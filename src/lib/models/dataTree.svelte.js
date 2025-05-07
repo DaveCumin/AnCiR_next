@@ -1,0 +1,11 @@
+class DataTree {
+
+    importData() {
+        
+    }
+    
+    simulateData() {
+
+    }
+
+}

@@ -1,14 +1,15 @@
 <script>
+    // import CollapsibleSection from '$lib/ui/CollapsibleSection.svelte';
     import Icon from '$lib/icon/Icon.svelte';
     import { DateTime } from 'luxon';
-    import { generateData } from '$lib/data/simulate';
-    import { data } from '$lib/store';
-    
-    // import { Draggable } from '@shopify/draggable';
-    // import CollapsibleSection from '$lib/ui/CollapsibleSection.svelte';
 
+    // import { generateData } from '$lib/data/simulate';
+    import { data } from '$lib/store';
+    import { DataItem } from '$lib/models/dataItem.svelte';
+
+    
     function simulateData() {
-        const newDataEntry = generateData(
+        const newDataEntry = new DataItem(
         28,
         15,
         DateTime.now()
@@ -22,10 +23,10 @@
         [24, 28],
         [100, 150],
         $data.length
-      );
+        );
 
-      $data = [...$data, newDataEntry];
-      console.log($data);
+        $data = [...$data, newDataEntry];
+        console.log($data);
     }
 </script>
 
@@ -35,6 +36,7 @@
         <p>Data Sources</p>
 
         <div class="add">
+            <!-- <button> -->
             <button on:click={simulateData}>
                 <Icon name="add" width={16} height={16}/>
             </button>
@@ -62,11 +64,11 @@
     
                     <details>
                     <summary>values</summary>
-                    {#each Object.entries(entry.data) as [key, info]}
-                        {#if info.type === 'value'}
-                        <p><em>{info.name}</em>: [{info.data.slice(0,5).join(', ')} …]</p>
-                        {/if}
-                    {/each}
+                    <ul>
+                        {#each entry.data.value.data.slice(0,5) as ts}
+                        <li>{ts}</li>
+                        {/each}
+                    </ul>
                     </details>
                 
             </details>
