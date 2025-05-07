@@ -1,6 +1,5 @@
 <script>
-    import { AddIcon, SearchIcon } from '$lib/icons'
-
+    import Icon from '$lib/icon/Icon.svelte';
     import { DateTime } from 'luxon';
     import { generateData } from '$lib/data/simulate';
     import { data } from '$lib/store';
@@ -34,22 +33,15 @@
 <div class="container">
     <div class="heading">
         <p>Data Sources</p>
-    </div>
-
-    <div class="functions">
-        <div class="search">
-            <SearchIcon />
-            <p>Search</p>
-        </div>
 
         <div class="add">
             <button on:click={simulateData}>
-                <AddIcon />
+                <Icon name="add" width={16} height={16}/>
             </button>
         </div>
+    </div>
 
         
-    </div>
 
     <div class="data-list">
         {#each $data as entry (entry.id)}
@@ -104,50 +96,23 @@
     .heading {
         width: 16vw;
         height: 4vh;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    
         border-bottom: 1px solid #D9D9D9;
     }
 
     .heading p {
-        margin-top: 0.6rem;
         margin-left: 0.6rem;
         font-weight: bold;
-    }
-
-    .functions {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        margin: 0.5rem; 
-    }
-
-    .search {
-        width: 13.5vw;
-        height: 3vh;
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        justify-content: start;
-
-        border-radius: 5px;
-        background-color: var(--color-lightness-95, blue);
-    }
-
-    .search :global(svg) {
-        margin-left: 0.5rem;
-        margin-right: 0.5rem;
-        color: var(--color-lightness-75)
-    }
-
-    .search p {
-        font-weight: 400;
-        font-size: small;
-        color: var(--color-lightness-75, blue);
     }
 
     button {
         background-color: transparent;
         border: none;
-        margin: 0;
+        margin-right: 0.6rem;
         padding: 0;
         text-align: inherit;
         font: inherit;
@@ -160,7 +125,6 @@
 
     .add :global(svg){
         vertical-align: middle;
-        margin-left: 0.45rem;
         color: var(--color-icon-unselected, blue);
     }
 </style>

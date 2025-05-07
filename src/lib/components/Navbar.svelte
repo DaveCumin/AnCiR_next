@@ -1,6 +1,5 @@
 <!-- Navbar.svelte -->
 <script>
-    import { TableIcon, WorksheetIcon, GearIcon, QueryIcon} from '$lib/icons';
     import { currentTab } from '$lib/store';
     import Icon from '$lib/icon/Icon.svelte';
 

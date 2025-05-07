@@ -1,5 +1,5 @@
 <script>
-    import { AddIcon, SearchIcon } from '$lib/icons'
+
 </script>
 
 
@@ -10,12 +10,12 @@
 
     <div class="functions">
         <div class="search">
-            <SearchIcon />
+            
             <p>Search</p>
         </div>
 
         <div class="add">
-            <AddIcon />
+            
         </div>
     </div>
 

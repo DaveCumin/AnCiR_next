@@ -1,6 +1,5 @@
 <script>
 	import { onMount } from 'svelte';
-    import { currentTab } from '$lib/store';
 
 	let { name = '', width = 24, height = 24, style = 'fill: #D9D9D9;' } = $props();
 	let svgContent = $state();
