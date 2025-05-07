@@ -1,0 +1,18 @@
+:root {
+    --color-icon-selected: #5F5F5F;
+    --color-icon-unselected: #D9D9D9;
+
+
+
+
+
+    /* based on lightness */
+    --color-lightness-35: #5F5F5F;
+    --color-lightness-75: #B3B3B3;
+    --color-lightness-85: #D9D9D9;
+    --color-lightness-95: #F2F2F2;
+    
+
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}

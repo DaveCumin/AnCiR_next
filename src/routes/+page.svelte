@@ -1,2 +1,19 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<!-- +page.svelte -->
+
+<script> 
+    // import { version } from "../../package.json";
+    import "../app.css";
+    import Navbar from "$lib/components/Navbar.svelte";
+    import ViewDisplay from "../lib/components/ViewDisplay.svelte";
+	
+</script>
+
+<!-- <svelte:head>
+  <title>AnCiR v β.{version}</title>
+</svelte:head> -->
+
+<Navbar />
+<ViewDisplay />
+
+
+
