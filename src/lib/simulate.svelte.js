@@ -58,6 +58,6 @@ export class Data {
               type: "value",
               data: valueData,
             };
-          }
+        }
     }
 }

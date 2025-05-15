@@ -1,0 +1,99 @@
+import { forceFormat, getPeriod } from "../utils/time/TimeUtils";
+
+export class DataField {
+    id;
+    // displayName = '';
+    type = ''; // future update: categorical ?
+    properties = {};
+    dataLength = 0;
+    dataArr = $state([]); // set everything reactive
+    
+    //
+    // processArr = {};
+    // origin = null;
+    // chartArr = {};
+
+    constructor(id, type, dataLength) {
+        this.id =id;
+        // this.displayName = displayName;
+        this.type = type;
+        this.dataLength = dataLength;
+    }
+
+    // Return for reactivity
+    toObj() {
+        return {
+            id: this.id,
+            type: this.type,
+            properties: this.properties,
+            dataArr: this.dataArr,
+            
+            // processArr: this.processArr,
+        }
+    }
+
+    // Populate new dataField based on type
+    newDataField(fs_min, startDate, periods, maxHeights) {
+        switch (this.type) {
+            case 'time':
+                this.generateTimeData(fs_min, startDate);
+                break;
+            case 'value':
+                this.generateValueData(fs_min, periods, maxHeights)
+                break;
+            default:
+                console.log('error: double check type');
+        }
+    }
+
+
+    // Data with type 'time'
+    generateTimeData(fs_min, startDate) {
+        const timeData = [];
+        for (let i = 0; i < this.dataLength; i++) {
+            const time = new Date(
+            startDate.getTime() + i * fs_min * 60 * 1000
+            ).toLocaleString("en-US");
+            timeData.push(time);
+        }
+
+        const timefmt = "M/D/YYYY, h:mm:s A";
+        const processedTimeData = forceFormat(timeData, timefmt);
+        const timePeriod = getPeriod(timeData, timefmt);
+
+        this.dataArr = {
+            raw: timeData,
+            content: processedTimeData,
+        };
+
+        this.properties = {
+            timeFormat: timefmt,
+            recordPeriod: timePeriod,
+        };
+
+    }
+
+
+    // Data with type 'value'
+    generateValueData(fs_min, period, maxHeight) {
+            const valueData = [];
+            
+            const periodL = period * (60 / fs_min); //the length of the period
+        
+            for (let j = 0; j < this.dataLength; j++) {
+              const isLowPeriod = j % periodL < periodL / 2;
+              const mult = isLowPeriod ? maxHeight * 0.05 : maxHeight;
+        
+              const randomValue = Math.random() * mult;
+              valueData.push(Math.round(randomValue));
+            }
+            
+            this.dataArr = {
+                // raw: valueData // consistency but duplication
+                content: valueData,
+            };
+
+            // this.properties = {
+            // }
+    }
+}

@@ -3,7 +3,7 @@ import { forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
 export class DataItem {
     id;
     importedFrom;
-    displayName;
+    displayName = $state('');
     dataLength;
     data;
 
@@ -59,7 +59,8 @@ export class DataItem {
               const randomValue = Math.random() * mult;
               valueData.push(Math.round(randomValue));
             }
-        
+            
+            //bug
             this.data.value = {
               name: `value${i}`,
               type: "value",

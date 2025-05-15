@@ -6,10 +6,11 @@
     // import { generateData } from '$lib/data/simulate';
     import { data } from '$lib/store';
     import { DataItem } from '$lib/models/dataItem.svelte';
+    import { TestDataItem } from '$lib/models/testDataItem.svelte';
 
-    
+    // manual handle simulate
     function simulateData() {
-        const newDataEntry = new DataItem(
+        const newDataEntry = new TestDataItem(
         28,
         15,
         DateTime.now()
@@ -26,7 +27,27 @@
         );
 
         $data = [...$data, newDataEntry];
-        console.log($data);
+        console.log("items:", $data);
+        console.log("new added item fields:", $state.snapshot($data[$data.length - 1].dataField))
+    }
+
+    // test reactivity
+    function changeName() {
+        /*
+        change name of simulate_0 to happy_data
+        */
+        console.log($data[0].displayName);
+        $data[0].displayName = 'happy_data';
+        console.log($data[0].displayName);
+    } 
+
+    function changeDataFieldContent() {
+        /*
+        change first data point of value0 in simulate_0 to 0318
+        */
+       console.log($data[0].dataField[1].dataArr.content[0]);
+       $data[0].dataField[1].dataArr.content[0] = 318;
+       console.log($data[0].dataField[1].dataArr.content[0]);
     }
 </script>
 
@@ -36,20 +57,51 @@
         <p>Data Sources</p>
 
         <div class="add">
-            <!-- <button> -->
-            <button on:click={simulateData}>
+            <button onclick={simulateData}>
                 <Icon name="add" width={16} height={16}/>
             </button>
         </div>
     </div>
 
-        
-
     <div class="data-list">
         {#each $data as entry (entry.id)}
             <details>
                 <summary>{entry.displayName}</summary>
-                    <!-- here you can render whatever fields you like; for example: -->
+                <p><strong>importedFrom:</strong>{entry.importedFrom}</p>
+                <p><strong>Length:</strong>{entry.dataLength}</p>
+
+                {#each entry.dataField as field (field.id)}
+                <details>
+                    <summary>{field.type}</summary>
+                    <ul>
+                        {#each field.dataArr.content.slice(0,5) as test}
+                        <li>{test}</li>
+                        {/each}
+                    </ul>
+                </details>    
+                {/each}
+
+            </details>
+        {/each}
+    </div>
+
+    <div class="test">
+        <button onclick={changeName}>
+            change item name
+        </button>
+
+        <button onclick={changeDataFieldContent}>
+            change data point
+        </button>
+    </div>
+
+        
+
+    <!-- <div class="data-list">
+        {#each $data as entry (entry.id)}
+            <details>
+                <summary>{entry.displayName}</summary>
+
                     <p><strong>ID:</strong> {entry.id}</p>
                     <p><strong>Length:</strong> {entry.datalength}</p>
     
@@ -74,7 +126,7 @@
             </details>
             
         {/each}
-    </div>
+    </div> -->
 
     
 </div>
