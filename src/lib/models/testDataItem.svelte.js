@@ -4,7 +4,7 @@ import { DataField } from './dataField.svelte';
 export class TestDataItem {
 	id;
 	importedFrom = '';
-	displayName = '';
+	displayName = $state();
 	dataLength = 0;
 	dataField = $state([]);
 

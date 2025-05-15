@@ -4,7 +4,7 @@
 	import { DateTime } from 'luxon';
 
 	// import { generateData } from '$lib/data/simulate';
-	import { data } from '$lib/store';
+	import { data } from '$lib/store.svelte.js';
 	import { DataItem } from '$lib/models/dataItem.svelte';
 	import { TestDataItem } from '$lib/models/testDataItem.svelte';
 
@@ -23,12 +23,15 @@
 				.toJSDate(),
 			[24, 28],
 			[100, 150],
-			$data.length
+			data.data.length
 		);
 
-		$data = [...$data, newDataEntry];
-		console.log('items:', $data);
-		console.log('new added item fields:', $state.snapshot($data[$data.length - 1].dataField));
+		data.data = [...data.data, newDataEntry];
+		console.log('items:', data.data);
+		console.log(
+			'new added item fields:',
+			$state.snapshot(data.data[data.data.length - 1].dataField)
+		);
 	}
 
 	// test reactivity
@@ -36,18 +39,19 @@
 		/*
         change name of simulate_0 to happy_data
         */
-		console.log($data[0].displayName);
-		$data[0].changeName('happy_data' + Math.round(Math.random() * 10, 2));
-		console.log($data[0].displayName);
+		console.log($state.snapshot(data.data));
+		console.log(data.data[0].displayName);
+		data.data[0].changeName('happy_data' + Math.round(Math.random() * 10, 2));
+		console.log(data.data[0].displayName);
 	}
 
 	function changeDataFieldContent() {
 		/*
         change first data point of value0 in simulate_0 to 0318
         */
-		console.log($data[0].dataField[1].dataArr.content[0]);
-		$data[0].dataField[1].dataArr.content[0] = 318;
-		console.log($data[0].dataField[1].dataArr.content[0]);
+		console.log(data.data[0].dataField[1].dataArr.content[0]);
+		data.data[0].dataField[1].dataArr.content[0] = 318 + Math.round(Math.random() * 10, 2);
+		console.log(data.data[0].dataField[1].dataArr.content[0]);
 	}
 </script>
 
@@ -63,23 +67,31 @@
 	</div>
 
 	<div class="data-list">
-		{#each $data as entry (entry.id)}
-			<details>
-				<summary>{entry.displayName}</summary>
-				<p><strong>importedFrom:</strong>{entry.importedFrom}</p>
-				<p><strong>Length:</strong>{entry.dataLength}</p>
+		{#each data.data as entry (entry.id)}
+			{#key data.data}
+				<details>
+					<summary>{entry.displayName}</summary>
+					<p><strong>importedFrom:</strong>{entry.importedFrom}</p>
+					<p><strong>Length:</strong>{entry.dataLength}</p>
 
-				{#each entry.dataField as field (field.id)}
-					<details>
-						<summary>{field.type}</summary>
-						<ul>
-							{#each field.dataArr.content.slice(0, 5) as test}
-								<li>{test}</li>
-							{/each}
-						</ul>
-					</details>
-				{/each}
-			</details>
+					{#each entry.dataField as field (field.id)}
+						<details>
+							<summary>{field.type}</summary>
+							<ul>
+								{#each field.dataArr.content.slice(0, 5) as test}
+									<li>{test}</li>
+								{/each}
+							</ul>
+						</details>
+						<details>
+							<summary>testD</summary>
+							<ul>
+								<li>{field.testD}</li>
+							</ul>
+						</details>
+					{/each}
+				</details>
+			{/key}
 		{/each}
 	</div>
 
@@ -90,7 +102,7 @@
 	</div>
 
 	<!-- <div class="data-list">
-        {#each $data as entry (entry.id)}
+        {#each data as entry (entry.id)}
             <details>
                 <summary>{entry.displayName}</summary>
 
