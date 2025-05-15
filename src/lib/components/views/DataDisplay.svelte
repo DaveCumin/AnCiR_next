@@ -1,103 +1,95 @@
 <script>
-    // import CollapsibleSection from '$lib/ui/CollapsibleSection.svelte';
-    import Icon from '$lib/icon/Icon.svelte';
-    import { DateTime } from 'luxon';
+	// import CollapsibleSection from '$lib/ui/CollapsibleSection.svelte';
+	import Icon from '$lib/icon/Icon.svelte';
+	import { DateTime } from 'luxon';
 
-    // import { generateData } from '$lib/data/simulate';
-    import { data } from '$lib/store';
-    import { DataItem } from '$lib/models/dataItem.svelte';
-    import { TestDataItem } from '$lib/models/testDataItem.svelte';
+	// import { generateData } from '$lib/data/simulate';
+	import { data } from '$lib/store';
+	import { DataItem } from '$lib/models/dataItem.svelte';
+	import { TestDataItem } from '$lib/models/testDataItem.svelte';
 
-    // manual handle simulate
-    function simulateData() {
-        const newDataEntry = new TestDataItem(
-        28,
-        15,
-        DateTime.now()
-          .set({
-            hour: 0,
-            minute: 0,
-            second: 0,
-            millisecond: 0,
-          })
-          .toJSDate(),
-        [24, 28],
-        [100, 150],
-        $data.length
-        );
+	// manual handle simulate
+	function simulateData() {
+		const newDataEntry = new TestDataItem(
+			28,
+			15,
+			DateTime.now()
+				.set({
+					hour: 0,
+					minute: 0,
+					second: 0,
+					millisecond: 0
+				})
+				.toJSDate(),
+			[24, 28],
+			[100, 150],
+			$data.length
+		);
 
-        $data = [...$data, newDataEntry];
-        console.log("items:", $data);
-        console.log("new added item fields:", $state.snapshot($data[$data.length - 1].dataField))
-    }
+		$data = [...$data, newDataEntry];
+		console.log('items:', $data);
+		console.log('new added item fields:', $state.snapshot($data[$data.length - 1].dataField));
+	}
 
-    // test reactivity
-    function changeName() {
-        /*
+	// test reactivity
+	function changeName() {
+		/*
         change name of simulate_0 to happy_data
         */
-        console.log($data[0].displayName);
-        $data[0].displayName = 'happy_data';
-        console.log($data[0].displayName);
-    } 
+		console.log($data[0].displayName);
+		$data[0].changeName('happy_data' + Math.round(Math.random() * 10, 2));
+		console.log($data[0].displayName);
+	}
 
-    function changeDataFieldContent() {
-        /*
+	function changeDataFieldContent() {
+		/*
         change first data point of value0 in simulate_0 to 0318
         */
-       console.log($data[0].dataField[1].dataArr.content[0]);
-       $data[0].dataField[1].dataArr.content[0] = 318;
-       console.log($data[0].dataField[1].dataArr.content[0]);
-    }
+		console.log($data[0].dataField[1].dataArr.content[0]);
+		$data[0].dataField[1].dataArr.content[0] = 318;
+		console.log($data[0].dataField[1].dataArr.content[0]);
+	}
 </script>
 
-
 <div class="container">
-    <div class="heading">
-        <p>Data Sources</p>
+	<div class="heading">
+		<p>Data Sources</p>
 
-        <div class="add">
-            <button onclick={simulateData}>
-                <Icon name="add" width={16} height={16}/>
-            </button>
-        </div>
-    </div>
+		<div class="add">
+			<button onclick={simulateData}>
+				<Icon name="add" width={16} height={16} />
+			</button>
+		</div>
+	</div>
 
-    <div class="data-list">
-        {#each $data as entry (entry.id)}
-            <details>
-                <summary>{entry.displayName}</summary>
-                <p><strong>importedFrom:</strong>{entry.importedFrom}</p>
-                <p><strong>Length:</strong>{entry.dataLength}</p>
+	<div class="data-list">
+		{#each $data as entry (entry.id)}
+			<details>
+				<summary>{entry.displayName}</summary>
+				<p><strong>importedFrom:</strong>{entry.importedFrom}</p>
+				<p><strong>Length:</strong>{entry.dataLength}</p>
 
-                {#each entry.dataField as field (field.id)}
-                <details>
-                    <summary>{field.type}</summary>
-                    <ul>
-                        {#each field.dataArr.content.slice(0,5) as test}
-                        <li>{test}</li>
-                        {/each}
-                    </ul>
-                </details>    
-                {/each}
+				{#each entry.dataField as field (field.id)}
+					<details>
+						<summary>{field.type}</summary>
+						<ul>
+							{#each field.dataArr.content.slice(0, 5) as test}
+								<li>{test}</li>
+							{/each}
+						</ul>
+					</details>
+				{/each}
+			</details>
+		{/each}
+	</div>
 
-            </details>
-        {/each}
-    </div>
+	<div class="test">
+		<button onclick={changeName}> change item name </button>
 
-    <div class="test">
-        <button onclick={changeName}>
-            change item name
-        </button>
+		<button onclick={changeDataFieldContent}> change data point </button>
+	</div>
 
-        <button onclick={changeDataFieldContent}>
-            change data point
-        </button>
-    </div>
-
-        
-
-    <!-- <div class="data-list">
+	<!-- <div class="data-list">
         {#each $data as entry (entry.id)}
             <details>
                 <summary>{entry.displayName}</summary>
@@ -127,58 +119,56 @@
             
         {/each}
     </div> -->
-
-    
 </div>
 
 <style>
-    .container {
-        width: 16vw;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: start;
-        align-items: start;
+	.container {
+		width: 16vw;
+		height: 100vh;
+		display: flex;
+		flex-direction: column;
+		justify-content: start;
+		align-items: start;
 
-        position: fixed;
-        top: 0;
-        left: 4vw;
+		position: fixed;
+		top: 0;
+		left: 4vw;
 
-        border-right: 1px solid #D9D9D9;
-    }
+		border-right: 1px solid #d9d9d9;
+	}
 
-    .heading {
-        width: 16vw;
-        height: 4vh;
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-    
-        border-bottom: 1px solid #D9D9D9;
-    }
+	.heading {
+		width: 16vw;
+		height: 4vh;
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
 
-    .heading p {
-        margin-left: 0.6rem;
-        font-weight: bold;
-    }
+		border-bottom: 1px solid #d9d9d9;
+	}
 
-    button {
-        background-color: transparent;
-        border: none;
-        margin-right: 0.6rem;
-        padding: 0;
-        text-align: inherit;
-        font: inherit;
-        border-radius: 0;
-        appearance: none;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
+	.heading p {
+		margin-left: 0.6rem;
+		font-weight: bold;
+	}
 
-    .add :global(svg){
-        vertical-align: middle;
-        color: var(--color-icon-unselected, blue);
-    }
+	button {
+		background-color: transparent;
+		border: none;
+		margin-right: 0.6rem;
+		padding: 0;
+		text-align: inherit;
+		font: inherit;
+		border-radius: 0;
+		appearance: none;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.add :global(svg) {
+		vertical-align: middle;
+		color: var(--color-icon-unselected, blue);
+	}
 </style>
