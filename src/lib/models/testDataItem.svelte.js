@@ -1,10 +1,11 @@
 import { forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
 import { DataField } from './dataField.svelte';
+import { data } from '../store.svelte';
 
 export class TestDataItem {
 	id;
 	importedFrom = '';
-	displayName = '';
+	displayName = $state('');
 	dataLength = 0;
 	dataField = $state([]);
 
@@ -18,7 +19,7 @@ export class TestDataItem {
 		this.simulateData(fs_min, startDate, periods, maxHeights);
 	}
 
-	changeName(name) {
+    changeName = (name) => {
 		this.displayName = name;
 	}
 

@@ -4,7 +4,7 @@
 	import { DateTime } from 'luxon';
 
 	// import { generateData } from '$lib/data/simulate';
-	import { data } from '$lib/store';
+	import { data } from '$lib/store.svelte';
 	import { DataItem } from '$lib/models/dataItem.svelte';
 	import { TestDataItem } from '$lib/models/testDataItem.svelte';
 
@@ -23,31 +23,31 @@
 				.toJSDate(),
 			[24, 28],
 			[100, 150],
-			$data.length
+			data.length
 		);
 
-		$data = [...$data, newDataEntry];
-		console.log('items:', $data);
-		console.log('new added item fields:', $state.snapshot($data[$data.length - 1].dataField));
+		data.push(newDataEntry);
+		console.log('items:', data);
+		console.log('new added item fields:', $state.snapshot(data[data.length - 1].dataField));
 	}
 
 	// test reactivity
-	function changeName() {
-		/*
-        change name of simulate_0 to happy_data
-        */
-		console.log($data[0].displayName);
-		$data[0].changeName('happy_data' + Math.round(Math.random() * 10, 2));
-		console.log($data[0].displayName);
-	}
+	// function changeName() {
+	// 	/*
+    //     change name of simulate_0 to happy_data
+    //     */
+	// 	console.log(data[0].displayName);
+	// 	data[0].changeName('happy_data' + Math.round(Math.random() * 10, 2));
+	// 	console.log(data[0].displayName);
+	// }
 
 	function changeDataFieldContent() {
 		/*
         change first data point of value0 in simulate_0 to 0318
         */
-		console.log($data[0].dataField[1].dataArr.content[0]);
-		$data[0].dataField[1].dataArr.content[0] = 318;
-		console.log($data[0].dataField[1].dataArr.content[0]);
+		console.log(data[0].dataField[1].dataArr.content[0]);
+		data[0].dataField[1].dataArr.content[0] = 318;
+		console.log(data[0].dataField[1].dataArr.content[0]);
 	}
 </script>
 
@@ -63,9 +63,10 @@
 	</div>
 
 	<div class="data-list">
-		{#each $data as entry (entry.id)}
+		{#each data as entry (entry.id)}
 			<details>
 				<summary>{entry.displayName}</summary>
+                <button onclick={() => data[entry.id].changeName('happy_data' + Math.round(Math.random() * 10, 2))}> change item name </button>
 				<p><strong>importedFrom:</strong>{entry.importedFrom}</p>
 				<p><strong>Length:</strong>{entry.dataLength}</p>
 
@@ -84,13 +85,11 @@
 	</div>
 
 	<div class="test">
-		<button onclick={changeName}> change item name </button>
-
 		<button onclick={changeDataFieldContent}> change data point </button>
 	</div>
 
 	<!-- <div class="data-list">
-        {#each $data as entry (entry.id)}
+        {#each data as entry (entry.id)}
             <details>
                 <summary>{entry.displayName}</summary>
 

@@ -11,7 +11,7 @@ export class DataField {
     //
     // processArr = {};
     // origin = null;
-    // chartArr = {};
+    // chartArr = {}; // chart states`
 
     constructor(id, type, dataLength) {
         this.id =id;
@@ -33,13 +33,13 @@ export class DataField {
     }
 
     // Populate new dataField based on type
-    newDataField(fs_min, startDate, periods, maxHeights) {
+    newDataField(fs_min, startDate, period, maxHeight) {
         switch (this.type) {
             case 'time':
                 this.generateTimeData(fs_min, startDate);
                 break;
             case 'value':
-                this.generateValueData(fs_min, periods, maxHeights)
+                this.generateValueData(fs_min, period, maxHeight)
                 break;
             default:
                 console.log('error: double check type');
@@ -64,6 +64,7 @@ export class DataField {
         this.dataArr = {
             raw: timeData,
             content: processedTimeData,
+            // derived_by: raw -> format -> process2
         };
 
         this.properties = {

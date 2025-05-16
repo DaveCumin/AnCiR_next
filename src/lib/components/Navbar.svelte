@@ -1,6 +1,6 @@
 <!-- Navbar.svelte -->
 <script>
-    import { currentTab } from '$lib/store';
+    import { currentTab } from '$lib/store.svelte';
     import Icon from '$lib/icon/Icon.svelte';
 
     /**
