@@ -70,17 +70,24 @@
 				<p><strong>importedFrom:</strong>{entry.importedFrom}</p>
 				<p><strong>Length:</strong>{entry.dataLength}</p>
 
-				{#each entry.dataField as field (field.id)}
-					<details>
-						<summary>{field.type}</summary>
-						<ul>
-							{#each field.dataArr.content.slice(0, 5) as test}
-								<li>{test}</li>
-							{/each}
-						</ul>
-					</details>
-				{/each}
-			</details>
+					{#each entry.dataField as field (field.id)}
+						<details>
+							<summary>{field.type}</summary>
+							<ul>
+								{#each field.dataArr.content.slice(0, 5) as test}
+									<li>{test}</li>
+								{/each}
+							</ul>
+						</details>
+						<details>
+							<summary>testD</summary>
+							<ul>
+								<li>{field.testD}</li>
+							</ul>
+						</details>
+					{/each}
+				</details>
+			{/key}
 		{/each}
 	</div>
 
@@ -89,6 +96,7 @@
 	</div>
 
 	<!-- <div class="data-list">
+        {#each data as entry (entry.id)}
         {#each data as entry (entry.id)}
             <details>
                 <summary>{entry.displayName}</summary>

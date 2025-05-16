@@ -6,9 +6,8 @@
 
 </script>
 
-{#if $currentTab === 'data'}
-    <DataDisplay />
-{:else if $currentTab === 'worksheet'}
-    <WorksheetDisplay />
+{#if currentTab.tab === 'data'}
+	<DataDisplay />
+{:else if currentTab.tab === 'worksheet'}
+	<WorksheetDisplay />
 {/if}
-
