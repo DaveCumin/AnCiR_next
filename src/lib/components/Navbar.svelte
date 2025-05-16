@@ -1,13 +1,13 @@
 <!-- Navbar.svelte -->
 <script>
-	import { currentTab } from '$lib/store.svelte.js';
+	import { currentState } from '$lib/store.svelte';
 	import Icon from '$lib/icon/Icon.svelte';
 
 	/**
 	 * @param {string} tab
 	 */
 	function switchTab(tab) {
-		currentTab.tab = tab;
+		currentState.tab = tab;
 		console.log('current tab:', tab);
 	}
 </script>
@@ -15,12 +15,12 @@
 <nav class="container">
 	<div class="icon-container">
 		<button on:click={() => switchTab('data')}>
-			<Icon name="table" style={currentTab === 'data' ? 'fill: pink;' : 'fill: #D9D9D9;'} />
+			<Icon name="table" style={currentState.tab === 'data' ? 'fill: pink;' : 'fill: #D9D9D9;'} />
 			<!-- <TableIcon /> -->
 		</button>
 
 		<button on:click={() => switchTab('worksheet')}>
-			<Icon name="layer" style={currentTab === 'worksheet' ? 'fill: pink;' : 'fill: #D9D9D9;'} />
+			<Icon name="layer" style={currentState.tab === 'worksheet' ? 'fill: pink;' : 'fill: #D9D9D9;'} />
 			<!-- <WorksheetIcon /> -->
 		</button>
 	</div>

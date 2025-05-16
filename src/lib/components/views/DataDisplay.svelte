@@ -6,11 +6,10 @@
 	// import { generateData } from '$lib/data/simulate';
 	import { data } from '$lib/store.svelte';
 	import { DataItem } from '$lib/models/dataItem.svelte';
-	import { TestDataItem } from '$lib/models/testDataItem.svelte';
 
 	// manual handle simulate
 	function simulateData() {
-		const newDataEntry = new TestDataItem(
+		const newDataEntry = new DataItem(
 			28,
 			15,
 			DateTime.now()
@@ -70,24 +69,23 @@
 				<p><strong>importedFrom:</strong>{entry.importedFrom}</p>
 				<p><strong>Length:</strong>{entry.dataLength}</p>
 
-					{#each entry.dataField as field (field.id)}
-						<details>
-							<summary>{field.type}</summary>
-							<ul>
-								{#each field.dataArr.content.slice(0, 5) as test}
-									<li>{test}</li>
-								{/each}
-							</ul>
-						</details>
-						<details>
-							<summary>testD</summary>
-							<ul>
-								<li>{field.testD}</li>
-							</ul>
-						</details>
-					{/each}
-				</details>
-			{/key}
+				{#each entry.dataField as field (field.id)}
+					<details>
+						<summary>{field.type}</summary>
+						<ul>
+							{#each field.dataArr.content.slice(0, 5) as test}
+								<li>{test}</li>
+							{/each}
+						</ul>
+					</details>
+					<details>
+						<summary>testD</summary>
+						<ul>
+							<li>{field.testD}</li>
+						</ul>
+					</details>
+				{/each}
+			</details>
 		{/each}
 	</div>
 
