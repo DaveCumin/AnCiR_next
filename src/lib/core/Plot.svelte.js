@@ -1,14 +1,47 @@
-import { Scatterplotclass } from '$lib/plots/scatter/Scatterplotclass.svelte.js'; //TODO: Make this dynamic
-import Scatterplot from '$lib/plots/scatter/Scatterplot.svelte'; //TODO: Make this dynamic
+//Dynamically loads the plotMap. Assumes that the folder name is the same as the svelte and svelte.js files
+async function loadPlots() {
+	const sveltePaths = import.meta.glob('$lib/plots/**/*.svelte', { eager: false });
+	const jsPaths = import.meta.glob('$lib/plots/**/*.js', { eager: false });
+
+	const plotMap = new Map();
+
+	for (const sveltePath in sveltePaths) {
+		const fileName = sveltePath.split('/').pop();
+		const folderName = sveltePath.split('/').slice(-2)[0];
+		const jsFileName = fileName.replace('.svelte', '.svelte.js');
+		const jsPath = sveltePath.replace(fileName, jsFileName);
+		if (folderName != 'plots') {
+			try {
+				const svelteModule = await sveltePaths[sveltePath]();
+				const component = svelteModule.default;
+				const jsModule = await jsPaths[jsPath]();
+				const plotClass = jsModule.default || Object.values(jsModule)[0];
+
+				plotMap.set(folderName, {
+					plot: component,
+					data: plotClass
+				});
+			} catch (error) {
+				console.error(`Error loading ${sveltePath} or ${jsPath}:`, error);
+			}
+		}
+	}
+	console.log('Plot map:', plotMap);
+	return plotMap;
+}
 
 let plotidCounter = 0;
 
 export class Plot {
-	static processFuncMap = new Map([['scatter', { plot: Scatterplot, data: Scatterplotclass }]]); //TODO: Make this dynamic
+	static processFuncMap;
 
 	plotid;
 	name = '';
 	plot;
+
+	static async init() {
+		this.processFuncMap = await loadPlots();
+	}
 
 	constructor({ ...dataIN }, id = null) {
 		if (id === null) {

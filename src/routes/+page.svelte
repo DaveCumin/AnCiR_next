@@ -42,7 +42,9 @@
 		return newDataEntry.columnID;
 	}
 
-	onMount(() => {
+	onMount(async () => {
+		await Process.init(); //set up the processMap
+		await Plot.init(); //set up the plotMap
 		refresh();
 	});
 
@@ -74,12 +76,12 @@
 		core.tables[1].columnRefs = [d1id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
 
 		core.plots = [];
-		core.plots.push(new Plot({ name: 'test', type: 'scatter' }));
+		core.plots.push(new Plot({ name: 'test', type: 'Scatterplot' }));
 	}
 
 	function load() {
 		const jsonData = JSON.parse(
-			`{"tables":[{"tableid":0,"name":"table 1","columnRefs":[3,1,0]},{"tableid":1,"name":"table 2","columnRefs":[1,2]},{"tableid":2,"name":"table 3","columnRefs":[4,5]}],"plots":[{"plotid":0,"name":"test","type":"scatter","plot":{"width":300,"height":100,"data":[{"x":{"columnID":6,"name":"val1","refDataID":1,"type":"number","processes":[]},"y":{"columnID":7,"name":"the time","refDataID":0,"type":"time","processes":[]}},{"x":{"columnID":8,"name":"AWD","refDataID":3,"type":"time","processes":[]},"y":{"columnID":9,"refDataID":4,"type":"number","processes":[]}}]}}],"data":[{"columnID":0,"name":"the time","rawData":[1,2,3,4],"type":"time","timeformat":1,"processes":[{"processid":0,"name":"add","args":{"value":4}}]},{"columnID":1,"name":"val1","rawData":[0,10,8,2],"type":"number","processes":[{"processid":1,"name":"add","args":{"value":4}},{"processid":2,"name":"sub","args":{"find":0,"replace":0}}]},{"columnID":2,"name":"mycat","rawData":["a","b","b","c"],"type":"category","processes":[]},{"columnID":3,"name":"AWD","rawData":{"start":10,"step":1,"length":5},"type":"time","timeformat":3,"compression":"awd","processes":[]},{"columnID":4,"rawData":[0.5320851666862695,0.08923008150735368],"type":"number","processes":[]},{"columnID":5,"rawData":[0.9092213365565878,0.7247559800547119],"type":"number","processes":[]}]}`
+			`{"tables":[{"tableid":0,"name":"table 1","columnRefs":[3,1,0]},{"tableid":1,"name":"table 2","columnRefs":[1,2]},{"tableid":2,"name":"table 3","columnRefs":[4,5]}],"plots":[{"plotid":0,"name":"test","type":"Scatterplot","plot":{"width":300,"height":100,"data":[{"x":{"columnID":6,"name":"val1","refDataID":1,"type":"number","processes":[]},"y":{"columnID":7,"name":"the time","refDataID":0,"type":"time","processes":[]}},{"x":{"columnID":8,"name":"AWD","refDataID":3,"type":"time","processes":[]},"y":{"columnID":9,"refDataID":4,"type":"number","processes":[]}}]}}],"data":[{"columnID":0,"name":"the time","rawData":[1,2,3,4],"type":"time","timeformat":1,"processes":[{"processid":0,"name":"add","args":{"value":4}}]},{"columnID":1,"name":"val1","rawData":[0,10,8,2],"type":"number","processes":[{"processid":1,"name":"add","args":{"value":4}},{"processid":2,"name":"sub","args":{"find":0,"replace":0}}]},{"columnID":2,"name":"mycat","rawData":["a","b","b","c"],"type":"category","processes":[]},{"columnID":3,"name":"AWD","rawData":{"start":10,"step":1,"length":5},"type":"time","timeformat":3,"compression":"awd","processes":[]},{"columnID":4,"rawData":[0.5320851666862695,0.08923008150735368],"type":"number","processes":[]},{"columnID":5,"rawData":[0.9092213365565878,0.7247559800547119],"type":"number","processes":[]}]}`
 		);
 
 		//reset things

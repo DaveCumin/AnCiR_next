@@ -1,18 +1,31 @@
-import { add, add_defaults } from '$lib/processes/add.js'; //TODO: Make this dynamic
-import { sub, sub_defaults } from '$lib/processes/sub.js'; //TODO: Make this dynamic
+async function loadProcesses() {
+	const processes_paths = import.meta.glob('$lib/processes/*.js');
+	const processMap = new Map();
+	for (const path in processes_paths) {
+		const process = await processes_paths[path]();
+		const fileName = path.split('/').pop().split('.').shift();
+		processMap.set(fileName, {
+			func: process[fileName],
+			defaults: process[fileName + '_defaults']
+		});
+	}
+
+	return processMap;
+}
 
 let processidCounter = 0;
 
 export class Process {
-	static processFuncMap = new Map([
-		['add', { func: add, defaults: add_defaults }],
-		['sub', { func: sub, defaults: sub_defaults }]
-	]); //TODO: Make this dynamic
-
+	static processFuncMap;
 	processid;
 	name = '';
 	processFunc;
 	args = $state({});
+
+	//Set up the process function map
+	static async init() {
+		this.processFuncMap = await loadProcesses();
+	}
 
 	constructor({ ...dataIN }, id = null) {
 		if (id === null) {
