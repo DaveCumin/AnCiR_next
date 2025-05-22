@@ -14,8 +14,8 @@
 	let previewHTML = '';
 	let importReady = false;
 
-	async function onFileChange(event) {
-		setFilesToImport(event.target.files);
+	async function onFileChange(e) {
+		setFilesToImport(e.target.files);
 		await importDataUtils.parseFile(6);
 		previewHTML = importDataUtils.makeTempTable(getTempData());
 		importReady = true;
@@ -27,13 +27,13 @@
 
 	async function confirmImport() {
 		await importDataUtils.loadData();
-		alert('Imported!');
+		alert('Imported!'); // better UI
 	}
 	
 	// test reactivity
 	function changeDataFieldContent() {
 		/*
-        change first data point of value0 in simulate_0 to 0318
+        change first data point of value0 in first DataItem to 0318
         */
 		console.log(data[0].dataField[1].dataArr.content[0]);
 		data[0].dataField[1].dataArr.content[0] = 318;
@@ -75,9 +75,9 @@
 		{/each}
 	</div>
 
-	<div class="test">
+	<!-- <div class="test">
 		<button onclick={changeDataFieldContent}> change data point </button>
-	</div>
+	</div> -->
 
 	<div class="import-container">
 
@@ -132,7 +132,8 @@
 
 <style>
 	.container {
-		width: 16vw;
+		overflow-y: auto;
+		min-width: 16vw;
 		height: 100vh;
 		display: flex;
 		flex-direction: column;
@@ -141,13 +142,13 @@
 
 		position: fixed;
 		top: 0;
-		left: 4vw;
+		left: 48px;
 
 		border-right: 1px solid #d9d9d9;
 	}
 
 	.heading {
-		width: 16vw;
+		width: 100%;
 		height: 4vh;
 		display: flex;
 		flex-direction: row;
