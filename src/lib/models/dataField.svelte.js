@@ -10,7 +10,7 @@ export class DataField {
 	testD = $derived.by(() => {
 		// Check if dataArr.content exists and has values
 		if (this.dataArr.content && this.dataArr.content.length > 0) {
-			return this.dataArr.content[0] + Math.random();
+			return this.dataArr.content.map((x) => x + Math.random());
 		}
 		return 0; // Default value if dataArr.content is empty
 	});

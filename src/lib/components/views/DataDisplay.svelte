@@ -86,7 +86,9 @@
 						<details>
 							<summary>testD</summary>
 							<ul>
-								<li>{field.testD}</li>
+								{#each field.testD.slice(0, 5) as testd}
+									<li>{testd}</li>
+								{/each}
 							</ul>
 						</details>
 					{/each}
