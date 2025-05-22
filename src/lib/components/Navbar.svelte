@@ -1,10 +1,10 @@
 <!-- Navbar.svelte -->
 <script>
-	import { app_state } from '$lib/core/theCore.svelte.js';
+	import { appState } from '$lib/core/theCore.svelte.js';
 	import Icon from '$lib/icon/Icon.svelte';
 
 	function switchTab(tab) {
-		app_state.current_tab = tab;
+		appState.currentTab = tab;
 		console.log('current tab:', tab);
 	}
 </script>
@@ -14,7 +14,7 @@
 		<button on:click={() => switchTab('data')}>
 			<Icon
 				name="table"
-				style={app_state.current_tab === 'data' ? 'fill: pink;' : 'fill: #D9D9D9;'}
+				style={appState.currentTab === 'data' ? 'fill: pink;' : 'fill: #D9D9D9;'}
 			/>
 			<!-- <TableIcon /> -->
 		</button>
@@ -22,7 +22,7 @@
 		<button on:click={() => switchTab('worksheet')}>
 			<Icon
 				name="layer"
-				style={app_state.current_tab === 'worksheet' ? 'fill: pink;' : 'fill: #D9D9D9;'}
+				style={appState.currentTab === 'worksheet' ? 'fill: pink;' : 'fill: #D9D9D9;'}
 			/>
 			<!-- <WorksheetIcon /> -->
 		</button>

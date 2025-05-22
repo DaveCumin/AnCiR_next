@@ -1,6 +1,6 @@
 export const core = $state({});
-export const app_state = $state({
-	current_tab: 'data'
+export const appState = $state({
+	currentTab: 'data'
 });
 
 //TODOs:
