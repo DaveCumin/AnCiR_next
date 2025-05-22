@@ -1,12 +1,12 @@
 <!-- ViewDisplay.svelte -->
 <script>
-	import { currentTab } from '$lib/store.svelte.js';
+	import { app_state } from '$lib/core/theCore.svelte.js';
 	import DataDisplay from '$lib/components/views/DataDisplay.svelte';
 	import WorksheetDisplay from '$lib/components/views/WorksheetDisplay.svelte';
 </script>
 
-{#if currentTab.tab === 'data'}
+{#if app_state.current_tab === 'data'}
 	<DataDisplay />
-{:else if currentTab.tab === 'worksheet'}
+{:else if app_state.current_tab === 'worksheet'}
 	<WorksheetDisplay />
 {/if}

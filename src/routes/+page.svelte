@@ -76,7 +76,7 @@
 		core.tables[1].columnRefs = [d1id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
 
 		core.plots = [];
-		core.plots.push(new Plot({ name: 'test', type: 'Scatterplot' }));
+		core.plots.push(new Plot({ name: 'test scatterplot', type: 'Scatterplot' }));
 	}
 
 	function load() {
@@ -107,11 +107,12 @@
 <!-- <svelte:head>
   <title>AnCiR v β.{version}</title>
 </svelte:head> 
+-->
 
 <Navbar />
 <ViewDisplay />
--->
 
+<!--
 <p>Data:</p>
 <button onclick={() => load()}>load</button>
 <button onclick={() => refresh()}>Refresh</button>
@@ -161,7 +162,7 @@
 							{p.name} -
 							{#each Object.keys(p.args) as arg}
 								{arg} ({dat.getProcessArgType(p.name, arg)}):
-								<!-- //TODO: consider if this is the best approach, or should each function have it's own UI (as a component)?? -->
+								
 								{#if dat.getProcessArgType(p.name, arg) === 'number'}
 									<input type="number" bind:value={p.args[arg]} />
 								{:else if dat.getProcessArgType(p.name, arg) === 'category'}
@@ -183,7 +184,7 @@
 <Visualise />
 
 <pre>{JSON.stringify(core, null, 2)}</pre>
-
+-->
 <style>
 	section {
 		padding: 8px;

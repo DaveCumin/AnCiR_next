@@ -1,4 +1,8 @@
 export const core = $state({});
+export const app_state = $state({
+	current_tab: 'data'
+});
+
 //TODOs:
 //- consider states for:
 //- UI theme (defaults for colours, rems, fonts, border, shading, etc).

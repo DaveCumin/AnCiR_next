@@ -26,7 +26,6 @@ async function loadPlots() {
 			}
 		}
 	}
-	console.log('Plot map:', plotMap);
 	return plotMap;
 }
 
