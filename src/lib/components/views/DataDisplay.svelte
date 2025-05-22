@@ -1,5 +1,6 @@
 <script>
 	// import CollapsibleSection from '$lib/ui/CollapsibleSection.svelte';
+	import { core } from '$lib/core/theCore.svelte.js';
 	import Icon from '$lib/icon/Icon.svelte';
 
 	import { data } from '$lib/store.svelte';
@@ -30,14 +31,17 @@
 		alert('Imported!');
 	}
 	
+
 	// test reactivity
-	function changeDataFieldContent() {
+	function changeName() {
 		/*
-        change first data point of value0 in simulate_0 to 0318
+        change name of simulate_0 to happy_data
         */
-		console.log(data[0].dataField[1].dataArr.content[0]);
-		data[0].dataField[1].dataArr.content[0] = 318;
-		console.log(data[0].dataField[1].dataArr.content[0]);
+		core.tables[0].name = 'happy_data' + Math.round(Math.random() * 10, 2);
+	}
+
+	function changeDataFieldContent() {
+		core.data[0].rawData[0] = core.data[0].rawData[0] + Math.round(Math.random() * 10, 2);
 	}
 
 </script>
@@ -54,27 +58,27 @@
 	</div>
 
 	<div class="data-list">
-		{#each data as entry (entry.id)}
-			<details>
-				<summary>{entry.displayName}</summary>
-                <button onclick={() => data[entry.id].setName('happy_data' + Math.round(Math.random() * 10, 2))}> change item name </button>
-				<p><strong>importedFrom:</strong>{entry.importedFrom}</p>
-				<p><strong>Length:</strong>{entry.dataLength}</p>
-
-				{#each entry.dataField as field (field.id)}
-					<details>
-						<summary>{field.type}</summary>
-						<ul>
-							{#each field.dataArr.content.slice(0, 5) as test}
-								<li>{test}</li>
-							{/each}
-						</ul>
-					</details>
+		{#each core.tables as table}
+			<details open>
+				<summary>{table.tableid} - {table.name}</summary>
+				{#each table.columnRefs as col}
+					{#each core.data as dat}
+						{#if dat.columnID == col}
+							<details open>
+								<summary>{dat.name} {dat.columnID}</summary>
+								<ul>
+									{dat.type}
+									<li>{dat.getData().slice(0, 5)}</li>
+								</ul>
+							</details>
+						{/if}
+					{/each}
 				{/each}
 			</details>
 		{/each}
 	</div>
 
+	-------------------
 	<div class="test">
 		<button onclick={changeDataFieldContent}> change data point </button>
 	</div>
