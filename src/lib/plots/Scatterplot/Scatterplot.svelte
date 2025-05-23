@@ -13,6 +13,10 @@
 		return color;
 	}
 
+	function normalise(values, min, max) {
+		return values.map((value) => (value - min) / (max - min));
+	}
+
 	class ScatterDataclass {
 		parent = $state();
 		x = $state();
@@ -23,23 +27,15 @@
 			let tempx = this.x.getData() ?? [];
 			let tempy = this.y.getData() ?? [];
 
-			const xmax = Math.max(...tempx);
-			const ymax = Math.max(...tempy);
+			//normalise to the parent width and height
+			tempx = normalise(tempx, this.parent.xlims[0], this.parent.xlims[1]);
+			tempy = normalise(tempy, this.parent.ylims[0], this.parent.ylims[1]);
 
-			console.log(
-				'ylims: ',
-				this.parent.ylims,
-				'width: ',
-				this.parent.parent.width,
-				', or ',
-				this.parent.width
-			);
 			for (let p = 0; p < tempx.length; p++) {
 				out +=
-					(this.parent.parent.width * tempx[p]) / xmax +
+					this.parent.parent.width * tempx[p] +
 					',' +
-					(this.parent.parent.height -
-						(this.parent.parent.height * tempy[p]) / this.parent.ylims[1]) +
+					(this.parent.parent.height - this.parent.parent.height * tempy[p]) +
 					' ';
 			}
 
@@ -81,6 +77,10 @@
 		parent = $state();
 		data = $state([]);
 		ylims = $derived.by(() => {
+			if (this.data.length === 0) {
+				return [0, 0];
+			}
+
 			let ymin = Infinity;
 			let ymax = -Infinity;
 			this.data.forEach((d, i) => {
@@ -90,16 +90,30 @@
 			});
 			return [ymin, ymax];
 		});
+		xlims = $derived.by(() => {
+			if (this.data.length === 0) {
+				return [0, 0];
+			}
+
+			let xmin = Infinity;
+			let xmax = -Infinity;
+			this.data.forEach((d, i) => {
+				let tempx = this.data[i].x.getData() ?? [];
+				xmin = Math.min(xmin, Math.min(...tempx));
+				xmax = Math.max(xmax, Math.max(...tempx));
+			});
+			return [xmin, xmax];
+		});
 
 		constructor(parent, dataIN) {
 			this.parent = parent;
 			if (dataIN) {
 				this.addData(dataIN);
 			}
+			console.log('parent: ', parent);
 		}
 
 		addData(dataIN) {
-			console.log('din: ', dataIN);
 			this.data.push(new ScatterDataclass(this, dataIN));
 		}
 		removeData(idx) {
@@ -111,15 +125,16 @@
 				data: this.data
 			};
 		}
-		static fromJSON(json) {
+		static fromJSON(parent, json) {
+			console.log('from json parent: ', parent);
 			if (!json) {
-				return new Scatterplotclass();
+				return new Scatterplotclass(parent, null);
 			}
 			//TODO: fix this.
-			const { width, height, data } = json;
-			const scatter = new Scatterplotclass(width, height);
+			const { data } = json;
+			const scatter = new Scatterplotclass(parent, json);
 			if (data) {
-				scatter.data = data.map((d) => ScatterDataclass.fromJSON(d, scatter));
+				scatter.data = data.map((d) => ScatterDataclass.fromJSON(scatter, d));
 			}
 			return scatter;
 		}
@@ -137,7 +152,6 @@
 
 {#snippet controls(theData)}
 	<div>
-		<p>controls: {JSON.stringify(theData)}; Parent: {theData.parent}</p>
 		<p>Data:</p>
 		<button
 			on:click={() =>
@@ -202,9 +216,8 @@
 {/snippet}
 
 {#snippet plot(theData)}
-	<p>{theData.data[0].polyline}</p>
 	<svg width={theData.width} height={theData.height} style="background: grey;">
-		{#each theData.data as datum}
+		{#each theData.plot.data as datum}
 			{#if datum.polyline}
 				<polyline fill="none" stroke={datum.colour} stroke-width="3" points={datum.polyline} />
 			{/if}
