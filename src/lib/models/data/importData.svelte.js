@@ -2,7 +2,7 @@
 // @ts-nocheck
 import { DateTime } from 'luxon';
 
-import { data } from '$lib/store.svelte';
+import { pushObj } from '$lib/core/theCore.svelte';
 import { DataItem } from '$lib/models/data/dataItem.svelte';
 import { DataField } from '$lib/models/data/dataField.svelte';
 import {
@@ -216,11 +216,11 @@ function doBasicFileImport(result, fname) {
 
     // create dataItem object with constructor(ID, importedFrom, displayName, dataLength)
     const newDataEntry = new DataItem(
-        getID(),
+        '',
         fname,
-        'data_' + getID(),
         result[Object.keys(result)[0]].length
     )
+    newDataEntry.setName(`data_${newDataEntry.id}`);
 
     //insert a data element for each header
     Object.keys(result).forEach((f, i) => {
@@ -231,48 +231,28 @@ function doBasicFileImport(result, fname) {
 
         if (guessedFormat != -1) {
             const timefmt = guessedFormat;
-            const df = new DataField(i, 'time')
-            df.displayName = f;
-            df.dataArr = {
-                raw: result[f],
-                content: forceFormat(result[f], timefmt),
-            };
+            const df = new DataField(newDataEntry.id, 'time')
+            df.name = f;
+            df.dataArr = forceFormat(result[f], timefmt);
             // this.properties = {
             //     timeFormat: timefmt,
             //     recordPeriod: getPeriod(result[f], timefmt),
             // };
-            newDataEntry.dataField.push(df);
+            newDataEntry.dataFields.push(df);
         } else if (!isNaN(datum)) {
-            const df = new DataField(i, 'value')
-            df.displayName = f;
-            df.dataArr = {
-                content: result[f],
-            }
-            newDataEntry.dataField.push(df);
+            const df = new DataField(newDataEntry.id, 'value')
+            df.name = f;
+            df.dataArr = result[f];
+            newDataEntry.dataFields.push(df);
         } else {
             const df = new DataField(i, 'category')
-            df.displayName = f;
-            df.dataArr = {
-                content: result[f],
-            }
-            newDataEntry.dataField.push(df);
-        }
-        // ??
-        
-        
+            df.name = f;
+            df.dataArr = result[f];
+            newDataEntry.dataFields.push(df);
+        }   
     });
     
-    data.push(newDataEntry);
-}
-
-//get the next highest id
-function getID() {
-    if (data.length === 0) {
-        return 0;
-    }
-    let ids = [];
-    data.forEach((d) => ids.push(d.id));
-    return Math.max(...ids) + 1;
+    pushObj(newDataEntry);
 }
 
 // get the first valid data point in the result, given key

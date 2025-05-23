@@ -1,7 +1,24 @@
-export const core = $state({});
+import { ModelIndex } from "$lib/models/modelIndex";
+
+export const core = $state({
+	data: []
+});
 export const appState = $state({
 	currentTab: 'data'
 });
+
+export function pushObj(obj) {
+	if (obj instanceof ModelIndex['DataItem']) {
+		core.data.push(obj);
+	}
+}
+
+// export function getObj(obj) {
+// 	if (obj instanceof ModelIndex['DataField']) {
+
+// 	}
+// }
+
 
 //TODOs:
 //- consider states for:

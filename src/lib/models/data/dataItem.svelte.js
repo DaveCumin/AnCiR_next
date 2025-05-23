@@ -1,48 +1,52 @@
 import { forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
 import { DataField } from './dataField.svelte';
-import { data } from '$lib/store.svelte';
+
+let _counter = 0;
+function getNextId() {
+	return _counter++;
+}
 
 export class DataItem {
 	id;
+	name = $state('');
 	importedFrom = '';
-	displayName = $state('');
 	dataLength = 0;
-	dataField = $state([]);
+	dataFields = $state([]);
 
 	// simulate only
-	constructor(ID, importedFrom, displayName, dataLength) {
-		this.id = ID;
+	constructor(name, importedFrom, dataLength) {
+		this.id = getNextId();
+		this.name = name;
 		this.importedFrom = importedFrom;
-		this.displayName = displayName;
 		this.dataLength = dataLength;
-		
 	}
 
 
 	// getter and setter methods
     setName = (name) => {
-		this.displayName = name;
+		this.name = name;
 	}
 
 
 	// create simulated data through static function
-	static simulateDataItem(Ndays, fs_min, startDate, periods, maxHeights, ID) {
-		const item = new DataItem(ID, `simulated(${Ndays},${maxHeights[0]})`, `Simulated_${ID}`, Ndays * 24 * (60 / fs_min));
+	static simulateDataItem(Ndays, fs_min, startDate, periods, maxHeights) {
+		const item = new DataItem('', `simulated(${Ndays},${maxHeights[0]})`, Ndays * 24 * (60 / fs_min));
+		item.setName(`Simulated_${item.id}`);
 		item.simulateData(fs_min, startDate, periods, maxHeights);
 		return item;
 	}
 
 	simulateData(fs_min, startDate, periods, maxHeights) {
 		//time
-		const df = new DataField(0, 'time');
-		df.simulateDataField(fs_min, startDate, periods, maxHeights, this.dataLength);
-		this.dataField.push(df);
+		const dft = new DataField(this.id, 'time');
+		dft.simulateDataField(fs_min, startDate, periods, maxHeights, this.dataLength);
+		this.dataFields.push(dft);
 
 		//value
 		for (let i = 0; i < periods.length; i++) {
-			const dfv = new DataField(this.dataField.length + i, 'value');
+			const dfv = new DataField(this.id, 'value');
 			dfv.simulateDataField(fs_min, startDate, periods[i], maxHeights[i], this.dataLength);
-			this.dataField.push(dfv);
+			this.dataFields.push(dfv);
 		}
 	}
 }

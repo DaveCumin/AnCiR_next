@@ -2,6 +2,7 @@
 import { DateTime } from 'luxon';
 
 import { data } from '$lib/store.svelte';
+import { pushObj } from '$lib/core/theCore.svelte';
 import { DataItem } from '$lib/models/data/dataItem.svelte';
 
 export function simulateData() {
@@ -20,10 +21,9 @@ export function simulateData() {
             .toJSDate(),
         [24, 28],
         [100, 150],
-        data.length
     );
 
-    data.push(newDataEntry);
+    pushObj(newDataEntry);
     // console.log('items:', $state.snapshot(data));
     // console.log('new added item fields:', $state.snapshot(data[data.length - 1].dataField));
 }

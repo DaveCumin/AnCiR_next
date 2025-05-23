@@ -1,28 +1,36 @@
 import { forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
-import { data } from '$lib/store.svelte';
+import { core } from '$lib/core/theCore.svelte';
+
+let _counter = 0;
+function getNextId() {
+	return _counter++;
+}
 
 export class DataField {
 	id;
-	refDataID = $state(null); //if it is a column that is based on another
-	properties = {};
-	dataArr = $state([]); // set everything reactive
-	
-	displayName = $derived.by(() => {
-		if(this.refDataID !== null){
-			return data.find((column) => column.columnID === this.refDataID)?.name
+	parentId = $state();
+	refId = $state(null); //if it is a column that is based on another
+
+	name = $derived.by(() => {
+		if (this.refId !== null) {
+			return core.data[this.parentId].find((df) => df.id === this.refId)?.name;
 		}
-		// else generate?
-	});
+	})
 	type = $derived.by(() => {
-		if(this.refDataID !== null){
-			return data.find((column) => column.columnID === this.refDataID)?.type
+		if (this.refId !== null) {
+			return core.data[this.parentId].find((df) => df.id === this.refId)?.type;
 		}
-	});
-	timeformat = $state();
+	})
+	
+	properties = $state([]);
+	// compression = $state(null);
+	// timeformat = $state();
+	dataArr = $state(); // set everything reactive
 	processArr = $state([]); // implement later
 
-	constructor(id, type) {
-		this.id = id;
+	constructor(parentId, type) {
+		this.id = getNextId();
+		this.parentId = parentId;
 		this.type = type;
 	}
 
@@ -54,16 +62,12 @@ export class DataField {
 		const processedTimeData = forceFormat(timeData, timefmt);
 		const timePeriod = getPeriod(timeData, timefmt);
 
-        this.dataArr = {
-            raw: timeData,
-            content: processedTimeData,
-            // derived_by: raw -> format -> process2
-        };
+        this.dataArr = processedTimeData;
 
-		this.properties = {
-			timeFormat: timefmt,
-			recordPeriod: timePeriod
-		};
+		// this.properties = {
+		// 	timeFormat: timefmt,
+		// 	recordPeriod: timePeriod
+		// };
 
 		// refactor dataArr and properties
 	}
@@ -81,11 +85,7 @@ export class DataField {
 			const randomValue = Math.random() * mult;
 			valueData.push(Math.round(randomValue));
 		}
-
-		this.dataArr = {
-			// raw: valueData // consistency but duplication
-			content: valueData
-		};
+		this.dataArr = valueData;
 
 		// this.properties = {
 		// }

@@ -6,102 +6,102 @@
 	import Navbar from '$lib/components/Navbar.svelte';
 	import ViewDisplay from '../lib/components/ViewDisplay.svelte';
 
-	import { core } from '$lib/core/theCore.svelte.js';
-	import { Process } from '$lib/core/Process.svelte.js';
-	import { Column } from '$lib/core/Column.svelte.js';
-	import { Table } from '$lib/core/Table.svelte.js';
-	import { Plot } from '$lib/core/Plot.svelte.js';
-	import PlotHandler from '$lib/plots/PlotHandler.svelte';
-	import { onMount } from 'svelte';
-	import Visualise from '$lib/components/Visualise.svelte';
+	// import { core } from '$lib/core/theCore.svelte.js';
+	// import { Process } from '$lib/core/Process.svelte.js';
+	// import { Column } from '$lib/core/Column.svelte.js';
+	// import { Table } from '$lib/core/Table.svelte.js';
+	// import { Plot } from '$lib/core/Plot.svelte.js';
+	// import PlotHandler from '$lib/plots/PlotHandler.svelte';
+	// import { onMount } from 'svelte';
+	// import Visualise from '$lib/components/Visualise.svelte';
 
-	function addData(dataIN, type, name) {
-		let newDataEntry;
-		if (dataIN != null) {
-			newDataEntry = new Column({ type, rawData: dataIN, name });
-			if (type == 'time') {
-				newDataEntry.timeformat = 1;
-			}
-			core.data.push(newDataEntry);
-		} else {
-			newDataEntry = new Column({
-				type,
-				rawData: [
-					Math.round(10 * Math.random(), 2),
-					Math.round(10 * Math.random(), 2),
-					Math.round(10 * Math.random(), 2),
-					Math.round(10 * Math.random(), 2)
-				],
-				name
-			});
-			if (type == 'time') {
-				newDataEntry.timeformat = 1;
-			}
-			core.data.push(newDataEntry);
-		}
-		return newDataEntry.columnID;
-	}
+	// function addData(dataIN, type, name) {
+	// 	let newDataEntry;
+	// 	if (dataIN != null) {
+	// 		newDataEntry = new Column({ type, rawData: dataIN, name });
+	// 		if (type == 'time') {
+	// 			newDataEntry.timeformat = 1;
+	// 		}
+	// 		core.data.push(newDataEntry);
+	// 	} else {
+	// 		newDataEntry = new Column({
+	// 			type,
+	// 			rawData: [
+	// 				Math.round(10 * Math.random(), 2),
+	// 				Math.round(10 * Math.random(), 2),
+	// 				Math.round(10 * Math.random(), 2),
+	// 				Math.round(10 * Math.random(), 2)
+	// 			],
+	// 			name
+	// 		});
+	// 		if (type == 'time') {
+	// 			newDataEntry.timeformat = 1;
+	// 		}
+	// 		core.data.push(newDataEntry);
+	// 	}
+	// 	return newDataEntry.columnID;
+	// }
 
-	onMount(async () => {
-		await Process.init(); //set up the processMap
-		await Plot.init(); //set up the plotMap
-		refresh();
-	});
+	// onMount(async () => {
+	// 	await Process.init(); //set up the processMap
+	// 	await Plot.init(); //set up the plotMap
+	// 	refresh();
+	// });
 
-	function refresh() {
-		//simulate importing data
-		core.data = [];
-		let d0id = addData([1, 2, 3, 4], 'time', 'the time');
-		core.data[0].addProcess('add');
+	// function refresh() {
+	// 	//simulate importing data
+	// 	core.data = [];
+	// 	let d0id = addData([1, 2, 3, 4], 'time', 'the time');
+	// 	core.data[0].addProcess('add');
 
-		let d1id = addData(null, 'number', 'val1');
-		core.data[1].addProcess('add');
-		core.data[1].addProcess('sub');
+	// 	let d1id = addData(null, 'number', 'val1');
+	// 	core.data[1].addProcess('add');
+	// 	core.data[1].addProcess('sub');
 
-		let d2id = addData(['a', 'b', 'b', 'c'], 'category', 'mycat');
+	// 	let d2id = addData(['a', 'b', 'b', 'c'], 'category', 'mycat');
 
-		let testawd = new Column({
-			type: 'time',
-			rawData: { start: 10, step: 1, length: 5 },
-			compression: 'awd',
-			name: 'AWD',
-			timeformat: 3
-		});
-		core.data.push(testawd);
+	// 	let testawd = new Column({
+	// 		type: 'time',
+	// 		rawData: { start: 10, step: 1, length: 5 },
+	// 		compression: 'awd',
+	// 		name: 'AWD',
+	// 		timeformat: 3
+	// 	});
+	// 	core.data.push(testawd);
 
-		core.tables = [];
-		core.tables.push(new Table({ name: 'table 1' }));
-		core.tables[0].columnRefs = [testawd.columnID, d1id, d0id];
-		core.tables.push(new Table({ name: 'table 2' }));
-		core.tables[1].columnRefs = [d1id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
+	// 	core.tables = [];
+	// 	core.tables.push(new Table({ name: 'table 1' }));
+	// 	core.tables[0].columnRefs = [testawd.columnID, d1id, d0id];
+	// 	core.tables.push(new Table({ name: 'table 2' }));
+	// 	core.tables[1].columnRefs = [d1id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
 
-		core.plots = [];
-		core.plots.push(new Plot({ name: 'test scatterplot', type: 'Scatterplot' }));
-	}
+	// 	core.plots = [];
+	// 	core.plots.push(new Plot({ name: 'test scatterplot', type: 'Scatterplot' }));
+	// }
 
-	function load() {
-		const jsonData = JSON.parse(
-			`{"tables":[{"tableid":0,"name":"table 1","columnRefs":[3,1,0]},{"tableid":1,"name":"table 2","columnRefs":[1,2]},{"tableid":2,"name":"table 3","columnRefs":[4,5]}],"plots":[{"plotid":0,"name":"test","type":"Scatterplot","plot":{"width":300,"height":100,"data":[{"x":{"columnID":6,"name":"val1","refDataID":1,"type":"number","processes":[]},"y":{"columnID":7,"name":"the time","refDataID":0,"type":"time","processes":[]}},{"x":{"columnID":8,"name":"AWD","refDataID":3,"type":"time","processes":[]},"y":{"columnID":9,"refDataID":4,"type":"number","processes":[]}}]}}],"data":[{"columnID":0,"name":"the time","rawData":[1,2,3,4],"type":"time","timeformat":1,"processes":[{"processid":0,"name":"add","args":{"value":4}}]},{"columnID":1,"name":"val1","rawData":[0,10,8,2],"type":"number","processes":[{"processid":1,"name":"add","args":{"value":4}},{"processid":2,"name":"sub","args":{"find":0,"replace":0}}]},{"columnID":2,"name":"mycat","rawData":["a","b","b","c"],"type":"category","processes":[]},{"columnID":3,"name":"AWD","rawData":{"start":10,"step":1,"length":5},"type":"time","timeformat":3,"compression":"awd","processes":[]},{"columnID":4,"rawData":[0.5320851666862695,0.08923008150735368],"type":"number","processes":[]},{"columnID":5,"rawData":[0.9092213365565878,0.7247559800547119],"type":"number","processes":[]}]}`
-		);
+	// function load() {
+	// 	const jsonData = JSON.parse(
+	// 		`{"tables":[{"tableid":0,"name":"table 1","columnRefs":[3,1,0]},{"tableid":1,"name":"table 2","columnRefs":[1,2]},{"tableid":2,"name":"table 3","columnRefs":[4,5]}],"plots":[{"plotid":0,"name":"test","type":"Scatterplot","plot":{"width":300,"height":100,"data":[{"x":{"columnID":6,"name":"val1","refDataID":1,"type":"number","processes":[]},"y":{"columnID":7,"name":"the time","refDataID":0,"type":"time","processes":[]}},{"x":{"columnID":8,"name":"AWD","refDataID":3,"type":"time","processes":[]},"y":{"columnID":9,"refDataID":4,"type":"number","processes":[]}}]}}],"data":[{"columnID":0,"name":"the time","rawData":[1,2,3,4],"type":"time","timeformat":1,"processes":[{"processid":0,"name":"add","args":{"value":4}}]},{"columnID":1,"name":"val1","rawData":[0,10,8,2],"type":"number","processes":[{"processid":1,"name":"add","args":{"value":4}},{"processid":2,"name":"sub","args":{"find":0,"replace":0}}]},{"columnID":2,"name":"mycat","rawData":["a","b","b","c"],"type":"category","processes":[]},{"columnID":3,"name":"AWD","rawData":{"start":10,"step":1,"length":5},"type":"time","timeformat":3,"compression":"awd","processes":[]},{"columnID":4,"rawData":[0.5320851666862695,0.08923008150735368],"type":"number","processes":[]},{"columnID":5,"rawData":[0.9092213365565878,0.7247559800547119],"type":"number","processes":[]}]}`
+	// 	);
 
-		//reset things
-		core.data = [];
-		core.tables = [];
-		core.plots = [];
+	// 	//reset things
+	// 	core.data = [];
+	// 	core.tables = [];
+	// 	core.plots = [];
 
-		//load in the data
-		jsonData.data.map((datajson) => {
-			core.data.push(Column.fromJSON(datajson));
-		});
-		//Set up the tables
-		jsonData.tables.map((tablejson) => {
-			core.tables.push(Table.fromJSON(tablejson));
-		});
-		//Make the plots
-		jsonData.plots.map((plotjson) => {
-			core.plots.push(Plot.fromJSON(plotjson));
-		});
-	}
+	// 	//load in the data
+	// 	jsonData.data.map((datajson) => {
+	// 		core.data.push(Column.fromJSON(datajson));
+	// 	});
+	// 	//Set up the tables
+	// 	jsonData.tables.map((tablejson) => {
+	// 		core.tables.push(Table.fromJSON(tablejson));
+	// 	});
+	// 	//Make the plots
+	// 	jsonData.plots.map((plotjson) => {
+	// 		core.plots.push(Plot.fromJSON(plotjson));
+	// 	});
+	// }
 </script>
 
 <!-- <svelte:head>

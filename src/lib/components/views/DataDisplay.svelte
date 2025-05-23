@@ -1,10 +1,8 @@
 <script>
-	// import CollapsibleSection from '$lib/ui/CollapsibleSection.svelte';
 	import { core } from '$lib/core/theCore.svelte.js';
 	import Icon from '$lib/icon/Icon.svelte';
 
 	import { data } from '$lib/store.svelte';
-	// import { DataItem } from '$lib/models/data/dataItem.svelte';
 	import { simulateData, importData } from '$lib/models/data/dataTree.svelte';
 	import {
 		importDataUtils,
@@ -33,15 +31,8 @@
 	
 
 	// test reactivity
-	function changeName() {
-		/*
-        change name of simulate_0 to happy_data
-        */
-		core.tables[0].name = 'happy_data' + Math.round(Math.random() * 10, 2);
-	}
-
 	function changeDataFieldContent() {
-		core.data[0].rawData[0] = core.data[0].rawData[0] + Math.round(Math.random() * 10, 2);
+		core.data[0].dataFields[1].dataArr[0] = core.data[0].dataFields[1].dataArr[0] + Math.round(Math.random() * 10, 2);
 	}
 
 </script>
@@ -57,7 +48,7 @@
 		</div>
 	</div>
 
-	<div class="data-list">
+	<!-- <div class="data-list">
 		{#each core.tables as table}
 			<details open>
 				<summary>{table.tableid} - {table.name}</summary>
@@ -73,6 +64,28 @@
 							</details>
 						{/if}
 					{/each}
+				{/each}
+			</details>
+		{/each}
+	</div> -->
+
+	<div class="data-list">
+		{#each core.data as entry (entry.id)}
+			<details>
+				<summary>{entry.name}</summary>
+                <button onclick={() => entry.setName('happy_data' + Math.round(Math.random() * 10, 2))}> change item name </button>
+				<p><strong>importedFrom:</strong>{entry.importedFrom}</p>
+				<p><strong>Length:</strong>{entry.dataLength}</p>
+
+				{#each entry.dataFields as field (field.id)}
+					<details>
+						<summary>{field.type}</summary>
+						<ul>
+							{#each field.dataArr.slice(0, 5) as test}
+								<li>{test}</li>
+							{/each}
+						</ul>
+					</details>
 				{/each}
 			</details>
 		{/each}
@@ -100,38 +113,6 @@
 			<button class="btn" onclick={confirmImport}>Import Data</button>
 		{/if}
 	</div>
-
-	<!-- <div class="data-list">
-        {#each data as entry (entry.id)}
-        {#each data as entry (entry.id)}
-            <details>
-                <summary>{entry.displayName}</summary>
-
-                    <p><strong>ID:</strong> {entry.id}</p>
-                    <p><strong>Length:</strong> {entry.datalength}</p>
-    
-                    <details>
-                    <summary>time</summary>
-                    <ul>
-                        {#each entry.data.time.data.slice(0,5) as ts}
-                        <li>{ts}</li>
-                        {/each}
-                    </ul>
-                    </details>
-    
-                    <details>
-                    <summary>values</summary>
-                    <ul>
-                        {#each entry.data.value.data.slice(0,5) as ts}
-                        <li>{ts}</li>
-                        {/each}
-                    </ul>
-                    </details>
-                
-            </details>
-            
-        {/each}
-    </div> -->
 </div>
 
 <style>

@@ -1,21 +1,21 @@
 import { Process } from '$lib/core/Process.svelte.js';
 import { core } from '$lib/core/theCore.svelte.js';
 
-let columnidCounter = 0;
+let idCounter = 0;
 
 export class Column {
-	columnID;
+	id;
 	refDataID = $state(null); //if it is a column that is based on another
 	rawData = null; //if it has raw data, store that here
 	compression = $state(null);
 	name = $derived.by(() => {
 		if (this.refDataID !== null) {
-			return core.data.find((column) => column.columnID === this.refDataID)?.name;
+			return core.data.find((column) => column.id === this.refDataID)?.name;
 		}
 	});
 	type = $derived.by(() => {
 		if (this.refDataID !== null) {
-			return core.data.find((column) => column.columnID === this.refDataID)?.type;
+			return core.data.find((column) => column.id === this.refDataID)?.type;
 		}
 	});
 	timeformat = $state();
@@ -23,11 +23,11 @@ export class Column {
 
 	constructor({ ...columnData }, id = null) {
 		if (id === null) {
-			this.columnID = columnidCounter;
-			columnidCounter++;
+			this.id = idCounter;
+			idCounter++;
 		} else {
-			this.columnID = id;
-			columnidCounter = Math.max(id + 1, columnidCounter + 1);
+			this.id = id;
+			idCounter = Math.max(id + 1, idCounter + 1);
 		}
 		//Assign the other data
 		Object.assign(this, structuredClone(columnData));
@@ -54,7 +54,7 @@ export class Column {
 		let out = [];
 		//if there is a reference, then just get that data
 		if (this.refDataID != null) {
-			out = core.data.find((column) => column.columnID === this.refDataID)?.getData();
+			out = core.data.find((column) => column.id === this.refDataID)?.getData();
 		} else {
 			//get the raw data
 			out = this.rawData;
@@ -82,7 +82,7 @@ export class Column {
 	}
 
 	toJSON() {
-		let jsonOut = { columnID: this.columnID, name: this.name };
+		let jsonOut = { id: this.id, name: this.name };
 		if (this.refDataID != null) {
 			jsonOut.refDataID = this.refDataID;
 		} else {
@@ -100,7 +100,7 @@ export class Column {
 	}
 
 	static fromJSON(json) {
-		const { columnID, name, type, refDataID, rawData, timeformat, processes, compression } = json;
+		const { id, name, type, refDataID, rawData, timeformat, processes, compression } = json;
 		let column = new Column(
 			{
 				name,
@@ -111,7 +111,7 @@ export class Column {
 				timeformat: timeformat ?? '',
 				processes: []
 			},
-			columnID
+			id
 		);
 		processes.map((p) => column.processes.push(Process.fromJSON(p)));
 		return column;
