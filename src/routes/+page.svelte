@@ -9,7 +9,7 @@
 	import { core } from '$lib/core/theCore.svelte.js';
 	import { Column } from '$lib/core/Column.svelte';
 	import { Table } from '$lib/core/Table.svelte';
-	import { Plot } from '$lib/core/Plot.svelte';
+	import Plotcomponent, { Plot } from '$lib/core/Plot.svelte';
 	import { onMount } from 'svelte';
 	import Visualise from '$lib/components/Visualise.svelte';
 
@@ -90,7 +90,7 @@
 		core.tables[1].columnRefs = [d1id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
 
 		core.plots = [];
-		core.plots.push(new Plot({ name: 'test scatterplot', type: 'Scatterplot' }));
+		core.plots.push(new Plot({ name: 'test scatterplot', type: 'scatterplot' }));
 	}
 
 	function load() {
@@ -125,6 +125,10 @@
 
 <Navbar />
 <ViewDisplay />
+
+{#each core.plots as plot}
+	<Plotcomponent {plot} />
+{/each}
 
 <!--
 <p>Data:</p>
