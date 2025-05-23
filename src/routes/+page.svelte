@@ -90,7 +90,7 @@
 		core.tables[1].columnRefs = [d1id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
 
 		core.plots = [];
-		core.plots.push(new Plot({ name: 'test scatterplot', type: 'scatterplot' }));
+		core.plots.push(new Plot({ name: 'testscatterplot', type: 'scatterplot' }));
 	}
 
 	function load() {

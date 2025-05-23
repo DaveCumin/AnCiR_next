@@ -143,7 +143,9 @@
 				},
 				columnID
 			);
-			processes.map((p) => column.processes.push(Process.fromJSON(p, column)));
+			if (processes?.length > 0) {
+				processes.map((p) => column.processes.push(Process.fromJSON(p, column)));
+			}
 			return column;
 		}
 	}

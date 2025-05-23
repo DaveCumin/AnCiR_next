@@ -19,42 +19,52 @@
 		y = $state();
 		colour = $state(getRandomColor());
 		polyline = $derived.by(() => {
-			const tempx = this.x?.getData() ?? [];
-			const tempy = this.y?.getData() ?? [];
-			if (tempx.length === 0 || tempy.length === 0) return '';
-
-			const xmax = Math.max(...tempx) || 1; // Avoid division by zero
-			const ymax = Math.max(...tempy) || 1;
 			let out = '';
-			for (let p = 0; p < Math.min(tempx.length, tempy.length); p++) {
+			let tempx = this.x.getData() ?? [];
+			let tempy = this.y.getData() ?? [];
+
+			const xmax = Math.max(...tempx);
+			const ymax = Math.max(...tempy);
+
+			console.log(
+				'ylims: ',
+				this.parent.ylims,
+				'width: ',
+				this.parent.parent.width,
+				', or ',
+				this.parent.width
+			);
+			for (let p = 0; p < tempx.length; p++) {
 				out +=
-					(this.parent.width * tempx[p]) / xmax +
+					(this.parent.parent.width * tempx[p]) / xmax +
 					',' +
-					(this.parent.height - (this.parent.height * tempy[p]) / ymax) +
+					(this.parent.parent.height -
+						(this.parent.parent.height * tempy[p]) / this.parent.ylims[1]) +
 					' ';
 			}
-			return out.trim();
+
+			return out;
 		});
 
 		constructor(parent, dataIN) {
 			this.parent = parent;
-			this.x = dataIN?.x
-				? Column.fromJSON(dataIN.x)
-				: new Column({ refDataID: this.getValidColumnID() });
-			this.y = dataIN?.y
-				? Column.fromJSON(dataIN.y)
-				: new Column({ refDataID: this.getValidColumnID() });
-		}
 
-		getValidColumnID() {
-			const options = Array.from(core.data.keys());
-			return options.length > 0 ? options[Math.floor(Math.random() * options.length)] : -1;
+			if (dataIN && dataIN.x) {
+				this.x = Column.fromJSON(dataIN.x);
+			} else {
+				this.x = new Column({ refDataID: -1 });
+			}
+			if (dataIN && dataIN.y) {
+				this.y = Column.fromJSON(dataIN.y);
+			} else {
+				this.y = new Column({ refDataID: -1 });
+			}
 		}
 
 		toJSON() {
 			return {
-				x: this.x.toJSON(),
-				y: this.y.toJSON(),
+				x: this.x,
+				y: this.y,
 				colour: this.colour
 			};
 		}
@@ -68,50 +78,44 @@
 	}
 
 	export class Scatterplotclass {
-		width = $state(400);
-		height = $state(100);
+		parent = $state();
 		data = $state([]);
 		ylims = $derived.by(() => {
 			let ymin = Infinity;
 			let ymax = -Infinity;
-			for (const d of this.data) {
-				const tempy = d.y?.getData() ?? [];
-				if (tempy.length > 0) {
-					ymin = Math.min(ymin, Math.min(...tempy));
-					ymax = Math.max(ymax, Math.max(...tempy));
-				}
-			}
-			return [ymin === Infinity ? 0 : ymin, ymax === -Infinity ? 1 : ymax];
+			this.data.forEach((d, i) => {
+				let tempy = this.data[i].y.getData() ?? [];
+				ymin = Math.min(ymin, Math.min(...tempy));
+				ymax = Math.max(ymax, Math.max(...tempy));
+			});
+			return [ymin, ymax];
 		});
 
-		constructor(width, height, dataIN) {
-			this.width = width || 400;
-			this.height = height || 100;
+		constructor(parent, dataIN) {
+			this.parent = parent;
 			if (dataIN) {
 				this.addData(dataIN);
 			}
 		}
 
 		addData(dataIN) {
-			this.data = [...this.data, new ScatterDataclass(this, dataIN)];
+			console.log('din: ', dataIN);
+			this.data.push(new ScatterDataclass(this, dataIN));
 		}
-
 		removeData(idx) {
-			this.data = this.data.filter((_, i) => i !== idx);
+			this.data.splice(idx, 1);
 		}
 
 		toJSON() {
 			return {
-				width: this.width,
-				height: this.height,
-				data: this.data.map((d) => d.toJSON())
+				data: this.data
 			};
 		}
-
 		static fromJSON(json) {
 			if (!json) {
-				return new Scatterplotclass(400, 100);
+				return new Scatterplotclass();
 			}
+			//TODO: fix this.
 			const { width, height, data } = json;
 			const scatter = new Scatterplotclass(width, height);
 			if (data) {
@@ -123,7 +127,7 @@
 </script>
 
 <script>
-	let { theData = $bindable(), which = 'plot' } = $props();
+	let { theData, which } = $props();
 
 	function pickRandomData() {
 		const options = Array.from(core.data.keys());
@@ -133,7 +137,7 @@
 
 {#snippet controls(theData)}
 	<div>
-		<p>{JSON.stringify(theData)}</p>
+		<p>controls: {JSON.stringify(theData)}; Parent: {theData.parent}</p>
 		<p>Data:</p>
 		<button
 			on:click={() =>
@@ -198,15 +202,14 @@
 {/snippet}
 
 {#snippet plot(theData)}
-	<p>{JSON.stringify(theData)}</p>
-	<!-- <svg width={theData.width} height={theData.height} style="background: grey;">
+	<p>{theData.data[0].polyline}</p>
+	<svg width={theData.width} height={theData.height} style="background: grey;">
 		{#each theData.data as datum}
 			{#if datum.polyline}
 				<polyline fill="none" stroke={datum.colour} stroke-width="3" points={datum.polyline} />
 			{/if}
 		{/each}
 	</svg>
-	-->
 {/snippet}
 
 {#if which === 'plot'}

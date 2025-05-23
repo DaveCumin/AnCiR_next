@@ -53,9 +53,11 @@
 	let { plot } = $props();
 </script>
 
-<p>{JSON.stringify(plot)}</p>
-
 <Box {plot}>
 	<p>{plot.name}</p>
-	<svelte:component this={plotMap.get(plot.type).plot} plotData={plot.plot} which="plot" />
+	<svelte:component this={plotMap.get(plot.type).plot} theData={plot.plot} which="plot" />
 </Box>
+
+<div style="margin-left:40vw">
+	<svelte:component this={plotMap.get(plot.type).plot} theData={plot.plot} which="controls" />
+</div>
