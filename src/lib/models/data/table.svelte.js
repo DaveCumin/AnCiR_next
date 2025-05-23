@@ -1,12 +1,12 @@
 import { forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
-import { DataField } from './dataField.svelte';
+import { Column } from './column.svelte';
 
 let _counter = 0;
 function getNextId() {
 	return _counter++;
 }
 
-export class DataItem {
+export class Table {
 	id;
 	name = $state('');
 	importedFrom = '';
@@ -29,8 +29,8 @@ export class DataItem {
 
 
 	// create simulated data through static function
-	static simulateDataItem(Ndays, fs_min, startDate, periods, maxHeights) {
-		const item = new DataItem('', `simulated(${Ndays},${maxHeights[0]})`, Ndays * 24 * (60 / fs_min));
+	static simulateTable(Ndays, fs_min, startDate, periods, maxHeights) {
+		const item = new Table('', `simulated(${Ndays},${maxHeights[0]})`, Ndays * 24 * (60 / fs_min));
 		item.setName(`Simulated_${item.id}`);
 		item.simulateData(fs_min, startDate, periods, maxHeights);
 		return item;
@@ -38,14 +38,14 @@ export class DataItem {
 
 	simulateData(fs_min, startDate, periods, maxHeights) {
 		//time
-		const dft = new DataField(this.id, 'time');
-		dft.simulateDataField(fs_min, startDate, periods, maxHeights, this.dataLength);
+		const dft = new Column(this.id, 'time');
+		dft.simulateColumn(fs_min, startDate, periods, maxHeights, this.dataLength);
 		this.dataFields.push(dft);
 
 		//value
 		for (let i = 0; i < periods.length; i++) {
-			const dfv = new DataField(this.id, 'value');
-			dfv.simulateDataField(fs_min, startDate, periods[i], maxHeights[i], this.dataLength);
+			const dfv = new Column(this.id, 'value');
+			dfv.simulateColumn(fs_min, startDate, periods[i], maxHeights[i], this.dataLength);
 			this.dataFields.push(dfv);
 		}
 	}

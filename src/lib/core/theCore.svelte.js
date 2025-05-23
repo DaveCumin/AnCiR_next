@@ -8,7 +8,7 @@ export const appState = $state({
 });
 
 export function pushObj(obj) {
-	if (obj instanceof ModelIndex['DataItem']) {
+	if (obj instanceof ModelIndex['Table']) {
 		core.data.push(obj);
 	}
 }

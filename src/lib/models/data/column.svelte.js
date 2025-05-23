@@ -6,7 +6,7 @@ function getNextId() {
 	return _counter++;
 }
 
-export class DataField {
+export class Column {
 	id;
 	parentId = $state();
 	refId = $state(null); //if it is a column that is based on another
@@ -36,7 +36,7 @@ export class DataField {
 
 
     // Simulate new dataField based on type
-    simulateDataField(fs_min, startDate, period, maxHeight, dataLength) {
+    simulateColumn(fs_min, startDate, period, maxHeight, dataLength) {
         switch (this.type) {
             case 'time':
                 this.generateTimeData(fs_min, startDate, dataLength);

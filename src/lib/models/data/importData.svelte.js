@@ -3,8 +3,8 @@
 import { DateTime } from 'luxon';
 
 import { pushObj } from '$lib/core/theCore.svelte';
-import { DataItem } from '$lib/models/data/dataItem.svelte';
-import { DataField } from '$lib/models/data/dataField.svelte';
+import { Table } from '$lib/models/data/table.svelte';
+import { Column } from '$lib/models/data/column.svelte';
 import {
     guessDateofArray,
     forceFormat,
@@ -214,8 +214,8 @@ async function loadData() {
 // TODO_med: check the logic here, as the Sampling freq isn't updating properly for times.
 function doBasicFileImport(result, fname) {
 
-    // create dataItem object with constructor(ID, importedFrom, displayName, dataLength)
-    const newDataEntry = new DataItem(
+    // create Table object with constructor(ID, importedFrom, displayName, dataLength)
+    const newDataEntry = new Table(
         '',
         fname,
         result[Object.keys(result)[0]].length
@@ -231,7 +231,7 @@ function doBasicFileImport(result, fname) {
 
         if (guessedFormat != -1) {
             const timefmt = guessedFormat;
-            const df = new DataField(newDataEntry.id, 'time')
+            const df = new Column(newDataEntry.id, 'time')
             df.name = f;
             df.dataArr = forceFormat(result[f], timefmt);
             // this.properties = {
@@ -240,12 +240,12 @@ function doBasicFileImport(result, fname) {
             // };
             newDataEntry.dataFields.push(df);
         } else if (!isNaN(datum)) {
-            const df = new DataField(newDataEntry.id, 'value')
+            const df = new Column(newDataEntry.id, 'value')
             df.name = f;
             df.dataArr = result[f];
             newDataEntry.dataFields.push(df);
         } else {
-            const df = new DataField(i, 'category')
+            const df = new Column(i, 'category')
             df.name = f;
             df.dataArr = result[f];
             newDataEntry.dataFields.push(df);

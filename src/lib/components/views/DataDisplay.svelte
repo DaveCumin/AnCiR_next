@@ -2,7 +2,6 @@
 	import { core } from '$lib/core/theCore.svelte.js';
 	import Icon from '$lib/icon/Icon.svelte';
 
-	import { data } from '$lib/store.svelte';
 	import { simulateData, importData } from '$lib/models/data/dataTree.svelte';
 	import {
 		importDataUtils,

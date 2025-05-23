@@ -1,14 +1,13 @@
 // @ts-nocheck
 import { DateTime } from 'luxon';
 
-import { data } from '$lib/store.svelte';
 import { pushObj } from '$lib/core/theCore.svelte';
-import { DataItem } from '$lib/models/data/dataItem.svelte';
+import { Table } from '$lib/models/data/table.svelte';
 
 export function simulateData() {
     // manual handle simulate 
     // create new DataItem object with static method simulateDataItem(Ndays, fs_min, startDate, periods, maxHeights, ID)
-    const newDataEntry = DataItem.simulateDataItem(
+    const newDataEntry = Table.simulateTable(
         28,
         15,
         DateTime.now()
