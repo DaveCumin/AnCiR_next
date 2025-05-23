@@ -152,7 +152,7 @@
 
 {#snippet controls(theData)}
 	<div>
-		<p>Data:</p>
+		<p>Data for: {theData.parent.name}</p>
 		<button
 			onclick={() =>
 				theData.addData({

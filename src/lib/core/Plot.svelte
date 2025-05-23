@@ -5,7 +5,7 @@
 
 	export class Plot {
 		plotid;
-		name = '';
+		name = $state('plot' + this.plotid);
 		x = $state(0);
 		y = $state(0);
 		width = $state(200);
@@ -52,14 +52,16 @@
 	import Box from '$lib/components/Box.svelte';
 	let { plot } = $props();
 	const Plot = appConsts.plotMap.get(plot.type).plot ?? null;
+	let options = $state({ x: 0, y: 0, width: 200, height: 150 });
 </script>
 
-<p>{JSON.stringify(plot)}</p>
 <Box {plot}>
 	<p><input type="text" bind:value={plot.name} /></p>
 	<Plot theData={plot} which="plot" />
 </Box>
 
-<div style="margin-left:40vw">
-	<Plot theData={plot.plot} which="controls" />
-</div>
+<Box plot={options}>
+	<div>
+		<Plot theData={plot.plot} which="controls" />
+	</div>
+</Box>
