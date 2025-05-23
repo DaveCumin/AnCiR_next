@@ -60,7 +60,7 @@ export function getDataFromSource(sourceIndex, vals) {
 	for (let p = 0; p < vals.processSteps.length; p++) {
 		const processName = vals.processSteps[p].process;
 		const processFunction = componentMap[processName].func;
-		// Check if the function exists in the processMap
+		// Check if the function exists in the appConsts.processMap
 		if (typeof processFunction === 'function') {
 			dataFromSource = processFunction(dataFromSource, vals.processSteps[p].parameters); //CALL THE FUNCTION WITH PARAMS
 		} else {

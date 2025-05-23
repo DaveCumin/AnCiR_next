@@ -2,6 +2,10 @@ export const core = $state({});
 export const app_state = $state({
 	current_tab: 'data'
 });
+export const appConsts = $state({
+	processMap: new Map(),
+	plotMap: new Map()
+});
 
 //TODOs:
 //- consider states for:

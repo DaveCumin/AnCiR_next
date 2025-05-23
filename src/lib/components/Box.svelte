@@ -132,6 +132,8 @@
 	};
 </script>
 
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="box"
 	style="min-width:{minWidth}px; min-height:{minHeight}px; width:{plot.width}px; height:{plot.height}px; 
@@ -201,6 +203,7 @@
 	></div>
 
 	<!-- Resize Handle -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="resize-handle"
 		onmousedown={startResize}

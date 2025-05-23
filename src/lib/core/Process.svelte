@@ -1,5 +1,5 @@
 <script module>
-	import { processMap } from '$lib/processes/processMap';
+	import { appConsts } from '$lib/core/theCore.svelte';
 
 	let processidCounter = 0;
 
@@ -22,7 +22,7 @@
 			//set the name
 			this.name = dataIN.name;
 			//set the function and return an error if it doesn't exist
-			const funcEntry = processMap.get(this.name);
+			const funcEntry = appConsts.processMap.get(this.name);
 			if (!funcEntry) {
 				this.processFunc = (x) => {
 					return x;
@@ -63,7 +63,7 @@
 
 <script>
 	let { p } = $props();
-	const Process = processMap.get(p.name).component ?? null;
+	const Process = appConsts.processMap.get(p.name).component ?? null;
 </script>
 
 {#if Process}

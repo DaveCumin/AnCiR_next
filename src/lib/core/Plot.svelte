@@ -1,5 +1,5 @@
 <script module>
-	import { plotMap } from '$lib/plots/plotMap';
+	import { appConsts } from '$lib/core/theCore.svelte';
 
 	let plotidCounter = 0;
 
@@ -25,7 +25,7 @@
 			this.name = dataIN.name;
 			//need to make the plot
 			this.type = dataIN.type;
-			this.plot = plotMap.get(dataIN.type).data.fromJSON(this, dataIN.plot);
+			this.plot = appConsts.plotMap.get(dataIN.type).data.fromJSON(this, dataIN.plot);
 		}
 
 		toJSON() {
@@ -51,7 +51,7 @@
 <script>
 	import Box from '$lib/components/Box.svelte';
 	let { plot } = $props();
-	const Plot = plotMap.get(plot.type).plot ?? null;
+	const Plot = appConsts.plotMap.get(plot.type).plot ?? null;
 </script>
 
 <p>{JSON.stringify(plot)}</p>

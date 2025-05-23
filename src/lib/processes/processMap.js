@@ -1,4 +1,4 @@
-async function loadProcesses() {
+export async function loadProcesses() {
 	// Same loadPlots implementation as above
 	const sveltePaths = import.meta.glob('$lib/processes/*.svelte', { eager: false });
 	const processMap = new Map();
@@ -21,5 +21,3 @@ async function loadProcesses() {
 	}
 	return processMap;
 }
-
-export const processMap = await loadProcesses();

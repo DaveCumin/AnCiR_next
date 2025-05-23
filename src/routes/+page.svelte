@@ -5,8 +5,9 @@
 	import '../app.css';
 	import Navbar from '$lib/components/Navbar.svelte';
 	import ViewDisplay from '../lib/components/ViewDisplay.svelte';
-
-	import { core } from '$lib/core/theCore.svelte.js';
+	import { loadProcesses } from '$lib/processes/processMap.js';
+	import { loadPlots } from '$lib/plots/plotMap.js';
+	import { core, appConsts } from '$lib/core/theCore.svelte.js';
 	import { Column } from '$lib/core/Column.svelte';
 	import { Table } from '$lib/core/Table.svelte';
 	import Plotcomponent, { Plot } from '$lib/core/Plot.svelte';
@@ -25,10 +26,10 @@
 			newDataEntry = new Column({
 				type,
 				rawData: [
-					Math.round(10 * Math.random(), 2),
-					Math.round(10 * Math.random(), 2),
-					Math.round(10 * Math.random(), 2),
-					Math.round(10 * Math.random(), 2)
+					Math.round(10 * Math.random()),
+					Math.round(10 * Math.random()),
+					Math.round(10 * Math.random()),
+					Math.round(10 * Math.random())
 				],
 				name,
 				provenance
@@ -42,6 +43,9 @@
 	}
 
 	onMount(async () => {
+		//load the maps
+		appConsts.processMap = await loadProcesses();
+		appConsts.plotMap = await loadPlots();
 		refresh();
 	});
 
@@ -202,7 +206,7 @@
 <Visualise />
 
 <pre>{JSON.stringify(core, null, 2)}</pre>
--->
+
 <style>
 	section {
 		padding: 8px;
@@ -211,3 +215,4 @@
 		background: grey;
 	}
 </style>
+-->

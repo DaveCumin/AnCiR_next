@@ -1,4 +1,4 @@
-async function loadPlots() {
+export async function loadPlots() {
 	// Same loadPlots implementation as above
 	const sveltePaths = import.meta.glob('$lib/plots/**/*.svelte', { eager: false });
 	const plotMap = new Map();
@@ -41,8 +41,6 @@ async function loadPlots() {
 			console.error(`Error loading ${sveltePath}:`, error);
 		}
 	}
-	console.log('PlotMap:', plotMap);
+	console.log('plotMap:', plotMap);
 	return plotMap;
 }
-
-export const plotMap = await loadPlots();
