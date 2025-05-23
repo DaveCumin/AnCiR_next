@@ -59,8 +59,8 @@
 		isDragging = true;
 		initialMouseX = event.clientX;
 		initialMouseY = event.clientY;
-		initialX = core.plots[0].x;
-		initialY = core.plots[0].y;
+		initialX = plot.x;
+		initialY = plot.y;
 		document.addEventListener('mousemove', doDrag);
 		document.addEventListener('mouseup', stopDrag);
 	};
@@ -71,21 +71,21 @@
 			event.preventDefault();
 			const deltaX = event.clientX - initialMouseX;
 			const deltaY = event.clientY - initialMouseY;
-			core.plots[0].x = initialX + deltaX;
-			core.plots[0].y = initialY + deltaY;
+			plot.x = initialX + deltaX;
+			plot.y = initialY + deltaY;
 
 			//snap to grid
-			core.plots[0].x = Math.round(core.plots[0].x / gridSize) * gridSize;
-			core.plots[0].y = Math.round(core.plots[0].y / gridSize) * gridSize;
+			plot.x = Math.round(plot.x / gridSize) * gridSize;
+			plot.y = Math.round(plot.y / gridSize) * gridSize;
 
 			//Need to keep the div in the parent
 			//left
-			if (core.plots[0].x < 0) {
-				core.plots[0].x = 0;
+			if (plot.x < 0) {
+				plot.x = 0;
 			}
 			//top
-			if (core.plots[0].y < 0) {
-				core.plots[0].y = 0;
+			if (plot.y < 0) {
+				plot.y = 0;
 			}
 			//the right and bottom will auto move in the div - it will grow with scrollbar
 		}
@@ -102,8 +102,8 @@
 		isResizing = true;
 		initialMouseX = event.clientX;
 		initialMouseY = event.clientY;
-		initialWidth = core.plots[0].width;
-		initialHeight = core.plots[0].height;
+		initialWidth = plot.width;
+		initialHeight = plot.height;
 		document.addEventListener('mousemove', doResize);
 		document.addEventListener('mouseup', stopResize);
 	};
@@ -114,14 +114,8 @@
 			event.preventDefault();
 			const deltaX = event.clientX - initialMouseX;
 			const deltaY = event.clientY - initialMouseY;
-			core.plots[0].width = Math.max(
-				minWidth,
-				Math.round((initialWidth + deltaX) / gridSize) * gridSize
-			);
-			core.plots[0].height = Math.max(
-				minHeight,
-				Math.round((initialHeight + deltaY) / gridSize) * gridSize
-			);
+			plot.width = Math.max(minWidth, Math.round((initialWidth + deltaX) / gridSize) * gridSize);
+			plot.height = Math.max(minHeight, Math.round((initialHeight + deltaY) / gridSize) * gridSize);
 		}
 	};
 
@@ -139,7 +133,7 @@
 	style="min-width:{minWidth}px; min-height:{minHeight}px; width:{plot.width}px; height:{plot.height}px; 
             background-color: pink; position: relative; 
                        border-radius: 8px; padding:3px; margin:3px;
-            transform:translate3d({core.plots[0].x}px, {core.plots[0].y}px, 0px);
+            transform:translate3d({plot.x}px, {plot.y}px, 0px);
               position:absolute;"
 	onclick={(e) => {
 		//thestate.currentBoxID = id;
@@ -149,7 +143,7 @@
 	<div
 		class="content"
 		style=" position:relative; 
-              overflow:auto; width:100%; height:100%;"
+              overflow:auto; width:100%; height:100%; z-index:100000;"
 	>
 		{@render children?.()}
 	</div>
@@ -192,8 +186,8 @@
 	<!-- Drag Handle (a border around the box) -->
 	<div
 		class="drag-handle"
-		style="width: calc({core.plots[0].width}px + {borderOffset * 2}px);
-          height: calc({core.plots[0].height}px + {borderOffset * 2}px + {topHeight}px);
+		style="width: calc({plot.width}px + {borderOffset * 2}px);
+          height: calc({plot.height}px + {borderOffset * 2}px + {topHeight}px);
           left: -{borderOffset}px;
           top: -{borderOffset}px;
           cursor: {dragcursor};

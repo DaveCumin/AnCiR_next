@@ -1,5 +1,6 @@
 <script>
 	import { core } from '$lib/core/theCore.svelte.js';
+	import { Plot } from '$lib/core/Plot.svelte';
 </script>
 
 <div class="container">
@@ -16,6 +17,10 @@
 	</div>
 
 	<div class="data-list">
+		<button
+			onclick={() => core.plots.push(new Plot({ name: 'testscatterplot', type: 'scatterplot' }))}
+			>Add Plot</button
+		>
 		{#each core.plots as plot}
 			<details open>
 				<summary

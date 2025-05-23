@@ -56,7 +56,7 @@
 
 <p>{JSON.stringify(plot)}</p>
 <Box {plot}>
-	<p>{plot.name}</p>
+	<p><input type="text" bind:value={plot.name} /></p>
 	<Plot theData={plot} which="plot" />
 </Box>
 
