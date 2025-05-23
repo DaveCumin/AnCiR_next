@@ -40,7 +40,7 @@
 
 <style>
 	.container {
-		width: 4vw;
+		min-width: 48px;
 		height: 100vh;
 		display: flex;
 		flex-direction: column;
