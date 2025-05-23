@@ -1,5 +1,5 @@
-import { Column } from '$lib/core/Column.svelte.js';
-import { Process } from '$lib/core/Process.svelte.js';
+import { Column } from '$lib/core/Column.svelte';
+import { Process } from '$lib/core/Process.svelte';
 import { core } from '$lib/core/theCore.svelte.js';
 
 function getRandomColor() {

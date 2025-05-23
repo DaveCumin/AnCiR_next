@@ -1,7 +1,9 @@
 <script>
 	// import CollapsibleSection from '$lib/ui/CollapsibleSection.svelte';
 	import { core } from '$lib/core/theCore.svelte.js';
+	import Table from '$lib/core/Table.svelte';
 	import Icon from '$lib/icon/Icon.svelte';
+	import Column from '$lib/core/Column.svelte';
 
 	// test reactivity
 	function changeName() {
@@ -12,7 +14,8 @@
 	}
 
 	function changeDataFieldContent() {
-		core.data[0].rawData[0] = core.data[0].rawData[0] + Math.round(Math.random() * 10, 2);
+		console.log(JSON.stringify(core.data[0]));
+		core.data[0].rawData[0] = Math.round(Math.random() * 100, 2);
 	}
 </script>
 
@@ -21,30 +24,18 @@
 		<p>Data Sources</p>
 
 		<div class="add">
-			<button onclick={simulateData}>
+			<button
+				onclick={() =>
+					core.tables.push(new Table({ name: 'table' + Math.round(Math.random() * 1000, 2) }))}
+			>
 				<Icon name="add" width={16} height={16} />
 			</button>
 		</div>
 	</div>
 
-	<div class="data-list">
+	<div class="data-list" style="overflow:scroll;">
 		{#each core.tables as table}
-			<details open>
-				<summary>{table.tableid} - {table.name}</summary>
-				{#each table.columnRefs as col}
-					{#each core.data as dat}
-						{#if dat.columnID == col}
-							<details open>
-								<summary>{dat.name} {dat.columnID}</summary>
-								<ul>
-									{dat.type}
-									<li>{dat.getData().slice(0, 5)}</li>
-								</ul>
-							</details>
-						{/if}
-					{/each}
-				{/each}
-			</details>
+			<Table {table} />
 		{/each}
 	</div>
 

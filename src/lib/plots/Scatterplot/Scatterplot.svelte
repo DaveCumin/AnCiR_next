@@ -31,6 +31,7 @@
 		</p>
 
 		{#each datum.x.processes as p}
+			<!--
 			<div>
 				{p.id}
 				{p.name} -
@@ -44,7 +45,11 @@
 				{/each}
 				<button onclick={() => datum.x.removeProcess(p.processid)}>-</button>
 			</div>
+			-->
+			{p.id}
+			{p.name} -
 		{/each}
+
 		<p>
 			y: {datum.y.name} ({datum.y.getData()}) <input type="number" bind:value={datum.y.refDataID} />
 			<button onclick={() => datum.y.addProcess(Math.random() > 0.5 ? 'add' : 'sub')}
@@ -52,6 +57,7 @@
 			>
 		</p>
 		{#each datum.y.processes as p}
+			<!-- 
 			<div>
 				{p.id}
 				{p.name} -
@@ -65,6 +71,9 @@
 				{/each}
 				<button onclick={() => datum.y.removeProcess(p.processid)}>-</button>
 			</div>
+			-->
+			{p.id}
+			{p.name} -
 		{/each}
 		<input type="color" bind:value={datum.colour} />
 	{/each}
