@@ -51,14 +51,15 @@
 <script>
 	import Box from '$lib/components/Box.svelte';
 	let { plot } = $props();
+	const Plot = plotMap.get(plot.type).plot ?? null;
 </script>
 
 <p>{JSON.stringify(plot)}</p>
 <Box {plot}>
 	<p>{plot.name}</p>
-	<svelte:component this={plotMap.get(plot.type).plot} theData={plot} which="plot" />
+	<Plot theData={plot} which="plot" />
 </Box>
 
 <div style="margin-left:40vw">
-	<svelte:component this={plotMap.get(plot.type).plot} theData={plot.plot} which="controls" />
+	<Plot theData={plot.plot} which="controls" />
 </div>

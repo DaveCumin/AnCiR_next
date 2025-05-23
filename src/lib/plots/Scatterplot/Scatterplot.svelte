@@ -1,5 +1,5 @@
 <!-- src/lib/plots/scatter/Scatterplot.svelte -->
-<script context="module">
+<script module>
 	import { Column } from '$lib/core/Column.svelte';
 	import { Process } from '$lib/core/Process.svelte';
 	import { core } from '$lib/core/theCore.svelte.js';
@@ -154,7 +154,7 @@
 	<div>
 		<p>Data:</p>
 		<button
-			on:click={() =>
+			onclick={() =>
 				theData.addData({
 					x: { refDataID: pickRandomData() },
 					y: { refDataID: pickRandomData() }
@@ -166,12 +166,12 @@
 		{#each theData.data as datum, i}
 			<p>
 				Data {i} ({JSON.stringify(datum)})
-				<button on:click={() => theData.removeData(i)}>-</button>
+				<button onclick={() => theData.removeData(i)}>-</button>
 			</p>
 			<p>
 				x: {datum.x.name} ({datum.x.getData()?.join(', ')})
 				<input type="number" bind:value={datum.x.refDataID} />
-				<button on:click={() => datum.x.addProcess(Math.random() > 0.5 ? 'add' : 'sub')}>
+				<button onclick={() => datum.x.addProcess(Math.random() > 0.5 ? 'add' : 'sub')}>
 					Add process
 				</button>
 			</p>
@@ -186,13 +186,13 @@
 							<input type="text" bind:value={p.args.values[arg]} />
 						{/if}
 					{/each}
-					<button on:click={() => datum.x.removeProcess(p.processid)}>-</button>
+					<button onclick={() => datum.x.removeProcess(p.processid)}>-</button>
 				</div>
 			{/each}
 			<p>
 				y: {datum.y.name} ({datum.y.getData()?.join(', ')})
 				<input type="number" bind:value={datum.y.refDataID} />
-				<button on:click={() => datum.y.addProcess(Math.random() > 0.5 ? 'add' : 'sub')}>
+				<button onclick={() => datum.y.addProcess(Math.random() > 0.5 ? 'add' : 'sub')}>
 					Add process
 				</button>
 			</p>
@@ -207,7 +207,7 @@
 							<input type="text" bind:value={p.args.values[arg]} />
 						{/if}
 					{/each}
-					<button on:click={() => datum.y.removeProcess(p.processid)}>-</button>
+					<button onclick={() => datum.y.removeProcess(p.processid)}>-</button>
 				</div>
 			{/each}
 			<input type="color" bind:value={datum.colour} />

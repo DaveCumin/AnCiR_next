@@ -1,4 +1,4 @@
-<script context="module">
+<script module>
 	import Icon from '$lib/icon/Icon.svelte';
 	import { core } from '$lib/core/theCore.svelte.js';
 
@@ -37,7 +37,7 @@
 
 <script>
 	// @ts-nocheck
-	let { plot } = $props();
+	let { plot, children } = $props();
 
 	function deleteBox() {
 		//thestate.boxes = thestate.boxes.filter((box) => box.id !== id);
@@ -139,7 +139,7 @@
                        border-radius: 8px; padding:3px; margin:3px;
             transform:translate3d({core.plots[0].x}px, {core.plots[0].y}px, 0px);
               position:absolute;"
-	on:click={(e) => {
+	onclick={(e) => {
 		//thestate.currentBoxID = id;
 		e.stopPropagation();
 	}}
@@ -149,7 +149,7 @@
 		style=" position:relative; 
               overflow:auto; width:100%; height:100%;"
 	>
-		<slot></slot>
+		{@render children?.()}
 	</div>
 
 	<!-- Label-->
@@ -161,7 +161,7 @@
 	<div
 		class="layerupbutton boxbutton"
 		style="top:-{borderOffset - 1}px;"
-		on:click={() => {
+		onclick={() => {
 			moveBoxLayer('up');
 		}}
 	>
@@ -171,7 +171,7 @@
 	<div
 		class="layerdownbutton boxbutton"
 		style="top:-{borderOffset - 1}px;"
-		on:click={() => {
+		onclick={() => {
 			moveBoxLayer('down');
 		}}
 	>
@@ -181,7 +181,7 @@
 	<div
 		class="deletebutton boxbutton"
 		style="top:-{borderOffset - 1}px"
-		on:click={() => {
+		onclick={() => {
 			deleteBox();
 		}}
 	>
@@ -197,13 +197,13 @@
           cursor: {dragcursor};
           
           "
-		on:mousedown={startDrag}
+		onmousedown={startDrag}
 	></div>
 
 	<!-- Resize Handle -->
 	<div
 		class="resize-handle"
-		on:mousedown={startResize}
+		onmousedown={startResize}
 		style="bottom: calc(-{borderOffset}px - 4px);
       right: calc(-{borderOffset}px);
       

@@ -11,7 +11,7 @@
 
 <nav class="container">
 	<div class="icon-container">
-		<button on:click={() => switchTab('data')}>
+		<button onclick={() => switchTab('data')}>
 			<Icon
 				name="table"
 				style={app_state.current_tab === 'data' ? 'fill: pink;' : 'fill: #D9D9D9;'}
@@ -19,7 +19,7 @@
 			<!-- <TableIcon /> -->
 		</button>
 
-		<button on:click={() => switchTab('worksheet')}>
+		<button onclick={() => switchTab('worksheet')}>
 			<Icon
 				name="layer"
 				style={app_state.current_tab === 'worksheet' ? 'fill: pink;' : 'fill: #D9D9D9;'}

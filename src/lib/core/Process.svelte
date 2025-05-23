@@ -63,6 +63,11 @@
 
 <script>
 	let { p } = $props();
+	const Process = processMap.get(p.name).component ?? null;
 </script>
 
-<svelte:component this={processMap.get(p.name).component} {p} />
+{#if Process}
+	<Process {p} />
+{:else}
+	<div>Error: No component found for process "{p.name}"</div>
+{/if}

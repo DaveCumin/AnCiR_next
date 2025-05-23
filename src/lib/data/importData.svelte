@@ -308,7 +308,7 @@
 		/>
 		<!-- show -->
 		{#if Object.keys(tempData).length === 0}
-			<button on:click={openFileChoose}>Choose file</button>
+			<button onclick={openFileChoose}>Choose file</button>
 			<lable>Skip lines:</lable><input type="number" bind:value={skipLines} />
 			<lable>Header:</lable><input type="checkbox" label="headers" bind:checked={useHeaders} />
 		{/if}
@@ -322,7 +322,7 @@
 		<!-- show the table of the temp data and allow manipulations -->
 		{#if errorInfile}
 			<p>{filesToImport[0].name}</p>
-			<button on:click={openFileChoose}>Change file</button>
+			<button onclick={openFileChoose}>Change file</button>
 			<!-- svelte-ignore a11y-label-has-associated-control -->
 			<label>Header:</label><input
 				type="checkbox"
@@ -341,7 +341,7 @@
 			<hr />
 		{:else if Object.keys(tempData).length}
 			<p>{filesToImport[0].name}</p>
-			<button on:click={openFileChoose}>Change file</button>
+			<button onclick={openFileChoose}>Change file</button>
 			<!-- svelte-ignore a11y-label-has-associated-control -->
 			<label>Header:</label><input
 				type="checkbox"
@@ -360,7 +360,7 @@
 			<hr />
 			<p>{@html makeTempTable(tempData)}</p>
 			<hr />
-			<button on:click={loadData}>Import</button>
+			<button onclick={loadData}>Import</button>
 		{/if}
 		<!-- show error message if there are errors-->
 	</Dialog>

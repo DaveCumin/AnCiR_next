@@ -84,7 +84,7 @@
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<span class="addSimDataButton" on:click={() => addSimData()}>
+		<span class="addSimDataButton" onclick={() => addSimData()}>
 			➕ <!-- Plus sign symbol -->
 		</span>
 		{#each Array.from({ length: N_simulated }) as _, i}
@@ -98,7 +98,7 @@
 					<!-- svelte-ignore a11y-click-events-have-key-events -->
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
 					<!-- svelte-ignore a11y-click-events-have-key-events -->
-					<div class="removeData hoverbutton" on:click={() => removeSimData(i)}>
+					<div class="removeData hoverbutton" onclick={() => removeSimData(i)}>
 						🗑️ <!-- Trash bin symbol -->
 					</div>
 
@@ -127,7 +127,7 @@
 			</div>
 		{/each}
 
-		<button on:click={() => handleGenerateData(Ndays, fs_min, start, periods, maxheights)}
+		<button onclick={() => handleGenerateData(Ndays, fs_min, start, periods, maxheights)}
 			>Generate</button
 		>
 	</Dialog>
