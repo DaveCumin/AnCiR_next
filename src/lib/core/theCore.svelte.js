@@ -3,8 +3,10 @@ import { ModelIndex } from "$lib/models/modelIndex";
 export const core = $state({
 	data: []
 });
+
 export const appState = $state({
-	currentTab: 'data'
+	currentTab: 'data',
+	addIcon: '',
 });
 
 export function pushObj(obj) {

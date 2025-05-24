@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 
-	let { name = '', width = 24, height = 24, style = 'fill: #D9D9D9;' } = $props();
+	let { name = '', width = 24, height = 24, className = 'icon' } = $props();
 	let svgContent = $state();
 
 	const icons = import.meta.glob('$lib/icon/*.svg', { query: '?raw', import: 'default' });
@@ -13,14 +13,42 @@
 	}
 
 	onMount(async () => {
-		if (icons[name]) {
-			svgContent = await icons[name]();
-		} else {
-			console.error(`Icon "${name}" not found`);
-		}
-	});
+	if (icons[name]) {
+		let raw = await icons[name]();
+
+		// Replace hardcoded fills with fill="currentColor"
+		raw = raw.replace(/fill=".*?"/g, 'fill="currentColor"');
+
+		svgContent = raw;
+	} else {
+		console.error(`Icon "${name}" not found`);
+	}
+});
 </script>
 
-<svg {style} xmlns="http://www.w3.org/2000/svg" {width} {height} viewBox="0 0 24 24">
+<svg
+	xmlns="http://www.w3.org/2000/svg"
+	{width}
+	{height}
+	viewBox="0 0 24 24"
+	class={className}
+>
 	{@html svgContent}
 </svg>
+
+<style>
+	.icon {
+		fill: #d9d9d9;
+		transition: fill 0.2s ease;
+		cursor: pointer;
+	}
+
+	.icon:hover {
+		fill: pink;
+	}
+
+	.icon.active {
+		fill: pink;
+	}
+
+</style>

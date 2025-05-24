@@ -238,17 +238,17 @@ function doBasicFileImport(result, fname) {
             //     timeFormat: timefmt,
             //     recordPeriod: getPeriod(result[f], timefmt),
             // };
-            newDataEntry.dataFields.push(df);
+            newDataEntry.columns.push(df);
         } else if (!isNaN(datum)) {
             const df = new Column(newDataEntry.id, 'value')
             df.name = f;
             df.dataArr = result[f];
-            newDataEntry.dataFields.push(df);
+            newDataEntry.columns.push(df);
         } else {
             const df = new Column(i, 'category')
             df.name = f;
             df.dataArr = result[f];
-            newDataEntry.dataFields.push(df);
+            newDataEntry.columns.push(df);
         }   
     });
     

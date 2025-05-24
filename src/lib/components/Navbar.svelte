@@ -14,7 +14,7 @@
 		<button on:click={() => switchTab('data')}>
 			<Icon
 				name="table"
-				style={appState.currentTab === 'data' ? 'fill: pink;' : 'fill: #D9D9D9;'}
+				className={appState.currentTab === 'data' ? 'icon active' : 'icon'}
 			/>
 			<!-- <TableIcon /> -->
 		</button>
@@ -22,7 +22,7 @@
 		<button on:click={() => switchTab('worksheet')}>
 			<Icon
 				name="layer"
-				style={appState.currentTab === 'worksheet' ? 'fill: pink;' : 'fill: #D9D9D9;'}
+				className={appState.currentTab === 'worksheet' ? 'icon active' : 'icon'}
 			/>
 			<!-- <WorksheetIcon /> -->
 		</button>
@@ -40,7 +40,7 @@
 
 <style>
 	.container {
-		min-width: 48px;
+		min-width: 56px;
 		height: 100vh;
 		display: flex;
 		flex-direction: column;
@@ -60,15 +60,10 @@
 		justify-content: center;
 		align-items: center;
 
-		margin-top: 24px;
-		margin-bottom: 24px;
+		margin-top: 28px;
+		margin-bottom: 28px;
 	}
 
-	/* .icon-container :global(svg) {
-        width: 24px;
-        height: 24px;
-        margin: 0.5rem;
-    } */
 
 	button {
 		background-color: transparent;

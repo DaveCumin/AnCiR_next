@@ -11,7 +11,7 @@ export class Table {
 	name = $state('');
 	importedFrom = '';
 	dataLength = 0;
-	dataFields = $state([]);
+	columns = $state([]);
 
 	// simulate only
 	constructor(name, importedFrom, dataLength) {
@@ -40,13 +40,13 @@ export class Table {
 		//time
 		const dft = new Column(this.id, 'time');
 		dft.simulateColumn(fs_min, startDate, periods, maxHeights, this.dataLength);
-		this.dataFields.push(dft);
+		this.columns.push(dft);
 
 		//value
 		for (let i = 0; i < periods.length; i++) {
 			const dfv = new Column(this.id, 'value');
 			dfv.simulateColumn(fs_min, startDate, periods[i], maxHeights[i], this.dataLength);
-			this.dataFields.push(dfv);
+			this.columns.push(dfv);
 		}
 	}
 }
