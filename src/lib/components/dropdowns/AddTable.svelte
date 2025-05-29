@@ -91,10 +91,12 @@
 				{/if}
 			</div>
 
-			<!-- Add this if you define `let importReady = true;` inside <script> -->
-			{#if importReady}
-				<button class="import-button" onclick={confirmImport}>Import Data</button>
-			{/if}
+			<div class="import-button-container">
+				<!-- Add this if you define `let importReady = true;` inside <script> -->
+				{#if importReady}
+					<button class="import-button" onclick={confirmImport}>Confirm Import</button>
+				{/if}
+			</div>
 		</div>
 	{/snippet}
 </Modal>
@@ -171,21 +173,6 @@
 		background-color: var(--color-hover);
 	}
 
-	.import-button {
-		margin-top: 10px;
-		background-color: var(--color-lightness-95);
-		border-radius: 4px;
-		padding: 10px;
-		padding-right: 12px;
-
-		font-size: 14px;
-		text-align: center;
-	}
-
-	.import-button:hover {
-		background-color: var(--color-hover);
-	}
-
 	.preview-placeholder {
 		width: 100%;
 		min-height: 200px;
@@ -199,7 +186,8 @@
 	/* preview table */
 	:global(.preview-table-wrapper) {
 		overflow-x: auto;
-		margin: 2rem 1rem;
+		margin-top: 1.5rem;
+		margin-bottom: 1rem;
 	}
 
 	:global(.preview-table-wrapper table) {
@@ -232,4 +220,27 @@
 	/* :global(.preview-table-wrapper tbody tr:hover) {
 		background-color: var(--color-lightness-85); 
 	}*/
+
+	.import-button-container {
+		display: flex;
+		justify-content: flex-end;
+		/* margin-right: 1rem; */
+	}
+
+	.import-button {
+		margin-top: 10px;
+		background-color: var(--color-lightness-95);
+		border-radius: 4px;
+		padding: 10px;
+		padding-right: 12px;
+
+		font-size: 14px;
+		text-align: center;
+	}
+
+	.import-button:hover {
+		background-color: var(--color-hover);
+	}
+
+
 </style>

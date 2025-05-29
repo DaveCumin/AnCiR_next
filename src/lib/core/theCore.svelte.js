@@ -1,7 +1,9 @@
 import { ModelIndex } from "$lib/models/modelIndex";
 
 export const core = $state({
-	data: []
+	table: [],
+	data: [],
+	process: [],
 });
 
 export const appState = $state({
