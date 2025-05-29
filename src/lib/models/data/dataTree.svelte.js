@@ -1,14 +1,15 @@
 // @ts-nocheck
 import { DateTime } from 'luxon';
 
-import { pushObj } from '$lib/core/theCore.svelte';
+import { appState, pushObj } from '$lib/core/theCore.svelte';
 import { Table } from '$lib/models/data/table.svelte';
 
-// import {
-//     importDataUtils,
-//     setFilesToImport,
-//     getTempData
-// } from '$lib/models/data/importData.svelte';
+import {
+    utils,
+    getFilesToImport,
+    setFilesToImport,
+    getTempData
+} from '$lib/models/data/importData.svelte';
 
 export function simulateData() {
     // manual handle simulate 
@@ -29,13 +30,15 @@ export function simulateData() {
     );
 
     pushObj(newDataEntry);
+    appState.addIcon = '';
 }
 
 // handleSimulateData()
 
-// export async function importData(e) {
-//     setFilesToImport(e.target.files);
-//     await importDataUtils.parseFile(6);
-//     previewHTML = importDataUtils.makeTempTable(getTempData());
-//     importReady = true;
-// }
+// ImportData
+export const ImportData = {
+	utils,
+    getFilesToImport,
+	setFilesToImport,
+	getTempData,
+};

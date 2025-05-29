@@ -3,6 +3,7 @@
 	import Icon from '$lib/icon/Icon.svelte';
 </script>
 
+
 <div class="heading">
 	<p>Worksheet Layers</p>
 
@@ -31,10 +32,11 @@
 		align-items: center;
 
 		border-bottom: 1px solid #d9d9d9;
+		background-color: white;
 	}
 
 	.heading p {
-		margin-left: 0.6rem;
+		margin-left: 1rem;
 		font-weight: bold;
 	}
 

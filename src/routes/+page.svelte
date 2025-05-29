@@ -21,9 +21,10 @@
 
 <style>
 	.view-container {
+		z-index: -1;
 		overflow-y: auto;
-		min-width: 16vw;
-		height: 100vh;
+		width: 300px;
+		height: 100%;
 		display: flex;
 		flex-direction: column;
 		justify-content: start;

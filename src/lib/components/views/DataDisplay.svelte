@@ -3,33 +3,6 @@
 	import Icon from '$lib/icon/Icon.svelte';
 	import AddTable from '../dropdowns/AddTable.svelte';
 
-	import { simulateData } from '$lib/models/data/dataTree.svelte';
-	import {
-		importDataUtils,
-		setFilesToImport,
-		getTempData
-	} from '$lib/models/data/importData.svelte';
-
-	let previewHTML = '';
-	let importReady = false;
-
-	async function onFileChange(e) {
-		setFilesToImport(e.target.files);
-		await importDataUtils.parseFile(6);
-		previewHTML = importDataUtils.makeTempTable(getTempData());
-		importReady = true;
-	}
-
-	function chooseFile() {
-		importDataUtils.openFileChoose();
-	}
-
-	async function confirmImport() {
-		await importDataUtils.loadData();
-		alert('Imported!'); // better UI
-	}
-	
-
 	// test reactivity
 	function changeDataFieldContent() {
 		core.data[0].columns[1].dataArr[0] = core.data[0].columns[1].dataArr[0] + Math.round(Math.random() * 10, 2);
@@ -39,19 +12,24 @@
 	let addBtnRef;
 	let dropdownPos = { top: 0, left: 0 };
 
+	function recalculateDropdownPosition() {
+		if (!addBtnRef) return;
+
+		const rect = addBtnRef.getBoundingClientRect();
+		dropdownPos = {
+			top: rect.top + window.scrollY, 
+			left: rect.right + window.scrollX
+		};
+	}
+
 	function openDropdown() {
-		if (appState.currentTab === 'data') {
-			
-		}
 		if (appState.addIcon === 'AddTable') {
 			appState.addIcon = '';
+			window.removeEventListener('resize', recalculateDropdownPosition);
 		} else {
-			const rect = addBtnRef.getBoundingClientRect();
-			dropdownPos = {
-				top: rect.bottom + window.scrollY,
-				left: rect.left + window.scrollX
-			};
+			recalculateDropdownPosition();
 			appState.addIcon = 'AddTable';
+			window.addEventListener('resize', recalculateDropdownPosition);
 		}
 	}
 
@@ -71,22 +49,19 @@
 
 <div class="data-list">
 	{#each core.data as entry (entry.id)}
-		<details>
-			<summary>{entry.name}</summary>
-			<button onclick={() => entry.name = 'happy_data' + Math.round(Math.random() * 10, 2)}> change item name </button>
-			<p><strong>importedFrom:</strong>{entry.importedFrom}</p>
-			<p><strong>Length:</strong>{entry.dataLength}</p>
-
-			{#each entry.columns as field (field.id)}
-				<details>
-					<summary>{field.type}</summary>
-					<ul>
-						{#each field.dataArr.slice(0, 5) as test}
-							<li>{test}</li>
-						{/each}
-					</ul>
-				</details>
-			{/each}
+		<details class="table-item">
+				<summary>{entry.name}</summary>
+				<!-- <button onclick={() => entry.name = 'happy_data' + Math.round(Math.random() * 10, 2)}> change item name </button> -->
+				{#each entry.columns as field (field.id)}
+					<details class="column-item">
+						<summary>{field.type}</summary>
+						<ul>
+							{#each field.dataArr.slice(0, 5) as test}
+								<li>{test}</li>
+							{/each}
+						</ul>
+					</details>
+				{/each}
 		</details>
 	{/each}
 </div>
@@ -94,24 +69,6 @@
 <!-- <div class="test">
 	<button onclick={changeDataFieldContent}> change data point </button>
 </div> -->
-
-<div class="import-container">
-
-	<button class="btn" onclick={chooseFile}>Choose File</button>
-	<input id="fileInput" type="file" accept=".csv,.awd" onchange={onFileChange} />
-
-	{#if previewHTML}
-		<div class="preview-table">
-			<h3>Preview</h3>
-			{@html previewHTML}
-		</div>
-	{/if}
-
-	<!-- Add this if you define `let importReady = true;` inside <script> -->
-	{#if importReady}
-		<button class="btn" onclick={confirmImport}>Import Data</button>
-	{/if}
-</div>
 
 
 {#if appState.addIcon === 'AddTable'}
@@ -136,7 +93,7 @@
 	}
 
 	.heading p {
-		margin-left: 0.6rem;
+		margin-left: 1rem;
 		font-weight: bold;
 	}
 
@@ -154,8 +111,48 @@
 		align-items: center;
 	}
 
-	/* .add :global(svg) {
-		vertical-align: middle;
-		color: var(--color-icon-unselected, blue);
+	.data-list {
+		width: 100%;
+		margin-top: 0.2rem;
+
+		font-size: 14px;
+	}
+
+	/* hover effect, need update */
+	.table-item:hover > summary {
+	background-color: var(--color-lightness-95);
+	}
+
+	.column-item:hover > summary {
+		background-color: var(--color-lightness-95);
+	}
+
+	/* .table-container[open] {
+		background-color: var(--color-lightness-98);
 	} */
+
+	.table-item summary {
+		font-weight: bold;
+		padding-bottom: 0.2rem;
+	}
+
+	.table-item {
+		margin-left: 0.5rem;
+		padding-top: 0.2rem;
+		padding-bottom: 0.2rem;
+	}
+	
+	.column-item {
+		margin-left: 1rem;
+		padding-top: 0.2rem;
+		padding-bottom: 0.2rem;
+	}
+	
+	.column-item summary{
+		font-weight: normal;
+		padding-bottom: 0;
+	}
+
+	
+	 
 </style>

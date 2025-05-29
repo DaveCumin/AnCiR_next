@@ -17,7 +17,7 @@ import { tick } from 'svelte';
 const specialValues = ["NaN", "NA", "null"];
 const previewTableNrows = 6;
 
-let _filesToImport;
+let _filesToImport = $state();
 let _tempdata = {};
 let error = {};
 let skipLines = 0;
@@ -27,6 +27,10 @@ let errorInfile = false;
 let specialRecognised = false;
 
 // getter and setter
+export function getFilesToImport() {
+    return _filesToImport;
+}
+
 export function setFilesToImport(f) {
 	_filesToImport = f;
 }
@@ -35,7 +39,7 @@ export function getTempData() {
 }
 
 // export functions as 'package' importDataUtils
-export const importDataUtils = {
+export const utils = {
     openFileChoose,
     parseFile,
     loadData,
@@ -208,6 +212,8 @@ async function loadData() {
     doBasicFileImport(_tempdata, _filesToImport[0].name); //LOAD THE DATA
 
     // $menuModalType = ''; //close the dialog
+
+    setFilesToImport('');
 }
 
 // put the data into the tool store

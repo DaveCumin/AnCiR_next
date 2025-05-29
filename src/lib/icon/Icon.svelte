@@ -38,17 +38,23 @@
 
 <style>
 	.icon {
-		fill: #d9d9d9;
+		fill: var(--color-icon-unselected);
 		transition: fill 0.2s ease;
 		cursor: pointer;
 	}
 
 	.icon:hover {
-		fill: pink;
+		fill: var(--color-hover);
 	}
 
 	.icon.active {
-		fill: pink;
+		fill: var(--color-icon-selected);
+	}
+
+	.close {
+		fill: var(--color-icon-close);
+		transition: fill 0.2s ease;
+		cursor: pointer;
 	}
 
 </style>
