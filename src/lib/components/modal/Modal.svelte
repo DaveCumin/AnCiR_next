@@ -44,11 +44,13 @@ $effect(() => {
 	dialog {
 		width: 36em;
 		border-radius: 5px;
-		border: var(--color-lightness-85);
+		border: 1px, solid, var(--color-lightness-85);
+		box-shadow: 0 4px 8px 0 var(--color-lightness-85), 0 6px 10px 0 var(--color-lightness-95);
 	}
 
 	dialog::backdrop {
-		background-color: rgba(0, 0, 0, 0.05);
+		background: rgba(255, 255, 255, 0.8);
+		backdrop-filter: blur(2px);
 	}
 
 	.dialog-container {

@@ -63,12 +63,12 @@
 					Upload File
 				</button>
 				<div class="filename">
-						<p class="filename-preview">
-							Selected: 
-							{#if ImportData.getFilesToImport()?.[0]}
-								{ImportData.getFilesToImport()[0].name}
-							{/if}
-						</p>
+					<p class="filename-preview">
+						Selected: 
+						{#if ImportData.getFilesToImport()?.[0]}
+							{ImportData.getFilesToImport()[0].name}
+						{/if}
+					</p>
 				</div>
 			</div>
 			
