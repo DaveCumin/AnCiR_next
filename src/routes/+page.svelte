@@ -13,6 +13,7 @@
 	import Plotcomponent, { Plot } from '$lib/core/Plot.svelte';
 	import { onMount } from 'svelte';
 	import Visualise from '$lib/components/Visualise.svelte';
+	import ColourPicker from '$lib/components/ColourPicker.svelte';
 
 	function addData(dataIN, type, name, provenance) {
 		let newDataEntry;
@@ -129,7 +130,14 @@
 
 <Navbar />
 <ViewDisplay />
+<div style="position:absolute; top:0; left:30px; z-index:1000; background:blue;">
+	<button onclick={() => refresh()}>Refresh</button>
+	<button onclick={() => load()}>Load</button>
+</div>
 
+<div style="position:absolute; top:0; right:300px; z-index:1000; background:grey;">
+	<ColourPicker />
+</div>
 {#each core.plots as plot}
 	<Plotcomponent {plot} />
 {/each}

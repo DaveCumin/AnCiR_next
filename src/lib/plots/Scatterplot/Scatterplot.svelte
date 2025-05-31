@@ -173,10 +173,10 @@
 			</p>
 
 			x: {datum.x.name} ({datum.x.getData()?.join(', ')})
-			<Column col={datum.x} />
+			<Column col={datum.x} canChange={true} />
 
 			y: {datum.y.name} ({datum.y.getData()?.join(', ')})
-			<Column col={datum.y} />
+			<Column col={datum.y} canChange={true} />
 
 			<input type="color" bind:value={datum.colour} />
 		{/each}

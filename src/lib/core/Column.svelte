@@ -155,13 +155,23 @@
 <script>
 	import Processcomponent from '$lib/core/Process.svelte'; //Need to rename it because Process is used as the class name in the module, above
 	import Icon from '$lib/icon/Icon.svelte';
-	let { col } = $props();
+	let { col, canChange = false } = $props();
 </script>
 
 <details open style="margin-left: 1rem">
-	<summary
-		><strong>{col.name}</strong><br /> <italic>{col.provenance}</italic><br />
-		{col.columnID} type:
+	<summary>
+		{#if canChange}
+			<select
+				name="datatype"
+				onchange={(e) => console.log('need TODO change the column ', e.target.value)}
+			>
+				{#each core.data as c}
+					<option value={c.columnID} selected={c.columnID == col.columnID}>{c.name}</option>
+				{/each}
+			</select>
+		{/if}
+		<strong>{col.name}</strong><br /> <italic>{col.provenance}</italic><br />
+		type:
 		<select name="datatype" bind:value={col.type}>
 			<option value="time">Time</option>
 			<option value="number">Number</option>
