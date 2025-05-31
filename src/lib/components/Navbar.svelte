@@ -1,7 +1,7 @@
 <!-- Navbar.svelte -->
 <script>
 	import { appState } from '$lib/core/theCore.svelte.js';
-	import Icon from '$lib/icon/Icon.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
 
 	function switchTab(tab) {
 		appState.currentTab = tab;

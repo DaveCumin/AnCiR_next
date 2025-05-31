@@ -1,7 +1,8 @@
 <script>
-	import { core, appState } from '$lib/core/theCore.svelte.js';
-	import Icon from '$lib/icon/Icon.svelte';
-	import AddTable from '../dropdowns/AddTable.svelte';
+	// @ts-nocheck
+	import { core } from '$lib/core/theCore.svelte.js';
+	import Icon from '$lib/icons/Icon.svelte';
+	import AddTable from '../addIconActions/AddTable.svelte';
 
 	// test reactivity
 	function changeDataFieldContent() {
@@ -10,27 +11,24 @@
 
 	// AddTable dropdown
 	let addBtnRef;
-	let dropdownPos = { top: 0, left: 0 };
+	let showAddTable = $state(false);
+	let dropdownTop = $state(0);
+	let dropdownLeft = $state(0);
 
 	function recalculateDropdownPosition() {
 		if (!addBtnRef) return;
-
 		const rect = addBtnRef.getBoundingClientRect();
-		dropdownPos = {
-			top: rect.top + window.scrollY, 
-			left: rect.right + window.scrollX
-		};
+
+		dropdownTop = rect.bottom + window.scrollY;
+		dropdownLeft = rect.left + window.scrollX;
 	}
 
 	function openDropdown() {
-		if (appState.addIcon === 'AddTable') {
-			appState.addIcon = '';
-			window.removeEventListener('resize', recalculateDropdownPosition);
-		} else {
-			recalculateDropdownPosition();
-			appState.addIcon = 'AddTable';
-			window.addEventListener('resize', recalculateDropdownPosition);
-		}
+		recalculateDropdownPosition();
+		requestAnimationFrame(() => {
+			showAddTable = true;
+		});
+		window.addEventListener('resize', recalculateDropdownPosition);
 	}
 
 </script>
@@ -70,11 +68,9 @@
 	<button onclick={changeDataFieldContent}> change data point </button>
 </div> -->
 
-
-{#if appState.addIcon === 'AddTable'}
-	<AddTable top={dropdownPos.top} left={dropdownPos.left} />
+{#if showAddTable}
+	<AddTable bind:showDropdown={showAddTable} dropdownTop={dropdownTop} dropdownLeft={dropdownLeft} />
 {/if}
-
 
 <style>
 	.heading {

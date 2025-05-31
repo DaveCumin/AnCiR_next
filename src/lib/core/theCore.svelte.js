@@ -8,7 +8,6 @@ export const core = $state({
 
 export const appState = $state({
 	currentTab: 'data',
-	addIcon: '',
 });
 
 export function pushObj(obj) {

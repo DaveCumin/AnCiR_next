@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { DateTime } from 'luxon';
 
-import { appState, pushObj } from '$lib/core/theCore.svelte';
+import { pushObj } from '$lib/core/theCore.svelte';
 import { Table } from '$lib/models/data/table.svelte';
 
 import {
@@ -30,7 +30,6 @@ export function simulateData() {
     );
 
     pushObj(newDataEntry);
-    appState.addIcon = '';
 }
 
 // handleSimulateData()

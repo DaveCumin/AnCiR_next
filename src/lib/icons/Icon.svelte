@@ -4,7 +4,7 @@
 	let { name = '', width = 24, height = 24, className = 'icon' } = $props();
 	let svgContent = $state();
 
-	const icons = import.meta.glob('$lib/icon/*.svg', { query: '?raw', import: 'default' });
+	const icons = import.meta.glob('$lib/icons/*.svg', { query: '?raw', import: 'default' });
 	//rename the keys to be the name of the icon
 	for (const key in icons) {
 		const newKey = key.split('/').pop().split('.')[0]; //get the name of the icon

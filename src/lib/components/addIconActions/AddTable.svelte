@@ -1,25 +1,26 @@
 <script>
-	// @ts-nocheck
-	import { appState } from '$lib/core/theCore.svelte';
-	import Icon from '$lib/icon/Icon.svelte';
-	import { simulateData, ImportData } from '$lib/models/data/dataTree.svelte';
-	import Modal from '../modal/Modal.svelte';
+    // @ts-nocheck
+    import Icon from '$lib/icons/Icon.svelte';
+    import { simulateData, ImportData } from '$lib/models/data/dataTree.svelte';
+    import Modal from '../popUps/Modal.svelte';
+    import Dropdown from '../popUps/Dropdown.svelte';
 
-	let showModal = $state(false);
-	let preview = $state();
-	let importReady = $state(false);
+    let showModal = $state(false);
+    let importPreview = $state();
+    let importReady = $state(false);
+    
+    let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
 
-    const { top = 0, left = 0 } = $props();
+    function openModal() {
+        showModal = true;
 
-	function openModal() {
-		showModal = true;
-		// appState.addIcon = ''; // not working, close dropdown but modal not invoked
-	}
+        console.log(showModal, showDropdown);
+    }
 
-	async function onFileChange(e) {
+    async function onFileChange(e) {
 		ImportData.setFilesToImport(e.target.files);
 		await ImportData.utils.parseFile(6);
-		preview = ImportData.utils.makeTempTable(ImportData.getTempData());
+		importPreview = ImportData.utils.makeTempTable(ImportData.getTempData());
 		importReady = true;
 	}
 
@@ -31,14 +32,15 @@
 		await ImportData.utils.loadData();
 		showModal = false; 
 		importReady = false;
-		preview = '';
-		appState.addIcon = ''; // works but not the best ux
+		importPreview = '';
+
+        showDropdown = false;
 	}
 </script>
 
-<div class="dropdown" style="top: {top}px; left: {left + 12}px">
-    <div class="group">
-		<div class="action">
+<Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
+    {#snippet groups()}
+        <div class="action">
 			<button onclick={openModal}>
 				Import Data
 			</button>
@@ -48,9 +50,10 @@
 			<button onclick={simulateData}>
 				Simulate Data
 			</button>
+            <!-- since we are handling simulation with a modal, doesn't matter if dropdown closes after action at this stage -->
 		</div>
-	</div>
-</div>
+    {/snippet}
+</Dropdown>
 
 <Modal bind:showModal>
 	{#snippet header()}
@@ -81,10 +84,10 @@
 	{#snippet children()}
 		<div class="import-container">
 			<div class="preview-placeholder">
-				{#if preview}
+				{#if importPreview}
 					<!-- <p>Preview Data</p> -->
 					<div class="preview-table-wrapper">
-						{@html preview}
+						{@html importPreview}
 					</div>
 				{:else}
 					<!-- <p>Choose file to preview data</p> -->
@@ -104,29 +107,6 @@
 
 
 <style>
-	.dropdown {
-		position: fixed;
-		z-index: 999;
-		width: 200px;
-
-		display: flex;
-		flex-direction: column;
-		
-		margin-top: 4px;
-		margin-left: 8px;
-
-		background-color: white;
-		border-radius: 4px;
-		border: 1px solid var(--color-lightness-85);
-
-		/* box-shadow: 0 4px 8px 0 var(--color-lightness-85), 0 6px 10px 0 var(--color-lightness-95); */
-	}
-
-	.group {
-		display: flex;
-		flex-direction: column;
-	}
-
 	.action button {
 		margin: 0.6em;
 		font-size: 14px;
@@ -244,3 +224,4 @@
 
 
 </style>
+

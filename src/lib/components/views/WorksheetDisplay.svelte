@@ -1,6 +1,6 @@
 <script>
 	import { core } from '$lib/core/theCore.svelte.js';
-	import Icon from '$lib/icon/Icon.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
 </script>
 
 

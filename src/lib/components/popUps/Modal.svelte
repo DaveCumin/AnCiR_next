@@ -5,7 +5,7 @@ https://svelte.dev/playground/modal?version=5.33.7
  
 -->
 <script>
-	import Icon from "$lib/icon/Icon.svelte";
+	import Icon from "$lib/icons/Icon.svelte";
 
 let { showModal = $bindable(), header, children } = $props()
 
