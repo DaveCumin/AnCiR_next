@@ -40,6 +40,7 @@ $effect(() => {
         display: flex;
         flex-direction: column;
 
+		padding: 0;
         margin-top: 4px;
         margin-left: 8px;
 

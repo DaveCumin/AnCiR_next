@@ -19,8 +19,8 @@
 		if (!addBtnRef) return;
 		const rect = addBtnRef.getBoundingClientRect();
 
-		dropdownTop = rect.bottom + window.scrollY;
-		dropdownLeft = rect.left + window.scrollX;
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
 	}
 
 	function openDropdown() {
