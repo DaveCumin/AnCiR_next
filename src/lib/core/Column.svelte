@@ -82,10 +82,11 @@
 						out.push(this.rawData.start + a);
 					}
 				}
-				//deal with timestamps
-				if (this.type === 'time') {
-					out = out.map((x) => x + this.timeformat); // TODO: Update to force time by format
-				}
+			}
+
+			//deal with timestamps
+			if (this.type === 'time') {
+				out = out.map((x) => x + this.timeformat); // TODO: Update to force time by format
 			}
 
 			//If no data, return empty
@@ -179,13 +180,16 @@
 			Compression: {col.compression}
 		{/if}
 		<li>
-			{col.getData().slice(0, 5)}
+			{col.getData()?.slice(0, 5)}
 			<button onclick={() => col.addProcess(Math.random() > 0.5 ? 'Add' : 'Sub')}
 				><Icon name="add" width={16} height={16} /></button
 			>
 		</li>
 		{#each col.processes as p}
 			<Processcomponent {p} />
+			<button onclick={() => col.removeProcess(p.processid)}>
+				<Icon name="close" width={16} height={16} /></button
+			>
 		{/each}
 	</ul>
 </details>

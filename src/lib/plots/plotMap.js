@@ -20,7 +20,7 @@ export async function loadPlots() {
 						typeof value.fromJSON === 'function'
 					) {
 						plotClass = value;
-						console.log(`Found class ${exportName} in ${sveltePath}`);
+						//console.log(`Found class ${exportName} in ${sveltePath}`);
 						break;
 					}
 				}
@@ -41,6 +41,6 @@ export async function loadPlots() {
 			console.error(`Error loading ${sveltePath}:`, error);
 		}
 	}
-	console.log('plotMap:', plotMap);
+	//console.log('plotMap:', plotMap);
 	return plotMap;
 }

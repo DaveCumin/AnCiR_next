@@ -11,6 +11,5 @@
 </script>
 
 <p>
-	{p.parentCol.type}
 	{p.processid} - {p.name} <input type="number" bind:value={p.args.value} />
 </p>

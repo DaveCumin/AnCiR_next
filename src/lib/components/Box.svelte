@@ -37,7 +37,7 @@
 
 <script>
 	// @ts-nocheck
-	let { plot, children } = $props();
+	let { plot, overflow, children } = $props();
 
 	function deleteBox() {
 		//thestate.boxes = thestate.boxes.filter((box) => box.id !== id);
@@ -56,6 +56,7 @@
 
 	//Drag logic -------------------------------------------------
 	const startDrag = (event) => {
+		event.preventDefault();
 		isDragging = true;
 		initialMouseX = event.clientX;
 		initialMouseY = event.clientY;
@@ -99,6 +100,7 @@
 
 	// Resize logic -------------------------------------------------
 	const startResize = (event) => {
+		event.preventDefault();
 		isResizing = true;
 		initialMouseX = event.clientX;
 		initialMouseY = event.clientY;
@@ -142,8 +144,8 @@
 >
 	<div
 		class="content"
-		style=" position:relative; 
-              overflow:auto; width:100%; height:100%; z-index:100000;"
+		style={`position:relative; 
+              overflow: ${overflow}; width:100%; height:100%; z-index: 101;`}
 	>
 		{@render children?.()}
 	</div>
@@ -203,7 +205,7 @@
 		onmousedown={startResize}
 		style="bottom: calc(-{borderOffset}px - 4px);
       right: calc(-{borderOffset}px);
-      
+	  z-index:1010;
       "
 	>
 		<Icon name="resizeHandle" />

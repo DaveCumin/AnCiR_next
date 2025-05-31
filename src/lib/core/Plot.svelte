@@ -6,10 +6,10 @@
 	export class Plot {
 		plotid;
 		name = $state('plot' + this.plotid);
-		x = $state(0);
-		y = $state(0);
-		width = $state(200);
-		height = $state(150);
+		x = $state(350);
+		y = $state(150);
+		width = $state(500);
+		height = $state(250);
 		type;
 		plot;
 
@@ -52,15 +52,15 @@
 	import Box from '$lib/components/Box.svelte';
 	let { plot } = $props();
 	const Plot = appConsts.plotMap.get(plot.type).plot ?? null;
-	let options = $state({ x: 0, y: 0, width: 200, height: 150 });
+	let options = $state({ x: 900, y: 0, width: 200, height: 550 });
 </script>
 
-<Box {plot}>
-	<p><input type="text" bind:value={plot.name} /></p>
-	<Plot theData={plot} which="plot" />
+<Box bind:plot overflow="none">
+	<a style="position:absolute; top:-1.5em;">{plot.name}</a>
+	<Plot bind:theData={plot} which="plot" />
 </Box>
 
-<Box plot={options}>
+<Box bind:plot={options} overflow="auto">
 	<div>
 		<Plot theData={plot.plot} which="controls" />
 	</div>

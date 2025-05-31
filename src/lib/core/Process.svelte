@@ -4,10 +4,8 @@
 	let processidCounter = 0;
 
 	export class Process {
-		static processFuncMap;
 		processid;
 		name = '';
-		processFunc;
 		args = $state({});
 		parentCol = $state();
 
@@ -21,21 +19,18 @@
 			}
 			//set the name
 			this.name = dataIN.name;
-			//set the function and return an error if it doesn't exist
-			const funcEntry = appConsts.processMap.get(this.name);
-			if (!funcEntry) {
-				this.processFunc = (x) => {
-					return x;
-				};
+			//return an error if the function doesn't exist
+			if (!appConsts.processMap.has(this.name)) {
 				this.args = { error: `no function ${this.name}` };
 			} else {
-				this.processFunc = funcEntry.func;
-				//Now put in the args
+				//Now put in the args, if provided, or use defaults
 				if (dataIN.args) {
 					this.args = dataIN.args;
 				} else {
 					this.args = Object.fromEntries(
-						Array.from(funcEntry.defaults.entries()).map(([key, value]) => [key, value.val])
+						Array.from(appConsts.processMap.get(this.name).defaults.entries()).map(
+							([key, value]) => [key, value.val]
+						)
 					);
 				}
 			}
@@ -44,7 +39,7 @@
 		}
 
 		doProcess(data) {
-			return this.processFunc(data, this.args);
+			return appConsts.processMap.get(this.name).func(data, this.args);
 		}
 
 		toJSON() {

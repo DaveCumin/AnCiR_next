@@ -20,15 +20,23 @@
 	});
 </script>
 
+<!-- TODO: consider what this should be. Either the replace is for the value, or (more sensibly) it is a replace of the ofiginal value, which needs some implementation thought -->
+{#if p.parentCol.type == 'time'}
+	<p>
+		{p.processid} - {p.name} find:<input type="number" bind:value={p.args.find} /> replace:
+		<input type="number" bind:value={p.args.replace} />
+	</p>
+{/if}
+
 {#if p.parentCol.type == 'number'}
 	<p>
 		{p.processid} - {p.name} find:<input type="number" bind:value={p.args.find} /> replace:
 		<input type="number" bind:value={p.args.replace} />
 	</p>
 {/if}
+
 {#if p.parentCol.type == 'category'}
 	<p>
-		{p.parentCol.type}
 		{p.processid} - {p.name} find:<input type="text" bind:value={p.args.find} /> replace:
 		<input type="text" bind:value={p.args.replace} />
 	</p>

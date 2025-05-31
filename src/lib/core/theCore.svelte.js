@@ -21,3 +21,5 @@ export const appConsts = $state({
 //- (stretch) UI: Drag and drop items (show zones where allowed, etc)
 //- (stretch) consider localstorage for UX preferences [and possibly data/sessions]; consoider cloud storage for sessions (Super-stretch: concurrent working a'la Google Sheets)
 //- (stretch) a store for edits to undo/redo: this needs careful thought
+
+// OTHER PLOTS

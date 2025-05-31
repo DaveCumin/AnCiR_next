@@ -1,7 +1,7 @@
 <!-- src/lib/plots/scatter/Scatterplot.svelte -->
 <script module>
-	import { Column } from '$lib/core/Column.svelte';
-	import { Process } from '$lib/core/Process.svelte';
+	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import Column from '$lib/core/Column.svelte';
 	import { core } from '$lib/core/theCore.svelte.js';
 
 	function getRandomColor() {
@@ -46,14 +46,14 @@
 			this.parent = parent;
 
 			if (dataIN && dataIN.x) {
-				this.x = Column.fromJSON(dataIN.x);
+				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new Column({ refDataID: -1 });
+				this.x = new ColumnClass({ refDataID: -1 });
 			}
 			if (dataIN && dataIN.y) {
-				this.y = Column.fromJSON(dataIN.y);
+				this.y = ColumnClass.fromJSON(dataIN.y);
 			} else {
-				this.y = new Column({ refDataID: -1 });
+				this.y = new ColumnClass({ refDataID: -1 });
 			}
 		}
 
@@ -110,7 +110,6 @@
 			if (dataIN) {
 				this.addData(dataIN);
 			}
-			console.log('parent: ', parent);
 		}
 
 		addData(dataIN) {
@@ -126,7 +125,6 @@
 			};
 		}
 		static fromJSON(parent, json) {
-			console.log('from json parent: ', parent);
 			if (!json) {
 				return new Scatterplotclass(parent, null);
 			}
@@ -152,7 +150,12 @@
 
 {#snippet controls(theData)}
 	<div>
-		<p>Data for: {theData.parent.name}</p>
+		Name: <input type="text" bind:value={theData.parent.name} />
+		Width: <input type="number" bind:value={theData.parent.width} />
+		height: <input type="number" bind:value={theData.parent.height} />
+		<p>ylims: {theData.ylims}</p>
+		<p>xlims: {theData.xlims}</p>
+		<p>Data:</p>
 		<button
 			onclick={() =>
 				theData.addData({
@@ -162,54 +165,19 @@
 		>
 			+
 		</button>
-		<p>ylims: {theData.ylims}</p>
+
 		{#each theData.data as datum, i}
 			<p>
-				Data {i} ({JSON.stringify(datum)})
+				Data {i}
 				<button onclick={() => theData.removeData(i)}>-</button>
 			</p>
-			<p>
-				x: {datum.x.name} ({datum.x.getData()?.join(', ')})
-				<input type="number" bind:value={datum.x.refDataID} />
-				<button onclick={() => datum.x.addProcess(Math.random() > 0.5 ? 'add' : 'sub')}>
-					Add process
-				</button>
-			</p>
-			{#each datum.x.processes as p}
-				<div>
-					{p.processid} - {p.name}
-					{#each Object.keys(p.args.values) as arg}
-						{arg} ({datum.x.getProcessArgType(p.name, arg)}):
-						{#if datum.x.getProcessArgType(p.name, arg) === 'number'}
-							<input type="number" bind:value={p.args.values[arg]} />
-						{:else if datum.x.getProcessArgType(p.name, arg) === 'category'}
-							<input type="text" bind:value={p.args.values[arg]} />
-						{/if}
-					{/each}
-					<button onclick={() => datum.x.removeProcess(p.processid)}>-</button>
-				</div>
-			{/each}
-			<p>
-				y: {datum.y.name} ({datum.y.getData()?.join(', ')})
-				<input type="number" bind:value={datum.y.refDataID} />
-				<button onclick={() => datum.y.addProcess(Math.random() > 0.5 ? 'add' : 'sub')}>
-					Add process
-				</button>
-			</p>
-			{#each datum.y.processes as p}
-				<div>
-					{p.processid} - {p.name}
-					{#each Object.keys(p.args.values) as arg}
-						{arg} ({datum.y.getProcessArgType(p.name, arg)}):
-						{#if datum.y.getProcessArgType(p.name, arg) === 'number'}
-							<input type="number" bind:value={p.args.values[arg]} />
-						{:else if datum.y.getProcessArgType(p.name, arg) === 'category'}
-							<input type="text" bind:value={p.args.values[arg]} />
-						{/if}
-					{/each}
-					<button onclick={() => datum.y.removeProcess(p.processid)}>-</button>
-				</div>
-			{/each}
+
+			x: {datum.x.name} ({datum.x.getData()?.join(', ')})
+			<Column col={datum.x} />
+
+			y: {datum.y.name} ({datum.y.getData()?.join(', ')})
+			<Column col={datum.y} />
+
 			<input type="color" bind:value={datum.colour} />
 		{/each}
 	</div>
