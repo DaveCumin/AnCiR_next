@@ -14,32 +14,6 @@
 -->
 
 <Navbar />
-<div class="view-container">
-	<ViewDisplay />
-</div>
+<ViewDisplay />
 
-
-<style>
-	.view-container {
-		z-index: -1;
-		overflow-y: auto;
-		width: 300px;
-		height: 100%;
-		display: flex;
-		flex-direction: column;
-		justify-content: start;
-		align-items: start;
-
-		position: fixed;
-		top: 0;
-		left: 56px;
-
-		border-right: 1px solid #d9d9d9;
-	}
-
-	.view-container::-webkit-scrollbar {
-		display: none; /* Chrome, Safari */
-	}
-
-</style>
 
