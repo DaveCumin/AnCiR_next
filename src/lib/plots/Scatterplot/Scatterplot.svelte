@@ -22,6 +22,7 @@
 		x = $state();
 		y = $state();
 		colour = $state(getRandomColor());
+		strokeWidth = $state(1);
 
 		constructor(parent, dataIN) {
 			this.parent = parent;
@@ -90,6 +91,8 @@
 			});
 			return [this.xlimsIN[0] ? this.xlimsIN[0] : xmin, this.xlimsIN[1] ? this.xlimsIN[1] : xmax];
 		});
+		xgridlines = $state(true);
+		ygridlines = $state(true);
 
 		constructor(parent, dataIN) {
 			this.parent = parent;
@@ -149,6 +152,7 @@
 
 		<p>
 			ylims: <button onclick={() => (theData.ylimsIN = [null, null])}>R</button>
+			grid:<input type="checkbox" bind:checked={theData.ygridlines} />
 			<input
 				type="number"
 				value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
@@ -166,6 +170,7 @@
 		</p>
 		<p>
 			xlims: <button onclick={() => (theData.xlimsIN = [null, null])}>R</button>
+			grid:<input type="checkbox" bind:checked={theData.xgridlines} />
 			<input
 				type="number"
 				value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
@@ -205,6 +210,7 @@
 			<Column col={datum.y} canChange={true} />
 
 			<input type="color" bind:value={datum.colour} />
+			<input type="number" step="0.1" min="0.1" bind:value={datum.strokeWidth} />
 		{/each}
 	</div>
 {/snippet}
@@ -213,7 +219,7 @@
 	<svg
 		width={theData.plot.parent.width}
 		height={theData.plot.parent.height}
-		style={`background: grey;`}
+		style={`background: white;`}
 	>
 		<!-- Draw the lines for each data set -->
 		{#each theData.plot.data as datum}
@@ -225,7 +231,7 @@
 				xlims={theData.plot.xlims}
 				ylims={theData.plot.ylims}
 				strokeCol={datum.colour}
-				strokeWidth="3"
+				strokeWidth={datum.strokeWidth}
 				style={`transform: translate(	${theData.plot.padding.left}px, 
 													${theData.plot.padding.top}px);`}
 			/>
@@ -241,6 +247,7 @@
 			yoffset={theData.plot.padding.top}
 			xoffset={theData.plot.padding.left}
 			nticks={5}
+			bind:gridlines={theData.plot.ygridlines}
 		/>
 		<!-- The X-axis -->
 		<Axis
@@ -253,6 +260,7 @@
 			yoffset={theData.plot.padding.top}
 			xoffset={theData.plot.padding.left}
 			nticks={5}
+			bind:gridlines={theData.plot.xgridlines}
 		/>
 	</svg>
 {/snippet}

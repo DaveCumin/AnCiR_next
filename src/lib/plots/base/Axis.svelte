@@ -21,6 +21,8 @@
 	$effect(() => {
 		select(g).selectAll('*').remove();
 
+		scale = scale.nice();
+
 		let axis;
 		switch (position) {
 			case 'bottom':
@@ -51,3 +53,29 @@
 </script>
 
 <g class="axis" bind:this={g} />
+
+{#if gridlines}
+	<g class="gridlines" style="transform:translate({xoffset}px, {yoffset}px);">
+		{#each scale.ticks(nticks) as t}
+			{#if position == 'bottom' || position == 'top'}
+				<line
+					class="gridline"
+					x1={scale(t)}
+					x2={scale(t)}
+					y1={0}
+					y2={height}
+					style="stroke: black;stroke-width: 1px;stroke-dasharray: 4;stroke-opacity: 0.3;"
+				/>
+			{:else}
+				<line
+					class="gridline"
+					x1={0}
+					x2={width}
+					y1={scale(t)}
+					y2={scale(t)}
+					style="stroke: black;stroke-width: 1px;stroke-dasharray: 4;stroke-opacity: 0.3;"
+				/>
+			{/if}
+		{/each}
+	</g>
+{/if}
