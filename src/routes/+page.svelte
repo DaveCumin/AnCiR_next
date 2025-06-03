@@ -96,6 +96,10 @@
 
 		core.plots = [];
 		core.plots.push(new Plot({ name: 'testscatterplot', type: 'scatterplot' }));
+		core.plots[0].plot.addData({
+			x: { refDataID: 0 },
+			y: { refDataID: 1 }
+		});
 	}
 
 	function load() {
@@ -136,6 +140,9 @@
 </div>
 
 <div style="position:absolute; top:0; right:300px; z-index:1000; background:grey;">
+	<ColourPicker />
+</div>
+<div style="position:absolute; top:0; right:270px; z-index:1000; background:grey;">
 	<ColourPicker />
 </div>
 {#each core.plots as plot}

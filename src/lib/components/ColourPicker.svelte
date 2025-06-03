@@ -1,51 +1,14 @@
 <script>
+	import { onMount } from 'svelte';
+
 	// Props
-	let { initialColor = '#ffffff', onColorChange = () => {} } = $props();
-
-	//hide or show
-	let show = $state(false);
-	$effect(() => {
-		if (show) {
-			drawPicker();
-			drawPalette();
-		}
-	});
-
-	onColorChange = () => {
-		// Placeholder for color change callback
-		console.log('Color changed:', $state.snapshot(currentColor));
-	};
+	let { initialColor = '#00ff00', onColorChange = () => {} } = $props();
 
 	// Reactive state for color components
 	let h = $state(0); // Hue (0-360)
 	let s = $state(1); // Saturation (0-1)
 	let v = $state(1); // Value (0-1)
 	let a = $state(1); // Alpha (0-1)
-
-	// Palette to store saved colors
-	let palette = $state(['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000']);
-	// Palette canvases
-	let paletteCanvases = $state(new Array(palette.length).fill(null));
-	let paletteContexts = $state(new Array(palette.length).fill(null));
-
-	// Input fields
-	let hexInput = $state(initialColor);
-	let rgbInput = $state({ r: 255, g: 255, b: 255 });
-	let hsvInput = $state({ h: 0, s: 100, v: 100 });
-
-	// Canvas for hue/saturation picker
-	let canvas;
-	let ctx;
-	let isDragging = $state(false);
-	// sliders
-	let hueCanvas;
-	let satCanvas;
-	let valCanvas;
-	let alphaCanvas;
-	let hueCtx;
-	let satCtx;
-	let valCtx;
-	let alphaCtx;
 
 	// Store for current color
 	const currentColor = $derived.by(() => {
@@ -56,6 +19,81 @@
 			hsv: { h, s: s * 100, v: v * 100, a: a * 100 }
 		};
 	});
+
+	onMount(() => {
+		updateFromHex(initialColor);
+	});
+
+	//hide or show
+	let show = $state(false);
+	$effect(() => {
+		if (show) {
+			drawPicker();
+			drawPalette();
+		}
+	});
+	function open() {
+		show = true;
+	}
+	function cancel() {
+		updateFromHex(initialColor);
+		show = false;
+	}
+	function save() {
+		initialColor = $state.snapshot(currentColor.hex);
+		show = false;
+	}
+
+	onColorChange = () => {
+		// Placeholder for color change callback
+		console.log('Color changed:', $state.snapshot(currentColor));
+	};
+
+	// Palette to store saved colors
+	let palette = $state(['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000']);
+	// Palette canvases
+	let paletteCanvases = $state(new Array(palette.length).fill(null));
+	let paletteContexts = $state(new Array(palette.length).fill(null));
+
+	// Input fields
+	let hexInput = $state(initialColor);
+	let rgbInput = $state({
+		r: currentColor.rgb.r,
+		g: currentColor.rgb.g,
+		b: currentColor.rgb.b,
+		a: currentColor.rgb.a
+	});
+	let hsvInput = $state({
+		h: currentColor.hsv.h,
+		s: currentColor.hsv.s,
+		v: currentColor.hsv.v,
+		a: currentColor.hsv.a
+	});
+
+	// Canvas for hue/saturation picker
+	let canvas;
+	let ctx;
+	let isDragging = $state(false);
+	// slider
+	//HSV
+	let hueCanvas;
+	let satCanvas;
+	let valCanvas;
+	let hueCtx;
+	let satCtx;
+	let valCtx;
+
+	//alpha
+	let alphaCanvas;
+	let alphaCtx;
+
+	// RGB
+	let redCanvas;
+	let greenCanvas;
+	let blueCanvas;
+	let redCtx;
+	let greenCtx;
+	let blueCtx;
 
 	// Draw hue/saturation picker
 	function drawPicker() {
@@ -99,7 +137,12 @@
 		hueCtx = hueCanvas?.getContext('2d');
 		satCtx = satCanvas?.getContext('2d');
 		valCtx = valCanvas?.getContext('2d');
+
 		alphaCtx = alphaCanvas?.getContext('2d');
+
+		redCtx = redCanvas?.getContext('2d');
+		greenCtx = greenCanvas?.getContext('2d');
+		blueCtx = blueCanvas?.getContext('2d');
 
 		// Hue slider
 		if (hueCtx) {
@@ -114,7 +157,7 @@
 
 			const x = (currentColor.hsv.h / 360) * width;
 			hueCtx.beginPath();
-			hueCtx.arc(x, height / 2, 5, 0, 2 * Math.PI);
+			hueCtx.arc(x, height / 2, 6, 0, 2 * Math.PI);
 			hueCtx.strokeStyle = 'black';
 			hueCtx.lineWidth = 1;
 			hueCtx.stroke();
@@ -132,7 +175,7 @@
 			satCtx.clearRect(0, 0, width, height);
 			for (let x = 0; x < width; x++) {
 				const sat = x / width;
-				satCtx.fillStyle = `hsl(${h}, ${sat * 100}%, 50%)`;
+				satCtx.fillStyle = `hsl(${h}, ${sat * 100}%, ${currentColor.hsv.v / 2}%)`;
 				satCtx.fillRect(x, 0, 1, height);
 			}
 			const x = (currentColor.hsv.s / 100) * width;
@@ -155,7 +198,7 @@
 			valCtx.clearRect(0, 0, width, height);
 			for (let x = 0; x < width; x++) {
 				const val = x / width;
-				valCtx.fillStyle = `hsl(${h}, ${s * 100}%, ${val * 100}%)`;
+				valCtx.fillStyle = `hsl(${h}, ${currentColor.hsv.s}%, ${val * 50}%)`;
 				valCtx.fillRect(x, 0, 1, height);
 			}
 			const x = (currentColor.hsv.v / 100) * width;
@@ -204,6 +247,74 @@
 			alphaCtx.lineWidth = 2;
 			alphaCtx.stroke();
 		}
+
+		//RGB sliders
+		if (redCtx) {
+			const width = redCanvas.width;
+			const height = redCanvas.height;
+			redCtx.clearRect(0, 0, width, height);
+			for (let x = 0; x < width; x++) {
+				const r = (x / width) * 255;
+				redCtx.fillStyle = `rgb(${r}, ${rgbInput.g}, ${rgbInput.b})`;
+				redCtx.fillRect(x, 0, 1, height);
+			}
+
+			const x = (currentColor.rgb.r / 255) * width;
+			redCtx.beginPath();
+			redCtx.arc(x, height / 2, 6, 0, 2 * Math.PI);
+			redCtx.strokeStyle = 'black';
+			redCtx.lineWidth = 1;
+			redCtx.stroke();
+			redCtx.beginPath();
+			redCtx.arc(x, height / 2, 5, 0, 2 * Math.PI); // Inner white circle
+			redCtx.strokeStyle = 'white';
+			redCtx.lineWidth = 2;
+			redCtx.stroke();
+		}
+		if (greenCtx) {
+			const width = greenCanvas.width;
+			const height = greenCanvas.height;
+			greenCtx.clearRect(0, 0, width, height);
+			for (let x = 0; x < width; x++) {
+				const g = (x / width) * 255;
+				greenCtx.fillStyle = `rgb(${rgbInput.r}, ${g}, ${rgbInput.b})`;
+				greenCtx.fillRect(x, 0, 1, height);
+			}
+
+			const x = (currentColor.rgb.g / 255) * width;
+			greenCtx.beginPath();
+			greenCtx.arc(x, height / 2, 6, 0, 2 * Math.PI);
+			greenCtx.strokeStyle = 'black';
+			greenCtx.lineWidth = 1;
+			greenCtx.stroke();
+			greenCtx.beginPath();
+			greenCtx.arc(x, height / 2, 5, 0, 2 * Math.PI); // Inner white circle
+			greenCtx.strokeStyle = 'white';
+			greenCtx.lineWidth = 2;
+			greenCtx.stroke();
+		}
+		if (blueCtx) {
+			const width = blueCanvas.width;
+			const height = blueCanvas.height;
+			blueCtx.clearRect(0, 0, width, height);
+			for (let x = 0; x < width; x++) {
+				const b = (x / width) * 255;
+				blueCtx.fillStyle = `rgb(${rgbInput.r}, ${rgbInput.g}, ${b})`;
+				blueCtx.fillRect(x, 0, 1, height);
+			}
+
+			const x = (currentColor.rgb.b / 255) * width;
+			blueCtx.beginPath();
+			blueCtx.arc(x, height / 2, 6, 0, 2 * Math.PI);
+			blueCtx.strokeStyle = 'black';
+			blueCtx.lineWidth = 1;
+			blueCtx.stroke();
+			blueCtx.beginPath();
+			blueCtx.arc(x, height / 2, 5, 0, 2 * Math.PI); // Inner white circle
+			blueCtx.strokeStyle = 'white';
+			blueCtx.lineWidth = 2;
+			blueCtx.stroke();
+		}
 	}
 
 	// Draw palette canvases with checkerboard and color
@@ -239,9 +350,6 @@
 			ctx.lineWidth = 1;
 			ctx.strokeRect(0, 0, width, height);
 		});
-		console.log('Palette updated:', $state.snapshot(palette));
-		console.log('Palette canvases:', $state.snapshot(paletteCanvases));
-		console.log('paletteContexts:', $state.snapshot(paletteContexts));
 	}
 
 	// Handle mouse/touch events on canvas
@@ -428,7 +536,7 @@
 {#if show}
 	<div>
 		<div style="position:relative; top:10xp; right:10px;">
-			<button onclick={() => (show = false)}>x</button>
+			<button onclick={() => cancel()}>x</button>
 		</div>
 		<!-- Color Preview -->
 		<div style="background-color: {currentColor.hex};"></div>
@@ -450,8 +558,9 @@
 
 		<!-- Sliders -->
 		<div style="margin-bottom: 16px;">
+			<!-- HSV -->
 			<label>Hue</label>
-			<div style="position relative; width: 100%; height: 16px;">
+			<div style="position: relative; width: 100%; height: 16px;">
 				<canvas bind:this={hueCanvas} width="200" height="16" style="width: 100%; height: 16px;"
 				></canvas>
 				<input
@@ -480,6 +589,7 @@
 					oninput={() => {
 						updateFromHsv();
 						drawSliders();
+						onColorChange($state.snapshot(currentColor));
 					}}
 					style="position: absolute; top: 0; left: 0; width: 100%; height: 16px; opacity: 0; cursor: pointer;"
 				/>
@@ -496,10 +606,13 @@
 					oninput={() => {
 						updateFromHsv();
 						drawSliders();
+						onColorChange($state.snapshot(currentColor));
 					}}
 					style="position: absolute; top: 0; left: 0; width: 100%; height: 16px; opacity: 0; cursor: pointer;"
 				/>
 			</div>
+
+			<!-- ALPHA -->
 			<label>Alpha</label>
 			<div style="position: relative; width: 100%; height: 16px;">
 				<canvas bind:this={alphaCanvas} width="200" height="16" style="width: 100%; height: 16px;"
@@ -512,6 +625,57 @@
 					oninput={() => {
 						updateFromHsv();
 						drawSliders();
+						onColorChange($state.snapshot(currentColor));
+					}}
+					style="position: absolute; top: 0; left: 0; width: 100%; height: 16px; opacity: 0; cursor: pointer;"
+				/>
+			</div>
+
+			<!-- RGB -->
+			<label>Red</label>
+			<div style="position: relative; width: 100%; height: 16px;">
+				<canvas bind:this={redCanvas} width="200" height="16" style="width: 100%; height: 16px;"
+				></canvas>
+				<input
+					type="range"
+					min="0"
+					max="255"
+					bind:value={rgbInput.r}
+					oninput={() => {
+						updateFromRgb();
+						onColorChange($state.snapshot(currentColor));
+					}}
+					style="position: absolute; top: 0; left: 0; width: 100%; height: 16px; opacity: 0; cursor: pointer;"
+				/>
+			</div>
+			<label>Green</label>
+			<div style="position: relative; width: 100%; height: 16px;">
+				<canvas bind:this={greenCanvas} width="200" height="16" style="width: 100%; height: 16px;"
+				></canvas>
+				<input
+					type="range"
+					min="0"
+					max="255"
+					bind:value={rgbInput.g}
+					oninput={() => {
+						updateFromRgb();
+						onColorChange($state.snapshot(currentColor));
+					}}
+					style="position: absolute; top: 0; left: 0; width: 100%; height: 16px; opacity: 0; cursor: pointer;"
+				/>
+			</div>
+			<label>Blue</label>
+			<div style="position: relative; width: 100%; height: 16px;">
+				<canvas bind:this={blueCanvas} width="200" height="16" style="width: 100%; height: 16px;"
+				></canvas>
+				<input
+					type="range"
+					min="0"
+					max="255"
+					bind:value={rgbInput.b}
+					oninput={() => {
+						updateFromRgb();
+						onColorChange($state.snapshot(currentColor));
 					}}
 					style="position: absolute; top: 0; left: 0; width: 100%; height: 16px; opacity: 0; cursor: pointer;"
 				/>
@@ -587,6 +751,18 @@
 					/>
 				</div>
 			</div>
+			<label>Alpha</label>
+			<div style="display: flex; gap: 4px;">
+				<input
+					type="number"
+					min="0"
+					max="100"
+					bind:value={hsvInput.a}
+					oninput={updateFromHsv}
+					style="width: 33.33%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+				/>
+			</div>
+			<div></div>
 		</div>
 
 		<!-- Palette -->
@@ -603,6 +779,10 @@
 					></canvas>
 				{/each}
 			</div>
+			New
+			<div style="width: 24px; height: 24px; background-color: {currentColor.hex};"></div>
+			Old
+			<div style="width: 24px; height: 24px; background-color: {initialColor};"></div>
 			<button
 				onclick={() => {
 					saveColor();
@@ -612,12 +792,17 @@
 			>
 				Save to Palette
 			</button>
+			<button
+				onclick={() => {
+					save();
+				}}>Save</button
+			>
 		</div>
 	</div>
 {:else}
 	<div
 		style="cursor: pointer; width: 24px; height: 24px; background-color: {currentColor.hex};"
-		onclick={() => (show = !show)}
+		onclick={() => open()}
 	></div>
 {/if}
 

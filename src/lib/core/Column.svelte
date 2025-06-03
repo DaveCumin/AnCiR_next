@@ -162,15 +162,20 @@
 	<summary>
 		{#if canChange}
 			<select
-				name="datatype"
-				onchange={(e) => console.log('need TODO change the column ', e.target.value)}
+				name="columnSelect"
+				onchange={(e) => {
+					col.refDataID = Number(e.target.value);
+				}}
+				value={col.refDataID}
 			>
 				{#each core.data as c}
 					<option value={c.columnID} selected={c.columnID == col.columnID}>{c.name}</option>
 				{/each}
 			</select>
 		{/if}
-		<strong>{col.name}</strong><br /> <italic>{col.provenance}</italic><br />
+		{#if !canChange}
+			<strong>{col.name}</strong><br /> <italic>{col.provenance}</italic><br />
+		{/if}
 		type:
 		<select name="datatype" bind:value={col.type}>
 			<option value="time">Time</option>

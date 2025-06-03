@@ -2,7 +2,11 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
+	import Axis from '$lib/plots/base/Axis.svelte';
+	import { scaleLinear } from 'd3-scale';
+
 	import { core } from '$lib/core/theCore.svelte.js';
+	import Line from '../base/Line.svelte';
 
 	function getRandomColor() {
 		const letters = '0123456789ABCDEF';
@@ -13,34 +17,11 @@
 		return color;
 	}
 
-	function normalise(values, min, max) {
-		return values.map((value) => (value - min) / (max - min));
-	}
-
 	class ScatterDataclass {
 		parent = $state();
 		x = $state();
 		y = $state();
 		colour = $state(getRandomColor());
-		polyline = $derived.by(() => {
-			let out = '';
-			let tempx = this.x.getData() ?? [];
-			let tempy = this.y.getData() ?? [];
-
-			//normalise to the parent width and height
-			tempx = normalise(tempx, this.parent.xlims[0], this.parent.xlims[1]);
-			tempy = normalise(tempy, this.parent.ylims[0], this.parent.ylims[1]);
-
-			for (let p = 0; p < tempx.length; p++) {
-				out +=
-					this.parent.parent.width * tempx[p] +
-					',' +
-					(this.parent.parent.height - this.parent.parent.height * tempy[p]) +
-					' ';
-			}
-
-			return out;
-		});
 
 		constructor(parent, dataIN) {
 			this.parent = parent;
@@ -76,6 +57,11 @@
 	export class Scatterplotclass {
 		parent = $state();
 		data = $state([]);
+		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
+		plotheight = $derived(this.parent.height - this.padding.top - this.padding.bottom);
+		plotwidth = $derived(this.parent.width - this.padding.left - this.padding.right);
+		xlimsIN = $state([null, null]);
+		ylimsIN = $state([null, null]);
 		ylims = $derived.by(() => {
 			if (this.data.length === 0) {
 				return [0, 0];
@@ -88,7 +74,7 @@
 				ymin = Math.min(ymin, Math.min(...tempy));
 				ymax = Math.max(ymax, Math.max(...tempy));
 			});
-			return [ymin, ymax];
+			return [this.ylimsIN[0] ? this.ylimsIN[0] : ymin, this.ylimsIN[1] ? this.ylimsIN[1] : ymax];
 		});
 		xlims = $derived.by(() => {
 			if (this.data.length === 0) {
@@ -102,7 +88,7 @@
 				xmin = Math.min(xmin, Math.min(...tempx));
 				xmax = Math.max(xmax, Math.max(...tempx));
 			});
-			return [xmin, xmax];
+			return [this.xlimsIN[0] ? this.xlimsIN[0] : xmin, this.xlimsIN[1] ? this.xlimsIN[1] : xmax];
 		});
 
 		constructor(parent, dataIN) {
@@ -153,8 +139,48 @@
 		Name: <input type="text" bind:value={theData.parent.name} />
 		Width: <input type="number" bind:value={theData.parent.width} />
 		height: <input type="number" bind:value={theData.parent.height} />
-		<p>ylims: {theData.ylims}</p>
-		<p>xlims: {theData.xlims}</p>
+
+		<p>
+			Padding: <input type="number" bind:value={theData.padding.top} />
+			<input type="number" bind:value={theData.padding.right} />
+			<input type="number" bind:value={theData.padding.bottom} />
+			<input type="number" bind:value={theData.padding.left} />
+		</p>
+
+		<p>
+			ylims: <button onclick={() => (theData.ylimsIN = [null, null])}>R</button>
+			<input
+				type="number"
+				value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
+				oninput={(e) => {
+					theData.ylimsIN[0] = [parseFloat(e.target.value)];
+				}}
+			/>
+			<input
+				type="number"
+				value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
+				oninput={(e) => {
+					theData.ylimsIN[1] = [parseFloat(e.target.value)];
+				}}
+			/>
+		</p>
+		<p>
+			xlims: <button onclick={() => (theData.xlimsIN = [null, null])}>R</button>
+			<input
+				type="number"
+				value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
+				oninput={(e) => {
+					theData.xlimsIN[0] = [parseFloat(e.target.value)];
+				}}
+			/>
+			<input
+				type="number"
+				value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
+				oninput={(e) => {
+					theData.xlimsIN[1] = [parseFloat(e.target.value)];
+				}}
+			/>
+		</p>
 		<p>Data:</p>
 		<button
 			onclick={() =>
@@ -184,12 +210,50 @@
 {/snippet}
 
 {#snippet plot(theData)}
-	<svg width={theData.width} height={theData.height} style="background: grey;">
+	<svg
+		width={theData.plot.parent.width}
+		height={theData.plot.parent.height}
+		style={`background: grey;`}
+	>
+		<!-- Draw the lines for each data set -->
 		{#each theData.plot.data as datum}
-			{#if datum.polyline}
-				<polyline fill="none" stroke={datum.colour} stroke-width="3" points={datum.polyline} />
-			{/if}
+			<Line
+				height={theData.plot.plotheight}
+				width={theData.plot.plotwidth}
+				x={datum.x.getData()}
+				y={datum.y.getData()}
+				xlims={theData.plot.xlims}
+				ylims={theData.plot.ylims}
+				strokeCol={datum.colour}
+				strokeWidth="3"
+				style={`transform: translate(	${theData.plot.padding.left}px, 
+													${theData.plot.padding.top}px);`}
+			/>
 		{/each}
+		<!-- The Y-axis -->
+		<Axis
+			bind:height={theData.plot.plotheight}
+			bind:width={theData.plot.plotwidth}
+			scale={scaleLinear()
+				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+				.range([theData.plot.plotheight, 0])}
+			position="left"
+			yoffset={theData.plot.padding.top}
+			xoffset={theData.plot.padding.left}
+			nticks={5}
+		/>
+		<!-- The X-axis -->
+		<Axis
+			bind:height={theData.plot.plotheight}
+			bind:width={theData.plot.plotwidth}
+			scale={scaleLinear()
+				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+				.range([0, theData.plot.plotwidth])}
+			position="bottom"
+			yoffset={theData.plot.padding.top}
+			xoffset={theData.plot.padding.left}
+			nticks={5}
+		/>
 	</svg>
 {/snippet}
 
