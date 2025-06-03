@@ -12,7 +12,7 @@
 		scale = $bindable(), //the d3s scale to use
 		nticks = $bindable(4), //number of ticks
 		colour = $bindable('black'), //colour of the lines and values
-		gridlines = $bindable() //whether to show gridlines or not
+		gridlines = $bindable(true) //whether to show gridlines or not //TODO: make this work
 	} = $props();
 
 	let transform;
