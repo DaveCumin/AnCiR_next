@@ -46,9 +46,8 @@
 				break;
 		}
 		select(g).call(axis).selectAll('path').style('stroke', colour);
-		select(g).call(axis).selectAll('text').style('fill', colour);
+		select(g).call(axis).selectAll('text').style('fill', colour).style('font-size', 15);
 		select(g).call(axis).style('transform', transform);
-		select(g).call(axis).style('font-size', 15);
 	});
 </script>
 

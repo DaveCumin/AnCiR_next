@@ -2,11 +2,12 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
-	import Axis from '$lib/plots/base/Axis.svelte';
+	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 
 	import { core } from '$lib/core/theCore.svelte.js';
-	import Line from '../base/Line.svelte';
+	import Line from '$lib/components/plotbits/Line.svelte';
+	import Points from '$lib/components/plotbits/Points.svelte';
 
 	function getRandomColor() {
 		const letters = '0123456789ABCDEF';
@@ -22,7 +23,7 @@
 		x = $state();
 		y = $state();
 		colour = $state(getRandomColor());
-		strokeWidth = $state(1);
+		strokeWidth = $state(3);
 
 		constructor(parent, dataIN) {
 			this.parent = parent;
@@ -224,15 +225,31 @@
 		<!-- Draw the lines for each data set -->
 		{#each theData.plot.data as datum}
 			<Line
-				height={theData.plot.plotheight}
-				width={theData.plot.plotwidth}
-				x={datum.x.getData()}
-				y={datum.y.getData()}
-				xlims={theData.plot.xlims}
-				ylims={theData.plot.ylims}
+				x={datum.x}
+				y={datum.y}
+				xscale={scaleLinear()
+					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+					.range([0, theData.plot.plotwidth])}
+				yscale={scaleLinear()
+					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+					.range([theData.plot.plotheight, 0])}
 				strokeCol={datum.colour}
 				strokeWidth={datum.strokeWidth}
 				style={`transform: translate(	${theData.plot.padding.left}px, 
+													${theData.plot.padding.top}px);`}
+			/>
+			<Points
+				x={datum.x}
+				y={datum.y}
+				xscale={scaleLinear()
+					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+					.range([0, theData.plot.plotwidth])}
+				yscale={scaleLinear()
+					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+					.range([theData.plot.plotheight, 0])}
+				radius={8}
+				fillCol={getRandomColor()}
+				style={`transform: translate(	${theData.plot.padding.left}px,
 													${theData.plot.padding.top}px);`}
 			/>
 		{/each}

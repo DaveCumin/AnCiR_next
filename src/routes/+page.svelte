@@ -50,13 +50,28 @@
 		refresh();
 	});
 
+	function makeArray(from, to, step) {
+		let out = [];
+		for (let i = from; i <= to; i += step) {
+			out.push(i);
+		}
+		return out;
+	}
+	function makeRandom(N) {
+		let out = [];
+		for (let i = 0; i < N; i++) {
+			out.push(Math.random());
+		}
+		return out;
+	}
+
 	function refresh() {
 		//simulate importing data
 		core.data = [];
-		let d0id = addData([1, 2, 3, 4], 'time', 'the time', 'just made this up');
+		let d0id = addData(makeArray(0, 100, 1), 'time', 'the time', 'just made this up');
 		core.data[0].addProcess('Add');
 
-		let d1id = addData(null, 'number', 'val1', 'imported from thin air');
+		let d1id = addData(makeRandom(100), 'number', 'val1', 'imported from thin air');
 		core.data[1].addProcess('Add');
 		core.data[1].addProcess('Sub');
 
