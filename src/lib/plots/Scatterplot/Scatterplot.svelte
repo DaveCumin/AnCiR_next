@@ -204,10 +204,10 @@
 				<button onclick={() => theData.removeData(i)}>-</button>
 			</p>
 
-			x: {datum.x.name} ({datum.x.getData()?.join(', ')})
+			x: {datum.x.name}
 			<Column col={datum.x} canChange={true} />
 
-			y: {datum.y.name} ({datum.y.getData()?.join(', ')})
+			y: {datum.y.name}
 			<Column col={datum.y} canChange={true} />
 
 			<input type="color" bind:value={datum.colour} />
@@ -220,39 +220,8 @@
 	<svg
 		width={theData.plot.parent.width}
 		height={theData.plot.parent.height}
-		style={`background: white;`}
+		style={`background: white; position: absolute;`}
 	>
-		<!-- Draw the lines for each data set -->
-		{#each theData.plot.data as datum}
-			<Line
-				x={datum.x}
-				y={datum.y}
-				xscale={scaleLinear()
-					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-					.range([0, theData.plot.plotwidth])}
-				yscale={scaleLinear()
-					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-					.range([theData.plot.plotheight, 0])}
-				strokeCol={datum.colour}
-				strokeWidth={datum.strokeWidth}
-				style={`transform: translate(	${theData.plot.padding.left}px, 
-													${theData.plot.padding.top}px);`}
-			/>
-			<Points
-				x={datum.x}
-				y={datum.y}
-				xscale={scaleLinear()
-					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-					.range([0, theData.plot.plotwidth])}
-				yscale={scaleLinear()
-					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-					.range([theData.plot.plotheight, 0])}
-				radius={8}
-				fillCol={getRandomColor()}
-				style={`transform: translate(	${theData.plot.padding.left}px,
-													${theData.plot.padding.top}px);`}
-			/>
-		{/each}
 		<!-- The Y-axis -->
 		<Axis
 			bind:height={theData.plot.plotheight}
@@ -280,6 +249,39 @@
 			bind:gridlines={theData.plot.xgridlines}
 		/>
 	</svg>
+	<!-- plotted with canvas to make it more responsive -->
+	{#each theData.plot.data as datum}
+		<Line
+			x={datum.x}
+			y={datum.y}
+			xscale={scaleLinear()
+				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+				.range([0, theData.plot.plotwidth])}
+			yscale={scaleLinear()
+				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+				.range([theData.plot.plotheight, 0])}
+			strokeCol={datum.colour}
+			strokeWidth={datum.strokeWidth}
+			style={`transform: translate(	${theData.plot.padding.left}px, 
+													${theData.plot.padding.top}px);`}
+			usecanvas={true}
+		/>
+		<Points
+			x={datum.x}
+			y={datum.y}
+			xscale={scaleLinear()
+				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+				.range([0, theData.plot.plotwidth])}
+			yscale={scaleLinear()
+				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+				.range([theData.plot.plotheight, 0])}
+			radius={8}
+			fillCol={getRandomColor()}
+			style={`transform: translate(	${theData.plot.padding.left}px,
+													${theData.plot.padding.top}px);`}
+			usecanvas={true}
+		/>
+	{/each}
 {/snippet}
 
 {#if which === 'plot'}
