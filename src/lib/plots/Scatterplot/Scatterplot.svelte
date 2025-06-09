@@ -241,6 +241,7 @@
 		id={'plot' + theData.plot.parent.plotid}
 		width={theData.plot.parent.width}
 		height={theData.plot.parent.height}
+		viewBox="0 0 {theData.plot.parent.width} {theData.plot.parent.height}"
 		style={`background: white; position: absolute;`}
 	>
 		<!-- The Y-axis -->

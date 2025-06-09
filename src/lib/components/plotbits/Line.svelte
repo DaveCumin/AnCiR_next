@@ -1,40 +1,59 @@
 <script>
 	let { x, y, xscale, yscale, strokeCol, strokeWidth, yoffset, xoffset } = $props();
 
+	let xlims = $derived(xscale.domain());
+	let ylims = $derived(yscale.domain());
+
+	let width = $derived(xscale.range()[1]);
+	let height = $derived(yscale.range()[0]);
+
+	let clipKey = $derived(`${xoffset},${yoffset},${width},${height}`);
+
 	let line = $derived.by(() => {
 		let tempx = x.getData() ?? [];
 		let tempy = y.getData() ?? [];
-		let xlims = xscale.domain();
-		let ylims = yscale.domain();
-		let buffer = Math.max(
-			1,
-			Math.abs(xlims[1] - xlims[0]) / 10,
-			Math.abs(ylims[1] - ylims[0]) / 10
-		);
-		let out = '';
-		for (let p = 0; p < tempx.length; p++) {
-			if (
-				tempx[p] >= Math.min(xlims[0], xlims[1]) - buffer &&
-				tempx[p] <= Math.max(xlims[0], xlims[1]) + buffer &&
-				tempy[p] >= Math.min(ylims[0], ylims[1]) - buffer &&
-				tempy[p] <= Math.max(ylims[0], ylims[1]) + buffer
-			) {
-				out += xscale(tempx[p]) + ',' + yscale(tempy[p]) + ' ';
+
+		//find the x point before the limit
+		let beforeIdx = 0;
+		for (let i = 1; i < tempx.length; i++) {
+			if (tempx[i] >= Math.min(xlims[0], xlims[1])) {
+				beforeIdx = i - 1;
+				break;
 			}
+		}
+
+		//find the x point after the limit
+		let afterIdx = tempx.length - 1;
+		for (let i = tempx.length - 2; i >= 0; i--) {
+			if (tempx[i] <= Math.max(xlims[0], xlims[1])) {
+				afterIdx = i + 1;
+				break;
+			}
+		}
+
+		let out = '';
+		for (let p = beforeIdx; p <= afterIdx; p++) {
+			out += xscale(tempx[p]) + ',' + yscale(tempy[p]) + ' ';
 		}
 
 		return out;
 	});
 </script>
 
-<polyline
-	points={line}
-	fill="none"
-	stroke={strokeCol}
-	stroke-width={strokeWidth}
-	style={`transform: translate(	${xoffset}px,
+<clipPath id={clipKey}>
+	<rect x={xoffset} y={yoffset} {width} {height} />
+</clipPath>
+
+<g clip-path={`url(#${clipKey})`}>
+	<polyline
+		points={line}
+		fill="none"
+		stroke={strokeCol}
+		stroke-width={strokeWidth}
+		style={`transform: translate(	${xoffset}px,
 									${yoffset}px);`}
-/>
+	/>
+</g>
 
 <!--
 //THIS WORKS BUT IS MUCH SLOWER TO RENDER
