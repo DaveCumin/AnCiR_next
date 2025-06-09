@@ -1,8 +1,5 @@
 <script>
-	let { x, y, xscale, yscale, strokeCol, strokeWidth, yoffset, xoffset, usecanvas, container } =
-		$props();
-
-	let context;
+	let { x, y, xscale, yscale, strokeCol, strokeWidth, yoffset, xoffset } = $props();
 
 	let scaledData = $derived.by(() => {
 		let tempx = x.getData() ?? [];
@@ -14,53 +11,26 @@
 
 		return { tempx, tempy };
 	});
-	let points = $derived.by(() => {
+	let line = $derived.by(() => {
 		let out = '';
 
 		//Create the polyline
 		for (let p = 0; p < scaledData.tempx.length; p++) {
 			out += scaledData.tempx[p] + ',' + scaledData.tempy[p] + ' ';
 		}
-
+		console.log(out);
 		return out;
 	});
-
-	$effect(() => {
-		if (usecanvas && container) {
-			context = container.getContext('2d');
-			if (context) {
-				context.strokeStyle = strokeCol;
-				context.lineWidth = strokeWidth;
-				draw();
-			}
-		}
-	});
-
-	function draw() {
-		context.beginPath();
-
-		scaledData.tempx.forEach((x, i) => {
-			if (i === 0) {
-				context.moveTo(x + xoffset, scaledData.tempy[i] + yoffset);
-			} else {
-				context.lineTo(x + xoffset, scaledData.tempy[i] + yoffset);
-			}
-		});
-		context.stroke();
-	}
 </script>
 
-{usecanvas}
-{#if !usecanvas}
-	<polyline
-		fill="none"
-		stroke={strokeCol}
-		stroke-width={strokeWidth}
-		{points}
-		style={`transform: translate(	${xoffset}px,
-													${yoffset}px);`}
-	/>
-{/if}
+<polyline
+	points={line}
+	fill="none"
+	stroke={strokeCol}
+	stroke-width={strokeWidth}
+	style={`transform: translate(	${xoffset}px,
+									${yoffset}px);`}
+/>
 
 <!--
 //THIS WORKS BUT IS MUCH SLOWER TO RENDER

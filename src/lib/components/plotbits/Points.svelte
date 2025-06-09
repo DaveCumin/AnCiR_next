@@ -1,17 +1,5 @@
 <script>
-	let {
-		x,
-		y,
-		xscale,
-		yscale,
-		radius,
-		fillCol,
-		style,
-		yoffset,
-		xoffset,
-		usecanvas = false,
-		container
-	} = $props();
+	let { x, y, xscale, yscale, radius, fillCol, yoffset, xoffset } = $props();
 
 	let context;
 
@@ -35,38 +23,12 @@
 
 		return out;
 	});
-
-	$effect(() => {
-		if (usecanvas) {
-			context = container.getContext('2d');
-			if (context) {
-				context.fillStyle = fillCol;
-				draw();
-			}
-		}
-	});
-
-	function draw() {
-		scaledData.tempx.forEach((p, i) => {
-			context.beginPath();
-			context.arc(
-				scaledData.tempx[i] + xoffset,
-				scaledData.tempy[i] + yoffset,
-				radius,
-				0,
-				2 * Math.PI
-			);
-			context.fill();
-		});
-	}
 </script>
 
-{#if !usecanvas}
-	<path
-		d={points}
-		fill={fillCol}
-		stroke="none"
-		style={`transform: translate(	${xoffset}px,
+<path
+	d={points}
+	fill={fillCol}
+	stroke="none"
+	style={`transform: translate(	${xoffset}px,
 													${yoffset}px);`}
-	/>
-{/if}
+/>

@@ -59,8 +59,6 @@
 	export class Scatterplotclass {
 		parent = $state();
 		data = $state([]);
-		useCanvas = $state(true);
-		container = $state();
 		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
 		plotheight = $derived(this.parent.height - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.parent.width - this.padding.left - this.padding.right);
@@ -132,8 +130,6 @@
 </script>
 
 <script>
-	import Container from '$lib/components/plotbits/Container.svelte';
-
 	let { theData, which } = $props();
 
 	function pickRandomData() {
@@ -147,8 +143,6 @@
 		Name: <input type="text" bind:value={theData.parent.name} />
 		Width: <input type="number" bind:value={theData.parent.width} />
 		height: <input type="number" bind:value={theData.parent.height} />
-
-		Use Canvas: <input type="checkbox" bind:checked={theData.useCanvas} />
 
 		<p>
 			Padding: <input type="number" bind:value={theData.padding.top} />
@@ -223,11 +217,10 @@
 {/snippet}
 
 {#snippet plot(theData)}
-	<Container
+	<svg
 		width={theData.plot.parent.width}
 		height={theData.plot.parent.height}
-		usecanvas={theData.plot.useCanvas}
-		bind:container={theData.plot.container}
+		style={`background: white; position: absolute;`}
 	>
 		<!-- The Y-axis -->
 		<Axis
@@ -241,8 +234,6 @@
 			xoffset={theData.plot.padding.left}
 			nticks={5}
 			gridlines={theData.plot.ygridlines}
-			usecanvas={theData.plot.useCanvas}
-			container={theData.plot.container}
 		/>
 		<!-- The X-axis -->
 		<Axis
@@ -256,8 +247,6 @@
 			xoffset={theData.plot.padding.left}
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
-			usecanvas={theData.plot.useCanvas}
-			container={theData.plot.container}
 		/>
 
 		{#each theData.plot.data as datum}
@@ -274,8 +263,6 @@
 				strokeWidth={datum.strokeWidth}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
-				usecanvas={theData.plot.useCanvas}
-				container={theData.plot.container}
 			/>
 			<Points
 				x={datum.x}
@@ -290,11 +277,9 @@
 				fillCol={datum.colour}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
-				usecanvas={theData.plot.useCanvas}
-				container={theData.plot.container}
 			/>
 		{/each}
-	</Container>
+	</svg>
 {/snippet}
 
 {#if which === 'plot'}
