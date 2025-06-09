@@ -1,24 +1,23 @@
 <script>
 	let { x, y, xscale, yscale, strokeCol, strokeWidth, yoffset, xoffset } = $props();
 
-	let scaledData = $derived.by(() => {
+	let line = $derived.by(() => {
 		let tempx = x.getData() ?? [];
 		let tempy = y.getData() ?? [];
-
-		//normalise according to the scale
-		tempx = tempx.map((val) => xscale(val));
-		tempy = tempy.map((val) => yscale(val));
-
-		return { tempx, tempy };
-	});
-	let line = $derived.by(() => {
+		let xlims = xscale.domain();
+		let ylims = yscale.domain();
 		let out = '';
-
-		//Create the polyline
-		for (let p = 0; p < scaledData.tempx.length; p++) {
-			out += scaledData.tempx[p] + ',' + scaledData.tempy[p] + ' ';
+		for (let p = 0; p < tempx.length; p++) {
+			if (
+				tempx[p] >= xlims[0] &&
+				tempx[p] <= xlims[1] &&
+				tempy[p] >= ylims[0] &&
+				tempy[p] <= ylims[1]
+			) {
+				out += xscale(tempx[p]) + ',' + yscale(tempy[p]) + ' ';
+			}
 		}
-		console.log(out);
+
 		return out;
 	});
 </script>

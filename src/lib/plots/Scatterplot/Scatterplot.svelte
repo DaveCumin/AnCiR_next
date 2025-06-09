@@ -22,8 +22,10 @@
 		parent = $state();
 		x = $state();
 		y = $state();
-		colour = $state(getRandomColor());
-		strokeWidth = $state(3);
+		linecolour = $state(getRandomColor());
+		linestrokeWidth = $state(3);
+		pointcolour = $state(getRandomColor());
+		pointradius = $state(5);
 
 		constructor(parent, dataIN) {
 			this.parent = parent;
@@ -210,8 +212,10 @@
 			y: {datum.y.name}
 			<Column col={datum.y} canChange={true} />
 
-			<input type="color" bind:value={datum.colour} />
-			<input type="number" step="0.1" min="0.1" bind:value={datum.strokeWidth} />
+			line col: <input type="color" bind:value={datum.linecolour} />
+			line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
+			point col: <input type="color" bind:value={datum.pointcolour} />
+			point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
 		{/each}
 	</div>
 {/snippet}
@@ -259,8 +263,8 @@
 				yscale={scaleLinear()
 					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 					.range([theData.plot.plotheight, 0])}
-				strokeCol={datum.colour}
-				strokeWidth={datum.strokeWidth}
+				strokeCol={datum.linecolour}
+				strokeWidth={datum.linestrokeWidth}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 			/>
@@ -273,8 +277,8 @@
 				yscale={scaleLinear()
 					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 					.range([theData.plot.plotheight, 0])}
-				radius={4}
-				fillCol={datum.colour}
+				radius={datum.pointradius}
+				fillCol={datum.pointcolour}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 			/>
