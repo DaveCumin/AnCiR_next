@@ -1,7 +1,18 @@
 <script>
-	let { x, y, xscale, yscale, radius, fillCol, style, usecanvas = false } = $props();
+	let {
+		x,
+		y,
+		xscale,
+		yscale,
+		radius,
+		fillCol,
+		style,
+		yoffset,
+		xoffset,
+		usecanvas = false,
+		container
+	} = $props();
 
-	let canvas;
 	let context;
 
 	let scaledData = $derived.by(() => {
@@ -14,35 +25,48 @@
 
 		return { tempx, tempy };
 	});
+	let points = $derived.by(() => {
+		let out = '';
+
+		//Create the polyline
+		for (let p = 0; p < scaledData.tempx.length; p++) {
+			out += `M${scaledData.tempx[p]} ${scaledData.tempy[p]} m-${radius} 0 a${radius} ${radius} 0 1 0 ${2 * radius} 0 a${radius} ${radius} 0 1 0 -${2 * radius} 0`;
+		}
+
+		return out;
+	});
 
 	$effect(() => {
 		if (usecanvas) {
-			context = canvas.getContext('2d');
-			context.clearRect(0, 0, canvas.width, canvas.height);
-			context.fillStyle = fillCol;
-			draw();
+			context = container.getContext('2d');
+			if (context) {
+				context.fillStyle = fillCol;
+				draw();
+			}
 		}
 	});
 
 	function draw() {
-		context.clearRect(0, 0, canvas.width, canvas.height);
 		scaledData.tempx.forEach((p, i) => {
 			context.beginPath();
-			context.arc(scaledData.tempx[i], scaledData.tempy[i], radius, 0, 2 * Math.PI);
+			context.arc(
+				scaledData.tempx[i] + xoffset,
+				scaledData.tempy[i] + yoffset,
+				radius,
+				0,
+				2 * Math.PI
+			);
 			context.fill();
 		});
 	}
 </script>
 
-{#if usecanvas}
-	<canvas
-		bind:this={canvas}
-		width={xscale.range()[1]}
-		height={yscale.range()[0]}
-		style={'position:absolute;' + style}
+{#if !usecanvas}
+	<path
+		d={points}
+		fill={fillCol}
+		stroke="none"
+		style={`transform: translate(	${xoffset}px,
+													${yoffset}px);`}
 	/>
-{:else}
-	{#each scaledData.tempx as x, i}
-		<circle {style} cx={x} cy={scaledData.tempy[i]} r={radius} fill={fillCol} />
-	{/each}
 {/if}

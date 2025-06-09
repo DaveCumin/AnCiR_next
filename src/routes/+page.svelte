@@ -60,7 +60,7 @@
 	function makeRandom(N) {
 		let out = [];
 		for (let i = 0; i < N; i++) {
-			out.push(Math.random());
+			out.push(Math.round(Math.random() * 10));
 		}
 		return out;
 	}
@@ -68,10 +68,10 @@
 	function refresh() {
 		//simulate importing data
 		core.data = [];
-		let d0id = addData(makeArray(0, 5000, 1), 'time', 'the time', 'just made this up');
+		let d0id = addData(makeArray(1, 100000, 1), 'time', 'the time', 'just made this up');
 		core.data[0].addProcess('Add');
 
-		let d1id = addData(makeRandom(5000), 'number', 'val1', 'imported from thin air');
+		let d1id = addData(makeRandom(100000), 'number', 'val1', 'imported from thin air');
 		core.data[1].addProcess('Add');
 		core.data[1].addProcess('Sub');
 
@@ -154,10 +154,10 @@
 	<button onclick={() => load()}>Load</button>
 </div>
 
-<div style="position:absolute; top:0; right:300px; z-index:1000; background:grey;">
+<div style="position:absolute; top:0; right:300px; z-index:1000; border:1px solid black;">
 	<ColourPicker />
 </div>
-<div style="position:absolute; top:0; right:270px; z-index:1000; background:grey;">
+<div style="position:absolute; top:0; right:270px; z-index:1000; border:1px solid black;">
 	<ColourPicker />
 </div>
 {#each core.plots as plot}

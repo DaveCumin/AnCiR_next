@@ -534,7 +534,7 @@
 </script>
 
 {#if show}
-	<div>
+	<div style="background: white;">
 		<div style="position:relative; top:10xp; right:10px;">
 			<button onclick={() => cancel()}>x</button>
 		</div>

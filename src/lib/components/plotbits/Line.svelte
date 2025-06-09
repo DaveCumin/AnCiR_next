@@ -1,7 +1,7 @@
 <script>
-	let { x, y, xscale, yscale, strokeCol, strokeWidth, style, usecanvas = false } = $props();
+	let { x, y, xscale, yscale, strokeCol, strokeWidth, yoffset, xoffset, usecanvas, container } =
+		$props();
 
-	let canvas;
 	let context;
 
 	let scaledData = $derived.by(() => {
@@ -15,7 +15,6 @@
 		return { tempx, tempy };
 	});
 	let points = $derived.by(() => {
-		console.log('me');
 		let out = '';
 
 		//Create the polyline
@@ -27,27 +26,85 @@
 	});
 
 	$effect(() => {
+		if (usecanvas && container) {
+			context = container.getContext('2d');
+			if (context) {
+				context.strokeStyle = strokeCol;
+				context.lineWidth = strokeWidth;
+				draw();
+			}
+		}
+	});
+
+	function draw() {
+		context.beginPath();
+
+		scaledData.tempx.forEach((x, i) => {
+			if (i === 0) {
+				context.moveTo(x + xoffset, scaledData.tempy[i] + yoffset);
+			} else {
+				context.lineTo(x + xoffset, scaledData.tempy[i] + yoffset);
+			}
+		});
+		context.stroke();
+	}
+</script>
+
+{usecanvas}
+{#if !usecanvas}
+	<polyline
+		fill="none"
+		stroke={strokeCol}
+		stroke-width={strokeWidth}
+		{points}
+		style={`transform: translate(	${xoffset}px,
+													${yoffset}px);`}
+	/>
+{/if}
+
+<!--
+//THIS WORKS BUT IS MUCH SLOWER TO RENDER
+<script>
+	import { line, curveBasis } from 'd3-shape';
+
+	let { x, y, xscale, yscale, strokeCol, strokeWidth, style, usecanvas = false } = $props();
+
+	let canvas;
+	let context;
+
+	let basis = false;
+
+	let scaledData = $derived(
+		x.getData().map((xVal, i) => ({
+			x: xscale(xVal),
+			y: yscale(y.getData()[i]),
+			id: i // Unique key for data binding
+		}))
+	);
+
+	let theLine = line()
+		.x((d) => d.x)
+		.y((d) => d.y);
+	if (basis) {
+		theLine = theLine.curve(curveBasis);
+	}
+
+	$effect(() => {
 		if (usecanvas) {
 			context = canvas.getContext('2d');
 			context.clearRect(0, 0, canvas.width, canvas.height);
 			context.strokeStyle = strokeCol;
 			context.lineWidth = strokeWidth;
-			console.log(context);
 			draw();
 		}
 	});
 
 	function draw() {
 		context.clearRect(0, 0, canvas.width, canvas.height);
+		context.strokeStyle = strokeCol;
+		context.lineWidth = strokeWidth;
 		context.beginPath();
-
-		scaledData.tempx.forEach((x, i) => {
-			if (i === 0) {
-				context.moveTo(x, scaledData.tempy[i]);
-			} else {
-				context.lineTo(x, scaledData.tempy[i]);
-			}
-		});
+		theLine.context(context)(scaledData);
 		context.stroke();
 	}
 </script>
@@ -63,28 +120,4 @@
 	<polyline fill="none" stroke={strokeCol} stroke-width={strokeWidth} {points} {style} />
 {/if}
 
-<!--
-//THIS WORKS BUT IS MUCH SLOWER TO RENDER
-//TODO: consider debouncing (where a 'holding' image is given when changes are made, then final graph renders)
-<script>
-	import { line, curveBasis } from 'd3-shape';
-	let { x, y, xscale, yscale, strokeCol, strokeWidth, style } = $props();
-
-	let data = $derived(
-		x.getData().map((xVal, i) => ({
-			x: xscale(xVal),
-			y: yscale(y.getData()[i]),
-			id: i // Unique key for data binding
-		}))
-	);
-
-	let theLine = line()
-		.x((d) => d.x)
-		.y((d) => d.y);
-	if (true) {
-		theLine = theLine.curve(curveBasis);
-	}
-</script>
-
-<path fill="none" stroke={strokeCol} stroke-width={strokeWidth} d={theLine(data)} {style} />
 -->

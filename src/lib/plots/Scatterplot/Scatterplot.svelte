@@ -59,6 +59,8 @@
 	export class Scatterplotclass {
 		parent = $state();
 		data = $state([]);
+		useCanvas = $state(true);
+		container = $state();
 		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
 		plotheight = $derived(this.parent.height - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.parent.width - this.padding.left - this.padding.right);
@@ -130,6 +132,8 @@
 </script>
 
 <script>
+	import Container from '$lib/components/plotbits/Container.svelte';
+
 	let { theData, which } = $props();
 
 	function pickRandomData() {
@@ -143,6 +147,8 @@
 		Name: <input type="text" bind:value={theData.parent.name} />
 		Width: <input type="number" bind:value={theData.parent.width} />
 		height: <input type="number" bind:value={theData.parent.height} />
+
+		Use Canvas: <input type="checkbox" bind:checked={theData.useCanvas} />
 
 		<p>
 			Padding: <input type="number" bind:value={theData.padding.top} />
@@ -217,15 +223,16 @@
 {/snippet}
 
 {#snippet plot(theData)}
-	<svg
+	<Container
 		width={theData.plot.parent.width}
 		height={theData.plot.parent.height}
-		style={`background: white; position: absolute;`}
+		usecanvas={theData.plot.useCanvas}
+		bind:container={theData.plot.container}
 	>
 		<!-- The Y-axis -->
 		<Axis
-			bind:height={theData.plot.plotheight}
-			bind:width={theData.plot.plotwidth}
+			height={theData.plot.plotheight}
+			width={theData.plot.plotwidth}
 			scale={scaleLinear()
 				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 				.range([theData.plot.plotheight, 0])}
@@ -233,12 +240,14 @@
 			yoffset={theData.plot.padding.top}
 			xoffset={theData.plot.padding.left}
 			nticks={5}
-			bind:gridlines={theData.plot.ygridlines}
+			gridlines={theData.plot.ygridlines}
+			usecanvas={theData.plot.useCanvas}
+			container={theData.plot.container}
 		/>
 		<!-- The X-axis -->
 		<Axis
-			bind:height={theData.plot.plotheight}
-			bind:width={theData.plot.plotwidth}
+			height={theData.plot.plotheight}
+			width={theData.plot.plotwidth}
 			scale={scaleLinear()
 				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
 				.range([0, theData.plot.plotwidth])}
@@ -246,42 +255,46 @@
 			yoffset={theData.plot.padding.top}
 			xoffset={theData.plot.padding.left}
 			nticks={5}
-			bind:gridlines={theData.plot.xgridlines}
+			gridlines={theData.plot.xgridlines}
+			usecanvas={theData.plot.useCanvas}
+			container={theData.plot.container}
 		/>
-	</svg>
-	<!-- plotted with canvas to make it more responsive -->
-	{#each theData.plot.data as datum}
-		<Line
-			x={datum.x}
-			y={datum.y}
-			xscale={scaleLinear()
-				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-				.range([0, theData.plot.plotwidth])}
-			yscale={scaleLinear()
-				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-				.range([theData.plot.plotheight, 0])}
-			strokeCol={datum.colour}
-			strokeWidth={datum.strokeWidth}
-			style={`transform: translate(	${theData.plot.padding.left}px, 
-													${theData.plot.padding.top}px);`}
-			usecanvas={true}
-		/>
-		<Points
-			x={datum.x}
-			y={datum.y}
-			xscale={scaleLinear()
-				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-				.range([0, theData.plot.plotwidth])}
-			yscale={scaleLinear()
-				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-				.range([theData.plot.plotheight, 0])}
-			radius={8}
-			fillCol={getRandomColor()}
-			style={`transform: translate(	${theData.plot.padding.left}px,
-													${theData.plot.padding.top}px);`}
-			usecanvas={true}
-		/>
-	{/each}
+
+		{#each theData.plot.data as datum}
+			<Line
+				x={datum.x}
+				y={datum.y}
+				xscale={scaleLinear()
+					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+					.range([0, theData.plot.plotwidth])}
+				yscale={scaleLinear()
+					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+					.range([theData.plot.plotheight, 0])}
+				strokeCol={datum.colour}
+				strokeWidth={datum.strokeWidth}
+				yoffset={theData.plot.padding.top}
+				xoffset={theData.plot.padding.left}
+				usecanvas={theData.plot.useCanvas}
+				container={theData.plot.container}
+			/>
+			<Points
+				x={datum.x}
+				y={datum.y}
+				xscale={scaleLinear()
+					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+					.range([0, theData.plot.plotwidth])}
+				yscale={scaleLinear()
+					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+					.range([theData.plot.plotheight, 0])}
+				radius={4}
+				fillCol={datum.colour}
+				yoffset={theData.plot.padding.top}
+				xoffset={theData.plot.padding.left}
+				usecanvas={theData.plot.useCanvas}
+				container={theData.plot.container}
+			/>
+		{/each}
+	</Container>
 {/snippet}
 
 {#if which === 'plot'}
