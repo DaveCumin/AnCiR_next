@@ -21,8 +21,12 @@
 				this.plotid = id;
 				plotidCounter = Math.max(id + 1, plotidCounter + 1);
 			}
-			//set the name
+			//set things
 			this.name = dataIN.name;
+			this.x = dataIN.x ?? 350;
+			this.y = dataIN.y ?? 150;
+			this.width = dataIN.width ?? 500;
+			this.height = dataIN.height ?? 250;
 			//need to make the plot
 			this.type = dataIN.type;
 			this.plot = appConsts.plotMap.get(dataIN.type).data.fromJSON(this, dataIN.plot);

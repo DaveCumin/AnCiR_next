@@ -1,8 +1,19 @@
+<script context="module">
+	export function getRandomColor() {
+		const letters = '0123456789ABCDEF';
+		let color = '#';
+		for (let i = 0; i < 6; i++) {
+			color += letters[Math.floor(Math.random() * 16)];
+		}
+		return color;
+	}
+</script>
+
 <script>
 	import { onMount } from 'svelte';
 
 	// Props
-	let { initialColor = '#00ff00', onColorChange = () => {} } = $props();
+	let { initialColor = getRandomColor(), onColorChange = () => {} } = $props();
 
 	// Reactive state for color components
 	let h = $state(0); // Hue (0-360)

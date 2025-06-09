@@ -6,13 +6,18 @@
 		let tempy = y.getData() ?? [];
 		let xlims = xscale.domain();
 		let ylims = yscale.domain();
+		let buffer = Math.max(
+			1,
+			Math.abs(xlims[1] - xlims[0]) / 10,
+			Math.abs(ylims[1] - ylims[0]) / 10
+		);
 		let out = '';
 		for (let p = 0; p < tempx.length; p++) {
 			if (
-				tempx[p] >= xlims[0] &&
-				tempx[p] <= xlims[1] &&
-				tempy[p] >= ylims[0] &&
-				tempy[p] <= ylims[1]
+				tempx[p] >= Math.min(xlims[0], xlims[1]) - buffer &&
+				tempx[p] <= Math.max(xlims[0], xlims[1]) + buffer &&
+				tempy[p] >= Math.min(ylims[0], ylims[1]) - buffer &&
+				tempy[p] <= Math.max(ylims[0], ylims[1]) + buffer
 			) {
 				out += xscale(tempx[p]) + ',' + yscale(tempy[p]) + ' ';
 			}

@@ -8,7 +8,7 @@
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
 
-	class ScatterDataclass {
+	class ActogramDataclass {
 		parent = $state();
 		x = $state();
 		y = $state();
@@ -46,7 +46,7 @@
 		}
 
 		static fromJSON(json, parent) {
-			return new ScatterDataclass(parent, {
+			return new ActogramDataclass(parent, {
 				x: json.x,
 				y: json.y,
 				linecolour: json.linecolour,
@@ -57,7 +57,7 @@
 		}
 	}
 
-	export class Scatterplotclass {
+	export class Actogramclass {
 		parent = $state();
 		data = $state([]);
 		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
@@ -104,7 +104,7 @@
 		}
 
 		addData(dataIN) {
-			this.data.push(new ScatterDataclass(this, dataIN));
+			this.data.push(new ActogramDataclass(this, dataIN));
 		}
 		removeData(idx) {
 			this.data.splice(idx, 1);
@@ -122,21 +122,21 @@
 		}
 		static fromJSON(parent, json) {
 			if (!json) {
-				return new Scatterplotclass(parent, null);
+				return new Actogramclass(parent, null);
 			}
-
-			const scatter = new Scatterplotclass(parent, null);
-			scatter.padding = json.padding;
-			scatter.xlimsIN = json.xlimsIN;
-			scatter.ylimsIN = json.ylimsIN;
-			scatter.padding = json.padding;
-			scatter.ygridlines = json.ygridlines;
-			scatter.xgridlines = json.xgridlines;
+			//TODO: this needs to be fixed
+			const actogram = new Actogramclass(parent, null);
+			actogram.padding = json.padding;
+			actogram.xlimsIN = json.xlimsIN;
+			actogram.ylimsIN = json.ylimsIN;
+			actogram.padding = json.padding;
+			actogram.ygridlines = json.ygridlines;
+			actogram.xgridlines = json.xgridlines;
 
 			if (json.data) {
-				scatter.data = json.data.map((d) => ScatterDataclass.fromJSON(d, scatter));
+				actogram.data = json.data.map((d) => ActogramDataclass.fromJSON(d, actogram));
 			}
-			return scatter;
+			return actogram;
 		}
 	}
 </script>

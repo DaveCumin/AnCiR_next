@@ -5,10 +5,11 @@ export async function loadPlots() {
 	for (const sveltePath in sveltePaths) {
 		const fileName = sveltePath.split('/').pop();
 		const folderName = sveltePath.split('/').slice(-2)[0];
+
 		try {
 			const svelteModule = await sveltePaths[sveltePath]();
 			const component = svelteModule.default;
-			const className = fileName; // e.g., Scatterplot
+			const className = fileName;
 			let plotClass = svelteModule[className];
 
 			// Fallback: Check all named exports for a class with fromJSON
