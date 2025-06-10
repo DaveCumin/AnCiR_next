@@ -34,7 +34,6 @@
 <polyline
 	points={line}
 	fill={colour}
-	stroke={colour}
 	style={`transform: translate(	${xoffset}px,
 									${yoffset}px);`}
 />

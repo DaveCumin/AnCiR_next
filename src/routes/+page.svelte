@@ -68,10 +68,15 @@
 	function refresh() {
 		//simulate importing data
 		core.data = [];
-		let d0id = addData(makeArray(1, 1_000, 1), 'time', 'the time', 'just made this up');
+		let d0id = addData(
+			makeArray(5.15, 5_005 * 0.15, 0.15),
+			'time',
+			'the time',
+			'just made this up'
+		);
 		core.data[0].addProcess('Add');
 
-		let d1id = addData(makeRandom(1_000), 'number', 'val1', 'imported from thin air');
+		let d1id = addData(makeRandom(5_000), 'number', 'val1', 'imported from thin air');
 		core.data[1].addProcess('Add');
 		core.data[1].addProcess('Sub');
 

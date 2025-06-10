@@ -24,7 +24,7 @@
 		parent = $state();
 		x = $state();
 		y = $state();
-		binSize = $state(5);
+		binSize = $state(0.5);
 		colour = $state();
 		dataByDays = $derived.by(() => {
 			const tempx = this.x.getData() ?? [];
@@ -90,9 +90,9 @@
 		padding = $state({ top: 30, right: 20, bottom: 10, left: 30 });
 		plotheight = $derived(this.parent.height - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.parent.width - this.padding.left - this.padding.right);
-		eachplotheight = $derived.by(
-			() => (this.plotheight - (this.Ndays - 1) * this.spaceBetween) / this.Ndays
-		);
+		eachplotheight = $derived.by(() => {
+			return (this.plotheight - (this.Ndays - 1) * this.spaceBetween) / this.Ndays;
+		});
 		startTime = $state(0);
 		spaceBetween = $state(2);
 		doublePlot = $state(2);
@@ -108,7 +108,6 @@
 				tempMaxx = tempMaxx - this.startTime; //TODO: need to work this out with real times
 				Ndays = Math.max(Ndays, tempMaxx / this.period);
 			});
-			console.log('Ndays ', Math.ceil(Ndays));
 			return Math.ceil(Ndays);
 		});
 
@@ -199,7 +198,8 @@
 			Start time: <input type="number" bind:value={theData.startTime} />
 			Period: <input type="number" bind:value={theData.period} />
 			Repeat: <input type="number" bind:value={theData.doublePlot} />
-			Space Between: <input type="number" bind:value={theData.spaceBetween} />
+			Space Between:
+			<input type="number" bind:value={theData.spaceBetween} />
 		</p>
 
 		<p>
@@ -269,7 +269,9 @@
 			position="top"
 			yoffset={theData.plot.padding.top}
 			xoffset={theData.plot.padding.left}
-			nticks={theData.plot.period}
+			nticks={theData.plot.plotwidth > 600
+				? theData.plot.period
+				: Math.max(2, theData.plot.plotwidth / 150)}
 			gridlines={false}
 		/>
 
