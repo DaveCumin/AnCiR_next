@@ -6,16 +6,45 @@
 	import { getRandomColor } from '$lib/components/ColourPicker.svelte';
 	import { core } from '$lib/core/theCore.svelte.js';
 	import Line from '$lib/components/plotbits/Line.svelte';
-	import Points from '$lib/components/plotbits/Points.svelte';
+	import BinnedHist from '$lib/components/plotbits/BinnedHist.svelte';
+	import { makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData';
 
+	function getNdataByPeriods(dataIN, from, to, period) {
+		const byPeriod = [];
+
+		for (let p = from; p < to; p++) {
+			if (dataIN[p]) {
+				let temp = dataIN[p].map((d) => d - from * period);
+				byPeriod.push(...temp);
+			}
+		}
+		return byPeriod;
+	}
 	class ActogramDataclass {
 		parent = $state();
 		x = $state();
 		y = $state();
-		linecolour = $state();
-		linestrokeWidth = $state(3);
-		pointcolour = $state();
-		pointradius = $state(5);
+		binSize = $state(5);
+		colour = $state();
+		dataByDays = $derived.by(() => {
+			const tempx = this.x.getData() ?? [];
+			const tempy = this.y.getData() ?? [];
+			const xByPeriod = {};
+			const yByPeriod = {};
+
+			for (let i = 0; i < tempx.length; i++) {
+				const period = Math.floor(tempx[i] / this.parent.period);
+				if (!xByPeriod[period]) {
+					xByPeriod[period] = [];
+					yByPeriod[period] = [];
+				}
+				if (xByPeriod[period]) {
+					xByPeriod[period].push(tempx[i]);
+					yByPeriod[period].push(tempy[i]);
+				}
+			}
+			return { xByPeriod, yByPeriod };
+		});
 
 		constructor(parent, dataIN) {
 			this.parent = parent;
@@ -30,16 +59,14 @@
 			} else {
 				this.y = new ColumnClass({ refDataID: -1 });
 			}
-			this.linecolour = dataIN?.linecolour ?? getRandomColor();
-			this.pointcolour = dataIN?.pointcolour ?? getRandomColor();
+			this.colour = dataIN?.colour ?? getRandomColor();
 		}
 
 		toJSON() {
 			return {
 				x: this.x,
 				y: this.y,
-				linecolour: this.linecolour,
-				linestrokeWidth: this.linestrokeWidth,
+				colour: this.colour,
 				pointcolour: this.pointcolour,
 				pointradius: this.pointradius
 			};
@@ -60,10 +87,31 @@
 	export class Actogramclass {
 		parent = $state();
 		data = $state([]);
-		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
+		padding = $state({ top: 30, right: 20, bottom: 10, left: 30 });
 		plotheight = $derived(this.parent.height - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.parent.width - this.padding.left - this.padding.right);
-		xlimsIN = $state([null, null]);
+		eachplotheight = $derived.by(
+			() => (this.plotheight - (this.Ndays - 1) * this.spaceBetween) / this.Ndays
+		);
+		startTime = $state(0);
+		spaceBetween = $state(2);
+		doublePlot = $state(2);
+		period = $state(24);
+		Ndays = $derived.by(() => {
+			if (this.data.length === 0) {
+				return 0;
+			}
+			let Ndays = 0;
+			this.data.forEach((d, i) => {
+				let tempMaxx = this.data[i].x.getData() ?? [];
+				tempMaxx = Math.max(...tempMaxx);
+				tempMaxx = tempMaxx - this.startTime; //TODO: need to work this out with real times
+				Ndays = Math.max(Ndays, tempMaxx / this.period);
+			});
+			console.log('Ndays ', Math.ceil(Ndays));
+			return Math.ceil(Ndays);
+		});
+
 		ylimsIN = $state([null, null]);
 		ylims = $derived.by(() => {
 			if (this.data.length === 0) {
@@ -79,22 +127,6 @@
 			});
 			return [this.ylimsIN[0] ? this.ylimsIN[0] : ymin, this.ylimsIN[1] ? this.ylimsIN[1] : ymax];
 		});
-		xlims = $derived.by(() => {
-			if (this.data.length === 0) {
-				return [0, 0];
-			}
-
-			let xmin = Infinity;
-			let xmax = -Infinity;
-			this.data.forEach((d, i) => {
-				let tempx = this.data[i].x.getData() ?? [];
-				xmin = Math.min(xmin, Math.min(...tempx));
-				xmax = Math.max(xmax, Math.max(...tempx));
-			});
-			return [this.xlimsIN[0] ? this.xlimsIN[0] : xmin, this.xlimsIN[1] ? this.xlimsIN[1] : xmax];
-		});
-		xgridlines = $state(true);
-		ygridlines = $state(true);
 
 		constructor(parent, dataIN) {
 			this.parent = parent;
@@ -115,8 +147,8 @@
 				xlimsIN: this.xlimsIN,
 				ylimsIN: this.ylimsIN,
 				padding: this.padding,
-				ygridlines: this.ygridlines,
-				xgridlines: this.xgridlines,
+				doublePlot: this.doublePlot,
+				period: this.period,
 				data: this.data
 			};
 		}
@@ -130,8 +162,6 @@
 			actogram.xlimsIN = json.xlimsIN;
 			actogram.ylimsIN = json.ylimsIN;
 			actogram.padding = json.padding;
-			actogram.ygridlines = json.ygridlines;
-			actogram.xgridlines = json.xgridlines;
 
 			if (json.data) {
 				actogram.data = json.data.map((d) => ActogramDataclass.fromJSON(d, actogram));
@@ -166,8 +196,14 @@
 		</p>
 
 		<p>
+			Start time: <input type="number" bind:value={theData.startTime} />
+			Period: <input type="number" bind:value={theData.period} />
+			Repeat: <input type="number" bind:value={theData.doublePlot} />
+			Space Between: <input type="number" bind:value={theData.spaceBetween} />
+		</p>
+
+		<p>
 			ylims: <button onclick={() => (theData.ylimsIN = [null, null])}>R</button>
-			grid:<input type="checkbox" bind:checked={theData.ygridlines} />
 			<input
 				type="number"
 				step="0.1"
@@ -185,26 +221,7 @@
 				}}
 			/>
 		</p>
-		<p>
-			xlims: <button onclick={() => (theData.xlimsIN = [null, null])}>R</button>
-			grid:<input type="checkbox" bind:checked={theData.xgridlines} />
-			<input
-				type="number"
-				step="0.1"
-				value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
-				oninput={(e) => {
-					theData.xlimsIN[0] = [parseFloat(e.target.value)];
-				}}
-			/>
-			<input
-				type="number"
-				step="0.1"
-				value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
-				oninput={(e) => {
-					theData.xlimsIN[1] = [parseFloat(e.target.value)];
-				}}
-			/>
-		</p>
+
 		<p>Data:</p>
 		<button
 			onclick={() =>
@@ -228,10 +245,9 @@
 			y: {datum.y.name}
 			<Column col={datum.y} canChange={true} />
 
-			line col: <input type="color" bind:value={datum.linecolour} />
-			line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
-			point col: <input type="color" bind:value={datum.pointcolour} />
-			point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
+			binSize: <input type="number" min="0.1" bind:value={datum.binSize} />
+
+			colour: <input type="color" bind:value={datum.colour} />
 		{/each}
 	</div>
 {/snippet}
@@ -243,62 +259,44 @@
 		height={theData.plot.parent.height}
 		style={`background: white; position: absolute;`}
 	>
-		<!-- The Y-axis -->
-		<Axis
-			height={theData.plot.plotheight}
-			width={theData.plot.plotwidth}
-			scale={scaleLinear()
-				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-				.range([theData.plot.plotheight, 0])}
-			position="left"
-			yoffset={theData.plot.padding.top}
-			xoffset={theData.plot.padding.left}
-			nticks={5}
-			gridlines={theData.plot.ygridlines}
-		/>
 		<!-- The X-axis -->
 		<Axis
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()
-				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+				.domain([0, theData.plot.period * theData.plot.doublePlot])
 				.range([0, theData.plot.plotwidth])}
-			position="bottom"
+			position="top"
 			yoffset={theData.plot.padding.top}
 			xoffset={theData.plot.padding.left}
-			nticks={5}
-			gridlines={theData.plot.xgridlines}
+			nticks={theData.plot.period}
+			gridlines={false}
 		/>
 
 		{#each theData.plot.data as datum}
-			<Line
-				x={datum.x}
-				y={datum.y}
-				xscale={scaleLinear()
-					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-					.range([0, theData.plot.plotwidth])}
-				yscale={scaleLinear()
-					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-					.range([theData.plot.plotheight, 0])}
-				strokeCol={datum.linecolour}
-				strokeWidth={datum.linestrokeWidth}
-				yoffset={theData.plot.padding.top}
-				xoffset={theData.plot.padding.left}
-			/>
-			<Points
-				x={datum.x}
-				y={datum.y}
-				xscale={scaleLinear()
-					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-					.range([0, theData.plot.plotwidth])}
-				yscale={scaleLinear()
-					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-					.range([theData.plot.plotheight, 0])}
-				radius={datum.pointradius}
-				fillCol={datum.pointcolour}
-				yoffset={theData.plot.padding.top}
-				xoffset={theData.plot.padding.left}
-			/>
+			{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
+				<BinnedHist
+					x={getNdataByPeriods(
+						datum.dataByDays.xByPeriod,
+						day,
+						day + theData.plot.doublePlot,
+						theData.plot.period
+					)}
+					y={getNdataByPeriods(datum.dataByDays.yByPeriod, day, day + theData.plot.doublePlot, 0)}
+					binSize={datum.binSize}
+					xscale={scaleLinear()
+						.domain([0, theData.plot.period * theData.plot.doublePlot])
+						.range([0, theData.plot.plotwidth])}
+					yscale={scaleLinear()
+						.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+						.range([theData.plot.eachplotheight, 0])}
+					colour={datum.colour}
+					yoffset={theData.plot.padding.top +
+						day * theData.plot.spaceBetween +
+						day * theData.plot.eachplotheight}
+					xoffset={theData.plot.padding.left}
+				/>
+			{/each}
 		{/each}
 	</svg>
 {/snippet}
