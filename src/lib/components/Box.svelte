@@ -1,6 +1,6 @@
 <script module>
 	import Icon from '$lib/icon/Icon.svelte';
-	import { core } from '$lib/core/theCore.svelte.js';
+	import { core, appConsts } from '$lib/core/theCore.svelte.js';
 
 	/*
   export function moveBoxLayer(direction) {
@@ -37,7 +37,9 @@
 
 <script>
 	// @ts-nocheck
-	let { plot, overflow, children } = $props();
+	let { plot, overflow, style = '', children } = $props();
+
+	const gridSize = appConsts.gridsize;
 
 	function deleteBox() {
 		//thestate.boxes = thestate.boxes.filter((box) => box.id !== id);
@@ -67,7 +69,6 @@
 	};
 
 	const doDrag = (event) => {
-		const gridSize = 5;
 		if (isDragging) {
 			event.preventDefault();
 			const deltaX = event.clientX - initialMouseX;
@@ -111,11 +112,12 @@
 	};
 
 	const doResize = (event) => {
-		const gridSize = 5;
 		if (isResizing) {
 			event.preventDefault();
 			const deltaX = event.clientX - initialMouseX;
 			const deltaY = event.clientY - initialMouseY;
+			console.log(plot);
+			console.log(typeof plot.width, plot.width);
 			plot.width = Math.max(minWidth, Math.round((initialWidth + deltaX) / gridSize) * gridSize);
 			plot.height = Math.max(minHeight, Math.round((initialHeight + deltaY) / gridSize) * gridSize);
 		}
@@ -132,11 +134,11 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="box"
-	style="min-width:{minWidth}px; min-height:{minHeight}px; width:{plot.width}px; height:{plot.height}px; 
-            background-color: pink; position: relative; 
+	style={`min-width:${minWidth}px; min-height:${minHeight}px; width:${plot.width}px; height:${plot.height}px; 
+	background-color: pink; position: relative; 
                        border-radius: 8px; padding:3px; margin:3px;
-            transform:translate3d({plot.x}px, {plot.y}px, 0px);
-              position:absolute;"
+            transform:translate3d(${plot.x}px, ${plot.y}px, 0px);
+              position:absolute; ${style}`}
 	onclick={(e) => {
 		//thestate.currentBoxID = id;
 		e.stopPropagation();

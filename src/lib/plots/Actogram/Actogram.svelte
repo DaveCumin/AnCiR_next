@@ -3,7 +3,7 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
-	import { getRandomColor } from '$lib/components/ColourPicker.svelte';
+	import ColourPicker, { getRandomColor } from '$lib/components/ColourPicker.svelte';
 	import { core } from '$lib/core/theCore.svelte.js';
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import BinnedHist from '$lib/components/plotbits/BinnedHist.svelte';
@@ -247,7 +247,7 @@
 
 			binSize: <input type="number" min="0.1" bind:value={datum.binSize} />
 
-			colour: <input type="color" bind:value={datum.colour} />
+			colour: <ColourPicker bind:value={datum.colour} />
 		{/each}
 	</div>
 {/snippet}
