@@ -54,13 +54,17 @@
 	let show = $state(false);
 	$effect(() => {
 		if (show && plot) {
+			// plot is so this re-renders with the Box is moved.
 			drawPicker();
 			drawPalette();
-			document.body.append(container);
+			document.body.append(container); //make it 'floating'
 		}
 	});
-	function open() {
+	function open(e) {
 		show = true;
+		console.log(e);
+		plot.x = e.clientX;
+		plot.y = e.clientY;
 	}
 	function cancel() {
 		updateFromHex(initialValue);
@@ -581,7 +585,7 @@
 </script>
 
 {#if show}
-	<div bind:this={container} style="position:absolute; top:0; left:0; height:100vh; width:100vw;">
+	<div bind:this={container} style="position:absolute; top:0; left:0;">
 		<Box {plot} overflow="auto">
 			<div style="background: white;">
 				<div style="position:absolute; top:10xp; right:10px;">
@@ -878,7 +882,7 @@
 	</div>
 {/if}
 <!-- THE INDICATOR-->
-<div style="cursor: pointer; width: 24px; height: 24px;}" onclick={() => open()}>
+<div style="cursor: pointer; width: 24px; height: 24px;}" onclick={(e) => open(e)}>
 	<canvas
 		bind:this={indicatorCanvas}
 		width="24"
