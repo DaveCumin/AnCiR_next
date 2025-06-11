@@ -17,6 +17,19 @@
 			}
 		}
 	}
+
+	function drawMarker(canvas, ctx, x) {
+		ctx.beginPath();
+		ctx.arc(x, canvas.height / 2, 6, 0, 2 * Math.PI);
+		ctx.strokeStyle = 'black';
+		ctx.lineWidth = 1;
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.arc(x, canvas.height / 2, 5, 0, 2 * Math.PI); // Inner white circle
+		ctx.strokeStyle = 'white';
+		ctx.lineWidth = 2;
+		ctx.stroke();
+	}
 </script>
 
 <script>
@@ -28,6 +41,7 @@
 	let { value = $bindable(getRandomColor()), onChange = () => {} } = $props();
 	let plot = $state({ x: 0, y: 0, width: 260, height: 400 });
 	let container;
+	let caneyedrop = false;
 
 	// Reactive state for color components
 	let h = $state(0); // Hue (0-360)
@@ -48,6 +62,9 @@
 
 	onMount(() => {
 		updateFromHex(value);
+		if (window.EyeDropper) {
+			caneyedrop = true;
+		}
 	});
 
 	//hide or show
@@ -62,7 +79,6 @@
 	});
 	function open(e) {
 		show = true;
-		console.log(e);
 		plot.x = e.clientX;
 		plot.y = e.clientY;
 	}
@@ -192,16 +208,7 @@
 			}
 
 			const x = (currentColor.hsv.h / 360) * width;
-			hueCtx.beginPath();
-			hueCtx.arc(x, height / 2, 6, 0, 2 * Math.PI);
-			hueCtx.strokeStyle = 'black';
-			hueCtx.lineWidth = 1;
-			hueCtx.stroke();
-			hueCtx.beginPath();
-			hueCtx.arc(x, height / 2, 5, 0, 2 * Math.PI); // Inner white circle
-			hueCtx.strokeStyle = 'white';
-			hueCtx.lineWidth = 2;
-			hueCtx.stroke();
+			drawMarker(hueCanvas, hueCtx, x);
 		}
 
 		// Saturation slider
@@ -215,16 +222,7 @@
 				satCtx.fillRect(x, 0, 1, height);
 			}
 			const x = (currentColor.hsv.s / 100) * width;
-			satCtx.beginPath();
-			satCtx.arc(x, height / 2, 6, 0, 2 * Math.PI);
-			satCtx.strokeStyle = 'black';
-			satCtx.lineWidth = 1;
-			satCtx.stroke();
-			satCtx.beginPath();
-			satCtx.arc(x, height / 2, 5, 0, 2 * Math.PI); // Inner white circle
-			satCtx.strokeStyle = 'white';
-			satCtx.lineWidth = 2;
-			satCtx.stroke();
+			drawMarker(satCanvas, satCtx, x);
 		}
 
 		// Value slider
@@ -238,16 +236,7 @@
 				valCtx.fillRect(x, 0, 1, height);
 			}
 			const x = (currentColor.hsv.v / 100) * width;
-			valCtx.beginPath();
-			valCtx.arc(x, height / 2, 6, 0, 2 * Math.PI);
-			valCtx.strokeStyle = 'black';
-			valCtx.lineWidth = 1;
-			valCtx.stroke();
-			valCtx.beginPath();
-			valCtx.arc(x, height / 2, 5, 0, 2 * Math.PI); // Inner white circle
-			valCtx.strokeStyle = 'white';
-			valCtx.lineWidth = 2;
-			valCtx.stroke();
+			drawMarker(valCanvas, valCtx, x);
 		}
 
 		// Alpha slider
@@ -266,16 +255,7 @@
 				alphaCtx.fillRect(x, 0, 1, height);
 			}
 			const x = (hsvInput.a / 100) * width; // Position based on alpha value (0-100)
-			alphaCtx.beginPath();
-			alphaCtx.arc(x, height / 2, 6, 0, 2 * Math.PI); // Outer black circle
-			alphaCtx.strokeStyle = 'black';
-			alphaCtx.lineWidth = 1;
-			alphaCtx.stroke();
-			alphaCtx.beginPath();
-			alphaCtx.arc(x, height / 2, 5, 0, 2 * Math.PI); // Inner white circle
-			alphaCtx.strokeStyle = 'white';
-			alphaCtx.lineWidth = 2;
-			alphaCtx.stroke();
+			drawMarker(alphaCanvas, alphaCtx, x);
 		}
 
 		//RGB sliders
@@ -290,16 +270,7 @@
 			}
 
 			const x = (currentColor.rgb.r / 255) * width;
-			redCtx.beginPath();
-			redCtx.arc(x, height / 2, 6, 0, 2 * Math.PI);
-			redCtx.strokeStyle = 'black';
-			redCtx.lineWidth = 1;
-			redCtx.stroke();
-			redCtx.beginPath();
-			redCtx.arc(x, height / 2, 5, 0, 2 * Math.PI); // Inner white circle
-			redCtx.strokeStyle = 'white';
-			redCtx.lineWidth = 2;
-			redCtx.stroke();
+			drawMarker(redCanvas, redCtx, x);
 		}
 		if (greenCtx) {
 			const width = greenCanvas.width;
@@ -312,16 +283,7 @@
 			}
 
 			const x = (currentColor.rgb.g / 255) * width;
-			greenCtx.beginPath();
-			greenCtx.arc(x, height / 2, 6, 0, 2 * Math.PI);
-			greenCtx.strokeStyle = 'black';
-			greenCtx.lineWidth = 1;
-			greenCtx.stroke();
-			greenCtx.beginPath();
-			greenCtx.arc(x, height / 2, 5, 0, 2 * Math.PI); // Inner white circle
-			greenCtx.strokeStyle = 'white';
-			greenCtx.lineWidth = 2;
-			greenCtx.stroke();
+			drawMarker(greenCanvas, greenCtx, x);
 		}
 		if (blueCtx) {
 			const width = blueCanvas.width;
@@ -334,16 +296,7 @@
 			}
 
 			const x = (currentColor.rgb.b / 255) * width;
-			blueCtx.beginPath();
-			blueCtx.arc(x, height / 2, 6, 0, 2 * Math.PI);
-			blueCtx.strokeStyle = 'black';
-			blueCtx.lineWidth = 1;
-			blueCtx.stroke();
-			blueCtx.beginPath();
-			blueCtx.arc(x, height / 2, 5, 0, 2 * Math.PI); // Inner white circle
-			blueCtx.strokeStyle = 'white';
-			blueCtx.lineWidth = 2;
-			blueCtx.stroke();
+			drawMarker(blueCanvas, blueCtx, x);
 		}
 	}
 
@@ -582,6 +535,18 @@
 		updateFromHex(color);
 		drawPalette();
 	}
+
+	function eyedropper() {
+		const eyeDropper = new EyeDropper();
+		eyeDropper
+			.open()
+			.then((result) => {
+				updateFromHex(result.sRGBHex);
+			})
+			.catch((e) => {
+				console.error(e);
+			});
+	}
 </script>
 
 {#if show}
@@ -591,6 +556,10 @@
 				<div style="position:absolute; top:10xp; right:10px;">
 					<button onclick={() => cancel()}>x</button>
 				</div>
+				<!-- eyedropper -->
+				{#if caneyedrop}
+					<button onclick={() => eyedropper()}>E</button>
+				{/if}
 				<!-- Color Preview -->
 				<div style="background-color: {currentColor.hex};"></div>
 

@@ -116,8 +116,6 @@
 			event.preventDefault();
 			const deltaX = event.clientX - initialMouseX;
 			const deltaY = event.clientY - initialMouseY;
-			console.log(plot);
-			console.log(typeof plot.width, plot.width);
 			plot.width = Math.max(minWidth, Math.round((initialWidth + deltaX) / gridSize) * gridSize);
 			plot.height = Math.max(minHeight, Math.round((initialHeight + deltaY) / gridSize) * gridSize);
 		}
