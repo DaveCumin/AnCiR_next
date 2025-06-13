@@ -37,7 +37,7 @@
 
 <script>
 	// @ts-nocheck
-	let { plot, overflow, style = '', children } = $props();
+	let { plot = $bindable(), overflow, style = '', children } = $props();
 
 	const gridSize = appConsts.gridsize;
 

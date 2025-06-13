@@ -8,7 +8,9 @@
 		return color;
 	}
 
-	function drawSquares(canvas, ctx) {
+	export function drawSquares(canvas) {
+		const ctx = canvas?.getContext('2d');
+		if (!ctx) return;
 		const squareSize = 4;
 		for (let x = 0; x < canvas.width; x += squareSize) {
 			for (let y = 0; y < canvas.height; y += squareSize) {
@@ -18,14 +20,16 @@
 		}
 	}
 
-	function drawMarker(canvas, ctx, x) {
+	function drawMarker(canvas, x) {
+		let ctx = canvas?.getContext('2d');
+		if (!ctx) return;
 		ctx.beginPath();
-		ctx.arc(x, canvas.height / 2, 6, 0, 2 * Math.PI);
+		ctx.arc(x * canvas.width, canvas.height / 2, canvas.height / 2 - 2, 0, 2 * Math.PI);
 		ctx.strokeStyle = 'black';
 		ctx.lineWidth = 1;
 		ctx.stroke();
 		ctx.beginPath();
-		ctx.arc(x, canvas.height / 2, 5, 0, 2 * Math.PI); // Inner white circle
+		ctx.arc(x * canvas.width, canvas.height / 2, canvas.height / 2 - 1, 0, 2 * Math.PI); // Inner white circle
 		ctx.strokeStyle = 'white';
 		ctx.lineWidth = 2;
 		ctx.stroke();
@@ -36,6 +40,23 @@
 	import { onMount } from 'svelte';
 	import Box from './Box.svelte';
 	import { appConsts } from '$lib/core/theCore.svelte';
+
+	import { interpolateRgbBasis } from 'd3-interpolate';
+	let interpcols = [
+		'#031326',
+		'#13385A',
+		'#47587A',
+		'#6B5F76',
+		'#8E616C',
+		'#BC6461',
+		'#BC6461',
+		'#BC6461',
+		'#E7A279',
+		'#E9C99F',
+		'#FDF5DA'
+	];
+	let interpolatedp = $state(0.5);
+	let interpolatecanvas;
 
 	// Props
 	let { value = $bindable(getRandomColor()), onChange = () => {} } = $props();
@@ -74,7 +95,26 @@
 			// plot is so this re-renders with the Box is moved.
 			drawPicker();
 			drawPalette();
-			document.body.append(container); //make it 'floating'
+
+			if (container.parentNode.nodeName != 'BODY') {
+				// don't re-float it each update
+				document.body.append(container); //make it 'floating'
+			}
+
+			//do the interpolated canvas
+			const ctx = interpolatecanvas?.getContext('2d');
+			if (!ctx) return;
+
+			const width = interpolatecanvas.width;
+			const height = interpolatecanvas.height;
+			ctx.clearRect(0, 0, width, height);
+			for (let x = 0; x < width; x++) {
+				const p = x / width;
+				ctx.fillStyle = interpolateRgbBasis(interpcols)(p);
+				ctx.fillRect(x, 0, 1, height);
+			}
+			let x = interpolatedp;
+			drawMarker(interpolatecanvas, x);
 		}
 	});
 	function open(e) {
@@ -126,26 +166,20 @@
 	let canvas;
 	let ctx;
 	let isDragging = $state(false);
-	// slider
+
+	// sliders
 	//HSV
 	let hueCanvas;
 	let satCanvas;
 	let valCanvas;
-	let hueCtx;
-	let satCtx;
-	let valCtx;
 
 	//alpha
 	let alphaCanvas;
-	let alphaCtx;
 
 	// RGB
 	let redCanvas;
 	let greenCanvas;
 	let blueCanvas;
-	let redCtx;
-	let greenCtx;
-	let blueCtx;
 
 	// Draw hue/saturation picker
 	function drawPicker() {
@@ -186,117 +220,100 @@
 
 	// Draw slider gradients
 	function drawSliders() {
-		hueCtx = hueCanvas?.getContext('2d');
-		satCtx = satCanvas?.getContext('2d');
-		valCtx = valCanvas?.getContext('2d');
-
-		alphaCtx = alphaCanvas?.getContext('2d');
-
-		redCtx = redCanvas?.getContext('2d');
-		greenCtx = greenCanvas?.getContext('2d');
-		blueCtx = blueCanvas?.getContext('2d');
-
 		// Hue slider
-		if (hueCtx) {
+		let ctx = hueCanvas?.getContext('2d');
+		if (ctx) {
 			const width = hueCanvas.width;
 			const height = hueCanvas.height;
-			hueCtx.clearRect(0, 0, width, height);
+			ctx.clearRect(0, 0, width, height);
 			for (let x = 0; x < width; x++) {
 				const hue = (x / width) * 360;
-				hueCtx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-				hueCtx.fillRect(x, 0, 1, height);
+				ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+				ctx.fillRect(x, 0, 1, height);
 			}
 
-			const x = (currentColor.hsv.h / 360) * width;
-			drawMarker(hueCanvas, hueCtx, x);
+			const x = currentColor.hsv.h / 360;
+			drawMarker(hueCanvas, x);
 		}
 
 		// Saturation slider
-		if (satCtx) {
+		ctx = satCanvas?.getContext('2d');
+		if (ctx) {
 			const width = satCanvas.width;
 			const height = satCanvas.height;
-			satCtx.clearRect(0, 0, width, height);
+			ctx.clearRect(0, 0, width, height);
 			for (let x = 0; x < width; x++) {
 				const sat = x / width;
-				satCtx.fillStyle = `hsl(${h}, ${sat * 100}%, ${currentColor.hsv.v / 2}%)`;
-				satCtx.fillRect(x, 0, 1, height);
+				ctx.fillStyle = `hsl(${h}, ${sat * 100}%, ${currentColor.hsv.v / 2}%)`;
+				ctx.fillRect(x, 0, 1, height);
 			}
-			const x = (currentColor.hsv.s / 100) * width;
-			drawMarker(satCanvas, satCtx, x);
+			const x = currentColor.hsv.s / 100;
+			drawMarker(satCanvas, x);
 		}
 
 		// Value slider
-		if (valCtx) {
+		ctx = valCanvas?.getContext('2d');
+		if (ctx) {
 			const width = valCanvas.width;
 			const height = valCanvas.height;
-			valCtx.clearRect(0, 0, width, height);
+			ctx.clearRect(0, 0, width, height);
 			for (let x = 0; x < width; x++) {
 				const val = x / width;
-				valCtx.fillStyle = `hsl(${h}, ${currentColor.hsv.s}%, ${val * 50}%)`;
-				valCtx.fillRect(x, 0, 1, height);
+				ctx.fillStyle = `hsl(${h}, ${currentColor.hsv.s}%, ${val * 50}%)`;
+				ctx.fillRect(x, 0, 1, height);
 			}
-			const x = (currentColor.hsv.v / 100) * width;
-			drawMarker(valCanvas, valCtx, x);
+			const x = currentColor.hsv.v / 100;
+			drawMarker(valCanvas, x);
 		}
 
 		// Alpha slider
-		if (alphaCtx) {
+		ctx = alphaCanvas?.getContext('2d');
+		if (ctx) {
 			const width = alphaCanvas.width;
 			const height = alphaCanvas.height;
 			const { r, g, b } = currentColor.rgb;
-			alphaCtx.clearRect(0, 0, width, height);
+			ctx.clearRect(0, 0, width, height);
 
 			// Draw checkerboard background for transparency visualization
-			drawSquares(alphaCanvas, alphaCtx);
+			drawSquares(alphaCanvas);
 
 			for (let x = 0; x < width; x++) {
 				const alpha = x / width;
-				alphaCtx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-				alphaCtx.fillRect(x, 0, 1, height);
+				ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+				ctx.fillRect(x, 0, 1, height);
 			}
-			const x = (hsvInput.a / 100) * width; // Position based on alpha value (0-100)
-			drawMarker(alphaCanvas, alphaCtx, x);
+			const x = hsvInput.a / 100; // Position based on alpha value (0-100)
+			drawMarker(alphaCanvas, x);
 		}
 
-		//RGB sliders
-		if (redCtx) {
-			const width = redCanvas.width;
-			const height = redCanvas.height;
-			redCtx.clearRect(0, 0, width, height);
-			for (let x = 0; x < width; x++) {
-				const r = (x / width) * 255;
-				redCtx.fillStyle = `rgb(${r}, ${rgbInput.g}, ${rgbInput.b})`;
-				redCtx.fillRect(x, 0, 1, height);
-			}
-
-			const x = (currentColor.rgb.r / 255) * width;
-			drawMarker(redCanvas, redCtx, x);
-		}
-		if (greenCtx) {
+		ctx = greenCanvas?.getContext('2d');
+		if (ctx) {
 			const width = greenCanvas.width;
 			const height = greenCanvas.height;
-			greenCtx.clearRect(0, 0, width, height);
+			ctx.clearRect(0, 0, width, height);
 			for (let x = 0; x < width; x++) {
 				const g = (x / width) * 255;
-				greenCtx.fillStyle = `rgb(${rgbInput.r}, ${g}, ${rgbInput.b})`;
-				greenCtx.fillRect(x, 0, 1, height);
+				ctx.fillStyle = `rgb(${rgbInput.r}, ${g}, ${rgbInput.b})`;
+				ctx.fillRect(x, 0, 1, height);
 			}
 
-			const x = (currentColor.rgb.g / 255) * width;
-			drawMarker(greenCanvas, greenCtx, x);
+			const x = currentColor.rgb.g / 255;
+			drawMarker(greenCanvas, x);
 		}
-		if (blueCtx) {
+
+		ctx = blueCanvas?.getContext('2d');
+		if (ctx) {
 			const width = blueCanvas.width;
 			const height = blueCanvas.height;
-			blueCtx.clearRect(0, 0, width, height);
+			ctx.clearRect(0, 0, width, height);
 			for (let x = 0; x < width; x++) {
 				const b = (x / width) * 255;
-				blueCtx.fillStyle = `rgb(${rgbInput.r}, ${rgbInput.g}, ${b})`;
-				blueCtx.fillRect(x, 0, 1, height);
+				ctx.fillStyle = `rgb(${rgbInput.r}, ${rgbInput.g}, ${b})`;
+				ctx.fillRect(x, 0, 1, height);
 			}
 
-			const x = (currentColor.rgb.b / 255) * width;
-			drawMarker(blueCanvas, blueCtx, x);
+			const x = currentColor.rgb.b / 255;
+			drawMarker(blueCanvas, x);
 		}
 	}
 
@@ -315,7 +332,7 @@
 			ctx.clearRect(0, 0, width, height);
 
 			// Draw checkerboard
-			drawSquares(paletteCanvases[index], ctx);
+			drawSquares(paletteCanvases[index]);
 
 			// Draw color with alpha
 			const { r, g, b, a: colorAlpha } = hexToRgb(color);
@@ -343,7 +360,7 @@
 		if (!ctx) return;
 		ctx.clearRect(0, 0, oldCanvas.width, oldCanvas.height);
 		// Draw checkerboard
-		drawSquares(oldCanvas, ctx);
+		drawSquares(oldCanvas);
 		//draw colour
 		ctx.fillStyle = initialValue;
 		ctx.fillRect(0, 0, oldCanvas.width, oldCanvas.height);
@@ -359,6 +376,25 @@
 	}
 
 	// Handle mouse/touch events on canvas
+	function handleInteraction(event, canvas, updatefunction) {
+		if (!isDragging && event.type !== 'mousedown' && event.type !== 'touchstart') return;
+
+		const rect = canvas.getBoundingClientRect();
+		const x =
+			(event.type === 'touchstart' || event.type === 'touchmove'
+				? event.touches[0].clientX
+				: event.clientX) - rect.left;
+		const y =
+			(event.type === 'touchstart' || event.type === 'touchmove'
+				? event.touches[0].clientY
+				: event.clientY) - rect.top;
+
+		const cx = Math.max(0, Math.min(1, x / rect.width));
+		const cy = Math.max(0, Math.min(1, 1 - y / rect.height));
+
+		updatefunction(cx, cy);
+	}
+
 	function handlePickerInteraction(event) {
 		if (!isDragging && event.type !== 'mousedown' && event.type !== 'touchstart') return;
 
@@ -537,6 +573,7 @@
 	}
 
 	function eyedropper() {
+		//https://developer.mozilla.org/en-US/docs/Web/API/EyeDropper
 		const eyeDropper = new EyeDropper();
 		eyeDropper
 			.open()
@@ -551,7 +588,7 @@
 
 {#if show}
 	<div bind:this={container} style="position:absolute; top:0; left:0;">
-		<Box {plot} overflow="auto">
+		<Box bind:plot overflow="auto">
 			<div style="background: white;">
 				<div style="position:absolute; top:10xp; right:10px;">
 					<button onclick={() => cancel()}>x</button>
@@ -568,8 +605,11 @@
 					bind:this={canvas}
 					width="200"
 					height="200"
-					style="cursor-crosshair"
-					onmousedown={() => (isDragging = true)}
+					style="cursor:crosshair;"
+					onmousedown={(e) => {
+						isDragging = true;
+						handlePickerInteraction(e);
+					}}
 					onmousemove={handlePickerInteraction}
 					onmouseup={() => (isDragging = false)}
 					onmouseleave={() => (isDragging = false)}
@@ -636,43 +676,69 @@
 
 					<!-- ALPHA -->
 					<label>Alpha</label>
-					<div style="position: relative; width: 100%; height: 16px;">
+					<div style="position: relative; width: 100%; height: 16px; cursor: crosshair;">
+						<!-- TODO: consider if this is a better way, compared to the slider approach (more accurate) -->
 						<canvas
+							id="ALPHA"
 							bind:this={alphaCanvas}
 							width="200"
 							height="16"
 							style="width: 100%; height: 16px;"
-						></canvas>
-						<input
-							type="range"
-							min="0"
-							max="100"
-							bind:value={hsvInput.a}
-							oninput={() => {
-								updateFromHsv();
-								drawSliders();
-								onColorChange($state.snapshot(currentColor));
+							onmousedown={(e) => {
+								isDragging = true;
+								handleInteraction(e, alphaCanvas, (x, y) => {
+									hsvInput.a = x * 100;
+									updateFromHsv();
+									drawMarker(alphaCanvas, x);
+								});
 							}}
-							style="position: absolute; top: 0; left: 0; width: 100%; height: 16px; opacity: 0; cursor: pointer;"
-						/>
+							onmousemove={(e) =>
+								handleInteraction(e, alphaCanvas, (x, y) => {
+									hsvInput.a = x * 100;
+									updateFromHsv();
+									drawMarker(alphaCanvas, x);
+								})}
+							onmouseup={() => (isDragging = false)}
+							onmouseleave={() => (isDragging = false)}
+							ontouchstart={(e) =>
+								handleInteraction(e, alphaCanvas, (x, y) => {
+									hsvInput.a = x * 100;
+									updateFromHsv();
+									drawMarker(alphaCanvas, x);
+								})}
+							ontouchmove={(e) =>
+								handleInteraction(e, alphaCanvas, (x, y) => {
+									hsvInput.a = x * 100;
+									updateFromHsv();
+									drawMarker(alphaCanvas, x);
+								})}
+							ontouchend={() => (isDragging = false)}
+						></canvas>
 					</div>
 
 					<!-- RGB -->
 					<label>Red</label>
-					<div style="position: relative; width: 100%; height: 16px;">
-						<canvas bind:this={redCanvas} width="200" height="16" style="width: 100%; height: 16px;"
-						></canvas>
-						<input
-							type="range"
-							min="0"
-							max="255"
-							bind:value={rgbInput.r}
-							oninput={() => {
-								updateFromRgb();
-								onColorChange($state.snapshot(currentColor));
-							}}
-							style="position: absolute; top: 0; left: 0; width: 100%; height: 16px; opacity: 0; cursor: pointer;"
-						/>
+
+					<div style="position: relative; width: 100%; height: 16px; border:1px solid red;">
+						<div style="position: relative; width: 100%; height: 16px;">
+							<canvas
+								bind:this={redCanvas}
+								width="200"
+								height="16"
+								style="width: 100%; height: 16px;"
+							></canvas>
+							<input
+								type="range"
+								min="0"
+								max="255"
+								bind:value={rgbInput.r}
+								oninput={() => {
+									updateFromRgb();
+									onColorChange($state.snapshot(currentColor));
+								}}
+								style="position: absolute; top: 0; left: 0; width: 100%; height: 16px; opacity: 0; cursor: pointer;"
+							/>
+						</div>
 					</div>
 					<label>Green</label>
 					<div style="position: relative; width: 100%; height: 16px;">
@@ -846,6 +912,16 @@
 						}}>Save</button
 					>
 				</div>
+			</div>
+
+			<div
+				style="border:1px solid black; 
+background:{interpolateRgbBasis(interpcols)(interpolatedp)}; width:20px; height:20px;"
+			></div>
+			<div style="width:20px; height:20px;">
+				<input type="number" min="0" max="1" step="0.1" bind:value={interpolatedp} />
+				<p>{interpolateRgbBasis(interpcols)(interpolatedp)}</p>
+				<canvas bind:this={interpolatecanvas} width="200" height="30" />
 			</div>
 		</Box>
 	</div>

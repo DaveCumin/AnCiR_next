@@ -196,7 +196,7 @@
 
 		<p>
 			Start time: <input type="number" bind:value={theData.startTime} />
-			Period: <input type="number" bind:value={theData.period} />
+			Period: <input type="number" step="0.1" bind:value={theData.period} />
 			Repeat: <input type="number" bind:value={theData.doublePlot} />
 			Space Between:
 			<input type="number" bind:value={theData.spaceBetween} />
@@ -245,7 +245,7 @@
 			y: {datum.y.name}
 			<Column col={datum.y} canChange={true} />
 
-			binSize: <input type="number" min="0.1" bind:value={datum.binSize} />
+			binSize: <input type="number" min="0.1" step="0.1" bind:value={datum.binSize} />
 
 			colour: <ColourPicker bind:value={datum.colour} />
 		{/each}
