@@ -1,5 +1,6 @@
 <script module>
 	import DoubleRange from '$lib/components/inputs/DoubleRange.svelte';
+	import { linearRegression, makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData';
 	import { scaleLinear } from 'd3-scale';
 
 	function findCentileValue(data, centile) {
@@ -76,8 +77,12 @@
 			// For each double period, find the threshold and match the template (do this for all periods, rather than only selected to reduce computation if changes made to periodRange: only display)
 			//-------------------------------
 			let bestMatchx = [];
-			for (let i = 0; i < Object.keys(this.parent.dataByDays.xByPeriod).length; i++) {
-				let periodsData = this.parent.dataByDays.yByPeriod[i]; // get the y data for the day
+
+			for (let i = 0; i < Object.keys(this.parent.dataByDays.xByPeriod).length - 1; i++) {
+				let periodsData = [
+					...this.parent.dataByDays.yByPeriod[i],
+					...this.parent.dataByDays.yByPeriod[i + 1]
+				]; // get the y data for the day
 				//get the threshold value
 				const centileValue = findCentileValue(periodsData, this.centileThreshold);
 				//convert to 1,-1
@@ -85,20 +90,50 @@
 					value <= centileValue || isNaN(value) ? -1 : 1
 				);
 				//pad the data for the template
-				periodsData = Array.from({ length: N }, () => (this.type === 'onset' ? 1 : -1))
+				periodsData = Array.from({ length: N }, () => (this.type === 'onset' ? -1 : 1))
 					.concat(periodsData)
-					.concat(Array.from({ length: M }, () => (this.type === 'onset' ? -1 : 1)));
+					.concat(Array.from({ length: M }, () => (this.type === 'onset' ? 1 : -1)));
 
 				//find the best match to the template and centre the template on the match
 				let bestMatchIndex = findBestMatchIndex(aboveBelow, template) + Math.round((N + M) / 2);
 				//find the x-value in the period that corresponds to that index
-				bestMatchx.push(
-					this.parent.dataByDays.xByPeriod[i][bestMatchIndex] - i * this.parent.parent.period
-				);
+				let xData = [
+					...this.parent.dataByDays.xByPeriod[i],
+					...this.parent.dataByDays.xByPeriod[i + 1]
+				];
+				bestMatchx.push(xData[bestMatchIndex] - i * this.parent.parent.period);
 			}
+			//--------------
+			//Do the last day on its own
+			let i = Object.keys(this.parent.dataByDays.xByPeriod).length - 1;
+			let periodsData = this.parent.dataByDays.yByPeriod[i];
+			// get the y data for the day
+			//get the threshold value
+			const centileValue = findCentileValue(periodsData, this.centileThreshold);
+			//convert to 1,-1
+			const aboveBelow = periodsData.map((value) =>
+				value <= centileValue || isNaN(value) ? -1 : 1
+			);
+			//pad the data for the template
+			periodsData = Array.from({ length: N }, () => (this.type === 'onset' ? -1 : 1))
+				.concat(periodsData)
+				.concat(Array.from({ length: M }, () => (this.type === 'onset' ? 1 : -1)));
 
-			let markers = bestMatchx;
-			return markers;
+			//find the best match to the template and centre the template on the match
+			let bestMatchIndex = findBestMatchIndex(aboveBelow, template) + Math.round((N + M) / 2);
+			//find the x-value in the period that corresponds to that index
+			let xData = this.parent.dataByDays.xByPeriod[i];
+
+			bestMatchx.push(xData[bestMatchIndex] - i * this.parent.parent.period);
+			//--------------
+			//Update periodRangeMax if it's more than the number of periods
+			this.periodRangeMax = Math.min(
+				this.periodRangeMax,
+				Object.keys(this.parent.dataByDays.xByPeriod).length
+			);
+
+			//Return the markers
+			return bestMatchx;
 		});
 
 		markerPoints = $derived.by(() => {
@@ -118,6 +153,16 @@
 			}
 
 			return out;
+		});
+
+		linearRegression = $derived.by(() => {
+			//get the markers of interest
+			const xs = makeSeqArray(this.periodRangeMin, this.periodRangeMax, 1);
+			let ys = this.markers.slice(this.periodRangeMin - 1, this.periodRangeMax);
+			for (let i = 0; i < ys.length; i++) {
+				ys[i] = ys[i] + i * this.parent.parent.period;
+			}
+			return linearRegression(xs, ys);
 		});
 
 		constructor(parent, dataIN) {
@@ -183,6 +228,7 @@
 		bind:maxVal={marker.periodRangeMax}
 	/>
 	<p>{marker.markers}</p>
+	<p>linearRegression: {marker.linearRegression.slope}</p>
 {/snippet}
 
 {#snippet plot(marker)}

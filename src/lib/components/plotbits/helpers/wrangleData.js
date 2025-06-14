@@ -55,3 +55,46 @@ export function makeSeqArray(from, to, step) {
 	}
 	return out;
 }
+
+////Perform a linear regression
+
+export function linearRegression(x, y) {
+	const n = x.length;
+
+	if (n !== y.length || n === 0) {
+		throw new Error('Input arrays must have the same non-zero length');
+	}
+
+	let sumX = 0;
+	let sumY = 0;
+	let sumXY = 0;
+	let sumXSquare = 0;
+
+	for (let i = 0; i < n; i++) {
+		sumX += x[i];
+		sumY += y[i];
+		sumXY += x[i] * y[i];
+		sumXSquare += x[i] * x[i];
+	}
+
+	const slope = (n * sumXY - sumX * sumY) / (n * sumXSquare - sumX * sumX);
+	const intercept = (sumY - slope * sumX) / n;
+
+	// Calculate R-squared
+	let ssTotal = 0;
+	let ssResidual = 0;
+	let sumSquaredErrors = 0;
+	const meanY = sumY / n;
+
+	for (let i = 0; i < n; i++) {
+		const predictedY = slope * x[i] + intercept;
+		ssTotal += (y[i] - meanY) ** 2;
+		ssResidual += (y[i] - predictedY) ** 2;
+		sumSquaredErrors += (y[i] - predictedY) ** 2;
+	}
+
+	const rSquared = 1 - ssResidual / ssTotal;
+	const rmse = Math.sqrt(sumSquaredErrors / n);
+
+	return { slope, intercept, rSquared, rmse };
+}

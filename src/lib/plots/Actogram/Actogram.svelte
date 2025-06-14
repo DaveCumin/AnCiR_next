@@ -34,13 +34,15 @@
 
 			for (let i = 0; i < tempx.length; i++) {
 				const period = Math.floor(tempx[i] / this.parent.period);
-				if (!xByPeriod[period]) {
-					xByPeriod[period] = [];
-					yByPeriod[period] = [];
-				}
-				if (xByPeriod[period]) {
-					xByPeriod[period].push(tempx[i]);
-					yByPeriod[period].push(tempy[i]);
+				if (period >= 0) {
+					if (!xByPeriod[period]) {
+						xByPeriod[period] = [];
+						yByPeriod[period] = [];
+					}
+					if (xByPeriod[period]) {
+						xByPeriod[period].push(tempx[i]);
+						yByPeriod[period].push(tempy[i]);
+					}
 				}
 			}
 			return { xByPeriod, yByPeriod };
