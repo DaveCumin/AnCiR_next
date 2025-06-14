@@ -5,7 +5,7 @@
 	import { scaleLinear } from 'd3-scale';
 	import ColourPicker, { getRandomColor } from '$lib/components/ColourPicker.svelte';
 	import { core } from '$lib/core/theCore.svelte.js';
-	import Line from '$lib/components/plotbits/Line.svelte';
+	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import BinnedHist from '$lib/components/plotbits/BinnedHist.svelte';
 	import { makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData';
 
@@ -45,6 +45,7 @@
 			}
 			return { xByPeriod, yByPeriod };
 		});
+		phaseMarkers = $state([]);
 
 		constructor(parent, dataIN) {
 			this.parent = parent;
@@ -62,18 +63,23 @@
 			this.colour = dataIN?.colour ?? getRandomColor();
 		}
 
+		addMarker() {
+			this.phaseMarkers.push(new PhaseMarkerClass(this, { type: 'onset' }));
+		}
+
 		toJSON() {
 			return {
 				x: this.x,
 				y: this.y,
 				colour: this.colour,
 				pointcolour: this.pointcolour,
-				pointradius: this.pointradius
+				pointradius: this.pointradius,
+				phaseMarkers: this.phaseMarkers
 			};
 		}
 
 		static fromJSON(json, parent) {
-			return new ActogramDataclass(parent, {
+			let actClass = new ActogramDataclass(parent, {
 				x: json.x,
 				y: json.y,
 				linecolour: json.linecolour,
@@ -81,6 +87,12 @@
 				pointcolour: json.pointcolour,
 				pointradius: json.pointradius
 			});
+			if (json.phaseMarkers) {
+				actClass.phaseMarkers = json.phaseMarkers.map((d) =>
+					ActogramDataclass.fromJSON(d, actClass)
+				);
+			}
+			return actClass;
 		}
 	}
 
@@ -248,6 +260,11 @@
 			binSize: <input type="number" min="0.1" step="0.1" bind:value={datum.binSize} />
 
 			colour: <ColourPicker bind:value={datum.colour} />
+
+			<p>Markers:<button onclick={() => datum.addMarker()}>+</button></p>
+			{#each datum.phaseMarkers as marker}
+				<PhaseMarker {which} {marker} />
+			{/each}
 		{/each}
 	</div>
 {/snippet}
@@ -276,6 +293,7 @@
 		/>
 
 		{#each theData.plot.data as datum}
+			<!-- Make the histogram for each period -->
 			{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
 				<BinnedHist
 					x={getNdataByPeriods(
@@ -298,6 +316,10 @@
 						day * theData.plot.eachplotheight}
 					xoffset={theData.plot.padding.left}
 				/>
+			{/each}
+			<!-- THE MARKERS -->
+			{#each datum.phaseMarkers as marker}
+				<PhaseMarker {which} {marker} />
 			{/each}
 		{/each}
 	</svg>

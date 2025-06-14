@@ -105,9 +105,7 @@
 	}
 
 	function updateFromHex(hex) {
-		console.log(hex);
 		if (/^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/.test(hex)) {
-			console.log('updating');
 			rgbInput = { ...hexToRgb(hexInput) };
 			hsvInput = rgbToHsv(rgbInput);
 			drawPicker();

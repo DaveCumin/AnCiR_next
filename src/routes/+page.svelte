@@ -16,6 +16,7 @@
 	import ColourPicker from '$lib/components/ColourPicker.svelte';
 
 	import { testjson } from '$lib/test.svelte.js';
+	import DoubleRange from '$lib/components/inputs/DoubleRange.svelte';
 
 	function addData(dataIN, type, name, provenance) {
 		let newDataEntry;
@@ -66,19 +67,27 @@
 		}
 		return out;
 	}
+	function makeRhythmic(N, period, low = 10, high = 100) {
+		let out = [];
+		for (let i = 0; i < N; i++) {
+			const mult = i % period < period / 2 ? low : high;
+			out.push(Math.round(Math.random() * mult));
+		}
+		return out;
+	}
 
 	function refresh() {
 		//simulate importing data
 		core.data = [];
 		let d0id = addData(
-			makeArray(5.15, 50_005 * 0.15, 0.15),
+			makeArray(5.15, 1_005 * 0.15, 0.15),
 			'time',
 			'the time',
 			'just made this up'
 		);
 		core.data[0].addProcess('Add');
 
-		let d1id = addData(makeRandom(50_000), 'number', 'val1', 'imported from thin air');
+		let d1id = addData(makeRhythmic(1_000, 24 / 0.15), 'number', 'val1', 'imported from thin air');
 		core.data[1].addProcess('Add');
 		core.data[1].addProcess('Sub');
 
@@ -173,6 +182,11 @@
 </div>
 <div style="position:absolute; top:0; right:270px; z-index:1000; border:1px solid black;">
 	<ColourPicker />
+</div>
+<div
+	style="position:absolute; top:100; right:170px; z-index:1000; border:1px solid black; background:white;"
+>
+	<DoubleRange />
 </div>
 {#each core.plots as plot}
 	<Plotcomponent {plot} />

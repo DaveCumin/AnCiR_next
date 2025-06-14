@@ -18,7 +18,7 @@
 				tempy[p] >= Math.min(ylims[0], ylims[1]) &&
 				tempy[p] <= Math.max(ylims[0], ylims[1])
 			) {
-				out += `M${xscale(tempx[p])} ${yscale(tempy[p])} m-${radius} 0 a${radius} ${radius} 0 1 0 ${2 * radius} 0 a${radius} ${radius} 0 1 0 -${2 * radius} 0`;
+				out += `M${xscale(tempx[p])} ${yscale(tempy[p])} m-${radius} 0 a${radius} ${radius} 0 1 0 ${2 * radius} 0 a${radius} ${radius} 0 1 0 -${2 * radius} 0 `;
 			}
 		}
 
