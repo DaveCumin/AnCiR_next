@@ -20,8 +20,10 @@
 		}
 		return byPeriod;
 	}
+
 	class ActogramDataclass {
 		parent = $state();
+
 		x = $state();
 		y = $state();
 		binSize = $state(0.5);
@@ -101,6 +103,7 @@
 	export class Actogramclass {
 		parent = $state();
 		data = $state([]);
+		isAddingMarkerTo = $state(-1);
 		padding = $state({ top: 30, right: 20, bottom: 10, left: 30 });
 		plotheight = $derived(this.parent.height - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.parent.width - this.padding.left - this.padding.right);
@@ -155,6 +158,18 @@
 			this.data.splice(idx, 1);
 		}
 
+		addPhaseMarkerTo(markerID, clickedDay, clickedTime) {
+			//find the marker with the id
+			for (let i = 0; i < this.data.length; i++) {
+				for (let j = 0; j < this.data[i].phaseMarkers.length; j++) {
+					console.log(this.data[i].phaseMarkers[j].id);
+					if (this.data[i].phaseMarkers[j].id == markerID) {
+						this.data[i].phaseMarkers[j].addTime(clickedDay, clickedTime);
+					}
+				}
+			}
+		}
+
 		toJSON() {
 			return {
 				xlimsIN: this.xlimsIN,
@@ -191,6 +206,36 @@
 	function pickRandomData() {
 		const options = Array.from(core.data.keys());
 		return options.length > 0 ? options[Math.floor(Math.random() * options.length)] : -1;
+	}
+
+	function handleClick(e) {
+		if (theData.plot.isAddingMarkerTo >= 0) {
+			const [clickedDay, clickedHrs] = getClickedTime(e);
+			theData.plot.addPhaseMarkerTo(theData.plot.isAddingMarkerTo, clickedDay, clickedHrs);
+		}
+		theData.plot.isAddingMarkerTo = -1;
+	}
+
+	function getClickedTime(e) {
+		if (
+			e.offsetX < theData.plot.padding.left ||
+			e.offsetX > theData.plot.padding.left + theData.plot.plotwidth ||
+			e.offsetY < theData.plot.padding.top ||
+			e.offsetY > theData.plot.padding.top + theData.plot.plotheight
+		) {
+			return null;
+		}
+
+		const clickedDay = Math.floor(
+			(e.offsetY - theData.plot.padding.top) /
+				(theData.plot.eachplotheight + theData.plot.spaceBetween)
+		);
+		const clickedHrs =
+			((e.offsetX - theData.plot.padding.left) / theData.plot.plotwidth) *
+			theData.plot.period *
+			theData.plot.doublePlot;
+
+		return [clickedDay, clickedHrs];
 	}
 </script>
 
@@ -277,6 +322,7 @@
 		width={theData.plot.parent.width}
 		height={theData.plot.parent.height}
 		style={`background: white; position: absolute;`}
+		onclick={(e) => handleClick(e)}
 	>
 		<!-- The X-axis -->
 		<Axis

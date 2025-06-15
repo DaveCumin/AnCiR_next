@@ -1,6 +1,10 @@
 <script module>
 	import DoubleRange from '$lib/components/inputs/DoubleRange.svelte';
-	import { linearRegression, makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData';
+	import {
+		linearRegression,
+		makeSeqArray,
+		removeNullsFromXY
+	} from '$lib/components/plotbits/helpers/wrangleData';
 	import { scaleLinear } from 'd3-scale';
 
 	function findCentileValue(data, centile) {
@@ -38,8 +42,11 @@
 		return bestMatchIndex;
 	}
 
+	let _phaseMarkerCounter = 0;
+
 	export class PhaseMarkerClass {
 		parent = $state();
+		id;
 		type = $state(); //{onset, offset, manual}
 		centileThreshold = $state();
 		templateHrsBefore = $state();
@@ -51,6 +58,11 @@
 		periodRangeMin = $state();
 		periodRangeMax = $state();
 		manualMarkers = $state([]);
+
+		//Add a manual marker
+		addTime(clickedDay, clickedHrs) {
+			this.manualMarkers[clickedDay] = clickedHrs;
+		}
 
 		//Calculate the markers for the actogram
 		markers = $derived.by(() => {
@@ -143,6 +155,7 @@
 				.range([0, this.parent.parent.plotwidth]);
 			const radius = Math.max(4, this.parent.parent.eachplotheight / 10);
 			for (let m = this.periodRangeMin - 1; m <= this.periodRangeMax - 1; m++) {
+				if (!this.markers[m]) continue;
 				out += `M${xscale(this.markers[m]) + this.parent.parent.padding.left} ${
 					this.parent.parent.padding.top +
 					this.parent.parent.eachplotheight -
@@ -157,16 +170,23 @@
 
 		linearRegression = $derived.by(() => {
 			//get the markers of interest
-			const xs = makeSeqArray(this.periodRangeMin, this.periodRangeMax, 1);
+			let xs = makeSeqArray(this.periodRangeMin, this.periodRangeMax, 1);
 			let ys = this.markers.slice(this.periodRangeMin - 1, this.periodRangeMax);
 			for (let i = 0; i < ys.length; i++) {
 				ys[i] = ys[i] + i * this.parent.parent.period;
 			}
+			//remove any NaNs
+			[xs, ys] = removeNullsFromXY(xs, ys);
+			//return an NaN if there are no values
+			if (xs.length == 0) return NaN;
 			return linearRegression(xs, ys);
 		});
 
 		constructor(parent, dataIN) {
 			this.parent = parent;
+
+			this.id = _phaseMarkerCounter;
+			_phaseMarkerCounter++;
 			if (dataIN) {
 				this.type = dataIN.type || 'onset';
 				this.centileThreshold = dataIN.centileThreshold || 50;
@@ -217,7 +237,11 @@
 </script>
 
 {#snippet controls(marker)}
-	Type: <input type="text" bind:value={marker.type} />
+	<p>{marker.id}</p>
+	Type:<input type="text" bind:value={marker.type} />
+	{#if marker.type === 'manual'}
+		<button onclick={() => (marker.parent.parent.isAddingMarkerTo = marker.id)}>Add Marker</button>
+	{/if}
 	N: <input type="number" min="0" max="100" bind:value={marker.templateHrsBefore} />
 	M: <input type="number" min="0" max="100" bind:value={marker.templateHrsAfter} />
 	%: <input type="number" min="0" max="100" bind:value={marker.centileThreshold} />

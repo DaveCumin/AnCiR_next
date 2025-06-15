@@ -98,3 +98,16 @@ export function linearRegression(x, y) {
 
 	return { slope, intercept, rSquared, rmse };
 }
+
+//----
+export function removeNullsFromXY(x, y) {
+	let outX = [];
+	let outY = [];
+	for (let i = 0; i < x.length; i++) {
+		if (x[i] !== null && y[i] !== null && !isNaN(x[i]) && !isNaN(y[i])) {
+			outX.push(x[i]);
+			outY.push(y[i]);
+		}
+	}
+	return [outX, outY];
+}
