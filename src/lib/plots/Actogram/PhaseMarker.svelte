@@ -172,8 +172,9 @@
 			//get the markers of interest
 			let xs = makeSeqArray(this.periodRangeMin - 1, this.periodRangeMax - 1, 1);
 			let ys = this.markers.slice(this.periodRangeMin - 1, this.periodRangeMax);
+			console.log('before: ', xs, ys);
 			for (let i = 0; i < ys.length; i++) {
-				ys[i] = ys[i] + i * this.parent.parent.periodHrs;
+				ys[i] = ys[i] + xs[i] * this.parent.parent.periodHrs;
 			}
 			//remove any NaNs
 			[xs, ys] = removeNullsFromXY(xs, ys);
@@ -281,7 +282,7 @@
 					marker.parent.parent.Ndays *
 						(marker.linearRegression.slope - marker.parent.parent.periodHrs)
 			) + marker.parent.parent.padding.left}
-			y2={marker.parent.parent.Ndays *
+			y2={(marker.parent.parent.Ndays - 1) *
 				(marker.parent.parent.eachplotheight + marker.parent.parent.spaceBetween) +
 				marker.parent.parent.eachplotheight +
 				marker.parent.parent.padding.top}

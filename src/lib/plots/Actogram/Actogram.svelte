@@ -251,6 +251,8 @@
 		</p>
 
 		<p>
+			Ndays: <a>{theData.Ndays}</a>
+			eachplotheight: <a>{theData.eachplotheight}</a>
 			Start time: <input type="number" bind:value={theData.startTime} />
 			Period: <input type="number" step="0.1" bind:value={theData.periodHrs} />
 			Repeat: <input type="number" bind:value={theData.doublePlot} />
