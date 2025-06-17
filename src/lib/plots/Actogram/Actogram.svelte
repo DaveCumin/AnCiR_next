@@ -3,9 +3,10 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
-	import ColourPicker, { getRandomColor } from '$lib/components/ColourPicker.svelte';
+	import ColourPicker, { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { core } from '$lib/core/theCore.svelte.js';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
+	import LightBand, { LightBandClass } from './LightBand.svelte';
 	import BinnedHist from '$lib/components/plotbits/BinnedHist.svelte';
 	import { makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData';
 
@@ -99,7 +100,24 @@
 		parent = $state();
 		data = $state([]);
 		isAddingMarkerTo = $state(-1);
-		padding = $state({ top: 30, right: 20, bottom: 10, left: 30 });
+		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 30 });
+		padding = $derived.by(() => {
+			if (this.LightBand.length > 0) {
+				return {
+					top: this.paddingIN.top + this.LightBand.height * 2,
+					right: this.paddingIN.right,
+					bottom: this.paddingIN.bottom,
+					left: this.paddingIN.left
+				};
+			} else {
+				return {
+					top: this.paddingIN.top,
+					right: this.paddingIN.right,
+					bottom: this.paddingIN.bottom,
+					left: this.paddingIN.left
+				};
+			}
+		});
 		plotheight = $derived(this.parent.height - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.parent.width - this.padding.left - this.padding.right);
 		eachplotheight = $derived.by(() => {
@@ -109,6 +127,7 @@
 		spaceBetween = $state(2);
 		doublePlot = $state(2);
 		periodHrs = $state(24);
+		LightBand = $state(new LightBandClass(this, { bands: [] }));
 		Ndays = $derived.by(() => {
 			if (this.data.length === 0) {
 				return 0;
@@ -167,11 +186,11 @@
 
 		toJSON() {
 			return {
-				xlimsIN: this.xlimsIN,
 				ylimsIN: this.ylimsIN,
-				padding: this.padding,
+				paddingIN: this.paddingIN,
 				doublePlot: this.doublePlot,
 				periodHrs: this.periodHrs,
+				LightBand: this.LightBand,
 				data: this.data
 			};
 		}
@@ -181,12 +200,12 @@
 			}
 			//TODO: this needs to be fixed
 			const actogram = new Actogramclass(parent, null);
-			actogram.padding = json.padding;
-			actogram.xlimsIN = json.xlimsIN;
+			actogram.paddingIN = json.paddingIN;
 			actogram.ylimsIN = json.ylimsIN;
-			actogram.padding = json.padding;
 			actogram.doublePlot = json.doublePlot;
 			actogram.periodHrs = json.periodHrs;
+
+			actogram.LightBand = new LightBandClass.fromJSON(json.bands ?? { bands: [] }, actogram);
 
 			if (json.data) {
 				actogram.data = json.data.map((d) => ActogramDataclass.fromJSON(d, actogram));
@@ -198,6 +217,7 @@
 
 <script>
 	import { convertToImage } from '$lib/components/plotbits/helpers/save.js';
+
 	let { theData, which } = $props();
 
 	function pickRandomData() {
@@ -244,12 +264,16 @@
 		height: <input type="number" bind:value={theData.parent.height} />
 
 		<p>
-			Padding: <input type="number" bind:value={theData.padding.top} />
-			<input type="number" bind:value={theData.padding.right} />
-			<input type="number" bind:value={theData.padding.bottom} />
-			<input type="number" bind:value={theData.padding.left} />
+			Padding: <input type="number" bind:value={theData.paddingIN.top} />
+			<input type="number" bind:value={theData.paddingIN.right} />
+			<input type="number" bind:value={theData.paddingIN.bottom} />
+			<input type="number" bind:value={theData.paddingIN.left} />
 		</p>
+		<p>{JSON.stringify(theData.padding)}</p>
 
+		<p>
+			<LightBand bind:bands={theData.LightBand} which="controls" />
+		</p>
 		<p>
 			Ndays: <a>{theData.Ndays}</a>
 			eachplotheight: <a>{theData.eachplotheight}</a>
@@ -323,6 +347,7 @@
 		style={`background: white; position: absolute;`}
 		onclick={(e) => handleClick(e)}
 	>
+		<LightBand bind:bands={theData.plot.LightBand} which="plot" />
 		<!-- The X-axis -->
 		<Axis
 			height={theData.plot.plotheight}

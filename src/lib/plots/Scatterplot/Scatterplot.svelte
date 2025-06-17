@@ -3,7 +3,7 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
-	import { getRandomColor } from '$lib/components/ColourPicker.svelte';
+	import { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { core } from '$lib/core/theCore.svelte.js';
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';

@@ -12,7 +12,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { appConsts } from '$lib/core/theCore.svelte';
-	import Box from './Box.svelte';
+	import Box from '../Box.svelte';
 	let { value = $bindable(getRandomColor()), onChange = () => {} } = $props();
 	let plot = $state({ x: 0, y: 0, width: 260, height: 400 });
 
@@ -564,14 +564,14 @@
 <!-- THE INDICATOR-->
 
 <div
-	style="background-color: {hexInput}; width: 24px; height: 24px; border: 1px solid #ccc; position: relative; cursor: pointer;"
+	style="background-color: {value}; width: 24px; height: 24px; border: 1px solid #ccc; position: relative; cursor: pointer;"
 	onclick={(e) => open(e)}
 >
 	<div
 		style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
 	></div>
 	<div
-		style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {hexInput};"
+		style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {value};"
 	></div>
 </div>
 

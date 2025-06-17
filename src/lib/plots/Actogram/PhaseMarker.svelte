@@ -1,5 +1,5 @@
 <script module>
-	import ColourPicker from '$lib/components/ColourPicker.svelte';
+	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import DoubleRange from '$lib/components/inputs/DoubleRange.svelte';
 	import {
 		linearRegression,
@@ -179,7 +179,6 @@
 			[xs, ys] = removeNullsFromXY(xs, ys);
 			//return an NaN if there are no values
 			if (xs.length == 0) return NaN;
-			console.log(xs, ys);
 			return linearRegression(xs, ys);
 		});
 
