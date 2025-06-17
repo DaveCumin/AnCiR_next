@@ -1,9 +1,10 @@
 <script module>
 	import { Process } from '$lib/core/Process.svelte';
-	import { core } from '$lib/core/theCore.svelte.js';
+	import { core, appConsts } from '$lib/core/theCore.svelte.js';
 
 	export function getColumnByID(id) {
-		return core.data.find((column) => column.columnID === id);
+		const theColumn = core.data.find((column) => column.columnID === id);
+		return theColumn;
 	}
 
 	let _columnidCounter = 0;
@@ -155,23 +156,14 @@
 <script>
 	import Processcomponent from '$lib/core/Process.svelte'; //Need to rename it because Process is used as the class name in the module, above
 	import Icon from '$lib/icon/Icon.svelte';
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	let { col, canChange = false } = $props();
 </script>
 
 <details open style="margin-left: 1rem">
 	<summary>
 		{#if canChange}
-			<select
-				name="columnSelect"
-				onchange={(e) => {
-					col.refDataID = Number(e.target.value);
-				}}
-				value={col.refDataID}
-			>
-				{#each core.data as c}
-					<option value={c.columnID} selected={c.columnID == col.columnID}>{c.name}</option>
-				{/each}
-			</select>
+			<ColumnSelector bind:value={col.refDataID} />
 		{/if}
 		{#if !canChange}
 			<strong>{col.name}</strong><br /> <italic>{col.provenance}</italic><br />
@@ -196,8 +188,14 @@
 		{/if}
 		<li>
 			{col.getData()?.slice(0, 5)}
-			<button onclick={() => col.addProcess(Math.random() > 0.5 ? 'Add' : 'Sub')}
-				><Icon name="add" width={16} height={16} /></button
+			<button
+				onclick={() => {
+					const proc = [...appConsts.processMap.entries()][
+						Math.floor(Math.random() * [...appConsts.processMap.entries()].length)
+					];
+					console.log(proc[0]);
+					col.addProcess(proc[0]);
+				}}><Icon name="add" width={16} height={16} /></button
 			>
 		</li>
 		{#each col.processes as p}

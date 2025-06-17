@@ -3,7 +3,7 @@
 		const value = args.value;
 		return x.map((i) => i + value);
 	}
-	export const add_defaults = new Map([['value', { val: 0, type: 'dataType' }]]);
+	export const add_defaults = new Map([['value', { val: 0 }]]);
 </script>
 
 <script>

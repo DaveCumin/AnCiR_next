@@ -1,4 +1,5 @@
 <script module>
+	import ColourPicker from '$lib/components/ColourPicker.svelte';
 	import DoubleRange from '$lib/components/inputs/DoubleRange.svelte';
 	import {
 		linearRegression,
@@ -51,12 +52,11 @@
 		centileThreshold = $state();
 		templateHrsBefore = $state();
 		templateHrsAfter = $state();
-		MADThreshold = $state();
 		colour = $state();
 		showLine = $state();
 		showMarkers = $state();
-		periodRangeMin = $state();
-		periodRangeMax = $state();
+		periodRangeMin = $state(0);
+		periodRangeMax = $state(0);
 		manualMarkers = $state([]);
 
 		//Add a manual marker
@@ -113,7 +113,7 @@
 					...this.parent.dataByDays.xByPeriod[i],
 					...this.parent.dataByDays.xByPeriod[i + 1]
 				];
-				bestMatchx.push(xData[bestMatchIndex] - i * this.parent.parent.period);
+				bestMatchx.push(xData[bestMatchIndex] - i * this.parent.parent.periodHrs);
 			}
 			//--------------
 			//Do the last day on its own
@@ -136,7 +136,7 @@
 			//find the x-value in the period that corresponds to that index
 			let xData = this.parent.dataByDays.xByPeriod[i];
 
-			bestMatchx.push(xData[bestMatchIndex] - i * this.parent.parent.period);
+			bestMatchx.push(xData[bestMatchIndex] - i * this.parent.parent.periodHrs);
 			//--------------
 			//Update periodRangeMax if it's more than the number of periods
 			this.periodRangeMax = Math.min(
@@ -151,7 +151,7 @@
 		markerPoints = $derived.by(() => {
 			let out = '';
 			const xscale = scaleLinear()
-				.domain([0, this.parent.parent.period * this.parent.parent.doublePlot])
+				.domain([0, this.parent.parent.periodHrs * this.parent.parent.doublePlot])
 				.range([0, this.parent.parent.plotwidth]);
 			const radius = Math.max(4, this.parent.parent.eachplotheight / 10);
 			for (let m = this.periodRangeMin - 1; m <= this.periodRangeMax - 1; m++) {
@@ -170,13 +170,14 @@
 
 		linearRegression = $derived.by(() => {
 			//get the markers of interest
-			let xs = makeSeqArray(this.periodRangeMin, this.periodRangeMax, 1);
+			let xs = makeSeqArray(this.periodRangeMin - 1, this.periodRangeMax - 1, 1);
 			let ys = this.markers.slice(this.periodRangeMin - 1, this.periodRangeMax);
 			for (let i = 0; i < ys.length; i++) {
-				ys[i] = ys[i] + i * this.parent.parent.period;
+				ys[i] = ys[i] + i * this.parent.parent.periodHrs;
 			}
 			//remove any NaNs
 			[xs, ys] = removeNullsFromXY(xs, ys);
+			console.log(xs, ys);
 			//return an NaN if there are no values
 			if (xs.length == 0) return NaN;
 			return linearRegression(xs, ys);
@@ -192,7 +193,6 @@
 				this.centileThreshold = dataIN.centileThreshold || 50;
 				this.templateHrsBefore = dataIN.templateHrsBefore || 3;
 				this.templateHrsAfter = dataIN.templateHrsAfter || 3;
-				this.MADThreshold = dataIN.MADThreshold || 2;
 				this.colour = dataIN.colour || 'black';
 				this.showLine = dataIN.showLine || true;
 				this.showMarkers = dataIN.showMarkers || true;
@@ -208,11 +208,12 @@
 				centileThreshold: this.centileThreshold,
 				templateHrsBefore: this.templateHrsBefore,
 				templateHrsAfter: this.templateHrsAfter,
-				MADThreshold: this.MADThreshold,
 				colour: this.colour,
 				showLine: this.showLine,
 				showMarkers: this.showMarkers,
-				periodRange: this.periodRange
+				periodRangeMin: this.periodRangeMin,
+				periodRangeMax: this.periodRangeMax,
+				manualMarkers: this.manualMarkers
 			};
 		}
 
@@ -222,11 +223,12 @@
 				centileThreshold: json.centileThreshold,
 				templateHrsBefore: json.templateHrsBefore,
 				templateHrsAfter: json.templateHrsAfter,
-				MADThreshold: json.MADThreshold,
 				colour: json.colour,
 				showLine: json.showLine,
 				showMarkers: json.showMarkers,
-				periodRange: json.periodRange
+				periodRangeMin: json.periodRangeMin,
+				periodRangeMax: json.periodRangeMax,
+				manualMarkers: json.manualMarkers
 			});
 		}
 	}
@@ -234,6 +236,9 @@
 
 <script>
 	let { marker, which } = $props();
+	const xscale = scaleLinear()
+		.domain([0, marker.parent.parent.periodHrs * marker.parent.parent.doublePlot])
+		.range([0, marker.parent.parent.plotwidth]);
 </script>
 
 {#snippet controls(marker)}
@@ -251,12 +256,38 @@
 		bind:minVal={marker.periodRangeMin}
 		bind:maxVal={marker.periodRangeMax}
 	/>
+	<ColourPicker bind:value={marker.colour} />
 	<p>{marker.markers}</p>
-	<p>linearRegression: {marker.linearRegression.slope}</p>
+	{#if marker.linearRegression?.slope}
+		<p>linearRegression: {JSON.stringify(marker.linearRegression)}</p>
+		Show Line:<input type="checkbox" bind:checked={marker.showLine} />
+	{/if}
+	<p>
+		{marker.parent.parent.Ndays *
+			(marker.parent.parent.eachplotheight + marker.parent.parent.spaceBetween) +
+			marker.parent.parent.eachplotheight +
+			marker.parent.parent.padding.top}
+	</p>
 {/snippet}
 
 {#snippet plot(marker)}
-	<path d={marker.markerPoints} fill={'lime'} stroke="none" />
+	<path d={marker.markerPoints} fill={marker.colour} stroke="none" />
+	{#if marker.showLine && marker.linearRegression}
+		<line
+			x1={xscale(marker.linearRegression.intercept) + marker.parent.parent.padding.left}
+			y1={marker.parent.parent.padding.top}
+			x2={xscale(
+				marker.linearRegression.intercept +
+					marker.parent.parent.Ndays *
+						(marker.linearRegression.slope - marker.parent.parent.periodHrs)
+			) + marker.parent.parent.padding.left}
+			y2={marker.parent.parent.Ndays *
+				(marker.parent.parent.eachplotheight + marker.parent.parent.spaceBetween) +
+				marker.parent.parent.eachplotheight +
+				marker.parent.parent.padding.top}
+			stroke={marker.colour}
+		/>
+	{/if}
 {/snippet}
 
 {#if which === 'plot'}

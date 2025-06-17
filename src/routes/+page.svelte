@@ -13,10 +13,8 @@
 	import Plotcomponent, { Plot } from '$lib/core/Plot.svelte';
 	import { onMount } from 'svelte';
 	import Visualise from '$lib/components/Visualise.svelte';
-	import ColourPicker from '$lib/components/ColourPicker.svelte';
 
 	import { testjson } from '$lib/test.svelte.js';
-	import DoubleRange from '$lib/components/inputs/DoubleRange.svelte';
 
 	function addData(dataIN, type, name, provenance) {
 		let newDataEntry;
@@ -86,6 +84,7 @@
 			'just made this up'
 		);
 		core.data[0].addProcess('Add');
+		core.data[0].addProcess('FilterByOtherCol');
 
 		let d1id = addData(makeRhythmic(1_000, 24 / 0.15), 'number', 'val1', 'imported from thin air');
 		core.data[1].addProcess('Add');
@@ -177,17 +176,6 @@
 	<button onclick={() => load()}>Load</button>
 </div>
 
-<div style="position:absolute; top:0; right:300px; z-index:1000; border:1px solid black;">
-	<ColourPicker />
-</div>
-<div style="position:absolute; top:0; right:270px; z-index:1000; border:1px solid black;">
-	<ColourPicker />
-</div>
-<div
-	style="position:absolute; top:100; right:170px; z-index:1000; border:1px solid black; background:white;"
->
-	<DoubleRange />
-</div>
 {#each core.plots as plot}
 	<Plotcomponent {plot} />
 {/each}

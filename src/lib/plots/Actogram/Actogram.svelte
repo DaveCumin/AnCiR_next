@@ -35,7 +35,7 @@
 			const yByPeriod = {};
 
 			for (let i = 0; i < tempx.length; i++) {
-				const period = Math.floor(tempx[i] / this.parent.period);
+				const period = Math.floor(tempx[i] / this.parent.periodHrs);
 				if (period >= 0) {
 					if (!xByPeriod[period]) {
 						xByPeriod[period] = [];
@@ -76,24 +76,19 @@
 				x: this.x,
 				y: this.y,
 				colour: this.colour,
-				pointcolour: this.pointcolour,
-				pointradius: this.pointradius,
 				phaseMarkers: this.phaseMarkers
 			};
 		}
 
 		static fromJSON(json, parent) {
-			let actClass = new ActogramDataclass(parent, {
+			const actClass = new ActogramDataclass(parent, {
 				x: json.x,
 				y: json.y,
-				linecolour: json.linecolour,
-				linestrokeWidth: json.linestrokeWidth,
-				pointcolour: json.pointcolour,
-				pointradius: json.pointradius
+				colour: json.colour
 			});
 			if (json.phaseMarkers) {
 				actClass.phaseMarkers = json.phaseMarkers.map((d) =>
-					ActogramDataclass.fromJSON(d, actClass)
+					PhaseMarkerClass.fromJSON(d, actClass)
 				);
 			}
 			return actClass;
@@ -113,7 +108,7 @@
 		startTime = $state(0);
 		spaceBetween = $state(2);
 		doublePlot = $state(2);
-		period = $state(24);
+		periodHrs = $state(24);
 		Ndays = $derived.by(() => {
 			if (this.data.length === 0) {
 				return 0;
@@ -123,7 +118,7 @@
 				let tempMaxx = this.data[i].x.getData() ?? [];
 				tempMaxx = Math.max(...tempMaxx);
 				tempMaxx = tempMaxx - this.startTime; //TODO: need to work this out with real times
-				Ndays = Math.max(Ndays, tempMaxx / this.period);
+				Ndays = Math.max(Ndays, tempMaxx / this.periodHrs);
 			});
 			return Math.ceil(Ndays);
 		});
@@ -176,7 +171,7 @@
 				ylimsIN: this.ylimsIN,
 				padding: this.padding,
 				doublePlot: this.doublePlot,
-				period: this.period,
+				periodHrs: this.periodHrs,
 				data: this.data
 			};
 		}
@@ -190,6 +185,8 @@
 			actogram.xlimsIN = json.xlimsIN;
 			actogram.ylimsIN = json.ylimsIN;
 			actogram.padding = json.padding;
+			actogram.doublePlot = json.doublePlot;
+			actogram.periodHrs = json.periodHrs;
 
 			if (json.data) {
 				actogram.data = json.data.map((d) => ActogramDataclass.fromJSON(d, actogram));
@@ -232,7 +229,7 @@
 		);
 		const clickedHrs =
 			((e.offsetX - theData.plot.padding.left) / theData.plot.plotwidth) *
-			theData.plot.period *
+			theData.plot.periodHrs *
 			theData.plot.doublePlot;
 
 		return [clickedDay, clickedHrs];
@@ -255,7 +252,7 @@
 
 		<p>
 			Start time: <input type="number" bind:value={theData.startTime} />
-			Period: <input type="number" step="0.1" bind:value={theData.period} />
+			Period: <input type="number" step="0.1" bind:value={theData.periodHrs} />
 			Repeat: <input type="number" bind:value={theData.doublePlot} />
 			Space Between:
 			<input type="number" bind:value={theData.spaceBetween} />
@@ -329,13 +326,13 @@
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()
-				.domain([0, theData.plot.period * theData.plot.doublePlot])
+				.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
 				.range([0, theData.plot.plotwidth])}
 			position="top"
 			yoffset={theData.plot.padding.top}
 			xoffset={theData.plot.padding.left}
 			nticks={theData.plot.plotwidth > 600
-				? theData.plot.period
+				? theData.plot.periodHrs
 				: Math.max(2, theData.plot.plotwidth / 150)}
 			gridlines={false}
 		/>
@@ -348,12 +345,12 @@
 						datum.dataByDays.xByPeriod,
 						day,
 						day + theData.plot.doublePlot,
-						theData.plot.period
+						theData.plot.periodHrs
 					)}
 					y={getNdataByPeriods(datum.dataByDays.yByPeriod, day, day + theData.plot.doublePlot, 0)}
 					binSize={datum.binSize}
 					xscale={scaleLinear()
-						.domain([0, theData.plot.period * theData.plot.doublePlot])
+						.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
 						.range([0, theData.plot.plotwidth])}
 					yscale={scaleLinear()
 						.domain([theData.plot.ylims[0], theData.plot.ylims[1]])

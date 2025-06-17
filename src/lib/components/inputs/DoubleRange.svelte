@@ -1,6 +1,6 @@
 <script>
 	//inspired by https://w3collective.com/double-range-slider-html-css-js/
-	let { min = 0, max = 100, step = 1, minVal = $bindable(10), maxVal = $bindable(90) } = $props();
+	let { min = 0, max = 100, step = 1, minVal = $bindable(), maxVal = $bindable() } = $props();
 
 	//TODO: need to deal with min>max and other edge cases, etc.
 	//TODO: style this !!

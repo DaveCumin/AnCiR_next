@@ -5,8 +5,8 @@
 		return x.map((i) => (i == find ? replace : i));
 	}
 	export const sub_defaults = new Map([
-		['find', { val: 0, type: 'dataType' }],
-		['replace', { val: 0, type: 'dataType' }]
+		['find', { val: 0 }],
+		['replace', { val: 0 }]
 	]);
 </script>
 
