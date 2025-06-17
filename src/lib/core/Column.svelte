@@ -177,6 +177,7 @@
 	>
 	<ul>
 		{col.type}
+		{#if col.type == 'number'}[{Math.min(...col.getData())},{Math.max(...col.getData())}]{/if}
 		{#if col.type == 'time'}
 			<br />
 			Time format:

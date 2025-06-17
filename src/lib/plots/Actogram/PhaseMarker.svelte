@@ -170,17 +170,16 @@
 
 		linearRegression = $derived.by(() => {
 			//get the markers of interest
-			let xs = makeSeqArray(this.periodRangeMin - 1, this.periodRangeMax - 1, 1);
+			let xs = makeSeqArray(this.periodRangeMin, this.periodRangeMax, 1);
 			let ys = this.markers.slice(this.periodRangeMin - 1, this.periodRangeMax);
-			console.log('before: ', xs, ys);
 			for (let i = 0; i < ys.length; i++) {
 				ys[i] = ys[i] + xs[i] * this.parent.parent.periodHrs;
 			}
 			//remove any NaNs
 			[xs, ys] = removeNullsFromXY(xs, ys);
-			console.log(xs, ys);
 			//return an NaN if there are no values
 			if (xs.length == 0) return NaN;
+			console.log(xs, ys);
 			return linearRegression(xs, ys);
 		});
 
@@ -237,9 +236,11 @@
 
 <script>
 	let { marker, which } = $props();
-	const xscale = scaleLinear()
-		.domain([0, marker.parent.parent.periodHrs * marker.parent.parent.doublePlot])
-		.range([0, marker.parent.parent.plotwidth]);
+	const xscale = $derived(
+		scaleLinear()
+			.domain([0, marker.parent.parent.periodHrs * marker.parent.parent.doublePlot])
+			.range([0, marker.parent.parent.plotwidth])
+	);
 </script>
 
 {#snippet controls(marker)}

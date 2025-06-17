@@ -340,30 +340,32 @@
 		/>
 
 		{#each theData.plot.data as datum}
-			<!-- Make the histogram for each period -->
-			{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
-				<BinnedHist
-					x={getNdataByPeriods(
-						datum.dataByDays.xByPeriod,
-						day,
-						day + theData.plot.doublePlot,
-						theData.plot.periodHrs
-					)}
-					y={getNdataByPeriods(datum.dataByDays.yByPeriod, day, day + theData.plot.doublePlot, 0)}
-					binSize={datum.binSize}
-					xscale={scaleLinear()
-						.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
-						.range([0, theData.plot.plotwidth])}
-					yscale={scaleLinear()
-						.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-						.range([theData.plot.eachplotheight, 0])}
-					colour={datum.colour}
-					yoffset={theData.plot.padding.top +
-						day * theData.plot.spaceBetween +
-						day * theData.plot.eachplotheight}
-					xoffset={theData.plot.padding.left}
-				/>
-			{/each}
+			<g
+				class="actogram"
+				style="transform: translate({theData.plot.padding.left}px, {theData.plot.padding.top}px);"
+			>
+				<!-- Make the histogram for each period -->
+				{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
+					<BinnedHist
+						x={getNdataByPeriods(
+							datum.dataByDays.xByPeriod,
+							day,
+							day + theData.plot.doublePlot,
+							theData.plot.periodHrs
+						)}
+						y={getNdataByPeriods(datum.dataByDays.yByPeriod, day, day + theData.plot.doublePlot, 0)}
+						binSize={datum.binSize}
+						xscale={scaleLinear()
+							.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
+							.range([0, theData.plot.plotwidth])}
+						yscale={scaleLinear()
+							.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+							.range([theData.plot.eachplotheight, 0])}
+						colour={datum.colour}
+						yoffset={day * theData.plot.spaceBetween + day * theData.plot.eachplotheight}
+					/>
+				{/each}
+			</g>
 			<!-- THE MARKERS -->
 			{#each datum.phaseMarkers as marker}
 				<PhaseMarker {which} {marker} />
