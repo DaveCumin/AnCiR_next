@@ -40,9 +40,8 @@
 		x = $state();
 		y = $state();
 		binSize = $state(0.15);
-		cachedBinned = $state({ key: null, data: null });
+		binnedData = $derived(binData(this.x.getData(), this.y.getData(), this.binSize, 0));
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
-
 		linecolour = $state();
 		linestrokeWidth = $state(3);
 		pointcolour = $state();
@@ -50,26 +49,20 @@
 
 		// Compute periodogram data - this is faster than the $derived. Could also consider debouncing, if updates are slow.
 		updatePeriodData() {
-			const key = `${this.x.toJSON().toString()}_${this.y.toJSON().toString()}_${this.binSize}`;
-			if (!this.cachedBinned.key || this.cachedBinned.key !== key) {
-				this.cachedBinned = {
-					key,
-					data: binData(this.x.getData(), this.y.getData(), this.binSize, 0)
-				};
-			}
-
+			console.log('periodLims IN', this.parent.periodlimsIN);
 			const periods = makeSeqArray(
 				this.parent.periodlimsIN[0],
 				this.parent.periodlimsIN[1],
 				this.parent.periodSteps
 			);
+			console.log('periods: ', periods);
 			const correctedAlpha = Math.pow(1 - this.parent.alpha, 1 / periods.length);
 			const power = new Array(periods.length);
 			const threshold = new Array(periods.length);
 			const pvalue = new Array(periods.length);
 
 			for (let p = 0; p < periods.length; p++) {
-				power[p] = calculatePower(this.cachedBinned.data.y_out, this.binSize, periods[p]);
+				power[p] = calculatePower(this.binnedData.y_out, this.binSize, periods[p]);
 				threshold[p] = qchisq(correctedAlpha, Math.round(periods[p] / this.binSize));
 				pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / this.binSize));
 			}
@@ -254,10 +247,11 @@
 			period grid:<input type="checkbox" bind:checked={theData.xgridlines} />
 			<input
 				type="number"
+				min="0.1"
 				step="0.1"
 				value={theData.periodlimsIN[0] ? theData.periodlimsIN[0] : theData.periodlims[0]}
 				oninput={(e) => {
-					theData.periodlimsIN[0] = [parseFloat(e.target.value)];
+					theData.periodlimsIN[0] = parseFloat(e.target.value);
 				}}
 			/>
 			<input
@@ -265,7 +259,7 @@
 				step="0.1"
 				value={theData.periodlimsIN[1] ? theData.periodlimsIN[1] : theData.periodlims[1]}
 				oninput={(e) => {
-					theData.periodlimsIN[1] = [parseFloat(e.target.value)];
+					theData.periodlimsIN[1] = parseFloat(e.target.value);
 				}}
 			/>
 			step:
