@@ -10,22 +10,19 @@
 	let clipKey = $derived(`${xoffset},${yoffset},${width},${height}`);
 
 	let line = $derived.by(() => {
-		let tempx = x.getData() ?? [];
-		let tempy = y.getData() ?? [];
-
 		//find the x point before the limit
 		let beforeIdx = 0;
-		for (let i = 1; i < tempx.length; i++) {
-			if (tempx[i] >= Math.min(xlims[0], xlims[1])) {
+		for (let i = 1; i < x.length; i++) {
+			if (x[i] >= Math.min(xlims[0], xlims[1])) {
 				beforeIdx = i - 1;
 				break;
 			}
 		}
 
 		//find the x point after the limit
-		let afterIdx = tempx.length - 1;
-		for (let i = tempx.length - 2; i >= 0; i--) {
-			if (tempx[i] <= Math.max(xlims[0], xlims[1])) {
+		let afterIdx = x.length - 1;
+		for (let i = x.length - 2; i >= 0; i--) {
+			if (x[i] <= Math.max(xlims[0], xlims[1])) {
 				afterIdx = i + 1;
 				break;
 			}
@@ -33,7 +30,7 @@
 
 		let out = '';
 		for (let p = beforeIdx; p <= afterIdx; p++) {
-			out += xscale(tempx[p]) + ',' + yscale(tempy[p]) + ' ';
+			out += xscale(x[p]) + ',' + yscale(y[p]) + ' ';
 		}
 
 		return out;

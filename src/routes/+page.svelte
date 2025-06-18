@@ -125,16 +125,26 @@
 		core.tables[1].columnRefs = [d1id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
 
 		core.plots = [];
+		//Scatter plot
 		core.plots.push(new Plot({ name: 'testscatter', type: 'scatterplot' }));
 		core.plots[0].plot.addData({
 			x: { refDataID: 0 },
 			y: { refDataID: 1 }
 		});
+		//Actogram
 		core.plots.push(new Plot({ name: 'an actogram', type: 'actogram' }));
 		core.plots[1].x = 300;
 		core.plots[1].y = 400;
 		core.plots[1].height = 700;
 		core.plots[1].plot.addData({
+			x: { refDataID: 0 },
+			y: { refDataID: 1 }
+		});
+		//Periodogram
+		core.plots.push(new Plot({ name: 'a periodogram', type: 'periodogram' }));
+		core.plots[2].x = 400;
+		core.plots[2].y = 450;
+		core.plots[2].plot.addData({
 			x: { refDataID: 0 },
 			y: { refDataID: 1 }
 		});

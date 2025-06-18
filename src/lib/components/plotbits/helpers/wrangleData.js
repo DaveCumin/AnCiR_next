@@ -111,3 +111,8 @@ export function removeNullsFromXY(x, y) {
 	}
 	return [outX, outY];
 }
+
+//Calculate mean
+export function mean(arr) {
+	return arr.reduce((acc, val) => acc + val, 0) / arr.length;
+}

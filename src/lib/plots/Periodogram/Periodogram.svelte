@@ -5,17 +5,77 @@
 	import { scaleLinear } from 'd3-scale';
 	import { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { core } from '$lib/core/theCore.svelte.js';
+	import { binData, mean, makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import { pchisq, qchisq } from '$lib/data/CDFs';
+
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
 
-	class ScatterDataclass {
+	function calculatePower(data, binSize, period) {
+		const colNum = Math.round(period / binSize);
+		const rowNum = Math.ceil(data.length / colNum);
+
+		const avgP = Array.from({ length: colNum }, (_, colIndex) => {
+			const colStart = colIndex;
+			const colValues = Array.from(
+				{ length: rowNum },
+				(_, rowIndex) => data[colStart + rowIndex * colNum]
+			).filter((value) => value !== undefined && !isNaN(value)); // only keep the true values
+
+			//return the mean
+			return mean(colValues);
+		});
+
+		const avgAll = mean(data);
+
+		const numerator =
+			avgP.reduce((sum, avgPValue) => sum + Math.pow(avgPValue - avgAll, 2), 0) *
+			(data.length * rowNum);
+		const denominator = data.reduce((sum, value) => sum + Math.pow(value - avgAll, 2), 0);
+		return numerator / denominator;
+	}
+
+	class PeriodogramDataclass {
 		parent = $state();
 		x = $state();
 		y = $state();
+		binSize = $state(0.15);
+		cachedBinned = $state({ key: null, data: null });
+		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
+
 		linecolour = $state();
 		linestrokeWidth = $state(3);
 		pointcolour = $state();
 		pointradius = $state(5);
+
+		// Compute periodogram data - this is faster than the $derived. Could also consider debouncing, if updates are slow.
+		updatePeriodData() {
+			const key = `${this.x.toJSON().toString()}_${this.y.toJSON().toString()}_${this.binSize}`;
+			if (!this.cachedBinned.key || this.cachedBinned.key !== key) {
+				this.cachedBinned = {
+					key,
+					data: binData(this.x.getData(), this.y.getData(), this.binSize, 0)
+				};
+			}
+
+			const periods = makeSeqArray(
+				this.parent.periodlimsIN[0],
+				this.parent.periodlimsIN[1],
+				this.parent.periodSteps
+			);
+			const correctedAlpha = Math.pow(1 - this.parent.alpha, 1 / periods.length);
+			const power = new Array(periods.length);
+			const threshold = new Array(periods.length);
+			const pvalue = new Array(periods.length);
+
+			for (let p = 0; p < periods.length; p++) {
+				power[p] = calculatePower(this.cachedBinned.data.y_out, this.binSize, periods[p]);
+				threshold[p] = qchisq(correctedAlpha, Math.round(periods[p] / this.binSize));
+				pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / this.binSize));
+			}
+
+			this.periodData = { x: periods, y: power, threshold, pvalue };
+		}
 
 		constructor(parent, dataIN) {
 			this.parent = parent;
@@ -46,7 +106,7 @@
 		}
 
 		static fromJSON(json, parent) {
-			return new ScatterDataclass(parent, {
+			return new PeriodogramDataclass(parent, {
 				x: json.x,
 				y: json.y,
 				linecolour: json.linecolour,
@@ -57,13 +117,15 @@
 		}
 	}
 
-	export class Scatterplotclass {
+	export class Periodogramclass {
 		parent = $state();
 		data = $state([]);
 		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
 		plotheight = $derived(this.parent.height - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.parent.width - this.padding.left - this.padding.right);
-		xlimsIN = $state([null, null]);
+		periodlimsIN = $state([1, 30]);
+		periodSteps = $state(0.15);
+		alpha = $state(0.05);
 		ylimsIN = $state([null, null]);
 		ylims = $derived.by(() => {
 			if (this.data.length === 0) {
@@ -73,25 +135,11 @@
 			let ymin = Infinity;
 			let ymax = -Infinity;
 			this.data.forEach((d, i) => {
-				let tempy = this.data[i].y.getData() ?? [];
+				let tempy = this.data[i].periodData.y;
 				ymin = Math.min(ymin, Math.min(...tempy));
 				ymax = Math.max(ymax, Math.max(...tempy));
 			});
 			return [this.ylimsIN[0] ? this.ylimsIN[0] : ymin, this.ylimsIN[1] ? this.ylimsIN[1] : ymax];
-		});
-		xlims = $derived.by(() => {
-			if (this.data.length === 0) {
-				return [0, 0];
-			}
-
-			let xmin = Infinity;
-			let xmax = -Infinity;
-			this.data.forEach((d, i) => {
-				let tempx = this.data[i].x.getData() ?? [];
-				xmin = Math.min(xmin, Math.min(...tempx));
-				xmax = Math.max(xmax, Math.max(...tempx));
-			});
-			return [this.xlimsIN[0] ? this.xlimsIN[0] : xmin, this.xlimsIN[1] ? this.xlimsIN[1] : xmax];
 		});
 		xgridlines = $state(true);
 		ygridlines = $state(true);
@@ -104,15 +152,21 @@
 		}
 
 		addData(dataIN) {
-			this.data.push(new ScatterDataclass(this, dataIN));
+			const datum = new PeriodogramDataclass(this, dataIN);
+			datum.updatePeriodData();
+			this.data.push(datum);
 		}
 		removeData(idx) {
 			this.data.splice(idx, 1);
 		}
+		updateAllPeriodData() {
+			this.data.forEach((datum) => datum.updatePeriodData());
+		}
 
 		toJSON() {
 			return {
-				xlimsIN: this.xlimsIN,
+				periodlimsIN: this.periodlimsIN,
+				periodSteps: this.periodSteps,
 				ylimsIN: this.ylimsIN,
 				padding: this.padding,
 				ygridlines: this.ygridlines,
@@ -122,21 +176,23 @@
 		}
 		static fromJSON(parent, json) {
 			if (!json) {
-				return new Scatterplotclass(parent, null);
+				return new Periodogramclass(parent, null);
 			}
 
-			const scatter = new Scatterplotclass(parent, null);
-			scatter.padding = json.padding;
-			scatter.xlimsIN = json.xlimsIN;
-			scatter.ylimsIN = json.ylimsIN;
-			scatter.padding = json.padding;
-			scatter.ygridlines = json.ygridlines;
-			scatter.xgridlines = json.xgridlines;
+			const periodogram = newPeriodogramclass(parent, null);
+			periodogram.padding = json.padding;
+			periodogram.periodlimsIN = json.periodlimsIN;
+			periodogram.periodSteps = json.periodSteps;
+			periodogram.ylimsIN = json.ylimsIN;
+			periodogram.padding = json.padding;
+			periodogram.ygridlines = json.ygridlines;
+			periodogram.xgridlines = json.xgridlines;
 
 			if (json.data) {
-				scatter.data = json.data.map((d) => ScatterDataclass.fromJSON(d, scatter));
+				periodogram.data = json.data.map((d) => PeriodogramDataclass.fromJSON(d, periodogram));
+				periodogram.updateAllPeriodData();
 			}
-			return scatter;
+			return periodogram;
 		}
 	}
 </script>
@@ -149,6 +205,12 @@
 		const options = Array.from(core.data.keys());
 		return options.length > 0 ? options[Math.floor(Math.random() * options.length)] : -1;
 	}
+
+	$effect(() => {
+		if (theData.periodlimsIN || theData.periodSteps || theData.alpha) {
+			theData.updateAllPeriodData();
+		}
+	});
 </script>
 
 {#snippet controls(theData)}
@@ -163,6 +225,9 @@
 			<input type="number" bind:value={theData.padding.right} />
 			<input type="number" bind:value={theData.padding.bottom} />
 			<input type="number" bind:value={theData.padding.left} />
+		</p>
+		<p>
+			alpha: <input type="number" min="0.0001" max="1" step="0.01" bind:value={theData.alpha} />
 		</p>
 
 		<p>
@@ -186,24 +251,25 @@
 			/>
 		</p>
 		<p>
-			xlims: <button onclick={() => (theData.xlimsIN = [null, null])}>R</button>
-			grid:<input type="checkbox" bind:checked={theData.xgridlines} />
+			period grid:<input type="checkbox" bind:checked={theData.xgridlines} />
 			<input
 				type="number"
 				step="0.1"
-				value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
+				value={theData.periodlimsIN[0] ? theData.periodlimsIN[0] : theData.periodlims[0]}
 				oninput={(e) => {
-					theData.xlimsIN[0] = [parseFloat(e.target.value)];
+					theData.periodlimsIN[0] = [parseFloat(e.target.value)];
 				}}
 			/>
 			<input
 				type="number"
 				step="0.1"
-				value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
+				value={theData.periodlimsIN[1] ? theData.periodlimsIN[1] : theData.periodlims[1]}
 				oninput={(e) => {
-					theData.xlimsIN[1] = [parseFloat(e.target.value)];
+					theData.periodlimsIN[1] = [parseFloat(e.target.value)];
 				}}
 			/>
+			step:
+			<input type="number" min="0.1" step="0.01" bind:value={theData.periodSteps} />
 		</p>
 		<p>Data:</p>
 		<button
@@ -227,6 +293,8 @@
 
 			y: {datum.y.name}
 			<Column col={datum.y} canChange={true} />
+
+			binSize: <input type="number" step="0.01" min="0.01" bind:value={datum.binSize} />
 
 			line col: <input type="color" bind:value={datum.linecolour} />
 			line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
@@ -262,7 +330,7 @@
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()
-				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+				.domain([theData.plot.periodlimsIN[0], theData.plot.periodlimsIN[1]])
 				.range([0, theData.plot.plotwidth])}
 			position="bottom"
 			yoffset={theData.plot.padding.top}
@@ -273,10 +341,10 @@
 
 		{#each theData.plot.data as datum}
 			<Line
-				x={datum.x.getData()}
-				y={datum.y.getData()}
+				x={datum.periodData.x}
+				y={datum.periodData.y}
 				xscale={scaleLinear()
-					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+					.domain([theData.plot.periodlimsIN[0], theData.plot.periodlimsIN[1]])
 					.range([0, theData.plot.plotwidth])}
 				yscale={scaleLinear()
 					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
@@ -287,10 +355,10 @@
 				xoffset={theData.plot.padding.left}
 			/>
 			<Points
-				x={datum.x.getData()}
-				y={datum.y.getData()}
+				x={datum.periodData.x}
+				y={datum.periodData.y}
 				xscale={scaleLinear()
-					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+					.domain([theData.plot.periodlimsIN[0], theData.plot.periodlimsIN[1]])
 					.range([0, theData.plot.plotwidth])}
 				yscale={scaleLinear()
 					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
