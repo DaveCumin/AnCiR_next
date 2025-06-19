@@ -73,6 +73,18 @@
 		}
 		return out;
 	}
+	function makeDateTimeArray(N, from = new Date(), step_hrs = 1) {
+		let out = [];
+		let currentDate = new Date(from);
+		for (let i = 0; i < N; i++) {
+			out.push(new Date(currentDate));
+			currentDate.setHours(currentDate.getHours() + step_hrs);
+		}
+		//now convert to timestamps
+		//out = out.map((d) => d.getTime()); // this makes the UNIX timestamps
+		out = out.map((d) => d.toISOString()); // this makes the ISO strings
+		return out;
+	}
 
 	function refresh() {
 		//simulate importing data
@@ -112,9 +124,12 @@
 		});
 		core.data.push(testrefref);
 
+		let testtimestring = addData(makeDateTimeArray(), 'time', 'REALTIME', 'Just made up');
+
 		core.tables = [];
 		core.tables.push(new Table({ name: 'table 1' }));
 		core.tables[0].columnRefs = [
+			testtimestring,
 			testawd.columnID,
 			d1id,
 			d0id,

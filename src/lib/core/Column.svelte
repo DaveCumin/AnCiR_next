@@ -1,6 +1,7 @@
 <script module>
 	import { Process } from '$lib/core/Process.svelte';
 	import { core, appConsts } from '$lib/core/theCore.svelte.js';
+	import { getISODate } from '$lib/utils/time/TimeUtils';
 
 	export function getColumnByID(id) {
 		const theColumn = core.data.find((column) => column.columnID === id);
@@ -39,6 +40,9 @@
 		});
 		//time format for converting time data
 		timeformat = $derived(this.type === 'time' ? 0 : null);
+		//time data needed for some functions
+		startTime = getISODate(this.rawData, this.timeformat);
+
 		//The associated processes that are applied to the data
 		processes = $state([]);
 
@@ -165,7 +169,7 @@
 		{#if canChange}
 			<ColumnSelector bind:value={col.refDataID} />
 		{/if}
-		{#if !canChange}
+		{#if !col.isReferencial()}
 			<strong>{col.name}</strong><br /> <italic>{col.provenance}</italic><br />
 		{/if}
 		type:
@@ -181,14 +185,21 @@
 		{#if col.type == 'time'}
 			<br />
 			Time format:
-			<input type="number" bind:value={col.timeformat} />
+			{#if !canChange}
+				<input type="number" bind:value={col.timeformat} />
+			{:else}
+				{getColumnByID(col.refDataID)?.timeformat}
+			{/if}
 		{/if}
 		{#if col.compression != null}
 			<br />
 			Compression: {col.compression}
 		{/if}
 		<li>
-			{col.getData()?.slice(0, 5)}
+			{#if !col.isReferencial() && Array.isArray(col.rawData)}
+				<p>raw: {col.rawData.slice(0, 5)}</p>
+			{/if}
+			data: {col.getData()?.slice(0, 5)}
 			<button
 				onclick={() => {
 					const proc = [...appConsts.processMap.entries()][

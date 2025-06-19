@@ -46,24 +46,24 @@
 		linestrokeWidth = $state(3);
 		pointcolour = $state();
 		pointradius = $state(5);
+		alpha = $state(0.05);
 
 		// Compute periodogram data - this is faster than the $derived. Could also consider debouncing, if updates are slow.
 		updatePeriodData() {
-			console.log('periodLims IN', this.parent.periodlimsIN);
 			const periods = makeSeqArray(
 				this.parent.periodlimsIN[0],
 				this.parent.periodlimsIN[1],
 				this.parent.periodSteps
 			);
-			console.log('periods: ', periods);
-			const correctedAlpha = Math.pow(1 - this.parent.alpha, 1 / periods.length);
+
+			const correctedAlpha = Math.pow(1 - this.alpha, 1 / periods.length);
 			const power = new Array(periods.length);
 			const threshold = new Array(periods.length);
 			const pvalue = new Array(periods.length);
 
 			for (let p = 0; p < periods.length; p++) {
 				power[p] = calculatePower(this.binnedData.y_out, this.binSize, periods[p]);
-				threshold[p] = qchisq(correctedAlpha, Math.round(periods[p] / this.binSize));
+				threshold[p] = qchisq(1 - correctedAlpha, Math.round(periods[p] / this.binSize));
 				pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / this.binSize));
 			}
 
@@ -118,7 +118,6 @@
 		plotwidth = $derived(this.parent.width - this.padding.left - this.padding.right);
 		periodlimsIN = $state([1, 30]);
 		periodSteps = $state(0.15);
-		alpha = $state(0.05);
 		ylimsIN = $state([null, null]);
 		ylims = $derived.by(() => {
 			if (this.data.length === 0) {
@@ -200,7 +199,7 @@
 	}
 
 	$effect(() => {
-		if (theData.periodlimsIN || theData.periodSteps || theData.alpha) {
+		if (theData.periodlimsIN || theData.periodSteps) {
 			theData.updateAllPeriodData();
 		}
 	});
@@ -218,9 +217,6 @@
 			<input type="number" bind:value={theData.padding.right} />
 			<input type="number" bind:value={theData.padding.bottom} />
 			<input type="number" bind:value={theData.padding.left} />
-		</p>
-		<p>
-			alpha: <input type="number" min="0.0001" max="1" step="0.01" bind:value={theData.alpha} />
 		</p>
 
 		<p>
@@ -289,6 +285,16 @@
 			<Column col={datum.y} canChange={true} />
 
 			binSize: <input type="number" step="0.01" min="0.01" bind:value={datum.binSize} />
+
+			alpha:
+			<input
+				type="number"
+				min="0.0001"
+				max="0.9999"
+				step="0.01"
+				bind:value={datum.alpha}
+				oninput={() => datum.updatePeriodData()}
+			/>
 
 			line col: <input type="color" bind:value={datum.linecolour} />
 			line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
@@ -359,6 +365,21 @@
 					.range([theData.plot.plotheight, 0])}
 				radius={datum.pointradius}
 				fillCol={datum.pointcolour}
+				yoffset={theData.plot.padding.top}
+				xoffset={theData.plot.padding.left}
+			/>
+			<!-- the threshold -->
+			<Line
+				x={datum.periodData.x}
+				y={datum.periodData.threshold}
+				xscale={scaleLinear()
+					.domain([theData.plot.periodlimsIN[0], theData.plot.periodlimsIN[1]])
+					.range([0, theData.plot.plotwidth])}
+				yscale={scaleLinear()
+					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+					.range([theData.plot.plotheight, 0])}
+				strokeCol={datum.linecolour}
+				strokeWidth={datum.linestrokeWidth}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 			/>
