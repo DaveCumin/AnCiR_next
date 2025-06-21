@@ -56,7 +56,7 @@
 			{#each entry.columns as col (col.id)}
 				<details class="column-item">
 					<summary>{col.type}</summary>
-					<p>{col.data.slice(0, 10)}</p>
+					<p>{col.getData()?.slice(0, 5)}</p>
 					<!-- processes -->
 				</details>
 			{/each}

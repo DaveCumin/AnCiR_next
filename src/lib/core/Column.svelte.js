@@ -39,7 +39,8 @@ export class Column {
 		}
 	});
 
-	data = $state()
+	data = $state();
+	
 	processes = $state([]);
 	timeFormat = $state();
 	compression = $state(null); //if any compression is used, store the info here
@@ -148,8 +149,8 @@ export class Column {
 			//deal with compressed data
 			if (this.compression === 'awd') {
 				out = [];
-				for (let a = 0; a < this.rawData.length; a += this.rawData.step) {
-					out.push(this.rawData.start + a);
+				for (let a = 0; a < this.data.length; a += this.data.step) {
+					out.push(this.data.start + a);
 				}
 			}
 		}
@@ -194,17 +195,29 @@ export class Column {
 	}
 
 	static fromJSON(json) {
-		const {
-			id,
-			name,
-			type,
-			refId,
-			data,
-			timeFormat,
-			processes,
-			compression,
-			provenance
-		} = json;
+		// const {
+		// 	id,
+		// 	name,
+		// 	type,
+		// 	refId,
+		// 	data,
+		// 	timeFormat,
+		// 	processes,
+		// 	compression,
+		// 	provenance
+		// } = json;
+
+		// uncomment above and delete bottom after full transfer
+		const id = json.id ?? json.columnID;
+		const name = json.name ?? 'Untitled Table';
+		const type = json.type; // TODO: should report error actually
+		const refId = json.refId ?? json.refDataID ?? null;
+		const data = json.data ?? json.rawData ?? [];
+		const timeFormat = json.timeFormat ?? json.timeformat ?? '';
+		// const processes = json.processes ?? [];
+		const processes = [];
+		const compression = json.compression ?? null;
+		const provenance = json.provenance ?? null;
 
 		let column = new Column(
 			{

@@ -100,7 +100,12 @@ export class Table {
 	}
 
 	static fromJSON(json) {
-		const { id, name, columnRefs } = json;
+		// const { id, name, columnRefs } = json;
+		// uncomment above and delete bottom after full transfer
+		const id = json.id ?? json.tableid;
+		const name = json.name ?? 'Untitled Table';
+		const columnRefs = json.columnRefs ?? json.columnRefs ?? [];
+
 		let table = new Table({ name, columnRefs }, id);
 		return table;
 	}

@@ -13,7 +13,6 @@
 
     import Modal from '../reusable/Modal.svelte';
     import Dropdown from '../reusable/Dropdown.svelte';
-	import { faL } from '@fortawesome/free-solid-svg-icons';
 
     let showImportModal = $state(false);
     let showExportModal = $state(false);
@@ -86,7 +85,7 @@
 
         showImportModal = false;
         importReady = false;
-
+        showDropdown = false;
     }
 
     function exportJson() {
@@ -110,6 +109,8 @@
 
 		document.body.removeChild(a);
 		URL.revokeObjectURL(url);
+
+        showDropdown = false;
     }
 
 </script>
