@@ -9,7 +9,8 @@
 
 	// test reactivity
 	function changeDataFieldContent() {
-		core.data[0].columns[1].dataArr[0] = core.data[0].columns[1].dataArr[0] + Math.round(Math.random() * 10, 2);
+		console.log($state.snapshot(core.data));
+		core.data[1].data[0] = core.data[0].data[0] + Math.round(Math.random() * 10, 2);
 	}
 
 	// AddTable dropdown

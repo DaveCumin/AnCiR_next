@@ -63,6 +63,11 @@ export class Column {
 
 	// Simulate new dataField based on type
     simulateColumn(type, fs_min, startDate, period, maxHeight, dataLength) {
+		if (!this.name) {
+			this.name = type;
+		}
+		console.log(this.name);
+
         this.type = type;
 		switch (this.type) {
             case 'time':
@@ -120,6 +125,7 @@ export class Column {
 	addProcess(processName) {
 		this.processes.push(new Process({ name: processName }, this));
 	}
+
 	removeProcess(id) {
 		this.processes = this.processes.filter((p) => p.processid !== id);
 	}
@@ -158,39 +164,39 @@ export class Column {
 
 	// Import and Export as JSON
 	toJSON() {
-		let jsonOut = { columnId: this.columnId, columnName: this.name };
+		let jsonOut = { id: this.id, name: this.name };
 		
 		if (this.refId != null) {
-			jsonOut.columnRefId = this.refId;
+			jsonOut.refId = this.refId;
 		} else {
-			jsonOut.columnData = this.data;
+			jsonOut.data = this.data;
 		}
 
-		jsonOut.columnType = this.type;
+		jsonOut.type = this.type;
 
 		if (this.type == 'time') {
-			jsonOut.columnTimeFormat = this.timeFormat;
+			jsonOut.timeFormat = this.timeFormat;
 		}
 		if (this.compression != null) {
-			jsonOut.columnCompression = this.compression;
+			jsonOut.compression = this.compression;
 		}
-		jsonOut.columnProvenance = this.provenance;
-		jsonOut.columnProcesses = this.processes;
+		jsonOut.provenance = this.provenance;
+		jsonOut.processes = this.processes;
 
 		return jsonOut;
 	}
 
 	static fromJSON(json) {
 		const {
-			columnId,
-			columnName,
-			columnType,
-			columnRefId,
-			columnData,
-			columnTimeFormat,
-			columnProcesses,
-			columnCompression,
-			columnProvenance
+			id,
+			name,
+			type,
+			refId,
+			data,
+			timeFormat,
+			processes,
+			compression,
+			provenance
 		} = json;
 
 		let column = new Column(

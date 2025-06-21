@@ -92,9 +92,9 @@ export class Table {
 	// Import and Export JSON
 	toJSON() {
 		return {
-			tableId: this.id,
-			tableName: this.name,
-			tableColumnRefs: this.columns.map((col) => col.id)
+			id: this.id,
+			name: this.name,
+			columnRefs: this.columns.map((col) => col.id)
 		};
 	}
 
