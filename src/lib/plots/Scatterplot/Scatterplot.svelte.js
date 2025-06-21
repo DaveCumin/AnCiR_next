@@ -1,6 +1,6 @@
-import { Column } from '$lib/core/Column.svelte.js';
-import { Process } from '$lib/core/Process.svelte.js';
-import { core } from '$lib/core/theCore.svelte.js';
+import { Column } from '$lib/core/column.svelte.js';
+import { Process } from '$lib/core/process.svelte.js';
+import { core } from '$lib/core/core.svelte.js';
 
 function getRandomColor() {
 	var letters = '0123456789ABCDEF';

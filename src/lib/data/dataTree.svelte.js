@@ -1,15 +1,15 @@
 // @ts-nocheck
 import { DateTime } from 'luxon';
 
-import { pushObj } from '$lib/core/theCore.svelte';
-import { Table } from '$lib/models/data/table.svelte';
+import { pushObj } from '$lib/core/core.svelte';
+import { Table } from '$lib/core/table.svelte';
 
 import {
     utils,
     getFilesToImport,
     setFilesToImport,
     getTempData
-} from '$lib/models/data/importData.svelte';
+} from '$lib/data/importData.svelte';
 
 export function simulateData() {
     // manual handle simulate 
@@ -28,7 +28,7 @@ export function simulateData() {
         [24, 28],
         [100, 150],
     );
-
+    // console.log(newDataEntry instanceof Table);
     pushObj(newDataEntry);
 }
 

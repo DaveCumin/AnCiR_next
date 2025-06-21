@@ -1,5 +1,5 @@
 <script>
-	import { core } from '$lib/core/theCore.svelte.js';
+	import { core } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 </script>
 

@@ -2,9 +2,9 @@
 // @ts-nocheck
 import { DateTime } from 'luxon';
 
-import { pushObj } from '$lib/core/theCore.svelte';
-import { Table } from '$lib/models/data/table.svelte';
-import { Column } from '$lib/models/data/column.svelte';
+import { pushObj } from '$lib/core/core.svelte';
+import { Table } from '$lib/core/table.svelte';
+import { Column } from '$lib/core/column.svelte';
 import {
     guessDateofArray,
     forceFormat,
@@ -221,11 +221,9 @@ async function loadData() {
 function doBasicFileImport(result, fname) {
 
     // create Table object with constructor(ID, importedFrom, displayName, dataLength)
-    const newDataEntry = new Table(
-        '',
-        fname,
-        result[Object.keys(result)[0]].length
-    )
+    const newDataEntry = new Table();
+    // importedFrom = fname;
+    // dataLength = result[Object.keys(result)[0]].length;
     newDataEntry.setName(`data_${newDataEntry.id}`);
 
     //insert a data element for each header
@@ -237,28 +235,34 @@ function doBasicFileImport(result, fname) {
 
         if (guessedFormat != -1) {
             const timefmt = guessedFormat;
-            const df = new Column(newDataEntry.id, 'time')
+            const df = new Column();
+            df.type = 'time';
             df.name = f;
-            df.dataArr = forceFormat(result[f], timefmt);
+            df.data = forceFormat(result[f], timefmt);
             // this.properties = {
             //     timeFormat: timefmt,
             //     recordPeriod: getPeriod(result[f], timefmt),
             // };
-            newDataEntry.columns.push(df);
+            newDataEntry.addColumn(df);
+
         } else if (!isNaN(datum)) {
-            const df = new Column(newDataEntry.id, 'value')
+            const df = new Column();
+            df.type = 'value';
             df.name = f;
-            df.dataArr = result[f];
-            newDataEntry.columns.push(df);
+            df.data = result[f];
+            newDataEntry.addColumn(df);
+
         } else {
-            const df = new Column(i, 'category')
+            const df = new Column();
+            df.type = 'category';
             df.name = f;
-            df.dataArr = result[f];
-            newDataEntry.columns.push(df);
+            df.data = result[f];
+            newDataEntry.addColumn(df);
         }   
     });
-    
+    console.log(newDataEntry instanceof Table);
     pushObj(newDataEntry);
+
 }
 
 // get the first valid data point in the result, given key

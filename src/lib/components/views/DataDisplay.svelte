@@ -1,6 +1,9 @@
 <script>
+	// TODO: multiple select on control plots,
+	// bulk change (e.g. width)
+
 	// @ts-nocheck
-	import { core } from '$lib/core/theCore.svelte.js';
+	import { core } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddTable from '../addIconActions/AddTable.svelte';
 
@@ -44,22 +47,18 @@
 
 </div>
 
-
 <div class="data-list">
-	{#each core.data as entry (entry.id)}
+	{#each core.tables as entry (entry.id)}
 		<details class="table-item">
-				<summary>{entry.name}</summary>
-				<!-- <button onclick={() => entry.name = 'happy_data' + Math.round(Math.random() * 10, 2)}> change item name </button> -->
-				{#each entry.columns as field (field.id)}
-					<details class="column-item">
-						<summary>{field.type}</summary>
-						<ul>
-							{#each field.dataArr.slice(0, 5) as test}
-								<li>{test}</li>
-							{/each}
-						</ul>
-					</details>
-				{/each}
+			<summary>{entry.name}</summary>
+			<!-- <button onclick={() => entry.name = 'happy_data' + Math.round(Math.random() * 10, 2)}> change item name </button> -->
+			{#each entry.columns as col (col.id)}
+				<details class="column-item">
+					<summary>{col.type}</summary>
+					<p>{col.data.slice(0, 10)}</p>
+					<!-- processes -->
+				</details>
+			{/each}
 		</details>
 	{/each}
 </div>

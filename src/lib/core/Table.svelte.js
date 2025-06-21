@@ -1,47 +1,112 @@
-let tableidCounter = 0;
+// @ts-nocheck
+import { forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
+import { core, pushObj } from '$lib/core/core.svelte.js';
+import { Column } from './column.svelte';
+
+let _counter = 0;
+function getNextId() {
+	return _counter++;
+}
+
+function getColumnById(id) {
+	return core.data.find((column) => column.id === id);
+}
 
 export class Table {
-	tableid;
-	name = $state(); //name of the table
+	id;
+	name = $state('');
+
+	// importedFrom = '';
+	// dataLength = 0;
+
 	columnRefs = $state([]); //Reference IDs for the raw data that are columns
+	
+	columns = $derived.by(() => {
+		return this.columnRefs.map((colRef) => getColumnById(colRef));
+	}); //The actual columns of data
 
-	//TODO: consider metadata (file imported from, simulated settings, etc).
-	// should these be in the table or column (both)? Columns can move, so maybe there... make 'metadata' a separate thing and point to it from Table and Cols?
+	// constructor(name, importedFrom, dataLength) {
+	// 	this.id = getNextId();
+	// 	this.name = name;
+	// 	this.importedFrom = importedFrom;
+	// 	this.dataLength = dataLength;
+	// }
 
-	constructor({ ...dataIN }, id = null) {
+	constructor(dataIN = {}, id = null) {
+		//deal with the id: if one is inputted, then use it and update _counter; else use _counter
 		if (id === null) {
-			this.tableid = id ?? tableidCounter;
-			tableidCounter++;
+			this.id = getNextId();
 		} else {
-			this.tableid = id;
-			tableidCounter = Math.max(id + 1, tableidCounter + 1);
+			this.id = id;
+			_counter = Math.max(id + 1, _counter + 1);
 		}
-		this.name = dataIN.name;
-		if (dataIN.columnRefs) {
-			this.columnRefs = dataIN.columnRefs;
-		} else {
-			this.columnRefs = [];
+		//Assign the other data
+		Object.assign(this, structuredClone(dataIN));
+	}
+
+
+	// getter and setter methods
+	setName = (name) => {
+		this.name = name;
+	}
+
+	// Function to add or remove a column of data from the table
+	addColumn(col) {
+		pushObj(col);
+		this.columnRefs.push(col.id);
+	}
+
+	// need testing
+	removeColumn(col) {
+		this.columnRefs = this.columnRefs.filter((_, i) => i !== col.id);
+	}
+
+
+	// create simulated data through static function
+	static simulateTable(Ndays, fs_min, startDate, periods, maxHeights) {
+		const item = new Table();
+		//importedFrom = `simulated(${Ndays},${maxHeights[0]})`
+		item.setName(`Simulated_${item.id}`);
+		item.simulateData(Ndays, fs_min, startDate, periods, maxHeights);
+		return item;
+	}
+
+	simulateData(Ndays, fs_min, startDate, periods, maxHeights) {
+		const dataLength = Ndays * 24 * (60 / fs_min);
+
+		//time
+		const dft = new Column();
+		dft.simulateColumn('time', fs_min, startDate, periods, maxHeights, dataLength);
+		
+		this.addColumn(dft);
+
+		//value
+		for (let i = 0; i < periods.length; i++) {
+			const dfv = new Column();
+			dfv.simulateColumn('value', fs_min, startDate, periods[i], maxHeights[i], dataLength);
+			
+			this.addColumn(dfv);
 		}
 	}
 
-	addColumn(dataIN) {
-		this.columnRefs.push(dataIN);
-	}
-	removeColumn(idx) {
-		this.columnRefs = this.columnRefs.filter((_, i) => i !== idx);
-	}
-
+	// Import and Export JSON
 	toJSON() {
 		return {
-			tableid: this.tableid,
-			name: this.name,
-			columnRefs: this.columnRefs
+			tableId: this.id,
+			tableName: this.name,
+			tableColumnRefs: this.columns.map((col) => col.id)
 		};
 	}
 
 	static fromJSON(json) {
-		const { tableid, name, columnRefs } = json;
-		let table = new Table({ name, columnRefs }, tableid);
+		const { id, name, columnRefs } = json;
+		let table = new Table({ name, columnRefs }, id);
 		return table;
 	}
 }
+
+/*
+	collection.push({ id: 2, name: "✅ Object", count: 1 })
+	collection.push(new Ob(3, '✅ Class.toObj()').toObj())
+*/
+

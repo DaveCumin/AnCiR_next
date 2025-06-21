@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	let { theData = $bindable() } = $props();
 
-	import { core } from '$lib/core/theCore.svelte.js';
+	import { core } from '$lib/core/core.svelte.js';
 	function pickRandomData() {
 		const options = core.data.map((d) => {
 			return d.columnID;

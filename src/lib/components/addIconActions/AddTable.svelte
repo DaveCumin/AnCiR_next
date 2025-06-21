@@ -1,7 +1,7 @@
 <script>
     // @ts-nocheck
     import Icon from '$lib/icons/Icon.svelte';
-    import { simulateData, ImportData } from '$lib/models/data/dataTree.svelte';
+    import { simulateData, ImportData } from '$lib/data/dataTree.svelte';
     import Modal from '../popUps/Modal.svelte';
     import Dropdown from '../popUps/Dropdown.svelte';
 

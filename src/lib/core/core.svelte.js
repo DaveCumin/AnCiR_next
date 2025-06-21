@@ -1,9 +1,12 @@
-import { ModelIndex } from "$lib/models/modelIndex";
+import { Column } from "./column.svelte";
+import { Plot } from "./plot.svelte";
+import { Table } from "./table.svelte";
 
 export const core = $state({
-	table: [],
+	columns: [],
 	data: [],
-	process: [],
+	plots: [],
+	tables: [],
 });
 
 export const appState = $state({
@@ -11,16 +14,23 @@ export const appState = $state({
 });
 
 export function pushObj(obj) {
-	if (obj instanceof ModelIndex['Table']) {
+	if (obj instanceof Column) {
 		core.data.push(obj);
+	} else if (obj instanceof Table) {
+		core.tables.push(obj);
+	} else if (obj instanceof Plot) {
+		core.plots.push(obj);
+	} else {
+		console.log("Error: object not instance of Column, Table or Plot");
 	}
 }
 
-// export function getObj(obj) {
-// 	if (obj instanceof ModelIndex['DataField']) {
 
-// 	}
-// }
+/* Core Documentation
+- core contains columns, plots, tables. E.g. call core.columns[column.ids]
+- call pushObj(obj) to add into core.arrays
+
+*/
 
 
 //TODOs:

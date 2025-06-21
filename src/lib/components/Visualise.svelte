@@ -1,6 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
-	import { core } from '$lib/core/theCore.svelte.js';
+	import { core } from '$lib/core/core.svelte.js';
 
 	//This is just a quick and dirty, using visjs. TODO: consider custm code or making vis (oro ther) a module. ?size.
 

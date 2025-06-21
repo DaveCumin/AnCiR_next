@@ -1,6 +1,6 @@
 <script module>
-	import { core } from '$lib/core/theCore.svelte.js';
-	import { Plot } from '$lib/core/Plot.svelte.js';
+	import { core } from '$lib/core/core.svelte.js';
+	import { Plot } from '$lib/core/plot.svelte.js';
 </script>
 
 {#each core.plots as plot, i}

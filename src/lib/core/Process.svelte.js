@@ -13,7 +13,7 @@ async function loadProcesses() {
 	return processMap;
 }
 
-let processidCounter = 0;
+let _idCounter = 0;
 
 export class Process {
 	static processFuncMap;
@@ -29,11 +29,11 @@ export class Process {
 
 	constructor({ ...dataIN }, id = null) {
 		if (id === null) {
-			this.processid = id ?? processidCounter;
-			processidCounter++;
+			this.processid = id ?? _idCounter;
+			_idCounter++;
 		} else {
 			this.processid = id;
-			processidCounter = Math.max(id + 1, processidCounter + 1);
+			_idCounter = Math.max(id + 1, _idCounter + 1);
 		}
 		//set the name
 		this.name = dataIN.name;
