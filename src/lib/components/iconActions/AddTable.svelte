@@ -1,9 +1,10 @@
+<!-- TODO: Import data/table logic might need re-work -->
 <script>
     // @ts-nocheck
     import Icon from '$lib/icons/Icon.svelte';
     import { simulateData, ImportData } from '$lib/data/dataTree.svelte';
-    import Modal from '../popUps/Modal.svelte';
-    import Dropdown from '../popUps/Dropdown.svelte';
+    import Modal from '../reusable/Modal.svelte';
+    import Dropdown from '../reusable/Dropdown.svelte';
 
     let showModal = $state(false);
     let importPreview = $state();

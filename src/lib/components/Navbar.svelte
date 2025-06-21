@@ -1,17 +1,43 @@
+<!-- TODO: fix setting dropdown position -->
+
 <!-- Navbar.svelte -->
 <script>
+	// @ts-nocheck
 	import { appState } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
+	import Setting from './iconActions/Setting.svelte';
+
+	let gearBtnRef;
+	let showSetting = $state(false);
+	let dropdownTop = $state(0);
+	let dropdownLeft = $state(0);
+
+	function recalculateDropdownPosition() {
+		if (!gearBtnRef) return;
+		const rect = gearBtnRef.getBoundingClientRect();
+
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
+	}
+
+	function openDropdown() {
+		recalculateDropdownPosition();
+		requestAnimationFrame(() => {
+			showSetting = true;
+		});
+		window.addEventListener('resize', recalculateDropdownPosition);
+	}
 
 	function switchTab(tab) {
 		appState.currentTab = tab;
 		console.log('current tab:', tab);
 	}
+	
 </script>
 
 <nav class="container">
 	<div class="icon-container">
-		<button on:click={() => switchTab('data')}>
+		<button onclick={() => switchTab('data')}>
 			<Icon
 				name="table"
 				className={appState.currentTab === 'data' ? 'icon active' : 'icon'}
@@ -19,7 +45,7 @@
 			<!-- <TableIcon /> -->
 		</button>
 
-		<button on:click={() => switchTab('worksheet')}>
+		<button onclick={() => switchTab('worksheet')}>
 			<Icon
 				name="layer"
 				className={appState.currentTab === 'worksheet' ? 'icon active' : 'icon'}
@@ -29,7 +55,7 @@
 	</div>
 
 	<div class="icon-container">
-		<button>
+		<button bind:this={gearBtnRef} onclick={openDropdown}>
 			<Icon name="gear" />
 		</button>
 		<button>
@@ -37,6 +63,10 @@
 		</button>
 	</div>
 </nav>
+
+{#if showSetting}
+	<Setting bind:showDropdown={showSetting} dropdownTop={dropdownTop} dropdownLeft={dropdownLeft} />
+{/if}
 
 <style>
 	.container {

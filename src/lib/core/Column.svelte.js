@@ -54,11 +54,18 @@ export class Column {
 		if (id === null) {
 			this.id = getNextId();
 		} else {
-			this.columnID = id;
+			this.id = id;
 			_counter = Math.max(id + 1, _counter + 1);
 		}
 		//Assign the other data
-		Object.assign(this, structuredClone(columnData));
+		this.name = columnData.name ?? null;
+		this.type = columnData.type ?? null;
+		this.refId = columnData.refId ?? null;
+		this.data = columnData.data ?? null;
+		this.timeFormat = columnData.timeFormat ?? null;
+		this.compression = columnData.compression ?? null;
+		this.provenance = columnData.provenance ?? null;
+		this.processes = columnData.processes ?? [];
 	}
 
 	// Simulate new dataField based on type
@@ -149,7 +156,7 @@ export class Column {
 
 		//deal with timestamps
 		if (this.type === 'time') {
-			out = out.map((x) => x + this.timeformat); // TODO: Update to force time by format
+			out = out.map((x) => x + this.timeFormat); // TODO: Update to force time by format
 		}
 
 		//If no data, return empty
@@ -206,11 +213,11 @@ export class Column {
 				refId: refId ?? null,
 				data: data ?? null,
 				compression: compression ?? null,
-				timeFormat: timeformat ?? '',
+				timeFormat: timeFormat ?? '',
 				provenance: provenance ?? null,
-				processes: []
+				processes: processes ?? []
 			},
-			columnId
+			id
 		);
 		if (processes?.length > 0) {
 			processes.map((p) => column.processes.push(Process.fromJSON(p, column)));

@@ -32,7 +32,7 @@ export class Table {
 	// 	this.dataLength = dataLength;
 	// }
 
-	constructor(dataIN = {}, id = null) {
+	constructor(tableData = {}, id = null) {
 		//deal with the id: if one is inputted, then use it and update _counter; else use _counter
 		if (id === null) {
 			this.id = getNextId();
@@ -41,7 +41,8 @@ export class Table {
 			_counter = Math.max(id + 1, _counter + 1);
 		}
 		//Assign the other data
-		Object.assign(this, structuredClone(dataIN));
+		this.name = tableData.name ?? null;
+		this.columnRefs = tableData.columnRefs ?? [];
 	}
 
 
@@ -94,7 +95,7 @@ export class Table {
 		return {
 			id: this.id,
 			name: this.name,
-			columnRefs: this.columns.map((col) => col.id)
+			columnRefs: this.columnRefs,
 		};
 	}
 

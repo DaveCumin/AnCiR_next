@@ -5,7 +5,7 @@
 	// @ts-nocheck
 	import { core } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
-	import AddTable from '../addIconActions/AddTable.svelte';
+	import AddTable from '../iconActions/AddTable.svelte';
 
 	// test reactivity
 	function changeDataFieldContent() {
