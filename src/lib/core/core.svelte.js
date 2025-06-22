@@ -3,7 +3,6 @@ import { Plot } from "./plot.svelte";
 import { Table } from "./table.svelte";
 
 export const core = $state({
-	columns: [],
 	data: [],
 	plots: [],
 	tables: [],
@@ -23,6 +22,11 @@ export function pushObj(obj) {
 	} else {
 		console.log("Error: object not instance of Column, Table or Plot");
 	}
+}
+
+export function outputCoreAsJson() {
+	const output = { ...core };
+	return JSON.stringify(output, null, 2);
 }
 
 

@@ -7,7 +7,7 @@
 
 <script>
     // @ts-nocheck
-	import { core } from '$lib/core/core.svelte';
+	import { core, pushObj, outputCoreAsJson } from '$lib/core/core.svelte';
     import { Column } from '$lib/core/column.svelte';
     import { Table } from '$lib/core/table.svelte';
 
@@ -62,7 +62,7 @@
 		reader.readAsText(file);
 
         importReady = true;
-	} // use jsonData
+	}
 
     function importJson() {
 
@@ -72,11 +72,11 @@
 		// core.plots = [];
 
 		jsonData.data.map((datajson) => {
-			core.data.push(Column.fromJSON(datajson));
+			pushObj(Column.fromJSON(datajson));
 		});
 
 		jsonData.tables.map((tablejson) => {
-			core.tables.push(Table.fromJSON(tablejson));
+			pushObj(Table.fromJSON(tablejson));
 		});
 
 		// jsonData.plots.map((plotjson) => {
@@ -89,13 +89,7 @@
     }
 
     function exportJson() {
-        const output = {
-            data: core.data,
-            table: core.tables,
-            // dynamic rec core
-        };
-
-		const jsonStr = JSON.stringify(output, null, 2);
+        const jsonStr = outputCoreAsJson()
 
 		const blob = new Blob([jsonStr], { type: 'application/json' });
 		const url = URL.createObjectURL(blob);
