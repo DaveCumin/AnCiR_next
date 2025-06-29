@@ -203,6 +203,27 @@
 			theData.updateAllPeriodData();
 		}
 	});
+
+	let axisDimensions = { bottom: 0, left: 0, top: 0, right: 0 };
+	function handleAxisDimensions(event) {
+		const { width, height } = event.detail;
+		// Update temporary storage instead of padding directly
+		axisDimensions[event.detail.position] =
+			event.detailposition === 'bottom' || event.detailposition === 'top' ? height : width;
+
+		// Update padding only when necessary (e.g., after all axes are measured)
+		const newPadding = { ...theData.plot.padding };
+		let needsUpdate = false;
+		for (const pos of ['bottom', 'left', 'top', 'right']) {
+			if (axisDimensions[pos] > 0 && newPadding[pos] < axisDimensions[pos] + 10) {
+				newPadding[pos] = axisDimensions[pos] + 10; // Add buffer
+				needsUpdate = true;
+			}
+		}
+		if (needsUpdate) {
+			theData.plot.padding = newPadding; // Single update to avoid loop
+		}
+	}
 </script>
 
 {#snippet controls(theData)}
@@ -324,6 +345,7 @@
 			xoffset={theData.plot.padding.left}
 			nticks={5}
 			gridlines={theData.plot.ygridlines}
+			on:dimensions={handleAxisDimensions}
 		/>
 		<!-- The X-axis -->
 		<Axis
@@ -337,6 +359,7 @@
 			xoffset={theData.plot.padding.left}
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
+			on:dimensions={handleAxisDimensions}
 		/>
 
 		{#each theData.plot.data as datum}

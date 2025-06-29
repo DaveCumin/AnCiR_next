@@ -2,6 +2,8 @@
 	// @ts-nocheck
 	import { select, selectAll } from 'd3-selection';
 	import { axisBottom, axisLeft, axisTop, axisRight } from 'd3-axis';
+	import { createEventDispatcher } from 'svelte';
+	const dispatch = createEventDispatcher();
 
 	let {
 		height, //height of the plot
@@ -15,12 +17,47 @@
 		gridlines = true //whether to show gridlines or not
 	} = $props();
 
+	let axisGroup;
+
 	let ticklength = 6;
 	let tickspace = 15;
 	let tickfontsize = 15;
+
+	let tickLabelWidth = $state(0);
+	let tickLabelHeight = $state(0);
+	$effect(() => {
+		if (axisGroup) {
+			let maxWidth = 0;
+			let maxHeight = 0;
+
+			select(axisGroup)
+				.selectAll('.ticklabel')
+				.each(function () {
+					const bbox = this.getBBox();
+					maxWidth = Math.max(maxWidth, bbox.width);
+					maxHeight = Math.max(maxHeight, bbox.height);
+				});
+
+			// Include tick length and spacing for total dimensions
+			if (position === 'bottom' || position === 'top') {
+				tickLabelHeight = maxHeight + ticklength + tickspace;
+				tickLabelWidth = maxWidth;
+			} else {
+				tickLabelWidth = maxWidth + ticklength * 2; // Account for tick and spacing
+				tickLabelHeight = maxHeight;
+			}
+
+			// Dispatch dimensions to parent
+			dispatch('dimensions', {
+				width: tickLabelWidth,
+				height: tickLabelHeight,
+				position: position
+			});
+		}
+	});
 </script>
 
-<g class="axis" style="transform:translate({xoffset}px, {yoffset}px);">
+<g bind:this={axisGroup} class="axis" style="transform:translate({xoffset}px, {yoffset}px);">
 	{#each scale.ticks(nticks) as t}
 		<!-- Do the gridlines -->
 		{#if gridlines}
