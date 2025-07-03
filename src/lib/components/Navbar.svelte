@@ -30,7 +30,6 @@
 
 	function switchTab(tab) {
 		appState.currentTab = tab;
-		console.log('current tab:', tab);
 	}
 	
 </script>

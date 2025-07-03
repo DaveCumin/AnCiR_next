@@ -1,7 +1,6 @@
 <script>
 	// @ts-nocheck
 
-	/* TODO: fix highlighting text when drag*/
 	import { appState } from '$lib/core/core.svelte.js';
 	import DataDisplay from '$lib/components/views/DataDisplay.svelte';
 	import WorksheetDisplay from '$lib/components/views/WorksheetDisplay.svelte';
@@ -10,34 +9,47 @@
 	let width = 360; // initial width
 	const minWidth = 300;
 
-	export let resizeSide = 'right'; // 'left' or 'right'
+	export let resizeSide = 'right';
 	let resizing = false;
 
 	function onMouseMove(e) {
 		if (!resizing) return;
-		const newWidth = e.clientX - container.getBoundingClientRect().left;
-		width = Math.max(minWidth, newWidth);
+
+        const rect = container.getBoundingClientRect();
+        let newWidth;
+
+        if (resizeSide === 'right') {
+            newWidth = e.clientX - rect.left;
+        } else {
+            const delta = rect.right - e.clientX;
+            newWidth = delta;
+        }
+
+        width = Math.max(minWidth, newWidth);
 	}
 
 	function stopResize() {
 		resizing = false;
+		document.body.style.userSelect = ''; 
 		window.removeEventListener('mousemove', onMouseMove);
 		window.removeEventListener('mouseup', stopResize);
 	}
 
 	function startResize() {
 		resizing = true;
+		document.body.style.userSelect = 'none'; 
 		window.addEventListener('mousemove', onMouseMove);
 		window.addEventListener('mouseup', stopResize);
 	}
 </script>
 
-<div bind:this={container} class="view-container {resizeSide}" style="width: {width}px;">
+<div bind:this={container} class="view-container {resizeSide}}" style="width: {width}px;">
 	{#if appState.currentTab === 'data'}
 		<DataDisplay />
 	{:else if appState.currentTab === 'worksheet'}
 		<WorksheetDisplay />
 	{/if}
+
 	<div class="resizer" onmousedown={startResize}></div>
 </div>
 
@@ -69,7 +81,7 @@
 
 	.resizer {
 		width: 6px;
-		cursor: ew-resize;
+		cursor: col-resize;
 		height: 100%;
 		position: absolute;
 		top: 0;

@@ -3,8 +3,8 @@
     // @ts-nocheck
     import Icon from '$lib/icons/Icon.svelte';
     import { simulateData, ImportData } from '$lib/data/dataTree.svelte';
-    import Modal from '../reusable/Modal.svelte';
-    import Dropdown from '../reusable/Dropdown.svelte';
+    import Modal from '../reusables/Modal.svelte';
+    import Dropdown from '../reusables/Dropdown.svelte';
 
     let showModal = $state(false);
     let importPreview = $state();

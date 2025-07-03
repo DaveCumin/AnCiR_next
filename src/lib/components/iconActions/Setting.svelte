@@ -11,8 +11,8 @@
     import { Column } from '$lib/core/column.svelte';
     import { Table } from '$lib/core/table.svelte';
 
-    import Modal from '../reusable/Modal.svelte';
-    import Dropdown from '../reusable/Dropdown.svelte';
+    import Modal from '../reusables/Modal.svelte';
+    import Dropdown from '../reusables/Dropdown.svelte';
 
     let showImportModal = $state(false);
     let showExportModal = $state(false);

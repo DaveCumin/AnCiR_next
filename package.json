@@ -39,6 +39,9 @@
 	"dependencies": {
 		"@fortawesome/free-solid-svg-icons": "^6.7.2",
 		"@fortawesome/svelte-fontawesome": "^0.2.3",
+		"d3-axis": "^3.0.0",
+		"d3-scale": "^4.0.2",
+		"d3-selection": "^3.0.0",
 		"luxon": "^3.6.1",
 		"papaparse": "^5.5.3"
 	}

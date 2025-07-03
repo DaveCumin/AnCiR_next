@@ -3,9 +3,11 @@
 	// bulk change (e.g. width)
 
 	// @ts-nocheck
-	import { core } from '$lib/core/core.svelte.js';
+	import { core, appConsts } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddTable from '../iconActions/AddTable.svelte';
+
+	let {canChange = false} = $props();
 
 	// test reactivity
 	function changeDataFieldContent() {
@@ -48,21 +50,100 @@
 
 </div>
 
-<div class="data-list">
-	{#each core.tables as entry (entry.id)}
-		<details class="table-item">
-			<summary>{entry.name}</summary>
-			<!-- <button onclick={() => entry.name = 'happy_data' + Math.round(Math.random() * 10, 2)}> change item name </button> -->
-			{#each entry.columns as col (col.id)}
-				<details class="column-item">
-					<summary>{col.type}</summary>
-					<p>{col.getData()?.slice(0, 5)}</p>
-					<!-- processes -->
-				</details>
-			{/each}
-		</details>
+<!-- TODO: delete after finish merging -->
+<div class="list">
+	{#each core.xx as entry (entry.id)}
+		<div class="table-container">
+			<details class="table-item">
+				<summary class="table-name">{entry.name}</summary>
+				<!-- <button onclick={() => entry.name = 'happy_data' + Math.round(Math.random() * 10, 2)}> change item name </button> -->
+				{#each entry.columns as col (col.id)}
+					<details open class="column-item">
+						<summary>{col.type}</summary>
+						{col.getData()?.slice(0, 5)}
+						<!-- processes -->
+					</details>
+				{/each}
+			</details>
+		</div>
 	{/each}
 </div>
+
+<!-- TODO: write custom component to achieve -->
+<div class="display-list">
+	{#each core.tables as table (table.id)}
+		<div class="table-container">
+			<details class="table-item">
+				<summary class="table-name">{table.name}</summary>
+				<!-- <button onclick={() => entry.name = 'happy_data' + Math.round(Math.random() * 10, 2)}> change item name </button> -->
+
+				{#each table.columns as col (col.id)}
+					<details open class="column-item">
+						<summary>
+							{#if canChange}
+								<ColumnSelector bind:value={col.refId} />
+							{/if}
+							{#if !col.isReferencial()}
+								<strong>{col.name}</strong><br /> <italic>{col.provenance}</italic><br />
+							{/if}
+							type:
+							<select name="datatype" bind:value={col.type}>
+								<option value="time">Time</option>
+								<option value="number">Number</option>
+								<option value="category">Category</option>
+							</select>
+
+						</summary>
+						<ul>
+							{col.type}
+							{#if col.type == 'number'}[{Math.min(...col.getData())},{Math.max(...col.getData())}]{/if}
+							{#if col.type == 'time'}
+								<br />
+								Time format:
+								{#if !canChange}
+									<input type="number" bind:value={col.timeFormat} />
+								{:else}
+									{getColumnById(col.refId)?.timeFormat}
+								{/if}
+							{/if}
+							{#if col.compression != null}
+								<br />
+								Compression: {col.compression}
+							{/if}
+
+							<li>
+								{#if !col.isReferencial() && Array.isArray(col.data)}
+									<p>raw: {col.data.slice(0, 5)}</p> 
+								{/if}
+								data: {col.getData()?.slice(0, 5)}
+								<button onclick={() => {col.addProcess('Add');}}>
+									<Icon name="add" width={16} height={16} />
+								</button>
+								<!-- TODO: add process -->
+							</li>
+							{#each col.processes as p}
+								{appConsts.processMap.get(p.name).component ?? null}
+								<button onclick={() => col.removeProcess(p.id)}>
+									<Icon name="close" width={16} height={16} />
+								</button>
+							{/each}
+						</ul>
+					</details>
+				{/each}
+			</details>
+
+			
+		</div>
+	{/each}
+</div>
+
+<!-- <div class="data-list">
+	{#each core.tables as entry (entry.id)}
+		<div class="card">
+			<p>{entry.name}</p>
+		</div>
+	{/each}
+</div> -->
 
 <!-- <div class="test">
 	<button onclick={changeDataFieldContent}> change data point </button>
@@ -107,29 +188,36 @@
 		align-items: center;
 	}
 
-	.data-list {
+	.display-list {
 		width: 100%;
-		margin-top: 0.2rem;
-
-		font-size: 14px;
+		margin-top: 0.5rem;
 	}
 
-	/* hover effect, need update */
-	.table-item:hover > summary {
-	background-color: var(--color-lightness-95);
+	/* TODO: hover effect, need update */
+	summary::marker {
+		margin-right: 1.2rem;
 	}
 
-	.column-item:hover > summary {
-		background-color: var(--color-lightness-95);
+	summary:open {
+		margin-top: 0.3rem;
+		margin-bottom: 0.5rem;
 	}
 
-	/* .table-container[open] {
+	details:open {
+		margin-bottom: 0.5rem;
+	}
+
+	details:open > summary.table-name {
+		background-color: pink;
+	}
+
+	.table-container {
+		margin-left: 0.5rem;
+	}
+
+	.table-container:hover {
 		background-color: var(--color-lightness-98);
-	} */
-
-	.table-item summary {
-		font-weight: bold;
-		padding-bottom: 0.2rem;
+		border-radius: 5px 0 0 5px ;
 	}
 
 	.table-item {
@@ -140,13 +228,6 @@
 	
 	.column-item {
 		margin-left: 1rem;
-		padding-top: 0.2rem;
-		padding-bottom: 0.2rem;
-	}
-	
-	.column-item summary{
-		font-weight: normal;
-		padding-bottom: 0;
 	}
 
 	

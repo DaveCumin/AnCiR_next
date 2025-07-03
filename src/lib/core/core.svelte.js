@@ -12,6 +12,13 @@ export const appState = $state({
 	currentTab: 'data',
 });
 
+export const appConsts = $state({
+	processMap: new Map(),
+	plotMap: new Map(),
+	gridsize: Number(5),
+	appColours: ['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000']
+});
+
 export function pushObj(obj) {
 	if (obj instanceof Column) {
 		core.data.push(obj);

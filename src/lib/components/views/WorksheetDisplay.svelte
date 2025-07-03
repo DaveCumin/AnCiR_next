@@ -1,6 +1,30 @@
 <script>
+	// @ts-nocheck
+
 	import { core } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
+	import AddPlot from '../iconActions/AddPlot.svelte';
+
+	let addBtnRef;
+	let showAddPlot = $state(false);
+	let dropdownTop = $state(0);
+	let dropdownLeft = $state(0);
+
+	function recalculateDropdownPosition() {
+		if (!addBtnRef) return;
+		const rect = addBtnRef.getBoundingClientRect();
+
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
+	}
+
+	function openDropdown() {
+		recalculateDropdownPosition();
+		requestAnimationFrame(() => {
+			showAddPlot = true;
+		});
+		window.addEventListener('resize', recalculateDropdownPosition);
+	}
 </script>
 
 
@@ -8,14 +32,22 @@
 	<p>Worksheet Layers</p>
 
 	<div class="add">
-		<button>
+		<button bind:this={addBtnRef} onclick={openDropdown}>
 			<Icon name="add" width={16} height={16} />
 		</button>
 	</div>
 </div>
 
-<div class="data-list">
-	
+{#if showAddPlot}
+	<AddPlot bind:showDropdown={showAddPlot} dropdownTop={dropdownTop} dropdownLeft={dropdownLeft} />
+{/if}
+
+<div class="display-list">
+	{#each core.plots as plot (plot.id)}
+		<details>
+			<summary>{plot.name}</summary>
+		</details>
+	{/each}
 </div>
 
 
@@ -52,5 +84,10 @@
 		display: flex;
 		justify-content: center;
 		align-items: center;
+	}
+
+	.display-list {
+		width: 100%;
+		margin-top: 0.5rem;
 	}
 </style>
