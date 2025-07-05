@@ -50,11 +50,10 @@
 <svelte:window on:mousemove={onMouseMove} on:mouseup={onMouseUp} />
 
 <section
-	on:mousedown={onMouseDown}
 	class="draggable"
-	style="left: {x}px; top: {y}px; width: {width}px; height: {height}px;"
->
-	<div class="plot-header">
+	style="left: {x}px; top: {y}px; width: {width}px; height: {height}px;">
+	
+	<div class="plot-header" on:mousedown={onMouseDown}>
 		{title}
 	</div>
 	<div class="plot-content">
@@ -66,7 +65,6 @@
 <style>
 	.draggable {
 		user-select: none;
-		cursor: move;
 		position: absolute;
 		border: solid 1px #ccc;
 		background-color: white;
@@ -79,6 +77,7 @@
 	}
 
 	.plot-header {
+		cursor: move;
 		background-color: #f8f8f8;
 		padding: 0.5rem 1rem;
 		font-weight: bold;
