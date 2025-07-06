@@ -16,6 +16,51 @@
 
 	import { testjson } from '$lib/test.svelte.js';
 
+	import { guessFormatD3 } from '$lib/utils/time/guessTimeFormat_d3.js';
+	import { guessFormat } from '$lib/utils/time/guessTimeFormat.js';
+
+	const timesToTest = ['2025/10/01', '2025/12/01', '2025/13/01'];
+	console.log('times to test: ', timesToTest);
+	console.log('d3 guess: ', guessFormatD3(timesToTest));
+	console.log('guess: ', guessFormat(timesToTest[0]));
+	import { timeParse, utcParse } from 'd3-time-format';
+	console.log(
+		'parse: ',
+		timeParse('%Y/%m/%d')(timesToTest[0]),
+		timeParse('%Y/%m/%d')(timesToTest[1]),
+		timeParse('%Y/%m/%d')(timesToTest[2])
+	);
+
+	const timesToTest2 = [
+		'2025-04-06T02:45:29.833Z',
+		'2025-04-06T04:45:29.833Z',
+		'2025-04-06T06:45:29.833Z'
+	];
+	console.log('times to test: ', timesToTest2);
+	console.log('d3 guess: ', guessFormatD3(timesToTest2));
+	console.log('guess: ', guessFormat(timesToTest2[0]));
+
+	console.log(
+		'parse: ',
+		timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[0]),
+		timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[1]),
+		timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[2])
+	);
+	console.log(
+		'parse: ',
+		Number(timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[0])),
+		Number(timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[1])),
+		Number(timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[2]))
+	);
+	console.log(
+		'parse utc: ',
+		Number(utcParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[0])),
+		Number(utcParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[1])),
+		Number(utcParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[2]))
+	);
+
+	const N = 1_000;
+
 	function addData(dataIN, type, name, provenance) {
 		let newDataEntry;
 		if (dataIN != null) {
@@ -75,10 +120,8 @@
 	}
 	function makeDateTimeArray(N, from = new Date(), step_hrs = 1) {
 		let out = [];
-		let currentDate = new Date(from);
 		for (let i = 0; i < N; i++) {
-			out.push(new Date(currentDate));
-			currentDate.setHours(currentDate.getHours() + step_hrs);
+			out.push(new Date(Number(from) + i * step_hrs * 3600000)); //step_hrs is in hours, so convert to milliseconds
 		}
 		//now convert to timestamps
 		//out = out.map((d) => d.getTime()); // this makes the UNIX timestamps
@@ -90,8 +133,8 @@
 		//simulate importing data
 		core.data = [];
 		let d0id = addData(
-			makeArray(5.15, 1_005 * 0.15, 0.15),
-			'time',
+			makeArray(5.15, (N + 5) * 0.15, 0.15),
+			'number',
 			'the time',
 			'just made this up'
 		);
@@ -105,7 +148,7 @@
 		let d2id = addData(['a', 'b', 'b', 'c'], 'category', 'mycat', 'imported from Egypt');
 
 		let testawd = new Column({
-			type: 'time',
+			type: 'number',
 			rawData: { start: 10, step: 1, length: 5 },
 			compression: 'awd',
 			name: 'AWD',
@@ -124,7 +167,13 @@
 		});
 		core.data.push(testrefref);
 
-		let testtimestring = addData(makeDateTimeArray(), 'time', 'REALTIME', 'Just made up');
+		let testtimestring = addData(
+			makeDateTimeArray(N, new Date(), 0.15),
+			'time',
+			'REALTIME',
+			'Just made up'
+		); //yyyy-LL-dd'T'HH:mm:ss.S'Z'
+		core.data[testtimestring].timeformat = '%Y-%m-%dT%H:%M:%S.%L%Z';
 
 		core.tables = [];
 		core.tables.push(new Table({ name: 'table 1' }));
@@ -143,7 +192,7 @@
 		//Scatter plot
 		core.plots.push(new Plot({ name: 'testscatter', type: 'scatterplot' }));
 		core.plots[0].plot.addData({
-			x: { refDataID: 0 },
+			x: { refDataID: testtimestring },
 			y: { refDataID: 1 }
 		});
 		//Actogram

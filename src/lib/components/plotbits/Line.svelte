@@ -22,7 +22,6 @@
 
 	let afterIdx = $derived.by(() => {
 		//find the x point after the limit
-		let xlims = xscale.domain();
 		for (let i = x.length - 2; i >= 0; i--) {
 			if (x[i] <= Math.max(xlims[0], xlims[1])) {
 				return i + 1;

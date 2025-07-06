@@ -14,7 +14,7 @@ export function formatDate(dateIN) {
 }
 
 function convertFormat(formatIN) {
-	if (!formatIN) return formatIN;
+	if (!formatIN || typeof formatIN == 'number') return formatIN;
 
 	//moment format string to luxon format string (https://moment.github.io/luxon/#/parsing?id=table-of-tokens)
 	const map = {

@@ -1,7 +1,7 @@
 <script module>
 	import { Process } from '$lib/core/Process.svelte';
 	import { core, appConsts } from '$lib/core/theCore.svelte.js';
-	import { getISODate } from '$lib/utils/time/TimeUtils';
+	import { timeParse } from 'd3-time-format';
 
 	export function getColumnByID(id) {
 		const theColumn = core.data.find((column) => column.columnID === id);
@@ -40,8 +40,6 @@
 		});
 		//time format for converting time data
 		timeformat = $derived(this.type === 'time' ? 0 : null);
-		//time data needed for some functions
-		startTime = getISODate(this.rawData, this.timeformat);
 
 		//The associated processes that are applied to the data
 		processes = $state([]);
@@ -90,8 +88,8 @@
 			}
 
 			//deal with timestamps
-			if (this.type === 'time') {
-				out = out.map((x) => x + this.timeformat); // TODO: Update to force time by format
+			if (this.type === 'time' && !this.isReferencial()) {
+				out = out.map((x) => Number(timeParse(this.timeformat)(x))); // Turn into UNIX values of time
 			}
 
 			//If no data, return empty
@@ -102,6 +100,12 @@
 				out = p.doProcess(out);
 			}
 			return out;
+		}
+
+		getHoursSinceStart() {
+			const raw = this.getData();
+			if (this.type == 'number') return raw.map((x) => x - raw[0]); //If a number, then assume it's in hours and take difference from the start
+			if (this.type == 'time') return raw.map((x) => (x - raw[0]) / 3600000); //if it's a time, then assume it's in milliseconds and take difference from the start, then convert to hours
 		}
 
 		//Save and load the column to and from JSON
@@ -186,7 +190,7 @@
 			<br />
 			Time format:
 			{#if !canChange}
-				<input type="number" bind:value={col.timeformat} />
+				<input bind:value={col.timeformat} />
 			{:else}
 				{getColumnByID(col.refDataID)?.timeformat}
 			{/if}
@@ -200,6 +204,7 @@
 				<p>raw: {col.rawData.slice(0, 5)}</p>
 			{/if}
 			data: {col.getData()?.slice(0, 5)}
+			hoursSince: {col.getHoursSinceStart()?.slice(0, 5)}
 			<button
 				onclick={() => {
 					const proc = [...appConsts.processMap.entries()][

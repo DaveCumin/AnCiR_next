@@ -5,7 +5,7 @@ export const app_state = $state({
 export const appConsts = $state({
 	processMap: new Map(),
 	plotMap: new Map(),
-	gridsize: Number(5),
+	gridsize: Number(10),
 	appColours: ['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000']
 });
 
