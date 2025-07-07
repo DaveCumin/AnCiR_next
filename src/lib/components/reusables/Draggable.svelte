@@ -1,11 +1,13 @@
 <script>
 	// not a draggable reusable, change to plot component some time
 	
-	// TODO: invisible, change layers
+	// TODO: invisible
 	// TODO: control panel
 	// TODO: change color, palette on top
 	// TODO: click outside to cancel selection?
 	// TODO: lock to grid
+
+	// TODO: fix layering issue (when onMouseUp finishes in the plot, no bring to front, vice versa)
 	// @ts-nocheck
 	import { appState, core } from "$lib/core/core.svelte";
 
@@ -17,6 +19,8 @@
 	export let title = '';
 	export let id = null;
 	let tempId = id;
+
+	export let zIndex = 1;
 
 	const minWidth = 100;
 	const minHeight = 100;
@@ -36,8 +40,6 @@
 
 			x = Math.max(appState.positionDisplayPanel, 
 				Math.min(x, appState.positionControlPanel - width - 20));
-
-			console.log("x:" + x);
 
 		} else if (resizing) {
 			const deltaX = e.clientX - initialMouseX;
@@ -74,7 +76,9 @@
 		// 	appState.selectedPlotId = tempId;
 		// }
 		appState.selectedPlotId = tempId;
-		bringToFront(appState.selectedPlotId);
+		// bringToFront(appState.selectedPlotId);
+
+		console.log("id:", id, "z-index:", zIndex);
 
 	}
 </script>
@@ -87,7 +91,7 @@
 	onclick={handleClick}
 	class:selected={appState.selectedPlotId === id}
 	class="draggable"
-	style="left: {x}px; top: {y}px; width: {width + 20}px; height: {height + 50}px;">
+	style="left: {x}px; top: {y}px; width: {width + 20}px; height: {height + 50}px; z-index: {zIndex};">
 	
 	<div class="plot-header" onmousedown={onMouseDown}>
 		{title}
