@@ -10,6 +10,7 @@ export const core = $state({
 
 export const appState = $state({
 	currentTab: 'data',
+	selectedPlotId: null,
 	showNavbar: true,
 	showDisplayPanel: true,
 	showControlPanel: true,
