@@ -44,6 +44,12 @@
 		//The associated processes that are applied to the data
 		processes = $state([]);
 
+		hoursSinceStart = $derived.by(() => {
+			const raw = this.getData();
+			if (this.type == 'number') return raw.map((x) => x - raw[0]); //If a number, then assume it's in hours and take difference from the start
+			if (this.type == 'time') return raw.map((x) => (x - raw[0]) / 3600000); //if it's a time, then assume it's in milliseconds and take difference from the start, then convert to hours
+		});
+
 		constructor({ ...columnData }, id = null) {
 			if (id === null) {
 				this.columnID = _columnidCounter;
@@ -100,12 +106,6 @@
 				out = p.doProcess(out);
 			}
 			return out;
-		}
-
-		getHoursSinceStart() {
-			const raw = this.getData();
-			if (this.type == 'number') return raw.map((x) => x - raw[0]); //If a number, then assume it's in hours and take difference from the start
-			if (this.type == 'time') return raw.map((x) => (x - raw[0]) / 3600000); //if it's a time, then assume it's in milliseconds and take difference from the start, then convert to hours
 		}
 
 		//Save and load the column to and from JSON
@@ -204,7 +204,8 @@
 				<p>raw: {col.rawData.slice(0, 5)}</p>
 			{/if}
 			data: {col.getData()?.slice(0, 5)}
-			hoursSince: {col.getHoursSinceStart()?.slice(0, 5)}
+			N: {col.getData().length}
+			hoursSince: {col.hoursSinceStart?.slice(0, 5)}
 			<button
 				onclick={() => {
 					const proc = [...appConsts.processMap.entries()][

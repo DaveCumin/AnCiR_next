@@ -113,6 +113,14 @@ export function removeNullsFromXY(x, y) {
 }
 
 //Calculate mean
-export function mean(arr) {
-	return arr.reduce((acc, val) => acc + val, 0) / arr.length;
+export function mean(data) {
+	let sum = 0;
+	let count = 0;
+	for (let i = 0; i < data.length; i++) {
+		if (data[i] !== undefined && !isNaN(data[i])) {
+			sum += data[i];
+			count++;
+		}
+	}
+	return count > 0 ? sum / count : 0;
 }

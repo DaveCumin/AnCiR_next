@@ -9,6 +9,21 @@
 		//get the binned
 		const binned = binData(x, y, binSize, binStart);
 
+		//remove any bins that are empty
+		for (let i = 0; i < binned.y_out.length; i++) {
+			if (
+				binned.y_out[i] === null ||
+				binned.y_out[i] === undefined ||
+				binned.bins[i] === null ||
+				binned.bins[i] === undefined
+			) {
+				binned.y_out.splice(i, 1);
+				binned.bins.splice(i, 1);
+				i--;
+			}
+		}
+
+		//now make the path
 		let out = `${width},${height} 0,${height} `; // start at the width,0 and make a baseline
 		//cycle through the points
 		for (let b = 0; b < binned.bins.length - 1; b++) {

@@ -30,7 +30,10 @@
 		binSize = $state(0.5);
 		colour = $state();
 		dataByDays = $derived.by(() => {
-			const tempx = this.x.getData() ?? [];
+			const tempx = this.x.hoursSinceStart.map(
+				(x) => x - (Number(new Date(this.parent.startTime)) - Number(this.x.getData()[0])) / 3600000
+			);
+
 			const tempy = this.y.getData() ?? [];
 			const xByPeriod = {};
 			const yByPeriod = {};
@@ -134,11 +137,12 @@
 			}
 			let Ndays = 0;
 			this.data.forEach((d, i) => {
-				let tempMaxx = this.data[i].x.getData() ?? [];
+				let tempMaxx = this.data[i].x.hoursSinceStart;
 				tempMaxx = Math.max(...tempMaxx);
-				tempMaxx = tempMaxx - this.startTime; //TODO: need to work this out with real times
+				tempMaxx = tempMaxx; //TODO: need to work this out with real times
 				Ndays = Math.max(Ndays, tempMaxx / this.periodHrs);
 			});
+
 			return Math.ceil(Ndays);
 		});
 
@@ -254,6 +258,21 @@
 
 		return [clickedDay, clickedHrs];
 	}
+
+	$effect(() => {
+		//set the start time to be the minimum time in the x data
+		let minTime = Infinity;
+		theData?.plot?.data?.forEach((datum) => {
+			console.log('datum.x', Number(datum.x.getData()[0]));
+			minTime = Math.min(minTime, Number(datum.x.getData()[0]));
+		});
+		if (minTime === Infinity) {
+			minTime = 0; // If no data, set to 0
+		}
+		if (minTime > 0) {
+			theData.plot.startTime = new Date(minTime).toISOString().substring(0, 10);
+		}
+	});
 </script>
 
 {#snippet controls(theData)}

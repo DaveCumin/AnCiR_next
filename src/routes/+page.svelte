@@ -59,7 +59,9 @@
 		Number(utcParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[2]))
 	);
 
+	//------------------------------------
 	const N = 1_000;
+	//------------------------------------
 
 	function addData(dataIN, type, name, provenance) {
 		let newDataEntry;
@@ -187,6 +189,7 @@
 		];
 		core.tables.push(new Table({ name: 'table 2' }));
 		core.tables[1].columnRefs = [d1id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
+		console.log('TABLES LOADED');
 
 		core.plots = [];
 		//Scatter plot
@@ -195,6 +198,7 @@
 			x: { refDataID: testtimestring },
 			y: { refDataID: 1 }
 		});
+		console.log('SCATTER LOADED');
 		//Actogram
 		core.plots.push(new Plot({ name: 'an actogram', type: 'actogram' }));
 		core.plots[1].x = 300;
@@ -204,6 +208,7 @@
 			x: { refDataID: 0 },
 			y: { refDataID: 1 }
 		});
+		console.log('Actogram LOADED');
 		//Periodogram
 		core.plots.push(new Plot({ name: 'a periodogram', type: 'periodogram' }));
 		core.plots[2].x = 400;
@@ -212,6 +217,8 @@
 			x: { refDataID: 0 },
 			y: { refDataID: 1 }
 		});
+
+		console.log('PLOTS LOADED');
 	}
 
 	function load() {

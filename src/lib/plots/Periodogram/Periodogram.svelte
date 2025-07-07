@@ -11,36 +11,40 @@
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
 
-	function calculatePower(data, binSize, period) {
+	function calculatePower(data, binSize, period, avgAll, denominator) {
 		const colNum = Math.round(period / binSize);
 		const rowNum = Math.ceil(data.length / colNum);
 
 		const avgP = Array.from({ length: colNum }, (_, colIndex) => {
-			const colStart = colIndex;
-			const colValues = Array.from(
-				{ length: rowNum },
-				(_, rowIndex) => data[colStart + rowIndex * colNum]
-			).filter((value) => value !== undefined && !isNaN(value)); // only keep the true values
-
-			//return the mean
-			return mean(colValues);
+			const colValues = [];
+			for (let rowIndex = 0; rowIndex < rowNum; rowIndex++) {
+				const idx = colIndex + rowIndex * colNum;
+				if (idx < data.length && data[idx] !== undefined && !isNaN(data[idx])) {
+					colValues.push(data[idx]);
+				}
+			}
+			return colValues.length > 0 ? mean(colValues) : 0;
 		});
 
-		const avgAll = mean(data);
-
 		const numerator =
-			avgP.reduce((sum, avgPValue) => sum + Math.pow(avgPValue - avgAll, 2), 0) *
+			avgP.reduce((sum, avgPValue) => {
+				const diff = avgPValue - avgAll;
+				return sum + diff * diff;
+			}, 0) *
 			(data.length * rowNum);
-		const denominator = data.reduce((sum, value) => sum + Math.pow(value - avgAll, 2), 0);
-		return numerator / denominator;
+
+		return denominator === 0 ? 0 : numerator / denominator;
 	}
 
 	class PeriodogramDataclass {
 		parent = $state();
 		x = $state();
 		y = $state();
-		binSize = $state(0.15);
-		binnedData = $derived(binData(this.x.getHoursSinceStart(), this.y.getData(), this.binSize, 0));
+		binSize = $state(0.25);
+		binnedData = $derived.by(() => {
+			console.log('binning data for periodogram');
+			return binData(this.x.hoursSinceStart, this.y.getData(), this.binSize, 0);
+		});
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
 		linecolour = $state();
 		linestrokeWidth = $state(3);
@@ -61,12 +65,25 @@
 			const threshold = new Array(periods.length);
 			const pvalue = new Array(periods.length);
 
+			//precompute for the calculatePower function
+			const avgAll = mean(this.binnedData.y_out);
+			const denominator = this.binnedData.y_out.reduce(
+				(sum, value) => sum + Math.pow(value - avgAll, 2),
+				0
+			);
+
 			for (let p = 0; p < periods.length; p++) {
-				power[p] = calculatePower(this.binnedData.y_out, this.binSize, periods[p]);
+				if (p % 10 == 0) console.log(`Calculating period ${p + 1} of ${periods.length}`);
+				power[p] = calculatePower(
+					this.binnedData.y_out,
+					this.binSize,
+					periods[p],
+					avgAll,
+					denominator
+				); //TODO: THIS IS SLOW FOR ANY DATA LONGER THAN 1,100-ish. NEEDS IMPROVEMENT
 				threshold[p] = qchisq(1 - correctedAlpha, Math.round(periods[p] / this.binSize));
 				pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / this.binSize));
 			}
-
 			this.periodData = { x: periods, y: power, threshold, pvalue };
 		}
 
@@ -117,7 +134,7 @@
 		plotheight = $derived(this.parent.height - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.parent.width - this.padding.left - this.padding.right);
 		periodlimsIN = $state([1, 30]);
-		periodSteps = $state(0.15);
+		periodSteps = $state(0.25);
 		ylimsIN = $state([null, null]);
 		ylims = $derived.by(() => {
 			if (this.data.length === 0) {
