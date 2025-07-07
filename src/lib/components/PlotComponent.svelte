@@ -5,8 +5,9 @@
     import Box from './Box.svelte';
 </script>
 
+
 {#each core.plots as plot (plot.id)}
-	<Draggable
+    <Draggable
         bind:x={plot.x}
         bind:y={plot.y}
         bind:width={plot.width}
@@ -18,11 +19,6 @@
             theData={plot}
             which="plot" />
     </Draggable>
-
-    <!-- <Box bind:plot overflow="none">
-        <a style="position:absolute; top:-1.5em;">{plot.name}</a>
-        <Plot bind:theData={plot} which="plot" />
-    </Box> -->
 {/each}
 
 <style>

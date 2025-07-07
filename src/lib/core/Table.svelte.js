@@ -112,7 +112,6 @@ export class Table {
 }
 
 /*
-	collection.push({ id: 2, name: "✅ Object", count: 1 })
 	collection.push(new Ob(3, '✅ Class.toObj()').toObj())
 */
 

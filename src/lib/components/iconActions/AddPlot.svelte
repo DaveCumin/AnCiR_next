@@ -20,9 +20,15 @@
 		plotType = type;
     }
 
+	let xCol = $state();
+	let yCol = $state();
 	function confirmImport() {
-		console.log([...appConsts.plotMap]);
-		pushObj(new Plot({ name: plotName, type: plotType }));
+		const newPlot = new Plot({ name: plotName, type: plotType });
+		newPlot.plot.addData({ x: xCol, y: yCol });
+		console.log($state.snapshot(xCol));
+		console.log($state.snapshot(newPlot.plot));
+		pushObj(newPlot);
+
 		showModal = false;
 	}
 
@@ -85,8 +91,8 @@
 				<!-- TODO: make these draggable? -->
 				<!-- TODO: interface control -->
 				<div>
-					<label for="plotX">x:</label>
-					<select name="plotX" id="plot-x">
+					<label for="xCol">x:</label>
+					<select bind:value={xCol} name="xCol" id="plot-x">
 						<option value="" disabled selected>Select x</option>
 						{#each core.tables as table (table.id)}
 							{#each table.columns as col (col.id)}
@@ -96,8 +102,8 @@
 					</select>
 				</div>
 				<div>
-					<label for="plotY">y:</label>
-					<select name="plotY" id="plot-y">
+					<label for="yCol">y:</label>
+					<select bind:value={yCol} name="yCol" id="plot-y">
 						<option value="" disabled selected>Select y</option>
 						{#each core.tables as table (table.id)}
 							{#each table.columns as col (col.id)}

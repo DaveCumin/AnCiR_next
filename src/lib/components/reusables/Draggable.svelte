@@ -49,9 +49,10 @@
 
 <svelte:window on:mousemove={onMouseMove} on:mouseup={onMouseUp} />
 
+<!-- added header therefore TODO: other way than hardcode -->
 <section
 	class="draggable"
-	style="left: {x}px; top: {y}px; width: {width}px; height: {height}px;">
+	style="left: {x}px; top: {y}px; width: {width + 20}px; height: {height + 50}px;">
 	
 	<div class="plot-header" on:mousedown={onMouseDown}>
 		{title}

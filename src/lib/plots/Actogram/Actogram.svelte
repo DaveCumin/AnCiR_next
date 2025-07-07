@@ -56,14 +56,14 @@
 			this.parent = parent;
 
 			if (dataIN && dataIN.x) {
-				this.x = ColumnClass.fromJSON(dataIN.x);
+				this.x = Column.fromJSON(dataIN.x);
 			} else {
-				this.x = new ColumnClass({ refDataID: -1 });
+				this.x = new Column({ refId: -1 });
 			}
 			if (dataIN && dataIN.y) {
-				this.y = ColumnClass.fromJSON(dataIN.y);
+				this.y = Column.fromJSON(dataIN.y);
 			} else {
-				this.y = new ColumnClass({ refDataID: -1 });
+				this.y = new Column({ refId: -1 });
 			}
 			this.colour = dataIN?.colour ?? getRandomColor();
 		}
@@ -102,9 +102,9 @@
 		isAddingMarkerTo = $state(-1);
 		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 30 });
 		padding = $derived.by(() => {
-			if (this.LightBand.length > 0) {
+			if (this.bands.length > 0) {
 				return {
-					top: this.paddingIN.top + this.LightBand.height * 2,
+					top: this.paddingIN.top + this.bands.height * 2,
 					right: this.paddingIN.right,
 					bottom: this.paddingIN.bottom,
 					left: this.paddingIN.left
@@ -127,7 +127,7 @@
 		spaceBetween = $state(2);
 		doublePlot = $state(2);
 		periodHrs = $state(24);
-		LightBand = $state(new LightBandClass(this, { bands: [] }));
+		bands = $state(new LightBandClass(this, { bands: [] }));
 		Ndays = $derived.by(() => {
 			if (this.data.length === 0) {
 				return 0;
@@ -168,6 +168,7 @@
 		addData(dataIN) {
 			this.data.push(new ActogramDataclass(this, dataIN));
 		}
+		
 		removeData(idx) {
 			this.data.splice(idx, 1);
 		}
@@ -190,7 +191,7 @@
 				paddingIN: this.paddingIN,
 				doublePlot: this.doublePlot,
 				periodHrs: this.periodHrs,
-				LightBand: this.LightBand,
+				bands: this.bands,
 				data: this.data
 			};
 		}
@@ -205,7 +206,7 @@
 			actogram.doublePlot = json.doublePlot;
 			actogram.periodHrs = json.periodHrs;
 
-			actogram.LightBand = new LightBandClass.fromJSON(json.bands ?? { bands: [] }, actogram);
+			actogram.bands = LightBandClass.fromJSON(json.bands ?? { bands: [] }, actogram);
 
 			if (json.data) {
 				actogram.data = json.data.map((d) => ActogramDataclass.fromJSON(d, actogram));
@@ -256,7 +257,7 @@
 	}
 </script>
 
-{#snippet controls(theData)}
+<!-- {#snippet controls(theData)}
 	<div>
 		<button onclick={() => convertToImage('plot' + theData.parent.plotid, 'svg')}>Save </button>
 		Name: <input type="text" bind:value={theData.parent.name} />
@@ -337,7 +338,7 @@
 			{/each}
 		{/each}
 	</div>
-{/snippet}
+{/snippet} -->
 
 {#snippet plot(theData)}
 	<svg
@@ -347,7 +348,7 @@
 		style={`background: white; position: absolute;`}
 		onclick={(e) => handleClick(e)}
 	>
-		<LightBand bind:bands={theData.plot.LightBand} which="plot" />
+		<LightBand bind:bands={theData.plot.bands} which="plot" />
 		<!-- The X-axis -->
 		<Axis
 			height={theData.plot.plotheight}

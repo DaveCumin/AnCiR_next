@@ -3,7 +3,7 @@
 	import { Column } from '$lib/core/column.svelte';
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
-	// import { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { core } from '$lib/core/core.svelte.js';
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
@@ -21,14 +21,14 @@
 			this.parent = parent;
 
 			if (dataIN && dataIN.x) {
-				this.x = ColumnClass.fromJSON(dataIN.x);
+				this.x = Column.fromJSON(dataIN.x);
 			} else {
-				this.x = new ColumnClass({ refDataID: -1 });
+				this.x = new Column({ refId: -1 });
 			}
 			if (dataIN && dataIN.y) {
-				this.y = ColumnClass.fromJSON(dataIN.y);
+				this.y = Column.fromJSON(dataIN.y);
 			} else {
-				this.y = new ColumnClass({ refDataID: -1 });
+				this.y = new Column({ refId: -1 });
 			}
 			this.linecolour = dataIN?.linecolour ?? getRandomColor();
 			this.pointcolour = dataIN?.pointcolour ?? getRandomColor();

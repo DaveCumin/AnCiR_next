@@ -10,6 +10,9 @@ export const core = $state({
 
 export const appState = $state({
 	currentTab: 'data',
+	showNavbar: true,
+	showDisplayPanel: true,
+	showControlPanel: true,
 });
 
 export const appConsts = $state({

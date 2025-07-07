@@ -18,14 +18,17 @@
 		refId = $state(null); // if instance based on another instance
 	
 		name = $derived.by(() => {
-			if (this.isReferencial()) {
-				return core.columns.find((column) => column.id === this.refId)?.name;
+			// console.log((column.id));
+			if (this.refId != null) {
+				// console.log($state.snapshot(core.columns))
+				// console.log($state.snapshot(this.refId));
+				return core.data.find((column) => column.id === this.refId)?.name;
 			}
 		})
 	
 		type = $derived.by(() => {
 			if (this.isReferencial()) {
-				return core.columns.find((column) => column.id === this.refId)?.type;
+				return core.data.find((column) => column.id === this.refId)?.type;
 			}
 		})
 	
@@ -223,7 +226,7 @@
 	
 			// uncomment above and delete bottom after full transfer
 			const id = json.id ?? json.columnID;
-			const name = json.name ?? 'Untitled Table';
+			const name = json.name ?? 'Untitled Column';
 			const type = json.type; // TODO: should report error actually
 			const refId = json.refId ?? json.refDataID ?? null;
 			const data = json.data ?? json.rawData ?? [];

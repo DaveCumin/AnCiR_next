@@ -45,6 +45,6 @@ export async function loadPlots() {
 			console.error(`Error loading ${sveltePath}:`, error);
 		}
 	}
-	//console.log('plotMap:', plotMap);
+	// console.log('plotMap:', plotMap);
 	return plotMap;
 }
