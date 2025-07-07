@@ -1,16 +1,22 @@
 <script>
-	// TODO: invisible, only drag on top, change layers
+	// not a draggable reusable, change to plot component some time
+	
+	// TODO: invisible, change layers
 	// TODO: control panel
 	// TODO: change color, palette on top
+	// TODO: click outside to cancel selection?
+	// TODO: lock to grid
 	// @ts-nocheck
-	import { appState } from "$lib/core/core.svelte";
+	import { appState, core } from "$lib/core/core.svelte";
 
 	export let x = 100;
 	export let y = 100;
 	export let width = 200;
 	export let height = 150;
+
 	export let title = '';
 	export let id = null;
+	let tempId = id;
 
 	const minWidth = 100;
 	const minHeight = 100;
@@ -27,6 +33,12 @@
 		if (moving) {
 			x += e.movementX;
 			y += e.movementY;
+
+			x = Math.max(appState.positionDisplayPanel, 
+				Math.min(x, appState.positionControlPanel - width - 20));
+
+			console.log("x:" + x);
+
 		} else if (resizing) {
 			const deltaX = e.clientX - initialMouseX;
 			const deltaY = e.clientY - initialMouseY;
@@ -49,13 +61,26 @@
 		initialHeight = height;
 	}
 
-	function handleClick() {
-		appState.selectedPlotId = id;
+	function bringToFront(id) {
+		const index = core.plots.findIndex(p => p.id === id);
+		if (index !== -1) {
+            const [plot] = core.plots.splice(index, 1);
+            core.plots.push(plot);
+        }
 	}
-	console.log(id);
+
+	function handleClick() {
+		// if (clicking) {
+		// 	appState.selectedPlotId = tempId;
+		// }
+		appState.selectedPlotId = tempId;
+		bringToFront(appState.selectedPlotId);
+
+	}
 </script>
 
-<svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp} />
+<svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp}/>
+
 
 <!-- added header therefore TODO: other way than hardcode -->
 <section

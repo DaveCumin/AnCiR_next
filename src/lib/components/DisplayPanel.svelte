@@ -26,6 +26,9 @@
         }
 
         width = Math.max(minWidth, newWidth);
+		
+		// TODO: fix plot limitation when resize
+		// appState.positionDisplayPanel = width;
 	}
 
 	function stopResize() {

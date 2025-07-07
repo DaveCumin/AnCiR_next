@@ -73,13 +73,13 @@
 </script>
 
 <script>
-	import Box from '$lib/components/Box.svelte';
+	// import Box from '$lib/components/Box.svelte';
 	let { plot } = $props();
 	const Plot = appConsts.plotMap.get(plot.type).plot ?? null;
 	let options = $state({ x: 900, y: 0, width: 200, height: 550 });
 </script>
 
-<Box bind:plot overflow="none">
+<!-- <Box bind:plot overflow="none">
 	<a style="position:absolute; top:-1.5em;">{plot.name}</a>
 	<Plot bind:theData={plot} which="plot" />
 </Box>
@@ -88,4 +88,8 @@
 	<div>
 		<Plot theData={plot.plot} which="controls" />
 	</div>
-</Box>
+</Box> -->
+
+<div>
+	<Plot bind:theData={plot} which="plot" />
+</div>

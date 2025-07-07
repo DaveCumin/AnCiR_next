@@ -7,7 +7,7 @@
 	import Navbar from '$lib/components/Navbar.svelte';
 	import DisplayPanel from '../lib/components/DisplayPanel.svelte';
 	import ControlPanel from '$lib/components/ControlPanel.svelte';
-	import PlotComponent from '$lib/components/PlotComponent.svelte';
+	import PlotPanel from '$lib/components/PlotPanel.svelte';
 	
 	import { onMount } from 'svelte';
 	import { testJson } from './testJson.svelte.js';
@@ -26,10 +26,15 @@
 		//load the maps
 		appConsts.processMap = await loadProcesses();
 		appConsts.plotMap = await loadPlots();
-		// refresh();
 
+		populatePanelWidth();
 		loadTestJson();
 	});
+
+	function populatePanelWidth() {
+		appState.positionDisplayPanel = 360 + appState.positionNavbar;
+		appState.positionControlPanel = window.outerWidth - 360;
+	}
 
 	function loadTestJson() {
 		// const jsonData = JSON.parse(`${testJson}`);
@@ -69,7 +74,7 @@
 	<DisplayPanel />
 {/if}
 
-<PlotComponent />
+<PlotPanel />
 
 { #if appState.showControlPanel}
 	<ControlPanel /> 

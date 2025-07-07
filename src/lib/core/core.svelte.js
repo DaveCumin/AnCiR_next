@@ -10,10 +10,16 @@ export const core = $state({
 
 export const appState = $state({
 	currentTab: 'data',
-	selectedPlotId: null,
+
 	showNavbar: true,
 	showDisplayPanel: true,
 	showControlPanel: true,
+
+	positionNavbar: 56,
+	positionDisplayPanel: null,
+	positionControlPanel: null,
+	
+	selectedPlotId: null,
 });
 
 export const appConsts = $state({
@@ -39,6 +45,7 @@ export function outputCoreAsJson() {
 	const output = { ...core };
 	return JSON.stringify(output, null, 2);
 }
+
 
 
 /* Core Documentation

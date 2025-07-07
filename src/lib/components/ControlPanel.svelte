@@ -2,6 +2,7 @@
 
 <script>
 	// @ts-nocheck
+	import { appState } from "$lib/core/core.svelte";
 
 	import ControlDisplay from "./views/ControlDisplay.svelte";
 
@@ -21,11 +22,15 @@
         if (resizeSide === 'right') {
             newWidth = e.clientX - rect.left;
         } else {
-            const delta = rect.right - e.clientX;
-            newWidth = delta;
+            newWidth = rect.right - e.clientX;
         }
 
         width = Math.max(minWidth, newWidth);
+
+		// TODO: fix plot limitation when resize
+
+		// appState.positionControlPanel = window.outerWidth - width;
+		// console.log(appState.positionControlPanel);
     }
 
 	function stopResize() {
