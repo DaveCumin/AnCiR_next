@@ -1,4 +1,6 @@
 <script>
+    // TODO: scroll horizontally and vertically
+
     // @ts-nocheck
 	import Draggable from '../reusables/Draggable.svelte';
 
@@ -21,7 +23,7 @@
         bind:height={plot.height}
         title={plot.name}
         id={plot.id}
-        zIndex={findZIndex(plot.id)}
+        
     >
         {@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
         <Plot

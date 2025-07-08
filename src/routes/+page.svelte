@@ -28,7 +28,8 @@
 		appConsts.plotMap = await loadPlots();
 
 		populatePanelWidth();
-		loadTestJson();
+		refresh();
+		// loadTestJson();
 	});
 
 	function populatePanelWidth() {
@@ -58,6 +59,152 @@
 			core.plots.push(Plot.fromJSON(plotjson));
 		});
 	};
+
+	function addData(dataIN, type, name, provenance) {
+		let newDataEntry;
+		if (dataIN != null) {
+			newDataEntry = new Column({ type, data: dataIN, name, provenance });
+			if (type == 'time') {
+				newDataEntry.timeFormat = 1;
+			}
+			core.data.push(newDataEntry);
+		} else {
+			newDataEntry = new Column({
+				type,
+				data: [
+					Math.round(10 * Math.random()),
+					Math.round(10 * Math.random()),
+					Math.round(10 * Math.random()),
+					Math.round(10 * Math.random())
+				],
+				name,
+				provenance
+			});
+			if (type == 'time') {
+				newDataEntry.timeFormat = 1;
+			}
+			core.data.push(newDataEntry);
+		}
+		return newDataEntry.id;
+	}
+
+	function makeArray(from, to, step) {
+		let out = [];
+		for (let i = from; i <= to; i += step) {
+			out.push(i);
+		}
+		return out;
+	}
+
+	function makeRandom(N) {
+		let out = [];
+		for (let i = 0; i < N; i++) {
+			out.push(Math.round(Math.random() * 10));
+		}
+		return out;
+	}
+
+	function makeRhythmic(N, period, low = 10, high = 100) {
+		let out = [];
+		for (let i = 0; i < N; i++) {
+			const mult = i % period < period / 2 ? low : high;
+			out.push(Math.round(Math.random() * mult));
+		}
+		return out;
+	}
+	function makeDateTimeArray(N, from = new Date(), step_hrs = 1) {
+		let out = [];
+		let currentDate = new Date(from);
+		for (let i = 0; i < N; i++) {
+			out.push(new Date(currentDate));
+			currentDate.setHours(currentDate.getHours() + step_hrs);
+		}
+		//now convert to timestamps
+		//out = out.map((d) => d.getTime()); // this makes the UNIX timestamps
+		out = out.map((d) => d.toISOString()); // this makes the ISO strings
+		return out;
+	}
+
+	function refresh() {
+		let N = 1005;
+
+		//simulate importing data
+		core.data = [];
+		let d0id = addData(
+			makeArray(5.15, N * 0.15, 0.15),
+			'time',
+			'the time',
+			'just made this up'
+		);
+		core.data[0].addProcess('Add');
+		core.data[0].addProcess('FilterByOtherCol');
+
+		let d1id = addData(makeRhythmic(1_000, 24 / 0.15), 'number', 'val1', 'imported from thin air');
+		core.data[1].addProcess('Add');
+		core.data[1].addProcess('Sub');
+
+		let d2id = addData(['a', 'b', 'b', 'c'], 'category', 'mycat', 'imported from Egypt');
+
+		let testawd = new Column({
+			type: 'time',
+			data: { start: 10, step: 1, length: 5 },
+			compression: 'awd',
+			name: 'AWD',
+			timeFormat: 3,
+			provenance: 'another manufactured column'
+		});
+		core.data.push(testawd);
+
+		let testref = new Column({
+			refId: d1id
+		});
+		core.data.push(testref);
+
+		let testrefref = new Column({
+			refId: testref.id
+		});
+		core.data.push(testrefref);
+
+		let testtimestring = addData(makeDateTimeArray(), 'time', 'REALTIME', 'Just made up');
+
+		core.tables = [];
+		core.tables.push(new Table({ name: 'table 1' }));
+		core.tables[0].columnRefs = [
+			testtimestring,
+			testawd.id,
+			d1id,
+			d0id,
+			testref.id,
+			testrefref.id
+		];
+		core.tables.push(new Table({ name: 'table 2' }));
+		core.tables[1].columnRefs = [d1id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
+
+		core.plots = [];
+		//Scatter plot
+		core.plots.push(new Plot({ name: 'testscatter', type: 'scatterplot' }));
+		core.plots[0].plot.addData({
+			x: { refId: 0 },
+			y: { refId: 1 }
+		});
+		//Actogram
+		core.plots.push(new Plot({ name: 'an actogram', type: 'actogram' }));
+		core.plots[1].x = 300;
+		core.plots[1].y = 400;
+		core.plots[1].height = 700;
+		core.plots[1].plot.addData({
+			x: { refId: 0 },
+			y: { refId: 1 }
+		});
+		//Periodogram
+		core.plots.push(new Plot({ name: 'a periodogram', type: 'periodogram' }));
+		core.plots[2].x = 400;
+		core.plots[2].y = 450;
+		core.plots[2].plot.addData({
+			x: { refId: 0 },
+			y: { refId: 1 }
+		});
+	}
 
 </script>
 

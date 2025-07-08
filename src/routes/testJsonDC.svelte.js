@@ -128,6 +128,59 @@ export const testJsonDC = `{
                     }
                 ]
             }
+        },
+        {
+            "plotid": 2,
+            "name": "test periodogram",
+            "x": 400,
+            "y": 450,
+            "width": 500,
+            "height": 250,
+            "type": "periodogram",
+            "plot": {
+                "ylimsIN": [
+                    null,
+                    null
+                ],
+                "padding": {
+                    "top": 15,
+                    "right": 20,
+                    "bottom": 30,
+                    "left": 49.8515625
+                },
+                "periodSteps": 0.15,
+                "periodlimsIN": [
+                    1,
+                    30
+                ],
+                "xgridlines": true,
+                "ygridlines": true,
+                "data": [
+                    {
+                        "x": {
+                            "columnID": 11,
+                            "name": "the time*",
+                            "refDataID": 0,
+                            "type": "time",
+                            "timeformat": "",
+                            "provenance": "refers to the time which is just made this up",
+                            "processes": []
+                        },
+                        "y": {
+                            "columnID": 12,
+                            "name": "val1*",
+                            "refDataID": 1,
+                            "type": "number",
+                            "provenance": "refers to val1 which is imported from thin air",
+                            "processes": []
+                        },
+                        "linecolour": "#382642",
+                        "linestrokeWidth": 3,
+                        "pointcolour": "#3C7564",
+                        "pointradius": 5
+                    }
+                ]
+            }
         }
     ],
     "data": [

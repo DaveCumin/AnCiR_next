@@ -34,12 +34,67 @@
 		return numerator / denominator;
 	}
 
+	function calculatePowerFast(data, binSize, period) {
+		const colNum = Math.round(period / binSize);
+		if (colNum < 1) return 0;
+
+		const rowNum = Math.ceil(data.length / colNum);
+
+		let colSums = new Array(colNum).fill(0);
+		let colCounts = new Array(colNum).fill(0);
+		let totalSum = 0;
+		let totalCount = 0;
+
+		for (let i = 0; i < data.length; i++) {
+			const col = i % colNum;
+			const val = data[i];
+			if (!isNaN(val)) {
+				colSums[col] += val;
+				colCounts[col]++;
+				totalSum += val;
+				totalCount++;
+			}
+		}
+
+		if (totalCount === 0) return 0;
+
+		const avgAll = totalSum / totalCount;
+
+		const avgP = colSums.map((sum, i) =>
+			colCounts[i] > 0 ? sum / colCounts[i] : avgAll
+		);
+
+		let numSum = 0;
+		for (let i = 0; i < colNum; i++) {
+			numSum += (avgP[i] - avgAll) ** 2;
+		}
+		const numerator = numSum * data.length * rowNum;
+
+		let denomSum = 0;
+		for (let i = 0; i < data.length; i++) {
+			const val = data[i];
+			if (!isNaN(val)) {
+			denomSum += (val - avgAll) ** 2;
+			}
+		}
+
+		if (denomSum === 0) return 0;
+
+		return numerator / denomSum;
+	}
+
+
 	class PeriodogramDataclass {
 		parent = $state();
 		x = $state();
 		y = $state();
 		binSize = $state(0.15);
-		binnedData = $derived(binData(this.x.getData(), this.y.getData(), this.binSize, 0));
+		binnedData = $derived.by(() => {
+			const xData = this.x.getData();
+			const yData = this.y.getData();
+			if (!xData || !yData) return null;
+			return binData(xData, yData, this.binSize, 0);
+		});
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
 		linecolour = $state();
 		linestrokeWidth = $state(3);
@@ -61,7 +116,7 @@
 			const pvalue = new Array(periods.length);
 
 			for (let p = 0; p < periods.length; p++) {
-				power[p] = calculatePower(this.binnedData.y_out, this.binSize, periods[p]);
+				power[p] = calculatePowerFast(this.binnedData.y_out, this.binSize, periods[p]);
 				threshold[p] = qchisq(1 - correctedAlpha, Math.round(periods[p] / this.binSize));
 				pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / this.binSize));
 			}
@@ -170,8 +225,8 @@
 				return new Periodogramclass(parent, null);
 			}
 
-			const periodogram = newPeriodogramclass(parent, null);
-			periodogram.padding = json.padding;
+			const periodogram = new Periodogramclass(parent, null);
+			periodogram.padding = json.padding ?? json.paddingIN;
 			periodogram.periodlimsIN = json.periodlimsIN;
 			periodogram.periodSteps = json.periodSteps;
 			periodogram.ylimsIN = json.ylimsIN;
@@ -223,6 +278,16 @@
 			theData.plot.padding = newPadding; // Single update to avoid loop
 		}
 	}
+
+	function samplePoints(x, y, maxPoints = 500) {
+		if (x.length <= maxPoints) return { x, y };
+		const step = Math.ceil(x.length / maxPoints);
+		return {
+			x: x.filter((_, i) => i % step === 0),
+			y: y.filter((_, i) => i % step === 0)
+		};
+	}
+
 </script>
 
 {#snippet controls(theData)}
@@ -362,9 +427,10 @@
 		/>
 
 		{#each theData.plot.data as datum}
+			{@const sampled = samplePoints(datum.periodData.x, datum.periodData.y)}
 			<Line
 				x={datum.periodData.x}
-				y={datum.periodData.y}
+    			y={datum.periodData.y}
 				xscale={scaleLinear()
 					.domain([theData.plot.periodlimsIN[0], theData.plot.periodlimsIN[1]])
 					.range([0, theData.plot.plotwidth])}
@@ -376,9 +442,11 @@
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 			/>
+
+			
 			<Points
 				x={datum.periodData.x}
-				y={datum.periodData.y}
+    			y={datum.periodData.y}
 				xscale={scaleLinear()
 					.domain([theData.plot.periodlimsIN[0], theData.plot.periodlimsIN[1]])
 					.range([0, theData.plot.plotwidth])}

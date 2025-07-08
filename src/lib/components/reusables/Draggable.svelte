@@ -6,21 +6,17 @@
 	// TODO: change color, palette on top
 	// TODO: click outside to cancel selection?
 	// TODO: lock to grid
+	// TODO: set y limit
 
 	// TODO: fix layering issue (when onMouseUp finishes in the plot, no bring to front, vice versa)
 	// @ts-nocheck
 	import { appState, core } from "$lib/core/core.svelte";
 
-	export let x = 100;
-	export let y = 100;
-	export let width = 200;
-	export let height = 150;
-
-	export let title = '';
-	export let id = null;
+	let {x=$bindable(100), y=$bindable(100), width=$bindable(200), height=$bindable(150), title='', id} = $props();
+	
 	let tempId = id;
 
-	export let zIndex = 1;
+	// export let zIndex = 1;
 
 	const minWidth = 100;
 	const minHeight = 100;
@@ -72,13 +68,10 @@
 	}
 
 	function handleClick() {
-		// if (clicking) {
-		// 	appState.selectedPlotId = tempId;
-		// }
 		appState.selectedPlotId = tempId;
-		// bringToFront(appState.selectedPlotId);
+		bringToFront(appState.selectedPlotId); //change without zindex
 
-		console.log("id:", id, "z-index:", zIndex);
+		// console.log("id:", id, "z-index:", zIndex);
 
 	}
 </script>
@@ -91,7 +84,7 @@
 	onclick={handleClick}
 	class:selected={appState.selectedPlotId === id}
 	class="draggable"
-	style="left: {x}px; top: {y}px; width: {width + 20}px; height: {height + 50}px; z-index: {zIndex};">
+	style="left: {x}px; top: {y}px; width: {width + 20}px; height: {height + 50}px;">
 	
 	<div class="plot-header" onmousedown={onMouseDown}>
 		{title}
