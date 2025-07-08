@@ -211,7 +211,7 @@
 					const proc = [...appConsts.processMap.entries()][
 						Math.floor(Math.random() * [...appConsts.processMap.entries()].length)
 					];
-					console.log(proc[0]);
+
 					col.addProcess(proc[0]);
 				}}><Icon name="add" width={16} height={16} /></button
 			>

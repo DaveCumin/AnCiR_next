@@ -40,7 +40,6 @@
 			const xByPeriod = {};
 			const yByPeriod = {};
 
-			console.log('offset: ', this.offset);
 			for (let i = 0; i < tempx.length; i++) {
 				const period = Math.floor(tempx[i] / this.parent.periodHrs);
 
@@ -130,7 +129,13 @@
 		eachplotheight = $derived.by(() => {
 			return (this.plotheight - (this.Ndays - 1) * this.spaceBetween) / this.Ndays;
 		});
-		startTime = $state();
+		startTime = $derived.by(() => {
+			let minTime = Infinity;
+			this.data.forEach((datum) => {
+				minTime = Math.min(minTime, Number(datum.x.getData()[0]));
+			});
+			return minTime !== Infinity ? new Date(minTime).toISOString().substring(0, 10) : undefined;
+		});
 		spaceBetween = $state(2);
 		doublePlot = $state(2);
 		periodHrs = $state(24);
@@ -263,23 +268,6 @@
 
 		return [clickedDay, clickedHrs];
 	}
-
-	$effect(() => {
-		console.log(new Date(), 'effect start');
-		//set the start time to be the minimum time in the x data
-		let minTime = Infinity;
-		theData?.plot?.data?.forEach((datum) => {
-			console.log('datum.x', Number(datum.x.getData()[0]));
-			minTime = Math.min(minTime, Number(datum.x.getData()[0]));
-		});
-		if (minTime === Infinity) {
-			minTime = 0; // If no data, set to 0
-		}
-		if (minTime > 0) {
-			theData.plot.startTime = new Date(minTime).toISOString().substring(0, 10);
-		}
-		console.log(new Date(), 'effect end');
-	});
 </script>
 
 {#snippet controls(theData)}

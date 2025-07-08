@@ -7,7 +7,6 @@ export function binData(x, y, binSize, binStart = 0) {
 
 	// Initialize arrays for bin sums and counts
 	const numBins = Math.ceil((max(x) - binStart) / binSize);
-	console.log(numBins, max(x), binStart, binSize);
 	const binSums = new Array(numBins).fill(0);
 	const binCounts = new Array(numBins).fill(0);
 	const bins = new Array(numBins).fill(0).map((_, i) => binStart + i * binSize);

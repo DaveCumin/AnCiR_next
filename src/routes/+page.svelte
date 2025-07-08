@@ -60,7 +60,7 @@
 	);
 
 	//------------------------------------
-	const N = 10_000;
+	const N = 5_000;
 	//------------------------------------
 
 	function addData(dataIN, type, name, provenance) {
