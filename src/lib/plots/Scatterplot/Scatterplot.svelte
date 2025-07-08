@@ -290,7 +290,7 @@
 		<Axis
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
-			scale={scaleLinear()
+			scale={scaleTime()
 				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
 				.range([0, theData.plot.plotwidth])}
 			position="bottom"

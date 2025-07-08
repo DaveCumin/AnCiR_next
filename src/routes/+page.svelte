@@ -60,7 +60,7 @@
 	);
 
 	//------------------------------------
-	const N = 1_000;
+	const N = 10_000;
 	//------------------------------------
 
 	function addData(dataIN, type, name, provenance) {
@@ -98,10 +98,10 @@
 		refresh();
 	});
 
-	function makeArray(from, to, step) {
+	function makeArray(N, from, step) {
 		let out = [];
-		for (let i = from; i <= to; i += step) {
-			out.push(i);
+		for (let i = 0; i < N; i++) {
+			out.push(from + i * step);
 		}
 		return out;
 	}
@@ -134,16 +134,11 @@
 	function refresh() {
 		//simulate importing data
 		core.data = [];
-		let d0id = addData(
-			makeArray(5.15, (N + 5) * 0.15, 0.15),
-			'number',
-			'the time',
-			'just made this up'
-		);
+		let d0id = addData(makeArray(N, 5, 0.15), 'number', 'the time', 'just made this up');
 		core.data[0].addProcess('Add');
 		core.data[0].addProcess('FilterByOtherCol');
 
-		let d1id = addData(makeRhythmic(1_000, 24 / 0.15), 'number', 'val1', 'imported from thin air');
+		let d1id = addData(makeRhythmic(N, 24 / 0.15), 'number', 'val1', 'imported from thin air');
 		core.data[1].addProcess('Add');
 		core.data[1].addProcess('Sub');
 
@@ -217,8 +212,10 @@
 			x: { refDataID: 0 },
 			y: { refDataID: 1 }
 		});
+		console.log('Periodogram LOADED');
 
 		console.log('PLOTS LOADED');
+		console.log('core: ', $state.snapshot(core));
 	}
 
 	function load() {

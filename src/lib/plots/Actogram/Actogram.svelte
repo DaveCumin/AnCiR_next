@@ -9,6 +9,7 @@
 	import LightBand, { LightBandClass } from './LightBand.svelte';
 	import BinnedHist from '$lib/components/plotbits/BinnedHist.svelte';
 	import { makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData';
+	import { max, min } from '$lib/components/plotbits/helpers/wrangleData.js';
 
 	function getNdataByPeriods(dataIN, from, to, period) {
 		const byPeriod = [];
@@ -29,17 +30,20 @@
 		y = $state();
 		binSize = $state(0.5);
 		colour = $state();
+		offset = $derived(
+			(Number(new Date(this.parent.startTime)) - Number(this.x.getData()[0])) / 3600000
+		);
 		dataByDays = $derived.by(() => {
-			const tempx = this.x.hoursSinceStart.map(
-				(x) => x - (Number(new Date(this.parent.startTime)) - Number(this.x.getData()[0])) / 3600000
-			);
+			const tempx = this.x.hoursSinceStart.map((x) => x - this.offset);
 
 			const tempy = this.y.getData() ?? [];
 			const xByPeriod = {};
 			const yByPeriod = {};
 
+			console.log('offset: ', this.offset);
 			for (let i = 0; i < tempx.length; i++) {
 				const period = Math.floor(tempx[i] / this.parent.periodHrs);
+
 				if (period >= 0) {
 					if (!xByPeriod[period]) {
 						xByPeriod[period] = [];
@@ -137,13 +141,14 @@
 			}
 			let Ndays = 0;
 			this.data.forEach((d, i) => {
-				let tempMaxx = this.data[i].x.hoursSinceStart;
-				tempMaxx = Math.max(...tempMaxx);
-				tempMaxx = tempMaxx; //TODO: need to work this out with real times
-				Ndays = Math.max(Ndays, tempMaxx / this.periodHrs);
+				console.log('d.offset: ', d.offset);
+				Ndays = Math.max(
+					Ndays,
+					Object.keys(d.dataByDays.xByPeriod).length - Math.floor(d.offset / 24)
+				);
 			});
 
-			return Math.ceil(Ndays);
+			return Ndays;
 		});
 
 		ylimsIN = $state([null, null]);
@@ -156,8 +161,8 @@
 			let ymax = -Infinity;
 			this.data.forEach((d, i) => {
 				let tempy = this.data[i].y.getData() ?? [];
-				ymin = Math.min(ymin, Math.min(...tempy));
-				ymax = Math.max(ymax, Math.max(...tempy));
+				ymin = Math.min(ymin, min(tempy));
+				ymax = Math.max(ymax, max(tempy));
 			});
 			return [this.ylimsIN[0] ? this.ylimsIN[0] : ymin, this.ylimsIN[1] ? this.ylimsIN[1] : ymax];
 		});
@@ -260,6 +265,7 @@
 	}
 
 	$effect(() => {
+		console.log(new Date(), 'effect start');
 		//set the start time to be the minimum time in the x data
 		let minTime = Infinity;
 		theData?.plot?.data?.forEach((datum) => {
@@ -272,6 +278,7 @@
 		if (minTime > 0) {
 			theData.plot.startTime = new Date(minTime).toISOString().substring(0, 10);
 		}
+		console.log(new Date(), 'effect end');
 	});
 </script>
 

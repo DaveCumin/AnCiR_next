@@ -13,27 +13,31 @@
 
 	function calculatePower(data, binSize, period, avgAll, denominator) {
 		const colNum = Math.round(period / binSize);
+		if (colNum < 1) return 0;
+
 		const rowNum = Math.ceil(data.length / colNum);
 
-		const avgP = Array.from({ length: colNum }, (_, colIndex) => {
-			const colValues = [];
-			for (let rowIndex = 0; rowIndex < rowNum; rowIndex++) {
-				const idx = colIndex + rowIndex * colNum;
-				if (idx < data.length && data[idx] !== undefined && !isNaN(data[idx])) {
-					colValues.push(data[idx]);
-				}
+		let colSums = new Array(colNum).fill(0);
+		let colCounts = new Array(colNum).fill(0);
+
+		for (let i = 0; i < data.length; i++) {
+			const col = i % colNum;
+			const val = data[i];
+			if (!isNaN(val)) {
+				colSums[col] += val;
+				colCounts[col]++;
 			}
-			return colValues.length > 0 ? mean(colValues) : 0;
-		});
+		}
 
-		const numerator =
-			avgP.reduce((sum, avgPValue) => {
-				const diff = avgPValue - avgAll;
-				return sum + diff * diff;
-			}, 0) *
-			(data.length * rowNum);
+		const avgP = colSums.map((sum, i) => (colCounts[i] > 0 ? sum / colCounts[i] : avgAll));
 
-		return denominator === 0 ? 0 : numerator / denominator;
+		let numSum = 0;
+		for (let i = 0; i < colNum; i++) {
+			numSum += (avgP[i] - avgAll) ** 2;
+		}
+		const numerator = numSum * data.length * rowNum;
+
+		return numerator / denominator;
 	}
 
 	class PeriodogramDataclass {
@@ -42,7 +46,6 @@
 		y = $state();
 		binSize = $state(0.25);
 		binnedData = $derived.by(() => {
-			console.log('binning data for periodogram');
 			return binData(this.x.hoursSinceStart, this.y.getData(), this.binSize, 0);
 		});
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
@@ -65,22 +68,19 @@
 			const threshold = new Array(periods.length);
 			const pvalue = new Array(periods.length);
 
-			//precompute for the calculatePower function
-			const avgAll = mean(this.binnedData.y_out);
-			const denominator = this.binnedData.y_out.reduce(
-				(sum, value) => sum + Math.pow(value - avgAll, 2),
-				0
-			);
+			// Compute the average one
+			const data = this.binnedData.y_out;
+			const avgAll = mean(data);
+			let denominator = 0;
+			for (let i = 0; i < data.length; i++) {
+				const val = data[i];
+				if (!isNaN(val)) {
+					denominator += (val - avgAll) ** 2;
+				}
+			}
 
 			for (let p = 0; p < periods.length; p++) {
-				if (p % 10 == 0) console.log(`Calculating period ${p + 1} of ${periods.length}`);
-				power[p] = calculatePower(
-					this.binnedData.y_out,
-					this.binSize,
-					periods[p],
-					avgAll,
-					denominator
-				); //TODO: THIS IS SLOW FOR ANY DATA LONGER THAN 1,100-ish. NEEDS IMPROVEMENT
+				power[p] = calculatePower(data, this.binSize, periods[p], avgAll, denominator); //TODO: THIS IS SLOW FOR ANY DATA LONGER THAN 1,100-ish. NEEDS IMPROVEMENT
 				threshold[p] = qchisq(1 - correctedAlpha, Math.round(periods[p] / this.binSize));
 				pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / this.binSize));
 			}

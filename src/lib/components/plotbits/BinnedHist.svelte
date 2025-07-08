@@ -1,13 +1,13 @@
 <script>
 	import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 
-	let { x, y, binSize = 5, binStart = 0, xscale, yscale, colour, yoffset, xoffset } = $props();
+	let { x, y, binSize = 5, xscale, yscale, colour, yoffset, xoffset } = $props();
 
 	let line = $derived.by(() => {
 		let width = xscale.range()[1];
 		let height = yscale.range()[0];
 		//get the binned
-		const binned = binData(x, y, binSize, binStart);
+		const binned = binData(x, y, binSize, 0);
 
 		//remove any bins that are empty
 		for (let i = 0; i < binned.y_out.length; i++) {

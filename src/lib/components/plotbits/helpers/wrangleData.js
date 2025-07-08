@@ -1,48 +1,32 @@
 //Bin data in binSize bins starting at binStart - takes the average y-value and returns the starting x positions
-// eg
-/*
-x = [2,3, 5,6,7,9,11,12,13];
-y = [2,10,9,7,1,3,4 ,6, 6 ];
-binSize = 3;
-binStart = 0;
-binData(x, y, binSize, binStart) //{ bins: [ 0, 3, 6, 9, 12 ], y_out: [ 2, 9.5, 4, 3.5, 6 ] }
-*/
+
 export function binData(x, y, binSize, binStart = 0) {
-	//check
 	if (binSize <= 0) {
 		throw new Error('binSize must be greater than 0');
 	}
 
-	// Initialize output arrays
-	const bins = [];
-	const y_out = [];
+	// Initialize arrays for bin sums and counts
+	const numBins = Math.ceil((max(x) - binStart) / binSize);
+	console.log(numBins, max(x), binStart, binSize);
+	const binSums = new Array(numBins).fill(0);
+	const binCounts = new Array(numBins).fill(0);
+	const bins = new Array(numBins).fill(0).map((_, i) => binStart + i * binSize);
 
-	// Calculate bin edges starting from Bstart
-	let start = binStart;
-	let end = start + binSize;
-
-	// Iterate through x and y to bin values
-	while (start < Math.max(...x)) {
-		// Find indices of x values that fall within the current bin
-		let indices = x.map((val, i) => (val >= start && val < end ? i : -1)).filter((i) => i !== -1);
-
-		// If there are values in this bin
-		if (indices.length > 0) {
-			// Calculate bin center
-			bins.push(start);
-
-			// Calculate average of y values for this bin
-			let ySum = indices.reduce((sum, i) => sum + y[i], 0);
-			y_out.push(ySum / indices.length);
-		} else {
-			bins.push(start);
-			y_out.push(0);
+	// Single pass over x and y to assign bins
+	for (let i = 0; i < x.length; i++) {
+		const valX = x[i];
+		const valY = y[i];
+		if (!isNaN(valX) && !isNaN(valY)) {
+			const binIndex = Math.floor((valX - binStart) / binSize);
+			if (binIndex >= 0 && binIndex < numBins) {
+				binSums[binIndex] += valY;
+				binCounts[binIndex]++;
+			}
 		}
-
-		// Move to next bin
-		start += binSize;
-		end += binSize;
 	}
+
+	// Compute y_out as averages
+	const y_out = binSums.map((sum, i) => (binCounts[i] > 0 ? sum / binCounts[i] : 0));
 
 	return { bins, y_out };
 }
@@ -123,4 +107,24 @@ export function mean(data) {
 		}
 	}
 	return count > 0 ? sum / count : 0;
+}
+
+export function min(data) {
+	let out = Infinity;
+	for (let i = 0; i < data.length; i++) {
+		if (data[i] !== undefined && !isNaN(data[i]) && data[i] < out) {
+			out = data[i];
+		}
+	}
+	return out === Infinity ? null : out;
+}
+
+export function max(data) {
+	let out = -Infinity;
+	for (let i = 0; i < data.length; i++) {
+		if (data[i] !== undefined && !isNaN(data[i]) && data[i] > out) {
+			out = data[i];
+		}
+	}
+	return out === -Infinity ? null : out;
 }
