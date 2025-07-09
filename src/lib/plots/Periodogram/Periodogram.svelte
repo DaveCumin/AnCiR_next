@@ -57,34 +57,39 @@
 
 		// Compute periodogram data - this is faster than the $derived. Could also consider debouncing, if updates are slow.
 		updatePeriodData() {
-			const periods = makeSeqArray(
-				this.parent.periodlimsIN[0],
-				this.parent.periodlimsIN[1],
-				this.parent.periodSteps
-			);
+			if (this.binnedData.bins.length == 0) {
+				this.periodData = { x: [], y: [], threshold: [], pvalue: [] };
+			} else {
+				const periods = makeSeqArray(
+					this.parent.periodlimsIN[0],
+					this.parent.periodlimsIN[1],
+					this.parent.periodSteps
+				);
 
-			const correctedAlpha = Math.pow(1 - this.alpha, 1 / periods.length);
-			const power = new Array(periods.length);
-			const threshold = new Array(periods.length);
-			const pvalue = new Array(periods.length);
+				const correctedAlpha = Math.pow(1 - this.alpha, 1 / periods.length);
+				const power = new Array(periods.length);
+				const threshold = new Array(periods.length);
+				const pvalue = new Array(periods.length);
 
-			// Compute the average one
-			const data = this.binnedData.y_out;
-			const avgAll = mean(data);
-			let denominator = 0;
-			for (let i = 0; i < data.length; i++) {
-				const val = data[i];
-				if (!isNaN(val)) {
-					denominator += (val - avgAll) ** 2;
+				// Compute the average one
+				const data = this.binnedData.y_out;
+				const avgAll = mean(data);
+				let denominator = 0;
+				for (let i = 0; i < data.length; i++) {
+					const val = data[i];
+					if (!isNaN(val)) {
+						denominator += (val - avgAll) ** 2;
+					}
 				}
-			}
 
-			for (let p = 0; p < periods.length; p++) {
-				power[p] = calculatePower(data, this.binSize, periods[p], avgAll, denominator); //TODO: THIS IS SLOW FOR ANY DATA LONGER THAN 1,100-ish. NEEDS IMPROVEMENT
-				threshold[p] = qchisq(1 - correctedAlpha, Math.round(periods[p] / this.binSize));
-				pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / this.binSize));
+				for (let p = 0; p < periods.length; p++) {
+					power[p] = calculatePower(data, this.binSize, periods[p], avgAll, denominator);
+					threshold[p] = qchisq(1 - correctedAlpha, Math.round(periods[p] / this.binSize));
+					pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / this.binSize));
+				}
+
+				this.periodData = { x: periods, y: power, threshold, pvalue };
 			}
-			this.periodData = { x: periods, y: power, threshold, pvalue };
 		}
 
 		constructor(parent, dataIN) {
@@ -188,7 +193,7 @@
 				return new Periodogramclass(parent, null);
 			}
 
-			const periodogram = newPeriodogramclass(parent, null);
+			const periodogram = new Periodogramclass(parent, null);
 			periodogram.padding = json.padding;
 			periodogram.periodlimsIN = json.periodlimsIN;
 			periodogram.periodSteps = json.periodSteps;

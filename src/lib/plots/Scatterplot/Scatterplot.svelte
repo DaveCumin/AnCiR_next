@@ -7,6 +7,7 @@
 	import { core } from '$lib/core/theCore.svelte.js';
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
+	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 
 	class ScatterDataclass {
 		parentplot = $state();
@@ -74,8 +75,8 @@
 			let ymax = -Infinity;
 			this.data.forEach((d, i) => {
 				let tempy = this.data[i].y.getData() ?? [];
-				ymin = Math.min(ymin, Math.min(...tempy));
-				ymax = Math.max(ymax, Math.max(...tempy));
+				ymin = min([ymin, ...tempy]);
+				ymax = max([ymax, ...tempy]);
 			});
 			return [this.ylimsIN[0] ? this.ylimsIN[0] : ymin, this.ylimsIN[1] ? this.ylimsIN[1] : ymax];
 		});
@@ -89,8 +90,8 @@
 			this.data.forEach((d, i) => {
 				let tempx = this.data[i].x.getData() ?? [];
 				tempx = tempx.map((x) => Number(x)); // Ensure all values are numbers
-				xmin = Math.min(xmin, Math.min(...tempx));
-				xmax = Math.max(xmax, Math.max(...tempx));
+				xmin = min([xmin, ...tempx]);
+				xmax = max([xmax, ...tempx]);
 			});
 			return [this.xlimsIN[0] ? this.xlimsIN[0] : xmin, this.xlimsIN[1] ? this.xlimsIN[1] : xmax];
 		});

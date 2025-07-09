@@ -136,7 +136,6 @@
 		core.data = [];
 		let d0id = addData(makeArray(N, 5, 0.15), 'number', 'the time', 'just made this up');
 		core.data[0].addProcess('Add');
-		core.data[0].addProcess('FilterByOtherCol');
 
 		let d1id = addData(makeRhythmic(N, 24 / 0.15), 'number', 'val1', 'imported from thin air');
 		core.data[1].addProcess('Add');
@@ -170,7 +169,7 @@
 			'REALTIME',
 			'Just made up'
 		); //yyyy-LL-dd'T'HH:mm:ss.S'Z'
-		core.data[testtimestring].timeformat = '%Y-%m-%dT%H:%M:%S.%L%Z';
+		core.data[core.data.length - 1].timeformat = '%Y-%m-%dT%H:%M:%S.%L%Z';
 
 		core.tables = [];
 		core.tables.push(new Table({ name: 'table 1' }));
@@ -191,7 +190,7 @@
 		core.plots.push(new Plot({ name: 'testscatter', type: 'scatterplot' }));
 		core.plots[0].plot.addData({
 			x: { refDataID: testtimestring },
-			y: { refDataID: 1 }
+			y: { refDataID: d1id }
 		});
 		console.log('SCATTER LOADED');
 		//Actogram
@@ -200,8 +199,8 @@
 		core.plots[1].y = 400;
 		core.plots[1].height = 700;
 		core.plots[1].plot.addData({
-			x: { refDataID: 0 },
-			y: { refDataID: 1 }
+			x: { refDataID: d0id },
+			y: { refDataID: d1id }
 		});
 		console.log('Actogram LOADED');
 		//Periodogram
@@ -209,13 +208,14 @@
 		core.plots[2].x = 400;
 		core.plots[2].y = 450;
 		core.plots[2].plot.addData({
-			x: { refDataID: 0 },
-			y: { refDataID: 1 }
+			x: { refDataID: d0id },
+			y: { refDataID: d1id }
 		});
 		console.log('Periodogram LOADED');
 
 		console.log('PLOTS LOADED');
 		console.log('core: ', $state.snapshot(core));
+		console.log('REFRESHED');
 	}
 
 	function load() {

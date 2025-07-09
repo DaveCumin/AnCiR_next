@@ -45,7 +45,6 @@
 			};
 		}
 		static fromJSON(json) {
-			//TODO
 			const { plotid, name, x, y, width, height, type, plot } = json;
 			return new Plot({ name, x, y, width, height, type, plot }, plotid);
 		}

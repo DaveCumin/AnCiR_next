@@ -64,7 +64,6 @@ export function getDataFromSource(sourceIndex, vals) {
 		if (typeof processFunction === 'function') {
 			dataFromSource = processFunction(dataFromSource, vals.processSteps[p].parameters); //CALL THE FUNCTION WITH PARAMS
 		} else {
-			// TODO _low: MAKE THIS AN ERROR AND HANDLE IT BETTER (unlikely to enter here, realistically)
 			console.error(`Function '${processName}' does not exist.`);
 		}
 	}
@@ -199,7 +198,6 @@ export function averageBinnedValues(xs, ys, binSize, startAt = 0) {
 	//get the average of the values
 	const averageY = yout.map((sum, index) => {
 		return counts[index] > 0 ? sum / counts[index] : 0;
-		//TODO_HIGH: need to change the above to return NaN, not 0, and then have the actogram (and others) deal with that!!
 	});
 
 	return { time: xout, values: averageY };

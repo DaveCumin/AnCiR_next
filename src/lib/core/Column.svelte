@@ -67,7 +67,10 @@
 			this.processes.push(new Process({ name: processName }, this));
 		}
 		removeProcess(id) {
+			console.log('remnoving process id ', id);
+			console.log('before: ', $state.snapshot(this.processes));
 			this.processes = this.processes.filter((p) => p.processid !== id);
+			console.log('after: ', $state.snapshot(this.processes));
 		}
 
 		//Helper function to see if the column is referencial
@@ -75,8 +78,21 @@
 			return this.refDataID != null;
 		}
 
+		#cachedData = null;
+		#lastDataHash = null;
+
 		//Magic function to get the data, apply time formatting, and apply procesess; will recursively follow the refDataID if needed
 		getData() {
+			// Create a hash of all inputs to detect changes
+			const processHash = this.processes
+				.map((p) => `${p.processid}:${p.name}:${JSON.stringify(p.args)}`)
+				.join('|');
+			const dataHash = `${this.refDataID || ''}:${this.rawData?.length || ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}`;
+
+			if (this.#lastDataHash === dataHash && this.#cachedData) {
+				return this.#cachedData;
+			}
+
 			let out = [];
 			//if there is a reference, then just get that data
 			if (this.refDataID != null) {
@@ -105,6 +121,10 @@
 			for (const p of this.processes) {
 				out = p.doProcess(out);
 			}
+
+			//save hash and return data
+			this.#cachedData = out;
+			this.#lastDataHash = dataHash;
 			return out;
 		}
 
@@ -173,8 +193,9 @@
 		{#if canChange}
 			<ColumnSelector bind:value={col.refDataID} />
 		{/if}
+		<strong>{col.name}</strong><br />
 		{#if !col.isReferencial()}
-			<strong>{col.name}</strong><br /> <italic>{col.provenance}</italic><br />
+			<italic>{col.provenance}</italic><br />
 		{/if}
 		type:
 		<select name="datatype" bind:value={col.type}>
@@ -217,10 +238,13 @@
 			>
 		</li>
 		{#each col.processes as p}
-			<Processcomponent {p} />
-			<button onclick={() => col.removeProcess(p.processid)}>
-				<Icon name="close" width={16} height={16} /></button
-			>
+			{#key p.processid}
+				<!-- Force the refresh when a process is added or removed (mostly the latter)-->
+				<Processcomponent {p} />
+				<button onclick={() => col.removeProcess(p.processid)}>
+					<Icon name="close" width={16} height={16} /></button
+				>
+			{/key}
 		{/each}
 	</ul>
 </details>

@@ -16,8 +16,8 @@
 
 		for (let p = from; p < to; p++) {
 			if (dataIN[p]) {
-				let temp = dataIN[p].map((d) => d - from * period);
-				byPeriod.push(...temp);
+				const offset = from * period;
+				byPeriod.push(...dataIN[p].map((d) => d - offset));
 			}
 		}
 		return byPeriod;
@@ -34,14 +34,15 @@
 			(Number(new Date(this.parent.startTime)) - Number(this.x.getData()[0])) / 3600000
 		);
 		dataByDays = $derived.by(() => {
-			const tempx = this.x.hoursSinceStart.map((x) => x - this.offset);
+			console.log(new Date(), ' dataByDays recalculated');
+			const tempx = this.x.hoursSinceStart;
 
 			const tempy = this.y.getData() ?? [];
 			const xByPeriod = {};
 			const yByPeriod = {};
 
 			for (let i = 0; i < tempx.length; i++) {
-				const period = Math.floor(tempx[i] / this.parent.periodHrs);
+				const period = Math.floor((tempx[i] - this.offset) / this.parent.periodHrs);
 
 				if (period >= 0) {
 					if (!xByPeriod[period]) {
@@ -49,7 +50,7 @@
 						yByPeriod[period] = [];
 					}
 					if (xByPeriod[period]) {
-						xByPeriod[period].push(tempx[i]);
+						xByPeriod[period].push(tempx[i] - this.offset);
 						yByPeriod[period].push(tempy[i]);
 					}
 				}
@@ -146,7 +147,6 @@
 			}
 			let Ndays = 0;
 			this.data.forEach((d, i) => {
-				console.log('d.offset: ', d.offset);
 				Ndays = Math.max(
 					Ndays,
 					Object.keys(d.dataByDays.xByPeriod).length - Math.floor(d.offset / 24)
@@ -190,7 +190,6 @@
 			//find the marker with the id
 			for (let i = 0; i < this.data.length; i++) {
 				for (let j = 0; j < this.data[i].phaseMarkers.length; j++) {
-					console.log(this.data[i].phaseMarkers[j].id);
 					if (this.data[i].phaseMarkers[j].id == markerID) {
 						this.data[i].phaseMarkers[j].addTime(clickedDay, clickedTime);
 					}
@@ -212,14 +211,14 @@
 			if (!json) {
 				return new Actogramclass(parent, null);
 			}
-			//TODO: this needs to be fixed
+
 			const actogram = new Actogramclass(parent, null);
 			actogram.paddingIN = json.paddingIN;
 			actogram.ylimsIN = json.ylimsIN;
 			actogram.doublePlot = json.doublePlot;
 			actogram.periodHrs = json.periodHrs;
 
-			actogram.LightBand = new LightBandClass.fromJSON(json.bands ?? { bands: [] }, actogram);
+			actogram.LightBand = LightBandClass.fromJSON(json.bands ?? { bands: [] }, actogram);
 
 			if (json.data) {
 				actogram.data = json.data.map((d) => ActogramDataclass.fromJSON(d, actogram));
