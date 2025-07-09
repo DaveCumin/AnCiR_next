@@ -291,9 +291,13 @@
 		<Axis
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
-			scale={scaleTime()
-				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-				.range([0, theData.plot.plotwidth])}
+			scale={theData.plot.anyXdataTime
+				? scaleTime()
+						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+						.range([0, theData.plot.plotwidth])
+				: scaleLinear()
+						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+						.range([0, theData.plot.plotwidth])}
 			position="bottom"
 			yoffset={theData.plot.padding.top}
 			xoffset={theData.plot.padding.left}
