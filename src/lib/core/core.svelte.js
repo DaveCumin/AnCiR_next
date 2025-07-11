@@ -1,4 +1,4 @@
-import { Column } from "./column.svelte";
+import { Column } from "./Column.svelte";
 import { Plot } from "./plot.svelte";
 import { Table } from "./table.svelte";
 

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
 import { core, pushObj } from '$lib/core/core.svelte.js';
-import { Column } from './column.svelte';
+import { Column } from './Column.svelte';
 
 let _counter = 0;
 function getNextId() {
