@@ -217,7 +217,10 @@
 			actogram.doublePlot = json.doublePlot;
 			actogram.periodHrs = json.periodHrs;
 
-			actogram.lightBands = LightBandClass.fromJSON(json.lightBands ?? { lightBands: [] }, actogram);
+			actogram.lightBands = LightBandClass.fromJSON(
+				json.lightBands ?? { lightBands: [] },
+				actogram
+			);
 
 			if (json.data) {
 				actogram.data = json.data.map((d) => ActogramDataclass.fromJSON(d, actogram));
@@ -282,7 +285,7 @@
 			<input type="number" bind:value={theData.paddingIN.left} />
 		</p>
 		<p>{JSON.stringify(theData.padding)}</p>
-		
+
 		<p>
 			<LightBand bind:bands={theData.lightBands} which="controls" />
 		</p>

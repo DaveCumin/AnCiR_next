@@ -75,7 +75,7 @@
 				let yNodeId = null;
 
 				['x', 'y'].forEach((axis) => {
-					const refDataID = dataPoint[axis].refDataID;
+					const refDataID = dataPoint[axis].refId;
 					const columnLast = columnLastProcess[refDataID];
 					if (columnLast) {
 						const plotDataId = `${axis}_dp${dpIndex}_plot${plotIndex}`;

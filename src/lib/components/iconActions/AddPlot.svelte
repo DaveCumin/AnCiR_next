@@ -1,24 +1,24 @@
 <script>
-    // @ts-nocheck
-    import { simulateData, ImportData } from '$lib/data/dataTree.svelte';
+	// @ts-nocheck
+	import { simulateData, ImportData } from '$lib/data/dataTree.svelte';
 	import { core, pushObj, appConsts } from '$lib/core/core.svelte';
-	import { Plot } from '$lib/core/plot.svelte';
-    
-	import Icon from '$lib/icons/Icon.svelte';
-    import Modal from '../reusables/Modal.svelte';
-    import Dropdown from '../reusables/Dropdown.svelte';
+	import { Plot } from '$lib/core/Plot.svelte';
 
-    let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
-	
-    let showModal = $state(false);
+	import Icon from '$lib/icons/Icon.svelte';
+	import Modal from '../reusables/Modal.svelte';
+	import Dropdown from '../reusables/Dropdown.svelte';
+
+	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
+
+	let showModal = $state(false);
 	let plotType = $state();
 	let plotName = $derived.by(() => {
-		return plotType + "_" + Math.round(Math.random() * 10, 2)
+		return plotType + '_' + Math.round(Math.random() * 10, 2);
 	});
-    function openModal(type) {
-        showModal = true;
+	function openModal(type) {
+		showModal = true;
 		plotType = type;
-    }
+	}
 
 	let xCol = $state();
 	let yCol = $state();
@@ -31,58 +31,68 @@
 
 		showModal = false;
 	}
-
 </script>
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
-    {#snippet groups()}
-        <div class="action">
-			<button onclick={() => {openModal('actogram')}}>
+	{#snippet groups()}
+		<div class="action">
+			<button
+				onclick={() => {
+					openModal('actogram');
+				}}
+			>
 				Create New Actogram
 			</button>
 		</div>
 
 		<div class="action">
-			<button onclick={() => {openModal('periodogram')}}>
+			<button
+				onclick={() => {
+					openModal('periodogram');
+				}}
+			>
 				Create New Periodogram
 			</button>
 		</div>
-		
+
 		<div class="action">
-			<button onclick={() => {openModal('scatterplot')}}>
+			<button
+				onclick={() => {
+					openModal('scatterplot');
+				}}
+			>
 				Create New ScatterPlot
 			</button>
 		</div>
-    {/snippet}
+	{/snippet}
 </Dropdown>
 
 <!-- TODO: change modal component to icon-like structure? -->
 
 <Modal bind:showModal>
 	{#snippet header()}
-	<div class="heading">
-		<h2>Create New {plotType}</h2>
+		<div class="heading">
+			<h2>Create New {plotType}</h2>
 
-		<div class="choose-file-container">
-			<div>
-				<label for="plotType">Choose a Plot Type:</label>
-	
-				<select bind:value={plotType} name="plotType" id="plot-type">
-					<option value="actogram">Actogram</option>
-					<option value="periodogram">Periodogram</option>
-					<option value="scatterplot">ScatterPlot</option>
-				</select>
-			</div>
+			<div class="choose-file-container">
+				<div>
+					<label for="plotType">Choose a Plot Type:</label>
 
-			<div class="selected">
-				<p class="selected-preview">
-					Name: {plotName}
-					<!-- TODO: double click to change name -->
-				</p>
+					<select bind:value={plotType} name="plotType" id="plot-type">
+						<option value="actogram">Actogram</option>
+						<option value="periodogram">Periodogram</option>
+						<option value="scatterplot">ScatterPlot</option>
+					</select>
+				</div>
+
+				<div class="selected">
+					<p class="selected-preview">
+						Name: {plotName}
+						<!-- TODO: double click to change name -->
+					</p>
+				</div>
 			</div>
 		</div>
-	</div>
-		
 	{/snippet}
 
 	{#snippet children()}
@@ -96,7 +106,7 @@
 						<option value="" disabled selected>Select x</option>
 						{#each core.tables as table (table.id)}
 							{#each table.columns as col (col.id)}
-								<option value={col.id}>{table.name+": "+col.name}</option>
+								<option value={col.id}>{table.name + ': ' + col.name}</option>
 							{/each}
 						{/each}
 					</select>
@@ -107,7 +117,7 @@
 						<option value="" disabled selected>Select y</option>
 						{#each core.tables as table (table.id)}
 							{#each table.columns as col (col.id)}
-								<option value={col.id}>{table.name+": "+col.name}</option>
+								<option value={col.id}>{table.name + ': ' + col.name}</option>
 							{/each}
 						{/each}
 					</select>
@@ -120,8 +130,6 @@
 		</div>
 	{/snippet}
 </Modal>
-
-
 
 <style>
 	.action button {
@@ -200,7 +208,4 @@
 	.import-button:hover {
 		background-color: var(--color-hover);
 	}
-
-
 </style>
-

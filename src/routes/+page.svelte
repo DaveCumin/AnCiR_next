@@ -12,16 +12,16 @@
 
 	import { loadProcesses } from '$lib/processes/processMap.js';
 	import { loadPlots } from '$lib/plots/plotMap.js';
-	
+
 	import { onMount } from 'svelte';
 	import { testJson } from './testJson.svelte.js';
 	import { testJsonDC } from './testJsonDC.svelte';
-	
+
 	import { core, pushObj, appConsts, appState } from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	import { Table } from '$lib/core/table.svelte';
-	import { Plot } from '$lib/core/plot.svelte';
-	import { Process } from '$lib/core/process.svelte';
+	import { Plot } from '$lib/core/Plot.svelte';
+	import { Process } from '$lib/core/Process.svelte';
 
 	// import { testjson } from '$lib/test.svelte.js';
 
@@ -107,14 +107,14 @@
 		jsonData.plots.map((plotjson) => {
 			core.plots.push(Plot.fromJSON(plotjson));
 		});
-	};
+	}
 
 	function addData(dataIN, type, name, provenance) {
 		let newDataEntry;
 		if (dataIN != null) {
 			newDataEntry = new Column({ type, data: dataIN, name, provenance });
 			if (type == 'time') {
-				newDataEntry.timeFormat = 1;
+				newDataEntry.timeFormat = '';
 			}
 			core.data.push(newDataEntry);
 		} else {
@@ -213,21 +213,14 @@
 
 		core.tables = [];
 		core.tables.push(new Table({ name: 'table 1' }));
-		core.tables[0].columnRefs = [
-			testtimestring,
-			testawd.id,
-			d1id,
-			d0id,
-			testref.id,
-			testrefref.id
-		];
+		core.tables[0].columnRefs = [testtimestring, testawd.id, d1id, d0id, testref.id, testrefref.id];
 		core.tables.push(new Table({ name: 'table 2' }));
 		core.tables[1].columnRefs = [d1id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
 
 		core.plots = [];
 		//Scatter plot
 		core.plots.push(new Plot({ name: 'testscatter', type: 'scatterplot' }));
-		core.plots[0].x =  appState.positionDisplayPanel + 20 ; // broke the plot
+		core.plots[0].x = appState.positionDisplayPanel + 20; // broke the plot
 		core.plots[0].plot.addData({
 			x: { refId: 0 },
 			y: { refId: 1 }
@@ -250,7 +243,6 @@
 			y: { refId: 1 }
 		});
 	}
-
 </script>
 
 <!-- <svelte:head>
@@ -267,11 +259,10 @@
 {/if}
 
 {#if appState.showControlPanel}
-	<ControlPanel /> 
+	<ControlPanel />
 {/if}
 
 <PlotDisplay />
-
 
 <style>
 	:global(body) {
@@ -293,7 +284,4 @@
 		font-family: 'Inter', sans-serif;
 		font-size: 14px;
 	}
-	
 </style>
-
-

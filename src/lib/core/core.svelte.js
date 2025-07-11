@@ -1,11 +1,11 @@
-import { Column } from "./Column.svelte";
-import { Plot } from "./plot.svelte";
-import { Table } from "./table.svelte.js";
+import { Column } from './Column.svelte';
+import { Plot } from './Plot.svelte';
+import { Table } from './table.svelte.js';
 
 export const core = $state({
 	data: [],
 	plots: [],
-	tables: [],
+	tables: []
 });
 
 export const appState = $state({
@@ -19,12 +19,10 @@ export const appState = $state({
 	positionDisplayPanel: null,
 	positionControlPanel: null,
 
-	
-
-	canvasOffset: { x: 0, y: 0},
+	canvasOffset: { x: 0, y: 0 },
 	canvasScale: 1.0,
-	
-	selectedPlotId: null,
+
+	selectedPlotId: null
 });
 
 export const appConsts = $state({
@@ -42,7 +40,7 @@ export function pushObj(obj) {
 	} else if (obj instanceof Plot) {
 		core.plots.push(obj);
 	} else {
-		console.log("Error: object not instance of Column, Table or Plot");
+		console.log('Error: object not instance of Column, Table or Plot');
 	}
 }
 
@@ -51,14 +49,11 @@ export function outputCoreAsJson() {
 	return JSON.stringify(output, null, 2);
 }
 
-
-
 /* Core Documentation
 - core contains columns, plots, tables. E.g. call core.columns[column.ids]
 - call pushObj(obj) to add into core.arrays
 
 */
-
 
 //TODOs:
 //- consider states for:

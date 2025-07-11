@@ -44,7 +44,7 @@
 		doProcess(data) {
 			return appConsts.processMap.get(this.name).func(data, this.args);
 		}
-		
+
 		toJSON() {
 			return {
 				id: this.id,
@@ -52,7 +52,7 @@
 				args: this.args
 			};
 		}
-		
+
 		static fromJSON(json, column) {
 			const { id, name, args } = json;
 			return new Process({ name, args }, column, id);

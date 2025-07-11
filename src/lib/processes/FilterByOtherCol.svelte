@@ -1,6 +1,6 @@
 <script module>
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
-	import { getColumnById } from '$lib/core/Column.svelte';
+	import { getColumnByID } from '$lib/core/Column.svelte';
 
 	export function filterbyothercol(x, args) {
 		console.log('filterbyothercol args: ', $state.snapshot(args));
@@ -8,7 +8,7 @@
 		if (byColId == -1) return x;
 
 		const byColValue = args.byColValue;
-		const byColData = getColumnById(byColId).getData();
+		const byColData = getColumnByID(byColId).getData();
 
 		let out = [];
 		for (let i = 0; i < byColData.length; i++) {

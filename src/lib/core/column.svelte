@@ -1,69 +1,48 @@
 <script module>
-	// @ts-nocheck
-	import { forceFormat, getPeriod, getISODate } from '$lib/utils/time/TimeUtils';
+	import { Process } from '$lib/core/Process.svelte';
+	import { core, appConsts } from '$lib/core/core.svelte.js';
+	import { timeParse } from 'd3-time-format';
 
-	import { core } from '$lib/core/core.svelte.js';
-	import { Process } from '$lib/core/process.svelte';
-	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
-
-	let _counter = 0;
-	function getNextId() {
-		return _counter++;
+	export function getColumnByID(id) {
+		const theColumn = core.data.find((column) => column.id === id);
+		return theColumn;
 	}
 
-	export function getColumnById(id) {
-		return core.data.find((column) => column.id === id);
-	}
+	let _columnidCounter = 0;
 
 	export class Column {
-		id;
-		refId = $state(null); // if instance based on another instance
-
-		name = $derived.by(() => {
-			// console.log((column.id));
-			if (this.refId != null) {
-				// console.log($state.snapshot(core.columns))
-				// console.log($state.snapshot(this.refId));
-				return core.data.find((column) => column.id === this.refId)?.name;
-			}
-		});
-
-		type = $derived.by(() => {
-			if (this.isReferencial()) {
-				return core.data.find((column) => column.id === this.refId)?.type;
-			}
-		});
-
+		id; //Unique ID for the column
+		refId = $state(null); //if it is a column that is based on another
+		data = null; //if it has raw data, store that here
+		compression = $state(null); //if any compression is used, store the info here
+		//Where the data are from (references all the way to the primary source [importd (file) or simulated (params)])
 		provenance = $derived.by(() => {
 			if (this.isReferencial()) {
 				return (
 					'refers to ' +
-					getColumnById(this.refId)?.name +
+					getColumnByID(this.refId)?.name +
 					' which is ' +
-					getColumnById(this.refId)?.provenance
+					getColumnByID(this.refId)?.provenance
 				);
 			}
 		});
-
-		#cachedData = null;
-		#lastDataHash = null;
+		//Name for the column - make it the referenced one if it is referencial
+		name = $derived.by(() => {
+			if (this.isReferencial()) {
+				return getColumnByID(this.refId)?.name + '*';
+			}
+		});
+		//Type of data - if it is referencial, then get the type from the reference
+		type = $derived.by(() => {
+			if (this.isReferencial()) {
+				return getColumnByID(this.refId)?.type;
+			}
+		});
+		//time format for converting time data
+		timeformat = $derived(this.type === 'time' ? 0 : null);
 
 		//The associated processes that are applied to the data
 		processes = $state([]);
-
-		//time format for converting time data
-		timeFormat = $derived(this.type === 'time' ? 0 : null);
-
-		//time data needed for some functions
-		startTime = getISODate(this.data, this.timeFormat);
-
-		compression = $state(null); //if any compression is used, store the info here
-		//Where the data are from (references all the way to the primary source [importd (file) or simulated (params)])
-
-		// constructor(type) {
-		// 	this.id = getNextId();
-		// 	this.type = type;
-		// }
 
 		hoursSinceStart = $derived.by(() => {
 			const raw = this.getData();
@@ -71,103 +50,46 @@
 			if (this.type == 'time') return raw.map((x) => (x - raw[0]) / 3600000); //if it's a time, then assume it's in milliseconds and take difference from the start, then convert to hours
 		});
 
-		constructor(columnData = {}, id = null) {
+		constructor({ ...columnData }, id = null) {
 			if (id === null) {
-				this.id = getNextId();
+				this.id = _columnidCounter;
+				_columnidCounter++;
 			} else {
 				this.id = id;
-				_counter = Math.max(id + 1, _counter + 1);
+				_columnidCounter = Math.max(id + 1, _columnidCounter + 1);
 			}
 			//Assign the other data
-			this.name = columnData.name ?? null;
-			this.type = columnData.type ?? null;
-			this.refId = columnData.refId ?? null;
-			this.data = columnData.data ?? null;
-			this.timeFormat = columnData.timeFormat ?? null;
-			this.compression = columnData.compression ?? null;
-			this.provenance = columnData.provenance ?? null;
-			this.processes = columnData.processes ?? [];
-			this.hoursSinceStart = columnData.hoursSinceStart ?? null;
+			Object.assign(this, structuredClone(columnData));
 		}
 
-		// Helper function to see if the column is referencial
+		//To add and remove processes
+		addProcess(processName) {
+			this.processes.push(new Process({ name: processName }, this));
+		}
+		removeProcess(id) {
+			console.log('remnoving process id ', id);
+			console.log('before: ', $state.snapshot(this.processes));
+			this.processes = this.processes.filter((p) => p.processid !== id);
+			console.log('after: ', $state.snapshot(this.processes));
+		}
+
+		//Helper function to see if the column is referencial
 		isReferencial() {
 			return this.refId != null;
 		}
 
-		// Simulate new dataField based on type
-		simulateColumn(type, fs_min, startDate, period, maxHeight, dataLength) {
-			if (!this.name) {
-				this.name = type;
-			}
-			console.log(this.name);
+		#cachedData = null;
+		#lastDataHash = null;
 
-			this.type = type;
-			switch (this.type) {
-				case 'time':
-					this.generateTimeData(fs_min, startDate, dataLength);
-					break;
-				case 'value':
-					this.generateValueData(fs_min, period, maxHeight, dataLength);
-					break;
-				default:
-					console.log('error: double check type');
-			}
-		}
-
-		// Data with type 'time'
-		generateTimeData(fs_min, startDate, dataLength) {
-			const timeData = [];
-
-			for (let i = 0; i < dataLength; i++) {
-				const time = new Date(startDate.getTime() + i * fs_min * 60 * 1000).toLocaleString('en-US');
-				timeData.push(time);
-			}
-
-			const timefmt = 'M/D/YYYY, h:mm:s A';
-			const processedTimeData = forceFormat(timeData, timefmt);
-			const timePeriod = getPeriod(timeData, timefmt);
-
-			this.data = processedTimeData;
-			this.timeFormat = timefmt; //TODO: fix
-
-			// this.properties = {
-			// 	timeFormat: timefmt,
-			// 	recordPeriod: timePeriod
-			// };
-		}
-
-		// Data with type 'value'
-		generateValueData(fs_min, period, maxHeight, dataLength) {
-			const valueData = [];
-
-			const periodL = period * (60 / fs_min); //the length of the period
-
-			for (let j = 0; j < dataLength; j++) {
-				const isLowPeriod = j % periodL < periodL / 2;
-				const mult = isLowPeriod ? maxHeight * 0.05 : maxHeight;
-
-				const randomValue = Math.random() * mult;
-				valueData.push(Math.round(randomValue));
-			}
-			this.data = valueData;
-		}
-
-		// Add and remove processes
-		addProcess(processName) {
-			this.processes.push(new Process({ name: processName }, this));
-		}
-
-		removeProcess(id) {
-			this.processes = this.processes.filter((p) => p.id !== id);
-		}
-
-		// Magic function to get the data, apply time formatting, and apply procesess; will recursively follow the refDataID if needed
+		//Magic function to get the data, apply time formatting, and apply procesess; will recursively follow the refId if needed
 		getData() {
+			console.log('getting data for ', this.name, '(', this.id, '); ref = ', this.refId, '...');
+			// Create a hash of all inputs to detect changes
 			const processHash = this.processes
-				.map((p) => `${p.id}:${p.name}:${JSON.stringify(p.args)}`)
+				.map((p) => `${p.processid}:${p.name}:${JSON.stringify(p.args)}`)
 				.join('|');
-			const dataHash = `${this.refDataID || ''}:${this.rawData?.length || ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}`;
+			const dataHash = `${this.refId || ''}:${this.data?.length || ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}`;
+
 			if (this.#lastDataHash === dataHash && this.#cachedData) {
 				return this.#cachedData;
 			}
@@ -177,86 +99,62 @@
 			if (this.refId != null) {
 				out = core.data.find((column) => column.id === this.refId)?.getData();
 			} else {
-				//get the raw data
-				out = this.data;
 				//deal with compressed data
 				if (this.compression === 'awd') {
 					out = [];
 					for (let a = 0; a < this.data.length; a += this.data.step) {
 						out.push(this.data.start + a);
 					}
+				} else {
+					//get the raw data
+					out = this.data;
 				}
 			}
+			console.log('out here: ', out);
 
 			//deal with timestamps
-			// if (this.type === 'time') {
-			// 	out = out.map((x) => x + this.timeFormat); // TODO: Update to force time by format
-			// }
+			if (this.type === 'time' && !this.isReferencial()) {
+				out = out.map((x) => Number(timeParse(this.timeformat)(x))); // Turn into UNIX values of time
+			}
 
 			//If no data, return empty
 			if (out == []) return [];
+			console.log(out);
 
 			//otherwise apply the processes
 			for (const p of this.processes) {
 				out = p.doProcess(out);
 			}
 
+			//save hash and return data
 			this.#cachedData = out;
 			this.#lastDataHash = dataHash;
 			return out;
 		}
 
-		// Import and Export as JSON
+		//Save and load the column to and from JSON
 		toJSON() {
-			let jsonOut = { id: this.id, name: this.name };
-
+			let jsonOut = { columnID: this.columnID, name: this.name };
 			if (this.refId != null) {
 				jsonOut.refId = this.refId;
 			} else {
 				jsonOut.data = this.data;
 			}
-
 			jsonOut.type = this.type;
-
 			if (this.type == 'time') {
-				jsonOut.timeFormat = this.timeFormat;
+				jsonOut.timeformat = this.timeformat;
 			}
 			if (this.compression != null) {
 				jsonOut.compression = this.compression;
 			}
 			jsonOut.provenance = this.provenance;
 			jsonOut.processes = this.processes;
-			jsonOut.hoursSinceStart = this.hoursSinceStart;
 
 			return jsonOut;
 		}
-
 		static fromJSON(json) {
-			// const {
-			// 	id,
-			// 	name,
-			// 	type,
-			// 	refId,
-			// 	data,
-			// 	timeFormat,
-			// 	processes,
-			// 	compression,
-			// 	provenance
-			// } = json;
-
-			// uncomment above and delete bottom after full transfer
-			const id = json.id ?? json.columnID;
-			const name = json.name ?? 'Untitled Column';
-			const type = json.type; // TODO: should report error actually
-			const refId = json.refId ?? json.refDataID ?? null;
-			const data = json.data ?? json.rawData ?? [];
-			const timeFormat = json.timeFormat ?? json.timeformat ?? '';
-			// const processes = json.processes ?? [];
-			const processes = [];
-			const compression = json.compression ?? null;
-			const provenance = json.provenance ?? null;
-			const hoursSinceStart = json.hoursSinceStart ?? null;
-
+			const { columnID, name, type, refId, data, timeformat, processes, compression, provenance } =
+				json;
 			let column = new Column(
 				{
 					name,
@@ -264,12 +162,11 @@
 					refId: refId ?? null,
 					data: data ?? null,
 					compression: compression ?? null,
-					timeFormat: timeFormat ?? '',
+					timeformat: timeformat ?? '',
 					provenance: provenance ?? null,
-					processes: processes ?? [],
-					hoursSinceStart: hoursSinceStart ?? null
+					processes: []
 				},
-				id
+				columnID
 			);
 			if (processes?.length > 0) {
 				processes.map((p) => column.processes.push(Process.fromJSON(p, column)));
@@ -280,10 +177,9 @@
 </script>
 
 <script>
-	import Processcomponent from '$lib/core/process.svelte'; //Need to rename it because Process is used as the class name in the module, above
+	import Processcomponent from '$lib/core/Process.svelte'; //Need to rename it because Process is used as the class name in the module, above
 	import Icon from '$lib/icons/Icon.svelte';
-	import { appConsts } from '$lib/core/core.svelte.js';
-
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	let { col, canChange = false } = $props();
 </script>
 
@@ -292,12 +188,7 @@
 		{#if canChange}
 			<ColumnSelector bind:value={col.refId} />
 		{/if}
-		<strong
-			>{col.name}
-			{#if col.isReferencial()}
-				<span>*</span>
-			{/if}
-		</strong><br />
+		<strong>{col.name}</strong><br />
 		{#if !col.isReferencial()}
 			<italic>{col.provenance}</italic><br />
 		{/if}
@@ -310,14 +201,14 @@
 	>
 	<ul>
 		{col.type}
-		{#if col.type == 'number'}[{Math.min(...col.getData())},{Math.max(...col.getData())}]{/if}
+		<!-- {#if col.type == 'number'}[{Math.min(...col.getData())},{Math.max(...col.getData())}]{/if} -->
 		{#if col.type == 'time'}
 			<br />
 			Time format:
 			{#if !canChange}
-				<input type="number" bind:value={col.timeFormat} />
+				<input bind:value={col.timeformat} />
 			{:else}
-				{getColumnById(col.refId)?.timeFormat}
+				{getColumnByID(col.refId)?.timeformat}
 			{/if}
 		{/if}
 		{#if col.compression != null}
@@ -329,21 +220,23 @@
 				<p>raw: {col.data.slice(0, 5)}</p>
 			{/if}
 			data: {col.getData()?.slice(0, 5)}
+			N: {col.getData().length}
+			hoursSince: {col.hoursSinceStart?.slice(0, 5)}
 			<button
 				onclick={() => {
 					const proc = [...appConsts.processMap.entries()][
 						Math.floor(Math.random() * [...appConsts.processMap.entries()].length)
 					];
-					console.log(proc[0]);
+
 					col.addProcess(proc[0]);
 				}}><Icon name="add" width={16} height={16} /></button
 			>
 		</li>
 		{#each col.processes as p}
-			{#key p.id}
-				<!-- make sure it updates when removing a process-->
+			{#key p.processid}
+				<!-- Force the refresh when a process is added or removed (mostly the latter)-->
 				<Processcomponent {p} />
-				<button onclick={() => col.removeProcess(p.id)}>
+				<button onclick={() => col.removeProcess(p.processid)}>
 					<Icon name="close" width={16} height={16} /></button
 				>
 			{/key}
