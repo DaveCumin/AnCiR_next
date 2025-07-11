@@ -78,6 +78,7 @@
 			return this.refId != null;
 		}
 
+		//For caching of the data - important for efficiency
 		#cachedData = null;
 		#lastDataHash = null;
 
