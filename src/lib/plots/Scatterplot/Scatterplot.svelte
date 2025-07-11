@@ -174,7 +174,7 @@
 
 {#snippet controls(theData)}
 	<div>
-		<button onclick={() => convertToImage('plot' + theData.parent.plotid, 'svg')}>Save </button>
+		<button onclick={() => convertToImage('plot' + theData.parent.id, 'svg')}>Save </button>
 		Name: <input type="text" bind:value={theData.parent.name} />
 		Width: <input type="number" bind:value={theData.parent.width} />
 		height: <input type="number" bind:value={theData.parent.height} />
@@ -237,7 +237,7 @@
 			+
 		</button>
 
-		{#each theData.data as datum, i}
+		<!-- {#each theData.data as datum, i}
 			<p>
 				Data {i}
 				<button onclick={() => theData.removeData(i)}>-</button>
@@ -253,7 +253,7 @@
 			line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
 			point col: <input type="color" bind:value={datum.pointcolour} />
 			point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
-		{/each}
+		{/each} -->
 	</div>
 {/snippet}
 

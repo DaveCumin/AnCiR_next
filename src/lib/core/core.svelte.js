@@ -18,6 +18,11 @@ export const appState = $state({
 	positionNavbar: 56,
 	positionDisplayPanel: null,
 	positionControlPanel: null,
+
+	
+
+	canvasOffset: { x: 0, y: 0},
+	canvasScale: 1.0,
 	
 	selectedPlotId: null,
 });

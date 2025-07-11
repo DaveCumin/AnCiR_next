@@ -43,7 +43,7 @@
 {/if}
 
 <div class="display-list">
-	{#each core.plots as plot (plot.id)}
+	{#each core.plots.toReversed() as plot (plot.id)}
 		<details>
 			<summary>{plot.name}</summary>
 		</details>

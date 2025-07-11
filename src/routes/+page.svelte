@@ -8,6 +8,7 @@
 	import DisplayPanel from '../lib/components/DisplayPanel.svelte';
 	import ControlPanel from '$lib/components/ControlPanel.svelte';
 	import PlotPanel from '$lib/components/PlotPanel.svelte';
+	import PlotDisplay from '$lib/components/views/PlotDisplay.svelte';
 	
 	import { onMount } from 'svelte';
 	import { testJson } from './testJson.svelte.js';
@@ -34,7 +35,7 @@
 
 	function populatePanelWidth() {
 		appState.positionDisplayPanel = 360 + appState.positionNavbar;
-		appState.positionControlPanel = window.outerWidth - 360;
+		appState.positionControlPanel = window.innerWidth - 360;
 	}
 
 	function loadTestJson() {
@@ -183,13 +184,14 @@
 		core.plots = [];
 		//Scatter plot
 		core.plots.push(new Plot({ name: 'testscatter', type: 'scatterplot' }));
+		core.plots[0].x =  appState.positionDisplayPanel + 20 ; // broke the plot
 		core.plots[0].plot.addData({
 			x: { refId: 0 },
 			y: { refId: 1 }
 		});
 		//Actogram
 		core.plots.push(new Plot({ name: 'an actogram', type: 'actogram' }));
-		core.plots[1].x = 300;
+		core.plots[1].x = appState.positionDisplayPanel + 20;
 		core.plots[1].y = 400;
 		core.plots[1].height = 700;
 		core.plots[1].plot.addData({
@@ -198,7 +200,7 @@
 		});
 		//Periodogram
 		core.plots.push(new Plot({ name: 'a periodogram', type: 'periodogram' }));
-		core.plots[2].x = 400;
+		core.plots[2].x = appState.positionDisplayPanel + 100;
 		core.plots[2].y = 450;
 		core.plots[2].plot.addData({
 			x: { refId: 0 },
@@ -213,19 +215,19 @@
 </svelte:head> 
 -->
 
-{ #if appState.showNavbar}
+{#if appState.showNavbar}
 	<Navbar />
 {/if}
 
-{ #if appState.showDisplayPanel}
+{#if appState.showDisplayPanel}
 	<DisplayPanel />
 {/if}
 
-<PlotPanel />
-
-{ #if appState.showControlPanel}
+{#if appState.showControlPanel}
 	<ControlPanel /> 
 {/if}
+
+<PlotDisplay />
 
 
 <style>

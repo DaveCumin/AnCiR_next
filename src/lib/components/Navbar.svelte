@@ -76,11 +76,15 @@
 		justify-content: space-between;
 		align-items: center;
 
+		background-color: white;
+
 		position: fixed;
 		top: 0;
 		left: 0;
 
 		border-right: 1px solid #d9d9d9;
+
+		z-index: 1000;
 	}
 
 	.icon-container {

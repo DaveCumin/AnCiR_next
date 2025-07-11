@@ -257,9 +257,9 @@
 	}
 </script>
 
-<!-- {#snippet controls(theData)}
+{#snippet controls(theData)}
 	<div>
-		<button onclick={() => convertToImage('plot' + theData.parent.plotid, 'svg')}>Save </button>
+		<button onclick={() => convertToImage('plot' + theData.parent.id, 'svg')}>Save </button>
 		Name: <input type="text" bind:value={theData.parent.name} />
 		Width: <input type="number" bind:value={theData.parent.width} />
 		height: <input type="number" bind:value={theData.parent.height} />
@@ -273,7 +273,7 @@
 		<p>{JSON.stringify(theData.padding)}</p>
 
 		<p>
-			<LightBand bind:bands={theData.LightBand} which="controls" />
+			<LightBand bind:bands={theData.bands} which="controls" />
 		</p>
 		<p>
 			Ndays: <a>{theData.Ndays}</a>
@@ -309,14 +309,14 @@
 		<button
 			onclick={() =>
 				theData.addData({
-					x: { refDataID: pickRandomData() },
-					y: { refDataID: pickRandomData() }
+					x: { refId: pickRandomData() },
+					y: { refId: pickRandomData() }
 				})}
 		>
 			+
 		</button>
 
-		{#each theData.data as datum, i}
+		<!-- {#each theData.data as datum, i}
 			<p>
 				Data {i}
 				<button onclick={() => theData.removeData(i)}>-</button>
@@ -336,13 +336,13 @@
 			{#each datum.phaseMarkers as marker}
 				<PhaseMarker {which} {marker} />
 			{/each}
-		{/each}
+		{/each} -->
 	</div>
-{/snippet} -->
+{/snippet}
 
 {#snippet plot(theData)}
 	<svg
-		id={'plot' + theData.plot.parent.plotid}
+		id={'plot' + theData.plot.parent.id}
 		width={theData.plot.parent.width}
 		height={theData.plot.parent.height}
 		style={`background: white; position: absolute;`}

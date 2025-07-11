@@ -29,7 +29,7 @@
 
 		// TODO: fix plot limitation when resize
 
-		// appState.positionControlPanel = window.outerWidth - width;
+		// appState.positionControlPanel = window.innerWidth - width;
 		// console.log(appState.positionControlPanel);
     }
 
@@ -40,7 +40,7 @@
 		window.removeEventListener('mouseup', stopResize);
 	}
 
-	function startResize() {
+	function startResize(e) {
 		resizing = true;
 		document.body.style.userSelect = 'none'; 
 		window.addEventListener('mousemove', onMouseMove);
@@ -55,8 +55,8 @@
 
 <style>
 	.view-container {
-		z-index: -1;
 		overflow-y: auto;
+		overflow-x: hidden;
 		height: 100%;
 		min-width: 300px;
 		max-width: 444px;
@@ -73,7 +73,8 @@
 		border-left: 1px solid #d9d9d9;
 		background: #ffffff;
 		box-sizing: border-box;
-		overflow: hidden;
+		
+		z-index: 999;
 	}
 
 	.view-container::-webkit-scrollbar {

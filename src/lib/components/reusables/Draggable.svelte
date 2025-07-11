@@ -4,19 +4,17 @@
 	// TODO: invisible
 	// TODO: control panel
 	// TODO: change color, palette on top
-	// TODO: click outside to cancel selection?
-	// TODO: lock to grid
-	// TODO: set y limit
 
-	// TODO: fix layering issue (when onMouseUp finishes in the plot, no bring to front, vice versa)
+	// TODO: lock to grid
 	// @ts-nocheck
 	import { appState, core } from "$lib/core/core.svelte";
 
-	let {x=$bindable(100), y=$bindable(100), width=$bindable(200), height=$bindable(150), title='', id} = $props();
+	let {x=$bindable(100), y=$bindable(100),
+		width=$bindable(200), height=$bindable(150), title='', id,
+		canvasWidth=50000, canvasHeight=50000
+	} = $props();
 	
 	let tempId = id;
-
-	// export let zIndex = 1;
 
 	const minWidth = 100;
 	const minHeight = 100;
@@ -24,6 +22,7 @@
 	let moving = false;
 	let resizing = false;
 	let initialMouseX, initialMouseY, initialWidth, initialHeight;
+	let newX, newY;
 
 	function onMouseDown() {
 		moving = true;
@@ -34,14 +33,18 @@
 			x += e.movementX;
 			y += e.movementY;
 
-			x = Math.max(appState.positionDisplayPanel, 
-				Math.min(x, appState.positionControlPanel - width - 20));
+			x = Math.max(0, Math.min(x, canvasWidth - width - 20));
+        	y = Math.max(0, Math.min(y, canvasHeight - height - 50));
 
 		} else if (resizing) {
 			const deltaX = e.clientX - initialMouseX;
 			const deltaY = e.clientY - initialMouseY;
-			width = Math.max(minWidth, initialWidth + deltaX);
-			height = Math.max(minHeight, initialHeight + deltaY);
+
+			const maxWidth = canvasWidth - x - 20;
+        	const maxHeight = canvasHeight - y - 50;
+
+			width = Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth));
+        	height = Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight));
 		}
 	}
 
@@ -67,13 +70,21 @@
         }
 	}
 
-	function handleClick() {
+	function handleClick(e) {
+		e.stopPropagation();
 		appState.selectedPlotId = tempId;
-		bringToFront(appState.selectedPlotId); //change without zindex
+		appState.showControlPanel = true;
+		
+		bringToFront(appState.selectedPlotId); //change without changing z-index in style
 
 		// console.log("id:", id, "z-index:", zIndex);
-
 	}
+
+	function handleCanvasClick(e) {
+		e.stopPropagation();
+        appState.selectedPlotId = null;
+    }
+
 </script>
 
 <svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp}/>
@@ -84,7 +95,10 @@
 	onclick={handleClick}
 	class:selected={appState.selectedPlotId === id}
 	class="draggable"
-	style="left: {x}px; top: {y}px; width: {width + 20}px; height: {height + 50}px;">
+	style="left: {x}px;
+		top: {y}px;
+		width: {width + 20}px;
+		height: {height + 50}px;">
 	
 	<div class="plot-header" onmousedown={onMouseDown}>
 		{title}
@@ -107,6 +121,8 @@
 		overflow: hidden;
 		display: flex;
 		flex-direction: column;
+
+		z-index: 1;
 	}
 
 	.selected {
@@ -115,12 +131,15 @@
 	}
 
 	.plot-header {
-		cursor: move;
 		background-color: #f8f8f8;
 		padding: 0.5rem 1rem;
 		font-weight: bold;
 		border-bottom: 1px solid var(--color-lightness-85);
 		flex-shrink: 0;
+	}
+
+	.selected .plot-header {
+		cursor: move;
 	}
 
 	.plot-content {

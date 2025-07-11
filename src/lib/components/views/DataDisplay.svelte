@@ -29,7 +29,8 @@
 		dropdownLeft = rect.right + window.scrollX + 12;
 	}
 
-	function openDropdown() {
+	function openDropdown(e) {
+		e.stopPropagation();
 		recalculateDropdownPosition();
 		requestAnimationFrame(() => {
 			showAddTable = true;

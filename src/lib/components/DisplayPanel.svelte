@@ -58,7 +58,6 @@
 
 <style>
 	.view-container {
-		z-index: -1;
 		overflow-y: auto;
 		overflow-x: hidden;
 		height: 100%;
@@ -76,6 +75,8 @@
 		border-right: 1px solid #d9d9d9;
 		background: #fff;
 		box-sizing: border-box;
+
+		z-index: 999;
 	}
 
 	.view-container::-webkit-scrollbar {
@@ -89,7 +90,6 @@
 		position: absolute;
 		top: 0;
 		right: 0;
-		z-index: 1;
 		background-color: transparent;
 	}
 

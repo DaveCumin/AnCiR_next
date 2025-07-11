@@ -357,7 +357,7 @@
 			+
 		</button>
 
-		{#each theData.data as datum, i}
+		<!-- {#each theData.data as datum, i}
 			<p>
 				Data {i}
 				<button onclick={() => theData.removeData(i)}>-</button>
@@ -385,7 +385,7 @@
 			line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
 			point col: <input type="color" bind:value={datum.pointcolour} />
 			point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
-		{/each}
+		{/each} -->
 	</div>
 {/snippet}
 

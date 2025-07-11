@@ -1,19 +1,46 @@
 <!-- Handle click plot (plot id core state) -->
 <script>
+	// @ts-nocheck
     import Icon from "$lib/icons/Icon.svelte";
+
+	import { appConsts, appState, core } from "$lib/core/core.svelte";
+
+	function closeControlPanel() {
+		appState.selectedPlotId = null;
+		appState.showControlPanel = false;
+
+		appState.positionControlPanel = window.innerWidth;
+	}
 
 </script>
 
-<!-- <div class="heading">
+<div class="heading">
 	<p>Control Panel</p>
 
 	<div class="add">
-		<button >
+		<button onclick={closeControlPanel}>
             <Icon name="close" width={16} height={16} className="close"/>
 		</button>
 	</div>
+</div>
 
-</div> -->
+<div class="control-display">
+	<p>{appState.selectedPlotId}</p>
+	
+  	{#key appState.selectedPlotId}
+		{#if (appState.selectedPlotId) >= 0}
+			{@const plot = core.plots.find(p => p.id === appState.selectedPlotId)}
+			{#if plot}
+				{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
+				{#if Plot}
+				<p>{core.plots.find(p => p.id === appState.selectedPlotId)?.name}</p>
+	<p>{JSON.stringify(core.plots.find(p => p.id === appState.selectedPlotId)?.plot)}</p>
+				<Plot theData={plot.plot} which="controls" />
+				{/if}
+			{/if}
+    	{/if}
+  	{/key}
+</div>
 
 <style>
 	.heading {
@@ -48,6 +75,11 @@
 		display: flex;
 		justify-content: center;
 		align-items: center;
+	}
+
+	.control-display {
+		margin-left: 1rem;
+		margin-right: 1rem;
 	}
 
 </style>

@@ -93,3 +93,7 @@
 <div>
 	<Plot bind:theData={plot} which="plot" />
 </div>
+
+<div>
+	<Plot theData={plot.plot} which="controls" />
+</div>
