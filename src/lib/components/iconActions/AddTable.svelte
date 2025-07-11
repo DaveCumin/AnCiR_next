@@ -1,24 +1,24 @@
 <!-- TODO: Import data/table logic might need re-work -->
 <script>
-    // @ts-nocheck
-    import Icon from '$lib/icons/Icon.svelte';
-    import { simulateData, ImportData } from '$lib/data/dataTree.svelte';
-    import Modal from '../reusables/Modal.svelte';
-    import Dropdown from '../reusables/Dropdown.svelte';
+	// @ts-nocheck
+	import Icon from '$lib/icons/Icon.svelte';
+	import { simulateData, ImportData } from '$lib/data/dataTree.svelte';
+	import Modal from '$lib/components/reusables/Modal.svelte';
+	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 
-    let showModal = $state(false);
-    let importPreview = $state();
-    let importReady = $state(false);
-    
-    let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
+	let showModal = $state(false);
+	let importPreview = $state();
+	let importReady = $state(false);
 
-    function openModal() {
-        showModal = true;
+	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
 
-        console.log(showModal, showDropdown);
-    }
+	function openModal() {
+		showModal = true;
 
-    async function onFileChange(e) {
+		console.log(showModal, showDropdown);
+	}
+
+	async function onFileChange(e) {
 		ImportData.setFilesToImport(e.target.files);
 		await ImportData.utils.parseFile(6);
 		importPreview = ImportData.utils.makeTempTable(ImportData.getTempData());
@@ -31,29 +31,25 @@
 
 	async function confirmImport() {
 		await ImportData.utils.loadData();
-		showModal = false; 
+		showModal = false;
 		importReady = false;
 		importPreview = '';
 
-        showDropdown = false;
+		showDropdown = false;
 	}
 </script>
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
-    {#snippet groups()}
-        <div class="action">
-			<button onclick={openModal}>
-				Import Data
-			</button>
-		</div>
-		
+	{#snippet groups()}
 		<div class="action">
-			<button onclick={simulateData}>
-				Simulate Data
-			</button>
-            <!-- since we are handling simulation with a modal, doesn't matter if dropdown closes after action at this stage -->
+			<button onclick={openModal}> Import Data </button>
 		</div>
-    {/snippet}
+
+		<div class="action">
+			<button onclick={simulateData}> Simulate Data </button>
+			<!-- since we are handling simulation with a modal, doesn't matter if dropdown closes after action at this stage -->
+		</div>
+	{/snippet}
 </Dropdown>
 
 <Modal bind:showModal>
@@ -61,25 +57,28 @@
 		<div class="heading">
 			<h2>Import Data</h2>
 			<!-- <button class="btn" onclick={chooseFile}>Choose File</button> -->
-			
+
 			<div class="choose-file-container">
-				<button class="choose-file-button" onclick={chooseFile}>
-					Upload File
-				</button>
+				<button class="choose-file-button" onclick={chooseFile}> Upload File </button>
 				<div class="filename">
 					<p class="filename-preview">
-						Selected: 
+						Selected:
 						{#if ImportData.getFilesToImport()?.[0]}
 							{ImportData.getFilesToImport()[0].name}
 						{/if}
 					</p>
 				</div>
 			</div>
-			
 		</div>
 
 		<!-- input style not shown -->
-		<input id="fileInput" type="file" accept=".csv,.awd" onchange={onFileChange} style="display: none;"/>
+		<input
+			id="fileInput"
+			type="file"
+			accept=".csv,.awd"
+			onchange={onFileChange}
+			style="display: none;"
+		/>
 	{/snippet}
 
 	{#snippet children()}
@@ -104,8 +103,6 @@
 		</div>
 	{/snippet}
 </Modal>
-
-
 
 <style>
 	.action button {
@@ -191,7 +188,6 @@
 		text-align: left;
 	}
 
-
 	:global(.preview-table-wrapper td) {
 		padding: 8px 12px;
 		border: 1px solid var(--color-lightness-85);
@@ -222,7 +218,4 @@
 	.import-button:hover {
 		background-color: var(--color-hover);
 	}
-
-
 </style>
-

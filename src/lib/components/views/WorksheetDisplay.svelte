@@ -3,7 +3,7 @@
 
 	import { core } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
-	import AddPlot from '../iconActions/AddPlot.svelte';
+	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
 
 	let addBtnRef;
 	let showAddPlot = $state(false);
@@ -27,7 +27,6 @@
 	}
 </script>
 
-
 <div class="heading">
 	<p>Worksheet Layers</p>
 
@@ -39,7 +38,7 @@
 </div>
 
 {#if showAddPlot}
-	<AddPlot bind:showDropdown={showAddPlot} dropdownTop={dropdownTop} dropdownLeft={dropdownLeft} />
+	<AddPlot bind:showDropdown={showAddPlot} {dropdownTop} {dropdownLeft} />
 {/if}
 
 <div class="display-list">
@@ -49,7 +48,6 @@
 		</details>
 	{/each}
 </div>
-
 
 <style>
 	.heading {

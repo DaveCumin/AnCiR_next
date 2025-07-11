@@ -5,8 +5,8 @@
 	import { Plot } from '$lib/core/Plot.svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
-	import Modal from '../reusables/Modal.svelte';
-	import Dropdown from '../reusables/Dropdown.svelte';
+	import Modal from '$lib/components/reusables/Modal.svelte';
+	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 
 	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
 

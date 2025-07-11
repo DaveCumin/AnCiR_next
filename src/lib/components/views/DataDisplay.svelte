@@ -5,7 +5,7 @@
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
-	import AddTable from '../iconActions/AddTable.svelte';
+	import AddTable from '$lib/components/iconActions/AddTable.svelte';
 	import Column from '$lib/core/Column.svelte';
 
 	let { canChange = false } = $props();

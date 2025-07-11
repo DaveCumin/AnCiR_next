@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { DateTime } from 'luxon';
 import { guessFormat } from './guessTimeFormat';
-import { min, max } from '../MathsStats';
-import { createSequenceArray } from '../MathsStats';
+import { min, max } from '$lib/utils/MathsStats';
+import { createSequenceArray } from '$lib/utils/MathsStats';
 
 const decimalPlaces = 4;
 
