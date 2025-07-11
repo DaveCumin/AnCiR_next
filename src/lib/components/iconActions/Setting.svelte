@@ -8,8 +8,8 @@
 <script>
     // @ts-nocheck
 	import { core, pushObj, outputCoreAsJson } from '$lib/core/core.svelte';
-    import { Column } from '$lib/core/column.svelte';
-    import { Table } from '$lib/core/table.svelte';
+    import { Column } from '$lib/core/Column.svelte';
+    import { Table } from '$lib/core/table.svelte.js';
 
     import Modal from '../reusables/Modal.svelte';
     import Dropdown from '../reusables/Dropdown.svelte';

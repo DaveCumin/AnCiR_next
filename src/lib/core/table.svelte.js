@@ -114,3 +114,4 @@ export class Table {
 /*
 	collection.push(new Ob(3, '✅ Class.toObj()').toObj())
 */
+

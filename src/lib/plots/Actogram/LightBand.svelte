@@ -128,19 +128,23 @@
 		onclick={() => bands.addBand({ col: bands.length % 2 === 0 ? '#000000' : '#ffffff', pc: 10 })}
 		>+ band</button
 	>
-	{#each bands.bands as b, i}
-		<p>
-			<ColourPicker bind:value={b.col} />
-			<input
-				type="number"
-				bind:value={b.pc}
-				min="1"
-				max="100"
-				step="1"
-				oninput={(e) => bands.updateBandPC(i, e.target.value)}
-			/><button onclick={() => bands.removeBand(i)}>-</button>
-		</p>
-	{/each}
+	{#if bands?.bands}
+		{#each bands.bands as b, i}
+			<p>
+				<ColourPicker bind:value={b.col} />
+				<input
+					type="number"
+					bind:value={b.pc}
+					min="1"
+					max="100"
+					step="1"
+					oninput={(e) => bands.updateBandPC(i, e.target.value)}
+				/><button onclick={() => bands.removeBand(i)}>-</button>
+			</p>
+		{/each}
+	{:else}
+		<p>No bands available</p>
+	{/if}
 	<button onclick={() => bands.swapBandCols()}>swapcols</button>
 {/snippet}
 

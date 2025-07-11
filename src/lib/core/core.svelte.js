@@ -1,6 +1,6 @@
 import { Column } from "./Column.svelte";
 import { Plot } from "./plot.svelte";
-import { Table } from "./table.svelte";
+import { Table } from "./Table.svelte.js";
 
 export const core = $state({
 	data: [],

@@ -20,7 +20,7 @@
 	});
 </script>
 
-<!-- TODO: consider what this should be. Either the replace is for the value, or (more sensibly) it is a replace of the ofiginal value, which needs some implementation thought -->
+<!-- TODO: consider what this should be. Either the replace is for the value, or (more sensibly) it is a replace part of the original string (to change the year, eg), which needs some implementation thought -->
 {#if p.parentCol.type == 'time'}
 	<p>
 		{p.processid} - {p.name} find:<input type="number" bind:value={p.args.find} /> replace:

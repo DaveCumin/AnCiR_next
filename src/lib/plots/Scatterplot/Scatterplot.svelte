@@ -1,15 +1,16 @@
 <script module>
-	// import { Column as ColumnClass } from '$lib/core/Column.svelte';
-	import { Column } from '$lib/core/column.svelte';
+	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotbits/Axis.svelte';
-	import { scaleLinear } from 'd3-scale';
+	import { scaleLinear, scaleTime } from 'd3-scale';
 	import { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { core } from '$lib/core/core.svelte.js';
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
+	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 
 	class ScatterDataclass {
-		parent = $state();
+		parentplot = $state();
 		x = $state();
 		y = $state();
 		linecolour = $state();
@@ -18,17 +19,17 @@
 		pointradius = $state(5);
 
 		constructor(parent, dataIN) {
-			this.parent = parent;
+			this.parentplot = parent;
 
 			if (dataIN && dataIN.x) {
-				this.x = Column.fromJSON(dataIN.x);
+				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new Column({ refId: -1 });
+				this.x = new ColumnClass({ refDataID: -1 });
 			}
 			if (dataIN && dataIN.y) {
-				this.y = Column.fromJSON(dataIN.y);
+				this.y = ColumnClass.fromJSON(dataIN.y);
 			} else {
-				this.y = new Column({ refId: -1 });
+				this.y = new ColumnClass({ refDataID: -1 });
 			}
 			this.linecolour = dataIN?.linecolour ?? getRandomColor();
 			this.pointcolour = dataIN?.pointcolour ?? getRandomColor();
@@ -58,11 +59,11 @@
 	}
 
 	export class Scatterplotclass {
-		parent = $state();
+		parentbox = $state();
 		data = $state([]);
 		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
-		plotheight = $derived(this.parent.height - this.padding.top - this.padding.bottom);
-		plotwidth = $derived(this.parent.width - this.padding.left - this.padding.right);
+		plotheight = $derived(this.parentbox.height - this.padding.top - this.padding.bottom);
+		plotwidth = $derived(this.parentbox.width - this.padding.left - this.padding.right);
 		xlimsIN = $state([null, null]);
 		ylimsIN = $state([null, null]);
 		ylims = $derived.by(() => {
@@ -74,8 +75,8 @@
 			let ymax = -Infinity;
 			this.data.forEach((d, i) => {
 				let tempy = this.data[i].y.getData() ?? [];
-				ymin = Math.min(ymin, Math.min(...tempy));
-				ymax = Math.max(ymax, Math.max(...tempy));
+				ymin = min([ymin, ...tempy]);
+				ymax = max([ymax, ...tempy]);
 			});
 			return [this.ylimsIN[0] ? this.ylimsIN[0] : ymin, this.ylimsIN[1] ? this.ylimsIN[1] : ymax];
 		});
@@ -88,16 +89,23 @@
 			let xmax = -Infinity;
 			this.data.forEach((d, i) => {
 				let tempx = this.data[i].x.getData() ?? [];
-				xmin = Math.min(xmin, Math.min(...tempx));
-				xmax = Math.max(xmax, Math.max(...tempx));
+				tempx = tempx.map((x) => Number(x)); // Ensure all values are numbers
+				xmin = min([xmin, ...tempx]);
+				xmax = max([xmax, ...tempx]);
 			});
 			return [this.xlimsIN[0] ? this.xlimsIN[0] : xmin, this.xlimsIN[1] ? this.xlimsIN[1] : xmax];
 		});
 		xgridlines = $state(true);
 		ygridlines = $state(true);
+		anyXdataTime = $derived.by(() => {
+			if (this.data.length === 0) {
+				return false;
+			}
+			return this.data.some((d) => d.x.type === 'time');
+		});
 
 		constructor(parent, dataIN) {
-			this.parent = parent;
+			this.parentbox = parent;
 			if (dataIN) {
 				this.addData(dataIN);
 			}
@@ -149,35 +157,14 @@
 		const options = Array.from(core.data.keys());
 		return options.length > 0 ? options[Math.floor(Math.random() * options.length)] : -1;
 	}
-
-	let axisDimensions = { bottom: 0, left: 0, top: 0, right: 0 };
-	function handleAxisDimensions(event) {
-		const { width, height } = event.detail;
-		// Update temporary storage instead of padding directly
-		axisDimensions[event.detail.position] =
-			event.detailposition === 'bottom' || event.detailposition === 'top' ? height : width;
-
-		// Update padding only when necessary (e.g., after all axes are measured)
-		const newPadding = { ...theData.plot.padding };
-		let needsUpdate = false;
-		for (const pos of ['bottom', 'left', 'top', 'right']) {
-			if (axisDimensions[pos] > 0 && newPadding[pos] < axisDimensions[pos] + 10) {
-				newPadding[pos] = axisDimensions[pos] + 10; // Add buffer
-				needsUpdate = true;
-			}
-		}
-		if (needsUpdate) {
-			theData.plot.padding = newPadding; // Single update to avoid loop
-		}
-	}
 </script>
 
 {#snippet controls(theData)}
 	<div>
-		<button onclick={() => convertToImage('plot' + theData.parent.id, 'svg')}>Save </button>
-		Name: <input type="text" bind:value={theData.parent.name} />
-		Width: <input type="number" bind:value={theData.parent.width} />
-		height: <input type="number" bind:value={theData.parent.height} />
+		<button onclick={() => convertToImage('plot' + theData.parentbox.id, 'svg')}>Save </button>
+		Name: <input type="text" bind:value={theData.parentbox.name} />
+		Width: <input type="number" bind:value={theData.parentbox.width} />
+		height: <input type="number" bind:value={theData.parentbox.height} />
 
 		<p>
 			Padding: <input type="number" bind:value={theData.padding.top} />
@@ -209,22 +196,44 @@
 		<p>
 			xlims: <button onclick={() => (theData.xlimsIN = [null, null])}>R</button>
 			grid:<input type="checkbox" bind:checked={theData.xgridlines} />
-			<input
-				type="number"
-				step="0.1"
-				value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
-				oninput={(e) => {
-					theData.xlimsIN[0] = [parseFloat(e.target.value)];
-				}}
-			/>
-			<input
-				type="number"
-				step="0.1"
-				value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
-				oninput={(e) => {
-					theData.xlimsIN[1] = [parseFloat(e.target.value)];
-				}}
-			/>
+			{#if theData.anyXdataTime}
+				<input
+					type="datetime-local"
+					value={theData.xlimsIN[0]
+						? new Date(theData.xlimsIN[0]).toISOString().substring(0, 16)
+						: new Date(theData.xlims[0]).toISOString().substring(0, 16)}
+					oninput={(e) => {
+						console.log('xlimsIN[0]', e.target.value);
+						theData.xlimsIN[0] = Number(new Date(e.target.value));
+					}}
+				/>
+				<input
+					type="datetime-local"
+					value={theData.xlimsIN[1]
+						? new Date(theData.xlimsIN[1]).toISOString().substring(0, 16)
+						: new Date(theData.xlims[1]).toISOString().substring(0, 16)}
+					oninput={(e) => {
+						theData.xlimsIN[1] = Number(new Date(e.target.value));
+					}}
+				/>
+			{:else}
+				<input
+					type="number"
+					step="0.1"
+					value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
+					onchange={(e) => {
+						theData.xlimsIN[0] = parseFloat(e.target.value);
+					}}
+				/>
+				<input
+					type="number"
+					step="0.1"
+					value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
+					onchange={(e) => {
+						theData.xlimsIN[1] = parseFloat(e.target.value);
+					}}
+				/>
+			{/if}
 		</p>
 		<p>Data:</p>
 		<button
@@ -237,7 +246,7 @@
 			+
 		</button>
 
-		<!-- {#each theData.data as datum, i}
+		{#each theData.data as datum, i}
 			<p>
 				Data {i}
 				<button onclick={() => theData.removeData(i)}>-</button>
@@ -253,16 +262,16 @@
 			line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
 			point col: <input type="color" bind:value={datum.pointcolour} />
 			point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
-		{/each} -->
+		{/each}
 	</div>
 {/snippet}
 
 {#snippet plot(theData)}
 	<svg
-		id={'plot' + theData.plot.parent.plotid}
-		width={theData.plot.parent.width}
-		height={theData.plot.parent.height}
-		viewBox="0 0 {theData.plot.parent.width} {theData.plot.parent.height}"
+		id={'plot' + theData.plot.parentbox.id}
+		width={theData.plot.parentbox.width}
+		height={theData.plot.parentbox.height}
+		viewBox="0 0 {theData.plot.parentbox.width} {theData.plot.parentbox.height}"
 		style={`background: white; position: absolute;`}
 	>
 		<!-- The Y-axis -->
@@ -277,21 +286,23 @@
 			xoffset={theData.plot.padding.left}
 			nticks={5}
 			gridlines={theData.plot.ygridlines}
-			on:dimensions={handleAxisDimensions}
 		/>
 		<!-- The X-axis -->
 		<Axis
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
-			scale={scaleLinear()
-				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-				.range([0, theData.plot.plotwidth])}
+			scale={theData.plot.anyXdataTime
+				? scaleTime()
+						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+						.range([0, theData.plot.plotwidth])
+				: scaleLinear()
+						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+						.range([0, theData.plot.plotwidth])}
 			position="bottom"
 			yoffset={theData.plot.padding.top}
 			xoffset={theData.plot.padding.left}
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
-			on:dimensions={handleAxisDimensions}
 		/>
 
 		{#each theData.plot.data as datum}

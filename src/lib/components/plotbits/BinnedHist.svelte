@@ -1,14 +1,15 @@
 <script>
 	import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 
-	let { x, y, binSize = 5, binStart = 0, xscale, yscale, colour, yoffset, xoffset } = $props();
+	let { x, y, binSize = 5, xscale, yscale, colour, yoffset, xoffset } = $props();
 
 	let line = $derived.by(() => {
 		let width = xscale.range()[1];
 		let height = yscale.range()[0];
 		//get the binned
-		const binned = binData(x, y, binSize, binStart);
+		const binned = binData(x, y, binSize, 0);
 
+		//now make the path
 		let out = `${width},${height} 0,${height} `; // start at the width,0 and make a baseline
 		//cycle through the points
 		for (let b = 0; b < binned.bins.length - 1; b++) {

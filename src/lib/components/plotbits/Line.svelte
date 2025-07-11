@@ -2,7 +2,6 @@
 	let { x, y, xscale, yscale, strokeCol, strokeWidth, yoffset, xoffset } = $props();
 
 	let xlims = $derived(xscale.domain());
-	let ylims = $derived(yscale.domain());
 
 	let width = $derived(xscale.range()[1]);
 	let height = $derived(yscale.range()[0]);
@@ -22,7 +21,6 @@
 
 	let afterIdx = $derived.by(() => {
 		//find the x point after the limit
-		let xlims = xscale.domain();
 		for (let i = x.length - 2; i >= 0; i--) {
 			if (x[i] <= Math.max(xlims[0], xlims[1])) {
 				return i + 1;
@@ -33,10 +31,13 @@
 
 	let line = $derived.by(() => {
 		let out = '';
-		for (let p = beforeIdx; p <= afterIdx; p++) {
-			out += xscale(x[p]) + ',' + yscale(y[p]) + ' ';
-		}
 
+		for (let p = beforeIdx; p <= afterIdx; p++) {
+			if (!isNaN(x[p]) && !isNaN(y[p])) {
+				//only include values, not NaNs
+				out += xscale(x[p]) + ',' + yscale(y[p]) + ' ';
+			}
+		}
 		return out;
 	});
 </script>

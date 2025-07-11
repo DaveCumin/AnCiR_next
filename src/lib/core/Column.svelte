@@ -1,8 +1,10 @@
 <script module>
 	// @ts-nocheck
 	import { forceFormat, getPeriod, getISODate } from '$lib/utils/time/TimeUtils';
+	
 	import { core } from '$lib/core/core.svelte.js';
 	import { Process } from '$lib/core/process.svelte';
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte'
 	
 	let _counter = 0;
 	function getNextId() {
@@ -61,6 +63,12 @@
 		// 	this.id = getNextId();
 		// 	this.type = type;
 		// }
+
+		hoursSinceStart = $derived.by(() => {
+			const raw = this.getData();
+			if (this.type == 'number') return raw.map((x) => x - raw[0]); //If a number, then assume it's in hours and take difference from the start
+			if (this.type == 'time') return raw.map((x) => (x - raw[0]) / 3600000); //if it's a time, then assume it's in milliseconds and take difference from the start, then convert to hours
+		});
 	
 		constructor(columnData = {}, id = null) {
 			if (id === null) {
@@ -78,6 +86,7 @@
 			this.compression = columnData.compression ?? null;
 			this.provenance = columnData.provenance ?? null;
 			this.processes = columnData.processes ?? [];
+			this.hoursSinceStart = columnData.hoursSinceStart ?? null;
 		}
 
 		// Helper function to see if the column is referencial
@@ -207,6 +216,7 @@
 			}
 			jsonOut.provenance = this.provenance;
 			jsonOut.processes = this.processes;
+			jsonOut.hoursSinceStart = this.hoursSinceStart;
 	
 			return jsonOut;
 		}
@@ -235,6 +245,7 @@
 			const processes = [];
 			const compression = json.compression ?? null;
 			const provenance = json.provenance ?? null;
+			const hoursSinceStart = json.hoursSinceStart ?? null;
 	
 			let column = new Column(
 				{
@@ -245,7 +256,8 @@
 					compression: compression ?? null,
 					timeFormat: timeFormat ?? '',
 					provenance: provenance ?? null,
-					processes: processes ?? []
+					processes: processes ?? [],
+					hoursSinceStart: hoursSinceStart ?? null,
 				},
 				id
 			);
@@ -265,7 +277,7 @@
 </script>
 
 
-<!-- <details open style="margin-left: 1rem">
+<details open style="margin-left: 1rem">
 	<summary>
 		{#if canChange}
 			<ColumnSelector bind:value={col.refId} />
@@ -318,4 +330,4 @@
 			>
 		{/each}
 	</ul>
-</details> -->
+</details>

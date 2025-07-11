@@ -1,5 +1,6 @@
 <script module>
-	import { Column } from '$lib/core/column.svelte';
+	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
@@ -10,31 +11,7 @@
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
 
-	function calculatePower(data, binSize, period) {
-		const colNum = Math.round(period / binSize);
-		const rowNum = Math.ceil(data.length / colNum);
-
-		const avgP = Array.from({ length: colNum }, (_, colIndex) => {
-			const colStart = colIndex;
-			const colValues = Array.from(
-				{ length: rowNum },
-				(_, rowIndex) => data[colStart + rowIndex * colNum]
-			).filter((value) => value !== undefined && !isNaN(value)); // only keep the true values
-
-			//return the mean
-			return mean(colValues);
-		});
-
-		const avgAll = mean(data);
-
-		const numerator =
-			avgP.reduce((sum, avgPValue) => sum + Math.pow(avgPValue - avgAll, 2), 0) *
-			(data.length * rowNum);
-		const denominator = data.reduce((sum, value) => sum + Math.pow(value - avgAll, 2), 0);
-		return numerator / denominator;
-	}
-
-	function calculatePowerFast(data, binSize, period) {
+	function calculatePower(data, binSize, period, avgAll, denominator) {
 		const colNum = Math.round(period / binSize);
 		if (colNum < 1) return 0;
 
@@ -42,8 +19,6 @@
 
 		let colSums = new Array(colNum).fill(0);
 		let colCounts = new Array(colNum).fill(0);
-		let totalSum = 0;
-		let totalCount = 0;
 
 		for (let i = 0; i < data.length; i++) {
 			const col = i % colNum;
@@ -51,18 +26,10 @@
 			if (!isNaN(val)) {
 				colSums[col] += val;
 				colCounts[col]++;
-				totalSum += val;
-				totalCount++;
 			}
 		}
 
-		if (totalCount === 0) return 0;
-
-		const avgAll = totalSum / totalCount;
-
-		const avgP = colSums.map((sum, i) =>
-			colCounts[i] > 0 ? sum / colCounts[i] : avgAll
-		);
+		const avgP = colSums.map((sum, i) => (colCounts[i] > 0 ? sum / colCounts[i] : avgAll));
 
 		let numSum = 0;
 		for (let i = 0; i < colNum; i++) {
@@ -70,30 +37,16 @@
 		}
 		const numerator = numSum * data.length * rowNum;
 
-		let denomSum = 0;
-		for (let i = 0; i < data.length; i++) {
-			const val = data[i];
-			if (!isNaN(val)) {
-			denomSum += (val - avgAll) ** 2;
-			}
-		}
-
-		if (denomSum === 0) return 0;
-
-		return numerator / denomSum;
+		return numerator / denominator;
 	}
-
 
 	class PeriodogramDataclass {
 		parent = $state();
 		x = $state();
 		y = $state();
-		binSize = $state(0.15);
+		binSize = $state(0.25);
 		binnedData = $derived.by(() => {
-			const xData = this.x.getData();
-			const yData = this.y.getData();
-			if (!xData || !yData) return null;
-			return binData(xData, yData, this.binSize, 0);
+			return binData(this.x.hoursSinceStart, this.y.getData(), this.binSize, 0);
 		});
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
 		linecolour = $state();
@@ -104,38 +57,53 @@
 
 		// Compute periodogram data - this is faster than the $derived. Could also consider debouncing, if updates are slow.
 		updatePeriodData() {
-			const periods = makeSeqArray(
-				this.parent.periodlimsIN[0],
-				this.parent.periodlimsIN[1],
-				this.parent.periodSteps
-			);
+			if (this.binnedData.bins.length == 0) {
+				this.periodData = { x: [], y: [], threshold: [], pvalue: [] };
+			} else {
+				const periods = makeSeqArray(
+					this.parent.periodlimsIN[0],
+					this.parent.periodlimsIN[1],
+					this.parent.periodSteps
+				);
 
-			const correctedAlpha = Math.pow(1 - this.alpha, 1 / periods.length);
-			const power = new Array(periods.length);
-			const threshold = new Array(periods.length);
-			const pvalue = new Array(periods.length);
+				const correctedAlpha = Math.pow(1 - this.alpha, 1 / periods.length);
+				const power = new Array(periods.length);
+				const threshold = new Array(periods.length);
+				const pvalue = new Array(periods.length);
 
-			for (let p = 0; p < periods.length; p++) {
-				power[p] = calculatePowerFast(this.binnedData.y_out, this.binSize, periods[p]);
-				threshold[p] = qchisq(1 - correctedAlpha, Math.round(periods[p] / this.binSize));
-				pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / this.binSize));
+				// Compute the average one
+				const data = this.binnedData.y_out;
+				const avgAll = mean(data);
+				let denominator = 0;
+				for (let i = 0; i < data.length; i++) {
+					const val = data[i];
+					if (!isNaN(val)) {
+						denominator += (val - avgAll) ** 2;
+					}
+				}
+
+				for (let p = 0; p < periods.length; p++) {
+					power[p] = calculatePower(data, this.binSize, periods[p], avgAll, denominator);
+					threshold[p] = qchisq(1 - correctedAlpha, Math.round(periods[p] / this.binSize));
+					pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / this.binSize));
+				}
+
+				this.periodData = { x: periods, y: power, threshold, pvalue };
 			}
-
-			this.periodData = { x: periods, y: power, threshold, pvalue };
 		}
 
 		constructor(parent, dataIN) {
 			this.parent = parent;
 
 			if (dataIN && dataIN.x) {
-				this.x = Column.fromJSON(dataIN.x);
+				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new Column({ refId: -1 });
+				this.x = new ColumnClass({ refId: -1 });
 			}
 			if (dataIN && dataIN.y) {
-				this.y = Column.fromJSON(dataIN.y);
+				this.y = ColumnClass.fromJSON(dataIN.y);
 			} else {
-				this.y = new Column({ refId: -1 });
+				this.y = new ColumnClass({ refId: -1 });
 			}
 			this.linecolour = dataIN?.linecolour ?? getRandomColor();
 			this.pointcolour = dataIN?.pointcolour ?? getRandomColor();
@@ -171,7 +139,7 @@
 		plotheight = $derived(this.parent.height - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.parent.width - this.padding.left - this.padding.right);
 		periodlimsIN = $state([1, 30]);
-		periodSteps = $state(0.15);
+		periodSteps = $state(0.25);
 		ylimsIN = $state([null, null]);
 		ylims = $derived.by(() => {
 			if (this.data.length === 0) {
@@ -257,37 +225,6 @@
 			theData.updateAllPeriodData();
 		}
 	});
-
-	let axisDimensions = { bottom: 0, left: 0, top: 0, right: 0 };
-	function handleAxisDimensions(event) {
-		const { width, height } = event.detail;
-		// Update temporary storage instead of padding directly
-		axisDimensions[event.detail.position] =
-			event.detailposition === 'bottom' || event.detailposition === 'top' ? height : width;
-
-		// Update padding only when necessary (e.g., after all axes are measured)
-		const newPadding = { ...theData.plot.padding };
-		let needsUpdate = false;
-		for (const pos of ['bottom', 'left', 'top', 'right']) {
-			if (axisDimensions[pos] > 0 && newPadding[pos] < axisDimensions[pos] + 10) {
-				newPadding[pos] = axisDimensions[pos] + 10; // Add buffer
-				needsUpdate = true;
-			}
-		}
-		if (needsUpdate) {
-			theData.plot.padding = newPadding; // Single update to avoid loop
-		}
-	}
-
-	function samplePoints(x, y, maxPoints = 500) {
-		if (x.length <= maxPoints) return { x, y };
-		const step = Math.ceil(x.length / maxPoints);
-		return {
-			x: x.filter((_, i) => i % step === 0),
-			y: y.filter((_, i) => i % step === 0)
-		};
-	}
-
 </script>
 
 {#snippet controls(theData)}
@@ -350,14 +287,14 @@
 		<button
 			onclick={() =>
 				theData.addData({
-					x: { refDataID: pickRandomData() },
-					y: { refDataID: pickRandomData() }
+					x: { refId: pickRandomData() },
+					y: { refId: pickRandomData() }
 				})}
 		>
 			+
 		</button>
 
-		<!-- {#each theData.data as datum, i}
+		{#each theData.data as datum, i}
 			<p>
 				Data {i}
 				<button onclick={() => theData.removeData(i)}>-</button>
@@ -385,7 +322,7 @@
 			line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
 			point col: <input type="color" bind:value={datum.pointcolour} />
 			point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
-		{/each} -->
+		{/each}
 	</div>
 {/snippet}
 
@@ -409,7 +346,6 @@
 			xoffset={theData.plot.padding.left}
 			nticks={5}
 			gridlines={theData.plot.ygridlines}
-			on:dimensions={handleAxisDimensions}
 		/>
 		<!-- The X-axis -->
 		<Axis
@@ -423,14 +359,12 @@
 			xoffset={theData.plot.padding.left}
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
-			on:dimensions={handleAxisDimensions}
 		/>
 
 		{#each theData.plot.data as datum}
-			{@const sampled = samplePoints(datum.periodData.x, datum.periodData.y)}
 			<Line
 				x={datum.periodData.x}
-    			y={datum.periodData.y}
+				y={datum.periodData.y}
 				xscale={scaleLinear()
 					.domain([theData.plot.periodlimsIN[0], theData.plot.periodlimsIN[1]])
 					.range([0, theData.plot.plotwidth])}
@@ -442,11 +376,9 @@
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 			/>
-
-			
 			<Points
 				x={datum.periodData.x}
-    			y={datum.periodData.y}
+				y={datum.periodData.y}
 				xscale={scaleLinear()
 					.domain([theData.plot.periodlimsIN[0], theData.plot.periodlimsIN[1]])
 					.range([0, theData.plot.plotwidth])}

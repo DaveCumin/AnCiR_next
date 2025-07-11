@@ -1,6 +1,6 @@
 <script module>
-	// import { Column as ColumnClass } from '$lib/core/Column.svelte';
-	import { Column } from '$lib/core/column.svelte';
+	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import ColourPicker, { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
@@ -9,14 +9,15 @@
 	import LightBand, { LightBandClass } from './LightBand.svelte';
 	import BinnedHist from '$lib/components/plotbits/BinnedHist.svelte';
 	import { makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData';
+	import { max, min } from '$lib/components/plotbits/helpers/wrangleData.js';
 
 	function getNdataByPeriods(dataIN, from, to, period) {
 		const byPeriod = [];
 
 		for (let p = from; p < to; p++) {
 			if (dataIN[p]) {
-				let temp = dataIN[p].map((d) => d - from * period);
-				byPeriod.push(...temp);
+				const offset = from * period;
+				byPeriod.push(...dataIN[p].map((d) => d - offset));
 			}
 		}
 		return byPeriod;
@@ -29,21 +30,27 @@
 		y = $state();
 		binSize = $state(0.5);
 		colour = $state();
+		offset = $derived(
+			(Number(new Date(this.parent.startTime)) - Number(this.x.getData()[0])) / 3600000
+		);
 		dataByDays = $derived.by(() => {
-			const tempx = this.x.getData() ?? [];
+			console.log(new Date(), ' dataByDays recalculated');
+			const tempx = this.x.hoursSinceStart;
+
 			const tempy = this.y.getData() ?? [];
 			const xByPeriod = {};
 			const yByPeriod = {};
 
 			for (let i = 0; i < tempx.length; i++) {
-				const period = Math.floor(tempx[i] / this.parent.periodHrs);
+				const period = Math.floor((tempx[i] - this.offset) / this.parent.periodHrs);
+
 				if (period >= 0) {
 					if (!xByPeriod[period]) {
 						xByPeriod[period] = [];
 						yByPeriod[period] = [];
 					}
 					if (xByPeriod[period]) {
-						xByPeriod[period].push(tempx[i]);
+						xByPeriod[period].push(tempx[i] - this.offset);
 						yByPeriod[period].push(tempy[i]);
 					}
 				}
@@ -56,14 +63,14 @@
 			this.parent = parent;
 
 			if (dataIN && dataIN.x) {
-				this.x = Column.fromJSON(dataIN.x);
+				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new Column({ refId: -1 });
+				this.x = new ColumnClass({ refId: -1 });
 			}
 			if (dataIN && dataIN.y) {
-				this.y = Column.fromJSON(dataIN.y);
+				this.y = ColumnClass.fromJSON(dataIN.y);
 			} else {
-				this.y = new Column({ refId: -1 });
+				this.y = new ColumnClass({ refId: -1 });
 			}
 			this.colour = dataIN?.colour ?? getRandomColor();
 		}
@@ -102,9 +109,9 @@
 		isAddingMarkerTo = $state(-1);
 		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 30 });
 		padding = $derived.by(() => {
-			if (this.bands.length > 0) {
+			if (this.lightBands.length > 0) {
 				return {
-					top: this.paddingIN.top + this.bands.height * 2,
+					top: this.paddingIN.top + this.lightBands.height * 2,
 					right: this.paddingIN.right,
 					bottom: this.paddingIN.bottom,
 					left: this.paddingIN.left
@@ -123,23 +130,30 @@
 		eachplotheight = $derived.by(() => {
 			return (this.plotheight - (this.Ndays - 1) * this.spaceBetween) / this.Ndays;
 		});
-		startTime = $state(0);
+		startTime = $derived.by(() => {
+			let minTime = Infinity;
+			this.data.forEach((datum) => {
+				minTime = Math.min(minTime, Number(datum.x.getData()[0]));
+			});
+			return minTime !== Infinity ? new Date(minTime).toISOString().substring(0, 10) : undefined;
+		});
 		spaceBetween = $state(2);
 		doublePlot = $state(2);
 		periodHrs = $state(24);
-		bands = $state(new LightBandClass(this, { bands: [] }));
+		lightBands = $state(new LightBandClass(this, { lightBands: [] }));
 		Ndays = $derived.by(() => {
 			if (this.data.length === 0) {
 				return 0;
 			}
 			let Ndays = 0;
 			this.data.forEach((d, i) => {
-				let tempMaxx = this.data[i].x.getData() ?? [];
-				tempMaxx = Math.max(...tempMaxx);
-				tempMaxx = tempMaxx - this.startTime; //TODO: need to work this out with real times
-				Ndays = Math.max(Ndays, tempMaxx / this.periodHrs);
+				Ndays = Math.max(
+					Ndays,
+					Object.keys(d.dataByDays.xByPeriod).length - Math.floor(d.offset / 24)
+				);
 			});
-			return Math.ceil(Ndays);
+
+			return Ndays;
 		});
 
 		ylimsIN = $state([null, null]);
@@ -152,8 +166,8 @@
 			let ymax = -Infinity;
 			this.data.forEach((d, i) => {
 				let tempy = this.data[i].y.getData() ?? [];
-				ymin = Math.min(ymin, Math.min(...tempy));
-				ymax = Math.max(ymax, Math.max(...tempy));
+				ymin = Math.min(ymin, min(tempy));
+				ymax = Math.max(ymax, max(tempy));
 			});
 			return [this.ylimsIN[0] ? this.ylimsIN[0] : ymin, this.ylimsIN[1] ? this.ylimsIN[1] : ymax];
 		});
@@ -168,7 +182,6 @@
 		addData(dataIN) {
 			this.data.push(new ActogramDataclass(this, dataIN));
 		}
-		
 		removeData(idx) {
 			this.data.splice(idx, 1);
 		}
@@ -177,7 +190,6 @@
 			//find the marker with the id
 			for (let i = 0; i < this.data.length; i++) {
 				for (let j = 0; j < this.data[i].phaseMarkers.length; j++) {
-					console.log(this.data[i].phaseMarkers[j].id);
 					if (this.data[i].phaseMarkers[j].id == markerID) {
 						this.data[i].phaseMarkers[j].addTime(clickedDay, clickedTime);
 					}
@@ -191,7 +203,7 @@
 				paddingIN: this.paddingIN,
 				doublePlot: this.doublePlot,
 				periodHrs: this.periodHrs,
-				bands: this.bands,
+				lightBands: this.lightBands,
 				data: this.data
 			};
 		}
@@ -199,14 +211,13 @@
 			if (!json) {
 				return new Actogramclass(parent, null);
 			}
-			//TODO: this needs to be fixed
 			const actogram = new Actogramclass(parent, null);
 			actogram.paddingIN = json.paddingIN;
 			actogram.ylimsIN = json.ylimsIN;
 			actogram.doublePlot = json.doublePlot;
 			actogram.periodHrs = json.periodHrs;
 
-			actogram.bands = LightBandClass.fromJSON(json.bands ?? { bands: [] }, actogram);
+			actogram.lightBands = LightBandClass.fromJSON(json.lightBands ?? { lightBands: [] }, actogram);
 
 			if (json.data) {
 				actogram.data = json.data.map((d) => ActogramDataclass.fromJSON(d, actogram));
@@ -271,14 +282,14 @@
 			<input type="number" bind:value={theData.paddingIN.left} />
 		</p>
 		<p>{JSON.stringify(theData.padding)}</p>
-
+		
 		<p>
-			<LightBand bind:bands={theData.bands} which="controls" />
+			<LightBand bind:bands={theData.lightBands} which="controls" />
 		</p>
 		<p>
 			Ndays: <a>{theData.Ndays}</a>
 			eachplotheight: <a>{theData.eachplotheight}</a>
-			Start time: <input type="number" bind:value={theData.startTime} />
+			Start time: <input type="date" bind:value={theData.startTime} />
 			Period: <input type="number" step="0.1" bind:value={theData.periodHrs} />
 			Repeat: <input type="number" bind:value={theData.doublePlot} />
 			Space Between:
@@ -316,7 +327,7 @@
 			+
 		</button>
 
-		<!-- {#each theData.data as datum, i}
+		{#each theData.data as datum, i}
 			<p>
 				Data {i}
 				<button onclick={() => theData.removeData(i)}>-</button>
@@ -336,7 +347,7 @@
 			{#each datum.phaseMarkers as marker}
 				<PhaseMarker {which} {marker} />
 			{/each}
-		{/each} -->
+		{/each}
 	</div>
 {/snippet}
 
@@ -348,7 +359,7 @@
 		style={`background: white; position: absolute;`}
 		onclick={(e) => handleClick(e)}
 	>
-		<LightBand bind:bands={theData.plot.bands} which="plot" />
+		<LightBand bind:bands={theData.plot.lightBands} which="plot" />
 		<!-- The X-axis -->
 		<Axis
 			height={theData.plot.plotheight}

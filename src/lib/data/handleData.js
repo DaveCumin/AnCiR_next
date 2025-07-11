@@ -60,23 +60,19 @@ export function getFirstTime(sourceIndex, vals) {
 }
 
 export function getDataFromSource(sourceIndex, vals) {
-  //get the raw data
-  let dataFromSource = getRawData(sourceIndex, vals);
-  //now apply the processes, if any
-  for (let p = 0; p < vals.processSteps.length; p++) {
-    const processName = vals.processSteps[p].process;
-    const processFunction = componentMap[processName].func;
-    // Check if the function exists in the appConsts.processMap
-    if (typeof processFunction === "function") {
-      dataFromSource = processFunction(
-        dataFromSource,
-        vals.processSteps[p].parameters
-      ); //CALL THE FUNCTION WITH PARAMS
-    } else {
-      // TODO _low: MAKE THIS AN ERROR AND HANDLE IT BETTER (unlikely to enter here, realistically)
-      console.error(`Function '${processName}' does not exist.`);
-    }
-  }
+	//get the raw data
+	let dataFromSource = getRawData(sourceIndex, vals);
+	//now apply the processes, if any
+	for (let p = 0; p < vals.processSteps.length; p++) {
+		const processName = vals.processSteps[p].process;
+		const processFunction = componentMap[processName].func;
+		// Check if the function exists in the appConsts.processMap
+		if (typeof processFunction === 'function') {
+			dataFromSource = processFunction(dataFromSource, vals.processSteps[p].parameters); //CALL THE FUNCTION WITH PARAMS
+		} else {
+			console.error(`Function '${processName}' does not exist.`);
+		}
+	}
 
   return dataFromSource;
 }
