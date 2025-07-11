@@ -10,15 +10,6 @@
 
 		const byColValue = args.byColValue;
 		const byColData = getColumnById(byColId).getData();
-		console.log(
-			'filtering on col ',
-			byColId,
-			'; ',
-			core.data[byColId].name,
-			'; byColData = ',
-			byColData.splice(0, 5),
-			'...'
-		);
 
 		let out = [];
 		for (let i = 0; i < byColData.length; i++) {
@@ -41,12 +32,12 @@
 	let { p = $bindable() } = $props();
 </script>
 
-<p>{p.processid} - {p.name}</p>
+<p>{p.id} - {p.name}</p>
 <p>
 	<!-- TODO: Do we really want to exclude the current column (and reference), per below? -->
 	If <ColumnSelector
 		bind:value={p.args.byColId}
-		excludeColIds={[p.parentCol.columnID, p.parentCol.refDataID]}
+		excludeColIds={[p.parentCol.id, p.parentCol.refId]}
 	/> is
 	{#if p.parentCol.type == 'string'}
 		<input type="text" bind:value={p.args.byColValue} />

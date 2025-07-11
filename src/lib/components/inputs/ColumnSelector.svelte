@@ -11,8 +11,8 @@
 
 <select name="columnSelect" onchange={(e) => onChange(e.target.value)} bind:value>
 	{#each core.data as c}
-		{#if !excludeColIds.includes(c.columnID)}
-			<option value={c.columnID}>{c.name}</option>
+		{#if !excludeColIds.includes(c.id)}
+			<option value={c.id}>{c.name}</option>
 		{/if}
 	{/each}
 </select>

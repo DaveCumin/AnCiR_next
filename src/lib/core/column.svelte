@@ -45,7 +45,8 @@
 			}
 		});
 
-		data = $state();
+		#cachedData = null;
+		#lastDataHash = null;
 
 		//The associated processes that are applied to the data
 		processes = $state([]);
@@ -158,11 +159,19 @@
 		}
 
 		removeProcess(id) {
-			this.processes = this.processes.filter((p) => p.processid !== id);
+			this.processes = this.processes.filter((p) => p.id !== id);
 		}
 
 		// Magic function to get the data, apply time formatting, and apply procesess; will recursively follow the refDataID if needed
 		getData() {
+			const processHash = this.processes
+				.map((p) => `${p.id}:${p.name}:${JSON.stringify(p.args)}`)
+				.join('|');
+			const dataHash = `${this.refDataID || ''}:${this.rawData?.length || ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}`;
+			if (this.#lastDataHash === dataHash && this.#cachedData) {
+				return this.#cachedData;
+			}
+
 			let out = [];
 			//if there is a reference, then just get that data
 			if (this.refId != null) {
@@ -191,6 +200,9 @@
 			for (const p of this.processes) {
 				out = p.doProcess(out);
 			}
+
+			this.#cachedData = out;
+			this.#lastDataHash = dataHash;
 			return out;
 		}
 
@@ -328,10 +340,13 @@
 			>
 		</li>
 		{#each col.processes as p}
-			<Processcomponent {p} />
-			<button onclick={() => col.removeProcess(p.id)}>
-				<Icon name="close" width={16} height={16} /></button
-			>
+			{#key p.id}
+				<!-- make sure it updates when removing a process-->
+				<Processcomponent {p} />
+				<button onclick={() => col.removeProcess(p.id)}>
+					<Icon name="close" width={16} height={16} /></button
+				>
+			{/key}
 		{/each}
 	</ul>
 </details>
