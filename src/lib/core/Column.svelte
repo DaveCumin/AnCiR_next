@@ -1,41 +1,41 @@
 <script module>
 	import { Process } from '$lib/core/Process.svelte';
-	import { core, appConsts } from '$lib/core/theCore.svelte.js';
+	import { core, appConsts } from '$lib/core/core.svelte.js';
 	import { timeParse } from 'd3-time-format';
 
 	export function getColumnByID(id) {
-		const theColumn = core.data.find((column) => column.columnID === id);
+		const theColumn = core.data.find((column) => column.id === id);
 		return theColumn;
 	}
 
 	let _columnidCounter = 0;
 
 	export class Column {
-		columnID; //Unique ID for the column
-		refDataID = $state(null); //if it is a column that is based on another
-		rawData = null; //if it has raw data, store that here
+		id; //Unique ID for the column
+		refId = $state(null); //if it is a column that is based on another
+		data = null; //if it has raw data, store that here
 		compression = $state(null); //if any compression is used, store the info here
 		//Where the data are from (references all the way to the primary source [importd (file) or simulated (params)])
 		provenance = $derived.by(() => {
 			if (this.isReferencial()) {
 				return (
 					'refers to ' +
-					getColumnByID(this.refDataID)?.name +
+					getColumnByID(this.refId)?.name +
 					' which is ' +
-					getColumnByID(this.refDataID)?.provenance
+					getColumnByID(this.refId)?.provenance
 				);
 			}
 		});
 		//Name for the column - make it the referenced one if it is referencial
 		name = $derived.by(() => {
 			if (this.isReferencial()) {
-				return getColumnByID(this.refDataID)?.name + '*';
+				return getColumnByID(this.refId)?.name + '*';
 			}
 		});
 		//Type of data - if it is referencial, then get the type from the reference
 		type = $derived.by(() => {
 			if (this.isReferencial()) {
-				return getColumnByID(this.refDataID)?.type;
+				return getColumnByID(this.refId)?.type;
 			}
 		});
 		//time format for converting time data
@@ -52,10 +52,10 @@
 
 		constructor({ ...columnData }, id = null) {
 			if (id === null) {
-				this.columnID = _columnidCounter;
+				this.id = _columnidCounter;
 				_columnidCounter++;
 			} else {
-				this.columnID = id;
+				this.id = id;
 				_columnidCounter = Math.max(id + 1, _columnidCounter + 1);
 			}
 			//Assign the other data
@@ -75,19 +75,21 @@
 
 		//Helper function to see if the column is referencial
 		isReferencial() {
-			return this.refDataID != null;
+			return this.refId != null;
 		}
 
+		//For caching of the data - important for efficiency
 		#cachedData = null;
 		#lastDataHash = null;
 
-		//Magic function to get the data, apply time formatting, and apply procesess; will recursively follow the refDataID if needed
+		//Magic function to get the data, apply time formatting, and apply procesess; will recursively follow the refId if needed
 		getData() {
+			console.log('getting data for ', this.name, '(', this.id, '); ref = ', this.refId, '...');
 			// Create a hash of all inputs to detect changes
 			const processHash = this.processes
 				.map((p) => `${p.processid}:${p.name}:${JSON.stringify(p.args)}`)
 				.join('|');
-			const dataHash = `${this.refDataID || ''}:${this.rawData?.length || ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}`;
+			const dataHash = `${this.refId || ''}:${this.data?.length || ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}`;
 
 			if (this.#lastDataHash === dataHash && this.#cachedData) {
 				return this.#cachedData;
@@ -95,19 +97,21 @@
 
 			let out = [];
 			//if there is a reference, then just get that data
-			if (this.refDataID != null) {
-				out = core.data.find((column) => column.columnID === this.refDataID)?.getData();
+			if (this.refId != null) {
+				out = core.data.find((column) => column.id === this.refId)?.getData();
 			} else {
-				//get the raw data
-				out = this.rawData;
 				//deal with compressed data
 				if (this.compression === 'awd') {
 					out = [];
-					for (let a = 0; a < this.rawData.length; a += this.rawData.step) {
-						out.push(this.rawData.start + a);
+					for (let a = 0; a < this.data.length; a += this.data.step) {
+						out.push(this.data.start + a);
 					}
+				} else {
+					//get the raw data
+					out = this.data;
 				}
 			}
+			console.log('out here: ', out);
 
 			//deal with timestamps
 			if (this.type === 'time' && !this.isReferencial()) {
@@ -116,6 +120,7 @@
 
 			//If no data, return empty
 			if (out == []) return [];
+			console.log(out);
 
 			//otherwise apply the processes
 			for (const p of this.processes) {
@@ -131,10 +136,10 @@
 		//Save and load the column to and from JSON
 		toJSON() {
 			let jsonOut = { columnID: this.columnID, name: this.name };
-			if (this.refDataID != null) {
-				jsonOut.refDataID = this.refDataID;
+			if (this.refId != null) {
+				jsonOut.refId = this.refId;
 			} else {
-				jsonOut.rawData = this.rawData;
+				jsonOut.data = this.data;
 			}
 			jsonOut.type = this.type;
 			if (this.type == 'time') {
@@ -149,23 +154,14 @@
 			return jsonOut;
 		}
 		static fromJSON(json) {
-			const {
-				columnID,
-				name,
-				type,
-				refDataID,
-				rawData,
-				timeformat,
-				processes,
-				compression,
-				provenance
-			} = json;
+			const { columnID, name, type, refId, data, timeformat, processes, compression, provenance } =
+				json;
 			let column = new Column(
 				{
 					name,
 					type,
-					refDataID: refDataID ?? null,
-					rawData: rawData ?? null,
+					refId: refId ?? null,
+					data: data ?? null,
 					compression: compression ?? null,
 					timeformat: timeformat ?? '',
 					provenance: provenance ?? null,
@@ -183,7 +179,7 @@
 
 <script>
 	import Processcomponent from '$lib/core/Process.svelte'; //Need to rename it because Process is used as the class name in the module, above
-	import Icon from '$lib/icon/Icon.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	let { col, canChange = false } = $props();
 </script>
@@ -191,7 +187,7 @@
 <details open style="margin-left: 1rem">
 	<summary>
 		{#if canChange}
-			<ColumnSelector bind:value={col.refDataID} />
+			<ColumnSelector bind:value={col.refId} />
 		{/if}
 		<strong>{col.name}</strong><br />
 		{#if !col.isReferencial()}
@@ -213,7 +209,7 @@
 			{#if !canChange}
 				<input bind:value={col.timeformat} />
 			{:else}
-				{getColumnByID(col.refDataID)?.timeformat}
+				{getColumnByID(col.refId)?.timeformat}
 			{/if}
 		{/if}
 		{#if col.compression != null}
@@ -221,8 +217,8 @@
 			Compression: {col.compression}
 		{/if}
 		<li>
-			{#if !col.isReferencial() && Array.isArray(col.rawData)}
-				<p>raw: {col.rawData.slice(0, 5)}</p>
+			{#if !col.isReferencial() && Array.isArray(col.data)}
+				<p>raw: {col.data.slice(0, 5)}</p>
 			{/if}
 			data: {col.getData()?.slice(0, 5)}
 			N: {col.getData().length}

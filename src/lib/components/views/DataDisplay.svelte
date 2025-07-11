@@ -12,9 +12,10 @@
 	import ColumnSelector from '../inputs/ColumnSelector.svelte';
 
 	//variables for new column
+	let howMakeNewColumn = $state('');
 	let showAddColumnModal = $state(false);
 	let selectedTable = $state();
-	let newColumnType = $state('');
+	let newColumnName = $state('new col');
 	let newColumnLength = $state(0);
 	let newColumnData = $state([]);
 	//variables for random new col
@@ -58,17 +59,18 @@
 	}
 
 	function calcnewColumnData() {
-		console.log('effect | newColType: ', newColumnType);
-		if (newColumnType == 'random') {
+		console.log('effect | newColType: ', howMakeNewColumn);
+		if (howMakeNewColumn == 'random') {
 			newColumnData = Array.from(
 				{ length: newColumnLength },
 				() => Math.round(Math.random() * randomColMultiplier, 2) + randomColOffset
 			);
-			//TODO: The 'existing' runs effects too much for some reason...
-		} else if (newColumnType == 'existing' && newColsExisting.length > 0) {
+		} else if (howMakeNewColumn == 'existing' && newColsExisting.length > 0) {
+			//TODO: need to deal with types and operators in between (eg * for numnbers, space for strings, and rawData for time [but only if no processes])
 			newColumnData = getColumnByID(newColsExisting[0]).getData();
 			for (let nc = 1; nc < newColsExisting.length; nc++) {
 				const temp = getColumnByID(newColsExisting[nc]).getData();
+
 				newColumnData = newColumnData.map((d, i) => d + temp[i]);
 			}
 		} else {
@@ -77,15 +79,21 @@
 	}
 
 	function confirmAddColumn() {
-		console.log('adding ', $state.snapshot(newColumnData));
 		const newDataEntry = new Column({
 			type: 'number',
 			data: $state.snapshot(newColumnData),
-			name: 'new',
+			name: newColumnName,
 			provenance: 'created from columns'
 		});
 		core.data.push(newDataEntry);
 		selectedTable.columnRefs.push(newDataEntry.id);
+		//reset values
+		selectedTable = '';
+		newColumnName = 'new col';
+		howMakeNewColumn = '';
+		newColumnLength = 0;
+		newColumnData = [];
+		//hide modal
 		showAddColumnModal = false;
 	}
 </script>
@@ -129,13 +137,16 @@
 
 	{#snippet children()}
 		<div>
-			Type: <select bind:value={newColumnType} onchange={calcnewColumnData}>
+			Name: <input type="text" bind:value={newColumnName} />
+		</div>
+		<div>
+			Type: <select bind:value={howMakeNewColumn} onchange={calcnewColumnData}>
 				<option value="random">Random</option>
 				<option value="simulated">Simulated</option>
 				<option value="existing">From existing columns</option>
 			</select>
 		</div>
-		{#if newColumnType == 'random'}
+		{#if howMakeNewColumn == 'random'}
 			<div>
 				Multiplier: <input
 					type="number"
@@ -145,7 +156,7 @@
 				Offset: <input type="number" bind:value={randomColOffset} onchange={calcnewColumnData} />
 			</div>
 		{/if}
-		{#if newColumnType == 'existing'}
+		{#if howMakeNewColumn == 'existing'}
 			{#each newColsExisting as col, i}
 				<ColumnSelector bind:value={newColsExisting[i]} onChange={calcnewColumnData} />
 			{/each}

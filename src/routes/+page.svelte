@@ -220,27 +220,28 @@
 		core.plots = [];
 		//Scatter plot
 		core.plots.push(new Plot({ name: 'testscatter', type: 'scatterplot' }));
-		core.plots[0].x = appState.positionDisplayPanel + 20; // broke the plot
+		core.plots[0].x = 5;
+		core.plots[0].y = 5;
 		core.plots[0].plot.addData({
-			x: { refId: 0 },
-			y: { refId: 1 }
+			x: { refId: core.data[0].id },
+			y: { refId: core.data[1].id }
 		});
 		//Actogram
 		core.plots.push(new Plot({ name: 'an actogram', type: 'actogram' }));
-		core.plots[1].x = appState.positionDisplayPanel + 20;
-		core.plots[1].y = 400;
+		core.plots[1].x = 20;
+		core.plots[1].y = 300;
 		core.plots[1].height = 700;
 		core.plots[1].plot.addData({
-			x: { refId: 0 },
-			y: { refId: 1 }
+			x: { refId: core.data[0].id },
+			y: { refId: core.data[1].id }
 		});
 		//Periodogram
 		core.plots.push(new Plot({ name: 'a periodogram', type: 'periodogram' }));
-		core.plots[2].x = appState.positionDisplayPanel + 100;
+		core.plots[2].x = 10;
 		core.plots[2].y = 450;
 		core.plots[2].plot.addData({
-			x: { refId: 0 },
-			y: { refId: 1 }
+			x: { refId: core.data[0].id },
+			y: { refId: core.data[1].id }
 		});
 	}
 </script>
