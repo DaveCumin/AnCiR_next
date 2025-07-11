@@ -7,14 +7,24 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddTable from '$lib/components/iconActions/AddTable.svelte';
 	import Column from '$lib/core/Column.svelte';
+	import { getColumnByID } from '$lib/core/Column.svelte';
+	import Modal from '$lib/components/reusables/Modal.svelte';
+	import ColumnSelector from '../inputs/ColumnSelector.svelte';
+
+	//variables for new column
+	let showAddColumnModal = $state(false);
+	let selectedTable = $state();
+	let newColumnType = $state('');
+	let newColumnLength = $state(0);
+	let newColumnData = $state([]);
+	//variables for random new col
+	let randomColMultiplier = $state(10);
+	let randomColOffset = $state(100);
+	//vars for existing new col
+	let newColsValueReset = $state(-1);
+	let newColsExisting = $state([]);
 
 	let { canChange = false } = $props();
-
-	// test reactivity
-	function changeDataFieldContent() {
-		console.log($state.snapshot(core.data));
-		core.data[1].data[0] = core.data[0].data[0] + Math.round(Math.random() * 10, 2);
-	}
 
 	// AddTable dropdown
 	let addBtnRef;
@@ -38,6 +48,26 @@
 		});
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
+
+	//functions to deal with adding a new column
+	function addColumn(tableid) {
+		console.log('Add a column');
+		selectedTable = core.tables.find((t) => t.id === tableid);
+		newColumnLength = getColumnByID(selectedTable.columnRefs[0]).getData().length;
+		showAddColumnModal = true;
+	}
+	$effect(() => {
+		console.log('effect | newColType: ', newColumnType);
+		if (newColumnType == 'random') {
+			newColumnData = Array.from(
+				{ length: newColumnLength },
+				() => Math.round(Math.random() * randomColMultiplier, 2) + randomColOffset
+			);
+		} else if (newColumnType == 'existing') {
+		} else {
+			newColumnData = [];
+		}
+	});
 </script>
 
 <div class="heading">
@@ -56,6 +86,7 @@
 		<div class="table-container">
 			<details class="table-item">
 				<summary class="table-name">{table.name}</summary>
+				<button onclick={() => addColumn(table.id)}>Add column</button>
 				{#each table.columns as col}
 					<Column col={core.data.find((c) => c.id === col.id)} />
 				{/each}
@@ -64,21 +95,53 @@
 	{/each}
 </div>
 
-<!-- <div class="data-list">
-	{#each core.tables as entry (entry.id)}
-		<div class="card">
-			<p>{entry.name}</p>
-		</div>
-	{/each}
-</div> -->
-
-<!-- <div class="test">
-	<button onclick={changeDataFieldContent}> change data point </button>
-</div> -->
-
 {#if showAddTable}
 	<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
 {/if}
+
+<Modal bind:showModal={showAddColumnModal}>
+	{#snippet header()}
+		<div class="heading">
+			<h2>Add a column to {selectedTable?.name}</h2>
+			<!-- <button class="btn" onclick={chooseFile}>Choose File</button> -->
+		</div>
+	{/snippet}
+
+	{#snippet children()}
+		<div>
+			Type: <select bind:value={newColumnType}>
+				<option value="random">Random</option>
+				<option value="simulated">Simulated</option>
+				<option value="existing">From existing columns</option>
+			</select>
+		</div>
+		{#if newColumnType == 'random'}
+			<div>
+				Multiplier: <input type="number" bind:value={randomColMultiplier} />
+				Offset: <input type="number" bind:value={randomColOffset} />
+			</div>
+		{/if}
+		{#if newColumnType == 'existing'}
+			{#each newColsExisting as col, i}
+				<ColumnSelector bind:value={newColsExisting[i]} />
+			{/each}
+			Add new: <ColumnSelector
+				bind:value={newColsValueReset}
+				onChange={(value) => {
+					newColsExisting.push(Number(value));
+					newColsValueReset = -1;
+				}}
+			/>
+		{/if}
+
+		{#if newColumnData.length > 0}
+			<div>
+				Preview:
+				{newColumnData.slice(0, 5)}
+			</div>
+		{/if}
+	{/snippet}
+</Modal>
 
 <style>
 	.heading {

@@ -1,15 +1,11 @@
 // @ts-nocheck
 import { forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
 import { core, pushObj } from '$lib/core/core.svelte.js';
-import { Column } from './Column.svelte';
+import { getColumnByID, Column } from './Column.svelte';
 
 let _counter = 0;
 function getNextId() {
 	return _counter++;
-}
-
-function getColumnById(id) {
-	return core.data.find((column) => column.id === id);
 }
 
 export class Table {
@@ -20,9 +16,9 @@ export class Table {
 	// dataLength = 0;
 
 	columnRefs = $state([]); //Reference IDs for the raw data that are columns
-	
+
 	columns = $derived.by(() => {
-		return this.columnRefs.map((colRef) => getColumnById(colRef));
+		return this.columnRefs.map((colRef) => getColumnByID(colRef));
 	}); //The actual columns of data
 
 	// constructor(name, importedFrom, dataLength) {
@@ -45,11 +41,10 @@ export class Table {
 		this.columnRefs = tableData.columnRefs ?? [];
 	}
 
-
 	// getter and setter methods
 	setName = (name) => {
 		this.name = name;
-	}
+	};
 
 	// Function to add or remove a column of data from the table
 	addColumn(col) {
@@ -61,7 +56,6 @@ export class Table {
 	removeColumn(col) {
 		this.columnRefs = this.columnRefs.filter((_, i) => i !== col.id);
 	}
-
 
 	// create simulated data through static function
 	static simulateTable(Ndays, fs_min, startDate, periods, maxHeights) {
@@ -78,14 +72,14 @@ export class Table {
 		//time
 		const dft = new Column();
 		dft.simulateColumn('time', fs_min, startDate, periods, maxHeights, dataLength);
-		
+
 		this.addColumn(dft);
 
 		//value
 		for (let i = 0; i < periods.length; i++) {
 			const dfv = new Column();
 			dfv.simulateColumn('value', fs_min, startDate, periods[i], maxHeights[i], dataLength);
-			
+
 			this.addColumn(dfv);
 		}
 	}
@@ -95,7 +89,7 @@ export class Table {
 		return {
 			id: this.id,
 			name: this.name,
-			columnRefs: this.columnRefs,
+			columnRefs: this.columnRefs
 		};
 	}
 
@@ -110,8 +104,3 @@ export class Table {
 		return table;
 	}
 }
-
-/*
-	collection.push(new Ob(3, '✅ Class.toObj()').toObj())
-*/
-
