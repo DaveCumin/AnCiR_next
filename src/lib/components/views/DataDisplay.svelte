@@ -6,8 +6,8 @@
 	import { core, appConsts } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddTable from '$lib/components/iconActions/AddTable.svelte';
-	import Column from '$lib/core/Column.svelte';
-	import { getColumnByID } from '$lib/core/Column.svelte';
+	import ColumnComponent from '$lib/core/Column.svelte';
+	import { Column, getColumnByID } from '$lib/core/Column.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import ColumnSelector from '../inputs/ColumnSelector.svelte';
 
@@ -56,18 +56,38 @@
 		newColumnLength = getColumnByID(selectedTable.columnRefs[0]).getData().length;
 		showAddColumnModal = true;
 	}
-	$effect(() => {
+
+	function calcnewColumnData() {
 		console.log('effect | newColType: ', newColumnType);
 		if (newColumnType == 'random') {
 			newColumnData = Array.from(
 				{ length: newColumnLength },
 				() => Math.round(Math.random() * randomColMultiplier, 2) + randomColOffset
 			);
-		} else if (newColumnType == 'existing') {
+			//TODO: The 'existing' runs effects too much for some reason...
+		} else if (newColumnType == 'existing' && newColsExisting.length > 0) {
+			newColumnData = getColumnByID(newColsExisting[0]).getData();
+			for (let nc = 1; nc < newColsExisting.length; nc++) {
+				const temp = getColumnByID(newColsExisting[nc]).getData();
+				newColumnData = newColumnData.map((d, i) => d + temp[i]);
+			}
 		} else {
 			newColumnData = [];
 		}
-	});
+	}
+
+	function confirmAddColumn() {
+		console.log('adding ', $state.snapshot(newColumnData));
+		const newDataEntry = new Column({
+			type: 'number',
+			data: $state.snapshot(newColumnData),
+			name: 'new',
+			provenance: 'created from columns'
+		});
+		core.data.push(newDataEntry);
+		selectedTable.columnRefs.push(newDataEntry.id);
+		showAddColumnModal = false;
+	}
 </script>
 
 <div class="heading">
@@ -88,7 +108,7 @@
 				<summary class="table-name">{table.name}</summary>
 				<button onclick={() => addColumn(table.id)}>Add column</button>
 				{#each table.columns as col}
-					<Column col={core.data.find((c) => c.id === col.id)} />
+					<ColumnComponent col={core.data.find((c) => c.id === col.id)} />
 				{/each}
 			</details>
 		</div>
@@ -109,7 +129,7 @@
 
 	{#snippet children()}
 		<div>
-			Type: <select bind:value={newColumnType}>
+			Type: <select bind:value={newColumnType} onchange={calcnewColumnData}>
 				<option value="random">Random</option>
 				<option value="simulated">Simulated</option>
 				<option value="existing">From existing columns</option>
@@ -117,19 +137,24 @@
 		</div>
 		{#if newColumnType == 'random'}
 			<div>
-				Multiplier: <input type="number" bind:value={randomColMultiplier} />
-				Offset: <input type="number" bind:value={randomColOffset} />
+				Multiplier: <input
+					type="number"
+					bind:value={randomColMultiplier}
+					onchange={calcnewColumnData}
+				/>
+				Offset: <input type="number" bind:value={randomColOffset} onchange={calcnewColumnData} />
 			</div>
 		{/if}
 		{#if newColumnType == 'existing'}
 			{#each newColsExisting as col, i}
-				<ColumnSelector bind:value={newColsExisting[i]} />
+				<ColumnSelector bind:value={newColsExisting[i]} onChange={calcnewColumnData} />
 			{/each}
 			Add new: <ColumnSelector
 				bind:value={newColsValueReset}
 				onChange={(value) => {
 					newColsExisting.push(Number(value));
 					newColsValueReset = -1;
+					calcnewColumnData();
 				}}
 			/>
 		{/if}
@@ -139,6 +164,7 @@
 				Preview:
 				{newColumnData.slice(0, 5)}
 			</div>
+			<div><button onclick={confirmAddColumn}>Add these data</button></div>
 		{/if}
 	{/snippet}
 </Modal>
