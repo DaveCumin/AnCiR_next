@@ -1,5 +1,5 @@
 <script module>
-	import { appConsts } from '$lib/core/theCore.svelte';
+	import { appConsts } from '$lib/core/core.svelte';
 
 	let processidCounter = 0;
 
