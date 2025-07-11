@@ -4,7 +4,7 @@
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
-	import { core } from '$lib/core/theCore.svelte.js';
+	import { core } from '$lib/core/core.svelte.js';
 	import { binData, mean, makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { pchisq, qchisq } from '$lib/data/CDFs';
 
@@ -98,12 +98,12 @@
 			if (dataIN && dataIN.x) {
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new ColumnClass({ refDataID: -1 });
+				this.x = new ColumnClass({ refId: -1 });
 			}
 			if (dataIN && dataIN.y) {
 				this.y = ColumnClass.fromJSON(dataIN.y);
 			} else {
-				this.y = new ColumnClass({ refDataID: -1 });
+				this.y = new ColumnClass({ refId: -1 });
 			}
 			this.linecolour = dataIN?.linecolour ?? getRandomColor();
 			this.pointcolour = dataIN?.pointcolour ?? getRandomColor();
@@ -194,7 +194,7 @@
 			}
 
 			const periodogram = new Periodogramclass(parent, null);
-			periodogram.padding = json.padding;
+			periodogram.padding = json.padding ?? json.paddingIN;
 			periodogram.periodlimsIN = json.periodlimsIN;
 			periodogram.periodSteps = json.periodSteps;
 			periodogram.ylimsIN = json.ylimsIN;
@@ -287,8 +287,8 @@
 		<button
 			onclick={() =>
 				theData.addData({
-					x: { refDataID: pickRandomData() },
-					y: { refDataID: pickRandomData() }
+					x: { refId: pickRandomData() },
+					y: { refId: pickRandomData() }
 				})}
 		>
 			+

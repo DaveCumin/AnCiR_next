@@ -1,5 +1,5 @@
 <script>
-	import { core } from '$lib/core/theCore.svelte.js';
+	import { core } from '$lib/core/core.svelte.js';
 	let {
 		onChange = (value) => {
 			console.log('selected col ' + value);

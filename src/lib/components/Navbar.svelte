@@ -1,12 +1,37 @@
+<!-- TODO: fix setting dropdown position -->
+
 <!-- Navbar.svelte -->
 <script>
-	import { app_state } from '$lib/core/theCore.svelte.js';
-	import Icon from '$lib/icon/Icon.svelte';
+	// @ts-nocheck
+	import { appState } from '$lib/core/core.svelte.js';
+	import Icon from '$lib/icons/Icon.svelte';
+	import Setting from './iconActions/Setting.svelte';
+
+	let gearBtnRef;
+	let showSetting = $state(false);
+	let dropdownTop = $state(0);
+	let dropdownLeft = $state(0);
+
+	function recalculateDropdownPosition() {
+		if (!gearBtnRef) return;
+		const rect = gearBtnRef.getBoundingClientRect();
+
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
+	}
+
+	function openDropdown() {
+		recalculateDropdownPosition();
+		requestAnimationFrame(() => {
+			showSetting = true;
+		});
+		window.addEventListener('resize', recalculateDropdownPosition);
+	}
 
 	function switchTab(tab) {
-		app_state.current_tab = tab;
-		console.log('current tab:', tab);
+		appState.currentTab = tab;
 	}
+	
 </script>
 
 <nav class="container">
@@ -14,7 +39,7 @@
 		<button onclick={() => switchTab('data')}>
 			<Icon
 				name="table"
-				style={app_state.current_tab === 'data' ? 'fill: pink;' : 'fill: #D9D9D9;'}
+				className={appState.currentTab === 'data' ? 'icon active' : 'icon'}
 			/>
 			<!-- <TableIcon /> -->
 		</button>
@@ -22,14 +47,14 @@
 		<button onclick={() => switchTab('worksheet')}>
 			<Icon
 				name="layer"
-				style={app_state.current_tab === 'worksheet' ? 'fill: pink;' : 'fill: #D9D9D9;'}
+				className={appState.currentTab === 'worksheet' ? 'icon active' : 'icon'}
 			/>
 			<!-- <WorksheetIcon /> -->
 		</button>
 	</div>
 
 	<div class="icon-container">
-		<button>
+		<button bind:this={gearBtnRef} onclick={openDropdown}>
 			<Icon name="gear" />
 		</button>
 		<button>
@@ -38,20 +63,28 @@
 	</div>
 </nav>
 
+{#if showSetting}
+	<Setting bind:showDropdown={showSetting} dropdownTop={dropdownTop} dropdownLeft={dropdownLeft} />
+{/if}
+
 <style>
 	.container {
-		width: 4vw;
+		min-width: 56px;
 		height: 100vh;
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
 		align-items: center;
 
+		background-color: white;
+
 		position: fixed;
 		top: 0;
 		left: 0;
 
 		border-right: 1px solid #d9d9d9;
+
+		z-index: 1000;
 	}
 
 	.icon-container {
@@ -60,15 +93,10 @@
 		justify-content: center;
 		align-items: center;
 
-		margin-top: 24px;
-		margin-bottom: 24px;
+		margin-top: 28px;
+		margin-bottom: 28px;
 	}
 
-	/* .icon-container :global(svg) {
-        width: 24px;
-        height: 24px;
-        margin: 0.5rem;
-    } */
 
 	button {
 		background-color: transparent;

@@ -1,7 +1,7 @@
 <script module>
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
-	import { getColumnByID } from '$lib/core/Column.svelte';
-	import { core } from '$lib/core/theCore.svelte';
+	import { getColumnById } from '$lib/core/Column.svelte';
+	import { core } from '$lib/core/core.svelte';
 
 	export function filterbyothercol(x, args) {
 		console.log('filterbyothercol args: ', $state.snapshot(args));
@@ -9,7 +9,7 @@
 		if (byColId == -1) return x;
 
 		const byColValue = args.byColValue;
-		const byColData = getColumnByID(byColId).getData();
+		const byColData = getColumnById(byColId).getData();
 		console.log(
 			'filtering on col ',
 			byColId,

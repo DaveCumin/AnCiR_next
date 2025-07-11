@@ -11,8 +11,8 @@
 
 <script>
 	import { onMount } from 'svelte';
-	import { appConsts } from '$lib/core/theCore.svelte';
-	import Box from '../Box.svelte';
+	import { appConsts } from '$lib/core/core.svelte';
+	// import Box from '../Box.svelte';
 	let { value = $bindable(getRandomColor()), onChange = () => {} } = $props();
 	let plot = $state({ x: 0, y: 0, width: 260, height: 400 });
 

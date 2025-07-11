@@ -1,20 +1,29 @@
 <!-- +page.svelte -->
 
 <script>
+	// @ts-nocheck
 	// import { version } from "../../package.json";
 	import '../app.css';
 	import Navbar from '$lib/components/Navbar.svelte';
-	import ViewDisplay from '../lib/components/ViewDisplay.svelte';
+	import DisplayPanel from '../lib/components/DisplayPanel.svelte';
+	import ControlPanel from '$lib/components/ControlPanel.svelte';
+	import PlotPanel from '$lib/components/PlotPanel.svelte';
+	import PlotDisplay from '$lib/components/views/PlotDisplay.svelte';
+
 	import { loadProcesses } from '$lib/processes/processMap.js';
 	import { loadPlots } from '$lib/plots/plotMap.js';
-	import { core, appConsts } from '$lib/core/theCore.svelte.js';
-	import { Column } from '$lib/core/Column.svelte';
-	import { Table } from '$lib/core/Table.svelte';
-	import Plotcomponent, { Plot } from '$lib/core/Plot.svelte';
+	
 	import { onMount } from 'svelte';
-	import Visualise from '$lib/components/Visualise.svelte';
+	import { testJson } from './testJson.svelte.js';
+	import { testJsonDC } from './testJsonDC.svelte';
+	
+	import { core, pushObj, appConsts, appState } from '$lib/core/core.svelte';
+	import { Column } from '$lib/core/Column.svelte';
+	import { Table } from '$lib/core/table.svelte';
+	import { Plot } from '$lib/core/plot.svelte';
+	import { Process } from '$lib/core/process.svelte';
 
-	import { testjson } from '$lib/test.svelte.js';
+	// import { testjson } from '$lib/test.svelte.js';
 
 	import { guessFormatD3 } from '$lib/utils/time/guessTimeFormat_d3.js';
 	import { guessFormat } from '$lib/utils/time/guessTimeFormat.js';
@@ -60,21 +69,58 @@
 	);
 
 	//------------------------------------
-	const N = 5_000;
+	const N = 1_000;
 	//------------------------------------
+
+	onMount(async () => {
+		//load the maps
+		appConsts.processMap = await loadProcesses();
+		appConsts.plotMap = await loadPlots();
+
+		populatePanelWidth();
+		refresh();
+		// loadTestJson();
+	});
+
+	function populatePanelWidth() {
+		appState.positionDisplayPanel = 360 + appState.positionNavbar;
+		appState.positionControlPanel = window.innerWidth - 360;
+	}
+
+	function loadTestJson() {
+		// const jsonData = JSON.parse(`${testJson}`);
+		const jsonData = JSON.parse(`${testJsonDC}`);
+
+		//reset things
+		core.data = [];
+		core.tables = [];
+		core.plots = [];
+
+		jsonData.data.map((datajson) => {
+			core.data.push(Column.fromJSON(datajson));
+		});
+
+		jsonData.tables.map((tablejson) => {
+			core.tables.push(Table.fromJSON(tablejson));
+		});
+
+		jsonData.plots.map((plotjson) => {
+			core.plots.push(Plot.fromJSON(plotjson));
+		});
+	};
 
 	function addData(dataIN, type, name, provenance) {
 		let newDataEntry;
 		if (dataIN != null) {
-			newDataEntry = new Column({ type, rawData: dataIN, name, provenance });
+			newDataEntry = new Column({ type, data: dataIN, name, provenance });
 			if (type == 'time') {
-				newDataEntry.timeformat = 1;
+				newDataEntry.timeFormat = 1;
 			}
 			core.data.push(newDataEntry);
 		} else {
 			newDataEntry = new Column({
 				type,
-				rawData: [
+				data: [
 					Math.round(10 * Math.random()),
 					Math.round(10 * Math.random()),
 					Math.round(10 * Math.random()),
@@ -84,19 +130,12 @@
 				provenance
 			});
 			if (type == 'time') {
-				newDataEntry.timeformat = 1;
+				newDataEntry.timeFormat = 1;
 			}
 			core.data.push(newDataEntry);
 		}
-		return newDataEntry.columnID;
+		return newDataEntry.id;
 	}
-
-	onMount(async () => {
-		//load the maps
-		appConsts.processMap = await loadProcesses();
-		appConsts.plotMap = await loadPlots();
-		refresh();
-	});
 
 	function makeArray(N, from, step) {
 		let out = [];
@@ -120,6 +159,7 @@
 		}
 		return out;
 	}
+
 	function makeDateTimeArray(N, from = new Date(), step_hrs = 1) {
 		let out = [];
 		for (let i = 0; i < N; i++) {
@@ -145,21 +185,21 @@
 
 		let testawd = new Column({
 			type: 'number',
-			rawData: { start: 10, step: 1, length: 5 },
+			data: { start: 10, step: 1, length: 5 },
 			compression: 'awd',
 			name: 'AWD',
-			timeformat: 3,
+			timeFormat: 3,
 			provenance: 'another manufactured column'
 		});
 		core.data.push(testawd);
 
 		let testref = new Column({
-			refDataID: d1id
+			refId: d1id
 		});
 		core.data.push(testref);
 
 		let testrefref = new Column({
-			refDataID: testref.columnID
+			refId: testref.id
 		});
 		core.data.push(testrefref);
 
@@ -175,70 +215,42 @@
 		core.tables.push(new Table({ name: 'table 1' }));
 		core.tables[0].columnRefs = [
 			testtimestring,
-			testawd.columnID,
+			testawd.id,
 			d1id,
 			d0id,
-			testref.columnID,
-			testrefref.columnID
+			testref.id,
+			testrefref.id
 		];
 		core.tables.push(new Table({ name: 'table 2' }));
 		core.tables[1].columnRefs = [d1id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
-		console.log('TABLES LOADED');
 
 		core.plots = [];
 		//Scatter plot
 		core.plots.push(new Plot({ name: 'testscatter', type: 'scatterplot' }));
+		core.plots[0].x =  appState.positionDisplayPanel + 20 ; // broke the plot
 		core.plots[0].plot.addData({
-			x: { refDataID: testtimestring },
-			y: { refDataID: d1id }
+			x: { refId: 0 },
+			y: { refId: 1 }
 		});
-		console.log('SCATTER LOADED');
 		//Actogram
 		core.plots.push(new Plot({ name: 'an actogram', type: 'actogram' }));
-		core.plots[1].x = 300;
+		core.plots[1].x = appState.positionDisplayPanel + 20;
 		core.plots[1].y = 400;
 		core.plots[1].height = 700;
 		core.plots[1].plot.addData({
-			x: { refDataID: d0id },
-			y: { refDataID: d1id }
+			x: { refId: 0 },
+			y: { refId: 1 }
 		});
-		console.log('Actogram LOADED');
 		//Periodogram
 		core.plots.push(new Plot({ name: 'a periodogram', type: 'periodogram' }));
-		core.plots[2].x = 400;
+		core.plots[2].x = appState.positionDisplayPanel + 100;
 		core.plots[2].y = 450;
 		core.plots[2].plot.addData({
-			x: { refDataID: d0id },
-			y: { refDataID: d1id }
-		});
-		console.log('Periodogram LOADED');
-
-		console.log('PLOTS LOADED');
-		console.log('core: ', $state.snapshot(core));
-		console.log('REFRESHED');
-	}
-
-	function load() {
-		const jsonData = JSON.parse(`${testjson}`);
-
-		//reset things
-		core.data = [];
-		core.tables = [];
-		core.plots = [];
-
-		//load in the data
-		jsonData.data.map((datajson) => {
-			core.data.push(Column.fromJSON(datajson));
-		});
-		//Set up the tables
-		jsonData.tables.map((tablejson) => {
-			core.tables.push(Table.fromJSON(tablejson));
-		});
-		//Make the plots
-		jsonData.plots.map((plotjson) => {
-			core.plots.push(Plot.fromJSON(plotjson));
+			x: { refId: 0 },
+			y: { refId: 1 }
 		});
 	}
+
 </script>
 
 <!-- <svelte:head>
@@ -246,97 +258,42 @@
 </svelte:head> 
 -->
 
-<Navbar />
-<ViewDisplay />
-<div style="position:absolute; top:0; left:30px; z-index:1000; background:blue;">
-	<button onclick={() => console.log(core)}>printJSON</button>
-	<button onclick={() => refresh()}>Refresh</button>
-	<button onclick={() => load()}>Load</button>
-</div>
+{#if appState.showNavbar}
+	<Navbar />
+{/if}
 
-{#each core.plots as plot}
-	<Plotcomponent {plot} />
-{/each}
+{#if appState.showDisplayPanel}
+	<DisplayPanel />
+{/if}
 
-<!--
-<p>Data:</p>
-<button onclick={() => load()}>load</button>
-<button onclick={() => refresh()}>Refresh</button>
+{#if appState.showControlPanel}
+	<ControlPanel /> 
+{/if}
 
-<div>
-	<button onclick={() => core.tables.push(new Table({ name: 'table ' + (core.tables.length + 1) }))}
-		>New table</button
-	>
-	{#each core.tables as table}
-		<p><strong>{table.name}</strong></p>
-		<button
-			onclick={() => {
-				const tempid = addData([Math.random(), Math.random()], 'number');
-				table.addColumn(tempid);
-			}}>add Data</button
-		>
-		{#each table.columnRefs as col, colidx}
-			{#each core.data as dat}
-				{#if dat.columnID == col}
-					<p>
-						{dat.columnID} <input bind:value={dat.name} /> : {JSON.stringify(dat.getData())}
-						type:
-						<select name="datatype" bind:value={dat.type}>
-							<option value="time">Time</option>
-							<option value="number">Number</option>
-							<option value="category">Category</option>
-						</select>
-						<button onclick={() => table.removeColumn(colidx)}>-</button>
-						<button
-							onclick={() => {
-								core.data = core.data.filter((d) => d.columnID !== dat.columnID);
-							}}>!-!</button
-						>
-					</p>
-					<button onclick={() => dat.addProcess(Math.random() > 0.5 ? 'add' : 'sub')}
-						>add Process</button
-					>
-					{#if dat.type == 'time'}
-						<br />
-						Time format:
-						<input type="number" bind:value={dat.timeformat} />
-					{/if}
+<PlotDisplay />
 
-					{#each dat.processes as p}
-						<div>
-							{p.id}
-							{p.name} -
-							{#each Object.keys(p.args) as arg}
-								{arg} ({dat.getProcessArgType(p.name, arg)}):
-								
-								{#if dat.getProcessArgType(p.name, arg) === 'number'}
-									<input type="number" bind:value={p.args[arg]} />
-								{:else if dat.getProcessArgType(p.name, arg) === 'category'}
-									<input type="text" bind:value={p.args[arg]} />
-								{/if}
-							{/each}
-							<button onclick={() => dat.removeProcess(p.processid)}>-</button>
-						</div>
-					{/each}
-					<hr />
-				{/if}
-			{/each}
-		{/each}
-	{/each}
-</div>
-
-<PlotHandler />
-
-<Visualise />
-
-<pre>{JSON.stringify(core, null, 2)}</pre>
 
 <style>
-	section {
-		padding: 8px;
-		margin: 4px 0;
-		border: 1px solid #ccc;
-		background: grey;
+	:global(body) {
+		font-family: 'Inter', sans-serif;
+		font-size: 14px;
 	}
+
+	/* :global(p) {
+		font-family: 'Inter', sans-serif;
+		font-size: 14px;
+	} */
+
+	:global(button) {
+		font-family: 'Inter', sans-serif;
+		font-size: 14px;
+	}
+
+	:global(.card) {
+		font-family: 'Inter', sans-serif;
+		font-size: 14px;
+	}
+	
 </style>
--->
+
+

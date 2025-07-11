@@ -4,7 +4,7 @@
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import ColourPicker, { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
-	import { core } from '$lib/core/theCore.svelte.js';
+	import { core } from '$lib/core/core.svelte.js';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
 	import BinnedHist from '$lib/components/plotbits/BinnedHist.svelte';
@@ -65,12 +65,12 @@
 			if (dataIN && dataIN.x) {
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new ColumnClass({ refDataID: -1 });
+				this.x = new ColumnClass({ refId: -1 });
 			}
 			if (dataIN && dataIN.y) {
 				this.y = ColumnClass.fromJSON(dataIN.y);
 			} else {
-				this.y = new ColumnClass({ refDataID: -1 });
+				this.y = new ColumnClass({ refId: -1 });
 			}
 			this.colour = dataIN?.colour ?? getRandomColor();
 		}
@@ -109,9 +109,9 @@
 		isAddingMarkerTo = $state(-1);
 		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 30 });
 		padding = $derived.by(() => {
-			if (this.LightBand.length > 0) {
+			if (this.lightBands.length > 0) {
 				return {
-					top: this.paddingIN.top + this.LightBand.height * 2,
+					top: this.paddingIN.top + this.lightBands.height * 2,
 					right: this.paddingIN.right,
 					bottom: this.paddingIN.bottom,
 					left: this.paddingIN.left
@@ -140,7 +140,7 @@
 		spaceBetween = $state(2);
 		doublePlot = $state(2);
 		periodHrs = $state(24);
-		LightBand = $state(new LightBandClass(this, { bands: [] }));
+		lightBands = $state(new LightBandClass(this, { lightBands: [] }));
 		Ndays = $derived.by(() => {
 			if (this.data.length === 0) {
 				return 0;
@@ -203,7 +203,7 @@
 				paddingIN: this.paddingIN,
 				doublePlot: this.doublePlot,
 				periodHrs: this.periodHrs,
-				LightBand: this.LightBand,
+				lightBands: this.lightBands,
 				data: this.data
 			};
 		}
@@ -211,14 +211,13 @@
 			if (!json) {
 				return new Actogramclass(parent, null);
 			}
-
 			const actogram = new Actogramclass(parent, null);
 			actogram.paddingIN = json.paddingIN;
 			actogram.ylimsIN = json.ylimsIN;
 			actogram.doublePlot = json.doublePlot;
 			actogram.periodHrs = json.periodHrs;
 
-			actogram.LightBand = LightBandClass.fromJSON(json.bands ?? { bands: [] }, actogram);
+			actogram.lightBands = LightBandClass.fromJSON(json.lightBands ?? { lightBands: [] }, actogram);
 
 			if (json.data) {
 				actogram.data = json.data.map((d) => ActogramDataclass.fromJSON(d, actogram));
@@ -271,7 +270,7 @@
 
 {#snippet controls(theData)}
 	<div>
-		<button onclick={() => convertToImage('plot' + theData.parent.plotid, 'svg')}>Save </button>
+		<button onclick={() => convertToImage('plot' + theData.parent.id, 'svg')}>Save </button>
 		Name: <input type="text" bind:value={theData.parent.name} />
 		Width: <input type="number" bind:value={theData.parent.width} />
 		height: <input type="number" bind:value={theData.parent.height} />
@@ -283,9 +282,9 @@
 			<input type="number" bind:value={theData.paddingIN.left} />
 		</p>
 		<p>{JSON.stringify(theData.padding)}</p>
-
+		
 		<p>
-			<LightBand bind:bands={theData.LightBand} which="controls" />
+			<LightBand bind:bands={theData.lightBands} which="controls" />
 		</p>
 		<p>
 			Ndays: <a>{theData.Ndays}</a>
@@ -321,8 +320,8 @@
 		<button
 			onclick={() =>
 				theData.addData({
-					x: { refDataID: pickRandomData() },
-					y: { refDataID: pickRandomData() }
+					x: { refId: pickRandomData() },
+					y: { refId: pickRandomData() }
 				})}
 		>
 			+
@@ -354,13 +353,13 @@
 
 {#snippet plot(theData)}
 	<svg
-		id={'plot' + theData.plot.parent.plotid}
+		id={'plot' + theData.plot.parent.id}
 		width={theData.plot.parent.width}
 		height={theData.plot.parent.height}
 		style={`background: white; position: absolute;`}
 		onclick={(e) => handleClick(e)}
 	>
-		<LightBand bind:bands={theData.plot.LightBand} which="plot" />
+		<LightBand bind:bands={theData.plot.lightBands} which="plot" />
 		<!-- The X-axis -->
 		<Axis
 			height={theData.plot.plotheight}

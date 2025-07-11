@@ -4,7 +4,7 @@
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear, scaleTime } from 'd3-scale';
 	import { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
-	import { core } from '$lib/core/theCore.svelte.js';
+	import { core } from '$lib/core/core.svelte.js';
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
@@ -161,7 +161,7 @@
 
 {#snippet controls(theData)}
 	<div>
-		<button onclick={() => convertToImage('plot' + theData.parentbox.plotid, 'svg')}>Save </button>
+		<button onclick={() => convertToImage('plot' + theData.parentbox.id, 'svg')}>Save </button>
 		Name: <input type="text" bind:value={theData.parentbox.name} />
 		Width: <input type="number" bind:value={theData.parentbox.width} />
 		height: <input type="number" bind:value={theData.parentbox.height} />
@@ -268,7 +268,7 @@
 
 {#snippet plot(theData)}
 	<svg
-		id={'plot' + theData.plot.parentbox.plotid}
+		id={'plot' + theData.plot.parentbox.id}
 		width={theData.plot.parentbox.width}
 		height={theData.plot.parentbox.height}
 		viewBox="0 0 {theData.plot.parentbox.width} {theData.plot.parentbox.height}"
@@ -337,6 +337,7 @@
 		{/each}
 	</svg>
 {/snippet}
+
 
 {#if which === 'plot'}
 	{@render plot(theData)}

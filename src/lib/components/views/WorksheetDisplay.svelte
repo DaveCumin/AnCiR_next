@@ -1,117 +1,93 @@
 <script>
-	import { core } from '$lib/core/theCore.svelte.js';
-	import { Plot } from '$lib/core/Plot.svelte';
+	// @ts-nocheck
+
+	import { core } from '$lib/core/core.svelte.js';
+	import Icon from '$lib/icons/Icon.svelte';
+	import AddPlot from '../iconActions/AddPlot.svelte';
+
+	let addBtnRef;
+	let showAddPlot = $state(false);
+	let dropdownTop = $state(0);
+	let dropdownLeft = $state(0);
+
+	function recalculateDropdownPosition() {
+		if (!addBtnRef) return;
+		const rect = addBtnRef.getBoundingClientRect();
+
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
+	}
+
+	function openDropdown() {
+		recalculateDropdownPosition();
+		requestAnimationFrame(() => {
+			showAddPlot = true;
+		});
+		window.addEventListener('resize', recalculateDropdownPosition);
+	}
 </script>
 
-<div class="container">
-	<div class="heading">
-		<p>Worksheet Layers</p>
-	</div>
 
-	<div class="functions">
-		<div class="search">
-			<p>Search</p>
-		</div>
+<div class="heading">
+	<p>Worksheet Layers</p>
 
-		<div class="add"></div>
-	</div>
-
-	<div class="data-list">
-		<button
-			onclick={() => core.plots.push(new Plot({ name: 'testscatterplot', type: 'scatterplot' }))}
-			>Add Plot</button
-		>
-		{#each core.plots as plot}
-			<details open>
-				<summary
-					>{plot.plotid} - {plot.name}<button onclick={() => plot.plot.addData({ xIN: 0, yIN: 1 })}
-						>+</button
-					></summary
-				>
-				<ul>
-					{#each plot.plot.data as datum}
-						<details open>
-							<summary> </summary>
-							x: {datum.x.name} ({datum.x.getData()})
-							<input type="number" bind:value={datum.x.refDataID} />
-							<button onclick={() => datum.x.addProcess(Math.random() > 0.5 ? 'add' : 'sub')}
-								>Add process</button
-							>
-							y: {datum.y.name} ({datum.y.getData()})
-							<input type="number" bind:value={datum.y.refDataID} />
-							<button onclick={() => datum.y.addProcess(Math.random() > 0.5 ? 'add' : 'sub')}
-								>Add process</button
-							>
-						</details>
-					{/each}
-				</ul>
-			</details>
-		{/each}
+	<div class="add">
+		<button bind:this={addBtnRef} onclick={openDropdown}>
+			<Icon name="add" width={16} height={16} />
+		</button>
 	</div>
 </div>
 
+{#if showAddPlot}
+	<AddPlot bind:showDropdown={showAddPlot} dropdownTop={dropdownTop} dropdownLeft={dropdownLeft} />
+{/if}
+
+<div class="display-list">
+	{#each core.plots.toReversed() as plot (plot.id)}
+		<details>
+			<summary>{plot.name}</summary>
+		</details>
+	{/each}
+</div>
+
+
 <style>
-	.container {
-		width: 16vw;
-		height: 100vh;
-		display: flex;
-		flex-direction: column;
-		justify-content: start;
-		align-items: start;
-
-		position: fixed;
-		top: 0;
-		left: 4vw;
-
-		border-right: 1px solid #d9d9d9;
-	}
-
 	.heading {
-		width: 16vw;
+		position: sticky;
+		top: 0;
+
+		width: 100%;
 		height: 4vh;
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+
 		border-bottom: 1px solid #d9d9d9;
+		background-color: white;
 	}
 
 	.heading p {
-		margin-top: 0.6rem;
-		margin-left: 0.6rem;
+		margin-left: 1rem;
 		font-weight: bold;
 	}
 
-	.functions {
+	button {
+		background-color: transparent;
+		border: none;
+		margin-right: 0.6rem;
+		padding: 0;
+		text-align: inherit;
+		font: inherit;
+		border-radius: 0;
+		appearance: none;
 		display: flex;
-		flex-direction: row;
+		justify-content: center;
 		align-items: center;
-		margin: 0.5rem;
 	}
 
-	.search {
-		width: 13.5vw;
-		height: 3vh;
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		justify-content: start;
-
-		border-radius: 5px;
-		background-color: var(--color-lightness-95, blue);
-	}
-
-	.search :global(svg) {
-		margin-left: 0.5rem;
-		margin-right: 0.5rem;
-		color: var(--color-lightness-75);
-	}
-
-	.search p {
-		font-weight: 400;
-		font-size: small;
-		color: var(--color-lightness-75, blue);
-	}
-
-	.add {
-		vertical-align: middle;
-		margin-left: 0.45rem;
-		color: var(--color-icon-unselected, blue);
+	.display-list {
+		width: 100%;
+		margin-top: 0.5rem;
 	}
 </style>
