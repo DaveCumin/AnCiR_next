@@ -327,6 +327,7 @@
 	</svg>
 {/snippet}
 
+
 {#if which === 'plot'}
 	{@render plot(theData)}
 {:else if which === 'controls'}

@@ -145,7 +145,6 @@
 		core.data[1].addProcess('Sub');
 
 		let d2id = addData(['a', 'b', 'b', 'c'], 'category', 'mycat', 'imported from Egypt');
-
 		let testawd = new Column({
 			type: 'time',
 			data: { start: 10, step: 1, length: 5 },

@@ -9,7 +9,7 @@
 		return _counter++;
 	}
 	
-	function getColumnById(id) {
+	export function getColumnById(id) {
 		return core.data.find((column) => column.id === id);
 	}
 	
