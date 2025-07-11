@@ -1,19 +1,25 @@
 <script>
 	// not a draggable reusable, change to plot component some time
-	
+
 	// TODO: invisible
 	// TODO: control panel
 	// TODO: change color, palette on top
 
 	// TODO: lock to grid
 	// @ts-nocheck
-	import { appState, core } from "$lib/core/core.svelte";
+	import { appState, core } from '$lib/core/core.svelte';
 
-	let {x=$bindable(100), y=$bindable(100),
-		width=$bindable(200), height=$bindable(150), title='', id,
-		canvasWidth=50000, canvasHeight=50000
+	let {
+		x = $bindable(100),
+		y = $bindable(100),
+		width = $bindable(200),
+		height = $bindable(150),
+		title = '',
+		id,
+		canvasWidth = 50000,
+		canvasHeight = 50000
 	} = $props();
-	
+
 	let tempId = id;
 
 	const minWidth = 100;
@@ -34,17 +40,16 @@
 			y += e.movementY;
 
 			x = Math.max(0, Math.min(x, canvasWidth - width - 20));
-        	y = Math.max(0, Math.min(y, canvasHeight - height - 50));
-
+			y = Math.max(0, Math.min(y, canvasHeight - height - 50));
 		} else if (resizing) {
 			const deltaX = e.clientX - initialMouseX;
 			const deltaY = e.clientY - initialMouseY;
 
 			const maxWidth = canvasWidth - x - 20;
-        	const maxHeight = canvasHeight - y - 50;
+			const maxHeight = canvasHeight - y - 50;
 
 			width = Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth));
-        	height = Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight));
+			height = Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight));
 		}
 	}
 
@@ -63,32 +68,31 @@
 	}
 
 	function bringToFront(id) {
-		const index = core.plots.findIndex(p => p.id === id);
+		const index = core.plots.findIndex((p) => p.id === id);
 		if (index !== -1) {
-            const [plot] = core.plots.splice(index, 1);
-            core.plots.push(plot);
-        }
+			const [plot] = core.plots.splice(index, 1);
+			core.plots.push(plot);
+		}
 	}
 
 	function handleClick(e) {
 		e.stopPropagation();
 		appState.selectedPlotId = tempId;
 		appState.showControlPanel = true;
-		
+
 		bringToFront(appState.selectedPlotId); //change without changing z-index in style
 
 		// console.log("id:", id, "z-index:", zIndex);
 	}
 
 	function handleCanvasClick(e) {
+		console.log('HERE');
 		e.stopPropagation();
-        appState.selectedPlotId = null;
-    }
-
+		appState.selectedPlotId = null;
+	}
 </script>
 
-<svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp}/>
-
+<svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp} />
 
 <!-- added header therefore TODO: other way than hardcode -->
 <section
@@ -98,8 +102,8 @@
 	style="left: {x}px;
 		top: {y}px;
 		width: {width + 20}px;
-		height: {height + 50}px;">
-	
+		height: {height + 50}px;"
+>
 	<div class="plot-header" onmousedown={onMouseDown}>
 		{title}
 	</div>

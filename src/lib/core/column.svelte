@@ -1,24 +1,24 @@
 <script module>
 	// @ts-nocheck
 	import { forceFormat, getPeriod, getISODate } from '$lib/utils/time/TimeUtils';
-	
+
 	import { core } from '$lib/core/core.svelte.js';
 	import { Process } from '$lib/core/process.svelte';
-	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte'
-	
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+
 	let _counter = 0;
 	function getNextId() {
 		return _counter++;
 	}
-	
+
 	export function getColumnById(id) {
 		return core.data.find((column) => column.id === id);
 	}
-	
+
 	export class Column {
 		id;
 		refId = $state(null); // if instance based on another instance
-	
+
 		name = $derived.by(() => {
 			// console.log((column.id));
 			if (this.refId != null) {
@@ -26,16 +26,16 @@
 				// console.log($state.snapshot(this.refId));
 				return core.data.find((column) => column.id === this.refId)?.name;
 			}
-		})
-	
+		});
+
 		type = $derived.by(() => {
 			if (this.isReferencial()) {
 				return core.data.find((column) => column.id === this.refId)?.type;
 			}
-		})
-	
+		});
+
 		provenance = $derived.by(() => {
-			if (this.isReferencial() ) {
+			if (this.isReferencial()) {
 				return (
 					'refers to ' +
 					getColumnById(this.refId)?.name +
@@ -44,21 +44,21 @@
 				);
 			}
 		});
-	
+
 		data = $state();
-		
+
 		//The associated processes that are applied to the data
 		processes = $state([]);
 
 		//time format for converting time data
 		timeFormat = $derived(this.type === 'time' ? 0 : null);
-		
+
 		//time data needed for some functions
 		startTime = getISODate(this.data, this.timeFormat);
-		
+
 		compression = $state(null); //if any compression is used, store the info here
 		//Where the data are from (references all the way to the primary source [importd (file) or simulated (params)])
-	
+
 		// constructor(type) {
 		// 	this.id = getNextId();
 		// 	this.type = type;
@@ -69,7 +69,7 @@
 			if (this.type == 'number') return raw.map((x) => x - raw[0]); //If a number, then assume it's in hours and take difference from the start
 			if (this.type == 'time') return raw.map((x) => (x - raw[0]) / 3600000); //if it's a time, then assume it's in milliseconds and take difference from the start, then convert to hours
 		});
-	
+
 		constructor(columnData = {}, id = null) {
 			if (id === null) {
 				this.id = getNextId();
@@ -93,76 +93,74 @@
 		isReferencial() {
 			return this.refId != null;
 		}
-	
+
 		// Simulate new dataField based on type
 		simulateColumn(type, fs_min, startDate, period, maxHeight, dataLength) {
 			if (!this.name) {
 				this.name = type;
 			}
 			console.log(this.name);
-	
+
 			this.type = type;
 			switch (this.type) {
 				case 'time':
 					this.generateTimeData(fs_min, startDate, dataLength);
 					break;
 				case 'value':
-					this.generateValueData(fs_min, period, maxHeight, dataLength)
+					this.generateValueData(fs_min, period, maxHeight, dataLength);
 					break;
 				default:
 					console.log('error: double check type');
 			}
 		}
-	
+
 		// Data with type 'time'
 		generateTimeData(fs_min, startDate, dataLength) {
 			const timeData = [];
-	
+
 			for (let i = 0; i < dataLength; i++) {
 				const time = new Date(startDate.getTime() + i * fs_min * 60 * 1000).toLocaleString('en-US');
 				timeData.push(time);
 			}
-	
+
 			const timefmt = 'M/D/YYYY, h:mm:s A';
 			const processedTimeData = forceFormat(timeData, timefmt);
 			const timePeriod = getPeriod(timeData, timefmt);
-	
+
 			this.data = processedTimeData;
 			this.timeFormat = timefmt; //TODO: fix
-	
+
 			// this.properties = {
 			// 	timeFormat: timefmt,
 			// 	recordPeriod: timePeriod
 			// };
-	
 		}
-		
+
 		// Data with type 'value'
 		generateValueData(fs_min, period, maxHeight, dataLength) {
 			const valueData = [];
-	
+
 			const periodL = period * (60 / fs_min); //the length of the period
-	
+
 			for (let j = 0; j < dataLength; j++) {
 				const isLowPeriod = j % periodL < periodL / 2;
 				const mult = isLowPeriod ? maxHeight * 0.05 : maxHeight;
-	
+
 				const randomValue = Math.random() * mult;
 				valueData.push(Math.round(randomValue));
 			}
 			this.data = valueData;
-	
 		}
-	
+
 		// Add and remove processes
 		addProcess(processName) {
 			this.processes.push(new Process({ name: processName }, this));
 		}
-	
+
 		removeProcess(id) {
 			this.processes = this.processes.filter((p) => p.processid !== id);
 		}
-		
+
 		// Magic function to get the data, apply time formatting, and apply procesess; will recursively follow the refDataID if needed
 		getData() {
 			let out = [];
@@ -195,19 +193,19 @@
 			}
 			return out;
 		}
-	
+
 		// Import and Export as JSON
 		toJSON() {
 			let jsonOut = { id: this.id, name: this.name };
-			
+
 			if (this.refId != null) {
 				jsonOut.refId = this.refId;
 			} else {
 				jsonOut.data = this.data;
 			}
-	
+
 			jsonOut.type = this.type;
-	
+
 			if (this.type == 'time') {
 				jsonOut.timeFormat = this.timeFormat;
 			}
@@ -217,10 +215,10 @@
 			jsonOut.provenance = this.provenance;
 			jsonOut.processes = this.processes;
 			jsonOut.hoursSinceStart = this.hoursSinceStart;
-	
+
 			return jsonOut;
 		}
-	
+
 		static fromJSON(json) {
 			// const {
 			// 	id,
@@ -233,7 +231,7 @@
 			// 	compression,
 			// 	provenance
 			// } = json;
-	
+
 			// uncomment above and delete bottom after full transfer
 			const id = json.id ?? json.columnID;
 			const name = json.name ?? 'Untitled Column';
@@ -246,7 +244,7 @@
 			const compression = json.compression ?? null;
 			const provenance = json.provenance ?? null;
 			const hoursSinceStart = json.hoursSinceStart ?? null;
-	
+
 			let column = new Column(
 				{
 					name,
@@ -257,7 +255,7 @@
 					timeFormat: timeFormat ?? '',
 					provenance: provenance ?? null,
 					processes: processes ?? [],
-					hoursSinceStart: hoursSinceStart ?? null,
+					hoursSinceStart: hoursSinceStart ?? null
 				},
 				id
 			);
@@ -272,18 +270,24 @@
 <script>
 	import Processcomponent from '$lib/core/process.svelte'; //Need to rename it because Process is used as the class name in the module, above
 	import Icon from '$lib/icons/Icon.svelte';
-	// import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import { appConsts } from '$lib/core/core.svelte.js';
+
 	let { col, canChange = false } = $props();
 </script>
-
 
 <details open style="margin-left: 1rem">
 	<summary>
 		{#if canChange}
 			<ColumnSelector bind:value={col.refId} />
 		{/if}
+		<strong
+			>{col.name}
+			{#if col.isReferencial()}
+				<span>*</span>
+			{/if}
+		</strong><br />
 		{#if !col.isReferencial()}
-			<strong>{col.name}</strong><br /> <italic>{col.provenance}</italic><br />
+			<italic>{col.provenance}</italic><br />
 		{/if}
 		type:
 		<select name="datatype" bind:value={col.type}>
@@ -310,7 +314,7 @@
 		{/if}
 		<li>
 			{#if !col.isReferencial() && Array.isArray(col.data)}
-				<p>raw: {col.data.slice(0, 5)}</p> 
+				<p>raw: {col.data.slice(0, 5)}</p>
 			{/if}
 			data: {col.getData()?.slice(0, 5)}
 			<button
