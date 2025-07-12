@@ -68,6 +68,14 @@
 		Number(utcParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[2]))
 	);
 
+	document.addEventListener('keydown', (event) => {
+		// Check if Ctrl, Shift, and 'I' are pressed simultaneously
+		if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
+			event.preventDefault(); // Prevent default browser behavior (e.g., opening developer tools)
+			console.log($state.snapshot(core));
+		}
+	});
+
 	//------------------------------------
 	const N = 1_000;
 	//------------------------------------
