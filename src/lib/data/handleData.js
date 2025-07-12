@@ -14,7 +14,7 @@ import { min, max } from '$lib/utils/MathsStats';
 import { getISODate } from '$lib/utils/time/TimeUtils.js';
 
 //Get data from the data structure
-export function getDataFromTable(tableID, key) {
+export function.getData()FromTable(tableID, key) {
 	const tempData = get(data)[get(data).findIndex((d) => d.id === tableID)].data[key];
 
 	if (tempData.type === 'time') {
@@ -37,7 +37,7 @@ export function getFieldNames(source) {
 export function getRawData(sourceIndex, vals) {
 	const sourceData = get(graphs)[get(activeGraphTab)].sourceData[sourceIndex];
 	const tableID = sourceData.tableID;
-	let rawData = getDataFromTable(tableID, vals.field);
+	let rawData =.getData()FromTable(tableID, vals.field);
 	return rawData;
 }
 //get the timeFormat from graph source
@@ -53,7 +53,7 @@ export function getFirstTime(sourceIndex, vals) {
 	return getISODate(firstTime, format);
 }
 
-export function getDataFromSource(sourceIndex, vals) {
+export function.getData()FromSource(sourceIndex, vals) {
 	//get the raw data
 	let dataFromSource = getRawData(sourceIndex, vals);
 	//now apply the processes, if any

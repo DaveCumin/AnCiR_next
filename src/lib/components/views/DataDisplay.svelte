@@ -126,7 +126,7 @@
 			<details class="table-item">
 				<summary class="table-name">{table.name}</summary>
 				<button onclick={() => addColumn(table.id)}>Add column</button>
-				{#each table.columns as col}
+				{#each table.columns as col, i}
 					{#if !col.tableProcessed}
 						<ColumnComponent {col} />
 					{/if}

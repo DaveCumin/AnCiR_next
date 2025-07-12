@@ -13,8 +13,7 @@
 	export class Column {
 		id; //Unique ID for the column
 		refId = $state(null); //if it is a column that is based on another
-		lastDataHash = null;
-		tableProcessed; //so it doesn't show up in the Table twice (as a column and as a table process output)
+		tableProcessed; //so it doesn't show up in the Table twice (as a column and as a table process)
 		data = null; //if it has raw data, store that here
 		compression = $state(null); //if any compression is used, store the info here
 		//Where the data are from (references all the way to the primary source [importd (file) or simulated (params)])
@@ -66,8 +65,6 @@
 				_columnidCounter = Math.max(id + 1, _columnidCounter + 1);
 			}
 			this.tableProcessed = false;
-			this.lastDataHash = null;
-
 			//Assign the other data
 			Object.assign(this, structuredClone(columnData));
 		}
@@ -87,16 +84,27 @@
 
 		//For caching of the data - important for efficiency
 		#cachedData = null;
+		#lastDataHash = null;
 
-		//Magic function to get the data, apply time formatting, and apply procesess; will recursively follow the refId if needed
+		getDataHash() {
+			const processHash = this.processes
+				.map((p) => `${p.processid}:${p.name}:${JSON.stringify(p.args)}`)
+				.join('|');
+			const refColumn = this.isReferencial() ? getColumnByID(this.refId) : null;
+			const refDataHash = refColumn ? refColumn.getDataHash() : '';
+			return `${this.refId ?? '_'}:${this.data?.length || ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}:${refDataHash}`;
+		}
+
+		//--- FUNCTION TO GET THE DATA
 		getData() {
 			// Create a hash of all inputs to detect changes
 			const processHash = this.processes
 				.map((p) => `${p.processid}:${p.name}:${JSON.stringify(p.args)}`)
 				.join('|');
-			const dataHash = `${core.data.find((column) => column.id === this.refId)?.lastDataHash}:${this.data?.length || ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}`;
-			console.log(this.name, ' hash = ', dataHash);
-			if (this.lastDataHash === dataHash && this.#cachedData) {
+			const refColumn = this.isReferencial() ? getColumnByID(this.refId) : null;
+			const refDataHash = refColumn ? refColumn.getDataHash() : '';
+			const dataHash = `${this.refId ?? '_'}:${this.data?.length || ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}:${refDataHash}`;
+			if (this.#lastDataHash === dataHash && this.#cachedData) {
 				return this.#cachedData;
 			}
 
@@ -132,7 +140,15 @@
 
 			//save hash
 			this.#cachedData = out;
-			this.lastDataHash = dataHash;
+			this.#lastDataHash = dataHash;
+
+			//update any referencing columns
+			core.data.forEach((c) => {
+				if (c.refId === this.id) {
+					console.log('the ref to update: ', c.refId, c.id);
+					c.getData();
+				}
+			});
 
 			//return data
 			return out;
