@@ -51,9 +51,10 @@
 		processes = $state([]);
 
 		hoursSinceStart = $derived.by(() => {
-			const raw = this.getData();
-			if (this.type == 'number') return raw.map((x) => x - raw[0]); //If a number, then assume it's in hours and take difference from the start
-			if (this.type == 'time') return raw.map((x) => (x - raw[0]) / 3600000); //if it's a time, then assume it's in milliseconds and take difference from the start, then convert to hours
+			const thedata = this.getData();
+			if (this.type == 'number') return thedata.map((x) => x - thedata[0]); //If a number, then assume it's in hours and take difference from the start
+			if (this.type == 'time') return thedata.map((x) => (x - thedata[0]) / 3600000); //if it's a time, then assume it's in milliseconds and take difference from the start, then convert to hours
+			console.warn('that was hoursSinceStart');
 		});
 
 		constructor({ ...columnData }, id = null) {
@@ -92,7 +93,7 @@
 				.join('|');
 			const refColumn = this.isReferencial() ? getColumnByID(this.refId) : null;
 			const refDataHash = refColumn ? refColumn.getDataHash() : '';
-			return `${this.refId ?? '_'}:${this.data?.length || ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}:${refDataHash}`;
+			return `${this.refId ?? '_'}:${this.data?.length || ''}:${this.tableProcessed ?? ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}:${refDataHash}`;
 		}
 
 		//--- FUNCTION TO GET THE DATA
@@ -103,10 +104,15 @@
 				.join('|');
 			const refColumn = this.isReferencial() ? getColumnByID(this.refId) : null;
 			const refDataHash = refColumn ? refColumn.getDataHash() : '';
-			const dataHash = `${this.refId ?? '_'}:${this.data?.length || ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}:${refDataHash}`;
+			const dataHash = `${this.refId ?? '_'}:${this.data?.length || ''}:${this.tableProcessed ?? ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}:${refDataHash}`;
+			console.log('data hash: ', dataHash, ' for ', this.id, this.name);
+			console.log('last hash: ', this.#lastDataHash);
 			if (this.#lastDataHash === dataHash && this.#cachedData) {
+				console.log('returning cached');
 				return this.#cachedData;
 			}
+
+			console.warn('recalculating');
 
 			let out = [];
 			//if there is a reference, then just get that data
@@ -142,14 +148,6 @@
 			this.#cachedData = out;
 			this.#lastDataHash = dataHash;
 
-			//update any referencing columns
-			core.data.forEach((c) => {
-				if (c.refId === this.id) {
-					console.log('the ref to update: ', c.refId, c.id);
-					c.getData();
-				}
-			});
-
 			//return data
 			return out;
 		}
@@ -169,22 +167,36 @@
 			if (this.compression != null) {
 				jsonOut.compression = this.compression;
 			}
+			jsonOut.tableProcessed = this.tableProcessed;
 			jsonOut.provenance = this.provenance;
 			jsonOut.processes = this.processes;
 
 			return jsonOut;
 		}
 		static fromJSON(json) {
-			const { id, name, type, refId, data, timeformat, processes, compression, provenance } = json;
+			const {
+				id,
+				name,
+				type,
+				refId,
+				data,
+				tableProcessed,
+				timeformat,
+				processes,
+				compression,
+				provenance
+			} = json;
 			let column = new Column(
 				{
 					name,
 					type,
 					refId: refId ?? null,
 					data: data ?? null,
+					tableProcessed: tableProcessed ?? null,
 					compression: compression ?? null,
 					timeformat: timeformat ?? '',
 					provenance: provenance ?? null,
+
 					processes: []
 				},
 				id
@@ -201,7 +213,7 @@
 	import Processcomponent from '$lib/core/Process.svelte'; //Need to rename it because Process is used as the class name in the module, above
 	import Icon from '$lib/icons/Icon.svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
-	let { col = $bindable(), canChange = false } = $props();
+	let { col, canChange = false } = $props();
 </script>
 
 {#if col == undefined}
@@ -209,6 +221,7 @@
 {:else}
 	<details open style="margin-left: 1rem">
 		<summary>
+			ID: {col.id}
 			{#if canChange}
 				<ColumnSelector bind:value={col.refId} />
 			{/if}

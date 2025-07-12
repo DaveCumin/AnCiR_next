@@ -44,15 +44,15 @@
 
 		getColumnByID(outX.id).data = theBinnedData.bins;
 		getColumnByID(outY.id).data = theBinnedData.y_out;
+		const processHash = crypto.randomUUID();
+		getColumnByID(outX.id).tableProcessed = processHash;
+		getColumnByID(outY.id).tableProcessed = processHash;
 
 		return theBinnedData;
 	});
 
 	onMount(() => {
 		//put the columns into the core data
-		core.data.push(outX);
-		core.data.push(outY);
-		//and put them into a table
 		core.tables[tableID].addColumn(outX);
 		core.tables[tableID].addColumn(outY);
 

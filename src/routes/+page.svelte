@@ -234,20 +234,20 @@
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
 		});
-		//Actogram
-		core.plots.push(new Plot({ name: 'an actogram', type: 'actogram' }));
-		core.plots[1].x = 20;
-		core.plots[1].y = 300;
-		core.plots[1].height = 700;
-		core.plots[1].plot.addData({
-			x: { refId: core.data[0].id },
-			y: { refId: core.data[1].id }
-		});
+		// //Actogram
+		// core.plots.push(new Plot({ name: 'an actogram', type: 'actogram' }));
+		// core.plots[core.plots.length -1].x = 20;
+		// core.plots[core.plots.length -1].y = 300;
+		// core.plots[core.plots.length -1].height = 700;
+		// core.plots[core.plots.length -1].plot.addData({
+		// 	x: { refId: core.data[0].id },
+		// 	y: { refId: core.data[1].id }
+		// });
 		//Periodogram
 		core.plots.push(new Plot({ name: 'a periodogram', type: 'periodogram' }));
-		core.plots[2].x = 10;
-		core.plots[2].y = 450;
-		core.plots[2].plot.addData({
+		core.plots[core.plots.length - 1].x = 10;
+		core.plots[core.plots.length - 1].y = 450;
+		core.plots[core.plots.length - 1].plot.addData({
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
 		});
