@@ -2,6 +2,7 @@
 import { forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
 import { core, pushObj } from '$lib/core/core.svelte.js';
 import { getColumnByID, Column } from './Column.svelte';
+import { TableProcess } from '$lib/core/TableProcess.svelte';
 
 let _counter = 0;
 function getNextId() {
@@ -11,9 +12,7 @@ function getNextId() {
 export class Table {
 	id;
 	name = $state('');
-
-	// importedFrom = '';
-	// dataLength = 0;
+	contents = $state([]);
 
 	columnRefs = $state([]); //Reference IDs for the raw data that are columns
 
@@ -21,12 +20,7 @@ export class Table {
 		return this.columnRefs.map((colRef) => getColumnByID(colRef));
 	}); //The actual columns of data
 
-	// constructor(name, importedFrom, dataLength) {
-	// 	this.id = getNextId();
-	// 	this.name = name;
-	// 	this.importedFrom = importedFrom;
-	// 	this.dataLength = dataLength;
-	// }
+	processes = $state([]);
 
 	constructor(tableData = {}, id = null) {
 		//deal with the id: if one is inputted, then use it and update _counter; else use _counter
@@ -39,6 +33,26 @@ export class Table {
 		//Assign the other data
 		this.name = tableData.name ?? null;
 		this.columnRefs = tableData.columnRefs ?? [];
+		this.processes = tableData.processes ?? [
+			new TableProcess(
+				{
+					name: 'binneddata',
+					args: [
+						[
+							'xIN',
+							{ val: -1 },
+							'yIN',
+							{ val: -1 },
+							'binSize',
+							{ val: 0.25 },
+							'binStart',
+							{ val: 0 }
+						]
+					]
+				},
+				this
+			)
+		];
 	}
 
 	// getter and setter methods
@@ -89,7 +103,8 @@ export class Table {
 		return {
 			id: this.id,
 			name: this.name,
-			columnRefs: this.columnRefs
+			columnRefs: this.columnRefs,
+			processes: this.processes
 		};
 	}
 
@@ -99,6 +114,11 @@ export class Table {
 		const id = json.id ?? json.tableid;
 		const name = json.name ?? 'Untitled Table';
 		const columnRefs = json.columnRefs ?? json.columnRefs ?? [];
+		if (json.processes) {
+			json.processes.forEach((process) => {
+				//TODO make the process and add it to the table
+			});
+		}
 
 		let table = new Table({ name, columnRefs }, id);
 		return table;

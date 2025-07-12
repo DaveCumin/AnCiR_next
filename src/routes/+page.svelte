@@ -243,6 +243,8 @@
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
 		});
+
+		console.log('ALL SET UP: ', $state.snapshot(core));
 	}
 </script>
 

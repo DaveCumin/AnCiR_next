@@ -10,6 +10,16 @@
 	import { Column, getColumnByID } from '$lib/core/Column.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import ColumnSelector from '../inputs/ColumnSelector.svelte';
+	import TableProcess from '$lib/core/TableProcess.svelte';
+
+	import ProgressIndicator from '$lib/components/ProgressIndicator.svelte';
+	let steps = $state([
+		{ label: 'lab 1', completed: false, active: true, isExpanded: true },
+		{ label: 'lab 2', completed: false, active: false, isExpanded: false },
+		{ label: 'lab 3', completed: false, active: false, isExpanded: false },
+		{ label: 'lab 4', completed: false, active: false, isExpanded: false }
+	]);
+	let currentStep = $state(0);
 
 	//variables for new column
 	let howMakeNewColumn = $state('');
@@ -93,6 +103,7 @@
 		howMakeNewColumn = '';
 		newColumnLength = 0;
 		newColumnData = [];
+		newColsExisting = [];
 		//hide modal
 		showAddColumnModal = false;
 	}
@@ -116,12 +127,44 @@
 				<summary class="table-name">{table.name}</summary>
 				<button onclick={() => addColumn(table.id)}>Add column</button>
 				{#each table.columns as col}
-					<ColumnComponent col={core.data.find((c) => c.id === col.id)} />
+					{#if !col.tableProcessed}
+						<ColumnComponent {col} />
+					{/if}
+				{/each}
+				{#each table.processes as p}
+					<TableProcess {p} />
 				{/each}
 			</details>
 		</div>
 	{/each}
 </div>
+
+{#snippet stepContent(index, step)}
+	{#if index === 0}
+		<p>Content for Lab 1</p>
+		<input type="text" placeholder="Enter data for Lab 1" />
+	{:else if index === 1}
+		<p>Content for Lab 2</p>
+		<textarea
+			placeholder="Enter details for Lab 2"
+			oninput={(e) => {
+				if (e.target.value != '') {
+					steps[1].completed = true;
+				} else {
+					steps[1].completed = false;
+				}
+			}}
+		></textarea>
+	{:else if index === 2}
+		<p>Content for Label 3</p>
+		<textarea placeholder="Enter details for Label 3"></textarea>
+	{:else if index === 3}
+		<p>Content for Lab 4</p>
+		<textarea placeholder="Enter details for Lab 4"></textarea>
+	{/if}
+{/snippet}
+
+<ProgressIndicator bind:steps bind:currentStep {stepContent} />
 
 {#if showAddTable}
 	<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />

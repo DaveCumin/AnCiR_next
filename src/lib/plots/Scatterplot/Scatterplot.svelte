@@ -21,12 +21,12 @@
 		constructor(parent, dataIN) {
 			this.parentplot = parent;
 
-			if (dataIN && dataIN.x) {
+			if (dataIN?.x) {
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
 				this.x = new ColumnClass({ refDataID: -1 });
 			}
-			if (dataIN && dataIN.y) {
+			if (dataIN?.y) {
 				this.y = ColumnClass.fromJSON(dataIN.y);
 			} else {
 				this.y = new ColumnClass({ refDataID: -1 });
