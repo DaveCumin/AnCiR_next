@@ -42,7 +42,7 @@
 			const yByPeriod = {};
 
 			for (let i = 0; i < tempx.length; i++) {
-				const period = Math.floor((tempx[i] - this.offset) / this.parent.periodHrs);
+				const period = Math.floor((tempx[i] - this.offset) / this.parentPlot.periodHrs);
 
 				if (period >= 0) {
 					if (!xByPeriod[period]) {
@@ -356,9 +356,9 @@
 
 {#snippet plot(theData)}
 	<svg
-		id={'plot' + theData.plot.parent.id}
-		width={theData.plot.parent.width}
-		height={theData.plot.parent.height}
+		id={'plot' + theData.plot.parentBox.id}
+		width={theData.plot.parentBox.width}
+		height={theData.plot.parentBox.height}
 		style={`background: white; position: absolute;`}
 		onclick={(e) => handleClick(e)}
 	>
