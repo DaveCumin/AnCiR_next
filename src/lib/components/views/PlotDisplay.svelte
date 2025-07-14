@@ -12,7 +12,6 @@
 		closeControlPanel();
 	}
 	let canvasWidthPx = $derived.by(() => {
-		console.log(appState.showControlPanel);
 		if (appState.showControlPanel) {
 			return (
 				window.innerWidth -

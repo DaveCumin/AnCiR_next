@@ -7,14 +7,20 @@
 	import ControlDisplay from './views/ControlDisplay.svelte';
 
 	let container;
-	let width = 360; // initial width
+	let width = $derived(window.innerWidth - appState.positionControlPanel); // initial width
 	const minWidth = 300;
+	const maxWidth = 500;
 
-	export let resizeSide = 'left';
+	let resizeSide = 'left';
 	let resizing = false;
 
 	function onMouseMove(e) {
 		if (!resizing) return;
+
+		if (window.innerWidth - e.clientX >= maxWidth) {
+			stopResize();
+			return;
+		}
 
 		const rect = container.getBoundingClientRect();
 		let newWidth;
@@ -27,10 +33,7 @@
 
 		width = Math.max(minWidth, newWidth);
 
-		// TODO: fix plot limitation when resize
-
-		// appState.positionControlPanel = window.innerWidth - width;
-		// console.log(appState.positionControlPanel);
+		appState.positionControlPanel = window.innerWidth - width;
 	}
 
 	function stopResize() {
@@ -48,7 +51,11 @@
 	}
 </script>
 
-<div bind:this={container} class="view-container {resizeSide}" style="width: {width}px;">
+<div
+	bind:this={container}
+	class="view-container {resizeSide}"
+	style="width: {width}px; min-width: {minWidth}px;	max-width: {maxWidth}px;"
+>
 	<ControlDisplay />
 	<div class="resizer" onmousedown={startResize}></div>
 </div>
@@ -59,8 +66,6 @@
 		overflow-x: hidden;
 		overflow-wrap: anywhere;
 		height: 100%;
-		min-width: 300px;
-		max-width: 444px;
 		display: flex;
 		flex-direction: column;
 		justify-content: start;
