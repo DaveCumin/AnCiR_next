@@ -1,6 +1,6 @@
 <script context="module">
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
-	import { getColumnByID } from '$lib/core/Column.svelte';
+	import { getColumnById } from '$lib/core/Column.svelte';
 
 	function compareValues(value, operator, target) {
 		switch (operator) {
@@ -35,9 +35,9 @@
 
 		// Process each condition
 		for (const { byColId, isOperator, byColValue } of conditions) {
-			if (byColId == -1) continue; // Skip invalid column IDs
+			if (byColId == -1) continue; // Skip invalid column Ids
 
-			const byCol = getColumnByID(byColId);
+			const byCol = getColumnById(byColId);
 			if (!byCol) continue; // Skip if column not found
 
 			const byColData = byCol.getData();
@@ -94,10 +94,10 @@
 			<span>Where</span>
 			<ColumnSelector
 				bind:value={condition.byColId}
-				excludeColIds={[p.parentCol.id, p.parentCol.refDataID]}
+				excludeColIds={[p.parentCol.id, p.parentCol.refDataId]}
 			/>
 			<span>is</span>
-			{#if getColumnByID(condition.byColId)?.type === 'category'}
+			{#if getColumnById(condition.byColId)?.type === 'category'}
 				<select bind:value={condition.isOperator}>
 					<option value="==">equals</option>
 					<option value="!=">not equals</option>
@@ -113,7 +113,7 @@
 					<option value="<=">≤</option>
 				</select>
 			{/if}
-			{#if getColumnByID(condition.byColId)?.type === 'category'}
+			{#if getColumnById(condition.byColId)?.type === 'category'}
 				<input type="text" bind:value={condition.byColValue} />
 			{:else}
 				<input type="number" bind:value={condition.byColValue} />

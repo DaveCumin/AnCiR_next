@@ -1,10 +1,10 @@
-export function convertToImage(svgID, filetype = 'png') {
+export function convertToImage(svgId, filetype = 'png') {
 	if ((filetype = 'svg')) {
-		exportSVG(svgID);
+		exportSVG(svgId);
 		return;
 	}
 	// Get the SVG element
-	const svg = document.getElementById(svgID);
+	const svg = document.getElementById(svgId);
 
 	// Serialize the SVG to a string
 	const serializer = new XMLSerializer();
@@ -38,7 +38,7 @@ export function convertToImage(svgID, filetype = 'png') {
 		// Create a download link
 		const link = document.createElement('a');
 		link.href = DataUrl;
-		link.download = svgID + '.' + filetype; // File name
+		link.download = svgId + '.' + filetype; // File name
 		document.body.appendChild(link);
 		link.click();
 		document.body.removeChild(link);
@@ -48,8 +48,8 @@ export function convertToImage(svgID, filetype = 'png') {
 	};
 }
 
-function exportSVG(svgID) {
-	const svgString = document.getElementById(svgID).outerHTML;
+function exportSVG(svgId) {
+	const svgString = document.getElementById(svgId).outerHTML;
 	const svgBlob = new Blob([svgString], {
 		type: 'image/svg+xml;charset=utf-8'
 	});
@@ -57,7 +57,7 @@ function exportSVG(svgID) {
 
 	const link = document.createElement('a');
 	link.href = svgUrl;
-	link.download = svgID + '.svg';
+	link.download = svgId + '.svg';
 	document.body.appendChild(link);
 	link.click();
 

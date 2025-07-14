@@ -14,8 +14,8 @@ import { min, max } from '$lib/utils/MathsStats';
 import { getISODate } from '$lib/utils/time/TimeUtils.js';
 
 //Get data from the data structure
-export function.getData()FromTable(tableID, key) {
-	const tempData = get(data)[get(data).findIndex((d) => d.id === tableID)].data[key];
+export function.getData()FromTable(tableId, key) {
+	const tempData = get(data)[get(data).findIndex((d) => d.id === tableId)].data[key];
 
 	if (tempData.type === 'time') {
 		return tempData.timeData;
@@ -24,31 +24,31 @@ export function.getData()FromTable(tableID, key) {
 }
 
 //Gets the name of the field (for display purposes)
-export function getFieldName(tableID, field) {
-	const tempData = get(data)[get(data).findIndex((d) => d.id === tableID)].data[field];
+export function getFieldName(tableId, field) {
+	const tempData = get(data)[get(data).findIndex((d) => d.id === tableId)].data[field];
 	return tempData.name;
 }
 
 export function getFieldNames(source) {
-	return Object.keys(get(data)[get(data).findIndex((d) => d.id === source.tableID)].data);
+	return Object.keys(get(data)[get(data).findIndex((d) => d.id === source.tableId)].data);
 }
 
 //get the data from graph source
 export function getRawData(sourceIndex, vals) {
 	const sourceData = get(graphs)[get(activeGraphTab)].sourceData[sourceIndex];
-	const tableID = sourceData.tableID;
-	let rawData =.getData()FromTable(tableID, vals.field);
+	const tableId = sourceData.tableId;
+	let rawData =.getData()FromTable(tableId, vals.field);
 	return rawData;
 }
 //get the timeFormat from graph source
 export function getFirstTime(sourceIndex, vals) {
 	const sourceData = get(graphs)[get(activeGraphTab)].sourceData[sourceIndex];
-	const tableID = sourceData.tableID;
+	const tableId = sourceData.tableId;
 	const format =
-		get(data)[get(data).findIndex((d) => d.id === tableID)].data[vals.field].timeFormat;
+		get(data)[get(data).findIndex((d) => d.id === tableId)].data[vals.field].timeFormat;
 
 	const firstTime =
-		get(data)[get(data).findIndex((d) => d.id === tableID)].data[vals.field].data[0];
+		get(data)[get(data).findIndex((d) => d.id === tableId)].data[vals.field].data[0];
 
 	return getISODate(firstTime, format);
 }
@@ -72,33 +72,33 @@ export function.getData()FromSource(sourceIndex, vals) {
 }
 
 //get the type of a data field
-export function getFieldType(tableID, field) {
-	const tempData = get(data)[get(data).findIndex((d) => d.id === tableID)].data[field];
+export function getFieldType(tableId, field) {
+	const tempData = get(data)[get(data).findIndex((d) => d.id === tableId)].data[field];
 	return tempData.type;
 }
 
-export function getFieldTypeFromGraph(graphID, sourceID, keyIN) {
-	const theGraph = get(graphs)[get(graphs).findIndex((g) => g.id === graphID)];
+export function getFieldTypeFromGraph(graphId, sourceId, keyIN) {
+	const theGraph = get(graphs)[get(graphs).findIndex((g) => g.id === graphId)];
 	const tempData =
-		get(data)[get(data).findIndex((d) => d.id === theGraph.sourceData[sourceID].tableID)].data[
-			theGraph.sourceData[sourceID].chartvalues[keyIN].field
+		get(data)[get(data).findIndex((d) => d.id === theGraph.sourceData[sourceId].tableId)].data[
+			theGraph.sourceData[sourceId].chartvalues[keyIN].field
 		];
 	return tempData.type;
 }
 
 //remove data from a graph
-export function removeGraphData(srcID) {
+export function removeGraphData(srcId) {
 	graphs.update((currentData) => {
 		const newData = [...currentData];
-		const currentGraphID = newData[get(activeGraphTab)].id;
+		const currentGraphId = newData[get(activeGraphTab)].id;
 
-		// Find the current graph by ID
-		const currentGraph = newData.find((graph) => graph.id === currentGraphID);
+		// Find the current graph by Id
+		const currentGraph = newData.find((graph) => graph.id === currentGraphId);
 
 		// Check if the currentGraph exists and has sourceData
 		if (currentGraph && currentGraph.sourceData) {
 			// Remove the i-th sourceData element from the currentGraph
-			currentGraph.sourceData.splice(srcID, 1);
+			currentGraph.sourceData.splice(srcId, 1);
 		}
 
 		return newData;
@@ -122,22 +122,22 @@ export function createnewDataForGraph(protoValues, protoOther) {
 	}
 }
 
-export function addDataToGraph(tableID_IN, prototypechartvalues, prototypeother) {
+export function addDataToGraph(tableId_IN, prototypechartvalues, prototypeother) {
 	let chartvalues = {};
 
 	// Iterate over the keys of the original object, make the fields
 	Object.keys(prototypechartvalues).forEach((key, cdindex) => {
 		// Create a new object structure for each key
 		chartvalues[key] = {
-			field: Object.keys(get(data)[get(data).findIndex((d) => d.id === tableID_IN)].data)[cdindex], //{insert fieldnames in order}
+			field: Object.keys(get(data)[get(data).findIndex((d) => d.id === tableId_IN)].data)[cdindex], //{insert fieldnames in order}
 			processSteps: []
 		};
 	});
 
-	// every graph has a tableID and a name; then add chartvalues
+	// every graph has a tableId and a name; then add chartvalues
 	graphs.update((current) => {
 		current[get(activeGraphTab)].sourceData.push({
-			tableID: tableID_IN,
+			tableId: tableId_IN,
 			name: 'Data ' + (1 + get(graphs)[get(activeGraphTab)].sourceData.length),
 			chartvalues: chartvalues,
 			...deepCopy(prototypeother)

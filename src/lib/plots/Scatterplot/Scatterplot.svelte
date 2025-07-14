@@ -24,12 +24,12 @@
 			if (dataIN?.x) {
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new ColumnClass({ refDataID: -1 });
+				this.x = new ColumnClass({ refDataId: -1 });
 			}
 			if (dataIN?.y) {
 				this.y = ColumnClass.fromJSON(dataIN.y);
 			} else {
-				this.y = new ColumnClass({ refDataID: -1 });
+				this.y = new ColumnClass({ refDataId: -1 });
 			}
 			this.linecolour = dataIN?.linecolour ?? getRandomColor();
 			this.pointcolour = dataIN?.pointcolour ?? getRandomColor();
@@ -239,8 +239,8 @@
 		<button
 			onclick={() =>
 				theData.addData({
-					x: { refDataID: pickRandomData() },
-					y: { refDataID: pickRandomData() }
+					x: { refDataId: pickRandomData() },
+					y: { refDataId: pickRandomData() }
 				})}
 		>
 			+

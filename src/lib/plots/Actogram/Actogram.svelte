@@ -186,11 +186,11 @@
 			this.data.splice(idx, 1);
 		}
 
-		addPhaseMarkerTo(markerID, clickedDay, clickedTime) {
+		addPhaseMarkerTo(markerId, clickedDay, clickedTime) {
 			//find the marker with the id
 			for (let i = 0; i < this.data.length; i++) {
 				for (let j = 0; j < this.data[i].phaseMarkers.length; j++) {
-					if (this.data[i].phaseMarkers[j].id == markerID) {
+					if (this.data[i].phaseMarkers[j].id == markerId) {
 						this.data[i].phaseMarkers[j].addTime(clickedDay, clickedTime);
 					}
 				}
@@ -273,10 +273,10 @@
 
 {#snippet controls(theData)}
 	<div>
-		<button onclick={() => convertToImage('plot' + theData.parent.id, 'svg')}>Save </button>
-		Name: <input type="text" bind:value={theData.parent.name} />
-		Width: <input type="number" bind:value={theData.parent.width} />
-		height: <input type="number" bind:value={theData.parent.height} />
+		<button onclick={() => convertToImage('plot' + theData.parentBox.id, 'svg')}>Save </button>
+		Name: <input type="text" bind:value={theData.parentBox.name} />
+		Width: <input type="number" bind:value={theData.parentBox.width} />
+		height: <input type="number" bind:value={theData.parentBox.height} />
 
 		<p>
 			Padding: <input type="number" bind:value={theData.paddingIN.top} />

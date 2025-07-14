@@ -6,9 +6,15 @@
 	import Draggable from '$lib/components/reusables/Draggable.svelte';
 
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
+	import { closeControlPanel } from '$lib/components/views/ControlDisplay.svelte';
+	function handleClick(e) {
+		e.stopPropagation();
+		closeControlPanel();
+	}
 </script>
 
 <div
+	onclick={handleClick}
 	class="canvas"
 	style="top: 0; left: {appState.positionDisplayPanel}px; width: {window.innerWidth -
 		appState.positionDisplayPanel -

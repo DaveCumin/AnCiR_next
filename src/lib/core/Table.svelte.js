@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
 import { core, pushObj } from '$lib/core/core.svelte.js';
-import { getColumnByID, Column } from './Column.svelte';
+import { getColumnById, Column } from './Column.svelte';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
 
-export function getTableByID(id) {
+export function getTableById(id) {
 	const theTable = core.tables.find((table) => table.id === id);
 	return theTable;
 }
@@ -19,10 +19,10 @@ export class Table {
 	name = $state('');
 	contents = $state([]);
 
-	columnRefs = $state([]); //Reference IDs for the raw data that are columns
+	columnRefs = $state([]); //Reference Ids for the raw data that are columns
 
 	columns = $derived.by(() => {
-		return this.columnRefs.map((colRef) => getColumnByID(colRef));
+		return this.columnRefs.map((colRef) => getColumnById(colRef));
 	}); //The actual columns of data
 
 	processes = $state([]);

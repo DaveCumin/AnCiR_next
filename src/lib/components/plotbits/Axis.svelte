@@ -58,7 +58,7 @@
 				.style('font-size', `${tickfontsize}px`)
 				.style('transform', `translate(${width + xoffset}px, ${yoffset}px)`);
 		}
-		//DO GRIDLINES
+		//DO GRIdLINES
 		if (gridlines) {
 			if (position == 'bottom') {
 				select(axisGroup)

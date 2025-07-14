@@ -5,7 +5,7 @@
 	/*
   export function moveBoxLayer(direction) {
     let boxes = thestate.boxes;
-    let id = thestate.currentBoxID;
+    let id = thestate.currentBoxId;
     // Clone the boxes to avoid modifying the original array
     const boxescopy = [...boxes];
 
@@ -138,7 +138,7 @@
             transform:translate3d(${plot.x}px, ${plot.y}px, 0px);
               position:absolute; ${style}`}
 	onclick={(e) => {
-		//thestate.currentBoxID = id;
+		//thestate.currentBoxId = id;
 		e.stopPropagation();
 	}}
 >

@@ -3,7 +3,7 @@
 	import { core, appConsts } from '$lib/core/core.svelte.js';
 	import { timeParse } from 'd3-time-format';
 
-	export function getColumnByID(id) {
+	export function getColumnById(id) {
 		const theColumn = core.data.find((column) => column.id === id);
 		return theColumn;
 	}
@@ -11,9 +11,9 @@
 	let _columnidCounter = 0;
 
 	export class Column {
-		id; //Unique ID for the column
+		id; //Unique Id for the column
 		refId = $state(null); //if it is a column that is based on another
-		tableProcessGUID;
+		tableProcessGUId;
 		data = null; //if it has raw data, store that here
 		compression = $state(null); //if any compression is used, store the info here
 		//Where the data are from (references all the way to the primary source [importd (file) or simulated (params)])
@@ -21,9 +21,9 @@
 			if (this.isReferencial()) {
 				return (
 					'refers to ' +
-					getColumnByID(this.refId)?.name +
+					getColumnById(this.refId)?.name +
 					' which is ' +
-					getColumnByID(this.refId)?.provenance
+					getColumnById(this.refId)?.provenance
 				);
 			}
 		});
@@ -33,15 +33,15 @@
 				return this.customName; // Prioritize custom name if set
 			}
 			if (this.isReferencial()) {
-				this.customName = getColumnByID(this.refId)?.name + '*';
-				return getColumnByID(this.refId)?.name + '*';
+				this.customName = getColumnById(this.refId)?.name + '*';
+				return getColumnById(this.refId)?.name + '*';
 			}
 		});
 		customName = null;
 		//Type of data - if it is referencial, then get the type from the reference
 		type = $derived.by(() => {
 			if (this.isReferencial()) {
-				return getColumnByID(this.refId)?.type;
+				return getColumnById(this.refId)?.type;
 			}
 		});
 		//time format for converting time data
@@ -65,7 +65,7 @@
 				this.id = id;
 				_columnidCounter = Math.max(id + 1, _columnidCounter + 1);
 			}
-			this.tableProcessGUID = '';
+			this.tableProcessGUId = '';
 			//Assign the other data
 			Object.assign(this, structuredClone(columnData));
 		}
@@ -91,11 +91,11 @@
 
 		getDataHash() {
 			const processHash =
-				this.tableProcessGUID +
+				this.tableProcessGUId +
 				':' +
 				this.processes.map((p) => `${p.processid}:${p.name}:${JSON.stringify(p.args)}`).join('|');
 
-			const refColumn = this.isReferencial() ? getColumnByID(this.refId) : null;
+			const refColumn = this.isReferencial() ? getColumnById(this.refId) : null;
 			const refDataHash = refColumn ? refColumn.getDataHash() : '';
 			return `${this.refId ?? '_'}:${this.data?.length || ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}:${refDataHash}`;
 		}
@@ -166,7 +166,7 @@
 			if (this.compression != null) {
 				jsonOut.compression = this.compression;
 			}
-			jsonOut.tableProcessGUID = this.tableProcessGUID;
+			jsonOut.tableProcessGUId = this.tableProcessGUId;
 			jsonOut.provenance = this.provenance;
 			jsonOut.processes = this.processes;
 
@@ -180,7 +180,7 @@
 				refId,
 				data,
 				timeformat,
-				tableProcessGUID,
+				tableProcessGUId,
 				processes,
 				compression,
 				provenance
@@ -194,7 +194,7 @@
 					compression: compression ?? null,
 					timeformat: timeformat ?? '',
 					provenance: provenance ?? null,
-					tableProcessGUID: tableProcessGUID ?? '',
+					tableProcessGUId: tableProcessGUId ?? '',
 					processes: []
 				},
 				id
@@ -219,7 +219,7 @@
 {:else}
 	<details open style="margin-left: 1rem">
 		<summary>
-			ID: {col.id}
+			Id: {col.id}
 			{#if canChange}
 				<ColumnSelector bind:value={col.refId} />
 			{/if}
@@ -243,7 +243,7 @@
 				{#if !canChange}
 					<input bind:value={col.timeformat} />
 				{:else}
-					{getColumnByID(col.refId)?.timeformat}
+					{getColumnById(col.refId)?.timeformat}
 				{/if}
 			{/if}
 			{#if col.compression != null}

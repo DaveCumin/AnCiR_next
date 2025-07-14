@@ -75,14 +75,10 @@
 		}
 	}
 
-	function handleClick(e) {
+	function handleDblClick(e) {
 		e.stopPropagation();
 		appState.selectedPlotId = tempId;
 		appState.showControlPanel = true;
-
-		bringToFront(appState.selectedPlotId); //change without changing z-index in style
-
-		// console.log("id:", id, "z-index:", zIndex);
 	}
 
 	function handleCanvasClick(e) {
@@ -96,7 +92,7 @@
 
 <!-- added header therefore TODO: other way than hardcode -->
 <section
-	onclick={handleClick}
+	ondblclick={handleDblClick}
 	class:selected={appState.selectedPlotId === id}
 	class="draggable"
 	style="left: {x}px;

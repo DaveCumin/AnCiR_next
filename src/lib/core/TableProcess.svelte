@@ -1,11 +1,11 @@
 <script module>
 	import { core } from '$lib/core/core.svelte.js';
-	import { getTableByID } from '$lib/core/Table.svelte';
+	import { getTableById } from '$lib/core/Table.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	let _tableprocessidCounter = 0;
 
 	export class TableProcess {
-		id; //Unique ID for the column
+		id; //Unique Id for the column
 		name = '';
 		args = $state({});
 
@@ -44,8 +44,8 @@
 				this.args.yOUT = outY.id;
 				console.log('adding columns to table', this.parent.name);
 				console.log('xOUT: ', outX, 'yOUT: ', outY);
-				console.log('table ID', this.parent.id);
-				const theTable = getTableByID(this.parent.id);
+				console.log('table Id', this.parent.id);
+				const theTable = getTableById(this.parent.id);
 				console.log(theTable);
 				theTable.addColumn(outX);
 				theTable.addColumn(outY);

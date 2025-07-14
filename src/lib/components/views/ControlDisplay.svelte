@@ -1,17 +1,17 @@
 <!-- Handle click plot (plot id core state) -->
-<script>
-	// @ts-nocheck
-    import Icon from "$lib/icons/Icon.svelte";
-
-	import { appConsts, appState, core } from "$lib/core/core.svelte";
-
-	function closeControlPanel() {
+<script module>
+	export function closeControlPanel() {
 		appState.selectedPlotId = null;
 		appState.showControlPanel = false;
-
 		appState.positionControlPanel = window.innerWidth;
 	}
+</script>
 
+<script>
+	// @ts-nocheck
+	import Icon from '$lib/icons/Icon.svelte';
+
+	import { appConsts, appState, core } from '$lib/core/core.svelte';
 </script>
 
 <div class="heading">
@@ -19,34 +19,33 @@
 
 	<div class="add">
 		<button onclick={closeControlPanel}>
-            <Icon name="close" width={16} height={16} className="close"/>
+			<Icon name="close" width={16} height={16} className="close" />
 		</button>
 	</div>
 </div>
 
 <div class="control-display">
 	<p>{appState.selectedPlotId}</p>
-	
-  	{#key appState.selectedPlotId}
-		{#if (appState.selectedPlotId) >= 0}
-			{@const plot = core.plots.find(p => p.id === appState.selectedPlotId)}
+
+	{#key appState.selectedPlotId}
+		{#if appState.selectedPlotId >= 0}
+			{@const plot = core.plots.find((p) => p.id === appState.selectedPlotId)}
 			{#if plot}
 				{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 				{#if Plot}
-				<p>{core.plots.find(p => p.id === appState.selectedPlotId)?.name}</p>
-	<p>{JSON.stringify(core.plots.find(p => p.id === appState.selectedPlotId)?.plot)}</p>
-				<Plot theData={plot.plot} which="controls" />
+					<p>{core.plots.find((p) => p.id === appState.selectedPlotId)?.name}</p>
+					<p>{JSON.stringify(core.plots.find((p) => p.id === appState.selectedPlotId)?.plot)}</p>
+					<Plot theData={plot.plot} which="controls" />
 				{/if}
 			{/if}
-    	{/if}
-  	{/key}
+		{/if}
+	{/key}
 </div>
 
 <style>
 	.heading {
 		position: sticky;
 		top: 0;
-
 		width: 100%;
 		height: 4vh;
 		display: flex;
@@ -63,7 +62,7 @@
 		/* font-weight: bold; */
 	}
 
-    button {
+	button {
 		background-color: transparent;
 		border: none;
 		margin-right: 0.6rem;
@@ -81,5 +80,4 @@
 		margin-left: 1rem;
 		margin-right: 1rem;
 	}
-
 </style>

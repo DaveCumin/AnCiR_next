@@ -50,18 +50,18 @@ export const testjson = `{
                 "data": [
                     {
                         "x": {
-                            "columnID": 59,
+                            "columnId": 59,
                             "name": "REALTIME*",
-                            "refDataID": 58,
+                            "refDataId": 58,
                             "type": "time",
                             "timeformat": "",
                             "provenance": "refers to REALTIME which is Just made up",
                             "processes": []
                         },
                         "y": {
-                            "columnID": 60,
+                            "columnId": 60,
                             "name": "val1*",
-                            "refDataID": 53,
+                            "refDataId": 53,
                             "type": "number",
                             "provenance": "refers to val1 which is imported from thin air",
                             "processes": []
@@ -101,17 +101,17 @@ export const testjson = `{
                 "data": [
                     {
                         "x": {
-                            "columnID": 61,
+                            "columnId": 61,
                             "name": "the time*",
-                            "refDataID": 52,
+                            "refDataId": 52,
                             "type": "number",
                             "provenance": "refers to the time which is just made this up",
                             "processes": []
                         },
                         "y": {
-                            "columnID": 62,
+                            "columnId": 62,
                             "name": "val1*",
-                            "refDataID": 53,
+                            "refDataId": 53,
                             "type": "number",
                             "provenance": "refers to val1 which is imported from thin air",
                             "processes": []
@@ -151,17 +151,17 @@ export const testjson = `{
                 "data": [
                     {
                         "x": {
-                            "columnID": 63,
+                            "columnId": 63,
                             "name": "the time*",
-                            "refDataID": 52,
+                            "refDataId": 52,
                             "type": "number",
                             "provenance": "refers to the time which is just made this up",
                             "processes": []
                         },
                         "y": {
-                            "columnID": 64,
+                            "columnId": 64,
                             "name": "val1*",
-                            "refDataID": 53,
+                            "refDataId": 53,
                             "type": "number",
                             "provenance": "refers to val1 which is imported from thin air",
                             "processes": []
@@ -177,7 +177,7 @@ export const testjson = `{
     ],
     "data": [
         {
-            "columnID": 52,
+            "columnId": 52,
             "name": "the time",
             "rawData": [
                 5,
@@ -5194,7 +5194,7 @@ export const testjson = `{
             ]
         },
         {
-            "columnID": 53,
+            "columnId": 53,
             "name": "val1",
             "rawData": [
                 7,
@@ -10219,7 +10219,7 @@ export const testjson = `{
             ]
         },
         {
-            "columnID": 54,
+            "columnId": 54,
             "name": "mycat",
             "rawData": [
                 "a",
@@ -10232,7 +10232,7 @@ export const testjson = `{
             "processes": []
         },
         {
-            "columnID": 55,
+            "columnId": 55,
             "name": "AWD",
             "rawData": {
                 "start": 10,
@@ -10245,23 +10245,23 @@ export const testjson = `{
             "processes": []
         },
         {
-            "columnID": 56,
+            "columnId": 56,
             "name": "val1*",
-            "refDataID": 53,
+            "refDataId": 53,
             "type": "number",
             "provenance": "refers to val1 which is imported from thin air",
             "processes": []
         },
         {
-            "columnID": 57,
+            "columnId": 57,
             "name": "val1**",
-            "refDataID": 56,
+            "refDataId": 56,
             "type": "number",
             "provenance": "refers to val1* which is refers to val1 which is imported from thin air",
             "processes": []
         },
         {
-            "columnID": 58,
+            "columnId": 58,
             "name": "REALTIME",
             "rawData": [
                 "2025-07-09T02:26:45.223Z",

@@ -7,7 +7,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddTable from '$lib/components/iconActions/AddTable.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
-	import { Column, getColumnByID } from '$lib/core/Column.svelte';
+	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import ColumnSelector from '../inputs/ColumnSelector.svelte';
 	import TableProcess from '$lib/core/TableProcess.svelte';
@@ -64,7 +64,7 @@
 	function addColumn(tableid) {
 		console.log('Add a column');
 		selectedTable = core.tables.find((t) => t.id === tableid);
-		newColumnLength = getColumnByID(selectedTable.columnRefs[0]).getData().length;
+		newColumnLength = getColumnById(selectedTable.columnRefs[0]).getData().length;
 		showAddColumnModal = true;
 	}
 
@@ -77,9 +77,9 @@
 			);
 		} else if (howMakeNewColumn == 'existing' && newColsExisting.length > 0) {
 			//TODO: need to deal with types and operators in between (eg * for numnbers, space for strings, and rawData for time [but only if no processes])
-			newColumnData = getColumnByID(newColsExisting[0]).getData();
+			newColumnData = getColumnById(newColsExisting[0]).getData();
 			for (let nc = 1; nc < newColsExisting.length; nc++) {
-				const temp = getColumnByID(newColsExisting[nc]).getData();
+				const temp = getColumnById(newColsExisting[nc]).getData();
 
 				newColumnData = newColumnData.map((d, i) => d + temp[i]);
 			}
