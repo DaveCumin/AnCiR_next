@@ -14,10 +14,11 @@
 	import { fly } from 'svelte/transition';
 
 	let container;
-	let width = 360; // initial width
-	const minWidth = 300;
+	let width = appState.positionDisplayPanel; // initial width
+	const minWidth = 200;
+	const maxWidth = 500;
 
-	export let resizeSide = 'right';
+	let resizeSide = 'right';
 	let resizing = false;
 
 	function onMouseMove(e) {
@@ -29,13 +30,15 @@
 		if (resizeSide === 'right') {
 			newWidth = e.clientX - rect.left;
 		} else {
-			const delta = rect.right - e.clientX;
-			newWidth = delta;
+			newWidth = rect.right - e.clientX;
+		}
+		if (newWidth >= maxWidth || newWidth <= minWidth) {
+			stopResize();
+			return;
 		}
 
 		width = Math.max(minWidth, newWidth);
-
-		appState.positionDisplayPanel = width;
+		appState.positionDisplayPanel = width + appState.positionNavbar;
 	}
 
 	function stopResize() {
@@ -57,7 +60,7 @@
 	<div
 		bind:this={container}
 		class="view-container {resizeSide}}"
-		style="width: {width}px;"
+		style="width: {width}px; min-width: {minWidth}px;	max-width: {maxWidth}px;"
 		in:fly={{ x: -width, duration: 600 }}
 		out:fly={{ x: -width, duration: 600 }}
 	>
@@ -82,8 +85,6 @@
 		overflow-y: auto;
 		overflow-x: hidden;
 		height: 100%;
-		min-width: 300px;
-		max-width: 500px;
 		display: flex;
 		flex-direction: column;
 		justify-content: start;

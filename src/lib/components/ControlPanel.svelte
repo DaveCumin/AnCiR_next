@@ -9,7 +9,7 @@
 	import { fly } from 'svelte/transition';
 
 	let container;
-	let width = $derived(window.innerWidth - appState.positionControlPanel); // initial width
+	let width = window.innerWidth - appState.positionControlPanel; // initial width
 	const minWidth = 300;
 	const maxWidth = 500;
 
@@ -19,11 +19,6 @@
 	function onMouseMove(e) {
 		if (!resizing) return;
 
-		if (window.innerWidth - e.clientX >= maxWidth) {
-			stopResize();
-			return;
-		}
-
 		const rect = container.getBoundingClientRect();
 		let newWidth;
 
@@ -31,6 +26,10 @@
 			newWidth = e.clientX - rect.left;
 		} else {
 			newWidth = rect.right - e.clientX;
+		}
+		if (newWidth >= maxWidth || newWidth <= minWidth) {
+			stopResize();
+			return;
 		}
 
 		width = Math.max(minWidth, newWidth);
