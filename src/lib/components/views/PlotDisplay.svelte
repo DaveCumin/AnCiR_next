@@ -20,7 +20,7 @@
 		? window.innerWidth -
 			appState.positionDisplayPanel -
 			(window.innerWidth - appState.positionControlPanel)
-		: window.innerWidth}px; height: 100vh;"
+		: window.innerWidth - appState.positionDisplayPanel}px; height: 100vh;"
 >
 	{#each core.plots as plot, i (plot.id)}
 		<Draggable
