@@ -13,7 +13,7 @@
 	export class Column {
 		id; //Unique Id for the column
 		refId = $state(null); //if it is a column that is based on another
-		tableProcessGUId;
+		tableProcessGUId = $state([]);
 		data = null; //if it has raw data, store that here
 		compression = $state(null); //if any compression is used, store the info here
 		//Where the data are from (references all the way to the primary source [importd (file) or simulated (params)])
@@ -76,7 +76,7 @@
 			this.processes.push(newProcess);
 			return newProcess.id;
 		}
-		
+
 		removeProcess(id) {
 			this.processes = this.processes.filter((p) => p.id !== id);
 		}

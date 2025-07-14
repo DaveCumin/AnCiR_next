@@ -15,44 +15,13 @@
 		console.log('ProgressIndicator: stepContent defined =', !!stepContent);
 	});
 
-	// Ensure currentStep stays within bounds and manage active state
-	$effect(() => {
-		if (!steps || steps.length === 0) {
-			currentStep = 0;
-			console.log('ProgressIndicator: No steps, setting currentStep to 0');
-			return;
-		}
-		if (currentStep < 0) {
-			currentStep = 0;
-			console.log('ProgressIndicator: Clamped currentStep to 0');
-		}
-		if (currentStep >= steps.length) {
-			currentStep = steps.length - 1;
-			console.log('ProgressIndicator: Clamped currentStep to', currentStep);
-		}
-
-		// Ensure only the current step is active and set isExpanded for completed steps
-		steps.forEach((step, i) => {
-			if (step) {
-				step.active = i === currentStep;
-				// Initialize isExpanded: true for completed steps, false otherwise
-				if (step.completed && step.isExpanded === undefined) {
-					step.isExpanded = true;
-				} else if (!step.completed && step.isExpanded === undefined) {
-					step.isExpanded = false;
-				}
-			}
-		});
-	});
-
 	// Function to toggle step expansion
 	function toggleStep(index) {
 		if (!steps[index]) {
-			console.log('ProgressIndicator: Invalid step index', index);
 			return;
 		}
-		if (steps[index].completed) {
-			// Toggle isExpanded for completed steps
+		// Allow toggling for active or completed steps
+		if (steps[index].completed || index === currentStep || steps[index - 1]?.completed) {
 			steps[index].isExpanded = !steps[index].isExpanded;
 			console.log(
 				'ProgressIndicator: Toggled isExpanded for step',
@@ -60,31 +29,12 @@
 				'to',
 				steps[index].isExpanded
 			);
-		} else if (index === currentStep) {
-			// For the current step, do nothing (remains expanded)
 		} else {
-			// For incomplete steps, move to that step
-			currentStep = index;
-			console.log('ProgressIndicator: Toggled to step', index);
+			// For incomplete and non-active steps, move to that step without expanding
+			// currentStep = index;
+			// steps[index].isExpanded = true; // Expand the new active step
+			// console.log('ProgressIndicator: Moved to step', index);
 		}
-	}
-
-	// Update completed status when moving to next/previous step
-	async function goToStep(index) {
-		if (!steps || index < 0 || index >= steps.length) {
-			console.log('ProgressIndicator: Invalid goToStep index', index);
-			return;
-		}
-		// Mark all steps up to the current as completed and expanded
-		for (let i = 0; i <= index; i++) {
-			if (steps[i]) {
-				steps[i].completed = true;
-				steps[i].isExpanded = true; // Expand completed steps by default
-			}
-		}
-		currentStep = index;
-		console.log('ProgressIndicator: Moved to step', index);
-		await tick(); // Ensure DOM updates before animations
 	}
 </script>
 
@@ -96,7 +46,7 @@
 				<div
 					class="step-header"
 					role="button"
-					aria-expanded={index === currentStep || step.isExpanded}
+					aria-expanded={step.isExpanded}
 					onclick={() => toggleStep(index)}
 				>
 					<div class="step-indicator">
@@ -112,7 +62,7 @@
 				</div>
 
 				<!-- Step Content (Accordion) -->
-				<div class="step-content" class:expanded={index === currentStep || step.isExpanded}>
+				<div class="step-content" class:expanded={step.isExpanded}>
 					<div class="content-inner">
 						{#if stepContent}
 							{@render stepContent(index, step)}
@@ -142,7 +92,7 @@
 		flex-direction: column;
 		align-items: flex-start;
 		max-width: 600px;
-		margin: 20px auto;
+		margin: 5px;
 		font-family: Arial, sans-serif;
 	}
 
@@ -156,7 +106,7 @@
 	.step-header {
 		display: flex;
 		align-items: center;
-		padding: 10px;
+		padding: 5px;
 		cursor: pointer;
 		transition: background-color 0.2s ease;
 	}
@@ -171,7 +121,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		margin-right: 12px;
+		margin-right: 6px;
+		margin-left: -3px;
 	}
 
 	.dot {
@@ -219,7 +170,7 @@
 	}
 
 	.content-inner {
-		padding: 10px 20px 20px 48px; /* Align with step indicator */
+		padding: 10px 10px 10px 24px; /* Align with step indicator */
 		border-left: 2px solid #e5e7eb;
 		margin-left: 12px;
 	}
@@ -240,24 +191,5 @@
 		gap: 10px;
 		margin-top: 20px;
 		margin-left: 48px;
-	}
-
-	button {
-		padding: 8px 16px;
-		background-color: #3b82f6;
-		color: white;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 14px;
-	}
-
-	button:hover {
-		background-color: #2563eb;
-	}
-
-	button:disabled {
-		background-color: #9ca3af;
-		cursor: not-allowed;
 	}
 </style>

@@ -75,7 +75,7 @@
 		<input
 			id="fileInput"
 			type="file"
-			accept=".csv,.awd"
+			accept=".csv,.awd,.txt"
 			onchange={onFileChange}
 			style="display: none;"
 		/>
