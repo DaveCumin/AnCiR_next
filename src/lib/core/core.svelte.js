@@ -22,7 +22,7 @@ export const appState = $state({
 	canvasOffset: { x: 0, y: 0 },
 	canvasScale: 1.0,
 
-	selectedPlotId: null
+	selectedPlotIds: []
 });
 
 export const appConsts = $state({

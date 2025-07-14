@@ -1,7 +1,7 @@
 <!-- Handle click plot (plot id core state) -->
 <script module>
 	export function closeControlPanel() {
-		appState.selectedPlotId = null;
+		appState.selectedPlotIds = [];
 		appState.showControlPanel = false;
 	}
 </script>
@@ -24,16 +24,19 @@
 </div>
 
 <div class="control-display">
-	<p>{appState.selectedPlotId}</p>
+	<!-- This is only for the first selected plot - need an #if to take care of multiple selections -->
+	<p>{appState.selectedPlotIds}</p>
 
-	{#key appState.selectedPlotId}
-		{#if appState.selectedPlotId >= 0}
-			{@const plot = core.plots.find((p) => p.id === appState.selectedPlotId)}
+	{#key appState.selectedPlotIds}
+		{#if appState.selectedPlotIds.length >= 0}
+			{@const plot = core.plots.find((p) => p.id === appState.selectedPlotIds[0])}
 			{#if plot}
 				{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 				{#if Plot}
-					<p>{core.plots.find((p) => p.id === appState.selectedPlotId)?.name}</p>
-					<p>{JSON.stringify(core.plots.find((p) => p.id === appState.selectedPlotId)?.plot)}</p>
+					<p>{core.plots.find((p) => p.id === appState.selectedPlotIds[0])?.name}</p>
+					<p>
+						{JSON.stringify(core.plots.find((p) => p.id === appState.selectedPlotIds[0])?.plot)}
+					</p>
 					<Plot theData={plot.plot} which="controls" />
 				{/if}
 			{/if}

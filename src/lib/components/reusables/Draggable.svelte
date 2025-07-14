@@ -77,18 +77,26 @@
 
 	function handleDblClick(e) {
 		e.stopPropagation();
-		appState.selectedPlotId = tempId;
+		appState.selectedPlotIds = [tempId];
 		appState.showControlPanel = true;
 	}
 	function handleClick(e) {
 		e.stopPropagation();
-		appState.selectedPlotId = tempId;
+		//look for alt held at the same time
+		if (e.altKey) {
+			//Only add if it's not already there
+			if (!appState.selectedPlotIds.includes(tempId)) {
+				appState.selectedPlotIds.push(tempId);
+			}
+		} else {
+			appState.selectedPlotIds = [tempId];
+		}
 	}
 
 	function handleCanvasClick(e) {
 		console.log('HERE');
 		e.stopPropagation();
-		appState.selectedPlotId = null;
+		appState.selectedPlotIds = [];
 	}
 </script>
 
@@ -98,7 +106,7 @@
 <section
 	ondblclick={handleDblClick}
 	onclick={handleClick}
-	class:selected={appState.selectedPlotId === id}
+	class:selected={appState.selectedPlotIds?.includes(id)}
 	class="draggable"
 	style="left: {x}px;
 		top: {y}px;
