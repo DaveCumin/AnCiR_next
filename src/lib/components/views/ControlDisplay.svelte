@@ -3,7 +3,6 @@
 	export function closeControlPanel() {
 		appState.selectedPlotId = null;
 		appState.showControlPanel = false;
-		appState.positionControlPanel = window.innerWidth;
 	}
 </script>
 
