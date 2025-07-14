@@ -1,5 +1,6 @@
 <script module>
 	export function closeDisplayPanel() {
+		appState.currentTab = null;
 		appState.showDisplayPanel = false;
 	}
 </script>
