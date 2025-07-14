@@ -76,6 +76,7 @@
 			this.processes.push(newProcess);
 			return newProcess.id;
 		}
+		
 		removeProcess(id) {
 			this.processes = this.processes.filter((p) => p.id !== id);
 		}
@@ -93,11 +94,11 @@
 			const processHash =
 				this.tableProcessGUId +
 				':' +
-				this.processes.map((p) => `${p.processid}:${p.name}:${JSON.stringify(p.args)}`).join('|');
+				this.processes.map((p) => `${p.id}:${p.name}:${JSON.stringify(p.args)}`).join('|');
 
 			const refColumn = this.isReferencial() ? getColumnById(this.refId) : null;
 			const refDataHash = refColumn ? refColumn.getDataHash() : '';
-			return `${this.refId ?? '_'}:${this.data?.length || ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}:${refDataHash}`;
+			return `${this.refId ?? '_'}:${this.data?.length || ''}:${this.compression || ''}:${this.type}:${this.timeFormat}:${processHash}:${refDataHash}`;
 		}
 
 		//--- FUNCTION TO GET THE DATA
