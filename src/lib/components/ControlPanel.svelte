@@ -6,6 +6,8 @@
 
 	import ControlDisplay from './views/ControlDisplay.svelte';
 
+	import { fly } from 'svelte/transition';
+
 	let container;
 	let width = $derived(window.innerWidth - appState.positionControlPanel); // initial width
 	const minWidth = 300;
@@ -51,16 +53,28 @@
 	}
 </script>
 
-<div
-	bind:this={container}
-	class="view-container {resizeSide}"
-	style="width: {width}px; min-width: {minWidth}px;	max-width: {maxWidth}px;"
->
-	<ControlDisplay />
-	<div class="resizer" onmousedown={startResize}></div>
-</div>
+{#if appState.showControlPanel}
+	<div
+		bind:this={container}
+		class="view-container {resizeSide}"
+		style="width: {width}px; min-width: {minWidth}px;	max-width: {maxWidth}px;"
+		in:fly={{ x: width, duration: 600 }}
+		out:fly={{ x: width, duration: 600 }}
+	>
+		<ControlDisplay />
+		<div class="resizer" onmousedown={startResize}></div>
+	</div>
+{:else}
+	<button class="openControlPanel" onclick={() => (appState.showControlPanel = true)}>open</button>
+{/if}
 
 <style>
+	.openControlPanel {
+		position: fixed;
+		top: 0;
+		right: 0;
+		z-index: 999;
+	}
 	.view-container {
 		overflow-y: auto;
 		overflow-x: hidden;

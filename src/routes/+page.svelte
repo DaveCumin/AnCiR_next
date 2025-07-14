@@ -282,15 +282,11 @@
 	<Navbar />
 {/if}
 
-{#if appState.showDisplayPanel}
-	<DisplayPanel />
-{/if}
-
-{#if appState.showControlPanel}
-	<ControlPanel />
-{/if}
+<DisplayPanel />
 
 <PlotDisplay />
+
+<ControlPanel />
 
 <style>
 	:global(body) {

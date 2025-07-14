@@ -11,6 +11,7 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import ColumnSelector from '../inputs/ColumnSelector.svelte';
 	import TableProcess from '$lib/core/TableProcess.svelte';
+	import { closeDisplayPanel } from '$lib/components/DisplayPanel.svelte';
 
 	import ProgressIndicator from '$lib/components/ProgressIndicator.svelte';
 	let steps = $state([
@@ -111,6 +112,10 @@
 
 <div class="heading">
 	<p>Data Sources</p>
+
+	<button onclick={closeDisplayPanel}>
+		<Icon name="close" width={16} height={16} className="close" />
+	</button>
 
 	<div class="add">
 		<button bind:this={addBtnRef} onclick={openDropdown}>

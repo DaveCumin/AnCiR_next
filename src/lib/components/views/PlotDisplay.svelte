@@ -12,22 +12,29 @@
 		closeControlPanel();
 	}
 	let canvasWidthPx = $derived.by(() => {
-		if (appState.showControlPanel) {
+		if (appState.showDisplayPanel && appState.showControlPanel) {
 			return (
 				window.innerWidth -
 				appState.positionDisplayPanel -
 				(window.innerWidth - appState.positionControlPanel)
 			);
-		} else {
+		}
+		if (appState.showDisplayPanel) {
 			return window.innerWidth - appState.positionDisplayPanel;
 		}
+		if (appState.showControlPanel) {
+			return appState.positionControlPanel;
+		}
+		return window.innerWidth;
 	});
 </script>
 
 <div
 	onclick={handleClick}
 	class="canvas"
-	style="top: 0; left: {appState.positionDisplayPanel}px; width: {canvasWidthPx}px; height: 100vh;"
+	style="top: 0; left: {appState.showDisplayPanel
+		? appState.positionDisplayPanel
+		: appState.positionNavbar}px; width: {canvasWidthPx}px; height: 100vh;"
 >
 	{#each core.plots as plot, i (plot.id)}
 		<Draggable
@@ -48,5 +55,6 @@
 	.canvas {
 		position: fixed;
 		overflow: auto;
+		transition: width 0.6s;
 	}
 </style>
