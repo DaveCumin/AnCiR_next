@@ -304,7 +304,7 @@
 			<input
 				type="number"
 				step="0.1"
-				value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
+				value={theData.ylimsIN[0] != null ? theData.ylimsIN[0] : theData.ylims[0]}
 				oninput={(e) => {
 					theData.ylimsIN[0] = [parseFloat(e.target.value)];
 				}}
@@ -312,7 +312,7 @@
 			<input
 				type="number"
 				step="0.1"
-				value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
+				value={theData.ylimsIN[1] != null ? theData.ylimsIN[1] : theData.ylims[1]}
 				oninput={(e) => {
 					theData.ylimsIN[1] = [parseFloat(e.target.value)];
 				}}

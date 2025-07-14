@@ -153,7 +153,10 @@
 				ymin = Math.min(ymin, Math.min(...tempy));
 				ymax = Math.max(ymax, Math.max(...tempy));
 			});
-			return [this.ylimsIN[0] ? this.ylimsIN[0] : ymin, this.ylimsIN[1] ? this.ylimsIN[1] : ymax];
+			return [
+				this.ylimsIN[0] != null ? this.ylimsIN[0] : ymin,
+				this.ylimsIN[1] != null ? this.ylimsIN[1] : ymax
+			];
 		});
 		xgridlines = $state(true);
 		ygridlines = $state(true);
