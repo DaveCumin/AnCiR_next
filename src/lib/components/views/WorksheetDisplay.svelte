@@ -1,7 +1,7 @@
 <script>
 	// @ts-nocheck
 
-	import { core, appState } from '$lib/core/core.svelte.js';
+	import { core, appState, appConsts } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
 	import { closeDisplayPanel } from '$lib/components/DisplayPanel.svelte';
@@ -51,6 +51,10 @@
 			<summary class={appState.selectedPlotIds.includes(plot.id) ? 'selected' : ''}
 				>{plot.name}</summary
 			>
+			{#if plot.id >= 0}
+				{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
+				<Plot theData={plot.plot} which="controls" />
+			{/if}
 		</details>
 	{/each}
 </div>
