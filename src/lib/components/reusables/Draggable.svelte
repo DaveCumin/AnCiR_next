@@ -80,6 +80,10 @@
 		appState.selectedPlotId = tempId;
 		appState.showControlPanel = true;
 	}
+	function handleClick(e) {
+		e.stopPropagation();
+		appState.selectedPlotId = tempId;
+	}
 
 	function handleCanvasClick(e) {
 		console.log('HERE');
@@ -93,6 +97,7 @@
 <!-- added header therefore TODO: other way than hardcode -->
 <section
 	ondblclick={handleDblClick}
+	onclick={handleClick}
 	class:selected={appState.selectedPlotId === id}
 	class="draggable"
 	style="left: {x}px;

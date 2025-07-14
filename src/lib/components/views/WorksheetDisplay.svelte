@@ -1,7 +1,7 @@
 <script>
 	// @ts-nocheck
 
-	import { core } from '$lib/core/core.svelte.js';
+	import { core, appState } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
 
@@ -44,12 +44,16 @@
 <div class="display-list">
 	{#each core.plots.toReversed() as plot (plot.id)}
 		<details>
-			<summary>{plot.name}</summary>
+			<summary class={appState.selectedPlotId === plot.id ? 'selected' : ''}>{plot.name}</summary>
 		</details>
 	{/each}
 </div>
 
 <style>
+	.selected {
+		background: pink;
+	}
+
 	.heading {
 		position: sticky;
 		top: 0;
