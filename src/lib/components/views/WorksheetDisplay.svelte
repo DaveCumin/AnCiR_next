@@ -44,7 +44,9 @@
 <div class="display-list">
 	{#each core.plots.toReversed() as plot (plot.id)}
 		<details>
-			<summary class={appState.selectedPlotIds === plot.id ? 'selected' : ''}>{plot.name}</summary>
+			<summary class={appState.selectedPlotIds.includes(plot.id) ? 'selected' : ''}
+				>{plot.name}</summary
+			>
 		</details>
 	{/each}
 </div>

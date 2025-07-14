@@ -84,9 +84,12 @@
 		e.stopPropagation();
 		//look for alt held at the same time
 		if (e.altKey) {
-			//Only add if it's not already there
+			//Add if it's not already there
 			if (!appState.selectedPlotIds.includes(tempId)) {
 				appState.selectedPlotIds.push(tempId);
+			} else {
+				//or remove it
+				appState.selectedPlotIds = appState.selectedPlotIds.filter((id) => id !== tempId);
 			}
 		} else {
 			appState.selectedPlotIds = [tempId];
