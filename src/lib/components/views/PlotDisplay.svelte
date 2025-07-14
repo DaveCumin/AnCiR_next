@@ -16,9 +16,11 @@
 <div
 	onclick={handleClick}
 	class="canvas"
-	style="top: 0; left: {appState.positionDisplayPanel}px; width: {window.innerWidth -
-		appState.positionDisplayPanel -
-		(window.innerWidth - appState.positionControlPanel)}px; height: 100vh;"
+	style="top: 0; left: {appState.positionDisplayPanel}px; width: {appState.showControlPanel
+		? window.innerWidth -
+			appState.positionDisplayPanel -
+			(window.innerWidth - appState.positionControlPanel)
+		: window.innerWidth}px; height: 100vh;"
 >
 	{#each core.plots as plot, i (plot.id)}
 		<Draggable

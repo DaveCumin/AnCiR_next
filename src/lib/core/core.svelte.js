@@ -13,7 +13,7 @@ export const appState = $state({
 
 	showNavbar: true,
 	showDisplayPanel: true,
-	showControlPanel: true,
+	showControlPanel: false,
 
 	positionNavbar: 56,
 	positionDisplayPanel: null,
