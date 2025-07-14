@@ -24,14 +24,14 @@
 	}
 
 	class ActogramDataclass {
-		parent = $state();
+		parentPlot = $state();
 
 		x = $state();
 		y = $state();
 		binSize = $state(0.5);
 		colour = $state();
 		offset = $derived(
-			(Number(new Date(this.parent.startTime)) - Number(this.x.getData()[0])) / 3600000
+			(Number(new Date(this.parentPlot.startTime)) - Number(this.x.getData()[0])) / 3600000
 		);
 		dataByDays = $derived.by(() => {
 			console.log(new Date(), ' dataByDays recalculated');
@@ -60,7 +60,7 @@
 		phaseMarkers = $state([]);
 
 		constructor(parent, dataIN) {
-			this.parent = parent;
+			this.parentPlot = parent;
 
 			if (dataIN && dataIN.x) {
 				this.x = ColumnClass.fromJSON(dataIN.x);
@@ -104,7 +104,7 @@
 	}
 
 	export class Actogramclass {
-		parent = $state();
+		parentBox = $state();
 		data = $state([]);
 		isAddingMarkerTo = $state(-1);
 		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 30 });
@@ -125,8 +125,8 @@
 				};
 			}
 		});
-		plotheight = $derived(this.parent.height - this.padding.top - this.padding.bottom);
-		plotwidth = $derived(this.parent.width - this.padding.left - this.padding.right);
+		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
+		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
 		eachplotheight = $derived.by(() => {
 			return (this.plotheight - (this.Ndays - 1) * this.spaceBetween) / this.Ndays;
 		});
@@ -173,7 +173,7 @@
 		});
 
 		constructor(parent, dataIN) {
-			this.parent = parent;
+			this.parentBox = parent;
 			if (dataIN) {
 				this.addData(dataIN);
 			}

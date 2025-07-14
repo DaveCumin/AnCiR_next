@@ -41,12 +41,12 @@
 	}
 
 	class PeriodogramDataclass {
-		parent = $state();
+		parentPlot = $state();
 		x = $state();
 		y = $state();
 		binSize = $state(0.25);
 		binnedData = $derived.by(() => {
-			return binData(this.x.hoursSinceStart, this.y.getData(), this.binSize, 0);
+			return binData(this.x.hoursSinceStart, this.y.processedData, this.binSize, 0);
 		});
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
 		linecolour = $state();
@@ -61,9 +61,9 @@
 				this.periodData = { x: [], y: [], threshold: [], pvalue: [] };
 			} else {
 				const periods = makeSeqArray(
-					this.parent.periodlimsIN[0],
-					this.parent.periodlimsIN[1],
-					this.parent.periodSteps
+					this.parentPlot.periodlimsIN[0],
+					this.parentPlot.periodlimsIN[1],
+					this.parentPlot.periodSteps
 				);
 
 				const correctedAlpha = Math.pow(1 - this.alpha, 1 / periods.length);
@@ -93,7 +93,7 @@
 		}
 
 		constructor(parent, dataIN) {
-			this.parent = parent;
+			this.parentPlot = parent;
 
 			if (dataIN && dataIN.x) {
 				this.x = ColumnClass.fromJSON(dataIN.x);
@@ -133,11 +133,11 @@
 	}
 
 	export class Periodogramclass {
-		parent = $state();
+		parentBox = $state();
 		data = $state([]);
 		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
-		plotheight = $derived(this.parent.height - this.padding.top - this.padding.bottom);
-		plotwidth = $derived(this.parent.width - this.padding.left - this.padding.right);
+		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
+		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
 		periodlimsIN = $state([1, 30]);
 		periodSteps = $state(0.25);
 		ylimsIN = $state([null, null]);
@@ -159,7 +159,7 @@
 		ygridlines = $state(true);
 
 		constructor(parent, dataIN) {
-			this.parent = parent;
+			this.parentBox = parent;
 			if (dataIN) {
 				this.addData(dataIN);
 			}
