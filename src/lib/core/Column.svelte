@@ -13,7 +13,7 @@
 	export class Column {
 		id; //Unique ID for the column
 		refId = $state(null); //if it is a column that is based on another
-		tableProcessed; //so it doesn't show up in the Table twice (as a column and as a table process)
+		tableProcessGUID;
 		data = null; //if it has raw data, store that here
 		compression = $state(null); //if any compression is used, store the info here
 		//Where the data are from (references all the way to the primary source [importd (file) or simulated (params)])
@@ -54,7 +54,7 @@
 			const thedata = this.getData();
 			if (this.type == 'number') return thedata.map((x) => x - thedata[0]); //If a number, then assume it's in hours and take difference from the start
 			if (this.type == 'time') return thedata.map((x) => (x - thedata[0]) / 3600000); //if it's a time, then assume it's in milliseconds and take difference from the start, then convert to hours
-			console.warn('that was hoursSinceStart');
+			//console.warn('that was hoursSinceStart');
 		});
 
 		constructor({ ...columnData }, id = null) {
@@ -65,14 +65,16 @@
 				this.id = id;
 				_columnidCounter = Math.max(id + 1, _columnidCounter + 1);
 			}
-			this.tableProcessed = false;
+			this.tableProcessGUID = '';
 			//Assign the other data
 			Object.assign(this, structuredClone(columnData));
 		}
 
 		//To add and remove processes
 		addProcess(processName) {
-			this.processes.push(new Process({ name: processName }, this));
+			const newProcess = new Process({ name: processName }, this);
+			this.processes.push(newProcess);
+			return newProcess.id;
 		}
 		removeProcess(id) {
 			this.processes = this.processes.filter((p) => p.id !== id);
@@ -88,31 +90,28 @@
 		#lastDataHash = null;
 
 		getDataHash() {
-			const processHash = this.processes
-				.map((p) => `${p.processid}:${p.name}:${JSON.stringify(p.args)}`)
-				.join('|');
+			const processHash =
+				this.tableProcessGUID +
+				':' +
+				this.processes.map((p) => `${p.processid}:${p.name}:${JSON.stringify(p.args)}`).join('|');
+
 			const refColumn = this.isReferencial() ? getColumnByID(this.refId) : null;
 			const refDataHash = refColumn ? refColumn.getDataHash() : '';
-			return `${this.refId ?? '_'}:${this.data?.length || ''}:${this.tableProcessed ?? ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}:${refDataHash}`;
+			return `${this.refId ?? '_'}:${this.data?.length || ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}:${refDataHash}`;
 		}
 
 		//--- FUNCTION TO GET THE DATA
 		getData() {
 			// Create a hash of all inputs to detect changes
-			const processHash = this.processes
-				.map((p) => `${p.processid}:${p.name}:${JSON.stringify(p.args)}`)
-				.join('|');
-			const refColumn = this.isReferencial() ? getColumnByID(this.refId) : null;
-			const refDataHash = refColumn ? refColumn.getDataHash() : '';
-			const dataHash = `${this.refId ?? '_'}:${this.data?.length || ''}:${this.tableProcessed ?? ''}:${this.compression || ''}:${this.type}:${this.timeformat}:${processHash}:${refDataHash}`;
-			console.log('data hash: ', dataHash, ' for ', this.id, this.name);
-			console.log('last hash: ', this.#lastDataHash);
+			const dataHash = this.getDataHash();
+			// console.log('data hash: ', dataHash, ' for ', this.id, this.name);
+			// console.log('last hash: ', this.#lastDataHash);
 			if (this.#lastDataHash === dataHash && this.#cachedData) {
-				console.log('returning cached');
+				// console.log('returning cached');
 				return this.#cachedData;
 			}
 
-			console.warn('recalculating');
+			// console.warn('recalculating');
 
 			let out = [];
 			//if there is a reference, then just get that data
@@ -167,7 +166,7 @@
 			if (this.compression != null) {
 				jsonOut.compression = this.compression;
 			}
-			jsonOut.tableProcessed = this.tableProcessed;
+			jsonOut.tableProcessGUID = this.tableProcessGUID;
 			jsonOut.provenance = this.provenance;
 			jsonOut.processes = this.processes;
 
@@ -180,8 +179,8 @@
 				type,
 				refId,
 				data,
-				tableProcessed,
 				timeformat,
+				tableProcessGUID,
 				processes,
 				compression,
 				provenance
@@ -192,11 +191,10 @@
 					type,
 					refId: refId ?? null,
 					data: data ?? null,
-					tableProcessed: tableProcessed ?? null,
 					compression: compression ?? null,
 					timeformat: timeformat ?? '',
 					provenance: provenance ?? null,
-
+					tableProcessGUID: tableProcessGUID ?? '',
 					processes: []
 				},
 				id

@@ -22,6 +22,7 @@
 	import { Table } from '$lib/core/table.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
 	import { Process } from '$lib/core/Process.svelte';
+	import { TableProcess } from '$lib/core/tableProcess.svelte';
 
 	// import { testjson } from '$lib/test.svelte.js';
 
@@ -224,6 +225,22 @@
 		core.tables[0].columnRefs = [testtimestring, testawd.id, d1id, d0id, testref.id, testrefref.id];
 		core.tables.push(new Table({ name: 'table 2' }));
 		core.tables[1].columnRefs = [d1id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
+		core.tables[1].processes.push(
+			new TableProcess(
+				{
+					name: 'binneddata',
+					args: {
+						xIN: 0,
+						yIN: 1,
+						binSize: 0.25,
+						binStart: 0,
+						xOUT: -1,
+						yOUT: -1
+					}
+				},
+				core.tables[1]
+			)
+		);
 
 		core.plots = [];
 		//Scatter plot
@@ -235,14 +252,14 @@
 			y: { refId: core.data[1].id }
 		});
 		// //Actogram
-		// core.plots.push(new Plot({ name: 'an actogram', type: 'actogram' }));
-		// core.plots[core.plots.length -1].x = 20;
-		// core.plots[core.plots.length -1].y = 300;
-		// core.plots[core.plots.length -1].height = 700;
-		// core.plots[core.plots.length -1].plot.addData({
-		// 	x: { refId: core.data[0].id },
-		// 	y: { refId: core.data[1].id }
-		// });
+		core.plots.push(new Plot({ name: 'an actogram', type: 'actogram' }));
+		core.plots[core.plots.length - 1].x = 20;
+		core.plots[core.plots.length - 1].y = 300;
+		core.plots[core.plots.length - 1].height = 700;
+		core.plots[core.plots.length - 1].plot.addData({
+			x: { refId: core.data[0].id },
+			y: { refId: core.data[1].id }
+		});
 		//Periodogram
 		core.plots.push(new Plot({ name: 'a periodogram', type: 'periodogram' }));
 		core.plots[core.plots.length - 1].x = 10;

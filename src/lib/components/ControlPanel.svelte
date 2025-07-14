@@ -2,9 +2,9 @@
 
 <script>
 	// @ts-nocheck
-	import { appState } from "$lib/core/core.svelte";
+	import { appState } from '$lib/core/core.svelte';
 
-	import ControlDisplay from "./views/ControlDisplay.svelte";
+	import ControlDisplay from './views/ControlDisplay.svelte';
 
 	let container;
 	let width = 360; // initial width
@@ -14,35 +14,35 @@
 	let resizing = false;
 
 	function onMouseMove(e) {
-        if (!resizing) return;
+		if (!resizing) return;
 
-        const rect = container.getBoundingClientRect();
-        let newWidth;
+		const rect = container.getBoundingClientRect();
+		let newWidth;
 
-        if (resizeSide === 'right') {
-            newWidth = e.clientX - rect.left;
-        } else {
-            newWidth = rect.right - e.clientX;
-        }
+		if (resizeSide === 'right') {
+			newWidth = e.clientX - rect.left;
+		} else {
+			newWidth = rect.right - e.clientX;
+		}
 
-        width = Math.max(minWidth, newWidth);
+		width = Math.max(minWidth, newWidth);
 
 		// TODO: fix plot limitation when resize
 
 		// appState.positionControlPanel = window.innerWidth - width;
 		// console.log(appState.positionControlPanel);
-    }
+	}
 
 	function stopResize() {
 		resizing = false;
-		document.body.style.userSelect = ''; 
+		document.body.style.userSelect = '';
 		window.removeEventListener('mousemove', onMouseMove);
 		window.removeEventListener('mouseup', stopResize);
 	}
 
 	function startResize(e) {
 		resizing = true;
-		document.body.style.userSelect = 'none'; 
+		document.body.style.userSelect = 'none';
 		window.addEventListener('mousemove', onMouseMove);
 		window.addEventListener('mouseup', stopResize);
 	}
@@ -57,6 +57,7 @@
 	.view-container {
 		overflow-y: auto;
 		overflow-x: hidden;
+		overflow-wrap: anywhere;
 		height: 100%;
 		min-width: 300px;
 		max-width: 444px;
@@ -68,12 +69,12 @@
 		position: fixed;
 		top: 0;
 		/* right: 56px; */
-        right: 0;
+		right: 0;
 
 		border-left: 1px solid #d9d9d9;
 		background: #ffffff;
 		box-sizing: border-box;
-		
+
 		z-index: 999;
 	}
 

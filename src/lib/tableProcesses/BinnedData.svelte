@@ -1,6 +1,19 @@
 <script module>
 	export const binneddata_defaults = new Map([
-		['xIN', { val: -1 }, 'yIN', { val: -1 }, 'binSize', { val: 0.25 }, 'binStart', { val: 0 }]
+		[
+			'xIN',
+			{ val: -1 },
+			'yIN',
+			{ val: -1 },
+			'binSize',
+			{ val: 0.25 },
+			'binStart',
+			{ val: 0 },
+			'xOUT',
+			{ val: -1 },
+			'yOUT',
+			{ val: -1 }
+		]
 	]);
 </script>
 
@@ -8,21 +21,17 @@
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import ColumnComponent from '$lib/core/Column.svelte';
-	import { Column, getColumnByID } from '$lib/core/Column.svelte';
-	import { core } from '$lib/core/core.svelte.js';
+	import { getColumnByID } from '$lib/core/Column.svelte';
 
-	import { onMount } from 'svelte';
+	let { p = $bindable() } = $props();
 
-	let { p = $bindable(), tableID = 0 } = $props();
-
-	let outX = new Column({ tableProcessed: true, name: 'binned X', type: 'number', data: [] });
-	let outY = new Column({ tableProcessed: true, name: 'binned Y', type: 'number', data: [] });
-
-	let binneddata = $derived.by(() => {
+	function getBinnedData() {
 		const xIN = p.args.xIN;
 		const yIN = p.args.yIN;
 		const binSize = p.args.binSize;
 		const binStart = p.args.binStart;
+		const xOUT = p.args.xOUT;
+		const yOUT = p.args.yOUT;
 		if (
 			xIN == undefined ||
 			yIN == undefined ||
@@ -36,46 +45,45 @@
 		}
 
 		const theBinnedData = binData(
-			core.data[xIN].hoursSinceStart,
-			core.data[yIN].getData(),
+			getColumnByID(xIN).hoursSinceStart,
+			getColumnByID(yIN).getData(),
 			binSize,
 			binStart
 		);
 
-		getColumnByID(outX.id).data = theBinnedData.bins;
-		getColumnByID(outY.id).data = theBinnedData.y_out;
+		getColumnByID(xOUT).data = theBinnedData.bins;
+		getColumnByID(yOUT).data = theBinnedData.y_out;
 		const processHash = crypto.randomUUID();
-		getColumnByID(outX.id).tableProcessed = processHash;
-		getColumnByID(outY.id).tableProcessed = processHash;
+		getColumnByID(xOUT).tableProcessGUID = processHash;
+		getColumnByID(yOUT).tableProcessGUID = processHash;
+		//TODO: I don't know why the above isn't working, but the 'hack' is below (to make columns that reference xOUT/yOUT update from the changed column)
+		let temp = getColumnByID(xOUT).addProcess('Add');
+		getColumnByID(xOUT).removeProcess(temp);
+		temp = getColumnByID(yOUT).addProcess('Add');
+		getColumnByID(yOUT).removeProcess(temp);
+		//-----
 
-		return theBinnedData;
-	});
+		binnedData = theBinnedData;
+	}
 
-	onMount(() => {
-		//put the columns into the core data
-		core.tables[tableID].addColumn(outX);
-		core.tables[tableID].addColumn(outY);
-
-		return () => {
-			console.log('Destroying: Removing outX and outY from core.data');
-			core.data = core.data.filter((col) => col.id !== outX.id && col.id !== outY.id);
-		};
-	});
+	let binnedData = $state();
+	getBinnedData();
 </script>
 
 <p>
 	Bin: <br />
-	x = <ColumnSelector bind:value={p.args.xIN} /> <br />
-	y = <ColumnSelector bind:value={p.args.yIN} excludeColIds={[p.xIN]} /><br />
-	Bin size: <input type="number" bind:value={p.args.binSize} /> <br />
-	Bin start: <input type="number" bind:value={p.args.binStart} />
+	x = <ColumnSelector bind:value={p.args.xIN} oninput={getBinnedData} /> <br />
+	y = <ColumnSelector bind:value={p.args.yIN} excludeColIds={[p.xIN]} oninput={getBinnedData} /><br
+	/>
+	Bin size: <input type="number" bind:value={p.args.binSize} oninput={getBinnedData} /> <br />
+	Bin start: <input type="number" bind:value={p.args.binStart} oninput={getBinnedData} />
 </p>
 <p>Output:</p>
-{#key binneddata}
-	{#if binneddata.bins.length > 0}
-		{@const xout = getColumnByID(outX.id)}
+{#key binnedData}
+	{#if binnedData.bins.length > 0}
+		{@const xout = getColumnByID(p.args.xOUT)}
 		<ColumnComponent col={xout} />
-		{@const yout = getColumnByID(outY.id)}
+		{@const yout = getColumnByID(p.args.yOUT)}
 		<ColumnComponent col={yout} />
 	{:else}
 		<p>Need to have valid inputs to create columns.</p>

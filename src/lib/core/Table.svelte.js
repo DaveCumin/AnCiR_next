@@ -4,6 +4,11 @@ import { core, pushObj } from '$lib/core/core.svelte.js';
 import { getColumnByID, Column } from './Column.svelte';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
 
+export function getTableByID(id) {
+	const theTable = core.tables.find((table) => table.id === id);
+	return theTable;
+}
+
 let _counter = 0;
 function getNextId() {
 	return _counter++;
@@ -33,26 +38,7 @@ export class Table {
 		//Assign the other data
 		this.name = tableData.name ?? null;
 		this.columnRefs = tableData.columnRefs ?? [];
-		this.processes = tableData.processes ?? [
-			new TableProcess(
-				{
-					name: 'binneddata',
-					args: [
-						[
-							'xIN',
-							{ val: -1 },
-							'yIN',
-							{ val: -1 },
-							'binSize',
-							{ val: 0.25 },
-							'binStart',
-							{ val: 0 }
-						]
-					]
-				},
-				this
-			)
-		];
+		this.processes = tableData.processes ?? [];
 	}
 
 	// getter and setter methods
