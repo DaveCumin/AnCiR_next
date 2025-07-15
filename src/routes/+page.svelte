@@ -92,8 +92,8 @@
 	});
 
 	function populatePanelWidth() {
-		appState.positionDisplayPanel = 360 + appState.positionNavbar;
-		appState.positionControlPanel = window.innerWidth - 360;
+		appState.widthDisplayPanel = 360;
+		appState.widthControlPanel = 360;
 	}
 
 	function loadTestJson() {

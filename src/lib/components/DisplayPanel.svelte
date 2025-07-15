@@ -14,7 +14,6 @@
 	import { fly } from 'svelte/transition';
 
 	let container;
-	let width = appState.positionDisplayPanel; // initial width
 	const minWidth = 200;
 	const maxWidth = 500;
 
@@ -37,8 +36,7 @@
 			return;
 		}
 
-		width = Math.max(minWidth, newWidth);
-		appState.positionDisplayPanel = width + appState.positionNavbar;
+		appState.widthDisplayPanel = newWidth;
 	}
 
 	function stopResize() {
@@ -60,9 +58,9 @@
 	<div
 		bind:this={container}
 		class="view-container {resizeSide}}"
-		style="width: {width}px; min-width: {minWidth}px;	max-width: {maxWidth}px;"
-		in:fly={{ x: -width, duration: 600 }}
-		out:fly={{ x: -width, duration: 600 }}
+		style="width: {appState.widthDisplayPanel}px; min-width: {minWidth}px;	max-width: {maxWidth}px;"
+		in:fly={{ x: -appState.widthDisplayPanel, duration: 600 }}
+		out:fly={{ x: -appState.widthDisplayPanel, duration: 600 }}
 	>
 		{#if appState.currentTab === 'data'}
 			<DataDisplay />

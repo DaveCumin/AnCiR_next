@@ -9,7 +9,6 @@
 	import { fly } from 'svelte/transition';
 
 	let container;
-	let width = window.innerWidth - appState.positionControlPanel; // initial width
 	const minWidth = 300;
 	const maxWidth = 500;
 
@@ -32,9 +31,7 @@
 			return;
 		}
 
-		width = Math.max(minWidth, newWidth);
-
-		appState.positionControlPanel = window.innerWidth - width;
+		appState.widthControlPanel = newWidth;
 	}
 
 	function stopResize() {
@@ -56,9 +53,9 @@
 	<div
 		bind:this={container}
 		class="view-container {resizeSide}"
-		style="width: {width}px; min-width: {minWidth}px;	max-width: {maxWidth}px;"
-		in:fly={{ x: width, duration: 600 }}
-		out:fly={{ x: width, duration: 600 }}
+		style="width: {appState.widthControlPanel}px; min-width: {minWidth}px;	max-width: {maxWidth}px;"
+		in:fly={{ x: appState.widthControlPanel, duration: 600 }}
+		out:fly={{ x: appState.widthControlPanel, duration: 600 }}
 	>
 		<ControlDisplay />
 		<div class="resizer" onmousedown={startResize}></div>

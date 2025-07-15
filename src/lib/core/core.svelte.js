@@ -15,9 +15,9 @@ export const appState = $state({
 	showDisplayPanel: true,
 	showControlPanel: false,
 
-	positionNavbar: 56,
-	positionDisplayPanel: null,
-	positionControlPanel: null,
+	widthNavBar: 56,
+	widthDisplayPanel: 200,
+	widthControlPanel: 200,
 
 	canvasOffset: { x: 0, y: 0 },
 	canvasScale: 1.0,

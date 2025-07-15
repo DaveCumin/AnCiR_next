@@ -34,7 +34,7 @@
 	}
 </script>
 
-<nav class="container">
+<nav class="container" style="width: {appState.widthNavBar}px;">
 	<div class="icon-container">
 		<button onclick={() => switchTab('data')}>
 			<Icon name="table" className={appState.currentTab === 'data' ? 'icon active' : 'icon'} />
@@ -63,7 +63,6 @@
 
 <style>
 	.container {
-		min-width: 56px;
 		height: 100vh;
 		display: flex;
 		flex-direction: column;
