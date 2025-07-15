@@ -69,19 +69,25 @@
 		Number(utcParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[2]))
 	);
 
-	document.addEventListener('keydown', (event) => {
-		// Check if Ctrl, Shift, and 'I' are pressed simultaneously
-		if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
-			event.preventDefault(); // Prevent default browser behavior (e.g., opening developer tools)
-			console.log($state.snapshot(core));
-		}
-	});
-
 	//------------------------------------
 	const N = 1_000;
 	//------------------------------------
 
 	onMount(async () => {
+		//add event listeners
+		const updateWidth = () => {
+			appState.windowWidth = window.innerWidth;
+		};
+		window.addEventListener('resize', updateWidth);
+
+		document.addEventListener('keydown', (event) => {
+			// Check if Ctrl, Shift, and 'I' are pressed simultaneously
+			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
+				event.preventDefault(); // Prevent default browser behavior (e.g., opening developer tools)
+				console.log($state.snapshot(core));
+			}
+		});
+
 		//load the maps
 		appConsts.processMap = await loadProcesses();
 		appConsts.plotMap = await loadPlots();
@@ -89,11 +95,17 @@
 		populatePanelWidth();
 		refresh();
 		// loadTestJson();
+
+		//remove the listeners
+		return () => {
+			window.removeEventListener('resize', updateWidth);
+			document.removeEventListener('keydown');
+		};
 	});
 
 	function populatePanelWidth() {
-		appState.widthDisplayPanel = 360;
-		appState.widthControlPanel = 360;
+		appState.widthDisplayPanel = 200;
+		appState.widthControlPanel = 200;
 	}
 
 	function loadTestJson() {

@@ -12,9 +12,10 @@
 		closeControlPanel();
 	}
 	let canvasWidthPx = $derived.by(() => {
-		const whole = window.innerWidth - appState.widthNavBar;
+		const whole = appState.windowWidth - appState.widthNavBar;
 		const displayWidth = appState.showDisplayPanel ? appState.widthDisplayPanel : 0;
 		const controlWidth = appState.showControlPanel ? appState.widthControlPanel : 0;
+		console.log('whole: ', whole, 'displayWidth: ', displayWidth, 'controlWidth: ', controlWidth);
 		return whole - displayWidth - controlWidth;
 	});
 	let leftPx = $derived.by(() => {
@@ -50,5 +51,6 @@
 		position: fixed;
 		overflow: auto;
 		transition: width 0.6s;
+		transition: left 0.6s;
 	}
 </style>
