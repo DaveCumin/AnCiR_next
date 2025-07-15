@@ -14,23 +14,6 @@
 	import { closeDisplayPanel } from '$lib/components/DisplayPanel.svelte';
 	import MakeNewColumn from './modals/MakeNewColumn.svelte';
 
-	let showNewCol = $state(false);
-	//variables for new column
-	let howMakeNewColumn = $state('');
-	let showAddColumnModal = $state(false);
-	let selectedTable = $state();
-	let newColumnName = $state('new col');
-	let newColumnLength = $state(0);
-	let newColumnData = $state([]);
-	//variables for random new col
-	let randomColMultiplier = $state(10);
-	let randomColOffset = $state(100);
-	//vars for existing new col
-	let newColsValueReset = $state(-1);
-	let newColsExisting = $state([]);
-
-	let { canChange = false } = $props();
-
 	// AddTable dropdown
 	let addBtnRef;
 	let showAddTable = $state(false);
@@ -54,53 +37,8 @@
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
 
-	//functions to deal with adding a new column
-	function addColumn(tableid) {
-		console.log('Add a column');
-		selectedTable = core.tables.find((t) => t.id === tableid);
-		newColumnLength = getColumnById(selectedTable.columnRefs[0]).getData().length;
-		showAddColumnModal = true;
-	}
-
-	function calcnewColumnData() {
-		console.log('effect | newColType: ', howMakeNewColumn);
-		if (howMakeNewColumn == 'random') {
-			newColumnData = Array.from(
-				{ length: newColumnLength },
-				() => Math.round(Math.random() * randomColMultiplier, 2) + randomColOffset
-			);
-		} else if (howMakeNewColumn == 'existing' && newColsExisting.length > 0) {
-			//TODO: need to deal with types and operators in between (eg * for numnbers, space for strings, and rawData for time [but only if no processes])
-			newColumnData = getColumnById(newColsExisting[0]).getData();
-			for (let nc = 1; nc < newColsExisting.length; nc++) {
-				const temp = getColumnById(newColsExisting[nc]).getData();
-
-				newColumnData = newColumnData.map((d, i) => d + temp[i]);
-			}
-		} else {
-			newColumnData = [];
-		}
-	}
-
-	function confirmAddColumn() {
-		const newDataEntry = new Column({
-			type: 'number',
-			data: $state.snapshot(newColumnData),
-			name: newColumnName,
-			provenance: 'created from columns'
-		});
-		core.data.push(newDataEntry);
-		selectedTable.columnRefs.push(newDataEntry.id);
-		//reset values
-		selectedTable = '';
-		newColumnName = 'new col';
-		howMakeNewColumn = '';
-		newColumnLength = 0;
-		newColumnData = [];
-		newColsExisting = [];
-		//hide modal
-		showAddColumnModal = false;
-	}
+	let showNewCol = $state(false);
+	let selectedTable = $state(null);
 </script>
 
 <div class="heading">
@@ -123,7 +61,12 @@
 		<div class="table-container">
 			<details class="table-item">
 				<summary class="table-name">{table.name}</summary>
-				<button onclick={() => addColumn(table.id)}>Add column</button>
+				<button
+					onclick={() => {
+						selectedTable = table.id;
+						showNewCol = true;
+					}}>Add column</button
+				>
 				{#each table.columns as col, i}
 					{#if !col.tableProcessed}
 						<ColumnComponent {col} />
@@ -140,68 +83,8 @@
 {#if showAddTable}
 	<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
 {/if}
-<button
-	onclick={() => {
-		showNewCol = !showNewCol;
-	}}
->
-	Test
-</button>
 
-<MakeNewColumn bind:show={showNewCol} />
-
-<Modal bind:showModal={showAddColumnModal}>
-	{#snippet header()}
-		<div class="heading">
-			<h2>Add a column to {selectedTable?.name}</h2>
-			<!-- <button class="btn" onclick={chooseFile}>Choose File</button> -->
-		</div>
-	{/snippet}
-
-	{#snippet children()}
-		<div>
-			Name: <input type="text" bind:value={newColumnName} />
-		</div>
-		<div>
-			Type: <select bind:value={howMakeNewColumn} onchange={calcnewColumnData}>
-				<option value="random">Random</option>
-				<option value="simulated">Simulated</option>
-				<option value="existing">From existing columns</option>
-			</select>
-		</div>
-		{#if howMakeNewColumn == 'random'}
-			<div>
-				Multiplier: <input
-					type="number"
-					bind:value={randomColMultiplier}
-					onchange={calcnewColumnData}
-				/>
-				Offset: <input type="number" bind:value={randomColOffset} onchange={calcnewColumnData} />
-			</div>
-		{/if}
-		{#if howMakeNewColumn == 'existing'}
-			{#each newColsExisting as col, i}
-				<ColumnSelector bind:value={newColsExisting[i]} onChange={calcnewColumnData} />
-			{/each}
-			Add new: <ColumnSelector
-				bind:value={newColsValueReset}
-				onChange={(value) => {
-					newColsExisting.push(Number(value));
-					newColsValueReset = -1;
-					calcnewColumnData();
-				}}
-			/>
-		{/if}
-
-		{#if newColumnData.length > 0}
-			<div>
-				Preview:
-				{newColumnData.slice(0, 5)}
-			</div>
-			<div><button onclick={confirmAddColumn}>Add these data</button></div>
-		{/if}
-	{/snippet}
-</Modal>
+<MakeNewColumn bind:show={showNewCol} tableId={selectedTable} />
 
 <style>
 	.heading {
