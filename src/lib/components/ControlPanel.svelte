@@ -7,7 +7,7 @@
 	import { fly } from 'svelte/transition';
 
 	let container;
-	const minWidth = 300;
+	const minWidth = 200;
 	const maxWidth = 500;
 
 	let resizeSide = 'left';

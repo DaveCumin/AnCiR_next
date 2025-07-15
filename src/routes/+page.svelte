@@ -92,7 +92,6 @@
 		appConsts.processMap = await loadProcesses();
 		appConsts.plotMap = await loadPlots();
 
-		populatePanelWidth();
 		refresh();
 		// loadTestJson();
 
@@ -102,11 +101,6 @@
 			document.removeEventListener('keydown');
 		};
 	});
-
-	function populatePanelWidth() {
-		appState.widthDisplayPanel = 200;
-		appState.widthControlPanel = 200;
-	}
 
 	function loadTestJson() {
 		// const jsonData = JSON.parse(`${testJson}`);
