@@ -76,7 +76,7 @@
 		}
 
 		addMarker() {
-			this.phaseMarkers.push(new PhaseMarkerClass(this, { type: 'onset' }));
+			this.phaseMarkers.push(new PhaseMarkerClass(this, { type: 'manual' }));
 		}
 
 		toJSON() {
