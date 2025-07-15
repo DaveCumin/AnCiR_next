@@ -50,7 +50,8 @@
 	.canvas {
 		position: fixed;
 		overflow: auto;
-		transition: width 0.6s;
-		transition: left 0.6s;
+		transition:
+			width 0.6s ease,
+			left 0.6s ease;
 	}
 </style>
