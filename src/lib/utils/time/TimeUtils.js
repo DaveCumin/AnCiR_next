@@ -161,7 +161,10 @@ export function getISODate(stringIN, formatIN) {
 	if (!formatIN) return stringIN;
 	return DateTime.fromFormat(stringIN, convertFormat(formatIN)).toISO();
 }
-
+export function getUNIXDate(stringIN, formatIN) {
+	if (!formatIN) return stringIN;
+	return DateTime.fromFormat(stringIN, convertFormat(formatIN)).toMillis();
+}
 export function addTime(start, hoursIN) {
 	return formatTimeFromISO(DateTime.fromISO(start).plus({ hours: hoursIN }).toISO());
 }

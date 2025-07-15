@@ -12,23 +12,14 @@ import { tick } from 'svelte';
 const specialValues = ['NaN', 'NA', 'null'];
 const previewTableNrows = 6;
 
-let _filesToImport = $state();
 let _tempdata = {};
+let _columnOrder = [];
 let error = {};
 let skipLines = 0;
-let useHeaders = true;
 let flagExtraData = false;
 let errorInfile = false;
 let specialRecognised = false;
 
-// getter and setter
-export function getFilesToImport() {
-	return _filesToImport;
-}
-
-export function setFilesToImport(f) {
-	_filesToImport = f;
-}
 export function getTempData() {
 	return _tempdata;
 }
@@ -44,11 +35,12 @@ export const utils = {
 /*
 helper functions: import data
 */
-async function openFileChoose() {
+async function openFileChoose(hasHeader = true) {
 	//reset the values
 	_tempdata = {};
+	_columnOrder = [];
 	error = {};
-	useHeaders = true;
+	hasHeader = true;
 	flagExtraData = false;
 	errorInfile = false;
 	specialRecognised = false;
@@ -61,20 +53,26 @@ async function openFileChoose() {
 	fileInput.click();
 }
 
-function parseFile(previewIN = 0) {
+function parseFile(targetFile, previewIN = 0, hasHeader = false) {
+	if (!targetFile) {
+		errorInfile = true;
+		return;
+	}
+
 	errorInfile = false; //reset the errors
 	return new Promise((resolve) => {
-		console.log('doing papa previewIN= ' + previewIN + ', useHeaders= ' + useHeaders);
+		console.log('doing papa previewIN= ' + previewIN + ', hasHeader= ' + hasHeader);
 
 		//Do the business
-		Papa.parse(_filesToImport[0], {
+		Papa.parse(targetFile, {
 			preview: previewIN,
-			header: useHeaders,
+			header: hasHeader,
 			dynamicTyping: true,
 			skipEmptyLines: 'greedy',
 			error: function (err, file, inputElem, reason) {
 				console.log('Error: ' + err + ' | ' + reason);
 				_tempdata = {};
+				_columnOrder = [];
 				error = { err, reason };
 				resolve(); // Resolve the Promise even in case of an error
 			},
@@ -99,11 +97,18 @@ function parseFile(previewIN = 0) {
 			complete: function (results, file) {
 				console.log('Parsing complete:', results, file);
 
+				// Store the column order from the file
+				if (hasHeader && results.meta.fields) {
+					_columnOrder = results.meta.fields; // PapaParse provides the field order
+				} else if (results.data.length > 0) {
+					_columnOrder = Object.keys(results.data[0]); // Fallback to first row keys
+				}
+
 				//Deal with awd data
 				if (file.name.toLowerCase().endsWith('.awd')) {
 					results.errors = [];
 					//get more data to preview before continuing
-					if (previewIN == skipLines + previewTableNrows + useHeaders) {
+					if (previewIN == skipLines + previewTableNrows + hasHeader) {
 						parseFile(14);
 					} else {
 						results.data = awdTocsv(results.data);
@@ -139,6 +144,15 @@ function dealWithData(dataIN) {
 					)
 			); // the replace convers the a.m. or p.m. to AM or PM so it can be a time;
 		}
+		// Ensure DateTime is added to _columnOrder in the correct position
+		if (!_columnOrder.includes('DateTime')) {
+			const dateIndex = _columnOrder.indexOf('Date');
+			if (dateIndex !== -1) {
+				_columnOrder.splice(dateIndex + 1, 0, 'DateTime');
+			} else {
+				_columnOrder.push('DateTime');
+			}
+		}
 	}
 }
 
@@ -147,22 +161,26 @@ function convertArrayToObject(inputArray) {
 	try {
 		let resultObject = {};
 
+		if (_columnOrder.length > 0) {
+			_columnOrder.forEach((key) => {
+				resultObject[key] = [];
+			});
+		}
+
 		// Loop through each object in the array
 		inputArray.forEach((item) => {
-			// Loop through each key in the object
-			Object.keys(item).forEach((key) => {
-				// Initialize the array for the key if it doesn't exist
+			// Use _columnOrder if available, otherwise use item keys
+			const keys = _columnOrder.length > 0 ? _columnOrder : Object.keys(item);
+			keys.forEach((key) => {
 				if (!resultObject[key]) {
 					resultObject[key] = [];
 				}
-
-				// Push the value to the corresponding array
 				resultObject[key].push(item[key]);
 			});
 		});
 
-		//change the keys to the first values if useHeader and extra
-		if (flagExtraData && useHeaders) {
+		//change the keys to the first values if hasHeader and extra
+		if (flagExtraData && hasHeader) {
 			resultObject = changeObjectKeys(resultObject, inputArray[0]);
 		}
 
@@ -175,33 +193,31 @@ function convertArrayToObject(inputArray) {
 
 //change the keys to a new array
 function changeObjectKeys(object, newKeys) {
-	console.log(object);
 	const newObject = {};
 
-	// Loop through the keys of the original object
-	Object.keys(object).forEach((originalKey, i) => {
-		// Create the new key
-		const newKey = newKeys[i] || originalKey;
+	const orderedKeys = _columnOrder.length > 0 ? _columnOrder : Object.keys(object);
 
-		// Assign the values to the new key in the new object
-		object[originalKey].splice(0, 1); // remove the first value, as it's the header
-		newObject[newKey] = object[originalKey];
+	orderedKeys.forEach((originalKey, i) => {
+		const newKey = newKeys[i] || originalKey;
+		if (object[originalKey]) {
+			object[originalKey].splice(0, 1); // Remove the first value (header)
+			newObject[newKey] = object[originalKey];
+		}
 	});
+
+	// Update _columnOrder with new keys
+	_columnOrder = Object.keys(newObject);
 
 	return newObject;
 }
 
 //Load the data once all operations have been completed
-async function loadData() {
+async function loadData(targetFile, hasHeader) {
 	console.log('loading...');
-	await parseFile(0); //load all the data
+	await parseFile(targetFile, 0, hasHeader); //load all the data
 
 	//TODO_high: perorm the required manipulations
-	doBasicFileImport(_tempdata, _filesToImport[0].name); //LOAD THE DATA
-
-	// $menuModalType = ''; //close the dialog
-
-	setFilesToImport('');
+	doBasicFileImport(_tempdata, targetFile.name); //LOAD THE DATA
 }
 
 // put the data into the tool store
@@ -218,26 +234,22 @@ function doBasicFileImport(result, fname) {
 		//find the data type based on the first non-NaN element
 		const datum = getFirstValid(result[f], 5);
 		const guessedFormat = guessDateofArray(result[f]);
-
-		if (guessedFormat != -1) {
-			const timefmt = guessedFormat;
-			const df = new Column();
+		console.log(f, datum, guessedFormat);
+		if (guessedFormat != -1 && guessedFormat.length > 0) {
+			const df = new Column({});
 			df.type = 'time';
 			df.name = f;
-			df.data = forceFormat(result[f], timefmt);
-			// this.properties = {
-			//     timeFormat: timefmt,
-			//     recordPeriod: getPeriod(result[f], timefmt),
-			// };
+			df.data = result[f];
+			df.timeFormat = guessedFormat;
 			newDataEntry.addColumn(df);
 		} else if (!isNaN(datum)) {
-			const df = new Column();
+			const df = new Column({});
 			df.type = 'value';
 			df.name = f;
 			df.data = result[f];
 			newDataEntry.addColumn(df);
 		} else {
-			const df = new Column();
+			const df = new Column({});
 			df.type = 'category';
 			df.name = f;
 			df.data = result[f];
@@ -260,19 +272,21 @@ function getFirstValid(data) {
 }
 
 //make a table from the data
-function makeTempTable(_tempdata) {
+function makeTempTable(tempdata) {
 	//If there is no data, report an error
-	if (Object.keys(_tempdata).length === 0) {
-		return 'There was an error reading the file ' + _filesToImport[0].name;
+	if (Object.keys(tempdata).length === 0) {
+		return 'There was an error reading the file ';
 	}
-
+	console.log('raw: ', JSON.stringify(tempdata));
+	console.log('keys: ', Object.keys(tempdata));
 	let table = '<table><thead><tr>';
-	Object.keys(_tempdata).forEach((heading) => (table += `<th>${heading}</th>`));
+	const keys = _columnOrder.length > 0 ? _columnOrder : Object.keys(tempdata);
+	keys.forEach((heading) => (table += `<th>${heading}</th>`));
 	table += '</tr></thead><tbody>';
 	for (let r = 0; r < previewTableNrows; r++) {
 		table += '<tr>';
-		for (let c = 0; c < Object.keys(_tempdata).length; c++) {
-			table += `<td>${_tempdata[Object.keys(_tempdata)[c]][r]}</td>`;
+		for (let c = 0; c < keys.length; c++) {
+			table += `<td>${tempdata[keys[c]][r]}</td>`;
 		}
 		table += '</tr>';
 	}

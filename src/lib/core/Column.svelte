@@ -1,7 +1,8 @@
 <script module>
 	import { Process } from '$lib/core/Process.svelte';
 	import { core, appConsts } from '$lib/core/core.svelte.js';
-	import { timeParse } from 'd3-time-format';
+	// import { timeParse } from 'd3-time-format';
+	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
 
 	export function getColumnById(id) {
 		const theColumn = core.data.find((column) => column.id === id);
@@ -45,7 +46,7 @@
 			}
 		});
 		//time format for converting time data
-		timeformat = $derived(this.type === 'time' ? 0 : null);
+		timeFormat = $state([]);
 
 		//The associated processes that are applied to the data
 		processes = $state([]);
@@ -67,6 +68,7 @@
 			}
 			this.tableProcessGUId = '';
 			//Assign the other data
+
 			Object.assign(this, structuredClone(columnData));
 		}
 
@@ -133,7 +135,8 @@
 
 			//deal with timestamps
 			if (this.type === 'time' && !this.isReferencial()) {
-				out = out.map((x) => Number(timeParse(this.timeformat)(x))); // Turn into UNIX values of time
+				// out = out.map((x) => Number(timeParse(this.timeFormat)(x))); // Turn into UNIX values of time
+				out = out.map((x) => Number(getUNIXDate(x, this.timeFormat))); // Turn into UNIX values of time
 			}
 
 			//If no data, return empty
@@ -162,7 +165,7 @@
 			}
 			jsonOut.type = this.type;
 			if (this.type == 'time') {
-				jsonOut.timeformat = this.timeformat;
+				jsonOut.timeFormat = this.timeFormat;
 			}
 			if (this.compression != null) {
 				jsonOut.compression = this.compression;
@@ -180,7 +183,7 @@
 				type,
 				refId,
 				data,
-				timeformat,
+				timeFormat,
 				tableProcessGUId,
 				processes,
 				compression,
@@ -193,7 +196,7 @@
 					refId: refId ?? null,
 					data: data ?? null,
 					compression: compression ?? null,
-					timeformat: timeformat ?? '',
+					timeFormat: timeFormat ?? '',
 					provenance: provenance ?? null,
 					tableProcessGUId: tableProcessGUId ?? '',
 					processes: []
@@ -242,9 +245,9 @@
 				<br />
 				Time format:
 				{#if !canChange}
-					<input bind:value={col.timeformat} />
+					<input bind:value={col.timeFormat} />
 				{:else}
-					{getColumnById(col.refId)?.timeformat}
+					{getColumnById(col.refId)?.timeFormat}
 				{/if}
 			{/if}
 			{#if col.compression != null}
