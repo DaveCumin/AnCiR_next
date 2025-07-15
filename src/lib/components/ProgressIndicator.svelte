@@ -23,12 +23,6 @@
 		// Allow toggling for active or completed steps
 		if (steps[index].completed || index === currentStep || steps[index - 1]?.completed) {
 			steps[index].isExpanded = !steps[index].isExpanded;
-			console.log(
-				'ProgressIndicator: Toggled isExpanded for step',
-				index,
-				'to',
-				steps[index].isExpanded
-			);
 		} else {
 			// For incomplete and non-active steps, move to that step without expanding
 			// currentStep = index;

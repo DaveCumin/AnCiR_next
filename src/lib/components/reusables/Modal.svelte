@@ -1,51 +1,52 @@
 <!-- 
- 
 Template from svelte offcial
 https://svelte.dev/playground/modal?version=5.33.7
- 
--->
+ -->
 <script>
-	import Icon from "$lib/icons/Icon.svelte";
+	import Icon from '$lib/icons/Icon.svelte';
 
-let { showModal = $bindable(), header, children } = $props()
+	let { showModal = $bindable(), header, children } = $props();
 
-let dialog = $state();
+	let dialog = $state();
 
-$effect(() => {
-	if (showModal && !dialog.open) {
-		dialog.showModal();
-	} else if (!showModal && dialog.open) {
-		dialog.close();
-	}
-});
-
+	$effect(() => {
+		if (showModal && !dialog.open) {
+			dialog.showModal();
+		} else if (!showModal && dialog.open) {
+			dialog.close();
+		}
+	});
 </script>
 
 <dialog
 	bind:this={dialog}
 	onclose={() => (showModal = false)}
-	onclick={(e) => { if (e.target === dialog) dialog.close(); }}
+	onclick={(e) => {
+		if (e.target === dialog) dialog.close();
+	}}
 >
 	<div>
 		<!-- svelte-ignore a11y_autofocus -->
 		<button autofocus onclick={() => dialog.close()}>
-			<Icon name="close" width={16} height={16} className="close"/>
+			<Icon name="close" width={16} height={16} className="close" />
 		</button>
 
 		<div class="dialog-container">
 			{@render header?.()}
 			{@render children?.()}
 		</div>
-		
 	</div>
 </dialog>
 
 <style>
 	dialog {
 		width: 36em;
+		max-height: 50vh;
 		border-radius: 5px;
 		border: 1px, solid, var(--color-lightness-85);
-		box-shadow: 0 4px 8px 0 var(--color-lightness-85), 0 6px 10px 0 var(--color-lightness-95);
+		box-shadow:
+			0 4px 8px 0 var(--color-lightness-85),
+			0 6px 10px 0 var(--color-lightness-95);
 	}
 
 	dialog::backdrop {
@@ -73,5 +74,4 @@ $effect(() => {
 		margin-left: -0.2em;
 		margin-top: -0.2em;
 	}
-
 </style>

@@ -12,16 +12,9 @@
 	import ColumnSelector from '../inputs/ColumnSelector.svelte';
 	import TableProcess from '$lib/core/TableProcess.svelte';
 	import { closeDisplayPanel } from '$lib/components/DisplayPanel.svelte';
+	import MakeNewColumn from './modals/MakeNewColumn.svelte';
 
-	import ProgressIndicator from '$lib/components/ProgressIndicator.svelte';
-	let steps = $state([
-		{ label: 'lab 1', completed: false, active: true, isExpanded: true },
-		{ label: 'lab 2', completed: false, active: false, isExpanded: false },
-		{ label: 'lab 3', completed: false, active: false, isExpanded: false },
-		{ label: 'lab 4', completed: false, active: false, isExpanded: false }
-	]);
-	let currentStep = $state(0);
-
+	let showNewCol = $state(false);
 	//variables for new column
 	let howMakeNewColumn = $state('');
 	let showAddColumnModal = $state(false);
@@ -144,64 +137,18 @@
 	{/each}
 </div>
 
-{#snippet stepContent(index, step)}
-	{#if index === 0}
-		<p>Content for Lab 1</p>
-		<input
-			type="text"
-			placeholder="Enter data for Lab 1"
-			oninput={(e) => {
-				if (e.target.value != '') {
-					steps[0].completed = true;
-				} else {
-					steps[0].completed = false;
-				}
-			}}
-		/>
-	{:else if index === 1}
-		<p>Content for Lab 2</p>
-		<textarea
-			placeholder="Enter details for Lab 2"
-			oninput={(e) => {
-				if (e.target.value != '') {
-					steps[1].completed = true;
-				} else {
-					steps[1].completed = false;
-				}
-			}}
-		></textarea>
-	{:else if index === 2}
-		<p>Content for Label 3</p>
-		<textarea
-			placeholder="Enter details for Label 3"
-			oninput={(e) => {
-				if (e.target.value != '') {
-					steps[2].completed = true;
-				} else {
-					steps[2].completed = false;
-				}
-			}}
-		></textarea>
-	{:else if index === 3}
-		<p>Content for Lab 4</p>
-		<textarea
-			placeholder="Enter details for Lab 4"
-			oninput={(e) => {
-				if (e.target.value != '') {
-					steps[3].completed = true;
-				} else {
-					steps[3].completed = false;
-				}
-			}}
-		></textarea>
-	{/if}
-{/snippet}
-
-<ProgressIndicator bind:steps bind:currentStep {stepContent} />
-
 {#if showAddTable}
 	<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
 {/if}
+<button
+	onclick={() => {
+		showNewCol = !showNewCol;
+	}}
+>
+	Test
+</button>
+
+<MakeNewColumn bind:show={showNewCol} />
 
 <Modal bind:showModal={showAddColumnModal}>
 	{#snippet header()}
