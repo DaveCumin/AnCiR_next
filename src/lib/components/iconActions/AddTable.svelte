@@ -14,8 +14,6 @@
 
 	function openModal() {
 		showModal = true;
-
-		console.log(showModal, showDropdown);
 	}
 
 	async function onFileChange(e) {

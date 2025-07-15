@@ -5,95 +5,71 @@
 	import { getColumnById } from '$lib/core/Column.svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
+	import Dropdown from '../reusables/Dropdown.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
-	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
-	import { faL } from '@fortawesome/free-solid-svg-icons';
+	import AttributeSelect from '../reusables/AttributeSelect.svelte';
 
 	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
+	
+    let showModal = $state(false);
 
-	let showModal = $state(false);
-	let plotType = $state();
+	let plotType = $state("Plot");
 	let plotName = $derived.by(() => {
-		return plotType + '_' + Math.round(Math.random() * 10, 2);
+		return plotType + '_' + (core.plots.length + 1);
 	});
-	function openModal(type) {
+
+	function openModalSingle() {
 		showModal = true;
-		plotType = type;
 	}
 
 	let xCol = $state();
 	let yCol = $state();
+
 	function confirmImport() {
 		const newPlot = new Plot({ name: plotName, type: plotType });
-		// let xId = getColumnById(xCol);
-		// let yId = getColumnById(yCol);
-
-		console.log("DEBUG: x and y id = ", xCol.id, yCol.id);
-
 		newPlot.plot.addData( {
 			x: {refId: xCol},
 			y: {refId: yCol}
 		});
-
-		console.log(newPlot);
-
 		pushObj(newPlot);
 
 		showModal = false;
-		showDropdown = false;
 	}
+
+	function capitalise(str) {
+		return str.charAt(0).toUpperCase() + str.slice(1);
+	}
+
 </script>
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
-	{#snippet groups()}
-		<div class="action">
-			<button
-				onclick={() => {
-					openModal('actogram');
-				}}
-			>
-				Create New Actogram
+    {#snippet groups()}
+        <div class="action">
+			<button onclick={openModalSingle}>
+				Create New Plot
 			</button>
 		</div>
 
 		<div class="action">
-			<button
-				onclick={() => {
-					openModal('periodogram');
-				}}
-			>
-				Create New Periodogram
+			<button>
+				Create Multiple Plots
 			</button>
 		</div>
-
-		<div class="action">
-			<button
-				onclick={() => {
-					openModal('scatterplot');
-				}}
-			>
-				Create New ScatterPlot
-			</button>
-		</div>
-	{/snippet}
+    {/snippet}
 </Dropdown>
-
-<!-- TODO: change modal component to icon-like structure? -->
 
 <Modal bind:showModal>
 	{#snippet header()}
 		<div class="heading">
-			<h2>Create New {plotType}</h2>
+			<h2>Create New {capitalise(plotType)}</h2>
 
 			<div class="choose-file-container">
 				<div>
-					<label for="plotType">Choose a Plot Type:</label>
-
-					<select bind:value={plotType} name="plotType" id="plot-type">
-						<option value="actogram">Actogram</option>
-						<option value="periodogram">Periodogram</option>
-						<option value="scatterplot">ScatterPlot</option>
-					</select>
+					<AttributeSelect
+						bind:bindTo={plotType}
+						label="Plot Type"
+						options={["actogram", "periodogram", "scatterplot"]}
+					/>
 				</div>
 
 				<div class="selected">
@@ -110,29 +86,19 @@
 		<div class="import-container">
 			<div class="preview-placeholder">
 				<!-- TODO: make these draggable? -->
-				<!-- TODO: interface control -->
-				<div>
-					<label for="xCol">x:</label>
-					<select bind:value={xCol} name="xCol" id="plot-x">
-						<option value="" disabled selected>Select x</option>
-						{#each core.tables as table (table.id)}
-							{#each table.columns as col (col.id)}
-								<option value={col.id}>{table.name + ': ' + col.name}</option>
-							{/each}
-						{/each}
-					</select>
-				</div>
-				<div>
-					<label for="yCol">y:</label>
-					<select bind:value={yCol} name="yCol" id="plot-y">
-						<option value="" disabled selected>Select y</option>
-						{#each core.tables as table (table.id)}
-							{#each table.columns as col (col.id)}
-								<option value={col.id}>{table.name + ': ' + col.name}</option>
-							{/each}
-						{/each}
-					</select>
-				</div>
+				<AttributeSelect
+					bind:bindTo={xCol}
+					label="x"
+					options={core.tables.flatMap(table => table.columns.map(col => col.id))}
+					optionsDisplay={core.tables.flatMap(table => table.columns.map(col => table.name + ': ' + col.name))}
+				/>
+
+				<AttributeSelect
+					bind:bindTo={yCol}
+					label="y"
+					options={core.tables.flatMap(table => table.columns.map(col => col.id))}
+					optionsDisplay={core.tables.flatMap(table => table.columns.map(col => table.name + ': ' + col.name))}
+				/>
 			</div>
 
 			<div class="import-button-container">
@@ -141,6 +107,7 @@
 		</div>
 	{/snippet}
 </Modal>
+
 
 <style>
 	.action button {
@@ -219,4 +186,5 @@
 	.import-button:hover {
 		background-color: var(--color-hover);
 	}
+
 </style>

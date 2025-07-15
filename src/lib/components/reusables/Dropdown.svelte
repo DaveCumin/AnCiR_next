@@ -1,17 +1,17 @@
 <script>
 	import Icon from "$lib/icons/Icon.svelte";
 
-let { showDropdown = $bindable(), top = 0, left = 0, groups } = $props()
+	let { showDropdown = $bindable(), top = 0, left = 0, groups } = $props()
 
-let dialog = $state();
+	let dialog = $state();
 
-$effect(() => {
-	if (showDropdown && !dialog.open) {
-		dialog.showModal(); // dialog function
-	} else if (!showDropdown && dialog.open) {
-		dialog.close();
-	}
-});
+	$effect(() => {
+		if (showDropdown && !dialog.open) {
+			dialog.showModal(); // dialog function
+		} else if (!showDropdown && dialog.open) {
+			dialog.close();
+		}
+	});
 
 </script>
 
