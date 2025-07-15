@@ -31,8 +31,7 @@
 		} else {
 			newWidth = rect.right - e.clientX;
 		}
-		if (newWidth > maxWidth || newWidth < minWidth) {
-			stopResize();
+		if (newWidth > maxWidth - 1 || newWidth < minWidth + 1) {
 			return;
 		}
 

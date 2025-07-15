@@ -3,9 +3,7 @@
 <script>
 	// @ts-nocheck
 	import { appState } from '$lib/core/core.svelte';
-
 	import ControlDisplay from './views/ControlDisplay.svelte';
-
 	import { fly } from 'svelte/transition';
 
 	let container;
@@ -26,8 +24,7 @@
 		} else {
 			newWidth = rect.right - e.clientX;
 		}
-		if (newWidth > maxWidth || newWidth < minWidth) {
-			stopResize();
+		if (newWidth > maxWidth - 1 || newWidth < minWidth + 1) {
 			return;
 		}
 
