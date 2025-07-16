@@ -53,6 +53,8 @@
 			x = Math.max(0, Math.min(newX, canvasWidth - width - 20));
 			y = Math.max(0, Math.min(newY, canvasHeight - height - 50));
 
+			RePosition();
+
 		} else if (resizing) {
 			const deltaX = e.clientX - initialMouseX;
 			const deltaY = e.clientY - initialMouseY;
@@ -62,6 +64,8 @@
 
 			width = snapToGrid(Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth)));
 			height = snapToGrid(Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight)));
+		
+			RePosition();
 		}
 	}
 
