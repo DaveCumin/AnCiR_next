@@ -334,34 +334,31 @@
 		<input type="number" bind:value={theData.spaceBetween} />
 	</div>
 
+	<div class="control-component">
+		<p class="control-component-title">ylims: </p>
+		<button onclick={() => (theData.ylimsIN = [null, null])}>Re-centre</button>
+		<p>Min: </p>
+		<input
+			type="number"
+			step="0.1"
+			value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
+			oninput={(e) => {
+				theData.ylimsIN[0] = [parseFloat(e.target.value)];
+			}}
+		/>
+		<p>Max: </p>
+		<input
+			type="number"
+			step="0.1"
+			value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
+			oninput={(e) => {
+				theData.ylimsIN[1] = [parseFloat(e.target.value)];
+			}}
+		/>
+	</div>
+
 
 	<div>
-
-		<p>
-			
-			
-		</p>
-
-		<p>
-			ylims: <button onclick={() => (theData.ylimsIN = [null, null])}>R</button>
-			<input
-				type="number"
-				step="0.1"
-				value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
-				oninput={(e) => {
-					theData.ylimsIN[0] = [parseFloat(e.target.value)];
-				}}
-			/>
-			<input
-				type="number"
-				step="0.1"
-				value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-				oninput={(e) => {
-					theData.ylimsIN[1] = [parseFloat(e.target.value)];
-				}}
-			/>
-		</p>
-
 		<p>Data:</p>
 		<button
 			onclick={() =>

@@ -1,13 +1,15 @@
 <script>
 	// not a draggable reusable, change to plot component some time
 
-	// TODO: invisible
 	// TODO: control panel
 	// TODO: change color, palette on top
 
-	// TODO: lock to grid
 	// @ts-nocheck
+
+	import { tick } from 'svelte';
 	import { appState, core, snapToGrid } from '$lib/core/core.svelte';
+
+	let plotElement;
 
 	let {
 		x = $bindable(100),
@@ -85,10 +87,13 @@
 		}
 	}
 
-	function handleDblClick(e) {
+	async function handleDblClick(e) {
 		e.stopPropagation();
 		appState.selectedPlotIds = [tempId];
 		appState.showControlPanel = true;
+		
+		await tick();
+		RePosition();
 	}
 
 	function handleClick(e) {
@@ -105,6 +110,20 @@
 		} else {
 			appState.selectedPlotIds = [tempId];
 		}
+
+		RePosition();
+	}
+
+	function RePosition() {
+		if (appState.selectedPlotIds.includes(tempId)) {			
+			if (plotElement) {
+			plotElement.scrollIntoView({
+				behavior: 'smooth',
+				block: 'nearest',
+				inline: 'nearest'
+			});
+		}
+		}
 	}
 
 	function handleCanvasClick(e) {
@@ -118,6 +137,7 @@
 
 <!-- added header therefore TODO: other way than hardcode -->
 <section
+	bind:this={plotElement}
 	ondblclick={handleDblClick}
 	onclick={handleClick}
 	class:selected={appState.selectedPlotIds?.includes(id)}
@@ -164,7 +184,7 @@
 		font-weight: bold;
 		border-bottom: 1px solid var(--color-lightness-85);
 		flex-shrink: 0;
-	}
+ 	}
 
 	.plot-content {
 		flex: 1;
