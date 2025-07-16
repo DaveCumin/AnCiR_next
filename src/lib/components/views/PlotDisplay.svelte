@@ -27,7 +27,23 @@
 <div
 	onclick={handleClick}
 	class="canvas"
-	style="top: 0; left: {appState.positionDisplayPanel}px; width: {canvasWidthPx}px; height: 100vh;"
+	style="top: 0; left: {appState.positionDisplayPanel}px; width: {canvasWidthPx}px; height: 100vh;
+		background-image: 
+		repeating-linear-gradient(
+			to right,
+			#eee 0,
+			#eee 1px,
+			transparent 1px,
+			transparent {appState.gridSize}px
+		),
+		repeating-linear-gradient(
+			to bottom,
+			#eee 0,
+			#eee 1px,
+			transparent 1px,
+			transparent {appState.gridSize}px
+		);
+		"
 >
 	{#each core.plots as plot, i (plot.id)}
 		<Draggable

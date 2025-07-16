@@ -24,13 +24,14 @@ export const appState = $state({
 	canvasOffset: { x: 0, y: 0 },
 	canvasScale: 1.0,
 
-	selectedPlotIds: []
+	selectedPlotIds: [],
+
+	gridSize: 5
 });
 
 export const appConsts = $state({
 	processMap: new Map(),
 	plotMap: new Map(),
-	gridsize: Number(5),
 	appColours: ['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000']
 });
 
@@ -51,9 +52,8 @@ export function pushObj(obj) {
 	}
 }
 
-let grid_size = $state(5);
 export function snapToGrid(value) {
-  	return Math.round(value / grid_size) * grid_size;
+  	return Math.round(value / appState.gridSize) * appState.gridSize;
 }
 
 let _attempt = 0;
