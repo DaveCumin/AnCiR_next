@@ -212,6 +212,7 @@
 				this.periodRangeMin = dataIN.periodRangeMin || 1;
 				this.periodRangeMax =
 					dataIN.periodRangeMax || Object.keys(parent.dataByDays.xByPeriod).length;
+				this.manualMarkers = dataIN.manualMarkers || [];
 			}
 		}
 

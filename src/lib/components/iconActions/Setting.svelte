@@ -8,8 +8,9 @@
 <script>
 	// @ts-nocheck
 	import { core, pushObj, outputCoreAsJson } from '$lib/core/core.svelte';
-	import { Column } from '$lib/core/Column.svelte';
 	import { Table } from '$lib/core/table.svelte.js';
+	import { Column } from '$lib/core/Column.svelte';
+	import { Plot } from '$lib/core/Plot.svelte';
 
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
@@ -30,6 +31,7 @@
 
 	function openImportModal() {
 		showImportModal = true;
+		fileInput.click();
 	}
 
 	function openExportModal() {
@@ -68,7 +70,7 @@
 		//reset existing workflow
 		core.data = [];
 		core.tables = [];
-		// core.plots = [];
+		core.plots = [];
 
 		jsonData.data.map((datajson) => {
 			pushObj(Column.fromJSON(datajson));
@@ -78,9 +80,9 @@
 			pushObj(Table.fromJSON(tablejson));
 		});
 
-		// jsonData.plots.map((plotjson) => {
-		// 	core.plots.push(Plot.fromJSON(plotjson));
-		// });
+		jsonData.plots.map((plotjson) => {
+			core.plots.push(Plot.fromJSON(plotjson));
+		});
 
 		showImportModal = false;
 		importReady = false;
@@ -154,8 +156,9 @@
 					<!-- <p>Preview Data</p> -->
 					<div class="preview-table-wrapper">
 						<!-- {@html importPreview} -->
-						Tables imported: {jsonData.tables.length}
-						<!-- Plots imported: {jsonData.plots.length} -->
+						<p>Tables imported: {jsonData.tables.length}</p>
+						<p>Data imported: {jsonData.data.length}</p>
+						<p>Plots imported: {jsonData.plots.length}</p>
 					</div>
 				{:else}
 					<!-- <p>Choose file to preview data</p> -->

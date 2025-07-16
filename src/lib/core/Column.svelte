@@ -58,7 +58,7 @@
 			//console.warn('that was hoursSinceStart');
 		});
 
-		constructor({ ...columnData }, id = null) {
+		constructor(columnData = null, id = null) {
 			if (id === null) {
 				this.id = _columnidCounter;
 				_columnidCounter++;
@@ -68,8 +68,10 @@
 			}
 			this.tableProcessGUId = '';
 			//Assign the other data
-
-			Object.assign(this, structuredClone(columnData));
+			if (columnData) {
+				console.log('CD: ', columnData);
+				Object.assign(this, columnData);
+			}
 		}
 
 		//To add and remove processes
