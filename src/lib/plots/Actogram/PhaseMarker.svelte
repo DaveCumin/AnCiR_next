@@ -59,15 +59,29 @@
 		periodRangeMax = $state(0);
 		manualMarkers = $state([]);
 
-		//Add a manual marker
+		//Add a manual marker - the raw time clicked on
 		addTime(clickedDay, clickedHrs) {
-			this.manualMarkers[clickedDay] = clickedHrs;
+			// Calculate absolute time using the current periodHrs
+			const periodHrs = this.parentData.parentPlot.periodHrs;
+			const absoluteTime = clickedDay * periodHrs + clickedHrs;
+			this.manualMarkers = [...this.manualMarkers, absoluteTime];
 		}
 
 		//Calculate the markers for the actogram
 		markers = $derived.by(() => {
-			if (this.type == 'manual') {
-				return this.manualMarkers;
+			const periodHrs = this.parentData.parentPlot.periodHrs;
+			if (this.type === 'manual') {
+				// Group manual markers by day based on current periodHrs
+				const markersByDay = {};
+				for (const absoluteTime of this.manualMarkers) {
+					const day = Math.floor(absoluteTime / periodHrs);
+					const hour = absoluteTime % periodHrs;
+					if (!markersByDay[day]) markersByDay[day] = [];
+					markersByDay[day] = hour;
+				}
+				// Convert to array of arrays, filling gaps with empty arrays
+				const maxDay = Math.max(-1, ...Object.keys(markersByDay).map(Number));
+				return Array.from({ length: maxDay + 1 }, (_, i) => markersByDay[i] || NaN);
 			}
 			//-------------------------------
 			//Generate the template
