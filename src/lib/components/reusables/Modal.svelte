@@ -5,7 +5,7 @@ https://svelte.dev/playground/modal?version=5.33.7
 <script>
 	import Icon from '$lib/icons/Icon.svelte';
 
-	let { showModal = $bindable(), header, children } = $props();
+	let { showModal = $bindable(), onclose = () => {}, header, children } = $props();
 
 	let dialog = $state();
 
@@ -13,21 +13,27 @@ https://svelte.dev/playground/modal?version=5.33.7
 		if (showModal && !dialog.open) {
 			dialog.showModal();
 		} else if (!showModal && dialog.open) {
-			dialog.close();
+			close();
 		}
 	});
+
+	function close() {
+		showModal = false;
+		dialog.close();
+		onclose();
+	}
 </script>
 
 <dialog
 	bind:this={dialog}
 	onclose={() => (showModal = false)}
 	onclick={(e) => {
-		if (e.target === dialog) dialog.close();
+		if (e.target === dialog) close();
 	}}
 >
 	<div>
 		<!-- svelte-ignore a11y_autofocus -->
-		<button autofocus onclick={() => dialog.close()}>
+		<button autofocus onclick={() => close()}>
 			<Icon name="close" width={16} height={16} className="close" />
 		</button>
 

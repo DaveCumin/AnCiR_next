@@ -39,7 +39,6 @@
 		showModal = false;
 		importReady = false;
 		importPreview = '';
-
 		showDropdown = false;
 	}
 </script>
@@ -57,7 +56,7 @@
 	{/snippet}
 </Dropdown>
 
-<Modal bind:showModal>
+<Modal bind:showModal onclose={() => (showDropdown = false)}>
 	{#snippet header()}
 		<div class="heading">
 			<h2>Import Data</h2>

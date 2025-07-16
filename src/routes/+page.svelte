@@ -279,10 +279,9 @@
 	}
 </script>
 
-<!-- <svelte:head>
-  <title>AnCiR v β.{version}</title>
-</svelte:head> 
--->
+<svelte:head>
+	<title>AnCiR v β.4.0</title>
+</svelte:head>
 
 {#if appState.showNavbar}
 	<Navbar />

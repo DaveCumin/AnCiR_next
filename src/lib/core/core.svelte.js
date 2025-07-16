@@ -29,8 +29,8 @@ export const appState = $state({
 export const appConsts = $state({
 	processMap: new Map(),
 	plotMap: new Map(),
-	gridsize: Number(5),
-	appColours: ['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000']
+	gridsize: Number(5), // TODO query I think this should be in appState
+	appColours: ['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000'] // TODO query I think this should also be in appState
 });
 
 export function pushObj(obj) {
@@ -46,7 +46,7 @@ export function pushObj(obj) {
 }
 
 export function outputCoreAsJson() {
-	const output = { ...core };
+	const output = { ...core }; // TODO: output appState also, so when it loads, it will look exactly the same.
 	return JSON.stringify(output, null, 2);
 }
 

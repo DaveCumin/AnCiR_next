@@ -84,6 +84,8 @@
 			core.plots.push(Plot.fromJSON(plotjson));
 		});
 
+		//TODO add in appState import also
+
 		showImportModal = false;
 		importReady = false;
 		showDropdown = false;

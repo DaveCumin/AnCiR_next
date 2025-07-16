@@ -147,10 +147,7 @@
 			}
 			let Ndays = 0;
 			this.data.forEach((d, i) => {
-				Ndays = Math.max(
-					Ndays,
-					Object.keys(d.dataByDays.xByPeriod).length - Math.floor(d.offset / 24)
-				);
+				Ndays = Math.max(Ndays, Object.keys(d.dataByDays.xByPeriod).length);
 			});
 
 			return Ndays;
