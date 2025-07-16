@@ -1,5 +1,4 @@
 :root {
-    /* TODO: dynamic variable of z-index, calculate based on current */
     /* icon related */
     --color-icon-selected: #5F5F5F;
     --color-icon-unselected: #D9D9D9;

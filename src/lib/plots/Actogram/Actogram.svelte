@@ -272,31 +272,74 @@
 </script>
 
 {#snippet controls(theData)}
-	<div>
-		<button onclick={() => convertToImage('plot' + theData.parentBox.id, 'svg')}>Save </button>
-		Name: <input type="text" bind:value={theData.parentBox.name} />
-		Width: <input type="number" bind:value={theData.parentBox.width} />
-		height: <input type="number" bind:value={theData.parentBox.height} />
+	<button onclick={() => convertToImage('plot' + theData.parentBox.id, 'svg')}>Save </button>
+	
+	<div class="control-component">
+		<div class="control-input">
+			<p>Name: </p>
+			<input type="text" bind:value={theData.parentBox.name} />
+		</div>
 
-		<p>
-			Padding: <input type="number" bind:value={theData.paddingIN.top} />
-			<input type="number" bind:value={theData.paddingIN.right} />
-			<input type="number" bind:value={theData.paddingIN.bottom} />
-			<input type="number" bind:value={theData.paddingIN.left} />
-		</p>
+		<div class="control-input">
+			<p>Width: </p>
+			<input type="number" bind:value={theData.parentBox.width} />
+		</div>
+
+		<div class="control-input">
+			<p>Height: </p>
+			<input type="number" bind:value={theData.parentBox.height} />
+		</div>
+	</div>
+
+	<div class="control-component">
+		<p class="control-component-title">Padding: </p>
+		
+		<p>Top: </p>
+		<input type="number" bind:value={theData.paddingIN.top} />
+		
+		<p>Bottom: </p>
+		<input type="number" bind:value={theData.paddingIN.bottom} />
+
+		<p>Left: </p>
+		<input type="number" bind:value={theData.paddingIN.left} />
+
+		<p>Right: </p>
+		<input type="number" bind:value={theData.paddingIN.right} />
+		
 		<p>{JSON.stringify(theData.padding)}</p>
+	</div>
+
+	<div class="control-component">
+		<!-- TODO: edit class in LightBand component -->
+		<LightBand bind:bands={theData.lightBands} which="controls" />
+	</div>
+
+	<div class="control-component">
+		<!-- TODO: why <a> -->
+		Ndays: <a>{theData.Ndays}</a>
+		Each Plot Height: <a>{theData.eachplotheight}</a>
+	</div>
+
+	<div class="control-component">
+		<p>Start time: </p>
+		<input type="date" bind:value={theData.startTime} />
+
+		<p>Period: </p>
+		<input type="number" step="0.1" bind:value={theData.periodHrs} />
+		
+		<p>Repeat: </p>
+		<input type="number" bind:value={theData.doublePlot} />
+		
+		<p>Space Between:</p>
+		<input type="number" bind:value={theData.spaceBetween} />
+	</div>
+
+
+	<div>
 
 		<p>
-			<LightBand bind:bands={theData.lightBands} which="controls" />
-		</p>
-		<p>
-			Ndays: <a>{theData.Ndays}</a>
-			eachplotheight: <a>{theData.eachplotheight}</a>
-			Start time: <input type="date" bind:value={theData.startTime} />
-			Period: <input type="number" step="0.1" bind:value={theData.periodHrs} />
-			Repeat: <input type="number" bind:value={theData.doublePlot} />
-			Space Between:
-			<input type="number" bind:value={theData.spaceBetween} />
+			
+			
 		</p>
 
 		<p>
