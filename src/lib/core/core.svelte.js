@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { Column } from './Column.svelte';
 import { Plot } from './Plot.svelte';
 import { Table } from './Table.svelte';
@@ -49,16 +51,9 @@ export function pushObj(obj) {
 	}
 }
 
-function getAutoPosition(index) {
-	const baseX = 20;
-	const baseY = 20;
-	const offsetX = 40;
-	const offsetY = 40;
-
-	return {
-		x: baseX + index * offsetX,
-		y: baseY + index * offsetY
-	};
+let grid_size = $state(5);
+export function snapToGrid(value) {
+  	return Math.round(value / grid_size) * grid_size;
 }
 
 let _attempt = 0;
@@ -69,15 +64,18 @@ function findNextAvailablePosition(existingPlots) {
 	const offsetY = 40;
 	
 	while (true) {
-		const x = baseX + _attempt * offsetX;
-		const y = baseY + _attempt * offsetY;
+		const rawX = baseX + _attempt * offsetX;
+		const rawY = baseY + _attempt * offsetY;
+
+		const x = snapToGrid(rawX);
+    	const y = snapToGrid(rawY);
 		
 		const collision = existingPlots.some(p =>
-		Math.abs(p.x - x) < 30 && Math.abs(p.y - y) < 30
+			Math.abs(p.x - x) < 30 && Math.abs(p.y - y) < 30
 		);
 		
 		if (!collision) {
-		return { x, y };
+			return { x, y };
 		}
 		
 		_attempt++;

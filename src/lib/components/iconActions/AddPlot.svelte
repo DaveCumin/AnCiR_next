@@ -75,7 +75,6 @@
 					<p class="selected-preview">
 						Name: 
 						<input bind:value={plotName} type="text"  placeholder="enter plot name">
-						<!-- TODO: double click to change name -->
 					</p>
 				</div>
 			</div>

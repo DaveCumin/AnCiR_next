@@ -7,7 +7,7 @@
 
 	// TODO: lock to grid
 	// @ts-nocheck
-	import { appState, core } from '$lib/core/core.svelte';
+	import { appState, core, snapToGrid } from '$lib/core/core.svelte';
 
 	let {
 		x = $bindable(100),
@@ -28,19 +28,29 @@
 	let moving = false;
 	let resizing = false;
 	let initialMouseX, initialMouseY, initialWidth, initialHeight;
-	let newX, newY;
 
-	function onMouseDown() {
+	let dragStartX, dragStartY;
+	let mouseStartX, mouseStartY;
+
+	function onMouseDown(e) {
 		moving = true;
+		mouseStartX = e.clientX;
+		mouseStartY = e.clientY;
+		dragStartX = x;
+		dragStartY = y;
 	}
 
 	function onMouseMove(e) {
 		if (moving) {
-			x += e.movementX;
-			y += e.movementY;
+			const deltaX = e.clientX - mouseStartX;
+			const deltaY = e.clientY - mouseStartY;
 
-			x = Math.max(0, Math.min(x, canvasWidth - width - 20));
-			y = Math.max(0, Math.min(y, canvasHeight - height - 50));
+			const newX = snapToGrid(dragStartX + deltaX);
+			const newY = snapToGrid(dragStartY + deltaY);
+
+			x = Math.max(0, Math.min(newX, canvasWidth - width - 20));
+			y = Math.max(0, Math.min(newY, canvasHeight - height - 50));
+
 		} else if (resizing) {
 			const deltaX = e.clientX - initialMouseX;
 			const deltaY = e.clientY - initialMouseY;
@@ -48,8 +58,8 @@
 			const maxWidth = canvasWidth - x - 20;
 			const maxHeight = canvasHeight - y - 50;
 
-			width = Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth));
-			height = Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight));
+			width = snapToGrid(Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth)));
+			height = snapToGrid(Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight)));
 		}
 	}
 
@@ -80,6 +90,7 @@
 		appState.selectedPlotIds = [tempId];
 		appState.showControlPanel = true;
 	}
+
 	function handleClick(e) {
 		e.stopPropagation();
 		//look for alt held at the same time
@@ -147,15 +158,12 @@
 	}
 
 	.plot-header {
+		cursor: move;
 		background-color: #f8f8f8;
 		padding: 0.5rem 1rem;
 		font-weight: bold;
 		border-bottom: 1px solid var(--color-lightness-85);
 		flex-shrink: 0;
-	}
-
-	.selected .plot-header {
-		cursor: move;
 	}
 
 	.plot-content {
