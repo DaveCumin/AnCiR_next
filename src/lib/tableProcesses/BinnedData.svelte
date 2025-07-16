@@ -56,12 +56,6 @@
 		const processHash = crypto.randomUUID();
 		getColumnById(xOUT).tableProcessGUId = processHash;
 		getColumnById(yOUT).tableProcessGUId = processHash;
-		//TODO: I don't know why the above isn't working, but the 'hack' is below (to make columns that reference xOUT/yOUT update from the changed column)
-		let temp = getColumnById(xOUT).addProcess('Add');
-		getColumnById(xOUT).removeProcess(temp);
-		temp = getColumnById(yOUT).addProcess('Add');
-		getColumnById(yOUT).removeProcess(temp);
-		//-----
 
 		binnedData = theBinnedData;
 	}

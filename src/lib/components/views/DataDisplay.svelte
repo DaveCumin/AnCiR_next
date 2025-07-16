@@ -142,7 +142,17 @@
 {#snippet stepContent(index, step)}
 	{#if index === 0}
 		<p>Content for Lab 1</p>
-		<input type="text" placeholder="Enter data for Lab 1" />
+		<input
+			type="text"
+			placeholder="Enter data for Lab 1"
+			oninput={(e) => {
+				if (e.target.value != '') {
+					steps[0].completed = true;
+				} else {
+					steps[0].completed = false;
+				}
+			}}
+		/>
 	{:else if index === 1}
 		<p>Content for Lab 2</p>
 		<textarea
@@ -157,10 +167,28 @@
 		></textarea>
 	{:else if index === 2}
 		<p>Content for Label 3</p>
-		<textarea placeholder="Enter details for Label 3"></textarea>
+		<textarea
+			placeholder="Enter details for Label 3"
+			oninput={(e) => {
+				if (e.target.value != '') {
+					steps[2].completed = true;
+				} else {
+					steps[2].completed = false;
+				}
+			}}
+		></textarea>
 	{:else if index === 3}
 		<p>Content for Lab 4</p>
-		<textarea placeholder="Enter details for Lab 4"></textarea>
+		<textarea
+			placeholder="Enter details for Lab 4"
+			oninput={(e) => {
+				if (e.target.value != '') {
+					steps[3].completed = true;
+				} else {
+					steps[3].completed = false;
+				}
+			}}
+		></textarea>
 	{/if}
 {/snippet}
 
