@@ -14,9 +14,7 @@
     let showModal = $state(false);
 
 	let plotType = $state("Plot");
-	let plotName = $derived.by(() => {
-		return plotType + '_' + (core.plots.length + 1);
-	});
+	let plotName = $state(plotType + '_' + (core.plots.length + 1));
 
 	function openModalSingle() {
 		showModal = true;
@@ -34,6 +32,7 @@
 		pushObj(newPlot);
 
 		showModal = false;
+		showDropdown = false;
 	}
 
 	function capitalise(str) {
@@ -46,7 +45,7 @@
     {#snippet groups()}
         <div class="action">
 			<button onclick={openModalSingle}>
-				Create New Plot
+				Create Single Plot
 			</button>
 		</div>
 
@@ -74,7 +73,8 @@
 
 				<div class="selected">
 					<p class="selected-preview">
-						Name: {plotName}
+						Name: 
+						<input bind:value={plotName} type="text"  placeholder="enter plot name">
 						<!-- TODO: double click to change name -->
 					</p>
 				</div>

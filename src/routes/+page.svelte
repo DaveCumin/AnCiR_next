@@ -244,26 +244,20 @@
 
 		core.plots = [];
 		//Scatter plot
-		core.plots.push(new Plot({ name: 'testscatter', type: 'scatterplot' }));
-		core.plots[0].x = 5;
-		core.plots[0].y = 5;
+		pushObj(new Plot({ name: 'testscatter', type: 'scatterplot' }));
 		core.plots[0].plot.addData({
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
 		});
 		// //Actogram
-		core.plots.push(new Plot({ name: 'an actogram', type: 'actogram' }));
-		core.plots[core.plots.length - 1].x = 20;
-		core.plots[core.plots.length - 1].y = 300;
+		pushObj(new Plot({ name: 'an actogram', type: 'actogram' }));
 		core.plots[core.plots.length - 1].height = 700;
 		core.plots[core.plots.length - 1].plot.addData({
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
 		});
 		//Periodogram
-		core.plots.push(new Plot({ name: 'a periodogram', type: 'periodogram' }));
-		core.plots[core.plots.length - 1].x = 10;
-		core.plots[core.plots.length - 1].y = 450;
+		pushObj(new Plot({ name: 'a periodogram', type: 'periodogram' }));
 		core.plots[core.plots.length - 1].plot.addData({
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }

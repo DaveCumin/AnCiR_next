@@ -1,6 +1,6 @@
 import { Column } from './Column.svelte';
 import { Plot } from './Plot.svelte';
-import { Table } from './table.svelte.js';
+import { Table } from './Table.svelte';
 
 export const core = $state({
 	data: [],
@@ -38,9 +38,49 @@ export function pushObj(obj) {
 	} else if (obj instanceof Table) {
 		core.tables.push(obj);
 	} else if (obj instanceof Plot) {
+		const pos = findNextAvailablePosition(core.plots);
+
+		obj.x = pos.x;
+		obj.y = pos.y;
+
 		core.plots.push(obj);
 	} else {
 		console.log('Error: object not instance of Column, Table or Plot');
+	}
+}
+
+function getAutoPosition(index) {
+	const baseX = 20;
+	const baseY = 20;
+	const offsetX = 40;
+	const offsetY = 40;
+
+	return {
+		x: baseX + index * offsetX,
+		y: baseY + index * offsetY
+	};
+}
+
+let _attempt = 0;
+function findNextAvailablePosition(existingPlots) {
+	const baseX = 20;
+	const baseY = 20;
+	const offsetX = 40;
+	const offsetY = 40;
+	
+	while (true) {
+		const x = baseX + _attempt * offsetX;
+		const y = baseY + _attempt * offsetY;
+		
+		const collision = existingPlots.some(p =>
+		Math.abs(p.x - x) < 30 && Math.abs(p.y - y) < 30
+		);
+		
+		if (!collision) {
+		return { x, y };
+		}
+		
+		_attempt++;
 	}
 }
 
