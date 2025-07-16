@@ -26,7 +26,7 @@ export const appState = $state({
 
 	selectedPlotIds: [],
 
-	gridSize: 5
+	gridSize: 10,
 });
 
 export const appConsts = $state({
@@ -58,7 +58,7 @@ export function snapToGrid(value) {
 
 let _attempt = 0;
 function findNextAvailablePosition(existingPlots) {
-	const baseX = 20;
+	const baseX =10;
 	const baseY = 20;
 	const offsetX = 40;
 	const offsetY = 40;

@@ -17,7 +17,7 @@
 	import { testJson } from './testJson.svelte.js';
 	import { testJsonDC } from './testJsonDC.svelte';
 
-	import { core, pushObj, appConsts, appState } from '$lib/core/core.svelte';
+	import { core, pushObj, appConsts, appState, snapToGrid } from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	import { Table } from '$lib/core/table.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
@@ -251,7 +251,7 @@
 		});
 		// //Actogram
 		pushObj(new Plot({ name: 'an actogram', type: 'actogram' }));
-		core.plots[core.plots.length - 1].height = 700;
+		core.plots[core.plots.length - 1].height = snapToGrid(700);
 		core.plots[core.plots.length - 1].plot.addData({
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }

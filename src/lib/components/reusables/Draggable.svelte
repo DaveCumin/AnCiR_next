@@ -124,8 +124,8 @@
 	class="draggable"
 	style="left: {x}px;
 		top: {y}px;
-		width: {width + 20}px;
-		height: {height + 50}px;"
+		width: {snapToGrid(width + 20)}px;
+		height: {snapToGrid(height + 50)}px;"
 >
 	<div class="plot-header" onmousedown={onMouseDown}>
 		{title}
