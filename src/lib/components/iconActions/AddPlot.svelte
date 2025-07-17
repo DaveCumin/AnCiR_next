@@ -21,16 +21,24 @@
 	}
 
 	let xCol = $state();
-	let yCol = $state();
+
+	let yCols = $state([null]); // contains column id
+
+	let plotNames = $state([plotName]);
+
+	function AddNewPlot() {
+		yCols.push(null);
+	}
 
 	function confirmImport() {
-		const newPlot = new Plot({ name: plotName, type: plotType });
-		newPlot.plot.addData( {
-			x: {refId: xCol},
-			y: {refId: yCol}
-		});
-		pushObj(newPlot);
-
+		for (let i = 0; i < yCols.length; i++) {
+			const newPlot = new Plot ({ name: plotNames[i], type: plotType });
+			newPlot.plot.addData({
+				x: {refId: xCol},
+				y: {refId: yCols[i]}
+			});
+			pushObj(newPlot);
+		}
 		showModal = false;
 		showDropdown = false;
 	}
@@ -54,7 +62,7 @@
 <Modal bind:showModal>
 	{#snippet header()}
 		<div class="heading">
-			<h2>Create New {capitalise(plotType)}</h2>
+			<h2>Create New {capitalise(plotType)}(s)</h2>
 
 			<div class="choose-file-container">
 				<div>
@@ -63,13 +71,13 @@
 						label="Plot Type"
 						options={["actogram", "periodogram", "scatterplot"]}
 					/>
-				</div>
 
-				<div class="selected">
-					<p class="selected-preview">
-						Name: 
-						<input bind:value={plotName} type="text"  placeholder="enter plot name">
-					</p>
+					<AttributeSelect
+						bind:bindTo={xCol}
+						label="x"
+						options={core.tables.flatMap(table => table.columns.map(col => col.id))}
+						optionsDisplay={core.tables.flatMap(table => table.columns.map(col => table.name + ': ' + col.name))}
+					/>
 				</div>
 			</div>
 		</div>
@@ -78,21 +86,23 @@
 	{#snippet children()}
 		<div class="import-container">
 			<div class="preview-placeholder">
-				<!-- TODO: make these draggable? -->
-				<AttributeSelect
-					bind:bindTo={xCol}
-					label="x"
-					options={core.tables.flatMap(table => table.columns.map(col => col.id))}
-					optionsDisplay={core.tables.flatMap(table => table.columns.map(col => table.name + ': ' + col.name))}
-				/>
+				{#each yCols as yCol, i}
+					<div class="selected">
+						<p class="selected-preview">
+							Name: 
+							<input bind:value={plotNames[i]} type="text"  placeholder="enter plot name">
+						</p>
+					</div>
 
-				<AttributeSelect
-					bind:bindTo={yCol}
-					label="y"
-					options={core.tables.flatMap(table => table.columns.map(col => col.id))}
-					optionsDisplay={core.tables.flatMap(table => table.columns.map(col => table.name + ': ' + col.name))}
-				/>
+					<AttributeSelect
+						bind:bindTo={yCols[i]}
+						label="y"
+						options={core.tables.flatMap(table => table.columns.map(col => col.id))}
+						optionsDisplay={core.tables.flatMap(table => table.columns.map(col => table.name + ': ' + col.name))}
+					/>
+				{/each}
 			</div>
+			<button onclick={AddNewPlot}>Add New Plots</button>
 		</div>
 	{/snippet}
 
