@@ -1,10 +1,5 @@
 <script>
 	// not a draggable reusable, change to plot component some time
-
-	// TODO: invisible
-	// TODO: control panel
-	// TODO: change color, palette on top
-
 	// TODO: lock to grid
 	// @ts-nocheck
 	import { appState, core } from '$lib/core/core.svelte';
@@ -20,8 +15,6 @@
 		canvasHeight = 50000
 	} = $props();
 
-	let tempId = id;
-
 	const minWidth = 100;
 	const minHeight = 100;
 
@@ -30,17 +23,25 @@
 	let initialMouseX, initialMouseY, initialWidth, initialHeight;
 	let newX, newY;
 
-	function onMouseDown() {
-		moving = true;
+	function onMouseDown(e) {
+		if (appState.selectedPlotIds.includes(id)) {
+			moving = true;
+		} else if (!e.altKey) {
+			appState.selectedPlotIds = [id];
+			moving = true;
+		}
 	}
 
 	function onMouseMove(e) {
 		if (moving) {
-			x += e.movementX;
-			y += e.movementY;
+			appState.selectedPlotIds.forEach((id) => {
+				const plot = core.plots.find((p) => p.id === id);
+				plot.x += e.movementX;
+				plot.y += e.movementY;
 
-			x = Math.max(0, Math.min(x, canvasWidth - width - 20));
-			y = Math.max(0, Math.min(y, canvasHeight - height - 50));
+				plot.x = Math.max(0, Math.min(plot.x, canvasWidth - width - 20));
+				plot.y = Math.max(0, Math.min(plot.y, canvasHeight - height - 50));
+			});
 		} else if (resizing) {
 			const deltaX = e.clientX - initialMouseX;
 			const deltaY = e.clientY - initialMouseY;
@@ -80,27 +81,27 @@
 
 	function handleDblClick(e) {
 		e.stopPropagation();
-		if (tempId >= 0) {
+		if (id >= 0) {
 			//handle colour-picker
-			appState.selectedPlotIds = [tempId];
+			appState.selectedPlotIds = [id];
 			appState.showControlPanel = true;
 		}
 	}
 	function handleClick(e) {
 		e.stopPropagation();
-		if (tempId >= 0) {
+		if (id >= 0) {
 			//handle colour-picker
 			//look for alt held at the same time
 			if (e.altKey) {
 				//Add if it's not already there
-				if (!appState.selectedPlotIds.includes(tempId)) {
-					appState.selectedPlotIds.push(tempId);
+				if (!appState.selectedPlotIds.includes(id)) {
+					appState.selectedPlotIds.push(id);
 				} else {
 					//or remove it
 					appState.selectedPlotIds = appState.selectedPlotIds.filter((id) => id !== tempId);
 				}
-			} else {
-				appState.selectedPlotIds = [tempId];
+			} else if (!appState.selectedPlotIds.includes(id)) {
+				appState.selectedPlotIds = [id];
 			}
 		}
 	}
@@ -119,7 +120,7 @@
 		width: {width + 20}px;
 		height: {height + 50}px;"
 >
-	<div class="plot-header" onmousedown={onMouseDown}>
+	<div class="plot-header" onmousedown={(e) => onMouseDown(e)}>
 		{title}
 	</div>
 	<div class="plot-content">
