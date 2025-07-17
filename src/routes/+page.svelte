@@ -311,6 +311,21 @@
 		font-size: 14px;
 	}
 
+	/* resizer style */
+	:global(.resizer) {
+		width: 4px;
+		cursor: col-resize;
+		height: 100%;
+		position: absolute;
+		top: 0;
+		right: 0;
+		background-color: transparent;
+	}
+
+	:global(.resizer:hover) {
+		background-color: var(--color-hover);
+	}
+
 	/* button style */
 	:global(.dialog-button-container) {
 		display: flex;

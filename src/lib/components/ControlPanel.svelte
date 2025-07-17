@@ -87,17 +87,6 @@
 		display: none;
 	}
 
-	.resizer {
-		width: 6px;
-		cursor: col-resize;
-		height: 100%;
-		position: absolute;
-		top: 0;
-		right: 0;
-		z-index: 1;
-		background-color: transparent;
-	}
-
 	.view-container.right .resizer {
 		right: 0;
 	}
