@@ -87,7 +87,7 @@
 		appConsts.plotMap = await loadPlots();
 
 		populatePanelWidth();
-		refresh();
+		// refresh();
 		// loadTestJson();
 	});
 

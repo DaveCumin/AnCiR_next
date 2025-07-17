@@ -1,4 +1,6 @@
 <script module>
+	// @ts-nocheck
+
 	import { Process } from '$lib/core/Process.svelte';
 	import { core, appConsts } from '$lib/core/core.svelte.js';
 	import { timeParse } from 'd3-time-format';
@@ -8,7 +10,7 @@
 		return theColumn;
 	}
 
-	let _columnidCounter = 0;
+	let _columnIdCounter = 0;
 
 	export class Column {
 		id; //Unique Id for the column
@@ -45,7 +47,7 @@
 			}
 		});
 		//time format for converting time data
-		timeformat = $derived(this.type === 'time' ? 0 : null);
+		timeFormat = $derived(this.type === 'time' ? 0 : null);
 
 		//The associated processes that are applied to the data
 		processes = $state([]);
@@ -59,15 +61,16 @@
 
 		constructor({ ...columnData }, id = null) {
 			if (id === null) {
-				this.id = _columnidCounter;
-				_columnidCounter++;
+				this.id = _columnIdCounter;
+				_columnIdCounter++;
 			} else {
 				this.id = id;
-				_columnidCounter = Math.max(id + 1, _columnidCounter + 1);
+				_columnIdCounter = Math.max(id + 1, _columnIdCounter + 1);
 			}
 			this.tableProcessGUId = '';
 			//Assign the other data
-			Object.assign(this, structuredClone(columnData));
+			Object.assign(this, JSON.parse(JSON.stringify(columnData)));
+			// Object.assign(this, structuredClone(columnData));
 		}
 
 		//To add and remove processes
@@ -133,7 +136,7 @@
 
 			//deal with timestamps
 			if (this.type === 'time' && !this.isReferencial()) {
-				out = out.map((x) => Number(timeParse(this.timeformat)(x))); // Turn into UNIX values of time
+				out = out.map((x) => Number(timeParse(this.timeFormat)(x))); // Turn into UNIX values of time
 			}
 
 			//If no data, return empty
@@ -162,7 +165,7 @@
 			}
 			jsonOut.type = this.type;
 			if (this.type == 'time') {
-				jsonOut.timeformat = this.timeformat;
+				jsonOut.timeFormat = this.timeFormat;
 			}
 			if (this.compression != null) {
 				jsonOut.compression = this.compression;
@@ -180,7 +183,7 @@
 				type,
 				refId,
 				data,
-				timeformat,
+				timeFormat,
 				tableProcessGUId,
 				processes,
 				compression,
@@ -192,17 +195,22 @@
 					type,
 					refId: refId ?? null,
 					data: data ?? null,
-					compression: compression ?? null,
-					timeformat: timeformat ?? '',
-					provenance: provenance ?? null,
+					timeFormat: timeFormat ?? '',
 					tableProcessGUId: tableProcessGUId ?? '',
-					processes: []
+
+					compression: compression ?? null,
+					provenance: provenance ?? null,
 				},
 				id
 			);
-			if (processes?.length > 0) {
-				processes.map((p) => column.processes.push(Process.fromJSON(p, column)));
+			
+			column.processes = [];
+			if (Array.isArray(processes)) {
+				for (const p of processes) {
+					column.processes.push(Process.fromJSON(p, column));
+				}
 			}
+
 			return column;
 		}
 	}
@@ -242,9 +250,9 @@
 				<br />
 				Time format:
 				{#if !canChange}
-					<input bind:value={col.timeformat} />
+					<input bind:value={col.timeFormat} />
 				{:else}
-					{getColumnById(col.refId)?.timeformat}
+					{getColumnById(col.refId)?.timeFormat}
 				{/if}
 			{/if}
 			{#if col.compression != null}

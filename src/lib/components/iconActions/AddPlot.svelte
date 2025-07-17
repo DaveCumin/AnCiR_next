@@ -16,7 +16,7 @@
 	let plotType = $state("Plot");
 	let plotName = $state(plotType + '_' + (core.plots.length + 1));
 
-	function openModalSingle() {
+	function openModal() {
 		showModal = true;
 	}
 
@@ -46,12 +46,6 @@
         <div class="action">
 			<button onclick={openModalSingle}>
 				Create Single Plot
-			</button>
-		</div>
-
-		<div class="action">
-			<button>
-				Create Multiple Plots
 			</button>
 		</div>
     {/snippet}
