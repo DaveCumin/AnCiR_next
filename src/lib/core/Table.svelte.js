@@ -70,14 +70,14 @@ export class Table {
 		const dataLength = Ndays * 24 * (60 / fs_min);
 
 		//time
-		const dft = new Column();
+		const dft = new Column({});
 		dft.simulateColumn('time', fs_min, startDate, periods, maxHeights, dataLength);
 
 		this.addColumn(dft);
 
 		//value
 		for (let i = 0; i < periods.length; i++) {
-			const dfv = new Column();
+			const dfv = new Column({});
 			dfv.simulateColumn('value', fs_min, startDate, periods[i], maxHeights[i], dataLength);
 
 			this.addColumn(dfv);

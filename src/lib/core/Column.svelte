@@ -3,7 +3,9 @@
 
 	import { Process } from '$lib/core/Process.svelte';
 	import { core, appConsts } from '$lib/core/core.svelte.js';
+
 	import { timeParse } from 'd3-time-format';
+	import { forceFormat, getPeriod, getISODate } from '$lib/utils/time/TimeUtils';
 
 	export function getColumnById(id) {
 		const theColumn = core.data.find((column) => column.id === id);
@@ -68,9 +70,10 @@
 				_columnIdCounter = Math.max(id + 1, _columnIdCounter + 1);
 			}
 			this.tableProcessGUId = '';
+			
 			//Assign the other data
 			Object.assign(this, JSON.parse(JSON.stringify(columnData)));
-			// Object.assign(this, structuredClone(columnData));
+			// TODO: DEBUG Object.assign(this, structuredClone(columnData));
 		}
 
 		//To add and remove processes
@@ -155,6 +158,66 @@
 			return out;
 		}
 
+		// DEBUG: Simulate data
+		simulateColumn(type, fs_min, startDate, period, maxHeight, dataLength) {
+			if (!this.name) {
+				this.name = type;
+			}
+	
+			this.type = type;
+			switch (this.type) {
+				case 'time':
+					this.generateTimeData(fs_min, startDate, dataLength);
+					break;
+				case 'value':
+					this.generateValueData(fs_min, period, maxHeight, dataLength)
+					break;
+				default:
+					// TODO: UI warn user
+					console.log('error: double check type');
+			}
+		}
+
+		// Data with type 'time'
+		generateTimeData(fs_min, startDate, dataLength) {
+			const timeData = [];
+	
+			for (let i = 0; i < dataLength; i++) {
+				const time = new Date(startDate.getTime() + i * fs_min * 60 * 1000).toLocaleString('en-US');
+				timeData.push(time);
+			}
+	
+			const timefmt = 'M/D/YYYY, h:mm:s A';
+			const processedTimeData = forceFormat(timeData, timefmt);
+			const timePeriod = getPeriod(timeData, timefmt);
+	
+			this.data = processedTimeData;
+			this.timeFormat = timefmt; //TODO: fix
+	
+			// this.properties = {
+			// 	timeFormat: timefmt,
+			// 	recordPeriod: timePeriod
+			// };
+	
+		}
+		
+		// Data with type 'value'
+		generateValueData(fs_min, period, maxHeight, dataLength) {
+			const valueData = [];
+	
+			const periodL = period * (60 / fs_min); //the length of the period
+	
+			for (let j = 0; j < dataLength; j++) {
+				const isLowPeriod = j % periodL < periodL / 2;
+				const mult = isLowPeriod ? maxHeight * 0.05 : maxHeight;
+	
+				const randomValue = Math.random() * mult;
+				valueData.push(Math.round(randomValue));
+			}
+			this.data = valueData;
+	
+		}
+
 		//Save and load the column to and from JSON
 		toJSON() {
 			let jsonOut = { id: this.id, name: this.name };
@@ -176,6 +239,7 @@
 
 			return jsonOut;
 		}
+
 		static fromJSON(json) {
 			const {
 				id,
