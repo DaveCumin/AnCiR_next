@@ -66,8 +66,8 @@
 
 <p>
 	Bin: <br />
-	x = <ColumnSelector bind:value={p.args.xIN} oninput={getBinnedData} /> <br />
-	y = <ColumnSelector bind:value={p.args.yIN} excludeColIds={[p.xIN]} oninput={getBinnedData} /><br
+	x = <ColumnSelector bind:value={p.args.xIN} onchange={getBinnedData} /> <br />
+	y = <ColumnSelector bind:value={p.args.yIN} excludeColIds={[p.xIN]} onchange={getBinnedData} /><br
 	/>
 	Bin size:
 	<input type="number" bind:value={p.args.binSize} oninput={getBinnedData} min="0.1" step="0.1" />

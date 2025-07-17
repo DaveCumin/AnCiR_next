@@ -81,13 +81,10 @@
 		window.addEventListener('resize', updateWidth);
 
 		document.addEventListener('keydown', (event) => {
-			// Check if Ctrl, Shift, and 'I' are pressed simultaneously
 			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
-				event.preventDefault(); // Prevent default browser behavior (e.g., opening developer tools)
 				console.log($state.snapshot(core));
 			}
 			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 's') {
-				event.preventDefault(); // Prevent default browser behavior (e.g., opening developer tools)
 				refresh();
 			}
 		});
@@ -237,8 +234,8 @@
 				{
 					name: 'binneddata',
 					args: {
-						xIN: testtimestring,
-						yIN: d0id,
+						xIN: d0id,
+						yIN: d1id,
 						binSize: 0.25,
 						binStart: 0,
 						xOUT: -1,
