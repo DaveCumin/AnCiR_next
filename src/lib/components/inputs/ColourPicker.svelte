@@ -13,8 +13,8 @@
 	import { onMount } from 'svelte';
 	import { appConsts } from '$lib/core/core.svelte';
 	import Draggable from '$lib/components/reusables/Draggable.svelte';
-	let { value = $bindable(getRandomColor()), onChange = () => {} } = $props();
-	let plot = $state({ x: 0, y: 0, width: 260, height: 400 });
+	let { value = $bindable(), onChange = () => {} } = $props();
+	let cpDraggable = $state({ x: 0, y: 0, width: 300, height: 300 });
 
 	let show = $state(false);
 	let showAdvanced = $state(false);
@@ -169,13 +169,14 @@
 	}
 
 	function saveColor() {
-		appConsts.appColours.push(hexInput);
+		if (!appConsts.appColours.includes(hexInput)) {
+			appConsts.appColours.push(hexInput);
+		}
 	}
 
 	//TODO: is this needed?
-	//TODO: STRANGE THINGS (The ControlDisplay disappears) HAPPEN WHEN THIS COMPONENT IS CLOSED OR IF THE COLOUR IS PICKED... MOUSE EVENTS?
 	$effect(() => {
-		if (show && plot) {
+		if (show && cpDraggable) {
 			if (container.parentNode.nodeName != 'BODY') {
 				// don't re-float it each update
 				document.body.append(container); //make it 'floating'
@@ -185,13 +186,13 @@
 
 	function open(e) {
 		show = true;
-		plot.x = e.clientX;
-		plot.y = e.clientY;
+		cpDraggable.x = e.clientX - 300;
+		cpDraggable.y = e.clientY - 300;
 	}
 
 	function save() {
-		console.log('sving ', value);
 		value = hexInput;
+		initialColor = $state.snapshot(value);
 		show = false;
 	}
 
@@ -214,13 +215,21 @@
 			caneyedrop = true;
 		}
 		initialColor = $state.snapshot(value);
+		console.log('initialColor: ', initialColor);
 	});
 </script>
 
 <!-- Pop-up Color Picker -->
 {#if show}
 	<div bind:this={container} style="position:absolute; top:0; left:0; z-index:1000">
-		<Draggable bind:plot overflow="auto" title="Colour Picker">
+		<Draggable
+			bind:x={cpDraggable.x}
+			bind:y={cpDraggable.y}
+			bind:width={cpDraggable.width}
+			bind:height={cpDraggable.height}
+			overflow="auto"
+			title="Colour Picker"
+		>
 			<div style="background:white; padding: 16px; position: relative;">
 				<!-- Close Button -->
 				<div style="position: absolute; top: 8px; right: 8px;">
