@@ -221,7 +221,7 @@ function doBasicFileImport(result, fname) {
 
 		if (guessedFormat != -1) {
 			const timefmt = guessedFormat;
-			const df = new Column();
+			const df = new Column({});
 			df.type = 'time';
 			df.name = f;
 			df.data = forceFormat(result[f], timefmt);
@@ -231,13 +231,13 @@ function doBasicFileImport(result, fname) {
 			// };
 			newDataEntry.addColumn(df);
 		} else if (!isNaN(datum)) {
-			const df = new Column();
+			const df = new Column({});
 			df.type = 'value';
 			df.name = f;
 			df.data = result[f];
 			newDataEntry.addColumn(df);
 		} else {
-			const df = new Column();
+			const df = new Column({});
 			df.type = 'category';
 			df.name = f;
 			df.data = result[f];

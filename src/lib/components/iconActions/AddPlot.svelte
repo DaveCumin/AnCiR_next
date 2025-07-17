@@ -44,8 +44,8 @@
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
     {#snippet groups()}
         <div class="action">
-			<button onclick={openModalSingle}>
-				Create Single Plot
+			<button onclick={openModal}>
+				Create New Plot
 			</button>
 		</div>
     {/snippet}
@@ -93,10 +93,12 @@
 					optionsDisplay={core.tables.flatMap(table => table.columns.map(col => table.name + ': ' + col.name))}
 				/>
 			</div>
+		</div>
+	{/snippet}
 
-			<div class="import-button-container">
-				<button class="import-button" onclick={confirmImport}>Confirm Import</button>
-			</div>
+	{#snippet button()}
+		<div class="dialog-button-container">
+			<button class="dialog-button" onclick={confirmImport}>Confirm Import</button>
 		</div>
 	{/snippet}
 </Modal>
@@ -157,27 +159,6 @@
 	.selected-preview {
 		color: var(--color-lightness-35);
 		font-size: 14px;
-	}
-
-	.import-button-container {
-		display: flex;
-		justify-content: flex-end;
-		/* margin-right: 1rem; */
-	}
-
-	.import-button {
-		margin-top: 10px;
-		background-color: var(--color-lightness-95);
-		border-radius: 4px;
-		padding: 10px;
-		padding-right: 12px;
-
-		font-size: 14px;
-		text-align: center;
-	}
-
-	.import-button:hover {
-		background-color: var(--color-hover);
 	}
 
 </style>

@@ -34,6 +34,7 @@
 	console.log('d3 guess: ', guessFormatD3(timesToTest));
 	console.log('guess: ', guessFormat(timesToTest[0]));
 	import { timeParse, utcParse } from 'd3-time-format';
+	import { faL } from '@fortawesome/free-solid-svg-icons';
 	console.log(
 		'parse: ',
 		timeParse('%Y/%m/%d')(timesToTest[0]),
@@ -87,7 +88,7 @@
 		appConsts.plotMap = await loadPlots();
 
 		populatePanelWidth();
-		// refresh();
+		refresh();
 		// loadTestJson();
 	});
 
@@ -265,6 +266,9 @@
 
 		// console.log('ALL SET UP: ', $state.snapshot(core));
 	}
+
+	// TODO: Key Handling accessibility, e.g. ctrl+i == import
+
 </script>
 
 <!-- <svelte:head>
@@ -305,5 +309,26 @@
 	:global(.card) {
 		font-family: 'Inter', sans-serif;
 		font-size: 14px;
+	}
+
+	/* button style */
+	:global(.dialog-button-container) {
+		display: flex;
+		justify-content: flex-end;
+	}
+
+	:global(button.dialog-button) {
+		margin-top: 10px;
+		background-color: var(--color-lightness-95);
+		border-radius: 4px;
+		padding: 10px;
+		padding-right: 12px;
+
+		font-size: 14px;
+		text-align: center;
+	}
+
+	:global(button.dialog-button:hover) {
+		background-color: var(--color-hover);
 	}
 </style>

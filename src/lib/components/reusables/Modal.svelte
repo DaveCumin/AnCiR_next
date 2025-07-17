@@ -7,7 +7,7 @@ https://svelte.dev/playground/modal?version=5.33.7
 <script>
 	import Icon from "$lib/icons/Icon.svelte";
 
-let { showModal = $bindable(), header, children } = $props()
+let { showModal = $bindable(), header, children, button } = $props()
 
 let dialog = $state();
 
@@ -28,13 +28,14 @@ $effect(() => {
 >
 	<div>
 		<!-- svelte-ignore a11y_autofocus -->
-		<button autofocus onclick={() => dialog.close()}>
+		<button onclick={() => dialog.close()}>
 			<Icon name="close" width={16} height={16} className="close"/>
 		</button>
 
 		<div class="dialog-container">
 			{@render header?.()}
 			{@render children?.()}
+			{@render button?.()}
 		</div>
 		
 	</div>
@@ -73,5 +74,4 @@ $effect(() => {
 		margin-left: -0.2em;
 		margin-top: -0.2em;
 	}
-
 </style>
