@@ -86,14 +86,15 @@
 				event.preventDefault(); // Prevent default browser behavior (e.g., opening developer tools)
 				console.log($state.snapshot(core));
 			}
+			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 's') {
+				event.preventDefault(); // Prevent default browser behavior (e.g., opening developer tools)
+				refresh();
+			}
 		});
 
 		//load the maps
 		appConsts.processMap = await loadProcesses();
 		appConsts.plotMap = await loadPlots();
-
-		refresh();
-		// loadTestJson();
 
 		//remove the listeners
 		return () => {
