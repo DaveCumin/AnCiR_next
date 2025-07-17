@@ -321,17 +321,25 @@
 	</div>
 
 	<div class="control-component">
-		<p>Start time: </p>
-		<input type="date" bind:value={theData.startTime} />
+		<div class="control-input">
+			<p>Start time: </p>
+			<input type="date" bind:value={theData.startTime} />
+		</div>
 
-		<p>Period: </p>
-		<input type="number" step="0.1" bind:value={theData.periodHrs} />
+		<div class="control-input">
+			<p>Period: </p>
+			<input type="number" step="0.1" bind:value={theData.periodHrs} />
+		</div>
 		
-		<p>Repeat: </p>
-		<input type="number" bind:value={theData.doublePlot} />
+		<div class="control-input">
+			<p>Repeat: </p>
+			<input type="number" bind:value={theData.doublePlot} />
+		</div>
 		
-		<p>Space Between:</p>
-		<input type="number" bind:value={theData.spaceBetween} />
+		<div class="control-input">
+			<p>Space Between:</p>
+			<input type="number" bind:value={theData.spaceBetween} />
+		</div>
 	</div>
 
 	<div class="control-component">

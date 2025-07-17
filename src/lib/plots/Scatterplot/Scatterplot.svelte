@@ -160,81 +160,123 @@
 </script>
 
 {#snippet controls(theData)}
+	<button onclick={() => convertToImage('plot' + theData.parentBox.id, 'svg')}>Save </button>
+	
+	<div class="control-component">
+		<div class="control-input">
+			<p>Name: </p>
+			<input type="text" bind:value={theData.parentBox.name} />
+		</div>
+
+		<div class="control-input">
+			<p>Width: </p>
+			<input type="number" bind:value={theData.parentBox.width} />
+		</div>
+
+		<div class="control-input">
+			<p>Height: </p>
+			<input type="number" bind:value={theData.parentBox.height} />
+		</div>
+	</div>
+
+	<div class="control-component">
+		<p class="control-component-title">Padding: </p>
+		
+		<p>Top: </p>
+		<input type="number" bind:value={theData.padding.top} />
+		
+		<p>Bottom: </p>
+		<input type="number" bind:value={theData.padding.bottom} />
+
+		<p>Left: </p>
+		<input type="number" bind:value={theData.padding.left} />
+
+		<p>Right: </p>
+		<input type="number" bind:value={theData.padding.right} />
+		
+		<p>{JSON.stringify(theData.padding)}</p>
+	</div>
+
+	<div class="control-component">
+		<button onclick={() => (theData.ylimsIN = [null, null])}>Re-centre</button>
+
+		<p class="control-component-title">ylims: </p>
+		<p>Grid:<input type="checkbox" bind:checked={theData.ygridlines} /></p>
+
+		<p>Min: </p>
+		<input
+			type="number"
+			step="0.1"
+			value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
+			oninput={(e) => {
+				theData.ylimsIN[0] = [parseFloat(e.target.value)];
+			}}
+		/>
+		
+		<p>Max: </p>
+		<input
+			type="number"
+			step="0.1"
+			value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
+			oninput={(e) => {
+				theData.ylimsIN[1] = [parseFloat(e.target.value)];
+			}}
+		/>
+	</div>
+
+	<div class="control-component">
+		<button onclick={() => (theData.xlimsIN = [null, null])}>Re-centre</button>
+
+		<p class="control-component-title">xlims: </p>
+		<p>Grid: <input type="checkbox" bind:checked={theData.xgridlines} /></p>
+
+		{#if theData.anyXdataTime}
+			<p>Min: </p>
+			<input
+				type="datetime-local"
+				value={theData.xlimsIN[0]
+					? new Date(theData.xlimsIN[0]).toISOString().substring(0, 16)
+					: new Date(theData.xlims[0]).toISOString().substring(0, 16)}
+				oninput={(e) => {
+					console.log('xlimsIN[0]', e.target.value);
+					theData.xlimsIN[0] = Number(new Date(e.target.value));
+				}}
+			/>
+
+			<p>Max: </p>
+			<input
+				type="datetime-local"
+				value={theData.xlimsIN[1]
+					? new Date(theData.xlimsIN[1]).toISOString().substring(0, 16)
+					: new Date(theData.xlims[1]).toISOString().substring(0, 16)}
+				oninput={(e) => {
+					theData.xlimsIN[1] = Number(new Date(e.target.value));
+				}}
+			/>
+		{:else}
+			<p>Min: </p>
+			<input
+				type="number"
+				step="0.1"
+				value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
+				onchange={(e) => {
+					theData.xlimsIN[0] = parseFloat(e.target.value);
+				}}
+			/>
+
+			<p>Max: </p>
+			<input
+				type="number"
+				step="0.1"
+				value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
+				onchange={(e) => {
+					theData.xlimsIN[1] = parseFloat(e.target.value);
+				}}
+			/>
+		{/if}
+	</div>
+	
 	<div>
-		<button onclick={() => convertToImage('plot' + theData.parentBox.id, 'svg')}>Save </button>
-		Name: <input type="text" bind:value={theData.parentBox.name} />
-		Width: <input type="number" bind:value={theData.parentBox.width} />
-		height: <input type="number" bind:value={theData.parentBox.height} />
-
-		<p>
-			Padding: <input type="number" bind:value={theData.padding.top} />
-			<input type="number" bind:value={theData.padding.right} />
-			<input type="number" bind:value={theData.padding.bottom} />
-			<input type="number" bind:value={theData.padding.left} />
-		</p>
-
-		<p>
-			ylims: <button onclick={() => (theData.ylimsIN = [null, null])}>R</button>
-			grid:<input type="checkbox" bind:checked={theData.ygridlines} />
-			<input
-				type="number"
-				step="0.1"
-				value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
-				oninput={(e) => {
-					theData.ylimsIN[0] = [parseFloat(e.target.value)];
-				}}
-			/>
-			<input
-				type="number"
-				step="0.1"
-				value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-				oninput={(e) => {
-					theData.ylimsIN[1] = [parseFloat(e.target.value)];
-				}}
-			/>
-		</p>
-		<p>
-			xlims: <button onclick={() => (theData.xlimsIN = [null, null])}>R</button>
-			grid:<input type="checkbox" bind:checked={theData.xgridlines} />
-			{#if theData.anyXdataTime}
-				<input
-					type="datetime-local"
-					value={theData.xlimsIN[0]
-						? new Date(theData.xlimsIN[0]).toISOString().substring(0, 16)
-						: new Date(theData.xlims[0]).toISOString().substring(0, 16)}
-					oninput={(e) => {
-						console.log('xlimsIN[0]', e.target.value);
-						theData.xlimsIN[0] = Number(new Date(e.target.value));
-					}}
-				/>
-				<input
-					type="datetime-local"
-					value={theData.xlimsIN[1]
-						? new Date(theData.xlimsIN[1]).toISOString().substring(0, 16)
-						: new Date(theData.xlims[1]).toISOString().substring(0, 16)}
-					oninput={(e) => {
-						theData.xlimsIN[1] = Number(new Date(e.target.value));
-					}}
-				/>
-			{:else}
-				<input
-					type="number"
-					step="0.1"
-					value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
-					onchange={(e) => {
-						theData.xlimsIN[0] = parseFloat(e.target.value);
-					}}
-				/>
-				<input
-					type="number"
-					step="0.1"
-					value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
-					onchange={(e) => {
-						theData.xlimsIN[1] = parseFloat(e.target.value);
-					}}
-				/>
-			{/if}
-		</p>
 		<p>Data:</p>
 		<button
 			onclick={() =>

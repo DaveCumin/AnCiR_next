@@ -21,13 +21,13 @@
 	}
 
 	let xCol = $state();
-
 	let yCols = $state([null]); // contains column id
 
 	let plotNames = $state([plotName]);
 
 	function AddNewPlot() {
 		yCols.push(null);
+		plotNames.push('New_' + capitalise(plotType) + '_' + yCols.length);
 	}
 
 	function confirmImport() {
@@ -65,20 +65,18 @@
 			<h2>Create New {capitalise(plotType)}(s)</h2>
 
 			<div class="choose-file-container">
-				<div>
-					<AttributeSelect
-						bind:bindTo={plotType}
-						label="Plot Type"
-						options={["actogram", "periodogram", "scatterplot"]}
-					/>
+				<AttributeSelect
+					bind:bindTo={plotType}
+					label="Plot Type"
+					options={["actogram", "periodogram", "scatterplot"]}
+				/>
 
-					<AttributeSelect
-						bind:bindTo={xCol}
-						label="x"
-						options={core.tables.flatMap(table => table.columns.map(col => col.id))}
-						optionsDisplay={core.tables.flatMap(table => table.columns.map(col => table.name + ': ' + col.name))}
-					/>
-				</div>
+				<AttributeSelect
+					bind:bindTo={xCol}
+					label="x"
+					options={core.tables.flatMap(table => table.columns.map(col => col.id))}
+					optionsDisplay={core.tables.flatMap(table => table.columns.map(col => table.name + ': ' + col.name))}
+				/>
 			</div>
 		</div>
 	{/snippet}
@@ -90,7 +88,7 @@
 					<div class="selected">
 						<p class="selected-preview">
 							Name: 
-							<input bind:value={plotNames[i]} type="text"  placeholder="enter plot name">
+							<input bind:value={plotNames[i]} type="text" placeholder="enter plot name">
 						</p>
 					</div>
 
