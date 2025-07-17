@@ -220,7 +220,7 @@
 <!-- Pop-up Color Picker -->
 {#if show}
 	<div bind:this={container} style="position:absolute; top:0; left:0; z-index:1000">
-		<Draggable bind:plot overflow="auto">
+		<Draggable bind:plot overflow="auto" title="Colour Picker">
 			<div style="background:white; padding: 16px; position: relative;">
 				<!-- Close Button -->
 				<div style="position: absolute; top: 8px; right: 8px;">

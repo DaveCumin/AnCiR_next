@@ -68,38 +68,41 @@
 	}
 
 	function bringToFront(id) {
-		const index = core.plots.findIndex((p) => p.id === id);
-		if (index !== -1) {
-			const [plot] = core.plots.splice(index, 1);
-			core.plots.push(plot);
+		if (id >= 0) {
+			//handle colour-picker
+			const index = core.plots.findIndex((p) => p.id === id);
+			if (index !== -1) {
+				const [plot] = core.plots.splice(index, 1);
+				core.plots.push(plot);
+			}
 		}
 	}
 
 	function handleDblClick(e) {
 		e.stopPropagation();
-		appState.selectedPlotIds = [tempId];
-		appState.showControlPanel = true;
+		if (tempId >= 0) {
+			//handle colour-picker
+			appState.selectedPlotIds = [tempId];
+			appState.showControlPanel = true;
+		}
 	}
 	function handleClick(e) {
 		e.stopPropagation();
-		//look for alt held at the same time
-		if (e.altKey) {
-			//Add if it's not already there
-			if (!appState.selectedPlotIds.includes(tempId)) {
-				appState.selectedPlotIds.push(tempId);
+		if (tempId >= 0) {
+			//handle colour-picker
+			//look for alt held at the same time
+			if (e.altKey) {
+				//Add if it's not already there
+				if (!appState.selectedPlotIds.includes(tempId)) {
+					appState.selectedPlotIds.push(tempId);
+				} else {
+					//or remove it
+					appState.selectedPlotIds = appState.selectedPlotIds.filter((id) => id !== tempId);
+				}
 			} else {
-				//or remove it
-				appState.selectedPlotIds = appState.selectedPlotIds.filter((id) => id !== tempId);
+				appState.selectedPlotIds = [tempId];
 			}
-		} else {
-			appState.selectedPlotIds = [tempId];
 		}
-	}
-
-	function handleCanvasClick(e) {
-		console.log('HERE');
-		e.stopPropagation();
-		appState.selectedPlotIds = [];
 	}
 </script>
 
