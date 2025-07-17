@@ -155,20 +155,24 @@
 					<!-- <p>Preview Data</p> -->
 					<div class="preview-table-wrapper">
 						<!-- {@html importPreview} -->
-						Tables imported: {jsonData.tables.length}
-						<!-- Plots imported: {jsonData.plots.length} -->
+						<p>Tables imported: {jsonData.tables.length}</p>
+						<p>Plots imported: {jsonData.plots.length}</p>
 					</div>
 				{:else}
 					<!-- <p>Choose file to preview data</p> -->
 				{/if}
 			</div>
 
-			<div class="import-button-container">
-				{#if importReady}
-					<button class="import-button" onclick={importJson}>Confirm Import</button>
-				{/if}
-				<!-- ux^: could have an else state to reflect error -->
-			</div>
+			
+		</div>
+	{/snippet}
+
+	{#snippet button()}
+		<div class="dialog-button-container">
+			{#if importReady}
+				<button class="dialog-button" onclick={importJson}>Confirm Import</button>
+			{/if}
+			<!-- ux^: could have an else state to reflect error -->
 		</div>
 	{/snippet}
 </Modal>
