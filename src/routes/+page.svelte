@@ -236,8 +236,8 @@
 				{
 					name: 'binneddata',
 					args: {
-						xIN: 0,
-						yIN: 1,
+						xIN: testtimestring,
+						yIN: d0id,
 						binSize: 0.25,
 						binStart: 0,
 						xOUT: -1,
