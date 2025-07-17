@@ -7,6 +7,7 @@
 
 <script>
 	// @ts-nocheck
+	import { tick } from 'svelte';
 	import { core, pushObj, outputCoreAsJson } from '$lib/core/core.svelte';
 	import { Table } from '$lib/core/table.svelte.js';
 	import { Column } from '$lib/core/Column.svelte';
@@ -29,9 +30,10 @@
 
 	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
 
-	function openImportModal() {
+	async function openImportModal() {
 		showImportModal = true;
-		fileInput.click();
+		await tick();
+		chooseFile();
 	}
 
 	function openExportModal() {
