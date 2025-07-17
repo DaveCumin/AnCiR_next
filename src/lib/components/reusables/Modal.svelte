@@ -6,13 +6,14 @@ https://svelte.dev/playground/modal?version=5.33.7
 	import Icon from '$lib/icons/Icon.svelte';
 
 	let { showModal = $bindable(), onclose = () => {}, header, children } = $props();
+	import { fade } from 'svelte/transition';
 
 	let dialog = $state();
 
 	$effect(() => {
-		if (showModal && !dialog.open) {
-			dialog.showModal();
-		} else if (!showModal && dialog.open) {
+		if (showModal && !dialog?.open) {
+			dialog?.showModal();
+		} else if (!showModal && dialog?.open) {
 			close();
 		}
 	});
@@ -24,25 +25,30 @@ https://svelte.dev/playground/modal?version=5.33.7
 	}
 </script>
 
-<dialog
-	bind:this={dialog}
-	onclose={() => (showModal = false)}
-	onclick={(e) => {
-		if (e.target === dialog) close();
-	}}
->
-	<div>
-		<!-- svelte-ignore a11y_autofocus -->
-		<button autofocus onclick={() => close()}>
-			<Icon name="close" width={16} height={16} className="close" />
-		</button>
+{#if showModal}
+	<div class="backdrop" transition:fade={{ duration: 360 }}>
+		<dialog
+			bind:this={dialog}
+			onclose={() => (showModal = false)}
+			onclick={(e) => {
+				if (e.target === dialog) close();
+			}}
+			transition:fade={{ duration: 360 }}
+		>
+			<div>
+				<!-- svelte-ignore a11y_autofocus -->
+				<button autofocus onclick={() => close()}>
+					<Icon name="close" width={16} height={16} className="close" />
+				</button>
 
-		<div class="dialog-container">
-			{@render header?.()}
-			{@render children?.()}
-		</div>
+				<div class="dialog-container">
+					{@render header?.()}
+					{@render children?.()}
+				</div>
+			</div>
+		</dialog>
 	</div>
-</dialog>
+{/if}
 
 <style>
 	dialog {
@@ -54,8 +60,18 @@ https://svelte.dev/playground/modal?version=5.33.7
 			0 4px 8px 0 var(--color-lightness-85),
 			0 6px 10px 0 var(--color-lightness-95);
 	}
+	.backdrop {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(255, 255, 255, 0);
+		backdrop-filter: blur(0px);
+	}
 
-	dialog::backdrop {
+	/* Apply backdrop effect when dialog is open */
+	.backdrop:not([hidden]) {
 		background: rgba(255, 255, 255, 0.8);
 		backdrop-filter: blur(2px);
 	}
