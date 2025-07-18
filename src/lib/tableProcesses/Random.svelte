@@ -1,29 +1,24 @@
 <script module>
-	export const addcolumns_defaults = new Map([
-		['xsIN', { val: [] }],
+	export const random_defaults = new Map([
+		['offset', { val: 0 }],
+		['multiply', { val: 10 }],
+		['N', { val: 10 }],
 		['out', { result: { val: -1 } }], //needed to set upu the output columns
 		['valid', { val: false }] //needed for the progress step logic
 	]);
 </script>
 
 <script>
-	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { onMount } from 'svelte';
 
 	let { p = $bindable() } = $props();
 	let result = $state();
-	function addcolumns() {
-		if (p.args.xsIN.length == 0) {
-			result = [];
-			p.args.valid = false;
-			return;
-		}
-		result = getColumnById(p.args.xsIN[0]).getData();
-		for (let i = 1; i < p.args.xsIN.length; i++) {
-			const temp = getColumnById(p.args.xsIN[i]).getData();
-			result = result.map((x, i) => x + temp[i]);
+	function makeRandom() {
+		result = [];
+		for (let i = 0; i < p.args.N; i++) {
+			result.push((p.args.offset + Math.random() * p.args.multiply).toFixed(2));
 		}
 
 		if (p.args.out.result == -1) {
@@ -43,38 +38,12 @@
 	let choice = $state(-1);
 	onMount(() => {
 		//needed to get the values when it first mounts
-		addcolumns();
+		makeRandom();
 	});
 </script>
 
-<p>Add:</p>
-{#each p.args.xsIN as _, i}
-	<ColumnSelector
-		bind:value={p.args.xsIN[i]}
-		onChange={() => {
-			addcolumns();
-		}}
-	/><button
-		onclick={() => {
-			p.args.xsIN.splice(i, 1);
-			console.log('AFTER REMOVE', p.args.xsIN, '; length=', p.args.xsIN.length);
-			addcolumns();
-		}}>-</button
-	>
-	{#if p.args.xsIN.length > 1 && i < p.args.xsIN.length - 1}
-		<a>+</a>
-	{/if}
-{/each}
-<p>
-	Add new: <ColumnSelector
-		bind:value={choice}
-		onChange={(value) => {
-			p.args.xsIN.push(Number(value));
-			addcolumns();
-			choice = -1;
-		}}
-	/>
-</p>
+<p>Offset: <input type="number" bind:value={p.args.offset} oninput={makeRandom} /></p>
+<p>Multiply: <input type="number" bind:value={p.args.multiply} oninput={makeRandom} /></p>
 {#if p.args.valid && p.args.out.result == -1}
 	<p>Preview:</p>
 	<p>X: {result}</p>

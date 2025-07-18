@@ -4,8 +4,8 @@
 		['yIN', { val: -1 }],
 		['binSize', { val: 0.25 }],
 		['binStart', { val: 0 }],
-		['out', { binnedx: { val: -1 }, binnedy: { val: -1 } }],
-		['valid', { val: false }]
+		['out', { binnedx: { val: -1 }, binnedy: { val: -1 } }], //needed to set upu the output columns
+		['valid', { val: false }] //needed for the progress step logic
 	]);
 </script>
 
@@ -14,6 +14,7 @@
 	import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { onMount } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
@@ -34,7 +35,9 @@
 			yIN == -1 ||
 			binSize == 0
 		) {
-			return { bins: [], y_out: [] };
+			binnedData = { bins: [], y_out: [] };
+			p.args.valid = false;
+			return;
 		}
 
 		const theBinnedData = binData(
@@ -61,7 +64,10 @@
 	}
 
 	let binnedData = $state();
-	getBinnedData();
+	onMount(() => {
+		//needed to get the values when it first mounts
+		getBinnedData();
+	});
 </script>
 
 <p>
@@ -76,12 +82,12 @@
 </p>
 <p>Output:</p>
 {#key binnedData}
-	{#if binnedData?.bins.length > 0 && p.args.out.binnedx != -1 && p.args.out.binnedy != -1}
+	{#if p.args.valid && p.args.out.binnedx != -1 && p.args.out.binnedy != -1}
 		{@const xout = getColumnById(p.args.out.binnedx)}
 		<ColumnComponent col={xout} />
 		{@const yout = getColumnById(p.args.out.binnedy)}
 		<ColumnComponent col={yout} />
-	{:else if binnedData?.bins.length > 0}
+	{:else if p.args.valid}
 		<p>Preview:</p>
 		<p>X: {binnedData.bins.slice(0, 5)}</p>
 		<p>Y: {binnedData.y_out.slice(0, 5)}</p>

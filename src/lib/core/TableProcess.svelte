@@ -1,7 +1,7 @@
 <script module>
 	import { appConsts } from '$lib/core/core.svelte.js';
 	import { getTableById } from '$lib/core/Table.svelte';
-	import { Column } from '$lib/core/Column.svelte';
+	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	let _tableprocessidCounter = 0;
 
 	export class TableProcess {
@@ -37,6 +37,9 @@
 					});
 					this.args.out[Object.keys(this.args.out)[i]] = tempCol.id;
 					theTable.addColumn(tempCol);
+				}
+				if (Object.keys(this.args).includes('N')) {
+					this.args.N = getColumnById(theTable.columnRefs[0]).getData().length;
 				}
 				//--------------------------
 			}
