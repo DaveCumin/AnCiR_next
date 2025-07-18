@@ -2,8 +2,8 @@
 	import ProgressIndicator from '$lib/components/ProgressIndicator.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
-	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
-	import { core } from '$lib/core/core.svelte.js';
+	import { TableProcess } from '$lib/core/TableProcess.svelte';
+	import { core, appConsts } from '$lib/core/core.svelte.js';
 	let { show = $bindable(), tableId } = $props();
 
 	///-----------
@@ -18,6 +18,7 @@
 	let randomColMultiplier = $state(10);
 	let randomColOffset = $state(100);
 	//vars for existing new col
+	let tableProcessChosen = $state();
 	let newColsValueReset = $state(-1);
 	let newColsExisting = $state([]);
 
@@ -41,20 +42,36 @@
 	}
 
 	function confirmAddColumn() {
-		const newDataEntry = new Column({
-			type: 'number',
-			data: $state.snapshot(newColumnData),
-			name: newColumnName,
-			provenance: 'created from columns'
-		});
-		core.data.push(newDataEntry);
-		core.tables.find((t) => t.id === tableId).columnRefs.push(newDataEntry.id);
-		//reset values
-		newColumnName = 'new col';
-		howMakeNewColumn = '';
-		newColumnLength = 0;
-		newColumnData = [];
-		newColsExisting = [];
+		if (howMakeNewColumn == 'existing') {
+			console.log('MAKING: ');
+			console.log(tableId);
+			console.log(tableProcessChosen);
+			console.log(theDefaults);
+			core.tables[tableId].processes.push(
+				new TableProcess(
+					{
+						name: tableProcessChosen,
+						args: theDefaults
+					},
+					core.tables[tableId]
+				)
+			);
+		} else {
+			const newDataEntry = new Column({
+				type: 'number',
+				data: $state.snapshot(newColumnData),
+				name: newColumnName,
+				provenance: 'created from columns'
+			});
+			core.data.push(newDataEntry);
+			core.tables.find((t) => t.id === tableId).columnRefs.push(newDataEntry.id);
+			//reset values
+			newColumnName = 'new col';
+			howMakeNewColumn = '';
+			newColumnLength = 0;
+			newColumnData = [];
+			newColsExisting = [];
+		}
 		//hide modal
 		show = false;
 	}
@@ -103,13 +120,42 @@
 			if (howMakeNewColumn == 'random') {
 				steps[changedIndex].completed = randomColMultiplier != null && randomColOffset != null;
 			}
-			if (howMakeNewColumn == 'existing') {
-				steps[changedIndex].completed = newColsExisting.length > 0;
-			}
 		}
 	}
+	//This checks for validity based on the TableProcess (they must have a 'valid' entry for the logic; just like they must have an 'out' for the output logic to work)
+	$effect(() => {
+		if (theDefaults?.valid) {
+			steps[1].completed = true;
+		} else {
+			steps[1].completed = false;
+		}
+	});
 
 	//------
+	function processNested(obj) {
+		const result = {};
+		for (const [key, value] of Object.entries(obj)) {
+			result[key] = value.val !== undefined ? value.val : processNested(value);
+		}
+		return result;
+	}
+
+	let theDefaults = $state(null);
+	function test() {
+		console.log('chosen: ', tableProcessChosen);
+		theDefaults = Object.fromEntries(
+			Array.from(appConsts.tableProcessMap.get(tableProcessChosen).defaults.entries()).map(
+				([key, value]) => {
+					if (key === 'out') {
+						return ['out', processNested(value)];
+					}
+					return [key, value.val];
+				}
+			)
+		);
+
+		console.log($state.snapshot(theDefaults));
+	}
 </script>
 
 {#snippet stepContent(index, step)}
@@ -157,36 +203,33 @@
 					}}
 				/>
 			</div>
+			<div>
+				Preview:
+				{newColumnData.slice(0, 5)}
+			</div>
 		{/if}
 		{#if howMakeNewColumn == 'existing'}
-			{#each newColsExisting as col, i}
-				<ColumnSelector
-					bind:value={newColsExisting[i]}
-					onChange={() => {
-						calcnewColumnData();
-						enforceSequentialCompletion(index);
+			Process to use: <select bind:value={tableProcessChosen} onchange={test}>
+				<option value=""></option>
+				{#each Array.from(appConsts.tableProcessMap.keys()) as tp}
+					<option value={tp}>{tp}</option>
+				{/each}
+			</select>
+			{#if tableProcessChosen != '' && theDefaults}
+				{@const TableProcess = appConsts.tableProcessMap.get(tableProcessChosen)?.component}
+				<TableProcess
+					p={{
+						name: tableProcessChosen,
+						args: theDefaults
 					}}
 				/>
-			{/each}
-			Add new: <ColumnSelector
-				bind:value={newColsValueReset}
-				onChange={(value) => {
-					newColsExisting.push(Number(value));
-					newColsValueReset = -1;
-					calcnewColumnData();
-					enforceSequentialCompletion(index);
-				}}
-			/>
+			{/if}
 		{/if}
 	{/if}
 {/snippet}
 
 {#snippet footerContent()}
 	{#if steps[1].completed}
-		<div>
-			Preview:
-			{newColumnData.slice(0, 5)}
-		</div>
 		<div><button onclick={confirmAddColumn}>Add these data</button></div>
 	{/if}
 {/snippet}

@@ -138,7 +138,10 @@
 			this.data.forEach((datum) => {
 				minTime = Math.min(minTime, Number(datum.x.getData()[0]));
 			});
-			return minTime !== Infinity ? new Date(minTime).toISOString().substring(0, 10) : undefined;
+			//TODO: fix here for data with timeformat that doesn't work
+			return minTime !== Infinity && minTime
+				? new Date(minTime).toISOString().substring(0, 10)
+				: undefined;
 		});
 		spaceBetween = $state(2);
 		doublePlot = $state(2);

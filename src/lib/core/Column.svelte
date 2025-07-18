@@ -14,7 +14,7 @@
 	export class Column {
 		id; //Unique Id for the column
 		refId = $state(null); //if it is a column that is based on another
-		tableProcessGUId = $state([]);
+		tableProcessGUId = $state();
 		data = null; //if it has raw data, store that here
 		compression = $state(null); //if any compression is used, store the info here
 		//Where the data are from (references all the way to the primary source [importd (file) or simulated (params)])

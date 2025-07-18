@@ -12,6 +12,7 @@
 
 	import { loadProcesses } from '$lib/processes/processMap.js';
 	import { loadPlots } from '$lib/plots/plotMap.js';
+	import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
 
 	import { onMount } from 'svelte';
 	import { testJson } from './testJson.svelte.js';
@@ -83,6 +84,7 @@
 		document.addEventListener('keydown', (event) => {
 			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
 				console.log($state.snapshot(core));
+				console.log($state.snapshot(appConsts));
 			}
 			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 's') {
 				refresh();
@@ -92,6 +94,7 @@
 		//load the maps
 		appConsts.processMap = await loadProcesses();
 		appConsts.plotMap = await loadPlots();
+		appConsts.tableProcessMap = await loadTableProcesses();
 
 		//remove the listeners
 		return () => {
@@ -232,14 +235,13 @@
 		core.tables[1].processes.push(
 			new TableProcess(
 				{
-					name: 'binneddata',
+					name: 'BinnedData',
 					args: {
 						xIN: d0id,
 						yIN: d1id,
 						binSize: 0.25,
 						binStart: 0,
-						xOUT: -1,
-						yOUT: -1
+						out: { binnedx: -1, binnedy: -1 }
 					}
 				},
 				core.tables[1]
