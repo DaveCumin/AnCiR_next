@@ -4,6 +4,7 @@
 		['multiply', { val: 10 }],
 		['N', { val: 10 }],
 		['out', { result: { val: -1 } }], //needed to set upu the output columns
+		['data', { val: [] }],
 		['valid', { val: false }] //needed for the progress step logic
 	]);
 </script>
@@ -29,6 +30,7 @@
 		}
 
 		if (result.length > 0) {
+			p.args.data = result;
 			p.args.valid = true;
 		} else {
 			p.args.valid = false;

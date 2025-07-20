@@ -217,7 +217,33 @@
 	import Processcomponent from '$lib/core/Process.svelte'; //Need to rename it because Process is used as the class name in the module, above
 	import Icon from '$lib/icons/Icon.svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import AddProcess from '$lib/components/iconActions/AddProcess.svelte';
+
 	let { col, canChange = false } = $props();
+
+	let addBtnRef;
+	let showAddProcess = $state(false);
+	let dropdownTop = $state(0);
+	let dropdownLeft = $state(0);
+
+	function recalculateDropdownPosition() {
+		if (!addBtnRef) return;
+		const rect = addBtnRef.getBoundingClientRect();
+
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
+	}
+
+	let columnSelected = $state(-1);
+	function openDropdown(e, id) {
+		e.stopPropagation();
+		columnSelected = id;
+		recalculateDropdownPosition();
+		requestAnimationFrame(() => {
+			showAddProcess = true;
+		});
+		window.addEventListener('resize', recalculateDropdownPosition);
+	}
 </script>
 
 {#if col == undefined}
@@ -263,15 +289,6 @@
 				data: {col.getData()?.slice(0, 5)}
 				N: {col.getData().length}
 				hoursSince: {col.hoursSinceStart?.slice(0, 5)}
-				<button
-					onclick={() => {
-						const proc = [...appConsts.processMap.entries()][
-							Math.floor(Math.random() * [...appConsts.processMap.entries()].length)
-						];
-
-						col.addProcess(proc[0]);
-					}}><Icon name="add" width={16} height={16} /></button
-				>
 			</li>
 			{#each col.processes as p}
 				{#key p.id}
@@ -282,6 +299,15 @@
 					>
 				{/key}
 			{/each}
+			<div class="add">
+				<button bind:this={addBtnRef} onclick={(e) => openDropdown(e, col.id)}>
+					<Icon name="add" width={16} height={16} />
+				</button>
+			</div>
 		</ul>
 	</details>
+{/if}
+
+{#if showAddProcess}
+	<AddProcess bind:showDropdown={showAddProcess} {columnSelected} {dropdownTop} {dropdownLeft} />
 {/if}

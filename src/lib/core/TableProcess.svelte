@@ -33,7 +33,7 @@
 						tableProcessed: processHash,
 						name: Object.keys(this.args.out)[i],
 						type: 'number',
-						data: []
+						data: dataIN.args.data ?? [] //This is to make sure the preview is exactly what the data are (eg for random)
 					});
 					this.args.out[Object.keys(this.args.out)[i]] = tempCol.id;
 					theTable.addColumn(tempCol);
