@@ -293,6 +293,9 @@
 	</div>
 
 	<div class="control-component">
+		<button onclick={() => (theData.xlimsIN = [null, null])}>Re-centre</button>
+
+		<p class="control-component-title">xlims: </p>
 		<p>Period Grid: <input type="checkbox" bind:checked={theData.xgridlines} /></p>
 
 		<p>Min: </p>

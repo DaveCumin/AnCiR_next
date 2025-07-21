@@ -14,7 +14,6 @@ export function formatDate(dateIN) {
 }
 
 function convertFormat(formatIN) {
-	// TODO: import debug
 	// if (!formatIN || typeof formatIN == 'number') return formatIN;
 	if (typeof formatIN !== 'string') return formatIN;
 
@@ -79,7 +78,6 @@ export function guessDateofArray(dates) {
 }
 
 export function calculateTimeDifference(start, end, dateFormat) {
-	// TODO: import debug
 	// if (start === null || end === null || start === undefined || end === undefined) {
 	// 	return null;
 	// }

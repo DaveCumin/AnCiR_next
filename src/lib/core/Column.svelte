@@ -192,7 +192,7 @@
 			const timePeriod = getPeriod(timeData, timefmt);
 	
 			this.data = processedTimeData;
-			this.timeFormat = timefmt; //TODO: fix
+			this.timeFormat = timefmt; //TODO: fix take DC-edits
 	
 			// this.properties = {
 			// 	timeFormat: timefmt,
