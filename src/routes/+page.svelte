@@ -97,6 +97,8 @@
 		appConsts.plotMap = await loadPlots();
 		appConsts.tableProcessMap = await loadTableProcesses();
 
+		// loadTestJson(); // TODO: DEBUG - error in COLUMN class
+
 		//remove the listeners
 		return () => {
 			window.removeEventListener('resize', updateWidth);

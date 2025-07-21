@@ -40,13 +40,13 @@ https://svelte.dev/playground/modal?version=5.33.7
 				<button onclick={() => close()}>
 					<Icon name="close" width={16} height={16} className="close" />
 				</button>
+			</div>
 
 		<div class="dialog-container">
 			{@render header?.()}
 			{@render children?.()}
 			{@render button?.()}
 		</div>
-		
 	</div>
 {/if}
 

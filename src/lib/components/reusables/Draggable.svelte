@@ -107,7 +107,7 @@
 			appState.selectedPlotIds = [id];
 			appState.showControlPanel = true;
 		}
-		appState.selectedPlotIds = [tempId];
+		appState.selectedPlotIds = [id];
 		appState.showControlPanel = true;
 	}
 
@@ -122,7 +122,7 @@
 					appState.selectedPlotIds.push(id);
 				} else {
 					//or remove it
-					appState.selectedPlotIds = appState.selectedPlotIds.filter((id) => id !== tempId);
+					appState.selectedPlotIds = appState.selectedPlotIds.filter((id) => id !== id);
 				}
 			} else if (!appState.selectedPlotIds.includes(id)) {
 				appState.selectedPlotIds = [id];
@@ -132,7 +132,7 @@
 	}
 	
 	function RePosition() {
-		if (appState.selectedPlotIds.includes(tempId)) {			
+		if (appState.selectedPlotIds.includes(id)) {			
 			if (plotElement) {
 			plotElement.scrollIntoView({
 				behavior: 'smooth',
