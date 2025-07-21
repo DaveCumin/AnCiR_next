@@ -21,8 +21,7 @@
 		for (let i = 0; i < p.args.N; i++) {
 			result.push((p.args.offset + Math.random() * p.args.multiply).toFixed(2));
 		}
-
-		if (p.args.out.result == -1) {
+		if (p.args.out.result == -1 || !p.args.out.result) {
 		} else {
 			getColumnById(p.args.out.result).data = result;
 			const processHash = crypto.randomUUID();
@@ -37,7 +36,6 @@
 		}
 	}
 
-	let choice = $state(-1);
 	onMount(() => {
 		//needed to get the values when it first mounts
 		makeRandom();

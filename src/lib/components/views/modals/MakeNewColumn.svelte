@@ -113,15 +113,18 @@
 			</select>
 		</div>
 	{:else if index === 1}
-		{#if tableProcessChosen != '' && theDefaults}
-			{@const TableProcess = appConsts.tableProcessMap.get(tableProcessChosen)?.component}
-			<TableProcess
-				p={{
-					name: tableProcessChosen,
-					args: theDefaults
-				}}
-			/>
-		{/if}
+		{#key theDefaults}
+			<!-- ensure component mounts after theDefaults change -->
+			{#if tableProcessChosen != '' && theDefaults}
+				{@const TableProcess = appConsts.tableProcessMap.get(tableProcessChosen)?.component}
+				<TableProcess
+					p={{
+						name: tableProcessChosen,
+						args: theDefaults
+					}}
+				/>
+			{/if}
+		{/key}
 	{/if}
 {/snippet}
 

@@ -7,7 +7,7 @@
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 	import { on } from 'svelte/events';
 
-	let showModal = $state(false);
+	let showImportModal = $state(false);
 	let importPreview = $state();
 	let importReady = $state(false);
 	let hasHeader = $state(true);
@@ -15,8 +15,8 @@
 
 	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
 
-	function openModal() {
-		showModal = true;
+	function openImportModal() {
+		showImportModal = true;
 		ImportData.utils.openFileChoose();
 	}
 
@@ -36,7 +36,7 @@
 
 	async function confirmImport() {
 		await ImportData.utils.loadData(targetFile, hasHeader);
-		showModal = false;
+		showImportModal = false;
 		importReady = false;
 		importPreview = '';
 		showDropdown = false;
@@ -46,7 +46,7 @@
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
 		<div class="action">
-			<button onclick={openModal}> Import Data </button>
+			<button onclick={openImportModal}> Import Data </button>
 		</div>
 
 		<div class="action">
@@ -56,7 +56,7 @@
 	{/snippet}
 </Dropdown>
 
-<Modal bind:showModal onclose={() => (showDropdown = false)}>
+<Modal bind:showModal={showImportModal} onclose={() => (showDropdown = false)}>
 	{#snippet header()}
 		<div class="heading">
 			<h2>Import Data</h2>

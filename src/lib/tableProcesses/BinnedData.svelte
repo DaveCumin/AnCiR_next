@@ -25,7 +25,7 @@
 		const binStart = p.args.binStart;
 		const xOUT = p.args.out.binnedx;
 		const yOUT = p.args.out.binnedy;
-		console.log($state.snapshot(p.args));
+
 		if (
 			xIN == undefined ||
 			yIN == undefined ||

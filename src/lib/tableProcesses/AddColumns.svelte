@@ -15,7 +15,8 @@
 	let { p = $bindable() } = $props();
 	let result = $state();
 	function addcolumns() {
-		if (p.args.xsIN.length == 0) {
+		if (!p.args.xsIN) return; //if there is no input yet
+		if (p.args.xsIN?.length == 0) {
 			result = [];
 			p.args.valid = false;
 			return;
@@ -57,7 +58,6 @@
 	/><button
 		onclick={() => {
 			p.args.xsIN.splice(i, 1);
-			console.log('AFTER REMOVE', p.args.xsIN, '; length=', p.args.xsIN.length);
 			addcolumns();
 		}}>-</button
 	>
