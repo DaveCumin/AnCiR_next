@@ -46,7 +46,7 @@
 	let _phaseMarkerCounter = 0;
 
 	export class PhaseMarkerClass {
-		parent = $state();
+		parentData = $state();
 		id;
 		type = $state(); //{onset, offset, manual}
 		centileThreshold = $state();
@@ -59,22 +59,36 @@
 		periodRangeMax = $state(0);
 		manualMarkers = $state([]);
 
-		//Add a manual marker
+		//Add a manual marker - the raw time clicked on
 		addTime(clickedDay, clickedHrs) {
-			this.manualMarkers[clickedDay] = clickedHrs;
+			// Calculate absolute time using the current periodHrs
+			const periodHrs = this.parentData.parentPlot.periodHrs;
+			const absoluteTime = clickedDay * periodHrs + clickedHrs;
+			this.manualMarkers = [...this.manualMarkers, absoluteTime];
 		}
 
 		//Calculate the markers for the actogram
 		markers = $derived.by(() => {
-			if (this.type == 'manual') {
-				return this.manualMarkers;
+			const periodHrs = this.parentData.parentPlot.periodHrs;
+			if (this.type === 'manual') {
+				// Group manual markers by day based on current periodHrs
+				const markersByDay = {};
+				for (const absoluteTime of this.manualMarkers) {
+					const day = Math.floor(absoluteTime / periodHrs);
+					const hour = absoluteTime % periodHrs;
+					if (!markersByDay[day]) markersByDay[day] = [];
+					markersByDay[day] = hour;
+				}
+				// Convert to array of arrays, filling gaps with empty arrays
+				const maxDay = Math.max(-1, ...Object.keys(markersByDay).map(Number));
+				return Array.from({ length: maxDay + 1 }, (_, i) => markersByDay[i] || NaN);
 			}
 			//-------------------------------
 			//Generate the template
 			//-------------------------------
 			//Calculate the number of before and after bins that are needed
-			const N = Math.round(this.templateHrsBefore / this.parent.binSize);
-			const M = Math.round(this.templateHrsAfter / this.parent.binSize);
+			const N = Math.round(this.templateHrsBefore / this.parentData.binSize);
+			const M = Math.round(this.templateHrsAfter / this.parentData.binSize);
 
 			//Fill the N and M with 1s and -1s (if onset; or -1s and 1s if offset)
 			const template = [];
@@ -90,10 +104,10 @@
 			//-------------------------------
 			let bestMatchx = [];
 
-			for (let i = 0; i < Object.keys(this.parent.dataByDays.xByPeriod).length - 1; i++) {
+			for (let i = 0; i < Object.keys(this.parentData.dataByDays.xByPeriod).length - 1; i++) {
 				let periodsData = [
-					...this.parent.dataByDays.yByPeriod[i],
-					...this.parent.dataByDays.yByPeriod[i + 1]
+					...this.parentData.dataByDays.yByPeriod[i],
+					...this.parentData.dataByDays.yByPeriod[i + 1]
 				]; // get the y data for the day
 				//get the threshold value
 				const centileValue = findCentileValue(periodsData, this.centileThreshold);
@@ -110,15 +124,15 @@
 				let bestMatchIndex = findBestMatchIndex(aboveBelow, template) + Math.round((N + M) / 2);
 				//find the x-value in the period that corresponds to that index
 				let xData = [
-					...this.parent.dataByDays.xByPeriod[i],
-					...this.parent.dataByDays.xByPeriod[i + 1]
+					...this.parentData.dataByDays.xByPeriod[i],
+					...this.parentData.dataByDays.xByPeriod[i + 1]
 				];
-				bestMatchx.push(xData[bestMatchIndex] - i * this.parent.parent.periodHrs);
+				bestMatchx.push(xData[bestMatchIndex] - i * this.parentData.parentPlot.periodHrs);
 			}
 			//--------------
 			//Do the last day on its own
-			let i = Object.keys(this.parent.dataByDays.xByPeriod).length - 1;
-			let periodsData = this.parent.dataByDays.yByPeriod[i];
+			let i = Object.keys(this.parentData.dataByDays.xByPeriod).length - 1;
+			let periodsData = this.parentData.dataByDays.yByPeriod[i];
 			// get the y data for the day
 			//get the threshold value
 			const centileValue = findCentileValue(periodsData, this.centileThreshold);
@@ -134,14 +148,14 @@
 			//find the best match to the template and centre the template on the match
 			let bestMatchIndex = findBestMatchIndex(aboveBelow, template) + Math.round((N + M) / 2);
 			//find the x-value in the period that corresponds to that index
-			let xData = this.parent.dataByDays.xByPeriod[i];
+			let xData = this.parentData.dataByDays.xByPeriod[i];
 
-			bestMatchx.push(xData[bestMatchIndex] - i * this.parent.parent.periodHrs);
+			bestMatchx.push(xData[bestMatchIndex] - i * this.parentData.parentPlot.periodHrs);
 			//--------------
 			//Update periodRangeMax if it's more than the number of periods
 			this.periodRangeMax = Math.min(
 				this.periodRangeMax,
-				Object.keys(this.parent.dataByDays.xByPeriod).length
+				Object.keys(this.parentData.dataByDays.xByPeriod).length
 			);
 
 			//Return the markers
@@ -151,17 +165,17 @@
 		markerPoints = $derived.by(() => {
 			let out = '';
 			const xscale = scaleLinear()
-				.domain([0, this.parent.parent.periodHrs * this.parent.parent.doublePlot])
-				.range([0, this.parent.parent.plotwidth]);
-			const radius = Math.max(4, this.parent.parent.eachplotheight / 10);
+				.domain([0, this.parentData.parentPlot.periodHrs * this.parentData.parentPlot.doublePlot])
+				.range([0, this.parentData.parentPlot.plotwidth]);
+			const radius = Math.max(4, this.parentData.parentPlot.eachplotheight / 10);
 			for (let m = this.periodRangeMin - 1; m <= this.periodRangeMax - 1; m++) {
 				if (!this.markers[m]) continue;
-				out += `M${xscale(this.markers[m]) + this.parent.parent.padding.left} ${
-					this.parent.parent.padding.top +
-					this.parent.parent.eachplotheight -
+				out += `M${xscale(this.markers[m]) + this.parentData.parentPlot.padding.left} ${
+					this.parentData.parentPlot.padding.top +
+					this.parentData.parentPlot.eachplotheight -
 					radius / 2 +
-					m * this.parent.parent.spaceBetween +
-					m * this.parent.parent.eachplotheight
+					m * this.parentData.parentPlot.spaceBetween +
+					m * this.parentData.parentPlot.eachplotheight
 				} m-${radius} 0 a${radius} ${radius} 0 1 0 ${2 * radius} 0 a${radius} ${radius} 0 1 0 -${2 * radius} 0 `;
 			}
 
@@ -173,7 +187,7 @@
 			let xs = makeSeqArray(this.periodRangeMin, this.periodRangeMax, 1);
 			let ys = this.markers.slice(this.periodRangeMin - 1, this.periodRangeMax);
 			for (let i = 0; i < ys.length; i++) {
-				ys[i] = ys[i] + xs[i] * this.parent.parent.periodHrs;
+				ys[i] = ys[i] + xs[i] * this.parentData.parentPlot.periodHrs;
 			}
 			//remove any NaNs
 			[xs, ys] = removeNullsFromXY(xs, ys);
@@ -183,7 +197,7 @@
 		});
 
 		constructor(parent, dataIN) {
-			this.parent = parent;
+			this.parentData = parent;
 
 			this.id = _phaseMarkerCounter;
 			_phaseMarkerCounter++;
@@ -198,6 +212,7 @@
 				this.periodRangeMin = dataIN.periodRangeMin || 1;
 				this.periodRangeMax =
 					dataIN.periodRangeMax || Object.keys(parent.dataByDays.xByPeriod).length;
+				this.manualMarkers = dataIN.manualMarkers || [];
 			}
 		}
 
@@ -237,8 +252,8 @@
 	let { marker, which } = $props();
 	const xscale = $derived(
 		scaleLinear()
-			.domain([0, marker.parent.parent.periodHrs * marker.parent.parent.doublePlot])
-			.range([0, marker.parent.parent.plotwidth])
+			.domain([0, marker.parentData.parentPlot.periodHrs * marker.parentData.parentPlot.doublePlot])
+			.range([0, marker.parentData.parentPlot.plotwidth])
 	);
 </script>
 
@@ -246,14 +261,16 @@
 	<p>{marker.id}</p>
 	Type:<input type="text" bind:value={marker.type} />
 	{#if marker.type === 'manual'}
-		<button onclick={() => (marker.parent.parent.isAddingMarkerTo = marker.id)}>Add Marker</button>
+		<button onclick={() => (marker.parentData.parentPlot.isAddingMarkerTo = marker.id)}
+			>Add Marker</button
+		>
 	{/if}
 	N: <input type="number" min="0" max="100" bind:value={marker.templateHrsBefore} />
 	M: <input type="number" min="0" max="100" bind:value={marker.templateHrsAfter} />
 	%: <input type="number" min="0" max="100" bind:value={marker.centileThreshold} />
 	periods: <DoubleRange
 		min="1"
-		max={Object.keys(marker.parent.dataByDays.xByPeriod).length}
+		max={Object.keys(marker.parentData.dataByDays.xByPeriod).length}
 		bind:minVal={marker.periodRangeMin}
 		bind:maxVal={marker.periodRangeMax}
 	/>
@@ -264,10 +281,10 @@
 		Show Line:<input type="checkbox" bind:checked={marker.showLine} />
 	{/if}
 	<p>
-		{marker.parent.parent.Ndays *
-			(marker.parent.parent.eachplotheight + marker.parent.parent.spaceBetween) +
-			marker.parent.parent.eachplotheight +
-			marker.parent.parent.padding.top}
+		{marker.parentData.parentPlot.Ndays *
+			(marker.parentData.parentPlot.eachplotheight + marker.parentData.parentPlot.spaceBetween) +
+			marker.parentData.parentPlot.eachplotheight +
+			marker.parentData.parentPlot.padding.top}
 	</p>
 {/snippet}
 
@@ -275,17 +292,17 @@
 	<path d={marker.markerPoints} fill={marker.colour} stroke="none" />
 	{#if marker.showLine && marker.linearRegression}
 		<line
-			x1={xscale(marker.linearRegression.intercept) + marker.parent.parent.padding.left}
-			y1={marker.parent.parent.padding.top}
+			x1={xscale(marker.linearRegression.intercept) + marker.parentData.parentPlot.padding.left}
+			y1={marker.parentData.parentPlot.padding.top}
 			x2={xscale(
 				marker.linearRegression.intercept +
-					marker.parent.parent.Ndays *
-						(marker.linearRegression.slope - marker.parent.parent.periodHrs)
-			) + marker.parent.parent.padding.left}
-			y2={(marker.parent.parent.Ndays - 1) *
-				(marker.parent.parent.eachplotheight + marker.parent.parent.spaceBetween) +
-				marker.parent.parent.eachplotheight +
-				marker.parent.parent.padding.top}
+					marker.parentData.parentPlot.Ndays *
+						(marker.linearRegression.slope - marker.parentData.parentPlot.periodHrs)
+			) + marker.parentData.parentPlot.padding.left}
+			y2={(marker.parentData.parentPlot.Ndays - 1) *
+				(marker.parentData.parentPlot.eachplotheight + marker.parentData.parentPlot.spaceBetween) +
+				marker.parentData.parentPlot.eachplotheight +
+				marker.parentData.parentPlot.padding.top}
 			stroke={marker.colour}
 		/>
 	{/if}

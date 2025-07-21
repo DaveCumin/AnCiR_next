@@ -7,6 +7,7 @@
 
 <script>
 	// @ts-nocheck
+	import { tick } from 'svelte';
 	import { core, pushObj, outputCoreAsJson } from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	import { Table } from '$lib/core/Table.svelte.js';
@@ -29,8 +30,10 @@
 
 	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
 
-	function openImportModal() {
+	async function openImportModal() {
 		showImportModal = true;
+		await tick();
+		chooseFile();
 	}
 
 	function openExportModal() {
@@ -82,6 +85,8 @@
 		jsonData.plots.map((plotjson) => {
 			core.plots.push(Plot.fromJSON(plotjson));
 		});
+
+		//TODO add in appState import also
 
 		showImportModal = false;
 		importReady = false;
@@ -156,6 +161,7 @@
 					<div class="preview-table-wrapper">
 						<!-- {@html importPreview} -->
 						<p>Tables imported: {jsonData.tables.length}</p>
+						<p>Data imported: {jsonData.data.length}</p>
 						<p>Plots imported: {jsonData.plots.length}</p>
 					</div>
 				{:else}

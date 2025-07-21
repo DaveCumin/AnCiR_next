@@ -17,9 +17,10 @@ export const appState = $state({
 	showDisplayPanel: true,
 	showControlPanel: false,
 
-	positionNavbar: 56,
-	positionDisplayPanel: null,
-	positionControlPanel: null,
+	windowWidth: window.innerWidth,
+	widthNavBar: 56,
+	widthDisplayPanel: 200,
+	widthControlPanel: 200,
 
 	canvasOffset: { x: 0, y: 0 },
 	canvasScale: 1.0,
@@ -32,6 +33,7 @@ export const appState = $state({
 export const appConsts = $state({
 	processMap: new Map(),
 	plotMap: new Map(),
+	tableProcessMap: new Map(),
 	appColours: ['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000']
 });
 
@@ -83,7 +85,7 @@ function findNextAvailablePosition(existingPlots) {
 }
 
 export function outputCoreAsJson() {
-	const output = { ...core };
+	const output = { ...core }; // TODO: output appState also, so when it loads, it will look exactly the same.
 	return JSON.stringify(output, null, 2);
 }
 

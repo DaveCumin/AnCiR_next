@@ -7,7 +7,7 @@
 		allOrSingle = $state('all');
 
 		constructor(parent, dataIN) {
-			this.parent = parent;
+			this.parentPlot = parent;
 			this.bands = dataIN?.bands ?? [];
 		}
 
@@ -117,8 +117,10 @@
 	let { bands = $bindable(), which } = $props();
 	let singleWidth = $derived.by(() => {
 		const plotwidth =
-			bands.parent.parent.width - bands.parent.paddingIN.left - bands.parent.paddingIN.right;
-		return plotwidth / bands.parent.doublePlot;
+			bands.parentPlot.parentBox.width -
+			bands.parentPlot.paddingIN.left -
+			bands.parentPlot.paddingIN.right;
+		return plotwidth / bands.parentPlot.doublePlot;
 	});
 </script>
 
@@ -151,7 +153,7 @@
 {#snippet plot(bands)}
 	<g
 		class="actogram"
-		style="transform: translate({bands.parent.paddingIN.left}px, {bands.height}px);"
+		style="transform: translate({bands.parentPlot.paddingIN.left}px, {bands.height}px);"
 	>
 		{#each bands.bands as b, i}
 			{@const xPos = bands.bands

@@ -22,8 +22,6 @@
 		canvasHeight = 50000
 	} = $props();
 
-	let tempId = id;
-
 	const minWidth = 100;
 	const minHeight = 100;
 
@@ -35,7 +33,12 @@
 	let mouseStartX, mouseStartY;
 
 	function onMouseDown(e) {
-		moving = true;
+		if (appState.selectedPlotIds.includes(id)) {
+			moving = true;
+		} else if (!e.altKeye) {
+			appState.selectedPlotIds = [id];
+			moving = true;
+		}
 		mouseStartX = e.clientX;
 		mouseStartY = e.clientY;
 		dragStartX = x;
@@ -44,17 +47,20 @@
 
 	function onMouseMove(e) {
 		if (moving) {
-			const deltaX = e.clientX - mouseStartX;
-			const deltaY = e.clientY - mouseStartY;
+			appState.selectedPlotIds.forEach((id) => {
+				const plot = core.plots.find((p) => p.id === id);
 
-			const newX = snapToGrid(dragStartX + deltaX);
-			const newY = snapToGrid(dragStartY + deltaY);
+				const deltaX = e.clientX - mouseStartX;
+				const deltaY = e.clientY - mouseStartY;
 
-			x = Math.max(0, Math.min(newX, canvasWidth - width - 20));
-			y = Math.max(0, Math.min(newY, canvasHeight - height - 50));
+				const newX = snapToGrid(dragStartX + deltaX);
+				const newY = snapToGrid(dragStartY + deltaY);
+
+				plot.x = Math.max(0, Math.min(newX, canvasWidth - width - 20));
+				plot.y = Math.max(0, Math.min(newY, canvasHeight - height - 50));
+			});
 
 			RePosition();
-
 		} else if (resizing) {
 			const deltaX = e.clientX - initialMouseX;
 			const deltaY = e.clientY - initialMouseY;
@@ -84,40 +90,47 @@
 	}
 
 	function bringToFront(id) {
-		const index = core.plots.findIndex((p) => p.id === id);
-		if (index !== -1) {
-			const [plot] = core.plots.splice(index, 1);
-			core.plots.push(plot);
+		if (id >= 0) {
+			//handle colour-picker
+			const index = core.plots.findIndex((p) => p.id === id);
+			if (index !== -1) {
+				const [plot] = core.plots.splice(index, 1);
+				core.plots.push(plot);
+			}
 		}
 	}
 
 	async function handleDblClick(e) {
 		e.stopPropagation();
+		if (id >= 0) {
+			//handle colour-picker
+			appState.selectedPlotIds = [id];
+			appState.showControlPanel = true;
+		}
 		appState.selectedPlotIds = [tempId];
 		appState.showControlPanel = true;
-		
-		await tick();
-		RePosition();
 	}
 
 	function handleClick(e) {
 		e.stopPropagation();
-		//look for alt held at the same time
-		if (e.altKey) {
-			//Add if it's not already there
-			if (!appState.selectedPlotIds.includes(tempId)) {
-				appState.selectedPlotIds.push(tempId);
-			} else {
-				//or remove it
-				appState.selectedPlotIds = appState.selectedPlotIds.filter((id) => id !== tempId);
+		if (id >= 0) {
+			//handle colour-picker
+			//look for alt held at the same time
+			if (e.altKey) {
+				//Add if it's not already there
+				if (!appState.selectedPlotIds.includes(id)) {
+					appState.selectedPlotIds.push(id);
+				} else {
+					//or remove it
+					appState.selectedPlotIds = appState.selectedPlotIds.filter((id) => id !== tempId);
+				}
+			} else if (!appState.selectedPlotIds.includes(id)) {
+				appState.selectedPlotIds = [id];
 			}
-		} else {
-			appState.selectedPlotIds = [tempId];
 		}
-
 		RePosition();
 	}
-
+	
 	function RePosition() {
 		if (appState.selectedPlotIds.includes(tempId)) {			
 			if (plotElement) {
@@ -128,12 +141,6 @@
 			});
 		}
 		}
-	}
-
-	function handleCanvasClick(e) {
-		console.log('HERE');
-		e.stopPropagation();
-		appState.selectedPlotIds = [];
 	}
 </script>
 
@@ -151,7 +158,7 @@
 		width: {snapToGrid(width + 20)}px;
 		height: {snapToGrid(height + 50)}px;"
 >
-	<div class="plot-header" onmousedown={onMouseDown}>
+	<div class="plot-header" onmousedown={(e) => onMouseDown(e)}>
 		{title}
 	</div>
 	<div class="plot-content">

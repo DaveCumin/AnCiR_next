@@ -7,9 +7,9 @@
 	import { core } from '$lib/core/core.svelte.js';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
-	import BinnedHist from '$lib/components/plotbits/BinnedHist.svelte';
+	import Hist from '$lib/components/plotbits/Hist.svelte';
 	import { makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData';
-	import { max, min } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import { binData, max, min } from '$lib/components/plotbits/helpers/wrangleData.js';
 
 	function getNdataByPeriods(dataIN, from, to, period) {
 		const byPeriod = [];
@@ -36,13 +36,16 @@
 		dataByDays = $derived.by(() => {
 			console.log(new Date(), ' dataByDays recalculated');
 			const tempx = this.x.hoursSinceStart;
-
 			const tempy = this.y.getData() ?? [];
 			const xByPeriod = {};
 			const yByPeriod = {};
 
-			for (let i = 0; i < tempx.length; i++) {
-				const period = Math.floor((tempx[i] - this.offset) / this.parentPlot.periodHrs);
+			const binned = binData(tempx, tempy, this.binSize, 0);
+
+			//TODO: do the binning here also (not in the Hist component)
+			//TODO: also compute the min and max for the y-axis (overall v by periods)
+			for (let i = 0; i < binned.bins.length; i++) {
+				const period = Math.floor((binned.bins[i] - this.offset) / this.parentPlot.periodHrs);
 
 				if (period >= 0) {
 					if (!xByPeriod[period]) {
@@ -50,8 +53,8 @@
 						yByPeriod[period] = [];
 					}
 					if (xByPeriod[period]) {
-						xByPeriod[period].push(tempx[i] - this.offset);
-						yByPeriod[period].push(tempy[i]);
+						xByPeriod[period].push(binned.bins[i] - this.offset);
+						yByPeriod[period].push(binned.y_out[i]);
 					}
 				}
 			}
@@ -76,7 +79,7 @@
 		}
 
 		addMarker() {
-			this.phaseMarkers.push(new PhaseMarkerClass(this, { type: 'onset' }));
+			this.phaseMarkers.push(new PhaseMarkerClass(this, { type: 'manual' }));
 		}
 
 		toJSON() {
@@ -135,7 +138,10 @@
 			this.data.forEach((datum) => {
 				minTime = Math.min(minTime, Number(datum.x.getData()[0]));
 			});
-			return minTime !== Infinity ? new Date(minTime).toISOString().substring(0, 10) : undefined;
+			//TODO: fix here for data with timeformat that doesn't work
+			return minTime !== Infinity && minTime
+				? new Date(minTime).toISOString().substring(0, 10)
+				: undefined;
 		});
 		spaceBetween = $state(2);
 		doublePlot = $state(2);
@@ -147,10 +153,7 @@
 			}
 			let Ndays = 0;
 			this.data.forEach((d, i) => {
-				Ndays = Math.max(
-					Ndays,
-					Object.keys(d.dataByDays.xByPeriod).length - Math.floor(d.offset / 24)
-				);
+				Ndays = Math.max(Ndays, Object.keys(d.dataByDays.xByPeriod).length);
 			});
 
 			return Ndays;
@@ -434,7 +437,7 @@
 			>
 				<!-- Make the histogram for each period -->
 				{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
-					<BinnedHist
+					<Hist
 						x={getNdataByPeriods(
 							datum.dataByDays.xByPeriod,
 							day,
@@ -442,7 +445,6 @@
 							theData.plot.periodHrs
 						)}
 						y={getNdataByPeriods(datum.dataByDays.yByPeriod, day, day + theData.plot.doublePlot, 0)}
-						binSize={datum.binSize}
 						xscale={scaleLinear()
 							.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
 							.range([0, theData.plot.plotwidth])}

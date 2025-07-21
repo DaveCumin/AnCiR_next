@@ -12,6 +12,7 @@
 
 	import { loadProcesses } from '$lib/processes/processMap.js';
 	import { loadPlots } from '$lib/plots/plotMap.js';
+	import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
 
 	import { onMount } from 'svelte';
 	import { testJson } from './testJson.svelte.js';
@@ -70,32 +71,38 @@
 		Number(utcParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[2]))
 	);
 
-	document.addEventListener('keydown', (event) => {
-		// Check if Ctrl, Shift, and 'I' are pressed simultaneously
-		if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
-			event.preventDefault(); // Prevent default browser behavior (e.g., opening developer tools)
-			console.log($state.snapshot(core));
-		}
-	});
-
 	//------------------------------------
 	const N = 1_000;
 	//------------------------------------
 
 	onMount(async () => {
+		//add event listeners
+		const updateWidth = () => {
+			appState.windowWidth = window.innerWidth;
+		};
+		window.addEventListener('resize', updateWidth);
+
+		document.addEventListener('keydown', (event) => {
+			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
+				console.log($state.snapshot(core));
+				console.log($state.snapshot(appConsts));
+			}
+			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 's') {
+				refresh();
+			}
+		});
+
 		//load the maps
 		appConsts.processMap = await loadProcesses();
 		appConsts.plotMap = await loadPlots();
+		appConsts.tableProcessMap = await loadTableProcesses();
 
-		populatePanelWidth();
-		refresh();
-		// loadTestJson();
+		//remove the listeners
+		return () => {
+			window.removeEventListener('resize', updateWidth);
+			document.removeEventListener('keydown');
+		};
 	});
-
-	function populatePanelWidth() {
-		appState.positionDisplayPanel = 360 + appState.positionNavbar;
-		appState.positionControlPanel = window.innerWidth - 360;
-	}
 
 	function loadTestJson() {
 		// const jsonData = JSON.parse(`${testJson}`);
@@ -229,14 +236,13 @@
 		core.tables[1].processes.push(
 			new TableProcess(
 				{
-					name: 'binneddata',
+					name: 'BinnedData',
 					args: {
-						xIN: 0,
-						yIN: 1,
+						xIN: d0id,
+						yIN: d1id,
 						binSize: 0.25,
 						binStart: 0,
-						xOUT: -1,
-						yOUT: -1
+						out: { binnedx: -1, binnedy: -1 }
 					}
 				},
 				core.tables[1]
@@ -271,24 +277,19 @@
 
 </script>
 
-<!-- <svelte:head>
-  <title>AnCiR v β.{version}</title>
-</svelte:head> 
--->
+<svelte:head>
+	<title>AnCiR v β.4.0</title>
+</svelte:head>
 
 {#if appState.showNavbar}
 	<Navbar />
 {/if}
 
-{#if appState.showDisplayPanel}
-	<DisplayPanel />
-{/if}
-
-{#if appState.showControlPanel}
-	<ControlPanel />
-{/if}
+<DisplayPanel />
 
 <PlotDisplay />
+
+<ControlPanel />
 
 <style>
 	:global(body) {

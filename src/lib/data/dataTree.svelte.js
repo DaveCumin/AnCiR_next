@@ -4,12 +4,7 @@ import { DateTime } from 'luxon';
 import { pushObj } from '$lib/core/core.svelte';
 import { Table } from '$lib/core/table.svelte';
 
-import {
-	utils,
-	getFilesToImport,
-	setFilesToImport,
-	getTempData
-} from '$lib/data/importData.svelte';
+import { utils, getTempData } from '$lib/data/importData.svelte';
 
 export function simulateData() {
 	// manual handle simulate
@@ -37,7 +32,5 @@ export function simulateData() {
 // ImportData
 export const ImportData = {
 	utils,
-	getFilesToImport,
-	setFilesToImport,
 	getTempData
 };

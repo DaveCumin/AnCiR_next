@@ -78,7 +78,10 @@
 				ymin = min([ymin, ...tempy]);
 				ymax = max([ymax, ...tempy]);
 			});
-			return [this.ylimsIN[0] ? this.ylimsIN[0] : ymin, this.ylimsIN[1] ? this.ylimsIN[1] : ymax];
+			return [
+				this.ylimsIN[0] != null ? this.ylimsIN[0] : ymin,
+				this.ylimsIN[1] != null ? this.ylimsIN[1] : ymax
+			];
 		});
 		xlims = $derived.by(() => {
 			if (this.data.length === 0) {
@@ -93,7 +96,10 @@
 				xmin = min([xmin, ...tempx]);
 				xmax = max([xmax, ...tempx]);
 			});
-			return [this.xlimsIN[0] ? this.xlimsIN[0] : xmin, this.xlimsIN[1] ? this.xlimsIN[1] : xmax];
+			return [
+				this.xlimsIN[0] != null ? this.xlimsIN[0] : xmin,
+				this.xlimsIN[1] != null ? this.xlimsIN[1] : xmax
+			];
 		});
 		xgridlines = $state(true);
 		ygridlines = $state(true);

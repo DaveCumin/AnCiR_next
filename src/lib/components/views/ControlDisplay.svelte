@@ -54,7 +54,6 @@
 		flex-direction: row;
 		justify-content: center;
 		align-items: center;
-
 		/* border-bottom: 1px solid #d9d9d9; */
 		background-color: white;
 	}

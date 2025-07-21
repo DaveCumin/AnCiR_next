@@ -29,26 +29,20 @@
 	}
 
 	function switchTab(tab) {
+		appState.showDisplayPanel = true;
 		appState.currentTab = tab;
 	}
-	
 </script>
 
-<nav class="container">
+<nav class="container" style="width: {appState.widthNavBar}px;">
 	<div class="icon-container">
 		<button onclick={() => switchTab('data')}>
-			<Icon
-				name="table"
-				className={appState.currentTab === 'data' ? 'icon active' : 'icon'}
-			/>
+			<Icon name="table" className={appState.currentTab === 'data' ? 'icon active' : 'icon'} />
 			<!-- <TableIcon /> -->
 		</button>
 
 		<button onclick={() => switchTab('worksheet')}>
-			<Icon
-				name="layer"
-				className={appState.currentTab === 'worksheet' ? 'icon active' : 'icon'}
-			/>
+			<Icon name="layer" className={appState.currentTab === 'worksheet' ? 'icon active' : 'icon'} />
 			<!-- <WorksheetIcon /> -->
 		</button>
 	</div>
@@ -64,12 +58,11 @@
 </nav>
 
 {#if showSetting}
-	<Setting bind:showDropdown={showSetting} dropdownTop={dropdownTop} dropdownLeft={dropdownLeft} />
+	<Setting bind:showDropdown={showSetting} {dropdownTop} {dropdownLeft} />
 {/if}
 
 <style>
 	.container {
-		min-width: 56px;
 		height: 100vh;
 		display: flex;
 		flex-direction: column;
@@ -96,7 +89,6 @@
 		margin-top: 28px;
 		margin-bottom: 28px;
 	}
-
 
 	button {
 		background-color: transparent;

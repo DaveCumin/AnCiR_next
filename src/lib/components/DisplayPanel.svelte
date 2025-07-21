@@ -1,68 +1,87 @@
+<script module>
+	export function closeDisplayPanel() {
+		appState.currentTab = null;
+		appState.showDisplayPanel = false;
+	}
+</script>
+
 <script>
 	// @ts-nocheck
 
 	import { appState } from '$lib/core/core.svelte.js';
 	import DataDisplay from '$lib/components/views/DataDisplay.svelte';
 	import WorksheetDisplay from '$lib/components/views/WorksheetDisplay.svelte';
+	import { fly } from 'svelte/transition';
 
 	let container;
-	let width = 360; // initial width
-	const minWidth = 300;
+	const minWidth = 200;
+	const maxWidth = 500;
 
-	export let resizeSide = 'right';
+	let resizeSide = 'right';
 	let resizing = false;
 
 	function onMouseMove(e) {
 		if (!resizing) return;
 
-        const rect = container.getBoundingClientRect();
-        let newWidth;
+		const rect = container.getBoundingClientRect();
+		let newWidth;
 
-        if (resizeSide === 'right') {
-            newWidth = e.clientX - rect.left;
-        } else {
-            const delta = rect.right - e.clientX;
-            newWidth = delta;
-        }
+		if (resizeSide === 'right') {
+			newWidth = e.clientX - rect.left;
+		} else {
+			newWidth = rect.right - e.clientX;
+		}
+		if (newWidth > maxWidth - 1 || newWidth < minWidth + 1) {
+			return;
+		}
 
-        width = Math.max(minWidth, newWidth);
-		
-		// TODO: fix plot limitation when resize
-		// appState.positionDisplayPanel = width;
+		appState.widthDisplayPanel = newWidth;
 	}
 
 	function stopResize() {
 		resizing = false;
-		document.body.style.userSelect = ''; 
+		document.body.style.userSelect = '';
 		window.removeEventListener('mousemove', onMouseMove);
 		window.removeEventListener('mouseup', stopResize);
 	}
 
 	function startResize() {
 		resizing = true;
-		document.body.style.userSelect = 'none'; 
+		document.body.style.userSelect = 'none';
 		window.addEventListener('mousemove', onMouseMove);
 		window.addEventListener('mouseup', stopResize);
 	}
 </script>
 
-<div bind:this={container} class="view-container {resizeSide}}" style="width: {width}px;">
-	{#if appState.currentTab === 'data'}
-		<DataDisplay />
-	{:else if appState.currentTab === 'worksheet'}
-		<WorksheetDisplay />
-	{/if}
+{#if appState.showDisplayPanel}
+	<div
+		bind:this={container}
+		class="view-container {resizeSide}}"
+		style="width: {appState.widthDisplayPanel}px; min-width: {minWidth}px;	max-width: {maxWidth}px;"
+		in:fly={{ x: -appState.widthDisplayPanel, duration: 600 }}
+		out:fly={{ x: -appState.widthDisplayPanel, duration: 600 }}
+	>
+		{#if appState.currentTab === 'data'}
+			<DataDisplay />
+		{:else if appState.currentTab === 'worksheet'}
+			<WorksheetDisplay />
+		{/if}
 
-	<div class="resizer" onmousedown={startResize}></div>
-</div>
+		<div class="resizer" onmousedown={startResize}></div>
+	</div>
+{/if}
 
 <style>
+	.openDisplayPanel {
+		position: fixed;
+		top: 10px;
+		left: 56px;
+		z-index: 999;
+	}
 	.view-container {
 		overflow-y: auto;
 		overflow-x: hidden;
 		height: 100%;
-		min-width: 300px;
-		max-width: 500px;
 		display: flex;
 		flex-direction: column;
 		justify-content: start;

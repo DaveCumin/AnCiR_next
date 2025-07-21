@@ -11,31 +11,8 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import ColumnSelector from '../inputs/ColumnSelector.svelte';
 	import TableProcess from '$lib/core/TableProcess.svelte';
-
-	import ProgressIndicator from '$lib/components/ProgressIndicator.svelte';
-	let steps = $state([
-		{ label: 'lab 1', completed: false, active: true, isExpanded: true },
-		{ label: 'lab 2', completed: false, active: false, isExpanded: false },
-		{ label: 'lab 3', completed: false, active: false, isExpanded: false },
-		{ label: 'lab 4', completed: false, active: false, isExpanded: false }
-	]);
-	let currentStep = $state(0);
-
-	//variables for new column
-	let howMakeNewColumn = $state('');
-	let showAddColumnModal = $state(false);
-	let selectedTable = $state();
-	let newColumnName = $state('new col');
-	let newColumnLength = $state(0);
-	let newColumnData = $state([]);
-	//variables for random new col
-	let randomColMultiplier = $state(10);
-	let randomColOffset = $state(100);
-	//vars for existing new col
-	let newColsValueReset = $state(-1);
-	let newColsExisting = $state([]);
-
-	let { canChange = false } = $props();
+	import { closeDisplayPanel } from '$lib/components/DisplayPanel.svelte';
+	import MakeNewColumn from './modals/MakeNewColumn.svelte';
 
 	// AddTable dropdown
 	let addBtnRef;
@@ -60,57 +37,16 @@
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
 
-	//functions to deal with adding a new column
-	function addColumn(tableid) {
-		console.log('Add a column');
-		selectedTable = core.tables.find((t) => t.id === tableid);
-		newColumnLength = getColumnById(selectedTable.columnRefs[0]).getData().length;
-		showAddColumnModal = true;
-	}
-
-	function calcnewColumnData() {
-		console.log('effect | newColType: ', howMakeNewColumn);
-		if (howMakeNewColumn == 'random') {
-			newColumnData = Array.from(
-				{ length: newColumnLength },
-				() => Math.round(Math.random() * randomColMultiplier, 2) + randomColOffset
-			);
-		} else if (howMakeNewColumn == 'existing' && newColsExisting.length > 0) {
-			//TODO: need to deal with types and operators in between (eg * for numnbers, space for strings, and rawData for time [but only if no processes])
-			newColumnData = getColumnById(newColsExisting[0]).getData();
-			for (let nc = 1; nc < newColsExisting.length; nc++) {
-				const temp = getColumnById(newColsExisting[nc]).getData();
-
-				newColumnData = newColumnData.map((d, i) => d + temp[i]);
-			}
-		} else {
-			newColumnData = [];
-		}
-	}
-
-	function confirmAddColumn() {
-		const newDataEntry = new Column({
-			type: 'number',
-			data: $state.snapshot(newColumnData),
-			name: newColumnName,
-			provenance: 'created from columns'
-		});
-		core.data.push(newDataEntry);
-		selectedTable.columnRefs.push(newDataEntry.id);
-		//reset values
-		selectedTable = '';
-		newColumnName = 'new col';
-		howMakeNewColumn = '';
-		newColumnLength = 0;
-		newColumnData = [];
-		newColsExisting = [];
-		//hide modal
-		showAddColumnModal = false;
-	}
+	let showNewCol = $state(false);
+	let selectedTable = $state(null);
 </script>
 
 <div class="heading">
 	<p>Data Sources</p>
+
+	<button onclick={closeDisplayPanel}>
+		<Icon name="close" width={16} height={16} className="close" />
+	</button>
 
 	<div class="add">
 		<button bind:this={addBtnRef} onclick={openDropdown}>
@@ -125,7 +61,12 @@
 		<div class="table-container">
 			<details class="table-item">
 				<summary class="table-name">{table.name}</summary>
-				<button onclick={() => addColumn(table.id)}>Add column</button>
+				<button
+					onclick={() => {
+						selectedTable = table.id;
+						showNewCol = true;
+					}}>Add column</button
+				>
 				{#each table.columns as col, i}
 					{#if !col.tableProcessed}
 						<ColumnComponent {col} />
@@ -139,117 +80,11 @@
 	{/each}
 </div>
 
-{#snippet stepContent(index, step)}
-	{#if index === 0}
-		<p>Content for Lab 1</p>
-		<input
-			type="text"
-			placeholder="Enter data for Lab 1"
-			oninput={(e) => {
-				if (e.target.value != '') {
-					steps[0].completed = true;
-				} else {
-					steps[0].completed = false;
-				}
-			}}
-		/>
-	{:else if index === 1}
-		<p>Content for Lab 2</p>
-		<textarea
-			placeholder="Enter details for Lab 2"
-			oninput={(e) => {
-				if (e.target.value != '') {
-					steps[1].completed = true;
-				} else {
-					steps[1].completed = false;
-				}
-			}}
-		></textarea>
-	{:else if index === 2}
-		<p>Content for Label 3</p>
-		<textarea
-			placeholder="Enter details for Label 3"
-			oninput={(e) => {
-				if (e.target.value != '') {
-					steps[2].completed = true;
-				} else {
-					steps[2].completed = false;
-				}
-			}}
-		></textarea>
-	{:else if index === 3}
-		<p>Content for Lab 4</p>
-		<textarea
-			placeholder="Enter details for Lab 4"
-			oninput={(e) => {
-				if (e.target.value != '') {
-					steps[3].completed = true;
-				} else {
-					steps[3].completed = false;
-				}
-			}}
-		></textarea>
-	{/if}
-{/snippet}
-
-<ProgressIndicator bind:steps bind:currentStep {stepContent} />
-
 {#if showAddTable}
 	<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
 {/if}
 
-<Modal bind:showModal={showAddColumnModal}>
-	{#snippet header()}
-		<div class="heading">
-			<h2>Add a column to {selectedTable?.name}</h2>
-			<!-- <button class="btn" onclick={chooseFile}>Choose File</button> -->
-		</div>
-	{/snippet}
-
-	{#snippet children()}
-		<div>
-			Name: <input type="text" bind:value={newColumnName} />
-		</div>
-		<div>
-			Type: <select bind:value={howMakeNewColumn} onchange={calcnewColumnData}>
-				<option value="random">Random</option>
-				<option value="simulated">Simulated</option>
-				<option value="existing">From existing columns</option>
-			</select>
-		</div>
-		{#if howMakeNewColumn == 'random'}
-			<div>
-				Multiplier: <input
-					type="number"
-					bind:value={randomColMultiplier}
-					onchange={calcnewColumnData}
-				/>
-				Offset: <input type="number" bind:value={randomColOffset} onchange={calcnewColumnData} />
-			</div>
-		{/if}
-		{#if howMakeNewColumn == 'existing'}
-			{#each newColsExisting as col, i}
-				<ColumnSelector bind:value={newColsExisting[i]} onChange={calcnewColumnData} />
-			{/each}
-			Add new: <ColumnSelector
-				bind:value={newColsValueReset}
-				onChange={(value) => {
-					newColsExisting.push(Number(value));
-					newColsValueReset = -1;
-					calcnewColumnData();
-				}}
-			/>
-		{/if}
-
-		{#if newColumnData.length > 0}
-			<div>
-				Preview:
-				{newColumnData.slice(0, 5)}
-			</div>
-			<div><button onclick={confirmAddColumn}>Add these data</button></div>
-		{/if}
-	{/snippet}
-</Modal>
+<MakeNewColumn bind:show={showNewCol} tableId={selectedTable} />
 
 <style>
 	.heading {

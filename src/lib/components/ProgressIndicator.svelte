@@ -5,15 +5,9 @@
 	let {
 		steps = $bindable(), // Array of { label: string, completed: boolean, active: boolean, isExpanded: boolean }
 		currentStep = $bindable(0), // Index of the current active step
-		stepContent // Snippet function: (index, step) => content
+		stepContent, // Snippet function: (index, step) => content
+		footerContent // snipped for the end (Accept, eg)
 	} = $props();
-
-	// Debug logging
-	$effect(() => {
-		console.log('ProgressIndicator: steps =', steps);
-		console.log('ProgressIndicator: currentStep =', currentStep);
-		console.log('ProgressIndicator: stepContent defined =', !!stepContent);
-	});
 
 	// Function to toggle step expansion
 	function toggleStep(index) {
@@ -23,12 +17,6 @@
 		// Allow toggling for active or completed steps
 		if (steps[index].completed || index === currentStep || steps[index - 1]?.completed) {
 			steps[index].isExpanded = !steps[index].isExpanded;
-			console.log(
-				'ProgressIndicator: Toggled isExpanded for step',
-				index,
-				'to',
-				steps[index].isExpanded
-			);
 		} else {
 			// For incomplete and non-active steps, move to that step without expanding
 			// currentStep = index;
@@ -63,7 +51,10 @@
 
 				<!-- Step Content (Accordion) -->
 				<div class="step-content" class:expanded={step.isExpanded}>
-					<div class="content-inner">
+					<div
+						class="content-inner"
+						style="border-left: 2px solid {step.completed ? '#10b981' : '#e5e7eb'};"
+					>
 						{#if stepContent}
 							{@render stepContent(index, step)}
 						{:else}
@@ -77,10 +68,14 @@
 					<div
 						class="progress-line"
 						class:completed={step.completed && steps[index + 1]?.completed}
+						style="background-color: {step.completed ? '#10b981' : '#e5e7eb'};"
 					></div>
 				{/if}
 			</div>
 		{/each}
+		{#if footerContent}
+			{@render footerContent()}
+		{/if}
 	{:else}
 		<p>No steps provided</p>
 	{/if}
@@ -171,14 +166,13 @@
 
 	.content-inner {
 		padding: 10px 10px 10px 24px; /* Align with step indicator */
-		border-left: 2px solid #e5e7eb;
 		margin-left: 12px;
 	}
 
 	.progress-line {
 		width: 2px;
-		height: 40px;
-		background-color: #e5e7eb;
+		height: 10px;
+		margin-top: -2px;
 		margin-left: 12px; /* Center under step indicator */
 	}
 

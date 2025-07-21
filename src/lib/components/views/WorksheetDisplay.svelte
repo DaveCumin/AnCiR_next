@@ -1,9 +1,10 @@
 <script>
 	// @ts-nocheck
 
-	import { core } from '$lib/core/core.svelte.js';
+	import { core, appConsts } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddPlot from '../iconActions/AddPlot.svelte';
+	import { closeDisplayPanel } from '$lib/components/DisplayPanel.svelte';
 
 	let addBtnRef;
 	let showAddPlot = $state(false);
@@ -58,6 +59,9 @@
 
 <div class="heading">
 	<p>Worksheet Layers</p>
+	<button onclick={closeDisplayPanel}>
+		<Icon name="close" width={16} height={16} className="close" />
+	</button>
 
 	<div class="add">
 		<button bind:this={addBtnRef} onclick={openDropdown}>
@@ -79,6 +83,10 @@
 			ondrop={() => handleDrop(i)}
 		>
 			<summary>{plot.name}</summary>
+			{#if plot.id >= 0}
+				{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
+				<Plot theData={plot.plot} which="controls" />
+			{/if}
 		</details>
 	{/each}
 </div>

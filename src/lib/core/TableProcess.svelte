@@ -1,7 +1,7 @@
 <script module>
-	import { core } from '$lib/core/core.svelte.js';
+	import { appConsts } from '$lib/core/core.svelte.js';
 	import { getTableById } from '$lib/core/Table.svelte';
-	import { Column } from '$lib/core/Column.svelte';
+	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	let _tableprocessidCounter = 0;
 
 	export class TableProcess {
@@ -23,33 +23,24 @@
 			this.name = dataIN.name;
 
 			if (dataIN.args) {
-				console.warn('NEW TABLEPROCESS WITH ARGS: ', dataIN.args);
 				this.args = dataIN.args;
-
-				//THIS IS FOR A BinnedDaata PROCESS ---------
-				const processHash = crypto.randomUUID();
-				const outX = new Column({
-					tableProcessed: processHash,
-					name: 'binned X',
-					type: 'number',
-					data: []
-				});
-				this.args.xOUT = outX.id;
-				const outY = new Column({
-					tableProcessed: processHash,
-					name: 'binned Y',
-					type: 'number',
-					data: []
-				});
-				this.args.yOUT = outY.id;
-				console.log('adding columns to table', this.parent.name);
-				console.log('xOUT: ', outX, 'yOUT: ', outY);
-				console.log('table Id', this.parent.id);
+				//MAKE THE OUTPUTS (defined in the defaults with 'OUT') AND ASSOCIATE THEM
 				const theTable = getTableById(this.parent.id);
-				console.log(theTable);
-				theTable.addColumn(outX);
-				theTable.addColumn(outY);
-				console.log('table: ');
+				const processHash = crypto.randomUUID();
+
+				for (let i = 0; i < Object.keys(this.args.out).length; i++) {
+					const tempCol = new Column({
+						tableProcessed: processHash,
+						name: Object.keys(this.args.out)[i],
+						type: 'number',
+						data: dataIN.args.data ?? [] //This is to make sure the preview is exactly what the data are (eg for random)
+					});
+					this.args.out[Object.keys(this.args.out)[i]] = tempCol.id;
+					theTable.addColumn(tempCol);
+				}
+				if (Object.keys(this.args).includes('N')) {
+					this.args.N = getColumnById(theTable.columnRefs[0]).getData().length;
+				}
 				//--------------------------
 			}
 		}
@@ -64,10 +55,11 @@
 </script>
 
 <script>
-	import BinnedData from '$lib/tableProcesses/BinnedData.svelte';
-
 	let { p } = $props();
+	console.log('p; ', p);
 </script>
 
-<div>table process {p.id} here!</div>
-<BinnedData {p} />
+{#if p}
+	{@const TheTableProcess = appConsts.tableProcessMap.get(p.name)?.component}
+	<TheTableProcess {p} />
+{/if}

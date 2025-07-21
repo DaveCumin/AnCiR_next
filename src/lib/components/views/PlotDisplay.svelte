@@ -15,26 +15,17 @@
 	}
 
 	let canvasWidthPx = $derived.by(() => {
-		if (appState.showControlPanel) {
-			return (
-				window.innerWidth -
-				appState.positionDisplayPanel -
-				(window.innerWidth - appState.positionControlPanel)
-			);
-		} else {
-			return window.innerWidth - appState.positionDisplayPanel;
-		}
+		const whole = appState.windowWidth - appState.widthNavBar;
+		const displayWidth = appState.showDisplayPanel ? appState.widthDisplayPanel : 0;
+		const controlWidth = appState.showControlPanel ? appState.widthControlPanel : 0;
+		console.log('whole: ', whole, 'displayWidth: ', displayWidth, 'controlWidth: ', controlWidth);
+		return whole - displayWidth - controlWidth;
 	});
-
-	let canvasContentHeight = $derived.by(() => {
-		if (core.plots.length === 0) {
-			return `${window.innerHeight}px`;
+	let leftPx = $derived.by(() => {
+		if (appState.showDisplayPanel) {
+			return appState.widthDisplayPanel + appState.widthNavBar;
 		}
-
-		const bottommost = Math.max(...core.plots.map(p => p.y + p.height));
-		const padded = Math.max(window.innerHeight, bottommost + 100);
-
-		return `${padded}px`;
+		return appState.widthNavBar;
 	});
 </script>
 
@@ -42,7 +33,7 @@
 	onclick={handleClick}
 	class="canvas"
 	style="top: 0;
-			left: {appState.positionDisplayPanel}px;
+			left: {leftPx}px;
 			">
 			
 	<div
@@ -88,5 +79,8 @@
 	.canvas {
 		position: fixed;
 		overflow: auto;
+		transition:
+			width 0.6s ease,
+			left 0.6s ease;
 	}
 </style>

@@ -5,6 +5,7 @@
 
 	import { timeFormat } from 'd3-time-format';
 	import { scaleTime } from 'd3-scale';
+	import { transition } from 'd3-transition';
 
 	let {
 		height, //height of the plot
@@ -28,11 +29,15 @@
 		width;
 		yoffset;
 		xoffset;
+		//Set a transition
+		// const t = transition().duration(10); //Doesn't look good without a similar transition for the line/points/etc... hard to do.
+
 		// DO THE SCALES
 		let axis;
 		if (position == 'bottom') {
 			axis = axisBottom(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
+				// .transition(t)
 				.call(axis)
 				.style('font-size', `${tickfontsize}px`)
 				.style('transform', `translate(${xoffset}px, ${height + yoffset}px)`);
@@ -40,6 +45,7 @@
 		if (position == 'top') {
 			axis = axisTop(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
+				// .transition(t)
 				.call(axis)
 				.style('font-size', `${tickfontsize}px`)
 				.style('transform', `translate(${xoffset}px, ${yoffset}px)`);
@@ -47,6 +53,7 @@
 		if (position == 'left') {
 			axis = axisLeft(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
+				// .transition(t)
 				.call(axis)
 				.style('font-size', `${tickfontsize}px`)
 				.style('transform', `translate(${xoffset}px, ${yoffset}px)`);
@@ -54,6 +61,7 @@
 		if (position == 'right') {
 			axis = axisRight(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
+				// .transition(t)
 				.call(axis)
 				.style('font-size', `${tickfontsize}px`)
 				.style('transform', `translate(${width + xoffset}px, ${yoffset}px)`);
@@ -63,6 +71,7 @@
 			if (position == 'bottom') {
 				select(axisGroup)
 					.selectAll('.tick')
+
 					.append('line')
 					.attr('class', 'gridline')
 					.attr('y1', 0)
@@ -70,6 +79,7 @@
 			} else if (position == 'top') {
 				select(axisGroup)
 					.selectAll('.tick')
+
 					.append('line')
 					.attr('class', 'gridline')
 					.attr('y1', 0)
@@ -77,6 +87,7 @@
 			} else if (position == 'left') {
 				select(axisGroup)
 					.selectAll('.tick')
+
 					.append('line')
 					.attr('class', 'gridline')
 					.attr('x1', 0)
@@ -84,6 +95,7 @@
 			} else if (position == 'right') {
 				select(axisGroup)
 					.selectAll('.tick')
+
 					.append('line')
 					.attr('class', 'gridline')
 					.attr('x1', 0)

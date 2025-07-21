@@ -5,20 +5,27 @@
 	import { simulateData, ImportData } from '$lib/data/dataTree.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
+	import { on } from 'svelte/events';
 
 	let showModal = $state(false);
 	let importPreview = $state();
 	let importReady = $state(false);
+	let hasHeader = $state(true);
+	let targetFile = $state();
 
 	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
 
 	function openModal() {
 		showModal = true;
+		ImportData.utils.openFileChoose();
 	}
 
 	async function onFileChange(e) {
-		ImportData.setFilesToImport(e.target.files);
-		await ImportData.utils.parseFile(6);
+		targetFile = e.target.files[0];
+		doPreview();
+	}
+	async function doPreview() {
+		await ImportData.utils.parseFile(targetFile, 6, hasHeader);
 		importPreview = ImportData.utils.makeTempTable(ImportData.getTempData());
 		importReady = true;
 	}
@@ -28,11 +35,10 @@
 	}
 
 	async function confirmImport() {
-		await ImportData.utils.loadData();
+		await ImportData.utils.loadData(targetFile, hasHeader);
 		showModal = false;
 		importReady = false;
 		importPreview = '';
-
 		showDropdown = false;
 	}
 </script>
@@ -50,7 +56,7 @@
 	{/snippet}
 </Dropdown>
 
-<Modal bind:showModal>
+<Modal bind:showModal onclose={() => (showDropdown = false)}>
 	{#snippet header()}
 		<div class="heading">
 			<h2>Import Data</h2>
@@ -61,8 +67,8 @@
 				<div class="filename">
 					<p class="filename-preview">
 						Selected:
-						{#if ImportData.getFilesToImport()?.[0]}
-							{ImportData.getFilesToImport()[0].name}
+						{#if targetFile}
+							{targetFile.name}
 						{/if}
 					</p>
 				</div>
@@ -83,7 +89,9 @@
 		<div class="import-container">
 			<div class="preview-placeholder">
 				{#if importPreview}
-					<!-- <p>Preview Data</p> -->
+					<p>
+						Header: <input type="checkbox" bind:checked={hasHeader} onchange={() => doPreview()} />
+					</p>
 					<div class="preview-table-wrapper">
 						{@html importPreview}
 					</div>

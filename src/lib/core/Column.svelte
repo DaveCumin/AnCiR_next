@@ -3,9 +3,8 @@
 
 	import { Process } from '$lib/core/Process.svelte';
 	import { core, appConsts } from '$lib/core/core.svelte.js';
-
-	import { timeParse } from 'd3-time-format';
-	import { forceFormat, getPeriod, getISODate } from '$lib/utils/time/TimeUtils';
+	// import { timeParse } from 'd3-time-format';
+	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
 
 	export function getColumnById(id) {
 		const theColumn = core.data.find((column) => column.id === id);
@@ -17,7 +16,7 @@
 	export class Column {
 		id; //Unique Id for the column
 		refId = $state(null); //if it is a column that is based on another
-		tableProcessGUId = $state([]);
+		tableProcessGUId = $state('');
 		data = null; //if it has raw data, store that here
 		compression = $state(null); //if any compression is used, store the info here
 		//Where the data are from (references all the way to the primary source [importd (file) or simulated (params)])
@@ -49,7 +48,7 @@
 			}
 		});
 		//time format for converting time data
-		timeFormat = $derived(this.type === 'time' ? 0 : null);
+		timeFormat = $state([]);
 
 		//The associated processes that are applied to the data
 		processes = $state([]);
@@ -61,7 +60,7 @@
 			//console.warn('that was hoursSinceStart');
 		});
 
-		constructor({ ...columnData }, id = null) {
+		constructor(columnData = null, id = null) {
 			if (id === null) {
 				this.id = _columnIdCounter;
 				_columnIdCounter++;
@@ -72,8 +71,12 @@
 			this.tableProcessGUId = '';
 			
 			//Assign the other data
-			Object.assign(this, JSON.parse(JSON.stringify(columnData)));
-			// TODO: DEBUG Object.assign(this, structuredClone(columnData));
+			if (columnData) {
+				console.log('CD: ', columnData);
+				Object.assign(this, columnData);
+			}
+
+			// Object.assign(this, JSON.parse(JSON.stringify(columnData)));
 		}
 
 		//To add and remove processes
@@ -139,7 +142,8 @@
 
 			//deal with timestamps
 			if (this.type === 'time' && !this.isReferencial()) {
-				out = out.map((x) => Number(timeParse(this.timeFormat)(x))); // Turn into UNIX values of time
+				// out = out.map((x) => Number(timeParse(this.timeFormat)(x))); // Turn into UNIX values of time
+				out = out.map((x) => Number(getUNIXDate(x, this.timeFormat))); // Turn into UNIX values of time
 			}
 
 			//If no data, return empty
@@ -263,6 +267,7 @@
 					tableProcessGUId: tableProcessGUId ?? '',
 
 					compression: compression ?? null,
+					timeFormat: timeFormat ?? '',
 					provenance: provenance ?? null,
 				},
 				id
@@ -284,7 +289,33 @@
 	import Processcomponent from '$lib/core/Process.svelte'; //Need to rename it because Process is used as the class name in the module, above
 	import Icon from '$lib/icons/Icon.svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import AddProcess from '$lib/components/iconActions/AddProcess.svelte';
+
 	let { col, canChange = false } = $props();
+
+	let addBtnRef;
+	let showAddProcess = $state(false);
+	let dropdownTop = $state(0);
+	let dropdownLeft = $state(0);
+
+	function recalculateDropdownPosition() {
+		if (!addBtnRef) return;
+		const rect = addBtnRef.getBoundingClientRect();
+
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
+	}
+
+	let columnSelected = $state(-1);
+	function openDropdown(e, id) {
+		e.stopPropagation();
+		columnSelected = id;
+		recalculateDropdownPosition();
+		requestAnimationFrame(() => {
+			showAddProcess = true;
+		});
+		window.addEventListener('resize', recalculateDropdownPosition);
+	}
 </script>
 
 {#if col == undefined}
@@ -330,15 +361,6 @@
 				data: {col.getData()?.slice(0, 5)}
 				N: {col.getData().length}
 				hoursSince: {col.hoursSinceStart?.slice(0, 5)}
-				<button
-					onclick={() => {
-						const proc = [...appConsts.processMap.entries()][
-							Math.floor(Math.random() * [...appConsts.processMap.entries()].length)
-						];
-
-						col.addProcess(proc[0]);
-					}}><Icon name="add" width={16} height={16} /></button
-				>
 			</li>
 			{#each col.processes as p}
 				{#key p.id}
@@ -349,6 +371,15 @@
 					>
 				{/key}
 			{/each}
+			<div class="add">
+				<button bind:this={addBtnRef} onclick={(e) => openDropdown(e, col.id)}>
+					<Icon name="add" width={16} height={16} />
+				</button>
+			</div>
 		</ul>
 	</details>
+{/if}
+
+{#if showAddProcess}
+	<AddProcess bind:showDropdown={showAddProcess} {columnSelected} {dropdownTop} {dropdownLeft} />
 {/if}
