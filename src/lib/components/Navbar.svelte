@@ -29,8 +29,12 @@
 	}
 
 	function switchTab(tab) {
-		appState.showDisplayPanel = true;
-		appState.currentTab = tab;
+		if (appState.currentTab == tab && appState.showDisplayPanel) {
+			appState.showDisplayPanel = false;
+		} else {
+			appState.showDisplayPanel = true;
+			appState.currentTab = tab;
+		}
 	}
 </script>
 
