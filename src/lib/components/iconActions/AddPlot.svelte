@@ -35,35 +35,17 @@
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
-		<div class="action">
-			<button
-				onclick={() => {
-					openModal('actogram');
-				}}
-			>
-				Create New Actogram
-			</button>
-		</div>
-
-		<div class="action">
-			<button
-				onclick={() => {
-					openModal('periodogram');
-				}}
-			>
-				Create New Periodogram
-			</button>
-		</div>
-
-		<div class="action">
-			<button
-				onclick={() => {
-					openModal('scatterplot');
-				}}
-			>
-				Create New ScatterPlot
-			</button>
-		</div>
+		{#each Object.keys(Object.fromEntries(appConsts.plotMap.entries())) as type}
+			<div class="action">
+				<button
+					onclick={() => {
+						openModal(type);
+					}}
+				>
+					Create New {type.charAt(0).toUpperCase() + type.slice(1)}
+				</button>
+			</div>
+		{/each}
 	{/snippet}
 </Dropdown>
 
@@ -79,9 +61,9 @@
 					<label for="plotType">Choose a Plot Type:</label>
 
 					<select bind:value={plotType} name="plotType" id="plot-type">
-						<option value="actogram">Actogram</option>
-						<option value="periodogram">Periodogram</option>
-						<option value="scatterplot">ScatterPlot</option>
+						{#each Object.keys(Object.fromEntries(appConsts.plotMap.entries())) as type}
+							<option value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+						{/each}
 					</select>
 				</div>
 

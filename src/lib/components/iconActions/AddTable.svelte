@@ -176,6 +176,7 @@
 
 	:global(.preview-table-wrapper table) {
 		width: 100%;
+		table-layout: fixed;
 		border-collapse: collapse;
 		font-size: 14px;
 		background-color: white;
@@ -198,6 +199,7 @@
 		padding: 8px 12px;
 		border: 1px solid var(--color-lightness-85);
 		text-align: left;
+		overflow: clip;
 	}
 
 	/* :global(.preview-table-wrapper tbody tr:hover) {

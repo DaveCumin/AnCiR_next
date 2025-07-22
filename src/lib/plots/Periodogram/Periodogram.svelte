@@ -7,11 +7,51 @@
 	import { core } from '$lib/core/core.svelte.js';
 	import { binData, mean, makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { pchisq, qchisq } from '$lib/data/CDFs';
-
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
 
-	function calculatePower(data, binSize, period, avgAll, denominator) {
+	// Lomb-Scargle implementation
+	function calculateLombScarglePower(times, values, frequencies) {
+		// Remove NaN values
+		const validIndices = times
+			.map((t, i) => (isNaN(t) || isNaN(values[i]) ? -1 : i))
+			.filter((i) => i !== -1);
+		const t = validIndices.map((i) => times[i]);
+		const y = validIndices.map((i) => values[i]);
+
+		if (t.length === 0) return new Array(frequencies.length).fill(0);
+
+		// Compute mean and variance
+		const yMean = mean(y);
+		const yVariance = y.reduce((sum, val) => sum + (val - yMean) ** 2, 0) / (y.length - 1);
+
+		const powers = frequencies.map((f) => {
+			const omega = 2 * Math.PI * f;
+
+			// Compute time shift (tau) for phase adjustment
+			const cosSum = t.reduce((sum, ti) => sum + Math.cos(omega * ti), 0);
+			const sinSum = t.reduce((sum, ti) => sum + Math.sin(omega * ti), 0);
+			const tau = Math.atan2(sinSum, cosSum) / (2 * omega);
+
+			// Compute sine and cosine components
+			const cosTerm = y.reduce((sum, yi, i) => {
+				return sum + (yi - yMean) * Math.cos(omega * (t[i] - tau));
+			}, 0);
+			const sinTerm = y.reduce((sum, yi, i) => {
+				return sum + (yi - yMean) * Math.sin(omega * (t[i] - tau));
+			}, 0);
+
+			const cosDenom = t.reduce((sum, ti) => sum + Math.cos(omega * (ti - tau)) ** 2, 0);
+			const sinDenom = t.reduce((sum, ti) => sum + Math.sin(omega * (ti - tau)) ** 2, 0);
+
+			// Lomb-Scargle power
+			const power = (cosTerm ** 2 / cosDenom + sinTerm ** 2 / sinDenom) / (2 * yVariance);
+			return power;
+		});
+		return powers;
+	}
+
+	function calculateChiSquaredPower(data, binSize, period, avgAll, denominator) {
 		const colNum = Math.round(period / binSize);
 		if (colNum < 1) return 0;
 
@@ -45,8 +85,12 @@
 		x = $state();
 		y = $state();
 		binSize = $state(0.25);
+		method = $state('Chi-squared'); // New: method selector
 		binnedData = $derived.by(() => {
-			return binData(this.x.hoursSinceStart, this.y.getData(), this.binSize, 0);
+			if (this.method === 'Chi-squared') {
+				return binData(this.x.hoursSinceStart, this.y.getData(), this.binSize, 0);
+			}
+			return { bins: [], y_out: [] }; // No binning for Lomb-Scargle
 		});
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
 		linecolour = $state();
@@ -55,23 +99,25 @@
 		pointradius = $state(5);
 		alpha = $state(0.05);
 
-		// Compute periodogram data - this is faster than the $derived. Could also consider debouncing, if updates are slow.
 		updatePeriodData() {
-			if (this.binnedData.bins.length == 0) {
+			if (this.method === 'Chi-squared' && this.binnedData.bins.length === 0) {
 				this.periodData = { x: [], y: [], threshold: [], pvalue: [] };
-			} else {
-				const periods = makeSeqArray(
-					this.parentPlot.periodlimsIN[0],
-					this.parentPlot.periodlimsIN[1],
-					this.parentPlot.periodSteps
-				);
+				return;
+			}
 
-				const correctedAlpha = Math.pow(1 - this.alpha, 1 / periods.length);
-				const power = new Array(periods.length);
-				const threshold = new Array(periods.length);
-				const pvalue = new Array(periods.length);
+			const periods = makeSeqArray(
+				this.parentPlot.periodlimsIN[0],
+				this.parentPlot.periodlimsIN[1],
+				this.parentPlot.periodSteps
+			);
+			const frequencies = periods.map((p) => 1 / p); // For Lomb-Scargle
 
-				// Compute the average one
+			const correctedAlpha = Math.pow(1 - this.alpha, 1 / periods.length);
+			const power = new Array(periods.length);
+			const threshold = new Array(periods.length);
+			const pvalue = new Array(periods.length);
+
+			if (this.method === 'Chi-squared') {
 				const data = this.binnedData.y_out;
 				const avgAll = mean(data);
 				let denominator = 0;
@@ -83,13 +129,24 @@
 				}
 
 				for (let p = 0; p < periods.length; p++) {
-					power[p] = calculatePower(data, this.binSize, periods[p], avgAll, denominator);
+					power[p] = calculateChiSquaredPower(data, this.binSize, periods[p], avgAll, denominator);
 					threshold[p] = qchisq(1 - correctedAlpha, Math.round(periods[p] / this.binSize));
 					pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / this.binSize));
 				}
+			} else if (this.method === 'Lomb-Scargle') {
+				const times = this.x.hoursSinceStart;
+				const values = this.y.getData();
+				const powers = calculateLombScarglePower(times, values, frequencies);
 
-				this.periodData = { x: periods, y: power, threshold, pvalue };
+				for (let p = 0; p < periods.length; p++) {
+					power[p] = powers[p];
+					// For Lomb-Scargle, significance thresholds are more complex; use a simplified approach
+					threshold[p] = -Math.log(correctedAlpha) / 2; // Approximate threshold
+					pvalue[p] = Math.exp(-2 * power[p]); // Approximate p-value
+				}
 			}
+
+			this.periodData = { x: periods, y: power, threshold, pvalue };
 		}
 
 		constructor(parent, dataIN) {
@@ -107,6 +164,7 @@
 			}
 			this.linecolour = dataIN?.linecolour ?? getRandomColor();
 			this.pointcolour = dataIN?.pointcolour ?? getRandomColor();
+			this.method = dataIN?.method ?? 'Chi-squared'; // Initialize method
 		}
 
 		toJSON() {
@@ -116,7 +174,10 @@
 				linecolour: this.linecolour,
 				linestrokeWidth: this.linestrokeWidth,
 				pointcolour: this.pointcolour,
-				pointradius: this.pointradius
+				pointradius: this.pointradius,
+				binSize: this.binSize,
+				method: this.method,
+				alpha: this.alpha
 			};
 		}
 
@@ -127,7 +188,10 @@
 				linecolour: json.linecolour,
 				linestrokeWidth: json.linestrokeWidth,
 				pointcolour: json.pointcolour,
-				pointradius: json.pointradius
+				pointradius: json.pointradius,
+				binSize: json.binSize,
+				method: json.method,
+				alpha: json.alpha
 			});
 		}
 	}
@@ -232,10 +296,10 @@
 
 {#snippet controls(theData)}
 	<div>
-		<button onclick={() => convertToImage('plot' + theData.parentBox.id, 'svg')}>Save </button>
+		<button onclick={() => convertToImage('plot' + theData.parentBox.id, 'svg')}>Save</button>
 		Name: <input type="text" bind:value={theData.parentBox.name} />
 		Width: <input type="number" bind:value={theData.parentBox.width} />
-		height: <input type="number" bind:value={theData.parentBox.height} />
+		Height: <input type="number" bind:value={theData.parentBox.height} />
 
 		<p>
 			Padding: <input type="number" bind:value={theData.padding.top} />
@@ -246,13 +310,13 @@
 
 		<p>
 			ylims: <button onclick={() => (theData.ylimsIN = [null, null])}>R</button>
-			grid:<input type="checkbox" bind:checked={theData.ygridlines} />
+			grid: <input type="checkbox" bind:checked={theData.ygridlines} />
 			<input
 				type="number"
 				step="0.1"
 				value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
 				oninput={(e) => {
-					theData.ylimsIN[0] = [parseFloat(e.target.value)];
+					theData.ylimsIN[0] = parseFloat(e.target.value);
 				}}
 			/>
 			<input
@@ -260,12 +324,12 @@
 				step="0.1"
 				value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
 				oninput={(e) => {
-					theData.ylimsIN[1] = [parseFloat(e.target.value)];
+					theData.ylimsIN[1] = parseFloat(e.target.value);
 				}}
 			/>
 		</p>
 		<p>
-			period grid:<input type="checkbox" bind:checked={theData.xgridlines} />
+			period grid: <input type="checkbox" bind:checked={theData.xgridlines} />
 			<input
 				type="number"
 				min="0.1"
@@ -283,8 +347,7 @@
 					theData.periodlimsIN[1] = parseFloat(e.target.value);
 				}}
 			/>
-			step:
-			<input type="number" min="0.1" step="0.01" bind:value={theData.periodSteps} />
+			step: <input type="number" min="0.1" step="0.01" bind:value={theData.periodSteps} />
 		</p>
 		<p>Data:</p>
 		<button
@@ -309,17 +372,28 @@
 			y: {datum.y.name}
 			<Column col={datum.y} canChange={true} />
 
-			binSize: <input type="number" step="0.01" min="0.01" bind:value={datum.binSize} />
+			<!-- New: Method selector -->
+			<p>
+				Method:
+				<select bind:value={datum.method} onchange={() => datum.updatePeriodData()}>
+					<option value="Chi-squared">Chi-squared</option>
+					<option value="Lomb-Scargle">Lomb-Scargle</option>
+				</select>
+			</p>
 
-			alpha:
-			<input
-				type="number"
-				min="0.0001"
-				max="0.9999"
-				step="0.01"
-				bind:value={datum.alpha}
-				oninput={() => datum.updatePeriodData()}
-			/>
+			<!-- binSize only relevant for Chi-squared -->
+			{#if datum.method === 'Chi-squared'}
+				binSize: <input type="number" step="0.01" min="0.01" bind:value={datum.binSize} />
+				alpha:
+				<input
+					type="number"
+					min="0.0001"
+					max="0.9999"
+					step="0.01"
+					bind:value={datum.alpha}
+					oninput={() => datum.updatePeriodData()}
+				/>
+			{/if}
 
 			line col: <input type="color" bind:value={datum.linecolour} />
 			line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
@@ -330,6 +404,7 @@
 {/snippet}
 
 {#snippet plot(theData)}
+	<!-- Unchanged plot rendering -->
 	<svg
 		id={'plot' + theData.plot.parentBox.id}
 		width={theData.plot.parentBox.width}
@@ -337,7 +412,6 @@
 		viewBox="0 0 {theData.plot.parentBox.width} {theData.plot.parentBox.height}"
 		style={`background: white; position: absolute;`}
 	>
-		<!-- The Y-axis -->
 		<Axis
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
@@ -350,7 +424,6 @@
 			nticks={5}
 			gridlines={theData.plot.ygridlines}
 		/>
-		<!-- The X-axis -->
 		<Axis
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
@@ -393,21 +466,22 @@
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 			/>
-			<!-- the threshold -->
-			<Line
-				x={datum.periodData.x}
-				y={datum.periodData.threshold}
-				xscale={scaleLinear()
-					.domain([theData.plot.periodlimsIN[0], theData.plot.periodlimsIN[1]])
-					.range([0, theData.plot.plotwidth])}
-				yscale={scaleLinear()
-					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-					.range([theData.plot.plotheight, 0])}
-				strokeCol={datum.linecolour}
-				strokeWidth={datum.linestrokeWidth}
-				yoffset={theData.plot.padding.top}
-				xoffset={theData.plot.padding.left}
-			/>
+			{#if datum.method === 'Chi-squared'}
+				<Line
+					x={datum.periodData.x}
+					y={datum.periodData.threshold}
+					xscale={scaleLinear()
+						.domain([theData.plot.periodlimsIN[0], theData.plot.periodlimsIN[1]])
+						.range([0, theData.plot.plotwidth])}
+					yscale={scaleLinear()
+						.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+						.range([theData.plot.plotheight, 0])}
+					strokeCol={datum.linecolour}
+					strokeWidth={datum.linestrokeWidth}
+					yoffset={theData.plot.padding.top}
+					xoffset={theData.plot.padding.left}
+				/>
+			{/if}
 		{/each}
 	</svg>
 {/snippet}

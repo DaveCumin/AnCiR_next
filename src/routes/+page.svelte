@@ -274,6 +274,11 @@
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
 		});
+		//Table
+		core.plots.push(new Plot({ name: 'a table', type: 'tableplot' }));
+		core.plots[core.plots.length - 1].x = 250;
+		core.plots[core.plots.length - 1].y = 250;
+		core.plots[core.plots.length - 1].plot.columnRefs = [core.data[0].id, core.data[1].id];
 
 		console.log('ALL SET UP: ', $state.snapshot(core));
 	}
