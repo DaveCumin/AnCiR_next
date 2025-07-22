@@ -279,7 +279,7 @@
 </script>
 
 <script>
-	import { convertToImage } from '$lib/components/plotbits/helpers/save.js';
+	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 	let { theData, which } = $props();
 
 	function pickRandomData() {
@@ -292,11 +292,32 @@
 			theData.updateAllPeriodData();
 		}
 	});
+
+	let addBtnRef;
+	let showSavePlot = $state(false);
+	let dropdownTop = $state(0);
+	let dropdownLeft = $state(0);
+
+	function recalculateDropdownPosition() {
+		if (!addBtnRef) return;
+		const rect = addBtnRef.getBoundingClientRect();
+
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
+	}
+
+	function openDropdown() {
+		recalculateDropdownPosition();
+		requestAnimationFrame(() => {
+			showSavePlot = true;
+		});
+		window.addEventListener('resize', recalculateDropdownPosition);
+	}
 </script>
 
 {#snippet controls(theData)}
+	<div><button bind:this={addBtnRef} onclick={openDropdown}>Save</button></div>
 	<div>
-		<button onclick={() => convertToImage('plot' + theData.parentBox.id, 'svg')}>Save</button>
 		Name: <input type="text" bind:value={theData.parentBox.name} />
 		Width: <input type="number" bind:value={theData.parentBox.width} />
 		Height: <input type="number" bind:value={theData.parentBox.height} />
@@ -401,6 +422,14 @@
 			point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
 		{/each}
 	</div>
+	{#if showSavePlot}
+		<SavePlot
+			bind:showDropdown={showSavePlot}
+			{dropdownTop}
+			{dropdownLeft}
+			Id={'plot' + theData.parentBox.id}
+		/>
+	{/if}
 {/snippet}
 
 {#snippet plot(theData)}

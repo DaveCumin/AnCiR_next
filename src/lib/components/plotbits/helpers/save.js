@@ -1,5 +1,5 @@
 export function convertToImage(svgId, filetype = 'png') {
-	if ((filetype = 'svg')) {
+	if (filetype == 'svg') {
 		exportSVG(svgId);
 		return;
 	}
