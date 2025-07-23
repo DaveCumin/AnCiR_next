@@ -6,6 +6,7 @@
 	export class Tableplotclass {
 		parentBox = $state();
 		columnRefs = $state([]);
+		showCol = $state([]);
 		colCurrent = $state(1);
 		showColNumber = $state(true);
 		decimalPlaces = $state(2);
@@ -35,9 +36,12 @@
 				out.push('#');
 			}
 			for (let i = 0; i < this.columnRefs.length; i++) {
-				out.push(getColumnById(this.columnRefs[i]).name);
+				if (this.showCol[i]) {
+					//get the column name
+					out.push(getColumnById(this.columnRefs[i]).name);
+				}
 			}
-			console.log('headings: ', out);
+
 			return out;
 		});
 
@@ -47,13 +51,16 @@
 				out.push(new Array(this.Ncolumns).fill(1).map((x, i) => this.colCurrent - 1 + i + 1));
 			}
 			for (let i = 0; i < this.columnRefs.length; i++) {
-				out.push(
-					getColumnById(this.columnRefs[i])
-						.getData()
-						.slice(this.colCurrent, this.colCurrent + this.Ncolumns)
-						.map((x) => (Number(x) == x ? x.toFixed(this.decimalPlaces) : x))
-				);
+				if (this.showCol[i]) {
+					out.push(
+						getColumnById(this.columnRefs[i])
+							.getData()
+							.slice(this.colCurrent, this.colCurrent + this.Ncolumns)
+							.map((x) => (Number(x) == x ? x.toFixed(this.decimalPlaces) : x))
+					);
+				}
 			}
+
 			return out;
 		});
 
@@ -62,6 +69,7 @@
 
 			if (dataIN) {
 				this.columnRefs = dataIN.columnRefs;
+				this.showCol = dataIN.showCol ?? Array(this.columnRefs.length).fill(true);
 			}
 		}
 
@@ -88,6 +96,7 @@
 
 	let { theData, which } = $props();
 	console.log($state.snapshot(theData));
+	console.log($state.snapshot(theData.showCol));
 </script>
 
 {#snippet controls(theData)}
@@ -99,19 +108,31 @@
 		<input type="number" min="1" max={theData.longestCol} bind:value={theData.colCurrent} />
 		to {theData.colCurrent + theData.Ncolumns - 1} of {theData.longestCol}
 	</p>
+
+	Show columns:
+	<ul>
+		{#each theData.columnRefs as colId, i}
+			<li>
+				<input type="checkbox" bind:checked={theData.showCol[i]} />
+				{getColumnById(colId).name}
+			</li>
+		{/each}
+	</ul>
 {/snippet}
 
 {#snippet plot(theData)}
-	<Table headers={theData.plot.tableHeadings} data={theData.plot.tableData} />
-	<p>
-		Row <input
-			type="number"
-			min="1"
-			max={theData.plot.longestCol}
-			bind:value={theData.plot.colCurrent}
-		/>
-		to {theData.plot.colCurrent + theData.plot.Ncolumns - 1} of {theData.plot.longestCol}
-	</p>
+	{#key theData.plot.showCol}
+		<Table headers={theData.plot.tableHeadings} data={theData.plot.tableData} />
+		<p>
+			Row <input
+				type="number"
+				min="1"
+				max={theData.plot.longestCol}
+				bind:value={theData.plot.colCurrent}
+			/>
+			to {theData.plot.colCurrent + theData.plot.Ncolumns - 1} of {theData.plot.longestCol}
+		</p>
+	{/key}
 {/snippet}
 
 {#if which === 'plot'}

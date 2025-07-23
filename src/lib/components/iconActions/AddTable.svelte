@@ -11,6 +11,7 @@
 	let importPreview = $state();
 	let importReady = $state(false);
 	let hasHeader = $state(true);
+	let delimiter = $state(',');
 	let targetFile = $state();
 
 	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
@@ -25,7 +26,7 @@
 		doPreview();
 	}
 	async function doPreview() {
-		await ImportData.utils.parseFile(targetFile, 6, hasHeader);
+		await ImportData.utils.parseFile(targetFile, 6, hasHeader, delimiter);
 		importPreview = ImportData.utils.makeTempTable(ImportData.getTempData());
 		importReady = true;
 	}
@@ -91,6 +92,13 @@
 				{#if importPreview}
 					<p>
 						Header: <input type="checkbox" bind:checked={hasHeader} onchange={() => doPreview()} />
+						Delimiter:
+						<select bind:value={delimiter} onchange={() => doPreview()}>
+							<option value=",">, (comma)</option>
+							<option value=";">; (semicolon)</option>
+							<option value="\t">Tab</option>
+							<option value="|">| (pipe)</option>
+						</select>
 					</p>
 					<div class="preview-table-wrapper">
 						{@html importPreview}

@@ -279,6 +279,7 @@
 		core.plots[core.plots.length - 1].x = 250;
 		core.plots[core.plots.length - 1].y = 250;
 		core.plots[core.plots.length - 1].plot.columnRefs = [core.data[0].id, core.data[1].id];
+		core.plots[core.plots.length - 1].plot.showCol = [true, true];
 
 		console.log('ALL SET UP: ', $state.snapshot(core));
 	}

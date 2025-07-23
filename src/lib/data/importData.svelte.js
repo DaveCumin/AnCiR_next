@@ -53,7 +53,7 @@ async function openFileChoose(hasHeader = true) {
 	fileInput.click();
 }
 
-function parseFile(targetFile, previewIN = 0, hasHeader = false) {
+function parseFile(targetFile, previewIN = 0, hasHeader = false, delimiter = ',') {
 	if (!targetFile) {
 		errorInfile = true;
 		return;
@@ -69,6 +69,7 @@ function parseFile(targetFile, previewIN = 0, hasHeader = false) {
 			header: hasHeader,
 			dynamicTyping: true,
 			skipEmptyLines: 'greedy',
+			delimiter: delimiter,
 			error: function (err, file, inputElem, reason) {
 				console.log('Error: ' + err + ' | ' + reason);
 				_tempdata = {};
