@@ -8,9 +8,8 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 
-	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
+	let { showModal = $bindable(false) } = $props();
 
-	let showModal = $state(false);
 	let plotType = $state();
 	let plotName = $derived.by(() => {
 		return plotType + '_' + Math.round(Math.random() * 10, 2);
@@ -22,7 +21,7 @@
 
 	let xCol = $state();
 	let yCol = $state();
-	function confirmImport() {
+	function makePlot() {
 		const newPlot = new Plot({ name: plotName, type: plotType });
 		newPlot.plot.addData({ x: xCol, y: yCol });
 		console.log($state.snapshot(xCol));
@@ -33,23 +32,7 @@
 	}
 </script>
 
-<Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
-	{#snippet groups()}
-		{#each Object.keys(Object.fromEntries(appConsts.plotMap.entries())) as type}
-			<div class="action">
-				<button
-					onclick={() => {
-						openModal(type);
-					}}
-				>
-					Create New {type.charAt(0).toUpperCase() + type.slice(1)}
-				</button>
-			</div>
-		{/each}
-	{/snippet}
-</Dropdown>
-
-<!-- TODO: change modal component to icon-like structure? -->
+<!-- TODO: change select in the modal component to icon-like structure? -->
 
 <Modal bind:showModal>
 	{#snippet header()}
@@ -107,7 +90,7 @@
 			</div>
 
 			<div class="import-button-container">
-				<button class="import-button" onclick={confirmImport}>Confirm Import</button>
+				<button class="import-button" onclick={makePlot}>Make the {plotType}</button>
 			</div>
 		</div>
 	{/snippet}

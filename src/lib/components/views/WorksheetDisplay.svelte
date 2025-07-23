@@ -6,25 +6,10 @@
 	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
 	import { closeDisplayPanel } from '$lib/components/DisplayPanel.svelte';
 
-	let addBtnRef;
-	let showAddPlot = $state(false);
-	let dropdownTop = $state(0);
-	let dropdownLeft = $state(0);
+	let showNewPlotModal = $state(false);
 
-	function recalculateDropdownPosition() {
-		if (!addBtnRef) return;
-		const rect = addBtnRef.getBoundingClientRect();
-
-		dropdownTop = rect.top + window.scrollY;
-		dropdownLeft = rect.right + window.scrollX + 12;
-	}
-
-	function openDropdown() {
-		recalculateDropdownPosition();
-		requestAnimationFrame(() => {
-			showAddPlot = true;
-		});
-		window.addEventListener('resize', recalculateDropdownPosition);
+	function openMakeNewPlot() {
+		showNewPlotModal = true;
 	}
 </script>
 
@@ -35,15 +20,13 @@
 	</button>
 
 	<div class="add">
-		<button bind:this={addBtnRef} onclick={openDropdown}>
+		<button onclick={openMakeNewPlot}>
 			<Icon name="add" width={16} height={16} />
 		</button>
 	</div>
 </div>
 
-{#if showAddPlot}
-	<AddPlot bind:showDropdown={showAddPlot} {dropdownTop} {dropdownLeft} />
-{/if}
+<AddPlot bind:showModal={showNewPlotModal} />
 
 <div class="display-list">
 	{#each core.plots.toReversed() as plot (plot.id)}

@@ -9,7 +9,7 @@
 	import LightBand, { LightBandClass } from './LightBand.svelte';
 	import Hist from '$lib/components/plotbits/Hist.svelte';
 	import { makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData';
-	import { binData, max, min } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import { max, min } from '$lib/components/plotbits/helpers/wrangleData.js';
 
 	function getNdataByPeriods(dataIN, from, to, period) {
 		const byPeriod = [];

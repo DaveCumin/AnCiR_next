@@ -63,7 +63,31 @@
 		data = $state([]);
 		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
 		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
+
 		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
+		// //TODO: make this happen from the start (or when axis/axes update)
+		// plotwidth = $derived.by(() => {
+		// 	console.log(this.parentBox.width);
+
+		// 	let plot = document.getElementById('plot' + this.parentBox.id);
+		// 	let axisLeftRectOffset = 0;
+		// 	if (plot) {
+		// 		let plotRect = plot?.getBoundingClientRect();
+		// 		let axesLeft = plot?.querySelectorAll('.axis-left');
+
+		// 		for (let i = 0; i < axesLeft.length; i++) {
+		// 			let axisRect = axesLeft[i].getBoundingClientRect();
+		// 			console.log(axisRect);
+		// 			console.log(axisRect.left, plotRect.left);
+		// 			if (plotRect.left - axisRect.left > 0) {
+		// 				axisLeftRectOffset = Math.max(axisLeftRectOffset, plotRect.left - axisRect.left);
+		// 			}
+		// 		}
+		// 	}
+		// 	this.padding.left += axisLeftRectOffset;
+		// 	return this.parentBox.width - this.padding.left - this.padding.right;
+		// });
+
 		xlimsIN = $state([null, null]);
 		ylimsIN = $state([null, null]);
 		ylims = $derived.by(() => {

@@ -3,7 +3,7 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import { getTableById } from '$lib/core/Table.svelte';
 	import { TableProcess } from '$lib/core/TableProcess.svelte';
-	import { core, appConsts } from '$lib/core/core.svelte.js';
+	import { appConsts } from '$lib/core/core.svelte.js';
 	let { show = $bindable(), tableId } = $props();
 
 	///-----------
