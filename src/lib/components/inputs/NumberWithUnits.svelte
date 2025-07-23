@@ -110,6 +110,7 @@
 
 	function handleMouseMove(event) {
 		if (isDragging) {
+			document.body.style.cursor = 'ew-resize';
 			const deltaX = event.clientX - startX;
 			const deltaValue = deltaX * sensitivity * step;
 			let newValue = startValue + deltaValue;
@@ -129,6 +130,7 @@
 
 	function stopDrag() {
 		isDragging = false;
+		document.body.style.cursor = 'default';
 		window.removeEventListener('mousemove', handleMouseMove);
 		window.removeEventListener('mouseup', stopDrag);
 	}
