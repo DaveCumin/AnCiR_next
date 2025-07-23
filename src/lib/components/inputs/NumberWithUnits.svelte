@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 
 	let {
-		value = $bindable(),
+		value = $bindable(0),
 		step = 0.1,
 		min = -100,
 		max = 100,
@@ -93,6 +93,45 @@
 		lastUnit = selectedUnit; // update the last unit
 		updateValue();
 	}
+
+	//For the click to slide functionality
+	let isDragging = false;
+	let startX = 0;
+	let startValue = $state(0);
+	let sensitivity = 0.1;
+	function startDrag(event) {
+		isDragging = true;
+		startX = event.clientX;
+		startValue = value;
+
+		window.addEventListener('mousemove', handleMouseMove);
+		window.addEventListener('mouseup', stopDrag);
+	}
+
+	function handleMouseMove(event) {
+		if (isDragging) {
+			const deltaX = event.clientX - startX;
+			const deltaValue = deltaX * sensitivity * step;
+			let newValue = startValue + deltaValue;
+			// Apply step constraint
+			newValue = Math.round(newValue / step) * step;
+
+			// Apply min/max constraints
+			newValue = Math.max(min, Math.min(max, newValue));
+
+			// Round to avoid floating-point precision issues
+			newValue = Number(newValue.toFixed(6));
+
+			value = newValue;
+			updateDisplayValue();
+		}
+	}
+
+	function stopDrag() {
+		isDragging = false;
+		window.removeEventListener('mousemove', handleMouseMove);
+		window.removeEventListener('mouseup', stopDrag);
+	}
 </script>
 
 <input
@@ -104,6 +143,8 @@
 	bind:value={displayValue}
 	oninput={updateValue}
 	onchange={adjustLimits}
+	onmousedown={startDrag}
+	class="draggable-number-input"
 />
 {#if Object.keys(units).length > 1}
 	<select class="unitSelect" bind:value={selectedUnit} onchange={unitChange}>
@@ -114,7 +155,8 @@
 		{/each}
 	</select>
 {/if}
-<a>{displayMin}</a><input
+
+<!-- <a>{displayMin}</a><input
 	type="range"
 	{step}
 	min={displayMin}
@@ -122,4 +164,25 @@
 	bind:value={displayValue}
 	oninput={updateValue}
 	onchange={adjustLimits}
-/><a>{displayMax}</a>
+/><a>{displayMax}</a> -->
+
+<style>
+	.draggable-number-input {
+		padding: 8px;
+		font-size: 14px;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		width: 100px;
+		cursor: ew-resize; /* Horizontal resize cursor */
+	}
+
+	.draggable-number-input:hover {
+		border-color: #666;
+	}
+
+	.draggable-number-input:focus {
+		outline: none;
+		border-color: #007bff;
+		box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+	}
+</style>

@@ -13,6 +13,7 @@
 	import TableProcess from '$lib/core/TableProcess.svelte';
 	import { closeDisplayPanel } from '$lib/components/DisplayPanel.svelte';
 	import MakeNewColumn from './modals/MakeNewColumn.svelte';
+	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 
 	// AddTable dropdown
 	let addBtnRef;
@@ -80,6 +81,7 @@
 	{/each}
 </div>
 
+<NumberWithUnits />
 {#if showAddTable}
 	<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
 {/if}
