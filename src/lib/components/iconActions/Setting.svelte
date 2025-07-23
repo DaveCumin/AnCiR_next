@@ -252,12 +252,6 @@
 		font-size: 14px;
 	}
 
-	/* preview table */
-	:global(.preview-table-wrapper) {
-		overflow-x: auto;
-		margin-top: 1.5rem;
-	}
-
 	.import-button-container {
 		display: flex;
 		justify-content: flex-end;

@@ -164,7 +164,7 @@
 			}
 			this.linecolour = dataIN?.linecolour ?? getRandomColor();
 			this.pointcolour = dataIN?.pointcolour ?? getRandomColor();
-			this.method = dataIN?.method ?? 'Chi-squared'; // Initialize method
+			this.method = dataIN?.method ?? 'Lomb-Scargle'; // Initialize method
 		}
 
 		toJSON() {
@@ -293,6 +293,7 @@
 		}
 	});
 
+	//TODO: Could this become a component, rather than the current copy-paste approach for all the states etc?
 	let addBtnRef;
 	let showSavePlot = $state(false);
 	let dropdownTop = $state(0);
@@ -353,8 +354,8 @@
 			period grid: <input type="checkbox" bind:checked={theData.xgridlines} />
 			<input
 				type="number"
-				min="0.1"
-				step="0.1"
+				min="0.01"
+				step="0.01"
 				value={theData.periodlimsIN[0] ? theData.periodlimsIN[0] : theData.periodlims[0]}
 				oninput={(e) => {
 					theData.periodlimsIN[0] = parseFloat(e.target.value);

@@ -6,13 +6,13 @@
 	export class Tableplotclass {
 		parentBox = $state();
 		columnRefs = $state([]);
-		pageCurrent = $state(1);
+		colCurrent = $state(1);
 		showColNumber = $state(true);
 
 		//work out the number of columns that can fit in the height of the parent
 		Ncolumns = $derived.by(() => {
 			const colHeightpx = 34; //TODO: change this to be the appState font size plus padding
-			let Ncols = Math.floor((this.parentBox.height - 3 * colHeightpx) / colHeightpx);
+			let Ncols = Math.floor((this.parentBox.height - 2 * colHeightpx) / colHeightpx);
 			if (Ncols < 1) {
 				Ncols = 1;
 				this.parentBox.height = 5 * colHeightpx;
@@ -27,26 +27,6 @@
 			return out;
 		});
 		startCol = $state(0);
-		pagesTotal = $derived.by(() => {
-			const pagestotal = Math.ceil(this.longestCol / this.Ncolumns);
-			if (this.pageCurrent > pagestotal) {
-				this.pageCurrent = pagestotal;
-			}
-			return pagestotal;
-		});
-
-		nextPage() {
-			this.pageCurrent += 1;
-			if (this.pageCurrent > pagestotal) {
-				this.pageCurrent = pagestotal;
-			}
-		}
-		previousPage() {
-			this.pageCurrent -= 1;
-			if (this.pageCurrent < 1) {
-				this.pageCurrent = 1;
-			}
-		}
 
 		tableHeadings = $derived.by(() => {
 			let out = [];
@@ -63,20 +43,13 @@
 		tableData = $derived.by(() => {
 			let out = [];
 			if (this.showColNumber) {
-				out.push(
-					new Array(this.Ncolumns)
-						.fill(1)
-						.map((x, i) => (this.pageCurrent - 1) * this.Ncolumns + i + 1)
-				);
+				out.push(new Array(this.Ncolumns).fill(1).map((x, i) => this.colCurrent - 1 + i + 1));
 			}
 			for (let i = 0; i < this.columnRefs.length; i++) {
 				out.push(
 					getColumnById(this.columnRefs[i])
 						.getData()
-						.slice(
-							this.pageCurrent * this.Ncolumns,
-							this.pageCurrent * this.Ncolumns + this.Ncolumns
-						)
+						.slice(this.colCurrent, this.colCurrent + this.Ncolumns)
 				);
 			}
 			return out;
@@ -84,6 +57,7 @@
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
+
 			if (dataIN) {
 				this.columnRefs = dataIN.columnRefs;
 			}
@@ -119,29 +93,22 @@
 	<p>Col Numbers: <input type="checkbox" bind:checked={theData.showColNumber} /></p>
 
 	<p>
-		Page
-		<input
-			type="number"
-			min="1"
-			max={theData.pagesTotal}
-			bind:value={theData.pageCurrent}
-			onchange={(e) => console.log(e)}
-		/>
-		of {theData.pagesTotal}
+		Row:
+		<input type="number" min="1" max={theData.longestCol} bind:value={theData.colCurrent} />
+		to {theData.colCurrent + theData.Ncolumns - 1} of {theData.longestCol}
 	</p>
 {/snippet}
 
 {#snippet plot(theData)}
 	<Table headers={theData.plot.tableHeadings} data={theData.plot.tableData} />
 	<p>
-		Page <input
+		Row <input
 			type="number"
 			min="1"
-			max={theData.plot.pagesTotal}
-			bind:value={theData.plot.pageCurrent}
-			onchange={(e) => console.log(e)}
+			max={theData.plot.longestCol}
+			bind:value={theData.plot.colCurrent}
 		/>
-		of {theData.plot.pagesTotal}
+		to {theData.plot.colCurrent + theData.plot.Ncolumns - 1} of {theData.plot.longestCol}
 	</p>
 {/snippet}
 

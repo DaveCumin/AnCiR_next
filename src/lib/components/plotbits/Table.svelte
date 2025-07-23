@@ -83,8 +83,31 @@
 </div>
 
 <style>
-	.preview-table-wrapper {
+	/* preview table */
+	:global(.preview-table-wrapper) {
 		overflow-x: auto;
+	}
+
+	:global(.preview-table-wrapper table) {
+		width: 100%;
+		table-layout: fixed;
+		border-collapse: collapse;
+		font-size: 14px;
+		background-color: white;
+	}
+
+	:global(.preview-table-wrapper th) {
+		padding: 8px 12px;
+		border: 1px solid var(--color-lightness-85);
+		background-color: var(--color-lightness-97);
+		text-align: left;
+	}
+
+	:global(.preview-table-wrapper td) {
+		padding: 8px 12px;
+		border: 1px solid var(--color-lightness-85);
+		text-align: left;
+		overflow: clip;
 	}
 
 	table {
