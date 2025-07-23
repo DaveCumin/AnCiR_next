@@ -14,7 +14,7 @@
 		//work out the number of columns that can fit in the height of the parent
 		Ncolumns = $derived.by(() => {
 			const colHeightpx = 34; //TODO: change this to be the appState font size plus padding
-			let Ncols = Math.floor((this.parentBox.height - 2 * colHeightpx) / colHeightpx);
+			let Ncols = Math.floor((this.parentBox.height - 2.4 * colHeightpx) / colHeightpx);
 			if (Ncols < 1) {
 				Ncols = 1;
 				this.parentBox.height = 5 * colHeightpx;
@@ -55,7 +55,7 @@
 					out.push(
 						getColumnById(this.columnRefs[i])
 							.getData()
-							.slice(this.colCurrent, this.colCurrent + this.Ncolumns)
+							.slice(this.colCurrent - 1, this.colCurrent + this.Ncolumns)
 							.map((x) => (Number(x) == x ? x.toFixed(this.decimalPlaces) : x))
 					);
 				}
@@ -123,7 +123,7 @@
 {#snippet plot(theData)}
 	{#key theData.plot.showCol}
 		<Table headers={theData.plot.tableHeadings} data={theData.plot.tableData} />
-		<p>
+		<p style="margin-bottom: 0;">
 			Row <input
 				type="number"
 				min="1"

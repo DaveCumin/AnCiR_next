@@ -37,6 +37,7 @@
 		) {
 			binnedData = { bins: [], y_out: [] };
 			p.args.valid = false;
+			console.log('here @ 40');
 			return;
 		}
 
@@ -48,6 +49,7 @@
 		);
 
 		if (xOUT == -1 || yOUT == -1) {
+			console.log('here @ 52');
 		} else {
 			getColumnById(xOUT).data = theBinnedData.bins;
 			getColumnById(yOUT).data = theBinnedData.y_out;
@@ -59,6 +61,7 @@
 		if (binnedData.bins.length > 0) {
 			p.args.valid = true;
 		} else {
+			console.log('here @ 64');
 			p.args.valid = false;
 		}
 	}
@@ -72,11 +75,11 @@
 
 <p>
 	Bin: <br />
-	x = <ColumnSelector bind:value={p.args.xIN} onchange={getBinnedData} /> <br />
-	y = <ColumnSelector bind:value={p.args.yIN} excludeColIds={[p.xIN]} onchange={getBinnedData} /><br
+	x = <ColumnSelector bind:value={p.args.xIN} onChange={getBinnedData} /> <br />
+	y = <ColumnSelector bind:value={p.args.yIN} excludeColIds={[p.xIN]} onChange={getBinnedData} /><br
 	/>
 	Bin size:
-	<input type="number" bind:value={p.args.binSize} oninput={getBinnedData} min="0.1" step="0.1" />
+	<input type="number" bind:value={p.args.binSize} oninput={getBinnedData} min="0.1" step="0.01" />
 	<br />
 	Bin start: <input type="number" bind:value={p.args.binStart} oninput={getBinnedData} />
 </p>
@@ -89,8 +92,8 @@
 		<ColumnComponent col={yout} />
 	{:else if p.args.valid}
 		<p>Preview:</p>
-		<p>X: {binnedData.bins.slice(0, 5)}</p>
-		<p>Y: {binnedData.y_out.slice(0, 5)}</p>
+		<p>X: {binnedData.bins.slice(0, 5).map((x) => x.toFixed(2))}</p>
+		<p>Y: {binnedData.y_out.slice(0, 5).map((y) => y.toFixed(2))}</p>
 	{:else}
 		<p>Need to have valid inputs to create columns.</p>
 	{/if}

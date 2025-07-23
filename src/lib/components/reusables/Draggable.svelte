@@ -138,12 +138,12 @@
 		border: solid 1px var(--color-lightness-85);
 		background-color: white;
 		box-sizing: border-box;
-		/* box-shadow: 0 2px 5px rgba(0,0,0,0.15); */
+		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
 		border-radius: 4px;
 		overflow: hidden;
 		display: flex;
 		flex-direction: column;
-
+		min-width: 200px;
 		z-index: 1;
 	}
 
