@@ -5,6 +5,7 @@
 	let widths = $state(headers.map(() => 100 / headers.length + '%'));
 	let resizingIndex = -1;
 	let totalWidth = 0;
+	let table;
 	const minWidth = 30; // Minimum column width in pixels
 
 	function startResize(index) {
@@ -15,7 +16,6 @@
 
 	function handleMouseMove(event) {
 		if (resizingIndex >= 0) {
-			const table = document.querySelector('.preview-table-wrapper table');
 			totalWidth = table.offsetWidth;
 			const th = table.querySelectorAll('th')[resizingIndex];
 			const newWidth = event.clientX - th.getBoundingClientRect().left;
@@ -43,6 +43,7 @@
 					);
 					return `${newAdjustedWidth}%`;
 				}
+
 				return w;
 			});
 		}
@@ -55,7 +56,7 @@
 	}
 </script>
 
-<div class="preview-table-wrapper">
+<div class="preview-table-wrapper" bind:this={table}>
 	<table style="width: 100%; table-layout: fixed;">
 		<thead>
 			<tr>

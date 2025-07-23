@@ -225,7 +225,7 @@
 			'REALTIME',
 			'Just made up'
 		); //yyyy-LL-dd'T'HH:mm:ss.S'Z'
-		core.data[core.data.length - 1].timeformat = '%Y-%m-%dT%H:%M:%S.%L%Z';
+		core.data[core.data.length - 1].timeFormat = "yyyy-LL-dd'T'HH:mm:ss.S'Z'"; //'%Y-%m-%dT%H:%M:%S.%L%Z';
 
 		core.tables = [];
 		core.tables.push(new Table({ name: 'my first table' }));

@@ -1,10 +1,16 @@
 <script module>
 	// @ts-nocheck
-	import { appConsts } from '$lib/core/core.svelte';
+	import { appConsts, core } from '$lib/core/core.svelte';
 
 	let _counter = 0;
 	function getNextId() {
 		return _counter++;
+	}
+	export function removePlot(id) {
+		const index = core.plots.findIndex((p) => p.id === id);
+		if (index !== -1) {
+			core.plots.splice(index, 1);
+		}
 	}
 
 	export class Plot {
@@ -73,22 +79,9 @@
 </script>
 
 <script>
-	// import Box from '$lib/components/Box.svelte';
 	let { plot } = $props();
 	const Plot = appConsts.plotMap.get(plot.type).plot ?? null;
-	let options = $state({ x: 900, y: 0, width: 200, height: 550 });
 </script>
-
-<!-- <Box bind:plot overflow="none">
-	<a style="position:absolute; top:-1.5em;">{plot.name}</a>
-	<Plot bind:theData={plot} which="plot" />
-</Box>
-
-<Box bind:plot={options} overflow="auto">
-	<div>
-		<Plot theData={plot.plot} which="controls" />
-	</div>
-</Box> -->
 
 <div>
 	<Plot bind:theData={plot} which="plot" />

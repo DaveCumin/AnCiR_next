@@ -14,6 +14,8 @@
 	import { closeDisplayPanel } from '$lib/components/DisplayPanel.svelte';
 	import MakeNewColumn from './modals/MakeNewColumn.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
+	import { Plot } from '$lib/core/Plot.svelte';
+	import { getTableById } from '$lib/core/Table.svelte';
 
 	// AddTable dropdown
 	let addBtnRef;
@@ -40,6 +42,17 @@
 
 	let showNewCol = $state(false);
 	let selectedTable = $state(null);
+
+	/// Display as TablePlot
+	function makeNewTablePlot(id) {
+		core.plots.push(new Plot({ name: 'Data from ' + getTableById(id).name, type: 'tableplot' }));
+		core.plots[core.plots.length - 1].x = 250;
+		core.plots[core.plots.length - 1].y = 250;
+		core.plots[core.plots.length - 1].plot.columnRefs = getTableById(id).columnRefs;
+		core.plots[core.plots.length - 1].plot.showCol = new Array(
+			getTableById(id).columnRefs.length
+		).fill(true);
+	}
 </script>
 
 <div class="heading">
@@ -67,6 +80,11 @@
 						selectedTable = table.id;
 						showNewCol = true;
 					}}>Add column</button
+				>
+				<button
+					onclick={() => {
+						makeNewTablePlot(table.id);
+					}}>View Table</button
 				>
 				{#each table.columns as col, i}
 					{#if !col.tableProcessed}

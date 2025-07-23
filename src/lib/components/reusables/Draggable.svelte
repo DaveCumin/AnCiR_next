@@ -3,6 +3,7 @@
 	// TODO: lock to grid
 	// @ts-nocheck
 	import { appState, core } from '$lib/core/core.svelte';
+	import { removePlot } from '$lib/core/Plot.svelte';
 
 	let {
 		x = $bindable(100),
@@ -122,6 +123,7 @@
 >
 	<div class="plot-header" onmousedown={(e) => onMouseDown(e)}>
 		{title}
+		<button onclick={() => removePlot(id)}>X</button>
 	</div>
 	<div class="plot-content">
 		<slot></slot>
