@@ -8,6 +8,7 @@
 		columnRefs = $state([]);
 		colCurrent = $state(1);
 		showColNumber = $state(true);
+		decimalPlaces = $state(2);
 
 		//work out the number of columns that can fit in the height of the parent
 		Ncolumns = $derived.by(() => {
@@ -50,6 +51,7 @@
 					getColumnById(this.columnRefs[i])
 						.getData()
 						.slice(this.colCurrent, this.colCurrent + this.Ncolumns)
+						.map((x) => (Number(x) == x ? x.toFixed(this.decimalPlaces) : x))
 				);
 			}
 			return out;
@@ -91,7 +93,7 @@
 {#snippet controls(theData)}
 	<p><input type="text" bind:value={theData.parentBox.name} /></p>
 	<p>Col Numbers: <input type="checkbox" bind:checked={theData.showColNumber} /></p>
-
+	<p>Round to decimals: <input type="number" min="0" bind:value={theData.decimalPlaces} /></p>
 	<p>
 		Row:
 		<input type="number" min="1" max={theData.longestCol} bind:value={theData.colCurrent} />

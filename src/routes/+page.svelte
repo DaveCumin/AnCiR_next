@@ -228,9 +228,9 @@
 		core.data[core.data.length - 1].timeformat = '%Y-%m-%dT%H:%M:%S.%L%Z';
 
 		core.tables = [];
-		core.tables.push(new Table({ name: 'table 1' }));
+		core.tables.push(new Table({ name: 'my first table' }));
 		core.tables[0].columnRefs = [testtimestring, testawd.id, d1id, d0id, testref.id, testrefref.id];
-		core.tables.push(new Table({ name: 'table 2' }));
+		core.tables.push(new Table({ name: 'table too' }));
 		core.tables[1].columnRefs = [d1id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
 		core.tables[1].processes.push(
 			new TableProcess(

@@ -5,7 +5,7 @@
 	let widths = $state(headers.map(() => 100 / headers.length + '%'));
 	let resizingIndex = -1;
 	let totalWidth = 0;
-	const minWidth = 50; // Minimum column width in pixels
+	const minWidth = 30; // Minimum column width in pixels
 
 	function startResize(index) {
 		resizingIndex = index;
@@ -35,13 +35,10 @@
 				if (i === resizingIndex) {
 					return `${newWidthPercent}%`;
 				}
-				// Distribute the difference among other columns
-				//TODO: This is a bit weird, but it works
-				if (widthDiff !== 0 && i !== resizingIndex) {
+				if (i === resizingIndex + 1) {
 					const currentWidth = parseFloat(w);
-					const adjustment = (widthDiff / (headers.length - 1)) * (oldWidth / 100);
 					const newAdjustedWidth = Math.max(
-						currentWidth - adjustment,
+						currentWidth - widthDiff,
 						(minWidth / totalWidth) * 100
 					);
 					return `${newAdjustedWidth}%`;

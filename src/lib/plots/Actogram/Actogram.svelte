@@ -28,7 +28,6 @@
 
 		x = $state();
 		y = $state();
-		binSize = $state(0.5);
 		colour = $state();
 		offset = $derived(
 			(Number(new Date(this.parentPlot.startTime)) - Number(this.x.getData()[0])) / 3600000
@@ -40,12 +39,9 @@
 			const xByPeriod = {};
 			const yByPeriod = {};
 
-			const binned = binData(tempx, tempy, this.binSize, 0);
-
-			//TODO: do the binning here also (not in the Hist component)
-			//TODO: also compute the min and max for the y-axis (overall v by periods)
-			for (let i = 0; i < binned.bins.length; i++) {
-				const period = Math.floor((binned.bins[i] - this.offset) / this.parentPlot.periodHrs);
+			//TODO: compute the min and max for the y-axis (overall v by periods)
+			for (let i = 0; i < tempx.length; i++) {
+				const period = Math.floor((tempx[i] - this.offset) / this.parentPlot.periodHrs);
 
 				if (period >= 0) {
 					if (!xByPeriod[period]) {
@@ -53,8 +49,8 @@
 						yByPeriod[period] = [];
 					}
 					if (xByPeriod[period]) {
-						xByPeriod[period].push(binned.bins[i] - this.offset);
-						yByPeriod[period].push(binned.y_out[i]);
+						xByPeriod[period].push(tempx[i] - this.offset);
+						yByPeriod[period].push(tempy[i]);
 					}
 				}
 			}
@@ -365,8 +361,6 @@
 
 			y: {datum.y.name}
 			<Column col={datum.y} canChange={true} />
-
-			binSize: <input type="number" min="0.1" step="0.1" bind:value={datum.binSize} />
 
 			colour: <ColourPicker bind:value={datum.colour} />
 
