@@ -11,6 +11,8 @@
 	import { makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData';
 	import { max, min } from '$lib/components/plotbits/helpers/wrangleData.js';
 
+	export const Actogram_defaultDataInputs = ['time', 'values'];
+
 	function getNdataByPeriods(dataIN, from, to, period) {
 		const byPeriod = [];
 

@@ -10,6 +10,8 @@
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
 
+	export const Periodogram_defaultDataInputs = ['time', 'values'];
+
 	// Lomb-Scargle implementation
 	function calculateLombScarglePower(times, values, frequencies) {
 		// Remove NaN values

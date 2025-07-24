@@ -3,6 +3,8 @@
 	import Column, { getColumnById } from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 
+	export const Tableplot_defaultDataInputs = [];
+
 	export class Tableplotclass {
 		parentBox = $state();
 		columnRefs = $state([]);

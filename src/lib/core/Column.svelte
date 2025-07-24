@@ -69,7 +69,6 @@
 			this.tableProcessGUId = '';
 			//Assign the other data
 			if (columnData) {
-				console.log('CD: ', columnData);
 				Object.assign(this, columnData);
 			}
 		}

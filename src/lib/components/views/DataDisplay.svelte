@@ -9,7 +9,6 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
-	import ColumnSelector from '../inputs/ColumnSelector.svelte';
 	import TableProcess from '$lib/core/TableProcess.svelte';
 	import { closeDisplayPanel } from '$lib/components/DisplayPanel.svelte';
 	import MakeNewColumn from './modals/MakeNewColumn.svelte';

@@ -9,6 +9,8 @@
 	import Points from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 
+	export const Scatterplot_defaultDataInputs = ['x', 'y'];
+
 	class ScatterDataclass {
 		parentPlot = $state();
 		x = $state();

@@ -3,7 +3,7 @@
 
 	import { core, appState, appConsts } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
-	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
+	import AddPlot from '$lib/components/views/modals/MakeNewPlot.svelte';
 	import { closeDisplayPanel } from '$lib/components/DisplayPanel.svelte';
 
 	let showNewPlotModal = $state(false);

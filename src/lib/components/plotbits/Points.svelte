@@ -47,7 +47,7 @@
 			);
 			if (dist < closestDist) {
 				closestDist = dist;
-				closestIdx = p;
+				closestIdx = p - 1;
 			}
 		}
 		if (closestIdx >= 0) {
