@@ -10,6 +10,7 @@
 
 	function openMakeNewPlot() {
 		showNewPlotModal = true;
+		showModal = false;
 	}
 </script>
 

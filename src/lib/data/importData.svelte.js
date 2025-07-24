@@ -53,7 +53,8 @@ async function openFileChoose(hasHeader = true) {
 	fileInput.click();
 }
 
-function parseFile(targetFile, previewIN = 0, hasHeader = false, delimiter = ',') {
+function parseFile(targetFile, previewIN = 0, hasHeader = false, del = '') {
+	console.log('parseFile called with:', targetFile, previewIN, hasHeader, del);
 	if (!targetFile) {
 		errorInfile = true;
 		return;
@@ -69,7 +70,7 @@ function parseFile(targetFile, previewIN = 0, hasHeader = false, delimiter = ','
 			header: hasHeader,
 			dynamicTyping: true,
 			skipEmptyLines: 'greedy',
-			delimiter: delimiter,
+			delimiter: del,
 			error: function (err, file, inputElem, reason) {
 				console.log('Error: ' + err + ' | ' + reason);
 				_tempdata = {};
@@ -90,7 +91,7 @@ function parseFile(targetFile, previewIN = 0, hasHeader = false, delimiter = ','
 					console.log('ACTIWARE');
 					specialRecognised = 'actiware';
 					skipLines = 148; /// the number of lines for an Actiware file before the data starts
-					parseFile(skipLines + previewIN + 1);
+					parseFile(targetFile, skipLines + previewIN + 1);
 				}
 
 				return lines.join('\n'); // Join the remaining lines back into a single string
@@ -110,7 +111,7 @@ function parseFile(targetFile, previewIN = 0, hasHeader = false, delimiter = ','
 					results.errors = [];
 					//get more data to preview before continuing
 					if (previewIN == skipLines + previewTableNrows + hasHeader) {
-						parseFile(14);
+						parseFile(targetFile, 14);
 					} else {
 						results.data = awdTocsv(results.data);
 					}
@@ -213,9 +214,9 @@ function changeObjectKeys(object, newKeys) {
 }
 
 //Load the data once all operations have been completed
-async function loadData(targetFile, hasHeader) {
+async function loadData(targetFile, hasHeader, del) {
 	console.log('loading...');
-	await parseFile(targetFile, 0, hasHeader); //load all the data
+	await parseFile(targetFile, 0, hasHeader, del); //load all the data
 
 	//TODO_high: perorm the required manipulations
 	doBasicFileImport(_tempdata, targetFile.name); //LOAD THE DATA
@@ -278,9 +279,7 @@ function makeTempTable(tempdata) {
 	if (Object.keys(tempdata).length === 0) {
 		return 'There was an error reading the file ';
 	}
-	console.log('raw: ', JSON.stringify(tempdata));
-	console.log('keys: ', Object.keys(tempdata));
-	let table = '<table><thead><tr>';
+	let table = '<table style="width: "";"><thead><tr>'; //need the width else it tries to fit into the modal and no data show
 	const keys = _columnOrder.length > 0 ? _columnOrder : Object.keys(tempdata);
 	keys.forEach((heading) => (table += `<th>${heading}</th>`));
 	table += '</tr></thead><tbody>';
