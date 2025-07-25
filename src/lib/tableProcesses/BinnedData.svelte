@@ -37,7 +37,6 @@
 		) {
 			binnedData = { bins: [], y_out: [] };
 			p.args.valid = false;
-			console.log('here @ 40');
 			return;
 		}
 
@@ -49,7 +48,6 @@
 		);
 
 		if (xOUT == -1 || yOUT == -1) {
-			console.log('here @ 52');
 		} else {
 			getColumnById(xOUT).data = theBinnedData.bins;
 			getColumnById(yOUT).data = theBinnedData.y_out;
@@ -61,7 +59,6 @@
 		if (binnedData.bins.length > 0) {
 			p.args.valid = true;
 		} else {
-			console.log('here @ 64');
 			p.args.valid = false;
 		}
 	}

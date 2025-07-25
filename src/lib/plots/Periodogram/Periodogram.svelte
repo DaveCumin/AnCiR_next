@@ -235,6 +235,11 @@
 		}
 
 		addData(dataIN) {
+			if (Object.keys(dataIN).includes('time')) {
+				const temp = { x: { refId: dataIN.time.refId }, y: { refId: dataIN.values.refId } };
+				dataIN = structuredClone(temp);
+			}
+			console.log('periodogram data: ', dataIN);
 			const datum = new PeriodogramDataclass(this, dataIN);
 			datum.updatePeriodData();
 			this.data.push(datum);

@@ -7,7 +7,6 @@ import { Column } from '$lib/core/Column.svelte';
 import { guessDateofArray, forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
 
 import Papa from 'papaparse';
-import { tick } from 'svelte';
 
 const specialValues = ['NaN', 'NA', 'null'];
 const previewTableNrows = 6;
@@ -44,13 +43,6 @@ async function openFileChoose(hasHeader = true) {
 	flagExtraData = false;
 	errorInfile = false;
 	specialRecognised = false;
-
-	//wait for input to be loaded
-	await tick();
-
-	//click it
-	const fileInput = document.getElementById('fileInput');
-	fileInput.click();
 }
 
 function parseFile(targetFile, previewIN = 0, hasHeader = false, del = '') {
@@ -279,7 +271,7 @@ function makeTempTable(tempdata) {
 	if (Object.keys(tempdata).length === 0) {
 		return 'There was an error reading the file ';
 	}
-	let table = '<table style="width: "";"><thead><tr>'; //need the width else it tries to fit into the modal and no data show
+	let table = '<table style="width: auto;"><thead><tr>'; //need the width else it tries to fit into the modal and no data show
 	const keys = _columnOrder.length > 0 ? _columnOrder : Object.keys(tempdata);
 	keys.forEach((heading) => (table += `<th>${heading}</th>`));
 	table += '</tr></thead><tbody>';

@@ -15,7 +15,6 @@
 		const whole = appState.windowWidth - appState.widthNavBar;
 		const displayWidth = appState.showDisplayPanel ? appState.widthDisplayPanel : 0;
 		const controlWidth = appState.showControlPanel ? appState.widthControlPanel : 0;
-		console.log('whole: ', whole, 'displayWidth: ', displayWidth, 'controlWidth: ', controlWidth);
 		return whole - displayWidth - controlWidth;
 	});
 	let leftPx = $derived.by(() => {

@@ -98,7 +98,6 @@
 	{/each}
 </div>
 
-<NumberWithUnits />
 {#if showAddTable}
 	<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
 {/if}

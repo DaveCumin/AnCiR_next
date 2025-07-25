@@ -4,8 +4,13 @@ https://svelte.dev/playground/modal?version=5.33.7
  -->
 <script>
 	import Icon from '$lib/icons/Icon.svelte';
-
-	let { showModal = $bindable(), onclose = () => {}, header, children } = $props();
+	let {
+		showModal = $bindable(),
+		onclose = () => {},
+		onopen = () => {},
+		header,
+		children
+	} = $props();
 	import { fade } from 'svelte/transition';
 
 	let dialog = $state();
@@ -13,6 +18,7 @@ https://svelte.dev/playground/modal?version=5.33.7
 	$effect(() => {
 		if (showModal && !dialog?.open) {
 			dialog?.showModal();
+			onopen();
 		} else if (!showModal && dialog?.open) {
 			close();
 		}

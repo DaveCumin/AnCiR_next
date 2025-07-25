@@ -1,47 +1,13 @@
 <!-- TODO: Import data/table logic might need re-work -->
 <script>
 	// @ts-nocheck
-	import Icon from '$lib/icons/Icon.svelte';
-	import { simulateData, ImportData } from '$lib/data/dataTree.svelte';
-	import Modal from '$lib/components/reusables/Modal.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
-	import { on } from 'svelte/events';
-
-	let showImportModal = $state(false);
-	let importPreview = $state();
-	let importReady = $state(false);
-	let hasHeader = $state(true);
-	let delimiter = $state('');
-	let targetFile = $state();
+	import ImportData, { openImportModal } from '$lib/components/views/modals/ImportData.svelte';
+	import SimulateData, {
+		openSimulateModal
+	} from '$lib/components/views/modals/SimulateData.svelte';
 
 	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
-
-	function openImportModal() {
-		showImportModal = true;
-		ImportData.utils.openFileChoose();
-	}
-
-	async function onFileChange(e) {
-		targetFile = e.target.files[0];
-		doPreview();
-	}
-	async function doPreview() {
-		await ImportData.utils.parseFile(targetFile, 6, hasHeader, delimiter);
-		importPreview = ImportData.utils.makeTempTable(ImportData.getTempData());
-		importReady = true;
-	}
-
-	function chooseFile() {
-		ImportData.utils.openFileChoose();
-	}
-
-	async function confirmImport() {
-		await ImportData.utils.loadData(targetFile, hasHeader, delimiter);
-		showImportModal = false;
-		importReady = false;
-		importPreview = '';
-		showDropdown = false;
-	}
 </script>
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
@@ -51,75 +17,13 @@
 		</div>
 
 		<div class="action">
-			<button onclick={simulateData}> Simulate Data </button>
-			<!-- since we are handling simulation with a modal, doesn't matter if dropdown closes after action at this stage -->
+			<button onclick={openSimulateModal}> Simulate Data </button>
 		</div>
 	{/snippet}
 </Dropdown>
 
-<Modal bind:showModal={showImportModal} onclose={() => (showDropdown = false)}>
-	{#snippet header()}
-		<div class="heading">
-			<h2>Import Data</h2>
-			<!-- <button class="btn" onclick={chooseFile}>Choose File</button> -->
-
-			<div class="choose-file-container">
-				<button class="choose-file-button" onclick={chooseFile}> Upload File </button>
-				<div class="filename">
-					<p class="filename-preview">
-						Selected:
-						{#if targetFile}
-							{targetFile.name}
-						{/if}
-					</p>
-				</div>
-			</div>
-		</div>
-
-		<!-- input style not shown -->
-		<input
-			id="fileInput"
-			type="file"
-			accept=".csv,.awd,.txt"
-			onchange={onFileChange}
-			style="display: none;"
-		/>
-	{/snippet}
-
-	{#snippet children()}
-		<div class="import-container">
-			<div class="preview-placeholder">
-				{#if importPreview}
-					<p>
-						Header: <input type="checkbox" bind:checked={hasHeader} onchange={() => doPreview()} />
-						Delimiter:
-						<!-- <input bind:value={delimiter} type="text" oninput={() => doPreview()} /> -->
-						<select bind:value={delimiter} onchange={() => doPreview()}>
-							<option value="">auto</option>
-							<option value=",">, (comma)</option>
-							<option value=";">; (semicolon)</option>
-							<option value="\t">Tab</option>
-							<option value="|">| (pipe)</option>
-							<option value=" ">(space)</option>
-						</select>
-					</p>
-					<div class="preview-table-wrapper">
-						{@html importPreview}
-					</div>
-				{:else}
-					<!-- <p>Choose file to preview data</p> -->
-				{/if}
-			</div>
-
-			<div class="import-button-container">
-				<!-- Add this if you define `let importReady = true;` inside <script> -->
-				{#if importReady}
-					<button class="import-button" onclick={confirmImport}>Confirm Import</button>
-				{/if}
-			</div>
-		</div>
-	{/snippet}
-</Modal>
+<ImportData />
+<SimulateData />
 
 <style>
 	.action button {

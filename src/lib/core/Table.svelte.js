@@ -57,33 +57,6 @@ export class Table {
 		this.columnRefs = this.columnRefs.filter((_, i) => i !== col.id);
 	}
 
-	// create simulated data through static function
-	static simulateTable(Ndays, fs_min, startDate, periods, maxHeights) {
-		const item = new Table();
-		//importedFrom = `simulated(${Ndays},${maxHeights[0]})`
-		item.setName(`Simulated_${item.id}`);
-		item.simulateData(Ndays, fs_min, startDate, periods, maxHeights);
-		return item;
-	}
-
-	simulateData(Ndays, fs_min, startDate, periods, maxHeights) {
-		const dataLength = Ndays * 24 * (60 / fs_min);
-
-		//time
-		const dft = new Column();
-		dft.simulateColumn('time', fs_min, startDate, periods, maxHeights, dataLength);
-
-		this.addColumn(dft);
-
-		//value
-		for (let i = 0; i < periods.length; i++) {
-			const dfv = new Column();
-			dfv.simulateColumn('value', fs_min, startDate, periods[i], maxHeights[i], dataLength);
-
-			this.addColumn(dfv);
-		}
-	}
-
 	// Import and Export JSON
 	toJSON() {
 		return {
