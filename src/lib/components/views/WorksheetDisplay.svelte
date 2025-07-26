@@ -4,7 +4,6 @@
 	import { core, appConsts } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddPlot from '../iconActions/AddPlot.svelte';
-	import { closeDisplayPanel } from '$lib/components/DisplayPanel.svelte';
 
 	let addBtnRef;
 	let showAddPlot = $state(false);
@@ -59,9 +58,6 @@
 
 <div class="heading">
 	<p>Worksheet Layers</p>
-	<button onclick={closeDisplayPanel}>
-		<Icon name="close" width={16} height={16} className="close" />
-	</button>
 
 	<div class="add">
 		<button bind:this={addBtnRef} onclick={openDropdown}>

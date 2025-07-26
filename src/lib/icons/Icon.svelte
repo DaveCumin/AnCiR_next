@@ -57,4 +57,14 @@
 		cursor: pointer;
 	}
 
+	.control-component-title-icon {
+		fill: var(--color-lightness-35);
+		transition: fill 0.2s ease;
+		cursor: pointer;
+	}
+
+	.control-component-title-icon:hover {
+		fill: var(--color-hover);
+	}
+
 </style>

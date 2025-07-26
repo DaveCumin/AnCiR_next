@@ -1,15 +1,15 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
-	import Axis from '$lib/components/plotbits/Axis.svelte';
+	import Axis from '$lib/components/plotBits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { core } from '$lib/core/core.svelte.js';
-	import { binData, mean, makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import { binData, mean, makeSeqArray } from '$lib/components/plotBits/helpers/wrangleData.js';
 	import { pchisq, qchisq } from '$lib/data/CDFs';
 
-	import Line from '$lib/components/plotbits/Line.svelte';
-	import Points from '$lib/components/plotbits/Points.svelte';
+	import Line from '$lib/components/plotBits/Line.svelte';
+	import Points from '$lib/components/plotBits/Points.svelte';
 
 	function calculatePower(data, binSize, period, avgAll, denominator) {
 		const colNum = Math.round(period / binSize);
@@ -201,7 +201,6 @@
 			periodogram.periodlimsIN = json.periodlimsIN;
 			periodogram.periodSteps = json.periodSteps;
 			periodogram.ylimsIN = json.ylimsIN;
-			periodogram.padding = json.padding;
 			periodogram.ygridlines = json.ygridlines;
 			periodogram.xgridlines = json.xgridlines;
 
@@ -215,7 +214,7 @@
 </script>
 
 <script>
-	import { convertToImage } from '$lib/components/plotbits/helpers/save.js';
+	import { convertToImage } from '$lib/components/plotBits/helpers/save.js';
 	let { theData, which } = $props();
 
 	function pickRandomData() {

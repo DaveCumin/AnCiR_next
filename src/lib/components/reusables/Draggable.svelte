@@ -25,6 +25,7 @@
 	const minWidth = 100;
 	const minHeight = 100;
 
+	// Plot movement and resize
 	let moving = false;
 	let resizing = false;
 	let initialMouseX, initialMouseY, initialWidth, initialHeight;
@@ -109,6 +110,9 @@
 		}
 		appState.selectedPlotIds = [id];
 		appState.showControlPanel = true;
+
+		await tick();
+		RePosition();
 	}
 
 	function handleClick(e) {
@@ -142,6 +146,32 @@
 		}
 		}
 	}
+
+	// Plot header Editing
+	let element;
+	let isEditing = $state(false);
+	async function startEdit(e) {
+		e.stopPropagation();
+		isEditing = true
+		await tick()
+		element.focus()
+	}
+
+	function saveEdit() {
+		if (isEditing == true) {
+			isEditing = false
+			
+			const plot = core.plots.find((p) => p.id === id);
+			plot.title = element.textContent;
+			element.blur()
+		}
+	}
+
+	function endEdit(e) {
+		if (isEditing && e.key == 'Enter') {
+			saveEdit()
+		}
+	}
 </script>
 
 <svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp} />
@@ -158,8 +188,12 @@
 		width: {snapToGrid(width + 20)}px;
 		height: {snapToGrid(height + 50)}px;"
 >
-	<div class="plot-header" onmousedown={(e) => onMouseDown(e)}>
-		{title}
+	<div
+		class="plot-header"
+		onmousedown={onMouseDown}
+	>
+		<p>
+		{title}</p>
 	</div>
 	<div class="plot-content">
 		<slot></slot>
@@ -189,13 +223,19 @@
 	}
 
 	.plot-header {
-		cursor: move;
-		background-color: #f8f8f8;
-		padding: 0.5rem 1rem;
-		font-weight: bold;
-		border-bottom: 1px solid var(--color-lightness-85);
 		flex-shrink: 0;
- 	}
+		cursor: move;
+
+		padding: 0.5rem 1rem;
+		background-color: var(--color-lightness-98);
+		border-bottom: 1px solid var(--color-lightness-85);
+		
+		font-weight: bold;
+	}
+
+	.plot-header p {
+		margin: 0;
+	}
 
 	.plot-content {
 		flex: 1;

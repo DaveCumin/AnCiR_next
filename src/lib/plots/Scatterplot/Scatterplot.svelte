@@ -1,13 +1,13 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
-	import Axis from '$lib/components/plotbits/Axis.svelte';
+	import Axis from '$lib/components/plotBits/Axis.svelte';
 	import { scaleLinear, scaleTime } from 'd3-scale';
 	import { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { core } from '$lib/core/core.svelte.js';
-	import Line from '$lib/components/plotbits/Line.svelte';
-	import Points from '$lib/components/plotbits/Points.svelte';
-	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import Line from '$lib/components/plotBits/Line.svelte';
+	import Points from '$lib/components/plotBits/Points.svelte';
+	import { min, max } from '$lib/components/plotBits/helpers/wrangleData.js';
 
 	class ScatterDataclass {
 		parentPlot = $state();
@@ -156,7 +156,7 @@
 </script>
 
 <script>
-	import { convertToImage } from '$lib/components/plotbits/helpers/save.js';
+	import { convertToImage } from '$lib/components/plotBits/helpers/save.js';
 	let { theData, which } = $props();
 
 	function pickRandomData() {

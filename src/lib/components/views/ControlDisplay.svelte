@@ -14,18 +14,18 @@
 </script>
 
 <div class="heading">
-	<p>Control Panel</p>
+	<!-- <p>Control Panel</p> -->
 
-	<div class="add">
-		<button onclick={closeControlPanel}>
+	<!-- <div class="add">
+		<button class="icon" onclick={closeControlPanel}>
 			<Icon name="close" width={16} height={16} className="close" />
 		</button>
-	</div>
+	</div> -->
 </div>
 
 <div class="control-display">
 	<!-- This is only for the first selected plot - need an #if to take care of multiple selections -->
-	<p>{appState.selectedPlotIds}</p>
+	<!-- <p>{appState.selectedPlotIds}</p> -->
 
 	{#key appState.selectedPlotIds}
 		{#if appState.selectedPlotIds.length >= 0}
@@ -33,10 +33,10 @@
 			{#if plot}
 				{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 				{#if Plot}
-					<p>{core.plots.find((p) => p.id === appState.selectedPlotIds[0])?.name}</p>
+					<!-- <p>{core.plots.find((p) => p.id === appState.selectedPlotIds[0])?.name}</p>
 					<p>
 						{JSON.stringify(core.plots.find((p) => p.id === appState.selectedPlotIds[0])?.plot)}
-					</p>
+					</p> -->
 					<Plot theData={plot.plot} which="controls" />
 				{/if}
 			{/if}
@@ -49,7 +49,7 @@
 		position: sticky;
 		top: 0;
 		width: 100%;
-		height: 4vh;
+		/* height: 4vh; */
 		display: flex;
 		flex-direction: row;
 		justify-content: center;
@@ -63,22 +63,9 @@
 		/* font-weight: bold; */
 	}
 
-	button {
-		background-color: transparent;
-		border: none;
-		margin-right: 0.6rem;
-		padding: 0;
-		text-align: inherit;
-		font: inherit;
-		border-radius: 0;
-		appearance: none;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-	}
-
 	.control-display {
+		top: 0;
+		width: calc(100% - 2rem);
 		margin-left: 1rem;
-		margin-right: 1rem;
 	}
 </style>

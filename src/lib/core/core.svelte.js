@@ -12,22 +12,24 @@ export const core = $state({
 
 export const appState = $state({
 	currentTab: 'worksheet',
+	currentControlTab: 'properties',
 
 	showNavbar: true,
 	showDisplayPanel: true,
 	showControlPanel: false,
 
 	windowWidth: window.innerWidth,
+	windowHeight: window.innerHeight,
 	widthNavBar: 56,
-	widthDisplayPanel: 200,
-	widthControlPanel: 200,
+	widthDisplayPanel: 300,
+	widthControlPanel: 300,
 
 	canvasOffset: { x: 0, y: 0 },
 	canvasScale: 1.0,
 
 	selectedPlotIds: [],
 
-	gridSize: 10,
+	gridSize: 20,
 });
 
 export const appConsts = $state({

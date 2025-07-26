@@ -1,5 +1,3 @@
-<!-- TODO: select plot to bring up control panel / switch to -->
-
 <script>
 	// @ts-nocheck
 	import { appState } from '$lib/core/core.svelte';

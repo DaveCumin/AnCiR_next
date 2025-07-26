@@ -294,6 +294,9 @@
 <ControlPanel />
 
 <style>
+	/* TODO: control units */
+	/* TODO: user prompt if no band */
+
 	:global(body) {
 		font-family: 'Inter', sans-serif;
 		font-size: 14px;
@@ -309,15 +312,29 @@
 		font-size: 14px;
 	}
 
-	:global(.card) {
-		font-family: 'Inter', sans-serif;
-		font-size: 14px;
+	:global(button.icon) {
+		background-color: transparent;
+		border: none;
+		margin-right: 0.6rem;
+		padding: 0;
+		text-align: inherit;
+		font: inherit;
+		border-radius: 0;
+		appearance: none;
+		display: flex;
+		justify-content: center;
+		align-items: center;
 	}
+
+	/* :global(input:focus) {
+		background-color: blue;
+	} */
+
 
 	/* resizer style */
 	:global(.resizer) {
-		width: 4px;
 		cursor: col-resize;
+		width: 4px;
 		height: 100%;
 		position: absolute;
 		top: 0;
@@ -325,11 +342,9 @@
 		background-color: transparent;
 	}
 
-	:global(.resizer:hover) {
-		background-color: var(--color-hover);
-	}
+	/* TODO: scroll down, resizer not working */
 
-	/* button style */
+	/* dialog button style */
 	:global(.dialog-button-container) {
 		display: flex;
 		justify-content: flex-end;
@@ -348,5 +363,156 @@
 
 	:global(button.dialog-button:hover) {
 		background-color: var(--color-hover);
+	}
+
+	/* plot control */
+	:global(.div-line) {
+		height: 1px;
+		width: 100%;
+		background-color: var(--color-lightness-85);
+		margin-top: 1.0rem;
+		margin-bottom: 0.5rem;
+	}
+
+	/* TODO: DEBUG no style */
+	:global(.div-block) {
+		height: 300px;
+		width: 100%;
+		background-color: transparent;
+	}
+
+	:global(.control-banner) {
+		width: 100%;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+
+		font-weight: bold;
+		/* background-color: blue; */
+	}
+
+	:global(.control-banner-icons) {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: flex-end;
+	}
+
+	:global(.control-tag) {
+		width: 100%;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: flex-start;
+
+		margin-bottom: 1rem;
+		gap: 0.4rem;
+	}
+
+	:global(.control-tag button) {
+		font-size: 14px;
+		padding: 0.25rem 0.5rem;
+
+		color: var(--color-lightness-35);
+		background-color: transparent;
+		border-radius: 4px;;
+		border: none;
+		appearance: none;
+	}
+
+	:global(.control-tag button.active) {
+		color: black;
+		background-color: var(--color-lightness-95);
+	}
+
+	:global(.control-tag button:hover) {
+		background-color: var(--color-lightness-95);
+	}
+
+	:global(.control-component) {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+
+		width: 100%;
+		/* margin-bottom: 0.5rem; */
+	}
+
+	:global(.control-component-title) {
+		width: 100%;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		
+		/* font-weight: bold; */
+	}
+
+	:global(.control-component-title-icons) {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: flex-end;
+	}
+
+	:global(.control-input-vertical) {
+		width: 100%;
+
+		margin-bottom: 0.5rem;
+	}
+
+	:global(.control-input-horizontal) {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+
+		width: 100%;
+		gap: 0.5rem;
+
+		margin-bottom: 0.5rem;
+	}
+
+	:global(.control-input-square) {
+		width: 100%;
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 0.5rem;
+
+		margin-bottom: 0.5rem;
+	}
+
+	:global(.control-input) {
+		display: flex;
+		flex: 1 1 0;
+		flex-direction: column;
+		width: 100%;
+		min-width: 0;
+	}
+
+	:global(.control-input p) {
+		font-size: 12px;
+		text-align: left;
+		color: var(--color-lightness-35);
+		margin: 0 0 4px 0;
+	}
+
+	:global(.control-input input) {
+		font-size: 14px;
+		font-weight: lighter;
+		padding: 2px 8px;
+		border: solid 1px transparent;
+		background-color: var(--color-lightness-95);
+		border-radius: 4px;
+		box-sizing: border-box;
+		transition: border-color 0.2s;
+
+		width: 100%;
+		min-width: 0;
+	}
+
+	:global(.control-input input:hover) {
+		border: solid 1px var(--color-lightness-85);
 	}
 </style>

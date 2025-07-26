@@ -21,11 +21,24 @@
 		console.log('whole: ', whole, 'displayWidth: ', displayWidth, 'controlWidth: ', controlWidth);
 		return whole - displayWidth - controlWidth;
 	});
+
 	let leftPx = $derived.by(() => {
 		if (appState.showDisplayPanel) {
 			return appState.widthDisplayPanel + appState.widthNavBar;
 		}
 		return appState.widthNavBar;
+	});
+
+	// TODO: next step to possible inf grid
+	let gridBackgroundWidthPx = $derived.by(() => {
+		const rightMostPlot = Math.max(...core.plots.map(p => p.x + p.width));
+		console.log(canvasWidthPx, rightMostPlot);
+		return Math.max(canvasWidthPx, rightMostPlot + appState.gridSize);
+	});
+
+	let gridBackgroundHeightPx = $derived.by(() => {
+		const bottomMostPlot = Math.max(...core.plots.map(p => p.y + p.height));
+		return Math.max(appState.windowHeight, bottomMostPlot + 3 * appState.gridSize);
 	});
 </script>
 
@@ -39,7 +52,6 @@
 	<div
 		class="canvas-panel"
 		style="
-		
 		width: {canvasWidthPx}px;
 		height: 100vh;
 		background-image:
@@ -57,21 +69,43 @@
 			transparent 1px,
 			transparent {appState.gridSize}px
 			);
-		"
-	>
-		{#each core.plots as plot, i (plot.id)}
-			<Draggable
-				bind:x={plot.x}
-				bind:y={plot.y}
-				bind:width={plot.width}
-				bind:height={plot.height}
-				title={plot.name}
-				id={plot.id}
-			>
-				{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
-				<Plot theData={plot} which="plot" />
-			</Draggable>
-		{/each}
+	">
+
+		<div class="canvas-background"
+			style="
+			width: {gridBackgroundWidthPx}px;
+			height: {gridBackgroundHeightPx}px;
+			background-image:
+				repeating-linear-gradient(
+				to right,
+				var(--color-lightness-95) 0,
+				var(--color-lightness-95) 1px,
+				transparent 1px,
+				transparent {appState.gridSize}px
+				),
+				repeating-linear-gradient(
+				to bottom,
+				var(--color-lightness-95) 0,
+				var(--color-lightness-95) 1px,
+				transparent 1px,
+				transparent {appState.gridSize}px
+				);
+			"
+		>
+			{#each core.plots as plot, i (plot.id)}
+				<Draggable
+					bind:x={plot.x}
+					bind:y={plot.y}
+					bind:width={plot.width}
+					bind:height={plot.height}
+					title={plot.name}
+					id={plot.id}
+				>
+					{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
+					<Plot theData={plot} which="plot" />
+				</Draggable>
+			{/each}
+		</div>
 	</div>
 </div>
 
