@@ -142,14 +142,13 @@
 		</div>
 	</div>
 
-	<div class="control-input-vertical">
-		<div class="control-input">
-			<p>Height</p>
-			<input type="number" bind:value={bands.height} />
+	{#if bands.bands.length > 0}
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>Height</p>
+				<input type="number" bind:value={bands.height} min="1"/>
+			</div>
 		</div>
-	</div>
-
-	{#if bands?.bands}
 		{#each bands.bands as b, i}
 			<p>
 				<ColourPicker bind:value={b.col} />
@@ -164,7 +163,11 @@
 			</p>
 		{/each}
 	{:else}
-		<p>No bands available</p>
+	<div class="control-input-vertical">
+		<div class="control-input">
+			<p>No bands added</p>
+		</div>
+	</div>
 	{/if}
 	
 {/snippet}

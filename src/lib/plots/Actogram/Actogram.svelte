@@ -235,7 +235,6 @@
 </script>
 
 <script>
-	import { convertToImage } from '$lib/components/plotBits/helpers/save.js';
 	import { appState } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 
@@ -278,29 +277,6 @@
 </script>
 
 {#snippet controls(theData)}
-	<!-- TODO: might move this to parent control display and stick on top -->
-	<div class="control-banner">
-		<p>Control Panel</p>
-
-		<div class="control-banner-icons">
-			<button class="icon" onclick={() => convertToImage('plot' + theData.parentBox.id, 'svg')}>
-				<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
-			</button>
-			
-			<!-- TODO: write rest all property function -->
-			<button class="icon">
-				<Icon name="reset" width={16} height={16} className="control-component-title-icon" />
-			</button>
-		</div>
-	</div>
-
-	<div class="control-tag">
-		<button class={appState.currentControlTab === 'properties' ? 'active' : ''} onclick={() => appState.currentControlTab = 'properties'}>Properties</button>
-		<button class={appState.currentControlTab === 'data' ? 'active' : ''} onclick={() => appState.currentControlTab = 'data'}>Data</button>
-	</div>
-	
-	<div class="div-line"></div>
-	
 	{#if (appState.currentControlTab === 'properties')}
 	<div class="control-component">
 		<div class="control-input-vertical">
@@ -399,7 +375,7 @@
 
 	<div class="control-component">
 		<div class="control-component-title">
-			<p>y lims</p>
+			<p>Y-lims</p>
 			<div class="control-component-title-icons">
 				<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
 					<Icon name="reset" width={14} height={14} className="control-component-title-icon"/>
@@ -434,7 +410,6 @@
 		</div>
 	</div>
 
-	<div class="div-block"></div>
 	{:else if (appState.currentControlTab === 'data') }
 	<div>
 		<p>Data:</p>

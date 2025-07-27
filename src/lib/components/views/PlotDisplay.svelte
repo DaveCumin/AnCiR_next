@@ -1,13 +1,14 @@
 <script>
-	// TODO: scroll horizontally and vertically
-	// TODO: if mouse reach end of screen, screen shifts with mouse
-
 	// @ts-nocheck
 	import Draggable from '$lib/components/reusables/Draggable.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
+	import CreateNewPlotModal from '$lib/components/views/modals/CreateNewPlotModal.svelte';
 
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 	import { closeControlPanel } from '$lib/components/views/ControlDisplay.svelte';
-	import { max } from '$lib/utils/MathsStats';
+	import { tick } from 'svelte';
+	
+	let showModal = $state(false);
 
 	function handleClick(e) {
 		e.stopPropagation();
@@ -29,16 +30,14 @@
 		return appState.widthNavBar;
 	});
 
-	// TODO: next step to possible inf grid
 	let gridBackgroundWidthPx = $derived.by(() => {
 		const rightMostPlot = Math.max(...core.plots.map(p => p.x + p.width));
-		console.log(canvasWidthPx, rightMostPlot);
-		return Math.max(canvasWidthPx, rightMostPlot + appState.gridSize);
+		return Math.max(canvasWidthPx, rightMostPlot + 200);
 	});
 
 	let gridBackgroundHeightPx = $derived.by(() => {
 		const bottomMostPlot = Math.max(...core.plots.map(p => p.y + p.height));
-		return Math.max(appState.windowHeight, bottomMostPlot + 3 * appState.gridSize);
+		return Math.max(appState.windowHeight, bottomMostPlot + 200);
 	});
 </script>
 
@@ -54,21 +53,6 @@
 		style="
 		width: {canvasWidthPx}px;
 		height: 100vh;
-		background-image:
-			repeating-linear-gradient(
-			to right,
-			var(--color-lightness-95) 0,
-			var(--color-lightness-95) 1px,
-			transparent 1px,
-			transparent {appState.gridSize}px
-			),
-			repeating-linear-gradient(
-			to bottom,
-			var(--color-lightness-95) 0,
-			var(--color-lightness-95) 1px,
-			transparent 1px,
-			transparent {appState.gridSize}px
-			);
 	">
 
 		<div class="canvas-background"
@@ -92,6 +76,7 @@
 				);
 			"
 		>
+		{#if core.plots.length > 0}
 			{#each core.plots as plot, i (plot.id)}
 				<Draggable
 					bind:x={plot.x}
@@ -105,6 +90,17 @@
 					<Plot theData={plot} which="plot" />
 				</Draggable>
 			{/each}
+
+		{:else}
+			<div class="no-plot-prompt">
+				<button class="icon" onclick={() => showModal = true}>
+					<Icon name="add" width={24} height={24} />
+				</button>
+				<p>Click to Add New Plot</p>
+			</div>
+
+			<CreateNewPlotModal bind:showModal={showModal} />
+		{/if}
 		</div>
 	</div>
 </div>
@@ -116,5 +112,21 @@
 		transition:
 			width 0.6s ease,
 			left 0.6s ease;
+	}
+
+	.no-plot-prompt {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+
+		width: 100%;
+		height: 100%;
+
+		font-weight: bold;
+	}
+
+	.no-plot-prompt p {
+		color: var(--color-lightness-75);
 	}
 </style>

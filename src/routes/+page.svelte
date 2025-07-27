@@ -365,6 +365,8 @@
 		background-color: var(--color-hover);
 	}
 
+	/* TODO: re-organise margin */
+
 	/* plot control */
 	:global(.div-line) {
 		height: 1px;
@@ -374,9 +376,8 @@
 		margin-bottom: 0.5rem;
 	}
 
-	/* TODO: DEBUG no style */
 	:global(.div-block) {
-		height: 300px;
+		height: 150px;
 		width: 100%;
 		background-color: transparent;
 	}
@@ -491,6 +492,18 @@
 		min-width: 0;
 	}
 
+	:global(.control-input-checkbox) {
+		display: flex;
+		flex: 1 1 0;
+		flex-direction: row;
+		align-items: center;
+		text-align: center;
+		width: 100%;
+		min-width: 0;
+
+		margin: 0;
+	}
+
 	:global(.control-input p) {
 		font-size: 12px;
 		text-align: left;
@@ -498,13 +511,21 @@
 		margin: 0 0 4px 0;
 	}
 
+	:global(.control-input-checkbox p) {
+		font-size: 12px;
+		text-align: left;
+		color: var(--color-lightness-35);
+		margin: 0 0 0 0.2rem;
+	}
+
 	:global(.control-input input) {
 		font-size: 14px;
 		font-weight: lighter;
 		padding: 2px 8px;
 		border: solid 1px transparent;
-		background-color: var(--color-lightness-95);
-		border-radius: 4px;
+		background-color: var(--color-lightness-97);
+		border: solid 1px var(--color-lightness-85);
+		border-radius: 2px;
 		box-sizing: border-box;
 		transition: border-color 0.2s;
 
@@ -513,6 +534,6 @@
 	}
 
 	:global(.control-input input:hover) {
-		border: solid 1px var(--color-lightness-85);
+		border: solid 1px var(--color-lightness-35);
 	}
 </style>

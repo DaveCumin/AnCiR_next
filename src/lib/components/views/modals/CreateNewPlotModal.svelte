@@ -5,20 +5,17 @@
 	import { getColumnById } from '$lib/core/Column.svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
-	import Dropdown from '../reusables/Dropdown.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
-	import AttributeSelect from '../reusables/AttributeSelect.svelte';
+	import AttributeSelect from '$lib/components/reusables/AttributeSelect.svelte';
 
-	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
-	
-    let showModal = $state(false);
- 
+    let { showModal = $bindable(false) } = $props();
+
 	let plotType = $state("Plot");
 	let plotName = $state(plotType + '_' + (core.plots.length + 1));
 
-	function openModal() {
-		showModal = true;
-	}
+	// function openModal() {
+	// 	showModal = true;
+	// }
 
 	let xCol = $state();
 	let yCols = $state([null]); // contains column id
@@ -49,15 +46,6 @@
 
 </script>
 
-<Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
-    {#snippet groups()}
-        <div class="action">
-			<button onclick={openModal}>
-				Create New Plot
-			</button>
-		</div>
-    {/snippet}
-</Dropdown>
 
 <Modal bind:showModal>
 	{#snippet header()}
@@ -113,15 +101,6 @@
 
 
 <style>
-	.action button {
-		margin: 0.6em;
-		font-size: 14px;
-	}
-
-	.action:hover {
-		background-color: var(--color-lightness-95);
-	}
-
 	button {
 		background-color: transparent;
 		border: none;
@@ -144,19 +123,6 @@
 		flex-direction: row;
 		align-items: center;
 		gap: 1rem;
-	}
-
-	.choose-file-button {
-		background-color: var(--color-lightness-95);
-		padding: 8px 12px;
-		border-radius: 4px;
-
-		font-size: 14px;
-		text-align: center;
-	}
-
-	.choose-file-button:hover {
-		background-color: var(--color-hover);
 	}
 
 	.preview-placeholder {

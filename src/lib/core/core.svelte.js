@@ -29,14 +29,15 @@ export const appState = $state({
 
 	selectedPlotIds: [],
 
-	gridSize: 20,
+	gridSize: 15,
+
+	appColours: ['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000'],
 });
 
 export const appConsts = $state({
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
-	appColours: ['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000']
 });
 
 export function pushObj(obj) {
@@ -60,6 +61,7 @@ export function snapToGrid(value) {
   	return Math.round(value / appState.gridSize) * appState.gridSize;
 }
 
+// TODO: change to grid* layout
 let _attempt = 0;
 function findNextAvailablePosition(existingPlots) {
 	const baseX =10;

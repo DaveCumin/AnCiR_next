@@ -8,6 +8,7 @@
 
 	import { tick } from 'svelte';
 	import { appState, core, snapToGrid } from '$lib/core/core.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
 
 	let plotElement;
 
@@ -34,6 +35,7 @@
 	let mouseStartX, mouseStartY;
 
 	function onMouseDown(e) {
+		if (e.target.closest('button.icon')) return;
 		if (appState.selectedPlotIds.includes(id)) {
 			moving = true;
 		} else if (!e.altKeye) {
@@ -147,31 +149,11 @@
 		}
 	}
 
-	// Plot header Editing
-	let element;
-	let isEditing = $state(false);
-	async function startEdit(e) {
+	function openPlotDetails(e) {
 		e.stopPropagation();
-		isEditing = true
-		await tick()
-		element.focus()
+		console.log("clickkkkkkkeeeed");
 	}
-
-	function saveEdit() {
-		if (isEditing == true) {
-			isEditing = false
-			
-			const plot = core.plots.find((p) => p.id === id);
-			plot.title = element.textContent;
-			element.blur()
-		}
-	}
-
-	function endEdit(e) {
-		if (isEditing && e.key == 'Enter') {
-			saveEdit()
-		}
-	}
+	
 </script>
 
 <svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp} />
@@ -194,6 +176,10 @@
 	>
 		<p>
 		{title}</p>
+
+		<button class="icon" onclick={openPlotDetails}>
+			<Icon name="menu-horizontal-dots" width={20} height={20} className="plot-header-icon" />
+		</button>
 	</div>
 	<div class="plot-content">
 		<slot></slot>
@@ -218,15 +204,22 @@
 	}
 
 	.selected {
-		border: 1px solid #007bff;
-		box-shadow: 0 2px 5px rgba(0, 123, 255, 0.5);
+		border: 1px solid #0275FF;
+		box-shadow: 0 2px 5px rgba(2, 117, 255, 0.5);
 	}
 
 	.plot-header {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+
 		flex-shrink: 0;
 		cursor: move;
 
-		padding: 0.5rem 1rem;
+		padding: 0.5rem;
+		padding-left: 1rem;
+		padding-right: 0.4rem;
 		background-color: var(--color-lightness-98);
 		border-bottom: 1px solid var(--color-lightness-85);
 		
@@ -235,6 +228,10 @@
 
 	.plot-header p {
 		margin: 0;
+	}
+
+	.plot-header button {
+		padding-right: 0;
 	}
 
 	.plot-content {
@@ -250,7 +247,6 @@
 		right: 0;
 		bottom: 0;
 		cursor: nwse-resize;
-		/* background-color: #888; */
 		border-radius: 2px;
 	}
 </style>

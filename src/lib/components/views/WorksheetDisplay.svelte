@@ -4,25 +4,11 @@
 	import { core, appConsts } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddPlot from '../iconActions/AddPlot.svelte';
+	import CreateNewPlotModal from './modals/CreateNewPlotModal.svelte';
 
-	let addBtnRef;
-	let showAddPlot = $state(false);
-	let dropdownTop = $state(0);
-	let dropdownLeft = $state(0);
+	let showModal = $state(false);
+
 	let draggedIndex = $state(null);
-
-	function recalculateDropdownPosition() {
-		if (!addBtnRef) return;
-		const rect = addBtnRef.getBoundingClientRect();
-		dropdownTop = rect.top + window.scrollY;
-		dropdownLeft = rect.right + window.scrollX + 12;
-	}
-
-	function openDropdown() {
-		recalculateDropdownPosition();
-		requestAnimationFrame(() => showAddPlot = true);
-		window.addEventListener('resize', recalculateDropdownPosition);
-	}
 
 	function viewToModelIndex(i) {
 		return core.plots.length - 1 - i;
@@ -60,15 +46,13 @@
 	<p>Worksheet Layers</p>
 
 	<div class="add">
-		<button bind:this={addBtnRef} onclick={openDropdown}>
+		<button onclick={() => showModal = true}>
 			<Icon name="add" width={16} height={16} />
 		</button>
 	</div>
 </div>
 
-{#if showAddPlot}
-	<AddPlot bind:showDropdown={showAddPlot} dropdownTop={dropdownTop} dropdownLeft={dropdownLeft} />
-{/if}
+<CreateNewPlotModal bind:showModal={showModal} />
 
 <div class="display-list">
 	{#each core.plots.toReversed() as plot, i (plot.id)}
@@ -81,7 +65,7 @@
 			<summary>{plot.name}</summary>
 			{#if plot.id >= 0}
 				{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
-				<Plot theData={plot.plot} which="controls" />
+				<!-- <Plot theData={plot.plot} which="controls" /> -->
 			{/if}
 		</details>
 	{/each}

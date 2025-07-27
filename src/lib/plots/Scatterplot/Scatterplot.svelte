@@ -24,12 +24,12 @@
 			if (dataIN?.x) {
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new ColumnClass({ refDataId: -1 });
+				this.x = new ColumnClass({ refId: -1 });
 			}
 			if (dataIN?.y) {
 				this.y = ColumnClass.fromJSON(dataIN.y);
 			} else {
-				this.y = new ColumnClass({ refDataId: -1 });
+				this.y = new ColumnClass({ refId: -1 });
 			}
 			this.linecolour = dataIN?.linecolour ?? getRandomColor();
 			this.pointcolour = dataIN?.pointcolour ?? getRandomColor();
@@ -156,7 +156,9 @@
 </script>
 
 <script>
-	import { convertToImage } from '$lib/components/plotBits/helpers/save.js';
+	import { appState } from "$lib/core/core.svelte";
+	import Icon from '$lib/icons/Icon.svelte';
+
 	let { theData, which } = $props();
 
 	function pickRandomData() {
@@ -166,152 +168,167 @@
 </script>
 
 {#snippet controls(theData)}
-	<button onclick={() => convertToImage('plot' + theData.parentBox.id, 'svg')}>Save </button>
+	{#if (appState.currentControlTab === 'properties')}
+	<div class="control-component">
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>Name</p>
+				<input type="text" bind:value={theData.parentBox.name} />
+			</div>
+		</div>
+	</div>
+
+	<div class="control-component">
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>Width</p>
+				<input type="number" bind:value={theData.parentBox.width} />
+			</div>
 	
-	<div class="control-component">
-		<div class="control-input">
-			<p>Name: </p>
-			<input type="text" bind:value={theData.parentBox.name} />
-		</div>
-
-		<div class="control-input">
-			<p>Width: </p>
-			<input type="number" bind:value={theData.parentBox.width} />
-		</div>
-
-		<div class="control-input">
-			<p>Height: </p>
-			<input type="number" bind:value={theData.parentBox.height} />
+			<div class="control-input">
+				<p>Height</p>
+				<input type="number" bind:value={theData.parentBox.height} />
+			</div>
 		</div>
 	</div>
 
-	<div class="control-component">
-		<p class="control-component-title">Padding: </p>
-		
-		<p>Top: </p>
-		<input type="number" bind:value={theData.padding.top} />
-		
-		<p>Bottom: </p>
-		<input type="number" bind:value={theData.padding.bottom} />
-
-		<p>Left: </p>
-		<input type="number" bind:value={theData.padding.left} />
-
-		<p>Right: </p>
-		<input type="number" bind:value={theData.padding.right} />
-		
-		<p>{JSON.stringify(theData.padding)}</p>
-	</div>
+	<div class="div-line"></div>
 
 	<div class="control-component">
-		<button onclick={() => (theData.ylimsIN = [null, null])}>Re-centre</button>
-
-		<p class="control-component-title">ylims: </p>
-		<p>Grid:<input type="checkbox" bind:checked={theData.ygridlines} /></p>
-
-		<p>Min: </p>
-		<input
-			type="number"
-			step="0.1"
-			value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
-			oninput={(e) => {
-				theData.ylimsIN[0] = [parseFloat(e.target.value)];
-			}}
-		/>
+		<div class="control-component-title">
+			<p>Padding</p>
+		</div>
 		
-		<p>Max: </p>
-		<input
-			type="number"
-			step="0.1"
-			value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-			oninput={(e) => {
-				theData.ylimsIN[1] = [parseFloat(e.target.value)];
-			}}
-		/>
+		<div class="control-input-square">
+			<div class="control-input">
+				<p>Top</p>
+				<input type="number" bind:value={theData.padding.top} />
+			</div>
+			
+			<div class="control-input">
+				<p>Bottom</p>
+				<input type="number" bind:value={theData.padding.bottom} />
+			</div>
+
+			<div class="control-input">
+				<p>Left</p>
+				<input type="number" bind:value={theData.padding.left} />
+			</div>
+
+			<div class="control-input">
+				<p>Right</p>
+				<input type="number" bind:value={theData.padding.right} />
+			</div>
+		</div>
 	</div>
+
+	<div class="div-line"></div>
 
 	<div class="control-component">
-		<button onclick={() => (theData.xlimsIN = [null, null])}>Re-centre</button>
+		<div class="control-component-title">
+			<p>X-lims</p>
+			<div class="control-component-title-icons">
+				<button class="icon" onclick={() => (theData.xlimsIN = [null, null])}>
+					<Icon name="reset" width={14} height={14} className="control-component-title-icon"/>
+				</button>
+			</div>
+		</div>
 
-		<p class="control-component-title">xlims: </p>
-		<p>Grid: <input type="checkbox" bind:checked={theData.xgridlines} /></p>
+		<div class="control-input-vertical">
+			<div class="control-input-checkbox">
+				<input type="checkbox" bind:checked={theData.xgridlines} />
+				<p>Grid</p>
+			</div>
+		</div>
 
-		{#if theData.anyXdataTime}
-			<p>Min: </p>
-			<input
-				type="datetime-local"
-				value={theData.xlimsIN[0]
-					? new Date(theData.xlimsIN[0]).toISOString().substring(0, 16)
-					: new Date(theData.xlims[0]).toISOString().substring(0, 16)}
-				oninput={(e) => {
-					console.log('xlimsIN[0]', e.target.value);
-					theData.xlimsIN[0] = Number(new Date(e.target.value));
-				}}
-			/>
+		<div class="control-input-horizontal">
+			{#if theData.anyXdataTime}
+			<div class="control-input">
+				<p>Min</p>
+				<input
+					type="datetime-local"
+					value={theData.xlimsIN[0]
+						? new Date(theData.xlimsIN[0]).toISOString().substring(0, 16)
+						: new Date(theData.xlims[0]).toISOString().substring(0, 16)}
+					oninput={(e) => {
+						console.log('xlimsIN[0]', e.target.value);
+						theData.xlimsIN[0] = Number(new Date(e.target.value));
+					}}
+				/>
+			</div>
 
-			<p>Max: </p>
-			<input
-				type="datetime-local"
-				value={theData.xlimsIN[1]
-					? new Date(theData.xlimsIN[1]).toISOString().substring(0, 16)
-					: new Date(theData.xlims[1]).toISOString().substring(0, 16)}
-				oninput={(e) => {
-					theData.xlimsIN[1] = Number(new Date(e.target.value));
-				}}
-			/>
-		{:else}
-			<p>Min: </p>
-			<input
-				type="number"
-				step="0.1"
-				value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
-				onchange={(e) => {
-					theData.xlimsIN[0] = parseFloat(e.target.value);
-				}}
-			/>
+			<div class="control-input">
+				<p>Max</p>
+				<input
+					type="datetime-local"
+					value={theData.xlimsIN[1]
+						? new Date(theData.xlimsIN[1]).toISOString().substring(0, 16)
+						: new Date(theData.xlims[1]).toISOString().substring(0, 16)}
+					oninput={(e) => {
+						theData.xlimsIN[1] = Number(new Date(e.target.value));
+					}}
+				/>
+			</div>
+			{:else}
+			<div class="control-input">
+				<p>Min</p>
+				<input
+					type="number"
+					step="0.1"
+					value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
+					onchange={(e) => {
+						theData.xlimsIN[0] = parseFloat(e.target.value);
+					}}
+				/>
+			</div>
 
-			<p>Max: </p>
-			<input
-				type="number"
-				step="0.1"
-				value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
-				onchange={(e) => {
-					theData.xlimsIN[1] = parseFloat(e.target.value);
-				}}
-			/>
-		{/if}
+			<div class="control-input">
+				<p>Max</p>
+				<input
+					type="number"
+					step="0.1"
+					value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
+					onchange={(e) => {
+						theData.xlimsIN[1] = parseFloat(e.target.value);
+					}}
+				/>
+			</div>
+			{/if}
+		</div>
 	</div>
-	
-	<div>
-		<p>Data:</p>
-		<button
-			onclick={() =>
-				theData.addData({
-					x: { refDataId: pickRandomData() },
-					y: { refDataId: pickRandomData() }
-				})}
-		>
-			+
-		</button>
 
-		{#each theData.data as datum, i}
-			<p>
-				Data {i}
-				<button onclick={() => theData.removeData(i)}>-</button>
-			</p>
+	{:else if (appState.currentControlTab === 'data')}
+		<div>
+			<p>Data:</p>
+			<button
+				onclick={() =>
+					theData.addData({
+						x: { refDataId: pickRandomData() },
+						y: { refDataId: pickRandomData() }
+					})}
+			>
+				+
+			</button>
 
-			x: {datum.x.name}
-			<Column col={datum.x} canChange={true} />
+			{#each theData.data as datum, i}
+				<p>
+					Data {i}
+					<button onclick={() => theData.removeData(i)}>-</button>
+				</p>
 
-			y: {datum.y.name}
-			<Column col={datum.y} canChange={true} />
+				x: {datum.x.name}
+				<Column col={datum.x} canChange={true} />
 
-			line col: <input type="color" bind:value={datum.linecolour} />
-			line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
-			point col: <input type="color" bind:value={datum.pointcolour} />
-			point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
-		{/each}
-	</div>
+				y: {datum.y.name}
+				<Column col={datum.y} canChange={true} />
+
+				line col: <input type="color" bind:value={datum.linecolour} />
+				line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
+				point col: <input type="color" bind:value={datum.pointcolour} />
+				point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
+			{/each}
+		</div>
+	{/if}
 {/snippet}
 
 {#snippet plot(theData)}

@@ -57,6 +57,17 @@
 		cursor: pointer;
 	}
 
+	.plot-header-icon {
+		fill: black;
+		transition: fill 0.2s ease;
+		cursor: pointer;
+	}
+
+	.plot-header-icon:hover {
+		background-color: var(--color-lightness-90);
+		border-radius: 100px;
+	}
+
 	.control-component-title-icon {
 		fill: var(--color-lightness-35);
 		transition: fill 0.2s ease;
