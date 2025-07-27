@@ -14,7 +14,13 @@
 
 	// Lomb-Scargle implementation
 	function calculateLombScarglePower(times, values, frequencies) {
-		if (times.length < 2 || values.length < 2 || times.length !== values.length) {
+		if (
+			!times ||
+			!values ||
+			times.length < 2 ||
+			values.length < 2 ||
+			times.length !== values.length
+		) {
 			return new Array(frequencies.length).fill(0);
 		}
 		// Remove NaN values
@@ -385,8 +391,8 @@
 		<button
 			onclick={() =>
 				theData.addData({
-					x: { refId: pickRandomData() },
-					y: { refId: pickRandomData() }
+					x: { refId: -1 },
+					y: { refId: -1 }
 				})}
 		>
 			+

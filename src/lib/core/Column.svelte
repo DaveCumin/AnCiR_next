@@ -262,6 +262,7 @@
 			{/if}
 			type:
 			<select name="datatype" bind:value={col.type}>
+				<option value=""></option>
 				<option value="time">Time</option>
 				<option value="number">Number</option>
 				<option value="category">Category</option>

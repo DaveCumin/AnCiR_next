@@ -36,8 +36,7 @@
 			(Number(new Date(this.parentPlot.startTime)) - Number(this.x.getData()[0])) / 3600000
 		);
 		dataByDays = $derived.by(() => {
-			console.log(new Date(), ' dataByDays recalculated');
-			const tempx = this.x.hoursSinceStart;
+			const tempx = this.x.hoursSinceStart ?? [];
 			const tempy = this.y.getData() ?? [];
 			const xByPeriod = {};
 			const yByPeriod = {};
@@ -352,8 +351,8 @@
 		<button
 			onclick={() =>
 				theData.addData({
-					x: { refId: pickRandomData() },
-					y: { refId: pickRandomData() }
+					x: { refId: -1 },
+					y: { refId: -1 }
 				})}
 		>
 			+
