@@ -9,8 +9,29 @@
 <script>
 	// @ts-nocheck
 	import Icon from '$lib/icons/Icon.svelte';
-
+	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 	import { appConsts, appState, core } from '$lib/core/core.svelte';
+
+	let addBtnRef;
+	let showSavePlot = $state(false);
+	let dropdownTop = $state(0);
+	let dropdownLeft = $state(0);
+
+	function recalculateDropdownPosition() {
+		if (!addBtnRef) return;
+		const rect = addBtnRef.getBoundingClientRect();
+
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
+	}
+
+	function openDropdown() {
+		recalculateDropdownPosition();
+		requestAnimationFrame(() => {
+			showSavePlot = true;
+		});
+		window.addEventListener('resize', recalculateDropdownPosition);
+	}
 </script>
 
 <div class="heading">
@@ -28,6 +49,9 @@
 	<p>{appState.selectedPlotIds}</p>
 
 	{#key appState.selectedPlotIds}
+		{#if appState.selectedPlotIds.length > 1}
+			<div><button bind:this={addBtnRef} onclick={openDropdown}>Save</button></div>
+		{/if}
 		{#if appState.selectedPlotIds.length >= 0}
 			{@const plot = core.plots.find((p) => p.id === appState.selectedPlotIds[0])}
 			{#if plot}
@@ -43,6 +67,14 @@
 		{/if}
 	{/key}
 </div>
+{#if showSavePlot}
+	<SavePlot
+		bind:showDropdown={showSavePlot}
+		{dropdownTop}
+		{dropdownLeft}
+		Id={appState.selectedPlotIds}
+	/>
+{/if}
 
 <style>
 	.heading {

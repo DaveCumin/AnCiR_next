@@ -24,14 +24,16 @@
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
 		{#each appConsts.processMap.entries() as [key, value]}
-			<button
-				onclick={() => {
-					showDropdown = false;
-					addTheProcess(key);
-				}}
-			>
-				{key}
-			</button>
+			<div class="action">
+				<button
+					onclick={() => {
+						showDropdown = false;
+						addTheProcess(key);
+					}}
+				>
+					{key}
+				</button>
+			</div>
 		{/each}
 	{/snippet}
 </Dropdown>
@@ -60,57 +62,5 @@
 	.heading {
 		display: flex;
 		flex-direction: column;
-	}
-
-	.choose-file-container {
-		height: 2em;
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		gap: 1rem;
-	}
-
-	.choose-file-button {
-		background-color: var(--color-lightness-95);
-		padding: 8px 12px;
-		border-radius: 4px;
-
-		font-size: 14px;
-		text-align: center;
-	}
-
-	.choose-file-button:hover {
-		background-color: var(--color-hover);
-	}
-
-	.preview-placeholder {
-		width: 100%;
-		min-height: 200px;
-	}
-
-	.filename-preview {
-		color: var(--color-lightness-35);
-		font-size: 14px;
-	}
-
-	.import-button-container {
-		display: flex;
-		justify-content: flex-end;
-		/* margin-right: 1rem; */
-	}
-
-	.import-button {
-		margin-top: 10px;
-		background-color: var(--color-lightness-95);
-		border-radius: 4px;
-		padding: 10px;
-		padding-right: 12px;
-
-		font-size: 14px;
-		text-align: center;
-	}
-
-	.import-button:hover {
-		background-color: var(--color-hover);
 	}
 </style>

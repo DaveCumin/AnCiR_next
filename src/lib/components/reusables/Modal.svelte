@@ -4,6 +4,7 @@ https://svelte.dev/playground/modal?version=5.33.7
  -->
 <script>
 	import Icon from '$lib/icons/Icon.svelte';
+	import { preventDefault } from 'svelte/legacy';
 	let {
 		showModal = $bindable(),
 		onclose = () => {},
@@ -37,7 +38,10 @@ https://svelte.dev/playground/modal?version=5.33.7
 			bind:this={dialog}
 			onclose={() => (showModal = false)}
 			onclick={(e) => {
-				if (e.target === dialog) close();
+				if (e.target === dialog) {
+					console.log('HERE');
+					close();
+				}
 			}}
 			transition:fade={{ duration: 360 }}
 		>

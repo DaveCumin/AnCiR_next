@@ -114,11 +114,13 @@
 	let startX = 0;
 	let startValue = $state(0);
 	let sensitivity = 0.1;
+	let inputElement = $state(null);
 
 	function startDrag(event) {
 		isDragging = true;
 		startX = event.clientX;
 		startValue = displayValue;
+		//inputElement.requestPointerLock();
 		window.addEventListener('mousemove', handleMouseMove, { capture: true });
 		window.addEventListener('mouseup', stopDrag, { capture: true });
 	}
@@ -139,48 +141,14 @@
 	function stopDrag(event) {
 		isDragging = false;
 		document.body.style.cursor = 'default';
+		//document.exitPointerLock();
 		window.removeEventListener('mousemove', handleMouseMove, { capture: true });
 		window.removeEventListener('mouseup', stopDrag, { capture: true });
 	}
-
-	//----------------------------------------------------------
-	// Scrolling funcitonality - NOT WORKING TODO
-	//-----------------------------------------------------------
-	// let isScrollable = false;
-
-	// function startScroll(event) {
-	// 	event.preventDefault();
-	// 	event.stopPropagation();
-	// 	isScrollable = true;
-	// }
-
-	// function stopScroll(event) {
-	// 	event.preventDefault();
-	// 	event.stopPropagation();
-	// 	isScrollable = false;
-	// }
-
-	// function handleWheel(event) {
-	// 	if (!isScrollable) return;
-	// 	event.preventDefault();
-	// 	event.stopPropagation();
-
-	// 	// Determine scroll direction (negative for up, positive for down)
-	// 	const delta = event.deltaY < 0 ? step : -step;
-	// 	let newValue = Number(displayValue) + Number(delta);
-
-	// 	// Apply step constraint
-	// 	newValue = Math.round(newValue / step) * step;
-
-	// 	// Round to avoid floating-point precision issues
-	// 	newValue = Number(newValue.toFixed(6));
-
-	// 	displayValue = newValue;
-	// 	updateValue();
-	// }
 </script>
 
 <input
+	bind:this={inputElement}
 	style="width:20%"
 	type="number"
 	{step}
@@ -190,6 +158,9 @@
 	oninput={updateValue}
 	onchange={adjustLimits}
 	onmousedown={startDrag}
+	onmouseover={(e) => {
+		e.target.focus(); //to enable scrolling for changing the value
+	}}
 	class="draggable-number-input"
 />
 

@@ -30,6 +30,7 @@
 
 		x = $state();
 		y = $state();
+
 		colour = $state();
 		offset = $derived(
 			(Number(new Date(this.parentPlot.startTime)) - Number(this.x.getData()[0])) / 3600000
