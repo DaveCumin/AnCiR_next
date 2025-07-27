@@ -5,8 +5,7 @@
 	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
 
 	export function getColumnById(id) {
-		const theColumn = core.data.find((column) => column.id === id);
-		return theColumn;
+		return core.data.find((column) => column.id === id);
 	}
 
 	let _columnidCounter = 0;
@@ -134,6 +133,9 @@
 				}
 			}
 
+			//fail fast if no data
+			if (!out || out.length === 0) return [];
+
 			//deal with timestamps
 			if (this.type === 'time' && !this.isReferencial()) {
 				// out = out.map((x) => Number(timeParse(this.timeFormat)(x))); // Turn into UNIX values of time
@@ -234,9 +236,9 @@
 	}
 
 	let columnSelected = $state(-1);
-	function openDropdown(e, id) {
+	function openDropdown(e, colSelected) {
 		e.stopPropagation();
-		columnSelected = id;
+		columnSelected = colSelected;
 		recalculateDropdownPosition();
 		requestAnimationFrame(() => {
 			showAddProcess = true;
@@ -286,7 +288,7 @@
 					<p>raw: {col.data.slice(0, 5)}</p>
 				{/if}
 				data: {col.getData()?.slice(0, 5)}
-				N: {col.getData().length}
+				N: {col.getData()?.length ?? 0}
 				hoursSince: {col.hoursSinceStart?.slice(0, 5)}
 			</li>
 			{#each col.processes as p}
@@ -299,7 +301,7 @@
 				{/key}
 			{/each}
 			<div class="add">
-				<button bind:this={addBtnRef} onclick={(e) => openDropdown(e, col.id)}>
+				<button bind:this={addBtnRef} onclick={(e) => openDropdown(e, col)}>
 					<Icon name="add" width={16} height={16} />
 				</button>
 			</div>

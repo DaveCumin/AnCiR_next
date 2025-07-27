@@ -16,7 +16,7 @@
 
 	function addTheProcess(name) {
 		if (columnSelected == -1) return;
-		getColumnById(columnSelected).addProcess(name);
+		columnSelected.addProcess(name);
 		showDropdown = false;
 	}
 </script>

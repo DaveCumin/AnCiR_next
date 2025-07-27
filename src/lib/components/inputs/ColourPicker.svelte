@@ -7,6 +7,10 @@
 		}
 		return color;
 	}
+
+	export function getPaletteColor(n) {
+		return appConsts.appColours[n % appConsts.appColours.length];
+	}
 </script>
 
 <script>
