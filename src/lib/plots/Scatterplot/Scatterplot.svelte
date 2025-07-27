@@ -3,7 +3,7 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear, scaleTime } from 'd3-scale';
-	import { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { core } from '$lib/core/core.svelte.js';
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
@@ -33,8 +33,8 @@
 			} else {
 				this.y = new ColumnClass({ refDataId: -1 });
 			}
-			this.linecolour = dataIN?.linecolour ?? getRandomColor();
-			this.pointcolour = dataIN?.pointcolour ?? getRandomColor();
+			this.linecolour = dataIN?.linecolour ?? getPaletteColor(this.parentPlot.data.length);
+			this.pointcolour = dataIN?.pointcolour ?? getPaletteColor(this.parentPlot.data.length);
 		}
 
 		toJSON() {
@@ -367,34 +367,36 @@
 		/>
 
 		{#each theData.plot.data as datum}
-			<Line
-				x={datum.x.getData()}
-				y={datum.y.getData()}
-				xscale={scaleLinear()
-					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-					.range([0, theData.plot.plotwidth])}
-				yscale={scaleLinear()
-					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-					.range([theData.plot.plotheight, 0])}
-				strokeCol={datum.linecolour}
-				strokeWidth={datum.linestrokeWidth}
-				yoffset={theData.plot.padding.top}
-				xoffset={theData.plot.padding.left}
-			/>
-			<Points
-				x={datum.x.getData()}
-				y={datum.y.getData()}
-				xscale={scaleLinear()
-					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-					.range([0, theData.plot.plotwidth])}
-				yscale={scaleLinear()
-					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-					.range([theData.plot.plotheight, 0])}
-				radius={datum.pointradius}
-				fillCol={datum.pointcolour}
-				yoffset={theData.plot.padding.top}
-				xoffset={theData.plot.padding.left}
-			/>
+			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
+				<Line
+					x={datum.x.getData()}
+					y={datum.y.getData()}
+					xscale={scaleLinear()
+						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+						.range([0, theData.plot.plotwidth])}
+					yscale={scaleLinear()
+						.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+						.range([theData.plot.plotheight, 0])}
+					strokeCol={datum.linecolour}
+					strokeWidth={datum.linestrokeWidth}
+					yoffset={theData.plot.padding.top}
+					xoffset={theData.plot.padding.left}
+				/>
+				<Points
+					x={datum.x.getData()}
+					y={datum.y.getData()}
+					xscale={scaleLinear()
+						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+						.range([0, theData.plot.plotwidth])}
+					yscale={scaleLinear()
+						.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+						.range([theData.plot.plotheight, 0])}
+					radius={datum.pointradius}
+					fillCol={datum.pointcolour}
+					yoffset={theData.plot.padding.top}
+					xoffset={theData.plot.padding.left}
+				/>
+			{/if}
 		{/each}
 	</svg>
 {/snippet}

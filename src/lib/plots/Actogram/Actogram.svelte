@@ -3,7 +3,7 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
-	import ColourPicker, { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { core } from '$lib/core/core.svelte.js';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
@@ -74,7 +74,7 @@
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
-			this.colour = dataIN?.colour ?? getRandomColor();
+			this.colour = dataIN?.colour ?? getPaletteColor(this.parentPlot.data.length);
 		}
 
 		addMarker() {

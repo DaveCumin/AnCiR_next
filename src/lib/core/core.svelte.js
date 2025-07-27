@@ -31,7 +31,7 @@ export const appConsts = $state({
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
 	gridsize: Number(5), // TODO query I think this should be in appState
-	appColours: ['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000'] // TODO query I think this should also be in appState
+	appColours: ['#0B090B', '#F8BFD4', '#787C3F', '#3B565E', '#E5A15E'] // TODO query I think this should also be in appState
 });
 
 export function pushObj(obj) {

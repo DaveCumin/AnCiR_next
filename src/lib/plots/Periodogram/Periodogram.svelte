@@ -3,7 +3,7 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
-	import { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { core } from '$lib/core/core.svelte.js';
 	import { binData, mean, makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { pchisq, qchisq } from '$lib/data/CDFs';
@@ -14,6 +14,9 @@
 
 	// Lomb-Scargle implementation
 	function calculateLombScarglePower(times, values, frequencies) {
+		if (times.length < 2 || values.length < 2 || times.length !== values.length) {
+			return new Array(frequencies.length).fill(0);
+		}
 		// Remove NaN values
 		const validIndices = times
 			.map((t, i) => (isNaN(t) || isNaN(values[i]) ? -1 : i))
@@ -164,8 +167,8 @@
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
-			this.linecolour = dataIN?.linecolour ?? getRandomColor();
-			this.pointcolour = dataIN?.pointcolour ?? getRandomColor();
+			this.linecolour = dataIN?.linecolour ?? getPaletteColor(this.parentPlot.data.length);
+			this.pointcolour = dataIN?.pointcolour ?? getPaletteColor(this.parentPlot.data.length);
 			this.method = dataIN?.method ?? 'Lomb-Scargle'; // Initialize method
 		}
 
