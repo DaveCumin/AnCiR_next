@@ -52,7 +52,7 @@
 		{#if appState.selectedPlotIds.length > 1}
 			<div><button bind:this={addBtnRef} onclick={openDropdown}>Save</button></div>
 		{/if}
-		{#if appState.selectedPlotIds.length >= 0}
+		{#if appState.selectedPlotIds.length == 1}
 			{@const plot = core.plots.find((p) => p.id === appState.selectedPlotIds[0])}
 			{#if plot}
 				{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}

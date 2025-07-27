@@ -99,7 +99,7 @@
 					appState.selectedPlotIds.push(id);
 				} else {
 					//or remove it
-					appState.selectedPlotIds = appState.selectedPlotIds.filter((id) => id !== tempId);
+					appState.selectedPlotIds = appState.selectedPlotIds.filter((theid) => theid !== id);
 				}
 			} else if (!appState.selectedPlotIds.includes(id)) {
 				appState.selectedPlotIds = [id];
