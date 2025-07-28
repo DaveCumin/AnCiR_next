@@ -43,6 +43,9 @@
 		// Compare all plots
 		const options = compareJson(plots);
 		console.log('OPTIONS: ', options);
+
+		//TODO: I think we need a manual list to check against and show only those that are on that (to avoid exposing things like the GUIDs)
+
 		return options;
 	}
 
@@ -102,7 +105,6 @@
 		}
 
 		compare(jsonArray);
-		console.log('Matches found: ', matches);
 		return matches;
 	}
 </script>
