@@ -63,7 +63,7 @@
 				{#each headers as header, index}
 					<th style="width: {widths[index]}; position: relative;">
 						{header}
-						<div class="resizer" on:mousedown={() => startResize(index)}></div>
+						<div class="resizer" onmousedown={() => startResize(index)}></div>
 					</th>
 				{/each}
 			</tr>
