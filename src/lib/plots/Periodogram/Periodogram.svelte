@@ -330,6 +330,12 @@
 		});
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
+
+	//Tooltip
+	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
+	function handleTooltip(event) {
+		tooltip = event.detail;
+	}
 </script>
 
 {#snippet controls(theData)}
@@ -457,6 +463,7 @@
 		height={theData.plot.parentBox.height}
 		viewBox="0 0 {theData.plot.parentBox.width} {theData.plot.parentBox.height}"
 		style={`background: white; position: absolute;`}
+		ontooltip={handleTooltip}
 	>
 		<Axis
 			height={theData.plot.plotheight}
@@ -511,6 +518,7 @@
 				fillCol={datum.pointcolour}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
+				tooltip={true}
 			/>
 			{#if datum.method === 'Chi-squared'}
 				<Line
@@ -530,6 +538,11 @@
 			{/if}
 		{/each}
 	</svg>
+	{#if tooltip.visible}
+		<div class="tooltip" style={`left: ${tooltip.x}px; top: ${tooltip.y}px;`}>
+			{tooltip.content}
+		</div>
+	{/if}
 {/snippet}
 
 {#if which === 'plot'}
@@ -537,3 +550,16 @@
 {:else if which === 'controls'}
 	{@render controls(theData)}
 {/if}
+
+<style>
+	.tooltip {
+		position: absolute;
+		background-color: rgba(0, 0, 0, 0.7);
+		color: white;
+		padding: 0.5rem 0.8rem;
+		border-radius: 4px;
+		pointer-events: none;
+		font-size: 0.8rem;
+		z-index: 9999;
+	}
+</style>
