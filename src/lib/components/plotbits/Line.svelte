@@ -1,4 +1,5 @@
 <script>
+	import { line } from 'd3-shape';
 	let { x, y, xscale, yscale, strokeCol, strokeWidth, yoffset, xoffset } = $props();
 
 	let xlims = $derived(xscale.domain());
@@ -29,16 +30,20 @@
 		return x.length - 1;
 	});
 
-	let line = $derived.by(() => {
-		let out = '';
+	let theline = $derived.by(() => {
+		//this is faster than the loop I had before!
 
-		for (let p = beforeIdx; p <= afterIdx; p++) {
-			if (!isNaN(x[p]) && !isNaN(y[p])) {
-				//only include values, not NaNs
-				out += xscale(x[p]) + ',' + yscale(y[p]) + ' ';
-			}
-		}
-		return out;
+		// Slice x and y arrays to include only points between beforeIdx and afterIdx
+		const xSlice = x.slice(beforeIdx, afterIdx + 1);
+		const ySlice = y.slice(beforeIdx, afterIdx + 1);
+
+		let theLine = line()
+			.x((d, i) => xscale(xSlice[i]))
+			.y((d, i) => yscale(ySlice[i]));
+
+		//can apply curves (eg https://d3js.org/d3-shape/curve#curveBundle_beta) here - just import them first
+
+		return theLine(xSlice);
 	});
 </script>
 
@@ -47,8 +52,8 @@
 </clipPath>
 
 <g clip-path={`url(#${clipKey})`}>
-	<polyline
-		points={line}
+	<path
+		d={theline}
 		fill="none"
 		stroke={strokeCol}
 		stroke-width={strokeWidth}
