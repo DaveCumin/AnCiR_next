@@ -2,7 +2,6 @@
 	let { x, y, xscale, yscale, colour, yoffset, xoffset } = $props();
 
 	let theline = $derived.by(() => {
-		const start = performance.now('test');
 		let width = xscale.range()[1];
 		let height = yscale.range()[0];
 
@@ -23,8 +22,6 @@
 			out += `${width},${yscale(y[x.length - 1])} `;
 		}
 		out += `${width},${height} `;
-
-		console.log('Line render time:', performance.now('test') - start);
 
 		return out;
 	});

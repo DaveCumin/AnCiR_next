@@ -1,6 +1,5 @@
 <script module>
-	import { Column as ColumnClass } from '$lib/core/Column.svelte';
-	import Column, { getColumnById } from '$lib/core/Column.svelte';
+	import { getColumnById } from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 
 	export const Tableplot_defaultDataInputs = [];
@@ -44,7 +43,7 @@
 						getColumnById(this.columnRefs[i]).type === 'time' &&
 						getColumnById(this.columnRefs[i]).data?.length > 0
 					) {
-						out.push(getColumnById(this.columnRefs[i]).name + ' (raw | time)');
+						out.push(getColumnById(this.columnRefs[i]).name + ' (raw | hrs since start)');
 					} else {
 						//get the column name
 						out.push(getColumnById(this.columnRefs[i]).name);

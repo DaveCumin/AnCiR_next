@@ -201,7 +201,7 @@
 
 		let testawd = new Column({
 			type: 'number',
-			data: { start: 10, step: 1, length: 5 },
+			data: { start: 10, step: 1, length: N },
 			compression: 'awd',
 			name: 'AWD',
 			timeFormat: 3,

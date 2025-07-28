@@ -185,9 +185,7 @@
 				const temp = { x: { refId: dataIN.time.refId }, y: { refId: dataIN.values.refId } };
 				dataIN = structuredClone(temp);
 			}
-			console.log('adding data', JSON.stringify(dataIN));
 			this.data.push(new ActogramDataclass(this, dataIN));
-			console.log('this data = ', this.data);
 		}
 		removeData(idx) {
 			this.data.splice(idx, 1);

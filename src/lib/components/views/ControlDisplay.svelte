@@ -32,6 +32,79 @@
 		});
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
+
+	// get the options that are the same for all selected plots
+	function getSameOptions(selectedPlotIds) {
+		if (selectedPlotIds.length < 2) return [];
+
+		// Get all plot objects using $state.snapshot
+		const plots = selectedPlotIds.map((id) => $state.snapshot(core.plots.find((p) => p.id === id)));
+
+		// Compare all plots
+		const options = compareJson(plots);
+		console.log('OPTIONS: ', options);
+		return options;
+	}
+
+	function compareJson(jsonArray) {
+		const matches = [];
+
+		// Helper function to get all keys, including private ones
+		function getKeys(obj) {
+			if (typeof obj.getAllFields === 'function') {
+				return Object.keys(obj.getAllFields());
+			}
+			return Object.keys(obj);
+		}
+
+		// Helper function to get value, handling private fields
+		function getValue(obj, key) {
+			if (typeof obj.getAllFields === 'function') {
+				return obj.getAllFields()[key];
+			}
+			return obj[key];
+		}
+
+		// Helper function to recursively compare objects
+		function compare(objects, path = '') {
+			// Ensure all inputs are objects
+			if (objects.some((obj) => !obj || typeof obj !== 'object')) {
+				return;
+			}
+
+			// Get keys from all objects
+			const keySets = objects.map((obj) => new Set(getKeys(obj)));
+			// Find common keys (intersection of all key sets)
+			const commonKeys = [...keySets[0]].filter((key) => keySets.every((set) => set.has(key)));
+
+			for (const key of commonKeys) {
+				const newPath = path ? `${path}.${key}` : key;
+
+				// Get values for the key from all objects
+				const values = objects.map((obj) => getValue(obj, key));
+
+				// Check if values are objects (not arrays) for recursion
+				if (values.every((val) => typeof val === 'object')) {
+					compare(values, newPath);
+				} else {
+					// Check if all values are equal (using deep comparison for arrays)
+					const areEqual = values.every(
+						(val, i, arr) => JSON.stringify(val) === JSON.stringify(arr[0])
+					);
+
+					// Store the common value or null
+					matches.push({
+						path: newPath,
+						value: areEqual ? values[0] : null
+					});
+				}
+			}
+		}
+
+		compare(jsonArray);
+		console.log('Matches found: ', matches);
+		return matches;
+	}
 </script>
 
 <div class="heading">
@@ -46,10 +119,11 @@
 
 <div class="control-display">
 	<!-- This is only for the first selected plot - need an #if to take care of multiple selections -->
-	<p>{appState.selectedPlotIds}</p>
 
 	{#key appState.selectedPlotIds}
 		{#if appState.selectedPlotIds.length > 1}
+			<p>{appState.selectedPlotIds}</p>
+			<p>{JSON.stringify(getSameOptions(appState.selectedPlotIds), null, 2)}</p>
 			<div><button bind:this={addBtnRef} onclick={openDropdown}>Save</button></div>
 		{/if}
 		{#if appState.selectedPlotIds.length == 1}
@@ -57,10 +131,6 @@
 			{#if plot}
 				{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 				{#if Plot}
-					<p>{core.plots.find((p) => p.id === appState.selectedPlotIds[0])?.name}</p>
-					<p>
-						{JSON.stringify(core.plots.find((p) => p.id === appState.selectedPlotIds[0])?.plot)}
-					</p>
 					<Plot theData={plot.plot} which="controls" />
 				{/if}
 			{/if}
