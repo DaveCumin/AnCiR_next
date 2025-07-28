@@ -161,6 +161,9 @@
 	onmouseover={(e) => {
 		e.target.focus(); //to enable scrolling for changing the value
 	}}
+	onwheel={(e) => {
+		e.stopPropagation();
+	}}
 	class="draggable-number-input"
 />
 

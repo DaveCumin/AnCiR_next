@@ -388,6 +388,7 @@
 				/>
 				<Points
 					x={datum.x.getData()}
+					xtype={datum.x.type}
 					y={datum.y.getData()}
 					xscale={scaleLinear()
 						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])

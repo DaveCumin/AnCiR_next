@@ -2,7 +2,18 @@
 	//TODO: add a way to display a tooltip on hover
 	import { quadtree } from 'd3-quadtree';
 
-	let { x, y, xscale, yscale, radius, fillCol, yoffset, xoffset, tooltip = false } = $props();
+	let {
+		x,
+		y,
+		xscale,
+		yscale,
+		radius,
+		fillCol,
+		yoffset,
+		xoffset,
+		tooltip = false,
+		xtype = 'number'
+	} = $props();
 
 	let beforeIdx = $derived.by(() => {
 		//find the x point before the limit
@@ -67,12 +78,16 @@
 		const mouseY = e.offsetY;
 		const closest = qt.find(mouseX, mouseY, radius * 2);
 		if (closest && closest.index >= 0) {
+			let content = `(${x[closest.index].toFixed(2)}, ${y[closest.index].toFixed(2)})`;
+			if (xtype == 'time') {
+				content = `(${new Date(x[closest.index]).toLocaleString()}, ${y[closest.index].toFixed(2)})`;
+			}
 			const event = new CustomEvent('tooltip', {
 				detail: {
 					visible: true,
 					x: mouseX + 10, // Offset to avoid cursor overlap
 					y: mouseY + 10,
-					content: `(${x[closest.index].toFixed(2)}, ${y[closest.index].toFixed(2)})`
+					content: content
 				},
 				bubbles: true
 			});
