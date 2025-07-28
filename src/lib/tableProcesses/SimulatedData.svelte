@@ -1,10 +1,10 @@
 <script module>
 	export const simulateddata_defaults = new Map([
 		['startTime', { val: new Date().toISOString().slice(0, 16) }],
-		['N_hours', { val: 10 }],
+		['N_hours', { val: 4 * 24 }],
 		['samplingPeriod_hours', { val: 0.25 }],
 		['rhythmPeriod_hours', { val: 24 }],
-		['rhythmAmplitude', { val: 1 }],
+		['rhythmAmplitude', { val: 100 }],
 
 		['out', { time: { val: -1 }, values: { val: -1 } }], //needed to set upu the output columns
 		['valid', { val: false }] //needed for the progress step logic
@@ -35,9 +35,10 @@
 		simulatedTime = [];
 		simulatedValues = [];
 		for (let i = 0; i < N_hours; i += samplingPeriod_hours) {
-			simulatedTime.push(Number(new Date(new Date(startTime).getTime() + i * 3600000)));
+			console.log(startTime);
+			simulatedTime.push(new Date(new Date(startTime).getTime() + i * 3600000).toISOString());
 			const amplitude =
-				Math.floor(i / rhythmPeriod_hours) < rhythmPeriod_hours / 2 ? rhythmAmplitude : 1;
+				Math.floor(i % rhythmPeriod_hours) < rhythmPeriod_hours / 2 ? rhythmAmplitude : 1;
 			const value = Math.random() * amplitude;
 			simulatedValues.push(value);
 		}
@@ -45,6 +46,8 @@
 		if (timeOUT == -1 || valuesOUT == -1) {
 		} else {
 			getColumnById(timeOUT).data = simulatedTime;
+			getColumnById(timeOUT).timeFormat = "YYYY-MM-DD'T'HH:mm:ss.S'Z'";
+			getColumnById(timeOUT).type = 'time';
 			getColumnById(valuesOUT).data = simulatedValues;
 			const processHash = crypto.randomUUID();
 			getColumnById(timeOUT).tableProcessGUId = processHash;
@@ -116,7 +119,7 @@
 	{:else if p.args.valid}
 		<p>Preview:</p>
 		<p>N = {Math.floor(p.args.N_hours / p.args.samplingPeriod_hours)}</p>
-		<p>X: {simulatedTime.slice(0, 5).map((x) => x.toFixed(2))}</p>
+		<p>X: {simulatedTime.slice(0, 5)}</p>
 		<p>Y: {simulatedValues.slice(0, 5).map((y) => y.toFixed(2))}</p>
 	{:else}
 		<p>Need to have valid inputs to create columns.</p>

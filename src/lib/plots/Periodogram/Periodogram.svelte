@@ -298,11 +298,6 @@
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 	let { theData, which } = $props();
 
-	function pickRandomData() {
-		const options = Array.from(core.data.keys());
-		return options.length > 0 ? options[Math.floor(Math.random() * options.length)] : -1;
-	}
-
 	$effect(() => {
 		if (theData.periodlimsIN || theData.periodSteps) {
 			theData.updateAllPeriodData();

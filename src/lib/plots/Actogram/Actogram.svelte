@@ -242,11 +242,6 @@
 
 	let { theData, which } = $props();
 
-	function pickRandomData() {
-		const options = Array.from(core.data.keys());
-		return options.length > 0 ? options[Math.floor(Math.random() * options.length)] : -1;
-	}
-
 	function handleClick(e) {
 		if (theData.plot.isAddingMarkerTo >= 0) {
 			const [clickedDay, clickedHrs] = getClickedTime(e);
