@@ -139,7 +139,12 @@
 			//deal with timestamps
 			if (this.type === 'time' && !this.isReferencial()) {
 				// out = out.map((x) => Number(timeParse(this.timeFormat)(x))); // Turn into UNIX values of time
-				out = out.map((x) => Number(getUNIXDate(x, this.timeFormat))); // Turn into UNIX values of time
+				try {
+					out = out.map((x) => Number(getUNIXDate(x, this.timeFormat))); // Turn into UNIX values of time
+				} catch (e) {
+					console.warn('Error parsing time data:', e);
+					out = out;
+				}
 			}
 
 			//If no data, return empty

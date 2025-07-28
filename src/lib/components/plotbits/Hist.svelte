@@ -1,7 +1,8 @@
 <script>
 	let { x, y, xscale, yscale, colour, yoffset, xoffset } = $props();
 
-	let line = $derived.by(() => {
+	let theline = $derived.by(() => {
+		const start = performance.now('test');
 		let width = xscale.range()[1];
 		let height = yscale.range()[0];
 
@@ -23,12 +24,14 @@
 		}
 		out += `${width},${height} `;
 
+		console.log('Line render time:', performance.now('test') - start);
+
 		return out;
 	});
 </script>
 
 <polyline
-	points={line}
+	points={theline}
 	fill={colour}
 	style={`transform: translate(	${xoffset ? xoffset : 0}px,
 									${yoffset ? yoffset : 0}px);`}

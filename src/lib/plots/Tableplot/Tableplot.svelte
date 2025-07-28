@@ -39,8 +39,16 @@
 			}
 			for (let i = 0; i < this.columnRefs.length; i++) {
 				if (this.showCol[i]) {
-					//get the column name
-					out.push(getColumnById(this.columnRefs[i]).name);
+					//if the column is a time column with data, add the raw data
+					if (
+						getColumnById(this.columnRefs[i]).type === 'time' &&
+						getColumnById(this.columnRefs[i]).data?.length > 0
+					) {
+						out.push(getColumnById(this.columnRefs[i]).name + ' (raw | time)');
+					} else {
+						//get the column name
+						out.push(getColumnById(this.columnRefs[i]).name);
+					}
 				}
 			}
 
@@ -54,12 +62,27 @@
 			}
 			for (let i = 0; i < this.columnRefs.length; i++) {
 				if (this.showCol[i]) {
-					out.push(
-						getColumnById(this.columnRefs[i])
-							.getData()
-							.slice(this.colCurrent - 1, this.colCurrent + this.Ncolumns)
-							.map((x) => (Number(x) == x ? x.toFixed(this.decimalPlaces) : x))
-					);
+					//if the column is a time column with data, add the raw data
+					if (
+						getColumnById(this.columnRefs[i]).type === 'time' &&
+						getColumnById(this.columnRefs[i]).data?.length > 0
+					) {
+						const times = getColumnById(this.columnRefs[i]).data?.slice(
+							this.colCurrent - 1,
+							this.colCurrent + this.Ncolumns
+						);
+						const values = getColumnById(this.columnRefs[i])
+							.hoursSinceStart.slice(this.colCurrent - 1, this.colCurrent + this.Ncolumns)
+							.map((x) => (Number(x) == x ? x.toFixed(this.decimalPlaces) : x));
+						out.push(times.map((t, j) => `${t} | ${values[j]}`));
+					} else {
+						out.push(
+							getColumnById(this.columnRefs[i])
+								.getData()
+								.slice(this.colCurrent - 1, this.colCurrent + this.Ncolumns)
+								.map((x) => (Number(x) == x ? x.toFixed(this.decimalPlaces) : x))
+						);
+					}
 				}
 			}
 
@@ -94,11 +117,7 @@
 </script>
 
 <script>
-	import { preventDefault } from 'svelte/legacy';
-
 	let { theData, which } = $props();
-	console.log($state.snapshot(theData));
-	console.log($state.snapshot(theData.showCol));
 </script>
 
 {#snippet controls(theData)}
