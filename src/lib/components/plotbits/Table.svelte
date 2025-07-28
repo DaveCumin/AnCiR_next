@@ -49,6 +49,13 @@
 		}
 	}
 
+	//update the widths when data is changed.
+	$effect(() => {
+		if (headers) {
+			widths = headers.map(() => 100 / headers.length + '%');
+		}
+	});
+
 	function handleMouseUp() {
 		resizingIndex = -1;
 		window.removeEventListener('mousemove', handleMouseMove);
