@@ -4,7 +4,6 @@
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear, scaleTime } from 'd3-scale';
 	import { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
-	import { core } from '$lib/core/core.svelte.js';
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
