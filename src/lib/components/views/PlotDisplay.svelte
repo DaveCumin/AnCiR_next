@@ -2,12 +2,12 @@
 	// @ts-nocheck
 	import Draggable from '$lib/components/reusables/Draggable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import CreateNewPlotModal from '$lib/components/views/modals/CreateNewPlotModal.svelte';
+	import CreateNewPlotModal from '$lib/components/views/modals/MakeNewPlot.svelte';
 
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 	import { closeControlPanel } from '$lib/components/views/ControlDisplay.svelte';
 	import { tick } from 'svelte';
-	
+
 	let showModal = $state(false);
 
 	function handleClick(e) {
@@ -30,12 +30,12 @@
 	});
 
 	let gridBackgroundWidthPx = $derived.by(() => {
-		const rightMostPlot = Math.max(...core.plots.map(p => p.x + p.width));
+		const rightMostPlot = Math.max(...core.plots.map((p) => p.x + p.width));
 		return Math.max(canvasWidthPx, rightMostPlot + 200);
 	});
 
 	let gridBackgroundHeightPx = $derived.by(() => {
-		const bottomMostPlot = Math.max(...core.plots.map(p => p.y + p.height));
+		const bottomMostPlot = Math.max(...core.plots.map((p) => p.y + p.height));
 		return Math.max(appState.windowHeight, bottomMostPlot + 200);
 	});
 </script>
@@ -45,16 +45,17 @@
 	class="canvas"
 	style="top: 0;
 			left: {leftPx}px;
-			">
-			
+			"
+>
 	<div
 		class="canvas-panel"
 		style="
 		width: {canvasWidthPx}px;
 		height: 100vh;
-	">
-
-		<div class="canvas-background"
+	"
+	>
+		<div
+			class="canvas-background"
 			style="
 			width: {gridBackgroundWidthPx}px;
 			height: {gridBackgroundHeightPx}px;
@@ -75,31 +76,30 @@
 				);
 			"
 		>
-		{#if core.plots.length > 0}
-			{#each core.plots as plot, i (plot.id)}
-				<Draggable
-					bind:x={plot.x}
-					bind:y={plot.y}
-					bind:width={plot.width}
-					bind:height={plot.height}
-					title={plot.name}
-					id={plot.id}
-				>
-					{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
-					<Plot theData={plot} which="plot" />
-				</Draggable>
-			{/each}
+			{#if core.plots.length > 0}
+				{#each core.plots as plot, i (plot.id)}
+					<Draggable
+						bind:x={plot.x}
+						bind:y={plot.y}
+						bind:width={plot.width}
+						bind:height={plot.height}
+						title={plot.name}
+						id={plot.id}
+					>
+						{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
+						<Plot theData={plot} which="plot" />
+					</Draggable>
+				{/each}
+			{:else}
+				<div class="no-plot-prompt">
+					<button class="icon" onclick={() => (showModal = true)}>
+						<Icon name="add" width={24} height={24} />
+					</button>
+					<p>Click to Add New Plot</p>
+				</div>
 
-		{:else}
-			<div class="no-plot-prompt">
-				<button class="icon" onclick={() => showModal = true}>
-					<Icon name="add" width={24} height={24} />
-				</button>
-				<p>Click to Add New Plot</p>
-			</div>
-
-			<CreateNewPlotModal bind:showModal={showModal} />
-		{/if}
+				<CreateNewPlotModal bind:showModal />
+			{/if}
 		</div>
 	</div>
 </div>
