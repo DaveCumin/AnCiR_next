@@ -114,6 +114,7 @@
 
 <script>
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
 	let { bands = $bindable(), which } = $props();
 	let singleWidth = $derived.by(() => {
 		const plotwidth =
@@ -124,13 +125,30 @@
 	});
 </script>
 
+<!-- TODO: DEBUG swap not working after changing color -->
+
 {#snippet controls(bands)}
-	Bands: Height: <input type="number" bind:value={bands.height} />
-	<button
-		onclick={() => bands.addBand({ col: bands.length % 2 === 0 ? '#000000' : '#ffffff', pc: 10 })}
-		>+ band</button
-	>
-	{#if bands?.bands}
+	<div class="control-component-title">
+		<p>Bands</p>
+		<div class="control-component-title-icons">
+			<button class="icon" onclick={() => bands.swapBandCols()}>
+				<Icon name="swap" width={12} height={12} className="control-component-title-icon" />
+			</button>
+			<button class="icon"
+				onclick={() => bands.addBand({ col: bands.length % 2 === 0 ? '#000000' : '#ffffff', pc: 10 })}
+			>
+				<Icon name="plus" width={16} height={16} className="control-component-title-icon" />
+			</button>
+		</div>
+	</div>
+
+	{#if bands.bands.length > 0}
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>Height</p>
+				<input type="number" bind:value={bands.height} min="1"/>
+			</div>
+		</div>
 		{#each bands.bands as b, i}
 			<p>
 				<input type="color" bind:value={b.col} />
@@ -145,9 +163,13 @@
 			</p>
 		{/each}
 	{:else}
-		<p>No bands available</p>
+	<div class="control-input-vertical">
+		<div class="control-input">
+			<p>Click + to add a band</p>
+		</div>
+	</div>
 	{/if}
-	<button onclick={() => bands.swapBandCols()}>swapcols</button>
+	
 {/snippet}
 
 {#snippet plot(bands)}

@@ -1,14 +1,17 @@
 <script module>
-	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	// @ts-nocheck
+
 	import Column from '$lib/core/Column.svelte';
-	import Axis from '$lib/components/plotbits/Axis.svelte';
-	import { scaleLinear } from 'd3-scale';
+	import Hist from '$lib/components/plotBits/Hist.svelte';
+	import Axis from '$lib/components/plotBits/Axis.svelte';
+
+	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
-	import Hist from '$lib/components/plotbits/Hist.svelte';
-	import { makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData';
-	import { max, min } from '$lib/components/plotbits/helpers/wrangleData.js';
+
+	import { scaleLinear } from 'd3-scale';
+	import { makeSeqArray, max, min } from '$lib/components/plotBits/helpers/wrangleData';
 
 	export const Actogram_defaultDataInputs = ['time', 'values'];
 
@@ -107,7 +110,7 @@
 		parentBox = $state();
 		data = $state([]);
 		isAddingMarkerTo = $state(-1);
-		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 30 });
+		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 20 });
 		padding = $derived.by(() => {
 			if (this.lightBands.length > 0) {
 				return {
@@ -235,7 +238,9 @@
 </script>
 
 <script>
-	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
+	import { appState } from '$lib/core/core.svelte';
+	
+	import Icon from '$lib/icons/Icon.svelte';
 
 	let { theData, which } = $props();
 
@@ -292,53 +297,141 @@
 </script>
 
 {#snippet controls(theData)}
-	<div><button bind:this={addBtnRef} onclick={openDropdown}>Save</button></div>
+	{#if (appState.currentControlTab === 'properties')}
+	<div class="control-component">
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>Name</p>
+				<input type="text" bind:value={theData.parentBox.name} />
+			</div>
+		</div>
+	</div>
+
+	<div class="control-component">
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>Width</p>
+				<input type="number" bind:value={theData.parentBox.width} />
+			</div>
+	
+			<div class="control-input">
+				<p>Height</p>
+				<input type="number" bind:value={theData.parentBox.height} />
+			</div>
+		</div>
+	</div>
+
+	<div class="div-line"></div>
+
+	<div class="control-component">
+		<div class="control-component-title">
+			<p>Padding</p>
+		</div>
+		
+		<div class="control-input-square">
+			<div class="control-input">
+				<p>Top</p>
+				<input type="number" bind:value={theData.paddingIN.top} />
+			</div>
+			
+			<div class="control-input">
+				<p>Bottom</p>
+				<input type="number" bind:value={theData.paddingIN.bottom} />
+			</div>
+
+			<div class="control-input">
+				<p>Left</p>
+				<input type="number" bind:value={theData.paddingIN.left} />
+			</div>
+
+			<div class="control-input">
+				<p>Right</p>
+				<input type="number" bind:value={theData.paddingIN.right} />
+			</div>
+		</div>
+
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>Space Between</p>
+				<input type="number" bind:value={theData.spaceBetween} />
+			</div>
+		</div>
+	</div>
+
+	<div class="div-line"></div>
+		
+	<div class="control-component">
+		<LightBand bind:bands={theData.lightBands} which="controls" />
+	</div>
+
+	<div class="div-line"></div>
+
+	<div class="control-component">
+		<div class="control-component-title">
+			<p>Time</p>
+		</div>
+
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>Start time</p>
+				<input type="date" bind:value={theData.startTime} />
+			</div>
+		</div>
+		
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>Period</p>
+				<input type="number" step="0.1" bind:value={theData.periodHrs} />
+			</div>
+			
+			<div class="control-input">
+				<p>Repeat</p>
+				<input type="number" bind:value={theData.doublePlot} />
+			</div>
+		</div>
+	</div>
+
+	<div class="div-line"></div>
+
+	<div class="control-component">
+		<div class="control-component-title">
+			<p>Y-lims</p>
+			<div class="control-component-title-icons">
+				<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
+					<Icon name="reset" width={14} height={14} className="control-component-title-icon"/>
+				</button>
+			</div>
+		</div>
+
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>Min</p>
+				<input
+					type="number"
+					step="0.1"
+					value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
+					oninput={(e) => {
+						theData.ylimsIN[0] = [parseFloat(e.target.value)];
+					}}
+				/>
+			</div>
+	
+			<div class="control-input">
+				<p>Max</p>
+				<input
+					type="number"
+					step="0.1"
+					value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
+					oninput={(e) => {
+						theData.ylimsIN[1] = [parseFloat(e.target.value)];
+					}}
+				/>
+			</div>
+		</div>
+	</div>
+
+	{:else if (appState.currentControlTab === 'data') }
 	<div>
-		Name: <input type="text" bind:value={theData.parentBox.name} />
-		Width: <input type="number" bind:value={theData.parentBox.width} />
-		height: <input type="number" bind:value={theData.parentBox.height} />
-
-		<p>
-			Padding: <input type="number" bind:value={theData.paddingIN.top} />
-			<input type="number" bind:value={theData.paddingIN.right} />
-			<input type="number" bind:value={theData.paddingIN.bottom} />
-			<input type="number" bind:value={theData.paddingIN.left} />
-		</p>
-		<p>{JSON.stringify(theData.padding)}</p>
-
-		<p>
-			<LightBand bind:bands={theData.lightBands} which="controls" />
-		</p>
-		<p>
-			Ndays: <a>{theData.Ndays}</a>
-			eachplotheight: <a>{theData.eachplotheight}</a>
-			Start time: <input type="date" bind:value={theData.startTime} />
-			Period: <input type="number" step="0.1" bind:value={theData.periodHrs} />
-			Repeat: <input type="number" bind:value={theData.doublePlot} />
-			Space Between:
-			<input type="number" bind:value={theData.spaceBetween} />
-		</p>
-
-		<p>
-			ylims: <button onclick={() => (theData.ylimsIN = [null, null])}>R</button>
-			<input
-				type="number"
-				step="0.1"
-				value={theData.ylimsIN[0] != null ? theData.ylimsIN[0] : theData.ylims[0]}
-				oninput={(e) => {
-					theData.ylimsIN[0] = [parseFloat(e.target.value)];
-				}}
-			/>
-			<input
-				type="number"
-				step="0.1"
-				value={theData.ylimsIN[1] != null ? theData.ylimsIN[1] : theData.ylims[1]}
-				oninput={(e) => {
-					theData.ylimsIN[1] = [parseFloat(e.target.value)];
-				}}
-			/>
-		</p>
-
 		<p>Data:</p>
 		<button
 			onclick={() =>
@@ -370,13 +463,6 @@
 			{/each}
 		{/each}
 	</div>
-	{#if showSavePlot}
-		<SavePlot
-			bind:showDropdown={showSavePlot}
-			{dropdownTop}
-			{dropdownLeft}
-			Id={'plot' + theData.parentBox.id}
-		/>
 	{/if}
 {/snippet}
 
@@ -438,6 +524,7 @@
 		{/each}
 	</svg>
 {/snippet}
+
 
 {#if which === 'plot'}
 	{@render plot(theData)}

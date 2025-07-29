@@ -117,4 +117,10 @@
 			</div>
 		</div>
 	{/snippet}
+
+	{#snippet button()}
+		<div class="dialog-button-container">
+			<button class="dialog-button" onclick={confirmImport}>Confirm Import</button>
+		</div>
+	{/snippet}
 </Modal>

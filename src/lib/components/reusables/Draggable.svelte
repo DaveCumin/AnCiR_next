@@ -1,9 +1,17 @@
 <script>
 	// not a draggable reusable, change to plot component some time
-	// TODO: lock to grid
+
+	// TODO: control panel
+	// TODO: change color, palette on top
+
 	// @ts-nocheck
-	import { appState, core } from '$lib/core/core.svelte';
+	import { tick } from 'svelte';
+	import { appState, core, snapToGrid } from '$lib/core/core.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
+
 	import { removePlot } from '$lib/core/Plot.svelte';
+
+	let plotElement;
 
 	let {
 		x = $bindable(100),
@@ -19,30 +27,44 @@
 	const minWidth = 100;
 	const minHeight = 100;
 
+	// Plot movement and resize
 	let moving = false;
 	let resizing = false;
 	let initialMouseX, initialMouseY, initialWidth, initialHeight;
-	let newX, newY;
+
+	let dragStartX, dragStartY;
+	let mouseStartX, mouseStartY;
 
 	function onMouseDown(e) {
+		if (e.target.closest('button.icon')) return;
 		if (appState.selectedPlotIds.includes(id)) {
 			moving = true;
-		} else if (!e.altKey) {
+		} else if (!e.altKeye) {
 			appState.selectedPlotIds = [id];
 			moving = true;
 		}
+		mouseStartX = e.clientX;
+		mouseStartY = e.clientY;
+		dragStartX = x;
+		dragStartY = y;
 	}
 
 	function onMouseMove(e) {
 		if (moving) {
 			appState.selectedPlotIds.forEach((id) => {
 				const plot = core.plots.find((p) => p.id === id);
-				plot.x += e.movementX;
-				plot.y += e.movementY;
 
-				plot.x = Math.max(0, Math.min(plot.x, canvasWidth - width - 20));
-				plot.y = Math.max(0, Math.min(plot.y, canvasHeight - height - 50));
+				const deltaX = e.clientX - mouseStartX;
+				const deltaY = e.clientY - mouseStartY;
+
+				const newX = snapToGrid(dragStartX + deltaX);
+				const newY = snapToGrid(dragStartY + deltaY);
+
+				plot.x = Math.max(0, Math.min(newX, canvasWidth - width - 20));
+				plot.y = Math.max(0, Math.min(newY, canvasHeight - height - 50));
 			});
+
+			RePosition();
 		} else if (resizing) {
 			const deltaX = e.clientX - initialMouseX;
 			const deltaY = e.clientY - initialMouseY;
@@ -50,8 +72,10 @@
 			const maxWidth = canvasWidth - x - 20;
 			const maxHeight = canvasHeight - y - 50;
 
-			width = Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth));
-			height = Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight));
+			width = snapToGrid(Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth)));
+			height = snapToGrid(Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight)));
+		
+			RePosition();
 		}
 	}
 
@@ -80,14 +104,20 @@
 		}
 	}
 
-	function handleDblClick(e) {
+	async function handleDblClick(e) {
 		e.stopPropagation();
 		if (id >= 0) {
 			//handle colour-picker
 			appState.selectedPlotIds = [id];
 			appState.showControlPanel = true;
 		}
+		appState.selectedPlotIds = [id];
+		appState.showControlPanel = true;
+
+		await tick();
+		RePosition();
 	}
+
 	function handleClick(e) {
 		e.stopPropagation();
 		if (id >= 0) {
@@ -105,25 +135,52 @@
 				appState.selectedPlotIds = [id];
 			}
 		}
+		RePosition();
 	}
+	
+	function RePosition() {
+		if (appState.selectedPlotIds.includes(id)) {			
+			if (plotElement) {
+			plotElement.scrollIntoView({
+				behavior: 'smooth',
+				block: 'nearest',
+				inline: 'nearest'
+			});
+		}
+		}
+	}
+
+	function openPlotDetails(e) {
+		e.stopPropagation();
+		console.log("clickkkkkkkeeeed");
+	}
+	
 </script>
 
 <svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp} />
 
 <!-- added header therefore TODO: other way than hardcode -->
 <section
+	bind:this={plotElement}
 	ondblclick={handleDblClick}
 	onclick={handleClick}
 	class:selected={appState.selectedPlotIds?.includes(id)}
 	class="draggable"
 	style="left: {x}px;
 		top: {y}px;
-		width: {width + 20}px;
-		height: {height + 50}px;"
+		width: {snapToGrid(width + 20)}px;
+		height: {snapToGrid(height + 50)}px;"
 >
-	<div class="plot-header" onmousedown={(e) => onMouseDown(e)}>
-		{title}
-		<button onclick={() => removePlot(id)}>X</button>
+	<div
+		class="plot-header"
+		onmousedown={onMouseDown}
+	>
+		<p>
+		{title}</p>
+
+		<button class="icon" onclick={() => removePlot(id)}>
+			<Icon name="menu-horizontal-dots" width={20} height={20} className="plot-header-icon" />
+		</button>
 	</div>
 	<div class="plot-content">
 		<slot></slot>
@@ -148,20 +205,34 @@
 	}
 
 	.selected {
-		border: 1px solid #007bff;
-		box-shadow: 0 2px 5px rgba(0, 123, 255, 0.5);
+		border: 1px solid #0275FF;
+		box-shadow: 0 2px 5px rgba(2, 117, 255, 0.5);
 	}
 
 	.plot-header {
-		background-color: #f8f8f8;
-		padding: 0.5rem 1rem;
-		font-weight: bold;
-		border-bottom: 1px solid var(--color-lightness-85);
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+
 		flex-shrink: 0;
+		cursor: move;
+
+		padding: 0.5rem;
+		padding-left: 1rem;
+		padding-right: 0.4rem;
+		background-color: var(--color-lightness-98);
+		border-bottom: 1px solid var(--color-lightness-85);
+		
+		font-weight: bold;
 	}
 
-	.selected .plot-header {
-		cursor: move;
+	.plot-header p {
+		margin: 0;
+	}
+
+	.plot-header button {
+		padding-right: 0;
 	}
 
 	.plot-content {
@@ -177,7 +248,6 @@
 		right: 0;
 		bottom: 0;
 		cursor: nwse-resize;
-		/* background-color: #888; */
 		border-radius: 2px;
 	}
 </style>

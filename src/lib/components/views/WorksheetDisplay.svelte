@@ -1,10 +1,10 @@
 <script>
 	// @ts-nocheck
 
-	import { core, appState, appConsts } from '$lib/core/core.svelte.js';
+	import { core, appConsts } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
-	import AddPlot from '$lib/components/views/modals/MakeNewPlot.svelte';
-	import { closeDisplayPanel } from '$lib/components/DisplayPanel.svelte';
+	import AddPlot from '../views/modals/MakeNewPlot.svelte';
+	import CreateNewPlotModal from './modals/CreateNewPlotModal.svelte';
 
 	let showNewPlotModal = $state(false);
 
@@ -13,11 +13,10 @@
 	}
 </script>
 
+
+
 <div class="heading">
 	<p>Worksheet Layers</p>
-	<button onclick={closeDisplayPanel}>
-		<Icon name="close" width={16} height={16} className="close" />
-	</button>
 
 	<div class="add">
 		<button onclick={openMakeNewPlot}>
@@ -29,24 +28,24 @@
 <AddPlot bind:showModal={showNewPlotModal} />
 
 <div class="display-list">
-	{#each core.plots.toReversed() as plot (plot.id)}
-		<details>
-			<summary class={appState.selectedPlotIds.includes(plot.id) ? 'selected' : ''}
-				>{plot.name}</summary
-			>
+	{#each core.plots.toReversed() as plot, i (plot.id)}
+		<details
+			draggable="true"
+			ondragstart={() => handleDragStart(i)}
+			ondragover={handleDragOver}
+			ondrop={() => handleDrop(i)}
+		>
+			<summary>{plot.name}</summary>
 			{#if plot.id >= 0}
 				{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
-				<Plot theData={plot.plot} which="controls" />
+				<!-- <Plot theData={plot.plot} which="controls" /> -->
 			{/if}
 		</details>
 	{/each}
 </div>
 
-<style>
-	.selected {
-		background: pink;
-	}
 
+<style>
 	.heading {
 		position: sticky;
 		top: 0;

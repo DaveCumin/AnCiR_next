@@ -8,7 +8,15 @@
 
 </script>
 
-<PlotDisplay />
+<div class="plot-panel">
+    <PlotDisplay />
+</div>
+
+<style>
+    .plot-panel {
+        overflow: auto;
+    }
+</style>
 
 
 

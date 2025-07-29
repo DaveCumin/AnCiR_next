@@ -2,8 +2,8 @@
 	// @ts-nocheck
 	import { tick } from 'svelte';
 	import { core, pushObj, outputCoreAsJson } from '$lib/core/core.svelte';
-	import { Table } from '$lib/core/table.svelte.js';
 	import { Column } from '$lib/core/Column.svelte';
+	import { Table } from '$lib/core/Table.svelte.js';
 	import { Plot } from '$lib/core/Plot.svelte';
 
 	import Modal from '$lib/components/reusables/Modal.svelte';
@@ -160,12 +160,16 @@
 				{/if}
 			</div>
 
-			<div class="import-button-container">
-				{#if importReady}
-					<button class="import-button" onclick={importJson}>Confirm Import</button>
-				{/if}
-				<!-- ux^: could have an else state to reflect error -->
-			</div>
+			
+		</div>
+	{/snippet}
+
+	{#snippet button()}
+		<div class="dialog-button-container">
+			{#if importReady}
+				<button class="dialog-button" onclick={importJson}>Confirm Import</button>
+			{/if}
+			<!-- ux^: could have an else state to reflect error -->
 		</div>
 	{/snippet}
 </Modal>

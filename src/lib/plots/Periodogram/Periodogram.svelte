@@ -1,14 +1,15 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
-	import Axis from '$lib/components/plotbits/Axis.svelte';
+	import Axis from '$lib/components/plotBits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { core } from '$lib/core/core.svelte.js';
-	import { binData, mean, makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import { binData, mean, makeSeqArray } from '$lib/components/plotBits/helpers/wrangleData.js';
 	import { pchisq, qchisq } from '$lib/data/CDFs';
-	import Line from '$lib/components/plotbits/Line.svelte';
-	import Points from '$lib/components/plotbits/Points.svelte';
+
+	import Line from '$lib/components/plotBits/Line.svelte';
+	import Points from '$lib/components/plotBits/Points.svelte';
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
 
@@ -281,7 +282,6 @@
 			periodogram.periodlimsIN = json.periodlimsIN;
 			periodogram.periodSteps = json.periodSteps;
 			periodogram.ylimsIN = json.ylimsIN;
-			periodogram.padding = json.padding;
 			periodogram.ygridlines = json.ygridlines;
 			periodogram.xgridlines = json.xgridlines;
 
@@ -295,7 +295,12 @@
 </script>
 
 <script>
+	import { appState } from '$lib/core/core.svelte';
+	
+	import Icon from '$lib/icons/Icon.svelte';
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
+
+
 	let { theData, which } = $props();
 
 	$effect(() => {
@@ -333,61 +338,156 @@
 	}
 </script>
 
-{#snippet controls(theData)}
-	<div><button bind:this={addBtnRef} onclick={openDropdown}>Save</button></div>
+{#snippet controls(theData)}	
+	{#if (appState.currentControlTab === 'properties')}
+	<div class="control-component">
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>Name</p>
+				<input type="text" bind:value={theData.parentBox.name} />
+			</div>
+		</div>
+
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>Width</p>
+				<input type="number" bind:value={theData.parentBox.width} />
+			</div>
+	
+			<div class="control-input">
+				<p>Height</p>
+				<input type="number" bind:value={theData.parentBox.height} />
+			</div>
+		</div>
+	</div>
+
+	<div class="div-line"></div>
+
+	<div class="control-component">
+		<div class="control-component-title">
+			<p>Padding</p>
+		</div>
+		
+		<div class="control-input-square">
+			<div class="control-input">
+				<p>Top</p>
+				<input type="number" bind:value={theData.padding.top} />
+			</div>
+			
+			<div class="control-input">
+				<p>Bottom</p>
+				<input type="number" bind:value={theData.padding.bottom} />
+			</div>
+
+			<div class="control-input">
+				<p>Left</p>
+				<input type="number" bind:value={theData.padding.left} />
+			</div>
+
+			<div class="control-input">
+				<p>Right</p>
+				<input type="number" bind:value={theData.padding.right} />
+			</div>
+		</div>
+	</div>
+
+	<div class="div-line"></div>
+
+	<div class="control-component">
+		<div class="control-component-title">
+			<p>Y-Axis</p>
+			<div class="control-component-title-icons">
+				<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
+					<Icon name="reset" width={14} height={14} className="control-component-title-icon"/>
+				</button>
+			</div>
+		</div>
+
+		<!-- TODO: fix checkbox input style -->
+		<div class="control-input-vertical">
+			<div class="control-input-checkbox">
+				<input type="checkbox" bind:checked={theData.ygridlines} />
+				<p>Grid</p>
+			</div>
+		</div>
+
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>Min</p>
+				<input
+					type="number"
+					step="0.1"
+					value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
+					oninput={(e) => {
+						theData.ylimsIN[0] = [parseFloat(e.target.value)];
+					}}
+				/>
+			</div>
+	
+			<div class="control-input">
+				<p>Max</p>
+				<input
+					type="number"
+					step="0.1"
+					value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
+					oninput={(e) => {
+						theData.ylimsIN[1] = [parseFloat(e.target.value)];
+					}}
+				/>
+			</div>
+		</div>
+	</div>
+
+	<div class="control-component">
+		<div class="control-component-title">
+			<p>X-Axis</p>
+		</div>
+
+		<div class="control-input-vertical">
+			<div class="control-input-checkbox">
+				<input type="checkbox" bind:checked={theData.xgridlines} />
+				<p>Period Grid</p>
+			</div>
+		</div>
+
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>Min</p>
+				<input
+					type="number"
+					min="0.1"
+					step="0.1"
+					value={theData.periodlimsIN[0] ? theData.periodlimsIN[0] : theData.periodlims[0]}
+					oninput={(e) => {
+						theData.periodlimsIN[0] = parseFloat(e.target.value);
+					}}
+				/>
+			</div>
+	
+			<div class="control-input">
+				<p>Max</p>
+				<input
+					type="number"
+					step="0.1"
+					value={theData.periodlimsIN[1] ? theData.periodlimsIN[1] : theData.periodlimsIN[1]}
+					oninput={(e) => {
+						theData.periodlimsIN[1] = parseFloat(e.target.value);
+					}}
+				/>
+			</div>
+		</div>
+
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>Period Step</p>
+				<input type="number" min="0.1" step="0.01" bind:value={theData.periodSteps} />
+			</div>
+		</div>
+	</div>
+
+	{:else if (appState.currentControlTab === 'data')}
+
 	<div>
-		Name: <input type="text" bind:value={theData.parentBox.name} />
-		Width: <input type="number" bind:value={theData.parentBox.width} />
-		Height: <input type="number" bind:value={theData.parentBox.height} />
-
-		<p>
-			Padding: <input type="number" bind:value={theData.padding.top} />
-			<input type="number" bind:value={theData.padding.right} />
-			<input type="number" bind:value={theData.padding.bottom} />
-			<input type="number" bind:value={theData.padding.left} />
-		</p>
-
-		<p>
-			ylims: <button onclick={() => (theData.ylimsIN = [null, null])}>R</button>
-			grid: <input type="checkbox" bind:checked={theData.ygridlines} />
-			<input
-				type="number"
-				step="0.1"
-				value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
-				oninput={(e) => {
-					theData.ylimsIN[0] = parseFloat(e.target.value);
-				}}
-			/>
-			<input
-				type="number"
-				step="0.1"
-				value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-				oninput={(e) => {
-					theData.ylimsIN[1] = parseFloat(e.target.value);
-				}}
-			/>
-		</p>
-		<p>
-			period grid: <input type="checkbox" bind:checked={theData.xgridlines} />
-			<input
-				type="number"
-				min="0.01"
-				step="0.01"
-				value={theData.periodlimsIN[0] ? theData.periodlimsIN[0] : theData.periodlims[0]}
-				oninput={(e) => {
-					theData.periodlimsIN[0] = parseFloat(e.target.value);
-				}}
-			/>
-			<input
-				type="number"
-				step="0.1"
-				value={theData.periodlimsIN[1] ? theData.periodlimsIN[1] : theData.periodlims[1]}
-				oninput={(e) => {
-					theData.periodlimsIN[1] = parseFloat(e.target.value);
-				}}
-			/>
-			step: <input type="number" min="0.1" step="0.01" bind:value={theData.periodSteps} />
-		</p>
 		<p>Data:</p>
 		<button
 			onclick={() =>
@@ -440,13 +540,7 @@
 			point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
 		{/each}
 	</div>
-	{#if showSavePlot}
-		<SavePlot
-			bind:showDropdown={showSavePlot}
-			{dropdownTop}
-			{dropdownLeft}
-			Id={'plot' + theData.parentBox.id}
-		/>
+
 	{/if}
 {/snippet}
 

@@ -4,14 +4,15 @@
 
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte.js';
+	import { Column, getColumnById } from '$lib/core/Column.svelte';
+
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddTable from '$lib/components/iconActions/AddTable.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
-	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import TableProcess from '$lib/core/TableProcess.svelte';
-	import { closeDisplayPanel } from '$lib/components/DisplayPanel.svelte';
 	import MakeNewColumn from './modals/MakeNewColumn.svelte';
+	import Collapisble from '../reusables/Collapisble.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
 	import { getTableById } from '$lib/core/Table.svelte';
@@ -57,12 +58,8 @@
 <div class="heading">
 	<p>Data Sources</p>
 
-	<button onclick={closeDisplayPanel}>
-		<Icon name="close" width={16} height={16} className="close" />
-	</button>
-
 	<div class="add">
-		<button bind:this={addBtnRef} onclick={openDropdown}>
+		<button bind:this={addBtnRef} class="icon" onclick={openDropdown}>
 			<Icon name="add" width={16} height={16} />
 		</button>
 	</div>
@@ -70,33 +67,55 @@
 
 <!-- TODO: write custom component to achieve -->
 <div class="display-list">
+
 	{#each core.tables as table (table.id)}
 		<div class="table-container">
 			<details class="table-item">
 				<summary class="table-name">{table.name}</summary>
-				<button
-					onclick={() => {
-						selectedTable = table.id;
-						showNewCol = true;
-					}}>Add column</button
-				>
+
+				<div class="collapsible-icon-container">
+					<button class="collapsible-icon"
+						onclick={() => {
+							selectedTable = table.id;
+							showNewCol = true;
+					}}>
+						<Icon name="plus" width={16} height={16} className="static-icon" />
+					</button>
+				</div>
+
 				<button
 					onclick={() => {
 						makeNewTablePlot(table.id);
 					}}>View Table</button
 				>
+
+
 				{#each table.columns as col, i}
 					{#if !col.tableProcessed}
+					<div class="second-collapsible">
 						<ColumnComponent {col} />
+					</div>
 					{/if}
 				{/each}
 				{#each table.processes as p}
+				<div class="second-collapsible">
 					<TableProcess {p} />
+				</div>
 				{/each}
 			</details>
 		</div>
 	{/each}
 </div>
+
+<!-- <div class="display-list">
+	{#each core.tables as table(table.id)}
+		<div class="table-container">
+
+		</div>
+	{/each}
+</div> -->
+
+
 
 {#if showAddTable}
 	<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
@@ -125,59 +144,41 @@
 		font-weight: bold;
 	}
 
-	button {
-		background-color: transparent;
-		border: none;
-		margin-right: 0.6rem;
-		padding: 0;
-		text-align: inherit;
-		font: inherit;
-		border-radius: 0;
-		appearance: none;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-	}
-
 	.display-list {
 		width: 100%;
 		margin-top: 0.5rem;
 	}
 
-	/* TODO: hover effect, need update */
-	summary::marker {
-		margin-right: 1.2rem;
+	.collapsible-icon-container {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		padding: 0.5rem 0.5rem;
+		padding-left: 1.0rem;
 	}
 
-	summary:open {
-		margin-top: 0.3rem;
-		margin-bottom: 0.5rem;
+	.collapsible-icon {
+		width: 100%;
+		padding: 0.2rem 0;
+
+		background-color: white;
+		border-radius: 4px;
+		border: solid 1px var(--color-lightness-85);
+		
+		border-color: none;
+		appearance: none;
 	}
 
-	details:open {
-		margin-bottom: 0.5rem;
-	}
-
-	details:open > summary.table-name {
-		background-color: pink;
-	}
-
-	.table-container {
-		margin-left: 0.5rem;
-	}
-
-	.table-container:hover {
+	.collapsible-icon:hover {
 		background-color: var(--color-lightness-98);
-		border-radius: 5px 0 0 5px;
+		cursor: pointer;
 	}
 
-	.table-item {
-		margin-left: 0.5rem;
-		padding-top: 0.2rem;
-		padding-bottom: 0.2rem;
+	/* TODO: fix parent and child relationship */
+	.second-collapsible {
+		padding: 0.5rem 0.5rem;
+		padding-left: 1.0rem;
 	}
 
-	.column-item {
-		margin-left: 1rem;
-	}
 </style>

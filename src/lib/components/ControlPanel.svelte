@@ -1,8 +1,7 @@
-<!-- TODO: select plot to bring up control panel / switch to -->
-
 <script>
 	// @ts-nocheck
 	import { appState } from '$lib/core/core.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
 	import ControlDisplay from './views/ControlDisplay.svelte';
 	import { fly } from 'svelte/transition';
 
@@ -58,7 +57,12 @@
 		<div class="resizer" onmousedown={startResize}></div>
 	</div>
 {:else}
-	<button class="openControlPanel" onclick={() => (appState.showControlPanel = true)}>open</button>
+<!-- TODO: reconsider this ux wise -->
+<div class="open-control-panel-icon-container">
+	<button class="icon" onclick={() => (appState.showControlPanel = true)}>
+		<Icon name="circle-chevron-left" width={32} height={32}/>
+	</button>
+</div>
 {/if}
 
 <style>
@@ -68,6 +72,14 @@
 		right: 0;
 		z-index: 999;
 	}
+
+	.open-control-panel-icon-container {
+		position: fixed;
+		top: calc(100vh * 4 / 9);
+		right: 16px;
+		z-index: 999;
+	}
+
 	.view-container {
 		overflow-y: auto;
 		overflow-x: hidden;
@@ -92,17 +104,6 @@
 
 	.view-container::-webkit-scrollbar {
 		display: none;
-	}
-
-	.resizer {
-		width: 6px;
-		cursor: col-resize;
-		height: 100%;
-		position: absolute;
-		top: 0;
-		right: 0;
-		z-index: 1;
-		background-color: transparent;
 	}
 
 	.view-container.right .resizer {

@@ -230,20 +230,20 @@ function doBasicFileImport(result, fname) {
 		const guessedFormat = guessDateofArray(result[f]);
 		console.log(f, datum, guessedFormat);
 		if (guessedFormat != -1 && guessedFormat.length > 0) {
-			const df = new Column();
+			const df = new Column({});
 			df.type = 'time';
 			df.name = f;
 			df.data = result[f];
 			df.timeFormat = guessedFormat;
 			newDataEntry.addColumn(df);
 		} else if (!isNaN(datum)) {
-			const df = new Column();
+			const df = new Column({});
 			df.type = 'value';
 			df.name = f;
 			df.data = result[f];
 			newDataEntry.addColumn(df);
 		} else {
-			const df = new Column();
+			const df = new Column({});
 			df.type = 'category';
 			df.name = f;
 			df.data = result[f];

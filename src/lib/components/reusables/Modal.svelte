@@ -4,13 +4,14 @@ https://svelte.dev/playground/modal?version=5.33.7
  -->
 <script>
 	import Icon from '$lib/icons/Icon.svelte';
-	import { preventDefault } from 'svelte/legacy';
+
 	let {
 		showModal = $bindable(),
 		onclose = () => {},
 		onopen = () => {},
 		header,
-		children
+		children,
+		button
 	} = $props();
 	import { fade } from 'svelte/transition';
 
@@ -47,16 +48,16 @@ https://svelte.dev/playground/modal?version=5.33.7
 		>
 			<div>
 				<!-- svelte-ignore a11y_autofocus -->
-				<button autofocus onclick={() => close()}>
+				<button onclick={() => close()}>
 					<Icon name="close" width={16} height={16} className="close" />
 				</button>
-
-				<div class="dialog-container">
-					{@render header?.()}
-					{@render children?.()}
-				</div>
 			</div>
-		</dialog>
+
+		<div class="dialog-container">
+			{@render header?.()}
+			{@render children?.()}
+			{@render button?.()}
+		</div>
 	</div>
 {/if}
 

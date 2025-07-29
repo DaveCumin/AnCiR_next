@@ -57,6 +57,11 @@
 
 	{#snippet children()}
 		<SimulatedData bind:p />
-		<div><button onclick={confirmAddColumn}>Add these data</button></div>
+	{/snippet}
+
+	{#snippet button()}
+		<div class="dialog-button-container">
+			<button class="dialog-button" onclick={confirmAddColumn}>Add these data</button>
+		</div>
 	{/snippet}
 </Modal>
