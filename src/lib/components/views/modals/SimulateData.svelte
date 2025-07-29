@@ -39,7 +39,7 @@
 			core.tables[core.tables.length - 1]
 		);
 		core.tables[core.tables.length - 1].processes.push(tb);
-		showSimulateModal = false;
+		showModal = false;
 	}
 </script>
 
