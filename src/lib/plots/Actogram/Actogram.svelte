@@ -111,7 +111,7 @@
 		parentBox = $state();
 		data = $state([]);
 		isAddingMarkerTo = $state(-1);
-		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 30 });
+		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 20 });
 		padding = $derived.by(() => {
 			if (this.lightBands.length > 0) {
 				return {

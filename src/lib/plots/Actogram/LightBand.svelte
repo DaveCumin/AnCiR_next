@@ -165,7 +165,7 @@
 	{:else}
 	<div class="control-input-vertical">
 		<div class="control-input">
-			<p>No bands added</p>
+			<p>Click + to add a band</p>
 		</div>
 	</div>
 	{/if}

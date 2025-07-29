@@ -334,12 +334,6 @@ import Icon from '$lib/icons/Icon.svelte';
 	<div class="control-component">
 		<div class="control-component-title">
 			<p>X-Axis</p>
-			<!-- TODO: DEBUG reset x axis not working -->
-			<div class="control-component-title-icons">
-				<button class="icon" onclick={() => (theData.periodlimsIN = [null, null])}>
-					<Icon name="reset" width={14} height={14} className="control-component-title-icon"/>
-				</button>
-			</div>
 		</div>
 
 		<div class="control-input-vertical">

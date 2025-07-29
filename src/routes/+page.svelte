@@ -298,17 +298,12 @@
 	/* TODO: user prompt if no band */
 
 	:global(body) {
-		font-family: 'Inter', sans-serif;
+		font-family: system-ui, sans-serif;
 		font-size: 14px;
 	}
 
-	/* :global(p) {
-		font-family: 'Inter', sans-serif;
-		font-size: 14px;
-	} */
-
 	:global(button) {
-		font-family: 'Inter', sans-serif;
+		font-family: system-ui, sans-serif;
 		font-size: 14px;
 	}
 
@@ -521,7 +516,7 @@
 	:global(.control-input input) {
 		font-size: 14px;
 		font-weight: lighter;
-		padding: 2px 8px;
+		padding: 0.2rem 0.5rem;
 		border: solid 1px transparent;
 		background-color: var(--color-lightness-97);
 		border: solid 1px var(--color-lightness-85);

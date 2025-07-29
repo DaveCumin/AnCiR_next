@@ -291,7 +291,9 @@
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import AddProcess from '$lib/components/iconActions/AddProcess.svelte';
 
-	let { col, canChange = false } = $props();
+	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
+
+	let { col = $bindable(), canChange = false } = $props();
 
 	let addBtnRef;
 	let showAddProcess = $state(false);
@@ -321,25 +323,29 @@
 {#if col == undefined}
 	<p>Column is undefined</p>
 {:else}
-	<details open style="margin-left: 1rem">
+	
+	<details open>
 		<summary>
-			Id: {col.id}
+			<!-- Id: {col.id} -->
 			{#if canChange}
 				<ColumnSelector bind:value={col.refId} />
 			{/if}
-			<strong><input bind:value={col.name} /></strong><br />
+
+			<div class="data-collapsible-title-container">
+				<TypeSelector bind:value={col.type} />
+				<strong><input bind:value={col.name} /></strong>
+				{col.type}
+			</div>
+			
+			
 			{#if !col.isReferencial()}
-				<italic>{col.provenance}</italic><br />
+				<div class="data-component-info">
+					<italic>{col.provenance}</italic>
+				</div>
 			{/if}
-			type:
-			<select name="datatype" bind:value={col.type}>
-				<option value="time">Time</option>
-				<option value="number">Number</option>
-				<option value="category">Category</option>
-			</select></summary
-		>
+			
+		</summary>
 		<ul>
-			{col.type}
 			<!-- {#if col.type == 'number'}[{Math.min(...col.getData())},{Math.max(...col.getData())}]{/if} -->
 			{#if col.type == 'time'}
 				<br />
@@ -350,18 +356,7 @@
 					{getColumnById(col.refId)?.timeFormat}
 				{/if}
 			{/if}
-			{#if col.compression != null}
-				<br />
-				Compression: {col.compression}
-			{/if}
-			<li>
-				{#if !col.isReferencial() && Array.isArray(col.data)}
-					<p>raw: {col.data.slice(0, 5)}</p>
-				{/if}
-				data: {col.getData()?.slice(0, 5)}
-				N: {col.getData().length}
-				hoursSince: {col.hoursSinceStart?.slice(0, 5)}
-			</li>
+
 			{#each col.processes as p}
 				{#key p.id}
 					<!-- Force the refresh when a process is added or removed (mostly the latter)-->
@@ -383,3 +378,115 @@
 {#if showAddProcess}
 	<AddProcess bind:showDropdown={showAddProcess} {columnSelected} {dropdownTop} {dropdownLeft} />
 {/if}
+
+
+<style>
+	.data-collapsible-title-container {
+		display: flex;
+		align-items: center;
+		justify-content: flex-start;
+
+		margin: 0;
+	}
+
+	.data-component-info p{
+		font-size: 12px;
+		text-align: left;
+		color: var(--color-lightness-35);
+		margin: 0;
+	}
+
+	.data-component-input p {
+		font-size: 12px;
+		text-align: left;
+		color: var(--color-lightness-35);
+		margin: 0;
+	}
+
+	/* General container for details */
+	details {
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 4px;
+		padding: 0.5rem 0.75rem;
+		background: var(--color-lightness-98);
+	}
+
+	/* Summary section clickable area */
+	summary {
+		display: flex;
+		flex-direction: column;
+		
+		cursor: pointer;
+		list-style: circle;
+		font-size: 1rem;
+		font-weight: 500;
+		margin-bottom: 0.5rem;
+	}
+
+	summary strong input {
+		border: none;
+		background: transparent;
+		font-size: 14px;
+
+		font-weight: 600;
+		color: inherit;
+		padding: 0px;
+		width: 100%;
+		outline: none;
+	}
+
+	/* Provenance italic style */
+	summary italic {
+		font-style: italic;
+		font-size: 12px;
+		color: var(--color-lightness-35);
+	}
+
+	/* Select and input controls */
+	select,
+	input {
+		font-size: 14px;
+		font-weight: lighter;
+		padding: 0.2rem 0.5rem;
+		border: solid 1px transparent;
+
+		border: solid 1px var(--color-lightness-85);
+		border-radius: 2px;
+		box-sizing: border-box;
+		transition: border-color 0.2s;
+
+		width: 100%;
+		min-width: 0;
+	}
+
+	select:focus,
+	input:focus {
+		border: 1px solid #0275FF;
+		box-shadow: 0 2px 5px rgba(2, 117, 255, 0.5);
+		outline: none;
+	}
+
+	/* UL structure and list items */
+	ul {
+		margin: 0.5rem 0 0 0;
+		padding: 0;
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		font-size: 0.9rem;
+	}
+
+	ul li {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.25rem 0;
+		border-bottom: 1px solid #eee;
+	}
+
+	ul li:last-child {
+		border-bottom: none;
+	}
+</style>
+

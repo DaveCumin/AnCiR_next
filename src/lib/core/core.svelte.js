@@ -11,7 +11,7 @@ export const core = $state({
 });
 
 export const appState = $state({
-	currentTab: 'worksheet',
+	currentTab: 'data',
 	currentControlTab: 'properties',
 
 	showNavbar: true,
