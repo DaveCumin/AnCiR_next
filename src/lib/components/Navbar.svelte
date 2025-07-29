@@ -5,7 +5,7 @@
 	// @ts-nocheck
 	import { appState } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
-	import Setting from './iconActions/Setting.svelte';
+	import Setting from '$lib/components/iconActions/Setting.svelte';
 
 	let gearBtnRef;
 	let showSetting = $state(false);

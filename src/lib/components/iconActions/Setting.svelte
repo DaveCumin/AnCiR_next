@@ -83,7 +83,7 @@
 		});
 
 		jsonData.plots.map((plotjson) => {
-			core.plots.push(Plot.fromJSON(plotjson));
+			pushObj(Plot.fromJSON(plotjson));
 		});
 
 		//TODO add in appState import also

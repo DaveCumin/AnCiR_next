@@ -73,13 +73,20 @@ export class Table {
 		const id = json.id ?? json.tableid;
 		const name = json.name ?? 'Untitled Table';
 		const columnRefs = json.columnRefs ?? json.columnRefs ?? [];
+
+		let table = new Table({ name, columnRefs }, id);
 		if (json.processes) {
 			json.processes.forEach((process) => {
 				//TODO make the process and add it to the table
+				const tempProcess = new TableProcess(process, table, process.id);
+				//add the process
+				table.processes.push(tempProcess);
+				//remove the columns that are in the process so they aren't duplicated.
+				Object.keys(tempProcess.args.out).forEach((key) => {
+					table.columnRefs = table.columnRefs.filter((col) => col !== tempProcess.args.out[key]);
+				});
 			});
 		}
-
-		let table = new Table({ name, columnRefs }, id);
 		return table;
 	}
 }

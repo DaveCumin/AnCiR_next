@@ -15,7 +15,7 @@
 
 	export class Plot {
 		id;
-		name = $state('plot' + this.id); // TODO: possible fix?
+		name = $state('plot' + this.id);
 		x = $state(350);
 		y = $state(150);
 		width = $state(500);
@@ -68,7 +68,6 @@
 			};
 		}
 		static fromJSON(json) {
-			//TODO
 			const id = json.id ?? json.plotid;
 			const name = json.name ?? 'Untitled Plot';
 

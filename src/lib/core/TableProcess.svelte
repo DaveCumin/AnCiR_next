@@ -22,7 +22,12 @@
 
 			this.name = dataIN.name;
 
-			if (dataIN.args) {
+			//If there is a column out ref set (i.e. reading from JSON)
+			if (dataIN.args.out[Object.keys(dataIN.args.out)[0]] >= 0) {
+				this.args = dataIN.args;
+			}
+			//If the out refs are not yet defined (i.e. creating new)
+			else if (dataIN.args) {
 				this.args = dataIN.args;
 				//MAKE THE OUTPUTS (defined in the defaults with 'OUT') AND ASSOCIATE THEM
 				const theTable = getTableById(this.parent.id);
@@ -36,10 +41,10 @@
 						data: dataIN.args.data ?? [] //This is to make sure the preview is exactly what the data are (eg for random)
 					});
 					this.args.out[Object.keys(this.args.out)[i]] = tempCol.id;
-					theTable.addColumn(tempCol);
+					theTable?.addColumn(tempCol);
 				}
 				if (Object.keys(this.args).includes('N')) {
-					this.args.N = getColumnById(theTable.columnRefs[0]).getData().length;
+					this.args.N = getColumnById(theTable?.columnRefs[0]).getData().length;
 				}
 				//--------------------------
 			}

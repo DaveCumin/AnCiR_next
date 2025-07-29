@@ -1,5 +1,4 @@
 <script>
-	//TODO: add a way to display a tooltip on hover
 	import { quadtree } from 'd3-quadtree';
 
 	let {
