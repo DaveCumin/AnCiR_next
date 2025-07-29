@@ -1,4 +1,5 @@
-<script context="module">
+<script module>
+	//TODO: MAKE THIS WORK IN THE DRAGABLE!
 	export function getRandomColor() {
 		const letters = '0123456789ABCDEF';
 		let color = '#';
@@ -17,7 +18,7 @@
 	import { onMount } from 'svelte';
 	import { appConsts } from '$lib/core/core.svelte';
 	import Draggable from '$lib/components/reusables/Draggable.svelte';
-	let { value = $bindable(), onChange = () => {} } = $props();
+	let { value = $bindable() } = $props();
 	let cpDraggable = $state({ x: 0, y: 0, width: 300, height: 300 });
 
 	let show = $state(false);
@@ -233,6 +234,7 @@
 			bind:height={cpDraggable.height}
 			overflow="auto"
 			title="Colour Picker"
+			id={crypto.randomUUID()}
 		>
 			<div style="background:white; padding: 16px; position: relative;">
 				<!-- Close Button -->

@@ -4,7 +4,6 @@
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
-	import { core } from '$lib/core/core.svelte.js';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
 	import Hist from '$lib/components/plotbits/Hist.svelte';
@@ -363,7 +362,7 @@
 			y: {datum.y.name}
 			<Column col={datum.y} canChange={true} />
 
-			colour: <ColourPicker bind:value={datum.colour} />
+			colour: <input type="color" bind:value={datum.colour} />
 
 			<p>Markers:<button onclick={() => datum.addMarker()}>+</button></p>
 			{#each datum.phaseMarkers as marker}

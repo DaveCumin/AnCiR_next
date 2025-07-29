@@ -133,7 +133,7 @@
 	{#if bands?.bands}
 		{#each bands.bands as b, i}
 			<p>
-				<ColourPicker bind:value={b.col} />
+				<input type="color" bind:value={b.col} />
 				<input
 					type="number"
 					bind:value={b.pc}

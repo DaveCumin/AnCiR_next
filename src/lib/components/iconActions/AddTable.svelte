@@ -1,4 +1,3 @@
-<!-- TODO: Import data/table logic might need re-work -->
 <script>
 	// @ts-nocheck
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';

@@ -24,8 +24,8 @@ export function binData(x, y, binSize, binStart = 0) {
 		}
 	}
 
-	// Compute y_out as averages
-	const y_out = binSums.map((sum, i) => (binCounts[i] > 0 ? sum / binCounts[i] : 0));
+	// Compute y_out as averages; NaN if no data in the bin
+	const y_out = binSums.map((sum, i) => (binCounts[i] > 0 ? sum / binCounts[i] : NaN));
 
 	return { bins, y_out };
 }

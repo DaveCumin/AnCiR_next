@@ -1,10 +1,3 @@
-<!-- 
- TODO:
- need to fix dropdown ui ()
- dynamic import and export (cores)
- add import on top of existing?
--->
-
 <script>
 	// @ts-nocheck
 	import { tick } from 'svelte';
@@ -85,8 +78,6 @@
 		jsonData.plots.map((plotjson) => {
 			pushObj(Plot.fromJSON(plotjson));
 		});
-
-		//TODO add in appState import also
 
 		showImportModal = false;
 		importReady = false;
