@@ -16,7 +16,7 @@ export const appState = $state({
 	showControlPanel: false,
 
 	windowWidth: window.innerWidth,
-	widthNavBar: 56,
+	widthNavBar: 40,
 	widthDisplayPanel: 200,
 	widthControlPanel: 200,
 

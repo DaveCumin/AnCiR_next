@@ -77,7 +77,6 @@ export class Table {
 		let table = new Table({ name, columnRefs }, id);
 		if (json.processes) {
 			json.processes.forEach((process) => {
-				//TODO make the process and add it to the table
 				const tempProcess = new TableProcess(process, table, process.id);
 				//add the process
 				table.processes.push(tempProcess);

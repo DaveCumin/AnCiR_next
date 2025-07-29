@@ -56,8 +56,8 @@
 {#if appState.showDisplayPanel}
 	<div
 		bind:this={container}
-		class="view-container {resizeSide}}"
-		style="width: {appState.widthDisplayPanel}px; min-width: {minWidth}px;	max-width: {maxWidth}px;"
+		class="view-container {resizeSide}"
+		style="left: {appState.widthNavBar}px; width: {appState.widthDisplayPanel}px; min-width: {minWidth}px;	max-width: {maxWidth}px;"
 		in:fly={{ x: -appState.widthDisplayPanel, duration: 600 }}
 		out:fly={{ x: -appState.widthDisplayPanel, duration: 600 }}
 	>
