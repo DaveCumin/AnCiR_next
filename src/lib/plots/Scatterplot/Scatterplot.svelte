@@ -186,6 +186,7 @@
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
+	import Page from '../../../routes/+page.svelte';
 
 	let { theData, which } = $props();
 
