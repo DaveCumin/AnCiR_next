@@ -3,8 +3,7 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
-	import { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
-	import { core } from '$lib/core/core.svelte.js';
+	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { binData, mean, makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { pchisq, qchisq } from '$lib/data/CDFs';
 	import Line from '$lib/components/plotbits/Line.svelte';
@@ -434,9 +433,9 @@
 				/>
 			{/if}
 
-			line col: <input type="color" bind:value={datum.linecolour} />
+			line col: <ColourPicker bind:value={datum.linecolour} />
 			line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
-			point col: <input type="color" bind:value={datum.pointcolour} />
+			point col: <ColourPicker bind:value={datum.pointcolour} />
 			point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
 		{/each}
 	</div>

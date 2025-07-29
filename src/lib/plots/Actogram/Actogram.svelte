@@ -362,7 +362,7 @@
 			y: {datum.y.name}
 			<Column col={datum.y} canChange={true} />
 
-			colour: <input type="color" bind:value={datum.colour} />
+			colour: <ColourPicker bind:value={datum.colour} />
 
 			<p>Markers:<button onclick={() => datum.addMarker()}>+</button></p>
 			{#each datum.phaseMarkers as marker}

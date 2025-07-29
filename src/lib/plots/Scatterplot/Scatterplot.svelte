@@ -3,7 +3,7 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear, scaleTime } from 'd3-scale';
-	import { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
@@ -312,9 +312,9 @@
 			y: {datum.y.name}
 			<Column col={datum.y} canChange={true} />
 
-			line col: <input type="color" bind:value={datum.linecolour} />
+			line col: <ColourPicker bind:value={datum.linecolour} />
 			line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
-			point col: <input type="color" bind:value={datum.pointcolour} />
+			point col: <ColourPicker bind:value={datum.pointcolour} />
 			point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
 		{/each}
 	</div>
