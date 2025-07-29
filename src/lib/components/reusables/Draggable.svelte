@@ -39,9 +39,9 @@
 		if (e.target.closest('button.icon')) return;
 		if (appState.selectedPlotIds.includes(id)) {
 			moving = true;
-		} else if (!e.altKeye) {
-			appState.selectedPlotIds = [id];
-			moving = true;
+			// } else if (!e.altKeye) {
+			// 	appState.selectedPlotIds = [id];
+			// 	moving = true;
 		}
 		mouseStartX = e.clientX;
 		mouseStartY = e.clientY;
@@ -57,8 +57,8 @@
 				const deltaX = e.clientX - mouseStartX;
 				const deltaY = e.clientY - mouseStartY;
 
-				const newX = snapToGrid(dragStartX + deltaX);
-				const newY = snapToGrid(dragStartY + deltaY);
+				const newX = snapToGrid(plot.x + deltaX);
+				const newY = snapToGrid(plot.y + deltaY);
 
 				plot.x = Math.max(0, Math.min(newX, canvasWidth - width - 20));
 				plot.y = Math.max(0, Math.min(newY, canvasHeight - height - 50));
@@ -74,7 +74,7 @@
 
 			width = snapToGrid(Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth)));
 			height = snapToGrid(Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight)));
-		
+
 			RePosition();
 		}
 	}
@@ -121,9 +121,9 @@
 	function handleClick(e) {
 		e.stopPropagation();
 		if (id >= 0) {
-			//handle colour-picker
 			//look for alt held at the same time
 			if (e.altKey) {
+				console.log('alt held for ', id, $state.snapshot(appState.selectedPlotIds));
 				//Add if it's not already there
 				if (!appState.selectedPlotIds.includes(id)) {
 					appState.selectedPlotIds.push(id);
@@ -137,24 +137,23 @@
 		}
 		RePosition();
 	}
-	
+
 	function RePosition() {
-		if (appState.selectedPlotIds.includes(id)) {			
+		if (appState.selectedPlotIds == id) {
 			if (plotElement) {
-			plotElement.scrollIntoView({
-				behavior: 'smooth',
-				block: 'nearest',
-				inline: 'nearest'
-			});
-		}
+				plotElement.scrollIntoView({
+					behavior: 'smooth',
+					block: 'nearest',
+					inline: 'nearest'
+				});
+			}
 		}
 	}
 
 	function openPlotDetails(e) {
 		e.stopPropagation();
-		console.log("clickkkkkkkeeeed");
+		console.log('clickkkkkkkeeeed');
 	}
-	
 </script>
 
 <svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp} />
@@ -171,12 +170,10 @@
 		width: {snapToGrid(width + 20)}px;
 		height: {snapToGrid(height + 50)}px;"
 >
-	<div
-		class="plot-header"
-		onmousedown={onMouseDown}
-	>
+	<div class="plot-header" onmousedown={onMouseDown}>
 		<p>
-		{title}</p>
+			{title}
+		</p>
 
 		<button class="icon" onclick={() => removePlot(id)}>
 			<Icon name="menu-horizontal-dots" width={20} height={20} className="plot-header-icon" />
@@ -205,7 +202,7 @@
 	}
 
 	.selected {
-		border: 1px solid #0275FF;
+		border: 1px solid #0275ff;
 		box-shadow: 0 2px 5px rgba(2, 117, 255, 0.5);
 	}
 
@@ -223,7 +220,7 @@
 		padding-right: 0.4rem;
 		background-color: var(--color-lightness-98);
 		border-bottom: 1px solid var(--color-lightness-85);
-		
+
 		font-weight: bold;
 	}
 
