@@ -39,9 +39,6 @@
 		if (e.target.closest('button.icon')) return;
 		if (appState.selectedPlotIds.includes(id)) {
 			moving = true;
-			// } else if (!e.altKeye) {
-			// 	appState.selectedPlotIds = [id];
-			// 	moving = true;
 		}
 		mouseStartX = e.clientX;
 		mouseStartY = e.clientY;
@@ -54,14 +51,14 @@
 			appState.selectedPlotIds.forEach((id) => {
 				const plot = core.plots.find((p) => p.id === id);
 
-				const deltaX = e.clientX - mouseStartX;
-				const deltaY = e.clientY - mouseStartY;
+				plot.x += e.movementX;
+				plot.y += e.movementY;
 
-				const newX = snapToGrid(plot.x + deltaX);
-				const newY = snapToGrid(plot.y + deltaY);
+				const newX = snapToGrid(plot.x);
+				const newY = snapToGrid(plot.y);
 
-				plot.x = Math.max(0, Math.min(newX, canvasWidth - width - 20));
-				plot.y = Math.max(0, Math.min(newY, canvasHeight - height - 50));
+				plot.x = Math.max(0, Math.min(plot.x, canvasWidth - width - 20));
+				plot.y = Math.max(0, Math.min(plot.y, canvasHeight - height - 50));
 			});
 
 			RePosition();
