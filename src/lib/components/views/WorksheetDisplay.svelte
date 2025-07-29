@@ -1,31 +1,72 @@
 <script>
 	// @ts-nocheck
 
-	import { core, appConsts } from '$lib/core/core.svelte.js';
+	import { core } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
-	import AddPlot from '../views/modals/MakeNewPlot.svelte';
-	import CreateNewPlotModal from './modals/CreateNewPlotModal.svelte';
+	import AddPlot from '../iconActions/AddPlot.svelte';
 
-	let showNewPlotModal = $state(false);
+	let addBtnRef;
+	let showAddPlot = $state(false);
+	let dropdownTop = $state(0);
+	let dropdownLeft = $state(0);
+	let draggedIndex = $state(null);
 
-	function openMakeNewPlot() {
-		showNewPlotModal = true;
+	function recalculateDropdownPosition() {
+		if (!addBtnRef) return;
+		const rect = addBtnRef.getBoundingClientRect();
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
+	}
+
+	function openDropdown() {
+		recalculateDropdownPosition();
+		requestAnimationFrame(() => (showAddPlot = true));
+		window.addEventListener('resize', recalculateDropdownPosition);
+	}
+
+	function viewToModelIndex(i) {
+		return core.plots.length - 1 - i;
+	}
+
+	function handleDragStart(i) {
+		draggedIndex = viewToModelIndex(i);
+	}
+
+	function handleDragOver(event) {
+		event.preventDefault();
+	}
+
+	function handleDrop(i) {
+		if (draggedIndex === null) return;
+
+		const targetIndex = viewToModelIndex(i);
+		if (draggedIndex === targetIndex) {
+			draggedIndex = null;
+			return;
+		}
+
+		const updated = [...core.plots];
+		const [movedItem] = updated.splice(draggedIndex, 1);
+		updated.splice(targetIndex, 0, movedItem);
+
+		core.plots = updated;
+		draggedIndex = null;
 	}
 </script>
-
-
 
 <div class="heading">
 	<p>Worksheet Layers</p>
 
 	<div class="add">
-		<button onclick={openMakeNewPlot}>
+		<button bind:this={addBtnRef} onclick={openDropdown}>
 			<Icon name="add" width={16} height={16} />
 		</button>
 	</div>
 </div>
 
-<AddPlot bind:showModal={showNewPlotModal} />
+{#if showAddPlot}
+	<AddPlot bind:showDropdown={showAddPlot} {dropdownTop} {dropdownLeft} />
+{/if}
 
 <div class="display-list">
 	{#each core.plots.toReversed() as plot, i (plot.id)}
@@ -36,14 +77,9 @@
 			ondrop={() => handleDrop(i)}
 		>
 			<summary>{plot.name}</summary>
-			{#if plot.id >= 0}
-				{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
-				<!-- <Plot theData={plot.plot} which="controls" /> -->
-			{/if}
 		</details>
 	{/each}
 </div>
-
 
 <style>
 	.heading {
