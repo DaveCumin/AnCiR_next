@@ -14,8 +14,7 @@ export function formatDate(dateIN) {
 }
 
 function convertFormat(formatIN) {
-	// if (!formatIN || typeof formatIN == 'number') return formatIN;
-	if (typeof formatIN !== 'string') return formatIN;
+	if (!formatIN || typeof formatIN == 'number') return formatIN;
 
 	//moment format string to luxon format string (https://moment.github.io/luxon/#/parsing?id=table-of-tokens)
 	const map = {
@@ -78,20 +77,9 @@ export function guessDateofArray(dates) {
 }
 
 export function calculateTimeDifference(start, end, dateFormat) {
-	// if (start === null || end === null || start === undefined || end === undefined) {
-	// 	return null;
-	// }
-	
-	if (
-		typeof start !== 'string' ||
-		typeof end !== 'string' ||
-		!dateFormat ||
-		typeof dateFormat !== 'string'
-	) {
-		console.warn('Invalid inputs to calculateTimeDifference:', { start, end, dateFormat });
+	if (start === null || end === null || start === undefined || end === undefined) {
 		return null;
 	}
-
 	start = DateTime.fromFormat(start, dateFormat);
 	end = DateTime.fromFormat(end, dateFormat);
 

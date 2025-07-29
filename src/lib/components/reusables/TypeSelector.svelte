@@ -9,6 +9,7 @@
 	const options = [
 		{ label: 'Time', value: 'time', icon: 'clock' },
 		{ label: 'Number', value: 'number', icon: 'math' },
+		{ label: 'Number', value: 'value', icon: 'math' },
 		{ label: 'Category', value: 'category', icon: 'list' }
 	];
 
@@ -58,7 +59,9 @@
     {#if (value)}
         {@const iconName = options.find(o => o.value === value).icon}
         <button class="icon" onclick={toggleDropdown}>
-            <Icon name={iconName} width={16} height={16} className="control-component-icon"/>
+            {#key iconName}
+			<Icon name={iconName} width={16} height={16} className="control-component-icon"/>
+			{/key}
         </button>
 
         {#if open}

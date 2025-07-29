@@ -1132,6 +1132,7 @@ class Guesser {
 export function guessFormat(date, format) {
 	const parsedResults = Guesser.parse(date);
 	const refinedParsedResults = Guesser.refine(parsedResults);
+	console.log("Date being parsed:", date);
 	if (refinedParsedResults.length === 0) {
 		console.error("Couldn't parse date");
 		//throw Error("Couldn't parse date");

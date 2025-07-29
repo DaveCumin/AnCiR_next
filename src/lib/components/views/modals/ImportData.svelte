@@ -41,7 +41,6 @@
 		showImportModal = false;
 		importReady = false;
 		importPreview = '';
-		showDropdown = false;
 	}
 </script>
 
@@ -109,18 +108,14 @@
 				{/if}
 			</div>
 
-			<div class="import-button-container">
-				<!-- Add this if you define `let importReady = true;` inside <script> -->
-				{#if importReady}
-					<button class="import-button" onclick={confirmImport}>Confirm Import</button>
-				{/if}
-			</div>
 		</div>
 	{/snippet}
 
 	{#snippet button()}
 		<div class="dialog-button-container">
-			<button class="dialog-button" onclick={confirmImport}>Confirm Import</button>
+			{#if importReady}
+				<button class="dialog-button" onclick={confirmImport}>Confirm Import</button>
+			{/if}
 		</div>
 	{/snippet}
 </Modal>
