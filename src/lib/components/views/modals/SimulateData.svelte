@@ -5,15 +5,10 @@
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { Table } from '$lib/core/Table.svelte';
 	import { TableProcess } from '$lib/core/TableProcess.svelte';
-
-	let showSimulateModal = $state(false);
-
-	export function openSimulateModal() {
-		showSimulateModal = true;
-	}
 </script>
 
 <script>
+	let { showModal = $bindable(false) } = $props();
 	function processNested(obj) {
 		const result = {};
 		for (const [key, value] of Object.entries(obj)) {
@@ -48,7 +43,7 @@
 	}
 </script>
 
-<Modal bind:showModal={showSimulateModal}>
+<Modal bind:showModal>
 	{#snippet header()}
 		<div class="heading">
 			<h2>Simulate Data</h2>

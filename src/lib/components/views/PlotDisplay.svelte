@@ -3,12 +3,13 @@
 	import Draggable from '$lib/components/reusables/Draggable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import CreateNewPlotModal from '$lib/components/views/modals/MakeNewPlot.svelte';
-
+	import CreateNewDataModal from '$lib/components/views/modals/SimulateData.svelte';
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 	import { closeControlPanel } from '$lib/components/views/ControlDisplay.svelte';
 	import { tick } from 'svelte';
 
-	let showModal = $state(false);
+	let showNewPlotModal = $state(false);
+	let showNewDataModal = $state(false);
 
 	function handleClick(e) {
 		e.stopPropagation();
@@ -90,15 +91,24 @@
 						<Plot theData={plot} which="plot" />
 					</Draggable>
 				{/each}
-			{:else}
+			{:else if core.data.length > 0}
 				<div class="no-plot-prompt">
-					<button class="icon" onclick={() => (showModal = true)}>
+					<button class="icon" onclick={() => (showNewPlotModal = true)}>
 						<Icon name="add" width={24} height={24} />
 					</button>
-					<p>Click to Add New Plot</p>
+					<p>Click to add a new plot</p>
 				</div>
 
-				<CreateNewPlotModal bind:showModal />
+				<CreateNewPlotModal bind:showModal={showNewPlotModal} />
+			{:else}
+				<div class="no-plot-prompt">
+					<button class="icon" onclick={() => (showNewDataModal = true)}>
+						<Icon name="add" width={24} height={24} />
+					</button>
+					<p>Click to add new data</p>
+				</div>
+
+				<CreateNewDataModal bind:showModal={showNewDataModal} />
 			{/if}
 		</div>
 	</div>
