@@ -120,7 +120,7 @@
 		isDragging = true;
 		startX = event.clientX;
 		startValue = displayValue;
-		//inputElement.requestPointerLock();
+		//inputElement?.requestPointerLock();
 		window.addEventListener('mousemove', handleMouseMove, { capture: true });
 		window.addEventListener('mouseup', stopDrag, { capture: true });
 	}

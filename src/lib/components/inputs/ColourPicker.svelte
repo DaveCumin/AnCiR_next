@@ -1,5 +1,6 @@
 <script module>
-	//TODO: MAKE THIS WORK IN THE DRAGABLE!
+	//TODO : This needs styling
+
 	export function getRandomColor() {
 		const letters = '0123456789ABCDEF';
 		let color = '#';
@@ -15,12 +16,58 @@
 </script>
 
 <script>
-	import { onMount } from 'svelte';
-	import { appConsts } from '$lib/core/core.svelte';
-	import Draggable from '$lib/components/reusables/Draggable.svelte';
-	let { value = $bindable() } = $props();
-	let cpDraggable = $state({ x: 0, y: 0, width: 300, height: 300 });
+	import { tick } from 'svelte';
 
+	import { onMount, onDestroy } from 'svelte';
+	import { appConsts, appState } from '$lib/core/core.svelte';
+	let { value = $bindable() } = $props();
+
+	//for moving around
+	let pos = $state({ x: 100, y: 100, width: 300, height: 250 });
+	const minWidth = 300;
+	const minHeight = 200;
+	let moving = false;
+	let resizing = false;
+	let initialMouseX, initialMouseY, initialWidth, initialHeight;
+
+	function onMouseDown(e) {
+		moving = true;
+	}
+
+	function onMouseMove(e) {
+		if (moving) {
+			pos.x += e.movementX;
+			pos.y += e.movementY;
+
+			pos.x = Math.max(0, pos.x);
+			pos.y = Math.max(0, pos.y);
+		} else if (resizing) {
+			const deltaX = e.clientX - initialMouseX;
+			const deltaY = e.clientY - initialMouseY;
+
+			const maxWidth = 300;
+			const maxHeight = 500;
+
+			pos.width = Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth));
+			pos.height = Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight));
+		}
+	}
+
+	function onMouseUp() {
+		moving = false;
+		resizing = false;
+	}
+
+	function startResize(e) {
+		e.stopPropagation();
+		resizing = true;
+		initialMouseX = e.clientX;
+		initialMouseY = e.clientY;
+		initialWidth = pos.width;
+		initialHeight = pos.height;
+	}
+
+	//for the colour picker -----------------------
 	let show = $state(false);
 	let showAdvanced = $state(false);
 	let container;
@@ -179,9 +226,9 @@
 		}
 	}
 
-	//TODO: is this needed?
+	//so can move wherever
 	$effect(() => {
-		if (show && cpDraggable) {
+		if (show) {
 			if (container.parentNode.nodeName != 'BODY') {
 				// don't re-float it each update
 				document.body.append(container); //make it 'floating'
@@ -189,10 +236,33 @@
 		}
 	});
 
-	function open(e) {
+	//make sure only one is open at a time
+	$effect(() => {
+		if (!appState.showColourPicker) {
+			show = false;
+		}
+	});
+
+	async function open(e) {
+		appState.showColourPicker = false;
+		await tick(); //Need this to update all the other pickers (remove them)
+		//work out where it should be rendered
+		const mouseX = e.clientX;
+		const mouseY = e.clientY;
+		if (mouseX + 320 > window.innerWidth) {
+			pos.x = mouseX - 320;
+		} else {
+			pos.x = mouseX + 10;
+		}
+
+		if (mouseY + 320 > window.innerHeight) {
+			pos.y = mouseY - 320;
+		} else {
+			pos.y = mouseY + 10;
+		}
+		//render the plot
+		appState.showColourPicker = true;
 		show = true;
-		cpDraggable.x = e.clientX - 300;
-		cpDraggable.y = e.clientY - 300;
 	}
 
 	function save() {
@@ -201,15 +271,8 @@
 		show = false;
 	}
 
-	function cancel() {
-		value = initialColor;
-		show = false;
-	}
-
 	$effect(() => {
-		console.log('showAdvanced: ', showAdvanced);
 		if (showAdvanced) {
-			console.log('running effect');
 			drawPicker();
 		}
 	});
@@ -220,356 +283,370 @@
 			caneyedrop = true;
 		}
 		initialColor = $state.snapshot(value);
-		console.log('initialColor: ', initialColor);
+	});
+	onDestroy(() => {
+		if (container && container.parentNode) {
+			container.parentNode.removeChild(container);
+		}
 	});
 </script>
+
+<svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp} />
 
 <!-- Pop-up Color Picker -->
 {#if show}
 	<div bind:this={container} style="position:absolute; top:0; left:0; z-index:1000">
-		<Draggable
-			bind:x={cpDraggable.x}
-			bind:y={cpDraggable.y}
-			bind:width={cpDraggable.width}
-			bind:height={cpDraggable.height}
-			overflow="auto"
-			title="Colour Picker"
-			id={crypto.randomUUID()}
+		<section
+			class="colour-picker"
+			style="left: {pos.x}px;
+		top: {pos.y}px;
+		width: {pos.width + 20}px;
+		height: {pos.height + 50}px;"
 		>
-			<div style="background:white; padding: 16px; position: relative;">
-				<!-- Close Button -->
-				<div style="position: absolute; top: 8px; right: 8px;">
-					<button
-						onclick={() => cancel()}
-						style="background: none; border: none; font-size: 16px; cursor: pointer;"
-					>
-						✕
-					</button>
-				</div>
-
-				<!-- Color Preview -->
-				<div style="display: flex; gap: 8px; margin-bottom: 16px;">
-					<div>
-						<span>New</span>
-						<div style="width: 24px; height: 24px; border: 1px solid #ccc; position: relative;">
-							<div
-								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
-							></div>
-							<div
-								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {hexInput};"
-							></div>
+			<div class="cp-header" onmousedown={(e) => onMouseDown(e)}>
+				Colour Picker
+				<button
+					onclick={() => {
+						show = false;
+					}}>X</button
+				>
+			</div>
+			<div class="cp-content">
+				<div style="background:white; padding: 16px; position: relative;">
+					<!-- Color Preview -->
+					<div style="display: flex; gap: 8px; margin-bottom: 16px;">
+						<div>
+							<span>New</span>
+							<div style="width: 24px; height: 24px; border: 1px solid #ccc; position: relative;">
+								<div
+									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
+								></div>
+								<div
+									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {hexInput};"
+								></div>
+							</div>
 						</div>
-					</div>
-					<div>
-						<span>Old</span>
-						<div
-							style="background-color: {initialColor}; width: 24px; height: 24px; border: 1px solid #ccc; position: relative;"
-						>
+						<div>
+							<span>Old</span>
 							<div
-								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
-							></div>
-							<div
-								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {initialColor};"
-							></div>
-						</div>
-					</div>
-				</div>
-
-				<!-- Palette -->
-				<div style="margin-bottom: 16px;">
-					<label>Palette</label>
-					<div style="display: flex; flex-wrap: wrap; gap: 8px; cursor: pointer;">
-						{#each appConsts.appColours as color, index}
-							<div
-								id="palette-{index}"
-								style="background-color: {color}; width: 24px; height: 24px; border: 1px solid #ccc; position: relative;"
-								onclick={() => {
-									hexInput = color;
-									updateFromHex(color);
-								}}
+								style="background-color: {initialColor}; width: 24px; height: 24px; border: 1px solid #ccc; position: relative;"
 							>
 								<div
 									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
 								></div>
 								<div
-									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {color};"
+									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {initialColor};"
 								></div>
 							</div>
-						{/each}
+						</div>
 					</div>
-				</div>
 
-				<!-- Eyedropper and Toggle -->
-				<div style="display: flex; gap: 8px; margin-bottom: 16px;">
-					{#if caneyedrop}
-						<button
-							onclick={() => eyedropper()}
-							style="padding: 4px 8px; background-color: #6b7280; color: white; border-radius: 4px; border: none; cursor: pointer;"
-						>
-							Eyedropper
-						</button>
-					{/if}
+					<!-- Palette -->
+					<div style="margin-bottom: 16px;">
+						<label>Palette</label>
+						<div style="display: flex; flex-wrap: wrap; gap: 8px; cursor: pointer;">
+							{#each appConsts.appColours as color, index}
+								<div
+									id="palette-{index}"
+									style="background-color: {color}; width: 24px; height: 24px; border: 1px solid #ccc; position: relative;"
+									onclick={() => {
+										hexInput = color;
+										updateFromHex(color);
+									}}
+								>
+									<div
+										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
+									></div>
+									<div
+										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {color};"
+									></div>
+								</div>
+							{/each}
+						</div>
+					</div>
 					<button
-						onclick={() => (showAdvanced = !showAdvanced)}
+						onclick={() => {
+							const randomCol = getRandomColor();
+							hexInput = randomCol;
+							updateFromHex(randomCol);
+						}}
 						style="padding: 4px 8px; background-color: #6b7280; color: white; border-radius: 4px; border: none; cursor: pointer;"
 					>
-						{showAdvanced ? 'Hide Advanced' : 'More Options'}
+						Pick random colour
 					</button>
-				</div>
-
-				{#if showAdvanced}
-					<!-- Hue/Saturation Picker -->
-					<canvas
-						bind:this={canvas}
-						width="200"
-						height="200"
-						style="cursor: crosshair; width: 100%; margin-bottom: 16px;"
-						onmousedown={() => (isDragging = true)}
-						onmousemove={handlePickerInteraction}
-						onmouseup={() => (isDragging = false)}
-						onmouseleave={() => (isDragging = false)}
-						ontouchstart={handlePickerInteraction}
-						ontouchmove={handlePickerInteraction}
-						ontouchend={() => (isDragging = false)}
-					></canvas>
-
-					<!-- Sliders -->
-					<div style="margin-bottom: 16px;">
-						<label>Hue</label>
-						<div
-							style="position: relative; width: 100%; height: 16px; border-radius: 8px; overflow: hidden;"
+					<!-- Eyedropper and Toggle -->
+					<div style="display: flex; gap: 8px; margin-bottom: 16px;">
+						{#if caneyedrop}
+							<button
+								onclick={() => eyedropper()}
+								style="padding: 4px 8px; background-color: #6b7280; color: white; border-radius: 4px; border: none; cursor: pointer;"
+							>
+								Eyedropper
+							</button>
+						{/if}
+						<button
+							onclick={() => (showAdvanced = !showAdvanced)}
+							style="padding: 4px 8px; background-color: #6b7280; color: white; border-radius: 4px; border: none; cursor: pointer;"
 						>
-							<div
-								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, hsl(0, 100%, 50%), hsl(60, 100%, 50%), hsl(120, 100%, 50%), hsl(180, 100%, 50%), hsl(240, 100%, 50%), hsl(300, 100%, 50%), hsl(360, 100%, 50%));"
-							></div>
-							<input
-								class="myslider"
-								type="range"
-								min="0"
-								max="360"
-								bind:value={hsvInput.h}
-								oninput={() => updateFromHsv()}
-								style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
-							/>
-						</div>
-
-						<label>Saturation</label>
-						<div
-							style="position: relative; width: 100%; height: 16px; border-radius: 8px; overflow: hidden;"
-						>
-							<div
-								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, hsl({hsvInput.h}, 0%, 50%), hsl({hsvInput.h}, 100%, 50%));"
-							></div>
-							<input
-								class="myslider"
-								type="range"
-								min="0"
-								max="100"
-								bind:value={hsvInput.s}
-								oninput={() => updateFromHsv()}
-								style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
-							/>
-						</div>
-
-						<label>Value</label>
-						<div
-							style="position: relative; width: 100%; height: 16px; border-radius: 8px; overflow: hidden;"
-						>
-							<div
-								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, hsl({hsvInput.h}, {hsvInput.s}%, 0%), hsl({hsvInput.h}, {hsvInput.s}%, 100%));"
-							></div>
-							<input
-								class="myslider"
-								type="range"
-								min="0"
-								max="100"
-								bind:value={hsvInput.v}
-								oninput={() => updateFromHsv()}
-								style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
-							/>
-						</div>
-
-						<label>Alpha</label>
-						<div
-							style="position: relative; width: 100%; height: 16px; border-radius: 8px; overflow: hidden;"
-						>
-							<div
-								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
-							></div>
-							<div
-								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgba({rgbInput.r}, {rgbInput.g}, {rgbInput.b}, 0), rgba({rgbInput.r}, {rgbInput.g}, {rgbInput.b}, 1));"
-							></div>
-							<input
-								class="myslider"
-								type="range"
-								min="0"
-								max="100"
-								step="1"
-								bind:value={hsvInput.a}
-								oninput={() => updateFromHsv()}
-								style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
-							/>
-						</div>
-
-						<label>Red</label>
-						<div
-							style="position: relative; width: 100%; height: 16px; border-radius: 8px; overflow: hidden;"
-						>
-							<div
-								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgb(0, {rgbInput.g}, {rgbInput.b}), rgb(255, {rgbInput.g}, {rgbInput.b}));"
-							></div>
-							<input
-								class="myslider"
-								type="range"
-								min="0"
-								max="255"
-								bind:value={rgbInput.r}
-								oninput={() => updateFromRgb()}
-								style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
-							/>
-						</div>
-
-						<label>Green</label>
-						<div
-							style="position: relative; width: 100%; height: 16px; border-radius: 8px; overflow: hidden;"
-						>
-							<div
-								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgb({rgbInput.r}, 0, {rgbInput.b}), rgb({rgbInput.r}, 255, {rgbInput.b}));"
-							></div>
-							<input
-								class="myslider"
-								type="range"
-								min="0"
-								max="255"
-								bind:value={rgbInput.g}
-								oninput={() => updateFromRgb()}
-								style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
-							/>
-						</div>
-
-						<label>Blue</label>
-						<div
-							style="position: relative; width: 100%; height: 16px; border-radius: 8px; overflow: hidden;"
-						>
-							<div
-								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgb({rgbInput.r}, {rgbInput.g}, 0), rgb({rgbInput.r}, {rgbInput.g}, 255));"
-							></div>
-							<input
-								class="myslider"
-								type="range"
-								min="0"
-								max="255"
-								bind:value={rgbInput.b}
-								oninput={() => updateFromRgb()}
-								style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
-							/>
-						</div>
+							{showAdvanced ? 'Hide Advanced' : 'More Options'}
+						</button>
 					</div>
 
-					<!-- Inputs -->
-					<div
-						style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;"
-					>
-						<div>
-							<label>Hex</label>
-							<input
-								type="text"
-								bind:value={hexInput}
-								oninput={() => updateFromHex(hexInput)}
-								style="width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
-							/>
-						</div>
-						<div>
-							<label>RGB</label>
-							<div style="display: flex; gap: 4px;">
+					{#if showAdvanced}
+						<!-- Hue/Saturation Picker -->
+						<canvas
+							bind:this={canvas}
+							width="200"
+							height="200"
+							style="cursor: crosshair; width: 100%; margin-bottom: 16px;"
+							onmousedown={() => (isDragging = true)}
+							onmousemove={handlePickerInteraction}
+							onmouseup={() => (isDragging = false)}
+							onmouseleave={() => (isDragging = false)}
+							ontouchstart={handlePickerInteraction}
+							ontouchmove={handlePickerInteraction}
+							ontouchend={() => (isDragging = false)}
+						></canvas>
+
+						<!-- Sliders -->
+						<div style="margin-bottom: 16px;">
+							<label>Hue</label>
+							<div
+								style="position: relative; width: 100%; height: 16px; border-radius: 8px; overflow: hidden;"
+							>
+								<div
+									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, hsl(0, 100%, 50%), hsl(60, 100%, 50%), hsl(120, 100%, 50%), hsl(180, 100%, 50%), hsl(240, 100%, 50%), hsl(300, 100%, 50%), hsl(360, 100%, 50%));"
+								></div>
 								<input
-									type="number"
-									min="0"
-									max="255"
-									bind:value={rgbInput.r}
-									oninput={updateFromRgb}
-									style="width: 33.33%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
-								/>
-								<input
-									type="number"
-									min="0"
-									max="255"
-									bind:value={rgbInput.g}
-									oninput={updateFromRgb}
-									style="width: 33.33%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
-								/>
-								<input
-									type="number"
-									min="0"
-									max="255"
-									bind:value={rgbInput.b}
-									oninput={updateFromRgb}
-									style="width: 33.33%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
-								/>
-							</div>
-						</div>
-						<div>
-							<label>HSV</label>
-							<div style="display: flex; gap: 4px;">
-								<input
-									type="number"
+									class="myslider"
+									type="range"
 									min="0"
 									max="360"
 									bind:value={hsvInput.h}
-									oninput={updateFromHsv}
-									style="width: 33.33%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									oninput={() => updateFromHsv()}
+									style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
 								/>
+							</div>
+
+							<label>Saturation</label>
+							<div
+								style="position: relative; width: 100%; height: 16px; border-radius: 8px; overflow: hidden;"
+							>
+								<div
+									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, hsl({hsvInput.h}, 0%, 50%), hsl({hsvInput.h}, 100%, 50%));"
+								></div>
 								<input
-									type="number"
+									class="myslider"
+									type="range"
 									min="0"
 									max="100"
 									bind:value={hsvInput.s}
-									oninput={updateFromHsv}
-									style="width: 33.33%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									oninput={() => updateFromHsv()}
+									style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
 								/>
+							</div>
+
+							<label>Value</label>
+							<div
+								style="position: relative; width: 100%; height: 16px; border-radius: 8px; overflow: hidden;"
+							>
+								<div
+									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, hsl({hsvInput.h}, {hsvInput.s}%, 0%), hsl({hsvInput.h}, {hsvInput.s}%, 100%));"
+								></div>
 								<input
-									type="number"
+									class="myslider"
+									type="range"
 									min="0"
 									max="100"
 									bind:value={hsvInput.v}
-									oninput={updateFromHsv}
-									style="width: 33.33%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									oninput={() => updateFromHsv()}
+									style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
 								/>
 							</div>
-						</div>
-						<div>
+
 							<label>Alpha</label>
-							<div style="display: flex; gap: 4px;">
+							<div
+								style="position: relative; width: 100%; height: 16px; border-radius: 8px; overflow: hidden;"
+							>
+								<div
+									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
+								></div>
+								<div
+									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgba({rgbInput.r}, {rgbInput.g}, {rgbInput.b}, 0), rgba({rgbInput.r}, {rgbInput.g}, {rgbInput.b}, 1));"
+								></div>
 								<input
-									type="number"
+									class="myslider"
+									type="range"
 									min="0"
 									max="100"
+									step="1"
 									bind:value={hsvInput.a}
-									oninput={updateFromHsv}
-									style="width: 33.33%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									oninput={() => updateFromHsv()}
+									style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
+								/>
+							</div>
+
+							<label>Red</label>
+							<div
+								style="position: relative; width: 100%; height: 16px; border-radius: 8px; overflow: hidden;"
+							>
+								<div
+									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgb(0, {rgbInput.g}, {rgbInput.b}), rgb(255, {rgbInput.g}, {rgbInput.b}));"
+								></div>
+								<input
+									class="myslider"
+									type="range"
+									min="0"
+									max="255"
+									bind:value={rgbInput.r}
+									oninput={() => updateFromRgb()}
+									style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
+								/>
+							</div>
+
+							<label>Green</label>
+							<div
+								style="position: relative; width: 100%; height: 16px; border-radius: 8px; overflow: hidden;"
+							>
+								<div
+									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgb({rgbInput.r}, 0, {rgbInput.b}), rgb({rgbInput.r}, 255, {rgbInput.b}));"
+								></div>
+								<input
+									class="myslider"
+									type="range"
+									min="0"
+									max="255"
+									bind:value={rgbInput.g}
+									oninput={() => updateFromRgb()}
+									style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
+								/>
+							</div>
+
+							<label>Blue</label>
+							<div
+								style="position: relative; width: 100%; height: 16px; border-radius: 8px; overflow: hidden;"
+							>
+								<div
+									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgb({rgbInput.r}, {rgbInput.g}, 0), rgb({rgbInput.r}, {rgbInput.g}, 255));"
+								></div>
+								<input
+									class="myslider"
+									type="range"
+									min="0"
+									max="255"
+									bind:value={rgbInput.b}
+									oninput={() => updateFromRgb()}
+									style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
 								/>
 							</div>
 						</div>
-					</div>
-				{/if}
 
-				<!-- Save Buttons -->
-				<div style="display: flex; gap: 8px;">
-					<button
-						onclick={() => saveColor()}
-						style="padding: 4px 8px; background-color: #3b82f6; color: white; border-radius: 4px; border: none; cursor: pointer;"
-					>
-						Save to Palette
-					</button>
-					<button
-						onclick={() => save()}
-						style="padding: 4px 8px; background-color: #10b981; color: white; border-radius: 4px; border: none; cursor: pointer;"
-					>
-						Save
-					</button>
+						<!-- Inputs -->
+						<div
+							style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;"
+						>
+							<div>
+								<label>Hex</label>
+								<input
+									type="text"
+									bind:value={hexInput}
+									oninput={() => updateFromHex(hexInput)}
+									style="width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+								/>
+							</div>
+							<div>
+								<label>RGB</label>
+								<div style="display: flex; gap: 4px;">
+									<input
+										type="number"
+										min="0"
+										max="255"
+										bind:value={rgbInput.r}
+										oninput={updateFromRgb}
+										style="width: 33.33%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									/>
+									<input
+										type="number"
+										min="0"
+										max="255"
+										bind:value={rgbInput.g}
+										oninput={updateFromRgb}
+										style="width: 33.33%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									/>
+									<input
+										type="number"
+										min="0"
+										max="255"
+										bind:value={rgbInput.b}
+										oninput={updateFromRgb}
+										style="width: 33.33%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									/>
+								</div>
+							</div>
+							<div>
+								<label>HSV</label>
+								<div style="display: flex; gap: 4px;">
+									<input
+										type="number"
+										min="0"
+										max="360"
+										bind:value={hsvInput.h}
+										oninput={updateFromHsv}
+										style="width: 33.33%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									/>
+									<input
+										type="number"
+										min="0"
+										max="100"
+										bind:value={hsvInput.s}
+										oninput={updateFromHsv}
+										style="width: 33.33%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									/>
+									<input
+										type="number"
+										min="0"
+										max="100"
+										bind:value={hsvInput.v}
+										oninput={updateFromHsv}
+										style="width: 33.33%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									/>
+								</div>
+							</div>
+							<div>
+								<label>Alpha</label>
+								<div style="display: flex; gap: 4px;">
+									<input
+										type="number"
+										min="0"
+										max="100"
+										bind:value={hsvInput.a}
+										oninput={updateFromHsv}
+										style="width: 33.33%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									/>
+								</div>
+							</div>
+						</div>
+					{/if}
+
+					<!-- Save Buttons -->
+					<div style="display: flex; gap: 8px;">
+						<button
+							onclick={() => saveColor()}
+							style="padding: 4px 8px; background-color: #3b82f6; color: white; border-radius: 4px; border: none; cursor: pointer;"
+						>
+							Save to Palette
+						</button>
+						<button
+							onclick={() => save()}
+							style="padding: 4px 8px; background-color: #10b981; color: white; border-radius: 4px; border: none; cursor: pointer;"
+						>
+							Save
+						</button>
+					</div>
 				</div>
 			</div>
-		</Draggable>
+			<div class="resize-handle" onmousedown={startResize}></div>
+		</section>
 	</div>
 {/if}
 
@@ -619,5 +696,42 @@
 
 	button:hover {
 		opacity: 0.9;
+	}
+
+	.colour-picker {
+		user-select: none;
+		position: absolute;
+		border: solid 1px var(--color-lightness-85);
+		background-color: white;
+		box-sizing: border-box;
+		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+		border-radius: 4px;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+		min-width: 200px;
+		z-index: 1;
+	}
+	.cp-header {
+		background-color: #f8f8f8;
+		padding: 0.5rem 1rem;
+		font-weight: bold;
+		border-bottom: 1px solid var(--color-lightness-85);
+		flex-shrink: 0;
+	}
+	.cp-content {
+		flex: 1;
+		padding: 0.5rem;
+		overflow: auto;
+	}
+	.resize-handle {
+		position: absolute;
+		width: 16px;
+		height: 16px;
+		right: 0;
+		bottom: 0;
+		cursor: nwse-resize;
+		/* background-color: #888; */
+		border-radius: 2px;
 	}
 </style>

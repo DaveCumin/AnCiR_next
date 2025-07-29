@@ -15,6 +15,8 @@
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
 	import { getTableById } from '$lib/core/Table.svelte';
+	import ColourPicker from '../inputs/ColourPicker.svelte';
+	import { faRightToBracket } from '@fortawesome/free-solid-svg-icons';
 
 	// AddTable dropdown
 	let addBtnRef;
