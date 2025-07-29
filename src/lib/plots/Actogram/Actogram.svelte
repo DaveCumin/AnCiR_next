@@ -239,7 +239,7 @@
 
 <script>
 	import { appState } from '$lib/core/core.svelte';
-	
+
 	import Icon from '$lib/icons/Icon.svelte';
 
 	let { theData, which } = $props();
@@ -297,172 +297,171 @@
 </script>
 
 {#snippet controls(theData)}
-	{#if (appState.currentControlTab === 'properties')}
-	<div class="control-component">
-		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Name</p>
-				<input type="text" bind:value={theData.parentBox.name} />
-			</div>
-		</div>
-	</div>
-
-	<div class="control-component">
-		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Width</p>
-				<input type="number" bind:value={theData.parentBox.width} />
-			</div>
-	
-			<div class="control-input">
-				<p>Height</p>
-				<input type="number" bind:value={theData.parentBox.height} />
-			</div>
-		</div>
-	</div>
-
-	<div class="div-line"></div>
-
-	<div class="control-component">
-		<div class="control-component-title">
-			<p>Padding</p>
-		</div>
-		
-		<div class="control-input-square">
-			<div class="control-input">
-				<p>Top</p>
-				<input type="number" bind:value={theData.paddingIN.top} />
-			</div>
-			
-			<div class="control-input">
-				<p>Bottom</p>
-				<input type="number" bind:value={theData.paddingIN.bottom} />
-			</div>
-
-			<div class="control-input">
-				<p>Left</p>
-				<input type="number" bind:value={theData.paddingIN.left} />
-			</div>
-
-			<div class="control-input">
-				<p>Right</p>
-				<input type="number" bind:value={theData.paddingIN.right} />
+	{#if appState.currentControlTab === 'properties'}
+		<div class="control-component">
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Name</p>
+					<input type="text" bind:value={theData.parentBox.name} />
+				</div>
 			</div>
 		</div>
 
-		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Space Between</p>
-				<input type="number" bind:value={theData.spaceBetween} />
-			</div>
-		</div>
-	</div>
+		<div class="control-component">
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Width</p>
+					<input type="number" bind:value={theData.parentBox.width} />
+				</div>
 
-	<div class="div-line"></div>
-		
-	<div class="control-component">
-		<LightBand bind:bands={theData.lightBands} which="controls" />
-	</div>
-
-	<div class="div-line"></div>
-
-	<div class="control-component">
-		<div class="control-component-title">
-			<p>Time</p>
-		</div>
-
-		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Start time</p>
-				<input type="date" bind:value={theData.startTime} />
-			</div>
-		</div>
-		
-		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Period</p>
-				<input type="number" step="0.1" bind:value={theData.periodHrs} />
-			</div>
-			
-			<div class="control-input">
-				<p>Repeat</p>
-				<input type="number" bind:value={theData.doublePlot} />
-			</div>
-		</div>
-	</div>
-
-	<div class="div-line"></div>
-
-	<div class="control-component">
-		<div class="control-component-title">
-			<p>Y-lims</p>
-			<div class="control-component-title-icons">
-				<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
-					<Icon name="reset" width={14} height={14} className="control-component-title-icon"/>
-				</button>
+				<div class="control-input">
+					<p>Height</p>
+					<input type="number" bind:value={theData.parentBox.height} />
+				</div>
 			</div>
 		</div>
 
-		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Min</p>
-				<input
-					type="number"
-					step="0.1"
-					value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
-					oninput={(e) => {
-						theData.ylimsIN[0] = [parseFloat(e.target.value)];
-					}}
-				/>
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Padding</p>
 			</div>
-	
-			<div class="control-input">
-				<p>Max</p>
-				<input
-					type="number"
-					step="0.1"
-					value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-					oninput={(e) => {
-						theData.ylimsIN[1] = [parseFloat(e.target.value)];
-					}}
-				/>
+
+			<div class="control-input-square">
+				<div class="control-input">
+					<p>Top</p>
+					<input type="number" bind:value={theData.paddingIN.top} />
+				</div>
+
+				<div class="control-input">
+					<p>Bottom</p>
+					<input type="number" bind:value={theData.paddingIN.bottom} />
+				</div>
+
+				<div class="control-input">
+					<p>Left</p>
+					<input type="number" bind:value={theData.paddingIN.left} />
+				</div>
+
+				<div class="control-input">
+					<p>Right</p>
+					<input type="number" bind:value={theData.paddingIN.right} />
+				</div>
+			</div>
+
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Space Between</p>
+					<input type="number" bind:value={theData.spaceBetween} />
+				</div>
 			</div>
 		</div>
-	</div>
 
-	{:else if (appState.currentControlTab === 'data') }
-	<div>
-		<p>Data:</p>
-		<button
-			onclick={() =>
-				theData.addData({
-					x: { refId: -1 },
-					y: { refId: -1 }
-				})}
-		>
-			+
-		</button>
+		<div class="div-line"></div>
 
-		{#each theData.data as datum, i}
-			<p>
-				Data {i}
-				<button onclick={() => theData.removeData(i)}>-</button>
-			</p>
+		<div class="control-component">
+			<LightBand bind:bands={theData.lightBands} which="controls" />
+		</div>
 
-			x: {datum.x.name}
-			<Column col={datum.x} canChange={true} />
+		<div class="div-line"></div>
 
-			y: {datum.y.name}
-			<Column col={datum.y} canChange={true} />
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Time</p>
+			</div>
 
-			colour: <input type="color" bind:value={datum.colour} />
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Start time</p>
+					<input type="date" bind:value={theData.startTime} />
+				</div>
+			</div>
 
-			<p>Markers:<button onclick={() => datum.addMarker()}>+</button></p>
-			{#each datum.phaseMarkers as marker}
-				<PhaseMarker {which} {marker} />
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Period</p>
+					<input type="number" step="0.1" bind:value={theData.periodHrs} />
+				</div>
+
+				<div class="control-input">
+					<p>Repeat</p>
+					<input type="number" bind:value={theData.doublePlot} />
+				</div>
+			</div>
+		</div>
+
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Y-lims</p>
+				<div class="control-component-title-icons">
+					<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
+						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
+					</button>
+				</div>
+			</div>
+
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Min</p>
+					<input
+						type="number"
+						step="0.1"
+						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
+						oninput={(e) => {
+							theData.ylimsIN[0] = [parseFloat(e.target.value)];
+						}}
+					/>
+				</div>
+
+				<div class="control-input">
+					<p>Max</p>
+					<input
+						type="number"
+						step="0.1"
+						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
+						oninput={(e) => {
+							theData.ylimsIN[1] = [parseFloat(e.target.value)];
+						}}
+					/>
+				</div>
+			</div>
+		</div>
+	{:else if appState.currentControlTab === 'data'}
+		<div>
+			<p>Data:</p>
+			<button
+				onclick={() =>
+					theData.addData({
+						x: { refId: -1 },
+						y: { refId: -1 }
+					})}
+			>
+				+
+			</button>
+
+			{#each theData.data as datum, i}
+				<p>
+					Data {i}
+					<button onclick={() => theData.removeData(i)}>-</button>
+				</p>
+
+				x: {datum.x.name}
+				<Column col={datum.x} canChange={true} />
+
+				y: {datum.y.name}
+				<Column col={datum.y} canChange={true} />
+
+				colour: <ColourPicker bind:value={datum.colour} />
+
+				<p>Markers:<button onclick={() => datum.addMarker()}>+</button></p>
+				{#each datum.phaseMarkers as marker}
+					<PhaseMarker {which} {marker} />
+				{/each}
 			{/each}
-		{/each}
-	</div>
+		</div>
 	{/if}
 {/snippet}
 
@@ -524,7 +523,6 @@
 		{/each}
 	</svg>
 {/snippet}
-
 
 {#if which === 'plot'}
 	{@render plot(theData)}

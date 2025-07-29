@@ -3,7 +3,7 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotBits/Axis.svelte';
 	import { scaleLinear, scaleTime } from 'd3-scale';
-	import { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
@@ -182,11 +182,11 @@
 </script>
 
 <script>
-	import { appState } from "$lib/core/core.svelte";
-	
+	import { appState } from '$lib/core/core.svelte';
+
 	import Icon from '$lib/icons/Icon.svelte';
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
-	
+
 	let { theData, which } = $props();
 
 	let addBtnRef;
@@ -218,135 +218,135 @@
 </script>
 
 {#snippet controls(theData)}
-	{#if (appState.currentControlTab === 'properties')}
-	<div class="control-component">
-		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Name</p>
-				<input type="text" bind:value={theData.parentBox.name} />
-			</div>
-		</div>
-	</div>
-
-	<div class="control-component">
-		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Width</p>
-				<input type="number" bind:value={theData.parentBox.width} />
-			</div>
-	
-			<div class="control-input">
-				<p>Height</p>
-				<input type="number" bind:value={theData.parentBox.height} />
-			</div>
-		</div>
-	</div>
-
-	<div class="div-line"></div>
-
-	<div class="control-component">
-		<div class="control-component-title">
-			<p>Padding</p>
-		</div>
-		
-		<div class="control-input-square">
-			<div class="control-input">
-				<p>Top</p>
-				<input type="number" bind:value={theData.padding.top} />
-			</div>
-			
-			<div class="control-input">
-				<p>Bottom</p>
-				<input type="number" bind:value={theData.padding.bottom} />
-			</div>
-
-			<div class="control-input">
-				<p>Left</p>
-				<input type="number" bind:value={theData.padding.left} />
-			</div>
-
-			<div class="control-input">
-				<p>Right</p>
-				<input type="number" bind:value={theData.padding.right} />
-			</div>
-		</div>
-	</div>
-
-	<div class="div-line"></div>
-
-	<div class="control-component">
-		<div class="control-component-title">
-			<p>X-lims</p>
-			<div class="control-component-title-icons">
-				<button class="icon" onclick={() => (theData.xlimsIN = [null, null])}>
-					<Icon name="reset" width={14} height={14} className="control-component-title-icon"/>
-				</button>
+	{#if appState.currentControlTab === 'properties'}
+		<div class="control-component">
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Name</p>
+					<input type="text" bind:value={theData.parentBox.name} />
+				</div>
 			</div>
 		</div>
 
-		<div class="control-input-vertical">
-			<div class="control-input-checkbox">
-				<input type="checkbox" bind:checked={theData.xgridlines} />
-				<p>Grid</p>
+		<div class="control-component">
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Width</p>
+					<input type="number" bind:value={theData.parentBox.width} />
+				</div>
+
+				<div class="control-input">
+					<p>Height</p>
+					<input type="number" bind:value={theData.parentBox.height} />
+				</div>
 			</div>
 		</div>
 
-		<div class="control-input-horizontal">
-			{#if theData.anyXdataTime}
-			<div class="control-input">
-				<p>Min</p>
-				<input
-					type="datetime-local"
-					value={theData.xlimsIN[0]
-						? new Date(theData.xlimsIN[0]).toISOString().substring(0, 16)
-						: new Date(theData.xlims[0]).toISOString().substring(0, 16)}
-					oninput={(e) => {
-						console.log('xlimsIN[0]', e.target.value);
-						theData.xlimsIN[0] = Number(new Date(e.target.value));
-					}}
-				/>
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Padding</p>
 			</div>
 
-			<div class="control-input">
-				<p>Max</p>
-				<input
-					type="datetime-local"
-					value={theData.xlimsIN[1]
-						? new Date(theData.xlimsIN[1]).toISOString().substring(0, 16)
-						: new Date(theData.xlims[1]).toISOString().substring(0, 16)}
-					oninput={(e) => {
-						theData.xlimsIN[1] = Number(new Date(e.target.value));
-					}}
-				/>
-			</div>
-			{:else}
-			<div class="control-input">
-				<p>Min</p>
-				<input
-					type="number"
-					step="0.1"
-					value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
-					onchange={(e) => {
-						theData.xlimsIN[0] = parseFloat(e.target.value);
-					}}
-				/>
-			</div>
+			<div class="control-input-square">
+				<div class="control-input">
+					<p>Top</p>
+					<input type="number" bind:value={theData.padding.top} />
+				</div>
 
-			<div class="control-input">
-				<p>Max</p>
-				<input
-					type="number"
-					step="0.1"
-					value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
-					onchange={(e) => {
-						theData.xlimsIN[1] = parseFloat(e.target.value);
-					}}
-				/>
+				<div class="control-input">
+					<p>Bottom</p>
+					<input type="number" bind:value={theData.padding.bottom} />
+				</div>
+
+				<div class="control-input">
+					<p>Left</p>
+					<input type="number" bind:value={theData.padding.left} />
+				</div>
+
+				<div class="control-input">
+					<p>Right</p>
+					<input type="number" bind:value={theData.padding.right} />
+				</div>
 			</div>
-			{/if}
 		</div>
-	</div>
-	{:else if (appState.currentControlTab === 'data')}
+
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>X-lims</p>
+				<div class="control-component-title-icons">
+					<button class="icon" onclick={() => (theData.xlimsIN = [null, null])}>
+						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
+					</button>
+				</div>
+			</div>
+
+			<div class="control-input-vertical">
+				<div class="control-input-checkbox">
+					<input type="checkbox" bind:checked={theData.xgridlines} />
+					<p>Grid</p>
+				</div>
+			</div>
+
+			<div class="control-input-horizontal">
+				{#if theData.anyXdataTime}
+					<div class="control-input">
+						<p>Min</p>
+						<input
+							type="datetime-local"
+							value={theData.xlimsIN[0]
+								? new Date(theData.xlimsIN[0]).toISOString().substring(0, 16)
+								: new Date(theData.xlims[0]).toISOString().substring(0, 16)}
+							oninput={(e) => {
+								console.log('xlimsIN[0]', e.target.value);
+								theData.xlimsIN[0] = Number(new Date(e.target.value));
+							}}
+						/>
+					</div>
+
+					<div class="control-input">
+						<p>Max</p>
+						<input
+							type="datetime-local"
+							value={theData.xlimsIN[1]
+								? new Date(theData.xlimsIN[1]).toISOString().substring(0, 16)
+								: new Date(theData.xlims[1]).toISOString().substring(0, 16)}
+							oninput={(e) => {
+								theData.xlimsIN[1] = Number(new Date(e.target.value));
+							}}
+						/>
+					</div>
+				{:else}
+					<div class="control-input">
+						<p>Min</p>
+						<input
+							type="number"
+							step="0.1"
+							value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
+							onchange={(e) => {
+								theData.xlimsIN[0] = parseFloat(e.target.value);
+							}}
+						/>
+					</div>
+
+					<div class="control-input">
+						<p>Max</p>
+						<input
+							type="number"
+							step="0.1"
+							value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
+							onchange={(e) => {
+								theData.xlimsIN[1] = parseFloat(e.target.value);
+							}}
+						/>
+					</div>
+				{/if}
+			</div>
+		</div>
+	{:else if appState.currentControlTab === 'data'}
 		<div>
 			<p>Data:</p>
 			<button
@@ -371,9 +371,9 @@
 				y: {datum.y.name}
 				<Column col={datum.y} canChange={true} />
 
-				line col: <input type="color" bind:value={datum.linecolour} />
+				line col: <ColourPicker bind:value={datum.linecolour} />
 				line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
-				point col: <input type="color" bind:value={datum.pointcolour} />
+				point col: <ColourPicker bind:value={datum.pointcolour} />
 				point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
 			{/each}
 		</div>

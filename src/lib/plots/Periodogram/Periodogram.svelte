@@ -3,8 +3,7 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotBits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
-	import { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
-	import { core } from '$lib/core/core.svelte.js';
+	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { binData, mean, makeSeqArray } from '$lib/components/plotBits/helpers/wrangleData.js';
 	import { pchisq, qchisq } from '$lib/data/CDFs';
 
@@ -296,10 +295,9 @@
 
 <script>
 	import { appState } from '$lib/core/core.svelte';
-	
+
 	import Icon from '$lib/icons/Icon.svelte';
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
-
 
 	let { theData, which } = $props();
 
@@ -338,209 +336,206 @@
 	}
 </script>
 
-{#snippet controls(theData)}	
-	{#if (appState.currentControlTab === 'properties')}
-	<div class="control-component">
-		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Name</p>
-				<input type="text" bind:value={theData.parentBox.name} />
+{#snippet controls(theData)}
+	{#if appState.currentControlTab === 'properties'}
+		<div class="control-component">
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Name</p>
+					<input type="text" bind:value={theData.parentBox.name} />
+				</div>
+			</div>
+
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Width</p>
+					<input type="number" bind:value={theData.parentBox.width} />
+				</div>
+
+				<div class="control-input">
+					<p>Height</p>
+					<input type="number" bind:value={theData.parentBox.height} />
+				</div>
 			</div>
 		</div>
 
-		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Width</p>
-				<input type="number" bind:value={theData.parentBox.width} />
-			</div>
-	
-			<div class="control-input">
-				<p>Height</p>
-				<input type="number" bind:value={theData.parentBox.height} />
-			</div>
-		</div>
-	</div>
+		<div class="div-line"></div>
 
-	<div class="div-line"></div>
-
-	<div class="control-component">
-		<div class="control-component-title">
-			<p>Padding</p>
-		</div>
-		
-		<div class="control-input-square">
-			<div class="control-input">
-				<p>Top</p>
-				<input type="number" bind:value={theData.padding.top} />
-			</div>
-			
-			<div class="control-input">
-				<p>Bottom</p>
-				<input type="number" bind:value={theData.padding.bottom} />
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Padding</p>
 			</div>
 
-			<div class="control-input">
-				<p>Left</p>
-				<input type="number" bind:value={theData.padding.left} />
-			</div>
+			<div class="control-input-square">
+				<div class="control-input">
+					<p>Top</p>
+					<input type="number" bind:value={theData.padding.top} />
+				</div>
 
-			<div class="control-input">
-				<p>Right</p>
-				<input type="number" bind:value={theData.padding.right} />
-			</div>
-		</div>
-	</div>
+				<div class="control-input">
+					<p>Bottom</p>
+					<input type="number" bind:value={theData.padding.bottom} />
+				</div>
 
-	<div class="div-line"></div>
+				<div class="control-input">
+					<p>Left</p>
+					<input type="number" bind:value={theData.padding.left} />
+				</div>
 
-	<div class="control-component">
-		<div class="control-component-title">
-			<p>Y-Axis</p>
-			<div class="control-component-title-icons">
-				<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
-					<Icon name="reset" width={14} height={14} className="control-component-title-icon"/>
-				</button>
+				<div class="control-input">
+					<p>Right</p>
+					<input type="number" bind:value={theData.padding.right} />
+				</div>
 			</div>
 		</div>
 
-		<!-- TODO: fix checkbox input style -->
-		<div class="control-input-vertical">
-			<div class="control-input-checkbox">
-				<input type="checkbox" bind:checked={theData.ygridlines} />
-				<p>Grid</p>
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Y-Axis</p>
+				<div class="control-component-title-icons">
+					<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
+						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
+					</button>
+				</div>
+			</div>
+
+			<!-- TODO: fix checkbox input style -->
+			<div class="control-input-vertical">
+				<div class="control-input-checkbox">
+					<input type="checkbox" bind:checked={theData.ygridlines} />
+					<p>Grid</p>
+				</div>
+			</div>
+
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Min</p>
+					<input
+						type="number"
+						step="0.1"
+						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
+						oninput={(e) => {
+							theData.ylimsIN[0] = [parseFloat(e.target.value)];
+						}}
+					/>
+				</div>
+
+				<div class="control-input">
+					<p>Max</p>
+					<input
+						type="number"
+						step="0.1"
+						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
+						oninput={(e) => {
+							theData.ylimsIN[1] = [parseFloat(e.target.value)];
+						}}
+					/>
+				</div>
 			</div>
 		</div>
 
-		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Min</p>
-				<input
-					type="number"
-					step="0.1"
-					value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
-					oninput={(e) => {
-						theData.ylimsIN[0] = [parseFloat(e.target.value)];
-					}}
-				/>
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>X-Axis</p>
 			</div>
-	
-			<div class="control-input">
-				<p>Max</p>
-				<input
-					type="number"
-					step="0.1"
-					value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-					oninput={(e) => {
-						theData.ylimsIN[1] = [parseFloat(e.target.value)];
-					}}
-				/>
-			</div>
-		</div>
-	</div>
 
-	<div class="control-component">
-		<div class="control-component-title">
-			<p>X-Axis</p>
-		</div>
-
-		<div class="control-input-vertical">
-			<div class="control-input-checkbox">
-				<input type="checkbox" bind:checked={theData.xgridlines} />
-				<p>Period Grid</p>
+			<div class="control-input-vertical">
+				<div class="control-input-checkbox">
+					<input type="checkbox" bind:checked={theData.xgridlines} />
+					<p>Period Grid</p>
+				</div>
 			</div>
-		</div>
 
-		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Min</p>
-				<input
-					type="number"
-					min="0.1"
-					step="0.1"
-					value={theData.periodlimsIN[0] ? theData.periodlimsIN[0] : theData.periodlims[0]}
-					oninput={(e) => {
-						theData.periodlimsIN[0] = parseFloat(e.target.value);
-					}}
-				/>
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Min</p>
+					<input
+						type="number"
+						min="0.1"
+						step="0.1"
+						value={theData.periodlimsIN[0] ? theData.periodlimsIN[0] : theData.periodlims[0]}
+						oninput={(e) => {
+							theData.periodlimsIN[0] = parseFloat(e.target.value);
+						}}
+					/>
+				</div>
+
+				<div class="control-input">
+					<p>Max</p>
+					<input
+						type="number"
+						step="0.1"
+						value={theData.periodlimsIN[1] ? theData.periodlimsIN[1] : theData.periodlimsIN[1]}
+						oninput={(e) => {
+							theData.periodlimsIN[1] = parseFloat(e.target.value);
+						}}
+					/>
+				</div>
 			</div>
-	
-			<div class="control-input">
-				<p>Max</p>
-				<input
-					type="number"
-					step="0.1"
-					value={theData.periodlimsIN[1] ? theData.periodlimsIN[1] : theData.periodlimsIN[1]}
-					oninput={(e) => {
-						theData.periodlimsIN[1] = parseFloat(e.target.value);
-					}}
-				/>
+
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Period Step</p>
+					<input type="number" min="0.1" step="0.01" bind:value={theData.periodSteps} />
+				</div>
 			</div>
 		</div>
+	{:else if appState.currentControlTab === 'data'}
+		<div>
+			<p>Data:</p>
+			<button
+				onclick={() =>
+					theData.addData({
+						x: { refId: -1 },
+						y: { refId: -1 }
+					})}
+			>
+				+
+			</button>
 
-		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Period Step</p>
-				<input type="number" min="0.1" step="0.01" bind:value={theData.periodSteps} />
-			</div>
+			{#each theData.data as datum, i}
+				<p>
+					Data {i}
+					<button onclick={() => theData.removeData(i)}>-</button>
+				</p>
+
+				x: {datum.x.name}
+				<Column col={datum.x} canChange={true} />
+
+				y: {datum.y.name}
+				<Column col={datum.y} canChange={true} />
+
+				<!-- New: Method selector -->
+				<p>
+					Method:
+					<select bind:value={datum.method} onchange={() => datum.updatePeriodData()}>
+						<option value="Chi-squared">Chi-squared</option>
+						<option value="Lomb-Scargle">Lomb-Scargle</option>
+					</select>
+				</p>
+
+				<!-- binSize only relevant for Chi-squared -->
+				{#if datum.method === 'Chi-squared'}
+					binSize: <input type="number" step="0.01" min="0.01" bind:value={datum.binSize} />
+					alpha:
+					<input
+						type="number"
+						min="0.0001"
+						max="0.9999"
+						step="0.01"
+						bind:value={datum.alpha}
+						oninput={() => datum.updatePeriodData()}
+					/>
+				{/if}
+
+				line col: <ColourPicker bind:value={datum.linecolour} />
+				line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
+				point col: <ColourPicker bind:value={datum.pointcolour} />
+				point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
+			{/each}
 		</div>
-	</div>
-
-	{:else if (appState.currentControlTab === 'data')}
-
-	<div>
-		<p>Data:</p>
-		<button
-			onclick={() =>
-				theData.addData({
-					x: { refId: -1 },
-					y: { refId: -1 }
-				})}
-		>
-			+
-		</button>
-
-		{#each theData.data as datum, i}
-			<p>
-				Data {i}
-				<button onclick={() => theData.removeData(i)}>-</button>
-			</p>
-
-			x: {datum.x.name}
-			<Column col={datum.x} canChange={true} />
-
-			y: {datum.y.name}
-			<Column col={datum.y} canChange={true} />
-
-			<!-- New: Method selector -->
-			<p>
-				Method:
-				<select bind:value={datum.method} onchange={() => datum.updatePeriodData()}>
-					<option value="Chi-squared">Chi-squared</option>
-					<option value="Lomb-Scargle">Lomb-Scargle</option>
-				</select>
-			</p>
-
-			<!-- binSize only relevant for Chi-squared -->
-			{#if datum.method === 'Chi-squared'}
-				binSize: <input type="number" step="0.01" min="0.01" bind:value={datum.binSize} />
-				alpha:
-				<input
-					type="number"
-					min="0.0001"
-					max="0.9999"
-					step="0.01"
-					bind:value={datum.alpha}
-					oninput={() => datum.updatePeriodData()}
-				/>
-			{/if}
-
-			line col: <input type="color" bind:value={datum.linecolour} />
-			line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
-			point col: <input type="color" bind:value={datum.pointcolour} />
-			point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
-		{/each}
-	</div>
-
 	{/if}
 {/snippet}
 
