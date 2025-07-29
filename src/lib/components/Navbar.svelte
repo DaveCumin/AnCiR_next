@@ -6,11 +6,13 @@
 	import { appState } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import Setting from '$lib/components/iconActions/Setting.svelte';
+	import About from './views/modals/About.svelte';
 
 	let gearBtnRef;
 	let showSetting = $state(false);
 	let dropdownTop = $state(0);
 	let dropdownLeft = $state(0);
+	let showAbout = $state(false);
 
 	function recalculateDropdownPosition() {
 		if (!gearBtnRef) return;
@@ -56,7 +58,11 @@
 		<button bind:this={gearBtnRef} onclick={openDropdown}>
 			<Icon name="gear" />
 		</button>
-		<button>
+		<button
+			onclick={() => {
+				showAbout = true;
+			}}
+		>
 			<Icon name="query" />
 		</button>
 	</div>
@@ -65,6 +71,7 @@
 {#if showSetting}
 	<Setting bind:showDropdown={showSetting} {dropdownTop} {dropdownLeft} />
 {/if}
+<About bind:showModal={showAbout} />
 
 <style>
 	.container {
