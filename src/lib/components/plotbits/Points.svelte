@@ -18,7 +18,7 @@
 		//find the x point before the limit
 		let xlims = xscale.domain();
 		for (let i = 1; i < x.length; i++) {
-			if (x[i] >= Math.min(xlims[0], xlims[1]) && x[i - 1]) {
+			if (x[i] >= Math.min(xlims[0], xlims[1])) {
 				return i - 1;
 			}
 		}
@@ -29,7 +29,7 @@
 		//find the x point after the limit
 		let xlims = xscale.domain();
 		for (let i = x.length - 2; i >= 0; i--) {
-			if (x[i] <= Math.max(xlims[0], xlims[1]) && x[i + 1]) {
+			if (x[i] <= Math.max(xlims[0], xlims[1])) {
 				return i + 1;
 			}
 		}
@@ -41,7 +41,7 @@
 		let out = '';
 		for (let p = beforeIdx; p <= afterIdx; p++) {
 			//only include the point if it's within the y limits
-			if (y[p] >= yscale.domain()[0] && y[p] <= yscale.domain()[1]) {
+			if (y[p] >= yscale.domain()[0] && y[p] <= yscale.domain()[1] && x[p] && y[p]) {
 				out += `M${xscale(x[p])} ${yscale(y[p])} m-${radius} 0 a${radius} ${radius} 0 1 0 ${2 * radius} 0 a${radius} ${radius} 0 1 0 -${2 * radius} 0 `;
 			}
 		}

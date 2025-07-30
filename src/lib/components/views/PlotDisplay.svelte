@@ -3,13 +3,35 @@
 	import Draggable from '$lib/components/reusables/Draggable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import CreateNewPlotModal from '$lib/components/views/modals/MakeNewPlot.svelte';
-	import CreateNewDataModal from '$lib/components/views/modals/SimulateData.svelte';
+	import AddTable from '$lib/components/iconActions/AddTable.svelte';
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 	import { closeControlPanel } from '$lib/components/views/ControlDisplay.svelte';
 	import { tick } from 'svelte';
 
+	// AddTable dropdown
+	let addBtnRef;
+	let showAddTable = $state(false);
+	let dropdownTop = $state(0);
+	let dropdownLeft = $state(0);
+
+	function recalculateDropdownPosition() {
+		if (!addBtnRef) return;
+		const rect = addBtnRef.getBoundingClientRect();
+
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
+	}
+
+	function openDropdown(e) {
+		e.stopPropagation();
+		recalculateDropdownPosition();
+		requestAnimationFrame(() => {
+			showAddTable = true;
+		});
+		window.addEventListener('resize', recalculateDropdownPosition);
+	}
+
 	let showNewPlotModal = $state(false);
-	let showNewDataModal = $state(false);
 
 	function handleClick(e) {
 		e.stopPropagation();
@@ -102,13 +124,14 @@
 				<CreateNewPlotModal bind:showModal={showNewPlotModal} />
 			{:else}
 				<div class="no-plot-prompt">
-					<button class="icon" onclick={() => (showNewDataModal = true)}>
+					<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
 						<Icon name="add" width={24} height={24} />
 					</button>
 					<p>Click to add new data</p>
 				</div>
-
-				<CreateNewDataModal bind:showModal={showNewDataModal} />
+				{#if showAddTable}
+					<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
+				{/if}
 			{/if}
 		</div>
 	</div>
