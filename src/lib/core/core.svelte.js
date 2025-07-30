@@ -15,7 +15,7 @@ export const appState = $state({
 	currentControlTab: 'properties',
 
 	showNavbar: true,
-	showDisplayPanel: true,
+	showDisplayPanel: false,
 	showControlPanel: false,
 
 	windowWidth: window.innerWidth,
