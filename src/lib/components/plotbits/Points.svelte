@@ -1,6 +1,18 @@
 <script>
-	//TODO: add a way to display a tooltip on hover
-	let { x, y, xscale, yscale, radius, fillCol, yoffset, xoffset } = $props();
+	import { quadtree } from 'd3-quadtree';
+
+	let {
+		x,
+		y,
+		xscale,
+		yscale,
+		radius,
+		fillCol,
+		yoffset,
+		xoffset,
+		tooltip = false,
+		xtype = 'number'
+	} = $props();
 
 	let beforeIdx = $derived.by(() => {
 		//find the x point before the limit
@@ -29,7 +41,7 @@
 		let out = '';
 		for (let p = beforeIdx; p <= afterIdx; p++) {
 			//only include the point if it's within the y limits
-			if (y[p] >= yscale.domain()[0] && y[p] <= yscale.domain()[1]) {
+			if (y[p] >= yscale.domain()[0] && y[p] <= yscale.domain()[1] && x[p] && y[p]) {
 				out += `M${xscale(x[p])} ${yscale(y[p])} m-${radius} 0 a${radius} ${radius} 0 1 0 ${2 * radius} 0 a${radius} ${radius} 0 1 0 -${2 * radius} 0 `;
 			}
 		}
@@ -37,22 +49,66 @@
 		return out;
 	});
 
-	function handleHover(e) {
-		//cycle through the points and find the closest one to the mouse
-		let closestIdx = -1;
-		let closestDist = Infinity;
-		for (let p = beforeIdx; p <= afterIdx; p++) {
-			const dist = Math.sqrt(
-				Math.pow(e.offsetX - xscale(x[p]), 2) + Math.pow(e.offsetY - yscale(y[p]), 2)
+	let qt = $derived.by(() => {
+		if (!tooltip) return null;
+		const tree = quadtree()
+			.x((d) => xscale(d.x) + xoffset)
+			.y((d) => yscale(d.y) + yoffset)
+			.addAll(
+				x
+					.map((xVal, i) => ({
+						x: xVal,
+						y: y[i],
+						index: i
+					}))
+					.filter(
+						(d) =>
+							d.index >= beforeIdx &&
+							d.index <= afterIdx &&
+							d.y >= yscale.domain()[0] &&
+							d.y <= yscale.domain()[1]
+					)
 			);
-			if (dist < closestDist) {
-				closestDist = dist;
-				closestIdx = p;
+		return tree;
+	});
+	function handleHover(e) {
+		if (!tooltip) return;
+		const mouseX = e.offsetX;
+		const mouseY = e.offsetY;
+		const closest = qt.find(mouseX, mouseY, radius * 2);
+		if (closest && closest.index >= 0) {
+			let content = `(${x[closest.index].toFixed(2)}, ${y[closest.index].toFixed(2)})`;
+			if (xtype == 'time') {
+				content = `(${new Date(x[closest.index]).toLocaleString()}, ${y[closest.index].toFixed(2)})`;
 			}
+			const event = new CustomEvent('tooltip', {
+				detail: {
+					visible: true,
+					x: mouseX + 10, // Offset to avoid cursor overlap
+					y: mouseY + 10,
+					content: content
+				},
+				bubbles: true
+			});
+			e.target.dispatchEvent(event);
+		} else {
+			e.target.dispatchEvent(
+				new CustomEvent('tooltip', {
+					detail: { visible: false },
+					bubbles: true
+				})
+			);
 		}
-		if (closestIdx >= 0) {
-			console.log(`Hovered point: ${closestIdx} at (${x[closestIdx]}, ${y[closestIdx]})`);
-		}
+	}
+
+	function handleMouseLeave(e) {
+		if (!tooltip) return;
+		e.target.dispatchEvent(
+			new CustomEvent('tooltip', {
+				detail: { visible: false },
+				bubbles: true
+			})
+		);
 	}
 </script>
 
@@ -64,4 +120,5 @@
 	onmousemove={(e) => {
 		handleHover(e);
 	}}
+	onmouseleave={handleMouseLeave}
 />

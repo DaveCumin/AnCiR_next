@@ -1,15 +1,21 @@
 <script module>
 	// @ts-nocheck
-	import { appConsts } from '$lib/core/core.svelte';
+	import { appConsts, core } from '$lib/core/core.svelte';
 
 	let _counter = 0;
 	function getNextId() {
 		return _counter++;
 	}
+	export function removePlot(id) {
+		const index = core.plots.findIndex((p) => p.id === id);
+		if (index !== -1) {
+			core.plots.splice(index, 1);
+		}
+	}
 
 	export class Plot {
 		id;
-		name = $state('plot' + this.id); // TODO: possible fix?
+		name = $state('plot' + this.id);
 		x = $state(350);
 		y = $state(150);
 		width = $state(500);
@@ -62,29 +68,19 @@
 			};
 		}
 		static fromJSON(json) {
-			const { plotid, name, x, y, width, height, type, plot } = json;
-			return new Plot({ name, x, y, width, height, type, plot }, plotid);
+			const id = json.id ?? json.plotid;
+			const name = json.name ?? 'Untitled Plot';
+
+			const { x, y, width, height, type, plot } = json;
+			return new Plot({ name, x, y, width, height, type, plot }, id);
 		}
 	}
 </script>
 
 <script>
-	// import Box from '$lib/components/Box.svelte';
 	let { plot } = $props();
 	const Plot = appConsts.plotMap.get(plot.type).plot ?? null;
-	let options = $state({ x: 900, y: 0, width: 200, height: 550 });
 </script>
-
-<!-- <Box bind:plot overflow="none">
-	<a style="position:absolute; top:-1.5em;">{plot.name}</a>
-	<Plot bind:theData={plot} which="plot" />
-</Box>
-
-<Box bind:plot={options} overflow="auto">
-	<div>
-		<Plot theData={plot.plot} which="controls" />
-	</div>
-</Box> -->
 
 <div>
 	<Plot bind:theData={plot} which="plot" />

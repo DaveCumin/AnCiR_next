@@ -11,5 +11,5 @@
 </script>
 
 <p>
-	{p.processid} - {p.name} <input type="number" bind:value={p.args.value} />
+	{p.id} - {p.name} <input type="number" bind:value={p.args.value} />
 </p>

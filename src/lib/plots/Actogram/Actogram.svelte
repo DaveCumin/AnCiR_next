@@ -1,15 +1,19 @@
 <script module>
-	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	// @ts-nocheck
+
 	import Column from '$lib/core/Column.svelte';
-	import Axis from '$lib/components/plotbits/Axis.svelte';
-	import { scaleLinear } from 'd3-scale';
-	import ColourPicker, { getRandomColor } from '$lib/components/inputs/ColourPicker.svelte';
-	import { core } from '$lib/core/core.svelte.js';
+	import Hist from '$lib/components/plotBits/Hist.svelte';
+	import Axis from '$lib/components/plotBits/Axis.svelte';
+
+	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
-	import BinnedHist from '$lib/components/plotbits/BinnedHist.svelte';
-	import { makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData';
-	import { max, min } from '$lib/components/plotbits/helpers/wrangleData.js';
+
+	import { scaleLinear } from 'd3-scale';
+	import { makeSeqArray, max, min } from '$lib/components/plotBits/helpers/wrangleData';
+
+	export const Actogram_defaultDataInputs = ['time', 'values'];
 
 	function getNdataByPeriods(dataIN, from, to, period) {
 		const byPeriod = [];
@@ -24,25 +28,24 @@
 	}
 
 	class ActogramDataclass {
-		parent = $state();
+		parentPlot = $state();
 
 		x = $state();
 		y = $state();
-		binSize = $state(0.5);
+
 		colour = $state();
 		offset = $derived(
-			(Number(new Date(this.parent.startTime)) - Number(this.x.getData()[0])) / 3600000
+			(Number(new Date(this.parentPlot.startTime)) - Number(this.x.getData()[0])) / 3600000
 		);
 		dataByDays = $derived.by(() => {
-			console.log(new Date(), ' dataByDays recalculated');
-			const tempx = this.x.hoursSinceStart;
-
+			const tempx = this.x.hoursSinceStart ?? [];
 			const tempy = this.y.getData() ?? [];
 			const xByPeriod = {};
 			const yByPeriod = {};
 
+			//TODO: compute the min and max for the y-axis (overall v by periods)
 			for (let i = 0; i < tempx.length; i++) {
-				const period = Math.floor((tempx[i] - this.offset) / this.parent.periodHrs);
+				const period = Math.floor((tempx[i] - this.offset) / this.parentPlot.periodHrs);
 
 				if (period >= 0) {
 					if (!xByPeriod[period]) {
@@ -60,7 +63,7 @@
 		phaseMarkers = $state([]);
 
 		constructor(parent, dataIN) {
-			this.parent = parent;
+			this.parentPlot = parent;
 
 			if (dataIN && dataIN.x) {
 				this.x = ColumnClass.fromJSON(dataIN.x);
@@ -72,11 +75,11 @@
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
-			this.colour = dataIN?.colour ?? getRandomColor();
+			this.colour = dataIN?.colour ?? getPaletteColor(this.parentPlot.data.length);
 		}
 
 		addMarker() {
-			this.phaseMarkers.push(new PhaseMarkerClass(this, { type: 'onset' }));
+			this.phaseMarkers.push(new PhaseMarkerClass(this, { type: 'manual' }));
 		}
 
 		toJSON() {
@@ -104,10 +107,10 @@
 	}
 
 	export class Actogramclass {
-		parent = $state();
+		parentBox = $state();
 		data = $state([]);
 		isAddingMarkerTo = $state(-1);
-		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 30 });
+		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 20 });
 		padding = $derived.by(() => {
 			if (this.lightBands.length > 0) {
 				return {
@@ -125,8 +128,8 @@
 				};
 			}
 		});
-		plotheight = $derived(this.parent.height - this.padding.top - this.padding.bottom);
-		plotwidth = $derived(this.parent.width - this.padding.left - this.padding.right);
+		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
+		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
 		eachplotheight = $derived.by(() => {
 			return (this.plotheight - (this.Ndays - 1) * this.spaceBetween) / this.Ndays;
 		});
@@ -135,7 +138,10 @@
 			this.data.forEach((datum) => {
 				minTime = Math.min(minTime, Number(datum.x.getData()[0]));
 			});
-			return minTime !== Infinity ? new Date(minTime).toISOString().substring(0, 10) : undefined;
+			//TODO: fix here for data with timeformat that doesn't work
+			return minTime !== Infinity && minTime
+				? new Date(minTime).toISOString().substring(0, 10)
+				: undefined;
 		});
 		spaceBetween = $state(2);
 		doublePlot = $state(2);
@@ -147,10 +153,7 @@
 			}
 			let Ndays = 0;
 			this.data.forEach((d, i) => {
-				Ndays = Math.max(
-					Ndays,
-					Object.keys(d.dataByDays.xByPeriod).length - Math.floor(d.offset / 24)
-				);
+				Ndays = Math.max(Ndays, Object.keys(d.dataByDays.xByPeriod).length);
 			});
 
 			return Ndays;
@@ -173,24 +176,28 @@
 		});
 
 		constructor(parent, dataIN) {
-			this.parent = parent;
+			this.parentBox = parent;
 			if (dataIN) {
 				this.addData(dataIN);
 			}
 		}
 
 		addData(dataIN) {
+			if (Object.keys(dataIN).includes('time')) {
+				const temp = { x: { refId: dataIN.time.refId }, y: { refId: dataIN.values.refId } };
+				dataIN = structuredClone(temp);
+			}
 			this.data.push(new ActogramDataclass(this, dataIN));
 		}
 		removeData(idx) {
 			this.data.splice(idx, 1);
 		}
 
-		addPhaseMarkerTo(markerID, clickedDay, clickedTime) {
+		addPhaseMarkerTo(markerId, clickedDay, clickedTime) {
 			//find the marker with the id
 			for (let i = 0; i < this.data.length; i++) {
 				for (let j = 0; j < this.data[i].phaseMarkers.length; j++) {
-					if (this.data[i].phaseMarkers[j].id == markerID) {
+					if (this.data[i].phaseMarkers[j].id == markerId) {
 						this.data[i].phaseMarkers[j].addTime(clickedDay, clickedTime);
 					}
 				}
@@ -217,7 +224,10 @@
 			actogram.doublePlot = json.doublePlot;
 			actogram.periodHrs = json.periodHrs;
 
-			actogram.lightBands = LightBandClass.fromJSON(json.lightBands ?? { lightBands: [] }, actogram);
+			actogram.lightBands = LightBandClass.fromJSON(
+				json.lightBands ?? { lightBands: [] },
+				actogram
+			);
 
 			if (json.data) {
 				actogram.data = json.data.map((d) => ActogramDataclass.fromJSON(d, actogram));
@@ -228,14 +238,11 @@
 </script>
 
 <script>
-	import { convertToImage } from '$lib/components/plotbits/helpers/save.js';
+	import { appState } from '$lib/core/core.svelte';
+
+	import Icon from '$lib/icons/Icon.svelte';
 
 	let { theData, which } = $props();
-
-	function pickRandomData() {
-		const options = Array.from(core.data.keys());
-		return options.length > 0 ? options[Math.floor(Math.random() * options.length)] : -1;
-	}
 
 	function handleClick(e) {
 		if (theData.plot.isAddingMarkerTo >= 0) {
@@ -266,96 +273,203 @@
 
 		return [clickedDay, clickedHrs];
 	}
+
+	let addBtnRef;
+	let showSavePlot = $state(false);
+	let dropdownTop = $state(0);
+	let dropdownLeft = $state(0);
+
+	function recalculateDropdownPosition() {
+		if (!addBtnRef) return;
+		const rect = addBtnRef.getBoundingClientRect();
+
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
+	}
+
+	function openDropdown() {
+		recalculateDropdownPosition();
+		requestAnimationFrame(() => {
+			showSavePlot = true;
+		});
+		window.addEventListener('resize', recalculateDropdownPosition);
+	}
 </script>
 
 {#snippet controls(theData)}
-	<div>
-		<button onclick={() => convertToImage('plot' + theData.parent.id, 'svg')}>Save </button>
-		Name: <input type="text" bind:value={theData.parent.name} />
-		Width: <input type="number" bind:value={theData.parent.width} />
-		height: <input type="number" bind:value={theData.parent.height} />
+	{#if appState.currentControlTab === 'properties'}
+		<div class="control-component">
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Name</p>
+					<input type="text" bind:value={theData.parentBox.name} />
+				</div>
+			</div>
+		</div>
 
-		<p>
-			Padding: <input type="number" bind:value={theData.paddingIN.top} />
-			<input type="number" bind:value={theData.paddingIN.right} />
-			<input type="number" bind:value={theData.paddingIN.bottom} />
-			<input type="number" bind:value={theData.paddingIN.left} />
-		</p>
-		<p>{JSON.stringify(theData.padding)}</p>
-		
-		<p>
+		<div class="control-component">
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Width</p>
+					<input type="number" bind:value={theData.parentBox.width} />
+				</div>
+
+				<div class="control-input">
+					<p>Height</p>
+					<input type="number" bind:value={theData.parentBox.height} />
+				</div>
+			</div>
+		</div>
+
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Padding</p>
+			</div>
+
+			<div class="control-input-square">
+				<div class="control-input">
+					<p>Top</p>
+					<input type="number" bind:value={theData.paddingIN.top} />
+				</div>
+
+				<div class="control-input">
+					<p>Bottom</p>
+					<input type="number" bind:value={theData.paddingIN.bottom} />
+				</div>
+
+				<div class="control-input">
+					<p>Left</p>
+					<input type="number" bind:value={theData.paddingIN.left} />
+				</div>
+
+				<div class="control-input">
+					<p>Right</p>
+					<input type="number" bind:value={theData.paddingIN.right} />
+				</div>
+			</div>
+
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Space Between</p>
+					<input type="number" bind:value={theData.spaceBetween} />
+				</div>
+			</div>
+		</div>
+
+		<div class="div-line"></div>
+
+		<div class="control-component">
 			<LightBand bind:bands={theData.lightBands} which="controls" />
-		</p>
-		<p>
-			Ndays: <a>{theData.Ndays}</a>
-			eachplotheight: <a>{theData.eachplotheight}</a>
-			Start time: <input type="date" bind:value={theData.startTime} />
-			Period: <input type="number" step="0.1" bind:value={theData.periodHrs} />
-			Repeat: <input type="number" bind:value={theData.doublePlot} />
-			Space Between:
-			<input type="number" bind:value={theData.spaceBetween} />
-		</p>
+		</div>
 
-		<p>
-			ylims: <button onclick={() => (theData.ylimsIN = [null, null])}>R</button>
-			<input
-				type="number"
-				step="0.1"
-				value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
-				oninput={(e) => {
-					theData.ylimsIN[0] = [parseFloat(e.target.value)];
-				}}
-			/>
-			<input
-				type="number"
-				step="0.1"
-				value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-				oninput={(e) => {
-					theData.ylimsIN[1] = [parseFloat(e.target.value)];
-				}}
-			/>
-		</p>
+		<div class="div-line"></div>
 
-		<p>Data:</p>
-		<button
-			onclick={() =>
-				theData.addData({
-					x: { refId: pickRandomData() },
-					y: { refId: pickRandomData() }
-				})}
-		>
-			+
-		</button>
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Time</p>
+			</div>
 
-		{#each theData.data as datum, i}
-			<p>
-				Data {i}
-				<button onclick={() => theData.removeData(i)}>-</button>
-			</p>
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Start time</p>
+					<input type="date" bind:value={theData.startTime} />
+				</div>
+			</div>
 
-			x: {datum.x.name}
-			<Column col={datum.x} canChange={true} />
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Period</p>
+					<input type="number" step="0.1" bind:value={theData.periodHrs} />
+				</div>
 
-			y: {datum.y.name}
-			<Column col={datum.y} canChange={true} />
+				<div class="control-input">
+					<p>Repeat</p>
+					<input type="number" bind:value={theData.doublePlot} />
+				</div>
+			</div>
+		</div>
 
-			binSize: <input type="number" min="0.1" step="0.1" bind:value={datum.binSize} />
+		<div class="div-line"></div>
 
-			colour: <ColourPicker bind:value={datum.colour} />
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Y-lims</p>
+				<div class="control-component-title-icons">
+					<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
+						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
+					</button>
+				</div>
+			</div>
 
-			<p>Markers:<button onclick={() => datum.addMarker()}>+</button></p>
-			{#each datum.phaseMarkers as marker}
-				<PhaseMarker {which} {marker} />
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Min</p>
+					<input
+						type="number"
+						step="0.1"
+						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
+						oninput={(e) => {
+							theData.ylimsIN[0] = [parseFloat(e.target.value)];
+						}}
+					/>
+				</div>
+
+				<div class="control-input">
+					<p>Max</p>
+					<input
+						type="number"
+						step="0.1"
+						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
+						oninput={(e) => {
+							theData.ylimsIN[1] = [parseFloat(e.target.value)];
+						}}
+					/>
+				</div>
+			</div>
+		</div>
+	{:else if appState.currentControlTab === 'data'}
+		<div>
+			<p>Data:</p>
+			<button
+				onclick={() =>
+					theData.addData({
+						x: { refId: -1 },
+						y: { refId: -1 }
+					})}
+			>
+				+
+			</button>
+
+			{#each theData.data as datum, i}
+				<p>
+					Data {i}
+					<button onclick={() => theData.removeData(i)}>-</button>
+				</p>
+
+				x: {datum.x.name}
+				<Column col={datum.x} canChange={true} />
+
+				y: {datum.y.name}
+				<Column col={datum.y} canChange={true} />
+
+				colour: <ColourPicker bind:value={datum.colour} />
+
+				<p>Markers:<button onclick={() => datum.addMarker()}>+</button></p>
+				{#each datum.phaseMarkers as marker}
+					<PhaseMarker {which} {marker} />
+				{/each}
 			{/each}
-		{/each}
-	</div>
+		</div>
+	{/if}
 {/snippet}
 
 {#snippet plot(theData)}
 	<svg
-		id={'plot' + theData.plot.parent.id}
-		width={theData.plot.parent.width}
-		height={theData.plot.parent.height}
+		id={'plot' + theData.plot.parentBox.id}
+		width={theData.plot.parentBox.width}
+		height={theData.plot.parentBox.height}
 		style={`background: white; position: absolute;`}
 		onclick={(e) => handleClick(e)}
 	>
@@ -383,7 +497,7 @@
 			>
 				<!-- Make the histogram for each period -->
 				{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
-					<BinnedHist
+					<Hist
 						x={getNdataByPeriods(
 							datum.dataByDays.xByPeriod,
 							day,
@@ -391,7 +505,6 @@
 							theData.plot.periodHrs
 						)}
 						y={getNdataByPeriods(datum.dataByDays.yByPeriod, day, day + theData.plot.doublePlot, 0)}
-						binSize={datum.binSize}
 						xscale={scaleLinear()
 							.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
 							.range([0, theData.plot.plotwidth])}

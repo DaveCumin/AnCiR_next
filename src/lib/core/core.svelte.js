@@ -1,37 +1,46 @@
-import { Column } from "./Column.svelte";
-import { Plot } from "./plot.svelte";
-import { Table } from "./Table.svelte.js";
+// @ts-nocheck
+
+import { Column } from './Column.svelte';
+import { Plot } from './Plot.svelte';
+import { Table } from './Table.svelte';
 
 export const core = $state({
 	data: [],
 	plots: [],
-	tables: [],
+	tables: []
 });
 
 export const appState = $state({
 	currentTab: 'data',
+	currentControlTab: 'properties',
 
 	showNavbar: true,
-	showDisplayPanel: true,
-	showControlPanel: true,
+	showDisplayPanel: false,
+	showControlPanel: false,
 
-	positionNavbar: 56,
-	positionDisplayPanel: null,
-	positionControlPanel: null,
+	windowWidth: window.innerWidth,
+	windowHeight: window.innerHeight,
+	widthNavBar: 56,
+	widthDisplayPanel: 300,
+	widthControlPanel: 300,
 
-	
-
-	canvasOffset: { x: 0, y: 0},
+	canvasOffset: { x: 0, y: 0 },
 	canvasScale: 1.0,
-	
-	selectedPlotId: null,
+
+	selectedPlotIds: [],
+
+	gridSize: 15,
+
+	appColours: ['#0B090B', '#F8BFD4', '#787C3F', '#3B565E', '#E5A15E'],
+	showColourPicker: false
 });
 
 export const appConsts = $state({
 	processMap: new Map(),
 	plotMap: new Map(),
-	gridsize: Number(5),
-	appColours: ['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000']
+	tableProcessMap: new Map(),
+
+	appColours: ['#0B090B', '#F8BFD4', '#787C3F', '#3B565E', '#E5A15E']
 });
 
 export function pushObj(obj) {
@@ -40,37 +49,47 @@ export function pushObj(obj) {
 	} else if (obj instanceof Table) {
 		core.tables.push(obj);
 	} else if (obj instanceof Plot) {
+		const pos = findNextAvailablePosition(core.plots);
+
+		obj.x = pos.x;
+		obj.y = pos.y;
+
 		core.plots.push(obj);
 	} else {
-		console.log("Error: object not instance of Column, Table or Plot");
+		console.log('Error: object not instance of Column, Table or Plot');
+	}
+}
+
+export function snapToGrid(value) {
+	return Math.round(value / appState.gridSize) * appState.gridSize;
+}
+
+// TODO: change to grid* layout
+let _attempt = 0;
+function findNextAvailablePosition(existingPlots) {
+	const baseX = 10;
+	const baseY = 20;
+	const offsetX = 40;
+	const offsetY = 40;
+
+	while (true) {
+		const rawX = baseX + _attempt * offsetX;
+		const rawY = baseY + _attempt * offsetY;
+
+		const x = snapToGrid(rawX);
+		const y = snapToGrid(rawY);
+
+		const collision = existingPlots.some((p) => Math.abs(p.x - x) < 30 && Math.abs(p.y - y) < 30);
+
+		if (!collision) {
+			return { x, y };
+		}
+
+		_attempt++;
 	}
 }
 
 export function outputCoreAsJson() {
-	const output = { ...core };
+	const output = { ...core }; // TODO: output appState also, so when it loads, it will look exactly the same.
 	return JSON.stringify(output, null, 2);
 }
-
-
-
-/* Core Documentation
-- core contains columns, plots, tables. E.g. call core.columns[column.ids]
-- call pushObj(obj) to add into core.arrays
-
-*/
-
-
-//TODOs:
-//- consider states for:
-//- UI theme (defaults for colours, rems, fonts, border, shading, etc).
-//(stretch) and the ability to store custom values
-//- How best to give users feedback (trigger Toasts)?
-//- Import data logic (including time format guessing - this is currently OK, I think; though, could include a formats for "epoch" or "seconds", etc [if not already])
-//- Simulate data - extend the current options to include Bob's algorithms
-//- Carefully consider plots (?layercake)
-//- structure for the 'Box' that houses a plot (width, height, xpos, ypos, layer)..
-// should this be in the Plot class or separate? (i.e. do we want to allow making a 'Box' larger or smaller than the contents?)
-//- UI: allow a 'Box' to be 'fullscreen'
-//- (stretch) UI: Drag and drop items (show zones where allowed, etc)
-//- (stretch) consider localstorage for UX preferences [and possibly data/sessions]; consoider cloud storage for sessions (Super-stretch: concurrent working a'la Google Sheets)
-//- (stretch) a store for edits to undo/redo: this needs careful thought

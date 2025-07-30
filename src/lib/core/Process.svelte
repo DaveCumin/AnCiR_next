@@ -1,24 +1,26 @@
 <script module>
+	// @ts-nocheck
 	import { appConsts } from '$lib/core/core.svelte';
 
-	let processidCounter = 0;
+	let _counter = 0;
 
 	export class Process {
-		processid;
+		id;
 		name = '';
 		args = $state({});
 		parentCol = $state();
 
 		constructor({ ...dataIN }, parent, id = null) {
 			if (id === null) {
-				this.processid = id ?? processidCounter;
-				processidCounter++;
+				this.id = id ?? _counter;
+				_counter++;
 			} else {
-				this.processid = id;
-				processidCounter = Math.max(id + 1, processidCounter + 1);
+				this.id = id;
+				_counter = Math.max(id + 1, _counter + 1);
 			}
 			//set the name
 			this.name = dataIN.name;
+
 			//return an error if the function doesn't exist
 			if (!appConsts.processMap.has(this.name)) {
 				this.args = { error: `no function ${this.name}` };
@@ -38,20 +40,22 @@
 			this.parentCol = parent;
 		}
 
+		// Perform processes (add/filer etc)
 		doProcess(data) {
 			return appConsts.processMap.get(this.name).func(data, this.args);
 		}
 
 		toJSON() {
 			return {
-				processid: this.processid,
+				id: this.id,
 				name: this.name,
 				args: this.args
 			};
 		}
+
 		static fromJSON(json, column) {
-			const { processid, name, args } = json;
-			return new Process({ name, args }, column, processid);
+			const { id, name, args } = json;
+			return new Process({ name, args }, column, id);
 		}
 	}
 </script>

@@ -1,111 +1,27 @@
-<!-- TODO: Import data/table logic might need re-work -->
 <script>
-    // @ts-nocheck
-    import Icon from '$lib/icons/Icon.svelte';
-    import { simulateData, ImportData } from '$lib/data/dataTree.svelte';
-    import Modal from '../reusables/Modal.svelte';
-    import Dropdown from '../reusables/Dropdown.svelte';
+	// @ts-nocheck
+	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
+	import ImportData, { openImportModal } from '$lib/components/views/modals/ImportData.svelte';
+	import SimulateData from '$lib/components/views/modals/SimulateData.svelte';
 
-    let showModal = $state(false);
-    let importPreview = $state();
-    let importReady = $state(false);
-    
-    let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
-
-    function openModal() {
-        showModal = true;
-
-        console.log(showModal, showDropdown);
-    }
-
-    async function onFileChange(e) {
-		ImportData.setFilesToImport(e.target.files);
-		await ImportData.utils.parseFile(6);
-		importPreview = ImportData.utils.makeTempTable(ImportData.getTempData());
-		importReady = true;
-	}
-
-	function chooseFile() {
-		ImportData.utils.openFileChoose();
-	}
-
-	async function confirmImport() {
-		await ImportData.utils.loadData();
-		showModal = false; 
-		importReady = false;
-		importPreview = '';
-
-        showDropdown = false;
-	}
+	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
+	let showModal = $state(false);
 </script>
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
-    {#snippet groups()}
-        <div class="action">
-			<button onclick={openModal}>
-				Import Data
-			</button>
-		</div>
-		
+	{#snippet groups()}
 		<div class="action">
-			<button onclick={simulateData}>
-				Simulate Data
-			</button>
-            <!-- since we are handling simulation with a modal, doesn't matter if dropdown closes after action at this stage -->
+			<button onclick={openImportModal}> Import Data </button>
 		</div>
-    {/snippet}
+
+		<div class="action">
+			<button onclick={() => (showModal = true)}> Simulate Data </button>
+		</div>
+	{/snippet}
 </Dropdown>
 
-<Modal bind:showModal>
-	{#snippet header()}
-		<div class="heading">
-			<h2>Import Data</h2>
-			<!-- <button class="btn" onclick={chooseFile}>Choose File</button> -->
-			
-			<div class="choose-file-container">
-				<button class="choose-file-button" onclick={chooseFile}>
-					Upload File
-				</button>
-				<div class="filename">
-					<p class="filename-preview">
-						Selected: 
-						{#if ImportData.getFilesToImport()?.[0]}
-							{ImportData.getFilesToImport()[0].name}
-						{/if}
-					</p>
-				</div>
-			</div>
-			
-		</div>
-
-		<!-- input style not shown -->
-		<input id="fileInput" type="file" accept=".csv,.awd" onchange={onFileChange} style="display: none;"/>
-	{/snippet}
-
-	{#snippet children()}
-		<div class="import-container">
-			<div class="preview-placeholder">
-				{#if importPreview}
-					<!-- <p>Preview Data</p> -->
-					<div class="preview-table-wrapper">
-						{@html importPreview}
-					</div>
-				{:else}
-					<!-- <p>Choose file to preview data</p> -->
-				{/if}
-			</div>
-
-			<div class="import-button-container">
-				<!-- Add this if you define `let importReady = true;` inside <script> -->
-				{#if importReady}
-					<button class="import-button" onclick={confirmImport}>Confirm Import</button>
-				{/if}
-			</div>
-		</div>
-	{/snippet}
-</Modal>
-
-
+<ImportData />
+<SimulateData bind:showModal />
 
 <style>
 	.action button {
@@ -164,44 +80,6 @@
 		font-size: 14px;
 	}
 
-	/* preview table */
-	:global(.preview-table-wrapper) {
-		overflow-x: auto;
-		margin-top: 1.5rem;
-		margin-bottom: 1rem;
-	}
-
-	:global(.preview-table-wrapper table) {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 14px;
-		background-color: white;
-	}
-
-	/* :global(.preview-table-wrapper thead) {
-		position: sticky;
-		top: 0;
-		z-index: 1;
-	} */
-
-	:global(.preview-table-wrapper th) {
-		padding: 8px 12px;
-		border: 1px solid var(--color-lightness-85);
-		background-color: var(--color-lightness-95);
-		text-align: left;
-	}
-
-
-	:global(.preview-table-wrapper td) {
-		padding: 8px 12px;
-		border: 1px solid var(--color-lightness-85);
-		text-align: left;
-	}
-
-	/* :global(.preview-table-wrapper tbody tr:hover) {
-		background-color: var(--color-lightness-85); 
-	}*/
-
 	.import-button-container {
 		display: flex;
 		justify-content: flex-end;
@@ -222,7 +100,4 @@
 	.import-button:hover {
 		background-color: var(--color-hover);
 	}
-
-
 </style>
-

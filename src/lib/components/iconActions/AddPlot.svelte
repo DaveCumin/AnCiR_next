@@ -1,127 +1,39 @@
 <script>
-    // @ts-nocheck
-    import { simulateData, ImportData } from '$lib/data/dataTree.svelte';
+	// @ts-nocheck
 	import { core, pushObj, appConsts } from '$lib/core/core.svelte';
-	import { Plot } from '$lib/core/plot.svelte';
-    
+	import { Plot } from '$lib/core/Plot.svelte';
+	import { getColumnById } from '$lib/core/Column.svelte';
+
 	import Icon from '$lib/icons/Icon.svelte';
-    import Modal from '../reusables/Modal.svelte';
-    import Dropdown from '../reusables/Dropdown.svelte';
+	import Dropdown from '../reusables/Dropdown.svelte';
+	import Modal from '$lib/components/reusables/Modal.svelte';
+	import AttributeSelect from '../reusables/AttributeSelect.svelte';
+	import MakeNewPlotsMultiple from '../views/modals/MakeNewPlots_Multiple.svelte';
+	import MakeNewPlot from '../views/modals/MakeNewPlot.svelte';
 
-    let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
-	
-    let showModal = $state(false);
-	let plotType = $state();
-	let plotName = $derived.by(() => {
-		return plotType + "_" + Math.round(Math.random() * 10, 2)
-	});
-    function openModal(type) {
-        showModal = true;
-		plotType = type;
-    }
+	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
 
-	let xCol = $state();
-	let yCol = $state();
-	function confirmImport() {
-		const newPlot = new Plot({ name: plotName, type: plotType });
-		newPlot.plot.addData({ x: xCol, y: yCol });
-		console.log($state.snapshot(xCol));
-		console.log($state.snapshot(newPlot.plot));
-		pushObj(newPlot);
+	let showSingle = $state(false);
+	let showMultiple = $state(false);
 
-		showModal = false;
+	function capitalise(str) {
+		return str.charAt(0).toUpperCase() + str.slice(1);
 	}
-
 </script>
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
-    {#snippet groups()}
-        <div class="action">
-			<button onclick={() => {openModal('actogram')}}>
-				Create New Actogram
-			</button>
-		</div>
-
+	{#snippet groups()}
 		<div class="action">
-			<button onclick={() => {openModal('periodogram')}}>
-				Create New Periodogram
-			</button>
+			<button onclick={(showSingle = true)}> Create New Plot </button>
 		</div>
-		
 		<div class="action">
-			<button onclick={() => {openModal('scatterplot')}}>
-				Create New ScatterPlot
-			</button>
+			<button onclick={(showMultiple = true)}> Create New Plots </button>
 		</div>
-    {/snippet}
+	{/snippet}
 </Dropdown>
 
-<!-- TODO: change modal component to icon-like structure? -->
-
-<Modal bind:showModal>
-	{#snippet header()}
-	<div class="heading">
-		<h2>Create New {plotType}</h2>
-
-		<div class="choose-file-container">
-			<div>
-				<label for="plotType">Choose a Plot Type:</label>
-	
-				<select bind:value={plotType} name="plotType" id="plot-type">
-					<option value="actogram">Actogram</option>
-					<option value="periodogram">Periodogram</option>
-					<option value="scatterplot">ScatterPlot</option>
-				</select>
-			</div>
-
-			<div class="selected">
-				<p class="selected-preview">
-					Name: {plotName}
-					<!-- TODO: double click to change name -->
-				</p>
-			</div>
-		</div>
-	</div>
-		
-	{/snippet}
-
-	{#snippet children()}
-		<div class="import-container">
-			<div class="preview-placeholder">
-				<!-- TODO: make these draggable? -->
-				<!-- TODO: interface control -->
-				<div>
-					<label for="xCol">x:</label>
-					<select bind:value={xCol} name="xCol" id="plot-x">
-						<option value="" disabled selected>Select x</option>
-						{#each core.tables as table (table.id)}
-							{#each table.columns as col (col.id)}
-								<option value={col.id}>{table.name+": "+col.name}</option>
-							{/each}
-						{/each}
-					</select>
-				</div>
-				<div>
-					<label for="yCol">y:</label>
-					<select bind:value={yCol} name="yCol" id="plot-y">
-						<option value="" disabled selected>Select y</option>
-						{#each core.tables as table (table.id)}
-							{#each table.columns as col (col.id)}
-								<option value={col.id}>{table.name+": "+col.name}</option>
-							{/each}
-						{/each}
-					</select>
-				</div>
-			</div>
-
-			<div class="import-button-container">
-				<button class="import-button" onclick={confirmImport}>Confirm Import</button>
-			</div>
-		</div>
-	{/snippet}
-</Modal>
-
-
+<MakeNewPlotsMultiple bind:showModal={showMultiple} />
+<MakeNewPlot bind:showModal={showSingle} />
 
 <style>
 	.action button {
@@ -179,28 +91,4 @@
 		color: var(--color-lightness-35);
 		font-size: 14px;
 	}
-
-	.import-button-container {
-		display: flex;
-		justify-content: flex-end;
-		/* margin-right: 1rem; */
-	}
-
-	.import-button {
-		margin-top: 10px;
-		background-color: var(--color-lightness-95);
-		border-radius: 4px;
-		padding: 10px;
-		padding-right: 12px;
-
-		font-size: 14px;
-		text-align: center;
-	}
-
-	.import-button:hover {
-		background-color: var(--color-hover);
-	}
-
-
 </style>
-

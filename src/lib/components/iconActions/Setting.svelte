@@ -1,52 +1,49 @@
-<!-- 
- TODO:
- need to fix dropdown ui ()
- dynamic import and export (cores)
- add import on top of existing?
--->
-
 <script>
-    // @ts-nocheck
+	// @ts-nocheck
+	import { tick } from 'svelte';
 	import { core, pushObj, outputCoreAsJson } from '$lib/core/core.svelte';
-    import { Column } from '$lib/core/Column.svelte';
-    import { Table } from '$lib/core/table.svelte.js';
+	import { Column } from '$lib/core/Column.svelte';
+	import { Table } from '$lib/core/Table.svelte.js';
+	import { Plot } from '$lib/core/Plot.svelte';
 
-    import Modal from '../reusables/Modal.svelte';
-    import Dropdown from '../reusables/Dropdown.svelte';
+	import Modal from '$lib/components/reusables/Modal.svelte';
+	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 
-    let showImportModal = $state(false);
-    let showExportModal = $state(false);
+	let showImportModal = $state(false);
+	let showExportModal = $state(false);
 
-    let importReady = $state(false);
-    let importPreview = $state();
-    
-    let fileInput;
-    let fileName = $state();
+	let importReady = $state(false);
+	let importPreview = $state();
 
-    let jsonData = $state();
-    let error = '';
-    
-    let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
-    
-    function openImportModal() {
-        showImportModal = true;
-    }
-    
-    function openExportModal() {
-        showExportModal = true;
-    }
-    
-    function chooseFile() {
-        fileInput.click();
-    }
+	let fileInput;
+	let fileName = $state();
 
-    function handleFileChange(event) {
+	let jsonData = $state();
+	let error = '';
+
+	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
+
+	async function openImportModal() {
+		showImportModal = true;
+		await tick();
+		chooseFile();
+	}
+
+	function openExportModal() {
+		showExportModal = true;
+	}
+
+	function chooseFile() {
+		fileInput.click();
+	}
+
+	function handleFileChange(event) {
 		const file = event.target.files[0];
-        importPreview = false;
+		importPreview = false;
 
 		if (!file) return;
 
-        fileName = file.name;
+		fileName = file.name;
 
 		const reader = new FileReader();
 		reader.onload = (e) => {
@@ -61,15 +58,14 @@
 
 		reader.readAsText(file);
 
-        importReady = true;
+		importReady = true;
 	}
 
-    function importJson() {
-
-        //reset existing workflow
+	function importJson() {
+		//reset existing workflow
 		core.data = [];
 		core.tables = [];
-		// core.plots = [];
+		core.plots = [];
 
 		jsonData.data.map((datajson) => {
 			pushObj(Column.fromJSON(datajson));
@@ -79,17 +75,17 @@
 			pushObj(Table.fromJSON(tablejson));
 		});
 
-		// jsonData.plots.map((plotjson) => {
-		// 	core.plots.push(Plot.fromJSON(plotjson));
-		// });
+		jsonData.plots.map((plotjson) => {
+			pushObj(Plot.fromJSON(plotjson));
+		});
 
-        showImportModal = false;
-        importReady = false;
-        showDropdown = false;
-    }
+		showImportModal = false;
+		importReady = false;
+		showDropdown = false;
+	}
 
-    function exportJson() {
-        const jsonStr = outputCoreAsJson()
+	function exportJson() {
+		const jsonStr = outputCoreAsJson();
 
 		const blob = new Blob([jsonStr], { type: 'application/json' });
 		const url = URL.createObjectURL(blob);
@@ -104,73 +100,76 @@
 		document.body.removeChild(a);
 		URL.revokeObjectURL(url);
 
-        showDropdown = false;
-    }
-
+		showDropdown = false;
+	}
 </script>
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
-    {#snippet groups()}
-        <div class="action">
-			<button onclick={openImportModal}>
-				Import Working JSON
-			</button>
-		</div>
-		
+	{#snippet groups()}
 		<div class="action">
-			<button onclick={exportJson}>
-				Export Working JSON
-			</button>
+			<button onclick={openImportModal}> Import Working JSON </button>
 		</div>
-    {/snippet}
+
+		<div class="action">
+			<button onclick={exportJson}> Export Working JSON </button>
+		</div>
+	{/snippet}
 </Dropdown>
 
 <Modal bind:showModal={showImportModal}>
 	{#snippet header()}
 		<div class="heading">
 			<h2>Import Workflow</h2>
-			
+
 			<div class="choose-file-container">
-				<button class="choose-file-button" onclick={chooseFile}> 
-					Upload File
-				</button>
+				<button class="choose-file-button" onclick={chooseFile}> Upload File </button>
 				<div class="filename">
 					<p class="filename-preview">
-						Selected: 
+						Selected:
 						{#if fileName}
 							{fileName}
 						{/if}
 					</p>
 				</div>
 			</div>
-			
 		</div>
 
 		<!-- input style not shown -->
-        <input bind:this={fileInput} type="file" accept=".json" onchange={handleFileChange} style="display: none;"/>
+		<input
+			bind:this={fileInput}
+			type="file"
+			accept=".json"
+			onchange={handleFileChange}
+			style="display: none;"
+		/>
 	{/snippet}
 
-    {#snippet children()}
+	{#snippet children()}
 		<div class="import-container">
 			<div class="preview-placeholder">
 				{#if jsonData}
 					<!-- <p>Preview Data</p> -->
 					<div class="preview-table-wrapper">
 						<!-- {@html importPreview} -->
-                         Tables imported: {jsonData.tables.length}
-                         <!-- Plots imported: {jsonData.plots.length} -->
+						<p>Tables imported: {jsonData.tables.length}</p>
+						<p>Data imported: {jsonData.data.length}</p>
+						<p>Plots imported: {jsonData.plots.length}</p>
 					</div>
 				{:else}
 					<!-- <p>Choose file to preview data</p> -->
 				{/if}
 			</div>
 
-			<div class="import-button-container">
-				{#if importReady}
-					<button class="import-button" onclick={importJson}>Confirm Import</button>
-				{/if}
-                <!-- ux^: could have an else state to reflect error -->
-			</div>
+			
+		</div>
+	{/snippet}
+
+	{#snippet button()}
+		<div class="dialog-button-container">
+			{#if importReady}
+				<button class="dialog-button" onclick={importJson}>Confirm Import</button>
+			{/if}
+			<!-- ux^: could have an else state to reflect error -->
 		</div>
 	{/snippet}
 </Modal>
@@ -191,10 +190,8 @@
     {/snippet}
 </Modal> -->
 
-
-
 <style>
-    .action button {
+	.action button {
 		margin: 0.6em;
 		font-size: 14px;
 	}
@@ -214,7 +211,7 @@
 		cursor: pointer;
 	}
 
-    .heading {
+	.heading {
 		display: flex;
 		flex-direction: column;
 	}
@@ -248,12 +245,6 @@
 	.filename-preview {
 		color: var(--color-lightness-35);
 		font-size: 14px;
-	}
-
-	/* preview table */
-	:global(.preview-table-wrapper) {
-		overflow-x: auto;
-		margin-top: 1.5rem;
 	}
 
 	.import-button-container {

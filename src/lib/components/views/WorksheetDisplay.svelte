@@ -9,24 +9,50 @@
 	let showAddPlot = $state(false);
 	let dropdownTop = $state(0);
 	let dropdownLeft = $state(0);
+	let draggedIndex = $state(null);
 
 	function recalculateDropdownPosition() {
 		if (!addBtnRef) return;
 		const rect = addBtnRef.getBoundingClientRect();
-
 		dropdownTop = rect.top + window.scrollY;
 		dropdownLeft = rect.right + window.scrollX + 12;
 	}
 
 	function openDropdown() {
 		recalculateDropdownPosition();
-		requestAnimationFrame(() => {
-			showAddPlot = true;
-		});
+		requestAnimationFrame(() => (showAddPlot = true));
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
-</script>
 
+	function viewToModelIndex(i) {
+		return core.plots.length - 1 - i;
+	}
+
+	function handleDragStart(i) {
+		draggedIndex = viewToModelIndex(i);
+	}
+
+	function handleDragOver(event) {
+		event.preventDefault();
+	}
+
+	function handleDrop(i) {
+		if (draggedIndex === null) return;
+
+		const targetIndex = viewToModelIndex(i);
+		if (draggedIndex === targetIndex) {
+			draggedIndex = null;
+			return;
+		}
+
+		const updated = [...core.plots];
+		const [movedItem] = updated.splice(draggedIndex, 1);
+		updated.splice(targetIndex, 0, movedItem);
+
+		core.plots = updated;
+		draggedIndex = null;
+	}
+</script>
 
 <div class="heading">
 	<p>Worksheet Layers</p>
@@ -39,17 +65,21 @@
 </div>
 
 {#if showAddPlot}
-	<AddPlot bind:showDropdown={showAddPlot} dropdownTop={dropdownTop} dropdownLeft={dropdownLeft} />
+	<AddPlot bind:showDropdown={showAddPlot} {dropdownTop} {dropdownLeft} />
 {/if}
 
 <div class="display-list">
-	{#each core.plots.toReversed() as plot (plot.id)}
-		<details>
+	{#each core.plots.toReversed() as plot, i (plot.id)}
+		<details
+			draggable="true"
+			ondragstart={() => handleDragStart(i)}
+			ondragover={handleDragOver}
+			ondrop={() => handleDrop(i)}
+		>
 			<summary>{plot.name}</summary>
 		</details>
 	{/each}
 </div>
-
 
 <style>
 	.heading {

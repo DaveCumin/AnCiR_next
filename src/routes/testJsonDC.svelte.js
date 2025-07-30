@@ -49,18 +49,18 @@ export const testJsonDC = `{
                 "data": [
                     {
                         "x": {
-                            "columnID": 6,
+                            "columnId": 6,
                             "name": "the time*",
-                            "refDataID": 0,
+                            "refDataId": 0,
                             "type": "time",
                             "timeformat": "",
                             "provenance": "refers to the time which is just made this up",
                             "processes": []
                         },
                         "y": {
-                            "columnID": 7,
+                            "columnId": 7,
                             "name": "val1*",
-                            "refDataID": 1,
+                            "refDataId": 1,
                             "type": "number",
                             "provenance": "refers to val1 which is imported from thin air",
                             "processes": []
@@ -107,18 +107,18 @@ export const testJsonDC = `{
                 "data": [
                     {
                         "x": {
-                            "columnID": 8,
+                            "columnId": 8,
                             "name": "the time*",
-                            "refDataID": 0,
+                            "refDataId": 0,
                             "type": "time",
                             "timeformat": "",
                             "provenance": "refers to the time which is just made this up",
                             "processes": []
                         },
                         "y": {
-                            "columnID": 9,
+                            "columnId": 9,
                             "name": "val1*",
-                            "refDataID": 1,
+                            "refDataId": 1,
                             "type": "number",
                             "provenance": "refers to val1 which is imported from thin air",
                             "processes": []
@@ -158,18 +158,18 @@ export const testJsonDC = `{
                 "data": [
                     {
                         "x": {
-                            "columnID": 11,
+                            "columnId": 11,
                             "name": "the time*",
-                            "refDataID": 0,
+                            "refDataId": 0,
                             "type": "time",
                             "timeformat": "",
                             "provenance": "refers to the time which is just made this up",
                             "processes": []
                         },
                         "y": {
-                            "columnID": 12,
+                            "columnId": 12,
                             "name": "val1*",
-                            "refDataID": 1,
+                            "refDataId": 1,
                             "type": "number",
                             "provenance": "refers to val1 which is imported from thin air",
                             "processes": []
@@ -185,7 +185,7 @@ export const testJsonDC = `{
     ],
     "data": [
         {
-            "columnID": 0,
+            "columnId": 0,
             "name": "the time",
             "rawData": [
                 5.15,
@@ -1182,7 +1182,7 @@ export const testJsonDC = `{
             ]
         },
         {
-            "columnID": 1,
+            "columnId": 1,
             "name": "val1",
             "rawData": [
                 7,
@@ -2207,7 +2207,7 @@ export const testJsonDC = `{
             ]
         },
         {
-            "columnID": 2,
+            "columnId": 2,
             "name": "mycat",
             "rawData": [
                 "a",
@@ -2220,7 +2220,7 @@ export const testJsonDC = `{
             "processes": []
         },
         {
-            "columnID": 3,
+            "columnId": 3,
             "name": "AWD",
             "rawData": {
                 "start": 10,
@@ -2234,17 +2234,17 @@ export const testJsonDC = `{
             "processes": []
         },
         {
-            "columnID": 4,
+            "columnId": 4,
             "name": "val1*",
-            "refDataID": 1,
+            "refDataId": 1,
             "type": "number",
             "provenance": "refers to val1 which is imported from thin air",
             "processes": []
         },
         {
-            "columnID": 5,
+            "columnId": 5,
             "name": "val1**",
-            "refDataID": 4,
+            "refDataId": 4,
             "type": "number",
             "provenance": "refers to val1* which is refers to val1 which is imported from thin air",
             "processes": []

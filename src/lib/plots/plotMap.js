@@ -11,23 +11,9 @@ export async function loadPlots() {
 				// Make sure to only read in the file with the same name (other files should be imported by that one)
 				const svelteModule = await sveltePaths[sveltePath]();
 				const component = svelteModule.default;
-				const className = fileName;
-				let plotClass = svelteModule[className];
-
-				// Fallback: Check all named exports for a class with fromJSON
-				if (!plotClass || typeof plotClass.fromJSON !== 'function') {
-					for (const [exportName, value] of Object.entries(svelteModule)) {
-						if (
-							exportName !== 'default' &&
-							typeof value === 'function' &&
-							typeof value.fromJSON === 'function'
-						) {
-							plotClass = value;
-							//console.log(`Found class ${exportName} in ${sveltePath}`);
-							break;
-						}
-					}
-				}
+				const className = fileName.split('.')[0] + 'class';
+				const plotClass = svelteModule[className];
+				const defaultInputs = svelteModule[fileName.split('.')[0] + '_defaultDataInputs'];
 
 				if (!plotClass) {
 					console.warn(
@@ -38,7 +24,8 @@ export async function loadPlots() {
 
 				plotMap.set(folderName.toLowerCase(), {
 					plot: component,
-					data: plotClass
+					data: plotClass,
+					defaultInputs: defaultInputs || []
 				});
 			}
 		} catch (error) {

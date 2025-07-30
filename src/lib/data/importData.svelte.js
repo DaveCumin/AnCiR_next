@@ -1,300 +1,287 @@
-
 // @ts-nocheck
 import { DateTime } from 'luxon';
 
 import { pushObj } from '$lib/core/core.svelte';
 import { Table } from '$lib/core/table.svelte';
 import { Column } from '$lib/core/Column.svelte';
-import {
-    guessDateofArray,
-    forceFormat,
-    getPeriod,
-} from '$lib/utils/time/TimeUtils';
+import { guessDateofArray, forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
 
 import Papa from 'papaparse';
-import { tick } from 'svelte';
 
-const specialValues = ["NaN", "NA", "null"];
+const specialValues = ['NaN', 'NA', 'null'];
 const previewTableNrows = 6;
 
-let _filesToImport = $state();
 let _tempdata = {};
+let _columnOrder = [];
 let error = {};
 let skipLines = 0;
-let useHeaders = true;
 let flagExtraData = false;
 let errorInfile = false;
 let specialRecognised = false;
 
-// getter and setter
-export function getFilesToImport() {
-    return _filesToImport;
-}
-
-export function setFilesToImport(f) {
-	_filesToImport = f;
-}
 export function getTempData() {
 	return _tempdata;
 }
 
 // export functions as 'package' importDataUtils
 export const utils = {
-    openFileChoose,
-    parseFile,
-    loadData,
-    makeTempTable,
-}
-
+	openFileChoose,
+	parseFile,
+	loadData,
+	makeTempTable
+};
 
 /*
 helper functions: import data
 */
-async function openFileChoose() {
-    //reset the values
-    _tempdata = {};
-    error = {};
-    useHeaders = true;
-    flagExtraData = false;
-    errorInfile = false;
-    specialRecognised = false;
-
-    //wait for input to be loaded
-    await tick();
-
-    //click it
-    const fileInput = document.getElementById("fileInput");
-    fileInput.click();
+async function openFileChoose(hasHeader = true) {
+	//reset the values
+	_tempdata = {};
+	_columnOrder = [];
+	error = {};
+	hasHeader = true;
+	flagExtraData = false;
+	errorInfile = false;
+	specialRecognised = false;
 }
 
-function parseFile(previewIN = 0) {
-    errorInfile = false; //reset the errors
-    return new Promise((resolve) => {
-        console.log(
-            "doing papa previewIN= " + previewIN + ", useHeaders= " + useHeaders
-        );
+function parseFile(targetFile, previewIN = 0, hasHeader = false, del = '') {
+	console.log('parseFile called with:', targetFile, previewIN, hasHeader, del);
+	if (!targetFile) {
+		errorInfile = true;
+		return;
+	}
 
-        //Do the business
-        Papa.parse(_filesToImport[0], {
-            preview: previewIN,
-            header: useHeaders,
-            dynamicTyping: true,
-            skipEmptyLines: "greedy",
-            error: function (err, file, inputElem, reason) {
-                console.log("Error: " + err + " | " + reason);
-                _tempdata = {};
-                error = { err, reason };
-                resolve(); // Resolve the Promise even in case of an error
-            },
-            //Remove the first skipLines lines of the file before parsing
-            beforeFirstChunk: (chunk) => {
-            const lines = chunk.split(/\r\n|\r|\n/); // Split the content into lines
+	errorInfile = false; //reset the errors
+	return new Promise((resolve) => {
+		console.log('doing papa previewIN= ' + previewIN + ', hasHeader= ' + hasHeader);
 
-            const firstLines = skipLines
-                ? lines.splice(0, skipLines) // Remove the first N lines if there are skiplines
-                : lines[0].split(/[,;\t]/); //else take a sample of the first line to check for filetype (Actiware, etc)
+		//Do the business
+		Papa.parse(targetFile, {
+			preview: previewIN,
+			header: hasHeader,
+			dynamicTyping: true,
+			skipEmptyLines: 'greedy',
+			delimiter: del,
+			error: function (err, file, inputElem, reason) {
+				console.log('Error: ' + err + ' | ' + reason);
+				_tempdata = {};
+				_columnOrder = [];
+				error = { err, reason };
+				resolve(); // Resolve the Promise even in case of an error
+			},
+			//Remove the first skipLines lines of the file before parsing
+			beforeFirstChunk: (chunk) => {
+				const lines = chunk.split(/\r\n|\r|\n/); // Split the content into lines
 
-            //check for Actiware data - and remove appropriate lines, if so
-            if (
-                firstLines[0]?.includes("Actiware Export File") &&
-                !specialRecognised
-            ) {
-                console.log("ACTIWARE");
-                specialRecognised = "actiware";
-                skipLines = 148; /// the number of lines for an Actiware file before the data starts
-                parseFile(skipLines + previewIN + 1);
-            }
+				const firstLines = skipLines
+					? lines.splice(0, skipLines) // Remove the first N lines if there are skiplines
+					: lines[0].split(/[,;\t]/); //else take a sample of the first line to check for filetype (Actiware, etc)
 
-            return lines.join("\n"); // Join the remaining lines back into a single string
-            },
-            complete: function (results, file) {
-                console.log("Parsing complete:", results, file);
+				//check for Actiware data - and remove appropriate lines, if so
+				if (firstLines[0]?.includes('Actiware Export File') && !specialRecognised) {
+					console.log('ACTIWARE');
+					specialRecognised = 'actiware';
+					skipLines = 148; /// the number of lines for an Actiware file before the data starts
+					parseFile(targetFile, skipLines + previewIN + 1);
+				}
 
-                //Deal with awd data
-                if (file.name.toLowerCase().endsWith(".awd")) {
-                    results.errors = [];
-                    //get more data to preview before continuing
-                    if (previewIN == skipLines + previewTableNrows + useHeaders) {
-                    parseFile(14);
-                    } else {
-                    results.data = awdTocsv(results.data);
-                    }
-                }
-                console.log("RESULTS", results);
-                //for non awd files, continue
-                if (results.errors.length > 0) {
-                    errorInfile = true;
-                }
-                dealWithData(results.data);
+				return lines.join('\n'); // Join the remaining lines back into a single string
+			},
+			complete: function (results, file) {
+				console.log('Parsing complete:', results, file);
 
-                resolve(); // Resolve the Promise when parsing is complete
-            },
-        });
-    });
+				// Store the column order from the file
+				if (hasHeader && results.meta.fields) {
+					_columnOrder = results.meta.fields; // PapaParse provides the field order
+				} else if (results.data.length > 0) {
+					_columnOrder = Object.keys(results.data[0]); // Fallback to first row keys
+				}
+
+				//Deal with awd data
+				if (file.name.toLowerCase().endsWith('.awd')) {
+					results.errors = [];
+					//get more data to preview before continuing
+					if (previewIN == skipLines + previewTableNrows + hasHeader) {
+						parseFile(targetFile, 14);
+					} else {
+						results.data = awdTocsv(results.data);
+					}
+				}
+				console.log('RESULTS', results);
+				//for non awd files, continue
+				if (results.errors.length > 0) {
+					errorInfile = true;
+				}
+				dealWithData(results.data);
+
+				resolve(); // Resolve the Promise when parsing is complete
+			}
+		});
+	});
 }
 
 //deal with the data - actiware, clocklab, etc
 function dealWithData(dataIN) {
-    //convert the data into an object of arrays
-    _tempdata = convertArrayToObject(dataIN);
+	//convert the data into an object of arrays
+	_tempdata = convertArrayToObject(dataIN);
 
-    if (specialRecognised === "actiware") {
-        _tempdata["DateTime"] = [];
-        for (let i = 0; i < _tempdata["Date"].length; i++) {
-            _tempdata["DateTime"].push(
-            _tempdata["Date"][i] +
-                " " +
-                _tempdata["Time"][i].replace(
-                /\b([ap])\.m\./gi,
-                (match, group) => group.toUpperCase() + "M"
-                )
-            ); // the replace convers the a.m. or p.m. to AM or PM so it can be a time;
-        }
-    }
+	if (specialRecognised === 'actiware') {
+		_tempdata['DateTime'] = [];
+		for (let i = 0; i < _tempdata['Date'].length; i++) {
+			_tempdata['DateTime'].push(
+				_tempdata['Date'][i] +
+					' ' +
+					_tempdata['Time'][i].replace(
+						/\b([ap])\.m\./gi,
+						(match, group) => group.toUpperCase() + 'M'
+					)
+			); // the replace convers the a.m. or p.m. to AM or PM so it can be a time;
+		}
+		// Ensure DateTime is added to _columnOrder in the correct position
+		if (!_columnOrder.includes('DateTime')) {
+			const dateIndex = _columnOrder.indexOf('Date');
+			if (dateIndex !== -1) {
+				_columnOrder.splice(dateIndex + 1, 0, 'DateTime');
+			} else {
+				_columnOrder.push('DateTime');
+			}
+		}
+	}
 }
 
 //Converts the array into an object - more like AnCir uses
 function convertArrayToObject(inputArray) {
-    try {
-        let resultObject = {};
+	try {
+		let resultObject = {};
 
-        // Loop through each object in the array
-        inputArray.forEach((item) => {
-            // Loop through each key in the object
-            Object.keys(item).forEach((key) => {
-            // Initialize the array for the key if it doesn't exist
-            if (!resultObject[key]) {
-                resultObject[key] = [];
-            }
+		if (_columnOrder.length > 0) {
+			_columnOrder.forEach((key) => {
+				resultObject[key] = [];
+			});
+		}
 
-            // Push the value to the corresponding array
-            resultObject[key].push(item[key]);
-            });
-        });
+		// Loop through each object in the array
+		inputArray.forEach((item) => {
+			// Use _columnOrder if available, otherwise use item keys
+			const keys = _columnOrder.length > 0 ? _columnOrder : Object.keys(item);
+			keys.forEach((key) => {
+				if (!resultObject[key]) {
+					resultObject[key] = [];
+				}
+				resultObject[key].push(item[key]);
+			});
+		});
 
-        //change the keys to the first values if useHeader and extra
-        if (flagExtraData && useHeaders) {
-            resultObject = changeObjectKeys(resultObject, inputArray[0]);
-        }
+		//change the keys to the first values if hasHeader and extra
+		if (flagExtraData && hasHeader) {
+			resultObject = changeObjectKeys(resultObject, inputArray[0]);
+		}
 
-        return resultObject;
-
-    } catch (error) {
-        console.error("Error converting array to object:", error);
-        return {};
-    }
+		return resultObject;
+	} catch (error) {
+		console.error('Error converting array to object:', error);
+		return {};
+	}
 }
 
 //change the keys to a new array
 function changeObjectKeys(object, newKeys) {
-    console.log(object);
-    const newObject = {};
+	const newObject = {};
 
-    // Loop through the keys of the original object
-    Object.keys(object).forEach((originalKey, i) => {
-        // Create the new key
-        const newKey = newKeys[i] || originalKey;
-        
-        // Assign the values to the new key in the new object
-        object[originalKey].splice(0, 1); // remove the first value, as it's the header
-        newObject[newKey] = object[originalKey];
-    });
+	const orderedKeys = _columnOrder.length > 0 ? _columnOrder : Object.keys(object);
 
-    return newObject;
+	orderedKeys.forEach((originalKey, i) => {
+		const newKey = newKeys[i] || originalKey;
+		if (object[originalKey]) {
+			object[originalKey].splice(0, 1); // Remove the first value (header)
+			newObject[newKey] = object[originalKey];
+		}
+	});
+
+	// Update _columnOrder with new keys
+	_columnOrder = Object.keys(newObject);
+
+	return newObject;
 }
 
 //Load the data once all operations have been completed
-async function loadData() {
-    console.log("loading...");
-    await parseFile(0); //load all the data
+async function loadData(targetFile, hasHeader, del) {
+	console.log('loading...');
+	await parseFile(targetFile, 0, hasHeader, del); //load all the data
 
-    //TODO_high: perorm the required manipulations
-    doBasicFileImport(_tempdata, _filesToImport[0].name); //LOAD THE DATA
-
-    // $menuModalType = ''; //close the dialog
-
-    setFilesToImport('');
+	//TODO_high: perorm the required manipulations
+	doBasicFileImport(_tempdata, targetFile.name); //LOAD THE DATA
 }
 
 // put the data into the tool store
 // TODO_med: check the logic here, as the Sampling freq isn't updating properly for times.
 function doBasicFileImport(result, fname) {
+	// create Table object with constructor(Id, importedFrom, displayName, dataLength)
+	const newDataEntry = new Table();
+	// importedFrom = fname;
+	// dataLength = result[Object.keys(result)[0]].length;
+	newDataEntry.setName(`data_${newDataEntry.id}`);
 
-    // create Table object with constructor(ID, importedFrom, displayName, dataLength)
-    const newDataEntry = new Table();
-    // importedFrom = fname;
-    // dataLength = result[Object.keys(result)[0]].length;
-    newDataEntry.setName(`data_${newDataEntry.id}`);
-
-    //insert a data element for each header
-    Object.keys(result).forEach((f, i) => {
-
-        //find the data type based on the first non-NaN element
-        const datum = getFirstValid(result[f], 5);
-        const guessedFormat = guessDateofArray(result[f]);
-
-        if (guessedFormat != -1) {
-            const timefmt = guessedFormat;
-            const df = new Column();
-            df.type = 'time';
-            df.name = f;
-            df.data = forceFormat(result[f], timefmt);
-            // this.properties = {
-            //     timeFormat: timefmt,
-            //     recordPeriod: getPeriod(result[f], timefmt),
-            // };
-            newDataEntry.addColumn(df);
-
-        } else if (!isNaN(datum)) {
-            const df = new Column();
-            df.type = 'value';
-            df.name = f;
-            df.data = result[f];
-            newDataEntry.addColumn(df);
-
-        } else {
-            const df = new Column();
-            df.type = 'category';
-            df.name = f;
-            df.data = result[f];
-            newDataEntry.addColumn(df);
-        }   
-    });
-    console.log(newDataEntry instanceof Table);
-    pushObj(newDataEntry);
-
+	//insert a data element for each header
+	Object.keys(result).forEach((f, i) => {
+		//find the data type based on the first non-NaN element
+		const datum = getFirstValid(result[f], 5);
+		const guessedFormat = guessDateofArray(result[f]);
+		console.log(f, datum, guessedFormat);
+		if (guessedFormat != -1 && guessedFormat.length > 0) {
+			const df = new Column({});
+			df.type = 'time';
+			df.name = f;
+			df.data = result[f];
+			df.timeFormat = guessedFormat;
+			newDataEntry.addColumn(df);
+		} else if (!isNaN(datum)) {
+			const df = new Column({});
+			df.type = 'number';
+			df.name = f;
+			df.data = result[f];
+			newDataEntry.addColumn(df);
+		} else {
+			const df = new Column({});
+			df.type = 'category';
+			df.name = f;
+			df.data = result[f];
+			newDataEntry.addColumn(df);
+		}
+	});
+	console.log(newDataEntry instanceof Table);
+	pushObj(newDataEntry);
 }
 
 // get the first valid data point in the result, given key
 function getFirstValid(data) {
-    for (const value of data) {
-        if (value !== null && value !== "" && !specialValues.includes(value)) {
-            return value;
-        }
-    }
-    // Return a default value if no valid value is found
-    return null;
+	for (const value of data) {
+		if (value !== null && value !== '' && !specialValues.includes(value)) {
+			return value;
+		}
+	}
+	// Return a default value if no valid value is found
+	return null;
 }
 
 //make a table from the data
-function makeTempTable(_tempdata) {
-    //If there is no data, report an error
-    if (Object.keys(_tempdata).length === 0) {
-        return "There was an error reading the file " + _filesToImport[0].name;
-    }
-
-    let table = "<table><thead><tr>";
-    Object.keys(_tempdata).forEach(
-        (heading) => (table += `<th>${heading}</th>`)
-    );
-    table += "</tr></thead><tbody>";
-    for (let r = 0; r < previewTableNrows; r++) {
-        table += "<tr>";
-        for (let c = 0; c < Object.keys(_tempdata).length; c++) {
-            table += `<td>${_tempdata[Object.keys(_tempdata)[c]][r]}</td>`;
-        }
-        table += "</tr>";
-    }
-    table += "</tbody></table>";
-    return table;
+function makeTempTable(tempdata) {
+	//If there is no data, report an error
+	if (Object.keys(tempdata).length === 0) {
+		return 'There was an error reading the file ';
+	}
+	let table = '<table style="width: auto;"><thead><tr>'; //need the width else it tries to fit into the modal and no data show
+	const keys = _columnOrder.length > 0 ? _columnOrder : Object.keys(tempdata);
+	keys.forEach((heading) => (table += `<th>${heading}</th>`));
+	table += '</tr></thead><tbody>';
+	for (let r = 0; r < previewTableNrows; r++) {
+		table += '<tr>';
+		for (let c = 0; c < keys.length; c++) {
+			table += `<td>${tempdata[keys[c]][r]}</td>`;
+		}
+		table += '</tr>';
+	}
+	table += '</tbody></table>';
+	return table;
 }

@@ -37,30 +37,25 @@
 			const tableId = `table_${table.tableid}`;
 			addNode(tableId, `Table ${table.tableid}: ${table.name}`, 'table', 0);
 
-			table.columnRefs.forEach((columnID) => {
-				const data = core?.data?.find((d) => d.columnID === columnID);
+			table.columnRefs.forEach((columnId) => {
+				const data = core?.data?.find((d) => d.id === columnId);
 				if (data) {
-					const columnId = `column_${columnID}`;
-					addNode(columnId, `Column ${columnID}: ${data.name}`, 'column', 1);
+					const columnId = `column_${columnId}`;
+					addNode(columnId, `Column ${columnId}: ${data.name}`, 'column', 1);
 					edges.push({ from: tableId, to: columnId });
 
 					// Handle column processes
 					let currentLevel = 2; // Start processes at level 2
 					let previous = columnId;
 					data.processes.forEach((process) => {
-						const processId = `process_${process.processid}`;
-						addNode(
-							processId,
-							`Process ${process.processid}: ${process.name}`,
-							'process',
-							currentLevel
-						);
+						const processId = `process_${process.id}`;
+						addNode(processId, `Process ${process.id}: ${process.name}`, 'process', currentLevel);
 						edges.push({ from: previous, to: processId });
 						previous = processId;
 						currentLevel += 0.5;
 					});
 					maxColumnProcessLevel = Math.max(maxColumnProcessLevel, currentLevel - 0.5);
-					columnLastProcess[columnID] = data.processes.length > 0 ? previous : columnId;
+					columnLastProcess[columnId] = data.processes.length > 0 ? previous : columnId;
 				}
 			});
 		});
@@ -80,11 +75,11 @@
 				let yNodeId = null;
 
 				['x', 'y'].forEach((axis) => {
-					const refDataID = dataPoint[axis].refDataID;
-					const columnLast = columnLastProcess[refDataID];
+					const refDataId = dataPoint[axis].refId;
+					const columnLast = columnLastProcess[refDataId];
 					if (columnLast) {
 						const plotDataId = `${axis}_dp${dpIndex}_plot${plotIndex}`;
-						const columnName = core?.data?.find((d) => d.columnID === refDataID).name;
+						const columnName = core?.data?.find((d) => d.id === refDataId).name;
 						addNode(
 							plotDataId,
 							`${axis.toUpperCase()} dp${dpIndex}: ${columnName}`,
@@ -93,7 +88,7 @@
 						);
 						edges.push({ from: columnLast, to: plotDataId });
 
-						// Store x and y node IDs for undirected edge
+						// Store x and y node Ids for undirected edge
 						if (axis === 'x') xNodeId = plotDataId;
 						if (axis === 'y') yNodeId = plotDataId;
 
@@ -101,10 +96,10 @@
 						const plotProcesses = dataPoint[axis].processes || [];
 						let plotProcessLevelcurrent = plotProcessLevelstart;
 						plotProcesses.forEach((process) => {
-							const processId = `process_${process.processid}`;
+							const processId = `process_${process.id}`;
 							addNode(
 								processId,
-								`Process ${process.processid}: ${process.name}`,
+								`Process ${process.id}: ${process.name}`,
 								'process',
 								plotProcessLevelcurrent
 							);

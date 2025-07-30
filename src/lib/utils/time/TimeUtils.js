@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { DateTime } from 'luxon';
 import { guessFormat } from './guessTimeFormat';
-import { min, max } from '../MathsStats';
-import { createSequenceArray } from '../MathsStats';
+import { min, max } from '$lib/utils/MathsStats';
+import { createSequenceArray } from '$lib/utils/MathsStats';
 
 const decimalPlaces = 4;
 
@@ -161,7 +161,10 @@ export function getISODate(stringIN, formatIN) {
 	if (!formatIN) return stringIN;
 	return DateTime.fromFormat(stringIN, convertFormat(formatIN)).toISO();
 }
-
+export function getUNIXDate(stringIN, formatIN) {
+	if (!formatIN) return stringIN;
+	return DateTime.fromFormat(stringIN, convertFormat(formatIN)).toMillis();
+}
 export function addTime(start, hoursIN) {
 	return formatTimeFromISO(DateTime.fromISO(start).plus({ hours: hoursIN }).toISO());
 }
