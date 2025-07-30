@@ -22,7 +22,8 @@
 		);
 
 		//clear the defaults
-		theDefaults = {};
+		tableProcessChosen = '';
+		theDefaults = null;
 
 		//hide modal
 		show = false;
@@ -98,8 +99,6 @@
 				}
 			)
 		);
-
-		console.log($state.snapshot(theDefaults));
 		enforceSequentialCompletion(0);
 	}
 </script>

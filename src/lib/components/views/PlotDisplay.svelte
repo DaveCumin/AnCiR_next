@@ -61,6 +61,18 @@
 		const bottomMostPlot = Math.max(...core.plots.map((p) => p.y + p.height));
 		return Math.max(appState.windowHeight, bottomMostPlot + 200);
 	});
+
+	$effect(() => {
+		if (showAddTable && core.data.length > 0) {
+			appState.showDisplayPanel = true;
+		}
+	});
+	$effect(() => {
+		if (showNewPlotModal && core.plots.length > 0) {
+			//TODO: would be nice to see the '+' [add new plot] icon move to the top-right (and stay there)
+			console.log('TODO: move add plot icon...');
+		}
+	});
 </script>
 
 <div
@@ -113,6 +125,17 @@
 						<Plot theData={plot} which="plot" />
 					</Draggable>
 				{/each}
+
+				<button
+					class="icon newplotconstant"
+					style="position: absolute; left: calc({canvasWidthPx}px - 35px); top: 15px;"
+					onclick={() => (showNewPlotModal = true)}
+				>
+					<Icon name="add" width={24} height={24} />
+				</button>
+				{#if showNewPlotModal}
+					<AddPlot bind:showDropdown={showNewPlotModal} {dropdownTop} {dropdownLeft} />
+				{/if}
 			{:else if core.data.length > 0}
 				<div class="no-plot-prompt">
 					<button class="icon" onclick={() => (showNewPlotModal = true)}>
@@ -162,5 +185,9 @@
 
 	.no-plot-prompt p {
 		color: var(--color-lightness-75);
+	}
+
+	.newplotconstant{
+		transition left 0.5s ease;
 	}
 </style>
