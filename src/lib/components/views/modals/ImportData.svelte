@@ -18,7 +18,6 @@
 	export function openImportModal() {
 		showImportModal = true;
 		ImportData.utils.openFileChoose();
-		fileInput.click();
 	}
 
 	async function onFileChange(e) {
@@ -107,7 +106,6 @@
 					<!-- <p>Choose file to preview data</p> -->
 				{/if}
 			</div>
-
 		</div>
 	{/snippet}
 
