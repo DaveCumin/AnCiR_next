@@ -63,21 +63,19 @@ export function linearRegression(x, y) {
 	const slope = (n * sumXY - sumX * sumY) / (n * sumXSquare - sumX * sumX);
 	const intercept = (sumY - slope * sumX) / n;
 
-	// Calculate R-squared
+	// Calculate R-squared and rmse
 	let ssTotal = 0;
 	let ssResidual = 0;
-	let sumSquaredErrors = 0;
 	const meanY = sumY / n;
 
 	for (let i = 0; i < n; i++) {
 		const predictedY = slope * x[i] + intercept;
 		ssTotal += (y[i] - meanY) ** 2;
 		ssResidual += (y[i] - predictedY) ** 2;
-		sumSquaredErrors += (y[i] - predictedY) ** 2;
 	}
 
 	const rSquared = 1 - ssResidual / ssTotal;
-	const rmse = Math.sqrt(sumSquaredErrors / n);
+	const rmse = Math.sqrt(ssResidual / n);
 
 	return { slope, intercept, rSquared, rmse };
 }

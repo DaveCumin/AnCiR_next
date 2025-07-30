@@ -65,6 +65,7 @@
 
 	$effect(() => {
 		if (showAddTable && core.data.length > 0) {
+			appState.currentTab = 'data';
 			appState.showDisplayPanel = true;
 		}
 	});
@@ -132,7 +133,10 @@
 					style="z-index: 999; position: fixed; right: {appState.showControlPanel
 						? appState.widthControlPanel
 						: 0}px; top: 15px;"
-					onclick={() => (showNewPlotModalconst = true)}
+					onclick={(e) => {
+						e.stopPropagation();
+						showNewPlotModalconst = true;
+					}}
 				>
 					<Icon name="add" width={24} height={24} />
 				</button>

@@ -9,7 +9,6 @@
 			//move it to be within the page
 			const rect = dialog.getBoundingClientRect();
 			const padding = 10;
-			console.log(rect);
 			if (rect.right > window.innerWidth - padding) {
 				left = window.innerWidth - rect.width - padding;
 			}
@@ -17,7 +16,6 @@
 				left = 0;
 			}
 			if (rect.bottom > window.innerHeight - padding) {
-				console.log('trying to move up');
 				top = window.innerHeight - rect.height - padding;
 			}
 			if (rect.top < 0) {
@@ -33,6 +31,7 @@
 	bind:this={dialog}
 	onclose={() => (showDropdown = false)}
 	onclick={(e) => {
+		e.stopPropagation();
 		if (e.target === dialog) dialog.close();
 	}}
 	style={`top: ${top}px; left: ${left}px`}

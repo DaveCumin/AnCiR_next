@@ -308,7 +308,6 @@
 		</p>
 		Show Line:<input type="checkbox" bind:checked={marker.showLine} />
 	{/if}
-	<p>{marker.markers}</p>
 {/snippet}
 
 {#snippet plot(marker)}

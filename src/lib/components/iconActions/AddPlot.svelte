@@ -24,10 +24,10 @@
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
 		<div class="action">
-			<button onclick={(showSingle = true)}> Create New Plot </button>
+			<button onclick={(e) => (showSingle = true)}> Create New Plot </button>
 		</div>
 		<div class="action">
-			<button onclick={(showMultiple = true)}> Create New Plots </button>
+			<button onclick={(e) => (showMultiple = true)}> Create New Plots </button>
 		</div>
 	{/snippet}
 </Dropdown>
