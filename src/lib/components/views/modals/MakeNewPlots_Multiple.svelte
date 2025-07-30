@@ -1,5 +1,7 @@
 <script>
 	// @ts-nocheck
+	import ProgressIndicator from '$lib/components/ProgressIndicator.svelte';
+
 	import { core, pushObj, appConsts, appState, snapToGrid } from '$lib/core/core.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
@@ -7,6 +9,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import AttributeSelect from '$lib/components/reusables/AttributeSelect.svelte';
+	import { get } from 'svelte/store';
 
 	let { showModal = $bindable(false) } = $props();
 
@@ -15,13 +18,6 @@
 
 	let xCol = $state();
 	let yCols = $state([null]); // contains column id
-
-	let plotNames = $state([plotName]);
-
-	function AddNewPlot() {
-		yCols.push(null);
-		plotNames.push('New_' + capitalise(plotType) + '_' + yCols.length);
-	}
 
 	function confirmImport() {
 		const nCols = Math.ceil(Math.sqrt(yCols.length)); // for the layout
@@ -32,6 +28,8 @@
 		if (plotType === 'actogram') {
 			height = 600;
 		}
+
+		const xName = getColumnById(xCol).name;
 
 		for (let i = 0; i < yCols.length; i++) {
 			//find the position
@@ -44,7 +42,7 @@
 			);
 
 			const newPlot = new Plot({
-				name: plotNames[i],
+				name: getColumnById(yCols[i]).name,
 				type: plotType,
 				x: snapToGrid(col * (width + padding) + (col + 1) * padding),
 				y: snapToGrid(row * (height + padding) + (row + 1) * padding + row * 2 * padding),
@@ -57,68 +55,113 @@
 			});
 			core.plots.push(newPlot);
 		}
+		plotType = 'Plot';
 		showModal = false;
 	}
 
 	function capitalise(str) {
 		return str.charAt(0).toUpperCase() + str.slice(1);
 	}
+
+	//------------- STUFF TO DO WITH THE PROGRESS
+
+	let steps = $state([
+		{ label: 'Plot type', completed: false, isExpanded: true },
+		{ label: 'Inputs', completed: false, isExpanded: false }
+	]);
+	let currentStep = $state(0);
+
+	//This assumes that each step must be completed before the next
+	function setCurrentStep() {
+		//look backwards to find the last completed step and make the next one the current one
+		for (let i = steps.length - 2; i >= 0; i--) {
+			if (steps[i].completed) {
+				steps[i + 1].isExpanded = true;
+				currentStep = i + 1;
+				return;
+			}
+		}
+		currentStep = 0;
+	}
+	function enforceSequentialCompletion(changedIndex) {
+		enforceCompletedRules(changedIndex);
+		// If the changed step is marked incomplete, reset all subsequent steps
+		if (!steps[changedIndex].completed) {
+			for (let i = changedIndex + 1; i < steps.length; i++) {
+				steps[i].completed = false;
+				steps[i].isExpanded = false;
+			}
+		}
+		setCurrentStep();
+	}
+	function enforceCompletedRules(changedIndex) {
+		//rules for the first step - selection
+		if (changedIndex === 0) {
+			steps[changedIndex].completed = plotType != '';
+			steps[1].label = `Options for ${plotType}`;
+			enforceCompletedRules(1);
+		}
+	}
+	//This checks for validity
+	$effect(() => {
+		console.log('yCols: ', yCols);
+		if (plotType != 'Plot') {
+			steps[0].completed = true;
+			enforceSequentialCompletion(0);
+		}
+	});
+
+	//-------------------
 </script>
+
+{#snippet stepContent(index, step)}
+	{#if index === 0}
+		<div class="choose-file-container">
+			<AttributeSelect
+				bind:bindTo={plotType}
+				label="Plot Type"
+				options={['actogram', 'periodogram', 'scatterplot']}
+			/>
+		</div>
+	{/if}
+	{#if index === 1}
+		<AttributeSelect
+			bind:bindTo={xCol}
+			label={plotType == 'scatterplot' ? 'x' : 'time'}
+			options={core.tables.flatMap((table) => table.columns.map((col) => col.id))}
+			optionsDisplay={core.tables.flatMap((table) =>
+				table.columns.map((col) => table.name + ': ' + col.name)
+			)}
+		/>
+
+		<div class="import-container">
+			<div class="preview-placeholder">
+				<p>Alt-click to select multiple</p>
+				<span>ys:</span>
+				<select bind:value={yCols} multiple style="height: 100px">
+					{#each core.tables as table}
+						{#each table.columns as col}
+							<option value={col.id}>{table.name + ': ' + col.name}</option>
+						{/each}
+					{/each}
+				</select>
+			</div>
+		</div>
+		{#if yCols[0]}
+			<div class="dialog-button-container">
+				<button class="dialog-button" onclick={confirmImport}>Confirm Import</button>
+			</div>
+		{/if}
+	{/if}
+{/snippet}
 
 <Modal bind:showModal>
 	{#snippet header()}
 		<div class="heading">
-			<h2>Create New {capitalise(plotType)}(s)</h2>
-
-			<div class="choose-file-container">
-				<AttributeSelect
-					bind:bindTo={plotType}
-					label="Plot Type"
-					options={['actogram', 'periodogram', 'scatterplot']}
-				/>
-
-				<AttributeSelect
-					bind:bindTo={xCol}
-					label="x"
-					options={core.tables.flatMap((table) => table.columns.map((col) => col.id))}
-					optionsDisplay={core.tables.flatMap((table) =>
-						table.columns.map((col) => table.name + ': ' + col.name)
-					)}
-				/>
-			</div>
+			<h2>Create New {capitalise(plotType)}s</h2>
 		</div>
 	{/snippet}
-
-	{#snippet children()}
-		<div class="import-container">
-			<div class="preview-placeholder">
-				{#each yCols as yCol, i}
-					<div class="selected">
-						<p class="selected-preview">
-							Name:
-							<input bind:value={plotNames[i]} type="text" placeholder="enter plot name" />
-						</p>
-					</div>
-
-					<AttributeSelect
-						bind:bindTo={yCols[i]}
-						label="y"
-						options={core.tables.flatMap((table) => table.columns.map((col) => col.id))}
-						optionsDisplay={core.tables.flatMap((table) =>
-							table.columns.map((col) => table.name + ': ' + col.name)
-						)}
-					/>
-				{/each}
-			</div>
-			<button onclick={AddNewPlot}>Add New Plots</button>
-		</div>
-	{/snippet}
-
-	{#snippet button()}
-		<div class="dialog-button-container">
-			<button class="dialog-button" onclick={confirmImport}>Confirm Import</button>
-		</div>
-	{/snippet}
+	<ProgressIndicator bind:steps bind:currentStep {stepContent} />
 </Modal>
 
 <style>
