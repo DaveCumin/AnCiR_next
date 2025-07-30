@@ -163,7 +163,7 @@
 	}
 
 	function RePosition() {
-		if ($state.snapshot(appState.selectedPlotIds) === id) {
+		if ($state.snapshot(appState.selectedPlotIds).includes(id)) {
 			if (plotElement) {
 				plotElement.scrollIntoView({
 					behavior: 'smooth',
