@@ -11,7 +11,9 @@ https://svelte.dev/playground/modal?version=5.33.7
 		onopen = () => {},
 		header,
 		children,
-		button
+		button,
+		width = '36rem',
+		max_height = '50vh'
 	} = $props();
 	import { fade } from 'svelte/transition';
 
@@ -36,6 +38,7 @@ https://svelte.dev/playground/modal?version=5.33.7
 {#if showModal}
 	<div class="backdrop" transition:fade={{ duration: 360 }}>
 		<dialog
+			style="width: {width}; max-height: {max_height}"
 			bind:this={dialog}
 			onclose={() => (showModal = false)}
 			onclick={(e) => {
@@ -53,18 +56,17 @@ https://svelte.dev/playground/modal?version=5.33.7
 				</button>
 			</div>
 
-		<div class="dialog-container">
-			{@render header?.()}
-			{@render children?.()}
-			{@render button?.()}
-		</div>
+			<div class="dialog-container">
+				{@render header?.()}
+				{@render children?.()}
+				{@render button?.()}
+			</div>
+		</dialog>
 	</div>
 {/if}
 
 <style>
 	dialog {
-		width: 36em;
-		max-height: 50vh;
 		border-radius: 5px;
 		border: 1px, solid, var(--color-lightness-85);
 		box-shadow:

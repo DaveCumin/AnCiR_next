@@ -39,7 +39,7 @@
 		if (e.target.closest('button.icon')) return;
 		if (appState.selectedPlotIds.includes(id)) {
 			moving = true;
-		} else if (!e.altKeye) {
+		} else if (!e.altKey) {
 			appState.selectedPlotIds = [id];
 			moving = true;
 		}
@@ -49,19 +49,33 @@
 		dragStartY = y;
 	}
 
+	function anySelectedPlotEdge(xOffset, yOffset) {
+		let result = false;
+		appState.selectedPlotIds.forEach((id) => {
+			const plot = core.plots.find((p) => p.id === id);
+			if ($state.snapshot(plot.x) + xOffset <= 0 || $state.snapshot(plot.y) + yOffset <= 0) {
+				result = true;
+			}
+		});
+		return result;
+	}
+
 	function onMouseMove(e) {
 		if (moving) {
 			appState.selectedPlotIds.forEach((id) => {
 				const plot = core.plots.find((p) => p.id === id);
+				if (anySelectedPlotEdge(e.movementX, e.movementY)) {
+					//do nothing
+				} else {
+					plot.x += e.movementX;
+					plot.y += e.movementY;
 
-				const deltaX = e.clientX - mouseStartX;
-				const deltaY = e.clientY - mouseStartY;
+					const newX = snapToGrid(plot.x);
+					const newY = snapToGrid(plot.y);
 
-				const newX = snapToGrid(dragStartX + deltaX);
-				const newY = snapToGrid(dragStartY + deltaY);
-
-				plot.x = Math.max(0, Math.min(newX, canvasWidth - width - 20));
-				plot.y = Math.max(0, Math.min(newY, canvasHeight - height - 50));
+					plot.x = Math.max(0, Math.min(plot.x, canvasWidth - width - 20));
+					plot.y = Math.max(0, Math.min(plot.y, canvasHeight - height - 50));
+				}
 			});
 
 			RePosition();
@@ -74,7 +88,7 @@
 
 			width = snapToGrid(Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth)));
 			height = snapToGrid(Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight)));
-		
+
 			RePosition();
 		}
 	}
@@ -120,8 +134,8 @@
 
 	function handleClick(e) {
 		e.stopPropagation();
+
 		if (id >= 0) {
-			//handle colour-picker
 			//look for alt held at the same time
 			if (e.altKey) {
 				//Add if it's not already there
@@ -137,24 +151,23 @@
 		}
 		RePosition();
 	}
-	
+
 	function RePosition() {
-		if (appState.selectedPlotIds.includes(id)) {			
+		if ($state.snapshot(appState.selectedPlotIds) === id) {
 			if (plotElement) {
-			plotElement.scrollIntoView({
-				behavior: 'smooth',
-				block: 'nearest',
-				inline: 'nearest'
-			});
-		}
+				plotElement.scrollIntoView({
+					behavior: 'smooth',
+					block: 'nearest',
+					inline: 'nearest'
+				});
+			}
 		}
 	}
 
 	function openPlotDetails(e) {
 		e.stopPropagation();
-		console.log("clickkkkkkkeeeed");
+		console.log('clickkkkkkkeeeed');
 	}
-	
 </script>
 
 <svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp} />
@@ -162,8 +175,8 @@
 <!-- added header therefore TODO: other way than hardcode -->
 <section
 	bind:this={plotElement}
-	ondblclick={handleDblClick}
-	onclick={handleClick}
+	ondblclick={(e) => handleDblClick(e)}
+	onclick={(e) => handleClick(e)}
 	class:selected={appState.selectedPlotIds?.includes(id)}
 	class="draggable"
 	style="left: {x}px;
@@ -171,12 +184,10 @@
 		width: {snapToGrid(width + 20)}px;
 		height: {snapToGrid(height + 50)}px;"
 >
-	<div
-		class="plot-header"
-		onmousedown={onMouseDown}
-	>
+	<div class="plot-header" onmousedown={(e) => onMouseDown(e)}>
 		<p>
-		{title}</p>
+			{title}
+		</p>
 
 		<button class="icon" onclick={() => removePlot(id)}>
 			<Icon name="menu-horizontal-dots" width={20} height={20} className="plot-header-icon" />
@@ -185,7 +196,7 @@
 	<div class="plot-content">
 		<slot></slot>
 	</div>
-	<div class="resize-handle" onmousedown={startResize}></div>
+	<div class="resize-handle" onmousedown={(e) => startResize(e)}></div>
 </section>
 
 <style>
@@ -205,7 +216,7 @@
 	}
 
 	.selected {
-		border: 1px solid #0275FF;
+		border: 1px solid #0275ff;
 		box-shadow: 0 2px 5px rgba(2, 117, 255, 0.5);
 	}
 
@@ -223,7 +234,7 @@
 		padding-right: 0.4rem;
 		background-color: var(--color-lightness-98);
 		border-bottom: 1px solid var(--color-lightness-85);
-		
+
 		font-weight: bold;
 	}
 

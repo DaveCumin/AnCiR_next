@@ -41,7 +41,7 @@
 		let out = '';
 		for (let p = beforeIdx; p <= afterIdx; p++) {
 			//only include the point if it's within the y limits
-			if (y[p] >= yscale.domain()[0] && y[p] <= yscale.domain()[1]) {
+			if (y[p] >= yscale.domain()[0] && y[p] <= yscale.domain()[1] && x[p] && y[p]) {
 				out += `M${xscale(x[p])} ${yscale(y[p])} m-${radius} 0 a${radius} ${radius} 0 1 0 ${2 * radius} 0 a${radius} ${radius} 0 1 0 -${2 * radius} 0 `;
 			}
 		}

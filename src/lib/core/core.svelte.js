@@ -15,7 +15,7 @@ export const appState = $state({
 	currentControlTab: 'properties',
 
 	showNavbar: true,
-	showDisplayPanel: true,
+	showDisplayPanel: false,
 	showControlPanel: false,
 
 	windowWidth: window.innerWidth,
@@ -32,14 +32,15 @@ export const appState = $state({
 	gridSize: 15,
 
 	appColours: ['#0B090B', '#F8BFD4', '#787C3F', '#3B565E', '#E5A15E'],
+	showColourPicker: false
 });
 
 export const appConsts = $state({
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
-	
-	appColours: ['#0B090B', '#F8BFD4', '#787C3F', '#3B565E', '#E5A15E'],
+
+	appColours: ['#0B090B', '#F8BFD4', '#787C3F', '#3B565E', '#E5A15E']
 });
 
 export function pushObj(obj) {
@@ -60,32 +61,30 @@ export function pushObj(obj) {
 }
 
 export function snapToGrid(value) {
-  	return Math.round(value / appState.gridSize) * appState.gridSize;
+	return Math.round(value / appState.gridSize) * appState.gridSize;
 }
 
 // TODO: change to grid* layout
 let _attempt = 0;
 function findNextAvailablePosition(existingPlots) {
-	const baseX =10;
+	const baseX = 10;
 	const baseY = 20;
 	const offsetX = 40;
 	const offsetY = 40;
-	
+
 	while (true) {
 		const rawX = baseX + _attempt * offsetX;
 		const rawY = baseY + _attempt * offsetY;
 
 		const x = snapToGrid(rawX);
-    	const y = snapToGrid(rawY);
-		
-		const collision = existingPlots.some(p =>
-			Math.abs(p.x - x) < 30 && Math.abs(p.y - y) < 30
-		);
-		
+		const y = snapToGrid(rawY);
+
+		const collision = existingPlots.some((p) => Math.abs(p.x - x) < 30 && Math.abs(p.y - y) < 30);
+
 		if (!collision) {
 			return { x, y };
 		}
-		
+
 		_attempt++;
 	}
 }

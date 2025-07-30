@@ -134,8 +134,10 @@
 			<button class="icon" onclick={() => bands.swapBandCols()}>
 				<Icon name="swap" width={12} height={12} className="control-component-title-icon" />
 			</button>
-			<button class="icon"
-				onclick={() => bands.addBand({ col: bands.length % 2 === 0 ? '#000000' : '#ffffff', pc: 10 })}
+			<button
+				class="icon"
+				onclick={() =>
+					bands.addBand({ col: bands.length % 2 === 0 ? '#000000' : '#ffffff', pc: 10 })}
 			>
 				<Icon name="plus" width={16} height={16} className="control-component-title-icon" />
 			</button>
@@ -146,12 +148,12 @@
 		<div class="control-input-vertical">
 			<div class="control-input">
 				<p>Height</p>
-				<input type="number" bind:value={bands.height} min="1"/>
+				<input type="number" bind:value={bands.height} min="1" />
 			</div>
 		</div>
 		{#each bands.bands as b, i}
 			<p>
-				<input type="color" bind:value={b.col} />
+				<ColourPicker bind:value={b.col} />
 				<input
 					type="number"
 					bind:value={b.pc}
@@ -163,13 +165,12 @@
 			</p>
 		{/each}
 	{:else}
-	<div class="control-input-vertical">
-		<div class="control-input">
-			<p>Click + to add a band</p>
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>Click + to add a band</p>
+			</div>
 		</div>
-	</div>
 	{/if}
-	
 {/snippet}
 
 {#snippet plot(bands)}

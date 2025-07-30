@@ -2,13 +2,36 @@
 	// @ts-nocheck
 	import Draggable from '$lib/components/reusables/Draggable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import CreateNewPlotModal from '$lib/components/views/modals/CreateNewPlotModal.svelte';
-
+	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
+	import AddTable from '$lib/components/iconActions/AddTable.svelte';
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 	import { closeControlPanel } from '$lib/components/views/ControlDisplay.svelte';
 	import { tick } from 'svelte';
-	
-	let showModal = $state(false);
+
+	// AddTable dropdown
+	let addBtnRef;
+	let showAddTable = $state(false);
+	let dropdownTop = $state(0);
+	let dropdownLeft = $state(0);
+
+	function recalculateDropdownPosition() {
+		if (!addBtnRef) return;
+		const rect = addBtnRef.getBoundingClientRect();
+
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
+	}
+
+	function openDropdown(e) {
+		e.stopPropagation();
+		recalculateDropdownPosition();
+		requestAnimationFrame(() => {
+			showAddTable = true;
+		});
+		window.addEventListener('resize', recalculateDropdownPosition);
+	}
+
+	let showNewPlotModal = $state(false);
 
 	function handleClick(e) {
 		e.stopPropagation();
@@ -30,12 +53,12 @@
 	});
 
 	let gridBackgroundWidthPx = $derived.by(() => {
-		const rightMostPlot = Math.max(...core.plots.map(p => p.x + p.width));
+		const rightMostPlot = Math.max(...core.plots.map((p) => p.x + p.width));
 		return Math.max(canvasWidthPx, rightMostPlot + 200);
 	});
 
 	let gridBackgroundHeightPx = $derived.by(() => {
-		const bottomMostPlot = Math.max(...core.plots.map(p => p.y + p.height));
+		const bottomMostPlot = Math.max(...core.plots.map((p) => p.y + p.height));
 		return Math.max(appState.windowHeight, bottomMostPlot + 200);
 	});
 </script>
@@ -45,16 +68,17 @@
 	class="canvas"
 	style="top: 0;
 			left: {leftPx}px;
-			">
-			
+			"
+>
 	<div
 		class="canvas-panel"
 		style="
 		width: {canvasWidthPx}px;
 		height: 100vh;
-	">
-
-		<div class="canvas-background"
+	"
+	>
+		<div
+			class="canvas-background"
 			style="
 			width: {gridBackgroundWidthPx}px;
 			height: {gridBackgroundHeightPx}px;
@@ -75,31 +99,42 @@
 				);
 			"
 		>
-		{#if core.plots.length > 0}
-			{#each core.plots as plot, i (plot.id)}
-				<Draggable
-					bind:x={plot.x}
-					bind:y={plot.y}
-					bind:width={plot.width}
-					bind:height={plot.height}
-					title={plot.name}
-					id={plot.id}
-				>
-					{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
-					<Plot theData={plot} which="plot" />
-				</Draggable>
-			{/each}
+			{#if core.plots.length > 0}
+				{#each core.plots as plot, i (plot.id)}
+					<Draggable
+						bind:x={plot.x}
+						bind:y={plot.y}
+						bind:width={plot.width}
+						bind:height={plot.height}
+						title={plot.name}
+						id={plot.id}
+					>
+						{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
+						<Plot theData={plot} which="plot" />
+					</Draggable>
+				{/each}
+			{:else if core.data.length > 0}
+				<div class="no-plot-prompt">
+					<button class="icon" onclick={() => (showNewPlotModal = true)}>
+						<Icon name="add" width={24} height={24} />
+					</button>
+					<p>Click to add a new plot</p>
+				</div>
 
-		{:else}
-			<div class="no-plot-prompt">
-				<button class="icon" onclick={() => showModal = true}>
-					<Icon name="add" width={24} height={24} />
-				</button>
-				<p>Click to Add New Plot</p>
-			</div>
-
-			<CreateNewPlotModal bind:showModal={showModal} />
-		{/if}
+				{#if showNewPlotModal}
+					<AddPlot bind:showDropdown={showNewPlotModal} {dropdownTop} {dropdownLeft} />
+				{/if}
+			{:else}
+				<div class="no-plot-prompt">
+					<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
+						<Icon name="add" width={24} height={24} />
+					</button>
+					<p>Click to add new data</p>
+				</div>
+				{#if showAddTable}
+					<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
+				{/if}
+			{/if}
 		</div>
 	</div>
 </div>

@@ -4,51 +4,21 @@
 		appState.selectedPlotIds = [];
 		appState.showControlPanel = false;
 	}
-</script>
 
-<script>
-	// @ts-nocheck
-	import Icon from '$lib/icons/Icon.svelte';
-	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
-	
-	import { appConsts, appState, core } from '$lib/core/core.svelte';
-	import { convertToImage } from '$lib/components/plotBits/helpers/save.js';
+	const toShow = { width: 'number', height: 'number', 'plot.data.*.*.refId': 'Column' };
 
-	let addBtnRef;
-	let showSavePlot = $state(false);
-	let dropdownTop = $state(0);
-	let dropdownLeft = $state(0);
+	function filterPaths(paths) {
+		// Helper function to check if a path matches a pattern
+		function isMatch(path, pattern) {
+			// Convert pattern to regex, escaping dots and replacing * with .*
+			const regexPattern = '^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$';
+			return new RegExp(regexPattern).test(path);
+		}
 
-	function recalculateDropdownPosition() {
-		if (!addBtnRef) return;
-		const rect = addBtnRef.getBoundingClientRect();
-
-		dropdownTop = rect.top + window.scrollY;
-		dropdownLeft = rect.right + window.scrollX + 12;
-	}
-
-	function openDropdown() {
-		recalculateDropdownPosition();
-		requestAnimationFrame(() => {
-			showSavePlot = true;
-		});
-		window.addEventListener('resize', recalculateDropdownPosition);
-	}
-
-	// get the options that are the same for all selected plots
-	function getSameOptions(selectedPlotIds) {
-		if (selectedPlotIds.length < 2) return [];
-
-		// Get all plot objects using $state.snapshot
-		const plots = selectedPlotIds.map((id) => $state.snapshot(core.plots.find((p) => p.id === id)));
-
-		// Compare all plots
-		const options = compareJson(plots);
-		console.log('OPTIONS: ', options);
-
-		//TODO: I think we need a manual list to check against and show only those that are on that (to avoid exposing things like the GUIDs)
-
-		return options;
+		// Filter paths based on toShow
+		console.log(paths);
+		console.log(toShow);
+		return paths.filter((item) => Object.keys(toShow).some((key) => isMatch(item.path, key)));
 	}
 
 	function compareJson(jsonArray) {
@@ -109,19 +79,65 @@
 		compare(jsonArray);
 		return matches;
 	}
-	
 </script>
 
+<script>
+	// @ts-nocheck
+	import Icon from '$lib/icons/Icon.svelte';
+	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 
+	import { appConsts, appState, core } from '$lib/core/core.svelte';
+	import { convertToImage } from '$lib/components/plotBits/helpers/save.js';
+
+	let addBtnRef;
+	let showSavePlot = $state(false);
+	let dropdownTop = $state(0);
+	let dropdownLeft = $state(0);
+
+	function recalculateDropdownPosition() {
+		if (!addBtnRef) return;
+		const rect = addBtnRef.getBoundingClientRect();
+
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
+	}
+
+	function openDropdown() {
+		recalculateDropdownPosition();
+		requestAnimationFrame(() => {
+			showSavePlot = true;
+		});
+		window.addEventListener('resize', recalculateDropdownPosition);
+	}
+
+	// get the options that are the same for all selected plots
+	function getSameOptions(selectedPlotIds) {
+		if (selectedPlotIds.length < 2) return [];
+
+		// Get all plot objects using $state.snapshot
+		const plots = selectedPlotIds.map((id) => $state.snapshot(core.plots.find((p) => p.id === id)));
+
+		// Compare all plots
+		let options = compareJson(plots);
+
+		// Filter paths
+		options = filterPaths(options);
+
+		return options;
+	}
+</script>
 
 <div class="control-display">
-
 	<!-- This is only for the first selected plot - need an #if to take care of multiple selections -->
 
 	{#key appState.selectedPlotIds}
 		{#if appState.selectedPlotIds.length > 1}
 			<p>{appState.selectedPlotIds}</p>
 			<p>{JSON.stringify(getSameOptions(appState.selectedPlotIds), null, 2)}</p>
+			{#each getSameOptions(appState.selectedPlotIds) as same}
+				<p>{same.path} {toShow[same.path]} {same.value}</p>
+			{/each}
+
 			<div><button bind:this={addBtnRef} onclick={openDropdown}>Save</button></div>
 		{/if}
 		{#if appState.selectedPlotIds.length == 1}
@@ -137,8 +153,7 @@
 					<div class="control-banner">
 						<p>Control Panel</p>
 
-						<div class="control-banner-icons">
-						</div>
+						<div class="control-banner-icons"></div>
 					</div>
 					<!-- TODO: after fix put in control-banner-icons -->
 					<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
@@ -156,8 +171,14 @@
 					{/if}
 
 					<div class="control-tag">
-						<button class={appState.currentControlTab === 'properties' ? 'active' : ''} onclick={() => appState.currentControlTab = 'properties'}>Properties</button>
-						<button class={appState.currentControlTab === 'data' ? 'active' : ''} onclick={() => appState.currentControlTab = 'data'}>Data</button>
+						<button
+							class={appState.currentControlTab === 'properties' ? 'active' : ''}
+							onclick={() => (appState.currentControlTab = 'properties')}>Properties</button
+						>
+						<button
+							class={appState.currentControlTab === 'data' ? 'active' : ''}
+							onclick={() => (appState.currentControlTab = 'data')}>Data</button
+						>
 					</div>
 
 					<div class="div-line"></div>
@@ -165,24 +186,30 @@
 				{/if}
 			{/if}
 		{:else}
-		<div class="control-banner">
-			<p>Control Panel</p>
+			<div class="control-banner">
+				<p>Control Panel</p>
 
-			<div class="control-banner-icons">
-				<button class="icon">
-					<Icon name="reset" width={16} height={16} className="control-component-title-icon" />
-				</button>
+				<div class="control-banner-icons">
+					<button class="icon">
+						<Icon name="reset" width={16} height={16} className="control-component-title-icon" />
+					</button>
+				</div>
 			</div>
-		</div>
 
-		<div class="control-tag">
-			<button class={appState.currentControlTab === 'properties' ? 'active' : ''} onclick={() => appState.currentControlTab = 'properties'}>Properties</button>
-			<button class={appState.currentControlTab === 'files' ? 'active' : ''} onclick={() => appState.currentControlTab = 'files'}>Files</button>
-		</div>
+			<div class="control-tag">
+				<button
+					class={appState.currentControlTab === 'properties' ? 'active' : ''}
+					onclick={() => (appState.currentControlTab = 'properties')}>Properties</button
+				>
+				<button
+					class={appState.currentControlTab === 'files' ? 'active' : ''}
+					onclick={() => (appState.currentControlTab = 'files')}>Files</button
+				>
+			</div>
 
-		<div class="div-line"></div>
+			<div class="div-line"></div>
 
-		<!-- TODO: implement grid size change -->
+			<!-- TODO: implement grid size change -->
 		{/if}
 	{/key}
 

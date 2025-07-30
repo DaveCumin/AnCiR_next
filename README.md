@@ -1,38 +1,19 @@
-# sv
+### Analysis of Circadian Rhythms (AnCiR) v4.0.0
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+This is our 'AnCiR' to the need for a simple-to-use (GUI; no coding) tool for analysis of circadian rhythms.
 
-## Creating a project
+This version is written in [Svelte](https://svelte.dev/) by [DaveCumin](https://github.com/davecumin) and [yz-329](https://github.com/yz-329). The [previous](https://github.com/DaveCumin/ancir_svelte) version was also written in Svelte, and the [version before that](https://github.com/DaveCumin/AnCiR) was written in Javascript without Svelte.
 
-If you're seeing this, you've probably already done this step. Congrats!
+**Please feel free to send any bug reports, feature requests, or offers of support to [d.cumin@auckland.ac.nz](mailto:d.cumin@auckland.ac.nz?subject=AnCiR)**
 
-```bash
-# create a new project in the current directory
-npx sv create
+The following packages were used in this project:
 
-# create a new project in my-app
-npx sv create my-app
-```
+- [D3](https://d3js.org/) is used for plotting (ISC licensed).
+- [Papaparse](https://www.papaparse.com/) is used for importing the data (MIT licensed).
+- [Moment-guess](https://www.npmjs.com/package/moment-guess) was adapted to guess the time format of data (MIT licensed).
+- [Stats functions from](https://github.com/ytliu0/p-value_calculators/blob/master/statFunctions.js) [@ytliu0](https://github.com/ytliu0) (GPL-3.0 licensed).
+- [Luxon](https://www.npmjs.com/package/luxon) is used for date manipulation and caluclations (MIT licensed).
 
-## Developing
+Default colours for the plots are taken from the [maps designed and curated by Fabio Crameri](https://www.fabiocrameri.ch/colourmaps/) (MIT licensed).
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+As such, this software is licensed under the stricter of the above - the GPL-3.0 license ([http://fsf.org/](http://fsf.org/)).

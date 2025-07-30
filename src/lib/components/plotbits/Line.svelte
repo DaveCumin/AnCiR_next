@@ -13,7 +13,7 @@
 		//find the x point before the limit
 		let xlims = xscale.domain();
 		for (let i = 1; i < x.length; i++) {
-			if (x[i] >= Math.min(xlims[0], xlims[1])) {
+			if (x[i] >= Math.min(xlims[0], xlims[1]) && x[i - 1] && y[i - 1]) {
 				return i - 1;
 			}
 		}
@@ -23,7 +23,7 @@
 	let afterIdx = $derived.by(() => {
 		//find the x point after the limit
 		for (let i = x.length - 2; i >= 0; i--) {
-			if (x[i] <= Math.max(xlims[0], xlims[1])) {
+			if (x[i] <= Math.max(xlims[0], xlims[1]) && x[i + 1] && y[i + 1]) {
 				return i + 1;
 			}
 		}

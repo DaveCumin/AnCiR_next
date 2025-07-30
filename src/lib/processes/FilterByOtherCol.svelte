@@ -10,6 +10,8 @@
 				return value != target;
 			case '>':
 				return value > target;
+			case '<':
+				return value < target;
 			case '>=':
 				return value >= target;
 			case '<=':
@@ -24,7 +26,6 @@
 	}
 
 	export function filterbyothercol(x, args) {
-		console.log('filterbyothercol args: ', $state.snapshot(args));
 		const { conditions } = args;
 
 		// If no conditions or invalid, return original array
@@ -40,26 +41,28 @@
 			const byCol = getColumnById(byColId);
 			if (!byCol) continue; // Skip if column not found
 
-			const byColData = byCol.getData();
 			const byColType = byCol.type;
-			const mask = new Array(x.length).fill(false);
 
 			if (byColType === 'category') {
+				const byColData = byCol.getData();
 				for (let i = 0; i < byColData.length; i++) {
-					mask[i] = compareValues(byColData[i], isOperator, byColValue);
+					resultMask[i] = compareValues(byColData[i], isOperator, byColValue);
+				}
+			} else if (byColType === 'time') {
+				const byColData = byCol.hoursSinceStart;
+				for (let i = 0; i < byColData.length; i++) {
+					resultMask[i] = compareValues(Number(byColData[i]), isOperator, Number(byColValue));
 				}
 			} else {
+				const byColData = byCol.getData();
 				for (let i = 0; i < byColData.length; i++) {
-					mask[i] = compareValues(Number(byColData[i]), isOperator, Number(byColValue));
+					resultMask[i] = compareValues(Number(byColData[i]), isOperator, Number(byColValue));
 				}
 			}
-
-			// Combine with result mask using OR
-			resultMask = resultMask.map((val, i) => val || mask[i]);
 		}
 
 		// Apply mask to filter x
-		const out = x.map((val, i) => (resultMask[i] ? val : undefined));
+		const out = x.map((val, i) => (resultMask[i] ? val : NaN));
 		return out;
 	}
 
@@ -108,7 +111,8 @@
 				<select bind:value={condition.isOperator}>
 					<option value="==">=</option>
 					<option value="!=">!=</option>
-					<option value=">">></option>
+					<option value=">">&gt;</option>
+					<option value="<">&lt;</option>
 					<option value=">=">≥</option>
 					<option value="<=">≤</option>
 				</select>

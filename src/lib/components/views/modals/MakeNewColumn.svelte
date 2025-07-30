@@ -21,6 +21,9 @@
 			)
 		);
 
+		//clear the defaults
+		theDefaults = {};
+
 		//hide modal
 		show = false;
 	}

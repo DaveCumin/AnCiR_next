@@ -274,7 +274,7 @@
 		bind:minVal={marker.periodRangeMin}
 		bind:maxVal={marker.periodRangeMax}
 	/>
-	<input type="color" bind:value={marker.colour} />
+	<ColourPicker bind:value={marker.colour} />
 	<p>{marker.markers}</p>
 	{#if marker.linearRegression?.slope}
 		<p>linearRegression: {JSON.stringify(marker.linearRegression)}</p>

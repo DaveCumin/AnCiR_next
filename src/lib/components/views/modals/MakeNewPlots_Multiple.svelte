@@ -8,14 +8,10 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import AttributeSelect from '$lib/components/reusables/AttributeSelect.svelte';
 
-    let { showModal = $bindable(false) } = $props();
+	let { showModal = $bindable(false) } = $props();
 
-	let plotType = $state("Plot");
+	let plotType = $state('Plot');
 	let plotName = $state(plotType + '_' + (core.plots.length + 1));
-
-	// function openModal() {
-	// 	showModal = true;
-	// }
 
 	let xCol = $state();
 	let yCols = $state([null]); // contains column id
@@ -29,10 +25,10 @@
 
 	function confirmImport() {
 		for (let i = 0; i < yCols.length; i++) {
-			const newPlot = new Plot ({ name: plotNames[i], type: plotType });
+			const newPlot = new Plot({ name: plotNames[i], type: plotType });
 			newPlot.plot.addData({
-				x: {refId: xCol},
-				y: {refId: yCols[i]}
+				x: { refId: xCol },
+				y: { refId: yCols[i] }
 			});
 			pushObj(newPlot);
 		}
@@ -43,9 +39,7 @@
 	function capitalise(str) {
 		return str.charAt(0).toUpperCase() + str.slice(1);
 	}
-
 </script>
-
 
 <Modal bind:showModal>
 	{#snippet header()}
@@ -56,14 +50,16 @@
 				<AttributeSelect
 					bind:bindTo={plotType}
 					label="Plot Type"
-					options={["actogram", "periodogram", "scatterplot"]}
+					options={['actogram', 'periodogram', 'scatterplot']}
 				/>
 
 				<AttributeSelect
 					bind:bindTo={xCol}
 					label="x"
-					options={core.tables.flatMap(table => table.columns.map(col => col.id))}
-					optionsDisplay={core.tables.flatMap(table => table.columns.map(col => table.name + ': ' + col.name))}
+					options={core.tables.flatMap((table) => table.columns.map((col) => col.id))}
+					optionsDisplay={core.tables.flatMap((table) =>
+						table.columns.map((col) => table.name + ': ' + col.name)
+					)}
 				/>
 			</div>
 		</div>
@@ -75,16 +71,18 @@
 				{#each yCols as yCol, i}
 					<div class="selected">
 						<p class="selected-preview">
-							Name: 
-							<input bind:value={plotNames[i]} type="text" placeholder="enter plot name">
+							Name:
+							<input bind:value={plotNames[i]} type="text" placeholder="enter plot name" />
 						</p>
 					</div>
 
 					<AttributeSelect
 						bind:bindTo={yCols[i]}
 						label="y"
-						options={core.tables.flatMap(table => table.columns.map(col => col.id))}
-						optionsDisplay={core.tables.flatMap(table => table.columns.map(col => table.name + ': ' + col.name))}
+						options={core.tables.flatMap((table) => table.columns.map((col) => col.id))}
+						optionsDisplay={core.tables.flatMap((table) =>
+							table.columns.map((col) => table.name + ': ' + col.name)
+						)}
 					/>
 				{/each}
 			</div>
@@ -98,7 +96,6 @@
 		</div>
 	{/snippet}
 </Modal>
-
 
 <style>
 	button {
@@ -134,5 +131,4 @@
 		color: var(--color-lightness-35);
 		font-size: 14px;
 	}
-
 </style>

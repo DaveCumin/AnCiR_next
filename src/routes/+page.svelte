@@ -30,46 +30,48 @@
 	import { guessFormatD3 } from '$lib/utils/time/guessTimeFormat_d3.js';
 	import { guessFormat } from '$lib/utils/time/guessTimeFormat.js';
 
-	const timesToTest = ['2025/10/01', '2025/12/01', '2025/13/01'];
-	console.log('times to test: ', timesToTest);
-	console.log('d3 guess: ', guessFormatD3(timesToTest));
-	console.log('guess: ', guessFormat(timesToTest[0]));
-	import { timeParse, utcParse } from 'd3-time-format';
-	import { faL } from '@fortawesome/free-solid-svg-icons';
-	console.log(
-		'parse: ',
-		timeParse('%Y/%m/%d')(timesToTest[0]),
-		timeParse('%Y/%m/%d')(timesToTest[1]),
-		timeParse('%Y/%m/%d')(timesToTest[2])
-	);
+	let isLoaded = $state(false);
 
-	const timesToTest2 = [
-		'2025-04-06T02:45:29.833Z',
-		'2025-04-06T04:45:29.833Z',
-		'2025-04-06T06:45:29.833Z'
-	];
-	console.log('times to test: ', timesToTest2);
-	console.log('d3 guess: ', guessFormatD3(timesToTest2));
-	console.log('guess: ', guessFormat(timesToTest2[0]));
+	// const timesToTest = ['2025/10/01', '2025/12/01', '2025/13/01'];
+	// console.log('times to test: ', timesToTest);
+	// console.log('d3 guess: ', guessFormatD3(timesToTest));
+	// console.log('guess: ', guessFormat(timesToTest[0]));
+	// import { timeParse, utcParse } from 'd3-time-format';
+	// import { faL } from '@fortawesome/free-solid-svg-icons';
+	// console.log(
+	// 	'parse: ',
+	// 	timeParse('%Y/%m/%d')(timesToTest[0]),
+	// 	timeParse('%Y/%m/%d')(timesToTest[1]),
+	// 	timeParse('%Y/%m/%d')(timesToTest[2])
+	// );
 
-	console.log(
-		'parse: ',
-		timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[0]),
-		timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[1]),
-		timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[2])
-	);
-	console.log(
-		'parse: ',
-		Number(timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[0])),
-		Number(timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[1])),
-		Number(timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[2]))
-	);
-	console.log(
-		'parse utc: ',
-		Number(utcParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[0])),
-		Number(utcParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[1])),
-		Number(utcParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[2]))
-	);
+	// const timesToTest2 = [
+	// 	'2025-04-06T02:45:29.833Z',
+	// 	'2025-04-06T04:45:29.833Z',
+	// 	'2025-04-06T06:45:29.833Z'
+	// ];
+	// console.log('times to test: ', timesToTest2);
+	// console.log('d3 guess: ', guessFormatD3(timesToTest2));
+	// console.log('guess: ', guessFormat(timesToTest2[0]));
+
+	// console.log(
+	// 	'parse: ',
+	// 	timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[0]),
+	// 	timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[1]),
+	// 	timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[2])
+	// );
+	// console.log(
+	// 	'parse: ',
+	// 	Number(timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[0])),
+	// 	Number(timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[1])),
+	// 	Number(timeParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[2]))
+	// );
+	// console.log(
+	// 	'parse utc: ',
+	// 	Number(utcParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[0])),
+	// 	Number(utcParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[1])),
+	// 	Number(utcParse('%Y-%m-%dT%H:%M:%S.%LZ')(timesToTest2[2]))
+	// );
 
 	//------------------------------------
 	const N = 1_000;
@@ -98,6 +100,8 @@
 		appConsts.tableProcessMap = await loadTableProcesses();
 
 		// loadTestJson(); // TODO: DEBUG - error in COLUMN class
+
+		isLoaded = true;
 
 		//remove the listeners
 		return () => {
@@ -282,22 +286,25 @@
 	}
 
 	// TODO: Key Handling accessibility, e.g. ctrl+i == import
-
 </script>
 
 <svelte:head>
 	<title>AnCiR v β.4.0</title>
 </svelte:head>
 
-{#if appState.showNavbar}
-	<Navbar />
+{#if isLoaded}
+	{#if appState.showNavbar}
+		<Navbar />
+	{/if}
+
+	<DisplayPanel />
+
+	<PlotDisplay />
+
+	<ControlPanel />
+{:else}
+	<div>Loading...</div>
 {/if}
-
-<DisplayPanel />
-
-<PlotDisplay />
-
-<ControlPanel />
 
 <style>
 	/* TODO: control units */
@@ -330,7 +337,6 @@
 	/* :global(input:focus) {
 		background-color: blue;
 	} */
-
 
 	/* resizer style */
 	:global(.resizer) {
@@ -373,7 +379,7 @@
 		height: 1px;
 		width: 100%;
 		background-color: var(--color-lightness-85);
-		margin-top: 1.0rem;
+		margin-top: 1rem;
 		margin-bottom: 0.5rem;
 	}
 
@@ -418,7 +424,7 @@
 
 		color: var(--color-lightness-35);
 		background-color: transparent;
-		border-radius: 4px;;
+		border-radius: 4px;
 		border: none;
 		appearance: none;
 	}
@@ -447,7 +453,7 @@
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-between;
-		
+
 		/* font-weight: bold; */
 	}
 
