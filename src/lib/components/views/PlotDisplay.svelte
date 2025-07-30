@@ -125,11 +125,17 @@
 						<Plot theData={plot} which="plot" />
 					</Draggable>
 				{/each}
-				<div class="no-plot-prompt">
-					<button class="icon" id="newplotbutton" onclick={() => (showNewPlotModal = true)}>
-						<Icon name="add" width={24} height={24} />
-					</button>
-				</div>
+
+				<button
+					class="icon newplotconstant"
+					style="position: absolute; left: calc({canvasWidthPx}px - 35px); top: 15px;"
+					onclick={() => (showNewPlotModal = true)}
+				>
+					<Icon name="add" width={24} height={24} />
+				</button>
+				{#if showNewPlotModal}
+					<AddPlot bind:showDropdown={showNewPlotModal} {dropdownTop} {dropdownLeft} />
+				{/if}
 			{:else if core.data.length > 0}
 				<div class="no-plot-prompt">
 					<button class="icon" onclick={() => (showNewPlotModal = true)}>
@@ -179,5 +185,9 @@
 
 	.no-plot-prompt p {
 		color: var(--color-lightness-75);
+	}
+
+	.newplotconstant{
+		transition left 0.5s ease;
 	}
 </style>

@@ -22,6 +22,7 @@
 		);
 
 		//clear the defaults
+		tableProcessChosen = '';
 		theDefaults = null;
 
 		//hide modal
