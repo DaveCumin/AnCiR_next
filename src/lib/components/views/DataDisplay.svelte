@@ -105,7 +105,11 @@
 			</details>
 		</div>
 	{/each}
+
+	<div class="div-block"></div>
 </div>
+
+
 
 <!-- <div class="display-list">
 	{#each core.tables as table(table.id)}
