@@ -41,20 +41,14 @@
 			const byCol = getColumnById(byColId);
 			if (!byCol) continue; // Skip if column not found
 
+			const byColData = byCol.getData();
 			const byColType = byCol.type;
 
 			if (byColType === 'category') {
-				const byColData = byCol.getData();
 				for (let i = 0; i < byColData.length; i++) {
 					resultMask[i] = compareValues(byColData[i], isOperator, byColValue);
 				}
-			} else if (byColType === 'time') {
-				const byColData = byCol.hoursSinceStart;
-				for (let i = 0; i < byColData.length; i++) {
-					resultMask[i] = compareValues(Number(byColData[i]), isOperator, Number(byColValue));
-				}
 			} else {
-				const byColData = byCol.getData();
 				for (let i = 0; i < byColData.length; i++) {
 					resultMask[i] = compareValues(Number(byColData[i]), isOperator, Number(byColValue));
 				}
@@ -119,6 +113,13 @@
 			{/if}
 			{#if getColumnById(condition.byColId)?.type === 'category'}
 				<input type="text" bind:value={condition.byColValue} />
+			{:else if getColumnById(condition.byColId)?.type === 'time'}
+				<input
+					type="datetime-local"
+					oninput={(e) => {
+						condition.byColValue = Number(new Date(e.target.value));
+					}}
+				/>
 			{:else}
 				<input type="number" bind:value={condition.byColValue} />
 			{/if}
