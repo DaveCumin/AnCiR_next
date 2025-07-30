@@ -8,109 +8,32 @@
 	import Dropdown from '../reusables/Dropdown.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import AttributeSelect from '../reusables/AttributeSelect.svelte';
+	import MakeNewPlotsMultiple from '../views/modals/MakeNewPlots_Multiple.svelte';
+	import MakeNewPlot from '../views/modals/MakeNewPlot.svelte';
 
 	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
-	
-    let showModal = $state(false);
- 
-	let plotType = $state("Plot");
-	let plotName = $state(plotType + '_' + (core.plots.length + 1));
 
-	function openModal() {
-		showModal = true;
-	}
-
-	let xCol = $state();
-	let yCols = $state([null]); // contains column id
-
-	let plotNames = $state([plotName]);
-
-	function AddNewPlot() {
-		yCols.push(null);
-		plotNames.push('New_' + capitalise(plotType) + '_' + yCols.length);
-	}
-
-	function confirmImport() {
-		for (let i = 0; i < yCols.length; i++) {
-			const newPlot = new Plot ({ name: plotNames[i], type: plotType });
-			newPlot.plot.addData({
-				x: {refId: xCol},
-				y: {refId: yCols[i]}
-			});
-			pushObj(newPlot);
-		}
-		showModal = false;
-		showDropdown = false;
-	}
+	let showSingle = $state(false);
+	let showMultiple = $state(false);
 
 	function capitalise(str) {
 		return str.charAt(0).toUpperCase() + str.slice(1);
 	}
-
 </script>
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
-    {#snippet groups()}
-        <div class="action">
-			<button onclick={openModal}>
-				Create New Plot
-			</button>
+	{#snippet groups()}
+		<div class="action">
+			<button onclick={(showSingle = true)}> Create New Plot </button>
 		</div>
-    {/snippet}
+		<div class="action">
+			<button onclick={(showMultiple = true)}> Create New Plots </button>
+		</div>
+	{/snippet}
 </Dropdown>
 
-<Modal bind:showModal>
-	{#snippet header()}
-		<div class="heading">
-			<h2>Create New {capitalise(plotType)}(s)</h2>
-
-			<div class="choose-file-container">
-				<AttributeSelect
-					bind:bindTo={plotType}
-					label="Plot Type"
-					options={["actogram", "periodogram", "scatterplot"]}
-				/>
-
-				<AttributeSelect
-					bind:bindTo={xCol}
-					label="x"
-					options={core.tables.flatMap(table => table.columns.map(col => col.id))}
-					optionsDisplay={core.tables.flatMap(table => table.columns.map(col => table.name + ': ' + col.name))}
-				/>
-			</div>
-		</div>
-	{/snippet}
-
-	{#snippet children()}
-		<div class="import-container">
-			<div class="preview-placeholder">
-				{#each yCols as yCol, i}
-					<div class="selected">
-						<p class="selected-preview">
-							Name: 
-							<input bind:value={plotNames[i]} type="text" placeholder="enter plot name">
-						</p>
-					</div>
-
-					<AttributeSelect
-						bind:bindTo={yCols[i]}
-						label="y"
-						options={core.tables.flatMap(table => table.columns.map(col => col.id))}
-						optionsDisplay={core.tables.flatMap(table => table.columns.map(col => table.name + ': ' + col.name))}
-					/>
-				{/each}
-			</div>
-			<button onclick={AddNewPlot}>Add New Plots</button>
-		</div>
-	{/snippet}
-
-	{#snippet button()}
-		<div class="dialog-button-container">
-			<button class="dialog-button" onclick={confirmImport}>Confirm Import</button>
-		</div>
-	{/snippet}
-</Modal>
-
+<MakeNewPlotsMultiple bind:showModal={showMultiple} />
+<MakeNewPlot bind:showModal={showSingle} />
 
 <style>
 	.action button {
@@ -168,5 +91,4 @@
 		color: var(--color-lightness-35);
 		font-size: 14px;
 	}
-
 </style>

@@ -2,7 +2,7 @@
 	// @ts-nocheck
 	import Draggable from '$lib/components/reusables/Draggable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import CreateNewPlotModal from '$lib/components/views/modals/MakeNewPlot.svelte';
+	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
 	import AddTable from '$lib/components/iconActions/AddTable.svelte';
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 	import { closeControlPanel } from '$lib/components/views/ControlDisplay.svelte';
@@ -121,7 +121,9 @@
 					<p>Click to add a new plot</p>
 				</div>
 
-				<CreateNewPlotModal bind:showModal={showNewPlotModal} />
+				{#if showNewPlotModal}
+					<AddPlot bind:showDropdown={showNewPlotModal} {dropdownTop} {dropdownLeft} />
+				{/if}
 			{:else}
 				<div class="no-plot-prompt">
 					<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
