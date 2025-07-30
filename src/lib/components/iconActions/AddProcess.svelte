@@ -16,7 +16,6 @@
 
 	function addTheProcess(name) {
 		if (!columnSelected) return;
-		console.log('columnSelected ', columnSelected);
 		columnSelected.addProcess(name);
 		showDropdown = false;
 	}
@@ -25,14 +24,16 @@
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
 		{#each appConsts.processMap.entries() as [key, value]}
-			<button
-				onclick={() => {
-					showDropdown = false;
-					addTheProcess(key);
-				}}
-			>
-				{key}
-			</button>
+			<div class="action">
+				<button
+					onclick={() => {
+						showDropdown = false;
+						addTheProcess(key);
+					}}
+				>
+					{key}
+				</button>
+			</div>
 		{/each}
 	{/snippet}
 </Dropdown>
