@@ -129,7 +129,7 @@
 
 				<button
 					class="icon newplotconstant"
-					style="position: fixed; right: {appState.showControlPanel
+					style="z-index: 999; position: fixed; right: {appState.showControlPanel
 						? appState.widthControlPanel
 						: 0}px; top: 15px;"
 					onclick={() => (showNewPlotModalconst = true)}
@@ -156,7 +156,7 @@
 					<AddPlot
 						bind:showDropdown={showNewPlotModal}
 						dropdownTop={window.innerHeight / 2 - 25}
-						dropdownLeft={window.innerWidth / 2 + 100}
+						dropdownLeft={window.innerWidth / 2 - 40}
 					/>
 				{/if}
 			{:else}

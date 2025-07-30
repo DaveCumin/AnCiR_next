@@ -4,6 +4,8 @@ This is our 'AnCiR' to the need for a simple-to-use (GUI; no coding) tool for an
 
 This version is written in [Svelte](https://svelte.dev/) by [DaveCumin](https://github.com/davecumin) and [yz-329](https://github.com/yz-329). The [previous](https://github.com/DaveCumin/ancir_svelte) version was also written in Svelte, and the [version before that](https://github.com/DaveCumin/AnCiR) was written in Javascript without Svelte.
 
+This version was financially supported by a University of Auckland Teaching and Learning Development and Innovation Grant (2024).
+
 **Please feel free to send any bug reports, feature requests, or offers of support to [d.cumin@auckland.ac.nz](mailto:d.cumin@auckland.ac.nz?subject=AnCiR)**
 
 The following packages were used in this project:

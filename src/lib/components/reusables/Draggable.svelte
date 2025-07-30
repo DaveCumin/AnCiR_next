@@ -1,9 +1,4 @@
 <script>
-	// not a draggable reusable, change to plot component some time
-
-	// TODO: control panel
-	// TODO: change color, palette on top
-
 	// @ts-nocheck
 	import { tick } from 'svelte';
 	import { appState, core, snapToGrid } from '$lib/core/core.svelte';
@@ -47,11 +42,11 @@
 		}
 		mouseStartX = e.clientX;
 		mouseStartY = e.clientY;
-		
+
 		dragStartPositions = {};
 		// find all selected plots
-		appState.selectedPlotIds.forEach(id => {
-			const plot = core.plots.find(p => p.id === id);
+		appState.selectedPlotIds.forEach((id) => {
+			const plot = core.plots.find((p) => p.id === id);
 			dragStartPositions[id] = { x: plot.x, y: plot.y };
 		});
 	}
@@ -76,8 +71,8 @@
 				const plot = core.plots.find((p) => p.id === id);
 				if (!plot) return;
 
-				if (anySelectedPlotEdge(e.movementX, e.movementY)) return //do nothing
-				
+				if (anySelectedPlotEdge(e.movementX, e.movementY)) return; //do nothing
+
 				const start = dragStartPositions[id];
 
 				const newX = snapToGrid(start.x + deltaX);
@@ -85,17 +80,41 @@
 
 				plot.x = Math.max(0, Math.min(newX, canvasWidth - width - 20));
 				plot.y = Math.max(0, Math.min(newY, canvasHeight - height - 50));
-				
 			});
 
 			RePosition();
 		} else if (resizing) {
-			const deltaX = e.clientX - initialMouseX;
-			const deltaY = e.clientY - initialMouseY;
+			let deltaX = e.clientX - initialMouseX;
+			let deltaY = e.clientY - initialMouseY;
 
 			const maxWidth = canvasWidth - x - 20;
 			const maxHeight = canvasHeight - y - 50;
 
+			//Do resize over the left
+			const rightLim =
+				window.innerWidth - (appState.showControlPanel ? appState.widthControlPanel : 0);
+			const currentTop = document.getElementsByClassName('canvas')[0].scrollTop;
+			const currentLeft = document.getElementsByClassName('canvas')[0].scrollLeft;
+
+			if (e.pageX > rightLim) {
+				document.getElementsByClassName('canvas')[0].scrollTo({
+					top: currentTop,
+					left: currentLeft + appState.gridSize,
+					behavior: 'smooth'
+				});
+				deltaX += appState.gridSize;
+			}
+			//do resize down
+			if (e.pageY > window.innerHeight) {
+				document.getElementsByClassName('canvas')[0].scrollTo({
+					top: currentTop + appState.gridSize,
+					left: currentLeft,
+					behavior: 'smooth'
+				});
+				deltaY += appState.gridSize;
+			}
+
+			//do the resize
 			width = snapToGrid(Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth)));
 			height = snapToGrid(Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight)));
 

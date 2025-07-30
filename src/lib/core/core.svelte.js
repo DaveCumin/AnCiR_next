@@ -21,15 +21,14 @@ export const appState = $state({
 	windowWidth: window.innerWidth,
 	windowHeight: window.innerHeight,
 	widthNavBar: 56,
-	widthDisplayPanel: 300,
-	widthControlPanel: 300,
+	widthDisplayPanel: 250,
+	widthControlPanel: 250,
 
+	gridSize: 15,
 	canvasOffset: { x: 0, y: 0 },
 	canvasScale: 1.0,
 
 	selectedPlotIds: [],
-
-	gridSize: 15,
 
 	appColours: ['#0B090B', '#F8BFD4', '#787C3F', '#3B565E', '#E5A15E'],
 	showColourPicker: false
