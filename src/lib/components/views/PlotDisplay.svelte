@@ -71,8 +71,7 @@
 	});
 	$effect(() => {
 		if (showNewPlotModal && core.plots.length > 0) {
-			//TODO: would be nice to see the '+' [add new plot] icon move to the top-right (and stay there)
-			console.log('TODO: move add plot icon...');
+			//TODO: would be nice to see the '+' [add new plot] icon move, with animation, to the top-right (and stay there)
 		}
 	});
 </script>

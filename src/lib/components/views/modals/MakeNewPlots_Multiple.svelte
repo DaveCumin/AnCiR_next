@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	import { core, pushObj, appConsts } from '$lib/core/core.svelte';
+	import { core, pushObj, appConsts, appState, snapToGrid } from '$lib/core/core.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 
@@ -24,16 +24,40 @@
 	}
 
 	function confirmImport() {
+		const nCols = Math.ceil(Math.sqrt(yCols.length)); // for the layout
+		//default width and height
+		const padding = appState.gridSize;
+		let width = 500;
+		let height = 250;
+		if (plotType === 'actogram') {
+			height = 600;
+		}
+
 		for (let i = 0; i < yCols.length; i++) {
-			const newPlot = new Plot({ name: plotNames[i], type: plotType });
+			//find the position
+			const col = i % nCols;
+			const row = Math.floor(i / nCols);
+			console.log(
+				i,
+				snapToGrid(col * (width + padding) + padding),
+				snapToGrid(row * (height + padding) + padding)
+			);
+
+			const newPlot = new Plot({
+				name: plotNames[i],
+				type: plotType,
+				x: snapToGrid(col * (width + padding) + (col + 1) * padding),
+				y: snapToGrid(row * (height + padding) + (row + 1) * padding + row * 2 * padding),
+				width: snapToGrid(width),
+				height: snapToGrid(height)
+			});
 			newPlot.plot.addData({
 				x: { refId: xCol },
 				y: { refId: yCols[i] }
 			});
-			pushObj(newPlot);
+			core.plots.push(newPlot);
 		}
 		showModal = false;
-		showDropdown = false;
 	}
 
 	function capitalise(str) {

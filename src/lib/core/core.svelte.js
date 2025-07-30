@@ -49,7 +49,6 @@ export function pushObj(obj) {
 		core.tables.push(obj);
 	} else if (obj instanceof Plot) {
 		const pos = findNextAvailablePosition(core.plots);
-
 		obj.x = pos.x;
 		obj.y = pos.y;
 
