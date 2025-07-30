@@ -35,6 +35,8 @@
 	let dragStartX, dragStartY;
 	let mouseStartX, mouseStartY;
 
+	let dragStartPositions = {};
+
 	function onMouseDown(e) {
 		if (e.target.closest('button.icon')) return;
 		if (appState.selectedPlotIds.includes(id)) {
@@ -45,8 +47,13 @@
 		}
 		mouseStartX = e.clientX;
 		mouseStartY = e.clientY;
-		dragStartX = x;
-		dragStartY = y;
+		
+		dragStartPositions = {};
+		// find all selected plots
+		appState.selectedPlotIds.forEach(id => {
+			const plot = core.plots.find(p => p.id === id);
+			dragStartPositions[id] = { x: plot.x, y: plot.y };
+		});
 	}
 
 	function anySelectedPlotEdge(xOffset, yOffset) {
@@ -62,20 +69,23 @@
 
 	function onMouseMove(e) {
 		if (moving) {
+			const deltaX = e.clientX - mouseStartX;
+			const deltaY = e.clientY - mouseStartY;
+
 			appState.selectedPlotIds.forEach((id) => {
 				const plot = core.plots.find((p) => p.id === id);
-				if (anySelectedPlotEdge(e.movementX, e.movementY)) {
-					//do nothing
-				} else {
-					plot.x += e.movementX;
-					plot.y += e.movementY;
+				if (!plot) return;
 
-					const newX = snapToGrid(plot.x);
-					const newY = snapToGrid(plot.y);
+				if (anySelectedPlotEdge(e.movementX, e.movementY)) return //do nothing
+				
+				const start = dragStartPositions[id];
 
-					plot.x = Math.max(0, Math.min(plot.x, canvasWidth - width - 20));
-					plot.y = Math.max(0, Math.min(plot.y, canvasHeight - height - 50));
-				}
+				const newX = snapToGrid(start.x + deltaX);
+				const newY = snapToGrid(start.y + deltaY);
+
+				plot.x = Math.max(0, Math.min(newX, canvasWidth - width - 20));
+				plot.y = Math.max(0, Math.min(newY, canvasHeight - height - 50));
+				
 			});
 
 			RePosition();
