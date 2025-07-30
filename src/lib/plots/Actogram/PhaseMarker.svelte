@@ -83,13 +83,25 @@
 				const maxDay = Math.max(-1, ...Object.keys(markersByDay).map(Number));
 				return Array.from({ length: maxDay + 1 }, (_, i) => markersByDay[i] || NaN);
 			}
+
 			//-------------------------------
 			//Generate the template
 			//-------------------------------
 			//Calculate the number of before and after bins that are needed
 			const N = Math.round(this.templateHrsBefore / this.parentData.binSize);
 			const M = Math.round(this.templateHrsAfter / this.parentData.binSize);
-
+			console.log(
+				'binsize: ',
+				this.parentData.binSize,
+				'; hrsB: ',
+				this.templateHrsBefore,
+				'; hrsA: ',
+				this.templateHrsAfter,
+				'; N: ',
+				N,
+				'; M: ',
+				M
+			);
 			//Fill the N and M with 1s and -1s (if onset; or -1s and 1s if offset)
 			const template = [];
 			for (let i = 0; i < N; i++) {
@@ -111,10 +123,12 @@
 				]; // get the y data for the day
 				//get the threshold value
 				const centileValue = findCentileValue(periodsData, this.centileThreshold);
+
 				//convert to 1,-1
 				const aboveBelow = periodsData.map((value) =>
 					value <= centileValue || isNaN(value) ? -1 : 1
 				);
+
 				//pad the data for the template
 				periodsData = Array.from({ length: N }, () => (this.type === 'onset' ? -1 : 1))
 					.concat(periodsData)
@@ -122,6 +136,7 @@
 
 				//find the best match to the template and centre the template on the match
 				let bestMatchIndex = findBestMatchIndex(aboveBelow, template) + Math.round((N + M) / 2);
+				console.log('bestMatchIndex: ', bestMatchIndex);
 				//find the x-value in the period that corresponds to that index
 				let xData = [
 					...this.parentData.dataByDays.xByPeriod[i],
@@ -159,6 +174,7 @@
 			);
 
 			//Return the markers
+			console.log(bestMatchx);
 			return bestMatchx;
 		});
 
@@ -167,7 +183,7 @@
 			const xscale = scaleLinear()
 				.domain([0, this.parentData.parentPlot.periodHrs * this.parentData.parentPlot.doublePlot])
 				.range([0, this.parentData.parentPlot.plotwidth]);
-			const radius = Math.max(4, this.parentData.parentPlot.eachplotheight / 10);
+			const radius = 6;
 			for (let m = this.periodRangeMin - 1; m <= this.periodRangeMax - 1; m++) {
 				if (!this.markers[m]) continue;
 				out += `M${xscale(this.markers[m]) + this.parentData.parentPlot.padding.left} ${
@@ -258,16 +274,23 @@
 </script>
 
 {#snippet controls(marker)}
-	<p>{marker.id}</p>
-	Type:<input type="text" bind:value={marker.type} />
+	Type:<select bind:value={marker.type}>
+		<option value="onset">onset</option>
+		<option value="offset">offset</option>
+		<option value="manual">manual</option>
+	</select>
+
 	{#if marker.type === 'manual'}
 		<button onclick={() => (marker.parentData.parentPlot.isAddingMarkerTo = marker.id)}
 			>Add Marker</button
 		>
+	{:else}
+		<div>
+			N: <input type="number" min="0" max="100" bind:value={marker.templateHrsBefore} />
+			M: <input type="number" min="0" max="100" bind:value={marker.templateHrsAfter} />
+			%: <input type="number" min="0" max="100" bind:value={marker.centileThreshold} />
+		</div>
 	{/if}
-	N: <input type="number" min="0" max="100" bind:value={marker.templateHrsBefore} />
-	M: <input type="number" min="0" max="100" bind:value={marker.templateHrsAfter} />
-	%: <input type="number" min="0" max="100" bind:value={marker.centileThreshold} />
 	periods: <DoubleRange
 		min="1"
 		max={Object.keys(marker.parentData.dataByDays.xByPeriod).length}
@@ -275,17 +298,17 @@
 		bind:maxVal={marker.periodRangeMax}
 	/>
 	<ColourPicker bind:value={marker.colour} />
-	<p>{marker.markers}</p>
+
 	{#if marker.linearRegression?.slope}
-		<p>linearRegression: {JSON.stringify(marker.linearRegression)}</p>
+		<p>Est τ: {marker.linearRegression.slope.toFixed(2)} hrs</p>
+		<p>
+			R-squared: {marker.linearRegression.rSquared.toFixed(3)}, Error: {marker.linearRegression.rmse.toFixed(
+				3
+			)}
+		</p>
 		Show Line:<input type="checkbox" bind:checked={marker.showLine} />
 	{/if}
-	<p>
-		{marker.parentData.parentPlot.Ndays *
-			(marker.parentData.parentPlot.eachplotheight + marker.parentData.parentPlot.spaceBetween) +
-			marker.parentData.parentPlot.eachplotheight +
-			marker.parentData.parentPlot.padding.top}
-	</p>
+	<p>{marker.markers}</p>
 {/snippet}
 
 {#snippet plot(marker)}
@@ -304,6 +327,7 @@
 				marker.parentData.parentPlot.eachplotheight +
 				marker.parentData.parentPlot.padding.top}
 			stroke={marker.colour}
+			stroke-width="2"
 		/>
 	{/if}
 {/snippet}

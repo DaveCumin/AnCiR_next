@@ -69,7 +69,7 @@
 				_columnIdCounter = Math.max(id + 1, _columnIdCounter + 1);
 			}
 			this.tableProcessGUId = '';
-			
+
 			//Assign the other data
 			if (columnData) {
 				console.log('CD: ', columnData);
@@ -167,14 +167,14 @@
 			if (!this.name) {
 				this.name = type;
 			}
-	
+
 			this.type = type;
 			switch (this.type) {
 				case 'time':
 					this.generateTimeData(fs_min, startDate, dataLength);
 					break;
 				case 'value':
-					this.generateValueData(fs_min, period, maxHeight, dataLength)
+					this.generateValueData(fs_min, period, maxHeight, dataLength);
 					break;
 				default:
 					// TODO: UI warn user
@@ -185,41 +185,39 @@
 		// Data with type 'time'
 		generateTimeData(fs_min, startDate, dataLength) {
 			const timeData = [];
-	
+
 			for (let i = 0; i < dataLength; i++) {
 				const time = new Date(startDate.getTime() + i * fs_min * 60 * 1000).toLocaleString('en-US');
 				timeData.push(time);
 			}
-	
+
 			const timefmt = 'M/D/YYYY, h:mm:s A';
 			const processedTimeData = forceFormat(timeData, timefmt);
 			const timePeriod = getPeriod(timeData, timefmt);
-	
+
 			this.data = processedTimeData;
 			this.timeFormat = timefmt; //TODO: fix take DC-edits
-	
+
 			// this.properties = {
 			// 	timeFormat: timefmt,
 			// 	recordPeriod: timePeriod
 			// };
-	
 		}
-		
+
 		// Data with type 'value'
 		generateValueData(fs_min, period, maxHeight, dataLength) {
 			const valueData = [];
-	
+
 			const periodL = period * (60 / fs_min); //the length of the period
-	
+
 			for (let j = 0; j < dataLength; j++) {
 				const isLowPeriod = j % periodL < periodL / 2;
 				const mult = isLowPeriod ? maxHeight * 0.05 : maxHeight;
-	
+
 				const randomValue = Math.random() * mult;
 				valueData.push(Math.round(randomValue));
 			}
 			this.data = valueData;
-	
 		}
 
 		//Save and load the column to and from JSON
@@ -268,11 +266,11 @@
 
 					compression: compression ?? null,
 					timeFormat: timeFormat ?? '',
-					provenance: provenance ?? null,
+					provenance: provenance ?? null
 				},
 				id
 			);
-			
+
 			column.processes = [];
 			if (Array.isArray(processes)) {
 				for (const p of processes) {
@@ -323,7 +321,6 @@
 {#if col == undefined}
 	<p>Column is undefined</p>
 {:else}
-	
 	<details open>
 		<summary>
 			<!-- Id: {col.id} -->
@@ -336,14 +333,12 @@
 				<strong><input bind:value={col.name} /></strong>
 				{col.type}
 			</div>
-			
-			
+
 			{#if !col.isReferencial()}
 				<div class="data-component-info">
 					<italic>{col.provenance}</italic>
 				</div>
 			{/if}
-			
 		</summary>
 		<ul>
 			<!-- {#if col.type == 'number'}[{Math.min(...col.getData())},{Math.max(...col.getData())}]{/if} -->
@@ -376,9 +371,13 @@
 {/if}
 
 {#if showAddProcess}
-	<AddProcess bind:showDropdown={showAddProcess} {columnSelected} {dropdownTop} {dropdownLeft} />
+	<AddProcess
+		bind:showDropdown={showAddProcess}
+		columnSelected={col}
+		{dropdownTop}
+		{dropdownLeft}
+	/>
 {/if}
-
 
 <style>
 	.data-collapsible-title-container {
@@ -389,7 +388,7 @@
 		margin: 0;
 	}
 
-	.data-component-info p{
+	.data-component-info p {
 		font-size: 12px;
 		text-align: left;
 		color: var(--color-lightness-35);
@@ -415,7 +414,7 @@
 	summary {
 		display: flex;
 		flex-direction: column;
-		
+
 		cursor: pointer;
 		list-style: circle;
 		font-size: 1rem;
@@ -461,7 +460,7 @@
 
 	select:focus,
 	input:focus {
-		border: 1px solid #0275FF;
+		border: 1px solid #0275ff;
 		box-shadow: 0 2px 5px rgba(2, 117, 255, 0.5);
 		outline: none;
 	}

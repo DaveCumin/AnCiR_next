@@ -32,6 +32,7 @@
 	}
 
 	let showNewPlotModal = $state(false);
+	let showNewPlotModalconst = $state(false);
 
 	function handleClick(e) {
 		e.stopPropagation();
@@ -128,13 +129,20 @@
 
 				<button
 					class="icon newplotconstant"
-					style="position: absolute; left: calc({canvasWidthPx}px - 35px); top: 15px;"
-					onclick={() => (showNewPlotModal = true)}
+					style="position: fixed; right: {appState.showControlPanel
+						? appState.widthControlPanel
+						: 0}px; top: 15px;"
+					onclick={() => (showNewPlotModalconst = true)}
 				>
 					<Icon name="add" width={24} height={24} />
 				</button>
-				{#if showNewPlotModal}
-					<AddPlot bind:showDropdown={showNewPlotModal} {dropdownTop} {dropdownLeft} />
+
+				{#if showNewPlotModalconst}
+					<AddPlot
+						bind:showDropdown={showNewPlotModalconst}
+						dropdownTop={15}
+						dropdownLeft={window.innerWidth}
+					/>
 				{/if}
 			{:else if core.data.length > 0}
 				<div class="no-plot-prompt">
@@ -145,7 +153,11 @@
 				</div>
 
 				{#if showNewPlotModal}
-					<AddPlot bind:showDropdown={showNewPlotModal} {dropdownTop} {dropdownLeft} />
+					<AddPlot
+						bind:showDropdown={showNewPlotModal}
+						dropdownTop={window.innerHeight / 2 - 25}
+						dropdownLeft={window.innerWidth / 2 + 100}
+					/>
 				{/if}
 			{:else}
 				<div class="no-plot-prompt">
@@ -187,7 +199,7 @@
 		color: var(--color-lightness-75);
 	}
 
-	.newplotconstant{
-		transition left 0.5s ease;
+	.newplotconstant {
+		transition: right 0.5s ease;
 	}
 </style>

@@ -212,7 +212,23 @@
 		data = $state([]);
 		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
 		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
-		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
+		plotwidth = $derived.by(() => {
+			this.ylims;
+			this.xlims;
+			let plot = document.getElementById('plot' + this.parentBox.id);
+			let axisLeftRectOffset = 0;
+			if (plot) {
+				let plotRect = plot?.getBoundingClientRect();
+				let axesLeft = plot?.querySelectorAll('.axis-left');
+
+				for (let i = 0; i < axesLeft.length; i++) {
+					let axisRect = axesLeft[i].getBoundingClientRect();
+					axisLeftRectOffset = plotRect.left - axisRect.left;
+				}
+			}
+			this.padding.left += Math.ceil(axisLeftRectOffset);
+			return this.parentBox.width - this.padding.left - this.padding.right;
+		});
 		periodlimsIN = $state([1, 30]);
 		periodSteps = $state(0.25);
 		ylimsIN = $state([null, null]);
@@ -295,9 +311,8 @@
 
 <script>
 	import { appState } from '$lib/core/core.svelte';
-
+	import { onMount } from 'svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 
 	let { theData, which } = $props();
 
@@ -307,33 +322,30 @@
 		}
 	});
 
-	//TODO: Could this become a component, rather than the current copy-paste approach for all the states etc?
-	let addBtnRef;
-	let showSavePlot = $state(false);
-	let dropdownTop = $state(0);
-	let dropdownLeft = $state(0);
-
-	function recalculateDropdownPosition() {
-		if (!addBtnRef) return;
-		const rect = addBtnRef.getBoundingClientRect();
-
-		dropdownTop = rect.top + window.scrollY;
-		dropdownLeft = rect.right + window.scrollX + 12;
-	}
-
-	function openDropdown() {
-		recalculateDropdownPosition();
-		requestAnimationFrame(() => {
-			showSavePlot = true;
-		});
-		window.addEventListener('resize', recalculateDropdownPosition);
-	}
-
 	//Tooltip
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
 	function handleTooltip(event) {
 		tooltip = event.detail;
 	}
+
+	onMount(() => {
+		if (which == 'plot') {
+			let plot = document.getElementById('plot' + theData.id);
+			let axisLeftRectOffset = 0;
+			if (plot) {
+				let plotRect = plot?.getBoundingClientRect();
+				let axesLeft = plot?.querySelectorAll('.axis-left');
+
+				for (let i = 0; i < axesLeft.length; i++) {
+					let axisRect = axesLeft[i].getBoundingClientRect();
+					axisLeftRectOffset = plotRect.left - axisRect.left;
+				}
+			}
+
+			theData.plot.padding.left += Math.ceil(axisLeftRectOffset);
+			return theData.plot.parentBox.width - theData.plot.padding.left - theData.plot.padding.right;
+		}
+	});
 </script>
 
 {#snippet controls(theData)}

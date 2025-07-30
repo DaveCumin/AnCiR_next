@@ -32,7 +32,13 @@
 
 		x = $state();
 		y = $state();
-
+		binSize = $derived.by(() => {
+			//the average time between x values
+			return (
+				(this.x.hoursSinceStart[this.x.hoursSinceStart.length - 1] - this.x.hoursSinceStart[0]) /
+				this.x.hoursSinceStart.length
+			);
+		});
 		colour = $state();
 		offset = $derived(
 			(Number(new Date(this.parentPlot.startTime)) - Number(this.x.getData()[0])) / 3600000

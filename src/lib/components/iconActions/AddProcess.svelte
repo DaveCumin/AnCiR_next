@@ -9,14 +9,15 @@
 
 	let {
 		showDropdown = $bindable(false),
-		columnSelected = -1,
+		columnSelected = null,
 		dropdownTop = 0,
 		dropdownLeft = 0
 	} = $props();
 
 	function addTheProcess(name) {
-		if (columnSelected == -1) return;
-		getColumnById(columnSelected).addProcess(name);
+		if (!columnSelected) return;
+		console.log('columnSelected ', columnSelected);
+		columnSelected.addProcess(name);
 		showDropdown = false;
 	}
 </script>

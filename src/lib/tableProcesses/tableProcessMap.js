@@ -9,8 +9,6 @@ export async function loadTableProcesses() {
 		try {
 			const svelteModule = await sveltePaths[sveltePath]();
 			const component = svelteModule.default;
-			console.log('FUNCNAME: ', funcName);
-			console.log(svelteModule[`${funcName}_defaults`]);
 			tableProcessMap.set(fileName, {
 				component: component,
 				defaults: svelteModule[`${funcName}_defaults`] || new Map()
