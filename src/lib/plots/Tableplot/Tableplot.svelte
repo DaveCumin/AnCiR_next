@@ -130,6 +130,23 @@
 	</p>
 
 	Show columns:
+	<p>
+		<a
+			onclick={(e) => {
+				for (let i = 0; i < theData.showCol.length; i++) {
+					theData.showCol[i] = true;
+				}
+			}}>All</a
+		>
+		|
+		<a
+			onclick={(e) => {
+				for (let i = 0; i < theData.showCol.length; i++) {
+					theData.showCol[i] = false;
+				}
+			}}>None</a
+		>
+	</p>
 	<ul>
 		{#each theData.columnRefs as colId, i}
 			<li>
@@ -142,16 +159,18 @@
 
 {#snippet plot(theData)}
 	{#key theData.plot.showCol}
-		<Table headers={theData.plot.tableHeadings} data={theData.plot.tableData} />
-		<p style="margin-bottom: 0;">
-			Row <input
-				type="number"
-				min="1"
-				max={theData.plot.longestCol}
-				bind:value={theData.plot.colCurrent}
-			/>
-			to {theData.plot.colCurrent + theData.plot.Ncolumns - 1} of {theData.plot.longestCol}
-		</p>
+		{#if theData.plot.showCol.some((s) => s) || theData.plot.showColNumber}
+			<Table headers={theData.plot.tableHeadings} data={theData.plot.tableData} />
+			<p style="margin-bottom: 0;">
+				Row <input
+					type="number"
+					min="1"
+					max={theData.plot.longestCol}
+					bind:value={theData.plot.colCurrent}
+				/>
+				to {theData.plot.colCurrent + theData.plot.Ncolumns - 1} of {theData.plot.longestCol}
+			</p>
+		{/if}
 	{/key}
 {/snippet}
 
