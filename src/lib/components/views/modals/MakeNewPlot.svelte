@@ -83,8 +83,6 @@
 	}
 
 	function makePlot() {
-		//TODO: This isn't working :'(
-		console.log('Making plot with inputs: ', $state.snapshot(inputs));
 		const newPlot = new Plot({ name: plotName, type: plotType });
 		let data = {};
 		Object.entries(inputs).forEach(([key, value]) => {

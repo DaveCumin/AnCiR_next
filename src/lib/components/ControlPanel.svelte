@@ -1,9 +1,10 @@
 <script>
 	// @ts-nocheck
-	import { appState } from '$lib/core/core.svelte';
+	import { appState, core } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import ControlDisplay from './views/ControlDisplay.svelte';
 	import { fly } from 'svelte/transition';
+	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
 
 	let container;
 	const minWidth = 200;
@@ -43,6 +44,8 @@
 		window.addEventListener('mousemove', onMouseMove);
 		window.addEventListener('mouseup', stopResize);
 	}
+
+	let showNewPlotModalconst = $state(false);
 </script>
 
 {#if appState.showControlPanel}
@@ -57,12 +60,35 @@
 		<div class="resizer" onmousedown={startResize}></div>
 	</div>
 {:else}
-<!-- TODO: reconsider this ux wise -->
-<div class="open-control-panel-icon-container">
-	<button class="icon" onclick={() => (appState.showControlPanel = true)}>
-		<Icon name="circle-chevron-left" width={32} height={32}/>
+	<!-- TODO: reconsider this ux wise -->
+	<div class="open-control-panel-icon-container">
+		<button class="icon" onclick={() => (appState.showControlPanel = true)}>
+			<Icon name="circle-chevron-left" width={32} height={32} />
+		</button>
+	</div>
+{/if}
+
+{#if core.data.length > 0 && core.plots.length > 0}
+	<button
+		class="icon newplotconstant"
+		style="z-index: 999; position: fixed; right: {appState.showControlPanel
+			? appState.widthControlPanel
+			: 0}px; top: 15px;"
+		onclick={(e) => {
+			e.stopPropagation();
+			showNewPlotModalconst = true;
+		}}
+	>
+		<Icon name="add" width={24} height={24} />
 	</button>
-</div>
+
+	{#if showNewPlotModalconst}
+		<AddPlot
+			bind:showDropdown={showNewPlotModalconst}
+			dropdownTop={15}
+			dropdownLeft={window.innerWidth}
+		/>
+	{/if}
 {/if}
 
 <style>

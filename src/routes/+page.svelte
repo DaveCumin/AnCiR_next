@@ -92,6 +92,14 @@
 			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 's') {
 				refresh();
 			}
+			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'p') {
+				appState.canvasScale += 0.1;
+				console.log(appState.canvasScale);
+			}
+			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'o') {
+				appState.canvasScale -= 0.1;
+				console.log(appState.canvasScale);
+			}
 		});
 
 		//load the maps

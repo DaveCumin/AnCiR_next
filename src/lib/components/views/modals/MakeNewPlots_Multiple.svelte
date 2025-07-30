@@ -104,7 +104,6 @@
 	}
 	//This checks for validity
 	$effect(() => {
-		console.log('yCols: ', yCols);
 		if (plotType != 'Plot') {
 			steps[0].completed = true;
 			enforceSequentialCompletion(0);

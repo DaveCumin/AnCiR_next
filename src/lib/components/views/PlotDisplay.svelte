@@ -32,7 +32,6 @@
 	}
 
 	let showNewPlotModal = $state(false);
-	let showNewPlotModalconst = $state(false);
 
 	function handleClick(e) {
 		e.stopPropagation();
@@ -69,11 +68,6 @@
 			appState.showDisplayPanel = true;
 		}
 	});
-	$effect(() => {
-		if (showNewPlotModal && core.plots.length > 0) {
-			//TODO: would be nice to see the '+' [add new plot] icon move, with animation, to the top-right (and stay there)
-		}
-	});
 </script>
 
 <div
@@ -86,15 +80,18 @@
 	<div
 		class="canvas-panel"
 		style="
-		width: {canvasWidthPx}px;
+		position: relative;
+		transform-origin: top left;
+		width: {Math.max(canvasWidthPx, canvasWidthPx / appState.canvasScale)}px;
 		height: 100vh;
+		transform: scale({appState.canvasScale});
 	"
 	>
 		<div
 			class="canvas-background"
 			style="
-			width: {gridBackgroundWidthPx}px;
-			height: {gridBackgroundHeightPx}px;
+			width: {Math.max(canvasWidthPx, canvasWidthPx / appState.canvasScale)}px;
+			height: {Math.max(gridBackgroundHeightPx, gridBackgroundHeightPx / appState.canvasScale)}px;
 			background-image:
 				repeating-linear-gradient(
 				to right,
@@ -126,27 +123,6 @@
 						<Plot theData={plot} which="plot" />
 					</Draggable>
 				{/each}
-
-				<button
-					class="icon newplotconstant"
-					style="z-index: 999; position: fixed; right: {appState.showControlPanel
-						? appState.widthControlPanel
-						: 0}px; top: 15px;"
-					onclick={(e) => {
-						e.stopPropagation();
-						showNewPlotModalconst = true;
-					}}
-				>
-					<Icon name="add" width={24} height={24} />
-				</button>
-
-				{#if showNewPlotModalconst}
-					<AddPlot
-						bind:showDropdown={showNewPlotModalconst}
-						dropdownTop={15}
-						dropdownLeft={window.innerWidth}
-					/>
-				{/if}
 			{:else if core.data.length > 0}
 				<div class="no-plot-prompt">
 					<button class="icon" onclick={() => (showNewPlotModal = true)}>
