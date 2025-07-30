@@ -238,7 +238,7 @@ function doBasicFileImport(result, fname) {
 			newDataEntry.addColumn(df);
 		} else if (!isNaN(datum)) {
 			const df = new Column({});
-			df.type = 'value';
+			df.type = 'number';
 			df.name = f;
 			df.data = result[f];
 			newDataEntry.addColumn(df);
