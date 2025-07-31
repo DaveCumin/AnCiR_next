@@ -142,7 +142,8 @@
 		startTime = $derived.by(() => {
 			let minTime = Infinity;
 			this.data.forEach((datum) => {
-				minTime = Math.min(minTime, Number(datum.x.getData()[0]));
+				const thefirst = datum.x.getData() ? datum.x.getData()[0] : minTime;
+				minTime = Math.min(minTime, Number(thefirst));
 			});
 			//TODO: fix here for data with timeformat that doesn't work
 			return minTime !== Infinity && minTime

@@ -110,7 +110,7 @@
 			let xmin = Infinity;
 			let xmax = -Infinity;
 			this.data.forEach((d, i) => {
-				let tempx = this.data[i].x.getData();
+				let tempx = this.data[i].x.getData() ?? [];
 
 				tempx = tempx.map((x) => Number(x)); // Ensure all values are numbers
 				xmin = min([xmin, ...tempx]);
