@@ -5,7 +5,6 @@
 	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
 	import AddTable from '$lib/components/iconActions/AddTable.svelte';
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
-	import { closeControlPanel } from '$lib/components/views/ControlDisplay.svelte';
 	import { tick } from 'svelte';
 
 	// AddTable dropdown
@@ -36,7 +35,7 @@
 	function handleClick(e) {
 		e.stopPropagation();
 		appState.selectedPlotIds = [];
-		closeControlPanel();
+		appState.showControlPanel = false;
 	}
 
 	let canvasWidthPx = $derived.by(() => {

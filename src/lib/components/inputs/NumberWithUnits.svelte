@@ -2,10 +2,10 @@
 	import { onMount } from 'svelte';
 	let {
 		value = $bindable(0),
-		step = 0.1,
-		min = -100,
-		max = 100,
-		limits = [-500, Infinity],
+		step = 1,
+		min = -Infinity,
+		max = Infinity,
+		limits = [-Infinity, Infinity],
 		units = {
 			default: 'hr',
 			day: 24,
