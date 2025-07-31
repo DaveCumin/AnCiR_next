@@ -50,6 +50,14 @@
 			});
 			core.plots.push(newPlot);
 		}
+
+		appState.selectedPlotIds = [];
+		for (let i = core.plots.length - 1; i > core.plots.length - yCols.length - 1; i--) {
+			console.log(core.plots[i].id);
+			appState.selectedPlotIds.push(core.plots[i].id);
+		}
+		console.log($state.snapshot(appState.selectedPlotIds));
+
 		plotType = 'Plot';
 		showModal = false;
 	}

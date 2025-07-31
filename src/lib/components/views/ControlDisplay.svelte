@@ -1,7 +1,7 @@
 <!-- Handle click plot (plot id core state) -->
 <script module>
 	export function closeControlPanel() {
-		appState.selectedPlotIds = [];
+		// appState.selectedPlotIds = [];
 		appState.showControlPanel = false;
 	}
 
