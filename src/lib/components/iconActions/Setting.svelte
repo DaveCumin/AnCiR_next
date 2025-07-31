@@ -8,9 +8,11 @@
 
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
+	import Settings from '../views/modals/Settings.svelte';
+
+	let showSettingsModal = $state(false);
 
 	let showImportModal = $state(false);
-	let showExportModal = $state(false);
 
 	let importReady = $state(false);
 	let importPreview = $state();
@@ -27,10 +29,6 @@
 		showImportModal = true;
 		await tick();
 		chooseFile();
-	}
-
-	function openExportModal() {
-		showExportModal = true;
 	}
 
 	function chooseFile() {
@@ -107,11 +105,15 @@
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
 		<div class="action">
-			<button onclick={openImportModal}> Import Working JSON </button>
+			<button onclick={openImportModal}> Import session</button>
 		</div>
 
 		<div class="action">
-			<button onclick={exportJson}> Export Working JSON </button>
+			<button onclick={exportJson}> Export session </button>
+		</div>
+
+		<div class="action">
+			<button onclick={(e) => (showSettingsModal = true)}> Settings </button>
 		</div>
 	{/snippet}
 </Dropdown>
@@ -159,8 +161,6 @@
 					<!-- <p>Choose file to preview data</p> -->
 				{/if}
 			</div>
-
-			
 		</div>
 	{/snippet}
 
@@ -174,21 +174,7 @@
 	{/snippet}
 </Modal>
 
-<!-- potential modal for export? -->
-
-<!-- <Modal bind:showModal={showExportModal}>
-    {#snippet header()}
-		<div class="heading">
-			<h2>Export Workflow</h2>
-			<div class="choose-file-container">
-				<button class="choose-file-button" onclick={exportJson}>
-					Export Current Workflow
-				</button>
-			</div>
-			
-		</div>
-    {/snippet}
-</Modal> -->
+<Settings bind:showModal={showSettingsModal} />
 
 <style>
 	.action button {

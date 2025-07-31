@@ -35,6 +35,7 @@
 
 	function handleClick(e) {
 		e.stopPropagation();
+		appState.selectedPlotIds = [];
 		closeControlPanel();
 	}
 
