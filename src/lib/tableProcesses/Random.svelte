@@ -15,7 +15,7 @@
 	import { onMount } from 'svelte';
 
 	let { p = $bindable() } = $props();
-	console.log($state.snapshot(p));
+
 	let result = $state();
 	function makeRandom() {
 		result = [];

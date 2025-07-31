@@ -280,27 +280,6 @@
 
 		return [clickedDay, clickedHrs];
 	}
-
-	let addBtnRef;
-	let showSavePlot = $state(false);
-	let dropdownTop = $state(0);
-	let dropdownLeft = $state(0);
-
-	function recalculateDropdownPosition() {
-		if (!addBtnRef) return;
-		const rect = addBtnRef.getBoundingClientRect();
-
-		dropdownTop = rect.top + window.scrollY;
-		dropdownLeft = rect.right + window.scrollX + 12;
-	}
-
-	function openDropdown() {
-		recalculateDropdownPosition();
-		requestAnimationFrame(() => {
-			showSavePlot = true;
-		});
-		window.addEventListener('resize', recalculateDropdownPosition);
-	}
 </script>
 
 {#snippet controls(theData)}

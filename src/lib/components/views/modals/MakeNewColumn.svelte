@@ -90,8 +90,6 @@
 
 	let theDefaults = $state(null);
 	function setupProcess() {
-		console.log('chosen: ', tableProcessChosen);
-
 		theDefaults = Object.fromEntries(
 			Array.from(appConsts.tableProcessMap.get(tableProcessChosen).defaults.entries()).map(
 				([key, value]) => {
@@ -102,10 +100,7 @@
 				}
 			)
 		);
-		console.log('setup: ', $state.snapshot(theDefaults));
-
 		defaultsReady = true;
-
 		enforceSequentialCompletion(0);
 	}
 </script>
