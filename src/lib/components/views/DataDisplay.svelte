@@ -67,18 +67,19 @@
 
 <!-- TODO: write custom component to achieve -->
 <div class="display-list">
-
 	{#each core.tables as table (table.id)}
 		<div class="table-container">
 			<details class="table-item">
 				<summary class="table-name">{table.name}</summary>
 
 				<div class="collapsible-icon-container">
-					<button class="collapsible-icon"
+					<button
+						class="collapsible-icon"
 						onclick={() => {
 							selectedTable = table.id;
 							showNewCol = true;
-					}}>
+						}}
+					>
 						<Icon name="plus" width={16} height={16} className="static-icon" />
 					</button>
 				</div>
@@ -89,18 +90,17 @@
 					}}>View Table</button
 				>
 
-
 				{#each table.columns as col, i}
 					{#if !col.tableProcessed}
-					<div class="second-collapsible">
-						<ColumnComponent {col} />
-					</div>
+						<div class="second-collapsible">
+							<ColumnComponent {col} />
+						</div>
 					{/if}
 				{/each}
 				{#each table.processes as p}
-				<div class="second-collapsible">
-					<TableProcess {p} />
-				</div>
+					<div class="second-collapsible">
+						<TableProcess {p} />
+					</div>
 				{/each}
 			</details>
 		</div>
@@ -108,8 +108,6 @@
 
 	<div class="div-block"></div>
 </div>
-
-
 
 <!-- <div class="display-list">
 	{#each core.tables as table(table.id)}
@@ -119,11 +117,7 @@
 	{/each}
 </div> -->
 
-
-
-{#if showAddTable}
-	<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
-{/if}
+<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
 
 <MakeNewColumn bind:show={showNewCol} tableId={selectedTable} />
 
@@ -159,7 +153,7 @@
 		justify-content: center;
 
 		padding: 0.5rem 0.5rem;
-		padding-left: 1.0rem;
+		padding-left: 1rem;
 	}
 
 	.collapsible-icon {
@@ -169,7 +163,7 @@
 		background-color: white;
 		border-radius: 4px;
 		border: solid 1px var(--color-lightness-85);
-		
+
 		border-color: none;
 		appearance: none;
 	}
@@ -182,7 +176,6 @@
 	/* TODO: fix parent and child relationship */
 	.second-collapsible {
 		padding: 0.5rem 0.5rem;
-		padding-left: 1.0rem;
+		padding-left: 1rem;
 	}
-
 </style>

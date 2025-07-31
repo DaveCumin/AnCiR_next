@@ -82,13 +82,11 @@
 		<Icon name="add" width={24} height={24} />
 	</button>
 
-	{#if showNewPlotModalconst}
-		<AddPlot
-			bind:showDropdown={showNewPlotModalconst}
-			dropdownTop={15}
-			dropdownLeft={window.innerWidth}
-		/>
-	{/if}
+	<AddPlot
+		bind:showDropdown={showNewPlotModalconst}
+		dropdownTop={15}
+		dropdownLeft={window.innerWidth}
+	/>
 {/if}
 
 <button

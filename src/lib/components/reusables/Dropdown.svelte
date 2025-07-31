@@ -21,28 +21,32 @@
 			if (rect.top < 0) {
 				top = 0;
 			}
-		} else if (!showDropdown && dialog.open) {
+		} else if (!showDropdown && dialog?.open) {
 			dialog.close();
 		}
 	});
 </script>
 
-<dialog
-	bind:this={dialog}
-	onclose={() => (showDropdown = false)}
-	onclick={(e) => {
-		e.stopPropagation();
-		if (e.target === dialog) dialog.close();
-	}}
-	style={`top: ${top}px; left: ${left}px`}
->
-	<div>
-		<!-- svelte-ignore a11y_autofocus -->
-		<div class="group">
-			{@render groups?.()}
+{#if showDropdown}
+	<dialog
+		bind:this={dialog}
+		onclose={() => {
+			showDropdown = false;
+		}}
+		style={`top: ${top}px; left: ${left}px`}
+		onclick={(e) => {
+			e.stopPropagation();
+			showDropdown = false;
+		}}
+	>
+		<div>
+			<!-- svelte-ignore a11y_autofocus -->
+			<div class="group">
+				{@render groups?.()}
+			</div>
 		</div>
-	</div>
-</dialog>
+	</dialog>
+{/if}
 
 <style>
 	dialog {

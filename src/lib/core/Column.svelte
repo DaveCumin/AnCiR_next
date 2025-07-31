@@ -370,14 +370,7 @@
 	</details>
 {/if}
 
-{#if showAddProcess}
-	<AddProcess
-		bind:showDropdown={showAddProcess}
-		columnSelected={col}
-		{dropdownTop}
-		{dropdownLeft}
-	/>
-{/if}
+<AddProcess bind:showDropdown={showAddProcess} columnSelected={col} {dropdownTop} {dropdownLeft} />
 
 <style>
 	.data-collapsible-title-container {

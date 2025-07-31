@@ -158,14 +158,13 @@
 					</button>
 
 					<!-- TODO: change where dropdown is postioned -->
-					{#if showSavePlot}
-						<SavePlot
-							bind:showDropdown={showSavePlot}
-							{dropdownTop}
-							{dropdownLeft}
-							Id={'plot' + plot.plot.parentBox.id}
-						/>
-					{/if}
+
+					<SavePlot
+						bind:showDropdown={showSavePlot}
+						{dropdownTop}
+						{dropdownLeft}
+						Id={'plot' + plot.plot.parentBox.id}
+					/>
 
 					<div class="control-tag">
 						<button
@@ -212,14 +211,13 @@
 
 	<div class="div-block"></div>
 </div>
-{#if showSavePlot}
-	<SavePlot
-		bind:showDropdown={showSavePlot}
-		{dropdownTop}
-		{dropdownLeft}
-		Id={appState.selectedPlotIds}
-	/>
-{/if}
+
+<SavePlot
+	bind:showDropdown={showSavePlot}
+	{dropdownTop}
+	{dropdownLeft}
+	Id={appState.selectedPlotIds}
+/>
 
 <style>
 	.heading {

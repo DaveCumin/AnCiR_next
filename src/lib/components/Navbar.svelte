@@ -68,9 +68,8 @@
 	</div>
 </nav>
 
-{#if showSetting}
-	<Setting bind:showDropdown={showSetting} {dropdownTop} {dropdownLeft} />
-{/if}
+<Setting bind:showDropdown={showSetting} {dropdownTop} {dropdownLeft} />
+
 <About bind:showModal={showAbout} />
 
 <style>

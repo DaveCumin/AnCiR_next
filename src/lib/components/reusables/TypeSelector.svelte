@@ -59,20 +59,18 @@
 				{/key}
 			</button>
 
-			{#if showDropdown}
-				<Dropdown bind:showDropdown {top} {left}>
-					{#snippet groups()}
-						{#each options as option}
-							<div class:selected={option.value === value} onclick={(e) => selectOption(e, option)}>
-								<button class="icon">
-									<Icon name={option.icon} width={14} height={14} />
-								</button>
-								<span>{option.label}</span>
-							</div>
-						{/each}
-					{/snippet}
-				</Dropdown>
-			{/if}
+			<Dropdown bind:showDropdown {top} {left}>
+				{#snippet groups()}
+					{#each options as option}
+						<div class:selected={option.value === value} onclick={(e) => selectOption(e, option)}>
+							<button class="icon">
+								<Icon name={option.icon} width={14} height={14} />
+							</button>
+							<span>{option.label}</span>
+						</div>
+					{/each}
+				{/snippet}
+			</Dropdown>
 		{/if}
 	</div>
 </div>

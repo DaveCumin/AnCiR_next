@@ -132,13 +132,11 @@
 					<p>Click to add a new plot</p>
 				</div>
 
-				{#if showNewPlotModal}
-					<AddPlot
-						bind:showDropdown={showNewPlotModal}
-						dropdownTop={window.innerHeight / 2 - 25}
-						dropdownLeft={window.innerWidth / 2 - 40}
-					/>
-				{/if}
+				<AddPlot
+					bind:showDropdown={showNewPlotModal}
+					dropdownTop={window.innerHeight / 2 - 25}
+					dropdownLeft={window.innerWidth / 2 - 40}
+				/>
 			{:else}
 				<div class="no-plot-prompt">
 					<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
@@ -146,9 +144,8 @@
 					</button>
 					<p>Click to add new data</p>
 				</div>
-				{#if showAddTable}
-					<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
-				{/if}
+
+				<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
 			{/if}
 		</div>
 	</div>

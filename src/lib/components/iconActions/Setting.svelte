@@ -113,7 +113,13 @@
 		</div>
 
 		<div class="action">
-			<button onclick={(e) => (showSettingsModal = true)}> Settings </button>
+			<button
+				onclick={(e) => {
+					showSettingsModal = true;
+				}}
+			>
+				Settings
+			</button>
 		</div>
 	{/snippet}
 </Dropdown>
