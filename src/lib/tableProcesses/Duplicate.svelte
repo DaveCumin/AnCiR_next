@@ -18,7 +18,7 @@
 		if (p.args.xIN == -1) return; //if there is no input yet
 		result = getColumnById(p.args.xIN).getData();
 
-		if (p.args.out.result == -1) {
+		if (p.args.out.result == -1 || !p.args.out.result) {
 			//do nothing
 			return;
 		} else {

@@ -74,7 +74,7 @@
 		});
 
 		jsonData.plots.map((plotjson) => {
-			pushObj(Plot.fromJSON(plotjson));
+			pushObj(Plot.fromJSON(plotjson), false);
 		});
 
 		showImportModal = false;

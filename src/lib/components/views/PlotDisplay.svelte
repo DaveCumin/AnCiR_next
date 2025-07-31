@@ -64,7 +64,7 @@
 	});
 
 	$effect(() => {
-		if (showAddTable && core.data.length > 0) {
+		if (core.data.length > 0) {
 			appState.currentTab = 'data';
 			appState.showDisplayPanel = true;
 		}

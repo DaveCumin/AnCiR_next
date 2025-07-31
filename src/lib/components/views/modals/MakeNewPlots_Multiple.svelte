@@ -142,9 +142,11 @@
 				<span>ys:</span>
 				<select bind:value={yCols} multiple style="height: 100px">
 					{#each core.tables as table}
-						{#each table.columns as col}
-							<option value={col.id}>{table.name + ': ' + col.name}</option>
-						{/each}
+						<optgroup label={table.name}>
+							{#each table.columns as col}
+								<option value={col.id}>{col.name}</option>
+							{/each}
+						</optgroup>
 					{/each}
 				</select>
 			</div>
@@ -199,5 +201,14 @@
 	.selected-preview {
 		color: var(--color-lightness-35);
 		font-size: 14px;
+	}
+
+	select optgroup {
+		font-weight: bold;
+		color: var(--color-lightness-35);
+	}
+
+	select option {
+		padding-left: 20px; /* Indent sub-categories */
 	}
 </style>

@@ -19,6 +19,7 @@
 	import { onMount } from 'svelte';
 
 	let { p = $bindable() } = $props();
+	console.log($state.snapshot(p));
 
 	let simulatedTime = $state([]);
 	let simulatedValues = $state([]);

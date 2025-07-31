@@ -42,15 +42,19 @@ export const appConsts = $state({
 	appColours: ['#0B090B', '#F8BFD4', '#787C3F', '#3B565E', '#E5A15E']
 });
 
-export function pushObj(obj) {
+export function pushObj(obj, autoPosition = true) {
 	if (obj instanceof Column) {
 		core.data.push(obj);
 	} else if (obj instanceof Table) {
 		core.tables.push(obj);
 	} else if (obj instanceof Plot) {
-		const pos = findNextAvailablePosition(core.plots);
-		obj.x = pos.x;
-		obj.y = pos.y;
+		console.log(obj);
+		console.log(autoPosition);
+		if (autoPosition) {
+			const pos = findNextAvailablePosition(core.plots);
+			obj.x = pos.x;
+			obj.y = pos.y;
+		}
 
 		core.plots.push(obj);
 	} else {

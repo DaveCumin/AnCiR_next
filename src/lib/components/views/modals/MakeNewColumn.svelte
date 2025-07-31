@@ -4,6 +4,7 @@
 	import { getTableById } from '$lib/core/Table.svelte';
 	import { TableProcess } from '$lib/core/TableProcess.svelte';
 	import { appConsts } from '$lib/core/core.svelte.js';
+
 	let { show = $bindable(), tableId } = $props();
 
 	///-----------
@@ -78,6 +79,7 @@
 	});
 
 	//------
+	let defaultsReady = $state(false);
 	function processNested(obj) {
 		const result = {};
 		for (const [key, value] of Object.entries(obj)) {
@@ -89,6 +91,7 @@
 	let theDefaults = $state(null);
 	function setupProcess() {
 		console.log('chosen: ', tableProcessChosen);
+
 		theDefaults = Object.fromEntries(
 			Array.from(appConsts.tableProcessMap.get(tableProcessChosen).defaults.entries()).map(
 				([key, value]) => {
@@ -99,6 +102,10 @@
 				}
 			)
 		);
+		console.log('setup: ', $state.snapshot(theDefaults));
+
+		defaultsReady = true;
+
 		enforceSequentialCompletion(0);
 	}
 </script>
@@ -107,7 +114,14 @@
 	{#if index === 0}
 		<div>
 			Process to use:
-			<select bind:value={tableProcessChosen} onchange={setupProcess}>
+			<select
+				onchange={(e) => {
+					theDefaults = null;
+					defaultsReady = false;
+					tableProcessChosen = e.target.value; // had to do it this way, else the component would mount before theDefaults were set
+					setupProcess();
+				}}
+			>
 				<option value=""></option>
 				{#each Array.from(appConsts.tableProcessMap.keys()) as tp}
 					<option value={tp}>{tp}</option>
@@ -115,18 +129,16 @@
 			</select>
 		</div>
 	{:else if index === 1}
-		{#key theDefaults}
-			<!-- ensure component mounts after theDefaults change -->
-			{#if tableProcessChosen != '' && theDefaults}
-				{@const TableProcess = appConsts.tableProcessMap.get(tableProcessChosen)?.component}
-				<TableProcess
-					p={{
-						name: tableProcessChosen,
-						args: theDefaults
-					}}
-				/>
-			{/if}
-		{/key}
+		<!-- ensure component mounts after theDefaults change -->
+		{#if tableProcessChosen && tableProcessChosen !== '' && defaultsReady && theDefaults !== null && theDefaults !== undefined}
+			{@const TableProcess = appConsts.tableProcessMap.get(tableProcessChosen)?.component}
+			<TableProcess
+				p={{
+					name: tableProcessChosen,
+					args: theDefaults
+				}}
+			/>
+		{/if}
 	{/if}
 {/snippet}
 
