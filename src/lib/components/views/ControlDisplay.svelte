@@ -150,6 +150,7 @@
 
 			<p>{appState.selectedPlotIds}</p>
 			<p>{JSON.stringify(theSameOptions, null, 2)}</p>
+			<!-- This may need to be layed out, like the others, with loops only for the data (that way, easier to set min/max input values and label appropriately -->
 			{#each theSameOptions as same}
 				{#if toShow[same.path] == 'number'}
 					<p>

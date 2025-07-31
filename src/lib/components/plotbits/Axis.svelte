@@ -66,12 +66,11 @@
 				.style('font-size', `${tickfontsize}px`)
 				.style('transform', `translate(${width + xoffset}px, ${yoffset}px)`);
 		}
-		//DO GRIdLINES
+		//DO GRIDLINES
 		if (gridlines) {
 			if (position == 'bottom') {
 				select(axisGroup)
 					.selectAll('.tick')
-
 					.append('line')
 					.attr('class', 'gridline')
 					.attr('y1', 0)
@@ -79,7 +78,6 @@
 			} else if (position == 'top') {
 				select(axisGroup)
 					.selectAll('.tick')
-
 					.append('line')
 					.attr('class', 'gridline')
 					.attr('y1', 0)
@@ -87,7 +85,6 @@
 			} else if (position == 'left') {
 				select(axisGroup)
 					.selectAll('.tick')
-
 					.append('line')
 					.attr('class', 'gridline')
 					.attr('x1', 0)
@@ -95,7 +92,6 @@
 			} else if (position == 'right') {
 				select(axisGroup)
 					.selectAll('.tick')
-
 					.append('line')
 					.attr('class', 'gridline')
 					.attr('x1', 0)
