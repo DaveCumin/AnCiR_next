@@ -91,7 +91,36 @@
 	{/if}
 {/if}
 
+<button
+	class="icon zoomout"
+	style="z-index: 999; position: fixed; right: {appState.showControlPanel
+		? appState.widthControlPanel
+		: 0}px; bottom: 35px;"
+	onclick={(e) => {
+		e.stopPropagation();
+		appState.canvasScale -= 0.05;
+	}}
+>
+	<Icon name="zoom-out" width={24} height={24} />
+</button>
+
+<button
+	class="icon zoomin"
+	style="z-index: 999; position: fixed; right: {appState.showControlPanel
+		? appState.widthControlPanel
+		: 0}px; bottom: 10px;"
+	onclick={(e) => {
+		e.stopPropagation();
+		appState.canvasScale += 0.05;
+	}}
+>
+	<Icon name="zoom-in" width={24} height={24} />
+</button>
+
 <style>
+	.icon {
+		transition: right 0.6s ease;
+	}
 	.openControlPanel {
 		position: fixed;
 		top: 0;
