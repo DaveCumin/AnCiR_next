@@ -90,7 +90,7 @@
 		<div
 			class="canvas-background"
 			style="
-			width: {Math.max(canvasWidthPx, canvasWidthPx / appState.canvasScale)}px;
+			width: {Math.max(gridBackgroundWidthPx, gridBackgroundWidthPx / appState.canvasScale)}px;
 			height: {Math.max(gridBackgroundHeightPx, gridBackgroundHeightPx / appState.canvasScale)}px;
 			background-image:
 				repeating-linear-gradient(
