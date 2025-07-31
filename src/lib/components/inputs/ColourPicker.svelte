@@ -265,12 +265,6 @@
 		show = true;
 	}
 
-	function save() {
-		value = hexInput;
-		initialColor = $state.snapshot(value);
-		show = false;
-	}
-
 	$effect(() => {
 		if (showAdvanced) {
 			drawPicker();
@@ -329,7 +323,11 @@
 						<div>
 							<span>Old</span>
 							<div
-								style="background-color: {initialColor}; width: 24px; height: 24px; border: 1px solid #ccc; position: relative;"
+								style="background-color: {initialColor}; width: 24px; height: 24px; border: 1px solid #ccc; position: relative; cursor: pointer;"
+								onclick={(e) => {
+									value = initialColor;
+									hexInput = value;
+								}}
 							>
 								<div
 									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
@@ -635,12 +633,6 @@
 							style="padding: 4px 8px; background-color: #3b82f6; color: white; border-radius: 4px; border: none; cursor: pointer;"
 						>
 							Save to Palette
-						</button>
-						<button
-							onclick={() => save()}
-							style="padding: 4px 8px; background-color: #10b981; color: white; border-radius: 4px; border: none; cursor: pointer;"
-						>
-							Save
 						</button>
 					</div>
 				</div>
