@@ -30,4 +30,7 @@
 		'Open Sans',
 		'Helvetica Neue',
 		sans-serif;
+
+	/* control */
+	--control-input-height: calc(16px + 0.4rem + 2px);
 }

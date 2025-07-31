@@ -456,6 +456,12 @@
 		/* font-weight: bold; */
 	}
 
+	:global(.control-component-title button) {
+		margin: 0;
+		margin-left: 0.5rem;
+		padding: 0;
+	}
+
 	:global(.control-component-title-icons) {
 		display: flex;
 		flex-direction: row;
@@ -488,6 +494,22 @@
 		gap: 0.5rem;
 
 		margin-bottom: 0.5rem;
+	}
+
+	:global(.control-input-color) {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+
+		width: 100%;
+		gap: 0.5rem;
+		margin-bottom: 0.25rem;
+	}
+
+	:global(.control-input-color button) {
+		margin: 0;
+		padding: 0;
 	}
 
 	:global(.control-input) {
@@ -525,6 +547,11 @@
 	}
 
 	:global(.control-input input) {
+		width: 100%;
+
+		height: var(--control-input-height);
+		box-sizing: border-box;
+
 		font-size: 14px;
 		font-weight: lighter;
 		padding: 0.2rem 0.5rem;
@@ -532,11 +559,7 @@
 		background-color: var(--color-lightness-97);
 		border: solid 1px var(--color-lightness-85);
 		border-radius: 2px;
-		box-sizing: border-box;
-		transition: border-color 0.2s;
-
-		width: 100%;
-		min-width: 0;
+		transition: border-color 0.2s;	
 	}
 
 	:global(.control-input input:hover) {

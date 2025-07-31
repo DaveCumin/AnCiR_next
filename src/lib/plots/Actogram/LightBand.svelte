@@ -131,9 +131,11 @@
 	<div class="control-component-title">
 		<p>Bands</p>
 		<div class="control-component-title-icons">
+			{#if bands.bands.length > 0}
 			<button class="icon" onclick={() => bands.swapBandCols()}>
 				<Icon name="swap" width={12} height={12} className="control-component-title-icon" />
 			</button>
+			{/if}
 			<button
 				class="icon"
 				onclick={() =>
@@ -152,17 +154,23 @@
 			</div>
 		</div>
 		{#each bands.bands as b, i}
-			<p>
+			<div class="control-input-color">
 				<ColourPicker bind:value={b.col} />
-				<input
-					type="number"
-					bind:value={b.pc}
-					min="1"
-					max="100"
-					step="1"
-					oninput={(e) => bands.updateBandPC(i, e.target.value)}
-				/><button onclick={() => bands.removeBand(i)}>-</button>
-			</p>
+				<div class="control-input">
+					<input
+						type="number"
+						bind:value={b.pc}
+						min="1"
+						max="100"
+						step="1"
+						oninput={(e) => bands.updateBandPC(i, e.target.value)}
+					/>
+				</div>
+					<button class="icon" onclick={() => bands.removeBand(i)}>
+						<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
+					</button>
+				
+			</div>
 		{/each}
 	{:else}
 		<div class="control-input-vertical">
