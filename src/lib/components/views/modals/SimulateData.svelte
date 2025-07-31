@@ -27,7 +27,7 @@
 			}
 		)
 	);
-	console.log('p.args', $state.snapshot(p.args));
+	// console.log('p.args', $state.snapshot(p.args));
 	function confirmAddColumn() {
 		//make new table
 		core.tables.push(new Table());

@@ -103,7 +103,7 @@ export function removeGraphData(srcId) {
 
 		return newData;
 	});
-	console.log(get(graphs));
+	
 }
 
 export function createnewDataForGraph(protoValues, protoOther) {
@@ -313,7 +313,6 @@ export function linearRegression(x, y) {
 
 // add a manual marker/onset for actogram
 export function addManualMarker(time) {
-	console.log(time);
 	const sem = get(graphs)[get(activeGraphTab)]?.semaphore;
 	if (sem?.text == 'addingManualMarker') {
 		graphs.update((currentData) => {
@@ -325,9 +324,8 @@ export function addManualMarker(time) {
 			return currentData;
 		});
 	} else {
-		console.log('something wrong in addManualMarker');
-		console.log('time', time);
-		console.log('semaphore', sem);
+		console.warn('something wrong in addManualMarker');
+		
 	}
 }
 export function removeMarker(srcIndex, osIndex, d) {

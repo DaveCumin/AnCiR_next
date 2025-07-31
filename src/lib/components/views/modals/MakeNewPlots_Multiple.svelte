@@ -35,11 +35,6 @@
 			//find the position
 			const col = i % nCols;
 			const row = Math.floor(i / nCols);
-			console.log(
-				i,
-				snapToGrid(col * (width + padding) + padding),
-				snapToGrid(row * (height + padding) + padding)
-			);
 
 			const newPlot = new Plot({
 				name: getColumnById(yCols[i]).name,

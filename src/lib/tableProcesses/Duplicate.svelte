@@ -15,7 +15,6 @@
 	let { p = $bindable() } = $props();
 	let result = $state();
 	function duplicate() {
-		console.log('trying duplicate: ', p.args.xIN);
 		if (p.args.xIN == -1) return; //if there is no input yet
 		result = getColumnById(p.args.xIN).getData();
 

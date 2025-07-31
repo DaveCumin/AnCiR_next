@@ -43,7 +43,6 @@ https://svelte.dev/playground/modal?version=5.33.7
 			onclose={() => (showModal = false)}
 			onclick={(e) => {
 				if (e.target === dialog) {
-					console.log('HERE');
 					close();
 				}
 			}}

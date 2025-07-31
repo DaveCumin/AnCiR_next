@@ -198,12 +198,9 @@
 
 				for (let i = 0; i < axesLeft.length; i++) {
 					let axisRect = axesLeft[i].getBoundingClientRect();
-					console.log(axisRect);
-					console.log(axisRect.left, plotRect.left);
 					axisLeftRectOffset = Math.max(axisLeftRectOffset, plotRect.left - axisRect.left);
 				}
 			}
-			console.log(theData);
 			theData.plot.padding.left += Math.ceil(axisLeftRectOffset);
 			return theData.plot.parentBox.width - theData.plot.padding.left - theData.plot.padding.right;
 		}
@@ -294,7 +291,6 @@
 								? new Date(theData.xlimsIN[0]).toISOString().substring(0, 16)
 								: new Date(theData.xlims[0]).toISOString().substring(0, 16)}
 							oninput={(e) => {
-								console.log('xlimsIN[0]', e.target.value);
 								theData.xlimsIN[0] = Number(new Date(e.target.value));
 							}}
 						/>

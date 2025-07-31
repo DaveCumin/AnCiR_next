@@ -90,18 +90,7 @@
 			//Calculate the number of before and after bins that are needed
 			const N = Math.round(this.templateHrsBefore / this.parentData.binSize);
 			const M = Math.round(this.templateHrsAfter / this.parentData.binSize);
-			console.log(
-				'binsize: ',
-				this.parentData.binSize,
-				'; hrsB: ',
-				this.templateHrsBefore,
-				'; hrsA: ',
-				this.templateHrsAfter,
-				'; N: ',
-				N,
-				'; M: ',
-				M
-			);
+
 			//Fill the N and M with 1s and -1s (if onset; or -1s and 1s if offset)
 			const template = [];
 			for (let i = 0; i < N; i++) {
@@ -136,7 +125,6 @@
 
 				//find the best match to the template and centre the template on the match
 				let bestMatchIndex = findBestMatchIndex(aboveBelow, template) + Math.round((N + M) / 2);
-				console.log('bestMatchIndex: ', bestMatchIndex);
 				//find the x-value in the period that corresponds to that index
 				let xData = [
 					...this.parentData.dataByDays.xByPeriod[i],
@@ -174,7 +162,6 @@
 			);
 
 			//Return the markers
-			console.log(bestMatchx);
 			return bestMatchx;
 		});
 

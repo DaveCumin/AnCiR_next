@@ -46,7 +46,7 @@ async function openFileChoose(hasHeader = true) {
 }
 
 function parseFile(targetFile, previewIN = 0, hasHeader = false, del = '') {
-	console.log('parseFile called with:', targetFile, previewIN, hasHeader, del);
+	// console.log('parseFile called with:', targetFile, previewIN, hasHeader, del);
 	if (!targetFile) {
 		errorInfile = true;
 		return;
@@ -54,7 +54,7 @@ function parseFile(targetFile, previewIN = 0, hasHeader = false, del = '') {
 
 	errorInfile = false; //reset the errors
 	return new Promise((resolve) => {
-		console.log('doing papa previewIN= ' + previewIN + ', hasHeader= ' + hasHeader);
+		// console.log('doing papa previewIN= ' + previewIN + ', hasHeader= ' + hasHeader);
 
 		//Do the business
 		Papa.parse(targetFile, {
@@ -89,7 +89,7 @@ function parseFile(targetFile, previewIN = 0, hasHeader = false, del = '') {
 				return lines.join('\n'); // Join the remaining lines back into a single string
 			},
 			complete: function (results, file) {
-				console.log('Parsing complete:', results, file);
+				// console.log('Parsing complete:', results, file);
 
 				// Store the column order from the file
 				if (hasHeader && results.meta.fields) {
@@ -108,7 +108,7 @@ function parseFile(targetFile, previewIN = 0, hasHeader = false, del = '') {
 						results.data = awdTocsv(results.data);
 					}
 				}
-				console.log('RESULTS', results);
+
 				//for non awd files, continue
 				if (results.errors.length > 0) {
 					errorInfile = true;
@@ -207,7 +207,7 @@ function changeObjectKeys(object, newKeys) {
 
 //Load the data once all operations have been completed
 async function loadData(targetFile, hasHeader, del) {
-	console.log('loading...');
+	// console.log('loading...');
 	await parseFile(targetFile, 0, hasHeader, del); //load all the data
 
 	//TODO_high: perorm the required manipulations
@@ -228,7 +228,7 @@ function doBasicFileImport(result, fname) {
 		//find the data type based on the first non-NaN element
 		const datum = getFirstValid(result[f], 5);
 		const guessedFormat = guessDateofArray(result[f]);
-		console.log(f, datum, guessedFormat);
+		// console.log(f, datum, guessedFormat);
 		if (guessedFormat != -1 && guessedFormat.length > 0) {
 			const df = new Column({});
 			df.type = 'time';
@@ -250,7 +250,7 @@ function doBasicFileImport(result, fname) {
 			newDataEntry.addColumn(df);
 		}
 	});
-	console.log(newDataEntry instanceof Table);
+	// console.log(newDataEntry instanceof Table);
 	pushObj(newDataEntry);
 }
 

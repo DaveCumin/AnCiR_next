@@ -16,8 +16,6 @@
 		}
 
 		// Filter paths based on toShow
-		console.log(paths);
-		console.log(toShow);
 		return paths.filter((item) => Object.keys(toShow).some((key) => isMatch(item.path, key)));
 	}
 

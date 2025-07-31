@@ -54,7 +54,7 @@ export function pushObj(obj) {
 
 		core.plots.push(obj);
 	} else {
-		console.log('Error: object not instance of Column, Table or Plot');
+		console.warn('Error: object not instance of Column, Table or Plot');
 	}
 }
 

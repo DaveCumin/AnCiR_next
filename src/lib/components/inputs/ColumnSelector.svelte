@@ -2,7 +2,7 @@
 	import { core } from '$lib/core/core.svelte.js';
 	let {
 		onChange = (value) => {
-			console.log('selected col ' + value);
+			// console.log('selected col ' + value);
 		},
 		excludeColIds = [],
 		value = $bindable()

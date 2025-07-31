@@ -177,7 +177,7 @@
 					break;
 				default:
 					// TODO: UI warn user
-					console.log('error: double check type');
+					console.warn('error: double check type');
 			}
 		}
 
@@ -307,6 +307,7 @@
 
 	let columnSelected = $state(-1);
 	function openDropdown(e, id) {
+		e.preventDefault();
 		e.stopPropagation();
 		columnSelected = id;
 		recalculateDropdownPosition();
