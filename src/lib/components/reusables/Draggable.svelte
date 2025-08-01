@@ -64,8 +64,8 @@
 
 	function onMouseMove(e) {
 		if (moving) {
-			const deltaX = e.clientX - mouseStartX;
-			const deltaY = e.clientY - mouseStartY;
+			const deltaX = (e.clientX - mouseStartX) / appState.canvasScale;
+			const deltaY = (e.clientY - mouseStartY) / appState.canvasScale;
 
 			appState.selectedPlotIds.forEach((id) => {
 				const plot = core.plots.find((p) => p.id === id);

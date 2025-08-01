@@ -158,11 +158,8 @@
 	oninput={updateValue}
 	onchange={adjustLimits}
 	onmousedown={startDrag}
-	onmouseover={(e) => {
-		e.target.focus(); //to enable scrolling for changing the value
-	}}
 	onwheel={(e) => {
-		e.stopPropagation();
+		if (inputElement.focus()) e.stopPropagation();
 	}}
 	class="draggable-number-input"
 />

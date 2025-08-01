@@ -11,7 +11,7 @@ import Papa from 'papaparse';
 const specialValues = ['NaN', 'NA', 'null'];
 const previewTableNrows = 6;
 
-let _tempdata = {};
+let _tempdata = $state({});
 let _columnOrder = [];
 let error = {};
 let skipLines = 0;
@@ -83,6 +83,12 @@ function parseFile(targetFile, previewIN = 0, hasHeader = false, del = '') {
 					console.log('ACTIWARE');
 					specialRecognised = 'actiware';
 					skipLines = 148; /// the number of lines for an Actiware file before the data starts
+					parseFile(targetFile, skipLines + previewIN + 1);
+				}
+				if (firstLines[0]?.includes('UserID') && !specialRecognised) {
+					console.log('MW8');
+					specialRecognised = 'MW8';
+					skipLines = 10; /// the number of lines for an MW8 watch csv file file before the data starts
 					parseFile(targetFile, skipLines + previewIN + 1);
 				}
 
