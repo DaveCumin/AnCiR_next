@@ -140,7 +140,7 @@
 			<div class="preview-placeholder">
 				<p>Alt-click to select multiple</p>
 				<span>ys:</span>
-				<select bind:value={yCols} multiple style="height: 100px">
+				<select bind:value={yCols} multiple style="height: 100px" onchange={console.log(yCols)}>
 					{#each core.tables as table}
 						<optgroup label={table.name}>
 							{#each table.columns as col}
@@ -161,7 +161,7 @@
 				</select>
 			</div>
 		</div>
-		{#if yCols[0]}
+		{#if yCols[0] && xCol}
 			<div class="dialog-button-container">
 				<button class="dialog-button" onclick={confirmImport}>Confirm Import</button>
 			</div>
