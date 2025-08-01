@@ -1,7 +1,4 @@
 <script>
-	// TODO: multiple select on control plots,
-	// bulk change (e.g. width)
-
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte.js';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
@@ -53,6 +50,16 @@
 			getTableById(id).columnRefs.length
 		).fill(true);
 	}
+
+	let openClps = $state({});
+	function toggleClps(id) {
+		openClps[id] = !openClps[id];
+	}
+
+	let openMenus = $state({});
+	function toggleMenu(id) {
+		openMenus[id] = !openMenus[id];
+	}
 </script>
 
 <div class="heading">
@@ -69,36 +76,61 @@
 <div class="display-list">
 
 	{#each core.tables as table (table.id)}
-		<div class="table-container">
-			<details class="table-item">
-				<summary class="table-name">{table.name}</summary>
+		<div class="clps-container">
+			<details class="clps-item">
+				<summary
+					class="clps-title-container"
+					onclick={(e) => {
+					e.stopPropagation();
+					toggleClps(table.id);
+				}}
+				>
+					<div class="clps-title">
+						<p>{table.name}</p>
+					</div>
+					
+					<div class="clps-title-button">
+						<button class="icon" onclick={(e) => {
+							e.stopPropagation();
+							toggleMenu(table.id)
+						}}>
+							<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon"/>
+						</button>
+						{#if openClps[table.id]}
+							<Icon name="caret-down" width={20} height={20} className="first-detail-title-icon" />
+						{:else}
+							<Icon name="caret-right" width={20} height={20} className="first-detail-title-icon" />
+						{/if}
+					</div>
+				</summary>
 
-				<div class="collapsible-icon-container">
-					<button class="collapsible-icon"
+				<!-- <div class="clps-icon-container">
+					<button class="clps-icon"
 						onclick={() => {
 							selectedTable = table.id;
 							showNewCol = true;
 					}}>
 						<Icon name="plus" width={16} height={16} className="static-icon" />
+						<p>Add new column</p>
 					</button>
 				</div>
 
 				<button
 					onclick={() => {
 						makeNewTablePlot(table.id);
-					}}>View Table</button
-				>
+				}}>
+					View Table
+				</button> -->
 
-
-				{#each table.columns as col, i}
+				{#each table.columns as col (col.id)}
 					{#if !col.tableProcessed}
-					<div class="second-collapsible">
+					<div class="second-clps">
 						<ColumnComponent {col} />
 					</div>
 					{/if}
 				{/each}
 				{#each table.processes as p}
-				<div class="second-collapsible">
+				<div class="second-clps">
 					<TableProcess {p} />
 				</div>
 				{/each}
@@ -134,55 +166,67 @@
 
 		width: 100%;
 		height: 4vh;
+		min-height: calc(16px + 0.25rem * 2);
 		display: flex;
 		flex-direction: row;
 		justify-content: space-between;
 		align-items: center;
 
-		border-bottom: 1px solid #d9d9d9;
+		border-bottom: 1px solid var(--color-lightness-85);
 		background-color: white;
+
+		z-index: 999;
 	}
 
 	.heading p {
-		margin-left: 1rem;
+		margin-left: 0.75rem;
 		font-weight: bold;
 	}
 
 	.display-list {
 		width: 100%;
-		margin-top: 0.5rem;
+		margin-top: 0.25rem;
 	}
 
-	.collapsible-icon-container {
+	/* collapsible */
+	details {
+		margin: 0.25rem 0.5rem 0.25rem 0.75rem;
+		padding: 0;
+	}
+
+	summary {
+		list-style: none;
+
 		display: flex;
+		flex-direction: row;
 		align-items: center;
-		justify-content: center;
+		justify-content: space-between;
 
-		padding: 0.5rem 0.5rem;
-		padding-left: 1.0rem;
+		margin: 0;
+		padding: 0;
 	}
 
-	.collapsible-icon {
-		width: 100%;
-		padding: 0.2rem 0;
-
-		background-color: white;
-		border-radius: 4px;
-		border: solid 1px var(--color-lightness-85);
-		
-		border-color: none;
-		appearance: none;
+	summary p {
+		margin: 0;
+		padding: 0;
 	}
 
-	.collapsible-icon:hover {
-		background-color: var(--color-lightness-98);
-		cursor: pointer;
+	summary button {
+		margin: 0;
+		padding: 0;
 	}
 
-	/* TODO: fix parent and child relationship */
-	.second-collapsible {
-		padding: 0.5rem 0.5rem;
-		padding-left: 1.0rem;
+	summary .icon {
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.2s ease;
 	}
+
+	details:hover summary .icon {
+		opacity: 1;
+		pointer-events: auto;
+	}
+
+	
 
 </style>

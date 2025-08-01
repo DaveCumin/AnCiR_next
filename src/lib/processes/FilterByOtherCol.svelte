@@ -71,7 +71,7 @@
 </script>
 
 <script>
-	let { p = $bindable() } = $props();
+	let { col, p = $bindable() } = $props();
 
 	// Add a new condition
 	function addCondition() {
@@ -84,8 +84,8 @@
 	}
 </script>
 
-<div>
-	<p>{p.id} - {p.name}</p>
+<div class="control-input process">
+	<p>{p.name}</p>
 	{#each p.args.conditions as condition, index}
 		<div class="conditions">
 			<span>Where</span>

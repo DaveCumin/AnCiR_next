@@ -306,9 +306,6 @@
 {/if}
 
 <style>
-	/* TODO: control units */
-	/* TODO: user prompt if no band */
-
 	:global(body) {
 		font-family: system-ui, sans-serif;
 		font-size: 14px;
@@ -371,9 +368,8 @@
 		background-color: var(--color-hover);
 	}
 
-	/* TODO: re-organise margin */
 
-	/* plot control */
+	/* space filler */
 	:global(.div-line) {
 		height: 1px;
 		width: 100%;
@@ -388,6 +384,115 @@
 		background-color: transparent;
 	}
 
+	/* dropdown */
+	:global(.dropdown-action button) {
+		margin: 0.6em;
+		
+		font-size: 14px;
+		font: inherit;
+		text-align: inherit;
+
+		background-color: transparent;
+		border: none;
+		border-radius: 0;
+		appearance: none;
+
+		cursor: pointer;
+	}
+
+	:global(.dropdown-action:hover) {
+		background-color: var(--color-lightness-95);
+	}
+
+	/* display collapsible */
+	:global(details) {
+		margin: 0.25rem 0.5rem;
+		padding: 0;
+	}
+
+	:global(summary) {
+		list-style: none;
+
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+
+		margin: 0;
+		padding: 0;
+	}
+
+	:global(summary p) {
+		margin: 0;
+		padding: 0;
+	}
+
+	:global(summary button) {
+		margin: 0;
+		padding: 0;
+	}
+
+	:global(.clps-title) {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: flex-start;
+
+	}
+
+	:global(.clps-title-button) {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: flex-start;
+
+		gap: 0.25rem;
+	}
+
+	:global(.clps-icon-container) {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		padding: 0.5rem 0.5rem;
+		padding-left: 1.0rem;
+	}
+
+	:global(.clps-icon) {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+
+		width: 100%;
+		padding: 0.5rem 0;
+
+		background-color: white;
+		border-radius: 4px;
+		border: solid 1px var(--color-lightness-85);
+		
+		border-color: none;
+		appearance: none;
+	}
+
+	:global(.clps-icon p) {
+		margin: 0 0 0 0.2rem;
+		padding: 0;
+		color: var(--color-lightness-35);
+	}
+
+	:global(.clps-icon:hover) {
+		background-color: var(--color-lightness-98);
+		cursor: pointer;
+	}
+
+	:global(.second-clps) {
+		width: 100%;
+		padding: 0 0 0 0.25rem;
+	}
+
+
+	/* plot control */
 	:global(.control-banner) {
 		width: 100%;
 		display: flex;
@@ -504,7 +609,7 @@
 
 		width: 100%;
 		gap: 0.5rem;
-		margin-bottom: 0.25rem;
+		margin-bottom: 0.5rem;
 	}
 
 	:global(.control-input-color button) {

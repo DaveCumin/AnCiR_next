@@ -200,7 +200,7 @@
 		</p>
 
 		<button class="icon" onclick={() => removePlot(id)}>
-			<Icon name="menu-horizontal-dots" width={20} height={20} className="plot-header-icon" />
+			<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" />
 		</button>
 	</div>
 	<div class="plot-content">

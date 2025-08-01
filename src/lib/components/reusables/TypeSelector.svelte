@@ -30,11 +30,9 @@
 	}
 
 	function toggleDropdown(e) {
-        console.log("clicked");
+        e.stopPropagation();
 
         open = !open;
-
-		e.stopPropagation();
 
 		const rect = e.currentTarget.getBoundingClientRect();
 		top = rect.bottom;
@@ -57,24 +55,28 @@
 	<div class="type-selector">
     {#if (value)}
         {@const iconName = options.find(o => o.value === value).icon}
-        <button class="icon" onclick={toggleDropdown}>
-            {#key iconName}
-			<Icon name={iconName} width={16} height={16} className="control-component-icon"/>
-			{/key}
-        </button>
+		<div class="option-display">
+			<button class="icon" onclick={toggleDropdown}>
+				{#key iconName}
+				<Icon name={iconName} width={16} height={16} className="control-component-icon"/>
+				{/key}
+			</button>
+		</div>
 
         {#if open}
             <Dropdown bind:showDropdown={showDropdown} top={top} left={left}>
                 {#snippet groups()}
                     {#each options as option}
+					<!-- TODO HIGH: stop propagation problem -->
                         <div
+							class="option dropdown-action"
                             class:selected={option.value === value}
                             onclick={() => selectOption(option)}
                         >
                             <button class="icon">
-                                <Icon name={option.icon} width={14} height={14} />
+                                <Icon name={option.icon} width={14} height={14} className="static-icon"/>
                             </button>
-                            <span>{option.label}</span>
+                            <p>{option.label}</p>
                         </div>
                     {/each}
                 {/snippet}
@@ -90,39 +92,59 @@
 	.type-selector {
 		position: relative;
 		display: inline-block;
-	}
 
-	/* Dropdown list styling */
-	.dropdown {
-		position: absolute;
-		top: 110%;
-		left: 0;
-		min-width: 120px;
-		background: var(--color-lightness-97);
-		border: 1px solid var(--color-lightness-85);
-		border-radius: 4px;
-		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-		padding: 0.25rem 0;
+		z-index: inherit;
+
 		margin: 0;
-		list-style: none;
-		z-index: 100;
+		padding: 0;
 	}
 
-	.dropdown li {
+	.option-display {
+		width: 20px;
+		height: 20px;
+
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
-		padding: 0.25rem 0.5rem;
-		cursor: pointer;
-		transition: background-color 0.2s ease;
+		justify-content: center;
+
+		margin: 0 0 0 0;
+		padding: 0;
 	}
 
-	.dropdown li:hover {
-		background-color: var(--color-lightness-95);
-	}
-
-	.dropdown li.selected {
+	.option-display:hover {
+		border-radius: 4px;
 		background-color: var(--color-lightness-90);
-		font-weight: 500;
+	}
+
+	.option-display button {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		padding: 0;
+		margin: 0;
+		border: none;
+		background: none;
+		line-height: 0;
+
+		margin: 0;
+		padding: 0;
+	}
+
+	.option {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: flex-start;
+	}
+
+	.option p {
+		margin: 0;
+		padding: 0;
+		font-size: 14px;
+		font-weight: normal;
+		font-style: normal;
 	}
 </style>

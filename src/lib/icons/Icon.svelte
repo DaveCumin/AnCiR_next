@@ -38,7 +38,7 @@
 
 <style>
 	.static-icon {
-		fill: var(--color-icon-unselected);
+		fill: var(--color-lightness-35);
 		transition: fill 0.2s ease;
 		cursor: pointer;
 	}
@@ -63,13 +63,13 @@
 		cursor: pointer;
 	}
 
-	.plot-header-icon {
-		fill: black;
+	.menu-icon {
+		fill: var(--color-lightness-35);
 		transition: fill 0.2s ease;
 		cursor: pointer;
 	}
 
-	.plot-header-icon:hover {
+	.menu-icon:hover {
 		background-color: var(--color-lightness-90);
 		border-radius: 100px;
 	}
@@ -82,6 +82,28 @@
 
 	.control-component-title-icon:hover {
 		fill: var(--color-hover);
+	}
+
+	.first-detail-title-icon {
+		fill: var(--color-lightness-35);
+		transition: fill 0.2s ease;
+		cursor: pointer;
+	}
+
+	.first-detail-title-icon:hover {
+		background-color: var(--color-lightness-90);
+		border-radius: 100px;
+	}
+
+	.second-detail-title-icon {
+		fill: var(--color-lightness-55);
+		transition: fill 0.2s ease;
+		cursor: pointer;
+	}
+
+	.second-detail-title-icon:hover {
+		background-color: var(--color-lightness-90);
+		border-radius: 100px;
 	}
 
 </style>

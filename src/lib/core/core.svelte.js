@@ -11,7 +11,7 @@ export const core = $state({
 });
 
 export const appState = $state({
-	currentTab: 'data',
+	currentTab: initialiseCurrentTab(false, false), // change values if panel visibility initialised differently
 	currentControlTab: 'properties',
 
 	showNavbar: true,
@@ -32,7 +32,7 @@ export const appState = $state({
 	gridSize: 15,
 
 	appColours: ['#0B090B', '#F8BFD4', '#787C3F', '#3B565E', '#E5A15E'],
-	showColourPicker: false
+	showColourPicker: false,
 });
 
 export const appConsts = $state({
@@ -42,6 +42,11 @@ export const appConsts = $state({
 
 	appColours: ['#0B090B', '#F8BFD4', '#787C3F', '#3B565E', '#E5A15E']
 });
+
+function initialiseCurrentTab(showDisplayPanel, showControlPanel) {
+	if (!showDisplayPanel && !showControlPanel) return 'null';
+	return 'data';
+}
 
 export function pushObj(obj) {
 	if (obj instanceof Column) {

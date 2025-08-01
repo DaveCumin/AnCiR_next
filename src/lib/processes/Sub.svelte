@@ -11,7 +11,9 @@
 </script>
 
 <script>
-	let { p = $bindable() } = $props();
+	import Icon from "$lib/icons/Icon.svelte";
+
+	let { col, p = $bindable() } = $props();
 	$effect(() => {
 		if (p.parentCol.type == 'number') {
 			p.args.find = Number(p.args.find) || 0;
@@ -21,23 +23,66 @@
 </script>
 
 <!-- TODO: consider what this should be. Either the replace is for the value, or (more sensibly) it is a replace part of the original string (to change the year, eg), which needs some implementation thought -->
-{#if p.parentCol.type == 'time'}
-	<p>
-		{p.id} - {p.name} find:<input type="number" bind:value={p.args.find} /> replace:
-		<input type="number" bind:value={p.args.replace} />
-	</p>
-{/if}
+<div class="control-input process">
+	{#if p.parentCol.type == 'time'}
+		<div class="process-title">
+			<p>{p.name}</p>
+			<button class="icon" onclick={(e) => {e.stopPropagation(); col.removeProcess(p.id);}}>
+				<Icon name="minus" width={16} height={16} className="control-component-icon"/>
+			</button>
+		</div>
 
-{#if p.parentCol.type == 'number'}
-	<p>
-		{p.id} - {p.name} find:<input type="number" bind:value={p.args.find} /> replace:
-		<input type="number" bind:value={p.args.replace} />
-	</p>
-{/if}
+			<p>find</p>
+			<input type="number" bind:value={p.args.find} />
+			<p>replace</p>
+			<input type="number" bind:value={p.args.replace} />
+	{/if}
+	
+	{#if p.parentCol.type == 'number'}
+		<div class="process-title">
+			<p>{p.name}</p>
+			<button class="icon" onclick={(e) => {e.stopPropagation(); col.removeProcess(p.id);}}>
+				<Icon name="minus" width={16} height={16} className="control-component-icon"/>
+			</button>
+		</div>
 
-{#if p.parentCol.type == 'category'}
-	<p>
-		{p.id} - {p.name} find:<input type="text" bind:value={p.args.find} /> replace:
-		<input type="text" bind:value={p.args.replace} />
-	</p>
-{/if}
+			<p>find</p>
+			<input type="number" bind:value={p.args.find} />
+			<p>replace</p>
+			<input type="number" bind:value={p.args.replace} />
+	{/if}
+	
+	{#if p.parentCol.type == 'category'}
+		<div class="process-title">
+			<p>{p.name}</p>
+			<button class="icon" onclick={(e) => {e.stopPropagation(); col.removeProcess(p.id);}}>
+				<Icon name="minus" width={16} height={16} className="control-component-icon"/>
+			</button>
+		</div>
+
+			<p>find</p>
+			<input type="text" bind:value={p.args.find} />
+			<p>replace</p>
+			<input type="text" bind:value={p.args.replace} />
+	{/if}
+</div>
+
+
+<style>
+	.process {
+		margin: 0.25rem 0;
+	}
+
+	.process-title {
+		width: 100%;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+
+		margin: 0;
+		padding: 0;
+
+
+	}
+</style>

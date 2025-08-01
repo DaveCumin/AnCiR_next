@@ -286,12 +286,13 @@
 </script>
 
 <script>
-	import Processcomponent from '$lib/core/Process.svelte'; //Need to rename it because Process is used as the class name in the module, above
 	import Icon from '$lib/icons/Icon.svelte';
-	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import Processcomponent from '$lib/core/Process.svelte'; //Need to rename it because Process is used as the class name in the module, above
 	import AddProcess from '$lib/components/iconActions/AddProcess.svelte';
-
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
+
+	import { appState } from '$lib/core/core.svelte.js';
 
 	let { col = $bindable(), canChange = false } = $props();
 
@@ -309,6 +310,7 @@
 	}
 
 	let columnSelected = $state(-1);
+	let openClps = $state({});
 	function openDropdown(e, id) {
 		e.stopPropagation();
 		columnSelected = id;
@@ -317,62 +319,138 @@
 			showAddProcess = true;
 		});
 		window.addEventListener('resize', recalculateDropdownPosition);
+
+		openClps[id] = true;
 	}
+
+	function toggleClps(id) {
+		openClps[id] = !openClps[id];
+	}
+
+	let openMenus = $state({});
+	function toggleMenu(id) {
+		openMenus[id] = !openMenus[id];
+	}
+
+	let isEditable = $state(false);
+
+	function enableEdit() {
+		isEditable = true;
+		// Focus the input immediately after enabling
+		requestAnimationFrame(() => inputRef?.focus());
+	}
+
+	let inputRef = $state();
+
 </script>
 
 {#if col == undefined}
 	<p>Column is undefined</p>
 {:else}
-	
-	<details open>
-		<summary>
-			<!-- Id: {col.id} -->
-			{#if canChange}
-				<ColumnSelector bind:value={col.refId} />
-			{/if}
-
-			<div class="data-collapsible-title-container">
-				<TypeSelector bind:value={col.type} />
-				<strong><input bind:value={col.name} /></strong>
-				{col.type}
-			</div>
-			
-			
-			{#if !col.isReferencial()}
-				<div class="data-component-info">
-					<italic>{col.provenance}</italic>
-				</div>
-			{/if}
-			
-		</summary>
-		<ul>
-			<!-- {#if col.type == 'number'}[{Math.min(...col.getData())},{Math.max(...col.getData())}]{/if} -->
-			{#if col.type == 'time'}
-				<br />
-				Time format:
-				{#if !canChange}
-					<input bind:value={col.timeFormat} />
-				{:else}
-					{getColumnById(col.refId)?.timeFormat}
+	<div class="clps-container">
+		<details
+			class="clps-item"
+			bind:open={openClps[col.id]}
+		>
+			<summary
+				class="clps-title-container"
+						onclick={(e) => {
+						e.stopPropagation();
+						toggleClps(col.id);
+			}}
+			>
+				<div class="column-indicator"></div>
+				{#if canChange}
+					<ColumnSelector bind:value={col.refId} />
 				{/if}
-			{/if}
+	
+				<div class="clps-title">
+					<TypeSelector bind:value={col.type} />
+					<p>
+						<input
+							bind:this={inputRef}
+							bind:value={col.name}
+							readonly={!isEditable}
+							{...(!isEditable ? { tabindex: -1 } : {})}
+							ondblclick={(e) => {
+								e.stopPropagation();
+								enableEdit();
+							}}
+							onclick={(e) => {
+								if (!isEditable) {
+								e.stopPropagation();
+								const summaryEl = e.target.closest('summary');
+								summaryEl?.click();
+								}
+							}}
+							onblur={() => (isEditable = false)}
+						/>
+					</p>
+				</div>
+				
+				<div class="clps-title-button">
+					<button class="icon" onclick={(e) => {
+						e.stopPropagation();
+						toggleMenu(col.id);
+						openDropdown(e, col.id);
+					}}>
+						<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon"/>
+					</button>
+					{#if openClps[col.id]}
+						<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />
+					{:else}
+						<Icon name="caret-right" width={20} height={20} className="second-detail-title-icon" />
+					{/if}
+				</div>
+			</summary>
 
-			{#each col.processes as p}
-				{#key p.id}
-					<!-- Force the refresh when a process is added or removed (mostly the latter)-->
-					<Processcomponent {p} />
-					<button onclick={() => col.removeProcess(p.id)}>
-						<Icon name="close" width={16} height={16} /></button
-					>
-				{/key}
-			{/each}
-			<div class="add">
-				<button bind:this={addBtnRef} onclick={(e) => openDropdown(e, col.id)}>
-					<Icon name="add" width={16} height={16} />
-				</button>
+			
+			
+			<div class="clps-content-container">
+				<div class="line"></div>
+				<div class="data-component-info">
+					{#if !col.isReferencial()}
+						<italic><p>{col.provenance}</p></italic>
+					{:else}
+						<italic><p>primary source</p></italic>
+						<!-- TODO: check with DC how to name-->
+					{/if}
+				</div>
+
+	
+				<!-- {#if col.type == 'number'}[{Math.min(...col.getData())},{Math.max(...col.getData())}]{/if} -->
+				{#if col.type == 'time'}
+				<div class="control-input display">
+					<p>Time Format</p>
+					{#if !canChange}
+						<input bind:value={col.timeFormat} />
+					{:else}
+						{getColumnById(col.refId)?.timeFormat}
+					{/if}
+				</div>
+				{/if}
+				
+				<!-- TODO: icon unclickable -->
+				<div class="process-container">
+					{#each col.processes as p}
+						{#key p.id}
+							<!-- Force the refresh when a process is added or removed (mostly the latter)-->
+							<div class="single-process-container">
+								<Processcomponent {p} />
+							</div>
+						{/key}
+					{/each}
+				</div>
+				<!-- <div class="add">
+					<button class="icon" bind:this={addBtnRef} onclick={(e) => openDropdown(e, col.id)}>
+						<Icon name="add" width={16} height={16} />
+					</button>
+				</div> -->
 			</div>
-		</ul>
-	</details>
+
+			<div class="block"></div>
+		</details>
+	</div>
 {/if}
 
 {#if showAddProcess}
@@ -382,18 +460,24 @@
 
 <style>
 	.data-collapsible-title-container {
+		width: 100%;
+
 		display: flex;
+		flex-direction: row;
 		align-items: center;
 		justify-content: flex-start;
 
 		margin: 0;
+		padding: 0;
 	}
 
 	.data-component-info p{
 		font-size: 12px;
 		text-align: left;
 		color: var(--color-lightness-35);
+		
 		margin: 0;
+		padding: 0;
 	}
 
 	.data-component-input p {
@@ -401,42 +485,103 @@
 		text-align: left;
 		color: var(--color-lightness-35);
 		margin: 0;
+		padding: 0;
 	}
 
-	/* General container for details */
-	details {
-		border: 1px solid var(--color-lightness-85);
-		border-radius: 4px;
-		padding: 0.5rem 0.75rem;
-		background: var(--color-lightness-98);
-	}
-
-	/* Summary section clickable area */
-	summary {
-		display: flex;
-		flex-direction: column;
-		
-		cursor: pointer;
-		list-style: circle;
-		font-size: 1rem;
-		font-weight: 500;
-		margin-bottom: 0.5rem;
-	}
-
-	summary strong input {
-		border: none;
-		background: transparent;
-		font-size: 14px;
-
-		font-weight: 600;
-		color: inherit;
-		padding: 0px;
+	.line {
 		width: 100%;
-		outline: none;
+		height: 1px;
+
+		background-color: var(--color-lightness-85);
+
+		margin: 0.25rem 0 0.5rem 0;
+	}
+
+	.block {
+		width: 100%;
+		height: 1.0rem;
+
+		background-color: transparent;
+	}
+
+	/* General container */
+	.column-indicator {
+		position: absolute;
+		top: 0;
+		left: 0;
+		bottom: 0;
+
+		width: 4px;
+		height: 100%;
+		background-color: var(--color-hover);
+
+		border-radius: 4px 0 0 4px;
+	}
+
+	.clps-container {
+		display: flex;
+		position: relative;
+
+		width: 100%;
+		
+		border-radius: 4px;
+
+		margin: 0.25rem 0;
+	}
+
+	.clps-container:hover {
+		background-color: var(--color-lightness-97);
+	}
+
+	.clps-content-container {
+		width: calc(100% - 1.25rem);
+		margin: 0 0 0 1.0rem;
+		padding: 0;
+	}
+
+	details {
+		width: 100%;
+		margin: 0.25rem 0.25rem 0.25rem 1.0rem;
+		padding: 0;
+	}
+
+	summary {
+		width: 100%;
+
+		list-style: none;
+
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+
+		margin: 0;
+		padding: 0;
+	}
+
+	summary p {
+		margin: 0;
+		padding: 0;
+	}
+
+	summary button {
+		margin: 0;
+		padding: 0;
+	}
+
+	summary .icon {
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.2s ease;
+	}
+
+	details:hover summary .icon {
+		opacity: 1;
+		pointer-events: auto;
 	}
 
 	/* Provenance italic style */
-	summary italic {
+	italic {
 		font-style: italic;
 		font-size: 12px;
 		color: var(--color-lightness-35);
@@ -445,47 +590,33 @@
 	/* Select and input controls */
 	select,
 	input {
+		height: var(--control-input-height);
+		width: auto;
+		box-sizing: border-box;
+
+		padding: 0.2rem 0.5rem;
+		background-color: transparent;
+		
 		font-size: 14px;
 		font-weight: lighter;
-		padding: 0.2rem 0.5rem;
+
 		border: solid 1px transparent;
-
-		border: solid 1px var(--color-lightness-85);
 		border-radius: 2px;
-		box-sizing: border-box;
+		
 		transition: border-color 0.2s;
-
-		width: 100%;
-		min-width: 0;
 	}
 
-	select:focus,
-	input:focus {
-		border: 1px solid #0275FF;
-		box-shadow: 0 2px 5px rgba(2, 117, 255, 0.5);
+	input[readonly]:focus {
+		border: 1px solid transparent;
 		outline: none;
 	}
 
-	/* UL structure and list items */
-	ul {
-		margin: 0.5rem 0 0 0;
-		padding: 0;
-		list-style: none;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		font-size: 0.9rem;
+	.display {
+		margin: 0.5rem 0;
 	}
 
-	ul li {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 0.25rem 0;
-		border-bottom: 1px solid #eee;
+	.process-container {
+		margin: 0.5rem 0;
 	}
 
-	ul li:last-child {
-		border-bottom: none;
-	}
 </style>
