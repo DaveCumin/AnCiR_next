@@ -146,6 +146,16 @@
 							{#each table.columns as col}
 								<option value={col.id}>{col.name}</option>
 							{/each}
+							<!-- include the tableProces data also -->
+							{#each table.processes as p}
+								{#each p.args.out as o}
+									{@const key = Object.keys(o)}
+									{#each key as k}
+										{@const col = getColumnById(o[k])}
+										<option value={col.id}>{col.name}</option>
+									{/each}
+								{/each}
+							{/each}
 						</optgroup>
 					{/each}
 				</select>
