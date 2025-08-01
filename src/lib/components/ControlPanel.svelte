@@ -128,9 +128,18 @@
 
 	.open-control-panel-icon-container {
 		position: fixed;
-		top: calc(100vh * 4 / 9);
-		right: 16px;
+		top: calc(100vh * 9 / 20);
+		right: 0;
 		z-index: 999;
+
+		/* display: flex;
+		justify-content: center;
+		align-items: center;
+
+		height: 100%; */
+
+		margin: 0;
+		padding: 0;
 	}
 
 	.view-container {

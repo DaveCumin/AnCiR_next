@@ -10,12 +10,12 @@
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
-		<div class="action">
-			<button onclick={openImportModal}> Import Data </button>
+		<div class="action" onclick={openImportModal}>
+			<button> Import Data </button>
 		</div>
 
-		<div class="action">
-			<button onclick={() => (showModal = true)}> Simulate Data </button>
+		<div class="action" onclick={() => (showModal = true)}>
+			<button> Simulate Data </button>
 		</div>
 	{/snippet}
 </Dropdown>
@@ -24,6 +24,9 @@
 <SimulateData bind:showModal />
 
 <style>
+	.action {
+		cursor: pointer;
+	}
 	.action button {
 		margin: 0.6em;
 		font-size: 14px;
@@ -40,8 +43,6 @@
 		font: inherit;
 		border-radius: 0;
 		appearance: none;
-
-		cursor: pointer;
 	}
 
 	.heading {
