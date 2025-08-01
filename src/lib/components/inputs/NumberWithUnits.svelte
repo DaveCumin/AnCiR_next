@@ -152,8 +152,8 @@
 	style="width:20%"
 	type="number"
 	{step}
-	min={displayMin}
-	max={displayMax}
+	min={limits[0]}
+	max={limits[1]}
 	bind:value={displayValue}
 	oninput={updateValue}
 	onchange={adjustLimits}

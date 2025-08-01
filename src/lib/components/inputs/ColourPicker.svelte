@@ -1,6 +1,6 @@
 <script module>
 	//TODO : This needs styling
-
+	import Icon from '$lib/icons/Icon.svelte';
 	export function getRandomColor() {
 		const letters = '0123456789ABCDEF';
 		let color = '#';
@@ -11,7 +11,7 @@
 	}
 
 	export function getPaletteColor(n) {
-		return appConsts.appColours[n % appConsts.appColours.length];
+		return appState.appColours[n % appState.appColours.length];
 	}
 </script>
 
@@ -221,8 +221,8 @@
 	}
 
 	function saveColor() {
-		if (!appConsts.appColours.includes(hexInput)) {
-			appConsts.appColours.push(hexInput);
+		if (!appState.appColours.includes(hexInput)) {
+			appState.appColours.push(hexInput);
 		}
 	}
 
@@ -299,11 +299,9 @@
 		>
 			<div class="cp-header" onmousedown={(e) => onMouseDown(e)}>
 				Colour Picker
-				<button
-					onclick={() => {
-						show = false;
-					}}>X</button
-				>
+				<button class="icon" onclick={() => (show = false)}>
+					<Icon name="close" width={20} height={20} className="icon" />
+				</button>
 			</div>
 			<div class="cp-content">
 				<div style="background:white; padding: 16px; position: relative;">
@@ -311,7 +309,9 @@
 					<div style="display: flex; gap: 8px; margin-bottom: 16px;">
 						<div>
 							<span>New</span>
-							<div style="width: 24px; height: 24px; border: 1px solid #ccc; position: relative;">
+							<div
+								style="width: 24px; height: 24px; border: 1px solid #ccc; position: relative; cursor:pointer"
+							>
 								<div
 									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
 								></div>
@@ -343,7 +343,7 @@
 					<div style="margin-bottom: 16px;">
 						<label>Palette</label>
 						<div style="display: flex; flex-wrap: wrap; gap: 8px; cursor: pointer;">
-							{#each appConsts.appColours as color, index}
+							{#each appState.appColours as color, index}
 								<div
 									id="palette-{index}"
 									style="background-color: {color}; width: 24px; height: 24px; border: 1px solid #ccc; position: relative;"
@@ -626,15 +626,17 @@
 						</div>
 					{/if}
 
-					<!-- Save Buttons -->
-					<div style="display: flex; gap: 8px;">
-						<button
-							onclick={() => saveColor()}
-							style="padding: 4px 8px; background-color: #3b82f6; color: white; border-radius: 4px; border: none; cursor: pointer;"
-						>
-							Save to Palette
-						</button>
-					</div>
+					{#if !appState.appColours.includes(value)}
+						<!-- Save Button -->
+						<div style="display: flex; gap: 8px;">
+							<button
+								onclick={() => saveColor()}
+								style="padding: 4px 8px; background-color: #3b82f6; color: white; border-radius: 4px; border: none; cursor: pointer;"
+							>
+								Save to Palette
+							</button>
+						</div>
+					{/if}
 				</div>
 			</div>
 			<div class="resize-handle" onmousedown={startResize}></div>
@@ -705,11 +707,21 @@
 		z-index: 1;
 	}
 	.cp-header {
-		background-color: #f8f8f8;
-		padding: 0.5rem 1rem;
-		font-weight: bold;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+
+		padding: 0.5rem;
+		padding-left: 1rem;
+		padding-right: 0.4rem;
+		background-color: var(--color-lightness-98);
 		border-bottom: 1px solid var(--color-lightness-85);
+
+		font-weight: bold;
 		flex-shrink: 0;
+
+		cursor: move;
 	}
 	.cp-content {
 		flex: 1;

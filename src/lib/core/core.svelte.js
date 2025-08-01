@@ -38,8 +38,41 @@ export const appConsts = $state({
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
-
-	appColours: ['#0B090B', '#F8BFD4', '#787C3F', '#3B565E', '#E5A15E']
+	colourPalettes: {
+		batlowk: [
+			'#04050A',
+			'#FACCFA',
+			'#4F6657',
+			'#FDB9BF',
+			'#6F7845',
+			'#F6A986',
+			'#A18E38',
+			'#D89E50'
+		],
+		devon: ['#2C1A4C', '#3669AD', '#D0CCF5', '#6181D0', '#BAB3F1', '#989BE7', '#275186', '#E8E5FA'],
+		glasgow: [
+			'#361338',
+			'#A6BED8',
+			'#6B260B',
+			'#74A9B0',
+			'#716311',
+			'#DBD3FF',
+			'#687C48',
+			'#60927D'
+		],
+		lipari: [
+			'#031326',
+			'#E9C99F',
+			'#13385A',
+			'#E7A279',
+			'#47587A',
+			'#BC6461',
+			'#6B5F76',
+			'#8E616C'
+		],
+		oslo: ['#010101', '#D4D6DB', '#133251', '#AAB6CA', '#1F4C7B', '#89A0CA', '#3869A8', '#658AC7'],
+		berlin: ['#234154', '#4A1E0E', '#3E7295', '#83422A', '#6B9FD5', '#BE796B', '#A6ACD5', '#EDADAD']
+	}
 });
 
 export function pushObj(obj, autoPosition = true) {
