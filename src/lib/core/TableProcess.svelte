@@ -61,7 +61,6 @@
 
 <script>
 	let { p } = $props();
-	console.log('p; ', p);
 </script>
 
 {#if p}

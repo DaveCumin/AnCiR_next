@@ -1,9 +1,10 @@
 <script>
 	// @ts-nocheck
-	import { appState } from '$lib/core/core.svelte';
+	import { appState, core } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import ControlDisplay from './views/ControlDisplay.svelte';
 	import { fly } from 'svelte/transition';
+	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
 
 	let container;
 	const minWidth = 200;
@@ -43,6 +44,8 @@
 		window.addEventListener('mousemove', onMouseMove);
 		window.addEventListener('mouseup', stopResize);
 	}
+
+	let showNewPlotModalconst = $state(false);
 </script>
 
 {#if appState.showControlPanel}
@@ -57,15 +60,65 @@
 		<div class="resizer" onmousedown={startResize}></div>
 	</div>
 {:else}
-<!-- TODO: reconsider this ux wise -->
-<div class="open-control-panel-icon-container">
-	<button class="icon" onclick={() => (appState.showControlPanel = true)}>
-		<Icon name="circle-chevron-left" width={32} height={32}/>
-	</button>
-</div>
+	<!-- TODO: reconsider this ux wise -->
+	<div class="open-control-panel-icon-container">
+		<button class="icon" onclick={() => (appState.showControlPanel = true)}>
+			<Icon name="circle-chevron-left" width={32} height={32} />
+		</button>
+	</div>
 {/if}
 
+{#if core.data.length > 0 && core.plots.length > 0}
+	<button
+		class="icon newplotconstant"
+		style="z-index: 999; position: fixed; right: {appState.showControlPanel
+			? appState.widthControlPanel
+			: 0}px; top: 15px;"
+		onclick={(e) => {
+			e.stopPropagation();
+			showNewPlotModalconst = true;
+		}}
+	>
+		<Icon name="add" width={24} height={24} />
+	</button>
+
+	<AddPlot
+		bind:showDropdown={showNewPlotModalconst}
+		dropdownTop={15}
+		dropdownLeft={window.innerWidth}
+	/>
+{/if}
+
+<button
+	class="icon zoomout"
+	style="z-index: 999; position: fixed; right: {appState.showControlPanel
+		? appState.widthControlPanel
+		: 0}px; bottom: 35px;"
+	onclick={(e) => {
+		e.stopPropagation();
+		appState.canvasScale -= 0.05;
+	}}
+>
+	<Icon name="zoom-out" width={24} height={24} />
+</button>
+
+<button
+	class="icon zoomin"
+	style="z-index: 999; position: fixed; right: {appState.showControlPanel
+		? appState.widthControlPanel
+		: 0}px; bottom: 10px;"
+	onclick={(e) => {
+		e.stopPropagation();
+		appState.canvasScale += 0.05;
+	}}
+>
+	<Icon name="zoom-in" width={24} height={24} />
+</button>
+
 <style>
+	.icon {
+		transition: right 0.6s ease;
+	}
 	.openControlPanel {
 		position: fixed;
 		top: 0;
@@ -75,9 +128,18 @@
 
 	.open-control-panel-icon-container {
 		position: fixed;
-		top: calc(100vh * 4 / 9);
-		right: 16px;
+		top: calc(100vh * 9 / 20);
+		right: 0;
 		z-index: 999;
+
+		/* display: flex;
+		justify-content: center;
+		align-items: center;
+
+		height: 100%; */
+
+		margin: 0;
+		padding: 0;
 	}
 
 	.view-container {

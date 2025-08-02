@@ -5,7 +5,6 @@
 	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
 	import AddTable from '$lib/components/iconActions/AddTable.svelte';
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
-	import { closeControlPanel } from '$lib/components/views/ControlDisplay.svelte';
 	import { tick } from 'svelte';
 
 	// AddTable dropdown
@@ -35,7 +34,8 @@
 
 	function handleClick(e) {
 		e.stopPropagation();
-		closeControlPanel();
+		appState.selectedPlotIds = [];
+		appState.showControlPanel = false;
 	}
 
 	let canvasWidthPx = $derived.by(() => {
@@ -63,14 +63,9 @@
 	});
 
 	$effect(() => {
-		if (showAddTable && core.data.length > 0) {
+		if (core.data.length > 0) {
+			appState.currentTab = 'data';
 			appState.showDisplayPanel = true;
-		}
-	});
-	$effect(() => {
-		if (showNewPlotModal && core.plots.length > 0) {
-			//TODO: would be nice to see the '+' [add new plot] icon move to the top-right (and stay there)
-			console.log('TODO: move add plot icon...');
 		}
 	});
 </script>
@@ -85,15 +80,18 @@
 	<div
 		class="canvas-panel"
 		style="
-		width: {canvasWidthPx}px;
+		position: relative;
+		transform-origin: top left;
+		width: {Math.max(canvasWidthPx, canvasWidthPx / appState.canvasScale)}px;
 		height: 100vh;
+		transform: scale({appState.canvasScale});
 	"
 	>
 		<div
 			class="canvas-background"
 			style="
-			width: {gridBackgroundWidthPx}px;
-			height: {gridBackgroundHeightPx}px;
+			width: {Math.max(gridBackgroundWidthPx, gridBackgroundWidthPx / appState.canvasScale)}px;
+			height: {Math.max(gridBackgroundHeightPx, gridBackgroundHeightPx / appState.canvasScale)}px;
 			background-image:
 				repeating-linear-gradient(
 				to right,
@@ -125,17 +123,6 @@
 						<Plot theData={plot} which="plot" />
 					</Draggable>
 				{/each}
-
-				<button
-					class="icon newplotconstant"
-					style="position: absolute; left: calc({canvasWidthPx}px - 35px); top: 15px;"
-					onclick={() => (showNewPlotModal = true)}
-				>
-					<Icon name="add" width={24} height={24} />
-				</button>
-				{#if showNewPlotModal}
-					<AddPlot bind:showDropdown={showNewPlotModal} {dropdownTop} {dropdownLeft} />
-				{/if}
 			{:else if core.data.length > 0}
 				<div class="no-plot-prompt">
 					<button class="icon" onclick={() => (showNewPlotModal = true)}>
@@ -144,9 +131,11 @@
 					<p>Click to add a new plot</p>
 				</div>
 
-				{#if showNewPlotModal}
-					<AddPlot bind:showDropdown={showNewPlotModal} {dropdownTop} {dropdownLeft} />
-				{/if}
+				<AddPlot
+					bind:showDropdown={showNewPlotModal}
+					dropdownTop={window.innerHeight / 2 - 25}
+					dropdownLeft={window.innerWidth / 2 - 40}
+				/>
 			{:else}
 				<div class="no-plot-prompt">
 					<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
@@ -154,9 +143,8 @@
 					</button>
 					<p>Click to add new data</p>
 				</div>
-				{#if showAddTable}
-					<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
-				{/if}
+
+				<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
 			{/if}
 		</div>
 	</div>
@@ -187,7 +175,7 @@
 		color: var(--color-lightness-75);
 	}
 
-	.newplotconstant{
-		transition left 0.5s ease;
+	.newplotconstant {
+		transition: right 0.5s ease;
 	}
 </style>

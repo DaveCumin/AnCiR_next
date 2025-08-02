@@ -63,7 +63,7 @@
 	}
 </script>
 
-<div class="preview-table-wrapper" bind:this={table}>
+<div class="preview-table-wrapper" bind:this={table} style="margin-top: 0.2rem;">
 	<table style="width: 100%; table-layout: fixed;">
 		<thead>
 			<tr>

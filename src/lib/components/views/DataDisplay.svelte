@@ -77,7 +77,6 @@
 
 <!-- TODO: write custom component to achieve -->
 <div class="display-list">
-
 	{#each core.tables as table (table.id)}
 		<div class="clps-container">
 			<details class="clps-item">

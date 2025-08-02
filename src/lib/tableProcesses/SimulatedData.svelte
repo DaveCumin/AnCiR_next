@@ -35,7 +35,6 @@
 		simulatedTime = [];
 		simulatedValues = [];
 		for (let i = 0; i < N_hours; i += samplingPeriod_hours) {
-			console.log(startTime);
 			simulatedTime.push(new Date(new Date(startTime).getTime() + i * 3600000).toISOString());
 			const amplitude =
 				Math.floor(i % rhythmPeriod_hours) < rhythmPeriod_hours / 2 ? rhythmAmplitude : 1;
@@ -62,7 +61,6 @@
 
 	//TODO: something strange when this is mounted - there is an "Uncaught RangeError: Maximum call stack size exceeded" error in $effect (I don't know why ;( )
 	onMount(() => {
-		console.log('SimulatedData mounted p: ', $state.snapshot(p));
 		//needed to get the values when it first mounts
 		makeSimulatedData();
 	});

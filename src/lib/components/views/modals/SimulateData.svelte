@@ -27,7 +27,7 @@
 			}
 		)
 	);
-	console.log('p.args', $state.snapshot(p.args));
+	// console.log('p.args', $state.snapshot(p.args));
 	function confirmAddColumn() {
 		//make new table
 		core.tables.push(new Table());
@@ -39,6 +39,18 @@
 			core.tables[core.tables.length - 1]
 		);
 		core.tables[core.tables.length - 1].processes.push(tb);
+
+		p.args = Object.fromEntries(
+			Array.from(appConsts.tableProcessMap.get('SimulatedData').defaults.entries()).map(
+				([key, value]) => {
+					if (key === 'out') {
+						return ['out', processNested(value)];
+					}
+					return [key, value.val];
+				}
+			)
+		);
+
 		showModal = false;
 	}
 </script>

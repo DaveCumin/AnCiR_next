@@ -2,10 +2,10 @@
 	import { onMount } from 'svelte';
 	let {
 		value = $bindable(0),
-		step = 0.1,
-		min = -100,
-		max = 100,
-		limits = [-500, Infinity],
+		step = 1,
+		min = -Infinity,
+		max = Infinity,
+		limits = [-Infinity, Infinity],
 		units = {
 			default: 'hr',
 			day: 24,
@@ -152,17 +152,14 @@
 	style="width:20%"
 	type="number"
 	{step}
-	min={displayMin}
-	max={displayMax}
+	min={limits[0]}
+	max={limits[1]}
 	bind:value={displayValue}
 	oninput={updateValue}
 	onchange={adjustLimits}
 	onmousedown={startDrag}
-	onmouseover={(e) => {
-		e.target.focus(); //to enable scrolling for changing the value
-	}}
 	onwheel={(e) => {
-		e.stopPropagation();
+		if (inputElement.focus()) e.stopPropagation();
 	}}
 	class="draggable-number-input"
 />

@@ -15,13 +15,12 @@
 	let { p = $bindable() } = $props();
 	let result = $state();
 	function duplicate() {
-		console.log('trying duplicate: ', p.args.xIN);
+		console.log($state.snapshot(p.args.xIN));
 		if (p.args.xIN == -1) return; //if there is no input yet
 		result = getColumnById(p.args.xIN).getData();
 
-		if (p.args.out.result == -1) {
+		if (p.args.out.result == -1 || !p.args.out.result) {
 			//do nothing
-			return;
 		} else {
 			getColumnById(p.args.out.result).data = result;
 			const processHash = crypto.randomUUID();

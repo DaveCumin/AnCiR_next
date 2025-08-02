@@ -1,8 +1,9 @@
 <script>
 	import { core } from '$lib/core/core.svelte.js';
+	import { getColumnById } from '$lib/core/Column.svelte';
 	let {
 		onChange = (value) => {
-			console.log('selected col ' + value);
+			// console.log('selected col ' + value);
 		},
 		excludeColIds = [],
 		value = $bindable()
@@ -18,6 +19,18 @@
 					core.tables[t].name + ' : ' + core.tables[t].columns[c].name,
 					core.tables[t].columns[c].id
 				);
+			}
+		}
+		//get the table process Ids also
+		for (let p = 0; p < core.tables[t].processes.length; p++) {
+			for (let o = 0; o < core.tables[t].processes[p].args.out.length; o++) {
+				Object.keys(core.tables[t].processes[p].args.out).forEach((key) => {
+					const ref = core.tables[t].processes[p].args.out[key];
+					if (ref !== -1 && !excludeColIds.includes(ref)) {
+						const processCol = getColumnById(ref);
+						options.set(core.tables[t].name + ' : ' + processCol.name, processCol.id);
+					}
+				});
 			}
 		}
 	}

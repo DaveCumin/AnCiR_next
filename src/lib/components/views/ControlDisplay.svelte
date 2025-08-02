@@ -1,10 +1,5 @@
 <!-- Handle click plot (plot id core state) -->
 <script module>
-	export function closeControlPanel() {
-		appState.selectedPlotIds = [];
-		appState.showControlPanel = false;
-	}
-
 	const toShow = { width: 'number', height: 'number', 'plot.data.*.*.refId': 'Column' };
 
 	function filterPaths(paths) {
@@ -16,8 +11,6 @@
 		}
 
 		// Filter paths based on toShow
-		console.log(paths);
-		console.log(toShow);
 		return paths.filter((item) => Object.keys(toShow).some((key) => isMatch(item.path, key)));
 	}
 
@@ -88,6 +81,7 @@
 
 	import { appConsts, appState, core } from '$lib/core/core.svelte';
 	import { convertToImage } from '$lib/components/plotBits/helpers/save.js';
+	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 
 	let addBtnRef;
 	let showSavePlot = $state(false);
@@ -125,6 +119,18 @@
 
 		return options;
 	}
+
+	let theSameOptions = $state();
+	$effect(() => {
+		theSameOptions = getSameOptions(appState.selectedPlotIds);
+	});
+	function updateOptions(samepath) {
+		core.plots.forEach((plot) => {
+			if (appState.selectedPlotIds.includes(plot.id)) {
+				plot[samepath] = theSameOptions.filter((p) => p.path == samepath)[0].value;
+			}
+		});
+	}
 </script>
 
 <div class="control-display">
@@ -132,15 +138,34 @@
 
 	{#key appState.selectedPlotIds}
 		{#if appState.selectedPlotIds.length > 1}
-			<p>{appState.selectedPlotIds}</p>
-			<p>{JSON.stringify(getSameOptions(appState.selectedPlotIds), null, 2)}</p>
-			{#each getSameOptions(appState.selectedPlotIds) as same}
-				<p>{same.path} {toShow[same.path]} {same.value}</p>
-			{/each}
+			<div class="control-banner">
+				<p>Control Panel</p>
 
-			<div><button bind:this={addBtnRef} onclick={openDropdown}>Save</button></div>
-		{/if}
-		{#if appState.selectedPlotIds.length == 1}
+				<div class="control-banner-icons"></div>
+			</div>
+			<!-- TODO: after fix put in control-banner-icons -->
+			<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
+				<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
+			</button>
+
+			<p>{appState.selectedPlotIds}</p>
+			<p>{JSON.stringify(theSameOptions, null, 2)}</p>
+			<!-- This may need to be layed out, like the others, with loops only for the data (that way, easier to set min/max input values and label appropriately -->
+			{#each theSameOptions as same}
+				{#if toShow[same.path] == 'number'}
+					<p>
+						{same.path}
+						<NumberWithUnits
+							bind:value={same.value}
+							units={{}}
+							onInput={() => updateOptions(same.path)}
+						/>
+					</p>
+				{:else}
+					<p>{same.path} {toShow[same.path]} {same.value}</p>
+				{/if}
+			{/each}
+		{:else if appState.selectedPlotIds.length == 1}
 			{@const plot = core.plots.find((p) => p.id === appState.selectedPlotIds[0])}
 			{#if plot}
 				{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
@@ -162,14 +187,13 @@
 
 
 					<!-- TODO: change where dropdown is postioned -->
-					{#if showSavePlot}
-						<SavePlot
-							bind:showDropdown={showSavePlot}
-							{dropdownTop}
-							{dropdownLeft}
-							Id={'plot' + plot.plot.parentBox.id}
-						/>
-					{/if}
+
+					<SavePlot
+						bind:showDropdown={showSavePlot}
+						{dropdownTop}
+						{dropdownLeft}
+						Id={'plot' + plot.plot.parentBox.id}
+					/>
 
 					<div class="control-tag">
 						<button
@@ -189,41 +213,20 @@
 		{:else}
 			<div class="control-banner">
 				<p>Control Panel</p>
-
-				<div class="control-banner-icons">
-					<button class="icon">
-						<Icon name="reset" width={16} height={16} className="control-component-title-icon" />
-					</button>
-				</div>
 			</div>
-
-			<div class="control-tag">
-				<button
-					class={appState.currentControlTab === 'properties' ? 'active' : ''}
-					onclick={() => (appState.currentControlTab = 'properties')}>Properties</button
-				>
-				<button
-					class={appState.currentControlTab === 'files' ? 'active' : ''}
-					onclick={() => (appState.currentControlTab = 'files')}>Files</button
-				>
-			</div>
-
-			<div class="div-line"></div>
-
-			<!-- TODO: implement grid size change -->
+			<p>Please select a plot or plots (with alt-click) to use the control panel.</p>
 		{/if}
 	{/key}
 
 	<div class="div-block"></div>
 </div>
-{#if showSavePlot}
-	<SavePlot
-		bind:showDropdown={showSavePlot}
-		{dropdownTop}
-		{dropdownLeft}
-		Id={appState.selectedPlotIds}
-	/>
-{/if}
+
+<SavePlot
+	bind:showDropdown={showSavePlot}
+	{dropdownTop}
+	{dropdownLeft}
+	Id={appState.selectedPlotIds}
+/>
 
 <style>
 	.heading {

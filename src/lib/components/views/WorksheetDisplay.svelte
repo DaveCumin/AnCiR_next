@@ -74,9 +74,7 @@
 	</div>
 </div>
 
-{#if showAddPlot}
-	<AddPlot bind:showDropdown={showAddPlot} {dropdownTop} {dropdownLeft} />
-{/if}
+<AddPlot bind:showDropdown={showAddPlot} {dropdownTop} {dropdownLeft} />
 
 <div class="display-list">
 	{#each core.plots.toReversed() as plot, i (plot.id)}

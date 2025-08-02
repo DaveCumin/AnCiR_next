@@ -87,10 +87,19 @@
 		document.addEventListener('keydown', (event) => {
 			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
 				console.log($state.snapshot(core));
+				console.log($state.snapshot(appState));
 				console.log($state.snapshot(appConsts));
 			}
 			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 's') {
 				refresh();
+			}
+			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'p') {
+				appState.canvasScale += 0.1;
+				console.log(appState.canvasScale);
+			}
+			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'o') {
+				appState.canvasScale -= 0.1;
+				console.log(appState.canvasScale);
 			}
 		});
 

@@ -9,7 +9,6 @@
 			//move it to be within the page
 			const rect = dialog.getBoundingClientRect();
 			const padding = 10;
-			console.log(rect);
 			if (rect.right > window.innerWidth - padding) {
 				left = window.innerWidth - rect.width - padding;
 			}
@@ -17,33 +16,37 @@
 				left = 0;
 			}
 			if (rect.bottom > window.innerHeight - padding) {
-				console.log('trying to move up');
 				top = window.innerHeight - rect.height - padding;
 			}
 			if (rect.top < 0) {
 				top = 0;
 			}
-		} else if (!showDropdown && dialog.open) {
+		} else if (!showDropdown && dialog?.open) {
 			dialog.close();
 		}
 	});
 </script>
 
-<dialog
-	bind:this={dialog}
-	onclose={() => (showDropdown = false)}
-	onclick={(e) => {
-		if (e.target === dialog) dialog.close();
-	}}
-	style={`top: ${top}px; left: ${left}px`}
->
-	<div>
-		<!-- svelte-ignore a11y_autofocus -->
-		<div class="group">
-			{@render groups?.()}
+{#if showDropdown}
+	<dialog
+		bind:this={dialog}
+		onclose={() => {
+			showDropdown = false;
+		}}
+		style={`top: ${top}px; left: ${left}px`}
+		onclick={(e) => {
+			e.stopPropagation();
+			showDropdown = false;
+		}}
+	>
+		<div>
+			<!-- svelte-ignore a11y_autofocus -->
+			<div class="group">
+				{@render groups?.()}
+			</div>
 		</div>
-	</div>
-</dialog>
+	</dialog>
+{/if}
 
 <style>
 	dialog {

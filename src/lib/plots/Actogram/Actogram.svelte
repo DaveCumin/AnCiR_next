@@ -32,7 +32,13 @@
 
 		x = $state();
 		y = $state();
-
+		binSize = $derived.by(() => {
+			//the average time between x values
+			return (
+				(this.x.hoursSinceStart[this.x.hoursSinceStart.length - 1] - this.x.hoursSinceStart[0]) /
+				this.x.hoursSinceStart.length
+			);
+		});
 		colour = $state();
 		offset = $derived(
 			(Number(new Date(this.parentPlot.startTime)) - Number(this.x.getData()[0])) / 3600000
@@ -136,7 +142,8 @@
 		startTime = $derived.by(() => {
 			let minTime = Infinity;
 			this.data.forEach((datum) => {
-				minTime = Math.min(minTime, Number(datum.x.getData()[0]));
+				const thefirst = datum.x.getData() ? datum.x.getData()[0] : minTime;
+				minTime = Math.min(minTime, Number(thefirst));
 			});
 			//TODO: fix here for data with timeformat that doesn't work
 			return minTime !== Infinity && minTime
@@ -272,27 +279,6 @@
 			theData.plot.doublePlot;
 
 		return [clickedDay, clickedHrs];
-	}
-
-	let addBtnRef;
-	let showSavePlot = $state(false);
-	let dropdownTop = $state(0);
-	let dropdownLeft = $state(0);
-
-	function recalculateDropdownPosition() {
-		if (!addBtnRef) return;
-		const rect = addBtnRef.getBoundingClientRect();
-
-		dropdownTop = rect.top + window.scrollY;
-		dropdownLeft = rect.right + window.scrollX + 12;
-	}
-
-	function openDropdown() {
-		recalculateDropdownPosition();
-		requestAnimationFrame(() => {
-			showSavePlot = true;
-		});
-		window.addEventListener('resize', recalculateDropdownPosition);
 	}
 </script>
 
