@@ -5,6 +5,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 
 	import { removePlot } from '$lib/core/Plot.svelte';
+	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 
 	let plotElement;
 
@@ -197,6 +198,27 @@
 		e.stopPropagation();
 		console.log('clickkkkkkkeeeed');
 	}
+
+	let addBtnRef;
+	let showDropdown = $state(false);
+	let dropdownTop = $state(0);
+	let dropdownLeft = $state(0);
+
+	function recalculateDropdownPosition() {
+		if (!addBtnRef) return;
+		const rect = addBtnRef.getBoundingClientRect();
+
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
+	}
+
+	function openDropdown() {
+		recalculateDropdownPosition();
+		requestAnimationFrame(() => {
+			showDropdown = true;
+		});
+		window.addEventListener('resize', recalculateDropdownPosition);
+	}
 </script>
 
 <svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp} />
@@ -219,7 +241,8 @@
 		</p>
 
 		<button class="icon" onclick={() => removePlot(id)}>
-			<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" />
+			<!-- <Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" /> -->
+			 <Icon name="close" width={16} height={16} className="close" />
 		</button>
 	</div>
 	<div class="plot-content">
@@ -227,6 +250,10 @@
 	</div>
 	<div class="resize-handle" onmousedown={(e) => startResize(e)}></div>
 </section>
+
+{#if showDropdown}
+	<SinglePlotAction bind:showDropdown {dropdownTop} {dropdownLeft} />
+{/if}
 
 <style>
 	.draggable {
