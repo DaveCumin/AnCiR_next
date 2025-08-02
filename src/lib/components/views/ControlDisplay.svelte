@@ -176,7 +176,7 @@
 					</p> -->
 
 					<div class="control-banner">
-						<p>Control Panel</p>
+						<p>{plot.name}</p>
 
 						<div class="control-banner-icons">
 							<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
@@ -184,9 +184,6 @@
 							</button>
 						</div>
 					</div>
-
-
-					<!-- TODO: change where dropdown is postioned -->
 
 					<SavePlot
 						bind:showDropdown={showSavePlot}

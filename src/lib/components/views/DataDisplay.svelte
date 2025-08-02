@@ -32,7 +32,6 @@
 		requestAnimationFrame(() => {
 			showAddTable = true;
 		});
-		
 	}
 
 	let showNewCol = $state(false);

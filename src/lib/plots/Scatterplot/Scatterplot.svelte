@@ -209,14 +209,6 @@
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
-		<div class="control-component">
-			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Name</p>
-					<input type="text" bind:value={theData.parentBox.name} />
-				</div>
-			</div>
-		</div>
 
 		<div class="control-component">
 			<div class="control-input-horizontal">

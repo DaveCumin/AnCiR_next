@@ -10,12 +10,12 @@
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
-		<div class="dropdown-action" onclick={openImportModal}>
-			<button> Import Data </button>
+		<div class="dropdown-action">
+			<button onclick={openImportModal}> Import Data </button>
 		</div>
 
-		<div class="dropdown-action" onclick={() => (showModal = true)}>
-			<button> Simulate Data </button>
+		<div class="dropdown-action">
+			<button onclick={() => (showModal = true)}> Simulate Data </button>
 		</div>
 	{/snippet}
 </Dropdown>

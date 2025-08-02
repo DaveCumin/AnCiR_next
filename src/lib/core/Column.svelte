@@ -308,11 +308,12 @@
 	}
 
 	let columnSelected = $state(-1);
+	let openClps = $state({});
+
 	function openDropdown(e, id) {
 		e.preventDefault();
 		e.stopPropagation();
-	let openClps = $state({});
-	function openDropdown(id) {
+
 		columnSelected = id;
 
 		const rect = event.currentTarget.getBoundingClientRect();
@@ -394,7 +395,7 @@
 					<button class="icon" onclick={(e) => {
 						e.stopPropagation();
 						toggleMenu(col.id);
-						openDropdown(col.id);
+						openDropdown(e, col.id);
 					}}>
 						<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon"/>
 					</button>

@@ -1,6 +1,4 @@
 <script module>
-	//TODO : This needs styling
-	import Icon from '$lib/icons/Icon.svelte';
 	export function getRandomColor() {
 		const letters = '0123456789ABCDEF';
 		let color = '#';
