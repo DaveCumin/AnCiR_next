@@ -11,9 +11,9 @@
 </script>
 
 <script>
-	import Icon from "$lib/icons/Icon.svelte";
+	import Icon from '$lib/icons/Icon.svelte';
 
-	let { col, p = $bindable() } = $props();
+	let { p = $bindable() } = $props();
 	$effect(() => {
 		if (p.parentCol.type == 'number') {
 			p.args.find = Number(p.args.find) || 0;
@@ -24,14 +24,19 @@
 
 <!-- TODO: consider what this should be. Either the replace is for the value, or (more sensibly) it is a replace part of the original string (to change the year, eg), which needs some implementation thought -->
 <div class="control-input process">
+	<div class="process-title">
+		<p>{p.name}</p>
+		<button
+			class="icon"
+			onclick={(e) => {
+				e.stopPropagation();
+				p.parentCol.removeProcess(p.id);
+			}}
+		>
+			<Icon name="minus" width={16} height={16} className="control-component-icon" />
+		</button>
+	</div>
 	{#if p.parentCol.type == 'time'}
-		<div class="process-title">
-			<p>{p.name}</p>
-			<button class="icon" onclick={(e) => {e.stopPropagation(); col.removeProcess(p.id);}}>
-				<Icon name="minus" width={16} height={16} className="control-component-icon"/>
-			</button>
-		</div>
-
 		<div class="control-input-horizontal">
 			<div class="control-input">
 				<p>find</p>
@@ -43,15 +48,8 @@
 			</div>
 		</div>
 	{/if}
-	
+
 	{#if p.parentCol.type == 'number'}
-		<div class="process-title">
-			<p>{p.name}</p>
-			<button class="icon" onclick={(e) => {e.stopPropagation(); col.removeProcess(p.id);}}>
-				<Icon name="minus" width={16} height={16} className="control-component-icon"/>
-			</button>
-		</div>
-
 		<div class="control-input-horizontal">
 			<div class="control-input">
 				<p>find</p>
@@ -63,15 +61,8 @@
 			</div>
 		</div>
 	{/if}
-	
-	{#if p.parentCol.type == 'category'}
-		<div class="process-title">
-			<p>{p.name}</p>
-			<button class="icon" onclick={(e) => {e.stopPropagation(); col.removeProcess(p.id);}}>
-				<Icon name="minus" width={16} height={16} className="control-component-icon"/>
-			</button>
-		</div>
 
+	{#if p.parentCol.type == 'category'}
 		<div class="control-input-horizontal">
 			<div class="control-input">
 				<p>find</p>
@@ -85,7 +76,5 @@
 	{/if}
 </div>
 
-
 <style>
-
 </style>

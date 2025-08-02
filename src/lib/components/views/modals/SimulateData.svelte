@@ -53,6 +53,7 @@
 
 		showModal = false;
 	}
+	console.log('show Sim modal: ', showModal);
 </script>
 
 <Modal bind:showModal>

@@ -71,9 +71,9 @@
 {#if core.data.length > 0 && core.plots.length > 0}
 	<button
 		class="icon newplotconstant"
-		style="z-index: 999; position: fixed; right: {appState.showControlPanel
+		style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
 			? appState.widthControlPanel
-			: 0}px; top: 15px;"
+			: 0}px + 15px); top: 15px;"
 		onclick={(e) => {
 			e.stopPropagation();
 			showNewPlotModalconst = true;
@@ -91,9 +91,9 @@
 
 <button
 	class="icon zoomout"
-	style="z-index: 999; position: fixed; right: {appState.showControlPanel
+	style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
 		? appState.widthControlPanel
-		: 0}px; bottom: 35px;"
+		: 0}px + 15px); bottom: 35px;"
 	onclick={(e) => {
 		e.stopPropagation();
 		appState.canvasScale -= 0.05;
@@ -104,9 +104,9 @@
 
 <button
 	class="icon zoomin"
-	style="z-index: 999; position: fixed; right: {appState.showControlPanel
+	style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
 		? appState.widthControlPanel
-		: 0}px; bottom: 10px;"
+		: 0}px + 15px); bottom: 10px;"
 	onclick={(e) => {
 		e.stopPropagation();
 		appState.canvasScale += 0.05;

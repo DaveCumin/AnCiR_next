@@ -71,7 +71,9 @@
 </script>
 
 <script>
-	let { col, p = $bindable() } = $props();
+	import Icon from '$lib/icons/Icon.svelte';
+
+	let { p = $bindable() } = $props();
 
 	// Add a new condition
 	function addCondition() {
@@ -87,6 +89,15 @@
 <div class="control-input process">
 	<div class="process-title">
 		<p>{p.name}</p>
+		<button
+			class="icon"
+			onclick={(e) => {
+				e.stopPropagation();
+				p.parentCol.removeProcess(p.id);
+			}}
+		>
+			<Icon name="minus" width={16} height={16} className="control-component-icon" />
+		</button>
 	</div>
 	{#each p.args.conditions as condition, index}
 		<div class="conditions">

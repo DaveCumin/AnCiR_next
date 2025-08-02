@@ -306,8 +306,13 @@
 		>
 			<div class="cp-header" onmousedown={(e) => onMouseDown(e)}>
 				<p>Colour Picker</p>
-				<button class="icon" onclick={() => {show = false;}}>
-					<Icon name="close" width={16} height={16} className="close" />
+				<button
+					class="icon"
+					onclick={() => {
+						show = false;
+					}}
+				>
+					<Icon name="close" width={16} height={16} className="icon" />
 				</button>
 			</div>
 			<div class="cp-content">
@@ -658,11 +663,7 @@
 {/if}
 
 <!-- Indicator -->
-<div
-	class="cp-preview"
-	style="background-color: {value};"
-	onclick={(e) => open(e)}
->
+<div class="cp-preview" style="background-color: {value};" onclick={(e) => open(e)}>
 	<!-- <div
 		style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
 	></div> -->
@@ -761,7 +762,7 @@
 
 		border-radius: 2px;
 		border: 1px solid var(--color-lightness-85);
-		
+
 		position: relative;
 		cursor: pointer;
 

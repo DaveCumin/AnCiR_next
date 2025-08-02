@@ -5,7 +5,9 @@
 	import SimulateData from '$lib/components/views/modals/SimulateData.svelte';
 
 	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
-	let showModal = $state(false);
+	let showSimulateModal = $state(false);
+
+	$inspect(showSimulateModal);
 </script>
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
@@ -15,14 +17,20 @@
 		</div>
 
 		<div class="dropdown-action">
-			<button onclick={() => (showModal = true)}> Simulate Data </button>
+			<button
+				onclick={() => {
+					console.log('trying');
+					showSimulateModal = true;
+				}}
+			>
+				Simulate Data
+			</button>
 		</div>
 	{/snippet}
 </Dropdown>
 
 <ImportData />
-<SimulateData bind:showModal />
+<SimulateData bind:showModal={showSimulateModal} />
 
 <style>
-
 </style>

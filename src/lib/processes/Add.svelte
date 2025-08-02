@@ -7,21 +7,26 @@
 </script>
 
 <script>
-	import Icon from "$lib/icons/Icon.svelte";
-	
+	import Icon from '$lib/icons/Icon.svelte';
+
 	let { p = $bindable() } = $props();
 </script>
 
 <div class="control-input process">
 	<div class="process-title">
 		<p>{p.name}</p>
-		<button class="icon" onclick={(e) => {e.stopPropagation(); col.removeProcess(p.id);}}>
-			<Icon name="minus" width={16} height={16} className="control-component-icon"/>
+		<button
+			class="icon"
+			onclick={(e) => {
+				e.stopPropagation();
+				p.parentCol.removeProcess(p.id);
+			}}
+		>
+			<Icon name="minus" width={16} height={16} className="control-component-icon" />
 		</button>
 	</div>
 	<input type="number" bind:value={p.args.value} />
 </div>
 
 <style>
-	
 </style>

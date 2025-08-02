@@ -128,7 +128,7 @@
 					<button class="icon" onclick={() => (showNewPlotModal = true)}>
 						<Icon name="add" width={24} height={24} />
 					</button>
-					<p>Click to add a new plot</p>
+					<p style="margin-left: 10px">Click to add a new plot</p>
 				</div>
 
 				<AddPlot
@@ -141,7 +141,7 @@
 					<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
 						<Icon name="add" width={24} height={24} />
 					</button>
-					<p>Click to add new data</p>
+					<p style="margin-left: 10px">Click to add new data</p>
 				</div>
 
 				<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
@@ -176,6 +176,8 @@
 	}
 
 	.newplotconstant {
+		position: fixed;
+		right: 15px;
 		transition: right 0.5s ease;
 	}
 </style>

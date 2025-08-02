@@ -50,7 +50,6 @@
 		requestAnimationFrame(() => {
 			showSingleTableDropdown = true;
 		});
-		
 	}
 
 	let openClps = $state({});
@@ -82,21 +81,23 @@
 				<summary
 					class="clps-title-container"
 					onclick={(e) => {
-					e.stopPropagation();
-					toggleClps(table.id);
-				}}
+						e.stopPropagation();
+						toggleClps(table.id);
+					}}
 				>
 					<div class="clps-title">
 						<p>{table.name}</p>
 					</div>
-					
+
 					<div class="clps-title-button">
-						<button class="icon"
+						<button
+							class="icon"
 							onclick={(e) => {
 								e.stopPropagation();
 								openSingleTableDropdown(e, table.id);
-						}}>
-							<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon"/>
+							}}
+						>
+							<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" />
 						</button>
 						{#if openClps[table.id]}
 							<Icon name="caret-down" width={20} height={20} className="first-detail-title-icon" />
@@ -108,15 +109,15 @@
 
 				{#each table.columns as col (col.id)}
 					{#if !col.tableProcessed}
-					<div class="second-clps">
-						<ColumnComponent {col} />
-					</div>
+						<div class="second-clps">
+							<ColumnComponent {col} />
+						</div>
 					{/if}
 				{/each}
 				{#each table.processes as p}
-				<div class="second-clps">
-					<TableProcess {p} />
-				</div>
+					<div class="second-clps">
+						<TableProcess {p} />
+					</div>
 				{/each}
 			</details>
 		</div>
@@ -125,13 +126,15 @@
 	<div class="div-block"></div>
 </div>
 
-{#if showAddTable}
-	<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
-{/if}
+<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
 
-{#if showSingleTableDropdown}
-	<SingleTableAction bind:showDropdown={showSingleTableDropdown} {dropdownTop} {dropdownLeft} tableId={selectedTable} {addNewColumn}/>
-{/if}
+<SingleTableAction
+	bind:showDropdown={showSingleTableDropdown}
+	{dropdownTop}
+	{dropdownLeft}
+	tableId={selectedTable}
+	{addNewColumn}
+/>
 
 <MakeNewColumn bind:show={showNewCol} tableId={selectedTable} />
 
@@ -205,7 +208,4 @@
 		opacity: 1;
 		pointer-events: auto;
 	}
-
-	
-
 </style>
