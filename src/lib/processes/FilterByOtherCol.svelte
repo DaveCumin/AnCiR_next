@@ -85,44 +85,51 @@
 </script>
 
 <div class="control-input process">
-	<p>{p.name}</p>
+	<div class="process-title">
+		<p>{p.name}</p>
+	</div>
 	{#each p.args.conditions as condition, index}
 		<div class="conditions">
-			<span>Where</span>
-			<ColumnSelector
-				bind:value={condition.byColId}
-				excludeColIds={[p.parentCol.id, p.parentCol.refDataId]}
-			/>
-			<span>is</span>
-			{#if getColumnById(condition.byColId)?.type === 'category'}
-				<select bind:value={condition.isOperator}>
-					<option value="==">equals</option>
-					<option value="!=">not equals</option>
-					<option value="includes">includes</option>
-					<option value="notincludes">does not include</option>
-				</select>
-			{:else}
-				<select bind:value={condition.isOperator}>
-					<option value="==">=</option>
-					<option value="!=">!=</option>
-					<option value=">">&gt;</option>
-					<option value="<">&lt;</option>
-					<option value=">=">≥</option>
-					<option value="<=">≤</option>
-				</select>
-			{/if}
-			{#if getColumnById(condition.byColId)?.type === 'category'}
-				<input type="text" bind:value={condition.byColValue} />
-			{:else if getColumnById(condition.byColId)?.type === 'time'}
-				<input
-					type="datetime-local"
-					oninput={(e) => {
-						condition.byColValue = Number(new Date(e.target.value));
-					}}
+			<div class="second-level-condition">
+				<span>Where</span>
+				<ColumnSelector
+					bind:value={condition.byColId}
+					excludeColIds={[p.parentCol.id, p.parentCol.refDataId]}
 				/>
-			{:else}
-				<input type="number" bind:value={condition.byColValue} />
-			{/if}
+			</div>
+
+			<div class="second-level-condition">
+				<span>is</span>
+				{#if getColumnById(condition.byColId)?.type === 'category'}
+					<select bind:value={condition.isOperator}>
+						<option value="==">equals</option>
+						<option value="!=">not equals</option>
+						<option value="includes">includes</option>
+						<option value="notincludes">does not include</option>
+					</select>
+				{:else}
+					<select bind:value={condition.isOperator}>
+						<option value="==">=</option>
+						<option value="!=">!=</option>
+						<option value=">">&gt;</option>
+						<option value="<">&lt;</option>
+						<option value=">=">≥</option>
+						<option value="<=">≤</option>
+					</select>
+				{/if}
+				{#if getColumnById(condition.byColId)?.type === 'category'}
+					<input type="text" bind:value={condition.byColValue} />
+				{:else if getColumnById(condition.byColId)?.type === 'time'}
+					<input
+						type="datetime-local"
+						oninput={(e) => {
+							condition.byColValue = Number(new Date(e.target.value));
+						}}
+					/>
+				{:else}
+					<input type="number" bind:value={condition.byColValue} />
+				{/if}
+			</div>
 			{#if p.args.conditions.length > 1}
 				<button onclick={() => removeCondition(index)} disabled={p.args.conditions.length <= 1}>
 					Remove
@@ -133,14 +140,36 @@
 			{/if}
 		</div>
 	{/each}
-	<button onclick={addCondition}> Add Condition </button>
+	<button class="add-condition-button" onclick={addCondition}>Add Condition</button>
 </div>
 
 <style>
-	button:hover {
+	.conditions {
+		width: 100%;
+
+		margin: 0;
+		padding: 0;
+	}
+	.second-level-condition {
+		width: 100%;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+
+		margin: 0;
+		padding: 0;
+		gap: 0.2rem;
+
+		font-size: 12px;
+		color: var(--color-lightness-35);
+
+		margin-bottom: 0.25rem;
+	}
+	.add-condition-button:hover {
 		opacity: 0.9;
 	}
-	button:disabled {
+	.add-condition-button:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}

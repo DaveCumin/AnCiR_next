@@ -125,7 +125,6 @@
 
 		width: 100%;
 		height: 4vh;
-		min-height: calc(16px + 0.25rem * 2);
 		display: flex;
 		flex-direction: row;
 		justify-content: space-between;
@@ -138,6 +137,10 @@
 	.heading p {
 		margin-left: 0.75rem;
 		font-weight: bold;
+	}
+
+	.heading button {
+		margin-right: 0.65rem;
 	}
 
 	.display-list {

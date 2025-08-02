@@ -96,14 +96,11 @@
 	}
 
 	.second-detail-title-icon {
+		margin: 0;
+
 		fill: var(--color-lightness-55);
 		transition: fill 0.2s ease;
 		cursor: pointer;
-	}
-
-	.second-detail-title-icon:hover {
-		background-color: var(--color-lightness-90);
-		border-radius: 100px;
 	}
 
 </style>

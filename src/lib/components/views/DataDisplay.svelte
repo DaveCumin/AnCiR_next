@@ -13,42 +13,45 @@
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
 	import { getTableById } from '$lib/core/Table.svelte';
+	import SingleTableAction from '../iconActions/SingleTableAction.svelte';
 
 	// AddTable dropdown
-	let addBtnRef;
 	let showAddTable = $state(false);
 	let dropdownTop = $state(0);
 	let dropdownLeft = $state(0);
 
-	function recalculateDropdownPosition() {
-		if (!addBtnRef) return;
-		const rect = addBtnRef.getBoundingClientRect();
-
+	function setDropdownPositionFromEvent(e) {
+		const rect = e.currentTarget.getBoundingClientRect();
 		dropdownTop = rect.top + window.scrollY;
 		dropdownLeft = rect.right + window.scrollX + 12;
 	}
 
 	function openDropdown(e) {
 		e.stopPropagation();
-		recalculateDropdownPosition();
+		setDropdownPositionFromEvent(e);
 		requestAnimationFrame(() => {
 			showAddTable = true;
 		});
-		window.addEventListener('resize', recalculateDropdownPosition);
+		
 	}
 
 	let showNewCol = $state(false);
 	let selectedTable = $state(null);
 
-	/// Display as TablePlot
-	function makeNewTablePlot(id) {
-		core.plots.push(new Plot({ name: 'Data from ' + getTableById(id).name, type: 'tableplot' }));
-		core.plots[core.plots.length - 1].x = 250;
-		core.plots[core.plots.length - 1].y = 250;
-		core.plots[core.plots.length - 1].plot.columnRefs = getTableById(id).columnRefs;
-		core.plots[core.plots.length - 1].plot.showCol = new Array(
-			getTableById(id).columnRefs.length
-		).fill(true);
+	export function addNewColumn(id) {
+		selectedTable = id;
+		showNewCol = true;
+	}
+
+	let showSingleTableDropdown = $state(false);
+
+	function openSingleTableDropdown(e, id) {
+		selectedTable = id;
+		setDropdownPositionFromEvent(e);
+		requestAnimationFrame(() => {
+			showSingleTableDropdown = true;
+		});
+		
 	}
 
 	let openClps = $state({});
@@ -66,7 +69,7 @@
 	<p>Data Sources</p>
 
 	<div class="add">
-		<button bind:this={addBtnRef} class="icon" onclick={openDropdown}>
+		<button class="icon" onclick={openDropdown}>
 			<Icon name="add" width={16} height={16} />
 		</button>
 	</div>
@@ -90,9 +93,10 @@
 					</div>
 					
 					<div class="clps-title-button">
-						<button class="icon" onclick={(e) => {
-							e.stopPropagation();
-							toggleMenu(table.id)
+						<button class="icon"
+							onclick={(e) => {
+								e.stopPropagation();
+								openSingleTableDropdown(e, table.id);
 						}}>
 							<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon"/>
 						</button>
@@ -103,24 +107,6 @@
 						{/if}
 					</div>
 				</summary>
-
-				<!-- <div class="clps-icon-container">
-					<button class="clps-icon"
-						onclick={() => {
-							selectedTable = table.id;
-							showNewCol = true;
-					}}>
-						<Icon name="plus" width={16} height={16} className="static-icon" />
-						<p>Add new column</p>
-					</button>
-				</div>
-
-				<button
-					onclick={() => {
-						makeNewTablePlot(table.id);
-				}}>
-					View Table
-				</button> -->
 
 				{#each table.columns as col (col.id)}
 					{#if !col.tableProcessed}
@@ -141,20 +127,12 @@
 	<div class="div-block"></div>
 </div>
 
-
-
-<!-- <div class="display-list">
-	{#each core.tables as table(table.id)}
-		<div class="table-container">
-
-		</div>
-	{/each}
-</div> -->
-
-
-
 {#if showAddTable}
 	<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
+{/if}
+
+{#if showSingleTableDropdown}
+	<SingleTableAction bind:showDropdown={showSingleTableDropdown} {dropdownTop} {dropdownLeft} tableId={selectedTable} {addNewColumn}/>
 {/if}
 
 <MakeNewColumn bind:show={showNewCol} tableId={selectedTable} />
@@ -166,7 +144,6 @@
 
 		width: 100%;
 		height: 4vh;
-		min-height: calc(16px + 0.25rem * 2);
 		display: flex;
 		flex-direction: row;
 		justify-content: space-between;
@@ -181,6 +158,10 @@
 	.heading p {
 		margin-left: 0.75rem;
 		font-weight: bold;
+	}
+
+	.heading button {
+		margin-right: 0.65rem;
 	}
 
 	.display-list {

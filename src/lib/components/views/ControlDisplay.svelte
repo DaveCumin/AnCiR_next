@@ -153,12 +153,13 @@
 					<div class="control-banner">
 						<p>Control Panel</p>
 
-						<div class="control-banner-icons"></div>
+						<div class="control-banner-icons">
+							<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
+								<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
+							</button>
+						</div>
 					</div>
-					<!-- TODO: after fix put in control-banner-icons -->
-					<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
-						<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
-					</button>
+
 
 					<!-- TODO: change where dropdown is postioned -->
 					{#if showSavePlot}
@@ -234,7 +235,6 @@
 		flex-direction: row;
 		justify-content: center;
 		align-items: center;
-		/* border-bottom: 1px solid #d9d9d9; */
 		background-color: white;
 	}
 

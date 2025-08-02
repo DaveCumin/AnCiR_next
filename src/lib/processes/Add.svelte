@@ -23,23 +23,5 @@
 </div>
 
 <style>
-	.process {
-		margin: 0.25rem 0;
-	}
-
-	.process-title {
-		width: 100%;
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		justify-content: space-between;
-
-		margin: 0;
-		padding: 0;
-	}
-
-	.process-title button {
-		margin: 0 0 0 0;
-		padding: 0;
-	}
+	
 </style>

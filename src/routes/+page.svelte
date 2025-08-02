@@ -319,7 +319,7 @@
 	:global(button.icon) {
 		background-color: transparent;
 		border: none;
-		margin-right: 0.6rem;
+		margin: 0;
 		padding: 0;
 		text-align: inherit;
 		font: inherit;
@@ -386,6 +386,7 @@
 
 	/* dropdown */
 	:global(.dropdown-action button) {
+		display: flex; 
 		margin: 0.6em;
 		
 		font-size: 14px;
@@ -509,6 +510,9 @@
 		flex-direction: row;
 		align-items: center;
 		justify-content: flex-end;
+
+		margin: 0;
+		padding: 0;
 	}
 
 	:global(.control-tag) {
@@ -651,7 +655,7 @@
 		margin: 0 0 0 0.2rem;
 	}
 
-	:global(.control-input input) {
+	:global(.control-input select, .control-input input) {
 		width: 100%;
 
 		height: var(--control-input-height);
@@ -667,7 +671,33 @@
 		transition: border-color 0.2s;	
 	}
 
-	:global(.control-input input:hover) {
+	:global(.control-input select:hover, .control-input input:hover) {
 		border: solid 1px var(--color-lightness-35);
+	}
+
+	/* process */
+
+	:global(.process) {
+		width: 100%;
+		flex: 1 1 0;
+		margin: 1rem 0;
+	}
+
+	:global(.process-title) {
+		width: 100%;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+
+		margin: 0;
+		padding: 0;
+
+		font-weight: bold;
+	}
+
+	:global(.process-title button) {
+		margin: 0;
+		padding: 0;
 	}
 </style>

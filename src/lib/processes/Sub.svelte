@@ -32,10 +32,16 @@
 			</button>
 		</div>
 
-			<p>find</p>
-			<input type="number" bind:value={p.args.find} />
-			<p>replace</p>
-			<input type="number" bind:value={p.args.replace} />
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>find</p>
+				<input type="number" bind:value={p.args.find} />
+			</div>
+			<div class="control-input">
+				<p>replace with</p>
+				<input type="number" bind:value={p.args.replace} />
+			</div>
+		</div>
 	{/if}
 	
 	{#if p.parentCol.type == 'number'}
@@ -46,10 +52,16 @@
 			</button>
 		</div>
 
-			<p>find</p>
-			<input type="number" bind:value={p.args.find} />
-			<p>replace</p>
-			<input type="number" bind:value={p.args.replace} />
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>find</p>
+				<input type="number" bind:value={p.args.find} />
+			</div>
+			<div class="control-input">
+				<p>replace with</p>
+				<input type="number" bind:value={p.args.replace} />
+			</div>
+		</div>
 	{/if}
 	
 	{#if p.parentCol.type == 'category'}
@@ -60,29 +72,20 @@
 			</button>
 		</div>
 
-			<p>find</p>
-			<input type="text" bind:value={p.args.find} />
-			<p>replace</p>
-			<input type="text" bind:value={p.args.replace} />
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>find</p>
+				<input type="text" bind:value={p.args.find} />
+			</div>
+			<div class="control-input">
+				<p>replace with</p>
+				<input type="text" bind:value={p.args.replace} />
+			</div>
+		</div>
 	{/if}
 </div>
 
 
 <style>
-	.process {
-		margin: 0.25rem 0;
-	}
 
-	.process-title {
-		width: 100%;
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		justify-content: space-between;
-
-		margin: 0;
-		padding: 0;
-
-
-	}
 </style>

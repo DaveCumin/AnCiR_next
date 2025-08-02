@@ -286,6 +286,7 @@
 </script>
 
 <script>
+	// @ts-nocheck
 	import Icon from '$lib/icons/Icon.svelte';
 	import Processcomponent from '$lib/core/Process.svelte'; //Need to rename it because Process is used as the class name in the module, above
 	import AddProcess from '$lib/components/iconActions/AddProcess.svelte';
@@ -311,14 +312,15 @@
 
 	let columnSelected = $state(-1);
 	let openClps = $state({});
-	function openDropdown(e, id) {
-		e.stopPropagation();
+	function openDropdown(id) {
 		columnSelected = id;
-		recalculateDropdownPosition();
+
+		const rect = event.currentTarget.getBoundingClientRect();
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
 		requestAnimationFrame(() => {
 			showAddProcess = true;
 		});
-		window.addEventListener('resize', recalculateDropdownPosition);
 
 		openClps[id] = true;
 	}
@@ -392,7 +394,7 @@
 					<button class="icon" onclick={(e) => {
 						e.stopPropagation();
 						toggleMenu(col.id);
-						openDropdown(e, col.id);
+						openDropdown(col.id);
 					}}>
 						<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon"/>
 					</button>
@@ -407,16 +409,16 @@
 			
 			
 			<div class="clps-content-container">
-				<div class="line"></div>
 				<div class="data-component-info">
 					{#if !col.isReferencial()}
-						<italic><p>{col.provenance}</p></italic>
+					<italic><p>{col.provenance}</p></italic>
 					{:else}
-						<italic><p>primary source</p></italic>
-						<!-- TODO: check with DC how to name-->
+					<italic><p>primary source</p></italic>
+					<!-- TODO: check with DC how to name-->
 					{/if}
 				</div>
-
+				
+				<div class="line"></div>
 	
 				<!-- {#if col.type == 'number'}[{Math.min(...col.getData())},{Math.max(...col.getData())}]{/if} -->
 				{#if col.type == 'time'}
@@ -480,14 +482,6 @@
 		padding: 0;
 	}
 
-	.data-component-input p {
-		font-size: 12px;
-		text-align: left;
-		color: var(--color-lightness-35);
-		margin: 0;
-		padding: 0;
-	}
-
 	.line {
 		width: 100%;
 		height: 1px;
@@ -499,7 +493,7 @@
 
 	.block {
 		width: 100%;
-		height: 1.0rem;
+		height: 0.75rem;
 
 		background-color: transparent;
 	}
@@ -513,9 +507,9 @@
 
 		width: 4px;
 		height: 100%;
-		background-color: var(--color-hover);
+		background-color: var(--color-lightness-90);
 
-		border-radius: 4px 0 0 4px;
+		border-radius: 4px;
 	}
 
 	.clps-container {
@@ -534,14 +528,14 @@
 	}
 
 	.clps-content-container {
-		width: calc(100% - 1.25rem);
+		width: calc(100% - 1.5rem + 6px);
 		margin: 0 0 0 1.0rem;
 		padding: 0;
 	}
 
 	details {
 		width: 100%;
-		margin: 0.25rem 0.25rem 0.25rem 1.0rem;
+		margin: 0.25rem 0.25rem 0.25rem 0.5rem;
 		padding: 0;
 	}
 
@@ -616,7 +610,7 @@
 	}
 
 	.process-container {
-		margin: 0.5rem 0;
+		margin: 0.75rem 0 0.5rem 1.0rem;
 	}
 
 </style>
