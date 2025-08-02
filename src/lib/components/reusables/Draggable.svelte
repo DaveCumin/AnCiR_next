@@ -82,18 +82,25 @@
 				plot.x = Math.max(0, Math.min(newX, canvasWidth - width - 20));
 				plot.y = Math.max(0, Math.min(newY, canvasHeight - height - 50));
 			});
-
-			RePosition();
 		} else if (resizing) {
-			let deltaX = e.clientX - initialMouseX;
-			let deltaY = e.clientY - initialMouseY;
+			let deltaX = (e.clientX - initialMouseX) / appState.canvasScale;
+			let deltaY = (e.clientY - initialMouseY) / appState.canvasScale;
 
 			const maxWidth = canvasWidth - x - 20;
 			const maxHeight = canvasHeight - y - 50;
 
-			//Do resize over the left
+			//do the resize
+			width = snapToGrid(Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth)));
+			height = snapToGrid(Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight)));
+		}
+
+		// scroll with the move/resive
+		if (resizing || moving) {
+			//Do over the left
 			const rightLim =
-				window.innerWidth - (appState.showControlPanel ? appState.widthControlPanel : 0);
+				window.innerWidth -
+				(appState.showControlPanel ? appState.widthControlPanel / appState.canvasScale : 0);
+
 			const currentTop = document.getElementsByClassName('canvas')[0].scrollTop;
 			const currentLeft = document.getElementsByClassName('canvas')[0].scrollLeft;
 
@@ -105,7 +112,7 @@
 				});
 				deltaX += appState.gridSize;
 			}
-			//do resize down
+			//do  down
 			if (e.pageY > window.innerHeight) {
 				document.getElementsByClassName('canvas')[0].scrollTo({
 					top: currentTop + appState.gridSize,
@@ -114,12 +121,6 @@
 				});
 				deltaY += appState.gridSize;
 			}
-
-			//do the resize
-			width = snapToGrid(Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth)));
-			height = snapToGrid(Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight)));
-
-			RePosition();
 		}
 	}
 

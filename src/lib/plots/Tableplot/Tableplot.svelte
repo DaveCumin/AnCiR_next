@@ -132,6 +132,7 @@
 	Show columns:
 	<p>
 		<a
+			style="cursor: pointer;"
 			onclick={(e) => {
 				for (let i = 0; i < theData.showCol.length; i++) {
 					theData.showCol[i] = true;
@@ -140,6 +141,7 @@
 		>
 		|
 		<a
+			style="cursor: pointer;"
 			onclick={(e) => {
 				for (let i = 0; i < theData.showCol.length; i++) {
 					theData.showCol[i] = false;

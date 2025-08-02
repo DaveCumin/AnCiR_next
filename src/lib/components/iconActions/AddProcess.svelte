@@ -24,16 +24,17 @@
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
 		{#each appConsts.processMap.entries() as [key, value]}
-		<div class="dropdown-action">
-			<button
+			<div
+				class="dropdown-action"
 				onclick={() => {
 					showDropdown = false;
 					addTheProcess(key);
 				}}
 			>
-				{key}
-			</button>
-		</div>
+				<button>
+					{key}
+				</button>
+			</div>
 		{/each}
 	{/snippet}
 </Dropdown>

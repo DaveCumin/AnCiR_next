@@ -6,7 +6,8 @@
 			// console.log('selected col ' + value);
 		},
 		excludeColIds = [],
-		value = $bindable()
+		value = $bindable(),
+		multiple = false
 	} = $props();
 
 	//set up the values and labels for the data
@@ -36,9 +37,31 @@
 	}
 </script>
 
-<select name="columnSelect" onchange={(e) => onChange(e.target.value)} bind:value>
-	{#each Array.from(options.entries()) as [key, value]}
-		<option {value}>{key}</option>
-	{/each}
-	<!-- add in columns that are not in core.data but not core.tables -->
-</select>
+{#if multiple}
+	<select bind:value onchange={(e) => onChange(e.target.value)} multiple style="height: 200px">
+		{#each core.tables as table}
+			<optgroup label={table.name}>
+				{#each table.columns as col}
+					<option value={col.id}>{col.name}</option>
+				{/each}
+				<!-- include the tableProces data also -->
+				{#each table.processes as p}
+					{#each p.args.out as o}
+						{@const key = Object.keys(o)}
+						{#each key as k}
+							{@const col = getColumnById(o[k])}
+							<option value={col.id}>{col.name}</option>
+						{/each}
+					{/each}
+				{/each}
+			</optgroup>
+		{/each}
+	</select>
+{:else}
+	<select name="columnSelect" onchange={(e) => onChange(e.target.value)} bind:value>
+		{#each Array.from(options.entries()) as [key, value]}
+			<option {value}>{key}</option>
+		{/each}
+		<!-- add in columns that are not in core.data but not core.tables -->
+	</select>
+{/if}

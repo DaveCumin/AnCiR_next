@@ -10,6 +10,7 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import AttributeSelect from '$lib/components/reusables/AttributeSelect.svelte';
 	import { get } from 'svelte/store';
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 
 	let { showModal = $bindable(false) } = $props();
 
@@ -140,25 +141,7 @@
 			<div class="preview-placeholder">
 				<p>Alt-click to select multiple</p>
 				<span>ys:</span>
-				<select bind:value={yCols} multiple style="height: 100px">
-					{#each core.tables as table}
-						<optgroup label={table.name}>
-							{#each table.columns as col}
-								<option value={col.id}>{col.name}</option>
-							{/each}
-							<!-- include the tableProces data also -->
-							{#each table.processes as p}
-								{#each p.args.out as o}
-									{@const key = Object.keys(o)}
-									{#each key as k}
-										{@const col = getColumnById(o[k])}
-										<option value={col.id}>{col.name}</option>
-									{/each}
-								{/each}
-							{/each}
-						</optgroup>
-					{/each}
-				</select>
+				<ColumnSelector bind:value={yCols} multiple={true} />
 			</div>
 		</div>
 		{#if yCols[0] != null && xCol >= 0}

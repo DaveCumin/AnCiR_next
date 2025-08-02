@@ -15,6 +15,8 @@
 	let { p = $bindable() } = $props();
 	let result = $state();
 	function addcolumns() {
+		console.log('HERE:');
+		console.log($state.snapshot(p.args.xsIN));
 		if (!p.args.xsIN) return; //if there is no input yet
 		if (p.args.xsIN?.length == 0) {
 			result = [];
@@ -41,7 +43,6 @@
 		}
 	}
 
-	let choice = $state(-1);
 	onMount(() => {
 		//needed to get the values when it first mounts
 		addcolumns();
@@ -49,13 +50,16 @@
 </script>
 
 <p>Add:</p>
+<ColumnSelector
+	bind:value={p.args.xsIN}
+	onChange={() => {
+		addcolumns();
+	}}
+	multiple={true}
+/>
 {#each p.args.xsIN as _, i}
-	<ColumnSelector
-		bind:value={p.args.xsIN[i]}
-		onChange={() => {
-			addcolumns();
-		}}
-	/><button
+	<a>{getColumnById(p.args.xsIN[i]).name}</a>
+	<button
 		onclick={() => {
 			p.args.xsIN.splice(i, 1);
 			addcolumns();
@@ -65,16 +69,7 @@
 		<a>+</a>
 	{/if}
 {/each}
-<p>
-	Add new: <ColumnSelector
-		bind:value={choice}
-		onChange={(value) => {
-			p.args.xsIN.push(Number(value));
-			addcolumns();
-			choice = -1;
-		}}
-	/>
-</p>
+
 {#if p.args.valid && p.args.out.result == -1}
 	<p>Preview:</p>
 	<p>X: {result}</p>

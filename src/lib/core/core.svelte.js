@@ -31,7 +31,7 @@ export const appState = $state({
 	selectedPlotIds: [],
 
 	appColours: ['#0B090B', '#F8BFD4', '#787C3F', '#3B565E', '#E5A15E'],
-	showColourPicker: false,
+	showColourPicker: false
 });
 
 export const appConsts = $state({
@@ -86,8 +86,6 @@ export function pushObj(obj, autoPosition = true) {
 	} else if (obj instanceof Table) {
 		core.tables.push(obj);
 	} else if (obj instanceof Plot) {
-		console.log(obj);
-		console.log(autoPosition);
 		if (autoPosition) {
 			const pos = findNextAvailablePosition(core.plots);
 			obj.x = pos.x;

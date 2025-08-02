@@ -25,25 +25,29 @@
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
 		{#each ['svg', 'png', 'jpeg'] as type}
-			<div class="action">
-				{#if Id.length > 0}
-					<button
-						onclick={() => {
-							saveMultipleAsImage(Id, type);
-						}}
-					>
+			{#if Id.length > 0}
+				<div
+					class="action"
+					onclick={() => {
+						saveMultipleAsImage(Id, type);
+					}}
+				>
+					<button>
 						{type}
 					</button>
-				{:else}
-					<button
-						onclick={() => {
-							convertToImage(Id, type);
-						}}
-					>
+				</div>
+			{:else}
+				<div
+					class="action"
+					onclick={() => {
+						convertToImage(Id, type);
+					}}
+				>
+					<button>
 						{type}
 					</button>
-				{/if}
-			</div>
+				</div>
+			{/if}
 		{/each}
 	{/snippet}
 </Dropdown>

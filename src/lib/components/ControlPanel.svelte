@@ -73,7 +73,7 @@
 		class="icon newplotconstant"
 		style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
 			? appState.widthControlPanel
-			: 0}px + 15px); top: 15px;"
+			: 0}px + 5px); top: 15px;"
 		onclick={(e) => {
 			e.stopPropagation();
 			showNewPlotModalconst = true;
@@ -93,7 +93,7 @@
 	class="icon zoomout"
 	style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
 		? appState.widthControlPanel
-		: 0}px + 15px); bottom: 35px;"
+		: 0}px + 5px); bottom: 35px;"
 	onclick={(e) => {
 		e.stopPropagation();
 		appState.canvasScale -= 0.05;
@@ -106,7 +106,7 @@
 	class="icon zoomin"
 	style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
 		? appState.widthControlPanel
-		: 0}px + 15px); bottom: 10px;"
+		: 0}px + 5px); bottom: 10px;"
 	onclick={(e) => {
 		e.stopPropagation();
 		appState.canvasScale += 0.05;
