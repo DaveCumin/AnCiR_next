@@ -1,6 +1,5 @@
 <script>
 	// @ts-nocheck
-	import { simulateData, ImportData } from '$lib/data/dataTree.svelte';
 	import { core, pushObj, appConsts } from '$lib/core/core.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
 
