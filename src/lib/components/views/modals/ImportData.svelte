@@ -27,7 +27,8 @@
 	let parsedData = $state(null);
 	let errorInfile = $state(false);
 	let specialRecognised = $state(false);
-	let awaiting = $state(false);
+	let awaitingPreview = $state(false);
+	let awaitingLoad = $state(false);
 
 	let showImportModal = $state(false);
 	let fileInput = $state();
@@ -63,18 +64,18 @@
 	}
 
 	async function doPreview() {
-		awaiting = targetFile.size > 50_000_000 ? true : false; //only spinner if over 50Mb
+		awaitingPreview = targetFile.size > 50_000_000 ? true : false; //only spinner if over 50Mb; this shouldn't make much of a difference, because it's only going to read a few lines but better have it in case
 		await tick();
 		await parseFile();
-		awaiting = false;
+		awaitingPreview = false;
 		importReady = true; // Set only after parseFile fully resolves
 	}
 
 	async function confirmImport() {
-		awaiting = targetFile.size > 50_000_000 ? true : false; //only spinner if over 50Mb
+		awaitingLoad = targetFile.size > 500_000 ? true : false; //only spinner if over 500kb - low, because it's computationally expensive to convert and read in all
 		await tick();
 		await loadData();
-		awaiting = false;
+		awaitingLoad = false;
 		resetValues();
 		showImportModal = false;
 	}
@@ -278,8 +279,10 @@
 
 <Modal bind:showModal={showImportModal}>
 	{#snippet header()}
-		{#if awaiting}
+		{#if awaitingPreview}
 			<p>Importing data from {targetFile?.name ?? 'file'}.</p>
+		{:else if awaitingLoad}
+			<p>Loading data from {targetFile?.name ?? 'file'}.</p>
 		{:else}
 			<div class="heading">
 				<h2>Import Data</h2>
@@ -308,7 +311,7 @@
 	{/snippet}
 
 	{#snippet children()}
-		{#if !awaiting}
+		{#if !awaitingPreview && !awaitingLoad}
 			<div class="import-container">
 				<div class="preview-placeholder">
 					{#if parsedData && importReady}
@@ -342,7 +345,7 @@
 						>
 							<TableLayout {headers} data={Object.keys(parsedData).map((k) => parsedData[k])} />
 						</div>
-					{:else if !awaiting}
+					{:else if !awaitingPreview && !awaitingLoad}
 						<p>Choose file to preview data</p>
 					{/if}
 				</div>
@@ -352,7 +355,7 @@
 
 	{#snippet button()}
 		<div class="dialog-button-container">
-			{#if importReady && !awaiting}
+			{#if importReady && !awaitingPreview && !awaitingLoad}
 				<button class="dialog-button" onclick={confirmImport}>Confirm Import</button>
 			{/if}
 		</div>
