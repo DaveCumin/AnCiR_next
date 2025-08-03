@@ -543,7 +543,7 @@
 	details {
 		width: 100%;
 		min-width: 0;
-		
+
 		margin: 0.25rem 0.25rem 0.25rem 0.5rem;
 		padding: 0;
 	}
@@ -617,10 +617,10 @@
 	}
 
 	.display {
-		margin: 0.5rem 0;
+		margin: 0rem 0;
 	}
 
 	.process-container {
-		margin: 0.75rem 0 0.5rem 1rem;
+		margin: 0rem 0 0.5rem 1rem;
 	}
 </style>

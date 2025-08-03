@@ -22,7 +22,7 @@
 				p.parentCol.removeProcess(p.id);
 			}}
 		>
-			<Icon name="minus" width={16} height={16} className="control-component-icon" />
+			<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
 		</button>
 	</div>
 	<input type="number" bind:value={p.args.value} />
