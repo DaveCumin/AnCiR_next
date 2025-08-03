@@ -84,6 +84,7 @@
 
 	function rgbToHex({ r, g, b, a }) {
 		const toHex = (n) => Math.round(n).toString(16).padStart(2, '0');
+
 		return a < 1
 			? `#${toHex(r)}${toHex(g)}${toHex(b)}${toHex(a * 255)}`
 			: `#${toHex(r)}${toHex(g)}${toHex(b)}`;
@@ -126,7 +127,7 @@
 			h: Math.round(h * 360),
 			s: Math.round(s * 100),
 			v: Math.round(v * 100),
-			a: Math.round(a * 100)
+			a: Math.round(a)
 		};
 	}
 
@@ -149,7 +150,7 @@
 			r: Math.round((r + m) * 255),
 			g: Math.round((g + m) * 255),
 			b: Math.round((b + m) * 255),
-			a: Math.round(a / 100)
+			a: a / 100
 		};
 	}
 	function updateFromRgb() {
@@ -159,6 +160,8 @@
 	}
 
 	function updateFromHsv() {
+		console.log('update: ', hsvInput.a);
+
 		rgbInput = { ...hsvToRgb(hsvInput) };
 		hexInput = rgbToHex(rgbInput);
 		drawPicker();
