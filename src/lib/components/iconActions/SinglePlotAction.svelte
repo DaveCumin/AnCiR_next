@@ -1,9 +1,9 @@
 <script>
 	// @ts-nocheck
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
-	import SavePlot from './SavePlot.svelte';
 	import { core } from '$lib/core/core.svelte';
 	import { removePlot } from '$lib/core/Plot.svelte';
+	import { convertToImage, saveMultipleAsImage } from '$lib/components/plotbits/helpers/save.js';
 
 	let {
 		showDropdown = $bindable(false),
@@ -11,51 +11,68 @@
 		dropdownLeft = 0,
 		plotId = $bindable(null)
 	} = $props();
-	let showModal = $state(false);
 
-	//child item - Save
-	let showSavePlot = $state(false);
-	let dropdownTop_child = $derived(dropdownTop + 5);
-	let dropdownLeft_child = $derived(dropdownLeft + 200);
+	function handleSaveAction(type) {
+		const Id = 'plot' + plotId;
+		if (Id.length > 0) {
+			saveMultipleAsImage(Id, type);
+		} else {
+			convertToImage(Id, type);
+		}
+		showDropdown = false;
+	}
 
-	let keepopen = $state(true);
-	function closeAll() {
-		showSavePlot = false;
-		//TODO: need to keep this open if it was a mouseleave, not a click... the SavePlot doesn't distinguish
+	function handleDeleteAction() {
+		removePlot(plotId);
 		showDropdown = false;
 	}
 </script>
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
-	{#snippet groups()}
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
+	{#snippet groups({ showSubmenu, hideSubmenu, keepSubmenuOpen, activeSubmenu, closeDropdown })}
+		<!-- Save option with submenu -->
 		<div
-			class="dropdown-action"
-			onmouseover={(e) => {
-				showSavePlot = true;
-			}}
+			class="dropdown-item has-submenu"
+			onmouseenter={() => showSubmenu('save')}
+			onmouseleave={() => hideSubmenu('save')}
 		>
-			<button> Save </button>
+			<button>Save</button>
+
+			{#if activeSubmenu === 'save'}
+				<div
+					style="top:{dropdownTop + 5``}px; left:{dropdownLeft + 200}px;"
+					class="submenu"
+					onmouseenter={() => keepSubmenuOpen('save')}
+					onmouseleave={() => hideSubmenu('save', 100)}
+				>
+					{#each ['svg', 'png', 'jpeg'] as type}
+						<div class="dropdown-item" onclick={handleSaveAction}>
+							<button>
+								{type.toUpperCase()}
+							</button>
+						</div>
+					{/each}
+				</div>
+			{/if}
 		</div>
 
-		<div
-			class="dropdown-action"
-			onclick={() => removePlot(plotId)}
-			onmouseover={(e) => {
-				console.log('over delete');
-				showSavePlot = false;
-			}}
-		>
-			<button> Delete </button>
+		<!-- Delete option -->
+		<div class="dropdown-item" onclick={handleDeleteAction}>
+			<button>Delete</button>
 		</div>
 	{/snippet}
 </Dropdown>
 
-<SavePlot
-	bind:showDropdown={showSavePlot}
-	dropdownTop={dropdownTop_child}
-	dropdownLeft={dropdownLeft_child}
-	Id={'plot' + plotId}
-	on:Closed={closeAll}
-	on:mouseOut={() => (showSavePlot = false)}
-/>
+<style>
+	button {
+		background-color: transparent;
+		border: none;
+		text-align: inherit;
+		font: inherit;
+		border-radius: 0;
+		appearance: none;
+		cursor: pointer;
+		width: 100%;
+		padding: 0;
+	}
+</style>

@@ -7,8 +7,6 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 
-	import { createEventDispatcher } from 'svelte';
-
 	import { convertToImage, saveMultipleAsImage } from '$lib/components/plotbits/helpers/save.js';
 
 	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0, Id } = $props();
@@ -22,23 +20,9 @@
 		showModal = true;
 		plotType = type;
 	}
-	const dispatch = createEventDispatcher();
-	$effect(() => {
-		if (!showDropdown) {
-			dispatch('Closed');
-		}
-	});
 </script>
 
-<Dropdown
-	bind:showDropdown
-	top={dropdownTop}
-	left={dropdownLeft}
-	on:mouseOut={() => {
-		showDropdown = false;
-		dispatch('mouseOut');
-	}}
->
+<Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
 		{#each ['svg', 'png', 'jpeg'] as type}
 			{#if Id.length > 0}
