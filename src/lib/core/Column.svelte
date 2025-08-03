@@ -456,8 +456,10 @@
 <style>
 	.data-collapsible-title-container {
 		width: 100%;
+		min-width: 0; 
 
 		display: flex;
+		flex: 1 1 0;
 		flex-direction: row;
 		align-items: center;
 		justify-content: flex-start;
@@ -507,9 +509,11 @@
 
 	.clps-container {
 		display: flex;
+		flex: 1 1 0;
 		position: relative;
 
 		width: 100%;
+		min-width: 0;
 
 		border-radius: 4px;
 
@@ -522,22 +526,36 @@
 
 	.clps-content-container {
 		width: calc(100% - 1.5rem + 6px);
+		min-width: 0;
+
 		margin: 0 0 0 1rem;
 		padding: 0;
+
+		display: flex;
+		flex-direction: column;
+		flex: 1 1 0;
+	}
+
+	.clps-title {
+		min-width: 0; 
 	}
 
 	details {
 		width: 100%;
+		min-width: 0;
+		
 		margin: 0.25rem 0.25rem 0.25rem 0.5rem;
 		padding: 0;
 	}
 
 	summary {
 		width: 100%;
+		min-width: 0;
 
 		list-style: none;
 
 		display: flex;
+		flex: 1 1 0;
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-between;
