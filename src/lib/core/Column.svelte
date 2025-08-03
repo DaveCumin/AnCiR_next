@@ -319,9 +319,7 @@
 		const rect = event.currentTarget.getBoundingClientRect();
 		dropdownTop = rect.top + window.scrollY;
 		dropdownLeft = rect.right + window.scrollX + 12;
-		requestAnimationFrame(() => {
-			showAddProcess = true;
-		});
+		showAddProcess = true;
 
 		openClps[id] = true;
 	}
@@ -344,29 +342,25 @@
 	}
 
 	let inputRef = $state();
-
 </script>
 
 {#if col == undefined}
 	<p>Column is undefined</p>
 {:else}
 	<div class="clps-container">
-		<details
-			class="clps-item"
-			bind:open={openClps[col.id]}
-		>
+		<details class="clps-item" bind:open={openClps[col.id]}>
 			<summary
 				class="clps-title-container"
-						onclick={(e) => {
-						e.stopPropagation();
-						toggleClps(col.id);
-			}}
+				onclick={(e) => {
+					e.stopPropagation();
+					toggleClps(col.id);
+				}}
 			>
 				<div class="column-indicator"></div>
 				{#if canChange}
 					<ColumnSelector bind:value={col.refId} />
 				{/if}
-	
+
 				<div class="clps-title">
 					<TypeSelector bind:value={col.type} />
 					<p>
@@ -374,30 +368,33 @@
 							bind:this={inputRef}
 							bind:value={col.name}
 							readonly={!isEditable}
-							{...(!isEditable ? { tabindex: -1 } : {})}
+							{...!isEditable ? { tabindex: -1 } : {}}
 							ondblclick={(e) => {
 								e.stopPropagation();
 								enableEdit();
 							}}
 							onclick={(e) => {
 								if (!isEditable) {
-								e.stopPropagation();
-								const summaryEl = e.target.closest('summary');
-								summaryEl?.click();
+									e.stopPropagation();
+									const summaryEl = e.target.closest('summary');
+									summaryEl?.click();
 								}
 							}}
 							onblur={() => (isEditable = false)}
 						/>
 					</p>
 				</div>
-				
+
 				<div class="clps-title-button">
-					<button class="icon" onclick={(e) => {
-						e.stopPropagation();
-						toggleMenu(col.id);
-						openDropdown(e, col.id);
-					}}>
-						<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon"/>
+					<button
+						class="icon"
+						onclick={(e) => {
+							e.stopPropagation();
+							toggleMenu(col.id);
+							openDropdown(e, col.id);
+						}}
+					>
+						<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" />
 					</button>
 					{#if openClps[col.id]}
 						<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />
@@ -407,32 +404,30 @@
 				</div>
 			</summary>
 
-			
-			
 			<div class="clps-content-container">
 				<div class="data-component-info">
 					{#if !col.isReferencial()}
-					<italic><p>{col.provenance}</p></italic>
+						<italic><p>{col.provenance}</p></italic>
 					{:else}
-					<italic><p>primary source</p></italic>
-					<!-- TODO: check with DC how to name-->
+						<italic><p>primary source</p></italic>
+						<!-- TODO: check with DC how to name-->
 					{/if}
 				</div>
-				
+
 				<div class="line"></div>
-	
+
 				<!-- {#if col.type == 'number'}[{Math.min(...col.getData())},{Math.max(...col.getData())}]{/if} -->
 				{#if col.type == 'time'}
-				<div class="control-input display">
-					<p>Time Format</p>
-					{#if !canChange}
-						<input bind:value={col.timeFormat} />
-					{:else}
-						{getColumnById(col.refId)?.timeFormat}
-					{/if}
-				</div>
+					<div class="control-input display">
+						<p>Time Format</p>
+						{#if !canChange}
+							<input bind:value={col.timeFormat} />
+						{:else}
+							{getColumnById(col.refId)?.timeFormat}
+						{/if}
+					</div>
 				{/if}
-				
+
 				<!-- TODO: icon unclickable -->
 				<div class="process-container">
 					{#each col.processes as p}
@@ -475,7 +470,7 @@
 		font-size: 12px;
 		text-align: left;
 		color: var(--color-lightness-35);
-		
+
 		margin: 0;
 		padding: 0;
 	}
@@ -515,7 +510,7 @@
 		position: relative;
 
 		width: 100%;
-		
+
 		border-radius: 4px;
 
 		margin: 0.25rem 0;
@@ -527,7 +522,7 @@
 
 	.clps-content-container {
 		width: calc(100% - 1.5rem + 6px);
-		margin: 0 0 0 1.0rem;
+		margin: 0 0 0 1rem;
 		padding: 0;
 	}
 
@@ -588,13 +583,13 @@
 
 		padding: 0.2rem 0.5rem;
 		background-color: transparent;
-		
+
 		font-size: 14px;
 		font-weight: lighter;
 
 		border: solid 1px transparent;
 		border-radius: 2px;
-		
+
 		transition: border-color 0.2s;
 	}
 
@@ -608,7 +603,6 @@
 	}
 
 	.process-container {
-		margin: 0.75rem 0 0.5rem 1.0rem;
+		margin: 0.75rem 0 0.5rem 1rem;
 	}
-
 </style>

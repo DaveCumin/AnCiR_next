@@ -29,9 +29,7 @@
 	function openDropdown(e) {
 		e.stopPropagation();
 		setDropdownPositionFromEvent(e);
-		requestAnimationFrame(() => {
-			showAddTable = true;
-		});
+		showAddTable = true;
 	}
 
 	let showNewCol = $state(false);
@@ -47,9 +45,7 @@
 	function openSingleTableDropdown(e, id) {
 		selectedTable = id;
 		setDropdownPositionFromEvent(e);
-		requestAnimationFrame(() => {
-			showSingleTableDropdown = true;
-		});
+		showSingleTableDropdown = true;
 	}
 
 	let openClps = $state({});

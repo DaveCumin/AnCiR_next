@@ -24,9 +24,8 @@
 
 	function openDropdown() {
 		recalculateDropdownPosition();
-		requestAnimationFrame(() => {
-			showSetting = true;
-		});
+		showSetting = true;
+
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
 

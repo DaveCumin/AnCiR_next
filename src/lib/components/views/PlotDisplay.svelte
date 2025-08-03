@@ -24,9 +24,8 @@
 	function openDropdown(e) {
 		e.stopPropagation();
 		recalculateDropdownPosition();
-		requestAnimationFrame(() => {
-			showAddTable = true;
-		});
+		showAddTable = true;
+
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
 

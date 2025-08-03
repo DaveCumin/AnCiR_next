@@ -1,12 +1,14 @@
 <script>
-	let { showDropdown = $bindable(), top = 0, left = 0, groups } = $props();
+	import { createEventDispatcher } from 'svelte';
 
+	const dispatch = createEventDispatcher();
+
+	let { showDropdown = $bindable(), top = 0, left = 0, groups } = $props();
 	let dialog = $state();
 
 	$effect(() => {
 		if (showDropdown && !dialog.open) {
-			dialog.showModal(); // dialog function
-			//move it to be within the page
+			dialog.showModal();
 			const rect = dialog.getBoundingClientRect();
 			const padding = 10;
 			if (rect.right > window.innerWidth - padding) {
@@ -30,9 +32,7 @@
 {#if showDropdown}
 	<dialog
 		bind:this={dialog}
-		onclose={() => {
-			showDropdown = false;
-		}}
+		onclose={() => (showDropdown = false)}
 		style={`top: ${top}px; left: ${left}px`}
 		onclick={(e) => {
 			e.stopPropagation();
@@ -40,8 +40,12 @@
 		}}
 	>
 		<div>
-			<!-- svelte-ignore a11y_autofocus -->
-			<div class="group">
+			<div
+				class="group"
+				onmouseleave={(e) => {
+					dispatch('mouseOut', e);
+				}}
+			>
 				{@render groups?.()}
 			</div>
 		</div>

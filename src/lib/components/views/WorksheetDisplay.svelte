@@ -4,12 +4,27 @@
 	import { core } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddPlot from '../iconActions/AddPlot.svelte';
+	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
+	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 
 	let addBtnRef;
 	let showAddPlot = $state(false);
 	let dropdownTop = $state(0);
 	let dropdownLeft = $state(0);
 	let draggedIndex = $state(null);
+
+	let showSinglePlotDropdown = $state(false);
+	let selectedPlot = $state(null);
+	function openSinglePlotDropdown(e, id) {
+		selectedPlot = id;
+		setDropdownPositionFromEvent(e);
+		showSinglePlotDropdown = true;
+	}
+	function setDropdownPositionFromEvent(e) {
+		const rect = e.currentTarget.getBoundingClientRect();
+		dropdownTop = rect.top + window.scrollY;
+		dropdownLeft = rect.right + window.scrollX + 12;
+	}
 
 	function recalculateDropdownPosition() {
 		if (!addBtnRef) return;
@@ -78,43 +93,52 @@
 
 <div class="display-list">
 	{#each core.plots.toReversed() as plot, i (plot.id)}
-	<div class="clps-container">
-		<details
-			draggable="true"
-			ondragstart={() => handleDragStart(i)}
-			ondragover={handleDragOver}
-			ondrop={() => handleDrop(i)}
-		>
-			<summary
-				class="clps-title-container"
-				onclick={(e) => {
-					e.stopPropagation();
-					toggleClps(plot.id);
-				}}
+		<div class="clps-container">
+			<details
+				draggable="true"
+				ondragstart={() => handleDragStart(i)}
+				ondragover={handleDragOver}
+				ondrop={() => handleDrop(i)}
 			>
-				<div class="clps-title">
-					<p>{plot.name}</p>
-				</div>
-				
-				<div class="clps-title-button">
-					<button class="icon" onclick={(e) => {
+				<summary
+					class="clps-title-container"
+					onclick={(e) => {
 						e.stopPropagation();
-						toggleMenu(plot.id)
-					}}>
-						<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon"/>
-					</button>
-					{#if openClps[plot.id]}
-						<Icon name="caret-down" width={20} height={20} className="static-icon" />
-					{:else}
-						<Icon name="caret-right" width={20} height={20} className="static-icon" />
-					{/if}
-				</div>
-				
-			</summary>
-		</details>
-	</div>
+						toggleClps(plot.id);
+					}}
+				>
+					<div class="clps-title">
+						<p>{plot.name}</p>
+					</div>
+
+					<div class="clps-title-button">
+						<button
+							class="icon"
+							onclick={(e) => {
+								e.stopPropagation();
+								openSinglePlotDropdown(e, plot.id);
+							}}
+						>
+							<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" />
+						</button>
+						{#if openClps[plot.id]}
+							<Icon name="caret-down" width={20} height={20} className="static-icon" />
+						{:else}
+							<Icon name="caret-right" width={20} height={20} className="static-icon" />
+						{/if}
+					</div>
+				</summary>
+			</details>
+		</div>
 	{/each}
 </div>
+
+<SinglePlotAction
+	bind:showDropdown={showSinglePlotDropdown}
+	{dropdownTop}
+	{dropdownLeft}
+	plotId={selectedPlot}
+/>
 
 <style>
 	.heading {

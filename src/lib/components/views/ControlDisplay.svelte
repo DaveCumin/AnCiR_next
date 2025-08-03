@@ -98,9 +98,8 @@
 
 	function openDropdown() {
 		recalculateDropdownPosition();
-		requestAnimationFrame(() => {
-			showSavePlot = true;
-		});
+		showSavePlot = true;
+
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
 

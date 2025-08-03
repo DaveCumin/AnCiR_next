@@ -36,9 +36,7 @@
 		left = rect.left;
 
 		recalculateDropdownPosition();
-		requestAnimationFrame(() => {
-			showDropdown = true;
-		});
+		showDropdown = true;
 	}
 
 	function selectOption(e, option) {
@@ -51,36 +49,34 @@
 
 <div class="type-selector" onclick={toggleDropdown}>
 	<div class="type-selector">
-    {#if (value)}
-        {@const iconName = options.find((o) => o.value === value).icon}
-        <button class="icon" onclick={(e) => toggleDropdown(e)}>
-            {#key iconName}
-			<Icon name={iconName} width={16} height={16} className="control-component-icon"/>
-			{/key}
-        </button>
+		{#if value}
+			{@const iconName = options.find((o) => o.value === value).icon}
+			<button class="icon" onclick={(e) => toggleDropdown(e)}>
+				{#key iconName}
+					<Icon name={iconName} width={16} height={16} className="control-component-icon" />
+				{/key}
+			</button>
 
-        {#if open}
-            <Dropdown bind:showDropdown={showDropdown} top={top} left={left}>
-                {#snippet groups()}
-                    {#each options as option}
-                        <div
-							class="option dropdown-action"
-                            class:selected={option.value === value}
-                            onclick={() => selectOption(option)}
-                        >
-                            <button class="icon">
-                                <Icon name={option.icon} width={14} height={14} />
-                            </button>
-                            <span>{option.label}</span>
-                        </div>
-                    {/each}
-                {/snippet}
-            </Dropdown>
-        {/if}
-
-    {/if}
-    </div>
-
+			{#if open}
+				<Dropdown bind:showDropdown {top} {left}>
+					{#snippet groups()}
+						{#each options as option}
+							<div
+								class="option dropdown-action"
+								class:selected={option.value === value}
+								onclick={() => selectOption(option)}
+							>
+								<button class="icon">
+									<Icon name={option.icon} width={14} height={14} />
+								</button>
+								<span>{option.label}</span>
+							</div>
+						{/each}
+					{/snippet}
+				</Dropdown>
+			{/if}
+		{/if}
+	</div>
 </div>
 
 <style>
