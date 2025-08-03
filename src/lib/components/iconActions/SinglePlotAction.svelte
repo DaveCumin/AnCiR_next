@@ -12,54 +12,82 @@
 		plotId = $bindable(null)
 	} = $props();
 
-	function handleSaveAction(type) {
+	let saveMenuItem = $state();
+	let activeSubmenu = $state(null);
+
+	function handleSaveAction(type, closeDropdown) {
 		const Id = 'plot' + plotId;
 		if (Id.length > 0) {
 			saveMultipleAsImage(Id, type);
 		} else {
 			convertToImage(Id, type);
 		}
-		showDropdown = false;
+		closeDropdown();
 	}
 
-	function handleDeleteAction() {
+	function handleDeleteAction(closeDropdown) {
 		removePlot(plotId);
-		showDropdown = false;
+		closeDropdown();
 	}
+
+	// Clean up when dropdown closes
+	$effect(() => {
+		if (!showDropdown) {
+			activeSubmenu = null;
+		}
+	});
 </script>
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
-	{#snippet groups({ showSubmenu, hideSubmenu, keepSubmenuOpen, activeSubmenu, closeDropdown })}
+	{#snippet groups({
+		showSubmenu,
+		hideSubmenu,
+		keepSubmenuOpen,
+		activeSubmenu: dropdownActiveSubmenu,
+		closeDropdown
+	})}
 		<!-- Save option with submenu -->
 		<div
 			class="dropdown-item has-submenu"
+			bind:this={saveMenuItem}
 			onmouseenter={() => showSubmenu('save')}
-			onmouseleave={() => hideSubmenu('save')}
+			onmouseleave={() => hideSubmenu('save', 150)}
 		>
 			<button>Save</button>
-
-			{#if activeSubmenu === 'save'}
-				<div
-					style="top:{dropdownTop + 5``}px; left:{dropdownLeft + 200}px;"
-					class="submenu"
-					onmouseenter={() => keepSubmenuOpen('save')}
-					onmouseleave={() => hideSubmenu('save', 100)}
-				>
-					{#each ['svg', 'png', 'jpeg'] as type}
-						<div class="dropdown-item" onclick={handleSaveAction}>
-							<button>
-								{type.toUpperCase()}
-							</button>
-						</div>
-					{/each}
-				</div>
-			{/if}
 		</div>
 
 		<!-- Delete option -->
-		<div class="dropdown-item" onclick={handleDeleteAction}>
+		<div
+			class="dropdown-item"
+			onclick={() => handleDeleteAction(closeDropdown)}
+			onmouseenter={() => hideSubmenu('save', 0)}
+		>
 			<button>Delete</button>
 		</div>
+
+		<!-- Submenu for Save -->
+		{#if dropdownActiveSubmenu === 'save' && saveMenuItem}
+			{@const position = { top: saveMenuItem.offsetTop, left: saveMenuItem.offsetLeft }}
+			<!-- Bridge element to cover gap -->
+			<div
+				class="submenu-bridge"
+				style="top: {dropdownTop}px; left: {dropdownLeft +
+					200}px; width: 5px; height: {saveMenuItem.getBoundingClientRect().height}px;"
+				onmouseenter={() => keepSubmenuOpen('save')}
+			></div>
+			<div
+				class="submenu"
+				style="top: {dropdownTop}px; left: {dropdownLeft + 200}px;"
+				onmouseenter={() => keepSubmenuOpen('save')}
+				onmouseleave={() => hideSubmenu('save', 150)}
+			>
+				{#each ['svg', 'png', 'jpeg'] as type}
+					<button class="submenu-item" onclick={() => handleSaveAction(type, closeDropdown)}>
+						{type.toUpperCase()}
+					</button>
+				{/each}
+			</div>
+		{/if}
 	{/snippet}
 </Dropdown>
 
@@ -74,5 +102,41 @@
 		cursor: pointer;
 		width: 100%;
 		padding: 0;
+	}
+
+	.submenu-bridge {
+		position: fixed;
+		background: transparent;
+		z-index: 1002; /* Above dialog and submenu */
+		pointer-events: auto;
+	}
+
+	.submenu {
+		position: fixed;
+		min-width: 150px;
+		background-color: white;
+		border-radius: 4px;
+		border: 1px solid var(--color-lightness-85);
+		box-shadow:
+			0 4px 8px 0 var(--color-lightness-85),
+			0 6px 10px 0 var(--color-lightness-95);
+		z-index: 1001; /* Above dialog */
+		padding: 0;
+	}
+
+	.submenu-item {
+		display: block;
+		padding: 0.6em;
+		cursor: pointer;
+		border: none;
+		background: transparent;
+		text-align: left;
+		font: inherit;
+		width: 100%;
+		font-size: 14px;
+	}
+
+	.submenu-item:hover {
+		background-color: var(--color-lightness-95);
 	}
 </style>

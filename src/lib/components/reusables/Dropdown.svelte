@@ -1,19 +1,8 @@
 <script>
-	import { createEventDispatcher } from 'svelte';
-
-	let {
-		showDropdown = $bindable(),
-		top = 0,
-		left = 0,
-		groups,
-		parentDropdown = null // Reference to parent dropdown for nesting
-	} = $props();
-
+	let { showDropdown = $bindable(), top = 0, left = 0, groups } = $props();
 	let dialog = $state();
 	let activeSubmenu = $state(null);
 	let submenuTimeouts = new Map();
-
-	const dispatch = createEventDispatcher();
 
 	$effect(() => {
 		if (showDropdown && !dialog?.open) {
@@ -31,15 +20,12 @@
 		const rect = dialog.getBoundingClientRect();
 		const padding = 10;
 
-		// Adjust horizontal position
 		if (rect.right > window.innerWidth - padding) {
 			left = window.innerWidth - rect.width - padding;
 		}
 		if (rect.left < 0) {
 			left = 0;
 		}
-
-		// Adjust vertical position
 		if (rect.bottom > window.innerHeight - padding) {
 			top = window.innerHeight - rect.height - padding;
 		}
@@ -49,26 +35,11 @@
 	}
 
 	function showSubmenu(submenuId, event) {
-		// Clear any existing timeout for this submenu
 		if (submenuTimeouts.has(submenuId)) {
 			clearTimeout(submenuTimeouts.get(submenuId));
 			submenuTimeouts.delete(submenuId);
 		}
-
 		activeSubmenu = submenuId;
-	}
-
-	function getSubmenuPosition(element) {
-		if (!element) return { top: 0, left: 0 };
-
-		const rect = element.getBoundingClientRect();
-		const submenuLeft = rect.right + 5; // Small gap from parent
-		const submenuTop = rect.top;
-
-		return {
-			top: submenuTop,
-			left: submenuLeft
-		};
 	}
 
 	function hideSubmenu(submenuId, delay = 200) {
@@ -78,7 +49,6 @@
 			}
 			submenuTimeouts.delete(submenuId);
 		}, delay);
-
 		submenuTimeouts.set(submenuId, timeoutId);
 	}
 
@@ -91,7 +61,6 @@
 
 	function closeDropdown() {
 		showDropdown = false;
-		dispatch('close');
 	}
 </script>
 
@@ -113,8 +82,7 @@
 				hideSubmenu,
 				keepSubmenuOpen,
 				activeSubmenu,
-				closeDropdown,
-				getSubmenuPosition
+				closeDropdown
 			})}
 		</div>
 	</dialog>
@@ -122,7 +90,7 @@
 
 <style>
 	dialog {
-		z-index: 999;
+		z-index: 1000;
 		width: 200px;
 		display: flex;
 		flex-direction: column;
@@ -138,7 +106,7 @@
 	}
 
 	dialog::backdrop {
-		background: rgba(255, 255, 255, 0);
+		background: transparent;
 	}
 
 	.dropdown-content {
@@ -167,6 +135,7 @@
 	:global(.dropdown-item.has-submenu::after) {
 		content: '▶';
 		font-size: 0.8em;
+		color: #666;
 	}
 
 	:global(.submenu) {
@@ -178,7 +147,7 @@
 		box-shadow:
 			0 4px 8px 0 var(--color-lightness-85),
 			0 6px 10px 0 var(--color-lightness-95);
-		z-index: 1001;
+		z-index: 1001; /* Above dialog */
 	}
 
 	:global(.submenu-item) {
