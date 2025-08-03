@@ -689,7 +689,7 @@
 	:global(.process) {
 		width: 100%;
 		flex: 1 1 0;
-		margin: 1rem 0;
+		margin: 0;
 	}
 
 	:global(.process-title) {

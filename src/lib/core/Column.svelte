@@ -431,9 +431,10 @@
 				<!-- TODO: icon unclickable -->
 				<div class="process-container">
 					{#each col.processes as p}
-						{#key p.id}
-							<!-- Force the refresh when a process is added or removed (mostly the latter)-->
-							<div class="single-process-container">
+					{#key p.id}
+					<!-- Force the refresh when a process is added or removed (mostly the latter)-->
+						<div class="single-process-container">
+								<div class="column-indicator"></div>
 								<Processcomponent {p} />
 							</div>
 						{/key}
@@ -617,10 +618,22 @@
 	}
 
 	.display {
-		margin: 0rem 0;
+		margin: 0;
 	}
 
 	.process-container {
-		margin: 0rem 0 0.5rem 1rem;
+		display: flex;
+		flex-direction: column;
+		margin: 0;
+		gap: 0.5rem;
+	}
+
+	.single-process-container {
+		position: relative; /* new */
+		padding-left: 0.75rem;
+		display: flex;
+		align-items: center;
+
+		margin: 0;
 	}
 </style>
