@@ -64,7 +64,7 @@
 							<div
 								class="option dropdown-action"
 								class:selected={option.value === value}
-								onclick={() => selectOption(option)}
+								onclick={(e) => selectOption(e, option)}
 							>
 								<button class="icon">
 									<Icon name={option.icon} width={14} height={14} />
