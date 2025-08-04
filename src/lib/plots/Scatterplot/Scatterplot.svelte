@@ -296,7 +296,8 @@
 						}}
 					/>
 				</div>
-				{#if theData.ylimsIN[0] || theData.ylimsIN[1]}
+
+				{#if theData.ylimsIN[0] != null || theData.ylimsIN[1] != null}
 					<div class="control-component-input-icons">
 						<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
 							<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
@@ -374,11 +375,13 @@
 						/>
 					</div>
 				{/if}
-				<div class="control-component-input-icons">
-					<button class="icon" onclick={() => (theData.xlimsIN = [null, null])}>
-						<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
-					</button>
-				</div>
+				{#if theData.xlimsIN[0] != null || theData.xlimsIN[1] != null}
+					<div class="control-component-input-icons">
+						<button class="icon" onclick={() => (theData.xlimsIN = [null, null])}>
+							<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
+						</button>
+					</div>
+				{/if}
 			</div>
 		</div>
 	{:else if appState.currentControlTab === 'data'}
