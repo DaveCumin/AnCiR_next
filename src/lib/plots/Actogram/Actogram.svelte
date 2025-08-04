@@ -65,9 +65,11 @@
 					}
 				}
 			}
+			console.log(yByPeriod);
 
 			return { xByPeriod, yByPeriod };
 		});
+
 		phaseMarkers = $state([]);
 
 		constructor(parent, dataIN) {
@@ -168,20 +170,50 @@
 			return Ndays;
 		});
 
-		ylimsIN = $state([null, null]);
+		ylimsOption = $state('byperiod');
+		ylimsIN = $state([0, 100]);
+		// make ylims and array of arrays (each period of each data)
 		ylims = $derived.by(() => {
 			if (this.data.length === 0) {
 				return [0, 0];
 			}
 
-			let ymin = Infinity;
-			let ymax = -Infinity;
-			this.data.forEach((d, i) => {
-				let tempy = this.data[i].y.getData() ?? [];
-				ymin = Math.min(ymin, min(tempy));
-				ymax = Math.max(ymax, max(tempy));
-			});
-			return [this.ylimsIN[0] ? this.ylimsIN[0] : ymin, this.ylimsIN[1] ? this.ylimsIN[1] : ymax];
+			let ylims_out = Array.from({ length: this.data.length }, () =>
+				Array.from({ length: this.Ndays }, () => Array.from({ length: 2 }, () => 0))
+			);
+			// Calculate the lims for each period
+			if (this.ylimsOption == 'byperiod') {
+				this.data.forEach((d, i) => {
+					for (let k = 0; k < this.Ndays; k++) {
+						ylims_out[i][k] = [
+							min(getNdataByPeriods(d.dataByDays.yByPeriod, k, k + this.doublePlot, 0)),
+							max(getNdataByPeriods(d.dataByDays.yByPeriod, k, k + this.doublePlot, 0))
+						];
+					}
+					// Object.keys(d.dataByDays.yByPeriod).forEach((key, k) => {
+					// 	ylims_out[i][k] = [min(d.dataByDays.yByPeriod[key]), max(d.dataByDays.yByPeriod[key])];
+					// });
+				});
+			}
+			//caluclate the lims for the data, each to their own
+			else if (this.ylimsOption == 'overall') {
+				this.data.forEach((d, i) => {
+					const minmax = [min(d.y.getData()), max(d.y.getData())];
+					for (let k = 0; k < this.Ndays; k++) {
+						ylims_out[i][k] = minmax;
+					}
+				});
+			}
+			//else, just use the ylimsIN
+			else if (this.ylimsOption == 'manual') {
+				this.data.forEach((d, i) => {
+					for (let k = 0; k < this.Ndays; k++) {
+						ylims_out[i][k] = [this.ylimsIN[0], this.ylimsIN[1]];
+					}
+				});
+			}
+
+			return ylims_out;
 		});
 
 		constructor(parent, dataIN) {
@@ -215,6 +247,7 @@
 
 		toJSON() {
 			return {
+				ylimsOption: this.ylimsOption,
 				ylimsIN: this.ylimsIN,
 				paddingIN: this.paddingIN,
 				doublePlot: this.doublePlot,
@@ -229,6 +262,7 @@
 			}
 			const actogram = new Actogramclass(parent, null);
 			actogram.paddingIN = json.paddingIN;
+			actogram.ylimsOption = json.ylimsOption;
 			actogram.ylimsIN = json.ylimsIN;
 			actogram.doublePlot = json.doublePlot;
 			actogram.periodHrs = json.periodHrs;
@@ -248,8 +282,6 @@
 
 <script>
 	import { appState } from '$lib/core/core.svelte';
-
-	import Icon from '$lib/icons/Icon.svelte';
 
 	let { theData, which } = $props();
 
@@ -378,13 +410,20 @@
 		<div class="control-component">
 			<div class="control-component-title">
 				<p>Y-lims</p>
-				<div class="control-component-title-icons">
-					<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
-						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
-					</button>
+			</div>
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Scale Y-axis:</p>
+					<select bind:value={theData.ylimsOption}
+						><option value="overall">Overall</option>
+						<option value="byperiod">By Periods</option>
+						<option value="manual">Manual</option></select
+					>
 				</div>
 			</div>
+		</div>
 
+		{#if theData.ylimsOption == 'manual'}
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Min</p>
@@ -410,7 +449,7 @@
 					/>
 				</div>
 			</div>
-		</div>
+		{/if}
 	{:else if appState.currentControlTab === 'data'}
 		<div>
 			<p>Data:</p>
@@ -472,7 +511,7 @@
 			gridlines={false}
 		/>
 
-		{#each theData.plot.data as datum}
+		{#each theData.plot.data as datum, d}
 			<g
 				class="actogram"
 				style="transform: translate({theData.plot.padding.left}px, {theData.plot.padding.top}px);"
@@ -491,7 +530,7 @@
 							.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
 							.range([0, theData.plot.plotwidth])}
 						yscale={scaleLinear()
-							.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+							.domain([theData.plot.ylims[d][day][0], theData.plot.ylims[d][day][1]])
 							.range([theData.plot.eachplotheight, 0])}
 						colour={datum.colour}
 						yoffset={day * theData.plot.spaceBetween + day * theData.plot.eachplotheight}
