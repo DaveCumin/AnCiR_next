@@ -9,6 +9,7 @@
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
+	import Annotation, { AnnotationClass } from './Annotation.svelte';
 
 	import { scaleLinear } from 'd3-scale';
 	import { makeSeqArray, max, min } from '$lib/components/plotBits/helpers/wrangleData';
@@ -63,8 +64,6 @@
 					}
 				}
 			}
-			console.log(yByPeriod);
-
 			return { xByPeriod, yByPeriod };
 		});
 
@@ -117,6 +116,7 @@
 	export class Actogramclass {
 		parentBox = $state();
 		data = $state([]);
+		annotations = $state([]);
 		isAddingMarkerTo = $state(-1);
 		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 20 });
 		padding = $derived.by(() => {
@@ -241,6 +241,10 @@
 					}
 				}
 			}
+		}
+
+		addAnnotation() {
+			this.annotations.push(new AnnotationClass(this));
 		}
 
 		toJSON() {
@@ -480,6 +484,10 @@
 				{/each}
 			{/each}
 		</div>
+		<p>Annotations:<button onclick={() => theData.addAnnotation()}>+</button></p>
+		{#each theData.annotations as annotation}
+			<Annotation {which} {annotation} />
+		{/each}
 	{/if}
 {/snippet}
 
@@ -538,6 +546,10 @@
 			{#each datum.phaseMarkers as marker}
 				<PhaseMarker {which} {marker} />
 			{/each}
+		{/each}
+		<!-- THE ANNOTATIONS -->
+		{#each theData.plot.annotations as annotation}
+			<Annotation {which} {annotation} />
 		{/each}
 	</svg>
 {/snippet}

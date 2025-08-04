@@ -39,37 +39,32 @@
 		if (position == 'bottom') {
 			axis = axisBottom(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
-				// .transition(t)
 				.call(axis)
-				.style('font-size', `${tickfontsize}px`)
 				.style('transform', `translate(${xoffset}px, ${height + yoffset}px)`);
 		}
 		if (position == 'top') {
 			axis = axisTop(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
-			select(axisGroup)
-				// .transition(t)
-				.call(axis)
-				.style('font-size', `${tickfontsize}px`)
-				.style('transform', `translate(${xoffset}px, ${yoffset}px)`);
+			select(axisGroup).call(axis).style('transform', `translate(${xoffset}px, ${yoffset}px)`);
 		}
 		if (position == 'left') {
 			axis = axisLeft(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
-			select(axisGroup)
-				// .transition(t)
-				.call(axis)
-				.style('font-size', `${tickfontsize}px`)
-				.style('transform', `translate(${xoffset}px, ${yoffset}px)`);
+			select(axisGroup).call(axis).style('transform', `translate(${xoffset}px, ${yoffset}px)`);
 		}
 		if (position == 'right') {
 			axis = axisRight(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
-				// .transition(t)
 				.call(axis)
-				.style('font-size', `${tickfontsize}px`)
 				.style('transform', `translate(${width + xoffset}px, ${yoffset}px)`);
 		}
+		select(axisGroup)
+			// .transition(t)
+			.call(axis)
+			.style('font-size', `${tickfontsize}px`)
+			.style('font-family', 'system-ui, sans-serif');
+
 		//DO GRIDLINES
 		if (gridlines) {
+			select(axisGroup).select('.gridline').remove();
 			if (position == 'bottom') {
 				select(axisGroup)
 					.selectAll('.tick')
@@ -114,6 +109,7 @@
 			.append('text')
 			.attr('class', 'axis-label')
 			.style('font-size', `${labelfontsize}px`)
+			.style('font-family', 'system-ui, sans-serif')
 			.style('text-anchor', 'middle')
 			.style('fill', 'black')
 			.text(label);
@@ -126,12 +122,12 @@
 			labelElement
 				.attr('transform', `rotate(-90)`)
 				.attr('x', -height / 2)
-				.attr('y', -30); // Position to the left of the ticks
+				.attr('y', -40); // Position to the left of the ticks
 		} else if (position == 'right') {
 			labelElement
 				.attr('transform', `rotate(90)`)
 				.attr('x', height / 2)
-				.attr('y', 50); // Position to the right of the ticks
+				.attr('y', -40); // Position to the right of the ticks
 		}
 	});
 </script>

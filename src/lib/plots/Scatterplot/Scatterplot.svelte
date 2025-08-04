@@ -441,6 +441,19 @@
 			gridlines={theData.plot.ygridlines}
 			label={theData.plot.ylabel}
 		/>
+		<Axis
+			height={theData.plot.plotheight}
+			width={theData.plot.plotwidth}
+			scale={scaleLinear()
+				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+				.range([theData.plot.plotheight, 0])}
+			position="right"
+			yoffset={theData.plot.padding.top}
+			xoffset={theData.plot.padding.left + theData.plot.axisLeftWidth}
+			nticks={5}
+			gridlines={theData.plot.ygridlines}
+			label={theData.plot.ylabel}
+		/>
 		<!-- The X-axis -->
 		<Axis
 			height={theData.plot.plotheight}
@@ -453,6 +466,23 @@
 						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
 						.range([0, theData.plot.plotwidth])}
 			position="bottom"
+			yoffset={theData.plot.padding.top}
+			xoffset={theData.plot.padding.left + theData.plot.axisLeftWidth}
+			nticks={5}
+			gridlines={theData.plot.xgridlines}
+			label={theData.plot.xlabel}
+		/>
+		<Axis
+			height={theData.plot.plotheight}
+			width={theData.plot.plotwidth}
+			scale={theData.plot.anyXdataTime
+				? scaleTime()
+						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+						.range([0, theData.plot.plotwidth])
+				: scaleLinear()
+						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+						.range([0, theData.plot.plotwidth])}
+			position="top"
 			yoffset={theData.plot.padding.top}
 			xoffset={theData.plot.padding.left + theData.plot.axisLeftWidth}
 			nticks={5}
