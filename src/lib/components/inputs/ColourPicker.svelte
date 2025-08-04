@@ -160,8 +160,6 @@
 	}
 
 	function updateFromHsv() {
-		console.log('update: ', hsvInput.a);
-
 		rgbInput = { ...hsvToRgb(hsvInput) };
 		hexInput = rgbToHex(rgbInput);
 		drawPicker();

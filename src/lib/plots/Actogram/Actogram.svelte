@@ -50,8 +50,9 @@
 			const yByPeriod = {};
 
 			//TODO: compute the min and max for the y-axis (overall v by periods)
+			let period;
 			for (let i = 0; i < tempx.length; i++) {
-				const period = Math.floor((tempx[i] - this.offset) / this.parentPlot.periodHrs);
+				period = Math.floor((tempx[i] - this.offset) / this.parentPlot.periodHrs);
 
 				if (period >= 0) {
 					if (!xByPeriod[period]) {
@@ -64,6 +65,7 @@
 					}
 				}
 			}
+
 			return { xByPeriod, yByPeriod };
 		});
 		phaseMarkers = $state([]);
@@ -146,7 +148,7 @@
 				minTime = Math.min(minTime, Number(thefirst));
 			});
 			//TODO: fix here for data with timeformat that doesn't work
-			return minTime !== Infinity && (minTime >= 0)
+			return minTime !== Infinity && minTime >= 0
 				? new Date(minTime).toISOString().substring(0, 10)
 				: undefined;
 		});
@@ -284,7 +286,6 @@
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
-
 		<div class="control-component">
 			<!-- <div class="control-component-title">
 				<p>Dimension</p>

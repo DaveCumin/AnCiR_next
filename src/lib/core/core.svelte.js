@@ -30,7 +30,16 @@ export const appState = $state({
 
 	selectedPlotIds: [],
 
-	appColours: ['#0B090B', '#F8BFD4', '#787C3F', '#3B565E', '#E5A15E'],
+	appColours: [
+		'#234154',
+		'#4A1E0E',
+		'#3E7295',
+		'#83422A',
+		'#6B9FD5',
+		'#BE796B',
+		'#A6ACD5',
+		'#EDADAD'
+	],
 	showColourPicker: false
 });
 

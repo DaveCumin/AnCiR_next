@@ -9,8 +9,8 @@
                     <svg xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100">
                         <defs>
                             <linearGradient id="ae8194c03-b976-4110-a715-bc6a7dcd8efe" x1="127.09" y1="100.34" x2="11.24" y2="19.22" gradientUnits="userSpaceOnUse">
-                                <stop offset="0" stop-color="#fad5a5"></stop>
-                                <stop offset="1" stop-color="#f06c68"></stop>
+                                <stop offset="0" stop-color="#A6ACD5"></stop>
+                                <stop offset="1" stop-color="#EDADAD"></stop>
                             </linearGradient>
                             <linearGradient id="b74247629-084e-4695-a572-5323a7fe49da" x1="12.79" y1="-21.54" x2="83.81" y2="101.47" href="#ae8194c03-b976-4110-a715-bc6a7dcd8efe"></linearGradient>
                         </defs>
