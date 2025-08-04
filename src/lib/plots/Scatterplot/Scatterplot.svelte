@@ -121,6 +121,8 @@
 				this.xlimsIN[1] != null ? this.xlimsIN[1] : xmax
 			];
 		});
+		xlabel = $state('');
+		ylabel = $state('');
 		xgridlines = $state(true);
 		ygridlines = $state(true);
 		anyXdataTime = $derived.by(() => {
@@ -209,7 +211,6 @@
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
-
 		<div class="control-component">
 			<div class="control-input-horizontal">
 				<div class="control-input">
@@ -258,7 +259,54 @@
 
 		<div class="control-component">
 			<div class="control-component-title">
-				<p>X-lims</p>
+				<p>Y-Axis</p>
+				<div class="control-component-title-icons">
+					<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
+						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
+					</button>
+				</div>
+			</div>
+			<div class="control-input-vertical">
+				<div class="control-input-checkbox">
+					<p>Label</p>
+					<input bind:value={theData.ylabel} />
+				</div>
+			</div>
+
+			<div class="control-input-vertical">
+				<div class="control-input-checkbox">
+					<input type="checkbox" bind:checked={theData.ygridlines} />
+					<p>Grid</p>
+				</div>
+			</div>
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Min</p>
+					<input
+						type="number"
+						step="0.1"
+						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
+						onchange={(e) => {
+							theData.ylimsIN[0] = parseFloat(e.target.value);
+						}}
+					/>
+				</div>
+
+				<div class="control-input">
+					<p>Max</p>
+					<input
+						type="number"
+						step="0.1"
+						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
+						onchange={(e) => {
+							theData.ylimsIN[1] = parseFloat(e.target.value);
+						}}
+					/>
+				</div>
+			</div>
+
+			<div class="control-component-title">
+				<p>X-Axis</p>
 				<div class="control-component-title-icons">
 					<button class="icon" onclick={() => (theData.xlimsIN = [null, null])}>
 						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
@@ -382,6 +430,7 @@
 			xoffset={theData.plot.padding.left}
 			nticks={5}
 			gridlines={theData.plot.ygridlines}
+			label={theData.plot.ylabel}
 		/>
 		<!-- The X-axis -->
 		<Axis

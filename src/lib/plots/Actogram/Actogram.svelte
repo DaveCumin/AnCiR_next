@@ -48,8 +48,6 @@
 			const tempy = this.y.getData() ?? [];
 			const xByPeriod = {};
 			const yByPeriod = {};
-
-			//TODO: compute the min and max for the y-axis (overall v by periods)
 			let period;
 			for (let i = 0; i < tempx.length; i++) {
 				period = Math.floor((tempx[i] - this.offset) / this.parentPlot.periodHrs);
@@ -159,6 +157,7 @@
 		periodHrs = $state(24);
 		lightBands = $state(new LightBandClass(this, { lightBands: [] }));
 		Ndays = $derived.by(() => {
+			//TODO: this should caluclate the number of days from the start - so look at the max x data in each data and compare with the starttime
 			if (this.data.length === 0) {
 				return 0;
 			}
@@ -170,7 +169,7 @@
 			return Ndays;
 		});
 
-		ylimsOption = $state('overall');
+		ylimsOption = $state('byperiod');
 		ylimsIN = $state([0, 100]);
 		// make ylims and array of arrays (each period of each data)
 		ylims = $derived.by(() => {
@@ -190,12 +189,9 @@
 							max(getNdataByPeriods(d.dataByDays.yByPeriod, k, k + this.doublePlot, 0))
 						];
 					}
-					// Object.keys(d.dataByDays.yByPeriod).forEach((key, k) => {
-					// 	ylims_out[i][k] = [min(d.dataByDays.yByPeriod[key]), max(d.dataByDays.yByPeriod[key])];
-					// });
 				});
 			}
-			//caluclate the lims for the data, each to their own -- DEFAULT OPTION
+			//caluclate the lims for the data, each to their own
 			else if (this.ylimsOption == 'overall') {
 				this.data.forEach((d, i) => {
 					if (d.y.getData()?.length > 0 && d.x.getData()?.length > 0) {

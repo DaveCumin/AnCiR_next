@@ -15,7 +15,8 @@
 		position, //where the axis should be (x or y etc)
 		scale, //the d3s scale to use
 		nticks, //number of ticks
-		gridlines = true //whether to show gridlines or not
+		gridlines = true, //whether to show gridlines or not
+		label = ''
 	} = $props();
 
 	let axisGroup;
@@ -23,6 +24,7 @@
 	let ticklength = 6;
 	let tickspace = 4;
 	let tickfontsize = 15;
+	let labelfontsize = 20;
 
 	$effect(() => {
 		height;
@@ -102,6 +104,36 @@
 				.style('stroke-width', '1px')
 				.style('stroke-dasharray', '4')
 				.style('stroke-opacity', '0.8');
+		}
+		//DO THE LABEL
+		if (label != '') {
+			console.log(label);
+			// Remove existing label
+			select(axisGroup).select('.axis-label').remove();
+
+			let labelElement = select(axisGroup)
+				.append('text')
+				.attr('class', 'axis-label')
+				.style('font-size', `${labelfontsize}px`)
+				.style('font-weight', 'bold')
+				.style('text-anchor', 'middle')
+				.text(label);
+
+			if (position == 'bottom') {
+				labelElement.attr('x', width / 2).attr('y', 45); // Position below the ticks
+			} else if (position == 'top') {
+				labelElement.attr('x', width / 2).attr('y', -30); // Position above the ticks
+			} else if (position == 'left') {
+				labelElement
+					.attr('transform', `rotate(-90)`)
+					.attr('x', -height / 2)
+					.attr('y', -50); // Position to the left of the ticks
+			} else if (position == 'right') {
+				labelElement
+					.attr('transform', `rotate(90)`)
+					.attr('x', height / 2)
+					.attr('y', -50); // Position to the right of the ticks
+			}
 		}
 	});
 </script>
