@@ -15,8 +15,6 @@
 	let { p = $bindable() } = $props();
 	let result = $state();
 	function addcolumns() {
-		console.log('HERE:');
-		console.log($state.snapshot(p.args.xsIN));
 		if (!p.args.xsIN) return; //if there is no input yet
 		if (p.args.xsIN?.length == 0) {
 			result = [];

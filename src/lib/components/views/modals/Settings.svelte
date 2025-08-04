@@ -5,7 +5,7 @@
 
 <script>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-	import { appConsts, appState } from '$lib/core/core.svelte';
+	import { appConsts, appState } from '$lib/core/core.svelte.js';
 	import ColourPaletteSelect from '$lib/components/inputs/ColourPaletteSelect.svelte';
 	let { showModal = $bindable(false) } = $props();
 

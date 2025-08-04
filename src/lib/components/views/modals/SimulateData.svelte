@@ -2,7 +2,7 @@
 	// @ts-nocheck
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import SimulatedData from '$lib/tableProcesses/SimulatedData.svelte';
-	import { core, appConsts } from '$lib/core/core.svelte';
+	import { core, appConsts } from '$lib/core/core.svelte.js';
 	import { Table } from '$lib/core/Table.svelte';
 	import { TableProcess } from '$lib/core/TableProcess.svelte';
 </script>

@@ -146,7 +146,7 @@
 				minTime = Math.min(minTime, Number(thefirst));
 			});
 			//TODO: fix here for data with timeformat that doesn't work
-			return minTime !== Infinity && (minTime >= 0)
+			return minTime !== Infinity && minTime >= 0
 				? new Date(minTime).toISOString().substring(0, 10)
 				: undefined;
 		});
@@ -245,7 +245,7 @@
 </script>
 
 <script>
-	import { appState } from '$lib/core/core.svelte';
+	import { appState } from '$lib/core/core.svelte.js';
 
 	import Icon from '$lib/icons/Icon.svelte';
 
@@ -284,7 +284,6 @@
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
-
 		<div class="control-component">
 			<!-- <div class="control-component-title">
 				<p>Dimension</p>

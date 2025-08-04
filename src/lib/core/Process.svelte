@@ -1,6 +1,6 @@
 <script module>
 	// @ts-nocheck
-	import { appConsts } from '$lib/core/core.svelte';
+	import { appConsts } from '$lib/core/core.svelte.js';
 
 	let _counter = 0;
 

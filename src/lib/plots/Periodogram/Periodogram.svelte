@@ -309,7 +309,7 @@
 </script>
 
 <script>
-	import { appState } from '$lib/core/core.svelte';
+	import { appState } from '$lib/core/core.svelte.js';
 	import { onMount } from 'svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 
@@ -350,7 +350,6 @@
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
 		<div class="control-component">
-
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Width</p>

@@ -79,7 +79,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 
-	import { appConsts, appState, core } from '$lib/core/core.svelte';
+	import { appConsts, appState, core } from '$lib/core/core.svelte.js';
 	import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte.js';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 

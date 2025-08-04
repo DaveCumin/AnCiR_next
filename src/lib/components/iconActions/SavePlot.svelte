@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	import { core, pushObj, appConsts } from '$lib/core/core.svelte';
+	import { core, pushObj, appConsts } from '$lib/core/core.svelte.js';
 	import { Plot } from '$lib/core/Plot.svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';

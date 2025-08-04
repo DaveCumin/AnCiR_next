@@ -1,6 +1,6 @@
 <script module>
 	// @ts-nocheck
-	import { appConsts, core } from '$lib/core/core.svelte';
+	import { appConsts, core } from '$lib/core/core.svelte.js';
 
 	let _counter = 0;
 	function getNextId() {

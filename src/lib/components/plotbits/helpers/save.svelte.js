@@ -1,5 +1,4 @@
 //TODO: scale issue when saving
-//TODO: jpeg background is black ~ ?
 export function convertToImage(svgId, filetype = 'png') {
 	if (filetype == 'svg') {
 		exportSVG(svgId);

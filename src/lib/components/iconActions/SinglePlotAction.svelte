@@ -1,7 +1,7 @@
 <script>
 	// @ts-nocheck
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
-	import { core } from '$lib/core/core.svelte';
+	import { core } from '$lib/core/core.svelte.js';
 	import { removePlot } from '$lib/core/Plot.svelte';
 	import {
 		convertToImage,

@@ -1,22 +1,16 @@
 <script>
-    // @ts-nocheck
-    import { appState } from "$lib/core/core.svelte";
+	// @ts-nocheck
+	import { appState } from '$lib/core/core.svelte.js';
 
-    import PlotDisplay from "./views/PlotDisplay.svelte";
-
-    
-
+	import PlotDisplay from './views/PlotDisplay.svelte';
 </script>
 
 <div class="plot-panel">
-    <PlotDisplay />
+	<PlotDisplay />
 </div>
 
 <style>
-    .plot-panel {
-        overflow: auto;
-    }
+	.plot-panel {
+		overflow: auto;
+	}
 </style>
-
-
-

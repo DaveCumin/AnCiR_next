@@ -3,7 +3,7 @@
 	import Papa from 'papaparse';
 	import { DateTime } from 'luxon';
 
-	import { pushObj } from '$lib/core/core.svelte';
+	import { pushObj } from '$lib/core/core.svelte.js';
 	import { Table } from '$lib/core/table.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	import { guessDateofArray, forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';

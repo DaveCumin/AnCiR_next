@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	import { appState, core } from '$lib/core/core.svelte';
+	import { appState, core } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import ControlDisplay from './views/ControlDisplay.svelte';
 	import { fly } from 'svelte/transition';

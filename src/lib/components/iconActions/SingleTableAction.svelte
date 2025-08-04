@@ -2,7 +2,7 @@
 	// @ts-nocheck
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 
-	import { core } from '$lib/core/core.svelte';
+	import { core } from '$lib/core/core.svelte.js';
 	import { Plot } from '$lib/core/Plot.svelte';
 	import { getTableById } from '$lib/core/Table.svelte';
 

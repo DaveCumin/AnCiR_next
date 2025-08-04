@@ -1,7 +1,7 @@
 <script>
 	// @ts-nocheck
 	import { tick } from 'svelte';
-	import { appState, core, snapToGrid } from '$lib/core/core.svelte';
+	import { appState, core, snapToGrid } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 
 	import { removePlot } from '$lib/core/Plot.svelte';

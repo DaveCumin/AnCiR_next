@@ -17,7 +17,7 @@
 	import { tick } from 'svelte';
 
 	import { onMount, onDestroy } from 'svelte';
-	import { appConsts, appState } from '$lib/core/core.svelte';
+	import { appConsts, appState } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	let { value = $bindable() } = $props();
 

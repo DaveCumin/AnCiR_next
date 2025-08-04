@@ -1,25 +1,14 @@
 <script>
-    import { core } from "$lib/core/core.svelte";
+	import { core } from '$lib/core/core.svelte.js';
 
-    import Icon from "$lib/icons/Icon.svelte";
+	import Icon from '$lib/icons/Icon.svelte';
 
+	let {} = $props();
 
-    let {} = $props();
+	function openCollapisble() {}
 
-    function openCollapisble() {
-
-    }
-
-    function closeCollapisble() {
-
-    }
-
+	function closeCollapisble() {}
 </script>
 
-
-
-
 <style>
-
-
 </style>

@@ -1,5 +1,5 @@
 <script>
-	import { appConsts, appState } from '$lib/core/core.svelte';
+	import { appConsts, appState } from '$lib/core/core.svelte.js';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 
 	let { onSelect = () => {} } = $props();
