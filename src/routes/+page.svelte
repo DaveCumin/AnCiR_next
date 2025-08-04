@@ -582,6 +582,15 @@
 		flex-direction: row;
 		align-items: center;
 		justify-content: flex-end;
+		cursor: pointer;
+	}
+
+	:global(.control-component-input-icons) {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: flex-end;
+		margin-top: 1rem;
 	}
 
 	:global(.control-input-vertical) {

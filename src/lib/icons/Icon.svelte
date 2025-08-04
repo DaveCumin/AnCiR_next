@@ -13,26 +13,20 @@
 	}
 
 	onMount(async () => {
-	if (icons[name]) {
-		let raw = await icons[name]();
+		if (icons[name]) {
+			let raw = await icons[name]();
 
-		// Replace hardcoded fills with fill="currentColor"
-		raw = raw.replace(/fill=".*?"/g, 'fill="currentColor"');
+			// Replace hardcoded fills with fill="currentColor"
+			raw = raw.replace(/fill=".*?"/g, 'fill="currentColor"');
 
-		svgContent = raw;
-	} else {
-		console.error(`Icon "${name}" not found`);
-	}
-});
+			svgContent = raw;
+		} else {
+			console.error(`Icon "${name}" not found`);
+		}
+	});
 </script>
 
-<svg
-	xmlns="http://www.w3.org/2000/svg"
-	{width}
-	{height}
-	viewBox="0 0 24 24"
-	class={className}
->
+<svg xmlns="http://www.w3.org/2000/svg" {width} {height} viewBox="0 0 24 24" class={className}>
 	{@html svgContent}
 </svg>
 
@@ -84,6 +78,16 @@
 		fill: var(--color-hover);
 	}
 
+	.control-component-input-icon {
+		fill: var(--color-lightness-35);
+		transition: fill 0.2s ease;
+		cursor: pointer;
+	}
+
+	.control-component-input-icon:hover {
+		fill: var(--color-hover);
+	}
+
 	.first-detail-title-icon {
 		fill: var(--color-lightness-35);
 		transition: fill 0.2s ease;
@@ -102,5 +106,4 @@
 		transition: fill 0.2s ease;
 		cursor: pointer;
 	}
-
 </style>
