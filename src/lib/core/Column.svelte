@@ -528,13 +528,13 @@
 	.clps-content-container {
 		width: calc(100% - 1.5rem + 6px);
 		min-width: 0;
-
-		margin: 0 0 0 1rem;
-		padding: 0;
-
+		
 		display: flex;
 		flex-direction: column;
 		flex: 1 1 0;
+
+		margin: 0 0 0 1rem;
+		padding: 0;
 	}
 
 	.clps-title {

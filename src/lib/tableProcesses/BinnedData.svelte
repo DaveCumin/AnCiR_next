@@ -18,6 +18,8 @@
 
 	let { p = $bindable() } = $props();
 
+	let binnedData = $state();
+
 	function getBinnedData() {
 		const xIN = p.args.xIN;
 		const yIN = p.args.yIN;
@@ -63,7 +65,6 @@
 		}
 	}
 
-	let binnedData = $state();
 	onMount(() => {
 		//needed to get the values when it first mounts
 		getBinnedData();

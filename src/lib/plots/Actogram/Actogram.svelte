@@ -146,7 +146,7 @@
 				minTime = Math.min(minTime, Number(thefirst));
 			});
 			//TODO: fix here for data with timeformat that doesn't work
-			return minTime !== Infinity && minTime
+			return minTime !== Infinity && (minTime >= 0)
 				? new Date(minTime).toISOString().substring(0, 10)
 				: undefined;
 		});

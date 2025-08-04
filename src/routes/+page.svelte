@@ -685,7 +685,6 @@
 	}
 
 	/* process */
-
 	:global(.process) {
 		width: 100%;
 		flex: 1 1 0;
