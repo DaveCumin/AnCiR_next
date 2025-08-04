@@ -7,6 +7,7 @@
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import { tick } from 'svelte';
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
 
@@ -65,22 +66,38 @@
 		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
 		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
 
-		plotwidth = $derived.by(() => {
+		plotwidth = $derived(
+			this.parentBox.width - this.padding.left - this.axisLeftWidth - this.padding.right
+		);
+
+		//TODO: this isn't wokring quite right... ???
+		lastaxisLeftWidth = $state(0);
+		axisLeftWidth = $derived.by(() => {
+			let out = -Infinity;
 			this.ylims;
 			this.xlims;
+			this.ylabel;
 			let plot = document.getElementById('plot' + this.parentBox.id);
-			let axisLeftRectOffset = 0;
 			if (plot) {
 				let plotRect = plot?.getBoundingClientRect();
+				let intendedAxisLeft = plotRect.left + this.padding.left;
 				let axesLeft = plot?.querySelectorAll('.axis-left');
 
 				for (let i = 0; i < axesLeft.length; i++) {
 					let axisRect = axesLeft[i].getBoundingClientRect();
-					axisLeftRectOffset = plotRect.left - axisRect.left;
+					let actualAxisLeft = axisRect.left;
+					console.log('intended ', intendedAxisLeft, ', actual ', actualAxisLeft);
+					// If axis extends to the left of intended position, that's overhang
+					if (actualAxisLeft != intendedAxisLeft) {
+						out = Math.max(out, intendedAxisLeft - actualAxisLeft);
+					}
 				}
 			}
-			this.padding.left += Math.ceil(axisLeftRectOffset);
-			return this.parentBox.width - this.padding.left - this.padding.right;
+			if (out > this.padding.left) {
+				this.lastaxisLeftWidth = out;
+			}
+			console.log('returnning ', this.lastaxisLeftWidth);
+			return this.lastaxisLeftWidth;
 		});
 
 		xlimsIN = $state([null, null]);
@@ -122,7 +139,7 @@
 			];
 		});
 		xlabel = $state('');
-		ylabel = $state('');
+		ylabel = $state(null);
 		xgridlines = $state(true);
 		ygridlines = $state(true);
 		anyXdataTime = $derived.by(() => {
@@ -180,7 +197,6 @@
 <script>
 	import { appState } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import { onMount } from 'svelte';
 
 	let { theData, which } = $props();
 
@@ -189,24 +205,6 @@
 	function handleTooltip(event) {
 		tooltip = event.detail;
 	}
-
-	onMount(() => {
-		if (which == 'plot') {
-			let plot = document.getElementById('plot' + theData.id);
-			let axisLeftRectOffset = 0;
-			if (plot) {
-				let plotRect = plot?.getBoundingClientRect();
-				let axesLeft = plot?.querySelectorAll('.axis-left');
-
-				for (let i = 0; i < axesLeft.length; i++) {
-					let axisRect = axesLeft[i].getBoundingClientRect();
-					axisLeftRectOffset = Math.max(axisLeftRectOffset, plotRect.left - axisRect.left);
-				}
-			}
-			theData.plot.padding.left += Math.ceil(axisLeftRectOffset);
-			return theData.plot.parentBox.width - theData.plot.padding.left - theData.plot.padding.right;
-		}
-	});
 </script>
 
 {#snippet controls(theData)}
@@ -267,7 +265,7 @@
 				</div>
 			</div>
 			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
+				<div class="control-input">
 					<p>Label</p>
 					<input bind:value={theData.ylabel} />
 				</div>
@@ -286,7 +284,7 @@
 						type="number"
 						step="0.1"
 						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
-						onchange={(e) => {
+						oninput={(e) => {
 							theData.ylimsIN[0] = parseFloat(e.target.value);
 						}}
 					/>
@@ -298,7 +296,7 @@
 						type="number"
 						step="0.1"
 						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-						onchange={(e) => {
+						oninput={(e) => {
 							theData.ylimsIN[1] = parseFloat(e.target.value);
 						}}
 					/>
@@ -311,6 +309,12 @@
 					<button class="icon" onclick={() => (theData.xlimsIN = [null, null])}>
 						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
 					</button>
+				</div>
+			</div>
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Label</p>
+					<input bind:value={theData.xlabel} />
 				</div>
 			</div>
 
@@ -355,7 +359,7 @@
 							type="number"
 							step="0.1"
 							value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
-							onchange={(e) => {
+							oninput={(e) => {
 								theData.xlimsIN[0] = parseFloat(e.target.value);
 							}}
 						/>
@@ -367,7 +371,7 @@
 							type="number"
 							step="0.1"
 							value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
-							onchange={(e) => {
+							oninput={(e) => {
 								theData.xlimsIN[1] = parseFloat(e.target.value);
 							}}
 						/>
@@ -427,7 +431,7 @@
 				.range([theData.plot.plotheight, 0])}
 			position="left"
 			yoffset={theData.plot.padding.top}
-			xoffset={theData.plot.padding.left}
+			xoffset={theData.plot.padding.left + theData.plot.axisLeftWidth}
 			nticks={5}
 			gridlines={theData.plot.ygridlines}
 			label={theData.plot.ylabel}
@@ -445,9 +449,10 @@
 						.range([0, theData.plot.plotwidth])}
 			position="bottom"
 			yoffset={theData.plot.padding.top}
-			xoffset={theData.plot.padding.left}
+			xoffset={theData.plot.padding.left + theData.plot.axisLeftWidth}
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
+			label={theData.plot.xlabel}
 		/>
 
 		{#each theData.plot.data as datum}
@@ -464,7 +469,7 @@
 					strokeCol={datum.linecolour}
 					strokeWidth={datum.linestrokeWidth}
 					yoffset={theData.plot.padding.top}
-					xoffset={theData.plot.padding.left}
+					xoffset={theData.plot.padding.left + theData.plot.axisLeftWidth}
 				/>
 				<Points
 					x={datum.x.getData()}
@@ -479,7 +484,7 @@
 					radius={datum.pointradius}
 					fillCol={datum.pointcolour}
 					yoffset={theData.plot.padding.top}
-					xoffset={theData.plot.padding.left}
+					xoffset={theData.plot.padding.left + theData.plot.axisLeftWidth}
 					tooltip={true}
 				/>
 			{/if}

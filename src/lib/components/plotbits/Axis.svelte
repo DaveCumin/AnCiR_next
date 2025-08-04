@@ -24,7 +24,7 @@
 	let ticklength = 6;
 	let tickspace = 4;
 	let tickfontsize = 15;
-	let labelfontsize = 20;
+	let labelfontsize = 16;
 
 	$effect(() => {
 		height;
@@ -105,35 +105,33 @@
 				.style('stroke-dasharray', '4')
 				.style('stroke-opacity', '0.8');
 		}
+		//TODO: find a better way to put the label (especially the y label) so it isn't taken over by the tick text
 		//DO THE LABEL
-		if (label != '') {
-			console.log(label);
-			// Remove existing label
-			select(axisGroup).select('.axis-label').remove();
+		// Remove existing label
+		select(axisGroup).select('.axis-label').remove();
+		//add in the label
+		let labelElement = select(axisGroup)
+			.append('text')
+			.attr('class', 'axis-label')
+			.style('font-size', `${labelfontsize}px`)
+			.style('text-anchor', 'middle')
+			.style('fill', 'black')
+			.text(label);
 
-			let labelElement = select(axisGroup)
-				.append('text')
-				.attr('class', 'axis-label')
-				.style('font-size', `${labelfontsize}px`)
-				.style('font-weight', 'bold')
-				.style('text-anchor', 'middle')
-				.text(label);
-
-			if (position == 'bottom') {
-				labelElement.attr('x', width / 2).attr('y', 45); // Position below the ticks
-			} else if (position == 'top') {
-				labelElement.attr('x', width / 2).attr('y', -30); // Position above the ticks
-			} else if (position == 'left') {
-				labelElement
-					.attr('transform', `rotate(-90)`)
-					.attr('x', -height / 2)
-					.attr('y', -50); // Position to the left of the ticks
-			} else if (position == 'right') {
-				labelElement
-					.attr('transform', `rotate(90)`)
-					.attr('x', height / 2)
-					.attr('y', -50); // Position to the right of the ticks
-			}
+		if (position == 'bottom') {
+			labelElement.attr('x', width / 2).attr('y', 45); // Position below the ticks
+		} else if (position == 'top') {
+			labelElement.attr('x', width / 2).attr('y', -30); // Position above the ticks
+		} else if (position == 'left') {
+			labelElement
+				.attr('transform', `rotate(-90)`)
+				.attr('x', -height / 2)
+				.attr('y', -30); // Position to the left of the ticks
+		} else if (position == 'right') {
+			labelElement
+				.attr('transform', `rotate(90)`)
+				.attr('x', height / 2)
+				.attr('y', 50); // Position to the right of the ticks
 		}
 	});
 </script>
