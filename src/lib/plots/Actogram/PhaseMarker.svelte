@@ -55,6 +55,8 @@
 		colour = $state();
 		showLine = $state();
 		showMarkers = $state();
+		lineWidth = $state(3);
+		markerSize = $state(5);
 		periodRangeMin = $state(0);
 		periodRangeMax = $state(0);
 		manualMarkers = $state([]);
@@ -170,7 +172,7 @@
 			const xscale = scaleLinear()
 				.domain([0, this.parentData.parentPlot.periodHrs * this.parentData.parentPlot.doublePlot])
 				.range([0, this.parentData.parentPlot.plotwidth]);
-			const radius = 6;
+			const radius = this.markerSize;
 			for (let m = this.periodRangeMin - 1; m <= this.periodRangeMax - 1; m++) {
 				if (!this.markers[m]) continue;
 				out += `M${xscale(this.markers[m]) + this.parentData.parentPlot.padding.left} ${
@@ -228,6 +230,8 @@
 				colour: this.colour,
 				showLine: this.showLine,
 				showMarkers: this.showMarkers,
+				lineWidth: this.lineWidth,
+				markerSize: this.markerSize,
 				periodRangeMin: this.periodRangeMin,
 				periodRangeMax: this.periodRangeMax,
 				manualMarkers: this.manualMarkers
@@ -243,6 +247,8 @@
 				colour: json.colour,
 				showLine: json.showLine,
 				showMarkers: json.showMarkers,
+				lineWidth: json.lineWidth,
+				markerSize: json.markerSize,
 				periodRangeMin: json.periodRangeMin,
 				periodRangeMax: json.periodRangeMax,
 				manualMarkers: json.manualMarkers
@@ -267,6 +273,14 @@
 		<option value="manual">manual</option>
 	</select>
 
+	<p>
+		Marker size: <input type="number" min="1" max="100" step="0.2" bind:value={marker.markerSize} />
+	</p>
+	{#if marker.linearRegression?.slope}
+		<p>
+			Line width: <input type="number" min="1" max="100" step="0.2" bind:value={marker.lineWidth} />
+		</p>
+	{/if}
 	{#if marker.type === 'manual'}
 		<button onclick={() => (marker.parentData.parentPlot.isAddingMarkerTo = marker.id)}
 			>Add Marker</button
@@ -298,8 +312,7 @@
 {/snippet}
 
 {#snippet plot(marker)}
-	<path d={marker.markerPoints} fill={marker.colour} stroke="none" />
-	{#if marker.showLine && marker.linearRegression}
+	{#if marker.showLine && marker.linearRegression?.slope}
 		<line
 			x1={xscale(marker.linearRegression.intercept) + marker.parentData.parentPlot.padding.left}
 			y1={marker.parentData.parentPlot.padding.top}
@@ -313,9 +326,10 @@
 				marker.parentData.parentPlot.eachplotheight +
 				marker.parentData.parentPlot.padding.top}
 			stroke={marker.colour}
-			stroke-width="2"
+			stroke-width={marker.lineWidth}
 		/>
 	{/if}
+	<path d={marker.markerPoints} fill={marker.colour} stroke="none" />
 {/snippet}
 
 {#if which === 'plot'}
