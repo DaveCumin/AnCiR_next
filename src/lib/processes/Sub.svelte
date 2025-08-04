@@ -56,7 +56,7 @@
 				<input type="number" bind:value={p.args.find} />
 			</div>
 			<div class="control-input">
-				<p>replace with</p>
+				<p>replace</p>
 				<input type="number" bind:value={p.args.replace} />
 			</div>
 		</div>
@@ -69,7 +69,7 @@
 				<input type="text" bind:value={p.args.find} />
 			</div>
 			<div class="control-input">
-				<p>replace with</p>
+				<p>replace</p>
 				<input type="text" bind:value={p.args.replace} />
 			</div>
 		</div>

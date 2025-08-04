@@ -417,18 +417,17 @@
 				<div class="line"></div>
 
 				<!-- {#if col.type == 'number'}[{Math.min(...col.getData())},{Math.max(...col.getData())}]{/if} -->
-				{#if col.type == 'time'}
-					<div class="control-input display">
+				<div class="control-input display">
+					{#if col.type == 'time'}
 						<p>Time Format</p>
 						{#if !canChange}
 							<input bind:value={col.timeFormat} />
 						{:else}
 							{getColumnById(col.refId)?.timeFormat}
 						{/if}
-					</div>
-				{/if}
+					{/if}
+				</div>
 
-				<!-- TODO: icon unclickable -->
 				<div class="process-container">
 					{#each col.processes as p}
 					{#key p.id}
@@ -440,11 +439,6 @@
 						{/key}
 					{/each}
 				</div>
-				<!-- <div class="add">
-					<button class="icon" bind:this={addBtnRef} onclick={(e) => openDropdown(e, col.id)}>
-						<Icon name="add" width={16} height={16} />
-					</button>
-				</div> -->
 			</div>
 
 			<div class="block"></div>
@@ -455,7 +449,7 @@
 <AddProcess bind:showDropdown={showAddProcess} columnSelected={col} {dropdownTop} {dropdownLeft} />
 
 <style>
-	.data-collapsible-title-container {
+	/* .data-collapsible-title-container {
 		width: 100%;
 		min-width: 0; 
 
@@ -467,7 +461,7 @@
 
 		margin: 0;
 		padding: 0;
-	}
+	} */
 
 	.data-component-info p {
 		font-size: 12px;
@@ -526,14 +520,14 @@
 	}
 
 	.clps-content-container {
-		width: calc(100% - 1.5rem + 6px);
+		width: calc(100% - 1rem + 6px);
 		min-width: 0;
 		
 		display: flex;
 		flex-direction: column;
 		flex: 1 1 0;
 
-		margin: 0 0 0 1rem;
+		margin: 0 0 0 0.5rem;
 		padding: 0;
 	}
 
@@ -598,6 +592,7 @@
 	input {
 		height: var(--control-input-height);
 		width: auto;
+		min-width: 0;
 		box-sizing: border-box;
 
 		padding: 0.2rem 0.5rem;
@@ -619,6 +614,7 @@
 
 	.display {
 		margin: 0;
+		margin-bottom: 0.5rem;
 	}
 
 	.process-container {
