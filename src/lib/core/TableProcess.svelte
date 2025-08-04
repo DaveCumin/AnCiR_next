@@ -60,10 +60,10 @@
 </script>
 
 <script>
-	let { p } = $props();
+	let { p = $bindable() } = $props();
 </script>
 
 {#if p}
 	{@const TheTableProcess = appConsts.tableProcessMap.get(p.name)?.component}
-	<TheTableProcess {p} />
+	<TheTableProcess bind:p />
 {/if}
