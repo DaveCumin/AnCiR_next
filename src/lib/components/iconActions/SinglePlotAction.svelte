@@ -3,7 +3,10 @@
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 	import { core } from '$lib/core/core.svelte';
 	import { removePlot } from '$lib/core/Plot.svelte';
-	import { convertToImage, saveMultipleAsImage } from '$lib/components/plotbits/helpers/save.js';
+	import {
+		convertToImage,
+		saveMultipleAsImage
+	} from '$lib/components/plotbits/helpers/save.svelte.js';
 
 	let {
 		showDropdown = $bindable(false),
@@ -81,7 +84,7 @@
 				onmouseenter={() => keepSubmenuOpen('save')}
 				onmouseleave={() => hideSubmenu('save', 150)}
 			>
-				{#each ['svg', 'png', 'jpeg'] as type}
+				{#each ['svg', 'png'] as type}
 					<button class="submenu-item" onclick={() => handleSaveAction(type, closeDropdown)}>
 						{type.toUpperCase()}
 					</button>

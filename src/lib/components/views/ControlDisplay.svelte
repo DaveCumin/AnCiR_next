@@ -80,7 +80,7 @@
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 
 	import { appConsts, appState, core } from '$lib/core/core.svelte';
-	import { convertToImage } from '$lib/components/plotBits/helpers/save.js';
+	import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte.js';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 
 	let addBtnRef;

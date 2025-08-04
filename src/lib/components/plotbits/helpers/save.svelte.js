@@ -1,3 +1,5 @@
+//TODO: scale issue when saving
+//TODO: jpeg background is black ~ ?
 export function convertToImage(svgId, filetype = 'png') {
 	if (filetype == 'svg') {
 		exportSVG(svgId);
@@ -31,9 +33,10 @@ export function convertToImage(svgId, filetype = 'png') {
 		let DataUrl;
 		if (filetype == 'png') {
 			DataUrl = canvas.toDataURL('image/png'); // For PNG
-		} else if (filetype == 'jpeg') {
-			DataUrl = canvas.toDataURL('image/jpeg', 0.9); // For JPEG, quality 0-1
 		}
+		// } else if (filetype == 'jpeg') {
+		// 	DataUrl = canvas.toDataURL('image/jpeg', 0.9); // For JPEG, quality 0-1
+		// }
 
 		// Create a download link
 		const link = document.createElement('a');

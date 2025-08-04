@@ -105,11 +105,11 @@
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
 		<div class="action">
-			<button onclick={openImportModal}> Import session</button>
+			<button onclick={openImportModal}> Load session</button>
 		</div>
 
 		<div class="action">
-			<button onclick={exportJson}> Export session </button>
+			<button onclick={exportJson}> Save session </button>
 		</div>
 
 		<div class="action">

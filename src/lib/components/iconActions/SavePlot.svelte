@@ -7,7 +7,10 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 
-	import { convertToImage, saveMultipleAsImage } from '$lib/components/plotbits/helpers/save.js';
+	import {
+		convertToImage,
+		saveMultipleAsImage
+	} from '$lib/components/plotbits/helpers/save.svelte.js';
 
 	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0, Id } = $props();
 
@@ -24,7 +27,7 @@
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
-		{#each ['svg', 'png', 'jpeg'] as type}
+		{#each ['svg', 'png'] as type}
 			{#if Id.length > 0}
 				<div
 					class="action"
