@@ -170,7 +170,7 @@
 			return Ndays;
 		});
 
-		ylimsOption = $state('byperiod');
+		ylimsOption = $state('overall');
 		ylimsIN = $state([0, 100]);
 		// make ylims and array of arrays (each period of each data)
 		ylims = $derived.by(() => {
@@ -195,12 +195,14 @@
 					// });
 				});
 			}
-			//caluclate the lims for the data, each to their own
+			//caluclate the lims for the data, each to their own -- DEFAULT OPTION
 			else if (this.ylimsOption == 'overall') {
 				this.data.forEach((d, i) => {
-					const minmax = [min(d.y.getData()), max(d.y.getData())];
-					for (let k = 0; k < this.Ndays; k++) {
-						ylims_out[i][k] = minmax;
+					if (d.y.getData()?.length > 0 && d.x.getData()?.length > 0) {
+						const minmax = [min(d.y?.getData()), max(d.y?.getData())];
+						for (let k = 0; k < this.Ndays; k++) {
+							ylims_out[i][k] = minmax;
+						}
 					}
 				});
 			}
@@ -208,7 +210,7 @@
 			else if (this.ylimsOption == 'manual') {
 				this.data.forEach((d, i) => {
 					for (let k = 0; k < this.Ndays; k++) {
-						ylims_out[i][k] = [this.ylimsIN[0], this.ylimsIN[1]];
+						ylims_out[i][k] = [Number(this.ylimsIN[0]), this.ylimsIN[1]];
 					}
 				});
 			}
@@ -430,7 +432,7 @@
 					<input
 						type="number"
 						step="0.1"
-						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
+						value={theData.ylimsIN[0] >= 0 ? theData.ylimsIN[0] : theData.ylims[0]}
 						oninput={(e) => {
 							theData.ylimsIN[0] = [parseFloat(e.target.value)];
 						}}
