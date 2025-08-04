@@ -161,7 +161,7 @@
 	}
 
 	.step-content.expanded {
-		max-height: 500px; /* Adjust based on content */
+		max-height: 1500px; /* Adjust based on content */
 	}
 
 	.content-inner {

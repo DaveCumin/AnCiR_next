@@ -8,6 +8,7 @@
 
 <script>
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import Table from '$lib/components/plotbits/Table.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { onMount } from 'svelte';
@@ -70,7 +71,8 @@
 
 {#if p.args.valid && p.args.out.result == -1}
 	<p>Preview:</p>
-	<p>X: {result}</p>
+
+	<div style="height:250px; overflow:auto;"><Table headers={['Result']} data={[result]} /></div>
 {:else if p.args.out.result > 0}
 	<ColumnComponent col={getColumnById(p.args.out.result)} />
 {:else}
