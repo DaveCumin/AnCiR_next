@@ -270,6 +270,7 @@
 		}
 		//render the plot
 		appState.showColourPicker = true;
+		showAdvanced = false;
 		show = true;
 	}
 
@@ -375,6 +376,38 @@
 							{/each}
 						</div>
 					</div>
+					<label>Alpha</label>
+					<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
+						<div
+							style="position: relative; flex-grow: 1; height: 16px; border-radius: 8px; overflow: hidden;"
+						>
+							<div
+								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
+							></div>
+							<div
+								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgba({rgbInput.r}, {rgbInput.g}, {rgbInput.b}, 0), rgba({rgbInput.r}, {rgbInput.g}, {rgbInput.b}, 1));"
+							></div>
+							<input
+								class="myslider"
+								type="range"
+								min="0"
+								max="100"
+								step="1"
+								bind:value={hsvInput.a}
+								oninput={() => updateFromHsv()}
+								style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
+							/>
+						</div>
+						<input
+							type="number"
+							min="0"
+							max="100"
+							step="1"
+							bind:value={hsvInput.a}
+							oninput={updateFromHsv}
+							style="width: {numberInputWidth}px; height: 16px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+						/>
+					</div>
 					<button
 						onclick={() => {
 							const randomCol = getRandomColor();
@@ -421,39 +454,6 @@
 
 						<!-- Sliders -->
 						<div style="margin-bottom: 16px;">
-							<label>Alpha</label>
-							<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
-								<div
-									style="position: relative; flex-grow: 1; height: 16px; border-radius: 8px; overflow: hidden;"
-								>
-									<div
-										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
-									></div>
-									<div
-										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgba({rgbInput.r}, {rgbInput.g}, {rgbInput.b}, 0), rgba({rgbInput.r}, {rgbInput.g}, {rgbInput.b}, 1));"
-									></div>
-									<input
-										class="myslider"
-										type="range"
-										min="0"
-										max="100"
-										step="1"
-										bind:value={hsvInput.a}
-										oninput={() => updateFromHsv()}
-										style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
-									/>
-								</div>
-								<input
-									type="number"
-									min="0"
-									max="100"
-									step="1"
-									bind:value={hsvInput.a}
-									oninput={updateFromHsv}
-									style="width: {numberInputWidth}px; height: 16px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
-								/>
-							</div>
-
 							<label>Hue</label>
 							<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
 								<div

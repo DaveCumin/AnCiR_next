@@ -401,9 +401,9 @@
 				<Column col={datum.y} canChange={true} />
 
 				line col: <ColourPicker bind:value={datum.linecolour} />
-				line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
+				line width: <input type="number" step="0.2" min="0.1" bind:value={datum.linestrokeWidth} />
 				point col: <ColourPicker bind:value={datum.pointcolour} />
-				point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
+				point radius: <input type="number" step="0.2" min="0.1" bind:value={datum.pointradius} />
 			{/each}
 		</div>
 	{/if}

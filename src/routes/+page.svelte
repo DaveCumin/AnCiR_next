@@ -297,7 +297,7 @@
 </script>
 
 <svelte:head>
-	<title>AnCiR v β.4.0</title>
+	<title>AnCiR v β.4.1</title>
 </svelte:head>
 
 {#if isLoaded}
@@ -377,7 +377,6 @@
 		background-color: var(--color-hover);
 	}
 
-
 	/* space filler */
 	:global(.div-line) {
 		height: 1px;
@@ -395,9 +394,9 @@
 
 	/* dropdown */
 	:global(.dropdown-action button) {
-		display: flex; 
+		display: flex;
 		margin: 0.6em;
-		
+
 		font-size: 14px;
 		font: inherit;
 		text-align: inherit;
@@ -447,7 +446,6 @@
 		flex-direction: row;
 		align-items: center;
 		justify-content: flex-start;
-
 	}
 
 	:global(.clps-title-button) {
@@ -465,7 +463,7 @@
 		justify-content: center;
 
 		padding: 0.5rem 0.5rem;
-		padding-left: 1.0rem;
+		padding-left: 1rem;
 	}
 
 	:global(.clps-icon) {
@@ -480,7 +478,7 @@
 		background-color: white;
 		border-radius: 4px;
 		border: solid 1px var(--color-lightness-85);
-		
+
 		border-color: none;
 		appearance: none;
 	}
@@ -500,7 +498,6 @@
 		width: 100%;
 		padding: 0 0 0 0.25rem;
 	}
-
 
 	/* plot control */
 	:global(.control-banner) {
@@ -677,7 +674,7 @@
 		background-color: var(--color-lightness-97);
 		border: solid 1px var(--color-lightness-85);
 		border-radius: 2px;
-		transition: border-color 0.2s;	
+		transition: border-color 0.2s;
 	}
 
 	:global(.control-input select:hover, .control-input input:hover) {

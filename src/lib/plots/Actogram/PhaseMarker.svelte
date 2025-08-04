@@ -274,11 +274,11 @@
 	</select>
 
 	<p>
-		Marker size: <input type="number" min="1" max="100" step="0.2" bind:value={marker.markerSize} />
+		Marker size: <input type="number" min="1" step="0.2" bind:value={marker.markerSize} />
 	</p>
 	{#if marker.linearRegression?.slope}
 		<p>
-			Line width: <input type="number" min="1" max="100" step="0.2" bind:value={marker.lineWidth} />
+			Line width: <input type="number" min="1" step="0.2" bind:value={marker.lineWidth} />
 		</p>
 	{/if}
 	{#if marker.type === 'manual'}
