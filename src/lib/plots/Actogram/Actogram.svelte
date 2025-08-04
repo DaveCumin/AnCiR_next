@@ -288,7 +288,6 @@
 			const [clickedDay, clickedHrs] = getClickedTime(e);
 			theData.plot.addPhaseMarkerTo(theData.plot.isAddingMarkerTo, clickedDay, clickedHrs);
 		}
-		theData.plot.isAddingMarkerTo = -1;
 	}
 
 	function getClickedTime(e) {

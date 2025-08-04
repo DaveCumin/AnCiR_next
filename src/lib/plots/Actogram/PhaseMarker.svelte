@@ -264,27 +264,44 @@
 			.domain([0, marker.parentData.parentPlot.periodHrs * marker.parentData.parentPlot.doublePlot])
 			.range([0, marker.parentData.parentPlot.plotwidth])
 	);
+	let addMarkerButtonText = $state('Add markers');
 </script>
 
 {#snippet controls(marker)}
-	Type:<select bind:value={marker.type}>
-		<option value="onset">onset</option>
-		<option value="offset">offset</option>
-		<option value="manual">manual</option>
-	</select>
-
-	<p>
-		Marker size: <input type="number" min="1" step="0.2" bind:value={marker.markerSize} />
-	</p>
+	<div class="control-input">
+		<p>Type</p>
+		<select bind:value={marker.type}>
+			<option value="onset">Onset</option>
+			<option value="offset">Offset</option>
+			<option value="manual">Manual</option>
+		</select>
+	</div>
+	<ColourPicker bind:value={marker.colour} />
+	<div class="control-input">
+		<p>Marker size:</p>
+		<input type="number" min="1" step="0.2" bind:value={marker.markerSize} />
+	</div>
 	{#if marker.linearRegression?.slope}
-		<p>
-			Line width: <input type="number" min="1" step="0.2" bind:value={marker.lineWidth} />
-		</p>
+		<div class="control-input">
+			<p>Line width:</p>
+			<input type="number" min="1" step="0.2" bind:value={marker.lineWidth} />
+		</div>
 	{/if}
 	{#if marker.type === 'manual'}
-		<button onclick={() => (marker.parentData.parentPlot.isAddingMarkerTo = marker.id)}
-			>Add Marker</button
-		>
+		<div class="control-input">
+			<button
+				onclick={() => {
+					console.log(addMarkerButtonText);
+					if (addMarkerButtonText == 'Add markers') {
+						marker.parentData.parentPlot.isAddingMarkerTo = marker.id;
+						addMarkerButtonText = 'Stop adding';
+					} else {
+						marker.parentData.parentPlot.isAddingMarkerTo = -1;
+						addMarkerButtonText = 'Add markers';
+					}
+				}}>{addMarkerButtonText}</button
+			>
+		</div>
 	{:else}
 		<div>
 			N: <input type="number" min="0" max="100" bind:value={marker.templateHrsBefore} />
@@ -298,7 +315,6 @@
 		bind:minVal={marker.periodRangeMin}
 		bind:maxVal={marker.periodRangeMax}
 	/>
-	<ColourPicker bind:value={marker.colour} />
 
 	{#if marker.linearRegression?.slope}
 		<p>Est τ: {marker.linearRegression.slope.toFixed(2)} hrs</p>
