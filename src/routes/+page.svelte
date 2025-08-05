@@ -531,6 +531,11 @@
 		margin-bottom: 1rem;
 		gap: 0.4rem;
 		overflow-x: auto;
+		
+	}
+
+	:global(.control-tag::-webkit-scrollbar ) {
+		display: none;
 	}
 
 	:global(.control-tag button) {
