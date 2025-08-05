@@ -73,7 +73,7 @@
 	}
 
 	async function confirmImport() {
-		awaitingLoad = targetFile.size > 500_000 ? true : false; //only spinner if over 500kb - low, because it's computationally expensive to convert and read in all
+		awaitingLoad = true;
 		await tick();
 		await loadData();
 		awaitingLoad = false;
@@ -240,7 +240,8 @@
 			//find the data type based on the first non-NaN element
 			const datum = getFirstValid(result[f], 5);
 			const guessedFormat = guessDateofArray(result[f]);
-			// console.log(f, datum, guessedFormat);
+
+			//If it's a time
 			if (guessedFormat != -1 && guessedFormat.length > 0) {
 				const df = new Column({});
 				df.type = 'time';
@@ -249,12 +250,14 @@
 				df.timeFormat = guessedFormat;
 				newDataEntry.addColumn(df);
 			} else if (!isNaN(datum)) {
+				//if it's a number
 				const df = new Column({});
 				df.type = 'number';
 				df.name = f;
 				df.data = result[f];
 				newDataEntry.addColumn(df);
 			} else {
+				//otherwise it's a category
 				const df = new Column({});
 				df.type = 'category';
 				df.name = f;
@@ -286,7 +289,10 @@
 				<p>Importing data from {targetFile?.name ?? 'file'}.</p>
 			</div>
 		{:else if awaitingLoad}
-			<p>Loading data from {targetFile?.name ?? 'file'}.</p>
+			<div class="title-container">
+				<Icon name="spinner" width={32} height={32} className="spinner" />
+				<p>Loading data from {targetFile?.name ?? 'file'}.</p>
+			</div>
 		{:else}
 			<div class="heading">
 				<h2>Import Data</h2>
