@@ -122,13 +122,14 @@
 
 		//TODO: find a better way to put the label (especially the y label) so it isn't taken over by the tick text
 		//DO THE LABEL
-		// Remove existing label
+		// Remove existing label`
 		select(axisGroup).select('.axis-label').remove();
 		const nolabelRect = axisGroup.getBoundingClientRect();
-		console.log(position);
-		console.log($state.snapshot(plotPadding));
+		console.log('position: ', position);
+		console.log('padding: ', $state.snapshot(plotPadding));
+		console.log('sum: ', $state.snapshot(plotPadding.left) + axisLeftWidth);
 
-		console.log(nolabelRect);
+		console.log('nolab', nolabelRect);
 		//add in the label
 		let labelElement = select(axisGroup)
 			.append('text')
@@ -147,7 +148,7 @@
 			labelElement
 				.attr('transform', `rotate(-90)`)
 				.attr('x', -height / 2)
-				.attr('y', -40); // Position to the left of the ticks
+				.attr('y', -30); // Position to the left of the ticks
 		} else if (position == 'right') {
 			labelElement
 				.attr('transform', `rotate(90)`)

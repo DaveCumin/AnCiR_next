@@ -23,21 +23,10 @@
 					);
 				}
 			}
-			console.log('Tables:', $state.snapshot(core.tables[t]));
-			console.log('processes ', $state.snapshot(core.tables[t].processes));
 			//get the table process Ids also
 			for (let p = 0; p < core.tables[t].processes.length; p++) {
-				console.log('process ', $state.snapshot(core.tables[t].processes[p]));
-				console.log('args out ', $state.snapshot(core.tables[t].processes[p].args.out));
-				console.log(
-					'args out length ',
-					$state.snapshot(Object.keys(core.tables[t].processes[p].args.out).length)
-				);
-
 				Object.keys(core.tables[t].processes[p].args.out).forEach((key) => {
 					const ref = core.tables[t].processes[p].args.out[key];
-					console.log('KEY: ', key);
-					console.log('processes ', $state.snapshot(core.tables[t].processes[p].args.out[key]));
 					if (ref !== -1 && !excludeColIds.includes(ref)) {
 						const processCol = getColumnById(ref);
 						out.set(core.tables[t].name + ' : ' + processCol.name, processCol.id);

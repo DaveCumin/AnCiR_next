@@ -72,6 +72,7 @@
 		//TODO: this isn't wokring quite right... ???
 		lastaxisLeftWidth = $state(0);
 		axisLeftWidth = $derived.by(() => {
+			//$inspect.trace('in axisLeftWidth');
 			let out = -Infinity;
 			this.ylims;
 			this.xlims;

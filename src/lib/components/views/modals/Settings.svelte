@@ -33,5 +33,6 @@
 		<p>
 			Grid size: <NumberWithUnits bind:value={appState.gridSize} units={{}} limits={[1, 100]} />
 		</p>
+		<p>coreChanging: <input type="checkbox" bind:checked={appState.coreChanging} /></p>
 	{/snippet}
 </Modal>

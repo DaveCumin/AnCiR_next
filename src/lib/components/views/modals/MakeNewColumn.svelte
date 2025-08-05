@@ -3,7 +3,7 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import { getTableById } from '$lib/core/Table.svelte';
 	import { TableProcess } from '$lib/core/TableProcess.svelte';
-	import { appConsts } from '$lib/core/core.svelte.js';
+	import { appConsts, appState } from '$lib/core/core.svelte.js';
 	import { tick } from 'svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 
@@ -15,6 +15,7 @@
 
 	async function confirmAddColumn() {
 		awaitingLoad = true;
+		appState.coreChanging = true;
 
 		await tick();
 		await new Promise((resolve) => setTimeout(resolve, 50)); // short wait to make sure the spinner will show
@@ -40,6 +41,8 @@
 		tableProcessChosen = '';
 		theDefaults = null;
 		awaitingLoad = false;
+		await tick();
+		appState.coreChanging = false;
 
 		//hide modal
 		show = false;
