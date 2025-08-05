@@ -15,7 +15,6 @@
 
 	async function confirmAddColumn() {
 		awaitingLoad = true;
-		appState.coreChanging = true;
 
 		await tick();
 		await new Promise((resolve) => setTimeout(resolve, 50)); // short wait to make sure the spinner will show
@@ -42,7 +41,6 @@
 		theDefaults = null;
 		awaitingLoad = false;
 		await tick();
-		appState.coreChanging = false;
 
 		//hide modal
 		show = false;

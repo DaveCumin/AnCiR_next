@@ -61,8 +61,12 @@
 		return Math.max(appState.windowHeight, bottomMostPlot + 200);
 	});
 
+	//more efficient way to open the dataDisplay on import (fewer reactive checks)
+	let hasData = $derived.by(() => {
+		return core.data.length > 0;
+	});
 	$effect(() => {
-		if (core.data.length > 0) {
+		if (hasData) {
 			appState.currentTab = 'data';
 			appState.showDisplayPanel = true;
 		}
@@ -108,44 +112,42 @@
 				);
 			"
 		>
-			{#if !appState.coreChanging}
-				{#if core.plots.length > 0}
-					{#each core.plots as plot, i (plot.id)}
-						<Draggable
-							bind:x={plot.x}
-							bind:y={plot.y}
-							bind:width={plot.width}
-							bind:height={plot.height}
-							title={plot.name}
-							id={plot.id}
-						>
-							{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
-							<Plot theData={plot} which="plot" />
-						</Draggable>
-					{/each}
-				{:else if core.data.length > 0}
-					<div class="no-plot-prompt">
-						<button class="icon" onclick={() => (showNewPlotModal = true)}>
-							<Icon name="add" width={24} height={24} />
-						</button>
-						<p style="margin-left: 10px">Click to add a new plot</p>
-					</div>
+			{#if core.plots.length > 0}
+				{#each core.plots as plot, i (plot.id)}
+					<Draggable
+						x={plot.x}
+						y={plot.y}
+						width={plot.width}
+						height={plot.height}
+						title={plot.name}
+						id={plot.id}
+					>
+						{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
+						<Plot theData={plot} which="plot" />
+					</Draggable>
+				{/each}
+			{:else if core.data.length > 0}
+				<div class="no-plot-prompt">
+					<button class="icon" onclick={() => (showNewPlotModal = true)}>
+						<Icon name="add" width={24} height={24} />
+					</button>
+					<p style="margin-left: 10px">Click to add a new plot</p>
+				</div>
 
-					<AddPlot
-						bind:showDropdown={showNewPlotModal}
-						dropdownTop={window.innerHeight / 2 - 25}
-						dropdownLeft={window.innerWidth / 2 - 40}
-					/>
-				{:else}
-					<div class="no-plot-prompt">
-						<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
-							<Icon name="add" width={24} height={24} />
-						</button>
-						<p style="margin-left: 10px">Click to add new data</p>
-					</div>
+				<AddPlot
+					bind:showDropdown={showNewPlotModal}
+					dropdownTop={window.innerHeight / 2 - 25}
+					dropdownLeft={window.innerWidth / 2 - 40}
+				/>
+			{:else}
+				<div class="no-plot-prompt">
+					<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
+						<Icon name="add" width={24} height={24} />
+					</button>
+					<p style="margin-left: 10px">Click to add new data</p>
+				</div>
 
-					<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
-				{/if}
+				<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
 			{/if}
 		</div>
 	</div>

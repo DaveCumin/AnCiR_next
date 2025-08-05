@@ -110,7 +110,9 @@
 			let ymin = Infinity;
 			let ymax = -Infinity;
 			this.data.forEach((d, i) => {
+				console.log(this.data[i].y);
 				let tempy = this.data[i].y.getData() ?? [];
+				console.log(tempy);
 				ymin = min([ymin, ...tempy]);
 				ymax = max([ymax, ...tempy]);
 			});

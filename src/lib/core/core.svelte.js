@@ -11,7 +11,6 @@ export const core = $state({
 });
 
 export const appState = $state({
-	coreChanging: false,
 	currentTab: initialiseCurrentTab(false, false), // change values if panel visibility initialised differently
 
 	showNavbar: true,
