@@ -309,11 +309,12 @@
 </script>
 
 <script>
-	import { appState } from '$lib/core/core.svelte';
 	import { onMount } from 'svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 
 	let { theData, which } = $props();
+
+	let currentControlTab = $state('properties');
 
 	$effect(() => {
 		if (theData.periodlimsIN || theData.periodSteps) {
@@ -348,9 +349,19 @@
 </script>
 
 {#snippet controls(theData)}
-	{#if appState.currentControlTab === 'properties'}
-		<div class="control-component">
+	<div class="control-tag">
+		<button
+			class={currentControlTab === 'properties' ? 'active' : ''}
+			onclick={() => (currentControlTab = 'properties')}>Properties</button
+		>
+		<button
+			class={currentControlTab === 'data' ? 'active' : ''}
+			onclick={() => (currentControlTab = 'data')}>Data</button
+		>
+	</div>
 
+	{#if currentControlTab === 'properties'}
+		<div class="control-component">
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Width</p>
@@ -487,7 +498,7 @@
 				</div>
 			</div>
 		</div>
-	{:else if appState.currentControlTab === 'data'}
+	{:else if currentControlTab === 'data'}
 		<div>
 			<p>Data:</p>
 			<button

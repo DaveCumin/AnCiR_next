@@ -431,9 +431,9 @@
 				<!-- TODO: icon unclickable -->
 				<div class="process-container">
 					{#each col.processes as p}
-					{#key p.id}
-					<!-- Force the refresh when a process is added or removed (mostly the latter)-->
-						<div class="single-process-container">
+						{#key p.id}
+							<!-- Force the refresh when a process is added or removed (mostly the latter)-->
+							<div class="single-process-container">
 								<div class="column-indicator"></div>
 								<Processcomponent {p} />
 							</div>
@@ -457,7 +457,7 @@
 <style>
 	.data-collapsible-title-container {
 		width: 100%;
-		min-width: 0; 
+		min-width: 0;
 
 		display: flex;
 		flex: 1 1 0;
@@ -528,7 +528,7 @@
 	.clps-content-container {
 		width: calc(100% - 1.5rem + 6px);
 		min-width: 0;
-		
+
 		display: flex;
 		flex-direction: column;
 		flex: 1 1 0;
@@ -538,7 +538,7 @@
 	}
 
 	.clps-title {
-		min-width: 0; 
+		min-width: 0;
 	}
 
 	details {

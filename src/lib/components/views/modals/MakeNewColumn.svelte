@@ -15,6 +15,7 @@
 
 	async function confirmAddColumn() {
 		awaitingLoad = true;
+
 		await tick();
 		await new Promise((resolve) => setTimeout(resolve, 50)); // short wait to make sure the spinner will show
 		await tick();

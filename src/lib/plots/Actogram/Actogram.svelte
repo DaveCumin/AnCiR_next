@@ -283,9 +283,9 @@
 </script>
 
 <script>
-	import { appState } from '$lib/core/core.svelte';
-
 	let { theData, which } = $props();
+
+	let currentControlTab = $state('properties');
 
 	function handleClick(e) {
 		if (theData.plot.isAddingMarkerTo >= 0) {
@@ -318,7 +318,21 @@
 </script>
 
 {#snippet controls(theData)}
-	{#if appState.currentControlTab === 'properties'}
+	<div class="control-tag">
+		<button
+			class={currentControlTab === 'properties' ? 'active' : ''}
+			onclick={() => (currentControlTab = 'properties')}>Properties</button
+		>
+		<button
+			class={currentControlTab === 'data' ? 'active' : ''}
+			onclick={() => (currentControlTab = 'data')}>Data</button
+		>
+		<button
+			class={currentControlTab === 'annotations' ? 'active' : ''}
+			onclick={() => (currentControlTab = 'annotations')}>Annotations</button
+		>
+	</div>
+	{#if currentControlTab === 'properties'}
 		<div class="control-component">
 			<!-- <div class="control-component-title">
 				<p>Dimension</p>
@@ -451,7 +465,7 @@
 				</div>
 			</div>
 		{/if}
-	{:else if appState.currentControlTab === 'data'}
+	{:else if currentControlTab === 'data'}
 		<div>
 			<p>Data:</p>
 			<button
@@ -484,6 +498,7 @@
 				{/each}
 			{/each}
 		</div>
+	{:else if currentControlTab === 'annotations'}
 		<p>Annotations:<button onclick={() => theData.addAnnotation()}>+</button></p>
 		{#each theData.annotations as annotation}
 			<Annotation {which} {annotation} />

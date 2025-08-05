@@ -7,7 +7,6 @@
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
-	import { tick } from 'svelte';
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
 
@@ -195,10 +194,11 @@
 </script>
 
 <script>
-	import { appState } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 
 	let { theData, which } = $props();
+
+	let currentControlTab = $state('properties');
 
 	//Tooltip
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
@@ -208,7 +208,20 @@
 </script>
 
 {#snippet controls(theData)}
-	{#if appState.currentControlTab === 'properties'}
+	<div class="control-tag">
+		<button
+			class={currentControlTab === 'properties' ? 'active' : ''}
+			onclick={() => (currentControlTab = 'properties')}>Properties</button
+		>
+		<button
+			class={currentControlTab === 'data' ? 'active' : ''}
+			onclick={() => (currentControlTab = 'data')}>Data</button
+		>
+	</div>
+
+	<div class="div-line"></div>
+
+	{#if currentControlTab === 'properties'}
 		<div class="control-component">
 			<div class="control-input-horizontal">
 				<div class="control-input">
@@ -384,7 +397,7 @@
 				{/if}
 			</div>
 		</div>
-	{:else if appState.currentControlTab === 'data'}
+	{:else if currentControlTab === 'data'}
 		<div>
 			<p>Data:</p>
 			<button
