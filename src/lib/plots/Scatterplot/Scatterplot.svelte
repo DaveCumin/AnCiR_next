@@ -440,7 +440,7 @@
 		ontooltip={handleTooltip}
 	>
 		<!-- The Y-axis -->
-		<!-- <Axis
+		<Axis
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()
@@ -471,9 +471,9 @@
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
 			label={theData.plot.xlabel}
-		/> -->
+		/>
 		<!-- EXTRA FOR TESTING-->
-		<Axis
+		<!-- <Axis
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()
@@ -503,7 +503,7 @@
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
 			label={theData.plot.xlabel}
-		/>
+		/> -->
 
 		{#each theData.plot.data as datum}
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}

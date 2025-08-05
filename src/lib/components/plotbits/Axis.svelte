@@ -102,7 +102,7 @@
 					.append('line')
 					.attr('class', 'gridline')
 					.attr('x1', 0) // Start at axis
-					.attr('x2', width - plotPadding.right + axisLeftWidth); // End at right edge of plot area
+					.attr('x2', width); // End at right edge of plot area
 			} else if (position == 'right') {
 				select(axisGroup)
 					.selectAll('.tick')
