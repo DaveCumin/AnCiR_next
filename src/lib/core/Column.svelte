@@ -520,8 +520,8 @@
 	}
 
 	.clps-content-container {
-		width: calc(100% - 0.5rem + 0.5rem + 6px); 
-		/* note: width: calc(100% - 0.5rem + margin-left + 6px)*/
+		width: calc(100% - (0.5rem + 0.5rem) + 6px); 
+		/* note: width: calc(100% - (0.5rem + margin-left) + 6px)*/
 		min-width: 0;
 		
 		display: flex;
