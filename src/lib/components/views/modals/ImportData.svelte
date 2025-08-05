@@ -3,7 +3,7 @@
 	import Papa from 'papaparse';
 	import { DateTime } from 'luxon';
 
-	import { pushObj } from '$lib/core/core.svelte';
+	import { appConsts, pushObj } from '$lib/core/core.svelte';
 	import { Table } from '$lib/core/table.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	import { guessDateofArray, forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
@@ -65,8 +65,9 @@
 	}
 
 	async function doPreview() {
-		awaitingPreview = targetFile.size > 50_000_000 ? true : false; //only spinner if over 50Mb; this shouldn't make much of a difference, because it's only going to read a few lines but better have it in case
+		awaitingPreview = true;
 		await tick();
+		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms)); // short wait to make sure the spinner will show
 		await parseFile();
 		awaitingPreview = false;
 		importReady = true; // Set only after parseFile fully resolves
@@ -75,6 +76,7 @@
 	async function confirmImport() {
 		awaitingLoad = true;
 		await tick();
+		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms)); // short wait to make sure the spinner will show
 		await loadData();
 		awaitingLoad = false;
 		resetValues();
@@ -228,7 +230,7 @@
 
 	// put the data into the tool store
 	// TODO_med: check the logic here, as the Sampling freq isn't updating properly for times.
-	function doBasicFileImport(result, fname) {
+	async function doBasicFileImport(result, fname) {
 		// create Table object with constructor(Id, importedFrom, displayName, dataLength)
 		const newDataEntry = new Table();
 		// importedFrom = fname;
@@ -267,6 +269,9 @@
 		});
 		// console.log(newDataEntry instanceof Table);
 		pushObj(newDataEntry);
+
+		//to allow the animation to occur
+		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms || 10));
 	}
 
 	// get the first valid data point in the result, given key

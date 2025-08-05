@@ -9,10 +9,12 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import AttributeSelect from '$lib/components/reusables/AttributeSelect.svelte';
-	import { get } from 'svelte/store';
+	import { tick } from 'svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 
 	let { showModal = $bindable(false) } = $props();
+
+	let awaitingMake = $state(false);
 
 	let plotType = $state('Plot');
 	let plotName = $state(plotType + '_' + (core.plots.length + 1));
@@ -20,7 +22,12 @@
 	let xCol = $state();
 	let yCols = $state([null]); // contains column id
 
-	function confirmImport() {
+	async function confirmImport() {
+		awaitingMake = true;
+		await tick();
+		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms)); // short wait to make sure the spinner will show
+		await tick();
+
 		const nCols = Math.ceil(Math.sqrt(yCols.length)); // for the layout
 		//default width and height
 		const padding = appState.gridSize;
@@ -50,6 +57,8 @@
 				y: { refId: yCols[i] }
 			});
 			core.plots.push(newPlot);
+
+			await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms || 10));
 		}
 
 		appState.selectedPlotIds = [];
@@ -60,6 +69,7 @@
 		console.log($state.snapshot(appState.selectedPlotIds));
 
 		plotType = 'Plot';
+		awaitingMake = false;
 		showModal = false;
 	}
 
@@ -151,7 +161,7 @@
 					onclick={(e) => {
 						e.stopPropagation();
 						confirmImport();
-					}}>Confirm Import</button
+					}}>Make these {yCols.length} plots</button
 				>
 			</div>
 		{/if}
@@ -160,11 +170,20 @@
 
 <Modal bind:showModal>
 	{#snippet header()}
-		<div class="heading">
-			<h2>Create New {capitalise(plotType)}s</h2>
-		</div>
+		{#if awaitingMake}
+			<div class="title-container">
+				<Icon name="spinner" width={32} height={32} className="spinner" />
+				<p>Making the {yCols.length} plots.</p>
+			</div>
+		{:else}
+			<div class="heading">
+				<h2>Create New {capitalise(plotType)}s</h2>
+			</div>
+		{/if}
 	{/snippet}
-	<ProgressIndicator bind:steps bind:currentStep {stepContent} />
+	{#if !awaitingMake}
+		<ProgressIndicator bind:steps bind:currentStep {stepContent} />
+	{/if}
 </Modal>
 
 <style>

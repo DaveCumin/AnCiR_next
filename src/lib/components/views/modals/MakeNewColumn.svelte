@@ -17,11 +17,10 @@
 		awaitingLoad = true;
 
 		await tick();
-		await new Promise((resolve) => setTimeout(resolve, 50)); // short wait to make sure the spinner will show
+		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms)); // short wait to make sure the spinner will show
 		await tick();
 
 		// Create process in a non-reactive context
-		console.time('Create Process');
 		const newProcess = new TableProcess(
 			{
 				name: tableProcessChosen,
@@ -29,12 +28,9 @@
 			},
 			getTableById(tableId)
 		);
-		console.timeEnd('Create Process');
 
 		// Batch update: Add process to reactive state
-		console.time('Push Process');
 		getTableById(tableId).processes.push(newProcess);
-		console.timeEnd('Push Process');
 
 		//clear the defaults
 		tableProcessChosen = '';

@@ -401,16 +401,21 @@
 		</div>
 	{:else if currentControlTab === 'data'}
 		<div>
-			<p>Data:</p>
-			<button
-				onclick={() =>
-					theData.addData({
-						x: { refId: -1 },
-						y: { refId: -1 }
-					})}
-			>
-				+
-			</button>
+			<div class="heading">
+				<p>Data</p>
+				<div class="add">
+					<button
+						class="icon"
+						onclick={() =>
+							theData.addData({
+								x: { refId: -1 },
+								y: { refId: -1 }
+							})}
+					>
+						<Icon name="add" width={16} height={16} />
+					</button>
+				</div>
+			</div>
 
 			{#each theData.data as datum, i}
 				<p>
@@ -557,6 +562,25 @@
 {/if}
 
 <style>
+	.heading {
+		position: sticky;
+		top: 0;
+
+		width: 100%;
+		height: 4vh;
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.heading p {
+		margin-left: 0.75rem;
+	}
+
+	.heading button {
+		margin-right: 0.65rem;
+	}
 	.tooltip {
 		position: absolute;
 		background-color: rgba(0, 0, 0, 0.7);

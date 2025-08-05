@@ -115,12 +115,12 @@
 			{#if core.plots.length > 0}
 				{#each core.plots as plot, i (plot.id)}
 					<Draggable
-						x={plot.x}
-						y={plot.y}
-						width={plot.width}
-						height={plot.height}
-						title={plot.name}
-						id={plot.id}
+						bind:x={plot.x}
+						bind:y={plot.y}
+						bind:width={plot.width}
+						bind:height={plot.height}
+						bind:title={plot.name}
+						bind:id={plot.id}
 					>
 						{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 						<Plot theData={plot} which="plot" />

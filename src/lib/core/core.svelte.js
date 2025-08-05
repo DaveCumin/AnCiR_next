@@ -46,6 +46,7 @@ export const appConsts = $state({
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
+	timeoutRefresh_ms: 20,
 	colourPalettes: {
 		batlowk: [
 			'#04050A',

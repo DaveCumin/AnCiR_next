@@ -64,10 +64,12 @@
 	}
 
 	function onMouseMove(e) {
+		let deltaX, deltaY;
+		if (resizing || moving) {
+			deltaX = (e.clientX - initialMouseX) / appState.canvasScale;
+			deltaY = (e.clientY - initialMouseY) / appState.canvasScale;
+		}
 		if (moving) {
-			const deltaX = (e.clientX - mouseStartX) / appState.canvasScale;
-			const deltaY = (e.clientY - mouseStartY) / appState.canvasScale;
-
 			appState.selectedPlotIds.forEach((id) => {
 				const plot = core.plots.find((p) => p.id === id);
 				if (!plot) return;
@@ -83,9 +85,6 @@
 				plot.y = Math.max(0, Math.min(newY, canvasHeight - height - 50));
 			});
 		} else if (resizing) {
-			let deltaX = (e.clientX - initialMouseX) / appState.canvasScale;
-			let deltaY = (e.clientY - initialMouseY) / appState.canvasScale;
-
 			const maxWidth = canvasWidth - x - 20;
 			const maxHeight = canvasHeight - y - 50;
 
