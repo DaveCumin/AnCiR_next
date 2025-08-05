@@ -43,7 +43,29 @@
 		offset = $derived(
 			(Number(new Date(this.parentPlot.startTime)) - Number(this.x.getData()[0])) / 3600000
 		);
-		dataByDays = $derived.by(() => {
+		dataByDays = $state({ xByPeriod: {}, yByPeriod: {} });
+
+		phaseMarkers = $state([]);
+
+		constructor(parent, dataIN) {
+			this.parentPlot = parent;
+
+			if (dataIN && dataIN.x) {
+				this.x = ColumnClass.fromJSON(dataIN.x);
+			} else {
+				this.x = new ColumnClass({ refId: -1 });
+			}
+			if (dataIN && dataIN.y) {
+				this.y = ColumnClass.fromJSON(dataIN.y);
+			} else {
+				this.y = new ColumnClass({ refId: -1 });
+			}
+			this.colour = dataIN?.colour ?? getPaletteColor(this.parentPlot.data.length);
+
+			this.computeDataByDays(); 
+		}
+
+		computeDataByDays() {
 			const tempx = this.x.hoursSinceStart ?? [];
 			const tempy = this.y.getData() ?? [];
 			const xByPeriod = {};
@@ -63,27 +85,9 @@
 					}
 				}
 			}
-			console.log(yByPeriod);
+			console.log("DEBUG: yByPeriod: ", yByPeriod);
 
-			return { xByPeriod, yByPeriod };
-		});
-
-		phaseMarkers = $state([]);
-
-		constructor(parent, dataIN) {
-			this.parentPlot = parent;
-
-			if (dataIN && dataIN.x) {
-				this.x = ColumnClass.fromJSON(dataIN.x);
-			} else {
-				this.x = new ColumnClass({ refId: -1 });
-			}
-			if (dataIN && dataIN.y) {
-				this.y = ColumnClass.fromJSON(dataIN.y);
-			} else {
-				this.y = new ColumnClass({ refId: -1 });
-			}
-			this.colour = dataIN?.colour ?? getPaletteColor(this.parentPlot.data.length);
+			this.dataByDays = { xByPeriod, yByPeriod };
 		}
 
 		addMarker() {
@@ -226,10 +230,14 @@
 				const temp = { x: { refId: dataIN.time.refId }, y: { refId: dataIN.values.refId } };
 				dataIN = structuredClone(temp);
 			}
-			this.data.push(new ActogramDataclass(this, dataIN));
+
+			const datum = new ActogramDataclass(this, dataIN);
+			this.data.push(datum);
+			datum.computeDataByDays();
 		}
 		removeData(idx) {
 			this.data.splice(idx, 1);
+			this.data.forEach(d => d.computeDataByDays());
 		}
 
 		addPhaseMarkerTo(markerId, clickedDay, clickedTime) {
