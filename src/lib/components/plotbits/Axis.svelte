@@ -6,12 +6,13 @@
 	import { timeFormat } from 'd3-time-format';
 	import { scaleTime } from 'd3-scale';
 	import { transition } from 'd3-transition';
+	import Plot from '$lib/core/Plot.svelte';
 
 	let {
 		height, //height of the plot
 		width, //width of the plot
-		yoffset, //any offset y
-		xoffset, //any offset x
+		plotPadding = { top: 0, right: 0, bottom: 0, left: 0 },
+		axisLeftWidth = 0,
 		position, //where the axis should be (x or y etc)
 		scale, //the d3s scale to use
 		nticks, //number of ticks
@@ -29,8 +30,8 @@
 	$effect(() => {
 		height;
 		width;
-		yoffset;
-		xoffset;
+		axisLeftWidth;
+		plotPadding;
 		//Set a transition
 		// const t = transition().duration(10); //Doesn't look good without a similar transition for the line/points/etc... hard to do.
 
@@ -39,81 +40,102 @@
 		if (position == 'bottom') {
 			axis = axisBottom(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
-				// .transition(t)
 				.call(axis)
-				.style('font-size', `${tickfontsize}px`)
-				.style('transform', `translate(${xoffset}px, ${height + yoffset}px)`);
+				.style(
+					'transform',
+					`translate(${plotPadding.left + axisLeftWidth}px, ${height + plotPadding.top}px)`
+				);
 		}
 		if (position == 'top') {
 			axis = axisTop(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
-				// .transition(t)
 				.call(axis)
-				.style('font-size', `${tickfontsize}px`)
-				.style('transform', `translate(${xoffset}px, ${yoffset}px)`);
+				.style(
+					'transform',
+					`translate(${plotPadding.left + axisLeftWidth}px, ${plotPadding.top}px)`
+				);
 		}
 		if (position == 'left') {
 			axis = axisLeft(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
-				// .transition(t)
 				.call(axis)
-				.style('font-size', `${tickfontsize}px`)
-				.style('transform', `translate(${xoffset}px, ${yoffset}px)`);
+				.style(
+					'transform',
+					`translate(${plotPadding.left + axisLeftWidth}px, ${plotPadding.top}px)`
+				);
 		}
 		if (position == 'right') {
 			axis = axisRight(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
-				// .transition(t)
 				.call(axis)
-				.style('font-size', `${tickfontsize}px`)
-				.style('transform', `translate(${width + xoffset}px, ${yoffset}px)`);
+				.style(
+					'transform',
+					`translate(${width + plotPadding.left + axisLeftWidth}px, ${plotPadding.top}px)`
+				);
 		}
-		//DO GRIDLINES
+		select(axisGroup)
+			// .transition(t)
+			.call(axis)
+			.style('font-size', `${tickfontsize}px`)
+			.style('font-family', 'system-ui, sans-serif');
+
+		// DO GRIDLINES
 		if (gridlines) {
+			select(axisGroup).selectAll('.gridline').remove(); // Remove all existing gridlines
 			if (position == 'bottom') {
 				select(axisGroup)
 					.selectAll('.tick')
 					.append('line')
 					.attr('class', 'gridline')
-					.attr('y1', 0)
-					.attr('y2', -height);
+					.attr('y1', -plotPadding.top) // Start at top of plot area
+					.attr('y2', -height); // End at bottom of plot area
 			} else if (position == 'top') {
 				select(axisGroup)
 					.selectAll('.tick')
 					.append('line')
 					.attr('class', 'gridline')
-					.attr('y1', 0)
-					.attr('y2', height);
+					.attr('y1', 0) // Start at axis
+					.attr('y2', height); // End at bottom of plot area
 			} else if (position == 'left') {
 				select(axisGroup)
 					.selectAll('.tick')
 					.append('line')
 					.attr('class', 'gridline')
-					.attr('x1', 0)
-					.attr('x2', width);
+					.attr('x1', 0) // Start at axis
+					.attr('x2', width); // End at right edge of plot area
 			} else if (position == 'right') {
 				select(axisGroup)
 					.selectAll('.tick')
 					.append('line')
 					.attr('class', 'gridline')
-					.attr('x1', 0)
-					.attr('x2', -width);
+					.attr('x1', 0) // Start at axis
+					.attr('x2', -width); // End at left edge of plot area
 			}
 			selectAll('.gridline')
 				.style('stroke', 'grey')
 				.style('stroke-width', '1px')
 				.style('stroke-dasharray', '4')
 				.style('stroke-opacity', '0.8');
+		} else {
+			select(axisGroup).selectAll('.gridline').remove(); // Remove gridlines if disabled
 		}
+
 		//TODO: find a better way to put the label (especially the y label) so it isn't taken over by the tick text
 		//DO THE LABEL
-		// Remove existing label
+		// Remove existing label`
 		select(axisGroup).select('.axis-label').remove();
+		const nolabelRect = axisGroup.getBoundingClientRect();
+		console.log('position: ', position);
+		console.log('padding: ', $state.snapshot(plotPadding));
+		console.log('sum: ', $state.snapshot(plotPadding.left) + axisLeftWidth);
+
+		console.log('nolab', nolabelRect);
 		//add in the label
 		let labelElement = select(axisGroup)
 			.append('text')
 			.attr('class', 'axis-label')
 			.style('font-size', `${labelfontsize}px`)
+			.style('font-family', 'system-ui, sans-serif')
 			.style('text-anchor', 'middle')
 			.style('fill', 'black')
 			.text(label);
@@ -131,11 +153,11 @@
 			labelElement
 				.attr('transform', `rotate(90)`)
 				.attr('x', height / 2)
-				.attr('y', 50); // Position to the right of the ticks
+				.attr('y', -40); // Position to the right of the ticks
 		}
 	});
 </script>
 
-{#key (position, height, width, yoffset, xoffset, scale, nticks, gridlines)}
+{#key (position, height, width, plotPadding, axisLeftWidth, scale, nticks, gridlines)}
 	<g bind:this={axisGroup} class={'axis-' + position} />
 {/key}

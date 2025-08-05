@@ -10,6 +10,8 @@
 		args = $state({});
 
 		constructor({ ...dataIN }, parent, id = null) {
+			console.time('TableProcess Constructor');
+
 			if (id === null) {
 				this.id = id ?? _tableprocessidCounter;
 				_tableprocessidCounter++;
@@ -34,6 +36,8 @@
 				const processHash = crypto.randomUUID();
 
 				for (let i = 0; i < Object.keys(this.args.out).length; i++) {
+					console.time(`Column ${Object.keys(this.args.out)[i]} `);
+
 					const tempCol = new Column({
 						tableProcessed: processHash,
 						name: Object.keys(this.args.out)[i],
@@ -42,12 +46,15 @@
 					});
 					this.args.out[Object.keys(this.args.out)[i]] = tempCol.id;
 					theTable?.addColumn(tempCol);
+
+					console.timeEnd(`Column ${Object.keys(this.args.out)[i]} `);
 				}
 				if (Object.keys(this.args).includes('N')) {
 					this.args.N = getColumnById(theTable?.columnRefs[0]).getData().length;
 				}
 				//--------------------------
 			}
+			console.timeEnd('TableProcess Constructor');
 		}
 		toJSON() {
 			return {

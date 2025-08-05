@@ -9,6 +9,7 @@
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
+	import Annotation, { AnnotationClass } from './Annotation.svelte';
 
 	import { scaleLinear } from 'd3-scale';
 	import { makeSeqArray, max, min } from '$lib/components/plotBits/helpers/wrangleData';
@@ -62,7 +63,7 @@
 			}
 			this.colour = dataIN?.colour ?? getPaletteColor(this.parentPlot.data.length);
 
-			this.computeDataByDays(); 
+			this.computeDataByDays();
 		}
 
 		computeDataByDays() {
@@ -85,7 +86,7 @@
 					}
 				}
 			}
-			console.log("DEBUG: yByPeriod: ", yByPeriod);
+			console.log('DEBUG: yByPeriod: ', yByPeriod);
 
 			this.dataByDays = { xByPeriod, yByPeriod };
 		}
@@ -121,6 +122,7 @@
 	export class Actogramclass {
 		parentBox = $state();
 		data = $state([]);
+		annotations = $state([]);
 		isAddingMarkerTo = $state(-1);
 		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 20 });
 		padding = $derived.by(() => {
@@ -237,7 +239,7 @@
 		}
 		removeData(idx) {
 			this.data.splice(idx, 1);
-			this.data.forEach(d => d.computeDataByDays());
+			this.data.forEach((d) => d.computeDataByDays());
 		}
 
 		addPhaseMarkerTo(markerId, clickedDay, clickedTime) {
@@ -249,6 +251,10 @@
 					}
 				}
 			}
+		}
+
+		addAnnotation() {
+			this.annotations.push(new AnnotationClass(this));
 		}
 
 		toJSON() {
@@ -287,9 +293,9 @@
 </script>
 
 <script>
-	import { appState } from '$lib/core/core.svelte';
-
 	let { theData, which } = $props();
+
+	let currentControlTab = $state('properties');
 
 	function handleClick(e) {
 		if (theData.plot.isAddingMarkerTo >= 0) {
@@ -322,7 +328,24 @@
 </script>
 
 {#snippet controls(theData)}
-	{#if appState.currentControlTab === 'properties'}
+	<div class="control-tag">
+		<button
+			class={currentControlTab === 'properties' ? 'active' : ''}
+			onclick={() => (currentControlTab = 'properties')}>Properties</button
+		>
+		<button
+			class={currentControlTab === 'data' ? 'active' : ''}
+			onclick={() => (currentControlTab = 'data')}>Data</button
+		>
+		<button
+			class={currentControlTab === 'annotations' ? 'active' : ''}
+			onclick={() => (currentControlTab = 'annotations')}>Annotations</button
+		>
+	</div>
+
+	<div class="div-line"></div>
+
+	{#if currentControlTab === 'properties'}
 		<div class="control-component">
 			<!-- <div class="control-component-title">
 				<p>Dimension</p>
@@ -455,7 +478,7 @@
 				</div>
 			</div>
 		{/if}
-	{:else if appState.currentControlTab === 'data'}
+	{:else if currentControlTab === 'data'}
 		<div>
 			<p>Data:</p>
 			<button
@@ -488,6 +511,11 @@
 				{/each}
 			{/each}
 		</div>
+	{:else if currentControlTab === 'annotations'}
+		<p>Annotations:<button onclick={() => theData.addAnnotation()}>+</button></p>
+		{#each theData.annotations as annotation}
+			<Annotation {which} {annotation} />
+		{/each}
 	{/if}
 {/snippet}
 
@@ -508,8 +536,8 @@
 				.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
 				.range([0, theData.plot.plotwidth])}
 			position="top"
-			yoffset={theData.plot.padding.top}
-			xoffset={theData.plot.padding.left}
+			plotPadding={theData.plot.padding}
+			axisLeftWidth={theData.plot.axisLeftWidth}
 			nticks={theData.plot.plotwidth > 600
 				? theData.plot.periodHrs
 				: Math.max(2, theData.plot.plotwidth / 150)}
@@ -546,6 +574,10 @@
 			{#each datum.phaseMarkers as marker}
 				<PhaseMarker {which} {marker} />
 			{/each}
+		{/each}
+		<!-- THE ANNOTATIONS -->
+		{#each theData.plot.annotations as annotation}
+			<Annotation {which} {annotation} />
 		{/each}
 	</svg>
 {/snippet}

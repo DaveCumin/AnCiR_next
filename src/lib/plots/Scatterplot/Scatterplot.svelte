@@ -7,7 +7,6 @@
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
-	import { tick } from 'svelte';
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
 
@@ -73,6 +72,7 @@
 		//TODO: this isn't wokring quite right... ???
 		lastaxisLeftWidth = $state(0);
 		axisLeftWidth = $derived.by(() => {
+			//$inspect.trace('in axisLeftWidth');
 			let out = -Infinity;
 			this.ylims;
 			this.xlims;
@@ -110,7 +110,9 @@
 			let ymin = Infinity;
 			let ymax = -Infinity;
 			this.data.forEach((d, i) => {
+				console.log(this.data[i].y);
 				let tempy = this.data[i].y.getData() ?? [];
+				console.log(tempy);
 				ymin = min([ymin, ...tempy]);
 				ymax = max([ymax, ...tempy]);
 			});
@@ -195,10 +197,11 @@
 </script>
 
 <script>
-	import { appState } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 
 	let { theData, which } = $props();
+
+	let currentControlTab = $state('properties');
 
 	//Tooltip
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
@@ -208,7 +211,20 @@
 </script>
 
 {#snippet controls(theData)}
-	{#if appState.currentControlTab === 'properties'}
+	<div class="control-tag">
+		<button
+			class={currentControlTab === 'properties' ? 'active' : ''}
+			onclick={() => (currentControlTab = 'properties')}>Properties</button
+		>
+		<button
+			class={currentControlTab === 'data' ? 'active' : ''}
+			onclick={() => (currentControlTab = 'data')}>Data</button
+		>
+	</div>
+
+	<div class="div-line"></div>
+
+	{#if currentControlTab === 'properties'}
 		<div class="control-component">
 			<div class="control-input-horizontal">
 				<div class="control-input">
@@ -266,12 +282,6 @@
 				</div>
 			</div>
 
-			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.ygridlines} />
-					<p>Grid</p>
-				</div>
-			</div>
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Min</p>
@@ -305,6 +315,12 @@
 					</div>
 				{/if}
 			</div>
+			<div class="control-input-vertical">
+				<div class="control-input-checkbox">
+					<input type="checkbox" bind:checked={theData.ygridlines} />
+					<p>Grid</p>
+				</div>
+			</div>
 
 			<div class="control-component-title">
 				<p>X-Axis</p>
@@ -313,13 +329,6 @@
 				<div class="control-input">
 					<p>Label</p>
 					<input bind:value={theData.xlabel} />
-				</div>
-			</div>
-
-			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.xgridlines} />
-					<p>Grid</p>
 				</div>
 			</div>
 
@@ -383,8 +392,14 @@
 					</div>
 				{/if}
 			</div>
+			<div class="control-input-vertical">
+				<div class="control-input-checkbox">
+					<input type="checkbox" bind:checked={theData.xgridlines} />
+					<p>Grid</p>
+				</div>
+			</div>
 		</div>
-	{:else if appState.currentControlTab === 'data'}
+	{:else if currentControlTab === 'data'}
 		<div>
 			<p>Data:</p>
 			<button
@@ -435,12 +450,13 @@
 				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 				.range([theData.plot.plotheight, 0])}
 			position="left"
-			yoffset={theData.plot.padding.top}
-			xoffset={theData.plot.padding.left + theData.plot.axisLeftWidth}
+			plotPadding={theData.plot.padding}
+			axisLeftWidth={theData.plot.axisLeftWidth}
 			nticks={5}
 			gridlines={theData.plot.ygridlines}
 			label={theData.plot.ylabel}
 		/>
+
 		<!-- The X-axis -->
 		<Axis
 			height={theData.plot.plotheight}
@@ -453,12 +469,44 @@
 						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
 						.range([0, theData.plot.plotwidth])}
 			position="bottom"
-			yoffset={theData.plot.padding.top}
-			xoffset={theData.plot.padding.left + theData.plot.axisLeftWidth}
+			plotPadding={theData.plot.padding}
+			axisLeftWidth={theData.plot.axisLeftWidth}
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
 			label={theData.plot.xlabel}
 		/>
+		<!-- EXTRA FOR TESTING-->
+		<!-- <Axis
+			height={theData.plot.plotheight}
+			width={theData.plot.plotwidth}
+			scale={scaleLinear()
+				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+				.range([theData.plot.plotheight, 0])}
+			position="right"
+			plotPadding={theData.plot.padding}
+			axisLeftWidth={theData.plot.axisLeftWidth}
+			nticks={5}
+			gridlines={theData.plot.ygridlines}
+			label={theData.plot.ylabel}
+		/>
+
+		<Axis
+			height={theData.plot.plotheight}
+			width={theData.plot.plotwidth}
+			scale={theData.plot.anyXdataTime
+				? scaleTime()
+						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+						.range([0, theData.plot.plotwidth])
+				: scaleLinear()
+						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+						.range([0, theData.plot.plotwidth])}
+			position="top"
+			plotPadding={theData.plot.padding}
+			axisLeftWidth={theData.plot.axisLeftWidth}
+			nticks={5}
+			gridlines={theData.plot.xgridlines}
+			label={theData.plot.xlabel}
+		/> -->
 
 		{#each theData.plot.data as datum}
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}

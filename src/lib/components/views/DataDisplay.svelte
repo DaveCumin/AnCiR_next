@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	import { core, appConsts } from '$lib/core/core.svelte.js';
+	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';

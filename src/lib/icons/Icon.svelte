@@ -31,6 +31,20 @@
 </svg>
 
 <style>
+	.spinner {
+		fill: var(--color-lightness-35);
+		transition: fill 0.2s ease;
+		animation: spin 1s linear infinite;
+	}
+	@keyframes spin {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
 	.static-icon {
 		fill: var(--color-lightness-35);
 		transition: fill 0.2s ease;

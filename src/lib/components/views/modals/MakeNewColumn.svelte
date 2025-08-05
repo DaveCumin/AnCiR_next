@@ -3,28 +3,44 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import { getTableById } from '$lib/core/Table.svelte';
 	import { TableProcess } from '$lib/core/TableProcess.svelte';
-	import { appConsts } from '$lib/core/core.svelte.js';
+	import { appConsts, appState } from '$lib/core/core.svelte.js';
+	import { tick } from 'svelte';
+	import Icon from '$lib/icons/Icon.svelte';
 
 	let { show = $bindable(), tableId } = $props();
 
 	///-----------
 	let tableProcessChosen = $state();
+	let awaitingLoad = $state(false);
 
-	function confirmAddColumn() {
-		//add the process
-		getTableById(tableId).processes.push(
-			new TableProcess(
-				{
-					name: tableProcessChosen,
-					args: theDefaults
-				},
-				getTableById(tableId)
-			)
+	async function confirmAddColumn() {
+		awaitingLoad = true;
+
+		await tick();
+		await new Promise((resolve) => setTimeout(resolve, 50)); // short wait to make sure the spinner will show
+		await tick();
+
+		// Create process in a non-reactive context
+		console.time('Create Process');
+		const newProcess = new TableProcess(
+			{
+				name: tableProcessChosen,
+				args: theDefaults
+			},
+			getTableById(tableId)
 		);
+		console.timeEnd('Create Process');
+
+		// Batch update: Add process to reactive state
+		console.time('Push Process');
+		getTableById(tableId).processes.push(newProcess);
+		console.timeEnd('Push Process');
 
 		//clear the defaults
 		tableProcessChosen = '';
 		theDefaults = null;
+		awaitingLoad = false;
+		await tick();
 
 		//hide modal
 		show = false;
@@ -144,5 +160,21 @@
 {/snippet}
 
 <Modal bind:showModal={show}>
-	<ProgressIndicator bind:steps bind:currentStep {stepContent} {footerContent} />
+	{#if awaitingLoad}
+		<div class="title-container">
+			<Icon name="spinner" width={32} height={32} className="spinner" />
+			<p>Making the column</p>
+		</div>
+	{:else}
+		<ProgressIndicator bind:steps bind:currentStep {stepContent} {footerContent} />
+	{/if}
 </Modal>
+
+<style>
+	.title-container {
+		display: flex;
+		justify-content: left; /* Left horizontally */
+		align-items: center; /* Center vertically */
+		gap: 10px; /* Space between logo and text */
+	}
+</style>

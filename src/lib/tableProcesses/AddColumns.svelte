@@ -14,7 +14,9 @@
 	import { onMount } from 'svelte';
 
 	let { p = $bindable() } = $props();
+
 	let result = $state();
+
 	function addcolumns() {
 		if (!p.args.xsIN) return; //if there is no input yet
 		if (p.args.xsIN?.length == 0) {
