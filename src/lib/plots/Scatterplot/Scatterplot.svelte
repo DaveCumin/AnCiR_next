@@ -279,12 +279,6 @@
 				</div>
 			</div>
 
-			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.ygridlines} />
-					<p>Grid</p>
-				</div>
-			</div>
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Min</p>
@@ -318,6 +312,12 @@
 					</div>
 				{/if}
 			</div>
+			<div class="control-input-vertical">
+				<div class="control-input-checkbox">
+					<input type="checkbox" bind:checked={theData.ygridlines} />
+					<p>Grid</p>
+				</div>
+			</div>
 
 			<div class="control-component-title">
 				<p>X-Axis</p>
@@ -326,13 +326,6 @@
 				<div class="control-input">
 					<p>Label</p>
 					<input bind:value={theData.xlabel} />
-				</div>
-			</div>
-
-			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.xgridlines} />
-					<p>Grid</p>
 				</div>
 			</div>
 
@@ -396,6 +389,12 @@
 					</div>
 				{/if}
 			</div>
+			<div class="control-input-vertical">
+				<div class="control-input-checkbox">
+					<input type="checkbox" bind:checked={theData.xgridlines} />
+					<p>Grid</p>
+				</div>
+			</div>
 		</div>
 	{:else if currentControlTab === 'data'}
 		<div>
@@ -441,7 +440,7 @@
 		ontooltip={handleTooltip}
 	>
 		<!-- The Y-axis -->
-		<Axis
+		<!-- <Axis
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()
@@ -454,19 +453,7 @@
 			gridlines={theData.plot.ygridlines}
 			label={theData.plot.ylabel}
 		/>
-		<Axis
-			height={theData.plot.plotheight}
-			width={theData.plot.plotwidth}
-			scale={scaleLinear()
-				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-				.range([theData.plot.plotheight, 0])}
-			position="right"
-			plotPadding={theData.plot.padding}
-			axisLeftWidth={theData.plot.axisLeftWidth}
-			nticks={5}
-			gridlines={theData.plot.ygridlines}
-			label={theData.plot.ylabel}
-		/>
+
 		<!-- The X-axis -->
 		<Axis
 			height={theData.plot.plotheight}
@@ -484,7 +471,22 @@
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
 			label={theData.plot.xlabel}
+		/> -->
+		<!-- EXTRA FOR TESTING-->
+		<Axis
+			height={theData.plot.plotheight}
+			width={theData.plot.plotwidth}
+			scale={scaleLinear()
+				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+				.range([theData.plot.plotheight, 0])}
+			position="right"
+			plotPadding={theData.plot.padding}
+			axisLeftWidth={theData.plot.axisLeftWidth}
+			nticks={5}
+			gridlines={theData.plot.ygridlines}
+			label={theData.plot.ylabel}
 		/>
+
 		<Axis
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}

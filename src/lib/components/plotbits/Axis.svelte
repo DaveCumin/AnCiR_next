@@ -88,28 +88,28 @@
 					.append('line')
 					.attr('class', 'gridline')
 					.attr('y1', -plotPadding.top) // Start at top of plot area
-					.attr('y2', -(height - plotPadding.bottom)); // End at bottom of plot area
+					.attr('y2', -height); // End at bottom of plot area
 			} else if (position == 'top') {
 				select(axisGroup)
 					.selectAll('.tick')
 					.append('line')
 					.attr('class', 'gridline')
 					.attr('y1', 0) // Start at axis
-					.attr('y2', height - plotPadding.top - plotPadding.bottom); // End at bottom of plot area
+					.attr('y2', height); // End at bottom of plot area
 			} else if (position == 'left') {
 				select(axisGroup)
 					.selectAll('.tick')
 					.append('line')
 					.attr('class', 'gridline')
 					.attr('x1', 0) // Start at axis
-					.attr('x2', width - plotPadding.right - plotPadding.left + axisLeftWidth); // End at right edge of plot area
+					.attr('x2', width - plotPadding.right + axisLeftWidth); // End at right edge of plot area
 			} else if (position == 'right') {
 				select(axisGroup)
 					.selectAll('.tick')
 					.append('line')
 					.attr('class', 'gridline')
 					.attr('x1', 0) // Start at axis
-					.attr('x2', -(width + plotPadding.left - axisLeftWidth - plotPadding.right)); // End at left edge of plot area
+					.attr('x2', -width); // End at left edge of plot area
 			}
 			selectAll('.gridline')
 				.style('stroke', 'grey')
@@ -124,6 +124,11 @@
 		//DO THE LABEL
 		// Remove existing label
 		select(axisGroup).select('.axis-label').remove();
+		const nolabelRect = axisGroup.getBoundingClientRect();
+		console.log(position);
+		console.log($state.snapshot(plotPadding));
+
+		console.log(nolabelRect);
 		//add in the label
 		let labelElement = select(axisGroup)
 			.append('text')
