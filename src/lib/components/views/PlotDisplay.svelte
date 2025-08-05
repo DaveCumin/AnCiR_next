@@ -119,8 +119,8 @@
 						bind:y={plot.y}
 						bind:width={plot.width}
 						bind:height={plot.height}
-						bind:title={plot.name}
-						bind:id={plot.id}
+						title={plot.name}
+						id={plot.id}
 					>
 						{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 						<Plot theData={plot} which="plot" />

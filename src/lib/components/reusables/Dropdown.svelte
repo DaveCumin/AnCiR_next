@@ -76,7 +76,7 @@
 			}
 		}}
 	>
-		<div class="dropdown-content">
+		<div class="dropdown-content" onclick={(e) => closeDropdown()}>
 			{@render groups?.({
 				showSubmenu,
 				hideSubmenu,
