@@ -526,8 +526,8 @@
 				.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
 				.range([0, theData.plot.plotwidth])}
 			position="top"
-			yoffset={theData.plot.padding.top}
-			xoffset={theData.plot.padding.left}
+			plotPadding={theData.plot.padding}
+			axisLeftWidth={theData.plot.axisLeftWidth}
 			nticks={theData.plot.plotwidth > 600
 				? theData.plot.periodHrs
 				: Math.max(2, theData.plot.plotwidth / 150)}

@@ -573,8 +573,8 @@
 				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 				.range([theData.plot.plotheight, 0])}
 			position="left"
-			yoffset={theData.plot.padding.top}
-			xoffset={theData.plot.padding.left}
+			plotPadding={theData.plot.padding}
+			axisLeftWidth={theData.plot.axisLeftWidth}
 			nticks={5}
 			gridlines={theData.plot.ygridlines}
 		/>
@@ -585,8 +585,8 @@
 				.domain([theData.plot.periodlimsIN[0], theData.plot.periodlimsIN[1]])
 				.range([0, theData.plot.plotwidth])}
 			position="bottom"
-			yoffset={theData.plot.padding.top}
-			xoffset={theData.plot.padding.left}
+			plotPadding={theData.plot.padding}
+			axisLeftWidth={theData.plot.axisLeftWidth}
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
 		/>
