@@ -332,6 +332,9 @@
 			onclick={() => (currentControlTab = 'annotations')}>Annotations</button
 		>
 	</div>
+
+	<div class="div-line"></div>
+
 	{#if currentControlTab === 'properties'}
 		<div class="control-component">
 			<!-- <div class="control-component-title">

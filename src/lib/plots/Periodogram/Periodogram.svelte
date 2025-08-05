@@ -359,6 +359,7 @@
 			onclick={() => (currentControlTab = 'data')}>Data</button
 		>
 	</div>
+	<div class="div-line"></div>
 
 	{#if currentControlTab === 'properties'}
 		<div class="control-component">
