@@ -10,6 +10,7 @@
 
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import TableLayout from '$lib/components/plotbits/Table.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
 	import { tick } from 'svelte';
 	import { stackOrderInsideOut } from 'd3-shape';
 	import { parse } from 'svelte/compiler';
@@ -280,7 +281,10 @@
 <Modal bind:showModal={showImportModal}>
 	{#snippet header()}
 		{#if awaitingPreview}
-			<p>Importing data from {targetFile?.name ?? 'file'}.</p>
+			<div class="title-container">
+				<Icon name="spinner" width={32} height={32} className="spinner" />
+				<p>Importing data from {targetFile?.name ?? 'file'}.</p>
+			</div>
 		{:else if awaitingLoad}
 			<p>Loading data from {targetFile?.name ?? 'file'}.</p>
 		{:else}
@@ -361,3 +365,12 @@
 		</div>
 	{/snippet}
 </Modal>
+
+<style>
+	.title-container {
+		display: flex;
+		justify-content: left; /* Left horizontally */
+		align-items: center; /* Center vertically */
+		gap: 10px; /* Space between logo and text */
+	}
+</style>
