@@ -86,7 +86,6 @@
 					}
 				}
 			}
-			console.log('DEBUG: yByPeriod: ', yByPeriod);
 
 			this.dataByDays = { xByPeriod, yByPeriod };
 		}

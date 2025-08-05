@@ -97,12 +97,7 @@
 		y = $state();
 		binSize = $state(0.25);
 		method = $state('Chi-squared'); // New: method selector
-		binnedData = $derived.by(() => {
-			if (this.method === 'Chi-squared') {
-				return binData(this.x.hoursSinceStart, this.y.getData(), this.binSize, 0);
-			}
-			return { bins: [], y_out: [] }; // No binning for Lomb-Scargle
-		});
+
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
 		linecolour = $state();
 		linestrokeWidth = $state(3);
@@ -111,9 +106,14 @@
 		alpha = $state(0.05);
 
 		updatePeriodData() {
-			if (this.method === 'Chi-squared' && this.binnedData.bins.length === 0) {
-				this.periodData = { x: [], y: [], threshold: [], pvalue: [] };
-				return;
+			let binnedData = { bins: [], y_out: [] }; // No binning for Lomb-Scargle
+			if (this.method === 'Chi-squared') {
+				binnedData = binData(this.x.hoursSinceStart, this.y.getData(), this.binSize, 0);
+
+				if (this.binnedData.bins.length === 0) {
+					this.periodData = { x: [], y: [], threshold: [], pvalue: [] };
+					return;
+				}
 			}
 
 			const periods = makeSeqArray(

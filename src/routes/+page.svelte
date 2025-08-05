@@ -297,7 +297,7 @@
 </script>
 
 <svelte:head>
-	<title>AnCiR v β.4.1</title>
+	<title>AnCiR v β.4.2</title>
 </svelte:head>
 
 {#if isLoaded}
@@ -531,10 +531,9 @@
 		margin-bottom: 1rem;
 		gap: 0.4rem;
 		overflow-x: auto;
-		
 	}
 
-	:global(.control-tag::-webkit-scrollbar ) {
+	:global(.control-tag::-webkit-scrollbar) {
 		display: none;
 	}
 
