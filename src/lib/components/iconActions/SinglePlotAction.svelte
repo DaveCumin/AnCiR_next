@@ -121,8 +121,8 @@
 		border-radius: 4px;
 		border: 1px solid var(--color-lightness-85);
 		box-shadow:
-			0 4px 8px 0 var(--color-lightness-85),
-			0 6px 10px 0 var(--color-lightness-95);
+			0 4px 8px 0 rgba(0, 0, 0, 0.2), 
+			0 6px 10px 0 rgba(0, 0, 0, 0.1);
 		z-index: 1001; /* Above dialog */
 		padding: 0;
 	}
