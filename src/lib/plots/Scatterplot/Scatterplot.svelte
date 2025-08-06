@@ -62,43 +62,11 @@
 	export class Scatterplotclass {
 		parentBox = $state();
 		data = $state([]);
+
 		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
 		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
 
-		plotwidth = $derived(
-			this.parentBox.width - this.padding.left - this.axisLeftWidth - this.padding.right
-		);
-
-		//TODO: this isn't wokring quite right... ???
-		lastaxisLeftWidth = $state(0);
-		axisLeftWidth = $derived.by(() => {
-			//$inspect.trace('in axisLeftWidth');
-			let out = -Infinity;
-			this.ylims;
-			this.xlims;
-			this.ylabel;
-			let plot = document.getElementById('plot' + this.parentBox.id);
-			if (plot) {
-				let plotRect = plot?.getBoundingClientRect();
-				let intendedAxisLeft = plotRect.left + this.padding.left;
-				let axesLeft = plot?.querySelectorAll('.axis-left');
-
-				for (let i = 0; i < axesLeft.length; i++) {
-					let axisRect = axesLeft[i].getBoundingClientRect();
-					let actualAxisLeft = axisRect.left;
-					console.log('intended ', intendedAxisLeft, ', actual ', actualAxisLeft);
-					// If axis extends to the left of intended position, that's overhang
-					if (actualAxisLeft != intendedAxisLeft) {
-						out = Math.max(out, intendedAxisLeft - actualAxisLeft);
-					}
-				}
-			}
-			if (out > this.padding.left) {
-				this.lastaxisLeftWidth = out;
-			}
-			console.log('returnning ', this.lastaxisLeftWidth);
-			return this.lastaxisLeftWidth;
-		});
+		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
 
 		xlimsIN = $state([null, null]);
 		ylimsIN = $state([null, null]);
@@ -158,6 +126,29 @@
 			}
 		}
 
+		getAutoScaleValues(side) {
+			//get the svg left position
+			const leftSVG = document.getElementById('plot' + this.parentBox.id)?.getBoundingClientRect();
+			//get the axis (just the axis line) left position
+			const leftAxisLine = document
+				.getElementById('plot' + this.parentBox.id)
+				.getElementsByClassName('domain')[0]
+				.getBoundingClientRect();
+			//get the axis (including ticks and labels, etc) left position
+			const leftAxisWhole = document
+				.getElementById('plot' + this.parentBox.id)
+				.getElementsByClassName('axis-left')[0]
+				.getBoundingClientRect();
+			//Now do the auto-scaling
+			if (side == 'left') {
+				const leftAxisWidth = Math.round(leftAxisLine.left - leftAxisWhole.left + 5);
+				return leftAxisWidth;
+			}
+		}
+		autoScalePadding(side) {
+			this.padding[side] = this.getAutoScaleValues(side);
+		}
+
 		addData(dataIN) {
 			this.data.push(new ScatterDataclass(this, dataIN));
 		}
@@ -198,6 +189,7 @@
 
 <script>
 	import Icon from '$lib/icons/Icon.svelte';
+	import { onMount } from 'svelte';
 
 	let { theData, which } = $props();
 
@@ -208,6 +200,12 @@
 	function handleTooltip(event) {
 		tooltip = event.detail;
 	}
+
+	onMount(() => {
+		if (which == 'plot') {
+			theData.plot.autoScalePadding('left');
+		}
+	});
 </script>
 
 {#snippet controls(theData)}
@@ -260,6 +258,11 @@
 				<div class="control-input">
 					<p>Left</p>
 					<input type="number" bind:value={theData.padding.left} />
+					{#if theData.getAutoScaleValues('left') != theData.padding.left}
+						<button class="icon" onclick={() => theData.autoScalePadding('left')}>
+							<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
+						</button>
+					{/if}
 				</div>
 
 				<div class="control-input">
@@ -456,7 +459,6 @@
 				.range([theData.plot.plotheight, 0])}
 			position="left"
 			plotPadding={theData.plot.padding}
-			axisLeftWidth={theData.plot.axisLeftWidth}
 			nticks={5}
 			gridlines={theData.plot.ygridlines}
 			label={theData.plot.ylabel}
@@ -475,7 +477,6 @@
 						.range([0, theData.plot.plotwidth])}
 			position="bottom"
 			plotPadding={theData.plot.padding}
-			axisLeftWidth={theData.plot.axisLeftWidth}
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
 			label={theData.plot.xlabel}
@@ -489,7 +490,6 @@
 				.range([theData.plot.plotheight, 0])}
 			position="right"
 			plotPadding={theData.plot.padding}
-			axisLeftWidth={theData.plot.axisLeftWidth}
 			nticks={5}
 			gridlines={theData.plot.ygridlines}
 			label={theData.plot.ylabel}
@@ -507,7 +507,6 @@
 						.range([0, theData.plot.plotwidth])}
 			position="top"
 			plotPadding={theData.plot.padding}
-			axisLeftWidth={theData.plot.axisLeftWidth}
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
 			label={theData.plot.xlabel}
@@ -527,7 +526,7 @@
 					strokeCol={datum.linecolour}
 					strokeWidth={datum.linestrokeWidth}
 					yoffset={theData.plot.padding.top}
-					xoffset={theData.plot.padding.left + theData.plot.axisLeftWidth}
+					xoffset={theData.plot.padding.left}
 				/>
 				<Points
 					x={datum.x.getData()}
@@ -542,7 +541,7 @@
 					radius={datum.pointradius}
 					fillCol={datum.pointcolour}
 					yoffset={theData.plot.padding.top}
-					xoffset={theData.plot.padding.left + theData.plot.axisLeftWidth}
+					xoffset={theData.plot.padding.left}
 					tooltip={true}
 				/>
 			{/if}

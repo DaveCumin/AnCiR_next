@@ -12,7 +12,6 @@
 		height, //height of the plot
 		width, //width of the plot
 		plotPadding = { top: 0, right: 0, bottom: 0, left: 0 },
-		axisLeftWidth = 0,
 		position, //where the axis should be (x or y etc)
 		scale, //the d3s scale to use
 		nticks, //number of ticks
@@ -30,8 +29,8 @@
 	$effect(() => {
 		height;
 		width;
-		axisLeftWidth;
 		plotPadding;
+
 		//Set a transition
 		// const t = transition().duration(10); //Doesn't look good without a similar transition for the line/points/etc... hard to do.
 
@@ -41,37 +40,25 @@
 			axis = axisBottom(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
 				.call(axis)
-				.style(
-					'transform',
-					`translate(${plotPadding.left + axisLeftWidth}px, ${height + plotPadding.top}px)`
-				);
+				.style('transform', `translate(${plotPadding.left}px, ${height + plotPadding.top}px)`);
 		}
 		if (position == 'top') {
 			axis = axisTop(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
 				.call(axis)
-				.style(
-					'transform',
-					`translate(${plotPadding.left + axisLeftWidth}px, ${plotPadding.top}px)`
-				);
+				.style('transform', `translate(${plotPadding.left}px, ${plotPadding.top}px)`);
 		}
 		if (position == 'left') {
 			axis = axisLeft(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
 				.call(axis)
-				.style(
-					'transform',
-					`translate(${plotPadding.left + axisLeftWidth}px, ${plotPadding.top}px)`
-				);
+				.style('transform', `translate(${plotPadding.left}px, ${plotPadding.top}px)`);
 		}
 		if (position == 'right') {
 			axis = axisRight(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
 				.call(axis)
-				.style(
-					'transform',
-					`translate(${width + plotPadding.left + axisLeftWidth}px, ${plotPadding.top}px)`
-				);
+				.style('transform', `translate(${width + plotPadding.left}px, ${plotPadding.top}px)`);
 		}
 		select(axisGroup)
 			// .transition(t)
@@ -125,12 +112,8 @@
 		// Remove existing label`
 		select(axisGroup).select('.axis-label').remove();
 		const nolabelRect = axisGroup.getBoundingClientRect();
-		console.log('position: ', position);
-		console.log('padding: ', $state.snapshot(plotPadding));
-		console.log('sum: ', $state.snapshot(plotPadding.left) + axisLeftWidth);
 
-		console.log('nolab', nolabelRect);
-		//add in the label
+		// //add in the label
 		let labelElement = select(axisGroup)
 			.append('text')
 			.attr('class', 'axis-label')
@@ -158,6 +141,6 @@
 	});
 </script>
 
-{#key (position, height, width, plotPadding, axisLeftWidth, scale, nticks, gridlines)}
+{#key (position, height, width, plotPadding, scale, nticks, gridlines)}
 	<g bind:this={axisGroup} class={'axis-' + position} />
 {/key}

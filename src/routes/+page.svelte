@@ -78,6 +78,15 @@
 	//------------------------------------
 
 	onMount(async () => {
+		//load the maps
+		appConsts.processMap = await loadProcesses();
+		appConsts.plotMap = await loadPlots();
+		appConsts.tableProcessMap = await loadTableProcesses();
+
+		isLoaded = true;
+
+		// loadTestJson(); // TODO: DEBUG - error in COLUMN class
+
 		//add event listeners
 		const updateWidth = () => {
 			appState.windowWidth = window.innerWidth;
@@ -103,16 +112,7 @@
 			}
 		});
 
-		//load the maps
-		appConsts.processMap = await loadProcesses();
-		appConsts.plotMap = await loadPlots();
-		appConsts.tableProcessMap = await loadTableProcesses();
-
-		// loadTestJson(); // TODO: DEBUG - error in COLUMN class
-
-		isLoaded = true;
-
-		//remove the listeners
+		//remove the listeners on close
 		return () => {
 			window.removeEventListener('resize', updateWidth);
 			document.removeEventListener('keydown');

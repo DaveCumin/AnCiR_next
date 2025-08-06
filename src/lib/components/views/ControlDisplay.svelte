@@ -115,7 +115,7 @@
 
 		// Filter paths
 		options = filterPaths(options);
-
+		console.log(options);
 		return options;
 	}
 
