@@ -176,7 +176,16 @@
 					</p> -->
 
 					<div class="control-banner">
-						<p contenteditable="true" bind:innerHTML={plot.name}>{plot.name}</p>
+						<p
+							id="test"
+							contenteditable="false"
+							ondblclick={(e) => {
+								e.target.setAttribute('contenteditable', 'true');
+								e.target.focus();
+							}}
+							onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+							bind:innerHTML={plot.name}
+						></p>
 
 						<div class="control-banner-icons">
 							<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
