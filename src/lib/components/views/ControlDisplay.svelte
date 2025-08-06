@@ -177,7 +177,6 @@
 
 					<div class="control-banner">
 						<p
-							id="test"
 							contenteditable="false"
 							ondblclick={(e) => {
 								e.target.setAttribute('contenteditable', 'true');

@@ -14,6 +14,7 @@
 	import { Plot } from '$lib/core/Plot.svelte';
 	import { getTableById } from '$lib/core/Table.svelte';
 	import SingleTableAction from '../iconActions/SingleTableAction.svelte';
+	import { preventDefault } from 'svelte/legacy';
 
 	// AddTable dropdown
 	let showAddTable = $state(false);
@@ -74,15 +75,23 @@
 	{#each core.tables as table (table.id)}
 		<div class="clps-container">
 			<details class="clps-item">
-				<summary
-					class="clps-title-container"
-					onclick={(e) => {
-						e.stopPropagation();
-						toggleClps(table.id);
-					}}
-				>
-					<div class="clps-title">
-						<p>{table.name}</p>
+				<summary class="clps-title-container">
+					<div
+						class="clps-title"
+						onclick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+						}}
+					>
+						<p
+							contenteditable="false"
+							ondblclick={(e) => {
+								e.target.setAttribute('contenteditable', 'true');
+								e.target.focus();
+							}}
+							onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+							bind:innerHTML={table.name}
+						></p>
 					</div>
 
 					<div class="clps-title-button">
