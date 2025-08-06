@@ -176,7 +176,7 @@
 					</p> -->
 
 					<div class="control-banner">
-						<p>{plot.name}</p>
+						<p contenteditable="true" bind:innerHTML={plot.name}>{plot.name}</p>
 
 						<div class="control-banner-icons">
 							<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
