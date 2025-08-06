@@ -102,6 +102,7 @@
 	}
 
 	function unitChange() {
+		if (value == null) return;
 		updateDisplayValue();
 		lastUnit = selectedUnit; // update the last unit
 		updateValue();

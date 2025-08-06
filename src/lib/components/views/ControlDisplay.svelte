@@ -156,6 +156,7 @@
 						{same.path}
 						<NumberWithUnits
 							bind:value={same.value}
+							step={appState.gridSize}
 							units={{}}
 							onInput={() => updateOptions(same.path)}
 						/>
