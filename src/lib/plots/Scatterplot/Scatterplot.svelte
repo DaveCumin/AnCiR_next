@@ -129,20 +129,30 @@
 		getAutoScaleValues(side) {
 			//get the svg left position
 			const leftSVG = document.getElementById('plot' + this.parentBox.id)?.getBoundingClientRect();
-			//get the axis (just the axis line) left position
-			const leftAxisLine = document
-				.getElementById('plot' + this.parentBox.id)
-				.getElementsByClassName('domain')[0]
-				.getBoundingClientRect();
-			//get the axis (including ticks and labels, etc) left position
-			const leftAxisWhole = document
-				.getElementById('plot' + this.parentBox.id)
-				.getElementsByClassName('axis-left')[0]
-				.getBoundingClientRect();
-			//Now do the auto-scaling
+
 			if (side == 'left') {
-				const leftAxisWidth = Math.round(leftAxisLine.left - leftAxisWhole.left + 5);
-				return leftAxisWidth;
+				//find the left-most axis
+				const allAxes = document
+					.getElementById('plot' + this.parentBox.id)
+					.getElementsByClassName('axis-left');
+				console.log(allAxes);
+				if (allAxes) {
+					let leftMost = 0;
+					let leftAxisWhole = allAxes[0].getBoundingClientRect().left;
+					for (let i = 1; i < allAxes.length; i++) {
+						if (allAxes[i].getBoundingClientRect().left < leftAxisWhole) {
+							leftMost = i;
+							leftAxisWhole = allAxes[i].getBoundingClientRect().left;
+						}
+					}
+					const leftAxisLine = allAxes[leftMost]
+						.getElementsByClassName('domain')[0]
+						.getBoundingClientRect().left;
+					const leftAxisWidth = Math.round(leftAxisLine - leftAxisWhole + 5);
+					return leftAxisWidth;
+				} else {
+					return null;
+				}
 			}
 		}
 		autoScalePadding(side) {
