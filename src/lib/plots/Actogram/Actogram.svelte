@@ -497,10 +497,10 @@
 				</p>
 
 				x: {datum.x.name}
-				<Column col={datum.x} canChange={true} />
+				<Column col={datum.x} canChange={true} onChange={() => datum.computeDataByDays()} />
 
 				y: {datum.y.name}
-				<Column col={datum.y} canChange={true} />
+				<Column col={datum.y} canChange={true} onChange={() => datum.computeDataByDays()} />
 
 				colour: <ColourPicker bind:value={datum.colour} />
 

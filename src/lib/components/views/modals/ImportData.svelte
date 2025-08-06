@@ -7,6 +7,7 @@
 	import { Table } from '$lib/core/table.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	import { guessDateofArray, forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
+	import { numToString } from '$lib/utils/GeneralUtils';
 
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import TableLayout from '$lib/components/plotbits/Table.svelte';
@@ -175,7 +176,7 @@
 		} else {
 			headers = Array(dataIN[0].length)
 				.fill(1)
-				.map((_, i) => i);
+				.map((_, i) => numToString(i));
 		}
 
 		parsedData = convertArrayToObject(dataIN);

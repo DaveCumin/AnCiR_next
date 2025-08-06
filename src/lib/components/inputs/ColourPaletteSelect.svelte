@@ -29,7 +29,10 @@
 		)
 		.join(' ')}
 </div>
-<div onclick={(e) => openList()} bind:this={dropdownLabel}>Select palette</div>
+<select><option>one</option></select>
+<div class="falseSelection" onclick={(e) => openList()} bind:this={dropdownLabel}>
+	Select palette
+</div>
 <Dropdown bind:showDropdown top={listPos.top} left={listPos.left - 10}>
 	{#snippet groups()}
 		{#each Object.keys(appConsts.colourPalettes) as palette}
@@ -65,5 +68,14 @@
 		align-items: center;
 		gap: 4px;
 		cursor: pointer;
+	}
+	.falseSelection {
+		border: 1px solid;
+		width: max-content;
+		padding: 2px;
+	}
+	.falseSelection:after {
+		content: 'v';
+		padding-left: 0.25rem;
 	}
 </style>
