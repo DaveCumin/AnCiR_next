@@ -48,7 +48,9 @@
 				name: getColumnById(yCols[i]).name,
 				type: plotType,
 				x: snapToGrid(col * (width + padding) + (col + 1) * padding),
-				y: snapToGrid(row * (height + padding) + (row + 1) * padding + row * 2 * padding),
+				y: snapToGrid(
+					row * (height + padding) + (row + 1) * padding + row * 2 * padding + container.scrollTop
+				),
 				width: snapToGrid(width),
 				height: snapToGrid(height)
 			});

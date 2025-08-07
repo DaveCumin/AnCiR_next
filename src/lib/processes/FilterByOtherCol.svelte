@@ -102,32 +102,33 @@
 	{#each p.args.conditions as condition, index}
 		<div class="conditions">
 			<div class="second-level-condition">
-				<span>Where</span>
 				<ColumnSelector
 					bind:value={condition.byColId}
-					excludeColIds={[p.parentCol.id, p.parentCol.refDataId]}
+					excludeColIds={[p.parentCol.id, p.parentCol.refId]}
 				/>
+				<div class="operator-input">
+					{#if getColumnById(condition.byColId)?.type === 'category'}
+						<select bind:value={condition.isOperator}>
+							<option value="==">equals</option>
+							<option value="!=">not equals</option>
+							<option value="includes">includes</option>
+							<option value="notincludes">does not include</option>
+						</select>
+					{:else}
+						<select bind:value={condition.isOperator}>
+							<option value="==">=</option>
+							<option value="!=">!=</option>
+							<option value=">">&gt;</option>
+							<option value="<">&lt;</option>
+							<option value=">=">≥</option>
+							<option value="<=">≤</option>
+						</select>
+					{/if}
+				</div>
 			</div>
 
 			<div class="second-level-condition">
-				<span>is</span>
-				{#if getColumnById(condition.byColId)?.type === 'category'}
-					<select bind:value={condition.isOperator}>
-						<option value="==">equals</option>
-						<option value="!=">not equals</option>
-						<option value="includes">includes</option>
-						<option value="notincludes">does not include</option>
-					</select>
-				{:else}
-					<select bind:value={condition.isOperator}>
-						<option value="==">=</option>
-						<option value="!=">!=</option>
-						<option value=">">&gt;</option>
-						<option value="<">&lt;</option>
-						<option value=">=">≥</option>
-						<option value="<=">≤</option>
-					</select>
-				{/if}
+				
 				{#if getColumnById(condition.byColId)?.type === 'category'}
 					<input type="text" bind:value={condition.byColValue} />
 				{:else if getColumnById(condition.byColId)?.type === 'time'}
@@ -157,6 +158,11 @@
 <style>
 	.conditions {
 		width: 100%;
+		min-width: 0;
+
+		display: flex;
+		flex-direction: column;
+		flex: 1 1 0;
 
 		margin: 0;
 		padding: 0;
@@ -164,6 +170,7 @@
 	.second-level-condition {
 		width: 100%;
 		display: flex;
+		flex: 1 1 0;
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-between;
@@ -176,6 +183,9 @@
 		color: var(--color-lightness-35);
 
 		margin-bottom: 0.25rem;
+	}
+	.operator-input {
+		width: 4rem;
 	}
 	.add-condition-button:hover {
 		opacity: 0.9;

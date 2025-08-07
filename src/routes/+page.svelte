@@ -413,6 +413,57 @@
 		background-color: var(--color-lightness-95);
 	}
 
+	:global(.dropdown-item) {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.6em;
+		cursor: pointer;
+		border: none;
+		background: transparent;
+		text-align: left;
+		font: inherit;
+	}
+
+	:global(.dropdown-item:hover) {
+		background-color: var(--color-lightness-95);
+	}
+
+	:global(.dropdown-item.has-submenu::after) {
+		content: '▶';
+		font-size: 0.8em;
+		color: var(--color-lightness-35);
+	}
+
+	:global(.submenu) {
+		position: fixed;
+		min-width: 150px;
+		background-color: white;
+		border-radius: 4px;
+		border: 1px solid var(--color-lightness-85);
+		box-shadow:
+			0 4px 8px 0 rgba(0, 0, 0, 0.2), 
+			0 6px 10px 0 rgba(0, 0, 0, 0.1);
+		z-index: 1001; /* Above dialog */
+	}
+
+	:global(.submenu-item) {
+		display: block;
+		padding: 0.6em;
+		cursor: pointer;
+		border: none;
+		background: transparent;
+		text-align: left;
+		font: inherit;
+		width: 100%;
+		font-size: 14px;
+	}
+
+	:global(.submenu-item:hover) {
+		background-color: var(--color-lightness-95);
+	}
+
 	/* display collapsible */
 	:global(details) {
 		margin: 0.25rem 0.5rem;
