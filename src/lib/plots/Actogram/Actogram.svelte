@@ -324,6 +324,16 @@
 
 		return [clickedDay, clickedHrs];
 	}
+	//TODO: This reactivity is an issue when there aer multiple (LOADS) of plots
+	// and user wants to, eg, make a column.
+	// Needs fixing in ALL plot types, not just here.
+	$effect(() => {
+		if (which === 'plot') {
+			theData.plot.data.x;
+			theData.plot.data.y;
+			theData.plot.data.forEach((d) => d.computeDataByDays());
+		}
+	});
 </script>
 
 {#snippet controls(theData)}

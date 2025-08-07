@@ -31,10 +31,10 @@
 		const nCols = Math.ceil(Math.sqrt(yCols.length)); // for the layout
 		//default width and height
 		const padding = appState.gridSize;
-		let width = 500;
-		let height = 250;
+		let width = snapToGrid(495);
+		let height = snapToGrid(240);
 		if (plotType === 'actogram') {
-			height = 600;
+			height = snapToGrid(600);
 		}
 
 		const xName = getColumnById(xCol).name;
