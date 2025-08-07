@@ -61,7 +61,7 @@
 			});
 			core.plots.push(newPlot);
 
-			await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms || 10));
+			await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
 		}
 
 		appState.selectedPlotIds = [];

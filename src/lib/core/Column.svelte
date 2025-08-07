@@ -16,36 +16,31 @@
 	export class Column {
 		id; //Unique Id for the column
 		refId = $state(null); //if it is a column that is based on another
+		refColumn = $derived(getColumnById(this.refId)); // Direct reference to the referenced column
 		tableProcessGUId = $state('');
 		data = null; //if it has raw data, store that here
 		compression = $state(null); //if any compression is used, store the info here
 		//Where the data are from (references all the way to the primary source [importd (file) or simulated (params)])
 		provenance = $derived.by(() => {
 			if (this.isReferencial()) {
-				return (
-					'refers to ' +
-					getColumnById(this.refId)?.name +
-					' which is ' +
-					getColumnById(this.refId)?.provenance
-				);
+				return `refers to ${this.refColumn?.name} which is ${this.refColumn?.provenance}`;
 			}
+			return ''; // Define default provenance for non-referential columns
 		});
 		//Name for the column - make it the referenced one if it is referencial
 		name = $derived.by(() => {
-			if (this.customName !== null) {
-				return this.customName; // Prioritize custom name if set
-			}
+			if (this.customName !== null) return this.customName;
 			if (this.isReferencial()) {
-				this.customName = getColumnById(this.refId)?.name + '*';
-				return getColumnById(this.refId)?.name + '*';
+				this.customName = this.refColumn?.name + '*';
+				return this.refColumn?.name + '*';
 			}
+			return this.customName || 'Unnamed';
 		});
 		customName = null;
 		//Type of data - if it is referencial, then get the type from the reference
 		type = $derived.by(() => {
-			if (this.isReferencial()) {
-				return getColumnById(this.refId)?.type;
-			}
+			if (this.isReferencial()) return this.refColumn?.type;
+			return this._type || 'unknown';
 		});
 		//time format for converting time data
 		timeFormat = $state([]);
@@ -98,21 +93,22 @@
 		#cachedData = null;
 		#lastDataHash = null;
 
-		getDataHash() {
-			const processHash =
-				this.tableProcessGUId +
-				':' +
-				this.processes.map((p) => `${p.id}:${p.name}:${JSON.stringify(p.args)}`).join('|');
-
-			const refColumn = this.isReferencial() ? getColumnById(this.refId) : null;
-			const refDataHash = refColumn ? refColumn.getDataHash() : '';
-			return `${this.refId ?? '_'}:${this.data?.length || ''}:${this.compression || ''}:${this.type}:${this.timeFormat}:${processHash}:${refDataHash}`;
-		}
+		getDataHash = $derived.by(() => {
+			const dataStr = this.data ? JSON.stringify(this.data) : ''; // Deep hash of data
+			const processHash = this.processes
+				.map((p) => {
+					const argsStr = JSON.stringify(p.args); // Deep hash of process args
+					return `${p.id}:${p.name}:${argsStr}`;
+				})
+				.join('|');
+			const refDataHash = this.isReferencial() ? this.refColumn?.getDataHash : '';
+			return `${this.refId ?? '_'}:${dataStr}:${this.compression || ''}:${this._type || this.type}:${this.timeFormat}:${processHash}:${refDataHash}`;
+		});
 
 		//--- FUNCTION TO GET THE DATA
 		getData() {
 			// Create a hash of all inputs to detect changes
-			const dataHash = this.getDataHash();
+			const dataHash = this.getDataHash;
 			// console.log('data hash: ', dataHash, ' for ', this.id, this.name);
 			// console.log('last hash: ', this.#lastDataHash);
 			if (this.#lastDataHash === dataHash && this.#cachedData) {
@@ -124,8 +120,9 @@
 
 			let out = [];
 			//if there is a reference, then just get that data
-			if (this.refId != null) {
-				out = core.data.find((column) => column.id === this.refId)?.getData();
+			if (this.refId != null && this.refColumn) {
+				console.log('getting ref data', this.refColumn);
+				out = this.refColumn.getData();
 			} else {
 				//deal with compressed data
 				if (this.compression === 'awd') {
@@ -159,64 +156,6 @@
 
 			//return data
 			return out;
-		}
-
-		// DEBUG: Simulate data
-		simulateColumn(type, fs_min, startDate, period, maxHeight, dataLength) {
-			if (!this.name) {
-				this.name = type;
-			}
-
-			this.type = type;
-			switch (this.type) {
-				case 'time':
-					this.generateTimeData(fs_min, startDate, dataLength);
-					break;
-				case 'value':
-					this.generateValueData(fs_min, period, maxHeight, dataLength);
-					break;
-				default:
-					// TODO: UI warn user
-					console.warn('error: double check type');
-			}
-		}
-
-		// Data with type 'time'
-		generateTimeData(fs_min, startDate, dataLength) {
-			const timeData = [];
-
-			for (let i = 0; i < dataLength; i++) {
-				const time = new Date(startDate.getTime() + i * fs_min * 60 * 1000).toLocaleString('en-US');
-				timeData.push(time);
-			}
-
-			const timefmt = 'M/D/YYYY, h:mm:s A';
-			const processedTimeData = forceFormat(timeData, timefmt);
-			const timePeriod = getPeriod(timeData, timefmt);
-
-			this.data = processedTimeData;
-			this.timeFormat = timefmt; //TODO: fix take DC-edits
-
-			// this.properties = {
-			// 	timeFormat: timefmt,
-			// 	recordPeriod: timePeriod
-			// };
-		}
-
-		// Data with type 'value'
-		generateValueData(fs_min, period, maxHeight, dataLength) {
-			const valueData = [];
-
-			const periodL = period * (60 / fs_min); //the length of the period
-
-			for (let j = 0; j < dataLength; j++) {
-				const isLowPeriod = j % periodL < periodL / 2;
-				const mult = isLowPeriod ? maxHeight * 0.05 : maxHeight;
-
-				const randomValue = Math.random() * mult;
-				valueData.push(Math.round(randomValue));
-			}
-			this.data = valueData;
 		}
 
 		//Save and load the column to and from JSON

@@ -212,23 +212,8 @@
 		data = $state([]);
 		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
 		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
-		plotwidth = $derived.by(() => {
-			this.ylims;
-			this.xlims;
-			let plot = document.getElementById('plot' + this.parentBox.id);
-			let axisLeftRectOffset = 0;
-			if (plot) {
-				let plotRect = plot?.getBoundingClientRect();
-				let axesLeft = plot?.querySelectorAll('.axis-left');
+		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
 
-				for (let i = 0; i < axesLeft.length; i++) {
-					let axisRect = axesLeft[i].getBoundingClientRect();
-					axisLeftRectOffset = plotRect.left - axisRect.left;
-				}
-			}
-			this.padding.left += Math.ceil(axisLeftRectOffset);
-			return this.parentBox.width - this.padding.left - this.padding.right;
-		});
 		periodlimsIN = $state([1, 30]);
 		periodSteps = $state(0.25);
 		ylimsIN = $state([null, null]);
@@ -327,25 +312,6 @@
 	function handleTooltip(event) {
 		tooltip = event.detail;
 	}
-
-	onMount(() => {
-		if (which == 'plot') {
-			let plot = document.getElementById('plot' + theData.id);
-			let axisLeftRectOffset = 0;
-			if (plot) {
-				let plotRect = plot?.getBoundingClientRect();
-				let axesLeft = plot?.querySelectorAll('.axis-left');
-
-				for (let i = 0; i < axesLeft.length; i++) {
-					let axisRect = axesLeft[i].getBoundingClientRect();
-					axisLeftRectOffset = plotRect.left - axisRect.left;
-				}
-			}
-
-			theData.plot.padding.left += Math.ceil(axisLeftRectOffset);
-			return theData.plot.parentBox.width - theData.plot.padding.left - theData.plot.padding.right;
-		}
-	});
 </script>
 
 {#snippet controls(theData)}
@@ -574,7 +540,6 @@
 				.range([theData.plot.plotheight, 0])}
 			position="left"
 			plotPadding={theData.plot.padding}
-			axisLeftWidth={theData.plot.axisLeftWidth}
 			nticks={5}
 			gridlines={theData.plot.ygridlines}
 		/>
@@ -586,7 +551,6 @@
 				.range([0, theData.plot.plotwidth])}
 			position="bottom"
 			plotPadding={theData.plot.padding}
-			axisLeftWidth={theData.plot.axisLeftWidth}
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
 		/>

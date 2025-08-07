@@ -270,6 +270,9 @@
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
 		});
+		core.plots[core.plots.length - 1].x = 15;
+		core.plots[core.plots.length - 1].y = 15;
+
 		// //Actogram
 		pushObj(new Plot({ name: 'an actogram', type: 'actogram' }));
 		core.plots[core.plots.length - 1].height = snapToGrid(700);
@@ -277,16 +280,20 @@
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
 		});
+		core.plots[core.plots.length - 1].x = 15;
+		core.plots[core.plots.length - 1].y = 330;
 		//Periodogram
 		pushObj(new Plot({ name: 'a periodogram', type: 'periodogram' }));
 		core.plots[core.plots.length - 1].plot.addData({
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
 		});
+		core.plots[core.plots.length - 1].x = 550;
+		core.plots[core.plots.length - 1].y = 15;
 		//Table
 		core.plots.push(new Plot({ name: 'a table', type: 'tableplot' }));
-		core.plots[core.plots.length - 1].x = 250;
-		core.plots[core.plots.length - 1].y = 250;
+		core.plots[core.plots.length - 1].x = 550;
+		core.plots[core.plots.length - 1].y = 330;
 		core.plots[core.plots.length - 1].plot.columnRefs = [core.data[0].id, core.data[1].id];
 		core.plots[core.plots.length - 1].plot.showCol = [true, true];
 
@@ -443,7 +450,7 @@
 		border-radius: 4px;
 		border: 1px solid var(--color-lightness-85);
 		box-shadow:
-			0 4px 8px 0 rgba(0, 0, 0, 0.2), 
+			0 4px 8px 0 rgba(0, 0, 0, 0.2),
 			0 6px 10px 0 rgba(0, 0, 0, 0.1);
 		z-index: 1001; /* Above dialog */
 	}
