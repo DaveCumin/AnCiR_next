@@ -21,6 +21,9 @@
 	let yCols = $state([null]); // contains column id
 
 	function confirmImport() {
+		const container = document.getElementsByClassName("canvas")[0];
+		console.log("DEBUG: window yyy:", container.scrollTop);
+
 		const nCols = Math.ceil(Math.sqrt(yCols.length)); // for the layout
 		//default width and height
 		const padding = appState.gridSize;
@@ -41,7 +44,7 @@
 				name: getColumnById(yCols[i]).name,
 				type: plotType,
 				x: snapToGrid(col * (width + padding) + (col + 1) * padding),
-				y: snapToGrid(row * (height + padding) + (row + 1) * padding + row * 2 * padding),
+				y: snapToGrid(row * (height + padding) + (row + 1) * padding + row * 2 * padding + container.scrollTop),
 				width: snapToGrid(width),
 				height: snapToGrid(height)
 			});

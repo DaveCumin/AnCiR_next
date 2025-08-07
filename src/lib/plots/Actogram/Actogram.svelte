@@ -13,6 +13,7 @@
 
 	import { scaleLinear } from 'd3-scale';
 	import { makeSeqArray, max, min } from '$lib/components/plotBits/helpers/wrangleData';
+	import Icon from '$lib/icons/Icon.svelte';
 
 	export const Actogram_defaultDataInputs = ['time', 'values'];
 
@@ -480,15 +481,15 @@
 		{/if}
 	{:else if currentControlTab === 'data'}
 		<div>
-			<p>Data:</p>
 			<button
+				class="icon"
 				onclick={() =>
 					theData.addData({
 						x: { refId: -1 },
 						y: { refId: -1 }
 					})}
 			>
-				+
+				<Icon name="plus" width={16} height={16} className="control-component-title-icon" />
 			</button>
 
 			{#each theData.data as datum, i}
