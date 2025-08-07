@@ -96,9 +96,10 @@ export function pushObj(obj, autoPosition = true) {
 		core.tables.push(obj);
 	} else if (obj instanceof Plot) {
 		if (autoPosition) {
+			const container = document.getElementsByClassName('canvas')[0];
 			const pos = findNextAvailablePosition(core.plots);
-			obj.x = pos.x;
-			obj.y = pos.y;
+			obj.x = pos.x + container.offsetLeft;
+			obj.y = pos.y + container.offsetTop;
 		}
 
 		core.plots.push(obj);

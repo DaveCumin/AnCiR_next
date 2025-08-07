@@ -39,7 +39,6 @@
 
 		const xName = getColumnById(xCol).name;
 		const container = document.getElementsByClassName('canvas')[0];
-		console.log('making at ', container.scrollLeft, container.scrollTop);
 
 		for (let i = 0; i < yCols.length; i++) {
 			//find the position
