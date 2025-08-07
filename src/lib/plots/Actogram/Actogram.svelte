@@ -44,7 +44,27 @@
 		offset = $derived(
 			(Number(new Date(this.parentPlot.startTime)) - Number(this.x.getData()[0])) / 3600000
 		);
-		dataByDays = $state({ xByPeriod: {}, yByPeriod: {} });
+
+		dataByDays = $derived.by(() => {
+			const tempx = this.x.hoursSinceStart ?? [];
+			const tempy = this.y.getData() ?? [];
+			const xByPeriod = {};
+			const yByPeriod = {};
+			const offset = this.offset ?? 0;
+			const period = this.parentPlot?.periodHrs ?? 24;
+
+			for (let i = 0; i < tempx.length; i++) {
+				const p = Math.floor((tempx[i] - offset) / period);
+				if (p >= 0) {
+					xByPeriod[p] ||= [];
+					yByPeriod[p] ||= [];
+					xByPeriod[p].push(tempx[i] - offset);
+					yByPeriod[p].push(tempy[i]);
+				}
+			}
+
+			return { xByPeriod, yByPeriod };
+		});
 
 		phaseMarkers = $state([]);
 
@@ -62,32 +82,6 @@
 				this.y = new ColumnClass({ refId: -1 });
 			}
 			this.colour = dataIN?.colour ?? getPaletteColor(this.parentPlot.data.length);
-
-			this.computeDataByDays();
-		}
-
-		computeDataByDays() {
-			const tempx = this.x.hoursSinceStart ?? [];
-			const tempy = this.y.getData() ?? [];
-			const xByPeriod = {};
-			const yByPeriod = {};
-			let period;
-			for (let i = 0; i < tempx.length; i++) {
-				period = Math.floor((tempx[i] - this.offset) / this.parentPlot.periodHrs);
-
-				if (period >= 0) {
-					if (!xByPeriod[period]) {
-						xByPeriod[period] = [];
-						yByPeriod[period] = [];
-					}
-					if (xByPeriod[period]) {
-						xByPeriod[period].push(tempx[i] - this.offset);
-						yByPeriod[period].push(tempy[i]);
-					}
-				}
-			}
-
-			this.dataByDays = { xByPeriod, yByPeriod };
 		}
 
 		addMarker() {
@@ -234,11 +228,9 @@
 
 			const datum = new ActogramDataclass(this, dataIN);
 			this.data.push(datum);
-			datum.computeDataByDays();
 		}
 		removeData(idx) {
 			this.data.splice(idx, 1);
-			this.data.forEach((d) => d.computeDataByDays());
 		}
 
 		addPhaseMarkerTo(markerId, clickedDay, clickedTime) {
@@ -324,16 +316,6 @@
 
 		return [clickedDay, clickedHrs];
 	}
-	//TODO: This reactivity is an issue when there aer multiple (LOADS) of plots
-	// and user wants to, eg, make a column.
-	// Needs fixing in ALL plot types, not just here.
-	$effect(() => {
-		if (which === 'plot') {
-			theData.plot.data.x;
-			theData.plot.data.y;
-			theData.plot.data.forEach((d) => d.computeDataByDays());
-		}
-	});
 </script>
 
 {#snippet controls(theData)}
@@ -507,10 +489,10 @@
 				</p>
 
 				x: {datum.x.name}
-				<Column col={datum.x} canChange={true} onChange={() => datum.computeDataByDays()} />
+				<Column col={datum.x} canChange={true} />
 
 				y: {datum.y.name}
-				<Column col={datum.y} canChange={true} onChange={() => datum.computeDataByDays()} />
+				<Column col={datum.y} canChange={true} />
 
 				colour: <ColourPicker bind:value={datum.colour} />
 
