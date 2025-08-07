@@ -38,6 +38,8 @@
 		}
 
 		const xName = getColumnById(xCol).name;
+		const container = document.getElementsByClassName('canvas')[0];
+		console.log('making at ', container.scrollLeft, container.scrollTop);
 
 		for (let i = 0; i < yCols.length; i++) {
 			//find the position
@@ -47,7 +49,7 @@
 			const newPlot = new Plot({
 				name: getColumnById(yCols[i]).name,
 				type: plotType,
-				x: snapToGrid(col * (width + padding) + (col + 1) * padding),
+				x: snapToGrid(col * (width + padding) + (col + 1) * padding + container.scrollLeft),
 				y: snapToGrid(
 					row * (height + padding) + (row + 1) * padding + row * 2 * padding + container.scrollTop
 				),
