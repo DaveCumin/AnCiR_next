@@ -309,11 +309,12 @@
 </script>
 
 <script>
-	import { appState } from '$lib/core/core.svelte';
 	import { onMount } from 'svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 
 	let { theData, which } = $props();
+
+	let currentControlTab = $state('properties');
 
 	$effect(() => {
 		if (theData.periodlimsIN || theData.periodSteps) {
@@ -348,9 +349,20 @@
 </script>
 
 {#snippet controls(theData)}
-	{#if appState.currentControlTab === 'properties'}
-		<div class="control-component">
+	<div class="control-tag">
+		<button
+			class={currentControlTab === 'properties' ? 'active' : ''}
+			onclick={() => (currentControlTab = 'properties')}>Properties</button
+		>
+		<button
+			class={currentControlTab === 'data' ? 'active' : ''}
+			onclick={() => (currentControlTab = 'data')}>Data</button
+		>
+	</div>
+	<div class="div-line"></div>
 
+	{#if currentControlTab === 'properties'}
+		<div class="control-component">
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Width</p>
@@ -487,7 +499,7 @@
 				</div>
 			</div>
 		</div>
-	{:else if appState.currentControlTab === 'data'}
+	{:else if currentControlTab === 'data'}
 		<div>
 			<p>Data:</p>
 			<button
@@ -561,8 +573,8 @@
 				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 				.range([theData.plot.plotheight, 0])}
 			position="left"
-			yoffset={theData.plot.padding.top}
-			xoffset={theData.plot.padding.left}
+			plotPadding={theData.plot.padding}
+			axisLeftWidth={theData.plot.axisLeftWidth}
 			nticks={5}
 			gridlines={theData.plot.ygridlines}
 		/>
@@ -573,8 +585,8 @@
 				.domain([theData.plot.periodlimsIN[0], theData.plot.periodlimsIN[1]])
 				.range([0, theData.plot.plotwidth])}
 			position="bottom"
-			yoffset={theData.plot.padding.top}
-			xoffset={theData.plot.padding.left}
+			plotPadding={theData.plot.padding}
+			axisLeftWidth={theData.plot.axisLeftWidth}
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
 		/>

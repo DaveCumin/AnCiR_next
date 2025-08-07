@@ -47,30 +47,51 @@ export function guessDateofArray(dates) {
 	try {
 		// get the guess of the first date
 		let guessedlist = guessDateFormat(dates[0]);
-
-		//If there is only one guess, then return it
+		//If there is no guess, then return empty array
 		if (guessedlist.length === 0) return guessedlist;
+		// console.log('initial list', guessedlist);
 
-		//Otherwise, choose the format that works for the most number of dates
-		let validCount = new Array(guessedlist.length);
+		//set up the dates to check - subsample if a large dataset
 		let datesToCheck = dates;
 		//subsample if there are more than 100k points, subsample to 5k
-		if (dates.length > 100000) {
-			const idx = createSequenceArray(0, dates.length - 1, parseInt((dates.length - 1) / 5000));
+		if (dates.length > 100_000) {
+			const idx = createSequenceArray(0, dates.length - 1, parseInt((dates.length - 1) / 5_000));
 			datesToCheck = idx.map((i) => dates[i]);
 		}
 
-		for (let i = 0; i < guessedlist.length; i++) {
-			validCount[i] = datesToCheck.filter(
-				(date) => DateTime.fromFormat(date, convertFormat(guessedlist[i])).invalid === null
-			).length;
+		// console.log('all N: ', dates.length, ' checking ', datesToCheck.length);
+
+		//set up the Set of all possibleguesses
+		let allGuesses = new Set();
+		//fill it in
+		for (let i = 0; i < datesToCheck.length; i++) {
+			//make guess
+			const guesses = guessDateFormat(datesToCheck[i]);
+			//add the guess to Map or incresae counter
+			for (let j = 0; j < guesses.length; j++) {
+				allGuesses.add(guesses[j]);
+			}
 		}
-		//get the index with the highest 'hit rate'
-		const maxIndex = validCount.reduce((maxIdx, currentVal, currentIndex, array) => {
-			return currentVal > array[maxIdx] ? currentIndex : maxIdx;
-		}, 0);
+
+		//Now get the best one (where there are most matches)
+		const guessesArray = Array.from(allGuesses);
+		console.log('ALLGUESSES: ', guessesArray);
+		let guessScore = guessesArray.map((guess) => {
+			let score = 0;
+			for (let i = 0; i < datesToCheck.length; i++) {
+				if (DateTime.fromFormat(datesToCheck[i], convertFormat(guess)).invalid == null) {
+					score++;
+				}
+			}
+			return score;
+		});
+
+		console.log('SCORE:', guessScore);
+		console.log('best idx:', guessScore.indexOf(Math.max(...guessScore)));
+		console.log('FINAL guess:', guessesArray[guessScore.indexOf(Math.max(...guessScore))]);
+
 		//return that one
-		return guessedlist[maxIndex];
+		return guessesArray[guessScore.indexOf(Math.max(...guessScore))];
 	} catch (error) {
 		return -1;
 	}

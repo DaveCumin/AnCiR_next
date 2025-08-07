@@ -191,18 +191,6 @@
 						Id={'plot' + plot.plot.parentBox.id}
 					/>
 
-					<div class="control-tag">
-						<button
-							class={appState.currentControlTab === 'properties' ? 'active' : ''}
-							onclick={() => (appState.currentControlTab = 'properties')}>Properties</button
-						>
-						<button
-							class={appState.currentControlTab === 'data' ? 'active' : ''}
-							onclick={() => (appState.currentControlTab = 'data')}>Data</button
-						>
-					</div>
-
-					<div class="div-line"></div>
 					<Plot theData={plot.plot} which="controls" />
 				{/if}
 			{/if}

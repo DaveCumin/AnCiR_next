@@ -61,8 +61,12 @@
 		return Math.max(appState.windowHeight, bottomMostPlot + 200);
 	});
 
+	//more efficient way to open the dataDisplay on import (fewer reactive checks)
+	let hasData = $derived.by(() => {
+		return core.data.length > 0;
+	});
 	$effect(() => {
-		if (core.data.length > 0) {
+		if (hasData) {
 			appState.currentTab = 'data';
 			appState.showDisplayPanel = true;
 		}
@@ -111,10 +115,10 @@
 			{#if core.plots.length > 0}
 				{#each core.plots as plot, i (plot.id)}
 					<Draggable
-						bind:x={plot.x}
-						bind:y={plot.y}
-						bind:width={plot.width}
-						bind:height={plot.height}
+						x={plot.x}
+						y={plot.y}
+						width={plot.width}
+						height={plot.height}
 						title={plot.name}
 						id={plot.id}
 					>

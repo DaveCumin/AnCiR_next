@@ -576,22 +576,28 @@
 		width: 100%;
 		display: flex;
 		flex-direction: row;
+		flex-wrap: nowrap; /* Prevent buttons from wrapping */
 		align-items: center;
 		justify-content: flex-start;
-
 		margin-bottom: 1rem;
 		gap: 0.4rem;
+		overflow-x: auto;
+		
+	}
+
+	:global(.control-tag::-webkit-scrollbar ) {
+		display: none;
 	}
 
 	:global(.control-tag button) {
 		font-size: 14px;
 		padding: 0.25rem 0.5rem;
-
 		color: var(--color-lightness-35);
 		background-color: transparent;
 		border-radius: 4px;
 		border: none;
 		appearance: none;
+		white-space: nowrap; /* Prevent text wrapping within buttons */
 	}
 
 	:global(.control-tag button.active) {
@@ -602,7 +608,6 @@
 	:global(.control-tag button:hover) {
 		background-color: var(--color-lightness-95);
 	}
-
 	:global(.control-component) {
 		display: flex;
 		flex-direction: column;
