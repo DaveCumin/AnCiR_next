@@ -230,6 +230,7 @@
 
 			return axisWidths;
 		}
+
 		autoScalePadding(side) {
 			if (side == 'all') {
 				['top', 'left', 'right', 'bottom'].forEach((theSide) => {
@@ -355,11 +356,12 @@
 						<input
 							type="number"
 							bind:value={theData.padding.top}
-							style="width: calc(100% - {theData.getAutoScaleValues().top != theData.padding.top
+							style="width: calc(100% - {theData.getAutoScaleValues()?.top != null &&
+							theData.getAutoScaleValues().top != theData.padding.top
 								? 24
 								: 0}px)"
 						/>
-						{#if theData.getAutoScaleValues()?.top != theData.padding.top}
+						{#if theData.getAutoScaleValues()?.top != null && theData.getAutoScaleValues()?.top != theData.padding.top}
 							<button class="icon" onclick={() => theData.autoScalePadding('top')}>
 								<Icon
 									name="reset"
@@ -380,12 +382,12 @@
 						<input
 							type="number"
 							bind:value={theData.padding.bottom}
-							style="width: calc(100% - {theData.getAutoScaleValues().bottom !=
-							theData.padding.bottom
+							style="width: calc(100% - {theData.getAutoScaleValues()?.bottom != null &&
+							theData.getAutoScaleValues().bottom != theData.padding.bottom
 								? 24
 								: 0}px)"
 						/>
-						{#if theData.getAutoScaleValues()?.bottom != theData.padding.bottom}
+						{#if theData.getAutoScaleValues()?.bottom != null && theData.getAutoScaleValues()?.bottom != theData.padding.bottom}
 							<button class="icon" onclick={() => theData.autoScalePadding('bottom')}>
 								<Icon
 									name="reset"
@@ -406,11 +408,12 @@
 						<input
 							type="number"
 							bind:value={theData.padding.left}
-							style="width: calc(100% - {theData.getAutoScaleValues().left != theData.padding.left
+							style="width: calc(100% - {theData.getAutoScaleValues()?.left != null &&
+							theData.getAutoScaleValues().left != theData.padding.left
 								? 24
 								: 0}px)"
 						/>
-						{#if theData.getAutoScaleValues()?.left != theData.padding.left}
+						{#if theData.getAutoScaleValues()?.left != null && theData.getAutoScaleValues()?.left != theData.padding.left}
 							<button class="icon" onclick={() => theData.autoScalePadding('left')}>
 								<Icon
 									name="reset"
@@ -431,11 +434,12 @@
 						<input
 							type="number"
 							bind:value={theData.padding.right}
-							style="width: calc(100% - {theData.getAutoScaleValues().right != theData.padding.right
+							style="width: calc(100% - {theData.getAutoScaleValues()?.right != null &&
+							theData.getAutoScaleValues().right != theData.padding.right
 								? 24
 								: 0}px)"
 						/>
-						{#if theData.getAutoScaleValues()?.right != theData.padding.right}
+						{#if theData.getAutoScaleValues()?.right != null && theData.getAutoScaleValues()?.right != theData.padding.right}
 							<button class="icon" onclick={() => theData.autoScalePadding('right')}>
 								<Icon
 									name="reset"
@@ -660,7 +664,7 @@
 			label={theData.plot.xlabel}
 		/>
 		<!-- EXTRA FOR TESTING-->
-		<Axis
+		<!-- <Axis
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()
@@ -688,7 +692,7 @@
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
 			label={theData.plot.xlabel}
-		/>
+		/> -->
 
 		{#each theData.plot.data as datum}
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}

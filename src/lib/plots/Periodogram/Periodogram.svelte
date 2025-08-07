@@ -244,6 +244,121 @@
 			}
 		}
 
+		getAutoScaleValues() {
+			//set up outputs
+			let axisWidths = { left: null, right: null, top: null, bottom: null };
+
+			//get the svg position
+			const leftSVG = document.getElementById('plot' + this.parentBox.id)?.getBoundingClientRect();
+
+			//LEFT
+			//find the left-most axis
+			const allLeftAxes = document
+				.getElementById('plot' + this.parentBox.id)
+				?.getElementsByClassName('axis-left');
+			if (allLeftAxes.length == 0) {
+				//do nothing if there aren't any axes
+			} else {
+				if (allLeftAxes) {
+					let leftMost = 0;
+					let leftAxisWhole = allLeftAxes[0].getBoundingClientRect().left;
+					for (let i = 1; i < allLeftAxes.length; i++) {
+						if (allLeftAxes[i].getBoundingClientRect().left < leftAxisWhole) {
+							leftMost = i;
+							leftAxisWhole = allLeftAxes[i].getBoundingClientRect().left;
+						}
+					}
+					const leftAxisLine = allLeftAxes[leftMost]
+						.getElementsByClassName('domain')[0]
+						.getBoundingClientRect().left;
+					axisWidths.left = Math.round(leftAxisLine - leftAxisWhole + 6);
+				}
+			}
+
+			//RIGHT
+			//find the left-most axis
+			const allRightAxes = document
+				.getElementById('plot' + this.parentBox.id)
+				.getElementsByClassName('axis-right');
+			if (allRightAxes.length == 0) {
+				//do nothing if there aren't any axes
+			} else {
+				if (allRightAxes) {
+					let rightMost = 0;
+					let rightAxisWhole = allRightAxes[0].getBoundingClientRect().right;
+					for (let i = 1; i < allRightAxes.length; i++) {
+						if (allRightAxes[i].getBoundingClientRect().right > rightAxisWhole) {
+							rightMost = i;
+							rightAxisWhole = allRightAxes[i].getBoundingClientRect().right;
+						}
+					}
+					const rightAxisLine = allRightAxes[rightMost]
+						.getElementsByClassName('domain')[0]
+						.getBoundingClientRect().right;
+					axisWidths.right = Math.round(rightAxisWhole - rightAxisLine + 6);
+				}
+			}
+
+			//TOP
+			//find the top-most axis
+			const allTopAxes = document
+				.getElementById('plot' + this.parentBox.id)
+				.getElementsByClassName('axis-top');
+			if (allTopAxes.length == 0) {
+				//do nothing if there aren't any axes
+			} else {
+				if (allTopAxes) {
+					let topMost = 0;
+					let topAxisWhole = allTopAxes[0].getBoundingClientRect().top;
+					for (let i = 1; i < allTopAxes.length; i++) {
+						if (allTopAxes[i].getBoundingClientRect().top < topAxisWhole) {
+							topMost = i;
+							topAxisWhole = allTopAxes[i].getBoundingClientRect().top;
+						}
+					}
+					const topAxisLine = allTopAxes[topMost]
+						.getElementsByClassName('domain')[0]
+						.getBoundingClientRect().top;
+					axisWidths.top = Math.round(topAxisLine - topAxisWhole + 6);
+				}
+			}
+
+			//BOTTOM
+			//find the left-most axis
+			const allBottomAxes = document
+				.getElementById('plot' + this.parentBox.id)
+				.getElementsByClassName('axis-bottom');
+			if (allBottomAxes.length == 0) {
+				//do nothing if there aren't any axes
+			} else {
+				if (allBottomAxes) {
+					let bottomMost = 0;
+					let bottomAxisWhole = allBottomAxes[0].getBoundingClientRect().bottom;
+					for (let i = 1; i < allBottomAxes.length; i++) {
+						if (allBottomAxes[i].getBoundingClientRect().bottom > bottomAxisWhole) {
+							bottomMost = i;
+							bottomAxisWhole = allBottomAxes[i].getBoundingClientRect().bottom;
+						}
+					}
+					const bottomAxisLine = allBottomAxes[bottomMost]
+						.getElementsByClassName('domain')[0]
+						.getBoundingClientRect().bottom;
+					axisWidths.bottom = Math.round(bottomAxisWhole - bottomAxisLine + 6);
+				}
+			}
+
+			return axisWidths;
+		}
+		autoScalePadding(side) {
+			if (side == 'all') {
+				['top', 'left', 'right', 'bottom'].forEach((theSide) => {
+					this.padding[theSide] = this.getAutoScaleValues()[theSide] || this.padding[theSide];
+				});
+			} else {
+				this.padding[side] = this.getAutoScaleValues()[side];
+			}
+		}
+
 		addData(dataIN) {
 			if (Object.keys(dataIN).includes('time')) {
 				const temp = { x: { refId: dataIN.time.refId }, y: { refId: dataIN.values.refId } };
@@ -312,6 +427,21 @@
 	function handleTooltip(event) {
 		tooltip = event.detail;
 	}
+
+	onMount(() => {
+		if (which == 'plot') {
+			theData.plot.autoScalePadding('all');
+		}
+	});
+	//check for axes if the labels change
+	$effect(() => {
+		if (which == 'controls') {
+			theData.ylabel;
+			theData.xlabel;
+
+			theData.autoScalePadding('all');
+		}
+	});
 </script>
 
 {#snippet controls(theData)}
@@ -347,27 +477,114 @@
 		<div class="control-component">
 			<div class="control-component-title">
 				<p>Padding</p>
+				{#if theData.getAutoScaleValues()?.top != theData.padding.top || theData.getAutoScaleValues()?.bottom != theData.padding.bottom || theData.getAutoScaleValues()?.left != theData.padding.left || theData.getAutoScaleValues()?.right != theData.padding.right}
+					<button class="icon" onclick={() => theData.autoScalePadding('all')}>
+						<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
+					</button>
+				{/if}
 			</div>
 
 			<div class="control-input-square">
 				<div class="control-input">
 					<p>Top</p>
-					<input type="number" bind:value={theData.padding.top} />
+					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
+						<input
+							type="number"
+							bind:value={theData.padding.top}
+							style="width: calc(100% - {theData.getAutoScaleValues()?.top != null &&
+							theData.getAutoScaleValues().top != theData.padding.top
+								? 24
+								: 0}px)"
+						/>
+						{#if theData.getAutoScaleValues()?.top != null && theData.getAutoScaleValues()?.top != theData.padding.top}
+							<button class="icon" onclick={() => theData.autoScalePadding('top')}>
+								<Icon
+									name="reset"
+									width={14}
+									height={14}
+									className="control-component-input-icon"
+								/>
+							</button>
+						{/if}
+					</div>
 				</div>
 
 				<div class="control-input">
 					<p>Bottom</p>
-					<input type="number" bind:value={theData.padding.bottom} />
+					<div
+						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
+					>
+						<input
+							type="number"
+							bind:value={theData.padding.bottom}
+							style="width: calc(100% - {theData.getAutoScaleValues()?.bottom != null &&
+							theData.getAutoScaleValues().bottom != theData.padding.bottom
+								? 24
+								: 0}px)"
+						/>
+						{#if theData.getAutoScaleValues()?.bottom != null && theData.getAutoScaleValues()?.bottom != theData.padding.bottom}
+							<button class="icon" onclick={() => theData.autoScalePadding('bottom')}>
+								<Icon
+									name="reset"
+									width={14}
+									height={14}
+									className="control-component-input-icon"
+								/>
+							</button>
+						{/if}
+					</div>
 				</div>
 
 				<div class="control-input">
 					<p>Left</p>
-					<input type="number" bind:value={theData.padding.left} />
+					<div
+						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
+					>
+						<input
+							type="number"
+							bind:value={theData.padding.left}
+							style="width: calc(100% - {theData.getAutoScaleValues()?.left != null &&
+							theData.getAutoScaleValues().left != theData.padding.left
+								? 24
+								: 0}px)"
+						/>
+						{#if theData.getAutoScaleValues()?.left != null && theData.getAutoScaleValues()?.left != theData.padding.left}
+							<button class="icon" onclick={() => theData.autoScalePadding('left')}>
+								<Icon
+									name="reset"
+									width={14}
+									height={14}
+									className="control-component-input-icon"
+								/>
+							</button>
+						{/if}
+					</div>
 				</div>
 
 				<div class="control-input">
 					<p>Right</p>
-					<input type="number" bind:value={theData.padding.right} />
+					<div
+						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
+					>
+						<input
+							type="number"
+							bind:value={theData.padding.right}
+							style="width: calc(100% - {theData.getAutoScaleValues()?.right != null &&
+							theData.getAutoScaleValues().right != theData.padding.right
+								? 24
+								: 0}px)"
+						/>
+						{#if theData.getAutoScaleValues()?.right != null && theData.getAutoScaleValues()?.right != theData.padding.right}
+							<button class="icon" onclick={() => theData.autoScalePadding('right')}>
+								<Icon
+									name="reset"
+									width={14}
+									height={14}
+									className="control-component-input-icon"
+								/>
+							</button>
+						{/if}
+					</div>
 				</div>
 			</div>
 		</div>
