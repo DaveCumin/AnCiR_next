@@ -9,7 +9,7 @@
 		columnRefs = $state([]);
 		showCol = $state([]);
 		colCurrent = $state(1);
-		showColNumber = $state(true);
+		showColNumber = $state(false);
 		decimalPlaces = $state(2);
 
 		//work out the number of columns that can fit in the height of the parent
@@ -79,7 +79,7 @@
 							getColumnById(this.columnRefs[i])
 								.getData()
 								.slice(this.colCurrent - 1, this.colCurrent + this.Ncolumns)
-								.map((x) => (Number(x) == x ? x.toFixed(this.decimalPlaces) : x))
+								.map((x) => (Number(x) === x ? x.toFixed(this.decimalPlaces) : x))
 						);
 					}
 				}

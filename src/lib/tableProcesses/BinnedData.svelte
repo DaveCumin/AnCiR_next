@@ -20,6 +20,27 @@
 
 	let binnedData = $state();
 
+	// for reactivity -----------
+	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
+	let yIN_col = $derived.by(() => (p.args.yIN >= 0 ? getColumnById(p.args.yIN) : null));
+	let getHash = $derived.by(() => {
+		let out = '';
+		out += xIN_col?.getDataHash;
+		out += yIN_col?.getDataHash;
+		return out;
+	});
+	let lastHash = '';
+	$effect(() => {
+		const dataHash = getHash;
+		if (lastHash === dataHash) {
+			//do nothing
+		} else {
+			getBinnedData(); // DO THE BUSINESS
+			lastHash = getHash;
+		}
+	});
+	//------------
+
 	function getBinnedData() {
 		const xIN = p.args.xIN;
 		const yIN = p.args.yIN;

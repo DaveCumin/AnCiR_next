@@ -15,6 +15,30 @@
 
 	let { p = $bindable() } = $props();
 
+	// for reactivity -----------
+	let xIN_cols = $derived.by(() => {
+		if (!p.args.xsIN) return null;
+		else {
+			return p.args.xsIN.map((id) => getColumnById(id));
+		}
+	});
+	let getHash = $derived.by(() => {
+		let out = '';
+		out += xIN_cols.map((c) => c?.getDataHash).join('|');
+		return out;
+	});
+	let lastHash = '';
+	$effect(() => {
+		const dataHash = getHash;
+		if (lastHash === dataHash) {
+			//do nothing
+		} else {
+			addcolumns(); // DO THE BUSINESS
+			lastHash = getHash;
+		}
+	});
+	//------------
+
 	let result = $state();
 
 	function addcolumns() {
@@ -25,9 +49,14 @@
 			return;
 		}
 		result = getColumnById(p.args.xsIN[0]).getData();
+		const firstType = getColumnById(p.args.xsIN[0]).type;
 		for (let i = 1; i < p.args.xsIN.length; i++) {
 			const temp = getColumnById(p.args.xsIN[i]).getData();
-			result = result.map((x, i) => x + temp[i]);
+			if (firstType == 'category' || getColumnById(p.args.xsIN[i]).type == 'category') {
+				result = result.map((x, i) => x + ' ' + temp[i]);
+			} else {
+				result = result.map((x, i) => x + temp[i]);
+			}
 		}
 
 		if (p.args.out.result == -1) {

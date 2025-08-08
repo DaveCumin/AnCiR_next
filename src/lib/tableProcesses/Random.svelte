@@ -20,7 +20,7 @@
 	function makeRandom() {
 		result = [];
 		for (let i = 0; i < p.args.N; i++) {
-			result.push((p.args.offset + Math.random() * p.args.multiply).toFixed(2));
+			result.push(Number((p.args.offset + Math.random() * p.args.multiply).toFixed(2)));
 		}
 		if (p.args.out.result == -1 || !p.args.out.result) {
 		} else {

@@ -1,5 +1,5 @@
 //TODO: scale issue when saving
-//TODO: jpeg background is black ~ ?
+import { appState } from '$lib/core/core.svelte.js';
 export function convertToImage(svgId, filetype = 'png') {
 	if (filetype == 'svg') {
 		exportSVG(svgId);
@@ -22,8 +22,9 @@ export function convertToImage(svgId, filetype = 'png') {
 	img.onload = function () {
 		// Create a canvas
 		const canvas = document.createElement('canvas');
-		canvas.width = svg.getAttribute('width');
-		canvas.height = svg.getAttribute('height');
+		console.log('SCALE', appState.canvasScale);
+		canvas.width = svg.getAttribute('width') / appState.canvasScale;
+		canvas.height = svg.getAttribute('height') / appState.canvasScale;
 		const context = canvas.getContext('2d');
 
 		// Draw the SVG image onto the canvas
@@ -34,9 +35,6 @@ export function convertToImage(svgId, filetype = 'png') {
 		if (filetype == 'png') {
 			DataUrl = canvas.toDataURL('image/png'); // For PNG
 		}
-		// } else if (filetype == 'jpeg') {
-		// 	DataUrl = canvas.toDataURL('image/jpeg', 0.9); // For JPEG, quality 0-1
-		// }
 
 		// Create a download link
 		const link = document.createElement('a');
@@ -86,13 +84,18 @@ export function saveMultipleAsImage(svgIds, filetype = 'png') {
 
 	toConvert.forEach((svg) => {
 		const rect = svg.getBoundingClientRect();
-		const x = rect.left + window.scrollX;
-		const y = rect.top + window.scrollY;
-		positions.push({ x, y, width: rect.width, height: rect.height });
+		const x = rect.left / appState.canvasScale;
+		const y = rect.top / appState.canvasScale;
+		positions.push({
+			x,
+			y,
+			width: rect.width / appState.canvasScale,
+			height: rect.height / appState.canvasScale
+		});
 		minX = Math.min(minX, x);
 		minY = Math.min(minY, y);
-		maxX = Math.max(maxX, x + rect.width);
-		maxY = Math.max(maxY, y + rect.height);
+		maxX = Math.max(maxX, x + rect.width / appState.canvasScale);
+		maxY = Math.max(maxY, y + rect.height / appState.canvasScale);
 	});
 
 	//make a new svg object for them

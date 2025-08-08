@@ -13,6 +13,26 @@
 	import { onMount } from 'svelte';
 
 	let { p = $bindable() } = $props();
+
+	// for reactivity -----------
+	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
+	let getHash = $derived.by(() => {
+		let out = '';
+		out += xIN_col?.getDataHash;
+		return out;
+	});
+	let lastHash = '';
+	$effect(() => {
+		const dataHash = getHash;
+		if (lastHash === dataHash) {
+			//do nothing
+		} else {
+			duplicate(); // DO THE BUSINESS
+			lastHash = getHash;
+		}
+	});
+	//------------
+
 	let result = $state();
 	function duplicate() {
 		console.log($state.snapshot(p.args.xIN));

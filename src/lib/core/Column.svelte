@@ -40,7 +40,6 @@
 		//Type of data - if it is referencial, then get the type from the reference
 		type = $derived.by(() => {
 			if (this.isReferencial()) return this.refColumn?.type;
-			return this._type || 'unknown';
 		});
 		//time format for converting time data
 		timeFormat = $state([]);
@@ -94,7 +93,6 @@
 		#lastDataHash = null;
 
 		getDataHash = $derived.by(() => {
-			const dataStr = this.data ? JSON.stringify(this.data) : ''; // Deep hash of data
 			const processHash = this.processes
 				.map((p) => {
 					const argsStr = JSON.stringify(p.args); // Deep hash of process args
@@ -102,7 +100,7 @@
 				})
 				.join('|');
 			const refDataHash = this.isReferencial() ? this.refColumn?.getDataHash : '';
-			return `${this.refId ?? '_'}:${dataStr}:${this.compression || ''}:${this._type || this.type}:${this.timeFormat}:${processHash}:${refDataHash}`;
+			return `${this.refId ?? '_'}:${this.compression || ''}:${this.type}:${this.timeFormat}:${processHash}:${refDataHash}:${this.tableProcessGUId}`;
 		});
 
 		//--- FUNCTION TO GET THE DATA
@@ -121,7 +119,6 @@
 			let out = [];
 			//if there is a reference, then just get that data
 			if (this.refId != null && this.refColumn) {
-				console.log('getting ref data', this.refColumn);
 				out = this.refColumn.getData();
 			} else {
 				//deal with compressed data
@@ -295,6 +292,7 @@
 					toggleClps(col.id);
 				}}
 			>
+				<p>{col.tableProcessGUId}</p>
 				<div class="column-indicator"></div>
 				{#if canChange}
 					<ColumnSelector bind:value={col.refId} bind:onChange />

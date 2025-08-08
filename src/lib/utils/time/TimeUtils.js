@@ -23,6 +23,7 @@ function convertFormat(formatIN) {
 	};
 
 	let formatOUT = formatIN;
+	if (formatIN == '' || formatIN == null || formatIN == undefined) return '';
 
 	map.from.forEach((from, index) => {
 		const to = map.to[index];

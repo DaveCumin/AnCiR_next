@@ -110,6 +110,11 @@
 				appState.canvasScale -= 0.1;
 				console.log(appState.canvasScale);
 			}
+			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a') {
+				for (let i = 0; i < core.plots.length; i++) {
+					appState.selectedPlotIds.push(core.plots[i].id);
+				}
+			}
 		});
 
 		//remove the listeners on close

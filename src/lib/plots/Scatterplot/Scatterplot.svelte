@@ -129,14 +129,12 @@
 			//set up outputs
 			let axisWidths = { left: null, right: null, top: null, bottom: null };
 
-			//get the svg position
-			const leftSVG = document.getElementById('plot' + this.parentBox.id)?.getBoundingClientRect();
-
 			//LEFT
 			//find the left-most axis
 			const allLeftAxes = document
 				.getElementById('plot' + this.parentBox.id)
 				?.getElementsByClassName('axis-left');
+			console.log('Left axes: ', allLeftAxes);
 			if (allLeftAxes.length == 0) {
 				//do nothing if there aren't any axes
 			} else {

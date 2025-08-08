@@ -96,6 +96,9 @@
 
 		// scroll with the move/resive
 		if (resizing || moving) {
+			let deltaX = (e.clientX - initialMouseX) / appState.canvasScale;
+			let deltaY = (e.clientY - initialMouseY) / appState.canvasScale;
+
 			//Do over the left
 			const rightLim =
 				window.innerWidth -

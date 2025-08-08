@@ -15,6 +15,30 @@
 
 	let { p = $bindable() } = $props();
 
+	// for reactivity -----------
+	let xIN_cols = $derived.by(() => {
+		if (!p.args.xsIN) return null;
+		else {
+			return p.args.xsIN.map((id) => getColumnById(id));
+		}
+	});
+	let getHash = $derived.by(() => {
+		let out = '';
+		out += xIN_cols.map((c) => c?.getDataHash).join('|');
+		return out;
+	});
+	let lastHash = '';
+	$effect(() => {
+		const dataHash = getHash;
+		if (lastHash === dataHash) {
+			//do nothing
+		} else {
+			averagecolumns(); // DO THE BUSINESS
+			lastHash = getHash;
+		}
+	});
+	//------------
+
 	let result = $state();
 
 	function averagecolumns() {
