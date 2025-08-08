@@ -109,8 +109,8 @@
 			let binnedData = { bins: [], y_out: [] }; // No binning for Lomb-Scargle
 			if (this.method === 'Chi-squared') {
 				binnedData = binData(this.x.hoursSinceStart, this.y.getData(), this.binSize, 0);
-
-				if (this.binnedData.bins.length === 0) {
+				console.log(binnedData);
+				if (binnedData.bins.length === 0) {
 					this.periodData = { x: [], y: [], threshold: [], pvalue: [] };
 					return;
 				}
@@ -129,7 +129,7 @@
 			const pvalue = new Array(periods.length);
 
 			if (this.method === 'Chi-squared') {
-				const data = this.binnedData.y_out;
+				const data = binnedData.y_out;
 				const avgAll = mean(data);
 				let denominator = 0;
 				for (let i = 0; i < data.length; i++) {

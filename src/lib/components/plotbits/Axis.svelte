@@ -26,7 +26,7 @@
 	let tickspace = 4; // space between the ticks and the numbers
 	let tickfontsize = 15;
 	let labelfontsize = 16;
-	let labelBuffer = 10; // Additional spacing between largest tick label and axis label
+	let labelBuffer = 16; // Additional spacing between largest tick label and axis label
 
 	$effect(() => {
 		height;
