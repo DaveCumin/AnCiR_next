@@ -4,8 +4,10 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
 	import AddTable from '$lib/components/iconActions/AddTable.svelte';
+
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
+	import { removePlot } from '$lib/core/Plot.svelte';
 
 	// AddTable dropdown
 	let addBtnRef;
@@ -71,6 +73,38 @@
 			appState.showDisplayPanel = true;
 		}
 	});
+
+	onMount(() => {
+		const onKeyDown = (e) => {
+			const active = document.activeElement;
+
+			const isTextInput =
+				active &&
+				(active.tagName === 'INPUT' ||
+					active.tagName === 'TEXTAREA' ||
+					active.getAttribute('contenteditable') === 'true');
+
+			if (isTextInput) return;
+
+			if ((e.key === 'Backspace' || e.key === 'Delete') && appState.selectedPlotIds.length > 0) {
+				const confirmed = window.confirm(
+					`Are you sure you want to delete ${appState.selectedPlotIds.length} plot(s)?`
+				);
+
+				if (confirmed) {
+					for (const id of appState.selectedPlotIds) {
+						removePlot(id);
+					}
+					appState.selectedPlotIds = [];
+				}
+			}
+		};
+
+		window.addEventListener('keydown', onKeyDown);
+		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+		};
+	});
 </script>
 
 <div
@@ -114,17 +148,20 @@
 		>
 			{#if core.plots.length > 0}
 				{#each core.plots as plot, i (plot.id)}
-					<Draggable
-						bind:x={plot.x}
-						bind:y={plot.y}
-						bind:width={plot.width}
-						bind:height={plot.height}
-						title={plot.name}
-						id={plot.id}
-					>
-						{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
-						<Plot theData={plot} which="plot" />
-					</Draggable>
+					{#if !appState.invisiblePlotIds.includes(plot.id)}
+						<Draggable
+							bind:x={plot.x}
+							bind:y={plot.y}
+							bind:width={plot.width}
+							bind:height={plot.height}
+							title={plot.name}
+							id={plot.id}
+						>
+							{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
+							<Plot theData={plot} which="plot" />
+						</Draggable>
+						
+					{/if}
 				{/each}
 			{:else if core.data.length > 0}
 				<div class="no-plot-prompt">

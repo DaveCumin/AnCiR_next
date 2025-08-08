@@ -175,12 +175,16 @@
 				//Add if it's not already there
 				if (!appState.selectedPlotIds.includes(id)) {
 					appState.selectedPlotIds.push(id);
+
+					plotElement.focus();
 				} else {
 					//or remove it
 					appState.selectedPlotIds = appState.selectedPlotIds.filter((theid) => theid !== id);
 				}
 			} else if (!appState.selectedPlotIds.includes(id)) {
 				appState.selectedPlotIds = [id];
+
+				plotElement.focus();
 			}
 		}
 		RePosition();
@@ -200,7 +204,7 @@
 
 	function openPlotDetails(e) {
 		e.stopPropagation();
-		console.log('clickkkkkkkeeeed');
+		// open dropdown
 	}
 
 	let addBtnRef;
