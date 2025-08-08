@@ -1,7 +1,7 @@
 <script>
 	// @ts-nocheck
 
-	import { core } from '$lib/core/core.svelte.js';
+	import { appState, core } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddPlot from '../iconActions/AddPlot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
@@ -77,6 +77,14 @@
 	function toggleMenu(id) {
 		openMenus[id] = !openMenus[id];
 	}
+
+	function changePlotVisibility(id) {
+		if (appState.invisiblePlotIds.includes(id)) {
+			appState.invisiblePlotIds = appState.invisiblePlotIds.filter(plotId => plotId !== id);
+		} else {
+			appState.invisiblePlotIds.push(id);
+		}
+	}
 </script>
 
 <div class="heading">
@@ -108,7 +116,27 @@
 					}}
 				>
 					<div class="clps-title">
-						<p>{plot.name}</p>
+						<button class="icon"
+							onclick={(e) => {
+								e.stopPropagation();
+								changePlotVisibility(plot.id);
+							}}
+						>
+							{#if appState.invisiblePlotIds.includes(plot.id)}
+								<Icon name="eye-slash" width={16} height={16} />
+							{:else}
+								<Icon name="eye" width={16} height={16} className="visible" />
+							{/if}
+						</button>
+						<p
+							contenteditable="false"
+							ondblclick={(e) => {
+								e.target.setAttribute('contenteditable', 'true');
+								e.target.focus();
+							}}
+							onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+							bind:innerHTML={plot.name}
+						></p>
 					</div>
 
 					<div class="clps-title-button">
