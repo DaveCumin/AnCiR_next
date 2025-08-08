@@ -748,6 +748,24 @@
 		border: solid 1px var(--color-lightness-35);
 	}
 
+	/* plot control (data) */
+	:global(button.control-data-add) {
+		width: 100%;
+
+		border: solid 1px var(--color-lightness-85);
+		background-color: var(--color-lightness-97);
+		border-radius: 4px;
+
+		padding: 0.5rem 0;
+
+		cursor: pointer;
+	}
+
+	:global(button.control-data-add:hover) {
+		border: solid 1px var(--color-lightness-90);
+		background-color: var(--color-lightness-90)
+	}
+
 	/* process */
 	:global(.process) {
 		width: 100%;

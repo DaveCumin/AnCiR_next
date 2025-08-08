@@ -285,39 +285,27 @@
 {:else}
 	<div class="clps-container">
 		<details class="clps-item" bind:open={openClps[col.id]}>
-			<summary
-				class="clps-title-container"
-				onclick={(e) => {
-					e.stopPropagation();
-					toggleClps(col.id);
-				}}
-			>
+			<summary class="clps-title-container">
+				
 				<div class="column-indicator"></div>
-				{#if canChange}
-					<ColumnSelector bind:value={col.refId} bind:onChange />
-				{/if}
-
-				<div class="clps-title">
+				
+				<div
+					class="clps-title"
+					onclick={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+					}}
+				>
 					<TypeSelector bind:value={col.type} />
-					<p>
-						<input
-							bind:this={inputRef}
-							bind:value={col.name}
-							readonly={!isEditable}
-							{...!isEditable ? { tabindex: -1 } : {}}
-							ondblclick={(e) => {
-								e.stopPropagation();
-								enableEdit();
-							}}
-							onclick={(e) => {
-								if (!isEditable) {
-									e.stopPropagation();
-									const summaryEl = e.target.closest('summary');
-									summaryEl?.click();
-								}
-							}}
-							onblur={() => (isEditable = false)}
-						/>
+					<p 
+						contenteditable="false"
+						ondblclick={(e) => {
+							e.target.setAttribute('contenteditable', 'true');
+							e.target.focus();
+						}}
+						onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+						bind:innerHTML={col.name}
+					>
 					</p>
 				</div>
 
@@ -333,21 +321,32 @@
 						<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" />
 					</button>
 					{#if openClps[col.id]}
-						<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />
+					<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />
 					{:else}
-						<Icon name="caret-right" width={20} height={20} className="second-detail-title-icon" />
+					<Icon name="caret-right" width={20} height={20} className="second-detail-title-icon" />
 					{/if}
 				</div>
 			</summary>
 
 			<div class="clps-content-container">
 				<div class="data-component-info">
-					{#if !col.isReferencial()}
-						<italic><p>{col.provenance}</p></italic>
+					{#if canChange}
+						<div>
+							<ColumnSelector bind:value={col.refId} bind:onChange />
+						</div>
 					{:else}
-						<italic><p>primary source</p></italic>
-						<!-- TODO: check with DC how to name-->
+						{#if !col.isReferencial()}
+							<div>
+								<italic><p>{col.provenance}</p></italic>
+							</div>
+						{:else}
+							<div>
+								<italic><p>primary source</p></italic>
+								<!-- TODO: check with DC how to name-->
+							</div>
+						{/if}
 					{/if}
+					
 				</div>
 
 				<div class="line"></div>
@@ -399,11 +398,22 @@
 		padding: 0;
 	} */
 
-	.data-component-info p {
+	.data-component-info {
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+
 		font-size: 12px;
 		text-align: left;
 		color: var(--color-lightness-35);
 
+		margin: 0;
+		padding: 0;
+
+		gap: 0.25rem;
+	}
+
+	.data-component-info p {
 		margin: 0;
 		padding: 0;
 	}
@@ -469,7 +479,17 @@
 	}
 
 	.clps-title {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+
 		min-width: 0;
+
+		margin: 0;
+		padding: 0;
+
+		gap: 0.5rem;
 	}
 
 	details {

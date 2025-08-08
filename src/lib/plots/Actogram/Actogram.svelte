@@ -43,9 +43,9 @@
 		});
 		colour = $state();
 		offset = $derived(
-			(Number(new Date(this.parentPlot.startTime)) - Number(this.x.getData()[0])) / 3600000
+			(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
 		);
-
+		
 		dataByDays = $derived.by(() => {
 			const tempx = this.x.hoursSinceStart ?? [];
 			const tempy = this.y.getData() ?? [];
@@ -339,9 +339,9 @@
 
 	{#if currentControlTab === 'properties'}
 		<div class="control-component">
-			<!-- <div class="control-component-title">
+			<div class="control-component-title">
 				<p>Dimension</p>
-			</div> -->
+			</div>
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Width</p>
@@ -471,37 +471,53 @@
 			</div>
 		{/if}
 	{:else if currentControlTab === 'data'}
+		<div class="control-component">
+			{#each theData.data as datum, i}
+				<div class="control-component-title">
+					<p>Data {i}</p>
+					<div class="control-component-title-icons">
+						<button class="icon" onclick={() => theData.removeData(i)}>
+							<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
+						</button>
+					</div>
+				</div>
+				
+				x
+				<Column col={datum.x} canChange={true} />
+
+				y
+				<Column col={datum.y} canChange={true} />
+
+				colour: <ColourPicker bind:value={datum.colour} />
+
+
+				<div class="control-component-title">
+					<p>Markers</p>
+					<div class="control-component-title-icons">
+						<button class="icon" onclick={() => datum.addMarker()}>
+							<Icon name="plus" width={16} height={16} className="control-component-title-icon" />
+						</button>
+					</div>
+				</div>
+
+
+				{#each datum.phaseMarkers as marker}
+					<PhaseMarker {which} {marker} />
+				{/each}
+			{/each}
+		</div>
+		
 		<div>
 			<button
-				class="icon"
+				class="icon control-data-add"
 				onclick={() =>
 					theData.addData({
 						x: { refId: -1 },
 						y: { refId: -1 }
 					})}
 			>
-				<Icon name="plus" width={16} height={16} className="control-component-title-icon" />
+				<Icon name="plus" width={16} height={16} className="static-icon" />
 			</button>
-
-			{#each theData.data as datum, i}
-				<p>
-					Data {i}
-					<button onclick={() => theData.removeData(i)}>-</button>
-				</p>
-
-				x: {datum.x.name}
-				<Column col={datum.x} canChange={true} />
-
-				y: {datum.y.name}
-				<Column col={datum.y} canChange={true} />
-
-				colour: <ColourPicker bind:value={datum.colour} />
-
-				<p>Markers:<button onclick={() => datum.addMarker()}>+</button></p>
-				{#each datum.phaseMarkers as marker}
-					<PhaseMarker {which} {marker} />
-				{/each}
-			{/each}
 		</div>
 	{:else if currentControlTab === 'annotations'}
 		<p>Annotations:<button onclick={() => theData.addAnnotation()}>+</button></p>
