@@ -94,8 +94,8 @@ export function saveMultipleAsImage(svgIds, filetype = 'png') {
 		});
 		minX = Math.min(minX, x);
 		minY = Math.min(minY, y);
-		maxX = Math.max(maxX, x + rect.width / appState.canvasScale);
-		maxY = Math.max(maxY, y + rect.height / appState.canvasScale);
+		maxX = Math.max(maxX, x + rect.width);
+		maxY = Math.max(maxY, y + rect.height);
 	});
 
 	//make a new svg object for them
