@@ -759,6 +759,7 @@
 			plotPadding={theData.plot.padding}
 			nticks={5}
 			gridlines={theData.plot.ygridlines}
+			label="Power"
 		/>
 		<Axis
 			height={theData.plot.plotheight}
@@ -770,6 +771,7 @@
 			plotPadding={theData.plot.padding}
 			nticks={5}
 			gridlines={theData.plot.xgridlines}
+			label="Period"
 		/>
 
 		{#each theData.plot.data as datum}

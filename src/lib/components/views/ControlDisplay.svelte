@@ -133,14 +133,14 @@
 
 	{#if core.plots.filter((p) => p.selected).length > 1}
 		<div class="control-banner">
-			<p>Control Panel</p>
+			<p>Multiple plots selected</p>
 
-			<div class="control-banner-icons"></div>
+			<div class="control-banner-icons">
+				<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
+					<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
+				</button>
+			</div>
 		</div>
-		<!-- TODO: after fix put in control-banner-icons -->
-		<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
-			<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
-		</button>
 
 		<p>
 			{core.plots
