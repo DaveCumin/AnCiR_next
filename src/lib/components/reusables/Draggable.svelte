@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 
@@ -152,15 +152,24 @@
 	async function handleDblClick(e) {
 		e.stopPropagation();
 		appState.showControlPanel = true;
-
 		await tick();
 		RePosition();
 	}
 
 	function handleClick(e) {
 		e.stopPropagation();
-		selectPlot(e, id);
-		RePosition();
+		n += 1;
+		clearTimeout(timeout);
+		timeout = setTimeout(() => {
+			selectPlot(e, id);
+
+			if (n > 1) {
+				handleDblClick(e);
+			} else {
+				RePosition();
+			}
+			n = 0;
+		}, delay);
 	}
 
 	function RePosition() {
@@ -199,6 +208,9 @@
 
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
+	let timeout,
+		n = 0,
+		delay = 180;
 </script>
 
 <svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp} />
@@ -206,7 +218,6 @@
 <!-- added header therefore TODO: other way than hardcode -->
 <section
 	bind:this={plotElement}
-	ondblclick={(e) => handleDblClick(e)}
 	onclick={(e) => handleClick(e)}
 	class:selected
 	class="draggable"
