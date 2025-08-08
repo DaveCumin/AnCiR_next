@@ -112,17 +112,19 @@
 					</div>
 				</summary>
 
+				{#each table.processes as p}
+					<div class="second-clps">
+						<TableProcess {p} />
+					</div>
+					<hr />
+				{/each}
+
 				{#each table.columns as col (col.id)}
 					{#if !col.tableProcessed}
 						<div class="second-clps">
 							<ColumnComponent {col} />
 						</div>
 					{/if}
-				{/each}
-				{#each table.processes as p}
-					<div class="second-clps">
-						<TableProcess {p} />
-					</div>
 				{/each}
 			</details>
 		</div>

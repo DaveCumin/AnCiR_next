@@ -292,7 +292,6 @@
 					toggleClps(col.id);
 				}}
 			>
-				<p>{col.tableProcessGUId}</p>
 				<div class="column-indicator"></div>
 				{#if canChange}
 					<ColumnSelector bind:value={col.refId} bind:onChange />

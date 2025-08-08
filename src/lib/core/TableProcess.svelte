@@ -1,5 +1,5 @@
 <script module>
-	import { appConsts } from '$lib/core/core.svelte.js';
+	import { appConsts, pushObj } from '$lib/core/core.svelte.js';
 	import { getTableById } from '$lib/core/Table.svelte';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	let _tableprocessidCounter = 0;
@@ -41,7 +41,8 @@
 						data: dataIN.args.data ?? [] //This is to make sure the preview is exactly what the data are (eg for random)
 					});
 					this.args.out[Object.keys(this.args.out)[i]] = tempCol.id;
-					theTable?.addColumn(tempCol);
+					pushObj(tempCol);
+					theTable.columnRefs = [tempCol.id, ...theTable.columnRefs];
 				}
 				if (Object.keys(this.args).includes('N')) {
 					this.args.N = getColumnById(theTable?.columnRefs[0]).getData().length;

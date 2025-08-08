@@ -15,14 +15,6 @@
 		let out = new Map();
 		//get all the columns in tables
 		for (let t = 0; t < core.tables.length; t++) {
-			for (let c = 0; c < core.tables[t].columns.length; c++) {
-				if (!excludeColIds.includes(core.tables[t].columns[c].id)) {
-					out.set(
-						core.tables[t].name + ' : ' + core.tables[t].columns[c].name,
-						core.tables[t].columns[c].id
-					);
-				}
-			}
 			//get the table process Ids also
 			for (let p = 0; p < core.tables[t].processes.length; p++) {
 				Object.keys(core.tables[t].processes[p].args.out).forEach((key) => {
@@ -33,6 +25,16 @@
 					}
 				});
 			}
+
+			//columns
+			for (let c = 0; c < core.tables[t].columns.length; c++) {
+				if (!excludeColIds.includes(core.tables[t].columns[c].id)) {
+					out.set(
+						core.tables[t].name + ' : ' + core.tables[t].columns[c].name,
+						core.tables[t].columns[c].id
+					);
+				}
+			}
 		}
 		return out;
 	});
@@ -42,9 +44,6 @@
 	<select bind:value onchange={(e) => onChange(e.target.value)} multiple style="height: 200px">
 		{#each core.tables as table}
 			<optgroup label={table.name}>
-				{#each table.columns as col}
-					<option value={col.id}>{col.name}</option>
-				{/each}
 				<!-- include the tableProces data also -->
 				{#each table.processes as p}
 					{#each p.args.out as o}
@@ -54,6 +53,11 @@
 							<option value={col.id}>{col.name}</option>
 						{/each}
 					{/each}
+				{/each}
+
+				<!-- columns-->
+				{#each table.columns as col}
+					<option value={col.id}>{col.name}</option>
 				{/each}
 			</optgroup>
 		{/each}
