@@ -74,7 +74,7 @@
 <div class="display-list">
 	{#each core.tables as table (table.id)}
 		<div class="clps-container">
-			<details class="clps-item">
+			<details class="clps-item" bind:open={openClps[table.id]}>
 				<summary class="clps-title-container">
 					<div
 						class="clps-title"
