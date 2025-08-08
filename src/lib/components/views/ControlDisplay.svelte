@@ -104,28 +104,24 @@
 	}
 
 	// get the options that are the same for all selected plots
-	function getSameOptions(selectedPlotIds) {
-		if (selectedPlotIds.length < 2) return [];
-
+	const theSameOptions = $derived.by(() => {
 		// Get all plot objects using $state.snapshot
-		const plots = selectedPlotIds.map((id) => $state.snapshot(core.plots.find((p) => p.id === id)));
+		const plots = $state.snapshot(core.plots.filter((p) => p.selected));
+		console.log('plots: ', plots);
 
 		// Compare all plots
 		let options = compareJson(plots);
+		console.log('options: ', options);
 
 		// Filter paths
 		options = filterPaths(options);
-		console.log(options);
+		console.log('filtered', options);
 		return options;
-	}
-
-	let theSameOptions = $state();
-	$effect(() => {
-		theSameOptions = getSameOptions(appState.selectedPlotIds);
 	});
+
 	function updateOptions(samepath) {
 		core.plots.forEach((plot) => {
-			if (appState.selectedPlotIds.includes(plot.id)) {
+			if (plot.selected) {
 				plot[samepath] = theSameOptions.filter((p) => p.path == samepath)[0].value;
 			}
 		});
@@ -135,81 +131,79 @@
 <div class="control-display">
 	<!-- This is only for the first selected plot - need an #if to take care of multiple selections -->
 
-	{#key appState.selectedPlotIds}
-		{#if appState.selectedPlotIds.length > 1}
-			<div class="control-banner">
-				<p>Control Panel</p>
+	{#if core.plots.filter((p) => p.selected).length > 1}
+		<div class="control-banner">
+			<p>Control Panel</p>
 
-				<div class="control-banner-icons"></div>
-			</div>
-			<!-- TODO: after fix put in control-banner-icons -->
-			<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
-				<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
-			</button>
+			<div class="control-banner-icons"></div>
+		</div>
+		<!-- TODO: after fix put in control-banner-icons -->
+		<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
+			<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
+		</button>
 
-			<p>{appState.selectedPlotIds}</p>
-			<p>{JSON.stringify(theSameOptions, null, 2)}</p>
-			<!-- This may need to be layed out, like the others, with loops only for the data (that way, easier to set min/max input values and label appropriately -->
-			{#each theSameOptions as same}
-				{#if toShow[same.path] == 'number'}
-					<p>
-						{same.path}
-						<NumberWithUnits
-							bind:value={same.value}
-							step={appState.gridSize}
-							units={{}}
-							onInput={() => updateOptions(same.path)}
-						/>
-					</p>
-				{:else}
-					<p>{same.path} {toShow[same.path]} {same.value}</p>
-				{/if}
-			{/each}
-		{:else if appState.selectedPlotIds.length == 1}
-			{@const plot = core.plots.find((p) => p.id === appState.selectedPlotIds[0])}
-			{#if plot}
-				{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
-				{#if Plot}
-					<!-- <p>{core.plots.find((p) => p.id === appState.selectedPlotIds[0])?.name}</p>
-					<p>
-						{JSON.stringify(core.plots.find((p) => p.id === appState.selectedPlotIds[0])?.plot)}
-					</p> -->
-
-					<div class="control-banner">
-						<p
-							contenteditable="false"
-							ondblclick={(e) => {
-								e.target.setAttribute('contenteditable', 'true');
-								e.target.focus();
-							}}
-							onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-							bind:innerHTML={plot.name}
-						></p>
-
-						<div class="control-banner-icons">
-							<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
-								<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
-							</button>
-						</div>
-					</div>
-
-					<SavePlot
-						bind:showDropdown={showSavePlot}
-						{dropdownTop}
-						{dropdownLeft}
-						Id={'plot' + plot.plot.parentBox.id}
+		<p>
+			{core.plots
+				.filter((p) => p.selected)
+				.map((p) => p.id)
+				.join(', ')}
+		</p>
+		<p>{JSON.stringify(theSameOptions, null, 2)}</p>
+		<!-- This may need to be layed out, like the others, with loops only for the data (that way, easier to set min/max input values and label appropriately -->
+		{#each theSameOptions as same}
+			{#if toShow[same.path] == 'number'}
+				<p>
+					{same.path}
+					<NumberWithUnits
+						bind:value={same.value}
+						step={appState.gridSize}
+						units={{}}
+						onInput={() => updateOptions(same.path)}
 					/>
-
-					<Plot theData={plot.plot} which="controls" />
-				{/if}
+				</p>
+			{:else}
+				<p>{same.path} {toShow[same.path]} {same.value}</p>
 			{/if}
-		{:else}
-			<div class="control-banner">
-				<p>Control Panel</p>
-			</div>
-			<p>Please select a plot or plots (with alt-click) to use the control panel.</p>
+		{/each}
+	{:else if core.plots.filter((p) => p.selected).length == 1}
+		{@const plot = core.plots.filter((p) => p.selected)[0]}
+		{#if plot}
+			{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
+			{#if Plot}
+				<div class="control-banner">
+					<p
+						contenteditable="false"
+						ondblclick={(e) => {
+							e.target.setAttribute('contenteditable', 'true');
+							e.target.focus();
+						}}
+						onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+						bind:innerHTML={plot.name}
+					></p>
+
+					<div class="control-banner-icons">
+						<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
+							<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
+						</button>
+					</div>
+				</div>
+
+				<SavePlot
+					bind:showDropdown={showSavePlot}
+					{dropdownTop}
+					{dropdownLeft}
+					Id={'plot' + plot.plot.parentBox.id}
+				/>
+
+				<Plot theData={plot.plot} which="controls" />
+			{/if}
 		{/if}
-	{/key}
+	{:else}
+		<div class="control-banner">
+			<p>Control Panel</p>
+		</div>
+		<p>Please select a plot or plots (with alt-click) to use the control panel.</p>
+	{/if}
 
 	<div class="div-block"></div>
 </div>
@@ -218,7 +212,7 @@
 	bind:showDropdown={showSavePlot}
 	{dropdownTop}
 	{dropdownLeft}
-	Id={appState.selectedPlotIds}
+	Id={core.plots.filter((p) => p.selected)}
 />
 
 <style>

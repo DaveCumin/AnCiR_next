@@ -22,7 +22,6 @@ export function convertToImage(svgId, filetype = 'png') {
 	img.onload = function () {
 		// Create a canvas
 		const canvas = document.createElement('canvas');
-		console.log('SCALE', appState.canvasScale);
 		canvas.width = svg.getAttribute('width') / appState.canvasScale;
 		canvas.height = svg.getAttribute('height') / appState.canvasScale;
 		const context = canvas.getContext('2d');

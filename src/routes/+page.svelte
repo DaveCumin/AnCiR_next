@@ -21,7 +21,7 @@
 	import { core, pushObj, appConsts, appState, snapToGrid } from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	import { Table } from '$lib/core/table.svelte';
-	import { Plot } from '$lib/core/Plot.svelte';
+	import { Plot, selectAllPlots } from '$lib/core/Plot.svelte';
 	import { Process } from '$lib/core/Process.svelte';
 	import { TableProcess } from '$lib/core/tableProcess.svelte';
 
@@ -111,9 +111,7 @@
 				console.log(appState.canvasScale);
 			}
 			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a') {
-				for (let i = 0; i < core.plots.length; i++) {
-					appState.selectedPlotIds.push(core.plots[i].id);
-				}
+				selectAllPlots();
 			}
 		});
 

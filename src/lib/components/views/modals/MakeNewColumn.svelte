@@ -30,7 +30,9 @@
 		);
 
 		// Batch update: Add process to reactive state
-		getTableById(tableId).processes.push(newProcess);
+		//add table processes in reverse order so the most recent shows at the top
+		const theTable = getTableById(tableId);
+		theTable.processes = [newProcess, ...theTable.processes];
 
 		//clear the defaults
 		tableProcessChosen = '';

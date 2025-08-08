@@ -78,6 +78,7 @@ export class Table {
 		if (json.processes) {
 			json.processes.forEach((process) => {
 				const tempProcess = new TableProcess(process, table, process.id);
+
 				//add the process
 				table.processes.push(tempProcess);
 				//remove the columns that are in the process so they aren't duplicated.

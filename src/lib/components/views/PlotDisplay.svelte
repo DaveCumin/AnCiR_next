@@ -6,6 +6,7 @@
 	import AddTable from '$lib/components/iconActions/AddTable.svelte';
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 	import { tick } from 'svelte';
+	import { deselectAllPlots } from '$lib/core/Plot.svelte';
 
 	// AddTable dropdown
 	let addBtnRef;
@@ -33,7 +34,7 @@
 
 	function handleClick(e) {
 		e.stopPropagation();
-		appState.selectedPlotIds = [];
+		deselectAllPlots();
 		appState.showControlPanel = false;
 	}
 
@@ -70,6 +71,11 @@
 			appState.currentTab = 'data';
 			appState.showDisplayPanel = true;
 		}
+	});
+	let selectedPlotIds = $derived.by(() => {
+		const selectedIds = core.plots.filter((p) => p.selected);
+		console.log(selectedIds);
+		appConsts.selectedPlotIds = selectedIds;
 	});
 </script>
 
@@ -121,6 +127,7 @@
 						bind:height={plot.height}
 						title={plot.name}
 						id={plot.id}
+						selected={plot.selected}
 					>
 						{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 						<Plot theData={plot} which="plot" />
