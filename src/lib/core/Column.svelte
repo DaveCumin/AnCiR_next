@@ -257,27 +257,13 @@
 		dropdownLeft = rect.right + window.scrollX + 12;
 		showAddProcess = true;
 
-		openClps[id] = true;
-	}
-
-	function toggleClps(id) {
-		openClps[id] = !openClps[id];
+		// openClps[id] = true;
 	}
 
 	let openMenus = $state({});
 	function toggleMenu(id) {
 		openMenus[id] = !openMenus[id];
 	}
-
-	let isEditable = $state(false);
-
-	function enableEdit() {
-		isEditable = true;
-		// Focus the input immediately after enabling
-		requestAnimationFrame(() => inputRef?.focus());
-	}
-
-	let inputRef = $state();
 </script>
 
 {#if col == undefined}
@@ -285,40 +271,29 @@
 {:else}
 	<div class="clps-container">
 		<details class="clps-item" bind:open={openClps[col.id]}>
-			<summary
-				class="clps-title-container"
-				onclick={(e) => {
-					e.stopPropagation();
-					toggleClps(col.id);
-				}}
-			>
+			<summary class="clps-title-container">
 				<div class="column-indicator"></div>
 				{#if canChange}
 					<ColumnSelector bind:value={col.refId} bind:onChange />
 				{/if}
 
-				<div class="clps-title">
+				<div
+					class="clps-title"
+					onclick={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+					}}
+				>
 					<TypeSelector bind:value={col.type} />
-					<p>
-						<input
-							bind:this={inputRef}
-							bind:value={col.name}
-							readonly={!isEditable}
-							{...!isEditable ? { tabindex: -1 } : {}}
-							ondblclick={(e) => {
-								e.stopPropagation();
-								enableEdit();
-							}}
-							onclick={(e) => {
-								if (!isEditable) {
-									e.stopPropagation();
-									const summaryEl = e.target.closest('summary');
-									summaryEl?.click();
-								}
-							}}
-							onblur={() => (isEditable = false)}
-						/>
-					</p>
+					<p
+						contenteditable="false"
+						ondblclick={(e) => {
+							e.target.setAttribute('contenteditable', 'true');
+							e.target.focus();
+						}}
+						onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+						bind:innerHTML={col.name}
+					></p>
 				</div>
 
 				<div class="clps-title-button">
@@ -332,6 +307,7 @@
 					>
 						<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" />
 					</button>
+
 					{#if openClps[col.id]}
 						<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />
 					{:else}
@@ -466,10 +442,6 @@
 
 		margin: 0 0 0 0.5rem;
 		padding: 0;
-	}
-
-	.clps-title {
-		min-width: 0;
 	}
 
 	details {
