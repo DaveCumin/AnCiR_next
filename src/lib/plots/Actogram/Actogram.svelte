@@ -434,11 +434,11 @@
 			<div class="control-input-vertical">
 				<div class="control-input">
 					<p>Scale Y-axis:</p>
-					<select bind:value={theData.ylimsOption}
-						><option value="overall">Overall</option>
+					<select bind:value={theData.ylimsOption}>
+						<option value="overall">Overall</option>
 						<option value="byperiod">By Periods</option>
-						<option value="manual">Manual</option></select
-					>
+						<option value="manual">Manual</option>
+					</select>
 				</div>
 			</div>
 		</div>
@@ -474,7 +474,10 @@
 		<div class="control-component">
 			{#each theData.data as datum, i}
 				<div class="control-component-title">
-					<p>Data {i}</p>
+					<div class="control-component-title-colour">
+						<ColourPicker bind:value={datum.colour} />
+						<p>Data {i}</p>
+					</div>
 					<div class="control-component-title-icons">
 						<button class="icon" onclick={() => theData.removeData(i)}>
 							<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
@@ -482,34 +485,65 @@
 					</div>
 				</div>
 				
-				x
-				<Column col={datum.x} canChange={true} />
-
-				y
-				<Column col={datum.y} canChange={true} />
-
-				colour: <ColourPicker bind:value={datum.colour} />
-
-
-				<div class="control-component-title">
-					<p>Markers</p>
-					<div class="control-component-title-icons">
-						<button class="icon" onclick={() => datum.addMarker()}>
-							<Icon name="plus" width={16} height={16} className="control-component-title-icon" />
-						</button>
+				<div class="control-data-container">
+					<div class="control-data">
+						<div class="control-data-title">
+							<strong>x</strong>
+							<p
+								contenteditable="false"
+								ondblclick={(e) => {
+									e.target.setAttribute('contenteditable', 'true');
+									e.target.focus();
+								}}
+								onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+								bind:innerHTML={datum.x.name}
+							></p>
+						</div>
+	
+						<Column col={datum.x} canChange={true} />
 					</div>
+	
+					<div class="control-data">
+						<div class="control-data-title">
+							<strong>y</strong>
+							<p
+								contenteditable="false"
+								ondblclick={(e) => {
+									e.target.setAttribute('contenteditable', 'true');
+									e.target.focus();
+								}}
+								onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+								bind:innerHTML={datum.y.name}
+							></p>
+						</div>
+						
+						<Column col={datum.y} canChange={true} />
+					</div>
+					
+					<div class="control-component-title">
+						<p>Markers</p>
+	
+						<div class="control-component-title-icons">
+							<button class="icon" onclick={() => datum.addMarker()}>
+								<Icon name="plus" width={16} height={16} className="control-component-title-icon" />
+							</button>
+						</div>
+					</div>
+	
+					{#each datum.phaseMarkers as marker}
+						<PhaseMarker {which} {marker} />
+					{/each}
 				</div>
 
 
-				{#each datum.phaseMarkers as marker}
-					<PhaseMarker {which} {marker} />
-				{/each}
+				<div class="div-line"></div>
 			{/each}
 		</div>
+
 		
 		<div>
 			<button
-				class="icon control-data-add"
+				class="icon control-block-add"
 				onclick={() =>
 					theData.addData({
 						x: { refId: -1 },
@@ -520,10 +554,18 @@
 			</button>
 		</div>
 	{:else if currentControlTab === 'annotations'}
-		<p>Annotations:<button onclick={() => theData.addAnnotation()}>+</button></p>
 		{#each theData.annotations as annotation}
 			<Annotation {which} {annotation} />
 		{/each}
+
+		<div>
+			<button
+				class="icon control-block-add"
+				onclick={() => theData.addAnnotation()}
+			>
+				<Icon name="plus" width={16} height={16} className="static-icon" />
+			</button>
+		</div>
 	{/if}
 {/snippet}
 

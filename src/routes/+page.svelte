@@ -517,6 +517,7 @@
 		align-items: center;
 		justify-content: flex-start;
 
+		margin-left: 0.5rem;
 		gap: 0.25rem;
 	}
 
@@ -644,6 +645,15 @@
 		padding: 0;
 	}
 
+	:global(.control-component-title-colour) {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: flex-start;
+
+		gap: 0.5rem;
+	}
+
 	:global(.control-component-title-icons) {
 		display: flex;
 		flex-direction: row;
@@ -748,23 +758,64 @@
 		border: solid 1px var(--color-lightness-35);
 	}
 
-	/* plot control (data) */
-	:global(button.control-data-add) {
+	:global(button.control-block-add) {
 		width: 100%;
-
+		
 		border: solid 1px var(--color-lightness-85);
 		background-color: var(--color-lightness-97);
 		border-radius: 4px;
-
+		
 		padding: 0.5rem 0;
-
+		
 		cursor: pointer;
 	}
-
-	:global(button.control-data-add:hover) {
+	
+	:global(button.control-block-add:hover) {
 		border: solid 1px var(--color-lightness-90);
 		background-color: var(--color-lightness-90)
 	}
+	
+	/* plot control (data) */
+	:global(.control-data-container) {
+		display: flex;
+		flex-direction: column;
+
+		width: 100%;
+		min-width: 0;
+
+		margin: 0;
+		/* margin-left: 0.4rem; */
+		/* margin-left: 0.1rem; */
+
+		gap: 0.25rem;
+	}
+
+	:global(.control-data) {
+		width: 100%;
+		min-width: 0;
+	}
+
+	:global(.control-data-title) {
+		 display: flex;
+		 flex: 1 1 0;
+		 flex-direction: row;
+		 align-items: center;
+		 justify-content: flex-start;
+
+		 width: 100%;
+		 min-width: 0;
+
+		 margin: 0;
+		 padding: 0;
+
+		 gap: 0.5rem;
+	}
+
+	:global(.control-data-title p) {
+		margin: 0;
+		padding: 0;
+	}
+
 
 	/* process */
 	:global(.process) {

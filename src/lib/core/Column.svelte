@@ -295,18 +295,26 @@
 						e.preventDefault();
 						e.stopPropagation();
 					}}
-				>
+				>	
 					<TypeSelector bind:value={col.type} />
-					<p 
-						contenteditable="false"
-						ondblclick={(e) => {
-							e.target.setAttribute('contenteditable', 'true');
-							e.target.focus();
-						}}
-						onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-						bind:innerHTML={col.name}
-					>
-					</p>
+					
+					{#if canChange}
+						<div>
+							<ColumnSelector bind:value={col.refId} bind:onChange />
+						</div>
+					{:else}
+						<p 
+							contenteditable="false"
+							ondblclick={(e) => {
+								e.target.setAttribute('contenteditable', 'true');
+								e.target.focus();
+							}}
+							onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+							bind:innerHTML={col.name}
+						>
+						</p>
+					{/if}
+
 				</div>
 
 				<div class="clps-title-button">
@@ -330,11 +338,7 @@
 
 			<div class="clps-content-container">
 				<div class="data-component-info">
-					{#if canChange}
-						<div>
-							<ColumnSelector bind:value={col.refId} bind:onChange />
-						</div>
-					{:else}
+					{#if !canChange}
 						{#if !col.isReferencial()}
 							<div>
 								<italic><p>{col.provenance}</p></italic>
