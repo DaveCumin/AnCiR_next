@@ -1,12 +1,12 @@
 <script>
 	// @ts-nocheck
 
-	import { appState, core } from '$lib/core/core.svelte.js';
-	import { appState, core } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddPlot from '../iconActions/AddPlot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
+	
+	import { appState, core } from '$lib/core/core.svelte.js';
 	import { deselectAllPlots, selectAllPlots } from '$lib/core/Plot.svelte';
 
 	let addBtnRef;
