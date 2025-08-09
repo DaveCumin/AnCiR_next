@@ -156,8 +156,8 @@
 		);
 
 		// Compute middle and center for alignment
-		boundaries.middle = snapToGrid((boundaries.top + boundaries.bottom) / 2);
-		boundaries.center = snapToGrid((boundaries.left + boundaries.right) / 2);
+		boundaries.middle = (boundaries.top + boundaries.bottom) / 2;
+		boundaries.center = (boundaries.left + boundaries.right) / 2;
 
 		// Map plots to new positions based on 'by'
 		core.plots.forEach((plot) => {
@@ -187,8 +187,8 @@
 				}
 
 				//update the plot
-				plot.x = newX;
-				plot.y = newY;
+				plot.x = snapToGrid(newX);
+				plot.y = snapToGrid(newY);
 			}
 		});
 	}
@@ -199,8 +199,8 @@
 			const sortedPlots = [...selectedPlots].sort((a, b) => a.x - b.x);
 			const sortedPlotIds = sortedPlots.map((p) => p.id);
 			const minX = Math.min(...sortedPlots.map((p) => p.x));
-			const maxX = Math.max(...sortedPlots.map((p) => p.x + p.width));
-			const totalWidth = sortedPlots.reduce((sum, p) => sum + p.width, 0);
+			const maxX = Math.max(...sortedPlots.map((p) => p.x + p.width + 25)); // need to add the 25 that makes up a bit of a margin
+			const totalWidth = sortedPlots.reduce((sum, p) => sum + p.width + 25, 0);
 			gap = snapToGrid(
 				sortedPlots.length > 1 ? (maxX - minX - totalWidth) / (sortedPlots.length - 1) : 0
 			);
@@ -210,8 +210,8 @@
 			const sortedPlots = [...selectedPlots].sort((a, b) => a.y - b.y);
 			const sortedPlotIds = sortedPlots.map((p) => p.id);
 			const minY = Math.min(...sortedPlots.map((p) => p.y));
-			const maxY = Math.max(...sortedPlots.map((p) => p.y + p.height));
-			const totalHeight = sortedPlots.reduce((sum, p) => sum + p.height, 0);
+			const maxY = Math.max(...sortedPlots.map((p) => p.y + p.height + 50)); // need to add the 50 that makes up a bit of a margin and accounts for the header bar
+			const totalHeight = sortedPlots.reduce((sum, p) => sum + p.height + 50, 0);
 			gap = snapToGrid(
 				sortedPlots.length > 1 ? (maxY - minY - totalHeight) / (sortedPlots.length - 1) : 0
 			);
@@ -220,8 +220,6 @@
 		return gap;
 	}
 	function distributePlots(by, spacingIN = null) {
-		console.log('dist by: ', by);
-		console.log('dist gap: ', spacingIN);
 		if (selectedPlots.length < 2) return;
 
 		// Handle distributions
@@ -230,41 +228,39 @@
 			const sortedPlots = [...selectedPlots].sort((a, b) => a.x - b.x);
 			const sortedPlotIds = sortedPlots.map((p) => p.id);
 			const minX = Math.min(...sortedPlots.map((p) => p.x));
-			const maxX = Math.max(...sortedPlots.map((p) => p.x + p.width));
-			const totalWidth = sortedPlots.reduce((sum, p) => sum + p.width, 0);
-			const spacing =
-				spacingIN ??
-				snapToGrid(
+			if (spacingIN == null) {
+				const maxX = Math.max(...sortedPlots.map((p) => p.x + p.width + 25));
+				const totalWidth = sortedPlots.reduce((sum, p) => sum + p.width + 25, 0);
+				spacingIN = snapToGrid(
 					sortedPlots.length > 1 ? (maxX - minX - totalWidth) / (sortedPlots.length - 1) : 0
 				);
-			console.log('spacing: ', spacing);
+			}
+
+			console.log('spacing: ', spacingIN);
 			//now distribute
 			let currentX = minX;
 			sortedPlotIds.forEach((id) => {
-				core.plots[id].x = snapToGrid(currentX);
-				currentX += core.plots[id].width + spacing;
+				core.plots[id].x = snapToGrid(Math.max(0, currentX));
+				currentX += core.plots[id].width + 25 + spacingIN;
 			});
-			horizontalGapIN = null; //reset the vertical gap
 		}
 
 		if (by === 'verticalEqual') {
 			const sortedPlots = [...selectedPlots].sort((a, b) => a.y - b.y);
 			const sortedPlotIds = sortedPlots.map((p) => p.id);
 			const minY = Math.min(...sortedPlots.map((p) => p.y));
-			const maxY = Math.max(...sortedPlots.map((p) => p.y + p.height));
-			const totalHeight = sortedPlots.reduce((sum, p) => sum + p.height, 0);
-			const spacing =
-				spacingIN ??
-				snapToGrid(
+			if (spacingIN == null) {
+				const maxY = Math.max(...sortedPlots.map((p) => p.y + p.height + 50));
+				const totalHeight = sortedPlots.reduce((sum, p) => sum + p.height + 50, 0);
+				spacingIN = snapToGrid(
 					sortedPlots.length > 1 ? (maxY - minY - totalHeight) / (sortedPlots.length - 1) : 0
 				);
-
+			}
 			let currentY = minY;
 			sortedPlotIds.forEach((id) => {
-				core.plots[id].y = snapToGrid(currentY);
-				currentY += core.plots[id].height + spacing;
+				core.plots[id].y = snapToGrid(Math.max(0, currentY));
+				currentY += core.plots[id].height + 50 + spacingIN;
 			});
-			verticalGapIN = null; //reset the vertical gap
 		}
 	}
 
@@ -296,7 +292,7 @@
 
 	{#if selectedPlots.length > 1}
 		<div class="control-banner">
-			<p>Multiple plots selected</p>
+			<p>{selectedPlots.length} plots selected</p>
 
 			<div class="control-banner-icons">
 				<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
@@ -304,67 +300,170 @@
 				</button>
 			</div>
 		</div>
-		<div>
-			<button class="icon" onclick={(e) => alignPlots('top')}>
-				<Icon name="align-top" width={24} height={24} className="control-component-title-icon" />
-			</button>
-			<button class="icon" onclick={(e) => alignPlots('middle')}>
-				<Icon name="align-middle" width={24} height={24} className="control-component-title-icon" />
-			</button>
-			<button class="icon" onclick={(e) => alignPlots('bottom')}>
-				<Icon name="align-bottom" width={24} height={24} className="control-component-title-icon" />
-			</button>
-		</div>
-		<div>
-			<button class="icon" onclick={(e) => alignPlots('left')}>
-				<Icon name="align-left" width={24} height={24} className="control-component-title-icon" />
-			</button>
-			<button class="icon" onclick={(e) => alignPlots('centre')}>
-				<Icon name="align-centre" width={24} height={24} className="control-component-title-icon" />
-			</button>
-			<button class="icon" onclick={(e) => alignPlots('right')}>
-				<Icon name="align-right" width={24} height={24} className="control-component-title-icon" />
-			</button>
-		</div>
-		<div>
-			<button class="icon" onclick={(e) => distributePlots('horizontalEqual')}>
-				<Icon
-					name="distribute-horizontal"
-					width={24}
-					height={24}
-					className="control-component-title-icon"
-				/>
-			</button>
-			<input
-				type="number"
-				step={appState.gridSize}
-				value={horizontalGapIN != null && !isNaN(horizontalGapIN) ? horizontalGapIN : horizontalGap}
-				oninput={(e) => {
-					horizontalGapIN = parseFloat(e.target.value);
-					updateGap('horizontal');
-				}}
-			/>
-			<p>HGIN: {horizontalGapIN}</p>
-			<p>HG: {horizontalGap}</p>
-		</div>
-		<div>
-			<button class="icon" onclick={(e) => distributePlots('verticalEqual')}>
-				<Icon
-					name="distribute-vertical"
-					width={24}
-					height={24}
-					className="control-component-title-icon"
-				/>
-			</button>
-			<input
-				type="number"
-				step={appState.gridSize}
-				value={verticalGapIN ? verticalGapIN : verticalGap}
-				oninput={(e) => {
-					verticalGapIN = parseFloat(e.target.value);
-					updateGap('vertical');
-				}}
-			/>
+
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Align Plots</p>
+			</div>
+
+			<div class="control-input-square">
+				<div class="control-input">
+					<p>Vertically</p>
+					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
+						<button class="icon" onclick={(e) => alignPlots('top')}>
+							<Icon
+								name="align-top"
+								width={24}
+								height={24}
+								className="control-component-title-icon"
+							/>
+						</button>
+						<button class="icon" onclick={(e) => alignPlots('middle')}>
+							<Icon
+								name="align-middle"
+								width={24}
+								height={24}
+								className="control-component-title-icon"
+							/>
+						</button>
+						<button class="icon" onclick={(e) => alignPlots('bottom')}>
+							<Icon
+								name="align-bottom"
+								width={24}
+								height={24}
+								className="control-component-title-icon"
+							/>
+						</button>
+					</div>
+				</div>
+
+				<div class="control-input">
+					<p>Horizontally</p>
+					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
+						<button class="icon" onclick={(e) => alignPlots('left')}>
+							<Icon
+								name="align-left"
+								width={24}
+								height={24}
+								className="control-component-title-icon"
+							/>
+						</button>
+						<button class="icon" onclick={(e) => alignPlots('centre')}>
+							<Icon
+								name="align-centre"
+								width={24}
+								height={24}
+								className="control-component-title-icon"
+							/>
+						</button>
+						<button class="icon" onclick={(e) => alignPlots('right')}>
+							<Icon
+								name="align-right"
+								width={24}
+								height={24}
+								className="control-component-title-icon"
+							/>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<div class="div-line"></div>
+
+			<div class="control-component-title">
+				<p>Distribute Plots</p>
+			</div>
+
+			<div class="control-input-square">
+				<div class="control-input">
+					<p>Vertically (gap)</p>
+					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
+						<button class="icon" onclick={(e) => distributePlots('verticalEqual')}>
+							<Icon
+								name="distribute-vertical"
+								width={24}
+								height={24}
+								className="control-component-title-icon"
+							/>
+						</button>
+						<input
+							type="number"
+							step={appState.gridSize}
+							value={verticalGapIN ? verticalGapIN : verticalGap}
+							oninput={(e) => {
+								verticalGapIN = parseFloat(e.target.value);
+								updateGap('vertical');
+							}}
+							style="width: calc(100% - {verticalGapIN != null && verticalGapIN !== verticalGap
+								? 24
+								: 0}px)"
+						/>
+						{#if verticalGapIN != null && verticalGapIN !== verticalGap}
+							<button
+								class="icon"
+								onclick={() => {
+									verticalGapIN = verticalGap;
+									updateGap('vertical');
+								}}
+							>
+								<Icon
+									name="reset"
+									width={14}
+									height={14}
+									className="control-component-input-icon"
+								/>
+							</button>
+						{/if}
+					</div>
+				</div>
+
+				<div class="control-input">
+					<p>Horizontally (gap)</p>
+					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
+						<button class="icon" onclick={(e) => distributePlots('horizontalEqual')}>
+							<Icon
+								name="distribute-horizontal"
+								width={24}
+								height={24}
+								className="control-component-title-icon"
+							/>
+						</button>
+						<input
+							type="number"
+							step={appState.gridSize}
+							value={horizontalGapIN != null && !isNaN(horizontalGapIN)
+								? horizontalGapIN
+								: horizontalGap}
+							oninput={(e) => {
+								horizontalGapIN = parseFloat(e.target.value);
+								updateGap('horizontal');
+							}}
+							style="width: calc(100% - {horizontalGapIN != null &&
+							horizontalGapIN !== horizontalGap
+								? 24
+								: 0}px)"
+						/>
+						{#if horizontalGapIN != null && horizontalGapIN !== horizontalGap}
+							<button
+								class="icon"
+								onclick={() => {
+									horizontalGapIN = horizontalGap;
+									updateGap('horizontal');
+								}}
+							>
+								<Icon
+									name="reset"
+									width={14}
+									height={14}
+									className="control-component-input-icon"
+								/>
+							</button>
+						{/if}
+					</div>
+				</div>
+			</div>
+
+			<div class="div-line"></div>
 		</div>
 
 		<p>
