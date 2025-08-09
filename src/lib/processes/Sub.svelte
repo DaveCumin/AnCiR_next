@@ -1,4 +1,6 @@
 <script module>
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+
 	export function sub(x, args) {
 		const find = args.find;
 		const replace = args.replace;
@@ -40,11 +42,11 @@
 		<div class="control-input-horizontal">
 			<div class="control-input">
 				<p>find</p>
-				<input type="number" bind:value={p.args.find} />
+				<NumberWithUnits bind:value={p.args.find} />
 			</div>
 			<div class="control-input">
 				<p>replace</p>
-				<input type="number" bind:value={p.args.replace} />
+				<NumberWithUnits bind:value={p.args.replace} />
 			</div>
 		</div>
 	{/if}
@@ -53,11 +55,11 @@
 		<div class="control-input-horizontal">
 			<div class="control-input">
 				<p>find</p>
-				<input type="number" bind:value={p.args.find} />
+				<NumberWithUnits bind:value={p.args.find} />
 			</div>
 			<div class="control-input">
 				<p>replace</p>
-				<input type="number" bind:value={p.args.replace} />
+				<NumberWithUnits bind:value={p.args.replace} />
 			</div>
 		</div>
 	{/if}

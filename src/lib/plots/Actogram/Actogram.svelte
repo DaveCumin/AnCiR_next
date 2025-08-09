@@ -13,6 +13,8 @@
 
 	import { scaleLinear } from 'd3-scale';
 	import { makeSeqArray, max, min } from '$lib/components/plotBits/helpers/wrangleData';
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+
 	import Icon from '$lib/icons/Icon.svelte';
 
 	export const Actogram_defaultDataInputs = ['time', 'values'];
@@ -345,12 +347,12 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Width</p>
-					<input type="number" bind:value={theData.parentBox.width} />
+					<NumberWithUnits bind:value={theData.parentBox.width} />
 				</div>
 
 				<div class="control-input">
 					<p>Height</p>
-					<input type="number" bind:value={theData.parentBox.height} />
+					<NumberWithUnits bind:value={theData.parentBox.height} />
 				</div>
 			</div>
 		</div>
@@ -365,29 +367,29 @@
 			<div class="control-input-square">
 				<div class="control-input">
 					<p>Top</p>
-					<input type="number" bind:value={theData.paddingIN.top} />
+					<NumberWithUnits bind:value={theData.paddingIN.top} />
 				</div>
 
 				<div class="control-input">
 					<p>Bottom</p>
-					<input type="number" bind:value={theData.paddingIN.bottom} />
+					<NumberWithUnits bind:value={theData.paddingIN.bottom} />
 				</div>
 
 				<div class="control-input">
 					<p>Left</p>
-					<input type="number" bind:value={theData.paddingIN.left} />
+					<NumberWithUnits bind:value={theData.paddingIN.left} />
 				</div>
 
 				<div class="control-input">
 					<p>Right</p>
-					<input type="number" bind:value={theData.paddingIN.right} />
+					<NumberWithUnits bind:value={theData.paddingIN.right} />
 				</div>
 			</div>
 
 			<div class="control-input-vertical">
 				<div class="control-input">
 					<p>Space Between</p>
-					<input type="number" bind:value={theData.spaceBetween} />
+					<NumberWithUnits bind:value={theData.spaceBetween} />
 				</div>
 			</div>
 		</div>
@@ -415,12 +417,12 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Period</p>
-					<input type="number" step="0.1" bind:value={theData.periodHrs} />
+					<NumberWithUnits step="0.1" bind:value={theData.periodHrs} />
 				</div>
 
 				<div class="control-input">
 					<p>Repeat</p>
-					<input type="number" bind:value={theData.doublePlot} />
+					<NumberWithUnits bind:value={theData.doublePlot} />
 				</div>
 			</div>
 		</div>
@@ -447,11 +449,10 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Min</p>
-					<input
-						type="number"
+					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[0] >= 0 ? theData.ylimsIN[0] : theData.ylims[0]}
-						oninput={(e) => {
+						onInput={(e) => {
 							theData.ylimsIN[0] = [parseFloat(e.target.value)];
 						}}
 					/>
@@ -459,11 +460,10 @@
 
 				<div class="control-input">
 					<p>Max</p>
-					<input
-						type="number"
+					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-						oninput={(e) => {
+						onInput={(e) => {
 							theData.ylimsIN[1] = [parseFloat(e.target.value)];
 						}}
 					/>

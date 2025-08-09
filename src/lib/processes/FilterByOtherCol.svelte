@@ -1,4 +1,6 @@
 <script context="module">
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 
@@ -128,7 +130,6 @@
 			</div>
 
 			<div class="second-level-condition">
-				
 				{#if getColumnById(condition.byColId)?.type === 'category'}
 					<input type="text" bind:value={condition.byColValue} />
 				{:else if getColumnById(condition.byColId)?.type === 'time'}
@@ -139,7 +140,7 @@
 						}}
 					/>
 				{:else}
-					<input type="number" bind:value={condition.byColValue} />
+					<NumberWithUnits bind:value={condition.byColValue} />
 				{/if}
 			</div>
 			{#if p.args.conditions.length > 1}

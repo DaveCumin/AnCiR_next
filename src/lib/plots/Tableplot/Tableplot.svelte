@@ -1,4 +1,6 @@
 <script module>
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 
@@ -122,10 +124,10 @@
 {#snippet controls(theData)}
 	<p><input type="text" bind:value={theData.parentBox.name} /></p>
 	<p>Col Numbers: <input type="checkbox" bind:checked={theData.showColNumber} /></p>
-	<p>Round to decimals: <input type="number" min="0" bind:value={theData.decimalPlaces} /></p>
+	<p>Round to decimals: <NumberWithUnits min="0" bind:value={theData.decimalPlaces} /></p>
 	<p>
 		Row:
-		<input type="number" min="1" max={theData.longestCol} bind:value={theData.colCurrent} />
+		<NumberWithUnits min="1" max={theData.longestCol} bind:value={theData.colCurrent} />
 		to {theData.colCurrent + theData.Ncolumns - 1} of {theData.longestCol}
 	</p>
 
@@ -164,8 +166,7 @@
 		{#if theData.plot.showCol.some((s) => s) || theData.plot.showColNumber}
 			<Table headers={theData.plot.tableHeadings} data={theData.plot.tableData} />
 			<p style="margin-bottom: 0;">
-				Row <input
-					type="number"
+				Row <NumberWithUnits
 					min="1"
 					max={theData.plot.longestCol}
 					bind:value={theData.plot.colCurrent}

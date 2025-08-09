@@ -3,6 +3,8 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotBits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { binData, mean, makeSeqArray } from '$lib/components/plotBits/helpers/wrangleData.js';
 	import { pchisq, qchisq } from '$lib/data/CDFs';
@@ -462,12 +464,12 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Width</p>
-					<input type="number" bind:value={theData.parentBox.width} />
+					<NumberWithUnits bind:value={theData.parentBox.width} />
 				</div>
 
 				<div class="control-input">
 					<p>Height</p>
-					<input type="number" bind:value={theData.parentBox.height} />
+					<NumberWithUnits bind:value={theData.parentBox.height} />
 				</div>
 			</div>
 		</div>
@@ -488,14 +490,14 @@
 				<div class="control-input">
 					<p>Top</p>
 					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
-						<input
-							type="number"
+						<NumberWithUnits
 							bind:value={theData.padding.top}
 							style="width: calc(100% - {theData.getAutoScaleValues()?.top != null &&
 							theData.getAutoScaleValues().top != theData.padding.top
 								? 24
 								: 0}px)"
 						/>
+
 						{#if theData.getAutoScaleValues()?.top != null && theData.getAutoScaleValues()?.top != theData.padding.top}
 							<button class="icon" onclick={() => theData.autoScalePadding('top')}>
 								<Icon
@@ -514,8 +516,7 @@
 					<div
 						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
-						<input
-							type="number"
+						<NumberWithUnits
 							bind:value={theData.padding.bottom}
 							style="width: calc(100% - {theData.getAutoScaleValues()?.bottom != null &&
 							theData.getAutoScaleValues().bottom != theData.padding.bottom
@@ -540,8 +541,7 @@
 					<div
 						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
-						<input
-							type="number"
+						<NumberWithUnits
 							bind:value={theData.padding.left}
 							style="width: calc(100% - {theData.getAutoScaleValues()?.left != null &&
 							theData.getAutoScaleValues().left != theData.padding.left
@@ -566,8 +566,7 @@
 					<div
 						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
-						<input
-							type="number"
+						<NumberWithUnits
 							bind:value={theData.padding.right}
 							style="width: calc(100% - {theData.getAutoScaleValues()?.right != null &&
 							theData.getAutoScaleValues().right != theData.padding.right
@@ -612,11 +611,10 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Min</p>
-					<input
-						type="number"
+					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
-						oninput={(e) => {
+						onInput={(e) => {
 							theData.ylimsIN[0] = [parseFloat(e.target.value)];
 						}}
 					/>
@@ -624,11 +622,10 @@
 
 				<div class="control-input">
 					<p>Max</p>
-					<input
-						type="number"
+					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-						oninput={(e) => {
+						onInput={(e) => {
 							theData.ylimsIN[1] = [parseFloat(e.target.value)];
 						}}
 					/>
@@ -651,12 +648,11 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Min</p>
-					<input
-						type="number"
+					<NumberWithUnits
 						min="0.1"
 						step="0.1"
 						value={theData.periodlimsIN[0] ? theData.periodlimsIN[0] : theData.periodlims[0]}
-						oninput={(e) => {
+						onInput={(e) => {
 							theData.periodlimsIN[0] = parseFloat(e.target.value);
 						}}
 					/>
@@ -664,11 +660,10 @@
 
 				<div class="control-input">
 					<p>Max</p>
-					<input
-						type="number"
+					<NumberWithUnits
 						step="0.1"
 						value={theData.periodlimsIN[1] ? theData.periodlimsIN[1] : theData.periodlimsIN[1]}
-						oninput={(e) => {
+						onInput={(e) => {
 							theData.periodlimsIN[1] = parseFloat(e.target.value);
 						}}
 					/>
@@ -678,7 +673,7 @@
 			<div class="control-input-vertical">
 				<div class="control-input">
 					<p>Period Step</p>
-					<input type="number" min="0.1" step="0.01" bind:value={theData.periodSteps} />
+					<NumberWithUnits min="0.1" step="0.01" bind:value={theData.periodSteps} />
 				</div>
 			</div>
 		</div>
@@ -718,22 +713,21 @@
 
 				<!-- binSize only relevant for Chi-squared -->
 				{#if datum.method === 'Chi-squared'}
-					binSize: <input type="number" step="0.01" min="0.01" bind:value={datum.binSize} />
+					binSize: <NumberWithUnits step="0.01" min="0.01" bind:value={datum.binSize} />
 					alpha:
-					<input
-						type="number"
+					<NumberWithUnits
 						min="0.0001"
 						max="0.9999"
 						step="0.01"
 						bind:value={datum.alpha}
-						oninput={() => datum.updatePeriodData()}
+						onInput={() => datum.updatePeriodData()}
 					/>
 				{/if}
 
 				line col: <ColourPicker bind:value={datum.linecolour} />
-				line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
+				line width: <NumberWithUnits step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
 				point col: <ColourPicker bind:value={datum.pointcolour} />
-				point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
+				point radius: <NumberWithUnits step="0.1" min="0.1" bind:value={datum.pointradius} />
 			{/each}
 		</div>
 	{/if}

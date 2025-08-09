@@ -386,11 +386,10 @@
 								className="control-component-title-icon"
 							/>
 						</button>
-						<input
-							type="number"
+						<NumberWithUnits
 							step={appState.gridSize}
 							value={verticalGapIN ? verticalGapIN : verticalGap}
-							oninput={(e) => {
+							onInput={(e) => {
 								verticalGapIN = parseFloat(e.target.value);
 								updateGap('vertical');
 							}}
@@ -398,22 +397,6 @@
 								? 24
 								: 0}px)"
 						/>
-						{#if verticalGapIN != null && verticalGapIN !== verticalGap}
-							<button
-								class="icon"
-								onclick={() => {
-									verticalGapIN = verticalGap;
-									updateGap('vertical');
-								}}
-							>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
 					</div>
 				</div>
 
@@ -428,13 +411,12 @@
 								className="control-component-title-icon"
 							/>
 						</button>
-						<input
-							type="number"
+						<NumberWithUnits
 							step={appState.gridSize}
 							value={horizontalGapIN != null && !isNaN(horizontalGapIN)
 								? horizontalGapIN
 								: horizontalGap}
-							oninput={(e) => {
+							onInput={(e) => {
 								horizontalGapIN = parseFloat(e.target.value);
 								updateGap('horizontal');
 							}}
@@ -443,22 +425,6 @@
 								? 24
 								: 0}px)"
 						/>
-						{#if horizontalGapIN != null && horizontalGapIN !== horizontalGap}
-							<button
-								class="icon"
-								onclick={() => {
-									horizontalGapIN = horizontalGap;
-									updateGap('horizontal');
-								}}
-							>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
 					</div>
 				</div>
 			</div>
