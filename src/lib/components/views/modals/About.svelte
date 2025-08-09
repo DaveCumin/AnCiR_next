@@ -1,7 +1,8 @@
 <script module>
 	// @ts-nocheck
 	import Modal from '$lib/components/reusables/Modal.svelte';
-	import { onMount, tick } from 'svelte';
+	import { appConsts } from '$lib/core/core.svelte';
+	import { tick } from 'svelte';
 </script>
 
 <script>
@@ -53,7 +54,7 @@
 	{#snippet children()}
 		<div class="title-container">
 			<div id="logo-container" style="width: 36px; height: 36px;"></div>
-			<h3>Analysis of Circadian Rhythms (AnCiR) v4.0.0</h3>
+			<h3>Analysis of Circadian Rhythms (AnCiR) v{appConsts.version}</h3>
 		</div>
 		<p>
 			This is our 'AnCiR' to the need for a simple-to-use (GUI; no coding) tool for analysis of

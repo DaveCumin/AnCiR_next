@@ -5,9 +5,9 @@
 	import AddPlot from '../iconActions/AddPlot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
-	
+
 	import { appState, core } from '$lib/core/core.svelte.js';
-	import { deselectAllPlots, selectAllPlots } from '$lib/core/Plot.svelte';
+	import { deselectAllPlots, selectAllPlots, selectPlot } from '$lib/core/Plot.svelte';
 
 	let addBtnRef;
 	let showAddPlot = $state(false);
@@ -79,7 +79,7 @@
 
 	function changePlotVisibility(id) {
 		if (appState.invisiblePlotIds.includes(id)) {
-			appState.invisiblePlotIds = appState.invisiblePlotIds.filter(plotId => plotId !== id);
+			appState.invisiblePlotIds = appState.invisiblePlotIds.filter((plotId) => plotId !== id);
 		} else {
 			appState.invisiblePlotIds.push(id);
 		}
@@ -129,12 +129,16 @@
 			>
 				<summary
 					class="clps-title-container"
+					style="background-color: {plot.selected ? 'var(--color-lightness-95)' : ''};"
 					onclick={(e) => {
+						e.preventDefault();
 						e.stopPropagation();
+						selectPlot(e, plot.id);
 					}}
 				>
 					<div class="clps-title">
-						<button class="icon"
+						<button
+							class="icon"
 							onclick={(e) => {
 								e.stopPropagation();
 								changePlotVisibility(plot.id);
