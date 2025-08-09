@@ -42,10 +42,16 @@
 			);
 		});
 		colour = $state();
-		offset = $derived(
-			(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
-		);
-		
+		offset = $derived.by(() => {
+			if (this.x?.getData()) {
+				return (
+					(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
+				);
+			} else {
+				return 0;
+			}
+		});
+
 		dataByDays = $derived.by(() => {
 			const tempx = this.x.hoursSinceStart ?? [];
 			const tempy = this.y.getData() ?? [];
@@ -484,7 +490,7 @@
 						</button>
 					</div>
 				</div>
-				
+
 				<div class="control-data-container">
 					<div class="control-data">
 						<div class="control-data-title">
@@ -499,10 +505,10 @@
 								bind:innerHTML={datum.x.name}
 							></p>
 						</div>
-	
+
 						<Column col={datum.x} canChange={true} />
 					</div>
-	
+
 					<div class="control-data">
 						<div class="control-data-title">
 							<strong>y</strong>
@@ -516,31 +522,29 @@
 								bind:innerHTML={datum.y.name}
 							></p>
 						</div>
-						
+
 						<Column col={datum.y} canChange={true} />
 					</div>
-					
+
 					<div class="control-component-title">
 						<p>Markers</p>
-	
+
 						<div class="control-component-title-icons">
 							<button class="icon" onclick={() => datum.addMarker()}>
 								<Icon name="plus" width={16} height={16} className="control-component-title-icon" />
 							</button>
 						</div>
 					</div>
-	
+
 					{#each datum.phaseMarkers as marker}
 						<PhaseMarker {which} {marker} />
 					{/each}
 				</div>
 
-
 				<div class="div-line"></div>
 			{/each}
 		</div>
 
-		
 		<div>
 			<button
 				class="icon control-block-add"
@@ -559,10 +563,7 @@
 		{/each}
 
 		<div>
-			<button
-				class="icon control-block-add"
-				onclick={() => theData.addAnnotation()}
-			>
+			<button class="icon control-block-add" onclick={() => theData.addAnnotation()}>
 				<Icon name="plus" width={16} height={16} className="static-icon" />
 			</button>
 		</div>
