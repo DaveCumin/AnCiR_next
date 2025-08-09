@@ -257,27 +257,13 @@
 		dropdownLeft = rect.right + window.scrollX + 12;
 		showAddProcess = true;
 
-		openClps[id] = true;
-	}
-
-	function toggleClps(id) {
-		openClps[id] = !openClps[id];
+		// openClps[id] = true;
 	}
 
 	let openMenus = $state({});
 	function toggleMenu(id) {
 		openMenus[id] = !openMenus[id];
 	}
-
-	let isEditable = $state(false);
-
-	function enableEdit() {
-		isEditable = true;
-		// Focus the input immediately after enabling
-		requestAnimationFrame(() => inputRef?.focus());
-	}
-
-	let inputRef = $state();
 </script>
 
 {#if col == undefined}
@@ -328,6 +314,7 @@
 					>
 						<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" />
 					</button>
+
 					{#if openClps[col.id]}
 					<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />
 					{:else}

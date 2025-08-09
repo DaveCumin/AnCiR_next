@@ -13,6 +13,27 @@
 		}
 	}
 
+	export function selectPlot(e, id) {
+		// //look for alt held at the same time
+		if (e.altKey) {
+			//simply toggle selection
+			core.plots.forEach((p) => {
+				p.id == id ? (p.selected = !p.selected) : null;
+			});
+		} else {
+			//de-select all others and only select this one
+			core.plots.forEach((p) => {
+				p.id == id ? (p.selected = true) : (p.selected = false);
+			});
+		}
+	}
+	export function selectAllPlots() {
+		core.plots.forEach((p) => (p.selected = true));
+	}
+	export function deselectAllPlots() {
+		core.plots.forEach((p) => (p.selected = false));
+	}
+
 	export class Plot {
 		id;
 		name = $state('plot' + this.id);
@@ -21,6 +42,7 @@
 		width = $state(500);
 		height = $state(250);
 		type;
+		selected = $state(false);
 		plot;
 
 		constructor(plotData = {}, id = null) {
@@ -64,6 +86,7 @@
 				width: this.width,
 				height: this.height,
 				type: this.type,
+				selected: this.selected,
 				plot: this.plot
 			};
 		}
@@ -71,8 +94,8 @@
 			const id = json.id ?? json.plotid;
 			const name = json.name ?? 'Untitled Plot';
 
-			const { x, y, width, height, type, plot } = json;
-			return new Plot({ name, x, y, width, height, type, plot }, id);
+			const { x, y, width, height, type, selected, plot } = json;
+			return new Plot({ name, x, y, width, height, type, selected, plot }, id);
 		}
 	}
 </script>

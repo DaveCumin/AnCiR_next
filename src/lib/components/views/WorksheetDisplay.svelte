@@ -2,10 +2,12 @@
 	// @ts-nocheck
 
 	import { appState, core } from '$lib/core/core.svelte.js';
+	import { appState, core } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddPlot from '../iconActions/AddPlot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
+	import { deselectAllPlots, selectAllPlots } from '$lib/core/Plot.svelte';
 
 	let addBtnRef;
 	let showAddPlot = $state(false);
@@ -23,14 +25,14 @@
 	function setDropdownPositionFromEvent(e) {
 		const rect = e.currentTarget.getBoundingClientRect();
 		dropdownTop = rect.top + window.scrollY;
-		dropdownLeft = rect.right + window.scrollX + 12;
+		dropdownLeft = rect.right + window.scrollX + 6;
 	}
 
 	function recalculateDropdownPosition() {
 		if (!addBtnRef) return;
 		const rect = addBtnRef.getBoundingClientRect();
 		dropdownTop = rect.top + window.scrollY;
-		dropdownLeft = rect.right + window.scrollX + 12;
+		dropdownLeft = rect.right + window.scrollX + 6;
 	}
 
 	function openDropdown() {
@@ -69,9 +71,6 @@
 	}
 
 	let openClps = $state({});
-	function toggleClps(id) {
-		openClps[id] = !openClps[id];
-	}
 
 	let openMenus = $state({});
 	function toggleMenu(id) {
@@ -100,6 +99,25 @@
 <AddPlot bind:showDropdown={showAddPlot} {dropdownTop} {dropdownLeft} />
 
 <div class="display-list">
+	{#if core.plots.length > 1}
+		<div class="clps-container">
+			<details>
+				<summary>
+					<input
+						type="checkbox"
+						oninput={(e) => {
+							if (e.target.checked) {
+								selectAllPlots();
+							} else {
+								deselectAllPlots();
+							}
+						}}
+					/>
+				</summary>
+			</details>
+		</div>
+		<hr />
+	{/if}
 	{#each core.plots.toReversed() as plot, i (plot.id)}
 		<div class="clps-container">
 			<details
@@ -107,12 +125,12 @@
 				ondragstart={() => handleDragStart(i)}
 				ondragover={handleDragOver}
 				ondrop={() => handleDrop(i)}
+				bind:open={openClps[plot.id]}
 			>
 				<summary
 					class="clps-title-container"
 					onclick={(e) => {
 						e.stopPropagation();
-						toggleClps(plot.id);
 					}}
 				>
 					<div class="clps-title">
@@ -149,11 +167,12 @@
 						>
 							<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" />
 						</button>
-						{#if openClps[plot.id]}
+
+						<!-- {#if openClps[plot.id]}
 							<Icon name="caret-down" width={20} height={20} className="static-icon" />
 						{:else}
 							<Icon name="caret-right" width={20} height={20} className="static-icon" />
-						{/if}
+						{/if} -->
 					</div>
 				</summary>
 			</details>

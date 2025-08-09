@@ -1,10 +1,10 @@
 <script>
 	// @ts-nocheck
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 
-	import { removePlot } from '$lib/core/Plot.svelte';
+	import { removePlot, selectPlot } from '$lib/core/Plot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 
 	let plotElement;
@@ -16,6 +16,7 @@
 		height = $bindable(150),
 		title = '',
 		id,
+		selected = $bindable(false),
 		canvasWidth = 50000,
 		canvasHeight = 50000
 	} = $props();
@@ -35,31 +36,28 @@
 
 	function onMouseDown(e) {
 		if (e.target.closest('button.icon')) return;
-		if (appState.selectedPlotIds.includes(id)) {
-			moving = true;
-		} else if (!e.altKey) {
-			appState.selectedPlotIds = [id];
-			moving = true;
-		}
 		mouseStartX = e.clientX;
 		mouseStartY = e.clientY;
 
 		dragStartPositions = {};
 		// find all selected plots
-		appState.selectedPlotIds.forEach((id) => {
-			const plot = core.plots.find((p) => p.id === id);
-			dragStartPositions[id] = { x: plot.x, y: plot.y };
+		core.plots.forEach((p) => {
+			if (p.selected) {
+				dragStartPositions[p.id] = { x: p.x, y: p.y };
+			}
 		});
+		moving = true;
 	}
 
 	function anySelectedPlotEdge(xOffset, yOffset) {
 		let result = false;
-		appState.selectedPlotIds.forEach((id) => {
-			const plot = core.plots.find((p) => p.id === id);
-			if ($state.snapshot(plot.x) + xOffset <= 0 || $state.snapshot(plot.y) + yOffset <= 0) {
+
+		core.plots.forEach((p) => {
+			if (p.selected && (p.x + xOffset <= 0 || p.y + yOffset <= 0)) {
 				result = true;
 			}
 		});
+
 		return result;
 	}
 
@@ -68,19 +66,18 @@
 			const deltaX = (e.clientX - mouseStartX) / appState.canvasScale;
 			const deltaY = (e.clientY - mouseStartY) / appState.canvasScale;
 
-			appState.selectedPlotIds.forEach((id) => {
-				const plot = core.plots.find((p) => p.id === id);
-				if (!plot) return;
+			core.plots.forEach((p) => {
+				if (p.selected) {
+					if (anySelectedPlotEdge(e.movementX, e.movementY)) return; //do nothing
 
-				if (anySelectedPlotEdge(e.movementX, e.movementY)) return; //do nothing
+					const start = dragStartPositions[p.id];
 
-				const start = dragStartPositions[id];
+					const newX = snapToGrid(start.x + deltaX);
+					const newY = snapToGrid(start.y + deltaY);
 
-				const newX = snapToGrid(start.x + deltaX);
-				const newY = snapToGrid(start.y + deltaY);
-
-				plot.x = Math.max(0, Math.min(newX, canvasWidth - width - 20));
-				plot.y = Math.max(0, Math.min(newY, canvasHeight - height - 50));
+					p.x = Math.max(0, Math.min(newX, canvasWidth - width - 20));
+					p.y = Math.max(0, Math.min(newY, canvasHeight - height - 50));
+				}
 			});
 		} else if (resizing) {
 			let deltaX = (e.clientX - initialMouseX) / appState.canvasScale;
@@ -154,44 +151,29 @@
 
 	async function handleDblClick(e) {
 		e.stopPropagation();
-		if (id >= 0) {
-			//handle colour-picker
-			appState.selectedPlotIds = [id];
-			appState.showControlPanel = true;
-		}
-		appState.selectedPlotIds = [id];
 		appState.showControlPanel = true;
-
 		await tick();
 		RePosition();
 	}
 
 	function handleClick(e) {
 		e.stopPropagation();
+		n += 1;
+		clearTimeout(timeout);
+		timeout = setTimeout(() => {
+			selectPlot(e, id);
 
-		if (id >= 0) {
-			//look for alt held at the same time
-			if (e.altKey) {
-				//Add if it's not already there
-				if (!appState.selectedPlotIds.includes(id)) {
-					appState.selectedPlotIds.push(id);
-
-					plotElement.focus();
-				} else {
-					//or remove it
-					appState.selectedPlotIds = appState.selectedPlotIds.filter((theid) => theid !== id);
-				}
-			} else if (!appState.selectedPlotIds.includes(id)) {
-				appState.selectedPlotIds = [id];
-
-				plotElement.focus();
+			if (n > 1) {
+				handleDblClick(e);
+			} else {
+				RePosition();
 			}
-		}
-		RePosition();
+			n = 0;
+		}, delay);
 	}
 
 	function RePosition() {
-		if ($state.snapshot(appState.selectedPlotIds).includes(id)) {
+		if (selected) {
 			if (plotElement) {
 				plotElement.scrollIntoView({
 					behavior: 'smooth',
@@ -226,6 +208,9 @@
 
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
+	let timeout,
+		n = 0,
+		delay = 180;
 </script>
 
 <svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp} />
@@ -233,9 +218,8 @@
 <!-- added header therefore TODO: other way than hardcode -->
 <section
 	bind:this={plotElement}
-	ondblclick={(e) => handleDblClick(e)}
 	onclick={(e) => handleClick(e)}
-	class:selected={appState.selectedPlotIds?.includes(id)}
+	class:selected
 	class="draggable"
 	style="left: {x}px;
 		top: {y}px;
@@ -243,9 +227,17 @@
 		height: {snapToGrid(height + 50)}px;"
 >
 	<div class="plot-header" onmousedown={(e) => onMouseDown(e)}>
-		<p>
-			{title}
-		</p>
+		<p
+			contenteditable="false"
+			ondblclick={(e) => {
+				e.target.setAttribute('contenteditable', 'true');
+				e.target.focus();
+				console.log(e.target);
+			}}
+			onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+			bind:innerHTML={title}
+			style="cursor: default;"
+		></p>
 
 		<button class="icon" onclick={() => removePlot(id)}>
 			<!-- <Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" /> -->

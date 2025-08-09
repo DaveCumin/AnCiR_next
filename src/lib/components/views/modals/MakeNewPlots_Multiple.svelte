@@ -3,7 +3,7 @@
 	import ProgressIndicator from '$lib/components/ProgressIndicator.svelte';
 
 	import { core, pushObj, appConsts, appState, snapToGrid } from '$lib/core/core.svelte';
-	import { Plot } from '$lib/core/Plot.svelte';
+	import { Plot, deselectAllPlots } from '$lib/core/Plot.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
@@ -64,9 +64,9 @@
 			await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
 		}
 
-		appState.selectedPlotIds = [];
+		deselectAllPlots();
 		for (let i = core.plots.length - 1; i > core.plots.length - yCols.length - 1; i--) {
-			appState.selectedPlotIds.push(core.plots[i].id);
+			core.plots[i].selected = true;
 		}
 
 		plotType = 'Plot';

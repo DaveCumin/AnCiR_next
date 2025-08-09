@@ -50,9 +50,6 @@
 	}
 
 	let openClps = $state({});
-	function toggleClps(id) {
-		openClps[id] = !openClps[id];
-	}
 
 	let openMenus = $state({});
 	function toggleMenu(id) {

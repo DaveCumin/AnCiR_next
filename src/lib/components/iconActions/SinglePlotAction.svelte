@@ -74,13 +74,13 @@
 			<!-- Bridge element to cover gap -->
 			<div
 				class="submenu-bridge"
-				style="top: {dropdownTop}px; left: {dropdownLeft +
-					200}px; width: 5px; height: {saveMenuItem.getBoundingClientRect().height}px;"
+				style="top: {dropdownTop + 6}px; left: {dropdownLeft +
+					210}px; width: 5px; height: {saveMenuItem.getBoundingClientRect().height}px;"
 				onmouseenter={() => keepSubmenuOpen('save')}
 			></div>
 			<div
 				class="submenu"
-				style="top: {dropdownTop}px; left: {dropdownLeft + 200}px;"
+				style="top: {dropdownTop + 6}px; left: {dropdownLeft + 210}px;"
 				onmouseenter={() => keepSubmenuOpen('save')}
 				onmouseleave={() => hideSubmenu('save', 150)}
 			>
@@ -121,7 +121,7 @@
 		border-radius: 4px;
 		border: 1px solid var(--color-lightness-85);
 		box-shadow:
-			0 4px 8px 0 rgba(0, 0, 0, 0.2), 
+			0 4px 8px 0 rgba(0, 0, 0, 0.2),
 			0 6px 10px 0 rgba(0, 0, 0, 0.1);
 		z-index: 1001; /* Above dialog */
 		padding: 0;

@@ -16,15 +16,17 @@
 		scale, //the d3s scale to use
 		nticks, //number of ticks
 		gridlines = true, //whether to show gridlines or not
-		label = ''
+		label = '',
+		autoScaleVals = { top: 45, bottom: -45, left: 30, right: -30 }
 	} = $props();
 
 	let axisGroup;
 
 	let ticklength = 6;
-	let tickspace = 4;
+	let tickspace = 4; // space between the ticks and the numbers
 	let tickfontsize = 15;
 	let labelfontsize = 16;
+	let labelBuffer = 16; // Additional spacing between largest tick label and axis label
 
 	$effect(() => {
 		height;
@@ -107,8 +109,21 @@
 			select(axisGroup).selectAll('.gridline').remove(); // Remove gridlines if disabled
 		}
 
-		//TODO: find a better way to put the label (especially the y label) so it isn't taken over by the tick text
 		//DO THE LABEL
+
+		// Calculate maximum tick label size
+		let maxTickSize = 0;
+		select(axisGroup)
+			.selectAll('.tick text')
+			.each(function () {
+				const tickRect = this.getBoundingClientRect();
+				if (position === 'left' || position === 'right') {
+					maxTickSize = Math.max(maxTickSize, tickRect.width);
+				} else {
+					maxTickSize = Math.max(maxTickSize, tickRect.height);
+				}
+			});
+
 		// Remove existing label`
 		select(axisGroup).select('.axis-label').remove();
 		const nolabelRect = axisGroup.getBoundingClientRect();
@@ -123,20 +138,21 @@
 			.style('fill', 'black')
 			.text(label);
 
+		// Position the label based on max tick size
 		if (position == 'bottom') {
-			labelElement.attr('x', width / 2).attr('y', 45); // Position below the ticks
+			labelElement.attr('x', width / 2).attr('y', tickspace + maxTickSize + labelBuffer);
 		} else if (position == 'top') {
-			labelElement.attr('x', width / 2).attr('y', -30); // Position above the ticks
+			labelElement.attr('x', width / 2).attr('y', -(tickspace + maxTickSize + labelBuffer));
 		} else if (position == 'left') {
 			labelElement
 				.attr('transform', `rotate(-90)`)
 				.attr('x', -height / 2)
-				.attr('y', -30); // Position to the left of the ticks
+				.attr('y', -(tickspace + maxTickSize + labelBuffer));
 		} else if (position == 'right') {
 			labelElement
 				.attr('transform', `rotate(90)`)
 				.attr('x', height / 2)
-				.attr('y', -40); // Position to the right of the ticks
+				.attr('y', -(tickspace + maxTickSize + labelBuffer));
 		}
 	});
 </script>

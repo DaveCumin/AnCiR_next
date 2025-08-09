@@ -22,7 +22,6 @@ export function convertToImage(svgId, filetype = 'png') {
 	img.onload = function () {
 		// Create a canvas
 		const canvas = document.createElement('canvas');
-		console.log('SCALE', appState.canvasScale);
 		canvas.width = svg.getAttribute('width') / appState.canvasScale;
 		canvas.height = svg.getAttribute('height') / appState.canvasScale;
 		const context = canvas.getContext('2d');
@@ -94,8 +93,8 @@ export function saveMultipleAsImage(svgIds, filetype = 'png') {
 		});
 		minX = Math.min(minX, x);
 		minY = Math.min(minY, y);
-		maxX = Math.max(maxX, x + rect.width / appState.canvasScale);
-		maxY = Math.max(maxY, y + rect.height / appState.canvasScale);
+		maxX = Math.max(maxX, x + rect.width);
+		maxY = Math.max(maxY, y + rect.height);
 	});
 
 	//make a new svg object for them
