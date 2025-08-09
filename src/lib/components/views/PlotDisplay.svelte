@@ -74,11 +74,6 @@
 			appState.showDisplayPanel = true;
 		}
 	});
-	let selectedPlotIds = $derived.by(() => {
-		const selectedIds = core.plots.filter((p) => p.selected);
-		console.log(selectedIds);
-		appConsts.selectedPlotIds = selectedIds;
-	});
 
 	onMount(() => {
 		const onKeyDown = (e) => {
@@ -92,16 +87,16 @@
 
 			if (isTextInput) return;
 
-			if ((e.key === 'Backspace' || e.key === 'Delete') && appState.selectedPlotIds.length > 0) {
+			const selectedPlotIds = core.plots.filter((p) => p.selected).map((p) => p.id);
+			if ((e.key === 'Backspace' || e.key === 'Delete') && selectedPlotIds.length > 0) {
 				const confirmed = window.confirm(
-					`Are you sure you want to delete ${appState.selectedPlotIds.length} plot(s)?`
+					`Are you sure you want to delete ${selectedPlotIds.length} plot(s)?`
 				);
 
 				if (confirmed) {
-					for (const id of appState.selectedPlotIds) {
+					for (const id of selectedPlotIds) {
 						removePlot(id);
 					}
-					appState.selectedPlotIds = [];
 				}
 			}
 		};
@@ -167,7 +162,6 @@
 							{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 							<Plot theData={plot} which="plot" />
 						</Draggable>
-						
 					{/if}
 				{/each}
 			{:else if core.data.length > 0}

@@ -27,7 +27,6 @@ export const appState = $state({
 	canvasOffset: { x: 0, y: 0 },
 	canvasScale: 1.0,
 
-	selectedPlotIds: [],
 	invisiblePlotIds: [0],
 
 	appColours: [
