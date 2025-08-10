@@ -4,7 +4,7 @@
 	import Axis from '$lib/components/plotBits/Axis.svelte';
 	import { scaleLinear, scaleTime } from 'd3-scale';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
-	import Line from '$lib/components/plotbits/Line.svelte';
+	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 
@@ -14,8 +14,7 @@
 		parentPlot = $state();
 		x = $state();
 		y = $state();
-		linecolour = $state();
-		linestrokeWidth = $state(3);
+		line = $state();
 		pointcolour = $state();
 		pointradius = $state(5);
 
@@ -32,7 +31,7 @@
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
-			this.linecolour = dataIN?.linecolour ?? getPaletteColor(this.parentPlot.data.length);
+			this.line = new LineClass(dataIN?.line, this.parentPlot.data.length);
 			this.pointcolour = dataIN?.pointcolour ?? getPaletteColor(this.parentPlot.data.length);
 		}
 
@@ -40,8 +39,7 @@
 			return {
 				x: this.x,
 				y: this.y,
-				linecolour: this.linecolour,
-				linestrokeWidth: this.linestrokeWidth,
+				line: this.line.toJSON(),
 				pointcolour: this.pointcolour,
 				pointradius: this.pointradius
 			};
@@ -51,8 +49,7 @@
 			return new ScatterDataclass(parent, {
 				x: json.x,
 				y: json.y,
-				linecolour: json.linecolour,
-				linestrokeWidth: json.linestrokeWidth,
+				line: LineClass.fromJSON(json.line),
 				pointcolour: json.pointcolour,
 				pointradius: json.pointradius
 			});
@@ -541,12 +538,7 @@
 				y: {datum.y.name}
 				<Column col={datum.y} canChange={true} />
 
-				line col: <ColourPicker bind:value={datum.linecolour} />
-				line width: <NumberWithUnits
-					step="0.2"
-					limits={[0.1, Infinity]}
-					bind:value={datum.linestrokeWidth}
-				/>
+				<Line lineData={datum.line} which="controls" />
 				point col: <ColourPicker bind:value={datum.pointcolour} />
 				point radius: <NumberWithUnits
 					step="0.2"
@@ -632,18 +624,22 @@
 		{#each theData.plot.data as datum}
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
 				<Line
+					lineData={datum.line}
 					x={datum.x.getData()}
 					y={datum.y.getData()}
-					xscale={scaleLinear()
-						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-						.range([0, theData.plot.plotwidth])}
+					xscale={theData.plot.anyXdataTime
+						? scaleTime()
+								.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+								.range([0, theData.plot.plotwidth])
+						: scaleLinear()
+								.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+								.range([0, theData.plot.plotwidth])}
 					yscale={scaleLinear()
 						.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 						.range([theData.plot.plotheight, 0])}
-					strokeCol={datum.linecolour}
-					strokeWidth={datum.linestrokeWidth}
-					yoffset={theData.plot.padding.top}
 					xoffset={theData.plot.padding.left}
+					yoffset={theData.plot.padding.top}
+					which="plot"
 				/>
 				<Points
 					x={datum.x.getData()}

@@ -9,7 +9,7 @@
 	import { binData, mean, makeSeqArray } from '$lib/components/plotBits/helpers/wrangleData.js';
 	import { pchisq, qchisq } from '$lib/data/CDFs';
 
-	import Line from '$lib/components/plotBits/Line.svelte';
+	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points from '$lib/components/plotBits/Points.svelte';
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
@@ -101,8 +101,7 @@
 		method = $state('Chi-squared'); // New: method selector
 
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
-		linecolour = $state();
-		linestrokeWidth = $state(3);
+		line = $state();
 		pointcolour = $state();
 		pointradius = $state(5);
 		alpha = $state(0.05);
@@ -175,7 +174,7 @@
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
-			this.linecolour = dataIN?.linecolour ?? getPaletteColor(this.parentPlot.data.length);
+			this.line = new LineClass(dataIN?.line, this.parentPlot.data.length);
 			this.pointcolour = dataIN?.pointcolour ?? getPaletteColor(this.parentPlot.data.length);
 			this.method = dataIN?.method ?? 'Lomb-Scargle'; // Initialize method
 		}
@@ -184,8 +183,7 @@
 			return {
 				x: this.x,
 				y: this.y,
-				linecolour: this.linecolour,
-				linestrokeWidth: this.linestrokeWidth,
+				line: this.line.toJSON(),
 				pointcolour: this.pointcolour,
 				pointradius: this.pointradius,
 				binSize: this.binSize,
@@ -198,8 +196,7 @@
 			return new PeriodogramDataclass(parent, {
 				x: json.x,
 				y: json.y,
-				linecolour: json.linecolour,
-				linestrokeWidth: json.linestrokeWidth,
+				line: LineClass.fromJSON(json.line),
 				pointcolour: json.pointcolour,
 				pointradius: json.pointradius,
 				binSize: json.binSize,
@@ -727,8 +724,7 @@
 					/>
 				{/if}
 
-				line col: <ColourPicker bind:value={datum.linecolour} />
-				line width: <NumberWithUnits step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
+				<Line lineData={datum.line} which="controls" />
 				point col: <ColourPicker bind:value={datum.pointcolour} />
 				point radius: <NumberWithUnits step="0.1" min="0.1" bind:value={datum.pointradius} />
 			{/each}
@@ -773,6 +769,7 @@
 
 		{#each theData.plot.data as datum}
 			<Line
+				lineData={datum.line}
 				x={datum.periodData.x}
 				y={datum.periodData.y}
 				xscale={scaleLinear()
@@ -785,6 +782,7 @@
 				strokeWidth={datum.linestrokeWidth}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
+				which="plot"
 			/>
 			<Points
 				x={datum.periodData.x}
