@@ -326,6 +326,9 @@
 
 	{#if currentControlTab === 'properties'}
 		<div class="control-component">
+			<div class="control-component-title">
+				<p>Dimension</p>
+			</div>
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Width</p>

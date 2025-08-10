@@ -1,12 +1,13 @@
 <script>
 	// @ts-nocheck
 
-	import { appState, core } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddPlot from '../iconActions/AddPlot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
-	import { deselectAllPlots, selectAllPlots } from '$lib/core/Plot.svelte';
+
+	import { appState, core } from '$lib/core/core.svelte.js';
+	import { deselectAllPlots, selectAllPlots, selectPlot } from '$lib/core/Plot.svelte';
 
 	let addBtnRef;
 	let showAddPlot = $state(false);
@@ -75,6 +76,14 @@
 	function toggleMenu(id) {
 		openMenus[id] = !openMenus[id];
 	}
+
+	function changePlotVisibility(id) {
+		if (appState.invisiblePlotIds.includes(id)) {
+			appState.invisiblePlotIds = appState.invisiblePlotIds.filter((plotId) => plotId !== id);
+		} else {
+			appState.invisiblePlotIds.push(id);
+		}
+	}
 </script>
 
 <div class="heading">
@@ -120,12 +129,27 @@
 			>
 				<summary
 					class="clps-title-container"
+					style="background-color: {plot.selected ? 'var(--color-lightness-95)' : ''};"
 					onclick={(e) => {
+						e.preventDefault();
 						e.stopPropagation();
+						selectPlot(e, plot.id);
 					}}
 				>
 					<div class="clps-title">
-						<input type="checkbox" bind:checked={plot.selected} />
+						<button
+							class="icon"
+							onclick={(e) => {
+								e.stopPropagation();
+								changePlotVisibility(plot.id);
+							}}
+						>
+							{#if appState.invisiblePlotIds.includes(plot.id)}
+								<Icon name="eye-slash" width={16} height={16} />
+							{:else}
+								<Icon name="eye" width={16} height={16} className="visible" />
+							{/if}
+						</button>
 						<p
 							contenteditable="false"
 							ondblclick={(e) => {

@@ -27,7 +27,7 @@ export const appState = $state({
 	canvasOffset: { x: 0, y: 0 },
 	canvasScale: 1.0,
 
-	selectedPlotIds: [],
+	invisiblePlotIds: [],
 
 	appColours: [
 		'#234154',
@@ -43,6 +43,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
+	version: 'β.4.2',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),

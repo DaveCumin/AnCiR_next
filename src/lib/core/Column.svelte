@@ -272,28 +272,35 @@
 	<div class="clps-container">
 		<details class="clps-item" bind:open={openClps[col.id]}>
 			<summary class="clps-title-container">
+				
 				<div class="column-indicator"></div>
-				{#if canChange}
-					<ColumnSelector bind:value={col.refId} bind:onChange />
-				{/if}
-
+				
 				<div
 					class="clps-title"
 					onclick={(e) => {
 						e.preventDefault();
 						e.stopPropagation();
 					}}
-				>
+				>	
 					<TypeSelector bind:value={col.type} />
-					<p
-						contenteditable="false"
-						ondblclick={(e) => {
-							e.target.setAttribute('contenteditable', 'true');
-							e.target.focus();
-						}}
-						onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-						bind:innerHTML={col.name}
-					></p>
+					
+					{#if canChange}
+						<div>
+							<ColumnSelector bind:value={col.refId} bind:onChange />
+						</div>
+					{:else}
+						<p 
+							contenteditable="false"
+							ondblclick={(e) => {
+								e.target.setAttribute('contenteditable', 'true');
+								e.target.focus();
+							}}
+							onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+							bind:innerHTML={col.name}
+						>
+						</p>
+					{/if}
+
 				</div>
 
 				<div class="clps-title-button">
@@ -309,21 +316,28 @@
 					</button>
 
 					{#if openClps[col.id]}
-						<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />
+					<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />
 					{:else}
-						<Icon name="caret-right" width={20} height={20} className="second-detail-title-icon" />
+					<Icon name="caret-right" width={20} height={20} className="second-detail-title-icon" />
 					{/if}
 				</div>
 			</summary>
 
 			<div class="clps-content-container">
 				<div class="data-component-info">
-					{#if !col.isReferencial()}
-						<italic><p>{col.provenance}</p></italic>
-					{:else}
-						<italic><p>primary source</p></italic>
-						<!-- TODO: check with DC how to name-->
+					{#if !canChange}
+						{#if !col.isReferencial()}
+							<div>
+								<italic><p>{col.provenance}</p></italic>
+							</div>
+						{:else}
+							<div>
+								<italic><p>primary source</p></italic>
+								<!-- TODO: check with DC how to name-->
+							</div>
+						{/if}
 					{/if}
+					
 				</div>
 
 				<div class="line"></div>
@@ -375,11 +389,22 @@
 		padding: 0;
 	} */
 
-	.data-component-info p {
+	.data-component-info {
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+
 		font-size: 12px;
 		text-align: left;
 		color: var(--color-lightness-35);
 
+		margin: 0;
+		padding: 0;
+
+		gap: 0.25rem;
+	}
+
+	.data-component-info p {
 		margin: 0;
 		padding: 0;
 	}
@@ -442,6 +467,20 @@
 
 		margin: 0 0 0 0.5rem;
 		padding: 0;
+	}
+
+	.clps-title {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+
+		min-width: 0;
+
+		margin: 0;
+		padding: 0;
+
+		gap: 0.5rem;
 	}
 
 	details {

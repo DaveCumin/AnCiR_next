@@ -120,4 +120,19 @@
 		transition: fill 0.2s ease;
 		cursor: pointer;
 	}
+
+	.second-detail-title-icon:hover {
+		background-color: var(--color-lightness-90);
+		border-radius: 100px;
+	}
+
+	.visible {
+		fill: var(--color-lightness-35);
+		transition: fill 0.2s ease;
+		cursor: pointer;
+	}
+
+	.visible:hover {
+		fill: var(--color-hover);
+	}
 </style>

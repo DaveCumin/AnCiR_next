@@ -186,7 +186,7 @@
 
 	function openPlotDetails(e) {
 		e.stopPropagation();
-		console.log('clickkkkkkkeeeed');
+		// open dropdown
 	}
 
 	let addBtnRef;

@@ -53,7 +53,7 @@
 			{@const iconName = options.find((o) => o.value === value).icon}
 			<button class="icon" onclick={(e) => toggleDropdown(e)}>
 				{#key iconName}
-					<Icon name={iconName} width={16} height={16} className="control-component-icon" />
+					<Icon name={iconName} width={16} height={16} className="static-icon" />
 				{/key}
 			</button>
 
@@ -82,7 +82,9 @@
 <style>
 	.type-selector {
 		position: relative;
-		display: inline-block;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 
 		z-index: inherit;
 
@@ -90,38 +92,9 @@
 		padding: 0;
 	}
 
-	.option-display {
-		width: 20px;
-		height: 20px;
-
-		display: flex;
-		align-items: center;
-		justify-content: center;
-
-		margin: 0 0 0 0;
-		padding: 0;
-	}
-
-	.option-display:hover {
+	.type-selector button:hover {
 		border-radius: 4px;
 		background-color: var(--color-lightness-90);
-	}
-
-	.option-display button {
-		width: 100%;
-		height: 100%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-
-		padding: 0;
-		margin: 0;
-		border: none;
-		background: none;
-		line-height: 0;
-
-		margin: 0;
-		padding: 0;
 	}
 
 	.option {
@@ -129,13 +102,5 @@
 		flex-direction: row;
 		align-items: center;
 		justify-content: flex-start;
-	}
-
-	.option p {
-		margin: 0;
-		padding: 0;
-		font-size: 14px;
-		font-weight: normal;
-		font-style: normal;
 	}
 </style>

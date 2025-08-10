@@ -70,3 +70,22 @@
 		<!-- add in columns that are not in core.data but not core.tables -->
 	</select>
 {/if}
+
+<style>
+	/* If issue with styling in other components apart from control, find alternative */
+	select {
+		width: 100%;
+		min-width: 0;
+		flex: 1 1 0;
+		box-sizing: border-box;
+
+		font-size: 14px;
+		padding: 0.2rem 0.5rem;
+		background-color: transparent;
+
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 2px;
+
+		/* direction: rtl; */
+	}
+</style>
