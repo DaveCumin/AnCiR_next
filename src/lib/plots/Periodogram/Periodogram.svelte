@@ -541,7 +541,7 @@
 				<div class="control-input">
 					<p>Left</p>
 					<div
-						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
+						style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
 						<input
 							type="number"
@@ -604,7 +604,6 @@
 				</div>
 			</div>
 
-			<!-- TODO: fix checkbox input style -->
 			<div class="control-input-vertical">
 				<div class="control-input-checkbox">
 					<input type="checkbox" bind:checked={theData.ygridlines} />
@@ -686,58 +685,111 @@
 			</div>
 		</div>
 	{:else if currentControlTab === 'data'}
+		<div class="control-component">
+			{#each theData.data as datum, i}
+				<div class="control-component-title">
+					<div class="control-component-title-colour">
+						<!-- TODO: extension - change colour to be half line colour half point colour-->
+						<ColourPicker bind:value={datum.linecolour} />
+						<p>Data {i}</p>
+					</div>
+					<div class="control-component-title-icons">
+						<button class="icon" onclick={() => theData.removeData(i)}>
+							<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
+						</button>
+					</div>
+				</div>
+
+				<div class="control-data-container">
+					<div class="control-data">
+						<div class="control-data-title">
+							<strong>x</strong>
+							<p
+								contenteditable="false"
+								ondblclick={(e) => {
+									e.target.setAttribute('contenteditable', 'true');
+									e.target.focus();
+								}}
+								onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+								bind:innerHTML={datum.x.name}
+							></p>
+						</div>
+
+						<Column col={datum.x} canChange={true} />
+					</div>
+
+					<div class="control-data">
+						<div class="control-data-title">
+							<strong>y</strong>
+							<p
+								contenteditable="false"
+								ondblclick={(e) => {
+									e.target.setAttribute('contenteditable', 'true');
+									e.target.focus();
+								}}
+								onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+								bind:innerHTML={datum.y.name}
+							></p>
+						</div>
+
+						<Column col={datum.y} canChange={true} />
+					</div>
+
+					<div class="control-input">
+						<p>Method</p>
+						<select bind:value={datum.method} onchange={() => datum.updatePeriodData()}>
+							<option value="Chi-squared">Chi-squared</option>
+							<option value="Lomb-Scargle">Lomb-Scargle</option>
+						</select>
+					</div>
+					
+					<!-- New: Method selector -->
+					<div class="control-input-horizontal">
+	
+						<!-- binSize only relevant for Chi-squared -->
+						{#if datum.method === 'Chi-squared'}
+							<div class="control-input">
+								<p>Bin Size</p>
+								<input type="number" step="0.01" min="0.01" bind:value={datum.binSize} />
+							</div>
+	
+							<div class="control-input">
+								<p>Alpha</p>
+								<input
+									type="number"
+									min="0.0001"
+									max="0.9999"
+									step="0.01"
+									bind:value={datum.alpha}
+									oninput={() => datum.updatePeriodData()}
+								/>
+							</div>
+						{/if}
+					</div>
+				</div>
+
+
+
+				line col: <ColourPicker bind:value={datum.linecolour} />
+				line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
+				point col: <ColourPicker bind:value={datum.pointcolour} />
+				point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
+
+				<div class="div-line"></div>
+			{/each}
+		</div>
+
 		<div>
-			<p>Data:</p>
 			<button
+				class="icon control-block-add"
 				onclick={() =>
 					theData.addData({
 						x: { refId: -1 },
 						y: { refId: -1 }
 					})}
 			>
-				+
+				<Icon name="plus" width={16} height={16} className="static-icon" />
 			</button>
-
-			{#each theData.data as datum, i}
-				<p>
-					Data {i}
-					<button onclick={() => theData.removeData(i)}>-</button>
-				</p>
-
-				x: {datum.x.name}
-				<Column col={datum.x} canChange={true} />
-
-				y: {datum.y.name}
-				<Column col={datum.y} canChange={true} />
-
-				<!-- New: Method selector -->
-				<p>
-					Method:
-					<select bind:value={datum.method} onchange={() => datum.updatePeriodData()}>
-						<option value="Chi-squared">Chi-squared</option>
-						<option value="Lomb-Scargle">Lomb-Scargle</option>
-					</select>
-				</p>
-
-				<!-- binSize only relevant for Chi-squared -->
-				{#if datum.method === 'Chi-squared'}
-					binSize: <input type="number" step="0.01" min="0.01" bind:value={datum.binSize} />
-					alpha:
-					<input
-						type="number"
-						min="0.0001"
-						max="0.9999"
-						step="0.01"
-						bind:value={datum.alpha}
-						oninput={() => datum.updatePeriodData()}
-					/>
-				{/if}
-
-				line col: <ColourPicker bind:value={datum.linecolour} />
-				line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
-				point col: <ColourPicker bind:value={datum.pointcolour} />
-				point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
-			{/each}
 		</div>
 	{/if}
 {/snippet}

@@ -560,6 +560,8 @@
 	{:else if currentControlTab === 'annotations'}
 		{#each theData.annotations as annotation}
 			<Annotation {which} {annotation} />
+
+			<div class="div-line"></div>
 		{/each}
 
 		<div>

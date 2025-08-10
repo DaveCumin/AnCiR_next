@@ -276,17 +276,23 @@
 			<option value="manual">Manual</option>
 		</select>
 	</div>
-	<ColourPicker bind:value={marker.colour} />
-	<div class="control-input">
-		<p>Marker size:</p>
-		<input type="number" min="1" step="0.2" bind:value={marker.markerSize} />
-	</div>
-	{#if marker.linearRegression?.slope}
-		<div class="control-input">
-			<p>Line width:</p>
-			<input type="number" min="1" step="0.2" bind:value={marker.lineWidth} />
+
+	<div class="control-input-color">
+		<div class="control-color">
+			<ColourPicker bind:value={marker.colour} />
 		</div>
-	{/if}
+
+		<div class="control-input">
+			<p>Marker size</p>
+			<input type="number" min="1" step="0.2" bind:value={marker.markerSize} />
+		</div>
+		<div class="control-input">
+				{#if marker.linearRegression?.slope}
+				<p>Line width</p>
+				<input type="number" min="1" step="0.2" bind:value={marker.lineWidth} />
+				{/if}
+		</div>
+	</div>
 	{#if marker.type === 'manual'}
 		<div class="control-input">
 			<button
@@ -303,18 +309,32 @@
 			>
 		</div>
 	{:else}
-		<div>
-			N: <input type="number" min="0" max="100" bind:value={marker.templateHrsBefore} />
-			M: <input type="number" min="0" max="100" bind:value={marker.templateHrsAfter} />
-			%: <input type="number" min="0" max="100" bind:value={marker.centileThreshold} />
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>N</p>
+				<input type="number" min="0" max="100" bind:value={marker.templateHrsBefore} />
+			</div>
+
+			<div class="control-input">
+				<p>M</p>
+				<input type="number" min="0" max="100" bind:value={marker.templateHrsAfter} />
+			</div>
+
+			<div class="control-input">
+				<p>%</p>
+				<input type="number" min="0" max="100" bind:value={marker.centileThreshold} />
+			</div>
 		</div>
 	{/if}
-	periods: <DoubleRange
-		min="1"
-		max={Object.keys(marker.parentData.dataByDays.xByPeriod).length}
-		bind:minVal={marker.periodRangeMin}
-		bind:maxVal={marker.periodRangeMax}
-	/>
+		<div>
+			<p>period</p>
+			<DoubleRange
+				min="1"
+				max={Object.keys(marker.parentData.dataByDays.xByPeriod).length}
+				bind:minVal={marker.periodRangeMin}
+				bind:maxVal={marker.periodRangeMax}
+			/>
+		</div>
 
 	{#if marker.linearRegression?.slope}
 		<p>Est τ: {marker.linearRegression.slope.toFixed(2)} hrs</p>

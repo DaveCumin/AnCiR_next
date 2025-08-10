@@ -1,3 +1,4 @@
+<!-- TODO: colourpicker alpha initial value should be 100 but is 0 -->
 <script module>
 	export function getRandomColor() {
 		const letters = '0123456789ABCDEF';

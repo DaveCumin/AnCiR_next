@@ -79,13 +79,17 @@
 {#snippet controls(annotation)}
 	<div class="control-input-horizontal">
 		<div class="control-input">
-			<p>Name:</p>
+			<p>Name</p>
 			<input bind:value={annotation.name} />
+		</div>
+
+		<div class="control-color">
+			<ColourPicker bind:value={annotation.colour} />
 		</div>
 	</div>
 	<div class="control-input-horizontal">
 		<div class="control-input">
-			<p>Start:</p>
+			<p>Start</p>
 			<input
 				type="number"
 				step="0.1"
@@ -93,21 +97,18 @@
 				oninput={changedStartTime}
 			/>
 		</div>
+
 		<div class="control-input">
-			<p>Duration:</p>
-			<input type="number" step="0.1" bind:value={annotation.duration} oninput={changedDuration} />
-		</div>
-	</div>
-	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>End:</p>
+			<p>End</p>
 			<input type="number" step="0.1" value={annotation.endTime} oninput={changedEndTime} />
 		</div>
 
-		<div class="control-component-input-icons">
-			<ColourPicker bind:value={annotation.colour} />
+		<div class="control-input">
+			<p>Duration</p>
+			<input type="number" step="0.1" bind:value={annotation.duration} oninput={changedDuration} />
 		</div>
 	</div>
+		
 {/snippet}
 
 {#snippet plot(annotation)}

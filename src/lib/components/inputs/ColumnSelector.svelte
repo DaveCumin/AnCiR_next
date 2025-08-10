@@ -80,12 +80,20 @@
 		box-sizing: border-box;
 
 		font-size: 14px;
-		padding: 0.2rem 0.5rem;
-		background-color: transparent;
+		font-weight: lighter;
+		padding: 0.2rem 0.25rem;
+
+		/* background-color: transparent; */
+		background-color: var(--color-lightness-97);
 
 		border: 1px solid var(--color-lightness-85);
 		border-radius: 2px;
+		transition: border-color 0.2s;
 
 		/* direction: rtl; */
+	}
+
+	select:hover {
+		border: 1px solid var(--color-lightness-35);
 	}
 </style>

@@ -754,8 +754,23 @@
 		transition: border-color 0.2s;
 	}
 
+	:global(.control-input select) {
+		padding: 0.2rem 0.25rem;
+	}
+
 	:global(.control-input select:hover, .control-input input:hover) {
 		border: solid 1px var(--color-lightness-35);
+	}
+
+	:global(.control-color) {
+		display: flex;
+		align-items: baseline;
+		justify-content: baseline;
+
+		box-sizing: border-box;
+		border: solid 1px transparent;
+
+		margin-top: 1.2rem;
 	}
 
 	:global(button.control-block-add) {
@@ -784,7 +799,7 @@
 		min-width: 0;
 
 		margin: 0;
-		/* margin-left: 0.4rem; */
+		margin-left: 0.4rem;
 		/* margin-left: 0.1rem; */
 
 		gap: 0.25rem;
