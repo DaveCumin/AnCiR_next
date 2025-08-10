@@ -68,7 +68,7 @@
 	</div>
 {/if}
 
-{#if core.data.length > 0 && core.plots.length > 0}
+{#if core.plots.length > 0}
 	<button
 		class="icon newplotconstant"
 		style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
