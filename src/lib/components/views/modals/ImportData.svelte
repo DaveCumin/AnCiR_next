@@ -8,6 +8,7 @@
 	import { Column } from '$lib/core/Column.svelte';
 	import { guessDateofArray, forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
 	import { numToString } from '$lib/utils/GeneralUtils';
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import TableLayout from '$lib/components/plotbits/Table.svelte';
