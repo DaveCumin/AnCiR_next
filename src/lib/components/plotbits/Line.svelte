@@ -3,7 +3,8 @@
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import AttributeSelect from '../reusables/AttributeSelect.svelte';
+	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
+	import { isValidStroke } from '$lib/components/plotBits/helpers/misc.js';
 
 	export class LineClass {
 		colour = $state(getPaletteColor(0));
@@ -19,6 +20,7 @@
 					getPaletteColor(this.parentData.parentPlot.data.length - 1) ??
 					getPaletteColor(0);
 				this.strokeWidth = dataIN?.strokeWidth ?? 3;
+				this.stroke = dataIN?.stroke ?? 'solid';
 				this.draw = dataIN?.draw ?? true;
 			}
 		}
@@ -27,6 +29,7 @@
 			return {
 				colour: this.colour,
 				strokeWidth: this.strokeWidth,
+				stroke: this.stroke,
 				draw: this.draw
 			};
 		}
@@ -35,6 +38,7 @@
 			return new LineClass({
 				colour: json.colour,
 				strokeWidth: json.strokeWidth,
+				stroke: json.stroke,
 				draw: json.draw
 			});
 		}
@@ -85,7 +89,7 @@
 			</button>
 		</div>
 		<div class="control-input-horizontal">
-			<div class="control-input-colour" style="max-width: 1.5rem;">
+			<div class="control-input" style="max-width: 1.5rem;">
 				<p style="color:{'white'};">Col</p>
 				<ColourPicker bind:value={lineData.colour} />
 			</div>
@@ -95,11 +99,21 @@
 			</div>
 			<div class="control-input">
 				<p>Stroke</p>
-				<AttributeSelect
-					bind:bindTo={lineData.stroke}
-					options={['solid', '5, 5', '2, 2', '5, 2']}
-					optionsDisplay={['Solid', 'Dashed', 'Dotted', 'Dashed & Dotted']}
-				/>
+				<div style="border: {lineData.stroke === -1 ? '1' : '0'}px solid red;">
+					<AttributeSelect
+						onChange={(value) => {
+							if (isValidStroke(value)) {
+								lineData.stroke = value;
+							} else {
+								lineData.stroke = -1;
+							}
+						}}
+						options={['solid', '5, 5', '2, 2', '5, 2']}
+						optionsDisplay={['Solid', 'Dashed', 'Dotted', 'Dashed & Dotted']}
+						other={true}
+						placeholder={'eg 5, 5'}
+					/>
+				</div>
 			</div>
 		</div>
 	</div>

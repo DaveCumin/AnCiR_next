@@ -8,7 +8,7 @@
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
-	import AttributeSelect from '$lib/components/reusables/AttributeSelect.svelte';
+	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { tick } from 'svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 

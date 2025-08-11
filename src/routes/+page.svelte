@@ -707,7 +707,7 @@
 
 		width: 100%;
 		gap: 0.5rem;
-		margin-bottom: -1rem;
+		margin-bottom: 0.5rem;
 	}
 
 	:global(.control-input-color button) {
