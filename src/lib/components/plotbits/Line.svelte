@@ -3,10 +3,12 @@
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import AttributeSelect from '../reusables/AttributeSelect.svelte';
 
 	export class LineClass {
 		colour = $state(getPaletteColor(0));
 		strokeWidth = $state(3);
+		stroke = $state('solid');
 		draw = $state(true);
 
 		constructor(dataIN, parent) {
@@ -83,13 +85,21 @@
 			</button>
 		</div>
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Colour</p>
+			<div class="control-input-colour" style="max-width: 1.5rem;">
+				<p style="color:{'white'};">Col</p>
 				<ColourPicker bind:value={lineData.colour} />
 			</div>
 			<div class="control-input">
 				<p>Width</p>
 				<NumberWithUnits step="0.2" min={0.1} bind:value={lineData.strokeWidth} />
+			</div>
+			<div class="control-input">
+				<p>Stroke</p>
+				<AttributeSelect
+					bind:bindTo={lineData.stroke}
+					options={['solid', '5, 5', '2, 2', '5, 2']}
+					optionsDisplay={['Solid', 'Dashed', 'Dotted', 'Dashed & Dotted']}
+				/>
 			</div>
 		</div>
 	</div>
@@ -106,7 +116,7 @@
 				fill="none"
 				stroke={lineData.colour}
 				stroke-width={lineData.strokeWidth}
-				style="transform: translate({xoffset}px, {yoffset}px);"
+				style="transform: translate({xoffset}px, {yoffset}px); stroke-dasharray: {lineData.stroke};"
 			/>
 		</g>
 	{/if}
