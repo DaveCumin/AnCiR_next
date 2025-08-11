@@ -149,27 +149,19 @@
 		}
 	}
 
-	async function handleDblClick(e) {
+	async function handleClick(e) {
 		e.stopPropagation();
-		appState.showControlPanel = true;
-		await tick();
-		RePosition();
-	}
 
-	function handleClick(e) {
-		e.stopPropagation();
-		n += 1;
-		clearTimeout(timeout);
-		timeout = setTimeout(() => {
+		if (e.detail === 1) {
+			// Single click
 			selectPlot(e, id);
-
-			if (n > 1) {
-				handleDblClick(e);
-			} else {
-				RePosition();
-			}
-			n = 0;
-		}, delay);
+			RePosition();
+		} else if (e.detail === 2) {
+			// Double click
+			appState.showControlPanel = true;
+			await tick();
+			RePosition();
+		}
 	}
 
 	function RePosition() {
@@ -208,9 +200,6 @@
 
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
-	let timeout,
-		n = 0,
-		delay = 180;
 </script>
 
 <svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp} />
