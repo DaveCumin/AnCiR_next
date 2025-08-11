@@ -5,7 +5,7 @@
 	import { scaleLinear, scaleTime } from 'd3-scale';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
-	import Points from '$lib/components/plotbits/Points.svelte';
+	import Points, { PointsClass } from '$lib/components/plotBits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
@@ -15,8 +15,7 @@
 		x = $state();
 		y = $state();
 		line = $state();
-		pointcolour = $state();
-		pointradius = $state(5);
+		points = $state();
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
@@ -31,8 +30,8 @@
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
-			this.line = new LineClass(dataIN?.line, this.parentPlot.data.length);
-			this.pointcolour = dataIN?.pointcolour ?? getPaletteColor(this.parentPlot.data.length);
+			this.line = new LineClass(dataIN?.line, this);
+			this.points = new PointsClass(dataIN?.points, this);
 		}
 
 		toJSON() {
@@ -40,8 +39,7 @@
 				x: this.x,
 				y: this.y,
 				line: this.line.toJSON(),
-				pointcolour: this.pointcolour,
-				pointradius: this.pointradius
+				points: this.points.toJSON()
 			};
 		}
 
@@ -50,8 +48,7 @@
 				x: json.x,
 				y: json.y,
 				line: LineClass.fromJSON(json.line),
-				pointcolour: json.pointcolour,
-				pointradius: json.pointradius
+				points: PointsClass.fromJSON(json.points)
 			});
 		}
 	}
@@ -539,12 +536,7 @@
 				<Column col={datum.y} canChange={true} />
 
 				<Line lineData={datum.line} which="controls" />
-				point col: <ColourPicker bind:value={datum.pointcolour} />
-				point radius: <NumberWithUnits
-					step="0.2"
-					limits={[0.1, Infinity]}
-					bind:value={datum.pointradius}
-				/>
+				<Points pointsData={datum.points} which="controls" />
 			{/each}
 		</div>
 	{/if}
@@ -642,6 +634,7 @@
 					which="plot"
 				/>
 				<Points
+					pointsData={datum.points}
 					x={datum.x.getData()}
 					xtype={datum.x.type}
 					y={datum.y.getData()}
@@ -656,6 +649,7 @@
 					yoffset={theData.plot.padding.top}
 					xoffset={theData.plot.padding.left}
 					tooltip={true}
+					which="plot"
 				/>
 			{/if}
 		{/each}

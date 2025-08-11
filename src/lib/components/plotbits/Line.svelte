@@ -5,16 +5,20 @@
 	import Icon from '$lib/icons/Icon.svelte';
 
 	export class LineClass {
-		colour = $state(getPaletteColor(1));
+		colour = $state(getPaletteColor(0));
 		strokeWidth = $state(3);
 		draw = $state(true);
 
-		constructor(dataIN, N) {
+		constructor(dataIN, parent) {
 			this.parentData = parent;
-			console.log(parent);
-			this.colour = dataIN?.colour ?? getPaletteColor(N) ?? getPaletteColor(1);
-			this.strokeWidth = dataIN?.strokeWidth ?? 3;
-			this.draw = dataIN?.draw ?? true;
+			if (dataIN) {
+				this.colour =
+					dataIN?.colour ??
+					getPaletteColor(this.parentData.parentPlot.data.length - 1) ??
+					getPaletteColor(0);
+				this.strokeWidth = dataIN?.strokeWidth ?? 3;
+				this.draw = dataIN?.draw ?? true;
+			}
 		}
 
 		toJSON() {
@@ -37,7 +41,6 @@
 
 <script>
 	let { lineData = $bindable(), x, y, xscale, yscale, yoffset = 0, xoffset = 0, which } = $props();
-
 	let width = $derived(xscale.range()[1]);
 	let height = $derived(yscale.range()[0]);
 	let clipKey = $derived(`line-${xoffset}-${yoffset}-${width}-${height}`);

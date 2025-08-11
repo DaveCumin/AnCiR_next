@@ -10,7 +10,7 @@
 	import { pchisq, qchisq } from '$lib/data/CDFs';
 
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
-	import Points from '$lib/components/plotBits/Points.svelte';
+	import Points, { PointsClass } from '$lib/components/plotBits/Points.svelte';
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
 
@@ -102,9 +102,8 @@
 
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
 		line = $state();
-		pointcolour = $state();
-		pointradius = $state(5);
-		alpha = $state(0.05);
+		points = $state();
+		chiSquaredAlpha = $state(0.05);
 
 		updatePeriodData() {
 			let binnedData = { bins: [], y_out: [] }; // No binning for Lomb-Scargle
@@ -124,7 +123,7 @@
 			);
 			const frequencies = periods.map((p) => 1 / p); // For Lomb-Scargle
 
-			const correctedAlpha = Math.pow(1 - this.alpha, 1 / periods.length);
+			const correctedAlpha = Math.pow(1 - this.chiSquaredAlpha, 1 / periods.length);
 			const power = new Array(periods.length);
 			const threshold = new Array(periods.length);
 			const pvalue = new Array(periods.length);
@@ -174,8 +173,8 @@
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
-			this.line = new LineClass(dataIN?.line, this.parentPlot.data.length);
-			this.pointcolour = dataIN?.pointcolour ?? getPaletteColor(this.parentPlot.data.length);
+			this.line = new LineClass(dataIN?.line, this);
+			this.points = new PointsClass(dataIN?.points, this);
 			this.method = dataIN?.method ?? 'Lomb-Scargle'; // Initialize method
 		}
 
@@ -184,11 +183,10 @@
 				x: this.x,
 				y: this.y,
 				line: this.line.toJSON(),
-				pointcolour: this.pointcolour,
-				pointradius: this.pointradius,
+				points: this.points.toJSON(),
 				binSize: this.binSize,
 				method: this.method,
-				alpha: this.alpha
+				chiSquaredAlpha: this.chiSquaredAlpha
 			};
 		}
 
@@ -197,11 +195,10 @@
 				x: json.x,
 				y: json.y,
 				line: LineClass.fromJSON(json.line),
-				pointcolour: json.pointcolour,
-				pointradius: json.pointradius,
+				points: PointsClass.fromJSON(json.points),
 				binSize: json.binSize,
 				method: json.method,
-				alpha: json.alpha
+				chiSquaredAlpha: json.chiSquaredAlpha
 			});
 		}
 	}
@@ -719,14 +716,12 @@
 						min="0.0001"
 						max="0.9999"
 						step="0.01"
-						bind:value={datum.alpha}
+						bind:value={datum.chiSquaredAlpha}
 						onInput={() => datum.updatePeriodData()}
 					/>
 				{/if}
-
 				<Line lineData={datum.line} which="controls" />
-				point col: <ColourPicker bind:value={datum.pointcolour} />
-				point radius: <NumberWithUnits step="0.1" min="0.1" bind:value={datum.pointradius} />
+				<Points pointsData={datum.points} which="controls" />
 			{/each}
 		</div>
 	{/if}
@@ -785,6 +780,7 @@
 				which="plot"
 			/>
 			<Points
+				pointsData={datum.points}
 				x={datum.periodData.x}
 				y={datum.periodData.y}
 				xscale={scaleLinear()
@@ -798,9 +794,11 @@
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 				tooltip={true}
+				which="plot"
 			/>
 			{#if datum.method === 'Chi-squared'}
 				<Line
+					lineData={datum.line}
 					x={datum.periodData.x}
 					y={datum.periodData.threshold}
 					xscale={scaleLinear()

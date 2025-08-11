@@ -25,11 +25,14 @@
 	import { Process } from '$lib/core/Process.svelte';
 	import { TableProcess } from '$lib/core/tableProcess.svelte';
 
+	import Icon from '$lib/icons/Icon.svelte';
+
 	// import { testjson } from '$lib/test.svelte.js';
 
 	import { guessFormatD3 } from '$lib/utils/time/guessTimeFormat_d3.js';
 	import { guessFormat } from '$lib/utils/time/guessTimeFormat.js';
 
+	let loadingMsg = $state('Warming up...');
 	let isLoaded = $state(false);
 
 	// const timesToTest = ['2025/10/01', '2025/12/01', '2025/13/01'];
@@ -79,8 +82,11 @@
 
 	onMount(async () => {
 		//load the maps
+		loadingMsg = 'Loading processes ...';
 		appConsts.processMap = await loadProcesses();
+		loadingMsg = 'Loading plots ...';
 		appConsts.plotMap = await loadPlots();
+		loadingMsg = 'Loading table processes ...';
 		appConsts.tableProcessMap = await loadTableProcesses();
 
 		isLoaded = true;
@@ -321,7 +327,12 @@
 
 	<ControlPanel />
 {:else}
-	<div>Loading...</div>
+	<div>
+		<p>
+			<Icon name="spinner" width={32} height={32} className="spinner" />
+			{loadingMsg}
+		</p>
+	</div>
 {/if}
 
 <style>
