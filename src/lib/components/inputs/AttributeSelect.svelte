@@ -6,10 +6,11 @@
 		optionsDisplay = options,
 		other = false,
 		placeholder = '',
-		onChange = (value) => {}
+		onChange = () => {}
 	} = $props(); // options must be passed as array
 	let otherValInternal = crypto.randomUUID().replaceAll('-', '').slice(0, 6);
 	let selected = $state();
+	let selectComponent = $state();
 	let otherComponent = $state();
 </script>
 
@@ -18,6 +19,7 @@
 {/if}
 <div class="select-container">
 	<select
+		bind:this={selectComponent}
 		bind:value={selected}
 		name={label}
 		id={label}
@@ -60,12 +62,17 @@
 		width: calc(100% - 1rem);
 
 		padding: 2px;
-		border: none;
+		border-right: none;
 		z-index: 10;
 	}
+	.other-input:hover {
+		outline: none;
+		border-right: none;
+	}
+
 	.other-input:focus {
 		outline: none;
-		border: none;
+		border-right: none;
 	}
 	.select-container {
 		position: relative;
