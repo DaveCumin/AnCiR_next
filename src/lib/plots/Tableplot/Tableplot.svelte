@@ -119,6 +119,48 @@
 
 <script>
 	let { theData, which } = $props();
+
+	function makeEdits(edit) {
+		// Adjust column index if showColNumber is true (first column is row numbers)
+		// Adjust for showColNumber
+		const colOffset = theData.plot.showColNumber ? 1 : 0;
+		const tableCol = edit.col - colOffset;
+
+		// Map table column index to columnRefs index, accounting for showCol
+		let visibleColCount = 0;
+		let actualCol = -1;
+		for (let i = 0; i < theData.plot.columnRefs.length; i++) {
+			if (theData.plot.showCol[i]) {
+				if (visibleColCount === tableCol) {
+					actualCol = i;
+					break;
+				}
+				visibleColCount++;
+			}
+		}
+		//Get the correct column
+		const colId = theData.plot.columnRefs[actualCol];
+		const column = getColumnById(colId);
+
+		if (edit.row === 'h') {
+			// Editing header: change column name
+			if (actualCol >= 0 && actualCol < theData.plot.columnRefs.length) {
+				const colId = theData.plot.columnRefs[actualCol];
+				getColumnById(colId).name = edit.value;
+			}
+		} else {
+			// Editing data: update value at specific row
+			const rowIndex = Number(edit.row) + theData.plot.colCurrent - 1; // Adjust for colCurrent
+			if (
+				actualCol >= 0 &&
+				actualCol < theData.plot.columnRefs.length &&
+				rowIndex < theData.plot.longestCol
+			) {
+				//TODO - complete this (needs type checking, especially for time)
+				console.log('editing.. ', rowIndex, ' of ', column.name, ' with ', edit);
+			}
+		}
+	}
 </script>
 
 {#snippet controls(theData)}
@@ -164,7 +206,12 @@
 {#snippet plot(theData)}
 	{#key theData.plot.showCol}
 		{#if theData.plot.showCol.some((s) => s) || theData.plot.showColNumber}
-			<Table headers={theData.plot.tableHeadings} data={theData.plot.tableData} />
+			<Table
+				headers={theData.plot.tableHeadings}
+				data={theData.plot.tableData}
+				editable={true}
+				onInput={(edit) => makeEdits(edit)}
+			/>
 			<p style="margin-bottom: 0;">
 				Row <NumberWithUnits
 					min="1"

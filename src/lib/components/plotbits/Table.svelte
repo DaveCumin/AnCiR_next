@@ -1,5 +1,5 @@
 <script>
-	let { headers, data } = $props();
+	let { headers, data, editable = false, onInput = () => {} } = $props();
 
 	// Initialize widths array with equal distribution
 	let widths = $state(headers.map(() => 100 / headers.length + '%'));
@@ -61,6 +61,8 @@
 		window.removeEventListener('mousemove', handleMouseMove);
 		window.removeEventListener('mouseup', handleMouseUp);
 	}
+
+	let oldVal;
 </script>
 
 <div class="preview-table-wrapper" bind:this={table} style="margin-top: 0.2rem;">
@@ -68,7 +70,21 @@
 		<thead>
 			<tr>
 				{#each headers as header, index}
-					<th style="width: {widths[index]}; position: relative;">
+					<th
+						style="width: {widths[index]}; position: relative;"
+						contenteditable="false"
+						ondblclick={(e) => {
+							if (editable) {
+								oldVal = e.target.innerText;
+								e.target.setAttribute('contenteditable', 'true');
+								e.target.focus();
+								console.log(e.target);
+							}
+						}}
+						oninput={(e) => {
+							onInput({ col: index, row: 'h', value: e.target.innerText, old: oldVal });
+						}}
+					>
 						{header}
 						<div class="resizer" onmousedown={() => startResize(index)}></div>
 					</th>
@@ -76,10 +92,25 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each new Array(data[0].length) as d, i}
+			{#each new Array(data[0].length) as d, r}
 				<tr>
-					{#each data as col}
-						<td>{col[i] ?? 'N/A'}</td>
+					{#each data as col, c}
+						<td
+							contenteditable="false"
+							ondblclick={(e) => {
+								if (editable) {
+									oldVal = e.target.innerText;
+									e.target.setAttribute('contenteditable', 'true');
+									e.target.focus();
+									console.log(e.target);
+								}
+							}}
+							oninput={(e) => {
+								console.log(e);
+								onInput({ col: c, row: r, value: e.target.innerText, old: oldVal });
+								e.target.setAttribute('contenteditable', 'false');
+							}}>{col[c] ?? 'N/A'}</td
+						>
 					{/each}
 				</tr>
 			{/each}
