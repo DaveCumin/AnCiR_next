@@ -63,7 +63,7 @@
 				: newDisplayValue * unitFactor;
 		newValue = clamp(newValue, min, max);
 		value = newValue;
-		onInput();
+		onInput(value);
 	}
 
 	// Dragging functionality

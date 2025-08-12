@@ -106,12 +106,12 @@
 	Bin size:
 	<NumberWithUnits
 		bind:value={p.args.binSize}
-		onInput={(e) => getBinnedData()}
+		onInput={() => getBinnedData()}
 		min="0.1"
 		step="0.01"
 	/>
 	<br />
-	Bin start: <NumberWithUnits bind:value={p.args.binStart} onInput={(e) => getBinnedData()} />
+	Bin start: <NumberWithUnits bind:value={p.args.binStart} onInput={() => getBinnedData()} />
 </p>
 <p>Output:</p>
 {#key binnedData}

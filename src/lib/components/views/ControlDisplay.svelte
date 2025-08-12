@@ -389,8 +389,8 @@
 						<NumberWithUnits
 							step={appState.gridSize}
 							value={verticalGapIN ? verticalGapIN : verticalGap}
-							onInput={(e) => {
-								verticalGapIN = parseFloat(e.target.value);
+							onInput={(val) => {
+								verticalGapIN = parseFloat(val);
 								updateGap('vertical');
 							}}
 							style="width: calc(100% - {verticalGapIN != null && verticalGapIN !== verticalGap
@@ -416,8 +416,8 @@
 							value={horizontalGapIN != null && !isNaN(horizontalGapIN)
 								? horizontalGapIN
 								: horizontalGap}
-							onInput={(e) => {
-								horizontalGapIN = parseFloat(e.target.value);
+							onInput={(val) => {
+								horizontalGapIN = parseFloat(val);
 								updateGap('horizontal');
 							}}
 							style="width: calc(100% - {horizontalGapIN != null &&

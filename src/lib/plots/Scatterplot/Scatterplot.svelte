@@ -397,8 +397,8 @@
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
-						onInput={(e) => {
-							theData.ylimsIN[0] = parseFloat(e.target.value);
+						onInput={(val) => {
+							theData.ylimsIN[0] = parseFloat(val);
 						}}
 					/>
 				</div>
@@ -408,8 +408,8 @@
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-						onInput={(e) => {
-							theData.ylimsIN[1] = parseFloat(e.target.value);
+						onInput={(val) => {
+							theData.ylimsIN[1] = parseFloat(val);
 						}}
 					/>
 				</div>
@@ -448,8 +448,8 @@
 							value={theData.xlimsIN[0]
 								? new Date(theData.xlimsIN[0]).toISOString().substring(0, 16)
 								: new Date(theData.xlims[0]).toISOString().substring(0, 16)}
-							oninput={(e) => {
-								theData.xlimsIN[0] = Number(new Date(e.target.value));
+							oninput={(val) => {
+								theData.xlimsIN[0] = Number(new Date(val));
 							}}
 						/>
 					</div>
@@ -461,8 +461,8 @@
 							value={theData.xlimsIN[1]
 								? new Date(theData.xlimsIN[1]).toISOString().substring(0, 16)
 								: new Date(theData.xlims[1]).toISOString().substring(0, 16)}
-							oninput={(e) => {
-								theData.xlimsIN[1] = Number(new Date(e.target.value));
+							oninput={(val) => {
+								theData.xlimsIN[1] = Number(new Date(val));
 							}}
 						/>
 					</div>
@@ -472,8 +472,8 @@
 						<NumberWithUnits
 							step="0.1"
 							value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
-							onInput={(e) => {
-								theData.xlimsIN[0] = parseFloat(e.target.value);
+							onInput={(val) => {
+								theData.xlimsIN[0] = parseFloat(val);
 							}}
 						/>
 					</div>
@@ -483,8 +483,8 @@
 						<NumberWithUnits
 							step="0.1"
 							value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
-							onInput={(e) => {
-								theData.xlimsIN[1] = parseFloat(e.target.value);
+							onInput={(val) => {
+								theData.xlimsIN[1] = parseFloat(val);
 							}}
 						/>
 					</div>
