@@ -37,13 +37,15 @@
 			height = snapToGrid(600);
 		}
 
-		const xName = getColumnById(xCol).name;
+		const xName = getColumnById(xCol)?.name;
 		const container = document.getElementsByClassName('canvas')[0];
 
 		for (let i = 0; i < yCols.length; i++) {
 			//find the position
 			const col = i % nCols;
 			const row = Math.floor(i / nCols);
+
+			console.log('making new plot with x,y: ', xCol, yCols[i]);
 
 			const newPlot = new Plot({
 				name: getColumnById(yCols[i]).name,
@@ -56,7 +58,7 @@
 				height: snapToGrid(height)
 			});
 			newPlot.plot.addData({
-				x: { refId: xCol },
+				x: { refId: Number(xCol) },
 				y: { refId: yCols[i] }
 			});
 			core.plots.push(newPlot);
@@ -117,13 +119,6 @@
 			enforceCompletedRules(1);
 		}
 	}
-	//This checks for validity
-	$effect(() => {
-		if (plotType != 'Plot') {
-			steps[0].completed = true;
-			enforceSequentialCompletion(0);
-		}
-	});
 
 	//-------------------
 </script>
@@ -132,20 +127,28 @@
 	{#if index === 0}
 		<div class="choose-file-container">
 			<AttributeSelect
-				bind:bindTo={plotType}
+				bind:value={plotType}
 				label="Plot Type"
 				options={['actogram', 'periodogram', 'scatterplot']}
+				onChange={() => {
+					steps[0].completed = true;
+					enforceSequentialCompletion(0);
+				}}
 			/>
 		</div>
 	{/if}
 	{#if index === 1}
 		<AttributeSelect
-			bind:bindTo={xCol}
+			bind:value={xCol}
 			label={plotType == 'scatterplot' ? 'x' : 'time'}
 			options={core.tables.flatMap((table) => table.columns.map((col) => col.id))}
 			optionsDisplay={core.tables.flatMap((table) =>
 				table.columns.map((col) => table.name + ': ' + col.name)
 			)}
+			onChange={() => {
+				steps[0].completed = true;
+				enforceSequentialCompletion(0);
+			}}
 		/>
 
 		<div class="import-container">
@@ -155,7 +158,8 @@
 				<ColumnSelector bind:value={yCols} multiple={true} />
 			</div>
 		</div>
-		{#if yCols[0] != null && xCol >= 0}
+
+		{#if yCols[0] != null && Number(xCol) >= 0}
 			<div class="dialog-button-container">
 				<button
 					class="dialog-button"
