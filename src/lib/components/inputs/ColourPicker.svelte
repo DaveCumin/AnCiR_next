@@ -315,7 +315,7 @@
 						show = false;
 					}}
 				>
-					<Icon name="close" width={16} height={16} className="icon" />
+					<Icon name="close" width={16} height={16} className="icon close" />
 				</button>
 			</div>
 			<div class="cp-content">

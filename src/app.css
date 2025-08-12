@@ -3,13 +3,13 @@
 	--color-icon-selected: #5f5f5f;
 	--color-icon-unselected: #d9d9d9;
 
-	--color-icon-close: #ff6666;
+	--color-icon-close-hover: #ff6666;
 
 	/* colour based on lightness */
 	--color-lightness-35: #5f5f5f;
 	--color-lightness-45: #737373;
 	--color-lightness-50: #808080;
-	--color-lightness-55: #8C8C8C;
+	--color-lightness-55: #8c8c8c;
 	--color-lightness-60: #999999;
 	--color-lightness-75: #b3b3b3;
 	--color-lightness-85: #d9d9d9;
@@ -19,7 +19,7 @@
 	--color-lightness-97: #f7f7f7;
 	--color-lightness-98: #fafafa;
 
-	--color-hover: #EDADAD; /* Subtle change to align with the colour palette*/
+	--color-hover: #6a9fd4; /* Subtle change to align with the colour palette*/
 
 	/* font */
 	font-family:
@@ -38,5 +38,3 @@
 	/* control */
 	--control-input-height: calc(16px + 0.4rem + 2px);
 }
-
-

@@ -65,7 +65,7 @@
 		fill: var(--color-icon-selected);
 	}
 
-	.close {
+	.close:hover {
 		fill: var(--color-icon-close);
 		transition: fill 0.2s ease;
 		cursor: pointer;
