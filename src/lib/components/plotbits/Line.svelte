@@ -54,12 +54,27 @@
 	let theline = $derived.by(() => {
 		if (!lineData?.draw || !x || !y) return null;
 
+		//filter out the NaNs and data outside the plot limits
 		const xlims = xscale.domain();
 		const [minX, maxX] = [Math.min(...xlims), Math.max(...xlims)];
+		const ylims = yscale.domain();
+		const [minY, maxY] = [Math.min(...ylims), Math.max(...ylims)];
+
 		const filteredData = x
 			.map((xVal, i) => ({ x: xVal, y: y[i] }))
-			.filter((d) => d.x >= minX && d.x <= maxX && d.y != null);
+			.filter(
+				(d) =>
+					d.x >= minX &&
+					d.x <= maxX &&
+					d.y >= minY &&
+					d.y <= maxY &&
+					d.y != null &&
+					d.x != null &&
+					!isNaN(d.y) &&
+					!isNaN(d.x)
+			);
 
+		//No Line if only 1 or fewer points
 		if (filteredData.length < 2) return null;
 
 		const lineGenerator = line()

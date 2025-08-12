@@ -52,70 +52,55 @@
 		which
 	} = $props();
 
-	let beforeIdx = $derived.by(() => {
-		//find the x point before the limit
-		let xlims = xscale.domain();
-		for (let i = 1; i < x.length; i++) {
-			if (x[i] >= Math.min(xlims[0], xlims[1])) {
-				return i - 1;
-			}
-		}
-		return 0;
-	});
-
-	let afterIdx = $derived.by(() => {
-		//find the x point after the limit
-		let xlims = xscale.domain();
-		for (let i = x.length - 2; i >= 0; i--) {
-			if (x[i] <= Math.max(xlims[0], xlims[1])) {
-				return i + 1;
-			}
-		}
-		return x.length - 1;
-	});
+	let qt;
 
 	//MAKE THE POINTS PATH
 	let points = $derived.by(() => {
+		//filter out the NaNs and data outside the plot limits
+		const xlims = xscale.domain();
+		const [minX, maxX] = [Math.min(...xlims), Math.max(...xlims)];
+		const ylims = yscale.domain();
+		const [minY, maxY] = [Math.min(...ylims), Math.max(...ylims)];
+
+		const filteredData = x
+			.map((xVal, i) => ({ x: xVal, y: y[i] }))
+			.filter(
+				(d) =>
+					d.x >= minX &&
+					d.x <= maxX &&
+					d.y >= minY &&
+					d.y <= maxY &&
+					d.y != null &&
+					d.x != null &&
+					!isNaN(d.y) &&
+					!isNaN(d.x)
+			);
+
+		if (!pointsData?.draw || !x || !y) return null;
 		let out = '';
-		for (let p = beforeIdx; p <= afterIdx; p++) {
-			//only include the point if it's within the y limits
-			if (y[p] >= yscale.domain()[0] && y[p] <= yscale.domain()[1] && x[p] && y[p]) {
-				out += `M${xscale(x[p])} ${yscale(y[p])} m-${pointsData.radius} 0 a${pointsData.radius} ${pointsData.radius} 0 1 0 ${2 * pointsData.radius} 0 a${pointsData.radius} ${pointsData.radius} 0 1 0 -${2 * pointsData.radius} 0 `;
-			}
+		filteredData.forEach((p) => {
+			out += `M${xscale(p.x)} ${yscale(p.y)} m-${pointsData.radius} 0 a${pointsData.radius} ${pointsData.radius} 0 1 0 ${2 * pointsData.radius} 0 a${pointsData.radius} ${pointsData.radius} 0 1 0 -${2 * pointsData.radius} 0 `;
+		});
+
+		//Set up the quadtree for hovering
+		if (tooltip) {
+			qt = quadtree()
+				.x((d) => xscale(d.x) + xoffset)
+				.y((d) => yscale(d.y) + yoffset)
+				.addAll(filteredData);
 		}
 
 		return out;
 	});
 
-	let qt = $derived.by(() => {
-		if (!tooltip) return null;
-		const tree = quadtree()
-			.x((d) => xscale(d.x) + xoffset)
-			.y((d) => yscale(d.y) + yoffset)
-			.addAll(
-				x
-					.map((xVal, i) => ({
-						x: xVal,
-						y: y[i],
-						index: i
-					}))
-					.filter(
-						(d) =>
-							d.index >= beforeIdx &&
-							d.index <= afterIdx &&
-							d.y >= yscale.domain()[0] &&
-							d.y <= yscale.domain()[1]
-					)
-			);
-		return tree;
-	});
 	function handleHover(e) {
 		if (!tooltip) return;
 		const mouseX = e.offsetX;
 		const mouseY = e.offsetY;
 		const closest = qt.find(mouseX, mouseY, pointsData.radius * 2);
-		if (closest && closest.index >= 0) {
-			let content = `(${x[closest.index].toFixed(2)}, ${y[closest.index].toFixed(2)})`;
+
+		if (closest) {
+			let content = `(${closest.x.toFixed(2)}, ${closest.y.toFixed(2)})`;
 			if (xtype == 'time') {
 				content = `(${new Date(x[closest.index]).toLocaleString()}, ${y[closest.index].toFixed(2)})`;
 			}

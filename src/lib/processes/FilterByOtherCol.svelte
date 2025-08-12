@@ -34,7 +34,7 @@
 		if (!conditions || conditions.length === 0) return x;
 
 		// Initialize result mask (false for all elements initially for OR logic)
-		let resultMask = new Array(x.length).fill(false);
+		let resultMask = new Array(x.length).fill(true);
 
 		// Process each condition
 		for (const { byColId, isOperator, byColValue } of conditions) {
@@ -107,6 +107,7 @@
 				<ColumnSelector
 					bind:value={condition.byColId}
 					excludeColIds={[p.parentCol.id, p.parentCol.refId]}
+					getPlotSiblings={p.parentCol}
 				/>
 				<div class="operator-input">
 					{#if getColumnById(condition.byColId)?.type === 'category'}
