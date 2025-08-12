@@ -88,17 +88,17 @@
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>Start:</p>
-			<NumberWithUnits step="0.1" bind:value={annotation.startTime} oninput={changedStartTime} />
+			<NumberWithUnits step="0.1" bind:value={annotation.startTime} onInput={changedStartTime} />
 		</div>
 		<div class="control-input">
 			<p>Duration:</p>
-			<NumberWithUnits step="0.1" bind:value={annotation.duration} oninput={changedDuration} />
+			<NumberWithUnits step="0.1" bind:value={annotation.duration} onInput={changedDuration} />
 		</div>
 	</div>
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>End:</p>
-			<NumberWithUnits step="0.1" value={annotation.endTime} oninput={changedEndTime} />
+			<NumberWithUnits step="0.1" value={annotation.endTime} onInput={changedEndTime} />
 		</div>
 
 		<div class="control-component-input-icons">

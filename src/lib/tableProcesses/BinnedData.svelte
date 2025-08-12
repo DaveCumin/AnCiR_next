@@ -44,6 +44,7 @@
 	//------------
 
 	function getBinnedData() {
+		console.log('doing binned');
 		const xIN = p.args.xIN;
 		const yIN = p.args.yIN;
 		const binSize = p.args.binSize;
@@ -96,13 +97,21 @@
 
 <p>
 	Bin: <br />
-	x = <ColumnSelector bind:value={p.args.xIN} onChange={getBinnedData} /> <br />
-	y = <ColumnSelector bind:value={p.args.yIN} excludeColIds={[p.xIN]} onChange={getBinnedData} /><br
-	/>
+	x = <ColumnSelector bind:value={p.args.xIN} onChange={(e) => getBinnedData()} /> <br />
+	y = <ColumnSelector
+		bind:value={p.args.yIN}
+		excludeColIds={[p.xIN]}
+		onChange={(e) => getBinnedData()}
+	/><br />
 	Bin size:
-	<NumberWithUnits bind:value={p.args.binSize} oninput={getBinnedData} min="0.1" step="0.01" />
+	<NumberWithUnits
+		bind:value={p.args.binSize}
+		onInput={(e) => getBinnedData()}
+		min="0.1"
+		step="0.01"
+	/>
 	<br />
-	Bin start: <NumberWithUnits bind:value={p.args.binStart} oninput={getBinnedData} />
+	Bin start: <NumberWithUnits bind:value={p.args.binStart} onInput={(e) => getBinnedData()} />
 </p>
 <p>Output:</p>
 {#key binnedData}
