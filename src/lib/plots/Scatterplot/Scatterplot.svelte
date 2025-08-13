@@ -281,11 +281,10 @@
 
 <script>
 	import Icon from '$lib/icons/Icon.svelte';
+	import { appState } from '$lib/core/core.svelte';
 	import { onMount } from 'svelte';
 
 	let { theData, which } = $props();
-
-	let currentControlTab = $state('properties');
 
 	//Tooltip
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
@@ -310,20 +309,7 @@
 </script>
 
 {#snippet controls(theData)}
-	<div class="control-tag">
-		<button
-			class={currentControlTab === 'properties' ? 'active' : ''}
-			onclick={() => (currentControlTab = 'properties')}>Properties</button
-		>
-		<button
-			class={currentControlTab === 'data' ? 'active' : ''}
-			onclick={() => (currentControlTab = 'data')}>Data</button
-		>
-	</div>
-
-	<div class="div-line"></div>
-
-	{#if currentControlTab === 'properties'}
+	{#if appState.currentControlTab === 'properties'}
 		<div class="control-component">
 			<div class="control-component-title">
 				<p>Dimension</p>
@@ -587,7 +573,7 @@
 				</div>
 			</div>
 		</div>
-	{:else if currentControlTab === 'data'}
+	{:else if appState.currentControlTab === 'data'}
 		<div>
 			<div class="heading">
 				<p>Data</p>

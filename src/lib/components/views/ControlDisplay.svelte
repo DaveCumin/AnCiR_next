@@ -171,21 +171,42 @@
 			{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 			{#if Plot}
 				<div class="control-banner">
-					<p
-						contenteditable="false"
-						ondblclick={(e) => {
-							e.target.setAttribute('contenteditable', 'true');
-							e.target.focus();
-						}}
-						onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-						bind:innerHTML={plot.name}
-					></p>
-
-					<div class="control-banner-icons">
-						<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
-							<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
-						</button>
+					<div class="control-banner-title">
+						<p
+							contenteditable="false"
+							ondblclick={(e) => {
+								e.target.setAttribute('contenteditable', 'true');
+								e.target.focus();
+							}}
+							onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+							bind:innerHTML={plot.name}
+						></p>
+	
+						<div class="control-banner-icons">
+							<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
+								<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
+							</button>
+						</div>
 					</div>
+
+					<div class="control-tab">
+						<button
+							class={appState.currentControlTab === 'properties' ? 'active' : ''}
+							onclick={() => (appState.currentControlTab = 'properties')}>Properties</button
+						>
+						<button
+							class={appState.currentControlTab === 'data' ? 'active' : ''}
+							onclick={() => (appState.currentControlTab = 'data')}>Data</button
+						>
+
+						{#if plot.type === 'actogram'}
+						<button
+							class={appState.currentControlTab === 'annotations' ? 'active' : ''}
+							onclick={() => (appState.currentControlTab = 'annotations')}>Annotations</button
+						>
+						{/if}
+					</div>
+					<div class="div-line"></div>
 				</div>
 
 				<SavePlot

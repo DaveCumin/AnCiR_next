@@ -120,7 +120,6 @@
 </script>
 
 {#snippet controls(theData)}
-	<p><input type="text" bind:value={theData.parentBox.name} /></p>
 	<p>Col Numbers: <input type="checkbox" bind:checked={theData.showColNumber} /></p>
 	<p>Round to decimals: <input type="number" min="0" bind:value={theData.decimalPlaces} /></p>
 	<p>

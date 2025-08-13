@@ -291,9 +291,9 @@
 </script>
 
 <script>
-	let { theData, which } = $props();
+	import { appState } from '$lib/core/core.svelte';
 
-	let currentControlTab = $state('properties');
+	let { theData, which } = $props();
 
 	function handleClick(e) {
 		if (theData.plot.isAddingMarkerTo >= 0) {
@@ -326,24 +326,8 @@
 </script>
 
 {#snippet controls(theData)}
-	<div class="control-tag">
-		<button
-			class={currentControlTab === 'properties' ? 'active' : ''}
-			onclick={() => (currentControlTab = 'properties')}>Properties</button
-		>
-		<button
-			class={currentControlTab === 'data' ? 'active' : ''}
-			onclick={() => (currentControlTab = 'data')}>Data</button
-		>
-		<button
-			class={currentControlTab === 'annotations' ? 'active' : ''}
-			onclick={() => (currentControlTab = 'annotations')}>Annotations</button
-		>
-	</div>
 
-	<div class="div-line"></div>
-
-	{#if currentControlTab === 'properties'}
+	{#if appState.currentControlTab === 'properties'}
 		<div class="control-component">
 			<div class="control-component-title">
 				<p>Dimension</p>
@@ -476,9 +460,9 @@
 				</div>
 			</div>
 		{/if}
-	{:else if currentControlTab === 'data'}
+	{:else if appState.currentControlTab === 'data'}
+	{#each theData.data as datum, i}
 		<div class="control-component">
-			{#each theData.data as datum, i}
 				<div class="control-component-title">
 					<div class="control-component-title-colour">
 						<ColourPicker bind:value={datum.colour} />
@@ -494,7 +478,7 @@
 				<div class="control-data-container">
 					<div class="control-data">
 						<div class="control-data-title">
-							<strong>x</strong>
+							<strong>x:</strong>
 							<p
 								contenteditable="false"
 								ondblclick={(e) => {
@@ -511,7 +495,7 @@
 
 					<div class="control-data">
 						<div class="control-data-title">
-							<strong>y</strong>
+							<strong>y:</strong>
 							<p
 								contenteditable="false"
 								ondblclick={(e) => {
@@ -526,8 +510,8 @@
 						<Column col={datum.y} canChange={true} />
 					</div>
 
-					<div class="control-component-title">
-						<p>Markers</p>
+					<div class="control-data-title with-icon">
+						<strong>Markers</strong>
 
 						<div class="control-component-title-icons">
 							<button class="icon" onclick={() => datum.addMarker()}>
@@ -542,8 +526,8 @@
 				</div>
 
 				<div class="div-line"></div>
-			{/each}
-		</div>
+			</div>
+		{/each}
 
 		<div>
 			<button
@@ -557,7 +541,7 @@
 				<Icon name="plus" width={16} height={16} className="static-icon" />
 			</button>
 		</div>
-	{:else if currentControlTab === 'annotations'}
+	{:else if appState.currentControlTab === 'annotations'}
 		{#each theData.annotations as annotation}
 			<Annotation {which} {annotation} />
 

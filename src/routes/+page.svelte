@@ -565,14 +565,26 @@
 
 	/* plot control */
 	:global(.control-banner) {
+		position: sticky;
+		top: 0;
+
 		width: 100%;
 		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+
+		font-weight: bold;
+		background-color: white;
+	}
+
+	:global(.control-banner-title) {
+		width: 100%;
+		display: flex;
+		flex: 1 1 0;
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-between;
-
-		font-weight: bold;
-		/* background-color: blue; */
 	}
 
 	:global(.control-banner-icons) {
@@ -585,24 +597,27 @@
 		padding: 0;
 	}
 
-	:global(.control-tag) {
+	:global(.control-tab) {
+		position: sticky;
+		top: 0;
+
 		width: 100%;
 		display: flex;
 		flex-direction: row;
 		flex-wrap: nowrap; /* Prevent buttons from wrapping */
 		align-items: center;
 		justify-content: flex-start;
-		margin-bottom: 1rem;
 		gap: 0.4rem;
 		overflow-x: auto;
 	}
 
-	:global(.control-tag::-webkit-scrollbar) {
+	:global(.control-tab::-webkit-scrollbar) {
 		display: none;
 	}
 
-	:global(.control-tag button) {
+	:global(.control-tab button) {
 		font-size: 14px;
+		margin: 0;
 		padding: 0.25rem 0.5rem;
 		color: var(--color-lightness-35);
 		background-color: transparent;
@@ -612,12 +627,12 @@
 		white-space: nowrap; /* Prevent text wrapping within buttons */
 	}
 
-	:global(.control-tag button.active) {
+	:global(.control-tab button.active) {
 		color: black;
 		background-color: var(--color-lightness-95);
 	}
 
-	:global(.control-tag button:hover) {
+	:global(.control-tab button:hover) {
 		background-color: var(--color-lightness-95);
 	}
 	:global(.control-component) {
@@ -793,6 +808,7 @@
 	/* plot control (data) */
 	:global(.control-data-container) {
 		display: flex;
+		flex: 1 1 0;
 		flex-direction: column;
 
 		width: 100%;
@@ -806,6 +822,9 @@
 	}
 
 	:global(.control-data) {
+		display: flex;
+		flex: 1 1 0;
+		flex-direction: column;
 		width: 100%;
 		min-width: 0;
 	}
@@ -829,6 +848,10 @@
 	:global(.control-data-title p) {
 		margin: 0;
 		padding: 0;
+	}
+	
+	:global(.with-icon) {
+		justify-content: space-between;
 	}
 
 	/* process */
