@@ -109,7 +109,7 @@
 								console.log(e);
 								onInput({ col: c, row: r, value: e.target.innerText, old: oldVal });
 								e.target.setAttribute('contenteditable', 'false');
-							}}>{col[c] ?? 'N/A'}</td
+							}}>{col[r] ?? 'N/A'}</td
 						>
 					{/each}
 				</tr>
