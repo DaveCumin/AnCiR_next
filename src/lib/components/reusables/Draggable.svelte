@@ -3,7 +3,7 @@
 	import { onMount, tick } from 'svelte';
 	import { appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-
+	import { deselectAllPlots } from '$lib/core/Plot.svelte';
 	import { removePlot, selectPlot } from '$lib/core/Plot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 
@@ -32,20 +32,46 @@
 	let dragStartX, dragStartY;
 	let mouseStartX, mouseStartY;
 
+	let isDragging = false;
+	let hasMouseMoved = false;
+	let dragThreshold = 5; // pixels before considering it a drag
+
 	let dragStartPositions = {};
 
 	function onMouseDown(e) {
 		if (e.target.closest('button.icon')) return;
+
 		mouseStartX = e.clientX;
 		mouseStartY = e.clientY;
 
 		dragStartPositions = {};
-		// find all selected plots
+
+		hasMouseMoved = false;
+
+		// If Alt key is pressed, toggle selection of this plot
+		if (e.altKey) {
+			selected = !selected;
+			return;
+		}
+		// If this plot is not selected, we need to handle selection logic
+		if (!selected) {
+			// Clear other selections unless Alt is held
+			core.plots.forEach((p) => {
+				if (p.id !== id) {
+					p.selected = false;
+				}
+			});
+			selected = true;
+		}
+
+		// Prepare for potential drag operation
+		dragStartPositions = {};
 		core.plots.forEach((p) => {
 			if (p.selected) {
 				dragStartPositions[p.id] = { x: p.x, y: p.y };
 			}
 		});
+
 		moving = true;
 	}
 
@@ -62,12 +88,20 @@
 	}
 
 	function onMouseMove(e) {
-		if (moving) {
+		if (moving && !isDragging) {
+			const deltaX = Math.abs(e.clientX - mouseStartX);
+			const deltaY = Math.abs(e.clientY - mouseStartY);
+
+			if (deltaX > dragThreshold || deltaY > dragThreshold) {
+				isDragging = true;
+				hasMouseMoved = true;
+			}
+		}
+		if (moving && isDragging) {
 			const deltaX = (e.clientX - mouseStartX) / appState.canvasScale;
 			const deltaY = (e.clientY - mouseStartY) / appState.canvasScale;
-
 			core.plots.forEach((p) => {
-				if (p.selected) {
+				if (p.selected || p.id == id) {
 					if (anySelectedPlotEdge(e.movementX, e.movementY)) return; //do nothing
 
 					const start = dragStartPositions[p.id];
@@ -127,6 +161,8 @@
 	function onMouseUp() {
 		moving = false;
 		resizing = false;
+		isDragging = false;
+		hasMouseMoved = false;
 	}
 
 	function startResize(e) {
@@ -152,16 +188,22 @@
 	async function handleClick(e) {
 		e.stopPropagation();
 
+		if (hasMouseMoved) {
+			return;
+		}
+
 		if (e.detail === 1) {
 			// Single click
-			selectPlot(e, id);
-			RePosition();
+			if (e.altKey) {
+				// Alt+click to toggle selection (already handled in onMouseDown)
+				return;
+			}
 		} else if (e.detail === 2) {
 			// Double click
 			appState.showControlPanel = true;
 			await tick();
-			RePosition();
 		}
+		RePosition();
 	}
 
 	function RePosition() {

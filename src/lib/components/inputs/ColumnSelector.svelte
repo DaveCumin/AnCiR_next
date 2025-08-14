@@ -16,6 +16,9 @@
 		let out = new Map();
 
 		//get the other data in plot - TODO!!
+		// Might it be better to pass in the plot id and data id directly?
+		// Need to also update getColumnById() to take in something like {plotId:0, dataId:1, colId:1}
+		// Is this the best way?
 		console.time('getPlotSiblings');
 		if (getPlotSiblings !== -1) {
 			console.log('getPlotSiblings: ', getPlotSiblings.id);

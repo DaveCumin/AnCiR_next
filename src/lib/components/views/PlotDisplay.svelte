@@ -159,7 +159,7 @@
 							bind:height={plot.height}
 							title={plot.name}
 							id={plot.id}
-							selected={plot.selected}
+							bind:selected={plot.selected}
 						>
 							{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 							<Plot theData={plot} which="plot" />
