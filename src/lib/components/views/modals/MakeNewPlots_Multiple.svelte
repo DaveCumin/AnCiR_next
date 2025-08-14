@@ -20,9 +20,9 @@
 	let plotName = $state(plotType + '_' + (core.plots.length + 1));
 
 	let xCol = $state();
-	let yCols = $state([null]); // contains column id
+	let yCols = $state([]); // contains column id
 
-	async function confirmImport() {
+	async function confirmMakePlots() {
 		awaitingMake = true;
 		await tick();
 		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms)); // short wait to make sure the spinner will show
@@ -66,13 +66,18 @@
 			await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
 		}
 
+		//select the new plots
 		deselectAllPlots();
 		for (let i = core.plots.length - 1; i > core.plots.length - yCols.length - 1; i--) {
 			core.plots[i].selected = true;
 		}
 
+		//reset the form
 		plotType = 'Plot';
+		xCol = null;
+		yCols = [];
 		awaitingMake = false;
+		steps[0].completed = false;
 		showModal = false;
 	}
 
@@ -165,7 +170,7 @@
 					class="dialog-button"
 					onclick={(e) => {
 						e.stopPropagation();
-						confirmImport();
+						confirmMakePlots();
 					}}>Make these {yCols.length} plots</button
 				>
 			</div>

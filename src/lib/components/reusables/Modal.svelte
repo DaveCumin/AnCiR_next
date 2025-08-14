@@ -48,7 +48,7 @@ https://svelte.dev/playground/modal?version=5.33.7
 			}}
 			transition:fade={{ duration: 360 }}
 		>
-			<div>
+			<div style="position:absolute; right:1rem;">
 				<!-- svelte-ignore a11y_autofocus -->
 				<button onclick={() => close()}>
 					<Icon name="close" width={16} height={16} className="close" />

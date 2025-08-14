@@ -406,6 +406,8 @@
 
 		font-size: 14px;
 		text-align: center;
+
+		cursor: pointer;
 	}
 
 	:global(button.dialog-button:hover) {
