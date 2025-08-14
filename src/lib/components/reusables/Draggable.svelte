@@ -185,24 +185,12 @@
 		}
 	}
 
-	async function handleClick(e) {
+	async function handleDblClick(e) {
 		e.stopPropagation();
+		// Double click
+		appState.showControlPanel = true;
+		await tick();
 
-		if (hasMouseMoved) {
-			return;
-		}
-
-		if (e.detail === 1) {
-			// Single click
-			if (e.altKey) {
-				// Alt+click to toggle selection (already handled in onMouseDown)
-				return;
-			}
-		} else if (e.detail === 2) {
-			// Double click
-			appState.showControlPanel = true;
-			await tick();
-		}
 		RePosition();
 	}
 
@@ -247,9 +235,12 @@
 <svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp} />
 
 <!-- added header therefore TODO: other way than hardcode -->
+
+<!-- the click does nothing becasue it's all handled in the mousedown/up for drag/resize etc. -->
 <section
 	bind:this={plotElement}
-	onclick={(e) => handleClick(e)}
+	ondblclick={(e) => handleDblClick(e)}
+	onclick={(e) => e.stopPropagation()}
 	class:selected
 	class="draggable"
 	style="left: {x}px;
