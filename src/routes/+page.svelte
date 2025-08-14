@@ -100,24 +100,38 @@
 		window.addEventListener('resize', updateWidth);
 
 		document.addEventListener('keydown', (event) => {
-			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
+			const ISMAC =
+				navigator.platform.toUpperCase().indexOf('MAC') >= 0 ||
+				navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
+			const MODIFIER = ISMAC ? event.metaKey : event.ctrlKey;
+
+			// Print out info - DEGUGGING
+			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'i') {
 				console.log($state.snapshot(core));
 				console.log($state.snapshot(appState));
 				console.log($state.snapshot(appConsts));
 			}
-			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 's') {
+			// Create sample data quickly - FOR TESTING
+			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 's') {
 				refresh();
 			}
-			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'p') {
+
+			// CHANGE SCALE - ZOOM IN
+			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'p') {
 				appState.canvasScale += 0.1;
-				console.log(appState.canvasScale);
 			}
-			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'o') {
+			// CHANGE SCALE - ZOOM OUT
+			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'o') {
 				appState.canvasScale -= 0.1;
-				console.log(appState.canvasScale);
 			}
-			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a') {
+			// SELCT ALL PLOTS
+			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'a') {
 				selectAllPlots();
+			}
+			// SAVE THE SESSION
+			if (MODIFIER && event.key.toLowerCase() === 's') {
+				event.preventDefault();
+				//TODO: add save
 			}
 		});
 

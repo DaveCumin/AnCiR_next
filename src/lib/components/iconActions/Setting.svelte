@@ -82,6 +82,7 @@
 		showDropdown = false;
 	}
 
+	//TODO: FIX THIS!!
 	function exportJson() {
 		const jsonStr = outputCoreAsJson();
 
