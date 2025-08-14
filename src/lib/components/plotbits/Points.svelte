@@ -102,7 +102,7 @@
 		if (closest) {
 			let content = `(${closest.x.toFixed(2)}, ${closest.y.toFixed(2)})`;
 			if (xtype == 'time') {
-				content = `(${new Date(x[closest.index]).toLocaleString()}, ${y[closest.index].toFixed(2)})`;
+				content = `(${new Date(closest.x).toLocaleString()}, ${closest.y.toFixed(2)})`;
 			}
 			const event = new CustomEvent('tooltip', {
 				detail: {

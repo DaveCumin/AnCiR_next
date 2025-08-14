@@ -46,9 +46,43 @@
 		colour = $state();
 		offset = $derived.by(() => {
 			if (this.x?.getData()) {
-				return (
-					(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
+				console.log('Debugging offset in actogram: ');
+				console.log(
+					'startTime: ',
+					this.parentPlot?.startTime,
+					', ',
+					new Date(this.parentPlot?.startTime),
+					',',
+					Number(new Date(this.parentPlot?.startTime)),
+					',',
+					new Date(this.parentPlot?.startTime) -
+						new Date(this.parentPlot?.startTime).getTimezoneOffset(),
+					',',
+					Number(
+						new Date(this.parentPlot?.startTime) -
+							new Date(this.parentPlot?.startTime).getTimezoneOffset()
+					)
 				);
+				console.log('time0: ', this.x?.getData()[0], ', ', new Date(this.x?.getData()[0]));
+
+				if (this.x.type == 'time') {
+					console.log(
+						'offset time: ',
+						(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
+					);
+					return (
+						(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
+					);
+				} else {
+					//TODO: Fix this - it's not quite right.
+					console.log(
+						'offset number: ',
+						Number(new Date(this.parentPlot?.startTime)) / 3600000 - Number(this.x?.getData()[0])
+					);
+					return (
+						Number(new Date(this.parentPlot?.startTime)) / 3600000 - Number(this.x?.getData()[0])
+					);
+				}
 			} else {
 				return 0;
 			}
@@ -157,7 +191,7 @@
 			});
 			//TODO: fix here for data with timeformat that doesn't work
 			return minTime !== Infinity && minTime >= 0
-				? new Date(minTime).toISOString().substring(0, 10)
+				? new Date(minTime).setHours(0, 0, 0, 0) //set to beginnig of the day
 				: undefined;
 		});
 		spaceBetween = $state(2);
