@@ -527,7 +527,6 @@
 
 							await tick();
 
-							//TODO: consider this - scroll to the bottom and select y data automatically
 							//Scroll to the bottom of dataSettings
 							const dataSettings =
 								document.getElementsByClassName('control-display')[0].parentElement;
@@ -540,6 +539,8 @@
 							} else {
 								console.error("Element with ID 'dataSettings' not found");
 							}
+
+							//TODO: consider focuus on the next y
 							//focus on the next y value
 
 							// // Get the last element with class 'y-select'

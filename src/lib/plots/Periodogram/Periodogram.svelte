@@ -162,10 +162,16 @@
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
 
-			if (dataIN && dataIN.x) {
+			if (dataIN?.x) {
+				//if there's data, use it!
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new ColumnClass({ refId: -1 });
+				if (parent.data.length > 0) {
+					this.x = parent.data[parent.data.length - 1].x;
+				} else {
+					//blank one
+					this.x = new ColumnClass({ refId: -1 });
+				}
 			}
 			if (dataIN && dataIN.y) {
 				this.y = ColumnClass.fromJSON(dataIN.y);
@@ -406,6 +412,9 @@
 <script>
 	import { onMount } from 'svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import { flip } from 'svelte/animate';
+	import { slide } from 'svelte/transition';
+	import { tick } from 'svelte';
 
 	let { theData, which } = $props();
 
@@ -677,50 +686,69 @@
 		<div>
 			<p>Data:</p>
 			<button
-				onclick={() =>
+				onclick={async () => {
 					theData.addData({
-						x: { refId: -1 },
+						x: null,
 						y: { refId: -1 }
-					})}
+					});
+					await tick();
+
+					const dataSettings = document.getElementsByClassName('control-display')[0].parentElement;
+					if (dataSettings) {
+						dataSettings.scrollTo({
+							top: dataSettings.scrollHeight,
+							left: 0,
+							behavior: 'smooth'
+						});
+					} else {
+						console.error("Element with ID 'dataSettings' not found");
+					}
+				}}
 			>
 				+
 			</button>
 
-			{#each theData.data as datum, i}
-				<p>
-					Data {i}
-					<button onclick={() => theData.removeData(i)}>-</button>
-				</p>
+			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
+				<div
+					class="dataBlock"
+					animate:flip={{ duration: 500 }}
+					in:slide={{ duration: 500, axis: 'y' }}
+				>
+					<p>
+						Data {i}
+						<button onclick={() => theData.removeData(i)}>-</button>
+					</p>
 
-				x: {datum.x.name}
-				<Column col={datum.x} canChange={true} />
+					x: {datum.x.name}
+					<Column col={datum.x} canChange={true} />
 
-				y: {datum.y.name}
-				<Column col={datum.y} canChange={true} />
+					y: {datum.y.name}
+					<Column col={datum.y} canChange={true} />
 
-				<!-- New: Method selector -->
-				<p>
-					Method:
-					<select bind:value={datum.method} onchange={() => datum.updatePeriodData()}>
-						<option value="Chi-squared">Chi-squared</option>
-						<option value="Lomb-Scargle">Lomb-Scargle</option>
-					</select>
-				</p>
+					<!-- New: Method selector -->
+					<p>
+						Method:
+						<select bind:value={datum.method} onchange={() => datum.updatePeriodData()}>
+							<option value="Chi-squared">Chi-squared</option>
+							<option value="Lomb-Scargle">Lomb-Scargle</option>
+						</select>
+					</p>
 
-				<!-- binSize only relevant for Chi-squared -->
-				{#if datum.method === 'Chi-squared'}
-					binSize: <NumberWithUnits step="0.01" min="0.01" bind:value={datum.binSize} />
-					alpha:
-					<NumberWithUnits
-						min="0.0001"
-						max="0.9999"
-						step="0.01"
-						bind:value={datum.chiSquaredAlpha}
-						onInput={() => datum.updatePeriodData()}
-					/>
-				{/if}
-				<Line lineData={datum.line} which="controls" />
-				<Points pointsData={datum.points} which="controls" />
+					<!-- binSize only relevant for Chi-squared -->
+					{#if datum.method === 'Chi-squared'}
+						binSize: <NumberWithUnits step="0.01" min="0.01" bind:value={datum.binSize} />
+						alpha:
+						<NumberWithUnits
+							min="0.0001"
+							max="0.9999"
+							step="0.01"
+							bind:value={datum.chiSquaredAlpha}
+							onInput={() => datum.updatePeriodData()}
+						/>
+					{/if}
+					<Line lineData={datum.line} which="controls" />
+					<Points pointsData={datum.points} which="controls" />
+				</div>
 			{/each}
 		</div>
 	{/if}
