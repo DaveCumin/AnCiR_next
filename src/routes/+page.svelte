@@ -125,7 +125,8 @@
 				appState.canvasScale -= 0.1;
 			}
 			// SELCT ALL PLOTS
-			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'a') {
+			if (MODIFIER && event.key.toLowerCase() === 'a') {
+				event.preventDefault();
 				selectAllPlots();
 			}
 			// SAVE THE SESSION

@@ -18,11 +18,16 @@
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
-
 			if (dataIN?.x) {
+				//if there's data, use it!
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new ColumnClass({ refId: -1 });
+				if (parent.data.length > 0) {
+					this.x = parent.data[parent.data.length - 1].x;
+				} else {
+					//blank one
+					this.x = new ColumnClass({ refId: -1 });
+				}
 			}
 			if (dataIN?.y) {
 				this.y = ColumnClass.fromJSON(dataIN.y);
@@ -276,6 +281,9 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { onMount } from 'svelte';
+	import { flip } from 'svelte/animate';
+	import { slide } from 'svelte/transition';
+	import { tick } from 'svelte';
 
 	let { theData, which } = $props();
 
@@ -505,37 +513,81 @@
 			</div>
 		</div>
 	{:else if currentControlTab === 'data'}
-		<div>
+		<div id="dataSettings">
 			<div class="heading">
 				<p>Data</p>
 				<div class="add">
 					<button
 						class="icon"
-						onclick={() =>
+						onclick={async () => {
 							theData.addData({
-								x: { refId: -1 },
-								y: { refId: -1 }
-							})}
+								x: null,
+								y: {}
+							});
+
+							await tick();
+
+							//TODO: consider this - scroll to the bottom and select y data automatically
+							//Scroll to the bottom of dataSettings
+							const dataSettings =
+								document.getElementsByClassName('control-display')[0].parentElement;
+							if (dataSettings) {
+								dataSettings.scrollTo({
+									top: dataSettings.scrollHeight,
+									left: 0,
+									behavior: 'smooth'
+								});
+							} else {
+								console.error("Element with ID 'dataSettings' not found");
+							}
+							//focus on the next y value
+
+							// // Get the last element with class 'y-select'
+							// const ySelectElements = document.getElementsByClassName('y-select');
+							// const lastYSelect = ySelectElements[ySelectElements.length - 1];
+
+							// // Get the <select> element within the last y-select
+							// const selectElement = lastYSelect.querySelector('select');
+
+							// // Check if the select element exists
+							// if (selectElement) {
+							// 	// Simulate a click on the select element
+							// 	selectElement.click();
+							// } else {
+							// 	console.error('No <select> element found within the last y-select element');
+							// }
+						}}
 					>
 						<Icon name="add" width={16} height={16} />
 					</button>
 				</div>
 			</div>
 
-			{#each theData.data as datum, i}
-				<p>
-					Data {i}
-					<button onclick={() => theData.removeData(i)}>-</button>
-				</p>
+			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
+				<div
+					class="dataBlock"
+					animate:flip={{ duration: 500 }}
+					in:slide={{ duration: 500, axis: 'y' }}
+				>
+					<p>
+						Data {i}
+						<button onclick={() => theData.removeData(i)}>-</button>
+					</p>
 
-				x: {datum.x.name}
-				<Column col={datum.x} canChange={true} />
+					<div class="data-wrapper">
+						<div class="x-select">
+							x: {datum.x.name}
 
-				y: {datum.y.name}
-				<Column col={datum.y} canChange={true} />
-
-				<Line lineData={datum.line} which="controls" />
-				<Points pointsData={datum.points} which="controls" />
+							<Column col={datum.x} canChange={true} />
+						</div>
+						<div class="y-select">
+							y: {datum.y.name}
+							<Column col={datum.y} canChange={true} />
+						</div>
+						<Line lineData={datum.line} which="controls" />
+						<Points pointsData={datum.points} which="controls" />
+					</div>
+				</div>
 			{/each}
 		</div>
 	{/if}
