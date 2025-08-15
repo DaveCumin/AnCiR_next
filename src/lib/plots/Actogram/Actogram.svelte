@@ -252,7 +252,7 @@
 					}
 				});
 			}
-
+			console.log(ylims_out);
 			return ylims_out;
 		});
 
@@ -365,7 +365,6 @@
 </script>
 
 {#snippet controls(theData)}
-
 	{#if appState.currentControlTab === 'properties'}
 		<div class="control-component">
 			<div class="control-component-title">
@@ -505,56 +504,60 @@
 					animate:flip={{ duration: 500 }}
 					in:slide={{ duration: 500, axis: 'y' }}
 				>
-
-				<div class="control-component-title">
-					<div class="control-component-title-colour">
-						<ColourPicker bind:value={datum.colour} />
-						<p>Data {i}</p>
-					</div>
-					<div class="control-component-title-icons">
-						<button class="icon" onclick={() => theData.removeData(i)}>
-							<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
-						</button>
-					</div>
-				</div>
-
-				<div class="control-data-container">
-					<div class="control-data">
-						<div class="control-data-title">
-							<strong>x:</strong>
-							<p
-								contenteditable="false"
-								ondblclick={(e) => {
-									e.target.setAttribute('contenteditable', 'true');
-									e.target.focus();
-								}}
-								onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-								bind:innerHTML={datum.x.name}
-							></p>
+					<div class="control-component-title">
+						<div class="control-component-title-colour">
+							<ColourPicker bind:value={datum.colour} />
+							<p>Data {i}</p>
 						</div>
+						<div class="control-component-title-icons">
+							<button class="icon" onclick={() => theData.removeData(i)}>
+								<Icon
+									name="minus"
+									width={16}
+									height={16}
+									className="control-component-title-icon"
+								/>
+							</button>
+						</div>
+					</div>
+
+					<div class="control-data-container">
+						<div class="control-data">
+							<div class="control-data-title">
+								<strong>x:</strong>
+								<p
+									contenteditable="false"
+									ondblclick={(e) => {
+										e.target.setAttribute('contenteditable', 'true');
+										e.target.focus();
+									}}
+									onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+									bind:innerHTML={datum.x.name}
+								></p>
+							</div>
 
 							<Column col={datum.x} canChange={true} />
 						</div>
 
-					<div class="control-data">
-						<div class="control-data-title">
-							<strong>y:</strong>
-							<p
-								contenteditable="false"
-								ondblclick={(e) => {
-									e.target.setAttribute('contenteditable', 'true');
-									e.target.focus();
-								}}
-								onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-								bind:innerHTML={datum.y.name}
-							></p>
-						</div>
+						<div class="control-data">
+							<div class="control-data-title">
+								<strong>y:</strong>
+								<p
+									contenteditable="false"
+									ondblclick={(e) => {
+										e.target.setAttribute('contenteditable', 'true');
+										e.target.focus();
+									}}
+									onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+									bind:innerHTML={datum.y.name}
+								></p>
+							</div>
 
 							<Column col={datum.y} canChange={true} />
 						</div>
 
-					<div class="control-data-title with-icon">
-						<strong>Markers</strong>
+						<div class="control-data-title with-icon">
+							<strong>Markers</strong>
 
 							<div class="control-component-title-icons">
 								<button class="icon" onclick={() => datum.addMarker()}>
@@ -573,9 +576,9 @@
 						{/each}
 					</div>
 
-				<div class="div-line"></div>
-			</div>
-		{/each}
+					<div class="div-line"></div>
+				</div>
+			{/each}
 		</div>
 
 		<div>

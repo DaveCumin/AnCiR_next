@@ -156,7 +156,7 @@
 <Modal bind:showModal={showImportModal}>
 	{#snippet header()}
 		<div class="heading">
-			<h2>Import Workflow</h2>
+			<h2>Import Session</h2>
 
 			<div class="choose-file-container">
 				<button class="choose-file-button" onclick={chooseFile}> Upload File </button>

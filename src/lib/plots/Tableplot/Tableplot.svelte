@@ -96,12 +96,19 @@
 			if (dataIN) {
 				this.columnRefs = dataIN.columnRefs;
 				this.showCol = dataIN.showCol ?? Array(this.columnRefs.length).fill(true);
+				this.colCurrent = dataIN.colCurrent ?? 1;
+				this.showColNumber = dataIN.showColNumber ?? false;
+				this.decimalPlaces = dataIN.decimalPlaces ?? 2;
 			}
 		}
 
 		toJSON() {
 			return {
-				columnRefs: this.columnRefs
+				columnRefs: this.columnRefs,
+				showCol: this.showCol,
+				colCurrent: this.colCurrent,
+				showColNumber: this.showColNumber,
+				decimalPlaces: this.decimalPlaces
 			};
 		}
 		static fromJSON(parent, json) {
@@ -111,6 +118,10 @@
 
 			const table = new Tableplotclass(parent, null);
 			table.columnRefs = json.columnRefs;
+			table.showCol = json.showCol;
+			table.colCurrent = json.colCurrent;
+			table.showColNumber = json.showColNumber;
+			table.decimalPlaces = json.decimalPlaces;
 
 			return table;
 		}

@@ -99,6 +99,9 @@ export function pushObj(obj, autoPosition = true) {
 	} else if (obj instanceof Plot) {
 		if (autoPosition) {
 			const container = document.getElementsByClassName('canvas')[0];
+			console.log('DEBUGGING new plot from pushObj: ');
+			console.log(container.offsetLeft);
+			console.log(container.offsetTop);
 			const pos = findNextAvailablePosition(core.plots);
 			obj.x = pos.x + container.offsetLeft;
 			obj.y = pos.y + container.offsetTop;
