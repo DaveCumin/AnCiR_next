@@ -322,12 +322,14 @@
 
 	{#if selectedPlots.length > 1}
 		<div class="control-banner">
-			<p>{selectedPlots.length} plots selected</p>
+			<div class="control-banner-title">
+				<p>{selectedPlots.length} plots selected</p>
 
-			<div class="control-banner-icons">
-				<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
-					<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
-				</button>
+				<div class="control-banner-icons">
+					<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
+						<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
+					</button>
+				</div>
 			</div>
 		</div>
 
