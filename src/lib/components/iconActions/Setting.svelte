@@ -1,3 +1,53 @@
+<script module>
+	export function exportJson() {
+		try {
+			// Get JSON string and validate
+			const jsonStr = outputCoreAsJson();
+			if (typeof jsonStr !== 'string' || !jsonStr) {
+				throw new Error('Invalid or empty JSON string returned by outputCoreAsJson');
+			}
+
+			// Validate JSON content
+			try {
+				JSON.parse(jsonStr); // Ensure it's valid JSON
+			} catch (e) {
+				throw new Error('Invalid JSON format: ' + e.message);
+			}
+
+			// Create Blob with JSON content
+			const blob = new Blob([jsonStr], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+
+			// Create temporary <a> element
+			const a = document.createElement('a');
+			a.innerText = 'download';
+			a.href = url;
+			a.download = 'session.json'; // File name for download
+			document.body.appendChild(a);
+
+			// Programmatically trigger click
+			a.click();
+
+			console.log(
+				'should have started download of ',
+				JSON.parse(jsonStr),
+				' from ',
+				url,
+				' : ',
+				blob
+			);
+			// Clean up
+			setTimeout(() => {
+				document.body.removeChild(a);
+				URL.revokeObjectURL(url);
+			}, 10); // Delay cleanup to ensure download starts
+		} catch (error) {
+			console.error('Failed to export JSON:', error.message);
+			alert('Error exporting JSON: ' + error.message); // Notify user of error
+		}
+	}
+</script>
+
 <script>
 	// @ts-nocheck
 	import { tick } from 'svelte';
@@ -79,55 +129,6 @@
 
 		showImportModal = false;
 		importReady = false;
-	}
-
-	//TODO: Not downloading... FIX THIS!!
-	function exportJson() {
-		try {
-			// Get JSON string and validate
-			const jsonStr = outputCoreAsJson();
-			if (typeof jsonStr !== 'string' || !jsonStr) {
-				throw new Error('Invalid or empty JSON string returned by outputCoreAsJson');
-			}
-
-			// Validate JSON content
-			try {
-				JSON.parse(jsonStr); // Ensure it's valid JSON
-			} catch (e) {
-				throw new Error('Invalid JSON format: ' + e.message);
-			}
-
-			// Create Blob with JSON content
-			const blob = new Blob([jsonStr], { type: 'application/json' });
-			const url = URL.createObjectURL(blob);
-
-			// Create temporary <a> element
-			const a = document.createElement('a');
-			a.innerText = 'download';
-			a.href = url;
-			a.download = 'session.json'; // File name for download
-			document.body.appendChild(a);
-
-			// Programmatically trigger click
-			a.click();
-
-			console.log(
-				'should have started download of ',
-				JSON.parse(jsonStr),
-				' from ',
-				url,
-				' : ',
-				blob
-			);
-			// Clean up
-			setTimeout(() => {
-				document.body.removeChild(a);
-				URL.revokeObjectURL(url);
-			}, 10); // Delay cleanup to ensure download starts
-		} catch (error) {
-			console.error('Failed to export JSON:', error.message);
-			alert('Error exporting JSON: ' + error.message); // Notify user of error
-		}
 	}
 </script>
 

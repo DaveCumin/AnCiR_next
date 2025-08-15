@@ -18,7 +18,14 @@
 	import { testJson } from './testJson.svelte.js';
 	import { testJsonDC } from './testJsonDC.svelte';
 
-	import { core, pushObj, appConsts, appState, snapToGrid } from '$lib/core/core.svelte';
+	import {
+		core,
+		pushObj,
+		appConsts,
+		appState,
+		snapToGrid,
+		outputCoreAsJson
+	} from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	import { Table } from '$lib/core/table.svelte';
 	import { Plot, selectAllPlots } from '$lib/core/Plot.svelte';
@@ -91,8 +98,6 @@
 
 		isLoaded = true;
 
-		// loadTestJson(); // TODO: DEBUG - error in COLUMN class
-
 		//add event listeners
 		const updateWidth = () => {
 			appState.windowWidth = window.innerWidth;
@@ -130,9 +135,54 @@
 				selectAllPlots();
 			}
 			// SAVE THE SESSION
-			if (MODIFIER && event.key.toLowerCase() === 's') {
+			if (!event.shiftKey && MODIFIER && event.key.toLowerCase() === 's') {
 				event.preventDefault();
-				//TODO: add save
+				//TODO: Can this be put into the Setting module? I tried before and had issues
+				try {
+					// Get JSON string and validate
+					const jsonStr = outputCoreAsJson();
+					if (typeof jsonStr !== 'string' || !jsonStr) {
+						throw new Error('Invalid or empty JSON string returned by outputCoreAsJson');
+					}
+
+					// Validate JSON content
+					try {
+						JSON.parse(jsonStr); // Ensure it's valid JSON
+					} catch (e) {
+						throw new Error('Invalid JSON format: ' + e.message);
+					}
+
+					// Create Blob with JSON content
+					const blob = new Blob([jsonStr], { type: 'application/json' });
+					const url = URL.createObjectURL(blob);
+
+					// Create temporary <a> element
+					const a = document.createElement('a');
+					a.innerText = 'download';
+					a.href = url;
+					a.download = 'session.json'; // File name for download
+					document.body.appendChild(a);
+
+					// Programmatically trigger click
+					a.click();
+
+					console.log(
+						'should have started download of ',
+						JSON.parse(jsonStr),
+						' from ',
+						url,
+						' : ',
+						blob
+					);
+					// Clean up
+					setTimeout(() => {
+						document.body.removeChild(a);
+						URL.revokeObjectURL(url);
+					}, 10); // Delay cleanup to ensure download starts
+				} catch (error) {
+					console.error('Failed to export JSON:', error.message);
+					alert('Error exporting JSON: ' + error.message); // Notify user of error
+				}
 			}
 		});
 
@@ -879,7 +929,7 @@
 		margin: 0;
 		padding: 0;
 	}
-	
+
 	:global(.with-icon) {
 		justify-content: space-between;
 	}

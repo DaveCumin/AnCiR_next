@@ -232,7 +232,6 @@
 	}
 
 	// put the data into the tool store
-	// TODO_med: check the logic here, as the Sampling freq isn't updating properly for times.
 	async function doBasicFileImport(result, fname) {
 		// create Table object with constructor(Id, importedFrom, displayName, dataLength)
 		const newDataEntry = new Table();
