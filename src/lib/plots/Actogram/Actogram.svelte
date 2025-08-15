@@ -576,6 +576,7 @@
 				<div class="div-line"></div>
 			</div>
 		{/each}
+		</div>
 
 		<div>
 			<button

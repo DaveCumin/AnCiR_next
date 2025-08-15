@@ -412,10 +412,11 @@
 <script>
 	import { appState } from '$lib/core/core.svelte';
 	import { onMount } from 'svelte';
-	import Icon from '$lib/icons/Icon.svelte';
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
 	import { tick } from 'svelte';
+	
+	import Icon from '$lib/icons/Icon.svelte';
 
 	let { theData, which } = $props();
 
@@ -773,13 +774,12 @@
 					</div>
 				
 
-				line col: <ColourPicker bind:value={datum.linecolour} />
-				line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
-				point col: <ColourPicker bind:value={datum.pointcolour} />
-				point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
+					<Line lineData={datum.line} which="controls" />
+					<Points pointsData={datum.points} which="controls" />
 
-				<div class="div-line"></div>
-			</div>
+					<div class="div-line"></div>
+
+				</div>
 			{/each}
 		</div>
 
@@ -794,6 +794,7 @@
 			>
 				<Icon name="plus" width={16} height={16} className="static-icon" />
 			</button>
+		</div>
 		</div>
 	{/if}
 {/snippet}

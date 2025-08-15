@@ -101,12 +101,12 @@
 
 		<div class="control-input">
 			<p>End</p>
-			<NumberWithUnitsstep="0.1" value={annotation.endTime} oninput={changedEndTime} />
+			<NumberWithUnits step="0.1" value={annotation.endTime} oninput={changedEndTime} />
 		</div>
 
 		<div class="control-input">
 			<p>Duration</p>
-			<NumberWithUnitsstep="0.1" bind:value={annotation.duration} oninput={changedDuration} />
+			<NumberWithUnits step="0.1" bind:value={annotation.duration} oninput={changedDuration} />
 		</div>
 	</div>
 		
