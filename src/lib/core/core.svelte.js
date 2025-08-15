@@ -106,6 +106,17 @@ export function pushObj(obj, autoPosition = true) {
 			obj.x = pos.x + container.offsetLeft;
 			obj.y = pos.y + container.offsetTop;
 		}
+		//now do sizing
+		if (obj.type === 'scatterplot') {
+			obj.width = snapToGrid(500);
+			obj.height = snapToGrid(300);
+		} else if (obj.type === 'periodogram') {
+			obj.width = snapToGrid(400);
+			obj.height = snapToGrid(250);
+		} else if (obj.type === 'actogram') {
+			obj.width = snapToGrid(500);
+			obj.height = snapToGrid(600);
+		}
 
 		core.plots.push(obj);
 	} else {

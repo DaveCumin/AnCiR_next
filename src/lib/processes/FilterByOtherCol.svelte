@@ -134,6 +134,7 @@
 				{#if getColumnById(condition.byColId)?.type === 'category'}
 					<input type="text" bind:value={condition.byColValue} />
 				{:else if getColumnById(condition.byColId)?.type === 'time'}
+					<!--TODO: bind a value here so it always shows in ui-->
 					<input
 						type="datetime-local"
 						oninput={(e) => {
