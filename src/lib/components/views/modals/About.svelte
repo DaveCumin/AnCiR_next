@@ -64,11 +64,10 @@
 		<p>
 			This version is written in <a href="https://svelte.dev/">Svelte</a> by
 			<a href="https://github.com/davecumin">DaveCumin</a>
-			and <a href="https://github.com/yz-329">yz-329</a>. The
-			<a href="https://github.com/DaveCumin/ancir_svelte">previous</a>
-			version was also written in Svelte, and the
-			<a href="https://github.com/DaveCumin/AnCiR">version before that</a> was written in Javascript
-			without Svelte.
+			and <a href="https://github.com/yz-329">yz-329</a>. There have been two previous versions (see
+			<a href="https://github.com/DaveCumin/ancir_svelte">here</a>
+			and
+			<a href="https://github.com/DaveCumin/AnCiR">here</a>).
 		</p>
 		<p>
 			This version was financially supported by a University of Auckland Teaching and Learning
