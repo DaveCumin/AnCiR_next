@@ -490,8 +490,6 @@
 						step="0.1"
 						value={theData.ylimsIN[1] == null ? theData.ylims[1] : theData.ylimsIN[1]}
 						onInput={(val) => {
-							console.log(val);
-							console.log(parseFloat(val));
 							theData.ylimsIN[1] = [parseFloat(val)];
 						}}
 					/>

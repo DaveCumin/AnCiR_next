@@ -605,8 +605,8 @@
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
-						onInput={(e) => {
-							theData.ylimsIN[0] = [parseFloat(e.target.value)];
+						onInput={(val) => {
+							theData.ylimsIN[0] = [parseFloat(val)];
 						}}
 					/>
 				</div>
@@ -616,8 +616,8 @@
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-						onInput={(e) => {
-							theData.ylimsIN[1] = [parseFloat(e.target.value)];
+						onInput={(val) => {
+							theData.ylimsIN[1] = [parseFloat(val)];
 						}}
 					/>
 				</div>
@@ -643,8 +643,8 @@
 						min="0.1"
 						step="0.1"
 						value={theData.periodlimsIN[0] ? theData.periodlimsIN[0] : theData.periodlims[0]}
-						onInput={(e) => {
-							theData.periodlimsIN[0] = parseFloat(e.target.value);
+						onInput={(val) => {
+							theData.periodlimsIN[0] = parseFloat(val);
 						}}
 					/>
 				</div>
@@ -654,8 +654,8 @@
 					<NumberWithUnits
 						step="0.1"
 						value={theData.periodlimsIN[1] ? theData.periodlimsIN[1] : theData.periodlimsIN[1]}
-						onInput={(e) => {
-							theData.periodlimsIN[1] = parseFloat(e.target.value);
+						onInput={(val) => {
+							theData.periodlimsIN[1] = parseFloat(val);
 						}}
 					/>
 				</div>
