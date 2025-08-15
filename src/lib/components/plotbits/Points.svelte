@@ -11,9 +11,7 @@
 		constructor(dataIN, parent) {
 			this.parentData = parent;
 			this.colour =
-				dataIN?.colour ??
-				getPaletteColor(this.parentData.parentPlot.data.length) ??
-				getPaletteColor(0);
+				dataIN?.colour ?? getPaletteColor(parent.parentPlot.data.length) ?? getPaletteColor(0);
 			this.radius = dataIN?.radius ?? 4;
 			this.draw = dataIN?.draw ?? true;
 		}
