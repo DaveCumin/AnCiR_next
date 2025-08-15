@@ -1,4 +1,6 @@
 <script module>
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+
 	export function getRandomColor() {
 		const letters = '0123456789ABCDEF';
 		let color = '#';
@@ -15,7 +17,6 @@
 
 <script>
 	import { tick } from 'svelte';
-
 	import { onMount, onDestroy } from 'svelte';
 	import { appConsts, appState } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
@@ -398,13 +399,12 @@
 								style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
 							/>
 						</div>
-						<input
-							type="number"
+						<NumberWithUnits
 							min="0"
 							max="100"
 							step="1"
 							bind:value={hsvInput.a}
-							oninput={updateFromHsv}
+							onInput={updateFromHsv}
 							style="width: {numberInputWidth}px; height: 16px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
 						/>
 					</div>
@@ -473,13 +473,12 @@
 										style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
 									/>
 								</div>
-								<input
-									type="number"
+								<NumberWithUnits
 									min="0"
 									max="360"
 									step="1"
 									bind:value={hsvInput.h}
-									oninput={updateFromHsv}
+									onInput={updateFromHsv}
 									style="width:  {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
 								/>
 							</div>
@@ -503,13 +502,12 @@
 										style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
 									/>
 								</div>
-								<input
-									type="number"
+								<NumberWithUnits
 									min="0"
 									max="100"
 									step="1"
 									bind:value={hsvInput.s}
-									oninput={updateFromHsv}
+									onInput={updateFromHsv}
 									style="width: {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
 								/>
 							</div>
@@ -533,13 +531,12 @@
 										style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
 									/>
 								</div>
-								<input
-									type="number"
+								<NumberWithUnits
 									min="0"
 									max="100"
 									step="1"
 									bind:value={hsvInput.v}
-									oninput={updateFromHsv}
+									onInput={updateFromHsv}
 									style="width: {numberInputWidth}px; height: 16px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
 								/>
 							</div>
@@ -562,12 +559,11 @@
 										style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
 									/>
 								</div>
-								<input
-									type="number"
+								<NumberWithUnits
 									min="0"
 									max="255"
 									bind:value={rgbInput.r}
-									oninput={updateFromRgb}
+									onInput={updateFromRgb}
 									style="width:  {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
 								/>
 							</div>
@@ -590,12 +586,11 @@
 										style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
 									/>
 								</div>
-								<input
-									type="number"
+								<NumberWithUnits
 									min="0"
 									max="255"
 									bind:value={rgbInput.g}
-									oninput={updateFromRgb}
+									onInput={updateFromRgb}
 									style="width:  {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
 								/>
 							</div>
@@ -618,12 +613,11 @@
 										style="position: relative; width: 100%; height: 16px; background: transparent; cursor: crosshair; -webkit-appearance: none;"
 									/>
 								</div>
-								<input
-									type="number"
+								<NumberWithUnits
 									min="0"
 									max="255"
 									bind:value={rgbInput.b}
-									oninput={updateFromRgb}
+									onInput={updateFromRgb}
 									style="width: {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
 								/>
 							</div>

@@ -1,4 +1,6 @@
 <script module>
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+
 	export const binneddata_defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: -1 }],
@@ -98,9 +100,9 @@
 	y = <ColumnSelector bind:value={p.args.yIN} excludeColIds={[p.xIN]} onChange={getBinnedData} /><br
 	/>
 	Bin size:
-	<input type="number" bind:value={p.args.binSize} oninput={getBinnedData} min="0.1" step="0.01" />
+	<NumberWithUnits bind:value={p.args.binSize} oninput={getBinnedData} min="0.1" step="0.01" />
 	<br />
-	Bin start: <input type="number" bind:value={p.args.binStart} oninput={getBinnedData} />
+	Bin start: <NumberWithUnits bind:value={p.args.binStart} oninput={getBinnedData} />
 </p>
 <p>Output:</p>
 {#key binnedData}

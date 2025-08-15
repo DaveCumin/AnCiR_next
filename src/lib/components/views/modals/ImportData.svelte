@@ -348,8 +348,7 @@
 							</select>
 						</p>
 						<p>
-							Skip lines: <input
-								type="number"
+							Skip lines: <NumberWithUnits
 								bind:value={skipLines}
 								min="0"
 								oninput={() => doPreview()}

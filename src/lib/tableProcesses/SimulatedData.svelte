@@ -73,8 +73,15 @@
 		min="0.1"
 		step="0.1"
 		max={1000 * 24}
+		units={{
+			default: 'hrs',
+			days: 24,
+			hrs: 1,
+			mins: 1 / 60,
+			secs: 1 / (60 * 60)
+		}}
 		onInput={makeSimulatedData}
-		selectedUnitStart="day"
+		selectedUnitStart="days"
 	/>
 </p>
 <p>
@@ -83,8 +90,15 @@
 		min="0.01"
 		step="0.01"
 		max={50}
+		units={{
+			default: 'hrs',
+			days: 24,
+			hrs: 1,
+			mins: 1 / 60,
+			secs: 1 / (60 * 60)
+		}}
 		onInput={makeSimulatedData}
-		selectedUnitStart="min"
+		selectedUnitStart="mins"
 	/>
 </p>
 
@@ -94,6 +108,13 @@
 		min="0.1"
 		step="0.1"
 		max={50}
+		units={{
+			default: 'hrs',
+			days: 24,
+			hrs: 1,
+			mins: 1 / 60,
+			secs: 1 / (60 * 60)
+		}}
 		onInput={makeSimulatedData}
 	/>
 </p>
@@ -103,7 +124,6 @@
 		min="10"
 		max="1000"
 		step="1"
-		units={{}}
 		onInput={makeSimulatedData}
 	/>
 </p>

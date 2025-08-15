@@ -1,4 +1,6 @@
 <script module>
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+
 	export function multiply(x, args) {
 		const value = args.value;
 		return x.map((i) => i * value);
@@ -25,7 +27,7 @@
 			<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
 		</button>
 	</div>
-	<input type="number" bind:value={p.args.value} />
+	<NumberWithUnits bind:value={p.args.value} />
 </div>
 
 <style>
