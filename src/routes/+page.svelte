@@ -25,11 +25,14 @@
 	import { Process } from '$lib/core/Process.svelte';
 	import { TableProcess } from '$lib/core/tableProcess.svelte';
 
+	import Icon from '$lib/icons/Icon.svelte';
+
 	// import { testjson } from '$lib/test.svelte.js';
 
 	import { guessFormatD3 } from '$lib/utils/time/guessTimeFormat_d3.js';
 	import { guessFormat } from '$lib/utils/time/guessTimeFormat.js';
 
+	let loadingMsg = $state('Warming up...');
 	let isLoaded = $state(false);
 
 	// const timesToTest = ['2025/10/01', '2025/12/01', '2025/13/01'];
@@ -79,8 +82,11 @@
 
 	onMount(async () => {
 		//load the maps
+		loadingMsg = 'Loading processes ...';
 		appConsts.processMap = await loadProcesses();
+		loadingMsg = 'Loading plots ...';
 		appConsts.plotMap = await loadPlots();
+		loadingMsg = 'Loading table processes ...';
 		appConsts.tableProcessMap = await loadTableProcesses();
 
 		isLoaded = true;
@@ -94,24 +100,39 @@
 		window.addEventListener('resize', updateWidth);
 
 		document.addEventListener('keydown', (event) => {
-			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
+			const ISMAC =
+				navigator.platform.toUpperCase().indexOf('MAC') >= 0 ||
+				navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
+			const MODIFIER = ISMAC ? event.metaKey : event.ctrlKey;
+
+			// Print out info - DEGUGGING
+			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'i') {
 				console.log($state.snapshot(core));
 				console.log($state.snapshot(appState));
 				console.log($state.snapshot(appConsts));
 			}
-			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 's') {
+			// Create sample data quickly - FOR TESTING
+			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 's') {
 				refresh();
 			}
-			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'p') {
+
+			// CHANGE SCALE - ZOOM IN
+			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'p') {
 				appState.canvasScale += 0.1;
-				console.log(appState.canvasScale);
 			}
-			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'o') {
+			// CHANGE SCALE - ZOOM OUT
+			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'o') {
 				appState.canvasScale -= 0.1;
-				console.log(appState.canvasScale);
 			}
-			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a') {
+			// SELCT ALL PLOTS
+			if (MODIFIER && event.key.toLowerCase() === 'a') {
+				event.preventDefault();
 				selectAllPlots();
+			}
+			// SAVE THE SESSION
+			if (MODIFIER && event.key.toLowerCase() === 's') {
+				event.preventDefault();
+				//TODO: add save
 			}
 		});
 
@@ -291,11 +312,11 @@
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
 		});
-		core.plots[core.plots.length - 1].x = 550;
+		core.plots[core.plots.length - 1].x = 555;
 		core.plots[core.plots.length - 1].y = 15;
 		//Table
 		core.plots.push(new Plot({ name: 'a table', type: 'tableplot' }));
-		core.plots[core.plots.length - 1].x = 550;
+		core.plots[core.plots.length - 1].x = 555;
 		core.plots[core.plots.length - 1].y = 330;
 		core.plots[core.plots.length - 1].plot.columnRefs = [core.data[0].id, core.data[1].id];
 		core.plots[core.plots.length - 1].plot.showCol = [true, true];
@@ -321,7 +342,12 @@
 
 	<ControlPanel />
 {:else}
-	<div>Loading...</div>
+	<div>
+		<p>
+			<Icon name="spinner" width={32} height={32} className="spinner" />
+			{loadingMsg}
+		</p>
+	</div>
 {/if}
 
 <style>
@@ -384,6 +410,8 @@
 
 		font-size: 14px;
 		text-align: center;
+
+		cursor: pointer;
 	}
 
 	:global(button.dialog-button:hover) {

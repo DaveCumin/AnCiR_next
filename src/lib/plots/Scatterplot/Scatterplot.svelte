@@ -3,9 +3,8 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotBits/Axis.svelte';
 	import { scaleLinear, scaleTime } from 'd3-scale';
-	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
-	import Line from '$lib/components/plotbits/Line.svelte';
-	import Points from '$lib/components/plotbits/Points.svelte';
+	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
+	import Points, { PointsClass } from '$lib/components/plotBits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
@@ -14,36 +13,37 @@
 		parentPlot = $state();
 		x = $state();
 		y = $state();
-		linecolour = $state();
-		linestrokeWidth = $state(3);
-		pointcolour = $state();
-		pointradius = $state(5);
+		line = $state();
+		points = $state();
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
-
 			if (dataIN?.x) {
+				//if there's data, use it!
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new ColumnClass({ refId: -1 });
+				if (parent.data.length > 0) {
+					this.x = parent.data[parent.data.length - 1].x;
+				} else {
+					//blank one
+					this.x = new ColumnClass({ refId: -1 });
+				}
 			}
 			if (dataIN?.y) {
 				this.y = ColumnClass.fromJSON(dataIN.y);
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
-			this.linecolour = dataIN?.linecolour ?? getPaletteColor(this.parentPlot.data.length);
-			this.pointcolour = dataIN?.pointcolour ?? getPaletteColor(this.parentPlot.data.length);
+			this.line = new LineClass(dataIN?.line, this);
+			this.points = new PointsClass(dataIN?.points, this);
 		}
 
 		toJSON() {
 			return {
 				x: this.x,
 				y: this.y,
-				linecolour: this.linecolour,
-				linestrokeWidth: this.linestrokeWidth,
-				pointcolour: this.pointcolour,
-				pointradius: this.pointradius
+				line: this.line.toJSON(),
+				points: this.points.toJSON()
 			};
 		}
 
@@ -51,10 +51,8 @@
 			return new ScatterDataclass(parent, {
 				x: json.x,
 				y: json.y,
-				linecolour: json.linecolour,
-				linestrokeWidth: json.linestrokeWidth,
-				pointcolour: json.pointcolour,
-				pointradius: json.pointradius
+				line: LineClass.fromJSON(json.line),
+				points: PointsClass.fromJSON(json.points)
 			});
 		}
 	}
@@ -280,9 +278,13 @@
 </script>
 
 <script>
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appState } from '$lib/core/core.svelte';
 	import { onMount } from 'svelte';
+	import { flip } from 'svelte/animate';
+	import { slide } from 'svelte/transition';
+	import { tick } from 'svelte';
 
 	let { theData, which } = $props();
 
@@ -317,12 +319,12 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Width</p>
-					<input type="number" bind:value={theData.parentBox.width} />
+					<NumberWithUnits bind:value={theData.parentBox.width} />
 				</div>
 
 				<div class="control-input">
 					<p>Height</p>
-					<input type="number" bind:value={theData.parentBox.height} />
+					<NumberWithUnits bind:value={theData.parentBox.height} />
 				</div>
 			</div>
 		</div>
@@ -332,34 +334,12 @@
 		<div class="control-component">
 			<div class="control-component-title">
 				<p>Padding</p>
-				{#if theData.getAutoScaleValues()?.top != theData.padding.top || theData.getAutoScaleValues()?.bottom != theData.padding.bottom || theData.getAutoScaleValues()?.left != theData.padding.left || theData.getAutoScaleValues()?.right != theData.padding.right}
-					<button class="icon" onclick={() => theData.autoScalePadding('all')}>
-						<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
-					</button>
-				{/if}
 			</div>
 			<div class="control-input-square">
 				<div class="control-input">
 					<p>Top</p>
 					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
-						<input
-							type="number"
-							bind:value={theData.padding.top}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.top != null &&
-							theData.getAutoScaleValues().top != theData.padding.top
-								? 24
-								: 0}px)"
-						/>
-						{#if theData.getAutoScaleValues()?.top != null && theData.getAutoScaleValues()?.top != theData.padding.top}
-							<button class="icon" onclick={() => theData.autoScalePadding('top')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
+						<NumberWithUnits bind:value={theData.padding.top} />
 					</div>
 				</div>
 
@@ -368,24 +348,7 @@
 					<div
 						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
-						<input
-							type="number"
-							bind:value={theData.padding.bottom}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.bottom != null &&
-							theData.getAutoScaleValues().bottom != theData.padding.bottom
-								? 24
-								: 0}px)"
-						/>
-						{#if theData.getAutoScaleValues()?.bottom != null && theData.getAutoScaleValues()?.bottom != theData.padding.bottom}
-							<button class="icon" onclick={() => theData.autoScalePadding('bottom')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
+						<NumberWithUnits bind:value={theData.padding.bottom} />
 					</div>
 				</div>
 
@@ -394,24 +357,7 @@
 					<div
 						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
-						<input
-							type="number"
-							bind:value={theData.padding.left}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.left != null &&
-							theData.getAutoScaleValues().left != theData.padding.left
-								? 24
-								: 0}px)"
-						/>
-						{#if theData.getAutoScaleValues()?.left != null && theData.getAutoScaleValues()?.left != theData.padding.left}
-							<button class="icon" onclick={() => theData.autoScalePadding('left')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
+						<NumberWithUnits bind:value={theData.padding.left} />
 					</div>
 				</div>
 
@@ -420,24 +366,7 @@
 					<div
 						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
-						<input
-							type="number"
-							bind:value={theData.padding.right}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.right != null &&
-							theData.getAutoScaleValues().right != theData.padding.right
-								? 24
-								: 0}px)"
-						/>
-						{#if theData.getAutoScaleValues()?.right != null && theData.getAutoScaleValues()?.right != theData.padding.right}
-							<button class="icon" onclick={() => theData.autoScalePadding('right')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
+						<NumberWithUnits bind:value={theData.padding.right} />
 					</div>
 				</div>
 			</div>
@@ -459,24 +388,22 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Min</p>
-					<input
-						type="number"
+					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
-						oninput={(e) => {
-							theData.ylimsIN[0] = parseFloat(e.target.value);
+						onInput={(val) => {
+							theData.ylimsIN[0] = parseFloat(val);
 						}}
 					/>
 				</div>
 
 				<div class="control-input">
 					<p>Max</p>
-					<input
-						type="number"
+					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-						oninput={(e) => {
-							theData.ylimsIN[1] = parseFloat(e.target.value);
+						onInput={(val) => {
+							theData.ylimsIN[1] = parseFloat(val);
 						}}
 					/>
 				</div>
@@ -516,7 +443,8 @@
 								? new Date(theData.xlimsIN[0]).toISOString().substring(0, 16)
 								: new Date(theData.xlims[0]).toISOString().substring(0, 16)}
 							oninput={(e) => {
-								theData.xlimsIN[0] = Number(new Date(e.target.value));
+								const val = e.target.value;
+								theData.xlimsIN[0] = Number(new Date(val));
 							}}
 						/>
 					</div>
@@ -529,31 +457,30 @@
 								? new Date(theData.xlimsIN[1]).toISOString().substring(0, 16)
 								: new Date(theData.xlims[1]).toISOString().substring(0, 16)}
 							oninput={(e) => {
-								theData.xlimsIN[1] = Number(new Date(e.target.value));
+								const val = e.target.value;
+								theData.xlimsIN[1] = Number(new Date(val));
 							}}
 						/>
 					</div>
 				{:else}
 					<div class="control-input">
 						<p>Min</p>
-						<input
-							type="number"
+						<NumberWithUnits
 							step="0.1"
 							value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
-							oninput={(e) => {
-								theData.xlimsIN[0] = parseFloat(e.target.value);
+							onInput={(val) => {
+								theData.xlimsIN[0] = parseFloat(val);
 							}}
 						/>
 					</div>
 
 					<div class="control-input">
 						<p>Max</p>
-						<input
-							type="number"
+						<NumberWithUnits
 							step="0.1"
 							value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
-							oninput={(e) => {
-								theData.xlimsIN[1] = parseFloat(e.target.value);
+							onInput={(val) => {
+								theData.xlimsIN[1] = parseFloat(val);
 							}}
 						/>
 					</div>
@@ -574,39 +501,82 @@
 			</div>
 		</div>
 	{:else if appState.currentControlTab === 'data'}
-		<div>
+		<div id="dataSettings">
 			<div class="heading">
 				<p>Data</p>
 				<div class="add">
 					<button
 						class="icon"
-						onclick={() =>
+						onclick={async () => {
 							theData.addData({
-								x: { refId: -1 },
-								y: { refId: -1 }
-							})}
+								x: null,
+								y: {}
+							});
+
+							await tick();
+
+							//Scroll to the bottom of dataSettings
+							const dataSettings =
+								document.getElementsByClassName('control-display')[0].parentElement;
+							if (dataSettings) {
+								dataSettings.scrollTo({
+									top: dataSettings.scrollHeight,
+									left: 0,
+									behavior: 'smooth'
+								});
+							} else {
+								console.error("Element with ID 'dataSettings' not found");
+							}
+
+							//TODO: consider focuus on the next y
+							//focus on the next y value
+
+							// // Get the last element with class 'y-select'
+							// const ySelectElements = document.getElementsByClassName('y-select');
+							// const lastYSelect = ySelectElements[ySelectElements.length - 1];
+
+							// // Get the <select> element within the last y-select
+							// const selectElement = lastYSelect.querySelector('select');
+
+							// // Check if the select element exists
+							// if (selectElement) {
+							// 	// Simulate a click on the select element
+							// 	selectElement.click();
+							// } else {
+							// 	console.error('No <select> element found within the last y-select element');
+							// }
+						}}
 					>
 						<Icon name="add" width={16} height={16} />
 					</button>
 				</div>
 			</div>
 
-			{#each theData.data as datum, i}
-				<p>
-					Data {i}
-					<button onclick={() => theData.removeData(i)}>-</button>
-				</p>
+			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
+				<div
+					class="dataBlock"
+					animate:flip={{ duration: 500 }}
+					in:slide={{ duration: 500, axis: 'y' }}
+				>
+					<p>
+						Data {i}
+						<button onclick={() => theData.removeData(i)}>-</button>
+					</p>
 
-				x: {datum.x.name}
-				<Column col={datum.x} canChange={true} />
+					<div class="data-wrapper">
+						<div class="x-select">
+							x: {datum.x.name}
 
-				y: {datum.y.name}
-				<Column col={datum.y} canChange={true} />
-
-				line col: <ColourPicker bind:value={datum.linecolour} />
-				line width: <input type="number" step="0.2" min="0.1" bind:value={datum.linestrokeWidth} />
-				point col: <ColourPicker bind:value={datum.pointcolour} />
-				point radius: <input type="number" step="0.2" min="0.1" bind:value={datum.pointradius} />
+							<Column col={datum.x} canChange={true} />
+						</div>
+						<div class="y-select">
+							y: {datum.y.name}
+							<Column col={datum.y} canChange={true} />
+						</div>
+						<Line lineData={datum.line} which="controls" />
+						<Points pointsData={datum.points} which="controls" />
+					</div>
+				</div>
 			{/each}
 		</div>
 	{/if}
@@ -686,20 +656,25 @@
 		{#each theData.plot.data as datum}
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
 				<Line
+					lineData={datum.line}
 					x={datum.x.getData()}
 					y={datum.y.getData()}
-					xscale={scaleLinear()
-						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-						.range([0, theData.plot.plotwidth])}
+					xscale={theData.plot.anyXdataTime
+						? scaleTime()
+								.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+								.range([0, theData.plot.plotwidth])
+						: scaleLinear()
+								.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+								.range([0, theData.plot.plotwidth])}
 					yscale={scaleLinear()
 						.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 						.range([theData.plot.plotheight, 0])}
-					strokeCol={datum.linecolour}
-					strokeWidth={datum.linestrokeWidth}
-					yoffset={theData.plot.padding.top}
 					xoffset={theData.plot.padding.left}
+					yoffset={theData.plot.padding.top}
+					which="plot"
 				/>
 				<Points
+					pointsData={datum.points}
 					x={datum.x.getData()}
 					xtype={datum.x.type}
 					y={datum.y.getData()}
@@ -714,6 +689,7 @@
 					yoffset={theData.plot.padding.top}
 					xoffset={theData.plot.padding.left}
 					tooltip={true}
+					which="plot"
 				/>
 			{/if}
 		{/each}

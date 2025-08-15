@@ -1,4 +1,6 @@
 <script module>
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import DoubleRange from '$lib/components/inputs/DoubleRange.svelte';
 	import {
@@ -284,13 +286,11 @@
 
 		<div class="control-input">
 			<p>Marker size</p>
-			<input type="number" min="1" step="0.2" bind:value={marker.markerSize} />
+			<NumberWithUnits min="1" step="0.2" bind:value={marker.markerSize} />
 		</div>
 		<div class="control-input">
-				{#if marker.linearRegression?.slope}
-				<p>Line width</p>
-				<input type="number" min="1" step="0.2" bind:value={marker.lineWidth} />
-				{/if}
+			<p>Line width:</p>
+			<NumberWithUnits min="1" step="0.2" bind:value={marker.lineWidth} />
 		</div>
 	</div>
 	{#if marker.type === 'manual'}
@@ -312,17 +312,17 @@
 		<div class="control-input-horizontal">
 			<div class="control-input">
 				<p>N</p>
-				<input type="number" min="0" max="100" bind:value={marker.templateHrsBefore} />
+				<NumberWithUnits min="0" max="100" bind:value={marker.templateHrsBefore} />
 			</div>
 
 			<div class="control-input">
 				<p>M</p>
-				<input type="number" min="0" max="100" bind:value={marker.templateHrsAfter} />
+				<NumberWithUnits min="0" max="100" bind:value={marker.templateHrsAfter} />
 			</div>
 
 			<div class="control-input">
 				<p>%</p>
-				<input type="number" min="0" max="100" bind:value={marker.centileThreshold} />
+				<NumberWithUnits min="0" max="100" bind:value={marker.centileThreshold} />
 			</div>
 		</div>
 	{/if}

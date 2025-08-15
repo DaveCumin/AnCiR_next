@@ -106,8 +106,8 @@
 			</li>
 		</ul>
 		<p>
-			Icons are from <a href="https://github.com/FortAwesome/Font-Awesome">FontAwesome</a> (CC BY 4.0
-			License).
+			Icons are from <a href="https://github.com/FortAwesome/Font-Awesome">FontAwesome</a> (CC BY
+			4.0 Licensed) and the <a href="https://icon-sets.iconify.design/tabler">Tabler set</a> (MIT Licensed).
 		</p>
 		<p>
 			Default colours for the plots are taken from the <a

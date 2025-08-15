@@ -1,9 +1,9 @@
 <script>
 	// @ts-nocheck
-	import { appState, core } from '$lib/core/core.svelte';
+	import { appConsts, appState, core } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import ControlDisplay from './views/ControlDisplay.svelte';
-	import { fly } from 'svelte/transition';
+	import { fly, fade } from 'svelte/transition';
 	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
 
 	let container;
@@ -61,14 +61,18 @@
 	</div>
 {:else}
 	<!-- TODO: reconsider this ux wise -->
-	<div class="open-control-panel-icon-container">
+	<div
+		class="open-control-panel-icon-container"
+		in:fade={{ duration: 600 }}
+		out:fly={{ x: -appState.widthControlPanel, duration: 600 }}
+	>
 		<button class="icon" onclick={() => (appState.showControlPanel = true)}>
 			<Icon name="circle-chevron-left" width={32} height={32} />
 		</button>
 	</div>
 {/if}
 
-{#if core.data.length > 0 && core.plots.length > 0}
+{#if core.plots.length > 0}
 	<button
 		class="icon newplotconstant"
 		style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
@@ -77,6 +81,11 @@
 		onclick={(e) => {
 			e.stopPropagation();
 			showNewPlotModalconst = true;
+		}}
+		out:fly={{
+			x: -100,
+			y: 100,
+			duration: 600
 		}}
 	>
 		<Icon name="add" width={24} height={24} />

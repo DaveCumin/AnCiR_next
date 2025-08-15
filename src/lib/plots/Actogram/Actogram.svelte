@@ -13,6 +13,8 @@
 
 	import { scaleLinear } from 'd3-scale';
 	import { makeSeqArray, max, min } from '$lib/components/plotBits/helpers/wrangleData';
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+
 	import Icon from '$lib/icons/Icon.svelte';
 
 	export const Actogram_defaultDataInputs = ['time', 'values'];
@@ -44,9 +46,43 @@
 		colour = $state();
 		offset = $derived.by(() => {
 			if (this.x?.getData()) {
-				return (
-					(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
+				console.log('Debugging offset in actogram: ');
+				console.log(
+					'startTime: ',
+					this.parentPlot?.startTime,
+					', ',
+					new Date(this.parentPlot?.startTime),
+					',',
+					Number(new Date(this.parentPlot?.startTime)),
+					',',
+					new Date(this.parentPlot?.startTime) -
+						new Date(this.parentPlot?.startTime).getTimezoneOffset(),
+					',',
+					Number(
+						new Date(this.parentPlot?.startTime) -
+							new Date(this.parentPlot?.startTime).getTimezoneOffset()
+					)
 				);
+				console.log('time0: ', this.x?.getData()[0], ', ', new Date(this.x?.getData()[0]));
+
+				if (this.x.type == 'time') {
+					console.log(
+						'offset time: ',
+						(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
+					);
+					return (
+						(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
+					);
+				} else {
+					//TODO: Fix this - it's not quite right.
+					console.log(
+						'offset number: ',
+						Number(new Date(this.parentPlot?.startTime)) / 3600000 - Number(this.x?.getData()[0])
+					);
+					return (
+						Number(new Date(this.parentPlot?.startTime)) / 3600000 - Number(this.x?.getData()[0])
+					);
+				}
 			} else {
 				return 0;
 			}
@@ -155,7 +191,7 @@
 			});
 			//TODO: fix here for data with timeformat that doesn't work
 			return minTime !== Infinity && minTime >= 0
-				? new Date(minTime).toISOString().substring(0, 10)
+				? new Date(minTime).setHours(0, 0, 0, 0) //set to beginnig of the day
 				: undefined;
 		});
 		spaceBetween = $state(2);
@@ -291,6 +327,9 @@
 </script>
 
 <script>
+	import { flip } from 'svelte/animate';
+	import { slide } from 'svelte/transition';
+	import { tick } from 'svelte';
 	import { appState } from '$lib/core/core.svelte';
 
 	let { theData, which } = $props();
@@ -335,12 +374,12 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Width</p>
-					<input type="number" bind:value={theData.parentBox.width} />
+					<NumberWithUnits bind:value={theData.parentBox.width} />
 				</div>
 
 				<div class="control-input">
 					<p>Height</p>
-					<input type="number" bind:value={theData.parentBox.height} />
+					<NumberWithUnits bind:value={theData.parentBox.height} />
 				</div>
 			</div>
 		</div>
@@ -355,29 +394,29 @@
 			<div class="control-input-square">
 				<div class="control-input">
 					<p>Top</p>
-					<input type="number" bind:value={theData.paddingIN.top} />
+					<NumberWithUnits bind:value={theData.paddingIN.top} />
 				</div>
 
 				<div class="control-input">
 					<p>Bottom</p>
-					<input type="number" bind:value={theData.paddingIN.bottom} />
+					<NumberWithUnits bind:value={theData.paddingIN.bottom} />
 				</div>
 
 				<div class="control-input">
 					<p>Left</p>
-					<input type="number" bind:value={theData.paddingIN.left} />
+					<NumberWithUnits bind:value={theData.paddingIN.left} />
 				</div>
 
 				<div class="control-input">
 					<p>Right</p>
-					<input type="number" bind:value={theData.paddingIN.right} />
+					<NumberWithUnits bind:value={theData.paddingIN.right} />
 				</div>
 			</div>
 
 			<div class="control-input-vertical">
 				<div class="control-input">
 					<p>Space Between</p>
-					<input type="number" bind:value={theData.spaceBetween} />
+					<NumberWithUnits bind:value={theData.spaceBetween} />
 				</div>
 			</div>
 		</div>
@@ -405,12 +444,12 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Period</p>
-					<input type="number" step="0.1" bind:value={theData.periodHrs} />
+					<NumberWithUnits step="0.1" bind:value={theData.periodHrs} />
 				</div>
 
 				<div class="control-input">
 					<p>Repeat</p>
-					<input type="number" bind:value={theData.doublePlot} />
+					<NumberWithUnits bind:value={theData.doublePlot} />
 				</div>
 			</div>
 		</div>
@@ -437,32 +476,36 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Min</p>
-					<input
-						type="number"
+					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[0] >= 0 ? theData.ylimsIN[0] : theData.ylims[0]}
-						oninput={(e) => {
-							theData.ylimsIN[0] = [parseFloat(e.target.value)];
+						onInput={(val) => {
+							theData.ylimsIN[0] = [parseFloat(val)];
 						}}
 					/>
 				</div>
 
 				<div class="control-input">
 					<p>Max</p>
-					<input
-						type="number"
+					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-						oninput={(e) => {
-							theData.ylimsIN[1] = [parseFloat(e.target.value)];
+						onInput={(val) => {
+							theData.ylimsIN[1] = [parseFloat(val)];
 						}}
 					/>
 				</div>
 			</div>
 		{/if}
 	{:else if appState.currentControlTab === 'data'}
-	{#each theData.data as datum, i}
 		<div class="control-component">
+			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
+				<div
+					class="dataBlock"
+					animate:flip={{ duration: 500 }}
+					in:slide={{ duration: 500, axis: 'y' }}
+				>
+
 				<div class="control-component-title">
 					<div class="control-component-title-colour">
 						<ColourPicker bind:value={datum.colour} />
@@ -490,8 +533,8 @@
 							></p>
 						</div>
 
-						<Column col={datum.x} canChange={true} />
-					</div>
+							<Column col={datum.x} canChange={true} />
+						</div>
 
 					<div class="control-data">
 						<div class="control-data-title">
@@ -507,23 +550,28 @@
 							></p>
 						</div>
 
-						<Column col={datum.y} canChange={true} />
-					</div>
+							<Column col={datum.y} canChange={true} />
+						</div>
 
 					<div class="control-data-title with-icon">
 						<strong>Markers</strong>
 
-						<div class="control-component-title-icons">
-							<button class="icon" onclick={() => datum.addMarker()}>
-								<Icon name="plus" width={16} height={16} className="control-component-title-icon" />
-							</button>
+							<div class="control-component-title-icons">
+								<button class="icon" onclick={() => datum.addMarker()}>
+									<Icon
+										name="plus"
+										width={16}
+										height={16}
+										className="control-component-title-icon"
+									/>
+								</button>
+							</div>
 						</div>
-					</div>
 
-					{#each datum.phaseMarkers as marker}
-						<PhaseMarker {which} {marker} />
-					{/each}
-				</div>
+						{#each datum.phaseMarkers as marker}
+							<PhaseMarker {which} {marker} />
+						{/each}
+					</div>
 
 				<div class="div-line"></div>
 			</div>
@@ -532,11 +580,27 @@
 		<div>
 			<button
 				class="icon control-block-add"
-				onclick={() =>
+				onclick={async () => {
 					theData.addData({
 						x: { refId: -1 },
 						y: { refId: -1 }
-					})}
+					});
+
+					await tick();
+
+					//TODO: consider this - scroll to the bottom and select y data automatically
+					//Scroll to the bottom of dataSettings
+					const dataSettings = document.getElementsByClassName('control-display')[0].parentElement;
+					if (dataSettings) {
+						dataSettings.scrollTo({
+							top: dataSettings.scrollHeight,
+							left: 0,
+							behavior: 'smooth'
+						});
+					} else {
+						console.error("Element with ID 'dataSettings' not found");
+					}
+				}}
 			>
 				<Icon name="plus" width={16} height={16} className="static-icon" />
 			</button>

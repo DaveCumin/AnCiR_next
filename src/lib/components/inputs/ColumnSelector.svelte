@@ -1,10 +1,11 @@
 <script>
 	import { core } from '$lib/core/core.svelte.js';
-	import { getColumnById } from '$lib/core/Column.svelte';
+	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	let {
 		onChange = (value) => {
 			// console.log('selected col ' + value);
 		},
+		getPlotSiblings = -1,
 		excludeColIds = [],
 		value = $bindable(),
 		multiple = false
@@ -13,6 +14,46 @@
 	//set up the values and labels for the data
 	let options = $derived.by(() => {
 		let out = new Map();
+
+		//get the other data in plot - TODO!!
+		// Is this the best way?
+		console.time('getPlotSiblings');
+		//--- Brute force approach
+		if (getPlotSiblings !== -1) {
+			console.log('getPlotSiblings: ', getPlotSiblings.id);
+			for (let p = 0; p < core.plots.length; p++) {
+				for (let d = 0; d < core.plots[p].plot.data?.length; d++) {
+					Object.keys(core.plots[p].plot.data[d].toJSON()).forEach((key) => {
+						let tempFlag = false;
+						let tempGroup = [];
+						if (core.plots[p].plot.data[d][key] instanceof Column) {
+							const colId = core.plots[p].plot.data[d][key].id;
+							tempGroup.push(colId);
+							if (colId == getPlotSiblings) {
+								tempFlag = true;
+							}
+							console.log(
+								'TODO: need to add plot ',
+								p,
+								' (',
+								core.plots[p].name,
+								'), col ',
+								core.plots[p].plot.data[d][key].id,
+								' (',
+								core.plots[p].plot.data[d][key].name,
+								'): tempFlag = ',
+								tempFlag,
+								'tempGroup = ',
+								tempGroup
+							);
+						}
+					});
+				}
+			}
+		}
+
+		console.timeEnd('getPlotSiblings');
+
 		//get all the columns in tables
 		for (let t = 0; t < core.tables.length; t++) {
 			//get the table process Ids also

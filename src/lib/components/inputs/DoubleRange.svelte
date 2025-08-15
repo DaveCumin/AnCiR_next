@@ -2,6 +2,7 @@
 	//inspired by https://w3collective.com/double-range-slider-html-css-js/
 	let { min = 0, max = 100, step = 1, minVal = $bindable(), maxVal = $bindable() } = $props();
 
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	//TODO: need to deal with min>max and other edge cases, etc.
 	//TODO: can still enter fractions into the number input, even if step is 1. Would be good to prevent this.
 	//TODO: style this !!
@@ -18,9 +19,9 @@
 
 	<div class="range-price">
 		<label for="min">Min</label>
-		<input type="number" name="min" {min} {max} bind:value={minVal} />
+		<NumberWithUnits name="min" {min} {max} bind:value={minVal} />
 		<label for="max">Max</label>
-		<input type="number" name="max" {min} {max} bind:value={maxVal} />
+		<NumberWithUnits name="max" {min} {max} bind:value={maxVal} />
 	</div>
 </div>
 

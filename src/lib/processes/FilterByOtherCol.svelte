@@ -1,4 +1,6 @@
 <script context="module">
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 
@@ -32,7 +34,7 @@
 		if (!conditions || conditions.length === 0) return x;
 
 		// Initialize result mask (false for all elements initially for OR logic)
-		let resultMask = new Array(x.length).fill(false);
+		let resultMask = new Array(x.length).fill(true);
 
 		// Process each condition
 		for (const { byColId, isOperator, byColValue } of conditions) {
@@ -105,6 +107,7 @@
 				<ColumnSelector
 					bind:value={condition.byColId}
 					excludeColIds={[p.parentCol.id, p.parentCol.refId]}
+					getPlotSiblings={p.parentCol}
 				/>
 				<div class="operator-input">
 					{#if getColumnById(condition.byColId)?.type === 'category'}
@@ -128,7 +131,6 @@
 			</div>
 
 			<div class="second-level-condition">
-				
 				{#if getColumnById(condition.byColId)?.type === 'category'}
 					<input type="text" bind:value={condition.byColValue} />
 				{:else if getColumnById(condition.byColId)?.type === 'time'}
@@ -139,7 +141,7 @@
 						}}
 					/>
 				{:else}
-					<input type="number" bind:value={condition.byColValue} />
+					<NumberWithUnits bind:value={condition.byColValue} />
 				{/if}
 			</div>
 			{#if p.args.conditions.length > 1}

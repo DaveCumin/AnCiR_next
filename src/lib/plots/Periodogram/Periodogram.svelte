@@ -3,12 +3,13 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotBits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
-	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+
 	import { binData, mean, makeSeqArray } from '$lib/components/plotBits/helpers/wrangleData.js';
 	import { pchisq, qchisq } from '$lib/data/CDFs';
 
-	import Line from '$lib/components/plotBits/Line.svelte';
-	import Points from '$lib/components/plotBits/Points.svelte';
+	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
+	import Points, { PointsClass } from '$lib/components/plotBits/Points.svelte';
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
 
@@ -99,11 +100,9 @@
 		method = $state('Chi-squared'); // New: method selector
 
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
-		linecolour = $state();
-		linestrokeWidth = $state(3);
-		pointcolour = $state();
-		pointradius = $state(5);
-		alpha = $state(0.05);
+		line = $state();
+		points = $state();
+		chiSquaredAlpha = $state(0.05);
 
 		updatePeriodData() {
 			let binnedData = { bins: [], y_out: [] }; // No binning for Lomb-Scargle
@@ -123,7 +122,7 @@
 			);
 			const frequencies = periods.map((p) => 1 / p); // For Lomb-Scargle
 
-			const correctedAlpha = Math.pow(1 - this.alpha, 1 / periods.length);
+			const correctedAlpha = Math.pow(1 - this.chiSquaredAlpha, 1 / periods.length);
 			const power = new Array(periods.length);
 			const threshold = new Array(periods.length);
 			const pvalue = new Array(periods.length);
@@ -163,18 +162,24 @@
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
 
-			if (dataIN && dataIN.x) {
+			if (dataIN?.x) {
+				//if there's data, use it!
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new ColumnClass({ refId: -1 });
+				if (parent.data.length > 0) {
+					this.x = parent.data[parent.data.length - 1].x;
+				} else {
+					//blank one
+					this.x = new ColumnClass({ refId: -1 });
+				}
 			}
 			if (dataIN && dataIN.y) {
 				this.y = ColumnClass.fromJSON(dataIN.y);
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
-			this.linecolour = dataIN?.linecolour ?? getPaletteColor(this.parentPlot.data.length);
-			this.pointcolour = dataIN?.pointcolour ?? getPaletteColor(this.parentPlot.data.length);
+			this.line = new LineClass(dataIN?.line, this);
+			this.points = new PointsClass(dataIN?.points, this);
 			this.method = dataIN?.method ?? 'Lomb-Scargle'; // Initialize method
 		}
 
@@ -182,13 +187,11 @@
 			return {
 				x: this.x,
 				y: this.y,
-				linecolour: this.linecolour,
-				linestrokeWidth: this.linestrokeWidth,
-				pointcolour: this.pointcolour,
-				pointradius: this.pointradius,
+				line: this.line.toJSON(),
+				points: this.points.toJSON(),
 				binSize: this.binSize,
 				method: this.method,
-				alpha: this.alpha
+				chiSquaredAlpha: this.chiSquaredAlpha
 			};
 		}
 
@@ -196,13 +199,11 @@
 			return new PeriodogramDataclass(parent, {
 				x: json.x,
 				y: json.y,
-				linecolour: json.linecolour,
-				linestrokeWidth: json.linestrokeWidth,
-				pointcolour: json.pointcolour,
-				pointradius: json.pointradius,
+				line: LineClass.fromJSON(json.line),
+				points: PointsClass.fromJSON(json.points),
 				binSize: json.binSize,
 				method: json.method,
-				alpha: json.alpha
+				chiSquaredAlpha: json.chiSquaredAlpha
 			});
 		}
 	}
@@ -412,6 +413,9 @@
 	import { appState } from '$lib/core/core.svelte';
 	import { onMount } from 'svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import { flip } from 'svelte/animate';
+	import { slide } from 'svelte/transition';
+	import { tick } from 'svelte';
 
 	let { theData, which } = $props();
 
@@ -453,12 +457,12 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Width</p>
-					<input type="number" bind:value={theData.parentBox.width} />
+					<NumberWithUnits bind:value={theData.parentBox.width} />
 				</div>
 
 				<div class="control-input">
 					<p>Height</p>
-					<input type="number" bind:value={theData.parentBox.height} />
+					<NumberWithUnits bind:value={theData.parentBox.height} />
 				</div>
 			</div>
 		</div>
@@ -479,14 +483,14 @@
 				<div class="control-input">
 					<p>Top</p>
 					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
-						<input
-							type="number"
+						<NumberWithUnits
 							bind:value={theData.padding.top}
 							style="width: calc(100% - {theData.getAutoScaleValues()?.top != null &&
 							theData.getAutoScaleValues().top != theData.padding.top
 								? 24
 								: 0}px)"
 						/>
+
 						{#if theData.getAutoScaleValues()?.top != null && theData.getAutoScaleValues()?.top != theData.padding.top}
 							<button class="icon" onclick={() => theData.autoScalePadding('top')}>
 								<Icon
@@ -505,8 +509,7 @@
 					<div
 						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
-						<input
-							type="number"
+						<NumberWithUnits
 							bind:value={theData.padding.bottom}
 							style="width: calc(100% - {theData.getAutoScaleValues()?.bottom != null &&
 							theData.getAutoScaleValues().bottom != theData.padding.bottom
@@ -531,8 +534,7 @@
 					<div
 						style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
-						<input
-							type="number"
+						<NumberWithUnits
 							bind:value={theData.padding.left}
 							style="width: calc(100% - {theData.getAutoScaleValues()?.left != null &&
 							theData.getAutoScaleValues().left != theData.padding.left
@@ -557,8 +559,7 @@
 					<div
 						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
-						<input
-							type="number"
+						<NumberWithUnits
 							bind:value={theData.padding.right}
 							style="width: calc(100% - {theData.getAutoScaleValues()?.right != null &&
 							theData.getAutoScaleValues().right != theData.padding.right
@@ -602,11 +603,10 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Min</p>
-					<input
-						type="number"
+					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
-						oninput={(e) => {
+						onInput={(e) => {
 							theData.ylimsIN[0] = [parseFloat(e.target.value)];
 						}}
 					/>
@@ -614,11 +614,10 @@
 
 				<div class="control-input">
 					<p>Max</p>
-					<input
-						type="number"
+					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-						oninput={(e) => {
+						onInput={(e) => {
 							theData.ylimsIN[1] = [parseFloat(e.target.value)];
 						}}
 					/>
@@ -641,12 +640,11 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Min</p>
-					<input
-						type="number"
+					<NumberWithUnits
 						min="0.1"
 						step="0.1"
 						value={theData.periodlimsIN[0] ? theData.periodlimsIN[0] : theData.periodlims[0]}
-						oninput={(e) => {
+						onInput={(e) => {
 							theData.periodlimsIN[0] = parseFloat(e.target.value);
 						}}
 					/>
@@ -654,11 +652,10 @@
 
 				<div class="control-input">
 					<p>Max</p>
-					<input
-						type="number"
+					<NumberWithUnits
 						step="0.1"
 						value={theData.periodlimsIN[1] ? theData.periodlimsIN[1] : theData.periodlimsIN[1]}
-						oninput={(e) => {
+						onInput={(e) => {
 							theData.periodlimsIN[1] = parseFloat(e.target.value);
 						}}
 					/>
@@ -668,27 +665,37 @@
 			<div class="control-input-vertical">
 				<div class="control-input">
 					<p>Period Step</p>
-					<input type="number" min="0.1" step="0.01" bind:value={theData.periodSteps} />
+					<NumberWithUnits min="0.1" step="0.01" bind:value={theData.periodSteps} />
 				</div>
 			</div>
 		</div>
 	{:else if appState.currentControlTab === 'data'}
-		<div class="control-component">
-			{#each theData.data as datum, i}
-				<div class="control-component-title">
-					<div class="control-component-title-colour">
-						<!-- TODO: extension - change colour to be half line colour half point colour-->
-						<ColourPicker bind:value={datum.linecolour} />
-						<p>Data {i}</p>
-					</div>
-					<div class="control-component-title-icons">
-						<button class="icon" onclick={() => theData.removeData(i)}>
-							<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
-						</button>
-					</div>
-				</div>
+		<div>
+			<p>Data:</p>
+			<button
+				onclick={async () => {
+					theData.addData({
+						x: null,
+						y: { refId: -1 }
+					});
+					await tick();
 
-				<div class="control-data-container">
+					const dataSettings = document.getElementsByClassName('control-display')[0].parentElement;
+					if (dataSettings) {
+						dataSettings.scrollTo({
+							top: dataSettings.scrollHeight,
+							left: 0,
+							behavior: 'smooth'
+						});
+					} else {
+						console.error("Element with ID 'dataSettings' not found");
+					}
+				}}
+			>
+				+
+			</button>
+
+			<div class="control-data-container">
 					<div class="control-data">
 						<div class="control-data-title">
 							<strong>x</strong>
@@ -819,6 +826,7 @@
 
 		{#each theData.plot.data as datum}
 			<Line
+				lineData={datum.line}
 				x={datum.periodData.x}
 				y={datum.periodData.y}
 				xscale={scaleLinear()
@@ -831,8 +839,10 @@
 				strokeWidth={datum.linestrokeWidth}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
+				which="plot"
 			/>
 			<Points
+				pointsData={datum.points}
 				x={datum.periodData.x}
 				y={datum.periodData.y}
 				xscale={scaleLinear()
@@ -846,9 +856,11 @@
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 				tooltip={true}
+				which="plot"
 			/>
 			{#if datum.method === 'Chi-squared'}
 				<Line
+					lineData={datum.line}
 					x={datum.periodData.x}
 					y={datum.periodData.threshold}
 					xscale={scaleLinear()

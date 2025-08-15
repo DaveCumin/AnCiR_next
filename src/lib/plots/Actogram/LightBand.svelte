@@ -1,4 +1,6 @@
 <script module>
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+
 	export class LightBandClass {
 		parent;
 		bands = $state([]);
@@ -132,9 +134,9 @@
 		<p>Bands</p>
 		<div class="control-component-title-icons">
 			{#if bands.bands.length > 0}
-			<button class="icon" onclick={() => bands.swapBandCols()}>
-				<Icon name="swap" width={12} height={12} className="control-component-title-icon" />
-			</button>
+				<button class="icon" onclick={() => bands.swapBandCols()}>
+					<Icon name="swap" width={12} height={12} className="control-component-title-icon" />
+				</button>
 			{/if}
 			<button
 				class="icon"
@@ -150,26 +152,24 @@
 		<div class="control-input-vertical">
 			<div class="control-input">
 				<p>Height</p>
-				<input type="number" bind:value={bands.height} min="1" />
+				<NumberWithUnits bind:value={bands.height} min="1" />
 			</div>
 		</div>
 		{#each bands.bands as b, i}
 			<div class="control-input-color">
 				<ColourPicker bind:value={b.col} />
 				<div class="control-input">
-					<input
-						type="number"
+					<NumberWithUnits
 						bind:value={b.pc}
 						min="1"
 						max="100"
 						step="1"
-						oninput={(e) => bands.updateBandPC(i, e.target.value)}
+						onInput={(val) => bands.updateBandPC(i, val)}
 					/>
 				</div>
-					<button class="icon" onclick={() => bands.removeBand(i)}>
-						<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
-					</button>
-				
+				<button class="icon" onclick={() => bands.removeBand(i)}>
+					<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
+				</button>
 			</div>
 		{/each}
 	{:else}

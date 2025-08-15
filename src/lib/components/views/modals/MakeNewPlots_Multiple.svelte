@@ -8,7 +8,7 @@
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
-	import AttributeSelect from '$lib/components/reusables/AttributeSelect.svelte';
+	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { tick } from 'svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 
@@ -20,9 +20,9 @@
 	let plotName = $state(plotType + '_' + (core.plots.length + 1));
 
 	let xCol = $state();
-	let yCols = $state([null]); // contains column id
+	let yCols = $state([]); // contains column id
 
-	async function confirmImport() {
+	async function confirmMakePlots() {
 		awaitingMake = true;
 		await tick();
 		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms)); // short wait to make sure the spinner will show
@@ -37,13 +37,15 @@
 			height = snapToGrid(600);
 		}
 
-		const xName = getColumnById(xCol).name;
+		const xName = getColumnById(xCol)?.name;
 		const container = document.getElementsByClassName('canvas')[0];
 
 		for (let i = 0; i < yCols.length; i++) {
 			//find the position
 			const col = i % nCols;
 			const row = Math.floor(i / nCols);
+
+			console.log('making new plot with x,y: ', xCol, yCols[i]);
 
 			const newPlot = new Plot({
 				name: getColumnById(yCols[i]).name,
@@ -56,7 +58,7 @@
 				height: snapToGrid(height)
 			});
 			newPlot.plot.addData({
-				x: { refId: xCol },
+				x: { refId: Number(xCol) },
 				y: { refId: yCols[i] }
 			});
 			core.plots.push(newPlot);
@@ -64,13 +66,18 @@
 			await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
 		}
 
+		//select the new plots
 		deselectAllPlots();
 		for (let i = core.plots.length - 1; i > core.plots.length - yCols.length - 1; i--) {
 			core.plots[i].selected = true;
 		}
 
+		//reset the form
 		plotType = 'Plot';
+		xCol = null;
+		yCols = [];
 		awaitingMake = false;
+		steps[0].completed = false;
 		showModal = false;
 	}
 
@@ -117,13 +124,6 @@
 			enforceCompletedRules(1);
 		}
 	}
-	//This checks for validity
-	$effect(() => {
-		if (plotType != 'Plot') {
-			steps[0].completed = true;
-			enforceSequentialCompletion(0);
-		}
-	});
 
 	//-------------------
 </script>
@@ -132,20 +132,28 @@
 	{#if index === 0}
 		<div class="choose-file-container">
 			<AttributeSelect
-				bind:bindTo={plotType}
+				bind:value={plotType}
 				label="Plot Type"
 				options={['actogram', 'periodogram', 'scatterplot']}
+				onChange={() => {
+					steps[0].completed = true;
+					enforceSequentialCompletion(0);
+				}}
 			/>
 		</div>
 	{/if}
 	{#if index === 1}
 		<AttributeSelect
-			bind:bindTo={xCol}
+			bind:value={xCol}
 			label={plotType == 'scatterplot' ? 'x' : 'time'}
 			options={core.tables.flatMap((table) => table.columns.map((col) => col.id))}
 			optionsDisplay={core.tables.flatMap((table) =>
 				table.columns.map((col) => table.name + ': ' + col.name)
 			)}
+			onChange={() => {
+				steps[0].completed = true;
+				enforceSequentialCompletion(0);
+			}}
 		/>
 
 		<div class="import-container">
@@ -155,13 +163,14 @@
 				<ColumnSelector bind:value={yCols} multiple={true} />
 			</div>
 		</div>
-		{#if yCols[0] != null && xCol >= 0}
+
+		{#if yCols[0] != null && Number(xCol) >= 0}
 			<div class="dialog-button-container">
 				<button
 					class="dialog-button"
 					onclick={(e) => {
 						e.stopPropagation();
-						confirmImport();
+						confirmMakePlots();
 					}}>Make these {yCols.length} plots</button
 				>
 			</div>

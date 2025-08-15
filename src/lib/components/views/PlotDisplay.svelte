@@ -7,6 +7,8 @@
 
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 	import { onMount, tick } from 'svelte';
+	import { fly, fade } from 'svelte/transition';
+
 	import { deselectAllPlots } from '$lib/core/Plot.svelte';
 	import { removePlot } from '$lib/core/Plot.svelte';
 
@@ -157,7 +159,7 @@
 							bind:height={plot.height}
 							title={plot.name}
 							id={plot.id}
-							selected={plot.selected}
+							bind:selected={plot.selected}
 						>
 							{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 							<Plot theData={plot} which="plot" />
@@ -165,7 +167,7 @@
 					{/if}
 				{/each}
 			{:else if core.data.length > 0}
-				<div class="no-plot-prompt">
+				<div class="no-plot-prompt" out:fade={{ duration: 600 }}>
 					<button class="icon" onclick={() => (showNewPlotModal = true)}>
 						<Icon name="add" width={24} height={24} />
 					</button>
@@ -178,11 +180,20 @@
 					dropdownLeft={window.innerWidth / 2 - 40}
 				/>
 			{:else}
-				<div class="no-plot-prompt">
-					<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
+				<div class="no-plot-prompt" in:fade={{ duration: 600 }}>
+					<button
+						class="icon"
+						bind:this={addBtnRef}
+						onclick={openDropdown}
+						out:fly={{
+							x: 100,
+							y: -100,
+							duration: 600
+						}}
+					>
 						<Icon name="add" width={24} height={24} />
 					</button>
-					<p style="margin-left: 10px">Click to add new data</p>
+					<p style="margin-left: 10px" out:fade={{ duration: 600 }}>Click to add new data</p>
 				</div>
 
 				<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />

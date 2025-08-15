@@ -1,4 +1,6 @@
 <script module>
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Hist from '$lib/components/plotBits/Hist.svelte';
 	import { scaleLinear } from 'd3-scale';
@@ -90,8 +92,7 @@
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>Start</p>
-			<input
-				type="number"
+			<NumberWithUnits
 				step="0.1"
 				bind:value={annotation.startTime}
 				oninput={changedStartTime}
@@ -100,12 +101,12 @@
 
 		<div class="control-input">
 			<p>End</p>
-			<input type="number" step="0.1" value={annotation.endTime} oninput={changedEndTime} />
+			<NumberWithUnitsstep="0.1" value={annotation.endTime} oninput={changedEndTime} />
 		</div>
 
 		<div class="control-input">
 			<p>Duration</p>
-			<input type="number" step="0.1" bind:value={annotation.duration} oninput={changedDuration} />
+			<NumberWithUnitsstep="0.1" bind:value={annotation.duration} oninput={changedDuration} />
 		</div>
 	</div>
 		
