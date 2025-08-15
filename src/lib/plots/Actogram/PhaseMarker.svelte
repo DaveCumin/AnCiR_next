@@ -343,7 +343,11 @@
 				3
 			)}
 		</p>
-		Show Line:<input type="checkbox" bind:checked={marker.showLine} />
+
+		<div class="control-input-checkbox">
+			<input type="checkbox" bind:checked={marker.showLine} />
+			<p>Show Line</p>
+		</div>
 	{/if}
 {/snippet}
 

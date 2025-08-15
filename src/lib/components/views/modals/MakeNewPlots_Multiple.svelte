@@ -216,18 +216,4 @@
 		width: 100%;
 		min-height: 100px;
 	}
-
-	.selected-preview {
-		color: var(--color-lightness-35);
-		font-size: 14px;
-	}
-
-	select optgroup {
-		font-weight: bold;
-		color: var(--color-lightness-35);
-	}
-
-	select option {
-		padding-left: 20px; /* Indent sub-categories */
-	}
 </style>

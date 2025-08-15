@@ -370,11 +370,14 @@
 	:global(.dialog-button-container) {
 		display: flex;
 		justify-content: flex-end;
+
+		cursor: pointer;
 	}
 
 	:global(button.dialog-button) {
 		margin-top: 10px;
 		background-color: var(--color-lightness-95);
+		border: transparent;
 		border-radius: 4px;
 		padding: 10px;
 		padding-right: 12px;
@@ -711,7 +714,6 @@
 
 		width: 100%;
 		gap: 0.5rem;
-		margin-bottom: 0.5rem;
 	}
 
 	:global(.control-input-color button) {

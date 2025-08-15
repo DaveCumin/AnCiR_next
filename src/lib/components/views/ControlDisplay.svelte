@@ -126,6 +126,21 @@
 			}
 		});
 	}
+
+	let tempTab = 'properties';
+	function updateCurrentControlTab(tab, type) {
+		if (type === 'actogram') {
+			appState.currentControlTab = tab;
+		} else {
+			if (appState.currentControlTab === 'annotations') {
+				appState.currentControlTab = tempTab;
+			} else {
+				appState.currentControlTab = tab;
+			}
+		}
+		console.log("DEBUG:", appState.currentControlTab);
+
+	}
 </script>
 
 <div class="control-display">
@@ -192,17 +207,17 @@
 					<div class="control-tab">
 						<button
 							class={appState.currentControlTab === 'properties' ? 'active' : ''}
-							onclick={() => (appState.currentControlTab = 'properties')}>Properties</button
+							onclick={() => updateCurrentControlTab('properties', plot.type)}>Properties</button
 						>
 						<button
 							class={appState.currentControlTab === 'data' ? 'active' : ''}
-							onclick={() => (appState.currentControlTab = 'data')}>Data</button
+							onclick={() => updateCurrentControlTab('data', plot.type)}>Data</button
 						>
 
 						{#if plot.type === 'actogram'}
 						<button
 							class={appState.currentControlTab === 'annotations' ? 'active' : ''}
-							onclick={() => (appState.currentControlTab = 'annotations')}>Annotations</button
+							onclick={() => updateCurrentControlTab('annotations', plot.type) }>Annotations</button
 						>
 						{/if}
 					</div>
