@@ -3,9 +3,8 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotBits/Axis.svelte';
 	import { scaleLinear, scaleTime } from 'd3-scale';
-	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
-	import Line from '$lib/components/plotbits/Line.svelte';
-	import Points from '$lib/components/plotbits/Points.svelte';
+	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
+	import Points, { PointsClass } from '$lib/components/plotBits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
@@ -14,36 +13,37 @@
 		parentPlot = $state();
 		x = $state();
 		y = $state();
-		linecolour = $state();
-		linestrokeWidth = $state(3);
-		pointcolour = $state();
-		pointradius = $state(5);
+		line = $state();
+		points = $state();
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
-
 			if (dataIN?.x) {
+				//if there's data, use it!
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new ColumnClass({ refId: -1 });
+				if (parent.data.length > 0) {
+					this.x = parent.data[parent.data.length - 1].x;
+				} else {
+					//blank one
+					this.x = new ColumnClass({ refId: -1 });
+				}
 			}
 			if (dataIN?.y) {
 				this.y = ColumnClass.fromJSON(dataIN.y);
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
-			this.linecolour = dataIN?.linecolour ?? getPaletteColor(this.parentPlot.data.length);
-			this.pointcolour = dataIN?.pointcolour ?? getPaletteColor(this.parentPlot.data.length);
+			this.line = new LineClass(dataIN?.line, this);
+			this.points = new PointsClass(dataIN?.points, this);
 		}
 
 		toJSON() {
 			return {
 				x: this.x,
 				y: this.y,
-				linecolour: this.linecolour,
-				linestrokeWidth: this.linestrokeWidth,
-				pointcolour: this.pointcolour,
-				pointradius: this.pointradius
+				line: this.line.toJSON(),
+				points: this.points.toJSON()
 			};
 		}
 
@@ -51,10 +51,8 @@
 			return new ScatterDataclass(parent, {
 				x: json.x,
 				y: json.y,
-				linecolour: json.linecolour,
-				linestrokeWidth: json.linestrokeWidth,
-				pointcolour: json.pointcolour,
-				pointradius: json.pointradius
+				line: LineClass.fromJSON(json.line),
+				points: PointsClass.fromJSON(json.points)
 			});
 		}
 	}
@@ -282,11 +280,13 @@
 <script>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import { appState } from '$lib/core/core.svelte';
 	import { onMount } from 'svelte';
+	import { flip } from 'svelte/animate';
+	import { slide } from 'svelte/transition';
+	import { tick } from 'svelte';
 
 	let { theData, which } = $props();
-
-	let currentControlTab = $state('properties');
 
 	//Tooltip
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
@@ -311,20 +311,7 @@
 </script>
 
 {#snippet controls(theData)}
-	<div class="control-tag">
-		<button
-			class={currentControlTab === 'properties' ? 'active' : ''}
-			onclick={() => (currentControlTab = 'properties')}>Properties</button
-		>
-		<button
-			class={currentControlTab === 'data' ? 'active' : ''}
-			onclick={() => (currentControlTab = 'data')}>Data</button
-		>
-	</div>
-
-	<div class="div-line"></div>
-
-	{#if currentControlTab === 'properties'}
+	{#if appState.currentControlTab === 'properties'}
 		<div class="control-component">
 			<div class="control-component-title">
 				<p>Dimension</p>
@@ -404,8 +391,8 @@
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
-						onInput={(e) => {
-							theData.ylimsIN[0] = parseFloat(e.target.value);
+						onInput={(val) => {
+							theData.ylimsIN[0] = parseFloat(val);
 						}}
 					/>
 				</div>
@@ -415,8 +402,8 @@
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-						onInput={(e) => {
-							theData.ylimsIN[1] = parseFloat(e.target.value);
+						onInput={(val) => {
+							theData.ylimsIN[1] = parseFloat(val);
 						}}
 					/>
 				</div>
@@ -456,7 +443,8 @@
 								? new Date(theData.xlimsIN[0]).toISOString().substring(0, 16)
 								: new Date(theData.xlims[0]).toISOString().substring(0, 16)}
 							oninput={(e) => {
-								theData.xlimsIN[0] = Number(new Date(e.target.value));
+								const val = e.target.value;
+								theData.xlimsIN[0] = Number(new Date(val));
 							}}
 						/>
 					</div>
@@ -469,7 +457,8 @@
 								? new Date(theData.xlimsIN[1]).toISOString().substring(0, 16)
 								: new Date(theData.xlims[1]).toISOString().substring(0, 16)}
 							oninput={(e) => {
-								theData.xlimsIN[1] = Number(new Date(e.target.value));
+								const val = e.target.value;
+								theData.xlimsIN[1] = Number(new Date(val));
 							}}
 						/>
 					</div>
@@ -479,8 +468,8 @@
 						<NumberWithUnits
 							step="0.1"
 							value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
-							onInput={(e) => {
-								theData.xlimsIN[0] = parseFloat(e.target.value);
+							onInput={(val) => {
+								theData.xlimsIN[0] = parseFloat(val);
 							}}
 						/>
 					</div>
@@ -490,8 +479,8 @@
 						<NumberWithUnits
 							step="0.1"
 							value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
-							onInput={(e) => {
-								theData.xlimsIN[1] = parseFloat(e.target.value);
+							onInput={(val) => {
+								theData.xlimsIN[1] = parseFloat(val);
 							}}
 						/>
 					</div>
@@ -511,48 +500,83 @@
 				</div>
 			</div>
 		</div>
-	{:else if currentControlTab === 'data'}
-		<div>
+	{:else if appState.currentControlTab === 'data'}
+		<div id="dataSettings">
 			<div class="heading">
 				<p>Data</p>
 				<div class="add">
 					<button
 						class="icon"
-						onclick={() =>
+						onclick={async () => {
 							theData.addData({
-								x: { refId: -1 },
-								y: { refId: -1 }
-							})}
+								x: null,
+								y: {}
+							});
+
+							await tick();
+
+							//Scroll to the bottom of dataSettings
+							const dataSettings =
+								document.getElementsByClassName('control-display')[0].parentElement;
+							if (dataSettings) {
+								dataSettings.scrollTo({
+									top: dataSettings.scrollHeight,
+									left: 0,
+									behavior: 'smooth'
+								});
+							} else {
+								console.error("Element with ID 'dataSettings' not found");
+							}
+
+							//TODO: consider focuus on the next y
+							//focus on the next y value
+
+							// // Get the last element with class 'y-select'
+							// const ySelectElements = document.getElementsByClassName('y-select');
+							// const lastYSelect = ySelectElements[ySelectElements.length - 1];
+
+							// // Get the <select> element within the last y-select
+							// const selectElement = lastYSelect.querySelector('select');
+
+							// // Check if the select element exists
+							// if (selectElement) {
+							// 	// Simulate a click on the select element
+							// 	selectElement.click();
+							// } else {
+							// 	console.error('No <select> element found within the last y-select element');
+							// }
+						}}
 					>
 						<Icon name="add" width={16} height={16} />
 					</button>
 				</div>
 			</div>
 
-			{#each theData.data as datum, i}
-				<p>
-					Data {i}
-					<button onclick={() => theData.removeData(i)}>-</button>
-				</p>
+			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
+				<div
+					class="dataBlock"
+					animate:flip={{ duration: 500 }}
+					in:slide={{ duration: 500, axis: 'y' }}
+				>
+					<p>
+						Data {i}
+						<button onclick={() => theData.removeData(i)}>-</button>
+					</p>
 
-				x: {datum.x.name}
-				<Column col={datum.x} canChange={true} />
+					<div class="data-wrapper">
+						<div class="x-select">
+							x: {datum.x.name}
 
-				y: {datum.y.name}
-				<Column col={datum.y} canChange={true} />
-
-				line col: <ColourPicker bind:value={datum.linecolour} />
-				line width: <NumberWithUnits
-					step="0.2"
-					limits={[0.1, Infinity]}
-					bind:value={datum.linestrokeWidth}
-				/>
-				point col: <ColourPicker bind:value={datum.pointcolour} />
-				point radius: <NumberWithUnits
-					step="0.2"
-					limits={[0.1, Infinity]}
-					bind:value={datum.pointradius}
-				/>
+							<Column col={datum.x} canChange={true} />
+						</div>
+						<div class="y-select">
+							y: {datum.y.name}
+							<Column col={datum.y} canChange={true} />
+						</div>
+						<Line lineData={datum.line} which="controls" />
+						<Points pointsData={datum.points} which="controls" />
+					</div>
+				</div>
 			{/each}
 		</div>
 	{/if}
@@ -632,20 +656,25 @@
 		{#each theData.plot.data as datum}
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
 				<Line
+					lineData={datum.line}
 					x={datum.x.getData()}
 					y={datum.y.getData()}
-					xscale={scaleLinear()
-						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-						.range([0, theData.plot.plotwidth])}
+					xscale={theData.plot.anyXdataTime
+						? scaleTime()
+								.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+								.range([0, theData.plot.plotwidth])
+						: scaleLinear()
+								.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+								.range([0, theData.plot.plotwidth])}
 					yscale={scaleLinear()
 						.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 						.range([theData.plot.plotheight, 0])}
-					strokeCol={datum.linecolour}
-					strokeWidth={datum.linestrokeWidth}
-					yoffset={theData.plot.padding.top}
 					xoffset={theData.plot.padding.left}
+					yoffset={theData.plot.padding.top}
+					which="plot"
 				/>
 				<Points
+					pointsData={datum.points}
 					x={datum.x.getData()}
 					xtype={datum.x.type}
 					y={datum.y.getData()}
@@ -660,6 +689,7 @@
 					yoffset={theData.plot.padding.top}
 					xoffset={theData.plot.padding.left}
 					tooltip={true}
+					which="plot"
 				/>
 			{/if}
 		{/each}

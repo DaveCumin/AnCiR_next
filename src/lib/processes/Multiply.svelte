@@ -2,10 +2,10 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	export function multiply(x, args) {
-		const value = args.value;
+		const value = Number(args.value);
 		return x.map((i) => i * value);
 	}
-	export const mulitply_defaults = new Map([['value', { val: 1 }]]);
+	export const multiply_defaults = new Map([['value', { val: Number(1) }]]);
 </script>
 
 <script>

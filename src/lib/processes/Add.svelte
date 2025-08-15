@@ -2,10 +2,10 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	export function add(x, args) {
-		const value = args.value;
+		const value = Number(args.value);
 		return x.map((i) => i + value);
 	}
-	export const add_defaults = new Map([['value', { val: 0 }]]);
+	export const add_defaults = new Map([['value', { val: Number(0) }]]);
 </script>
 
 <script>

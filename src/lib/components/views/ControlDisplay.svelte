@@ -285,6 +285,21 @@
 	let verticalGap = $derived.by(() => {
 		return verticalGapIN != null && !isNaN(verticalGapIN) ? verticalGapIN : getGap('vertical');
 	});
+
+	let tempTab = 'properties';
+	function updateCurrentControlTab(tab, type) {
+		if (type === 'actogram') {
+			appState.currentControlTab = tab;
+		} else {
+			if (appState.currentControlTab === 'annotations') {
+				appState.currentControlTab = tempTab;
+			} else {
+				appState.currentControlTab = tab;
+			}
+		}
+		console.log("DEBUG:", appState.currentControlTab);
+
+	}
 </script>
 
 <div class="control-display">
@@ -389,8 +404,8 @@
 						<NumberWithUnits
 							step={appState.gridSize}
 							value={verticalGapIN ? verticalGapIN : verticalGap}
-							onInput={(e) => {
-								verticalGapIN = parseFloat(e.target.value);
+							onInput={(val) => {
+								verticalGapIN = parseFloat(val);
 								updateGap('vertical');
 							}}
 							style="width: calc(100% - {verticalGapIN != null && verticalGapIN !== verticalGap
@@ -416,8 +431,8 @@
 							value={horizontalGapIN != null && !isNaN(horizontalGapIN)
 								? horizontalGapIN
 								: horizontalGap}
-							onInput={(e) => {
-								horizontalGapIN = parseFloat(e.target.value);
+							onInput={(val) => {
+								horizontalGapIN = parseFloat(val);
 								updateGap('horizontal');
 							}}
 							style="width: calc(100% - {horizontalGapIN != null &&
@@ -461,21 +476,42 @@
 			{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 			{#if Plot}
 				<div class="control-banner">
-					<p
-						contenteditable="false"
-						ondblclick={(e) => {
-							e.target.setAttribute('contenteditable', 'true');
-							e.target.focus();
-						}}
-						onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-						bind:innerHTML={plot.name}
-					></p>
-
-					<div class="control-banner-icons">
-						<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
-							<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
-						</button>
+					<div class="control-banner-title">
+						<p
+							contenteditable="false"
+							ondblclick={(e) => {
+								e.target.setAttribute('contenteditable', 'true');
+								e.target.focus();
+							}}
+							onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+							bind:innerHTML={plot.name}
+						></p>
+	
+						<div class="control-banner-icons">
+							<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
+								<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
+							</button>
+						</div>
 					</div>
+
+					<div class="control-tab">
+						<button
+							class={appState.currentControlTab === 'properties' ? 'active' : ''}
+							onclick={() => updateCurrentControlTab('properties', plot.type)}>Properties</button
+						>
+						<button
+							class={appState.currentControlTab === 'data' ? 'active' : ''}
+							onclick={() => updateCurrentControlTab('data', plot.type)}>Data</button
+						>
+
+						{#if plot.type === 'actogram'}
+						<button
+							class={appState.currentControlTab === 'annotations' ? 'active' : ''}
+							onclick={() => updateCurrentControlTab('annotations', plot.type) }>Annotations</button
+						>
+						{/if}
+					</div>
+					<div class="div-line"></div>
 				</div>
 
 				<SavePlot

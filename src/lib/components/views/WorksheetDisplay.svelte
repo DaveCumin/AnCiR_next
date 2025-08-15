@@ -45,6 +45,7 @@
 		return core.plots.length - 1 - i;
 	}
 
+	//DRAG AND DROP
 	function handleDragStart(i) {
 		draggedIndex = viewToModelIndex(i);
 	}

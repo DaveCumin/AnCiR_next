@@ -153,7 +153,9 @@
 
 {#snippet footerContent()}
 	{#if steps[1].completed}
-		<div><button onclick={confirmAddColumn}>Add these data</button></div>
+		<div class="dialog-button-container">
+			<button class="dialog-button" onclick={confirmAddColumn}>Add these data</button>
+		</div>
 	{/if}
 {/snippet}
 

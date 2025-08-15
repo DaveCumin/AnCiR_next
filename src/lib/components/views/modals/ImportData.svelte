@@ -8,6 +8,7 @@
 	import { Column } from '$lib/core/Column.svelte';
 	import { guessDateofArray, forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
 	import { numToString } from '$lib/utils/GeneralUtils';
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import TableLayout from '$lib/components/plotbits/Table.svelte';
@@ -158,7 +159,9 @@
 
 						// Final processing
 						// await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate delay
+						//console.log('before dealing: ', results.data);
 						dealWithData(results.meta.fields, results.data);
+						//console.log('after parse dealing', $state.snapshot(parsedData));
 						resolve();
 					}
 				});
@@ -194,12 +197,11 @@
 			});
 
 			// Loop through each object in the array
-			inputArray.forEach((row) => {
+			inputArray.forEach((row, r) => {
 				Object.keys(row).forEach((k, idx) => {
 					resultObject[headers[idx]].push(row[k]);
 				});
 			});
-
 			return resultObject;
 		} catch (error) {
 			console.warn('Error converting array to object:', error);
@@ -246,6 +248,9 @@
 
 			//If it's a time
 			if (guessedFormat != -1 && guessedFormat.length > 0) {
+				console.log('time here...');
+				console.log('guess: ', guessedFormat);
+				console.log('result: ', result[f]);
 				const df = new Column({});
 				df.type = 'time';
 				df.name = f;
@@ -351,7 +356,7 @@
 							Skip lines: <NumberWithUnits
 								bind:value={skipLines}
 								min="0"
-								oninput={() => doPreview()}
+								onInput={() => doPreview()}
 							/>
 						</p>
 						<div

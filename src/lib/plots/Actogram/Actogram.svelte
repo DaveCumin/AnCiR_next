@@ -46,9 +46,43 @@
 		colour = $state();
 		offset = $derived.by(() => {
 			if (this.x?.getData()) {
-				return (
-					(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
+				console.log('Debugging offset in actogram: ');
+				console.log(
+					'startTime: ',
+					this.parentPlot?.startTime,
+					', ',
+					new Date(this.parentPlot?.startTime),
+					',',
+					Number(new Date(this.parentPlot?.startTime)),
+					',',
+					new Date(this.parentPlot?.startTime) -
+						new Date(this.parentPlot?.startTime).getTimezoneOffset(),
+					',',
+					Number(
+						new Date(this.parentPlot?.startTime) -
+							new Date(this.parentPlot?.startTime).getTimezoneOffset()
+					)
 				);
+				console.log('time0: ', this.x?.getData()[0], ', ', new Date(this.x?.getData()[0]));
+
+				if (this.x.type == 'time') {
+					console.log(
+						'offset time: ',
+						(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
+					);
+					return (
+						(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
+					);
+				} else {
+					//TODO: Fix this - it's not quite right.
+					console.log(
+						'offset number: ',
+						Number(new Date(this.parentPlot?.startTime)) / 3600000 - Number(this.x?.getData()[0])
+					);
+					return (
+						Number(new Date(this.parentPlot?.startTime)) / 3600000 - Number(this.x?.getData()[0])
+					);
+				}
 			} else {
 				return 0;
 			}
@@ -157,7 +191,7 @@
 			});
 			//TODO: fix here for data with timeformat that doesn't work
 			return minTime !== Infinity && minTime >= 0
-				? new Date(minTime).toISOString().substring(0, 10)
+				? new Date(minTime).setHours(0, 0, 0, 0) //set to beginnig of the day
 				: undefined;
 		});
 		spaceBetween = $state(2);
@@ -293,9 +327,12 @@
 </script>
 
 <script>
-	let { theData, which } = $props();
+	import { flip } from 'svelte/animate';
+	import { slide } from 'svelte/transition';
+	import { tick } from 'svelte';
+	import { appState } from '$lib/core/core.svelte';
 
-	let currentControlTab = $state('properties');
+	let { theData, which } = $props();
 
 	function handleClick(e) {
 		if (theData.plot.isAddingMarkerTo >= 0) {
@@ -328,24 +365,8 @@
 </script>
 
 {#snippet controls(theData)}
-	<div class="control-tag">
-		<button
-			class={currentControlTab === 'properties' ? 'active' : ''}
-			onclick={() => (currentControlTab = 'properties')}>Properties</button
-		>
-		<button
-			class={currentControlTab === 'data' ? 'active' : ''}
-			onclick={() => (currentControlTab = 'data')}>Data</button
-		>
-		<button
-			class={currentControlTab === 'annotations' ? 'active' : ''}
-			onclick={() => (currentControlTab = 'annotations')}>Annotations</button
-		>
-	</div>
 
-	<div class="div-line"></div>
-
-	{#if currentControlTab === 'properties'}
+	{#if appState.currentControlTab === 'properties'}
 		<div class="control-component">
 			<div class="control-component-title">
 				<p>Dimension</p>
@@ -458,8 +479,8 @@
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[0] >= 0 ? theData.ylimsIN[0] : theData.ylims[0]}
-						onInput={(e) => {
-							theData.ylimsIN[0] = [parseFloat(e.target.value)];
+						onInput={(val) => {
+							theData.ylimsIN[0] = [parseFloat(val)];
 						}}
 					/>
 				</div>
@@ -469,16 +490,22 @@
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
-						onInput={(e) => {
-							theData.ylimsIN[1] = [parseFloat(e.target.value)];
+						onInput={(val) => {
+							theData.ylimsIN[1] = [parseFloat(val)];
 						}}
 					/>
 				</div>
 			</div>
 		{/if}
-	{:else if currentControlTab === 'data'}
+	{:else if appState.currentControlTab === 'data'}
 		<div class="control-component">
-			{#each theData.data as datum, i}
+			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
+				<div
+					class="dataBlock"
+					animate:flip={{ duration: 500 }}
+					in:slide={{ duration: 500, axis: 'y' }}
+				>
+
 				<div class="control-component-title">
 					<div class="control-component-title-colour">
 						<ColourPicker bind:value={datum.colour} />
@@ -494,7 +521,7 @@
 				<div class="control-data-container">
 					<div class="control-data">
 						<div class="control-data-title">
-							<strong>x</strong>
+							<strong>x:</strong>
 							<p
 								contenteditable="false"
 								ondblclick={(e) => {
@@ -506,12 +533,12 @@
 							></p>
 						</div>
 
-						<Column col={datum.x} canChange={true} />
-					</div>
+							<Column col={datum.x} canChange={true} />
+						</div>
 
 					<div class="control-data">
 						<div class="control-data-title">
-							<strong>y</strong>
+							<strong>y:</strong>
 							<p
 								contenteditable="false"
 								ondblclick={(e) => {
@@ -523,43 +550,67 @@
 							></p>
 						</div>
 
-						<Column col={datum.y} canChange={true} />
-					</div>
-
-					<div class="control-component-title">
-						<p>Markers</p>
-
-						<div class="control-component-title-icons">
-							<button class="icon" onclick={() => datum.addMarker()}>
-								<Icon name="plus" width={16} height={16} className="control-component-title-icon" />
-							</button>
+							<Column col={datum.y} canChange={true} />
 						</div>
-					</div>
 
-					{#each datum.phaseMarkers as marker}
-						<PhaseMarker {which} {marker} />
-					{/each}
-				</div>
+					<div class="control-data-title with-icon">
+						<strong>Markers</strong>
+
+							<div class="control-component-title-icons">
+								<button class="icon" onclick={() => datum.addMarker()}>
+									<Icon
+										name="plus"
+										width={16}
+										height={16}
+										className="control-component-title-icon"
+									/>
+								</button>
+							</div>
+						</div>
+
+						{#each datum.phaseMarkers as marker}
+							<PhaseMarker {which} {marker} />
+						{/each}
+					</div>
 
 				<div class="div-line"></div>
-			{/each}
+			</div>
+		{/each}
 		</div>
 
 		<div>
 			<button
 				class="icon control-block-add"
-				onclick={() =>
+				onclick={async () => {
 					theData.addData({
 						x: { refId: -1 },
 						y: { refId: -1 }
-					})}
+					});
+
+					await tick();
+
+					//TODO: consider this - scroll to the bottom and select y data automatically
+					//Scroll to the bottom of dataSettings
+					const dataSettings = document.getElementsByClassName('control-display')[0].parentElement;
+					if (dataSettings) {
+						dataSettings.scrollTo({
+							top: dataSettings.scrollHeight,
+							left: 0,
+							behavior: 'smooth'
+						});
+					} else {
+						console.error("Element with ID 'dataSettings' not found");
+					}
+				}}
 			>
 				<Icon name="plus" width={16} height={16} className="static-icon" />
 			</button>
 		</div>
-	{:else if currentControlTab === 'annotations'}
+	{:else if appState.currentControlTab === 'annotations'}
 		{#each theData.annotations as annotation}
 			<Annotation {which} {annotation} />
+
+			<div class="div-line"></div>
 		{/each}
 
 		<div>

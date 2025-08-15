@@ -1,3 +1,4 @@
+<!-- TODO: colourpicker alpha initial value should be 100 but is 0 -->
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
@@ -315,7 +316,7 @@
 						show = false;
 					}}
 				>
-					<Icon name="close" width={16} height={16} className="icon" />
+					<Icon name="close" width={16} height={16} className="icon close" />
 				</button>
 			</div>
 			<div class="cp-content">

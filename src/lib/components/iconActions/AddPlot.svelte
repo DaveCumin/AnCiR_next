@@ -7,7 +7,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import Dropdown from '../reusables/Dropdown.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
-	import AttributeSelect from '../reusables/AttributeSelect.svelte';
+	import AttributeSelect from '../inputs/AttributeSelect.svelte';
 	import MakeNewPlotsMultiple from '../views/modals/MakeNewPlots_Multiple.svelte';
 	import MakeNewPlot from '../views/modals/MakeNewPlot.svelte';
 

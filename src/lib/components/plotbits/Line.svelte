@@ -1,123 +1,158 @@
-<script>
+<script module>
 	import { line } from 'd3-shape';
-	let { x, y, xscale, yscale, strokeCol, strokeWidth, yoffset, xoffset } = $props();
+	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
+	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
+	import { isValidStroke } from '$lib/components/plotBits/helpers/misc.js';
 
-	let xlims = $derived(xscale.domain());
+	export class LineClass {
+		colour = $state(getPaletteColor(0));
+		strokeWidth = $state(3);
+		stroke = $state('solid');
+		draw = $state(true);
 
+		constructor(dataIN, parent) {
+			this.parentData = parent;
+			if (dataIN) {
+				this.colour =
+					dataIN?.colour ??
+					getPaletteColor(this.parentData.parentPlot.data.length - 1) ??
+					getPaletteColor(0);
+				this.strokeWidth = dataIN?.strokeWidth ?? 3;
+				this.stroke = dataIN?.stroke ?? 'solid';
+				this.draw = dataIN?.draw ?? true;
+			}
+		}
+
+		toJSON() {
+			return {
+				colour: this.colour,
+				strokeWidth: this.strokeWidth,
+				stroke: this.stroke,
+				draw: this.draw
+			};
+		}
+
+		static fromJSON(json) {
+			return new LineClass({
+				colour: json.colour,
+				strokeWidth: json.strokeWidth,
+				stroke: json.stroke,
+				draw: json.draw
+			});
+		}
+	}
+</script>
+
+<script>
+	let { lineData = $bindable(), x, y, xscale, yscale, yoffset = 0, xoffset = 0, which } = $props();
 	let width = $derived(xscale.range()[1]);
 	let height = $derived(yscale.range()[0]);
-
-	let clipKey = $derived(`${xoffset},${yoffset},${width},${height}`);
-
-	let beforeIdx = $derived.by(() => {
-		//find the x point before the limit
-		let xlims = xscale.domain();
-		for (let i = 1; i < x.length; i++) {
-			if (x[i] >= Math.min(xlims[0], xlims[1]) && x[i - 1] && y[i - 1]) {
-				return i - 1;
-			}
-		}
-		return 0;
-	});
-
-	let afterIdx = $derived.by(() => {
-		//find the x point after the limit
-		for (let i = x.length - 2; i >= 0; i--) {
-			if (x[i] <= Math.max(xlims[0], xlims[1]) && x[i + 1] && y[i + 1]) {
-				return i + 1;
-			}
-		}
-		return x.length - 1;
-	});
+	let clipKey = $derived(`line-${xoffset}-${yoffset}-${width}-${height}`);
 
 	let theline = $derived.by(() => {
-		//this is faster than the loop I had before!
+		if (!lineData?.draw || !x || !y) return null;
 
-		// Slice x and y arrays to include only points between beforeIdx and afterIdx
-		const xSlice = x.slice(beforeIdx, afterIdx + 1);
-		const ySlice = y.slice(beforeIdx, afterIdx + 1);
+		//filter out the NaNs and data outside the plot limits
+		const xlims = xscale.domain();
+		const [minX, maxX] = [Math.min(...xlims), Math.max(...xlims)];
+		const ylims = yscale.domain();
+		const [minY, maxY] = [Math.min(...ylims), Math.max(...ylims)];
 
-		let theLine = line()
-			.x((d, i) => xscale(xSlice[i]))
-			.y((d, i) => yscale(ySlice[i]));
+		const filteredData = x
+			.map((xVal, i) => ({ x: xVal, y: y[i] }))
+			.filter(
+				(d) =>
+					d.x >= minX &&
+					d.x <= maxX &&
+					d.y >= minY &&
+					d.y <= maxY &&
+					d.y != null &&
+					d.x != null &&
+					!isNaN(d.y) &&
+					!isNaN(d.x)
+			);
 
-		//can apply curves (eg https://d3js.org/d3-shape/curve#curveBundle_beta) here - just import them first
+		//No Line if only 1 or fewer points
+		if (filteredData.length < 2) return null;
 
-		return theLine(xSlice);
+		const lineGenerator = line()
+			.x((d) => xscale(d.x))
+			.y((d) => yscale(d.y));
+
+		return lineGenerator(filteredData);
 	});
 </script>
 
-<clipPath id={clipKey}>
-	<rect x={xoffset} y={yoffset} {width} {height} />
-</clipPath>
+{#snippet controls(lineData)}
+	<div class="control-component">
+		<div class="control-component-title">
+			<p>Line</p>
+			<button
+				class="icon"
+				onclick={(e) => {
+					e.stopPropagation();
+					lineData.draw = !lineData.draw;
+				}}
+			>
+				{#if !lineData.draw}
+					<Icon name="eye-slash" width={16} height={16} />
+				{:else}
+					<Icon name="eye" width={16} height={16} className="visible" />
+				{/if}
+			</button>
+		</div>
+		<div class="control-input-horizontal">
+			<div class="control-input" style="max-width: 1.5rem;">
+				<p style="color:{'white'};">Col</p>
+				<ColourPicker bind:value={lineData.colour} />
+			</div>
+			<div class="control-input">
+				<p>Width</p>
+				<NumberWithUnits step="0.2" min={0.1} bind:value={lineData.strokeWidth} />
+			</div>
+			<div class="control-input">
+				<p>Stroke</p>
+				<div style="border: {lineData.stroke === -1 ? '1' : '0'}px solid red;">
+					<AttributeSelect
+						onChange={(value) => {
+							if (isValidStroke(value)) {
+								lineData.stroke = value;
+							} else {
+								lineData.stroke = -1;
+							}
+						}}
+						options={['solid', '5, 5', '2, 2', '5, 2']}
+						optionsDisplay={['Solid', 'Dashed', 'Dotted', 'Dashed & Dotted']}
+						other={true}
+						placeholder={'eg 5, 5'}
+					/>
+				</div>
+			</div>
+		</div>
+	</div>
+{/snippet}
 
-<g clip-path={`url(#${clipKey})`}>
-	<path
-		d={theline}
-		fill="none"
-		stroke={strokeCol}
-		stroke-width={strokeWidth}
-		style={`transform: translate(	${xoffset}px,
-									${yoffset}px);`}
-	/>
-</g>
+{#snippet plot(lineData)}
+	{#if theline && lineData?.draw}
+		<clipPath id={clipKey}>
+			<rect x={xoffset} y={yoffset} {width} {height} />
+		</clipPath>
+		<g clip-path="url(#{clipKey})">
+			<path
+				d={theline}
+				fill="none"
+				stroke={lineData.colour}
+				stroke-width={lineData.strokeWidth}
+				style="transform: translate({xoffset}px, {yoffset}px); stroke-dasharray: {lineData.stroke};"
+			/>
+		</g>
+	{/if}
+{/snippet}
 
-<!--
-//THIS WORKS BUT IS MUCH SLOWER TO RENDER
-<script>
-	import { line, curveBasis } from 'd3-shape';
-
-	let { x, y, xscale, yscale, strokeCol, strokeWidth, style, usecanvas = false } = $props();
-
-	let canvas;
-	let context;
-
-	let basis = false;
-
-	let scaledData = $derived(
-		x.getData().map((xVal, i) => ({
-			x: xscale(xVal),
-			y: yscale(y.getData()[i]),
-			id: i // Unique key for data binding
-		}))
-	);
-
-	let theLine = line()
-		.x((d) => d.x)
-		.y((d) => d.y);
-	if (basis) {
-		theLine = theLine.curve(curveBasis);
-	}
-
-	$effect(() => {
-		if (usecanvas) {
-			context = canvas.getContext('2d');
-			context.clearRect(0, 0, canvas.width, canvas.height);
-			context.strokeStyle = strokeCol;
-			context.lineWidth = strokeWidth;
-			draw();
-		}
-	});
-
-	function draw() {
-		context.clearRect(0, 0, canvas.width, canvas.height);
-		context.strokeStyle = strokeCol;
-		context.lineWidth = strokeWidth;
-		context.beginPath();
-		theLine.context(context)(scaledData);
-		context.stroke();
-	}
-</script>
-
-{#if usecanvas}
-	<canvas
-		bind:this={canvas}
-		width={xscale.range()[1]}
-		height={yscale.range()[0]}
-		style={'position:absolute;' + style}
-	/>
-{:else}
-	<polyline fill="none" stroke={strokeCol} stroke-width={strokeWidth} {points} {style} />
+{#if which === 'plot'}
+	{@render plot(lineData)}
+{:else if which === 'controls'}
+	{@render controls(lineData)}
 {/if}
-
--->

@@ -45,8 +45,8 @@
 	});
 </script>
 
-<p>Offset: <NumberWithUnits bind:value={p.args.offset} oninput={makeRandom} /></p>
-<p>Multiply: <NumberWithUnits bind:value={p.args.multiply} oninput={makeRandom} /></p>
+<p>Offset: <NumberWithUnits bind:value={p.args.offset} onInput={makeRandom} /></p>
+<p>Multiply: <NumberWithUnits bind:value={p.args.multiply} onInput={makeRandom} /></p>
 {#if p.args.valid && p.args.out.result == -1}
 	<p>Preview:</p>
 	<p>X: {result}</p>

@@ -5,12 +5,11 @@
 	import { scaleLinear } from 'd3-scale';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
-	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { binData, mean, makeSeqArray } from '$lib/components/plotBits/helpers/wrangleData.js';
 	import { pchisq, qchisq } from '$lib/data/CDFs';
 
-	import Line from '$lib/components/plotBits/Line.svelte';
-	import Points from '$lib/components/plotBits/Points.svelte';
+	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
+	import Points, { PointsClass } from '$lib/components/plotBits/Points.svelte';
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
 
@@ -101,11 +100,9 @@
 		method = $state('Chi-squared'); // New: method selector
 
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
-		linecolour = $state();
-		linestrokeWidth = $state(3);
-		pointcolour = $state();
-		pointradius = $state(5);
-		alpha = $state(0.05);
+		line = $state();
+		points = $state();
+		chiSquaredAlpha = $state(0.05);
 
 		updatePeriodData() {
 			let binnedData = { bins: [], y_out: [] }; // No binning for Lomb-Scargle
@@ -125,7 +122,7 @@
 			);
 			const frequencies = periods.map((p) => 1 / p); // For Lomb-Scargle
 
-			const correctedAlpha = Math.pow(1 - this.alpha, 1 / periods.length);
+			const correctedAlpha = Math.pow(1 - this.chiSquaredAlpha, 1 / periods.length);
 			const power = new Array(periods.length);
 			const threshold = new Array(periods.length);
 			const pvalue = new Array(periods.length);
@@ -165,18 +162,24 @@
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
 
-			if (dataIN && dataIN.x) {
+			if (dataIN?.x) {
+				//if there's data, use it!
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new ColumnClass({ refId: -1 });
+				if (parent.data.length > 0) {
+					this.x = parent.data[parent.data.length - 1].x;
+				} else {
+					//blank one
+					this.x = new ColumnClass({ refId: -1 });
+				}
 			}
 			if (dataIN && dataIN.y) {
 				this.y = ColumnClass.fromJSON(dataIN.y);
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
-			this.linecolour = dataIN?.linecolour ?? getPaletteColor(this.parentPlot.data.length);
-			this.pointcolour = dataIN?.pointcolour ?? getPaletteColor(this.parentPlot.data.length);
+			this.line = new LineClass(dataIN?.line, this);
+			this.points = new PointsClass(dataIN?.points, this);
 			this.method = dataIN?.method ?? 'Lomb-Scargle'; // Initialize method
 		}
 
@@ -184,13 +187,11 @@
 			return {
 				x: this.x,
 				y: this.y,
-				linecolour: this.linecolour,
-				linestrokeWidth: this.linestrokeWidth,
-				pointcolour: this.pointcolour,
-				pointradius: this.pointradius,
+				line: this.line.toJSON(),
+				points: this.points.toJSON(),
 				binSize: this.binSize,
 				method: this.method,
-				alpha: this.alpha
+				chiSquaredAlpha: this.chiSquaredAlpha
 			};
 		}
 
@@ -198,13 +199,11 @@
 			return new PeriodogramDataclass(parent, {
 				x: json.x,
 				y: json.y,
-				linecolour: json.linecolour,
-				linestrokeWidth: json.linestrokeWidth,
-				pointcolour: json.pointcolour,
-				pointradius: json.pointradius,
+				line: LineClass.fromJSON(json.line),
+				points: PointsClass.fromJSON(json.points),
 				binSize: json.binSize,
 				method: json.method,
-				alpha: json.alpha
+				chiSquaredAlpha: json.chiSquaredAlpha
 			});
 		}
 	}
@@ -411,12 +410,15 @@
 </script>
 
 <script>
+	import { appState } from '$lib/core/core.svelte';
 	import { onMount } from 'svelte';
+	import { flip } from 'svelte/animate';
+	import { slide } from 'svelte/transition';
+	import { tick } from 'svelte';
+	
 	import Icon from '$lib/icons/Icon.svelte';
 
 	let { theData, which } = $props();
-
-	let currentControlTab = $state('properties');
 
 	$effect(() => {
 		if (theData.periodlimsIN || theData.periodSteps) {
@@ -447,19 +449,8 @@
 </script>
 
 {#snippet controls(theData)}
-	<div class="control-tag">
-		<button
-			class={currentControlTab === 'properties' ? 'active' : ''}
-			onclick={() => (currentControlTab = 'properties')}>Properties</button
-		>
-		<button
-			class={currentControlTab === 'data' ? 'active' : ''}
-			onclick={() => (currentControlTab = 'data')}>Data</button
-		>
-	</div>
-	<div class="div-line"></div>
 
-	{#if currentControlTab === 'properties'}
+	{#if appState.currentControlTab === 'properties'}
 		<div class="control-component">
 			<div class="control-component-title">
 				<p>Dimension</p>
@@ -542,7 +533,7 @@
 				<div class="control-input">
 					<p>Left</p>
 					<div
-						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
+						style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
 						<NumberWithUnits
 							bind:value={theData.padding.left}
@@ -603,7 +594,6 @@
 				</div>
 			</div>
 
-			<!-- TODO: fix checkbox input style -->
 			<div class="control-input-vertical">
 				<div class="control-input-checkbox">
 					<input type="checkbox" bind:checked={theData.ygridlines} />
@@ -680,58 +670,131 @@
 				</div>
 			</div>
 		</div>
-	{:else if currentControlTab === 'data'}
+	{:else if appState.currentControlTab === 'data'}
 		<div>
 			<p>Data:</p>
 			<button
+				onclick={async () => {
+					theData.addData({
+						x: null,
+						y: { refId: -1 }
+					});
+					await tick();
+
+					const dataSettings = document.getElementsByClassName('control-display')[0].parentElement;
+					if (dataSettings) {
+						dataSettings.scrollTo({
+							top: dataSettings.scrollHeight,
+							left: 0,
+							behavior: 'smooth'
+						});
+					} else {
+						console.error("Element with ID 'dataSettings' not found");
+					}
+				}}
+			>
+				+
+			</button>
+
+			<div class="control-data-container">
+				{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
+				<div
+					class="dataBlock"
+					animate:flip={{ duration: 500 }}
+					in:slide={{ duration: 500, axis: 'y' }}
+				>
+					<p>
+						Data {i}
+						<button onclick={() => theData.removeData(i)}>-</button>
+					</p>
+
+					<div class="control-data">
+						<div class="control-data-title">
+							<strong>x</strong>
+							<p
+								contenteditable="false"
+								ondblclick={(e) => {
+									e.target.setAttribute('contenteditable', 'true');
+									e.target.focus();
+								}}
+								onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+								bind:innerHTML={datum.x.name}
+							></p>
+						</div>
+
+						<Column col={datum.x} canChange={true} />
+					</div>
+
+					<div class="control-data">
+						<div class="control-data-title">
+							<strong>y</strong>
+							<p
+								contenteditable="false"
+								ondblclick={(e) => {
+									e.target.setAttribute('contenteditable', 'true');
+									e.target.focus();
+								}}
+								onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+								bind:innerHTML={datum.y.name}
+							></p>
+						</div>
+
+						<Column col={datum.y} canChange={true} />
+					</div>
+
+					<div class="control-input">
+						<p>Method</p>
+						<select bind:value={datum.method} onchange={() => datum.updatePeriodData()}>
+							<option value="Chi-squared">Chi-squared</option>
+							<option value="Lomb-Scargle">Lomb-Scargle</option>
+						</select>
+					</div>
+					
+					<!-- New: Method selector -->
+					<div class="control-input-horizontal">
+						<!-- binSize only relevant for Chi-squared -->
+						{#if datum.method === 'Chi-squared'}
+							<div class="control-input">
+								<p>Bin Size</p>
+								<input type="number" step="0.01" min="0.01" bind:value={datum.binSize} />
+							</div>
+	
+							<div class="control-input">
+								<p>Alpha</p>
+								<input
+									type="number"
+									min="0.0001"
+									max="0.9999"
+									step="0.01"
+									bind:value={datum.alpha}
+									oninput={() => datum.updatePeriodData()}
+								/>
+							</div>
+						{/if}
+					</div>
+				
+
+					<Line lineData={datum.line} which="controls" />
+					<Points pointsData={datum.points} which="controls" />
+
+					<div class="div-line"></div>
+
+				</div>
+			{/each}
+		</div>
+
+		<div>
+			<button
+				class="icon control-block-add"
 				onclick={() =>
 					theData.addData({
 						x: { refId: -1 },
 						y: { refId: -1 }
 					})}
 			>
-				+
+				<Icon name="plus" width={16} height={16} className="static-icon" />
 			</button>
-
-			{#each theData.data as datum, i}
-				<p>
-					Data {i}
-					<button onclick={() => theData.removeData(i)}>-</button>
-				</p>
-
-				x: {datum.x.name}
-				<Column col={datum.x} canChange={true} />
-
-				y: {datum.y.name}
-				<Column col={datum.y} canChange={true} />
-
-				<!-- New: Method selector -->
-				<p>
-					Method:
-					<select bind:value={datum.method} onchange={() => datum.updatePeriodData()}>
-						<option value="Chi-squared">Chi-squared</option>
-						<option value="Lomb-Scargle">Lomb-Scargle</option>
-					</select>
-				</p>
-
-				<!-- binSize only relevant for Chi-squared -->
-				{#if datum.method === 'Chi-squared'}
-					binSize: <NumberWithUnits step="0.01" min="0.01" bind:value={datum.binSize} />
-					alpha:
-					<NumberWithUnits
-						min="0.0001"
-						max="0.9999"
-						step="0.01"
-						bind:value={datum.alpha}
-						onInput={() => datum.updatePeriodData()}
-					/>
-				{/if}
-
-				line col: <ColourPicker bind:value={datum.linecolour} />
-				line width: <NumberWithUnits step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
-				point col: <ColourPicker bind:value={datum.pointcolour} />
-				point radius: <NumberWithUnits step="0.1" min="0.1" bind:value={datum.pointradius} />
-			{/each}
+		</div>
 		</div>
 	{/if}
 {/snippet}
@@ -773,6 +836,7 @@
 
 		{#each theData.plot.data as datum}
 			<Line
+				lineData={datum.line}
 				x={datum.periodData.x}
 				y={datum.periodData.y}
 				xscale={scaleLinear()
@@ -785,8 +849,10 @@
 				strokeWidth={datum.linestrokeWidth}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
+				which="plot"
 			/>
 			<Points
+				pointsData={datum.points}
 				x={datum.periodData.x}
 				y={datum.periodData.y}
 				xscale={scaleLinear()
@@ -800,9 +866,11 @@
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 				tooltip={true}
+				which="plot"
 			/>
 			{#if datum.method === 'Chi-squared'}
 				<Line
+					lineData={datum.line}
 					x={datum.periodData.x}
 					y={datum.periodData.threshold}
 					xscale={scaleLinear()

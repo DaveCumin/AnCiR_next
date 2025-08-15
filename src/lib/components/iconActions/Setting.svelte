@@ -79,37 +79,66 @@
 
 		showImportModal = false;
 		importReady = false;
-		showDropdown = false;
 	}
 
+	//TODO: Not downloading... FIX THIS!!
 	function exportJson() {
-		const jsonStr = outputCoreAsJson();
+		try {
+			// Get JSON string and validate
+			const jsonStr = outputCoreAsJson();
+			if (typeof jsonStr !== 'string' || !jsonStr) {
+				throw new Error('Invalid or empty JSON string returned by outputCoreAsJson');
+			}
 
-		const blob = new Blob([jsonStr], { type: 'application/json' });
-		const url = URL.createObjectURL(blob);
+			// Validate JSON content
+			try {
+				JSON.parse(jsonStr); // Ensure it's valid JSON
+			} catch (e) {
+				throw new Error('Invalid JSON format: ' + e.message);
+			}
 
-		// Create temp <a> element and auto click it
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = 'workflow.json';
-		document.body.appendChild(a);
-		a.click();
+			// Create Blob with JSON content
+			const blob = new Blob([jsonStr], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
 
-		document.body.removeChild(a);
-		URL.revokeObjectURL(url);
+			// Create temporary <a> element
+			const a = document.createElement('a');
+			a.innerText = 'download';
+			a.href = url;
+			a.download = 'session.json'; // File name for download
+			document.body.appendChild(a);
 
-		showDropdown = false;
+			// Programmatically trigger click
+			a.click();
+
+			console.log(
+				'should have started download of ',
+				JSON.parse(jsonStr),
+				' from ',
+				url,
+				' : ',
+				blob
+			);
+			// Clean up
+			setTimeout(() => {
+				document.body.removeChild(a);
+				URL.revokeObjectURL(url);
+			}, 10); // Delay cleanup to ensure download starts
+		} catch (error) {
+			console.error('Failed to export JSON:', error.message);
+			alert('Error exporting JSON: ' + error.message); // Notify user of error
+		}
 	}
 </script>
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
 		<div class="action">
-			<button onclick={openImportModal}> Load session</button>
+			<button onclick={(e) => openImportModal()}> Load session</button>
 		</div>
 
 		<div class="action">
-			<button onclick={exportJson}> Save session </button>
+			<button onclick={(e) => exportJson()}> Save session </button>
 		</div>
 
 		<div class="action">
@@ -237,26 +266,5 @@
 	.filename-preview {
 		color: var(--color-lightness-35);
 		font-size: 14px;
-	}
-
-	.import-button-container {
-		display: flex;
-		justify-content: flex-end;
-		/* margin-right: 1rem; */
-	}
-
-	.import-button {
-		margin-top: 10px;
-		background-color: var(--color-lightness-95);
-		border-radius: 4px;
-		padding: 10px;
-		padding-right: 12px;
-
-		font-size: 14px;
-		text-align: center;
-	}
-
-	.import-button:hover {
-		background-color: var(--color-hover);
 	}
 </style>

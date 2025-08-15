@@ -25,11 +25,14 @@
 	import { Process } from '$lib/core/Process.svelte';
 	import { TableProcess } from '$lib/core/tableProcess.svelte';
 
+	import Icon from '$lib/icons/Icon.svelte';
+
 	// import { testjson } from '$lib/test.svelte.js';
 
 	import { guessFormatD3 } from '$lib/utils/time/guessTimeFormat_d3.js';
 	import { guessFormat } from '$lib/utils/time/guessTimeFormat.js';
 
+	let loadingMsg = $state('Warming up...');
 	let isLoaded = $state(false);
 
 	// const timesToTest = ['2025/10/01', '2025/12/01', '2025/13/01'];
@@ -79,8 +82,11 @@
 
 	onMount(async () => {
 		//load the maps
+		loadingMsg = 'Loading processes ...';
 		appConsts.processMap = await loadProcesses();
+		loadingMsg = 'Loading plots ...';
 		appConsts.plotMap = await loadPlots();
+		loadingMsg = 'Loading table processes ...';
 		appConsts.tableProcessMap = await loadTableProcesses();
 
 		isLoaded = true;
@@ -94,24 +100,39 @@
 		window.addEventListener('resize', updateWidth);
 
 		document.addEventListener('keydown', (event) => {
-			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
+			const ISMAC =
+				navigator.platform.toUpperCase().indexOf('MAC') >= 0 ||
+				navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
+			const MODIFIER = ISMAC ? event.metaKey : event.ctrlKey;
+
+			// Print out info - DEGUGGING
+			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'i') {
 				console.log($state.snapshot(core));
 				console.log($state.snapshot(appState));
 				console.log($state.snapshot(appConsts));
 			}
-			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 's') {
+			// Create sample data quickly - FOR TESTING
+			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 's') {
 				refresh();
 			}
-			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'p') {
+
+			// CHANGE SCALE - ZOOM IN
+			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'p') {
 				appState.canvasScale += 0.1;
-				console.log(appState.canvasScale);
 			}
-			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'o') {
+			// CHANGE SCALE - ZOOM OUT
+			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'o') {
 				appState.canvasScale -= 0.1;
-				console.log(appState.canvasScale);
 			}
-			if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a') {
+			// SELCT ALL PLOTS
+			if (MODIFIER && event.key.toLowerCase() === 'a') {
+				event.preventDefault();
 				selectAllPlots();
+			}
+			// SAVE THE SESSION
+			if (MODIFIER && event.key.toLowerCase() === 's') {
+				event.preventDefault();
+				//TODO: add save
 			}
 		});
 
@@ -321,7 +342,12 @@
 
 	<ControlPanel />
 {:else}
-	<div>Loading...</div>
+	<div>
+		<p>
+			<Icon name="spinner" width={32} height={32} className="spinner" />
+			{loadingMsg}
+		</p>
+	</div>
 {/if}
 
 <style>
@@ -370,17 +396,22 @@
 	:global(.dialog-button-container) {
 		display: flex;
 		justify-content: flex-end;
+
+		cursor: pointer;
 	}
 
 	:global(button.dialog-button) {
 		margin-top: 10px;
 		background-color: var(--color-lightness-95);
+		border: transparent;
 		border-radius: 4px;
 		padding: 10px;
 		padding-right: 12px;
 
 		font-size: 14px;
 		text-align: center;
+
+		cursor: pointer;
 	}
 
 	:global(button.dialog-button:hover) {
@@ -565,14 +596,26 @@
 
 	/* plot control */
 	:global(.control-banner) {
+		position: sticky;
+		top: 0;
+
 		width: 100%;
 		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+
+		font-weight: bold;
+		background-color: white;
+	}
+
+	:global(.control-banner-title) {
+		width: 100%;
+		display: flex;
+		flex: 1 1 0;
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-between;
-
-		font-weight: bold;
-		/* background-color: blue; */
 	}
 
 	:global(.control-banner-icons) {
@@ -585,24 +628,27 @@
 		padding: 0;
 	}
 
-	:global(.control-tag) {
+	:global(.control-tab) {
+		position: sticky;
+		top: 0;
+
 		width: 100%;
 		display: flex;
 		flex-direction: row;
 		flex-wrap: nowrap; /* Prevent buttons from wrapping */
 		align-items: center;
 		justify-content: flex-start;
-		margin-bottom: 1rem;
 		gap: 0.4rem;
 		overflow-x: auto;
 	}
 
-	:global(.control-tag::-webkit-scrollbar) {
+	:global(.control-tab::-webkit-scrollbar) {
 		display: none;
 	}
 
-	:global(.control-tag button) {
+	:global(.control-tab button) {
 		font-size: 14px;
+		margin: 0;
 		padding: 0.25rem 0.5rem;
 		color: var(--color-lightness-35);
 		background-color: transparent;
@@ -612,12 +658,12 @@
 		white-space: nowrap; /* Prevent text wrapping within buttons */
 	}
 
-	:global(.control-tag button.active) {
+	:global(.control-tab button.active) {
 		color: black;
 		background-color: var(--color-lightness-95);
 	}
 
-	:global(.control-tag button:hover) {
+	:global(.control-tab button:hover) {
 		background-color: var(--color-lightness-95);
 	}
 	:global(.control-component) {
@@ -696,7 +742,6 @@
 
 		width: 100%;
 		gap: 0.5rem;
-		margin-bottom: 0.5rem;
 	}
 
 	:global(.control-input-color button) {
@@ -754,8 +799,23 @@
 		transition: border-color 0.2s;
 	}
 
+	:global(.control-input select) {
+		padding: 0.2rem 0.25rem;
+	}
+
 	:global(.control-input select:hover, .control-input input:hover) {
 		border: solid 1px var(--color-lightness-35);
+	}
+
+	:global(.control-color) {
+		display: flex;
+		align-items: baseline;
+		justify-content: baseline;
+
+		box-sizing: border-box;
+		border: solid 1px transparent;
+
+		margin-top: 1.2rem;
 	}
 
 	:global(button.control-block-add) {
@@ -778,19 +838,23 @@
 	/* plot control (data) */
 	:global(.control-data-container) {
 		display: flex;
+		flex: 1 1 0;
 		flex-direction: column;
 
 		width: 100%;
 		min-width: 0;
 
 		margin: 0;
-		/* margin-left: 0.4rem; */
+		margin-left: 0.4rem;
 		/* margin-left: 0.1rem; */
 
 		gap: 0.25rem;
 	}
 
 	:global(.control-data) {
+		display: flex;
+		flex: 1 1 0;
+		flex-direction: column;
 		width: 100%;
 		min-width: 0;
 	}
@@ -814,6 +878,10 @@
 	:global(.control-data-title p) {
 		margin: 0;
 		padding: 0;
+	}
+	
+	:global(.with-icon) {
+		justify-content: space-between;
 	}
 
 	/* process */

@@ -62,6 +62,8 @@
 
 <script>
 	let { p } = $props();
+	console.log(p);
+	console.log(appConsts.processMap.get(p.name));
 	const Process = appConsts.processMap.get(p.name).component ?? null;
 </script>
 

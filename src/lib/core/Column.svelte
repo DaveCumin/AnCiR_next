@@ -257,7 +257,7 @@
 		dropdownLeft = rect.right + window.scrollX + 12;
 		showAddProcess = true;
 
-		// openClps[id] = true;
+		openClps[id] = true;
 	}
 
 	let openMenus = $state({});
@@ -272,24 +272,23 @@
 	<div class="clps-container">
 		<details class="clps-item" bind:open={openClps[col.id]}>
 			<summary class="clps-title-container">
-				
 				<div class="column-indicator"></div>
-				
+
 				<div
 					class="clps-title"
 					onclick={(e) => {
 						e.preventDefault();
 						e.stopPropagation();
 					}}
-				>	
+				>
 					<TypeSelector bind:value={col.type} />
-					
+
 					{#if canChange}
 						<div>
 							<ColumnSelector bind:value={col.refId} bind:onChange />
 						</div>
 					{:else}
-						<p 
+						<p
 							contenteditable="false"
 							ondblclick={(e) => {
 								e.target.setAttribute('contenteditable', 'true');
@@ -297,10 +296,8 @@
 							}}
 							onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
 							bind:innerHTML={col.name}
-						>
-						</p>
+						></p>
 					{/if}
-
 				</div>
 
 				<div class="clps-title-button">
@@ -316,9 +313,9 @@
 					</button>
 
 					{#if openClps[col.id]}
-					<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />
+						<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />
 					{:else}
-					<Icon name="caret-right" width={20} height={20} className="second-detail-title-icon" />
+						<Icon name="caret-right" width={20} height={20} className="second-detail-title-icon" />
 					{/if}
 				</div>
 			</summary>
@@ -337,7 +334,6 @@
 							</div>
 						{/if}
 					{/if}
-					
 				</div>
 
 				<div class="line"></div>

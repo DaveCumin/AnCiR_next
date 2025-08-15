@@ -3,7 +3,7 @@
 	import { onMount, tick } from 'svelte';
 	import { appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-
+	import { deselectAllPlots } from '$lib/core/Plot.svelte';
 	import { removePlot, selectPlot } from '$lib/core/Plot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 
@@ -32,20 +32,46 @@
 	let dragStartX, dragStartY;
 	let mouseStartX, mouseStartY;
 
+	let isDragging = false;
+	let hasMouseMoved = false;
+	let dragThreshold = 5; // pixels before considering it a drag
+
 	let dragStartPositions = {};
 
 	function onMouseDown(e) {
 		if (e.target.closest('button.icon')) return;
+
 		mouseStartX = e.clientX;
 		mouseStartY = e.clientY;
 
 		dragStartPositions = {};
-		// find all selected plots
+
+		hasMouseMoved = false;
+
+		// If Alt key is pressed, toggle selection of this plot
+		if (e.altKey) {
+			selected = !selected;
+			return;
+		}
+		// If this plot is not selected, we need to handle selection logic
+		if (!selected) {
+			// Clear other selections unless Alt is held
+			core.plots.forEach((p) => {
+				if (p.id !== id) {
+					p.selected = false;
+				}
+			});
+			selected = true;
+		}
+
+		// Prepare for potential drag operation
+		dragStartPositions = {};
 		core.plots.forEach((p) => {
 			if (p.selected) {
 				dragStartPositions[p.id] = { x: p.x, y: p.y };
 			}
 		});
+
 		moving = true;
 	}
 
@@ -62,12 +88,20 @@
 	}
 
 	function onMouseMove(e) {
-		if (moving) {
+		if (moving && !isDragging) {
+			const deltaX = Math.abs(e.clientX - mouseStartX);
+			const deltaY = Math.abs(e.clientY - mouseStartY);
+
+			if (deltaX > dragThreshold || deltaY > dragThreshold) {
+				isDragging = true;
+				hasMouseMoved = true;
+			}
+		}
+		if (moving && isDragging) {
 			const deltaX = (e.clientX - mouseStartX) / appState.canvasScale;
 			const deltaY = (e.clientY - mouseStartY) / appState.canvasScale;
-
 			core.plots.forEach((p) => {
-				if (p.selected) {
+				if (p.selected || p.id == id) {
 					if (anySelectedPlotEdge(e.movementX, e.movementY)) return; //do nothing
 
 					const start = dragStartPositions[p.id];
@@ -127,6 +161,8 @@
 	function onMouseUp() {
 		moving = false;
 		resizing = false;
+		isDragging = false;
+		hasMouseMoved = false;
 	}
 
 	function startResize(e) {
@@ -151,25 +187,11 @@
 
 	async function handleDblClick(e) {
 		e.stopPropagation();
+		// Double click
 		appState.showControlPanel = true;
 		await tick();
+
 		RePosition();
-	}
-
-	function handleClick(e) {
-		e.stopPropagation();
-		n += 1;
-		clearTimeout(timeout);
-		timeout = setTimeout(() => {
-			selectPlot(e, id);
-
-			if (n > 1) {
-				handleDblClick(e);
-			} else {
-				RePosition();
-			}
-			n = 0;
-		}, delay);
 	}
 
 	function RePosition() {
@@ -208,17 +230,17 @@
 
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
-	let timeout,
-		n = 0,
-		delay = 180;
 </script>
 
 <svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp} />
 
 <!-- added header therefore TODO: other way than hardcode -->
+
+<!-- the click does nothing becasue it's all handled in the mousedown/up for drag/resize etc. -->
 <section
 	bind:this={plotElement}
-	onclick={(e) => handleClick(e)}
+	ondblclick={(e) => handleDblClick(e)}
+	onclick={(e) => e.stopPropagation()}
 	class:selected
 	class="draggable"
 	style="left: {x}px;
@@ -241,7 +263,7 @@
 
 		<button class="icon" onclick={() => removePlot(id)}>
 			<!-- <Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" /> -->
-			<Icon name="close" width={16} height={16} className="icon" />
+			<Icon name="close" width={16} height={16} className="icon close" />
 		</button>
 	</div>
 	<div class="plot-content">

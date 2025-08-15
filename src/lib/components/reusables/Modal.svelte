@@ -48,7 +48,7 @@ https://svelte.dev/playground/modal?version=5.33.7
 			}}
 			transition:fade={{ duration: 360 }}
 		>
-			<div>
+			<div style="position:absolute; right:1rem;">
 				<!-- svelte-ignore a11y_autofocus -->
 				<button onclick={() => close()}>
 					<Icon name="close" width={16} height={16} className="close" />
@@ -69,7 +69,7 @@ https://svelte.dev/playground/modal?version=5.33.7
 		border-radius: 5px;
 		border: 1px, solid, var(--color-lightness-85);
 		box-shadow:
-			0 4px 8px 0 rgba(0, 0, 0, 0.2), 
+			0 4px 8px 0 rgba(0, 0, 0, 0.2),
 			0 6px 10px 0 rgba(0, 0, 0, 0.1);
 	}
 	.backdrop {

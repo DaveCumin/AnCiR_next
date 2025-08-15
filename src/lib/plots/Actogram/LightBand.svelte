@@ -164,7 +164,7 @@
 						min="1"
 						max="100"
 						step="1"
-						onInput={(e) => bands.updateBandPC(i, e.target.value)}
+						onInput={(val) => bands.updateBandPC(i, val)}
 					/>
 				</div>
 				<button class="icon" onclick={() => bands.removeBand(i)}>

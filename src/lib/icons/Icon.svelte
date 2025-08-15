@@ -66,7 +66,12 @@
 	}
 
 	.close {
-		fill: var(--color-icon-close);
+		fill: var(--color-icon-unselected);
+		transition: fill 0.2s ease;
+		cursor: pointer;
+	}
+	.close:hover {
+		fill: var(--color-icon-close-hover);
 		transition: fill 0.2s ease;
 		cursor: pointer;
 	}
