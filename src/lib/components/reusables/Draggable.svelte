@@ -38,7 +38,7 @@
 
 	let dragStartPositions = {};
 
-	function onMouseDown(e) {
+	function onMouseDown(e, doMove = true) {
 		if (e.target.closest('button.icon')) return;
 
 		mouseStartX = e.clientX;
@@ -71,8 +71,8 @@
 				dragStartPositions[p.id] = { x: p.x, y: p.y };
 			}
 		});
-
-		moving = true;
+		console.log('doMove: ', doMove, ' : ', true && doMove);
+		moving = true && doMove;
 	}
 
 	function anySelectedPlotEdge(xOffset, yOffset) {
@@ -240,6 +240,7 @@
 <section
 	bind:this={plotElement}
 	ondblclick={(e) => handleDblClick(e)}
+	onmousedown={(e) => onMouseDown(e, false)}
 	onclick={(e) => e.stopPropagation()}
 	class:selected
 	class="draggable"
@@ -248,7 +249,13 @@
 		width: {snapToGrid(width + 20)}px;
 		height: {snapToGrid(height + 50)}px;"
 >
-	<div class="plot-header" onmousedown={(e) => onMouseDown(e)}>
+	<div
+		class="plot-header"
+		onmousedown={(e) => {
+			e.stopPropagation();
+			onMouseDown(e);
+		}}
+	>
 		<p
 			contenteditable="false"
 			ondblclick={(e) => {
