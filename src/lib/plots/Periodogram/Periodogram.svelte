@@ -696,6 +696,17 @@
 			</button>
 
 			<div class="control-data-container">
+				{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
+				<div
+					class="dataBlock"
+					animate:flip={{ duration: 500 }}
+					in:slide={{ duration: 500, axis: 'y' }}
+				>
+					<p>
+						Data {i}
+						<button onclick={() => theData.removeData(i)}>-</button>
+					</p>
+
 					<div class="control-data">
 						<div class="control-data-title">
 							<strong>x</strong>
@@ -740,7 +751,6 @@
 					
 					<!-- New: Method selector -->
 					<div class="control-input-horizontal">
-	
 						<!-- binSize only relevant for Chi-squared -->
 						{#if datum.method === 'Chi-squared'}
 							<div class="control-input">
@@ -761,9 +771,7 @@
 							</div>
 						{/if}
 					</div>
-				</div>
-
-
+				
 
 				line col: <ColourPicker bind:value={datum.linecolour} />
 				line width: <input type="number" step="0.1" min="0.1" bind:value={datum.linestrokeWidth} />
@@ -771,6 +779,7 @@
 				point radius: <input type="number" step="0.1" min="0.1" bind:value={datum.pointradius} />
 
 				<div class="div-line"></div>
+			</div>
 			{/each}
 		</div>
 
