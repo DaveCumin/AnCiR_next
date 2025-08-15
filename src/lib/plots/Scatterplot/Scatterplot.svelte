@@ -503,8 +503,7 @@
 		</div>
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
-			<div class="heading">
-				<p>Data</p>
+			<div class="control-data-add">
 				<div class="add">
 					<button
 						class="icon"
@@ -548,11 +547,21 @@
 					class="dataBlock"
 					animate:flip={{ duration: 500 }}
 					in:slide={{ duration: 500, axis: 'y' }}
+					out:slide={{ duration: 500, axis: 'y' }}
 				>
-					<p>
-						Data {i}
-						<button onclick={() => theData.removeData(i)}>-</button>
-					</p>
+					<div class="control-component-title">
+						<p>
+							Data {i}
+						</p>
+						<button class="icon" onclick={() => theData.removeData(i)}
+							><Icon
+								name="minus"
+								width={16}
+								height={16}
+								className="control-component-title-icon"
+							/></button
+						>
+					</div>
 
 					<div class="data-wrapper">
 						<div class="x-select">
@@ -567,6 +576,7 @@
 						<Line lineData={datum.line} which="controls" />
 						<Points pointsData={datum.points} which="controls" />
 					</div>
+					<div class="div-line"></div>
 				</div>
 			{/each}
 		</div>
@@ -699,25 +709,6 @@
 {/if}
 
 <style>
-	.heading {
-		position: sticky;
-		top: 0;
-
-		width: 100%;
-		height: 4vh;
-		display: flex;
-		flex-direction: row;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.heading p {
-		margin-left: 0.75rem;
-	}
-
-	.heading button {
-		margin-right: 0.65rem;
-	}
 	.tooltip {
 		position: absolute;
 		background-color: rgba(0, 0, 0, 0.7);

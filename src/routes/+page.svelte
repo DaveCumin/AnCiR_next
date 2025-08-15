@@ -657,7 +657,7 @@
 
 		font-weight: bold;
 		background-color: white;
-		z-index: 999;
+		z-index: 99;
 	}
 
 	:global(.control-banner-title) {
@@ -717,6 +717,15 @@
 	:global(.control-tab button:hover) {
 		background-color: var(--color-lightness-95);
 	}
+
+	:global(.control-data-add) {
+		position: fixed;
+		top: 4.2rem;
+		width: 100%;
+		z-index: 100;
+		left: calc(100% - 2rem);
+	}
+
 	:global(.control-component) {
 		display: flex;
 		flex-direction: column;

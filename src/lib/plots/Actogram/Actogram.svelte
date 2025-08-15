@@ -499,12 +499,31 @@
 			</div>
 		{/if}
 	{:else if appState.currentControlTab === 'data'}
+		<div class="control-data-add">
+			<button
+				class="icon"
+				onclick={async () => {
+					theData.addData({
+						x: null,
+						y: { refId: -1 }
+					});
+					await tick();
+
+					//Scroll to the bottom of dataSettings
+					dataSettingsScrollTo('bottom');
+				}}
+			>
+				<Icon name="add" width={16} height={16} />
+			</button>
+		</div>
+
 		<div class="control-component">
 			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
 				<div
 					class="dataBlock"
 					animate:flip={{ duration: 500 }}
 					in:slide={{ duration: 500, axis: 'y' }}
+					out:slide={{ duration: 500, axis: 'y' }}
 				>
 					<div class="control-component-title">
 						<div class="control-component-title-colour">

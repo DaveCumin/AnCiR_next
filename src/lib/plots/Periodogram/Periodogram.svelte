@@ -670,8 +670,7 @@
 		</div>
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
-			<div class="heading">
-				<p>Data:</p>
+			<div class="control-data-add">
 				<button
 					class="icon"
 					onclick={async () => {
@@ -695,8 +694,9 @@
 						class="dataBlock"
 						animate:flip={{ duration: 500 }}
 						in:slide={{ duration: 500, axis: 'y' }}
+						out:slide={{ duration: 500, axis: 'y' }}
 					>
-						<div class="process-title">
+						<div class="control-component-title">
 							<p>
 								Data {i}
 							</p>
@@ -897,23 +897,5 @@
 		pointer-events: none;
 		font-size: 0.8rem;
 		z-index: 9999;
-	}
-	.heading {
-		position: sticky;
-		top: 0;
-
-		width: 100%;
-		height: 4vh;
-		display: flex;
-		flex-direction: row;
-		justify-content: space-between;
-		align-items: center;
-	}
-	.heading p {
-		margin-left: 0.75rem;
-	}
-
-	.heading button {
-		margin-right: 0.65rem;
 	}
 </style>
