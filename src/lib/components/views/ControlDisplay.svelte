@@ -1,5 +1,20 @@
 <!-- Handle click plot (plot id core state) -->
 <script module>
+	export function dataSettingsScrollTo(position = 'bottom') {
+		const dataSettings = document.getElementsByClassName('control-display')[0].parentElement;
+		const topPos =
+			position == 'bottom' ? dataSettings.scrollHeight : position == 'top' ? 0 : position;
+		if (dataSettings) {
+			dataSettings.scrollTo({
+				top: topPos,
+				left: 0,
+				behavior: 'smooth'
+			});
+		} else {
+			console.error("Element with ID 'dataSettings' not found");
+		}
+	}
+
 	const toShow = { width: 'number', height: 'number', 'plot.data.*.*.refId': 'Column' };
 
 	function filterPaths(paths) {
@@ -297,8 +312,8 @@
 				appState.currentControlTab = tab;
 			}
 		}
-		console.log("DEBUG:", appState.currentControlTab);
-
+		//dataSettingsScrollTo('top');
+		// console.log('DEBUG:', appState.currentControlTab);
 	}
 </script>
 
@@ -486,7 +501,7 @@
 							onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
 							bind:innerHTML={plot.name}
 						></p>
-	
+
 						<div class="control-banner-icons">
 							<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
 								<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
@@ -497,7 +512,10 @@
 					<div class="control-tab">
 						<button
 							class={appState.currentControlTab === 'properties' ? 'active' : ''}
-							onclick={() => updateCurrentControlTab('properties', plot.type)}>Properties</button
+							onclick={(e) => {
+								updateCurrentControlTab('properties', plot.type);
+								e.target.scrollIntoView({ behavior: 'smooth' });
+							}}>Properties</button
 						>
 						<button
 							class={appState.currentControlTab === 'data' ? 'active' : ''}
@@ -505,10 +523,13 @@
 						>
 
 						{#if plot.type === 'actogram'}
-						<button
-							class={appState.currentControlTab === 'annotations' ? 'active' : ''}
-							onclick={() => updateCurrentControlTab('annotations', plot.type) }>Annotations</button
-						>
+							<button
+								class={appState.currentControlTab === 'annotations' ? 'active' : ''}
+								onclick={(e) => {
+									updateCurrentControlTab('annotations', plot.type);
+									e.target.scrollIntoView({ behavior: 'smooth' });
+								}}>Annotations</button
+							>
 						{/if}
 					</div>
 					<div class="div-line"></div>
@@ -560,8 +581,11 @@
 	}
 
 	.control-display {
+		position: absolute;
 		top: 0;
 		width: calc(100% - 2rem);
-		margin-left: 1rem;
+
+		padding-left: 1rem;
+		padding-right: 1rem;
 	}
 </style>

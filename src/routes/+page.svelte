@@ -657,6 +657,7 @@
 
 		font-weight: bold;
 		background-color: white;
+		z-index: 999;
 	}
 
 	:global(.control-banner-title) {
@@ -895,9 +896,6 @@
 		min-width: 0;
 
 		margin: 0;
-		margin-left: 0.4rem;
-		/* margin-left: 0.1rem; */
-
 		gap: 0.25rem;
 	}
 

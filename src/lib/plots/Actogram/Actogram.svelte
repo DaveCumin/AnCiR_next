@@ -14,6 +14,7 @@
 	import { scaleLinear } from 'd3-scale';
 	import { makeSeqArray, max, min } from '$lib/components/plotBits/helpers/wrangleData';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
 
@@ -593,18 +594,8 @@
 
 					await tick();
 
-					//TODO: consider this - scroll to the bottom and select y data automatically
 					//Scroll to the bottom of dataSettings
-					const dataSettings = document.getElementsByClassName('control-display')[0].parentElement;
-					if (dataSettings) {
-						dataSettings.scrollTo({
-							top: dataSettings.scrollHeight,
-							left: 0,
-							behavior: 'smooth'
-						});
-					} else {
-						console.error("Element with ID 'dataSettings' not found");
-					}
+					dataSettingsScrollTo('bottom');
 				}}
 			>
 				<Icon name="plus" width={16} height={16} className="static-icon" />

@@ -6,6 +6,7 @@
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotBits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
 
@@ -516,17 +517,7 @@
 							await tick();
 
 							//Scroll to the bottom of dataSettings
-							const dataSettings =
-								document.getElementsByClassName('control-display')[0].parentElement;
-							if (dataSettings) {
-								dataSettings.scrollTo({
-									top: dataSettings.scrollHeight,
-									left: 0,
-									behavior: 'smooth'
-								});
-							} else {
-								console.error("Element with ID 'dataSettings' not found");
-							}
+							dataSettingsScrollTo('bottom');
 
 							//TODO: consider focuus on the next y
 							//focus on the next y value
