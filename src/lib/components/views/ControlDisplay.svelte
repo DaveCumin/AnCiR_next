@@ -95,7 +95,6 @@
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
-	import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte.js';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 	import { select } from 'd3-selection';
 	import { selectPlot } from '$lib/core/Plot.svelte';
@@ -505,7 +504,13 @@
 						></p>
 
 						<div class="control-banner-icons">
-							<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
+							<button
+								class="icon"
+								bind:this={addBtnRef}
+								onclick={(e) => {
+									openDropdown();
+								}}
+							>
 								<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
 							</button>
 						</div>
@@ -561,7 +566,7 @@
 	bind:showDropdown={showSavePlot}
 	{dropdownTop}
 	{dropdownLeft}
-	Id={core.plots.filter((p) => p.selected)}
+	Id={core.plots.filter((p) => p.selected).map((p) => p.id)}
 />
 
 <style>

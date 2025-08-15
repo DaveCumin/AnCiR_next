@@ -28,12 +28,12 @@
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
 		{#each ['svg', 'png'] as type}
-			{#if Id.length > 0}
+			{#if Id.length > 1}
 				<div
 					class="action"
-					onclick={() => {
+					onclick={(e) => {
 						saveMultipleAsImage(Id, type);
-						showDropdown = false; // Close child dropdown after action
+						showDropdown = false;
 					}}
 				>
 					<button>
@@ -43,8 +43,8 @@
 			{:else}
 				<div
 					class="action"
-					onclick={() => {
-						convertToImage(Id, type);
+					onclick={(e) => {
+						convertToImage('plot' + Id[0], type);
 						showDropdown = false;
 					}}
 				>

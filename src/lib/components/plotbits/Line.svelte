@@ -16,9 +16,7 @@
 			this.parentData = parent;
 			if (dataIN) {
 				this.colour =
-					dataIN?.colour ??
-					getPaletteColor(this.parentData.parentPlot.data.length - 1) ??
-					getPaletteColor(0);
+					dataIN?.colour ?? getPaletteColor(parent.parentPlot.data.length) ?? getPaletteColor(0);
 				this.strokeWidth = dataIN?.strokeWidth ?? 3;
 				this.stroke = dataIN?.stroke ?? 'solid';
 				this.draw = dataIN?.draw ?? true;

@@ -71,7 +71,6 @@
 				dragStartPositions[p.id] = { x: p.x, y: p.y };
 			}
 		});
-		console.log('doMove: ', doMove, ' : ', true && doMove);
 		moving = true && doMove;
 	}
 

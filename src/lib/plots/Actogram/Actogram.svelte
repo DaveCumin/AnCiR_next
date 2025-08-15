@@ -212,7 +212,7 @@
 			return Ndays;
 		});
 
-		ylimsOption = $state('byperiod');
+		ylimsOption = $state('overall');
 		ylimsIN = $state([0, 100]);
 		// make ylims and array of arrays (each period of each data)
 		ylims = $derived.by(() => {

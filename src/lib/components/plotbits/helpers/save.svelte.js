@@ -1,6 +1,8 @@
 //TODO: scale issue when saving
 import { appState } from '$lib/core/core.svelte.js';
+
 export function convertToImage(svgId, filetype = 'png') {
+	console.log('saving ' + svgId + ' as ' + filetype);
 	if (filetype == 'svg') {
 		exportSVG(svgId);
 		return;
@@ -65,6 +67,7 @@ function exportSVG(svgId) {
 }
 
 export function saveMultipleAsImage(svgIds, filetype = 'png') {
+	console.log('multiple: ', svgIds);
 	//get each of the plots to convert
 	let toConvert = [];
 	for (const svgId of svgIds) {
