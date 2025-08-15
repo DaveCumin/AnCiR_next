@@ -9,7 +9,6 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import TableProcess from '$lib/core/TableProcess.svelte';
 	import MakeNewColumn from './modals/MakeNewColumn.svelte';
-	import Collapisble from '../reusables/Collapisble.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
 	import { getTableById } from '$lib/core/Table.svelte';
@@ -148,7 +147,7 @@
 		top: 0;
 
 		width: 100%;
-		height: 4vh;
+		height: 2rem;
 		display: flex;
 		flex-direction: row;
 		justify-content: space-between;

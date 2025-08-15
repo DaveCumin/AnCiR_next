@@ -6,13 +6,13 @@
 		let height = yscale.range()[0];
 
 		//now make the path
-		let out = `${width},${height} 0,${height} `; // start at the width,0 and make a baseline
+		let out = `${width},${yscale(yscale.range()[1])} 0,${yscale(yscale.range()[1])} `; // start at the width,0 and make a baseline
 		out += `${xscale(x[0])},${height} `; // skip to the first point
 
-		//If the yscale is a single value, don't draw anything
-		if (yscale.domain()[0] == yscale.domain()[1]) {
-			return out;
-		}
+		// //If the yscale is a single value, don't draw anything
+		// if (yscale.domain()[0] == yscale.domain()[1]) {
+		// 	return out;
+		// }
 
 		//cycle through the points
 		for (let b = 0; b < x.length - 1; b++) {
@@ -23,11 +23,11 @@
 		if (x[x.length - 1] + 1 < xscale.domain()[1]) {
 			out +=
 				`${xscale(x[x.length - 1] + 1)},${yscale(y[x.length - 1])} ` +
-				`${xscale(x[x.length - 1] + 1)},${height} `;
+				`${xscale(x[x.length - 1] + 1)},${yscale(yscale.range()[1])} `;
 		} else {
 			out += `${width},${yscale(y[x.length - 1])} `;
 		}
-		out += `${width},${height} `;
+		out += `${width},${yscale(yscale.range()[1])} `;
 
 		return out;
 	});
