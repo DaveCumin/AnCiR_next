@@ -112,6 +112,7 @@
 
 			// Print out info - DEGUGGING
 			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'i') {
+				event.preventDefault();
 				console.log($state.snapshot(core));
 				console.log($state.snapshot(appState));
 				console.log($state.snapshot(appConsts));

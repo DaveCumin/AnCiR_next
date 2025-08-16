@@ -19,12 +19,8 @@
 	let activeSubmenu = $state(null);
 
 	function handleSaveAction(type, closeDropdown) {
-		const Id = 'plot' + plotId;
-		if (Id.length > 0) {
-			saveMultipleAsImage(Id, type);
-		} else {
-			convertToImage(Id, type);
-		}
+		convertToImage('plot' + plotId, type);
+
 		closeDropdown();
 	}
 
