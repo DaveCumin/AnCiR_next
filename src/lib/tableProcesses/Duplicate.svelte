@@ -1,9 +1,27 @@
 <script module>
 	export const duplicate_defaults = new Map([
 		['xIN', { val: -1 }],
-		['out', { result: { val: -1 } }], //needed to set upu the output columns
+		['out', { result: { val: -1 } }], //needed to setup the output columns
+		['data', { val: [] }], //Need a 'data' to work
 		['valid', { val: false }] //needed for the progress step logic
 	]);
+
+	export function duplicate(argsIN) {
+		if (argsIN.xIN == undefined || argsIN.xIN == -1) return [[], false]; //if there is no input yet
+
+		let result = [];
+		result = getColumnById(argsIN.xIN).getData();
+
+		if (argsIN.out.result == -1 || !argsIN.out.result) {
+			//do nothing
+		} else {
+			getColumnById(argsIN.out.result).data = result;
+			const processHash = crypto.randomUUID();
+			getColumnById(argsIN.out.result).tableProcessGUId = processHash;
+		}
+
+		return [result, result.length > 0];
+	}
 </script>
 
 <script>
@@ -27,35 +45,18 @@
 		if (lastHash === dataHash) {
 			//do nothing
 		} else {
-			duplicate(); // DO THE BUSINESS
+			doDuplicate(); // DO THE BUSINESS
 			lastHash = getHash;
 		}
 	});
 	//------------
-
 	let result = $state();
-	function duplicate() {
-		console.log($state.snapshot(p.args.xIN));
-		if (p.args.xIN == -1) return; //if there is no input yet
-		result = getColumnById(p.args.xIN).getData();
-
-		if (p.args.out.result == -1 || !p.args.out.result) {
-			//do nothing
-		} else {
-			getColumnById(p.args.out.result).data = result;
-			const processHash = crypto.randomUUID();
-			getColumnById(p.args.out.result).tableProcessGUId = processHash;
-		}
-
-		if (result.length > 0) {
-			p.args.valid = true;
-		} else {
-			p.args.valid = false;
-		}
+	function doDuplicate() {
+		[result, p.args.valid] = duplicate(p.args);
 	}
 	onMount(() => {
 		//needed to get the values when it first mounts
-		duplicate();
+		doDuplicate();
 	});
 </script>
 
@@ -64,7 +65,7 @@
 	<ColumnSelector
 		bind:value={p.args.xIN}
 		onChange={() => {
-			duplicate();
+			doDuplicate();
 		}}
 	/>
 </p>
@@ -74,6 +75,7 @@
 	<p>X: {result}</p>
 {:else if p.args.out.result > 0}
 	<ColumnComponent col={getColumnById(p.args.out.result)} />
+	<p>{getColumnById(p.args.out.result).getData().slice(0, 5)}</p>
 {:else}
 	<p>Need to have valid inputs to create columns.</p>
 {/if}

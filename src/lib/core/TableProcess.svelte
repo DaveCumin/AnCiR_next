@@ -34,22 +34,22 @@
 				const processHash = crypto.randomUUID();
 
 				for (let i = 0; i < Object.keys(this.args.out).length; i++) {
-					const tempCol = new Column({
-						tableProcessed: processHash,
-						name: Object.keys(this.args.out)[i],
-						type: 'number',
-						data: dataIN.args.data ?? [] //This is to make sure the preview is exactly what the data are (eg for random)
-					});
+					//Create a new column with the given name and assign it a tableProcessGUId
+					const tempCol = new Column({});
+					tempCol.name = Object.keys(this.args.out)[i] + '_' + this.id;
+					//now put that column ID in the out
 					this.args.out[Object.keys(this.args.out)[i]] = tempCol.id;
-					pushObj(tempCol);
-					theTable.columnRefs = [tempCol.id, ...theTable.columnRefs];
+					pushObj(tempCol); // add the column to core
+					theTable.columnRefs = [tempCol.id, ...theTable.columnRefs]; //add to table
 				}
-				if (Object.keys(this.args).includes('N')) {
-					this.args.N = getColumnById(theTable?.columnRefs[0]).getData().length;
-				}
+
+				//--------------------------
+				// - now run the process
+				appConsts.tableProcessMap.get(this.name).func(this.args);
 				//--------------------------
 			}
 		}
+
 		toJSON() {
 			return {
 				id: this.id,

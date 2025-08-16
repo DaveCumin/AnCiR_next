@@ -87,7 +87,7 @@
 		flex-direction: column;
 		align-items: flex-start;
 		max-width: 600px;
-		margin: 5px;
+		margin: 10px;
 		font-family: Arial, sans-serif;
 	}
 

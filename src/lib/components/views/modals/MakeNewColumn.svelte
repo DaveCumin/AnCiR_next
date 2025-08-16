@@ -3,7 +3,7 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import { getTableById } from '$lib/core/Table.svelte';
 	import { TableProcess } from '$lib/core/TableProcess.svelte';
-	import { appConsts, appState } from '$lib/core/core.svelte.js';
+	import { appConsts } from '$lib/core/core.svelte.js';
 	import { tick } from 'svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 
@@ -29,7 +29,6 @@
 			getTableById(tableId)
 		);
 
-		// Batch update: Add process to reactive state
 		//add table processes in reverse order so the most recent shows at the top
 		const theTable = getTableById(tableId);
 		theTable.processes = [newProcess, ...theTable.processes];

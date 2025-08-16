@@ -9,6 +9,47 @@
 		['out', { binnedx: { val: -1 }, binnedy: { val: -1 } }], //needed to set upu the output columns
 		['valid', { val: false }] //needed for the progress step logic
 	]);
+
+	export function binneddata(argsIN) {
+		const xIN = argsIN.xIN;
+		const yIN = argsIN.yIN;
+		const binSize = argsIN.binSize;
+		const binStart = argsIN.binStart;
+		const xOUT = argsIN.out.binnedx;
+		const yOUT = argsIN.out.binnedy;
+
+		if (
+			xIN == undefined ||
+			yIN == undefined ||
+			binSize == undefined ||
+			binStart == undefined ||
+			xIN == -1 ||
+			yIN == -1 ||
+			binSize == 0
+		) {
+			return [{ bins: [], y_out: [] }, false];
+		}
+
+		const theBinnedData = binData(
+			getColumnById(xIN).hoursSinceStart,
+			getColumnById(yIN).getData(),
+			binSize,
+			binStart
+		);
+
+		if (xOUT == -1 || yOUT == -1) {
+		} else {
+			getColumnById(xOUT).data = theBinnedData.bins;
+			getColumnById(xOUT).type = 'number';
+			getColumnById(yOUT).data = theBinnedData.y_out;
+			getColumnById(yOUT).type = 'number';
+			const processHash = crypto.randomUUID();
+			getColumnById(xOUT).tableProcessGUId = processHash;
+			getColumnById(yOUT).tableProcessGUId = processHash;
+		}
+
+		return [theBinnedData, theBinnedData.bins.length > 0];
+	}
 </script>
 
 <script>
@@ -37,58 +78,14 @@
 		if (lastHash === dataHash) {
 			//do nothing
 		} else {
-			getBinnedData(); // DO THE BUSINESS
+			binnedData = binneddata(p.args); // DO THE BUSINESS
 			lastHash = getHash;
 		}
 	});
 	//------------
-
 	function getBinnedData() {
-		console.log('doing binned');
-		const xIN = p.args.xIN;
-		const yIN = p.args.yIN;
-		const binSize = p.args.binSize;
-		const binStart = p.args.binStart;
-		const xOUT = p.args.out.binnedx;
-		const yOUT = p.args.out.binnedy;
-
-		if (
-			xIN == undefined ||
-			yIN == undefined ||
-			binSize == undefined ||
-			binStart == undefined ||
-			xIN == -1 ||
-			yIN == -1 ||
-			binSize == 0
-		) {
-			binnedData = { bins: [], y_out: [] };
-			p.args.valid = false;
-			return;
-		}
-
-		const theBinnedData = binData(
-			getColumnById(xIN).hoursSinceStart,
-			getColumnById(yIN).getData(),
-			binSize,
-			binStart
-		);
-
-		if (xOUT == -1 || yOUT == -1) {
-		} else {
-			getColumnById(xOUT).data = theBinnedData.bins;
-			getColumnById(yOUT).data = theBinnedData.y_out;
-			const processHash = crypto.randomUUID();
-			getColumnById(xOUT).tableProcessGUId = processHash;
-			getColumnById(yOUT).tableProcessGUId = processHash;
-		}
-		binnedData = theBinnedData;
-		if (binnedData.bins.length > 0) {
-			p.args.valid = true;
-		} else {
-			p.args.valid = false;
-		}
+		[binnedData, p.args.valid] = binneddata(p.args);
 	}
-
 	onMount(() => {
 		//needed to get the values when it first mounts
 		getBinnedData();

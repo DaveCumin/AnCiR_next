@@ -120,7 +120,7 @@
 				{/each}
 
 				{#each table.columns as col (col.id)}
-					{#if !col.tableProcessed}
+					{#if col.tableProcessGUId == ''}
 						<div class="second-clps">
 							<ColumnComponent {col} />
 						</div>

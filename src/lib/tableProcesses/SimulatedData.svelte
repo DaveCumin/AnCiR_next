@@ -9,6 +9,46 @@
 		['out', { time: { val: -1 }, values: { val: -1 } }], //needed to set upu the output columns
 		['valid', { val: false }] //needed for the progress step logic
 	]);
+
+	export function simulateddata(argsIN) {
+		console.log(argsIN);
+		const startTime = argsIN.startTime;
+		const N_hours = argsIN.N_hours;
+		const samplingPeriod_hours = argsIN.samplingPeriod_hours;
+		const rhythmPeriod_hours = argsIN.rhythmPeriod_hours;
+		const rhythmAmplitude = argsIN.rhythmAmplitude;
+		const timeOUT = argsIN.out.time;
+		const valuesOUT = argsIN.out.values;
+
+		let simulatedTime = [];
+		let simulatedValues = [];
+		for (let i = 0; i < N_hours; i += samplingPeriod_hours) {
+			simulatedTime.push(new Date(new Date(startTime).getTime() + i * 3600000).toISOString());
+			const amplitude =
+				Math.floor(i % rhythmPeriod_hours) < rhythmPeriod_hours / 2 ? rhythmAmplitude : 1;
+			const value = Math.random() * amplitude;
+			simulatedValues.push(value);
+		}
+
+		if (timeOUT == -1 || valuesOUT == -1) {
+			//this is just for preview, when no column is made
+		} else {
+			//this is for making and updating; set everything for the given columns
+			getColumnById(timeOUT).data = simulatedTime;
+			getColumnById(timeOUT).type = 'time';
+			getColumnById(timeOUT).timeFormat = "YYYY-MM-DD'T'HH:mm:ss.S'Z'";
+
+			getColumnById(valuesOUT).data = simulatedValues;
+			getColumnById(valuesOUT).type = 'number';
+
+			//update for reactivity
+			const processHash = crypto.randomUUID();
+			getColumnById(timeOUT).tableProcessGUId = processHash;
+			getColumnById(valuesOUT).tableProcessGUId = processHash;
+		}
+
+		return [simulatedTime, simulatedValues, simulatedValues.length > 0];
+	}
 </script>
 
 <script>
@@ -20,49 +60,15 @@
 
 	let { p = $bindable() } = $props();
 
-	let simulatedTime = $state([]);
-	let simulatedValues = $state([]);
+	let simulatedTime = $state();
+	let simulatedValues = $state();
 
-	function makeSimulatedData() {
-		const startTime = p.args.startTime;
-		const N_hours = p.args.N_hours;
-		const samplingPeriod_hours = p.args.samplingPeriod_hours;
-		const rhythmPeriod_hours = p.args.rhythmPeriod_hours;
-		const rhythmAmplitude = p.args.rhythmAmplitude;
-		const timeOUT = p.args.out.time;
-		const valuesOUT = p.args.out.values;
-
-		simulatedTime = [];
-		simulatedValues = [];
-		for (let i = 0; i < N_hours; i += samplingPeriod_hours) {
-			simulatedTime.push(new Date(new Date(startTime).getTime() + i * 3600000).toISOString());
-			const amplitude =
-				Math.floor(i % rhythmPeriod_hours) < rhythmPeriod_hours / 2 ? rhythmAmplitude : 1;
-			const value = Math.random() * amplitude;
-			simulatedValues.push(value);
-		}
-
-		if (timeOUT == -1 || valuesOUT == -1) {
-		} else {
-			getColumnById(timeOUT).data = simulatedTime;
-			getColumnById(timeOUT).timeFormat = "YYYY-MM-DD'T'HH:mm:ss.S'Z'";
-			getColumnById(timeOUT).type = 'time';
-			getColumnById(valuesOUT).data = simulatedValues;
-			const processHash = crypto.randomUUID();
-			getColumnById(timeOUT).tableProcessGUId = processHash;
-			getColumnById(valuesOUT).tableProcessGUId = processHash;
-		}
-		if (simulatedValues.length > 0) {
-			p.args.valid = true;
-		} else {
-			p.args.valid = false;
-		}
+	function doSimulated() {
+		[simulatedTime, simulatedValues, p.args.valid] = simulateddata(p.args);
 	}
-
-	//TODO: something strange when this is mounted - there is an "Uncaught RangeError: Maximum call stack size exceeded" error in $effect (I don't know why ;( )
 	onMount(() => {
 		//needed to get the values when it first mounts
-		makeSimulatedData();
+		doSimulated();
 	});
 </script>
 
@@ -80,7 +86,7 @@
 			mins: 1 / 60,
 			secs: 1 / (60 * 60)
 		}}
-		onInput={makeSimulatedData}
+		onInput={doSimulated}
 		selectedUnitStart="days"
 	/>
 </p>
@@ -97,7 +103,7 @@
 			mins: 1 / 60,
 			secs: 1 / (60 * 60)
 		}}
-		onInput={makeSimulatedData}
+		onInput={doSimulated}
 		selectedUnitStart="mins"
 	/>
 </p>
@@ -115,7 +121,7 @@
 			mins: 1 / 60,
 			secs: 1 / (60 * 60)
 		}}
-		onInput={makeSimulatedData}
+		onInput={doSimulated}
 	/>
 </p>
 <p>
@@ -124,7 +130,7 @@
 		min="10"
 		max="1000"
 		step="1"
-		onInput={makeSimulatedData}
+		onInput={doSimulated}
 	/>
 </p>
 <p>Output:</p>
