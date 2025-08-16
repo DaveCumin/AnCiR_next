@@ -438,7 +438,7 @@
 
 			<div class="control-input-vertical">
 				<div class="control-input">
-					<p>Start time {theData.startTime} {new Date(theData.startTime)}</p>
+					<p>Start time</p>
 					<!-- <input type="date" bind:value={theData.startTime} /> -->
 					<DateTimeHrs bind:value={theData.startTime} />
 				</div>
@@ -591,11 +591,16 @@
 								style="display: flex; align-items: center; justify-content: flex-start; margin: 0;"
 							>
 								<button class="icon">
-									<Icon name="pin" width={18} height={18} className="control-component-title-icon" />
+									<Icon
+										name="pin"
+										width={18}
+										height={18}
+										className="control-component-title-icon"
+									/>
 								</button>
 								<p>Markers</p>
 							</div>
-						
+
 							<div class="control-component-title-icons">
 								<button class="icon" onclick={() => datum.addMarker()}>
 									<Icon
