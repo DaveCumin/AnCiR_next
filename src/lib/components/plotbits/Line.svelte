@@ -14,13 +14,11 @@
 
 		constructor(dataIN, parent) {
 			this.parentData = parent;
-			if (dataIN) {
-				this.colour =
-					dataIN?.colour ?? getPaletteColor(parent.parentPlot.data.length) ?? getPaletteColor(0);
-				this.strokeWidth = dataIN?.strokeWidth ?? 3;
-				this.stroke = dataIN?.stroke ?? 'solid';
-				this.draw = dataIN?.draw ?? true;
-			}
+			this.colour =
+				dataIN?.colour ?? getPaletteColor(parent.parentPlot.data.length) ?? getPaletteColor(0);
+			this.strokeWidth = dataIN?.strokeWidth ?? 3;
+			this.stroke = dataIN?.stroke ?? 'solid';
+			this.draw = dataIN?.draw ?? true;
 		}
 
 		toJSON() {
