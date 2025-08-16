@@ -519,6 +519,13 @@
 			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
 				<div
 					class="dataBlock"
+					style="
+						display: flex;
+						flex-direction: column;
+						flex: 1 1 0;
+
+						width: 100%;
+					"
 					animate:flip={{ duration: 500 }}
 					in:slide={{ duration: 500, axis: 'y' }}
 					out:slide={{ duration: 500, axis: 'y' }}
@@ -543,7 +550,7 @@
 					<div class="control-data-container">
 						<div class="control-data">
 							<div class="control-data-title">
-								<strong>x:</strong>
+								<p>x:</p>
 								<p
 									contenteditable="false"
 									ondblclick={(e) => {
@@ -560,7 +567,7 @@
 
 						<div class="control-data">
 							<div class="control-data-title">
-								<strong>y:</strong>
+								<p>y:</p>
 								<p
 									contenteditable="false"
 									ondblclick={(e) => {
@@ -576,8 +583,15 @@
 						</div>
 
 						<div class="control-data-title with-icon">
-							<strong>Markers</strong>
-
+							<div
+								style="display: flex; align-items: center; justify-content: flex-start; margin: 0;"
+							>
+								<button class="icon">
+									<Icon name="pin" width={18} height={18} className="control-component-title-icon" />
+								</button>
+								<p>Markers</p>
+							</div>
+						
 							<div class="control-component-title-icons">
 								<button class="icon" onclick={() => datum.addMarker()}>
 									<Icon
