@@ -3,6 +3,7 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import { appConsts } from '$lib/core/core.svelte';
 	import { tick } from 'svelte';
+	import { buildInfo } from '$lib/utils/build-info.js';
 </script>
 
 <script>
@@ -123,6 +124,7 @@
 				href="http://fsf.org/">http://fsf.org/</a
 			>).
 		</p>
+		<p style="font-size:8px;">Build Number: {buildInfo.buildNumber}</p>
 	{/snippet}
 </Modal>
 
