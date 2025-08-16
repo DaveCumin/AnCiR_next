@@ -62,7 +62,6 @@
 				this.id = id;
 				_columnIdCounter = Math.max(id + 1, _columnIdCounter + 1);
 			}
-			this.tableProcessGUId = '';
 
 			//Assign the other data
 			if (columnData) {

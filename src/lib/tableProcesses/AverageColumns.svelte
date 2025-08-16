@@ -4,6 +4,27 @@
 		['out', { result: { val: -1 } }], //needed to set upu the output columns
 		['valid', { val: false }] //needed for the progress step logic
 	]);
+
+	export function averagecolumns(argsIN) {
+		if (argsIN.xsIN == undefined || argsIN.xsIN.length == 0) return [0, false]; //if there is no input yet
+
+		let result = [];
+		result = getColumnById(argsIN.xsIN[0]).getData();
+		for (let i = 1; i < argsIN.xsIN.length; i++) {
+			const temp = getColumnById(argsIN.xsIN[i]).getData();
+			result = result.map((x, i) => x + temp[i]);
+		}
+		result = result.map((x, i) => x / argsIN.xsIN.length);
+
+		if (argsIN.out.result == -1) {
+		} else {
+			getColumnById(argsIN.out.result).data = result;
+			const processHash = crypto.randomUUID();
+			getColumnById(argsIN.out.result).tableProcessGUId = processHash;
+		}
+
+		return [result, result.length > 0];
+	}
 </script>
 
 <script>
@@ -33,45 +54,19 @@
 		if (lastHash === dataHash) {
 			//do nothing
 		} else {
-			averagecolumns(); // DO THE BUSINESS
+			doAverageColumns(); // DO THE BUSINESS
 			lastHash = getHash;
 		}
 	});
 	//------------
 
 	let result = $state();
-
-	function averagecolumns() {
-		if (!p.args.xsIN) return; //if there is no input yet
-		if (p.args.xsIN?.length == 0) {
-			result = [];
-			p.args.valid = false;
-			return;
-		}
-		result = getColumnById(p.args.xsIN[0]).getData();
-		for (let i = 1; i < p.args.xsIN.length; i++) {
-			const temp = getColumnById(p.args.xsIN[i]).getData();
-			result = result.map((x, i) => x + temp[i]);
-		}
-		result = result.map((x, i) => x / p.args.xsIN.length);
-
-		if (p.args.out.result == -1) {
-		} else {
-			getColumnById(p.args.out.result).data = result;
-			const processHash = crypto.randomUUID();
-			getColumnById(p.args.out.result).tableProcessGUId = processHash;
-		}
-
-		if (result.length > 0) {
-			p.args.valid = true;
-		} else {
-			p.args.valid = false;
-		}
+	function doAverageColumns() {
+		[result, p.args.valid] = averagecolumns(p.args);
 	}
-
 	onMount(() => {
 		//needed to get the values when it first mounts
-		averagecolumns();
+		doAverageColumns();
 	});
 </script>
 
@@ -79,7 +74,7 @@
 <ColumnSelector
 	bind:value={p.args.xsIN}
 	onChange={() => {
-		averagecolumns();
+		doAverageColumns();
 	}}
 	multiple={true}
 />
@@ -88,7 +83,7 @@
 	<button
 		onclick={() => {
 			p.args.xsIN.splice(i, 1);
-			averagecolumns();
+			doAverageColumns();
 		}}>-</button
 	>
 	{#if p.args.xsIN.length > 1 && i < p.args.xsIN.length - 1}

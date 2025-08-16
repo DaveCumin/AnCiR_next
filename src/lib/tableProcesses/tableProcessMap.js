@@ -9,9 +9,11 @@ export async function loadTableProcesses() {
 		try {
 			const svelteModule = await sveltePaths[sveltePath]();
 			const component = svelteModule.default;
+			const tableProcessFunc = svelteModule[funcName];
 			tableProcessMap.set(fileName, {
 				component: component,
-				defaults: svelteModule[`${funcName}_defaults`] || new Map()
+				defaults: svelteModule[`${funcName}_defaults`] || new Map(),
+				func: tableProcessFunc
 			});
 		} catch (error) {
 			console.error(`Error loading ${sveltePath}:`, error);

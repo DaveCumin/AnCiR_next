@@ -16,6 +16,7 @@
 
 		//work out the number of columns that can fit in the height of the parent
 		Ncolumns = $derived.by(() => {
+			//TODO: calculate this based on the font size and the grid size, so the input for column is never cut off
 			const colHeightpx = 34; //TODO: change this to be the appState font size plus padding
 			let Ncols = Math.floor((this.parentBox.height - 2.4 * colHeightpx) / colHeightpx);
 			if (Ncols < 1) {

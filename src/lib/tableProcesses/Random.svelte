@@ -6,9 +6,23 @@
 		['multiply', { val: 10 }],
 		['N', { val: 10 }],
 		['out', { result: { val: -1 } }], //needed to set upu the output columns
-		['data', { val: [] }],
 		['valid', { val: false }] //needed for the progress step logic
 	]);
+
+	export function random(argsIN) {
+		let result = [];
+		for (let i = 0; i < argsIN.N; i++) {
+			result.push(Number((argsIN.offset + Math.random() * argsIN.multiply).toFixed(2)));
+		}
+		if (argsIN.out.result == -1 || !argsIN.out.result) {
+		} else {
+			getColumnById(argsIN.out.result).data = result;
+			const processHash = crypto.randomUUID();
+			getColumnById(argsIN.out.result).tableProcessGUId = processHash;
+		}
+
+		return [result, result.length > 0];
+	}
 </script>
 
 <script>
@@ -19,34 +33,16 @@
 	let { p = $bindable() } = $props();
 
 	let result = $state();
-	function makeRandom() {
-		result = [];
-		for (let i = 0; i < p.args.N; i++) {
-			result.push(Number((p.args.offset + Math.random() * p.args.multiply).toFixed(2)));
-		}
-		if (p.args.out.result == -1 || !p.args.out.result) {
-		} else {
-			getColumnById(p.args.out.result).data = result;
-			const processHash = crypto.randomUUID();
-			getColumnById(p.args.out.result).tableProcessGUId = processHash;
-		}
-
-		if (result.length > 0) {
-			p.args.data = result;
-			p.args.valid = true;
-		} else {
-			p.args.valid = false;
-		}
+	function doRandom() {
+		[result, p.args.valid] = random(p.args);
 	}
-
 	onMount(() => {
-		//needed to get the values when it first mounts
-		makeRandom();
+		doRandom();
 	});
 </script>
 
-<p>Offset: <NumberWithUnits bind:value={p.args.offset} onInput={makeRandom} /></p>
-<p>Multiply: <NumberWithUnits bind:value={p.args.multiply} onInput={makeRandom} /></p>
+<p>Offset: <NumberWithUnits bind:value={p.args.offset} onInput={doRandom} /></p>
+<p>Multiply: <NumberWithUnits bind:value={p.args.multiply} onInput={doRandom} /></p>
 {#if p.args.valid && p.args.out.result == -1}
 	<p>Preview:</p>
 	<p>X: {result}</p>
