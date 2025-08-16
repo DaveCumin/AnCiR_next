@@ -222,7 +222,7 @@
 				editable={true}
 				onInput={(edit) => makeEdits(edit)}
 			/>
-			<p style="margin-bottom: 0;">
+			<p style="margin-bottom: 0; margin-top:0.4rem;">
 				Row <NumberWithUnits
 					min="1"
 					max={theData.plot.longestCol}
