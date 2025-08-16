@@ -65,7 +65,11 @@
 	let oldVal;
 </script>
 
-<div class="preview-table-wrapper" bind:this={table} style="margin-top: 0.2rem;">
+<div
+	class="preview-table-wrapper"
+	bind:this={table}
+	style="margin-top: 0.2rem; margin-bottom: 0rem;"
+>
 	<table style="width: 100%; table-layout: fixed;">
 		<thead>
 			<tr>

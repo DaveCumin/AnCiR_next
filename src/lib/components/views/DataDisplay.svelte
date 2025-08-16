@@ -14,6 +14,7 @@
 	import { getTableById } from '$lib/core/Table.svelte';
 	import SingleTableAction from '../iconActions/SingleTableAction.svelte';
 	import { preventDefault } from 'svelte/legacy';
+	import DateTimeHrs from '../inputs/DateTimeHrs.svelte';
 
 	// AddTable dropdown
 	let showAddTable = $state(false);
@@ -54,6 +55,8 @@
 	function toggleMenu(id) {
 		openMenus[id] = !openMenus[id];
 	}
+
+	let timeval = $state(Number(new Date()));
 </script>
 
 <div class="heading">
@@ -68,6 +71,7 @@
 
 <!-- TODO: write custom component to achieve -->
 <div class="display-list">
+	<DateTimeHrs bind:value={timeval} />
 	{#each core.tables as table (table.id)}
 		<div class="clps-container">
 			<details class="clps-item" bind:open={openClps[table.id]}>

@@ -71,6 +71,7 @@
 						'offset time: ',
 						(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
 					);
+					console.log('LUXON : ', DateTime.fromMillis(this.parentPlot?.startTime, { zone: 'utc' }));
 					return (
 						(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
 					);
@@ -331,6 +332,8 @@
 	import { slide } from 'svelte/transition';
 	import { tick } from 'svelte';
 	import { appState } from '$lib/core/core.svelte';
+	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
+	import { DateTime } from 'luxon';
 
 	let { theData, which } = $props();
 
@@ -435,8 +438,9 @@
 
 			<div class="control-input-vertical">
 				<div class="control-input">
-					<p>Start time</p>
-					<input type="date" bind:value={theData.startTime} />
+					<p>Start time {theData.startTime} {new Date(theData.startTime)}</p>
+					<!-- <input type="date" bind:value={theData.startTime} /> -->
+					<DateTimeHrs bind:value={theData.startTime} />
 				</div>
 			</div>
 

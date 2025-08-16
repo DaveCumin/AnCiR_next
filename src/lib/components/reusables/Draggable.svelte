@@ -38,6 +38,90 @@
 
 	let dragStartPositions = {};
 
+	// Touch-specific variables
+	let touchStartTime = 0;
+	let lastTouchTime = 0;
+	let touchCount = 0;
+	let isTouch = false;
+
+	function getPointerPosition(e) {
+		if (e.touches && e.touches.length > 0) {
+			return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+		}
+		return { x: e.clientX, y: e.clientY };
+	}
+
+	function onPointerDown(e, doMove = true) {
+		// Prevent default touch behaviors
+		if (e.type.startsWith('touch')) {
+			e.preventDefault();
+			isTouch = true;
+
+			// Handle double tap for touch
+			const currentTime = Date.now();
+			if (currentTime - lastTouchTime < 300) {
+				touchCount++;
+			} else {
+				touchCount = 1;
+			}
+			lastTouchTime = currentTime;
+			touchStartTime = currentTime;
+
+			// Double tap detection
+			if (touchCount === 2) {
+				handleDblClick(e);
+				return;
+			}
+		} else {
+			isTouch = false;
+		}
+
+		if (e.target.closest('button.icon')) return;
+
+		const pos = getPointerPosition(e);
+		mouseStartX = pos.x;
+		mouseStartY = pos.y;
+
+		dragStartPositions = {};
+		hasMouseMoved = false;
+
+		// For touch, we don't have Alt key, so use different selection logic
+		if (isTouch) {
+			// Simple touch selection - just select this plot
+			if (!selected) {
+				core.plots.forEach((p) => {
+					if (p.id !== id) {
+						p.selected = false;
+					}
+				});
+				selected = true;
+			}
+		} else {
+			// Original mouse logic
+			if (e.altKey) {
+				selected = !selected;
+				return;
+			}
+			if (!selected) {
+				core.plots.forEach((p) => {
+					if (p.id !== id) {
+						p.selected = false;
+					}
+				});
+				selected = true;
+			}
+		}
+
+		// Prepare for potential drag operation
+		dragStartPositions = {};
+		core.plots.forEach((p) => {
+			if (p.selected) {
+				dragStartPositions[p.id] = { x: p.x, y: p.y };
+			}
+		});
+		moving = true && doMove;
+	}
+
 	function onMouseDown(e, doMove = true) {
 		if (e.target.closest('button.icon')) return;
 
@@ -74,6 +158,10 @@
 		moving = true && doMove;
 	}
 
+	function onTouchStart(e, doMove = true) {
+		onPointerDown(e, doMove);
+	}
+
 	function anySelectedPlotEdge(xOffset, yOffset) {
 		let result = false;
 
@@ -86,22 +174,26 @@
 		return result;
 	}
 
-	function onMouseMove(e) {
+	function onPointerMove(e) {
+		const pos = getPointerPosition(e);
+
 		if (moving && !isDragging) {
-			const deltaX = Math.abs(e.clientX - mouseStartX);
-			const deltaY = Math.abs(e.clientY - mouseStartY);
+			const deltaX = Math.abs(pos.x - mouseStartX);
+			const deltaY = Math.abs(pos.y - mouseStartY);
 
 			if (deltaX > dragThreshold || deltaY > dragThreshold) {
 				isDragging = true;
 				hasMouseMoved = true;
 			}
 		}
+
 		if (moving && isDragging) {
-			const deltaX = (e.clientX - mouseStartX) / appState.canvasScale;
-			const deltaY = (e.clientY - mouseStartY) / appState.canvasScale;
+			const deltaX = (pos.x - mouseStartX) / appState.canvasScale;
+			const deltaY = (pos.y - mouseStartY) / appState.canvasScale;
+
 			core.plots.forEach((p) => {
 				if (p.selected || p.id == id) {
-					if (anySelectedPlotEdge(e.movementX, e.movementY)) return; //do nothing
+					if (anySelectedPlotEdge(e.movementX, e.movementY)) return;
 
 					const start = dragStartPositions[p.id];
 
@@ -113,23 +205,18 @@
 				}
 			});
 		} else if (resizing) {
-			let deltaX = (e.clientX - initialMouseX) / appState.canvasScale;
-			let deltaY = (e.clientY - initialMouseY) / appState.canvasScale;
+			let deltaX = (pos.x - initialMouseX) / appState.canvasScale;
+			let deltaY = (pos.y - initialMouseY) / appState.canvasScale;
 
 			const maxWidth = canvasWidth - x - 20;
 			const maxHeight = canvasHeight - y - 50;
 
-			//do the resize
 			width = snapToGrid(Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth)));
 			height = snapToGrid(Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight)));
 		}
 
-		// scroll with the move/resive
+		// Auto-scroll functionality
 		if (resizing || moving) {
-			let deltaX = (e.clientX - initialMouseX) / appState.canvasScale;
-			let deltaY = (e.clientY - initialMouseY) / appState.canvasScale;
-
-			//Do over the left
 			const rightLim =
 				window.innerWidth -
 				(appState.showControlPanel ? appState.widthControlPanel / appState.canvasScale : 0);
@@ -137,40 +224,81 @@
 			const currentTop = document.getElementsByClassName('canvas')[0].scrollTop;
 			const currentLeft = document.getElementsByClassName('canvas')[0].scrollLeft;
 
-			if (e.pageX > rightLim) {
+			if (pos.x > rightLim) {
 				document.getElementsByClassName('canvas')[0].scrollTo({
 					top: currentTop,
 					left: currentLeft + appState.gridSize,
 					behavior: 'smooth'
 				});
-				deltaX += appState.gridSize;
 			}
-			//do  down
-			if (e.pageY > window.innerHeight) {
+
+			if (pos.y > window.innerHeight) {
 				document.getElementsByClassName('canvas')[0].scrollTo({
 					top: currentTop + appState.gridSize,
 					left: currentLeft,
 					behavior: 'smooth'
 				});
-				deltaY += appState.gridSize;
 			}
 		}
 	}
 
-	function onMouseUp() {
+	function onMouseMove(e) {
+		onPointerMove(e);
+	}
+
+	function onTouchMove(e) {
+		// Prevent scrolling while dragging/resizing
+		if (moving || resizing) {
+			e.preventDefault();
+		}
+		onPointerMove(e);
+	}
+
+	function onPointerUp() {
 		moving = false;
 		resizing = false;
 		isDragging = false;
 		hasMouseMoved = false;
+		isTouch = false;
+	}
+
+	function onMouseUp() {
+		onPointerUp();
+	}
+
+	function onTouchEnd(e) {
+		// For very short touches without movement, treat as a tap
+		const currentTime = Date.now();
+		const touchDuration = currentTime - touchStartTime;
+
+		if (touchDuration < 200 && !hasMouseMoved) {
+			// This was a quick tap, handle selection
+			if (!selected) {
+				core.plots.forEach((p) => {
+					if (p.id !== id) {
+						p.selected = false;
+					}
+				});
+				selected = true;
+			}
+		}
+
+		onPointerUp();
 	}
 
 	function startResize(e) {
 		e.stopPropagation();
+
+		const pos = getPointerPosition(e);
 		resizing = true;
-		initialMouseX = e.clientX;
-		initialMouseY = e.clientY;
+		initialMouseX = pos.x;
+		initialMouseY = pos.y;
 		initialWidth = width;
 		initialHeight = height;
+
+		if (e.type.startsWith('touch')) {
+			isTouch = true;
+		}
 	}
 
 	function bringToFront(id) {
@@ -231,8 +359,12 @@
 	}
 </script>
 
-<svelte:window onmousemove={onMouseMove} onmouseup={onMouseUp} />
-
+<svelte:window
+	onmousemove={onMouseMove}
+	onmouseup={onMouseUp}
+	ontouchmove={onTouchMove}
+	ontouchend={onTouchEnd}
+/>
 <!-- added header therefore TODO: other way than hardcode -->
 
 <!-- the click does nothing becasue it's all handled in the mousedown/up for drag/resize etc. -->
@@ -240,6 +372,7 @@
 	bind:this={plotElement}
 	ondblclick={(e) => handleDblClick(e)}
 	onmousedown={(e) => onMouseDown(e, false)}
+	ontouchstart={(e) => onTouchStart(e, false)}
 	onclick={(e) => e.stopPropagation()}
 	class:selected
 	class="draggable"
@@ -253,6 +386,10 @@
 		onmousedown={(e) => {
 			e.stopPropagation();
 			onMouseDown(e);
+		}}
+		ontouchstart={(e) => {
+			e.stopPropagation();
+			onTouchStart(e);
 		}}
 	>
 		<p
@@ -332,7 +469,7 @@
 	.plot-content {
 		flex: 1;
 		padding: 0.5rem;
-		overflow: auto;
+		overflow: hidden;
 	}
 
 	.resize-handle {
@@ -343,5 +480,13 @@
 		bottom: 0;
 		cursor: nwse-resize;
 		border-radius: 2px;
+	}
+
+	/* Make resize handle more touch-friendly */
+	@media (pointer: coarse) {
+		.resize-handle {
+			width: 24px;
+			height: 24px;
+		}
 	}
 </style>
