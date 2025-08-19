@@ -18,7 +18,8 @@ https://svelte.dev/playground/modal?version=5.33.7
 	import { fade } from 'svelte/transition';
 
 	let dialog = $state();
-	let closeBtnLeft = $derived(dialog?.getBoundingClientRect().right);
+	let closeBtnRight = $derived(dialog?.getBoundingClientRect().right);
+	let closeBtnTop = $derived(dialog?.getBoundingClientRect().top);
 
 	$effect(() => {
 		if (showModal && !dialog?.open) {
@@ -49,7 +50,7 @@ https://svelte.dev/playground/modal?version=5.33.7
 			}}
 			transition:fade={{ duration: 360 }}
 		>
-			<div class="modalCloseBtn" style="position:fixed; left:{closeBtnLeft - 50}px;">
+			<div class="modalCloseBtn" style="position:fixed; left:{closeBtnRight - 40}px; top: {closeBtnTop + 20}px;">
 				<!-- svelte-ignore a11y_autofocus -->
 				<button onclick={() => close()}>
 					<Icon name="close" width={16} height={16} className="close" />
@@ -90,10 +91,11 @@ https://svelte.dev/playground/modal?version=5.33.7
 	}
 
 	.dialog-container {
-		margin-left: 20px;
+		/* margin-left: 20px;
 		margin-right: 20px;
 		margin-top: -5px;
-		margin-bottom: 20px;
+		margin-bottom: 20px; */
+		margin: 20px;
 	}
 
 	button {
@@ -106,7 +108,7 @@ https://svelte.dev/playground/modal?version=5.33.7
 		justify-content: center;
 		align-items: center;
 
-		margin-left: -0.2em;
-		margin-top: -0.2em;
+		/* margin-left: -0.2em;
+		margin-top: -0.2em; */
 	}
 </style>
