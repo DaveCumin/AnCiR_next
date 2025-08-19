@@ -176,13 +176,36 @@
 </script>
 
 {#snippet controls(theData)}
-	<p>Col Numbers: <input type="checkbox" bind:checked={theData.showColNumber} /></p>
-	<p>Round to decimals: <NumberWithUnits min="0" bind:value={theData.decimalPlaces} /></p>
-	<p>
-		Row:
-		<NumberWithUnits min="1" max={theData.longestCol} bind:value={theData.colCurrent} />
-		to {theData.colCurrent + theData.Ncolumns - 1} of {theData.longestCol}
-	</p>
+	<div class="control-component">
+		<div class="control-input">
+			<p>Round to decimals</p>
+			<NumberWithUnits min="0" bind:value={theData.decimalPlaces} />
+		</div>
+	</div>
+
+	<div class="control-component">
+		<div >
+			<p>Row
+				<NumberWithUnits min="1" max={theData.longestCol} bind:value={theData.colCurrent} />
+				to {theData.colCurrent + theData.Ncolumns - 1} of {theData.longestCol}
+			</p>
+		</div>
+	</div>
+	
+	<div class="control-component">
+		<div class="control-component-title">
+			<p>Column</p>
+		</div>
+
+		<div class="control-input-checkbox">
+			<input type="checkbox" bind:checked={theData.showColNumber} />
+			<p>Col Numbers</p>
+		</div>
+
+		<div class="control-input">
+			
+		</div>
+	</div>
 
 	Show columns:
 	<p>

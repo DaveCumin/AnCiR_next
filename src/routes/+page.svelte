@@ -818,30 +818,11 @@
 		min-width: 0;
 	}
 
-	:global(.control-input-checkbox) {
-		display: flex;
-		flex: 1 1 0;
-		flex-direction: row;
-		align-items: center;
-		text-align: center;
-		width: 100%;
-		min-width: 0;
-
-		margin: 0;
-	}
-
 	:global(.control-input p) {
 		font-size: 12px;
 		text-align: left;
 		color: var(--color-lightness-35);
 		margin: 0 0 4px 0;
-	}
-
-	:global(.control-input-checkbox p) {
-		font-size: 12px;
-		text-align: left;
-		color: var(--color-lightness-35);
-		margin: 0 0 0 0.2rem;
 	}
 
 	:global(.control-input select, .control-input input) {
@@ -866,6 +847,31 @@
 
 	:global(.control-input select:hover, .control-input input:hover) {
 		border: solid 1px var(--color-lightness-35);
+	}
+
+	:global(.control-input-checkbox) {
+		display: flex;
+		flex: 1 1 0;
+		flex-direction: row;
+		align-items: center;
+		text-align: center;
+		width: 100%;
+		min-width: 0;
+
+		margin: 0;
+		margin-top: 0.2rem;
+		gap: 0.4rem;
+	}
+
+	:global(.control-input-checkbox p) {
+		font-size: 12px;
+		text-align: left;
+		color: var(--color-lightness-35);
+		margin: 0;
+	}
+
+	:global(.control-input-checkbox input) {
+		margin: 0;
 	}
 
 	:global(.control-color) {
