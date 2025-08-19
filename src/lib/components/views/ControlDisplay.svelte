@@ -553,7 +553,7 @@
 			{/if}
 		{/if}
 	{:else}
-		<div class="control-banner">
+		<div class="control-banner" style="display:flex; flex-direction:row; align-items:center; justify-content:left;">
 			<p>Control Panel</p>
 		</div>
 		<p>Please select a plot or plots (with alt-click) to use the control panel.</p>
