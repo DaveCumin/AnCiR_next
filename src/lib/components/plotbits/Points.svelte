@@ -152,14 +152,13 @@
 			</button>
 		</div>
 		<div class="control-input-horizontal">
-			<div class="control-input" style="max-width: 1.5rem;">
-				<p style="color:{'white'};">Col</p>
-
-				<ColourPicker bind:value={pointsData.colour} />
-			</div>
 			<div class="control-input">
 				<p>Radius</p>
 				<NumberWithUnits step="0.2" min={0.1} bind:value={pointsData.radius} />
+			</div>
+			<div class="control-input" style="max-width: 1.5rem;">
+				<p style="color:{'white'};">Col</p>
+				<ColourPicker bind:value={pointsData.colour} />
 			</div>
 		</div>
 	</div>

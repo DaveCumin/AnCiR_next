@@ -100,10 +100,6 @@
 			</button>
 		</div>
 		<div class="control-input-horizontal">
-			<div class="control-input" style="max-width: 1.5rem;">
-				<p style="color:{'white'};">Col</p>
-				<ColourPicker bind:value={lineData.colour} />
-			</div>
 			<div class="control-input">
 				<p>Width</p>
 				<NumberWithUnits step="0.2" min={0.1} bind:value={lineData.strokeWidth} />
@@ -125,6 +121,10 @@
 						placeholder={'eg 5, 5'}
 					/>
 				</div>
+			</div>
+			<div class="control-input" style="max-width: 1.5rem;">
+				<p style="color:{'white'};">Col</p>
+				<ColourPicker bind:value={lineData.colour} />
 			</div>
 		</div>
 	</div>
