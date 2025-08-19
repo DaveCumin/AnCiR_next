@@ -73,6 +73,8 @@
 	let sensitivity = 0.1;
 	let inputElement = $state(null);
 
+	let isFocused = $state(null);
+
 	function startDrag(event) {
 		isDragging = true;
 		startX = event.clientX;
@@ -108,10 +110,13 @@
 	min={typeof unitFactor === 'object' ? min : min / unitFactor}
 	max={typeof unitFactor === 'object' ? max : max / unitFactor}
 	bind:value={displayValue}
+	onfocus={ () => { isFocused = true; }}
+	onblur={ () => { isFocused = false; }}
 	oninput={(e) => updateValue(e.target.value)}
-	onmousedown={startDrag}
+	onmousedown={(e) => { startDrag(e); isFocused = true; }}
 	onwheel={(e) => {
-		if (inputElement.focus()) e.stopPropagation();
+		// if (inputElement.focus()) e.stopPropagation();
+		if (isFocused) e.stopPropagation();
 	}}
 	class={'draggable-number-input ' + className}
 	{style}
