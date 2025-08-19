@@ -134,22 +134,21 @@
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
-		<div class="action">
-			<button onclick={(e) => openImportModal()}> Load session</button>
+		<div class="action" onclick={(e) => openImportModal()}>
+			<button> Load session</button>
 		</div>
 
-		<div class="action">
-			<button onclick={(e) => exportJson()}> Save session </button>
+		<div class="action" onclick={(e) => exportJson()}>
+			<button> Save session </button>
 		</div>
 
-		<div class="action">
-			<button
-				onclick={(e) => {
-					showSettingsModal = true;
-				}}
-			>
-				Settings
-			</button>
+		<div
+			class="action"
+			onclick={(e) => {
+				showSettingsModal = true;
+			}}
+		>
+			<button> Settings </button>
 		</div>
 	{/snippet}
 </Dropdown>

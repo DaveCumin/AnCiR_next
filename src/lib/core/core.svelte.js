@@ -32,19 +32,19 @@ export const appState = $state({
 
 	appColours: [
 		'#234154',
-		'#4A1E0E',
+		'#BE796B',
 		'#3E7295',
+		'#EDADAD',
+		'#A6ACD5',
 		'#83422A',
 		'#6B9FD5',
-		'#BE796B',
-		'#A6ACD5',
-		'#EDADAD'
+		'#4A1E0E'
 	],
 	showColourPicker: false
 });
 
 export const appConsts = $state({
-	version: 'β.4.3',
+	version: 'β.4.4',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
@@ -82,7 +82,7 @@ export const appConsts = $state({
 			'#8E616C'
 		],
 		oslo: ['#010101', '#D4D6DB', '#133251', '#AAB6CA', '#1F4C7B', '#89A0CA', '#3869A8', '#658AC7'],
-		berlin: ['#234154', '#4A1E0E', '#3E7295', '#83422A', '#6B9FD5', '#BE796B', '#A6ACD5', '#EDADAD']
+		berlin: ['#234154', '#BE796B', '#3E7295', '#EDADAD', '#A6ACD5', '#83422A', '#6B9FD5', '#4A1E0E']
 	}
 });
 
