@@ -100,12 +100,12 @@
 		binSize = $state(0.25);
 		method = $state('Chi-squared'); // New: method selector
 
-		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
 		line = $state();
 		points = $state();
 		chiSquaredAlpha = $state(0.05);
 
-		updatePeriodData() {
+		periodData = $derived.by(() => {
+			let out = { x: [], y: [], threshold: [], pvalue: [] };
 			let binnedData = { bins: [], y_out: [] }; // No binning for Lomb-Scargle
 			if (this.method === 'Chi-squared') {
 				binnedData = binData(this.x.hoursSinceStart, this.y.getData(), this.binSize, 0);
@@ -157,8 +157,9 @@
 				}
 			}
 
-			this.periodData = { x: periods, y: power, threshold, pvalue };
-		}
+			out = { x: periods, y: power, threshold, pvalue };
+			return out;
+		});
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
@@ -367,14 +368,11 @@
 				dataIN = structuredClone(temp);
 			}
 			const datum = new PeriodogramDataclass(this, dataIN);
-			datum.updatePeriodData();
+
 			this.data.push(datum);
 		}
 		removeData(idx) {
 			this.data.splice(idx, 1);
-		}
-		updateAllPeriodData() {
-			this.data.forEach((datum) => datum.updatePeriodData());
 		}
 
 		toJSON() {
@@ -746,7 +744,7 @@
 
 						<div class="control-input">
 							<p>Method</p>
-							<select bind:value={datum.method} onchange={() => datum.updatePeriodData()}>
+							<select bind:value={datum.method}>
 								<option value="Chi-squared">Chi-squared</option>
 								<option value="Lomb-Scargle">Lomb-Scargle</option>
 							</select>
@@ -769,7 +767,6 @@
 										max="0.9999"
 										step="0.01"
 										bind:value={datum.alpha}
-										oninput={() => datum.updatePeriodData()}
 									/>
 								</div>
 							{/if}
