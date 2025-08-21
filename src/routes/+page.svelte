@@ -319,9 +319,9 @@
 
 		core.tables = [];
 		core.tables.push(new Table({ name: 'my first table' }));
-		core.tables[0].columnRefs = [testtimestring, testawd.id, d1id, d0id, testref.id, testrefref.id];
+		core.tables[0].columnRefs = [testtimestring, testawd.id, testref.id, testrefref.id];
 		core.tables.push(new Table({ name: 'table too' }));
-		core.tables[1].columnRefs = [d1id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
+		core.tables[1].columnRefs = [d1id, d0id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
 		core.tables[1].processes.push(
 			new TableProcess(
 				{
@@ -359,6 +359,10 @@
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
 		});
+		core.plots[core.plots.length - 1].plot.addData({
+			x: { refId: core.data[core.data.length - 2].id },
+			y: { refId: core.data[core.data.length - 1].id }
+		});
 		core.plots[core.plots.length - 1].x = 15;
 		core.plots[core.plots.length - 1].y = 375;
 		//Periodogram
@@ -377,8 +381,13 @@
 		core.plots.push(new Plot({ name: 'a table', type: 'tableplot' }));
 		core.plots[core.plots.length - 1].x = 555;
 		core.plots[core.plots.length - 1].y = 330;
-		core.plots[core.plots.length - 1].plot.columnRefs = [core.data[0].id, core.data[1].id];
-		core.plots[core.plots.length - 1].plot.showCol = [true, true];
+		core.plots[core.plots.length - 1].plot.columnRefs = [
+			core.data[0].id,
+			core.data[1].id,
+			core.data[core.data.length - 2].id,
+			core.data[core.data.length - 1].id
+		];
+		core.plots[core.plots.length - 1].plot.showCol = [true, true, true, true];
 
 		// console.log('ALL SET UP: ', $state.snapshot(core));
 	}
