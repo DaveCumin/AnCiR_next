@@ -329,7 +329,7 @@
 					args: {
 						xIN: d0id,
 						yIN: d1id,
-						binSize: 0.25,
+						binSize: 2,
 						binStart: 0,
 						out: { binnedx: -1, binnedy: -1 }
 					}
@@ -345,6 +345,10 @@
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
 		});
+		core.plots[0].plot.addData({
+			x: { refId: core.data[core.data.length - 2].id },
+			y: { refId: core.data[core.data.length - 1].id }
+		});
 		core.plots[core.plots.length - 1].x = 15;
 		core.plots[core.plots.length - 1].y = 15;
 
@@ -356,12 +360,16 @@
 			y: { refId: core.data[1].id }
 		});
 		core.plots[core.plots.length - 1].x = 15;
-		core.plots[core.plots.length - 1].y = 330;
+		core.plots[core.plots.length - 1].y = 375;
 		//Periodogram
 		pushObj(new Plot({ name: 'a periodogram', type: 'periodogram' }));
 		core.plots[core.plots.length - 1].plot.addData({
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
+		});
+		core.plots[core.plots.length - 1].plot.addData({
+			x: { refId: core.data[core.data.length - 2].id },
+			y: { refId: core.data[core.data.length - 1].id }
 		});
 		core.plots[core.plots.length - 1].x = 555;
 		core.plots[core.plots.length - 1].y = 15;

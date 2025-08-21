@@ -31,7 +31,9 @@
 		}
 
 		const theBinnedData = binData(
-			getColumnById(xIN).hoursSinceStart,
+			getColumnById(xIN).type == 'time'
+				? getColumnById(xIN).hoursSinceStart
+				: getColumnById(xIN).getData(),
 			getColumnById(yIN).getData(),
 			binSize,
 			binStart

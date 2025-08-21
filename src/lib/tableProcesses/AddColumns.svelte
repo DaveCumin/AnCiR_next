@@ -24,6 +24,7 @@
 		if (argsIN.out.result == -1) {
 		} else {
 			getColumnById(argsIN.out.result).data = result;
+			getColumnById(argsIN.out.result).type = typeof result[0] != 'string' ? 'category' : 'number';
 			const processHash = crypto.randomUUID();
 			getColumnById(argsIN.out.result).tableProcessGUId = processHash;
 		}
