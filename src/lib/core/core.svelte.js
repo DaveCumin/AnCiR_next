@@ -1,8 +1,8 @@
 // @ts-nocheck
 
-import { Column } from './Column.svelte';
-import { Plot } from './Plot.svelte';
-import { Table } from './Table.svelte';
+import { Column } from '$lib/core/Column.svelte';
+import { Plot } from '$lib/core//Plot.svelte';
+import { Table } from '$lib/core//Table.svelte';
 
 export const core = $state({
 	data: [],

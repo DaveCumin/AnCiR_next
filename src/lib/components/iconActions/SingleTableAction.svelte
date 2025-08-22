@@ -4,7 +4,7 @@
 
 	import { core } from '$lib/core/core.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
-	import { getTableById } from '$lib/core/Table.svelte';
+	import { getTableById, exportTable } from '$lib/core/Table.svelte';
 
 	let {
 		showDropdown = $bindable(false),
@@ -34,6 +34,10 @@
 
 		<div class="dropdown-action" onclick={() => makeNewTablePlot(tableId)}>
 			<button> View as Table </button>
+		</div>
+
+		<div class="dropdown-action" onclick={() => exportTable(tableId)}>
+			<button> Export data </button>
 		</div>
 	{/snippet}
 </Dropdown>

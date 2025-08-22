@@ -1,7 +1,7 @@
 <script module>
 	import { appConsts, pushObj } from '$lib/core/core.svelte.js';
 	import { getTableById } from '$lib/core/Table.svelte';
-	import { Column, getColumnById } from '$lib/core/Column.svelte';
+	import { Column } from '$lib/core/Column.svelte';
 	let _tableprocessidCounter = 0;
 
 	export class TableProcess {

@@ -27,7 +27,7 @@
 		outputCoreAsJson
 	} from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
-	import { Table } from '$lib/core/table.svelte';
+	import { Table } from '$lib/core/Table.svelte';
 	import { Plot, selectAllPlots } from '$lib/core/Plot.svelte';
 	import { Process } from '$lib/core/Process.svelte';
 	import { TableProcess } from '$lib/core/tableProcess.svelte';

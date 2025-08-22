@@ -4,7 +4,7 @@
 	import { DateTime } from 'luxon';
 
 	import { appConsts, pushObj } from '$lib/core/core.svelte';
-	import { Table } from '$lib/core/table.svelte';
+	import { Table } from '$lib/core/Table.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	import { guessDateofArray, forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
 	import { numToString } from '$lib/utils/GeneralUtils';

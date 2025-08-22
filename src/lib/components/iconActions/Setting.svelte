@@ -53,7 +53,7 @@
 	import { tick } from 'svelte';
 	import { core, pushObj, outputCoreAsJson } from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
-	import { Table } from '$lib/core/Table.svelte.js';
+	import { Table } from '$lib/core/Table.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
 
 	import Modal from '$lib/components/reusables/Modal.svelte';
