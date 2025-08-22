@@ -37,7 +37,7 @@
 		</div>
 
 		<div class="dropdown-action" onclick={() => exportTable(tableId)}>
-			<button> Export data </button>
+			<button> Export as csv </button>
 		</div>
 	{/snippet}
 </Dropdown>

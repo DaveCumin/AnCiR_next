@@ -39,13 +39,14 @@ export const appState = $state({
 		'#83422A',
 		'#6B9FD5',
 		'#4A1E0E',
-		'#fbe67280'
+
+		'#fbe67280' // transparrent yellow for light
 	],
 	showColourPicker: false
 });
 
 export const appConsts = $state({
-	version: 'β.4.4',
+	version: 'β.4.5',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
