@@ -38,7 +38,8 @@ export const appState = $state({
 		'#A6ACD5',
 		'#83422A',
 		'#6B9FD5',
-		'#4A1E0E'
+		'#4A1E0E',
+		'#fbe67280'
 	],
 	showColourPicker: false
 });

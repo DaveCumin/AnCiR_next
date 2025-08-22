@@ -3,10 +3,7 @@
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 	import { core } from '$lib/core/core.svelte';
 	import { removePlot } from '$lib/core/Plot.svelte';
-	import {
-		convertToImage,
-		saveMultipleAsImage
-	} from '$lib/components/plotbits/helpers/save.svelte.js';
+	import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte.js';
 
 	let {
 		showDropdown = $bindable(false),
