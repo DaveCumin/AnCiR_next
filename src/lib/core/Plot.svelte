@@ -7,9 +7,13 @@
 		return _counter++;
 	}
 	export function removePlot(id) {
-		const index = core.plots.findIndex((p) => p.id === id);
-		if (index !== -1) {
-			core.plots.splice(index, 1);
+		const confirmed = window.confirm(`Are you sure you want to delete the plot?`);
+
+		if (confirmed) {
+			const index = core.plots.findIndex((p) => p.id === id);
+			if (index !== -1) {
+				core.plots.splice(index, 1);
+			}
 		}
 	}
 

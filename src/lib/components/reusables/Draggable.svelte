@@ -14,7 +14,7 @@
 		y = $bindable(100),
 		width = $bindable(200),
 		height = $bindable(150),
-		title = '',
+		title = $bindable(''),
 		id,
 		selected = $bindable(false),
 		canvasWidth = 50000,

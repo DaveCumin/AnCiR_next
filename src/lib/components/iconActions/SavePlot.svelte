@@ -34,11 +34,6 @@
 		const submenuWidth = 150; // Matches min-width in CSS
 		return left + 210 + submenuWidth > viewportWidth ? 'left' : 'right';
 	}
-
-	function handleSaveAction(type: string, closeDropdown: () => void) {
-		openModal(type); // Open modal for save confirmation
-	}
-
 	function handleDeleteAction(closeDropdown: () => void) {
 		if (Id.length === 1) {
 			removePlot(Id[0]);
@@ -46,11 +41,6 @@
 			Id.forEach((id) => removePlot(id));
 		}
 		closeDropdown();
-	}
-
-	function openModal(type: string) {
-		showModal = true;
-		plotType = type;
 	}
 
 	$effect(() => {
@@ -68,6 +58,7 @@
 		activeSubmenu: dropdownActiveSubmenu,
 		closeDropdown
 	})}
+		<p>ID: {Id} | {Id.length}</p>
 		{#if Id.length > 1}
 			<!-- Save as single image -->
 			<div
@@ -179,7 +170,7 @@
 					onmouseleave={() => hideSubmenu('save', 150)}
 				>
 					{#each ['svg', 'png'] as type}
-						<button class="submenu-item" onclick={() => handleSaveAction(type, closeDropdown)}>
+						<button class="submenu-item" onclick={() => convertToImage('plot' + Id[0], type)}>
 							Save as {type.toUpperCase()}
 						</button>
 					{/each}
@@ -197,28 +188,6 @@
 		{/if}
 	{/snippet}
 </Dropdown>
-
-{#if showModal}
-	<Modal on:close={() => (showModal = false)}>
-		<div class="modal-content">
-			<h3>Save Plot as {plotType.toUpperCase()}</h3>
-			<input type="text" bind:value={plotName} placeholder="Enter plot name" />
-			<button
-				onclick={() => {
-					if (Id.length > 1) {
-						saveMultipleAsImage(Id, plotType, plotName);
-					} else {
-						convertToImage('plot' + Id[0], plotType, plotName);
-					}
-					showModal = false;
-					closeDropdown();
-				}}
-			>
-				Save
-			</button>
-		</div>
-	</Modal>
-{/if}
 
 <style>
 	.dropdown-item {

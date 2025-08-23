@@ -157,7 +157,7 @@
 							bind:y={plot.y}
 							bind:width={plot.width}
 							bind:height={plot.height}
-							title={plot.name}
+							bind:title={plot.name}
 							id={plot.id}
 							bind:selected={plot.selected}
 						>

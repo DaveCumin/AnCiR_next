@@ -401,7 +401,6 @@
 
 			if (json.data) {
 				periodogram.data = json.data.map((d) => PeriodogramDataclass.fromJSON(d, periodogram));
-				periodogram.updateAllPeriodData();
 			}
 			return periodogram;
 		}
@@ -418,12 +417,6 @@
 	import Icon from '$lib/icons/Icon.svelte';
 
 	let { theData, which } = $props();
-
-	$effect(() => {
-		if (theData.periodlimsIN || theData.periodSteps) {
-			theData.updateAllPeriodData();
-		}
-	});
 
 	//Tooltip
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
