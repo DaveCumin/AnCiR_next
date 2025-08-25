@@ -3,6 +3,7 @@ import { appState } from '$lib/core/core.svelte.js';
 import { core } from '$lib/core/core.svelte';
 
 export function convertToImage(svgId, filetype = 'png') {
+	console.log('convertToImage called with svgId:', svgId, 'and filetype:', filetype);
 	const plotName = core.plots[Number(svgId.replace('plot', ''))].name;
 
 	if (filetype == 'svg') {
@@ -11,6 +12,7 @@ export function convertToImage(svgId, filetype = 'png') {
 	}
 	// Get the SVG element
 	const svg = document.getElementById(svgId);
+	console.log('SVG element:', svg);
 
 	// Serialize the SVG to a string
 	const serializer = new XMLSerializer();

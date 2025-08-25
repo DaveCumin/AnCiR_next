@@ -16,6 +16,7 @@
 	let activeSubmenu = $state(null);
 
 	function handleSaveAction(type, closeDropdown) {
+		console.log('here');
 		convertToImage('plot' + plotId, type);
 
 		closeDropdown();

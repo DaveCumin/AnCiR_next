@@ -100,7 +100,13 @@
 
 			for (let i = 0; i < tempx.length; i++) {
 				const p = Math.floor((tempx[i] - offset) / period);
-				if (p >= 0) {
+				if (
+					p >= 0 &&
+					!isNaN(tempx[i]) &&
+					!isNaN(tempy[i]) &&
+					tempy[i] != null &&
+					tempx[i] != null
+				) {
 					xByPeriod[p] ||= [];
 					yByPeriod[p] ||= [];
 					xByPeriod[p].push(tempx[i] - offset);

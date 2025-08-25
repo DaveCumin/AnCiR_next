@@ -58,8 +58,7 @@
 		activeSubmenu: dropdownActiveSubmenu,
 		closeDropdown
 	})}
-		<p>ID: {Id} | {Id.length}</p>
-		{#if Id.length > 1}
+		{#if Array.isArray(Id) && Id.length > 1}
 			<!-- Save as single image -->
 			<div
 				class="dropdown-item has-submenu"
@@ -103,6 +102,7 @@
 			>
 				<button>Save as individual plots</button>
 			</div>
+
 			{#if dropdownActiveSubmenu === 'save-individual' && saveIndividualMenuItem}
 				{@const rect = saveIndividualMenuItem.getBoundingClientRect()}
 				{@const direction = getSubmenuDirection(dropdownLeft)}
