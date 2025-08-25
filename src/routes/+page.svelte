@@ -363,6 +363,7 @@
 			x: { refId: core.data[core.data.length - 2].id },
 			y: { refId: core.data[core.data.length - 1].id }
 		});
+		core.plots[core.plots.length - 1].plot.data[1].colour = '#bf796b91';
 		core.plots[core.plots.length - 1].x = 15;
 		core.plots[core.plots.length - 1].y = 375;
 		//Periodogram
@@ -375,11 +376,12 @@
 			x: { refId: core.data[core.data.length - 2].id },
 			y: { refId: core.data[core.data.length - 1].id }
 		});
-		core.plots[core.plots.length - 1].x = 555;
+		core.plots[core.plots.length - 1].x = 540;
 		core.plots[core.plots.length - 1].y = 15;
+		core.plots[core.plots.length - 1].width = 510;
 		//Table
 		core.plots.push(new Plot({ name: 'a table', type: 'tableplot' }));
-		core.plots[core.plots.length - 1].x = 555;
+		core.plots[core.plots.length - 1].x = 540;
 		core.plots[core.plots.length - 1].y = 330;
 		core.plots[core.plots.length - 1].plot.columnRefs = [
 			core.data[0].id,

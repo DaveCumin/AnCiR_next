@@ -28,9 +28,4 @@
 	});
 </script>
 
-<polyline
-	points={theline}
-	fill={colour}
-	style={`transform: translate(	${xoffset ? xoffset : 0}px,
-									${yoffset ? yoffset : 0}px);`}
-/>
+<polyline points={theline} fill={colour} transform="translate({xoffset || 0}, {yoffset || 0})" />

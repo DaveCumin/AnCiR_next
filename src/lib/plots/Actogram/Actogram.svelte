@@ -260,6 +260,7 @@
 					}
 				});
 			}
+			console.log('ylims_out: ', ylims_out);
 			return ylims_out;
 		});
 
@@ -690,10 +691,22 @@
 		{#each theData.plot.data as datum, d}
 			<g
 				class="actogram"
-				style="transform: translate({theData.plot.padding.left}px, {theData.plot.padding.top}px);"
+				transform="translate({theData.plot.padding.left}, {theData.plot.padding.top})"
 			>
 				<!-- Make the histogram for each period -->
 				{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
+					{@const refD = 0} // choose the dataset you want to align to
+					{@const refScale = scaleLinear()
+						.domain([theData.plot.ylims[refD][day][0], theData.plot.ylims[refD][day][1]])
+						.range([theData.plot.eachplotheight, 0])}
+
+					{@const thisScale = scaleLinear()
+						.domain([theData.plot.ylims[d][day][0], theData.plot.ylims[d][day][1]])
+						.range([theData.plot.eachplotheight, 0])}
+
+					{@const baseline = 0}
+					{@const baselineOffset = refScale(baseline) - thisScale(baseline)}
+
 					<Hist
 						x={getNdataByPeriods(
 							datum.dataByDays.xByPeriod,
@@ -705,11 +718,10 @@
 						xscale={scaleLinear()
 							.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
 							.range([0, theData.plot.plotwidth])}
-						yscale={scaleLinear()
-							.domain([theData.plot.ylims[d][day][0], theData.plot.ylims[d][day][1]])
-							.range([theData.plot.eachplotheight, 0])}
+						yscale={thisScale}
 						colour={datum.colour}
-						yoffset={day * theData.plot.spaceBetween + day * theData.plot.eachplotheight}
+						yoffset={day * (theData.plot.spaceBetween + theData.plot.eachplotheight) +
+							baselineOffset}
 					/>
 				{/each}
 			</g>
