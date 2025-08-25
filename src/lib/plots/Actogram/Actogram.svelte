@@ -695,17 +695,9 @@
 			>
 				<!-- Make the histogram for each period -->
 				{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
-					{@const refD = 0} // choose the dataset you want to align to
-					{@const refScale = scaleLinear()
-						.domain([theData.plot.ylims[refD][day][0], theData.plot.ylims[refD][day][1]])
-						.range([theData.plot.eachplotheight, 0])}
-
 					{@const thisScale = scaleLinear()
 						.domain([theData.plot.ylims[d][day][0], theData.plot.ylims[d][day][1]])
 						.range([theData.plot.eachplotheight, 0])}
-
-					{@const baseline = 0}
-					{@const baselineOffset = refScale(baseline) - thisScale(baseline)}
 
 					<Hist
 						x={getNdataByPeriods(
@@ -720,8 +712,7 @@
 							.range([0, theData.plot.plotwidth])}
 						yscale={thisScale}
 						colour={datum.colour}
-						yoffset={day * (theData.plot.spaceBetween + theData.plot.eachplotheight) +
-							baselineOffset}
+						yoffset={day * (theData.plot.spaceBetween + theData.plot.eachplotheight)}
 					/>
 				{/each}
 			</g>

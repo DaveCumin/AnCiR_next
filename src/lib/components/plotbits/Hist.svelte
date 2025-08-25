@@ -3,11 +3,12 @@
 
 	let theline = $derived.by(() => {
 		let width = xscale.range()[1];
-		let height = yscale.range()[0];
+		let height = yscale.range()[0]; // This is eachplotheight
+		let baseline = height; // Use the bottom of the plot area as baseline
 
 		//now make the path
-		let out = `${xscale(x[0])},${yscale(yscale.range()[1])} `; // start at the start
-		out += `${xscale(x[0])},${height} `; // skip to the first point
+		let out = `${xscale(x[0])},${baseline} `; // start at the baseline (bottom)
+		out += `${xscale(x[0])},${yscale(y[0])} `; // go to the first data point
 
 		//cycle through the points
 		for (let b = 0; b < x.length - 1; b++) {
@@ -18,12 +19,12 @@
 		if (x[x.length - 1] + 1 < xscale.domain()[1]) {
 			out +=
 				`${xscale(x[x.length - 1] + 1)},${yscale(y[x.length - 1])} ` +
-				`${xscale(x[x.length - 1] + 1)},${yscale(yscale.range()[1])} `;
+				`${xscale(x[x.length - 1] + 1)},${baseline} `;
 		} else {
 			out += `${width},${yscale(y[x.length - 1])} `;
 		}
-		out += `${width},${yscale(yscale.range()[1])} `;
-
+		out += `${width},${baseline} `;
+		console.log(yscale.range(), yscale.domain(), baseline, out);
 		return out;
 	});
 </script>
