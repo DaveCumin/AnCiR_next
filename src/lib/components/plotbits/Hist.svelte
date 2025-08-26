@@ -24,7 +24,7 @@
 			out += `${width},${yscale(y[x.length - 1])} `;
 		}
 		out += `${width},${baseline} `;
-		console.log(yscale.range(), yscale.domain(), baseline, out);
+
 		return out;
 	});
 </script>

@@ -102,6 +102,7 @@
 
 		line = $state();
 		points = $state();
+		thresholdline = $state();
 		chiSquaredAlpha = $state(0.05);
 
 		periodData = $derived.by(() => {
@@ -109,7 +110,6 @@
 			let binnedData = { bins: [], y_out: [] }; // No binning for Lomb-Scargle
 			if (this.method === 'Chi-squared') {
 				binnedData = binData(this.x.hoursSinceStart, this.y.getData(), this.binSize, 0);
-				console.log(binnedData);
 				if (binnedData.bins.length === 0) {
 					this.periodData = { x: [], y: [], threshold: [], pvalue: [] };
 					return;
@@ -158,6 +158,7 @@
 			}
 
 			out = { x: periods, y: power, threshold, pvalue };
+			console.log('periodData', out);
 			return out;
 		});
 
@@ -181,6 +182,7 @@
 				this.y = new ColumnClass({ refId: -1 });
 			}
 			this.line = new LineClass(dataIN?.line, this);
+			this.thresholdline = new LineClass(dataIN?.thresholdline, this);
 			this.points = new PointsClass(dataIN?.points, this);
 			this.method = dataIN?.method ?? 'Lomb-Scargle'; // Initialize method
 		}
@@ -190,6 +192,7 @@
 				x: this.x,
 				y: this.y,
 				line: this.line.toJSON(),
+				thresholdline: this.thresholdline.toJSON(),
 				points: this.points.toJSON(),
 				binSize: this.binSize,
 				method: this.method,
@@ -202,6 +205,7 @@
 				x: json.x,
 				y: json.y,
 				line: LineClass.fromJSON(json.line),
+				thresholdline: LineClass.fromJSON(json.thresholdline),
 				points: PointsClass.fromJSON(json.points),
 				binSize: json.binSize,
 				method: json.method,
@@ -759,7 +763,7 @@
 										min="0.0001"
 										max="0.9999"
 										step="0.01"
-										bind:value={datum.alpha}
+										bind:value={datum.chiSquaredAlpha}
 									/>
 								</div>
 							{/if}
@@ -767,6 +771,9 @@
 
 						<Line lineData={datum.line} which="controls" />
 						<Points pointsData={datum.points} which="controls" />
+						{#if datum.method === 'Chi-squared'}
+							<Line lineData={datum.thresholdline} which="controls" title="Threshold" />
+						{/if}
 
 						<div class="div-line"></div>
 					</div>
@@ -822,8 +829,6 @@
 				yscale={scaleLinear()
 					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 					.range([theData.plot.plotheight, 0])}
-				strokeCol={datum.linecolour}
-				strokeWidth={datum.linestrokeWidth}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 				which="plot"
@@ -838,8 +843,6 @@
 				yscale={scaleLinear()
 					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 					.range([theData.plot.plotheight, 0])}
-				radius={datum.pointradius}
-				fillCol={datum.pointcolour}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 				tooltip={true}
@@ -847,7 +850,7 @@
 			/>
 			{#if datum.method === 'Chi-squared'}
 				<Line
-					lineData={datum.line}
+					lineData={datum.thresholdline}
 					x={datum.periodData.x}
 					y={datum.periodData.threshold}
 					xscale={scaleLinear()
@@ -856,10 +859,9 @@
 					yscale={scaleLinear()
 						.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 						.range([theData.plot.plotheight, 0])}
-					strokeCol={datum.linecolour}
-					strokeWidth={datum.linestrokeWidth}
 					yoffset={theData.plot.padding.top}
 					xoffset={theData.plot.padding.left}
+					which="plot"
 				/>
 			{/if}
 		{/each}

@@ -42,7 +42,17 @@
 </script>
 
 <script>
-	let { lineData = $bindable(), x, y, xscale, yscale, yoffset = 0, xoffset = 0, which } = $props();
+	let {
+		lineData = $bindable(),
+		x,
+		y,
+		xscale,
+		yscale,
+		yoffset = 0,
+		xoffset = 0,
+		which,
+		title = 'Line'
+	} = $props();
 	let width = $derived(xscale.range()[1]);
 	let height = $derived(yscale.range()[0]);
 	let clipKey = $derived(`line-${xoffset}-${yoffset}-${width}-${height}`);
@@ -84,7 +94,7 @@
 {#snippet controls(lineData)}
 	<div class="control-component">
 		<div class="control-component-title">
-			<p>Line</p>
+			<p>{title}</p>
 			<button
 				class="icon"
 				onclick={(e) => {
