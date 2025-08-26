@@ -134,10 +134,7 @@ y = <ColumnSelector
 		<div style="height:250px; overflow:auto;">
 			<Table
 				headers={['binned x', 'binned y']}
-				data={[
-					binnedData.bins.slice(0, 5).map((x) => x.toFixed(2)),
-					binnedData.y_out.slice(0, 5).map((x) => x.toFixed(2))
-				]}
+				data={[binnedData.bins.map((x) => x.toFixed(2)), binnedData.y_out.map((x) => x.toFixed(2))]}
 			/>
 		</div>
 	{:else}
