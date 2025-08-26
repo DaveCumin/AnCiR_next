@@ -53,6 +53,8 @@
 
 <script>
 	import ColumnComponent from '$lib/core/Column.svelte';
+	import Table from '$lib/components/plotbits/Table.svelte';
+
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
@@ -72,68 +74,85 @@
 	});
 </script>
 
-<p>Start time: <input type="datetime-local" bind:value={p.args.startTime} /></p>
-<p>
-	Duration: <NumberWithUnits
-		bind:value={p.args.N_hours}
-		min="0.1"
-		step="0.1"
-		max={1000 * 24}
-		units={{
-			default: 'hrs',
-			days: 24,
-			hrs: 1,
-			mins: 1 / 60,
-			secs: 1 / (60 * 60)
-		}}
-		onInput={doSimulated}
-		selectedUnitStart="days"
-	/>
-</p>
-<p>
-	Sampling period: <NumberWithUnits
-		bind:value={p.args.samplingPeriod_hours}
-		min="0.01"
-		step="0.01"
-		max={50}
-		units={{
-			default: 'hrs',
-			days: 24,
-			hrs: 1,
-			mins: 1 / 60,
-			secs: 1 / (60 * 60)
-		}}
-		onInput={doSimulated}
-		selectedUnitStart="mins"
-	/>
-</p>
+<div class="control-input">
+	<p>Start time</p>
+	<input type="datetime-local" bind:value={p.args.startTime} />
+</div>
 
-<p>
-	Rhythm period: <NumberWithUnits
-		bind:value={p.args.rhythmPeriod_hours}
-		min="0.1"
-		step="0.1"
-		max={50}
-		units={{
-			default: 'hrs',
-			days: 24,
-			hrs: 1,
-			mins: 1 / 60,
-			secs: 1 / (60 * 60)
-		}}
-		onInput={doSimulated}
-	/>
-</p>
-<p>
-	Rhythm amplitude: <NumberWithUnits
-		bind:value={p.args.rhythmAmplitude}
-		min="10"
-		max="1000"
-		step="1"
-		onInput={doSimulated}
-	/>
-</p>
-<p>Output:</p>
+<div class="control-input">
+	<p>Duration</p>
+	<div style="display:flex;">
+		<NumberWithUnits
+			bind:value={p.args.N_hours}
+			min="0.1"
+			step="0.1"
+			max={1000 * 24}
+			units={{
+				default: 'hrs',
+				days: 24,
+				hrs: 1,
+				mins: 1 / 60,
+				secs: 1 / (60 * 60)
+			}}
+			onInput={doSimulated}
+			selectedUnitStart="days"
+		/>
+	</div>
+</div>
+
+<div class="control-input">
+	<p>Sampling period</p>
+	<div style="display:flex;">
+		<NumberWithUnits
+			bind:value={p.args.samplingPeriod_hours}
+			min="0.01"
+			step="0.01"
+			max={50}
+			units={{
+				default: 'hrs',
+				days: 24,
+				hrs: 1,
+				mins: 1 / 60,
+				secs: 1 / (60 * 60)
+			}}
+			onInput={doSimulated}
+			selectedUnitStart="mins"
+		/>
+	</div>
+</div>
+
+<div class="control-input">
+	<p>Rhythm period</p>
+	<div style="display:flex;">
+		<NumberWithUnits
+			bind:value={p.args.rhythmPeriod_hours}
+			min="0.1"
+			step="0.1"
+			max={50}
+			units={{
+				default: 'hrs',
+				days: 24,
+				hrs: 1,
+				mins: 1 / 60,
+				secs: 1 / (60 * 60)
+			}}
+			onInput={doSimulated}
+		/>
+	</div>
+</div>
+
+<div class="control-input">
+	<p>Rhythm amplitude</p>
+	<div style="display:flex;">
+		<NumberWithUnits
+			bind:value={p.args.rhythmAmplitude}
+			min="10"
+			max="1000"
+			step="1"
+			onInput={doSimulated}
+		/>
+	</div>
+</div>
 {#key simulatedValues}
 	{#if p.args.valid && p.args.out.time != -1 && p.args.out.values != -1}
 		{@const timeOut = getColumnById(p.args.out.time)}
@@ -143,8 +162,12 @@
 	{:else if p.args.valid}
 		<p>Preview:</p>
 		<p>N = {Math.floor(p.args.N_hours / p.args.samplingPeriod_hours)}</p>
-		<p>X: {simulatedTime.slice(0, 5)}</p>
-		<p>Y: {simulatedValues.slice(0, 5).map((y) => y.toFixed(2))}</p>
+		<div style="height:250px; overflow:auto;">
+			<Table
+				headers={['Time', 'Data']}
+				data={[simulatedTime, simulatedValues.map((y) => y.toFixed(2))]}
+			/>
+		</div>
 	{:else}
 		<p>Need to have valid inputs to create columns.</p>
 	{/if}
