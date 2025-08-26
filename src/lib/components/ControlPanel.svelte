@@ -57,8 +57,12 @@
 		out:fly={{ x: appState.widthControlPanel, duration: 600 }}
 	>
 		<ControlDisplay />
-		<div class="resizer" onmousedown={startResize}></div>
 	</div>
+	<div
+		class="resizer-overlay {resizeSide}"
+		style="right: {appState.widthControlPanel + (resizeSide === 'left' ? 0 : 6)}px;"
+		onmousedown={startResize}
+	></div>
 {:else}
 	<!-- TODO: reconsider this ux wise -->
 	<div
@@ -179,9 +183,20 @@
 
 	.view-container.right .resizer {
 		right: 0;
+		top: 0;
 	}
 
 	.view-container.left .resizer {
 		left: 0;
+		top: 0;
+	}
+	.resizer-overlay {
+		width: 6px;
+		height: 100vh;
+		position: fixed;
+		top: 0;
+		cursor: ew-resize;
+		background-color: transparent;
+		z-index: 1001;
 	}
 </style>
