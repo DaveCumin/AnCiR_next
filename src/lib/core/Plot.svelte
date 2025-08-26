@@ -1,18 +1,32 @@
 <script module>
 	// @ts-nocheck
-	import { appConsts, core } from '$lib/core/core.svelte';
+	let selectedPlotIds = $state();
 
+	import { appConsts, appState, core } from '$lib/core/core.svelte';
 	let _counter = 0;
 	function getNextId() {
 		return _counter++;
 	}
-	export function removePlot(id) {
-		const confirmed = window.confirm(`Are you sure you want to delete the plot?`);
-
-		if (confirmed) {
-			const index = core.plots.findIndex((p) => p.id === id);
-			if (index !== -1) {
-				core.plots.splice(index, 1);
+	export function removePlots(ids) {
+		console.log('REMOVE: ', ids);
+		//make selectedPLotIds an array if not already
+		if (!Array.isArray(ids)) ids = [ids];
+		selectedPlotIds = ids;
+		appState.AYStext =
+			ids.length == 1
+				? `Are you sure you want to remove ${core.plots[core.plots.findIndex((p) => p.id === ids[0])].name}?`
+				: `Are you sure you want to remove these ${ids.length} plots?`;
+		appState.AYScallback = handleAYS;
+		appState.showAYSModal = true;
+	}
+	function handleAYS(option) {
+		console.log('SELECTED: ', option);
+		if (option === 'Yes') {
+			for (const id of selectedPlotIds) {
+				const index = core.plots.findIndex((p) => p.id === id);
+				if (index !== -1) {
+					core.plots.splice(index, 1);
+				}
 			}
 		}
 	}

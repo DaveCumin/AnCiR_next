@@ -42,7 +42,11 @@ export const appState = $state({
 
 		'#fbe67280' // transparrent yellow for light
 	],
-	showColourPicker: false
+	showColourPicker: false,
+
+	showAYSModal: false, // AreYouSure modal
+	AYStext: '',
+	AYScallback: null
 });
 
 export const appConsts = $state({

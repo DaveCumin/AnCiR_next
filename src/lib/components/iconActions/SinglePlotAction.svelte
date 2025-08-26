@@ -2,7 +2,7 @@
 	// @ts-nocheck
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 	import { core } from '$lib/core/core.svelte';
-	import { removePlot } from '$lib/core/Plot.svelte';
+	import { removePlots } from '$lib/core/Plot.svelte';
 	import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte.js';
 
 	let {
@@ -23,7 +23,7 @@
 	}
 
 	function handleDeleteAction(closeDropdown) {
-		removePlot(plotId);
+		removePlots(plotId);
 		closeDropdown();
 	}
 

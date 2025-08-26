@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { core, pushObj, appConsts } from '$lib/core/core.svelte';
-	import { Plot, removePlot } from '$lib/core/Plot.svelte';
+	import { Plot, removePlots } from '$lib/core/Plot.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
@@ -35,11 +35,8 @@
 		return left + 210 + submenuWidth > viewportWidth ? 'left' : 'right';
 	}
 	function handleDeleteAction(closeDropdown: () => void) {
-		if (Id.length === 1) {
-			removePlot(Id[0]);
-		} else {
-			Id.forEach((id) => removePlot(id));
-		}
+		removePlots(Id);
+
 		closeDropdown();
 	}
 

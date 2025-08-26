@@ -10,7 +10,9 @@
 	import { fly, fade } from 'svelte/transition';
 
 	import { deselectAllPlots } from '$lib/core/Plot.svelte';
-	import { removePlot } from '$lib/core/Plot.svelte';
+	import { removePlots } from '$lib/core/Plot.svelte';
+
+	let selectedPlotIds = $derived.by(() => core.plots.filter((p) => p.selected).map((p) => p.id));
 
 	// AddTable dropdown
 	let addBtnRef;
@@ -89,17 +91,8 @@
 
 			if (isTextInput) return;
 
-			const selectedPlotIds = core.plots.filter((p) => p.selected).map((p) => p.id);
 			if ((e.key === 'Backspace' || e.key === 'Delete') && selectedPlotIds.length > 0) {
-				const confirmed = window.confirm(
-					`Are you sure you want to delete ${selectedPlotIds.length} plot(s)?`
-				);
-
-				if (confirmed) {
-					for (const id of selectedPlotIds) {
-						removePlot(id);
-					}
-				}
+				removePlots(selectedPlotIds);
 			}
 		};
 

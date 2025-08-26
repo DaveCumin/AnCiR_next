@@ -10,6 +10,8 @@
 	import PlotPanel from '$lib/components/PlotPanel.svelte';
 	import PlotDisplay from '$lib/components/views/PlotDisplay.svelte';
 
+	import AreYouSure from '$lib/components/views/modals/AreYouSure.svelte';
+
 	import { loadProcesses } from '$lib/processes/processMap.js';
 	import { loadPlots } from '$lib/plots/plotMap.js';
 	import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
@@ -411,6 +413,12 @@
 	<PlotDisplay />
 
 	<ControlPanel />
+
+	<AreYouSure
+		bind:showModal={appState.showAYSModal}
+		text={appState.AYStext}
+		callback={appState.AYScallback}
+	/>
 {:else}
 	<div>
 		<p>
@@ -984,5 +992,12 @@
 	:global(.process-title button) {
 		margin: 0;
 		padding: 0;
+	}
+
+	:global(input[type='checkbox']) {
+		width: 1rem;
+		height: 1rem;
+		accent-color: var(--color-hover);
+		cursor: pointer;
 	}
 </style>

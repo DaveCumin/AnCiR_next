@@ -627,7 +627,7 @@
 			<div class="control-input-vertical">
 				<div class="control-input-checkbox">
 					<input type="checkbox" bind:checked={theData.xgridlines} />
-					<p>Period Grid</p>
+					<p>Grid</p>
 				</div>
 			</div>
 
