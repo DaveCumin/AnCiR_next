@@ -31,7 +31,7 @@
 			/>
 		</p>
 		<p>
-			Grid size: <NumberWithUnits bind:value={appState.gridSize} units={{}} limits={[1, 100]} />
+			Grid size: <NumberWithUnits bind:value={appState.gridSize} min="1" max="100" />
 		</p>
 	{/snippet}
 </Modal>

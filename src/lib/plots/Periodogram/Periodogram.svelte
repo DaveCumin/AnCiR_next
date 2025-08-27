@@ -151,14 +151,11 @@
 
 				for (let p = 0; p < periods.length; p++) {
 					power[p] = powers[p];
-					// For Lomb-Scargle, significance thresholds are more complex; use a simplified approach
-					threshold[p] = -Math.log(correctedAlpha) / 2; // Approximate threshold
-					pvalue[p] = Math.exp(-2 * power[p]); // Approximate p-value
 				}
 			}
 
 			out = { x: periods, y: power, threshold, pvalue };
-			console.log('periodData', out);
+
 			return out;
 		});
 

@@ -712,7 +712,8 @@
 							.range([0, theData.plot.plotwidth])}
 						yscale={thisScale}
 						colour={datum.colour}
-						yoffset={day * (theData.plot.spaceBetween + theData.plot.eachplotheight)}
+						yoffset={day * (theData.plot.spaceBetween + theData.plot.eachplotheight) +
+							theData.plot.spaceBetween}
 					/>
 				{/each}
 			</g>
