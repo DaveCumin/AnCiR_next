@@ -997,7 +997,7 @@
 	:global(input[type='checkbox']) {
 		width: 1rem;
 		height: 1rem;
-		accent-color: var(--color-hover);
+		accent-color: var(--color-lightness-97);
 		cursor: pointer;
 	}
 </style>
