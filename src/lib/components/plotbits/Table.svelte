@@ -96,7 +96,7 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each new Array(data[0].length) as d, r}
+			{#each new Array(data[0]?.length) as d, r}
 				<tr>
 					{#each data as col, c}
 						<td
