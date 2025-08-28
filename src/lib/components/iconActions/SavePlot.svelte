@@ -83,7 +83,7 @@
 					onmouseleave={() => hideSubmenu('save', 150)}
 				>
 					{#each ['svg', 'png'] as type}
-						<button class="submenu-item" onclick={() => handleSaveAction(type, closeDropdown)}>
+						<button class="submenu-item" onclick={() => saveMultipleAsImage(Id, type)}>
 							Save as {type.toUpperCase()}
 						</button>
 					{/each}

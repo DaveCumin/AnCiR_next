@@ -3,8 +3,7 @@ import { appState } from '$lib/core/core.svelte.js';
 import { core } from '$lib/core/core.svelte';
 
 export function convertToImage(svgId, filetype = 'png') {
-	console.log('convertToImage called with svgId:', svgId, 'and filetype:', filetype);
-	const plotName = core.plots[Number(svgId.replace('plot', ''))].name;
+	const plotName = core.plots[Number(svgId.replace('plot', ''))]?.name ?? svgId;
 
 	if (filetype == 'svg') {
 		exportSVG(svgId, plotName);
