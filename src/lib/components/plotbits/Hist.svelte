@@ -6,24 +6,24 @@
 		let height = yscale.range()[0]; // This is eachplotheight
 		let baseline = height; // Use the bottom of the plot area as baseline
 
-		//now make the path
-		let out = `${xscale(x[0])},${baseline} `; // start at the baseline (bottom)
-		out += `${xscale(x[0])},${yscale(y[0])} `; // go to the first data point
+		//This is to update at some point
+		let barWidth = x.length > 1 ? Math.min(...x.slice(1).map((xi, i) => xi - x[i])) : 1;
 
-		//cycle through the points
-		for (let b = 0; b < x.length - 1; b++) {
-			out += `${xscale(x[b])},${yscale(y[b])} ` + `${xscale(x[b + 1])},${yscale(y[b])} `;
+		let out = '';
+
+		// Create individual bars for each data point
+		for (let i = 0; i < x.length; i++) {
+			let leftEdge = x[i] - barWidth / 2;
+			let rightEdge = x[i] + barWidth / 2;
+
+			// Start new bar at baseline
+			if (i > 0) out += ' '; // separator for multiple polygons
+
+			out += `${xscale(leftEdge)},${baseline} `; // bottom left
+			out += `${xscale(leftEdge)},${yscale(y[i])} `; // top left
+			out += `${xscale(rightEdge)},${yscale(y[i])} `; // top right
+			out += `${xscale(rightEdge)},${baseline}`; // bottom right
 		}
-		//add the last ones to complete the shape.
-		out += `${xscale(x[x.length - 1])},${yscale(y[x.length - 1])} `;
-		if (x[x.length - 1] + 1 < xscale.domain()[1]) {
-			out +=
-				`${xscale(x[x.length - 1] + 1)},${yscale(y[x.length - 1])} ` +
-				`${xscale(x[x.length - 1] + 1)},${baseline} `;
-		} else {
-			out += `${width},${yscale(y[x.length - 1])} `;
-		}
-		out += `${width},${baseline} `;
 
 		return out;
 	});

@@ -27,7 +27,7 @@
 			<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
 		</button>
 	</div>
-	<NumberWithUnits bind:value={p.args.value} />
+	<NumberWithUnits bind:value={p.args.value} step="0.001" />
 </div>
 
 <style>
