@@ -70,14 +70,7 @@
 			.map((xVal, i) => ({ x: xVal, y: y[i] }))
 			.filter(
 				(d) =>
-					d.x >= minX &&
-					d.x <= maxX &&
-					d.y >= minY &&
-					d.y <= maxY &&
-					d.y != null &&
-					d.x != null &&
-					!isNaN(d.y) &&
-					!isNaN(d.x)
+					d.x >= minX && d.x <= maxX && d.y != null && d.x != null && !isNaN(d.y) && !isNaN(d.x)
 			);
 
 		//No Line if only 1 or fewer points
