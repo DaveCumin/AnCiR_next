@@ -59,9 +59,10 @@
 		// endTime updates automatically via $derived
 	}
 
-	function changedEndTime(event) {
-		const newEndTime = Number(event.target.value) || 0;
+	function changedEndTime(newend) {
+		const newEndTime = Number(newend) || 0;
 		annotation.duration = Math.max(0, newEndTime - annotation.startTime);
+		console.log('changedEndTime', newEndTime, annotation.duration);
 	}
 
 	function changedDuration() {
@@ -84,17 +85,21 @@
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>Start</p>
-			<NumberWithUnits step="0.1" bind:value={annotation.startTime} oninput={changedStartTime} />
+			<NumberWithUnits step="0.1" bind:value={annotation.startTime} onInput={changedStartTime} />
 		</div>
 
 		<div class="control-input">
 			<p>End</p>
-			<NumberWithUnits step="0.1" value={annotation.endTime} oninput={changedEndTime} />
+			<NumberWithUnits
+				step="0.1"
+				value={annotation.endTime}
+				onInput={(val) => changedEndTime(val)}
+			/>
 		</div>
 
 		<div class="control-input">
 			<p>Duration</p>
-			<NumberWithUnits step="0.1" bind:value={annotation.duration} oninput={changedDuration} />
+			<NumberWithUnits step="0.1" bind:value={annotation.duration} onInput={changedDuration} />
 		</div>
 	</div>
 {/snippet}
