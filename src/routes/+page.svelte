@@ -1000,4 +1000,17 @@
 		accent-color: var(--color-lightness-97);
 		cursor: pointer;
 	}
+
+	:global(.column-indicator) {
+		position: absolute;
+		top: 0;
+		left: 0;
+		bottom: 0;
+
+		width: 4px;
+		height: 100%;
+		background-color: var(--color-lightness-90);
+
+		border-radius: 4px;
+	}
 </style>

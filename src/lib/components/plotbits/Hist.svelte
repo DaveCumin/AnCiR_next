@@ -1,43 +1,78 @@
+<script module>
+	// Helper function to convert x positions to xStart/xEnd arrays for histogram
+
+	export function createHistogramBins(xData, binSize) {
+		if (!xData || xData.length === 0) return { xStart: [], xEnd: [] };
+
+		const xStart = [];
+		const xEnd = [];
+
+		for (let i = 0; i < xData.length; i++) {
+			xStart.push(xData[i]);
+			xEnd.push(xData[i] + binSize);
+		}
+
+		return { xStart, xEnd };
+	}
+</script>
+
 <script>
-	let { x, y, xscale, yscale, colour, yoffset, xoffset } = $props();
+	let {
+		xStart, // Array of start x positions for each bar
+		xEnd, // Array of end x positions for each bar
+		y, // Array of heights for each bar
+		xscale, // D3 scale for x-axis
+		yscale, // D3 scale for y-axis
+		colour, // Fill color for bars
+		yoffset = 0, // Y translation offset
+		xoffset = 0 // X translation offset
+	} = $props();
+
+	// Validate input arrays have same length
+	if (xStart?.length !== xEnd?.length || xStart?.length !== y?.length) {
+		console.warn('Hist component: xStart, xEnd, and y arrays must have the same length');
+	}
 
 	let theline = $derived.by(() => {
-		let height = yscale.range()[0]; // This is eachplotheight
-		let baseline = height; // Use the bottom of the plot area as baseline
+		if (!xStart || !xEnd || !y || !xscale || !yscale) {
+			return '';
+		}
 
-		//This is to update at some point
-		let barWidth = x.length > 1 ? Math.min(...x.slice(1).map((xi, i) => xi - x[i])) : 1;
+		let height = yscale.range()[0]; // Bottom of the plot area
 
 		let out = '';
 
-		if (x.length === 2 && y.length === 2 && y[0] === y[1]) {
-			// Single bar case - treat x as [startX, endX] and y[0] as height
-			let leftEdge = x[0];
-			let rightEdge = x[1];
-			let barHeight = y[0];
+		// Process each bar
+		for (let i = 0; i < Math.min(xStart.length, xEnd.length, y.length); i++) {
+			let leftEdge = xStart[i];
+			let rightEdge = xEnd[i];
 
-			out += `${xscale(leftEdge)},${baseline} `; // bottom left
-			out += `${xscale(leftEdge)},${yscale(barHeight)} `; // top left
-			out += `${xscale(rightEdge)},${yscale(barHeight)} `; // top right
-			out += `${xscale(rightEdge)},${baseline}`; // bottom right
-		} else {
-			// Create individual bars for each data point
-			for (let i = 0; i < x.length; i++) {
-				let leftEdge = x[i];
-				let rightEdge = x[i] + barWidth;
+			// Add separator between polygons (required for multiple bars)
+			if (i > 0) out += ' ';
 
-				// Start new bar at baseline
-				if (i > 0) out += ' '; // separator for multiple polygons
-
-				out += `${xscale(leftEdge)},${baseline} `; // bottom left
-				out += `${xscale(leftEdge)},${yscale(y[i])} `; // top left
-				out += `${xscale(rightEdge)},${yscale(y[i])} `; // top right
-				out += `${xscale(rightEdge)},${baseline}`; // bottom right
-			}
+			// Create bar as a polygon: bottom-left, top-left, top-right, bottom-right
+			out += `${xscale(leftEdge)},${height} `; // bottom left
+			out += `${xscale(leftEdge)},${yscale(y[i])} `; // top left
+			out += `${xscale(rightEdge)},${yscale(y[i])} `; // top right
+			out += `${xscale(rightEdge)},${height}`; // bottom right
 		}
 
 		return out;
 	});
+
+	// Build style string for additional styling options
+	let styleString = $derived(() => {
+		let styles = [];
+		if (opacity !== 1) styles.push(`fill-opacity: ${opacity}`);
+		if (stroke) styles.push(`stroke: ${stroke}`);
+		if (strokeWidth > 0) styles.push(`stroke-width: ${strokeWidth}px`);
+		return styles.length > 0 ? styles.join('; ') : '';
+	});
 </script>
 
-<polyline points={theline} fill={colour} transform="translate({xoffset || 0}, {yoffset || 0})" />
+<polyline
+	points={theline}
+	fill={colour}
+	style={styleString}
+	transform="translate({xoffset}, {yoffset})"
+/>

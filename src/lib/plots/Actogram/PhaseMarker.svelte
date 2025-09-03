@@ -1,6 +1,6 @@
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-
+	import Icon from '$lib/icons/Icon.svelte';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import DoubleRange from '$lib/components/inputs/DoubleRange.svelte';
 	import {
@@ -50,6 +50,7 @@
 	export class PhaseMarkerClass {
 		parentData = $state();
 		id;
+		name = $state('');
 		type = $state(); //{onset, offset, manual}
 		centileThreshold = $state();
 		templateHrsBefore = $state();
@@ -209,6 +210,7 @@
 			this.id = _phaseMarkerCounter;
 			_phaseMarkerCounter++;
 			if (dataIN) {
+				this.name = dataIN.name || 'marker_' + this.id;
 				this.type = dataIN.type || 'onset';
 				this.centileThreshold = dataIN.centileThreshold || 50;
 				this.templateHrsBefore = dataIN.templateHrsBefore || 3;
@@ -225,6 +227,7 @@
 
 		toJSON() {
 			return {
+				name: this.name,
 				type: this.type,
 				centileThreshold: this.centileThreshold,
 				templateHrsBefore: this.templateHrsBefore,
@@ -242,6 +245,7 @@
 
 		static fromJSON(json, parent) {
 			return new PhaseMarkerClass(parent, {
+				name: json.name,
 				type: json.type,
 				centileThreshold: json.centileThreshold,
 				templateHrsBefore: json.templateHrsBefore,
@@ -270,6 +274,16 @@
 </script>
 
 {#snippet controls(marker)}
+	<div class="control-component-title">
+		<div class="control-component-title-colour">
+			<p>{marker.name}</p>
+		</div>
+		<div class="control-component-title-icons">
+			<button class="icon" onclick={() => console.log('remove marker')}>
+				<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
+			</button>
+		</div>
+	</div>
 	<div class="control-input">
 		<p>Type</p>
 		<select bind:value={marker.type}>
@@ -326,15 +340,15 @@
 			</div>
 		</div>
 	{/if}
-		<div>
-			<p>period</p>
-			<DoubleRange
-				min="1"
-				max={Object.keys(marker.parentData.dataByDays.xByPeriod).length}
-				bind:minVal={marker.periodRangeMin}
-				bind:maxVal={marker.periodRangeMax}
-			/>
-		</div>
+	<div>
+		<p>period</p>
+		<DoubleRange
+			min="1"
+			max={Object.keys(marker.parentData.dataByDays.xByPeriod).length}
+			bind:minVal={marker.periodRangeMin}
+			bind:maxVal={marker.periodRangeMax}
+		/>
+	</div>
 
 	{#if marker.linearRegression?.slope}
 		<p>Est τ: {marker.linearRegression.slope.toFixed(2)} hrs</p>

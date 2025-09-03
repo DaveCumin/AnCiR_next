@@ -40,4 +40,18 @@
 		align-items: center; /* Center vertically */
 		gap: 10px; /* Space between logo and text */
 	}
+	.dialog-button {
+		background: var(--color-lightness-95);
+		color: var(--color-lightness-35);
+		border-radius: 6px;
+		border: none;
+		padding: 0.5em 1.5em;
+		margin: 0.5em;
+		font-weight: bold;
+		font-size: 1rem;
+		transition: background 0.15s;
+	}
+	.dialog-button:hover {
+		background: var(--color-lightness-90);
+	}
 </style>

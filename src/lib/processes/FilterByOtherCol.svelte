@@ -43,7 +43,14 @@
 			const byCol = getColumnById(byColId);
 			if (!byCol) continue; // Skip if column not found
 
-			const byColData = byCol.getData();
+			let byColData = [];
+			if (byColId === args.parentColId) {
+				byColData = x;
+			} else {
+				byColData = byCol.getData();
+			}
+			if (!byColData || byColData.length === 0) continue;
+
 			const byColType = byCol.type;
 
 			if (byColType === 'category') {
@@ -66,7 +73,7 @@
 		[
 			'conditions',
 			{
-				val: [{ byColId: -1, isOperator: '==', byColValue: 0 }]
+				val: [{ byColId: -1, isOperator: '==', byColValue: 0, parentColId: -1 }]
 			}
 		]
 	]);
@@ -76,6 +83,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 
 	let { p = $bindable() } = $props();
+	p.args.parentColId = p.parentCol.id; //so we can access the parent col in the module script
 
 	// Add a new condition
 	function addCondition() {
@@ -104,11 +112,7 @@
 	{#each p.args.conditions as condition, index}
 		<div class="conditions">
 			<div class="second-level-condition">
-				<ColumnSelector
-					bind:value={condition.byColId}
-					excludeColIds={[p.parentCol.id, p.parentCol.refId]}
-					getPlotSiblings={p.parentCol}
-				/>
+				<ColumnSelector bind:value={condition.byColId} getPlotSiblings={p.parentCol} />
 				<div class="operator-input">
 					{#if getColumnById(condition.byColId)?.type === 'category'}
 						<select bind:value={condition.isOperator}>
@@ -134,9 +138,13 @@
 				{#if getColumnById(condition.byColId)?.type === 'category'}
 					<input type="text" bind:value={condition.byColValue} />
 				{:else if getColumnById(condition.byColId)?.type === 'time'}
+					{@const condDate = condition.byColValue
+						? new Date(condition.byColValue).toISOString().slice(0, 16)
+						: ''}
 					<!--TODO: bind a value here so it always shows in ui-->
 					<input
 						type="datetime-local"
+						value={condDate}
 						oninput={(e) => {
 							condition.byColValue = Number(new Date(e.target.value));
 						}}
