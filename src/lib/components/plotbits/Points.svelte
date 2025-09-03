@@ -102,13 +102,14 @@
 			if (xtype == 'time') {
 				content = `(${new Date(closest.x).toLocaleString()}, ${closest.y.toFixed(2)})`;
 			}
+			//make sure the tooltip stays 'in bounds'
 			const srcRect = e.srcElement.getBoundingClientRect();
 			const xPos = mouseX + 110 > srcRect.width ? mouseX - 120 : mouseX + 10;
 			const yPos = mouseY < 20 ? mouseY + 40 : mouseY + 10;
 			const event = new CustomEvent('tooltip', {
 				detail: {
 					visible: true,
-					x: xPos, // Offset to avoid cursor overlap
+					x: xPos,
 					y: yPos,
 					content: content
 				},
