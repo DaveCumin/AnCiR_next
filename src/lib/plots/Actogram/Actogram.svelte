@@ -213,21 +213,17 @@
 		isAddingMarkerTo = $state(-1);
 		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 20 });
 		padding = $derived.by(() => {
-			if (this.lightBands.length > 0) {
-				return {
-					top: this.paddingIN.top + this.lightBands.height * 2,
-					right: this.paddingIN.right,
-					bottom: this.paddingIN.bottom,
-					left: this.paddingIN.left
-				};
-			} else {
-				return {
-					top: this.paddingIN.top,
-					right: this.paddingIN.right,
-					bottom: this.paddingIN.bottom,
-					left: this.paddingIN.left
-				};
-			}
+			const allTopPadding =
+				this.lightBands.length > 0
+					? this.paddingIN.top + this.lightBands.height * 2
+					: this.paddingIN.top;
+
+			return {
+				top: allTopPadding,
+				right: this.paddingIN.right,
+				bottom: this.paddingIN.bottom,
+				left: this.paddingIN.left
+			};
 		});
 		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
@@ -407,18 +403,32 @@
 			const mouseX = e.offsetX;
 			const mouseY = e.offsetY;
 
-			const xscale = scaleLinear()
-				.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
-				.range([0, theData.plot.plotwidth]);
-
 			tooltip = {
 				visible: true,
 				x: mouseX + 10, // Offset to avoid cursor overlap
 				y: mouseY + 10,
-				content: `(${xscale.invert(mouseX - theData.plot.padding.left).toFixed(2)}, ${mouseY.toFixed(2)})`
+				content: getTimeFromMouse(mouseX, mouseY)
 			};
 		}
 	}
+
+	//take in a mouse position and return the day from the y value
+	function getTimeFromMouse(x, y) {
+		const allTopPadding =
+			theData.plot.lightBands.length > 0
+				? theData.plot.paddingIN.top + theData.plot.lightBands.height * 2
+				: theData.plot.paddingIN.top;
+
+		const xscale = scaleLinear()
+			.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
+			.range([0, theData.plot.plotwidth]);
+
+		const yscale = scaleLinear().domain([0, 100]).range([theData.plot.eachplotheight, 0]);
+
+		return `day
+			${Math.floor((y - allTopPadding) / (theData.plot.eachplotheight + theData.plot.spaceBetween))}, hour ${xscale.invert(x - theData.plot.padding.left).toFixed(2)}`;
+	}
+
 	function handleClick(e) {
 		// add markers if selected
 		if (theData.plot.isAddingMarkerTo >= 0) {
