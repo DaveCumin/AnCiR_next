@@ -79,10 +79,10 @@
 					//TODO: Fix this - it's not quite right.
 					console.log(
 						'offset number: ',
-						Number(new Date(this.parentPlot?.startTime)) / 3600000 - Number(this.x?.getData()[0])
+						3600000 + Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])
 					);
 					return (
-						Number(new Date(this.parentPlot?.startTime)) / 3600000 - Number(this.x?.getData()[0])
+						3600000 + Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])
 					);
 				}
 			} else {
@@ -202,7 +202,7 @@
 				allY.push(...y);
 			}
 		}
-
+		console.log(allXStart, allXEnd);
 		return { xStart: allXStart, xEnd: allXEnd, y: allY };
 	}
 
