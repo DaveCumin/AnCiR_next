@@ -104,12 +104,12 @@
 			}
 			const srcRect = e.srcElement.getBoundingClientRect();
 			const xPos = mouseX + 110 > srcRect.width ? mouseX - 120 : mouseX + 10;
-
+			const yPos = mouseY < 20 ? mouseY + 40 : mouseY + 10;
 			const event = new CustomEvent('tooltip', {
 				detail: {
 					visible: true,
 					x: xPos, // Offset to avoid cursor overlap
-					y: mouseY + 10,
+					y: yPos,
 					content: content
 				},
 				bubbles: true
