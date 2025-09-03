@@ -102,10 +102,13 @@
 			if (xtype == 'time') {
 				content = `(${new Date(closest.x).toLocaleString()}, ${closest.y.toFixed(2)})`;
 			}
+			const srcRect = e.srcElement.getBoundingClientRect();
+			const xPos = mouseX + 110 > srcRect.width ? mouseX - 120 : mouseX + 10;
+
 			const event = new CustomEvent('tooltip', {
 				detail: {
 					visible: true,
-					x: mouseX + 10, // Offset to avoid cursor overlap
+					x: xPos, // Offset to avoid cursor overlap
 					y: mouseY + 10,
 					content: content
 				},

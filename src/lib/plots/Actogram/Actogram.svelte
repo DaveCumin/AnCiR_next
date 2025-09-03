@@ -403,9 +403,13 @@
 			const mouseX = e.offsetX;
 			const mouseY = e.offsetY;
 
+			//make sure the tooltip stays 'in bounds'
+			const srcRect = e.srcElement.getBoundingClientRect();
+			const xPos = mouseX + 110 > srcRect.width ? mouseX - 120 : mouseX + 10;
+
 			tooltip = {
 				visible: true,
-				x: mouseX + 10, // Offset to avoid cursor overlap
+				x: xPos, // Offset to avoid cursor overlap
 				y: mouseY + 10,
 				content: getTimeFromMouse(mouseX, mouseY)
 			};
@@ -850,5 +854,6 @@
 		pointer-events: none;
 		font-size: 0.8rem;
 		z-index: 9999;
+		width: 100px;
 	}
 </style>

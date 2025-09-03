@@ -718,5 +718,6 @@
 		pointer-events: none;
 		font-size: 0.8rem;
 		z-index: 9999;
+		width: 100px;
 	}
 </style>
