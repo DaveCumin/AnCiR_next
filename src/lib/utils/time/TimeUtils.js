@@ -181,11 +181,11 @@ export function formatTimeFromISO(timeString) {
 }
 export function getISODate(stringIN, formatIN) {
 	if (!formatIN) return stringIN;
-	return DateTime.fromFormat(stringIN, convertFormat(formatIN)).toISO();
+	return DateTime.fromFormat(stringIN, convertFormat(formatIN), { zone: 'utc' }).toISO();
 }
 export function getUNIXDate(stringIN, formatIN) {
 	if (!formatIN) return stringIN;
-	return DateTime.fromFormat(stringIN, convertFormat(formatIN)).toMillis();
+	return DateTime.fromFormat(stringIN, convertFormat(formatIN), { zone: 'utc' }).toMillis();
 }
 export function addTime(start, hoursIN) {
 	return formatTimeFromISO(DateTime.fromISO(start).plus({ hours: hoursIN }).toISO());

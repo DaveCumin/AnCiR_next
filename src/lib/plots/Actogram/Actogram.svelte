@@ -53,6 +53,8 @@
 					this.parentPlot?.startTime,
 					', ',
 					new Date(this.parentPlot?.startTime),
+					' : ',
+					DateTime.fromMillis(this.parentPlot?.startTime, { zone: 'utc' }),
 					',',
 					Number(new Date(this.parentPlot?.startTime)),
 					',',
@@ -64,7 +66,14 @@
 							new Date(this.parentPlot?.startTime).getTimezoneOffset()
 					)
 				);
-				console.log('time0: ', this.x?.getData()[0], ', ', new Date(this.x?.getData()[0]));
+				console.log(
+					'time0: ',
+					this.x?.getData()[0],
+					', ',
+					DateTime.fromMillis(this.x?.getData()[0], { zone: 'utc' }),
+					' : ',
+					DateTime.fromMillis(this.x?.getData()[0], { zone: 'utc' })
+				);
 
 				if (this.x.type == 'time') {
 					console.log(
@@ -72,18 +81,16 @@
 						(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
 					);
 					console.log('LUXON : ', DateTime.fromMillis(this.parentPlot?.startTime, { zone: 'utc' }));
-					return (
-						(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
-					);
+					return (this.parentPlot?.startTime - Number(this.x?.getData()[0])) / 3600000;
 				} else {
 					//TODO: Fix this - it's not quite right.
 					console.log(
+						'number [0]: ',
+						Number(this.x?.getData()[0]),
 						'offset number: ',
-						3600000 + Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])
+						Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])
 					);
-					return (
-						3600000 + Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])
-					);
+					return -Number(this.x?.getData()[0]);
 				}
 			} else {
 				return 0;
@@ -202,7 +209,7 @@
 				allY.push(...y);
 			}
 		}
-		console.log(allXStart, allXEnd);
+		//console.log(allXStart, allXEnd);
 		return { xStart: allXStart, xEnd: allXEnd, y: allY };
 	}
 
@@ -232,15 +239,30 @@
 		});
 		startTime = $derived.by(() => {
 			let minTime = Infinity;
+
+			//Only update the startTime (minTime) if there is time data
 			this.data.forEach((datum) => {
-				const thefirst = datum.x.getData() ? datum.x.getData()[0] : minTime;
-				minTime = Math.min(minTime, Number(thefirst));
+				if (datum.x.type == 'time' && datum.x.getData()?.length > 0) {
+					const thefirst = datum.x.getData() ? datum.x.getData()[0] : minTime;
+					minTime = Math.min(minTime, Number(thefirst));
+				}
 			});
-			//TODO: fix here for data with timeformat that doesn't work
-			return minTime !== Infinity && minTime >= 0
-				? new Date(minTime).setHours(0, 0, 0, 0) //set to beginnig of the day
-				: undefined;
+			//if no time data then make the startTime 0 (to start with)
+			if (minTime === Infinity) {
+				minTime = 0;
+			}
+
+			//Keep the timezone as UTC to avoid daylight savings issues; and set to the start of the day (at least to start)
+			return DateTime.fromMillis(minTime, { zone: 'utc' })
+				.set({
+					hour: 0,
+					minute: 0,
+					second: 0,
+					millisecond: 0
+				})
+				.toMillis();
 		});
+
 		spaceBetween = $state(2);
 		doublePlot = $state(2);
 		periodHrs = $state(24);
