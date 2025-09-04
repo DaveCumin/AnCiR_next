@@ -464,6 +464,18 @@
 		return [clickedDay, clickedHrs];
 	}
 
+	async function addData() {
+		theData.addData({
+			x: null,
+			y: null
+		});
+
+		await tick();
+
+		//Scroll to the bottom of dataSettings
+		dataSettingsScrollTo('bottom');
+	}
+
 	//Tooltip
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
 	function handleTooltip(event) {
@@ -606,19 +618,7 @@
 		{/if}
 	{:else if appState.currentControlTab === 'data'}
 		<div class="control-data-add">
-			<button
-				class="icon"
-				onclick={async () => {
-					theData.addData({
-						x: null,
-						y: { refId: -1 }
-					});
-					await tick();
-
-					//Scroll to the bottom of dataSettings
-					dataSettingsScrollTo('bottom');
-				}}
-			>
+			<button class="icon" onclick={async () => await addData()}>
 				<Icon name="add" width={16} height={16} />
 			</button>
 		</div>
@@ -627,13 +627,6 @@
 			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
 				<div
 					class="dataBlock"
-					style="
-						display: flex;
-						flex-direction: column;
-						flex: 1 1 0;
-
-						width: 100%;
-					"
 					animate:flip={{ duration: 500 }}
 					in:slide={{ duration: 500, axis: 'y' }}
 					out:slide={{ duration: 500, axis: 'y' }}
@@ -728,20 +721,7 @@
 		</div>
 
 		<div>
-			<button
-				class="icon control-block-add"
-				onclick={async () => {
-					theData.addData({
-						x: { refId: -1 },
-						y: { refId: -1 }
-					});
-
-					await tick();
-
-					//Scroll to the bottom of dataSettings
-					dataSettingsScrollTo('bottom');
-				}}
-			>
+			<button class="icon control-block-add" onclick={async () => await addData()}>
 				<Icon name="plus" width={16} height={16} className="static-icon" />
 			</button>
 		</div>

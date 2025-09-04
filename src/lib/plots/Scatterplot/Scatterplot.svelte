@@ -510,7 +510,7 @@
 						onclick={async () => {
 							theData.addData({
 								x: null,
-								y: {}
+								y: null
 							});
 
 							await tick();

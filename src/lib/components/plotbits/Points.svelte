@@ -102,6 +102,7 @@
 			if (xtype == 'time') {
 				content = `(${new Date(closest.x).toLocaleString()}, ${closest.y.toFixed(2)})`;
 			}
+
 			//make sure the tooltip stays 'in bounds'
 			const srcRect = e.srcElement.getBoundingClientRect();
 			const xPos = mouseX + 110 > srcRect.width ? mouseX - 120 : mouseX + 10;
