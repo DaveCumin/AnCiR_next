@@ -305,6 +305,8 @@
 		if (which == 'controls') {
 			theData.ylabel;
 			theData.xlabel;
+			theData.xlims;
+			theData.ylims;
 
 			theData.autoScalePadding('all');
 		}

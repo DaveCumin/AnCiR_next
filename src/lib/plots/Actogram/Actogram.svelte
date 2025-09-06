@@ -47,50 +47,10 @@
 		colour = $state();
 		offset = $derived.by(() => {
 			if (this.x?.getData()) {
-				console.log('Debugging offset in actogram: ');
-				console.log(
-					'startTime: ',
-					this.parentPlot?.startTime,
-					', ',
-					new Date(this.parentPlot?.startTime),
-					' : ',
-					DateTime.fromMillis(this.parentPlot?.startTime, { zone: 'utc' }),
-					',',
-					Number(new Date(this.parentPlot?.startTime)),
-					',',
-					new Date(this.parentPlot?.startTime) -
-						new Date(this.parentPlot?.startTime).getTimezoneOffset(),
-					',',
-					Number(
-						new Date(this.parentPlot?.startTime) -
-							new Date(this.parentPlot?.startTime).getTimezoneOffset()
-					)
-				);
-				console.log(
-					'time0: ',
-					this.x?.getData()[0],
-					', ',
-					DateTime.fromMillis(this.x?.getData()[0], { zone: 'utc' }),
-					' : ',
-					DateTime.fromMillis(this.x?.getData()[0], { zone: 'utc' })
-				);
-
 				if (this.x.type == 'time') {
-					console.log(
-						'offset time: ',
-						(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
-					);
-					console.log('LUXON : ', DateTime.fromMillis(this.parentPlot?.startTime, { zone: 'utc' }));
-					return (this.parentPlot?.startTime - Number(this.x?.getData()[0])) / 3600000;
+					return (this.parentPlot?.startTime - Number(this.x?.getData()[0])) / 3600000; //get the hours
 				} else {
-					//TODO: Fix this - it's not quite right.
-					console.log(
-						'number [0]: ',
-						Number(this.x?.getData()[0]),
-						'offset number: ',
-						Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])
-					);
-					return -Number(this.x?.getData()[0]);
+					return -Number(this.x?.getData()[0]); //always just the value from the start
 				}
 			} else {
 				return 0;
