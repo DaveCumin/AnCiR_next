@@ -230,8 +230,8 @@
 			let ymax = -Infinity;
 			this.data.forEach((d, i) => {
 				let tempy = this.data[i].periodData.y;
-				ymin = Math.min(ymin, Math.min(...tempy));
-				ymax = Math.max(ymax, Math.max(...tempy));
+				ymin = Math.floor(Math.min(ymin, Math.min(...tempy)));
+				ymax = Math.ceil(Math.max(ymax, Math.max(...tempy)));
 			});
 			return [
 				this.ylimsIN[0] != null ? this.ylimsIN[0] : ymin,
@@ -435,6 +435,8 @@
 		if (which == 'controls') {
 			theData.ylabel;
 			theData.xlabel;
+			theData.ylims;
+			theData.xlims;
 
 			theData.autoScalePadding('all');
 		}

@@ -98,8 +98,8 @@
 				let tempx = this.data[i].x.getData() ?? [];
 
 				tempx = tempx.map((x) => Number(x)); // Ensure all values are numbers
-				xmin = min([xmin, ...tempx]);
-				xmax = max([xmax, ...tempx]);
+				xmin = Math.floor(min([xmin, ...tempx]));
+				xmax = Math.ceil(max([xmax, ...tempx]));
 			});
 			return [
 				this.xlimsIN[0] != null ? this.xlimsIN[0] : xmin,
