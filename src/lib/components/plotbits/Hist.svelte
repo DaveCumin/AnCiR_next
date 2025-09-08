@@ -2,35 +2,42 @@
 	let { x, y, xscale, yscale, colour, yoffset, xoffset } = $props();
 
 	let theline = $derived.by(() => {
-		let width = xscale.range()[1];
-		let height = yscale.range()[0];
+		let height = yscale.range()[0]; // This is eachplotheight
+		let baseline = height; // Use the bottom of the plot area as baseline
 
-		//now make the path
-		let out = `${xscale(x[0])},${yscale(yscale.range()[1])} `; // start at the start
-		out += `${xscale(x[0])},${height} `; // skip to the first point
+		//This is to update at some point
+		let barWidth = x.length > 1 ? Math.min(...x.slice(1).map((xi, i) => xi - x[i])) : 1;
 
-		//cycle through the points
-		for (let b = 0; b < x.length - 1; b++) {
-			out += `${xscale(x[b])},${yscale(y[b])} ` + `${xscale(x[b + 1])},${yscale(y[b])} `;
-		}
-		//add the last ones to complete the shape.
-		out += `${xscale(x[x.length - 1])},${yscale(y[x.length - 1])} `;
-		if (x[x.length - 1] + 1 < xscale.domain()[1]) {
-			out +=
-				`${xscale(x[x.length - 1] + 1)},${yscale(y[x.length - 1])} ` +
-				`${xscale(x[x.length - 1] + 1)},${yscale(yscale.range()[1])} `;
+		let out = '';
+
+		if (x.length === 2 && y.length === 2 && y[0] === y[1]) {
+			// Single bar case - treat x as [startX, endX] and y[0] as height
+			let leftEdge = x[0];
+			let rightEdge = x[1];
+			let barHeight = y[0];
+
+			out += `${xscale(leftEdge)},${baseline} `; // bottom left
+			out += `${xscale(leftEdge)},${yscale(barHeight)} `; // top left
+			out += `${xscale(rightEdge)},${yscale(barHeight)} `; // top right
+			out += `${xscale(rightEdge)},${baseline}`; // bottom right
 		} else {
-			out += `${width},${yscale(y[x.length - 1])} `;
+			// Create individual bars for each data point
+			for (let i = 0; i < x.length; i++) {
+				let leftEdge = x[i];
+				let rightEdge = x[i] + barWidth;
+
+				// Start new bar at baseline
+				if (i > 0) out += ' '; // separator for multiple polygons
+
+				out += `${xscale(leftEdge)},${baseline} `; // bottom left
+				out += `${xscale(leftEdge)},${yscale(y[i])} `; // top left
+				out += `${xscale(rightEdge)},${yscale(y[i])} `; // top right
+				out += `${xscale(rightEdge)},${baseline}`; // bottom right
+			}
 		}
-		out += `${width},${yscale(yscale.range()[1])} `;
 
 		return out;
 	});
 </script>
 
-<polyline
-	points={theline}
-	fill={colour}
-	style={`transform: translate(	${xoffset ? xoffset : 0}px,
-									${yoffset ? yoffset : 0}px);`}
-/>
+<polyline points={theline} fill={colour} transform="translate({xoffset || 0}, {yoffset || 0})" />

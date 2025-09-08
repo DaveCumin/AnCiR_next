@@ -4,7 +4,7 @@
 	import { appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { deselectAllPlots } from '$lib/core/Plot.svelte';
-	import { removePlot, selectPlot } from '$lib/core/Plot.svelte';
+	import { removePlots, selectPlot } from '$lib/core/Plot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 
 	let plotElement;
@@ -14,7 +14,7 @@
 		y = $bindable(100),
 		width = $bindable(200),
 		height = $bindable(150),
-		title = '',
+		title = $bindable(''),
 		id,
 		selected = $bindable(false),
 		canvasWidth = 50000,
@@ -404,7 +404,7 @@
 			style="cursor: default;"
 		></p>
 
-		<button class="icon" onclick={() => removePlot(id)}>
+		<button class="icon" onclick={() => removePlots(id)}>
 			<!-- <Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" /> -->
 			<Icon name="close" width={16} height={16} className="icon close" />
 		</button>

@@ -1,14 +1,17 @@
 //TODO: scale issue when saving
 import { appState } from '$lib/core/core.svelte.js';
+import { core } from '$lib/core/core.svelte';
 
 export function convertToImage(svgId, filetype = 'png') {
-	console.log('saving ' + svgId + ' as ' + filetype);
+	const plotName = core.plots[Number(svgId.replace('plot', ''))]?.name ?? svgId;
+
 	if (filetype == 'svg') {
-		exportSVG(svgId);
+		exportSVG(svgId, plotName);
 		return;
 	}
 	// Get the SVG element
 	const svg = document.getElementById(svgId);
+	console.log('SVG element:', svg);
 
 	// Serialize the SVG to a string
 	const serializer = new XMLSerializer();
@@ -40,7 +43,8 @@ export function convertToImage(svgId, filetype = 'png') {
 		// Create a download link
 		const link = document.createElement('a');
 		link.href = DataUrl;
-		link.download = svgId + '.' + filetype; // File name
+
+		link.download = plotName + '.' + filetype; // File name
 		document.body.appendChild(link);
 		link.click();
 		document.body.removeChild(link);
@@ -50,7 +54,7 @@ export function convertToImage(svgId, filetype = 'png') {
 	};
 }
 
-function exportSVG(svgId) {
+function exportSVG(svgId, plotName) {
 	const svgString = document.getElementById(svgId).outerHTML;
 	const svgBlob = new Blob([svgString], {
 		type: 'image/svg+xml;charset=utf-8'
@@ -59,13 +63,20 @@ function exportSVG(svgId) {
 
 	const link = document.createElement('a');
 	link.href = svgUrl;
-	link.download = svgId + '.svg';
+	link.download = plotName + '.svg';
 	document.body.appendChild(link);
 	link.click();
 
 	URL.revokeObjectURL(svgUrl);
 }
 
+export function saveMultipleAsIndividuals(svgIds, filetype = 'png') {
+	for (const svgId of svgIds) {
+		if (document.getElementById('plot' + svgId)) {
+			convertToImage('plot' + svgId, filetype);
+		}
+	}
+}
 export function saveMultipleAsImage(svgIds, filetype = 'png') {
 	console.log('multiple: ', svgIds);
 	//get each of the plots to convert

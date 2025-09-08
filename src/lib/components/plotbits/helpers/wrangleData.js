@@ -6,7 +6,7 @@ export function binData(x, y, binSize, binStart = 0) {
 	}
 
 	// Initialize arrays for bin sums and counts
-	const numBins = Math.ceil((max(x) - binStart) / binSize);
+	const numBins = Math.ceil((max(x) - binStart) / binSize) + 1;
 	const binSums = new Array(numBins).fill(0);
 	const binCounts = new Array(numBins).fill(0);
 	const bins = new Array(numBins).fill(0).map((_, i) => binStart + i * binSize);
@@ -106,6 +106,7 @@ export function mean(data) {
 	return count > 0 ? sum / count : 0;
 }
 
+//Calculate min and max
 export function min(data) {
 	let out = Infinity;
 	for (let i = 0; i < data.length; i++) {
@@ -124,4 +125,21 @@ export function max(data) {
 		}
 	}
 	return out === -Infinity ? null : out;
+}
+
+//DO MIN AND MAX TOGETHER TO SAVE COMPUTATION TIME
+export function minMax(data) {
+	let minVal = Infinity;
+	let maxVal = -Infinity;
+	for (let i = 0; i < data.length; i++) {
+		if (data[i] !== undefined && !isNaN(data[i])) {
+			if (data[i] < minVal) {
+				minVal = data[i];
+			}
+			if (data[i] > maxVal) {
+				maxVal = data[i];
+			}
+		}
+	}
+	return { min: minVal === Infinity ? null : minVal, max: maxVal === -Infinity ? null : maxVal };
 }

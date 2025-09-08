@@ -66,9 +66,14 @@
 		{:else if appState.currentTab === 'worksheet'}
 			<WorksheetDisplay />
 		{/if}
-
-		<div class="resizer" onmousedown={startResize}></div>
 	</div>
+	<div
+		class="resizer-overlay {resizeSide}"
+		style="left: {appState.widthNavBar +
+			appState.widthDisplayPanel -
+			(resizeSide === 'right' ? 6 : 0)}px;"
+		onmousedown={startResize}
+	></div>
 {/if}
 
 <style>
@@ -104,9 +109,29 @@
 
 	.view-container.right .resizer {
 		right: 0;
+		top: 0;
 	}
 
 	.view-container.left .resizer {
 		left: 0;
+		top: 0;
+	}
+
+	.resizer {
+		width: 6px;
+		cursor: ew-resize;
+		height: 100vh; /* Set the height to a very large value to account for scrolling */
+		position: absolute;
+		background-color: transparent;
+		z-index: 1000; /* Higher than the container's z-index */
+	}
+	.resizer-overlay {
+		width: 6px;
+		height: 100vh;
+		position: fixed;
+		top: 0;
+		cursor: ew-resize;
+		background-color: transparent;
+		z-index: 1001;
 	}
 </style>

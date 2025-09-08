@@ -10,6 +10,8 @@
 	import PlotPanel from '$lib/components/PlotPanel.svelte';
 	import PlotDisplay from '$lib/components/views/PlotDisplay.svelte';
 
+	import AreYouSure from '$lib/components/views/modals/AreYouSure.svelte';
+
 	import { loadProcesses } from '$lib/processes/processMap.js';
 	import { loadPlots } from '$lib/plots/plotMap.js';
 	import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
@@ -27,7 +29,7 @@
 		outputCoreAsJson
 	} from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
-	import { Table } from '$lib/core/table.svelte';
+	import { Table } from '$lib/core/Table.svelte';
 	import { Plot, selectAllPlots } from '$lib/core/Plot.svelte';
 	import { Process } from '$lib/core/Process.svelte';
 	import { TableProcess } from '$lib/core/tableProcess.svelte';
@@ -319,9 +321,9 @@
 
 		core.tables = [];
 		core.tables.push(new Table({ name: 'my first table' }));
-		core.tables[0].columnRefs = [testtimestring, testawd.id, d1id, d0id, testref.id, testrefref.id];
+		core.tables[0].columnRefs = [testtimestring, testawd.id, testref.id, testrefref.id];
 		core.tables.push(new Table({ name: 'table too' }));
-		core.tables[1].columnRefs = [d1id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
+		core.tables[1].columnRefs = [d1id, d0id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
 		core.tables[1].processes.push(
 			new TableProcess(
 				{
@@ -329,7 +331,7 @@
 					args: {
 						xIN: d0id,
 						yIN: d1id,
-						binSize: 0.25,
+						binSize: 2,
 						binStart: 0,
 						out: { binnedx: -1, binnedy: -1 }
 					}
@@ -345,6 +347,10 @@
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
 		});
+		core.plots[0].plot.addData({
+			x: { refId: core.data[core.data.length - 2].id },
+			y: { refId: core.data[core.data.length - 1].id }
+		});
 		core.plots[core.plots.length - 1].x = 15;
 		core.plots[core.plots.length - 1].y = 15;
 
@@ -355,22 +361,37 @@
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
 		});
+		core.plots[core.plots.length - 1].plot.addData({
+			x: { refId: core.data[core.data.length - 2].id },
+			y: { refId: core.data[core.data.length - 1].id }
+		});
+		core.plots[core.plots.length - 1].plot.data[1].colour = '#bf796b91';
 		core.plots[core.plots.length - 1].x = 15;
-		core.plots[core.plots.length - 1].y = 330;
+		core.plots[core.plots.length - 1].y = 375;
 		//Periodogram
 		pushObj(new Plot({ name: 'a periodogram', type: 'periodogram' }));
 		core.plots[core.plots.length - 1].plot.addData({
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
 		});
-		core.plots[core.plots.length - 1].x = 555;
+		core.plots[core.plots.length - 1].plot.addData({
+			x: { refId: core.data[core.data.length - 2].id },
+			y: { refId: core.data[core.data.length - 1].id }
+		});
+		core.plots[core.plots.length - 1].x = 540;
 		core.plots[core.plots.length - 1].y = 15;
+		core.plots[core.plots.length - 1].width = 510;
 		//Table
 		core.plots.push(new Plot({ name: 'a table', type: 'tableplot' }));
-		core.plots[core.plots.length - 1].x = 555;
+		core.plots[core.plots.length - 1].x = 540;
 		core.plots[core.plots.length - 1].y = 330;
-		core.plots[core.plots.length - 1].plot.columnRefs = [core.data[0].id, core.data[1].id];
-		core.plots[core.plots.length - 1].plot.showCol = [true, true];
+		core.plots[core.plots.length - 1].plot.columnRefs = [
+			core.data[0].id,
+			core.data[1].id,
+			core.data[core.data.length - 2].id,
+			core.data[core.data.length - 1].id
+		];
+		core.plots[core.plots.length - 1].plot.showCol = [true, true, true, true];
 
 		// console.log('ALL SET UP: ', $state.snapshot(core));
 	}
@@ -392,6 +413,12 @@
 	<PlotDisplay />
 
 	<ControlPanel />
+
+	<AreYouSure
+		bind:showModal={appState.showAYSModal}
+		text={appState.AYStext}
+		callback={appState.AYScallback}
+	/>
 {:else}
 	<div>
 		<p>
@@ -971,5 +998,12 @@
 	:global(.process-title button) {
 		margin: 0;
 		padding: 0;
+	}
+
+	:global(input[type='checkbox']) {
+		width: 1rem;
+		height: 1rem;
+		accent-color: var(--color-lightness-97);
+		cursor: pointer;
 	}
 </style>

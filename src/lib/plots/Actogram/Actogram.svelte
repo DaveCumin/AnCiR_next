@@ -100,7 +100,13 @@
 
 			for (let i = 0; i < tempx.length; i++) {
 				const p = Math.floor((tempx[i] - offset) / period);
-				if (p >= 0) {
+				if (
+					p >= 0 &&
+					!isNaN(tempx[i]) &&
+					!isNaN(tempy[i]) &&
+					tempy[i] != null &&
+					tempx[i] != null
+				) {
 					xByPeriod[p] ||= [];
 					yByPeriod[p] ||= [];
 					xByPeriod[p].push(tempx[i] - offset);
@@ -254,6 +260,7 @@
 					}
 				});
 			}
+			console.log('ylims_out: ', ylims_out);
 			return ylims_out;
 		});
 
@@ -684,10 +691,14 @@
 		{#each theData.plot.data as datum, d}
 			<g
 				class="actogram"
-				style="transform: translate({theData.plot.padding.left}px, {theData.plot.padding.top}px);"
+				transform="translate({theData.plot.padding.left}, {theData.plot.padding.top})"
 			>
 				<!-- Make the histogram for each period -->
 				{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
+					{@const thisScale = scaleLinear()
+						.domain([theData.plot.ylims[d][day][0], theData.plot.ylims[d][day][1]])
+						.range([theData.plot.eachplotheight, 0])}
+
 					<Hist
 						x={getNdataByPeriods(
 							datum.dataByDays.xByPeriod,
@@ -699,11 +710,10 @@
 						xscale={scaleLinear()
 							.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
 							.range([0, theData.plot.plotwidth])}
-						yscale={scaleLinear()
-							.domain([theData.plot.ylims[d][day][0], theData.plot.ylims[d][day][1]])
-							.range([theData.plot.eachplotheight, 0])}
+						yscale={thisScale}
 						colour={datum.colour}
-						yoffset={day * theData.plot.spaceBetween + day * theData.plot.eachplotheight}
+						yoffset={day * (theData.plot.spaceBetween + theData.plot.eachplotheight) +
+							theData.plot.spaceBetween}
 					/>
 				{/each}
 			</g>

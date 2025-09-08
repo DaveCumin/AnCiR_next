@@ -31,7 +31,9 @@
 		}
 
 		const theBinnedData = binData(
-			getColumnById(xIN).hoursSinceStart,
+			getColumnById(xIN).type == 'time'
+				? getColumnById(xIN).hoursSinceStart
+				: getColumnById(xIN).getData(),
 			getColumnById(yIN).getData(),
 			binSize,
 			binStart
@@ -56,7 +58,10 @@
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import { binData } from '$lib/components/plotBits/helpers/wrangleData.js';
 	import ColumnComponent from '$lib/core/Column.svelte';
+	import Table from '$lib/components/plotbits/Table.svelte';
+
 	import { getColumnById } from '$lib/core/Column.svelte';
+
 	import { onMount } from 'svelte';
 
 	let { p = $bindable() } = $props();
@@ -92,24 +97,31 @@
 	});
 </script>
 
-<p>
-	Bin: <br />
-	x = <ColumnSelector bind:value={p.args.xIN} onChange={(e) => getBinnedData()} /> <br />
-	y = <ColumnSelector
-		bind:value={p.args.yIN}
-		excludeColIds={[p.xIN]}
-		onChange={(e) => getBinnedData()}
-	/><br />
-	Bin size:
-	<NumberWithUnits
-		bind:value={p.args.binSize}
-		onInput={() => getBinnedData()}
-		min="0.1"
-		step="0.01"
-	/>
-	<br />
-	Bin start: <NumberWithUnits bind:value={p.args.binStart} onInput={() => getBinnedData()} />
-</p>
+Bin: <br />
+x = <ColumnSelector bind:value={p.args.xIN} onChange={(e) => getBinnedData()} /> <br />
+y = <ColumnSelector
+	bind:value={p.args.yIN}
+	excludeColIds={[p.xIN]}
+	onChange={(e) => getBinnedData()}
+/><br />
+
+<div class="control-input-horizontal">
+	<div class="control-input">
+		<p>Bin size</p>
+		<NumberWithUnits
+			bind:value={p.args.binSize}
+			onInput={() => getBinnedData()}
+			min="0.1"
+			step="0.01"
+		/>
+	</div>
+
+	<div class="control-input">
+		<p>Bin start</p>
+		<NumberWithUnits bind:value={p.args.binStart} onInput={() => getBinnedData()} />
+	</div>
+</div>
+
 <p>Output:</p>
 {#key binnedData}
 	{#if p.args.valid && p.args.out.binnedx != -1 && p.args.out.binnedy != -1}
@@ -119,8 +131,12 @@
 		<ColumnComponent col={yout} />
 	{:else if p.args.valid}
 		<p>Preview:</p>
-		<p>X: {binnedData.bins.slice(0, 5).map((x) => x.toFixed(2))}</p>
-		<p>Y: {binnedData.y_out.slice(0, 5).map((y) => y.toFixed(2))}</p>
+		<div style="height:250px; overflow:auto;">
+			<Table
+				headers={['binned x', 'binned y']}
+				data={[binnedData.bins.map((x) => x.toFixed(2)), binnedData.y_out.map((x) => x.toFixed(2))]}
+			/>
+		</div>
 	{:else}
 		<p>Need to have valid inputs to create columns.</p>
 	{/if}

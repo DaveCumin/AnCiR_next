@@ -18,14 +18,6 @@
 		// Derive endTime to avoid circular updates
 		endTime = $derived(this.startTime + this.duration);
 
-		path = $derived.by(() => {
-			const xScale = scaleLinear()
-				.domain([0, this.parentData.periodHrs * this.parentData.doublePlot])
-				.range([0, this.parentData.plotwidth]);
-
-			return `M${xScale(this.startTime)} 0 L${xScale(this.endTime)} 0`;
-		});
-
 		constructor(parent, dataIN) {
 			this.parentData = parent;
 			this.id = _annotationCounter++;
@@ -67,9 +59,10 @@
 		// endTime updates automatically via $derived
 	}
 
-	function changedEndTime(event) {
-		const newEndTime = Number(event.target.value) || 0;
+	function changedEndTime(newend) {
+		const newEndTime = Number(newend) || 0;
 		annotation.duration = Math.max(0, newEndTime - annotation.startTime);
+		console.log('changedEndTime', newEndTime, annotation.duration);
 	}
 
 	function changedDuration() {
@@ -92,42 +85,39 @@
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>Start</p>
-			<NumberWithUnits
-				step="0.1"
-				bind:value={annotation.startTime}
-				oninput={changedStartTime}
-			/>
+			<NumberWithUnits step="0.1" bind:value={annotation.startTime} onInput={changedStartTime} />
 		</div>
 
 		<div class="control-input">
 			<p>End</p>
-			<NumberWithUnits step="0.1" value={annotation.endTime} oninput={changedEndTime} />
+			<NumberWithUnits
+				step="0.1"
+				value={annotation.endTime}
+				onInput={(val) => changedEndTime(val)}
+			/>
 		</div>
 
 		<div class="control-input">
 			<p>Duration</p>
-			<NumberWithUnits step="0.1" bind:value={annotation.duration} oninput={changedDuration} />
+			<NumberWithUnits step="0.1" bind:value={annotation.duration} onInput={changedDuration} />
 		</div>
 	</div>
-		
 {/snippet}
 
 {#snippet plot(annotation)}
 	<g
 		class="annotations"
-		style="transform: translate({annotation.parentData.padding.left}px, {annotation.parentData
-			.padding.top}px);"
+		transform="translate({annotation.parentData.padding.left}, {annotation.parentData.padding.top})"
 		onmousemove={(e) => console.log(annotation.name)}
 	>
 		<Hist
-			x={[annotation.startTime, annotation.endTime - 1]}
+			x={[annotation.startTime, annotation.endTime]}
 			y={[50, 50]}
 			xscale={scaleLinear()
 				.domain([0, annotation.parentData.periodHrs * annotation.parentData.doublePlot])
 				.range([0, annotation.parentData.plotwidth])}
 			yscale={scaleLinear().domain([0, 100]).range([annotation.parentData.eachplotheight, 0])}
 			colour={annotation.colour}
-			yoffset={0}
 		/>
 	</g>
 {/snippet}

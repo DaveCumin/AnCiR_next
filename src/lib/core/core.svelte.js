@@ -1,8 +1,8 @@
 // @ts-nocheck
 
-import { Column } from './Column.svelte';
-import { Plot } from './Plot.svelte';
-import { Table } from './Table.svelte';
+import { Column } from '$lib/core/Column.svelte';
+import { Plot } from '$lib/core//Plot.svelte';
+import { Table } from '$lib/core//Table.svelte';
 
 export const core = $state({
 	data: [],
@@ -38,13 +38,19 @@ export const appState = $state({
 		'#A6ACD5',
 		'#83422A',
 		'#6B9FD5',
-		'#4A1E0E'
+		'#4A1E0E',
+
+		'#fbe67280' // transparrent yellow for light
 	],
-	showColourPicker: false
+	showColourPicker: false,
+
+	showAYSModal: false, // AreYouSure modal
+	AYStext: '',
+	AYScallback: null
 });
 
 export const appConsts = $state({
-	version: 'β.4.4',
+	version: 'β.4.7',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),

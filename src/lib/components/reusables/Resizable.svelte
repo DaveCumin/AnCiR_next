@@ -1,5 +1,5 @@
 <script>
-    // @ts-nocheck
+	// @ts-nocheck
 	let width = 200; // starting width if parent reference unspecified
 	const minWidth = 100;
 	let resizing = false;
@@ -57,7 +57,7 @@
 	.resizer {
 		width: 6px;
 		cursor: ew-resize;
-		height: 100%;
+		height: calc(100% + 20px);
 		position: absolute;
 		right: 0;
 		top: 0;

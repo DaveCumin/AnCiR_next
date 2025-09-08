@@ -100,16 +100,16 @@
 		binSize = $state(0.25);
 		method = $state('Chi-squared'); // New: method selector
 
-		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
 		line = $state();
 		points = $state();
+		thresholdline = $state();
 		chiSquaredAlpha = $state(0.05);
 
-		updatePeriodData() {
+		periodData = $derived.by(() => {
+			let out = { x: [], y: [], threshold: [], pvalue: [] };
 			let binnedData = { bins: [], y_out: [] }; // No binning for Lomb-Scargle
 			if (this.method === 'Chi-squared') {
 				binnedData = binData(this.x.hoursSinceStart, this.y.getData(), this.binSize, 0);
-				console.log(binnedData);
 				if (binnedData.bins.length === 0) {
 					this.periodData = { x: [], y: [], threshold: [], pvalue: [] };
 					return;
@@ -151,14 +151,13 @@
 
 				for (let p = 0; p < periods.length; p++) {
 					power[p] = powers[p];
-					// For Lomb-Scargle, significance thresholds are more complex; use a simplified approach
-					threshold[p] = -Math.log(correctedAlpha) / 2; // Approximate threshold
-					pvalue[p] = Math.exp(-2 * power[p]); // Approximate p-value
 				}
 			}
 
-			this.periodData = { x: periods, y: power, threshold, pvalue };
-		}
+			out = { x: periods, y: power, threshold, pvalue };
+
+			return out;
+		});
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
@@ -180,6 +179,7 @@
 				this.y = new ColumnClass({ refId: -1 });
 			}
 			this.line = new LineClass(dataIN?.line, this);
+			this.thresholdline = new LineClass(dataIN?.thresholdline, this);
 			this.points = new PointsClass(dataIN?.points, this);
 			this.method = dataIN?.method ?? 'Lomb-Scargle'; // Initialize method
 		}
@@ -189,6 +189,7 @@
 				x: this.x,
 				y: this.y,
 				line: this.line.toJSON(),
+				thresholdline: this.thresholdline.toJSON(),
 				points: this.points.toJSON(),
 				binSize: this.binSize,
 				method: this.method,
@@ -201,6 +202,7 @@
 				x: json.x,
 				y: json.y,
 				line: LineClass.fromJSON(json.line),
+				thresholdline: LineClass.fromJSON(json.thresholdline),
 				points: PointsClass.fromJSON(json.points),
 				binSize: json.binSize,
 				method: json.method,
@@ -367,14 +369,11 @@
 				dataIN = structuredClone(temp);
 			}
 			const datum = new PeriodogramDataclass(this, dataIN);
-			datum.updatePeriodData();
+
 			this.data.push(datum);
 		}
 		removeData(idx) {
 			this.data.splice(idx, 1);
-		}
-		updateAllPeriodData() {
-			this.data.forEach((datum) => datum.updatePeriodData());
 		}
 
 		toJSON() {
@@ -403,7 +402,6 @@
 
 			if (json.data) {
 				periodogram.data = json.data.map((d) => PeriodogramDataclass.fromJSON(d, periodogram));
-				periodogram.updateAllPeriodData();
 			}
 			return periodogram;
 		}
@@ -420,12 +418,6 @@
 	import Icon from '$lib/icons/Icon.svelte';
 
 	let { theData, which } = $props();
-
-	$effect(() => {
-		if (theData.periodlimsIN || theData.periodSteps) {
-			theData.updateAllPeriodData();
-		}
-	});
 
 	//Tooltip
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
@@ -632,7 +624,7 @@
 			<div class="control-input-vertical">
 				<div class="control-input-checkbox">
 					<input type="checkbox" bind:checked={theData.xgridlines} />
-					<p>Period Grid</p>
+					<p>Grid</p>
 				</div>
 			</div>
 
@@ -746,7 +738,7 @@
 
 						<div class="control-input">
 							<p>Method</p>
-							<select bind:value={datum.method} onchange={() => datum.updatePeriodData()}>
+							<select bind:value={datum.method}>
 								<option value="Chi-squared">Chi-squared</option>
 								<option value="Lomb-Scargle">Lomb-Scargle</option>
 							</select>
@@ -768,8 +760,7 @@
 										min="0.0001"
 										max="0.9999"
 										step="0.01"
-										bind:value={datum.alpha}
-										oninput={() => datum.updatePeriodData()}
+										bind:value={datum.chiSquaredAlpha}
 									/>
 								</div>
 							{/if}
@@ -777,6 +768,9 @@
 
 						<Line lineData={datum.line} which="controls" />
 						<Points pointsData={datum.points} which="controls" />
+						{#if datum.method === 'Chi-squared'}
+							<Line lineData={datum.thresholdline} which="controls" title="Threshold" />
+						{/if}
 
 						<div class="div-line"></div>
 					</div>
@@ -832,8 +826,6 @@
 				yscale={scaleLinear()
 					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 					.range([theData.plot.plotheight, 0])}
-				strokeCol={datum.linecolour}
-				strokeWidth={datum.linestrokeWidth}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 				which="plot"
@@ -848,8 +840,6 @@
 				yscale={scaleLinear()
 					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 					.range([theData.plot.plotheight, 0])}
-				radius={datum.pointradius}
-				fillCol={datum.pointcolour}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 				tooltip={true}
@@ -857,7 +847,7 @@
 			/>
 			{#if datum.method === 'Chi-squared'}
 				<Line
-					lineData={datum.line}
+					lineData={datum.thresholdline}
 					x={datum.periodData.x}
 					y={datum.periodData.threshold}
 					xscale={scaleLinear()
@@ -866,10 +856,9 @@
 					yscale={scaleLinear()
 						.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 						.range([theData.plot.plotheight, 0])}
-					strokeCol={datum.linecolour}
-					strokeWidth={datum.linestrokeWidth}
 					yoffset={theData.plot.padding.top}
 					xoffset={theData.plot.padding.left}
+					which="plot"
 				/>
 			{/if}
 		{/each}
