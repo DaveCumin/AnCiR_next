@@ -71,7 +71,7 @@
 		cursor: pointer;
 	}
 	.close:hover {
-		fill: var(--color-icon-close-hover);
+		fill: var(--color-button-close);
 		transition: fill 0.2s ease;
 		cursor: pointer;
 	}

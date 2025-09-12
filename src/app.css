@@ -21,6 +21,10 @@
 
 	--color-hover: #6a9fd4; /* Subtle change to align with the colour palette*/
 
+	--color-button-close: #FF605C;
+	--color-button-confirm: #6a9fd4;
+	--color-button-cancel: #d9d9d9;
+
 	/* font */
 	font-family:
 		system-ui,

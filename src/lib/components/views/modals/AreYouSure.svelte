@@ -2,7 +2,7 @@
 	let {
 		showModal = $bindable(false),
 		text = 'Are you sure?',
-		options = ['Yes', 'No'],
+		options = ['Cancel', 'Remove'],
 		callback
 	} = $props();
 	import Modal from '$lib/components/reusables/Modal.svelte';
@@ -15,12 +15,14 @@
 			<h4>{text}</h4>
 		</div>
 		<div
-			style="display: flex; flex-direction: row; align-content: center; justify-content: center;"
+			style="display: flex; flex-direction: row; align-content: center; justify-content: right; gap: 0.5rem;"
 		>
 			{#each options as option}
 				<button
-					class="dialog-button"
-					style="margin: 0.5em;"
+					class="dialog-button dialog-button-cancel"
+					class:dialog-button-cancel={option === 'Cancel'}
+					class:dialog-button-confirm={option === 'Remove'}
+					style="width: 6rem;"
 					onclick={() => {
 						if (callback) callback(option);
 						showModal = false;

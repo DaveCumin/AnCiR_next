@@ -496,6 +496,14 @@
 		background-color: var(--color-hover);
 	}
 
+	:global(button.dialog-button-confirm:hover) {
+		background-color: var(--color-button-confirm);
+	}
+
+	:global(button.dialog-button-cancel:hover) {
+		background-color: var(--color-button-cancel);
+	}
+
 	/* space filler */
 	:global(.div-line) {
 		height: 1px;
