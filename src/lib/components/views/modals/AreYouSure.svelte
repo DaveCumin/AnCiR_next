@@ -15,7 +15,7 @@
 			<h4>{text}</h4>
 		</div>
 		<div
-			style="    display: flex; flex-direction: row; align-content: center; justify-content: center;"
+			style="display: flex; flex-direction: row; align-content: center; justify-content: center;"
 		>
 			{#each options as option}
 				<button
