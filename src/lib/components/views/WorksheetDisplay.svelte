@@ -198,7 +198,7 @@
 		top: 0;
 
 		width: 100%;
-		height: 4vh;
+		height: 2rem;
 		display: flex;
 		flex-direction: row;
 		justify-content: space-between;
