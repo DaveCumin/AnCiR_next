@@ -44,8 +44,10 @@
 			if (!byCol) continue; // Skip if column not found
 
 			let byColData = [];
+			//if the id is the same one, use the x data
 			if (byColId === args.parentColId) {
 				byColData = x;
+				//else get the data fromt he column
 			} else {
 				byColData = byCol.getData();
 			}

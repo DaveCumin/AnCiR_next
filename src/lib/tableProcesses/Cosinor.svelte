@@ -31,12 +31,19 @@
 			getColumnById(xIN).type == 'time'
 				? getColumnById(xIN).hoursSinceStart
 				: getColumnById(xIN).getData();
-		const fittedData = fitCosineCurves(t, getColumnById(yIN).getData(), Ncurves);
+		const y = getColumnById(yIN).getData();
+		//remove NaNs
+		const validIndices = t
+			.map((t, i) => (isNaN(t) || isNaN(y[i]) ? -1 : i))
+			.filter((i) => i !== -1);
+		const tt = validIndices.map((i) => t[i]);
+		const yy = validIndices.map((i) => y[i]);
+		const fittedData = fitCosineCurves(tt, yy, Ncurves);
 		console.log(fittedData);
 
 		if (xOUT == -1 || yOUT == -1) {
 		} else {
-			getColumnById(xOUT).data = t;
+			getColumnById(xOUT).data = tt;
 			getColumnById(xOUT).type = 'number';
 			getColumnById(yOUT).data = fittedData.fitted;
 			getColumnById(yOUT).type = 'number';
@@ -45,7 +52,7 @@
 			getColumnById(yOUT).tableProcessGUId = processHash;
 		}
 
-		return [{ t, fitted: fittedData.fitted }, fittedData.fitted.length > 0];
+		return [{ t, fittedData: fittedData }, fittedData.fitted.length > 0];
 	}
 </script>
 
@@ -116,14 +123,36 @@ y = <ColumnSelector
 		<ColumnComponent col={xout} />
 		{@const yout = getColumnById(p.args.out.cosinory)}
 		<ColumnComponent col={yout} />
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}</p>
+			</div>
+		</div>
+		{#each cosinorData?.fittedData?.parameters.cosines as cosine, i}
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>
+						{(2 * Math.PI * (1 / cosine.frequency)).toFixed(2)}
+						{cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(
+							2
+						)})
+					</p>
+				</div>
+			</div>
+		{/each}
+		<p>{JSON.stringify(cosinorData)}</p>
 	{:else if p.args.valid}
 		<p>Preview:</p>
 		<div style="height:250px; overflow:auto;">
 			<Table
 				headers={['binned x', 'binned y']}
-				data={[cosinorData.t.map((x) => x.toFixed(2)), cosinorData.fitted.map((x) => x.toFixed(2))]}
+				data={[
+					cosinorData.t.map((x) => x.toFixed(2)),
+					cosinorData.fittedData.fitted.map((x) => x.toFixed(2))
+				]}
 			/>
 		</div>
+		<p>{JSON.stringify(cosinorData.fittedData)}</p>
 	{:else}
 		<p>Need to have valid inputs to create columns.</p>
 	{/if}
