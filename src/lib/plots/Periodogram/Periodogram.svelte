@@ -167,7 +167,7 @@
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
 				if (parent.data.length > 0) {
-					this.x = parent.data[parent.data.length - 1].x;
+					this.x = new ColumnClass({ refId: parent.data[parent.data.length - 1].x.refId });
 				} else {
 					//blank one
 					this.x = new ColumnClass({ refId: -1 });

@@ -114,7 +114,12 @@
 			if (dataIN && dataIN.x) {
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new ColumnClass({ refId: -1 });
+				if (parent.data.length > 0) {
+					this.x = new ColumnClass({ refId: parent.data[parent.data.length - 1].x.refId });
+				} else {
+					//blank one
+					this.x = new ColumnClass({ refId: -1 });
+				}
 			}
 			if (dataIN && dataIN.y) {
 				this.y = ColumnClass.fromJSON(dataIN.y);

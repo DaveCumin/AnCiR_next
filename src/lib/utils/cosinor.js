@@ -231,7 +231,7 @@ function estimatePeriodUniform(x, dt) {
 			}
 		}
 	}
-
+	console.log('estimated: ', bestLag > 0 ? bestLag * dt : 0);
 	return bestLag > 0 ? bestLag * dt : 0;
 }
 
