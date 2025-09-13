@@ -286,7 +286,7 @@
 					}
 				});
 			}
-			console.log('ylims_out: ', ylims_out);
+			// console.log('ylims_out: ', ylims_out);
 			return ylims_out;
 		});
 
