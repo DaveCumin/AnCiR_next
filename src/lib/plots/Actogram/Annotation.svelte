@@ -69,6 +69,34 @@
 		annotation.duration = Number(annotation.duration);
 		// endTime updates automatically via $derived
 	}
+
+	function handleHover(e) {
+		const mouseX = e.offsetX;
+		const mouseY = e.offsetY;
+
+		if (annotation.name != '') {
+			const event = new CustomEvent('tooltip', {
+				detail: {
+					visible: true,
+					x: mouseX + 10, // Offset to avoid cursor overlap
+					y: mouseY + 10,
+					content: annotation.name
+				},
+				bubbles: true
+			});
+
+			e.target.dispatchEvent(event);
+		}
+	}
+
+	function handleMouseLeave(e) {
+		e.target.dispatchEvent(
+			new CustomEvent('tooltip', {
+				detail: { visible: false },
+				bubbles: true
+			})
+		);
+	}
 </script>
 
 {#snippet controls(annotation)}
@@ -108,16 +136,21 @@
 	<g
 		class="annotations"
 		transform="translate({annotation.parentData.padding.left}, {annotation.parentData.padding.top})"
-		onmousemove={(e) => console.log(annotation.name)}
+		onmousemove={(e) => {
+			handleHover(e);
+		}}
+		onmouseleave={handleMouseLeave}
 	>
 		<Hist
-			x={[annotation.startTime, annotation.endTime]}
-			y={[50, 50]}
+			xStart={[annotation.startTime]}
+			xEnd={[annotation.endTime]}
+			y={[50]}
 			xscale={scaleLinear()
 				.domain([0, annotation.parentData.periodHrs * annotation.parentData.doublePlot])
 				.range([0, annotation.parentData.plotwidth])}
 			yscale={scaleLinear().domain([0, 100]).range([annotation.parentData.eachplotheight, 0])}
 			colour={annotation.colour}
+			yoffset={annotation.parentData.spaceBetween}
 		/>
 	</g>
 {/snippet}

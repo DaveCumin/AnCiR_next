@@ -2,7 +2,7 @@
 	// @ts-nocheck
 
 	import Column from '$lib/core/Column.svelte';
-	import Hist from '$lib/components/plotBits/Hist.svelte';
+	import Hist, { createHistogramBins } from '$lib/components/plotBits/Hist.svelte';
 	import Axis from '$lib/components/plotBits/Axis.svelte';
 
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
@@ -47,43 +47,10 @@
 		colour = $state();
 		offset = $derived.by(() => {
 			if (this.x?.getData()) {
-				console.log('Debugging offset in actogram: ');
-				console.log(
-					'startTime: ',
-					this.parentPlot?.startTime,
-					', ',
-					new Date(this.parentPlot?.startTime),
-					',',
-					Number(new Date(this.parentPlot?.startTime)),
-					',',
-					new Date(this.parentPlot?.startTime) -
-						new Date(this.parentPlot?.startTime).getTimezoneOffset(),
-					',',
-					Number(
-						new Date(this.parentPlot?.startTime) -
-							new Date(this.parentPlot?.startTime).getTimezoneOffset()
-					)
-				);
-				console.log('time0: ', this.x?.getData()[0], ', ', new Date(this.x?.getData()[0]));
-
 				if (this.x.type == 'time') {
-					console.log(
-						'offset time: ',
-						(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
-					);
-					console.log('LUXON : ', DateTime.fromMillis(this.parentPlot?.startTime, { zone: 'utc' }));
-					return (
-						(Number(new Date(this.parentPlot?.startTime)) - Number(this.x?.getData()[0])) / 3600000
-					);
+					return (this.parentPlot?.startTime - Number(this.x?.getData()[0])) / 3600000; //get the hours
 				} else {
-					//TODO: Fix this - it's not quite right.
-					console.log(
-						'offset number: ',
-						Number(new Date(this.parentPlot?.startTime)) / 3600000 - Number(this.x?.getData()[0])
-					);
-					return (
-						Number(new Date(this.parentPlot?.startTime)) / 3600000 - Number(this.x?.getData()[0])
-					);
+					return -Number(this.x?.getData()[0]); //always just the value from the start
 				}
 			} else {
 				return 0;
@@ -117,6 +84,28 @@
 			return { xByPeriod, yByPeriod };
 		});
 
+		// New derived property to create histogram bins for each day
+		histogramBinsByDays = $derived.by(() => {
+			const { xByPeriod, yByPeriod } = this.dataByDays;
+			const binsByPeriod = {};
+
+			Object.keys(xByPeriod).forEach((period) => {
+				const xData = xByPeriod[period];
+				const yData = yByPeriod[period];
+
+				if (xData && xData.length > 0) {
+					const { xStart, xEnd } = createHistogramBins(xData, this.binSize);
+					binsByPeriod[period] = {
+						xStart,
+						xEnd,
+						y: yData
+					};
+				}
+			});
+
+			return binsByPeriod;
+		});
+
 		phaseMarkers = $state([]);
 
 		constructor(parent, dataIN) {
@@ -125,7 +114,12 @@
 			if (dataIN && dataIN.x) {
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				this.x = new ColumnClass({ refId: -1 });
+				if (parent.data.length > 0) {
+					this.x = new ColumnClass({ refId: parent.data[parent.data.length - 1].x.refId });
+				} else {
+					//blank one
+					this.x = new ColumnClass({ refId: -1 });
+				}
 			}
 			if (dataIN && dataIN.y) {
 				this.y = ColumnClass.fromJSON(dataIN.y);
@@ -163,6 +157,27 @@
 		}
 	}
 
+	// Helper function to get histogram bins for specific periods
+	function getHistogramBinsForPeriods(histogramBinsByDays, from, to, periodHrs) {
+		const allXStart = [];
+		const allXEnd = [];
+		const allY = [];
+
+		for (let p = from; p < to; p++) {
+			if (histogramBinsByDays[p]) {
+				const offset = from * periodHrs;
+				const { xStart, xEnd, y } = histogramBinsByDays[p];
+
+				// Apply period offset to x positions
+				allXStart.push(...xStart.map((x) => x - offset));
+				allXEnd.push(...xEnd.map((x) => x - offset));
+				allY.push(...y);
+			}
+		}
+		//console.log(allXStart, allXEnd);
+		return { xStart: allXStart, xEnd: allXEnd, y: allY };
+	}
+
 	export class Actogramclass {
 		parentBox = $state();
 		data = $state([]);
@@ -170,21 +185,17 @@
 		isAddingMarkerTo = $state(-1);
 		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 20 });
 		padding = $derived.by(() => {
-			if (this.lightBands.length > 0) {
-				return {
-					top: this.paddingIN.top + this.lightBands.height * 2,
-					right: this.paddingIN.right,
-					bottom: this.paddingIN.bottom,
-					left: this.paddingIN.left
-				};
-			} else {
-				return {
-					top: this.paddingIN.top,
-					right: this.paddingIN.right,
-					bottom: this.paddingIN.bottom,
-					left: this.paddingIN.left
-				};
-			}
+			const allTopPadding =
+				this.lightBands.length > 0
+					? this.paddingIN.top + this.lightBands.height * 2
+					: this.paddingIN.top;
+
+			return {
+				top: allTopPadding,
+				right: this.paddingIN.right,
+				bottom: this.paddingIN.bottom,
+				left: this.paddingIN.left
+			};
 		});
 		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
@@ -193,15 +204,30 @@
 		});
 		startTime = $derived.by(() => {
 			let minTime = Infinity;
+
+			//Only update the startTime (minTime) if there is time data
 			this.data.forEach((datum) => {
-				const thefirst = datum.x.getData() ? datum.x.getData()[0] : minTime;
-				minTime = Math.min(minTime, Number(thefirst));
+				if (datum.x.type == 'time' && datum.x.getData()?.length > 0) {
+					const thefirst = datum.x.getData() ? datum.x.getData()[0] : minTime;
+					minTime = Math.min(minTime, Number(thefirst));
+				}
 			});
-			//TODO: fix here for data with timeformat that doesn't work
-			return minTime !== Infinity && minTime >= 0
-				? new Date(minTime).setHours(0, 0, 0, 0) //set to beginnig of the day
-				: undefined;
+			//if no time data then make the startTime 0 (to start with)
+			if (minTime === Infinity) {
+				minTime = 0;
+			}
+
+			//Keep the timezone as UTC to avoid daylight savings issues; and set to the start of the day (at least to start)
+			return DateTime.fromMillis(minTime, { zone: 'utc' })
+				.set({
+					hour: 0,
+					minute: 0,
+					second: 0,
+					millisecond: 0
+				})
+				.toMillis();
 		});
+
 		spaceBetween = $state(2);
 		doublePlot = $state(2);
 		periodHrs = $state(24);
@@ -260,7 +286,7 @@
 					}
 				});
 			}
-			console.log('ylims_out: ', ylims_out);
+			// console.log('ylims_out: ', ylims_out);
 			return ylims_out;
 		});
 
@@ -344,7 +370,59 @@
 
 	let { theData, which } = $props();
 
+	let isAltKeyDown = $state(false);
+	document.addEventListener('keydown', (e) => {
+		if (e.key === 'Alt') {
+			isAltKeyDown = true;
+		}
+	});
+
+	document.addEventListener('keyup', (e) => {
+		if (e.key === 'Alt') {
+			isAltKeyDown = false;
+			tooltip.visible = false;
+		}
+	});
+
+	function handleHover(e) {
+		if (isAltKeyDown && which === 'plot') {
+			//tooltip for time and values if control-click
+			const mouseX = e.offsetX;
+			const mouseY = e.offsetY;
+
+			//make sure the tooltip stays 'in bounds'
+			const srcRect = e.srcElement.getBoundingClientRect();
+			const xPos = mouseX + 110 > srcRect.width ? mouseX - 120 : mouseX + 10;
+			const yPos = mouseY < 20 ? mouseY + 40 : mouseY + 10;
+
+			tooltip = {
+				visible: true,
+				x: xPos, // Offset to avoid cursor overlap
+				y: yPos,
+				content: getTimeFromMouse(mouseX, mouseY)
+			};
+		}
+	}
+
+	//take in a mouse position and return the day from the y value
+	function getTimeFromMouse(x, y) {
+		const allTopPadding =
+			theData.plot.lightBands.length > 0
+				? theData.plot.paddingIN.top + theData.plot.lightBands.height * 2
+				: theData.plot.paddingIN.top;
+
+		const xscale = scaleLinear()
+			.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
+			.range([0, theData.plot.plotwidth]);
+
+		const yscale = scaleLinear().domain([0, 100]).range([theData.plot.eachplotheight, 0]);
+
+		return `day
+			${Math.floor((y - allTopPadding) / (theData.plot.eachplotheight + theData.plot.spaceBetween))}, hour ${xscale.invert(x - theData.plot.padding.left).toFixed(2)}`;
+	}
+
 	function handleClick(e) {
+		// add markers if selected
 		if (theData.plot.isAddingMarkerTo >= 0) {
 			const [clickedDay, clickedHrs] = getClickedTime(e);
 			theData.plot.addPhaseMarkerTo(theData.plot.isAddingMarkerTo, clickedDay, clickedHrs);
@@ -371,6 +449,24 @@
 			theData.plot.doublePlot;
 
 		return [clickedDay, clickedHrs];
+	}
+
+	async function addData() {
+		theData.addData({
+			x: null,
+			y: null
+		});
+
+		await tick();
+
+		//Scroll to the bottom of dataSettings
+		dataSettingsScrollTo('bottom');
+	}
+
+	//Tooltip
+	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
+	function handleTooltip(event) {
+		tooltip = event.detail;
 	}
 </script>
 
@@ -509,19 +605,7 @@
 		{/if}
 	{:else if appState.currentControlTab === 'data'}
 		<div class="control-data-add">
-			<button
-				class="icon"
-				onclick={async () => {
-					theData.addData({
-						x: null,
-						y: { refId: -1 }
-					});
-					await tick();
-
-					//Scroll to the bottom of dataSettings
-					dataSettingsScrollTo('bottom');
-				}}
-			>
+			<button class="icon" onclick={async () => await addData()}>
 				<Icon name="add" width={16} height={16} />
 			</button>
 		</div>
@@ -530,13 +614,6 @@
 			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
 				<div
 					class="dataBlock"
-					style="
-						display: flex;
-						flex-direction: column;
-						flex: 1 1 0;
-
-						width: 100%;
-					"
 					animate:flip={{ duration: 500 }}
 					in:slide={{ duration: 500, axis: 'y' }}
 					out:slide={{ duration: 500, axis: 'y' }}
@@ -631,20 +708,7 @@
 		</div>
 
 		<div>
-			<button
-				class="icon control-block-add"
-				onclick={async () => {
-					theData.addData({
-						x: { refId: -1 },
-						y: { refId: -1 }
-					});
-
-					await tick();
-
-					//Scroll to the bottom of dataSettings
-					dataSettingsScrollTo('bottom');
-				}}
-			>
+			<button class="icon control-block-add" onclick={async () => await addData()}>
 				<Icon name="plus" width={16} height={16} className="static-icon" />
 			</button>
 		</div>
@@ -670,6 +734,8 @@
 		height={theData.plot.parentBox.height}
 		style={`background: white; position: absolute;`}
 		onclick={(e) => handleClick(e)}
+		onmousemove={(e) => handleHover(e)}
+		ontooltip={handleTooltip}
 	>
 		<LightBand bind:bands={theData.plot.lightBands} which="plot" />
 		<!-- The X-axis -->
@@ -693,28 +759,33 @@
 				class="actogram"
 				transform="translate({theData.plot.padding.left}, {theData.plot.padding.top})"
 			>
-				<!-- Make the histogram for each period -->
+				<!-- Make the histogram for each period using new xStart/xEnd format -->
 				{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
 					{@const thisScale = scaleLinear()
 						.domain([theData.plot.ylims[d][day][0], theData.plot.ylims[d][day][1]])
 						.range([theData.plot.eachplotheight, 0])}
 
-					<Hist
-						x={getNdataByPeriods(
-							datum.dataByDays.xByPeriod,
-							day,
-							day + theData.plot.doublePlot,
-							theData.plot.periodHrs
-						)}
-						y={getNdataByPeriods(datum.dataByDays.yByPeriod, day, day + theData.plot.doublePlot, 0)}
-						xscale={scaleLinear()
-							.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
-							.range([0, theData.plot.plotwidth])}
-						yscale={thisScale}
-						colour={datum.colour}
-						yoffset={day * (theData.plot.spaceBetween + theData.plot.eachplotheight) +
-							theData.plot.spaceBetween}
-					/>
+					{@const histBins = getHistogramBinsForPeriods(
+						datum.histogramBinsByDays,
+						day,
+						day + theData.plot.doublePlot,
+						theData.plot.periodHrs
+					)}
+
+					{#if histBins.xStart.length > 0}
+						<Hist
+							xStart={histBins.xStart}
+							xEnd={histBins.xEnd}
+							y={histBins.y}
+							xscale={scaleLinear()
+								.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
+								.range([0, theData.plot.plotwidth])}
+							yscale={thisScale}
+							colour={datum.colour}
+							yoffset={day * (theData.plot.spaceBetween + theData.plot.eachplotheight) +
+								theData.plot.spaceBetween}
+						/>
+					{/if}
 				{/each}
 			</g>
 			<!-- THE MARKERS -->
@@ -727,6 +798,12 @@
 			<Annotation {which} {annotation} />
 		{/each}
 	</svg>
+
+	{#if tooltip.visible}
+		<div class="tooltip" style={`left: ${tooltip.x}px; top: ${tooltip.y}px;`}>
+			{tooltip.content}
+		</div>
+	{/if}
 {/snippet}
 
 {#if which === 'plot'}
@@ -734,3 +811,17 @@
 {:else if which === 'controls'}
 	{@render controls(theData)}
 {/if}
+
+<style>
+	.tooltip {
+		position: absolute;
+		background-color: rgba(0, 0, 0, 0.7);
+		color: white;
+		padding: 0.5rem 0.8rem;
+		border-radius: 4px;
+		pointer-events: none;
+		font-size: 0.8rem;
+		z-index: 9999;
+		width: 100px;
+	}
+</style>

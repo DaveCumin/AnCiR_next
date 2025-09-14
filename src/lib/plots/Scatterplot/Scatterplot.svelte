@@ -24,7 +24,7 @@
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
 				if (parent.data.length > 0) {
-					this.x = parent.data[parent.data.length - 1].x;
+					this.x = new ColumnClass({ refId: parent.data[parent.data.length - 1].x.refId });
 				} else {
 					//blank one
 					this.x = new ColumnClass({ refId: -1 });
@@ -98,8 +98,8 @@
 				let tempx = this.data[i].x.getData() ?? [];
 
 				tempx = tempx.map((x) => Number(x)); // Ensure all values are numbers
-				xmin = min([xmin, ...tempx]);
-				xmax = max([xmax, ...tempx]);
+				xmin = Math.floor(min([xmin, ...tempx]));
+				xmax = Math.ceil(max([xmax, ...tempx]));
 			});
 			return [
 				this.xlimsIN[0] != null ? this.xlimsIN[0] : xmin,
@@ -305,6 +305,8 @@
 		if (which == 'controls') {
 			theData.ylabel;
 			theData.xlabel;
+			theData.xlims;
+			theData.ylims;
 
 			theData.autoScalePadding('all');
 		}
@@ -510,7 +512,7 @@
 						onclick={async () => {
 							theData.addData({
 								x: null,
-								y: {}
+								y: null
 							});
 
 							await tick();
@@ -718,5 +720,6 @@
 		pointer-events: none;
 		font-size: 0.8rem;
 		z-index: 9999;
+		width: 100px;
 	}
 </style>

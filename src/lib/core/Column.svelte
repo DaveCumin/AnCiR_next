@@ -421,18 +421,6 @@
 	}
 
 	/* General container */
-	.column-indicator {
-		position: absolute;
-		top: 0;
-		left: 0;
-		bottom: 0;
-
-		width: 4px;
-		height: 100%;
-		background-color: var(--color-lightness-90);
-
-		border-radius: 4px;
-	}
 
 	.clps-container {
 		display: flex;
@@ -565,14 +553,5 @@
 		flex-direction: column;
 		margin: 0;
 		gap: 0.5rem;
-	}
-
-	.single-process-container {
-		position: relative; /* new */
-		padding-left: 0.75rem;
-		display: flex;
-		align-items: center;
-
-		margin: 0;
 	}
 </style>
