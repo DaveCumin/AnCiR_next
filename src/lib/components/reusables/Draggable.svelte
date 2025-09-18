@@ -6,7 +6,7 @@
 	import { deselectAllPlots } from '$lib/core/Plot.svelte';
 	import { removePlots, selectPlot } from '$lib/core/Plot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
-
+	import { getCanvasWidthPx } from '$lib/components/views/PlotDisplay.svelte';
 	let plotElement;
 
 	let {
@@ -37,6 +37,8 @@
 	let dragThreshold = 5; // pixels before considering it a drag
 
 	let dragStartPositions = {};
+	let fullscreen = $state(false);
+	let smallvalues = $state();
 
 	// Touch-specific variables
 	let touchStartTime = 0;
@@ -333,9 +335,26 @@
 		}
 	}
 
-	function openPlotDetails(e) {
-		e.stopPropagation();
-		// open dropdown
+	function toggleFullscreen() {
+		fullscreen = !fullscreen;
+		if (fullscreen) {
+			smallvalues = { x, y, width, height };
+			x = 0;
+			y = 0;
+			width = getCanvasWidthPx() - 20;
+			height = window.innerHeight - 50;
+		} else {
+			x = smallvalues.x;
+			y = smallvalues.y;
+			width = smallvalues.width;
+			height = smallvalues.height;
+		}
+		const updated = [...core.plots];
+		const pos = core.plots.findIndex((p) => p.id === id);
+		const [movedItem] = updated.splice(pos, 1);
+		updated.splice(core.plots.length, 0, movedItem);
+
+		core.plots = updated;
 	}
 
 	let addBtnRef;
@@ -404,10 +423,27 @@
 			style="cursor: default;"
 		></p>
 
-		<button class="icon" onclick={() => removePlots(id)}>
-			<!-- <Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" /> -->
-			<Icon name="close" width={16} height={16} className="icon close" />
-		</button>
+		<div class="clps-title-button">
+			<button
+				class="icon"
+				onclick={(e) => {
+					e.stopPropagation();
+					console.log('HERE');
+					toggleFullscreen();
+				}}
+			>
+				<Icon
+					name="menu-horizontal-dots plot-options-button"
+					width={20}
+					height={20}
+					className="menu-icon"
+				/>
+			</button>
+			<button class="icon" onclick={() => removePlots(id)}>
+				<!-- <Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" /> -->
+				<Icon name="close" width={16} height={16} className="icon close" />
+			</button>
+		</div>
 	</div>
 	<div class="plot-content">
 		<slot></slot>
@@ -480,6 +516,17 @@
 		bottom: 0;
 		cursor: nwse-resize;
 		border-radius: 2px;
+	}
+
+	.plot-options-button {
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.2s ease;
+	}
+
+	.plot-options-button:hover {
+		opacity: 1;
+		pointer-events: auto;
 	}
 
 	/* Make resize handle more touch-friendly */

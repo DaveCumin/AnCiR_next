@@ -1,3 +1,15 @@
+<script module>
+	export function getCanvasWidthPx() {
+		return canvasWidthPx;
+	}
+	let canvasWidthPx = $derived.by(() => {
+		const whole = appState.windowWidth - appState.widthNavBar;
+		const displayWidth = appState.showDisplayPanel ? appState.widthDisplayPanel : 0;
+		const controlWidth = appState.showControlPanel ? appState.widthControlPanel : 0;
+		return whole - displayWidth - controlWidth;
+	});
+</script>
+
 <script>
 	// @ts-nocheck
 	import Draggable from '$lib/components/reusables/Draggable.svelte';
@@ -43,13 +55,6 @@
 		deselectAllPlots();
 		appState.showControlPanel = false;
 	}
-
-	let canvasWidthPx = $derived.by(() => {
-		const whole = appState.windowWidth - appState.widthNavBar;
-		const displayWidth = appState.showDisplayPanel ? appState.widthDisplayPanel : 0;
-		const controlWidth = appState.showControlPanel ? appState.widthControlPanel : 0;
-		return whole - displayWidth - controlWidth;
-	});
 
 	let leftPx = $derived.by(() => {
 		if (appState.showDisplayPanel) {
