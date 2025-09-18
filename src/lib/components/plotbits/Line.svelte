@@ -261,6 +261,49 @@
 		return Math.pow(1 - Math.pow(u, 3), 3);
 	}
 
+	function movingAverage(y, windowSize = 5, type = 'simple') {
+		const result = [...y];
+		const halfWindow = Math.floor(windowSize / 2);
+
+		for (let i = 0; i < y.length; i++) {
+			let sum = 0;
+			let count = 0;
+			let weightSum = 0;
+
+			const start = Math.max(0, i - halfWindow);
+			const end = Math.min(y.length - 1, i + halfWindow);
+
+			for (let j = start; j <= end; j++) {
+				if (!isNaN(y[j])) {
+					if (type === 'simple') {
+						sum += y[j];
+						count++;
+					} else if (type === 'weighted') {
+						// Linear weighting - center point gets highest weight
+						const distance = Math.abs(i - j);
+						const weight = Math.max(0, windowSize - distance);
+						sum += y[j] * weight;
+						weightSum += weight;
+					} else if (type === 'exponential') {
+						// Exponential weighting
+						const distance = Math.abs(i - j);
+						const weight = Math.exp(-distance / (windowSize / 3));
+						sum += y[j] * weight;
+						weightSum += weight;
+					}
+				}
+			}
+
+			if (type === 'simple') {
+				result[i] = count > 0 ? sum / count : y[i];
+			} else {
+				result[i] = weightSum > 0 ? sum / weightSum : y[i];
+			}
+		}
+
+		return result;
+	}
+
 	export class LineClass {
 		colour = $state(getPaletteColor(0));
 		strokeWidth = $state(3);
@@ -280,6 +323,8 @@
 		savitzkyWindowSize = $state(5);
 		savitzkyPolyOrder = $state(2);
 		loessBandwidth = $state(0.3);
+		movingAvgWindowSize = $state(5);
+		movingAvgType = $state('simple');
 
 		constructor(dataIN, parent) {
 			this.parentData = parent;
@@ -300,6 +345,8 @@
 			this.savitzkyWindowSize = dataIN?.savitzkyWindowSize ?? 5;
 			this.savitzkyPolyOrder = dataIN?.savitzkyPolyOrder ?? 2;
 			this.loessBandwidth = dataIN?.loessBandwidth ?? 0.3;
+			this.movingAvgWindowSize = dataIN?.movingAvgWindowSize ?? 5;
+			this.movingAvgType = dataIN?.movingAvgType ?? 'simple';
 		}
 
 		toJSON() {
@@ -317,7 +364,9 @@
 				whittakerOrder: this.whittakerOrder,
 				savitzkyWindowSize: this.savitzkyWindowSize,
 				savitzkyPolyOrder: this.savitzkyPolyOrder,
-				loessBandwidth: this.loessBandwidth
+				loessBandwidth: this.loessBandwidth,
+				movingAvgWindowSize: this.movingAvgWindowSize,
+				movingAvgType: this.movingAvgType
 			};
 		}
 
@@ -336,7 +385,9 @@
 				whittakerOrder: json.whittakerOrder,
 				savitzkyWindowSize: json.savitzkyWindowSize,
 				savitzkyPolyOrder: json.savitzkyPolyOrder,
-				loessBandwidth: json.loessBandwidth
+				loessBandwidth: json.loessBandwidth,
+				movingAvgWindowSize: json.movingAvgWindowSize,
+				movingAvgType: json.movingAvgType
 			});
 		}
 	}
@@ -384,8 +435,8 @@
 		return lineGenerator(filteredData);
 	});
 
-	let smoothedLine = $derived.by(() => {
-		if (!lineData?.showSmoother || !x || !y || !theline) return null;
+	let smoothedData = $derived.by(() => {
+		if (!lineData.showSmoother || !lineData.parentData.x || !lineData.parentData.y) return null;
 
 		// Get filtered data similar to main line
 		const xlims = xscale.domain();
@@ -417,15 +468,23 @@
 				case 'loess':
 					smoothedY = loess(xVals, yVals, lineData.loessBandwidth);
 					break;
+				case 'moving':
+					smoothedY = movingAverage(yVals, lineData.movingAvgWindowSize, lineData.movingAvgType);
+					break;
 				default:
 					return null;
 			}
 		} catch (error) {
-			console.warn('Smoothing failed:', error);
+			console.warn('Something failed in smoothedData:', error);
 			return null;
 		}
 
-		const smoothedData = xVals.map((x, i) => ({ x, y: smoothedY[i] }));
+		const out = xVals.map((x, i) => ({ x, y: smoothedY[i] }));
+		return out;
+	});
+
+	let smoothedLine = $derived.by(() => {
+		if (!smoothedData) return null;
 
 		const lineGenerator = line()
 			.x((d) => xscale(d.x))
@@ -433,6 +492,27 @@
 
 		return lineGenerator(smoothedData);
 	});
+
+	// Export function for smoothed data
+	function exportSmoothedData() {
+		if (!smoothedData || smoothedData.length === 0) {
+			alert('No smoothed data available to export');
+			return;
+		}
+
+		const csvContent =
+			'data:text/csv;charset=utf-8,' +
+			'x,y\n' +
+			smoothedData.map((d) => `${d.x},${d.y}`).join('\n');
+
+		const encodedUri = encodeURI(csvContent);
+		const link = document.createElement('a');
+		link.setAttribute('href', encodedUri);
+		link.setAttribute('download', `smoothed_data_${lineData.smootherType}.csv`);
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+	}
 </script>
 
 {#snippet controls(lineData)}
@@ -485,19 +565,33 @@
 		<!-- Smoother Controls -->
 		<div class="control-component-title" style="margin-top: 1rem;">
 			<p>Smoother</p>
-			<button
-				class="icon"
-				onclick={(e) => {
-					e.stopPropagation();
-					lineData.showSmoother = !lineData.showSmoother;
-				}}
-			>
-				{#if !lineData.showSmoother}
-					<Icon name="eye-slash" width={16} height={16} />
-				{:else}
-					<Icon name="eye" width={16} height={16} className="visible" />
+			<div style="display: flex; gap: 0.25rem;">
+				{#if smoothedData}
+					<button
+						class="icon"
+						onclick={(e) => {
+							e.stopPropagation();
+							exportSmoothedData();
+						}}
+						title="Export smoothed data as CSV"
+					>
+						<Icon name="disk" width={16} height={16} className="control-component-input-icon" />
+					</button>
 				{/if}
-			</button>
+				<button
+					class="icon"
+					onclick={(e) => {
+						e.stopPropagation();
+						lineData.showSmoother = !lineData.showSmoother;
+					}}
+				>
+					{#if !lineData.showSmoother}
+						<Icon name="eye-slash" width={16} height={16} />
+					{:else}
+						<Icon name="eye" width={16} height={16} className="visible" />
+					{/if}
+				</button>
+			</div>
 		</div>
 
 		{#if lineData.showSmoother}
@@ -506,8 +600,8 @@
 					<p>Type</p>
 					<AttributeSelect
 						bind:value={lineData.smootherType}
-						options={['whittaker', 'savitzky', 'loess']}
-						optionsDisplay={['Whittaker-Eilers', 'Savitzky-Golay', 'LOESS']}
+						options={['whittaker', 'savitzky', 'loess', 'moving']}
+						optionsDisplay={['Whittaker-Eilers', 'Savitzky-Golay', 'LOESS', 'Moving Average']}
 					/>
 				</div>
 				<div class="control-input" style="max-width: 1.5rem;">
@@ -548,6 +642,21 @@
 					<div class="control-input">
 						<p>Bandwidth</p>
 						<NumberWithUnits step="0.1" min={0.1} max={1.0} bind:value={lineData.loessBandwidth} />
+					</div>
+				</div>
+			{:else if lineData.smootherType === 'moving'}
+				<div class="control-input-horizontal">
+					<div class="control-input">
+						<p>Window Size</p>
+						<NumberWithUnits step="1" min={3} max={51} bind:value={lineData.movingAvgWindowSize} />
+					</div>
+					<div class="control-input">
+						<p>Type</p>
+						<AttributeSelect
+							bind:value={lineData.movingAvgType}
+							options={['simple', 'weighted', 'exponential']}
+							optionsDisplay={['Simple', 'Weighted', 'Exponential']}
+						/>
 					</div>
 				</div>
 			{/if}

@@ -575,7 +575,22 @@
 							y: {datum.y.name}
 							<Column col={datum.y} canChange={true} />
 						</div>
-						<Line lineData={datum.line} which="controls" />
+						<Line
+							lineData={datum.line}
+							x={datum.x.getData()}
+							y={datum.y.getData()}
+							xscale={theData.anyXdataTime
+								? scaleTime()
+										.domain([theData.xlims[0], theData.xlims[1]])
+										.range([0, theData.plotwidth])
+								: scaleLinear()
+										.domain([theData.xlims[0], theData.xlims[1]])
+										.range([0, theData.plotwidth])}
+							yscale={scaleLinear()
+								.domain([theData.ylims[0], theData.ylims[1]])
+								.range([theData.plotheight, 0])}
+							which="controls"
+						/>
 						<Points pointsData={datum.points} which="controls" />
 					</div>
 					<div class="div-line"></div>
