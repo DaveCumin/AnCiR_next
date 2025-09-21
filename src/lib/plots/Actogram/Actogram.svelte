@@ -37,6 +37,7 @@
 
 		x = $state();
 		y = $state();
+		draw = $state();
 		binSize = $derived.by(() => {
 			//the average time between x values
 			return (
@@ -126,6 +127,11 @@
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
+			if (dataIN?.draw) {
+				this.draw = dataIN.draw;
+			} else {
+				this.draw = true;
+			}
 			this.colour = dataIN?.colour ?? getPaletteColor(this.parentPlot.data.length);
 		}
 
@@ -138,6 +144,7 @@
 				x: this.x,
 				y: this.y,
 				colour: this.colour,
+				draw: this.draw,
 				phaseMarkers: this.phaseMarkers
 			};
 		}
@@ -146,6 +153,7 @@
 			const actClass = new ActogramDataclass(parent, {
 				x: json.x,
 				y: json.y,
+				draw: json.draw,
 				colour: json.colour
 			});
 			if (json.phaseMarkers) {
@@ -632,6 +640,19 @@
 									className="control-component-title-icon"
 								/>
 							</button>
+							<button
+								class="icon"
+								onclick={(e) => {
+									e.stopPropagation();
+									datum.draw = !datum.draw;
+								}}
+							>
+								{#if !datum.draw}
+									<Icon name="eye-slash" width={16} height={16} />
+								{:else}
+									<Icon name="eye" width={16} height={16} className="visible" />
+								{/if}
+							</button>
 						</div>
 					</div>
 
@@ -759,34 +780,36 @@
 				class="actogram"
 				transform="translate({theData.plot.padding.left}, {theData.plot.padding.top})"
 			>
-				<!-- Make the histogram for each period using new xStart/xEnd format -->
-				{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
-					{@const thisScale = scaleLinear()
-						.domain([theData.plot.ylims[d][day][0], theData.plot.ylims[d][day][1]])
-						.range([theData.plot.eachplotheight, 0])}
+				{#if datum.draw}
+					<!-- Make the histogram for each period using new xStart/xEnd format -->
+					{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
+						{@const thisScale = scaleLinear()
+							.domain([theData.plot.ylims[d][day][0], theData.plot.ylims[d][day][1]])
+							.range([theData.plot.eachplotheight, 0])}
 
-					{@const histBins = getHistogramBinsForPeriods(
-						datum.histogramBinsByDays,
-						day,
-						day + theData.plot.doublePlot,
-						theData.plot.periodHrs
-					)}
+						{@const histBins = getHistogramBinsForPeriods(
+							datum.histogramBinsByDays,
+							day,
+							day + theData.plot.doublePlot,
+							theData.plot.periodHrs
+						)}
 
-					{#if histBins.xStart.length > 0}
-						<Hist
-							xStart={histBins.xStart}
-							xEnd={histBins.xEnd}
-							y={histBins.y}
-							xscale={scaleLinear()
-								.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
-								.range([0, theData.plot.plotwidth])}
-							yscale={thisScale}
-							colour={datum.colour}
-							yoffset={day * (theData.plot.spaceBetween + theData.plot.eachplotheight) +
-								theData.plot.spaceBetween}
-						/>
-					{/if}
-				{/each}
+						{#if histBins.xStart.length > 0}
+							<Hist
+								xStart={histBins.xStart}
+								xEnd={histBins.xEnd}
+								y={histBins.y}
+								xscale={scaleLinear()
+									.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
+									.range([0, theData.plot.plotwidth])}
+								yscale={thisScale}
+								colour={datum.colour}
+								yoffset={day * (theData.plot.spaceBetween + theData.plot.eachplotheight) +
+									theData.plot.spaceBetween}
+							/>
+						{/if}
+					{/each}
+				{/if}
 			</g>
 			<!-- THE MARKERS -->
 			{#each datum.phaseMarkers as marker}

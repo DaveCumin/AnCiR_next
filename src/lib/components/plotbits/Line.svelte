@@ -312,7 +312,7 @@
 
 		// Smoother properties
 		showSmoother = $state(false);
-		smootherType = $state('whittaker');
+		smootherType = $state('moving');
 		smootherColour = $state(getPaletteColor(1));
 		smootherStrokeWidth = $state(2);
 		smootherStroke = $state('solid');
@@ -336,7 +336,7 @@
 
 			// Initialize smoother properties
 			this.showSmoother = dataIN?.showSmoother ?? false;
-			this.smootherType = dataIN?.smootherType ?? 'whittaker';
+			this.smootherType = dataIN?.smootherType ?? 'moving';
 			this.smootherColour = dataIN?.smootherColour ?? getPaletteColor(1);
 			this.smootherStrokeWidth = dataIN?.smootherStrokeWidth ?? 2;
 			this.smootherStroke = dataIN?.smootherStroke ?? 'solid';
@@ -594,72 +594,70 @@
 			</div>
 		</div>
 
-		{#if lineData.showSmoother}
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>Type</p>
+				<AttributeSelect
+					bind:value={lineData.smootherType}
+					options={['moving', 'whittaker', 'savitzky', 'loess']}
+					optionsDisplay={['Moving Average', 'Whittaker-Eilers', 'Savitzky-Golay', 'LOESS']}
+				/>
+			</div>
+			<div class="control-input" style="max-width: 1.5rem;">
+				<p style="color:{'white'};">Col</p>
+				<ColourPicker bind:value={lineData.smootherColour} />
+			</div>
+			<div class="control-input">
+				<p>Width</p>
+				<NumberWithUnits step="0.2" min={0.1} bind:value={lineData.smootherStrokeWidth} />
+			</div>
+		</div>
+
+		<!-- Type-specific parameters -->
+		{#if lineData.smootherType === 'whittaker'}
 			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Lambda (Smoothing)</p>
+					<NumberWithUnits step="10" min={1} max={10000} bind:value={lineData.whittakerLambda} />
+				</div>
+				<div class="control-input">
+					<p>Order</p>
+					<NumberWithUnits step="1" min={1} max={4} bind:value={lineData.whittakerOrder} />
+				</div>
+			</div>
+		{:else if lineData.smootherType === 'savitzky'}
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Window Size</p>
+					<NumberWithUnits step="2" min={3} max={21} bind:value={lineData.savitzkyWindowSize} />
+				</div>
+				<div class="control-input">
+					<p>Poly Order</p>
+					<NumberWithUnits step="1" min={1} max={6} bind:value={lineData.savitzkyPolyOrder} />
+				</div>
+			</div>
+		{:else if lineData.smootherType === 'loess'}
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Bandwidth</p>
+					<NumberWithUnits step="0.1" min={0.1} max={1.0} bind:value={lineData.loessBandwidth} />
+				</div>
+			</div>
+		{:else if lineData.smootherType === 'moving'}
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Window Size</p>
+					<NumberWithUnits step="1" min={3} max={51} bind:value={lineData.movingAvgWindowSize} />
+				</div>
 				<div class="control-input">
 					<p>Type</p>
 					<AttributeSelect
-						bind:value={lineData.smootherType}
-						options={['whittaker', 'savitzky', 'loess', 'moving']}
-						optionsDisplay={['Whittaker-Eilers', 'Savitzky-Golay', 'LOESS', 'Moving Average']}
+						bind:value={lineData.movingAvgType}
+						options={['simple', 'weighted', 'exponential']}
+						optionsDisplay={['Simple', 'Weighted', 'Exponential']}
 					/>
 				</div>
-				<div class="control-input" style="max-width: 1.5rem;">
-					<p style="color:{'white'};">Col</p>
-					<ColourPicker bind:value={lineData.smootherColour} />
-				</div>
-				<div class="control-input">
-					<p>Width</p>
-					<NumberWithUnits step="0.2" min={0.1} bind:value={lineData.smootherStrokeWidth} />
-				</div>
 			</div>
-
-			<!-- Type-specific parameters -->
-			{#if lineData.smootherType === 'whittaker'}
-				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>Lambda (Smoothing)</p>
-						<NumberWithUnits step="10" min={1} max={10000} bind:value={lineData.whittakerLambda} />
-					</div>
-					<div class="control-input">
-						<p>Order</p>
-						<NumberWithUnits step="1" min={1} max={4} bind:value={lineData.whittakerOrder} />
-					</div>
-				</div>
-			{:else if lineData.smootherType === 'savitzky'}
-				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>Window Size</p>
-						<NumberWithUnits step="2" min={3} max={21} bind:value={lineData.savitzkyWindowSize} />
-					</div>
-					<div class="control-input">
-						<p>Poly Order</p>
-						<NumberWithUnits step="1" min={1} max={6} bind:value={lineData.savitzkyPolyOrder} />
-					</div>
-				</div>
-			{:else if lineData.smootherType === 'loess'}
-				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>Bandwidth</p>
-						<NumberWithUnits step="0.1" min={0.1} max={1.0} bind:value={lineData.loessBandwidth} />
-					</div>
-				</div>
-			{:else if lineData.smootherType === 'moving'}
-				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>Window Size</p>
-						<NumberWithUnits step="1" min={3} max={51} bind:value={lineData.movingAvgWindowSize} />
-					</div>
-					<div class="control-input">
-						<p>Type</p>
-						<AttributeSelect
-							bind:value={lineData.movingAvgType}
-							options={['simple', 'weighted', 'exponential']}
-							optionsDisplay={['Simple', 'Weighted', 'Exponential']}
-						/>
-					</div>
-				</div>
-			{/if}
 		{/if}
 	</div>
 {/snippet}
