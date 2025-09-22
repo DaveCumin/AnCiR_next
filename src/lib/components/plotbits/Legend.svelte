@@ -196,38 +196,32 @@
 				<g transform="translate({itemX}, {itemY})">
 					<!-- Render combined elements for this data series -->
 					{#each item.elements as element, j}
-						{@const yOffset = j * 2}
 						<!-- Slight offset for multiple elements -->
 
 						{#if element.type === 'line'}
 							<line
 								x1={2}
-								y1={legendData.fontSize / 2 + yOffset}
+								y1={legendData.fontSize / 2}
 								x2={18}
-								y2={legendData.fontSize / 2 + yOffset}
+								y2={legendData.fontSize / 2}
 								stroke={element.color}
-								stroke-width={Math.min(element.strokeWidth, 3)}
+								stroke-width={element.strokeWidth}
 								stroke-dasharray={element.stroke}
 							/>
 							<!-- Show smoother if present -->
 							{#if element.smoother}
 								<line
 									x1={2}
-									y1={legendData.fontSize / 2 + yOffset}
+									y1={legendData.fontSize / 2}
 									x2={18}
-									y2={legendData.fontSize / 2 + yOffset}
+									y2={legendData.fontSize / 2}
 									stroke={element.smoother.color}
-									stroke-width={Math.min(element.smoother.strokeWidth, 2)}
+									stroke-width={element.smoother.strokeWidth}
 									stroke-dasharray={element.smoother.stroke}
 								/>
 							{/if}
 						{:else if element.type === 'points'}
-							<circle
-								cx={10}
-								cy={legendData.fontSize / 2 + yOffset - Math.min(element.size, 4) / 2}
-								r={Math.min(element.size, 4)}
-								fill={element.color}
-							/>
+							<circle cx={10} cy={legendData.fontSize / 2} r={element.size} fill={element.color} />
 						{/if}
 					{/each}
 
