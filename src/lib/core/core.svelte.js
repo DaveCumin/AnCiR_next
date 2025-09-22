@@ -110,13 +110,13 @@ export function pushObj(obj, autoPosition = true) {
 			obj.y = pos.y + container.offsetTop;
 		}
 		//now do sizing
-		if (obj.type === 'scatterplot') {
+		if (obj.type === 'scatterplot' && (!obj.width || !obj.height)) {
 			obj.width = snapToGrid(500);
 			obj.height = snapToGrid(300);
-		} else if (obj.type === 'periodogram') {
+		} else if (obj.type === 'periodogram' && (!obj.width || !obj.height)) {
 			obj.width = snapToGrid(400);
 			obj.height = snapToGrid(250);
-		} else if (obj.type === 'actogram') {
+		} else if (obj.type === 'actogram' && (!obj.width || !obj.height)) {
 			obj.width = snapToGrid(500);
 			obj.height = snapToGrid(600);
 		}

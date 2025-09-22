@@ -65,6 +65,7 @@
 
 		constructor(plotData = {}, id = null) {
 			console.log('new plot: ', plotData);
+			console.log('plotdata.width: ', plotData.width);
 			if (id === null) {
 				this.id = getNextId();
 			} else {
