@@ -271,7 +271,7 @@
 	<div class="clps-container">
 		<details class="clps-item" bind:open={openClps[col.id]}>
 			<summary class="clps-title-container">
-				<div class="column-indicator"></div>
+				<!-- <div class="column-indicator"></div> -->
 
 				<div
 					class="clps-title"
@@ -354,7 +354,7 @@
 						{#key p.id}
 							<!-- Force the refresh when a process is added or removed (mostly the latter)-->
 							<div class="single-process-container">
-								<div class="column-indicator"></div>
+								<!-- <div class="column-indicator"></div> -->
 								<Processcomponent {p} />
 							</div>
 						{/key}

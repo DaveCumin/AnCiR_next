@@ -14,6 +14,7 @@
 		parentPlot = $state();
 		x = $state();
 		y = $state();
+		label = $state('test');
 		line = $state();
 		points = $state();
 
@@ -35,14 +36,60 @@
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
+			if (dataIN?.label) {
+				this.label = dataIN.label;
+			} else {
+				this.label = 'Data ' + (parent.data.length + 1);
+			}
 			this.line = new LineClass(dataIN?.line, this);
 			this.points = new PointsClass(dataIN?.points, this);
+		}
+
+		getLegendItem() {
+			// Return a single legend item that represents this data series
+			const item = {
+				label: this.label,
+				elements: []
+			};
+
+			// Add line representation if line is visible
+			if (this.line.draw) {
+				item.elements.push({
+					type: 'line',
+					color: this.line.colour,
+					strokeWidth: this.line.strokeWidth,
+					stroke: this.line.stroke,
+					smoother: this.line.showSmoother
+						? {
+								color: this.line.smootherColour,
+								strokeWidth: this.line.smootherStrokeWidth,
+								stroke: this.line.smootherStroke
+							}
+						: null
+				});
+			}
+
+			// Add points representation if points are visible
+			if (this.points.draw) {
+				item.elements.push({
+					type: 'points',
+					color: this.points.colour,
+					size: this.points.radius,
+					shape: this.points.shape
+				});
+			}
+
+			// If neither line nor points are visible, don't show in legend
+			if (item.elements.length === 0) return null;
+			console.log(item);
+			return item;
 		}
 
 		toJSON() {
 			return {
 				x: this.x,
 				y: this.y,
+				label: this.label,
 				line: this.line.toJSON(),
 				points: this.points.toJSON()
 			};
@@ -52,6 +99,7 @@
 			return new ScatterDataclass(parent, {
 				x: json.x,
 				y: json.y,
+				label: json.label,
 				line: LineClass.fromJSON(json.line),
 				points: PointsClass.fromJSON(json.points)
 			});
@@ -61,6 +109,7 @@
 	export class Scatterplotclass {
 		parentBox = $state();
 		data = $state([]);
+		legend = $state();
 
 		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
 		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
@@ -119,6 +168,7 @@
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
+			this.legend = new LegendClass(dataIN?.legend);
 			if (dataIN) {
 				this.addData(dataIN);
 			}
@@ -247,6 +297,19 @@
 			this.data.splice(idx, 1);
 		}
 
+		// Collect all legend items
+		getLegendItems = $derived.by(() => {
+			const items = [];
+			this.data.forEach((datum) => {
+				const legendItem = datum.getLegendItem();
+				if (legendItem) {
+					// Only add if the data series has visible elements
+					items.push(legendItem);
+				}
+			});
+			return items;
+		});
+
 		toJSON() {
 			return {
 				xlimsIN: this.xlimsIN,
@@ -254,7 +317,8 @@
 				padding: this.padding,
 				ygridlines: this.ygridlines,
 				xgridlines: this.xgridlines,
-				data: this.data
+				data: this.data,
+				legend: this.legend.toJSON()
 			};
 		}
 		static fromJSON(parent, json) {
@@ -273,6 +337,7 @@
 			if (json.data) {
 				scatter.data = json.data.map((d) => ScatterDataclass.fromJSON(d, scatter));
 			}
+			scatter.legend = LegendClass.fromJSON(json.legend);
 			return scatter;
 		}
 	}
@@ -286,6 +351,7 @@
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
 	import { tick } from 'svelte';
+	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 
 	let { theData, which } = $props();
 
@@ -333,6 +399,8 @@
 		</div>
 
 		<div class="div-line"></div>
+
+		<Legend legendData={theData.legend} which="controls" />
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -552,9 +620,15 @@
 					out:slide={{ duration: 500, axis: 'y' }}
 				>
 					<div class="control-component-title">
-						<p>
-							Data {i}
-						</p>
+						<p
+							contenteditable="false"
+							ondblclick={(e) => {
+								e.target.setAttribute('contenteditable', 'true');
+								e.target.focus();
+							}}
+							onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+							bind:innerHTML={datum.label}
+						></p>
 						<button class="icon" onclick={() => theData.removeData(i)}
 							><Icon
 								name="minus"
@@ -711,6 +785,14 @@
 				/>
 			{/if}
 		{/each}
+		<Legend
+			legendData={theData.plot.legend}
+			items={theData.plot.getLegendItems}
+			plotWidth={theData.plot.plotwidth}
+			plotHeight={theData.plot.plotheight}
+			padding={theData.plot.padding}
+			which="plot"
+		/>
 	</svg>
 	{#if tooltip.visible}
 		<div class="tooltip" style={`left: ${tooltip.x}px; top: ${tooltip.y}px;`}>

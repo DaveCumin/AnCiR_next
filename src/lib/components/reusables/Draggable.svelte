@@ -433,10 +433,10 @@
 				}}
 			>
 				<Icon
-					name="menu-horizontal-dots plot-options-button"
+					name="menu-horizontal-dots"
 					width={20}
 					height={20}
-					className="menu-icon"
+					className="menu-icon plot-options-button"
 				/>
 			</button>
 			<button class="icon" onclick={() => removePlots(id)}>
