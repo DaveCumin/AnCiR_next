@@ -504,6 +504,11 @@
 		background-color: var(--color-button-cancel);
 	}
 
+	:global(button.dialog-button-close:hover) {
+		background-color: var(--color-button-close);
+		color: white;
+	}
+
 	/* space filler */
 	:global(.div-line) {
 		height: 1px;

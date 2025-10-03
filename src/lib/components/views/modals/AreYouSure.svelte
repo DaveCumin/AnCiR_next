@@ -19,9 +19,9 @@
 		>
 			{#each options as option}
 				<button
-					class="dialog-button dialog-button-cancel"
+					class="dialog-button"
 					class:dialog-button-cancel={option === 'Cancel'}
-					class:dialog-button-confirm={option === 'Remove'}
+					class:dialog-button-close={option === 'Remove'}
 					style="width: 6rem;"
 					onclick={() => {
 						if (callback) callback(option);
@@ -52,8 +52,12 @@
 		font-weight: bold;
 		font-size: 1rem;
 		transition: background 0.15s;
+
+		display: flex;
+		justify-content: center;
+		align-items: center;
 	}
-	.dialog-button:hover {
+	/* .dialog-button:hover {
 		background: var(--color-lightness-90);
-	}
+	} */
 </style>
