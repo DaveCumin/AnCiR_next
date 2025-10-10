@@ -143,13 +143,19 @@
 
 			let xmin = Infinity;
 			let xmax = -Infinity;
+
 			this.data.forEach((d, i) => {
+				if (this.anyXdataTime && this.data[i].x.type !== 'time') {
+					//skip time data here
+					return;
+				}
 				let tempx = this.data[i].x.getData() ?? [];
 
 				tempx = tempx.map((x) => Number(x)); // Ensure all values are numbers
 				xmin = Math.floor(min([xmin, ...tempx]));
 				xmax = Math.ceil(max([xmax, ...tempx]));
 			});
+
 			return [
 				this.xlimsIN[0] != null ? this.xlimsIN[0] : xmin,
 				this.xlimsIN[1] != null ? this.xlimsIN[1] : xmax
@@ -747,9 +753,13 @@
 
 		{#each theData.plot.data as datum}
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
+				{@const xDATA =
+					theData.plot.anyXdataTime && datum.x.type !== 'time'
+						? datum.x.getData().map((d) => theData.plot.xlims[0] + d * 3600000)
+						: datum.x.getData()}
 				<Line
 					lineData={datum.line}
-					x={datum.x.getData()}
+					x={xDATA}
 					y={datum.y.getData()}
 					xscale={theData.plot.anyXdataTime
 						? scaleTime()

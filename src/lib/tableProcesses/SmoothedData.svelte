@@ -489,8 +489,8 @@ y = <ColumnSelector
 		<div class="control-input">
 			<p>Bandwidth</p>
 			<NumberWithUnits
-				step="0.1"
-				min={0.1}
+				step="0.01"
+				min={0.01}
 				max={1.0}
 				bind:value={p.args.loessBandwidth}
 				onInput={() => getSmoothedData()}
