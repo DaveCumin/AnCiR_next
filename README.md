@@ -2,7 +2,7 @@
 
 This is our 'AnCiR' to the need for a simple-to-use (GUI; no coding) tool for analysis of circadian rhythms.
 
-This version is written in [Svelte](https://svelte.dev/) by [DaveCumin](https://github.com/davecumin) and [yz-329](https://github.com/yz-329). There have been two previous versions (see [here](https://github.com/DaveCumin/ancir_svelte) and [here](https://github.com/DaveCumin/AnCiR)).
+This version is written in [Svelte](https://svelte.dev/) by [DaveCumin](https://github.com/davecumin) and [yz-329](https://github.com/yz-329).
 
 This version was financially supported by a University of Auckland Teaching and Learning Development and Innovation Grant (2024).
 
