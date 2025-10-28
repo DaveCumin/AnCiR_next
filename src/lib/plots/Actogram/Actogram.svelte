@@ -15,6 +15,7 @@
 	import { makeSeqArray, max, min } from '$lib/components/plotBits/helpers/wrangleData';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 
 	import Icon from '$lib/icons/Icon.svelte';
 
@@ -425,8 +426,16 @@
 
 		const yscale = scaleLinear().domain([0, 100]).range([theData.plot.eachplotheight, 0]);
 
-		return `day
-			${Math.floor((y - allTopPadding) / (theData.plot.eachplotheight + theData.plot.spaceBetween))}, hour ${xscale.invert(x - theData.plot.padding.left).toFixed(2)}`;
+		const unixTime =
+			theData.plot.startTime +
+			3600000 *
+				24 *
+				Math.floor(
+					(y - allTopPadding) / (theData.plot.eachplotheight + theData.plot.spaceBetween)
+				) +
+			3600000 * xscale.invert(x - theData.plot.padding.left);
+
+		return `${formatTimeFromUNIX(unixTime)}`;
 	}
 
 	function handleClick(e) {

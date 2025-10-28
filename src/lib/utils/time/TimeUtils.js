@@ -152,6 +152,11 @@ export function forceFormat(dataIN, formatIN) {
 	return dataout;
 }
 
+export function formatTimeFromUNIX(timeUNIX) {
+	const dt = DateTime.fromMillis(timeUNIX);
+	return formatTimeFromISO(dt.toUTC().toISO());
+}
+
 export function formatTimeFromISO(timeString) {
 	if (timeString) {
 		const [datePart, timePart] = timeString.split('T');
