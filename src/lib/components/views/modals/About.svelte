@@ -63,13 +63,13 @@
 		</p>
 
 		<p>
-			This version is written in <a href="https://svelte.dev/">Svelte</a> by
+			This version was financially supported by a University of Auckland Teaching and Learning
+			Development and Innovation Grant (2024) and is written in <a href="https://svelte.dev/"
+				>Svelte</a
+			>
+			by
 			<a href="https://github.com/davecumin">DaveCumin</a>
 			and <a href="https://github.com/yz-329">yz-329</a>.
-		</p>
-		<p>
-			This version was financially supported by a University of Auckland Teaching and Learning
-			Development and Innovation Grant (2024).
 		</p>
 		<p>
 			<strong
