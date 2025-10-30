@@ -92,15 +92,16 @@
 	});
 
 	function handleHover(e) {
+		const dp = 3;
 		if (!tooltip) return;
 		const mouseX = e.offsetX;
 		const mouseY = e.offsetY;
 		const closest = qt.find(mouseX, mouseY, pointsData.radius * 2);
 
 		if (closest) {
-			let content = `(${closest.x.toFixed(2)}, ${closest.y.toFixed(2)})`;
+			let content = `(${closest.x.toFixed(dp)}, ${closest.y.toFixed(dp)})`;
 			if (xtype == 'time') {
-				content = `(${new Date(closest.x).toLocaleString()}, ${closest.y.toFixed(2)})`;
+				content = `(${new Date(closest.x).toLocaleString()}, ${closest.y.toFixed(dp)})`;
 			}
 
 			//make sure the tooltip stays 'in bounds'
