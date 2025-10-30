@@ -342,7 +342,7 @@
 
 		core.plots = [];
 		//Scatter plot
-		pushObj(new Plot({ name: 'testscatter', type: 'scatterplot' }));
+		pushObj(new Plot({ name: 'A Scatterplot', type: 'scatterplot' }));
 		core.plots[0].plot.addData({
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
@@ -355,7 +355,7 @@
 		core.plots[core.plots.length - 1].y = 15;
 
 		// //Actogram
-		pushObj(new Plot({ name: 'an actogram', type: 'actogram' }));
+		pushObj(new Plot({ name: 'An Actogram', type: 'actogram' }));
 		core.plots[core.plots.length - 1].height = snapToGrid(700);
 		core.plots[core.plots.length - 1].plot.addData({
 			x: { refId: core.data[0].id },
@@ -366,10 +366,11 @@
 			y: { refId: core.data[core.data.length - 1].id }
 		});
 		core.plots[core.plots.length - 1].plot.data[1].colour = '#bf796b91';
-		core.plots[core.plots.length - 1].x = 15;
-		core.plots[core.plots.length - 1].y = 375;
+		core.plots[core.plots.length - 1].x = snapToGrid(15);
+		core.plots[core.plots.length - 1].y = snapToGrid(335);
+
 		//Periodogram
-		pushObj(new Plot({ name: 'a periodogram', type: 'periodogram' }));
+		pushObj(new Plot({ name: 'A Periodogram', type: 'periodogram' }));
 		core.plots[core.plots.length - 1].plot.addData({
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
@@ -378,13 +379,14 @@
 			x: { refId: core.data[core.data.length - 2].id },
 			y: { refId: core.data[core.data.length - 1].id }
 		});
-		core.plots[core.plots.length - 1].x = 540;
-		core.plots[core.plots.length - 1].y = 15;
-		core.plots[core.plots.length - 1].width = 510;
+		core.plots[core.plots.length - 1].x = snapToGrid(555);
+		core.plots[core.plots.length - 1].y = snapToGrid(15);
+		core.plots[core.plots.length - 1].width = snapToGrid(510);
+
 		//Table
 		core.plots.push(new Plot({ name: 'a table', type: 'tableplot' }));
-		core.plots[core.plots.length - 1].x = 540;
-		core.plots[core.plots.length - 1].y = 330;
+		core.plots[core.plots.length - 1].x = snapToGrid(555);
+		core.plots[core.plots.length - 1].y = snapToGrid(330);
 		core.plots[core.plots.length - 1].plot.columnRefs = [
 			core.data[0].id,
 			core.data[1].id,
@@ -393,7 +395,33 @@
 		];
 		core.plots[core.plots.length - 1].plot.showCol = [true, true, true, true];
 
-		// console.log('ALL SET UP: ', $state.snapshot(core));
+		//Correlogram
+		pushObj(new Plot({ name: 'An Autocorrelogram', type: 'correlogram' }));
+		core.plots[core.plots.length - 1].plot.addData({
+			x: { refId: core.data[0].id },
+			y: { refId: core.data[1].id }
+		});
+		core.plots[core.plots.length - 1].plot.addData({
+			x: { refId: core.data[core.data.length - 2].id },
+			y: { refId: core.data[core.data.length - 1].id }
+		});
+		core.plots[core.plots.length - 1].x = snapToGrid(555);
+		core.plots[core.plots.length - 1].y = snapToGrid(645);
+		core.plots[core.plots.length - 1].width = snapToGrid(510);
+
+		// FFT
+		pushObj(new Plot({ name: 'A Fourier Analysis', type: 'fft' }));
+		core.plots[core.plots.length - 1].plot.addData({
+			x: { refId: core.data[0].id },
+			y: { refId: core.data[1].id }
+		});
+		core.plots[core.plots.length - 1].plot.addData({
+			x: { refId: core.data[core.data.length - 2].id },
+			y: { refId: core.data[core.data.length - 1].id }
+		});
+		core.plots[core.plots.length - 1].x = snapToGrid(555);
+		core.plots[core.plots.length - 1].y = snapToGrid(960);
+		core.plots[core.plots.length - 1].width = snapToGrid(510);
 	}
 
 	// TODO: Key Handling accessibility, e.g. ctrl+i == import

@@ -64,6 +64,76 @@
 		return powers;
 	}
 
+	// Enright periodogram implementation
+	function calculateEnrightPower(times, values, periods, binSize) {
+		if (!times || !values || times.length < 2 || values.length < 2) {
+			return new Array(periods.length).fill(0);
+		}
+
+		// Remove NaN values and bin the data
+		const binnedData = binData(times, values, binSize, 0);
+		if (binnedData.bins.length === 0) {
+			return new Array(periods.length).fill(0);
+		}
+
+		const data = binnedData.y_out;
+		const n = data.length;
+
+		// Calculate mean
+		const dataMean = mean(data.filter((v) => !isNaN(v)));
+
+		// Center the data
+		const centeredData = data.map((v) => (isNaN(v) ? 0 : v - dataMean));
+
+		const powers = periods.map((period) => {
+			const binsPerPeriod = Math.round(period / binSize);
+			if (binsPerPeriod < 1 || binsPerPeriod > n) return 0;
+
+			// Calculate Qp statistic (sum of correlations at lag multiples of period)
+			let qp = 0;
+			let count = 0;
+
+			// For each possible lag that's a multiple of the period
+			for (let k = 1; k * binsPerPeriod < n; k++) {
+				const lag = k * binsPerPeriod;
+
+				// Calculate correlation at this lag
+				let correlation = 0;
+				let validPairs = 0;
+
+				for (let i = 0; i < n - lag; i++) {
+					if (!isNaN(centeredData[i]) && !isNaN(centeredData[i + lag])) {
+						correlation += centeredData[i] * centeredData[i + lag];
+						validPairs++;
+					}
+				}
+
+				if (validPairs > 0) {
+					qp += correlation / validPairs;
+					count++;
+				}
+			}
+
+			// Normalize by number of lags
+			if (count > 0) {
+				qp /= count;
+			}
+
+			// Calculate variance for normalization
+			const variance =
+				centeredData.reduce((sum, val) => {
+					return sum + (isNaN(val) ? 0 : val * val);
+				}, 0) / n;
+
+			// Return normalized power
+			return variance > 0 ? qp / variance : 0;
+		});
+
+		console.log(powers);
+		return powers;
+	}
+
+	//Chi Squared periodogram implementation
 	function calculateChiSquaredPower(data, binSize, period, avgAll, denominator) {
 		const colNum = Math.round(period / binSize);
 		if (colNum < 1) return 0;
@@ -148,6 +218,14 @@
 				const times = this.x.hoursSinceStart;
 				const values = this.y.getData();
 				const powers = calculateLombScarglePower(times, values, frequencies);
+
+				for (let p = 0; p < periods.length; p++) {
+					power[p] = powers[p];
+				}
+			} else if (this.method === 'Enright') {
+				const times = this.x.hoursSinceStart;
+				const values = this.y.getData();
+				const powers = calculateEnrightPower(times, values, periods, this.binSize);
 
 				for (let p = 0; p < periods.length; p++) {
 					power[p] = powers[p];
@@ -741,8 +819,9 @@
 						<div class="control-input">
 							<p>Method</p>
 							<select bind:value={datum.method}>
-								<option value="Chi-squared">Chi-squared</option>
 								<option value="Lomb-Scargle">Lomb-Scargle</option>
+								<option value="Chi-squared">Chi-squared</option>
+								<option value="Enright">Enright</option>
 							</select>
 						</div>
 
