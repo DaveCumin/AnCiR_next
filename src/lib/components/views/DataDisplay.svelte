@@ -114,7 +114,7 @@
 					<div class="second-clps">
 						<TableProcess {p} />
 					</div>
-					<hr />
+					<br />
 				{/each}
 
 				{#each table.columns as col (col.id)}

@@ -97,47 +97,81 @@
 	});
 </script>
 
-Bin: <br />
-x = <ColumnSelector bind:value={p.args.xIN} onChange={(e) => getBinnedData()} /> <br />
-y = <ColumnSelector
-	bind:value={p.args.yIN}
-	excludeColIds={[p.xIN]}
-	onChange={(e) => getBinnedData()}
-/><br />
+<div class="tableProcess-container">
+	<!-- Input Section -->
+	<div class="section-row">
+		<div class="tableProcess-label">
+			<span>Input</span>
+		</div>
 
-<div class="control-input-horizontal">
-	<div class="control-input">
-		<p>Bin size</p>
-		<NumberWithUnits
-			bind:value={p.args.binSize}
-			onInput={() => getBinnedData()}
-			min="0.1"
-			step="0.01"
-		/>
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>X column</p>
+				<ColumnSelector bind:value={p.args.xIN} onChange={(e) => getBinnedData()} />
+			</div>
+
+			<div class="control-input">
+				<p>Y column</p>
+
+				<ColumnSelector
+					bind:value={p.args.yIN}
+					excludeColIds={[p.xIN]}
+					onChange={(e) => getBinnedData()}
+				/>
+			</div>
+		</div>
 	</div>
 
-	<div class="control-input">
-		<p>Bin start</p>
-		<NumberWithUnits bind:value={p.args.binStart} onInput={() => getBinnedData()} />
+	<!-- Process Section -->
+	<div class="section-row">
+		<div class="tableProcess-label">
+			<span>Bin parameters</span>
+		</div>
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>Bin size</p>
+				<NumberWithUnits
+					bind:value={p.args.binSize}
+					onInput={() => getBinnedData()}
+					min="0.1"
+					step="0.01"
+				/>
+			</div>
+
+			<div class="control-input">
+				<p>Bin start</p>
+				<NumberWithUnits bind:value={p.args.binStart} onInput={() => getBinnedData()} />
+			</div>
+		</div>
+	</div>
+
+	<!-- Output Section -->
+	<div class="section-row">
+		<div class="tableProcess-label">
+			<span>Output</span>
+		</div>
+		<div class="section-content">
+			{#key binnedData}
+				{#if p.args.valid && p.args.out.binnedx != -1 && p.args.out.binnedy != -1}
+					{@const xout = getColumnById(p.args.out.binnedx)}
+					<ColumnComponent col={xout} />
+					{@const yout = getColumnById(p.args.out.binnedy)}
+					<ColumnComponent col={yout} />
+				{:else if p.args.valid}
+					<p>Preview:</p>
+					<div style="height:250px; overflow:auto;">
+						<Table
+							headers={['binned x', 'binned y']}
+							data={[
+								binnedData.bins.map((x) => x.toFixed(2)),
+								binnedData.y_out.map((x) => x.toFixed(2))
+							]}
+						/>
+					</div>
+				{:else}
+					<p>Need to have valid inputs to create columns.</p>
+				{/if}
+			{/key}
+		</div>
 	</div>
 </div>
-
-<p>Output:</p>
-{#key binnedData}
-	{#if p.args.valid && p.args.out.binnedx != -1 && p.args.out.binnedy != -1}
-		{@const xout = getColumnById(p.args.out.binnedx)}
-		<ColumnComponent col={xout} />
-		{@const yout = getColumnById(p.args.out.binnedy)}
-		<ColumnComponent col={yout} />
-	{:else if p.args.valid}
-		<p>Preview:</p>
-		<div style="height:250px; overflow:auto;">
-			<Table
-				headers={['binned x', 'binned y']}
-				data={[binnedData.bins.map((x) => x.toFixed(2)), binnedData.y_out.map((x) => x.toFixed(2))]}
-			/>
-		</div>
-	{:else}
-		<p>Need to have valid inputs to create columns.</p>
-	{/if}
-{/key}

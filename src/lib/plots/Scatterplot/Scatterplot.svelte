@@ -42,6 +42,9 @@
 				this.label = 'Data ' + (parent.data.length + 1);
 			}
 			this.line = new LineClass(dataIN?.line, this);
+			if (!dataIN?.line) {
+				this.line.draw = false;
+			}
 			this.points = new PointsClass(dataIN?.points, this);
 		}
 
@@ -655,6 +658,8 @@
 							y: {datum.y.name}
 							<Column col={datum.y} canChange={true} />
 						</div>
+
+						<Points pointsData={datum.points} which="controls" />
 						<Line
 							lineData={datum.line}
 							x={datum.x.getData()}
@@ -671,7 +676,6 @@
 								.range([theData.plotheight, 0])}
 							which="controls"
 						/>
-						<Points pointsData={datum.points} which="controls" />
 					</div>
 					<div class="div-line"></div>
 				</div>
@@ -816,17 +820,3 @@
 {:else if which === 'controls'}
 	{@render controls(theData)}
 {/if}
-
-<style>
-	.tooltip {
-		position: absolute;
-		background-color: rgba(0, 0, 0, 0.7);
-		color: white;
-		padding: 0.5rem 0.8rem;
-		border-radius: 4px;
-		pointer-events: none;
-		font-size: 0.8rem;
-		z-index: 9999;
-		width: 100px;
-	}
-</style>

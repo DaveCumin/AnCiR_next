@@ -86,7 +86,7 @@
 	// );
 
 	//------------------------------------
-	const N = 1_000;
+	const N = 2_000;
 	//------------------------------------
 
 	onMount(async () => {
@@ -824,8 +824,12 @@
 	}
 
 	:global(.control-input-vertical) {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
 		width: 100%;
-
+		gap: 0.5rem;
 		margin-bottom: 0.5rem;
 	}
 
@@ -834,10 +838,8 @@
 		flex-direction: row;
 		align-items: center;
 		justify-content: center;
-
 		width: 100%;
 		gap: 0.5rem;
-
 		margin-bottom: 0.5rem;
 	}
 
@@ -1040,5 +1042,45 @@
 		background-color: var(--color-lightness-90);
 
 		border-radius: 4px;
+	}
+
+	:global(.tooltip) {
+		position: absolute;
+		background-color: rgba(0, 0, 0, 0.7);
+		color: white;
+		padding: 0.5rem 0.8rem;
+		border-radius: 4px;
+		pointer-events: none;
+		font-size: 0.8rem;
+		z-index: 9999;
+		width: 100px;
+	}
+
+	:global(.tableProcess-container) {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		border: 0.1rem solid var(--color-lightness-85);
+		padding-right: 0.25rem;
+	}
+
+	:global(.section-row) {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.25rem;
+		padding-left: 0.25rem;
+	}
+	:global(.tableProcess-label) {
+		display: flex;
+		align-items: center;
+		margin-bottom: 0rem;
+		margin-left: -0.25rem;
+		background: white;
+		padding: 0.25rem;
+	}
+
+	:global(.tableProcess-label span) {
+		color: #555;
 	}
 </style>

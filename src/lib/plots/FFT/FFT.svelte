@@ -82,7 +82,7 @@
 
 		// Calculate sampling rate (times are in hours)
 		const dt = t.length > 1 ? (t[t.length - 1] - t[0]) / (t.length - 1) : 1;
-		const samplingRate = 1 / dt; // Hz (cycles per hour)
+		const samplingRate = 1 / dt; // (cycles per hour)
 		const nyquistFreq = samplingRate / 2;
 		const minPeriod = 2 * dt; // hours
 
@@ -127,7 +127,7 @@
 		x = $state();
 		y = $state();
 		showPhase = $state(false);
-		freqStep = $state(null); // null = auto, otherwise custom step size in Hz
+		freqStep = $state(null); // null = auto, otherwise custom step size in cycles/hr
 
 		line = $state();
 		points = $state();
@@ -161,7 +161,7 @@
 			this.points = new PointsClass(dataIN?.points, this);
 			this.phasePoints = new PointsClass(dataIN?.phasePoints, this);
 			this.showPhase = dataIN?.showPhase ?? false;
-			this.freqStep = dataIN?.freqStep ?? null;
+			this.freqStep = dataIN?.freqStep ?? 0.001;
 		}
 
 		toJSON() {
@@ -724,14 +724,14 @@
 				</div>
 				<div class="control-input-checkbox">
 					<input type="checkbox" bind:checked={theData.showPeriod} />
-					<p>Show as Period (hrs)</p>
+					<p>Show as Period (hours)</p>
 				</div>
 			</div>
 
 			{#if theData.showPeriod}
 				<div class="control-input-horizontal">
 					<div class="control-input">
-						<p>Min (≥{theData.minPeriod.toFixed(2)} hrs)</p>
+						<p>Min ({theData.minPeriod.toFixed(2)})</p>
 						<NumberWithUnits
 							min={theData.minPeriod}
 							step="0.1"
@@ -778,7 +778,7 @@
 					</div>
 
 					<div class="control-input">
-						<p>Max (≤{theData.maxFrequency.toFixed(3)} Hz)</p>
+						<p>Max ({theData.maxFrequency.toFixed(3)})</p>
 						<NumberWithUnits
 							max={theData.maxFrequency}
 							step="0.01"
@@ -855,7 +855,7 @@
 						</div>
 
 						<div class="control-input">
-							<p>Frequency Step (Hz)</p>
+							<p>Frequency Step</p>
 							<div style="display: flex; align-items: center; gap: 8px;">
 								<NumberWithUnits
 									min="0.0001"
@@ -967,7 +967,7 @@
 				plotPadding={theData.plot.padding}
 				nticks={5}
 				gridlines={theData.plot.xgridlines}
-				label={theData.plot.showPeriod ? 'Period (hrs)' : 'Frequency (Hz)'}
+				label={theData.plot.showPeriod ? 'Period (hours)' : 'Frequency'}
 			/>
 
 			<!-- Plot data -->
@@ -1045,16 +1045,3 @@
 {:else if which === 'controls'}
 	{@render controls(theData)}
 {/if}
-
-<style>
-	.tooltip {
-		position: absolute;
-		background-color: rgba(0, 0, 0, 0.7);
-		color: white;
-		padding: 0.5rem 0.8rem;
-		border-radius: 4px;
-		pointer-events: none;
-		font-size: 0.8rem;
-		z-index: 9999;
-	}
-</style>

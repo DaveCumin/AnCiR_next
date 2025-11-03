@@ -846,14 +846,6 @@
 
 <style>
 	.tooltip {
-		position: absolute;
-		background-color: rgba(0, 0, 0, 0.7);
-		color: white;
-		padding: 0.5rem 0.8rem;
-		border-radius: 4px;
-		pointer-events: none;
-		font-size: 0.8rem;
-		z-index: 9999;
 		width: 100px;
 	}
 </style>
