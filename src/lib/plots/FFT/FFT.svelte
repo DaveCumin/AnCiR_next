@@ -199,58 +199,67 @@
 		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
 
 		showPeriod = $state(false); // Toggle between frequency and period
-		freqlimsIN = $state([null, null]);
-		periodlimsIN = $state([null, null]);
+		xlimsIN = $state([null, null]);
 
 		// Get max frequency and min period from data
+		nyquistFreqs = $derived.by(() => this.data.map((d) => d.fftData.nyquistFreq || 0));
+		validFreqs = $derived.by(() =>
+			this.data.flatMap((d) => d.fftData.frequencies.filter((f) => f > 0))
+		);
+
 		maxFrequency = $derived.by(() => {
-			let maxFreq = 1;
-			this.data.forEach((d) => {
-				if (d.fftData.nyquistFreq > 0) {
-					maxFreq = Math.max(maxFreq, d.fftData.nyquistFreq);
-				}
-			});
-			return maxFreq;
+			if (this.data.length === 0) return 1; // sane default for empty plot
+			return Math.max(...this.nyquistFreqs);
 		});
 
 		minPeriod = $derived.by(() => {
-			let minPer = 0.1;
-			this.data.forEach((d) => {
-				if (d.fftData.minPeriod > 0) {
-					minPer = Math.max(minPer, d.fftData.minPeriod);
-				}
-			});
-			return minPer;
+			if (this.data.length === 0) return 0.1;
+			return Math.max(...this.data.map((d) => d.fftData.minPeriod || 0.1));
 		});
 
-		freqlims = $derived.by(() => {
-			if (this.data.length === 0) return [0, 1];
+		xlims = $derived.by(() => {
+			const showPeriod = this.showPeriod;
 
-			let fmin = 0;
-			let fmax = 0;
+			const data = this.data;
+			const validFreqs = this.validFreqs;
+			const minPeriod = this.minPeriod;
+			const maxFrequency = this.maxFrequency;
 
-			this.data.forEach((d) => {
-				if (d.fftData.frequencies.length > 0) {
-					fmax = Math.max(fmax, d.fftData.nyquistFreq || Math.max(...d.fftData.frequencies));
+			console.log('showPeriod:', $state.snapshot(this.showPeriod));
+			console.log('xlimsIN:', $state.snapshot(this.xlimsIN));
+
+			if (data.length === 0) {
+				return showPeriod ? [0.1, 100] : [0, 1];
+			}
+
+			let defMin, defMax;
+
+			if (showPeriod) {
+				const freqs = validFreqs;
+				if (freqs.length === 0) {
+					defMin = minPeriod;
+					defMax = 100;
+				} else {
+					const minF = Math.min(...freqs);
+					const maxF = Math.max(...freqs);
+					defMin = Math.max(1 / maxF, minPeriod);
+					defMax = 1 / minF;
 				}
-			});
+			} else {
+				defMin = 0;
+				defMax = maxFrequency;
+			}
+
+			const [userMin, userMax] = this.xlimsIN;
 
 			return [
-				this.freqlimsIN[0] != null ? this.freqlimsIN[0] : fmin,
-				this.freqlimsIN[1] != null ? Math.min(this.freqlimsIN[1], this.maxFrequency) : fmax
-			];
-		});
+				userMin != null
+					? showPeriod
+						? Math.max(userMin, minPeriod)
+						: Math.max(userMin, 0)
+					: defMin,
 
-		periodlims = $derived.by(() => {
-			if (this.data.length === 0) return [1, 100];
-
-			// Convert from frequency limits
-			const minPer = this.freqlims[1] > 0 ? 1 / this.freqlims[1] : this.minPeriod;
-			const maxPer = this.freqlims[0] > 0 ? 1 / this.freqlims[0] : 1000;
-
-			return [
-				this.periodlimsIN[0] != null ? Math.max(this.periodlimsIN[0], this.minPeriod) : minPer,
-				this.periodlimsIN[1] != null ? this.periodlimsIN[1] : maxPer
+				userMax != null ? (showPeriod ? userMax : Math.min(userMax, maxFrequency)) : defMax
 			];
 		});
 
@@ -416,10 +425,8 @@
 
 		toJSON() {
 			return {
-				freqlimsIN: this.freqlimsIN,
-				periodlimsIN: this.periodlimsIN,
+				xlimsIN: this.xlimsIN,
 				ylimsIN: this.ylimsIN,
-				phaseYlimsIN: this.phaseYlimsIN,
 				padding: this.padding,
 				ygridlines: this.ygridlines,
 				xgridlines: this.xgridlines,
@@ -437,9 +444,8 @@
 			const fft = new FFTclass(parent, null);
 			fft.padding = json.padding ?? json.paddingIN;
 			fft.freqlimsIN = json.freqlimsIN;
-			fft.periodlimsIN = json.periodlimsIN || [null, null];
+			fft.xlimsIN = json.xlimsIN || [null, null];
 			fft.ylimsIN = json.ylimsIN;
-			fft.phaseYlimsIN = json.phaseYlimsIN || [null, null];
 			fft.ygridlines = json.ygridlines;
 			fft.xgridlines = json.xgridlines;
 			fft.logScale = json.logScale ?? false;
@@ -705,13 +711,7 @@
 			<div class="control-component-title">
 				<p>X-Axis</p>
 				<div class="control-component-title-icons">
-					<button
-						class="icon"
-						onclick={() => {
-							theData.freqlimsIN = [null, null];
-							theData.periodlimsIN = [null, null];
-						}}
-					>
+					<button class="icon" onclick={() => (theData.xlimsIN = [null, null])}>
 						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
 					</button>
 				</div>
@@ -728,70 +728,57 @@
 				</div>
 			</div>
 
-			{#if theData.showPeriod}
-				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>Min ({theData.minPeriod.toFixed(2)})</p>
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>
+						Min {#if theData.showPeriod}
+							( {theData.minPeriod.toFixed(3)}){/if}
+					</p>
+					{#if theData.showPeriod}
 						<NumberWithUnits
 							min={theData.minPeriod}
 							step="0.1"
-							value={theData.periodlimsIN[0] != null
-								? theData.periodlimsIN[0]
-								: theData.periodlims[0]}
+							value={theData.xlimsIN[0]}
 							onInput={(val) => {
-								const period = Math.max(parseFloat(val), theData.minPeriod);
-								theData.periodlimsIN[0] = period;
-								theData.freqlimsIN[1] = 1 / period;
+								theData.xlimsIN[0] = parseFloat(val);
 							}}
 						/>
-					</div>
+					{:else}
+						<NumberWithUnits
+							min={0}
+							step="0.01"
+							value={theData.xlimsIN[0]}
+							onInput={(val) => {
+								theData.xlimsIN[0] = parseFloat(val);
+							}}
+						/>
+					{/if}
+				</div>
 
-					<div class="control-input">
-						<p>Max</p>
+				<div class="control-input">
+					<p>
+						Max {#if !theData.showPeriod}({theData.maxFrequency.toFixed(3)}){/if}
+					</p>
+					{#if theData.showPeriod}
 						<NumberWithUnits
 							step="1"
-							value={theData.periodlimsIN[1] != null
-								? theData.periodlimsIN[1]
-								: theData.periodlims[1]}
+							value={theData.xlimsIN[1]}
 							onInput={(val) => {
-								const period = parseFloat(val);
-								theData.periodlimsIN[1] = period;
-								theData.freqlimsIN[0] = period > 0 ? 1 / period : 0;
+								theData.xlimsIN[1] = parseFloat(val);
 							}}
 						/>
-					</div>
-				</div>
-			{:else}
-				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>Min</p>
-						<NumberWithUnits
-							min="0"
-							step="0.01"
-							value={theData.freqlimsIN[0] != null ? theData.freqlimsIN[0] : theData.freqlims[0]}
-							onInput={(val) => {
-								const freq = parseFloat(val);
-								theData.freqlimsIN[0] = freq;
-								theData.periodlimsIN[1] = freq > 0 ? 1 / freq : null;
-							}}
-						/>
-					</div>
-
-					<div class="control-input">
-						<p>Max ({theData.maxFrequency.toFixed(3)})</p>
+					{:else}
 						<NumberWithUnits
 							max={theData.maxFrequency}
 							step="0.01"
-							value={theData.freqlimsIN[1] != null ? theData.freqlimsIN[1] : theData.freqlims[1]}
+							value={theData.xlimsIN[1]}
 							onInput={(val) => {
-								const freq = Math.min(parseFloat(val), theData.maxFrequency);
-								theData.freqlimsIN[1] = freq;
-								theData.periodlimsIN[0] = freq > 0 ? 1 / freq : null;
+								theData.xlimsIN[1] = parseFloat(val);
 							}}
 						/>
-					</div>
+					{/if}
 				</div>
-			{/if}
+			</div>
 		</div>
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
@@ -835,6 +822,7 @@
 							<div class="control-data-title">
 								<strong>y (values)</strong>
 								<p
+									style="cursor: default;"
 									contenteditable="false"
 									ondblclick={(e) => {
 										e.target.setAttribute('contenteditable', 'true');
@@ -924,14 +912,9 @@
 				.domain([theData.plot.phaseYlims[0], theData.plot.phaseYlims[1]])
 				.range([theData.plot.plotheight, 0])}
 
-			{@const xScale = theData.plot.showPeriod
-				? scaleLinear()
-						.domain([theData.plot.periodlims[0], theData.plot.periodlims[1]])
-						.range([0, theData.plot.plotwidth])
-				: scaleLinear()
-						.domain([theData.plot.freqlims[0], theData.plot.freqlims[1]])
-						.range([0, theData.plot.plotwidth])}
-
+			{@const xScale = scaleLinear()
+				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+				.range([0, theData.plot.plotwidth])}
 			<!-- Y Axis (Magnitude) -->
 			<Axis
 				height={theData.plot.plotheight}

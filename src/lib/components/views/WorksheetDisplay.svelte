@@ -152,6 +152,7 @@
 							{/if}
 						</button>
 						<p
+							style="cursor: default;"
 							contenteditable="false"
 							ondblclick={(e) => {
 								e.target.setAttribute('contenteditable', 'true');

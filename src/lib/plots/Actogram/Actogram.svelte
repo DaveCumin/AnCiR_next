@@ -670,6 +670,7 @@
 							<div class="control-data-title">
 								<p>x:</p>
 								<p
+									style="cursor: default;"
 									contenteditable="false"
 									ondblclick={(e) => {
 										e.target.setAttribute('contenteditable', 'true');
@@ -687,6 +688,7 @@
 							<div class="control-data-title">
 								<p>y:</p>
 								<p
+									style="cursor: default;"
 									contenteditable="false"
 									ondblclick={(e) => {
 										e.target.setAttribute('contenteditable', 'true');

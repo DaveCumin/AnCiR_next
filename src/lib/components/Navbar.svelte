@@ -14,6 +14,12 @@
 	let dropdownLeft = $state(0);
 	let showAbout = $state(false);
 
+	//Tooltip
+	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
+	function handleTooltip(event) {
+		tooltip = event.detail;
+	}
+
 	function recalculateDropdownPosition() {
 		if (!gearBtnRef) return;
 		const rect = gearBtnRef.getBoundingClientRect();
@@ -40,27 +46,72 @@
 	}
 </script>
 
+{#if tooltip.visible}
+	<div class="tooltip" style={`left: ${tooltip.x}px; top: ${tooltip.y}px;`}>
+		{tooltip.content}
+	</div>
+{/if}
+
 <nav class="container" style="width: {appState.widthNavBar}px;">
 	<div class="icon-container">
-		<button onclick={() => switchTab('data')}>
+		<button
+			onclick={() => switchTab('data')}
+			onmouseenter={(e) =>
+				handleTooltip({
+					detail: { visible: true, x: e.clientX + 10, y: e.clientY + 10, content: 'Data View' }
+				})}
+			onmouseleave={(e) =>
+				handleTooltip({
+					detail: { visible: false, x: e.clientX + 10, y: e.clientY + 10, content: '' }
+				})}
+		>
 			<Icon name="table" className={appState.currentTab === 'data' ? 'icon active' : 'icon'} />
 			<!-- <TableIcon /> -->
 		</button>
 
-		<button onclick={() => switchTab('worksheet')}>
+		<button
+			onclick={() => switchTab('worksheet')}
+			onmouseenter={(e) =>
+				handleTooltip({
+					detail: { visible: true, x: e.clientX + 10, y: e.clientY + 10, content: 'Worksheet View' }
+				})}
+			onmouseleave={(e) =>
+				handleTooltip({
+					detail: { visible: false, x: e.clientX + 10, y: e.clientY + 10, content: '' }
+				})}
+		>
 			<Icon name="layer" className={appState.currentTab === 'worksheet' ? 'icon active' : 'icon'} />
 			<!-- <WorksheetIcon /> -->
 		</button>
 	</div>
 
 	<div class="icon-container">
-		<button bind:this={gearBtnRef} onclick={openDropdown}>
+		<button
+			bind:this={gearBtnRef}
+			onclick={openDropdown}
+			onmouseenter={(e) =>
+				handleTooltip({
+					detail: { visible: true, x: e.clientX + 10, y: e.clientY + 10, content: 'Settings' }
+				})}
+			onmouseleave={(e) =>
+				handleTooltip({
+					detail: { visible: false, x: e.clientX + 10, y: e.clientY + 10, content: '' }
+				})}
+		>
 			<Icon name="gear" />
 		</button>
 		<button
 			onclick={() => {
 				showAbout = true;
 			}}
+			onmouseenter={(e) =>
+				handleTooltip({
+					detail: { visible: true, x: e.clientX + 10, y: e.clientY + 10, content: 'About AnCiR' }
+				})}
+			onmouseleave={(e) =>
+				handleTooltip({
+					detail: { visible: false, x: e.clientX + 10, y: e.clientY + 10, content: '' }
+				})}
 		>
 			<Icon name="query" />
 		</button>

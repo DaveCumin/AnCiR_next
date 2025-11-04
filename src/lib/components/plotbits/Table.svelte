@@ -75,12 +75,13 @@
 			<tr>
 				{#each headers as header, index}
 					<th
-						style="width: {widths[index]}; position: relative;"
+						style="width: {widths[index]}; position: relative; cursor: default;"
 						contenteditable="false"
 						ondblclick={(e) => {
 							if (editable) {
 								oldVal = e.target.innerText;
 								e.target.setAttribute('contenteditable', 'true');
+
 								e.target.focus();
 								console.log(e.target);
 							}
@@ -100,6 +101,7 @@
 				<tr>
 					{#each data as col, c}
 						<td
+							style="cursor: default;"
 							contenteditable="false"
 							ondblclick={(e) => {
 								if (editable) {
