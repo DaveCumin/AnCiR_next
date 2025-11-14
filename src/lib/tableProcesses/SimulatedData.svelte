@@ -74,101 +74,114 @@
 	});
 </script>
 
-<div class="control-input">
-	<p>Start time</p>
-	<input type="datetime-local" bind:value={p.args.startTime} />
-</div>
-
-<div class="control-input">
-	<p>Duration</p>
-	<div style="display:flex;">
-		<NumberWithUnits
-			bind:value={p.args.N_hours}
-			min="0.1"
-			step="0.1"
-			max={1000 * 24}
-			units={{
-				default: 'hrs',
-				days: 24,
-				hrs: 1,
-				mins: 1 / 60,
-				secs: 1 / (60 * 60)
-			}}
-			onInput={doSimulated}
-			selectedUnitStart="days"
-		/>
-	</div>
-</div>
-
-<div class="control-input">
-	<p>Sampling period</p>
-	<div style="display:flex;">
-		<NumberWithUnits
-			bind:value={p.args.samplingPeriod_hours}
-			min="0.01"
-			step="0.01"
-			max={50}
-			units={{
-				default: 'hrs',
-				days: 24,
-				hrs: 1,
-				mins: 1 / 60,
-				secs: 1 / (60 * 60)
-			}}
-			onInput={doSimulated}
-			selectedUnitStart="mins"
-		/>
-	</div>
-</div>
-
-<div class="control-input">
-	<p>Rhythm period</p>
-	<div style="display:flex;">
-		<NumberWithUnits
-			bind:value={p.args.rhythmPeriod_hours}
-			min="0.1"
-			step="0.1"
-			max={50}
-			units={{
-				default: 'hrs',
-				days: 24,
-				hrs: 1,
-				mins: 1 / 60,
-				secs: 1 / (60 * 60)
-			}}
-			onInput={doSimulated}
-		/>
-	</div>
-</div>
-
-<div class="control-input">
-	<p>Rhythm amplitude</p>
-	<div style="display:flex;">
-		<NumberWithUnits
-			bind:value={p.args.rhythmAmplitude}
-			min="10"
-			max="1000"
-			step="1"
-			onInput={doSimulated}
-		/>
-	</div>
-</div>
-{#key simulatedValues}
-	{#if p.args.valid && p.args.out.time != -1 && p.args.out.values != -1}
-		{@const timeOut = getColumnById(p.args.out.time)}
-		<ColumnComponent col={timeOut} />
-		{@const yout = getColumnById(p.args.out.values)}
-		<ColumnComponent col={yout} />
-	{:else if p.args.valid}
-		<p>Preview:</p>
-		<p>N = {Math.floor(p.args.N_hours / p.args.samplingPeriod_hours)}</p>
-		<div style="height:250px; overflow:auto;">
-			<Table
-				headers={['Time', 'Data']}
-				data={[simulatedTime, simulatedValues.map((y) => y.toFixed(2))]}
-			/>
+<div class="tableProcess-container">
+	<div class="section-row">
+		<div class="tableProcess-label">
+			<span>Simulation settings</span>
 		</div>
-	{:else}
-		<p>Need to have valid inputs to create columns.</p>
-	{/if}
-{/key}
+
+		<div class="control-input">
+			<p>Start time</p>
+			<input type="datetime-local" bind:value={p.args.startTime} />
+		</div>
+
+		<div class="control-input">
+			<p>Duration</p>
+			<div style="display:flex;">
+				<NumberWithUnits
+					bind:value={p.args.N_hours}
+					min="0.1"
+					step="0.1"
+					max={1000 * 24}
+					units={{
+						default: 'hrs',
+						days: 24,
+						hrs: 1,
+						mins: 1 / 60,
+						secs: 1 / (60 * 60)
+					}}
+					onInput={doSimulated}
+					selectedUnitStart="days"
+				/>
+			</div>
+		</div>
+
+		<div class="control-input">
+			<p>Sampling period</p>
+			<div style="display:flex;">
+				<NumberWithUnits
+					bind:value={p.args.samplingPeriod_hours}
+					min="0.01"
+					step="0.01"
+					max={50}
+					units={{
+						default: 'hrs',
+						days: 24,
+						hrs: 1,
+						mins: 1 / 60,
+						secs: 1 / (60 * 60)
+					}}
+					onInput={doSimulated}
+					selectedUnitStart="mins"
+				/>
+			</div>
+		</div>
+
+		<div class="control-input">
+			<p>Rhythm period</p>
+			<div style="display:flex;">
+				<NumberWithUnits
+					bind:value={p.args.rhythmPeriod_hours}
+					min="0.1"
+					step="0.1"
+					max={50}
+					units={{
+						default: 'hrs',
+						days: 24,
+						hrs: 1,
+						mins: 1 / 60,
+						secs: 1 / (60 * 60)
+					}}
+					onInput={doSimulated}
+				/>
+			</div>
+		</div>
+
+		<div class="control-input">
+			<p>Rhythm amplitude</p>
+			<div style="display:flex;">
+				<NumberWithUnits
+					bind:value={p.args.rhythmAmplitude}
+					min="10"
+					max="1000"
+					step="1"
+					onInput={doSimulated}
+				/>
+			</div>
+		</div>
+	</div>
+	{#key simulatedValues}
+		{#if p.args.valid && p.args.out.time != -1 && p.args.out.values != -1}
+			<div class="section-row">
+				<div class="tableProcess-label">
+					<span>Output</span>
+				</div>
+			</div>
+			{@const timeOut = getColumnById(p.args.out.time)}
+			<ColumnComponent col={timeOut} />
+			{@const yout = getColumnById(p.args.out.values)}
+			<ColumnComponent col={yout} />
+		{:else if p.args.valid}
+			<p>Preview:</p>
+			<p>N = {Math.floor(p.args.N_hours / p.args.samplingPeriod_hours)}</p>
+			<div style="height:250px; overflow:auto;">
+				<Table
+					headers={['Time', 'Data']}
+					data={[simulatedTime, simulatedValues.map((y) => y.toFixed(2))]}
+				/>
+			</div>
+		{:else}
+			<p>Need to have valid inputs to create columns.</p>
+		{/if}
+	{/key}
+</div>

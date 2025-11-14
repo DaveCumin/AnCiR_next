@@ -19,6 +19,7 @@
 		if (argsIN.out.result == -1) {
 		} else {
 			getColumnById(argsIN.out.result).data = result;
+			getColumnById(argsIN.out.result).type = typeof result[0] != 'string' ? 'category' : 'number';
 			const processHash = crypto.randomUUID();
 			getColumnById(argsIN.out.result).tableProcessGUId = processHash;
 		}
@@ -70,33 +71,47 @@
 	});
 </script>
 
-<p>Average:</p>
-<ColumnSelector
-	bind:value={p.args.xsIN}
-	onChange={() => {
-		doAverageColumns();
-	}}
-	multiple={true}
-/>
-{#each p.args.xsIN as _, i}
-	<a>{getColumnById(p.args.xsIN[i]).name}</a>
-	<button
-		onclick={() => {
-			p.args.xsIN.splice(i, 1);
+<div class="tableProcess-container" style="display: block;">
+	<div class="section-row">
+		<div class="tableProcess-label">
+			<span>Average</span>
+		</div>
+	</div>
+	<div class="control-input">
+		<p>Columns</p>
+	</div>
+	<ColumnSelector
+		bind:value={p.args.xsIN}
+		onChange={() => {
 			doAverageColumns();
-		}}>-</button
-	>
-	{#if p.args.xsIN.length > 1 && i < p.args.xsIN.length - 1}
-		<a>,</a>
+		}}
+		multiple={true}
+	/>
+	{#each p.args.xsIN as _, i}
+		<a>{getColumnById(p.args.xsIN[i]).name}</a>
+		<button
+			onclick={() => {
+				p.args.xsIN.splice(i, 1);
+				doAverageColumns();
+			}}>-</button
+		>
+		{#if p.args.xsIN.length > 1 && i < p.args.xsIN.length - 1}
+			<a>,</a>
+		{/if}
+	{/each}
+
+	{#if p.args.valid && p.args.out.result == -1}
+		<p>Preview:</p>
+
+		<div style="height:250px; overflow:auto;"><Table headers={['Result']} data={[result]} /></div>
+	{:else if p.args.out.result > 0}
+		<div class="section-row">
+			<div class="tableProcess-label">
+				<span>Output</span>
+			</div>
+		</div>
+		<ColumnComponent col={getColumnById(p.args.out.result)} />
+	{:else}
+		<p>Need to have valid inputs to create columns.</p>
 	{/if}
-{/each}
-
-{#if p.args.valid && p.args.out.result == -1}
-	<p>Preview:</p>
-
-	<div style="height:250px; overflow:auto;"><Table headers={['Result']} data={[result]} /></div>
-{:else if p.args.out.result > 0}
-	<ColumnComponent col={getColumnById(p.args.out.result)} />
-{:else}
-	<p>Need to have valid inputs to create columns.</p>
-{/if}
+</div>

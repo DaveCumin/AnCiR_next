@@ -147,15 +147,15 @@
 
 	<!-- Output Section -->
 	<div class="section-row">
-		<div class="tableProcess-label">
-			<span>Output</span>
-		</div>
 		<div class="section-content">
 			{#key binnedData}
 				{#if p.args.valid && p.args.out.binnedx != -1 && p.args.out.binnedy != -1}
 					{@const xout = getColumnById(p.args.out.binnedx)}
-					<ColumnComponent col={xout} />
 					{@const yout = getColumnById(p.args.out.binnedy)}
+					<div class="tableProcess-label">
+						<span>Output</span>
+					</div>
+					<ColumnComponent col={xout} />
 					<ColumnComponent col={yout} />
 				{:else if p.args.valid}
 					<p>Preview:</p>

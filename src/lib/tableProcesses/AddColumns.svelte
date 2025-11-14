@@ -75,33 +75,48 @@
 	});
 </script>
 
-<p>Add:</p>
-<ColumnSelector
-	bind:value={p.args.xsIN}
-	onChange={() => {
-		doAddColumns();
-	}}
-	multiple={true}
-/>
-{#each p.args.xsIN as _, i}
-	<a>{getColumnById(p.args.xsIN[i]).name}</a>
-	<button
-		onclick={() => {
-			p.args.xsIN.splice(i, 1);
+<div class="tableProcess-container" style="display: block;">
+	<div class="section-row">
+		<div class="tableProcess-label">
+			<span>Add</span>
+		</div>
+	</div>
+	<div class="control-input">
+		<p>Columns</p>
+	</div>
+	<ColumnSelector
+		bind:value={p.args.xsIN}
+		onChange={() => {
 			doAddColumns();
-		}}>-</button
-	>
-	{#if p.args.xsIN.length > 1 && i < p.args.xsIN.length - 1}
-		<a>+</a>
+		}}
+		multiple={true}
+	/>
+
+	{#each p.args.xsIN as _, i}
+		<a>{getColumnById(p.args.xsIN[i]).name}</a>
+		<button
+			onclick={() => {
+				p.args.xsIN.splice(i, 1);
+				doAddColumns();
+			}}>-</button
+		>
+		{#if p.args.xsIN.length > 1 && i < p.args.xsIN.length - 1}
+			<a>+</a>
+		{/if}
+	{/each}
+
+	{#if p.args.valid && p.args.out.result == -1}
+		<p>Preview:</p>
+
+		<div style="height:250px; overflow:auto;"><Table headers={['Result']} data={[result]} /></div>
+	{:else if p.args.out.result > 0}
+		<div class="section-row">
+			<div class="tableProcess-label">
+				<span>Output</span>
+			</div>
+		</div>
+		<ColumnComponent col={getColumnById(p.args.out.result)} />
+	{:else}
+		<p>Need to have valid inputs to create columns.</p>
 	{/if}
-{/each}
-
-{#if p.args.valid && p.args.out.result == -1}
-	<p>Preview:</p>
-
-	<div style="height:250px; overflow:auto;"><Table headers={['Result']} data={[result]} /></div>
-{:else if p.args.out.result > 0}
-	<ColumnComponent col={getColumnById(p.args.out.result)} />
-{:else}
-	<p>Need to have valid inputs to create columns.</p>
-{/if}
+</div>

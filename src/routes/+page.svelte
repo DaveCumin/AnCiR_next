@@ -1059,9 +1059,11 @@
 	:global(.tableProcess-container) {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+
 		border: 0.1rem solid var(--color-lightness-85);
 		padding-right: 0.25rem;
+		margin-left: -0.25rem;
+		margin-right: 0.5rem;
 	}
 
 	:global(.section-row) {
@@ -1070,6 +1072,7 @@
 		align-items: stretch;
 		gap: 0.25rem;
 		padding-left: 0.25rem;
+		margin-top: 0.5rem;
 	}
 	:global(.tableProcess-label) {
 		display: flex;

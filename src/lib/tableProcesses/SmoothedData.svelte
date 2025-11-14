@@ -417,129 +417,158 @@
 	});
 </script>
 
-Smooth: <br />
-x = <ColumnSelector bind:value={p.args.xIN} onChange={(e) => getSmoothedData()} /> <br />
-y = <ColumnSelector
-	bind:value={p.args.yIN}
-	excludeColIds={[p.args.xIN]}
-	onChange={(e) => getSmoothedData()}
-/><br />
+<div class="tableProcess-container">
+	<!-- Input Section -->
+	<div class="section-row">
+		<div class="tableProcess-label">
+			<span>Input</span>
+		</div>
 
-<div class="control-input-horizontal">
-	<div class="control-input">
-		<p>Type</p>
-		<AttributeSelect
-			bind:value={p.args.smootherType}
-			options={['moving', 'whittaker', 'savitzky', 'loess']}
-			optionsDisplay={['Moving Average', 'Whittaker-Eilers', 'Savitzky-Golay', 'LOESS']}
-			onChange={() => getSmoothedData()}
-		/>
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>X column</p>
+				<ColumnSelector bind:value={p.args.xIN} onChange={(e) => getSmoothedData()} /> <br />
+			</div>
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>X column</p>
+					<ColumnSelector
+						bind:value={p.args.yIN}
+						excludeColIds={[p.args.xIN]}
+						onChange={(e) => getSmoothedData()}
+					/>
+				</div>
+			</div>
+		</div>
 	</div>
+
+	<div class="section-row">
+		<div class="tableProcess-label">
+			<span>Smooth parameters</span>
+		</div>
+
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>Type</p>
+				<AttributeSelect
+					bind:value={p.args.smootherType}
+					options={['moving', 'whittaker', 'savitzky', 'loess']}
+					optionsDisplay={['Moving Average', 'Whittaker-Eilers', 'Savitzky-Golay', 'LOESS']}
+					onChange={() => getSmoothedData()}
+				/>
+			</div>
+		</div>
+
+		<!-- Type-specific parameters -->
+		{#if p.args.smootherType === 'whittaker'}
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Lambda (Smoothing)</p>
+					<NumberWithUnits
+						step="10"
+						min={1}
+						max={10000}
+						bind:value={p.args.whittakerLambda}
+						onInput={() => getSmoothedData()}
+					/>
+				</div>
+				<div class="control-input">
+					<p>Order</p>
+					<NumberWithUnits
+						step="1"
+						min={1}
+						max={4}
+						bind:value={p.args.whittakerOrder}
+						onInput={() => getSmoothedData()}
+					/>
+				</div>
+			</div>
+		{:else if p.args.smootherType === 'savitzky'}
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Window Size</p>
+					<NumberWithUnits
+						step="2"
+						min={3}
+						max={21}
+						bind:value={p.args.savitzkyWindowSize}
+						onInput={() => getSmoothedData()}
+					/>
+				</div>
+				<div class="control-input">
+					<p>Poly Order</p>
+					<NumberWithUnits
+						step="1"
+						min={1}
+						max={6}
+						bind:value={p.args.savitzkyPolyOrder}
+						onInput={() => getSmoothedData()}
+					/>
+				</div>
+			</div>
+		{:else if p.args.smootherType === 'loess'}
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Bandwidth</p>
+					<NumberWithUnits
+						step="0.01"
+						min={0.01}
+						max={1.0}
+						bind:value={p.args.loessBandwidth}
+						onInput={() => getSmoothedData()}
+					/>
+				</div>
+			</div>
+		{:else if p.args.smootherType === 'moving'}
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Window Size</p>
+					<NumberWithUnits
+						step="1"
+						min={3}
+						max={51}
+						bind:value={p.args.movingAvgWindowSize}
+						onInput={() => getSmoothedData()}
+					/>
+				</div>
+				<div class="control-input">
+					<p>Type</p>
+					<AttributeSelect
+						bind:value={p.args.movingAvgType}
+						options={['simple', 'weighted', 'exponential']}
+						optionsDisplay={['Simple', 'Weighted', 'Exponential']}
+						onChange={() => getSmoothedData()}
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	{#key smoothedResult}
+		{#if p.args.valid && p.args.out.smoothedx != -1 && p.args.out.smoothedy != -1}
+			{@const xout = getColumnById(p.args.out.smoothedx)}
+
+			{@const yout = getColumnById(p.args.out.smoothedy)}
+			<div class="section-row">
+				<div class="tableProcess-label">
+					<span>Output</span>
+				</div>
+				<ColumnComponent col={xout} />
+				<ColumnComponent col={yout} />
+			</div>
+		{:else if p.args.valid}
+			<p>Preview:</p>
+			<div style="height:250px; overflow:auto;">
+				<Table
+					headers={['smoothed x', 'smoothed y']}
+					data={[
+						smoothedResult.x_out.map((x) => x.toFixed(2)),
+						smoothedResult.y_out.map((x) => x.toFixed(2))
+					]}
+				/>
+			</div>
+		{:else}
+			<p>Need to have valid inputs to create columns.</p>
+		{/if}
+	{/key}
 </div>
-
-<!-- Type-specific parameters -->
-{#if p.args.smootherType === 'whittaker'}
-	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Lambda (Smoothing)</p>
-			<NumberWithUnits
-				step="10"
-				min={1}
-				max={10000}
-				bind:value={p.args.whittakerLambda}
-				onInput={() => getSmoothedData()}
-			/>
-		</div>
-		<div class="control-input">
-			<p>Order</p>
-			<NumberWithUnits
-				step="1"
-				min={1}
-				max={4}
-				bind:value={p.args.whittakerOrder}
-				onInput={() => getSmoothedData()}
-			/>
-		</div>
-	</div>
-{:else if p.args.smootherType === 'savitzky'}
-	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Window Size</p>
-			<NumberWithUnits
-				step="2"
-				min={3}
-				max={21}
-				bind:value={p.args.savitzkyWindowSize}
-				onInput={() => getSmoothedData()}
-			/>
-		</div>
-		<div class="control-input">
-			<p>Poly Order</p>
-			<NumberWithUnits
-				step="1"
-				min={1}
-				max={6}
-				bind:value={p.args.savitzkyPolyOrder}
-				onInput={() => getSmoothedData()}
-			/>
-		</div>
-	</div>
-{:else if p.args.smootherType === 'loess'}
-	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Bandwidth</p>
-			<NumberWithUnits
-				step="0.01"
-				min={0.01}
-				max={1.0}
-				bind:value={p.args.loessBandwidth}
-				onInput={() => getSmoothedData()}
-			/>
-		</div>
-	</div>
-{:else if p.args.smootherType === 'moving'}
-	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Window Size</p>
-			<NumberWithUnits
-				step="1"
-				min={3}
-				max={51}
-				bind:value={p.args.movingAvgWindowSize}
-				onInput={() => getSmoothedData()}
-			/>
-		</div>
-		<div class="control-input">
-			<p>Type</p>
-			<AttributeSelect
-				bind:value={p.args.movingAvgType}
-				options={['simple', 'weighted', 'exponential']}
-				optionsDisplay={['Simple', 'Weighted', 'Exponential']}
-				onChange={() => getSmoothedData()}
-			/>
-		</div>
-	</div>
-{/if}
-
-<p>Output:</p>
-{#key smoothedResult}
-	{#if p.args.valid && p.args.out.smoothedx != -1 && p.args.out.smoothedy != -1}
-		{@const xout = getColumnById(p.args.out.smoothedx)}
-		<ColumnComponent col={xout} />
-		{@const yout = getColumnById(p.args.out.smoothedy)}
-		<ColumnComponent col={yout} />
-	{:else if p.args.valid}
-		<p>Preview:</p>
-		<div style="height:250px; overflow:auto;">
-			<Table
-				headers={['smoothed x', 'smoothed y']}
-				data={[
-					smoothedResult.x_out.map((x) => x.toFixed(2)),
-					smoothedResult.y_out.map((x) => x.toFixed(2))
-				]}
-			/>
-		</div>
-	{:else}
-		<p>Need to have valid inputs to create columns.</p>
-	{/if}
-{/key}

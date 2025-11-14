@@ -723,7 +723,15 @@
 					<p>Grid</p>
 				</div>
 				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.showPeriod} />
+					<input
+						type="checkbox"
+						bind:checked={theData.showPeriod}
+						onchange={(e) =>
+							(theData.xlimsIN = [
+								theData.xlimsIN[0] > 0 ? 1 / theData.xlimsIN[0] : this.minPeriod,
+								1 / theData.xlimsIN[1]
+							])}
+					/>
 					<p>Show as Period (hours)</p>
 				</div>
 			</div>
@@ -734,49 +742,30 @@
 						Min {#if theData.showPeriod}
 							( {theData.minPeriod.toFixed(3)}){/if}
 					</p>
-					{#if theData.showPeriod}
-						<NumberWithUnits
-							min={theData.minPeriod}
-							step="0.1"
-							value={theData.xlimsIN[0]}
-							onInput={(val) => {
-								theData.xlimsIN[0] = parseFloat(val);
-							}}
-						/>
-					{:else}
-						<NumberWithUnits
-							min={0}
-							step="0.01"
-							value={theData.xlimsIN[0]}
-							onInput={(val) => {
-								theData.xlimsIN[0] = parseFloat(val);
-							}}
-						/>
-					{/if}
+
+					<NumberWithUnits
+						min={theData.showPeriod ? theData.minPeriod : 0}
+						step="0.1"
+						value={theData.xlimsIN[0]}
+						onInput={(val) => {
+							theData.xlimsIN[0] = parseFloat(val);
+						}}
+					/>
 				</div>
 
 				<div class="control-input">
 					<p>
 						Max {#if !theData.showPeriod}({theData.maxFrequency.toFixed(3)}){/if}
 					</p>
-					{#if theData.showPeriod}
-						<NumberWithUnits
-							step="1"
-							value={theData.xlimsIN[1]}
-							onInput={(val) => {
-								theData.xlimsIN[1] = parseFloat(val);
-							}}
-						/>
-					{:else}
-						<NumberWithUnits
-							max={theData.maxFrequency}
-							step="0.01"
-							value={theData.xlimsIN[1]}
-							onInput={(val) => {
-								theData.xlimsIN[1] = parseFloat(val);
-							}}
-						/>
-					{/if}
+
+					<NumberWithUnits
+						max={theData.showPeriod ? 1000 : theData.maxFrequency}
+						step={theData.showPeriod ? '1' : '0.01'}
+						value={theData.xlimsIN[1]}
+						onInput={(val) => {
+							theData.xlimsIN[1] = parseFloat(val);
+						}}
+					/>
 				</div>
 			</div>
 		</div>

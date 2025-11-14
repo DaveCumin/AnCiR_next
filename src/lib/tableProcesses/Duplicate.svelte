@@ -16,6 +16,7 @@
 			//do nothing
 		} else {
 			getColumnById(argsIN.out.result).data = result;
+			getColumnById(argsIN.out.result).type = getColumnById(argsIN.xIN).type;
 			const processHash = crypto.randomUUID();
 			getColumnById(argsIN.out.result).tableProcessGUId = processHash;
 		}
@@ -62,22 +63,31 @@
 	});
 </script>
 
-<p>
-	Duplicate:
+<div class="tableProcess-container">
+	<!-- Input Section -->
+	<div class="section-row">
+		<div class="tableProcess-label">
+			<span>Duplicate</span>
+		</div>
+	</div>
 	<ColumnSelector
 		bind:value={p.args.xIN}
 		onChange={() => {
 			doDuplicate();
 		}}
 	/>
-</p>
 
-{#if p.args.valid && p.args.out.result == -1}
-	<p>Preview:</p>
-	<div style="height:250px; overflow:auto;"><Table headers={['Result']} data={[result]} /></div>
-{:else if p.args.out.result > 0}
-	<ColumnComponent col={getColumnById(p.args.out.result)} />
-	<p>{getColumnById(p.args.out.result).getData().slice(0, 5)}</p>
-{:else}
-	<p>Need to have valid inputs to create columns.</p>
-{/if}
+	{#if p.args.valid && p.args.out.result == -1}
+		<p>Preview:</p>
+		<div style="height:250px; overflow:auto;"><Table headers={['Result']} data={[result]} /></div>
+	{:else if p.args.out.result > 0}
+		<div class="section-row">
+			<div class="tableProcess-label">
+				<span>Output</span>
+			</div>
+		</div>
+		<ColumnComponent col={getColumnById(p.args.out.result)} />
+	{:else}
+		<p>Need to have valid inputs to create columns.</p>
+	{/if}
+</div>
