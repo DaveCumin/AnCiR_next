@@ -123,6 +123,8 @@
 			}
 			this.line = new LineClass(dataIN?.line, this);
 			this.confidenceLine = new LineClass(dataIN?.confidenceLine, this);
+			this.confidenceLine.stroke = dataIN?.confidenceLine?.stroke ?? '5,5';
+			this.confidenceLine.strokeWidth = dataIN?.confidenceLine?.strokeWidth ?? 1;
 			this.points = new PointsClass(dataIN?.points, this);
 			this.maxLag = dataIN?.maxLag ?? null;
 			this.showConfidenceBounds = dataIN?.showConfidenceBounds ?? true;
@@ -693,7 +695,6 @@
 						<Line lineData={datum.line} which="controls" title="Line" />
 						<Points pointsData={datum.points} which="controls" />
 
-						<!--
 						<Line lineData={datum.confidenceLine} which="controls" title="Confidence Bounds" />
 						{#if datum.confidenceLine.draw}
 							<div class="control-input">
@@ -704,7 +705,6 @@
 								</select>
 							</div>
 						{/if}
-						-->
 
 						<div class="div-line"></div>
 					</div>
@@ -800,7 +800,7 @@
 				which="plot"
 			/>
 
-			<!-- Confidence bounds 
+			<!-- Confidence bounds -->
 			{#if datum.showConfidenceBounds && datum.confidenceBounds}
 				{@const upperBound = new Array(datum.acfData.lags.length).fill(
 					datum.confidenceBounds.upper
@@ -808,8 +808,8 @@
 				{@const lowerBound = new Array(datum.acfData.lags.length).fill(
 					datum.confidenceBounds.lower
 				)}
--->
-			<!-- Upper confidence bound 
+
+				<!-- Upper confidence bound -->
 				<Line
 					lineData={datum.confidenceLine}
 					x={datum.acfData.lags}
@@ -824,8 +824,8 @@
 					xoffset={theData.plot.padding.left}
 					which="plot"
 				/>
--->
-			<!-- Lower confidence bound 
+
+				<!-- Lower confidence bound -->
 				<Line
 					lineData={datum.confidenceLine}
 					x={datum.acfData.lags}
@@ -840,9 +840,7 @@
 					xoffset={theData.plot.padding.left}
 					which="plot"
 				/>
-				
 			{/if}
-			-->
 		{/each}
 	</svg>
 
