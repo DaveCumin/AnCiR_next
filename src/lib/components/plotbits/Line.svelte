@@ -102,34 +102,36 @@
 				{/if}
 			</button>
 		</div>
-		<div class="control-input-horizontal">
-			<div class="control-input" style="max-width: 1.5rem;">
-				<p style="color:{'white'};">Col</p>
-				<ColourPicker bind:value={lineData.colour} />
-			</div>
-			<div class="control-input">
-				<p>Width</p>
-				<NumberWithUnits step="0.2" min={0.1} bind:value={lineData.strokeWidth} />
-			</div>
-			<div class="control-input">
-				<p>Stroke</p>
-				<div style="border: {lineData.stroke === -1 ? '1' : '0'}px solid red;">
-					<AttributeSelect
-						onChange={(value) => {
-							if (isValidStroke(value)) {
-								lineData.stroke = value;
-							} else {
-								lineData.stroke = -1;
-							}
-						}}
-						options={['solid', '5, 5', '2, 2', '5, 2']}
-						optionsDisplay={['Solid', 'Dashed', 'Dotted', 'Dashed & Dotted']}
-						other={true}
-						placeholder={'eg 5, 5'}
-					/>
+		{#if lineData.draw}
+			<div class="control-input-horizontal">
+				<div class="control-input" style="max-width: 1.5rem;">
+					<p style="color:{'white'};">Col</p>
+					<ColourPicker bind:value={lineData.colour} />
+				</div>
+				<div class="control-input">
+					<p>Width</p>
+					<NumberWithUnits step="0.2" min={0.1} bind:value={lineData.strokeWidth} />
+				</div>
+				<div class="control-input">
+					<p>Stroke</p>
+					<div style="border: {lineData.stroke === -1 ? '1' : '0'}px solid red;">
+						<AttributeSelect
+							onChange={(value) => {
+								if (isValidStroke(value)) {
+									lineData.stroke = value;
+								} else {
+									lineData.stroke = -1;
+								}
+							}}
+							options={['solid', '5, 5', '2, 2', '5, 2']}
+							optionsDisplay={['Solid', 'Dashed', 'Dotted', 'Dashed & Dotted']}
+							other={true}
+							placeholder={'eg 5, 5'}
+						/>
+					</div>
 				</div>
 			</div>
-		</div>
+		{/if}
 	</div>
 {/snippet}
 

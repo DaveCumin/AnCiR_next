@@ -664,6 +664,7 @@
 							<Column col={datum.y} canChange={true} />
 						</div>
 
+						<!--
 						<div class="control-input">
 							<p>Max Lag (hours)</p>
 							<div style="display: flex; align-items: center; gap: 8px;">
@@ -687,15 +688,14 @@
 								{datum.acfData.lags.length} lag points
 							</p>
 						</div>
+						-->
 
-						<div class="control-input-vertical">
-							<div class="control-input-checkbox">
-								<input type="checkbox" bind:checked={datum.showConfidenceBounds} />
-								<p>Show Confidence Bounds</p>
-							</div>
-						</div>
+						<Line lineData={datum.line} which="controls" title="Line" />
+						<Points pointsData={datum.points} which="controls" />
 
-						{#if datum.showConfidenceBounds}
+						<!--
+						<Line lineData={datum.confidenceLine} which="controls" title="Confidence Bounds" />
+						{#if datum.confidenceLine.draw}
 							<div class="control-input">
 								<p>Confidence Level</p>
 								<select bind:value={datum.confidenceLevel}>
@@ -704,12 +704,7 @@
 								</select>
 							</div>
 						{/if}
-
-						<Line lineData={datum.line} which="controls" title="ACF" />
-						<Points pointsData={datum.points} which="controls" />
-						{#if datum.showConfidenceBounds}
-							<Line lineData={datum.confidenceLine} which="controls" title="Confidence Bounds" />
-						{/if}
+						-->
 
 						<div class="div-line"></div>
 					</div>
@@ -805,7 +800,7 @@
 				which="plot"
 			/>
 
-			<!-- Confidence bounds -->
+			<!-- Confidence bounds 
 			{#if datum.showConfidenceBounds && datum.confidenceBounds}
 				{@const upperBound = new Array(datum.acfData.lags.length).fill(
 					datum.confidenceBounds.upper
@@ -813,8 +808,8 @@
 				{@const lowerBound = new Array(datum.acfData.lags.length).fill(
 					datum.confidenceBounds.lower
 				)}
-
-				<!-- Upper confidence bound -->
+-->
+			<!-- Upper confidence bound 
 				<Line
 					lineData={datum.confidenceLine}
 					x={datum.acfData.lags}
@@ -829,8 +824,8 @@
 					xoffset={theData.plot.padding.left}
 					which="plot"
 				/>
-
-				<!-- Lower confidence bound -->
+-->
+			<!-- Lower confidence bound 
 				<Line
 					lineData={datum.confidenceLine}
 					x={datum.acfData.lags}
@@ -845,7 +840,9 @@
 					xoffset={theData.plot.padding.left}
 					which="plot"
 				/>
+				
 			{/if}
+			-->
 		{/each}
 	</svg>
 

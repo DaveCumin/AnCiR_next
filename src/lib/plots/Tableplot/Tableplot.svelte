@@ -229,7 +229,8 @@
 					max={theData.plot.longestCol}
 					bind:value={theData.plot.colCurrent}
 				/>
-				to {theData.plot.colCurrent + theData.plot.Ncolumns - 1} of {theData.plot.longestCol}
+				to {Math.min(theData.plot.colCurrent + theData.plot.Ncolumns - 1, theData.plot.longestCol)} of
+				{theData.plot.longestCol}
 			</p>
 		{/if}
 	{/key}

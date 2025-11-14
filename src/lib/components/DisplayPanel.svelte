@@ -101,6 +101,7 @@
 		box-sizing: border-box;
 
 		z-index: 999;
+		/* box-shadow: 5px 0 10px rgba(0, 0, 0, 0.3); */
 	}
 
 	.view-container::-webkit-scrollbar {
