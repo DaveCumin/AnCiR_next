@@ -101,95 +101,88 @@
 	});
 </script>
 
-<div class="tableProcess-container">
-	<!-- Input Section -->
-	<div class="section-row">
-		<div class="tableProcess-label">
-			<span>Input</span>
+<!-- Input Section -->
+<div class="section-row">
+	<div class="tableProcess-label">
+		<span>Input</span>
+	</div>
+
+	<div class="control-input-vertical">
+		<div class="control-input">
+			<p>X column</p>
+			<ColumnSelector bind:value={p.args.xIN} onChange={(e) => getCosinor()} />
 		</div>
 
 		<div class="control-input-vertical">
 			<div class="control-input">
-				<p>X column</p>
-				<ColumnSelector bind:value={p.args.xIN} onChange={(e) => getCosinor()} />
-			</div>
-
-			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Y column</p>
-					<ColumnSelector
-						bind:value={p.args.yIN}
-						excludeColIds={[p.xIN]}
-						onChange={(e) => getCosinor()}
-					/>
-				</div>
-			</div>
-		</div>
-	</div>
-
-	<!-- Process Section -->
-	<div class="section-row">
-		<div class="tableProcess-label">
-			<span>Cosinor parameters</span>
-		</div>
-
-		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>N cosine curves</p>
-				<NumberWithUnits
-					bind:value={p.args.Ncurves}
-					onInput={() => getCosinor()}
-					min="1"
-					step="1"
+				<p>Y column</p>
+				<ColumnSelector
+					bind:value={p.args.yIN}
+					excludeColIds={[p.xIN]}
+					onChange={(e) => getCosinor()}
 				/>
 			</div>
 		</div>
 	</div>
+</div>
 
-	<!-- Output Section -->
-	<div class="section-row">
-		<div class="tableProcess-label">
-			<span>Output</span>
+<!-- Process Section -->
+<div class="section-row">
+	<div class="tableProcess-label">
+		<span>Cosinor parameters</span>
+	</div>
+
+	<div class="control-input-horizontal">
+		<div class="control-input">
+			<p>N cosine curves</p>
+			<NumberWithUnits bind:value={p.args.Ncurves} onInput={() => getCosinor()} min="1" step="1" />
 		</div>
-		<div class="section-content">
-			{#key cosinorData}
-				{#if p.args.valid && p.args.out.cosinorx != -1 && p.args.out.cosinory != -1}
-					{@const xout = getColumnById(p.args.out.cosinorx)}
-					<ColumnComponent col={xout} />
-					{@const yout = getColumnById(p.args.out.cosinory)}
-					<ColumnComponent col={yout} />
+	</div>
+</div>
+
+<!-- Output Section -->
+<div class="section-row">
+	<div class="tableProcess-label">
+		<span>Output</span>
+	</div>
+	<div class="section-content">
+		{#key cosinorData}
+			{#if p.args.valid && p.args.out.cosinorx != -1 && p.args.out.cosinory != -1}
+				{@const xout = getColumnById(p.args.out.cosinorx)}
+				<ColumnComponent col={xout} />
+				{@const yout = getColumnById(p.args.out.cosinory)}
+				<ColumnComponent col={yout} />
+				<div class="control-input-horizontal">
+					<div class="control-input">
+						<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}</p>
+					</div>
+				</div>
+				{#each cosinorData?.fittedData?.parameters.cosines as cosine, i}
 					<div class="control-input-horizontal">
 						<div class="control-input">
-							<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}</p>
+							<p>
+								{(2 * Math.PI * (1 / cosine.frequency)).toFixed(2)}
+								{cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(
+									2
+								)})
+							</p>
 						</div>
 					</div>
-					{#each cosinorData?.fittedData?.parameters.cosines as cosine, i}
-						<div class="control-input-horizontal">
-							<div class="control-input">
-								<p>
-									{(2 * Math.PI * (1 / cosine.frequency)).toFixed(2)}
-									{cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(
-										2
-									)})
-								</p>
-							</div>
-						</div>
-					{/each}
-				{:else if p.args.valid}
-					<p>Preview:</p>
-					<div style="height:250px; overflow:auto;">
-						<Table
-							headers={['binned x', 'binned y']}
-							data={[
-								cosinorData.t.map((x) => x.toFixed(2)),
-								cosinorData.fittedData.fitted.map((x) => x.toFixed(2))
-							]}
-						/>
-					</div>
-				{:else}
-					<p>Need to have valid inputs to create columns.</p>
-				{/if}
-			{/key}
-		</div>
+				{/each}
+			{:else if p.args.valid}
+				<p>Preview:</p>
+				<div style="height:250px; overflow:auto;">
+					<Table
+						headers={['binned x', 'binned y']}
+						data={[
+							cosinorData.t.map((x) => x.toFixed(2)),
+							cosinorData.fittedData.fitted.map((x) => x.toFixed(2))
+						]}
+					/>
+				</div>
+			{:else}
+				<p>Need to have valid inputs to create columns.</p>
+			{/if}
+		{/key}
 	</div>
 </div>

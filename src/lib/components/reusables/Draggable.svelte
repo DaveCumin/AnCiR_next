@@ -398,7 +398,8 @@
 	style="left: {x}px;
 		top: {y}px;
 		width: {snapToGrid(width + 20)}px;
-		height: {snapToGrid(height + 50)}px;"
+		height: {snapToGrid(height + 50)}px;
+		z-index: {fullscreen ? 9999 : ''};"
 >
 	<div
 		class="plot-header"
@@ -428,16 +429,14 @@
 				class="icon"
 				onclick={(e) => {
 					e.stopPropagation();
-					console.log('HERE');
 					toggleFullscreen();
 				}}
 			>
-				<Icon
-					name="menu-horizontal-dots"
-					width={20}
-					height={20}
-					className="menu-icon plot-options-button"
-				/>
+				{#if fullscreen}
+					<Icon name="minimise" width={20} height={20} className="menu-icon plot-options-button" />
+				{:else}
+					<Icon name="maximise" width={20} height={20} className="menu-icon plot-options-button" />
+				{/if}
 			</button>
 			<button class="icon" onclick={() => removePlots(id)}>
 				<!-- <Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" /> -->

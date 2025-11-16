@@ -71,7 +71,7 @@
 	});
 </script>
 
-<div class="tableProcess-container" style="display: block;">
+<div style="display: block;">
 	<div class="section-row">
 		<div class="tableProcess-label">
 			<span>Average</span>

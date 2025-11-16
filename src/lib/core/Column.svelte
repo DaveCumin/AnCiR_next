@@ -20,6 +20,9 @@
 		tableProcessGUId = $state('');
 		data = null; //if it has raw data, store that here
 		compression = $state(null); //if any compression is used, store the info here
+		binWidth = $derived.by(() => {
+			if (this.isReferencial()) return this.refColumn?.binWidth;
+		});
 		//Where the data are from (references all the way to the primary source [importd (file) or simulated (params)])
 		provenance = $derived.by(() => {
 			if (this.isReferencial()) {
@@ -50,6 +53,7 @@
 		hoursSinceStart = $derived.by(() => {
 			const thedata = this.getData();
 			if (this.type == 'number') return thedata.map((x) => x - thedata[0]); //If a number, then assume it's in hours and take difference from the start
+			if (this.type == 'bin') return thedata.map((x) => x - thedata[0] - this.binWidth / 2); //If a number, then assume it's in hours and take difference from the start
 			if (this.type == 'time') return thedata.map((x) => (x - thedata[0]) / 3600000); //if it's a time, then assume it's in milliseconds and take difference from the start, then convert to hours
 			//console.warn('that was hoursSinceStart');
 		});
@@ -99,7 +103,7 @@
 				})
 				.join('|');
 			const refDataHash = this.isReferencial() ? this.refColumn?.getDataHash : '';
-			return `${this.refId ?? '_'}:${this.compression || ''}:${this.type}:${this.timeFormat}:${processHash}:${refDataHash}:${this.tableProcessGUId}`;
+			return `${this.refId ?? '_'}:${this.compression || ''}:${this.type}:${this.timeFormat}:${this.binWidth || ''}:${processHash}:${refDataHash}:${this.tableProcessGUId}`;
 		});
 
 		//--- FUNCTION TO GET THE DATA
@@ -134,12 +138,16 @@
 
 			//deal with timestamps
 			if (this.type === 'time' && !this.isReferencial()) {
-				// out = out.map((x) => Number(timeParse(this.timeFormat)(x))); // Turn into UNIX values of time
 				try {
 					out = out.map((x) => Number(getUNIXDate(x, this.timeFormat))); // Turn into UNIX values of time
 				} catch {
 					console.warn('Error parsing time data for column ', this.id, this.name);
 				}
+			}
+
+			//deal with bins
+			if (this.type === 'bin') {
+				out = out.map((x) => x + this.binWidth / 2);
 			}
 
 			//If no data, return empty
@@ -170,6 +178,9 @@
 			if (this.type == 'time') {
 				jsonOut.timeFormat = this.timeFormat;
 			}
+			if (this.type == 'bin') {
+				jsonOut.binWidth = this.binWidth;
+			}
 			if (this.compression != null) {
 				jsonOut.compression = this.compression;
 			}
@@ -188,6 +199,7 @@
 				refId,
 				data,
 				timeFormat,
+				binWidth,
 				tableProcessGUId,
 				processes,
 				compression,
@@ -200,10 +212,10 @@
 					refId: refId ?? null,
 					data: data ?? null,
 					timeFormat: timeFormat ?? '',
+					binWidth: binWidth ?? null,
 					tableProcessGUId: tableProcessGUId ?? '',
 
 					compression: compression ?? null,
-					timeFormat: timeFormat ?? '',
 					provenance: provenance ?? null
 				},
 				id

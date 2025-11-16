@@ -63,31 +63,29 @@
 	});
 </script>
 
-<div class="tableProcess-container">
-	<!-- Input Section -->
+<!-- Input Section -->
+<div class="section-row">
+	<div class="tableProcess-label">
+		<span>Duplicate</span>
+	</div>
+</div>
+<ColumnSelector
+	bind:value={p.args.xIN}
+	onChange={() => {
+		doDuplicate();
+	}}
+/>
+
+{#if p.args.valid && p.args.out.result == -1}
+	<p>Preview:</p>
+	<div style="height:250px; overflow:auto;"><Table headers={['Result']} data={[result]} /></div>
+{:else if p.args.out.result > 0}
 	<div class="section-row">
 		<div class="tableProcess-label">
-			<span>Duplicate</span>
+			<span>Output</span>
 		</div>
 	</div>
-	<ColumnSelector
-		bind:value={p.args.xIN}
-		onChange={() => {
-			doDuplicate();
-		}}
-	/>
-
-	{#if p.args.valid && p.args.out.result == -1}
-		<p>Preview:</p>
-		<div style="height:250px; overflow:auto;"><Table headers={['Result']} data={[result]} /></div>
-	{:else if p.args.out.result > 0}
-		<div class="section-row">
-			<div class="tableProcess-label">
-				<span>Output</span>
-			</div>
-		</div>
-		<ColumnComponent col={getColumnById(p.args.out.result)} />
-	{:else}
-		<p>Need to have valid inputs to create columns.</p>
-	{/if}
-</div>
+	<ColumnComponent col={getColumnById(p.args.out.result)} />
+{:else}
+	<p>Need to have valid inputs to create columns.</p>
+{/if}

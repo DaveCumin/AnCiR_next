@@ -428,7 +428,7 @@
 </script>
 
 <svelte:head>
-	<title>AnCiR v {appConsts.version}</title>
+	<title>AnCiR {appConsts.version}</title>
 </svelte:head>
 
 {#if isLoaded}
@@ -1064,6 +1064,7 @@
 		padding-right: 0.25rem;
 		margin-left: -0.25rem;
 		margin-right: 0.5rem;
+		border-radius: 0.25rem;
 	}
 
 	:global(.section-row) {

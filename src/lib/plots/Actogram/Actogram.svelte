@@ -86,7 +86,6 @@
 			return { xByPeriod, yByPeriod };
 		});
 
-		// New derived property to create histogram bins for each day
 		histogramBinsByDays = $derived.by(() => {
 			const { xByPeriod, yByPeriod } = this.dataByDays;
 			const binsByPeriod = {};
@@ -96,15 +95,32 @@
 				const yData = yByPeriod[period];
 
 				if (xData && xData.length > 0) {
-					const { xStart, xEnd } = createHistogramBins(xData, this.binSize);
-					binsByPeriod[period] = {
-						xStart,
-						xEnd,
-						y: yData
-					};
+					console.log(this.x.type, ' ... ', this.x.binWidth);
+					// Check if x column is binned type
+					if (this.x.type === 'bin' && this.x.binWidth) {
+						console.log('DATA: ', xData);
+						// For binned data, xData already contains midpoints from getData()
+						// Calculate start and end from midpoints
+						const xStart = xData.map((mid) => mid - this.x.binWidth / 2);
+						const xEnd = xData.map((mid) => mid + this.x.binWidth / 2);
+
+						binsByPeriod[period] = {
+							xStart,
+							xEnd,
+							y: yData
+						};
+					} else {
+						// For non-binned data, create histogram bins as before
+						const { xStart, xEnd } = createHistogramBins(xData, this.binSize);
+						binsByPeriod[period] = {
+							xStart,
+							xEnd,
+							y: yData
+						};
+					}
 				}
 			});
-
+			console.log(this.x.toJSON());
 			return binsByPeriod;
 		});
 

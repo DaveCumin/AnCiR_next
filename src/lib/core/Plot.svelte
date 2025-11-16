@@ -8,7 +8,6 @@
 		return _counter++;
 	}
 	export function removePlots(ids) {
-		console.log('REMOVE: ', ids);
 		//make selectedPLotIds an array if not already
 		if (!Array.isArray(ids)) ids = [ids];
 		selectedPlotIds = ids;

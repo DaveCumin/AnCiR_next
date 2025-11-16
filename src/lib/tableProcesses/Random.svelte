@@ -45,35 +45,33 @@
 	});
 </script>
 
-<div class="tableProcess-container">
-	<div class="section-row">
-		<div class="tableProcess-label">
-			<span>Random settings</span>
-		</div>
-
-		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Offset</p>
-				<NumberWithUnits bind:value={p.args.offset} onInput={doRandom} />
-			</div>
-			<div class="control-input">
-				<p>Multiply</p>
-				<NumberWithUnits bind:value={p.args.multiply} onInput={doRandom} />
-			</div>
-		</div>
+<div class="section-row">
+	<div class="tableProcess-label">
+		<span>Random settings</span>
 	</div>
 
-	{#if p.args.valid && p.args.out.result == -1}
-		<p>Preview:</p>
-		<div style="height:250px; overflow:auto;"><Table headers={['Result']} data={[result]} /></div>
-	{:else if p.args.out.result > 0}
-		<div class="section-row">
-			<div class="tableProcess-label">
-				<span>Output</span>
-			</div>
+	<div class="control-input-vertical">
+		<div class="control-input">
+			<p>Offset</p>
+			<NumberWithUnits bind:value={p.args.offset} onInput={doRandom} />
 		</div>
-		<ColumnComponent col={getColumnById(p.args.out.result)} />
-	{:else}
-		<p>Need to have valid inputs to create columns.</p>
-	{/if}
+		<div class="control-input">
+			<p>Multiply</p>
+			<NumberWithUnits bind:value={p.args.multiply} onInput={doRandom} />
+		</div>
+	</div>
 </div>
+
+{#if p.args.valid && p.args.out.result == -1}
+	<p>Preview:</p>
+	<div style="height:250px; overflow:auto;"><Table headers={['Result']} data={[result]} /></div>
+{:else if p.args.out.result > 0}
+	<div class="section-row">
+		<div class="tableProcess-label">
+			<span>Output</span>
+		</div>
+	</div>
+	<ColumnComponent col={getColumnById(p.args.out.result)} />
+{:else}
+	<p>Need to have valid inputs to create columns.</p>
+{/if}

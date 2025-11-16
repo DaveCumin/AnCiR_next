@@ -9,6 +9,7 @@
 	const options = [
 		{ label: 'Time', value: 'time', icon: 'clock' },
 		{ label: 'Number', value: 'number', icon: 'math' },
+		{ label: 'Bin', value: 'bin', icon: 'table' },
 		{ label: 'Category', value: 'category', icon: 'list' }
 	];
 

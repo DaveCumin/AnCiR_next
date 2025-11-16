@@ -89,13 +89,13 @@
 
 		acfData = $derived.by(() => {
 			const times = this.x.hoursSinceStart;
-			const values = this.y.getData();
+			const values = this.y.getData() ?? [];
 			return computeAutocorrelation(times, values, this.maxLag);
 		});
 
 		confidenceBounds = $derived.by(() => {
 			// Calculate confidence bounds based on sample size
-			const n = this.y.getData().filter((v) => !isNaN(v)).length;
+			const n = this.y.getData()?.filter((v) => !isNaN(v)).length;
 			if (n < 2) return { upper: 0, lower: 0 };
 
 			// For large samples, approximate 95% CI is ±1.96/sqrt(n)
