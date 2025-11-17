@@ -98,7 +98,10 @@
 			// Default: just use next power of 2
 			n = Math.pow(2, Math.ceil(Math.log2(yDetrended.length)));
 		}
-
+		// Safety check: ensure n is at least as large as yDetrended.length
+		if (n < yDetrended.length) {
+			n = Math.pow(2, Math.ceil(Math.log2(yDetrended.length)));
+		}
 		const padded = [...yDetrended, ...new Array(n - yDetrended.length).fill(0)];
 		const signal = padded.map((val) => ({ re: val, im: 0 }));
 
@@ -225,8 +228,8 @@
 			const minPeriod = this.minPeriod;
 			const maxFrequency = this.maxFrequency;
 
-			console.log('showPeriod:', $state.snapshot(this.showPeriod));
-			console.log('xlimsIN:', $state.snapshot(this.xlimsIN));
+			//console.log('showPeriod:', $state.snapshot(this.showPeriod));
+			//console.log('xlimsIN:', $state.snapshot(this.xlimsIN));
 
 			if (data.length === 0) {
 				return showPeriod ? [0.1, 100] : [0, 1];
@@ -808,18 +811,15 @@
 						</div>
 
 						<div class="control-data">
-							<div class="control-data-title">
-								<strong>y (values)</strong>
-								<p
-									style="cursor: default;"
-									contenteditable="false"
-									ondblclick={(e) => {
-										e.target.setAttribute('contenteditable', 'true');
-										e.target.focus();
-									}}
-									onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-									bind:innerHTML={datum.y.name}
-								></p>
+							<div class="control-input">
+								<p>x (time)</p>
+							</div>
+							<Column col={datum.x} canChange={true} />
+						</div>
+
+						<div class="control-data">
+							<div class="control-input">
+								<p>y (Values)</p>
 							</div>
 							<Column col={datum.y} canChange={true} />
 						</div>

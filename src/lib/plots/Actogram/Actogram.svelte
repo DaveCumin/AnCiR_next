@@ -95,10 +95,8 @@
 				const yData = yByPeriod[period];
 
 				if (xData && xData.length > 0) {
-					console.log(this.x.type, ' ... ', this.x.binWidth);
 					// Check if x column is binned type
 					if (this.x.type === 'bin' && this.x.binWidth) {
-						console.log('DATA: ', xData);
 						// For binned data, xData already contains midpoints from getData()
 						// Calculate start and end from midpoints
 						const xStart = xData.map((mid) => mid - this.x.binWidth / 2);
@@ -120,7 +118,6 @@
 					}
 				}
 			});
-			console.log(this.x.toJSON());
 			return binsByPeriod;
 		});
 
@@ -683,36 +680,16 @@
 
 					<div class="control-data-container">
 						<div class="control-data">
-							<div class="control-data-title">
-								<p>x:</p>
-								<p
-									style="cursor: default;"
-									contenteditable="false"
-									ondblclick={(e) => {
-										e.target.setAttribute('contenteditable', 'true');
-										e.target.focus();
-									}}
-									onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-									bind:innerHTML={datum.x.name}
-								></p>
+							<div class="control-input">
+								<p>x</p>
 							</div>
 
 							<Column col={datum.x} canChange={true} />
 						</div>
 
 						<div class="control-data">
-							<div class="control-data-title">
-								<p>y:</p>
-								<p
-									style="cursor: default;"
-									contenteditable="false"
-									ondblclick={(e) => {
-										e.target.setAttribute('contenteditable', 'true');
-										e.target.focus();
-									}}
-									onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-									bind:innerHTML={datum.y.name}
-								></p>
+							<div class="control-input">
+								<p>y</p>
 							</div>
 
 							<Column col={datum.y} canChange={true} />

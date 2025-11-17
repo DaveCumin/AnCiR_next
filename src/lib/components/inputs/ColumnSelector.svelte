@@ -17,10 +17,10 @@
 
 		//get the other data in plot - TODO!!
 		// Is this the best way?
-		console.time('getPlotSiblings');
+		//console.time('getPlotSiblings');
 		//--- Brute force approach
 		if (getPlotSiblings !== -1) {
-			console.log('getPlotSiblings: ', getPlotSiblings.id);
+			//console.log('getPlotSiblings: ', getPlotSiblings.id);
 			for (let p = 0; p < core.plots.length; p++) {
 				for (let d = 0; d < core.plots[p].plot.data?.length; d++) {
 					Object.keys(core.plots[p].plot.data[d].toJSON()).forEach((key) => {
@@ -52,7 +52,7 @@
 			}
 		}
 
-		console.timeEnd('getPlotSiblings');
+		//console.timeEnd('getPlotSiblings');
 
 		//get all the columns in tables
 		for (let t = 0; t < core.tables.length; t++) {

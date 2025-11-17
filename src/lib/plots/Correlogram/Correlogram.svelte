@@ -633,35 +633,15 @@
 						</div>
 
 						<div class="control-data">
-							<div class="control-data-title">
-								<strong>x (time)</strong>
-								<p
-									style="cursor: default;"
-									contenteditable="false"
-									ondblclick={(e) => {
-										e.target.setAttribute('contenteditable', 'true');
-										e.target.focus();
-									}}
-									onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-									bind:innerHTML={datum.x.name}
-								></p>
+							<div class="control-input">
+								<p>x (time)</p>
 							</div>
 							<Column col={datum.x} canChange={true} />
 						</div>
 
 						<div class="control-data">
-							<div class="control-data-title">
-								<strong>y (values)</strong>
-								<p
-									style="cursor: default;"
-									contenteditable="false"
-									ondblclick={(e) => {
-										e.target.setAttribute('contenteditable', 'true');
-										e.target.focus();
-									}}
-									onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-									bind:innerHTML={datum.y.name}
-								></p>
+							<div class="control-input">
+								<p>y (values)</p>
 							</div>
 							<Column col={datum.y} canChange={true} />
 						</div>

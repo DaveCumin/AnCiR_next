@@ -84,7 +84,6 @@
 
 			// If neither line nor points are visible, don't show in legend
 			if (item.elements.length === 0) return null;
-			console.log(item);
 			return item;
 		}
 
@@ -651,12 +650,16 @@
 
 					<div class="data-wrapper">
 						<div class="x-select">
-							x: {datum.x.name}
+							<div class="control-input">
+								<p>x</p>
+							</div>
 
 							<Column col={datum.x} canChange={true} />
 						</div>
 						<div class="y-select">
-							y: {datum.y.name}
+							<div class="control-input">
+								<p>y</p>
+							</div>
 							<Column col={datum.y} canChange={true} />
 						</div>
 

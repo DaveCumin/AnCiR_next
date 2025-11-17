@@ -52,25 +52,55 @@
 <script>
 	let { legendData, items = [], plotWidth, plotHeight, padding, which = 'plot' } = $props();
 
+	let labelWidths = $state([]); // width of each <text> element
+	let measuringCanvas = $state(null); // hidden <canvas> for text metrics
+
+	// create a hidden canvas once (Svelte runs this after first render)
+	$effect(() => {
+		if (!measuringCanvas) {
+			const canvas = document.createElement('canvas');
+			document.body.appendChild(canvas);
+			measuringCanvas = canvas.getContext('2d');
+		}
+	});
+
+	// recompute widths whenever items, fontSize or the items array change
+	$effect(() => {
+		if (!measuringCanvas || !legendData.show || items.length === 0) {
+			labelWidths = [];
+			return;
+		}
+		measuringCanvas.font = `${legendData.fontSize}px sans-serif`;
+		labelWidths = items.map((it) => measuringCanvas.measureText(it.label).width);
+	});
+
 	// Calculate legend dimensions
 	let legendDimensions = $derived.by(() => {
-		if (!legendData.show || items.length === 0) return { width: 0, height: 0 };
+		if (!legendData.show || items.length === 0) return { width: 0, height: 0, contentHeight: 0 };
 
-		// Account for potential multiple elements per item (line + points)
-		const itemHeight = legendData.fontSize + legendData.itemSpacing + 4; // Extra space for overlapping elements
-		const maxLabelWidth = 80; // Approximate max width for label
-		const iconWidth = 25;
-		const itemWidth = iconWidth + maxLabelWidth;
+		const iconW = 25; // space for line / circle
+		const gap = 4; // gap between icon and text
+		const padding = legendData.padding;
+
+		// max width of *all* labels (plus icon + gap)
+		const maxLabelW = Math.max(...labelWidths, 0) + 2 + legendData.padding / 2;
+		const contentW = iconW + gap + maxLabelW;
+
+		const lineH = legendData.fontSize + legendData.itemSpacing + 4; // +4 for possible overlap
 
 		if (legendData.orientation === 'vertical') {
 			return {
-				width: itemWidth + legendData.padding * 2,
-				height: items.length * itemHeight + legendData.padding * 2
+				width: contentW + padding * 2,
+				height: items.length * lineH + padding * 2,
+				contentHeight: legendData.fontSize
 			};
 		} else {
+			// horizontal: each entry gets its own width + a little extra spacing
+			const totalContentW = items.reduce((sum, _, i) => sum + iconW + gap + labelWidths[i] + 10, 0);
 			return {
-				width: items.length * (itemWidth + 10) + legendData.padding * 2, // Extra spacing between items
-				height: itemHeight + legendData.padding * 2
+				width: totalContentW + padding * 2,
+				height: lineH + padding * 2,
+				contentHeight: legendData.fontSize
 			};
 		}
 	});
@@ -106,6 +136,26 @@
 			default:
 				return { x: margin, y: margin };
 		}
+	});
+
+	let xPositions = $derived.by(() => {
+		if (!legendData.show || items.length === 0 || legendData.orientation !== 'horizontal') {
+			return [];
+		}
+
+		const iconW = 25;
+		const gap = 4;
+		const spacing = 10;
+		const positions = [];
+		let cumulative = legendData.padding;
+
+		for (let i = 0; i < items.length; i++) {
+			const labelW = labelWidths[i] ?? 0;
+			positions.push(cumulative);
+			cumulative += iconW + gap + labelW + spacing;
+		}
+
+		return positions;
 	});
 </script>
 
@@ -152,7 +202,7 @@
 					<NumberWithUnits bind:value={legendData.padding} min={0} max={20} />
 				</div>
 			</div>
-
+			<!--
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p style="color: white;">BG</p>
@@ -163,14 +213,15 @@
 					<ColourPicker bind:value={legendData.borderColor} />
 				</div>
 			</div>
+			-->
 		{/if}
 	</div>
 {/snippet}
 
-{#snippet legendPlot()}
+svelte{#snippet legendPlot()}
 	{#if legendData.show && items.length > 0}
 		<g transform="translate({legendPosition.x + padding.left}, {legendPosition.y + padding.top})">
-			<!-- Legend background -->
+			<!-- background -->
 			<rect
 				x={0}
 				y={0}
@@ -182,60 +233,62 @@
 				rx={3}
 			/>
 
-			<!-- Legend items -->
+			<!-- items -->
 			{#each items as item, i}
-				{@const itemX =
-					legendData.orientation === 'horizontal'
-						? i * 120 + legendData.padding
-						: legendData.padding}
-				{@const itemY =
-					legendData.orientation === 'vertical'
-						? i * (legendData.fontSize + legendData.itemSpacing + 4) + legendData.padding
-						: legendData.padding}
+				{@const lineH = legendData.fontSize + legendData.itemSpacing + 4}
+				{@const iconW = 25}
+				{@const gap = 4}
+				{@const labelW = labelWidths[i] ?? 0}
 
-				<g transform="translate({itemX}, {itemY})">
-					<!-- Render combined elements for this data series -->
-					{#each item.elements as element, j}
-						<!-- Slight offset for multiple elements -->
-
-						{#if element.type === 'line'}
-							<line
-								x1={2}
-								y1={legendData.fontSize / 2}
-								x2={18}
-								y2={legendData.fontSize / 2}
-								stroke={element.color}
-								stroke-width={element.strokeWidth}
-								stroke-dasharray={element.stroke}
-							/>
-							<!-- Show smoother if present -->
-							{#if element.smoother}
+				{#if legendData.orientation === 'vertical'}
+					{@const itemX = legendData.padding}
+					{@const itemY = legendData.padding + i * lineH + lineH / 2}
+					<g transform="translate({itemX}, {itemY})">
+						{#each item.elements as el}
+							{#if el.type === 'line'}
 								<line
 									x1={2}
-									y1={legendData.fontSize / 2}
+									y1={0}
 									x2={18}
-									y2={legendData.fontSize / 2}
-									stroke={element.smoother.color}
-									stroke-width={element.smoother.strokeWidth}
-									stroke-dasharray={element.smoother.stroke}
+									y2={0}
+									stroke={el.color}
+									stroke-width={el.strokeWidth}
+									stroke-dasharray={el.stroke}
 								/>
+							{:else if el.type === 'points'}
+								<circle cx={10} cy={0} r={el.size} fill={el.color} />
 							{/if}
-						{:else if element.type === 'points'}
-							<circle cx={10} cy={legendData.fontSize / 2} r={element.size} fill={element.color} />
-						{/if}
-					{/each}
+						{/each}
+						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendData.fontSize} fill="black">
+							{item.label}
+						</text>
+					</g>
+				{:else}
+					<!-- HORIZONTAL -->
+					{@const startX = xPositions[i] ?? legendData.padding}
+					{@const itemY = legendDimensions.height / 2}
 
-					<!-- Label -->
-					<text
-						x={22}
-						y={legendData.fontSize / 2}
-						dy="0.35em"
-						font-size={legendData.fontSize}
-						fill="black"
-					>
-						{item.label}
-					</text>
-				</g>
+					<g transform="translate({startX}, {itemY})">
+						{#each item.elements as el}
+							{#if el.type === 'line'}
+								<line
+									x1={2}
+									y1={0}
+									x2={18}
+									y2={0}
+									stroke={el.color}
+									stroke-width={el.strokeWidth}
+									stroke-dasharray={el.stroke}
+								/>
+							{:else if el.type === 'points'}
+								<circle cx={10} cy={0} r={el.size} fill={el.color} />
+							{/if}
+						{/each}
+						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendData.fontSize} fill="black">
+							{item.label}
+						</text>
+					</g>
+				{/if}
 			{/each}
 		</g>
 	{/if}
