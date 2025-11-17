@@ -218,7 +218,7 @@
 	</div>
 {/snippet}
 
-svelte{#snippet legendPlot()}
+{#snippet legendPlot()}
 	{#if legendData.show && items.length > 0}
 		<g transform="translate({legendPosition.x + padding.left}, {legendPosition.y + padding.top})">
 			<!-- background -->
