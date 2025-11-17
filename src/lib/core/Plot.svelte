@@ -1,5 +1,7 @@
 <script module>
 	// @ts-nocheck
+	import { Column } from '$lib/core/Column.svelte';
+
 	let selectedPlotIds = $state();
 
 	import { appConsts, appState, core } from '$lib/core/core.svelte';
@@ -49,6 +51,29 @@
 	}
 	export function deselectAllPlots() {
 		core.plots.forEach((p) => (p.selected = false));
+	}
+
+	export function removeColumnFromPlots(c_id) {
+		core.plots.forEach((p, pi) => {
+			//for the table
+			if (p.type == 'tableplot') {
+				p.plot.columnRefs = p.plot.columnRefs.filter((cr) => cr != c_id);
+			} else {
+				// for each plot
+				p.plot.data.forEach((d, di) => {
+					// console.log('data:');
+					// console.log($state.snapshot(d));
+					//for each data
+					Object.keys($state.snapshot(d)).forEach((k) => {
+						if (d[k]?.refId == c_id) {
+							//if it's a match, then remove the reference
+							//console.log('removing col ', k, ' from plot ', pi, '(', p.name, '), data ', di);
+							core.plots[pi].plot.data[di][k] = new Column({ refId: -1 });
+						}
+					});
+				});
+			}
+		});
 	}
 
 	export class Plot {

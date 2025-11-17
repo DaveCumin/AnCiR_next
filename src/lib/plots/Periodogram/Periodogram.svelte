@@ -23,7 +23,7 @@
 			values.length < 2 ||
 			times.length !== values.length
 		) {
-			return new Array(frequencies.length).fill(0);
+			return new Array(frequencies.length).fill(NaN);
 		}
 		// Remove NaN values
 		const validIndices = times
@@ -67,7 +67,7 @@
 	// Enright periodogram implementation
 	function calculateEnrightPower(times, values, periods, binSize) {
 		if (!times || !values || times.length < 2 || values.length < 2) {
-			return new Array(periods.length).fill(0);
+			return new Array(periods.length).fill(NaN);
 		}
 
 		// Remove NaN values and bin the data
@@ -136,7 +136,7 @@
 	//Chi Squared periodogram implementation
 	function calculateChiSquaredPower(data, binSize, period, avgAll, denominator) {
 		const colNum = Math.round(period / binSize);
-		if (colNum < 1) return 0;
+		if (colNum < 1) return NaN;
 
 		const rowNum = Math.ceil(data.length / colNum);
 
@@ -160,7 +160,8 @@
 		}
 		const numerator = numSum * data.length * rowNum;
 
-		return numerator / denominator;
+		const result = numerator / denominator;
+		return isFinite(result) ? result : NaN;
 	}
 
 	class PeriodogramDataclass {
@@ -179,10 +180,12 @@
 			let out = { x: [], y: [], threshold: [], pvalue: [] };
 			let binnedData = { bins: [], y_out: [] }; // No binning for Lomb-Scargle
 			if (this.method === 'Chi-squared') {
+				if (!this.y.getData()) {
+					return { x: [], y: [], threshold: [], pvalue: [] };
+				}
 				binnedData = binData(this.x.hoursSinceStart, this.y.getData(), this.binSize, 0);
 				if (binnedData.bins.length === 0) {
-					this.periodData = { x: [], y: [], threshold: [], pvalue: [] };
-					return;
+					return { x: [], y: [], threshold: [], pvalue: [] };
 				}
 			}
 
@@ -232,7 +235,19 @@
 				}
 			}
 
-			out = { x: periods, y: power, threshold, pvalue };
+			var idxsToRemove = [];
+			for (let i = 0; i < power.length; i++) {
+				if (isNaN(power[i]) || isNaN(periods[i])) {
+					idxsToRemove.push(i);
+				}
+			}
+
+			out = {
+				x: periods.filter((v, i) => !idxsToRemove.includes(i)),
+				y: power.filter((v, i) => !idxsToRemove.includes(i)),
+				threshold,
+				pvalue
+			};
 
 			return out;
 		});

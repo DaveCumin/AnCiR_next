@@ -11,6 +11,14 @@
 		return theColumn;
 	}
 
+	export function removeColumn(id) {
+		core.data.forEach((d, i) => {
+			if (d.refId == id) {
+				core.data[i] = new Column({ refId: -1 });
+			}
+		});
+	}
+
 	let _columnIdCounter = 0;
 
 	export class Column {

@@ -422,6 +422,22 @@
 		core.plots[core.plots.length - 1].x = snapToGrid(555);
 		core.plots[core.plots.length - 1].y = snapToGrid(960);
 		core.plots[core.plots.length - 1].width = snapToGrid(510);
+
+		//--------
+		//Add another tableprocess to test removal
+		core.tables[1].processes.push(
+			new TableProcess(
+				{
+					name: 'Duplicate',
+					args: {
+						xIN: core.data[core.data.length - 1].id,
+						out: { result: -1 }
+					}
+				},
+				core.tables[1]
+			)
+		);
+		core.plots[0].plot.data[1].y.refId = core.data[core.data.length - 1].id;
 	}
 
 	// TODO: Key Handling accessibility, e.g. ctrl+i == import
