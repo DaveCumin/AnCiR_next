@@ -34,8 +34,8 @@
 			return { lags: [], correlations: [], dt: 1 };
 		}
 
-		const t = validIndices.map((i) => times[i]);
-		const y = validIndices.map((i) => values[i]);
+		const t = validIndices.map((i) => times[i]).filter((val) => val != null);
+		const y = validIndices.map((i) => values[i]).filter((val) => val != null);
 
 		const n = y.length;
 
@@ -88,14 +88,15 @@
 		confidenceLevel = $state(0.95); // 95% confidence interval
 
 		acfData = $derived.by(() => {
-			const times = this.x.hoursSinceStart;
-			const values = this.y.getData() ?? [];
+			const times = this.x?.hoursSinceStart ?? [];
+			const values = this.y?.getData() ?? [];
 			return computeAutocorrelation(times, values, this.maxLag);
 		});
 
 		confidenceBounds = $derived.by(() => {
 			// Calculate confidence bounds based on sample size
-			const n = this.y.getData()?.filter((v) => !isNaN(v)).length;
+			const n = this.y?.getData()?.filter((v) => !isNaN(v) && v != null).length ?? 0;
+
 			if (n < 2) return { upper: 0, lower: 0 };
 
 			// For large samples, approximate 95% CI is ±1.96/sqrt(n)
@@ -732,20 +733,22 @@
 		/>
 
 		<!-- Zero line -->
-		<line
-			x1={theData.plot.padding.left}
-			y1={scaleLinear()
-				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-				.range([theData.plot.plotheight, 0])(0) + theData.plot.padding.top}
-			x2={theData.plot.padding.left + theData.plot.plotwidth}
-			y2={scaleLinear()
-				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-				.range([theData.plot.plotheight, 0])(0) + theData.plot.padding.top}
-			stroke="#666"
-			stroke-width="1"
-			stroke-dasharray="4 2"
-			opacity="0.5"
-		/>
+		{#if theData.plot.data.length > 0 && theData.plot.ylims[0] <= 0 && theData.plot.ylims[1] >= 0}
+			<line
+				x1={theData.plot.padding.left}
+				y1={scaleLinear()
+					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+					.range([theData.plot.plotheight, 0])(0) + theData.plot.padding.top}
+				x2={theData.plot.padding.left + theData.plot.plotwidth}
+				y2={scaleLinear()
+					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+					.range([theData.plot.plotheight, 0])(0) + theData.plot.padding.top}
+				stroke="#666"
+				stroke-width="1"
+				stroke-dasharray="4 2"
+				opacity="0.5"
+			/>
+		{/if}
 
 		<!-- Plot data -->
 		{#each theData.plot.data as datum}

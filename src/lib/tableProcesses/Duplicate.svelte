@@ -68,14 +68,14 @@
 	<div class="tableProcess-label">
 		<span>Duplicate</span>
 	</div>
-</div>
-<ColumnSelector
-	bind:value={p.args.xIN}
-	onChange={() => {
-		doDuplicate();
-	}}
-/>
 
+	<ColumnSelector
+		bind:value={p.args.xIN}
+		onChange={() => {
+			doDuplicate();
+		}}
+	/>
+</div>
 {#if p.args.valid && p.args.out.result == -1}
 	<p>Preview:</p>
 	<div style="height:250px; overflow:auto;"><Table headers={['Result']} data={[result]} /></div>

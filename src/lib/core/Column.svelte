@@ -333,7 +333,7 @@
 							openDropdown(e, col.id);
 						}}
 					>
-						<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" />
+						<Icon name="add" width={18} height={18} className="menu-icon" />
 					</button>
 
 					{#if openClps[col.id]}
@@ -345,7 +345,7 @@
 			</summary>
 
 			<div class="clps-content-container">
-				<div class="data-component-info">
+				<div class="data-component-info" style="display:none;">
 					{#if !canChange}
 						{#if !col.isReferencial()}
 							<div>

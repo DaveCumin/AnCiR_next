@@ -81,7 +81,7 @@
 
 	<div class="control-input">
 		<p>Start time</p>
-		<input type="datetime-local" bind:value={p.args.startTime} />
+		<input type="datetime-local" bind:value={p.args.startTime} oninput={doSimulated} />
 	</div>
 
 	<div class="control-input">

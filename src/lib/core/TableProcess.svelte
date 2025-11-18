@@ -5,60 +5,60 @@
 	import { Column, removeColumn } from '$lib/core/Column.svelte';
 	let _tableprocessidCounter = 0;
 
-	export function deleteTableProcess(p) {
-		appState.AYStext = `Are you sure you want to remove these data?`;
+	function doDeleteTableProcess(p) {
+		appState.AYStext = `Are you sure you want to delete process ${p.name}? This will also delete any output columns created by this process.`;
 		appState.AYScallback = function handleAYS(option) {
 			if (option === 'Yes') {
-				//remove the table process
-				getTableById(p.parent.id).processes = getTableById(p.parent.id).processes.filter(
-					(tp) => tp.id != p.id
-				);
-				//remove the columns
-				Object.keys(p.args.out).forEach((o) => {
-					const colID = p.args.out[o];
-					console.log('TRYING TO REMOVE DATA ', colID);
-					//need to check if the columns are used in any plots first
-					removeColumnFromPlots(colID);
-
-					//remove from any table processes
-					core.tables.forEach((t, ti) => {
-						t.processes.forEach((p, pi) => {
-							Object.keys(p.args).forEach((k) => {
-								if (k.slice(-2) == 'IN') {
-									console.log('here ', k);
-									// if it's an input
-									if (typeof p.args[k] == 'object') {
-										//if it's an array input
-										console.log('array');
-										core.tables[ti].processes[pi].args[k] = core.tables[ti].processes[pi].args[
-											k
-										].filter((r) => r != colID);
-									} else {
-										console.log('number');
-										//if it's a number input
-										core.tables[ti].processes[pi].args[k] = -1;
-									}
-								}
-							});
-						});
-					});
-
-					//Remove them from the table refs
-					const tableIdx = core.tables.findIndex((t) => t.id === p.parent.id);
-					console.log('tableIdx: ', tableIdx);
-					core.tables[tableIdx].columnRefs = core.tables[tableIdx].columnRefs.filter(
-						(cr) => cr != colID
-					);
-
-					//remove ref from other columns
-					removeColumn(colID);
-
-					//And remove the data completeley
-					core.data = core.data.filter((c) => c.id != colID);
-				});
+				deleteTableProcess(p);
 			}
 		};
 		appState.showAYSModal = true;
+	}
+
+	export function deleteTableProcess(p) {
+		//remove the table process
+		getTableById(p.parent.id).processes = getTableById(p.parent.id).processes.filter(
+			(tp) => tp.id != p.id
+		);
+
+		//remove the columns
+		Object.keys(p.args.out).forEach((o) => {
+			const colID = p.args.out[o];
+			//need to check if the columns are used in any plots first
+			removeColumnFromPlots(colID);
+
+			//remove from any table processes
+			core.tables.forEach((t, ti) => {
+				t.processes.forEach((p, pi) => {
+					Object.keys(p.args).forEach((k) => {
+						if (k.slice(-2) == 'IN') {
+							// if it's an input
+							if (typeof p.args[k] == 'object') {
+								//if it's an array input
+								core.tables[ti].processes[pi].args[k] = core.tables[ti].processes[pi].args[
+									k
+								].filter((r) => r != colID);
+							} else {
+								//if it's a number input
+								core.tables[ti].processes[pi].args[k] = -1;
+							}
+						}
+					});
+				});
+			});
+
+			//Remove them from the table refs
+			const tableIdx = core.tables.findIndex((t) => t.id === p.parent.id);
+			core.tables[tableIdx].columnRefs = core.tables[tableIdx].columnRefs.filter(
+				(cr) => cr != colID
+			);
+
+			//remove ref from other columns
+			removeColumn(colID);
+
+			//And remove the data completeley
+			core.data = core.data.filter((c) => c.id != colID);
+		});
 	}
 
 	export class TableProcess {
@@ -125,11 +125,18 @@
 {#if p}
 	{@const TheTableProcess = appConsts.tableProcessMap.get(p.name)?.component}
 	<div class="tableProcess-container">
-		<div class="control-component-title-icons">
-			<button class="icon" onclick={() => deleteTableProcess(p)}>
+		<!-- <div
+			class="control-component-title-icons"
+			style="
+    margin-bottom: -1.75rem;
+    z-index: 9999;
+    margin-top: 0.25rem;
+"
+		>
+			<button class="icon" onclick={() => doDeleteTableProcess(p)}>
 				<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
 			</button>
-		</div>
+		</div> -->
 		<TheTableProcess bind:p />
 	</div>
 {/if}

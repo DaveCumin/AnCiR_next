@@ -1,9 +1,10 @@
 <script module>
 	// @ts-nocheck
 	import { forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
-	import { core, pushObj } from '$lib/core/core.svelte.js';
-	import { getColumnById, Column } from './Column.svelte';
-	import { TableProcess } from '$lib/core/TableProcess.svelte';
+	import { appState, core, pushObj } from '$lib/core/core.svelte.js';
+	import { getColumnById, Column, removeColumn } from './Column.svelte';
+	import { removeColumnFromPlots } from '$lib/core/Plot.svelte';
+	import { TableProcess, deleteTableProcess } from '$lib/core/TableProcess.svelte';
 
 	export function getTableById(id) {
 		const theTable = core.tables.find((table) => table.id === id);
@@ -33,6 +34,35 @@
 		a.download = table.name + '.csv';
 		a.click();
 		URL.revokeObjectURL(url);
+	}
+
+	export function deleteTable(id) {
+		appState.AYStext = `Are you sure you want to delete table ${getTableById(id).name}?`;
+		appState.AYScallback = function handleAYS(option) {
+			if (option === 'Yes') {
+				const tableIdx = core.tables.findIndex((table) => table.id === id);
+
+				//remove each table process in the table
+				core.tables[tableIdx].processes.forEach((p) => {
+					deleteTableProcess(p);
+				});
+
+				//store the columns to remove
+				const columnsToRemove = $state.snapshot(core.tables[tableIdx].columnRefs);
+
+				//remove the table
+				core.tables = core.tables.splice(tableIdx, 1);
+
+				//Remove the columns in the table
+				columnsToRemove.forEach((colID) => {
+					//need to check if the columns are used in any plots first
+					removeColumnFromPlots(colID);
+					//remove the column itself
+					removeColumn(colID);
+				});
+			}
+		};
+		appState.showAYSModal = true;
 	}
 
 	let _counter = 0;

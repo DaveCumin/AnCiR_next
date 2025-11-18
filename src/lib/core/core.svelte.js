@@ -106,8 +106,8 @@ export function pushObj(obj, autoPosition = true) {
 		if (autoPosition) {
 			const container = document.getElementsByClassName('canvas')[0];
 			const pos = findNextAvailablePosition(core.plots);
-			obj.x = pos.x + container.offsetLeft;
-			obj.y = pos.y + container.offsetTop;
+			obj.x = pos.x + container.scrollLeft;
+			obj.y = pos.y + container.scrollTop;
 		}
 		//now do sizing
 		if (obj.type === 'scatterplot') {

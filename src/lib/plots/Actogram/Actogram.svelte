@@ -732,11 +732,11 @@
 			{/each}
 		</div>
 
-		<div>
+		<!-- <div>
 			<button class="icon control-block-add" onclick={async () => await addData()}>
 				<Icon name="plus" width={16} height={16} className="static-icon" />
 			</button>
-		</div>
+		</div> -->
 	{:else if appState.currentControlTab === 'annotations'}
 		{#each theData.annotations as annotation}
 			<Annotation {which} {annotation} />

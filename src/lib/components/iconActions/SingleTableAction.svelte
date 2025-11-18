@@ -4,7 +4,7 @@
 
 	import { core } from '$lib/core/core.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
-	import { getTableById, exportTable } from '$lib/core/Table.svelte';
+	import { getTableById, exportTable, deleteTable } from '$lib/core/Table.svelte';
 
 	let {
 		showDropdown = $bindable(false),
@@ -39,5 +39,9 @@
 		<div class="dropdown-action" onclick={() => exportTable(tableId)}>
 			<button> Export as csv </button>
 		</div>
+
+		<!-- <div class="dropdown-action" onclick={() => deleteTable(tableId)}>
+			<button> Delete table </button>
+		</div> -->
 	{/snippet}
 </Dropdown>
