@@ -88,8 +88,6 @@
 				.addAll(filteredData);
 		}
 
-		console.log('OUT: ', out);
-
 		return out;
 	});
 

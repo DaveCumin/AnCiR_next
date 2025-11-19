@@ -652,7 +652,6 @@
 						<div class="x-select">
 							<div class="control-input">
 								<p>x</p>
-								<p>{datum.x.getData()?.slice(0, 5)}</p>
 							</div>
 
 							<Column col={datum.x} canChange={true} />
@@ -660,7 +659,6 @@
 						<div class="y-select">
 							<div class="control-input">
 								<p>y</p>
-								<p>{datum.y.getData()?.slice(0, 5)}</p>
 							</div>
 							<Column col={datum.y} canChange={true} />
 						</div>
