@@ -1,32 +1,75 @@
 //Bin data in binSize bins starting at binStart - takes the average y-value and returns the starting x positions
+export function binData(
+	xValues,
+	yValues,
+	binSize,
+	binStart = 0,
+	stepSize = null,
+	aggFunc = 'mean'
+) {
+	const n = xValues.length;
+	if (n === 0 || n !== yValues.length) return { bins: [], y_out: [] };
 
-export function binData(x, y, binSize, binStart = 0) {
-	if (binSize <= 0) {
-		throw new Error('binSize must be greater than 0');
-	}
+	const step = stepSize > 0 ? stepSize : binSize;
 
-	// Initialize arrays for bin sums and counts
-	const numBins = Math.ceil((max(x) - binStart) / binSize) + 1;
-	const binSums = new Array(numBins).fill(0);
-	const binCounts = new Array(numBins).fill(0);
-	const bins = new Array(numBins).fill(0).map((_, i) => binStart + i * binSize);
+	// Pair and sort by x once — O(N log N)
+	const paired = xValues.map((x, i) => ({ x, y: yValues[i] })).sort((a, b) => a.x - b.x);
 
-	// Single pass over x and y to assign bins
-	for (let i = 0; i < x.length; i++) {
-		const valX = x[i];
-		const valY = y[i];
-		if (!isNaN(valX) && !isNaN(valY)) {
-			const binIndex = Math.floor((valX - binStart) / binSize);
-			if (binIndex >= 0 && binIndex < numBins) {
-				binSums[binIndex] += valY;
-				binCounts[binIndex]++;
+	const xs = paired.map((p) => p.x);
+	const ys = paired.map((p) => p.y);
+
+	const aggFunctions = {
+		mean: (arr, start, end) => {
+			let sum = 0;
+			for (let i = start; i < end; i++) sum += arr[i];
+			return sum / (end - start);
+		},
+		min: (arr, start, end) => Math.min(...arr.slice(start, end)),
+		max: (arr, start, end) => Math.max(...arr.slice(start, end)),
+		median: (arr, start, end) => {
+			const slice = arr.slice(start, end);
+			slice.sort((a, b) => a - b);
+			const mid = Math.floor(slice.length / 2);
+			return slice.length % 2 === 0 ? (slice[mid - 1] + slice[mid]) / 2 : slice[mid];
+		},
+		stddev: (arr, start, end) => {
+			if (end - start < 2) return 0;
+			const mean = aggFunctions.mean(arr, start, end);
+			let sumSq = 0;
+			for (let i = start; i < end; i++) {
+				const diff = arr[i] - mean;
+				sumSq += diff * diff;
 			}
+			return Math.sqrt(sumSq / (end - start - 1));
 		}
+	};
+
+	const func = aggFunctions[aggFunc] || aggFunctions.mean;
+
+	const bins = [];
+	const y_out = [];
+
+	let currentStart = binStart;
+
+	while (true) {
+		const binEnd = currentStart + binSize;
+
+		bins.push(currentStart);
+		const start = xs.findIndex((x) => x >= currentStart);
+		const end = xs.findIndex((x) => x >= binEnd);
+		y_out.push(func(ys, start === -1 ? n : start, end === -1 ? n : end));
+
+		// Stop if next bin cannot contain any data
+		if (currentStart >= xs[n - 1]) break;
+
+		currentStart += step;
+
+		// Early exit if we've passed all data
+		if (currentStart + binSize >= xs[xs.length - 1]) break;
 	}
 
-	// Compute y_out as averages; NaN if no data in the bin
-	const y_out = binSums.map((sum, i) => (binCounts[i] > 0 ? sum / binCounts[i] : NaN));
-
+	console.log('bins: ', bins);
+	console.log('y', y_out);
 	return { bins, y_out };
 }
 

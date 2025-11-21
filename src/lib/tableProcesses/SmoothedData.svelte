@@ -374,7 +374,6 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { onMount } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
@@ -411,10 +410,6 @@
 	function getSmoothedData() {
 		[smoothedResult, p.args.valid] = smootheddata(p.args);
 	}
-
-	onMount(() => {
-		getSmoothedData();
-	});
 </script>
 
 <!-- Input Section -->
@@ -451,8 +446,8 @@
 			<p>Type</p>
 			<AttributeSelect
 				bind:value={p.args.smootherType}
-				options={['moving', 'whittaker', 'savitzky', 'loess']}
-				optionsDisplay={['Moving Average', 'Whittaker-Eilers', 'Savitzky-Golay', 'LOESS']}
+				options={['moving', 'savitzky', 'loess']}
+				optionsDisplay={['Moving Average', 'Savitzky-Golay', 'LOESS']}
 				onChange={() => getSmoothedData()}
 			/>
 		</div>

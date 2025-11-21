@@ -22,7 +22,7 @@ export function fitCosineCurves(t, x, N, options = {}) {
 
 	const {
 		initialGuess = null,
-		maxIterations = 1000,
+		maxIterations = 10000,
 		tolerance = 1e-6,
 		useMultiStart = true,
 		numStarts = 5
@@ -222,38 +222,62 @@ function generateInitialGuess(t, x, N, seed = 0) {
 
 	const params = [];
 
-	// Initial A (DC component) - start at zero since we'll add offset O
+	// For N=1, use a smarter initial guess
+	if (N === 1) {
+		// Remove mean for better frequency/amplitude estimation
+		const detrended = x.map((val) => val - mean);
+
+		// Get dominant period
+		const dominantPeriods = estimateDominantPeriods(t, x, 1);
+		const frequency = dominantPeriods.length > 0 ? dominantPeriods[0].frequency : 2 * Math.PI;
+
+		// Estimate amplitude and phase using least squares fit for given frequency
+		let cosSum = 0,
+			sinSum = 0;
+		for (let i = 0; i < t.length; i++) {
+			cosSum += detrended[i] * Math.cos(frequency * t[i]);
+			sinSum += detrended[i] * Math.sin(frequency * t[i]);
+		}
+		cosSum *= 2 / t.length;
+		sinSum *= 2 / t.length;
+
+		// Convert to amplitude and phase: B*cos(wt + o) = a*cos(wt) + b*sin(wt)
+		// where a = B*cos(o), b = -B*sin(o)
+		const amplitude = Math.sqrt(cosSum * cosSum + sinSum * sinSum);
+		const phase = -Math.atan2(sinSum, cosSum);
+
+		params.push(0); // A (DC component)
+		params.push(amplitude); // B (amplitude)
+		params.push(frequency); // w (frequency)
+		params.push(phase); // o (phase)
+		params.push(mean); // O (offset)
+
+		return params;
+	}
+
+	// Original multi-cosine logic
 	params.push(0);
 
-	// Get dominant periods
 	const dominantPeriods = estimateDominantPeriods(t, x, Math.max(3, N));
-
-	// Deterministic random generator for reproducible results
 	const rng = createSeededRNG(seed);
 
-	// Initial parameters for each cosine
 	for (let i = 0; i < N; i++) {
-		// Amplitude: use decreasing amplitudes based on data standard deviation
 		const amplitude = std * (1 / (i + 1)) * (0.5 + 0.5 * rng());
 		params.push(amplitude);
 
-		// Frequency: use dominant periods if available, otherwise harmonics
 		let frequency;
 		if (i < dominantPeriods.length) {
 			frequency = dominantPeriods[i].frequency;
 		} else {
-			// Use harmonics or random frequencies
 			const baseFreq = dominantPeriods.length > 0 ? dominantPeriods[0].frequency : 2 * Math.PI;
 			frequency = baseFreq * (i + 1) * (0.5 + rng());
 		}
 		params.push(frequency);
 
-		// Phase: deterministic based on seed and index
 		const phase = ((2 * Math.PI * (seed * 7 + i * 11)) / 17) % (2 * Math.PI);
 		params.push(phase);
 	}
 
-	// Initial O (offset)
 	params.push(mean);
 
 	return params;

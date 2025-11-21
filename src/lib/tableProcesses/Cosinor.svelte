@@ -16,43 +16,50 @@
 		const xOUT = argsIN.out.cosinorx;
 		const yOUT = argsIN.out.cosinory;
 
-		if (
-			xIN == undefined ||
-			yIN == undefined ||
-			Ncurves == undefined ||
-			xIN == -1 ||
-			yIN == -1 ||
-			Ncurves < 1
-		) {
-			return [{ cosinorx: [], cosinory: [] }, false];
+		let result = {
+			t: [],
+			fittedData: { fitted: [], parameters: { cosines: [] }, rmse: NaN }
+		};
+		let valid = false;
+
+		if (xIN != -1 && yIN != -1 && Ncurves >= 1 && getColumnById(xIN) && getColumnById(yIN)) {
+			const tCol = getColumnById(xIN);
+			const yCol = getColumnById(yIN);
+
+			const t = tCol.type === 'time' ? tCol.hoursSinceStart : tCol.getData();
+			const y = yCol.getData();
+
+			const validIndices = t
+				.map((v, i) => (isNaN(v) || isNaN(y[i]) ? -1 : i))
+				.filter((i) => i !== -1);
+
+			const tt = validIndices.map((i) => t[i]);
+			const yy = validIndices.map((i) => y[i]);
+
+			const fittedData = fitCosineCurves(tt, yy, Ncurves);
+
+			result = { t: tt, fittedData };
+			valid = fittedData.fitted.length > 0;
+
+			// Only write to output columns if they exist
+			if (xOUT != -1 && yOUT != -1) {
+				const xColOut = getColumnById(xOUT);
+				const yColOut = getColumnById(yOUT);
+
+				if (xColOut && yColOut) {
+					xColOut.data = tt;
+					xColOut.type = 'number';
+					yColOut.data = fittedData.fitted;
+					yColOut.type = 'number';
+
+					const processHash = crypto.randomUUID();
+					xColOut.tableProcessGUId = processHash;
+					yColOut.tableProcessGUId = processHash;
+				}
+			}
 		}
 
-		const t =
-			getColumnById(xIN).type == 'time'
-				? getColumnById(xIN).hoursSinceStart
-				: getColumnById(xIN).getData();
-		const y = getColumnById(yIN).getData();
-		//remove NaNs
-		const validIndices = t
-			.map((t, i) => (isNaN(t) || isNaN(y[i]) ? -1 : i))
-			.filter((i) => i !== -1);
-		const tt = validIndices.map((i) => t[i]);
-		const yy = validIndices.map((i) => y[i]);
-		const fittedData = fitCosineCurves(tt, yy, Ncurves);
-		console.log(fittedData);
-
-		if (xOUT == -1 || yOUT == -1) {
-		} else {
-			getColumnById(xOUT).data = tt;
-			getColumnById(xOUT).type = 'number';
-			getColumnById(yOUT).data = fittedData.fitted;
-			getColumnById(yOUT).type = 'number';
-			const processHash = crypto.randomUUID();
-			getColumnById(xOUT).tableProcessGUId = processHash;
-			getColumnById(yOUT).tableProcessGUId = processHash;
-		}
-
-		return [{ t, fittedData: fittedData }, fittedData.fitted.length > 0];
+		return [result, valid];
 	}
 </script>
 
@@ -63,8 +70,6 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 
 	import { getColumnById } from '$lib/core/Column.svelte';
-
-	import { onMount } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
@@ -82,23 +87,15 @@
 	let lastHash = '';
 	$effect(() => {
 		const dataHash = getHash;
-		if (lastHash === dataHash) {
-			//do nothing
-		} else {
-			cosinorData = cosinor(p.args); // DO THE BUSINESS
-			lastHash = getHash;
+		if (lastHash !== dataHash) {
+			[cosinorData, p.args.valid] = cosinor(p.args);
+			lastHash = dataHash;
 		}
 	});
 	//------------
 	function getCosinor() {
 		[cosinorData, p.args.valid] = cosinor(p.args);
-		console.log($state.snapshot(cosinorData));
-		console.log($state.snapshot(p.args));
 	}
-	onMount(() => {
-		//needed to get the values when it first mounts
-		getCosinor();
-	});
 </script>
 
 <!-- Input Section -->
@@ -146,43 +143,63 @@
 		<span>Output</span>
 	</div>
 	<div class="section-content">
-		{#key cosinorData}
-			{#if p.args.valid && p.args.out.cosinorx != -1 && p.args.out.cosinory != -1}
-				{@const xout = getColumnById(p.args.out.cosinorx)}
-				<ColumnComponent col={xout} />
-				{@const yout = getColumnById(p.args.out.cosinory)}
-				<ColumnComponent col={yout} />
+		{#if p.args.valid && p.args.out.cosinorx != -1 && p.args.out.cosinory != -1}
+			{@const xout = getColumnById(p.args.out.cosinorx)}
+			<ColumnComponent col={xout} />
+			{@const yout = getColumnById(p.args.out.cosinory)}
+			<ColumnComponent col={yout} />
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}</p>
+				</div>
+			</div>
+			{#each cosinorData?.fittedData?.parameters.cosines as cosine, i}
 				<div class="control-input-horizontal">
 					<div class="control-input">
-						<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}</p>
+						<p>
+							Period: {(2 * Math.PI * (1 / cosine.frequency)).toFixed(2)}
+						</p>
+
+						<p>
+							Equation: {cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(
+								2
+							)})
+						</p>
 					</div>
 				</div>
-				{#each cosinorData?.fittedData?.parameters.cosines as cosine, i}
-					<div class="control-input-horizontal">
-						<div class="control-input">
-							<p>
-								{(2 * Math.PI * (1 / cosine.frequency)).toFixed(2)}
-								{cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(
-									2
-								)})
-							</p>
-						</div>
-					</div>
-				{/each}
-			{:else if p.args.valid}
-				<p>Preview:</p>
-				<div style="height:250px; overflow:auto;">
-					<Table
-						headers={['binned x', 'binned y']}
-						data={[
-							cosinorData.t.map((x) => x.toFixed(2)),
-							cosinorData.fittedData.fitted.map((x) => x.toFixed(2))
-						]}
-					/>
+			{/each}
+		{:else if p.args.valid}
+			<p>Preview:</p>
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}</p>
 				</div>
-			{:else}
-				<p>Need to have valid inputs to create columns.</p>
-			{/if}
-		{/key}
+			</div>
+			{#each cosinorData?.fittedData?.parameters.cosines as cosine, i}
+				<div class="control-input-horizontal">
+					<div class="control-input">
+						<p>
+							Period: {(2 * Math.PI * (1 / cosine.frequency)).toFixed(2)}
+						</p>
+						<p>
+							Equation: {cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(
+								2
+							)})
+						</p>
+					</div>
+				</div>
+			{/each}
+			<div style="height:250px; overflow:auto;">
+				<Table
+					headers={['binned x', 'binned y']}
+					data={[
+						cosinorData.t.map((x) => x.toFixed(2)),
+						cosinorData.fittedData.fitted.map((x) => x.toFixed(2))
+					]}
+				/>
+			</div>
+		{:else}
+			<p>Need to have valid inputs to create columns.</p>
+		{/if}
 	</div>
 </div>

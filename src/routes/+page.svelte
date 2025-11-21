@@ -333,6 +333,7 @@
 						yIN: d1id,
 						binSize: 2,
 						binStart: 0,
+						stepSize: 2,
 						out: { binnedx: -1, binnedy: -1 }
 					}
 				},

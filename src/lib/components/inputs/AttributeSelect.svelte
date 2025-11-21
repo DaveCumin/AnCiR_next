@@ -1,4 +1,6 @@
 <script>
+	import { onMount } from 'svelte';
+
 	let {
 		value = $bindable(),
 		label,
@@ -12,6 +14,10 @@
 	let selected = $state();
 	let selectComponent = $state();
 	let otherComponent = $state();
+
+	onMount(() => {
+		selected = value;
+	});
 </script>
 
 {#if label}

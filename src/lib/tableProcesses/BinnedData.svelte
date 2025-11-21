@@ -6,8 +6,10 @@
 		['yIN', { val: -1 }],
 		['binSize', { val: 0.25 }],
 		['binStart', { val: 0 }],
-		['out', { binnedx: { val: -1 }, binnedy: { val: -1 } }], //needed to set upu the output columns
-		['valid', { val: false }] //needed for the progress step logic
+		['stepSize', { val: 0.25 }], // ← new: null = use binSize as step
+		['aggFunction', { val: 'mean' }], // ← new: mean | median | min | max | stddev
+		['out', { binnedx: { val: -1 }, binnedy: { val: -1 } }],
+		['valid', { val: false }]
 	]);
 
 	export function binneddata(argsIN) {
@@ -15,6 +17,8 @@
 		const yIN = argsIN.yIN;
 		const binSize = argsIN.binSize;
 		const binStart = argsIN.binStart;
+		const stepSize = argsIN.stepSize || binSize;
+		const aggFunction = argsIN.aggFunction || 'mean';
 		const xOUT = argsIN.out.binnedx;
 		const yOUT = argsIN.out.binnedy;
 
@@ -25,27 +29,30 @@
 			binStart == undefined ||
 			xIN == -1 ||
 			yIN == -1 ||
-			binSize == 0
+			binSize <= 0
 		) {
 			return [{ bins: [], y_out: [] }, false];
 		}
 
-		const theBinnedData = binData(
-			getColumnById(xIN).type == 'time'
+		const xData =
+			getColumnById(xIN).type === 'time'
 				? getColumnById(xIN).hoursSinceStart
-				: getColumnById(xIN).getData(),
-			getColumnById(yIN).getData(),
-			binSize,
-			binStart
-		);
+				: getColumnById(xIN).getData();
 
-		if (xOUT == -1 || yOUT == -1) {
-		} else {
+		const yData = getColumnById(yIN).getData();
+
+		const theBinnedData = binData(xData, yData, binSize, binStart, stepSize, aggFunction);
+
+		if (xOUT !== -1 && yOUT !== -1) {
 			getColumnById(xOUT).data = theBinnedData.bins;
 			getColumnById(xOUT).type = 'bin';
 			getColumnById(xOUT).binWidth = binSize;
+			getColumnById(xOUT).binStep = stepSize;
+			getColumnById(xOUT).aggFunction = aggFunction;
+
 			getColumnById(yOUT).data = theBinnedData.y_out;
 			getColumnById(yOUT).type = 'number';
+
 			const processHash = crypto.randomUUID();
 			getColumnById(xOUT).tableProcessGUId = processHash;
 			getColumnById(yOUT).tableProcessGUId = processHash;
@@ -60,116 +67,120 @@
 	import { binData } from '$lib/components/plotBits/helpers/wrangleData.js';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
-
 	import { getColumnById } from '$lib/core/Column.svelte';
-
 	import { onMount } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
 	let binnedData = $state();
 
-	// for reactivity -----------
+	// Reactivity
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	let yIN_col = $derived.by(() => (p.args.yIN >= 0 ? getColumnById(p.args.yIN) : null));
 	let getHash = $derived.by(() => {
-		let out = '';
-		out += xIN_col?.getDataHash;
-		out += yIN_col?.getDataHash;
-		return out;
+		let h = '';
+		h += xIN_col?.getDataHash ?? '';
+		h += yIN_col?.getDataHash ?? '';
+		h += p.args.binSize + p.args.binStart + (p.args.stepSize ?? '') + p.args.aggFunction;
+		return h;
 	});
 	let lastHash = '';
+
 	$effect(() => {
-		const dataHash = getHash;
-		if (lastHash === dataHash) {
-			//do nothing
-		} else {
-			binnedData = binneddata(p.args); // DO THE BUSINESS
+		if (getHash !== lastHash) {
+			[binnedData, p.args.valid] = binneddata(p.args);
 			lastHash = getHash;
 		}
 	});
-	//------------
+
 	function getBinnedData() {
 		[binnedData, p.args.valid] = binneddata(p.args);
 	}
-	onMount(() => {
-		//needed to get the values when it first mounts
-		getBinnedData();
-	});
+
+	onMount(getBinnedData);
 </script>
 
 <!-- Input Section -->
 <div class="section-row">
-	<div class="tableProcess-label">
-		<span>Input</span>
-	</div>
-
+	<div class="tableProcess-label"><span>Input</span></div>
 	<div class="control-input-vertical">
 		<div class="control-input">
 			<p>X column</p>
-			<ColumnSelector bind:value={p.args.xIN} onChange={(e) => getBinnedData()} />
+			<ColumnSelector bind:value={p.args.xIN} onChange={getBinnedData} />
 		</div>
-
 		<div class="control-input">
 			<p>Y column</p>
-
 			<ColumnSelector
 				bind:value={p.args.yIN}
-				excludeColIds={[p.xIN]}
-				onChange={(e) => getBinnedData()}
+				excludeColIds={[p.args.xIN]}
+				onChange={getBinnedData}
 			/>
 		</div>
 	</div>
 </div>
 
-<!-- Process Section -->
+<!-- Bin Parameters -->
 <div class="section-row">
-	<div class="tableProcess-label">
-		<span>Bin parameters</span>
-	</div>
+	<div class="tableProcess-label"><span>Bin parameters</span></div>
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>Bin size</p>
+			<NumberWithUnits bind:value={p.args.binSize} onInput={getBinnedData} min="0.01" step="0.01" />
+		</div>
+		<div class="control-input">
+			<p>Bin start</p>
+			<NumberWithUnits bind:value={p.args.binStart} onInput={getBinnedData} />
+		</div>
+	</div>
+
+	<div class="control-input-horizontal">
+		<div class="control-input">
+			<p>Step size</p>
+
 			<NumberWithUnits
-				bind:value={p.args.binSize}
-				onInput={() => getBinnedData()}
-				min="0.1"
+				bind:value={p.args.stepSize}
+				onInput={getBinnedData}
+				min="0.01"
 				step="0.01"
 			/>
 		</div>
 
 		<div class="control-input">
-			<p>Bin start</p>
-			<NumberWithUnits bind:value={p.args.binStart} onInput={() => getBinnedData()} />
+			<p>Function</p>
+			<select bind:value={p.args.aggFunction} on:change={getBinnedData}>
+				<option value="mean">Mean</option>
+				<option value="median">Median</option>
+				<option value="min">Minimum</option>
+				<option value="max">Maximum</option>
+				<option value="stddev">Std Dev</option>
+			</select>
 		</div>
 	</div>
 </div>
 
-<!-- Output Section -->
+<!-- Output / Preview -->
 <div class="section-row">
 	<div class="section-content">
 		{#key binnedData}
 			{#if p.args.valid && p.args.out.binnedx != -1 && p.args.out.binnedy != -1}
 				{@const xout = getColumnById(p.args.out.binnedx)}
 				{@const yout = getColumnById(p.args.out.binnedy)}
-				<div class="tableProcess-label">
-					<span>Output</span>
-				</div>
+				<div class="tableProcess-label"><span>Output</span></div>
 				<ColumnComponent col={xout} />
 				<ColumnComponent col={yout} />
-			{:else if p.args.valid}
-				<p>Preview:</p>
+			{:else if p.args.valid && binnedData?.bins?.length}
+				<p>Preview ({p.args.aggFunction}{p.args.stepSize ? `, step=${p.args.stepSize}` : ''}):</p>
 				<div style="height:250px; overflow:auto;">
 					<Table
-						headers={['binned x', 'binned y']}
+						headers={['binned x (center)', 'binned y']}
 						data={[
-							binnedData.bins.map((x) => x.toFixed(2)),
-							binnedData.y_out.map((x) => x.toFixed(2))
+							binnedData.bins.map((x) => x.toFixed(4)),
+							binnedData.y_out.map((y) => y.toFixed(4))
 						]}
 					/>
 				</div>
 			{:else}
-				<p>Need to have valid inputs to create columns.</p>
+				<p>Select valid input columns and parameters to see preview.</p>
 			{/if}
 		{/key}
 	</div>

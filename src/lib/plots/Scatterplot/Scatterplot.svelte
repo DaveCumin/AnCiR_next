@@ -152,8 +152,9 @@
 					return;
 				}
 				let tempx = this.data[i].x.getData() ?? [];
+				let tempy = this.data[i].y.getData() ?? [];
 
-				tempx = tempx.map((x) => Number(x)); // Ensure all values are numbers
+				tempx = tempx.filter((x, i) => Number(x) && Number(tempy[i])); // Ensure all values are numbers and there is a y-value associated
 				xmin = Math.floor(min([xmin, ...tempx]));
 				xmax = Math.ceil(max([xmax, ...tempx]));
 			});
