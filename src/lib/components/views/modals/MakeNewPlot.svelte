@@ -150,7 +150,7 @@
 {#snippet footerContent()}
 	{#if steps[1].completed}
 		<div class="dialog-button-container">
-			<button class="dialog-button" onclick={makePlot}>Make the {plotType}</button>
+			<button id="makePlot" class="dialog-button" onclick={makePlot}>Make the {plotType}</button>
 		</div>
 	{/if}
 {/snippet}

@@ -375,7 +375,9 @@
 	{#snippet button()}
 		<div class="dialog-button-container">
 			{#if importReady && !awaitingPreview && !awaitingLoad}
-				<button class="dialog-button" onclick={confirmImport}>Confirm Import</button>
+				<button id="confirmImport" class="dialog-button" onclick={confirmImport}
+					>Confirm Import</button
+				>
 			{/if}
 		</div>
 	{/snippet}

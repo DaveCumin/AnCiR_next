@@ -11,12 +11,65 @@
 		return theColumn;
 	}
 
-	export function removeColumn(id) {
-		core.data.forEach((d, i) => {
-			if (d.refId == id) {
-				core.data[i] = new Column({ refId: -1 });
+	export function removeColumn(columnId) {
+		// Step 1: Find all columns that reference the column being removed
+		const dependentColumns = core.data.filter((col) => col.refId === columnId);
+
+		// Step 2: Recursively handle dependent columns
+		// Set their refId to -1 to break the reference chain
+		dependentColumns.forEach((col) => {
+			col.refId = -1;
+		});
+
+		// Step 3: Remove from all table processes
+		core.tables.forEach((table) => {
+			table.processes.forEach((process) => {
+				const args = process.args;
+
+				// Handle single column inputs (xIN, yIN, etc.)
+				if (args.xIN === columnId) args.xIN = -1;
+				if (args.yIN === columnId) args.yIN = -1;
+
+				// Handle array of column inputs (xsIN, etc.)
+				if (Array.isArray(args.xsIN)) {
+					args.xsIN = args.xsIN.filter((id) => id !== columnId);
+				}
+
+				// Handle output columns - if this is an output column, mark it invalid
+				if (args.out) {
+					Object.keys(args.out).forEach((outKey) => {
+						if (args.out[outKey] === columnId) {
+							args.out[outKey] = -1;
+						}
+					});
+				}
+			});
+
+			// Remove from table's column references
+			table.columnRefs = table.columnRefs.filter((colId) => colId !== columnId);
+		});
+
+		// Step 4: Remove from all plots/tables
+		core.plots.forEach((plot) => {
+			if (plot.plot && plot.plot.columnRefs) {
+				plot.plot.columnRefs = plot.plot.columnRefs.filter((colId) => colId !== columnId);
+			}
+
+			// Handle plot-specific column references
+			if (plot.plot.columnRefs) {
+				plot.plot.columnRefs = plot.plot.columnRefs.filter((colId) => colId !== columnId);
 			}
 		});
+
+		// Step 5: Remove the column itself from core.data
+		core.data = core.data.filter((col) => col.id !== columnId);
+
+		return {
+			success: true,
+			removedColumnId: columnId,
+			dependentColumnsAffected: dependentColumns.length,
+			message: `Column ${columnId} safely removed. ${dependentColumns.length} dependent column(s) had their references cleared.`
+		};
 	}
 
 	let _columnIdCounter = 0;
@@ -322,6 +375,7 @@
 							bind:innerHTML={col.name}
 						></p>
 					{/if}
+					<button onclick={() => removeColumn(col.id)}>-</button>
 				</div>
 
 				<div class="clps-title-button">

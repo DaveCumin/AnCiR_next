@@ -15,50 +15,95 @@
 		appState.showAYSModal = true;
 	}
 
-	export function deleteTableProcess(p) {
-		//remove the table process
-		getTableById(p.parent.id).processes = getTableById(p.parent.id).processes.filter(
-			(tp) => tp.id != p.id
-		);
+	export function deleteTableProcess(tableProcess) {
+		if (!tableProcess || !tableProcess.parent) {
+			return {
+				success: false,
+				message: 'Invalid table process provided'
+			};
+		}
 
-		//remove the columns
-		Object.keys(p.args.out).forEach((o) => {
-			const colID = p.args.out[o];
-			//need to check if the columns are used in any plots first
+		const removedColumns = [];
+		const affectedProcesses = [];
+
+		// Step 1: Collect all output columns to remove
+		const outputColumnIds = Object.keys(tableProcess.args.out)
+			.map((outKey) => tableProcess.args.out[outKey])
+			.filter((id) => id >= 0);
+
+		// Step 2: Remove each output column and its dependencies
+		outputColumnIds.forEach((colID) => {
+			removedColumns.push(colID);
+
+			// Step 2a: Remove from plots/tables that display them
 			removeColumnFromPlots(colID);
 
-			//remove from any table processes
-			core.tables.forEach((t, ti) => {
-				t.processes.forEach((p, pi) => {
-					Object.keys(p.args).forEach((k) => {
-						if (k.slice(-2) == 'IN') {
-							// if it's an input
-							if (typeof p.args[k] == 'object') {
-								//if it's an array input
-								core.tables[ti].processes[pi].args[k] = core.tables[ti].processes[pi].args[
-									k
-								].filter((r) => r != colID);
-							} else {
-								//if it's a number input
-								core.tables[ti].processes[pi].args[k] = -1;
+			// Step 2b: Remove from input references in other table processes
+			core.tables.forEach((table, tableIdx) => {
+				table.processes.forEach((process, processIdx) => {
+					// Check all argument keys for references to this column
+					Object.keys(process.args).forEach((argKey) => {
+						// Only process input arguments (ending with 'IN')
+						if (argKey.slice(-2) === 'IN') {
+							if (typeof process.args[argKey] === 'object') {
+								// Array input (e.g., xsIN) - filter out the column
+								const before = process.args[argKey].length;
+								process.args[argKey] = process.args[argKey].filter((id) => id !== colID);
+								if (before !== process.args[argKey].length) {
+									affectedProcesses.push({
+										processId: process.id,
+										processName: process.name,
+										argument: argKey
+									});
+								}
+							} else if (process.args[argKey] === colID) {
+								// Single input (e.g., xIN, yIN) - set to -1
+								process.args[argKey] = -1;
+								affectedProcesses.push({
+									processId: process.id,
+									processName: process.name,
+									argument: argKey
+								});
 							}
 						}
 					});
 				});
 			});
 
-			//Remove them from the table refs
-			const tableIdx = core.tables.findIndex((t) => t.id === p.parent.id);
-			core.tables[tableIdx].columnRefs = core.tables[tableIdx].columnRefs.filter(
-				(cr) => cr != colID
-			);
+			// Step 2c: Remove from table's column references
+			const tableIdx = core.tables.findIndex((t) => t.id === tableProcess.parent.id);
+			if (tableIdx >= 0) {
+				core.tables[tableIdx].columnRefs = core.tables[tableIdx].columnRefs.filter(
+					(cr) => cr !== colID
+				);
+			}
 
-			//remove ref from other columns
+			// Step 2d: Remove columns that reference this column (break dependency chain)
+			const dependentColumns = core.data.filter((col) => col.refId === colID);
+			dependentColumns.forEach((depCol) => {
+				depCol.refId = -1; // Break the reference
+			});
+
+			// Step 2e: Remove from internal column reference system
 			removeColumn(colID);
 
-			//And remove the data completeley
-			core.data = core.data.filter((c) => c.id != colID);
+			// Step 2f: Remove from core data completely
+			core.data = core.data.filter((c) => c.id !== colID);
 		});
+
+		// Step 3: Remove the table process itself from the parent table
+		const parentTable = getTableById(tableProcess.parent.id);
+		parentTable.processes = parentTable.processes.filter((tp) => tp.id !== tableProcess.id);
+
+		return {
+			success: true,
+			processId: tableProcess.id,
+			processName: tableProcess.name,
+			removedOutputColumns: removedColumns.length,
+			affectedInputReferences: affectedProcesses.length,
+			affectedProcesses: affectedProcesses,
+			message: `Table process "${tableProcess.name}" safely removed. ${removedColumns.length} output column(s) deleted. ${affectedProcesses.length} other process(es) had input references cleaned up.`
+		};
 	}
 
 	export class TableProcess {
@@ -125,7 +170,7 @@
 {#if p}
 	{@const TheTableProcess = appConsts.tableProcessMap.get(p.name)?.component}
 	<div class="tableProcess-container">
-		<!-- <div
+		<div
 			class="control-component-title-icons"
 			style="
     margin-bottom: -1.75rem;
@@ -136,7 +181,7 @@
 			<button class="icon" onclick={() => doDeleteTableProcess(p)}>
 				<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
 			</button>
-		</div> -->
+		</div>
 		<TheTableProcess bind:p />
 	</div>
 {/if}

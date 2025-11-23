@@ -167,6 +167,7 @@
 		{#if yCols[0] != null && Number(xCol) >= 0}
 			<div class="dialog-button-container">
 				<button
+					id="makePlots"
 					class="dialog-button"
 					onclick={(e) => {
 						e.stopPropagation();

@@ -78,6 +78,7 @@
 		columnRefs = $state([]); //Reference Ids for the raw data that are columns
 
 		columns = $derived.by(() => {
+			console.log(this.columnRefs);
 			return this.columnRefs.map((colRef) => getColumnById(colRef));
 		}); //The actual columns of data
 
