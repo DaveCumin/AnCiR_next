@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	let {
-		value = $bindable(0),
+		value = $bindable(),
 		step = 1,
 		min = -Infinity,
 		max = Infinity,
@@ -111,7 +111,7 @@
 	oninput={(e) => updateValue(e.target.value)}
 	onmousedown={startDrag}
 	onwheel={(e) => {
-		if (inputElement.focus()) e.stopPropagation();
+		if (document.activeElement == inputElement) e.stopPropagation();
 	}}
 	class={'draggable-number-input ' + className}
 	{style}

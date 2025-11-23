@@ -11,6 +11,15 @@
 		return theColumn;
 	}
 
+	function doRemoveColumn(columnId) {
+		appState.AYStext = `Are you sure you want to delete ${getColumnById(columnId).name}?`;
+		appState.AYScallback = function handleAYS(option) {
+			if (option === 'Yes') {
+				removeColumn(columnId);
+			}
+		};
+		appState.showAYSModal = true;
+	}
 	export function removeColumn(columnId) {
 		// Step 1: Find all columns that reference the column being removed
 		const dependentColumns = core.data.filter((col) => col.refId === columnId);
@@ -179,6 +188,12 @@
 			}
 
 			// console.warn('recalculating');
+
+			if (this.refId === -1) {
+				//broken reference
+				console.warn('Column ', this.id, this.name, ' has a broken reference.');
+				return [];
+			}
 
 			let out = [];
 			//if there is a reference, then just get that data
@@ -375,7 +390,6 @@
 							bind:innerHTML={col.name}
 						></p>
 					{/if}
-					<button onclick={() => removeColumn(col.id)}>-</button>
 				</div>
 
 				<div class="clps-title-button">
@@ -389,6 +403,12 @@
 					>
 						<Icon name="add" width={18} height={18} className="menu-icon" />
 					</button>
+
+					{#if col.tableProcessGUId == ''}
+						<button class="icon" onclick={(e) => doRemoveColumn(col.id)}>
+							<Icon name="minus" width={18} height={18} className="menu-icon" />
+						</button>
+					{/if}
 
 					{#if openClps[col.id]}
 						<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />

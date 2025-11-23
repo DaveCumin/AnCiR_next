@@ -179,7 +179,7 @@
 "
 		>
 			<button class="icon" onclick={() => doDeleteTableProcess(p)}>
-				<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
+				<Icon name="minus" width={16} height={16} className="menu-icon" />
 			</button>
 		</div>
 		<TheTableProcess bind:p />

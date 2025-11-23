@@ -304,16 +304,11 @@
 			return [{ x_out: [], y_out: [] }, false];
 		}
 
-		console.log('xIN:, yIN: ', xIN, yIN);
-		console.log('xIN COL: ', $state.snapshot(getColumnById(xIN)));
-		console.log('xIN DATA: ', $state.snapshot(getColumnById(xIN).getData()));
 		const xData =
 			getColumnById(xIN).type == 'time'
 				? getColumnById(xIN).hoursSinceStart
 				: getColumnById(xIN).getData();
 		const yData = getColumnById(yIN).getData();
-
-		console.log('xData: ', xData);
 
 		// Filter out invalid data
 		const filteredData = xData

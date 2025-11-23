@@ -8,6 +8,7 @@ export function binData(
 	aggFunc = 'mean'
 ) {
 	const n = xValues.length;
+
 	if (n === 0 || n !== yValues.length) return { bins: [], y_out: [] };
 
 	const step = stepSize > 0 ? stepSize : binSize;
@@ -68,8 +69,8 @@ export function binData(
 		if (currentStart + binSize >= xs[xs.length - 1]) break;
 	}
 
-	console.log('bins: ', bins);
-	console.log('y', y_out);
+	// console.log('bins: ', bins);
+	// console.log('y', y_out);
 	return { bins, y_out };
 }
 
