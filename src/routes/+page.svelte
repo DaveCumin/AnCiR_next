@@ -6,6 +6,7 @@
 	import '../app.css';
 	import Navbar from '$lib/components/Navbar.svelte';
 	import DisplayPanel from '$lib/components/DisplayPanel.svelte';
+	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import ControlPanel from '$lib/components/ControlPanel.svelte';
 	import PlotPanel from '$lib/components/PlotPanel.svelte';
 	import PlotDisplay from '$lib/components/views/PlotDisplay.svelte';
@@ -462,8 +463,9 @@
 
 	<PlotDisplay />
 
-	<ControlPanel />
-
+	<SvelteFlowProvider>
+		<ControlPanel />
+	</SvelteFlowProvider>
 	<AreYouSure
 		bind:showModal={appState.showAYSModal}
 		text={appState.AYStext}

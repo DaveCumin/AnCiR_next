@@ -5,6 +5,9 @@
 	import ControlDisplay from './views/ControlDisplay.svelte';
 	import { fly, fade } from 'svelte/transition';
 	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
+	import { useSvelteFlow } from '@xyflow/svelte';
+
+	const { screenToFlowPosition, getZoom, setViewport, getViewport } = useSvelteFlow();
 
 	let container;
 	const minWidth = 200;
@@ -12,6 +15,24 @@
 
 	let resizeSide = 'left';
 	let resizing = false;
+
+	$effect(() => {
+		const currentZoom = appState.canvasScale;
+		const viewport = getViewport();
+
+		if (viewport && Math.abs(viewport.zoom - currentZoom) > 0.001) {
+			setViewport(
+				{
+					x: viewport.x,
+					y: viewport.y,
+					zoom: currentZoom
+				},
+				{ duration: 200 }
+			); // Optional: add smooth animation
+
+			console.log('viewport updated to zoom:', currentZoom);
+		}
+	});
 
 	function onMouseMove(e) {
 		if (!resizing) return;
@@ -110,6 +131,7 @@
 	onclick={(e) => {
 		e.stopPropagation();
 		appState.canvasScale -= 0.05;
+		console.log(appState.canvasScale);
 	}}
 >
 	<Icon name="zoom-out" width={24} height={24} />
@@ -123,6 +145,7 @@
 	onclick={(e) => {
 		e.stopPropagation();
 		appState.canvasScale += 0.05;
+		console.log(appState.canvasScale);
 	}}
 >
 	<Icon name="zoom-in" width={24} height={24} />
