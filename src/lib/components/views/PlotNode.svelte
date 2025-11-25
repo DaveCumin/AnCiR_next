@@ -32,7 +32,6 @@
 			onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
 			bind:innerHTML={plot.name}
 		></p>
-		<p>{selected ? 'S' : ''}</p>
 
 		<div class="clps-title-button">
 			<button

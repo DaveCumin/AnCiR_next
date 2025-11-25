@@ -27,7 +27,12 @@
 	import { deselectAllPlots } from '$lib/core/Plot.svelte';
 	import { removePlots } from '$lib/core/Plot.svelte';
 
-	let selectedPlotIds = $derived.by(() => core.plots.filter((p) => p.selected).map((p) => p.id));
+	const { getNodes } = useSvelteFlow();
+	let selectedPlotIds = $derived(
+		getNodes()
+			.filter((node) => node.selected)
+			.map((node) => node.data.plot.id)
+	);
 
 	// Convert plots to SvelteFlow nodes
 	let nodes = $derived.by(() =>
@@ -141,7 +146,7 @@
 			zoomOnPinch={true}
 			snapToGrid={true}
 			snapGrid={[appState.gridSize, appState.gridSize]}
-			deleteKeyCode={null}
+			onbeforedelete={() => removePlots(selectedPlotIds)}
 		>
 			<Background variant={BackgroundVariant.Dots} gap={appState.gridSize} />
 		</SvelteFlow>

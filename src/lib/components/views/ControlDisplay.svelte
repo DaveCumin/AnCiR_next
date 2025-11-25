@@ -99,6 +99,8 @@
 	import { select } from 'd3-selection';
 	import { selectPlot } from '$lib/core/Plot.svelte';
 
+	import { useSvelteFlow } from '@xyflow/svelte';
+
 	let addBtnRef;
 	let showSavePlot = $state(false);
 	let dropdownTop = $state(0);
@@ -287,7 +289,13 @@
 		}
 	}
 
-	let selectedPlots = $derived(core.plots.filter((p) => p.selected));
+	const { getNodes } = useSvelteFlow();
+	let selectedPlots = $derived(
+		getNodes()
+			.filter((node) => node.selected)
+			.map((node) => node.data.plot.id)
+	);
+	//let selectedPlots = $derived(core.plots.filter((p) => p.selected));
 
 	let horizontalGapIN = $state(null);
 	let horizontalGap = $derived.by(() => {
@@ -487,7 +495,8 @@
 			{/if}
 		{/each}
 	{:else if selectedPlots.length == 1}
-		{@const plot = core.plots.filter((p) => p.selected)[0]}
+		{@const plot = core.plots.filter((p) => p.id == selectedPlots)[0]}
+
 		{#if plot}
 			{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 			{#if Plot}
