@@ -2,12 +2,25 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appConsts } from '$lib/core/core.svelte.js';
 	import { removePlots } from '$lib/core/Plot.svelte';
+	import { NodeResizer } from '@xyflow/svelte';
 
-	let { data } = $props();
+	let { data, selected, width, height, positionAbsoluteX, positionAbsoluteY } = $props();
 	let plot = data.plot;
+	let thisNode = $state();
+
+	$effect(() => {
+		if (width !== undefined && height !== undefined) {
+			plot.width = width - 20;
+			plot.height = height - 50;
+			plot.x = positionAbsoluteX;
+			plot.y = positionAbsoluteY;
+		}
+	});
 </script>
 
-<div class="plot-node-wrapper">
+<NodeResizer minWidth={100} minHeight={30} isVisible={selected} />
+
+<div class="plot-node-wrapper" class:selected bind:this={thisNode}>
 	<!-- Your custom plot content goes here -->
 	<div class="plot-header">
 		<p
@@ -18,9 +31,8 @@
 			}}
 			onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
 			bind:innerHTML={plot.name}
-		>
-			<span>{plot.selected ? 's' : ''}</span>
-		</p>
+		></p>
+		<p>{selected ? 'S' : ''}</p>
 
 		<div class="clps-title-button">
 			<button
@@ -62,6 +74,8 @@
 		border: 1px solid var(--color-lightness-85);
 		border-radius: 4px;
 		overflow: hidden;
+		width: 100% !important;
+		height: 100% !important;
 		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
 	}
 
@@ -92,5 +106,9 @@
 	.clps-title-button {
 		display: flex;
 		gap: 0.25rem;
+	}
+	.plot-node-wrapper.selected {
+		border: 2px solid #0275ff !important;
+		box-shadow: 0 0 12px rgba(2, 117, 255, 0.5);
 	}
 </style>

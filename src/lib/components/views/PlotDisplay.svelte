@@ -42,7 +42,6 @@
 				height: plot.height + 50,
 				draggable: true,
 				selectable: true,
-				// This is key - it makes only the drag handle work
 				dragHandle: '.plot-header'
 			}))
 	);
@@ -53,28 +52,6 @@
 	const nodeTypes = {
 		plotNode: PlotNode
 	};
-
-	// Handle node position changes
-	function handleNodesChange(changes) {
-		changes.forEach((change) => {
-			const plot = core.plots.find((p) => p.id === parseInt(change.id));
-			if (!plot) return;
-
-			if (change.type === 'position' && change.position) {
-				plot.x = Math.round(change.position.x);
-				plot.y = Math.round(change.position.y);
-			}
-
-			if (change.type === 'dimensions' && change.dimensions) {
-				plot.width = change.dimensions.width - 20;
-				plot.height = change.dimensions.height - 50;
-			}
-
-			if (change.type === 'select') {
-				plot.selected = change.selected;
-			}
-		});
-	}
 
 	// AddTable dropdown
 	let addBtnRef;
@@ -162,13 +139,11 @@
 			panOnDrag={true}
 			panOnScroll={true}
 			zoomOnPinch={true}
-			defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-			onviewportchange={(vp) => {
-				// Only update your state when SvelteFlow changes
-				appState.canvasScale = vp.zoom;
-			}}
+			snapToGrid={true}
+			snapGrid={[appState.gridSize, appState.gridSize]}
+			deleteKeyCode={null}
 		>
-			<Background variant={BackgroundVariant.Dots} />
+			<Background variant={BackgroundVariant.Dots} gap={appState.gridSize} />
 		</SvelteFlow>
 	{:else if core.data.length > 0}
 		<div class="no-plot-prompt" out:fade={{ duration: 600 }}>

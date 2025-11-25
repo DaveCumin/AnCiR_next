@@ -757,7 +757,7 @@
 		id={'plot' + theData.plot.parentBox.id}
 		width={theData.plot.parentBox.width}
 		height={theData.plot.parentBox.height}
-		style={`background: white; position: absolute;`}
+		style={`background: white; position: relative;`}
 		onclick={(e) => handleClick(e)}
 		onmousemove={(e) => handleHover(e)}
 		ontooltip={handleTooltip}

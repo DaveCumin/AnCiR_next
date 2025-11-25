@@ -865,7 +865,7 @@
 		width={theData.plot.parentBox.width}
 		height={theData.plot.parentBox.height}
 		viewBox="0 0 {theData.plot.parentBox.width} {theData.plot.parentBox.height}"
-		style={`background: white; position: absolute;`}
+		style={`background: white; position: relative;`}
 		ontooltip={handleTooltip}
 	>
 		<Axis
