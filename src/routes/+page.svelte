@@ -284,7 +284,6 @@
 		//simulate importing data
 		core.data = [];
 		let d0id = addData(makeArray(N, 5, 0.15), 'number', 'the time', 'just made this up');
-		core.data[0].addProcess('Add');
 
 		let d1id = addData(makeRhythmic(N, 24 / 0.15), 'number', 'val1', 'imported from thin air');
 		core.data[1].addProcess('Add');
@@ -296,18 +295,24 @@
 			data: { start: 10, step: 1, length: N },
 			compression: 'awd',
 			name: 'AWD',
-			timeFormat: 3,
 			provenance: 'another manufactured column'
 		});
 		core.data.push(testawd);
 
 		let testref = new Column({
-			refId: d1id
+			type: 'number',
+			data: makeRhythmic(N, 22 / 0.15),
+			name: 'more',
+			provenance: 'testing'
 		});
 		core.data.push(testref);
 
 		let testrefref = new Column({
-			refId: testref.id
+			type: 'number',
+			data: { start: 5, step: 12, length: N },
+			compression: 'awd',
+			name: 'steps',
+			provenance: 'some data'
 		});
 		core.data.push(testrefref);
 

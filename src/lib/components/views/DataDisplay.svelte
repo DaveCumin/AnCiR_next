@@ -11,7 +11,7 @@
 	import MakeNewColumn from './modals/MakeNewColumn.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
-	import { getTableById } from '$lib/core/Table.svelte';
+	import { deleteTable, getTableById } from '$lib/core/Table.svelte';
 	import SingleTableAction from '../iconActions/SingleTableAction.svelte';
 	import { preventDefault } from 'svelte/legacy';
 
@@ -102,6 +102,15 @@
 							}}
 						>
 							<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" />
+						</button>
+						<button
+							class="icon"
+							onclick={(e) => {
+								e.stopPropagation();
+								deleteTable(table.id);
+							}}
+						>
+							<Icon name="minus" width={20} height={20} className="menu-icon" />
 						</button>
 						{#if openClps[table.id]}
 							<Icon name="caret-down" width={20} height={20} className="first-detail-title-icon" />

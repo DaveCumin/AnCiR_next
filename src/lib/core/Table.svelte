@@ -50,8 +50,8 @@
 				//store the columns to remove
 				const columnsToRemove = $state.snapshot(core.tables[tableIdx].columnRefs);
 
-				//remove the table
-				core.tables = core.tables.splice(tableIdx, 1);
+				//remove the table - FIX: use splice on the array directly, don't reassign
+				core.tables.splice(tableIdx, 1);
 
 				//Remove the columns in the table
 				columnsToRemove.forEach((colID) => {
