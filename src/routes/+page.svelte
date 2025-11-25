@@ -4,9 +4,10 @@
 	// @ts-nocheck
 	// import { version } from "../../package.json";
 	import '../app.css';
+	import { SvelteFlowProvider } from '@xyflow/svelte';
+
 	import Navbar from '$lib/components/Navbar.svelte';
 	import DisplayPanel from '$lib/components/DisplayPanel.svelte';
-	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import ControlPanel from '$lib/components/ControlPanel.svelte';
 	import PlotPanel from '$lib/components/PlotPanel.svelte';
 	import PlotDisplay from '$lib/components/views/PlotDisplay.svelte';
@@ -459,11 +460,11 @@
 		<Navbar />
 	{/if}
 
-	<DisplayPanel />
-
-	<PlotDisplay />
-
 	<SvelteFlowProvider>
+		<DisplayPanel />
+
+		<PlotDisplay />
+
 		<ControlPanel />
 	</SvelteFlowProvider>
 	<AreYouSure

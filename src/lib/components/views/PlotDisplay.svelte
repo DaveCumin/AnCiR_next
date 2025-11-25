@@ -12,7 +12,7 @@
 
 <script>
 	// @ts-nocheck
-	import { SvelteFlow, Background, BackgroundVariant } from '@xyflow/svelte';
+	import { SvelteFlow, Background, BackgroundVariant, useSvelteFlow } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 
 	import Icon from '$lib/icons/Icon.svelte';
@@ -36,10 +36,14 @@
 			.map((plot) => ({
 				id: plot.id.toString(),
 				position: { x: plot.x, y: plot.y },
-				data: { plot }, // pass the entire plot object to the node
+				data: { plot },
 				type: 'plotNode',
 				width: plot.width + 20,
-				height: plot.height + 50
+				height: plot.height + 50,
+				draggable: true,
+				selectable: true,
+				// This is key - it makes only the drag handle work
+				dragHandle: '.plot-header'
 			}))
 	);
 
@@ -51,14 +55,23 @@
 	};
 
 	// Handle node position changes
-	function onNodesChange(newNodes) {
-		newNodes.forEach((node) => {
-			const plot = core.plots.find((p) => p.id === parseInt(node.id));
-			if (plot) {
-				plot.x = Math.round(node.position.x);
-				plot.y = Math.round(node.position.y);
-				if (node.width !== undefined) plot.width = node.width - 20;
-				if (node.height !== undefined) plot.height = node.height - 50;
+	function handleNodesChange(changes) {
+		changes.forEach((change) => {
+			const plot = core.plots.find((p) => p.id === parseInt(change.id));
+			if (!plot) return;
+
+			if (change.type === 'position' && change.position) {
+				plot.x = Math.round(change.position.x);
+				plot.y = Math.round(change.position.y);
+			}
+
+			if (change.type === 'dimensions' && change.dimensions) {
+				plot.width = change.dimensions.width - 20;
+				plot.height = change.dimensions.height - 50;
+			}
+
+			if (change.type === 'select') {
+				plot.selected = change.selected;
 			}
 		});
 	}
@@ -146,9 +159,13 @@
 			{nodes}
 			{edges}
 			{nodeTypes}
-			on:nodesChange={(e) => onNodesChange(e.detail)}
-			onviewportchange={(viewport) => {
-				appState.canvasScale = viewport.zoom;
+			panOnDrag={true}
+			panOnScroll={true}
+			zoomOnPinch={true}
+			defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+			onviewportchange={(vp) => {
+				// Only update your state when SvelteFlow changes
+				appState.canvasScale = vp.zoom;
 			}}
 		>
 			<Background variant={BackgroundVariant.Dots} />
