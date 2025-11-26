@@ -53,7 +53,6 @@
 	function handleClick(e) {
 		e.stopPropagation();
 		deselectAllPlots();
-		appState.showControlPanel = false;
 	}
 
 	let leftPx = $derived.by(() => {
@@ -110,6 +109,7 @@
 
 <div
 	onclick={handleClick}
+	ondblclick={(appState.showControlPanel = false)}
 	class="canvas"
 	style="top: 0;
 			left: {leftPx}px;

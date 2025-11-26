@@ -341,8 +341,8 @@
 			smallvalues = { x, y, width, height };
 			x = 0;
 			y = 0;
-			width = getCanvasWidthPx() - 20;
-			height = window.innerHeight - 50;
+			width = getCanvasWidthPx() / appState.canvasScale - 20;
+			height = window.innerHeight / appState.canvasScale - 50;
 		} else {
 			x = smallvalues.x;
 			y = smallvalues.y;
