@@ -149,7 +149,7 @@
 	const Plot = appConsts.plotMap.get(plot.type).plot ?? null;
 </script>
 
-<div>
+<div style="width: {width}px; height: {height}px;">
 	<Plot bind:theData={plot} which="plot" />
 </div>
 

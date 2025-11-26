@@ -27,6 +27,9 @@
 		} else {
 			newWidth = rect.right - e.clientX;
 		}
+		if (newWidth < 40) {
+			appState.showControlPanel = false;
+		}
 		if (newWidth > maxWidth - 1 || newWidth < minWidth + 1) {
 			return;
 		}

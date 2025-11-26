@@ -12,7 +12,7 @@
 
 <script>
 	// @ts-nocheck
-	import { SvelteFlow, Background, BackgroundVariant, useSvelteFlow } from '@xyflow/svelte';
+	import { SvelteFlow, Background, BackgroundVariant } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 
 	import Icon from '$lib/icons/Icon.svelte';
@@ -27,14 +27,7 @@
 	import { deselectAllPlots } from '$lib/core/Plot.svelte';
 	import { removePlots } from '$lib/core/Plot.svelte';
 
-	const { getNodes } = useSvelteFlow();
-	let selectedPlotIds = $derived(
-		getNodes()
-			.filter((node) => node.selected)
-			.map((node) => node.data.plot.id)
-	);
-
-	// Convert plots to SvelteFlow nodes
+	// Convert plots to SvelteFlow nodes (simple, no selection logic here)
 	let nodes = $derived.by(() =>
 		core.plots
 			.filter((p) => !appState.invisiblePlotIds.includes(p.id))
@@ -47,9 +40,20 @@
 				height: plot.height + 50,
 				draggable: true,
 				selectable: true,
+				selected: plot.selected,
 				dragHandle: '.plot-header'
 			}))
 	);
+
+	function handleNodeDragStop(event) {
+		const nodes = event.nodes;
+		nodes.forEach((node) => {
+			if (node.data.plot) {
+				node.data.plot.x = node.position.x;
+				node.data.plot.y = node.position.y;
+			}
+		});
+	}
 
 	let edges = $derived.by(() => []);
 
@@ -87,16 +91,6 @@
 		return appState.widthNavBar;
 	});
 
-	let gridBackgroundWidthPx = $derived.by(() => {
-		const rightMostPlot = Math.max(...core.plots.map((p) => p.x + p.width), 0);
-		return Math.max(canvasWidthPx, rightMostPlot + 200);
-	});
-
-	let gridBackgroundHeightPx = $derived.by(() => {
-		const bottomMostPlot = Math.max(...core.plots.map((p) => p.y + p.height), 0);
-		return Math.max(appState.windowHeight, bottomMostPlot + 200);
-	});
-
 	let hasData = $derived.by(() => {
 		return core.data.length > 0;
 	});
@@ -123,6 +117,7 @@
 		};
 
 		window.addEventListener('keydown', onKeyDown);
+
 		return () => {
 			window.removeEventListener('keydown', onKeyDown);
 		};
@@ -141,10 +136,11 @@
 			snapToGrid={true}
 			snapGrid={[appState.gridSize, appState.gridSize]}
 			onbeforedelete={() => removePlots(selectedPlotIds)}
+			onnodedrag={handleNodeDragStop}
 		>
 			<Background variant={BackgroundVariant.Dots} gap={appState.gridSize} />
 		</SvelteFlow>
-
+	{:else if core.data.length > 0}
 		<div class="no-plot-prompt" out:fade={{ duration: 600 }}>
 			<button class="icon" onclick={() => (showNewPlotModal = true)}>
 				<Icon name="add" width={24} height={24} />

@@ -6,22 +6,22 @@
 
 	let { data, selected, width, height, positionAbsoluteX, positionAbsoluteY } = $props();
 	let plot = data.plot;
-	let thisNode = $state();
 
+	// Update position and size only
 	$effect(() => {
 		if (width !== undefined && height !== undefined) {
 			plot.width = width - 20;
 			plot.height = height - 50;
 			plot.x = positionAbsoluteX;
 			plot.y = positionAbsoluteY;
+			plot.selected = selected;
 		}
 	});
 </script>
 
 <NodeResizer minWidth={100} minHeight={30} isVisible={selected} />
 
-<div class="plot-node-wrapper" class:selected bind:this={thisNode}>
-	<!-- Your custom plot content goes here -->
+<div class="plot-node-wrapper" class:selected onclick={(e) => (plot.selected = true)}>
 	<div class="plot-header">
 		<p
 			contenteditable="false"
@@ -59,7 +59,7 @@
 		</div>
 	</div>
 
-	<div class="plot-content">
+	<div class="plot-content" style="width: {width - 10}px; height: {height - 40}px;">
 		{#if data.plot}
 			{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 			<Plot theData={plot} which="plot" />
@@ -107,7 +107,9 @@
 		display: flex;
 		gap: 0.25rem;
 	}
+
 	.plot-node-wrapper.selected {
+		border: 2px solid #0275ff !important;
 		box-shadow: 0 0 12px rgba(2, 117, 255, 0.5);
 	}
 </style>
