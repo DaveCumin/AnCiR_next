@@ -80,12 +80,6 @@
 
 	let showNewPlotModal = $state(false);
 
-	function handleClick(e) {
-		e.stopPropagation();
-		deselectAllPlots();
-		appState.showControlPanel = false;
-	}
-
 	let leftPx = $derived.by(() => {
 		if (appState.showDisplayPanel) {
 			return appState.widthDisplayPanel + appState.widthNavBar;
@@ -135,7 +129,7 @@
 	});
 </script>
 
-<div onclick={handleClick} class="canvas" style="top: 0; left: {leftPx}px;">
+<div class="canvas" style="top: 0; left: {leftPx}px;">
 	{#if core.plots.length > 0}
 		<SvelteFlow
 			{nodes}
@@ -150,7 +144,7 @@
 		>
 			<Background variant={BackgroundVariant.Dots} gap={appState.gridSize} />
 		</SvelteFlow>
-	{:else if core.data.length > 0}
+
 		<div class="no-plot-prompt" out:fade={{ duration: 600 }}>
 			<button class="icon" onclick={() => (showNewPlotModal = true)}>
 				<Icon name="add" width={24} height={24} />

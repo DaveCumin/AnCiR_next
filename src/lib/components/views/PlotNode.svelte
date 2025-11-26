@@ -100,6 +100,7 @@
 
 	.plot-content {
 		padding: 0.5rem;
+		cursor: default;
 	}
 
 	.clps-title-button {
@@ -107,7 +108,6 @@
 		gap: 0.25rem;
 	}
 	.plot-node-wrapper.selected {
-		border: 2px solid #0275ff !important;
 		box-shadow: 0 0 12px rgba(2, 117, 255, 0.5);
 	}
 </style>
