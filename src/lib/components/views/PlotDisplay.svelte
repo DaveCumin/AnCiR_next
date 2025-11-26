@@ -137,6 +137,7 @@
 			snapGrid={[appState.gridSize, appState.gridSize]}
 			onbeforedelete={() => removePlots(selectedPlotIds)}
 			onnodedrag={handleNodeDragStop}
+			onpaneclick={() => deselectAllPlots()}
 		>
 			<Background variant={BackgroundVariant.Dots} gap={appState.gridSize} />
 		</SvelteFlow>

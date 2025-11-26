@@ -21,7 +21,7 @@
 
 <NodeResizer minWidth={100} minHeight={30} isVisible={selected} />
 
-<div class="plot-node-wrapper" class:selected onclick={(e) => (plot.selected = true)}>
+<div class="plot-node-wrapper" class:selected>
 	<div class="plot-header">
 		<p
 			contenteditable="false"
