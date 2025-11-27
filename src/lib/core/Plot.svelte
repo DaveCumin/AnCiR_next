@@ -9,6 +9,12 @@
 	function getNextId() {
 		return _counter++;
 	}
+
+	export function getPlotById(id) {
+		const thePlot = core.plots.find((plot) => plot.id === id);
+		return thePlot;
+	}
+
 	export function removePlots(ids) {
 		//make selectedPLotIds an array if not already
 		if (!Array.isArray(ids)) ids = [ids];

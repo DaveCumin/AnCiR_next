@@ -97,7 +97,7 @@
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 	import { select } from 'd3-selection';
-	import { selectPlot, removePlots } from '$lib/core/Plot.svelte';
+	import { selectPlot, removePlots, getPlotById } from '$lib/core/Plot.svelte';
 
 	let addBtnRef;
 	let showSavePlot = $state(false);
@@ -254,8 +254,8 @@
 			//now distribute
 			let currentX = minX;
 			sortedPlotIds.forEach((id) => {
-				core.plots[id].x = snapToGrid(Math.max(0, currentX));
-				currentX += core.plots[id].width + 25 + spacingIN;
+				getPlotById(id).x = snapToGrid(Math.max(0, currentX));
+				currentX += getPlotById(id).width + 25 + spacingIN;
 			});
 		}
 
@@ -272,8 +272,9 @@
 			}
 			let currentY = minY;
 			sortedPlotIds.forEach((id) => {
-				core.plots[id].y = snapToGrid(Math.max(0, currentY));
-				currentY += core.plots[id].height + 50 + spacingIN;
+				console.log('setting plot ', id, ' to y: ', currentY);
+				getPlotById(id).y = snapToGrid(Math.max(0, currentY));
+				currentY += getPlotById(id).height + 50 + spacingIN;
 			});
 		}
 	}
