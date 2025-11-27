@@ -92,12 +92,12 @@
 <script>
 	// @ts-nocheck
 	import Icon from '$lib/icons/Icon.svelte';
-	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
+	import SavePlot from '$lib/components/iconActions/_old_SavePlot_with_submenus.svelte';
 
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 	import { select } from 'd3-selection';
-	import { selectPlot } from '$lib/core/Plot.svelte';
+	import { selectPlot, removePlots } from '$lib/core/Plot.svelte';
 
 	let addBtnRef;
 	let showSavePlot = $state(false);
@@ -328,6 +328,15 @@
 					<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
 						<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
 					</button>
+					<button
+						class="icon"
+						onclick={(e) => {
+							e.stopPropagation();
+							removePlots(selectedPlots.map((p) => p.id));
+						}}
+					>
+						<Icon name="minus" width={20} height={20} className="menu-icon" />
+					</button>
 				</div>
 			</div>
 		</div>
@@ -514,21 +523,33 @@
 							>
 								<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
 							</button>
+
+							<button
+								class="icon"
+								onclick={(e) => {
+									e.stopPropagation();
+									removePlots([plot.id]);
+								}}
+							>
+								<Icon name="minus" width={20} height={20} className="menu-icon" />
+							</button>
 						</div>
 					</div>
 
 					<div class="control-tab">
-						<button
-							class={appState.currentControlTab === 'properties' ? 'active' : ''}
-							onclick={(e) => {
-								updateCurrentControlTab('properties', plot.type);
-								e.target.scrollIntoView({ behavior: 'smooth' });
-							}}>Properties</button
-						>
-						<button
-							class={appState.currentControlTab === 'data' ? 'active' : ''}
-							onclick={() => updateCurrentControlTab('data', plot.type)}>Data</button
-						>
+						{#if plot.type !== 'tableplot'}
+							<button
+								class={appState.currentControlTab === 'properties' ? 'active' : ''}
+								onclick={(e) => {
+									updateCurrentControlTab('properties', plot.type);
+									e.target.scrollIntoView({ behavior: 'smooth' });
+								}}>Properties</button
+							>
+							<button
+								class={appState.currentControlTab === 'data' ? 'active' : ''}
+								onclick={() => updateCurrentControlTab('data', plot.type)}>Data</button
+							>
+						{/if}
 
 						{#if plot.type === 'actogram'}
 							<button

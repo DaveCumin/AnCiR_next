@@ -19,6 +19,11 @@
 		const submenuWidth = 150; // Matches min-width in CSS
 		return left + 210 + submenuWidth > viewportWidth ? 'left' : 'right';
 	}
+	function handleDeleteAction(closeDropdown: () => void) {
+		removePlots(Id);
+
+		closeDropdown();
+	}
 
 	$effect(() => {
 		if (!showDropdown) {
@@ -43,7 +48,7 @@
 				onmouseenter={() => showSubmenu('save')}
 				onmouseleave={() => hideSubmenu('save', 150)}
 			>
-				<button class="menubutton">Save as single image</button>
+				<button>Save as single image</button>
 			</div>
 			{#if dropdownActiveSubmenu === 'save' && saveSingleMenuItem}
 				{@const rect = saveSingleMenuItem.getBoundingClientRect()}
@@ -63,13 +68,7 @@
 					onmouseleave={() => hideSubmenu('save', 150)}
 				>
 					{#each ['svg', 'png'] as type}
-						<button
-							class="submenu-item"
-							onclick={() => {
-								saveMultipleAsImage(Id, type);
-								closeDropdown();
-							}}
-						>
+						<button class="submenu-item" onclick={() => saveMultipleAsImage(Id, type)}>
 							Save as {type.toUpperCase()}
 						</button>
 					{/each}
@@ -83,7 +82,7 @@
 				onmouseenter={() => showSubmenu('save-individual')}
 				onmouseleave={() => hideSubmenu('save-individual', 150)}
 			>
-				<button class="menubutton">Save as individual plots</button>
+				<button>Save as individual plots</button>
 			</div>
 
 			{#if dropdownActiveSubmenu === 'save-individual' && saveIndividualMenuItem}
@@ -116,21 +115,58 @@
 					{/each}
 				</div>
 			{/if}
+
+			<!-- Delete option -->
+			<div
+				class="dropdown-item"
+				onclick={() => handleDeleteAction(closeDropdown)}
+				onmouseenter={() => hideSubmenu('save', 0)}
+			>
+				<button>Delete all {Id.length} plots</button>
+			</div>
 		{:else}
 			<!-- Single plot save options -->
-			{#each ['svg', 'png'] as type}
+			<div
+				class="dropdown-item has-submenu"
+				bind:this={saveSingleMenuItem}
+				onmouseenter={() => showSubmenu('save')}
+				onmouseleave={() => hideSubmenu('save', 150)}
+			>
+				<button>Save</button>
+			</div>
+			{#if dropdownActiveSubmenu === 'save' && saveSingleMenuItem}
+				{@const rect = saveSingleMenuItem.getBoundingClientRect()}
+				{@const direction = getSubmenuDirection(dropdownLeft)}
+				{@const submenuLeft = direction === 'right' ? dropdownLeft + 210 : dropdownLeft - 155}
 				<div
-					class="dropdown-action"
-					onclick={() => {
-						convertToImage('plot' + Id[0], type);
-						closeDropdown();
-					}}
+					class="submenu-bridge"
+					style="top: {rect.top}px; left: {direction === 'right'
+						? rect.right
+						: rect.left - 5}px; width: 5px; height: {rect.height}px;"
+					onmouseenter={() => keepSubmenuOpen('save')}
+				></div>
+				<div
+					class="submenu"
+					style="top: {rect.top}px; left: {submenuLeft}px;"
+					onmouseenter={() => keepSubmenuOpen('save')}
+					onmouseleave={() => hideSubmenu('save', 150)}
 				>
-					<button>
-						Save as {type.toUpperCase()}
-					</button>
+					{#each ['svg', 'png'] as type}
+						<button class="submenu-item" onclick={() => convertToImage('plot' + Id[0], type)}>
+							Save as {type.toUpperCase()}
+						</button>
+					{/each}
 				</div>
-			{/each}
+			{/if}
+
+			<!-- Delete option -->
+			<div
+				class="dropdown-item"
+				onclick={() => handleDeleteAction(closeDropdown)}
+				onmouseenter={() => hideSubmenu('save', 0)}
+			>
+				<button>Delete</button>
+			</div>
 		{/if}
 	{/snippet}
 </Dropdown>
@@ -182,7 +218,7 @@
 		pointer-events: auto;
 	}
 
-	.menubutton {
+	button {
 		background-color: transparent;
 		border: none;
 		text-align: inherit;
@@ -192,5 +228,12 @@
 		cursor: pointer;
 		width: 100%;
 		padding: 0;
+	}
+
+	.modal-content {
+		display: flex;
+		flex-direction: column;
+		gap: 1em;
+		padding: 1em;
 	}
 </style>
