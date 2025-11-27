@@ -1,6 +1,5 @@
 <script>
-	import { onMount } from 'svelte';
-	import { core } from '$lib/core/theCore.svelte.js';
+	import { core } from '$lib/core/core.svelte.js';
 
 	//This is just a quick and dirty, using visjs. TODO: consider custm code or making vis (oro ther) a module. ?size.
 
@@ -34,13 +33,12 @@
 
 		// Process tables and their columns
 		core?.tables?.forEach((table) => {
-			const tableId = `table_${table.tableid}`;
-			addNode(tableId, `Table ${table.tableid}: ${table.name}`, 'table', 0);
+			const tableId = `table_${table.id}`;
+			addNode(tableId, `Table ${table.id}: ${table.name}`, 'table', 0);
 
 			table.columnRefs.forEach((columnId) => {
 				const data = core?.data?.find((d) => d.id === columnId);
 				if (data) {
-					const columnId = `column_${columnId}`;
 					addNode(columnId, `Column ${columnId}: ${data.name}`, 'column', 1);
 					edges.push({ from: tableId, to: columnId });
 
@@ -68,9 +66,10 @@
 
 		// Process plots - just the data and processes at the moment
 		core?.plots?.forEach((plot, plotIndex) => {
-			const plotId = `plot_${plotIndex}`;
+			const plotId = plot.id;
+			console.log(plot.plot);
 
-			plot.plot.data.forEach((dataPoint, dpIndex) => {
+			plot.plot.data?.forEach((dataPoint, dpIndex) => {
 				let xNodeId = null;
 				let yNodeId = null;
 

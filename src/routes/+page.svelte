@@ -40,9 +40,12 @@
 
 	import { guessFormatD3 } from '$lib/utils/time/guessTimeFormat_d3.js';
 	import { guessFormat } from '$lib/utils/time/guessTimeFormat.js';
+	import Visualise from '$lib/components/Visualise.svelte';
 
 	let loadingMsg = $state('Warming up...');
 	let isLoaded = $state(false);
+
+	let visualise = $state(false);
 
 	// const timesToTest = ['2025/10/01', '2025/12/01', '2025/13/01'];
 	// console.log('times to test: ', timesToTest);
@@ -136,6 +139,11 @@
 			if (MODIFIER && event.key.toLowerCase() === 'a') {
 				event.preventDefault();
 				selectAllPlots();
+			}
+			// visualise
+			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'x') {
+				event.preventDefault();
+				visualise = !visualise;
 			}
 			// SAVE THE SESSION
 			if (!event.shiftKey && MODIFIER && event.key.toLowerCase() === 's') {
@@ -454,21 +462,25 @@
 </svelte:head>
 
 {#if isLoaded}
-	{#if appState.showNavbar}
-		<Navbar />
+	{#if visualise}
+		<Visualise />
+	{:else}
+		{#if appState.showNavbar}
+			<Navbar />
+		{/if}
+
+		<DisplayPanel />
+
+		<PlotDisplay />
+
+		<ControlPanel />
+
+		<AreYouSure
+			bind:showModal={appState.showAYSModal}
+			text={appState.AYStext}
+			callback={appState.AYScallback}
+		/>
 	{/if}
-
-	<DisplayPanel />
-
-	<PlotDisplay />
-
-	<ControlPanel />
-
-	<AreYouSure
-		bind:showModal={appState.showAYSModal}
-		text={appState.AYStext}
-		callback={appState.AYScallback}
-	/>
 {:else}
 	<div>
 		<p>
