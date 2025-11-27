@@ -77,6 +77,12 @@
 					<th
 						style="width: {widths[index]}; position: relative; cursor: default;"
 						contenteditable="false"
+						onkeydown={(e) => {
+							if (e.key === 'Enter') {
+								e.preventDefault(); // Prevent new line
+								e.target.blur(); // Exit edit mode
+							}
+						}}
 						ondblclick={(e) => {
 							if (editable) {
 								oldVal = e.target.innerText;
@@ -103,6 +109,12 @@
 						<td
 							style="cursor: default;"
 							contenteditable="false"
+							onkeydown={(e) => {
+								if (e.key === 'Enter') {
+									e.preventDefault(); // Prevent new line
+									e.target.blur(); // Exit edit mode
+								}
+							}}
 							ondblclick={(e) => {
 								if (editable) {
 									oldVal = e.target.innerText;
@@ -112,9 +124,7 @@
 								}
 							}}
 							oninput={(e) => {
-								console.log(e);
 								onInput({ col: c, row: r, value: e.target.innerText, old: oldVal });
-								e.target.setAttribute('contenteditable', 'false');
 							}}>{col[r] ?? 'N/A'}</td
 						>
 					{/each}
