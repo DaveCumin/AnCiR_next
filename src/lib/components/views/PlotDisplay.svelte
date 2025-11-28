@@ -26,6 +26,7 @@
 
 	import { deselectAllPlots } from '$lib/core/Plot.svelte';
 	import { removePlots } from '$lib/core/Plot.svelte';
+	import Correlogram from '$lib/plots/Correlogram/Correlogram.svelte';
 
 	// Convert plots to SvelteFlow nodes (simple, no selection logic here)
 	let nodes = $derived.by(() =>
@@ -45,21 +46,17 @@
 			}))
 	);
 
-	function handleNodeDragStop(event) {
-		const nodes = event.nodes;
-		nodes.forEach((node) => {
-			if (node.data.plot) {
-				node.data.plot.x = node.position.x;
-				node.data.plot.y = node.position.y;
-			}
-		});
-	}
-
 	let edges = $derived.by(() => []);
 
 	// Map custom node types
 	const nodeTypes = {
-		plotNode: PlotNode
+		plotNode: PlotNode,
+		scatterplot: PlotNode,
+		correlogram: PlotNode,
+		fft: PlotNode,
+		tableplot: PlotNode,
+		actogram: PlotNode,
+		periodogram: PlotNode
 	};
 
 	// AddTable dropdown
@@ -125,9 +122,16 @@
 </script>
 
 <div class="canvas" style="top: 0; left: {leftPx}px;">
+	<div>
+		{#each core.plots as plot (plot.id)}
+			<p>
+				{plot.name} - {plot.position.x}, {plot.position.y} | {plot.x}, {plot.y}; {plot.width} x {plot.height}
+			</p>
+		{/each}
+	</div>
 	{#if core.plots.length > 0}
 		<SvelteFlow
-			{nodes}
+			bind:nodes={core.plots}
 			{edges}
 			{nodeTypes}
 			panOnDrag={true}
@@ -136,7 +140,6 @@
 			snapToGrid={true}
 			snapGrid={[appState.gridSize, appState.gridSize]}
 			onbeforedelete={() => removePlots(selectedPlotIds)}
-			onnodedrag={handleNodeDragStop}
 			onpaneclick={() => deselectAllPlots()}
 		>
 			<Background variant={BackgroundVariant.Dots} gap={appState.gridSize} />

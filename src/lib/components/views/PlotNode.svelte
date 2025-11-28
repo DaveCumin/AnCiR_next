@@ -4,68 +4,61 @@
 	import { removePlots } from '$lib/core/Plot.svelte';
 	import { NodeResizer } from '@xyflow/svelte';
 
-	let { data, selected, width, height, positionAbsoluteX, positionAbsoluteY } = $props();
-	let plot = data.plot;
-
-	// Update position and size only
-	$effect(() => {
-		if (width !== undefined && height !== undefined) {
-			plot.width = width - 20;
-			plot.height = height - 50;
-			plot.x = positionAbsoluteX;
-			plot.y = positionAbsoluteY;
-			plot.selected = selected;
-		}
-	});
+	let { data, selected } = $props();
+	console.log('data: ', data);
+	let plot = data.data.plot;
+	console.log('plot: ', plot);
 </script>
 
-<NodeResizer minWidth={100} minHeight={30} isVisible={selected} />
+{#if plot}
+	<NodeResizer minWidth={100} minHeight={30} isVisible={selected} />
 
-<div class="plot-node-wrapper" class:selected>
-	<div class="plot-header">
-		<p
-			contenteditable="false"
-			ondblclick={(e) => {
-				e.target.setAttribute('contenteditable', 'true');
-				e.target.focus();
-			}}
-			onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-			bind:innerHTML={plot.name}
-		></p>
+	<div class="plot-node-wrapper" class:selected>
+		<div class="plot-header">
+			<p
+				contenteditable="false"
+				ondblclick={(e) => {
+					e.target.setAttribute('contenteditable', 'true');
+					e.target.focus();
+				}}
+				onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
+				bind:innerHTML={data.data.name}
+			></p>
 
-		<div class="clps-title-button">
-			<button
-				class="icon"
-				onclick={(e) => {
-					e.stopPropagation();
-					plot.toggleFullscreen();
-				}}
-			>
-				{#if plot.fullscreen}
-					<Icon name="minimise" width={20} height={20} />
-				{:else}
-					<Icon name="maximise" width={20} height={20} />
-				{/if}
-			</button>
-			<button
-				class="icon"
-				onclick={(e) => {
-					e.stopPropagation();
-					removePlots(plot.id);
-				}}
-			>
-				<Icon name="close" width={16} height={16} />
-			</button>
+			<div class="clps-title-button">
+				<button
+					class="icon"
+					onclick={(e) => {
+						e.stopPropagation();
+						plot.toggleFullscreen();
+					}}
+				>
+					{#if plot.fullscreen}
+						<Icon name="minimise" width={20} height={20} />
+					{:else}
+						<Icon name="maximise" width={20} height={20} />
+					{/if}
+				</button>
+				<button
+					class="icon"
+					onclick={(e) => {
+						e.stopPropagation();
+						removePlots(plot.id);
+					}}
+				>
+					<Icon name="close" width={16} height={16} />
+				</button>
+			</div>
+		</div>
+
+		<div class="plot-content">
+			{#if data.data.plot}
+				{@const Plot = appConsts.plotMap.get(data.data.type).plot ?? null}
+				<Plot theData={data.data} which="plot" />
+			{/if}
 		</div>
 	</div>
-
-	<div class="plot-content" style="width: {width - 10}px; height: {height - 40}px;">
-		{#if data.plot}
-			{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
-			<Plot theData={plot} which="plot" />
-		{/if}
-	</div>
-</div>
+{/if}
 
 <style>
 	.plot-node-wrapper {

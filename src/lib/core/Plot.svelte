@@ -78,14 +78,16 @@
 
 	export class Plot {
 		id;
-		name = $state('plot' + this.id);
+		name = 'plot' + this.id;
 		x = $state(350);
 		y = $state(150);
-		width = $state(500);
-		height = $state(250);
+		width = 500;
+		height = 250;
 		type;
-		selected = $state(false);
-		plot;
+		selected = false;
+		plot = $state();
+		position = { x: this.x, y: this.y };
+		data = { plot: this };
 
 		constructor(plotData = {}, id = null) {
 			// console.log('new plot: ', plotData);
@@ -119,6 +121,10 @@
 			}
 
 			this.plot = plotTypeEntry.data.fromJSON(this, plotData.plot);
+
+			this.data = {
+				data: this
+			};
 		}
 
 		toJSON() {
