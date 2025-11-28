@@ -1,11 +1,18 @@
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-
+	import Icon from '$lib/icons/Icon.svelte';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Hist from '$lib/components/plotBits/Hist.svelte';
 	import { scaleLinear } from 'd3-scale';
+	import { getPlotById } from '$lib/core/Plot.svelte';
 
 	let _annotationCounter = 0;
+
+	export function deleteAnnotation(plotid, annotationid) {
+		getPlotById(plotid).plot.annotations = getPlotById(plotid).plot.annotations.filter(
+			(ann) => ann.id !== annotationid
+		);
+	}
 
 	export class AnnotationClass {
 		parentData = $state();
@@ -23,10 +30,15 @@
 			this.id = _annotationCounter++;
 
 			if (dataIN) {
-				this.name = dataIN.name || '';
+				this.name = dataIN.name || 'annotation ' + this.id;
 				this.startTime = Number(dataIN.startTime) || 1;
 				this.duration = Number(dataIN.endTime - dataIN.startTime) || 1;
 				this.colour = dataIN.colour || '#0000FF';
+			} else {
+				this.name = 'annotation ' + this.id;
+				this.startTime = 1;
+				this.duration = 1;
+				this.colour = '#0000FF';
 			}
 		}
 
@@ -100,6 +112,21 @@
 </script>
 
 {#snippet controls(annotation)}
+	<div
+		class="control-component-title-icons"
+		style="
+    margin-bottom: -1rem;
+    z-index: 9999;
+    margin-top: 0.25rem;
+"
+	>
+		<button
+			class="icon"
+			onclick={() => deleteAnnotation(annotation.parentData.parentBox.id, annotation.id)}
+		>
+			<Icon name="minus" width={16} height={16} className="menu-icon" />
+		</button>
+	</div>
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>Name</p>
@@ -127,32 +154,44 @@
 
 		<div class="control-input">
 			<p>Duration</p>
-			<NumberWithUnits step="0.1" bind:value={annotation.duration} onInput={changedDuration} />
+			<NumberWithUnits
+				min="0.1"
+				step="0.1"
+				bind:value={annotation.duration}
+				onInput={changedDuration}
+			/>
 		</div>
 	</div>
 {/snippet}
 
 {#snippet plot(annotation)}
-	<g
-		class="annotations"
-		transform="translate({annotation.parentData.padding.left}, {annotation.parentData.padding.top})"
-		onmousemove={(e) => {
-			handleHover(e);
-		}}
-		onmouseleave={handleMouseLeave}
-	>
-		<Hist
-			xStart={[annotation.startTime]}
-			xEnd={[annotation.endTime]}
-			y={[50]}
-			xscale={scaleLinear()
-				.domain([0, annotation.parentData.periodHrs * annotation.parentData.doublePlot])
-				.range([0, annotation.parentData.plotwidth])}
-			yscale={scaleLinear().domain([0, 100]).range([annotation.parentData.eachplotheight, 0])}
-			colour={annotation.colour}
-			yoffset={annotation.parentData.spaceBetween}
-		/>
-	</g>
+	{#if annotation.duration > 0}
+		{@const outDay = Math.floor(annotation.startTime / annotation.parentData.periodHrs) + 1}
+		{@const outHr = annotation.startTime % annotation.parentData.periodHrs}
+		{@const yOffset =
+			(outDay - 1) * (annotation.parentData.eachplotheight + annotation.parentData.spaceBetween)}
+		<g
+			class="annotations"
+			transform="translate({annotation.parentData.padding.left}, {annotation.parentData.padding
+				.top + yOffset})"
+			onmousemove={(e) => {
+				handleHover(e);
+			}}
+			onmouseleave={handleMouseLeave}
+		>
+			<Hist
+				xStart={[outHr]}
+				xEnd={[outHr + annotation.duration]}
+				y={[50]}
+				xscale={scaleLinear()
+					.domain([0, annotation.parentData.periodHrs * annotation.parentData.doublePlot])
+					.range([0, annotation.parentData.plotwidth])}
+				yscale={scaleLinear().domain([0, 100]).range([annotation.parentData.eachplotheight, 0])}
+				colour={annotation.colour}
+				yoffset={annotation.parentData.spaceBetween}
+			/>
+		</g>
+	{/if}
 {/snippet}
 
 {#if which === 'plot'}

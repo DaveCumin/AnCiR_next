@@ -738,10 +738,16 @@
 			</button>
 		</div> -->
 	{:else if appState.currentControlTab === 'annotations'}
-		{#each theData.annotations as annotation}
-			<Annotation {which} {annotation} />
-
-			<div class="div-line"></div>
+		{#each theData.annotations as annotation (annotation.id)}
+			<div
+				class="annotation-container"
+				animate:flip={{ duration: 500 }}
+				in:slide={{ duration: 500, axis: 'y' }}
+				out:slide={{ duration: 500, axis: 'y' }}
+			>
+				<Annotation {which} {annotation} />
+				<div class="div-line"></div>
+			</div>
 		{/each}
 
 		<div>
