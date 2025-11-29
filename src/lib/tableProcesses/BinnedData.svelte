@@ -6,8 +6,8 @@
 		['yIN', { val: -1 }],
 		['binSize', { val: 0.25 }],
 		['binStart', { val: 0 }],
-		['stepSize', { val: 0.25 }], // ← new: null = use binSize as step
-		['aggFunction', { val: 'mean' }], // ← new: mean | median | min | max | stddev
+		['stepSize', { val: 0.25 }], //null = use binSize as step
+		['aggFunction', { val: 'mean' }], // mean | median | min | max | stddev
 		['out', { binnedx: { val: -1 }, binnedy: { val: -1 } }],
 		['valid', { val: false }]
 	]);
@@ -133,21 +133,30 @@
 		</div>
 	</div>
 
+	<p>Different step size</p>
+	<input
+		type="checkbox"
+		onchange={(e) => {
+			p.args.stepSize = e.target.checked ? p.args.binSize : null;
+		}}
+	/>
+
 	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Step size</p>
+		{#if p.args.stepSize != null}
+			<div class="control-input">
+				<p>Step size</p>
 
-			<NumberWithUnits
-				bind:value={p.args.stepSize}
-				onInput={getBinnedData}
-				min="0.01"
-				step="0.01"
-			/>
-		</div>
-
+				<NumberWithUnits
+					bind:value={p.args.stepSize}
+					onInput={getBinnedData}
+					min="0.01"
+					step="0.01"
+				/>
+			</div>
+		{/if}
 		<div class="control-input">
 			<p>Function</p>
-			<select bind:value={p.args.aggFunction} on:change={getBinnedData}>
+			<select bind:value={p.args.aggFunction} onchange={getBinnedData}>
 				<option value="mean">Mean</option>
 				<option value="median">Median</option>
 				<option value="min">Minimum</option>

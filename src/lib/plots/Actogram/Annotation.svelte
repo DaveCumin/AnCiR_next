@@ -5,7 +5,6 @@
 	import Hist from '$lib/components/plotBits/Hist.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import { getPlotById } from '$lib/core/Plot.svelte';
-	import { DateTime } from 'luxon';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 
 	let _annotationCounter = 0;
@@ -95,6 +94,7 @@
 
 	function changedStartDateTime(dt) {
 		annotation.startTime = (dt - annotation.parentData.startTime) / 3600000;
+		annotation.endDateTime = annotation.parentData.startTime + annotation.endTime * 3600000;
 	}
 
 	function changedEndDateTime(dt) {
