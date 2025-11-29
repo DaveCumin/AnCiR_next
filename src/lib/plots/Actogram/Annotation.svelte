@@ -35,6 +35,46 @@
 			return (this.parentData?.startTime ?? 0) + this.endTime * 3600000;
 		});
 
+		// Calculate segments for rendering (handles period wrapping)
+		segments = $derived.by(() => {
+			const period = this.parentData?.periodHrs ?? 24;
+			const segments = [];
+
+			const start = this.startTime;
+			const end = this.endTime;
+
+			if (this.duration <= 0) return segments;
+
+			// Calculate which periods this annotation spans
+			const startPeriod = Math.floor(start / period);
+			const endPeriod = Math.floor(end / period);
+
+			// Create a segment for each period the annotation touches
+			for (let p = startPeriod; p <= endPeriod; p++) {
+				const periodStart = p * period;
+				const periodEnd = (p + 1) * period;
+
+				// Calculate the overlap with this period
+				const segmentStart = Math.max(start, periodStart);
+				const segmentEnd = Math.min(end, periodEnd);
+
+				if (segmentEnd > segmentStart) {
+					// Calculate display position within the period
+					const displayStart = segmentStart % period;
+					const displayDuration = segmentEnd - segmentStart;
+
+					segments.push({
+						period: p,
+						startHr: displayStart,
+						duration: displayDuration,
+						yOffset: p * (this.parentData.eachplotheight + this.parentData.spaceBetween)
+					});
+				}
+			}
+
+			return segments;
+		});
+
 		constructor(parent, dataIN) {
 			this.parentData = parent;
 			this.id = _annotationCounter++;
@@ -78,23 +118,19 @@
 
 	function changedStartTime() {
 		annotation.startTime = Number(annotation.startTime);
-		annotation.startDateTime = annotation.parentData.startTime + annotation.startTime * 3600000;
 	}
 
 	function changedEndTime(newend) {
 		const newEndTime = Number(newend) || 0;
 		annotation.duration = Math.max(0, newEndTime - annotation.startTime);
-		annotation.endDateTime = annotation.parentData.startTime + annotation.endTime * 3600000;
 	}
 
 	function changedDuration() {
 		annotation.duration = Number(annotation.duration);
-		annotation.endDateTime = annotation.parentData.startTime + annotation.endTime * 3600000;
 	}
 
 	function changedStartDateTime(dt) {
 		annotation.startTime = (dt - annotation.parentData.startTime) / 3600000;
-		annotation.endDateTime = annotation.parentData.startTime + annotation.endTime * 3600000;
 	}
 
 	function changedEndDateTime(dt) {
@@ -196,23 +232,19 @@
 {/snippet}
 
 {#snippet plot(annotation)}
-	{#if annotation.duration > 0}
-		{@const outDay = Math.floor(annotation.startTime / annotation.parentData.periodHrs) + 1}
-		{@const outHr = annotation.startTime % annotation.parentData.periodHrs}
-		{@const yOffset =
-			(outDay - 1) * (annotation.parentData.eachplotheight + annotation.parentData.spaceBetween)}
+	{#each annotation.segments as segment}
 		<g
 			class="annotations"
 			transform="translate({annotation.parentData.padding.left}, {annotation.parentData.padding
-				.top + yOffset})"
+				.top + segment.yOffset})"
 			onmousemove={(e) => {
 				handleHover(e);
 			}}
 			onmouseleave={handleMouseLeave}
 		>
 			<Hist
-				xStart={[outHr]}
-				xEnd={[outHr + annotation.duration]}
+				xStart={[segment.startHr]}
+				xEnd={[segment.startHr + segment.duration]}
 				y={[50]}
 				xscale={scaleLinear()
 					.domain([0, annotation.parentData.periodHrs * annotation.parentData.doublePlot])
@@ -222,7 +254,7 @@
 				yoffset={annotation.parentData.spaceBetween}
 			/>
 		</g>
-	{/if}
+	{/each}
 {/snippet}
 
 {#if which === 'plot'}
