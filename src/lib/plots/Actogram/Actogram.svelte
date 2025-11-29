@@ -35,10 +35,10 @@
 
 	class ActogramDataclass {
 		parentPlot = $state();
-
 		x = $state();
 		y = $state();
 		draw = $state();
+
 		binSize = $derived.by(() => {
 			//the average time between x values
 			return (
@@ -46,19 +46,22 @@
 				this.x.hoursSinceStart.length
 			);
 		});
+
 		colour = $state();
+
 		offset = $derived.by(() => {
 			if (this.x?.getData()) {
 				if (this.x.type == 'time') {
-					return (this.parentPlot?.startTime - Number(this.x?.getData()[0])) / 3600000; //get the hours
+					return (this.parentPlot?.startTime - Number(this.x?.getData()[0])) / 3600000;
 				} else {
-					return -Number(this.x?.getData()[0]); //always just the value from the start
+					return -Number(this.x?.getData()[0]);
 				}
 			} else {
 				return 0;
 			}
 		});
 
+		// Keep dataByDays for compatibility (used by phase markers and y-limits)
 		dataByDays = $derived.by(() => {
 			const tempx = this.x.hoursSinceStart ?? [];
 			const tempy = this.y.getData() ?? [];
@@ -86,39 +89,82 @@
 			return { xByPeriod, yByPeriod };
 		});
 
-		histogramBinsByDays = $derived.by(() => {
-			const { xByPeriod, yByPeriod } = this.dataByDays;
-			const binsByPeriod = {};
+		// New: Calculate bins with their actual boundaries
+		allBins = $derived.by(() => {
+			const tempx = this.x.hoursSinceStart ?? [];
+			const tempy = this.y.getData() ?? [];
+			const bins = [];
+			const offset = this.offset ?? 0;
 
-			Object.keys(xByPeriod).forEach((period) => {
-				const xData = xByPeriod[period];
-				const yData = yByPeriod[period];
+			for (let i = 0; i < tempx.length; i++) {
+				if (isNaN(tempx[i]) || isNaN(tempy[i]) || tempy[i] == null || tempx[i] == null) {
+					continue;
+				}
 
-				if (xData && xData.length > 0) {
-					// Check if x column is binned type
-					if (this.x.type === 'bin' && this.x.binWidth) {
-						// For binned data, xData already contains midpoints from getData()
-						// Calculate start and end from midpoints
-						const xStart = xData.map((mid) => mid - this.x.binWidth / 2);
-						const xEnd = xData.map((mid) => mid + this.x.binWidth / 2);
+				// Calculate bin boundaries
+				let binStart, binEnd;
 
-						binsByPeriod[period] = {
-							xStart,
-							xEnd,
-							y: yData
-						};
-					} else {
-						// For non-binned data, create histogram bins as before
-						const { xStart, xEnd } = createHistogramBins(xData, this.binSize);
-						binsByPeriod[period] = {
-							xStart,
-							xEnd,
-							y: yData
-						};
+				if (this.x.type === 'bin' && this.x.binWidth) {
+					binStart = tempx[i] - this.x.binWidth / 2;
+					binEnd = tempx[i] + this.x.binWidth / 2;
+				} else {
+					binStart = tempx[i] - this.binSize / 2;
+					binEnd = tempx[i] + this.binSize / 2;
+				}
+
+				bins.push({
+					start: binStart - offset,
+					end: binEnd - offset,
+					y: tempy[i]
+				});
+			}
+
+			return bins;
+		});
+
+		// New: Split bins by period, creating segments where bins cross period boundaries
+		binsByPeriod = $derived.by(() => {
+			const period = this.parentPlot?.periodHrs ?? 24;
+			const periodBins = {};
+
+			for (const bin of this.allBins) {
+				const startPeriod = Math.floor(bin.start / period);
+				const endPeriod = Math.floor(bin.end / period);
+
+				// Skip bins that end before period 0
+				if (endPeriod < 0) continue;
+
+				if (startPeriod === endPeriod && startPeriod >= 0) {
+					// Bin is entirely within one period
+					periodBins[startPeriod] ||= [];
+					periodBins[startPeriod].push({
+						xStart: bin.start,
+						xEnd: bin.end,
+						y: bin.y
+					});
+				} else {
+					// Bin spans multiple periods - create a segment for each
+					for (let p = Math.max(0, startPeriod); p <= endPeriod; p++) {
+						const periodStart = p * period;
+						const periodEnd = (p + 1) * period;
+
+						// Calculate segment boundaries (clipped to period)
+						const segmentStart = Math.max(bin.start, periodStart);
+						const segmentEnd = Math.min(bin.end, periodEnd);
+
+						if (segmentEnd > segmentStart) {
+							periodBins[p] ||= [];
+							periodBins[p].push({
+								xStart: segmentStart,
+								xEnd: segmentEnd,
+								y: bin.y // Full y value, not proportional
+							});
+						}
 					}
 				}
-			});
-			return binsByPeriod;
+			}
+
+			return periodBins;
 		});
 
 		phaseMarkers = $state([]);
@@ -132,7 +178,6 @@
 				if (parent.data.length > 0) {
 					this.x = new ColumnClass({ refId: parent.data[parent.data.length - 1].x.refId });
 				} else {
-					//blank one
 					this.x = new ColumnClass({ refId: -1 });
 				}
 			}
@@ -180,23 +225,24 @@
 	}
 
 	// Helper function to get histogram bins for specific periods
-	function getHistogramBinsForPeriods(histogramBinsByDays, from, to, periodHrs) {
+	function getBinsForPeriods(binsByPeriod, from, to, periodHrs) {
 		const allXStart = [];
 		const allXEnd = [];
 		const allY = [];
 
 		for (let p = from; p < to; p++) {
-			if (histogramBinsByDays[p]) {
+			if (binsByPeriod[p]) {
 				const offset = from * periodHrs;
-				const { xStart, xEnd, y } = histogramBinsByDays[p];
 
-				// Apply period offset to x positions
-				allXStart.push(...xStart.map((x) => x - offset));
-				allXEnd.push(...xEnd.map((x) => x - offset));
-				allY.push(...y);
+				for (const bin of binsByPeriod[p]) {
+					// Adjust x positions relative to the display offset
+					allXStart.push(bin.xStart - offset);
+					allXEnd.push(bin.xEnd - offset);
+					allY.push(bin.y);
+				}
 			}
 		}
-		//console.log(allXStart, allXEnd);
+
 		return { xStart: allXStart, xEnd: allXEnd, y: allY };
 	}
 
@@ -797,18 +843,18 @@
 							.domain([theData.plot.ylims[d][day][0], theData.plot.ylims[d][day][1]])
 							.range([theData.plot.eachplotheight, 0])}
 
-						{@const histBins = getHistogramBinsForPeriods(
-							datum.histogramBinsByDays,
+						{@const bins = getBinsForPeriods(
+							datum.binsByPeriod,
 							day,
 							day + theData.plot.doublePlot,
 							theData.plot.periodHrs
 						)}
 
-						{#if histBins.xStart.length > 0}
+						{#if bins.xStart.length > 0}
 							<Hist
-								xStart={histBins.xStart}
-								xEnd={histBins.xEnd}
-								y={histBins.y}
+								xStart={bins.xStart}
+								xEnd={bins.xEnd}
+								y={bins.y}
 								xscale={scaleLinear()
 									.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
 									.range([0, theData.plot.plotwidth])}
