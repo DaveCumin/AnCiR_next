@@ -1,24 +1,36 @@
 <script>
 	import { DateTime } from 'luxon';
-	let { value = $bindable(), zone = 'utc', hours = false } = $props();
+	let { value = $bindable(), zone = 'utc', hours = false, onChange = () => {} } = $props();
 
-	let displayDate = $state(DateTime.fromMillis(value, { zone: zone }).toISO().substring(0, 16));
-	let displayHours = $state(Number(new Date(value)) / 3600000);
+	// Use $derived to automatically update when value changes
+	let displayDate = $derived(DateTime.fromMillis(value, { zone: zone }).toISO().substring(0, 16));
+	let displayHours = $derived(value / 3600000);
+
+	// Store local editing state
+	let editingDate = $state(displayDate);
+	let editingHours = $state(displayHours);
+
+	// Sync editing state when value changes externally
+	$effect(() => {
+		editingDate = displayDate;
+		editingHours = displayHours;
+	});
 
 	function dateToValue() {
-		value = DateTime.fromISO(displayDate, { zone: zone }).toMillis();
-		displayHours = value / 3600000;
+		value = DateTime.fromISO(editingDate, { zone: zone }).toMillis();
+		onChange(value);
 	}
+
 	function numberToValue() {
-		value = displayHours * 3600000;
-		displayDate = DateTime.fromMillis(value, { zone: zone }).toISO().substring(0, 16);
+		value = editingHours * 3600000;
+		onChange(value);
 	}
 </script>
 
 {#if hours}
-	<input type="number" bind:value={displayHours} oninput={numberToValue} />
+	<input type="number" bind:value={editingHours} oninput={numberToValue} />
 {:else}
-	<input type="datetime-local" bind:value={displayDate} oninput={dateToValue} />
+	<input type="datetime-local" bind:value={editingDate} oninput={dateToValue} />
 	<!-- <input type="text" bind:value={zone} oninput={dateToValue} /> -->
 {/if}
 

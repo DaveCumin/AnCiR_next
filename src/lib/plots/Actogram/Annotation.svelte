@@ -5,6 +5,8 @@
 	import Hist from '$lib/components/plotBits/Hist.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import { getPlotById } from '$lib/core/Plot.svelte';
+	import { DateTime } from 'luxon';
+	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 
 	let _annotationCounter = 0;
 
@@ -24,6 +26,15 @@
 
 		// Derive endTime to avoid circular updates
 		endTime = $derived(this.startTime + this.duration);
+
+		// Convert hour offset to milliseconds timestamp
+		startDateTime = $derived.by(() => {
+			return (this.parentData?.startTime ?? 0) + this.startTime * 3600000;
+		});
+
+		endDateTime = $derived.by(() => {
+			return (this.parentData?.startTime ?? 0) + this.endTime * 3600000;
+		});
 
 		constructor(parent, dataIN) {
 			this.parentData = parent;
@@ -68,18 +79,27 @@
 
 	function changedStartTime() {
 		annotation.startTime = Number(annotation.startTime);
-		// endTime updates automatically via $derived
+		annotation.startDateTime = annotation.parentData.startTime + annotation.startTime * 3600000;
 	}
 
 	function changedEndTime(newend) {
 		const newEndTime = Number(newend) || 0;
 		annotation.duration = Math.max(0, newEndTime - annotation.startTime);
-		console.log('changedEndTime', newEndTime, annotation.duration);
+		annotation.endDateTime = annotation.parentData.startTime + annotation.endTime * 3600000;
 	}
 
 	function changedDuration() {
 		annotation.duration = Number(annotation.duration);
-		// endTime updates automatically via $derived
+		annotation.endDateTime = annotation.parentData.startTime + annotation.endTime * 3600000;
+	}
+
+	function changedStartDateTime(dt) {
+		annotation.startTime = (dt - annotation.parentData.startTime) / 3600000;
+	}
+
+	function changedEndDateTime(dt) {
+		const newEndTimeHrs = (dt - annotation.parentData.startTime) / 3600000;
+		annotation.duration = Math.max(0, newEndTimeHrs - annotation.startTime);
 	}
 
 	function handleHover(e) {
@@ -90,7 +110,7 @@
 			const event = new CustomEvent('tooltip', {
 				detail: {
 					visible: true,
-					x: mouseX + 10, // Offset to avoid cursor overlap
+					x: mouseX + 10,
 					y: mouseY + 10,
 					content: annotation.name
 				},
@@ -139,12 +159,12 @@
 	</div>
 	<div class="control-input-horizontal">
 		<div class="control-input">
-			<p>Start</p>
+			<p>Start (hours)</p>
 			<NumberWithUnits step="0.1" bind:value={annotation.startTime} onInput={changedStartTime} />
 		</div>
 
 		<div class="control-input">
-			<p>End</p>
+			<p>End (hours)</p>
 			<NumberWithUnits
 				step="0.1"
 				value={annotation.endTime}
@@ -160,6 +180,17 @@
 				bind:value={annotation.duration}
 				onInput={changedDuration}
 			/>
+		</div>
+	</div>
+	<div class="control-input-horizontal">
+		<div class="control-input">
+			<p>Start Date/Time</p>
+			<DateTimeHrs bind:value={annotation.startDateTime} onChange={changedStartDateTime} />
+		</div>
+
+		<div class="control-input">
+			<p>End Date/Time</p>
+			<DateTimeHrs bind:value={annotation.endDateTime} onChange={changedEndDateTime} />
 		</div>
 	</div>
 {/snippet}
