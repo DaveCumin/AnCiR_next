@@ -361,6 +361,7 @@
 	import { slide } from 'svelte/transition';
 	import { tick } from 'svelte';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
+	import Editable from '$lib/components/inputs/Editable.svelte';
 
 	let { theData, which } = $props();
 
@@ -629,16 +630,8 @@
 					out:slide={{ duration: 500, axis: 'y' }}
 				>
 					<div class="control-component-title">
-						<p
-							style="cursor: default;"
-							contenteditable="false"
-							ondblclick={(e) => {
-								e.target.setAttribute('contenteditable', 'true');
-								e.target.focus();
-							}}
-							onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-							bind:innerHTML={datum.label}
-						></p>
+						<p><Editable bind:value={datum.label} /></p>
+
 						<button class="icon" onclick={() => theData.removeData(i)}
 							><Icon
 								name="minus"

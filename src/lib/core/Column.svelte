@@ -318,6 +318,7 @@
 	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
 
 	import { appState } from '$lib/core/core.svelte.js';
+	import Editable from '$lib/components/inputs/Editable.svelte';
 
 	let { col = $bindable(), canChange = false, onChange = () => {} } = $props();
 
@@ -379,16 +380,7 @@
 							<ColumnSelector bind:value={col.refId} bind:onChange />
 						</div>
 					{:else}
-						<p
-							style="cursor: default;"
-							contenteditable="false"
-							ondblclick={(e) => {
-								e.target.setAttribute('contenteditable', 'true');
-								e.target.focus();
-							}}
-							onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-							bind:innerHTML={col.name}
-						></p>
+						<p><Editable bind:value={col.name} /></p>
 					{/if}
 				</div>
 

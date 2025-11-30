@@ -1,4 +1,6 @@
 <script>
+	import Editable from '../inputs/Editable.svelte';
+
 	let { headers, data, editable = false, onInput = () => {} } = $props();
 
 	// Initialize widths array with equal distribution
@@ -74,29 +76,11 @@
 		<thead>
 			<tr>
 				{#each headers as header, index}
-					<th
-						style="width: {widths[index]}; position: relative; cursor: default;"
-						contenteditable="false"
-						onkeydown={(e) => {
-							if (e.key === 'Enter') {
-								e.preventDefault(); // Prevent new line
-								e.target.blur(); // Exit edit mode
-							}
-						}}
-						ondblclick={(e) => {
-							if (editable) {
-								oldVal = e.target.innerText;
-								e.target.setAttribute('contenteditable', 'true');
-
-								e.target.focus();
-								console.log(e.target);
-							}
-						}}
-						oninput={(e) => {
-							onInput({ col: index, row: 'h', value: e.target.innerText, old: oldVal });
-						}}
-					>
-						{header}
+					<th>
+						<Editable
+							value={headers[index]}
+							onInput={(v) => onInput({ col: index, row: 'h', value: v, old: oldVal })}
+						/>
 						<div class="resizer" onmousedown={() => startResize(index)}></div>
 					</th>
 				{/each}
@@ -106,27 +90,14 @@
 			{#each new Array(data[0]?.length) as d, r}
 				<tr>
 					{#each data as col, c}
-						<td
-							style="cursor: default;"
-							contenteditable="false"
-							onkeydown={(e) => {
-								if (e.key === 'Enter') {
-									e.preventDefault(); // Prevent new line
-									e.target.blur(); // Exit edit mode
-								}
-							}}
-							ondblclick={(e) => {
-								if (editable) {
-									oldVal = e.target.innerText;
-									e.target.setAttribute('contenteditable', 'true');
-									e.target.focus();
-									console.log(e.target);
-								}
-							}}
-							oninput={(e) => {
-								onInput({ col: c, row: r, value: e.target.innerText, old: oldVal });
-							}}>{col[r] ?? 'N/A'}</td
-						>
+						<td>
+							<Editable
+								value={col[r]}
+								onInput={(v) => {
+									onInput({ col: c, row: r, value: v, old: oldVal });
+								}}
+							/>
+						</td>
 					{/each}
 				</tr>
 			{/each}

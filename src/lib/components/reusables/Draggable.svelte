@@ -7,6 +7,7 @@
 	import { removePlots, selectPlot } from '$lib/core/Plot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 	import { getCanvasWidthPx } from '$lib/components/views/PlotDisplay.svelte';
+	import Editable from '../inputs/Editable.svelte';
 	let plotElement;
 
 	let {
@@ -412,17 +413,7 @@
 			onTouchStart(e);
 		}}
 	>
-		<p
-			contenteditable="false"
-			ondblclick={(e) => {
-				e.target.setAttribute('contenteditable', 'true');
-				e.target.focus();
-				console.log(e.target);
-			}}
-			onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-			bind:innerHTML={title}
-			style="cursor: default;"
-		></p>
+		<p><Editable bind:value={title} /></p>
 
 		<div class="clps-title-button">
 			<button

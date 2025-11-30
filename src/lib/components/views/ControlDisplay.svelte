@@ -98,6 +98,7 @@
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 	import { select } from 'd3-selection';
 	import { selectPlot, removePlots, getPlotById } from '$lib/core/Plot.svelte';
+	import Editable from '../inputs/Editable.svelte';
 
 	let addBtnRef;
 	let showSavePlot = $state(false);
@@ -503,16 +504,7 @@
 			{#if Plot}
 				<div class="control-banner">
 					<div class="control-banner-title">
-						<p
-							style="cursor: default;"
-							contenteditable="false"
-							ondblclick={(e) => {
-								e.target.setAttribute('contenteditable', 'true');
-								e.target.focus();
-							}}
-							onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-							bind:innerHTML={plot.name}
-						></p>
+						<p><Editable bind:value={plot.name} /></p>
 
 						<div class="control-banner-icons">
 							<button

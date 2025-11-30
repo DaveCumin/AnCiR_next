@@ -8,6 +8,7 @@
 
 	import { appState, core } from '$lib/core/core.svelte.js';
 	import { deselectAllPlots, selectAllPlots, selectPlot } from '$lib/core/Plot.svelte';
+	import Editable from '../inputs/Editable.svelte';
 
 	let addBtnRef;
 	let showAddPlot = $state(false);
@@ -151,16 +152,7 @@
 								<Icon name="eye" width={16} height={16} className="visible" />
 							{/if}
 						</button>
-						<p
-							style="cursor: default;"
-							contenteditable="false"
-							ondblclick={(e) => {
-								e.target.setAttribute('contenteditable', 'true');
-								e.target.focus();
-							}}
-							onfocusout={(e) => e.target.setAttribute('contenteditable', 'false')}
-							bind:innerHTML={plot.name}
-						></p>
+						<p><Editable bind:value={plot.name} /></p>
 					</div>
 
 					<div class="clps-title-button">
