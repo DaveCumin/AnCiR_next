@@ -78,6 +78,7 @@
 				{#each headers as header, index}
 					<th>
 						<Editable
+							{editable}
 							value={headers[index]}
 							onInput={(v) => onInput({ col: index, row: 'h', value: v, old: oldVal })}
 						/>

@@ -4,7 +4,8 @@
 		enterEnds = true,
 		placeholder = '',
 		forceNumber = false,
-		onInput = () => {}
+		onInput = () => {},
+		editable = true
 	} = $props();
 	let originalValue = $state(value);
 
@@ -35,8 +36,14 @@
 	tabindex="0"
 	contenteditable="false"
 	bind:innerText={value}
-	ondblclick={startEdit}
-	onfocusout={endEdit}
+	ondblclick={(e) => {
+		if (editable) {
+			startEdit(e);
+		}
+	}}
+	onfocusout={(e) => {
+		if (editable) endEdit(e);
+	}}
 	oninput={(e) => {
 		// Real-time validation while typing
 		if (forceNumber) {
@@ -87,7 +94,7 @@
 			}
 		}
 	}}
-	class="inline-edit"
+	class={'inline-edit' + editable ? 'editable' : ''}
 	data-placeholder={placeholder}
 />
 
@@ -98,16 +105,16 @@
 		min-height: 1.2em;
 		outline: none;
 	}
-	.inline-edit[contenteditable='false'] {
+	.inline-edit[contenteditable='false'] .editable {
 		border-bottom: 1px solid var(--color-lightness-75);
 		cursor: pointer;
 	}
 
-	.inline-edit[contenteditable='true'] {
+	.inline-edit[contenteditable='true'] .editable {
 		cursor: text;
 	}
 
-	.inline-edit.empty:not([contenteditable='true'])::before {
+	.inline-edit.empty:not([contenteditable='true'])::before .editable {
 		content: attr(data-placeholder);
 	}
 </style>
