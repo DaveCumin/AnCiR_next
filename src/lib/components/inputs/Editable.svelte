@@ -88,7 +88,6 @@
 		}
 	}}
 	class="inline-edit"
-	class:empty={!value}
 	data-placeholder={placeholder}
 />
 
@@ -97,19 +96,18 @@
 		display: inline-block;
 		min-width: 2ch;
 		min-height: 1.2em;
-		border-bottom: 1px solid #666;
 		outline: none;
+	}
+	.inline-edit[contenteditable='false'] {
+		border-bottom: 1px solid var(--color-lightness-75);
 		cursor: pointer;
 	}
 
 	.inline-edit[contenteditable='true'] {
-		border-bottom-color: #007bff;
-		background: #f8f9fa;
 		cursor: text;
 	}
 
 	.inline-edit.empty:not([contenteditable='true'])::before {
 		content: attr(data-placeholder);
-		color: #999;
 	}
 </style>
