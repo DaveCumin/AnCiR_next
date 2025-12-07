@@ -157,8 +157,7 @@
 		if (edit.row === 'h') {
 			// Editing header: change column name
 			if (actualCol >= 0 && actualCol < theData.plot.columnRefs.length) {
-				const colId = theData.plot.columnRefs[actualCol];
-				getColumnById(colId).name = edit.value;
+				column.name = edit.value;
 			}
 		} else {
 			// Editing data: update value at specific row
@@ -168,8 +167,40 @@
 				actualCol < theData.plot.columnRefs.length &&
 				rowIndex < theData.plot.longestCol
 			) {
-				//TODO - complete this (needs type checking, especially for time)
-				console.log('editing.. ', rowIndex, ' of ', column.name, ' with ', edit);
+				//Do the edit
+				// Check if last process is EditValue, if not add it
+				if (column.processes[column.processes.length - 1]?.name != 'EditValue') {
+					column.addProcess('EditValue');
+				}
+
+				const editProcess = column.processes[column.processes.length - 1];
+
+				// Initialize edits array if it doesn't exist
+				if (!editProcess.args.edits) {
+					editProcess.args.edits = [];
+				}
+
+				// Check if position already has an edit
+				const existingIndex = editProcess.args.edits.findIndex((e) => e.position === rowIndex + 1);
+
+				if (existingIndex >= 0) {
+					// Update existing edit
+					editProcess.args.edits[existingIndex].value = Number(edit.value);
+					editProcess.args.edits = [...editProcess.args.edits]; // Trigger reactivity
+				} else {
+					// Add new edit
+					editProcess.args.edits = [
+						...editProcess.args.edits,
+						{
+							id: crypto.randomUUID(),
+							position: rowIndex + 1,
+							value: Number(edit.value)
+						}
+					];
+				}
+				// THIS is the 'brute force' way, which alters the data directly
+				// column.data[rowIndex] = Number(edit.value);
+				// column.tableProcessGUId = crypto.randomUUID(); //to update any derived data
 			}
 		}
 	}

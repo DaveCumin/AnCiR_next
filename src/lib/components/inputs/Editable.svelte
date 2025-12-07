@@ -28,6 +28,7 @@
 			}
 		}
 		onInput(value);
+		e.target.blur();
 	}
 </script>
 
@@ -60,12 +61,10 @@
 		if (enterEnds && e.key === 'Enter') {
 			e.preventDefault();
 			endEdit(e);
-			e.target.blur();
 		} else if (e.key === 'Escape') {
 			e.preventDefault();
 			value = originalValue;
 			endEdit(e);
-			e.target.blur();
 		} else if (forceNumber) {
 			// Allow: digits, decimal point, minus, backspace, delete, arrows, tab
 			const allowed =
