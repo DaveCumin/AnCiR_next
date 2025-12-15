@@ -20,12 +20,18 @@
 		}
 		// Create a CSV string from the table data with headers (Column names) at the top and data below
 		const headers = table.columns.map((col) => col.name).join(',') + '\n';
-		const dataRows = table.columns[0]
-			.getData()
-			.map((_, rowIndex) => {
-				return table.columns.map((col) => col.getData()[rowIndex]).join(',');
-			})
-			.join('\n');
+		// take care of any cases where the data might be of differing length
+		const maxRows = Math.max(...table.columns.map((col) => col.getData().length));
+		const defaultValue = 'NaN'; //default value
+
+		const dataRows = Array.from({ length: maxRows }, (_, rowIndex) => {
+			return table.columns
+				.map((col) => {
+					const data = col.getData();
+					return rowIndex < data.length ? data[rowIndex] : defaultValue;
+				})
+				.join(',');
+		}).join('\n');
 		const csvString = headers + dataRows;
 		const blob = new Blob([csvString], { type: 'text/csv' });
 		const url = URL.createObjectURL(blob);

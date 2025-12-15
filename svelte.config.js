@@ -12,6 +12,9 @@ const config = {
 		router: {
 			type: 'hash'
 		}
+	},
+	vitePlugin: {
+		inspector: true
 	}
 };
 

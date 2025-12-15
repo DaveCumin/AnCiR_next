@@ -4,19 +4,31 @@
 		enterEnds = true,
 		placeholder = '',
 		forceNumber = false,
+		number = { min: 0, step: 0.1 },
 		onInput = () => {},
 		editable = true
 	} = $props();
-	let originalValue = $state(value);
 
-	function startEdit(e) {
+	let originalValue = $state(value);
+	let isEditing = $state(false);
+	let inputElement = $state(null);
+
+	function startEdit() {
+		if (!editable) return;
 		originalValue = value;
-		e.target.setAttribute('contenteditable', 'true');
-		e.target.focus();
+		isEditing = true;
+
+		// Focus the input after it's rendered
+		setTimeout(() => {
+			if (inputElement) {
+				inputElement.focus();
+				inputElement.select();
+			}
+		}, 0);
 	}
 
-	function endEdit(e) {
-		e.target.setAttribute('contenteditable', 'false');
+	function endEdit() {
+		if (!isEditing) return;
 
 		// Validate and coerce to number if needed
 		if (forceNumber) {
@@ -27,93 +39,96 @@
 				value = parsed; // Store as actual number
 			}
 		}
-		onInput(value);
-		e.target.blur();
-	}
-</script>
 
-<span
-	role="textbox"
-	tabindex="0"
-	contenteditable="false"
-	bind:innerText={value}
-	ondblclick={(e) => {
-		if (editable) {
-			startEdit(e);
-		}
-	}}
-	onfocusout={(e) => {
-		if (editable) endEdit(e);
-	}}
-	oninput={(e) => {
-		// Real-time validation while typing
-		if (forceNumber) {
-			const text = e.target.innerText;
-			// Remove any non-numeric characters except decimal point and minus
-			const cleaned = text.replace(/[^\d.-]/g, '');
-			if (cleaned !== text) {
-				e.target.innerText = cleaned;
-			}
-		}
-		onInput(value);
-	}}
-	onkeydown={(e) => {
+		isEditing = false;
+	}
+
+	function handleKeydown(e) {
 		if (enterEnds && e.key === 'Enter') {
 			e.preventDefault();
-			endEdit(e);
+			endEdit();
 		} else if (e.key === 'Escape') {
 			e.preventDefault();
 			value = originalValue;
-			endEdit(e);
-		} else if (forceNumber) {
-			// Allow: digits, decimal point, minus, backspace, delete, arrows, tab
-			const allowed =
-				/^[0-9.]$/.test(e.key) ||
-				e.key === '-' ||
-				e.key === 'Backspace' ||
-				e.key === 'Delete' ||
-				e.key === 'ArrowLeft' ||
-				e.key === 'ArrowRight' ||
-				e.key === 'Tab' ||
-				e.ctrlKey ||
-				e.metaKey;
-
-			// Prevent multiple decimal points
-			if (e.key === '.' && e.target.innerText.includes('.')) {
-				e.preventDefault();
-			}
-			// Prevent minus if not at start
-			else if (
-				e.key === '-' &&
-				(e.target.innerText.includes('-') || window.getSelection().anchorOffset !== 0)
-			) {
-				e.preventDefault();
-			} else if (!allowed) {
-				e.preventDefault();
-			}
+			isEditing = false;
 		}
-	}}
-	class={'inline-edit' + editable ? 'editable' : ''}
-	data-placeholder={placeholder}
-/>
+	}
+</script>
+
+{#if isEditing}
+	<input
+		bind:this={inputElement}
+		bind:value
+		type={forceNumber ? 'number' : 'text'}
+		min={number?.min}
+		max={number?.max}
+		step={number?.step}
+		class="inline-edit-input"
+		size={value.length + 1}
+		{placeholder}
+		onkeydown={handleKeydown}
+		onblur={endEdit}
+		oninput={(e) => onInput(value)}
+	/>
+{:else}
+	<span
+		role="button"
+		tabindex="0"
+		class="inline-edit-span"
+		class:editable
+		ondblclick={startEdit}
+		onkeydown={(e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				startEdit();
+			}
+		}}
+	>
+		{value || placeholder}
+	</span>
+{/if}
 
 <style>
-	.inline-edit {
+	.inline-edit-span,
+	.inline-edit-input {
 		display: inline-block;
 		min-width: 2ch;
+		max-width: 100%;
 		min-height: 1.2em;
+		font-family: inherit;
+		font-size: inherit;
+		line-height: inherit;
+		margin: 0;
+		padding: 2px 4px;
+		border: 1px solid transparent;
+		background: transparent;
 		outline: none;
+		box-sizing: border-box;
+		vertical-align: baseline;
 	}
-	.inline-edit[contenteditable='false'] .editable {
-		border-bottom: 1px solid var(--color-lightness-75);
+
+	.inline-edit-span.editable {
+		text-decoration: underline dashed var(--color-lightness-50);
 		cursor: pointer;
 	}
 
-	.inline-edit[contenteditable='true'] .editable {
+	.inline-edit-input {
+		border-color: var(--color-lightness-50);
+		border-radius: 2px;
+		width: fit-content;
+		min-width: 3ch;
 		cursor: text;
 	}
 
-	.inline-edit.empty:not([contenteditable='true'])::before .editable {
+	.inline-edit-input:focus {
+		outline: 2px solid var(--color-lightness-50);
+		outline-offset: 1px;
+	}
+
+	/* Placeholder styling for span */
+	.inline-edit-span:empty::before {
 		content: attr(data-placeholder);
+		color: var(--color-lightness-50);
+		font-style: italic;
 	}
 </style>

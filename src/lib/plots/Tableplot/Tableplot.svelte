@@ -258,6 +258,7 @@
 				Row <NumberWithUnits
 					min="1"
 					max={theData.plot.longestCol}
+					step="1"
 					bind:value={theData.plot.colCurrent}
 				/>
 				to {Math.min(theData.plot.colCurrent + theData.plot.Ncolumns - 1, theData.plot.longestCol)} of

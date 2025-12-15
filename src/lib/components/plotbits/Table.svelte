@@ -76,7 +76,7 @@
 		<thead>
 			<tr>
 				{#each headers as header, index}
-					<th>
+					<th style="width: {widths[index]}">
 						<Editable
 							{editable}
 							value={headers[index]}
@@ -91,7 +91,7 @@
 			{#each new Array(data[0]?.length) as d, r}
 				<tr>
 					{#each data as col, c}
-						<td>
+						<td style="width: {widths[c]}">
 							<Editable
 								value={col[r]}
 								onInput={(v) => {
@@ -146,6 +146,13 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+	.preview-table-wrapper th {
+		padding: 8px 12px;
+		border: 1px solid var(--color-lightness-85);
+		background-color: var(--color-lightness-97);
+		text-align: left;
+		position: relative; /* Add this */
 	}
 
 	.resizer {
