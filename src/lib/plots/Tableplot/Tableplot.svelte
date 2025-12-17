@@ -23,6 +23,7 @@
 				Ncols = 1;
 				this.parentBox.height = 5 * colHeightpx;
 			}
+
 			return Ncols;
 		});
 		longestCol = $derived.by(() => {

@@ -49,7 +49,7 @@
 
 		const newEdit = {
 			id: crypto.randomUUID(),
-			position: 0,
+			position: 1,
 			value: p.parentCol.type == 'number' ? 0 : ''
 		};
 
@@ -91,8 +91,6 @@
 					{#if p.parentCol.type == 'time' || p.parentCol.type == 'number'}
 						<NumberWithUnits bind:value={edit.value} />
 					{:else if p.parentCol.type == 'category'}
-						<input type="text" bind:value={edit.value} />
-					{:else}
 						<input type="text" bind:value={edit.value} />
 					{/if}
 				</div>
