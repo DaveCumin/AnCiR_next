@@ -28,26 +28,6 @@
 	import { removePlots } from '$lib/core/Plot.svelte';
 	import Correlogram from '$lib/plots/Correlogram/Correlogram.svelte';
 
-	// Convert plots to SvelteFlow nodes (simple, no selection logic here)
-	let nodes = $derived.by(() =>
-		core.plots
-			.filter((p) => !appState.invisiblePlotIds.includes(p.id))
-			.map((plot) => ({
-				id: plot.id.toString(),
-				position: { x: plot.x, y: plot.y },
-				data: { plot },
-				type: 'plotNode',
-				width: plot.width + 20,
-				height: plot.height + 50,
-				draggable: true,
-				selectable: true,
-				selected: plot.selected,
-				dragHandle: '.plot-header'
-			}))
-	);
-
-	let edges = $derived.by(() => []);
-
 	// Map custom node types
 	const nodeTypes = {
 		plotNode: PlotNode,
@@ -132,7 +112,6 @@
 	{#if core.plots.length > 0}
 		<SvelteFlow
 			bind:nodes={core.plots}
-			{edges}
 			{nodeTypes}
 			panOnDrag={true}
 			panOnScroll={true}

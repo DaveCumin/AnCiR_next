@@ -4,16 +4,19 @@
 	import { removePlots } from '$lib/core/Plot.svelte';
 	import { NodeResizer } from '@xyflow/svelte';
 
-	let { data, selected } = $props();
-	console.log('data: ', data);
+	let { data, selected, width = 100, height = 100 } = $props();
 	let plot = data.data.plot;
-	console.log('plot: ', plot);
+	console.log(data.data.id + ' ' + width + ' x ' + height);
 </script>
 
 {#if plot}
-	<NodeResizer minWidth={100} minHeight={30} isVisible={selected} />
+	<div
+		class="plot-node-wrapper"
+		class:selected
+		style="width: {width}px; height: {height}px; position: relative;"
+	>
+		<NodeResizer isVisible={selected} minWidth={200} minHeight={100} />
 
-	<div class="plot-node-wrapper" class:selected>
 		<div class="plot-header">
 			<p
 				contenteditable="false"
@@ -66,8 +69,7 @@
 		border: 1px solid var(--color-lightness-85);
 		border-radius: 4px;
 		overflow: hidden;
-		width: 100% !important;
-		height: 100% !important;
+
 		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
 	}
 
@@ -94,6 +96,7 @@
 	.plot-content {
 		padding: 0.5rem;
 		cursor: default;
+		box-sizing: border-box;
 	}
 
 	.clps-title-button {

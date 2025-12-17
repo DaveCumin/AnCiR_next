@@ -79,15 +79,16 @@
 	export class Plot {
 		id;
 		name = 'plot' + this.id;
-		x = $state(350);
-		y = $state(150);
 		width = 500;
 		height = 250;
 		type;
 		selected = false;
 		plot = $state();
-		position = { x: this.x, y: this.y };
+		position = { x: appState.gridSize, y: appState.gridSize };
+		x = $derived(this.position.x);
+		y = $derived(this.position.y);
 		data = { plot: this };
+		dragHandle = '.plot-header';
 
 		constructor(plotData = {}, id = null) {
 			// console.log('new plot: ', plotData);
@@ -100,8 +101,7 @@
 			}
 			//set things
 			this.name = plotData.name ?? `Plot_${this.id}`;
-			this.x = plotData.x ?? 350;
-			this.y = plotData.y ?? 150;
+			this.position = { x: plotData.x ?? 350, y: plotData.y ?? 150 };
 			this.width = plotData.width ?? 500;
 			this.height = plotData.height ?? 250;
 			//need to make the plot
@@ -131,8 +131,7 @@
 			return {
 				id: this.id,
 				name: this.name,
-				x: this.x,
-				y: this.y,
+				position: this.position,
 				width: this.width,
 				height: this.height,
 				type: this.type,
@@ -144,8 +143,8 @@
 			const id = json.id ?? json.plotid;
 			const name = json.name ?? 'Untitled Plot';
 
-			const { x, y, width, height, type, selected, plot } = json;
-			return new Plot({ name, x, y, width, height, type, selected, plot }, id);
+			const { position, width, height, type, selected, plot } = json;
+			return new Plot({ name, position, width, height, type, selected, plot }, id);
 		}
 	}
 </script>
