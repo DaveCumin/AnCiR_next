@@ -49,6 +49,7 @@
 		"d3-time-format": "^4.1.0",
 		"d3-transition": "^3.0.1",
 		"luxon": "^3.6.1",
-		"papaparse": "^5.5.3"
+		"papaparse": "^5.5.3",
+		"xlsx": "^0.18.5"
 	}
 }

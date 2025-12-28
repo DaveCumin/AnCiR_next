@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import Papa from 'papaparse';
+	import * as XLSX from 'xlsx';
 	import { DateTime } from 'luxon';
 
 	import { appConsts, pushObj } from '$lib/core/core.svelte';
@@ -85,17 +86,80 @@
 		showImportModal = false;
 	}
 
-	async function parseFile() {
+	async function parseXLSX(file) {
 		return new Promise((resolve, reject) => {
-			if (!targetFile) {
-				errorInfile = true;
-				resolve();
-				return;
-			}
+			const reader = new FileReader();
 
-			errorInfile = false;
+			reader.onload = async (e) => {
+				try {
+					const data = new Uint8Array(e.target.result);
+					const workbook = XLSX.read(data, { type: 'array' });
+
+					// Get first sheet
+					const firstSheetName = workbook.SheetNames[0];
+					const worksheet = workbook.Sheets[firstSheetName];
+
+					// Convert to CSV format that Papa Parse can handle
+					const csv = XLSX.utils.sheet_to_csv(worksheet, {
+						skipHidden: true,
+						blankrows: false
+					});
+					console.log('Converted CSV: ', csv);
+
+					// Now parse the CSV with Papa Parse
+					Papa.parse(csv, {
+						preview: previewIN,
+						header: hasHeader,
+						dynamicTyping: true,
+						skipEmptyLines: 'greedy',
+						skipFirstNLines: skipLines,
+						complete: (results) => {
+							dealWithData(results.meta.fields, results.data);
+							resolve();
+						},
+						error: (err) => {
+							error = { err, reason: 'Failed to parse XLSX data' };
+							errorInfile = true;
+							reject(err);
+						}
+					});
+				} catch (err) {
+					error = { err, reason: 'Failed to read XLSX file' };
+					errorInfile = true;
+					reject(err);
+				}
+			};
+
+			reader.onerror = () => {
+				error = { err: reader.error, reason: 'Failed to read file' };
+				errorInfile = true;
+				reject(reader.error);
+			};
+
+			reader.readAsArrayBuffer(file);
+		});
+	}
+
+	async function parseFile() {
+		if (!targetFile) {
+			errorInfile = true;
+			return;
+		}
+
+		errorInfile = false;
+
+		// Check if it's an Excel file
+		const isExcel = targetFile.name.toLowerCase().match(/\.(xlsx|xls)$/);
+
+		if (isExcel) {
+			// Return the promise directly with await
+			return await parseXLSX(targetFile);
+		}
+
+		// For CSV files, continue with existing Papa Parse logic
+		return new Promise((resolve, reject) => {
 			let parseAttempts = 0;
-			const maxAttempts = 2; // Prevent infinite recursion
+			const maxAttempts = 2;
 
 			function tryParse() {
 				Papa.parse(targetFile, {
@@ -115,7 +179,6 @@
 						const lines = chunk.split(/\r\n|\r|\n/);
 						const firstLine = lines[0].split(/[,;\t]/);
 
-						//TODO: test with actiware data
 						if (firstLine?.includes('Actiware Export File') && !specialRecognised) {
 							specialRecognised = 'actiware';
 							skipLines = 148;
@@ -130,12 +193,11 @@
 					complete: async (results, file) => {
 						if (file.name.toLowerCase().endsWith('.awd')) {
 							results.errors = [];
-							//TODO: test this and adjust as necessary
 							if (previewIN === skipLines) {
 								previewIN = 14;
 								if (parseAttempts < maxAttempts) {
 									parseAttempts++;
-									tryParse(); // Recursive call
+									tryParse();
 									return;
 								}
 							} else {
@@ -147,21 +209,16 @@
 							errorInfile = true;
 						}
 
-						// Check if we need to reparse due to special file types
 						if (
 							(specialRecognised === 'actiware' || specialRecognised === 'MW8') &&
 							parseAttempts === 0
 						) {
 							parseAttempts++;
-							tryParse(); // Recursive call
+							tryParse();
 							return;
 						}
 
-						// Final processing
-						// await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate delay
-						//console.log('before dealing: ', results.data);
 						dealWithData(results.meta.fields, results.data);
-						//console.log('after parse dealing', $state.snapshot(parsedData));
 						resolve();
 					}
 				});
@@ -323,7 +380,7 @@
 				bind:this={fileInput}
 				id="fileInput"
 				type="file"
-				accept=".csv,.awd,.txt"
+				accept=".csv,.awd,.txt,.xlsx,.xls"
 				onchange={onFileChange}
 				style="display: none;"
 			/>

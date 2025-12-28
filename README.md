@@ -10,6 +10,7 @@ The following packages were used in this project:
 
 - [D3](https://d3js.org/) is used for plotting (ISC licensed).
 - [Papaparse](https://www.papaparse.com/) is used for importing the data (MIT licensed).
+- [SheetJS](https://www.npmjs.com/package/xlsx) for importing data from xlsx files (Apache 2.0).
 - [Moment-guess](https://www.npmjs.com/package/moment-guess) was adapted to guess the time format of data (MIT licensed).
 - [Stats functions from](https://github.com/ytliu0/p-value_calculators/blob/master/statFunctions.js) [@ytliu0](https://github.com/ytliu0) (GPL-3.0 licensed).
 - [Luxon](https://www.npmjs.com/package/luxon) is used for date manipulation and caluclations (MIT licensed).
