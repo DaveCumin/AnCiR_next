@@ -4,7 +4,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddPlot from '../iconActions/AddPlot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
-	import SavePlot from '$lib/components/iconActions/_old_SavePlot_with_submenus.svelte';
+	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 
 	import { appState, core } from '$lib/core/core.svelte.js';
 	import { deselectAllPlots, selectAllPlots, selectPlot } from '$lib/core/Plot.svelte';

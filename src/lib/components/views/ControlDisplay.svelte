@@ -92,7 +92,7 @@
 <script>
 	// @ts-nocheck
 	import Icon from '$lib/icons/Icon.svelte';
-	import SavePlot from '$lib/components/iconActions/_old_SavePlot_with_submenus.svelte';
+	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';

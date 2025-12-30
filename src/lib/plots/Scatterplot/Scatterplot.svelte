@@ -17,6 +17,7 @@
 		label = $state('test');
 		line = $state();
 		points = $state();
+		yAxis = $state('left'); // 'left' or 'right'
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
@@ -41,6 +42,7 @@
 			} else {
 				this.label = 'Data ' + (parent.data.length + 1);
 			}
+			this.yAxis = dataIN?.yAxis || 'left';
 			this.line = new LineClass(dataIN?.line, this);
 			if (!dataIN?.line) {
 				this.line.draw = false;
@@ -92,6 +94,7 @@
 				x: this.x,
 				y: this.y,
 				label: this.label,
+				yAxis: this.yAxis,
 				line: this.line.toJSON(),
 				points: this.points.toJSON()
 			};
@@ -102,6 +105,7 @@
 				x: json.x,
 				y: json.y,
 				label: json.label,
+				yAxis: json.yAxis,
 				line: LineClass.fromJSON(json.line),
 				points: PointsClass.fromJSON(json.points)
 			});
@@ -113,31 +117,55 @@
 		data = $state([]);
 		legend = $state();
 
-		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
+		padding = $state({ top: 15, right: 30, bottom: 30, left: 30 });
 		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
 
 		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
 
 		xlimsIN = $state([null, null]);
-		ylimsIN = $state([null, null]);
-		ylims = $derived.by(() => {
-			if (this.data.length === 0) {
+		ylimsLeftIN = $state([null, null]);
+		ylimsRightIN = $state([null, null]);
+
+		// Left Y-axis limits
+		ylimsLeft = $derived.by(() => {
+			const leftData = this.data.filter((d) => d.yAxis === 'left');
+			if (leftData.length === 0) {
 				return [0, 0];
 			}
 
 			let ymin = Infinity;
 			let ymax = -Infinity;
-			this.data.forEach((d, i) => {
-				let tempy = this.data[i].y.getData() ?? [];
-
+			leftData.forEach((d) => {
+				let tempy = d.y.getData() ?? [];
 				ymin = min([ymin, ...tempy]);
 				ymax = max([ymax, ...tempy]);
 			});
 			return [
-				this.ylimsIN[0] != null ? this.ylimsIN[0] : ymin,
-				this.ylimsIN[1] != null ? this.ylimsIN[1] : ymax
+				this.ylimsLeftIN[0] != null ? this.ylimsLeftIN[0] : ymin,
+				this.ylimsLeftIN[1] != null ? this.ylimsLeftIN[1] : ymax
 			];
 		});
+
+		// Right Y-axis limits
+		ylimsRight = $derived.by(() => {
+			const rightData = this.data.filter((d) => d.yAxis === 'right');
+			if (rightData.length === 0) {
+				return [0, 0];
+			}
+
+			let ymin = Infinity;
+			let ymax = -Infinity;
+			rightData.forEach((d) => {
+				let tempy = d.y.getData() ?? [];
+				ymin = min([ymin, ...tempy]);
+				ymax = max([ymax, ...tempy]);
+			});
+			return [
+				this.ylimsRightIN[0] != null ? this.ylimsRightIN[0] : ymin,
+				this.ylimsRightIN[1] != null ? this.ylimsRightIN[1] : ymax
+			];
+		});
+
 		xlims = $derived.by(() => {
 			if (this.data.length === 0) {
 				return [0, 0];
@@ -165,9 +193,16 @@
 			];
 		});
 		xlabel = $state('');
-		ylabel = $state(null);
+		ylabelLeft = $state(null);
+		ylabelRight = $state(null);
 		xgridlines = $state(true);
-		ygridlines = $state(true);
+		ygridlinesLeft = $state(true);
+		ygridlinesRight = $state(false);
+
+		hasRightAxisData = $derived.by(() => {
+			return this.data.some((d) => d.yAxis === 'right');
+		});
+
 		anyXdataTime = $derived.by(() => {
 			if (this.data.length === 0) {
 				return false;
@@ -322,10 +357,14 @@
 		toJSON() {
 			return {
 				xlimsIN: this.xlimsIN,
-				ylimsIN: this.ylimsIN,
+				ylimsLeftIN: this.ylimsLeftIN,
+				ylimsRightIN: this.ylimsRightIN,
 				padding: this.padding,
-				ygridlines: this.ygridlines,
+				ygridlinesLeft: this.ygridlinesLeft,
+				ygridlinesRight: this.ygridlinesRight,
 				xgridlines: this.xgridlines,
+				ylabelLeft: this.ylabelLeft,
+				ylabelRight: this.ylabelRight,
 				data: this.data,
 				legend: this.legend.toJSON()
 			};
@@ -338,10 +377,14 @@
 			const scatter = new Scatterplotclass(parent, null);
 			scatter.padding = json.padding;
 			scatter.xlimsIN = json.xlimsIN;
-			scatter.ylimsIN = json.ylimsIN;
+			scatter.ylimsLeftIN = json.ylimsLeftIN || [null, null];
+			scatter.ylimsRightIN = json.ylimsRightIN || [null, null];
 			scatter.padding = json.padding;
-			scatter.ygridlines = json.ygridlines;
+			scatter.ygridlinesLeft = json.ygridlinesLeft ?? true;
+			scatter.ygridlinesRight = json.ygridlinesRight ?? false;
 			scatter.xgridlines = json.xgridlines;
+			scatter.ylabelLeft = json.ylabelLeft;
+			scatter.ylabelRight = json.ylabelRight;
 
 			if (json.data) {
 				scatter.data = json.data.map((d) => ScatterDataclass.fromJSON(d, scatter));
@@ -379,10 +422,12 @@
 	//check for axes if the labels change
 	$effect(() => {
 		if (which == 'controls') {
-			theData.ylabel;
+			theData.ylabelLeft;
+			theData.ylabelRight;
 			theData.xlabel;
 			theData.xlims;
-			theData.ylims;
+			theData.ylimsLeft;
+			theData.ylimsRight;
 
 			theData.autoScalePadding('all');
 		}
@@ -457,12 +502,12 @@
 
 		<div class="control-component">
 			<div class="control-component-title">
-				<p>Y-Axis</p>
+				<p>Left Y-Axis</p>
 			</div>
 			<div class="control-input-vertical">
 				<div class="control-input">
 					<p>Label</p>
-					<input bind:value={theData.ylabel} />
+					<input bind:value={theData.ylabelLeft} />
 				</div>
 			</div>
 
@@ -471,9 +516,9 @@
 					<p>Min</p>
 					<NumberWithUnits
 						step="0.1"
-						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
+						value={theData.ylimsLeftIN[0] ? theData.ylimsLeftIN[0] : theData.ylimsLeft[0]}
 						onInput={(val) => {
-							theData.ylimsIN[0] = parseFloat(val);
+							theData.ylimsLeftIN[0] = parseFloat(val);
 						}}
 					/>
 				</div>
@@ -482,16 +527,16 @@
 					<p>Max</p>
 					<NumberWithUnits
 						step="0.1"
-						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
+						value={theData.ylimsLeftIN[1] ? theData.ylimsLeftIN[1] : theData.ylimsLeft[1]}
 						onInput={(val) => {
-							theData.ylimsIN[1] = parseFloat(val);
+							theData.ylimsLeftIN[1] = parseFloat(val);
 						}}
 					/>
 				</div>
 
-				{#if theData.ylimsIN[0] != null || theData.ylimsIN[1] != null}
+				{#if theData.ylimsLeftIN[0] != null || theData.ylimsLeftIN[1] != null}
 					<div class="control-component-input-icons">
-						<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
+						<button class="icon" onclick={() => (theData.ylimsLeftIN = [null, null])}>
 							<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
 						</button>
 					</div>
@@ -499,11 +544,74 @@
 			</div>
 			<div class="control-input-vertical">
 				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.ygridlines} />
+					<input type="checkbox" bind:checked={theData.ygridlinesLeft} />
 					<p>Grid</p>
 				</div>
 			</div>
+		</div>
 
+		{#if theData.hasRightAxisData}
+			<div class="div-line"></div>
+
+			<div class="control-component">
+				<div class="control-component-title">
+					<p>Right Y-Axis</p>
+				</div>
+				<div class="control-input-vertical">
+					<div class="control-input">
+						<p>Label</p>
+						<input bind:value={theData.ylabelRight} />
+					</div>
+				</div>
+
+				<div class="control-input-horizontal">
+					<div class="control-input">
+						<p>Min</p>
+						<NumberWithUnits
+							step="0.1"
+							value={theData.ylimsRightIN[0] ? theData.ylimsRightIN[0] : theData.ylimsRight[0]}
+							onInput={(val) => {
+								theData.ylimsRightIN[0] = parseFloat(val);
+							}}
+						/>
+					</div>
+
+					<div class="control-input">
+						<p>Max</p>
+						<NumberWithUnits
+							step="0.1"
+							value={theData.ylimsRightIN[1] ? theData.ylimsRightIN[1] : theData.ylimsRight[1]}
+							onInput={(val) => {
+								theData.ylimsRightIN[1] = parseFloat(val);
+							}}
+						/>
+					</div>
+
+					{#if theData.ylimsRightIN[0] != null || theData.ylimsRightIN[1] != null}
+						<div class="control-component-input-icons">
+							<button class="icon" onclick={() => (theData.ylimsRightIN = [null, null])}>
+								<Icon
+									name="reset"
+									width={14}
+									height={14}
+									className="control-component-input-icon"
+								/>
+							</button>
+						</div>
+					{/if}
+				</div>
+				<div class="control-input-vertical">
+					<div class="control-input-checkbox">
+						<input type="checkbox" bind:checked={theData.ygridlinesRight} />
+						<p>Grid</p>
+					</div>
+				</div>
+			</div>
+		{/if}
+
+		<div class="div-line"></div>
+
+		<div class="control-component">
 			<div class="control-component-title">
 				<p>X-Axis</p>
 			</div>
@@ -597,24 +705,6 @@
 
 							//Scroll to the bottom of dataSettings
 							dataSettingsScrollTo('bottom');
-
-							//TODO: consider focuus on the next y
-							//focus on the next y value
-
-							// // Get the last element with class 'y-select'
-							// const ySelectElements = document.getElementsByClassName('y-select');
-							// const lastYSelect = ySelectElements[ySelectElements.length - 1];
-
-							// // Get the <select> element within the last y-select
-							// const selectElement = lastYSelect.querySelector('select');
-
-							// // Check if the select element exists
-							// if (selectElement) {
-							// 	// Simulate a click on the select element
-							// 	selectElement.click();
-							// } else {
-							// 	console.error('No <select> element found within the last y-select element');
-							// }
 						}}
 					>
 						<Icon name="add" width={16} height={16} />
@@ -657,6 +747,16 @@
 							<Column col={datum.y} canChange={true} />
 						</div>
 
+						<div class="control-input-vertical">
+							<div class="control-input">
+								<p>Y-Axis</p>
+								<select bind:value={datum.yAxis}>
+									<option value="left">Left</option>
+									<option value="right">Right</option>
+								</select>
+							</div>
+						</div>
+
 						<Points pointsData={datum.points} which="controls" />
 						<Line
 							lineData={datum.line}
@@ -670,7 +770,11 @@
 										.domain([theData.xlims[0], theData.xlims[1]])
 										.range([0, theData.plotwidth])}
 							yscale={scaleLinear()
-								.domain([theData.ylims[0], theData.ylims[1]])
+								.domain(
+									datum.yAxis === 'left'
+										? [theData.ylimsLeft[0], theData.ylimsLeft[1]]
+										: [theData.ylimsRight[0], theData.ylimsRight[1]]
+								)
 								.range([theData.plotheight, 0])}
 							which="controls"
 						/>
@@ -691,19 +795,35 @@
 		style={`background: white; position: absolute;`}
 		ontooltip={handleTooltip}
 	>
-		<!-- The Y-axis -->
+		<!-- The Left Y-axis -->
 		<Axis
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()
-				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+				.domain([theData.plot.ylimsLeft[0], theData.plot.ylimsLeft[1]])
 				.range([theData.plot.plotheight, 0])}
 			position="left"
 			plotPadding={theData.plot.padding}
 			nticks={5}
-			gridlines={theData.plot.ygridlines}
-			label={theData.plot.ylabel}
+			gridlines={theData.plot.ygridlinesLeft}
+			label={theData.plot.ylabelLeft}
 		/>
+
+		<!-- The Right Y-axis (only if there's data on right axis) -->
+		{#if theData.plot.hasRightAxisData}
+			<Axis
+				height={theData.plot.plotheight}
+				width={theData.plot.plotwidth}
+				scale={scaleLinear()
+					.domain([theData.plot.ylimsRight[0], theData.plot.ylimsRight[1]])
+					.range([theData.plot.plotheight, 0])}
+				position="right"
+				plotPadding={theData.plot.padding}
+				nticks={5}
+				gridlines={theData.plot.ygridlinesRight}
+				label={theData.plot.ylabelRight}
+			/>
+		{/if}
 
 		<!-- The X-axis -->
 		<Axis
@@ -722,36 +842,6 @@
 			gridlines={theData.plot.xgridlines}
 			label={theData.plot.xlabel}
 		/>
-		<!-- EXTRA FOR TESTING-->
-		<!-- <Axis
-			height={theData.plot.plotheight}
-			width={theData.plot.plotwidth}
-			scale={scaleLinear()
-				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-				.range([theData.plot.plotheight, 0])}
-			position="right"
-			plotPadding={theData.plot.padding}
-			nticks={5}
-			gridlines={theData.plot.ygridlines}
-			label={theData.plot.ylabel}
-		/>
-
-		<Axis
-			height={theData.plot.plotheight}
-			width={theData.plot.plotwidth}
-			scale={theData.plot.anyXdataTime
-				? scaleTime()
-						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-						.range([0, theData.plot.plotwidth])
-				: scaleLinear()
-						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-						.range([0, theData.plot.plotwidth])}
-			position="top"
-			plotPadding={theData.plot.padding}
-			nticks={5}
-			gridlines={theData.plot.xgridlines}
-			label={theData.plot.xlabel}
-		/> -->
 
 		{#each theData.plot.data as datum}
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
@@ -759,6 +849,14 @@
 					theData.plot.anyXdataTime && datum.x.type !== 'time'
 						? datum.x.getData().map((d) => theData.plot.xlims[0] + d * 3600000)
 						: datum.x.getData()}
+				{@const yScale =
+					datum.yAxis === 'left'
+						? scaleLinear()
+								.domain([theData.plot.ylimsLeft[0], theData.plot.ylimsLeft[1]])
+								.range([theData.plot.plotheight, 0])
+						: scaleLinear()
+								.domain([theData.plot.ylimsRight[0], theData.plot.ylimsRight[1]])
+								.range([theData.plot.plotheight, 0])}
 				<Line
 					lineData={datum.line}
 					x={xDATA}
@@ -770,9 +868,7 @@
 						: scaleLinear()
 								.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
 								.range([0, theData.plot.plotwidth])}
-					yscale={scaleLinear()
-						.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-						.range([theData.plot.plotheight, 0])}
+					yscale={yScale}
 					xoffset={theData.plot.padding.left}
 					yoffset={theData.plot.padding.top}
 					which="plot"
@@ -785,9 +881,7 @@
 					xscale={scaleLinear()
 						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
 						.range([0, theData.plot.plotwidth])}
-					yscale={scaleLinear()
-						.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-						.range([theData.plot.plotheight, 0])}
+					yscale={yScale}
 					radius={datum.pointradius}
 					fillCol={datum.pointcolour}
 					yoffset={theData.plot.padding.top}
