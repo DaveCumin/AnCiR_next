@@ -15,6 +15,7 @@
 		position, //where the axis should be (x or y etc)
 		scale, //the d3s scale to use
 		nticks, //number of ticks
+		manualTicks = null, //an array of manual tick values to use instead of auto ticks
 		gridlines = true, //whether to show gridlines or not
 		label = '',
 		autoScaleVals = { top: 45, bottom: -45, left: 30, right: -30 }
@@ -39,25 +40,45 @@
 		// DO THE SCALES
 		let axis;
 		if (position == 'bottom') {
-			axis = axisBottom(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
+			if (manualTicks) {
+				axis = axisBottom(scale).tickValues(manualTicks);
+			} else {
+				axis = axisBottom(scale).ticks(nticks);
+			}
+			axis = axis.tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
 				.call(axis)
 				.style('transform', `translate(${plotPadding.left}px, ${height + plotPadding.top}px)`);
 		}
 		if (position == 'top') {
-			axis = axisTop(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
+			if (manualTicks) {
+				axis = axisTop(scale).tickValues(manualTicks);
+			} else {
+				axis = axisTop(scale).ticks(nticks);
+			}
+			axis = axis.tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
 				.call(axis)
 				.style('transform', `translate(${plotPadding.left}px, ${plotPadding.top}px)`);
 		}
 		if (position == 'left') {
-			axis = axisLeft(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
+			if (manualTicks) {
+				axis = axisLeft(scale).tickValues(manualTicks);
+			} else {
+				axis = axisLeft(scale).ticks(nticks);
+			}
+			axis = axis.tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
 				.call(axis)
 				.style('transform', `translate(${plotPadding.left}px, ${plotPadding.top}px)`);
 		}
 		if (position == 'right') {
-			axis = axisRight(scale).ticks(nticks).tickSize(ticklength).tickPadding(tickspace);
+			if (manualTicks) {
+				axis = axisRight(scale).tickValues(manualTicks);
+			} else {
+				axis = axisRight(scale).ticks(nticks);
+			}
+			axis = axis.tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
 				.call(axis)
 				.style('transform', `translate(${width + plotPadding.left}px, ${plotPadding.top}px)`);

@@ -126,6 +126,9 @@
 		ylimsLeftIN = $state([null, null]);
 		ylimsRightIN = $state([null, null]);
 
+		yTicksLeft = $state(5);
+		yTicksRight = $state(5);
+
 		// Left Y-axis limits
 		ylimsLeft = $derived.by(() => {
 			const leftData = this.data.filter((d) => d.yAxis === 'left');
@@ -201,6 +204,9 @@
 
 		hasRightAxisData = $derived.by(() => {
 			return this.data.some((d) => d.yAxis === 'right');
+		});
+		hasLeftAxisData = $derived.by(() => {
+			return this.data.some((d) => d.yAxis === 'left');
 		});
 
 		anyXdataTime = $derived.by(() => {
@@ -397,6 +403,7 @@
 
 <script>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import Toggle from '$lib/components/inputs/Toggle.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appState } from '$lib/core/core.svelte';
 	import { onMount } from 'svelte';
@@ -498,57 +505,70 @@
 			</div>
 		</div>
 
-		<div class="div-line"></div>
+		{#if theData.hasLeftAxisData}
+			<div class="div-line"></div>
 
-		<div class="control-component">
-			<div class="control-component-title">
-				<p>Left Y-Axis</p>
-			</div>
-			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Label</p>
-					<input bind:value={theData.ylabelLeft} />
+			<div class="control-component">
+				<div class="control-component-title">
+					<p>Left Y-Axis</p>
 				</div>
-			</div>
-
-			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Min</p>
-					<NumberWithUnits
-						step="0.1"
-						value={theData.ylimsLeftIN[0] ? theData.ylimsLeftIN[0] : theData.ylimsLeft[0]}
-						onInput={(val) => {
-							theData.ylimsLeftIN[0] = parseFloat(val);
-						}}
-					/>
-				</div>
-
-				<div class="control-input">
-					<p>Max</p>
-					<NumberWithUnits
-						step="0.1"
-						value={theData.ylimsLeftIN[1] ? theData.ylimsLeftIN[1] : theData.ylimsLeft[1]}
-						onInput={(val) => {
-							theData.ylimsLeftIN[1] = parseFloat(val);
-						}}
-					/>
-				</div>
-
-				{#if theData.ylimsLeftIN[0] != null || theData.ylimsLeftIN[1] != null}
-					<div class="control-component-input-icons">
-						<button class="icon" onclick={() => (theData.ylimsLeftIN = [null, null])}>
-							<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
-						</button>
+				<div class="control-input-vertical">
+					<div class="control-input">
+						<p>Label</p>
+						<input bind:value={theData.ylabelLeft} />
 					</div>
-				{/if}
-			</div>
-			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.ygridlinesLeft} />
-					<p>Grid</p>
+				</div>
+
+				<div class="control-input-horizontal">
+					<div class="control-input">
+						<p>Min</p>
+						<NumberWithUnits
+							step="0.1"
+							value={theData.ylimsLeftIN[0] ? theData.ylimsLeftIN[0] : theData.ylimsLeft[0]}
+							onInput={(val) => {
+								theData.ylimsLeftIN[0] = parseFloat(val);
+							}}
+						/>
+					</div>
+
+					<div class="control-input">
+						<p>Max</p>
+						<NumberWithUnits
+							step="0.1"
+							value={theData.ylimsLeftIN[1] ? theData.ylimsLeftIN[1] : theData.ylimsLeft[1]}
+							onInput={(val) => {
+								theData.ylimsLeftIN[1] = parseFloat(val);
+							}}
+						/>
+					</div>
+
+					{#if theData.ylimsLeftIN[0] != null || theData.ylimsLeftIN[1] != null}
+						<div class="control-component-input-icons">
+							<button class="icon" onclick={() => (theData.ylimsLeftIN = [null, null])}>
+								<Icon
+									name="reset"
+									width={14}
+									height={14}
+									className="control-component-input-icon"
+								/>
+							</button>
+						</div>
+					{/if}
+				</div>
+
+				<!-- <div class="control-input">
+					<p>Number of ticks</p>
+					<NumberWithUnits step="1" min="2" bind:value={theData.yTicksLeft} />
+				</div> -->
+
+				<div class="control-input-vertical">
+					<div class="control-input-checkbox">
+						<input type="checkbox" bind:checked={theData.ygridlinesLeft} />
+						<p>Grid</p>
+					</div>
 				</div>
 			</div>
-		</div>
+		{/if}
 
 		{#if theData.hasRightAxisData}
 			<div class="div-line"></div>
@@ -600,6 +620,18 @@
 						</div>
 					{/if}
 				</div>
+				<!-- <div class="control-input">
+					<p>Number of ticks</p>
+					<NumberWithUnits
+						step="1"
+						min="2"
+						value={theData.yTicksRight}
+						onInput={(val) => {
+							theData.yTicksRight = parseFloat(val);
+						}}
+					/>
+				</div> -->
+
 				<div class="control-input-vertical">
 					<div class="control-input-checkbox">
 						<input type="checkbox" bind:checked={theData.ygridlinesRight} />
@@ -750,10 +782,10 @@
 						<div class="control-input-vertical">
 							<div class="control-input">
 								<p>Y-Axis</p>
-								<select bind:value={datum.yAxis}>
-									<option value="left">Left</option>
-									<option value="right">Right</option>
-								</select>
+								<Toggle
+									Labels={['Left', 'Right']}
+									onChange={(v) => (datum.yAxis = v ? 'right' : 'left')}
+								/>
 							</div>
 						</div>
 
@@ -796,18 +828,20 @@
 		ontooltip={handleTooltip}
 	>
 		<!-- The Left Y-axis -->
-		<Axis
-			height={theData.plot.plotheight}
-			width={theData.plot.plotwidth}
-			scale={scaleLinear()
-				.domain([theData.plot.ylimsLeft[0], theData.plot.ylimsLeft[1]])
-				.range([theData.plot.plotheight, 0])}
-			position="left"
-			plotPadding={theData.plot.padding}
-			nticks={5}
-			gridlines={theData.plot.ygridlinesLeft}
-			label={theData.plot.ylabelLeft}
-		/>
+		{#if theData.plot.hasLeftAxisData}
+			<Axis
+				height={theData.plot.plotheight}
+				width={theData.plot.plotwidth}
+				scale={scaleLinear()
+					.domain([theData.plot.ylimsLeft[0], theData.plot.ylimsLeft[1]])
+					.range([theData.plot.plotheight, 0])}
+				position="left"
+				plotPadding={theData.plot.padding}
+				nticks={theData.plot.yTicksLeft}
+				gridlines={theData.plot.ygridlinesLeft}
+				label={theData.plot.ylabelLeft}
+			/>
+		{/if}
 
 		<!-- The Right Y-axis (only if there's data on right axis) -->
 		{#if theData.plot.hasRightAxisData}
@@ -819,7 +853,7 @@
 					.range([theData.plot.plotheight, 0])}
 				position="right"
 				plotPadding={theData.plot.padding}
-				nticks={5}
+				nticks={theData.plot.yTicksRight}
 				gridlines={theData.plot.ygridlinesRight}
 				label={theData.plot.ylabelRight}
 			/>

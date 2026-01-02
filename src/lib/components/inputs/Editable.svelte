@@ -108,7 +108,7 @@
 	}
 
 	.inline-edit-span.editable {
-		text-decoration: underline dashed var(--color-lightness-50);
+		text-decoration: underline double var(--color-lightness-50);
 		cursor: pointer;
 	}
 
