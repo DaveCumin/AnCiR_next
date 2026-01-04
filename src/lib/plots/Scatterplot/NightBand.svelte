@@ -20,7 +20,6 @@
 		name = $state('Night');
 		mode = $state('repeating'); // 'repeating' or 'custom'
 		colour = $state('#2C2C2C99'); // Semi-transparent dark gray with alpha
-		opacity = $state(0.3); // Opacity as separate property for easier control
 		enabled = $state(true);
 
 		// Repeating mode properties
@@ -127,7 +126,6 @@
 				this.name = dataIN.name || 'Night';
 				this.mode = dataIN.mode || 'repeating';
 				this.colour = dataIN.colour || '#2C2C2C99';
-				this.opacity = dataIN.opacity ?? 0.3;
 				this.enabled = dataIN.enabled ?? true;
 				this.repeatEveryHours = Number(dataIN.repeatEveryHours) || 24;
 				this.nightDurationHours = Number(dataIN.nightDurationHours) || 12;
@@ -172,7 +170,6 @@
 				name: this.name,
 				mode: this.mode,
 				colour: this.colour,
-				opacity: this.opacity,
 				enabled: this.enabled,
 				repeatEveryHours: this.repeatEveryHours,
 				nightDurationHours: this.nightDurationHours,
@@ -245,23 +242,6 @@
 		</div>
 	</div>
 
-	<div class="control-input">
-		<p>Opacity</p>
-		<div style="display: flex; align-items: center; gap: 0.5rem;">
-			<input
-				type="range"
-				min="0"
-				max="1"
-				step="0.05"
-				bind:value={nightBand.opacity}
-				style="flex: 1;"
-			/>
-			<span style="font-size: 12px; color: var(--color-lightness-35);"
-				>{Math.round(nightBand.opacity * 100)}%</span
-			>
-		</div>
-	</div>
-
 	<div class="control-input-horizontal">
 		<label style="display: flex; align-items: center; gap: 0.5rem; flex:  1;">
 			<input type="checkbox" bind:checked={nightBand.enabled} />
@@ -320,7 +300,7 @@
 				<NumberWithUnits step="0.5" bind:value={nightBand.startTimeHours} />
 			</div>
 		{:else}
-			<div class="control-input" style="opacity: 0.6;">
+			<div class="control-input">
 				<p>Start Time: Data Min + {nightBand.startTimeHours} hrs</p>
 			</div>
 		{/if}
@@ -341,7 +321,7 @@
 		</div>
 
 		{#if nightBand.bands.length > 0}
-			<div class="control-input" style="opacity: 0.6;">
+			<div class="control-input">
 				<p>Generates {nightBand.bands.length} band(s)</p>
 			</div>
 		{/if}
@@ -417,7 +397,7 @@
 		{@const xScale = scaleLinear().domain([0, 100]).range([0, 100])}
 
 		{#each nightBand.bands as band (band.label)}
-			<g class="night-band" opacity={nightBand.opacity}>
+			<g class="night-band">
 				<rect
 					class="night-band-rect"
 					x={`${(band.startTime / (nightBand.parentPlot?.xlimsOUT?.[1] ?? 100)) * 100}%`}
