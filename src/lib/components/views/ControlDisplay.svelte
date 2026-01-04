@@ -553,6 +553,16 @@
 								}}>Annotations</button
 							>
 						{/if}
+
+						{#if plot.type === 'scatterplot'}
+							<button
+								class={appState.currentControlTab === 'nightBands' ? 'active' : ''}
+								onclick={(e) => {
+									updateCurrentControlTab('nightBands', plot.type);
+									e.target.scrollIntoView({ behavior: 'smooth' });
+								}}>Night Bands</button
+							>
+						{/if}
 					</div>
 					<div class="div-line"></div>
 				</div>

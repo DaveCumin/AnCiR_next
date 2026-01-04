@@ -7,6 +7,7 @@
 	import Points, { PointsClass } from '$lib/components/plotBits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import NightBand, { NightBandClass } from './NightBand.svelte';
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
 
@@ -202,6 +203,8 @@
 		ygridlinesLeft = $state(true);
 		ygridlinesRight = $state(false);
 
+		nightBands = $state([]);
+
 		hasRightAxisData = $derived.by(() => {
 			return this.data.some((d) => d.yAxis === 'right');
 		});
@@ -347,6 +350,14 @@
 			this.data.splice(idx, 1);
 		}
 
+		addNightBand(bandIN) {
+			this.nightBands.push(new NightBandClass(this, bandIN));
+		}
+
+		removeNightBand(idx) {
+			this.nightBands.splice(idx, 1);
+		}
+
 		// Collect all legend items
 		getLegendItems = $derived.by(() => {
 			const items = [];
@@ -372,7 +383,8 @@
 				ylabelLeft: this.ylabelLeft,
 				ylabelRight: this.ylabelRight,
 				data: this.data,
-				legend: this.legend.toJSON()
+				legend: this.legend.toJSON(),
+				nightBands: this.nightBands.map((band) => band.toJSON())
 			};
 		}
 		static fromJSON(parent, json) {
@@ -394,6 +406,11 @@
 
 			if (json.data) {
 				scatter.data = json.data.map((d) => ScatterDataclass.fromJSON(d, scatter));
+			}
+			if (json.nightBands) {
+				json.nightBands.forEach((band) => {
+					plot.nightBands.push(NightBandClass.fromJSON(plot, band));
+				});
 			}
 			scatter.legend = LegendClass.fromJSON(json.legend);
 			return scatter;
@@ -815,6 +832,26 @@
 				</div>
 			{/each}
 		</div>
+	{:else if appState.currentControlTab === 'nightBands'}
+		<div class="control-component">
+			{#each theData.nightBands as nightBand (nightBand.id)}
+				<div
+					class="night-band-container"
+					animate:flip={{ duration: 500 }}
+					in:slide={{ duration: 500, axis: 'y' }}
+					out:slide={{ duration: 500, axis: 'y' }}
+				>
+					<NightBand which="controls" {nightBand} plotId={theData.parentBox.id} />
+					<div class="div-line"></div>
+				</div>
+			{/each}
+
+			<div>
+				<button class="icon control-block-add" onclick={() => theData.addNightBand()}>
+					<Icon name="plus" width={16} height={16} className="static-icon" />
+				</button>
+			</div>
+		</div>
 	{/if}
 {/snippet}
 
@@ -876,6 +913,33 @@
 			gridlines={theData.plot.xgridlines}
 			label={theData.plot.xlabel}
 		/>
+
+		<!-- Night bands background -->
+		<g
+			class="night-bands-layer"
+			style="transform: translate({theData.plot.padding.left}px, {theData.plot.padding.top}px);"
+		>
+			{#each theData.plot.nightBands as nightBand (nightBand.id)}
+				{@const xScale = scaleLinear()
+					.domain(theData.plot.xlims)
+					.range([0, theData.plot.plotwidth])}
+
+				{#if nightBand.enabled && nightBand.bands.length > 0}
+					{#each nightBand.bands as band (band.label)}
+						<rect
+							class="night-band-rect"
+							x={xScale(band.startTime)}
+							y="0"
+							width={Math.max(0, xScale(band.endTime) - xScale(band.startTime))}
+							height={theData.plot.plotheight}
+							fill={nightBand.colour}
+							opacity={nightBand.opacity}
+							style="pointer-events: none;"
+						/>
+					{/each}
+				{/if}
+			{/each}
+		</g>
 
 		{#each theData.plot.data as datum}
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
