@@ -13,6 +13,7 @@
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
+	export const Periodogram_controlHeaders = ['Properties', 'Data'];
 
 	// Lomb-Scargle implementation
 	function calculateLombScarglePower(times, values, frequencies) {

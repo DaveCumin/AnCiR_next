@@ -20,6 +20,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 
 	export const Actogram_defaultDataInputs = ['time', 'values'];
+	export const Actogram_controlHeaders = ['Properties', 'Data', 'Annotations'];
 
 	function getNdataByPeriods(dataIN, from, to, period) {
 		const byPeriod = [];

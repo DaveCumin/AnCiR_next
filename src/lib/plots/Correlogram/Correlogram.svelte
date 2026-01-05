@@ -12,6 +12,7 @@
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
 	export const Correlogram_defaultDataInputs = ['time', 'values'];
+	export const Correlogram_controlHeaders = ['Properties', 'Data'];
 
 	// Compute autocorrelation function
 	function computeAutocorrelation(times, values, maxLag = null) {

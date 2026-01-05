@@ -14,7 +14,7 @@ export async function loadPlots() {
 				const className = fileName.split('.')[0] + 'class';
 				const plotClass = svelteModule[className];
 				const defaultInputs = svelteModule[fileName.split('.')[0] + '_defaultDataInputs'];
-
+				const controlHeaders = svelteModule[fileName.split('.')[0] + '_controlHeaders'];
 				if (!plotClass) {
 					console.warn(
 						`No valid plot class found in ${sveltePath}. Expected a named export like ${className}.`
@@ -25,7 +25,8 @@ export async function loadPlots() {
 				plotMap.set(folderName.toLowerCase(), {
 					plot: component,
 					data: plotClass,
-					defaultInputs: defaultInputs || []
+					defaultInputs: defaultInputs || [],
+					controlHeaders: controlHeaders || []
 				});
 			}
 		} catch (error) {

@@ -10,6 +10,7 @@
 	import NightBand, { NightBandClass } from './NightBand.svelte';
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
+	export const Scatterplot_controlHeaders = ['Properties', 'Data', 'Bands'];
 
 	class ScatterDataclass {
 		parentPlot = $state();
@@ -838,7 +839,7 @@
 				</div>
 			{/each}
 		</div>
-	{:else if appState.currentControlTab === 'nightBands'}
+	{:else if appState.currentControlTab === 'bands'}
 		<div class="control-component">
 			{#each theData.nightBands as nightBand (nightBand.id)}
 				<div

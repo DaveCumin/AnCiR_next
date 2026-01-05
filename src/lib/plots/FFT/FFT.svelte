@@ -12,6 +12,7 @@
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
 	export const FFT_defaultDataInputs = ['time', 'values'];
+	export const FFT_controlHeaders = ['Properties', 'Data'];
 
 	// FFT implementation using Cooley-Tukey algorithm
 	function fft(signal) {

@@ -530,39 +530,17 @@
 					</div>
 
 					<div class="control-tab">
-						{#if plot.type !== 'tableplot'}
+						{#each appConsts.plotMap.get(plot.type).controlHeaders as header}
 							<button
-								class={appState.currentControlTab === 'properties' ? 'active' : ''}
+								class={appState.currentControlTab === header.toLowerCase() ? 'active' : ''}
 								onclick={(e) => {
-									updateCurrentControlTab('properties', plot.type);
+									updateCurrentControlTab(header.toLowerCase(), plot.type);
 									e.target.scrollIntoView({ behavior: 'smooth' });
-								}}>Properties</button
+								}}
 							>
-							<button
-								class={appState.currentControlTab === 'data' ? 'active' : ''}
-								onclick={() => updateCurrentControlTab('data', plot.type)}>Data</button
-							>
-						{/if}
-
-						{#if plot.type === 'actogram'}
-							<button
-								class={appState.currentControlTab === 'annotations' ? 'active' : ''}
-								onclick={(e) => {
-									updateCurrentControlTab('annotations', plot.type);
-									e.target.scrollIntoView({ behavior: 'smooth' });
-								}}>Annotations</button
-							>
-						{/if}
-
-						{#if plot.type === 'scatterplot'}
-							<button
-								class={appState.currentControlTab === 'nightBands' ? 'active' : ''}
-								onclick={(e) => {
-									updateCurrentControlTab('nightBands', plot.type);
-									e.target.scrollIntoView({ behavior: 'smooth' });
-								}}>Night Bands</button
-							>
-						{/if}
+								{header}
+							</button>
+						{/each}
 					</div>
 					<div class="div-line"></div>
 				</div>
