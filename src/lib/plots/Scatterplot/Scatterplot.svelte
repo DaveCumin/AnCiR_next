@@ -124,6 +124,12 @@
 		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
 
 		xlimsIN = $state([null, null]);
+		XScale = $derived(
+			this.anyXdataTime
+				? scaleTime().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth])
+				: scaleLinear().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth])
+		);
+
 		ylimsLeftIN = $state([null, null]);
 		ylimsRightIN = $state([null, null]);
 
@@ -900,13 +906,7 @@
 		<Axis
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
-			scale={theData.plot.anyXdataTime
-				? scaleTime()
-						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-						.range([0, theData.plot.plotwidth])
-				: scaleLinear()
-						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-						.range([0, theData.plot.plotwidth])}
+			scale={theData.plot.XScale}
 			position="bottom"
 			plotPadding={theData.plot.padding}
 			nticks={5}

@@ -31,22 +31,6 @@
 		// Custom mode properties
 		customBands = $state([]); // Array of { startTime, endTime }
 
-		// Derived properties for repeating mode
-		startTimeForCalculation = $derived.by(() => {
-			if (this.useDataMin && this.parentPlot?.data?.length > 0) {
-				// Get the minimum x value from all data
-				let minX = Infinity;
-				this.parentPlot.data.forEach((datum) => {
-					if (datum.x?.values) {
-						const dataMin = Math.min(...datum.x.values);
-						minX = Math.min(minX, dataMin);
-					}
-				});
-				return minX === Infinity ? this.startTimeHours : minX + this.startTimeHours;
-			}
-			return this.startTimeHours;
-		});
-
 		// Calculate all band segments to render
 		bands = $derived.by(() => {
 			// Force dependency on mode and other key toggles
@@ -55,45 +39,24 @@
 			const parent = this.parentPlot;
 			const hasData = parent?.data?.length > 0;
 
-			console.log(
-				'bands derived running - mode:',
-				mode,
-				'enabled:',
-				!enabled,
-				' parent:',
-				!parent,
-				' hasData:',
-				!hasData
-			);
-
 			if (!parent || !enabled || !hasData) {
 				return [];
 			}
-			console.log('starting');
 
 			const bands = [];
 
 			if (mode === 'repeating') {
-				console.log('calculating repeating bands');
-				let minX = Infinity;
-				let maxX = -Infinity;
+				let minX = parent.xlims[0];
+				let maxX = parent.xlims[1];
 
-				parent.data.forEach((datum) => {
-					console.log('datum.x:', datum.x);
-					if (datum.x?.getData() && datum.x.getData().length > 0) {
-						minX = Math.min(minX, ...datum.x.getData());
-						maxX = Math.max(maxX, ...datum.x.getData());
-					}
-				});
-				console.log('data minX:', minX, 'maxX:', maxX);
+				let bandStart = this.useDataMin ? minX : this.startTimeHours;
+				const bandWidth = parent.anyXdataTime
+					? this.nightDurationHours * 3600000
+					: this.nightDurationHours;
+				const step = parent.anyXdataTime ? this.repeatEveryHours * 3600000 : this.repeatEveryHours;
 
-				if (minX === Infinity) return [];
-
-				const startTime = this.startTimeForCalculation;
-
-				let bandStart = startTime;
 				while (bandStart < maxX) {
-					const bandEnd = bandStart + this.nightDurationHours;
+					const bandEnd = bandStart + bandWidth;
 					if (bandEnd > minX && bandStart < maxX) {
 						bands.push({
 							startTime: Math.max(bandStart, minX),
@@ -101,9 +64,8 @@
 							label: `Night ${bands.length + 1}`
 						});
 					}
-					bandStart += this.repeatEveryHours;
+					bandStart += step;
 				}
-				console.log('repeating bands:', bands);
 			} else if (mode === 'custom') {
 				this.customBands.forEach((band, idx) => {
 					if (band.startTime != null && band.endTime != null && band.startTime < band.endTime) {
