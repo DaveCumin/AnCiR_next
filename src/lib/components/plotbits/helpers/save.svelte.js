@@ -1,9 +1,10 @@
-//TODO: scale issue when saving
 import { appState } from '$lib/core/core.svelte.js';
 import { core } from '$lib/core/core.svelte';
+import { jsPDF } from 'jspdf';
+
 
 export function convertToImage(svgId, filetype = 'png') {
-	const plotName = core.plots[Number(svgId.replace('plot', ''))]?.name ?? svgId;
+	const plotName = core.plots[Number(svgId.  replace('plot', ''))]?.name ??  svgId;
 
 	if (filetype == 'svg') {
 		exportSVG(svgId, plotName);
@@ -11,7 +12,33 @@ export function convertToImage(svgId, filetype = 'png') {
 	}
 	// Get the SVG element
 	const svg = document.getElementById(svgId);
-	console.log('SVG element:', svg);
+	
+	// Get SVG dimensions - handle both explicit attributes and viewBox
+	let svgWidth = parseFloat(svg.getAttribute('width'));
+	let svgHeight = parseFloat(svg.getAttribute('height'));
+	
+	// Check for viewBox if width/height not set
+	if (!svgWidth || !svgHeight) {
+		const viewBox = svg.getAttribute('viewBox');
+		if (viewBox) {
+			const parts = viewBox.split(/[\s,]+/);
+			svgWidth = parseFloat(parts[2]);
+			svgHeight = parseFloat(parts[3]);
+		}
+	}
+	
+	// Fallback to bounding box if still not found
+	if (!svgWidth || !svgHeight) {
+		try {
+			const bbox = svg.getBBox();
+			svgWidth = bbox.width;
+			svgHeight = bbox.height;
+		} catch (e) {
+			console.error('Could not determine SVG dimensions:', e);
+			alert('Error:  Could not determine plot dimensions');
+			return;
+		}
+	}
 
 	// Serialize the SVG to a string
 	const serializer = new XMLSerializer();
@@ -25,23 +52,60 @@ export function convertToImage(svgId, filetype = 'png') {
 
 	// Wait for the image to load
 	img.onload = function () {
-		// Create a canvas
+		// Create a canvas with proper sizing
 		const canvas = document.createElement('canvas');
-		canvas.width = svg.getAttribute('width') / appState.canvasScale;
-		canvas.height = svg.getAttribute('height') / appState.canvasScale;
+		const scaledWidth = svgWidth / appState.canvasScale;
+		const scaledHeight = svgHeight / appState.canvasScale;
+		
+		canvas.width = Math.round(scaledWidth);
+		canvas.height = Math.round(scaledHeight);
+		
 		const context = canvas.getContext('2d');
+		context.imageSmoothingEnabled = true;
+		context.imageSmoothingQuality = 'high';
 
 		// Draw the SVG image onto the canvas
-		context.drawImage(img, 0, 0);
+		context.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-		// Convert canvas to PNG (or JPEG)
+		// Convert canvas to PNG (or PDF)
 		let DataUrl;
 		if (filetype == 'png') {
 			DataUrl = canvas.toDataURL('image/png'); // For PNG
 		}
+		if (filetype === 'pdf') {
+			try {
+				// Get the canvas image data
+				const imgData = canvas.toDataURL('image/png');
+
+				// Use the actual canvas dimensions for PDF
+				const pdfWidth = canvas.width;
+				const pdfHeight = canvas.height;
+
+				// Create PDF with exact canvas dimensions
+				const pdf = new jsPDF({
+					unit: 'px',
+					format: [pdfWidth, pdfHeight],
+					orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait',
+					compress: true
+				});
+
+				// Add image to PDF - ensure it fills the entire page
+				pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+				// Save the file
+				pdf.save(plotName + '.pdf');
+
+				// Clean up
+				URL.revokeObjectURL(url);
+			} catch (err) {
+				console.error('Error creating PDF: ' + (err?.message || err));
+				URL.revokeObjectURL(url);
+			}
+			return; // we've handled PDF export
+		}
 
 		// Create a download link
-		const link = document.createElement('a');
+		const link = document.  createElement('a');
 		link.href = DataUrl;
 
 		link.download = plotName + '.' + filetype; // File name
@@ -50,7 +114,7 @@ export function convertToImage(svgId, filetype = 'png') {
 		document.body.removeChild(link);
 
 		// Clean up
-		URL.revokeObjectURL(url);
+		URL.  revokeObjectURL(url);
 	};
 }
 
@@ -63,8 +127,8 @@ function exportSVG(svgId, plotName) {
 
 	const link = document.createElement('a');
 	link.href = svgUrl;
-	link.download = plotName + '.svg';
-	document.body.appendChild(link);
+	link.  download = plotName + '.svg';
+	document. body.appendChild(link);
 	link.click();
 
 	URL.revokeObjectURL(svgUrl);
@@ -78,7 +142,7 @@ export function saveMultipleAsIndividuals(svgIds, filetype = 'png') {
 	}
 }
 export function saveMultipleAsImage(svgIds, filetype = 'png') {
-	console.log('multiple: ', svgIds);
+	
 	//get each of the plots to convert
 	let toConvert = [];
 	for (const svgId of svgIds) {
@@ -96,19 +160,19 @@ export function saveMultipleAsImage(svgIds, filetype = 'png') {
 	const positions = [];
 
 	toConvert.forEach((svg) => {
-		const rect = svg.getBoundingClientRect();
-		const x = rect.left / appState.canvasScale;
-		const y = rect.top / appState.canvasScale;
+		const rect = svg.  getBoundingClientRect();
+		const x = rect. left / appState. canvasScale;
+		const y = rect.top / appState. canvasScale;
 		positions.push({
 			x,
 			y,
-			width: rect.width / appState.canvasScale,
-			height: rect.height / appState.canvasScale
+			width:   rect.width / appState. canvasScale,
+			height:  rect.height / appState.canvasScale
 		});
 		minX = Math.min(minX, x);
 		minY = Math.min(minY, y);
-		maxX = Math.max(maxX, x + rect.width);
-		maxY = Math.max(maxY, y + rect.height);
+		maxX = Math.max(maxX, x + rect.  width);
+		maxY = Math.max(maxY, y + rect.  height);
 	});
 
 	//make a new svg object for them
@@ -118,31 +182,31 @@ export function saveMultipleAsImage(svgIds, filetype = 'png') {
 	newSvg.setAttribute('width', totalWidth);
 	newSvg.setAttribute('height', totalHeight);
 	newSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-	newSvg.setAttribute('id', crypto.randomUUID());
+	newSvg.setAttribute('id', crypto. randomUUID());
 
 	//create a defs element for any styles or definitions
-	const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+	const defs = document.  createElementNS('http://www.w3.org/2000/svg', 'defs');
 	newSvg.appendChild(defs);
 
 	//copy the contents
-	toConvert.forEach((svg, index) => {
+	toConvert.  forEach((svg, index) => {
 		// Adjust position relative to the top-left corner of the combined bounding box
 		const { x, y } = positions[index];
 		const translateX = x - minX;
 		const translateY = y - minY;
 		// Clone SVG content
-		const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+		const group = document. createElementNS('http://www.w3.org/2000/svg', 'g');
 		group.setAttribute('transform', `translate(${translateX}, ${translateY})`);
-		Array.from(svg.children).forEach((child) => {
-			if (child.tagName.toLowerCase() === 'defs') {
+		Array.from(svg. children).forEach((child) => {
+			if (child.tagName. toLowerCase() === 'defs') {
 				// Merge <defs> content (handle ID conflicts if needed)
 				Array.from(child.children).forEach((def) => {
 					const newId = `${def.id}-svg${index}`;
 					def.setAttribute('id', newId);
-					defs.appendChild(def.cloneNode(true));
+					defs. appendChild(def. cloneNode(true));
 					// Update references to this ID in the SVG
 					svg.querySelectorAll(`[fill*="url(#${def.id}"]`).forEach((el) => {
-						el.setAttribute('fill', el.getAttribute('fill').replace(`#${def.id}`, `#${newId}`));
+						el. setAttribute('fill', el.getAttribute('fill').replace(`#${def.id}`, `#${newId}`));
 					});
 				});
 			} else {

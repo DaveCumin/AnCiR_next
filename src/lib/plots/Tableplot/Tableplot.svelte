@@ -3,9 +3,10 @@
 
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
+	import { faSignalPerfect } from '@fortawesome/free-solid-svg-icons';
 
 	export const Tableplot_defaultDataInputs = [];
-	export const Tableplot_controlHeaders = [];
+	export const Tableplot_controlHeaders = ['Properties and Data'];
 	export class Tableplotclass {
 		parentBox = $state();
 		columnRefs = $state([]);
@@ -13,19 +14,8 @@
 		colCurrent = $state(1);
 		showColNumber = $state(false);
 		decimalPlaces = $state(2);
+		Ncolumns = $state(10);
 
-		//work out the number of columns that can fit in the height of the parent
-		Ncolumns = $derived.by(() => {
-			//TODO: calculate this based on the font size and the grid size, so the input for column is never cut off
-			const colHeightpx = 34; //TODO: change this to be the appState font size plus padding
-			let Ncols = Math.floor((this.parentBox.height - 3 * colHeightpx) / colHeightpx);
-			if (Ncols < 1) {
-				Ncols = 1;
-				this.parentBox.height = 5 * colHeightpx;
-			}
-
-			return Ncols;
-		});
 		longestCol = $derived.by(() => {
 			let out = 0;
 			for (let i = 0; i < this.columnRefs.length; i++) {
@@ -133,6 +123,12 @@
 <script>
 	let { theData, which } = $props();
 
+	//Hadn't been able to get this working as a derived part of TablePlotClass for some reason; TODO - would be great to move it up, instead of effect
+	$effect(() => {
+		theData.plot.Ncolumns = Math.max(1, Math.floor((theData.height - 70) / 48)); // TODO: these numbers need adjusting
+	});
+
+	//------------
 	function makeEdits(edit) {
 		// Adjust column index if showColNumber is true (first column is row numbers)
 		// Adjust for showColNumber
@@ -199,9 +195,6 @@
 						}
 					];
 				}
-				// THIS is the 'brute force' way, which alters the data directly
-				// column.data[rowIndex] = Number(edit.value);
-				// column.tableProcessGUId = crypto.randomUUID(); //to update any derived data
 			}
 		}
 	}
