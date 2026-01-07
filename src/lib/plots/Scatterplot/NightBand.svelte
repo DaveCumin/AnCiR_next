@@ -19,7 +19,7 @@
 		id;
 		name = $state('Night');
 		mode = $state('repeating'); // 'repeating' or 'custom'
-		colour = $state('#2C2C2C99'); // Semi-transparent dark gray with alpha
+		colour = $state('#2C2C2C30'); // Semi-transparent dark gray with alpha
 		enabled = $state(true);
 
 		// Repeating mode properties
@@ -153,6 +153,7 @@
 <script>
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
+	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 
 	let { nightBand, which, plotId } = $props();
 
@@ -259,7 +260,11 @@
 		{#if !nightBand.useDataMin}
 			<div class="control-input">
 				<p>Start Time (hours)</p>
-				<NumberWithUnits step="0.5" bind:value={nightBand.startTimeHours} />
+				{#if nightBand.parentPlot.anyXdataTime}
+					<DateTimeHrs step="0.5" bind:value={nightBand.startTimeHours} />
+				{:else}
+					<NumberWithUnits step="0.5" bind:value={nightBand.startTimeHours} />
+				{/if}
 			</div>
 		{:else}
 			<div class="control-input">
