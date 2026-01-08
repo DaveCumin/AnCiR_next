@@ -259,17 +259,29 @@
 
 			if (dataIN?.x) {
 				//if there's data, use it!
-				this.x = ColumnReference.fromJSON(dataIN.x);
+				const xRefId = dataIN.x.refId !== undefined ? dataIN.x.refId : dataIN.x;
+				if (typeof xRefId === 'number' && xRefId !== -1) {
+					this.x = ColumnReference.createPlotColumn(xRefId);
+				} else {
+					this.x = ColumnReference.fromJSON(dataIN.x);
+				}
 			} else {
 				if (parent.data.length > 0) {
-					this.x = new ColumnReference(parent.data[parent.data.length - 1].x.refId);
+					const prevColumn = parent.data[parent.data.length - 1].x.column;
+					const sourceRefId = prevColumn?.refId ?? prevColumn?.id ?? -1;
+					this.x = ColumnReference.createPlotColumn(sourceRefId);
 				} else {
 					//blank one
 					this.x = new ColumnReference(-1);
 				}
 			}
 			if (dataIN && dataIN.y) {
-				this.y = ColumnReference.fromJSON(dataIN.y);
+				const yRefId = dataIN.y.refId !== undefined ? dataIN.y.refId : dataIN.y;
+				if (typeof yRefId === 'number' && yRefId !== -1) {
+					this.y = ColumnReference.createPlotColumn(yRefId);
+				} else {
+					this.y = ColumnReference.fromJSON(dataIN.y);
+				}
 			} else {
 				this.y = new ColumnReference(-1);
 			}

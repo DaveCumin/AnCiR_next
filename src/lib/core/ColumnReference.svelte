@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
-	import { getColumnById } from '$lib/core/Column.svelte';
+	import { getColumnById, Column } from '$lib/core/Column.svelte';
+	import { core } from '$lib/core/core.svelte.js';
 
 	/**
 	 * ColumnReference - A lightweight wrapper for column references
@@ -103,6 +104,29 @@
 				return new ColumnReference(json.id);
 			}
 			return new ColumnReference(-1);
+		}
+
+		/**
+		 * Create a new Column in core.data that references the source column,
+		 * allowing independent process management for plot data.
+		 *
+		 * @param {number} sourceRefId - The ID of the source column to reference
+		 * @returns {ColumnReference} A new ColumnReference pointing to the newly created Column
+		 */
+		static createPlotColumn(sourceRefId) {
+			// If sourceRefId is -1 or invalid, just return a broken reference
+			if (sourceRefId === -1 || sourceRefId === undefined) {
+				return new ColumnReference(-1);
+			}
+
+			// Create a new Column that references the source column
+			const newColumn = new Column({ refId: sourceRefId });
+
+			// Add it to core.data so processes can be added to it
+			core.data.push(newColumn);
+
+			// Return a ColumnReference to this new column
+			return new ColumnReference(newColumn.id);
 		}
 	}
 </script>
