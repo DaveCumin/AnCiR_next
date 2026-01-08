@@ -25,8 +25,28 @@ export function binData(
 			for (let i = start; i < end; i++) sum += arr[i];
 			return sum / (end - start);
 		},
-		min: (arr, start, end) => Math.min(...arr.slice(start, end)),
-		max: (arr, start, end) => Math.max(...arr.slice(start, end)),
+		min: (arr, start, end) => {
+			const s = start === -1 ? n : start;
+			const e = end === -1 ? n : end;
+			let out = Infinity;
+			for (let i = s; i < e; i++) {
+				if (arr[i] !== undefined && !isNaN(arr[i]) && arr[i] < out) {
+					out = arr[i];
+				}
+			}
+			return out === Infinity ? null : out;
+		},
+		max: (arr, start, end) => {
+			const s = start === -1 ? n : start;
+			const e = end === -1 ? n : end;
+			let out = -Infinity;
+			for (let i = s; i < e; i++) {
+				if (arr[i] !== undefined && !isNaN(arr[i]) && arr[i] > out) {
+					out = arr[i];
+				}
+			}
+			return out === -Infinity ? null : out;
+		},
 		median: (arr, start, end) => {
 			const slice = arr.slice(start, end);
 			slice.sort((a, b) => a - b);
