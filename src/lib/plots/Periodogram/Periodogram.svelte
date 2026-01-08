@@ -1,6 +1,7 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
+	import { ColumnReference } from '$lib/core/ColumnReference.svelte';
 	import Axis from '$lib/components/plotBits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
@@ -258,19 +259,19 @@
 
 			if (dataIN?.x) {
 				//if there's data, use it!
-				this.x = ColumnClass.fromJSON(dataIN.x);
+				this.x = ColumnReference.fromJSON(dataIN.x);
 			} else {
 				if (parent.data.length > 0) {
-					this.x = new ColumnClass({ refId: parent.data[parent.data.length - 1].x.refId });
+					this.x = new ColumnReference(parent.data[parent.data.length - 1].x.refId);
 				} else {
 					//blank one
-					this.x = new ColumnClass({ refId: -1 });
+					this.x = new ColumnReference(-1);
 				}
 			}
 			if (dataIN && dataIN.y) {
-				this.y = ColumnClass.fromJSON(dataIN.y);
+				this.y = ColumnReference.fromJSON(dataIN.y);
 			} else {
-				this.y = new ColumnClass({ refId: -1 });
+				this.y = new ColumnReference(-1);
 			}
 			this.line = new LineClass(dataIN?.line, this);
 			this.thresholdline = new LineClass(dataIN?.thresholdline, this);
@@ -280,8 +281,8 @@
 
 		toJSON() {
 			return {
-				x: this.x,
-				y: this.y,
+				x: this.x.toJSON(),
+				y: this.y.toJSON(),
 				line: this.line.toJSON(),
 				thresholdline: this.thresholdline.toJSON(),
 				points: this.points.toJSON(),

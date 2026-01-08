@@ -6,6 +6,7 @@
 	import Axis from '$lib/components/plotBits/Axis.svelte';
 
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import { ColumnReference } from '$lib/core/ColumnReference.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
@@ -174,18 +175,18 @@
 			this.parentPlot = parent;
 
 			if (dataIN && dataIN.x) {
-				this.x = ColumnClass.fromJSON(dataIN.x);
+				this.x = ColumnReference.fromJSON(dataIN.x);
 			} else {
 				if (parent.data.length > 0) {
-					this.x = new ColumnClass({ refId: parent.data[parent.data.length - 1].x.refId });
+					this.x = new ColumnReference(parent.data[parent.data.length - 1].x.refId);
 				} else {
-					this.x = new ColumnClass({ refId: -1 });
+					this.x = new ColumnReference(-1);
 				}
 			}
 			if (dataIN && dataIN.y) {
-				this.y = ColumnClass.fromJSON(dataIN.y);
+				this.y = ColumnReference.fromJSON(dataIN.y);
 			} else {
-				this.y = new ColumnClass({ refId: -1 });
+				this.y = new ColumnReference(-1);
 			}
 			if (dataIN?.draw) {
 				this.draw = dataIN.draw;
@@ -201,8 +202,8 @@
 
 		toJSON() {
 			return {
-				x: this.x,
-				y: this.y,
+				x: this.x.toJSON(),
+				y: this.y.toJSON(),
 				colour: this.colour,
 				draw: this.draw,
 				phaseMarkers: this.phaseMarkers
