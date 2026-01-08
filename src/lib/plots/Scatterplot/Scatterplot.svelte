@@ -1,6 +1,5 @@
 <script module>
-	import { Column as ColumnClass } from '$lib/core/Column.svelte';
-	import Column from '$lib/core/Column.svelte';
+	import Column, { getColumnById } from '$lib/core/Column.svelte';
 	import { ColumnReference } from '$lib/core/ColumnReference.svelte';
 	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear, scaleTime } from 'd3-scale';
@@ -774,7 +773,7 @@
 				</div>
 			</div>
 
-			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
+			{#each theData.data as datum, i (i + '--' + datum.x.id + '-' + datum.y.id)}
 				<div
 					class="dataBlock"
 					animate:flip={{ duration: 500 }}
@@ -800,13 +799,13 @@
 								<p>x</p>
 							</div>
 
-							<Column col={datum.x} canChange={true} />
+							<Column col={getColumnById(datum.x.refId)} canChange={true} />
 						</div>
 						<div class="y-select">
 							<div class="control-input">
 								<p>y</p>
 							</div>
-							<Column col={datum.y} canChange={true} />
+							<Column col={getColumnById(datum.y.refId)} canChange={true} />
 						</div>
 
 						<div class="control-input-vertical">

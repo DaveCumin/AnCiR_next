@@ -693,7 +693,7 @@
 		</div>
 
 		<div class="control-component">
-			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
+			{#each theData.data as datum, i (i + '-' + datum.x.id + '-' + datum.y.id)}
 				<div
 					class="dataBlock"
 					animate:flip={{ duration: 500 }}
