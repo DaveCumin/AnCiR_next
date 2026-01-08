@@ -160,3 +160,64 @@ export function outputCoreAsJson() {
 	const output = { ...core }; // TODO: output appState also, so when it loads, it will look exactly the same.
 	return JSON.stringify(output, null, 2);
 }
+
+/**
+ * Validate all ColumnReferences in plots to check for orphaned/broken references
+ * @returns {Object} Validation report with details about broken references
+ */
+export function validateReferences() {
+	const report = {
+		totalReferences: 0,
+		brokenReferences: 0,
+		brokenReferenceDetails: []
+	};
+
+	const validColumnIds = new Set(core.data.map((col) => col.id));
+
+	core.plots.forEach((plot, plotIndex) => {
+		if (plot.type === 'tableplot') {
+			// Handle tableplot columnRefs
+			if (plot.plot.columnRefs) {
+				plot.plot.columnRefs.forEach((refId) => {
+					report.totalReferences++;
+					if (!validColumnIds.has(refId)) {
+						report.brokenReferences++;
+						report.brokenReferenceDetails.push({
+							plotIndex,
+							plotName: plot.name,
+							plotType: plot.type,
+							refId,
+							location: 'columnRefs'
+						});
+					}
+				});
+			}
+		} else {
+			// Handle other plot types with data array
+			if (plot.plot.data) {
+				plot.plot.data.forEach((dataItem, dataIndex) => {
+					Object.keys(dataItem).forEach((key) => {
+						const item = dataItem[key];
+						// Check if this is a ColumnReference or has a refId
+						if (item?.refId !== undefined) {
+							report.totalReferences++;
+							if (item.refId !== -1 && !validColumnIds.has(item.refId)) {
+								report.brokenReferences++;
+								report.brokenReferenceDetails.push({
+									plotIndex,
+									plotName: plot.name,
+									plotType: plot.type,
+									dataIndex,
+									key,
+									refId: item.refId
+								});
+							}
+						}
+					});
+				});
+			}
+		}
+	});
+
+	return report;
+}
