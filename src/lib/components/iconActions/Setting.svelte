@@ -51,7 +51,7 @@
 <script>
 	// @ts-nocheck
 	import { tick } from 'svelte';
-	import { core, pushObj, outputCoreAsJson } from '$lib/core/core.svelte';
+	import { core, pushObj, outputCoreAsJson, loadAppState } from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	import { Table } from '$lib/core/Table.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
@@ -126,6 +126,10 @@
 		jsonData.plots.map((plotjson) => {
 			pushObj(Plot.fromJSON(plotjson), false);
 		});
+
+		if (jsonData.appState) {
+			loadAppState(jsonData.appState);
+		}
 
 		showImportModal = false;
 		importReady = false;

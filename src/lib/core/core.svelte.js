@@ -97,6 +97,14 @@ function initialiseCurrentTab(showDisplayPanel, showControlPanel) {
 	return 'data';
 }
 
+export function loadAppState(newAppState) {
+	for (const key in newAppState) {
+		if (key in appState) {
+			appState[key] = newAppState[key];
+		}
+	}
+}
+
 export function pushObj(obj, autoPosition = true) {
 	if (obj instanceof Column) {
 		core.data.push(obj);
@@ -157,6 +165,6 @@ function findNextAvailablePosition(existingPlots) {
 }
 
 export function outputCoreAsJson() {
-	const output = { ...core }; // TODO: output appState also, so when it loads, it will look exactly the same.
+	const output = { ...core, appState, version: appConsts.version };
 	return JSON.stringify(output, null, 2);
 }
