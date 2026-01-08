@@ -362,9 +362,17 @@
 			y: { refId: core.data[1].id }
 		});
 		core.plots[0].plot.addData({
-			x: { refId: core.data[core.data.length - 2].id },
-			y: { refId: core.data[core.data.length - 1].id }
+			x: { refId: core.data[7].id },
+			y: { refId: core.data[8].id }
 		});
+		console.log(
+			'just added: ',
+			core.data[0].id,
+			core.data[1].id,
+			core.data[7].id,
+			core.data[8].id,
+			core.plots[0].plot.data
+		);
 		core.plots[core.plots.length - 1].x = 15;
 		core.plots[core.plots.length - 1].y = 15;
 
@@ -376,8 +384,8 @@
 			y: { refId: core.data[1].id }
 		});
 		core.plots[core.plots.length - 1].plot.addData({
-			x: { refId: core.data[core.data.length - 2].id },
-			y: { refId: core.data[core.data.length - 1].id }
+			x: { refId: core.data[7].id },
+			y: { refId: core.data[8].id }
 		});
 		core.plots[core.plots.length - 1].plot.data[1].colour = '#bf796b91';
 		core.plots[core.plots.length - 1].x = snapToGrid(15);
@@ -390,8 +398,8 @@
 			y: { refId: core.data[1].id }
 		});
 		core.plots[core.plots.length - 1].plot.addData({
-			x: { refId: core.data[core.data.length - 2].id },
-			y: { refId: core.data[core.data.length - 1].id }
+			x: { refId: core.data[7].id },
+			y: { refId: core.data[8].id }
 		});
 		core.plots[core.plots.length - 1].x = snapToGrid(555);
 		core.plots[core.plots.length - 1].y = snapToGrid(15);
@@ -404,8 +412,8 @@
 		core.plots[core.plots.length - 1].plot.columnRefs = [
 			core.data[0].id,
 			core.data[1].id,
-			core.data[core.data.length - 2].id,
-			core.data[core.data.length - 1].id
+			core.data[7].id,
+			core.data[8].id
 		];
 		core.plots[core.plots.length - 1].plot.showCol = [true, true, true, true];
 
@@ -416,8 +424,8 @@
 			y: { refId: core.data[1].id }
 		});
 		core.plots[core.plots.length - 1].plot.addData({
-			x: { refId: core.data[core.data.length - 2].id },
-			y: { refId: core.data[core.data.length - 1].id }
+			x: { refId: core.data[7].id },
+			y: { refId: core.data[8].id }
 		});
 		core.plots[core.plots.length - 1].x = snapToGrid(555);
 		core.plots[core.plots.length - 1].y = snapToGrid(645);
@@ -430,13 +438,14 @@
 			y: { refId: core.data[1].id }
 		});
 		core.plots[core.plots.length - 1].plot.addData({
-			x: { refId: core.data[core.data.length - 2].id },
-			y: { refId: core.data[core.data.length - 1].id }
+			x: { refId: core.data[7].id },
+			y: { refId: core.data[8].id }
 		});
 		core.plots[core.plots.length - 1].x = snapToGrid(555);
 		core.plots[core.plots.length - 1].y = snapToGrid(960);
 		core.plots[core.plots.length - 1].width = snapToGrid(510);
 
+		console.log(core.data);
 		//--------
 		//Add another tableprocess to test removal
 		core.tables[1].processes.push(
@@ -444,14 +453,14 @@
 				{
 					name: 'Duplicate',
 					args: {
-						xIN: core.data[core.data.length - 1].id,
+						xIN: core.data[1].id,
 						out: { result: -1 }
 					}
 				},
 				core.tables[1]
 			)
 		);
-		core.plots[0].plot.data[1].y.refId = core.data[core.data.length - 1].id;
+		core.plots[0].plot.data[1].y.refId = core.data[29].id;
 	}
 
 	// TODO: Key Handling accessibility, e.g. ctrl+i == import
