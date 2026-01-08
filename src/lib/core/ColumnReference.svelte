@@ -128,5 +128,30 @@
 			// Return a ColumnReference to this new column
 			return new ColumnReference(newColumn.id);
 		}
+
+		/**
+		 * Helper method for plot dataclass constructors to create or load column references.
+		 * When dataIN is provided with a simple refId, creates a new plot column.
+		 * When dataIN is a full ColumnReference object (from saved JSON), preserves it.
+		 *
+		 * @param {Object|number} dataIN - The input data (either {refId: X} or a number)
+		 * @returns {ColumnReference} A new or existing ColumnReference
+		 */
+		static createOrLoad(dataIN) {
+			if (!dataIN) {
+				return new ColumnReference(-1);
+			}
+
+			// Extract the refId value from various input formats
+			const refId = dataIN.refId !== undefined ? dataIN.refId : dataIN;
+
+			// If it's a simple number refId (from UI), create a new plot column
+			if (typeof refId === 'number' && refId !== -1) {
+				return ColumnReference.createPlotColumn(refId);
+			}
+
+			// Otherwise, load from JSON (preserving saved column references)
+			return ColumnReference.fromJSON(dataIN);
+		}
 	}
 </script>

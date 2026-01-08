@@ -111,12 +111,7 @@
 			this.parentPlot = parent;
 
 			if (dataIN?.x) {
-				const xRefId = dataIN.x.refId !== undefined ? dataIN.x.refId : dataIN.x;
-				if (typeof xRefId === 'number' && xRefId !== -1) {
-					this.x = ColumnReference.createPlotColumn(xRefId);
-				} else {
-					this.x = ColumnReference.fromJSON(dataIN.x);
-				}
+				this.x = ColumnReference.createOrLoad(dataIN.x);
 			} else {
 				if (parent.data.length > 0) {
 					const prevColumn = parent.data[parent.data.length - 1].x.column;
@@ -127,12 +122,7 @@
 				}
 			}
 			if (dataIN && dataIN.y) {
-				const yRefId = dataIN.y.refId !== undefined ? dataIN.y.refId : dataIN.y;
-				if (typeof yRefId === 'number' && yRefId !== -1) {
-					this.y = ColumnReference.createPlotColumn(yRefId);
-				} else {
-					this.y = ColumnReference.fromJSON(dataIN.y);
-				}
+				this.y = ColumnReference.createOrLoad(dataIN.y);
 			} else {
 				this.y = new ColumnReference(-1);
 			}

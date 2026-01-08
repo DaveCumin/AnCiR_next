@@ -25,15 +25,7 @@
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
 			if (dataIN?.x) {
-				//if there's data, use it!
-				// Check if this is a new plot being created (has refId but not yet a plot column)
-				const xRefId = dataIN.x.refId !== undefined ? dataIN.x.refId : dataIN.x;
-				if (typeof xRefId === 'number' && xRefId !== -1) {
-					// Create a new Column in core.data that references the source column
-					this.x = ColumnReference.createPlotColumn(xRefId);
-				} else {
-					this.x = ColumnReference.fromJSON(dataIN.x);
-				}
+				this.x = ColumnReference.createOrLoad(dataIN.x);
 			} else {
 				if (parent.data.length > 0) {
 					// Copy the source refId from the previous data entry
@@ -46,13 +38,7 @@
 				}
 			}
 			if (dataIN?.y) {
-				const yRefId = dataIN.y.refId !== undefined ? dataIN.y.refId : dataIN.y;
-				if (typeof yRefId === 'number' && yRefId !== -1) {
-					// Create a new Column in core.data that references the source column
-					this.y = ColumnReference.createPlotColumn(yRefId);
-				} else {
-					this.y = ColumnReference.fromJSON(dataIN.y);
-				}
+				this.y = ColumnReference.createOrLoad(dataIN.y);
 			} else {
 				this.y = new ColumnReference(-1);
 			}
