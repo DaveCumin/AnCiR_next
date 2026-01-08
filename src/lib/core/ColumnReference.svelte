@@ -135,15 +135,21 @@
 		 * When dataIN is a full ColumnReference object (from saved JSON), preserves it.
 		 *
 		 * @param {Object|number} dataIN - The input data (either {refId: X} or a number)
+		 * @param {boolean} forceLoad - If true, always load from JSON instead of creating new column
 		 * @returns {ColumnReference} A new or existing ColumnReference
 		 */
-		static createOrLoad(dataIN) {
+		static createOrLoad(dataIN, forceLoad = false) {
 			if (!dataIN) {
 				return new ColumnReference(-1);
 			}
 
 			// Extract the refId value from various input formats
 			const refId = dataIN.refId !== undefined ? dataIN.refId : dataIN;
+
+			// If forceLoad is true (loading from saved JSON), just reconstruct the reference
+			if (forceLoad) {
+				return ColumnReference.fromJSON(dataIN);
+			}
 
 			// If it's a simple number refId (from UI), create a new plot column
 			if (typeof refId === 'number' && refId !== -1) {

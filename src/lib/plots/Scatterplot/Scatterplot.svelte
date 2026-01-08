@@ -24,8 +24,10 @@
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
+			const isLoadingFromJSON = dataIN?._loadingFromJSON;
+
 			if (dataIN?.x) {
-				this.x = ColumnReference.createOrLoad(dataIN.x);
+				this.x = ColumnReference.createOrLoad(dataIN.x, isLoadingFromJSON);
 			} else {
 				if (parent.data.length > 0) {
 					// Copy the source refId from the previous data entry
@@ -38,7 +40,7 @@
 				}
 			}
 			if (dataIN?.y) {
-				this.y = ColumnReference.createOrLoad(dataIN.y);
+				this.y = ColumnReference.createOrLoad(dataIN.y, isLoadingFromJSON);
 			} else {
 				this.y = new ColumnReference(-1);
 			}
@@ -112,7 +114,8 @@
 				label: json.label,
 				yAxis: json.yAxis,
 				line: LineClass.fromJSON(json.line),
-				points: PointsClass.fromJSON(json.points)
+				points: PointsClass.fromJSON(json.points),
+				_loadingFromJSON: true // Flag to indicate we're loading from saved data
 			});
 		}
 	}

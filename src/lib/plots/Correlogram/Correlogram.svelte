@@ -109,9 +109,10 @@
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
+			const isLoadingFromJSON = dataIN?._loadingFromJSON;
 
 			if (dataIN?.x) {
-				this.x = ColumnReference.createOrLoad(dataIN.x);
+				this.x = ColumnReference.createOrLoad(dataIN.x, isLoadingFromJSON);
 			} else {
 				if (parent.data.length > 0) {
 					const prevColumn = parent.data[parent.data.length - 1].x.column;
@@ -122,7 +123,7 @@
 				}
 			}
 			if (dataIN && dataIN.y) {
-				this.y = ColumnReference.createOrLoad(dataIN.y);
+				this.y = ColumnReference.createOrLoad(dataIN.y, isLoadingFromJSON);
 			} else {
 				this.y = new ColumnReference(-1);
 			}
@@ -158,7 +159,8 @@
 				points: PointsClass.fromJSON(json.points),
 				maxLag: json.maxLag,
 				showConfidenceBounds: json.showConfidenceBounds,
-				confidenceLevel: json.confidenceLevel
+				confidenceLevel: json.confidenceLevel,
+				_loadingFromJSON: true
 			});
 		}
 	}

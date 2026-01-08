@@ -256,10 +256,11 @@
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
+			const isLoadingFromJSON = dataIN?._loadingFromJSON;
 
 			if (dataIN?.x) {
 				//if there's data, use it!
-				this.x = ColumnReference.createOrLoad(dataIN.x);
+				this.x = ColumnReference.createOrLoad(dataIN.x, isLoadingFromJSON);
 			} else {
 				if (parent.data.length > 0) {
 					const prevColumn = parent.data[parent.data.length - 1].x.column;
@@ -271,7 +272,7 @@
 				}
 			}
 			if (dataIN && dataIN.y) {
-				this.y = ColumnReference.createOrLoad(dataIN.y);
+				this.y = ColumnReference.createOrLoad(dataIN.y, isLoadingFromJSON);
 			} else {
 				this.y = new ColumnReference(-1);
 			}
@@ -303,7 +304,8 @@
 				points: PointsClass.fromJSON(json.points),
 				binSize: json.binSize,
 				method: json.method,
-				chiSquaredAlpha: json.chiSquaredAlpha
+				chiSquaredAlpha: json.chiSquaredAlpha,
+				_loadingFromJSON: true
 			});
 		}
 	}
