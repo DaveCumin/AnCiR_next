@@ -15,9 +15,9 @@
 	let options = $derived.by(() => {
 		let out = new Map();
 
-		//get the other data in plot - TODO!!
+		//get the other data in plots - TODO!!
 		// Is this the best way?
-		//console.time('getPlotSiblings');
+		console.time('getPlotSiblings');
 		//--- Brute force approach
 		if (getPlotSiblings !== -1) {
 			//console.log('getPlotSiblings: ', getPlotSiblings.id);
@@ -45,6 +45,10 @@
 								tempFlag,
 								'tempGroup = ',
 								tempGroup
+							);
+							out.set(
+								core.plots[p].name + ' : ' + core.plots[p].plot.data[d][key].name,
+								core.plots[p].plot.data[d][key].id
 							);
 						}
 					});
@@ -77,6 +81,7 @@
 				}
 			}
 		}
+		console.log('out: ', out);
 		return out;
 	});
 </script>
@@ -102,6 +107,21 @@
 				{/each}
 			</optgroup>
 		{/each}
+
+		<!-- PLOT DATA -->
+		<!-- TODO: RECONSIDER ARCHITECTURE SO THAT ALL COLUMNS ARE IN core.data (only references in the plots) -->
+		<!-- {#each core.plots as plot}
+			{#each plot.plot.data as d}
+				<optgroup label={plot.plot.name}>
+					{#each Object.keys(d.toJSON()) as key}
+						{@const col = d[key]}
+						{#if col instanceof Column}
+							<option value={col.id}>{plot.name} : {col.name}</option>
+						{/if}
+					{/each}
+				</optgroup>
+			{/each}
+		{/each} -->
 	</select>
 {:else}
 	<select name="columnSelect" onchange={(e) => onChange(e.target.value)} bind:value>

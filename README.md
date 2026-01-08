@@ -1,8 +1,8 @@
-### Analysis of Circadian Rhythms (AnCiR) v4.3
+### Analysis of Circadian Rhythms (AnCiR)
 
 This is our 'AnCiR' to the need for a simple-to-use (GUI; no coding) tool for analysis of circadian rhythms.
 
-AnCiR was financially supported by a University of Auckland Teaching and Learning Development and Innovation Grant (2024) and is written in [Svelte](https://svelte.dev/) by [DaveCumin](https://github.com/davecumin) and [Yuxing (Starr) Zhang](https://github.com/yz-329)..
+AnCiR was financially supported by a University of Auckland Teaching and Learning Development and Innovation Grant (2024) and is written in [Svelte](https://svelte.dev/) by [DaveCumin](https://github.com/davecumin) and [Yuxing (Starr) Zhang](https://github.com/yz-329).
 
 **Please feel free to send any bug reports, feature requests, or offers of support to [d.cumin@auckland.ac.nz](mailto:d.cumin@auckland.ac.nz?subject=AnCiR)**
 
