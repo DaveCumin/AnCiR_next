@@ -7,7 +7,7 @@
 		linearRegression,
 		makeSeqArray,
 		removeNullsFromXY
-	} from '$lib/components/plotBits/helpers/wrangleData';
+	} from '$lib/components/plotbits/helpers/wrangleData';
 	import { scaleLinear } from 'd3-scale';
 
 	function findCentileValue(data, centile) {

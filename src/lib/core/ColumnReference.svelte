@@ -6,7 +6,7 @@
 	 * ColumnReference - A lightweight wrapper for column references
 	 * Instead of storing full Column objects, this stores only the refId
 	 * and provides convenient methods to access the actual Column when needed.
-	 * 
+	 *
 	 * Benefits:
 	 * - Smaller JSON serialization (just {refId})
 	 * - Better separation of concerns

@@ -64,7 +64,7 @@
 
 <script>
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
-	import { binData } from '$lib/components/plotBits/helpers/wrangleData.js';
+	import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';

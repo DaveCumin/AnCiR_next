@@ -2,7 +2,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
-	import Hist from '$lib/components/plotBits/Hist.svelte';
+	import Hist from '$lib/components/plotbits/Hist.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import { getPlotById } from '$lib/core/Plot.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
