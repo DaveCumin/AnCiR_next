@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import { Column } from '$lib/core/Column.svelte';
+	import { ColumnReference } from '$lib/core/ColumnReference.svelte';
 
 	let selectedPlotIds = $state();
 
@@ -71,10 +72,15 @@
 					// console.log($state.snapshot(d));
 					//for each data
 					Object.keys($state.snapshot(d)).forEach((k) => {
-						if (d[k]?.refId == c_id) {
-							//if it's a match, then remove the reference
+						// Check if this is a ColumnReference with the matching refId
+						if (d[k] instanceof ColumnReference && d[k].refId == c_id) {
+							//if it's a match, then mark it as broken reference
 							//console.log('removing col ', k, ' from plot ', pi, '(', p.name, '), data ', di);
-							core.plots[pi].plot.data[di][k] = new Column({ refId: -1 });
+							core.plots[pi].plot.data[di][k] = new ColumnReference(-1);
+						}
+						// Also handle legacy Column objects for backward compatibility
+						else if (d[k]?.refId == c_id && !(d[k] instanceof ColumnReference)) {
+							core.plots[pi].plot.data[di][k] = new ColumnReference(-1);
 						}
 					});
 				});

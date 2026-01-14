@@ -1,15 +1,16 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
-	import Axis from '$lib/components/plotBits/Axis.svelte';
+	import { ColumnReference } from '$lib/core/ColumnReference.svelte';
+	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
-	import { binData, mean, makeSeqArray } from '$lib/components/plotBits/helpers/wrangleData.js';
+	import { binData, mean, makeSeqArray } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { pchisq, qchisq } from '$lib/data/CDFs';
 
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
-	import Points, { PointsClass } from '$lib/components/plotBits/Points.svelte';
+	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
@@ -255,22 +256,25 @@
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
+			const isLoadingFromJSON = dataIN?._loadingFromJSON;
 
 			if (dataIN?.x) {
 				//if there's data, use it!
-				this.x = ColumnClass.fromJSON(dataIN.x);
+				this.x = ColumnReference.createOrLoad(dataIN.x, isLoadingFromJSON);
 			} else {
 				if (parent.data.length > 0) {
-					this.x = new ColumnClass({ refId: parent.data[parent.data.length - 1].x.refId });
+					const prevColumn = parent.data[parent.data.length - 1].x.column;
+					const sourceRefId = prevColumn?.refId ?? prevColumn?.id ?? -1;
+					this.x = ColumnReference.createPlotColumn(sourceRefId);
 				} else {
 					//blank one
-					this.x = new ColumnClass({ refId: -1 });
+					this.x = new ColumnReference(-1);
 				}
 			}
 			if (dataIN && dataIN.y) {
-				this.y = ColumnClass.fromJSON(dataIN.y);
+				this.y = ColumnReference.createOrLoad(dataIN.y, isLoadingFromJSON);
 			} else {
-				this.y = new ColumnClass({ refId: -1 });
+				this.y = new ColumnReference(-1);
 			}
 			this.line = new LineClass(dataIN?.line, this);
 			this.thresholdline = new LineClass(dataIN?.thresholdline, this);
@@ -280,8 +284,8 @@
 
 		toJSON() {
 			return {
-				x: this.x,
-				y: this.y,
+				x: this.x.toJSON(),
+				y: this.y.toJSON(),
 				line: this.line.toJSON(),
 				thresholdline: this.thresholdline.toJSON(),
 				points: this.points.toJSON(),
@@ -300,7 +304,8 @@
 				points: PointsClass.fromJSON(json.points),
 				binSize: json.binSize,
 				method: json.method,
-				chiSquaredAlpha: json.chiSquaredAlpha
+				chiSquaredAlpha: json.chiSquaredAlpha,
+				_loadingFromJSON: true
 			});
 		}
 	}
@@ -777,7 +782,7 @@
 			</div>
 
 			<div class="control-data-container">
-				{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
+				{#each theData.data as datum, i (i + '-' + datum.x.id + '-' + datum.y.id)}
 					<div
 						class="dataBlock"
 						animate:flip={{ duration: 500 }}

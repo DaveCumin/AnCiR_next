@@ -1,10 +1,10 @@
 <script module>
-	import { Column as ColumnClass } from '$lib/core/Column.svelte';
-	import Column from '$lib/core/Column.svelte';
-	import Axis from '$lib/components/plotBits/Axis.svelte';
+	import Column, { getColumnById } from '$lib/core/Column.svelte';
+	import { ColumnReference } from '$lib/core/ColumnReference.svelte';
+	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear, scaleTime } from 'd3-scale';
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
-	import Points, { PointsClass } from '$lib/components/plotBits/Points.svelte';
+	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import NightBand, { NightBandClass } from './NightBand.svelte';
@@ -23,21 +23,25 @@
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
+			const isLoadingFromJSON = dataIN?._loadingFromJSON;
+
 			if (dataIN?.x) {
-				//if there's data, use it!
-				this.x = ColumnClass.fromJSON(dataIN.x);
+				this.x = ColumnReference.createOrLoad(dataIN.x, isLoadingFromJSON);
 			} else {
 				if (parent.data.length > 0) {
-					this.x = new ColumnClass({ refId: parent.data[parent.data.length - 1].x.refId });
+					// Copy the source refId from the previous data entry
+					const prevColumn = parent.data[parent.data.length - 1].x.column;
+					const sourceRefId = prevColumn?.refId ?? prevColumn?.id ?? -1;
+					this.x = ColumnReference.createPlotColumn(sourceRefId);
 				} else {
 					//blank one
-					this.x = new ColumnClass({ refId: -1 });
+					this.x = new ColumnReference(-1);
 				}
 			}
 			if (dataIN?.y) {
-				this.y = ColumnClass.fromJSON(dataIN.y);
+				this.y = ColumnReference.createOrLoad(dataIN.y, isLoadingFromJSON);
 			} else {
-				this.y = new ColumnClass({ refId: -1 });
+				this.y = new ColumnReference(-1);
 			}
 			if (dataIN?.label) {
 				this.label = dataIN.label;
@@ -93,8 +97,8 @@
 
 		toJSON() {
 			return {
-				x: this.x,
-				y: this.y,
+				x: this.x.toJSON(),
+				y: this.y.toJSON(),
 				label: this.label,
 				yAxis: this.yAxis,
 				line: this.line.toJSON(),
@@ -109,7 +113,8 @@
 				label: json.label,
 				yAxis: json.yAxis,
 				line: LineClass.fromJSON(json.line),
-				points: PointsClass.fromJSON(json.points)
+				points: PointsClass.fromJSON(json.points),
+				_loadingFromJSON: true // Flag to indicate we're loading from saved data
 			});
 		}
 	}
@@ -768,7 +773,7 @@
 				</div>
 			</div>
 
-			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
+			{#each theData.data as datum, i (i + '--' + datum.x.id + '-' + datum.y.id)}
 				<div
 					class="dataBlock"
 					animate:flip={{ duration: 500 }}
@@ -794,13 +799,13 @@
 								<p>x</p>
 							</div>
 
-							<Column col={datum.x} canChange={true} />
+							<Column col={getColumnById(datum.x.refId)} canChange={true} />
 						</div>
 						<div class="y-select">
 							<div class="control-input">
 								<p>y</p>
 							</div>
-							<Column col={datum.y} canChange={true} />
+							<Column col={getColumnById(datum.y.refId)} canChange={true} />
 						</div>
 
 						<div class="control-input-vertical">

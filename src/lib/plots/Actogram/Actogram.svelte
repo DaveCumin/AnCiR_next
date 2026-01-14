@@ -2,17 +2,18 @@
 	// @ts-nocheck
 
 	import Column from '$lib/core/Column.svelte';
-	import Hist, { createHistogramBins } from '$lib/components/plotBits/Hist.svelte';
-	import Axis from '$lib/components/plotBits/Axis.svelte';
+	import Hist, { createHistogramBins } from '$lib/components/plotbits/Hist.svelte';
+	import Axis from '$lib/components/plotbits/Axis.svelte';
 
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import { ColumnReference } from '$lib/core/ColumnReference.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
 	import Annotation, { AnnotationClass } from './Annotation.svelte';
 
 	import { scaleLinear } from 'd3-scale';
-	import { makeSeqArray, max, min } from '$lib/components/plotBits/helpers/wrangleData';
+	import { makeSeqArray, max, min } from '$lib/components/plotbits/helpers/wrangleData';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
@@ -172,20 +173,23 @@
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
+			const isLoadingFromJSON = dataIN?._loadingFromJSON;
 
 			if (dataIN && dataIN.x) {
-				this.x = ColumnClass.fromJSON(dataIN.x);
+				this.x = ColumnReference.createOrLoad(dataIN.x, isLoadingFromJSON);
 			} else {
 				if (parent.data.length > 0) {
-					this.x = new ColumnClass({ refId: parent.data[parent.data.length - 1].x.refId });
+					const prevColumn = parent.data[parent.data.length - 1].x.column;
+					const sourceRefId = prevColumn?.refId ?? prevColumn?.id ?? -1;
+					this.x = ColumnReference.createPlotColumn(sourceRefId);
 				} else {
-					this.x = new ColumnClass({ refId: -1 });
+					this.x = new ColumnReference(-1);
 				}
 			}
 			if (dataIN && dataIN.y) {
-				this.y = ColumnClass.fromJSON(dataIN.y);
+				this.y = ColumnReference.createOrLoad(dataIN.y, isLoadingFromJSON);
 			} else {
-				this.y = new ColumnClass({ refId: -1 });
+				this.y = new ColumnReference(-1);
 			}
 			if (dataIN?.draw) {
 				this.draw = dataIN.draw;
@@ -201,8 +205,8 @@
 
 		toJSON() {
 			return {
-				x: this.x,
-				y: this.y,
+				x: this.x.toJSON(),
+				y: this.y.toJSON(),
 				colour: this.colour,
 				draw: this.draw,
 				phaseMarkers: this.phaseMarkers
@@ -214,7 +218,8 @@
 				x: json.x,
 				y: json.y,
 				draw: json.draw,
-				colour: json.colour
+				colour: json.colour,
+				_loadingFromJSON: true
 			});
 			if (json.phaseMarkers) {
 				actClass.phaseMarkers = json.phaseMarkers.map((d) =>
@@ -688,7 +693,7 @@
 		</div>
 
 		<div class="control-component">
-			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
+			{#each theData.data as datum, i (i + '-' + datum.x.id + '-' + datum.y.id)}
 				<div
 					class="dataBlock"
 					animate:flip={{ duration: 500 }}

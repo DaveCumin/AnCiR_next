@@ -16,6 +16,7 @@
 
 	function addTheProcess(name) {
 		if (!columnSelected) return;
+		console.log('Adding process ', name, ' to column ', columnSelected.id, ':', columnSelected);
 		columnSelected.addProcess(name);
 		showDropdown = false;
 	}
