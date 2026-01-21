@@ -7,7 +7,7 @@
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
-	export const Boxplot_defaultDataInputs = ['y'];
+	export const Boxplot_defaultDataInputs = ['x', 'y'];
 	export const Boxplot_controlHeaders = ['Properties', 'Data'];
 
 	class BoxPlotDataClass {
@@ -20,7 +20,6 @@
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
 
-			// X column for positioning (optional, defaults to sequential)
 			if (dataIN?.x) {
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
@@ -31,7 +30,6 @@
 				}
 			}
 
-			// Y column for values
 			if (dataIN?.y) {
 				this.y = ColumnClass.fromJSON(dataIN.y);
 			} else {
@@ -96,7 +94,20 @@
 
 		yTicks = $state(5);
 
-		// Calculate Y-axis limits based on all data
+		// Get all unique x values across all data series
+		uniqueXValues = $derived.by(() => {
+			const allXValues = new Set();
+			this.data.forEach((d) => {
+				const xData = d.x.getData() ?? [];
+				xData.forEach((val) => {
+					if (val != null && !isNaN(val)) {
+						allXValues.add(val);
+					}
+				});
+			});
+			return Array.from(allXValues).sort((a, b) => a - b);
+		});
+
 		ylims = $derived.by(() => {
 			if (this.data.length === 0) {
 				return [0, 10];
@@ -124,17 +135,16 @@
 			];
 		});
 
-		// Calculate X-axis limits (for categorical positioning)
+		// X-axis is categorical (0 to n-1 for n unique values)
 		xlims = $derived.by(() => {
-			if (this.data.length === 0) {
+			const numCategories = this.uniqueXValues.length;
+			if (numCategories === 0) {
 				return [0, 1];
 			}
 
-			const numBoxPlots = this.data.length;
-
 			return [
-				this.xlimsIN[0] != null ? this.xlimsIN[0] : 0,
-				this.xlimsIN[1] != null ? this.xlimsIN[1] : numBoxPlots
+				this.xlimsIN[0] != null ? this.xlimsIN[0] : -0.5,
+				this.xlimsIN[1] != null ? this.xlimsIN[1] : numCategories - 0.5
 			];
 		});
 
@@ -157,7 +167,6 @@
 				return axisWidths;
 			}
 
-			// LEFT
 			const allLeftAxes = document
 				.getElementById('plot' + this.parentBox.id)
 				?.getElementsByClassName('axis-left');
@@ -177,7 +186,6 @@
 				axisWidths.left = Math.round(leftAxisLine - leftAxisWhole + 6);
 			}
 
-			// BOTTOM
 			const allBottomAxes = document
 				.getElementById('plot' + this.parentBox.id)
 				.getElementsByClassName('axis-bottom');
@@ -301,6 +309,11 @@
 			theData.autoScalePadding('all');
 		}
 	});
+
+	// Custom tick values for x-axis to show actual unique x values
+	function getXAxisTickValues(uniqueXValues) {
+		return uniqueXValues.map((val, i) => ({ position: i, label: String(val) }));
+	}
 </script>
 
 {#snippet controls(theData)}
@@ -419,38 +432,6 @@
 				</div>
 			</div>
 
-			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Min</p>
-					<NumberWithUnits
-						step="0.1"
-						value={theData.xlimsIN[0] != null ? theData.xlimsIN[0] : theData.xlims[0]}
-						onInput={(val) => {
-							theData.xlimsIN[0] = parseFloat(val);
-						}}
-					/>
-				</div>
-
-				<div class="control-input">
-					<p>Max</p>
-					<NumberWithUnits
-						step="0.1"
-						value={theData.xlimsIN[1] != null ? theData.xlimsIN[1] : theData.xlims[1]}
-						onInput={(val) => {
-							theData.xlimsIN[1] = parseFloat(val);
-						}}
-					/>
-				</div>
-
-				{#if theData.xlimsIN[0] != null || theData.xlimsIN[1] != null}
-					<div class="control-component-input-icons">
-						<button class="icon" onclick={() => (theData.xlimsIN = [null, null])}>
-							<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
-						</button>
-					</div>
-				{/if}
-			</div>
-
 			<div class="control-input-vertical">
 				<div class="control-input-checkbox">
 					<input type="checkbox" bind:checked={theData.xgridlines} />
@@ -497,6 +478,12 @@
 					<div class="data-wrapper">
 						<div class="y-select">
 							<div class="control-input">
+								<p>x (categories)</p>
+							</div>
+							<Column col={datum.x} canChange={true} />
+						</div>
+						<div class="y-select">
+							<div class="control-input">
 								<p>y (values)</p>
 							</div>
 							<Column col={datum.y} canChange={true} />
@@ -504,7 +491,11 @@
 
 						<Box
 							boxPlotData={datum.boxPlot}
+							x={datum.x.getData()}
 							y={datum.y.getData()}
+							uniqueXValues={theData.uniqueXValues}
+							seriesIndex={i}
+							totalSeries={theData.data.length}
 							xscale={scaleLinear()
 								.domain([theData.xlims[0], theData.xlims[1]])
 								.range([0, theData.plotwidth])}
@@ -544,7 +535,7 @@
 			label={theData.plot.ylabel}
 		/>
 
-		<!-- X-axis -->
+		<!-- X-axis with custom categorical labels -->
 		<Axis
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
@@ -553,28 +544,30 @@
 				.range([0, theData.plot.plotwidth])}
 			position="bottom"
 			plotPadding={theData.plot.padding}
-			nticks={theData.plot.data.length}
+			nticks={theData.plot.uniqueXValues.length}
 			gridlines={theData.plot.xgridlines}
 			label={theData.plot.xlabel}
+			tickValues={theData.plot.uniqueXValues.map((val, i) => i)}
+			tickFormat={(d, i) => String(theData.plot.uniqueXValues[i])}
 		/>
 
 		<!-- Box plots -->
 		{#each theData.plot.data as datum, i}
-			{#if datum.y.getData()?.length > 0}
-				{@const xPosition = i + 0.5}
+			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
 				{@const xScale = scaleLinear()
-					.domain([xPosition - 0.5, xPosition + 0.5])
-					.range([
-						(i / theData.plot.data.length) * theData.plot.plotwidth,
-						((i + 1) / theData.plot.data.length) * theData.plot.plotwidth
-					])}
+					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+					.range([0, theData.plot.plotwidth])}
 				{@const yScale = scaleLinear()
 					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 					.range([theData.plot.plotheight, 0])}
 
 				<Box
 					boxPlotData={datum.boxPlot}
+					x={datum.x.getData()}
 					y={datum.y.getData()}
+					uniqueXValues={theData.plot.uniqueXValues}
+					seriesIndex={i}
+					totalSeries={theData.plot.data.length}
 					xscale={xScale}
 					yscale={yScale}
 					xoffset={theData.plot.padding.left}

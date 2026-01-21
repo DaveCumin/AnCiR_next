@@ -17,7 +17,7 @@
 
 		//get the other data in plots - TODO!!
 		// Is this the best way?
-		console.time('getPlotSiblings');
+		//console.time('getPlotSiblings');
 		//--- Brute force approach
 		if (getPlotSiblings !== -1) {
 			//console.log('getPlotSiblings: ', getPlotSiblings.id);
