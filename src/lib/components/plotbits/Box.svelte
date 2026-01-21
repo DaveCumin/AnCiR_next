@@ -75,32 +75,28 @@
 	function calculateBoxPlotStats(data) {
 		if (!data || data.length === 0) return null;
 
-		// Filter out null, undefined, and NaN values
 		const validData = data.filter((d) => d != null && !isNaN(d));
 		if (validData.length === 0) return null;
 
-		// Sort data
 		const sorted = [...validData].sort((a, b) => a - b);
 		const n = sorted.length;
 
-		// Calculate quartiles
 		const q1Index = Math.floor(n * 0.25);
 		const q2Index = Math.floor(n * 0.5);
 		const q3Index = Math.floor(n * 0.75);
 
 		const q1 = sorted[q1Index];
-		const q2 = sorted[q2Index]; // median
+		const q2 = sorted[q2Index];
 		const q3 = sorted[q3Index];
 
 		const iqr = q3 - q1;
 		const lowerFence = q1 - 1.5 * iqr;
 		const upperFence = q3 + 1.5 * iqr;
 
-		// Find whisker positions (min/max within fences)
 		const lowerWhisker = sorted.find((d) => d >= lowerFence) ?? sorted[0];
-		const upperWhisker = sorted.reverse().find((d) => d <= upperFence) ?? sorted[0];
+		const reverseSorted = [...sorted].reverse();
+		const upperWhisker = reverseSorted.find((d) => d <= upperFence) ?? sorted[sorted.length - 1];
 
-		// Find outliers
 		const outliers = validData.filter((d) => d < lowerFence || d > upperFence);
 
 		return {
@@ -119,41 +115,80 @@
 <script>
 	let {
 		boxPlotData = $bindable(),
-		y,
-		x = null,
+		x = [],
+		y = [],
 		xscale,
 		yscale,
-		yoffset = 0,
 		xoffset = 0,
+		yoffset = 0,
 		which,
+		uniqueXValues = [],
+		seriesIndex = 0,
+		totalSeries = 1,
 		title = 'Box Plot'
 	} = $props();
 
-	let width = $derived(xscale.range()[1]);
-	let height = $derived(yscale.range()[0]);
-	let clipKey = $derived(`boxplot-${xoffset}-${yoffset}-${width}-${height}`);
+	let width = $derived(xscale.range()[1] - xscale.range()[0]);
+	let height = $derived(yscale.range()[0] - yscale.range()[1]);
+	let clipKey = $derived(`boxplot-${seriesIndex}-${xoffset}-${yoffset}`);
 
-	let stats = $derived.by(() => {
-		if (!boxPlotData?.draw || !y) return null;
-		return calculateBoxPlotStats(y);
+	// Group y-values by unique x category
+	let groupedStats = $derived.by(() => {
+		if (!boxPlotData?.draw || !Array.isArray(x) || !Array.isArray(y)) {
+			return [];
+		}
+
+		const groups = new Map();
+
+		x.forEach((cat, i) => {
+			const val = y[i];
+			// Skip invalid entries — allow x.length !== y.length
+			if (cat == null || val == null || isNaN(val)) return;
+
+			if (!groups.has(cat)) {
+				groups.set(cat, []);
+			}
+			groups.get(cat).push(val);
+		});
+
+		return Array.from(groups.entries())
+			.map(([category, values]) => {
+				const stats = calculateBoxPlotStats(values);
+				if (!stats) return null;
+				return { category, ...stats };
+			})
+			.filter(Boolean);
 	});
 
-	let xCenter = $derived.by(() => {
-		if (!xscale) return 0;
-		const domain = xscale.domain();
-		const center = (domain[0] + domain[1]) / 2;
-		return xscale(center);
-	});
+	// Find the index of a category in uniqueXValues
+	function getCategoryIndex(category) {
+		if (category == null) return -1;
+		return uniqueXValues.findIndex((val) => String(val) === String(category));
+	}
 
+	// Calculate box width based on category spacing
 	let boxHalfWidth = $derived.by(() => {
-		if (!xscale) return 20;
-		const domain = xscale.domain();
-		const range = Math.abs(domain[1] - domain[0]);
-		return (xscale(domain[0] + (range * boxPlotData.boxWidth) / 2) - xscale(domain[0])) / 2;
+		if (!xscale || uniqueXValues.length === 0) return 20;
+
+		if (uniqueXValues.length === 1) {
+			// Single category - use a reasonable width
+			const rangeWidth = xscale.range()[1] - xscale.range()[0];
+			return (rangeWidth * 0.2 * boxPlotData.boxWidth) / (2 * totalSeries);
+		}
+
+		// Multiple categories - base width on spacing
+		const spacing = (xscale.range()[1] - xscale.range()[0]) / uniqueXValues.length;
+		return (spacing * boxPlotData.boxWidth) / (2 * totalSeries);
 	});
 
-	let whiskerHalfWidth = $derived.by(() => {
-		return boxHalfWidth * boxPlotData.whiskerWidth;
+	let whiskerHalfWidth = $derived(boxHalfWidth * boxPlotData.whiskerWidth);
+
+	// Calculate dodge offset for multiple series
+	let dodgeOffset = $derived.by(() => {
+		if (totalSeries <= 1) return 0;
+		const totalWidth = boxHalfWidth * 2 * totalSeries;
+		const step = totalWidth / totalSeries;
+		return (seriesIndex - (totalSeries - 1) / 2) * step;
 	});
 </script>
 
@@ -251,89 +286,91 @@
 {/snippet}
 
 {#snippet plot(boxPlotData)}
-	{#if stats && boxPlotData?.draw}
+	{#if groupedStats.length > 0 && boxPlotData?.draw}
 		<clipPath id={clipKey}>
 			<rect x={xoffset} y={yoffset} {width} {height} />
 		</clipPath>
+
 		<g clip-path="url(#{clipKey})" style="transform: translate({xoffset}px, {yoffset}px);">
-			<!-- Lower whisker line -->
-			<line
-				x1={xCenter}
-				y1={yscale(stats.lowerWhisker)}
-				x2={xCenter}
-				y2={yscale(stats.q1)}
-				stroke={boxPlotData.colour}
-				stroke-width={boxPlotData.strokeWidth}
-				stroke-dasharray={boxPlotData.stroke}
-			/>
-			<!-- Lower whisker cap -->
-			<line
-				x1={xCenter - whiskerHalfWidth}
-				y1={yscale(stats.lowerWhisker)}
-				x2={xCenter + whiskerHalfWidth}
-				y2={yscale(stats.lowerWhisker)}
-				stroke={boxPlotData.colour}
-				stroke-width={boxPlotData.strokeWidth}
-				stroke-dasharray={boxPlotData.stroke}
-			/>
+			{#each groupedStats as group}
+				{@const categoryIdx = getCategoryIndex(group.category)}
+				{@const xCenter = xscale(categoryIdx) + dodgeOffset}
 
-			<!-- Box -->
-			<rect
-				x={xCenter - boxHalfWidth}
-				y={yscale(stats.q3)}
-				width={boxHalfWidth * 2}
-				height={yscale(stats.q1) - yscale(stats.q3)}
-				fill={boxPlotData.fillColour}
-				fill-opacity={boxPlotData.fillOpacity}
-				stroke={boxPlotData.colour}
-				stroke-width={boxPlotData.strokeWidth}
-				stroke-dasharray={boxPlotData.stroke}
-			/>
+				<!-- Lower whisker -->
+				<line
+					x1={xCenter}
+					y1={yscale(group.lowerWhisker)}
+					x2={xCenter}
+					y2={yscale(group.q1)}
+					stroke={boxPlotData.colour}
+					stroke-width={boxPlotData.strokeWidth}
+					stroke-dasharray={boxPlotData.stroke}
+				/>
+				<line
+					x1={xCenter - whiskerHalfWidth}
+					y1={yscale(group.lowerWhisker)}
+					x2={xCenter + whiskerHalfWidth}
+					y2={yscale(group.lowerWhisker)}
+					stroke={boxPlotData.colour}
+					stroke-width={boxPlotData.strokeWidth}
+				/>
 
-			<!-- Median line -->
-			<line
-				x1={xCenter - boxHalfWidth}
-				y1={yscale(stats.q2)}
-				x2={xCenter + boxHalfWidth}
-				y2={yscale(stats.q2)}
-				stroke={boxPlotData.medianColour}
-				stroke-width={boxPlotData.medianWidth}
-			/>
+				<!-- Box -->
+				<rect
+					x={xCenter - boxHalfWidth}
+					y={yscale(group.q3)}
+					width={boxHalfWidth * 2}
+					height={yscale(group.q1) - yscale(group.q3)}
+					fill={boxPlotData.fillColour}
+					fill-opacity={boxPlotData.fillOpacity}
+					stroke={boxPlotData.colour}
+					stroke-width={boxPlotData.strokeWidth}
+					stroke-dasharray={boxPlotData.stroke}
+				/>
 
-			<!-- Upper whisker line -->
-			<line
-				x1={xCenter}
-				y1={yscale(stats.q3)}
-				x2={xCenter}
-				y2={yscale(stats.upperWhisker)}
-				stroke={boxPlotData.colour}
-				stroke-width={boxPlotData.strokeWidth}
-				stroke-dasharray={boxPlotData.stroke}
-			/>
-			<!-- Upper whisker cap -->
-			<line
-				x1={xCenter - whiskerHalfWidth}
-				y1={yscale(stats.upperWhisker)}
-				x2={xCenter + whiskerHalfWidth}
-				y2={yscale(stats.upperWhisker)}
-				stroke={boxPlotData.colour}
-				stroke-width={boxPlotData.strokeWidth}
-				stroke-dasharray={boxPlotData.stroke}
-			/>
+				<!-- Median -->
+				<line
+					x1={xCenter - boxHalfWidth}
+					y1={yscale(group.q2)}
+					x2={xCenter + boxHalfWidth}
+					y2={yscale(group.q2)}
+					stroke={boxPlotData.medianColour}
+					stroke-width={boxPlotData.medianWidth}
+				/>
 
-			<!-- Outliers -->
-			{#if boxPlotData.showOutliers}
-				{#each stats.outliers as outlier}
-					<circle
-						cx={xCenter}
-						cy={yscale(outlier)}
-						r={boxPlotData.outlierSize}
-						fill="none"
-						stroke={boxPlotData.colour}
-						stroke-width={boxPlotData.strokeWidth}
-					/>
-				{/each}
-			{/if}
+				<!-- Upper whisker -->
+				<line
+					x1={xCenter}
+					y1={yscale(group.q3)}
+					x2={xCenter}
+					y2={yscale(group.upperWhisker)}
+					stroke={boxPlotData.colour}
+					stroke-width={boxPlotData.strokeWidth}
+					stroke-dasharray={boxPlotData.stroke}
+				/>
+				<line
+					x1={xCenter - whiskerHalfWidth}
+					y1={yscale(group.upperWhisker)}
+					x2={xCenter + whiskerHalfWidth}
+					y2={yscale(group.upperWhisker)}
+					stroke={boxPlotData.colour}
+					stroke-width={boxPlotData.strokeWidth}
+				/>
+
+				<!-- Outliers -->
+				{#if boxPlotData.showOutliers}
+					{#each group.outliers as outlier}
+						<circle
+							cx={xCenter}
+							cy={yscale(outlier)}
+							r={boxPlotData.outlierSize}
+							fill="none"
+							stroke={boxPlotData.colour}
+							stroke-width={boxPlotData.strokeWidth}
+						/>
+					{/each}
+				{/if}
+			{/each}
 		</g>
 	{/if}
 {/snippet}

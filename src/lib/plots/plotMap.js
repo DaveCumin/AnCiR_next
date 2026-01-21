@@ -4,7 +4,7 @@ export async function loadPlots() {
 	const plotMap = new Map();
 	for (const sveltePath in sveltePaths) {
 		const fileName = sveltePath.split('/').pop();
-		console.log('Loading plot from:', sveltePath, 'with file name:', fileName);
+		//console.log('Loading plot from:', sveltePath, 'with file name:', fileName);
 		const folderName = sveltePath.split('/').slice(-2)[0];
 
 		try {

@@ -100,12 +100,19 @@
 			this.data.forEach((d) => {
 				const xData = d.x.getData() ?? [];
 				xData.forEach((val) => {
-					if (val != null && !isNaN(val)) {
+					if (val != null) {
+						// ← removed !isNaN
 						allXValues.add(val);
 					}
 				});
 			});
-			return Array.from(allXValues).sort((a, b) => a - b);
+			return Array.from(allXValues).sort((a, b) => {
+				// Safe sort for numbers or strings
+				const sa = String(a);
+				const sb = String(b);
+				if (!isNaN(+sa) && !isNaN(+sb)) return +sa - +sb;
+				return sa.localeCompare(sb);
+			});
 		});
 
 		ylims = $derived.by(() => {
@@ -308,6 +315,7 @@
 
 			theData.autoScalePadding('all');
 		}
+		//console.log($state.snapshot(theData.data));
 	});
 
 	// Custom tick values for x-axis to show actual unique x values
@@ -491,8 +499,8 @@
 
 						<Box
 							boxPlotData={datum.boxPlot}
-							x={datum.x.getData()}
-							y={datum.y.getData()}
+							x={datum.x.getData() ?? []}
+							y={datum.y.getData() ?? []}
 							uniqueXValues={theData.uniqueXValues}
 							seriesIndex={i}
 							totalSeries={theData.data.length}
@@ -502,6 +510,8 @@
 							yscale={scaleLinear()
 								.domain([theData.ylims[0], theData.ylims[1]])
 								.range([theData.plotheight, 0])}
+							xoffset={0}
+							yoffset={0}
 							which="controls"
 						/>
 					</div>
@@ -563,8 +573,8 @@
 
 				<Box
 					boxPlotData={datum.boxPlot}
-					x={datum.x.getData()}
-					y={datum.y.getData()}
+					x={datum.x.getData() ?? []}
+					y={datum.y.getData() ?? []}
 					uniqueXValues={theData.plot.uniqueXValues}
 					seriesIndex={i}
 					totalSeries={theData.plot.data.length}
