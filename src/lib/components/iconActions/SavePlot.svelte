@@ -62,7 +62,7 @@
 					onmouseenter={() => keepSubmenuOpen('save')}
 					onmouseleave={() => hideSubmenu('save', 150)}
 				>
-					{#each ['svg', 'png', 'pdf'] as type}
+					{#each ['svg', 'png'] as type}
 						<button
 							class="submenu-item"
 							onclick={() => {
@@ -118,7 +118,7 @@
 			{/if}
 		{:else}
 			<!-- Single plot save options -->
-			{#each ['svg', 'png', 'pdf'] as type}
+			{#each ['svg', 'png'] as type}
 				<div
 					class="dropdown-action"
 					onclick={() => {
