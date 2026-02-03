@@ -198,8 +198,8 @@
 
 			let out = [];
 			//if there is a reference, then just get that data
-			if (this.refId != null && this.refColumn) {
-				out = this.refColumn.getData();
+			if (this.refId != null) {
+				out = getColumnById(this.refId).getData();
 			} else {
 				//deal with compressed data
 				if (this.compression === 'awd') {

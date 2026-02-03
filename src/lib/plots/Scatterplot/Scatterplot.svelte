@@ -412,6 +412,8 @@
 			scatter.ylabelRight = json.ylabelRight;
 
 			if (json.data) {
+				console.log('json.data', $state.snapshot(json.data));
+
 				scatter.data = json.data.map((d) => ScatterDataclass.fromJSON(d, scatter));
 			}
 			if (json.nightBands) {

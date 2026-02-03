@@ -112,12 +112,13 @@
 
 	function importJson() {
 		//reset existing workflow
-		core.rawData = new Map();
 		core.data = [];
 		core.tables = [];
 		core.plots = [];
 
-		core.rawData = new Map(Object.entries($state.snapshot(jsonData.rawData)));
+		core.rawData = new Map(
+			Object.entries($state.snapshot(jsonData.rawData)).map(([key, value]) => [+key, value])
+		);
 
 		jsonData.data.map((datajson) => {
 			pushObj(Column.fromJSON(datajson));
