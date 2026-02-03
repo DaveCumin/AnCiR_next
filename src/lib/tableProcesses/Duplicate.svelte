@@ -15,7 +15,8 @@
 		if (argsIN.out.result == -1 || !argsIN.out.result) {
 			//do nothing
 		} else {
-			getColumnById(argsIN.out.result).data = result;
+			core.rawData.set(argsIN.out.result, result); //duplicate the data array
+			getColumnById(argsIN.out.result).data = argsIN.out.result;
 			getColumnById(argsIN.out.result).type = getColumnById(argsIN.xIN).type;
 			const processHash = crypto.randomUUID();
 			getColumnById(argsIN.out.result).tableProcessGUId = processHash;
@@ -32,6 +33,7 @@
 
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { onMount } from 'svelte';
+	import { core } from '$lib/core/core.svelte';
 
 	let { p = $bindable() } = $props();
 

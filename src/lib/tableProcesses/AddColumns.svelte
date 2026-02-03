@@ -23,7 +23,8 @@
 
 		if (argsIN.out.result == -1) {
 		} else {
-			getColumnById(argsIN.out.result).data = result;
+			core.rawData.set(argsIN.out.result, result);
+			getColumnById(argsIN.out.result).data = argsIN.out.result;
 			getColumnById(argsIN.out.result).type = typeof result[0] != 'string' ? 'category' : 'number';
 			const processHash = crypto.randomUUID();
 			getColumnById(argsIN.out.result).tableProcessGUId = processHash;
@@ -38,6 +39,7 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { core } from '$lib/core/core.svelte';
 	import { onMount } from 'svelte';
 
 	let { p = $bindable() } = $props();

@@ -44,13 +44,15 @@
 		const theBinnedData = binData(xData, yData, binSize, binStart, stepSize, aggFunction);
 
 		if (xOUT !== -1 && yOUT !== -1) {
-			getColumnById(xOUT).data = theBinnedData.bins;
+			core.rawData.set(xOUT, theBinnedData.bins);
+			getColumnById(xOUT).data = xOUT;
 			getColumnById(xOUT).type = 'bin';
 			getColumnById(xOUT).binWidth = binSize;
 			getColumnById(xOUT).binStep = stepSize;
 			getColumnById(xOUT).aggFunction = aggFunction;
 
-			getColumnById(yOUT).data = theBinnedData.y_out;
+			core.rawData.set(yOUT, theBinnedData.y_out);
+			getColumnById(yOUT).data = yOUT;
 			getColumnById(yOUT).type = 'number';
 
 			const processHash = crypto.randomUUID();
@@ -69,6 +71,7 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { onMount } from 'svelte';
+	import { core } from '$lib/core/core.svelte';
 
 	let { p = $bindable() } = $props();
 

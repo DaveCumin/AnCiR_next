@@ -350,9 +350,11 @@
 		const result = { x_out: xVals, y_out: smoothedY };
 
 		if (xOUT != -1 && yOUT != -1) {
-			getColumnById(xOUT).data = result.x_out;
+			core.rawData.set(xOUT, result.x_out);
+			getColumnById(xOUT).data = xOUT;
 			getColumnById(xOUT).type = 'number';
-			getColumnById(yOUT).data = result.y_out;
+			core.rawData.push(result.y_out);
+			getColumnById(yOUT).data = core.rawData.length - 1;
 			getColumnById(yOUT).type = 'number';
 			const processHash = crypto.randomUUID();
 			getColumnById(xOUT).tableProcessGUId = processHash;

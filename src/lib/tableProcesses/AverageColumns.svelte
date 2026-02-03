@@ -18,7 +18,9 @@
 
 		if (argsIN.out.result == -1) {
 		} else {
-			getColumnById(argsIN.out.result).data = result;
+			core.rawData.set(argsIN.out.result, result);
+			getColumnById(argsIN.out.result).data = argsIN.out.result;
+
 			getColumnById(argsIN.out.result).type = typeof result[0] != 'string' ? 'category' : 'number';
 			const processHash = crypto.randomUUID();
 			getColumnById(argsIN.out.result).tableProcessGUId = processHash;

@@ -47,9 +47,11 @@
 				const yColOut = getColumnById(yOUT);
 
 				if (xColOut && yColOut) {
-					xColOut.data = tt;
+					core.rawData.set(xOUT, tt);
+					xColOut.data = xOUT;
 					xColOut.type = 'number';
-					yColOut.data = fittedData.fitted;
+					core.rawData.set(yOUT, fittedData.fitted);
+					yColOut.data = yOUT;
 					yColOut.type = 'number';
 
 					const processHash = crypto.randomUUID();
@@ -70,6 +72,7 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { core } from '$lib/core/core.svelte';
 
 	let { p = $bindable() } = $props();
 

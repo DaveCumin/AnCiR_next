@@ -71,6 +71,7 @@
 		});
 
 		// Step 5: Remove the column itself from core.data
+		core.rawData.delete(columnId);
 		core.data = core.data.filter((col) => col.id !== columnId);
 
 		return {
@@ -88,7 +89,7 @@
 		refId = $state(null); //if it is a column that is based on another
 		refColumn = $derived(getColumnById(this.refId)); // Direct reference to the referenced column
 		tableProcessGUId = $state('');
-		data = null; //if it has raw data, store that here
+		data = null; //if it has raw data, store the id here
 		compression = $state(null); //if any compression is used, store the info here
 		binWidth = $derived.by(() => {
 			if (this.isReferencial()) return this.refColumn?.binWidth;
@@ -203,12 +204,16 @@
 				//deal with compressed data
 				if (this.compression === 'awd') {
 					out = [];
-					for (let a = 0; a < this.data.length; a += this.data.step) {
-						out.push(this.data.start + a);
+					for (
+						let a = 0;
+						a < core.rawData.get(this.data).length;
+						a += core.rawData.get(this.data).step
+					) {
+						out.push(core.rawData.get(this.data).start + a);
 					}
 				} else {
 					//get the raw data
-					out = this.data;
+					out = core.rawData.get(this.data);
 				}
 			}
 
@@ -319,6 +324,7 @@
 
 	import { appState } from '$lib/core/core.svelte.js';
 	import Editable from '$lib/components/inputs/Editable.svelte';
+	import { get } from 'svelte/store';
 
 	let { col = $bindable(), canChange = false, onChange = () => {} } = $props();
 

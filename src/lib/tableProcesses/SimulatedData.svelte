@@ -34,11 +34,14 @@
 			//this is just for preview, when no column is made
 		} else {
 			//this is for making and updating; set everything for the given columns
-			getColumnById(timeOUT).data = simulatedTime;
+
+			core.rawData.set(timeOUT, simulatedTime);
+			getColumnById(timeOUT).data = timeOUT;
 			getColumnById(timeOUT).type = 'time';
 			getColumnById(timeOUT).timeFormat = "YYYY-MM-DD'T'HH:mm:ss.S'Z'";
 
-			getColumnById(valuesOUT).data = simulatedValues;
+			core.rawData.set(valuesOUT, simulatedValues);
+			getColumnById(valuesOUT).data = valuesOUT;
 			getColumnById(valuesOUT).type = 'number';
 
 			//update for reactivity

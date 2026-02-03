@@ -97,6 +97,7 @@
 		reader.onload = (e) => {
 			try {
 				jsonData = JSON.parse(e.target.result);
+				console.log('jsonData:', $state.snapshot(jsonData));
 				error = '';
 			} catch (err) {
 				error = 'Invalid JSON file';
@@ -111,9 +112,12 @@
 
 	function importJson() {
 		//reset existing workflow
+		core.rawData = new Map();
 		core.data = [];
 		core.tables = [];
 		core.plots = [];
+
+		core.rawData = new Map(Object.entries($state.snapshot(jsonData.rawData)));
 
 		jsonData.data.map((datajson) => {
 			pushObj(Column.fromJSON(datajson));

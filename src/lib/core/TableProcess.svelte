@@ -2,7 +2,7 @@
 	import { appState, appConsts, pushObj, core } from '$lib/core/core.svelte.js';
 	import { getTableById } from '$lib/core/Table.svelte';
 	import { removeColumnFromPlots } from '$lib/core/Plot.svelte';
-	import { Column, removeColumn } from '$lib/core/Column.svelte';
+	import { Column, removeColumn, getColumnById } from '$lib/core/Column.svelte';
 	let _tableprocessidCounter = 0;
 
 	function doDeleteTableProcess(p) {

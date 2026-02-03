@@ -5,6 +5,7 @@ import { Plot } from '$lib/core//Plot.svelte';
 import { Table } from '$lib/core//Table.svelte';
 
 export const core = $state({
+	rawData: new Map(),
 	data: [],
 	plots: [],
 	tables: []
@@ -165,6 +166,8 @@ function findNextAvailablePosition(existingPlots) {
 }
 
 export function outputCoreAsJson() {
-	const output = { ...core, appState, version: appConsts.version };
+	let coreOut = JSON.parse(JSON.stringify(core));
+	coreOut.rawData = Object.fromEntries(core.rawData);
+	const output = { ...coreOut, appState, version: appConsts.version };
 	return JSON.stringify(output, null, 2);
 }

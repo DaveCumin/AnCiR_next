@@ -41,6 +41,7 @@
 	import { guessFormatD3 } from '$lib/utils/time/guessTimeFormat_d3.js';
 	import { guessFormat } from '$lib/utils/time/guessTimeFormat.js';
 	import Visualise from '$lib/components/Visualise.svelte';
+	import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte';
 
 	let loadingMsg = $state('Warming up...');
 	let isLoaded = $state(false);
@@ -209,6 +210,7 @@
 		const jsonData = JSON.parse(`${testJsonDC}`);
 
 		//reset things
+		core.rawData = new Map();
 		core.data = [];
 		core.tables = [];
 		core.plots = [];
@@ -229,20 +231,25 @@
 	function addData(dataIN, type, name, provenance) {
 		let newDataEntry;
 		if (dataIN != null) {
-			newDataEntry = new Column({ type, data: dataIN, name, provenance });
+			newDataEntry = new Column({ type, data: -1, name, provenance });
+			console.log($state.snapshot(core.rawData));
+			core.rawData.set(newDataEntry.id, dataIN);
+			newDataEntry.data = newDataEntry.id;
+
 			if (type == 'time') {
 				newDataEntry.timeFormat = '';
 			}
 			core.data.push(newDataEntry);
 		} else {
+			core.rawData.push([
+				Math.round(10 * Math.random()),
+				Math.round(10 * Math.random()),
+				Math.round(10 * Math.random()),
+				Math.round(10 * Math.random())
+			]);
 			newDataEntry = new Column({
 				type,
-				data: [
-					Math.round(10 * Math.random()),
-					Math.round(10 * Math.random()),
-					Math.round(10 * Math.random()),
-					Math.round(10 * Math.random())
-				],
+				data: core.rawData.length - 1,
 				name,
 				provenance
 			});
@@ -290,6 +297,7 @@
 
 	function refresh() {
 		//simulate importing data
+		core.rawData = new Map();
 		core.data = [];
 		let d0id = addData(makeArray(N, 5, 0.15), 'number', 'the time', 'just made this up');
 
@@ -298,31 +306,38 @@
 		core.data[1].addProcess('Sub');
 
 		let d2id = addData(['a', 'b', 'b', 'c'], 'category', 'mycat', 'imported from Egypt');
+
 		let testawd = new Column({
 			type: 'number',
-			data: { start: 10, step: 1, length: N },
+			data: -1,
 			compression: 'awd',
 			name: 'AWD',
 			provenance: 'another manufactured column'
 		});
+		testawd.data = testawd.id;
 		core.data.push(testawd);
+		core.rawData.set(testawd.id, { start: 10, step: 1, length: N });
 
 		let testref = new Column({
 			type: 'number',
-			data: makeRhythmic(N, 22 / 0.15),
+			data: -1,
 			name: 'more',
 			provenance: 'testing'
 		});
+		testref.data = testref.id;
 		core.data.push(testref);
+		core.rawData.set(testref.id, makeRhythmic(N, 22 / 0.15));
 
 		let testrefref = new Column({
 			type: 'number',
-			data: { start: 5, step: 12, length: N },
+			data: core.rawData.length - 1,
 			compression: 'awd',
 			name: 'steps',
 			provenance: 'some data'
 		});
+		testrefref.data = testrefref.id;
 		core.data.push(testrefref);
+		core.rawData.set(testrefref.id, { start: 5, step: 12, length: N });
 
 		let testtimestring = addData(
 			makeDateTimeArray(N, new Date(), 0.15),

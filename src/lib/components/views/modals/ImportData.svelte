@@ -4,7 +4,7 @@
 	import * as XLSX from 'xlsx';
 	import { DateTime } from 'luxon';
 
-	import { appConsts, pushObj } from '$lib/core/core.svelte';
+	import { appConsts, core, pushObj } from '$lib/core/core.svelte';
 	import { Table } from '$lib/core/Table.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	import { guessDateofArray, forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
@@ -301,33 +301,26 @@
 			//find the data type based on the first non-NaN element
 			const datum = getFirstValid(result[f], 5);
 			const guessedFormat = guessDateofArray(result[f]);
-
+			const df = new Column({});
 			//If it's a time
 			if (guessedFormat != -1 && guessedFormat.length > 0) {
 				console.log('time here...');
 				console.log('guess: ', guessedFormat);
 				console.log('result: ', result[f]);
-				const df = new Column({});
+
 				df.type = 'time';
-				df.name = f;
-				df.data = result[f];
 				df.timeFormat = guessedFormat;
-				newDataEntry.addColumn(df);
 			} else if (!isNaN(datum)) {
 				//if it's a number
-				const df = new Column({});
 				df.type = 'number';
-				df.name = f;
-				df.data = result[f];
-				newDataEntry.addColumn(df);
 			} else {
 				//otherwise it's a category
-				const df = new Column({});
 				df.type = 'category';
-				df.name = f;
-				df.data = result[f];
-				newDataEntry.addColumn(df);
 			}
+			df.name = f;
+			core.rawData.set(df.id, result[f]);
+			df.data = df.id;
+			newDataEntry.addColumn(df);
 		});
 		// console.log(newDataEntry instanceof Table);
 		pushObj(newDataEntry);
