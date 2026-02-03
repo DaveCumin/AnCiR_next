@@ -467,10 +467,8 @@ class TimeFormatRefiner {
 }
 
 const timeFormatRefiner = new TimeFormatRefiner('TimeFormatRefiner');
-const standardFormatParsersRefiner = new StandardFormatParsersRefiner(
-	'StandardFormatParsersRefiner'
-);
-const refiners = [standardFormatParsersRefiner, timeFormatRefiner];
+
+const refiners = [timeFormatRefiner];
 
 class YearFormatTokenAssigner {
 	constructor(name, type, format) {

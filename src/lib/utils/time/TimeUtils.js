@@ -50,7 +50,7 @@ export function guessDateofArray(dates) {
 		let guessedlist = guessDateFormat(dates[0]);
 		//If there is no guess, then return empty array
 		if (guessedlist.length === 0) return guessedlist;
-		// console.log('initial list', guessedlist);
+		//console.log('initial list', guessedlist, 'for ', dates[0]);
 
 		//set up the dates to check - subsample if a large dataset
 		let datesToCheck = dates;

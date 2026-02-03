@@ -1,5 +1,5 @@
 <script module>
-	import { line } from 'd3-shape';
+	import { line, curveBundle } from 'd3-shape';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
@@ -76,9 +76,13 @@
 		//No Line if only 1 or fewer points
 		if (filteredData.length < 2) return null;
 
-		const lineGenerator = line()
+		let lineGenerator = line()
 			.x((d) => xscale(d.x))
 			.y((d) => yscale(d.y));
+
+		//Can add more line options (curves) here later
+		// eg:
+		// lineGenerator = lineGenerator.curve(curveBundle.beta(0.5));
 
 		return lineGenerator(filteredData);
 	});
