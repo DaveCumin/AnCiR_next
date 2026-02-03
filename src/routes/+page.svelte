@@ -232,7 +232,6 @@
 		let newDataEntry;
 		if (dataIN != null) {
 			newDataEntry = new Column({ type, data: -1, name, provenance });
-			console.log($state.snapshot(core.rawData));
 			core.rawData.set(newDataEntry.id, dataIN);
 			newDataEntry.data = newDataEntry.id;
 
