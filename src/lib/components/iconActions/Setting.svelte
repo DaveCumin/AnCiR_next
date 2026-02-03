@@ -28,14 +28,6 @@
 			// Programmatically trigger click
 			a.click();
 
-			console.log(
-				'should have started download of ',
-				JSON.parse(jsonStr),
-				' from ',
-				url,
-				' : ',
-				blob
-			);
 			// Clean up
 			setTimeout(() => {
 				document.body.removeChild(a);
@@ -116,13 +108,25 @@
 		core.tables = [];
 		core.plots = [];
 
-		core.rawData = new Map(
-			Object.entries($state.snapshot(jsonData.rawData)).map(([key, value]) => [+key, value])
-		);
-
-		jsonData.data.map((datajson) => {
-			pushObj(Column.fromJSON(datajson));
-		});
+		if (!jsonData.version || jsonData.version < 'β.5') {
+			//legacy support for rawData as array
+			core.rawData = new Map(
+				Object.entries($state.snapshot(jsonData.data)).map(([id, data]) => [+id, data.data])
+			);
+			jsonData.data.map((datajson) => {
+				pushObj(Column.fromJSON(datajson));
+			});
+			for (let i = 0; i < core.data.length; i++) {
+				core.data[i].data = Array.isArray(core.data[i].data) ? core.data[i].id : -1;
+			}
+		} else {
+			core.rawData = new Map(
+				Object.entries($state.snapshot(jsonData.rawData)).map(([key, value]) => [+key, value])
+			);
+			jsonData.data.map((datajson) => {
+				pushObj(Column.fromJSON(datajson));
+			});
+		}
 
 		jsonData.tables.map((tablejson) => {
 			pushObj(Table.fromJSON(tablejson));
