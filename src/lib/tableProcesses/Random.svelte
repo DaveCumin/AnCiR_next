@@ -1,4 +1,5 @@
 <script module>
+	import { core } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	export const random_defaults = new Map([

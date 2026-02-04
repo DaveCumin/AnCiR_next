@@ -1,4 +1,5 @@
 <script module>
+	import { core } from '$lib/core/core.svelte';
 	export const simulateddata_defaults = new Map([
 		['startTime', { val: new Date().toISOString().slice(0, 16) }],
 		['N_hours', { val: 4 * 24 }],
@@ -11,7 +12,6 @@
 	]);
 
 	export function simulateddata(argsIN) {
-		console.log(argsIN);
 		const startTime = argsIN.startTime;
 		const N_hours = argsIN.N_hours;
 		const samplingPeriod_hours = argsIN.samplingPeriod_hours;

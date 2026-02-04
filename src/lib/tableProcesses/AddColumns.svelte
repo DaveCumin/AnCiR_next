@@ -1,4 +1,5 @@
 <script module>
+	import { core } from '$lib/core/core.svelte';
 	export const addcolumns_defaults = new Map([
 		['xsIN', { val: [] }],
 		['out', { result: { val: -1 } }], //needed to set upu the output columns
@@ -39,7 +40,6 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { core } from '$lib/core/core.svelte';
 	import { onMount } from 'svelte';
 
 	let { p = $bindable() } = $props();

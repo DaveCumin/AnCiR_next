@@ -1,4 +1,5 @@
 <script module>
+	import { core } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 
@@ -353,9 +354,11 @@
 			core.rawData.set(xOUT, result.x_out);
 			getColumnById(xOUT).data = xOUT;
 			getColumnById(xOUT).type = 'number';
-			core.rawData.push(result.y_out);
+
+			core.rawData.set(yOUT, result.y_out);
 			getColumnById(yOUT).data = core.rawData.length - 1;
 			getColumnById(yOUT).type = 'number';
+
 			const processHash = crypto.randomUUID();
 			getColumnById(xOUT).tableProcessGUId = processHash;
 			getColumnById(yOUT).tableProcessGUId = processHash;

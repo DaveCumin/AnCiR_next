@@ -111,7 +111,10 @@
 		if (!jsonData.version || jsonData.version < 'β.5') {
 			//legacy support for rawData as array
 			core.rawData = new Map(
-				Object.entries($state.snapshot(jsonData.data)).map(([id, data]) => [+id, data.data])
+				Object.entries($state.snapshot(jsonData.data)).map(([id, data]) => [
+					Number(data.id),
+					data.data
+				])
 			);
 			jsonData.data.map((datajson) => {
 				pushObj(Column.fromJSON(datajson));

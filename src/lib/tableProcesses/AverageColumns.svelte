@@ -1,4 +1,5 @@
 <script module>
+	import { core } from '$lib/core/core.svelte';
 	export const averagecolumns_defaults = new Map([
 		['xsIN', { val: [] }],
 		['out', { result: { val: -1 } }], //needed to set upu the output columns

@@ -1,4 +1,5 @@
 <script module>
+	import { core } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	export const cosinor_defaults = new Map([
@@ -72,7 +73,6 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { core } from '$lib/core/core.svelte';
 
 	let { p = $bindable() } = $props();
 

@@ -2,7 +2,7 @@
 
 <script>
 	// @ts-nocheck
-	// import { version } from "../../package.json";
+
 	import '../app.css';
 	import Navbar from '$lib/components/Navbar.svelte';
 	import DisplayPanel from '$lib/components/DisplayPanel.svelte';

@@ -1,4 +1,5 @@
 <script module>
+	import { core } from '$lib/core/core.svelte';
 	export const duplicate_defaults = new Map([
 		['xIN', { val: -1 }],
 		['out', { result: { val: -1 } }], //needed to setup the output columns
@@ -33,7 +34,6 @@
 
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { onMount } from 'svelte';
-	import { core } from '$lib/core/core.svelte';
 
 	let { p = $bindable() } = $props();
 

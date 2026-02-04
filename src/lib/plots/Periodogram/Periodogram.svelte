@@ -441,7 +441,7 @@
 					const bottomAxisLine = allBottomAxes[bottomMost]
 						.getElementsByClassName('domain')[0]
 						.getBoundingClientRect().bottom;
-					axisWidths.bottom = Math.round(bottomAxisWhole - bottomAxisLine + 6);
+					axisWidths.bottom = Math.round(bottomAxisWhole - bottomAxisLine + 12);
 				}
 			}
 

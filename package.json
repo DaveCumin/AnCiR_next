@@ -50,6 +50,7 @@
 		"d3-transition": "^3.0.1",
 		"luxon": "^3.7.2",
 		"papaparse": "^5.5.3",
+		"rollup-plugin-visualizer": "^6.0.5",
 		"xlsx": "^0.18.5"
 	}
 }
