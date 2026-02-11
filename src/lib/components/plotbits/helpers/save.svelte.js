@@ -1,11 +1,20 @@
 import { appState } from '$lib/core/core.svelte.js';
 import { core } from '$lib/core/core.svelte';
+import { tick } from 'svelte';
 
-export function convertToImage(svgId, filetype = 'png') {
+export async function convertToImage(svgId, filetype = 'png') {
+	//RESET THE ZOOM
+	const Zoom = appState.canvasScale;
+	appState.canvasScale = 1;
+	// await tick();
+	await tick();
+
 	const plotName = core.plots[Number(svgId.replace('plot', ''))]?.name ?? svgId;
 
 	if (filetype == 'svg') {
 		exportSVG(svgId, plotName);
+		//reset the zoom
+		appState.canvasScale = Zoom;
 		return;
 	}
 	// Get the SVG element
@@ -52,8 +61,8 @@ export function convertToImage(svgId, filetype = 'png') {
 	img.onload = function () {
 		// Create a canvas with proper sizing
 		const canvas = document.createElement('canvas');
-		const scaledWidth = svgWidth / appState.canvasScale;
-		const scaledHeight = svgHeight / appState.canvasScale;
+		const scaledWidth = svgWidth;
+		const scaledHeight = svgHeight;
 
 		canvas.width = Math.round(scaledWidth);
 		canvas.height = Math.round(scaledHeight);
@@ -83,6 +92,9 @@ export function convertToImage(svgId, filetype = 'png') {
 		// Clean up
 		URL.revokeObjectURL(url);
 	};
+
+	//reset the zoom
+	appState.canvasScale = Zoom;
 }
 
 function exportSVG(svgId, plotName) {
@@ -108,7 +120,13 @@ export function saveMultipleAsIndividuals(svgIds, filetype = 'png') {
 		}
 	}
 }
-export function saveMultipleAsImage(svgIds, filetype = 'png') {
+export async function saveMultipleAsImage(svgIds, filetype = 'png') {
+	//RESET THE ZOOM
+	const Zoom = appState.canvasScale;
+	appState.canvasScale = 1;
+	// await tick();
+	await tick();
+
 	//get each of the plots to convert
 	let toConvert = [];
 	for (const svgId of svgIds) {
@@ -127,13 +145,13 @@ export function saveMultipleAsImage(svgIds, filetype = 'png') {
 
 	toConvert.forEach((svg) => {
 		const rect = svg.getBoundingClientRect();
-		const x = rect.left / appState.canvasScale;
-		const y = rect.top / appState.canvasScale;
+		const x = rect.left;
+		const y = rect.top;
 		positions.push({
 			x,
 			y,
-			width: rect.width / appState.canvasScale,
-			height: rect.height / appState.canvasScale
+			width: rect.width,
+			height: rect.height
 		});
 		minX = Math.min(minX, x);
 		minY = Math.min(minY, y);
@@ -185,4 +203,7 @@ export function saveMultipleAsImage(svgIds, filetype = 'png') {
 	document.body.appendChild(newSvg);
 	convertToImage(newSvg.id, filetype);
 	document.body.removeChild(newSvg);
+
+	//reset the zoom
+	appState.canvasScale = Zoom;
 }

@@ -17,12 +17,19 @@
 	});
 
 	function dateToValue() {
-		value = DateTime.fromISO(editingDate, { zone: zone }).toMillis();
+		const dt = DateTime.fromISO(editingDate, { zone: zone });
+		if (!dt.isValid) return;
+		value = dt.toMillis();
 		onChange(value);
 	}
 
 	function numberToValue() {
-		value = editingHours * 3600000;
+		const parsed = parseFloat(editingHours);
+		if (isNaN(parsed)) {
+			console.log('ERROR HERE');
+			return;
+		}
+		value = parsed * 3600000;
 		onChange(value);
 	}
 </script>

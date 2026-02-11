@@ -38,6 +38,48 @@
 			alert('Error exporting JSON: ' + error.message); // Notify user of error
 		}
 	}
+
+	export function importJson(jsonData) {
+		//reset existing workflow
+		core.data = [];
+		core.tables = [];
+		core.plots = [];
+
+		if (!jsonData.version || jsonData.version < 'β.5') {
+			//legacy support for rawData as array
+			core.rawData = new Map(
+				Object.entries($state.snapshot(jsonData.data)).map(([id, data]) => [
+					Number(data.id),
+					data.data
+				])
+			);
+			jsonData.data.map((datajson) => {
+				pushObj(Column.fromJSON(datajson));
+			});
+			for (let i = 0; i < core.data.length; i++) {
+				core.data[i].data = Array.isArray(core.data[i].data) ? core.data[i].id : -1;
+			}
+		} else {
+			core.rawData = new Map(
+				Object.entries($state.snapshot(jsonData.rawData)).map(([key, value]) => [+key, value])
+			);
+			jsonData.data.map((datajson) => {
+				pushObj(Column.fromJSON(datajson));
+			});
+		}
+
+		jsonData.tables.map((tablejson) => {
+			pushObj(Table.fromJSON(tablejson));
+		});
+
+		jsonData.plots.map((plotjson) => {
+			pushObj(Plot.fromJSON(plotjson), false);
+		});
+
+		if (jsonData.appState) {
+			loadAppState(jsonData.appState);
+		}
+	}
 </script>
 
 <script>
@@ -89,7 +131,6 @@
 		reader.onload = (e) => {
 			try {
 				jsonData = JSON.parse(e.target.result);
-				console.log('jsonData:', $state.snapshot(jsonData));
 				error = '';
 			} catch (err) {
 				error = 'Invalid JSON file';
@@ -100,51 +141,6 @@
 		reader.readAsText(file);
 
 		importReady = true;
-	}
-
-	function importJson() {
-		//reset existing workflow
-		core.data = [];
-		core.tables = [];
-		core.plots = [];
-
-		if (!jsonData.version || jsonData.version < 'β.5') {
-			//legacy support for rawData as array
-			core.rawData = new Map(
-				Object.entries($state.snapshot(jsonData.data)).map(([id, data]) => [
-					Number(data.id),
-					data.data
-				])
-			);
-			jsonData.data.map((datajson) => {
-				pushObj(Column.fromJSON(datajson));
-			});
-			for (let i = 0; i < core.data.length; i++) {
-				core.data[i].data = Array.isArray(core.data[i].data) ? core.data[i].id : -1;
-			}
-		} else {
-			core.rawData = new Map(
-				Object.entries($state.snapshot(jsonData.rawData)).map(([key, value]) => [+key, value])
-			);
-			jsonData.data.map((datajson) => {
-				pushObj(Column.fromJSON(datajson));
-			});
-		}
-
-		jsonData.tables.map((tablejson) => {
-			pushObj(Table.fromJSON(tablejson));
-		});
-
-		jsonData.plots.map((plotjson) => {
-			pushObj(Plot.fromJSON(plotjson), false);
-		});
-
-		if (jsonData.appState) {
-			loadAppState(jsonData.appState);
-		}
-
-		showImportModal = false;
-		importReady = false;
 	}
 </script>
 
@@ -218,7 +214,14 @@
 	{#snippet button()}
 		<div class="dialog-button-container">
 			{#if importReady}
-				<button class="dialog-button" onclick={importJson}>Confirm Import</button>
+				<button
+					class="dialog-button"
+					onclick={() => {
+						importJson(jsonData);
+						showImportModal = false;
+						importReady = false;
+					}}>Confirm Import</button
+				>
 			{/if}
 			<!-- ux^: could have an else state to reflect error -->
 		</div>

@@ -1,4 +1,4 @@
-### Analysis of Circadian Rhythms (AnCiR)
+### Analysis of Chronobiological Rhythms (AnCiR)
 
 This is our 'AnCiR' to the need for a simple-to-use (GUI; no coding) tool for analysis of circadian rhythms.
 

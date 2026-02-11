@@ -83,6 +83,7 @@
 
 <script>
 	import Icon from '$lib/icons/Icon.svelte';
+	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 
 	let { p = $bindable() } = $props();
 	p.args.parentColId = p.parentCol.id; //so we can access the parent col in the module script
@@ -144,13 +145,7 @@
 						? new Date(condition.byColValue).toISOString().slice(0, 16)
 						: ''}
 					<!--TODO: bind a value here so it always shows in ui-->
-					<input
-						type="datetime-local"
-						value={condDate}
-						oninput={(e) => {
-							condition.byColValue = Number(new Date(e.target.value));
-						}}
-					/>
+					<DateTimeHrs bind:value={condition.byColValue} />
 				{:else}
 					<NumberWithUnits bind:value={condition.byColValue} />
 				{/if}

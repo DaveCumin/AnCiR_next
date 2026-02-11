@@ -619,7 +619,6 @@
 			<div class="control-input-vertical">
 				<div class="control-input">
 					<p>Start time</p>
-					<!-- <input type="date" bind:value={theData.startTime} /> -->
 					<DateTimeHrs bind:value={theData.startTime} />
 				</div>
 			</div>

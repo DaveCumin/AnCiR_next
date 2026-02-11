@@ -55,7 +55,7 @@
 	{#snippet children()}
 		<div class="title-container">
 			<div id="logo-container" style="width: 36px; height: 36px;"></div>
-			<h3>Analysis of Circadian Rhythms (AnCiR) v{appConsts.version}</h3>
+			<h3>Analysis of Chronobiological Rhythms (AnCiR) v{appConsts.version}</h3>
 		</div>
 		<p>
 			This is our 'AnCiR' to the need for a simple-to-use (GUI; no coding) tool for analysis of

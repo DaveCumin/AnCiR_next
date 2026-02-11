@@ -33,5 +33,8 @@
 		<p>
 			Grid size: <NumberWithUnits bind:value={appState.gridSize} min="1" max="100" />
 		</p>
+		<p>
+			Zoom: <NumberWithUnits bind:value={appState.canvasScale} min="0.01" max="10" step="0.05" />
+		</p>
 	{/snippet}
 </Modal>

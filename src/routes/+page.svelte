@@ -2,7 +2,6 @@
 
 <script>
 	// @ts-nocheck
-
 	import '../app.css';
 	import Navbar from '$lib/components/Navbar.svelte';
 	import DisplayPanel from '$lib/components/DisplayPanel.svelte';
@@ -15,9 +14,9 @@
 	import { loadProcesses } from '$lib/processes/processMap.js';
 	import { loadPlots } from '$lib/plots/plotMap.js';
 	import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
+	import { importJson } from '$lib/components/iconActions/Setting.svelte';
 
 	import { onMount } from 'svelte';
-	import { testJson } from './testJson.svelte.js';
 	import { testJsonDC } from './testJsonDC.svelte';
 
 	import {
@@ -128,6 +127,11 @@
 				refresh();
 			}
 
+			//load the test json
+			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'a') {
+				loadTestJson();
+			}
+
 			// CHANGE SCALE - ZOOM IN
 			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'p') {
 				appState.canvasScale += 0.1;
@@ -209,23 +213,7 @@
 		// const jsonData = JSON.parse(`${testJson}`);
 		const jsonData = JSON.parse(`${testJsonDC}`);
 
-		//reset things
-		core.rawData = new Map();
-		core.data = [];
-		core.tables = [];
-		core.plots = [];
-
-		jsonData.data.map((datajson) => {
-			core.data.push(Column.fromJSON(datajson));
-		});
-
-		jsonData.tables.map((tablejson) => {
-			core.tables.push(Table.fromJSON(tablejson));
-		});
-
-		jsonData.plots.map((plotjson) => {
-			core.plots.push(Plot.fromJSON(plotjson));
-		});
+		importJson(jsonData);
 	}
 
 	function addData(dataIN, type, name, provenance) {

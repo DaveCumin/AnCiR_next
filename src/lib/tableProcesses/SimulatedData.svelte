@@ -1,33 +1,57 @@
 <script module>
+	import { DateTime } from 'luxon';
+
 	import { core } from '$lib/core/core.svelte';
 	export const simulateddata_defaults = new Map([
-		['startTime', { val: new Date().toISOString().slice(0, 16) }],
-		['N_hours', { val: 4 * 24 }],
+		['startTime', { val: DateTime.fromISO(new Date().toISOString(), { zone: 'utc' }).toMillis() }],
+		[
+			'sections',
+			{
+				val: [
+					{
+						duration_hours: 4 * 24,
+						rhythmPeriod_hours: 24,
+						rhythmPhase_hours: 0,
+						rhythmAmplitude: 100
+					}
+				]
+			}
+		],
 		['samplingPeriod_hours', { val: 0.25 }],
-		['rhythmPeriod_hours', { val: 24 }],
-		['rhythmAmplitude', { val: 100 }],
 
-		['out', { time: { val: -1 }, values: { val: -1 } }], //needed to set upu the output columns
-		['valid', { val: false }] //needed for the progress step logic
+		['out', { time: { val: -1 }, values: { val: -1 } }],
+		['valid', { val: false }]
 	]);
 
 	export function simulateddata(argsIN) {
 		const startTime = argsIN.startTime;
-		const N_hours = argsIN.N_hours;
+		const sections = argsIN.sections;
 		const samplingPeriod_hours = argsIN.samplingPeriod_hours;
-		const rhythmPeriod_hours = argsIN.rhythmPeriod_hours;
-		const rhythmAmplitude = argsIN.rhythmAmplitude;
 		const timeOUT = argsIN.out.time;
 		const valuesOUT = argsIN.out.values;
 
 		let simulatedTime = [];
 		let simulatedValues = [];
-		for (let i = 0; i < N_hours; i += samplingPeriod_hours) {
-			simulatedTime.push(new Date(new Date(startTime).getTime() + i * 3600000).toISOString());
-			const amplitude =
-				Math.floor(i % rhythmPeriod_hours) < rhythmPeriod_hours / 2 ? rhythmAmplitude : 1;
-			const value = Math.random() * amplitude;
-			simulatedValues.push(value);
+		let currentTime = 0;
+
+		for (const section of sections) {
+			const duration = section.duration_hours;
+			const period = section.rhythmPeriod_hours;
+			const phase = section.rhythmPhase_hours || 0;
+			const amplitude = section.rhythmAmplitude;
+
+			for (let i = 0; i < duration; i += samplingPeriod_hours) {
+				simulatedTime.push(
+					new Date(new Date(startTime).getTime() + (currentTime + i) * 3600000).toISOString()
+				);
+
+				// Apply phase shift to the rhythm calculation
+				const phaseShiftedTime = i + phase;
+				const currentAmplitude = Math.floor(phaseShiftedTime % period) < period / 2 ? amplitude : 1;
+				const value = Math.random() * currentAmplitude;
+				simulatedValues.push(value);
+			}
+			currentTime += duration;
 		}
 
 		if (timeOUT == -1 || valuesOUT == -1) {
@@ -62,6 +86,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	import { onMount } from 'svelte';
+	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 
 	let { p = $bindable() } = $props();
 
@@ -71,6 +96,25 @@
 	function doSimulated() {
 		[simulatedTime, simulatedValues, p.args.valid] = simulateddata(p.args);
 	}
+
+	function addSection() {
+		p.args.sections = [
+			...p.args.sections,
+			{
+				duration_hours: 7 * 24,
+				rhythmPeriod_hours: 24,
+				rhythmPhase_hours: 0,
+				rhythmAmplitude: 100
+			}
+		];
+		doSimulated();
+	}
+
+	function removeSection(index) {
+		p.args.sections = p.args.sections.filter((_, i) => i !== index);
+		doSimulated();
+	}
+
 	onMount(() => {
 		//needed to get the values when it first mounts
 		doSimulated();
@@ -84,28 +128,7 @@
 
 	<div class="control-input">
 		<p>Start time</p>
-		<input type="datetime-local" bind:value={p.args.startTime} oninput={doSimulated} />
-	</div>
-
-	<div class="control-input">
-		<p>Duration</p>
-		<div style="display:flex;">
-			<NumberWithUnits
-				bind:value={p.args.N_hours}
-				min="0.1"
-				step="0.1"
-				max={1000 * 24}
-				units={{
-					default: 'hrs',
-					days: 24,
-					hrs: 1,
-					mins: 1 / 60,
-					secs: 1 / (60 * 60)
-				}}
-				onInput={doSimulated}
-				selectedUnitStart="days"
-			/>
-		</div>
+		<DateTimeHrs bind:value={p.args.startTime} onChange={doSimulated} />
 	</div>
 
 	<div class="control-input">
@@ -128,40 +151,103 @@
 			/>
 		</div>
 	</div>
+</div>
 
-	<div class="control-input">
-		<p>Rhythm period</p>
-		<div style="display:flex;">
-			<NumberWithUnits
-				bind:value={p.args.rhythmPeriod_hours}
-				min="0.1"
-				step="0.1"
-				max={50}
-				units={{
-					default: 'hrs',
-					days: 24,
-					hrs: 1,
-					mins: 1 / 60,
-					secs: 1 / (60 * 60)
-				}}
-				onInput={doSimulated}
-			/>
+{#each p.args.sections as section, index}
+	<div
+		class="section-row"
+		style="border-left: 3px solid #ccc; padding-left: 10px; margin-bottom: 10px;"
+	>
+		<div style="display: flex; justify-content: space-between; align-items: center;">
+			<strong>Section {index + 1}</strong>
+			{#if p.args.sections.length > 1}
+				<button onclick={() => removeSection(index)} style="color: red;">Remove</button>
+			{/if}
+		</div>
+
+		<div class="control-input">
+			<p>Duration</p>
+			<div style="display:flex;">
+				<NumberWithUnits
+					bind:value={section.duration_hours}
+					min="0.1"
+					step="0.1"
+					max={1000 * 24}
+					units={{
+						default: 'hrs',
+						days: 24,
+						hrs: 1,
+						mins: 1 / 60,
+						secs: 1 / (60 * 60)
+					}}
+					onInput={doSimulated}
+					selectedUnitStart="days"
+				/>
+			</div>
+		</div>
+
+		<div class="control-input">
+			<p>Rhythm period</p>
+			<div style="display:flex;">
+				<NumberWithUnits
+					bind:value={section.rhythmPeriod_hours}
+					min="0.1"
+					step="0.1"
+					max={50}
+					units={{
+						default: 'hrs',
+						days: 24,
+						hrs: 1,
+						mins: 1 / 60,
+						secs: 1 / (60 * 60)
+					}}
+					onInput={doSimulated}
+				/>
+			</div>
+		</div>
+
+		<div class="control-input">
+			<p>Rhythm phase shift</p>
+			<div style="display:flex;">
+				<NumberWithUnits
+					bind:value={section.rhythmPhase_hours}
+					min="-50"
+					step="0.1"
+					max={50}
+					units={{
+						default: 'hrs',
+						days: 24,
+						hrs: 1,
+						mins: 1 / 60,
+						secs: 1 / (60 * 60)
+					}}
+					onInput={doSimulated}
+				/>
+			</div>
+		</div>
+
+		<div class="control-input">
+			<p>Rhythm amplitude</p>
+			<div style="display:flex;">
+				<NumberWithUnits
+					bind:value={section.rhythmAmplitude}
+					min="10"
+					max="1000"
+					step="1"
+					onInput={doSimulated}
+				/>
+			</div>
 		</div>
 	</div>
+{/each}
 
-	<div class="control-input">
-		<p>Rhythm amplitude</p>
-		<div style="display:flex;">
-			<NumberWithUnits
-				bind:value={p.args.rhythmAmplitude}
-				min="10"
-				max="1000"
-				step="1"
-				onInput={doSimulated}
-			/>
-		</div>
+<div class="section-row">
+	<div class="tableProcess-label">
+		<span>Data sections</span>
+		<button onclick={addSection} style="margin-left: 10px;">+ Add Section</button>
 	</div>
 </div>
+
 {#key simulatedValues}
 	{#if p.args.valid && p.args.out.time != -1 && p.args.out.values != -1}
 		<div class="section-row">
@@ -175,7 +261,12 @@
 		<ColumnComponent col={yout} />
 	{:else if p.args.valid}
 		<p>Preview:</p>
-		<p>N = {Math.floor(p.args.N_hours / p.args.samplingPeriod_hours)}</p>
+		<p>
+			N = {simulatedTime.length} samples across {p.args.sections.length} section{p.args.sections
+				.length > 1
+				? 's'
+				: ''}
+		</p>
 		<div style="height:250px; overflow:auto;">
 			<Table
 				headers={['Time', 'Data']}
