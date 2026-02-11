@@ -13,12 +13,12 @@
 		['valid', { val: false }]
 	]);
 
-	export function binneddata(argsIN) {
+	export function binneddata(argsIN, differentstepsize) {
 		const xIN = argsIN.xIN;
 		const yIN = argsIN.yIN;
 		const binSize = argsIN.binSize;
 		const binStart = argsIN.binStart;
-		const stepSize = argsIN.stepSize || binSize;
+		const stepSize = differentstepsize ? argsIN.stepSize : binSize;
 		const aggFunction = argsIN.aggFunction || 'mean';
 		const xOUT = argsIN.out.binnedx;
 		const yOUT = argsIN.out.binnedy;
@@ -43,6 +43,13 @@
 		const yData = getColumnById(yIN).getData();
 
 		const theBinnedData = binData(xData, yData, binSize, binStart, stepSize, aggFunction);
+
+		console.log('in: ', { xData: xData.slice(0, 5), yData: yData.slice(0, 5) });
+		console.log('binning parameters: ', { binSize, binStart, stepSize, aggFunction });
+		console.log('out: ', {
+			bins: theBinnedData.bins.slice(0, 5),
+			y_out: theBinnedData.y_out.slice(0, 5)
+		});
 
 		if (xOUT !== -1 && yOUT !== -1) {
 			core.rawData.set(xOUT, theBinnedData.bins);
@@ -91,16 +98,18 @@
 
 	$effect(() => {
 		if (getHash !== lastHash) {
-			[binnedData, p.args.valid] = binneddata(p.args);
+			[binnedData, p.args.valid] = binneddata(p.args, differentstepsize);
 			lastHash = getHash;
 		}
 	});
 
 	function getBinnedData() {
-		[binnedData, p.args.valid] = binneddata(p.args);
+		[binnedData, p.args.valid] = binneddata(p.args, differentstepsize);
 	}
 
-	onMount(getBinnedData);
+	let differentstepsize = $state(false);
+
+	onMount(() => getBinnedData(p.args, differentstepsize));
 </script>
 
 <!-- Input Section -->
@@ -139,13 +148,14 @@
 	<p>Different step size</p>
 	<input
 		type="checkbox"
+		bind:checked={differentstepsize}
 		onchange={(e) => {
-			p.args.stepSize = e.target.checked ? p.args.binSize : null;
+			p.args.stepSize = differentstepsize ? p.args.binSize : null;
 		}}
 	/>
 
 	<div class="control-input-horizontal">
-		{#if p.args.stepSize != null}
+		{#if differentstepsize}
 			<div class="control-input">
 				<p>Step size</p>
 
@@ -186,7 +196,7 @@
 					<Table
 						headers={['binned x (center)', 'binned y']}
 						data={[
-							binnedData.bins.map((x) => x.toFixed(4)),
+							binnedData.bins.map((x) => (x + p.args.stepSize / 2).toFixed(4)),
 							binnedData.y_out.map((y) => y.toFixed(4))
 						]}
 					/>

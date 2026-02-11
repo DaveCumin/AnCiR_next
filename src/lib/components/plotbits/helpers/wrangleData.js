@@ -72,21 +72,28 @@ export function binData(
 
 	let currentStart = binStart;
 
+	const EPSILON = 1e-10;
+	let binIndex = 0;
 	while (true) {
 		const binEnd = currentStart + binSize;
 
 		bins.push(currentStart);
-		const start = xs.findIndex((x) => x >= currentStart);
-		const end = xs.findIndex((x) => x >= binEnd);
-		y_out.push(func(ys, start === -1 ? n : start, end === -1 ? n : end));
 
-		// Stop if next bin cannot contain any data
+		// Count only points where currentStart <= x < binEnd
+		let startIdx = -1;
+		let endIdx = n;
+		for (let i = 0; i < n; i++) {
+			if (startIdx === -1 && xs[i] >= currentStart - EPSILON) startIdx = i;
+			if (xs[i] < binEnd - EPSILON) endIdx = i + 1;
+		}
+		if (startIdx === -1) startIdx = n;
+
+		y_out.push(func(ys, startIdx, endIdx));
+
 		if (currentStart >= xs[n - 1]) break;
 
-		currentStart += step;
-
-		// Early exit if we've passed all data
-		if (currentStart + binSize >= xs[xs.length - 1]) break;
+		binIndex++;
+		currentStart = binStart + binIndex * step;
 	}
 
 	// console.log('bins: ', bins);
