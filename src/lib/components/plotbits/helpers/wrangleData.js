@@ -74,19 +74,20 @@ export function binData(
 
 	const EPSILON = 1e-10;
 	let binIndex = 0;
+	let pointer = 0; // tracks position in xs array (assumes sorted)
+
 	while (true) {
 		const binEnd = currentStart + binSize;
 
 		bins.push(currentStart);
 
-		// Count only points where currentStart <= x < binEnd
-		let startIdx = -1;
-		let endIdx = n;
-		for (let i = 0; i < n; i++) {
-			if (startIdx === -1 && xs[i] >= currentStart - EPSILON) startIdx = i;
-			if (xs[i] < binEnd - EPSILON) endIdx = i + 1;
-		}
-		if (startIdx === -1) startIdx = n;
+		// Advance pointer to find start of this bin
+		while (pointer < n && xs[pointer] < currentStart - EPSILON) pointer++;
+
+		// Collect all points in this bin [currentStart, binEnd)
+		const startIdx = pointer;
+		let endIdx = startIdx;
+		while (endIdx < n && xs[endIdx] < binEnd - EPSILON) endIdx++;
 
 		y_out.push(func(ys, startIdx, endIdx));
 
@@ -96,8 +97,6 @@ export function binData(
 		currentStart = binStart + binIndex * step;
 	}
 
-	// console.log('bins: ', bins);
-	// console.log('y', y_out);
 	return { bins, y_out };
 }
 
