@@ -13,7 +13,7 @@ export function binData(
 
 	const step = stepSize > 0 ? stepSize : binSize;
 
-	// Pair and sort by x once — O(N log N)
+	// Pair and sort by x once
 	const paired = xValues.map((x, i) => ({ x, y: yValues[i] })).sort((a, b) => a.x - b.x);
 
 	const xs = paired.map((p) => p.x);
@@ -74,7 +74,7 @@ export function binData(
 
 	const EPSILON = 1e-10;
 	let binIndex = 0;
-	let pointer = 0; // tracks position in xs array (assumes sorted)
+	let pointer = 0; // tracks position in xs array (assumes sorted, per above)
 
 	while (true) {
 		const binEnd = currentStart + binSize;

@@ -768,8 +768,15 @@
 							</div>
 						</div>
 
-						{#each datum.phaseMarkers as marker}
-							<PhaseMarker {which} {marker} />
+						{#each datum.phaseMarkers as marker (marker.id)}
+							<div
+								class="markerBlock"
+								animate:flip={{ duration: 500 }}
+								in:slide={{ duration: 500, axis: 'y' }}
+								out:slide={{ duration: 500, axis: 'y' }}
+							>
+								<PhaseMarker {which} {marker} />
+							</div>
 						{/each}
 					</div>
 

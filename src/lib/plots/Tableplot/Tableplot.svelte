@@ -4,6 +4,7 @@
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import { faSignalPerfect } from '@fortawesome/free-solid-svg-icons';
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 
 	export const Tableplot_defaultDataInputs = [];
 	export const Tableplot_controlHeaders = ['Properties and Data'];
@@ -237,6 +238,10 @@
 			</li>
 		{/each}
 	</ul>
+
+	<hr />
+	<p>Some work to do here - Table needs overhaul</p>
+	<ColumnSelector multiple={true} label="Add columns to table" />
 {/snippet}
 
 {#snippet plot(theData)}

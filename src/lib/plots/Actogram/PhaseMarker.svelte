@@ -2,6 +2,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
+	import Editable from '$lib/components/inputs/Editable.svelte';
 	import DoubleRange from '$lib/components/inputs/DoubleRange.svelte';
 	import {
 		linearRegression,
@@ -45,6 +46,46 @@
 		return bestMatchIndex;
 	}
 
+	//
+	// Add this in the <script module> section, near findBestMatchIndex
+	function findAllPeaks(test, template, minDistance) {
+		const correlations = [];
+
+		// Calculate correlation at each position
+		for (let i = 0; i <= test.length - template.length; i++) {
+			let correlation = 0;
+			for (let j = 0; j < template.length; j++) {
+				correlation += test[i + j] * template[j];
+			}
+			correlations.push(correlation);
+		}
+
+		// Find the maximum correlation for threshold calculation
+		const maxCorrelation = Math.max(...correlations);
+		const threshold = maxCorrelation * 0.7; // 70% of max - adjustable
+
+		const peaks = [];
+		for (let i = minDistance; i < correlations.length - minDistance; i++) {
+			if (correlations[i] > threshold) {
+				let isPeak = true;
+				// Check if this is a local maximum
+				for (let j = i - minDistance; j <= i + minDistance; j++) {
+					if (j !== i && correlations[j] >= correlations[i]) {
+						isPeak = false;
+						break;
+					}
+				}
+				if (isPeak) {
+					peaks.push({ index: i, correlation: correlations[i] });
+				}
+			}
+		}
+
+		// Sort by correlation strength (highest first)
+		return peaks.sort((a, b) => b.correlation - a.correlation);
+	}
+	//
+
 	let _phaseMarkerCounter = 0;
 
 	export class PhaseMarkerClass {
@@ -86,6 +127,7 @@
 				}
 				// Convert to array of arrays, filling gaps with empty arrays
 				const maxDay = Math.max(-1, ...Object.keys(markersByDay).map(Number));
+
 				return Array.from({ length: maxDay + 1 }, (_, i) => markersByDay[i] || NaN);
 			}
 
@@ -136,6 +178,9 @@
 					...this.parentData.dataByDays.xByPeriod[i + 1]
 				];
 				bestMatchx.push(xData[bestMatchIndex] - i * this.parentData.parentPlot.periodHrs);
+
+				const peaks = findAllPeaks(aboveBelow, template, minDistance);
+				console.log('peaks: ', peaks);
 			}
 			//--------------
 			//Do the last day on its own
@@ -274,95 +319,105 @@
 </script>
 
 {#snippet controls(marker)}
-	<div class="control-component-title">
-		<div class="control-component-title-colour">
-			<p>{marker.name}</p>
+	<div class="tableProcess-container">
+		<div class="control-component-title">
+			<div class="control-component-title-colour">
+				<p><Editable bind:value={marker.name} /></p>
+			</div>
+			<div class="control-component-title-icons">
+				<button
+					class="icon"
+					onclick={() => {
+						marker.parentData.phaseMarkers = marker.parentData.phaseMarkers.filter(
+							(m) => m.id !== marker.id
+						);
+					}}
+				>
+					<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
+				</button>
+			</div>
 		</div>
-		<div class="control-component-title-icons">
-			<button class="icon" onclick={() => console.log('remove marker')}>
-				<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
-			</button>
+		<div class="control-input">
+			<p>Type</p>
+			<select bind:value={marker.type}>
+				<option value="onset">Onset</option>
+				<option value="offset">Offset</option>
+				<option value="manual">Manual</option>
+			</select>
 		</div>
-	</div>
-	<div class="control-input">
-		<p>Type</p>
-		<select bind:value={marker.type}>
-			<option value="onset">Onset</option>
-			<option value="offset">Offset</option>
-			<option value="manual">Manual</option>
-		</select>
-	</div>
 
-	<div class="control-input-color">
-		<div class="control-color">
-			<ColourPicker bind:value={marker.colour} />
-		</div>
-
-		<div class="control-input">
-			<p>Marker size</p>
-			<NumberWithUnits min="1" step="0.2" bind:value={marker.markerSize} />
-		</div>
-		<div class="control-input">
-			<p>Line width:</p>
-			<NumberWithUnits min="1" step="0.2" bind:value={marker.lineWidth} />
-		</div>
-	</div>
-	{#if marker.type === 'manual'}
-		<div class="control-input">
-			<button
-				onclick={() => {
-					console.log(addMarkerButtonText);
-					if (addMarkerButtonText == 'Add markers') {
-						marker.parentData.parentPlot.isAddingMarkerTo = marker.id;
-						addMarkerButtonText = 'Stop adding';
-					} else {
-						marker.parentData.parentPlot.isAddingMarkerTo = -1;
-						addMarkerButtonText = 'Add markers';
-					}
-				}}>{addMarkerButtonText}</button
-			>
-		</div>
-	{:else}
-		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>N</p>
-				<NumberWithUnits min="0" max="100" bind:value={marker.templateHrsBefore} />
+		<div class="control-input-color">
+			<div class="control-color">
+				<ColourPicker bind:value={marker.colour} />
 			</div>
 
 			<div class="control-input">
-				<p>M</p>
-				<NumberWithUnits min="0" max="100" bind:value={marker.templateHrsAfter} />
+				<p>Marker size</p>
+				<NumberWithUnits min="1" step="0.2" bind:value={marker.markerSize} />
 			</div>
-
 			<div class="control-input">
-				<p>%</p>
-				<NumberWithUnits min="0" max="100" bind:value={marker.centileThreshold} />
+				<p>Line width:</p>
+				<NumberWithUnits min="1" step="0.2" bind:value={marker.lineWidth} />
 			</div>
 		</div>
-	{/if}
-	<div>
-		<p>period</p>
-		<DoubleRange
-			min="1"
-			max={Object.keys(marker.parentData.dataByDays.xByPeriod).length}
-			bind:minVal={marker.periodRangeMin}
-			bind:maxVal={marker.periodRangeMax}
-		/>
-	</div>
 
-	{#if marker.linearRegression?.slope}
-		<p>Est τ: {marker.linearRegression.slope.toFixed(2)} hrs</p>
-		<p>
-			R-squared: {marker.linearRegression.rSquared.toFixed(3)}, Error: {marker.linearRegression.rmse.toFixed(
-				3
-			)}
-		</p>
+		{#if marker.type === 'manual'}
+			<div class="control-input">
+				<button
+					onclick={() => {
+						console.log(addMarkerButtonText);
+						if (addMarkerButtonText == 'Add markers') {
+							marker.parentData.parentPlot.isAddingMarkerTo = marker.id;
+							addMarkerButtonText = 'Stop adding';
+						} else {
+							marker.parentData.parentPlot.isAddingMarkerTo = -1;
+							addMarkerButtonText = 'Add markers';
+						}
+					}}>{addMarkerButtonText}</button
+				>
+			</div>
+		{:else}
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>N</p>
+					<NumberWithUnits min="0" max="100" bind:value={marker.templateHrsBefore} />
+				</div>
 
-		<div class="control-input-checkbox">
-			<input type="checkbox" bind:checked={marker.showLine} />
-			<p>Show Line</p>
+				<div class="control-input">
+					<p>M</p>
+					<NumberWithUnits min="0" max="100" bind:value={marker.templateHrsAfter} />
+				</div>
+
+				<div class="control-input">
+					<p>%</p>
+					<NumberWithUnits min="0" max="100" bind:value={marker.centileThreshold} />
+				</div>
+			</div>
+		{/if}
+		<div>
+			<p>period</p>
+			<DoubleRange
+				min="1"
+				max={Object.keys(marker.parentData.dataByDays.xByPeriod).length}
+				bind:minVal={marker.periodRangeMin}
+				bind:maxVal={marker.periodRangeMax}
+			/>
 		</div>
-	{/if}
+
+		{#if marker.linearRegression?.slope}
+			<p>Est τ: {marker.linearRegression.slope.toFixed(2)} hrs</p>
+			<p>
+				R-squared: {marker.linearRegression.rSquared.toFixed(3)}, Error: {marker.linearRegression.rmse.toFixed(
+					3
+				)}
+			</p>
+
+			<div class="control-input-checkbox">
+				<input type="checkbox" bind:checked={marker.showLine} />
+				<p>Show Line</p>
+			</div>
+		{/if}
+	</div>
 {/snippet}
 
 {#snippet plot(marker)}
