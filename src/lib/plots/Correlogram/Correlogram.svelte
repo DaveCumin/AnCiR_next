@@ -15,7 +15,7 @@
 	export const Correlogram_controlHeaders = ['Properties', 'Data'];
 
 	// Compute autocorrelation function
-	function computeAutocorrelation(times, values, maxLag = null) {
+	function computeAutocorrelation(times, values, binSize = null, maxLag = null) {
 		if (
 			!times ||
 			!values ||
@@ -40,11 +40,28 @@
 
 		const n = y.length;
 
-		// Calculate time step (assuming uniform sampling)
-		const dt = t.length > 1 ? (t[t.length - 1] - t[0]) / (t.length - 1) : 1;
+		// Use provided binSize, or calculate from data
+		let dt;
+		if (binSize != null) {
+			dt = binSize;
+		} else {
+			// Calculate median time step for robustness
+			const diffs = [];
+			for (let i = 1; i < t.length; i++) {
+				diffs.push(t[i] - t[i - 1]);
+			}
+			diffs.sort((a, b) => a - b);
+			dt = diffs[Math.floor(diffs.length / 2)];
+		}
 
-		// Determine maximum lag
-		const nLags = maxLag ? Math.min(Math.floor(maxLag / dt), n - 1) : Math.floor(n / 2);
+		// Determine maximum lag (in hours)
+		const maxLagTime = maxLag ? maxLag : (t[t.length - 1] - t[0]) / 2;
+
+		// Number of lag steps - this gives you lags at every bin interval
+		const nLags = Math.min(
+			Math.floor(maxLagTime / dt),
+			Math.floor(n / 2) // Don't exceed half the data length
+		);
 
 		// Calculate mean and variance
 		const yMean = mean(y);
@@ -57,19 +74,72 @@
 		const lags = [];
 		const correlations = [];
 
-		// Compute autocorrelation for each lag
-		for (let lag = 0; lag <= nLags; lag++) {
-			let sum = 0;
-			let count = 0;
+		// Check if data is approximately uniformly sampled
+		const isUniform = (diffs) => {
+			if (!diffs || diffs.length === 0) return false;
+			const median = diffs[Math.floor(diffs.length / 2)];
+			const maxDev = diffs.reduce((max, d) => Math.max(max, Math.abs(d - median)), 0);
+			return maxDev < median * 0.1; // Within 10% of median
+		};
 
-			for (let i = 0; i < n - lag; i++) {
-				sum += (y[i] - yMean) * (y[i + lag] - yMean);
-				count++;
+		const timeDiffs = [];
+		for (let i = 1; i < t.length; i++) {
+			timeDiffs.push(t[i] - t[i - 1]);
+		}
+		timeDiffs.sort((a, b) => a - b);
+
+		if (isUniform(timeDiffs)) {
+			// Fast path for uniform data - use array indexing
+			for (let lag = 0; lag <= nLags; lag++) {
+				let sum = 0;
+				let count = 0;
+
+				for (let i = 0; i < n - lag; i++) {
+					if (!isNaN(y[i]) && !isNaN(y[i + lag])) {
+						sum += (y[i] - yMean) * (y[i + lag] - yMean);
+						count++;
+					}
+				}
+
+				const correlation = count > 0 ? sum / (count * yVariance) : 0;
+				lags.push(lag * dt);
+				correlations.push(correlation);
 			}
+		} else {
+			// Slow path for irregular data - find pairs by time
+			for (let lagIdx = 0; lagIdx <= nLags; lagIdx++) {
+				const targetLag = lagIdx * dt;
+				let sum = 0;
+				let count = 0;
 
-			const correlation = count > 0 ? sum / (count * yVariance) : 0;
-			lags.push(lag * dt);
-			correlations.push(correlation);
+				// Tolerance: half a bin width
+				const tolerance = dt / 2;
+
+				for (let i = 0; i < n; i++) {
+					// Binary search for points near targetLag away
+					const targetTime = t[i] + targetLag;
+
+					// Find points within tolerance of targetTime
+					for (let j = i + 1; j < n; j++) {
+						const timeDiff = t[j] - t[i];
+
+						if (Math.abs(timeDiff - targetLag) <= tolerance) {
+							if (!isNaN(y[i]) && !isNaN(y[j])) {
+								sum += (y[i] - yMean) * (y[j] - yMean);
+								count++;
+							}
+						}
+
+						if (timeDiff > targetLag + tolerance) {
+							break;
+						}
+					}
+				}
+
+				const correlation = count > 0 ? sum / (count * yVariance) : 0;
+				lags.push(targetLag);
+				correlations.push(correlation);
+			}
 		}
 
 		return { lags, correlations, dt };
@@ -91,7 +161,17 @@
 		acfData = $derived.by(() => {
 			const times = this.x?.hoursSinceStart ?? [];
 			const values = this.y?.getData() ?? [];
-			return computeAutocorrelation(times, values, this.maxLag);
+
+			// Get binSize from the x column if it's available (from actogram data)
+			let binSize = null;
+			if (this.x?.binWidth) {
+				binSize = this.x.binWidth;
+			} else if (times.length > 1) {
+				// Calculate from data
+				binSize = (times[times.length - 1] - times[0]) / (times.length - 1);
+			}
+
+			return computeAutocorrelation(times, values, binSize, this.maxLag);
 		});
 
 		confidenceBounds = $derived.by(() => {

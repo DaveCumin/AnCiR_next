@@ -46,46 +46,6 @@
 		return bestMatchIndex;
 	}
 
-	//
-	// Add this in the <script module> section, near findBestMatchIndex
-	function findAllPeaks(test, template, minDistance) {
-		const correlations = [];
-
-		// Calculate correlation at each position
-		for (let i = 0; i <= test.length - template.length; i++) {
-			let correlation = 0;
-			for (let j = 0; j < template.length; j++) {
-				correlation += test[i + j] * template[j];
-			}
-			correlations.push(correlation);
-		}
-
-		// Find the maximum correlation for threshold calculation
-		const maxCorrelation = Math.max(...correlations);
-		const threshold = maxCorrelation * 0.7; // 70% of max - adjustable
-
-		const peaks = [];
-		for (let i = minDistance; i < correlations.length - minDistance; i++) {
-			if (correlations[i] > threshold) {
-				let isPeak = true;
-				// Check if this is a local maximum
-				for (let j = i - minDistance; j <= i + minDistance; j++) {
-					if (j !== i && correlations[j] >= correlations[i]) {
-						isPeak = false;
-						break;
-					}
-				}
-				if (isPeak) {
-					peaks.push({ index: i, correlation: correlations[i] });
-				}
-			}
-		}
-
-		// Sort by correlation strength (highest first)
-		return peaks.sort((a, b) => b.correlation - a.correlation);
-	}
-	//
-
 	let _phaseMarkerCounter = 0;
 
 	export class PhaseMarkerClass {
@@ -178,9 +138,6 @@
 					...this.parentData.dataByDays.xByPeriod[i + 1]
 				];
 				bestMatchx.push(xData[bestMatchIndex] - i * this.parentData.parentPlot.periodHrs);
-
-				const peaks = findAllPeaks(aboveBelow, template, minDistance);
-				console.log('peaks: ', peaks);
 			}
 			//--------------
 			//Do the last day on its own
@@ -263,6 +220,8 @@
 				this.colour = dataIN.colour || 'black';
 				this.showLine = dataIN.showLine || true;
 				this.showMarkers = dataIN.showMarkers || true;
+				this.lineWidth = dataIN.lineWidth || 1;
+				this.markerSize = dataIN.markerSize || 5;
 				this.periodRangeMin = dataIN.periodRangeMin || 1;
 				this.periodRangeMax =
 					dataIN.periodRangeMax || Object.keys(parent.dataByDays.xByPeriod).length;

@@ -752,7 +752,7 @@
 			<div class="control-input-vertical">
 				<div class="control-input">
 					<p>Period Step</p>
-					<NumberWithUnits min="0.1" step="0.01" bind:value={theData.periodSteps} />
+					<NumberWithUnits min="0.01" step="0.01" bind:value={theData.periodSteps} />
 				</div>
 			</div>
 		</div>
