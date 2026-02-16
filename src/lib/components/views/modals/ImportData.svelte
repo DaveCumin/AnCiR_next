@@ -34,6 +34,9 @@
 	let awaitingPreview = $state(false);
 	let awaitingLoad = $state(false);
 
+	// Progress feedback
+	let loadProgress = $state({ stage: '', detail: '' });
+
 	let showImportModal = $state(false);
 	let fileInput = $state();
 
@@ -50,6 +53,7 @@
 		errorInfile = false;
 		error = {};
 		specialRecognised = false;
+		loadProgress = { stage: '', detail: '' };
 	}
 
 	export async function openImportModal() {
@@ -69,17 +73,25 @@
 
 	async function doPreview() {
 		awaitingPreview = true;
+		loadProgress = { stage: 'Reading file', detail: targetFile?.name ?? '' };
 		await tick();
-		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms)); // short wait to make sure the spinner will show
+		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
+
+		loadProgress = { stage: 'Parsing', detail: 'Detecting format…' };
+		await tick();
+
 		await parseFile();
+
+		loadProgress = { stage: '', detail: '' };
 		awaitingPreview = false;
-		importReady = true; // Set only after parseFile fully resolves
+		importReady = true;
 	}
 
 	async function confirmImport() {
 		awaitingLoad = true;
+		loadProgress = { stage: 'Loading data', detail: 'Reading full file…' };
 		await tick();
-		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms)); // short wait to make sure the spinner will show
+		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
 		await loadData();
 		awaitingLoad = false;
 		resetValues();
@@ -92,21 +104,27 @@
 
 			reader.onload = async (e) => {
 				try {
+					loadProgress = { stage: 'Parsing', detail: 'Reading Excel workbook…' };
+					await tick();
+
 					const data = new Uint8Array(e.target.result);
 					const workbook = XLSX.read(data, { type: 'array' });
 
-					// Get first sheet
 					const firstSheetName = workbook.SheetNames[0];
 					const worksheet = workbook.Sheets[firstSheetName];
 
-					// Convert to CSV format that Papa Parse can handle
+					loadProgress = { stage: 'Parsing', detail: `Converting sheet "${firstSheetName}"…` };
+					await tick();
+
 					const csv = XLSX.utils.sheet_to_csv(worksheet, {
 						skipHidden: true,
 						blankrows: false
 					});
 					console.log('Converted CSV: ', csv);
 
-					// Now parse the CSV with Papa Parse
+					loadProgress = { stage: 'Parsing', detail: 'Parsing rows…' };
+					await tick();
+
 					Papa.parse(csv, {
 						preview: previewIN,
 						header: hasHeader,
@@ -148,15 +166,12 @@
 
 		errorInfile = false;
 
-		// Check if it's an Excel file
 		const isExcel = targetFile.name.toLowerCase().match(/\.(xlsx|xls)$/);
 
 		if (isExcel) {
-			// Return the promise directly with await
 			return await parseXLSX(targetFile);
 		}
 
-		// For CSV files, continue with existing Papa Parse logic
 		return new Promise((resolve, reject) => {
 			let parseAttempts = 0;
 			const maxAttempts = 2;
@@ -229,8 +244,6 @@
 	}
 
 	function dealWithData(headersIN, dataIN) {
-		//convert the data into an object of arrays
-
 		if (hasHeader) {
 			headers = headersIN;
 		} else {
@@ -240,20 +253,15 @@
 		}
 
 		parsedData = convertArrayToObject(dataIN);
-
-		//TODO: If there is a separate date and time, combine them
 	}
 
-	//Converts the array into an object - more like AnCir uses
 	function convertArrayToObject(inputArray) {
 		try {
 			let resultObject = {};
-			// Initialize resultObject with empty arrays for each key
 			headers.forEach((key) => {
 				resultObject[key] = [];
 			});
 
-			// Loop through each object in the array
 			inputArray.forEach((row, r) => {
 				Object.keys(row).forEach((k, idx) => {
 					resultObject[headers[idx]].push(row[k]);
@@ -280,29 +288,46 @@
 		return newObject;
 	}
 
-	//Load the data once all operations have been completed
 	async function loadData() {
-		previewIN = 0; // This means we want to read in all the data
-		await parseFile(); //load all the data
+		previewIN = 0;
 
-		doBasicFileImport(parsedData, targetFile.name); //LOAD THE DATA
+		loadProgress = { stage: 'Loading data', detail: 'Parsing full file…' };
+		await tick();
+
+		await parseFile();
+
+		loadProgress = { stage: 'Loading data', detail: 'Building columns…' };
+		await tick();
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		doBasicFileImport(parsedData, targetFile.name);
 	}
 
-	// put the data into the tool store
 	async function doBasicFileImport(result, fname) {
-		// create Table object with constructor(Id, importedFrom, displayName, dataLength)
 		const newDataEntry = new Table();
-		// importedFrom = fname;
-		// dataLength = result[Object.keys(result)[0]].length;
 		newDataEntry.setName(`data_${newDataEntry.id}`);
 
-		//insert a data element for each header
-		Object.keys(result).forEach((f, i) => {
-			//find the data type based on the first non-NaN element
+		const keys = Object.keys(result);
+		const totalColumns = keys.length;
+
+		for (let i = 0; i < totalColumns; i++) {
+			const f = keys[i];
+
+			// Update progress for each column
+			loadProgress = {
+				stage: 'Loading data',
+				detail: `Processing column ${i + 1} of ${totalColumns}: "${f}"`
+			};
+			// Yield to the UI every few columns so the progress text updates
+			if (i % 5 === 0) {
+				await tick();
+				await new Promise((resolve) => setTimeout(resolve, 0));
+			}
+
 			const datum = getFirstValid(result[f], 5);
 			const guessedFormat = guessDateofArray(result[f]);
 			const df = new Column({});
-			//If it's a time
+
 			if (guessedFormat != -1 && guessedFormat.length > 0) {
 				console.log('time here...');
 				console.log('guess: ', guessedFormat);
@@ -311,32 +336,30 @@
 				df.type = 'time';
 				df.timeFormat = guessedFormat;
 			} else if (!isNaN(datum)) {
-				//if it's a number
 				df.type = 'number';
 			} else {
-				//otherwise it's a category
 				df.type = 'category';
 			}
 			df.name = f;
 			core.rawData.set(df.id, result[f]);
 			df.data = df.id;
 			newDataEntry.addColumn(df);
-		});
-		// console.log(newDataEntry instanceof Table);
+		}
+
+		loadProgress = { stage: 'Loading data', detail: 'Finalising…' };
+		await tick();
+
 		pushObj(newDataEntry);
 
-		//to allow the animation to occur
 		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms || 10));
 	}
 
-	// get the first valid data point in the result, given key
 	function getFirstValid(data) {
 		for (const value of data) {
 			if (value !== null && value !== '' && !specialValues.includes(value)) {
 				return value;
 			}
 		}
-		// Return a default value if no valid value is found
 		return null;
 	}
 </script>
@@ -346,12 +369,22 @@
 		{#if awaitingPreview}
 			<div class="title-container">
 				<Icon name="spinner" width={32} height={32} className="spinner" />
-				<p>Importing data from {targetFile?.name ?? 'file'}.</p>
+				<div>
+					<p>Importing data from {targetFile?.name ?? 'file'}.</p>
+					{#if loadProgress.detail}
+						<p class="progress-detail">{loadProgress.detail}</p>
+					{/if}
+				</div>
 			</div>
 		{:else if awaitingLoad}
 			<div class="title-container">
 				<Icon name="spinner" width={32} height={32} className="spinner" />
-				<p>Loading data from {targetFile?.name ?? 'file'}.</p>
+				<div>
+					<p>Loading data from {targetFile?.name ?? 'file'}.</p>
+					{#if loadProgress.detail}
+						<p class="progress-detail">{loadProgress.detail}</p>
+					{/if}
+				</div>
 			</div>
 		{:else}
 			<div class="heading">
@@ -436,8 +469,14 @@
 <style>
 	.title-container {
 		display: flex;
-		justify-content: left; /* Left horizontally */
-		align-items: center; /* Center vertically */
-		gap: 10px; /* Space between logo and text */
+		justify-content: left;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.progress-detail {
+		font-size: 0.85em;
+		color: var(--color-lightness-45, #777);
+		margin-top: 2px;
 	}
 </style>

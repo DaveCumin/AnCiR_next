@@ -39,11 +39,15 @@
 		}
 	}
 
-	export function importJson(jsonData) {
+	export async function importJson(jsonData, onProgress) {
 		//reset existing workflow
 		core.data = [];
 		core.tables = [];
 		core.plots = [];
+
+		if (onProgress) onProgress('Loading raw data…');
+		await tick();
+		await new Promise((r) => setTimeout(r, 0));
 
 		if (!jsonData.version || jsonData.version < 'β.5') {
 			//legacy support for rawData as array
@@ -53,9 +57,15 @@
 					data.data
 				])
 			);
-			jsonData.data.map((datajson) => {
-				pushObj(Column.fromJSON(datajson));
-			});
+			const totalData = jsonData.data.length;
+			for (let i = 0; i < totalData; i++) {
+				if (onProgress && i % 10 === 0) {
+					onProgress(`Loading columns… ${i + 1} of ${totalData}`);
+					await tick();
+					await new Promise((r) => setTimeout(r, 0));
+				}
+				pushObj(Column.fromJSON(jsonData.data[i]));
+			}
 			for (let i = 0; i < core.data.length; i++) {
 				core.data[i].data = Array.isArray(core.data[i].data) ? core.data[i].id : -1;
 			}
@@ -63,20 +73,48 @@
 			core.rawData = new Map(
 				Object.entries($state.snapshot(jsonData.rawData)).map(([key, value]) => [+key, value])
 			);
-			jsonData.data.map((datajson) => {
-				pushObj(Column.fromJSON(datajson));
-			});
+			const totalData = jsonData.data.length;
+			for (let i = 0; i < totalData; i++) {
+				if (onProgress && i % 10 === 0) {
+					onProgress(`Loading columns… ${i + 1} of ${totalData}`);
+					await tick();
+					await new Promise((r) => setTimeout(r, 0));
+				}
+				pushObj(Column.fromJSON(jsonData.data[i]));
+			}
 		}
 
-		jsonData.tables.map((tablejson) => {
-			pushObj(Table.fromJSON(tablejson));
-		});
+		if (onProgress) onProgress('Building tables…');
+		await tick();
+		await new Promise((r) => setTimeout(r, 0));
 
-		jsonData.plots.map((plotjson) => {
-			pushObj(Plot.fromJSON(plotjson), false);
-		});
+		const totalTables = jsonData.tables.length;
+		for (let i = 0; i < totalTables; i++) {
+			if (onProgress && totalTables > 1) {
+				onProgress(`Building table ${i + 1} of ${totalTables}…`);
+				await tick();
+				await new Promise((r) => setTimeout(r, 0));
+			}
+			pushObj(Table.fromJSON(jsonData.tables[i]));
+		}
+
+		if (onProgress) onProgress('Rebuilding plots…');
+		await tick();
+		await new Promise((r) => setTimeout(r, 0));
+
+		const totalPlots = jsonData.plots.length;
+		for (let i = 0; i < totalPlots; i++) {
+			if (onProgress && totalPlots > 1) {
+				onProgress(`Rebuilding plot ${i + 1} of ${totalPlots}…`);
+				await tick();
+				await new Promise((r) => setTimeout(r, 0));
+			}
+			pushObj(Plot.fromJSON(jsonData.plots[i]), false);
+		}
 
 		if (jsonData.appState) {
+			if (onProgress) onProgress('Restoring settings…');
+			await tick();
 			loadAppState(jsonData.appState);
 		}
 	}
@@ -93,6 +131,7 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 	import Settings from '../views/modals/Settings.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
 
 	let showSettingsModal = $state(false);
 
@@ -100,6 +139,8 @@
 
 	let importReady = $state(false);
 	let importPreview = $state();
+	let awaitingLoad = $state(false);
+	let loadProgressDetail = $state('');
 
 	let fileInput;
 	let fileName = $state();
@@ -111,6 +152,8 @@
 
 	async function openImportModal() {
 		showImportModal = true;
+		awaitingLoad = false;
+		loadProgressDetail = '';
 		await tick();
 		chooseFile();
 	}
@@ -142,6 +185,21 @@
 
 		importReady = true;
 	}
+
+	async function doImport() {
+		awaitingLoad = true;
+		loadProgressDetail = 'Starting…';
+		await tick();
+
+		await importJson(jsonData, (detail) => {
+			loadProgressDetail = detail;
+		});
+
+		awaitingLoad = false;
+		loadProgressDetail = '';
+		showImportModal = false;
+		importReady = false;
+	}
 </script>
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
@@ -167,21 +225,33 @@
 
 <Modal bind:showModal={showImportModal}>
 	{#snippet header()}
-		<div class="heading">
-			<h2>Import Session</h2>
-
-			<div class="choose-file-container">
-				<button class="choose-file-button" onclick={chooseFile}> Upload File </button>
-				<div class="filename">
-					<p class="filename-preview">
-						Selected:
-						{#if fileName}
-							{fileName}
-						{/if}
-					</p>
+		{#if awaitingLoad}
+			<div class="title-container">
+				<Icon name="spinner" width={32} height={32} className="spinner" />
+				<div>
+					<p>Loading session{fileName ? ` from ${fileName}` : ''}…</p>
+					{#if loadProgressDetail}
+						<p class="progress-detail">{loadProgressDetail}</p>
+					{/if}
 				</div>
 			</div>
-		</div>
+		{:else}
+			<div class="heading">
+				<h2>Import Session</h2>
+
+				<div class="choose-file-container">
+					<button class="choose-file-button" onclick={chooseFile}> Upload File </button>
+					<div class="filename">
+						<p class="filename-preview">
+							Selected:
+							{#if fileName}
+								{fileName}
+							{/if}
+						</p>
+					</div>
+				</div>
+			</div>
+		{/if}
 
 		<!-- input style not shown -->
 		<input
@@ -194,36 +264,26 @@
 	{/snippet}
 
 	{#snippet children()}
-		<div class="import-container">
-			<div class="preview-placeholder">
-				{#if jsonData}
-					<!-- <p>Preview Data</p> -->
-					<div class="preview-table-wrapper">
-						<!-- {@html importPreview} -->
-						<p>Tables imported: {jsonData.tables.length}</p>
-						<p>Data imported: {jsonData.data.length}</p>
-						<p>Plots imported: {jsonData.plots.length}</p>
-					</div>
-				{:else}
-					<!-- <p>Choose file to preview data</p> -->
-				{/if}
+		{#if !awaitingLoad}
+			<div class="import-container">
+				<div class="preview-placeholder">
+					{#if jsonData}
+						<div class="preview-table-wrapper">
+							<p>Tables imported: {jsonData.tables.length}</p>
+							<p>Data imported: {jsonData.data.length}</p>
+							<p>Plots imported: {jsonData.plots.length}</p>
+						</div>
+					{/if}
+				</div>
 			</div>
-		</div>
+		{/if}
 	{/snippet}
 
 	{#snippet button()}
 		<div class="dialog-button-container">
-			{#if importReady}
-				<button
-					class="dialog-button"
-					onclick={() => {
-						importJson(jsonData);
-						showImportModal = false;
-						importReady = false;
-					}}>Confirm Import</button
-				>
+			{#if importReady && !awaitingLoad}
+				<button class="dialog-button" onclick={doImport}>Confirm Import</button>
 			{/if}
-			<!-- ux^: could have an else state to reflect error -->
 		</div>
 	{/snippet}
 </Modal>
@@ -285,5 +345,18 @@
 	.filename-preview {
 		color: var(--color-lightness-35);
 		font-size: 14px;
+	}
+
+	.title-container {
+		display: flex;
+		justify-content: left;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.progress-detail {
+		font-size: 0.85em;
+		color: var(--color-lightness-45, #777);
+		margin-top: 2px;
 	}
 </style>
