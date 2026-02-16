@@ -15,6 +15,10 @@
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
 	export const Periodogram_controlHeaders = ['Properties', 'Data'];
 
+	// Buffer factor: calculate this much extra beyond the display range
+	// e.g. 0.25 means 25% extra on each side
+	const CALC_RANGE_BUFFER = 0.25;
+
 	// Lomb-Scargle implementation
 	function calculateLombScarglePower(times, values, frequencies) {
 		if (
@@ -26,7 +30,6 @@
 		) {
 			return new Array(frequencies.length).fill(NaN);
 		}
-		// Remove NaN values
 		const validIndices = times
 			.map((t, i) => (isNaN(t) || isNaN(values[i]) ? -1 : i))
 			.filter((i) => i !== -1);
@@ -35,19 +38,16 @@
 
 		if (t.length === 0) return new Array(frequencies.length).fill(0);
 
-		// Compute mean and variance
 		const yMean = mean(y);
 		const yVariance = y.reduce((sum, val) => sum + (val - yMean) ** 2, 0) / (y.length - 1);
 
 		const powers = frequencies.map((f) => {
 			const omega = 2 * Math.PI * f;
 
-			// Compute time shift (tau) for phase adjustment
 			const cosSum = t.reduce((sum, ti) => sum + Math.cos(omega * ti), 0);
 			const sinSum = t.reduce((sum, ti) => sum + Math.sin(omega * ti), 0);
 			const tau = Math.atan2(sinSum, cosSum) / (2 * omega);
 
-			// Compute sine and cosine components
 			const cosTerm = y.reduce((sum, yi, i) => {
 				return sum + (yi - yMean) * Math.cos(omega * (t[i] - tau));
 			}, 0);
@@ -58,7 +58,6 @@
 			const cosDenom = t.reduce((sum, ti) => sum + Math.cos(omega * (ti - tau)) ** 2, 0);
 			const sinDenom = t.reduce((sum, ti) => sum + Math.sin(omega * (ti - tau)) ** 2, 0);
 
-			// Lomb-Scargle power
 			const power = (cosTerm ** 2 / cosDenom + sinTerm ** 2 / sinDenom) / (2 * yVariance);
 			return power;
 		});
@@ -71,7 +70,6 @@
 			return new Array(periods.length).fill(NaN);
 		}
 
-		// Remove NaN values and bin the data
 		const binnedData = binData(times, values, binSize, 0);
 		if (binnedData.bins.length === 0) {
 			return new Array(periods.length).fill(0);
@@ -80,25 +78,20 @@
 		const data = binnedData.y_out;
 		const n = data.length;
 
-		// Calculate mean
 		const dataMean = mean(data.filter((v) => !isNaN(v)));
 
-		// Center the data
 		const centeredData = data.map((v) => (isNaN(v) ? 0 : v - dataMean));
 
 		const powers = periods.map((period) => {
 			const binsPerPeriod = Math.round(period / binSize);
 			if (binsPerPeriod < 1 || binsPerPeriod > n) return 0;
 
-			// Calculate Qp statistic (sum of correlations at lag multiples of period)
 			let qp = 0;
 			let count = 0;
 
-			// For each possible lag that's a multiple of the period
 			for (let k = 1; k * binsPerPeriod < n; k++) {
 				const lag = k * binsPerPeriod;
 
-				// Calculate correlation at this lag
 				let correlation = 0;
 				let validPairs = 0;
 
@@ -115,18 +108,15 @@
 				}
 			}
 
-			// Normalize by number of lags
 			if (count > 0) {
 				qp /= count;
 			}
 
-			// Calculate variance for normalization
 			const variance =
 				centeredData.reduce((sum, val) => {
 					return sum + (isNaN(val) ? 0 : val * val);
 				}, 0) / n;
 
-			// Return normalized power
 			return variance > 0 ? qp / variance : 0;
 		});
 
@@ -165,105 +155,197 @@
 		return isFinite(result) ? result : NaN;
 	}
 
+	/**
+	 * Run the full periodogram calculation for the given parameters.
+	 * Pure function — no side effects, no reactivity.
+	 */
+	function runPeriodogramCalculation(params) {
+		let out = { x: [], y: [], threshold: [], pvalue: [] };
+		let binnedData = { bins: [], y_out: [] };
+
+		if (params.method === 'Chi-squared') {
+			if (!params.yData) {
+				return { x: [], y: [], threshold: [], pvalue: [] };
+			}
+			binnedData = binData(params.xData, params.yData, params.binSize, 0);
+			if (binnedData.bins.length === 0) {
+				return { x: [], y: [], threshold: [], pvalue: [] };
+			}
+		}
+
+		const periods = makeSeqArray(params.periodMin, params.periodMax, params.periodSteps);
+		const frequencies = periods.map((p) => 1 / p);
+
+		const correctedAlpha = Math.pow(1 - params.chiSquaredAlpha, 1 / periods.length);
+		const power = new Array(periods.length);
+		const threshold = new Array(periods.length);
+		const pvalue = new Array(periods.length);
+
+		if (params.method === 'Chi-squared') {
+			const data = binnedData.y_out;
+			const avgAll = mean(data);
+			let denominator = 0;
+			for (let i = 0; i < data.length; i++) {
+				const val = data[i];
+				if (!isNaN(val)) {
+					denominator += (val - avgAll) ** 2;
+				}
+			}
+
+			for (let p = 0; p < periods.length; p++) {
+				power[p] = calculateChiSquaredPower(data, params.binSize, periods[p], avgAll, denominator);
+				threshold[p] = qchisq(1 - correctedAlpha, Math.round(periods[p] / params.binSize));
+				pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / params.binSize));
+			}
+		} else if (params.method === 'Lomb-Scargle') {
+			const times = params.xData;
+			const values = params.yData;
+			const powers = calculateLombScarglePower(times, values, frequencies);
+
+			for (let p = 0; p < periods.length; p++) {
+				power[p] = powers[p];
+			}
+		} else if (params.method === 'Enright') {
+			const times = params.xData;
+			const values = params.yData;
+			const powers = calculateEnrightPower(times, values, periods, params.binSize);
+
+			for (let p = 0; p < periods.length; p++) {
+				power[p] = powers[p];
+			}
+		}
+
+		var idxsToRemove = [];
+		for (let i = 0; i < power.length; i++) {
+			if (isNaN(power[i]) || isNaN(periods[i])) {
+				idxsToRemove.push(i);
+			}
+		}
+
+		out = {
+			x: periods.filter((v, i) => !idxsToRemove.includes(i)),
+			y: power.filter((v, i) => !idxsToRemove.includes(i)),
+			threshold: threshold.filter((v, i) => !idxsToRemove.includes(i)),
+			pvalue: pvalue.filter((v, i) => !idxsToRemove.includes(i))
+		};
+
+		return out;
+	}
+
+	/**
+	 * Build a fingerprint string from the data-related params (everything
+	 * EXCEPT period range). When this changes, we must always recalculate.
+	 */
+	function buildDataFingerprint(xData, yData, binSize, method, chiSquaredAlpha, periodSteps) {
+		return JSON.stringify({
+			xLen: xData?.length ?? 0,
+			xFirst: xData?.[0] ?? null,
+			xLast: xData?.[xData?.length - 1] ?? null,
+			yLen: yData?.length ?? 0,
+			yFirst: yData?.[0] ?? null,
+			yLast: yData?.[yData?.length - 1] ?? null,
+			binSize,
+			method,
+			chiSquaredAlpha,
+			periodSteps
+		});
+	}
+
 	class PeriodogramDataclass {
 		parentPlot = $state();
 		x = $state();
 		y = $state();
 		binSize = $state(0.25);
-		method = $state('Chi-squared'); // New: method selector
+		method = $state('Chi-squared');
 
 		line = $state();
 		points = $state();
 		thresholdline = $state();
 		chiSquaredAlpha = $state(0.05);
 
+		// ── Cache: intentionally a plain JS object, NOT $state. ──
+		// Svelte's reactivity system does NOT track reads/writes to this,
+		// which is exactly what we want — it lets us short-circuit inside
+		// $derived.by without creating new reactive dependencies.
+		_cache;
+
+		// ── The single derived that the rest of the component reads. ──
+		// It reads all reactive inputs (data, method, binSize, periodlims…)
+		// so Svelte re-evaluates it whenever any of those change.  But
+		// internally it checks the plain-JS cache and returns early when
+		// the expensive calculation can be skipped.
 		periodData = $derived.by(() => {
-			let out = { x: [], y: [], threshold: [], pvalue: [] };
-			let binnedData = { bins: [], y_out: [] }; // No binning for Lomb-Scargle
-			if (this.method === 'Chi-squared') {
-				if (!this.y.getData()) {
-					return { x: [], y: [], threshold: [], pvalue: [] };
-				}
-				binnedData = binData(this.x.hoursSinceStart, this.y.getData(), this.binSize, 0);
-				if (binnedData.bins.length === 0) {
-					return { x: [], y: [], threshold: [], pvalue: [] };
-				}
+			// 1. Read every reactive dependency up front so Svelte tracks them.
+			const xData = this.x.hoursSinceStart;
+			const yData = this.y.getData();
+			const binSize = this.binSize;
+			const method = this.method;
+			const chiSquaredAlpha = this.chiSquaredAlpha;
+			const periodSteps = this.parentPlot.periodSteps;
+			const displayMin = this.parentPlot.periodlimsIN[0];
+			const displayMax = this.parentPlot.periodlimsIN[1];
+
+			// 2. Build a fingerprint of everything that ISN'T the period range.
+			const fp = buildDataFingerprint(xData, yData, binSize, method, chiSquaredAlpha, periodSteps);
+
+			// 3. Check the plain-JS cache.
+			const c = this._cache;
+			const dataChanged = fp !== c.dataFingerprint;
+			const rangeCovered =
+				c.calcMin !== null &&
+				c.calcMax !== null &&
+				c.calcMin <= displayMin &&
+				c.calcMax >= displayMax;
+
+			// 4. If data hasn't changed AND cached range covers display → skip calc.
+			if (!dataChanged && rangeCovered) {
+				return c.result;
 			}
 
-			const periods = makeSeqArray(
-				this.parentPlot.periodlimsIN[0],
-				this.parentPlot.periodlimsIN[1],
-				this.parentPlot.periodSteps
-			);
-			const frequencies = periods.map((p) => 1 / p); // For Lomb-Scargle
+			// 5. Calculate with a buffered range so small future adjustments
+			//    will also be covered without recalculating.
+			const span = displayMax - displayMin;
+			const buffer = span * CALC_RANGE_BUFFER;
+			const calcMin = Math.max(0.01, displayMin - buffer);
+			const calcMax = displayMax + buffer;
 
-			const correctedAlpha = Math.pow(1 - this.chiSquaredAlpha, 1 / periods.length);
-			const power = new Array(periods.length);
-			const threshold = new Array(periods.length);
-			const pvalue = new Array(periods.length);
+			const result = runPeriodogramCalculation({
+				xData,
+				yData,
+				binSize,
+				method,
+				chiSquaredAlpha,
+				periodMin: calcMin,
+				periodMax: calcMax,
+				periodSteps
+			});
 
-			if (this.method === 'Chi-squared') {
-				const data = binnedData.y_out;
-				const avgAll = mean(data);
-				let denominator = 0;
-				for (let i = 0; i < data.length; i++) {
-					const val = data[i];
-					if (!isNaN(val)) {
-						denominator += (val - avgAll) ** 2;
-					}
-				}
+			// 6. Write back to the plain-JS cache (no reactivity triggered).
+			c.calcMin = calcMin;
+			c.calcMax = calcMax;
+			c.dataFingerprint = fp;
+			c.result = result;
 
-				for (let p = 0; p < periods.length; p++) {
-					power[p] = calculateChiSquaredPower(data, this.binSize, periods[p], avgAll, denominator);
-					threshold[p] = qchisq(1 - correctedAlpha, Math.round(periods[p] / this.binSize));
-					pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / this.binSize));
-				}
-			} else if (this.method === 'Lomb-Scargle') {
-				const times = this.x.hoursSinceStart;
-				const values = this.y.getData();
-				const powers = calculateLombScarglePower(times, values, frequencies);
-
-				for (let p = 0; p < periods.length; p++) {
-					power[p] = powers[p];
-				}
-			} else if (this.method === 'Enright') {
-				const times = this.x.hoursSinceStart;
-				const values = this.y.getData();
-				const powers = calculateEnrightPower(times, values, periods, this.binSize);
-
-				for (let p = 0; p < periods.length; p++) {
-					power[p] = powers[p];
-				}
-			}
-
-			var idxsToRemove = [];
-			for (let i = 0; i < power.length; i++) {
-				if (isNaN(power[i]) || isNaN(periods[i])) {
-					idxsToRemove.push(i);
-				}
-			}
-
-			out = {
-				x: periods.filter((v, i) => !idxsToRemove.includes(i)),
-				y: power.filter((v, i) => !idxsToRemove.includes(i)),
-				threshold,
-				pvalue
-			};
-
-			return out;
+			return result;
 		});
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
 
+			// Initialise the plain-JS cache BEFORE any $derived runs.
+			this._cache = {
+				calcMin: null,
+				calcMax: null,
+				dataFingerprint: null,
+				result: { x: [], y: [], threshold: [], pvalue: [] }
+			};
+
 			if (dataIN?.x) {
-				//if there's data, use it!
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
 				if (parent.data.length > 0) {
 					this.x = new ColumnClass({ refId: parent.data[parent.data.length - 1].x.refId });
 				} else {
-					//blank one
 					this.x = new ColumnClass({ refId: -1 });
 				}
 			}
@@ -275,7 +357,7 @@
 			this.line = new LineClass(dataIN?.line, this);
 			this.thresholdline = new LineClass(dataIN?.thresholdline, this);
 			this.points = new PointsClass(dataIN?.points, this);
-			this.method = dataIN?.method ?? 'Lomb-Scargle'; // Initialize method
+			this.method = dataIN?.method ?? 'Lomb-Scargle';
 		}
 
 		toJSON() {
@@ -343,19 +425,15 @@
 		}
 
 		getAutoScaleValues() {
-			//set up outputs
 			let axisWidths = { left: null, right: null, top: null, bottom: null };
 
-			//get the svg position
 			const leftSVG = document.getElementById('plot' + this.parentBox.id)?.getBoundingClientRect();
 
 			//LEFT
-			//find the left-most axis
 			const allLeftAxes = document
 				.getElementById('plot' + this.parentBox.id)
 				?.getElementsByClassName('axis-left');
 			if (allLeftAxes.length == 0) {
-				//do nothing if there aren't any axes
 			} else {
 				if (allLeftAxes) {
 					let leftMost = 0;
@@ -374,12 +452,10 @@
 			}
 
 			//RIGHT
-			//find the left-most axis
 			const allRightAxes = document
 				.getElementById('plot' + this.parentBox.id)
 				.getElementsByClassName('axis-right');
 			if (allRightAxes.length == 0) {
-				//do nothing if there aren't any axes
 			} else {
 				if (allRightAxes) {
 					let rightMost = 0;
@@ -398,12 +474,10 @@
 			}
 
 			//TOP
-			//find the top-most axis
 			const allTopAxes = document
 				.getElementById('plot' + this.parentBox.id)
 				.getElementsByClassName('axis-top');
 			if (allTopAxes.length == 0) {
-				//do nothing if there aren't any axes
 			} else {
 				if (allTopAxes) {
 					let topMost = 0;
@@ -422,12 +496,10 @@
 			}
 
 			//BOTTOM
-			//find the left-most axis
 			const allBottomAxes = document
 				.getElementById('plot' + this.parentBox.id)
 				.getElementsByClassName('axis-bottom');
 			if (allBottomAxes.length == 0) {
-				//do nothing if there aren't any axes
 			} else {
 				if (allBottomAxes) {
 					let bottomMost = 0;
