@@ -484,11 +484,13 @@
 		/>
 	{/if}
 {:else}
-	<div>
-		<p>
+	<div class="loading-container">
+		<div class="title-container">
 			<Icon name="spinner" width={32} height={32} className="spinner" />
-			{loadingMsg}
-		</p>
+			<div>
+				<p>{loadingMsg}</p>
+			</div>
+		</div>
 	</div>
 {/if}
 
@@ -1122,5 +1124,24 @@
 
 	:global(.tableProcess-label span) {
 		color: #555;
+	}
+
+	.loading-container {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		width: 100%;
+		height: 100vh;
+	}
+
+	.title-container {
+		display: flex;
+		justify-content: left;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.title-container p {
+		margin: 0;
 	}
 </style>
