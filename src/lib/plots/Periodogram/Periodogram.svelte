@@ -1,4 +1,13 @@
 <script module>
+	// @ts-nocheck
+	import BigNumber from 'bignumber.js';
+
+	// Configure BigNumber for high precision periodogram calculations
+	BigNumber.config({
+		DECIMAL_PLACES: 50,
+		ROUNDING_MODE: BigNumber.ROUND_HALF_UP
+	});
+
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotBits/Axis.svelte';
@@ -19,7 +28,7 @@
 	// e.g. 0.25 means 25% extra on each side
 	const CALC_RANGE_BUFFER = 0.25;
 
-	// Lomb-Scargle implementation
+	// Lomb-Scargle implementation with BigNumber for precision
 	function calculateLombScarglePower(times, values, frequencies) {
 		if (
 			!times ||
@@ -39,32 +48,58 @@
 		if (t.length === 0) return new Array(frequencies.length).fill(0);
 
 		const yMean = mean(y);
-		const yVariance = y.reduce((sum, val) => sum + (val - yMean) ** 2, 0) / (y.length - 1);
+
+		// Calculate variance using BigNumber
+		let yVarianceBN = new BigNumber(0);
+		for (let i = 0; i < y.length; i++) {
+			const diff = new BigNumber(y[i]).minus(yMean);
+			yVarianceBN = yVarianceBN.plus(diff.times(diff));
+		}
+		yVarianceBN = yVarianceBN.dividedBy(y.length - 1);
 
 		const powers = frequencies.map((f) => {
 			const omega = 2 * Math.PI * f;
 
-			const cosSum = t.reduce((sum, ti) => sum + Math.cos(omega * ti), 0);
-			const sinSum = t.reduce((sum, ti) => sum + Math.sin(omega * ti), 0);
-			const tau = Math.atan2(sinSum, cosSum) / (2 * omega);
+			// Calculate cosSum and sinSum using BigNumber
+			let cosSum = new BigNumber(0);
+			let sinSum = new BigNumber(0);
+			for (let i = 0; i < t.length; i++) {
+				cosSum = cosSum.plus(Math.cos(omega * t[i]));
+				sinSum = sinSum.plus(Math.sin(omega * t[i]));
+			}
+			const tau = Math.atan2(sinSum.toNumber(), cosSum.toNumber()) / (2 * omega);
 
-			const cosTerm = y.reduce((sum, yi, i) => {
-				return sum + (yi - yMean) * Math.cos(omega * (t[i] - tau));
-			}, 0);
-			const sinTerm = y.reduce((sum, yi, i) => {
-				return sum + (yi - yMean) * Math.sin(omega * (t[i] - tau));
-			}, 0);
+			// Calculate cosTerm and sinTerm using BigNumber
+			let cosTerm = new BigNumber(0);
+			let sinTerm = new BigNumber(0);
+			for (let i = 0; i < y.length; i++) {
+				const yDiff = new BigNumber(y[i]).minus(yMean);
+				const cosVal = Math.cos(omega * (t[i] - tau));
+				const sinVal = Math.sin(omega * (t[i] - tau));
+				cosTerm = cosTerm.plus(yDiff.times(cosVal));
+				sinTerm = sinTerm.plus(yDiff.times(sinVal));
+			}
 
-			const cosDenom = t.reduce((sum, ti) => sum + Math.cos(omega * (ti - tau)) ** 2, 0);
-			const sinDenom = t.reduce((sum, ti) => sum + Math.sin(omega * (ti - tau)) ** 2, 0);
+			// Calculate denominators using BigNumber
+			let cosDenom = new BigNumber(0);
+			let sinDenom = new BigNumber(0);
+			for (let i = 0; i < t.length; i++) {
+				const cosVal = Math.cos(omega * (t[i] - tau));
+				const sinVal = Math.sin(omega * (t[i] - tau));
+				cosDenom = cosDenom.plus(new BigNumber(cosVal).times(cosVal));
+				sinDenom = sinDenom.plus(new BigNumber(sinVal).times(sinVal));
+			}
 
-			const power = (cosTerm ** 2 / cosDenom + sinTerm ** 2 / sinDenom) / (2 * yVariance);
-			return power;
+			// Calculate power using BigNumber
+			const term1 = cosTerm.times(cosTerm).dividedBy(cosDenom);
+			const term2 = sinTerm.times(sinTerm).dividedBy(sinDenom);
+			const power = term1.plus(term2).dividedBy(yVarianceBN.times(2));
+			return power.toNumber();
 		});
 		return powers;
 	}
 
-	// Enright periodogram implementation
+	// Enright periodogram implementation with BigNumber for precision
 	function calculateEnrightPower(times, values, periods, binSize) {
 		if (!times || !values || times.length < 2 || values.length < 2) {
 			return new Array(periods.length).fill(NaN);
@@ -86,73 +121,88 @@
 			const binsPerPeriod = Math.round(period / binSize);
 			if (binsPerPeriod < 1 || binsPerPeriod > n) return 0;
 
-			let qp = 0;
+			let qp = new BigNumber(0);
 			let count = 0;
 
 			for (let k = 1; k * binsPerPeriod < n; k++) {
 				const lag = k * binsPerPeriod;
 
-				let correlation = 0;
+				let correlation = new BigNumber(0);
 				let validPairs = 0;
 
 				for (let i = 0; i < n - lag; i++) {
 					if (!isNaN(centeredData[i]) && !isNaN(centeredData[i + lag])) {
-						correlation += centeredData[i] * centeredData[i + lag];
+						correlation = correlation.plus(
+							new BigNumber(centeredData[i]).times(centeredData[i + lag])
+						);
 						validPairs++;
 					}
 				}
 
 				if (validPairs > 0) {
-					qp += correlation / validPairs;
+					qp = qp.plus(correlation.dividedBy(validPairs));
 					count++;
 				}
 			}
 
 			if (count > 0) {
-				qp /= count;
+				qp = qp.dividedBy(count);
 			}
 
-			const variance =
-				centeredData.reduce((sum, val) => {
-					return sum + (isNaN(val) ? 0 : val * val);
-				}, 0) / n;
+			// Calculate variance using BigNumber
+			let variance = new BigNumber(0);
+			for (let i = 0; i < centeredData.length; i++) {
+				const val = centeredData[i];
+				if (!isNaN(val)) {
+					variance = variance.plus(new BigNumber(val).times(val));
+				}
+			}
+			variance = variance.dividedBy(n);
 
-			return variance > 0 ? qp / variance : 0;
+			return variance.isGreaterThan(0) ? qp.dividedBy(variance).toNumber() : 0;
 		});
 
 		console.log(powers);
 		return powers;
 	}
 
-	//Chi Squared periodogram implementation
+	//Chi Squared periodogram implementation with BigNumber for precision
 	function calculateChiSquaredPower(data, binSize, period, avgAll, denominator) {
 		const colNum = Math.round(period / binSize);
 		if (colNum < 1) return NaN;
 
 		const rowNum = Math.ceil(data.length / colNum);
 
-		let colSums = new Array(colNum).fill(0);
+		// Use BigNumber arrays for column sums
+		let colSums = new Array(colNum).fill(0).map(() => new BigNumber(0));
 		let colCounts = new Array(colNum).fill(0);
 
 		for (let i = 0; i < data.length; i++) {
 			const col = i % colNum;
 			const val = data[i];
 			if (!isNaN(val)) {
-				colSums[col] += val;
+				colSums[col] = colSums[col].plus(val);
 				colCounts[col]++;
 			}
 		}
 
-		const avgP = colSums.map((sum, i) => (colCounts[i] > 0 ? sum / colCounts[i] : avgAll));
+		// Calculate column averages using BigNumber
+		const avgAllBN = new BigNumber(avgAll);
+		const avgP = colSums.map((sum, i) =>
+			colCounts[i] > 0 ? sum.dividedBy(colCounts[i]) : avgAllBN
+		);
 
-		let numSum = 0;
+		// Calculate numerator sum using BigNumber
+		let numSum = new BigNumber(0);
 		for (let i = 0; i < colNum; i++) {
-			numSum += (avgP[i] - avgAll) ** 2;
+			const diff = avgP[i].minus(avgAllBN);
+			numSum = numSum.plus(diff.times(diff));
 		}
-		const numerator = numSum * data.length * rowNum;
 
-		const result = numerator / denominator;
-		return isFinite(result) ? result : NaN;
+		const numerator = numSum.times(data.length).times(rowNum);
+		const result = numerator.dividedBy(denominator);
+
+		return result.isFinite() ? result.toNumber() : NaN;
 	}
 
 	/**
@@ -184,16 +234,25 @@
 		if (params.method === 'Chi-squared') {
 			const data = binnedData.y_out;
 			const avgAll = mean(data);
-			let denominator = 0;
+
+			// Calculate denominator using BigNumber for precision
+			let denominator = new BigNumber(0);
 			for (let i = 0; i < data.length; i++) {
 				const val = data[i];
 				if (!isNaN(val)) {
-					denominator += (val - avgAll) ** 2;
+					const diff = new BigNumber(val).minus(avgAll);
+					denominator = denominator.plus(diff.times(diff));
 				}
 			}
 
 			for (let p = 0; p < periods.length; p++) {
-				power[p] = calculateChiSquaredPower(data, params.binSize, periods[p], avgAll, denominator);
+				power[p] = calculateChiSquaredPower(
+					data,
+					params.binSize,
+					periods[p],
+					avgAll,
+					denominator.toNumber()
+				);
 				threshold[p] = qchisq(1 - correctedAlpha, Math.round(periods[p] / params.binSize));
 				pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / params.binSize));
 			}
