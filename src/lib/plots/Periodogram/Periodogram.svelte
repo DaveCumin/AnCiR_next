@@ -10,8 +10,9 @@
 	import Points, { PointsClass } from '$lib/components/plotBits/Points.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
-	// Import worker source as a raw string so it's inlined in the bundle
-	import periodogramWorkerSource from '$lib/workers/periodogram.worker.js?raw';
+	// Import worker source and BigNumber as raw strings so everything is inlined
+	import bigNumberSource from 'bignumber.js/bignumber.js?raw';
+	import periodogramWorkerSourceRaw from '$lib/workers/periodogram.worker.js?raw';
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
 	export const Periodogram_controlHeaders = ['Properties', 'Data'];
@@ -102,8 +103,12 @@
 			if (typeof Worker === 'undefined') return;
 
 			try {
-				// Create worker from inlined source via Blob URL
-				const blob = new Blob([periodogramWorkerSource], { type: 'application/javascript' });
+				// Strip the CDN importScripts line and prepend the local BigNumber source
+				const workerSource = periodogramWorkerSourceRaw.replace(
+					/importScripts\([^)]*bignumber[^)]*\);?\n?/g,
+					''
+				);
+				const blob = new Blob([bigNumberSource, '\n', workerSource], { type: 'application/javascript' });
 				const blobUrl = URL.createObjectURL(blob);
 				this.worker = new Worker(blobUrl);
 				URL.revokeObjectURL(blobUrl); // Clean up - worker keeps its own reference
