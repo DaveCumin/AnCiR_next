@@ -1,21 +1,10 @@
 <script module>
 	// @ts-nocheck
-	import BigNumber from 'bignumber.js';
-
-	// Configure BigNumber for high precision periodogram calculations
-	BigNumber.config({
-		DECIMAL_PLACES: 50,
-		ROUNDING_MODE: BigNumber.ROUND_HALF_UP
-	});
-
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotBits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-
-	import { binData, mean, makeSeqArray } from '$lib/components/plotBits/helpers/wrangleData.js';
-	import { pchisq, qchisq } from '$lib/data/CDFs';
 
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotBits/Points.svelte';
@@ -27,269 +16,6 @@
 	// Buffer factor: calculate this much extra beyond the display range
 	// e.g. 0.25 means 25% extra on each side
 	const CALC_RANGE_BUFFER = 0.25;
-
-	// Lomb-Scargle implementation with BigNumber for precision
-	function calculateLombScarglePower(times, values, frequencies) {
-		if (
-			!times ||
-			!values ||
-			times.length < 2 ||
-			values.length < 2 ||
-			times.length !== values.length
-		) {
-			return new Array(frequencies.length).fill(NaN);
-		}
-		const validIndices = times
-			.map((t, i) => (isNaN(t) || isNaN(values[i]) ? -1 : i))
-			.filter((i) => i !== -1);
-		const t = validIndices.map((i) => times[i]);
-		const y = validIndices.map((i) => values[i]);
-
-		if (t.length === 0) return new Array(frequencies.length).fill(0);
-
-		const yMean = mean(y);
-
-		// Calculate variance using BigNumber
-		let yVarianceBN = new BigNumber(0);
-		for (let i = 0; i < y.length; i++) {
-			const diff = new BigNumber(y[i]).minus(yMean);
-			yVarianceBN = yVarianceBN.plus(diff.times(diff));
-		}
-		yVarianceBN = yVarianceBN.dividedBy(y.length - 1);
-
-		const powers = frequencies.map((f) => {
-			const omega = 2 * Math.PI * f;
-
-			// Calculate cosSum and sinSum using BigNumber
-			let cosSum = new BigNumber(0);
-			let sinSum = new BigNumber(0);
-			for (let i = 0; i < t.length; i++) {
-				cosSum = cosSum.plus(Math.cos(omega * t[i]));
-				sinSum = sinSum.plus(Math.sin(omega * t[i]));
-			}
-			const tau = Math.atan2(sinSum.toNumber(), cosSum.toNumber()) / (2 * omega);
-
-			// Calculate cosTerm and sinTerm using BigNumber
-			let cosTerm = new BigNumber(0);
-			let sinTerm = new BigNumber(0);
-			for (let i = 0; i < y.length; i++) {
-				const yDiff = new BigNumber(y[i]).minus(yMean);
-				const cosVal = Math.cos(omega * (t[i] - tau));
-				const sinVal = Math.sin(omega * (t[i] - tau));
-				cosTerm = cosTerm.plus(yDiff.times(cosVal));
-				sinTerm = sinTerm.plus(yDiff.times(sinVal));
-			}
-
-			// Calculate denominators using BigNumber
-			let cosDenom = new BigNumber(0);
-			let sinDenom = new BigNumber(0);
-			for (let i = 0; i < t.length; i++) {
-				const cosVal = Math.cos(omega * (t[i] - tau));
-				const sinVal = Math.sin(omega * (t[i] - tau));
-				cosDenom = cosDenom.plus(new BigNumber(cosVal).times(cosVal));
-				sinDenom = sinDenom.plus(new BigNumber(sinVal).times(sinVal));
-			}
-
-			// Calculate power using BigNumber
-			const term1 = cosTerm.times(cosTerm).dividedBy(cosDenom);
-			const term2 = sinTerm.times(sinTerm).dividedBy(sinDenom);
-			const power = term1.plus(term2).dividedBy(yVarianceBN.times(2));
-			return power.toNumber();
-		});
-		return powers;
-	}
-
-	// Enright periodogram implementation with BigNumber for precision
-	function calculateEnrightPower(times, values, periods, binSize) {
-		if (!times || !values || times.length < 2 || values.length < 2) {
-			return new Array(periods.length).fill(NaN);
-		}
-
-		const binnedData = binData(times, values, binSize, 0);
-		if (binnedData.bins.length === 0) {
-			return new Array(periods.length).fill(0);
-		}
-
-		const data = binnedData.y_out;
-		const n = data.length;
-
-		const dataMean = mean(data.filter((v) => !isNaN(v)));
-
-		const centeredData = data.map((v) => (isNaN(v) ? 0 : v - dataMean));
-
-		const powers = periods.map((period) => {
-			const binsPerPeriod = Math.round(period / binSize);
-			if (binsPerPeriod < 1 || binsPerPeriod > n) return 0;
-
-			let qp = new BigNumber(0);
-			let count = 0;
-
-			for (let k = 1; k * binsPerPeriod < n; k++) {
-				const lag = k * binsPerPeriod;
-
-				let correlation = new BigNumber(0);
-				let validPairs = 0;
-
-				for (let i = 0; i < n - lag; i++) {
-					if (!isNaN(centeredData[i]) && !isNaN(centeredData[i + lag])) {
-						correlation = correlation.plus(
-							new BigNumber(centeredData[i]).times(centeredData[i + lag])
-						);
-						validPairs++;
-					}
-				}
-
-				if (validPairs > 0) {
-					qp = qp.plus(correlation.dividedBy(validPairs));
-					count++;
-				}
-			}
-
-			if (count > 0) {
-				qp = qp.dividedBy(count);
-			}
-
-			// Calculate variance using BigNumber
-			let variance = new BigNumber(0);
-			for (let i = 0; i < centeredData.length; i++) {
-				const val = centeredData[i];
-				if (!isNaN(val)) {
-					variance = variance.plus(new BigNumber(val).times(val));
-				}
-			}
-			variance = variance.dividedBy(n);
-
-			return variance.isGreaterThan(0) ? qp.dividedBy(variance).toNumber() : 0;
-		});
-
-		console.log(powers);
-		return powers;
-	}
-
-	//Chi Squared periodogram implementation with BigNumber for precision
-	function calculateChiSquaredPower(data, binSize, period, avgAll, denominator) {
-		const colNum = Math.round(period / binSize);
-		if (colNum < 1) return NaN;
-
-		const rowNum = Math.ceil(data.length / colNum);
-
-		// Use BigNumber arrays for column sums
-		let colSums = new Array(colNum).fill(0).map(() => new BigNumber(0));
-		let colCounts = new Array(colNum).fill(0);
-
-		for (let i = 0; i < data.length; i++) {
-			const col = i % colNum;
-			const val = data[i];
-			if (!isNaN(val)) {
-				colSums[col] = colSums[col].plus(val);
-				colCounts[col]++;
-			}
-		}
-
-		// Calculate column averages using BigNumber
-		const avgAllBN = new BigNumber(avgAll);
-		const avgP = colSums.map((sum, i) =>
-			colCounts[i] > 0 ? sum.dividedBy(colCounts[i]) : avgAllBN
-		);
-
-		// Calculate numerator sum using BigNumber
-		let numSum = new BigNumber(0);
-		for (let i = 0; i < colNum; i++) {
-			const diff = avgP[i].minus(avgAllBN);
-			numSum = numSum.plus(diff.times(diff));
-		}
-
-		const numerator = numSum.times(data.length).times(rowNum);
-		const result = numerator.dividedBy(denominator);
-
-		return result.isFinite() ? result.toNumber() : NaN;
-	}
-
-	/**
-	 * Run the full periodogram calculation for the given parameters.
-	 * Pure function — no side effects, no reactivity.
-	 */
-	function runPeriodogramCalculation(params) {
-		let out = { x: [], y: [], threshold: [], pvalue: [] };
-		let binnedData = { bins: [], y_out: [] };
-
-		if (params.method === 'Chi-squared') {
-			if (!params.yData) {
-				return { x: [], y: [], threshold: [], pvalue: [] };
-			}
-			binnedData = binData(params.xData, params.yData, params.binSize, 0);
-			if (binnedData.bins.length === 0) {
-				return { x: [], y: [], threshold: [], pvalue: [] };
-			}
-		}
-
-		const periods = makeSeqArray(params.periodMin, params.periodMax, params.periodSteps);
-		const frequencies = periods.map((p) => 1 / p);
-
-		const correctedAlpha = Math.pow(1 - params.chiSquaredAlpha, 1 / periods.length);
-		const power = new Array(periods.length);
-		const threshold = new Array(periods.length);
-		const pvalue = new Array(periods.length);
-
-		if (params.method === 'Chi-squared') {
-			const data = binnedData.y_out;
-			const avgAll = mean(data);
-
-			// Calculate denominator using BigNumber for precision
-			let denominator = new BigNumber(0);
-			for (let i = 0; i < data.length; i++) {
-				const val = data[i];
-				if (!isNaN(val)) {
-					const diff = new BigNumber(val).minus(avgAll);
-					denominator = denominator.plus(diff.times(diff));
-				}
-			}
-
-			for (let p = 0; p < periods.length; p++) {
-				power[p] = calculateChiSquaredPower(
-					data,
-					params.binSize,
-					periods[p],
-					avgAll,
-					denominator.toNumber()
-				);
-				threshold[p] = qchisq(1 - correctedAlpha, Math.round(periods[p] / params.binSize));
-				pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / params.binSize));
-			}
-		} else if (params.method === 'Lomb-Scargle') {
-			const times = params.xData;
-			const values = params.yData;
-			const powers = calculateLombScarglePower(times, values, frequencies);
-
-			for (let p = 0; p < periods.length; p++) {
-				power[p] = powers[p];
-			}
-		} else if (params.method === 'Enright') {
-			const times = params.xData;
-			const values = params.yData;
-			const powers = calculateEnrightPower(times, values, periods, params.binSize);
-
-			for (let p = 0; p < periods.length; p++) {
-				power[p] = powers[p];
-			}
-		}
-
-		var idxsToRemove = [];
-		for (let i = 0; i < power.length; i++) {
-			if (isNaN(power[i]) || isNaN(periods[i])) {
-				idxsToRemove.push(i);
-			}
-		}
-
-		out = {
-			x: periods.filter((v, i) => !idxsToRemove.includes(i)),
-			y: power.filter((v, i) => !idxsToRemove.includes(i)),
-			threshold: threshold.filter((v, i) => !idxsToRemove.includes(i)),
-			pvalue: pvalue.filter((v, i) => !idxsToRemove.includes(i))
-		};
-
-		return out;
-	}
 
 	/**
 	 * Build a fingerprint string from the data-related params (everything
@@ -322,82 +48,24 @@
 		thresholdline = $state();
 		chiSquaredAlpha = $state(0.05);
 
-		// ── Cache: intentionally a plain JS object, NOT $state. ──
-		// Svelte's reactivity system does NOT track reads/writes to this,
-		// which is exactly what we want — it lets us short-circuit inside
-		// $derived.by without creating new reactive dependencies.
-		_cache;
+		// Web worker state
+		worker = null;
+		currentCalculationId = null;
+		calculating = $state(false);
+		progress = $state({ current: 0, total: 0 });
 
-		// ── The single derived that the rest of the component reads. ──
-		// It reads all reactive inputs (data, method, binSize, periodlims…)
-		// so Svelte re-evaluates it whenever any of those change.  But
-		// internally it checks the plain-JS cache and returns early when
-		// the expensive calculation can be skipped.
-		periodData = $derived.by(() => {
-			// 1. Read every reactive dependency up front so Svelte tracks them.
-			const xData = this.x.hoursSinceStart;
-			const yData = this.y.getData();
-			const binSize = this.binSize;
-			const method = this.method;
-			const chiSquaredAlpha = this.chiSquaredAlpha;
-			const periodSteps = this.parentPlot.periodSteps;
-			const displayMin = this.parentPlot.periodlimsIN[0];
-			const displayMax = this.parentPlot.periodlimsIN[1];
+		// Period data - now $state instead of $derived
+		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
 
-			// 2. Build a fingerprint of everything that ISN'T the period range.
-			const fp = buildDataFingerprint(xData, yData, binSize, method, chiSquaredAlpha, periodSteps);
-
-			// 3. Check the plain-JS cache.
-			const c = this._cache;
-			const dataChanged = fp !== c.dataFingerprint;
-			const rangeCovered =
-				c.calcMin !== null &&
-				c.calcMax !== null &&
-				c.calcMin <= displayMin &&
-				c.calcMax >= displayMax;
-
-			// 4. If data hasn't changed AND cached range covers display → skip calc.
-			if (!dataChanged && rangeCovered) {
-				return c.result;
-			}
-
-			// 5. Calculate with a buffered range so small future adjustments
-			//    will also be covered without recalculating.
-			const span = displayMax - displayMin;
-			const buffer = span * CALC_RANGE_BUFFER;
-			const calcMin = Math.max(0.01, displayMin - buffer);
-			const calcMax = displayMax + buffer;
-
-			const result = runPeriodogramCalculation({
-				xData,
-				yData,
-				binSize,
-				method,
-				chiSquaredAlpha,
-				periodMin: calcMin,
-				periodMax: calcMax,
-				periodSteps
-			});
-
-			// 6. Write back to the plain-JS cache (no reactivity triggered).
-			c.calcMin = calcMin;
-			c.calcMax = calcMax;
-			c.dataFingerprint = fp;
-			c.result = result;
-
-			return result;
-		});
+		// Cache for smart recalculation
+		_cache = {
+			calcMin: null,
+			calcMax: null,
+			dataFingerprint: null
+		};
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
-
-			// Initialise the plain-JS cache BEFORE any $derived runs.
-			this._cache = {
-				calcMin: null,
-				calcMax: null,
-				dataFingerprint: null,
-				result: { x: [], y: [], threshold: [], pvalue: [] }
-			};
 
 			if (dataIN?.x) {
 				this.x = ColumnClass.fromJSON(dataIN.x);
@@ -417,6 +85,151 @@
 			this.thresholdline = new LineClass(dataIN?.thresholdline, this);
 			this.points = new PointsClass(dataIN?.points, this);
 			this.method = dataIN?.method ?? 'Lomb-Scargle';
+
+			// Initialize worker
+			this.initWorker();
+
+			// Set up reactive calculation trigger
+			this.setupCalculationTrigger();
+		}
+
+		initWorker() {
+			// Only create worker in browser environment
+			if (typeof Worker === 'undefined') return;
+
+			try {
+				this.worker = new Worker('/workers/periodogram.worker.js');
+
+				this.worker.onmessage = (e) => {
+					const { type, id, result, current, total, error } = e.data;
+
+					// Ignore messages from old calculations
+					if (id !== this.currentCalculationId) return;
+
+					if (type === 'progress') {
+						this.progress = { current, total };
+					} else if (type === 'complete') {
+						this.periodData = result;
+						this.calculating = false;
+						this.progress = { current: 0, total: 0 };
+					} else if (type === 'error') {
+						console.error('Periodogram calculation error:', error);
+						this.calculating = false;
+						this.progress = { current: 0, total: 0 };
+					} else if (type === 'cancelled') {
+						this.calculating = false;
+						this.progress = { current: 0, total: 0 };
+					}
+				};
+
+				this.worker.onerror = (error) => {
+					console.error('Worker error:', error);
+					this.calculating = false;
+					this.progress = { current: 0, total: 0 };
+				};
+			} catch (error) {
+				console.error('Failed to create worker:', error);
+			}
+		}
+
+		cleanup() {
+			this.cancelCalculation();
+			if (this.worker) {
+				this.worker.terminate();
+				this.worker = null;
+			}
+		}
+
+		setupCalculationTrigger() {
+			$effect(() => {
+				// Read all reactive dependencies
+				const xData = this.x.hoursSinceStart;
+				const yData = this.y.getData();
+				const binSize = this.binSize;
+				const method = this.method;
+				const chiSquaredAlpha = this.chiSquaredAlpha;
+				const periodSteps = this.parentPlot.periodSteps;
+				const displayMin = this.parentPlot.periodlimsIN[0];
+				const displayMax = this.parentPlot.periodlimsIN[1];
+
+				// Skip if data is invalid
+				if (!xData || !yData || xData.length === 0 || yData.length === 0) {
+					return;
+				}
+
+				// Build fingerprint for data-related params
+				const fp = buildDataFingerprint(xData, yData, binSize, method, chiSquaredAlpha, periodSteps);
+
+				// Check cache
+				const dataChanged = fp !== this._cache.dataFingerprint;
+				const rangeCovered =
+					this._cache.calcMin !== null &&
+					this._cache.calcMax !== null &&
+					this._cache.calcMin <= displayMin &&
+					this._cache.calcMax >= displayMax;
+
+				// Skip calculation if cache is valid
+				if (!dataChanged && rangeCovered) {
+					return;
+				}
+
+				// Calculate with buffered range
+				const span = displayMax - displayMin;
+				const buffer = span * CALC_RANGE_BUFFER;
+				const calcMin = Math.max(0.01, displayMin - buffer);
+				const calcMax = displayMax + buffer;
+
+				// Update cache
+				this._cache.calcMin = calcMin;
+				this._cache.calcMax = calcMax;
+				this._cache.dataFingerprint = fp;
+
+				// Start calculation
+				this.startCalculation({
+					xData,
+					yData,
+					binSize,
+					method,
+					chiSquaredAlpha,
+					periodMin: calcMin,
+					periodMax: calcMax,
+					periodSteps
+				});
+			});
+		}
+
+		startCalculation(params) {
+			// Skip if worker is not available (SSR or creation failed)
+			if (!this.worker) {
+				console.warn('Worker not available, skipping calculation');
+				return;
+			}
+
+			// Cancel any ongoing calculation
+			if (this.calculating) {
+				this.cancelCalculation();
+			}
+
+			// Generate unique ID for this calculation
+			this.currentCalculationId = Math.random().toString(36).substring(7);
+			this.calculating = true;
+			this.progress = { current: 0, total: 0 };
+
+			// Send calculation request to worker
+			this.worker.postMessage({
+				type: 'calculate',
+				id: this.currentCalculationId,
+				params
+			});
+		}
+
+		cancelCalculation() {
+			if (this.currentCalculationId && this.worker) {
+				this.worker.postMessage({
+					type: 'cancel',
+					id: this.currentCalculationId
+				});
+			}
 		}
 
 		toJSON() {
@@ -598,6 +411,10 @@
 			this.data.push(datum);
 		}
 		removeData(idx) {
+			// Clean up the worker before removing
+			if (this.data[idx]) {
+				this.data[idx].cleanup();
+			}
 			this.data.splice(idx, 1);
 		}
 
@@ -635,12 +452,13 @@
 
 <script>
 	import { appState } from '$lib/core/core.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
 	import { tick } from 'svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
 	let { theData, which } = $props();
 
@@ -655,6 +473,14 @@
 			theData.plot.autoScalePadding('all');
 		}
 	});
+
+	onDestroy(() => {
+		// Clean up any active workers
+		theData.plot.data.forEach(datum => {
+			datum.cleanup();
+		});
+	});
+
 	//check for axes if the labels change
 	$effect(() => {
 		if (which == 'controls') {
@@ -991,7 +817,42 @@
 {/snippet}
 
 {#snippet plot(theData)}
-	<!-- Unchanged plot rendering -->
+	<!-- Check if any data is calculating -->
+	{@const isCalculating = theData.plot.data.some((d) => d.calculating)}
+	{@const calculatingData = theData.plot.data.find((d) => d.calculating)}
+
+	<!-- Calculating overlay -->
+	{#if isCalculating && calculatingData}
+		<div
+			style="
+				position: absolute;
+				inset: 0;
+				background: rgba(255, 255, 255, 0.9);
+				backdrop-filter: blur(3px);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				flex-direction: column;
+				gap: 16px;
+				z-index: 10;
+			"
+		>
+			<LoadingSpinner
+				message="Calculating periodogram..."
+				detail={calculatingData.progress.total > 0
+					? `${Math.round((calculatingData.progress.current / calculatingData.progress.total) * 100)}%`
+					: ''}
+			/>
+			<button
+				class="icon"
+				onclick={() => calculatingData.cancelCalculation()}
+				style="padding: 8px 16px; font-size: 14px;"
+			>
+				Cancel
+			</button>
+		</div>
+	{/if}
+
 	<svg
 		id={'plot' + theData.plot.parentBox.id}
 		width={theData.plot.parentBox.width}
