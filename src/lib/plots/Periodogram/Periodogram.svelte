@@ -86,10 +86,12 @@
 			this.points = new PointsClass(dataIN?.points, this);
 			this.method = dataIN?.method ?? 'Lomb-Scargle';
 
-			// Initialize worker
+			// Initialize worker (doesn't need component context)
 			this.initWorker();
+		}
 
-			// Set up reactive calculation trigger
+		// Must be called from component context (e.g., in onMount or after creation)
+		init() {
 			this.setupCalculationTrigger();
 		}
 
@@ -407,7 +409,7 @@
 				dataIN = structuredClone(temp);
 			}
 			const datum = new PeriodogramDataclass(this, dataIN);
-
+			datum.init(); // Initialize reactive triggers
 			this.data.push(datum);
 		}
 		removeData(idx) {
@@ -443,7 +445,11 @@
 			periodogram.xgridlines = json.xgridlines;
 
 			if (json.data) {
-				periodogram.data = json.data.map((d) => PeriodogramDataclass.fromJSON(d, periodogram));
+				periodogram.data = json.data.map((d) => {
+					const datum = PeriodogramDataclass.fromJSON(d, periodogram);
+					datum.init(); // Initialize reactive triggers
+					return datum;
+				});
 			}
 			return periodogram;
 		}
