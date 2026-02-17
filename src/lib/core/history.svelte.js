@@ -23,21 +23,72 @@ class HistoryManager {
 			const tableCount = core.tables.length;
 			const plotCount = core.plots.length;
 
-			// Also track changes to existing items (not just add/remove)
+			// Track changes to columns (data)
 			core.data.forEach((d) => {
 				d.name;
 				d.refId;
+				d.data;
+				d.type;
+
+				// Track process changes
+				d.processes?.forEach((p) => {
+					p.name;
+					p.displayName;
+					// Access args deeply to trigger on any arg change
+					if (p.args) {
+						Object.keys(p.args).forEach(key => {
+							p.args[key];
+						});
+					}
+				});
 			});
+
+			// Track changes to tables
 			core.tables.forEach((t) => {
 				t.name;
 				t.columnRefs;
+
+				// Track table process changes
+				t.processes?.forEach((tp) => {
+					tp.name;
+					tp.displayName;
+					// Access args deeply to trigger on any arg change
+					if (tp.args) {
+						Object.keys(tp.args).forEach(key => {
+							const val = tp.args[key];
+							// If it's an object (like 'out'), access its properties too
+							if (val && typeof val === 'object') {
+								Object.keys(val).forEach(subkey => {
+									val[subkey];
+								});
+							}
+						});
+					}
+				});
 			});
+
+			// Track changes to plots
 			core.plots.forEach((p) => {
 				p.name;
 				p.x;
 				p.y;
 				p.width;
 				p.height;
+				p.type;
+				p.selected;
+
+				// Track plot data references
+				p.plot?.data?.forEach((d) => {
+					// Access data properties to trigger on changes
+					if (d && typeof d === 'object') {
+						Object.keys(d).forEach(key => {
+							const val = d[key];
+							if (val && typeof val === 'object' && val.refId !== undefined) {
+								val.refId;
+							}
+						});
+					}
+				});
 			});
 
 			// Determine if this is a structural change (add/remove)

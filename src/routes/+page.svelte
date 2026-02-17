@@ -401,16 +401,7 @@
 
 		//Scatter plot
 		pushObj(new Plot({ name: 'A Scatterplot', type: 'scatterplot' }));
-		console.log(
-			'scatterplot refids: ',
-			core.data[0].id,
-			', ',
-			core.data[1].id,
-			', ',
-			core.data[core.data.length - 2].id,
-			', ',
-			core.data[core.data.length - 1].id
-		);
+
 		core.plots[0].plot.addData({
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
