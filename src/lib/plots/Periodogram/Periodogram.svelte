@@ -11,7 +11,7 @@
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
 	// Import worker source as a raw string so it's inlined in the bundle
-	import periodogramWorkerSource from '../../../static/workers/periodogram.worker.js?raw';
+	import periodogramWorkerSource from '$lib/workers/periodogram.worker.js?raw';
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
 	export const Periodogram_controlHeaders = ['Properties', 'Data'];
