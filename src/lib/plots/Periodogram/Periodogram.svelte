@@ -145,58 +145,48 @@
 			}
 		}
 
-		// Called by the component's $effect to trigger calculation
-		triggerCalculation() {
+		// Called by the component's $effect to trigger calculation.
+		// Reactive values must be read by the caller ($effect) and passed in.
+		triggerCalculation(xData, yData, binSize, method, chiSquaredAlpha, periodSteps, displayMin, displayMax) {
+			// Skip if data is invalid
+			if (!xData || !yData || xData.length === 0 || yData.length === 0) {
+				return;
+			}
+
+			// Build fingerprint for data-related params
+			const fp = buildDataFingerprint(xData, yData, binSize, method, chiSquaredAlpha, periodSteps);
+
+			// Check cache
+			const dataChanged = fp !== this._cache.dataFingerprint;
+			const rangeCovered =
+				this._cache.calcMin !== null &&
+				this._cache.calcMax !== null &&
+				this._cache.calcMin <= displayMin &&
+				this._cache.calcMax >= displayMax;
+
+			// Skip calculation if cache is valid
+			if (!dataChanged && rangeCovered) {
+				return;
+			}
+
+			// Calculate with buffered range
+			const span = displayMax - displayMin;
+			const buffer = span * CALC_RANGE_BUFFER;
+			const calcMin = Math.max(0.01, displayMin - buffer);
+			const calcMax = displayMax + buffer;
+
+			// Update cache
+			this._cache.calcMin = calcMin;
+			this._cache.calcMax = calcMax;
+			this._cache.dataFingerprint = fp;
+
 			// Clear any pending debounced calculation
 			if (this._debounceTimer) {
 				clearTimeout(this._debounceTimer);
 			}
 
-			// Debounce the calculation to avoid rapid successive calls
+			// Debounce the actual worker call
 			this._debounceTimer = setTimeout(() => {
-				// Read all reactive dependencies
-				const xData = this.x.hoursSinceStart;
-				const yData = this.y.getData();
-				const binSize = this.binSize;
-				const method = this.method;
-				const chiSquaredAlpha = this.chiSquaredAlpha;
-				const periodSteps = this.parentPlot.periodSteps;
-				const displayMin = this.parentPlot.periodlimsIN[0];
-				const displayMax = this.parentPlot.periodlimsIN[1];
-
-				// Skip if data is invalid
-				if (!xData || !yData || xData.length === 0 || yData.length === 0) {
-					return;
-				}
-
-				// Build fingerprint for data-related params
-				const fp = buildDataFingerprint(xData, yData, binSize, method, chiSquaredAlpha, periodSteps);
-
-				// Check cache
-				const dataChanged = fp !== this._cache.dataFingerprint;
-				const rangeCovered =
-					this._cache.calcMin !== null &&
-					this._cache.calcMax !== null &&
-					this._cache.calcMin <= displayMin &&
-					this._cache.calcMax >= displayMax;
-
-				// Skip calculation if cache is valid
-				if (!dataChanged && rangeCovered) {
-					return;
-				}
-
-				// Calculate with buffered range
-				const span = displayMax - displayMin;
-				const buffer = span * CALC_RANGE_BUFFER;
-				const calcMin = Math.max(0.01, displayMin - buffer);
-				const calcMax = displayMax + buffer;
-
-				// Update cache
-				this._cache.calcMin = calcMin;
-				this._cache.calcMax = calcMax;
-				this._cache.dataFingerprint = fp;
-
-				// Start calculation
 				this.startCalculation({
 					xData,
 					yData,
@@ -494,12 +484,26 @@
 		}
 	});
 
-	// Set up calculation triggers for all periodogram data
+	// Set up calculation triggers for all periodogram data.
+	// We read all reactive dependencies HERE so Svelte tracks them,
+	// then pass the values into the debounced triggerCalculation.
 	$effect(() => {
 		if (which === 'plot' && theData.plot?.data) {
-			// Trigger calculation for each datum
 			theData.plot.data.forEach(datum => {
-				datum.triggerCalculation();
+				const xData = datum.x.hoursSinceStart;
+				const yData = datum.y.getData();
+				const binSize = datum.binSize;
+				const method = datum.method;
+				const chiSquaredAlpha = datum.chiSquaredAlpha;
+				const periodSteps = datum.parentPlot.periodSteps;
+				const displayMin = datum.parentPlot.periodlimsIN[0];
+				const displayMax = datum.parentPlot.periodlimsIN[1];
+
+				datum.triggerCalculation(
+					xData, yData, binSize, method,
+					chiSquaredAlpha, periodSteps,
+					displayMin, displayMax
+				);
 			});
 		}
 	});
