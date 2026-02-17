@@ -103,12 +103,8 @@
 			if (typeof Worker === 'undefined') return;
 
 			try {
-				// Strip the CDN importScripts line and prepend the local BigNumber source
-				const workerSource = periodogramWorkerSourceRaw.replace(
-					/importScripts\([^)]*bignumber[^)]*\);?\n?/g,
-					''
-				);
-				const blob = new Blob([bigNumberSource, '\n', workerSource], { type: 'application/javascript' });
+				// Prepend the local BigNumber source to the worker code
+				const blob = new Blob([bigNumberSource, '\n', periodogramWorkerSourceRaw], { type: 'application/javascript' });
 				const blobUrl = URL.createObjectURL(blob);
 				this.worker = new Worker(blobUrl);
 				URL.revokeObjectURL(blobUrl); // Clean up - worker keeps its own reference

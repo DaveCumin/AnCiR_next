@@ -1,8 +1,6 @@
 // Periodogram calculation worker
 // This runs in a separate thread to avoid blocking the UI
-
-// Import BigNumber from CDN
-importScripts('https://cdn.jsdelivr.net/npm/bignumber.js@9.1.2/bignumber.min.js');
+// BigNumber is prepended to this source at runtime (see Periodogram.svelte initWorker)
 
 // Configure BigNumber for high precision
 BigNumber.config({
