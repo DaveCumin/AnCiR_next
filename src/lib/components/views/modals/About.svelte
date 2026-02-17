@@ -69,7 +69,7 @@
 			>
 			by
 			<a href="https://github.com/davecumin">DaveCumin</a>
-			and <a href="https://github.com/yz-329">Yuxing (Starr) Zhang</a>.
+			and <a href="https://github.com/yz-329">Yuxing (Starr) Zhang</a>, with help from AI models.
 		</p>
 		<p>
 			<strong

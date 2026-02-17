@@ -10,6 +10,9 @@
 	import Points, { PointsClass } from '$lib/components/plotBits/Points.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
+	// Import worker source as a raw string so it's inlined in the bundle
+	import periodogramWorkerSource from '../../../static/workers/periodogram.worker.js?raw';
+
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
 	export const Periodogram_controlHeaders = ['Properties', 'Data'];
 
@@ -99,7 +102,11 @@
 			if (typeof Worker === 'undefined') return;
 
 			try {
-				this.worker = new Worker('/workers/periodogram.worker.js');
+				// Create worker from inlined source via Blob URL
+				const blob = new Blob([periodogramWorkerSource], { type: 'application/javascript' });
+				const blobUrl = URL.createObjectURL(blob);
+				this.worker = new Worker(blobUrl);
+				URL.revokeObjectURL(blobUrl); // Clean up - worker keeps its own reference
 
 				this.worker.onmessage = (e) => {
 					const { type, id, result, current, total, error } = e.data;
