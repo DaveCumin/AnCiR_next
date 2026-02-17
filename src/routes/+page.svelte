@@ -117,89 +117,92 @@
 				navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
 			const MODIFIER = ISMAC ? event.metaKey : event.ctrlKey;
 
-			// Print out info - DEGUGGING
-			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'i') {
-				event.preventDefault();
-				console.log($state.snapshot(core));
-				console.log($state.snapshot(appState));
-				console.log($state.snapshot(appConsts));
-			}
-			// Create sample data quickly - FOR TESTING
-			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 's') {
-				refresh();
-			}
+			if (!isLoading) {
+				// Don't allow keypresses if loading
+				// Print out info - DEGUGGING
+				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'i') {
+					event.preventDefault();
+					console.log($state.snapshot(core));
+					console.log($state.snapshot(appState));
+					console.log($state.snapshot(appConsts));
+				}
+				// Create sample data quickly - FOR TESTING
+				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 's') {
+					refresh();
+				}
 
-			//load the test json
-			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'a') {
-				loadTestJson();
-			}
+				//load the test json
+				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'a') {
+					loadTestJson();
+				}
 
-			// CHANGE SCALE - ZOOM IN
-			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'p') {
-				appState.canvasScale += 0.1;
-			}
-			// CHANGE SCALE - ZOOM OUT
-			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'o') {
-				appState.canvasScale -= 0.1;
-			}
-			// SELCT ALL PLOTS
-			if (MODIFIER && event.key.toLowerCase() === 'a') {
-				event.preventDefault();
-				selectAllPlots();
-			}
-			// visualise
-			if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'x') {
-				event.preventDefault();
-				visualise = !visualise;
-			}
-			// SAVE THE SESSION
-			if (!event.shiftKey && MODIFIER && event.key.toLowerCase() === 's') {
-				event.preventDefault();
-				//TODO: Can this be put into the Setting module? I tried before and had issues
-				try {
-					// Get JSON string and validate
-					const jsonStr = outputCoreAsJson();
-					if (typeof jsonStr !== 'string' || !jsonStr) {
-						throw new Error('Invalid or empty JSON string returned by outputCoreAsJson');
-					}
-
-					// Validate JSON content
+				// CHANGE SCALE - ZOOM IN
+				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'p') {
+					appState.canvasScale += 0.1;
+				}
+				// CHANGE SCALE - ZOOM OUT
+				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'o') {
+					appState.canvasScale -= 0.1;
+				}
+				// SELCT ALL PLOTS
+				if (MODIFIER && event.key.toLowerCase() === 'a') {
+					event.preventDefault();
+					selectAllPlots();
+				}
+				// visualise
+				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'x') {
+					event.preventDefault();
+					visualise = !visualise;
+				}
+				// SAVE THE SESSION
+				if (!event.shiftKey && MODIFIER && event.key.toLowerCase() === 's') {
+					event.preventDefault();
+					//TODO: Can this be put into the Setting module? I tried before and had issues
 					try {
-						JSON.parse(jsonStr); // Ensure it's valid JSON
-					} catch (e) {
-						throw new Error('Invalid JSON format: ' + e.message);
+						// Get JSON string and validate
+						const jsonStr = outputCoreAsJson();
+						if (typeof jsonStr !== 'string' || !jsonStr) {
+							throw new Error('Invalid or empty JSON string returned by outputCoreAsJson');
+						}
+
+						// Validate JSON content
+						try {
+							JSON.parse(jsonStr); // Ensure it's valid JSON
+						} catch (e) {
+							throw new Error('Invalid JSON format: ' + e.message);
+						}
+
+						// Create Blob with JSON content
+						const blob = new Blob([jsonStr], { type: 'application/json' });
+						const url = URL.createObjectURL(blob);
+
+						// Create temporary <a> element
+						const a = document.createElement('a');
+						a.innerText = 'download';
+						a.href = url;
+						a.download = 'session.json'; // File name for download
+						document.body.appendChild(a);
+
+						// Programmatically trigger click
+						a.click();
+
+						console.log(
+							'should have started download of ',
+							JSON.parse(jsonStr),
+							' from ',
+							url,
+							' : ',
+							blob
+						);
+						// Clean up
+						setTimeout(() => {
+							document.body.removeChild(a);
+							URL.revokeObjectURL(url);
+						}, 10); // Delay cleanup to ensure download starts
+					} catch (error) {
+						console.error('Failed to export JSON:', error.message);
+						alert('Error exporting JSON: ' + error.message); // Notify user of error
 					}
-
-					// Create Blob with JSON content
-					const blob = new Blob([jsonStr], { type: 'application/json' });
-					const url = URL.createObjectURL(blob);
-
-					// Create temporary <a> element
-					const a = document.createElement('a');
-					a.innerText = 'download';
-					a.href = url;
-					a.download = 'session.json'; // File name for download
-					document.body.appendChild(a);
-
-					// Programmatically trigger click
-					a.click();
-
-					console.log(
-						'should have started download of ',
-						JSON.parse(jsonStr),
-						' from ',
-						url,
-						' : ',
-						blob
-					);
-					// Clean up
-					setTimeout(() => {
-						document.body.removeChild(a);
-						URL.revokeObjectURL(url);
-					}, 10); // Delay cleanup to ensure download starts
-				} catch (error) {
-					console.error('Failed to export JSON:', error.message);
-					alert('Error exporting JSON: ' + error.message); // Notify user of error
 				}
 			}
 		});
@@ -293,6 +296,7 @@
 		core.tables = [];
 		core.plots = [];
 		core.rawData = new Map();
+		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		//Show the loading message
 		isLoading = true;
@@ -355,6 +359,9 @@
 		core.tables[0].columnRefs = [testtimestring, testawd.id, testref.id, testrefref.id];
 		core.tables.push(new Table({ name: 'table too' }));
 		core.tables[1].columnRefs = [d1id, d0id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
+
+		loadingMsg = 'Putting binned data...';
+		await new Promise((resolve) => setTimeout(resolve, 10));
 		core.tables[1].processes.push(
 			new TableProcess(
 				{
@@ -377,6 +384,16 @@
 
 		//Scatter plot
 		pushObj(new Plot({ name: 'A Scatterplot', type: 'scatterplot' }));
+		console.log(
+			'scatterplot refids: ',
+			core.data[0].id,
+			', ',
+			core.data[1].id,
+			', ',
+			core.data[core.data.length - 2].id,
+			', ',
+			core.data[core.data.length - 1].id
+		);
 		core.plots[0].plot.addData({
 			x: { refId: core.data[0].id },
 			y: { refId: core.data[1].id }
@@ -440,7 +457,7 @@
 
 		loadingMsg = 'Making correlogram...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
-		console.log('making core');
+
 		//Correlogram
 		pushObj(new Plot({ name: 'An Autocorrelogram', type: 'correlogram' }));
 		core.plots[core.plots.length - 1].plot.addData({
