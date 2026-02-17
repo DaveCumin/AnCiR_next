@@ -90,11 +90,6 @@
 			this.initWorker();
 		}
 
-		// Must be called from component context (e.g., in onMount or after creation)
-		init() {
-			this.setupCalculationTrigger();
-		}
-
 		initWorker() {
 			// Only create worker in browser environment
 			if (typeof Worker === 'undefined') return;
@@ -142,61 +137,60 @@
 			}
 		}
 
-		setupCalculationTrigger() {
-			$effect(() => {
-				// Read all reactive dependencies
-				const xData = this.x.hoursSinceStart;
-				const yData = this.y.getData();
-				const binSize = this.binSize;
-				const method = this.method;
-				const chiSquaredAlpha = this.chiSquaredAlpha;
-				const periodSteps = this.parentPlot.periodSteps;
-				const displayMin = this.parentPlot.periodlimsIN[0];
-				const displayMax = this.parentPlot.periodlimsIN[1];
+		// Called by the component's $effect to trigger calculation
+		triggerCalculation() {
+			// Read all reactive dependencies
+			const xData = this.x.hoursSinceStart;
+			const yData = this.y.getData();
+			const binSize = this.binSize;
+			const method = this.method;
+			const chiSquaredAlpha = this.chiSquaredAlpha;
+			const periodSteps = this.parentPlot.periodSteps;
+			const displayMin = this.parentPlot.periodlimsIN[0];
+			const displayMax = this.parentPlot.periodlimsIN[1];
 
-				// Skip if data is invalid
-				if (!xData || !yData || xData.length === 0 || yData.length === 0) {
-					return;
-				}
+			// Skip if data is invalid
+			if (!xData || !yData || xData.length === 0 || yData.length === 0) {
+				return;
+			}
 
-				// Build fingerprint for data-related params
-				const fp = buildDataFingerprint(xData, yData, binSize, method, chiSquaredAlpha, periodSteps);
+			// Build fingerprint for data-related params
+			const fp = buildDataFingerprint(xData, yData, binSize, method, chiSquaredAlpha, periodSteps);
 
-				// Check cache
-				const dataChanged = fp !== this._cache.dataFingerprint;
-				const rangeCovered =
-					this._cache.calcMin !== null &&
-					this._cache.calcMax !== null &&
-					this._cache.calcMin <= displayMin &&
-					this._cache.calcMax >= displayMax;
+			// Check cache
+			const dataChanged = fp !== this._cache.dataFingerprint;
+			const rangeCovered =
+				this._cache.calcMin !== null &&
+				this._cache.calcMax !== null &&
+				this._cache.calcMin <= displayMin &&
+				this._cache.calcMax >= displayMax;
 
-				// Skip calculation if cache is valid
-				if (!dataChanged && rangeCovered) {
-					return;
-				}
+			// Skip calculation if cache is valid
+			if (!dataChanged && rangeCovered) {
+				return;
+			}
 
-				// Calculate with buffered range
-				const span = displayMax - displayMin;
-				const buffer = span * CALC_RANGE_BUFFER;
-				const calcMin = Math.max(0.01, displayMin - buffer);
-				const calcMax = displayMax + buffer;
+			// Calculate with buffered range
+			const span = displayMax - displayMin;
+			const buffer = span * CALC_RANGE_BUFFER;
+			const calcMin = Math.max(0.01, displayMin - buffer);
+			const calcMax = displayMax + buffer;
 
-				// Update cache
-				this._cache.calcMin = calcMin;
-				this._cache.calcMax = calcMax;
-				this._cache.dataFingerprint = fp;
+			// Update cache
+			this._cache.calcMin = calcMin;
+			this._cache.calcMax = calcMax;
+			this._cache.dataFingerprint = fp;
 
-				// Start calculation
-				this.startCalculation({
-					xData,
-					yData,
-					binSize,
-					method,
-					chiSquaredAlpha,
-					periodMin: calcMin,
-					periodMax: calcMax,
-					periodSteps
-				});
+			// Start calculation
+			this.startCalculation({
+				xData,
+				yData,
+				binSize,
+				method,
+				chiSquaredAlpha,
+				periodMin: calcMin,
+				periodMax: calcMax,
+				periodSteps
 			});
 		}
 
@@ -409,7 +403,6 @@
 				dataIN = structuredClone(temp);
 			}
 			const datum = new PeriodogramDataclass(this, dataIN);
-			datum.init(); // Initialize reactive triggers
 			this.data.push(datum);
 		}
 		removeData(idx) {
@@ -445,11 +438,7 @@
 			periodogram.xgridlines = json.xgridlines;
 
 			if (json.data) {
-				periodogram.data = json.data.map((d) => {
-					const datum = PeriodogramDataclass.fromJSON(d, periodogram);
-					datum.init(); // Initialize reactive triggers
-					return datum;
-				});
+				periodogram.data = json.data.map((d) => PeriodogramDataclass.fromJSON(d, periodogram));
 			}
 			return periodogram;
 		}
@@ -482,9 +471,21 @@
 
 	onDestroy(() => {
 		// Clean up any active workers
-		theData.plot.data.forEach(datum => {
-			datum.cleanup();
-		});
+		if (which === 'plot' && theData.plot?.data) {
+			theData.plot.data.forEach(datum => {
+				datum.cleanup();
+			});
+		}
+	});
+
+	// Set up calculation triggers for all periodogram data
+	$effect(() => {
+		if (which === 'plot' && theData.plot?.data) {
+			// Trigger calculation for each datum
+			theData.plot.data.forEach(datum => {
+				datum.triggerCalculation();
+			});
+		}
 	});
 
 	//check for axes if the labels change
