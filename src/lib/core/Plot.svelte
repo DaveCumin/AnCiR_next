@@ -90,6 +90,7 @@
 		width = $state(500);
 		height = $state(250);
 		type;
+		typeDisplayName = $state('');
 		selected = $state(false);
 		plot;
 
@@ -102,13 +103,7 @@
 				this.id = id;
 				_counter = Math.max(id + 1, _counter + 1);
 			}
-			//set things
-			this.name = plotData.name ?? `Plot_${this.id}`;
-			this.x = plotData.x ?? 350;
-			this.y = plotData.y ?? 150;
-			this.width = plotData.width ?? 500;
-			this.height = plotData.height ?? 250;
-			//need to make the plot
+			//need to set the plot type first to get the display name
 			this.type = plotData.type;
 
 			if (!this.type) {
@@ -123,6 +118,16 @@
 			if (typeof plotTypeEntry.data.fromJSON !== 'function') {
 				throw new Error(`plotTypeEntry.data.fromJSON is not a function`);
 			}
+
+			// Set display name for the plot type
+			this.typeDisplayName = plotTypeEntry.displayName || this.type;
+
+			//set things - use display name in default plot name
+			this.name = plotData.name ?? `${this.typeDisplayName}_${this.id}`;
+			this.x = plotData.x ?? 350;
+			this.y = plotData.y ?? 150;
+			this.width = plotData.width ?? 500;
+			this.height = plotData.height ?? 250;
 
 			this.plot = plotTypeEntry.data.fromJSON(this, plotData.plot);
 		}

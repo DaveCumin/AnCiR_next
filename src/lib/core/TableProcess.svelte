@@ -109,6 +109,7 @@
 	export class TableProcess {
 		id; //Unique Id
 		name = '';
+		displayName = $state('');
 		args = $state({});
 
 		constructor({ ...dataIN }, parent, id = null) {
@@ -123,6 +124,10 @@
 			this.parent = parent;
 
 			this.name = dataIN.name;
+
+			// Get display name from the tableProcessMap
+			const tableProcessInfo = appConsts.tableProcessMap.get(this.name);
+			this.displayName = tableProcessInfo?.displayName || this.name;
 
 			//If there is a column out ref set (i.e. reading from JSON)
 			if (dataIN.args.out[Object.keys(dataIN.args.out)[0]] >= 0) {

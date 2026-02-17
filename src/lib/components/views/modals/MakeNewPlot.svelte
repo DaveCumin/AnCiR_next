@@ -46,7 +46,7 @@
 		//rules for the first step - selection
 		if (changedIndex === 0) {
 			steps[changedIndex].completed = plotType != '';
-			steps[1].label = `Options for ${plotType}`;
+			steps[1].label = `Options for ${plotDisplayName}`;
 			enforceCompletedRules(1);
 		}
 	}
@@ -62,8 +62,11 @@
 	//-------------------
 
 	let plotType = $state();
+	let plotDisplayName = $derived.by(() => {
+		return plotType ? appConsts.plotMap.get(plotType)?.displayName || plotType : '';
+	});
 	let plotName = $derived.by(() => {
-		return plotType + '_' + Math.round(Math.random() * 10, 2);
+		return plotDisplayName + '_' + Math.round(Math.random() * 10, 2);
 	});
 	function openModal(type) {
 		showModal = true;
@@ -71,6 +74,17 @@
 	}
 
 	let inputs = $state({});
+
+	// Get sorted plot types with column inputs
+	let sortedPlotTypes = $derived.by(() => {
+		return Object.keys(Object.fromEntries(appConsts.plotMap.entries()))
+			.filter(type => appConsts.plotMap.get(type)?.defaultInputs?.length > 0)
+			.sort((a, b) => {
+				const nameA = appConsts.plotMap.get(a)?.displayName || a;
+				const nameB = appConsts.plotMap.get(b)?.displayName || b;
+				return nameA.localeCompare(nameB);
+			});
+	});
 
 	function makeInputs() {
 		enforceSequentialCompletion(0);
@@ -102,7 +116,7 @@
 
 {#snippet header()}
 	<div class="heading">
-		<h2>Create New {plotType}</h2>
+		<h2>Create New {plotDisplayName}</h2>
 	</div>
 {/snippet}
 
@@ -114,11 +128,8 @@
 
 				<select bind:value={plotType} name="plotType" id="plot-type" onchange={makeInputs}>
 					<option value=""></option>
-					{#each Object.keys(Object.fromEntries(appConsts.plotMap.entries())) as type}
-						{#if appConsts.plotMap.get(type)?.defaultInputs?.length > 0}
-							<!-- only include the plots that have column inputs-->
-							<option value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-						{/if}
+					{#each sortedPlotTypes as type}
+						<option value={type}>{appConsts.plotMap.get(type)?.displayName || type}</option>
 					{/each}
 				</select>
 			</div>
@@ -150,7 +161,7 @@
 {#snippet footerContent()}
 	{#if steps[1].completed}
 		<div class="dialog-button-container">
-			<button id="makePlot" class="dialog-button" onclick={makePlot}>Make the {plotType}</button>
+			<button id="makePlot" class="dialog-button" onclick={makePlot}>Make the {plotDisplayName}</button>
 		</div>
 	{/if}
 {/snippet}

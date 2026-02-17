@@ -16,6 +16,8 @@ export async function loadPlots() {
 				const plotClass = svelteModule[className];
 				const defaultInputs = svelteModule[fileName.split('.')[0] + '_defaultDataInputs'];
 				const controlHeaders = svelteModule[fileName.split('.')[0] + '_controlHeaders'];
+				const displayName = svelteModule[fileName.split('.')[0] + '_displayName'] || formatDisplayName(folderName);
+
 				if (!plotClass) {
 					console.warn(
 						`No valid plot class found in ${sveltePath}. Expected a named export like ${className}.`
@@ -27,7 +29,8 @@ export async function loadPlots() {
 					plot: component,
 					data: plotClass,
 					defaultInputs: defaultInputs || [],
-					controlHeaders: controlHeaders || []
+					controlHeaders: controlHeaders || [],
+					displayName: displayName
 				});
 			}
 		} catch (error) {
@@ -36,4 +39,12 @@ export async function loadPlots() {
 	}
 	//console.log('plotMap:', plotMap);
 	return plotMap;
+}
+
+// Helper function to convert camelCase/PascalCase to readable format
+function formatDisplayName(name) {
+	return name
+		.replace(/([A-Z])/g, ' $1') // Add space before capital letters
+		.replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+		.trim();
 }

@@ -1,7 +1,7 @@
 <script module>
 	import { core } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-
+	export const binneddata_displayName = 'Bin Data';
 	export const binneddata_defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: -1 }],

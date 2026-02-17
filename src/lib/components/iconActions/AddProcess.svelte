@@ -14,6 +14,15 @@
 		dropdownLeft = 0
 	} = $props();
 
+	// Get sorted processes by display name
+	let sortedProcesses = $derived.by(() => {
+		return Array.from(appConsts.processMap.entries()).sort((a, b) => {
+			const nameA = a[1].displayName || a[0];
+			const nameB = b[1].displayName || b[0];
+			return nameA.localeCompare(nameB);
+		});
+	});
+
 	function addTheProcess(name) {
 		if (!columnSelected) return;
 		columnSelected.addProcess(name);
@@ -23,7 +32,7 @@
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
-		{#each appConsts.processMap.entries() as [key, value]}
+		{#each sortedProcesses as [key, value]}
 			<div
 				class="dropdown-action"
 				onclick={() => {
@@ -32,7 +41,7 @@
 				}}
 			>
 				<button>
-					{key}
+					{value.displayName || key}
 				</button>
 			</div>
 		{/each}

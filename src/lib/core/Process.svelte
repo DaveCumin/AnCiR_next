@@ -7,6 +7,7 @@
 	export class Process {
 		id;
 		name = '';
+		displayName = $state('');
 		args = $state({});
 		parentCol = $state();
 
@@ -24,13 +25,17 @@
 			//return an error if the function doesn't exist
 			if (!appConsts.processMap.has(this.name)) {
 				this.args = { error: `no function ${this.name}` };
+				this.displayName = this.name;
 			} else {
+				const processInfo = appConsts.processMap.get(this.name);
+				this.displayName = processInfo.displayName || this.name;
+
 				//Now put in the args, if provided, or use defaults
 				if (dataIN.args) {
 					this.args = dataIN.args;
 				} else {
 					this.args = Object.fromEntries(
-						Array.from(appConsts.processMap.get(this.name).defaults.entries()).map(
+						Array.from(processInfo.defaults.entries()).map(
 							([key, value]) => [key, value.val]
 						)
 					);

@@ -8,6 +8,7 @@
 
 	export const Tableplot_defaultDataInputs = [];
 	export const Tableplot_controlHeaders = ['Properties and Data'];
+	export const Tableplot_displayName = 'Table';
 
 	export class Tableplotclass {
 		parentBox = $state();

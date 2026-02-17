@@ -2,7 +2,7 @@
 	import { core } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
-
+	export const smootheddata_displayName = 'Smooth Data';
 	export const smootheddata_defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: -1 }],

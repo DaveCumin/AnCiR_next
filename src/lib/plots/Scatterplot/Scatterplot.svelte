@@ -11,6 +11,7 @@
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
 	export const Scatterplot_controlHeaders = ['Properties', 'Data', 'Bands'];
+	export const Scatterplot_displayName = 'Scatterplot';
 
 	class ScatterDataclass {
 		parentPlot = $state();

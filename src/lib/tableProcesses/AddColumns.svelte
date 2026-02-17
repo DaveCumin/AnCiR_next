@@ -1,5 +1,7 @@
 <script module>
 	import { core } from '$lib/core/core.svelte';
+	export const addcolumns_displayName = 'Add Columns';
+
 	export const addcolumns_defaults = new Map([
 		['xsIN', { val: [] }],
 		['out', { result: { val: -1 } }], //needed to set upu the output columns

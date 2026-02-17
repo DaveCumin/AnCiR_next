@@ -13,6 +13,23 @@
 	let tableProcessChosen = $state();
 	let awaitingLoad = $state(false);
 
+	// Get sorted table processes by display name
+	let sortedTableProcesses = $derived.by(() => {
+		return Array.from(appConsts.tableProcessMap.entries())
+			.sort((a, b) => {
+				const nameA = a[1].displayName || a[0];
+				const nameB = b[1].displayName || b[0];
+				return nameA.localeCompare(nameB);
+			});
+	});
+
+	// Get display name for chosen process
+	let tableProcessDisplayName = $derived.by(() => {
+		return tableProcessChosen
+			? appConsts.tableProcessMap.get(tableProcessChosen)?.displayName || tableProcessChosen
+			: '';
+	});
+
 	async function confirmAddColumn() {
 		awaitingLoad = true;
 
@@ -78,7 +95,7 @@
 		//rules for the first step - selection
 		if (changedIndex === 0) {
 			steps[changedIndex].completed = tableProcessChosen != '';
-			steps[1].label = `Options for ${tableProcessChosen}`;
+			steps[1].label = `Options for ${tableProcessDisplayName}`;
 			enforceCompletedRules(1);
 		}
 	}
@@ -131,8 +148,8 @@
 				}}
 			>
 				<option value=""></option>
-				{#each Array.from(appConsts.tableProcessMap.keys()) as tp}
-					<option value={tp}>{tp}</option>
+				{#each sortedTableProcesses as [key, value]}
+					<option value={key}>{value.displayName || key}</option>
 				{/each}
 			</select>
 		</div>

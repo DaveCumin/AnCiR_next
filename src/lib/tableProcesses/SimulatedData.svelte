@@ -2,6 +2,8 @@
 	import { DateTime } from 'luxon';
 
 	import { core } from '$lib/core/core.svelte';
+
+	export const simulateddata_displayName = 'Simulate Data';
 	export const simulateddata_defaults = new Map([
 		['startTime', { val: DateTime.fromISO(new Date().toISOString(), { zone: 'utc' }).toMillis() }],
 		[

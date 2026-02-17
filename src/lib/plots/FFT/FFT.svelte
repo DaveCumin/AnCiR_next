@@ -13,6 +13,7 @@
 
 	export const FFT_defaultDataInputs = ['time', 'values'];
 	export const FFT_controlHeaders = ['Properties', 'Data'];
+	export const FFT_displayName = 'Fourier analysis';
 
 	// FFT implementation using Cooley-Tukey algorithm
 	function fft(signal) {
