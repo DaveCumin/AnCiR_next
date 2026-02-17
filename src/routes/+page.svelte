@@ -37,6 +37,7 @@
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import { history } from '$lib/core/history.svelte';
 
 	// import { testjson } from '$lib/test.svelte.js';
 
@@ -49,6 +50,9 @@
 	let isLoading = $state(true);
 
 	let visualise = $state(false);
+
+	// Initialize history watching (must be in component context)
+	history.init();
 
 	// const timesToTest = ['2025/10/01', '2025/12/01', '2025/13/01'];
 	// console.log('times to test: ', timesToTest);
@@ -120,6 +124,18 @@
 
 			if (!isLoading) {
 				// Don't allow keypresses if loading
+
+				// UNDO
+				if (MODIFIER && !event.shiftKey && event.key.toLowerCase() === 'z') {
+					event.preventDefault();
+					history.undo();
+				}
+				// REDO
+				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'z') {
+					event.preventDefault();
+					history.redo();
+				}
+
 				// Print out info - DEGUGGING
 				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'i') {
 					event.preventDefault();

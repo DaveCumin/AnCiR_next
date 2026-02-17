@@ -65,6 +65,15 @@
 		fill: var(--color-icon-selected);
 	}
 
+	.icon.disabled {
+		fill: var(--color-lightness-75);
+		cursor: not-allowed;
+	}
+
+	.icon.disabled:hover {
+		fill: var(--color-lightness-75);
+	}
+
 	.close {
 		fill: var(--color-icon-unselected);
 		transition: fill 0.2s ease;
