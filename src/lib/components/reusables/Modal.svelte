@@ -13,7 +13,8 @@ https://svelte.dev/playground/modal?version=5.33.7
 		children,
 		button,
 		width = '36rem',
-		max_height = '50vh'
+		max_height = '50vh',
+		showClose = true
 	} = $props();
 	import { fade } from 'svelte/transition';
 
@@ -49,12 +50,14 @@ https://svelte.dev/playground/modal?version=5.33.7
 			}}
 			transition:fade={{ duration: 360 }}
 		>
-			<div class="modalCloseBtn" style="position:fixed; left:{closeBtnLeft - 50}px;">
-				<!-- svelte-ignore a11y_autofocus -->
-				<button onclick={() => close()}>
-					<Icon name="close" width={16} height={16} className="close" />
-				</button>
-			</div>
+			{#if showClose}
+				<div class="modalCloseBtn" style="position:fixed; left:{closeBtnLeft - 50}px;">
+					<!-- svelte-ignore a11y_autofocus -->
+					<button onclick={() => close()}>
+						<Icon name="close" width={16} height={16} className="close" />
+					</button>
+				</div>
+			{/if}
 
 			<div class="dialog-container">
 				{@render header?.()}

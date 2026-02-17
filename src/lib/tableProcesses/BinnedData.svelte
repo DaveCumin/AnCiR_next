@@ -44,12 +44,12 @@
 
 		const theBinnedData = binData(xData, yData, binSize, binStart, stepSize, aggFunction);
 
-		console.log('in: ', { xData: xData.slice(0, 5), yData: yData.slice(0, 5) });
-		console.log('binning parameters: ', { binSize, binStart, stepSize, aggFunction });
-		console.log('out: ', {
-			bins: theBinnedData.bins.slice(0, 5),
-			y_out: theBinnedData.y_out.slice(0, 5)
-		});
+		// console.log('in: ', { xData: xData.slice(0, 5), yData: yData.slice(0, 5) });
+		// console.log('binning parameters: ', { binSize, binStart, stepSize, aggFunction });
+		// console.log('out: ', {
+		// 	bins: theBinnedData.bins.slice(0, 5),
+		// 	y_out: theBinnedData.y_out.slice(0, 5)
+		// });
 
 		if (xOUT !== -1 && yOUT !== -1) {
 			core.rawData.set(xOUT, theBinnedData.bins);

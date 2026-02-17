@@ -60,8 +60,8 @@
 			if (!core.plots) return origins;
 
 			core.plots.forEach((plot) => {
-				if (plot?.plot?.data && Array.isArray(plot.plot.data)) {
-					plot.plot.data.forEach((d, seriesIdx) => {
+				if (plot?.data && Array.isArray(plot.data)) {
+					plot.data.forEach((d, seriesIdx) => {
 						const roleItems = [
 							{ refId: d.x?.refId, role: 'x' },
 							{ refId: d.y?.refId, role: 'y' },
@@ -84,8 +84,8 @@
 					});
 				}
 
-				if (plot.plot?.columnRefs && Array.isArray(plot.plot.columnRefs)) {
-					plot.plot.columnRefs.forEach((refId) => {
+				if (plot.columnRefs && Array.isArray(plot.columnRefs)) {
+					plot.columnRefs.forEach((refId) => {
 						if (refId == null || refId === -1) return;
 						if (!origins[refId]) origins[refId] = [];
 						origins[refId].push({
@@ -97,7 +97,7 @@
 					});
 				}
 			});
-
+			console.log('Plot origins:', origins);
 			return origins;
 		});
 
@@ -226,9 +226,9 @@
 
 	function isPlotSelected(plot) {
 		let cols = [];
-		if (plot?.plot?.data && Array.isArray(plot.plot.data)) {
+		if (plot?.data && Array.isArray(plot.plot.data)) {
 			cols = plot.plot.data.flatMap((d) => [d.x?.refId, d.y?.refId, d.z?.refId]).filter(Boolean);
-		} else if (plot?.plot?.columnRefs) {
+		} else if (plot?.columnRefs) {
 			cols = plot.plot.columnRefs;
 		}
 		return cols.length > 0 && cols.every(isColumnSelected);
@@ -249,14 +249,12 @@
 
 	function togglePlotSelection(plot) {
 		let cols = [];
-		if (plot?.plot?.data && Array.isArray(plot.plot.data)) {
+		if (plot?.data && Array.isArray(plot.data)) {
 			cols = [
-				...new Set(
-					plot.plot.data.flatMap((d) => [d.x?.refId, d.y?.refId, d.z?.refId]).filter(Boolean)
-				)
+				...new Set(plot.data.flatMap((d) => [d.x?.refId, d.y?.refId, d.z?.refId]).filter(Boolean))
 			];
-		} else if (plot?.plot?.columnRefs) {
-			cols = plot.plot.columnRefs;
+		} else if (plot?.columnRefs) {
+			cols = plot.columnRefs;
 		}
 		const isSel = isPlotSelected(plot);
 		if (isSel) {
@@ -265,7 +263,7 @@
 				if (idx >= 0) theData.removeColumn(idx);
 			});
 		} else {
-			theData.plot.addColumns(cols);
+			theData.addColumns(cols);
 		}
 	}
 
@@ -281,16 +279,16 @@
 	}
 
 	function getPlotColumns(plot) {
-		if (plot?.plot?.data && Array.isArray(plot.plot.data)) {
+		if (plot?.data && Array.isArray(plot.data)) {
 			return [
 				...new Set(
-					plot.plot.data
+					plot.data
 						.flatMap((d) => [d.x?.refId, d.y?.refId, d.z?.refId])
 						.filter((id) => id != null && id !== -1)
 				)
 			];
 		}
-		if (plot?.plot?.columnRefs) return plot.plot.columnRefs;
+		if (plot?.columnRefs) return plot.columnRefs;
 		return [];
 	}
 
@@ -381,65 +379,109 @@
 			{/if}
 		</div>
 
-		<div class="tree-list">
+		<div class="tree-list display-list">
+			<!-- Tables -->
 			{#each core.tables as table (table.id)}
-				{@const isExpanded = expandedTables.has(table.id)}
-				{@const selected = isTableSelected(table)}
-				<div class="tree-item">
-					<div class="tree-item-header">
-						<input
-							type="checkbox"
-							checked={selected}
-							onchange={() => toggleTableSelection(table)}
-						/>
-						<span
-							class="tree-name"
-							onclick={() => toggleTable(table.id)}
-							role="button"
-							tabindex="0"
-						>
-							{table.name}
-						</span>
-						<span class="tree-badge">Table</span>
-						<button class="expand-icon" onclick={() => toggleTable(table.id)}>
-							<Icon name={isExpanded ? 'caret-down' : 'caret-right'} width={16} height={16} />
-						</button>
+				<details class="clps-item" open={expandedTables.has(table.id)}>
+					<summary class="clps-title-container">
+						<div class="clps-title">
+							<input
+								type="checkbox"
+								checked={isTableSelected(table)}
+								onchange={() => toggleTableSelection(table)}
+							/>
+							<span class="tree-name">{table.name}</span>
+						</div>
+
+						<div class="clps-title-button">
+							{#if expandedTables.has(table.id)}
+								<Icon name="caret-down" width={16} height={16} />
+							{:else}
+								<Icon name="caret-right" width={16} height={16} />
+							{/if}
+						</div>
+					</summary>
+
+					<div class="tree-children">
+						{#each table.columnRefs as colId (colId)}
+							{@const col = getColumnById(colId)}
+							{#if col}
+								<div class="tree-item-child">
+									<input
+										type="checkbox"
+										checked={isColumnSelected(colId)}
+										onchange={() => toggleColumnSelection(colId)}
+									/>
+									<span class="tree-name">{col.name}</span>
+									<!-- <span class="tree-type">{col.type}</span> -->
+									<!-- optional -->
+								</div>
+							{/if}
+						{/each}
 					</div>
-					{#if isExpanded}
-						<div class="tree-children" transition:slide={{ duration: 200 }}>
-							{#each table.columnRefs as colId (colId)}
+				</details>
+			{/each}
+
+			<!-- Plots -->
+			{#each core.plots as plot (plot.id)}
+				{@const plotCols = getPlotColumns(plot)}
+				{#if plotCols.length > 0}
+					<details class="clps-item" open={expandedPlots.has(plot.id)}>
+						<summary class="clps-title-container">
+							<div class="clps-title">
+								<input
+									type="checkbox"
+									checked={isPlotSelected(plot)}
+									onchange={() => togglePlotSelection(plot)}
+								/>
+								<span class="tree-name">{plot.name}</span>
+								<span class="tree-badge">Plot</span>
+							</div>
+
+							<div class="clps-title-button">
+								{#if expandedPlots.has(plot.id)}
+									<Icon name="caret-down" width={16} height={16} />
+								{:else}
+									<Icon name="caret-right" width={16} height={16} />
+								{/if}
+							</div>
+						</summary>
+
+						<div class="tree-children">
+							{#each plotCols as colId (colId)}
 								{@const col = getColumnById(colId)}
-								{@const sel = isColumnSelected(colId)}
 								{#if col}
 									<div class="tree-item-child">
 										<input
 											type="checkbox"
-											checked={sel}
+											checked={isColumnSelected(colId)}
 											onchange={() => toggleColumnSelection(colId)}
 										/>
-										<span
-											class="tree-name"
-											onclick={() => toggleColumnSelection(colId)}
-											role="button"
-											tabindex="0"
-										>
-											{col.name}
-										</span>
-										<span class="tree-type">{col.type}</span>
+										<span class="tree-name">{col.name}</span>
+										<!-- <span class="tree-type">{col.type}</span> -->
 									</div>
 								{/if}
 							{/each}
 						</div>
-					{/if}
+					</details>
+				{/if}
+			{/each}
+
+			<!-- Standalone columns (flat, no grouping) -->
+			{#each standaloneColumns as col (col.id)}
+				<div class="tree-item-child standalone">
+					<input
+						type="checkbox"
+						checked={isColumnSelected(col.id)}
+						onchange={() => toggleColumnSelection(col.id)}
+					/>
+					<span class="tree-name">{col.name}</span>
+					<!-- <span class="tree-type">{col.type}</span> -->
 				</div>
 			{/each}
 
-			<!-- Plots and standalone columns sections remain similar – just make sure they call togglePlotSelection & toggleColumnSelection -->
-
-			<!-- ... (omitted for brevity – apply same pattern as above) ... -->
-
 			{#if !core.tables.length && !core.plots.length && !standaloneColumns.length}
-				<p style="color: var(--color-lightness-35); font-size: 12px;">No data available</p>
+				<p class="empty-state">No data available</p>
 			{/if}
 		</div>
 	</div>
@@ -477,101 +519,97 @@
 {/if}
 
 <style>
-	.column-count {
-		font-size: 12px;
-		color: var(--color-lightness-45);
-		font-weight: normal;
+	.display-list {
+		width: 100%;
+		margin-top: 0.25rem;
 	}
 
-	.tree-list {
-		margin-top: 0.5rem;
-		max-height: 500px;
-		overflow-y: auto;
+	.clps-item {
+		margin: 0.15rem 0;
 	}
 
-	.tree-item {
-		margin-bottom: 0.25rem;
+	.clps-title-container {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.35rem 0.5rem;
+		border-radius: 4px;
+		cursor: pointer;
+		user-select: none;
+		transition: background 0.15s;
 	}
 
-	.tree-item-header {
+	.clps-title-container:hover {
+		background: var(--color-lightness-98);
+	}
+
+	.clps-title {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		padding: 0.4rem 0.5rem;
-		transition: background-color 0.2s;
+		flex: 1;
 	}
 
-	.tree-item-header:hover {
-		background-color: var(--color-lightness-98);
-	}
-
-	.expand-icon {
-		padding: 0;
+	.clps-title input[type='checkbox'] {
 		margin: 0;
-		margin-left: auto;
-		background: none;
-		border: none;
-		cursor: pointer;
+	}
+
+	.clps-title-button {
 		display: flex;
 		align-items: center;
-		color: var(--color-lightness-35);
-		transition: color 0.2s;
+		gap: 0.25rem;
+		opacity: 0.7;
 	}
 
-	.expand-icon:hover {
-		color: var(--color-lightness-15);
-	}
-
-	.tree-name {
-		flex: 1;
-		font-size: 14px;
+	.clps-item[open] .clps-title-container {
 		font-weight: 500;
-		color: var(--color-lightness-15);
-		cursor: pointer;
-		user-select: none;
-	}
-
-	.tree-badge {
-		font-size: 10px;
-		color: var(--color-lightness-45);
-		padding: 2px 6px;
-		background-color: var(--color-lightness-90);
-		border-radius: 3px;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
 	}
 
 	.tree-children {
-		margin-left: 1.5rem;
-		margin-top: 0.25rem;
-		padding-left: 0.5rem;
+		margin-left: 1.6rem;
+		padding: 0.2rem 0;
 	}
 
 	.tree-item-child {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		padding: 0.4rem 0.5rem;
+		padding: 0.25rem 0.5rem;
 		border-radius: 3px;
-		transition: background-color 0.2s;
-		margin-bottom: 0.25rem;
 	}
 
 	.tree-item-child:hover {
-		background-color: var(--color-lightness-98);
+		background: var(--color-lightness-98);
 	}
 
-	.tree-item-child .tree-name {
-		font-weight: 400;
-		font-size: 13px;
+	.tree-item-child.standalone {
+		padding-left: 2.2rem; /* indent more to align under children */
 	}
 
-	.tree-type {
-		font-size: 10px;
-		color: var(--color-lightness-45);
-		padding: 2px 5px;
-		background-color: var(--color-lightness-95);
-		border-radius: 2px;
-		text-transform: capitalize;
+	.tree-name {
+		font-size: 13.5px;
+		color: var(--color-lightness-15);
+	}
+
+	.tree-badge {
+		font-size: 9.5px;
+		color: var(--color-lightness-50);
+		background: var(--color-lightness-92);
+		padding: 1px 5px;
+		border-radius: 3px;
+		margin-left: 0.5rem;
+	}
+
+	.empty-state {
+		color: var(--color-lightness-40);
+		font-size: 12px;
+		margin: 1rem 0.75rem;
+		font-style: italic;
+	}
+
+	/* hide default summary arrow */
+	.clps-item summary::-webkit-details-marker,
+	.clps-item summary::marker {
+		display: none;
 	}
 </style>

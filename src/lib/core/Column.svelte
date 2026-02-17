@@ -199,6 +199,7 @@
 			let out = [];
 			//if there is a reference, then just get that data
 			if (this.refId != null) {
+				console.log('getting data from reference column ', this.refId);
 				out = getColumnById(this.refId).getData();
 			} else {
 				//deal with compressed data

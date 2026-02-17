@@ -51,7 +51,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.5.3',
+	version: 'β.5.4',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
@@ -113,10 +113,12 @@ export function pushObj(obj, autoPosition = true) {
 		core.tables.push(obj);
 	} else if (obj instanceof Plot) {
 		if (autoPosition) {
-			const container = document.getElementsByClassName('canvas')[0];
 			const pos = findNextAvailablePosition(core.plots);
-			obj.x = pos.x + container.scrollLeft;
-			obj.y = pos.y + container.scrollTop;
+			const container = document.getElementsByClassName('canvas')[0];
+			if (container) {
+				obj.x = pos.x + container.scrollLeft;
+				obj.y = pos.y + container.scrollTop;
+			}
 		}
 		//now do sizing
 		if (obj.type === 'scatterplot') {

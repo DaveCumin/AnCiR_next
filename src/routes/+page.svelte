@@ -17,6 +17,8 @@
 	import { importJson } from '$lib/components/iconActions/Setting.svelte';
 
 	import { onMount } from 'svelte';
+	import { fade } from 'svelte/transition';
+
 	import { testJsonDC } from './testJsonDC.svelte';
 
 	import {
@@ -43,7 +45,7 @@
 	import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte';
 
 	let loadingMsg = $state('Warming up...');
-	let isLoaded = $state(false);
+	let isLoading = $state(true);
 
 	let visualise = $state(false);
 
@@ -101,7 +103,7 @@
 		loadingMsg = 'Loading table processes ...';
 		appConsts.tableProcessMap = await loadTableProcesses();
 
-		isLoaded = true;
+		isLoading = false;
 
 		//add event listeners
 		const updateWidth = () => {
@@ -209,11 +211,14 @@
 		};
 	});
 
-	function loadTestJson() {
+	async function loadTestJson() {
 		// const jsonData = JSON.parse(`${testJson}`);
 		const jsonData = JSON.parse(`${testJsonDC}`);
-
-		importJson(jsonData);
+		isLoading = true;
+		loadingMsg = 'Loading test data...';
+		await new Promise((resolve) => setTimeout(resolve, 10));
+		await importJson(jsonData);
+		isLoading = false;
 	}
 
 	function addData(dataIN, type, name, provenance) {
@@ -282,10 +287,19 @@
 		return out;
 	}
 
-	function refresh() {
-		//simulate importing data
-		core.rawData = new Map();
+	async function refresh() {
+		//Clear everything
 		core.data = [];
+		core.tables = [];
+		core.plots = [];
+		core.rawData = new Map();
+
+		//Show the loading message
+		isLoading = true;
+		loadingMsg = 'Making data...';
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		//simulate importing data
 		let d0id = addData(makeArray(N, 5, 0.15), 'number', 'the time', 'just made this up');
 
 		let d1id = addData(makeRhythmic(N, 24 / 0.15), 'number', 'val1', 'imported from thin air');
@@ -334,7 +348,9 @@
 		); //yyyy-LL-dd'T'HH:mm:ss.S'Z'
 		core.data[core.data.length - 1].timeFormat = "yyyy-LL-dd'T'HH:mm:ss.S'Z'"; //'%Y-%m-%dT%H:%M:%S.%L%Z';
 
-		core.tables = [];
+		loadingMsg = 'Putting data into tables...';
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
 		core.tables.push(new Table({ name: 'my first table' }));
 		core.tables[0].columnRefs = [testtimestring, testawd.id, testref.id, testrefref.id];
 		core.tables.push(new Table({ name: 'table too' }));
@@ -356,7 +372,9 @@
 			)
 		);
 
-		core.plots = [];
+		loadingMsg = 'Making scatterplot...';
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
 		//Scatter plot
 		pushObj(new Plot({ name: 'A Scatterplot', type: 'scatterplot' }));
 		core.plots[0].plot.addData({
@@ -369,6 +387,9 @@
 		});
 		core.plots[core.plots.length - 1].x = 15;
 		core.plots[core.plots.length - 1].y = 15;
+
+		loadingMsg = 'Making actogram...';
+		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		// //Actogram
 		pushObj(new Plot({ name: 'An Actogram', type: 'actogram' }));
@@ -385,6 +406,9 @@
 		core.plots[core.plots.length - 1].x = snapToGrid(15);
 		core.plots[core.plots.length - 1].y = snapToGrid(335);
 
+		loadingMsg = 'Making periodogram...';
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
 		//Periodogram
 		pushObj(new Plot({ name: 'A Periodogram', type: 'periodogram' }));
 		core.plots[core.plots.length - 1].plot.addData({
@@ -399,6 +423,9 @@
 		core.plots[core.plots.length - 1].y = snapToGrid(15);
 		core.plots[core.plots.length - 1].width = snapToGrid(510);
 
+		loadingMsg = 'Making table...';
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
 		//Table
 		core.plots.push(new Plot({ name: 'a table', type: 'tableplot' }));
 		core.plots[core.plots.length - 1].x = snapToGrid(555);
@@ -411,6 +438,9 @@
 		];
 		core.plots[core.plots.length - 1].plot.showCol = [true, true, true, true];
 
+		loadingMsg = 'Making correlogram...';
+		await new Promise((resolve) => setTimeout(resolve, 10));
+		console.log('making core');
 		//Correlogram
 		pushObj(new Plot({ name: 'An Autocorrelogram', type: 'correlogram' }));
 		core.plots[core.plots.length - 1].plot.addData({
@@ -425,6 +455,9 @@
 		core.plots[core.plots.length - 1].y = snapToGrid(645);
 		core.plots[core.plots.length - 1].width = snapToGrid(510);
 
+		loadingMsg = 'Making Fourier analysis...';
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
 		// FFT
 		pushObj(new Plot({ name: 'A Fourier Analysis', type: 'fft' }));
 		core.plots[core.plots.length - 1].plot.addData({
@@ -438,6 +471,9 @@
 		core.plots[core.plots.length - 1].x = snapToGrid(555);
 		core.plots[core.plots.length - 1].y = snapToGrid(960);
 		core.plots[core.plots.length - 1].width = snapToGrid(510);
+
+		loadingMsg = 'Making duplicate data...';
+		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		//--------
 		//Add another tableprocess to test removal
@@ -454,6 +490,8 @@
 			)
 		);
 		core.plots[0].plot.data[1].y.refId = core.data[core.data.length - 1].id;
+
+		isLoading = false;
 	}
 
 	// TODO: Key Handling accessibility, e.g. ctrl+i == import
@@ -463,32 +501,34 @@
 	<title>AnCiR {appConsts.version}</title>
 </svelte:head>
 
-{#if isLoaded}
-	{#if visualise}
-		<Visualise />
-	{:else}
-		{#if appState.showNavbar}
-			<Navbar />
-		{/if}
-
-		<DisplayPanel />
-
-		<PlotDisplay />
-
-		<ControlPanel />
-
-		<AreYouSure
-			bind:showModal={appState.showAYSModal}
-			text={appState.AYStext}
-			callback={appState.AYScallback}
-		/>
+{#if visualise}
+	<Visualise />
+{/if}
+{#if !isLoading || core.data.length > 0}
+	{#if appState.showNavbar}
+		<Navbar />
 	{/if}
-{:else}
-	<div class="loading-container">
-		<div class="title-container">
-			<Icon name="spinner" width={32} height={32} className="spinner" />
-			<div>
-				<p>{loadingMsg}</p>
+
+	<DisplayPanel />
+
+	<PlotDisplay />
+
+	<ControlPanel />
+
+	<AreYouSure
+		bind:showModal={appState.showAYSModal}
+		text={appState.AYStext}
+		callback={appState.AYScallback}
+	/>
+{/if}
+{#if isLoading}
+	<div class="backdrop" transition:fade={{ duration: 360 }}>
+		<div class="loading-container">
+			<div class="title-container">
+				<Icon name="spinner" width={32} height={32} className="spinner" />
+				<div>
+					<p>{loadingMsg}</p>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -740,7 +780,7 @@
 
 	/* plot control */
 	:global(.control-banner) {
-		position: sticky;
+		position:
 		top: 0;
 
 		width: 100%;
@@ -774,7 +814,7 @@
 	}
 
 	:global(.control-tab) {
-		position: sticky;
+		position:
 		top: 0;
 
 		width: 100%;
@@ -1126,12 +1166,23 @@
 		color: #555;
 	}
 
+	.backdrop {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(255, 255, 255, 0);
+		backdrop-filter: blur(0px);
+	}
 	.loading-container {
 		display: flex;
+		position: absolute;
 		justify-content: center;
 		align-items: center;
 		width: 100%;
 		height: 100vh;
+		z-index: 999999;
 	}
 
 	.title-container {
