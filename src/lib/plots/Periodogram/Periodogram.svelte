@@ -11,7 +11,7 @@
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
 	// Import worker source and BigNumber as raw strings so everything is inlined
-	import bigNumberSource from 'bignumber.js/bignumber.js?raw';
+	import bigNumberSource from '$lib/workers/bignumber.js?raw';
 	import periodogramWorkerSourceRaw from '$lib/workers/periodogram.worker.js?raw';
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
