@@ -147,7 +147,16 @@
 
 		// Called by the component's $effect to trigger calculation.
 		// Reactive values must be read by the caller ($effect) and passed in.
-		triggerCalculation(xData, yData, binSize, method, chiSquaredAlpha, periodSteps, displayMin, displayMax) {
+		triggerCalculation(
+			xData,
+			yData,
+			binSize,
+			method,
+			chiSquaredAlpha,
+			periodSteps,
+			displayMin,
+			displayMax
+		) {
 			// Skip if data is invalid
 			if (!xData || !yData || xData.length === 0 || yData.length === 0) {
 				return;
@@ -478,7 +487,7 @@
 	onDestroy(() => {
 		// Clean up any active workers
 		if (which === 'plot' && theData.plot?.data) {
-			theData.plot.data.forEach(datum => {
+			theData.plot.data.forEach((datum) => {
 				datum.cleanup();
 			});
 		}
@@ -489,7 +498,7 @@
 	// then pass the values into the debounced triggerCalculation.
 	$effect(() => {
 		if (which === 'plot' && theData.plot?.data) {
-			theData.plot.data.forEach(datum => {
+			theData.plot.data.forEach((datum) => {
 				const xData = datum.x.hoursSinceStart;
 				const yData = datum.y.getData();
 				const binSize = datum.binSize;
@@ -500,9 +509,14 @@
 				const displayMax = datum.parentPlot.periodlimsIN[1];
 
 				datum.triggerCalculation(
-					xData, yData, binSize, method,
-					chiSquaredAlpha, periodSteps,
-					displayMin, displayMax
+					xData,
+					yData,
+					binSize,
+					method,
+					chiSquaredAlpha,
+					periodSteps,
+					displayMin,
+					displayMax
 				);
 			});
 		}
@@ -870,13 +884,6 @@
 					? `${Math.round((calculatingData.progress.current / calculatingData.progress.total) * 100)}%`
 					: ''}
 			/>
-			<button
-				class="icon"
-				onclick={() => calculatingData.cancelCalculation()}
-				style="padding: 8px 16px; font-size: 14px;"
-			>
-				Cancel
-			</button>
 		</div>
 	{/if}
 
