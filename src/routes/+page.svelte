@@ -36,6 +36,7 @@
 	import { TableProcess } from '$lib/core/tableProcess.svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
 	// import { testjson } from '$lib/test.svelte.js';
 
@@ -541,12 +542,7 @@
 {#if isLoading}
 	<div class="backdrop" transition:fade={{ duration: 360 }}>
 		<div class="loading-container">
-			<div class="title-container">
-				<Icon name="spinner" width={32} height={32} className="spinner" />
-				<div>
-					<p>{loadingMsg}</p>
-				</div>
-			</div>
+			<LoadingSpinner message={loadingMsg} />
 		</div>
 	</div>
 {/if}
@@ -1189,8 +1185,9 @@
 		left: 0;
 		width: 100%;
 		height: 100%;
-		background: rgba(255, 255, 255, 0);
-		backdrop-filter: blur(0px);
+		background: rgba(255, 255, 255, 0.85);
+		backdrop-filter: blur(4px);
+		z-index: 9999;
 	}
 	.loading-container {
 		display: flex;
@@ -1202,14 +1199,4 @@
 		z-index: 999999;
 	}
 
-	.title-container {
-		display: flex;
-		justify-content: left;
-		align-items: center;
-		gap: 10px;
-	}
-
-	.title-container p {
-		margin: 0;
-	}
 </style>

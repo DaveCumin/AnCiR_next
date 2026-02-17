@@ -14,6 +14,7 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import TableLayout from '$lib/components/plotbits/Table.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import { tick } from 'svelte';
 	import { stackOrderInsideOut } from 'd3-shape';
 	import { parse } from 'svelte/compiler';
@@ -367,25 +368,15 @@
 <Modal bind:showModal={showImportModal}>
 	{#snippet header()}
 		{#if awaitingPreview}
-			<div class="title-container">
-				<Icon name="spinner" width={32} height={32} className="spinner" />
-				<div>
-					<p>Importing data from {targetFile?.name ?? 'file'}.</p>
-					{#if loadProgress.detail}
-						<p class="progress-detail">{loadProgress.detail}</p>
-					{/if}
-				</div>
-			</div>
+			<LoadingSpinner
+				message="Importing data from {targetFile?.name ?? 'file'}."
+				detail={loadProgress.detail}
+			/>
 		{:else if awaitingLoad}
-			<div class="title-container">
-				<Icon name="spinner" width={32} height={32} className="spinner" />
-				<div>
-					<p>Loading data from {targetFile?.name ?? 'file'}.</p>
-					{#if loadProgress.detail}
-						<p class="progress-detail">{loadProgress.detail}</p>
-					{/if}
-				</div>
-			</div>
+			<LoadingSpinner
+				message="Loading data from {targetFile?.name ?? 'file'}."
+				detail={loadProgress.detail}
+			/>
 		{:else}
 			<div class="heading">
 				<h2>Import Data</h2>
@@ -467,16 +458,4 @@
 </Modal>
 
 <style>
-	.title-container {
-		display: flex;
-		justify-content: left;
-		align-items: center;
-		gap: 10px;
-	}
-
-	.progress-detail {
-		font-size: 0.85em;
-		color: var(--color-lightness-45, #777);
-		margin-top: 2px;
-	}
 </style>

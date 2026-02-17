@@ -132,6 +132,7 @@
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 	import Settings from '../views/modals/Settings.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
 	let showSettingsModal = $state(false);
 
@@ -226,15 +227,10 @@
 <Modal bind:showModal={showImportModal}>
 	{#snippet header()}
 		{#if awaitingLoad}
-			<div class="title-container">
-				<Icon name="spinner" width={32} height={32} className="spinner" />
-				<div>
-					<p>Loading session{fileName ? ` from ${fileName}` : ''}…</p>
-					{#if loadProgressDetail}
-						<p class="progress-detail">{loadProgressDetail}</p>
-					{/if}
-				</div>
-			</div>
+			<LoadingSpinner
+				message="Loading session{fileName ? ` from ${fileName}` : ''}…"
+				detail={loadProgressDetail}
+			/>
 		{:else}
 			<div class="heading">
 				<h2>Import Session</h2>
@@ -347,16 +343,5 @@
 		font-size: 14px;
 	}
 
-	.title-container {
-		display: flex;
-		justify-content: left;
-		align-items: center;
-		gap: 10px;
-	}
 
-	.progress-detail {
-		font-size: 0.85em;
-		color: var(--color-lightness-45, #777);
-		margin-top: 2px;
-	}
 </style>

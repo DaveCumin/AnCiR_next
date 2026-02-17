@@ -6,6 +6,7 @@
 	import { appConsts } from '$lib/core/core.svelte.js';
 	import { tick } from 'svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
 	let { show = $bindable(), tableId } = $props();
 
@@ -179,20 +180,9 @@
 
 <Modal bind:showModal={show}>
 	{#if awaitingLoad}
-		<div class="title-container">
-			<Icon name="spinner" width={32} height={32} className="spinner" />
-			<p>Making the column</p>
-		</div>
+		<LoadingSpinner message="Making the column" />
 	{:else}
 		<ProgressIndicator bind:steps bind:currentStep {stepContent} {footerContent} />
 	{/if}
 </Modal>
 
-<style>
-	.title-container {
-		display: flex;
-		justify-content: left; /* Left horizontally */
-		align-items: center; /* Center vertically */
-		gap: 10px; /* Space between logo and text */
-	}
-</style>

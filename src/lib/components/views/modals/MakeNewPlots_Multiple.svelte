@@ -7,6 +7,7 @@
 	import { getColumnById } from '$lib/core/Column.svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { tick } from 'svelte';
@@ -182,10 +183,7 @@
 <Modal bind:showModal>
 	{#snippet header()}
 		{#if awaitingMake}
-			<div class="title-container">
-				<Icon name="spinner" width={32} height={32} className="spinner" />
-				<p>Making the {yCols.length} plots.</p>
-			</div>
+			<LoadingSpinner message="Making the {yCols.length} plots." />
 		{:else}
 			<div class="heading">
 				<h2>Create New {capitalise(plotType)}s</h2>
