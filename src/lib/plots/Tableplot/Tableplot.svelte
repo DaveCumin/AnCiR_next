@@ -279,6 +279,7 @@
 	}
 
 	function getPlotColumns(plot) {
+		console.log('getting columns for plot', plot.name, plot);
 		if (plot?.data && Array.isArray(plot.data)) {
 			return [
 				...new Set(
