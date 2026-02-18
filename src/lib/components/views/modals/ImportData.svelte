@@ -209,13 +209,15 @@
 					complete: async (results, file) => {
 						if (file.name.toLowerCase().endsWith('.awd')) {
 							results.errors = [];
-							if (previewIN === skipLines) {
-								previewIN = 14;
-								if (parseAttempts < maxAttempts) {
-									parseAttempts++;
-									tryParse();
-									return;
-								}
+							if (parseAttempts === 0) {
+								// Re-parse: no header (AWD has its own 7-line header),
+								// no row limit, no skip
+								hasHeader = false;
+								previewIN = 0;
+								skipLines = 0;
+								parseAttempts++;
+								tryParse();
+								return;
 							} else {
 								results.data = awdTocsv(results.data);
 								results.meta.fields = headers;
@@ -357,110 +359,69 @@
 	}
 
 	function awdTocsv(data) {
-		// AWD files have a short metadata header (~7 lines) then activity data.
-		// Header lines: device ID, start date, start time, epoch length (s), settings.
-		// PapaParse parsed with header=true so the first raw line became field keys
-		// and subsequent rows are objects. Reconstruct all rows as flat value arrays.
+		// AWD format: fixed 7-line header, then comma-separated data rows.
+		// Line 0: NAME (ignored)
+		// Line 1: START DATE (dd-MMM-yyyy, e.g. "10-Nov-1996")
+		// Line 2: START TIME (HH:mm, e.g. "16:22")
+		// Line 3: INTERVAL (sample interval in minutes × 4, so 4 → 1 min)
+		// Line 4: AGE (ignored)
+		// Line 5: ID (ignored)
+		// Line 6: SEX (ignored)
+		// Line 7+: Activity , Marker  (comma-separated data)
+		//
+		// Called after re-parse with hasHeader=false, so rows are arrays.
 
-		const allRows = [];
-		if (data.length > 0) {
-			// The PapaParse "field names" (first line of file) form the first logical row
-			allRows.push(Object.keys(data[0]));
+		if (data.length < 8) return data;
+
+		// --- Fixed header positions ---
+		const dateStr = String(data[1]?.[0] ?? '').trim();
+		const timeStr = String(data[2]?.[0] ?? '').trim();
+		const intervalRaw = Number(data[3]?.[0]) || 4;
+		// Stored value = minutes × 4, so actual seconds = (value / 4) × 60 = value × 15
+		const epochSeconds = intervalRaw * 15;
+
+		// Parse start date (dd-MMM-yyyy)
+		let startDate = DateTime.fromFormat(dateStr, 'dd-MMM-yyyy');
+		if (!startDate.isValid) {
+			// Try 2-digit year
+			startDate = DateTime.fromFormat(dateStr, 'dd-MMM-yy');
 		}
-		for (const row of data) {
-			allRows.push(Object.values(row));
-		}
-
-		// --- Extract metadata from header rows (scan first ~10 lines) ---
-		let startDate = null;
-		let startTime = null;
-		let epochSeconds = 60; // default 1-minute epochs
-
-		for (let i = 0; i < Math.min(allRows.length, 10); i++) {
-			const val = String(allRows[i]?.[0] ?? '').trim();
-			if (!val) continue;
-
-			// Detect epoch length – small integer that matches common epoch durations
-			if (!startDate && /^\d{1,3}$/.test(val)) {
-				const n = Number(val);
-				if ([1, 5, 10, 15, 30, 60, 120, 300].includes(n)) {
-					epochSeconds = n;
-					continue;
-				}
-			}
-
-			// Detect start date (various common AWD date formats)
-			if (!startDate) {
-				for (const fmt of ['dd-MMM-yy', 'dd-MMM-yyyy', 'MM/dd/yyyy', 'dd/MM/yyyy', 'yyyy-MM-dd']) {
-					const dt = DateTime.fromFormat(val, fmt);
-					if (dt.isValid) {
-						startDate = dt;
-						break;
-					}
-				}
-				if (startDate) continue;
-			}
-
-			// Detect start time
-			if (!startTime) {
-				for (const fmt of ['HH:mm:ss', 'HH:mm', 'h:mm:ss a', 'h:mm a']) {
-					const dt = DateTime.fromFormat(val, fmt);
-					if (dt.isValid) {
-						startTime = dt;
-						break;
-					}
-				}
-				if (startTime) continue;
-			}
+		if (!startDate.isValid) {
+			startDate = DateTime.now().startOf('day');
 		}
 
-		// --- Find where numeric activity data begins ---
-		let dataStartIdx = 0;
-		for (let i = 0; i < allRows.length; i++) {
-			const v = allRows[i]?.[0];
-			const s = String(v ?? '').trim();
-			if (s !== '' && !isNaN(Number(s)) && i >= 3) {
-				// Require at least 3 rows of header before data
-				dataStartIdx = i;
-				break;
-			}
-		}
-
-		const activityRows = allRows.slice(dataStartIdx);
-		if (activityRows.length === 0) return data; // fallback
-
-		// --- Build start datetime ---
-		let startDT = DateTime.now().startOf('day');
-		if (startDate && startTime) {
+		// Parse start time (HH:mm)
+		let startDT = startDate;
+		const timeParts = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+		if (timeParts) {
 			startDT = startDate.set({
-				hour: startTime.hour,
-				minute: startTime.minute,
-				second: startTime.second
+				hour: parseInt(timeParts[1]),
+				minute: parseInt(timeParts[2]),
+				second: 0
 			});
-		} else if (startDate) {
-			startDT = startDate;
 		}
 
-		// Determine how many value columns the data rows have
-		const sampleCols = activityRows[0]?.length ?? 1;
+		// Data starts at line 7
+		const dataRows = data.slice(7);
+		if (dataRows.length === 0) return data;
+
+		// Determine columns from data width
+		const sampleCols = dataRows[0]?.length ?? 1;
 		const colNames = ['DateTime', 'Activity'];
 		if (sampleCols > 1) colNames.push('Marker');
-		if (sampleCols > 2) {
-			for (let c = 2; c < sampleCols; c++) colNames.push(`Col${c + 1}`);
-		}
+		for (let c = 2; c < sampleCols; c++) colNames.push(`Col${c + 1}`);
 
-		// Build output rows as objects keyed by the new column names
-		const output = activityRows.map((row, i) => {
+		// Build output rows as objects
+		const output = dataRows.map((row, i) => {
 			const dt = startDT.plus({ seconds: i * epochSeconds });
 			const obj = { DateTime: dt.toFormat('yyyy-MM-dd HH:mm:ss') };
 			obj.Activity = Number(row[0]) || 0;
 			for (let c = 1; c < row.length; c++) {
-				obj[colNames[c + 1] ?? `Col${c + 2}`] = row[c];
+				obj[colNames[c + 1]] = row[c];
 			}
 			return obj;
 		});
 
-		// Update headers so dealWithData picks up the new column names
 		headers = colNames;
 		hasHeader = true;
 
