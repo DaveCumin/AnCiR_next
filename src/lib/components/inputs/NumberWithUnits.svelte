@@ -65,41 +65,6 @@
 		value = newValue;
 		onInput(value);
 	}
-
-	// Dragging functionality
-	let isDragging = false;
-	let startX = 0;
-	let startValue = $state(0);
-	let sensitivity = 0.1;
-	let inputElement = $state(null);
-
-	function startDrag(event) {
-		event.preventDefault();
-		isDragging = true;
-		startX = event.clientX;
-		startValue = displayValue;
-		window.addEventListener('mousemove', handleMouseMove, { capture: true });
-		window.addEventListener('mouseup', stopDrag, { capture: true });
-	}
-
-	function handleMouseMove(event) {
-		if (isDragging) {
-			document.body.style.cursor = 'ew-resize';
-			const deltaX = event.clientX - startX;
-			const deltaValue = deltaX * sensitivity * step;
-			let newValue = startValue + deltaValue;
-			newValue = Math.round(newValue / step) * step;
-			newValue = Number(newValue.toFixed(6));
-			updateValue(newValue);
-		}
-	}
-
-	function stopDrag() {
-		isDragging = false;
-		document.body.style.cursor = 'default';
-		window.removeEventListener('mousemove', handleMouseMove, { capture: true });
-		window.removeEventListener('mouseup', stopDrag, { capture: true });
-	}
 </script>
 
 <span class="number-input-wrapper">
@@ -114,17 +79,9 @@
 		onwheel={(e) => {
 			if (document.activeElement == inputElement) e.stopPropagation();
 		}}
-		class={'draggable-number-input ' + className}
+		class={'number-input ' + className}
 		{style}
 	/>
-	<!-- Drag handle sits just right of the spinner buttons -->
-	<span
-		class="drag-handle"
-		role="slider"
-		aria-valuenow={displayValue}
-		tabindex="-1"
-		onmousedown={startDrag}
-	></span>
 </span>
 
 {#if Object.keys(units).length > 2}
@@ -144,23 +101,16 @@
 		position: relative;
 	}
 
-	.drag-handle {
-		width: 8px;
-		cursor: ew-resize;
-		user-select: none;
-		flex-shrink: 0;
-	}
-
-	.draggable-number-input {
+	.number-input {
 		cursor: text;
 		user-select: none;
 	}
 
-	.draggable-number-input:hover {
+	.number-input:hover {
 		border-color: #666;
 	}
 
-	.draggable-number-input:focus {
+	.number-input:focus {
 		outline: none;
 		border-color: #007bff;
 		box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
