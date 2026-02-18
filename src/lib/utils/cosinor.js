@@ -1,11 +1,5 @@
 // @ts-nocheck
-import BigNumber from 'bignumber.js';
-
-// Configure BigNumber for high precision
-BigNumber.config({
-	DECIMAL_PLACES: 50,
-	ROUNDING_MODE: BigNumber.ROUND_HALF_UP
-});
+import { KahanSum } from './numerics.js';
 
 /**
  * Fits a model comprised of N cosine curves to data
@@ -86,27 +80,27 @@ function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance) {
 
 	// Levenberg-Marquardt optimization with adaptive lambda
 	let lambda = 0.01;
-	let prevError = new BigNumber(Infinity);
+	let prevError = Infinity;
 	let stagnationCount = 0;
 
 	for (let iter = 0; iter < maxIterations; iter++) {
 		const { residuals, jacobian } = computeResidualsAndJacobian(t, x, params, N);
 
-		// Calculate current error using BigNumber for precision
-		let currentError = new BigNumber(0);
+		// Calculate current error using Kahan summation
+		const errorAcc = new KahanSum();
 		for (let i = 0; i < residuals.length; i++) {
-			const r = new BigNumber(residuals[i]);
-			currentError = currentError.plus(r.times(r));
+			errorAcc.add(residuals[i] * residuals[i]);
 		}
+		const currentError = errorAcc.value;
 
 		// Check for convergence
-		const errorDiff = prevError.minus(currentError).abs();
-		if (errorDiff.isLessThan(tolerance)) {
+		const errorDiff = Math.abs(prevError - currentError);
+		if (errorDiff < tolerance) {
 			break;
 		}
 
 		// Check for stagnation and adjust lambda
-		if (errorDiff.isLessThan(tolerance * 10)) {
+		if (errorDiff < tolerance * 10) {
 			stagnationCount++;
 			if (stagnationCount > 5) {
 				lambda *= 10; // Increase damping
@@ -146,15 +140,14 @@ function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance) {
 		}
 	}
 
-	// Compute final statistics using BigNumber
+	// Compute final statistics using Kahan summation
 	const { residuals } = computeResidualsAndJacobian(t, x, params, N);
-	let rss = new BigNumber(0);
+	const rssAcc = new KahanSum();
 	for (let i = 0; i < residuals.length; i++) {
-		const r = new BigNumber(residuals[i]);
-		rss = rss.plus(r.times(r));
+		rssAcc.add(residuals[i] * residuals[i]);
 	}
-	const rmse = rss.dividedBy(t.length).sqrt().toNumber();
-	const rssValue = rss.toNumber();
+	const rssValue = rssAcc.value;
+	const rmse = Math.sqrt(rssValue / t.length);
 
 	// Generate fitted curve
 	const fitted = t.map((ti) => evaluateModel(ti, params, N));
@@ -333,7 +326,7 @@ function evaluateModel(t, params, N) {
 }
 
 /**
- * Compute residuals and Jacobian matrix using BigNumber for precision
+ * Compute residuals and Jacobian matrix
  */
 function computeResidualsAndJacobian(t, x, params, N) {
 	const m = t.length;
@@ -344,26 +337,25 @@ function computeResidualsAndJacobian(t, x, params, N) {
 	for (let i = 0; i < m; i++) {
 		const ti = t[i];
 		const predicted = evaluateModel(ti, params, N);
-		const residual = new BigNumber(x[i]).minus(predicted);
-		residuals[i] = residual.toNumber();
+		residuals[i] = x[i] - predicted;
 
 		// Partial derivatives
-		jacobian[i][0] = -1; // ∂/∂A
+		jacobian[i][0] = -1; // dF/dA
 
 		for (let j = 0; j < N; j++) {
-			const B = new BigNumber(params[1 + 3 * j]);
-			const w = new BigNumber(params[2 + 3 * j]);
-			const o = new BigNumber(params[3 + 3 * j]);
-			const cosArg = w.times(ti).plus(o);
-			const sinArg = Math.sin(cosArg.toNumber());
-			const cosValue = Math.cos(cosArg.toNumber());
+			const B = params[1 + 3 * j];
+			const w = params[2 + 3 * j];
+			const o = params[3 + 3 * j];
+			const cosArg = w * ti + o;
+			const sinArg = Math.sin(cosArg);
+			const cosValue = Math.cos(cosArg);
 
-			jacobian[i][1 + 3 * j] = -cosValue; // ∂/∂B_j
-			jacobian[i][2 + 3 * j] = B.times(ti).times(sinArg).toNumber(); // ∂/∂w_j
-			jacobian[i][3 + 3 * j] = B.times(sinArg).toNumber(); // ∂/∂o_j
+			jacobian[i][1 + 3 * j] = -cosValue; // dF/dB_j
+			jacobian[i][2 + 3 * j] = B * ti * sinArg; // dF/dw_j
+			jacobian[i][3 + 3 * j] = B * sinArg; // dF/do_j
 		}
 
-		jacobian[i][n - 1] = -1; // ∂/∂O
+		jacobian[i][n - 1] = -1; // dF/dO
 	}
 
 	return { residuals, jacobian };
@@ -380,11 +372,11 @@ function multiplyMatrices(A, B) {
 	const result = Array.from({ length: A.length }, () => new Array(B[0].length));
 	for (let i = 0; i < A.length; i++) {
 		for (let j = 0; j < B[0].length; j++) {
-			let sum = new BigNumber(0);
+			const acc = new KahanSum();
 			for (let k = 0; k < A[0].length; k++) {
-				sum = sum.plus(new BigNumber(A[i][k]).times(B[k][j]));
+				acc.add(A[i][k] * B[k][j]);
 			}
-			result[i][j] = sum.toNumber();
+			result[i][j] = acc.value;
 		}
 	}
 	return result;
@@ -392,25 +384,25 @@ function multiplyMatrices(A, B) {
 
 function multiplyMatrixVector(A, b) {
 	return A.map((row) => {
-		let sum = new BigNumber(0);
+		const acc = new KahanSum();
 		for (let i = 0; i < row.length; i++) {
-			sum = sum.plus(new BigNumber(row[i]).times(b[i]));
+			acc.add(row[i] * b[i]);
 		}
-		return sum.toNumber();
+		return acc.value;
 	});
 }
 
 function solveLinearSystem(A, b) {
-	// Simple Gaussian elimination with partial pivoting using BigNumber for precision
+	// Gaussian elimination with partial pivoting — native arithmetic
 	const n = A.length;
-	const augmented = A.map((row, i) => [...row.map((val) => new BigNumber(val)), new BigNumber(b[i])]);
+	const augmented = A.map((row, i) => [...row, b[i]]);
 
 	// Forward elimination
 	for (let i = 0; i < n; i++) {
 		// Find pivot
 		let maxRow = i;
 		for (let k = i + 1; k < n; k++) {
-			if (augmented[k][i].abs().isGreaterThan(augmented[maxRow][i].abs())) {
+			if (Math.abs(augmented[k][i]) > Math.abs(augmented[maxRow][i])) {
 				maxRow = k;
 			}
 		}
@@ -419,15 +411,15 @@ function solveLinearSystem(A, b) {
 		[augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]];
 
 		// Check for singular matrix
-		if (augmented[i][i].abs().isLessThan(1e-12)) {
+		if (Math.abs(augmented[i][i]) < 1e-12) {
 			throw new Error('Matrix is singular or near-singular');
 		}
 
 		// Make all rows below this one 0 in current column
 		for (let k = i + 1; k < n; k++) {
-			const factor = augmented[k][i].dividedBy(augmented[i][i]);
+			const factor = augmented[k][i] / augmented[i][i];
 			for (let j = i; j < n + 1; j++) {
-				augmented[k][j] = augmented[k][j].minus(factor.times(augmented[i][j]));
+				augmented[k][j] -= factor * augmented[i][j];
 			}
 		}
 	}
@@ -437,17 +429,10 @@ function solveLinearSystem(A, b) {
 	for (let i = n - 1; i >= 0; i--) {
 		let sum = augmented[i][n];
 		for (let j = i + 1; j < n; j++) {
-			sum = sum.minus(augmented[i][j].times(solution[j]));
+			sum -= augmented[i][j] * solution[j];
 		}
-		solution[i] = sum.dividedBy(augmented[i][i]).toNumber();
+		solution[i] = sum / augmented[i][i];
 	}
 
 	return solution;
 }
-
-// Example usage:
-// const t = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-// const x = [1, 1.5, 0.8, 0.2, 0.9, 1.8, 1.2, 0.3, 0.7, 1.4, 1.1];
-// const result = fitCosineCurves(t, x, 2);
-// console.log('Parameters:', result.parameters);
-// console.log('RMSE:', result.rmse);

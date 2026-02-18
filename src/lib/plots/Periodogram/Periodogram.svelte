@@ -10,9 +10,7 @@
 	import Points, { PointsClass } from '$lib/components/plotBits/Points.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
-	// Import worker source and BigNumber as raw strings so everything is inlined
-	import bigNumberSource from '$lib/workers/bignumber.js?raw';
-	import periodogramWorkerSourceRaw from '$lib/workers/periodogram.worker.js?raw';
+	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
 	export const Periodogram_controlHeaders = ['Properties', 'Data'];
@@ -52,9 +50,7 @@
 		thresholdline = $state();
 		chiSquaredAlpha = $state(0.05);
 
-		// Web worker state
-		worker = null;
-		currentCalculationId = null;
+		// Calculation state
 		calculating = $state(false);
 		progress = $state({ current: 0, total: 0 });
 
@@ -93,63 +89,12 @@
 			this.thresholdline = new LineClass(dataIN?.thresholdline, this);
 			this.points = new PointsClass(dataIN?.points, this);
 			this.method = dataIN?.method ?? 'Lomb-Scargle';
-
-			// Initialize worker (doesn't need component context)
-			this.initWorker();
-		}
-
-		initWorker() {
-			// Only create worker in browser environment
-			if (typeof Worker === 'undefined') return;
-
-			try {
-				// Prepend the local BigNumber source to the worker code
-				const blob = new Blob([bigNumberSource, '\n', periodogramWorkerSourceRaw], { type: 'application/javascript' });
-				const blobUrl = URL.createObjectURL(blob);
-				this.worker = new Worker(blobUrl);
-				URL.revokeObjectURL(blobUrl); // Clean up - worker keeps its own reference
-
-				this.worker.onmessage = (e) => {
-					const { type, id, result, current, total, error } = e.data;
-
-					// Ignore messages from old calculations
-					if (id !== this.currentCalculationId) return;
-
-					if (type === 'progress') {
-						this.progress = { current, total };
-					} else if (type === 'complete') {
-						this.periodData = result;
-						this.calculating = false;
-						this.progress = { current: 0, total: 0 };
-					} else if (type === 'error') {
-						console.error('Periodogram calculation error:', error);
-						this.calculating = false;
-						this.progress = { current: 0, total: 0 };
-					} else if (type === 'cancelled') {
-						this.calculating = false;
-						this.progress = { current: 0, total: 0 };
-					}
-				};
-
-				this.worker.onerror = (error) => {
-					console.error('Worker error:', error);
-					this.calculating = false;
-					this.progress = { current: 0, total: 0 };
-				};
-			} catch (error) {
-				console.error('Failed to create worker:', error);
-			}
 		}
 
 		cleanup() {
-			this.cancelCalculation();
 			if (this._debounceTimer) {
 				clearTimeout(this._debounceTimer);
 				this._debounceTimer = null;
-			}
-			if (this.worker) {
-				this.worker.terminate();
-				this.worker = null;
 			}
 		}
 
@@ -218,37 +163,21 @@
 		}
 
 		startCalculation(params) {
-			// Skip if worker is not available (SSR or creation failed)
-			if (!this.worker) {
-				console.warn('Worker not available, skipping calculation');
-				return;
-			}
-
-			// Cancel any ongoing calculation
-			if (this.calculating) {
-				this.cancelCalculation();
-			}
-
-			// Generate unique ID for this calculation
-			this.currentCalculationId = Math.random().toString(36).substring(7);
 			this.calculating = true;
 			this.progress = { current: 0, total: 0 };
 
-			// Send calculation request to worker
-			this.worker.postMessage({
-				type: 'calculate',
-				id: this.currentCalculationId,
-				params
-			});
-		}
-
-		cancelCalculation() {
-			if (this.currentCalculationId && this.worker) {
-				this.worker.postMessage({
-					type: 'cancel',
-					id: this.currentCalculationId
-				});
-			}
+			setTimeout(() => {
+				try {
+					this.periodData = runPeriodogramCalculation(params, (current, total) => {
+						this.progress = { current, total };
+					});
+				} catch (e) {
+					console.error('Periodogram calculation error:', e);
+				} finally {
+					this.calculating = false;
+					this.progress = { current: 0, total: 0 };
+				}
+			}, 0);
 		}
 
 		toJSON() {
@@ -493,7 +422,7 @@
 	});
 
 	onDestroy(() => {
-		// Clean up any active workers
+		// Clean up debounce timers
 		if (which === 'plot' && theData.plot?.data) {
 			theData.plot.data.forEach((datum) => {
 				datum.cleanup();

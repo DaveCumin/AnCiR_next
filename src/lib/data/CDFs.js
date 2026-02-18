@@ -5,170 +5,113 @@
 // This js file contains functions to compute
 //  * the standard normal distribution CDF: pnorm()
 //  * the chi-square distribution CDF: pchisq()
-//  * the t-ditribution CDF: pt()
+//  * the t-distribution CDF: pt()
 //  * the F-distribution CDF: pf()
 //  * the inverse of the above CDFs: qnorm(), qchisq(), qt(), qf()
 //
 // Several auxiliary functions are needed (n, m are positive integers)
 //  * bisection(): find the root of f(x)=0 using the method of bisection
-//                   (used to calculate the inverse of the CDFs)
 //  * ln(Gamma(n/2)):  gamnln()
 //  * incomplete gamma function P(n/2,x): gammp()
 //  * incomplete gamma function Q(n/2,x): gammq()
 //  * incomplete beta function I_x(n/2,m/2): betai()
 //========================================================================
 
-// Find the root of f(x)=0 using the method of bisection.
-// f: function with one argument.
-// x1 and x2 are real numbers such that x1 < x2 and f(x1)*f(x2) < 0.
-// Warning: won't check if conditions about x1 and x2 are satisfied.
-// They bracket the root, and are updated inside the function.
-// releps sets the relative accuracy of the root: the relative accuracy
-//         condition is satisfied if (x2-x1) < releps*|x|
-// abseps sets the absolute accuracy of the root: the absolute accuracy condition
-//         is satisfied if (x2-x1) < abseps or |f(x)| < abseps
-// The function returns x when the relative accuracy condition OR the absolute
-//         accuracy condition is satisfied.
-
-import BigNumber from 'bignumber.js';
-
-// Configure BigNumber for high precision
-BigNumber.config({
-	DECIMAL_PLACES: 50,
-	ROUNDING_MODE: BigNumber.ROUND_HALF_UP
-});
-
 function bisection(f, x1, x2, releps, abseps) {
 	var sign = function (z) {
-		const zBN = new BigNumber(z);
-		if (zBN.isGreaterThan(0)) {
-			return 1;
-		} else if (zBN.isLessThan(0)) {
-			return -1;
-		} else {
-			return 0;
-		}
+		if (z > 0) return 1;
+		else if (z < 0) return -1;
+		else return 0;
 	};
 
 	var f1 = sign(f(x1));
 	var f2 = sign(f(x2));
-	var x = new BigNumber(x1).plus(x2).dividedBy(2);
-	var fx = f(x.toNumber());
+	var x = (x1 + x2) / 2;
+	var fx = f(x);
 
-	const relBN = new BigNumber(releps);
-	const absBN = new BigNumber(abseps);
-
-	while (
-		new BigNumber(x2).minus(x1).isGreaterThan(absBN) &&
-		new BigNumber(x2).minus(x1).isGreaterThan(relBN.times(BigNumber.abs(x))) &&
-		BigNumber.abs(fx).isGreaterThan(absBN)
-	) {
+	while (x2 - x1 > abseps && x2 - x1 > releps * Math.abs(x) && Math.abs(fx) > abseps) {
 		if (fx * f1 > 0) {
-			x1 = x.toNumber();
+			x1 = x;
 			f1 = sign(fx);
 		} else {
-			x2 = x.toNumber();
+			x2 = x;
 			f2 = sign(fx);
 		}
-		x = new BigNumber(x1).plus(x2).dividedBy(2);
-		fx = f(x.toNumber());
+		x = (x1 + x2) / 2;
+		fx = f(x);
 	}
-	return x.toNumber();
+	return x;
 }
 
-// p-value for normal distribution: equivalent to R's pnorm(-z):
-// pnorm(z) = 1-F_{normal}(z), where F_{normal} is the cdf of the
-//   normal distribution.
-// This function calculates the p-value with a relative error < 1.2e-7
+// p-value for normal distribution: equivalent to R's pnorm(-z)
+// pnorm(z) = 1-F_{normal}(z)
+// Calculates the p-value with a relative error < 1.2e-7
 export function pnorm(z) {
-	const zBN = new BigNumber(z);
-	const x = new BigNumber(Math.SQRT1_2).times(BigNumber.abs(zBN));
+	const x = Math.SQRT1_2 * Math.abs(z);
 
-	// compute erfc(x) using an approximation formula (max rel error = 1.2e-7)
-	// see https://en.wikipedia.org/wiki/Error_function#Numerical_approximation
-	const t = new BigNumber(1).dividedBy(new BigNumber(1).plus(new BigNumber(0.5).times(x)));
-	const t2 = t.times(t);
-	const t3 = t2.times(t);
-	const t4 = t2.times(t2);
-	const t5 = t2.times(t3);
-	const t6 = t3.times(t3);
-	const t7 = t3.times(t4);
-	const t8 = t4.times(t4);
-	const t9 = t4.times(t5);
+	// erfc(x) approximation (max rel error = 1.2e-7)
+	const tv = 1 / (1 + 0.5 * x);
+	const t2 = tv * tv;
+	const t3 = t2 * tv;
+	const t4 = t2 * t2;
+	const t5 = t2 * t3;
+	const t6 = t3 * t3;
+	const t7 = t3 * t4;
+	const t8 = t4 * t4;
+	const t9 = t4 * t5;
 
-	const tau = x
-		.times(x)
-		.negated()
-		.minus(1.26551223)
-		.plus(new BigNumber(1.00002368).times(t))
-		.plus(new BigNumber(0.37409196).times(t2))
-		.plus(new BigNumber(0.09678418).times(t3))
-		.minus(new BigNumber(0.18628806).times(t4))
-		.plus(new BigNumber(0.27886807).times(t5))
-		.minus(new BigNumber(1.13520398).times(t6))
-		.plus(new BigNumber(1.48851587).times(t7))
-		.minus(new BigNumber(0.82215223).times(t8))
-		.plus(new BigNumber(0.17087277).times(t9));
+	const tau =
+		-x * x -
+		1.26551223 +
+		1.00002368 * tv +
+		0.37409196 * t2 +
+		0.09678418 * t3 -
+		0.18628806 * t4 +
+		0.27886807 * t5 -
+		1.13520398 * t6 +
+		1.48851587 * t7 -
+		0.82215223 * t8 +
+		0.17087277 * t9;
 
-	const p = new BigNumber(0.5).times(t).times(BigNumber.exp(tau.toNumber()));
+	const p = 0.5 * tv * Math.exp(tau);
 
-	if (zBN.isLessThan(0)) {
-		return new BigNumber(1).minus(p).toNumber();
+	if (z < 0) {
+		return 1 - p;
 	}
-
-	return p.toNumber();
+	return p;
 }
 
 // inverse of pnorm
-// z from right-tail p: same as R's qnorm(p, lower.tail=FALSE)
-// Use bisection to find z.
-// Relative accuracy are set by the parameter eps
 export function qnorm(p) {
-	const pBN = new BigNumber(p);
+	if (p === 0.5) return 0;
+	if (p < 1e-300 || p > 1 - 3e-16) return 1 / 0;
 
-	if (pBN.isEqualTo(0.5)) {
-		return 0;
-	}
-
-	if (pBN.isLessThan(1e-300) || pBN.isGreaterThan(new BigNumber(1).minus(3e-16))) {
-		return 1 / 0;
-	}
-
-	// Set relative accuracy parameter
 	var eps = 1e-6;
-
 	var pval = p;
-	if (pBN.isGreaterThan(0.5)) {
-		pval = new BigNumber(1).minus(pBN).toNumber();
+	if (p > 0.5) {
+		pval = 1 - p;
 	}
 
-	// Start bisection search...
-	const sqrt_2pioe = new BigNumber(1.520346901066281);
-	const min_arg = new BigNumber(2).times(pval).times(sqrt_2pioe);
+	const sqrt_2pioe = 1.520346901066281;
+	const min_arg = 2 * pval * sqrt_2pioe;
 	var minz = 0.0;
-	if (min_arg.isLessThan(1.0)) {
-		minz = new BigNumber(0.99).times(BigNumber.sqrt(min_arg.negated().ln().toNumber())).toNumber();
+	if (min_arg < 1.0) {
+		minz = 0.99 * Math.sqrt(-Math.log(min_arg));
 	}
-	const maxz = new BigNumber(1.01)
-		.times(
-			BigNumber.sqrt(new BigNumber(-2).times(BigNumber.ln(new BigNumber(2).times(pval))).toNumber())
-		)
-		.toNumber();
+	const maxz = 1.01 * Math.sqrt(-2 * Math.log(2 * pval));
 
 	var fun = function (z) {
 		return pnorm(z) - pval;
 	};
 	var z = bisection(fun, minz, maxz, eps, 0);
-	if (pBN.isGreaterThan(0.5)) {
+	if (p > 0.5) {
 		z = -z;
 	}
 	return z;
 }
 
 // Returns ln(Gamma(n/2)) for n=1,2,...
-// Warning: won't check the argument
 function gamnln(n) {
-	// Tabulated values of ln(Gamma(n/2)) for n<201
 	var lg = [
 		0.5723649429247001, 0, -0.1207822376352452, 0, 0.2846828704729192, 0.6931471805599453,
 		1.200973602347074, 1.791759469228055, 2.453736570842442, 3.178053830347946, 3.957813967618717,
@@ -213,321 +156,206 @@ function gamnln(n) {
 	];
 
 	if (n < 201) {
-		return new BigNumber(lg[n - 1]);
+		return lg[n - 1];
 	}
 
-	// For n>200, use the approx. formula given by numerical recipe
-	// relative error < 2e-10
+	// For n>200, Stirling-like approximation (relative error < 2e-10)
 	var coef = [
 		76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155,
 		1.208650973866179e-3, -5.395239384953e-6
 	];
-	const stp = new BigNumber(2.5066282746310005);
-	const x = new BigNumber(n).times(0.5);
+	const stp = 2.5066282746310005;
+	const x = n * 0.5;
 	var y = x;
-	var tmp = x.plus(5.5);
-	tmp = x.plus(0.5).times(BigNumber.ln(tmp)).minus(tmp);
-	var ser = new BigNumber(1.000000000190015);
+	var tmp = x + 5.5;
+	tmp = (x + 0.5) * Math.log(tmp) - tmp;
+	var ser = 1.000000000190015;
 	for (var i = 0; i < 6; i++) {
-		y = y.plus(1);
-		ser = ser.plus(new BigNumber(coef[i]).dividedBy(y));
+		y = y + 1;
+		ser = ser + coef[i] / y;
 	}
-	const gamln = tmp.plus(BigNumber.ln(stp.times(ser).dividedBy(x)));
-	return gamln;
+	return tmp + Math.log((stp * ser) / x);
 }
 
-// Returns the incomplete gamma function P(n/2,x) evaluated by
-// series representation. Algorithm from numerical recipe.
-// Assume that n is a positive integer and x>0, won't check arguments.
-// Relative error controlled by the eps parameter
+// Incomplete gamma P(n/2,x) by series — returns { P, Q } to avoid cancellation
 function gser(n, x) {
 	const maxit = 100000000;
-	const eps = new BigNumber(1e-8);
+	const eps = 1e-8;
 	const gln = gamnln(n);
-	const a = new BigNumber(n).times(0.5);
+	const a = n * 0.5;
 	var ap = a;
-	var sum = new BigNumber(1).dividedBy(a);
+	var sum = 1 / a;
 	var del = sum;
-	const xBN = new BigNumber(x);
 
 	for (var i = 1; i < maxit; i++) {
-		ap = ap.plus(1);
-		del = del.times(xBN).dividedBy(ap);
-		sum = sum.plus(del);
-		if (del.isLessThan(sum.times(eps))) {
+		ap = ap + 1;
+		del = (del * x) / ap;
+		sum = sum + del;
+		if (Math.abs(del) < Math.abs(sum) * eps) {
 			break;
 		}
 	}
-	return sum
-		.times(
-			BigNumber.exp(
-				xBN
-					.negated()
-					.plus(a.times(BigNumber.ln(xBN)))
-					.minus(gln)
-					.toNumber()
-			)
-		)
-		.toNumber();
+	const P = sum * Math.exp(-x + a * Math.log(x) - gln);
+	return { P, Q: 1 - P };
 }
 
-// Returns the incomplete gamma function Q(n/2,x) evaluated by
-// its continued fraction representation. Algorithm from numerical recipe.
-// Assume that n is a postive integer and x>0, won't check arguments.
-// Relative error controlled by the eps parameter
+// Incomplete gamma Q(n/2,x) by continued fraction — returns { P, Q }
 function gcf(n, x) {
 	const maxit = 100000000;
-	const eps = new BigNumber(1e-8);
+	const eps = 1e-8;
 	const gln = gamnln(n);
-	const a = new BigNumber(n).times(0.5);
-	const xBN = new BigNumber(x);
-	var b = xBN.plus(1).minus(a);
-	const fpmin = new BigNumber(1e-300);
-	var c = new BigNumber(1).dividedBy(fpmin);
-	var d = new BigNumber(1).dividedBy(b);
+	const a = n * 0.5;
+	var b = x + 1 - a;
+	const fpmin = 1e-300;
+	var c = 1 / fpmin;
+	var d = 1 / b;
 	var h = d;
 
 	for (var i = 1; i < maxit; i++) {
-		const an = new BigNumber(-i).times(new BigNumber(i).minus(a));
-		b = b.plus(2);
-		d = an.times(d).plus(b);
-		if (BigNumber.abs(d).isLessThan(fpmin)) {
-			d = fpmin;
-		}
-		c = b.plus(an.dividedBy(c));
-		if (BigNumber.abs(c).isLessThan(fpmin)) {
-			c = fpmin;
-		}
-		d = new BigNumber(1).dividedBy(d);
-		const del = d.times(c);
-		h = h.times(del);
-		if (BigNumber.abs(del.minus(1)).isLessThan(eps)) {
+		const an = -i * (i - a);
+		b = b + 2;
+		d = an * d + b;
+		if (Math.abs(d) < fpmin) d = fpmin;
+		c = b + an / c;
+		if (Math.abs(c) < fpmin) c = fpmin;
+		d = 1 / d;
+		const del = d * c;
+		h = h * del;
+		if (Math.abs(del - 1) < eps) {
 			break;
 		}
 	}
-	return h
-		.times(
-			BigNumber.exp(
-				xBN
-					.negated()
-					.plus(a.times(BigNumber.ln(xBN)))
-					.minus(gln)
-					.toNumber()
-			)
-		)
-		.toNumber();
+	const Q = h * Math.exp(-x + a * Math.log(x) - gln);
+	return { P: 1 - Q, Q };
 }
 
-// Returns the incomplete Gamma function P(n/2,x)
-// Assume n is a positive integer, x>0 , won't check arguments
+// Incomplete Gamma function P(n/2,x)
 function gammp(n, x) {
 	if (x < 0.5 * n + 1) {
-		return gser(n, x);
+		return gser(n, x).P;
 	} else {
-		return 1 - gcf(n, x);
+		return gcf(n, x).P;
 	}
 }
 
-// Returns the incomplete Gamma function Q(n/2,x)
-// Assume n is a positive integer, x>0 , won't check arguments
+// Incomplete Gamma function Q(n/2,x)
 function gammq(n, x) {
 	if (x < 0.5 * n + 1) {
-		return 1 - gser(n, x);
+		return gser(n, x).Q;
 	} else {
-		return gcf(n, x);
+		return gcf(n, x).Q;
 	}
 }
 
-// Evaluates incomplete beta function by modified Lentz's method
-// Algorithm from numerical recipe
+// Incomplete beta function by modified Lentz's method
 function betacf(a, b, x) {
 	const maxit = 100000000;
-	const aBN = new BigNumber(a);
-	const bBN = new BigNumber(b);
-	const xBN = new BigNumber(x);
-	const qab = aBN.plus(bBN);
-	const qap = aBN.plus(1.0);
-	const qam = aBN.minus(1.0);
-	var c = new BigNumber(1.0);
-	var d = new BigNumber(1).minus(qab.times(xBN).dividedBy(qap));
-	const fpmin = new BigNumber(1e-300);
-	const eps = new BigNumber(1e-8);
+	const qab = a + b;
+	const qap = a + 1;
+	const qam = a - 1;
+	var c = 1;
+	var d = 1 - (qab * x) / qap;
+	const fpmin = 1e-300;
+	const eps = 1e-8;
 
-	if (BigNumber.abs(d).isLessThan(fpmin)) {
-		d = fpmin;
-	}
-	d = new BigNumber(1.0).dividedBy(d);
+	if (Math.abs(d) < fpmin) d = fpmin;
+	d = 1 / d;
 	var h = d;
 
 	for (var m = 1; m < maxit; m++) {
 		const m2 = 2 * m;
-		var aa = new BigNumber(m)
-			.times(bBN.minus(m))
-			.times(xBN)
-			.dividedBy(qam.plus(m2).times(aBN.plus(m2)));
-		d = new BigNumber(1).plus(aa.times(d));
-		if (BigNumber.abs(d).isLessThan(fpmin)) {
-			d = fpmin;
-		}
-		c = new BigNumber(1).plus(aa.dividedBy(c));
-		if (BigNumber.abs(c).isLessThan(fpmin)) {
-			c = fpmin;
-		}
-		d = new BigNumber(1.0).dividedBy(d);
-		h = h.times(d).times(c);
+		var aa = (m * (b - m) * x) / ((qam + m2) * (a + m2));
+		d = 1 + aa * d;
+		if (Math.abs(d) < fpmin) d = fpmin;
+		c = 1 + aa / c;
+		if (Math.abs(c) < fpmin) c = fpmin;
+		d = 1 / d;
+		h = h * d * c;
 
-		aa = aBN
-			.plus(m)
-			.negated()
-			.times(qab.plus(m))
-			.times(xBN)
-			.dividedBy(aBN.plus(m2).times(qap.plus(m2)));
-		d = new BigNumber(1).plus(aa.times(d));
-		if (BigNumber.abs(d).isLessThan(fpmin)) {
-			d = fpmin;
-		}
-		c = new BigNumber(1).plus(aa.dividedBy(c));
-		if (BigNumber.abs(c).isLessThan(fpmin)) {
-			c = fpmin;
-		}
-		d = new BigNumber(1.0).dividedBy(d);
-		const del = d.times(c);
-		h = h.times(del);
-		if (BigNumber.abs(del.minus(1.0)).isLessThan(eps)) {
+		aa = (-(a + m) * (qab + m) * x) / ((a + m2) * (qap + m2));
+		d = 1 + aa * d;
+		if (Math.abs(d) < fpmin) d = fpmin;
+		c = 1 + aa / c;
+		if (Math.abs(c) < fpmin) c = fpmin;
+		d = 1 / d;
+		const del = d * c;
+		h = h * del;
+		if (Math.abs(del - 1) < eps) {
 			break;
 		}
 	}
-	return h.toNumber();
+	return h;
 }
 
-// Returns the incomplete beta function I_x(n/2,m/2) for positive integers n and m
-//     and 0<=x<=1
-// Warning: won't check arguments
-// Algorithm from numerical recipe
+// Incomplete beta function I_x(n/2,m/2)
 function betai(n, m, x) {
-	const aBN = new BigNumber(n).times(0.5);
-	const bBN = new BigNumber(m).times(0.5);
-	const xBN = new BigNumber(x);
+	const a = n * 0.5;
+	const b = m * 0.5;
 
 	var bt;
-	if (xBN.isEqualTo(0) || xBN.isEqualTo(1)) {
-		bt = new BigNumber(0);
+	if (x === 0 || x === 1) {
+		bt = 0;
 	} else {
 		const gln_sum = gamnln(m + n);
 		const gln_n = gamnln(n);
 		const gln_m = gamnln(m);
-		bt = BigNumber.exp(
-			gln_sum
-				.minus(gln_n)
-				.minus(gln_m)
-				.plus(aBN.times(BigNumber.ln(xBN)))
-				.plus(bBN.times(BigNumber.ln(new BigNumber(1).minus(xBN))))
-				.toNumber()
-		);
+		bt = Math.exp(gln_sum - gln_n - gln_m + a * Math.log(x) + b * Math.log(1 - x));
 	}
 
-	var beti;
-	if (xBN.isLessThan(aBN.plus(1.0).dividedBy(aBN.plus(bBN).plus(2)))) {
-		// use continued fraction directly
-		beti = new BigNumber(bt).times(betacf(aBN.toNumber(), bBN.toNumber(), x)).dividedBy(aBN);
+	if (x < (a + 1) / (a + b + 2)) {
+		return (bt * betacf(a, b, x)) / a;
 	} else {
-		// use continued fraction after making the symmetry transformation
-		beti = new BigNumber(1).minus(
-			new BigNumber(bt)
-				.times(betacf(bBN.toNumber(), aBN.toNumber(), new BigNumber(1).minus(xBN).toNumber()))
-				.dividedBy(bBN)
-		);
+		return 1 - (bt * betacf(b, a, 1 - x)) / b;
 	}
-	return beti.toNumber();
 }
 
 // p-value for chi^2 distribution
-// When ptype=1: returns 1-F_{chi^2}(chi2; n)
-// When ptype=2: returns the cdf F_{chi^2}(chi2; n)
-// same as R's function pchisq(chi2,n,lower.tail=FALSE) for ptype = 1
-// same as R's function pchisq(chi2,n) for ptype = 2
 export function pchisq(chi2, n, ptype = 1) {
-	const chi2BN = new BigNumber(chi2);
 	if (ptype == 1) {
-		return gammq(n, chi2BN.times(0.5).toNumber());
+		return gammq(n, chi2 * 0.5);
 	} else {
-		return gammp(n, chi2BN.times(0.5).toNumber());
+		return gammp(n, chi2 * 0.5);
 	}
 }
 
 // inverse of pchisq
-// same as R's function qchisq(p,n,lower.tail=FALSE) for ptype = 1
-// same as R's function qchisq(p,n) for ptype = 2
-// Assume that 0 <= p <= 1 and n is positive integer.
-// Won't check arguments.
-// Find root using bisection, relative accuracy set by eps
 export function qchisq(p, n, ptype = 1) {
-	const pBN = new BigNumber(p);
-
-	// Special cases
 	if (ptype == 1) {
-		if (pBN.isEqualTo(0)) {
-			return 1 / 0;
-		}
-		if (pBN.isEqualTo(1)) {
-			return 0;
-		}
+		if (p === 0) return 1 / 0;
+		if (p === 1) return 0;
 	}
-
 	if (ptype == 2) {
-		if (pBN.isEqualTo(0)) {
-			return 0;
-		}
-		if (pBN.isEqualTo(1)) {
-			return 1 / 0;
-		}
+		if (p === 0) return 0;
+		if (p === 1) return 1 / 0;
 	}
 
 	var eps = 1e-6;
-
-	// bracket the root
 	var min = 0;
-	const sd = BigNumber.sqrt(new BigNumber(2.0).times(n).toNumber());
-	var max = sd.times(2).toNumber();
+	const sd = Math.sqrt(2 * n);
+	var max = sd * 2;
 	var s = 1;
-	if (ptype == 2) {
-		s = -1;
-	}
-	// pchisq is decreasing for ptype=1, increasing for ptype=2
+	if (ptype == 2) s = -1;
+
 	while (s * pchisq(max, n, ptype) > p * s) {
 		min = max;
-		max = new BigNumber(max).plus(sd.times(2)).toNumber();
+		max = max + sd * 2;
 	}
 
 	var fun = function (x) {
 		return pchisq(x, n, ptype) - p;
 	};
-
 	return bisection(fun, min, max, eps, 0);
 }
 
-// ptype = 0: calculate P(<t) = F_t(t;n)
-// ptype = 1: calculate P(>t) = 1 - F_t(t;n)
-// ptype = 2: calculate P(>|t|) = 2[1-F_t(|t|;n)]
-// ptype = 3: calculate P(<|t|) = 1 - 2[1-F_t(|t|;n)]
+// t-distribution CDF
 function pt(t, n, ptype) {
-	const tBN = new BigNumber(t);
-	const nBN = new BigNumber(n);
-	const x = nBN.dividedBy(tBN.times(tBN).plus(nBN));
-	var p = betai(n, 1, x.toNumber());
+	const x = n / (t * t + n);
+	var p = betai(n, 1, x);
 
 	if (ptype == 0) {
-		if (tBN.isGreaterThan(0)) {
-			p = 1 - 0.5 * p;
-		} else {
-			p = 0.5 * p;
-		}
+		p = t > 0 ? 1 - 0.5 * p : 0.5 * p;
 	} else if (ptype == 1) {
-		if (tBN.isGreaterThan(0)) {
-			p = 0.5 * p;
-		} else {
-			p = 1 - 0.5 * p;
-		}
+		p = t > 0 ? 0.5 * p : 1 - 0.5 * p;
 	} else if (ptype == 3) {
 		p = 1 - p;
 	}
@@ -535,179 +363,116 @@ function pt(t, n, ptype) {
 }
 
 // inverse of pt
-// ptype = 0: Calculate t so that P(<t) = p
-// ptype = 1: Calculate t so that P(>t) = p
-// ptype = 2: Calculate t so that P(>|t|) = p
-// ptype = 3: Calculate t so that P(<|t|) = p
-// Relative accuracy set by eps
 function qt(p, n, ptype) {
-	const pBN = new BigNumber(p);
-
-	if (pBN.isEqualTo(0)) {
-		if (ptype == 1 || ptype == 2) {
-			return 1 / 0;
-		} else if (ptype == 0) {
-			return -1 / 0;
-		} else {
-			return 0;
-		}
+	if (p === 0) {
+		if (ptype == 1 || ptype == 2) return 1 / 0;
+		else if (ptype == 0) return -1 / 0;
+		else return 0;
 	}
-	if (pBN.isEqualTo(1)) {
-		if (ptype == 0 || ptype == 3) {
-			return 1 / 0;
-		} else if (ptype == 1) {
-			return -1 / 0;
-		} else {
-			return 0;
-		}
+	if (p === 1) {
+		if (ptype == 0 || ptype == 3) return 1 / 0;
+		else if (ptype == 1) return -1 / 0;
+		else return 0;
 	}
 
 	var eps = 1e-6;
 
-	// Want to find t for which pt(t,n,ptype) = p. Turn it into the equation
-	// pt(|t|,n,1) = p1.
 	var p1 = p;
-	if (ptype == 0 && pBN.isGreaterThan(0.5)) {
-		p1 = new BigNumber(1).minus(pBN).toNumber();
-	} else if (ptype == 1 && pBN.isGreaterThan(0.5)) {
-		p1 = new BigNumber(1).minus(pBN).toNumber();
+	if (ptype == 0 && p > 0.5) {
+		p1 = 1 - p;
+	} else if (ptype == 1 && p > 0.5) {
+		p1 = 1 - p;
 	} else if (ptype == 2) {
-		p1 = new BigNumber(0.5).times(pBN).toNumber();
+		p1 = 0.5 * p;
 	} else if (ptype == 3) {
-		p1 = new BigNumber(0.5).times(new BigNumber(1).minus(pBN)).toNumber();
+		p1 = 0.5 * (1 - p);
 	}
 
-	// Find tmax and tmin to bracket t with pt(t,n,1) = p1
-	const nBN = new BigNumber(n);
-	var tmp = gamnln(n + 1)
-		.minus(gamnln(n))
-		.dividedBy(nBN)
-		.plus(new BigNumber(0.5).minus(new BigNumber(1).dividedBy(nBN)).times(BigNumber.ln(nBN)));
-	tmp = tmp
-		.minus(BigNumber.ln(p1).dividedBy(nBN))
-		.minus(new BigNumber(0.5).times(BigNumber.ln(Math.PI)).dividedBy(nBN));
-	var tmax = BigNumber.exp(tmp.toNumber());
-	var tmin = BigNumber.exp(
-		tmp
-			.minus(new BigNumber(0.5).plus(new BigNumber(0.5).dividedBy(nBN)).times(BigNumber.ln(2.0)))
-			.toNumber()
-	);
+	var tmp =
+		(gamnln(n + 1) - gamnln(n)) / n +
+		(0.5 - 1 / n) * Math.log(n) -
+		Math.log(p1) / n -
+		(0.5 * Math.log(Math.PI)) / n;
 
-	if (tmin.times(tmin).isLessThan(nBN)) {
-		tmp = BigNumber.exp(
-			gamnln(n)
-				.minus(gamnln(n + 1))
-				.plus(new BigNumber(0.5).times(nBN.plus(1)).times(BigNumber.ln(2.0)))
-				.toNumber()
+	var tmax = Math.exp(tmp);
+	var tmin = Math.exp(tmp - (0.5 + 0.5 / n) * Math.log(2));
+
+	if (tmin * tmin < n) {
+		var tmp2 = Math.exp(
+			gamnln(n) - gamnln(n + 1) + 0.5 * (n + 1) * Math.log(2)
 		);
-		tmp = tmp.times(p1).times(BigNumber.sqrt(nBN.times(Math.PI).toNumber()));
-		tmin = BigNumber.sqrt(nBN.toNumber())
-			.plus(BigNumber.sqrt(new BigNumber(1).dividedBy(nBN).toNumber()))
-			.minus(tmp);
-		tmin = BigNumber.max(tmin, 0);
+		tmp2 = tmp2 * p1 * Math.sqrt(n * Math.PI);
+		tmin = Math.sqrt(n) + Math.sqrt(1 / n) - tmp2;
+		tmin = Math.max(tmin, 0);
 	}
 
-	if (pt(tmin.toNumber(), n, 1) < p1) {
-		tmin = tmin.times(0.5);
-		while (pt(tmin.toNumber(), n, 1) < p1) {
-			tmin = tmin.times(0.5);
+	if (pt(tmin, n, 1) < p1) {
+		tmin = tmin * 0.5;
+		while (pt(tmin, n, 1) < p1) {
+			tmin = tmin * 0.5;
 		}
 	}
-	if (pt(tmax.toNumber(), n, 1) > p1) {
-		tmax = tmax.times(2);
-		while (pt(tmax.toNumber(), n, 1) > p1) {
-			tmax = tmax.times(2);
+	if (pt(tmax, n, 1) > p1) {
+		tmax = tmax * 2;
+		while (pt(tmax, n, 1) > p1) {
+			tmax = tmax * 2;
 		}
 	}
 
-	// Find t using the bisection method
 	var fun = function (x) {
 		return pt(x, n, 1) - p1;
 	};
-	var t = bisection(fun, tmin.toNumber(), tmax.toNumber(), eps, 0);
+	var t = bisection(fun, tmin, tmax, eps, 0);
 
-	if ((ptype == 0 && pBN.isLessThan(0.5)) || (ptype == 1 && pBN.isGreaterThan(0.5))) {
+	if ((ptype == 0 && p < 0.5) || (ptype == 1 && p > 0.5)) {
 		t = -t;
 	}
-
 	return t;
 }
 
-// ptype=1: compute P(>F, df1, df2) = 1-F_F(F; df1,df2)
-// ptype=2: compute P(<F, df1,df2) = F_F(F; df1,df2)
-// Assume df1 and df2 are positive integers, and F>=0 (won't check arguments)
+// F-distribution CDF
 function pf(F, df1, df2, ptype) {
-	const FBN = new BigNumber(F);
-
-	if (FBN.isEqualTo(0)) {
-		if (ptype == 1) {
-			return 1;
-		} else {
-			return 0;
-		}
+	if (F === 0) {
+		return ptype == 1 ? 1 : 0;
 	}
-
 	if (ptype == 1) {
-		const x = new BigNumber(df2).dividedBy(new BigNumber(df1).times(FBN).plus(df2));
-		return betai(df2, df1, x.toNumber());
+		return betai(df2, df1, df2 / (df1 * F + df2));
 	} else {
-		const x = new BigNumber(df1).times(FBN).dividedBy(new BigNumber(df1).times(FBN).plus(df2));
-		return betai(df1, df2, x.toNumber());
+		return betai(df1, df2, (df1 * F) / (df1 * F + df2));
 	}
 }
 
 // inverse of pf
-// ptype=1: compute F s.t. P(>F, df1, df2) = p
-// ptype=2: compute F s.t. P(<F, df1,df2) = p
-// Assume df1 and df2 are positive integers, and 0<= p <=1 (won't change arguments)
-// relative accuracy set by eps
 function qf(p, d1, d2, ptype) {
-	const pBN = new BigNumber(p);
-
-	if (pBN.isEqualTo(0)) {
-		if (ptype == 1) {
-			return 1 / 0;
-		} else {
-			return 0;
-		}
+	if (p === 0) {
+		return ptype == 1 ? 1 / 0 : 0;
 	}
-
-	if (pBN.isEqualTo(1)) {
-		if (ptype == 1) {
-			return 0;
-		} else {
-			return 1 / 0;
-		}
+	if (p === 1) {
+		return ptype == 1 ? 0 : 1 / 0;
 	}
 
 	var eps = 1e-6;
+	var s = 3 - 2 * ptype;
+	var Fmax, Fmin;
 
-	// Find lower and upper values to bracket the root for bisection search
-	var Fmax;
-	var Fmin;
-	var s = 3 - 2 * ptype; // 1 or -1: p decreases or increases with F
-	var f21 = new BigNumber(1.0);
-	var p21 = pf(f21.toNumber(), d1, d2, ptype);
-
-	if (s * pf(f21.toNumber(), d1, d2, ptype) > s * p) {
-		Fmin = f21;
-		Fmax = f21.times(2);
-		while (s * pf(Fmax.toNumber(), d1, d2, ptype) > s * p) {
+	if (s * pf(1, d1, d2, ptype) > s * p) {
+		Fmin = 1;
+		Fmax = 2;
+		while (s * pf(Fmax, d1, d2, ptype) > s * p) {
 			Fmin = Fmax;
-			Fmax = Fmax.times(2);
+			Fmax = Fmax * 2;
 		}
 	} else {
-		Fmax = f21;
-		Fmin = f21.times(0.5);
-		while (s * pf(Fmin.toNumber(), d1, d2, ptype) <= s * p) {
+		Fmax = 1;
+		Fmin = 0.5;
+		while (s * pf(Fmin, d1, d2, ptype) <= s * p) {
 			Fmax = Fmin;
-			Fmin = Fmin.times(0.5);
+			Fmin = Fmin * 0.5;
 		}
 	}
 
 	var fun = function (x) {
 		return pf(x, d1, d2, ptype) - p;
 	};
-
-	return bisection(fun, Fmin.toNumber(), Fmax.toNumber(), eps, 0);
+	return bisection(fun, Fmin, Fmax, eps, 0);
 }
