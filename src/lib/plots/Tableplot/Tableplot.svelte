@@ -405,9 +405,19 @@
 
 						<div class="clps-title-button">
 							{#if expandedTables.has(table.id)}
-								<Icon name="caret-down" width={16} height={16} />
+								<Icon
+									name="caret-down"
+									width={20}
+									height={20}
+									className="first-detail-title-icon"
+								/>
 							{:else}
-								<Icon name="caret-right" width={16} height={16} />
+								<Icon
+									name="caret-right"
+									width={20}
+									height={20}
+									className="first-detail-title-icon"
+								/>
 							{/if}
 						</div>
 					</summary>
@@ -450,9 +460,19 @@
 
 							<div class="clps-title-button">
 								{#if expandedPlots.has(plot.id)}
-									<Icon name="caret-down" width={16} height={16} />
+									<Icon
+										name="caret-down"
+										width={20}
+										height={20}
+										className="first-detail-title-icon"
+									/>
 								{:else}
-									<Icon name="caret-right" width={16} height={16} />
+									<Icon
+										name="caret-right"
+										width={20}
+										height={20}
+										className="first-detail-title-icon"
+									/>
 								{/if}
 							</div>
 						</summary>
@@ -516,7 +536,10 @@
 						step="1"
 						bind:value={theData.plot.colCurrent}
 					/>
-					to {Math.min(theData.plot.colCurrent + theData.plot.Ncolumns - 1, theData.plot.longestCol)} of
+					to {Math.min(
+						theData.plot.colCurrent + theData.plot.Ncolumns - 1,
+						theData.plot.longestCol
+					)} of
 					{theData.plot.longestCol}
 				</p>
 			</div>
