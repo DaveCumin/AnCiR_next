@@ -12,6 +12,8 @@
 		style = ''
 	} = $props();
 
+	let inputElement = $state(null);
+
 	// eg units:
 	// 		{
 	// 		default: 'hr',
