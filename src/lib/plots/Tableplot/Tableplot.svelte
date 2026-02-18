@@ -17,7 +17,15 @@
 		colCurrent = $state(1);
 		showColNumber = $state(false);
 		decimalPlaces = $state(2);
-		Ncolumns = $state(10);
+		Ncolumns = $derived.by(() => {
+			const rowHeight = 33;
+			// Draggable outer box is parentBox.height + 50, minus its title bar (~37)
+			// and content padding (~16), leaving roughly parentBox.height - 3 for content.
+			const usable = (this.parentBox?.height ?? 250) - 3;
+			// Fixed overhead: table header row + "Row … of …" bar + wrapper margin
+			const fixedOverhead = 75;
+			return Math.max(1, Math.floor((usable - fixedOverhead) / rowHeight));
+		});
 
 		addColumn(colId) {
 			if (!this.columnRefs.includes(colId)) {
@@ -492,22 +500,26 @@
 {#snippet plot(theData)}
 	{#key theData.plot.showCol}
 		{#if theData.plot.showCol.some((s) => s) || theData.plot.showColNumber}
-			<Table
-				headers={theData.plot.tableHeadings}
-				data={theData.plot.tableData}
-				editable={true}
-				onInput={makeEdits}
-			/>
-			<p style="margin: 0.4rem 0 0;">
-				Row <NumberWithUnits
-					min="1"
-					max={theData.plot.longestCol}
-					step="1"
-					bind:value={theData.plot.colCurrent}
-				/>
-				to {Math.min(theData.plot.colCurrent + theData.plot.Ncolumns - 1, theData.plot.longestCol)} of
-				{theData.plot.longestCol}
-			</p>
+			<div class="tableplot-layout">
+				<div class="tableplot-body">
+					<Table
+						headers={theData.plot.tableHeadings}
+						data={theData.plot.tableData}
+						editable={true}
+						onInput={makeEdits}
+					/>
+				</div>
+				<p class="tableplot-row-bar">
+					Row <NumberWithUnits
+						min="1"
+						max={theData.plot.longestCol}
+						step="1"
+						bind:value={theData.plot.colCurrent}
+					/>
+					to {Math.min(theData.plot.colCurrent + theData.plot.Ncolumns - 1, theData.plot.longestCol)} of
+					{theData.plot.longestCol}
+				</p>
+			</div>
 		{:else}
 			<p style="color: #888; font-style: italic;">No columns selected</p>
 		{/if}
@@ -521,6 +533,22 @@
 {/if}
 
 <style>
+	.tableplot-layout {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+	}
+
+	.tableplot-body {
+		flex: 1;
+		overflow: hidden;
+	}
+
+	.tableplot-row-bar {
+		flex-shrink: 0;
+		margin: 0.4rem 0 0;
+	}
+
 	.display-list {
 		width: 100%;
 		margin-top: 0.25rem;

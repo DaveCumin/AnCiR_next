@@ -218,6 +218,7 @@
 								}
 							} else {
 								results.data = awdTocsv(results.data);
+								results.meta.fields = headers;
 							}
 						}
 
@@ -353,6 +354,117 @@
 		pushObj(newDataEntry);
 
 		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms || 10));
+	}
+
+	function awdTocsv(data) {
+		// AWD files have a short metadata header (~7 lines) then activity data.
+		// Header lines: device ID, start date, start time, epoch length (s), settings.
+		// PapaParse parsed with header=true so the first raw line became field keys
+		// and subsequent rows are objects. Reconstruct all rows as flat value arrays.
+
+		const allRows = [];
+		if (data.length > 0) {
+			// The PapaParse "field names" (first line of file) form the first logical row
+			allRows.push(Object.keys(data[0]));
+		}
+		for (const row of data) {
+			allRows.push(Object.values(row));
+		}
+
+		// --- Extract metadata from header rows (scan first ~10 lines) ---
+		let startDate = null;
+		let startTime = null;
+		let epochSeconds = 60; // default 1-minute epochs
+
+		for (let i = 0; i < Math.min(allRows.length, 10); i++) {
+			const val = String(allRows[i]?.[0] ?? '').trim();
+			if (!val) continue;
+
+			// Detect epoch length – small integer that matches common epoch durations
+			if (!startDate && /^\d{1,3}$/.test(val)) {
+				const n = Number(val);
+				if ([1, 5, 10, 15, 30, 60, 120, 300].includes(n)) {
+					epochSeconds = n;
+					continue;
+				}
+			}
+
+			// Detect start date (various common AWD date formats)
+			if (!startDate) {
+				for (const fmt of ['dd-MMM-yy', 'dd-MMM-yyyy', 'MM/dd/yyyy', 'dd/MM/yyyy', 'yyyy-MM-dd']) {
+					const dt = DateTime.fromFormat(val, fmt);
+					if (dt.isValid) {
+						startDate = dt;
+						break;
+					}
+				}
+				if (startDate) continue;
+			}
+
+			// Detect start time
+			if (!startTime) {
+				for (const fmt of ['HH:mm:ss', 'HH:mm', 'h:mm:ss a', 'h:mm a']) {
+					const dt = DateTime.fromFormat(val, fmt);
+					if (dt.isValid) {
+						startTime = dt;
+						break;
+					}
+				}
+				if (startTime) continue;
+			}
+		}
+
+		// --- Find where numeric activity data begins ---
+		let dataStartIdx = 0;
+		for (let i = 0; i < allRows.length; i++) {
+			const v = allRows[i]?.[0];
+			const s = String(v ?? '').trim();
+			if (s !== '' && !isNaN(Number(s)) && i >= 3) {
+				// Require at least 3 rows of header before data
+				dataStartIdx = i;
+				break;
+			}
+		}
+
+		const activityRows = allRows.slice(dataStartIdx);
+		if (activityRows.length === 0) return data; // fallback
+
+		// --- Build start datetime ---
+		let startDT = DateTime.now().startOf('day');
+		if (startDate && startTime) {
+			startDT = startDate.set({
+				hour: startTime.hour,
+				minute: startTime.minute,
+				second: startTime.second
+			});
+		} else if (startDate) {
+			startDT = startDate;
+		}
+
+		// Determine how many value columns the data rows have
+		const sampleCols = activityRows[0]?.length ?? 1;
+		const colNames = ['DateTime', 'Activity'];
+		if (sampleCols > 1) colNames.push('Marker');
+		if (sampleCols > 2) {
+			for (let c = 2; c < sampleCols; c++) colNames.push(`Col${c + 1}`);
+		}
+
+		// Build output rows as objects keyed by the new column names
+		const output = activityRows.map((row, i) => {
+			const dt = startDT.plus({ seconds: i * epochSeconds });
+			const obj = { DateTime: dt.toFormat('yyyy-MM-dd HH:mm:ss') };
+			obj.Activity = Number(row[0]) || 0;
+			for (let c = 1; c < row.length; c++) {
+				obj[colNames[c + 1] ?? `Col${c + 2}`] = row[c];
+			}
+			return obj;
+		});
+
+		// Update headers so dealWithData picks up the new column names
+		headers = colNames;
+		hasHeader = true;
+
+		return output;
 	}
 
 	function getFirstValid(data) {

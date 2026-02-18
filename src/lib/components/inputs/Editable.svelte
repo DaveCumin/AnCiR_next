@@ -84,7 +84,7 @@
 			}
 		}}
 	>
-		{value || placeholder}
+		{value != null && value !== '' ? value : placeholder}
 	</span>
 {/if}
 

@@ -74,6 +74,7 @@
 	let inputElement = $state(null);
 
 	function startDrag(event) {
+		event.preventDefault();
 		isDragging = true;
 		startX = event.clientX;
 		startValue = displayValue;
@@ -101,21 +102,30 @@
 	}
 </script>
 
-<input
-	bind:this={inputElement}
-	type="number"
-	{step}
-	min={typeof unitFactor === 'object' ? min : min / unitFactor}
-	max={typeof unitFactor === 'object' ? max : max / unitFactor}
-	bind:value={displayValue}
-	oninput={(e) => updateValue(e.target.value)}
-	onmousedown={startDrag}
-	onwheel={(e) => {
-		if (document.activeElement == inputElement) e.stopPropagation();
-	}}
-	class={'draggable-number-input ' + className}
-	{style}
-/>
+<span class="number-input-wrapper">
+	<input
+		bind:this={inputElement}
+		type="number"
+		{step}
+		min={typeof unitFactor === 'object' ? min : min / unitFactor}
+		max={typeof unitFactor === 'object' ? max : max / unitFactor}
+		bind:value={displayValue}
+		oninput={(e) => updateValue(e.target.value)}
+		onwheel={(e) => {
+			if (document.activeElement == inputElement) e.stopPropagation();
+		}}
+		class={'draggable-number-input ' + className}
+		{style}
+	/>
+	<!-- Drag handle sits just right of the spinner buttons -->
+	<span
+		class="drag-handle"
+		role="slider"
+		aria-valuenow={displayValue}
+		tabindex="-1"
+		onmousedown={startDrag}
+	></span>
+</span>
 
 {#if Object.keys(units).length > 2}
 	<select class="unitSelect" bind:value={selectedUnit}>
@@ -128,8 +138,21 @@
 {/if}
 
 <style>
-	.draggable-number-input {
+	.number-input-wrapper {
+		display: inline-flex;
+		align-items: stretch;
+		position: relative;
+	}
+
+	.drag-handle {
+		width: 8px;
 		cursor: ew-resize;
+		user-select: none;
+		flex-shrink: 0;
+	}
+
+	.draggable-number-input {
+		cursor: text;
 		user-select: none;
 	}
 
