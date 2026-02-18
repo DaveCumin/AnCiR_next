@@ -43,10 +43,22 @@ BigNumber.max = function (a, b) {
 BigNumber.ln.toString = () => '[polyfill]'; // marker for debugging
 
 // ============================================================================
-// SHARED HELPERS
+// SHARED HELPERS (type-agnostic)
 // ============================================================================
 
-function mean(data) {
+function makeSeqArray(from, to, step) {
+	let out = [];
+	for (let i = from; i <= to; i += step) {
+		out.push(i);
+	}
+	return out;
+}
+
+// ============================================================================
+// PLAIN JS HELPERS — mean and binData using native JS arithmetic
+// ============================================================================
+
+function meanPlain(data) {
 	let sum = 0;
 	let count = 0;
 	for (let i = 0; i < data.length; i++) {
@@ -58,15 +70,7 @@ function mean(data) {
 	return count > 0 ? sum / count : 0;
 }
 
-function makeSeqArray(from, to, step) {
-	let out = [];
-	for (let i = from; i <= to; i += step) {
-		out.push(i);
-	}
-	return out;
-}
-
-function binData(xValues, yValues, binSize, binStart = 0) {
+function binDataPlain(xValues, yValues, binSize, binStart = 0) {
 	const n = xValues.length;
 	if (n === 0 || n !== yValues.length) return { bins: [], y_out: [] };
 	const paired = xValues.map((x, i) => ({ x, y: yValues[i] })).sort((a, b) => a.x - b.x);
@@ -92,6 +96,52 @@ function binData(xValues, yValues, binSize, binStart = 0) {
 		y_out.push(meanFunc(ys, startIdx, endIdx));
 		if (currentStart >= xs[n - 1]) break;
 		currentStart += binSize;
+	}
+	return { bins, y_out };
+}
+
+// ============================================================================
+// BIGNUMBER HELPERS — mean and binData using BigNumber accumulation
+// ============================================================================
+
+function meanBN(data) {
+	let sum = new BigNumber(0);
+	let count = 0;
+	for (let i = 0; i < data.length; i++) {
+		if (data[i] !== undefined && !isNaN(data[i])) {
+			sum = sum.plus(data[i]);
+			count++;
+		}
+	}
+	return count > 0 ? sum.dividedBy(count).toNumber() : 0;
+}
+
+function binDataBN(xValues, yValues, binSize, binStart = 0) {
+	const n = xValues.length;
+	if (n === 0 || n !== yValues.length) return { bins: [], y_out: [] };
+	const paired = xValues.map((x, i) => ({ x, y: yValues[i] })).sort((a, b) => a.x - b.x);
+	const xs = paired.map((p) => p.x);
+	const ys = paired.map((p) => p.y);
+	const meanFuncBN = (arr, start, end) => {
+		let sum = new BigNumber(0);
+		for (let i = start; i < end; i++) sum = sum.plus(arr[i]);
+		return sum.dividedBy(end - start).toNumber();
+	};
+	const bins = [];
+	const y_out = [];
+	let currentStart = binStart;
+	const EPSILON = new BigNumber(1e-10);
+	let pointer = 0;
+	while (true) {
+		const binEnd = new BigNumber(currentStart).plus(binSize).toNumber();
+		bins.push(currentStart);
+		while (pointer < n && new BigNumber(xs[pointer]).isLessThan(new BigNumber(currentStart).minus(EPSILON))) pointer++;
+		const startIdx = pointer;
+		let endIdx = startIdx;
+		while (endIdx < n && new BigNumber(xs[endIdx]).isLessThan(new BigNumber(binEnd).minus(EPSILON))) endIdx++;
+		y_out.push(meanFuncBN(ys, startIdx, endIdx));
+		if (currentStart >= xs[n - 1]) break;
+		currentStart = new BigNumber(currentStart).plus(binSize).toNumber();
 	}
 	return { bins, y_out };
 }
@@ -249,7 +299,7 @@ plain.lombScargle = function (times, values, frequencies) {
 	const t = validIndices.map((i) => times[i]);
 	const y = validIndices.map((i) => values[i]);
 	if (t.length === 0) return new Array(frequencies.length).fill(0);
-	const yMean = mean(y);
+	const yMean = meanPlain(y);
 	const yVariance = y.reduce((sum, val) => sum + (val - yMean) ** 2, 0) / (y.length - 1);
 	return frequencies.map((f) => {
 		const omega = 2 * Math.PI * f;
@@ -268,11 +318,11 @@ plain.enright = function (times, values, periods, binSize) {
 	if (!times || !values || times.length < 2 || values.length < 2) {
 		return new Array(periods.length).fill(NaN);
 	}
-	const binnedData = binData(times, values, binSize, 0);
+	const binnedData = binDataPlain(times, values, binSize, 0);
 	if (binnedData.bins.length === 0) return new Array(periods.length).fill(0);
 	const data = binnedData.y_out;
 	const n = data.length;
-	const dataMean = mean(data.filter((v) => !isNaN(v)));
+	const dataMean = meanPlain(data.filter((v) => !isNaN(v)));
 	const centeredData = data.map((v) => (isNaN(v) ? 0 : v - dataMean));
 	return periods.map((period) => {
 		const binsPerPeriod = Math.round(period / binSize);
@@ -596,7 +646,7 @@ bn.lombScargle = function (times, values, frequencies) {
 	const t = validIndices.map((i) => times[i]);
 	const y = validIndices.map((i) => values[i]);
 	if (t.length === 0) return new Array(frequencies.length).fill(0);
-	const yMean = mean(y);
+	const yMean = meanBN(y);
 
 	let yVarianceBN = new BigNumber(0);
 	for (let i = 0; i < y.length; i++) {
@@ -639,11 +689,11 @@ bn.enright = function (times, values, periods, binSize) {
 	if (!times || !values || times.length < 2 || values.length < 2) {
 		return new Array(periods.length).fill(NaN);
 	}
-	const binnedData = binData(times, values, binSize, 0);
+	const binnedData = binDataBN(times, values, binSize, 0);
 	if (binnedData.bins.length === 0) return new Array(periods.length).fill(0);
 	const data = binnedData.y_out;
 	const n = data.length;
-	const dataMean = mean(data.filter((v) => !isNaN(v)));
+	const dataMean = meanBN(data.filter((v) => !isNaN(v)));
 	const centeredData = data.map((v) => (isNaN(v) ? 0 : v - dataMean));
 	return periods.map((period) => {
 		const binsPerPeriod = Math.round(period / binSize);
@@ -1049,26 +1099,29 @@ function runAllTests() {
 	];
 
 	for (const test of chiPeriodTests) {
-		const binnedData = binData(test.data.t, test.data.x, test.binSize, 0);
-		const data = binnedData.y_out;
-		const avgAll = mean(data);
-
-		// Plain denominator
+		// Plain pipeline: plain binData, plain mean, plain denominator
+		const binnedDataPlain = binDataPlain(test.data.t, test.data.x, test.binSize, 0);
+		const dataPlain = binnedDataPlain.y_out;
+		const avgAllPlain = meanPlain(dataPlain);
 		let denomPlain = 0;
-		for (let i = 0; i < data.length; i++) {
-			if (!isNaN(data[i])) denomPlain += (data[i] - avgAll) ** 2;
+		for (let i = 0; i < dataPlain.length; i++) {
+			if (!isNaN(dataPlain[i])) denomPlain += (dataPlain[i] - avgAllPlain) ** 2;
 		}
-		// BN denominator
+
+		// BN pipeline: BN binData, BN mean, BN denominator
+		const binnedDataBig = binDataBN(test.data.t, test.data.x, test.binSize, 0);
+		const dataBig = binnedDataBig.y_out;
+		const avgAllBig = meanBN(dataBig);
 		let denomBN = new BigNumber(0);
-		for (let i = 0; i < data.length; i++) {
-			if (!isNaN(data[i])) {
-				const diff = new BigNumber(data[i]).minus(avgAll);
+		for (let i = 0; i < dataBig.length; i++) {
+			if (!isNaN(dataBig[i])) {
+				const diff = new BigNumber(dataBig[i]).minus(avgAllBig);
 				denomBN = denomBN.plus(diff.times(diff));
 			}
 		}
 
-		const plainPowers = test.periods.map((p) => plain.chiSquared(data, test.binSize, p, avgAll, denomPlain));
-		const bnPowers = test.periods.map((p) => bn.chiSquared(data, test.binSize, p, avgAll, denomBN.toNumber()));
+		const plainPowers = test.periods.map((p) => plain.chiSquared(dataPlain, test.binSize, p, avgAllPlain, denomPlain));
+		const bnPowers = test.periods.map((p) => bn.chiSquared(dataBig, test.binSize, p, avgAllBig, denomBN.toNumber()));
 
 		const comp = compareArrays(plainPowers, bnPowers);
 		console.log(`\n  ${test.label}`);
@@ -1197,6 +1250,142 @@ function runAllTests() {
 		printArrayComparison('Residuals', resComp);
 
 		summaryRows.push({ test: `Cosinor: ${test.label.split('.')[1]?.trim() || test.label}`, relDiff: paramComp.maxRelDiff });
+	}
+
+	// -----------------------------------------------------------------------
+	// TEST 6: Helper functions (mean, binData) isolation test
+	// -----------------------------------------------------------------------
+	printSectionHeader('TEST 6: Helper functions — mean() and binData() precision');
+
+	const helperTests = [
+		{ label: '6a. mean: 1000 values near 1e6', data: Array.from({ length: 1000 }, (_, i) => 1e6 + 1e-8 * Math.sin(i)) },
+		{ label: '6b. mean: 10000 values near 1e8', data: Array.from({ length: 10000 }, (_, i) => 1e8 + 1e-6 * Math.cos(i)) },
+		{ label: '6c. mean: alternating +/- large values', data: Array.from({ length: 5000 }, (_, i) => (i % 2 === 0 ? 1 : -1) * 1e12 + 1e-3 * i) },
+	];
+
+	for (const test of helperTests) {
+		const plainVal = meanPlain(test.data);
+		const bnVal = meanBN(test.data);
+		const comp = compareScalars(plainVal, bnVal, test.label);
+		const flag = comp.relDiff > 1e-10 ? ' <<<' : '';
+		console.log(`  ${test.label}: plain=${formatSci(plainVal)} bn=${formatSci(bnVal)} relDiff=${formatSci(comp.relDiff)}${flag}`);
+		summaryRows.push({ test: `Helper: ${test.label.split('.')[1]?.trim()}`, relDiff: comp.relDiff });
+	}
+
+	// binData comparison
+	console.log('\n  binData comparisons (bin means for high-offset data):');
+	const binTests = [
+		{
+			label: '6d. binData: offset=1e6, amplitude=1e-8',
+			data: generateCosineData(2000, 24, 1e-8, 1e6, 1e-9, 42),
+			binSize: 0.25
+		},
+		{
+			label: '6e. binData: offset=1e4, amplitude=1e-4',
+			data: generateCosineData(2000, 24, 1e-4, 1e4, 1e-5, 42),
+			binSize: 0.25
+		}
+	];
+
+	for (const test of binTests) {
+		const plainBins = binDataPlain(test.data.t, test.data.x, test.binSize, 0);
+		const bnBins = binDataBN(test.data.t, test.data.x, test.binSize, 0);
+		const comp = compareArrays(plainBins.y_out, bnBins.y_out);
+		console.log(`\n  ${test.label}`);
+		printArrayComparison('Bin means', comp);
+		summaryRows.push({ test: `Helper: ${test.label.split('.')[1]?.trim()}`, relDiff: comp.maxRelDiff });
+	}
+
+	// -----------------------------------------------------------------------
+	// TEST 7: Amplitude/baseline ratio sweep — where do differences emerge?
+	// -----------------------------------------------------------------------
+	printSectionHeader('TEST 7: Amplitude/Baseline ratio sweep (Lomb-Scargle, 1000pts)');
+	console.log('\n  Sweeping amplitude/baseline ratio to find the threshold where');
+	console.log('  BigNumber results diverge significantly from plain JS.\n');
+
+	const baseline = 100;  // fixed baseline
+	const ratios = [1, 0.1, 0.01, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-12];
+	const sweepFreqs = makeSeqArray(1, 48, 0.5).map((p) => 1 / p);
+
+	console.log('  Ratio (amp/base)   Max Rel Diff (LS)    Max Rel Diff (ChiSq)   Significant?');
+	console.log('  ' + '-'.repeat(78));
+
+	for (const ratio of ratios) {
+		const amplitude = baseline * ratio;
+		const noise = amplitude * 0.1;
+		const data = generateCosineData(1000, 24, amplitude, baseline, noise, 42);
+
+		// Lomb-Scargle
+		const plainLS = plain.lombScargle(data.t, data.x, sweepFreqs);
+		const bnLS = bn.lombScargle(data.t, data.x, sweepFreqs);
+		const lsComp = compareArrays(plainLS, bnLS);
+
+		// Chi-squared
+		const binSize = 0.25;
+		const periods = makeSeqArray(1, 48, 0.5);
+
+		const binnedPlain = binDataPlain(data.t, data.x, binSize, 0);
+		const avgPlain = meanPlain(binnedPlain.y_out);
+		let dPlain = 0;
+		for (let i = 0; i < binnedPlain.y_out.length; i++) {
+			if (!isNaN(binnedPlain.y_out[i])) dPlain += (binnedPlain.y_out[i] - avgPlain) ** 2;
+		}
+
+		const binnedBig = binDataBN(data.t, data.x, binSize, 0);
+		const avgBig = meanBN(binnedBig.y_out);
+		let dBig = new BigNumber(0);
+		for (let i = 0; i < binnedBig.y_out.length; i++) {
+			if (!isNaN(binnedBig.y_out[i])) {
+				const diff = new BigNumber(binnedBig.y_out[i]).minus(avgBig);
+				dBig = dBig.plus(diff.times(diff));
+			}
+		}
+
+		const plainChiSq = periods.map((p) => plain.chiSquared(binnedPlain.y_out, binSize, p, avgPlain, dPlain));
+		const bnChiSq = periods.map((p) => bn.chiSquared(binnedBig.y_out, binSize, p, avgBig, dBig.toNumber()));
+		const chiComp = compareArrays(plainChiSq, bnChiSq);
+
+		const sig = (lsComp.maxRelDiff > 1e-10 || chiComp.maxRelDiff > 1e-10) ? 'YES' : 'no';
+		const ratioStr = ratio.toExponential(0).padStart(10);
+		console.log(`  ${ratioStr}           ${formatSci(lsComp.maxRelDiff).padStart(14)}      ${formatSci(chiComp.maxRelDiff).padStart(14)}      ${sig}`);
+
+		summaryRows.push({ test: `Ratio ${ratio.toExponential(0)}: LS`, relDiff: lsComp.maxRelDiff });
+		summaryRows.push({ test: `Ratio ${ratio.toExponential(0)}: ChiSq`, relDiff: chiComp.maxRelDiff });
+	}
+
+	// -----------------------------------------------------------------------
+	// TEST 8: Ratio sweep with larger dataset (5000 pts) — accumulation stress
+	// -----------------------------------------------------------------------
+	printSectionHeader('TEST 8: Ratio sweep with 5000 pts (accumulation stress)');
+	console.log('\n  Same sweep but with 5x more data to stress accumulation errors.\n');
+
+	const ratios2 = [1, 0.01, 1e-4, 1e-6, 1e-8, 1e-10];
+
+	console.log('  Ratio (amp/base)   Max Rel Diff (LS)    Max Rel Diff (Enright)   Significant?');
+	console.log('  ' + '-'.repeat(80));
+
+	for (const ratio of ratios2) {
+		const amplitude = baseline * ratio;
+		const noise = amplitude * 0.1;
+		const data = generateCosineData(5000, 24, amplitude, baseline, noise, 42);
+		const periods = makeSeqArray(1, 48, 0.5);
+
+		// Lomb-Scargle
+		const plainLS = plain.lombScargle(data.t, data.x, sweepFreqs);
+		const bnLS = bn.lombScargle(data.t, data.x, sweepFreqs);
+		const lsComp = compareArrays(plainLS, bnLS);
+
+		// Enright
+		const plainEnr = plain.enright(data.t, data.x, periods, 0.25);
+		const bnEnr = bn.enright(data.t, data.x, periods, 0.25);
+		const enrComp = compareArrays(plainEnr, bnEnr);
+
+		const sig = (lsComp.maxRelDiff > 1e-10 || enrComp.maxRelDiff > 1e-10) ? 'YES' : 'no';
+		const ratioStr = ratio.toExponential(0).padStart(10);
+		console.log(`  ${ratioStr}           ${formatSci(lsComp.maxRelDiff).padStart(14)}        ${formatSci(enrComp.maxRelDiff).padStart(14)}      ${sig}`);
+
+		summaryRows.push({ test: `5Kpts ratio ${ratio.toExponential(0)}: LS`, relDiff: lsComp.maxRelDiff });
+		summaryRows.push({ test: `5Kpts ratio ${ratio.toExponential(0)}: Enright`, relDiff: enrComp.maxRelDiff });
 	}
 
 	// -----------------------------------------------------------------------
