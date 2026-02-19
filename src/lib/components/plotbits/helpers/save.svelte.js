@@ -201,7 +201,7 @@ export async function saveMultipleAsImage(svgIds, filetype = 'png') {
 	});
 
 	document.body.appendChild(newSvg);
-	convertToImage(newSvg.id, filetype);
+	await convertToImage(newSvg.id, filetype);
 	document.body.removeChild(newSvg);
 
 	//reset the zoom
