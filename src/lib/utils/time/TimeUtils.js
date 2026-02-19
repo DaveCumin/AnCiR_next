@@ -76,7 +76,7 @@ export function guessDateofArray(dates) {
 
 		//Now get the best one (where there are most matches)
 		const guessesArray = Array.from(allGuesses);
-		console.log('ALLGUESSES: ', guessesArray);
+		//console.log('ALLGUESSES: ', guessesArray);
 		let guessScore = guessesArray.map((guess) => {
 			let score = 0;
 			for (let i = 0; i < datesToCheck.length; i++) {
@@ -87,9 +87,9 @@ export function guessDateofArray(dates) {
 			return score;
 		});
 
-		console.log('SCORE:', guessScore);
-		console.log('best idx:', guessScore.indexOf(Math.max(...guessScore)));
-		console.log('FINAL guess:', guessesArray[guessScore.indexOf(Math.max(...guessScore))]);
+		// console.log('SCORE:', guessScore);
+		// console.log('best idx:', guessScore.indexOf(Math.max(...guessScore)));
+		// console.log('FINAL guess:', guessesArray[guessScore.indexOf(Math.max(...guessScore))]);
 
 		//return that one
 		return guessesArray[guessScore.indexOf(Math.max(...guessScore))];

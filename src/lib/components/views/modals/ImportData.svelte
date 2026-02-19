@@ -18,6 +18,7 @@
 	import { tick } from 'svelte';
 	import { stackOrderInsideOut } from 'd3-shape';
 	import { parse } from 'svelte/compiler';
+	import { binData } from '$lib/components/plotBits/helpers/wrangleData.js';
 
 	const specialValues = ['NaN', 'NA', 'null'];
 
@@ -35,6 +36,12 @@
 	let awaitingPreview = $state(false);
 	let awaitingLoad = $state(false);
 	let awdMeta = $state(null); // { startMs, stepMs, count } for AWD time compression
+
+	// Binning for large files
+	const ROW_THRESHOLD = 15000;
+	let totalRowCount = $state(0);
+	let binningEnabled = $state(false);
+	let binIntervalMin = $state(15); // default 15 minutes
 
 	// Progress feedback
 	let loadProgress = $state({ stage: '', detail: '' });
@@ -57,6 +64,9 @@
 		specialRecognised = false;
 		loadProgress = { stage: '', detail: '' };
 		awdMeta = null;
+		totalRowCount = 0;
+		binningEnabled = false;
+		binIntervalMin = 15;
 	}
 
 	export async function openImportModal() {
@@ -85,9 +95,60 @@
 
 		await parseFile();
 
+		// Count total rows to decide whether to suggest binning
+		await countRows();
+		if (totalRowCount > ROW_THRESHOLD) {
+			binningEnabled = true;
+		}
+
 		loadProgress = { stage: '', detail: '' };
 		awaitingPreview = false;
 		importReady = true;
+	}
+
+	async function countRows() {
+		if (!targetFile) return;
+
+		const isExcel = targetFile.name.toLowerCase().match(/\.(xlsx|xls)$/);
+		const isAWD = targetFile.name.toLowerCase().endsWith('.awd');
+
+		if (isExcel) {
+			// For Excel, read the full workbook and count rows
+			return new Promise((resolve) => {
+				const reader = new FileReader();
+				reader.onload = (e) => {
+					try {
+						const data = new Uint8Array(e.target.result);
+						const workbook = XLSX.read(data, { type: 'array' });
+						const sheet = workbook.Sheets[workbook.SheetNames[0]];
+						const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+						totalRowCount = range.e.r - range.s.r; // rows minus header
+					} catch {
+						totalRowCount = 0;
+					}
+					resolve();
+				};
+				reader.onerror = () => { totalRowCount = 0; resolve(); };
+				reader.readAsArrayBuffer(targetFile);
+			});
+		}
+
+		// For CSV/text/AWD: count newlines in file text
+		return new Promise((resolve) => {
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				const text = e.target.result;
+				const lineCount = text.split(/\r\n|\r|\n/).length;
+				// Subtract header + skipLines
+				totalRowCount = Math.max(0, lineCount - (hasHeader ? 1 : 0) - skipLines);
+				if (isAWD) {
+					totalRowCount = Math.max(0, lineCount - 7); // AWD has 7-line header
+				}
+				resolve();
+			};
+			reader.onerror = () => { totalRowCount = 0; resolve(); };
+			reader.readAsText(targetFile);
+		});
 	}
 
 	async function confirmImport() {
@@ -312,10 +373,20 @@
 			// For AWD: force clean full parse (double-pass) and ensure awdMeta is set
 			console.log('[AWD FULL] Starting dedicated full AWD parse');
 			await parseFullAWD();
-			console.log('[AWD FULL] Parse complete, awdMeta now:', awdMeta);
+			console.log('[AWD FULL] Parse complete, awdMeta now:', $state.snapshot(awdMeta));
 		} else {
 			// Normal files: re-use existing parseFile logic
 			await parseFile();
+		}
+
+		// Apply binning if enabled
+		if (binningEnabled && parsedData) {
+			loadProgress = { stage: 'Loading data', detail: `Binning to ${binIntervalMin} min intervals…` };
+			await tick();
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			parsedData = binParsedData(parsedData);
+			// Clear awdMeta since binned data no longer matches compressed time
+			if (awdMeta) awdMeta = null;
 		}
 
 		loadProgress = { stage: 'Loading data', detail: 'Building columns…' };
@@ -507,6 +578,137 @@
 		});
 	}
 
+	function binParsedData(data) {
+		// data is { colName: [values...], ... } — column-oriented
+		const keys = Object.keys(data);
+		if (keys.length === 0) return data;
+
+		const rowCount = data[keys[0]].length;
+		if (rowCount === 0) return data;
+
+		// Find the time column
+		let timeKey = null;
+		let timeFormat = null;
+		for (const k of keys) {
+			const sample = data[k].slice(0, 5);
+			const fmt = guessDateofArray(sample);
+			if (fmt !== -1 && fmt.length > 0) {
+				timeKey = k;
+				timeFormat = Array.isArray(fmt) ? fmt[0] : fmt;
+				break;
+			}
+		}
+
+		if (!timeKey) {
+			console.warn('Binning: no time column found, skipping');
+			return data;
+		}
+
+		// Convert time to hours (numeric) for binData compatibility
+		let timeHours;
+		let firstDt;
+
+		if (awdMeta && timeKey === 'DateTime') {
+			// AWD: compute hours directly from metadata — no string parsing needed
+			const stepHours = awdMeta.stepMs / 3_600_000;
+			firstDt = DateTime.fromMillis(awdMeta.startMs);
+			timeHours = new Array(rowCount);
+			for (let i = 0; i < rowCount; i++) {
+				timeHours[i] = i * stepHours;
+			}
+		} else {
+			// General case: parse time strings
+			const timeStrings = data[timeKey];
+
+			// Try multiple Luxon parsers to find one that works
+			function parseDt(s) {
+				if (s == null) return null;
+				const str = String(s);
+				let dt = DateTime.fromFormat(str, timeFormat);
+				if (dt.isValid) return dt;
+				dt = DateTime.fromSQL(str);
+				if (dt.isValid) return dt;
+				dt = DateTime.fromISO(str);
+				if (dt.isValid) return dt;
+				return null;
+			}
+
+			firstDt = parseDt(timeStrings[0]);
+			if (!firstDt) {
+				console.warn('Binning: could not parse first time value, skipping');
+				return data;
+			}
+
+			timeHours = timeStrings.map((t) => {
+				const dt = parseDt(t);
+				return dt ? dt.diff(firstDt, 'hours').hours : NaN;
+			});
+		}
+
+		// Guard: check we have valid time data
+		const validCount = timeHours.filter((h) => !isNaN(h)).length;
+		if (validCount === 0) {
+			console.warn('Binning: all time values are NaN, skipping');
+			return data;
+		}
+
+		const binSizeHours = binIntervalMin / 60;
+
+		// Classify columns
+		const colTypes = {};
+		for (const k of keys) {
+			if (k === timeKey) { colTypes[k] = 'time'; continue; }
+			const sample = getFirstValid(data[k]);
+			colTypes[k] = (typeof sample === 'number' && !isNaN(sample)) ? 'number' : 'other';
+		}
+
+		// Use binData for the first numeric column to get the bin positions
+		const firstNumKey = keys.find((k) => colTypes[k] === 'number');
+		if (!firstNumKey) {
+			console.warn('Binning: no numeric columns found, skipping');
+			return data;
+		}
+
+		const refResult = binData(timeHours, data[firstNumKey], binSizeHours, 0, binSizeHours, 'mean');
+		const binPositions = refResult.bins; // bin start positions in hours
+		const numBins = binPositions.length;
+
+		// Build result: for time column, reconstruct datetime strings from bin positions
+		const result = {};
+		result[timeKey] = binPositions.map((h) => {
+			const dt = firstDt.plus({ hours: h });
+			return dt.toFormat('yyyy-MM-dd HH:mm:ss');
+		});
+
+		// For each other column, bin using binData or map category by index
+		for (const k of keys) {
+			if (k === timeKey) continue;
+
+			if (colTypes[k] === 'number') {
+				if (k === firstNumKey) {
+					result[k] = refResult.y_out;
+				} else {
+					const binned = binData(timeHours, data[k], binSizeHours, 0, binSizeHours, 'mean');
+					result[k] = binned.y_out;
+				}
+			} else {
+				// Category: take first value per bin using the bin positions
+				result[k] = new Array(numBins);
+				let ptr = 0;
+				for (let b = 0; b < numBins; b++) {
+					const binStart = binPositions[b];
+					const binEnd = binStart + binSizeHours;
+					// Advance pointer to first row in this bin
+					while (ptr < rowCount && (isNaN(timeHours[ptr]) || timeHours[ptr] < binStart)) ptr++;
+					result[k][b] = (ptr < rowCount && timeHours[ptr] < binEnd) ? data[k][ptr] : null;
+				}
+			}
+		}
+
+		console.log(`Binning: ${rowCount} rows → ${numBins} bins (${binIntervalMin} min)`);
+		return result;
+	}
+
 	function getFirstValid(data) {
 		for (const value of data) {
 			if (value !== null && value !== '' && !specialValues.includes(value)) {
@@ -584,6 +786,32 @@
 								onInput={() => doPreview()}
 							/>
 						</p>
+						{#if totalRowCount > ROW_THRESHOLD}
+							<div class="binning-panel">
+								<p class="binning-warning">
+									This file has ~{totalRowCount.toLocaleString()} rows.
+									Consider binning to reduce data size.
+								</p>
+								<p>
+									<label>
+										<input type="checkbox" bind:checked={binningEnabled} />
+										Bin data to
+									</label>
+									<NumberWithUnits
+										bind:value={binIntervalMin}
+										min={1}
+										step={1}
+										units={{ default: 'min', min: 1, hr: 60 }}
+									/>
+									intervals
+									{#if binningEnabled}
+										<span class="binning-estimate">
+											(~{Math.ceil(totalRowCount / binIntervalMin).toLocaleString()} rows after binning)
+										</span>
+									{/if}
+								</p>
+							</div>
+						{/if}
 						<div
 							class="preview-table-wrapper"
 							style="width: {150 * Object.keys(parsedData).length}px; !important"
@@ -610,4 +838,19 @@
 </Modal>
 
 <style>
+	.binning-panel {
+		margin: 0.5em 0;
+		padding: 0.5em 0.75em;
+		border: 1px solid var(--color-warning, #e6a817);
+		border-radius: 4px;
+		background: var(--color-warning-bg, #fef9e7);
+	}
+	.binning-warning {
+		font-weight: 600;
+		margin: 0 0 0.25em 0;
+	}
+	.binning-estimate {
+		opacity: 0.7;
+		font-size: 0.9em;
+	}
 </style>
