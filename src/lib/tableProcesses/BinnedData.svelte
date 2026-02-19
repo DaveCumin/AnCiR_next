@@ -147,11 +147,11 @@
 	<div class="tableProcess-label"><span>Bin parameters</span></div>
 	<div class="control-input-horizontal">
 		<div class="control-input">
-			<p>Bin size</p>
+			<p>Bin size (hrs)</p>
 			<NumberWithUnits bind:value={p.args.binSize} onInput={getBinnedData} min="0.01" step="0.01" />
 		</div>
 		<div class="control-input">
-			<p>Bin start</p>
+			<p>Bin start (hr)</p>
 			<NumberWithUnits bind:value={p.args.binStart} onInput={getBinnedData} />
 		</div>
 	</div>
@@ -168,7 +168,7 @@
 	<div class="control-input-horizontal">
 		{#if differentstepsize}
 			<div class="control-input">
-				<p>Step size</p>
+				<p>Step size (hrs)</p>
 
 				<NumberWithUnits
 					bind:value={p.args.stepSize}

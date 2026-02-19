@@ -17057,7 +17057,6 @@ export const testJsonDC = `{
     "showNavbar": true,
     "showDisplayPanel": true,
     "showControlPanel": true,
-    "windowWidth": 1512,
     "windowHeight": 819,
     "widthNavBar": 56,
     "widthDisplayPanel": 440,

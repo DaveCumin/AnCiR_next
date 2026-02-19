@@ -101,6 +101,7 @@
 		display: inline-flex;
 		align-items: stretch;
 		position: relative;
+		min-width: 60%;
 	}
 
 	.number-input {
