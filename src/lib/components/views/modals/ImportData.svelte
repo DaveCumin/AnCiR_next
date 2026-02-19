@@ -42,6 +42,10 @@
 	let totalRowCount = $state(0);
 	let binningEnabled = $state(false);
 	let binIntervalMin = $state(15); // default 15 minutes
+	let dataIntervalMin = $derived(awdMeta ? awdMeta.stepMs / 60_000 : 1);
+	let estimatedBinnedRows = $derived(
+		Math.ceil((totalRowCount * dataIntervalMin) / binIntervalMin)
+	);
 
 	// Progress feedback
 	let loadProgress = $state({ stage: '', detail: '' });
@@ -128,7 +132,10 @@
 					}
 					resolve();
 				};
-				reader.onerror = () => { totalRowCount = 0; resolve(); };
+				reader.onerror = () => {
+					totalRowCount = 0;
+					resolve();
+				};
 				reader.readAsArrayBuffer(targetFile);
 			});
 		}
@@ -146,7 +153,10 @@
 				}
 				resolve();
 			};
-			reader.onerror = () => { totalRowCount = 0; resolve(); };
+			reader.onerror = () => {
+				totalRowCount = 0;
+				resolve();
+			};
 			reader.readAsText(targetFile);
 		});
 	}
@@ -381,7 +391,10 @@
 
 		// Apply binning if enabled
 		if (binningEnabled && parsedData) {
-			loadProgress = { stage: 'Loading data', detail: `Binning to ${binIntervalMin} min intervals…` };
+			loadProgress = {
+				stage: 'Loading data',
+				detail: `Binning to ${binIntervalMin} min intervals…`
+			};
 			await tick();
 			await new Promise((resolve) => setTimeout(resolve, 10));
 			parsedData = binParsedData(parsedData);
@@ -657,9 +670,12 @@
 		// Classify columns
 		const colTypes = {};
 		for (const k of keys) {
-			if (k === timeKey) { colTypes[k] = 'time'; continue; }
+			if (k === timeKey) {
+				colTypes[k] = 'time';
+				continue;
+			}
 			const sample = getFirstValid(data[k]);
-			colTypes[k] = (typeof sample === 'number' && !isNaN(sample)) ? 'number' : 'other';
+			colTypes[k] = typeof sample === 'number' && !isNaN(sample) ? 'number' : 'other';
 		}
 
 		// Use binData for the first numeric column to get the bin positions
@@ -700,7 +716,7 @@
 					const binEnd = binStart + binSizeHours;
 					// Advance pointer to first row in this bin
 					while (ptr < rowCount && (isNaN(timeHours[ptr]) || timeHours[ptr] < binStart)) ptr++;
-					result[k][b] = (ptr < rowCount && timeHours[ptr] < binEnd) ? data[k][ptr] : null;
+					result[k][b] = ptr < rowCount && timeHours[ptr] < binEnd ? data[k][ptr] : null;
 				}
 			}
 		}
@@ -789,24 +805,18 @@
 						{#if totalRowCount > ROW_THRESHOLD}
 							<div class="binning-panel">
 								<p class="binning-warning">
-									This file has ~{totalRowCount.toLocaleString()} rows.
-									Consider binning to reduce data size.
+									This file has ~{totalRowCount.toLocaleString()} rows. Consider binning to reduce data
+									size.
 								</p>
 								<p>
 									<label>
 										<input type="checkbox" bind:checked={binningEnabled} />
 										Bin data to
 									</label>
-									<NumberWithUnits
-										bind:value={binIntervalMin}
-										min={1}
-										step={1}
-										units={{ default: 'min', min: 1, hr: 60 }}
-									/>
-									intervals
+									<NumberWithUnits bind:value={binIntervalMin} min={1} step={1} /> mins intervals
 									{#if binningEnabled}
 										<span class="binning-estimate">
-											(~{Math.ceil(totalRowCount / binIntervalMin).toLocaleString()} rows after binning)
+											(~{estimatedBinnedRows.toLocaleString()} rows after binning, {dataIntervalMin} min intervals detected)
 										</span>
 									{/if}
 								</p>
