@@ -1,6 +1,7 @@
 <script module>
 	import { core } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import { fitCosineCurves } from '$lib/utils/cosinor.js';
 
 	export const cosinor_defaults = new Map([
 		['xIN', { val: -1 }],
@@ -68,7 +69,6 @@
 
 <script>
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
-	import { fitCosineCurves } from '$lib/utils/cosinor.js';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 

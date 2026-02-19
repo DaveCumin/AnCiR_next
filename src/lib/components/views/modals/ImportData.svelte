@@ -34,6 +34,7 @@
 	let specialRecognised = $state(false);
 	let awaitingPreview = $state(false);
 	let awaitingLoad = $state(false);
+	let awdMeta = $state(null); // { startMs, stepMs, count } for AWD time compression
 
 	// Progress feedback
 	let loadProgress = $state({ stage: '', detail: '' });
@@ -55,6 +56,7 @@
 		error = {};
 		specialRecognised = false;
 		loadProgress = { stage: '', detail: '' };
+		awdMeta = null;
 	}
 
 	export async function openImportModal() {
@@ -221,6 +223,10 @@
 							} else {
 								results.data = awdTocsv(results.data);
 								results.meta.fields = headers;
+								// Limit preview to first 6 rows (like CSV)
+								if (awaitingPreview && results.data.length > 6) {
+									results.data = results.data.slice(0, 6);
+								}
 							}
 						}
 
@@ -294,17 +300,31 @@
 
 	async function loadData() {
 		previewIN = 0;
+		awaitingLoad = true;
 
 		loadProgress = { stage: 'Loading data', detail: 'Parsing full file…' };
 		await tick();
+		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms || 50));
 
-		await parseFile();
+		const isAWD = targetFile.name.toLowerCase().endsWith('.awd');
+
+		if (isAWD) {
+			// For AWD: force clean full parse (double-pass) and ensure awdMeta is set
+			console.log('[AWD FULL] Starting dedicated full AWD parse');
+			await parseFullAWD();
+			console.log('[AWD FULL] Parse complete, awdMeta now:', awdMeta);
+		} else {
+			// Normal files: re-use existing parseFile logic
+			await parseFile();
+		}
 
 		loadProgress = { stage: 'Loading data', detail: 'Building columns…' };
 		await tick();
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		doBasicFileImport(parsedData, targetFile.name);
+
+		awaitingLoad = false;
 	}
 
 	async function doBasicFileImport(result, fname) {
@@ -317,36 +337,47 @@
 		for (let i = 0; i < totalColumns; i++) {
 			const f = keys[i];
 
-			// Update progress for each column
 			loadProgress = {
 				stage: 'Loading data',
 				detail: `Processing column ${i + 1} of ${totalColumns}: "${f}"`
 			};
-			// Yield to the UI every few columns so the progress text updates
 			if (i % 5 === 0) {
 				await tick();
-				await new Promise((resolve) => setTimeout(resolve, 0));
+				await new Promise((r) => setTimeout(r, 0));
 			}
 
-			const datum = getFirstValid(result[f], 5);
-			const guessedFormat = guessDateofArray(result[f]);
 			const df = new Column({});
 
-			if (guessedFormat != -1 && guessedFormat.length > 0) {
-				console.log('time here...');
-				console.log('guess: ', guessedFormat);
-				console.log('result: ', result[f]);
-
+			if (awdMeta && f === 'DateTime') {
+				// Special handling: compressed time column
 				df.type = 'time';
-				df.timeFormat = guessedFormat;
-			} else if (!isNaN(datum)) {
-				df.type = 'number';
+				df.compression = 'awd';
+				df.name = 'DateTime'; // or 'Time since start (h)', etc. — you can rename later
+				core.rawData.set(df.id, {
+					start: awdMeta.startMs,
+					step: awdMeta.stepMs,
+					length: awdMeta.count // note: length = number of epochs
+				});
+				df.data = df.id;
 			} else {
-				df.type = 'category';
+				// Normal columns
+				const datum = getFirstValid(result[f], 5);
+				const guessedFormat = guessDateofArray(result[f]);
+
+				if (guessedFormat !== -1 && guessedFormat.length > 0) {
+					df.type = 'time';
+					df.timeFormat = guessedFormat;
+				} else if (typeof datum === 'number' && !isNaN(datum)) {
+					df.type = 'number';
+				} else {
+					df.type = 'category';
+				}
+
+				df.name = f;
+				core.rawData.set(df.id, result[f]);
+				df.data = df.id;
 			}
-			df.name = f;
-			core.rawData.set(df.id, result[f]);
-			df.data = df.id;
+
 			newDataEntry.addColumn(df);
 		}
 
@@ -368,57 +399,73 @@
 		// Line 5: ID (ignored)
 		// Line 6: SEX (ignored)
 		// Line 7+: Activity , Marker  (comma-separated data)
-		//
-		// Called after re-parse with hasHeader=false, so rows are arrays.
-
 		if (data.length < 8) return data;
 
-		// --- Fixed header positions ---
+		// --- Header parsing ---
 		const dateStr = String(data[1]?.[0] ?? '').trim();
 		const timeStr = String(data[2]?.[0] ?? '').trim();
-		const intervalRaw = Number(data[3]?.[0]) || 4;
-		// Stored value = minutes × 4, so actual seconds = (value / 4) × 60 = value × 15
+		const intervalRaw = Number(data[3]?.[0]) || 4; // usually 4 = 1 minute
+
+		// intervalRaw × 15 = seconds per epoch
 		const epochSeconds = intervalRaw * 15;
 
-		// Parse start date (dd-MMM-yyyy)
-		let startDate = DateTime.fromFormat(dateStr, 'dd-MMM-yyyy');
+		// Parse start date — try full year first, then 2-digit
+		let startDate = DateTime.fromFormat(dateStr, 'dd-MMM-yyyy', { locale: 'en' });
 		if (!startDate.isValid) {
-			// Try 2-digit year
-			startDate = DateTime.fromFormat(dateStr, 'dd-MMM-yy');
+			startDate = DateTime.fromFormat(dateStr, 'dd-MMM-yy', { locale: 'en' });
 		}
 		if (!startDate.isValid) {
+			console.warn('Invalid AWD start date:', dateStr);
 			startDate = DateTime.now().startOf('day');
 		}
 
-		// Parse start time (HH:mm)
+		// Add start time
 		let startDT = startDate;
-		const timeParts = timeStr.match(/^(\d{1,2}):(\d{2})$/);
-		if (timeParts) {
+		const timeMatch = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+		if (timeMatch) {
 			startDT = startDate.set({
-				hour: parseInt(timeParts[1]),
-				minute: parseInt(timeParts[2]),
-				second: 0
+				hour: Number(timeMatch[1]),
+				minute: Number(timeMatch[2]),
+				second: 0,
+				millisecond: 0
 			});
+		} else {
+			console.warn('Invalid AWD start time:', timeStr);
 		}
 
-		// Data starts at line 7
 		const dataRows = data.slice(7);
 		if (dataRows.length === 0) return data;
 
-		// Determine columns from data width
+		// Detect number of data columns
 		const sampleCols = dataRows[0]?.length ?? 1;
 		const colNames = ['DateTime', 'Activity'];
-		if (sampleCols > 1) colNames.push('Marker');
-		for (let c = 2; c < sampleCols; c++) colNames.push(`Col${c + 1}`);
+		if (sampleCols >= 2) colNames.push('Marker');
+		for (let c = 2; c < sampleCols; c++) {
+			colNames.push(`Extra${c}`);
+		}
 
-		// Build output rows as objects
+		// Metadata for time compression (used only for non-DateTime columns if you want later)
+		awdMeta = {
+			startMs: startDT.toMillis(),
+			stepMs: epochSeconds * 1000,
+			count: dataRows.length
+		};
+
+		// Build preview/full rows
 		const output = dataRows.map((row, i) => {
+			const obj = {};
+
+			// Always generate proper ISO-like datetime for DateTime column (needed for type guessing)
 			const dt = startDT.plus({ seconds: i * epochSeconds });
-			const obj = { DateTime: dt.toFormat('yyyy-MM-dd HH:mm:ss') };
-			obj.Activity = Number(row[0]) || 0;
+			obj.DateTime = dt.toFormat('yyyy-MM-dd HH:mm:ss');
+
+			// Other columns: numbers
+			obj.Activity = row[0] != null ? Number(row[0]) : 0;
 			for (let c = 1; c < row.length; c++) {
-				obj[colNames[c + 1]] = row[c];
+				const val = row[c];
+				obj[colNames[c + 1]] = val != null && !isNaN(val) ? Number(val) : val;
 			}
+
 			return obj;
 		});
 
@@ -426,6 +473,38 @@
 		hasHeader = true;
 
 		return output;
+	}
+	async function parseFullAWD() {
+		return new Promise((resolve, reject) => {
+			let attempts = 0;
+
+			function innerParse() {
+				Papa.parse(targetFile, {
+					preview: 0,
+					header: false,
+					dynamicTyping: true,
+					skipEmptyLines: 'greedy',
+					delimiter: ',',
+					complete: (results) => {
+						if (attempts === 0) {
+							attempts++;
+							innerParse();
+							return;
+						}
+
+						// Second pass — this is the full one
+						results.data = awdTocsv(results.data);
+						results.meta.fields = headers;
+
+						dealWithData(results.meta.fields, results.data);
+						resolve();
+					},
+					error: (err) => reject(err)
+				});
+			}
+
+			innerParse();
+		});
 	}
 
 	function getFirstValid(data) {

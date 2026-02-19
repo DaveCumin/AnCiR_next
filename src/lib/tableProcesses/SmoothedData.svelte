@@ -374,6 +374,7 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { onMount } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
@@ -410,6 +411,17 @@
 	function getSmoothedData() {
 		[smoothedResult, p.args.valid] = smootheddata(p.args);
 	}
+
+	onMount(() => {
+		//If data already exists (e.g. imported from JSON), use it instead of regenerating
+		const xKey = p.args.out.smoothedx;
+		const yKey = p.args.out.smoothedy;
+		if (xKey >= 0 && yKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
+			smoothedResult = { x_out: core.rawData.get(xKey), y_out: core.rawData.get(yKey) };
+			p.args.valid = true;
+			lastHash = getHash; // prevent $effect from recalculating
+		}
+	});
 </script>
 
 <!-- Input Section -->

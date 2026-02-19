@@ -60,8 +60,15 @@
 		[result, p.args.valid] = duplicate(p.args);
 	}
 	onMount(() => {
-		//needed to get the values when it first mounts
-		doDuplicate();
+		//If data already exists (e.g. imported from JSON), use it instead of regenerating
+		const outKey = p.args.out.result;
+		if (outKey >= 0 && core.rawData.has(outKey) && core.rawData.get(outKey).length > 0) {
+			result = core.rawData.get(outKey);
+			p.args.valid = true;
+			lastHash = getHash; // prevent $effect from recalculating
+		} else {
+			doDuplicate();
+		}
 	});
 </script>
 

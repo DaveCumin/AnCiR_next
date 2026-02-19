@@ -58,6 +58,7 @@
 
 		longestCol = $derived.by(() => {
 			let out = 0;
+
 			for (let i = 0; i < this.columnRefs.length; i++) {
 				out = Math.max(out, getColumnById(this.columnRefs[i])?.getData()?.length ?? 0);
 			}

@@ -3,53 +3,18 @@
 
 import { KahanSum, kahanMean, makeSeqArray } from './numerics.js';
 import { pchisq, qchisq } from '$lib/data/CDFs.js';
-
-// ========== Helper Functions ==========
-
-function binData(xValues, yValues, binSize, binStart = 0) {
-	const n = xValues.length;
-	if (n === 0 || n !== yValues.length) return { bins: [], y_out: [] };
-
-	// Pair and sort by x once
-	const paired = xValues.map((x, i) => ({ x, y: yValues[i] })).sort((a, b) => a.x - b.x);
-	const xs = paired.map((p) => p.x);
-	const ys = paired.map((p) => p.y);
-
-	const meanFunc = (arr, start, end) => {
-		const k = new KahanSum();
-		for (let i = start; i < end; i++) k.add(arr[i]);
-		return k.value / (end - start);
-	};
-
-	const bins = [];
-	const y_out = [];
-	let currentStart = binStart;
-	const EPSILON = 1e-10;
-	let pointer = 0;
-
-	while (true) {
-		const binEnd = currentStart + binSize;
-		bins.push(currentStart);
-
-		while (pointer < n && xs[pointer] < currentStart - EPSILON) pointer++;
-
-		const startIdx = pointer;
-		let endIdx = startIdx;
-		while (endIdx < n && xs[endIdx] < binEnd - EPSILON) endIdx++;
-
-		y_out.push(meanFunc(ys, startIdx, endIdx));
-
-		if (currentStart >= xs[n - 1]) break;
-		currentStart += binSize;
-	}
-
-	return { bins, y_out };
-}
+import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 
 // ========== Periodogram Calculation Functions ==========
 
 function calculateLombScarglePower(times, values, frequencies, onProgress) {
-	if (!times || !values || times.length < 2 || values.length < 2 || times.length !== values.length) {
+	if (
+		!times ||
+		!values ||
+		times.length < 2 ||
+		values.length < 2 ||
+		times.length !== values.length
+	) {
 		return new Array(frequencies.length).fill(NaN);
 	}
 
@@ -104,9 +69,7 @@ function calculateLombScarglePower(times, values, frequencies, onProgress) {
 
 		const cosTerm = cosTermAcc.value;
 		const sinTerm = sinTermAcc.value;
-		const power =
-			(cosTerm * cosTerm) / cosDenomAcc.value +
-			(sinTerm * sinTerm) / sinDenomAcc.value;
+		const power = (cosTerm * cosTerm) / cosDenomAcc.value + (sinTerm * sinTerm) / sinDenomAcc.value;
 
 		if (onProgress && freqIndex % 10 === 0) {
 			onProgress(freqIndex, frequencies.length);
@@ -197,9 +160,7 @@ function calculateChiSquaredPower(data, binSize, period, avgAll, denominator) {
 		}
 	}
 
-	const avgP = colSums.map((sum, i) =>
-		colCounts[i] > 0 ? sum.value / colCounts[i] : avgAll
-	);
+	const avgP = colSums.map((sum, i) => (colCounts[i] > 0 ? sum.value / colCounts[i] : avgAll));
 
 	// Calculate numerator sum using Kahan summation
 	const numAcc = new KahanSum();
@@ -250,13 +211,7 @@ export function runPeriodogramCalculation(params, onProgress) {
 		}
 
 		for (let p = 0; p < periods.length; p++) {
-			power[p] = calculateChiSquaredPower(
-				data,
-				params.binSize,
-				periods[p],
-				avgAll,
-				denomAcc.value
-			);
+			power[p] = calculateChiSquaredPower(data, params.binSize, periods[p], avgAll, denomAcc.value);
 			threshold[p] = qchisq(1 - correctedAlpha, Math.round(periods[p] / params.binSize));
 			pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / params.binSize));
 
@@ -265,12 +220,19 @@ export function runPeriodogramCalculation(params, onProgress) {
 			}
 		}
 	} else if (params.method === 'Lomb-Scargle') {
+		console.log(params);
 		const powers = calculateLombScarglePower(params.xData, params.yData, frequencies, onProgress);
 		for (let p = 0; p < periods.length; p++) {
 			power[p] = powers[p];
 		}
 	} else if (params.method === 'Enright') {
-		const powers = calculateEnrightPower(params.xData, params.yData, periods, params.binSize, onProgress);
+		const powers = calculateEnrightPower(
+			params.xData,
+			params.yData,
+			periods,
+			params.binSize,
+			onProgress
+		);
 		for (let p = 0; p < periods.length; p++) {
 			power[p] = powers[p];
 		}

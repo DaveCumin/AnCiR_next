@@ -109,7 +109,18 @@
 
 	let differentstepsize = $state(false);
 
-	onMount(() => getBinnedData(p.args, differentstepsize));
+	onMount(() => {
+		//If data already exists (e.g. imported from JSON), use it instead of regenerating
+		const xKey = p.args.out.binnedx;
+		const yKey = p.args.out.binnedy;
+		if (xKey >= 0 && yKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
+			binnedData = { bins: core.rawData.get(xKey), y_out: core.rawData.get(yKey) };
+			p.args.valid = true;
+			lastHash = getHash; // prevent $effect from recalculating
+		} else {
+			getBinnedData(p.args, differentstepsize);
+		}
+	});
 </script>
 
 <!-- Input Section -->

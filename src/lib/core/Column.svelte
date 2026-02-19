@@ -122,11 +122,45 @@
 		processes = $state([]);
 
 		hoursSinceStart = $derived.by(() => {
+			console.log('in hoursSinceStart for column ', this.id, this.name);
+			if (!this.isReferencial() && this.compression === 'awd' && this.processes.length === 0) {
+				console.log('awd case');
+				const raw = core.rawData.get(this.data);
+				const length = raw.length;
+				const step = raw.step;
+				const out = new Array(length);
+
+				if (this.type === 'number') {
+					for (let i = 0; i < length; i++) {
+						out[i] = i * step;
+					}
+					return out;
+				}
+				if (this.type === 'bin') {
+					const bwAdj = this.binWidth / 2;
+					for (let i = 0; i < length; i++) {
+						out[i] = i * step - bwAdj;
+					}
+					return out;
+				}
+				if (this.type === 'time') {
+					for (let i = 0; i < length; i++) {
+						out[i] = (i * step) / 3600000;
+					}
+					return out;
+				}
+			}
+			//Other cases
 			const thedata = this.getData();
-			if (this.type == 'number') return thedata.map((x) => x - thedata[0]); //If a number, then assume it's in hours and take difference from the start
-			if (this.type == 'bin') return thedata.map((x) => x - thedata[0] - this.binWidth / 2); //If a number, then assume it's in hours and take difference from the start
-			if (this.type == 'time') return thedata.map((x) => (x - thedata[0]) / 3600000); //if it's a time, then assume it's in milliseconds and take difference from the start, then convert to hours
-			//console.warn('that was hoursSinceStart');
+			if (this.type == 'number') {
+				return thedata.map((x) => x - thedata[0]);
+			}
+			if (this.type == 'bin') {
+				return thedata.map((x) => x - thedata[0] - this.binWidth / 2);
+			}
+			if (this.type == 'time') {
+				return thedata.map((x) => (x - thedata[0]) / 3600000);
+			}
 		});
 
 		constructor(columnData = null, id = null) {
@@ -203,13 +237,10 @@
 			} else {
 				//deal with compressed data
 				if (this.compression === 'awd') {
-					out = [];
-					for (
-						let a = 0;
-						a < core.rawData.get(this.data).length;
-						a += core.rawData.get(this.data).step
-					) {
-						out.push(core.rawData.get(this.data).start + a);
+					const raw = core.rawData.get(this.data);
+					out = new Array(raw.length);
+					for (let i = 0; i < raw.length; i++) {
+						out[i] = raw.start + i * raw.step;
 					}
 				} else {
 					//get the raw data
@@ -217,8 +248,8 @@
 				}
 			}
 
-			//deal with timestamps
-			if (this.type === 'time' && !this.isReferencial()) {
+			//deal with timestamps (skip for AWD-compressed columns — already UNIX ms)
+			if (this.type === 'time' && !this.isReferencial() && this.compression !== 'awd') {
 				try {
 					out = out.map((x) => Number(getUNIXDate(x, this.timeFormat))); // Turn into UNIX values of time
 				} catch {

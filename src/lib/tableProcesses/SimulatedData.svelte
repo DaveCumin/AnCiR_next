@@ -118,8 +118,16 @@
 	}
 
 	onMount(() => {
-		//needed to get the values when it first mounts
-		doSimulated();
+		//If data already exists (e.g. imported from JSON), use it instead of regenerating
+		const timeKey = p.args.out.time;
+		const valKey = p.args.out.values;
+		if (timeKey >= 0 && valKey >= 0 && core.rawData.has(timeKey) && core.rawData.get(timeKey).length > 0) {
+			simulatedTime = core.rawData.get(timeKey);
+			simulatedValues = core.rawData.get(valKey);
+			p.args.valid = simulatedValues.length > 0;
+		} else {
+			doSimulated();
+		}
 	});
 </script>
 
