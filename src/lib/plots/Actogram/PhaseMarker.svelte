@@ -228,10 +228,10 @@
 			if (candidates.length === 0) return null;
 
 			// Run a single narrow periodogram covering all candidate windows
-			const margin = 1.5; // ±1.5 hours around each candidate
-			const step = 0.1;
+			const margin = 0; // ±x hours around each candidate
+			const step = 0.001;
 			const results = candidates.map((c) => {
-				const pMin = Math.max(binSize * 2, c.period - margin);
+				const pMin = c.period - margin;
 				const pMax = c.period + margin;
 				const result = runPeriodogramCalculation({
 					xData,
@@ -415,7 +415,7 @@
 		</div>
 
 		{#if marker.linearRegression?.slope}
-			<p>Drawn τ: {marker.linearRegression.slope.toFixed(2)} hrs</p>
+			<!-- <p>Drawn τ: {marker.linearRegression.slope.toFixed(2)} hrs</p> -->
 			{#if marker.harmonicCheck}
 				<p><strong>Est τ: {marker.harmonicCheck.strongest.peakPeriod.toFixed(2)} hrs</strong></p>
 			{/if}
