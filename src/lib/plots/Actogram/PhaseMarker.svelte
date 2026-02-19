@@ -10,6 +10,7 @@
 		removeNullsFromXY
 	} from '$lib/components/plotBits/helpers/wrangleData';
 	import { scaleLinear } from 'd3-scale';
+	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
 
 	function findCentileValue(data, centile) {
 		const filteredData = data.filter((value) => !isNaN(value) && value !== 0);
@@ -206,6 +207,56 @@
 			return linearRegression(xs, ys);
 		});
 
+		// Check harmonics of the estimated tau against the periodogram
+		harmonicCheck = $derived.by(() => {
+			if (!this.linearRegression?.slope) return null;
+			const tau = this.linearRegression.slope;
+			const xData = this.parentData.x?.hoursSinceStart;
+			const yData = this.parentData.y?.getData();
+			if (!xData?.length || !yData?.length) return null;
+
+			const binSize = this.parentData.binSize || 0.25;
+			const dataSpan = xData[xData.length - 1] - xData[0];
+
+			// Candidate periods: tau, tau/2, 2*tau
+			const candidates = [
+				{ label: 'τ', period: tau },
+				{ label: 'τ/2', period: tau / 2 },
+				{ label: '2τ', period: tau * 2 }
+			].filter((c) => c.period > binSize * 2 && c.period < dataSpan / 2);
+
+			if (candidates.length === 0) return null;
+
+			// Run a single narrow periodogram covering all candidate windows
+			const margin = 1.5; // ±1.5 hours around each candidate
+			const step = 0.1;
+			const results = candidates.map((c) => {
+				const pMin = Math.max(binSize * 2, c.period - margin);
+				const pMax = c.period + margin;
+				const result = runPeriodogramCalculation({
+					xData,
+					yData,
+					binSize,
+					method: 'Lomb-Scargle',
+					chiSquaredAlpha: 0.05,
+					periodMin: pMin,
+					periodMax: pMax,
+					periodSteps: step
+				});
+				if (!result.y.length) return { ...c, peakPeriod: c.period, power: 0 };
+				const peakIdx = result.y.indexOf(Math.max(...result.y));
+				return {
+					...c,
+					peakPeriod: result.x[peakIdx],
+					power: result.y[peakIdx]
+				};
+			});
+
+			// Find strongest
+			const strongest = results.reduce((a, b) => (b.power > a.power ? b : a));
+			return { candidates: results, strongest };
+		});
+
 		constructor(parent, dataIN) {
 			this.parentData = parent;
 
@@ -364,7 +415,11 @@
 		</div>
 
 		{#if marker.linearRegression?.slope}
-			<p>Est τ: {marker.linearRegression.slope.toFixed(2)} hrs</p>
+			<p>Drawn τ: {marker.linearRegression.slope.toFixed(2)} hrs</p>
+			{#if marker.harmonicCheck}
+				<p><strong>Est τ: {marker.harmonicCheck.strongest.peakPeriod.toFixed(2)} hrs</strong></p>
+			{/if}
+
 			<p>
 				R-squared: {marker.linearRegression.rSquared.toFixed(3)}, Error: {marker.linearRegression.rmse.toFixed(
 					3

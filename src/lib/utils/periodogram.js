@@ -74,7 +74,6 @@ function calculateLombScarglePower(times, values, frequencies, onProgress) {
 		if (onProgress && freqIndex % 10 === 0) {
 			onProgress(freqIndex, frequencies.length);
 		}
-
 		return power / (2 * yVariance);
 	});
 
@@ -220,7 +219,6 @@ export function runPeriodogramCalculation(params, onProgress) {
 			}
 		}
 	} else if (params.method === 'Lomb-Scargle') {
-		console.log(params);
 		const powers = calculateLombScarglePower(params.xData, params.yData, frequencies, onProgress);
 		for (let p = 0; p < periods.length; p++) {
 			power[p] = powers[p];
