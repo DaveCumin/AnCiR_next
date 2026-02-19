@@ -300,6 +300,7 @@
 		spaceBetween = $state(2);
 		doublePlot = $state(2);
 		periodHrs = $state(24);
+		showDayNumbers = $state(false);
 		lightBands = $state(new LightBandClass(this, { lightBands: [] }));
 		Ndays = $derived.by(() => {
 			//TODO: this should caluclate the number of days from the start - so look at the max x data in each data and compare with the starttime
@@ -401,6 +402,7 @@
 				paddingIN: this.paddingIN,
 				doublePlot: this.doublePlot,
 				periodHrs: this.periodHrs,
+				showDayNumbers: this.showDayNumbers,
 				lightBands: this.lightBands,
 				data: this.data
 			};
@@ -415,6 +417,7 @@
 			actogram.ylimsIN = json.ylimsIN;
 			actogram.doublePlot = json.doublePlot;
 			actogram.periodHrs = json.periodHrs;
+			if (json.showDayNumbers != null) actogram.showDayNumbers = json.showDayNumbers;
 
 			actogram.lightBands = LightBandClass.fromJSON(
 				json.lightBands ?? { lightBands: [] },
@@ -600,6 +603,11 @@
 					<p>Space Between</p>
 					<NumberWithUnits bind:value={theData.spaceBetween} />
 				</div>
+			</div>
+
+			<div class="control-input-checkbox">
+				<input type="checkbox" bind:checked={theData.showDayNumbers} />
+				<p>Show period numbers</p>
 			</div>
 		</div>
 
@@ -821,6 +829,16 @@
 		onmousemove={(e) => handleHover(e)}
 		ontooltip={handleTooltip}
 	>
+		<defs>
+			<clipPath id={'actogram-clip-' + theData.plot.parentBox.id}>
+				<rect
+					x={theData.plot.padding.left}
+					y={theData.plot.padding.top}
+					width={theData.plot.plotwidth}
+					height={theData.plot.plotheight}
+				/>
+			</clipPath>
+		</defs>
 		<LightBand bind:bands={theData.plot.lightBands} which="plot" />
 		<!-- The X-axis -->
 		<Axis
@@ -874,15 +892,39 @@
 					{/each}
 				{/if}
 			</g>
-			<!-- THE MARKERS -->
-			{#each datum.phaseMarkers as marker}
-				<PhaseMarker {which} {marker} />
-			{/each}
+			<!-- THE MARKERS (clipped to plot area) -->
+			<g clip-path={'url(#actogram-clip-' + theData.plot.parentBox.id + ')'}>
+				{#each datum.phaseMarkers as marker}
+					<PhaseMarker {which} {marker} />
+				{/each}
+			</g>
 		{/each}
 		<!-- THE ANNOTATIONS -->
 		{#each theData.plot.annotations as annotation}
 			<Annotation {which} {annotation} />
 		{/each}
+		<!-- DAY/PERIOD NUMBERS -->
+		{#if theData.plot.showDayNumbers && theData.plot.Ndays > 0}
+			{@const dayScale = scaleLinear()
+				.domain([0, theData.plot.Ndays])
+				.range([0, theData.plot.Ndays])}
+			{@const dayTicks =
+				theData.plot.Ndays > 20 ? dayScale.ticks() : makeSeqArray(0, theData.plot.Ndays - 1, 1)}
+			{#each dayTicks as day}
+				{#if day >= 0 && day < theData.plot.Ndays}
+					<text
+						x={theData.plot.padding.left - 10}
+						y={theData.plot.padding.top +
+							day * (theData.plot.eachplotheight + theData.plot.spaceBetween) +
+							theData.plot.eachplotheight / 2}
+						text-anchor="end"
+						dominant-baseline="central"
+						font-size="10"
+						fill="#555">{day + 1}</text
+					>
+				{/if}
+			{/each}
+		{/if}
 	</svg>
 
 	{#if tooltip.visible}

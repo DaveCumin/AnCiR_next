@@ -122,9 +122,7 @@
 		processes = $state([]);
 
 		hoursSinceStart = $derived.by(() => {
-			console.log('in hoursSinceStart for column ', this.id, this.name);
 			if (!this.isReferencial() && this.compression === 'awd' && this.processes.length === 0) {
-				console.log('awd case');
 				const raw = core.rawData.get(this.data);
 				const length = raw.length;
 				const step = raw.step;
