@@ -36,7 +36,7 @@ class HistoryManager {
 					p.displayName;
 					// Access args deeply to trigger on any arg change
 					if (p.args) {
-						Object.keys(p.args).forEach(key => {
+						Object.keys(p.args).forEach((key) => {
 							p.args[key];
 						});
 					}
@@ -54,11 +54,11 @@ class HistoryManager {
 					tp.displayName;
 					// Access args deeply to trigger on any arg change
 					if (tp.args) {
-						Object.keys(tp.args).forEach(key => {
+						Object.keys(tp.args).forEach((key) => {
 							const val = tp.args[key];
 							// If it's an object (like 'out'), access its properties too
 							if (val && typeof val === 'object') {
-								Object.keys(val).forEach(subkey => {
+								Object.keys(val).forEach((subkey) => {
 									val[subkey];
 								});
 							}
@@ -81,7 +81,7 @@ class HistoryManager {
 				p.plot?.data?.forEach((d) => {
 					// Access data properties to trigger on changes
 					if (d && typeof d === 'object') {
-						Object.keys(d).forEach(key => {
+						Object.keys(d).forEach((key) => {
 							const val = d[key];
 							if (val && typeof val === 'object' && val.refId !== undefined) {
 								val.refId;
@@ -163,6 +163,8 @@ class HistoryManager {
 		if (this.undoStack.length === 0) return;
 
 		this.isRestoring = true;
+		appState.loadingState.isLoading = true;
+		appState.loadingState.loadingMsg = 'Undoing…';
 
 		// Save current state to redo stack
 		const currentState = outputCoreAsJson();
@@ -176,6 +178,7 @@ class HistoryManager {
 		this.lastSnapshot = previousState;
 
 		await tick();
+		appState.loadingState.isLoading = false;
 		this.isRestoring = false;
 	}
 
@@ -183,7 +186,8 @@ class HistoryManager {
 		if (this.redoStack.length === 0) return;
 
 		this.isRestoring = true;
-
+		appState.loadingState.isLoading = true;
+		appState.loadingState.loadingMsg = 'Redoing…';
 		// Save current state to undo stack
 		const currentState = outputCoreAsJson();
 		this.undoStack.push(currentState);
@@ -196,6 +200,7 @@ class HistoryManager {
 		this.lastSnapshot = nextState;
 
 		await tick();
+		appState.loadingState.isLoading = false;
 		this.isRestoring = false;
 	}
 

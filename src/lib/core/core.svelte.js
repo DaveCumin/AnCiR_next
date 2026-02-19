@@ -15,6 +15,11 @@ export const appState = $state({
 	currentTab: initialiseCurrentTab(false, false), // change values if panel visibility initialised differently
 	currentControlTab: 'properties',
 
+	loadingState: {
+		isLoading: true,
+		loadingMsg: 'Warming up...'
+	},
+
 	showNavbar: true,
 	showDisplayPanel: false,
 	showControlPanel: false,
@@ -100,7 +105,7 @@ function initialiseCurrentTab(showDisplayPanel, showControlPanel) {
 
 export function loadAppState(newAppState) {
 	for (const key in newAppState) {
-		if (key in appState) {
+		if (key in appState && key !== 'loadingState') {
 			appState[key] = newAppState[key];
 		}
 	}
@@ -109,6 +114,8 @@ export function loadAppState(newAppState) {
 export function pushObj(obj, autoPosition = true) {
 	if (obj instanceof Column) {
 		core.data.push(obj);
+		void obj.hoursSinceStart; // eagerly compute while spinner is showing
+		console.log('Pushed column with id', obj.id, 'and name', obj.name);
 	} else if (obj instanceof Table) {
 		core.tables.push(obj);
 	} else if (obj instanceof Plot) {

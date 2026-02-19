@@ -122,6 +122,10 @@
 		processes = $state([]);
 
 		hoursSinceStart = $derived.by(() => {
+			if (this.isReferencial()) {
+				return this.refColumn?.hoursSinceStart;
+			}
+
 			if (!this.isReferencial() && this.compression === 'awd' && this.processes.length === 0) {
 				const raw = core.rawData.get(this.data);
 				const length = raw.length;
@@ -151,13 +155,25 @@
 			//Other cases
 			const thedata = this.getData();
 			if (this.type == 'number') {
-				return thedata.map((x) => x - thedata[0]);
+				let out = Array(thedata.length);
+				for (let i = 0; i < thedata.length; i++) {
+					out[i] = thedata[i] - thedata[0];
+				}
+				return out;
 			}
 			if (this.type == 'bin') {
-				return thedata.map((x) => x - thedata[0] - this.binWidth / 2);
+				let out = Array(thedata.length);
+				for (let i = 0; i < thedata.length; i++) {
+					out[i] = thedata[i] - thedata[0] - this.binWidth / 2;
+				}
+				return out;
 			}
 			if (this.type == 'time') {
-				return thedata.map((x) => (x - thedata[0]) / 3600000);
+				let out = Array(thedata.length);
+				for (let i = 0; i < thedata.length; i++) {
+					out[i] = (thedata[i] - thedata[0]) / 3600000;
+				}
+				return out;
 			}
 		});
 

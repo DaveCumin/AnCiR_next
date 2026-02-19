@@ -117,6 +117,12 @@
 			await tick();
 			loadAppState(jsonData.appState);
 		}
+
+		if (onProgress) onProgress('Computing time axes…');
+		await tick();
+		for (const col of core.data) {
+			void col.hoursSinceStart;
+		}
 	}
 </script>
 
@@ -190,12 +196,16 @@
 	async function doImport() {
 		awaitingLoad = true;
 		loadProgressDetail = 'Starting…';
+		appState.loadingState.isLoading = true;
+		appState.loadingState.loadingMsg = `Loading session${fileName ? ` from ${fileName}` : ''}…`;
 		await tick();
 
 		await importJson(jsonData, (detail) => {
 			loadProgressDetail = detail;
+			appState.loadingState.loadingMsg = detail;
 		});
 
+		appState.loadingState.isLoading = false;
 		awaitingLoad = false;
 		loadProgressDetail = '';
 		showImportModal = false;
@@ -342,6 +352,4 @@
 		color: var(--color-lightness-35);
 		font-size: 14px;
 	}
-
-
 </style>

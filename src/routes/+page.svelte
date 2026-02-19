@@ -46,9 +46,6 @@
 	import Visualise from '$lib/components/Visualise.svelte';
 	import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte';
 
-	let loadingMsg = $state('Warming up...');
-	let isLoading = $state(true);
-
 	let visualise = $state(false);
 
 	// Initialize history watching (must be in component context)
@@ -101,14 +98,14 @@
 
 	onMount(async () => {
 		//load the maps
-		loadingMsg = 'Loading processes ...';
+		appState.loadingState.loadingMsg = 'Loading processes ...';
 		appConsts.processMap = await loadProcesses();
-		loadingMsg = 'Loading plots ...';
+		appState.loadingState.loadingMsg = 'Loading plots ...';
 		appConsts.plotMap = await loadPlots();
-		loadingMsg = 'Loading table processes ...';
+		appState.loadingState.loadingMsg = 'Loading table processes ...';
 		appConsts.tableProcessMap = await loadTableProcesses();
 
-		isLoading = false;
+		appState.loadingState.isLoading = false;
 
 		//add event listeners
 		const updateWidth = () => {
@@ -122,7 +119,7 @@
 				navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
 			const MODIFIER = ISMAC ? event.metaKey : event.ctrlKey;
 
-			if (!isLoading) {
+			if (!appState.loadingState.isLoading) {
 				// Don't allow keypresses if loading
 
 				// UNDO
@@ -234,11 +231,13 @@
 	async function loadTestJson() {
 		// const jsonData = JSON.parse(`${testJson}`);
 		const jsonData = JSON.parse(`${testJsonDC}`);
-		isLoading = true;
-		loadingMsg = 'Loading test data...';
+		appState.loadingState.isLoading = true;
+		appState.loadingState.loadingMsg = 'Loading test data...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
-		await importJson(jsonData);
-		isLoading = false;
+		await importJson(jsonData, (msg) => {
+			appState.loadingState.loadingMsg = msg;
+		});
+		appState.loadingState.isLoading = false;
 	}
 
 	function addData(dataIN, type, name, provenance) {
@@ -316,8 +315,8 @@
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		//Show the loading message
-		isLoading = true;
-		loadingMsg = 'Making data...';
+		appState.loadingState.isLoading = true;
+		appState.loadingState.loadingMsg = 'Making data...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		//simulate importing data
@@ -369,7 +368,7 @@
 		); //yyyy-LL-dd'T'HH:mm:ss.S'Z'
 		core.data[core.data.length - 1].timeFormat = "yyyy-LL-dd'T'HH:mm:ss.S'Z'"; //'%Y-%m-%dT%H:%M:%S.%L%Z';
 
-		loadingMsg = 'Putting data into tables...';
+		appState.loadingState.loadingMsg = 'Putting data into tables...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		core.tables.push(new Table({ name: 'my first table' }));
@@ -377,7 +376,7 @@
 		core.tables.push(new Table({ name: 'table too' }));
 		core.tables[1].columnRefs = [d1id, d0id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
 
-		loadingMsg = 'Putting binned data...';
+		appState.loadingState.loadingMsg = 'Putting binned data...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		core.tables[1].processes.push(
 			new TableProcess(
@@ -396,7 +395,7 @@
 			)
 		);
 
-		loadingMsg = 'Making scatterplot...';
+		appState.loadingState.loadingMsg = 'Making scatterplot...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		//Scatter plot
@@ -413,7 +412,7 @@
 		core.plots[core.plots.length - 1].x = 15;
 		core.plots[core.plots.length - 1].y = 15;
 
-		loadingMsg = 'Making actogram...';
+		appState.loadingState.loadingMsg = 'Making actogram...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		// //Actogram
@@ -431,7 +430,7 @@
 		core.plots[core.plots.length - 1].x = snapToGrid(15);
 		core.plots[core.plots.length - 1].y = snapToGrid(335);
 
-		loadingMsg = 'Making periodogram...';
+		appState.loadingState.loadingMsg = 'Making periodogram...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		//Periodogram
@@ -448,7 +447,7 @@
 		core.plots[core.plots.length - 1].y = snapToGrid(15);
 		core.plots[core.plots.length - 1].width = snapToGrid(510);
 
-		loadingMsg = 'Making table...';
+		appState.loadingState.loadingMsg = 'Making table...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		//Table
@@ -463,7 +462,7 @@
 		];
 		core.plots[core.plots.length - 1].plot.showCol = [true, true, true, true];
 
-		loadingMsg = 'Making correlogram...';
+		appState.loadingState.loadingMsg = 'Making correlogram...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		//Correlogram
@@ -480,7 +479,7 @@
 		core.plots[core.plots.length - 1].y = snapToGrid(645);
 		core.plots[core.plots.length - 1].width = snapToGrid(510);
 
-		loadingMsg = 'Making Fourier analysis...';
+		appState.loadingState.loadingMsg = 'Making Fourier analysis...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		// FFT
@@ -497,7 +496,7 @@
 		core.plots[core.plots.length - 1].y = snapToGrid(960);
 		core.plots[core.plots.length - 1].width = snapToGrid(510);
 
-		loadingMsg = 'Making duplicate data...';
+		appState.loadingState.loadingMsg = 'Making duplicate data...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		//--------
@@ -516,7 +515,7 @@
 		);
 		core.plots[0].plot.data[1].y.refId = core.data[core.data.length - 1].id;
 
-		isLoading = false;
+		appState.loadingState.isLoading = false;
 	}
 
 	// TODO: Key Handling accessibility, e.g. ctrl+i == import
@@ -529,7 +528,7 @@
 {#if visualise}
 	<Visualise />
 {/if}
-{#if !isLoading || core.data.length > 0}
+{#if !appState.loadingState.isLoading || core.data.length > 0}
 	{#if appState.showNavbar}
 		<Navbar />
 	{/if}
@@ -546,10 +545,10 @@
 		callback={appState.AYScallback}
 	/>
 {/if}
-{#if isLoading}
+{#if appState.loadingState.isLoading}
 	<div class="backdrop" transition:fade={{ duration: 360 }}>
 		<div class="loading-container">
-			<LoadingSpinner message={loadingMsg} />
+			<LoadingSpinner message={appState.loadingState.loadingMsg} />
 		</div>
 	</div>
 {/if}

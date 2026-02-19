@@ -43,9 +43,7 @@
 	let binningEnabled = $state(false);
 	let binIntervalMin = $state(15); // default 15 minutes
 	let dataIntervalMin = $derived(awdMeta ? awdMeta.stepMs / 60_000 : 1);
-	let estimatedBinnedRows = $derived(
-		Math.ceil((totalRowCount * dataIntervalMin) / binIntervalMin)
-	);
+	let estimatedBinnedRows = $derived(Math.ceil((totalRowCount * dataIntervalMin) / binIntervalMin));
 
 	// Progress feedback
 	let loadProgress = $state({ stage: '', detail: '' });
@@ -167,6 +165,7 @@
 		await tick();
 		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
 		await loadData();
+		console.log('Import complete');
 		awaitingLoad = false;
 		resetValues();
 		showImportModal = false;
@@ -194,7 +193,7 @@
 						skipHidden: true,
 						blankrows: false
 					});
-					console.log('Converted CSV: ', csv);
+					//console.log('Converted CSV: ', csv);
 
 					loadProgress = { stage: 'Parsing', detail: 'Parsing rows…' };
 					await tick();
@@ -381,9 +380,9 @@
 
 		if (isAWD) {
 			// For AWD: force clean full parse (double-pass) and ensure awdMeta is set
-			console.log('[AWD FULL] Starting dedicated full AWD parse');
+			//console.log('[AWD FULL] Starting dedicated full AWD parse');
 			await parseFullAWD();
-			console.log('[AWD FULL] Parse complete, awdMeta now:', $state.snapshot(awdMeta));
+			//console.log('[AWD FULL] Parse complete, awdMeta now:', $state.snapshot(awdMeta));
 		} else {
 			// Normal files: re-use existing parseFile logic
 			await parseFile();
@@ -406,7 +405,7 @@
 		await tick();
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
-		doBasicFileImport(parsedData, targetFile.name);
+		await doBasicFileImport(parsedData, targetFile.name);
 
 		awaitingLoad = false;
 	}
@@ -721,7 +720,6 @@
 			}
 		}
 
-		console.log(`Binning: ${rowCount} rows → ${numBins} bins (${binIntervalMin} min)`);
 		return result;
 	}
 
@@ -816,7 +814,8 @@
 									<NumberWithUnits bind:value={binIntervalMin} min={1} step={1} /> mins intervals
 									{#if binningEnabled}
 										<span class="binning-estimate">
-											(~{estimatedBinnedRows.toLocaleString()} rows after binning, {dataIntervalMin} min intervals detected)
+											(~{estimatedBinnedRows.toLocaleString()} rows after binning, {dataIntervalMin} min
+											intervals detected)
 										</span>
 									{/if}
 								</p>
