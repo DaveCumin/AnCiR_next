@@ -70,7 +70,7 @@
 		const out = x.map((val, i) => (resultMask[i] ? val : NaN));
 		return out;
 	}
-
+	export const filterbyothercol_displayName = 'Filter';
 	export const filterbyothercol_defaults = new Map([
 		[
 			'conditions',
@@ -101,7 +101,7 @@
 
 <div class="control-input process">
 	<div class="process-title">
-		<p>{p.name}</p>
+		<p>Filter conditions</p>
 		<button
 			class="icon"
 			onclick={(e) => {

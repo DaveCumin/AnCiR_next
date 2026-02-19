@@ -1,6 +1,7 @@
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
+	export const sub_displayName = 'Substitute';
 	export function sub(x, args) {
 		const find = args.find;
 		const replace = args.replace;
@@ -27,7 +28,7 @@
 <!-- TODO: consider what this should be. Either the replace is for the value, or (more sensibly) it is a replace part of the original string (to change the year, eg), which needs some implementation thought -->
 <div class="control-input process">
 	<div class="process-title">
-		<p>{p.name}</p>
+		<p>Substitute</p>
 		<button
 			class="icon"
 			onclick={(e) => {
@@ -38,27 +39,15 @@
 			<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
 		</button>
 	</div>
-	{#if p.parentCol.type == 'time'}
-		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>find</p>
-				<NumberWithUnits bind:value={p.args.find} />
-			</div>
-			<div class="control-input">
-				<p>replace</p>
-				<NumberWithUnits bind:value={p.args.replace} />
-			</div>
-		</div>
-	{/if}
 
-	{#if p.parentCol.type == 'number'}
+	{#if p.parentCol.type == 'number' || p.parentCol.type == 'time'}
 		<div class="control-input-horizontal">
 			<div class="control-input">
-				<p>find</p>
+				<p>Find</p>
 				<NumberWithUnits bind:value={p.args.find} />
 			</div>
 			<div class="control-input">
-				<p>replace</p>
+				<p>Replace</p>
 				<NumberWithUnits bind:value={p.args.replace} />
 			</div>
 		</div>
@@ -67,13 +56,19 @@
 	{#if p.parentCol.type == 'category'}
 		<div class="control-input-horizontal">
 			<div class="control-input">
-				<p>find</p>
+				<p>Find</p>
 				<input type="text" bind:value={p.args.find} />
 			</div>
 			<div class="control-input">
-				<p>replace</p>
+				<p>Replace</p>
 				<input type="text" bind:value={p.args.replace} />
 			</div>
+		</div>
+	{/if}
+
+	{#if p.parentCol.type == 'bin'}
+		<div class="control-input-horizontal">
+			<p>Substitution not supported for binned columns, sorry</p>
 		</div>
 	{/if}
 </div>
