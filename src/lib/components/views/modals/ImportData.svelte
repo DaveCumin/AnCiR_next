@@ -434,6 +434,8 @@
 			appState.loadingState.isLoading = false;
 			appState.loadingState.loadingMsg = '';
 		} catch (error) {
+			//show error to user
+			alert('Something went wrong. Please check your internet connection and try again.');
 			console.error('Fetch error:', error);
 		}
 	}

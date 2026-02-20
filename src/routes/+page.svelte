@@ -148,7 +148,11 @@
 
 				//load the test json
 				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'a') {
-					loadTestJson();
+					const test = new URL(window.location.href);
+					window.location.href =
+						test.origin +
+						'?loadFromURL=https://raw.githubusercontent.com/DaveCumin/AnCiR_next/refs/heads/main/test/testJSON.json';
+					// loadTestJson();
 				}
 
 				// CHANGE SCALE - ZOOM IN
@@ -228,9 +232,7 @@
 		const query = urlParams.get('loadFromURL') || 'No query parameter found';
 
 		if (query != 'No query parameter found') {
-			loadFromURL(
-				'https://raw.githubusercontent.com/DaveCumin/AnCiR_next/refs/heads/main/test/testJSON.json'
-			);
+			loadFromURL(query);
 		}
 
 		//remove the listeners on close
@@ -240,17 +242,17 @@
 		};
 	});
 
-	async function loadTestJson() {
-		// const jsonData = JSON.parse(`${testJson}`);
-		const jsonData = JSON.parse(`${testJsonDC}`);
-		appState.loadingState.isLoading = true;
-		appState.loadingState.loadingMsg = 'Loading test data...';
-		await new Promise((resolve) => setTimeout(resolve, 10));
-		await importJson(jsonData, (msg) => {
-			appState.loadingState.loadingMsg = msg;
-		});
-		appState.loadingState.isLoading = false;
-	}
+	// async function loadTestJson() {
+	// 	// const jsonData = JSON.parse(`${testJson}`);
+	// 	const jsonData = JSON.parse(`${testJsonDC}`);
+	// 	appState.loadingState.isLoading = true;
+	// 	appState.loadingState.loadingMsg = 'Loading test data...';
+	// 	await new Promise((resolve) => setTimeout(resolve, 10));
+	// 	await importJson(jsonData, (msg) => {
+	// 		appState.loadingState.loadingMsg = msg;
+	// 	});
+	// 	appState.loadingState.isLoading = false;
+	// }
 
 	function addData(dataIN, type, name, provenance) {
 		let newDataEntry;
