@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Deep Object Diff Tester (ESM Version)</title>
+		<style>
+			body {
+				font-family: sans-serif;
+				padding: 20px;
+				line-height: 1.5;
+				color: #333;
+				max-width: 1000px;
+				margin: 0 auto;
+			}
+			.container {
+				display: flex;
+				gap: 20px;
+				flex-wrap: wrap;
+			}
+			.box {
+				flex: 1;
+				min-width: 300px;
+			}
+			textarea {
+				width: 100%;
+				height: 200px;
+				font-family: monospace;
+				padding: 10px;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+				box-sizing: border-box;
+			}
+			pre {
+				background: #f4f4f4;
+				padding: 15px;
+				border-radius: 4px;
+				overflow-x: auto;
+				border: 1px solid #ddd;
+				min-height: 50px;
+			}
+			button {
+				background: #ff3e00;
+				color: white;
+				border: none;
+				padding: 12px 24px;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 1rem;
+				font-weight: bold;
+			}
+			button:hover {
+				background: #e03600;
+			}
+			h2 {
+				border-bottom: 2px solid #eee;
+				padding-bottom: 10px;
+				margin-top: 40px;
+			}
+			.label {
+				font-weight: bold;
+				color: #666;
+				font-size: 0.9rem;
+				text-transform: uppercase;
+				margin-bottom: 5px;
+				display: block;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Deep Object Diff Tester</h1>
+		<p>Using <code>deep-object-diff</code> via ES Modules.</p>
+
+		<div class="container">
+			<div class="box">
+				<span class="label">Original State</span>
+				<textarea id="original">
+{
+  "user": {
+    "name": "Svelte User",
+    "settings": {
+      "theme": "dark"
+    }
+  },
+  "items": [1, 2, 3]
+}
+            </textarea
+				>
+			</div>
+			<div class="box">
+				<span class="label">New State (Modified)</span>
+				<textarea id="updated">
+{
+  "user": {
+    "name": "Svelte Professional",
+    "settings": {
+      "theme": "light"
+    }
+  },
+  "items": [1, 2],
+  "newField": "Added this!"
+}
+            </textarea
+				>
+			</div>
+		</div>
+
+		<div style="margin-top: 20px">
+			<button id="compareBtn">Compare Objects</button>
+		</div>
+
+		<div class="result-group">
+			<h2>Results</h2>
+
+			<span class="label">Detailed Diff (The "Surgical" Update Map)</span>
+			<pre id="detailedDiffResult">Result will appear here...</pre>
+
+			<span class="label">Standard Diff</span>
+			<pre id="diffResult">...</pre>
+		</div>
+
+		<script type="module">
+			// Import directly from a provider that supports ES Modules
+			import { diff, detailedDiff } from 'https://cdn.skypack.dev/deep-object-diff';
+
+			const compareBtn = document.getElementById('compareBtn');
+			const originalInput = document.getElementById('original');
+			const updatedInput = document.getElementById('updated');
+			const diffDisplay = document.getElementById('diffResult');
+			const detailedDisplay = document.getElementById('detailedDiffResult');
+
+			function runComparison() {
+				try {
+					const t0 = performance.now();
+					const obj1 = JSON.parse(originalInput.value);
+					const obj2 = JSON.parse(updatedInput.value);
+
+					const difference = diff(obj1, obj2);
+					const detailed = detailedDiff(obj1, obj2);
+					console.log('diff: ', difference);
+					console.log('detail: ', detailed);
+					const t1 = performance.now();
+					console.log('Comparison took', t1 - t0, 'milliseconds');
+
+					diffDisplay.textContent = JSON.stringify(
+						difference,
+						function (k, v) {
+							return v === undefined ? null : v;
+						},
+						2
+					);
+					detailedDisplay.textContent = JSON.stringify(
+						detailed,
+						function (k, v) {
+							return v === undefined ? null : v;
+						},
+						2
+					);
+				} catch (e) {
+					alert('JSON Error: ' + e.message);
+				}
+			}
+
+			// Attach event listener
+			compareBtn.addEventListener('click', runComparison);
+
+			// Run once on load
+			runComparison();
+		</script>
+	</body>
+</html>

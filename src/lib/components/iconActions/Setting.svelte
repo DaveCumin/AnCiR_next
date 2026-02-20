@@ -1,4 +1,5 @@
 <script module>
+	import { appState } from '$lib/core/core.svelte';
 	export function exportJson() {
 		try {
 			// Get JSON string and validate
