@@ -230,7 +230,9 @@
 
 		//Check for query url
 		if (query) {
-			loadFromURL();
+			loadFromURL(
+				'https://raw.githubusercontent.com/DaveCumin/AnCiR_next/refs/heads/main/test/testJSON.json'
+			);
 		}
 
 		//remove the listeners on close

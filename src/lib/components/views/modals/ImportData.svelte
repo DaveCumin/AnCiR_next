@@ -417,7 +417,8 @@
 			if (!response.ok) {
 				throw new Error('Network response was not ok');
 			}
-			apiResults = await response.json();
+			const apiResults = await response.json();
+			console.log('Fetched JSON from URL:', apiResults);
 
 			awaitingLoad = true;
 			appState.loadingState.isLoading = true;
@@ -425,7 +426,6 @@
 			await tick();
 
 			await importJson(apiResults, (detail) => {
-				loadProgressDetail = detail;
 				appState.loadingState.loadingMsg = detail;
 			});
 
