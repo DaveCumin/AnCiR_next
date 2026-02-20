@@ -16,7 +16,6 @@ import { KahanSum } from './numerics.js';
  * @param {number} options.tolerance - Convergence tolerance (default: 1e-6)
  * @param {boolean} options.useMultiStart - Use multiple random starts (default: true)
  * @param {number} options.numStarts - Number of random starts (default: 5)
- * @param {number[]} options.outputX - Optional x values at which to evaluate the fitted model
  * @returns {Object} - Fitting results
  */
 export function fitCosineCurves(t, x, N, options = {}) {
@@ -29,36 +28,54 @@ export function fitCosineCurves(t, x, N, options = {}) {
 		maxIterations = 10000,
 		tolerance = 1e-6,
 		useMultiStart = true,
-		numStarts = 5,
-		outputX = null
+		numStarts = 5
 	} = options;
 
 	// If initial guess is provided, use it directly
 	if (initialGuess) {
-		return fitWithInitialGuess(t, x, N, initialGuess, maxIterations, tolerance, outputX);
+		return fitWithInitialGuess(t, x, N, initialGuess, maxIterations, tolerance);
 	}
 
 	// Use multi-start approach for better global optimization
 	if (useMultiStart && N > 1) {
-		return fitWithMultiStart(t, x, N, numStarts, maxIterations, tolerance, outputX);
+		return fitWithMultiStart(t, x, N, numStarts, maxIterations, tolerance);
 	} else {
 		// Single fit with improved initial guess
 		const params = generateInitialGuess(t, x, N);
-		return fitWithInitialGuess(t, x, N, params, maxIterations, tolerance, outputX);
+		return fitWithInitialGuess(t, x, N, params, maxIterations, tolerance);
 	}
+}
+
+/**
+ * Evaluate the fitted cosinor model at an array of x points.
+ * Use this after fitting to predict values at arbitrary x locations.
+ *
+ * @param {Object} parameters - The parameters object returned by fitCosineCurves
+ * @param {number[]} xPoints - x values at which to evaluate the model
+ * @returns {number[]} - Predicted y values
+ */
+export function evaluateCosinorAtPoints(parameters, xPoints) {
+	return xPoints.map((t) => {
+		let result = parameters.A;
+		for (const cosine of parameters.cosines) {
+			result += cosine.amplitude * Math.cos(cosine.frequency * t + cosine.phase);
+		}
+		result += parameters.O;
+		return result;
+	});
 }
 
 /**
  * Multi-start fitting approach
  */
-function fitWithMultiStart(t, x, N, numStarts, maxIterations, tolerance, outputX) {
+function fitWithMultiStart(t, x, N, numStarts, maxIterations, tolerance) {
 	let bestResult = null;
 	let bestRmse = Infinity;
 
 	// Try multiple different starting points
 	for (let start = 0; start < numStarts; start++) {
 		const params = generateInitialGuess(t, x, N, start);
-		const result = fitWithInitialGuess(t, x, N, params, maxIterations, tolerance, outputX);
+		const result = fitWithInitialGuess(t, x, N, params, maxIterations, tolerance);
 
 		if (result.rmse < bestRmse) {
 			bestRmse = result.rmse;
@@ -72,7 +89,7 @@ function fitWithMultiStart(t, x, N, numStarts, maxIterations, tolerance, outputX
 /**
  * Fit with given initial parameters
  */
-function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance, outputX) {
+function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance) {
 	const numParams = 1 + 3 * N + 1; // A + 3*N + O
 	let params = [...initialParams];
 
@@ -154,9 +171,6 @@ function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance, o
 	// Generate fitted curve
 	const fitted = t.map((ti) => evaluateModel(ti, params, N));
 
-	// Generate predicted values at outputX points if provided
-	const predicted = outputX ? outputX.map((ti) => evaluateModel(ti, params, N)) : null;
-
 	return {
 		parameters: {
 			A: params[0],
@@ -168,7 +182,6 @@ function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance, o
 			O: params[params.length - 1]
 		},
 		fitted: fitted,
-		predicted: predicted,
 		residuals: residuals,
 		rmse: rmse,
 		rss: rssValue

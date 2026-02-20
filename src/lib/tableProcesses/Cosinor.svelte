@@ -1,7 +1,7 @@
 <script module>
 	import { core } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-	import { fitCosineCurves } from '$lib/utils/cosinor.js';
+	import { fitCosineCurves, evaluateCosinorAtPoints } from '$lib/utils/cosinor.js';
 
 	export const cosinor_defaults = new Map([
 		['xIN', { val: -1 }],
@@ -23,7 +23,7 @@
 		let result = {
 			t: [],
 			outputXData: null,
-			fittedData: { fitted: [], predicted: null, parameters: { cosines: [] }, rmse: NaN }
+			fittedData: { fitted: [], parameters: { cosines: [] }, rmse: NaN }
 		};
 		let valid = false;
 
@@ -49,9 +49,14 @@
 				outputXData = outputXData.filter((v) => !isNaN(v));
 			}
 
-			const fittedData = fitCosineCurves(tt, yy, Ncurves, { outputX: outputXData });
+			const fittedData = fitCosineCurves(tt, yy, Ncurves);
 
-			result = { t: tt, outputXData, fittedData };
+			// Evaluate fitted model at outputX points after fitting (not during)
+			const predicted = outputXData
+				? evaluateCosinorAtPoints(fittedData.parameters, outputXData)
+				: null;
+
+			result = { t: tt, outputXData, fittedData, predicted };
 			valid = fittedData.fitted.length > 0;
 
 			// Only write to output columns if they exist
@@ -61,7 +66,7 @@
 
 				if (xColOut && yColOut) {
 					const xOutData = outputXData ?? tt;
-					const yOutData = outputXData ? fittedData.predicted : fittedData.fitted;
+					const yOutData = predicted ?? fittedData.fitted;
 
 					core.rawData.set(xOUT, xOutData);
 					xColOut.data = xOUT;
@@ -243,7 +248,7 @@
 					headers={['x', cosinorData.outputXData ? 'predicted y' : 'fitted y']}
 					data={[
 						(cosinorData.outputXData ?? cosinorData.t).map((x) => x.toFixed(2)),
-						(cosinorData.fittedData.predicted ?? cosinorData.fittedData.fitted).map((x) =>
+						(cosinorData.predicted ?? cosinorData.fittedData.fitted).map((x) =>
 							x.toFixed(2)
 						)
 					]}
