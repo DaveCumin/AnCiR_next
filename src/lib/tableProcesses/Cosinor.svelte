@@ -7,6 +7,7 @@
 		['xIN', { val: -1 }],
 		['yIN', { val: -1 }],
 		['Ncurves', { val: 0 }],
+		['outputX', { val: -1 }],
 		['out', { cosinorx: { val: -1 }, cosinory: { val: -1 } }], //needed to set up the output columns
 		['valid', { val: false }] //needed for the progress step logic
 	]);
@@ -15,12 +16,14 @@
 		const xIN = argsIN.xIN;
 		const yIN = argsIN.yIN;
 		const Ncurves = argsIN.Ncurves;
+		const outputXId = argsIN.outputX;
 		const xOUT = argsIN.out.cosinorx;
 		const yOUT = argsIN.out.cosinory;
 
 		let result = {
 			t: [],
-			fittedData: { fitted: [], parameters: { cosines: [] }, rmse: NaN }
+			outputXData: null,
+			fittedData: { fitted: [], predicted: null, parameters: { cosines: [] }, rmse: NaN }
 		};
 		let valid = false;
 
@@ -38,9 +41,17 @@
 			const tt = validIndices.map((i) => t[i]);
 			const yy = validIndices.map((i) => y[i]);
 
-			const fittedData = fitCosineCurves(tt, yy, Ncurves);
+			// Get outputX data if specified
+			let outputXData = null;
+			if (outputXId != -1 && getColumnById(outputXId)) {
+				const outputXCol = getColumnById(outputXId);
+				outputXData = outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
+				outputXData = outputXData.filter((v) => !isNaN(v));
+			}
 
-			result = { t: tt, fittedData };
+			const fittedData = fitCosineCurves(tt, yy, Ncurves, { outputX: outputXData });
+
+			result = { t: tt, outputXData, fittedData };
 			valid = fittedData.fitted.length > 0;
 
 			// Only write to output columns if they exist
@@ -49,10 +60,13 @@
 				const yColOut = getColumnById(yOUT);
 
 				if (xColOut && yColOut) {
-					core.rawData.set(xOUT, tt);
+					const xOutData = outputXData ?? tt;
+					const yOutData = outputXData ? fittedData.predicted : fittedData.fitted;
+
+					core.rawData.set(xOUT, xOutData);
 					xColOut.data = xOUT;
 					xColOut.type = 'number';
-					core.rawData.set(yOUT, fittedData.fitted);
+					core.rawData.set(yOUT, yOutData);
 					yColOut.data = yOUT;
 					yColOut.type = 'number';
 
@@ -77,14 +91,17 @@
 	let { p = $bindable() } = $props();
 
 	let cosinorData = $state();
+	let showOutputX = $state(p.args.outputX !== -1);
 
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	let yIN_col = $derived.by(() => (p.args.yIN >= 0 ? getColumnById(p.args.yIN) : null));
+	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
 	let getHash = $derived.by(() => {
 		let out = '';
 		out += xIN_col?.getDataHash;
 		out += yIN_col?.getDataHash;
+		out += outputX_col?.getDataHash;
 		return out;
 	});
 	let lastHash = '';
@@ -98,6 +115,13 @@
 	//------------
 	function getCosinor() {
 		[cosinorData, p.args.valid] = cosinor(p.args);
+	}
+
+	function toggleOutputX(checked) {
+		if (!checked) {
+			p.args.outputX = -1;
+			getCosinor();
+		}
 	}
 </script>
 
@@ -138,6 +162,28 @@
 			<NumberWithUnits bind:value={p.args.Ncurves} onInput={() => getCosinor()} min="1" step="1" />
 		</div>
 	</div>
+
+	<div class="control-input-horizontal">
+		<div class="control-input">
+			<label>
+				<input
+					type="checkbox"
+					bind:checked={showOutputX}
+					onchange={(e) => toggleOutputX(e.target.checked)}
+				/>
+				Specify output x values
+			</label>
+		</div>
+	</div>
+
+	{#if showOutputX}
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>Output X column</p>
+				<ColumnSelector bind:value={p.args.outputX} onChange={(e) => getCosinor()} />
+			</div>
+		</div>
+	{/if}
 </div>
 
 <!-- Output Section -->
@@ -194,10 +240,12 @@
 			{/each}
 			<div style="height:250px; overflow:auto;">
 				<Table
-					headers={['binned x', 'binned y']}
+					headers={['x', cosinorData.outputXData ? 'predicted y' : 'fitted y']}
 					data={[
-						cosinorData.t.map((x) => x.toFixed(2)),
-						cosinorData.fittedData.fitted.map((x) => x.toFixed(2))
+						(cosinorData.outputXData ?? cosinorData.t).map((x) => x.toFixed(2)),
+						(cosinorData.fittedData.predicted ?? cosinorData.fittedData.fitted).map((x) =>
+							x.toFixed(2)
+						)
 					]}
 				/>
 			</div>

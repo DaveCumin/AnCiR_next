@@ -16,6 +16,7 @@ import { KahanSum } from './numerics.js';
  * @param {number} options.tolerance - Convergence tolerance (default: 1e-6)
  * @param {boolean} options.useMultiStart - Use multiple random starts (default: true)
  * @param {number} options.numStarts - Number of random starts (default: 5)
+ * @param {number[]} options.outputX - Optional x values at which to evaluate the fitted model
  * @returns {Object} - Fitting results
  */
 export function fitCosineCurves(t, x, N, options = {}) {
@@ -28,35 +29,36 @@ export function fitCosineCurves(t, x, N, options = {}) {
 		maxIterations = 10000,
 		tolerance = 1e-6,
 		useMultiStart = true,
-		numStarts = 5
+		numStarts = 5,
+		outputX = null
 	} = options;
 
 	// If initial guess is provided, use it directly
 	if (initialGuess) {
-		return fitWithInitialGuess(t, x, N, initialGuess, maxIterations, tolerance);
+		return fitWithInitialGuess(t, x, N, initialGuess, maxIterations, tolerance, outputX);
 	}
 
 	// Use multi-start approach for better global optimization
 	if (useMultiStart && N > 1) {
-		return fitWithMultiStart(t, x, N, numStarts, maxIterations, tolerance);
+		return fitWithMultiStart(t, x, N, numStarts, maxIterations, tolerance, outputX);
 	} else {
 		// Single fit with improved initial guess
 		const params = generateInitialGuess(t, x, N);
-		return fitWithInitialGuess(t, x, N, params, maxIterations, tolerance);
+		return fitWithInitialGuess(t, x, N, params, maxIterations, tolerance, outputX);
 	}
 }
 
 /**
  * Multi-start fitting approach
  */
-function fitWithMultiStart(t, x, N, numStarts, maxIterations, tolerance) {
+function fitWithMultiStart(t, x, N, numStarts, maxIterations, tolerance, outputX) {
 	let bestResult = null;
 	let bestRmse = Infinity;
 
 	// Try multiple different starting points
 	for (let start = 0; start < numStarts; start++) {
 		const params = generateInitialGuess(t, x, N, start);
-		const result = fitWithInitialGuess(t, x, N, params, maxIterations, tolerance);
+		const result = fitWithInitialGuess(t, x, N, params, maxIterations, tolerance, outputX);
 
 		if (result.rmse < bestRmse) {
 			bestRmse = result.rmse;
@@ -70,7 +72,7 @@ function fitWithMultiStart(t, x, N, numStarts, maxIterations, tolerance) {
 /**
  * Fit with given initial parameters
  */
-function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance) {
+function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance, outputX) {
 	const numParams = 1 + 3 * N + 1; // A + 3*N + O
 	let params = [...initialParams];
 
@@ -152,6 +154,9 @@ function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance) {
 	// Generate fitted curve
 	const fitted = t.map((ti) => evaluateModel(ti, params, N));
 
+	// Generate predicted values at outputX points if provided
+	const predicted = outputX ? outputX.map((ti) => evaluateModel(ti, params, N)) : null;
+
 	return {
 		parameters: {
 			A: params[0],
@@ -163,6 +168,7 @@ function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance) {
 			O: params[params.length - 1]
 		},
 		fitted: fitted,
+		predicted: predicted,
 		residuals: residuals,
 		rmse: rmse,
 		rss: rssValue
