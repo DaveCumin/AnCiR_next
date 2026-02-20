@@ -98,12 +98,6 @@
 	//------------------------------------
 
 	onMount(async () => {
-		// Get query string from URL - for fetching external data
-		const urlParams = new URLSearchParams(window.location.search);
-		const query = urlParams.get('query') || 'No query parameter found';
-
-		console.log('query: ', query);
-
 		//load the maps
 		appState.loadingState.loadingMsg = 'Loading processes ...';
 		appConsts.processMap = await loadProcesses();
@@ -229,7 +223,11 @@
 		});
 
 		//Check for query url
-		if (query) {
+		// Get query string from URL - for fetching external data
+		const urlParams = new URLSearchParams(window.location.search);
+		const query = urlParams.get('loadFromURL') || 'No query parameter found';
+
+		if (query != 'No query parameter found') {
 			loadFromURL(
 				'https://raw.githubusercontent.com/DaveCumin/AnCiR_next/refs/heads/main/test/testJSON.json'
 			);
