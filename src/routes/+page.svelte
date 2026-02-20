@@ -150,7 +150,6 @@
 					window.location.href =
 						test.href +
 						'?loadFromURL=https://raw.githubusercontent.com/DaveCumin/AnCiR_next/refs/heads/main/test/testJSON.json';
-					// loadTestJson();
 				}
 
 				// CHANGE SCALE - ZOOM IN
