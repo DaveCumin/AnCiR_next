@@ -148,7 +148,7 @@
 				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'a') {
 					const test = new URL(window.location.href);
 					window.location.href =
-						test.origin +
+						test.href +
 						'?loadFromURL=https://raw.githubusercontent.com/DaveCumin/AnCiR_next/refs/heads/main/test/testJSON.json';
 					// loadTestJson();
 				}
