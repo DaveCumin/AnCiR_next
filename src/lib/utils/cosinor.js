@@ -47,6 +47,25 @@ export function fitCosineCurves(t, x, N, options = {}) {
 }
 
 /**
+ * Evaluate the fitted cosinor model at an array of x points.
+ * Use this after fitting to predict values at arbitrary x locations.
+ *
+ * @param {Object} parameters - The parameters object returned by fitCosineCurves
+ * @param {number[]} xPoints - x values at which to evaluate the model
+ * @returns {number[]} - Predicted y values
+ */
+export function evaluateCosinorAtPoints(parameters, xPoints) {
+	return xPoints.map((t) => {
+		let result = parameters.A;
+		for (const cosine of parameters.cosines) {
+			result += cosine.amplitude * Math.cos(cosine.frequency * t + cosine.phase);
+		}
+		result += parameters.O;
+		return result;
+	});
+}
+
+/**
  * Multi-start fitting approach
  */
 function fitWithMultiStart(t, x, N, numStarts, maxIterations, tolerance) {
