@@ -20,8 +20,6 @@
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 
-	import { testJsonDC } from './testJsonDC.svelte';
-
 	import {
 		core,
 		pushObj,
