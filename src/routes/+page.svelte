@@ -15,6 +15,7 @@
 	import { loadPlots } from '$lib/plots/plotMap.js';
 	import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
 	import { importJson } from '$lib/components/iconActions/Setting.svelte';
+	import { loadFromURL } from '$lib/components/views/modals/ImportData.svelte';
 
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
@@ -97,6 +98,12 @@
 	//------------------------------------
 
 	onMount(async () => {
+		// Get query string from URL - for fetching external data
+		const urlParams = new URLSearchParams(window.location.search);
+		const query = urlParams.get('query') || 'No query parameter found';
+
+		console.log('query: ', query);
+
 		//load the maps
 		appState.loadingState.loadingMsg = 'Loading processes ...';
 		appConsts.processMap = await loadProcesses();
@@ -220,6 +227,11 @@
 				}
 			}
 		});
+
+		//Check for query url
+		if (query) {
+			loadFromURL();
+		}
 
 		//remove the listeners on close
 		return () => {

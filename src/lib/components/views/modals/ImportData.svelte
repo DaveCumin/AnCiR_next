@@ -4,7 +4,7 @@
 	import * as XLSX from 'xlsx';
 	import { DateTime } from 'luxon';
 
-	import { appConsts, core, pushObj } from '$lib/core/core.svelte';
+	import { appConsts, core, pushObj, appState } from '$lib/core/core.svelte';
 	import { Table } from '$lib/core/Table.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	import { guessDateofArray, forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
@@ -15,6 +15,7 @@
 	import TableLayout from '$lib/components/plotbits/Table.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import { importJson } from '$lib/components/iconActions/Setting.svelte';
 	import { tick } from 'svelte';
 	import { stackOrderInsideOut } from 'd3-shape';
 	import { parse } from 'svelte/compiler';
@@ -408,6 +409,33 @@
 		await doBasicFileImport(parsedData, targetFile.name);
 
 		awaitingLoad = false;
+	}
+
+	export async function loadFromURL(url) {
+		try {
+			const response = await fetch(url);
+			if (!response.ok) {
+				throw new Error('Network response was not ok');
+			}
+			apiResults = await response.json();
+
+			awaitingLoad = true;
+			appState.loadingState.isLoading = true;
+			appState.loadingState.loadingMsg = `Loading data from ${url}…`;
+			await tick();
+
+			await importJson(apiResults, (detail) => {
+				loadProgressDetail = detail;
+				appState.loadingState.loadingMsg = detail;
+			});
+
+			appState.loadingState.isLoading = false;
+
+			appState.loadingState.isLoading = false;
+			appState.loadingState.loadingMsg = '';
+		} catch (error) {
+			console.error('Fetch error:', error);
+		}
 	}
 
 	async function doBasicFileImport(result, fname) {
