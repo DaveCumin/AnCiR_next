@@ -2,7 +2,7 @@
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
 	import Axis from '$lib/components/plotbits/Axis.svelte';
-	import { scaleLinear, scaleTime } from 'd3-scale';
+	import { scaleLinear, scaleTime, scaleLog } from 'd3-scale';
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
@@ -126,14 +126,22 @@
 		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
 
 		xlimsIN = $state([null, null]);
-		XScale = $derived(
-			this.anyXdataTime
-				? scaleTime().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth])
-				: scaleLinear().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth])
-		);
+		xLogScale = $state(false);
+		XScale = $derived.by(() => {
+			if (this.anyXdataTime) {
+				return scaleTime().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth]);
+			}
+			if (this.xLogScale && this.xlims[0] > 0 && this.xlims[1] > 0) {
+				return scaleLog().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth]);
+			}
+			return scaleLinear().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth]);
+		});
 
 		ylimsLeftIN = $state([null, null]);
 		ylimsRightIN = $state([null, null]);
+
+		yLogScaleLeft = $state(false);
+		yLogScaleRight = $state(false);
 
 		yTicksLeft = $state(5);
 		yTicksRight = $state(5);
@@ -210,6 +218,28 @@
 		xgridlines = $state(true);
 		ygridlinesLeft = $state(true);
 		ygridlinesRight = $state(false);
+
+		YScaleLeft = $derived.by(() => {
+			if (this.yLogScaleLeft && this.ylimsLeft[0] > 0 && this.ylimsLeft[1] > 0) {
+				return scaleLog()
+					.domain([this.ylimsLeft[0], this.ylimsLeft[1]])
+					.range([this.plotheight, 0]);
+			}
+			return scaleLinear()
+				.domain([this.ylimsLeft[0], this.ylimsLeft[1]])
+				.range([this.plotheight, 0]);
+		});
+
+		YScaleRight = $derived.by(() => {
+			if (this.yLogScaleRight && this.ylimsRight[0] > 0 && this.ylimsRight[1] > 0) {
+				return scaleLog()
+					.domain([this.ylimsRight[0], this.ylimsRight[1]])
+					.range([this.plotheight, 0]);
+			}
+			return scaleLinear()
+				.domain([this.ylimsRight[0], this.ylimsRight[1]])
+				.range([this.plotheight, 0]);
+		});
 
 		nightBands = $state([]);
 
@@ -382,8 +412,11 @@
 		toJSON() {
 			return {
 				xlimsIN: this.xlimsIN,
+				xLogScale: this.xLogScale,
 				ylimsLeftIN: this.ylimsLeftIN,
 				ylimsRightIN: this.ylimsRightIN,
+				yLogScaleLeft: this.yLogScaleLeft,
+				yLogScaleRight: this.yLogScaleRight,
 				padding: this.padding,
 				ygridlinesLeft: this.ygridlinesLeft,
 				ygridlinesRight: this.ygridlinesRight,
@@ -403,9 +436,11 @@
 			const scatter = new Scatterplotclass(parent, null);
 			scatter.padding = json.padding;
 			scatter.xlimsIN = json.xlimsIN;
+			scatter.xLogScale = json.xLogScale ?? false;
 			scatter.ylimsLeftIN = json.ylimsLeftIN || [null, null];
 			scatter.ylimsRightIN = json.ylimsRightIN || [null, null];
-			scatter.padding = json.padding;
+			scatter.yLogScaleLeft = json.yLogScaleLeft ?? false;
+			scatter.yLogScaleRight = json.yLogScaleRight ?? false;
 			scatter.ygridlinesLeft = json.ygridlinesLeft ?? true;
 			scatter.ygridlinesRight = json.ygridlinesRight ?? false;
 			scatter.xgridlines = json.xgridlines;
@@ -593,6 +628,10 @@
 						<input type="checkbox" bind:checked={theData.ygridlinesLeft} />
 						<p>Grid</p>
 					</div>
+					<div class="control-input-checkbox">
+						<input type="checkbox" bind:checked={theData.yLogScaleLeft} />
+						<p>Log Scale</p>
+					</div>
 				</div>
 			</div>
 		{/if}
@@ -663,6 +702,10 @@
 					<div class="control-input-checkbox">
 						<input type="checkbox" bind:checked={theData.ygridlinesRight} />
 						<p>Grid</p>
+					</div>
+					<div class="control-input-checkbox">
+						<input type="checkbox" bind:checked={theData.yLogScaleRight} />
+						<p>Log Scale</p>
 					</div>
 				</div>
 			</div>
@@ -746,6 +789,12 @@
 					<input type="checkbox" bind:checked={theData.xgridlines} />
 					<p>Grid</p>
 				</div>
+				{#if !theData.anyXdataTime}
+					<div class="control-input-checkbox">
+						<input type="checkbox" bind:checked={theData.xLogScale} />
+						<p>Log Scale</p>
+					</div>
+				{/if}
 			</div>
 		</div>
 	{:else if appState.currentControlTab === 'data'}
@@ -821,20 +870,8 @@
 							lineData={datum.line}
 							x={datum.x.getData()}
 							y={datum.y.getData()}
-							xscale={theData.anyXdataTime
-								? scaleTime()
-										.domain([theData.xlims[0], theData.xlims[1]])
-										.range([0, theData.plotwidth])
-								: scaleLinear()
-										.domain([theData.xlims[0], theData.xlims[1]])
-										.range([0, theData.plotwidth])}
-							yscale={scaleLinear()
-								.domain(
-									datum.yAxis === 'left'
-										? [theData.ylimsLeft[0], theData.ylimsLeft[1]]
-										: [theData.ylimsRight[0], theData.ylimsRight[1]]
-								)
-								.range([theData.plotheight, 0])}
+							xscale={theData.XScale}
+							yscale={datum.yAxis === 'left' ? theData.YScaleLeft : theData.YScaleRight}
 							which="controls"
 						/>
 					</div>
@@ -879,9 +916,7 @@
 			<Axis
 				height={theData.plot.plotheight}
 				width={theData.plot.plotwidth}
-				scale={scaleLinear()
-					.domain([theData.plot.ylimsLeft[0], theData.plot.ylimsLeft[1]])
-					.range([theData.plot.plotheight, 0])}
+				scale={theData.plot.YScaleLeft}
 				position="left"
 				plotPadding={theData.plot.padding}
 				nticks={theData.plot.yTicksLeft}
@@ -895,9 +930,7 @@
 			<Axis
 				height={theData.plot.plotheight}
 				width={theData.plot.plotwidth}
-				scale={scaleLinear()
-					.domain([theData.plot.ylimsRight[0], theData.plot.ylimsRight[1]])
-					.range([theData.plot.plotheight, 0])}
+				scale={theData.plot.YScaleRight}
 				position="right"
 				plotPadding={theData.plot.padding}
 				nticks={theData.plot.yTicksRight}
@@ -952,24 +985,12 @@
 						? datum.x.getData().map((d) => theData.plot.xlims[0] + d * 3600000)
 						: datum.x.getData()}
 				{@const yScale =
-					datum.yAxis === 'left'
-						? scaleLinear()
-								.domain([theData.plot.ylimsLeft[0], theData.plot.ylimsLeft[1]])
-								.range([theData.plot.plotheight, 0])
-						: scaleLinear()
-								.domain([theData.plot.ylimsRight[0], theData.plot.ylimsRight[1]])
-								.range([theData.plot.plotheight, 0])}
+					datum.yAxis === 'left' ? theData.plot.YScaleLeft : theData.plot.YScaleRight}
 				<Line
 					lineData={datum.line}
 					x={xDATA}
 					y={datum.y.getData()}
-					xscale={theData.plot.anyXdataTime
-						? scaleTime()
-								.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-								.range([0, theData.plot.plotwidth])
-						: scaleLinear()
-								.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-								.range([0, theData.plot.plotwidth])}
+					xscale={theData.plot.XScale}
 					yscale={yScale}
 					xoffset={theData.plot.padding.left}
 					yoffset={theData.plot.padding.top}
@@ -980,9 +1001,7 @@
 					x={xDATA}
 					xtype={datum.x.type}
 					y={datum.y.getData()}
-					xscale={scaleLinear()
-						.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-						.range([0, theData.plot.plotwidth])}
+					xscale={theData.plot.XScale}
 					yscale={yScale}
 					radius={datum.pointradius}
 					fillCol={datum.pointcolour}
