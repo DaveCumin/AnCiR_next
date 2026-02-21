@@ -1,3 +1,39 @@
+<script module>
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+
+	export class AxisClass {
+		label = $state('');
+		gridlines = $state(true);
+		nticks = $state(5);
+		manualTicks = $state(null);
+
+		constructor(dataIN, parent) {
+			this.label = dataIN?.label ?? '';
+			this.gridlines = dataIN?.gridlines ?? true;
+			this.nticks = dataIN?.nticks ?? 5;
+			this.manualTicks = dataIN?.manualTicks ?? null;
+		}
+
+		toJSON() {
+			return {
+				label: this.label,
+				gridlines: this.gridlines,
+				nticks: this.nticks,
+				manualTicks: this.manualTicks
+			};
+		}
+
+		static fromJSON(json) {
+			return new AxisClass({
+				label: json?.label ?? '',
+				gridlines: json?.gridlines ?? true,
+				nticks: json?.nticks ?? 5,
+				manualTicks: json?.manualTicks ?? null
+			});
+		}
+	}
+</script>
+
 <script>
 	// @ts-nocheck
 	import { select, selectAll } from 'd3-selection';
@@ -6,19 +42,16 @@
 	import { timeFormat } from 'd3-time-format';
 	import { scaleTime } from 'd3-scale';
 	import { transition } from 'd3-transition';
-	import Plot from '$lib/core/Plot.svelte';
 
 	let {
+		axisData = $bindable(),
 		height, //height of the plot
 		width, //width of the plot
 		plotPadding = { top: 0, right: 0, bottom: 0, left: 0 },
 		position, //where the axis should be (x or y etc)
 		scale, //the d3s scale to use
-		nticks, //number of ticks
-		manualTicks = null, //an array of manual tick values to use instead of auto ticks
-		gridlines = true, //whether to show gridlines or not
-		label = '',
-		autoScaleVals = { top: 45, bottom: -45, left: 30, right: -30 }
+		which,
+		title = 'Axis'
 	} = $props();
 
 	let axisGroup;
@@ -40,10 +73,10 @@
 		// DO THE SCALES
 		let axis;
 		if (position == 'bottom') {
-			if (manualTicks) {
-				axis = axisBottom(scale).tickValues(manualTicks);
+			if (axisData.manualTicks) {
+				axis = axisBottom(scale).tickValues(axisData.manualTicks);
 			} else {
-				axis = axisBottom(scale).ticks(nticks);
+				axis = axisBottom(scale).ticks(axisData.nticks);
 			}
 			axis = axis.tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
@@ -51,10 +84,10 @@
 				.style('transform', `translate(${plotPadding.left}px, ${height + plotPadding.top}px)`);
 		}
 		if (position == 'top') {
-			if (manualTicks) {
-				axis = axisTop(scale).tickValues(manualTicks);
+			if (axisData.manualTicks) {
+				axis = axisTop(scale).tickValues(axisData.manualTicks);
 			} else {
-				axis = axisTop(scale).ticks(nticks);
+				axis = axisTop(scale).ticks(axisData.nticks);
 			}
 			axis = axis.tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
@@ -62,10 +95,10 @@
 				.style('transform', `translate(${plotPadding.left}px, ${plotPadding.top}px)`);
 		}
 		if (position == 'left') {
-			if (manualTicks) {
-				axis = axisLeft(scale).tickValues(manualTicks);
+			if (axisData.manualTicks) {
+				axis = axisLeft(scale).tickValues(axisData.manualTicks);
 			} else {
-				axis = axisLeft(scale).ticks(nticks);
+				axis = axisLeft(scale).ticks(axisData.nticks);
 			}
 			axis = axis.tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
@@ -73,10 +106,10 @@
 				.style('transform', `translate(${plotPadding.left}px, ${plotPadding.top}px)`);
 		}
 		if (position == 'right') {
-			if (manualTicks) {
-				axis = axisRight(scale).tickValues(manualTicks);
+			if (axisData.manualTicks) {
+				axis = axisRight(scale).tickValues(axisData.manualTicks);
 			} else {
-				axis = axisRight(scale).ticks(nticks);
+				axis = axisRight(scale).ticks(axisData.nticks);
 			}
 			axis = axis.tickSize(ticklength).tickPadding(tickspace);
 			select(axisGroup)
@@ -90,7 +123,7 @@
 			.style('font-family', 'system-ui, sans-serif');
 
 		// DO GRIDLINES
-		if (gridlines) {
+		if (axisData.gridlines) {
 			select(axisGroup).selectAll('.gridline').remove(); // Remove all existing gridlines
 			if (position == 'bottom') {
 				select(axisGroup)
@@ -157,7 +190,7 @@
 			.style('font-family', 'system-ui, sans-serif')
 			.style('text-anchor', 'middle')
 			.style('fill', 'black')
-			.text(label);
+			.text(axisData.label);
 
 		// Position the label based on max tick size
 		if (position == 'bottom') {
@@ -178,6 +211,38 @@
 	});
 </script>
 
-{#key (position, height, width, plotPadding, scale, nticks, gridlines)}
-	<g bind:this={axisGroup} class={'axis-' + position} />
-{/key}
+{#snippet controls(axisData)}
+	<div class="control-component">
+		<div class="control-component-title">
+			<p>{title}</p>
+		</div>
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>Label</p>
+				<input bind:value={axisData.label} />
+			</div>
+			<div class="control-input">
+				<p>N Ticks</p>
+				<NumberWithUnits step="1" min="1" bind:value={axisData.nticks} />
+			</div>
+		</div>
+		<div class="control-input-vertical">
+			<div class="control-input-checkbox">
+				<input type="checkbox" bind:checked={axisData.gridlines} />
+				<p>Grid</p>
+			</div>
+		</div>
+	</div>
+{/snippet}
+
+{#snippet plot(axisData)}
+	{#key (position, height, width, plotPadding, scale, axisData.nticks, axisData.gridlines)}
+		<g bind:this={axisGroup} class={'axis-' + position} />
+	{/key}
+{/snippet}
+
+{#if which === 'plot'}
+	{@render plot(axisData)}
+{:else if which === 'controls'}
+	{@render controls(axisData)}
+{/if}

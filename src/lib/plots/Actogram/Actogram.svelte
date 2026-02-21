@@ -3,7 +3,7 @@
 
 	import Column from '$lib/core/Column.svelte';
 	import Hist, { createHistogramBins } from '$lib/components/plotbits/Hist.svelte';
-	import Axis from '$lib/components/plotbits/Axis.svelte';
+	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
@@ -302,6 +302,7 @@
 		periodHrs = $state(24);
 		showDayNumbers = $state(false);
 		lightBands = $state(new LightBandClass(this, { lightBands: [] }));
+		xAxis = $state();
 		Ndays = $derived.by(() => {
 			//TODO: this should caluclate the number of days from the start - so look at the max x data in each data and compare with the starttime
 			if (this.data.length === 0) {
@@ -362,6 +363,7 @@
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
+			this.xAxis = new AxisClass({ label: dataIN?.xAxis?.label ?? '', gridlines: dataIN?.xAxis?.gridlines ?? false, nticks: dataIN?.xAxis?.nticks ?? 5 });
 			if (dataIN) {
 				this.addData(dataIN);
 			}
@@ -404,6 +406,7 @@
 				periodHrs: this.periodHrs,
 				showDayNumbers: this.showDayNumbers,
 				lightBands: this.lightBands,
+				xAxis: this.xAxis.toJSON(),
 				data: this.data
 			};
 		}
@@ -423,6 +426,11 @@
 				json.lightBands ?? { lightBands: [] },
 				actogram
 			);
+
+			// Support both new AxisClass format and old format (no x axis previously)
+			if (json.xAxis) {
+				actogram.xAxis = AxisClass.fromJSON(json.xAxis);
+			}
 
 			if (json.data) {
 				actogram.data = json.data.map((d) => ActogramDataclass.fromJSON(d, actogram));
@@ -849,11 +857,8 @@
 				.range([0, theData.plot.plotwidth])}
 			position="top"
 			plotPadding={theData.plot.padding}
-			axisLeftWidth={theData.plot.axisLeftWidth}
-			nticks={theData.plot.plotwidth > 600
-				? theData.plot.periodHrs
-				: Math.max(2, theData.plot.plotwidth / 150)}
-			gridlines={false}
+			axisData={theData.plot.xAxis}
+			which="plot"
 		/>
 
 		{#each theData.plot.data as datum, d}

@@ -2,7 +2,7 @@
 	// @ts-nocheck
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
-	import Axis from '$lib/components/plotbits/Axis.svelte';
+	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
@@ -236,9 +236,13 @@
 		});
 		xgridlines = $state(true);
 		ygridlines = $state(true);
+		xAxis = $state();
+		yAxis = $state();
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
+			this.xAxis = new AxisClass({ label: dataIN?.xAxis?.label ?? 'Period (hours)', gridlines: dataIN?.xAxis?.gridlines ?? true, nticks: dataIN?.xAxis?.nticks ?? 5 });
+			this.yAxis = new AxisClass({ label: dataIN?.yAxis?.label ?? 'Power', gridlines: dataIN?.yAxis?.gridlines ?? true, nticks: dataIN?.yAxis?.nticks ?? 5 });
 			if (dataIN) {
 				this.addData(dataIN);
 			}
@@ -371,8 +375,8 @@
 				periodSteps: this.periodSteps,
 				ylimsIN: this.ylimsIN,
 				padding: this.padding,
-				ygridlines: this.ygridlines,
-				xgridlines: this.xgridlines,
+				xAxis: this.xAxis.toJSON(),
+				yAxis: this.yAxis.toJSON(),
 				data: this.data
 			};
 		}
@@ -386,8 +390,18 @@
 			periodogram.periodlimsIN = json.periodlimsIN;
 			periodogram.periodSteps = json.periodSteps;
 			periodogram.ylimsIN = json.ylimsIN;
-			periodogram.ygridlines = json.ygridlines;
-			periodogram.xgridlines = json.xgridlines;
+
+			// Support both new AxisClass format and old individual properties
+			if (json.xAxis) {
+				periodogram.xAxis = AxisClass.fromJSON(json.xAxis);
+			} else {
+				periodogram.xAxis = new AxisClass({ label: 'Period (hours)', gridlines: json.xgridlines ?? true });
+			}
+			if (json.yAxis) {
+				periodogram.yAxis = AxisClass.fromJSON(json.yAxis);
+			} else {
+				periodogram.yAxis = new AxisClass({ label: 'Power', gridlines: json.ygridlines ?? true });
+			}
 
 			if (json.data) {
 				periodogram.data = json.data.map((d) => PeriodogramDataclass.fromJSON(d, periodogram));
@@ -462,10 +476,9 @@
 	//check for axes if the labels change
 	$effect(() => {
 		if (which == 'controls') {
-			theData.ylabel;
-			theData.xlabel;
+			theData.yAxis.label;
+			theData.xAxis.label;
 			theData.ylims;
-			theData.xlims;
 
 			theData.autoScalePadding('all');
 		}
@@ -615,13 +628,6 @@
 				</div>
 			</div>
 
-			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.ygridlines} />
-					<p>Grid</p>
-				</div>
-			</div>
-
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Min</p>
@@ -647,16 +653,11 @@
 			</div>
 		</div>
 
+		<Axis axisData={theData.yAxis} which="controls" title="Y-Axis Controls" />
+
 		<div class="control-component">
 			<div class="control-component-title">
 				<p>X-Axis</p>
-			</div>
-
-			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.xgridlines} />
-					<p>Grid</p>
-				</div>
 			</div>
 
 			<div class="control-input-horizontal">
@@ -691,6 +692,8 @@
 				</div>
 			</div>
 		</div>
+
+		<Axis axisData={theData.xAxis} which="controls" title="X-Axis Controls" />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<div class="control-data-add">
@@ -840,9 +843,8 @@
 				.range([theData.plot.plotheight, 0])}
 			position="left"
 			plotPadding={theData.plot.padding}
-			nticks={5}
-			gridlines={theData.plot.ygridlines}
-			label="Power"
+			axisData={theData.plot.yAxis}
+			which="plot"
 		/>
 		<Axis
 			height={theData.plot.plotheight}
@@ -852,9 +854,8 @@
 				.range([0, theData.plot.plotwidth])}
 			position="bottom"
 			plotPadding={theData.plot.padding}
-			nticks={5}
-			gridlines={theData.plot.xgridlines}
-			label="Period (hours)"
+			axisData={theData.plot.xAxis}
+			which="plot"
 		/>
 
 		{#each theData.plot.data as datum}

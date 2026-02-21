@@ -1,7 +1,7 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
-	import Axis from '$lib/components/plotbits/Axis.svelte';
+	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
@@ -292,9 +292,13 @@
 
 		xgridlines = $state(true);
 		ygridlines = $state(true);
+		xAxis = $state();
+		yAxis = $state();
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
+			this.xAxis = new AxisClass({ label: dataIN?.xAxis?.label ?? 'Lag (hours)', gridlines: dataIN?.xAxis?.gridlines ?? true, nticks: dataIN?.xAxis?.nticks ?? 5 });
+			this.yAxis = new AxisClass({ label: dataIN?.yAxis?.label ?? 'Autocorrelation', gridlines: dataIN?.yAxis?.gridlines ?? true, nticks: dataIN?.yAxis?.nticks ?? 5 });
 			if (dataIN) {
 				this.addData(dataIN);
 			}
@@ -401,8 +405,8 @@
 				laglimsIN: this.laglimsIN,
 				ylimsIN: this.ylimsIN,
 				padding: this.padding,
-				ygridlines: this.ygridlines,
-				xgridlines: this.xgridlines,
+				xAxis: this.xAxis.toJSON(),
+				yAxis: this.yAxis.toJSON(),
 				data: this.data
 			};
 		}
@@ -416,8 +420,18 @@
 			correlogram.padding = json.padding ?? json.paddingIN;
 			correlogram.laglimsIN = json.laglimsIN || [null, null];
 			correlogram.ylimsIN = json.ylimsIN;
-			correlogram.ygridlines = json.ygridlines;
-			correlogram.xgridlines = json.xgridlines;
+
+			// Support both new AxisClass format and old individual properties
+			if (json.xAxis) {
+				correlogram.xAxis = AxisClass.fromJSON(json.xAxis);
+			} else {
+				correlogram.xAxis = new AxisClass({ label: 'Lag (hours)', gridlines: json.xgridlines ?? true });
+			}
+			if (json.yAxis) {
+				correlogram.yAxis = AxisClass.fromJSON(json.yAxis);
+			} else {
+				correlogram.yAxis = new AxisClass({ label: 'Autocorrelation', gridlines: json.ygridlines ?? true });
+			}
 
 			if (json.data) {
 				correlogram.data = json.data.map((d) => CorrelogramDataclass.fromJSON(d, correlogram));
@@ -451,10 +465,10 @@
 
 	$effect(() => {
 		if (which == 'controls') {
-			theData.ylabel;
-			theData.xlabel;
+			theData.yAxis.label;
+			theData.xAxis.label;
 			theData.ylims;
-			theData.xlims;
+			theData.laglims;
 			theData.autoScalePadding('all');
 		}
 	});
@@ -598,13 +612,6 @@
 				</div>
 			</div>
 
-			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.ygridlines} />
-					<p>Grid</p>
-				</div>
-			</div>
-
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Min</p>
@@ -634,6 +641,8 @@
 			</div>
 		</div>
 
+		<Axis axisData={theData.yAxis} which="controls" title="Y-Axis Controls" />
+
 		<div class="control-component">
 			<div class="control-component-title">
 				<p>X-Axis (Lag)</p>
@@ -641,13 +650,6 @@
 					<button class="icon" onclick={() => (theData.laglimsIN = [null, null])}>
 						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
 					</button>
-				</div>
-			</div>
-
-			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.xgridlines} />
-					<p>Grid</p>
 				</div>
 			</div>
 
@@ -676,6 +678,8 @@
 				</div>
 			</div>
 		</div>
+
+		<Axis axisData={theData.xAxis} which="controls" title="X-Axis Controls" />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<div class="control-data-add">
@@ -794,9 +798,8 @@
 				.range([theData.plot.plotheight, 0])}
 			position="left"
 			plotPadding={theData.plot.padding}
-			nticks={5}
-			gridlines={theData.plot.ygridlines}
-			label="Autocorrelation"
+			axisData={theData.plot.yAxis}
+			which="plot"
 		/>
 
 		<!-- X Axis -->
@@ -808,9 +811,8 @@
 				.range([0, theData.plot.plotwidth])}
 			position="bottom"
 			plotPadding={theData.plot.padding}
-			nticks={5}
-			gridlines={theData.plot.xgridlines}
-			label="Lag (hours)"
+			axisData={theData.plot.xAxis}
+			which="plot"
 		/>
 
 		<!-- Zero line -->

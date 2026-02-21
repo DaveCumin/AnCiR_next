@@ -1,7 +1,7 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
-	import Axis from '$lib/components/plotbits/Axis.svelte';
+	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear, scaleTime, scaleLog } from 'd3-scale';
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
@@ -145,8 +145,6 @@
 
 		yTicksLeft = $state(5);
 		yTicksRight = $state(5);
-
-		// Left Y-axis limits
 		ylimsLeft = $derived.by(() => {
 			const leftData = this.data.filter((d) => d.yAxis === 'left');
 			if (leftData.length === 0) {
@@ -212,12 +210,9 @@
 				this.xlimsIN[1] != null ? this.xlimsIN[1] : xmax
 			];
 		});
-		xlabel = $state('');
-		ylabelLeft = $state(null);
-		ylabelRight = $state(null);
-		xgridlines = $state(true);
-		ygridlinesLeft = $state(true);
-		ygridlinesRight = $state(false);
+		xAxis = $state();
+		yAxisLeft = $state();
+		yAxisRight = $state();
 
 		YScaleLeft = $derived.by(() => {
 			if (this.yLogScaleLeft && this.ylimsLeft[0] > 0 && this.ylimsLeft[1] > 0) {
@@ -260,6 +255,9 @@
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
 			this.legend = new LegendClass(dataIN?.legend);
+			this.xAxis = new AxisClass({ label: dataIN?.xAxis?.label ?? '', gridlines: dataIN?.xAxis?.gridlines ?? true, nticks: dataIN?.xAxis?.nticks ?? 5 });
+			this.yAxisLeft = new AxisClass({ label: dataIN?.yAxisLeft?.label ?? '', gridlines: dataIN?.yAxisLeft?.gridlines ?? true, nticks: dataIN?.yAxisLeft?.nticks ?? 5 });
+			this.yAxisRight = new AxisClass({ label: dataIN?.yAxisRight?.label ?? '', gridlines: dataIN?.yAxisRight?.gridlines ?? false, nticks: dataIN?.yAxisRight?.nticks ?? 5 });
 			if (dataIN) {
 				this.addData(dataIN);
 			}
@@ -418,11 +416,9 @@
 				yLogScaleLeft: this.yLogScaleLeft,
 				yLogScaleRight: this.yLogScaleRight,
 				padding: this.padding,
-				ygridlinesLeft: this.ygridlinesLeft,
-				ygridlinesRight: this.ygridlinesRight,
-				xgridlines: this.xgridlines,
-				ylabelLeft: this.ylabelLeft,
-				ylabelRight: this.ylabelRight,
+				xAxis: this.xAxis.toJSON(),
+				yAxisLeft: this.yAxisLeft.toJSON(),
+				yAxisRight: this.yAxisRight.toJSON(),
 				data: this.data,
 				legend: this.legend.toJSON(),
 				nightBands: this.nightBands.map((band) => band.toJSON())
@@ -441,11 +437,23 @@
 			scatter.ylimsRightIN = json.ylimsRightIN || [null, null];
 			scatter.yLogScaleLeft = json.yLogScaleLeft ?? false;
 			scatter.yLogScaleRight = json.yLogScaleRight ?? false;
-			scatter.ygridlinesLeft = json.ygridlinesLeft ?? true;
-			scatter.ygridlinesRight = json.ygridlinesRight ?? false;
-			scatter.xgridlines = json.xgridlines;
-			scatter.ylabelLeft = json.ylabelLeft;
-			scatter.ylabelRight = json.ylabelRight;
+
+			// Support both new AxisClass format and old individual properties
+			if (json.xAxis) {
+				scatter.xAxis = AxisClass.fromJSON(json.xAxis);
+			} else {
+				scatter.xAxis = new AxisClass({ label: json.xlabel ?? '', gridlines: json.xgridlines ?? true });
+			}
+			if (json.yAxisLeft) {
+				scatter.yAxisLeft = AxisClass.fromJSON(json.yAxisLeft);
+			} else {
+				scatter.yAxisLeft = new AxisClass({ label: json.ylabelLeft ?? '', gridlines: json.ygridlinesLeft ?? true });
+			}
+			if (json.yAxisRight) {
+				scatter.yAxisRight = AxisClass.fromJSON(json.yAxisRight);
+			} else {
+				scatter.yAxisRight = new AxisClass({ label: json.ylabelRight ?? '', gridlines: json.ygridlinesRight ?? false });
+			}
 
 			if (json.data) {
 				console.log('json.data', $state.snapshot(json.data));
@@ -491,9 +499,9 @@
 	//check for axes if the labels change
 	$effect(() => {
 		if (which == 'controls') {
-			theData.ylabelLeft;
-			theData.ylabelRight;
-			theData.xlabel;
+			theData.yAxisLeft.label;
+			theData.yAxisRight.label;
+			theData.xAxis.label;
 			theData.xlims;
 			theData.ylimsLeft;
 			theData.ylimsRight;
@@ -570,17 +578,9 @@
 		{#if theData.hasLeftAxisData}
 			<div class="div-line"></div>
 
-			<div class="control-component">
-				<div class="control-component-title">
-					<p>Left Y-Axis</p>
-				</div>
-				<div class="control-input-vertical">
-					<div class="control-input">
-						<p>Label</p>
-						<input bind:value={theData.ylabelLeft} />
-					</div>
-				</div>
+			<Axis axisData={theData.yAxisLeft} which="controls" title="Left Y-Axis" />
 
+			<div class="control-component">
 				<div class="control-input-horizontal">
 					<div class="control-input">
 						<p>Min</p>
@@ -618,16 +618,7 @@
 					{/if}
 				</div>
 
-				<!-- <div class="control-input">
-					<p>Number of ticks</p>
-					<NumberWithUnits step="1" min="2" bind:value={theData.yTicksLeft} />
-				</div> -->
-
 				<div class="control-input-vertical">
-					<div class="control-input-checkbox">
-						<input type="checkbox" bind:checked={theData.ygridlinesLeft} />
-						<p>Grid</p>
-					</div>
 					<div class="control-input-checkbox">
 						<input type="checkbox" bind:checked={theData.yLogScaleLeft} />
 						<p>Log Scale</p>
@@ -639,17 +630,9 @@
 		{#if theData.hasRightAxisData}
 			<div class="div-line"></div>
 
-			<div class="control-component">
-				<div class="control-component-title">
-					<p>Right Y-Axis</p>
-				</div>
-				<div class="control-input-vertical">
-					<div class="control-input">
-						<p>Label</p>
-						<input bind:value={theData.ylabelRight} />
-					</div>
-				</div>
+			<Axis axisData={theData.yAxisRight} which="controls" title="Right Y-Axis" />
 
+			<div class="control-component">
 				<div class="control-input-horizontal">
 					<div class="control-input">
 						<p>Min</p>
@@ -686,23 +669,8 @@
 						</div>
 					{/if}
 				</div>
-				<!-- <div class="control-input">
-					<p>Number of ticks</p>
-					<NumberWithUnits
-						step="1"
-						min="2"
-						value={theData.yTicksRight}
-						onInput={(val) => {
-							theData.yTicksRight = parseFloat(val);
-						}}
-					/>
-				</div> -->
 
 				<div class="control-input-vertical">
-					<div class="control-input-checkbox">
-						<input type="checkbox" bind:checked={theData.ygridlinesRight} />
-						<p>Grid</p>
-					</div>
 					<div class="control-input-checkbox">
 						<input type="checkbox" bind:checked={theData.yLogScaleRight} />
 						<p>Log Scale</p>
@@ -713,17 +681,9 @@
 
 		<div class="div-line"></div>
 
-		<div class="control-component">
-			<div class="control-component-title">
-				<p>X-Axis</p>
-			</div>
-			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Label</p>
-					<input bind:value={theData.xlabel} />
-				</div>
-			</div>
+		<Axis axisData={theData.xAxis} which="controls" title="X-Axis" />
 
+		<div class="control-component">
 			<div class="control-input-horizontal">
 				{#if theData.anyXdataTime}
 					<div class="control-input">
@@ -785,10 +745,6 @@
 				{/if}
 			</div>
 			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.xgridlines} />
-					<p>Grid</p>
-				</div>
 				{#if !theData.anyXdataTime}
 					<div class="control-input-checkbox">
 						<input type="checkbox" bind:checked={theData.xLogScale} />
@@ -919,9 +875,8 @@
 				scale={theData.plot.YScaleLeft}
 				position="left"
 				plotPadding={theData.plot.padding}
-				nticks={theData.plot.yTicksLeft}
-				gridlines={theData.plot.ygridlinesLeft}
-				label={theData.plot.ylabelLeft}
+				axisData={theData.plot.yAxisLeft}
+				which="plot"
 			/>
 		{/if}
 
@@ -933,9 +888,8 @@
 				scale={theData.plot.YScaleRight}
 				position="right"
 				plotPadding={theData.plot.padding}
-				nticks={theData.plot.yTicksRight}
-				gridlines={theData.plot.ygridlinesRight}
-				label={theData.plot.ylabelRight}
+				axisData={theData.plot.yAxisRight}
+				which="plot"
 			/>
 		{/if}
 
@@ -946,9 +900,8 @@
 			scale={theData.plot.XScale}
 			position="bottom"
 			plotPadding={theData.plot.padding}
-			nticks={5}
-			gridlines={theData.plot.xgridlines}
-			label={theData.plot.xlabel}
+			axisData={theData.plot.xAxis}
+			which="plot"
 		/>
 
 		<!-- Night bands background -->

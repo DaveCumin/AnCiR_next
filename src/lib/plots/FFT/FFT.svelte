@@ -1,7 +1,7 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
-	import Axis from '$lib/components/plotbits/Axis.svelte';
+	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear, scaleLog } from 'd3-scale';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
@@ -324,9 +324,15 @@
 		xgridlines = $state(true);
 		ygridlines = $state(true);
 		logScale = $state(false);
+		xAxis = $state();
+		yAxisMag = $state();
+		yAxisPhase = $state();
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
+			this.xAxis = new AxisClass({ label: dataIN?.xAxis?.label ?? 'Frequency', gridlines: dataIN?.xAxis?.gridlines ?? true, nticks: dataIN?.xAxis?.nticks ?? 5 });
+			this.yAxisMag = new AxisClass({ label: dataIN?.yAxisMag?.label ?? 'Magnitude', gridlines: dataIN?.yAxisMag?.gridlines ?? true, nticks: dataIN?.yAxisMag?.nticks ?? 5 });
+			this.yAxisPhase = new AxisClass({ label: dataIN?.yAxisPhase?.label ?? 'Phase (radians)', gridlines: dataIN?.yAxisPhase?.gridlines ?? false, nticks: dataIN?.yAxisPhase?.nticks ?? 5 });
 			if (dataIN) {
 				this.addData(dataIN);
 			}
@@ -433,8 +439,9 @@
 				xlimsIN: this.xlimsIN,
 				ylimsIN: this.ylimsIN,
 				padding: this.padding,
-				ygridlines: this.ygridlines,
-				xgridlines: this.xgridlines,
+				xAxis: this.xAxis.toJSON(),
+				yAxisMag: this.yAxisMag.toJSON(),
+				yAxisPhase: this.yAxisPhase.toJSON(),
 				logScale: this.logScale,
 				showPeriod: this.showPeriod,
 				data: this.data
@@ -451,10 +458,25 @@
 			fft.freqlimsIN = json.freqlimsIN;
 			fft.xlimsIN = json.xlimsIN || [null, null];
 			fft.ylimsIN = json.ylimsIN;
-			fft.ygridlines = json.ygridlines;
-			fft.xgridlines = json.xgridlines;
 			fft.logScale = json.logScale ?? false;
 			fft.showPeriod = json.showPeriod ?? false;
+
+			// Support both new AxisClass format and old individual properties
+			if (json.xAxis) {
+				fft.xAxis = AxisClass.fromJSON(json.xAxis);
+			} else {
+				fft.xAxis = new AxisClass({ label: 'Frequency', gridlines: json.xgridlines ?? true });
+			}
+			if (json.yAxisMag) {
+				fft.yAxisMag = AxisClass.fromJSON(json.yAxisMag);
+			} else {
+				fft.yAxisMag = new AxisClass({ label: 'Magnitude', gridlines: json.ygridlines ?? true });
+			}
+			if (json.yAxisPhase) {
+				fft.yAxisPhase = AxisClass.fromJSON(json.yAxisPhase);
+			} else {
+				fft.yAxisPhase = new AxisClass({ label: 'Phase (radians)', gridlines: false });
+			}
 
 			if (json.data) {
 				fft.data = json.data.map((d) => FFTDataclass.fromJSON(d, fft));
@@ -488,8 +510,8 @@
 
 	$effect(() => {
 		if (which == 'controls') {
-			theData.ylabel;
-			theData.xlabel;
+			theData.yAxisMag.label;
+			theData.xAxis.label;
 			theData.ylims;
 			theData.xlims;
 			theData.autoScalePadding('all');
@@ -637,10 +659,6 @@
 
 			<div class="control-input-vertical">
 				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.ygridlines} />
-					<p>Grid</p>
-				</div>
-				<div class="control-input-checkbox">
 					<input type="checkbox" bind:checked={theData.logScale} />
 					<p>Log Scale</p>
 				</div>
@@ -670,6 +688,8 @@
 				</div>
 			</div>
 		</div>
+
+		<Axis axisData={theData.yAxisMag} which="controls" title="Y-Axis (Magnitude) Controls" />
 
 		{#if theData.data.some((d) => d.showPhase)}
 			<div class="control-component">
@@ -710,6 +730,8 @@
 					</div>
 				</div>
 			</div>
+
+			<Axis axisData={theData.yAxisPhase} which="controls" title="Y-Axis (Phase) Controls" />
 		{/if}
 
 		<div class="control-component">
@@ -723,10 +745,6 @@
 			</div>
 
 			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.xgridlines} />
-					<p>Grid</p>
-				</div>
 				<div class="control-input-checkbox">
 					<input
 						type="checkbox"
@@ -774,6 +792,8 @@
 				</div>
 			</div>
 		</div>
+
+		<Axis axisData={theData.xAxis} which="controls" title="X-Axis Controls" />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<div class="control-data-add">
@@ -913,9 +933,8 @@
 				scale={yScale}
 				position="left"
 				plotPadding={theData.plot.padding}
-				nticks={5}
-				gridlines={theData.plot.ygridlines}
-				label={theData.plot.logScale ? 'Magnitude (log)' : 'Magnitude'}
+				axisData={theData.plot.yAxisMag}
+				which="plot"
 			/>
 
 			<!-- Y Axis (Phase) - on right side if any data shows phase -->
@@ -926,9 +945,8 @@
 					scale={phaseYScale}
 					position="right"
 					plotPadding={theData.plot.padding}
-					nticks={5}
-					gridlines={false}
-					label="Phase (radians)"
+					axisData={theData.plot.yAxisPhase}
+					which="plot"
 				/>
 			{/if}
 
@@ -939,9 +957,8 @@
 				scale={xScale}
 				position="bottom"
 				plotPadding={theData.plot.padding}
-				nticks={5}
-				gridlines={theData.plot.xgridlines}
-				label={theData.plot.showPeriod ? 'Period (hours)' : 'Frequency'}
+				axisData={theData.plot.xAxis}
+				which="plot"
 			/>
 
 			<!-- Plot data -->

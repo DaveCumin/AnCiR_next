@@ -1,7 +1,7 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
-	import Axis from '$lib/components/plotbits/Axis.svelte';
+	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import Box, { BoxClass } from '$lib/components/plotbits/Box.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
@@ -159,10 +159,14 @@
 		ylabel = $state('');
 		xgridlines = $state(false);
 		ygridlines = $state(true);
+		xAxis = $state();
+		yAxis = $state();
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
 			this.legend = new LegendClass(dataIN?.legend);
+			this.xAxis = new AxisClass({ label: dataIN?.xAxis?.label ?? '', gridlines: dataIN?.xAxis?.gridlines ?? false, nticks: dataIN?.xAxis?.nticks ?? 5 });
+			this.yAxis = new AxisClass({ label: dataIN?.yAxis?.label ?? '', gridlines: dataIN?.yAxis?.gridlines ?? true, nticks: dataIN?.yAxis?.nticks ?? 5 });
 			if (dataIN) {
 				this.addData(dataIN);
 			}
@@ -249,10 +253,8 @@
 				xlimsIN: this.xlimsIN,
 				ylimsIN: this.ylimsIN,
 				padding: this.padding,
-				ygridlines: this.ygridlines,
-				xgridlines: this.xgridlines,
-				ylabel: this.ylabel,
-				xlabel: this.xlabel,
+				xAxis: this.xAxis.toJSON(),
+				yAxis: this.yAxis.toJSON(),
 				data: this.data,
 				legend: this.legend.toJSON()
 			};
@@ -267,10 +269,18 @@
 			chart.padding = json.padding;
 			chart.xlimsIN = json.xlimsIN;
 			chart.ylimsIN = json.ylimsIN;
-			chart.ygridlines = json.ygridlines ?? true;
-			chart.xgridlines = json.xgridlines ?? false;
-			chart.ylabel = json.ylabel;
-			chart.xlabel = json.xlabel;
+
+			// Support both new AxisClass format and old individual properties
+			if (json.xAxis) {
+				chart.xAxis = AxisClass.fromJSON(json.xAxis);
+			} else {
+				chart.xAxis = new AxisClass({ label: json.xlabel ?? '', gridlines: json.xgridlines ?? false });
+			}
+			if (json.yAxis) {
+				chart.yAxis = AxisClass.fromJSON(json.yAxis);
+			} else {
+				chart.yAxis = new AxisClass({ label: json.ylabel ?? '', gridlines: json.ygridlines ?? true });
+			}
 
 			if (json.data) {
 				chart.data = json.data.map((d) => BoxPlotDataClass.fromJSON(d, chart));
@@ -308,8 +318,8 @@
 
 	$effect(() => {
 		if (which == 'controls') {
-			theData.ylabel;
-			theData.xlabel;
+			theData.yAxis.label;
+			theData.xAxis.label;
 			theData.ylims;
 			theData.xlims;
 
@@ -376,17 +386,9 @@
 
 		<div class="div-line"></div>
 
-		<div class="control-component">
-			<div class="control-component-title">
-				<p>Y-Axis</p>
-			</div>
-			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Label</p>
-					<input bind:value={theData.ylabel} />
-				</div>
-			</div>
+		<Axis axisData={theData.yAxis} which="controls" title="Y-Axis" />
 
+		<div class="control-component">
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>Min</p>
@@ -418,35 +420,11 @@
 					</div>
 				{/if}
 			</div>
-
-			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.ygridlines} />
-					<p>Grid</p>
-				</div>
-			</div>
 		</div>
 
 		<div class="div-line"></div>
 
-		<div class="control-component">
-			<div class="control-component-title">
-				<p>X-Axis</p>
-			</div>
-			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Label</p>
-					<input bind:value={theData.xlabel} />
-				</div>
-			</div>
-
-			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
-					<input type="checkbox" bind:checked={theData.xgridlines} />
-					<p>Grid</p>
-				</div>
-			</div>
-		</div>
+		<Axis axisData={theData.xAxis} which="controls" title="X-Axis" />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<div class="control-data-add">
@@ -540,9 +518,8 @@
 				.range([theData.plot.plotheight, 0])}
 			position="left"
 			plotPadding={theData.plot.padding}
-			nticks={theData.plot.yTicks}
-			gridlines={theData.plot.ygridlines}
-			label={theData.plot.ylabel}
+			axisData={theData.plot.yAxis}
+			which="plot"
 		/>
 
 		<!-- X-axis with custom categorical labels -->
@@ -554,11 +531,8 @@
 				.range([0, theData.plot.plotwidth])}
 			position="bottom"
 			plotPadding={theData.plot.padding}
-			nticks={theData.plot.uniqueXValues.length}
-			gridlines={theData.plot.xgridlines}
-			label={theData.plot.xlabel}
-			tickValues={theData.plot.uniqueXValues.map((val, i) => i)}
-			tickFormat={(d, i) => String(theData.plot.uniqueXValues[i])}
+			axisData={theData.plot.xAxis}
+			which="plot"
 		/>
 
 		<!-- Box plots -->
