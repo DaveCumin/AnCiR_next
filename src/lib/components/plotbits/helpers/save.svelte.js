@@ -53,8 +53,8 @@ export async function convertToImage(svgId, filetype = 'png') {
 
 	// Create an image to hold the SVG
 	const img = new Image();
-	const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-	const url = URL.createObjectURL(svgBlob);
+	const svgBase64 = btoa(unescape(encodeURIComponent(svgString)));
+	const url = `data:image/svg+xml;base64,${svgBase64}`;
 	img.src = url;
 
 	// Wait for the image to load
