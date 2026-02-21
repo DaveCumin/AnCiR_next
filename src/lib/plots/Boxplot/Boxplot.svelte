@@ -1,9 +1,9 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
-	import Axis from '$lib/components/plotBits/Axis.svelte';
+	import Axis from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
-	import Box, { BoxClass } from '$lib/components/plotBits/Box.svelte';
+	import Box, { BoxClass } from '$lib/components/plotbits/Box.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 

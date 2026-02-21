@@ -4,7 +4,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
-	import { isValidStroke } from '$lib/components/plotBits/helpers/misc.js';
+	import { isValidStroke } from '$lib/components/plotbits/helpers/misc.js';
 
 	export class LineClass {
 		colour = $state(getPaletteColor(0));

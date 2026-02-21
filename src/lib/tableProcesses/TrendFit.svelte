@@ -2,7 +2,7 @@
 	import { core } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
-	import { linearRegression } from '$lib/components/plotBits/helpers/wrangleData.js';
+	import { linearRegression } from '$lib/components/plotbits/helpers/wrangleData.js';
 
 	export const trendfit_displayName = 'Fit Trend Curves';
 	export const trendfit_defaults = new Map([

@@ -19,7 +19,7 @@
 	import { tick } from 'svelte';
 	import { stackOrderInsideOut } from 'd3-shape';
 	import { parse } from 'svelte/compiler';
-	import { binData } from '$lib/components/plotBits/helpers/wrangleData.js';
+	import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 
 	const specialValues = ['NaN', 'NA', 'null'];
 

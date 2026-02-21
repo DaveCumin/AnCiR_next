@@ -2,8 +2,8 @@
 	// @ts-nocheck
 
 	import Column from '$lib/core/Column.svelte';
-	import Hist, { createHistogramBins } from '$lib/components/plotBits/Hist.svelte';
-	import Axis from '$lib/components/plotBits/Axis.svelte';
+	import Hist, { createHistogramBins } from '$lib/components/plotbits/Hist.svelte';
+	import Axis from '$lib/components/plotbits/Axis.svelte';
 
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
@@ -12,7 +12,7 @@
 	import Annotation, { AnnotationClass } from './Annotation.svelte';
 
 	import { scaleLinear } from 'd3-scale';
-	import { makeSeqArray, max, min } from '$lib/components/plotBits/helpers/wrangleData';
+	import { makeSeqArray, max, min } from '$lib/components/plotbits/helpers/wrangleData';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
