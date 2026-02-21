@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Periodogram calculations — extracted from web worker, using native JS with Kahan summation.
 
-import { KahanSum, kahanMean, makeSeqArray } from './numerics.js';
+import { KahanSum, kahanMean, makeSeqArray } from '$lib/utils/numerics.js';
 import { pchisq, qchisq } from '$lib/data/CDFs.js';
 import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 

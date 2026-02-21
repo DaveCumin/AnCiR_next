@@ -115,7 +115,7 @@ export function pushObj(obj, autoPosition = true) {
 	if (obj instanceof Column) {
 		core.data.push(obj);
 		void obj.hoursSinceStart; // eagerly compute while spinner is showing
-		console.log('Pushed column with id', obj.id, 'and name', obj.name);
+		// console.log('Pushed column with id', obj.id, 'and name', obj.name);
 	} else if (obj instanceof Table) {
 		core.tables.push(obj);
 	} else if (obj instanceof Plot) {
