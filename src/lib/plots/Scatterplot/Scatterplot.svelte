@@ -143,8 +143,6 @@
 		yLogScaleLeft = $state(false);
 		yLogScaleRight = $state(false);
 
-		yTicksLeft = $state(5);
-		yTicksRight = $state(5);
 		ylimsLeft = $derived.by(() => {
 			const leftData = this.data.filter((d) => d.yAxis === 'left');
 			if (leftData.length === 0) {

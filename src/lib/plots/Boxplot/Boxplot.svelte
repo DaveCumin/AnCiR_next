@@ -92,8 +92,6 @@
 		xlimsIN = $state([null, null]);
 		ylimsIN = $state([null, null]);
 
-		yTicks = $state(5);
-
 		// Get all unique x values across all data series
 		uniqueXValues = $derived.by(() => {
 			const allXValues = new Set();
@@ -155,10 +153,6 @@
 			];
 		});
 
-		xlabel = $state('');
-		ylabel = $state('');
-		xgridlines = $state(false);
-		ygridlines = $state(true);
 		xAxis = $state();
 		yAxis = $state();
 

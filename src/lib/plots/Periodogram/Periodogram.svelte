@@ -234,8 +234,6 @@
 				this.ylimsIN[1] != null ? this.ylimsIN[1] : ymax
 			];
 		});
-		xgridlines = $state(true);
-		ygridlines = $state(true);
 		xAxis = $state();
 		yAxis = $state();
 

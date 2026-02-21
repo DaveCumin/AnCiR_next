@@ -290,8 +290,6 @@
 			];
 		});
 
-		xgridlines = $state(true);
-		ygridlines = $state(true);
 		xAxis = $state();
 		yAxis = $state();
 

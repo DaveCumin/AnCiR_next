@@ -321,8 +321,6 @@
 			];
 		});
 
-		xgridlines = $state(true);
-		ygridlines = $state(true);
 		logScale = $state(false);
 		xAxis = $state();
 		yAxisMag = $state();
