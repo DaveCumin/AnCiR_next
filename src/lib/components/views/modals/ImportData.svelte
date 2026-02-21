@@ -54,6 +54,8 @@
 
 	let buttonText = $derived(targetFile ? 'Change file' : 'Choose File');
 
+	let selectedColumns = $state(new Set());
+
 	function resetValues() {
 		parsedData = null;
 		importReady = false;
@@ -70,6 +72,7 @@
 		totalRowCount = 0;
 		binningEnabled = false;
 		binIntervalMin = 15;
+		selectedColumns.clear();
 	}
 
 	export async function openImportModal() {
@@ -97,6 +100,13 @@
 		await tick();
 
 		await parseFile();
+
+		if (headers.length > 0 && selectedColumns.size === 0) {
+			// Pre-select everything **only if nothing is selected yet**
+			// (protects against re-preview with changed skip/delimiter)
+			selectedColumns.clear();
+			headers.forEach((col) => selectedColumns.add(col));
+		}
 
 		// Count total rows to decide whether to suggest binning
 		await countRows();
@@ -336,6 +346,21 @@
 		parsedData = convertArrayToObject(dataIN);
 	}
 
+	function getFilteredData() {
+		if (selectedColumns.size === headers.length) {
+			// all selected → return original
+			return parsedData;
+		}
+
+		const result = {};
+		for (const col of selectedColumns) {
+			if (parsedData[col]) {
+				result[col] = [...parsedData[col]]; // copy
+			}
+		}
+		return result;
+	}
+
 	function convertArrayToObject(inputArray) {
 		try {
 			let resultObject = {};
@@ -401,6 +426,13 @@
 			// Clear awdMeta since binned data no longer matches compressed time
 			if (awdMeta) awdMeta = null;
 		}
+
+		// ─────────────── Filter to selected columns ─────────────────
+		loadProgress = { stage: 'Loading data', detail: 'Filtering selected columns…' };
+		await tick();
+
+		parsedData = getFilteredData();
+		console.log(selectedColumns);
 
 		loadProgress = { stage: 'Loading data', detail: 'Building columns…' };
 		await tick();
@@ -830,6 +862,7 @@
 								onInput={() => doPreview()}
 							/>
 						</p>
+
 						{#if totalRowCount > ROW_THRESHOLD}
 							<div class="binning-panel">
 								<p class="binning-warning">
@@ -851,11 +884,49 @@
 								</p>
 							</div>
 						{/if}
-						<div
-							class="preview-table-wrapper"
-							style="width: {150 * Object.keys(parsedData).length}px; !important"
-						>
-							<TableLayout {headers} data={Object.keys(parsedData).map((k) => parsedData[k])} />
+						<div class="preview-table-wrapper" style="overflow-x: auto; max-width: 100%;">
+							<table class="preview-table">
+								<thead>
+									<tr>
+										{#each headers as col}
+											<th
+												class:selected={selectedColumns.has(col)}
+												class:unselected={!selectedColumns.has(col)}
+											>
+												<label class="header-checkbox">
+													<input
+														type="checkbox"
+														checked={selectedColumns.has(col)}
+														onchange={(e) => {
+															if (e.currentTarget.checked) {
+																selectedColumns.add(col);
+															} else {
+																selectedColumns.delete(col);
+															}
+															console.log('selectedColumns:', selectedColumns);
+														}}
+													/>
+													<span class="col-name">{col}</span>
+												</label>
+											</th>
+										{/each}
+									</tr>
+								</thead>
+								<tbody>
+									{#each Array(Math.min(previewIN, parsedData[headers[0]]?.length || 0)) as _, rowIdx}
+										<tr>
+											{#each headers as col}
+												<td
+													class:selected={selectedColumns.has(col)}
+													class:unselected={!selectedColumns.has(col)}
+												>
+													{parsedData[col]?.[rowIdx] ?? '—'}
+												</td>
+											{/each}
+										</tr>
+									{/each}
+								</tbody>
+							</table>
 						</div>
 					{:else if !awaitingPreview && !awaitingLoad}
 						<p>Choose file to preview data</p>

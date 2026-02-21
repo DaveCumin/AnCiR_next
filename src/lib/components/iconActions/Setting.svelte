@@ -122,7 +122,7 @@
 		if (onProgress) onProgress('Computing time axes…');
 		await tick();
 		for (const col of core.data) {
-			void col.hoursSinceStart;
+			void col.hoursSinceStart; //pre-compute better performance
 		}
 	}
 </script>
