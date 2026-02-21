@@ -1,7 +1,8 @@
 // @ts-nocheck
 import { tick } from 'svelte';
-import { core, outputCoreAsJson } from './core.svelte';
-import { importJson } from '$lib/components/iconActions/Setting.svelte';
+import { core, appState, getCoreAsPlainObject, applyPatchToCore } from './core.svelte';
+import * as jsonpatch from 'fast-json-patch';
+
 class HistoryManager {
 	undoStack = $state([]);
 	redoStack = $state([]);
@@ -9,7 +10,8 @@ class HistoryManager {
 	isRestoring = false;
 
 	snapshotTimeout = null;
-	lastSnapshot = null;
+	lastSnapshotObj = null;
+	lastSnapshotStr = null;
 	lastCounts = null;
 
 	// Initialize the automatic watching - must be called from a component
@@ -132,23 +134,31 @@ class HistoryManager {
 	}
 
 	takeSnapshotIfChanged() {
-		const snapshot = outputCoreAsJson();
+		const currentObj = getCoreAsPlainObject();
+		const currentStr = JSON.stringify(currentObj);
 
 		// Don't save if identical to last snapshot
-		if (snapshot === this.lastSnapshot) {
-			return;
+		if (currentStr === this.lastSnapshotStr) return;
+
+		if (this.lastSnapshotObj !== null) {
+			// compare(A, B) produces operations that transform A into B.
+			// forwardPatch: lastSnapshot → current  (used by redo)
+			const forwardPatch = jsonpatch.compare(this.lastSnapshotObj, currentObj);
+			// reversePatch: current → lastSnapshot  (used by undo)
+			const reversePatch = jsonpatch.compare(currentObj, this.lastSnapshotObj);
+			this.undoStack.push({ forwardPatch, reversePatch });
+
+			// Limit stack size
+			if (this.undoStack.length > this.maxStackSize) {
+				this.undoStack.shift();
+			}
+
+			// Clear redo stack on new action
+			this.redoStack = [];
 		}
 
-		this.undoStack.push(snapshot);
-		this.lastSnapshot = snapshot;
-
-		// Limit stack size
-		if (this.undoStack.length > this.maxStackSize) {
-			this.undoStack.shift();
-		}
-
-		// Clear redo stack on new action
-		this.redoStack = [];
+		this.lastSnapshotObj = currentObj;
+		this.lastSnapshotStr = currentStr;
 	}
 
 	// For critical operations: snapshot immediately (no debounce)
@@ -163,19 +173,21 @@ class HistoryManager {
 		if (this.undoStack.length === 0) return;
 
 		this.isRestoring = true;
-		appState.loadingState.isLoading = true;
-		appState.loadingState.loadingMsg = 'Undoing…';
+		const entry = this.undoStack.pop();
+		this.redoStack.push(entry);
 
-		// Save current state to redo stack
-		const currentState = outputCoreAsJson();
-		this.redoStack.push(currentState);
+		// Only show loading overlay for large patches
+		if (entry.reversePatch.length > 10) {
+			appState.loadingState.isLoading = true;
+			appState.loadingState.loadingMsg = 'Undoing…';
+		}
 
-		// Restore previous state
-		const previousState = this.undoStack.pop();
-		await importJson(JSON.parse(previousState));
+		// Apply reverse patch in-place
+		applyPatchToCore(entry.reversePatch);
 
-		// Update last snapshot to match restored state
-		this.lastSnapshot = previousState;
+		// Update reference snapshot
+		this.lastSnapshotObj = getCoreAsPlainObject();
+		this.lastSnapshotStr = JSON.stringify(this.lastSnapshotObj);
 
 		await tick();
 		appState.loadingState.isLoading = false;
@@ -186,18 +198,21 @@ class HistoryManager {
 		if (this.redoStack.length === 0) return;
 
 		this.isRestoring = true;
-		appState.loadingState.isLoading = true;
-		appState.loadingState.loadingMsg = 'Redoing…';
-		// Save current state to undo stack
-		const currentState = outputCoreAsJson();
-		this.undoStack.push(currentState);
+		const entry = this.redoStack.pop();
+		this.undoStack.push(entry);
 
-		// Restore next state
-		const nextState = this.redoStack.pop();
-		await importJson(JSON.parse(nextState));
+		// Only show loading overlay for large patches
+		if (entry.forwardPatch.length > 10) {
+			appState.loadingState.isLoading = true;
+			appState.loadingState.loadingMsg = 'Redoing…';
+		}
 
-		// Update last snapshot to match restored state
-		this.lastSnapshot = nextState;
+		// Apply forward patch in-place
+		applyPatchToCore(entry.forwardPatch);
+
+		// Update reference snapshot
+		this.lastSnapshotObj = getCoreAsPlainObject();
+		this.lastSnapshotStr = JSON.stringify(this.lastSnapshotObj);
 
 		await tick();
 		appState.loadingState.isLoading = false;
@@ -207,7 +222,8 @@ class HistoryManager {
 	clear() {
 		this.undoStack = [];
 		this.redoStack = [];
-		this.lastSnapshot = null;
+		this.lastSnapshotObj = null;
+		this.lastSnapshotStr = null;
 	}
 
 	// Derived state for UI
@@ -218,3 +234,4 @@ class HistoryManager {
 }
 
 export const history = new HistoryManager();
+
