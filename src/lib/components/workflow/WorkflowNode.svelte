@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	let { node, selected = false, expanded = false } = $props();
+	let { node, selected = false, expanded = false, isDropTarget = false } = $props();
 
 	const typeColors = {
 		data: '#b3d9f2',
@@ -18,13 +18,16 @@
 	class="workflow-node"
 	class:selected
 	class:expanded={hasPanel}
+	class:drop-target={isDropTarget}
 	style="background-color: {typeColors[node.type] ?? '#eee'};"
 	role="button"
 	tabindex="0"
 >
 	<div class="node-header">
 		<div class="node-label">{node.label}</div>
-		{#if isEditable}
+		{#if isDropTarget}
+			<span class="drop-badge" title="Drop to replace all references">↓ replace</span>
+		{:else if isEditable}
 			<span class="expand-indicator" title={expanded ? 'Collapse' : 'Expand to edit'}>
 				{expanded ? '▲' : '▼'}
 			</span>
@@ -65,6 +68,12 @@
 		border-bottom-color: transparent;
 	}
 
+	.workflow-node.drop-target {
+		border: 2px dashed #28a745;
+		box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.25);
+		background-color: #e8f8ec !important;
+	}
+
 	.node-header {
 		display: flex;
 		align-items: center;
@@ -84,6 +93,14 @@
 		font-size: 9px;
 		color: #666;
 		flex-shrink: 0;
+	}
+
+	.drop-badge {
+		font-size: 9px;
+		font-weight: 700;
+		color: #28a745;
+		flex-shrink: 0;
+		white-space: nowrap;
 	}
 
 	.node-sublabel {

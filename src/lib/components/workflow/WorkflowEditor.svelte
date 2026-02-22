@@ -153,6 +153,11 @@
 		return id != null && id >= 0;
 	}
 
+	/** Returns true if (cx, cy) falls within a node's bounding box on the canvas. */
+	function isNodeHit(cx, cy, pos) {
+		return cx >= pos.x && cx <= pos.x + NODE_WIDTH && cy >= pos.y && cy <= pos.y + NODE_HEIGHT;
+	}
+
 	// Step 1: edge connectivity only (re-derives when core changes, NOT when positions change)
 	const edgeTopology = $derived.by(() => {
 		const edges = [];
@@ -266,6 +271,57 @@
 	// --- Node drag state ---
 	// { nodeId, startMouseCanvas: {x,y}, startPos: {x,y}, moved: boolean }
 	let dragInfo = $state(null);
+
+	// --- Column drag-to-replace drop target ---
+	let dropTargetNodeId = $state(null);
+
+	/**
+	 * Replace all downstream references to `oldColId` with `newColId`.
+	 * Updates: column refIds, table-process input args and columnRefs,
+	 * table columnRefs, and plot data refs.
+	 */
+	function replaceColumnRefs(newColId, oldColId) {
+		if (newColId === oldColId) return;
+
+		// 1. Columns that derive from the old column
+		core.data.forEach((col) => {
+			if (col.refId === oldColId) col.refId = newColId;
+		});
+
+		// 2. Table processes
+		core.tables.forEach((table) => {
+			table.columnRefs = table.columnRefs.map((id) => (id === oldColId ? newColId : id));
+			table.processes.forEach((tp) => {
+				if (tp.args.xIN === oldColId) tp.args.xIN = newColId;
+				if (tp.args.yIN === oldColId) tp.args.yIN = newColId;
+				if (Array.isArray(tp.args.xsIN)) {
+					tp.args.xsIN = tp.args.xsIN.map((id) => (id === oldColId ? newColId : id));
+				}
+				if (tp.args.out) {
+					Object.keys(tp.args.out).forEach((key) => {
+						if (tp.args.out[key] === oldColId) tp.args.out[key] = newColId;
+					});
+				}
+			});
+		});
+
+		// 3. Plots
+		core.plots.forEach((plot) => {
+			if (plot.type === 'tableplot') {
+				if (plot.plot.columnRefs) {
+					plot.plot.columnRefs = plot.plot.columnRefs.map((id) =>
+						id === oldColId ? newColId : id
+					);
+				}
+			} else {
+				plot.plot.data?.forEach((d) => {
+					['x', 'y', 'z'].forEach((axis) => {
+						if (d[axis]?.refId === oldColId) d[axis].refId = newColId;
+					});
+				});
+			}
+		});
+	}
 
 	// --- Plot resize state ---
 	// { nodeId, plotObj, startMouse:{x,y}, startW, startH, startPlotW, startPlotH }
@@ -420,6 +476,24 @@
 				} else {
 					customPositions[dragInfo.nodeId] = { x: nx, y: ny };
 				}
+
+				// Track drop target: if dragging a data node, detect overlapping data nodes
+				const draggedNode = allNodes.find((n) => n.id === dragInfo.nodeId);
+				if (draggedNode?.type === 'data') {
+					let found = null;
+					for (const node of allNodes) {
+						if (node.type !== 'data' || node.id === dragInfo.nodeId) continue;
+						const pos = customPositions[node.id] ?? nodePositions[node.id];
+						if (!pos) continue;
+						if (isNodeHit(canvasX, canvasY, pos)) {
+							found = node.id;
+							break;
+						}
+					}
+					dropTargetNodeId = found;
+				} else {
+					dropTargetNodeId = null;
+				}
 			}
 			return;
 		}
@@ -433,10 +507,23 @@
 			// Short press with no movement → treat as a click
 			handleNodeAction(node);
 		}
-		dragInfo = null;
+		// Don't clear dragInfo here — stopAll (which always fires) handles the drop and cleanup
 	}
 
 	function stopAll() {
+		// Perform column-replace drop if applicable.
+		// dropTargetNodeId is only non-null when cursor is over a *different* data node,
+		// so no guard against accidental same-node drops is needed.
+		if (dragInfo?.moved && dropTargetNodeId) {
+			const sourceNode = allNodes.find((n) => n.id === dragInfo.nodeId);
+			const targetNode = allNodes.find((n) => n.id === dropTargetNodeId);
+			if (sourceNode?.type === 'data' && targetNode?.type === 'data') {
+				replaceColumnRefs(sourceNode.refId, targetNode.refId);
+				// Snap the dragged node back to its default layout position
+				delete customPositions[dragInfo.nodeId];
+			}
+		}
+		dropTargetNodeId = null;
 		dragInfo = null;
 		resizeInfo = null;
 		isPanning = false;
@@ -516,14 +603,14 @@
 				{@const isExpanded = expandedNodeId === node.id}
 				{@const isDragging = dragInfo?.nodeId === node.id && dragInfo?.moved}
 				{@const isDimmed = connectedNodeIds !== null && !connectedNodeIds.has(node.id)}
+				{@const isDropTarget = dropTargetNodeId === node.id}
+				{@const nodeZIndex = isDragging ? 30 : isExpanded ? 20 : 1}
 				{#if pos}
 					<div
 						class="workflow-node-wrapper"
 						class:dragging={isDragging}
 						class:dimmed={isDimmed}
-						style="position: absolute; left: {pos.x}px; top: {pos.y}px; z-index: {isExpanded
-							? 20
-							: 1};"
+						style="position: absolute; left: {pos.x}px; top: {pos.y}px; z-index: {nodeZIndex};"
 						onmousedown={(e) => handleNodeWrapperMouseDown(e, node)}
 						onmouseup={(e) => handleNodeWrapperMouseUp(e, node)}
 						onclick={(e) => e.stopPropagation()}
@@ -533,6 +620,7 @@
 							{node}
 							selected={selectedPlotNodeId === node.id}
 							expanded={isExpanded}
+							{isDropTarget}
 						/>
 
 						{#if node.type === 'data'}
