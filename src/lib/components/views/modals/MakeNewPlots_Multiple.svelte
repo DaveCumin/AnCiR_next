@@ -34,7 +34,7 @@
 		const container = document.getElementsByClassName('canvas')[0];
 
 		const newPlot = new Plot({
-			name: capitalise(plotType) + '_combined',
+			name: capitalise(plotType) + '_combined_' + (core.plots.length + 1),
 			type: plotType
 		});
 
@@ -43,7 +43,6 @@
 				x: { refId: Number(xCol) },
 				y: { refId: yCols[i] }
 			});
-			await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
 		}
 
 		pushObj(newPlot);
