@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	import { core, appState } from '$lib/core/core.svelte.js';
+	import { core, appState, appConsts } from '$lib/core/core.svelte.js';
 	import { selectPlot, deselectAllPlots } from '$lib/core/Plot.svelte';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import WorkflowEdges from './WorkflowEdges.svelte';
@@ -10,12 +10,14 @@
 	const COL_WIDTH = 220;
 	const ROW_HEIGHT = 80;
 	const PADDING = 40;
+	const EDITOR_PANEL_WIDTH = 220;
+	const EDITOR_PANEL_MAX_HEIGHT = 320;
 
-	// Derive all nodes from core
+	// Derive all nodes from core — include live process/tp object references
 	const allNodes = $derived.by(() => {
 		const result = [];
 
-		// Col 0: data nodes (one per Column)
+		// Col 0: data nodes
 		core.data.forEach((col) => {
 			result.push({
 				id: `data_${col.id}`,
@@ -27,7 +29,7 @@
 			});
 		});
 
-		// Col 1: process nodes (one per Process on a column)
+		// Col 1: column process nodes
 		core.data.forEach((col) => {
 			col.processes.forEach((p) => {
 				result.push({
@@ -35,12 +37,14 @@
 					label: p.displayName || p.name,
 					type: 'process',
 					col: 1,
-					refId: p.id
+					refId: p.id,
+					processObj: p,
+					processName: p.name
 				});
 			});
 		});
 
-		// Col 2: tableprocess nodes (one per TableProcess on a table)
+		// Col 2: table process nodes
 		core.tables.forEach((table) => {
 			table.processes.forEach((tp) => {
 				result.push({
@@ -49,12 +53,14 @@
 					sublabel: table.name,
 					type: 'tableprocess',
 					col: 2,
-					refId: tp.id
+					refId: tp.id,
+					tpObj: tp,
+					tpName: tp.name
 				});
 			});
 		});
 
-		// Col 3: plot nodes (one per plot)
+		// Col 3: plot nodes
 		core.plots.forEach((plot) => {
 			result.push({
 				id: `plot_${plot.id}`,
@@ -69,7 +75,7 @@
 		return result;
 	});
 
-	// Assign row positions within each column
+	// Assign default column-layout positions
 	const nodePositions = $derived.by(() => {
 		const colCounts = { 0: 0, 1: 0, 2: 0, 3: 0 };
 		const positions = {};
@@ -83,50 +89,36 @@
 				y: row * ROW_HEIGHT + PADDING
 			};
 		}
-
 		return positions;
 	});
 
+	// User-drag position overrides keyed by node id
+	const customPositions = $state({});
+
 	// Canvas dimensions
 	const canvasWidth = $derived(4 * COL_WIDTH + 2 * PADDING);
-
 	const canvasHeight = $derived.by(() => {
 		const colCounts = [0, 1, 2, 3].map((col) => allNodes.filter((n) => n.col === col).length);
 		const maxRows = Math.max(...colCounts, 5);
 		return maxRows * ROW_HEIGHT + 2 * PADDING;
 	});
 
-	// Helper to check that a column reference id is valid
+	// --- Edge derivation split into topology + positioned ---
+
 	function isValidRef(id) {
 		return id != null && id >= 0;
 	}
 
-	// Derive edges with computed x,y positions
-	const allEdges = $derived.by(() => {
+	// Step 1: edge connectivity only (re-derives when core changes, NOT when positions change)
+	const edgeTopology = $derived.by(() => {
 		const edges = [];
 		const seen = new Set();
-
-		function nodeRight(id) {
-			const pos = nodePositions[id];
-			if (!pos) return null;
-			return { x: pos.x + NODE_WIDTH, y: pos.y + NODE_HEIGHT / 2 };
-		}
-
-		function nodeLeft(id) {
-			const pos = nodePositions[id];
-			if (!pos) return null;
-			return { x: pos.x, y: pos.y + NODE_HEIGHT / 2 };
-		}
 
 		function addEdge(fromId, toId, type) {
 			const key = `${fromId}|${toId}|${type}`;
 			if (seen.has(key)) return;
 			seen.add(key);
-			const from = nodeRight(fromId);
-			const to = nodeLeft(toId);
-			if (from && to) {
-				edges.push({ fromId, toId, from, to, type });
-			}
+			edges.push({ fromId, toId, type });
 		}
 
 		// data → process chains
@@ -157,11 +149,8 @@
 
 				addInputEdge(tp.args.xIN);
 				addInputEdge(tp.args.yIN);
-				if (Array.isArray(tp.args.xsIN)) {
-					tp.args.xsIN.forEach(addInputEdge);
-				}
+				if (Array.isArray(tp.args.xsIN)) tp.args.xsIN.forEach(addInputEdge);
 
-				// tableprocess → data (output columns)
 				if (tp.args.out) {
 					Object.values(tp.args.out).forEach((colId) => {
 						if (!isValidRef(colId)) return;
@@ -191,9 +180,7 @@
 			} else {
 				plot.plot.data?.forEach((dataPoint) => {
 					['x', 'y', 'z'].forEach((axis) => {
-						if (dataPoint[axis]?.refId != null) {
-							addPlotEdge(dataPoint[axis].refId);
-						}
+						if (dataPoint[axis]?.refId != null) addPlotEdge(dataPoint[axis].refId);
 					});
 				});
 			}
@@ -202,13 +189,29 @@
 		return edges;
 	});
 
-	// Currently selected plot node id
+	// Step 2: attach positions (re-derives when topology OR any position changes)
+	const allEdges = $derived.by(() => {
+		return edgeTopology.flatMap((edge) => {
+			const fromPos = customPositions[edge.fromId] ?? nodePositions[edge.fromId];
+			const toPos = customPositions[edge.toId] ?? nodePositions[edge.toId];
+			if (!fromPos || !toPos) return [];
+			return [
+				{
+					...edge,
+					from: { x: fromPos.x + NODE_WIDTH, y: fromPos.y + NODE_HEIGHT / 2 },
+					to: { x: toPos.x, y: toPos.y + NODE_HEIGHT / 2 }
+				}
+			];
+		});
+	});
+
+	// --- Selected plot highlight ---
 	const selectedPlotNodeId = $derived.by(() => {
 		const p = core.plots.find((p) => p.selected);
 		return p ? `plot_${p.id}` : null;
 	});
 
-	// Pan / zoom state
+	// --- Pan / zoom ---
 	let panX = $state(0);
 	let panY = $state(0);
 	let zoom = $state(1);
@@ -216,54 +219,128 @@
 	let panStartX = $state(0);
 	let panStartY = $state(0);
 
-	// Left offset mirrors PlotDisplay positioning
+	// --- Node drag state ---
+	// { nodeId, startMouseCanvas: {x,y}, startPos: {x,y}, moved: boolean }
+	let dragInfo = $state(null);
+
+	// --- Expanded process editor ---
+	let expandedNodeId = $state(null);
+
+	// Auto-clear expandedNodeId if the node is removed from core
+	$effect(() => {
+		if (expandedNodeId && !allNodes.find((n) => n.id === expandedNodeId)) {
+			expandedNodeId = null;
+		}
+	});
+
+	// Left offset to avoid the nav + display panels
 	const leftPx = $derived.by(() => {
 		return appState.showDisplayPanel
 			? appState.widthDisplayPanel + appState.widthNavBar
 			: appState.widthNavBar;
 	});
 
+	// --- Event handlers ---
+
 	function handleWheel(e) {
-		// Allow native browser zoom when modifier key is held
 		if (e.ctrlKey || e.metaKey) return;
 		e.preventDefault();
 		const factor = e.deltaY > 0 ? 0.9 : 1.1;
 		zoom = Math.min(Math.max(zoom * factor, 0.15), 4);
 	}
 
-	function handleMouseDown(e) {
-		if (e.target.closest('.workflow-node-wrapper')) return;
+	function handleCanvasMouseDown(e) {
+		if (e.button !== 0) return;
 		isPanning = true;
 		panStartX = e.clientX - panX;
 		panStartY = e.clientY - panY;
 	}
 
+	function handleNodeWrapperMouseDown(e, node) {
+		// Always prevent the canvas pan handler from firing
+		e.stopPropagation();
+		if (e.button !== 0) return;
+		// If the click is inside the expanded editor panel, don't start a drag
+		if (e.target.closest('.process-editor-panel')) return;
+
+		const canvasX = (e.clientX - panX) / zoom;
+		const canvasY = (e.clientY - panY) / zoom;
+		const pos = customPositions[node.id] ?? nodePositions[node.id];
+		if (!pos) return;
+
+		dragInfo = {
+			nodeId: node.id,
+			startMouseCanvas: { x: canvasX, y: canvasY },
+			startPos: { x: pos.x, y: pos.y },
+			moved: false
+		};
+	}
+
 	function handleMouseMove(e) {
+		if (dragInfo) {
+			const canvasX = (e.clientX - panX) / zoom;
+			const canvasY = (e.clientY - panY) / zoom;
+			const dx = canvasX - dragInfo.startMouseCanvas.x;
+			const dy = canvasY - dragInfo.startMouseCanvas.y;
+
+			if (!dragInfo.moved && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+				// Flip the flag in-place to avoid an extra object allocation per frame
+				dragInfo.moved = true;
+			}
+			if (dragInfo.moved) {
+				// Mutate existing entry when possible to minimise allocations
+				const prev = customPositions[dragInfo.nodeId];
+				const nx = dragInfo.startPos.x + dx;
+				const ny = dragInfo.startPos.y + dy;
+				if (prev) {
+					prev.x = nx;
+					prev.y = ny;
+				} else {
+					customPositions[dragInfo.nodeId] = { x: nx, y: ny };
+				}
+			}
+			return;
+		}
 		if (!isPanning) return;
 		panX = e.clientX - panStartX;
 		panY = e.clientY - panStartY;
 	}
 
-	function stopPan() {
+	function handleNodeWrapperMouseUp(e, node) {
+		if (dragInfo && !dragInfo.moved) {
+			// Short press with no movement → treat as a click
+			handleNodeAction(node);
+		}
+		dragInfo = null;
+	}
+
+	function stopAll() {
+		dragInfo = null;
 		isPanning = false;
 	}
 
-	function handleNodeClick(e, node) {
-		e.stopPropagation();
+	function handleNodeAction(node) {
 		if (node.type === 'plot') {
-			selectPlot(e, node.refId);
+			// Synthesise a minimal event-like object for selectPlot (needs altKey)
+			selectPlot({ altKey: false }, node.refId);
 		} else if (node.type === 'data') {
 			appState.currentTab = 'data';
 			appState.showDisplayPanel = true;
+		} else if (node.type === 'process' || node.type === 'tableprocess') {
+			expandedNodeId = expandedNodeId === node.id ? null : node.id;
 		}
 	}
 
 	function handleBackgroundClick() {
 		deselectAllPlots();
+		expandedNodeId = null;
 	}
 
 	function handleKeyDown(e) {
-		if (e.key === 'Escape') deselectAllPlots();
+		if (e.key === 'Escape') {
+			deselectAllPlots();
+			expandedNodeId = null;
+		}
 	}
 </script>
 
@@ -271,10 +348,10 @@
 	class="workflow-editor"
 	style="left: {leftPx}px;"
 	onwheel={handleWheel}
-	onmousedown={handleMouseDown}
+	onmousedown={handleCanvasMouseDown}
 	onmousemove={handleMouseMove}
-	onmouseup={stopPan}
-	onmouseleave={stopPan}
+	onmouseup={stopAll}
+	onmouseleave={stopAll}
 	onclick={handleBackgroundClick}
 	onkeydown={handleKeyDown}
 	role="presentation"
@@ -291,7 +368,7 @@
 		<button class="close-btn" onclick={() => (appState.showWorkflow = false)}>✕</button>
 	</div>
 
-	<div class="canvas-viewport" class:panning={isPanning}>
+	<div class="canvas-viewport" class:panning={isPanning && !dragInfo}>
 		<div
 			class="canvas-inner"
 			style="transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0; width: {canvasWidth}px; height: {canvasHeight}px; position: relative;"
@@ -299,17 +376,42 @@
 			<WorkflowEdges edges={allEdges} width={canvasWidth} height={canvasHeight} />
 
 			{#each allNodes as node (node.id)}
-				{@const pos = nodePositions[node.id]}
+				{@const pos = customPositions[node.id] ?? nodePositions[node.id]}
+				{@const isExpanded = expandedNodeId === node.id}
+				{@const isDragging = dragInfo?.nodeId === node.id && dragInfo?.moved}
 				{#if pos}
 					<div
 						class="workflow-node-wrapper"
-						style="position: absolute; left: {pos.x}px; top: {pos.y}px;"
+						class:dragging={isDragging}
+						style="position: absolute; left: {pos.x}px; top: {pos.y}px; z-index: {isExpanded
+							? 20
+							: 1};"
+						onmousedown={(e) => handleNodeWrapperMouseDown(e, node)}
+						onmouseup={(e) => handleNodeWrapperMouseUp(e, node)}
+						onclick={(e) => e.stopPropagation()}
+						role="presentation"
 					>
 						<WorkflowNode
 							{node}
 							selected={selectedPlotNodeId === node.id}
-							onclick={(e) => handleNodeClick(e, node)}
+							expanded={isExpanded}
 						/>
+
+						{#if isExpanded && node.type === 'process' && node.processObj}
+							{@const PComp = appConsts.processMap.get(node.processName)?.component}
+							{#if PComp}
+								<div class="process-editor-panel" style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;">
+									<PComp p={node.processObj} />
+								</div>
+							{/if}
+						{:else if isExpanded && node.type === 'tableprocess' && node.tpObj}
+							{@const TPComp = appConsts.tableProcessMap.get(node.tpName)?.component}
+							{#if TPComp}
+								<div class="process-editor-panel" style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;">
+									<TPComp p={node.tpObj} />
+								</div>
+							{/if}
+						{/if}
 					</div>
 				{/if}
 			{/each}
@@ -387,5 +489,27 @@
 
 	.canvas-viewport.panning {
 		cursor: grabbing;
+	}
+
+	.workflow-node-wrapper {
+		cursor: grab;
+	}
+
+	.workflow-node-wrapper.dragging {
+		cursor: grabbing;
+		opacity: 0.85;
+	}
+
+	.process-editor-panel {
+		overflow-y: auto;
+		background: white;
+		border: 1.5px solid rgba(0, 0, 0, 0.15);
+		border-top: none;
+		border-bottom-left-radius: 6px;
+		border-bottom-right-radius: 6px;
+		padding: 6px 8px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+		cursor: default;
+		box-sizing: border-box;
 	}
 </style>
