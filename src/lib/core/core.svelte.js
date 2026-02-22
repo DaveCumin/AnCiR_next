@@ -53,7 +53,9 @@ export const appState = $state({
 
 	showAYSModal: false, // AreYouSure modal
 	AYStext: '',
-	AYScallback: null
+	AYScallback: null,
+
+	showWorkflow: false
 });
 
 export const appConsts = $state({

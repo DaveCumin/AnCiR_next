@@ -42,10 +42,8 @@
 
 	import { guessFormatD3 } from '$lib/utils/time/guessTimeFormat_d3.js';
 	import { guessFormat } from '$lib/utils/time/guessTimeFormat.js';
-	import Visualise from '$lib/components/Visualise.svelte';
+	import WorkflowEditor from '$lib/components/workflow/WorkflowEditor.svelte';
 	import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte';
-
-	let visualise = $state(false);
 
 	// Initialize history watching (must be in component context)
 	history.init();
@@ -168,7 +166,7 @@
 				// visualise
 				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'x') {
 					event.preventDefault();
-					visualise = !visualise;
+					appState.showWorkflow = !appState.showWorkflow;
 				}
 				// SAVE THE SESSION
 				if (!event.shiftKey && MODIFIER && event.key.toLowerCase() === 's') {
@@ -536,8 +534,8 @@
 	<title>AnCiR {appConsts.version}</title>
 </svelte:head>
 
-{#if visualise}
-	<Visualise />
+{#if appState.showWorkflow}
+	<WorkflowEditor />
 {/if}
 {#if !appState.loadingState.isLoading || core.data.length > 0}
 	{#if appState.showNavbar}

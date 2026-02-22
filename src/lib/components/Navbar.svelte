@@ -83,6 +83,20 @@
 			<Icon name="layer" className={appState.currentTab === 'worksheet' ? 'icon active' : 'icon'} />
 			<!-- <WorksheetIcon /> -->
 		</button>
+
+		<button
+			onclick={() => (appState.showWorkflow = !appState.showWorkflow)}
+			onmouseenter={(e) =>
+				handleTooltip({
+					detail: { visible: true, x: e.clientX + 10, y: e.clientY + 10, content: 'Workflow View' }
+				})}
+			onmouseleave={(e) =>
+				handleTooltip({
+					detail: { visible: false, x: e.clientX + 10, y: e.clientY + 10, content: '' }
+				})}
+		>
+			<Icon name="process" className={appState.showWorkflow ? 'icon active' : 'icon'} />
+		</button>
 	</div>
 
 	<div class="icon-container">
