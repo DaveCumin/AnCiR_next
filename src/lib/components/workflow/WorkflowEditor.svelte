@@ -4,6 +4,9 @@
 	import { selectPlot, deselectAllPlots } from '$lib/core/Plot.svelte';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import WorkflowEdges from './WorkflowEdges.svelte';
+	import MakeNewPlot from '$lib/components/views/modals/MakeNewPlot.svelte';
+	import MakeNewColumn from '$lib/components/views/modals/MakeNewColumn.svelte';
+	import AddProcess from '$lib/components/iconActions/AddProcess.svelte';
 
 	const NODE_WIDTH = 160;
 	const NODE_HEIGHT = 48;
@@ -14,9 +17,25 @@
 	const EDITOR_PANEL_MAX_HEIGHT = 320;
 
 	// Plot preview thumbnail constants
-	const PLOT_PREVIEW_WIDTH = NODE_WIDTH;   // px — preview matches node header width (160)
-	const PLOT_PREVIEW_MAX_HEIGHT = 100;     // px — cap preview height
-	const PLOT_ROW_HEIGHT = NODE_HEIGHT + PLOT_PREVIEW_MAX_HEIGHT + 16; // taller rows for plot col
+	const PLOT_PREVIEW_DEFAULT_W = NODE_WIDTH;   // px — default preview width (160)
+	const PLOT_PREVIEW_DEFAULT_H = 100;          // px — default preview height
+	const PLOT_ROW_HEIGHT = NODE_HEIGHT + PLOT_PREVIEW_DEFAULT_H + 24; // default row height for plot col
+	const MIN_PREVIEW_W = 80;   // px — minimum preview panel width when resizing
+	const MIN_PREVIEW_H = 60;   // px — minimum preview panel height when resizing
+	const MIN_PLOT_W = 100;     // px — minimum actual plot width
+	const MIN_PLOT_H = 80;      // px — minimum actual plot height
+
+	// Per-plot preview size overrides keyed by node id
+	const plotPreviewSizes = $state({});
+
+	// --- Insert modals ---
+	let showAddPlotModal = $state(false);
+	let showAddColumnModal = $state(false);
+	let addColumnTableId = $state(null);
+	let showAddProcessDropdown = $state(false);
+	let addProcessColumn = $state(null);
+	let addProcessDropX = $state(0);
+	let addProcessDropY = $state(0);
 
 	// Derive all nodes from core — include live process/tp object references
 	const allNodes = $derived.by(() => {
@@ -92,7 +111,13 @@
 				x: col * COL_WIDTH + PADDING,
 				y: colOffsets[col] + PADDING
 			};
-			colOffsets[col] += col === 3 ? PLOT_ROW_HEIGHT : ROW_HEIGHT;
+			if (col === 3) {
+				const ps = plotPreviewSizes[node.id];
+				const h = ps ? ps.h : PLOT_PREVIEW_DEFAULT_H;
+				colOffsets[col] += NODE_HEIGHT + h + 24;
+			} else {
+				colOffsets[col] += ROW_HEIGHT;
+			}
 		}
 		return positions;
 	});
@@ -104,9 +129,16 @@
 	const canvasWidth = $derived(4 * COL_WIDTH + 2 * PADDING);
 	const canvasHeight = $derived.by(() => {
 		const colHeights = [0, 1, 2, 3].map((col) => {
-			const count = allNodes.filter((n) => n.col === col).length;
-			const rowH = col === 3 ? PLOT_ROW_HEIGHT : ROW_HEIGHT;
-			return count * rowH;
+			let total = 0;
+			allNodes.filter((n) => n.col === col).forEach((n) => {
+				if (col === 3) {
+					const ps = plotPreviewSizes[n.id];
+					total += NODE_HEIGHT + (ps ? ps.h : PLOT_PREVIEW_DEFAULT_H) + 24;
+				} else {
+					total += ROW_HEIGHT;
+				}
+			});
+			return total;
 		});
 		return Math.max(...colHeights, 5 * ROW_HEIGHT) + 2 * PADDING;
 	});
@@ -231,6 +263,10 @@
 	// { nodeId, startMouseCanvas: {x,y}, startPos: {x,y}, moved: boolean }
 	let dragInfo = $state(null);
 
+	// --- Plot resize state ---
+	// { nodeId, plotObj, startMouse:{x,y}, startW, startH, startPlotW, startPlotH }
+	let resizeInfo = $state(null);
+
 	// --- Expanded process editor ---
 	let expandedNodeId = $state(null);
 
@@ -268,8 +304,10 @@
 		// Always prevent the canvas pan handler from firing
 		e.stopPropagation();
 		if (e.button !== 0) return;
-		// If the click is inside the expanded editor panel, don't start a drag
+		// Skip if the click is inside panels or action buttons that handle their own events
 		if (e.target.closest('.process-editor-panel')) return;
+		if (e.target.closest('.plot-resize-handle')) return;
+		if (e.target.closest('.node-add-btn')) return;
 
 		const canvasX = (e.clientX - panX) / zoom;
 		const canvasY = (e.clientY - panY) / zoom;
@@ -284,7 +322,48 @@
 		};
 	}
 
+	function handleResizeMouseDown(e, node) {
+		e.stopPropagation();
+		const id = node.id;
+		const cur = plotPreviewSizes[id] ?? { w: PLOT_PREVIEW_DEFAULT_W, h: PLOT_PREVIEW_DEFAULT_H };
+		resizeInfo = {
+			nodeId: id,
+			plotObj: node.plotObj,
+			startMouse: { x: e.clientX, y: e.clientY },
+			startW: cur.w,
+			startH: cur.h,
+			startPlotW: node.plotObj.width,
+			startPlotH: node.plotObj.height
+		};
+	}
+
+	function openAddProcess(e, col) {
+		e.stopPropagation();
+		addProcessColumn = col;
+		const rect = e.currentTarget.getBoundingClientRect();
+		addProcessDropX = rect.right + 4;
+		addProcessDropY = rect.top;
+		showAddProcessDropdown = true;
+	}
+
+	function openAddTableProcess(e, tableId) {
+		e.stopPropagation();
+		addColumnTableId = tableId;
+		showAddColumnModal = true;
+	}
+
 	function handleMouseMove(e) {
+		if (resizeInfo) {
+			const dx = (e.clientX - resizeInfo.startMouse.x) / zoom;
+			const dy = (e.clientY - resizeInfo.startMouse.y) / zoom;
+			const nw = Math.max(MIN_PREVIEW_W, resizeInfo.startW + dx);
+			const nh = Math.max(MIN_PREVIEW_H, resizeInfo.startH + dy);
+			plotPreviewSizes[resizeInfo.nodeId] = { w: nw, h: nh };
+			// Scale the actual plot proportionally so detail level is consistent
+			resizeInfo.plotObj.width = Math.max(MIN_PLOT_W, Math.round(resizeInfo.startPlotW * (nw / resizeInfo.startW)));
+			resizeInfo.plotObj.height = Math.max(MIN_PLOT_H, Math.round(resizeInfo.startPlotH * (nh / resizeInfo.startH)));
+			return;
+		}
 		if (dragInfo) {
 			const canvasX = (e.clientX - panX) / zoom;
 			const canvasY = (e.clientY - panY) / zoom;
@@ -324,6 +403,7 @@
 
 	function stopAll() {
 		dragInfo = null;
+		resizeInfo = null;
 		isPanning = false;
 	}
 
@@ -373,6 +453,14 @@
 			<span class="legend-item" style="background:#ffe0b3;">table process</span>
 			<span class="legend-item" style="background:#b3f2cc;">plot</span>
 		</div>
+		<div class="header-add-actions">
+			<button class="header-add-btn" onclick={() => (showAddPlotModal = true)} title="Add new plot">+ Plot</button>
+			{#each core.tables as table (table.id)}
+				<button class="header-add-btn header-add-tp" onclick={(e) => openAddTableProcess(e, table.id)} title="Add table process to {table.name}">
+					+ TP: {table.name}
+				</button>
+			{/each}
+		</div>
 		<button class="close-btn" onclick={() => (appState.showWorkflow = false)}>✕</button>
 	</div>
 
@@ -405,6 +493,18 @@
 							expanded={isExpanded}
 						/>
 
+						{#if node.type === 'data'}
+							{@const col = core.data.find((d) => d.id === node.refId)}
+							{#if col}
+								<button
+									class="node-add-btn"
+									onmousedown={(e) => e.stopPropagation()}
+									onclick={(e) => openAddProcess(e, col)}
+									title="Add process to {col.name}"
+								>+ Process</button>
+							{/if}
+						{/if}
+
 						{#if isExpanded && node.type === 'process' && node.processObj}
 							{@const PComp = appConsts.processMap.get(node.processName)?.component}
 							{#if PComp}
@@ -423,12 +523,12 @@
 
 						{#if node.type === 'plot' && node.plotObj}
 							{@const PlotComp = appConsts.plotMap.get(node.plotObj.type)?.plot}
-							{@const previewScale = PLOT_PREVIEW_WIDTH / node.plotObj.width}
-							{@const previewH = Math.min(node.plotObj.height * previewScale, PLOT_PREVIEW_MAX_HEIGHT)}
+							{@const pSize = plotPreviewSizes[node.id] ?? { w: PLOT_PREVIEW_DEFAULT_W, h: PLOT_PREVIEW_DEFAULT_H }}
+							{@const previewScale = pSize.w / node.plotObj.width}
 							{#if PlotComp}
 								<div
 									class="plot-preview-panel"
-									style="width:{PLOT_PREVIEW_WIDTH}px; height:{previewH}px;"
+									style="width:{pSize.w}px; height:{pSize.h}px;"
 								>
 									<div
 										class="plot-preview-inner"
@@ -436,6 +536,11 @@
 									>
 										<PlotComp theData={node.plotObj} which="plot" />
 									</div>
+									<div
+										class="plot-resize-handle"
+										onmousedown={(e) => handleResizeMouseDown(e, node)}
+										title="Drag to resize"
+									>⤡</div>
 								</div>
 							{/if}
 						{/if}
@@ -445,6 +550,18 @@
 		</div>
 	</div>
 </div>
+
+<!-- Insert modals / dropdowns rendered outside the transformed canvas -->
+<MakeNewPlot bind:showModal={showAddPlotModal} />
+{#if showAddColumnModal}
+	<MakeNewColumn bind:show={showAddColumnModal} tableId={addColumnTableId} />
+{/if}
+<AddProcess
+	bind:showDropdown={showAddProcessDropdown}
+	columnSelected={addProcessColumn}
+	dropdownTop={addProcessDropY}
+	dropdownLeft={addProcessDropX}
+/>
 
 <style>
 	.workflow-editor {
@@ -549,9 +666,82 @@
 		background: white;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 		box-sizing: border-box;
+		position: relative;
 	}
 
 	.plot-preview-inner {
 		pointer-events: none;
+	}
+
+	.plot-resize-handle {
+		position: absolute;
+		bottom: 2px;
+		right: 2px;
+		width: 16px;
+		height: 16px;
+		font-size: 11px;
+		line-height: 16px;
+		text-align: center;
+		cursor: nwse-resize;
+		color: #888;
+		background: rgba(255, 255, 255, 0.8);
+		border-radius: 2px;
+		user-select: none;
+	}
+
+	.plot-resize-handle:hover {
+		color: #333;
+		background: rgba(255, 255, 255, 1);
+	}
+
+	/* "+ Process" button on data nodes */
+	.node-add-btn {
+		display: none;
+		font-size: 10px;
+		padding: 2px 6px;
+		background: rgba(0, 0, 0, 0.07);
+		border: 1px solid rgba(0, 0, 0, 0.15);
+		border-radius: 3px;
+		cursor: pointer;
+		color: #444;
+		width: 100%;
+		box-sizing: border-box;
+		text-align: left;
+		margin-top: 2px;
+	}
+
+	.workflow-node-wrapper:hover .node-add-btn {
+		display: block;
+	}
+
+	.node-add-btn:hover {
+		background: rgba(0, 0, 0, 0.13);
+	}
+
+	/* Header insert buttons */
+	.header-add-actions {
+		display: flex;
+		gap: 4px;
+		flex-wrap: wrap;
+		align-items: center;
+	}
+
+	.header-add-btn {
+		font-size: 10px;
+		padding: 2px 7px;
+		background: transparent;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 3px;
+		cursor: pointer;
+		color: var(--color-lightness-35);
+		white-space: nowrap;
+	}
+
+	.header-add-btn:hover {
+		background: var(--color-lightness-95);
+	}
+
+	.header-add-tp {
+		border-color: #ffe0b3;
 	}
 </style>
