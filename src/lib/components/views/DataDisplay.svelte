@@ -9,6 +9,7 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import TableProcess from '$lib/core/TableProcess.svelte';
 	import MakeNewColumn from './modals/MakeNewColumn.svelte';
+	import SwapColumns from './modals/SwapColumns.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
 	import { deleteTable, getTableById } from '$lib/core/Table.svelte';
@@ -32,6 +33,8 @@
 		setDropdownPositionFromEvent(e);
 		showAddTable = true;
 	}
+
+	let showSwapColumns = $state(false);
 
 	let showNewCol = $state(false);
 	let selectedTable = $state(null);
@@ -63,6 +66,9 @@
 	<p>Data Sources</p>
 
 	<div class="add">
+		<button class="icon" onclick={() => (showSwapColumns = true)} title="Swap column references">
+			<Icon name="swap" width={16} height={16} />
+		</button>
 		<button class="icon" onclick={openDropdown}>
 			<Icon name="add" width={16} height={16} />
 		</button>
@@ -144,6 +150,8 @@
 />
 
 <MakeNewColumn bind:show={showNewCol} tableId={selectedTable} />
+
+<SwapColumns bind:showModal={showSwapColumns} />
 
 <style>
 	.heading {

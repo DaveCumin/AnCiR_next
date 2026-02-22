@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	import { core, appState, appConsts } from '$lib/core/core.svelte.js';
+	import { core, appState, appConsts, replaceColumnRefs } from '$lib/core/core.svelte.js';
 	import { selectPlot, deselectAllPlots } from '$lib/core/Plot.svelte';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import WorkflowEdges from './WorkflowEdges.svelte';
@@ -22,6 +22,9 @@
 	const MIN_PREVIEW_H = 60;   // px — minimum preview panel height when resizing
 	const MIN_PLOT_W = 100;     // px — minimum actual plot width
 	const MIN_PLOT_H = 80;      // px — minimum actual plot height
+
+	// Pastel colour palette for data nodes grouped by source table (cycles when > 6 tables)
+	const TABLE_COLORS = ['#c8d8f0', '#f0c8d8', '#c8f0d8', '#d8c8f0', '#f0d8c8', '#d8f0c8'];
 
 	// Derive the natural preview height from a plot's aspect ratio (no cropping by default)
 	function getDefaultPreviewH(plotObj) {
@@ -45,20 +48,49 @@
 	const allNodes = $derived.by(() => {
 		const result = [];
 
-		// Col 0: data nodes
+		// Build set of TP output column IDs (these go in col 3, not col 0)
+		const tpOutputColIds = new Set();
+		core.tables.forEach((table) => {
+			table.processes.forEach((tp) => {
+				if (tp.args.out) {
+					Object.values(tp.args.out).forEach((id) => {
+						if (id != null && id >= 0) tpOutputColIds.add(id);
+					});
+				}
+			});
+		});
+
+		// Build colId → table colour (stable by table index)
+		const colToColor = new Map();
+		core.tables.forEach((table, idx) => {
+			const color = TABLE_COLORS[idx % TABLE_COLORS.length];
+			table.columnRefs.forEach((colId) => colToColor.set(colId, color));
+			table.processes.forEach((tp) => {
+				if (tp.args.out) {
+					Object.values(tp.args.out).forEach((colId) => {
+						if (colId != null && colId >= 0) colToColor.set(colId, color);
+					});
+				}
+			});
+		});
+
+		// Col 0: regular input data nodes (not TP outputs)
 		core.data.forEach((col) => {
+			if (tpOutputColIds.has(col.id)) return;
 			result.push({
 				id: `data_${col.id}`,
 				label: col.name,
 				sublabel: col.type,
 				type: 'data',
 				col: 0,
-				refId: col.id
+				refId: col.id,
+				tableColor: colToColor.get(col.id)
 			});
 		});
 
-		// Col 1: column process nodes
+		// Col 1: column process nodes (only on input columns)
 		core.data.forEach((col) => {
+			if (tpOutputColIds.has(col.id)) return;
 			col.processes.forEach((p) => {
 				result.push({
 					id: `process_${p.id}`,
@@ -88,14 +120,37 @@
 			});
 		});
 
-		// Col 3: plot nodes
+		// Col 3: TP output data nodes, ordered by TP so they appear near their parent TP
+		core.tables.forEach((table, tableIdx) => {
+			const color = TABLE_COLORS[tableIdx % TABLE_COLORS.length];
+			table.processes.forEach((tp) => {
+				if (!tp.args.out) return;
+				Object.values(tp.args.out).forEach((colId) => {
+					if (colId == null || colId < 0) return;
+					const col = core.data.find((d) => d.id === colId);
+					if (!col) return;
+					result.push({
+						id: `data_${col.id}`,
+						label: col.name,
+						sublabel: col.type,
+						type: 'data',
+						col: 3,
+						refId: col.id,
+						tableColor: color,
+						isTPOutput: true
+					});
+				});
+			});
+		});
+
+		// Col 4: plot nodes (was col 3)
 		core.plots.forEach((plot) => {
 			result.push({
 				id: `plot_${plot.id}`,
 				label: plot.name,
 				sublabel: plot.type,
 				type: 'plot',
-				col: 3,
+				col: 4,
 				refId: plot.id,
 				plotObj: plot
 			});
@@ -106,7 +161,7 @@
 
 	// Assign default column-layout positions (plot column uses aspect-ratio-derived row height)
 	const nodePositions = $derived.by(() => {
-		const colOffsets = { 0: 0, 1: 0, 2: 0, 3: 0 };
+		const colOffsets = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
 		const positions = {};
 
 		for (const node of allNodes) {
@@ -115,7 +170,7 @@
 				x: col * COL_WIDTH + PADDING,
 				y: colOffsets[col] + PADDING
 			};
-			if (col === 3) {
+			if (col === 4) {
 				const ps = plotPreviewSizes[node.id];
 				const h = ps ? ps.h : getDefaultPreviewH(node.plotObj);
 				colOffsets[col] += NODE_HEIGHT + h + 24;
@@ -130,12 +185,12 @@
 	const customPositions = $state({});
 
 	// Canvas dimensions
-	const canvasWidth = $derived(4 * COL_WIDTH + 2 * PADDING);
+	const canvasWidth = $derived(5 * COL_WIDTH + 2 * PADDING);
 	const canvasHeight = $derived.by(() => {
-		const colHeights = [0, 1, 2, 3].map((col) => {
+		const colHeights = [0, 1, 2, 3, 4].map((col) => {
 			let total = 0;
 			allNodes.filter((n) => n.col === col).forEach((n) => {
-				if (col === 3) {
+				if (col === 4) {
 					const ps = plotPreviewSizes[n.id];
 					total += NODE_HEIGHT + (ps ? ps.h : getDefaultPreviewH(n.plotObj)) + 24;
 				} else {
@@ -284,54 +339,6 @@
 
 	// --- Column drag-to-replace drop target ---
 	let dropTargetNodeId = $state(null);
-
-	/**
-	 * Replace all downstream references to `oldColId` with `newColId`.
-	 * Updates: column refIds, table-process input args and columnRefs,
-	 * table columnRefs, and plot data refs.
-	 */
-	function replaceColumnRefs(newColId, oldColId) {
-		if (newColId === oldColId) return;
-
-		// 1. Columns that derive from the old column
-		core.data.forEach((col) => {
-			if (col.refId === oldColId) col.refId = newColId;
-		});
-
-		// 2. Table processes
-		core.tables.forEach((table) => {
-			table.columnRefs = table.columnRefs.map((id) => (id === oldColId ? newColId : id));
-			table.processes.forEach((tp) => {
-				if (tp.args.xIN === oldColId) tp.args.xIN = newColId;
-				if (tp.args.yIN === oldColId) tp.args.yIN = newColId;
-				if (Array.isArray(tp.args.xsIN)) {
-					tp.args.xsIN = tp.args.xsIN.map((id) => (id === oldColId ? newColId : id));
-				}
-				if (tp.args.out) {
-					Object.keys(tp.args.out).forEach((key) => {
-						if (tp.args.out[key] === oldColId) tp.args.out[key] = newColId;
-					});
-				}
-			});
-		});
-
-		// 3. Plots
-		core.plots.forEach((plot) => {
-			if (plot.type === 'tableplot') {
-				if (plot.plot.columnRefs) {
-					plot.plot.columnRefs = plot.plot.columnRefs.map((id) =>
-						id === oldColId ? newColId : id
-					);
-				}
-			} else {
-				plot.plot.data?.forEach((d) => {
-					['x', 'y', 'z'].forEach((axis) => {
-						if (d[axis]?.refId === oldColId) d[axis].refId = newColId;
-					});
-				});
-			}
-		});
-	}
 
 	// --- Plot resize state ---
 	// { nodeId, plotObj, startMouse:{x,y}, startW, startH, startPlotW, startPlotH }
@@ -596,7 +603,9 @@
 	<div class="workflow-header">
 		<span class="workflow-title">Workflow</span>
 		<div class="header-legend">
-			<span class="legend-item" style="background:#b3d9f2;">data</span>
+			{#each core.tables as table, idx (table.id)}
+				<span class="legend-item" style="background:{TABLE_COLORS[idx % TABLE_COLORS.length]};">{table.name}</span>
+			{/each}
 			<span class="legend-item" style="background:#fffacc;">process</span>
 			<span class="legend-item" style="background:#ffe0b3;">table process</span>
 			<span class="legend-item" style="background:#b3f2cc;">plot</span>

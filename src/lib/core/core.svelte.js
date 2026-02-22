@@ -177,6 +177,67 @@ function findNextAvailablePosition(existingPlots) {
 	}
 }
 
+/**
+ * Replace all downstream references to `oldColId` with `newColId`.
+ * Updates: column refIds, table-process input args and output args,
+ * table columnRefs, and plot data refs.
+ */
+export function replaceColumnRefs(newColId, oldColId) {
+	if (newColId === oldColId) return;
+
+	core.data.forEach((col) => {
+		if (col.refId === oldColId) col.refId = newColId;
+	});
+
+	core.tables.forEach((table) => {
+		table.columnRefs = table.columnRefs.map((id) => (id === oldColId ? newColId : id));
+		table.processes.forEach((tp) => {
+			if (tp.args.xIN === oldColId) tp.args.xIN = newColId;
+			if (tp.args.yIN === oldColId) tp.args.yIN = newColId;
+			if (Array.isArray(tp.args.xsIN)) {
+				tp.args.xsIN = tp.args.xsIN.map((id) => (id === oldColId ? newColId : id));
+			}
+			if (tp.args.out) {
+				Object.keys(tp.args.out).forEach((key) => {
+					if (tp.args.out[key] === oldColId) tp.args.out[key] = newColId;
+				});
+			}
+		});
+	});
+
+	core.plots.forEach((plot) => {
+		if (plot.type === 'tableplot') {
+			if (plot.plot.columnRefs) {
+				plot.plot.columnRefs = plot.plot.columnRefs.map((id) =>
+					id === oldColId ? newColId : id
+				);
+			}
+		} else {
+			plot.plot.data?.forEach((d) => {
+				['x', 'y', 'z'].forEach((axis) => {
+					if (d[axis]?.refId === oldColId) d[axis].refId = newColId;
+				});
+			});
+		}
+	});
+}
+
+/**
+ * Atomically swap all downstream references between two column IDs.
+ * Uses a temporary sentinel (one below the minimum real column ID) so
+ * the three-step A→temp, B→A, temp→B pattern cannot collide with any
+ * existing column ID.
+ */
+export function swapColumnRefs(idA, idB) {
+	if (idA === idB) return;
+	// Pick a sentinel that cannot be a real column ID
+	const allIds = core.data.map((c) => c.id);
+	const TEMP_ID = allIds.length ? Math.min(...allIds) - 1 : -1;
+	replaceColumnRefs(TEMP_ID, idA);
+	replaceColumnRefs(idA, idB);
+	replaceColumnRefs(idB, TEMP_ID);
+}
+
 export function outputCoreAsJson() {
 	let coreOut = JSON.parse(JSON.stringify(core));
 	coreOut.rawData = Object.fromEntries(core.rawData);

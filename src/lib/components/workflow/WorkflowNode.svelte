@@ -9,6 +9,7 @@
 		plot: '#b3f2cc'
 	};
 
+	const bgColor = node.tableColor ?? typeColors[node.type] ?? '#eee';
 	const isEditable = node.type === 'process' || node.type === 'tableprocess';
 	// Plot nodes always have a preview panel below, so apply the expanded border style
 	const hasPanel = node.type === 'plot' || expanded;
@@ -19,7 +20,7 @@
 	class:selected
 	class:expanded={hasPanel}
 	class:drop-target={isDropTarget}
-	style="background-color: {typeColors[node.type] ?? '#eee'};"
+	style="background-color: {bgColor};"
 	role="button"
 	tabindex="0"
 >
