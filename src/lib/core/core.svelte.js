@@ -59,7 +59,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.8.1',
+	version: 'β.9.0',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
@@ -208,9 +208,7 @@ export function replaceColumnRefs(newColId, oldColId) {
 	core.plots.forEach((plot) => {
 		if (plot.type === 'tableplot') {
 			if (plot.plot.columnRefs) {
-				plot.plot.columnRefs = plot.plot.columnRefs.map((id) =>
-					id === oldColId ? newColId : id
-				);
+				plot.plot.columnRefs = plot.plot.columnRefs.map((id) => (id === oldColId ? newColId : id));
 			}
 		} else {
 			plot.plot.data?.forEach((d) => {
