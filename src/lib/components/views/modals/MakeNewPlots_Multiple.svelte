@@ -10,6 +10,7 @@
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
+	import Toggle from '$lib/components/inputs/Toggle.svelte';
 	import { tick } from 'svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 
@@ -22,6 +23,44 @@
 
 	let xCol = $state();
 	let yCols = $state([]); // contains column id
+	let combinePlots = $state(false); // false = separate plots, true = combined into one plot
+
+	async function confirmMakeCombinedPlot() {
+		awaitingMake = true;
+		await tick();
+		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
+		await tick();
+
+		const container = document.getElementsByClassName('canvas')[0];
+
+		const newPlot = new Plot({
+			name: capitalise(plotType) + '_combined',
+			type: plotType
+		});
+
+		for (let i = 0; i < yCols.length; i++) {
+			newPlot.plot.addData({
+				x: { refId: Number(xCol) },
+				y: { refId: yCols[i] }
+			});
+			await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
+		}
+
+		pushObj(newPlot);
+
+		//select the new plot
+		deselectAllPlots();
+		core.plots[core.plots.length - 1].selected = true;
+
+		//reset the form
+		plotType = 'Plot';
+		xCol = null;
+		yCols = [];
+		combinePlots = false;
+		awaitingMake = false;
+		steps[0].completed = false;
+		showModal = false;
+	}
 
 	async function confirmMakePlots() {
 		awaitingMake = true;
@@ -77,6 +116,7 @@
 		plotType = 'Plot';
 		xCol = null;
 		yCols = [];
+		combinePlots = false;
 		awaitingMake = false;
 		steps[0].completed = false;
 		showModal = false;
@@ -142,6 +182,9 @@
 				}}
 			/>
 		</div>
+		<div class="combine-toggle">
+			<Toggle Labels={['Separate plots', 'Combined plot']} onChange={(v) => (combinePlots = v)} />
+		</div>
 	{/if}
 	{#if index === 1}
 		<AttributeSelect
@@ -172,8 +215,15 @@
 					class="dialog-button"
 					onclick={(e) => {
 						e.stopPropagation();
-						confirmMakePlots();
-					}}>Make these {yCols.length} plots</button
+						if (combinePlots) {
+							confirmMakeCombinedPlot();
+						} else {
+							confirmMakePlots();
+						}
+					}}
+					>{combinePlots
+						? `Combine ${yCols.length} data sets into one plot`
+						: `Make these ${yCols.length} plots`}</button
 				>
 			</div>
 		{/if}
@@ -183,10 +233,18 @@
 <Modal bind:showModal>
 	{#snippet header()}
 		{#if awaitingMake}
-			<LoadingSpinner message="Making the {yCols.length} plots." />
+			<LoadingSpinner
+				message={combinePlots
+					? `Making the combined plot with ${yCols.length} data sets.`
+					: `Making the ${yCols.length} plots.`}
+			/>
 		{:else}
 			<div class="heading">
-				<h2>Create New {capitalise(plotType)}s</h2>
+				<h2>
+					{combinePlots
+						? `Create Combined ${capitalise(plotType)}`
+						: `Create New ${capitalise(plotType)}s`}
+				</h2>
 			</div>
 		{/if}
 	{/snippet}
@@ -218,6 +276,13 @@
 		flex-direction: row;
 		align-items: center;
 		gap: 1rem;
+	}
+
+	.combine-toggle {
+		margin-top: 0.5em;
+		display: flex;
+		align-items: center;
+		font-size: 14px;
 	}
 
 	.preview-placeholder {
