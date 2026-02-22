@@ -4,6 +4,7 @@
 	import { selectPlot, deselectAllPlots } from '$lib/core/Plot.svelte';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import WorkflowEdges from './WorkflowEdges.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
 	import MakeNewPlot from '$lib/components/views/modals/MakeNewPlot.svelte';
 	import MakeNewColumn from '$lib/components/views/modals/MakeNewColumn.svelte';
 	import AddProcess from '$lib/components/iconActions/AddProcess.svelte';
@@ -15,6 +16,11 @@
 	const PADDING = 40;
 	const EDITOR_PANEL_WIDTH = 220;
 	const EDITOR_PANEL_MAX_HEIGHT = 320;
+
+	// Pan / zoom constants
+	const MIN_ZOOM = 0.15;
+	const MAX_ZOOM = 4;
+	const ZOOM_STEP = 0.1;
 
 	// Plot preview thumbnail constants
 	const PLOT_PREVIEW_DEFAULT_W = 240;  // px — default preview width (wider than node header)
@@ -398,19 +404,25 @@
 	}
 
 	function handleWheel(e) {
-		if (e.ctrlKey || e.metaKey) return;
 		e.preventDefault();
-		const factor = e.deltaY > 0 ? 0.9 : 1.1;
-		const newZoom = Math.min(Math.max(zoom * factor, 0.15), 4);
-		// Keep the canvas point under the cursor fixed while zooming
-		const rect = canvasViewportEl?.getBoundingClientRect() ?? { left: 0, top: 0 };
-		const relX = e.clientX - rect.left;
-		const relY = e.clientY - rect.top;
-		const canvasX = (relX - panX) / zoom;
-		const canvasY = (relY - panY) / zoom;
-		panX = relX - canvasX * newZoom;
-		panY = relY - canvasY * newZoom;
-		zoom = newZoom;
+		if (e.ctrlKey || e.metaKey) {
+			// Pinch-to-zoom: ctrl/meta + wheel zooms
+			const factor = e.deltaY > 0 ? 0.9 : 1.1;
+			const newZoom = Math.min(Math.max(zoom * factor, MIN_ZOOM), MAX_ZOOM);
+			// Keep the canvas point under the cursor fixed while zooming
+			const rect = canvasViewportEl?.getBoundingClientRect() ?? { left: 0, top: 0 };
+			const relX = e.clientX - rect.left;
+			const relY = e.clientY - rect.top;
+			const canvasX = (relX - panX) / zoom;
+			const canvasY = (relY - panY) / zoom;
+			panX = relX - canvasX * newZoom;
+			panY = relY - canvasY * newZoom;
+			zoom = newZoom;
+		} else {
+			// Regular scroll: pan the canvas
+			panX -= e.deltaX;
+			panY -= e.deltaY;
+		}
 	}
 
 	function handleCanvasMouseDown(e) {
@@ -711,6 +723,23 @@
 			{/each}
 		</div>
 	</div>
+
+	<div class="zoom-controls">
+		<button
+			class="icon zoom-btn"
+			onclick={(e) => { e.stopPropagation(); zoom = Math.min(zoom + ZOOM_STEP, MAX_ZOOM); }}
+			title="Zoom in"
+		>
+			<Icon name="zoom-in" width={24} height={24} />
+		</button>
+		<button
+			class="icon zoom-btn"
+			onclick={(e) => { e.stopPropagation(); zoom = Math.max(zoom - ZOOM_STEP, MIN_ZOOM); }}
+			title="Zoom out"
+		>
+			<Icon name="zoom-out" width={24} height={24} />
+		</button>
+	</div>
 </div>
 
 <!-- Insert modals / dropdowns rendered outside the transformed canvas -->
@@ -860,6 +889,33 @@
 	.plot-resize-handle:hover {
 		color: #333;
 		background: rgba(255, 255, 255, 1);
+	}
+
+	.zoom-controls {
+		position: absolute;
+		bottom: 10px;
+		right: 10px;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		z-index: 10;
+	}
+
+	.zoom-btn {
+		width: 28px;
+		height: 28px;
+		background: white;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 4px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+	}
+
+	.zoom-btn:hover {
+		background: var(--color-lightness-95);
 	}
 
 	/* "+ Process" button on data nodes */
