@@ -153,9 +153,17 @@
 		return id != null && id >= 0;
 	}
 
-	/** Returns true if (cx, cy) falls within a node's bounding box on the canvas. */
-	function isNodeHit(cx, cy, pos) {
-		return cx >= pos.x && cx <= pos.x + NODE_WIDTH && cy >= pos.y && cy <= pos.y + NODE_HEIGHT;
+	/**
+	 * Returns true if two NODE_WIDTH×NODE_HEIGHT boxes (each described by top-left {x,y})
+	 * overlap. Used for drag-to-replace drop detection in canvas coordinate space.
+	 */
+	function boxesOverlap(a, b) {
+		return (
+			a.x < b.x + NODE_WIDTH &&
+			a.x + NODE_WIDTH > b.x &&
+			a.y < b.y + NODE_HEIGHT &&
+			a.y + NODE_HEIGHT > b.y
+		);
 	}
 
 	// Step 1: edge connectivity only (re-derives when core changes, NOT when positions change)
@@ -265,6 +273,8 @@
 	let panY = $state(0);
 	let zoom = $state(1);
 	let isPanning = $state(false);
+	/** Bound to the .canvas-viewport element for precise coordinate conversion. */
+	let canvasViewportEl = $state(null);
 	let panStartX = $state(0);
 	let panStartY = $state(0);
 
@@ -371,16 +381,28 @@
 
 	// --- Event handlers ---
 
+	/** Convert a mouse event's client coords to canvas-inner coordinates. */
+	function toCanvasCoords(clientX, clientY) {
+		const rect = canvasViewportEl?.getBoundingClientRect() ?? { left: 0, top: 0 };
+		return {
+			x: (clientX - rect.left - panX) / zoom,
+			y: (clientY - rect.top - panY) / zoom
+		};
+	}
+
 	function handleWheel(e) {
 		if (e.ctrlKey || e.metaKey) return;
 		e.preventDefault();
 		const factor = e.deltaY > 0 ? 0.9 : 1.1;
 		const newZoom = Math.min(Math.max(zoom * factor, 0.15), 4);
 		// Keep the canvas point under the cursor fixed while zooming
-		const canvasX = (e.clientX - panX) / zoom;
-		const canvasY = (e.clientY - panY) / zoom;
-		panX = e.clientX - canvasX * newZoom;
-		panY = e.clientY - canvasY * newZoom;
+		const rect = canvasViewportEl?.getBoundingClientRect() ?? { left: 0, top: 0 };
+		const relX = e.clientX - rect.left;
+		const relY = e.clientY - rect.top;
+		const canvasX = (relX - panX) / zoom;
+		const canvasY = (relY - panY) / zoom;
+		panX = relX - canvasX * newZoom;
+		panY = relY - canvasY * newZoom;
 		zoom = newZoom;
 	}
 
@@ -400,8 +422,7 @@
 		if (e.target.closest('.plot-resize-handle')) return;
 		if (e.target.closest('.node-add-btn')) return;
 
-		const canvasX = (e.clientX - panX) / zoom;
-		const canvasY = (e.clientY - panY) / zoom;
+		const { x: canvasX, y: canvasY } = toCanvasCoords(e.clientX, e.clientY);
 		const pos = customPositions[node.id] ?? nodePositions[node.id];
 		if (!pos) return;
 
@@ -456,20 +477,18 @@
 			return;
 		}
 		if (dragInfo) {
-			const canvasX = (e.clientX - panX) / zoom;
-			const canvasY = (e.clientY - panY) / zoom;
+			const { x: canvasX, y: canvasY } = toCanvasCoords(e.clientX, e.clientY);
 			const dx = canvasX - dragInfo.startMouseCanvas.x;
 			const dy = canvasY - dragInfo.startMouseCanvas.y;
 
 			if (!dragInfo.moved && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
-				// Flip the flag in-place to avoid an extra object allocation per frame
 				dragInfo.moved = true;
 			}
 			if (dragInfo.moved) {
-				// Mutate existing entry when possible to minimise allocations
-				const prev = customPositions[dragInfo.nodeId];
+				// Update dragged node position in canvas space
 				const nx = dragInfo.startPos.x + dx;
 				const ny = dragInfo.startPos.y + dy;
+				const prev = customPositions[dragInfo.nodeId];
 				if (prev) {
 					prev.x = nx;
 					prev.y = ny;
@@ -477,15 +496,17 @@
 					customPositions[dragInfo.nodeId] = { x: nx, y: ny };
 				}
 
-				// Track drop target: if dragging a data node, detect overlapping data nodes
+				// Drop-target detection: compare dragged node's bbox against each data node's bbox.
+				// Both positions are in canvas space, so no viewport-offset error.
 				const draggedNode = allNodes.find((n) => n.id === dragInfo.nodeId);
 				if (draggedNode?.type === 'data') {
+					const draggedBox = { x: nx, y: ny };
 					let found = null;
 					for (const node of allNodes) {
 						if (node.type !== 'data' || node.id === dragInfo.nodeId) continue;
 						const pos = customPositions[node.id] ?? nodePositions[node.id];
 						if (!pos) continue;
-						if (isNodeHit(canvasX, canvasY, pos)) {
+						if (boxesOverlap(draggedBox, pos)) {
 							found = node.id;
 							break;
 						}
@@ -591,7 +612,7 @@
 		<button class="close-btn" onclick={() => (appState.showWorkflow = false)}>✕</button>
 	</div>
 
-	<div class="canvas-viewport" class:panning={isPanning && !dragInfo}>
+	<div class="canvas-viewport" bind:this={canvasViewportEl} class:panning={isPanning && !dragInfo}>
 		<div
 			class="canvas-inner"
 			style="transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0; width: {canvasWidth}px; height: {canvasHeight}px; position: relative;"
@@ -611,6 +632,8 @@
 						class:dragging={isDragging}
 						class:dimmed={isDimmed}
 						style="position: absolute; left: {pos.x}px; top: {pos.y}px; z-index: {nodeZIndex};"
+						title={node.type === 'data' ? 'Drag onto another data node to replace all its downstream references' : undefined}
+						aria-label={node.type === 'data' ? `${node.label} data node — drag onto another data node to replace all downstream references` : node.label}
 						onmousedown={(e) => handleNodeWrapperMouseDown(e, node)}
 						onmouseup={(e) => handleNodeWrapperMouseUp(e, node)}
 						onclick={(e) => e.stopPropagation()}
