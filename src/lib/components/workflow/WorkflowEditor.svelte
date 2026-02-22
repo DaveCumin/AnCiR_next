@@ -360,7 +360,7 @@
 	function handleResizeMouseDown(e, node) {
 		e.stopPropagation();
 		const id = node.id;
-		const cur = plotPreviewSizes[id] ?? { w: PLOT_PREVIEW_DEFAULT_W, h: PLOT_PREVIEW_DEFAULT_H };
+		const cur = plotPreviewSizes[id] ?? { w: PLOT_PREVIEW_DEFAULT_W, h: getDefaultPreviewH(node.plotObj) };
 		resizeInfo = {
 			nodeId: id,
 			plotObj: node.plotObj,
