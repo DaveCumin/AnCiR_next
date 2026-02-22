@@ -23,11 +23,11 @@
 	const ZOOM_STEP = 0.1;
 
 	// Plot preview thumbnail constants
-	const PLOT_PREVIEW_DEFAULT_W = 240;  // px — default preview width (wider than node header)
-	const MIN_PREVIEW_W = 80;   // px — minimum preview panel width when resizing
-	const MIN_PREVIEW_H = 60;   // px — minimum preview panel height when resizing
-	const MIN_PLOT_W = 100;     // px — minimum actual plot width
-	const MIN_PLOT_H = 80;      // px — minimum actual plot height
+	const PLOT_PREVIEW_DEFAULT_W = 240; // px — default preview width (wider than node header)
+	const MIN_PREVIEW_W = 80; // px — minimum preview panel width when resizing
+	const MIN_PREVIEW_H = 60; // px — minimum preview panel height when resizing
+	const MIN_PLOT_W = 100; // px — minimum actual plot width
+	const MIN_PLOT_H = 80; // px — minimum actual plot height
 
 	// Pastel colour palette for data nodes grouped by source table (cycles when > 6 tables)
 	const TABLE_COLORS = ['#c8d8f0', '#f0c8d8', '#c8f0d8', '#d8c8f0', '#f0d8c8', '#d8f0c8'];
@@ -195,14 +195,16 @@
 	const canvasHeight = $derived.by(() => {
 		const colHeights = [0, 1, 2, 3, 4].map((col) => {
 			let total = 0;
-			allNodes.filter((n) => n.col === col).forEach((n) => {
-				if (col === 4) {
-					const ps = plotPreviewSizes[n.id];
-					total += NODE_HEIGHT + (ps ? ps.h : getDefaultPreviewH(n.plotObj)) + 24;
-				} else {
-					total += ROW_HEIGHT;
-				}
-			});
+			allNodes
+				.filter((n) => n.col === col)
+				.forEach((n) => {
+					if (col === 4) {
+						const ps = plotPreviewSizes[n.id];
+						total += NODE_HEIGHT + (ps ? ps.h : getDefaultPreviewH(n.plotObj)) + 24;
+					} else {
+						total += ROW_HEIGHT;
+					}
+				});
 			return total;
 		});
 		return Math.max(...colHeights, 5 * ROW_HEIGHT) + 2 * PADDING;
@@ -456,7 +458,10 @@
 	function handleResizeMouseDown(e, node) {
 		e.stopPropagation();
 		const id = node.id;
-		const cur = plotPreviewSizes[id] ?? { w: PLOT_PREVIEW_DEFAULT_W, h: getDefaultPreviewH(node.plotObj) };
+		const cur = plotPreviewSizes[id] ?? {
+			w: PLOT_PREVIEW_DEFAULT_W,
+			h: getDefaultPreviewH(node.plotObj)
+		};
 		resizeInfo = {
 			nodeId: id,
 			plotObj: node.plotObj,
@@ -491,8 +496,14 @@
 			const nh = Math.max(MIN_PREVIEW_H, resizeInfo.startH + dy);
 			plotPreviewSizes[resizeInfo.nodeId] = { w: nw, h: nh };
 			// Scale the actual plot proportionally so detail level is consistent
-			resizeInfo.plotObj.width = Math.max(MIN_PLOT_W, Math.round(resizeInfo.startPlotW * (nw / resizeInfo.startW)));
-			resizeInfo.plotObj.height = Math.max(MIN_PLOT_H, Math.round(resizeInfo.startPlotH * (nh / resizeInfo.startH)));
+			resizeInfo.plotObj.width = Math.max(
+				MIN_PLOT_W,
+				Math.round(resizeInfo.startPlotW * (nw / resizeInfo.startW))
+			);
+			resizeInfo.plotObj.height = Math.max(
+				MIN_PLOT_H,
+				Math.round(resizeInfo.startPlotH * (nh / resizeInfo.startH))
+			);
 			return;
 		}
 		if (dragInfo) {
@@ -616,16 +627,24 @@
 		<span class="workflow-title">Workflow</span>
 		<div class="header-legend">
 			{#each core.tables as table, idx (table.id)}
-				<span class="legend-item" style="background:{TABLE_COLORS[idx % TABLE_COLORS.length]};">{table.name}</span>
+				<span class="legend-item" style="background:{TABLE_COLORS[idx % TABLE_COLORS.length]};"
+					>{table.name}</span
+				>
 			{/each}
 			<span class="legend-item" style="background:#fffacc;">process</span>
 			<span class="legend-item" style="background:#ffe0b3;">table process</span>
 			<span class="legend-item" style="background:#b3f2cc;">plot</span>
 		</div>
 		<div class="header-add-actions">
-			<button class="header-add-btn" onclick={() => (showAddPlotModal = true)} title="Add new plot">+ Plot</button>
+			<button class="header-add-btn" onclick={() => (showAddPlotModal = true)} title="Add new plot"
+				>+ Plot</button
+			>
 			{#each core.tables as table (table.id)}
-				<button class="header-add-btn header-add-tp" onclick={(e) => openAddTableProcess(e, table.id)} title="Add table process to {table.name}">
+				<button
+					class="header-add-btn header-add-tp"
+					onclick={(e) => openAddTableProcess(e, table.id)}
+					title="Add table process to {table.name}"
+				>
 					+ TP: {table.name}
 				</button>
 			{/each}
@@ -638,7 +657,12 @@
 			class="canvas-inner"
 			style="transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0; width: {canvasWidth}px; height: {canvasHeight}px; position: relative;"
 		>
-			<WorkflowEdges edges={allEdges} width={canvasWidth} height={canvasHeight} highlightedIds={connectedNodeIds} />
+			<WorkflowEdges
+				edges={allEdges}
+				width={canvasWidth}
+				height={canvasHeight}
+				highlightedIds={connectedNodeIds}
+			/>
 
 			{#each allNodes as node (node.id)}
 				{@const pos = customPositions[node.id] ?? nodePositions[node.id]}
@@ -653,8 +677,12 @@
 						class:dragging={isDragging}
 						class:dimmed={isDimmed}
 						style="position: absolute; left: {pos.x}px; top: {pos.y}px; z-index: {nodeZIndex};"
-						title={node.type === 'data' ? 'Drag onto another data node to replace all its downstream references' : undefined}
-						aria-label={node.type === 'data' ? `${node.label} data node — drag onto another data node to replace all downstream references` : node.label}
+						title={node.type === 'data'
+							? 'Drag onto another data node to replace all its downstream references'
+							: undefined}
+						aria-label={node.type === 'data'
+							? `${node.label} data node — drag onto another data node to replace all downstream references`
+							: node.label}
 						onmousedown={(e) => handleNodeWrapperMouseDown(e, node)}
 						onmouseup={(e) => handleNodeWrapperMouseUp(e, node)}
 						onclick={(e) => e.stopPropagation()}
@@ -674,22 +702,28 @@
 									class="node-add-btn"
 									onmousedown={(e) => e.stopPropagation()}
 									onclick={(e) => openAddProcess(e, col)}
-									title="Add process to {col.name}"
-								>+ Process</button>
+									title="Add process to {col.name}">+ Process</button
+								>
 							{/if}
 						{/if}
 
 						{#if isExpanded && node.type === 'process' && node.processObj}
 							{@const PComp = appConsts.processMap.get(node.processName)?.component}
 							{#if PComp}
-								<div class="process-editor-panel" style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;">
+								<div
+									class="process-editor-panel"
+									style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;"
+								>
 									<PComp p={node.processObj} />
 								</div>
 							{/if}
 						{:else if isExpanded && node.type === 'tableprocess' && node.tpObj}
 							{@const TPComp = appConsts.tableProcessMap.get(node.tpName)?.component}
 							{#if TPComp}
-								<div class="process-editor-panel" style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;">
+								<div
+									class="process-editor-panel"
+									style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;"
+								>
 									<TPComp p={node.tpObj} />
 								</div>
 							{/if}
@@ -697,16 +731,17 @@
 
 						{#if node.type === 'plot' && node.plotObj}
 							{@const PlotComp = appConsts.plotMap.get(node.plotObj.type)?.plot}
-							{@const pSize = plotPreviewSizes[node.id] ?? { w: PLOT_PREVIEW_DEFAULT_W, h: getDefaultPreviewH(node.plotObj) }}
+							{@const pSize = plotPreviewSizes[node.id] ?? {
+								w: PLOT_PREVIEW_DEFAULT_W,
+								h: getDefaultPreviewH(node.plotObj)
+							}}
 							{@const previewScale = pSize.w / node.plotObj.width}
 							{#if PlotComp}
-								<div
-									class="plot-preview-panel"
-									style="width:{pSize.w}px; height:{pSize.h}px;"
-								>
+								<div class="plot-preview-panel" style="width:{pSize.w}px; height:{pSize.h}px;">
 									<div
 										class="plot-preview-inner"
-										style="transform:scale({previewScale}); transform-origin:top left; width:{node.plotObj.width}px; height:{node.plotObj.height}px;"
+										style="transform:scale({previewScale}); transform-origin:top left; width:{node
+											.plotObj.width}px; height:{node.plotObj.height}px;"
 									>
 										<PlotComp theData={node.plotObj} which="plot" />
 									</div>
@@ -714,7 +749,9 @@
 										class="plot-resize-handle"
 										onmousedown={(e) => handleResizeMouseDown(e, node)}
 										title="Drag to resize"
-									>⤡</div>
+									>
+										⤡
+									</div>
 								</div>
 							{/if}
 						{/if}
@@ -726,18 +763,24 @@
 
 	<div class="zoom-controls">
 		<button
-			class="icon zoom-btn"
-			onclick={(e) => { e.stopPropagation(); zoom = Math.min(zoom + ZOOM_STEP, MAX_ZOOM); }}
-			title="Zoom in"
-		>
-			<Icon name="zoom-in" width={24} height={24} />
-		</button>
-		<button
-			class="icon zoom-btn"
-			onclick={(e) => { e.stopPropagation(); zoom = Math.max(zoom - ZOOM_STEP, MIN_ZOOM); }}
+			class="icon zoomout"
+			onclick={(e) => {
+				e.stopPropagation();
+				zoom = Math.max(zoom - ZOOM_STEP, MIN_ZOOM);
+			}}
 			title="Zoom out"
 		>
 			<Icon name="zoom-out" width={24} height={24} />
+		</button>
+		<button
+			class="icon zoomin"
+			onclick={(e) => {
+				e.stopPropagation();
+				zoom = Math.min(zoom + ZOOM_STEP, MAX_ZOOM);
+			}}
+			title="Zoom in"
+		>
+			<Icon name="zoom-in" width={24} height={24} />
 		</button>
 	</div>
 </div>
