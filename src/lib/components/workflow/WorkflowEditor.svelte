@@ -13,6 +13,11 @@
 	const EDITOR_PANEL_WIDTH = 220;
 	const EDITOR_PANEL_MAX_HEIGHT = 320;
 
+	// Plot preview thumbnail constants
+	const PLOT_PREVIEW_WIDTH = NODE_WIDTH;   // px — preview matches node header width (160)
+	const PLOT_PREVIEW_MAX_HEIGHT = 100;     // px — cap preview height
+	const PLOT_ROW_HEIGHT = NODE_HEIGHT + PLOT_PREVIEW_MAX_HEIGHT + 16; // taller rows for plot col
+
 	// Derive all nodes from core — include live process/tp object references
 	const allNodes = $derived.by(() => {
 		const result = [];
@@ -68,26 +73,26 @@
 				sublabel: plot.type,
 				type: 'plot',
 				col: 3,
-				refId: plot.id
+				refId: plot.id,
+				plotObj: plot
 			});
 		});
 
 		return result;
 	});
 
-	// Assign default column-layout positions
+	// Assign default column-layout positions (plot column uses a taller row height)
 	const nodePositions = $derived.by(() => {
-		const colCounts = { 0: 0, 1: 0, 2: 0, 3: 0 };
+		const colOffsets = { 0: 0, 1: 0, 2: 0, 3: 0 };
 		const positions = {};
 
 		for (const node of allNodes) {
 			const col = node.col;
-			const row = colCounts[col] ?? 0;
-			colCounts[col] = row + 1;
 			positions[node.id] = {
 				x: col * COL_WIDTH + PADDING,
-				y: row * ROW_HEIGHT + PADDING
+				y: colOffsets[col] + PADDING
 			};
+			colOffsets[col] += col === 3 ? PLOT_ROW_HEIGHT : ROW_HEIGHT;
 		}
 		return positions;
 	});
@@ -98,9 +103,12 @@
 	// Canvas dimensions
 	const canvasWidth = $derived(4 * COL_WIDTH + 2 * PADDING);
 	const canvasHeight = $derived.by(() => {
-		const colCounts = [0, 1, 2, 3].map((col) => allNodes.filter((n) => n.col === col).length);
-		const maxRows = Math.max(...colCounts, 5);
-		return maxRows * ROW_HEIGHT + 2 * PADDING;
+		const colHeights = [0, 1, 2, 3].map((col) => {
+			const count = allNodes.filter((n) => n.col === col).length;
+			const rowH = col === 3 ? PLOT_ROW_HEIGHT : ROW_HEIGHT;
+			return count * rowH;
+		});
+		return Math.max(...colHeights, 5 * ROW_HEIGHT) + 2 * PADDING;
 	});
 
 	// --- Edge derivation split into topology + positioned ---
@@ -412,6 +420,25 @@
 								</div>
 							{/if}
 						{/if}
+
+						{#if node.type === 'plot' && node.plotObj}
+							{@const PlotComp = appConsts.plotMap.get(node.plotObj.type)?.plot}
+							{@const previewScale = PLOT_PREVIEW_WIDTH / node.plotObj.width}
+							{@const previewH = Math.min(node.plotObj.height * previewScale, PLOT_PREVIEW_MAX_HEIGHT)}
+							{#if PlotComp}
+								<div
+									class="plot-preview-panel"
+									style="width:{PLOT_PREVIEW_WIDTH}px; height:{previewH}px;"
+								>
+									<div
+										class="plot-preview-inner"
+										style="transform:scale({previewScale}); transform-origin:top left; width:{node.plotObj.width}px; height:{node.plotObj.height}px;"
+									>
+										<PlotComp theData={node.plotObj} which="plot" />
+									</div>
+								</div>
+							{/if}
+						{/if}
 					</div>
 				{/if}
 			{/each}
@@ -511,5 +538,20 @@
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 		cursor: default;
 		box-sizing: border-box;
+	}
+
+	.plot-preview-panel {
+		overflow: hidden;
+		border: 1.5px solid rgba(0, 0, 0, 0.15);
+		border-top: none;
+		border-bottom-left-radius: 6px;
+		border-bottom-right-radius: 6px;
+		background: white;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+		box-sizing: border-box;
+	}
+
+	.plot-preview-inner {
+		pointer-events: none;
 	}
 </style>

@@ -10,12 +10,14 @@
 	};
 
 	const isEditable = node.type === 'process' || node.type === 'tableprocess';
+	// Plot nodes always have a preview panel below, so apply the expanded border style
+	const hasPanel = node.type === 'plot' || expanded;
 </script>
 
 <div
 	class="workflow-node"
 	class:selected
-	class:expanded
+	class:expanded={hasPanel}
 	style="background-color: {typeColors[node.type] ?? '#eee'};"
 	role="button"
 	tabindex="0"
