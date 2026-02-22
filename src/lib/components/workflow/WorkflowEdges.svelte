@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	let { edges = [], width = 0, height = 0 } = $props();
+	let { edges = [], width = 0, height = 0, highlightedIds = null } = $props();
 
 	const edgeColors = {
 		'data-process': '#aaaaaa',
@@ -12,6 +12,16 @@
 	function cubicBezierPath(x1, y1, x2, y2) {
 		const cx = Math.abs(x2 - x1) * 0.5;
 		return `M ${x1} ${y1} C ${x1 + cx} ${y1}, ${x2 - cx} ${y2}, ${x2} ${y2}`;
+	}
+
+	function edgeOpacity(edge) {
+		if (highlightedIds === null) return 0.7;
+		return highlightedIds.has(edge.fromId) && highlightedIds.has(edge.toId) ? 0.9 : 0.08;
+	}
+
+	function edgeStrokeWidth(edge) {
+		if (highlightedIds === null) return 1.5;
+		return highlightedIds.has(edge.fromId) && highlightedIds.has(edge.toId) ? 2.5 : 1;
 	}
 </script>
 
@@ -25,9 +35,9 @@
 			<path
 				d={cubicBezierPath(edge.from.x, edge.from.y, edge.to.x, edge.to.y)}
 				stroke={edgeColors[edge.type] ?? '#aaaaaa'}
-				stroke-width="1.5"
+				stroke-width={edgeStrokeWidth(edge)}
 				fill="none"
-				opacity="0.7"
+				opacity={edgeOpacity(edge)}
 			/>
 		{/if}
 	{/each}

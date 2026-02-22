@@ -17,13 +17,17 @@
 	const EDITOR_PANEL_MAX_HEIGHT = 320;
 
 	// Plot preview thumbnail constants
-	const PLOT_PREVIEW_DEFAULT_W = NODE_WIDTH;   // px — default preview width (160)
-	const PLOT_PREVIEW_DEFAULT_H = 100;          // px — default preview height
-	const PLOT_ROW_HEIGHT = NODE_HEIGHT + PLOT_PREVIEW_DEFAULT_H + 24; // default row height for plot col
+	const PLOT_PREVIEW_DEFAULT_W = 240;  // px — default preview width (wider than node header)
 	const MIN_PREVIEW_W = 80;   // px — minimum preview panel width when resizing
 	const MIN_PREVIEW_H = 60;   // px — minimum preview panel height when resizing
 	const MIN_PLOT_W = 100;     // px — minimum actual plot width
 	const MIN_PLOT_H = 80;      // px — minimum actual plot height
+
+	// Derive the natural preview height from a plot's aspect ratio (no cropping by default)
+	function getDefaultPreviewH(plotObj) {
+		if (!plotObj?.width) return PLOT_PREVIEW_DEFAULT_W; // fallback: square if no width info
+		return plotObj.height * (PLOT_PREVIEW_DEFAULT_W / plotObj.width);
+	}
 
 	// Per-plot preview size overrides keyed by node id
 	const plotPreviewSizes = $state({});
@@ -100,7 +104,7 @@
 		return result;
 	});
 
-	// Assign default column-layout positions (plot column uses a taller row height)
+	// Assign default column-layout positions (plot column uses aspect-ratio-derived row height)
 	const nodePositions = $derived.by(() => {
 		const colOffsets = { 0: 0, 1: 0, 2: 0, 3: 0 };
 		const positions = {};
@@ -113,7 +117,7 @@
 			};
 			if (col === 3) {
 				const ps = plotPreviewSizes[node.id];
-				const h = ps ? ps.h : PLOT_PREVIEW_DEFAULT_H;
+				const h = ps ? ps.h : getDefaultPreviewH(node.plotObj);
 				colOffsets[col] += NODE_HEIGHT + h + 24;
 			} else {
 				colOffsets[col] += ROW_HEIGHT;
@@ -133,7 +137,7 @@
 			allNodes.filter((n) => n.col === col).forEach((n) => {
 				if (col === 3) {
 					const ps = plotPreviewSizes[n.id];
-					total += NODE_HEIGHT + (ps ? ps.h : PLOT_PREVIEW_DEFAULT_H) + 24;
+					total += NODE_HEIGHT + (ps ? ps.h : getDefaultPreviewH(n.plotObj)) + 24;
 				} else {
 					total += ROW_HEIGHT;
 				}
@@ -270,6 +274,31 @@
 	// --- Expanded process editor ---
 	let expandedNodeId = $state(null);
 
+	// --- Focus / connected-node highlight ---
+	let focusedNodeId = $state(null);
+
+	// BFS both directions in the edge graph to find the full connected subgraph
+	const connectedNodeIds = $derived.by(() => {
+		if (!focusedNodeId) return null;
+		const connected = new Set([focusedNodeId]);
+		const queue = [focusedNodeId];
+		let head = 0; // O(1) dequeue with index pointer
+		while (head < queue.length) {
+			const current = queue[head++];
+			for (const edge of edgeTopology) {
+				if (edge.fromId === current && !connected.has(edge.toId)) {
+					connected.add(edge.toId);
+					queue.push(edge.toId);
+				}
+				if (edge.toId === current && !connected.has(edge.fromId)) {
+					connected.add(edge.fromId);
+					queue.push(edge.fromId);
+				}
+			}
+		}
+		return connected;
+	});
+
 	// Auto-clear expandedNodeId if the node is removed from core
 	$effect(() => {
 		if (expandedNodeId && !allNodes.find((n) => n.id === expandedNodeId)) {
@@ -290,7 +319,13 @@
 		if (e.ctrlKey || e.metaKey) return;
 		e.preventDefault();
 		const factor = e.deltaY > 0 ? 0.9 : 1.1;
-		zoom = Math.min(Math.max(zoom * factor, 0.15), 4);
+		const newZoom = Math.min(Math.max(zoom * factor, 0.15), 4);
+		// Keep the canvas point under the cursor fixed while zooming
+		const canvasX = (e.clientX - panX) / zoom;
+		const canvasY = (e.clientY - panY) / zoom;
+		panX = e.clientX - canvasX * newZoom;
+		panY = e.clientY - canvasY * newZoom;
+		zoom = newZoom;
 	}
 
 	function handleCanvasMouseDown(e) {
@@ -408,6 +443,9 @@
 	}
 
 	function handleNodeAction(node) {
+		// Toggle focus: click same node again to deselect
+		focusedNodeId = focusedNodeId === node.id ? null : node.id;
+
 		if (node.type === 'plot') {
 			// Synthesise a minimal event-like object for selectPlot (needs altKey)
 			selectPlot({ altKey: false }, node.refId);
@@ -422,12 +460,14 @@
 	function handleBackgroundClick() {
 		deselectAllPlots();
 		expandedNodeId = null;
+		focusedNodeId = null;
 	}
 
 	function handleKeyDown(e) {
 		if (e.key === 'Escape') {
 			deselectAllPlots();
 			expandedNodeId = null;
+			focusedNodeId = null;
 		}
 	}
 </script>
@@ -469,16 +509,18 @@
 			class="canvas-inner"
 			style="transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0; width: {canvasWidth}px; height: {canvasHeight}px; position: relative;"
 		>
-			<WorkflowEdges edges={allEdges} width={canvasWidth} height={canvasHeight} />
+			<WorkflowEdges edges={allEdges} width={canvasWidth} height={canvasHeight} highlightedIds={connectedNodeIds} />
 
 			{#each allNodes as node (node.id)}
 				{@const pos = customPositions[node.id] ?? nodePositions[node.id]}
 				{@const isExpanded = expandedNodeId === node.id}
 				{@const isDragging = dragInfo?.nodeId === node.id && dragInfo?.moved}
+				{@const isDimmed = connectedNodeIds !== null && !connectedNodeIds.has(node.id)}
 				{#if pos}
 					<div
 						class="workflow-node-wrapper"
 						class:dragging={isDragging}
+						class:dimmed={isDimmed}
 						style="position: absolute; left: {pos.x}px; top: {pos.y}px; z-index: {isExpanded
 							? 20
 							: 1};"
@@ -523,7 +565,7 @@
 
 						{#if node.type === 'plot' && node.plotObj}
 							{@const PlotComp = appConsts.plotMap.get(node.plotObj.type)?.plot}
-							{@const pSize = plotPreviewSizes[node.id] ?? { w: PLOT_PREVIEW_DEFAULT_W, h: PLOT_PREVIEW_DEFAULT_H }}
+							{@const pSize = plotPreviewSizes[node.id] ?? { w: PLOT_PREVIEW_DEFAULT_W, h: getDefaultPreviewH(node.plotObj) }}
 							{@const previewScale = pSize.w / node.plotObj.width}
 							{#if PlotComp}
 								<div
@@ -637,11 +679,17 @@
 
 	.workflow-node-wrapper {
 		cursor: grab;
+		transition: opacity 0.15s;
 	}
 
 	.workflow-node-wrapper.dragging {
 		cursor: grabbing;
 		opacity: 0.85;
+	}
+
+	.workflow-node-wrapper.dimmed {
+		opacity: 0.2;
+		pointer-events: none;
 	}
 
 	.process-editor-panel {
