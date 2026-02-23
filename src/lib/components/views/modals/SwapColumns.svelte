@@ -21,8 +21,10 @@
 
 <Modal bind:showModal>
 	<div class="swap-header">
-		<h2>Swap Column References</h2>
-		<p>All downstream processes, table processes, and plots will be rewired to swap the two columns.</p>
+		<h2>Swap Columns</h2>
+		<p>
+			All downstream processes, table processes, and plots will be rewired to swap the two columns.
+		</p>
 	</div>
 	<div class="swap-container">
 		<div class="row">

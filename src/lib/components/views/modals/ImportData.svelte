@@ -56,12 +56,18 @@
 
 	let selectedColumns = $state(new Set());
 
+	// Multi-file concatenation support
+	let targetFiles = $state([]); // All selected files
+	let extraFileErrors = $state([]); // [{ filename, error }] for header mismatches
+	let checkingHeaders = $state(false); // True while validating additional file headers
+
 	function resetValues() {
 		parsedData = null;
 		importReady = false;
 		hasHeader = true;
 		delimiter = '';
 		targetFile = null;
+		targetFiles = [];
 		previewIN = 6;
 		skipLines = 0;
 		errorInfile = false;
@@ -73,6 +79,8 @@
 		binningEnabled = false;
 		binIntervalMin = 15;
 		selectedColumns.clear();
+		extraFileErrors = [];
+		checkingHeaders = false;
 	}
 
 	export async function openImportModal() {
@@ -83,7 +91,9 @@
 	}
 
 	async function onFileChange(e) {
-		targetFile = e.target.files[0];
+		const files = [...e.target.files];
+		targetFiles = files;
+		targetFile = files[0] ?? null;
 
 		if (targetFile) {
 			await doPreview();
@@ -116,6 +126,12 @@
 
 		loadProgress = { stage: '', detail: '' };
 		awaitingPreview = false;
+
+		// Re-validate additional file headers whenever preview settings change
+		if (targetFiles.length > 1) {
+			await checkAdditionalHeaders(targetFiles.slice(1));
+		}
+
 		importReady = true;
 	}
 
@@ -361,6 +377,157 @@
 		return result;
 	}
 
+	// ─── Multi-file helpers ────────────────────────────────────────────────────
+
+	/** Parse just enough of a file to get its column headers. */
+	async function getFileHeaders(file) {
+		const isExcel = file.name.toLowerCase().match(/\.(xlsx|xls)$/);
+		const isAWD = file.name.toLowerCase().endsWith('.awd');
+
+		if (isAWD) {
+			throw new Error('AWD format files cannot be combined with other files.');
+		}
+
+		if (isExcel) {
+			return new Promise((resolve, reject) => {
+				const reader = new FileReader();
+				reader.onload = (e) => {
+					try {
+						const data = new Uint8Array(e.target.result);
+						const workbook = XLSX.read(data, { type: 'array' });
+						const sheet = workbook.Sheets[workbook.SheetNames[0]];
+						const csv = XLSX.utils.sheet_to_csv(sheet, { skipHidden: true, blankrows: false });
+						Papa.parse(csv, {
+							preview: 1,
+							header: hasHeader,
+							dynamicTyping: false,
+							skipEmptyLines: true,
+							complete: (results) => {
+								resolve(
+									hasHeader
+										? (results.meta.fields ?? [])
+										: (results.data[0]?.map((_, i) => numToString(i)) ?? [])
+								);
+							},
+							error: reject
+						});
+					} catch (err) {
+						reject(err);
+					}
+				};
+				reader.onerror = () => reject(reader.error);
+				reader.readAsArrayBuffer(file);
+			});
+		}
+
+		// CSV / text
+		return new Promise((resolve, reject) => {
+			Papa.parse(file, {
+				preview: skipLines + (hasHeader ? 1 : 2),
+				header: hasHeader,
+				dynamicTyping: false,
+				skipEmptyLines: true,
+				skipFirstNLines: skipLines,
+				delimiter: delimiter,
+				complete: (results) => {
+					if (hasHeader) {
+						resolve(results.meta.fields ?? []);
+					} else {
+						resolve(results.data[0]?.map((_, i) => numToString(i)) ?? []);
+					}
+				},
+				error: reject
+			});
+		});
+	}
+
+	/** Check that each additional file's headers match the reference (first) file. */
+	async function checkAdditionalHeaders(additionalFiles) {
+		checkingHeaders = true;
+		extraFileErrors = [];
+
+		// AWD primary file: multi-file not supported
+		if (targetFile?.name.toLowerCase().endsWith('.awd')) {
+			extraFileErrors = additionalFiles.map((f) => ({
+				filename: f.name,
+				error: 'Multi-file concatenation is not supported for AWD files.'
+			}));
+			checkingHeaders = false;
+			return;
+		}
+
+		const refHeaders = [...headers];
+
+		for (const file of additionalFiles) {
+			try {
+				const fileHdrs = await getFileHeaders(file);
+				const match =
+					fileHdrs.length === refHeaders.length && fileHdrs.every((h, i) => h === refHeaders[i]);
+				if (!match) {
+					extraFileErrors = [
+						...extraFileErrors,
+						{
+							filename: file.name,
+							error: `Headers don't match. Expected [${refHeaders.join(', ')}], got [${fileHdrs.join(', ')}]`
+						}
+					];
+				}
+			} catch (err) {
+				extraFileErrors = [
+					...extraFileErrors,
+					{ filename: file.name, error: err.message ?? String(err) }
+				];
+			}
+		}
+
+		checkingHeaders = false;
+	}
+
+	/** Fully parse an additional file and return column-oriented data. */
+	async function parseAdditionalFileData(file) {
+		const isExcel = file.name.toLowerCase().match(/\.(xlsx|xls)$/);
+
+		if (isExcel) {
+			return new Promise((resolve, reject) => {
+				const reader = new FileReader();
+				reader.onload = (e) => {
+					try {
+						const data = new Uint8Array(e.target.result);
+						const workbook = XLSX.read(data, { type: 'array' });
+						const sheet = workbook.Sheets[workbook.SheetNames[0]];
+						const csv = XLSX.utils.sheet_to_csv(sheet, { skipHidden: true, blankrows: false });
+						Papa.parse(csv, {
+							header: hasHeader,
+							dynamicTyping: true,
+							skipEmptyLines: 'greedy',
+							complete: (results) => resolve(convertArrayToObject(results.data)),
+							error: reject
+						});
+					} catch (err) {
+						reject(err);
+					}
+				};
+				reader.onerror = () => reject(reader.error);
+				reader.readAsArrayBuffer(file);
+			});
+		}
+
+		// CSV / text
+		return new Promise((resolve, reject) => {
+			Papa.parse(file, {
+				header: hasHeader,
+				dynamicTyping: true,
+				skipEmptyLines: 'greedy',
+				skipFirstNLines: skipLines,
+				delimiter: delimiter,
+				complete: (results) => resolve(convertArrayToObject(results.data)),
+				error: reject
+			});
+		});
+	}
+
+	// ──────────────────────────────────────────────────────────────────────────
+
 	function convertArrayToObject(inputArray) {
 		try {
 			let resultObject = {};
@@ -434,11 +601,38 @@
 		parsedData = getFilteredData();
 		console.log(selectedColumns);
 
+		// ─────────────── Concatenate additional files (multi-file mode) ──────────
+		if (targetFiles.length > 1) {
+			for (let i = 1; i < targetFiles.length; i++) {
+				const extraFile = targetFiles[i];
+				loadProgress = {
+					stage: 'Loading data',
+					detail: `Concatenating file ${i + 1} of ${targetFiles.length}: ${extraFile.name}`
+				};
+				await tick();
+				await new Promise((r) => setTimeout(r, 10));
+
+				const extraData = await parseAdditionalFileData(extraFile);
+
+				// Append each selected column's values from the extra file
+				for (const col of selectedColumns) {
+					if (parsedData[col] && extraData[col]) {
+						parsedData[col] = [...parsedData[col], ...extraData[col]];
+					}
+				}
+			}
+		}
+
 		loadProgress = { stage: 'Loading data', detail: 'Building columns…' };
 		await tick();
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
-		await doBasicFileImport(parsedData, targetFile.name);
+		const importName =
+			targetFiles.length > 1
+				? `${targetFile.name} (+${targetFiles.length - 1} more)`
+				: targetFile.name;
+
+		await doBasicFileImport(parsedData, importName);
 
 		awaitingLoad = false;
 	}
@@ -799,12 +993,16 @@
 	{#snippet header()}
 		{#if awaitingPreview}
 			<LoadingSpinner
-				message="Importing data from {targetFile?.name ?? 'file'}."
+				message={targetFiles.length > 1
+					? `Previewing ${targetFiles.length} files.`
+					: `Importing data from ${targetFile?.name ?? 'file'}.`}
 				detail={loadProgress.detail}
 			/>
 		{:else if awaitingLoad}
 			<LoadingSpinner
-				message="Loading data from {targetFile?.name ?? 'file'}."
+				message={targetFiles.length > 1
+					? `Importing ${targetFiles.length} files.`
+					: `Loading data from ${targetFile?.name ?? 'file'}.`}
 				detail={loadProgress.detail}
 			/>
 		{:else}
@@ -816,7 +1014,9 @@
 					<div class="filename">
 						<p class="filename-preview">
 							Selected:
-							{#if targetFile}
+							{#if targetFiles.length > 1}
+								{targetFiles.length} files
+							{:else if targetFile}
 								{targetFile.name}
 							{/if}
 						</p>
@@ -828,6 +1028,7 @@
 				id="fileInput"
 				type="file"
 				accept=".csv,.awd,.txt,.xlsx,.xls"
+				multiple
 				onchange={onFileChange}
 				style="display: none;"
 			/>
@@ -928,6 +1129,42 @@
 								</tbody>
 							</table>
 						</div>
+
+						{#if targetFiles.length > 1}
+							<div class="multi-file-list">
+								<p class="multi-file-title">Files to concatenate ({targetFiles.length}):</p>
+								<ul>
+									{#each targetFiles as file, i}
+										<li class="file-item">
+											<span class="file-item-name">{file.name}</span>
+											{#if i === 0}
+												<span class="badge badge-reference">reference</span>
+											{:else if checkingHeaders}
+												<span class="badge badge-checking">checking…</span>
+											{:else}
+												{@const err = extraFileErrors.find((e) => e.filename === file.name)}
+												{#if err}
+													<span class="badge badge-error" title={err.error}>✗ mismatch</span>
+												{:else}
+													<span class="badge badge-ok">✓ ok</span>
+												{/if}
+											{/if}
+										</li>
+									{/each}
+								</ul>
+								{#if extraFileErrors.length > 0}
+									<div class="mismatch-warning">
+										<p class="mismatch-warning-title">Header mismatches prevent concatenation:</p>
+										{#each extraFileErrors as err}
+											<p class="mismatch-detail">
+												<strong>{err.filename}:</strong>
+												{err.error}
+											</p>
+										{/each}
+									</div>
+								{/if}
+							</div>
+						{/if}
 					{:else if !awaitingPreview && !awaitingLoad}
 						<p>Choose file to preview data</p>
 					{/if}
@@ -938,7 +1175,7 @@
 
 	{#snippet button()}
 		<div class="dialog-button-container">
-			{#if importReady && !awaitingPreview && !awaitingLoad}
+			{#if importReady && !awaitingPreview && !awaitingLoad && !checkingHeaders && extraFileErrors.length === 0}
 				<button id="confirmImport" class="dialog-button" onclick={confirmImport}
 					>Confirm Import</button
 				>
@@ -948,6 +1185,82 @@
 </Modal>
 
 <style>
+	/* ── Multi-file concatenation UI ─────────────────────────────────────────── */
+	.multi-file-list {
+		margin-top: 0.75em;
+		padding: 0.5em 0.75em;
+		border: 1px solid var(--color-border, #ccc);
+		border-radius: 4px;
+		background: var(--color-surface-alt, #f8f8f8);
+	}
+	.multi-file-title {
+		font-weight: 600;
+		margin: 0 0 0.4em 0;
+		font-size: 0.9em;
+	}
+	.multi-file-list ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25em;
+	}
+	.file-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5em;
+		font-size: 0.85em;
+	}
+	.file-item-name {
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.badge {
+		flex-shrink: 0;
+		padding: 0.1em 0.45em;
+		border-radius: 3px;
+		font-size: 0.8em;
+		font-weight: 600;
+	}
+	.badge-reference {
+		background: var(--color-neutral, #ddd);
+		color: #555;
+	}
+	.badge-checking {
+		background: #e8f0fe;
+		color: #1a73e8;
+	}
+	.badge-ok {
+		background: #e6f4ea;
+		color: #137333;
+	}
+	.badge-error {
+		background: #fce8e6;
+		color: #c5221f;
+		cursor: help;
+	}
+	.mismatch-warning {
+		margin-top: 0.5em;
+		padding: 0.4em 0.6em;
+		border: 1px solid #f5c6cb;
+		border-radius: 3px;
+		background: #fce8e6;
+		color: #c5221f;
+		font-size: 0.82em;
+	}
+	.mismatch-warning-title {
+		font-weight: 600;
+		margin: 0 0 0.25em 0;
+	}
+	.mismatch-detail {
+		margin: 0.2em 0 0 0;
+		word-break: break-all;
+	}
+	/* ─────────────────────────────────────────────────────────────────────────── */
+
 	.binning-panel {
 		margin: 0.5em 0;
 		padding: 0.5em 0.75em;

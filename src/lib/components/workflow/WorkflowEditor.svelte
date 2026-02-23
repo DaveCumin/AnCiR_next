@@ -30,7 +30,7 @@
 	const MIN_PLOT_H = 80; // px — minimum actual plot height
 
 	// Pastel colour palette for data nodes grouped by source table (cycles when > 6 tables)
-	const TABLE_COLORS = ['#c8d8f0', '#f0c8d8', '#c8f0d8', '#d8c8f0', '#f0d8c8', '#d8f0c8'];
+	const TABLE_COLOURS = ['#c8d8f0', '#f0c8d8', '#c8f0d8', '#d8c8f0', '#f0d8c8', '#d8f0c8'];
 
 	// Derive the natural preview height from a plot's aspect ratio (no cropping by default)
 	function getDefaultPreviewH(plotObj) {
@@ -69,7 +69,7 @@
 		// Build colId → table colour (stable by table index)
 		const colToColor = new Map();
 		core.tables.forEach((table, idx) => {
-			const color = TABLE_COLORS[idx % TABLE_COLORS.length];
+			const color = TABLE_COLOURS[idx % TABLE_COLOURS.length];
 			table.columnRefs.forEach((colId) => colToColor.set(colId, color));
 			table.processes.forEach((tp) => {
 				if (tp.args.out) {
@@ -128,7 +128,7 @@
 
 		// Col 3: TP output data nodes, ordered by TP so they appear near their parent TP
 		core.tables.forEach((table, tableIdx) => {
-			const color = TABLE_COLORS[tableIdx % TABLE_COLORS.length];
+			const color = TABLE_COLOURS[tableIdx % TABLE_COLOURS.length];
 			table.processes.forEach((tp) => {
 				if (!tp.args.out) return;
 				Object.values(tp.args.out).forEach((colId) => {
@@ -627,7 +627,7 @@
 		<span class="workflow-title">Workflow</span>
 		<div class="header-legend">
 			{#each core.tables as table, idx (table.id)}
-				<span class="legend-item" style="background:{TABLE_COLORS[idx % TABLE_COLORS.length]};"
+				<span class="legend-item" style="background:{TABLE_COLOURS[idx % TABLE_COLOURS.length]};"
 					>{table.name}</span
 				>
 			{/each}

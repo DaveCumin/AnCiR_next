@@ -65,7 +65,7 @@
 <div class="heading">
 	<p>Data Sources</p>
 
-	<div class="add">
+	<div class="databuttons">
 		<button class="icon" onclick={() => (showSwapColumns = true)} title="Swap column references">
 			<Icon name="swap" width={16} height={16} />
 		</button>
@@ -222,5 +222,9 @@
 	details:hover summary .icon {
 		opacity: 1;
 		pointer-events: auto;
+	}
+
+	.databuttons {
+		display: flex;
 	}
 </style>
