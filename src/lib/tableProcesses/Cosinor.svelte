@@ -45,7 +45,8 @@
 			let outputXData = null;
 			if (outputXId != -1 && getColumnById(outputXId)) {
 				const outputXCol = getColumnById(outputXId);
-				outputXData = outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
+				outputXData =
+					outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
 				outputXData = outputXData.filter((v) => !isNaN(v));
 			}
 
@@ -92,6 +93,7 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { onMount } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
@@ -121,6 +123,23 @@
 	function getCosinor() {
 		[cosinorData, p.args.valid] = cosinor(p.args);
 	}
+
+	onMount(() => {
+		//If data already exists (e.g. imported from JSON), use it instead of regenerating
+		const xKey = p.args.out.cosinorx;
+		const yKey = p.args.out.cosinory;
+		if (xKey >= 0 && yKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
+			cosinorData = {
+				t: core.rawData.get(xKey),
+				outputXData: null,
+				fittedData: { fitted: core.rawData.get(yKey), parameters: { cosines: [] }, rmse: NaN }
+			};
+			p.args.valid = true;
+			lastHash = getHash; // prevent $effect from recalculating
+		} else {
+			getCosinor();
+		}
+	});
 
 	function toggleOutputX(checked) {
 		if (!checked) {
@@ -248,9 +267,7 @@
 					headers={['x', cosinorData.outputXData ? 'predicted y' : 'fitted y']}
 					data={[
 						(cosinorData.outputXData ?? cosinorData.t).map((x) => x.toFixed(2)),
-						(cosinorData.predicted ?? cosinorData.fittedData.fitted).map((x) =>
-							x.toFixed(2)
-						)
+						(cosinorData.predicted ?? cosinorData.fittedData.fitted).map((x) => x.toFixed(2))
 					]}
 				/>
 			</div>

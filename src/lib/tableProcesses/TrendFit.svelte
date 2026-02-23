@@ -225,6 +225,7 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { onMount } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
@@ -254,6 +255,23 @@
 	function getTrend() {
 		[trendData, p.args.valid] = trendfit(p.args);
 	}
+
+	onMount(() => {
+		//If data already exists (e.g. imported from JSON), use it instead of regenerating
+		const xKey = p.args.out.trendx;
+		const yKey = p.args.out.trendy;
+		if (xKey >= 0 && yKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
+			trendData = {
+				t: core.rawData.get(xKey),
+				outputXData: null,
+				fittedData: { fitted: core.rawData.get(yKey), parameters: {}, rmse: NaN, rSquared: NaN }
+			};
+			p.args.valid = true;
+			lastHash = getHash; // prevent $effect from recalculating
+		} else {
+			getTrend();
+		}
+	});
 
 	function toggleOutputX(checked) {
 		if (!checked) {
