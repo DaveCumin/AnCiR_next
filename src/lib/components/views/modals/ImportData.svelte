@@ -656,13 +656,15 @@
 			});
 
 			appState.loadingState.isLoading = false;
-
+			appState.loadingState.loadingMsg = '';
+			awaitingLoad = false;
+		} catch (error) {
 			appState.loadingState.isLoading = false;
 			appState.loadingState.loadingMsg = '';
-		} catch (error) {
-			//show error to user
-			alert('Something went wrong. Please check your internet connection and try again.');
-			console.error('Fetch error:', error);
+			awaitingLoad = false;
+			const msg = error?.message ?? String(error);
+			alert(`Failed to load session from URL.\n\n${msg}`);
+			console.error('loadFromURL error:', error);
 		}
 	}
 
