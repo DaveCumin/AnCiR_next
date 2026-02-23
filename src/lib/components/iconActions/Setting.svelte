@@ -91,18 +91,22 @@
 
 		const totalTables = jsonData.tables.length;
 		for (let i = 0; i < totalTables; i++) {
+			console.log('Processing table:', jsonData.tables[i].name, ':', i);
 			if (onProgress && totalTables > 1) {
 				onProgress(`Building table ${i + 1} of ${totalTables}…`);
 				await tick();
 				await new Promise((r) => setTimeout(r, 0));
 			}
+			console.log('Importing table:', jsonData.tables[i].name);
 			pushObj(Table.fromJSON(jsonData.tables[i]));
+			console.log('pushed');
 		}
+		console.log('Finished importing tables. Total tables:', core.tables.length);
 
 		if (onProgress) onProgress('Rebuilding plots…');
 		await tick();
 		await new Promise((r) => setTimeout(r, 0));
-
+		console.log('Starting to import plots. Total plots:', jsonData.plots.length);
 		const totalPlots = jsonData.plots.length;
 		for (let i = 0; i < totalPlots; i++) {
 			if (onProgress && totalPlots > 1) {
