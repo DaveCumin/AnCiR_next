@@ -374,11 +374,12 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
 	let smoothedResult = $state();
+	let mounted = $state(false);
 
 	// Reactivity
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -400,11 +401,12 @@
 	let lastHash = '';
 	$effect(() => {
 		const dataHash = getHash;
-		if (lastHash === dataHash) {
-			// do nothing
-		} else {
-			[smoothedResult, p.args.valid] = smootheddata(p.args);
-			lastHash = getHash;
+		if (!mounted) return;
+		if (lastHash !== dataHash) {
+			untrack(() => {
+				[smoothedResult, p.args.valid] = smootheddata(p.args);
+			});
+			lastHash = dataHash;
 		}
 	});
 
@@ -421,6 +423,7 @@
 			p.args.valid = true;
 			lastHash = getHash; // prevent $effect from recalculating
 		}
+		mounted = true;
 	});
 </script>
 

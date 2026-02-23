@@ -33,7 +33,7 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
@@ -45,13 +45,15 @@
 		return out;
 	});
 	let lastHash = '';
+	let mounted = $state(false);
 	$effect(() => {
 		const dataHash = getHash;
-		if (lastHash === dataHash) {
-			//do nothing
-		} else {
-			doDuplicate(); // DO THE BUSINESS
-			lastHash = getHash;
+		if (!mounted) return;
+		if (lastHash !== dataHash) {
+			untrack(() => {
+				doDuplicate();
+			});
+			lastHash = dataHash;
 		}
 	});
 	//------------
@@ -66,9 +68,8 @@
 			result = core.rawData.get(outKey);
 			p.args.valid = true;
 			lastHash = getHash; // prevent $effect from recalculating
-		} else {
-			doDuplicate();
 		}
+		mounted = true;
 	});
 </script>
 

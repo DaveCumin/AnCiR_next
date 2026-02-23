@@ -42,7 +42,7 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
@@ -59,16 +59,19 @@
 		return out;
 	});
 	let lastHash = '';
+	let mounted = $state(false);
 	$effect(() => {
 		const dataHash = getHash;
-		if (lastHash === dataHash) {
-			//do nothing
-		} else {
-			doAddColumns(); // DO THE BUSINESS
-			lastHash = getHash;
+		if (!mounted) return;
+		if (lastHash !== dataHash) {
+			untrack(() => {
+				doAddColumns();
+			});
+			lastHash = dataHash;
 		}
 	});
 	//------------
+
 	let result = $state();
 	function doAddColumns() {
 		[result, p.args.valid] = addcolumns(p.args);
@@ -80,9 +83,8 @@
 			result = core.rawData.get(outKey);
 			p.args.valid = true;
 			lastHash = getHash; // prevent $effect from recalculating
-		} else {
-			doAddColumns();
 		}
+		mounted = true;
 	});
 </script>
 

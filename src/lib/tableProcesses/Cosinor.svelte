@@ -93,12 +93,13 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
 	let cosinorData = $state();
 	let showOutputX = $state(p.args.outputX !== -1);
+	let mounted = $state(false);
 
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -114,8 +115,11 @@
 	let lastHash = '';
 	$effect(() => {
 		const dataHash = getHash;
+		if (!mounted) return;
 		if (lastHash !== dataHash) {
-			[cosinorData, p.args.valid] = cosinor(p.args);
+			untrack(() => {
+				[cosinorData, p.args.valid] = cosinor(p.args);
+			});
 			lastHash = dataHash;
 		}
 	});
@@ -136,9 +140,8 @@
 			};
 			p.args.valid = true;
 			lastHash = getHash; // prevent $effect from recalculating
-		} else {
-			getCosinor();
 		}
+		mounted = true;
 	});
 
 	function toggleOutputX(checked) {

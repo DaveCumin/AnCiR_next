@@ -61,8 +61,7 @@ return _r;`
 		if (argsIN.out.result !== -1) {
 			core.rawData.set(argsIN.out.result, result);
 			getColumnById(argsIN.out.result).data = argsIN.out.result;
-			getColumnById(argsIN.out.result).type =
-				typeof result[0] === 'string' ? 'category' : 'number';
+			getColumnById(argsIN.out.result).type = typeof result[0] === 'string' ? 'category' : 'number';
 			const processHash = crypto.randomUUID();
 			getColumnById(argsIN.out.result).tableProcessGUId = processHash;
 		}
@@ -75,7 +74,7 @@ return _r;`
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
@@ -98,10 +97,14 @@ return _r;`
 	);
 
 	let lastHash = '';
+	let mounted = $state(false);
 	$effect(() => {
 		const h = getHash;
+		if (!mounted) return;
 		if (lastHash !== h) {
-			doFormula();
+			untrack(() => {
+				doFormula();
+			});
 			lastHash = h;
 		}
 	});
@@ -137,7 +140,10 @@ return _r;`
 					const id = proc.args.out[key];
 					if (id >= 0 && !seen.has(id)) {
 						const col = getColumnById(id);
-						if (col) { seen.add(id); cols.push({ id: col.id, name: col.name, tableName: table.name }); }
+						if (col) {
+							seen.add(id);
+							cols.push({ id: col.id, name: col.name, tableName: table.name });
+						}
 					}
 				}
 			}
@@ -236,7 +242,13 @@ return _r;`
 		const before = token.value.slice(0, ac.triggerStart);
 		const after = token.value.slice(filterEnd);
 
-		p.args.tokens.splice(idx, 1, { type: 'text', value: before }, { type: 'col', id: colId }, { type: 'text', value: after });
+		p.args.tokens.splice(
+			idx,
+			1,
+			{ type: 'text', value: before },
+			{ type: 'col', id: colId },
+			{ type: 'text', value: after }
+		);
 		mergeAdjacentTextTokens();
 		closeAc();
 		doFormula();
@@ -246,9 +258,7 @@ return _r;`
 			// The chip was inserted at idx+1; the trailing text token is at idx+2 (before merge).
 			// After mergeAdjacentTextTokens the position may differ; find the first text token
 			// at or after the insertion point.
-			const newTextIdx = p.args.tokens.findIndex(
-				(t, i) => i >= idx + 2 && t.type === 'text'
-			);
+			const newTextIdx = p.args.tokens.findIndex((t, i) => i >= idx + 2 && t.type === 'text');
 			if (newTextIdx >= 0) focusTextToken(newTextIdx);
 		});
 	}
@@ -289,9 +299,8 @@ return _r;`
 			result = core.rawData.get(outKey);
 			p.args.valid = true;
 			lastHash = getHash;
-		} else {
-			doFormula();
 		}
+		mounted = true;
 	});
 </script>
 

@@ -105,14 +105,17 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
 	let wideToLongResult = $state();
+	let mounted = $state(false);
 
 	// Reactivity
-	let categoryIN_col = $derived.by(() => (p.args.categoryIN >= 0 ? getColumnById(p.args.categoryIN) : null));
+	let categoryIN_col = $derived.by(() =>
+		p.args.categoryIN >= 0 ? getColumnById(p.args.categoryIN) : null
+	);
 	let timeIN_col = $derived.by(() => (p.args.timeIN >= 0 ? getColumnById(p.args.timeIN) : null));
 	let valueIN_col = $derived.by(() => (p.args.valueIN >= 0 ? getColumnById(p.args.valueIN) : null));
 	let getHash = $derived.by(() => {
@@ -125,9 +128,13 @@
 	let lastHash = '';
 
 	$effect(() => {
-		if (getHash !== lastHash) {
-			doWideToLong();
-			lastHash = getHash;
+		const dataHash = getHash;
+		if (!mounted) return;
+		if (dataHash !== lastHash) {
+			untrack(() => {
+				doWideToLong();
+			});
+			lastHash = dataHash;
 		}
 	});
 
@@ -170,9 +177,8 @@
 			}
 			p.args.valid = true;
 			lastHash = getHash; // prevent $effect from recalculating
-		} else {
-			doWideToLong();
 		}
+		mounted = true;
 	});
 </script>
 
@@ -180,7 +186,10 @@
 <div class="section-row">
 	<div class="tableProcess-label"><span>Input</span></div>
 	<div class="control-input-vertical">
-		<div class="control-input" style={p.args.out.time >= 0 ? 'opacity:0.5; pointer-events:none;' : ''}>
+		<div
+			class="control-input"
+			style={p.args.out.time >= 0 ? 'opacity:0.5; pointer-events:none;' : ''}
+		>
 			<p>Category column</p>
 			<ColumnSelector bind:value={p.args.categoryIN} onChange={doWideToLong} />
 		</div>

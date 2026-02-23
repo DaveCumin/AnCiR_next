@@ -78,7 +78,7 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
@@ -95,11 +95,16 @@
 		return h;
 	});
 	let lastHash = '';
+	let mounted = $state(false);
 
 	$effect(() => {
-		if (getHash !== lastHash) {
-			[binnedData, p.args.valid] = binneddata(p.args, differentstepsize);
-			lastHash = getHash;
+		const dataHash = getHash;
+		if (!mounted) return;
+		if (dataHash !== lastHash) {
+			untrack(() => {
+				[binnedData, p.args.valid] = binneddata(p.args, differentstepsize);
+			});
+			lastHash = dataHash;
 		}
 	});
 
@@ -117,9 +122,8 @@
 			binnedData = { bins: core.rawData.get(xKey), y_out: core.rawData.get(yKey) };
 			p.args.valid = true;
 			lastHash = getHash; // prevent $effect from recalculating
-		} else {
-			getBinnedData(p.args, differentstepsize);
 		}
+		mounted = true;
 	});
 </script>
 
