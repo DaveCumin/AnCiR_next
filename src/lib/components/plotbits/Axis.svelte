@@ -67,6 +67,8 @@
 		width;
 		plotPadding;
 
+		if (!scale) return; // scale not ready yet — avoid rendering a broken axis
+
 		//Set a transition
 		// const t = transition().duration(10); //Doesn't look good without a similar transition for the line/points/etc... hard to do.
 
@@ -116,6 +118,8 @@
 				.call(axis)
 				.style('transform', `translate(${width + plotPadding.left}px, ${plotPadding.top}px)`);
 		}
+		if (!axis) return; // position didn't match any known value
+
 		select(axisGroup)
 			// .transition(t)
 			.call(axis)

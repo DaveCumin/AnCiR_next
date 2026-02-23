@@ -764,6 +764,9 @@
 	<div class="zoom-controls">
 		<button
 			class="icon zoomout"
+			style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
+				? appState.widthControlPanel
+				: 0}px + 5px); bottom: 35px;"
 			onclick={(e) => {
 				e.stopPropagation();
 				zoom = Math.max(zoom - ZOOM_STEP, MIN_ZOOM);
@@ -774,6 +777,9 @@
 		</button>
 		<button
 			class="icon zoomin"
+			style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
+				? appState.widthControlPanel
+				: 0}px + 5px); bottom: 10px;"
 			onclick={(e) => {
 				e.stopPropagation();
 				zoom = Math.min(zoom + ZOOM_STEP, MAX_ZOOM);
@@ -1010,5 +1016,8 @@
 
 	.header-add-tp {
 		border-color: #ffe0b3;
+	}
+	.icon {
+		transition: right 0.6s ease;
 	}
 </style>
