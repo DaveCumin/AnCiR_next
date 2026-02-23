@@ -79,9 +79,11 @@ return _r;`
 
 	let { p = $bindable() } = $props();
 
-	// Ensure tokens array is always initialised
+	// Ensure tokens array is always initialised and ends with a text token
 	if (!p.args.tokens || p.args.tokens.length === 0) {
 		p.args.tokens = [{ type: 'text', value: '' }];
+	} else if (p.args.tokens[p.args.tokens.length - 1]?.type !== 'text') {
+		p.args.tokens.push({ type: 'text', value: '' });
 	}
 
 	// ── Reactivity ───────────────────────────────────────────────────────────
@@ -114,6 +116,14 @@ return _r;`
 		} catch (e) {
 			formulaError = e.message;
 			p.args.valid = false;
+		}
+
+		// Clear the output column whenever the formula is invalid
+		if (!p.args.valid) {
+			const outId = p.args.out?.result;
+			if (outId !== undefined && outId !== -1) {
+				core.rawData.set(outId, []);
+			}
 		}
 	}
 
@@ -265,6 +275,10 @@ return _r;`
 			}
 		}
 		if (tokens.length === 0) {
+			tokens.push({ type: 'text', value: '' });
+		}
+		// Always keep a trailing text token so the cursor can be placed after the last chip
+		if (tokens[tokens.length - 1]?.type !== 'text') {
 			tokens.push({ type: 'text', value: '' });
 		}
 	}
