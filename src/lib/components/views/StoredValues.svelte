@@ -1,5 +1,5 @@
 <script>
-	import { core, removeStoredValue, renameStoredValue, storeValue } from '$lib/core/core.svelte.js';
+	import { core, removeStoredValue, renameStoredValue } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 
 	let editingKey = $state(null);

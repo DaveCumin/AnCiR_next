@@ -380,9 +380,9 @@
 				<div class="control-input">
 					<p>
 						R²: {trendData?.fittedData?.rSquared?.toFixed(3)}
-						<StoreValueButton label="R²" value={trendData?.fittedData?.rSquared} defaultName="trend_r_squared" source="Trend Fit ({p.args.model})" />
+						<StoreValueButton label="R²" value={trendData?.fittedData?.rSquared} defaultName="trend_r_squared" source={'Trend Fit (' + p.args.model + ')'} />
 						&ensp;RMSE: {trendData?.fittedData?.rmse?.toFixed(3)}
-						<StoreValueButton label="RMSE" value={trendData?.fittedData?.rmse} defaultName="trend_rmse" source="Trend Fit ({p.args.model})" />
+						<StoreValueButton label="RMSE" value={trendData?.fittedData?.rmse} defaultName="trend_rmse" source={'Trend Fit (' + p.args.model + ')'} />
 					</p>
 				</div>
 			</div>
@@ -412,7 +412,7 @@
 					{:else if p.args.model === 'polynomial'}
 						{#each trendData?.fittedData?.parameters?.coeffs ?? [] as c, i}
 							<p>c{i}: {c.toFixed(2)}
-								<StoreValueButton label="c{i}" value={c} defaultName="trend_c{i}" source="Trend Fit (polynomial)" />
+								<StoreValueButton label={'c' + i} value={c} defaultName={'trend_c' + i} source="Trend Fit (polynomial)" />
 							</p>
 						{/each}
 					{/if}
@@ -444,9 +444,9 @@
 				<div class="control-input">
 					<p>
 						R²: {trendData?.fittedData?.rSquared?.toFixed(3)}
-						<StoreValueButton label="R²" value={trendData?.fittedData?.rSquared} defaultName="trend_r_squared" source="Trend Fit ({p.args.model})" />
+						<StoreValueButton label="R²" value={trendData?.fittedData?.rSquared} defaultName="trend_r_squared" source={'Trend Fit (' + p.args.model + ')'} />
 						&ensp;RMSE: {trendData?.fittedData?.rmse?.toFixed(3)}
-						<StoreValueButton label="RMSE" value={trendData?.fittedData?.rmse} defaultName="trend_rmse" source="Trend Fit ({p.args.model})" />
+						<StoreValueButton label="RMSE" value={trendData?.fittedData?.rmse} defaultName="trend_rmse" source={'Trend Fit (' + p.args.model + ')'} />
 					</p>
 				</div>
 			</div>
@@ -476,7 +476,7 @@
 					{:else if p.args.model === 'polynomial'}
 						{#each trendData?.fittedData?.parameters?.coeffs ?? [] as c, i}
 							<p>c{i}: {c.toFixed(2)}
-								<StoreValueButton label="c{i}" value={c} defaultName="trend_c{i}" source="Trend Fit (polynomial)" />
+								<StoreValueButton label={'c' + i} value={c} defaultName={'trend_c' + i} source="Trend Fit (polynomial)" />
 							</p>
 						{/each}
 					{/if}
