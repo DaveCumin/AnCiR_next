@@ -3,10 +3,8 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
-	import DoubleRange from '$lib/components/inputs/DoubleRange.svelte';
 	import {
 		linearRegression,
-		makeSeqArray,
 		removeNullsFromXY
 	} from '$lib/components/plotbits/helpers/wrangleData';
 	import { scaleLinear } from 'd3-scale';
@@ -62,8 +60,7 @@
 		showMarkers = $state();
 		lineWidth = $state(3);
 		markerSize = $state(5);
-		periodRangeMin = $state(0);
-		periodRangeMax = $state(0);
+		selectedPeriods = $state([]);
 		manualMarkers = $state([]);
 
 		//Add a manual marker - the raw time clicked on
@@ -163,11 +160,6 @@
 
 			bestMatchx.push(xData[bestMatchIndex] - i * this.parentData.parentPlot.periodHrs);
 			//--------------
-			//Update periodRangeMax if it's more than the number of periods
-			this.periodRangeMax = Math.min(
-				this.periodRangeMax,
-				Object.keys(this.parentData.dataByDays.xByPeriod).length
-			);
 
 			//Return the markers
 			return bestMatchx;
@@ -179,7 +171,8 @@
 				.domain([0, this.parentData.parentPlot.periodHrs * this.parentData.parentPlot.doublePlot])
 				.range([0, this.parentData.parentPlot.plotwidth]);
 			const radius = this.markerSize;
-			for (let m = this.periodRangeMin - 1; m <= this.periodRangeMax - 1; m++) {
+			for (let m = 0; m < this.markers.length; m++) {
+				if (!this.selectedPeriods[m]) continue;
 				if (!this.markers[m]) continue;
 				out += `M${xscale(this.markers[m]) + this.parentData.parentPlot.padding.left} ${
 					this.parentData.parentPlot.padding.top +
@@ -194,11 +187,14 @@
 		});
 
 		linearRegression = $derived.by(() => {
-			//get the markers of interest
-			let xs = makeSeqArray(this.periodRangeMin, this.periodRangeMax, 1);
-			let ys = this.markers.slice(this.periodRangeMin - 1, this.periodRangeMax);
-			for (let i = 0; i < ys.length; i++) {
-				ys[i] = ys[i] + xs[i] * this.parentData.parentPlot.periodHrs;
+			//get the selected markers
+			let xs = [];
+			let ys = [];
+			for (let i = 0; i < this.markers.length; i++) {
+				if (this.selectedPeriods[i]) {
+					xs.push(i + 1);
+					ys.push(this.markers[i] + (i + 1) * this.parentData.parentPlot.periodHrs);
+				}
 			}
 			//remove any NaNs
 			[xs, ys] = removeNullsFromXY(xs, ys);
@@ -273,9 +269,18 @@
 				this.showMarkers = dataIN.showMarkers || true;
 				this.lineWidth = dataIN.lineWidth || 1;
 				this.markerSize = dataIN.markerSize || 5;
-				this.periodRangeMin = dataIN.periodRangeMin || 1;
-				this.periodRangeMax =
-					dataIN.periodRangeMax || Object.keys(parent.dataByDays.xByPeriod).length;
+				const numPeriods = Object.keys(parent.dataByDays.xByPeriod).length;
+				if (dataIN.selectedPeriods) {
+					this.selectedPeriods = dataIN.selectedPeriods;
+				} else if (dataIN.periodRangeMin != null && dataIN.periodRangeMax != null) {
+					// Backward compatibility: convert old min/max range to selectedPeriods array
+					this.selectedPeriods = Array.from({ length: numPeriods }, (_, i) => {
+						const period = i + 1;
+						return period >= dataIN.periodRangeMin && period <= dataIN.periodRangeMax;
+					});
+				} else {
+					this.selectedPeriods = Array.from({ length: numPeriods }, () => true);
+				}
 				this.manualMarkers = dataIN.manualMarkers || [];
 			}
 		}
@@ -292,8 +297,7 @@
 				showMarkers: this.showMarkers,
 				lineWidth: this.lineWidth,
 				markerSize: this.markerSize,
-				periodRangeMin: this.periodRangeMin,
-				periodRangeMax: this.periodRangeMax,
+				selectedPeriods: this.selectedPeriods,
 				manualMarkers: this.manualMarkers
 			};
 		}
@@ -310,6 +314,7 @@
 				showMarkers: json.showMarkers,
 				lineWidth: json.lineWidth,
 				markerSize: json.markerSize,
+				selectedPeriods: json.selectedPeriods,
 				periodRangeMin: json.periodRangeMin,
 				periodRangeMax: json.periodRangeMax,
 				manualMarkers: json.manualMarkers
@@ -405,13 +410,38 @@
 			</div>
 		{/if}
 		<div>
-			<p>period</p>
-			<DoubleRange
-				min="1"
-				max={Object.keys(marker.parentData.dataByDays.xByPeriod).length}
-				bind:minVal={marker.periodRangeMin}
-				bind:maxVal={marker.periodRangeMax}
-			/>
+			<div class="period-selection-header">
+				<p>Periods</p>
+				<div class="period-selection-actions">
+					<button
+						class="period-select-btn"
+						onclick={() => {
+							marker.selectedPeriods = marker.selectedPeriods.map(() => true);
+						}}>All</button
+					>
+					<button
+						class="period-select-btn"
+						onclick={() => {
+							marker.selectedPeriods = marker.selectedPeriods.map(() => false);
+						}}>None</button
+					>
+				</div>
+			</div>
+			<div class="period-checkbox-list">
+				{#each marker.selectedPeriods as selected, i (i)}
+					<label class="period-checkbox-item">
+						<input
+							type="checkbox"
+							checked={selected}
+							onchange={() => {
+								marker.selectedPeriods[i] = !marker.selectedPeriods[i];
+								marker.selectedPeriods = [...marker.selectedPeriods];
+							}}
+						/>
+						<span>{i + 1}</span>
+					</label>
+				{/each}
+			</div>
 		</div>
 
 		{#if marker.linearRegression?.slope}
@@ -460,3 +490,67 @@
 {:else if which === 'controls'}
 	{@render controls(marker)}
 {/if}
+
+<style>
+	.period-selection-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 4px;
+	}
+
+	.period-selection-header p {
+		font-size: 12px;
+		color: var(--color-lightness-35);
+		margin: 0;
+	}
+
+	.period-selection-actions {
+		display: flex;
+		gap: 4px;
+	}
+
+	.period-select-btn {
+		font-size: 11px;
+		padding: 1px 6px;
+		cursor: pointer;
+		border: 1px solid #ccc;
+		border-radius: 3px;
+		background: #f5f5f5;
+	}
+
+	.period-select-btn:hover {
+		background: #e0e0e0;
+	}
+
+	.period-checkbox-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 2px 6px;
+		max-height: 120px;
+		overflow-y: auto;
+		border: 1px solid #e1e9f6;
+		border-radius: 4px;
+		padding: 4px;
+	}
+
+	.period-checkbox-item {
+		display: flex;
+		align-items: center;
+		gap: 2px;
+		font-size: 11px;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.period-checkbox-item input[type='checkbox'] {
+		margin: 0;
+		width: 14px;
+		height: 14px;
+		cursor: pointer;
+	}
+
+	.period-checkbox-item span {
+		color: var(--color-lightness-35);
+	}
+</style>
