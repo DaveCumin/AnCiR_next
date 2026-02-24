@@ -366,7 +366,7 @@
 			this.xAxis = new AxisClass({
 				label: dataIN?.xAxis?.label ?? '',
 				gridlines: dataIN?.xAxis?.gridlines ?? false,
-				nticks: dataIN?.xAxis?.nticks ?? 24
+				nticks: dataIN?.xAxis?.nticks ?? 6
 			});
 			if (dataIN) {
 				this.addData(dataIN);
