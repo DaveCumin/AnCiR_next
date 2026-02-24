@@ -9,7 +9,8 @@ export const core = $state({
 	rawData: new Map(),
 	data: [],
 	plots: [],
-	tables: []
+	tables: [],
+	storedValues: {}
 });
 
 export const appState = $state({
@@ -148,6 +149,62 @@ export function pushObj(obj, autoPosition = true) {
 	}
 }
 
+/**
+ * Return a unique stored-value name by appending a counter if needed.
+ * e.g. if "trend_slope" exists, returns "trend_slope_2", then "_3", etc.
+ */
+export function uniqueStoredValueName(base) {
+	if (!(base in core.storedValues)) return base;
+	let n = 2;
+	while (`${base}_${n}` in core.storedValues) n++;
+	return `${base}_${n}`;
+}
+
+/**
+ * Store a named scalar value so it can be referenced later in formulas.
+ * The getter maintains a live reference so the value auto-updates when the
+ * source computation changes (e.g. markers move → τ updates).
+ * @param {string} name     – user-visible name (e.g. "cosinor_amplitude")
+ * @param {() => number} getter – function returning the current value
+ * @param {string} [source] – optional description of where it came from
+ */
+export function storeValue(name, getter, source = '') {
+	core.storedValues[name] = { getter, source };
+}
+
+/**
+ * Resolve the current numeric value of a stored value entry.
+ * Calls the live getter when available; falls back to a static snapshot
+ * (used after deserialisation when no getter exists).
+ */
+export function getStoredValue(name) {
+	const entry = core.storedValues[name];
+	if (!entry) return NaN;
+	if (typeof entry.getter === 'function') {
+		try {
+			return entry.getter();
+		} catch (e) {
+			console.warn(`Stored value '${name}' getter failed:`, e.message);
+			return entry.staticValue ?? NaN;
+		}
+	}
+	return entry.staticValue ?? NaN;
+}
+
+/** Remove a stored value by name. */
+export function removeStoredValue(name) {
+	delete core.storedValues[name];
+}
+
+/** Rename a stored value, returning the new name. */
+export function renameStoredValue(oldName, newName) {
+	if (oldName === newName || !(oldName in core.storedValues)) return oldName;
+	const finalName = uniqueStoredValueName(newName);
+	core.storedValues[finalName] = core.storedValues[oldName];
+	delete core.storedValues[oldName];
+	return finalName;
+}
+
 export function snapToGrid(value) {
 	return Math.round(value / appState.gridSize) * appState.gridSize;
 }
@@ -237,16 +294,34 @@ export function swapColumnRefs(idA, idB) {
 }
 
 export function outputCoreAsJson() {
-	let coreOut = JSON.parse(JSON.stringify(core));
+	let coreOut = JSON.parse(JSON.stringify(core, (key, val) => (typeof val === 'function' ? undefined : val)));
 	coreOut.rawData = Object.fromEntries(core.rawData);
+	// Resolve live getters into static snapshots for serialisation
+	const resolvedSV = {};
+	for (const [name, entry] of Object.entries(core.storedValues)) {
+		resolvedSV[name] = {
+			source: entry.source,
+			staticValue: getStoredValue(name)
+		};
+	}
+	coreOut.storedValues = resolvedSV;
 	const output = { ...coreOut, appState, version: appConsts.version };
 	return JSON.stringify(output, null, 2);
 }
 
 /** Returns a plain-object snapshot of core (no class instances). */
 export function getCoreAsPlainObject() {
-	const snap = JSON.parse(JSON.stringify(core));
+	const snap = JSON.parse(JSON.stringify(core, (key, val) => (typeof val === 'function' ? undefined : val)));
 	snap.rawData = Object.fromEntries(core.rawData);
+	// Resolve live getters into static snapshots
+	const resolvedSV = {};
+	for (const [name, entry] of Object.entries(core.storedValues)) {
+		resolvedSV[name] = {
+			source: entry.source,
+			staticValue: getStoredValue(name)
+		};
+	}
+	snap.storedValues = resolvedSV;
 	return snap;
 }
 
@@ -359,4 +434,7 @@ export function applyPatchToCore(patch) {
 			core.plots.push(Plot.fromJSON(plotSnap));
 		}
 	}
+
+	// --- Reconcile core.storedValues ---
+	core.storedValues = snap.storedValues ?? {};
 }

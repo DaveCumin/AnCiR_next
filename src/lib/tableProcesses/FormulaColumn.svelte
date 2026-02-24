@@ -1,5 +1,5 @@
 <script module>
-	import { core } from '$lib/core/core.svelte';
+	import { core, getStoredValue } from '$lib/core/core.svelte';
 
 	export const formulacolumn_displayName = 'Formula Column';
 
@@ -21,12 +21,20 @@
 			if (!getColumnById(t.id)) return [[], false];
 		}
 
+		// Validate stored value tokens
+		const svTokens = tokens.filter((t) => t.type === 'stored');
+		for (const t of svTokens) {
+			if (!(t.key in core.storedValues)) return [[], false];
+		}
+
 		// Build the JS expression: text tokens become literal text,
-		// col tokens become __colN[i] references
+		// col tokens become __colN[i] references,
+		// stored value tokens become __sv_KEY (scalar)
 		const formulaExpr = tokens
 			.map((t) => {
 				if (t.type === 'text') return t.value ?? '';
 				if (t.type === 'col') return `__col${t.id}[i]`;
+				if (t.type === 'stored') return `__sv_${t.key.replace(/[^a-zA-Z0-9_]/g, '_')}`;
 				return '';
 			})
 			.join('');
@@ -39,20 +47,26 @@
 		if (!firstData || firstData.length === 0) return [[], false];
 		const n = firstData.length;
 
+		// Collect unique stored value keys
+		const svKeys = [...new Set(svTokens.map((t) => t.key))];
+
 		let result;
 		try {
 			const paramNames = colIds.map((id) => `__col${id}`);
 			const paramValues = colIds.map((id) => getColumnById(id).getData());
+			const svParamNames = svKeys.map((k) => `__sv_${k.replace(/[^a-zA-Z0-9_]/g, '_')}`);
+			const svParamValues = svKeys.map((k) => getStoredValue(k));
 			// eslint-disable-next-line no-new-func
 			const fn = new Function(
 				...paramNames,
+				...svParamNames,
 				'Math',
 				`"use strict";
 const _r = new Array(${n});
 for (let i = 0; i < ${n}; i++) { _r[i] = (${formulaExpr}); }
 return _r;`
 			);
-			result = fn(...paramValues, Math);
+			result = fn(...paramValues, ...svParamValues, Math);
 		} catch (e) {
 			console.warn('Formula evaluation error:', e.message);
 			return [[], false];
@@ -91,9 +105,14 @@ return _r;`
 	);
 
 	let getHash = $derived.by(
-		() =>
-			allColIds.map((id) => getColumnById(id)?.getDataHash ?? '').join('|') +
-			JSON.stringify(p.args.tokens)
+		() => {
+			const svHash = Object.keys(core.storedValues)
+				.map((k) => `${k}:${getStoredValue(k)}`)
+				.join(',');
+			return allColIds.map((id) => getColumnById(id)?.getDataHash ?? '').join('|') +
+				JSON.stringify(p.args.tokens) +
+				svHash;
+		}
 	);
 
 	let lastHash = '';
@@ -158,10 +177,12 @@ return _r;`
 	});
 
 	// ── Autocomplete state ────────────────────────────────────────────────────
-	let ac = $state({ show: false, tokenIndex: -1, filter: '', triggerStart: -1, selIdx: 0 });
+	let ac = $state({ show: false, tokenIndex: -1, filter: '', triggerStart: -1, selIdx: 0, mode: 'col' });
+
+	let allStoredValues = $derived(Object.entries(core.storedValues).map(([key, entry]) => ({ key, value: getStoredValue(key), source: entry.source })));
 
 	let filteredColumns = $derived.by(() => {
-		if (!ac.show) return [];
+		if (!ac.show || ac.mode !== 'col') return [];
 		if (!ac.filter) return allColumns;
 		const f = ac.filter.toLowerCase();
 		return allColumns.filter(
@@ -169,8 +190,17 @@ return _r;`
 		);
 	});
 
+	let filteredStoredValues = $derived.by(() => {
+		if (!ac.show || ac.mode !== 'stored') return [];
+		if (!ac.filter) return allStoredValues;
+		const f = ac.filter.toLowerCase();
+		return allStoredValues.filter((sv) => sv.key.toLowerCase().includes(f));
+	});
+
+	let acItems = $derived(ac.mode === 'col' ? filteredColumns : filteredStoredValues);
+
 	function closeAc() {
-		ac = { show: false, tokenIndex: -1, filter: '', triggerStart: -1, selIdx: 0 };
+		ac = { show: false, tokenIndex: -1, filter: '', triggerStart: -1, selIdx: 0, mode: 'col' };
 	}
 
 	function handleTextInput(e, tokenIndex) {
@@ -181,11 +211,18 @@ return _r;`
 		const val = input.value;
 		const cursor = input.selectionStart ?? val.length;
 
-		// Walk backward from cursor for $ or @ (stop at whitespace)
+		// Walk backward from cursor for $, @ (column) or # (stored value) — stop at whitespace
 		let triggerPos = -1;
+		let mode = 'col';
 		for (let i = cursor - 1; i >= 0; i--) {
 			if (val[i] === '$' || val[i] === '@') {
 				triggerPos = i;
+				mode = 'col';
+				break;
+			}
+			if (val[i] === '#') {
+				triggerPos = i;
+				mode = 'stored';
 				break;
 			}
 			if (val[i] === ' ') break;
@@ -193,7 +230,7 @@ return _r;`
 
 		if (triggerPos >= 0) {
 			const filter = val.slice(triggerPos + 1, cursor);
-			ac = { show: true, tokenIndex, filter, triggerStart: triggerPos, selIdx: 0 };
+			ac = { show: true, tokenIndex, filter, triggerStart: triggerPos, selIdx: 0, mode };
 		} else {
 			closeAc();
 		}
@@ -202,7 +239,7 @@ return _r;`
 	function handleTextKeydown(e, tokenIndex) {
 		// Backspace at start of empty text token → remove preceding chip
 		if (e.key === 'Backspace' && !e.target.value) {
-			if (tokenIndex > 0 && p.args.tokens[tokenIndex - 1]?.type === 'col') {
+			if (tokenIndex > 0 && (p.args.tokens[tokenIndex - 1]?.type === 'col' || p.args.tokens[tokenIndex - 1]?.type === 'stored')) {
 				e.preventDefault();
 				removeToken(tokenIndex - 1);
 				// Focus the now-merged token (which has the same index after removal)
@@ -215,14 +252,18 @@ return _r;`
 
 		if (e.key === 'ArrowDown') {
 			e.preventDefault();
-			ac.selIdx = Math.min(ac.selIdx + 1, filteredColumns.length - 1);
+			ac.selIdx = Math.min(ac.selIdx + 1, acItems.length - 1);
 		} else if (e.key === 'ArrowUp') {
 			e.preventDefault();
 			ac.selIdx = Math.max(ac.selIdx - 1, 0);
 		} else if (e.key === 'Enter' || e.key === 'Tab') {
-			if (filteredColumns.length > 0) {
+			if (acItems.length > 0) {
 				e.preventDefault();
-				commitColumn(filteredColumns[ac.selIdx].id, tokenIndex);
+				if (ac.mode === 'col') {
+					commitColumn(acItems[ac.selIdx].id, tokenIndex);
+				} else {
+					commitStoredValue(acItems[ac.selIdx].key, tokenIndex);
+				}
 			} else {
 				closeAc();
 			}
@@ -255,9 +296,33 @@ return _r;`
 
 		// Focus the text input after the newly inserted chip
 		tick().then(() => {
-			// The chip was inserted at idx+1; the trailing text token is at idx+2 (before merge).
-			// After mergeAdjacentTextTokens the position may differ; find the first text token
-			// at or after the insertion point.
+			const newTextIdx = p.args.tokens.findIndex((t, i) => i >= idx + 2 && t.type === 'text');
+			if (newTextIdx >= 0) focusTextToken(newTextIdx);
+		});
+	}
+
+	// Insert a stored value chip, replacing the trigger+filter text in the token
+	function commitStoredValue(key, tokenIndexOverride) {
+		const idx = tokenIndexOverride ?? ac.tokenIndex;
+		const token = p.args.tokens[idx];
+		if (!token || token.type !== 'text') return;
+
+		const filterEnd = ac.triggerStart + 1 + ac.filter.length;
+		const before = token.value.slice(0, ac.triggerStart);
+		const after = token.value.slice(filterEnd);
+
+		p.args.tokens.splice(
+			idx,
+			1,
+			{ type: 'text', value: before },
+			{ type: 'stored', key },
+			{ type: 'text', value: after }
+		);
+		mergeAdjacentTextTokens();
+		closeAc();
+		doFormula();
+
+		tick().then(() => {
 			const newTextIdx = p.args.tokens.findIndex((t, i) => i >= idx + 2 && t.type === 'text');
 			if (newTextIdx >= 0) focusTextToken(newTextIdx);
 		});
@@ -319,7 +384,7 @@ return _r;`
 	</div>
 
 	<div class="formula-editor-wrap">
-		<!-- Formula editor: inline tokens (text inputs + column chips) -->
+		<!-- Formula editor: inline tokens (text inputs + column/stored value chips) -->
 		<div class="formula-editor">
 			{#each p.args.tokens as token, i}
 				{#if token.type === 'text'}
@@ -334,11 +399,16 @@ return _r;`
 						onfocus={() => {
 							if (ac.show && ac.tokenIndex !== i) closeAc();
 						}}
-						placeholder={p.args.tokens.length === 1 ? 'e.g.  2 *  (type $ or @ for columns)' : ''}
+						placeholder={p.args.tokens.length === 1 ? 'e.g.  2 *  ($ @ for columns, # for values)' : ''}
 					/>
 				{:else if token.type === 'col'}
 					<span class="chip">
 						{getColumnById(token.id)?.name ?? '(unknown)'}
+						<button class="chip-remove" onclick={() => removeToken(i)} title="Remove">×</button>
+					</span>
+				{:else if token.type === 'stored'}
+					<span class="chip chip-stored" title="Stored value: {core.storedValues[token.key]?.value}">
+						{token.key}
 						<button class="chip-remove" onclick={() => removeToken(i)} title="Remove">×</button>
 					</span>
 				{/if}
@@ -348,31 +418,54 @@ return _r;`
 		<!-- Inline autocomplete dropdown -->
 		{#if ac.show}
 			<div class="ac-dropdown" role="listbox">
-				{#if filteredColumns.length === 0}
-					<div class="ac-empty">No matching columns</div>
+				{#if ac.mode === 'col'}
+					{#if filteredColumns.length === 0}
+						<div class="ac-empty">No matching columns</div>
+					{:else}
+						{#each filteredColumns as col, j}
+							<div
+								class="ac-item"
+								class:ac-selected={j === ac.selIdx}
+								role="option"
+								aria-selected={j === ac.selIdx}
+								onmousedown={(e) => {
+									e.preventDefault();
+									commitColumn(col.id, ac.tokenIndex);
+								}}
+								onmouseenter={() => (ac.selIdx = j)}
+							>
+								<span class="ac-col-name">{col.name}</span>
+								<span class="ac-table-name">{col.tableName}</span>
+							</div>
+						{/each}
+					{/if}
 				{:else}
-					{#each filteredColumns as col, j}
-						<div
-							class="ac-item"
-							class:ac-selected={j === ac.selIdx}
-							role="option"
-							aria-selected={j === ac.selIdx}
-							onmousedown={(e) => {
-								e.preventDefault(); // prevent blur before click fires
-								commitColumn(col.id, ac.tokenIndex);
-							}}
-							onmouseenter={() => (ac.selIdx = j)}
-						>
-							<span class="ac-col-name">{col.name}</span>
-							<span class="ac-table-name">{col.tableName}</span>
-						</div>
-					{/each}
+					{#if filteredStoredValues.length === 0}
+						<div class="ac-empty">No matching stored values</div>
+					{:else}
+						{#each filteredStoredValues as sv, j}
+							<div
+								class="ac-item"
+								class:ac-selected={j === ac.selIdx}
+								role="option"
+								aria-selected={j === ac.selIdx}
+								onmousedown={(e) => {
+									e.preventDefault();
+									commitStoredValue(sv.key, ac.tokenIndex);
+								}}
+								onmouseenter={() => (ac.selIdx = j)}
+							>
+								<span class="ac-col-name">{sv.key}</span>
+								<span class="ac-table-name">= {sv.value}</span>
+							</div>
+						{/each}
+					{/if}
 				{/if}
 			</div>
 		{/if}
 	</div>
 
-	<p class="formula-hint">Tip: type <kbd>$</kbd> or <kbd>@</kbd> to insert a column</p>
+	<p class="formula-hint">Tip: type <kbd>$</kbd> or <kbd>@</kbd> for columns, <kbd>#</kbd> for stored values</p>
 
 	{#if formulaError}
 		<p class="formula-error">{formulaError}</p>
@@ -439,6 +532,11 @@ return _r;`
 		font-weight: 600;
 		white-space: nowrap;
 		user-select: none;
+	}
+
+	.chip-stored {
+		background-color: #90d94a66;
+		color: #2a5c1a;
 	}
 
 	.chip-remove {

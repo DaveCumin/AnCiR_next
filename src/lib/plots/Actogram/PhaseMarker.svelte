@@ -343,6 +343,8 @@
 </script>
 
 <script>
+	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+
 	let { marker, which } = $props();
 	const xscale = $derived(
 		scaleLinear()
@@ -502,13 +504,16 @@
 		{#if marker.linearRegression?.slope}
 			<!-- <p>Drawn τ: {marker.linearRegression.slope.toFixed(2)} hrs</p> -->
 			{#if marker.harmonicCheck}
-				<p><strong>Est τ: {marker.harmonicCheck.strongest.peakPeriod.toFixed(2)} hrs</strong></p>
+				<p><strong>Est τ: {marker.harmonicCheck.strongest.peakPeriod.toFixed(2)} hrs</strong>
+					<StoreValueButton label="τ" getter={() => marker.harmonicCheck.strongest.peakPeriod} defaultName={'tau_' + marker.name} source={'Actogram phase marker (' + marker.name + ')'} />
+				</p>
 			{/if}
 
 			<p>
-				R-squared: {marker.linearRegression.rSquared.toFixed(3)}, Error: {marker.linearRegression.rmse.toFixed(
-					3
-				)}
+				R²: {marker.linearRegression.rSquared.toFixed(3)}
+				<StoreValueButton label="R²" getter={() => marker.linearRegression.rSquared} defaultName={'marker_r_squared_' + marker.name} source={'Actogram phase marker (' + marker.name + ')'} />
+				&ensp;Error: {marker.linearRegression.rmse.toFixed(3)}
+				<StoreValueButton label="RMSE" getter={() => marker.linearRegression.rmse} defaultName={'marker_rmse_' + marker.name} source={'Actogram phase marker (' + marker.name + ')'} />
 			</p>
 
 			<div class="control-input-checkbox">
