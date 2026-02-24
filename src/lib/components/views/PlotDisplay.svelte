@@ -95,9 +95,9 @@
 
 			if (isTextInput) return;
 
-			if ((e.key === 'Backspace' || e.key === 'Delete') && selectedPlotIds.length > 0) {
-				removePlots(selectedPlotIds);
-			}
+			// if ((e.key === 'Backspace' || e.key === 'Delete') && selectedPlotIds.length > 0) {
+			// 	removePlots(selectedPlotIds);
+			// }
 		};
 
 		window.addEventListener('keydown', onKeyDown);
