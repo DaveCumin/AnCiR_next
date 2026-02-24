@@ -104,16 +104,16 @@ return _r;`
 		(p.args.tokens ?? []).filter((t) => t.type === 'col' && t.id >= 0).map((t) => t.id)
 	);
 
-	let getHash = $derived.by(
-		() => {
-			const svHash = Object.keys(core.storedValues)
-				.map((k) => `${k}:${getStoredValue(k)}`)
-				.join(',');
-			return allColIds.map((id) => getColumnById(id)?.getDataHash ?? '').join('|') +
-				JSON.stringify(p.args.tokens) +
-				svHash;
-		}
-	);
+	let getHash = $derived.by(() => {
+		const svHash = Object.keys(core.storedValues)
+			.map((k) => `${k}:${getStoredValue(k)}`)
+			.join(',');
+		return (
+			allColIds.map((id) => getColumnById(id)?.getDataHash ?? '').join('|') +
+			JSON.stringify(p.args.tokens) +
+			svHash
+		);
+	});
 
 	let lastHash = '';
 	let mounted = $state(false);
@@ -177,9 +177,22 @@ return _r;`
 	});
 
 	// ── Autocomplete state ────────────────────────────────────────────────────
-	let ac = $state({ show: false, tokenIndex: -1, filter: '', triggerStart: -1, selIdx: 0, mode: 'col' });
+	let ac = $state({
+		show: false,
+		tokenIndex: -1,
+		filter: '',
+		triggerStart: -1,
+		selIdx: 0,
+		mode: 'col'
+	});
 
-	let allStoredValues = $derived(Object.entries(core.storedValues).map(([key, entry]) => ({ key, value: getStoredValue(key), source: entry.source })));
+	let allStoredValues = $derived(
+		Object.entries(core.storedValues).map(([key, entry]) => ({
+			key,
+			value: getStoredValue(key),
+			source: entry.source
+		}))
+	);
 
 	let filteredColumns = $derived.by(() => {
 		if (!ac.show || ac.mode !== 'col') return [];
@@ -211,11 +224,11 @@ return _r;`
 		const val = input.value;
 		const cursor = input.selectionStart ?? val.length;
 
-		// Walk backward from cursor for $, @ (column) or # (stored value) — stop at whitespace
+		// Walk backward from cursor for $ (column) or # (stored value) — stop at whitespace
 		let triggerPos = -1;
 		let mode = 'col';
 		for (let i = cursor - 1; i >= 0; i--) {
-			if (val[i] === '$' || val[i] === '@') {
+			if (val[i] === '$') {
 				triggerPos = i;
 				mode = 'col';
 				break;
@@ -239,7 +252,11 @@ return _r;`
 	function handleTextKeydown(e, tokenIndex) {
 		// Backspace at start of empty text token → remove preceding chip
 		if (e.key === 'Backspace' && !e.target.value) {
-			if (tokenIndex > 0 && (p.args.tokens[tokenIndex - 1]?.type === 'col' || p.args.tokens[tokenIndex - 1]?.type === 'stored')) {
+			if (
+				tokenIndex > 0 &&
+				(p.args.tokens[tokenIndex - 1]?.type === 'col' ||
+					p.args.tokens[tokenIndex - 1]?.type === 'stored')
+			) {
 				e.preventDefault();
 				removeToken(tokenIndex - 1);
 				// Focus the now-merged token (which has the same index after removal)
@@ -399,7 +416,9 @@ return _r;`
 						onfocus={() => {
 							if (ac.show && ac.tokenIndex !== i) closeAc();
 						}}
-						placeholder={p.args.tokens.length === 1 ? 'e.g.  2 *  ($ @ for columns, # for values)' : ''}
+						placeholder={p.args.tokens.length === 1
+							? 'e.g.  2 *  ($ for columns, # for values)'
+							: ''}
 					/>
 				{:else if token.type === 'col'}
 					<span class="chip">
@@ -407,7 +426,10 @@ return _r;`
 						<button class="chip-remove" onclick={() => removeToken(i)} title="Remove">×</button>
 					</span>
 				{:else if token.type === 'stored'}
-					<span class="chip chip-stored" title="Stored value: {core.storedValues[token.key]?.value}">
+					<span
+						class="chip chip-stored"
+						title="Stored value: {core.storedValues[token.key]?.value}"
+					>
 						{token.key}
 						<button class="chip-remove" onclick={() => removeToken(i)} title="Remove">×</button>
 					</span>
@@ -439,33 +461,31 @@ return _r;`
 							</div>
 						{/each}
 					{/if}
+				{:else if filteredStoredValues.length === 0}
+					<div class="ac-empty">No matching stored values</div>
 				{:else}
-					{#if filteredStoredValues.length === 0}
-						<div class="ac-empty">No matching stored values</div>
-					{:else}
-						{#each filteredStoredValues as sv, j}
-							<div
-								class="ac-item"
-								class:ac-selected={j === ac.selIdx}
-								role="option"
-								aria-selected={j === ac.selIdx}
-								onmousedown={(e) => {
-									e.preventDefault();
-									commitStoredValue(sv.key, ac.tokenIndex);
-								}}
-								onmouseenter={() => (ac.selIdx = j)}
-							>
-								<span class="ac-col-name">{sv.key}</span>
-								<span class="ac-table-name">= {sv.value}</span>
-							</div>
-						{/each}
-					{/if}
+					{#each filteredStoredValues as sv, j}
+						<div
+							class="ac-item"
+							class:ac-selected={j === ac.selIdx}
+							role="option"
+							aria-selected={j === ac.selIdx}
+							onmousedown={(e) => {
+								e.preventDefault();
+								commitStoredValue(sv.key, ac.tokenIndex);
+							}}
+							onmouseenter={() => (ac.selIdx = j)}
+						>
+							<span class="ac-col-name">{sv.key}</span>
+							<span class="ac-table-name">= {sv.value}</span>
+						</div>
+					{/each}
 				{/if}
 			</div>
 		{/if}
 	</div>
 
-	<p class="formula-hint">Tip: type <kbd>$</kbd> or <kbd>@</kbd> for columns, <kbd>#</kbd> for stored values</p>
+	<p class="formula-hint">Tip: type <kbd>$</kbd> for columns, <kbd>#</kbd> for stored values</p>
 
 	{#if formulaError}
 		<p class="formula-error">{formulaError}</p>
