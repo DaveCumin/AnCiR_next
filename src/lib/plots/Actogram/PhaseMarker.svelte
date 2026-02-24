@@ -483,10 +483,13 @@
 								value={displayValue}
 								step="0.01"
 								min="0"
+								max={periodHrs}
 								onchange={(e) => {
 									const newVal = parseFloat(e.target.value);
 									if (!isNaN(newVal)) {
 										marker.editMarker(i, newVal);
+									} else {
+										e.target.value = displayValue;
 									}
 								}}
 							/>
