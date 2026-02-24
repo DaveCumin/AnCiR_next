@@ -91,6 +91,7 @@
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
+	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { onMount, untrack } from 'svelte';
@@ -226,14 +227,28 @@
 			<ColumnComponent col={yout} />
 			<div class="control-input-horizontal">
 				<div class="control-input">
-					<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}</p>
+					<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}
+						<StoreValueButton label="RMSE" value={cosinorData?.fittedData?.rmse} defaultName="cosinor_rmse" source="Cosinor" />
+					</p>
 				</div>
 			</div>
 			{#each cosinorData?.fittedData?.parameters.cosines as cosine, i}
+				{@const period = 2 * Math.PI * (1 / cosine.frequency)}
 				<div class="control-input-horizontal">
 					<div class="control-input">
 						<p>
-							Period: {(2 * Math.PI * (1 / cosine.frequency)).toFixed(2)}
+							Period: {period.toFixed(2)}
+							<StoreValueButton label="Period" value={period} defaultName={`cosinor_period${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
+						</p>
+
+						<p>
+							Amplitude: {cosine.amplitude.toFixed(2)}
+							<StoreValueButton label="Amplitude" value={cosine.amplitude} defaultName={`cosinor_amplitude${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
+						</p>
+
+						<p>
+							Phase: {cosine.phase.toFixed(2)}
+							<StoreValueButton label="Phase" value={cosine.phase} defaultName={`cosinor_phase${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
 						</p>
 
 						<p>
@@ -248,14 +263,26 @@
 			<p>Preview:</p>
 			<div class="control-input-horizontal">
 				<div class="control-input">
-					<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}</p>
+					<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}
+						<StoreValueButton label="RMSE" value={cosinorData?.fittedData?.rmse} defaultName="cosinor_rmse" source="Cosinor" />
+					</p>
 				</div>
 			</div>
 			{#each cosinorData?.fittedData?.parameters.cosines as cosine, i}
+				{@const period = 2 * Math.PI * (1 / cosine.frequency)}
 				<div class="control-input-horizontal">
 					<div class="control-input">
 						<p>
-							Period: {(2 * Math.PI * (1 / cosine.frequency)).toFixed(2)}
+							Period: {period.toFixed(2)}
+							<StoreValueButton label="Period" value={period} defaultName={`cosinor_period${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
+						</p>
+						<p>
+							Amplitude: {cosine.amplitude.toFixed(2)}
+							<StoreValueButton label="Amplitude" value={cosine.amplitude} defaultName={`cosinor_amplitude${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
+						</p>
+						<p>
+							Phase: {cosine.phase.toFixed(2)}
+							<StoreValueButton label="Phase" value={cosine.phase} defaultName={`cosinor_phase${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
 						</p>
 						<p>
 							Equation: {cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(

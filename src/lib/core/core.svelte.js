@@ -9,7 +9,8 @@ export const core = $state({
 	rawData: new Map(),
 	data: [],
 	plots: [],
-	tables: []
+	tables: [],
+	storedValues: {}
 });
 
 export const appState = $state({
@@ -146,6 +147,28 @@ export function pushObj(obj, autoPosition = true) {
 	} else {
 		console.warn('Error: object not instance of Column, Table or Plot');
 	}
+}
+
+/**
+ * Store a named scalar value so it can be referenced later in formulas.
+ * @param {string} name   – user-visible name (e.g. "cosinor_amplitude")
+ * @param {number} value  – the numeric value to store
+ * @param {string} [source] – optional description of where it came from
+ */
+export function storeValue(name, value, source = '') {
+	core.storedValues[name] = { value: +value, source };
+}
+
+/** Remove a stored value by name. */
+export function removeStoredValue(name) {
+	delete core.storedValues[name];
+}
+
+/** Rename a stored value. */
+export function renameStoredValue(oldName, newName) {
+	if (oldName === newName || !(oldName in core.storedValues)) return;
+	core.storedValues[newName] = core.storedValues[oldName];
+	delete core.storedValues[oldName];
 }
 
 export function snapToGrid(value) {
@@ -359,4 +382,7 @@ export function applyPatchToCore(patch) {
 			core.plots.push(Plot.fromJSON(plotSnap));
 		}
 	}
+
+	// --- Reconcile core.storedValues ---
+	core.storedValues = snap.storedValues ?? {};
 }

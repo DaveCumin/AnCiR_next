@@ -223,6 +223,7 @@
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
+	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { onMount, untrack } from 'svelte';
@@ -378,14 +379,43 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>
-						R²: {trendData?.fittedData?.rSquared?.toFixed(3)}, RMSE: {trendData?.fittedData?.rmse?.toFixed(
-							3
-						)}
+						R²: {trendData?.fittedData?.rSquared?.toFixed(3)}
+						<StoreValueButton label="R²" value={trendData?.fittedData?.rSquared} defaultName="trend_r_squared" source="Trend Fit ({p.args.model})" />
+						&ensp;RMSE: {trendData?.fittedData?.rmse?.toFixed(3)}
+						<StoreValueButton label="RMSE" value={trendData?.fittedData?.rmse} defaultName="trend_rmse" source="Trend Fit ({p.args.model})" />
 					</p>
 				</div>
 			</div>
 			<div class="control-input-horizontal">
 				<div class="control-input">
+					{#if p.args.model === 'linear'}
+						<p>Slope: {trendData?.fittedData?.parameters?.slope?.toFixed(2)}
+							<StoreValueButton label="Slope" value={trendData?.fittedData?.parameters?.slope} defaultName="trend_slope" source="Trend Fit (linear)" />
+						</p>
+						<p>Intercept: {trendData?.fittedData?.parameters?.intercept?.toFixed(2)}
+							<StoreValueButton label="Intercept" value={trendData?.fittedData?.parameters?.intercept} defaultName="trend_intercept" source="Trend Fit (linear)" />
+						</p>
+					{:else if p.args.model === 'exponential'}
+						<p>a: {trendData?.fittedData?.parameters?.a?.toFixed(2)}
+							<StoreValueButton label="a" value={trendData?.fittedData?.parameters?.a} defaultName="trend_a" source="Trend Fit (exponential)" />
+						</p>
+						<p>b: {trendData?.fittedData?.parameters?.b?.toFixed(2)}
+							<StoreValueButton label="b" value={trendData?.fittedData?.parameters?.b} defaultName="trend_b" source="Trend Fit (exponential)" />
+						</p>
+					{:else if p.args.model === 'logarithmic'}
+						<p>a: {trendData?.fittedData?.parameters?.a?.toFixed(2)}
+							<StoreValueButton label="a" value={trendData?.fittedData?.parameters?.a} defaultName="trend_a" source="Trend Fit (logarithmic)" />
+						</p>
+						<p>b: {trendData?.fittedData?.parameters?.b?.toFixed(2)}
+							<StoreValueButton label="b" value={trendData?.fittedData?.parameters?.b} defaultName="trend_b" source="Trend Fit (logarithmic)" />
+						</p>
+					{:else if p.args.model === 'polynomial'}
+						{#each trendData?.fittedData?.parameters?.coeffs ?? [] as c, i}
+							<p>c{i}: {c.toFixed(2)}
+								<StoreValueButton label="c{i}" value={c} defaultName="trend_c{i}" source="Trend Fit (polynomial)" />
+							</p>
+						{/each}
+					{/if}
 					<p>
 						Equation:
 						{#if p.args.model === 'linear'}
@@ -413,14 +443,43 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>
-						R²: {trendData?.fittedData?.rSquared?.toFixed(3)}, RMSE: {trendData?.fittedData?.rmse?.toFixed(
-							3
-						)}
+						R²: {trendData?.fittedData?.rSquared?.toFixed(3)}
+						<StoreValueButton label="R²" value={trendData?.fittedData?.rSquared} defaultName="trend_r_squared" source="Trend Fit ({p.args.model})" />
+						&ensp;RMSE: {trendData?.fittedData?.rmse?.toFixed(3)}
+						<StoreValueButton label="RMSE" value={trendData?.fittedData?.rmse} defaultName="trend_rmse" source="Trend Fit ({p.args.model})" />
 					</p>
 				</div>
 			</div>
 			<div class="control-input-horizontal">
 				<div class="control-input">
+					{#if p.args.model === 'linear'}
+						<p>Slope: {trendData?.fittedData?.parameters?.slope?.toFixed(2)}
+							<StoreValueButton label="Slope" value={trendData?.fittedData?.parameters?.slope} defaultName="trend_slope" source="Trend Fit (linear)" />
+						</p>
+						<p>Intercept: {trendData?.fittedData?.parameters?.intercept?.toFixed(2)}
+							<StoreValueButton label="Intercept" value={trendData?.fittedData?.parameters?.intercept} defaultName="trend_intercept" source="Trend Fit (linear)" />
+						</p>
+					{:else if p.args.model === 'exponential'}
+						<p>a: {trendData?.fittedData?.parameters?.a?.toFixed(2)}
+							<StoreValueButton label="a" value={trendData?.fittedData?.parameters?.a} defaultName="trend_a" source="Trend Fit (exponential)" />
+						</p>
+						<p>b: {trendData?.fittedData?.parameters?.b?.toFixed(2)}
+							<StoreValueButton label="b" value={trendData?.fittedData?.parameters?.b} defaultName="trend_b" source="Trend Fit (exponential)" />
+						</p>
+					{:else if p.args.model === 'logarithmic'}
+						<p>a: {trendData?.fittedData?.parameters?.a?.toFixed(2)}
+							<StoreValueButton label="a" value={trendData?.fittedData?.parameters?.a} defaultName="trend_a" source="Trend Fit (logarithmic)" />
+						</p>
+						<p>b: {trendData?.fittedData?.parameters?.b?.toFixed(2)}
+							<StoreValueButton label="b" value={trendData?.fittedData?.parameters?.b} defaultName="trend_b" source="Trend Fit (logarithmic)" />
+						</p>
+					{:else if p.args.model === 'polynomial'}
+						{#each trendData?.fittedData?.parameters?.coeffs ?? [] as c, i}
+							<p>c{i}: {c.toFixed(2)}
+								<StoreValueButton label="c{i}" value={c} defaultName="trend_c{i}" source="Trend Fit (polynomial)" />
+							</p>
+						{/each}
+					{/if}
 					<p>
 						Equation:
 						{#if p.args.model === 'linear'}
