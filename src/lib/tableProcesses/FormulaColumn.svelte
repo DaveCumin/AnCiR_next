@@ -1,5 +1,5 @@
 <script module>
-	import { core } from '$lib/core/core.svelte';
+	import { core, getStoredValue } from '$lib/core/core.svelte';
 
 	export const formulacolumn_displayName = 'Formula Column';
 
@@ -55,7 +55,7 @@
 			const paramNames = colIds.map((id) => `__col${id}`);
 			const paramValues = colIds.map((id) => getColumnById(id).getData());
 			const svParamNames = svKeys.map((k) => `__sv_${k.replace(/[^a-zA-Z0-9_]/g, '_')}`);
-			const svParamValues = svKeys.map((k) => core.storedValues[k].value);
+			const svParamValues = svKeys.map((k) => getStoredValue(k));
 			// eslint-disable-next-line no-new-func
 			const fn = new Function(
 				...paramNames,
@@ -105,10 +105,14 @@ return _r;`
 	);
 
 	let getHash = $derived.by(
-		() =>
-			allColIds.map((id) => getColumnById(id)?.getDataHash ?? '').join('|') +
-			JSON.stringify(p.args.tokens) +
-			JSON.stringify(core.storedValues)
+		() => {
+			const svHash = Object.keys(core.storedValues)
+				.map((k) => `${k}:${getStoredValue(k)}`)
+				.join(',');
+			return allColIds.map((id) => getColumnById(id)?.getDataHash ?? '').join('|') +
+				JSON.stringify(p.args.tokens) +
+				svHash;
+		}
 	);
 
 	let lastHash = '';
@@ -175,7 +179,7 @@ return _r;`
 	// ── Autocomplete state ────────────────────────────────────────────────────
 	let ac = $state({ show: false, tokenIndex: -1, filter: '', triggerStart: -1, selIdx: 0, mode: 'col' });
 
-	let allStoredValues = $derived(Object.entries(core.storedValues).map(([key, entry]) => ({ key, value: entry.value, source: entry.source })));
+	let allStoredValues = $derived(Object.entries(core.storedValues).map(([key, entry]) => ({ key, value: getStoredValue(key), source: entry.source })));
 
 	let filteredColumns = $derived.by(() => {
 		if (!ac.show || ac.mode !== 'col') return [];

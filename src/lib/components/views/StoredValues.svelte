@@ -1,27 +1,19 @@
 <script>
-	import { core, removeStoredValue, renameStoredValue } from '$lib/core/core.svelte.js';
+	import { core, getStoredValue, removeStoredValue, renameStoredValue } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 
 	let editingKey = $state(null);
 	let editName = $state('');
-	let editValue = $state('');
 
 	function startEdit(key) {
 		editingKey = key;
 		editName = key;
-		editValue = String(core.storedValues[key].value);
 	}
 
 	function commitEdit(oldKey) {
-		const newVal = parseFloat(editValue);
-		if (isNaN(newVal)) {
-			editingKey = null;
-			return;
-		}
 		if (editName && editName !== oldKey) {
 			renameStoredValue(oldKey, editName);
 		}
-		core.storedValues[editName].value = newVal;
 		editingKey = null;
 	}
 
@@ -52,16 +44,12 @@
 						bind:value={editName}
 						onkeydown={(e) => handleKeydown(e, key)}
 					/>
-					<input
-						class="sv-value-input"
-						bind:value={editValue}
-						onkeydown={(e) => handleKeydown(e, key)}
-					/>
-					<button class="sv-action" onclick={() => commitEdit(key)} title="Save">✓</button>
+					<span class="sv-value">{typeof getStoredValue(key) === 'number' ? getStoredValue(key).toPrecision(6) : getStoredValue(key)}</span>
+					<button class="sv-action sv-action-visible" onclick={() => commitEdit(key)} title="Save">✓</button>
 				{:else}
 					<span class="sv-name" title={entry.source || key}>{key}</span>
-					<span class="sv-value">{typeof entry.value === 'number' ? entry.value.toPrecision(6) : entry.value}</span>
-					<button class="sv-action" onclick={() => startEdit(key)} title="Edit">✏️</button>
+					<span class="sv-value">{typeof getStoredValue(key) === 'number' ? getStoredValue(key).toPrecision(6) : getStoredValue(key)}</span>
+					<button class="sv-action" onclick={() => startEdit(key)} title="Rename">✏️</button>
 					<button class="sv-action" onclick={() => removeStoredValue(key)} title="Delete">
 						<Icon name="minus" width={14} height={14} className="menu-icon" />
 					</button>
@@ -145,26 +133,17 @@
 		transition: opacity 0.15s ease;
 	}
 
-	.sv-row:hover .sv-action {
+	.sv-row:hover .sv-action,
+	.sv-action-visible {
 		opacity: 1;
 		pointer-events: auto;
 	}
 
-	.sv-name-input,
-	.sv-value-input {
+	.sv-name-input {
 		font-size: 12px;
 		padding: 0.15rem 0.3rem;
 		border: 1px solid var(--color-lightness-85, #ccc);
 		border-radius: 3px;
-	}
-
-	.sv-name-input {
 		flex: 1;
-	}
-
-	.sv-value-input {
-		width: 70px;
-		text-align: right;
-		font-family: monospace;
 	}
 </style>

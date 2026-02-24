@@ -228,7 +228,7 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}
-						<StoreValueButton label="RMSE" value={cosinorData?.fittedData?.rmse} defaultName="cosinor_rmse" source="Cosinor" />
+						<StoreValueButton label="RMSE" getter={() => cosinorData?.fittedData?.rmse} defaultName="cosinor_rmse" source="Cosinor" />
 					</p>
 				</div>
 			</div>
@@ -238,17 +238,17 @@
 					<div class="control-input">
 						<p>
 							Period: {period.toFixed(2)}
-							<StoreValueButton label="Period" value={period} defaultName={`cosinor_period${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
+							<StoreValueButton label="Period" getter={() => { const c = cosinorData?.fittedData?.parameters?.cosines?.[i]; return c ? 2 * Math.PI / c.frequency : NaN; }} defaultName={`cosinor_period${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
 						</p>
 
 						<p>
 							Amplitude: {cosine.amplitude.toFixed(2)}
-							<StoreValueButton label="Amplitude" value={cosine.amplitude} defaultName={`cosinor_amplitude${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
+							<StoreValueButton label="Amplitude" getter={() => cosinorData?.fittedData?.parameters?.cosines?.[i]?.amplitude} defaultName={`cosinor_amplitude${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
 						</p>
 
 						<p>
 							Phase: {cosine.phase.toFixed(2)}
-							<StoreValueButton label="Phase" value={cosine.phase} defaultName={`cosinor_phase${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
+							<StoreValueButton label="Phase" getter={() => cosinorData?.fittedData?.parameters?.cosines?.[i]?.phase} defaultName={`cosinor_phase${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
 						</p>
 
 						<p>
@@ -264,7 +264,7 @@
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}
-						<StoreValueButton label="RMSE" value={cosinorData?.fittedData?.rmse} defaultName="cosinor_rmse" source="Cosinor" />
+						<StoreValueButton label="RMSE" getter={() => cosinorData?.fittedData?.rmse} defaultName="cosinor_rmse" source="Cosinor" />
 					</p>
 				</div>
 			</div>
@@ -274,15 +274,15 @@
 					<div class="control-input">
 						<p>
 							Period: {period.toFixed(2)}
-							<StoreValueButton label="Period" value={period} defaultName={`cosinor_period${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
+							<StoreValueButton label="Period" getter={() => { const c = cosinorData?.fittedData?.parameters?.cosines?.[i]; return c ? 2 * Math.PI / c.frequency : NaN; }} defaultName={`cosinor_period${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
 						</p>
 						<p>
 							Amplitude: {cosine.amplitude.toFixed(2)}
-							<StoreValueButton label="Amplitude" value={cosine.amplitude} defaultName={`cosinor_amplitude${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
+							<StoreValueButton label="Amplitude" getter={() => cosinorData?.fittedData?.parameters?.cosines?.[i]?.amplitude} defaultName={`cosinor_amplitude${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
 						</p>
 						<p>
 							Phase: {cosine.phase.toFixed(2)}
-							<StoreValueButton label="Phase" value={cosine.phase} defaultName={`cosinor_phase${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
+							<StoreValueButton label="Phase" getter={() => cosinorData?.fittedData?.parameters?.cosines?.[i]?.phase} defaultName={`cosinor_phase${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
 						</p>
 						<p>
 							Equation: {cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(

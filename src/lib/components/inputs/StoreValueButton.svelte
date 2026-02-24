@@ -1,13 +1,13 @@
 <script>
 	import { storeValue } from '$lib/core/core.svelte.js';
 
-	let { label, value, defaultName = '', source = '' } = $props();
+	let { label, getter, defaultName = '', source = '' } = $props();
 	let saved = $state(false);
 
 	function save() {
 		const name = prompt('Name for this value:', defaultName);
 		if (name) {
-			storeValue(name, value, source);
+			storeValue(name, getter, source);
 			saved = true;
 			setTimeout(() => (saved = false), 1500);
 		}
