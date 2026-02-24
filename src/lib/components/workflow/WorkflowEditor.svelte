@@ -94,9 +94,8 @@
 			});
 		});
 
-		// Col 1: column process nodes (only on input columns)
+		// Col 1: column process nodes (all columns including TP outputs)
 		core.data.forEach((col) => {
-			if (tpOutputColIds.has(col.id)) return;
 			col.processes.forEach((p) => {
 				result.push({
 					id: `process_${p.id}`,
@@ -163,51 +162,6 @@
 		});
 
 		return result;
-	});
-
-	// Assign default column-layout positions (plot column uses aspect-ratio-derived row height)
-	const nodePositions = $derived.by(() => {
-		const colOffsets = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
-		const positions = {};
-
-		for (const node of allNodes) {
-			const col = node.col;
-			positions[node.id] = {
-				x: col * COL_WIDTH + PADDING,
-				y: colOffsets[col] + PADDING
-			};
-			if (col === 4) {
-				const ps = plotPreviewSizes[node.id];
-				const h = ps ? ps.h : getDefaultPreviewH(node.plotObj);
-				colOffsets[col] += NODE_HEIGHT + h + 24;
-			} else {
-				colOffsets[col] += ROW_HEIGHT;
-			}
-		}
-		return positions;
-	});
-
-	// User-drag position overrides keyed by node id
-	const customPositions = $state({});
-
-	// Canvas dimensions
-	const canvasWidth = $derived(5 * COL_WIDTH + 2 * PADDING);
-	const canvasHeight = $derived.by(() => {
-		const colHeights = [0, 1, 2, 3, 4].map((col) => {
-			let total = 0;
-			allNodes
-				.filter((n) => n.col === col)
-				.forEach((n) => {
-					if (col === 4) {
-						const ps = plotPreviewSizes[n.id];
-						total += NODE_HEIGHT + (ps ? ps.h : getDefaultPreviewH(n.plotObj)) + 24;
-					} else {
-						total += ROW_HEIGHT;
-					}
-				});
-			return total;
-		});
-		return Math.max(...colHeights, 5 * ROW_HEIGHT) + 2 * PADDING;
 	});
 
 	// --- Edge derivation split into topology + positioned ---
@@ -309,11 +263,138 @@
 		return edges;
 	});
 
+	/**
+	 * Topological layer assignment via longest-path in the DAG.
+	 * Ensures every edge flows from a lower layer to a higher layer (left → right).
+	 */
+	function computeNodeLayers(nodes, edges) {
+		const nodeIds = new Set(nodes.map((n) => n.id));
+		const adj = new Map();
+		const inDeg = new Map();
+
+		for (const id of nodeIds) {
+			adj.set(id, []);
+			inDeg.set(id, 0);
+		}
+
+		for (const edge of edges) {
+			if (!nodeIds.has(edge.fromId) || !nodeIds.has(edge.toId)) continue;
+			adj.get(edge.fromId).push(edge.toId);
+			inDeg.set(edge.toId, inDeg.get(edge.toId) + 1);
+		}
+
+		// Kahn's topological sort
+		const topoOrder = [];
+		const queue = [];
+		const tempInDeg = new Map(inDeg);
+
+		for (const [id, deg] of tempInDeg) {
+			if (deg === 0) queue.push(id);
+		}
+
+		while (queue.length > 0) {
+			const current = queue.shift();
+			topoOrder.push(current);
+			for (const next of adj.get(current) || []) {
+				tempInDeg.set(next, tempInDeg.get(next) - 1);
+				if (tempInDeg.get(next) === 0) queue.push(next);
+			}
+		}
+
+		// Handle any nodes not reached (cycles / disconnected)
+		const processed = new Set(topoOrder);
+		for (const id of nodeIds) {
+			if (!processed.has(id)) topoOrder.push(id);
+		}
+
+		// Longest-path layer assignment
+		const layer = new Map();
+		for (const id of topoOrder) {
+			if (!layer.has(id)) layer.set(id, 0);
+			for (const next of adj.get(id) || []) {
+				const newLayer = layer.get(id) + 1;
+				if (!layer.has(next) || newLayer > layer.get(next)) {
+					layer.set(next, newLayer);
+				}
+			}
+		}
+
+		for (const id of nodeIds) {
+			if (!layer.has(id)) layer.set(id, 0);
+		}
+
+		return layer;
+	}
+
+	// Compute default positions based on topological layers (all edges flow left → right)
+	const defaultPositions = $derived.by(() => {
+		const layers = computeNodeLayers(allNodes, edgeTopology);
+		const layerOffsets = {};
+		const positions = {};
+		let maxLayer = 0;
+
+		for (const node of allNodes) {
+			const layer = layers.get(node.id) ?? 0;
+			maxLayer = Math.max(maxLayer, layer);
+			if (layerOffsets[layer] == null) layerOffsets[layer] = 0;
+
+			positions[node.id] = {
+				x: layer * COL_WIDTH + PADDING,
+				y: layerOffsets[layer] + PADDING
+			};
+
+			if (node.type === 'plot') {
+				const ps = plotPreviewSizes[node.id];
+				const h = ps ? ps.h : getDefaultPreviewH(node.plotObj);
+				layerOffsets[layer] += NODE_HEIGHT + h + 24;
+			} else {
+				layerOffsets[layer] += ROW_HEIGHT;
+			}
+		}
+
+		return { positions, maxLayer, layerOffsets };
+	});
+
+	// Persistent positions — preserves layout when topology changes
+	let stablePositions = $state({});
+	let _knownNodeIds = new Set();
+
+	$effect(() => {
+		const currentNodes = allNodes;
+		const currentIds = new Set(currentNodes.map((n) => n.id));
+		const defaults = defaultPositions.positions;
+		const prev = _knownNodeIds;
+
+		// Assign default positions to newly appeared nodes only
+		for (const node of currentNodes) {
+			if (!prev.has(node.id) && defaults[node.id]) {
+				stablePositions[node.id] = { ...defaults[node.id] };
+			}
+		}
+
+		// Clean up positions for removed nodes
+		for (const id of prev) {
+			if (!currentIds.has(id)) {
+				delete stablePositions[id];
+			}
+		}
+
+		_knownNodeIds = currentIds;
+	});
+
+	// Canvas dimensions
+	const canvasWidth = $derived((defaultPositions.maxLayer + 1) * COL_WIDTH + 2 * PADDING);
+	const canvasHeight = $derived.by(() => {
+		const heights = Object.values(defaultPositions.layerOffsets);
+		return Math.max(...heights, 5 * ROW_HEIGHT) + 2 * PADDING;
+	});
+
 	// Step 2: attach positions (re-derives when topology OR any position changes)
 	const allEdges = $derived.by(() => {
 		return edgeTopology.flatMap((edge) => {
-			const fromPos = customPositions[edge.fromId] ?? nodePositions[edge.fromId];
-			const toPos = customPositions[edge.toId] ?? nodePositions[edge.toId];
+			const fromPos =
+				stablePositions[edge.fromId] ?? defaultPositions.positions[edge.fromId];
+			const toPos = stablePositions[edge.toId] ?? defaultPositions.positions[edge.toId];
 			if (!fromPos || !toPos) return [];
 			return [
 				{
@@ -444,7 +525,7 @@
 		if (e.target.closest('.node-add-btn')) return;
 
 		const { x: canvasX, y: canvasY } = toCanvasCoords(e.clientX, e.clientY);
-		const pos = customPositions[node.id] ?? nodePositions[node.id];
+		const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id];
 		if (!pos) return;
 
 		dragInfo = {
@@ -518,12 +599,11 @@
 				// Update dragged node position in canvas space
 				const nx = dragInfo.startPos.x + dx;
 				const ny = dragInfo.startPos.y + dy;
-				const prev = customPositions[dragInfo.nodeId];
-				if (prev) {
-					prev.x = nx;
-					prev.y = ny;
+				if (stablePositions[dragInfo.nodeId]) {
+					stablePositions[dragInfo.nodeId].x = nx;
+					stablePositions[dragInfo.nodeId].y = ny;
 				} else {
-					customPositions[dragInfo.nodeId] = { x: nx, y: ny };
+					stablePositions[dragInfo.nodeId] = { x: nx, y: ny };
 				}
 
 				// Drop-target detection: compare dragged node's bbox against each data node's bbox.
@@ -534,7 +614,7 @@
 					let found = null;
 					for (const node of allNodes) {
 						if (node.type !== 'data' || node.id === dragInfo.nodeId) continue;
-						const pos = customPositions[node.id] ?? nodePositions[node.id];
+						const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id];
 						if (!pos) continue;
 						if (boxesOverlap(draggedBox, pos)) {
 							found = node.id;
@@ -571,7 +651,8 @@
 			if (sourceNode?.type === 'data' && targetNode?.type === 'data') {
 				replaceColumnRefs(sourceNode.refId, targetNode.refId);
 				// Snap the dragged node back to its default layout position
-				delete customPositions[dragInfo.nodeId];
+				const dp = defaultPositions.positions[dragInfo.nodeId];
+				if (dp) stablePositions[dragInfo.nodeId] = { ...dp };
 			}
 		}
 		dropTargetNodeId = null;
@@ -665,7 +746,7 @@
 			/>
 
 			{#each allNodes as node (node.id)}
-				{@const pos = customPositions[node.id] ?? nodePositions[node.id]}
+				{@const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id]}
 				{@const isExpanded = expandedNodeId === node.id}
 				{@const isDragging = dragInfo?.nodeId === node.id && dragInfo?.moved}
 				{@const isDimmed = connectedNodeIds !== null && !connectedNodeIds.has(node.id)}
