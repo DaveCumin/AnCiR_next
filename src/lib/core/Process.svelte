@@ -100,18 +100,6 @@
 <script>
 	let { p } = $props();
 	const ProcessComponent = appConsts.processMap.get(p.name)?.component ?? null;
-
-	// Sync args across linked processes
-	$effect(() => {
-		if (p.linkedGroupId == null) return;
-		const argsJson = JSON.stringify(p.args);
-		const siblings = getLinkedProcesses(p.linkedGroupId);
-		for (const sibling of siblings) {
-			if (sibling.id !== p.id && JSON.stringify(sibling.args) !== argsJson) {
-				Object.assign(sibling.args, JSON.parse(argsJson));
-			}
-		}
-	});
 </script>
 
 {#if ProcessComponent}

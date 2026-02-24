@@ -1,7 +1,7 @@
 <script module>
 	// @ts-nocheck
 
-	import { Process, nextLinkedGroupId } from '$lib/core/Process.svelte';
+	import { Process, nextLinkedGroupId, getLinkedProcesses } from '$lib/core/Process.svelte';
 	import { core, appConsts } from '$lib/core/core.svelte.js';
 	// import { timeParse } from 'd3-time-format';
 	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
@@ -10,12 +10,39 @@
 	 * Add the same process to multiple columns at once.
 	 * If more than one column is provided, the processes are linked
 	 * so that changing args on one updates all the others.
+	 * All linked processes share the same args object.
 	 */
 	export function addProcessToColumns(columns, processName) {
 		const groupId = columns.length > 1 ? nextLinkedGroupId() : null;
+		let sharedArgs = null;
 		for (const col of columns) {
 			const newProcess = new Process({ name: processName, linkedGroupId: groupId }, col);
+			if (groupId != null) {
+				if (sharedArgs === null) {
+					sharedArgs = newProcess.args;
+				} else {
+					newProcess.args = sharedArgs;
+				}
+			}
 			col.processes.push(newProcess);
+		}
+	}
+
+	/**
+	 * After deserializing from JSON, linked processes each have their own
+	 * args copy. This function re-links them so they share the same object.
+	 */
+	export function relinkLinkedProcessArgs() {
+		const seen = new Map();
+		for (const col of core.data) {
+			for (const p of col.processes) {
+				if (p.linkedGroupId == null) continue;
+				if (seen.has(p.linkedGroupId)) {
+					p.args = seen.get(p.linkedGroupId);
+				} else {
+					seen.set(p.linkedGroupId, p.args);
+				}
+			}
 		}
 	}
 
