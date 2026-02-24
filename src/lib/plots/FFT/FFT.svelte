@@ -153,7 +153,7 @@
 				if (magnitudes[i] > magnitudes[maxIdx]) maxIdx = i;
 			}
 			const freq = frequencies[maxIdx];
-			return { frequency: freq, period: freq > 0 ? 1 / freq : Infinity, magnitude: magnitudes[maxIdx] };
+			return { frequency: freq, period: freq !== 0 ? 1 / freq : null, magnitude: magnitudes[maxIdx] };
 		});
 
 		constructor(parent, dataIN) {
@@ -896,7 +896,9 @@
 						</div>
 
 						{#if datum.peak}
-							<p><strong>Peak Period: {datum.peak.period.toFixed(2)} hrs</strong></p>
+							{#if datum.peak.period != null}
+								<p><strong>Peak Period: {datum.peak.period.toFixed(2)} hrs</strong></p>
+							{/if}
 							<p><strong>Peak Frequency: {datum.peak.frequency.toFixed(4)} cycles/hr</strong></p>
 							<p><strong>Peak Magnitude: {datum.peak.magnitude.toFixed(2)}</strong></p>
 						{/if}
