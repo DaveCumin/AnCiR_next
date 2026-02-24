@@ -1,6 +1,11 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
-	import { storeValue, removeStoredValue, renameStoredValue, uniqueStoredValueName } from '$lib/core/core.svelte.js';
+	import {
+		storeValue,
+		removeStoredValue,
+		renameStoredValue,
+		uniqueStoredValueName
+	} from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 
 	let { label, getter, defaultName = '', source = '' } = $props();
@@ -9,6 +14,8 @@
 	let editValue = $state('');
 	let inputEl = $state(null);
 	let popoverEl = $state(null);
+	let buttonEl = $state(null);
+	let popoverPos = $state({ left: 0, top: 0 });
 	let tooltip = $state({ visible: false, x: 0, y: 0 });
 
 	onMount(() => {
@@ -27,22 +34,20 @@
 		showPopover = true;
 		tooltip.visible = false;
 		setTimeout(() => {
+			if (buttonEl) {
+				const btnRect = buttonEl.getBoundingClientRect();
+				let left = btnRect.left;
+				let top = btnRect.bottom + 4;
+				if (popoverEl) {
+					const popRect = popoverEl.getBoundingClientRect();
+					if (left + popRect.width > window.innerWidth) left = btnRect.right - popRect.width;
+					if (top + popRect.height > window.innerHeight) top = btnRect.top - popRect.height - 4;
+				}
+				popoverPos = { left, top };
+			}
 			if (inputEl) {
 				inputEl.focus();
 				inputEl.select();
-			}
-			if (popoverEl) {
-				const rect = popoverEl.getBoundingClientRect();
-				if (rect.right > window.innerWidth) {
-					popoverEl.style.left = 'auto';
-					popoverEl.style.right = '0';
-				}
-				if (rect.bottom > window.innerHeight) {
-					popoverEl.style.top = 'auto';
-					popoverEl.style.bottom = '100%';
-					popoverEl.style.marginTop = '0';
-					popoverEl.style.marginBottom = '4px';
-				}
 			}
 		}, 0);
 	}
@@ -65,7 +70,6 @@
 	}
 
 	function showTooltip(e) {
-		if (showPopover) return;
 		let x = e.clientX + 10;
 		let y = e.clientY + 10;
 		if (x + 100 > window.innerWidth) x = window.innerWidth - 110;
@@ -84,30 +88,35 @@
 	</div>
 {/if}
 
+{#if showPopover}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="popover-backdrop" onclick={() => commitRename()} onkeydown={() => {}}></div>
+	<div
+		class="rename-popover"
+		bind:this={popoverEl}
+		style="left: {popoverPos.left}px; top: {popoverPos.top}px;"
+	>
+		<input
+			bind:this={inputEl}
+			bind:value={editValue}
+			class="rename-input"
+			onkeydown={handleKeydown}
+			placeholder="Variable name"
+		/>
+		<button class="rename-ok" onclick={commitRename}>✓</button>
+	</div>
+{/if}
+
 <span class="store-wrapper">
 	<button
-		class="store-btn"
+		class="icon"
+		bind:this={buttonEl}
 		onclick={openPopover}
 		onmouseenter={showTooltip}
 		onmouseleave={hideTooltip}
 	>
-		<Icon name="disk" width={14} height={14} className="store-icon" />
+		<Icon name="edit" width={14} height={14} />
 	</button>
-
-	{#if showPopover}
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="popover-backdrop" onclick={() => commitRename()} onkeydown={() => {}}></div>
-		<div class="rename-popover" bind:this={popoverEl}>
-			<input
-				bind:this={inputEl}
-				bind:value={editValue}
-				class="rename-input"
-				onkeydown={handleKeydown}
-				placeholder="Variable name"
-			/>
-			<button class="rename-ok" onclick={commitRename}>✓</button>
-		</div>
-	{/if}
 </span>
 
 <style>
@@ -124,9 +133,6 @@
 		height: 22px;
 		padding: 0;
 		margin-left: 4px;
-		border: 1px solid var(--color-lightness-85, #ccc);
-		border-radius: 3px;
-		background: var(--color-lightness-97, #f8f8f8);
 		cursor: pointer;
 		font-size: 12px;
 		vertical-align: middle;
@@ -141,16 +147,24 @@
 	:global(.store-btn:hover .store-icon) {
 		fill: var(--color-hover, #333);
 	}
+	.tooltip {
+		position: fixed;
+		z-index: 10000;
+		background: rgba(0, 0, 0, 0.75);
+		color: white;
+		font-size: 11px;
+		padding: 3px 7px;
+		border-radius: 3px;
+		pointer-events: none;
+		white-space: nowrap;
+	}
 	.popover-backdrop {
 		position: fixed;
 		inset: 0;
 		z-index: 9998;
 	}
 	.rename-popover {
-		position: absolute;
-		left: 0;
-		top: 100%;
-		margin-top: 4px;
+		position: fixed;
 		display: flex;
 		gap: 4px;
 		padding: 4px;
