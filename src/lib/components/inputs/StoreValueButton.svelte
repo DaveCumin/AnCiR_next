@@ -1,25 +1,32 @@
 <script>
-	import { storeValue } from '$lib/core/core.svelte.js';
+	import { onMount, onDestroy } from 'svelte';
+	import { storeValue, removeStoredValue, renameStoredValue, uniqueStoredValueName } from '$lib/core/core.svelte.js';
+	import Icon from '$lib/icons/Icon.svelte';
 
 	let { label, getter, defaultName = '', source = '' } = $props();
-	let saved = $state(false);
+	let storedName = $state('');
 
-	function save() {
-		const name = prompt('Name for this value:', defaultName);
-		if (name) {
-			storeValue(name, getter, source);
-			saved = true;
-			setTimeout(() => (saved = false), 1500);
+	onMount(() => {
+		storedName = uniqueStoredValueName(defaultName || label);
+		storeValue(storedName, getter, source);
+	});
+
+	onDestroy(() => {
+		if (storedName) {
+			removeStoredValue(storedName);
+		}
+	});
+
+	function editName() {
+		const newName = prompt('Rename stored value:', storedName);
+		if (newName && newName !== storedName) {
+			storedName = renameStoredValue(storedName, newName);
 		}
 	}
 </script>
 
-<button class="store-btn" class:saved onclick={save} title="Save '{label}' as a stored value">
-	{#if saved}
-		✓
-	{:else}
-		💾
-	{/if}
+<button class="store-btn" onclick={editName} title={storedName}>
+	<Icon name="disk" width={14} height={14} className="store-icon" />
 </button>
 
 <style>
@@ -42,8 +49,10 @@
 	.store-btn:hover {
 		background: var(--color-lightness-85, #e0e0e0);
 	}
-	.saved {
-		color: #27ae60;
-		border-color: #27ae60;
+	:global(.store-icon) {
+		fill: var(--color-lightness-45, #555);
+	}
+	:global(.store-btn:hover .store-icon) {
+		fill: var(--color-hover, #333);
 	}
 </style>

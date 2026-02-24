@@ -150,6 +150,17 @@ export function pushObj(obj, autoPosition = true) {
 }
 
 /**
+ * Return a unique stored-value name by appending a counter if needed.
+ * e.g. if "trend_slope" exists, returns "trend_slope_2", then "_3", etc.
+ */
+export function uniqueStoredValueName(base) {
+	if (!(base in core.storedValues)) return base;
+	let n = 2;
+	while (`${base}_${n}` in core.storedValues) n++;
+	return `${base}_${n}`;
+}
+
+/**
  * Store a named scalar value so it can be referenced later in formulas.
  * The getter maintains a live reference so the value auto-updates when the
  * source computation changes (e.g. markers move → τ updates).
@@ -185,11 +196,13 @@ export function removeStoredValue(name) {
 	delete core.storedValues[name];
 }
 
-/** Rename a stored value. */
+/** Rename a stored value, returning the new name. */
 export function renameStoredValue(oldName, newName) {
-	if (oldName === newName || !(oldName in core.storedValues)) return;
-	core.storedValues[newName] = core.storedValues[oldName];
+	if (oldName === newName || !(oldName in core.storedValues)) return oldName;
+	const finalName = uniqueStoredValueName(newName);
+	core.storedValues[finalName] = core.storedValues[oldName];
 	delete core.storedValues[oldName];
+	return finalName;
 }
 
 export function snapToGrid(value) {

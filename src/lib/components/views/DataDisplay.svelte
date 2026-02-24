@@ -16,7 +16,6 @@
 	import SingleTableAction from '../iconActions/SingleTableAction.svelte';
 	import { preventDefault } from 'svelte/legacy';
 	import Editable from '../inputs/Editable.svelte';
-	import StoredValues from './StoredValues.svelte';
 
 	// AddTable dropdown
 	let showAddTable = $state(false);
@@ -153,8 +152,6 @@
 <MakeNewColumn bind:show={showNewCol} tableId={selectedTable} />
 
 <SwapColumns bind:showModal={showSwapColumns} />
-
-<StoredValues />
 
 <style>
 	.heading {
