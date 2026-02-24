@@ -228,6 +228,7 @@
 
 		if (query != 'No query parameter found') {
 			loadFromURL(query);
+			window.history.replaceState({}, document.title, window.location.pathname);
 		}
 
 		//remove the listeners on close
