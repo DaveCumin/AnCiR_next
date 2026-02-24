@@ -398,6 +398,18 @@
 			this.data.splice(idx, 1);
 		}
 
+		getDownloadData() {
+			const headers = ['DataSeries', 'Lag (hours)', 'Autocorrelation'];
+			const rows = [];
+			this.data.forEach((datum, d) => {
+				const acf = datum.acfData;
+				for (let i = 0; i < acf.lags.length; i++) {
+					rows.push([d, acf.lags[i], acf.correlations[i]]);
+				}
+			});
+			return { headers, rows };
+		}
+
 		toJSON() {
 			return {
 				laglimsIN: this.laglimsIN,

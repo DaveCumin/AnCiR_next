@@ -401,6 +401,20 @@
 			this.annotations.push(new AnnotationClass(this));
 		}
 
+		getDownloadData() {
+			const headers = ['DataSeries', 'Period', 'BinStart (hrs)', 'BinEnd (hrs)', 'Value'];
+			const rows = [];
+			this.data.forEach((datum, d) => {
+				const periods = Object.keys(datum.binsByPeriod).sort((a, b) => a - b);
+				for (const p of periods) {
+					for (const bin of datum.binsByPeriod[p]) {
+						rows.push([d, Number(p) + 1, bin.xStart, bin.xEnd, bin.y]);
+					}
+				}
+			});
+			return { headers, rows };
+		}
+
 		toJSON() {
 			return {
 				ylimsOption: this.ylimsOption,

@@ -432,6 +432,25 @@
 			this.data.splice(idx, 1);
 		}
 
+		getDownloadData() {
+			const hasPhase = this.data.some((d) => d.showPhase);
+			const headers = ['DataSeries', 'Frequency (cycles/hr)', 'Period (hours)', 'Magnitude'];
+			if (hasPhase) headers.push('Phase (radians)');
+			const rows = [];
+			this.data.forEach((datum, d) => {
+				const fft = datum.fftData;
+				for (let i = 0; i < fft.frequencies.length; i++) {
+					const freq = fft.frequencies[i];
+					const row = [d, freq, freq > 0 ? 1 / freq : '', fft.magnitudes[i]];
+					if (hasPhase) {
+						row.push(fft.phases?.[i] ?? '');
+					}
+					rows.push(row);
+				}
+			});
+			return { headers, rows };
+		}
+
 		toJSON() {
 			return {
 				xlimsIN: this.xlimsIN,

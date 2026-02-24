@@ -2,6 +2,45 @@ import { appState } from '$lib/core/core.svelte.js';
 import { core } from '$lib/core/core.svelte';
 import { tick } from 'svelte';
 
+/**
+ * Convert headers and rows to a CSV string and trigger a download.
+ * @param {number} plotId - The plot index in core.plots
+ */
+export function saveDataAsCSV(plotId) {
+	const plot = core.plots[plotId];
+	if (!plot || !plot.plot) return;
+
+	const plotData = plot.plot;
+	if (typeof plotData.getDownloadData !== 'function') return;
+
+	const { headers, rows } = plotData.getDownloadData();
+	if (!headers || !rows || rows.length === 0) return;
+
+	const csvContent = [
+		headers.map(escapeCSV).join(','),
+		...rows.map((row) => row.map(escapeCSV).join(','))
+	].join('\n');
+
+	const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+	const url = URL.createObjectURL(blob);
+	const link = document.createElement('a');
+	link.href = url;
+	link.download = (plot.name || 'plot_data') + '.csv';
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
+	URL.revokeObjectURL(url);
+}
+
+function escapeCSV(value) {
+	if (value == null) return '';
+	const str = String(value);
+	if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+		return '"' + str.replace(/"/g, '""') + '"';
+	}
+	return str;
+}
+
 export async function convertToImage(svgId, filetype = 'png') {
 	//RESET THE ZOOM
 	const Zoom = appState.canvasScale;

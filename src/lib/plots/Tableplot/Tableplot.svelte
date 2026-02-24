@@ -180,6 +180,24 @@
 			}
 		}
 
+		getDownloadData() {
+			const headers = [];
+			const columns = [];
+			for (let i = 0; i < this.columnRefs.length; i++) {
+				if (!this.showCol[i]) continue;
+				const col = getColumnById(this.columnRefs[i]);
+				if (!col) continue;
+				headers.push(col.name);
+				columns.push(col.getData() ?? []);
+			}
+			const maxLen = Math.max(...columns.map((c) => c.length), 0);
+			const rows = [];
+			for (let r = 0; r < maxLen; r++) {
+				rows.push(columns.map((col) => (r < col.length ? col[r] : '')));
+			}
+			return { headers, rows };
+		}
+
 		toJSON() {
 			return {
 				columnRefs: this.columnRefs,

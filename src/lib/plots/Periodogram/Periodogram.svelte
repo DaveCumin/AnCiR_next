@@ -367,6 +367,24 @@
 			this.data.splice(idx, 1);
 		}
 
+		getDownloadData() {
+			const hasThreshold = this.data.some((d) => d.method === 'Chi-squared');
+			const headers = ['DataSeries', 'Period (hours)', 'Power'];
+			if (hasThreshold) headers.push('Threshold', 'P-value');
+			const rows = [];
+			this.data.forEach((datum, d) => {
+				const pd = datum.periodData;
+				for (let i = 0; i < pd.x.length; i++) {
+					const row = [d, pd.x[i], pd.y[i]];
+					if (hasThreshold) {
+						row.push(pd.threshold?.[i] ?? '', pd.pvalue?.[i] ?? '');
+					}
+					rows.push(row);
+				}
+			});
+			return { headers, rows };
+		}
+
 		toJSON() {
 			return {
 				periodlimsIN: this.periodlimsIN,

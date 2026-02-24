@@ -3,7 +3,7 @@
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 	import { core } from '$lib/core/core.svelte';
 	import { removePlots } from '$lib/core/Plot.svelte';
-	import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte.js';
+	import { convertToImage, saveDataAsCSV } from '$lib/components/plotbits/helpers/save.svelte.js';
 
 	let {
 		showDropdown = $bindable(false),
@@ -24,6 +24,11 @@
 
 	function handleDeleteAction(closeDropdown) {
 		removePlots(plotId);
+		closeDropdown();
+	}
+
+	function handleDownloadData(closeDropdown) {
+		saveDataAsCSV(plotId);
 		closeDropdown();
 	}
 
@@ -51,6 +56,15 @@
 			onmouseleave={() => hideSubmenu('save', 150)}
 		>
 			<button>Save</button>
+		</div>
+
+		<!-- Download data option -->
+		<div
+			class="dropdown-item"
+			onclick={() => handleDownloadData(closeDropdown)}
+			onmouseenter={() => hideSubmenu('save', 0)}
+		>
+			<button>Download data</button>
 		</div>
 
 		<!-- Delete option -->

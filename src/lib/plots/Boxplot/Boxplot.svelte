@@ -242,6 +242,24 @@
 			return items;
 		});
 
+		getDownloadData() {
+			const headers = [];
+			const columns = [];
+			this.data.forEach((datum, d) => {
+				const label = datum.label || `Data ${d}`;
+				const xData = datum.x.getData() ?? [];
+				const yData = datum.y.getData() ?? [];
+				headers.push(`Category_${label}`, `Value_${label}`);
+				columns.push(xData, yData);
+			});
+			const maxLen = Math.max(...columns.map((c) => c.length), 0);
+			const rows = [];
+			for (let i = 0; i < maxLen; i++) {
+				rows.push(columns.map((col) => (i < col.length ? col[i] : '')));
+			}
+			return { headers, rows };
+		}
+
 		toJSON() {
 			return {
 				xlimsIN: this.xlimsIN,

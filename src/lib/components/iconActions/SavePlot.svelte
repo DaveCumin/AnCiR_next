@@ -4,7 +4,8 @@
 	import {
 		convertToImage,
 		saveMultipleAsImage,
-		saveMultipleAsIndividuals
+		saveMultipleAsIndividuals,
+		saveDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
 
 	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0, Id } = $props();
@@ -148,6 +149,15 @@
 					<button>Save as {type.toUpperCase()}</button>
 				</div>
 			{/each}
+			<div
+				class="dropdown-action"
+				onclick={() => {
+					saveDataAsCSV(Id[0]);
+					closeDropdown();
+				}}
+			>
+				<button>Download data as CSV</button>
+			</div>
 		{/if}
 	{/snippet}
 </Dropdown>
