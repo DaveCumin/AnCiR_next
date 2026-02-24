@@ -144,6 +144,18 @@
 			return computeFFT(times, values, this.freqStep);
 		});
 
+		// Peak detection - find the highest magnitude and its corresponding frequency/period
+		peak = $derived.by(() => {
+			const { frequencies, magnitudes } = this.fftData;
+			if (!frequencies || !magnitudes || frequencies.length === 0) return null;
+			let maxIdx = 0;
+			for (let i = 1; i < magnitudes.length; i++) {
+				if (magnitudes[i] > magnitudes[maxIdx]) maxIdx = i;
+			}
+			const freq = frequencies[maxIdx];
+			return { frequency: freq, period: freq > 0 ? 1 / freq : Infinity, magnitude: magnitudes[maxIdx] };
+		});
+
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
 
@@ -882,6 +894,12 @@
 								{/if}
 							</p>
 						</div>
+
+						{#if datum.peak}
+							<p><strong>Peak Period: {datum.peak.period.toFixed(2)} hrs</strong></p>
+							<p><strong>Peak Frequency: {datum.peak.frequency.toFixed(4)} cycles/hr</strong></p>
+							<p><strong>Peak Magnitude: {datum.peak.magnitude.toFixed(2)}</strong></p>
+						{/if}
 
 						<Line lineData={datum.line} which="controls" title="Magnitude" />
 						<Points pointsData={datum.points} which="controls" />
