@@ -434,8 +434,7 @@
 							type="checkbox"
 							checked={selected}
 							onchange={() => {
-								marker.selectedPeriods[i] = !marker.selectedPeriods[i];
-								marker.selectedPeriods = [...marker.selectedPeriods];
+								marker.selectedPeriods = marker.selectedPeriods.map((v, j) => j === i ? !v : v);
 							}}
 						/>
 						<span>{i + 1}</span>
