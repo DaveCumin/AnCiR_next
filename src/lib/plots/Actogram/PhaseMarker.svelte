@@ -86,7 +86,7 @@
 				// Convert to array of arrays, filling gaps with empty arrays
 				const maxDay = Math.max(-1, ...Object.keys(markersByDay).map(Number));
 
-				return Array.from({ length: maxDay + 1 }, (_, i) => markersByDay[i] || NaN);
+				return Array.from({ length: maxDay + 1 }, (_, i) => markersByDay[i] ?? NaN);
 			}
 
 			//-------------------------------
@@ -106,60 +106,50 @@
 			}
 
 			//-------------------------------
-			// For each double period, find the threshold and match the template (do this for all periods, rather than only selected to reduce computation if changes made to periodRange: only display)
+			// For each period, find the threshold and match the template
+			// Only calculate for periods that have data
 			//-------------------------------
+			const xByPeriod = this.parentData.dataByDays.xByPeriod;
+			const yByPeriod = this.parentData.dataByDays.yByPeriod;
+			const periodKeys = Object.keys(xByPeriod).map(Number);
+			if (periodKeys.length === 0) return [];
+			const maxPeriod = Math.max(...periodKeys);
+
 			let bestMatchx = [];
 
-			for (let i = 0; i < Object.keys(this.parentData.dataByDays.xByPeriod).length - 1; i++) {
-				let periodsData = [
-					...this.parentData.dataByDays.yByPeriod[i],
-					...this.parentData.dataByDays.yByPeriod[i + 1]
-				]; // get the y data for the day
-				//get the threshold value
-				const centileValue = findCentileValue(periodsData, this.centileThreshold);
+			for (let i = 0; i <= maxPeriod; i++) {
+				// Skip periods without data
+				if (!yByPeriod[i] || yByPeriod[i].length === 0) {
+					bestMatchx.push(NaN);
+					continue;
+				}
 
-				//convert to 1,-1
+				let periodsData, xData;
+				// Use double-period matching if next period has data
+				if (yByPeriod[i + 1] && yByPeriod[i + 1].length > 0) {
+					periodsData = [...yByPeriod[i], ...yByPeriod[i + 1]];
+					xData = [...xByPeriod[i], ...xByPeriod[i + 1]];
+				} else {
+					periodsData = [...yByPeriod[i]];
+					xData = [...xByPeriod[i]];
+				}
+
+				const centileValue = findCentileValue(periodsData, this.centileThreshold);
 				const aboveBelow = periodsData.map((value) =>
 					value <= centileValue || isNaN(value) ? -1 : 1
 				);
 
-				//pad the data for the template
-				periodsData = Array.from({ length: N }, () => (this.type === 'onset' ? -1 : 1))
-					.concat(periodsData)
-					.concat(Array.from({ length: M }, () => (this.type === 'onset' ? 1 : -1)));
+				let bestMatchIndex =
+					findBestMatchIndex(aboveBelow, template) + Math.round((N + M) / 2);
 
-				//find the best match to the template and centre the template on the match
-				let bestMatchIndex = findBestMatchIndex(aboveBelow, template) + Math.round((N + M) / 2);
-				//find the x-value in the period that corresponds to that index
-				let xData = [
-					...this.parentData.dataByDays.xByPeriod[i],
-					...this.parentData.dataByDays.xByPeriod[i + 1]
-				];
-				bestMatchx.push(xData[bestMatchIndex] - i * this.parentData.parentPlot.periodHrs);
+				if (bestMatchIndex >= 0 && bestMatchIndex < xData.length) {
+					bestMatchx.push(
+						xData[bestMatchIndex] - i * this.parentData.parentPlot.periodHrs
+					);
+				} else {
+					bestMatchx.push(NaN);
+				}
 			}
-			//--------------
-			//Do the last day on its own
-			let i = Object.keys(this.parentData.dataByDays.xByPeriod).length - 1;
-			let periodsData = this.parentData.dataByDays.yByPeriod[i];
-			// get the y data for the day
-			//get the threshold value
-			const centileValue = findCentileValue(periodsData, this.centileThreshold);
-			//convert to 1,-1
-			const aboveBelow = periodsData.map((value) =>
-				value <= centileValue || isNaN(value) ? -1 : 1
-			);
-			//pad the data for the template
-			periodsData = Array.from({ length: N }, () => (this.type === 'onset' ? -1 : 1))
-				.concat(periodsData)
-				.concat(Array.from({ length: M }, () => (this.type === 'onset' ? 1 : -1)));
-
-			//find the best match to the template and centre the template on the match
-			let bestMatchIndex = findBestMatchIndex(aboveBelow, template) + Math.round((N + M) / 2);
-			//find the x-value in the period that corresponds to that index
-			let xData = this.parentData.dataByDays.xByPeriod[i];
-
-			bestMatchx.push(xData[bestMatchIndex] - i * this.parentData.parentPlot.periodHrs);
-			//--------------
 
 			//Return the markers
 			return bestMatchx;
@@ -172,8 +162,8 @@
 				.range([0, this.parentData.parentPlot.plotwidth]);
 			const radius = this.markerSize;
 			for (let m = 0; m < this.markers.length; m++) {
-				if (!this.selectedPeriods[m]) continue;
-				if (!this.markers[m]) continue;
+				if (!(this.selectedPeriods[m] ?? true)) continue;
+				if (isNaN(this.markers[m]) || this.markers[m] == null) continue;
 				out += `M${xscale(this.markers[m]) + this.parentData.parentPlot.padding.left} ${
 					this.parentData.parentPlot.padding.top +
 					this.parentData.parentPlot.eachplotheight -
@@ -191,7 +181,7 @@
 			let xs = [];
 			let ys = [];
 			for (let i = 0; i < this.markers.length; i++) {
-				if (this.selectedPeriods[i]) {
+				if (this.selectedPeriods[i] ?? true) {
 					xs.push(i + 1);
 					ys.push(this.markers[i] + (i + 1) * this.parentData.parentPlot.periodHrs);
 				}
@@ -253,6 +243,34 @@
 			return { candidates: results, strongest };
 		});
 
+		//Edit a marker value. If onset/offset, convert to manual first.
+		editMarker(periodIndex, newHourValue) {
+			const periodHrs = this.parentData.parentPlot.periodHrs;
+			if (this.type !== 'manual') {
+				// Convert all current computed markers to manual markers
+				const newManualMarkers = [];
+				for (let i = 0; i < this.markers.length; i++) {
+					if (!isNaN(this.markers[i]) && this.markers[i] != null) {
+						const hour = i === periodIndex ? newHourValue : this.markers[i];
+						// Wrap to [0, periodHrs) to ensure correct period assignment
+						const wrappedHour = ((hour % periodHrs) + periodHrs) % periodHrs;
+						newManualMarkers.push(i * periodHrs + wrappedHour);
+					}
+				}
+				this.manualMarkers = newManualMarkers;
+				this.type = 'manual';
+			} else {
+				// Already manual - update the specific marker
+				const absoluteTime = periodIndex * periodHrs + newHourValue;
+				this.manualMarkers = [
+					...this.manualMarkers.filter(
+						(t) => Math.floor(t / periodHrs) !== periodIndex
+					),
+					absoluteTime
+				];
+			}
+		}
+
 		constructor(parent, dataIN) {
 			this.parentData = parent;
 
@@ -269,7 +287,8 @@
 				this.showMarkers = dataIN.showMarkers || true;
 				this.lineWidth = dataIN.lineWidth || 1;
 				this.markerSize = dataIN.markerSize || 5;
-				const numPeriods = Object.keys(parent.dataByDays.xByPeriod).length;
+				const periodKeys = Object.keys(parent.dataByDays.xByPeriod).map(Number);
+				const numPeriods = periodKeys.length > 0 ? Math.max(...periodKeys) + 1 : 0;
 				if (dataIN.selectedPeriods) {
 					this.selectedPeriods = dataIN.selectedPeriods;
 				} else if (dataIN.periodRangeMin != null && dataIN.periodRangeMax != null) {
@@ -416,29 +435,63 @@
 					<button
 						class="period-select-btn"
 						onclick={() => {
-							marker.selectedPeriods = marker.selectedPeriods.map(() => true);
+							const newSelected = [...marker.selectedPeriods];
+							for (let i = 0; i < marker.markers.length; i++) {
+								if (!isNaN(marker.markers[i]) && marker.markers[i] != null) {
+									while (newSelected.length <= i) newSelected.push(true);
+									newSelected[i] = true;
+								}
+							}
+							marker.selectedPeriods = newSelected;
 						}}>All</button
 					>
 					<button
 						class="period-select-btn"
 						onclick={() => {
-							marker.selectedPeriods = marker.selectedPeriods.map(() => false);
+							const newSelected = [...marker.selectedPeriods];
+							for (let i = 0; i < marker.markers.length; i++) {
+								if (!isNaN(marker.markers[i]) && marker.markers[i] != null) {
+									while (newSelected.length <= i) newSelected.push(true);
+									newSelected[i] = false;
+								}
+							}
+							marker.selectedPeriods = newSelected;
 						}}>None</button
 					>
 				</div>
 			</div>
-			<div class="period-checkbox-list">
-				{#each marker.selectedPeriods as selected, i (i)}
-					<label class="period-checkbox-item">
-						<input
-							type="checkbox"
-							checked={selected}
-							onchange={() => {
-								marker.selectedPeriods = marker.selectedPeriods.map((v, j) => j === i ? !v : v);
-							}}
-						/>
-						<span>{i + 1}</span>
-					</label>
+			<div class="period-marker-list">
+				{#each marker.markers as markerValue, i (i)}
+					{#if !isNaN(markerValue) && markerValue != null}
+						{@const periodHrs = marker.parentData.parentPlot.periodHrs}
+						{@const displayValue = parseFloat((((markerValue % periodHrs) + periodHrs) % periodHrs).toFixed(2))}
+						<div class="period-marker-row">
+							<input
+								type="checkbox"
+								checked={marker.selectedPeriods[i] ?? true}
+								onchange={() => {
+									const newSelected = [...marker.selectedPeriods];
+									while (newSelected.length <= i) newSelected.push(true);
+									newSelected[i] = !newSelected[i];
+									marker.selectedPeriods = newSelected;
+								}}
+							/>
+							<span class="period-number">{i + 1}:</span>
+							<input
+								type="number"
+								class="marker-value-input"
+								value={displayValue}
+								step="0.01"
+								min="0"
+								onchange={(e) => {
+									const newVal = parseFloat(e.target.value);
+									if (!isNaN(newVal)) {
+										marker.editMarker(i, newVal);
+									}
+								}}
+							/>
+						</div>
+					{/if}
 				{/each}
 			</div>
 		</div>
@@ -522,34 +575,49 @@
 		background: #e0e0e0;
 	}
 
-	.period-checkbox-list {
+	.period-marker-list {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 2px 6px;
-		max-height: 120px;
+		flex-direction: column;
+		gap: 2px;
+		max-height: 150px;
 		overflow-y: auto;
 		border: 1px solid #e1e9f6;
 		border-radius: 4px;
 		padding: 4px;
 	}
 
-	.period-checkbox-item {
+	.period-marker-row {
 		display: flex;
 		align-items: center;
-		gap: 2px;
+		gap: 4px;
 		font-size: 11px;
-		cursor: pointer;
-		white-space: nowrap;
 	}
 
-	.period-checkbox-item input[type='checkbox'] {
+	.period-marker-row input[type='checkbox'] {
 		margin: 0;
 		width: 14px;
 		height: 14px;
 		cursor: pointer;
+		flex-shrink: 0;
 	}
 
-	.period-checkbox-item span {
+	.period-number {
 		color: var(--color-lightness-35);
+		min-width: 24px;
+		flex-shrink: 0;
+	}
+
+	.marker-value-input {
+		width: 70px;
+		font-size: 11px;
+		padding: 1px 4px;
+		border: 1px solid #ddd;
+		border-radius: 2px;
+		box-sizing: border-box;
+	}
+
+	.marker-value-input:focus {
+		outline: none;
+		border-color: #007bff;
 	}
 </style>
