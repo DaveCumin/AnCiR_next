@@ -5,6 +5,10 @@
 
 	let { label, getter, defaultName = '', source = '' } = $props();
 	let storedName = $state('');
+	let showPopover = $state(false);
+	let editValue = $state('');
+	let inputEl = $state(null);
+	let tooltip = $state({ visible: false, x: 0, y: 0 });
 
 	onMount(() => {
 		storedName = uniqueStoredValueName(defaultName || label || 'stored_value');
@@ -17,19 +21,83 @@
 		}
 	});
 
-	function editName() {
-		const newName = prompt('Rename stored value:', storedName);
-		if (newName && newName !== storedName) {
-			storedName = renameStoredValue(storedName, newName);
+	function openPopover() {
+		editValue = storedName;
+		showPopover = true;
+		tooltip.visible = false;
+		setTimeout(() => {
+			if (inputEl) {
+				inputEl.focus();
+				inputEl.select();
+			}
+		}, 0);
+	}
+
+	function commitRename() {
+		if (editValue && editValue !== storedName) {
+			storedName = renameStoredValue(storedName, editValue);
 		}
+		showPopover = false;
+	}
+
+	function handleKeydown(e) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			commitRename();
+		} else if (e.key === 'Escape') {
+			e.preventDefault();
+			showPopover = false;
+		}
+	}
+
+	function showTooltip(e) {
+		if (showPopover) return;
+		tooltip = { visible: true, x: e.clientX + 10, y: e.clientY + 10 };
+	}
+
+	function hideTooltip() {
+		tooltip = { visible: false, x: 0, y: 0 };
 	}
 </script>
 
-<button class="store-btn" onclick={editName} title={storedName}>
-	<Icon name="disk" width={14} height={14} className="store-icon" />
-</button>
+{#if tooltip.visible}
+	<div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">
+		{storedName}
+	</div>
+{/if}
+
+<span class="store-wrapper">
+	<button
+		class="store-btn"
+		onclick={openPopover}
+		onmouseenter={showTooltip}
+		onmouseleave={hideTooltip}
+	>
+		<Icon name="disk" width={14} height={14} className="store-icon" />
+	</button>
+
+	{#if showPopover}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="popover-backdrop" onclick={() => commitRename()} onkeydown={() => {}}></div>
+		<div class="rename-popover">
+			<input
+				bind:this={inputEl}
+				bind:value={editValue}
+				class="rename-input"
+				onkeydown={handleKeydown}
+				placeholder="Variable name"
+			/>
+			<button class="rename-ok" onclick={commitRename}>✓</button>
+		</div>
+	{/if}
+</span>
 
 <style>
+	.store-wrapper {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+	}
 	.store-btn {
 		display: inline-flex;
 		align-items: center;
@@ -54,5 +122,49 @@
 	}
 	:global(.store-btn:hover .store-icon) {
 		fill: var(--color-hover, #333);
+	}
+	.popover-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 9998;
+	}
+	.rename-popover {
+		position: absolute;
+		left: 0;
+		top: 100%;
+		margin-top: 4px;
+		display: flex;
+		gap: 4px;
+		padding: 4px;
+		background: white;
+		border: 1px solid var(--color-lightness-85, #ccc);
+		border-radius: 4px;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+		z-index: 9999;
+		white-space: nowrap;
+	}
+	.rename-input {
+		font-size: 12px;
+		padding: 2px 6px;
+		border: 1px solid var(--color-lightness-85, #ccc);
+		border-radius: 3px;
+		width: 140px;
+		outline: none;
+	}
+	.rename-input:focus {
+		border-color: var(--color-lightness-50, #888);
+	}
+	.rename-ok {
+		font-size: 12px;
+		padding: 2px 8px;
+		border: 1px solid var(--color-lightness-85, #ccc);
+		border-radius: 3px;
+		background: var(--color-lightness-97, #f8f8f8);
+		cursor: pointer;
+		color: #27ae60;
+		font-weight: bold;
+	}
+	.rename-ok:hover {
+		background: var(--color-lightness-85, #e0e0e0);
 	}
 </style>
