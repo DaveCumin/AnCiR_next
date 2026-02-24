@@ -11,7 +11,8 @@
 		dropdownTop = 0,
 		dropdownLeft = 0,
 		tableId = $bindable(null),
-		addNewColumn
+		addNewColumn,
+		addProcessToMultiple
 	} = $props();
 	let showModal = $state(false);
 
@@ -30,6 +31,10 @@
 	{#snippet groups()}
 		<div class="dropdown-action" onclick={() => addNewColumn(tableId)}>
 			<button> Add New Column </button>
+		</div>
+
+		<div class="dropdown-action" onclick={() => addProcessToMultiple(tableId)}>
+			<button> Add Process to Multiple </button>
 		</div>
 
 		<div class="dropdown-action" onclick={() => makeNewTablePlot(tableId)}>
