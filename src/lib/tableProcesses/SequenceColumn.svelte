@@ -7,7 +7,6 @@
 		['seqType', { val: 'number' }], // 'number' or 'time'
 		['start', { val: 0 }],
 		['step', { val: 1 }],
-		['mode', { val: 'count' }], // 'count' or 'end'
 		['count', { val: 10 }],
 		['end', { val: 9 }],
 		// time-specific defaults (stored in ms)
@@ -20,31 +19,15 @@
 
 	export function sequencecolumn(argsIN) {
 		let result = [];
-		// Small tolerance for floating-point end-bound comparisons
-		const FLOAT_EPSILON = 1e-9;
 
 		if (argsIN.seqType === 'number') {
 			const start = Number(argsIN.start);
 			const step = Number(argsIN.step);
 			if (step === 0) return [[], false];
 
-			if (argsIN.mode === 'count') {
-				const count = Math.max(0, Math.floor(Number(argsIN.count)));
-				for (let i = 0; i < count; i++) {
-					result.push(Number((start + i * step).toFixed(10)));
-				}
-			} else {
-				// 'end' mode
-				const end = Number(argsIN.end);
-				if (step > 0) {
-					for (let v = start; v <= end + step * FLOAT_EPSILON; v += step) {
-						result.push(Number(v.toFixed(10)));
-					}
-				} else {
-					for (let v = start; v >= end + step * FLOAT_EPSILON; v += step) {
-						result.push(Number(v.toFixed(10)));
-					}
-				}
+			const count = Math.max(0, Math.floor(Number(argsIN.count)));
+			for (let i = 0; i < count; i++) {
+				result.push(Number((start + i * step).toFixed(10)));
 			}
 			// Safety cap
 			if (result.length > 100000) result = result.slice(0, 100000);
@@ -54,22 +37,9 @@
 			const stepMs = Number(argsIN.stepHours) * 3600000;
 			if (stepMs === 0) return [[], false];
 
-			if (argsIN.mode === 'count') {
-				const count = Math.max(0, Math.floor(Number(argsIN.count)));
-				for (let i = 0; i < count; i++) {
-					result.push(new Date(startMs + i * stepMs).toISOString());
-				}
-			} else {
-				const endMs = Number(argsIN.endTime);
-				if (stepMs > 0) {
-					for (let t = startMs; t <= endMs + stepMs * FLOAT_EPSILON; t += stepMs) {
-						result.push(new Date(t).toISOString());
-					}
-				} else {
-					for (let t = startMs; t >= endMs + stepMs * FLOAT_EPSILON; t += stepMs) {
-						result.push(new Date(t).toISOString());
-					}
-				}
+			const count = Math.max(0, Math.floor(Number(argsIN.count)));
+			for (let i = 0; i < count; i++) {
+				result.push(new Date(startMs + i * stepMs).toISOString());
 			}
 			if (result.length > 100000) result = result.slice(0, 100000);
 		}
@@ -99,12 +69,70 @@
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import { onMount } from 'svelte';
 
+	const PREVIEW_ROWS = 6;
+
 	let { p = $bindable() } = $props();
 
 	let result = $state();
 
 	function doSequence() {
 		[result, p.args.valid] = sequencecolumn(p.args);
+	}
+
+	// --- Linked parameter helpers for numeric sequences ---
+	function changedStart() {
+		// Keep count & step, recalculate end
+		p.args.end = Number((p.args.start + p.args.step * (p.args.count - 1)).toFixed(10));
+		doSequence();
+	}
+
+	function changedStep() {
+		// Keep count & start, recalculate end
+		p.args.end = Number((p.args.start + p.args.step * (p.args.count - 1)).toFixed(10));
+		doSequence();
+	}
+
+	function changedCount() {
+		// Keep start & step, recalculate end
+		p.args.count = Math.max(1, Math.floor(Number(p.args.count)));
+		p.args.end = Number((p.args.start + p.args.step * (p.args.count - 1)).toFixed(10));
+		doSequence();
+	}
+
+	function changedEnd() {
+		// Keep start & step, recalculate count
+		const step = Number(p.args.step);
+		if (step === 0) return;
+		p.args.count = Math.max(1, Math.floor((p.args.end - p.args.start) / step) + 1);
+		doSequence();
+	}
+
+	// --- Linked parameter helpers for time sequences ---
+	function changedStartTime() {
+		// Keep count & step, recalculate endTime
+		p.args.endTime = p.args.startTime + p.args.stepHours * 3600000 * (p.args.count - 1);
+		doSequence();
+	}
+
+	function changedStepTime() {
+		// Keep count & start, recalculate endTime
+		p.args.endTime = p.args.startTime + p.args.stepHours * 3600000 * (p.args.count - 1);
+		doSequence();
+	}
+
+	function changedCountTime() {
+		// Keep startTime & step, recalculate endTime
+		p.args.count = Math.max(1, Math.floor(Number(p.args.count)));
+		p.args.endTime = p.args.startTime + p.args.stepHours * 3600000 * (p.args.count - 1);
+		doSequence();
+	}
+
+	function changedEndTime() {
+		// Keep startTime & step, recalculate count
+		const stepMs = Number(p.args.stepHours) * 3600000;
+		if (stepMs === 0) return;
+		p.args.count = Math.max(1, Math.floor((p.args.endTime - p.args.startTime) / stepMs) + 1);
+		doSequence();
 	}
 
 	onMount(() => {
@@ -130,14 +158,6 @@
 			<option value="time">Time</option>
 		</select>
 	</div>
-
-	<div class="control-input">
-		<p>Define end by</p>
-		<select bind:value={p.args.mode} onchange={doSequence}>
-			<option value="count">Count (N)</option>
-			<option value="end">End value</option>
-		</select>
-	</div>
 </div>
 
 <div class="section-row">
@@ -149,29 +169,26 @@
 		<div class="control-input-vertical">
 			<div class="control-input">
 				<p>Start</p>
-				<NumberWithUnits bind:value={p.args.start} onInput={doSequence} step={0.1} />
+				<NumberWithUnits bind:value={p.args.start} onInput={changedStart} step={0.1} />
 			</div>
 			<div class="control-input">
 				<p>Step</p>
-				<NumberWithUnits bind:value={p.args.step} onInput={doSequence} step={0.1} />
+				<NumberWithUnits bind:value={p.args.step} onInput={changedStep} step={0.1} />
 			</div>
-			{#if p.args.mode === 'count'}
-				<div class="control-input">
-					<p>Count (N)</p>
-					<NumberWithUnits bind:value={p.args.count} onInput={doSequence} min={0} step={1} />
-				</div>
-			{:else}
-				<div class="control-input">
-					<p>End</p>
-					<NumberWithUnits bind:value={p.args.end} onInput={doSequence} step={0.1} />
-				</div>
-			{/if}
+			<div class="control-input">
+				<p>Count (N)</p>
+				<NumberWithUnits bind:value={p.args.count} onInput={changedCount} min={1} step={1} />
+			</div>
+			<div class="control-input">
+				<p>End</p>
+				<NumberWithUnits bind:value={p.args.end} onInput={changedEnd} step={0.1} />
+			</div>
 		</div>
 	{:else}
 		<div class="control-input-vertical">
 			<div class="control-input">
 				<p>Start time</p>
-				<DateTimeHrs bind:value={p.args.startTime} onChange={doSequence} />
+				<DateTimeHrs bind:value={p.args.startTime} onChange={changedStartTime} />
 			</div>
 			<div class="control-input">
 				<p>Step</p>
@@ -187,29 +204,31 @@
 							mins: 1 / 60,
 							secs: 1 / (60 * 60)
 						}}
-						onInput={doSequence}
+						onInput={changedStepTime}
 						selectedUnitStart="hrs"
 					/>
 				</div>
 			</div>
-			{#if p.args.mode === 'count'}
-				<div class="control-input">
-					<p>Count (N)</p>
-					<NumberWithUnits bind:value={p.args.count} onInput={doSequence} min={0} step={1} />
-				</div>
-			{:else}
-				<div class="control-input">
-					<p>End time</p>
-					<DateTimeHrs bind:value={p.args.endTime} onChange={doSequence} />
-				</div>
-			{/if}
+			<div class="control-input">
+				<p>Count (N)</p>
+				<NumberWithUnits bind:value={p.args.count} onInput={changedCountTime} min={1} step={1} />
+			</div>
+			<div class="control-input">
+				<p>End time</p>
+				<DateTimeHrs bind:value={p.args.endTime} onChange={changedEndTime} />
+			</div>
 		</div>
 	{/if}
 </div>
 
 {#if p.args.valid && p.args.out.result === -1}
 	<p>Preview ({result.length} values):</p>
-	<div style="height:250px; overflow:auto;"><Table headers={['Result']} data={[result]} /></div>
+	<div style="max-height:200px; overflow:auto;">
+		<Table headers={['Result']} data={[result.slice(0, PREVIEW_ROWS)]} />
+	</div>
+	{#if result.length > PREVIEW_ROWS}
+		<p class="preview-ellipsis">… {result.length - PREVIEW_ROWS} more</p>
+	{/if}
 {:else if p.args.out.result > 0}
 	<div class="section-row">
 		<div class="tableProcess-label">
@@ -220,3 +239,12 @@
 {:else}
 	<p>Need to have valid inputs to create columns.</p>
 {/if}
+
+<style>
+	.preview-ellipsis {
+		font-size: 12px;
+		color: var(--color-lightness-50, #888);
+		margin: 0.25rem 0;
+		text-align: center;
+	}
+</style>
