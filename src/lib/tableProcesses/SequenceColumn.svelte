@@ -25,7 +25,7 @@
 			const step = Number(argsIN.step);
 			if (step === 0) return [[], false];
 
-			const count = Math.max(0, Math.floor(Number(argsIN.count)));
+			const count = Math.max(1, Math.floor(Number(argsIN.count)));
 			for (let i = 0; i < count; i++) {
 				result.push(Number((start + i * step).toFixed(10)));
 			}
@@ -37,7 +37,7 @@
 			const stepMs = Number(argsIN.stepHours) * 3600000;
 			if (stepMs === 0) return [[], false];
 
-			const count = Math.max(0, Math.floor(Number(argsIN.count)));
+			const count = Math.max(1, Math.floor(Number(argsIN.count)));
 			for (let i = 0; i < count; i++) {
 				result.push(new Date(startMs + i * stepMs).toISOString());
 			}
