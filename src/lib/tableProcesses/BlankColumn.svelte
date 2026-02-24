@@ -70,9 +70,7 @@
 	function commitData() {
 		if (p.args.out.result >= 0) {
 			// Try to detect numeric data
-			const allNumeric = editableData.every(
-				(v) => v === '' || (!isNaN(Number(v)) && v !== '')
-			);
+			const allNumeric = editableData.every((v) => v === '' || !isNaN(Number(v)));
 			const col = getColumnById(p.args.out.result);
 			if (allNumeric && editableData.some((v) => v !== '')) {
 				const numData = editableData.map((v) => (v === '' ? NaN : Number(v)));
@@ -117,7 +115,8 @@
 
 		// Fill in pasted values
 		for (let i = 0; i < lines.length; i++) {
-			// Handle tab-separated values: take only the first column
+			// Handle tab-separated values: take only the first column,
+			// since this is a single-column process
 			const cellValue = lines[i].split('\t')[0].trim();
 			editableData[startIndex + i] = cellValue;
 		}

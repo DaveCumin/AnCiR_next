@@ -29,8 +29,7 @@
 	);
 	function confirmAddColumn() {
 		core.tables.push(new Table());
-		core.tables[core.tables.length - 1].name =
-			'Sequence_' + core.tables[core.tables.length - 1].id;
+		core.tables[core.tables.length - 1].name = 'Sequence_' + core.tables[core.tables.length - 1].id;
 		const tb = new TableProcess(
 			{ name: 'SequenceColumn', args: p.args },
 			core.tables[core.tables.length - 1]

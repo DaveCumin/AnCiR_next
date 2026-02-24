@@ -11,15 +11,17 @@
 		['count', { val: 10 }],
 		['end', { val: 9 }],
 		// time-specific defaults (stored in ms)
-		['startTime', { val: DateTime.fromISO(new Date().toISOString(), { zone: 'utc' }).toMillis() }],
+		['startTime', { val: DateTime.utc().toMillis() }],
 		['stepHours', { val: 1 }],
-		['endTime', { val: DateTime.fromISO(new Date().toISOString(), { zone: 'utc' }).plus({ days: 1 }).toMillis() }],
+		['endTime', { val: DateTime.utc().plus({ days: 1 }).toMillis() }],
 		['out', { result: { val: -1 } }],
 		['valid', { val: false }]
 	]);
 
 	export function sequencecolumn(argsIN) {
 		let result = [];
+		// Small tolerance for floating-point end-bound comparisons
+		const FLOAT_EPSILON = 1e-9;
 
 		if (argsIN.seqType === 'number') {
 			const start = Number(argsIN.start);
@@ -35,11 +37,11 @@
 				// 'end' mode
 				const end = Number(argsIN.end);
 				if (step > 0) {
-					for (let v = start; v <= end + step * 1e-9; v += step) {
+					for (let v = start; v <= end + step * FLOAT_EPSILON; v += step) {
 						result.push(Number(v.toFixed(10)));
 					}
 				} else {
-					for (let v = start; v >= end + step * 1e-9; v += step) {
+					for (let v = start; v >= end + step * FLOAT_EPSILON; v += step) {
 						result.push(Number(v.toFixed(10)));
 					}
 				}
@@ -60,11 +62,11 @@
 			} else {
 				const endMs = Number(argsIN.endTime);
 				if (stepMs > 0) {
-					for (let t = startMs; t <= endMs + stepMs * 1e-9; t += stepMs) {
+					for (let t = startMs; t <= endMs + stepMs * FLOAT_EPSILON; t += stepMs) {
 						result.push(new Date(t).toISOString());
 					}
 				} else {
-					for (let t = startMs; t >= endMs + stepMs * 1e-9; t += stepMs) {
+					for (let t = startMs; t >= endMs + stepMs * FLOAT_EPSILON; t += stepMs) {
 						result.push(new Date(t).toISOString());
 					}
 				}
