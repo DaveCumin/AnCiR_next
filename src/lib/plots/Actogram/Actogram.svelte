@@ -363,7 +363,11 @@
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
-			this.xAxis = new AxisClass({ label: dataIN?.xAxis?.label ?? '', gridlines: dataIN?.xAxis?.gridlines ?? false, nticks: dataIN?.xAxis?.nticks ?? 24 });
+			this.xAxis = new AxisClass({
+				label: dataIN?.xAxis?.label ?? '',
+				gridlines: dataIN?.xAxis?.gridlines ?? false,
+				nticks: dataIN?.xAxis?.nticks ?? 24
+			});
 			if (dataIN) {
 				this.addData(dataIN);
 			}
@@ -649,6 +653,10 @@
 					<p>Repeat</p>
 					<NumberWithUnits bind:value={theData.doublePlot} />
 				</div>
+			</div>
+			<div class="control-input">
+				<p>Nticks</p>
+				<NumberWithUnits bind:value={theData.xAxis.nticks} />
 			</div>
 		</div>
 
