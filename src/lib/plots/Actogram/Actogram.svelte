@@ -654,6 +654,10 @@
 
 		<div class="div-line"></div>
 
+		<Axis axisData={theData.xAxis} which="controls" title="Time Axis" />
+
+		<div class="div-line"></div>
+
 		<div class="control-component">
 			<div class="control-component-title">
 				<p>Y-lims</p>
