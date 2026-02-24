@@ -8,6 +8,7 @@
 	let showPopover = $state(false);
 	let editValue = $state('');
 	let inputEl = $state(null);
+	let popoverEl = $state(null);
 	let tooltip = $state({ visible: false, x: 0, y: 0 });
 
 	onMount(() => {
@@ -29,6 +30,19 @@
 			if (inputEl) {
 				inputEl.focus();
 				inputEl.select();
+			}
+			if (popoverEl) {
+				const rect = popoverEl.getBoundingClientRect();
+				if (rect.right > window.innerWidth) {
+					popoverEl.style.left = 'auto';
+					popoverEl.style.right = '0';
+				}
+				if (rect.bottom > window.innerHeight) {
+					popoverEl.style.top = 'auto';
+					popoverEl.style.bottom = '100%';
+					popoverEl.style.marginTop = '0';
+					popoverEl.style.marginBottom = '4px';
+				}
 			}
 		}, 0);
 	}
@@ -52,7 +66,11 @@
 
 	function showTooltip(e) {
 		if (showPopover) return;
-		tooltip = { visible: true, x: e.clientX + 10, y: e.clientY + 10 };
+		let x = e.clientX + 10;
+		let y = e.clientY + 10;
+		if (x + 100 > window.innerWidth) x = window.innerWidth - 110;
+		if (y + 30 > window.innerHeight) y = e.clientY - 30;
+		tooltip = { visible: true, x, y };
 	}
 
 	function hideTooltip() {
@@ -79,7 +97,7 @@
 	{#if showPopover}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div class="popover-backdrop" onclick={() => commitRename()} onkeydown={() => {}}></div>
-		<div class="rename-popover">
+		<div class="rename-popover" bind:this={popoverEl}>
 			<input
 				bind:this={inputEl}
 				bind:value={editValue}
