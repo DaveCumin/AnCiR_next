@@ -1,10 +1,23 @@
 <script module>
 	// @ts-nocheck
 
-	import { Process } from '$lib/core/Process.svelte';
+	import { Process, nextLinkedGroupId } from '$lib/core/Process.svelte';
 	import { core, appConsts } from '$lib/core/core.svelte.js';
 	// import { timeParse } from 'd3-time-format';
 	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
+
+	/**
+	 * Add the same process to multiple columns at once.
+	 * If more than one column is provided, the processes are linked
+	 * so that changing args on one updates all the others.
+	 */
+	export function addProcessToColumns(columns, processName) {
+		const groupId = columns.length > 1 ? nextLinkedGroupId() : null;
+		for (const col of columns) {
+			const newProcess = new Process({ name: processName, linkedGroupId: groupId }, col);
+			col.processes.push(newProcess);
+		}
+	}
 
 	export function getColumnById(id) {
 		const theColumn = core.data.find((column) => column.id === id);
@@ -495,8 +508,10 @@
 					{#each col.processes as p}
 						{#key p.id}
 							<!-- Force the refresh when a process is added or removed (mostly the latter)-->
-							<div class="single-process-container">
-								<!-- <div class="column-indicator"></div> -->
+							<div class="single-process-container" class:linked-process={p.linkedGroupId != null}>
+								{#if p.linkedGroupId != null}
+									<div class="linked-badge" title="Linked – args shared with other columns">⟁</div>
+								{/if}
 								<Processcomponent {p} />
 							</div>
 						{/key}
@@ -695,5 +710,17 @@
 		flex-direction: column;
 		margin: 0;
 		gap: 0.5rem;
+	}
+
+	.linked-process {
+		border-left: 2px solid var(--color-lightness-35, #555);
+		padding-left: 0.35rem;
+	}
+
+	.linked-badge {
+		font-size: 10px;
+		color: var(--color-lightness-35, #555);
+		line-height: 1;
+		margin-bottom: 0.1rem;
 	}
 </style>

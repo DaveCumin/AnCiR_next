@@ -1,8 +1,29 @@
 <script module>
 	// @ts-nocheck
-	import { appConsts } from '$lib/core/core.svelte';
+	import { appConsts, core } from '$lib/core/core.svelte';
 
 	let _counter = 0;
+	let _linkedGroupCounter = 0;
+
+	export function nextLinkedGroupId() {
+		return _linkedGroupCounter++;
+	}
+
+	/**
+	 * Find all processes that share the same linkedGroupId.
+	 */
+	export function getLinkedProcesses(linkedGroupId) {
+		if (linkedGroupId == null) return [];
+		const result = [];
+		for (const col of core.data) {
+			for (const p of col.processes) {
+				if (p.linkedGroupId === linkedGroupId) {
+					result.push(p);
+				}
+			}
+		}
+		return result;
+	}
 
 	export class Process {
 		id;
@@ -10,6 +31,7 @@
 		displayName = $state('');
 		args = $state({});
 		parentCol = $state();
+		linkedGroupId = $state(null);
 
 		constructor({ ...dataIN }, parent, id = null) {
 			if (id === null) {
@@ -43,6 +65,12 @@
 			}
 			//set the type of data of the parent - for display purposes
 			this.parentCol = parent;
+
+			// Set linked group id if provided
+			if (dataIN.linkedGroupId != null) {
+				this.linkedGroupId = dataIN.linkedGroupId;
+				_linkedGroupCounter = Math.max(dataIN.linkedGroupId + 1, _linkedGroupCounter);
+			}
 		}
 
 		// Perform processes (add/filer etc)
@@ -51,29 +79,43 @@
 		}
 
 		toJSON() {
-			return {
+			const out = {
 				id: this.id,
 				name: this.name,
 				args: this.args
 			};
+			if (this.linkedGroupId != null) {
+				out.linkedGroupId = this.linkedGroupId;
+			}
+			return out;
 		}
 
 		static fromJSON(json, column) {
-			const { id, name, args } = json;
-			return new Process({ name, args }, column, id);
+			const { id, name, args, linkedGroupId } = json;
+			return new Process({ name, args, linkedGroupId: linkedGroupId ?? null }, column, id);
 		}
 	}
 </script>
 
 <script>
 	let { p } = $props();
-	// console.log(p);
-	// console.log(appConsts.processMap.get(p.name));
-	const Process = appConsts.processMap.get(p.name).component ?? null;
+	const ProcessComponent = appConsts.processMap.get(p.name)?.component ?? null;
+
+	// Sync args across linked processes
+	$effect(() => {
+		if (p.linkedGroupId == null) return;
+		const argsJson = JSON.stringify(p.args);
+		const siblings = getLinkedProcesses(p.linkedGroupId);
+		for (const sibling of siblings) {
+			if (sibling.id !== p.id && JSON.stringify(sibling.args) !== argsJson) {
+				Object.assign(sibling.args, JSON.parse(argsJson));
+			}
+		}
+	});
 </script>
 
-{#if Process}
-	<Process {p} />
+{#if ProcessComponent}
+	<ProcessComponent {p} />
 {:else}
 	<div>Error: No component found for process "{p.name}"</div>
 {/if}

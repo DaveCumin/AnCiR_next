@@ -4,12 +4,13 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 	import { appConsts } from '$lib/core/core.svelte.js';
-	import { getColumnById } from '$lib/core/Column.svelte';
+	import { getColumnById, addProcessToColumns } from '$lib/core/Column.svelte';
 	import { on } from 'svelte/events';
 
 	let {
 		showDropdown = $bindable(false),
 		columnSelected = null,
+		columnsSelected = [],
 		dropdownTop = 0,
 		dropdownLeft = 0
 	} = $props();
@@ -24,8 +25,11 @@
 	});
 
 	function addTheProcess(name) {
-		if (!columnSelected) return;
-		columnSelected.addProcess(name);
+		if (columnsSelected && columnsSelected.length > 0) {
+			addProcessToColumns(columnsSelected, name);
+		} else if (columnSelected) {
+			columnSelected.addProcess(name);
+		}
 		showDropdown = false;
 	}
 </script>
