@@ -186,6 +186,18 @@
 			return { upper: bound, lower: -bound };
 		});
 
+		// Peak detection - find the highest correlation after lag 0
+		peak = $derived.by(() => {
+			const { lags, correlations } = this.acfData;
+			if (!lags || !correlations || lags.length < 2) return null;
+			// Skip index 0 (lag=0 always has correlation=1.0)
+			let maxIdx = 1;
+			for (let i = 2; i < correlations.length; i++) {
+				if (correlations[i] > correlations[maxIdx]) maxIdx = i;
+			}
+			return { lag: lags[maxIdx], correlation: correlations[maxIdx] };
+		});
+
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
 
@@ -767,6 +779,11 @@
 							</p>
 						</div>
 						-->
+
+						{#if datum.peak}
+							<p><strong>Peak Lag: {datum.peak.lag.toFixed(2)} hrs</strong></p>
+							<p><strong>Peak Correlation: {datum.peak.correlation.toFixed(3)}</strong></p>
+						{/if}
 
 						<Line lineData={datum.line} which="controls" title="Line" />
 						<Points pointsData={datum.points} which="controls" />
