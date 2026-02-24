@@ -1,5 +1,5 @@
 <script module>
-	import { DateTime } from '$lib/utils/time/LiteDateTime';
+	import { DateTime } from 'luxon';
 
 	import { core } from '$lib/core/core.svelte';
 

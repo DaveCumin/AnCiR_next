@@ -1,7 +1,7 @@
 <script>
 	// @ts-nocheck
 	import { formatDate } from './TimeUtils';
-	import { DateTime } from './LiteDateTime';
+	import { DateTime } from 'luxon';
 
 	//params
 	export let thedatetime;

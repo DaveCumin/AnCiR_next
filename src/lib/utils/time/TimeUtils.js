@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { DateTime } from './LiteDateTime';
+import { DateTime } from 'luxon';
 import { guessFormat } from './guessTimeFormat';
 import { min, max } from '$lib/utils/MathsStats';
 import { createSequenceArray } from '$lib/utils/MathsStats';
