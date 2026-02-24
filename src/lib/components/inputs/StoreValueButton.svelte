@@ -7,7 +7,7 @@
 	let storedName = $state('');
 
 	onMount(() => {
-		storedName = uniqueStoredValueName(defaultName || label);
+		storedName = uniqueStoredValueName(defaultName || label || 'stored_value');
 		storeValue(storedName, getter, source);
 	});
 
