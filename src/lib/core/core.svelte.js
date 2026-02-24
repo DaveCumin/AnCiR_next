@@ -60,7 +60,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.10.6',
+	version: 'β.10.7',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
@@ -294,7 +294,9 @@ export function swapColumnRefs(idA, idB) {
 }
 
 export function outputCoreAsJson() {
-	let coreOut = JSON.parse(JSON.stringify(core, (key, val) => (typeof val === 'function' ? undefined : val)));
+	let coreOut = JSON.parse(
+		JSON.stringify(core, (key, val) => (typeof val === 'function' ? undefined : val))
+	);
 	coreOut.rawData = Object.fromEntries(core.rawData);
 	// Resolve live getters into static snapshots for serialisation
 	const resolvedSV = {};
@@ -311,7 +313,9 @@ export function outputCoreAsJson() {
 
 /** Returns a plain-object snapshot of core (no class instances). */
 export function getCoreAsPlainObject() {
-	const snap = JSON.parse(JSON.stringify(core, (key, val) => (typeof val === 'function' ? undefined : val)));
+	const snap = JSON.parse(
+		JSON.stringify(core, (key, val) => (typeof val === 'function' ? undefined : val))
+	);
 	snap.rawData = Object.fromEntries(core.rawData);
 	// Resolve live getters into static snapshots
 	const resolvedSV = {};
