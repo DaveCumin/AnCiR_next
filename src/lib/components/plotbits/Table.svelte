@@ -72,7 +72,7 @@
 	bind:this={table}
 	style="margin-top: 0.2rem; margin-bottom: 0rem;"
 >
-	<table style="width: 100%; table-layout: fixed;">
+	<table style="width: auto; table-layout: fixed;">
 		<thead>
 			<tr>
 				{#each headers as header, index}
@@ -113,7 +113,7 @@
 	}
 
 	:global(.preview-table-wrapper table) {
-		width: 100%;
+		width: auto;
 		table-layout: fixed;
 		border-collapse: collapse;
 		font-size: 14px;
