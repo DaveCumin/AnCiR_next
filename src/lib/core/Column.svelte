@@ -420,6 +420,38 @@
 	function toggleMenu(id) {
 		openMenus[id] = !openMenus[id];
 	}
+
+	// Drag-to-reorder processes
+	let dragIdx = $state(null);
+	let dragOverIdx = $state(null);
+
+	function onDragStart(e, idx) {
+		dragIdx = idx;
+		e.dataTransfer.effectAllowed = 'move';
+	}
+
+	function onDragOver(e, idx) {
+		e.preventDefault();
+		e.dataTransfer.dropEffect = 'move';
+		dragOverIdx = idx;
+	}
+
+	function onDrop(e, idx) {
+		e.preventDefault();
+		if (dragIdx != null && dragIdx !== idx) {
+			const items = [...col.processes];
+			const [moved] = items.splice(dragIdx, 1);
+			items.splice(idx, 0, moved);
+			col.processes = items;
+		}
+		dragIdx = null;
+		dragOverIdx = null;
+	}
+
+	function onDragEnd() {
+		dragIdx = null;
+		dragOverIdx = null;
+	}
 </script>
 
 {#if col == undefined}
@@ -505,10 +537,20 @@
 				</div>
 
 				<div class="process-container">
-					{#each col.processes as p}
+					{#each col.processes as p, i}
 						{#key p.id}
 							<!-- Force the refresh when a process is added or removed (mostly the latter)-->
-							<div class="single-process-container" class:linked-process={p.linkedGroupId != null}>
+							<div
+								class="single-process-container"
+								class:linked-process={p.linkedGroupId != null}
+								class:drag-over={dragOverIdx === i && dragIdx !== i}
+								draggable="true"
+								ondragstart={(e) => onDragStart(e, i)}
+								ondragover={(e) => onDragOver(e, i)}
+								ondrop={(e) => onDrop(e, i)}
+								ondragend={onDragEnd}
+							>
+								<div class="drag-handle" title="Drag to reorder">⠇</div>
 								{#if p.linkedGroupId != null}
 									<div class="linked-badge" title="Linked – args shared with other columns">⟁</div>
 								{/if}
@@ -722,5 +764,28 @@
 		color: var(--color-lightness-35, #555);
 		line-height: 1;
 		margin-bottom: 0.1rem;
+	}
+
+	.drag-handle {
+		cursor: grab;
+		user-select: none;
+		font-size: 12px;
+		line-height: 1;
+		color: var(--color-lightness-65, #aaa);
+		padding: 0 0.1rem;
+		opacity: 0;
+		transition: opacity 0.15s ease;
+	}
+
+	.drag-handle:active {
+		cursor: grabbing;
+	}
+
+	.single-process-container:hover .drag-handle {
+		opacity: 1;
+	}
+
+	.drag-over {
+		border-top: 2px solid var(--color-lightness-35, #555);
 	}
 </style>

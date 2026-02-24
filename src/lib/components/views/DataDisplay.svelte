@@ -161,7 +161,7 @@
 
 <MakeNewColumn bind:show={showNewCol} tableId={selectedTable} />
 
-<AddProcessToMultiple bind:show={showAddProcessMultiple} tableId={selectedTable} />
+<AddProcessToMultiple bind:show={showAddProcessMultiple} />
 
 <SwapColumns bind:showModal={showSwapColumns} />
 
