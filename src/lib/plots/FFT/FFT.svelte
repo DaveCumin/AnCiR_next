@@ -441,7 +441,7 @@
 				const fft = datum.fftData;
 				for (let i = 0; i < fft.frequencies.length; i++) {
 					const freq = fft.frequencies[i];
-					const row = [d, freq, freq > 0 ? 1 / freq : '', fft.magnitudes[i]];
+					const row = [d, freq, freq !== 0 ? 1 / freq : '', fft.magnitudes[i]];
 					if (hasPhase) {
 						row.push(fft.phases?.[i] ?? '');
 					}

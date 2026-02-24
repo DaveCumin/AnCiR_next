@@ -25,7 +25,7 @@ export function saveDataAsCSV(plotId) {
 	const url = URL.createObjectURL(blob);
 	const link = document.createElement('a');
 	link.href = url;
-	link.download = (plot.name || 'plot_data') + '.csv';
+	link.download = (plot.name || 'plot_data').replace(/[/\\:*?"<>|]/g, '_') + '.csv';
 	document.body.appendChild(link);
 	link.click();
 	document.body.removeChild(link);
