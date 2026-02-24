@@ -172,7 +172,8 @@ export function getStoredValue(name) {
 	if (typeof entry.getter === 'function') {
 		try {
 			return entry.getter();
-		} catch {
+		} catch (e) {
+			console.warn(`Stored value '${name}' getter failed:`, e.message);
 			return entry.staticValue ?? NaN;
 		}
 	}
