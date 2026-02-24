@@ -1,5 +1,5 @@
 <script>
-	import { DateTime } from 'luxon';
+	import { DateTime } from '$lib/utils/time/LiteDateTime';
 	let { value = $bindable(), zone = 'utc', hours = false, onChange = () => {} } = $props();
 
 	// Use $derived to automatically update when value changes

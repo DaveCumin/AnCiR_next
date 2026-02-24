@@ -1,8 +1,8 @@
 <script module>
 	// @ts-nocheck
 	import Papa from 'papaparse';
-	import * as XLSX from 'xlsx';
-	import { DateTime } from 'luxon';
+	import * as XLSX from '$lib/utils/xlsxLite';
+	import { DateTime } from '$lib/utils/time/LiteDateTime';
 
 	import { appConsts, core, pushObj, appState } from '$lib/core/core.svelte';
 	import { Table } from '$lib/core/Table.svelte';

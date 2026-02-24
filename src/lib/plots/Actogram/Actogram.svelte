@@ -446,7 +446,7 @@
 	import { tick } from 'svelte';
 	import { appState } from '$lib/core/core.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
-	import { DateTime } from 'luxon';
+	import { DateTime } from '$lib/utils/time/LiteDateTime';
 
 	let { theData, which } = $props();
 
