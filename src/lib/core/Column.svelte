@@ -527,8 +527,7 @@
 
 					<button
 						class="icon"
-						onclick={(e) => {
-							e.stopPropagation();
+						onclick={() => {
 							openClps[col.id] = !openClps[col.id];
 						}}
 					>

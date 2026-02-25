@@ -434,8 +434,7 @@
 						<div class="clps-title-button">
 							<button
 								class="icon"
-								onclick={(e) => {
-									e.stopPropagation();
+								onclick={() => {
 									toggleTable(table.id);
 								}}
 							>
@@ -506,8 +505,7 @@
 							<div class="clps-title-button">
 								<button
 									class="icon"
-									onclick={(e) => {
-										e.stopPropagation();
+									onclick={() => {
 										togglePlot(plot.id);
 									}}
 								>
