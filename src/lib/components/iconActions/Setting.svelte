@@ -85,6 +85,9 @@
 			}
 		}
 
+		// Re-link shared args for linked processes after deserialization
+		relinkLinkedProcessArgs();
+
 		if (onProgress) onProgress('Building tables…');
 		await tick();
 		await new Promise((r) => setTimeout(r, 0));
@@ -131,7 +134,7 @@
 	// @ts-nocheck
 	import { tick } from 'svelte';
 	import { core, pushObj, outputCoreAsJson, loadAppState } from '$lib/core/core.svelte';
-	import { Column } from '$lib/core/Column.svelte';
+	import { Column, relinkLinkedProcessArgs } from '$lib/core/Column.svelte';
 	import { Table } from '$lib/core/Table.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
 

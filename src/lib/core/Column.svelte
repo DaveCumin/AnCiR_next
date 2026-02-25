@@ -1,10 +1,50 @@
 <script module>
 	// @ts-nocheck
 
-	import { Process } from '$lib/core/Process.svelte';
+	import { Process, nextLinkedGroupId, getLinkedProcesses } from '$lib/core/Process.svelte';
 	import { core, appConsts } from '$lib/core/core.svelte.js';
 	// import { timeParse } from 'd3-time-format';
 	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
+
+	/**
+	 * Add the same process to multiple columns at once.
+	 * If more than one column is provided, the processes are linked
+	 * so that changing args on one updates all the others.
+	 * All linked processes share the same args object.
+	 */
+	export function addProcessToColumns(columns, processName) {
+		const groupId = columns.length > 1 ? nextLinkedGroupId() : null;
+		let sharedArgs = null;
+		for (const col of columns) {
+			const newProcess = new Process({ name: processName, linkedGroupId: groupId }, col);
+			if (groupId != null) {
+				if (sharedArgs === null) {
+					sharedArgs = newProcess.args;
+				} else {
+					newProcess.args = sharedArgs;
+				}
+			}
+			col.processes.push(newProcess);
+		}
+	}
+
+	/**
+	 * After deserializing from JSON, linked processes each have their own
+	 * args copy. This function re-links them so they share the same object.
+	 */
+	export function relinkLinkedProcessArgs() {
+		const seen = new Map();
+		for (const col of core.data) {
+			for (const p of col.processes) {
+				if (p.linkedGroupId == null) continue;
+				if (seen.has(p.linkedGroupId)) {
+					p.args = seen.get(p.linkedGroupId);
+				} else {
+					seen.set(p.linkedGroupId, p.args);
+				}
+			}
+		}
+	}
 
 	export function getColumnById(id) {
 		const theColumn = core.data.find((column) => column.id === id);
@@ -407,6 +447,38 @@
 	function toggleMenu(id) {
 		openMenus[id] = !openMenus[id];
 	}
+
+	// Drag-to-reorder processes
+	let dragIdx = $state(null);
+	let dragOverIdx = $state(null);
+
+	function onDragStart(e, idx) {
+		dragIdx = idx;
+		e.dataTransfer.effectAllowed = 'move';
+	}
+
+	function onDragOver(e, idx) {
+		e.preventDefault();
+		e.dataTransfer.dropEffect = 'move';
+		dragOverIdx = idx;
+	}
+
+	function onDrop(e, idx) {
+		e.preventDefault();
+		if (dragIdx != null && dragIdx !== idx) {
+			const items = [...col.processes];
+			const [moved] = items.splice(dragIdx, 1);
+			items.splice(idx, 0, moved);
+			col.processes = items;
+		}
+		dragIdx = null;
+		dragOverIdx = null;
+	}
+
+	function onDragEnd() {
+		dragIdx = null;
+		dragOverIdx = null;
+	}
 </script>
 
 {#if col == undefined}
@@ -492,11 +564,23 @@
 				</div>
 
 				<div class="process-container">
-					{#each col.processes as p}
+					{#each col.processes as p, i}
 						{#key p.id}
 							<!-- Force the refresh when a process is added or removed (mostly the latter)-->
-							<div class="single-process-container">
-								<!-- <div class="column-indicator"></div> -->
+							<div
+								class="single-process-container"
+								class:linked-process={p.linkedGroupId != null}
+								class:drag-over={dragOverIdx === i && dragIdx !== i}
+								draggable="true"
+								ondragstart={(e) => onDragStart(e, i)}
+								ondragover={(e) => onDragOver(e, i)}
+								ondrop={(e) => onDrop(e, i)}
+								ondragend={onDragEnd}
+							>
+								<div class="drag-handle" title="Drag to reorder">⠇</div>
+								{#if p.linkedGroupId != null}
+									<div class="linked-badge" title="Linked – args shared with other columns">⟁</div>
+								{/if}
 								<Processcomponent {p} />
 							</div>
 						{/key}
@@ -695,5 +779,40 @@
 		flex-direction: column;
 		margin: 0;
 		gap: 0.5rem;
+	}
+
+	.linked-process {
+		border-left: 2px solid var(--color-lightness-35, #555);
+		padding-left: 0.35rem;
+	}
+
+	.linked-badge {
+		font-size: 10px;
+		color: var(--color-lightness-35, #555);
+		line-height: 1;
+		margin-bottom: 0.1rem;
+	}
+
+	.drag-handle {
+		cursor: grab;
+		user-select: none;
+		font-size: 12px;
+		line-height: 1;
+		color: var(--color-lightness-65, #aaa);
+		padding: 0 0.1rem;
+		opacity: 0;
+		transition: opacity 0.15s ease;
+	}
+
+	.drag-handle:active {
+		cursor: grabbing;
+	}
+
+	.single-process-container:hover .drag-handle {
+		opacity: 1;
+	}
+
+	.drag-over {
+		border-top: 2px solid var(--color-lightness-35, #555);
 	}
 </style>

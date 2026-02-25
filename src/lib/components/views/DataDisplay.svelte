@@ -9,6 +9,7 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import TableProcess from '$lib/core/TableProcess.svelte';
 	import MakeNewColumn from './modals/MakeNewColumn.svelte';
+	import AddProcessToMultiple from './modals/AddProcessToMultiple.svelte';
 	import SwapColumns from './modals/SwapColumns.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
@@ -42,6 +43,14 @@
 	export function addNewColumn(id) {
 		selectedTable = id;
 		showNewCol = true;
+	}
+
+	// Add Process to Multiple modal
+	let showAddProcessMultiple = $state(false);
+
+	function addProcessToMultiple(id) {
+		selectedTable = id;
+		showAddProcessMultiple = true;
 	}
 
 	let showSingleTableDropdown = $state(false);
@@ -147,9 +156,12 @@
 	{dropdownLeft}
 	tableId={selectedTable}
 	{addNewColumn}
+	{addProcessToMultiple}
 />
 
 <MakeNewColumn bind:show={showNewCol} tableId={selectedTable} />
+
+<AddProcessToMultiple bind:show={showAddProcessMultiple} />
 
 <SwapColumns bind:showModal={showSwapColumns} />
 
