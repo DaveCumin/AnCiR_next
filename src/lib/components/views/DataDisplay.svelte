@@ -122,8 +122,14 @@
 						<button
 							class="icon"
 							onclick={(e) => {
-								e.stopPropagation();
+								console.log('BEFORE toggle:', table.id, 'openClps value:', openClps[table.id]);
 								openClps[table.id] = !openClps[table.id];
+								console.log('AFTER toggle:', table.id, 'openClps value:', openClps[table.id]);
+								const det = e.target.closest('details');
+								console.log('details.open:', det?.open);
+								setTimeout(() => {
+									console.log('details.open after tick:', det?.open);
+								}, 100);
 							}}
 						>
 							{#if openClps[table.id]}
