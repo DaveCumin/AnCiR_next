@@ -26,24 +26,6 @@
 		>
 			<button> Simulate Data </button>
 		</div>
-
-		<div
-			class="dropdown-action"
-			onclick={() => {
-				showSequenceModal = true;
-			}}
-		>
-			<button> Sequence Column </button>
-		</div>
-
-		<div
-			class="dropdown-action"
-			onclick={() => {
-				showBlankModal = true;
-			}}
-		>
-			<button> Blank Column </button>
-		</div>
 	{/snippet}
 </Dropdown>
 
