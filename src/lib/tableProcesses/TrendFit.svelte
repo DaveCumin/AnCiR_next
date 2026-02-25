@@ -253,7 +253,7 @@
 			untrack(() => {
 				[trendData, p.args.valid] = trendfit(p.args);
 			});
-			lastHash = dataHash;
+			lastHash = getHash; // read after untrack so mutations to p.args.valid don't re-trigger
 		}
 	});
 	//------------
@@ -280,7 +280,8 @@
 	function toggleOutputX(checked) {
 		if (!checked) {
 			p.args.outputX = -1;
-			getTrend();
+		} else {
+			p.args.outputX = p.args.xIN; // default to input X
 		}
 	}
 </script>
@@ -294,7 +295,7 @@
 	<div class="control-input-vertical">
 		<div class="control-input">
 			<p>X column</p>
-			<ColumnSelector bind:value={p.args.xIN} onChange={() => getTrend()} />
+			<ColumnSelector bind:value={p.args.xIN} />
 		</div>
 
 		<div class="control-input-vertical">
@@ -303,7 +304,6 @@
 				<ColumnSelector
 					bind:value={p.args.yIN}
 					excludeColIds={[p.args.xIN]}
-					onChange={() => getTrend()}
 				/>
 			</div>
 		</div>
@@ -359,7 +359,10 @@
 		<div class="control-input-vertical">
 			<div class="control-input">
 				<p>Output X column</p>
-				<ColumnSelector bind:value={p.args.outputX} onChange={() => getTrend()} />
+				<ColumnSelector
+					bind:value={p.args.outputX}
+					excludeColIds={[p.args.out.trendx, p.args.out.trendy]}
+				/>
 			</div>
 		</div>
 	{/if}

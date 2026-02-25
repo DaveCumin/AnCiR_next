@@ -229,6 +229,8 @@
 	function toggleOutputX(checked) {
 		if (!checked) {
 			p.args.outputX = -1;
+		} else {
+			p.args.outputX = p.args.xIN; // default to input X
 		}
 	}
 </script>
@@ -336,7 +338,10 @@
 		<div class="control-input-vertical">
 			<div class="control-input">
 				<p>Output X column</p>
-				<ColumnSelector bind:value={p.args.outputX} />
+				<ColumnSelector
+					bind:value={p.args.outputX}
+					excludeColIds={[p.args.out.cosinorx, p.args.out.cosinory]}
+				/>
 			</div>
 		</div>
 	{/if}
