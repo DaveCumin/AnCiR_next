@@ -202,7 +202,7 @@
 			untrack(() => {
 				[cosinorData, p.args.valid] = cosinor(p.args);
 			});
-			lastHash = dataHash;
+			lastHash = getHash; // read after untrack so mutations to p.args.valid don't re-trigger
 		}
 	});
 	//------------
