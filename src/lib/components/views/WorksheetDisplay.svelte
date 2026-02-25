@@ -104,7 +104,12 @@
 	{#if core.plots.length > 1}
 		<div class="clps-container">
 			<details>
-				<summary>
+				<summary
+					onclick={(e) => e.preventDefault()}
+					onkeydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+					}}
+				>
 					<input
 						type="checkbox"
 						oninput={(e) => {
@@ -136,6 +141,9 @@
 						e.preventDefault();
 						e.stopPropagation();
 						selectPlot(e, plot.id);
+					}}
+					onkeydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
 					}}
 				>
 					<div class="clps-title">

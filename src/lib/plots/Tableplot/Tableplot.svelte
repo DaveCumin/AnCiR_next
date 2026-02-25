@@ -412,32 +412,49 @@
 			<!-- Tables -->
 			{#each core.tables as table (table.id)}
 				<details class="clps-item" open={expandedTables.has(table.id)}>
-					<summary class="clps-title-container">
+					<summary
+						class="clps-title-container"
+						onclick={(e) => e.preventDefault()}
+						onkeydown={(e) => {
+							if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+						}}
+					>
 						<div class="clps-title">
 							<input
 								type="checkbox"
 								checked={isTableSelected(table)}
-								onchange={() => toggleTableSelection(table)}
+								onclick={(e) => {
+									e.stopPropagation();
+									toggleTableSelection(table);
+								}}
 							/>
 							<span class="tree-name">{table.name}</span>
 						</div>
 
 						<div class="clps-title-button">
-							{#if expandedTables.has(table.id)}
-								<Icon
-									name="caret-down"
-									width={20}
-									height={20}
-									className="first-detail-title-icon"
-								/>
-							{:else}
-								<Icon
-									name="caret-right"
-									width={20}
-									height={20}
-									className="first-detail-title-icon"
-								/>
-							{/if}
+							<button
+								class="icon"
+								onclick={(e) => {
+									e.stopPropagation();
+									toggleTable(table.id);
+								}}
+							>
+								{#if expandedTables.has(table.id)}
+									<Icon
+										name="caret-down"
+										width={20}
+										height={20}
+										className="first-detail-title-icon"
+									/>
+								{:else}
+									<Icon
+										name="caret-right"
+										width={20}
+										height={20}
+										className="first-detail-title-icon"
+									/>
+								{/if}
+							</button>
 						</div>
 					</summary>
 
@@ -466,33 +483,50 @@
 				{@const plotCols = getPlotColumns(plot)}
 				{#if plotCols.length > 0}
 					<details class="clps-item" open={expandedPlots.has(plot.id)}>
-						<summary class="clps-title-container">
+						<summary
+							class="clps-title-container"
+							onclick={(e) => e.preventDefault()}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+							}}
+						>
 							<div class="clps-title">
 								<input
 									type="checkbox"
 									checked={isPlotSelected(plot)}
-									onchange={() => togglePlotSelection(plot)}
+									onclick={(e) => {
+										e.stopPropagation();
+										togglePlotSelection(plot);
+									}}
 								/>
 								<span class="tree-name">{plot.name}</span>
 								<span class="tree-badge">Plot</span>
 							</div>
 
 							<div class="clps-title-button">
-								{#if expandedPlots.has(plot.id)}
-									<Icon
-										name="caret-down"
-										width={20}
-										height={20}
-										className="first-detail-title-icon"
-									/>
-								{:else}
-									<Icon
-										name="caret-right"
-										width={20}
-										height={20}
-										className="first-detail-title-icon"
-									/>
-								{/if}
+								<button
+									class="icon"
+									onclick={(e) => {
+										e.stopPropagation();
+										togglePlot(plot.id);
+									}}
+								>
+									{#if expandedPlots.has(plot.id)}
+										<Icon
+											name="caret-down"
+											width={20}
+											height={20}
+											className="first-detail-title-icon"
+										/>
+									{:else}
+										<Icon
+											name="caret-right"
+											width={20}
+											height={20}
+											className="first-detail-title-icon"
+										/>
+									{/if}
+								</button>
 							</div>
 						</summary>
 

@@ -89,14 +89,14 @@
 	{#each core.tables as table (table.id)}
 		<div class="clps-container">
 			<details class="clps-item" bind:open={openClps[table.id]}>
-				<summary class="clps-title-container">
-					<div
-						class="clps-title"
-						onclick={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-						}}
-					>
+				<summary
+					class="clps-title-container"
+					onclick={(e) => e.preventDefault()}
+					onkeydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+					}}
+				>
+					<div class="clps-title">
 						<p><Editable bind:value={table.name} /></p>
 					</div>
 
@@ -119,11 +119,19 @@
 						>
 							<Icon name="minus" width={20} height={20} className="menu-icon" />
 						</button>
-						{#if openClps[table.id]}
-							<Icon name="caret-down" width={20} height={20} className="first-detail-title-icon" />
-						{:else}
-							<Icon name="caret-right" width={20} height={20} className="first-detail-title-icon" />
-						{/if}
+						<button
+							class="icon"
+							onclick={(e) => {
+								e.stopPropagation();
+								openClps[table.id] = !openClps[table.id];
+							}}
+						>
+							{#if openClps[table.id]}
+								<Icon name="caret-down" width={20} height={20} className="first-detail-title-icon" />
+							{:else}
+								<Icon name="caret-right" width={20} height={20} className="first-detail-title-icon" />
+							{/if}
+						</button>
 					</div>
 				</summary>
 

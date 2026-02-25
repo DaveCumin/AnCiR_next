@@ -486,16 +486,16 @@
 {:else}
 	<div class="clps-container">
 		<details class="clps-item" bind:open={openClps[col.id]}>
-			<summary class="clps-title-container">
+			<summary
+				class="clps-title-container"
+				onclick={(e) => e.preventDefault()}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+				}}
+			>
 				<!-- <div class="column-indicator"></div> -->
 
-				<div
-					class="clps-title"
-					onclick={(e) => {
-						e.preventDefault();
-						e.stopPropagation();
-					}}
-				>
+				<div class="clps-title">
 					<TypeSelector bind:value={col.type} />
 
 					{#if canChange}
@@ -525,11 +525,19 @@
 						</button>
 					{/if}
 
-					{#if openClps[col.id]}
-						<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />
-					{:else}
-						<Icon name="caret-right" width={20} height={20} className="second-detail-title-icon" />
-					{/if}
+					<button
+						class="icon"
+						onclick={(e) => {
+							e.stopPropagation();
+							openClps[col.id] = !openClps[col.id];
+						}}
+					>
+						{#if openClps[col.id]}
+							<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />
+						{:else}
+							<Icon name="caret-right" width={20} height={20} className="second-detail-title-icon" />
+						{/if}
+					</button>
 				</div>
 			</summary>
 
