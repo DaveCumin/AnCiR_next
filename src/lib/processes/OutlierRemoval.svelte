@@ -71,8 +71,76 @@
 
 <script>
 	import Icon from '$lib/icons/Icon.svelte';
+	import { core } from '$lib/core/core.svelte.js';
+	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
 
 	let { p = $bindable() } = $props();
+
+	const removedValues = $derived.by(() => {
+		const col = p.parentCol;
+		const processIndex = col.processes.findIndex((proc) => proc.id === p.id);
+		if (processIndex < 0) return [];
+
+		// Reconstruct the data as it enters this process
+		let data;
+		if (col.isReferencial()) {
+			const refData = col.refColumn?.getData();
+			if (!refData) return [];
+			data = [...refData];
+		} else {
+			const rawData = core.rawData.get(col.data);
+			if (!rawData) return [];
+
+			if (col.compression === 'awd') {
+				data = new Array(rawData.length);
+				for (let i = 0; i < rawData.length; i++) {
+					data[i] = rawData.start + i * rawData.step;
+				}
+			} else {
+				data = [...rawData];
+			}
+
+			if (col.type === 'time' && col.compression !== 'awd') {
+				try {
+					data = data.map((x) => Number(getUNIXDate(x, col.timeFormat)));
+				} catch {
+					/* ignore */
+				}
+			}
+
+			if (col.type === 'bin') {
+				data = data.map((x) => x + col.binWidth / 2);
+			}
+		}
+
+		// Apply all processes before this one
+		for (let i = 0; i < processIndex; i++) {
+			data = col.processes[i].doProcess(data);
+		}
+
+		// Run outlier detection on the input data
+		const validData = data.filter((val) => val != null && !isNaN(val));
+		if (validData.length < 4) return [];
+
+		let outlierMask;
+		try {
+			if (p.args.method === 'zscore') {
+				outlierMask = detectOutliersZScore(validData, p.args.zThreshold);
+			} else {
+				outlierMask = detectOutliersIQR(validData, p.args.iqrMultiplier);
+			}
+		} catch {
+			return [];
+		}
+
+		const removed = [];
+		for (let i = 0; i < validData.length; i++) {
+			if (outlierMask[i]) {
+				removed.push(validData[i]);
+			}
+		}
+		return removed;
+	});
 </script>
 
 <div class="control-input process">
@@ -107,7 +175,49 @@
 			<NumberWithUnits bind:value={p.args.zThreshold} step="0.1" min={1} max={10} />
 		</div>
 	{/if}
+	{#if removedValues.length > 0}
+		<div>
+			<p>Removed values</p>
+			<div class="removed-values-list">
+				{#each removedValues as value, i}
+					<div class="removed-value-row">
+						<span class="removed-value-number">{i + 1}:</span>
+						<span class="removed-value">{parseFloat(value.toFixed(2))}</span>
+					</div>
+				{/each}
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
+	.removed-values-list {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		max-height: 150px;
+		overflow-y: auto;
+		border: 1px solid #e1e9f6;
+		border-radius: 4px;
+		padding: 4px;
+	}
+
+	.removed-value-row {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 11px;
+	}
+
+	.removed-value-number {
+		color: var(--color-lightness-35);
+		min-width: 24px;
+		flex-shrink: 0;
+	}
+
+	.removed-value {
+		width: 70px;
+		font-size: 11px;
+		padding: 1px 4px;
+	}
 </style>
