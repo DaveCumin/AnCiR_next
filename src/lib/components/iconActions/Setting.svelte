@@ -50,7 +50,7 @@
 		await tick();
 		await new Promise((r) => setTimeout(r, 0));
 
-		if (!jsonData.version || jsonData.version < 'β.5') {
+		if (!jsonData.rawData) {
 			//legacy support for rawData as array
 			core.rawData = new Map(
 				Object.entries($state.snapshot(jsonData.data)).map(([id, data]) => [

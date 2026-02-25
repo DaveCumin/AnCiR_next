@@ -478,7 +478,7 @@
 			}
 			if (json.nightBands) {
 				json.nightBands.forEach((band) => {
-					plot.nightBands.push(NightBandClass.fromJSON(plot, band));
+					scatter.nightBands.push(NightBandClass.fromJSON(scatter, band));
 				});
 			}
 			scatter.legend = LegendClass.fromJSON(json.legend);
