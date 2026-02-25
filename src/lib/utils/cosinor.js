@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { KahanSum } from './numerics.js';
+import { pf, qt } from '$lib/data/CDFs.js';
 
 /**
  * Fits a model comprised of N cosine curves to data
@@ -168,6 +169,14 @@ function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance) {
 	const rssValue = rssAcc.value;
 	const rmse = Math.sqrt(rssValue / t.length);
 
+	// Compute R²
+	const xMeanAcc = new KahanSum();
+	for (let i = 0; i < x.length; i++) xMeanAcc.add(x[i]);
+	const xMean = xMeanAcc.value / x.length;
+	const sstotAcc = new KahanSum();
+	for (let i = 0; i < x.length; i++) sstotAcc.add((x[i] - xMean) ** 2);
+	const rSquared = sstotAcc.value > 0 ? 1 - rssValue / sstotAcc.value : 0;
+
 	// Generate fitted curve
 	const fitted = t.map((ti) => evaluateModel(ti, params, N));
 
@@ -184,6 +193,7 @@ function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance) {
 		fitted: fitted,
 		residuals: residuals,
 		rmse: rmse,
+		rSquared: rSquared,
 		rss: rssValue
 	};
 }
@@ -454,4 +464,148 @@ function solveLinearSystem(A, b) {
 	}
 
 	return solution;
+}
+
+/**
+ * Classical (fixed-period) cosinor analysis via ordinary least squares.
+ * Model: Y(t) = M + Σ_k [ β_k·cos(kωt) + γ_k·sin(kωt) ],  ω = 2π/period
+ *
+ * Returns mesor, per-harmonic amplitude & acrophase with CIs (delta method),
+ * overall F-test for rhythm significance, R², and RMSE.
+ *
+ * @param {number[]} t          - Time values (same units as period)
+ * @param {number[]} y          - Data values
+ * @param {number}   period     - Fixed period (default 24)
+ * @param {number}   nHarmonics - Number of harmonics to fit (default 1)
+ * @param {number}   alpha      - Significance level for CIs (default 0.05)
+ * @returns {Object|null}
+ */
+export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05) {
+	const n = t.length;
+	const nParams = 2 * nHarmonics + 1; // mesor + 2 coefficients per harmonic
+	const df_res = n - nParams;
+	if (df_res < 1) return null;
+
+	const omega = (2 * Math.PI) / period;
+
+	// Build design matrix X: columns = [1, cos(ωt), sin(ωt), cos(2ωt), sin(2ωt), ...]
+	const X = t.map((ti) => {
+		const row = [1];
+		for (let k = 1; k <= nHarmonics; k++) {
+			row.push(Math.cos(k * omega * ti));
+			row.push(Math.sin(k * omega * ti));
+		}
+		return row;
+	});
+
+	// Compute XᵀX and Xᵀy
+	const XtX = Array.from({ length: nParams }, () => new Array(nParams).fill(0));
+	const Xty = new Array(nParams).fill(0);
+	for (let i = 0; i < n; i++) {
+		for (let j = 0; j < nParams; j++) {
+			Xty[j] += X[i][j] * y[i];
+			for (let k = 0; k < nParams; k++) {
+				XtX[j][k] += X[i][j] * X[i][k];
+			}
+		}
+	}
+
+	// Solve OLS: coeffs = (XᵀX)⁻¹ Xᵀy
+	let coeffs;
+	try {
+		coeffs = solveLinearSystem(XtX, Xty);
+	} catch (_) {
+		return null;
+	}
+
+	const M = coeffs[0]; // mesor
+
+	// Fitted values and residuals
+	const yMeanAcc = new KahanSum();
+	for (let i = 0; i < n; i++) yMeanAcc.add(y[i]);
+	const yMean = yMeanAcc.value / n;
+
+	const fitted = t.map((ti) => {
+		let val = M;
+		for (let k = 1; k <= nHarmonics; k++) {
+			val += coeffs[2 * k - 1] * Math.cos(k * omega * ti);
+			val += coeffs[2 * k] * Math.sin(k * omega * ti);
+		}
+		return val;
+	});
+
+	// Sums of squares (Kahan)
+	const sstotAcc = new KahanSum();
+	const ssresAcc = new KahanSum();
+	for (let i = 0; i < n; i++) {
+		sstotAcc.add((y[i] - yMean) ** 2);
+		ssresAcc.add((y[i] - fitted[i]) ** 2);
+	}
+	const SStot = sstotAcc.value;
+	const SSres = ssresAcc.value;
+	const SSreg = SStot - SSres;
+	const MSE = SSres / df_res;
+	const RMSE = Math.sqrt(MSE);
+	const R2 = SStot > 0 ? 1 - SSres / SStot : 0;
+
+	// F-test: H₀ — all harmonic coefficients are zero
+	const F_stat = MSE > 0 ? SSreg / (2 * nHarmonics) / MSE : NaN;
+	const pF = isNaN(F_stat) ? NaN : pf(F_stat, 2 * nHarmonics, df_res, 1);
+
+	// Covariance matrix V = MSE · (XᵀX)⁻¹  via solving nParams systems
+	const XtX_inv = Array.from({ length: nParams }, () => new Array(nParams).fill(0));
+	for (let col = 0; col < nParams; col++) {
+		const e = new Array(nParams).fill(0);
+		e[col] = 1;
+		try {
+			const sol = solveLinearSystem(XtX, e);
+			for (let row = 0; row < nParams; row++) XtX_inv[row][col] = sol[row];
+		} catch (_) {
+			/* leave column as zeros */
+		}
+	}
+
+	// t-critical value for (1 − alpha) confidence intervals
+	// qt(1 − α/2, df_res, ptype=0) gives the upper-tail critical value
+	const t_crit = qt(1 - alpha / 2, df_res, 0);
+
+	// Mesor CI
+	const SE_M = Math.sqrt(Math.max(0, MSE * XtX_inv[0][0]));
+	const CI_M = [M - t_crit * SE_M, M + t_crit * SE_M];
+
+	// Per-harmonic statistics
+	const harmonics = [];
+	for (let k = 1; k <= nHarmonics; k++) {
+		const bIdx = 2 * k - 1; // index of beta_k in coeffs
+		const gIdx = 2 * k; // index of gamma_k in coeffs
+		const beta_k = coeffs[bIdx];
+		const gamma_k = coeffs[gIdx];
+
+		const A_k = Math.sqrt(beta_k ** 2 + gamma_k ** 2);
+		const phi_k = Math.atan2(-gamma_k, beta_k); // acrophase in radians
+
+		// Acrophase in hours, normalised to [0, period/k)
+		let acrophase_hrs = (phi_k * period) / (2 * Math.PI * k);
+		if (acrophase_hrs < 0) acrophase_hrs += period / k;
+
+		const varBeta = MSE * XtX_inv[bIdx][bIdx];
+		const varGamma = MSE * XtX_inv[gIdx][gIdx];
+
+		// Delta method — amplitude
+		const varA = A_k > 0 ? (beta_k ** 2 * varBeta + gamma_k ** 2 * varGamma) / A_k ** 2 : 0;
+		const SE_A = Math.sqrt(Math.max(0, varA));
+		const CI_A = [Math.max(0, A_k - t_crit * SE_A), A_k + t_crit * SE_A];
+
+		// Delta method — acrophase (radians → hours)
+		const varPhi = A_k > 0 ? (gamma_k ** 2 * varBeta + beta_k ** 2 * varGamma) / A_k ** 4 : 0;
+		const SE_acrophase_hrs = Math.sqrt(Math.max(0, varPhi)) * period / (2 * Math.PI * k);
+		const CI_acrophase = [
+			acrophase_hrs - t_crit * SE_acrophase_hrs,
+			acrophase_hrs + t_crit * SE_acrophase_hrs
+		];
+
+		harmonics.push({ k, beta: beta_k, gamma: gamma_k, amplitude: A_k, acrophase_hrs, phi_rad: phi_k, SE_A, SE_acrophase_hrs, CI_A, CI_acrophase });
+	}
+
+	return { M, SE_M, CI_M, harmonics, F_stat, df: [2 * nHarmonics, df_res], pF, R2, RMSE, fitted, n, period, nHarmonics, alpha };
 }

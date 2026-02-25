@@ -348,7 +348,7 @@ export function qchisq(p, n, ptype = 1) {
 }
 
 // t-distribution CDF
-function pt(t, n, ptype) {
+export function pt(t, n, ptype) {
 	const x = n / (t * t + n);
 	var p = betai(n, 1, x);
 
@@ -363,7 +363,7 @@ function pt(t, n, ptype) {
 }
 
 // inverse of pt
-function qt(p, n, ptype) {
+export function qt(p, n, ptype) {
 	if (p === 0) {
 		if (ptype == 1 || ptype == 2) return 1 / 0;
 		else if (ptype == 0) return -1 / 0;
@@ -431,7 +431,7 @@ function qt(p, n, ptype) {
 }
 
 // F-distribution CDF
-function pf(F, df1, df2, ptype) {
+export function pf(F, df1, df2, ptype) {
 	if (F === 0) {
 		return ptype == 1 ? 1 : 0;
 	}

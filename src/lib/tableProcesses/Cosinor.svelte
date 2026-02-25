@@ -1,7 +1,7 @@
 <script module>
 	import { core } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-	import { fitCosineCurves, evaluateCosinorAtPoints } from '$lib/utils/cosinor.js';
+	import { fitCosineCurves, evaluateCosinorAtPoints, fitCosinorFixed } from '$lib/utils/cosinor.js';
 
 	export const cosinor_defaults = new Map([
 		['xIN', { val: -1 }],
@@ -9,7 +9,11 @@
 		['Ncurves', { val: 0 }],
 		['outputX', { val: -1 }],
 		['out', { cosinorx: { val: -1 }, cosinory: { val: -1 } }], //needed to set up the output columns
-		['valid', { val: false }] //needed for the progress step logic
+		['valid', { val: false }], //needed for the progress step logic
+		['useFixedPeriod', { val: false }],
+		['fixedPeriod', { val: 24 }],
+		['nHarmonics', { val: 1 }],
+		['alpha', { val: 0.05 }]
 	]);
 
 	export function cosinor(argsIN) {
@@ -19,15 +23,27 @@
 		const outputXId = argsIN.outputX;
 		const xOUT = argsIN.out.cosinorx;
 		const yOUT = argsIN.out.cosinory;
+		const useFixedPeriod = argsIN.useFixedPeriod ?? false;
+		const fixedPeriod = argsIN.fixedPeriod ?? 24;
+		const nHarmonics = argsIN.nHarmonics ?? 1;
+		const alpha = argsIN.alpha ?? 0.05;
 
 		let result = {
 			t: [],
 			outputXData: null,
-			fittedData: { fitted: [], parameters: { cosines: [] }, rmse: NaN }
+			fittedData: { fitted: [], parameters: { cosines: [] }, rmse: NaN, rSquared: NaN },
+			fixedStats: null
 		};
 		let valid = false;
 
-		if (xIN != -1 && yIN != -1 && Ncurves >= 1 && getColumnById(xIN) && getColumnById(yIN)) {
+		const canRun =
+			xIN != -1 &&
+			yIN != -1 &&
+			getColumnById(xIN) &&
+			getColumnById(yIN) &&
+			(useFixedPeriod ? nHarmonics >= 1 : Ncurves >= 1);
+
+		if (canRun) {
 			const tCol = getColumnById(xIN);
 			const yCol = getColumnById(yIN);
 
@@ -50,36 +66,94 @@
 				outputXData = outputXData.filter((v) => !isNaN(v));
 			}
 
-			const fittedData = fitCosineCurves(tt, yy, Ncurves);
-
-			// Evaluate fitted model at outputX points after fitting (not during)
-			const predicted = outputXData
-				? evaluateCosinorAtPoints(fittedData.parameters, outputXData)
-				: null;
-
-			result = { t: tt, outputXData, fittedData, predicted };
-			valid = fittedData.fitted.length > 0;
-
-			// Only write to output columns if they exist
-			if (xOUT != -1 && yOUT != -1) {
-				const xColOut = getColumnById(xOUT);
-				const yColOut = getColumnById(yOUT);
-
-				if (xColOut && yColOut) {
+			if (useFixedPeriod) {
+				// ── Fixed-period (classical Halberg) cosinor ──
+				const fixedResult = fitCosinorFixed(tt, yy, fixedPeriod, nHarmonics, alpha);
+				if (fixedResult) {
+					valid = true;
+					const omega = (2 * Math.PI) / fixedPeriod;
 					const xOutData = outputXData ?? tt;
-					const yOutData = predicted ?? fittedData.fitted;
+					const yOutData = outputXData
+						? outputXData.map((ti) => {
+								let val = fixedResult.M;
+								for (const h of fixedResult.harmonics) {
+									val +=
+										h.beta * Math.cos(h.k * omega * ti) +
+										h.gamma * Math.sin(h.k * omega * ti);
+								}
+								return val;
+							})
+						: fixedResult.fitted;
 
-					core.rawData.set(xOUT, xOutData);
-					xColOut.data = xOUT;
-					xColOut.type = 'number';
-					core.rawData.set(yOUT, yOutData);
-					yColOut.data = yOUT;
-					yColOut.type = 'number';
+					if (xOUT != -1 && yOUT != -1) {
+						const xColOut = getColumnById(xOUT);
+						const yColOut = getColumnById(yOUT);
+						if (xColOut && yColOut) {
+							core.rawData.set(xOUT, xOutData);
+							xColOut.data = xOUT;
+							xColOut.type = 'number';
+							core.rawData.set(yOUT, yOutData);
+							yColOut.data = yOUT;
+							yColOut.type = 'number';
+							const processHash = crypto.randomUUID();
+							xColOut.tableProcessGUId = processHash;
+							yColOut.tableProcessGUId = processHash;
+						}
+					}
 
-					const processHash = crypto.randomUUID();
-					xColOut.tableProcessGUId = processHash;
-					yColOut.tableProcessGUId = processHash;
+					result = {
+						t: tt,
+						outputXData,
+						fittedData: {
+							fitted: fixedResult.fitted,
+							parameters: {
+								cosines: fixedResult.harmonics.map((h) => ({
+									amplitude: h.amplitude,
+									frequency: (2 * Math.PI * h.k) / fixedPeriod,
+									phase: h.phi_rad
+								}))
+							},
+							rmse: fixedResult.RMSE,
+							rSquared: fixedResult.R2
+						},
+						fixedStats: fixedResult,
+						predicted: outputXData ? yOutData : null
+					};
 				}
+			} else {
+				// ── Free-parameter cosinor (original behaviour) ──
+				const fittedData = fitCosineCurves(tt, yy, Ncurves);
+
+				const predicted = outputXData
+					? evaluateCosinorAtPoints(fittedData.parameters, outputXData)
+					: null;
+
+				if (xOUT != -1 && yOUT != -1) {
+					const xColOut = getColumnById(xOUT);
+					const yColOut = getColumnById(yOUT);
+					if (xColOut && yColOut) {
+						const xOutData = outputXData ?? tt;
+						const yOutData = predicted ?? fittedData.fitted;
+						core.rawData.set(xOUT, xOutData);
+						xColOut.data = xOUT;
+						xColOut.type = 'number';
+						core.rawData.set(yOUT, yOutData);
+						yColOut.data = yOUT;
+						yColOut.type = 'number';
+						const processHash = crypto.randomUUID();
+						xColOut.tableProcessGUId = processHash;
+						yColOut.tableProcessGUId = processHash;
+					}
+				}
+
+				result = {
+					t: tt,
+					outputXData,
+					fittedData: { ...fittedData },
+					fixedStats: null,
+					predicted
+				};
+				valid = fittedData.fitted.length > 0;
 			}
 		}
 
@@ -98,6 +172,12 @@
 
 	let { p = $bindable() } = $props();
 
+	// Backwards compatibility: initialise fields absent in sessions saved before this version
+	if (p.args.useFixedPeriod === undefined) p.args.useFixedPeriod = false;
+	if (p.args.fixedPeriod === undefined) p.args.fixedPeriod = 24;
+	if (p.args.nHarmonics === undefined) p.args.nHarmonics = 1;
+	if (p.args.alpha === undefined) p.args.alpha = 0.05;
+
 	let cosinorData = $state();
 	let showOutputX = $state(p.args.outputX !== -1);
 	let mounted = $state(false);
@@ -111,6 +191,7 @@
 		out += xIN_col?.getDataHash;
 		out += yIN_col?.getDataHash;
 		out += outputX_col?.getDataHash;
+		out += p.args.useFixedPeriod;
 		return out;
 	});
 	let lastHash = '';
@@ -148,7 +229,6 @@
 	function toggleOutputX(checked) {
 		if (!checked) {
 			p.args.outputX = -1;
-			getCosinor();
 		}
 	}
 </script>
@@ -162,7 +242,7 @@
 	<div class="control-input-vertical">
 		<div class="control-input">
 			<p>X column</p>
-			<ColumnSelector bind:value={p.args.xIN} onChange={(e) => getCosinor()} />
+			<ColumnSelector bind:value={p.args.xIN} />
 		</div>
 
 		<div class="control-input-vertical">
@@ -171,7 +251,6 @@
 				<ColumnSelector
 					bind:value={p.args.yIN}
 					excludeColIds={[p.xIN]}
-					onChange={(e) => getCosinor()}
 				/>
 			</div>
 		</div>
@@ -186,10 +265,59 @@
 
 	<div class="control-input-horizontal">
 		<div class="control-input">
-			<p>N cosine curves</p>
-			<NumberWithUnits bind:value={p.args.Ncurves} onInput={() => getCosinor()} min="1" step="1" />
+			<label>
+				<input
+					type="checkbox"
+					bind:checked={p.args.useFixedPeriod}
+				/>
+				Use fixed period
+			</label>
 		</div>
 	</div>
+
+	{#if p.args.useFixedPeriod}
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>Period (hrs)</p>
+				<NumberWithUnits
+					bind:value={p.args.fixedPeriod}
+					onInput={() => getCosinor()}
+					min="0.1"
+					step="0.5"
+				/>
+			</div>
+			<div class="control-input">
+				<p>N harmonics</p>
+				<NumberWithUnits
+					bind:value={p.args.nHarmonics}
+					onInput={() => getCosinor()}
+					min="1"
+					step="1"
+				/>
+			</div>
+		</div>
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>CI level</p>
+				<select bind:value={p.args.alpha} onchange={() => getCosinor()}>
+					<option value={0.05}>95%</option>
+					<option value={0.01}>99%</option>
+				</select>
+			</div>
+		</div>
+	{:else}
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>N cosine curves</p>
+				<NumberWithUnits
+					bind:value={p.args.Ncurves}
+					onInput={() => getCosinor()}
+					min="1"
+					step="1"
+				/>
+			</div>
+		</div>
+	{/if}
 
 	<div class="control-input-horizontal">
 		<div class="control-input">
@@ -208,7 +336,7 @@
 		<div class="control-input-vertical">
 			<div class="control-input">
 				<p>Output X column</p>
-				<ColumnSelector bind:value={p.args.outputX} onChange={(e) => getCosinor()} />
+				<ColumnSelector bind:value={p.args.outputX} />
 			</div>
 		</div>
 	{/if}
@@ -230,6 +358,11 @@
 					<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}
 						<StoreValueButton label="RMSE" getter={() => cosinorData?.fittedData?.rmse} defaultName="cosinor_rmse" source="Cosinor" />
 					</p>
+					{#if cosinorData?.fittedData?.rSquared != null}
+						<p>R²: {cosinorData.fittedData.rSquared.toFixed(3)}
+							<StoreValueButton label="R²" getter={() => cosinorData?.fittedData?.rSquared} defaultName="cosinor_r2" source="Cosinor" />
+						</p>
+					{/if}
 				</div>
 			</div>
 			{#each cosinorData?.fittedData?.parameters.cosines as cosine, i}
@@ -251,14 +384,36 @@
 							<StoreValueButton label="Phase" getter={() => cosinorData?.fittedData?.parameters?.cosines?.[i]?.phase} defaultName={`cosinor_phase${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
 						</p>
 
-						<p>
-							Equation: {cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(
-								2
-							)})
-						</p>
+						{#if !cosinorData?.fixedStats}
+							<p>
+								Equation: {cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(2)})
+							</p>
+						{/if}
 					</div>
 				</div>
 			{/each}
+			{#if cosinorData?.fixedStats}
+				{@const s = cosinorData.fixedStats}
+				<div class="div-line"></div>
+				<div class="control-input-horizontal">
+					<div class="control-input">
+						<p>Mesor: {s.M.toFixed(3)} &nbsp;[{Math.round((1 - s.alpha) * 100)}% CI: {s.CI_M[0].toFixed(3)}, {s.CI_M[1].toFixed(3)}]
+							<StoreValueButton label="Mesor" getter={() => cosinorData?.fixedStats?.M} defaultName="cosinor_mesor" source="Cosinor (fixed)" />
+						</p>
+						{#each s.harmonics as h}
+							<p>H{h.k} Amplitude: {h.amplitude.toFixed(3)} &nbsp;[CI: {h.CI_A[0].toFixed(3)}, {h.CI_A[1].toFixed(3)}]
+								<StoreValueButton label={`H${h.k} Amplitude`} getter={() => cosinorData?.fixedStats?.harmonics?.[h.k - 1]?.amplitude} defaultName={`cosinor_amplitude${s.harmonics.length > 1 ? '_H' + h.k : ''}`} source="Cosinor (fixed)" />
+							</p>
+							<p>H{h.k} Acrophase: {h.acrophase_hrs.toFixed(2)} h &nbsp;[CI: {h.CI_acrophase[0].toFixed(2)}, {h.CI_acrophase[1].toFixed(2)}]
+								<StoreValueButton label={`H${h.k} Acrophase`} getter={() => cosinorData?.fixedStats?.harmonics?.[h.k - 1]?.acrophase_hrs} defaultName={`cosinor_acrophase${s.harmonics.length > 1 ? '_H' + h.k : ''}`} source="Cosinor (fixed)" />
+							</p>
+						{/each}
+						<p>F({s.df[0]}, {s.df[1]}) = {s.F_stat.toFixed(3)}, p {s.pF < 0.001 ? '< 0.001' : '= ' + s.pF.toFixed(3)}
+							<StoreValueButton label="p-value" getter={() => cosinorData?.fixedStats?.pF} defaultName="cosinor_pvalue" source="Cosinor (fixed)" />
+						</p>
+					</div>
+				</div>
+			{/if}
 		{:else if p.args.valid}
 			<p>Preview:</p>
 			<div class="control-input-horizontal">
@@ -266,6 +421,11 @@
 					<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}
 						<StoreValueButton label="RMSE" getter={() => cosinorData?.fittedData?.rmse} defaultName="cosinor_rmse" source="Cosinor" />
 					</p>
+					{#if cosinorData?.fittedData?.rSquared != null}
+						<p>R²: {cosinorData.fittedData.rSquared.toFixed(3)}
+							<StoreValueButton label="R²" getter={() => cosinorData?.fittedData?.rSquared} defaultName="cosinor_r2" source="Cosinor" />
+						</p>
+					{/if}
 				</div>
 			</div>
 			{#each cosinorData?.fittedData?.parameters.cosines as cosine, i}
@@ -284,14 +444,36 @@
 							Phase: {cosine.phase.toFixed(2)}
 							<StoreValueButton label="Phase" getter={() => cosinorData?.fittedData?.parameters?.cosines?.[i]?.phase} defaultName={`cosinor_phase${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
 						</p>
-						<p>
-							Equation: {cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(
-								2
-							)})
-						</p>
+						{#if !cosinorData?.fixedStats}
+							<p>
+								Equation: {cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(2)})
+							</p>
+						{/if}
 					</div>
 				</div>
 			{/each}
+			{#if cosinorData?.fixedStats}
+				{@const s = cosinorData.fixedStats}
+				<div class="div-line"></div>
+				<div class="control-input-horizontal">
+					<div class="control-input">
+						<p>Mesor: {s.M.toFixed(3)} &nbsp;[{Math.round((1 - s.alpha) * 100)}% CI: {s.CI_M[0].toFixed(3)}, {s.CI_M[1].toFixed(3)}]
+							<StoreValueButton label="Mesor" getter={() => cosinorData?.fixedStats?.M} defaultName="cosinor_mesor" source="Cosinor (fixed)" />
+						</p>
+						{#each s.harmonics as h}
+							<p>H{h.k} Amplitude: {h.amplitude.toFixed(3)} &nbsp;[CI: {h.CI_A[0].toFixed(3)}, {h.CI_A[1].toFixed(3)}]
+								<StoreValueButton label={`H${h.k} Amplitude`} getter={() => cosinorData?.fixedStats?.harmonics?.[h.k - 1]?.amplitude} defaultName={`cosinor_amplitude${s.harmonics.length > 1 ? '_H' + h.k : ''}`} source="Cosinor (fixed)" />
+							</p>
+							<p>H{h.k} Acrophase: {h.acrophase_hrs.toFixed(2)} h &nbsp;[CI: {h.CI_acrophase[0].toFixed(2)}, {h.CI_acrophase[1].toFixed(2)}]
+								<StoreValueButton label={`H${h.k} Acrophase`} getter={() => cosinorData?.fixedStats?.harmonics?.[h.k - 1]?.acrophase_hrs} defaultName={`cosinor_acrophase${s.harmonics.length > 1 ? '_H' + h.k : ''}`} source="Cosinor (fixed)" />
+							</p>
+						{/each}
+						<p>F({s.df[0]}, {s.df[1]}) = {s.F_stat.toFixed(3)}, p {s.pF < 0.001 ? '< 0.001' : '= ' + s.pF.toFixed(3)}
+							<StoreValueButton label="p-value" getter={() => cosinorData?.fixedStats?.pF} defaultName="cosinor_pvalue" source="Cosinor (fixed)" />
+						</p>
+					</div>
+				</div>
+			{/if}
 			<div style="height:250px; overflow:auto;">
 				<Table
 					headers={['x', cosinorData.outputXData ? 'predicted y' : 'fitted y']}
