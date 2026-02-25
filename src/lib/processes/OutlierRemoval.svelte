@@ -11,7 +11,7 @@
 	]);
 
 	// Outlier detection functions
-	function detectOutliersIQR(y, multiplier = 1.5) {
+	export function detectOutliersIQR(y, multiplier = 1.5) {
 		const sorted = [...y].sort((a, b) => a - b);
 		const n = sorted.length;
 		const q1Index = Math.floor(n / 4);
@@ -24,7 +24,7 @@
 		return y.map((val) => val < lowerBound || val > upperBound);
 	}
 
-	function detectOutliersZScore(y, threshold = 3) {
+	export function detectOutliersZScore(y, threshold = 3) {
 		const mean = kahanMean(y);
 		const sumSq = new KahanSum();
 		for (let val of y) {
@@ -36,9 +36,52 @@
 		return y.map((val) => Math.abs((val - mean) / std) > threshold);
 	}
 
+	/**
+	 * Returns a boolean mask over the full input array indicating which values are outliers.
+	 */
+	export function getOutlierMask(x, args) {
+		const method = args.method;
+		const validData = [];
+		const validIndices = [];
+		for (let i = 0; i < x.length; i++) {
+			if (x[i] != null && !isNaN(x[i])) {
+				validData.push(x[i]);
+				validIndices.push(i);
+			}
+		}
+
+		const fullMask = new Array(x.length).fill(false);
+		if (validData.length < 4) return fullMask;
+
+		let outlierMask;
+		try {
+			if (method === 'zscore') {
+				outlierMask = detectOutliersZScore(validData, args.zThreshold);
+			} else {
+				outlierMask = detectOutliersIQR(validData, args.iqrMultiplier);
+			}
+		} catch (error) {
+			return fullMask;
+		}
+
+		for (let i = 0; i < validData.length; i++) {
+			if (outlierMask[i]) {
+				fullMask[validIndices[i]] = true;
+			}
+		}
+		return fullMask;
+	}
+
 	export function outlierremoval(x, args) {
 		const method = args.method;
-		const validData = x.filter((val) => val != null && !isNaN(val));
+		const validData = [];
+		const validIndices = [];
+		for (let i = 0; i < x.length; i++) {
+			if (x[i] != null && !isNaN(x[i])) {
+				validData.push(x[i]);
+				validIndices.push(i);
+			}
+		}
 
 		if (validData.length < 4) {
 			return x; // Return original if not enough data
@@ -57,15 +100,15 @@
 			return x; // Return original on error
 		}
 
-		// Filter out outliers
-		const cleanData = [];
+		// Replace outliers with NaN (preserves array length for paired data alignment)
+		const result = [...x];
 		for (let i = 0; i < validData.length; i++) {
-			if (!outlierMask[i]) {
-				cleanData.push(validData[i]);
+			if (outlierMask[i]) {
+				result[validIndices[i]] = NaN;
 			}
 		}
 
-		return cleanData;
+		return result;
 	}
 </script>
 

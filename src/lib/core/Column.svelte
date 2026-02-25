@@ -332,6 +332,51 @@
 			return out;
 		}
 
+		/**
+		 * Returns data with all processes applied up to (but not including) the
+		 * process with the given id. Useful for inspecting pre-process data
+		 * (e.g. to identify which values an outlier removal process will flag).
+		 */
+		getDataBeforeProcess(processId) {
+			if (this.refId === -1) return [];
+
+			let out = [];
+			if (this.refId != null) {
+				out = getColumnById(this.refId).getData();
+			} else {
+				if (this.compression === 'awd') {
+					const raw = core.rawData.get(this.data);
+					out = new Array(raw.length);
+					for (let i = 0; i < raw.length; i++) {
+						out[i] = raw.start + i * raw.step;
+					}
+				} else {
+					out = core.rawData.get(this.data);
+				}
+			}
+
+			if (this.type === 'time' && !this.isReferencial() && this.compression !== 'awd') {
+				try {
+					out = out.map((x) => Number(getUNIXDate(x, this.timeFormat)));
+				} catch {
+					/* ignore */
+				}
+			}
+
+			if (this.type === 'bin') {
+				out = out.map((x) => x + this.binWidth / 2);
+			}
+
+			if (!out || out.length === 0) return [];
+
+			for (const p of this.processes) {
+				if (p.id === processId) break;
+				out = p.doProcess(out);
+			}
+
+			return out;
+		}
+
 		//Save and load the column to and from JSON
 		toJSON() {
 			let jsonOut = { id: this.id, name: this.name };

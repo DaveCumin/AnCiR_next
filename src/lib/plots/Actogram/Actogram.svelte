@@ -5,11 +5,12 @@
 	import Hist, { createHistogramBins } from '$lib/components/plotbits/Hist.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 
-	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import { Column as ColumnClass, getColumnById } from '$lib/core/Column.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
 	import Annotation, { AnnotationClass } from './Annotation.svelte';
+	import { getOutlierMask } from '$lib/processes/OutlierRemoval.svelte';
 
 	import { scaleLinear } from 'd3-scale';
 	import { makeSeqArray, max, min } from '$lib/components/plotbits/helpers/wrangleData';
@@ -170,6 +171,102 @@
 
 		phaseMarkers = $state([]);
 
+		showOutliers = $state(false);
+		outlierColour = $state('red');
+		outlierMarkerSize = $state(4);
+
+		// Compute outlier positions by period for display on the actogram
+		outliersByPeriod = $derived.by(() => {
+			if (!this.showOutliers) return {};
+
+			const tempx = this.x.hoursSinceStart ?? [];
+			const offset = this.offset ?? 0;
+			const period = this.parentPlot?.periodHrs ?? 24;
+
+			// Find the outlier removal process on the referenced y column
+			const refCol = getColumnById(this.y.refId);
+			const outlierProcess = refCol?.processes?.find((p) => p.name === 'OutlierRemoval');
+
+			const byPeriod = {};
+
+			if (outlierProcess) {
+				// Get y data BEFORE outlier removal to properly identify outliers
+				const yBeforeOutlierRemoval = refCol.getDataBeforeProcess(outlierProcess.id);
+				const mask = getOutlierMask(yBeforeOutlierRemoval, outlierProcess.args);
+				for (let i = 0; i < Math.min(tempx.length, mask.length); i++) {
+					if (
+						mask[i] &&
+						!isNaN(tempx[i]) &&
+						tempx[i] != null
+					) {
+						const xPos = tempx[i] - offset;
+						const day = Math.floor(xPos / period);
+						if (day >= 0) {
+							byPeriod[day] ||= [];
+							byPeriod[day].push(xPos);
+						}
+					}
+				}
+			} else {
+				// No outlier removal process on the referenced column: show NaN y-values
+				const tempy = this.y.getData() ?? [];
+				for (let i = 0; i < Math.min(tempx.length, tempy.length); i++) {
+					if (
+						(tempy[i] == null || isNaN(tempy[i])) &&
+						!isNaN(tempx[i]) &&
+						tempx[i] != null
+					) {
+						const xPos = tempx[i] - offset;
+						const day = Math.floor(xPos / period);
+						if (day >= 0) {
+							byPeriod[day] ||= [];
+							byPeriod[day].push(xPos);
+						}
+					}
+				}
+			}
+
+			return byPeriod;
+		});
+
+		// Generate SVG path for outlier markers (circles, like PhaseMarker)
+		outlierMarkerPoints = $derived.by(() => {
+			if (!this.showOutliers) return '';
+
+			let out = '';
+			const xscale = scaleLinear()
+				.domain([0, this.parentPlot.periodHrs * this.parentPlot.doublePlot])
+				.range([0, this.parentPlot.plotwidth]);
+			const radius = this.outlierMarkerSize;
+
+			for (const [periodStr, positions] of Object.entries(this.outliersByPeriod)) {
+				const period = Number(periodStr);
+				const periodOffset = period * this.parentPlot.periodHrs;
+
+				for (const xPos of positions) {
+					// Show in each double-plot repeat
+					for (let rep = 0; rep < this.parentPlot.doublePlot; rep++) {
+						const displayX = xPos - periodOffset + rep * this.parentPlot.periodHrs;
+						const displayDay = period - rep;
+						if (displayDay < 0 || displayDay >= this.parentPlot.Ndays) continue;
+
+						const cx =
+							xscale(displayX) + this.parentPlot.padding.left;
+						const cy =
+							this.parentPlot.padding.top +
+							this.parentPlot.eachplotheight -
+							radius / 2 +
+							displayDay * this.parentPlot.spaceBetween +
+							displayDay * this.parentPlot.eachplotheight;
+
+						out += `M${cx} ${cy} m-${radius} 0 a${radius} ${radius} 0 1 0 ${2 * radius} 0 a${radius} ${radius} 0 1 0 -${2 * radius} 0 `;
+					}
+				}
+			}
+
+			return out;
+		});
+
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
 
@@ -193,6 +290,10 @@
 				this.draw = true;
 			}
 			this.colour = dataIN?.colour ?? getPaletteColor(this.parentPlot.data.length);
+
+			if (dataIN?.showOutliers != null) this.showOutliers = dataIN.showOutliers;
+			if (dataIN?.outlierColour != null) this.outlierColour = dataIN.outlierColour;
+			if (dataIN?.outlierMarkerSize != null) this.outlierMarkerSize = dataIN.outlierMarkerSize;
 		}
 
 		addMarker() {
@@ -205,7 +306,10 @@
 				y: this.y,
 				colour: this.colour,
 				draw: this.draw,
-				phaseMarkers: this.phaseMarkers
+				phaseMarkers: this.phaseMarkers,
+				showOutliers: this.showOutliers,
+				outlierColour: this.outlierColour,
+				outlierMarkerSize: this.outlierMarkerSize
 			};
 		}
 
@@ -214,7 +318,10 @@
 				x: json.x,
 				y: json.y,
 				draw: json.draw,
-				colour: json.colour
+				colour: json.colour,
+				showOutliers: json.showOutliers,
+				outlierColour: json.outlierColour,
+				outlierMarkerSize: json.outlierMarkerSize
 			});
 			if (json.phaseMarkers) {
 				actClass.phaseMarkers = json.phaseMarkers.map((d) =>
@@ -816,6 +923,37 @@
 								<PhaseMarker {which} {marker} />
 							</div>
 						{/each}
+
+						<div class="control-data-title with-icon">
+							<div
+								style="display: flex; align-items: center; justify-content: flex-start; margin: 0;"
+							>
+								<button class="icon">
+									<Icon
+										name="pin"
+										width={18}
+										height={18}
+										className="control-component-title-icon"
+									/>
+								</button>
+								<p>Outliers</p>
+							</div>
+						</div>
+						<div class="control-input-checkbox">
+							<input type="checkbox" bind:checked={datum.showOutliers} />
+							<p>Show outliers</p>
+						</div>
+						{#if datum.showOutliers}
+							<div class="control-input-color">
+								<div class="control-color">
+									<ColourPicker bind:value={datum.outlierColour} />
+								</div>
+								<div class="control-input">
+									<p>Marker size</p>
+									<NumberWithUnits min="1" step="0.5" bind:value={datum.outlierMarkerSize} />
+								</div>
+							</div>
+						{/if}
 					</div>
 
 					<div class="div-line"></div>
@@ -924,6 +1062,10 @@
 				{#each datum.phaseMarkers as marker}
 					<PhaseMarker {which} {marker} />
 				{/each}
+				<!-- OUTLIER MARKERS -->
+				{#if datum.showOutliers && datum.outlierMarkerPoints}
+					<path d={datum.outlierMarkerPoints} fill={datum.outlierColour} stroke="none" />
+				{/if}
 			</g>
 		{/each}
 		<!-- THE ANNOTATIONS -->
