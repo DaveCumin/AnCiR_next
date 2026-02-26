@@ -296,7 +296,7 @@
 	}
 
 	function toggleColumnSelection(colId) {
-		console.log('Toggling column', colId, ', is currently selected:', isColumnSelected(colId));
+		//console.log('Toggling column', colId, ', is currently selected:', isColumnSelected(colId));
 		const isSel = isColumnSelected(colId);
 		if (isSel) {
 			const idx = theData.columnRefs.indexOf(colId);
@@ -307,7 +307,7 @@
 	}
 
 	function getPlotColumns(plot) {
-		console.log('getting columns for plot', plot.name, plot);
+		//console.log('getting columns for plot', plot.name, plot);
 		if (plot?.data && Array.isArray(plot.data)) {
 			return [
 				...new Set(

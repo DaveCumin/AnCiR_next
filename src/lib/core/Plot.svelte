@@ -27,7 +27,7 @@
 		appState.showAYSModal = true;
 	}
 	function handleAYS(option) {
-		console.log('SELECTED: ', option);
+		//console.log('SELECTED: ', option);
 		if (option === 'Yes') {
 			for (const id of selectedPlotIds) {
 				const index = core.plots.findIndex((p) => p.id === id);

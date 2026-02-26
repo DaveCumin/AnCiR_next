@@ -1086,11 +1086,29 @@
 								</p>
 							</div>
 						{/if}
+
+						<div class="period-selection-actions">
+							<button
+								class="period-select-btn"
+								onclick={() => {
+									//mark all the headings as selected
+									selectedColumns = new Set(headers);
+								}}>All</button
+							>
+							<button
+								class="period-select-btn"
+								onclick={() => {
+									//unselect all headers
+									selectedColumns = new Set();
+								}}>None</button
+							>
+						</div>
+
 						<div class="preview-table-wrapper" style="overflow-x: auto; max-width: 100%;">
 							<table class="preview-table">
 								<thead>
 									<tr>
-										{#each headers as col}
+										{#each headers as col, i (`${i}-${selectedColumns.has(col)}`)}
 											<th
 												class:selected={selectedColumns.has(col)}
 												class:unselected={!selectedColumns.has(col)}
@@ -1100,12 +1118,10 @@
 														type="checkbox"
 														checked={selectedColumns.has(col)}
 														onchange={(e) => {
-															if (e.currentTarget.checked) {
-																selectedColumns.add(col);
-															} else {
-																selectedColumns.delete(col);
-															}
-															console.log('selectedColumns:', selectedColumns);
+															const checked = e.currentTarget.checked;
+															selectedColumns = checked
+																? new Set([...selectedColumns, col]) // new set
+																: new Set([...selectedColumns].filter((c) => c !== col));
 														}}
 													/>
 													<span class="col-name">{col}</span>

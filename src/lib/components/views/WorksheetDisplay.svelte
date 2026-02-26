@@ -101,30 +101,6 @@
 <AddPlot bind:showDropdown={showAddPlot} {dropdownTop} {dropdownLeft} />
 
 <div class="display-list">
-	{#if core.plots.length > 1}
-		<div class="clps-container">
-			<details>
-				<summary
-					onclick={(e) => e.preventDefault()}
-					onkeydown={(e) => {
-						if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
-					}}
-				>
-					<input
-						type="checkbox"
-						oninput={(e) => {
-							if (e.target.checked) {
-								selectAllPlots();
-							} else {
-								deselectAllPlots();
-							}
-						}}
-					/>
-				</summary>
-			</details>
-		</div>
-		<hr />
-	{/if}
 	{#each core.plots.toReversed() as plot, i (plot.id)}
 		<div class="clps-container">
 			<details

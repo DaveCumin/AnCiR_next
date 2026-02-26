@@ -58,6 +58,90 @@ function parseRef(ref) {
 	return { c: colToIndex(m[1]), r: parseInt(m[2], 10) - 1 };
 }
 
+// ── Date/time helpers ────────────────────────────────────────────────────────
+
+/**
+ * Returns true if an Excel format code string represents a date or time format.
+ * Strips quoted literals and bracket sequences before checking.
+ */
+function isDateFormat(fmt) {
+	let stripped = fmt.replace(/"[^"]*"/g, '').replace(/\[[^\]]*\]/g, '');
+	// y=year, m=month/minute, d=day, h=hour, s=second
+	return /[yYmMdDhHsS]/.test(stripped);
+}
+
+/**
+ * Parse xl/styles.xml to get the set of cell style indices (s attribute) that
+ * correspond to date/time number formats.
+ */
+function parseDateStyles(files) {
+	const raw = files['xl/styles.xml'];
+	if (!raw) return new Set();
+
+	const doc = parseXML(bytesToString(raw));
+
+	// Excel built-in date/time numFmtIds
+	const dateNumFmtIds = new Set([14, 15, 16, 17, 18, 19, 20, 21, 22, 45, 46, 47]);
+
+	// Add any custom numFmts whose format code looks like a date/time
+	const numFmtNodes = doc.getElementsByTagName('numFmt');
+	for (let i = 0; i < numFmtNodes.length; i++) {
+		const id = parseInt(numFmtNodes[i].getAttribute('numFmtId') ?? '0', 10);
+		const fmt = numFmtNodes[i].getAttribute('formatCode') ?? '';
+		if (isDateFormat(fmt)) dateNumFmtIds.add(id);
+	}
+
+	// Walk cellXfs and flag style indices that use a date numFmtId
+	const dateStyleIndices = new Set();
+	const cellXfs = doc.getElementsByTagName('cellXfs')[0];
+	if (!cellXfs) return dateStyleIndices;
+
+	const xfNodes = cellXfs.getElementsByTagName('xf');
+	for (let i = 0; i < xfNodes.length; i++) {
+		const numFmtId = parseInt(xfNodes[i].getAttribute('numFmtId') ?? '0', 10);
+		if (dateNumFmtIds.has(numFmtId)) dateStyleIndices.add(i);
+	}
+
+	return dateStyleIndices;
+}
+
+/** Convert fractional day to "HH:mm:ss" string. */
+function fracToTimeString(frac) {
+	const totalSecs = Math.round(frac * 86400);
+	const h = Math.floor(totalSecs / 3600);
+	const m = Math.floor((totalSecs % 3600) / 60);
+	const s = totalSecs % 60;
+	return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+/**
+ * Convert an Excel serial date number to an ISO-like string.
+ * Returns the original text unchanged if it is not a valid number.
+ */
+function serialToDateString(raw) {
+	const num = parseFloat(raw);
+	if (isNaN(num)) return raw;
+
+	const intPart = Math.floor(num);
+	const fracPart = num - intPart;
+
+	// Time-only value (no date component)
+	if (intPart === 0) return fracToTimeString(fracPart);
+
+	// Excel has a phantom leap day on 1900-02-29 (serial 60); correct for it.
+	const corrected = intPart >= 60 ? intPart - 1 : intPart;
+	const date = new Date((corrected - 25569) * 86400000);
+
+	const yyyy = date.getUTCFullYear();
+	const MM = String(date.getUTCMonth() + 1).padStart(2, '0');
+	const dd = String(date.getUTCDate()).padStart(2, '0');
+
+	if (fracPart > 0) {
+		return `${yyyy}-${MM}-${dd} ${fracToTimeString(fracPart)}`;
+	}
+	return `${yyyy}-${MM}-${dd}`;
+}
+
 // ── Shared strings ───────────────────────────────────────────────────────────
 
 function parseSharedStrings(files) {
@@ -121,7 +205,7 @@ function parseWorkbookRels(files) {
  * Parse a worksheet XML into an internal sheet representation.
  * Returns: { cells: Map<string, value>, ref: string, hiddenRows: Set, hiddenCols: Set }
  */
-function parseSheet(bytes, sharedStrings) {
+function parseSheet(bytes, sharedStrings, dateStyleIndices) {
 	const doc = parseXML(bytesToString(bytes));
 
 	// Collect hidden columns
@@ -158,6 +242,7 @@ function parseSheet(bytes, sharedStrings) {
 		const cellNode = cellNodes[i];
 		const r = cellNode.getAttribute('r'); // e.g. "A1"
 		const t = cellNode.getAttribute('t'); // type: s=shared string, b=boolean, inlineStr, etc.
+		const s = cellNode.getAttribute('s'); // style index
 		const vNode = cellNode.getElementsByTagName('v')[0];
 		const isNode = cellNode.getElementsByTagName('is')[0]; // inline string
 
@@ -174,7 +259,13 @@ function parseSheet(bytes, sharedStrings) {
 		} else if (t === 'b' && vNode) {
 			value = vNode.textContent === '1' ? 'TRUE' : 'FALSE';
 		} else if (vNode) {
-			value = vNode.textContent ?? '';
+			// Check if this cell uses a date/time style
+			const styleIdx = s != null ? parseInt(s, 10) : -1;
+			if (dateStyleIndices && styleIdx >= 0 && dateStyleIndices.has(styleIdx)) {
+				value = serialToDateString(vNode.textContent);
+			} else {
+				value = vNode.textContent ?? '';
+			}
 		}
 
 		if (r) {
@@ -210,6 +301,7 @@ export function read(data, _opts) {
 	const sharedStrings = parseSharedStrings(files);
 	const sheetNames = parseWorkbook(files);
 	const rels = parseWorkbookRels(files);
+	const dateStyleIndices = parseDateStyles(files);
 
 	// Map sheet names to their rIds from workbook.xml
 	const workbookDoc = parseXML(bytesToString(files['xl/workbook.xml']));
@@ -229,7 +321,7 @@ export function read(data, _opts) {
 
 		const sheetBytes = files[filePath];
 		if (sheetBytes && name) {
-			Sheets[name] = parseSheet(sheetBytes, sharedStrings);
+			Sheets[name] = parseSheet(sheetBytes, sharedStrings, dateStyleIndices);
 		}
 	}
 
