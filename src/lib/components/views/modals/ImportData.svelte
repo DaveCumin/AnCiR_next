@@ -27,7 +27,9 @@
 	let headers = $state([]);
 	let delimiter = $state('');
 	let targetFile = $state();
-	let previewIN = $state(6);
+	let previewIN = $state(50);
+	let previewDisplayStart = $state(1);
+	let previewRowCount = $derived(parsedData ? (parsedData[headers[0]]?.length || 0) : 0);
 	let skipLines = $state(0);
 	let error = $state({});
 	let parsedData = $state(null);
@@ -67,7 +69,8 @@
 		delimiter = '';
 		targetFile = null;
 		targetFiles = [];
-		previewIN = 6;
+		previewIN = 50;
+		previewDisplayStart = 1;
 		skipLines = 0;
 		errorInfile = false;
 		error = {};
@@ -100,6 +103,7 @@
 	}
 
 	async function doPreview() {
+		previewDisplayStart = 1;
 		awaitingPreview = true;
 		loadProgress = { stage: 'Reading file', detail: targetFile?.name ?? '' };
 		await tick();
@@ -319,9 +323,9 @@
 							} else {
 								results.data = awdTocsv(results.data);
 								results.meta.fields = headers;
-								// Limit preview to first 6 rows (like CSV)
-								if (awaitingPreview && results.data.length > 6) {
-									results.data = results.data.slice(0, 6);
+								// Limit preview rows (like CSV)
+								if (awaitingPreview && results.data.length > previewIN) {
+									results.data = results.data.slice(0, previewIN);
 								}
 							}
 						}
@@ -1131,7 +1135,8 @@
 									</tr>
 								</thead>
 								<tbody>
-									{#each Array(Math.min(previewIN, parsedData[headers[0]]?.length || 0)) as _, rowIdx}
+									{#each Array(Math.min(6, Math.max(0, previewRowCount - (previewDisplayStart - 1)))) as _, i}
+										{@const rowIdx = previewDisplayStart - 1 + i}
 										<tr>
 											{#each headers as col}
 												<td
@@ -1146,6 +1151,7 @@
 								</tbody>
 							</table>
 						</div>
+						<p>Row <NumberWithUnits min={1} max={Math.max(1, previewRowCount - 5)} step={1} bind:value={previewDisplayStart} /> to {Math.min(previewDisplayStart + 5, previewRowCount)} of {previewRowCount} (preview)</p>
 
 						{#if targetFiles.length > 1}
 							<div class="multi-file-list">

@@ -104,6 +104,7 @@
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { onMount, untrack } from 'svelte';
 
@@ -111,6 +112,7 @@
 
 	let wideToLongResult = $state();
 	let mounted = $state(false);
+	let previewStart = $state(1);
 
 	// Reactivity
 	let categoryIN_col = $derived.by(() =>
@@ -139,6 +141,7 @@
 	});
 
 	function doWideToLong() {
+		previewStart = 1;
 		// Pre-scan: read unique categories and build out keys before running
 		if (
 			p.args.categoryIN >= 0 &&
@@ -225,15 +228,17 @@
 					{/if}
 				{/each}
 			{:else if p.args.valid && wideToLongResult?.time?.length}
-				<div style="height:250px; overflow:auto;">
-					<Table
-						headers={['time', ...p.args.categories]}
-						data={[
-							wideToLongResult.time,
-							...p.args.categories.map((cat) => wideToLongResult['value_' + cat])
-						]}
-					/>
-				</div>
+				{@const totalRows = wideToLongResult.time.length}
+				<Table
+					headers={['time', ...p.args.categories]}
+					data={[
+						wideToLongResult.time.slice(previewStart - 1, previewStart + 5),
+						...p.args.categories.map((cat) =>
+							wideToLongResult['value_' + cat].slice(previewStart - 1, previewStart + 5)
+						)
+					]}
+				/>
+				<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
 			{:else}
 				<p>Select valid input columns to see preview.</p>
 			{/if}

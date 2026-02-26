@@ -83,6 +83,7 @@
 	let { p = $bindable() } = $props();
 
 	let binnedData = $state();
+	let previewStart = $state(1);
 
 	// Reactivity
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -102,6 +103,7 @@
 		if (!mounted) return;
 		if (dataHash !== lastHash) {
 			untrack(() => {
+				previewStart = 1;
 				[binnedData, p.args.valid] = binneddata(p.args, differentstepsize);
 			});
 			lastHash = dataHash;
@@ -109,6 +111,7 @@
 	});
 
 	function getBinnedData() {
+		previewStart = 1;
 		[binnedData, p.args.valid] = binneddata(p.args, differentstepsize);
 	}
 
@@ -206,16 +209,16 @@
 				<ColumnComponent col={xout} />
 				<ColumnComponent col={yout} />
 			{:else if p.args.valid && binnedData?.bins?.length}
+				{@const totalRows = binnedData.bins.length}
 				<p>Preview ({p.args.aggFunction}{p.args.stepSize ? `, step=${p.args.stepSize}` : ''}):</p>
-				<div style="height:250px; overflow:auto;">
-					<Table
-						headers={['binned x (center)', 'binned y']}
-						data={[
-							binnedData.bins.map((x) => (x + p.args.stepSize / 2).toFixed(4)),
-							binnedData.y_out.map((y) => y.toFixed(4))
-						]}
-					/>
-				</div>
+				<Table
+					headers={['binned x (center)', 'binned y']}
+					data={[
+						binnedData.bins.slice(previewStart - 1, previewStart + 5).map((x) => (x + p.args.stepSize / 2).toFixed(4)),
+						binnedData.y_out.slice(previewStart - 1, previewStart + 5).map((y) => y.toFixed(4))
+					]}
+				/>
+				<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
 			{:else}
 				<p>Select valid input columns and parameters to see preview.</p>
 			{/if}

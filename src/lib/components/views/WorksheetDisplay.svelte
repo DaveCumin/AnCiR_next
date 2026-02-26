@@ -15,6 +15,8 @@
 	let dropdownTop = $state(0);
 	let dropdownLeft = $state(0);
 	let draggedIndex = $state(null);
+	let draggedViewIndex = $state(null);
+	let dragOverIdx = $state(null);
 
 	let showSinglePlotDropdown = $state(false);
 	let selectedPlot = $state(null);
@@ -47,12 +49,16 @@
 	}
 
 	//DRAG AND DROP
-	function handleDragStart(i) {
+	function handleDragStart(e, i) {
+		draggedViewIndex = i;
 		draggedIndex = viewToModelIndex(i);
+		e.dataTransfer.effectAllowed = 'move';
 	}
 
-	function handleDragOver(event) {
+	function handleDragOver(event, i) {
 		event.preventDefault();
+		event.dataTransfer.dropEffect = 'move';
+		dragOverIdx = i;
 	}
 
 	function handleDrop(i) {
@@ -61,6 +67,8 @@
 		const targetIndex = viewToModelIndex(i);
 		if (draggedIndex === targetIndex) {
 			draggedIndex = null;
+			draggedViewIndex = null;
+			dragOverIdx = null;
 			return;
 		}
 
@@ -70,6 +78,14 @@
 
 		core.plots = updated;
 		draggedIndex = null;
+		draggedViewIndex = null;
+		dragOverIdx = null;
+	}
+
+	function handleDragEnd() {
+		draggedIndex = null;
+		draggedViewIndex = null;
+		dragOverIdx = null;
 	}
 
 	let openClps = $state({});
@@ -102,14 +118,16 @@
 
 <div class="display-list">
 	{#each core.plots.toReversed() as plot, i (plot.id)}
-		<div class="clps-container">
-			<details
-				draggable="true"
-				ondragstart={() => handleDragStart(i)}
-				ondragover={handleDragOver}
-				ondrop={() => handleDrop(i)}
-				bind:open={openClps[plot.id]}
-			>
+		<div
+			class="clps-container"
+			class:drag-over={dragOverIdx === i && draggedViewIndex !== i}
+			draggable="true"
+			ondragstart={(e) => handleDragStart(e, i)}
+			ondragover={(e) => handleDragOver(e, i)}
+			ondrop={() => handleDrop(i)}
+			ondragend={handleDragEnd}
+		>
+			<details bind:open={openClps[plot.id]}>
 				<summary
 					class="clps-title-container"
 					style="background-color: {plot.selected ? 'var(--color-lightness-95)' : ''};"
@@ -122,6 +140,8 @@
 						if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
 					}}
 				>
+					<div class="drag-handle" title="Drag to reorder">⠇</div>
+
 					<div class="clps-title">
 						<button
 							class="icon"
@@ -224,5 +244,32 @@
 	summary button {
 		margin: 0;
 		padding: 0;
+	}
+
+	.clps-title {
+		flex: 1;
+	}
+
+	.drag-handle {
+		cursor: grab;
+		user-select: none;
+		font-size: 12px;
+		line-height: 1;
+		color: var(--color-lightness-65, #aaa);
+		padding: 0 0.1rem;
+		opacity: 0;
+		transition: opacity 0.15s ease;
+	}
+
+	.drag-handle:active {
+		cursor: grabbing;
+	}
+
+	.clps-container:hover .drag-handle {
+		opacity: 1;
+	}
+
+	.drag-over {
+		border-top: 2px solid var(--color-lightness-35, #555);
 	}
 </style>

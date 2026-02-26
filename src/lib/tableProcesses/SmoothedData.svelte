@@ -380,6 +380,7 @@
 
 	let smoothedResult = $state();
 	let mounted = $state(false);
+	let previewStart = $state(1);
 
 	// Reactivity
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -404,6 +405,7 @@
 		if (!mounted) return;
 		if (lastHash !== dataHash) {
 			untrack(() => {
+				previewStart = 1;
 				[smoothedResult, p.args.valid] = smootheddata(p.args);
 			});
 			lastHash = dataHash;
@@ -411,6 +413,7 @@
 	});
 
 	function getSmoothedData() {
+		previewStart = 1;
 		[smoothedResult, p.args.valid] = smootheddata(p.args);
 	}
 
@@ -566,16 +569,16 @@
 			<ColumnComponent col={yout} />
 		</div>
 	{:else if p.args.valid}
+		{@const totalRows = smoothedResult.x_out.length}
 		<p>Preview:</p>
-		<div style="height:250px; overflow:auto;">
-			<Table
-				headers={['smoothed x', 'smoothed y']}
-				data={[
-					smoothedResult.x_out.map((x) => x.toFixed(2)),
-					smoothedResult.y_out.map((x) => x.toFixed(2))
-				]}
-			/>
-		</div>
+		<Table
+			headers={['smoothed x', 'smoothed y']}
+			data={[
+				smoothedResult.x_out.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2)),
+				smoothedResult.y_out.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2))
+			]}
+		/>
+		<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
 	{:else}
 		<p>Need to have valid inputs to create columns.</p>
 	{/if}

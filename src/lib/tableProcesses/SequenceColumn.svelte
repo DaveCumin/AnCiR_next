@@ -69,13 +69,13 @@
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import { onMount } from 'svelte';
 
-	const PREVIEW_ROWS = 6;
-
 	let { p = $bindable() } = $props();
 
 	let result = $state();
+	let previewStart = $state(1);
 
 	function doSequence() {
+		previewStart = 1;
 		[result, p.args.valid] = sequencecolumn(p.args);
 	}
 
@@ -222,13 +222,10 @@
 </div>
 
 {#if p.args.valid && p.args.out.result === -1}
-	<p>Preview ({result.length} values):</p>
-	<div style="max-height:200px; overflow:auto;">
-		<Table headers={['Result']} data={[result.slice(0, PREVIEW_ROWS)]} />
-	</div>
-	{#if result.length > PREVIEW_ROWS}
-		<p class="preview-ellipsis">… {result.length - PREVIEW_ROWS} more</p>
-	{/if}
+	{@const totalRows = result.length}
+	<p>Preview ({totalRows} values):</p>
+	<Table headers={['Result']} data={[result.slice(previewStart - 1, previewStart + 5)]} />
+	<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
 {:else if p.args.out.result > 0}
 	<div class="section-row">
 		<div class="tableProcess-label">
@@ -240,11 +237,3 @@
 	<p>Need to have valid inputs to create columns.</p>
 {/if}
 
-<style>
-	.preview-ellipsis {
-		font-size: 12px;
-		color: var(--color-lightness-50, #888);
-		margin: 0.25rem 0;
-		text-align: center;
-	}
-</style>

@@ -87,6 +87,7 @@ return _r;`
 <script>
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { onMount, tick, untrack } from 'svelte';
 
@@ -130,8 +131,10 @@ return _r;`
 
 	let result = $state([]);
 	let formulaError = $state('');
+	let previewStart = $state(1);
 
 	function doFormula() {
+		previewStart = 1;
 		try {
 			[result, p.args.valid] = formulacolumn(p.args);
 			formulaError = p.args.valid ? '' : formulaError;
@@ -492,8 +495,10 @@ return _r;`
 	{/if}
 
 	{#if p.args.valid && p.args.out.result == -1}
+		{@const totalRows = result.length}
 		<p>Preview:</p>
-		<div style="height:250px; overflow:auto;"><Table headers={['Result']} data={[result]} /></div>
+		<Table headers={['Result']} data={[result.slice(previewStart - 1, previewStart + 5)]} />
+		<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
 	{:else if p.args.out.result > 0}
 		<div class="section-row">
 			<div class="tableProcess-label">

@@ -13,7 +13,7 @@ https://svelte.dev/playground/modal?version=5.33.7
 		children,
 		button,
 		width = '36rem',
-		max_height = '50vh'
+		max_height = '75vh'
 	} = $props();
 	import { fade } from 'svelte/transition';
 

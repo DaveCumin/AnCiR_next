@@ -181,6 +181,7 @@
 	let cosinorData = $state();
 	let showOutputX = $state(p.args.outputX !== -1);
 	let mounted = $state(false);
+	let previewStart = $state(1);
 
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -200,6 +201,7 @@
 		if (!mounted) return;
 		if (lastHash !== dataHash) {
 			untrack(() => {
+				previewStart = 1;
 				[cosinorData, p.args.valid] = cosinor(p.args);
 			});
 			lastHash = getHash; // read after untrack so mutations to p.args.valid don't re-trigger
@@ -207,6 +209,7 @@
 	});
 	//------------
 	function getCosinor() {
+		previewStart = 1;
 		[cosinorData, p.args.valid] = cosinor(p.args);
 	}
 
@@ -479,15 +482,17 @@
 					</div>
 				</div>
 			{/if}
-			<div style="height:250px; overflow:auto;">
-				<Table
-					headers={['x', cosinorData.outputXData ? 'predicted y' : 'fitted y']}
-					data={[
-						(cosinorData.outputXData ?? cosinorData.t).map((x) => x.toFixed(2)),
-						(cosinorData.predicted ?? cosinorData.fittedData.fitted).map((x) => x.toFixed(2))
-					]}
-				/>
-			</div>
+			{@const xData = cosinorData.outputXData ?? cosinorData.t}
+			{@const yData = cosinorData.predicted ?? cosinorData.fittedData.fitted}
+			{@const totalRows = xData.length}
+			<Table
+				headers={['x', cosinorData.outputXData ? 'predicted y' : 'fitted y']}
+				data={[
+					xData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2)),
+					yData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2))
+				]}
+			/>
+			<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
 		{:else}
 			<p>Need to have valid inputs to create columns.</p>
 		{/if}

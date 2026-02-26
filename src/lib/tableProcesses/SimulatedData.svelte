@@ -94,8 +94,10 @@
 
 	let simulatedTime = $state();
 	let simulatedValues = $state();
+	let previewStart = $state(1);
 
 	function doSimulated() {
+		previewStart = 1;
 		[simulatedTime, simulatedValues, p.args.valid] = simulateddata(p.args);
 	}
 
@@ -270,19 +272,21 @@
 		{@const yout = getColumnById(p.args.out.values)}
 		<ColumnComponent col={yout} />
 	{:else if p.args.valid}
+		{@const totalRows = simulatedTime.length}
 		<p>Preview:</p>
 		<p>
-			N = {simulatedTime.length} samples across {p.args.sections.length} section{p.args.sections
-				.length > 1
+			N = {totalRows} samples across {p.args.sections.length} section{p.args.sections.length > 1
 				? 's'
 				: ''}
 		</p>
-		<div style="height:250px; overflow:auto;">
-			<Table
-				headers={['Time', 'Data']}
-				data={[simulatedTime, simulatedValues.map((y) => y.toFixed(2))]}
-			/>
-		</div>
+		<Table
+			headers={['Time', 'Data']}
+			data={[
+				simulatedTime.slice(previewStart - 1, previewStart + 5),
+				simulatedValues.slice(previewStart - 1, previewStart + 5).map((y) => y.toFixed(2))
+			]}
+		/>
+		<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
 	{:else}
 		<p>Need to have valid inputs to create columns.</p>
 	{/if}

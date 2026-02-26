@@ -108,7 +108,8 @@
 	}
 
 	.inline-edit-span.editable {
-		text-decoration: underline double var(--color-lightness-50);
+		text-decoration: underline;
+		text-decoration-color: var(--color-lightness-75);
 		cursor: pointer;
 	}
 

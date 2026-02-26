@@ -233,6 +233,7 @@
 	let trendData = $state();
 	let showOutputX = $state(p.args.outputX !== -1);
 	let mounted = $state(false);
+	let previewStart = $state(1);
 
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -251,6 +252,7 @@
 		if (!mounted) return;
 		if (lastHash !== dataHash) {
 			untrack(() => {
+				previewStart = 1;
 				[trendData, p.args.valid] = trendfit(p.args);
 			});
 			lastHash = getHash; // read after untrack so mutations to p.args.valid don't re-trigger
@@ -258,6 +260,7 @@
 	});
 	//------------
 	function getTrend() {
+		previewStart = 1;
 		[trendData, p.args.valid] = trendfit(p.args);
 	}
 
@@ -505,15 +508,17 @@
 					</p>
 				</div>
 			</div>
-			<div style="height:250px; overflow:auto;">
-				<Table
-					headers={['x', trendData.outputXData ? 'predicted y' : 'fitted y']}
-					data={[
-						(trendData.outputXData ?? trendData.t).map((x) => x.toFixed(2)),
-						(trendData.predicted ?? trendData.fittedData.fitted).map((x) => x.toFixed(2))
-					]}
-				/>
-			</div>
+			{@const xData = trendData.outputXData ?? trendData.t}
+			{@const yData = trendData.predicted ?? trendData.fittedData.fitted}
+			{@const totalRows = xData.length}
+			<Table
+				headers={['x', trendData.outputXData ? 'predicted y' : 'fitted y']}
+				data={[
+					xData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2)),
+					yData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2))
+				]}
+			/>
+			<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
 		{:else}
 			<p>Need to have valid inputs to create columns.</p>
 		{/if}

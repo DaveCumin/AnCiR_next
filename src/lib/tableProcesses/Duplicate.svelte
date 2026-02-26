@@ -31,6 +31,7 @@
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { onMount, untrack } from 'svelte';
@@ -58,7 +59,9 @@
 	});
 	//------------
 	let result = $state();
+	let previewStart = $state(1);
 	function doDuplicate() {
+		previewStart = 1;
 		[result, p.args.valid] = duplicate(p.args);
 	}
 	onMount(() => {
@@ -87,8 +90,10 @@
 	/>
 </div>
 {#if p.args.valid && p.args.out.result == -1}
+	{@const totalRows = result.length}
 	<p>Preview:</p>
-	<div style="height:250px; overflow:auto;"><Table headers={['Result']} data={[result]} /></div>
+	<Table headers={['Result']} data={[result.slice(previewStart - 1, previewStart + 5)]} />
+	<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
 {:else if p.args.out.result > 0}
 	<div class="section-row">
 		<div class="tableProcess-label">
