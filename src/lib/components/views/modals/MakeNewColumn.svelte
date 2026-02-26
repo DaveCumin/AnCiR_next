@@ -16,12 +16,11 @@
 
 	// Get sorted table processes by display name
 	let sortedTableProcesses = $derived.by(() => {
-		return Array.from(appConsts.tableProcessMap.entries())
-			.sort((a, b) => {
-				const nameA = a[1].displayName || a[0];
-				const nameB = b[1].displayName || b[0];
-				return nameA.localeCompare(nameB);
-			});
+		return Array.from(appConsts.tableProcessMap.entries()).sort((a, b) => {
+			const nameA = a[1].displayName || a[0];
+			const nameB = b[1].displayName || b[0];
+			return nameA.localeCompare(nameB);
+		});
 	});
 
 	// Get display name for chosen process
@@ -109,6 +108,16 @@
 		}
 	});
 
+	//Clear defaults when not show
+	$effect(async () => {
+		if (!show) {
+			tableProcessChosen = '';
+			theDefaults = null;
+			awaitingLoad = false;
+			await tick();
+		}
+	});
+
 	//------
 	let defaultsReady = $state(false);
 	function processNested(obj) {
@@ -185,4 +194,3 @@
 		<ProgressIndicator bind:steps bind:currentStep {stepContent} {footerContent} />
 	{/if}
 </Modal>
-

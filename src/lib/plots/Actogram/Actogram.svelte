@@ -274,11 +274,18 @@
 		startTime = $derived.by(() => {
 			let minTime = Infinity;
 
-			//Only update the startTime (minTime) if there is time data
+			//Only update the startTime (minTime) if there is time data with a valid y value
 			this.data.forEach((datum) => {
-				if (datum.x.type == 'time' && datum.x.getData()?.length > 0) {
-					const thefirst = datum.x.getData() ? datum.x.getData()[0] : minTime;
-					minTime = Math.min(minTime, Number(thefirst));
+				if (datum.x.type == 'time') {
+					const xData = datum.x.getData();
+					const yData = datum.y.getData();
+					if (!xData?.length || !yData?.length) return;
+					for (let i = 0; i < Math.min(xData.length, yData.length); i++) {
+						if (yData[i] != null && !isNaN(Number(yData[i]))) {
+							minTime = Math.min(minTime, Number(xData[i]));
+							break;
+						}
+					}
 				}
 			});
 			//if no time data then make the startTime 0 (to start with)
@@ -304,16 +311,17 @@
 		lightBands = $state(new LightBandClass(this, { lightBands: [] }));
 		xAxis = $state();
 		Ndays = $derived.by(() => {
-			//TODO: this should caluclate the number of days from the start - so look at the max x data in each data and compare with the starttime
 			if (this.data.length === 0) {
 				return 0;
 			}
-			let Ndays = 0;
-			this.data.forEach((d, i) => {
-				Ndays = Math.max(Ndays, Object.keys(d.dataByDays.xByPeriod).length);
+			let maxPeriod = -1;
+			this.data.forEach((d) => {
+				const keys = Object.keys(d.dataByDays.xByPeriod).map(Number);
+				if (keys.length > 0) {
+					maxPeriod = Math.max(maxPeriod, Math.max(...keys));
+				}
 			});
-
-			return Ndays;
+			return maxPeriod + 1;
 		});
 
 		ylimsOption = $state('overall');
