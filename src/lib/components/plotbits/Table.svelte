@@ -92,12 +92,26 @@
 				<tr>
 					{#each data as col, c}
 						<td style="width: {widths[c]}">
-							<Editable
-								value={col[r]}
-								onInput={(v) => {
-									onInput({ col: c, row: r, value: v, old: oldVal });
-								}}
-							/>
+							{#if col[r]?.isTime}
+								<div class="time-cell">
+									<Editable
+										value={col[r].raw}
+										onInput={(v) => {
+											onInput({ col: c, row: r, value: v, old: oldVal });
+										}}
+									/>
+									{#if String(col[r].computed) !== String(col[r].raw)}
+										<div class="computed-time">{col[r].computed} hrs</div>
+									{/if}
+								</div>
+							{:else}
+								<Editable
+									value={col[r]}
+									onInput={(v) => {
+										onInput({ col: c, row: r, value: v, old: oldVal });
+									}}
+								/>
+							{/if}
 						</td>
 					{/each}
 				</tr>
@@ -144,8 +158,6 @@
 		padding: 0.5rem;
 		text-align: left;
 		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
 	}
 	.preview-table-wrapper th {
 		padding: 8px 12px;
@@ -153,6 +165,21 @@
 		background-color: var(--color-lightness-97);
 		text-align: left;
 		position: relative; /* Add this */
+	}
+
+	.time-cell {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 1px;
+	}
+
+	.computed-time {
+		font-size: 0.75em;
+		color: var(--color-lightness-50, #888);
+		line-height: 1.2;
+		padding-left: 4px;
+		white-space: nowrap;
 	}
 
 	.resizer {

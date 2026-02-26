@@ -123,12 +123,7 @@
 					continue;
 				}
 
-				let name = col.name;
-				if (col.type === 'time' && col.data?.length > 0) {
-					name += ' (raw | hrs since start)';
-				}
-
-				out.push(name);
+				out.push(col.name);
 			}
 			return out;
 		});
@@ -152,12 +147,23 @@
 					continue;
 				}
 
-				if (col.type === 'time' && col.data?.length > 0) {
-					const times = col.data.slice(this.colCurrent - 1, this.colCurrent + this.Ncolumns);
-					const hours = col.hoursSinceStart
-						.slice(this.colCurrent - 1, this.colCurrent + this.Ncolumns)
-						.map((x) => (Number.isFinite(x) ? x.toFixed(this.decimalPlaces) : x));
-					out.push(times.map((t, j) => `${t} | ${hours[j]}`));
+				if (col.type === 'time' && !col.isReferencial() && col.compression !== 'awd') {
+					const rawArr = core.rawData.get(col.data);
+					if (Array.isArray(rawArr)) {
+						const start = this.colCurrent - 1;
+						const rawStrings = rawArr.slice(start, start + this.Ncolumns);
+						const hours = (col.hoursSinceStart ?? [])
+							.slice(start, start + this.Ncolumns)
+							.map((x) => (Number.isFinite(x) ? x.toFixed(this.decimalPlaces) : String(x)));
+						out.push(rawStrings.map((t, j) => ({ raw: t, computed: hours[j], isTime: true })));
+					} else {
+						// AWD or missing rawData — fall back to numeric display
+						const data = col
+							.getData()
+							.slice(this.colCurrent - 1, this.colCurrent + this.Ncolumns)
+							.map((x) => (Number.isFinite(x) ? x.toFixed(this.decimalPlaces) : x));
+						out.push(data);
+					}
 				} else {
 					const data = col
 						.getData()
@@ -356,6 +362,16 @@
 
 		const rowIndex = Number(edit.row) + theData.plot.colCurrent - 1;
 		if (rowIndex >= theData.plot.longestCol) return;
+
+		// Time columns: edit the raw string in rawData directly
+		if (column.type === 'time' && !column.isReferencial() && column.compression !== 'awd') {
+			const rawArr = core.rawData.get(column.data);
+			if (Array.isArray(rawArr) && rowIndex < rawArr.length) {
+				rawArr[rowIndex] = edit.value;
+				column.rawDataVersion++;
+			}
+			return;
+		}
 
 		if (column.processes?.at(-1)?.name !== 'EditValue') {
 			column.addProcess('EditValue');

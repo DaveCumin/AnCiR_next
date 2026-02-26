@@ -161,6 +161,9 @@
 		//The associated processes that are applied to the data
 		processes = $state([]);
 
+		// Bump this to bust the getData() cache when rawData is mutated directly (e.g. time cell edits)
+		rawDataVersion = $state(0);
+
 		hoursSinceStart = $derived.by(() => {
 			if (this.isReferencial()) {
 				return this.refColumn?.hoursSinceStart;
@@ -262,7 +265,7 @@
 				})
 				.join('|');
 			const refDataHash = this.isReferencial() ? this.refColumn?.getDataHash : '';
-			return `${this.refId ?? '_'}:${this.compression || ''}:${this.type}:${this.timeFormat}:${this.binWidth || ''}:${processHash}:${refDataHash}:${this.tableProcessGUId}`;
+			return `${this.refId ?? '_'}:${this.compression || ''}:${this.type}:${this.timeFormat}:${this.binWidth || ''}:${processHash}:${refDataHash}:${this.tableProcessGUId}:${this.rawDataVersion}`;
 		});
 
 		//--- FUNCTION TO GET THE DATA
