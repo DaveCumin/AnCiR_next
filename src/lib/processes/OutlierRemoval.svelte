@@ -5,7 +5,7 @@
 
 	export const outlierremoval_displayName = 'Remove Outliers';
 	export const outlierremoval_defaults = new Map([
-		['method', { val: 'iqr' }],
+		['method', { val: 'zscore' }],
 		['iqrMultiplier', { val: 1.5 }],
 		['zThreshold', { val: 3 }]
 	]);

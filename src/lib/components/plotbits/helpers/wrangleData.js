@@ -9,7 +9,7 @@ export function binData(
 ) {
 	const n = xValues.length;
 
-	if (n === 0 || n !== yValues.length) return { bins: [], y_out: [] };
+	if (n === 0) return { bins: [], y_out: [] };
 
 	const step = stepSize > 0 ? stepSize : binSize;
 

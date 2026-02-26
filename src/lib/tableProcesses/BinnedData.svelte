@@ -214,11 +214,20 @@
 				<Table
 					headers={['binned x (center)', 'binned y']}
 					data={[
-						binnedData.bins.slice(previewStart - 1, previewStart + 5).map((x) => (x + p.args.stepSize / 2).toFixed(4)),
+						binnedData.bins
+							.slice(previewStart - 1, previewStart + 5)
+							.map((x) => (x + p.args.stepSize / 2).toFixed(4)),
 						binnedData.y_out.slice(previewStart - 1, previewStart + 5).map((y) => y.toFixed(4))
 					]}
 				/>
-				<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
+				<p>
+					Row <NumberWithUnits
+						min={1}
+						max={Math.max(1, totalRows - 5)}
+						step={1}
+						bind:value={previewStart}
+					/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+				</p>
 			{:else}
 				<p>Select valid input columns and parameters to see preview.</p>
 			{/if}
