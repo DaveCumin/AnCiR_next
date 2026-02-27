@@ -383,7 +383,7 @@
 	});
 
 	// Canvas dimensions
-	const canvasWidth = $derived((defaultPositions.maxLayer + 1) * COL_WIDTH + 2 * PADDING);
+	const canvasWidth = $derived((defaultPositions.maxLayer + 1) * COL_WIDTH + 2 * PADDING + 200);
 	const canvasHeight = $derived.by(() => {
 		const heights = Object.values(defaultPositions.layerOffsets);
 		return Math.max(...heights, 5 * ROW_HEIGHT) + 2 * PADDING;
@@ -392,8 +392,7 @@
 	// Step 2: attach positions (re-derives when topology OR any position changes)
 	const allEdges = $derived.by(() => {
 		return edgeTopology.flatMap((edge) => {
-			const fromPos =
-				stablePositions[edge.fromId] ?? defaultPositions.positions[edge.fromId];
+			const fromPos = stablePositions[edge.fromId] ?? defaultPositions.positions[edge.fromId];
 			const toPos = stablePositions[edge.toId] ?? defaultPositions.positions[edge.toId];
 			if (!fromPos || !toPos) return [];
 			return [

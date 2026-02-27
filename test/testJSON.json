@@ -6570,7 +6570,7 @@
 			"width": 750,
 			"height": 300,
 			"type": "scatterplot",
-			"selected": false,
+			"selected": true,
 			"plot": {
 				"xlimsIN": [null, null],
 				"xLogScale": false,
@@ -43575,40 +43575,47 @@
 			}
 		},
 		{
-			"id": 6,
-			"name": "Periodogram",
+			"id": 5,
+			"name": "Fourier-closeup",
 			"x": 795,
 			"y": 375,
-			"width": 500,
-			"height": 250,
-			"type": "periodogram",
-			"selected": true,
+			"width": 660,
+			"height": 285,
+			"type": "fft",
+			"selected": false,
 			"plot": {
-				"periodlimsIN": [1, 30],
-				"periodSteps": 0.25,
+				"xlimsIN": [22, 25],
 				"ylimsIN": [null, null],
 				"padding": {
 					"top": 15,
 					"right": 20,
 					"bottom": 47,
-					"left": 63
+					"left": 57
 				},
 				"xAxis": {
-					"label": "Period (hours)",
+					"label": "Frequency",
 					"gridlines": true,
 					"nticks": 5,
 					"manualTicks": null
 				},
-				"yAxis": {
-					"label": "Power",
+				"yAxisMag": {
+					"label": "Magnitude",
 					"gridlines": true,
 					"nticks": 5,
 					"manualTicks": null
 				},
+				"yAxisPhase": {
+					"label": "Phase (radians)",
+					"gridlines": false,
+					"nticks": 5,
+					"manualTicks": null
+				},
+				"logScale": false,
+				"showPeriod": true,
 				"data": [
 					{
 						"x": {
-							"id": 58,
+							"id": 30,
 							"name": "time_0*",
 							"refId": 0,
 							"type": "time",
@@ -43618,7 +43625,7 @@
 							"processes": []
 						},
 						"y": {
-							"id": 59,
+							"id": 31,
 							"name": "Before*",
 							"refId": 9,
 							"type": "number",
@@ -43627,29 +43634,33 @@
 							"processes": []
 						},
 						"line": {
-							"colour": "#BE796B",
+							"colour": "#3E7295",
 							"strokeWidth": 3,
 							"stroke": "solid",
 							"draw": true
 						},
-						"thresholdline": {
+						"phaseLine": {
 							"colour": "#234154",
 							"strokeWidth": 3,
 							"stroke": "solid",
 							"draw": true
 						},
-						"points": {
-							"colour": "#BE796B",
+						"phasePoints": {
+							"colour": "#234154",
 							"radius": 4,
 							"draw": true
 						},
-						"binSize": 0.25,
-						"method": "Lomb-Scargle",
-						"chiSquaredAlpha": 0.05
+						"points": {
+							"colour": "#3E7295",
+							"radius": 4,
+							"draw": true
+						},
+						"showPhase": false,
+						"freqStep": 0.0001
 					},
 					{
 						"x": {
-							"id": 60,
+							"id": 32,
 							"name": "time_0*",
 							"refId": 0,
 							"type": "time",
@@ -43659,8 +43670,8 @@
 							"processes": []
 						},
 						"y": {
-							"id": 61,
-							"name": "undefined*",
+							"id": 33,
+							"name": "After*",
 							"refId": 6,
 							"type": "number",
 							"tableProcessGUId": "",
@@ -43668,25 +43679,29 @@
 							"processes": []
 						},
 						"line": {
-							"colour": "#3E7295",
-							"strokeWidth": 3,
-							"stroke": "solid",
-							"draw": true
-						},
-						"thresholdline": {
 							"colour": "#BE796B",
 							"strokeWidth": 3,
 							"stroke": "solid",
 							"draw": true
 						},
-						"points": {
-							"colour": "#3E7295",
+						"phaseLine": {
+							"colour": "#BE796B",
+							"strokeWidth": 3,
+							"stroke": "solid",
+							"draw": true
+						},
+						"phasePoints": {
+							"colour": "#BE796B",
 							"radius": 4,
 							"draw": true
 						},
-						"binSize": 0.25,
-						"method": "Lomb-Scargle",
-						"chiSquaredAlpha": 0.05
+						"points": {
+							"colour": "#BE796B",
+							"radius": 4,
+							"draw": true
+						},
+						"showPhase": false,
+						"freqStep": 0.0001
 					}
 				]
 			}
@@ -43810,11 +43825,11 @@
 		"showNavbar": true,
 		"showDisplayPanel": true,
 		"showControlPanel": true,
-		"windowWidth": 1738,
+		"windowWidth": 1938,
 		"windowHeight": 819,
 		"widthNavBar": 56,
-		"widthDisplayPanel": 140,
-		"widthControlPanel": 201,
+		"widthDisplayPanel": 203,
+		"widthControlPanel": 250,
 		"gridSize": 15,
 		"canvasOffset": {
 			"x": 0,
@@ -43835,7 +43850,8 @@
 		],
 		"showColourPicker": true,
 		"showAYSModal": false,
-		"AYStext": "Are you sure you want to remove Fourier-closeup?",
+		"AYStext": "",
+		"AYScallback": null,
 		"showWorkflow": false
 	},
 	"version": "β.10.18"
