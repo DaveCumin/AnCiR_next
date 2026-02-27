@@ -1,7 +1,8 @@
 node_modules
 
 # Output
-/build
+/build/*
+!/build/index.html
 .output
 .vercel
 .netlify
