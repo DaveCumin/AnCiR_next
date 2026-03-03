@@ -147,7 +147,7 @@
 					<!--TODO: bind a value here so it always shows in ui-->
 					<DateTimeHrs bind:value={condition.byColValue} />
 				{:else}
-					<NumberWithUnits bind:value={condition.byColValue} />
+					<NumberWithUnits bind:value={condition.byColValue} step="0.01" />
 				{/if}
 			</div>
 			{#if p.args.conditions.length > 1}

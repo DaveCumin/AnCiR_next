@@ -1001,6 +1001,22 @@
 		margin: 0 0 4px 0;
 	}
 
+	:global(.data-warning) {
+		width: 100%;
+		padding: 6px 8px;
+		margin-bottom: 0.5rem;
+		background: #fff8e1;
+		border: 1px solid #f9a825;
+		border-radius: 4px;
+	}
+
+	:global(.data-warning p) {
+		font-size: 11px;
+		color: #795548;
+		margin: 2px 0;
+		line-height: 1.4;
+	}
+
 	:global(.control-input-checkbox p) {
 		font-size: 12px;
 		text-align: left;

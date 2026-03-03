@@ -53,6 +53,7 @@
 		// Calculation state
 		calculating = $state(false);
 		progress = $state({ current: 0, total: 0 });
+		dataWarnings = $state([]);
 
 		// Period data - now $state instead of $derived
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
@@ -100,6 +101,8 @@
 			this.thresholdline = new LineClass(dataIN?.thresholdline, this);
 			this.points = new PointsClass(dataIN?.points, this);
 			this.method = dataIN?.method ?? 'Lomb-Scargle';
+			this.binSize = dataIN?.binSize ?? 0.25;
+			this.chiSquaredAlpha = dataIN?.chiSquaredAlpha ?? 0.05;
 		}
 
 		cleanup() {
@@ -124,6 +127,46 @@
 			// Skip if data is invalid
 			if (!xData || !yData || xData.length === 0 || yData.length === 0) {
 				return;
+			}
+
+			// Check data quality for Chi-squared (warnings only — calculation still runs)
+			if (method === 'Chi-squared') {
+				const warnings = [];
+
+				const nanXCount = xData.filter((v) => v === null || v === undefined || isNaN(v)).length;
+				if (nanXCount > 0) {
+					warnings.push(
+						`${nanXCount} missing time value${nanXCount > 1 ? 's' : ''} — excluded from binning, but may indicate irregular data collection.`
+					);
+				}
+
+				const nanYCount = yData.filter((v) => v === null || v === undefined || isNaN(v)).length;
+				if (nanYCount > 0) {
+					warnings.push(
+						`${nanYCount} missing y value${nanYCount > 1 ? 's' : ''} — empty bins distort the chi-squared statistic.`
+					);
+				}
+
+				// Check for time gaps larger than the bin size
+				const validX = xData
+					.filter((v) => v !== null && v !== undefined && !isNaN(v))
+					.sort((a, b) => a - b);
+				if (validX.length > 1) {
+					let maxGap = 0;
+					for (let i = 1; i < validX.length; i++) {
+						const gap = validX[i] - validX[i - 1];
+						if (gap > maxGap) maxGap = gap;
+					}
+					if (maxGap > binSize * 1.5) {
+						warnings.push(
+							`Data has gaps up to ${maxGap.toFixed(1)} h (bin size: ${binSize} h) — empty bins inflate the chi-squared statistic and may produce false peaks.`
+						);
+					}
+				}
+
+				this.dataWarnings = warnings;
+			} else {
+				this.dataWarnings = [];
 			}
 
 			// Build fingerprint for data-related params
@@ -809,6 +852,14 @@
 								</div>
 							{/if}
 						</div>
+
+						{#if datum.method === 'Chi-squared' && datum.dataWarnings && datum.dataWarnings.length > 0}
+							<div class="data-warning">
+								{#each datum.dataWarnings as warning}
+									<p>⚠ {warning}</p>
+								{/each}
+							</div>
+						{/if}
 
 						{#if datum.peak}
 							<p><strong>Peak Period: {datum.peak.period.toFixed(2)} hrs</strong></p>
