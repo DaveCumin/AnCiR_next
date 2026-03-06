@@ -182,7 +182,17 @@ export function runPeriodogramCalculation(params, onProgress) {
 		if (!params.yData) {
 			return { x: [], y: [], threshold: [], pvalue: [] };
 		}
-		binnedData = binData(params.xData, params.yData, params.binSize, 0);
+		// Strip NaN/null x values before binning — a NaN last x causes binData's
+		// while(true) loop to never break (currentStart >= NaN is always false).
+		const validPairs = params.xData
+			.map((x, i) => ({ x, y: params.yData[i] }))
+			.filter((p) => p.x !== null && p.x !== undefined && !isNaN(p.x));
+		binnedData = binData(
+			validPairs.map((p) => p.x),
+			validPairs.map((p) => p.y),
+			params.binSize,
+			0
+		);
 		if (binnedData.bins.length === 0) {
 			return { x: [], y: [], threshold: [], pvalue: [] };
 		}
@@ -210,9 +220,16 @@ export function runPeriodogramCalculation(params, onProgress) {
 		}
 
 		for (let p = 0; p < periods.length; p++) {
-			power[p] = calculateChiSquaredPower(data, params.binSize, periods[p], avgAll, denomAcc.value);
-			threshold[p] = qchisq(1 - correctedAlpha, Math.round(periods[p] / params.binSize));
-			pvalue[p] = 1 - pchisq(power[p], Math.round(periods[p] / params.binSize));
+			const df = Math.round(periods[p] / params.binSize) - 1;
+			if (df < 1) {
+				power[p] = NaN;
+				threshold[p] = NaN;
+				pvalue[p] = NaN;
+			} else {
+				power[p] = calculateChiSquaredPower(data, params.binSize, periods[p], avgAll, denomAcc.value);
+				threshold[p] = qchisq(1 - correctedAlpha, df);
+				pvalue[p] = 1 - pchisq(power[p], df);
+			}
 
 			if (onProgress && p % 10 === 0) {
 				onProgress(p, periods.length);
