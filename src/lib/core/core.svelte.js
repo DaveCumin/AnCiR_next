@@ -60,7 +60,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.10.20',
+	version: 'β.10.21',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
@@ -107,9 +107,18 @@ function initialiseCurrentTab(showDisplayPanel, showControlPanel) {
 	return 'data';
 }
 
+// Keys that should never be restored from a saved session:
+// viewport dimensions are runtime values; showColourPicker is transient UI state.
+const LOAD_APP_STATE_SKIP_KEYS = new Set([
+	'loadingState',
+	'windowWidth',
+	'windowHeight',
+	'showColourPicker'
+]);
+
 export function loadAppState(newAppState) {
 	for (const key in newAppState) {
-		if (key in appState && key !== 'loadingState') {
+		if (key in appState && !LOAD_APP_STATE_SKIP_KEYS.has(key)) {
 			appState[key] = newAppState[key];
 		}
 	}

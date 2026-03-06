@@ -107,6 +107,7 @@
 		//add event listeners
 		const updateWidth = () => {
 			appState.windowWidth = window.innerWidth;
+			appState.windowHeight = window.innerHeight;
 		};
 		window.addEventListener('resize', updateWidth);
 
