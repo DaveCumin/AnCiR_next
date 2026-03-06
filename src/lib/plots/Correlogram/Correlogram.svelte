@@ -198,6 +198,42 @@
 			return { lag: lags[maxIdx], correlation: correlations[maxIdx] };
 		});
 
+		dataWarnings = $derived.by(() => {
+			const times = this.x?.hoursSinceStart ?? [];
+
+			if (!times || times.length < 2) return [];
+
+			const warnings = [];
+
+			const validT = times
+				.filter((v) => v !== null && v !== undefined && !isNaN(v))
+				.sort((a, b) => a - b);
+
+			const nanXCount = times.length - validT.length;
+			if (nanXCount > 0) {
+				warnings.push(
+					`${nanXCount} missing time value${nanXCount > 1 ? 's' : ''} — excluded from the autocorrelation.`
+				);
+			}
+
+			// Check for large gaps — lags coinciding with gaps have few pairs,
+			// but the confidence bounds use total n and do not reflect this.
+			if (validT.length > 1) {
+				const diffs = [];
+				for (let i = 1; i < validT.length; i++) diffs.push(validT[i] - validT[i - 1]);
+				diffs.sort((a, b) => a - b);
+				const medianDt = diffs[Math.floor(diffs.length / 2)];
+				const maxGap = diffs[diffs.length - 1];
+				if (maxGap > medianDt * 2) {
+					warnings.push(
+						`Data has gaps up to ${maxGap.toFixed(1)} h (typical interval: ${medianDt.toFixed(2)} h) — lags coinciding with gaps are estimated from few pairs, and the confidence bounds shown assume complete, evenly-spaced data.`
+					);
+				}
+			}
+
+			return warnings;
+		});
+
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
 
@@ -779,6 +815,14 @@
 							</p>
 						</div>
 						-->
+
+						{#if datum.dataWarnings && datum.dataWarnings.length > 0}
+							<div class="data-warning">
+								{#each datum.dataWarnings as warning}
+									<p>⚠ {warning}</p>
+								{/each}
+							</div>
+						{/if}
 
 						{#if datum.peak}
 							<p><strong>Peak Lag: {datum.peak.lag.toFixed(2)} hrs</strong></p>

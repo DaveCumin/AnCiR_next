@@ -129,8 +129,8 @@
 				return;
 			}
 
-			// Check data quality for Chi-squared (warnings only — calculation still runs)
-			if (method === 'Chi-squared') {
+			// Check data quality for binning-based methods (warnings only — calculation still runs)
+			if (method === 'Chi-squared' || method === 'Enright') {
 				const warnings = [];
 
 				const nanXCount = xData.filter((v) => v === null || v === undefined || isNaN(v)).length;
@@ -142,8 +142,11 @@
 
 				const nanYCount = yData.filter((v) => v === null || v === undefined || isNaN(v)).length;
 				if (nanYCount > 0) {
+					const yMsg = method === 'Chi-squared'
+						? 'empty bins distort the chi-squared statistic'
+						: 'empty bins are treated as zero and bias the Enright autocorrelation';
 					warnings.push(
-						`${nanYCount} missing y value${nanYCount > 1 ? 's' : ''} — empty bins distort the chi-squared statistic.`
+						`${nanYCount} missing y value${nanYCount > 1 ? 's' : ''} — ${yMsg}.`
 					);
 				}
 
@@ -158,8 +161,11 @@
 						if (gap > maxGap) maxGap = gap;
 					}
 					if (maxGap > binSize * 1.5) {
+						const gapMsg = method === 'Chi-squared'
+							? 'inflate the chi-squared statistic and may produce false peaks'
+							: 'are treated as zero and bias the Enright autocorrelation';
 						warnings.push(
-							`Data has gaps up to ${maxGap.toFixed(1)} h (bin size: ${binSize} h) — empty bins inflate the chi-squared statistic and may produce false peaks.`
+							`Data has gaps up to ${maxGap.toFixed(1)} h (bin size: ${binSize} h) — empty bins ${gapMsg}.`
 						);
 					}
 				}
@@ -853,7 +859,7 @@
 							{/if}
 						</div>
 
-						{#if datum.method === 'Chi-squared' && datum.dataWarnings && datum.dataWarnings.length > 0}
+						{#if (datum.method === 'Chi-squared' || datum.method === 'Enright') && datum.dataWarnings && datum.dataWarnings.length > 0}
 							<div class="data-warning">
 								{#each datum.dataWarnings as warning}
 									<p>⚠ {warning}</p>

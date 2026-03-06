@@ -156,6 +156,48 @@
 			return { frequency: freq, period: freq !== 0 ? 1 / freq : null, magnitude: magnitudes[maxIdx] };
 		});
 
+		dataWarnings = $derived.by(() => {
+			const times = this.x?.hoursSinceStart ?? [];
+			const values = this.y?.getData() ?? [];
+
+			if (!times || times.length < 2) return [];
+
+			const warnings = [];
+
+			const nanXCount = times.filter((v) => v === null || v === undefined || isNaN(v)).length;
+			if (nanXCount > 0) {
+				warnings.push(
+					`${nanXCount} missing time value${nanXCount > 1 ? 's' : ''} — excluded before the FFT; the sampling rate is recalculated from the remaining span and may be inaccurate.`
+				);
+			}
+
+			const nanYCount = values.filter((v) => v === null || v === undefined || isNaN(v)).length;
+			if (nanYCount > 0) {
+				warnings.push(
+					`${nanYCount} missing y value${nanYCount > 1 ? 's' : ''} — excluded before the FFT; these are not zero-padded at their original positions, which may introduce spectral artefacts.`
+				);
+			}
+
+			// Check for irregular spacing — FFT assumes uniform sampling
+			const validT = times
+				.filter((v) => v !== null && v !== undefined && !isNaN(v))
+				.sort((a, b) => a - b);
+			if (validT.length > 1) {
+				const diffs = [];
+				for (let i = 1; i < validT.length; i++) diffs.push(validT[i] - validT[i - 1]);
+				diffs.sort((a, b) => a - b);
+				const medianDt = diffs[Math.floor(diffs.length / 2)];
+				const maxGap = diffs[diffs.length - 1];
+				if (maxGap > medianDt * 1.5) {
+					warnings.push(
+						`Data has gaps up to ${maxGap.toFixed(1)} h (typical interval: ${medianDt.toFixed(2)} h) — the FFT assumes uniform sampling; the frequency axis and Nyquist frequency will be incorrect.`
+					);
+				}
+			}
+
+			return warnings;
+		});
+
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
 
@@ -913,6 +955,14 @@
 								{/if}
 							</p>
 						</div>
+
+						{#if datum.dataWarnings && datum.dataWarnings.length > 0}
+							<div class="data-warning">
+								{#each datum.dataWarnings as warning}
+									<p>⚠ {warning}</p>
+								{/each}
+							</div>
+						{/if}
 
 						{#if datum.peak}
 							{#if datum.peak.period != null}
