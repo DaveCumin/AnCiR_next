@@ -57,9 +57,7 @@
 					this.args = dataIN.args;
 				} else {
 					this.args = Object.fromEntries(
-						Array.from(processInfo.defaults.entries()).map(
-							([key, value]) => [key, value.val]
-						)
+						Array.from(processInfo.defaults.entries()).map(([key, value]) => [key, value.val])
 					);
 				}
 			}
@@ -75,7 +73,9 @@
 
 		// Perform processes (add/filer etc)
 		doProcess(data) {
-			return appConsts.processMap.get(this.name).func(data, this.args);
+			const proc = appConsts.processMap.get(this.name);
+			if (!proc) return data;
+			return proc.func(data, this.args);
 		}
 
 		toJSON() {

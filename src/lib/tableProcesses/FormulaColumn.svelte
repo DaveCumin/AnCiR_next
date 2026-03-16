@@ -498,7 +498,14 @@ return _r;`
 		{@const totalRows = result.length}
 		<p>Preview:</p>
 		<Table headers={['Result']} data={[result.slice(previewStart - 1, previewStart + 5)]} />
-		<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
+		<p>
+			Row <NumberWithUnits
+				min={1}
+				max={Math.max(1, totalRows - 5)}
+				step={1}
+				bind:value={previewStart}
+			/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+		</p>
 	{:else if p.args.out.result > 0}
 		<div class="section-row">
 			<div class="tableProcess-label">
@@ -591,7 +598,7 @@ return _r;`
 		border: 1px solid var(--color-lightness-85, #ccc);
 		border-radius: 4px;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-		z-index: 200;
+		z-index: 9999;
 	}
 
 	.ac-item {
