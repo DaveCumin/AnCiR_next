@@ -282,7 +282,7 @@
 						</p>
 					</div>
 				</div>
-				<div class="url-input-container">
+				<!-- <div class="url-input-container">
 					<input
 						class="url-input"
 						type="text"
@@ -292,14 +292,14 @@
 							if (e.key === 'Enter') fetchSessionFromURL();
 						}}
 					/>
-					<!-- <button
+					 <button
 						class="choose-file-button"
 						onclick={fetchSessionFromURL}
 						disabled={!sessionUrl.trim() || urlFetching}
 					>
 						{urlFetching ? 'Fetching…' : 'Load from URL'}
-					</button> -->
-				</div>
+					</button>
+				</div> -->
 			</div>
 		{/if}
 

@@ -1129,7 +1129,7 @@
 						</p>
 					</div>
 				</div>
-				<div class="url-input-container">
+				<!-- <div class="url-input-container">
 					<input
 						class="url-input"
 						type="text"
@@ -1139,14 +1139,14 @@
 							if (e.key === 'Enter') doPreviewFromURL();
 						}}
 					/>
-					<!-- <button
+					<button
 						class="choose-file-button"
 						onclick={doPreviewFromURL}
 						disabled={!dataUrl.trim() || awaitingPreview}
 					>
 						Load from URL
-					</button> -->
-				</div>
+					</button>
+				</div> -->
 			</div>
 			<input
 				bind:this={fileInput}
