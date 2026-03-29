@@ -159,6 +159,9 @@
 	let jsonData = $state();
 	let error = '';
 
+	let sessionUrl = $state('');
+	let urlFetching = $state(false);
+
 	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
 
 	async function openImportModal() {
@@ -195,6 +198,25 @@
 		reader.readAsText(file);
 
 		importReady = true;
+	}
+
+	async function fetchSessionFromURL() {
+		if (!sessionUrl.trim()) return;
+		urlFetching = true;
+		try {
+			const response = await fetch(sessionUrl.trim());
+			if (!response.ok) throw new Error(`HTTP ${response.status}`);
+			jsonData = await response.json();
+			fileName = sessionUrl.split('/').pop() || 'url';
+			error = '';
+			importReady = true;
+		} catch (err) {
+			error = `Failed to fetch: ${err.message}`;
+			jsonData = null;
+			importReady = false;
+			alert(`Failed to load session from URL.\n\n${err.message}`);
+		}
+		urlFetching = false;
 	}
 
 	async function doImport() {
@@ -259,6 +281,24 @@
 							{/if}
 						</p>
 					</div>
+				</div>
+				<div class="url-input-container">
+					<input
+						class="url-input"
+						type="text"
+						bind:value={sessionUrl}
+						placeholder="…or paste a URL to a session .json"
+						onkeydown={(e) => {
+							if (e.key === 'Enter') fetchSessionFromURL();
+						}}
+					/>
+					<!-- <button
+						class="choose-file-button"
+						onclick={fetchSessionFromURL}
+						disabled={!sessionUrl.trim() || urlFetching}
+					>
+						{urlFetching ? 'Fetching…' : 'Load from URL'}
+					</button> -->
 				</div>
 			</div>
 		{/if}
@@ -332,6 +372,23 @@
 		flex-direction: row;
 		align-items: center;
 		gap: 1rem;
+	}
+
+	.url-input-container {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+	}
+
+	.url-input {
+		flex: 1;
+		font-size: 13px;
+		padding: 0.2rem 0.5rem;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 2px;
+		background: var(--color-lightness-97);
 	}
 
 	.choose-file-button {

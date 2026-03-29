@@ -29,7 +29,7 @@
 	let targetFile = $state();
 	let previewIN = $state(50);
 	let previewDisplayStart = $state(1);
-	let previewRowCount = $derived(parsedData ? (parsedData[headers[0]]?.length || 0) : 0);
+	let previewRowCount = $derived(parsedData ? parsedData[headers[0]]?.length || 0 : 0);
 	let skipLines = $state(0);
 	let error = $state({});
 	let parsedData = $state(null);
@@ -38,6 +38,8 @@
 	let awaitingPreview = $state(false);
 	let awaitingLoad = $state(false);
 	let awdMeta = $state(null); // { startMs, stepMs, count } for AWD time compression
+	let dataUrl = $state('');
+	let isUrlMode = $state(false);
 
 	// Binning for large files
 	const ROW_THRESHOLD = 15000;
@@ -83,6 +85,8 @@
 		selectedColumns.clear();
 		extraFileErrors = [];
 		checkingHeaders = false;
+		dataUrl = '';
+		isUrlMode = false;
 	}
 
 	export async function openImportModal() {
@@ -189,12 +193,106 @@
 		});
 	}
 
+	async function doPreviewFromURL() {
+		if (!dataUrl.trim()) return;
+		// Reset relevant state without touching dataUrl
+		parsedData = null;
+		importReady = false;
+		targetFile = null;
+		targetFiles = [];
+		isUrlMode = true;
+		errorInfile = false;
+		error = {};
+		specialRecognised = false;
+		selectedColumns.clear();
+
+		awaitingPreview = true;
+		previewDisplayStart = 1;
+		loadProgress = { stage: 'Fetching', detail: dataUrl };
+		await tick();
+		await new Promise((r) => setTimeout(r, appConsts.timeoutRefresh_ms));
+
+		await new Promise((resolve) => {
+			Papa.parse(dataUrl.trim(), {
+				download: true,
+				preview: previewIN,
+				header: hasHeader,
+				dynamicTyping: true,
+				skipEmptyLines: 'greedy',
+				skipFirstNLines: skipLines,
+				delimiter: delimiter,
+				complete: (results) => {
+					if (results.errors.length > 0) errorInfile = true;
+					dealWithData(results.meta.fields, results.data);
+					resolve();
+				},
+				error: (err) => {
+					error = { err, reason: 'Failed to fetch URL' };
+					errorInfile = true;
+					alert(`Failed to fetch data from URL.\n\n${err.message ?? err}`);
+					resolve();
+				}
+			});
+		});
+
+		if (headers.length > 0 && selectedColumns.size === 0) {
+			headers.forEach((col) => selectedColumns.add(col));
+		}
+		totalRowCount = parsedData ? (parsedData[headers[0]]?.length ?? 0) : 0;
+
+		loadProgress = { stage: '', detail: '' };
+		awaitingPreview = false;
+		if (!errorInfile) importReady = true;
+	}
+
+	async function loadDataFromURL() {
+		await new Promise((resolve, reject) => {
+			Papa.parse(dataUrl.trim(), {
+				download: true,
+				header: hasHeader,
+				dynamicTyping: true,
+				skipEmptyLines: 'greedy',
+				skipFirstNLines: skipLines,
+				delimiter: delimiter,
+				complete: async (results) => {
+					const allData = convertArrayToObject(results.data);
+					const filteredData =
+						selectedColumns.size < headers.length
+							? Object.fromEntries(
+									[...selectedColumns].filter((c) => allData[c]).map((c) => [c, allData[c]])
+								)
+							: allData;
+					const urlName = dataUrl.split('/').pop() || 'url-data';
+					await doBasicFileImport(filteredData, urlName);
+					resolve();
+				},
+				error: (err) => {
+					error = { err, reason: 'Failed to fetch data from URL' };
+					errorInfile = true;
+					reject(err);
+				}
+			});
+		});
+	}
+
+	function reParse() {
+		if (isUrlMode) doPreviewFromURL();
+		else doPreview();
+	}
+
 	async function confirmImport() {
 		awaitingLoad = true;
-		loadProgress = { stage: 'Loading data', detail: 'Reading full file…' };
+		loadProgress = {
+			stage: 'Loading data',
+			detail: isUrlMode ? 'Fetching full data…' : 'Reading full file…'
+		};
 		await tick();
 		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
-		await loadData();
+		if (isUrlMode) {
+			await loadDataFromURL();
+		} else {
+			await loadData();
+		}
 		console.log('Import complete');
 		awaitingLoad = false;
 		resetValues();
@@ -998,16 +1096,20 @@
 	{#snippet header()}
 		{#if awaitingPreview}
 			<LoadingSpinner
-				message={targetFiles.length > 1
-					? `Previewing ${targetFiles.length} files.`
-					: `Importing data from ${targetFile?.name ?? 'file'}.`}
+				message={isUrlMode
+					? `Fetching data from URL…`
+					: targetFiles.length > 1
+						? `Previewing ${targetFiles.length} files.`
+						: `Importing data from ${targetFile?.name ?? 'file'}.`}
 				detail={loadProgress.detail}
 			/>
 		{:else if awaitingLoad}
 			<LoadingSpinner
-				message={targetFiles.length > 1
-					? `Importing ${targetFiles.length} files.`
-					: `Loading data from ${targetFile?.name ?? 'file'}.`}
+				message={isUrlMode
+					? `Loading data from URL…`
+					: targetFiles.length > 1
+						? `Importing ${targetFiles.length} files.`
+						: `Loading data from ${targetFile?.name ?? 'file'}.`}
 				detail={loadProgress.detail}
 			/>
 		{:else}
@@ -1026,6 +1128,24 @@
 							{/if}
 						</p>
 					</div>
+				</div>
+				<div class="url-input-container">
+					<input
+						class="url-input"
+						type="text"
+						bind:value={dataUrl}
+						placeholder="…or enter a URL to a CSV/text file"
+						onkeydown={(e) => {
+							if (e.key === 'Enter') doPreviewFromURL();
+						}}
+					/>
+					<!-- <button
+						class="choose-file-button"
+						onclick={doPreviewFromURL}
+						disabled={!dataUrl.trim() || awaitingPreview}
+					>
+						Load from URL
+					</button> -->
 				</div>
 			</div>
 			<input
@@ -1046,13 +1166,9 @@
 				<div class="preview-placeholder">
 					{#if parsedData && importReady}
 						<p>
-							Header: <input
-								type="checkbox"
-								bind:checked={hasHeader}
-								onchange={() => doPreview()}
-							/>
+							Header: <input type="checkbox" bind:checked={hasHeader} onchange={() => reParse()} />
 							Delimiter:
-							<select bind:value={delimiter} onchange={() => doPreview()}>
+							<select bind:value={delimiter} onchange={() => reParse()}>
 								<option value="">auto</option>
 								<option value=",">, (comma)</option>
 								<option value=";">; (semicolon)</option>
@@ -1065,7 +1181,7 @@
 							Skip lines: <NumberWithUnits
 								bind:value={skipLines}
 								min="0"
-								onInput={() => doPreview()}
+								onInput={() => reParse()}
 							/>
 						</p>
 
@@ -1151,7 +1267,14 @@
 								</tbody>
 							</table>
 						</div>
-						<p>Row <NumberWithUnits min={1} max={Math.max(1, previewRowCount - 5)} step={1} bind:value={previewDisplayStart} /> to {Math.min(previewDisplayStart + 5, previewRowCount)} of {previewRowCount} (preview)</p>
+						<p>
+							Row <NumberWithUnits
+								min={1}
+								max={Math.max(1, previewRowCount - 5)}
+								step={1}
+								bind:value={previewDisplayStart}
+							/> to {Math.min(previewDisplayStart + 5, previewRowCount)} of {previewRowCount} (preview)
+						</p>
 
 						{#if targetFiles.length > 1}
 							<div class="multi-file-list">
@@ -1208,6 +1331,24 @@
 </Modal>
 
 <style>
+	/* ── URL import ──────────────────────────────────────────────────────────── */
+	.url-input-container {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+	}
+
+	.url-input {
+		flex: 1;
+		font-size: 13px;
+		padding: 0.2rem 0.5rem;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 2px;
+		background: var(--color-lightness-97);
+	}
+
 	/* ── Multi-file concatenation UI ─────────────────────────────────────────── */
 	.multi-file-list {
 		margin-top: 0.75em;
