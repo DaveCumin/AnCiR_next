@@ -7,6 +7,7 @@
 
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import Editable from '$lib/components/inputs/Editable.svelte';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
 	import Annotation, { AnnotationClass } from './Annotation.svelte';
@@ -39,6 +40,7 @@
 		x = $state();
 		y = $state();
 		draw = $state();
+		label = $state();
 
 		binSize = $derived.by(() => {
 			//the average time between x values
@@ -181,6 +183,11 @@
 				} else {
 					this.x = new ColumnClass({ refId: -1 });
 				}
+			}
+			if (dataIN?.label) {
+				this.label = dataIN.label;
+			} else {
+				this.label = 'Data ' + (parent.data.length + 1);
 			}
 			if (dataIN && dataIN.y) {
 				this.y = ColumnClass.fromJSON(dataIN.y);
@@ -743,7 +750,7 @@
 					<div class="control-component-title">
 						<div class="control-component-title-colour">
 							<ColourPicker bind:value={datum.colour} />
-							<p>Data {i}</p>
+							<p><Editable bind:value={datum.label} /></p>
 						</div>
 						<div class="control-component-title-icons">
 							<button class="icon" onclick={() => theData.removeData(i)}>

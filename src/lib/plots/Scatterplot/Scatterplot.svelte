@@ -253,9 +253,21 @@
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
 			this.legend = new LegendClass(dataIN?.legend);
-			this.xAxis = new AxisClass({ label: dataIN?.xAxis?.label ?? '', gridlines: dataIN?.xAxis?.gridlines ?? true, nticks: dataIN?.xAxis?.nticks ?? 5 });
-			this.yAxisLeft = new AxisClass({ label: dataIN?.yAxisLeft?.label ?? '', gridlines: dataIN?.yAxisLeft?.gridlines ?? true, nticks: dataIN?.yAxisLeft?.nticks ?? 5 });
-			this.yAxisRight = new AxisClass({ label: dataIN?.yAxisRight?.label ?? '', gridlines: dataIN?.yAxisRight?.gridlines ?? false, nticks: dataIN?.yAxisRight?.nticks ?? 5 });
+			this.xAxis = new AxisClass({
+				label: dataIN?.xAxis?.label ?? '',
+				gridlines: dataIN?.xAxis?.gridlines ?? true,
+				nticks: dataIN?.xAxis?.nticks ?? 5
+			});
+			this.yAxisLeft = new AxisClass({
+				label: dataIN?.yAxisLeft?.label ?? '',
+				gridlines: dataIN?.yAxisLeft?.gridlines ?? true,
+				nticks: dataIN?.yAxisLeft?.nticks ?? 5
+			});
+			this.yAxisRight = new AxisClass({
+				label: dataIN?.yAxisRight?.label ?? '',
+				gridlines: dataIN?.yAxisRight?.gridlines ?? false,
+				nticks: dataIN?.yAxisRight?.nticks ?? 5
+			});
 			if (dataIN) {
 				this.addData(dataIN);
 			}
@@ -458,17 +470,26 @@
 			if (json.xAxis) {
 				scatter.xAxis = AxisClass.fromJSON(json.xAxis);
 			} else {
-				scatter.xAxis = new AxisClass({ label: json.xlabel ?? '', gridlines: json.xgridlines ?? true });
+				scatter.xAxis = new AxisClass({
+					label: json.xlabel ?? '',
+					gridlines: json.xgridlines ?? true
+				});
 			}
 			if (json.yAxisLeft) {
 				scatter.yAxisLeft = AxisClass.fromJSON(json.yAxisLeft);
 			} else {
-				scatter.yAxisLeft = new AxisClass({ label: json.ylabelLeft ?? '', gridlines: json.ygridlinesLeft ?? true });
+				scatter.yAxisLeft = new AxisClass({
+					label: json.ylabelLeft ?? '',
+					gridlines: json.ygridlinesLeft ?? true
+				});
 			}
 			if (json.yAxisRight) {
 				scatter.yAxisRight = AxisClass.fromJSON(json.yAxisRight);
 			} else {
-				scatter.yAxisRight = new AxisClass({ label: json.ylabelRight ?? '', gridlines: json.ygridlinesRight ?? false });
+				scatter.yAxisRight = new AxisClass({
+					label: json.ylabelRight ?? '',
+					gridlines: json.ygridlinesRight ?? false
+				});
 			}
 
 			if (json.data) {
