@@ -115,7 +115,7 @@
 	{#each p.args.conditions as condition, index}
 		<div class="conditions">
 			<div class="second-level-condition">
-				<ColumnSelector bind:value={condition.byColId} getPlotSiblings={p.parentCol} />
+				<ColumnSelector bind:value={condition.byColId} />
 				<div class="operator-input">
 					{#if getColumnById(condition.byColId)?.type === 'category'}
 						<select bind:value={condition.isOperator}>

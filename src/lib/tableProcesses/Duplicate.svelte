@@ -34,6 +34,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils';
 	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
@@ -60,6 +61,11 @@
 	//------------
 	let result = $state();
 	let previewStart = $state(1);
+	let displayResult = $derived(
+		result && xIN_col?.type === 'time'
+			? result.map((v) => formatTimeFromUNIX(v))
+			: result
+	);
 	function doDuplicate() {
 		previewStart = 1;
 		[result, p.args.valid] = duplicate(p.args);
@@ -92,7 +98,7 @@
 {#if p.args.valid && p.args.out.result == -1}
 	{@const totalRows = result.length}
 	<p>Preview:</p>
-	<Table headers={['Result']} data={[result.slice(previewStart - 1, previewStart + 5)]} />
+	<Table headers={['Result']} data={[displayResult.slice(previewStart - 1, previewStart + 5)]} />
 	<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
 {:else if p.args.out.result > 0}
 	<div class="section-row">

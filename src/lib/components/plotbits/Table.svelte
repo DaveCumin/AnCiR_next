@@ -104,6 +104,8 @@
 										<div class="computed-time">{col[r].computed} hrs</div>
 									{/if}
 								</div>
+							{:else if col[r] == null}
+								<span class="null-value">-</span>
 							{:else}
 								<Editable
 									value={col[r]}
@@ -180,6 +182,10 @@
 		line-height: 1.2;
 		padding-left: 4px;
 		white-space: nowrap;
+	}
+
+	.null-value {
+		color: var(--color-lightness-70, #aaa);
 	}
 
 	.resizer {
