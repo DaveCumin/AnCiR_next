@@ -67,7 +67,7 @@
 		}
 
 		// Apply mask to filter x
-		const out = x.map((val, i) => (resultMask[i] ? val : NaN));
+		const out = x.map((val, i) => (resultMask[i] ? val : null));
 		return out;
 	}
 	export const filterbyothercol_displayName = 'Filter';

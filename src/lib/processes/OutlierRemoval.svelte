@@ -38,7 +38,16 @@
 
 	export function outlierremoval(x, args) {
 		const method = args.method;
-		const validData = x.filter((val) => val != null && !isNaN(val));
+
+		// Track valid indices so we can map the mask back to original positions
+		const validIndices = [];
+		const validData = [];
+		for (let i = 0; i < x.length; i++) {
+			if (x[i] != null && !isNaN(x[i])) {
+				validIndices.push(i);
+				validData.push(x[i]);
+			}
+		}
 
 		if (validData.length < 4) {
 			return x; // Return original if not enough data
@@ -57,15 +66,14 @@
 			return x; // Return original on error
 		}
 
-		// Filter out outliers
-		const cleanData = [];
-		for (let i = 0; i < validData.length; i++) {
-			if (!outlierMask[i]) {
-				cleanData.push(validData[i]);
+		// Replace outliers with null, preserving original array length and indices
+		const out = [...x];
+		for (let i = 0; i < validIndices.length; i++) {
+			if (outlierMask[i]) {
+				out[validIndices[i]] = null;
 			}
 		}
-
-		return cleanData;
+		return out;
 	}
 </script>
 
