@@ -134,6 +134,9 @@
 		binWidth = $derived.by(() => {
 			if (this.isReferencial()) return this.refColumn?.binWidth;
 		});
+		originTime_ms = $derived.by(() => {
+			if (this.isReferencial()) return this.refColumn?.originTime_ms;
+		});
 		//Where the data are from (references all the way to the primary source [importd (file) or simulated (params)])
 		provenance = $derived.by(() => {
 			if (this.isReferencial()) {
@@ -349,6 +352,9 @@
 			if (this.type == 'bin') {
 				jsonOut.binWidth = this.binWidth;
 			}
+			if (this.originTime_ms != null) {
+				jsonOut.originTime_ms = this.originTime_ms;
+			}
 			if (this.compression != null) {
 				jsonOut.compression = this.compression;
 			}
@@ -368,6 +374,7 @@
 				data,
 				timeFormat,
 				binWidth,
+				originTime_ms,
 				tableProcessGUId,
 				processes,
 				compression,
@@ -382,6 +389,7 @@
 					timeFormat: timeFormat ?? '',
 					binWidth: binWidth ?? null,
 					tableProcessGUId: tableProcessGUId ?? '',
+					originTime_ms: originTime_ms ?? null,
 
 					compression: compression ?? null,
 					provenance: provenance ?? null

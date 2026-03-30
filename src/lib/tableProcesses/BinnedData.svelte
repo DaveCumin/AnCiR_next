@@ -58,6 +58,13 @@
 			getColumnById(xOUT).binWidth = binSize;
 			getColumnById(xOUT).binStep = stepSize;
 			getColumnById(xOUT).aggFunction = aggFunction;
+			// Store the origin timestamp so the actogram can align bins to time-of-day
+			if (getColumnById(xIN)?.type === 'time') {
+				const xRawData = getColumnById(xIN).getData();
+				if (xRawData?.length > 0) {
+					getColumnById(xOUT).originTime_ms = xRawData[0];
+				}
+			}
 
 			core.rawData.set(yOUT, theBinnedData.y_out);
 			getColumnById(yOUT).data = yOUT;

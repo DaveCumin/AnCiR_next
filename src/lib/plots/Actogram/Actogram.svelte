@@ -19,6 +19,7 @@
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 
 	import Icon from '$lib/icons/Icon.svelte';
+	import { core } from '$lib/core/core.svelte.js';
 
 	export const Actogram_defaultDataInputs = ['time', 'values'];
 	export const Actogram_controlHeaders = ['Properties', 'Data', 'Annotations'];
@@ -43,11 +44,10 @@
 		label = $state();
 
 		binSize = $derived.by(() => {
-			//the average time between x values
-			return (
-				(this.x.hoursSinceStart[this.x.hoursSinceStart.length - 1] - this.x.hoursSinceStart[0]) /
-				this.x.hoursSinceStart.length
-			);
+			// The step size between x values. Use length-1 to get the actual interval (not off by one).
+			const n = this.x.hoursSinceStart?.length ?? 0;
+			if (n <= 1) return 0;
+			return (this.x.hoursSinceStart[n - 1] - this.x.hoursSinceStart[0]) / (n - 1);
 		});
 
 		colour = $state();
@@ -56,6 +56,13 @@
 			if (this.x?.getData()) {
 				if (this.x.type == 'time') {
 					return (this.parentPlot?.startTime - Number(this.x?.getData()[0])) / 3600000;
+				} else if (this.x.type === 'bin') {
+					// Read raw bin-start directly from rawData, bypassing getData()'s +binWidth/2 centering.
+					const rawDataKey = this.x.data ?? this.x.refColumn?.data;
+					const rawBinStart0 = rawDataKey != null ? (core.rawData.get(rawDataKey)?.[0] ?? 0) : 0;
+					const originMs = this.x?.originTime_ms ?? this.parentPlot?.startTime;
+					const timeOfDayShift = (this.parentPlot?.startTime - originMs) / 3600000;
+					return -rawBinStart0 + timeOfDayShift;
 				} else {
 					return -Number(this.x?.getData()[0]);
 				}
@@ -104,15 +111,19 @@
 					continue;
 				}
 
-				// Calculate bin boundaries
+				// Calculate bin boundaries using left-edge alignment:
+				// each bar starts at the data point / bin-start position and spans forward by one step.
+				// This ensures raw-time and binned-column bars are perfectly aligned.
 				let binStart, binEnd;
 
 				if (this.x.type === 'bin' && this.x.binWidth) {
-					binStart = tempx[i] - this.x.binWidth / 2;
-					binEnd = tempx[i] + this.x.binWidth / 2;
+					// hoursSinceStart[i] equals rawBinStart[i] (relative to first bin start),
+					// so after subtracting offset it maps to the absolute bin-start hour in the plot.
+					binStart = tempx[i];
+					binEnd = tempx[i] + this.x.binWidth;
 				} else {
-					binStart = tempx[i] - this.binSize / 2;
-					binEnd = tempx[i] + this.binSize / 2;
+					binStart = tempx[i];
+					binEnd = tempx[i] + this.binSize;
 				}
 
 				bins.push({
