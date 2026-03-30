@@ -18,4 +18,4 @@ The following packages were used in this project:
 
 Default colours for the plots are taken from the [maps designed and curated by Fabio Crameri](https://www.fabiocrameri.ch/colourmaps/) (MIT licensed). See Crameri, F., G.E. Shephard, and P.J. Heron (2020), The misuse of colour in science communication, Nature Communications, 11, 5444.
 
-As such, this software is licensed under the stricter of the above - the GPL-3.0 license ([http://fsf.org/](http://fsf.org/)).
+As such, this software is licensed under the stricter of the above - the GPL-3.0 license ([http://fsf.org/](http://fsf.org/)). [![DOI](https://zenodo.org/badge/967164279.svg)](https://doi.org/10.5281/zenodo.19340642)

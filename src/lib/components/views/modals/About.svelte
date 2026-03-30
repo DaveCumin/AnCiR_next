@@ -125,6 +125,12 @@
 				href="http://fsf.org/">http://fsf.org/</a
 			>).
 		</p>
+		<p>
+			<a href="https://doi.org/10.5281/zenodo.19340642"
+				><img src="https://zenodo.org/badge/967164279.svg" alt="DOI" /></a
+			>
+		</p>
+
 		<p style="font-size:8px;">Build Number: {buildInfo.buildNumber}</p>
 	{/snippet}
 </Modal>
