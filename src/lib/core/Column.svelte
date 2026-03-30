@@ -182,9 +182,8 @@
 					return out;
 				}
 				if (this.type === 'bin') {
-					const bwAdj = this.binWidth / 2;
 					for (let i = 0; i < length; i++) {
-						out[i] = i * step - bwAdj;
+						out[i] = i * step;
 					}
 					return out;
 				}
@@ -207,7 +206,7 @@
 			if (this.type == 'bin') {
 				let out = Array(thedata.length);
 				for (let i = 0; i < thedata.length; i++) {
-					out[i] = thedata[i] - thedata[0] - this.binWidth / 2;
+					out[i] = thedata[i] - thedata[0];
 				}
 				return out;
 			}

@@ -118,7 +118,7 @@
 			const end = Math.min(y.length - 1, i + halfWindow);
 
 			for (let j = start; j <= end; j++) {
-				if (!isNaN(y[j])) {
+				if (y[j] != null && !isNaN(y[j])) {
 					if (type === 'simple') {
 						sum += y[j];
 						count++;
@@ -356,7 +356,7 @@
 			getColumnById(xOUT).type = 'number';
 
 			core.rawData.set(yOUT, result.y_out);
-			getColumnById(yOUT).data = core.rawData.length - 1;
+			getColumnById(yOUT).data = yOUT;
 			getColumnById(yOUT).type = 'number';
 
 			const processHash = crypto.randomUUID();
@@ -443,7 +443,7 @@
 		</div>
 		<div class="control-input-vertical">
 			<div class="control-input">
-				<p>X column</p>
+				<p>Y column</p>
 				<ColumnSelector
 					bind:value={p.args.yIN}
 					excludeColIds={[p.args.xIN]}
