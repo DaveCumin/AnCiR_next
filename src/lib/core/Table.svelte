@@ -143,10 +143,7 @@
 
 					//add the process
 					table.processes.push(tempProcess);
-					//remove the columns that are in the process so they aren't duplicated.
-					Object.keys(tempProcess.args.out).forEach((key) => {
-						table.columnRefs = table.columnRefs.filter((col) => col !== tempProcess.args.out[key]);
-					});
+
 				});
 			}
 			return table;
