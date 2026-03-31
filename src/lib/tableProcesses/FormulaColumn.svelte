@@ -186,8 +186,14 @@ return _r;`
 		filter: '',
 		triggerStart: -1,
 		selIdx: 0,
-		mode: 'col'
+		mode: 'col',
+		fixedTop: 0,
+		fixedLeft: 0,
+		fixedWidth: 0
 	});
+
+	/** @type {HTMLElement | null} */
+	let formulaEditorWrapEl = $state(null);
 
 	let allStoredValues = $derived(
 		Object.entries(core.storedValues).map(([key, entry]) => ({
@@ -216,7 +222,13 @@ return _r;`
 	let acItems = $derived(ac.mode === 'col' ? filteredColumns : filteredStoredValues);
 
 	function closeAc() {
-		ac = { show: false, tokenIndex: -1, filter: '', triggerStart: -1, selIdx: 0, mode: 'col' };
+		ac = { show: false, tokenIndex: -1, filter: '', triggerStart: -1, selIdx: 0, mode: 'col', fixedTop: 0, fixedLeft: 0, fixedWidth: 0 };
+	}
+
+	function getDropdownPosition() {
+		if (!formulaEditorWrapEl) return { fixedTop: 0, fixedLeft: 0, fixedWidth: 0 };
+		const rect = formulaEditorWrapEl.getBoundingClientRect();
+		return { fixedTop: rect.bottom + 2, fixedLeft: rect.left, fixedWidth: rect.width };
 	}
 
 	function handleTextInput(e, tokenIndex) {
@@ -246,7 +258,8 @@ return _r;`
 
 		if (triggerPos >= 0) {
 			const filter = val.slice(triggerPos + 1, cursor);
-			ac = { show: true, tokenIndex, filter, triggerStart: triggerPos, selIdx: 0, mode };
+			const { fixedTop, fixedLeft, fixedWidth } = getDropdownPosition();
+			ac = { show: true, tokenIndex, filter, triggerStart: triggerPos, selIdx: 0, mode, fixedTop, fixedLeft, fixedWidth };
 		} else {
 			closeAc();
 		}
@@ -280,9 +293,19 @@ return _r;`
 			if (acItems.length > 0) {
 				e.preventDefault();
 				if (ac.mode === 'col') {
-					commitColumn(acItems[ac.selIdx].id, tokenIndex);
+					const col = filteredColumns[ac.selIdx];
+					if (e.shiftKey || e.altKey) {
+						commitColumnAndContinue(col.id, tokenIndex);
+					} else {
+						commitColumn(col.id, tokenIndex);
+					}
 				} else {
-					commitStoredValue(acItems[ac.selIdx].key, tokenIndex);
+					const sv = filteredStoredValues[ac.selIdx];
+					if (e.shiftKey || e.altKey) {
+						commitStoredValueAndContinue(sv.key, tokenIndex);
+					} else {
+						commitStoredValue(sv.key, tokenIndex);
+					}
 				}
 			} else {
 				closeAc();
@@ -321,6 +344,40 @@ return _r;`
 		});
 	}
 
+	// Insert a column chip then immediately re-open autocomplete to add another (shift/alt-click)
+	/** @param {number} colId @param {number} [tokenIndexOverride] */
+	function commitColumnAndContinue(colId, tokenIndexOverride) {
+		const idx = tokenIndexOverride ?? ac.tokenIndex;
+		const token = p.args.tokens[idx];
+		if (!token || token.type !== 'text') return;
+
+		const filterEnd = ac.triggerStart + 1 + ac.filter.length;
+		const before = token.value.slice(0, ac.triggerStart);
+		const after = token.value.slice(filterEnd);
+		// Prepend ', $' to the remaining text so the user can pick the next column immediately
+		const separator = ', $';
+
+		p.args.tokens.splice(
+			idx,
+			1,
+			{ type: 'text', value: before },
+			{ type: 'col', id: colId },
+			{ type: 'text', value: separator + after }
+		);
+		mergeAdjacentTextTokens();
+		doFormula();
+
+		tick().then(() => {
+			const newTextIdx = p.args.tokens.findIndex((t, i) => i >= idx + 2 && t.type === 'text');
+			if (newTextIdx >= 0) {
+				focusTextToken(newTextIdx);
+				const { fixedTop, fixedLeft, fixedWidth } = getDropdownPosition();
+				// triggerStart = index of '$' inside separator (', $' → position 2)
+				ac = { show: true, tokenIndex: newTextIdx, filter: '', triggerStart: 2, selIdx: 0, mode: 'col', fixedTop, fixedLeft, fixedWidth };
+			}
+		});
+	}
+
 	// Insert a stored value chip, replacing the trigger+filter text in the token
 	function commitStoredValue(key, tokenIndexOverride) {
 		const idx = tokenIndexOverride ?? ac.tokenIndex;
@@ -345,6 +402,38 @@ return _r;`
 		tick().then(() => {
 			const newTextIdx = p.args.tokens.findIndex((t, i) => i >= idx + 2 && t.type === 'text');
 			if (newTextIdx >= 0) focusTextToken(newTextIdx);
+		});
+	}
+
+	// Insert a stored value chip then re-open autocomplete for another (shift/alt-click)
+	/** @param {string} key @param {number} [tokenIndexOverride] */
+	function commitStoredValueAndContinue(key, tokenIndexOverride) {
+		const idx = tokenIndexOverride ?? ac.tokenIndex;
+		const token = p.args.tokens[idx];
+		if (!token || token.type !== 'text') return;
+
+		const filterEnd = ac.triggerStart + 1 + ac.filter.length;
+		const before = token.value.slice(0, ac.triggerStart);
+		const after = token.value.slice(filterEnd);
+		const separator = ', #';
+
+		p.args.tokens.splice(
+			idx,
+			1,
+			{ type: 'text', value: before },
+			{ type: 'stored', key },
+			{ type: 'text', value: separator + after }
+		);
+		mergeAdjacentTextTokens();
+		doFormula();
+
+		tick().then(() => {
+			const newTextIdx = p.args.tokens.findIndex((t, i) => i >= idx + 2 && t.type === 'text');
+			if (newTextIdx >= 0) {
+				focusTextToken(newTextIdx);
+				const { fixedTop, fixedLeft, fixedWidth } = getDropdownPosition();
+				ac = { show: true, tokenIndex: newTextIdx, filter: '', triggerStart: 2, selIdx: 0, mode: 'stored', fixedTop, fixedLeft, fixedWidth };
+			}
 		});
 	}
 
@@ -403,7 +492,7 @@ return _r;`
 		</div>
 	</div>
 
-	<div class="formula-editor-wrap">
+	<div class="formula-editor-wrap" bind:this={formulaEditorWrapEl}>
 		<!-- Formula editor: inline tokens (text inputs + column/stored value chips) -->
 		<div class="formula-editor">
 			{#each p.args.tokens as token, i}
@@ -442,7 +531,7 @@ return _r;`
 
 		<!-- Inline autocomplete dropdown -->
 		{#if ac.show}
-			<div class="ac-dropdown" role="listbox">
+			<div class="ac-dropdown" role="listbox" style="top:{ac.fixedTop}px; left:{ac.fixedLeft}px; width:{ac.fixedWidth}px;">
 				{#if ac.mode === 'col'}
 					{#if filteredColumns.length === 0}
 						<div class="ac-empty">No matching columns</div>
@@ -453,9 +542,14 @@ return _r;`
 								class:ac-selected={j === ac.selIdx}
 								role="option"
 								aria-selected={j === ac.selIdx}
+								title="Click to insert · Shift/Alt+click to insert and add another"
 								onmousedown={(e) => {
 									e.preventDefault();
-									commitColumn(col.id, ac.tokenIndex);
+									if (e.shiftKey || e.altKey) {
+										commitColumnAndContinue(col.id, ac.tokenIndex);
+									} else {
+										commitColumn(col.id, ac.tokenIndex);
+									}
 								}}
 								onmouseenter={() => (ac.selIdx = j)}
 							>
@@ -473,9 +567,14 @@ return _r;`
 							class:ac-selected={j === ac.selIdx}
 							role="option"
 							aria-selected={j === ac.selIdx}
+							title="Click to insert · Shift/Alt+click to insert and add another"
 							onmousedown={(e) => {
 								e.preventDefault();
-								commitStoredValue(sv.key, ac.tokenIndex);
+								if (e.shiftKey || e.altKey) {
+									commitStoredValueAndContinue(sv.key, ac.tokenIndex);
+								} else {
+									commitStoredValue(sv.key, ac.tokenIndex);
+								}
 							}}
 							onmouseenter={() => (ac.selIdx = j)}
 						>
@@ -488,7 +587,7 @@ return _r;`
 		{/if}
 	</div>
 
-	<p class="formula-hint">Tip: type <kbd>$</kbd> for columns, <kbd>#</kbd> for stored values</p>
+	<p class="formula-hint">Tip: type <kbd>$</kbd> for columns, <kbd>#</kbd> for stored values · Shift/Alt+click (or Shift+Enter) to add multiple</p>
 
 	{#if formulaError}
 		<p class="formula-error">{formulaError}</p>
@@ -588,10 +687,7 @@ return _r;`
 
 	/* ── Autocomplete dropdown ── */
 	.ac-dropdown {
-		position: absolute;
-		top: calc(100% + 2px);
-		left: 0;
-		width: 100%;
+		position: fixed;
 		max-height: 180px;
 		overflow-y: auto;
 		background: var(--color-lightness-97, #f8f8f8);
