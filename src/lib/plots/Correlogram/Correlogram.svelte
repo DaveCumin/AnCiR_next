@@ -186,7 +186,7 @@
 			return { upper: bound, lower: -bound };
 		});
 
-		// Peak detection - find the highest correlation after lag 0
+		// Peak detection - find the highest correlation after lag 0 (across ALL data)
 		peak = $derived.by(() => {
 			const { lags, correlations } = this.acfData;
 			if (!lags || !correlations || lags.length < 2) return null;
@@ -194,6 +194,25 @@
 			let maxIdx = 1;
 			for (let i = 2; i < correlations.length; i++) {
 				if (correlations[i] > correlations[maxIdx]) maxIdx = i;
+			}
+			return { lag: lags[maxIdx], correlation: correlations[maxIdx] };
+		});
+
+		// Peak within the visible x-axis range
+		visiblePeak = $derived.by(() => {
+			const { lags, correlations } = this.acfData;
+			if (!lags || !correlations || lags.length < 2) return null;
+			const [xMin, xMax] = this.parentPlot?.laglims ?? [0, Infinity];
+			const visibleIndices = [];
+			for (let i = 0; i < lags.length; i++) {
+				// Skip lag=0 (index 0 when lags[0] === 0)
+				if (i === 0 && lags[i] === 0) continue;
+				if (lags[i] >= xMin && lags[i] <= xMax) visibleIndices.push(i);
+			}
+			if (visibleIndices.length === 0) return null;
+			let maxIdx = visibleIndices[0];
+			for (let i = 1; i < visibleIndices.length; i++) {
+				if (correlations[visibleIndices[i]] > correlations[maxIdx]) maxIdx = visibleIndices[i];
 			}
 			return { lag: lags[maxIdx], correlation: correlations[maxIdx] };
 		});
@@ -824,7 +843,15 @@
 							</div>
 						{/if}
 
-						{#if datum.peak}
+						{#if datum.visiblePeak}
+							<p><strong>Peak Lag: {datum.visiblePeak.lag.toFixed(2)} hrs</strong></p>
+							<p><strong>Peak Correlation: {datum.visiblePeak.correlation.toFixed(3)}</strong></p>
+							{#if datum.peak && Math.abs(datum.visiblePeak.lag - datum.peak.lag) > 0.001}
+								<div class="data-warning">
+									<p>⚠ Overall peak at {datum.peak.lag.toFixed(2)} hrs is outside the displayed range</p>
+								</div>
+							{/if}
+						{:else if datum.peak}
 							<p><strong>Peak Lag: {datum.peak.lag.toFixed(2)} hrs</strong></p>
 							<p><strong>Peak Correlation: {datum.peak.correlation.toFixed(3)}</strong></p>
 						{/if}

@@ -105,7 +105,8 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-	import { getColumnById } from '$lib/core/Column.svelte';
+	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
+	import { pushObj } from '$lib/core/core.svelte.js';
 	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
@@ -113,8 +114,15 @@
 	let wideToLongResult = $state();
 	let mounted = $state(false);
 	let previewStart = $state(1);
+	let errorMessage = $state('');
 
-	// Reactivity
+	// Local state bound to selectors — p.args.* is only updated when validation passes,
+	// so p.args.* is never transiently set to an invalid value (which could trigger $effect).
+	let categoryIN_local = $state(p.args.categoryIN);
+	let timeIN_local = $state(p.args.timeIN);
+	let valueIN_local = $state(p.args.valueIN);
+
+	// Reactivity — tracks the committed (valid) input columns
 	let categoryIN_col = $derived.by(() =>
 		p.args.categoryIN >= 0 ? getColumnById(p.args.categoryIN) : null
 	);
@@ -140,15 +148,65 @@
 		}
 	});
 
+	// Validate a candidate value against outputs and other already-committed inputs.
+	// p.args.* always holds the last valid committed values.
+	function validateInput(newVal, excludeField) {
+		const id = Number(newVal);
+		if (id < 0) return null;
+
+		const outputIds = new Set(Object.values(p.args.out).map(Number).filter((v) => v >= 0));
+		if (outputIds.has(id)) {
+			return 'That column is an output of this transform and cannot be used as an input.';
+		}
+
+		const inputs = { category: p.args.categoryIN, time: p.args.timeIN, value: p.args.valueIN };
+		for (const [field, val] of Object.entries(inputs)) {
+			if (field !== excludeField && Number(val) >= 0 && Number(val) === id) {
+				return `That column is already used as the ${field} input.`;
+			}
+		}
+		return null;
+	}
+
+	function onCategoryChange() {
+		const err = validateInput(categoryIN_local, 'category');
+		if (err) {
+			errorMessage = err;
+			categoryIN_local = p.args.categoryIN; // revert selector to last valid
+			return;
+		}
+		errorMessage = '';
+		p.args.categoryIN = categoryIN_local;
+		doWideToLong();
+	}
+
+	function onTimeChange() {
+		const err = validateInput(timeIN_local, 'time');
+		if (err) {
+			errorMessage = err;
+			timeIN_local = p.args.timeIN;
+			return;
+		}
+		errorMessage = '';
+		p.args.timeIN = timeIN_local;
+		doWideToLong();
+	}
+
+	function onValueChange() {
+		const err = validateInput(valueIN_local, 'value');
+		if (err) {
+			errorMessage = err;
+			valueIN_local = p.args.valueIN;
+			return;
+		}
+		errorMessage = '';
+		p.args.valueIN = valueIN_local;
+		doWideToLong();
+	}
+
 	function doWideToLong() {
 		previewStart = 1;
-		// Pre-scan: read unique categories and build out keys before running
-		if (
-			p.args.categoryIN >= 0 &&
-			p.args.timeIN >= 0 &&
-			p.args.valueIN >= 0 &&
-			Object.keys(p.args.out).length <= 1
-		) {
+		if (p.args.categoryIN >= 0 && p.args.timeIN >= 0 && p.args.valueIN >= 0) {
 			const catData = getColumnById(p.args.categoryIN).getData();
 			const seenCats = new Set();
 			const categories = [];
@@ -158,9 +216,39 @@
 					categories.push(c);
 				}
 			}
+
+			// Remove output columns for categories that no longer exist
+			const newCatSet = new Set(categories);
+			for (const oldCat of p.args.categories) {
+				if (!newCatSet.has(oldCat)) {
+					const outKey = 'value_' + oldCat;
+					const colId = p.args.out[outKey];
+					if (colId !== undefined && colId >= 0) {
+						removeColumn(colId);
+					}
+					delete p.args.out[outKey];
+				}
+			}
+
 			p.args.categories = categories;
+
+			// Add output columns for new categories.
+			// If the process is already committed (out.time has a real ID and has a parent table),
+			// create actual Column objects immediately — matching what TableProcess constructor does.
+			const committed = p.args.out.time >= 0 && p.parent;
 			for (const cat of categories) {
-				p.args.out['value_' + cat] = p.args.out['value_' + cat] ?? -1;
+				const outKey = 'value_' + cat;
+				if (p.args.out[outKey] === undefined || p.args.out[outKey] === -1) {
+					if (committed) {
+						const tempCol = new Column({});
+						tempCol.name = outKey + '_' + p.id;
+						p.args.out[outKey] = tempCol.id;
+						pushObj(tempCol);
+						p.parent.columnRefs = [tempCol.id, ...p.parent.columnRefs];
+					} else {
+						p.args.out[outKey] = p.args.out[outKey] ?? -1;
+					}
+				}
 			}
 		}
 		[wideToLongResult, p.args.valid] = widetolong(p.args);
@@ -181,6 +269,10 @@
 			p.args.valid = true;
 			lastHash = getHash; // prevent $effect from recalculating
 		}
+		// Sync local selector state from committed args (handles loaded sessions)
+		categoryIN_local = p.args.categoryIN;
+		timeIN_local = p.args.timeIN;
+		valueIN_local = p.args.valueIN;
 		mounted = true;
 	});
 </script>
@@ -189,29 +281,29 @@
 <div class="section-row">
 	<div class="tableProcess-label"><span>Input</span></div>
 	<div class="control-input-vertical">
-		<div
-			class="control-input"
-			style={p.args.out.time >= 0 ? 'opacity:0.5; pointer-events:none;' : ''}
-		>
+		<div class="control-input">
 			<p>Category column</p>
-			<ColumnSelector bind:value={p.args.categoryIN} onChange={doWideToLong} />
+			<ColumnSelector bind:value={categoryIN_local} onChange={onCategoryChange} />
 		</div>
 		<div class="control-input">
 			<p>Time column</p>
 			<ColumnSelector
-				bind:value={p.args.timeIN}
+				bind:value={timeIN_local}
 				excludeColIds={[p.args.categoryIN]}
-				onChange={doWideToLong}
+				onChange={onTimeChange}
 			/>
 		</div>
 		<div class="control-input">
 			<p>Value column</p>
 			<ColumnSelector
-				bind:value={p.args.valueIN}
+				bind:value={valueIN_local}
 				excludeColIds={[p.args.categoryIN, p.args.timeIN]}
-				onChange={doWideToLong}
+				onChange={onValueChange}
 			/>
 		</div>
+		{#if errorMessage}
+			<p class="error-message">{errorMessage}</p>
+		{/if}
 	</div>
 </div>
 
@@ -245,3 +337,11 @@
 		{/key}
 	</div>
 </div>
+
+<style>
+	.error-message {
+		color: #c0392b;
+		font-size: 12px;
+		margin: 0.25rem 0;
+	}
+</style>

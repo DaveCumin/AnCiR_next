@@ -144,13 +144,33 @@
 			return computeFFT(times, values, this.freqStep);
 		});
 
-		// Peak detection - find the highest magnitude and its corresponding frequency/period
+		// Peak detection - find the highest magnitude across ALL calculated data
 		peak = $derived.by(() => {
 			const { frequencies, magnitudes } = this.fftData;
 			if (!frequencies || !magnitudes || frequencies.length === 0) return null;
 			let maxIdx = 0;
 			for (let i = 1; i < magnitudes.length; i++) {
 				if (magnitudes[i] > magnitudes[maxIdx]) maxIdx = i;
+			}
+			const freq = frequencies[maxIdx];
+			return { frequency: freq, period: freq !== 0 ? 1 / freq : null, magnitude: magnitudes[maxIdx] };
+		});
+
+		// Peak within the visible x-axis range
+		visiblePeak = $derived.by(() => {
+			const { frequencies, magnitudes } = this.fftData;
+			if (!frequencies || !magnitudes || frequencies.length === 0) return null;
+			const showPeriod = this.parentPlot?.showPeriod ?? false;
+			const [xMin, xMax] = this.parentPlot?.xlims ?? [0, Infinity];
+			const visibleIndices = [];
+			for (let i = 0; i < frequencies.length; i++) {
+				const xVal = showPeriod ? (frequencies[i] !== 0 ? 1 / frequencies[i] : null) : frequencies[i];
+				if (xVal != null && xVal >= xMin && xVal <= xMax) visibleIndices.push(i);
+			}
+			if (visibleIndices.length === 0) return null;
+			let maxIdx = visibleIndices[0];
+			for (let i = 1; i < visibleIndices.length; i++) {
+				if (magnitudes[visibleIndices[i]] > magnitudes[maxIdx]) maxIdx = visibleIndices[i];
 			}
 			const freq = frequencies[maxIdx];
 			return { frequency: freq, period: freq !== 0 ? 1 / freq : null, magnitude: magnitudes[maxIdx] };
@@ -964,7 +984,18 @@
 							</div>
 						{/if}
 
-						{#if datum.peak}
+						{#if datum.visiblePeak}
+							{#if datum.visiblePeak.period != null}
+								<p><strong>Peak Period: {datum.visiblePeak.period.toFixed(2)} hrs</strong></p>
+							{/if}
+							<p><strong>Peak Frequency: {datum.visiblePeak.frequency.toFixed(4)} cycles/hr</strong></p>
+							<p><strong>Peak Magnitude: {datum.visiblePeak.magnitude.toFixed(2)}</strong></p>
+							{#if datum.peak && Math.abs(datum.visiblePeak.frequency - datum.peak.frequency) > 0.000001}
+								<div class="data-warning">
+									<p>⚠ Overall peak at {datum.peak.period != null ? datum.peak.period.toFixed(2) + ' hrs / ' : ''}{datum.peak.frequency.toFixed(4)} cycles/hr is outside the displayed range</p>
+								</div>
+							{/if}
+						{:else if datum.peak}
 							{#if datum.peak.period != null}
 								<p><strong>Peak Period: {datum.peak.period.toFixed(2)} hrs</strong></p>
 							{/if}

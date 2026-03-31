@@ -139,13 +139,10 @@
 					value <= centileValue || isNaN(value) ? -1 : 1
 				);
 
-				let bestMatchIndex =
-					findBestMatchIndex(aboveBelow, template) + Math.round((N + M) / 2);
+				let bestMatchIndex = findBestMatchIndex(aboveBelow, template) + Math.round((N + M) / 2);
 
 				if (bestMatchIndex >= 0 && bestMatchIndex < xData.length) {
-					bestMatchx.push(
-						xData[bestMatchIndex] - i * this.parentData.parentPlot.periodHrs
-					);
+					bestMatchx.push(xData[bestMatchIndex] - i * this.parentData.parentPlot.periodHrs);
 				} else {
 					bestMatchx.push(NaN);
 				}
@@ -263,9 +260,7 @@
 				// Already manual - update the specific marker
 				const absoluteTime = periodIndex * periodHrs + newHourValue;
 				this.manualMarkers = [
-					...this.manualMarkers.filter(
-						(t) => Math.floor(t / periodHrs) !== periodIndex
-					),
+					...this.manualMarkers.filter((t) => Math.floor(t / periodHrs) !== periodIndex),
 					absoluteTime
 				];
 			}
@@ -466,7 +461,9 @@
 				{#each marker.markers as markerValue, i (i)}
 					{#if !isNaN(markerValue) && markerValue != null}
 						{@const periodHrs = marker.parentData.parentPlot.periodHrs}
-						{@const displayValue = parseFloat((((markerValue % periodHrs) + periodHrs) % periodHrs).toFixed(2))}
+						{@const displayValue = parseFloat(
+							(((markerValue % periodHrs) + periodHrs) % periodHrs).toFixed(2)
+						)}
 						<div class="period-marker-row">
 							<input
 								type="checkbox"
@@ -504,16 +501,32 @@
 		{#if marker.linearRegression?.slope}
 			<!-- <p>Drawn τ: {marker.linearRegression.slope.toFixed(2)} hrs</p> -->
 			{#if marker.harmonicCheck}
-				<p><strong>Est τ: {marker.harmonicCheck.strongest.peakPeriod.toFixed(2)} hrs</strong>
-					<StoreValueButton label="τ" getter={() => marker.harmonicCheck.strongest.peakPeriod} defaultName={'tau_' + marker.name} source={'Actogram phase marker (' + marker.name + ')'} />
+				<p>
+					<strong>Est τ: {marker.harmonicCheck.strongest.peakPeriod.toFixed(2)} hrs</strong>
+					<StoreValueButton
+						label="τ"
+						getter={() => marker.harmonicCheck.strongest.peakPeriod}
+						defaultName={'tau_' + marker.name}
+						source={'Actogram phase marker (' + marker.name + ')'}
+					/>
 				</p>
 			{/if}
 
 			<p>
 				R²: {marker.linearRegression.rSquared.toFixed(3)}
-				<StoreValueButton label="R²" getter={() => marker.linearRegression.rSquared} defaultName={'marker_r_squared_' + marker.name} source={'Actogram phase marker (' + marker.name + ')'} />
+				<StoreValueButton
+					label="R²"
+					getter={() => marker.linearRegression.rSquared}
+					defaultName={'marker_r_squared_' + marker.name}
+					source={'Actogram phase marker (' + marker.name + ')'}
+				/>
 				&ensp;Error: {marker.linearRegression.rmse.toFixed(3)}
-				<StoreValueButton label="RMSE" getter={() => marker.linearRegression.rmse} defaultName={'marker_rmse_' + marker.name} source={'Actogram phase marker (' + marker.name + ')'} />
+				<StoreValueButton
+					label="RMSE"
+					getter={() => marker.linearRegression.rmse}
+					defaultName={'marker_rmse_' + marker.name}
+					source={'Actogram phase marker (' + marker.name + ')'}
+				/>
 			</p>
 
 			<div class="control-input-checkbox">

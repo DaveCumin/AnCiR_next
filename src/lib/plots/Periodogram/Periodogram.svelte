@@ -58,13 +58,30 @@
 		// Period data - now $state instead of $derived
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
 
-		// Peak detection - find the highest power value and its corresponding period
+		// Peak detection - find the highest power value across ALL calculated data
 		peak = $derived.by(() => {
 			const { x, y } = this.periodData;
 			if (!x || !y || x.length === 0 || y.length === 0) return null;
 			let maxIdx = 0;
 			for (let i = 1; i < y.length; i++) {
 				if (y[i] > y[maxIdx]) maxIdx = i;
+			}
+			return { period: x[maxIdx], power: y[maxIdx] };
+		});
+
+		// Peak within the visible x-axis range
+		visiblePeak = $derived.by(() => {
+			const { x, y } = this.periodData;
+			if (!x || !y || x.length === 0 || y.length === 0) return null;
+			const [xMin, xMax] = this.parentPlot?.periodlimsIN ?? [0, Infinity];
+			const visibleIndices = [];
+			for (let i = 0; i < x.length; i++) {
+				if (x[i] >= xMin && x[i] <= xMax) visibleIndices.push(i);
+			}
+			if (visibleIndices.length === 0) return null;
+			let maxIdx = visibleIndices[0];
+			for (let i = 1; i < visibleIndices.length; i++) {
+				if (y[visibleIndices[i]] > y[maxIdx]) maxIdx = visibleIndices[i];
 			}
 			return { period: x[maxIdx], power: y[maxIdx] };
 		});
@@ -867,7 +884,15 @@
 							</div>
 						{/if}
 
-						{#if datum.peak}
+						{#if datum.visiblePeak}
+							<p><strong>Peak Period: {datum.visiblePeak.period.toFixed(2)} hrs</strong></p>
+							<p><strong>Peak Power: {datum.visiblePeak.power.toFixed(2)}</strong></p>
+							{#if datum.peak && Math.abs(datum.visiblePeak.period - datum.peak.period) > 0.001}
+								<div class="data-warning">
+									<p>⚠ Overall peak at {datum.peak.period.toFixed(2)} hrs is outside the displayed range</p>
+								</div>
+							{/if}
+						{:else if datum.peak}
 							<p><strong>Peak Period: {datum.peak.period.toFixed(2)} hrs</strong></p>
 							<p><strong>Peak Power: {datum.peak.power.toFixed(2)}</strong></p>
 						{/if}
