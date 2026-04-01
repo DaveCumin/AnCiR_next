@@ -250,6 +250,11 @@
 					}
 				}
 			}
+
+			// Update valueColIds after all output columns are created/assigned
+			p.args.valueColIds = categories
+				.map((cat) => p.args.out['value_' + cat])
+				.filter((id) => id !== undefined && id >= 0);
 		}
 		[wideToLongResult, p.args.valid] = widetolong(p.args);
 	}
@@ -268,6 +273,12 @@
 			}
 			p.args.valid = true;
 			lastHash = getHash; // prevent $effect from recalculating
+			// Backfill valueColIds for sessions saved before this field was added
+			if (!p.args.valueColIds) {
+				p.args.valueColIds = p.args.categories
+					.map((cat) => p.args.out['value_' + cat])
+					.filter((id) => id !== undefined && id >= 0);
+			}
 		}
 		// Sync local selector state from committed args (handles loaded sessions)
 		categoryIN_local = p.args.categoryIN;

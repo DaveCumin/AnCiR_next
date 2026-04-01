@@ -2,7 +2,7 @@
 	// @ts-nocheck
 
 	import Column from '$lib/core/Column.svelte';
-	import Hist, { createHistogramBins } from '$lib/components/plotbits/Hist.svelte';
+	import Hist from '$lib/components/plotbits/Hist.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';

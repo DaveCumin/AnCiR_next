@@ -124,12 +124,14 @@
 		{/each} -->
 	</select>
 {:else}
-	<select name="columnSelect" onchange={(e) => onChange(e.target.value)} bind:value>
-		{#each Array.from(options.entries()) as [key, value]}
-			<option {value}>{key}</option>
-		{/each}
-		<!-- add in columns that are not in core.data but not core.tables -->
-	</select>
+	{#key options}
+		<select name="columnSelect" onchange={(e) => onChange(e.target.value)} bind:value>
+			{#each Array.from(options.entries()) as [key, value] (value)}
+				<option {value}>{key}</option>
+			{/each}
+			<!-- add in columns that are not in core.data but not core.tables -->
+		</select>
+	{/key}
 {/if}
 
 <style>

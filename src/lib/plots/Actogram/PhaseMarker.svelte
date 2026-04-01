@@ -142,7 +142,10 @@
 				let bestMatchIndex = findBestMatchIndex(aboveBelow, template) + Math.round((N + M) / 2);
 
 				if (bestMatchIndex >= 0 && bestMatchIndex < xData.length) {
-					bestMatchx.push(xData[bestMatchIndex] - i * this.parentData.parentPlot.periodHrs);
+					let rawHour = xData[bestMatchIndex] - i * periodHrs;
+					rawHour = ((rawHour % periodHrs) + periodHrs) % periodHrs;
+
+					bestMatchx.push(rawHour);
 				} else {
 					bestMatchx.push(NaN);
 				}
