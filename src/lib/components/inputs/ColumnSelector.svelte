@@ -87,44 +87,13 @@
 </script>
 
 {#if multiple}
-	<select bind:value onchange={(e) => onChange(e.target.value)} multiple style="height: 200px">
-		{#each core.tables as table}
-			<optgroup label={table.name}>
-				<!-- include the tableProces data also -->
-				{#each table.processes as p}
-					{#each p.args.out as o}
-						{@const key = Object.keys(o)}
-						{#each key as k}
-							{@const col = getColumnById(o[k])}
-							<option value={col.id}>{col.name}</option>
-						{/each}
-					{/each}
-				{/each}
-
-				<!-- columns-->
-				{#each table.columns as col}
-					{#if !excludeColIds.includes(col.id)}
-						<option value={col.id}>{col.name}</option>
-					{/if}
-				{/each}
-			</optgroup>
-		{/each}
-
-		<!-- PLOT DATA -->
-		<!-- TODO: RECONSIDER ARCHITECTURE SO THAT ALL COLUMNS ARE IN core.data (only references in the plots) -->
-		<!-- {#each core.plots as plot}
-			{#each plot.plot.data as d}
-				<optgroup label={plot.plot.name}>
-					{#each Object.keys(d.toJSON()) as key}
-						{@const col = d[key]}
-						{#if col instanceof Column}
-							<option value={col.id}>{plot.name} : {col.name}</option>
-						{/if}
-					{/each}
-				</optgroup>
+	{#key options}
+		<select bind:value onchange={(e) => onChange(e.target.value)} multiple>
+			{#each Array.from(options.entries()) as [key, val] (val)}
+				<option value={val}>{key}</option>
 			{/each}
-		{/each} -->
-	</select>
+		</select>
+	{/key}
 {:else}
 	{#key options}
 		<select name="columnSelect" onchange={(e) => onChange(e.target.value)} bind:value>

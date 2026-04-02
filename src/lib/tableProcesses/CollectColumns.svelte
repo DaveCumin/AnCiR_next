@@ -362,28 +362,11 @@
 	<div class="tableProcess-label"><span>Input columns</span></div>
 	<div class="control-input-vertical">
 		<p class="hint">Ctrl/Cmd-click or Shift-click to select multiple columns</p>
-		<ColumnSelector multiple={true} bind:value={selectedColIds} excludeColIds={aggregateExcludeIds} />
-	</div>
-</div>
-
-<!-- Output / Preview -->
-<div class="section-row">
-	<div class="section-content">
-		{#key collectResult}
-			{#if p.args.valid && (p.args.outColIds?.length ?? 0) > 0}
-				<div class="tableProcess-label"><span>Output</span></div>
-				{#each p.args.colIds as colId}
-					{@const outColId = p.args.out['col_' + colId]}
-					{#if outColId >= 0}
-						<ColumnComponent col={getColumnById(outColId)} />
-					{/if}
-				{/each}
-			{:else if p.args.valid && collectResult}
-				<p>Select a table to commit outputs.</p>
-			{:else}
-				<p>Select columns above to begin.</p>
-			{/if}
-		{/key}
+		<ColumnSelector
+			multiple={true}
+			bind:value={selectedColIds}
+			excludeColIds={aggregateExcludeIds}
+		/>
 	</div>
 </div>
 
@@ -418,6 +401,27 @@
 		</div>
 	</div>
 {/if}
+
+<!-- Output / Preview -->
+<div class="section-row">
+	<div class="section-content">
+		{#key collectResult}
+			{#if p.args.valid && (p.args.outColIds?.length ?? 0) > 0}
+				<div class="tableProcess-label"><span>Output</span></div>
+				{#each p.args.colIds as colId}
+					{@const outColId = p.args.out['col_' + colId]}
+					{#if outColId >= 0}
+						<ColumnComponent col={getColumnById(outColId)} />
+					{/if}
+				{/each}
+			{:else if p.args.valid && collectResult}
+				<p>Select a table to commit outputs.</p>
+			{:else}
+				<p>Select columns above to begin.</p>
+			{/if}
+		{/key}
+	</div>
+</div>
 
 <!-- Aggregate Section -->
 {#if p.args.valid}
