@@ -1,5 +1,6 @@
 <script module>
-	import { core } from '$lib/core/core.svelte';
+	// @ts-nocheck
+	import { core, appConsts } from '$lib/core/core.svelte';
 
 	export const widetolong_displayName = 'Wide To Long';
 	export const widetolong_defaults = new Map([
@@ -7,6 +8,8 @@
 		['timeIN', { val: -1 }],
 		['valueIN', { val: -1 }],
 		['categories', { val: [] }],
+		['aggregates', { val: [] }],
+		['preProcesses', { val: [] }],
 		['out', { time: { val: -1 } }],
 		['valid', { val: false }]
 	]);
@@ -73,6 +76,17 @@
 
 		// Write to output columns if they exist
 		if (argsIN.out.time !== -1) {
+			// Apply pre-processes (in order) to each category's values before writing outputs
+			for (const pp of argsIN.preProcesses ?? []) {
+				if (!pp.processName) continue;
+				const proc = appConsts.processMap.get(pp.processName);
+				if (proc?.func) {
+					for (const cat of categories) {
+						result['value_' + cat] = proc.func(result['value_' + cat], pp.processArgs ?? {});
+					}
+				}
+			}
+
 			const timeColId = argsIN.out.time;
 			core.rawData.set(timeColId, unionTimes);
 			getColumnById(timeColId).data = timeColId;
@@ -94,6 +108,50 @@
 					getColumnById(outColId).tableProcessGUId = processHash;
 				}
 			}
+
+			// Compute and write each aggregate output
+			for (const agg of argsIN.aggregates ?? []) {
+				if (!agg.outColId || agg.outColId === -1) continue;
+				const excluded = agg.excludedColIds ?? [];
+				const activeEntries = categories
+					.map((cat) => ({ cat, colId: argsIN.out['value_' + cat] }))
+					.filter(({ colId }) => colId !== undefined && colId !== -1 && !excluded.includes(colId));
+				if (activeEntries.length === 0) {
+					core.rawData.set(agg.outColId, []);
+					continue;
+				}
+				const n = unionTimes.length;
+				const aggResult = new Array(n);
+				const method = agg.method ?? 'mean';
+				// Use getData() so processes applied to output columns are included in aggregation
+				const processedArrays = activeEntries.map(({ cat, colId }) => {
+					const col = getColumnById(colId);
+					return col ? col.getData() : result['value_' + cat];
+				});
+				for (let i = 0; i < n; i++) {
+					const vals = processedArrays
+						.map((arr) => arr[i])
+						.filter((v) => v != null && !isNaN(v));
+					if (vals.length === 0) {
+						aggResult[i] = NaN;
+						continue;
+					}
+					if (method === 'min') {
+						aggResult[i] = Math.min(...vals);
+					} else if (method === 'max') {
+						aggResult[i] = Math.max(...vals);
+					} else if (method === 'mean') {
+						aggResult[i] = vals.reduce((a, b) => a + b, 0) / vals.length;
+					} else if (method === 'std') {
+						const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+						aggResult[i] = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
+					}
+				}
+				core.rawData.set(agg.outColId, aggResult);
+				getColumnById(agg.outColId).data = agg.outColId;
+				getColumnById(agg.outColId).type = 'number';
+				getColumnById(agg.outColId).tableProcessGUId = processHash;
+			}
 		}
 
 		return [result, unionTimes.length > 0];
@@ -101,12 +159,15 @@
 </script>
 
 <script>
+	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
+	import { Process } from '$lib/core/Process.svelte';
+	import Processcomponent from '$lib/core/Process.svelte';
 	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
@@ -122,6 +183,17 @@
 	let timeIN_local = $state(p.args.timeIN);
 	let valueIN_local = $state(p.args.valueIN);
 
+	// Process instances for "pre-process all outputs" UI — parallel to p.args.preProcesses
+	let preProcessProcs = $state([]);
+
+	let sortedProcesses = $derived.by(() => {
+		return Array.from(appConsts.processMap.entries()).sort((a, b) => {
+			const nameA = a[1].displayName || a[0];
+			const nameB = b[1].displayName || b[0];
+			return nameA.localeCompare(nameB);
+		});
+	});
+
 	// Reactivity — tracks the committed (valid) input columns
 	let categoryIN_col = $derived.by(() =>
 		p.args.categoryIN >= 0 ? getColumnById(p.args.categoryIN) : null
@@ -133,9 +205,34 @@
 		h += categoryIN_col?.getDataHash ?? '';
 		h += timeIN_col?.getDataHash ?? '';
 		h += valueIN_col?.getDataHash ?? '';
+		// Track processes on output value columns so aggregate recomputes when they change.
+		// We hash only the processes (not tableProcessGUId) to avoid an infinite update loop.
+		for (const cat of p.args.categories ?? []) {
+			const colId = p.args.out?.['value_' + cat];
+			if (colId >= 0) {
+				const col = getColumnById(colId);
+				if (col) {
+					h += col.processes.map((proc) => `${proc.id}:${proc.name}:${JSON.stringify(proc.args)}`).join('|');
+				}
+			}
+		}
+		// Track preProcesses name and args changes
+		h += preProcessProcs.map((proc) => `${proc.name}:${JSON.stringify(proc.args)}`).join('|');
 		return h;
 	});
 	let lastHash = '';
+
+	// Sync preProcessProcs args back to p.args so they persist in the session JSON
+	$effect(() => {
+		const snapshots = preProcessProcs.map((proc) => JSON.stringify(proc.args)); // establish tracking
+		untrack(() => {
+			for (let i = 0; i < snapshots.length; i++) {
+				if (p.args.preProcesses[i]) {
+					p.args.preProcesses[i].processArgs = JSON.parse(snapshots[i]);
+				}
+			}
+		});
+	});
 
 	$effect(() => {
 		const dataHash = getHash;
@@ -154,7 +251,11 @@
 		const id = Number(newVal);
 		if (id < 0) return null;
 
-		const outputIds = new Set(Object.values(p.args.out).map(Number).filter((v) => v >= 0));
+		const outputIds = new Set(
+			Object.values(p.args.out)
+				.map(Number)
+				.filter((v) => v >= 0)
+		);
 		if (outputIds.has(id)) {
 			return 'That column is an output of this transform and cannot be used as an input.';
 		}
@@ -204,6 +305,77 @@
 		doWideToLong();
 	}
 
+	function addPreProcess() {
+		const pp = { processName: '', processArgs: {} };
+		p.args.preProcesses = [...p.args.preProcesses, pp];
+		preProcessProcs = [...preProcessProcs, null];
+	}
+
+	function setPreProcess(idx, processName) {
+		if (!processName) {
+			p.args.preProcesses[idx] = { processName: '', processArgs: {} };
+			preProcessProcs[idx] = null;
+		} else {
+			const proc = new Process({ name: processName }, null);
+			p.args.preProcesses[idx] = { processName, processArgs: proc.args };
+			preProcessProcs[idx] = proc;
+		}
+		p.args.preProcesses = [...p.args.preProcesses];
+		preProcessProcs = [...preProcessProcs];
+		doWideToLong();
+	}
+
+	function removePreProcess(idx) {
+		p.args.preProcesses = p.args.preProcesses.filter((_, i) => i !== idx);
+		preProcessProcs = preProcessProcs.filter((_, i) => i !== idx);
+		doWideToLong();
+	}
+
+	function createAggregateColumn(label) {
+		const tempCol = new Column({});
+		tempCol.name = label;
+		pushObj(tempCol);
+		p.parent.columnRefs = [tempCol.id, ...p.parent.columnRefs];
+		return tempCol.id;
+	}
+
+	function addAggregate() {
+		const idx = p.args.aggregates.length;
+		const agg = { method: 'mean', excludedColIds: [], outColId: -1 };
+		if (p.parent) {
+			agg.outColId = createAggregateColumn('aggregate_' + idx + '_' + p.id);
+		}
+		p.args.aggregates = [...p.args.aggregates, agg];
+		doWideToLong();
+	}
+
+	function removeAggregate(idx) {
+		const agg = p.args.aggregates[idx];
+		if (agg.outColId >= 0) {
+			core.rawData.delete(agg.outColId);
+			removeColumn(agg.outColId);
+		}
+		p.args.aggregates = p.args.aggregates.filter((_, i) => i !== idx);
+		doWideToLong();
+	}
+
+	function onAggMethodChange() {
+		doWideToLong();
+	}
+
+	function toggleExcludeForAgg(idx, colId) {
+		const agg = p.args.aggregates[idx];
+		const excluded = agg.excludedColIds ?? [];
+		const newExcluded = excluded.includes(colId)
+			? excluded.filter((id) => id !== colId)
+			: [...excluded, colId];
+		const newAggregates = p.args.aggregates.map((a, i) =>
+			i === idx ? { ...a, excludedColIds: newExcluded } : a
+		);
+		p.args.aggregates = newAggregates;
+		doWideToLong();
+	}
+
 	function doWideToLong() {
 		previewStart = 1;
 		if (p.args.categoryIN >= 0 && p.args.timeIN >= 0 && p.args.valueIN >= 0) {
@@ -233,8 +405,6 @@
 			p.args.categories = categories;
 
 			// Add output columns for new categories.
-			// If the process is already committed (out.time has a real ID and has a parent table),
-			// create actual Column objects immediately — matching what TableProcess constructor does.
 			const committed = p.args.out.time >= 0 && p.parent;
 			for (const cat of categories) {
 				const outKey = 'value_' + cat;
@@ -255,11 +425,36 @@
 			p.args.valueColIds = categories
 				.map((cat) => p.args.out['value_' + cat])
 				.filter((id) => id !== undefined && id >= 0);
+
+			// Ensure aggregate output columns exist for any aggregate without one
+			if (p.parent) {
+				p.args.aggregates = p.args.aggregates.map((agg, i) => {
+					if (agg.outColId === undefined || agg.outColId === -1) {
+						return { ...agg, outColId: createAggregateColumn('aggregate_' + i + '_' + p.id) };
+					}
+					return agg;
+				});
+			}
 		}
 		[wideToLongResult, p.args.valid] = widetolong(p.args);
 	}
 
 	onMount(() => {
+		// Backfill aggregates array for old sessions that used the single-aggregate format
+		if (p.args.aggregates === undefined) {
+			if (p.args.aggregate && p.args.out?.aggregate >= 0) {
+				p.args.aggregates = [
+					{
+						method: p.args.aggregation ?? 'mean',
+						excludedColIds: p.args.excludedColIds ?? [],
+						outColId: p.args.out.aggregate
+					}
+				];
+			} else {
+				p.args.aggregates = [];
+			}
+		}
+
 		// If data already exists (e.g. imported from JSON), use it instead of regenerating
 		const timeKey = p.args.out.time;
 		if (timeKey >= 0 && core.rawData.has(timeKey) && core.rawData.get(timeKey).length > 0) {
@@ -280,6 +475,20 @@
 					.filter((id) => id !== undefined && id >= 0);
 			}
 		}
+		// Migrate old sessions: single applyToAll → preProcesses array
+		if (p.args.preProcesses === undefined) {
+			if (p.args.applyToAll?.processName) {
+				p.args.preProcesses = [p.args.applyToAll];
+			} else {
+				p.args.preProcesses = [];
+			}
+		}
+		// Restore Process instances for each saved pre-process
+		preProcessProcs = p.args.preProcesses.map((pp) =>
+			pp.processName
+				? new Process({ name: pp.processName, args: pp.processArgs }, null)
+				: null
+		);
 		// Sync local selector state from committed args (handles loaded sessions)
 		categoryIN_local = p.args.categoryIN;
 		timeIN_local = p.args.timeIN;
@@ -341,7 +550,14 @@
 						)
 					]}
 				/>
-				<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
+				<p>
+					Row <NumberWithUnits
+						min={1}
+						max={Math.max(1, totalRows - 5)}
+						step={1}
+						bind:value={previewStart}
+					/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+				</p>
 			{:else}
 				<p>Select valid input columns to see preview.</p>
 			{/if}
@@ -349,10 +565,170 @@
 	</div>
 </div>
 
+<!-- Pre-process Section -->
+{#if p.args.valid}
+	<div class="section-row">
+		<div class="tableProcess-label"><span>Pre-process</span></div>
+		<div class="control-input-vertical">
+			{#each p.args.preProcesses as pp, idx (idx)}
+				<div class="aggregate-block">
+					<div class="aggregate-header">
+						<span class="aggregate-title">Step {idx + 1}</span>
+						<button class="remove-btn" onclick={() => removePreProcess(idx)} title="Remove">×</button>
+					</div>
+					<div class="control-input">
+						<p>Process</p>
+						<select
+							value={pp.processName}
+							onchange={(e) => setPreProcess(idx, e.target.value)}
+						>
+							<option value="">Select…</option>
+							{#each sortedProcesses as [key, value] (key)}
+								<option value={key}>{value.displayName || key}</option>
+							{/each}
+						</select>
+					</div>
+					{#if preProcessProcs[idx]}
+						<Processcomponent p={preProcessProcs[idx]} />
+					{/if}
+				</div>
+			{/each}
+			<button class="add-aggregate-btn" onclick={addPreProcess}>+ Add pre-process step</button>
+		</div>
+	</div>
+{/if}
+
+<!-- Aggregate Section -->
+{#if p.args.valid}
+	<div class="section-row">
+		<div class="tableProcess-label"><span>Aggregate</span></div>
+		<div class="control-input-vertical">
+			{#each p.args.aggregates as agg, idx}
+				<div class="aggregate-block">
+					<div class="aggregate-header">
+						<span class="aggregate-title">Aggregate</span>
+						<button class="remove-btn" onclick={() => removeAggregate(idx)} title="Remove">×</button
+						>
+					</div>
+
+					<div class="control-input">
+						<p>Method</p>
+						<select bind:value={agg.method} onchange={onAggMethodChange}>
+							<option value="mean">Mean</option>
+							<option value="min">Min</option>
+							<option value="max">Max</option>
+							<option value="std">Std dev</option>
+						</select>
+					</div>
+
+					{#if (p.args.valueColIds ?? []).length > 0}
+						{@const excluded = agg.excludedColIds ?? []}
+						{@const nActive = (p.args.valueColIds ?? []).length - excluded.length}
+						<div class="control-input-vertical">
+							<p>Columns ({nActive} of {(p.args.valueColIds ?? []).length} included)</p>
+							<div class="col-checklist">
+								{#each p.args.valueColIds ?? [] as colId}
+									{@const col = getColumnById(colId)}
+									{@const included = !excluded.includes(colId)}
+									<label class="col-check-item">
+										<input
+											type="checkbox"
+											checked={included}
+											onchange={() => toggleExcludeForAgg(idx, colId)}
+										/>
+										{col?.name ?? `col ${colId}`}
+									</label>
+								{/each}
+							</div>
+						</div>
+					{/if}
+
+					{#if agg.outColId >= 0}
+						<ColumnComponent col={getColumnById(agg.outColId)} />
+					{/if}
+				</div>
+			{/each}
+
+			<button class="add-aggregate-btn" onclick={addAggregate}>+ Add aggregate</button>
+		</div>
+	</div>
+{/if}
+
 <style>
 	.error-message {
 		color: #c0392b;
 		font-size: 12px;
 		margin: 0.25rem 0;
+	}
+
+	.aggregate-block {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 4px;
+		padding: 0.5rem 0.6rem;
+	}
+
+	.aggregate-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.aggregate-title {
+		font-size: 12px;
+		font-weight: 600;
+	}
+
+	.remove-btn {
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-size: 16px;
+		line-height: 1;
+		color: var(--color-lightness-55, #888);
+		padding: 0 0.2rem;
+	}
+
+	.remove-btn:hover {
+		color: #c0392b;
+	}
+
+	.add-aggregate-btn {
+		background: none;
+		border: 1px dashed var(--color-lightness-75, #aaa);
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 12px;
+		padding: 0.3rem 0.6rem;
+		color: var(--color-lightness-45, #666);
+		width: 100%;
+		text-align: center;
+	}
+
+	.add-aggregate-btn:hover {
+		border-color: var(--color-lightness-55, #888);
+		color: var(--color-lightness-25, #333);
+	}
+
+	.col-checklist {
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+		max-height: 150px;
+		overflow-y: auto;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 4px;
+		padding: 0.25rem 0.4rem;
+	}
+
+	.col-check-item {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 12px;
+		cursor: pointer;
+		padding: 0.1rem 0;
 	}
 </style>

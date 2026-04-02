@@ -103,7 +103,9 @@
 
 				<!-- columns-->
 				{#each table.columns as col}
-					<option value={col.id}>{col.name}</option>
+					{#if !excludeColIds.includes(col.id)}
+						<option value={col.id}>{col.name}</option>
+					{/if}
 				{/each}
 			</optgroup>
 		{/each}
@@ -136,10 +138,14 @@
 
 <style>
 	/* If issue with styling in other components apart from control, find alternative */
+	select[multiple] {
+		min-height: 180px;
+	}
+
 	select {
 		width: 100%;
 		min-width: 0;
-		flex: 1 1 0;
+		flex: 1 1 auto;
 		box-sizing: border-box;
 
 		font-size: 14px;

@@ -12,7 +12,7 @@ export async function loadProcesses() {
 			const processFunc = svelteModule[funcName];
 			const displayName = svelteModule[`${funcName}_displayName`] || formatDisplayName(fileName);
 
-			processMap.set(funcName, {
+			processMap.set(fileName, {
 				component: component,
 				func: processFunc,
 				defaults: svelteModule[`${funcName}_defaults`] || new Map(),

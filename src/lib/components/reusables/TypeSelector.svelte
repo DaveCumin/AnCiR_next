@@ -4,7 +4,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 
-	let { value = $bindable() } = $props();
+	let { value = $bindable(), onChange = () => {} } = $props();
 
 	const options = [
 		{ label: 'Time', value: 'time', icon: 'clock' },
@@ -45,6 +45,7 @@
 		e.stopPropagation();
 		value = option.value;
 		showDropdown = false;
+		onChange(option.value);
 	}
 </script>
 
