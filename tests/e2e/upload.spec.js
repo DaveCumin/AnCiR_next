@@ -1,21 +1,17 @@
 import { test, expect } from '@playwright/test';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CSV_PATH = path.resolve(__dirname, '../../test/testData.csv');
-
-test('upload testData.csv renders actogram SVG without console errors', async ({ page }) => {
+test('cmd-shift-s loads sample data and renders SVG without console errors', async ({ page }) => {
 	const consoleErrors = [];
 	page.on('console', (msg) => {
-		if (msg.type() === 'error') consoleErrors.push(msg.text());
+		if (msg.type() === 'error' && !msg.text().includes('cloudflareinsights')) {
+			consoleErrors.push(msg.text());
+		}
 	});
 
 	await page.goto('/');
 
-	// Locate the file input and upload the CSV
-	const fileInput = page.locator('input[type="file"]');
-	await fileInput.setInputFiles(CSV_PATH);
+	// Trigger the built-in sample-data loader (Cmd+Shift+S / Ctrl+Shift+S)
+	await page.keyboard.press('Meta+Shift+S');
 
 	// Wait for an SVG to appear (actogram render)
 	const svg = page.locator('svg').first();

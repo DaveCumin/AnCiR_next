@@ -5,7 +5,7 @@ export function calculateStandardDeviation(arr) {
 
   // Step 2: Calculate the squared differences from the mean
   const squaredDifferences = arr.map((value) =>
-    Math.pow(value - memeanValan, 2)
+    Math.pow(value - meanVal, 2)
   );
 
   // Step 3: Calculate the average of the squared differences
