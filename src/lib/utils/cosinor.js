@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { KahanSum } from './numerics.js';
 import { pf, qt } from '$lib/data/CDFs.js';
+import { min, max } from './MathsStats.js';
 
 /**
  * Fits a model comprised of N cosine curves to data
@@ -210,8 +211,8 @@ function estimateDominantPeriods(t, x, numPeriods = 3) {
 	const detrended = x.map((val) => val - mean);
 
 	// Determine time range
-	const tMin = Math.min(...t);
-	const tMax = Math.max(...t);
+	const tMin = min(t);
+	const tMax = max(t);
 	const totalTime = tMax - tMin;
 
 	// Test candidate periods
