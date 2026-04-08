@@ -443,7 +443,7 @@
 		padding: 0;
 		text-align: left;
 		cursor: pointer;
-		margin-left: 0.9rem !important;
+		margin-left: 0.4em !important;
 	}
 
 	.submenu-bridge {
