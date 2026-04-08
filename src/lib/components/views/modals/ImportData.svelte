@@ -96,6 +96,14 @@
 		fileInput?.click();
 	}
 
+	export async function openImportModalWithUrl(url) {
+		resetValues();
+		dataUrl = url;
+		showImportModal = true;
+		await tick();
+		await doPreviewFromURL();
+	}
+
 	async function onFileChange(e) {
 		const files = [...e.target.files];
 		targetFiles = files;
