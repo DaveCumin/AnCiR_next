@@ -1,5 +1,6 @@
 <script module>
 	import { appState } from '$lib/core/core.svelte';
+	import { showError } from '$lib/core/notifications.svelte.js';
 	export function exportJson() {
 		try {
 			// Get JSON string and validate
@@ -36,7 +37,7 @@
 			}, 10); // Delay cleanup to ensure download starts
 		} catch (error) {
 			console.error('Failed to export JSON:', error.message);
-			alert('Error exporting JSON: ' + error.message); // Notify user of error
+			showError('Error exporting JSON: ' + error.message);
 		}
 	}
 
@@ -197,7 +198,7 @@
 			error = `Failed to fetch: ${err.message}`;
 			jsonData = null;
 			importReady = false;
-			alert(`Failed to load session from URL.\n\n${err.message}`);
+			showError(`Failed to load session from URL. \n\n${err.message}`);
 		}
 		urlFetching = false;
 	}
@@ -244,7 +245,7 @@
 			error = `Failed to fetch: ${err.message}`;
 			jsonData = null;
 			importReady = false;
-			alert(`Failed to load session from URL.\n\n${err.message}`);
+			showError(`Failed to load session from URL. \n\n${err.message}`);
 		}
 		urlFetching = false;
 	}

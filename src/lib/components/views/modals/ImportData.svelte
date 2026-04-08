@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import Papa from 'papaparse';
+	import { showError } from '$lib/core/notifications.svelte.js';
 	import * as XLSX from '$lib/utils/xlsxLite';
 	import { DateTime } from 'luxon';
 
@@ -237,7 +238,7 @@
 				error: (err) => {
 					error = { err, reason: 'Failed to fetch URL' };
 					errorInfile = true;
-					alert(`Failed to fetch data from URL.\n\n${err.message ?? err}`);
+					showError(`Failed to fetch data from URL. \n\n${err.message ?? err}`);
 					resolve();
 				}
 			});
@@ -772,7 +773,7 @@
 			appState.loadingState.loadingMsg = '';
 			awaitingLoad = false;
 			const msg = error?.message ?? String(error);
-			alert(`Failed to load session from URL.\n\n${msg}`);
+			showError(`Failed to load session from URL. \n\n${msg}`);
 			console.error('loadFromURL error:', error);
 		}
 	}

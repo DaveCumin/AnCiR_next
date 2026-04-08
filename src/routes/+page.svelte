@@ -10,6 +10,7 @@
 	import PlotDisplay from '$lib/components/views/PlotDisplay.svelte';
 
 	import AreYouSure from '$lib/components/views/modals/AreYouSure.svelte';
+	import { showError, errorDialog } from '$lib/core/notifications.svelte.js';
 
 	import { loadProcesses } from '$lib/processes/processMap.js';
 	import { loadPlots } from '$lib/plots/plotMap.js';
@@ -216,7 +217,7 @@
 						}, 10); // Delay cleanup to ensure download starts
 					} catch (error) {
 						console.error('Failed to export JSON:', error.message);
-						alert('Error exporting JSON: ' + error.message); // Notify user of error
+						showError('Error exporting JSON: ' + error.message);
 					}
 				}
 			}
@@ -556,6 +557,8 @@
 		callback={appState.AYScallback}
 	/>
 {/if}
+
+<AreYouSure bind:showModal={errorDialog.show} text={errorDialog.message} options={['OK']} />
 {#if appState.loadingState.isLoading}
 	<div class="backdrop" transition:fade={{ duration: 360 }}>
 		<div class="loading-container">
