@@ -191,14 +191,19 @@
 			let xmax = -Infinity;
 
 			this.data.forEach((d, i) => {
-				if (this.anyXdataTime && this.data[i].x.type !== 'time') {
-					//skip time data here
+				const xCol = this.data[i].x;
+				if (this.anyXdataTime && xCol.type !== 'time' && xCol.originTime_ms == null) {
+					// skip pure-number columns that have no time origin
 					return;
 				}
-				let tempx = this.data[i].x.getData() ?? [];
+				let tempx = xCol.getData() ?? [];
 				let tempy = this.data[i].y.getData() ?? [];
 
 				tempx = tempx.filter((x, i) => x != null && !isNaN(x) && tempy[i] != null && !isNaN(tempy[i])); // Ensure all values are valid (not null or NaN) — do NOT exclude zeros
+				// Convert origin-aware hour columns to ms for limit calculation
+				if (this.anyXdataTime && xCol.type !== 'time' && xCol.originTime_ms != null) {
+					tempx = tempx.map((h) => xCol.originTime_ms + h * 3600000);
+				}
 				xmin = Math.floor(min([xmin, ...tempx]));
 				xmax = Math.ceil(max([xmax, ...tempx]));
 			});
@@ -247,7 +252,7 @@
 			if (this.data.length === 0) {
 				return false;
 			}
-			return this.data.some((d) => d.x.type === 'time');
+			return this.data.some((d) => d.x.type === 'time' || d.x.originTime_ms != null);
 		});
 
 		constructor(parent, dataIN) {
@@ -972,7 +977,7 @@
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
 				{@const xDATA =
 					theData.plot.anyXdataTime && datum.x.type !== 'time'
-						? datum.x.getData().map((d) => theData.plot.xlims[0] + d * 3600000)
+						? datum.x.getData().map((d) => (datum.x.originTime_ms ?? theData.plot.xlims[0]) + d * 3600000)
 						: datum.x.getData()}
 				{@const yScale =
 					datum.yAxis === 'left' ? theData.plot.YScaleLeft : theData.plot.YScaleRight}

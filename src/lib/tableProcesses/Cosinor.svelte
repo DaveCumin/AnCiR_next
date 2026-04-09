@@ -66,6 +66,18 @@
 				outputXData = outputXData.filter((v) => !isNaN(v));
 			}
 
+			// Determine origin time for converting hours → ms on the x output
+			let originTime_ms = null;
+			if (outputXId != -1) {
+				const _outputXColForOrigin = getColumnById(outputXId);
+				if (_outputXColForOrigin && _outputXColForOrigin.type === 'time') {
+					originTime_ms = _outputXColForOrigin.getData()[0];
+				}
+			}
+			if (originTime_ms == null && tCol.type === 'time') {
+				originTime_ms = tCol.getData()[0];
+			}
+
 			if (useFixedPeriod) {
 				// ── Fixed-period (classical Halberg) cosinor ──
 				const fixedResult = fitCosinorFixed(tt, yy, fixedPeriod, nHarmonics, alpha);
@@ -89,9 +101,13 @@
 						const xColOut = getColumnById(xOUT);
 						const yColOut = getColumnById(yOUT);
 						if (xColOut && yColOut) {
-							core.rawData.set(xOUT, xOutData);
+							const xOutMs = originTime_ms != null
+								? xOutData.map((h) => originTime_ms + h * 3600000)
+								: xOutData;
+							core.rawData.set(xOUT, xOutMs);
 							xColOut.data = xOUT;
-							xColOut.type = 'number';
+							xColOut.type = originTime_ms != null ? 'time' : 'number';
+							if (originTime_ms != null) xColOut.timeFormat = null;
 							core.rawData.set(yOUT, yOutData);
 							yColOut.data = yOUT;
 							yColOut.type = 'number';
@@ -134,9 +150,13 @@
 					if (xColOut && yColOut) {
 						const xOutData = outputXData ?? tt;
 						const yOutData = predicted ?? fittedData.fitted;
-						core.rawData.set(xOUT, xOutData);
+						const xOutMs = originTime_ms != null
+							? xOutData.map((h) => originTime_ms + h * 3600000)
+							: xOutData;
+						core.rawData.set(xOUT, xOutMs);
 						xColOut.data = xOUT;
-						xColOut.type = 'number';
+						xColOut.type = originTime_ms != null ? 'time' : 'number';
+						if (originTime_ms != null) xColOut.timeFormat = null;
 						core.rawData.set(yOUT, yOutData);
 						yColOut.data = yOUT;
 						yColOut.type = 'number';

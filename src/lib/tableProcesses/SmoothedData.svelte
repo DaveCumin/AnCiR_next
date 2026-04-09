@@ -351,9 +351,18 @@
 		const result = { x_out: xVals, y_out: smoothedY };
 
 		if (xOUT != -1 && yOUT != -1) {
-			core.rawData.set(xOUT, result.x_out);
+			const xInCol = getColumnById(xIN);
+			const isTimeInput = xInCol?.type === 'time';
+			const originTime_ms = isTimeInput ? xInCol.getData()[0] : null;
+
+			const xOutValues = isTimeInput
+				? result.x_out.map((h) => originTime_ms + h * 3600000)
+				: result.x_out;
+
+			core.rawData.set(xOUT, xOutValues);
 			getColumnById(xOUT).data = xOUT;
-			getColumnById(xOUT).type = 'number';
+			getColumnById(xOUT).type = isTimeInput ? 'time' : 'number';
+			if (isTimeInput) getColumnById(xOUT).timeFormat = null;
 
 			core.rawData.set(yOUT, result.y_out);
 			getColumnById(yOUT).data = yOUT;
