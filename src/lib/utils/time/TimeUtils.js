@@ -13,7 +13,7 @@ export function formatDate(dateIN) {
 	return formattedDate;
 }
 
-function convertFormat(formatIN) {
+export function convertFormat(formatIN) {
 	if (!formatIN || typeof formatIN == 'number') return formatIN;
 
 	//moment format string to luxon format string (https://moment.github.io/luxon/#/parsing?id=table-of-tokens)
