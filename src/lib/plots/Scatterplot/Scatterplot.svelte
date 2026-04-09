@@ -198,7 +198,7 @@
 				let tempx = this.data[i].x.getData() ?? [];
 				let tempy = this.data[i].y.getData() ?? [];
 
-				tempx = tempx.filter((x, i) => Number(x) && Number(tempy[i])); // Ensure all values are numbers and there is a y-value associated
+				tempx = tempx.filter((x, i) => x != null && !isNaN(x) && tempy[i] != null && !isNaN(tempy[i])); // Ensure all values are valid (not null or NaN) — do NOT exclude zeros
 				xmin = Math.floor(min([xmin, ...tempx]));
 				xmax = Math.ceil(max([xmax, ...tempx]));
 			});
