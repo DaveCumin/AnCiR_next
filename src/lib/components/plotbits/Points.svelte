@@ -97,16 +97,18 @@
 		if (type === 'time') {
 			try {
 				return new Date(value).toLocaleString(); // works even if value is invalid date
-			} catch (e) {}
+			} catch (e) {
+				return value;
+			}
 		}
 
 		//else try as a number
 		try {
 			return value.toFixed(dp); // will throw if value isn't a number
-		} catch (e) {}
-
-		//otherwise just return the value as is
-		return value;
+		} catch (e) {
+			//otherwise just return the value as is
+			return value;
+		}
 	}
 
 	function handleHover(e) {
