@@ -81,10 +81,12 @@
 </script>
 
 <script>
+	// @ts-nocheck
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { formatTimeFromISO } from '$lib/utils/time/TimeUtils.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	import { onMount } from 'svelte';
@@ -282,7 +284,11 @@
 		<Table
 			headers={['Time', 'Data']}
 			data={[
-				simulatedTime.slice(previewStart - 1, previewStart + 5),
+				simulatedTime.slice(previewStart - 1, previewStart + 5).map((v) => ({
+					isTime: true,
+					raw: formatTimeFromISO(v),
+					computed: ((new Date(v).getTime() - p.args.startTime) / 3600000).toFixed(2)
+				})),
 				simulatedValues.slice(previewStart - 1, previewStart + 5).map((y) => y.toFixed(2))
 			]}
 		/>

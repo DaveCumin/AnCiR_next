@@ -18,25 +18,25 @@ vi.mock('$lib/core/Column.svelte', () => ({
 vi.mock('$lib/components/inputs/ColumnSelector.svelte', () => ({ default: {} }));
 vi.mock('$lib/components/inputs/NumberWithUnits.svelte', () => ({ default: {} }));
 
-import { widetolong } from './WideToLong.svelte';
+import { longtowide } from './LongToWide.svelte';
 
 beforeEach(() => {
 	Object.keys(mockColumns).forEach((k) => delete mockColumns[k]);
 	mockRawDataSet.mockClear();
 });
 
-describe('widetolong', () => {
+describe('longtowide', () => {
 	it('returns invalid when inputs are -1', () => {
-		const [, valid] = widetolong({ categoryIN: -1, timeIN: -1, valueIN: -1, out: { time: -1 }, preProcesses: [], aggregates: [] });
+		const [, valid] = longtowide({ categoryIN: -1, timeIN: -1, valueIN: -1, out: { time: -1 }, preProcesses: [], aggregates: [] });
 		expect(valid).toBe(false);
 	});
 
-	it('pivots category/time/value columns to wide format', () => {
+	it('pivots long-format category/time/value columns to wide format', () => {
 		mockColumns[1] = { getData: () => ['A', 'A', 'B', 'B'] };          // category
 		mockColumns[2] = { getData: () => [0, 1, 0, 1] };                   // time
 		mockColumns[3] = { getData: () => [10, 20, 30, 40] };               // value
 
-		const [result, valid] = widetolong({
+		const [result, valid] = longtowide({
 			categoryIN: 1, timeIN: 2, valueIN: 3,
 			out: { time: -1 }, preProcesses: [], aggregates: []
 		});
@@ -53,7 +53,7 @@ describe('widetolong', () => {
 		mockColumns[2] = { getData: () => [0, 1] };
 		mockColumns[3] = { getData: () => [10, 20] };
 
-		const [result] = widetolong({
+		const [result] = longtowide({
 			categoryIN: 1, timeIN: 2, valueIN: 3,
 			out: { time: -1 }, preProcesses: [], aggregates: []
 		});
@@ -67,7 +67,7 @@ describe('widetolong', () => {
 		mockColumns[2] = { getData: () => [] };
 		mockColumns[3] = { getData: () => [] };
 
-		const [, valid] = widetolong({
+		const [, valid] = longtowide({
 			categoryIN: 1, timeIN: 2, valueIN: 3,
 			out: { time: -1 }, preProcesses: [], aggregates: []
 		});
