@@ -732,10 +732,12 @@
 						<p>Min</p>
 						<input
 							type="datetime-local"
-							value={(() => { const v = theData.xlimsIN[0] ?? theData.xlims[0]; return Number.isFinite(v) ? new Date(v).toISOString().substring(0, 16) : ''; })()}
+							value={theData.xlimsIN[0]
+								? new Date(theData.xlimsIN[0]).toISOString().substring(0, 16)
+								: new Date(theData.xlims[0]).toISOString().substring(0, 16)}
 							oninput={(e) => {
 								const val = e.target.value;
-								theData.xlimsIN[0] = val ? Number(new Date(val)) : null;
+								theData.xlimsIN[0] = Number(new Date(val));
 							}}
 						/>
 					</div>
@@ -744,10 +746,12 @@
 						<p>Max</p>
 						<input
 							type="datetime-local"
-							value={(() => { const v = theData.xlimsIN[1] ?? theData.xlims[1]; return Number.isFinite(v) ? new Date(v).toISOString().substring(0, 16) : ''; })()}
+							value={theData.xlimsIN[1]
+								? new Date(theData.xlimsIN[1]).toISOString().substring(0, 16)
+								: new Date(theData.xlims[1]).toISOString().substring(0, 16)}
 							oninput={(e) => {
 								const val = e.target.value;
-								theData.xlimsIN[1] = val ? Number(new Date(val)) : null;
+								theData.xlimsIN[1] = Number(new Date(val));
 							}}
 						/>
 					</div>
