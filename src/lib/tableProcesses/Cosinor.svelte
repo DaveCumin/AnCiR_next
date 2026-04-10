@@ -133,7 +133,8 @@
 							rSquared: fixedResult.R2
 						},
 						fixedStats: fixedResult,
-						predicted: outputXData ? yOutData : null
+						predicted: outputXData ? yOutData : null,
+						originTime_ms
 					};
 				}
 			} else {
@@ -171,7 +172,8 @@
 					outputXData,
 					fittedData: { ...fittedData },
 					fixedStats: null,
-					predicted
+					predicted,
+					originTime_ms
 				};
 				valid = fittedData.fitted.length > 0;
 			}
@@ -182,12 +184,14 @@
 </script>
 
 <script>
+	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
@@ -207,6 +211,7 @@
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	let yIN_col = $derived.by(() => (p.args.yIN >= 0 ? getColumnById(p.args.yIN) : null));
 	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
+	let xIsTime = $derived(xIN_col?.type === 'time' || outputX_col?.type === 'time');
 	let getHash = $derived.by(() => {
 		let out = '';
 		out += xIN_col?.getDataHash;
@@ -508,7 +513,11 @@
 			<Table
 				headers={['x', cosinorData.outputXData ? 'predicted y' : 'fitted y']}
 				data={[
-					xData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2)),
+					xData.slice(previewStart - 1, previewStart + 5).map((x) =>
+						xIsTime && cosinorData.originTime_ms != null
+							? { isTime: true, raw: formatTimeFromUNIX(cosinorData.originTime_ms + x * 3600000), computed: x.toFixed(2) }
+							: x.toFixed(2)
+					),
 					yData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2))
 				]}
 			/>
