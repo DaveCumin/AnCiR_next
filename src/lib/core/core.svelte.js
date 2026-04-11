@@ -54,13 +54,12 @@ export const appState = $state({
 	showAYSModal: false, // AreYouSure modal
 	AYStext: '',
 	AYScallback: null,
-	AYSoptions: ['Yes', 'No'],
 
 	showWorkflow: false
 });
 
 export const appConsts = $state({
-	version: 'β.18.3',
+	version: 'β.15.0',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
@@ -212,22 +211,6 @@ export function renameStoredValue(oldName, newName) {
 	core.storedValues[finalName] = core.storedValues[oldName];
 	delete core.storedValues[oldName];
 	return finalName;
-}
-
-/** Show an error modal with a single OK button. */
-export function showError(message) {
-	appState.AYStext = message;
-	appState.AYScallback = null;
-	appState.AYSoptions = ['OK'];
-	appState.showAYSModal = true;
-}
-
-/** Show an "Are you sure?" confirmation modal. */
-export function showAYS(text, callback, options = ['Yes', 'No']) {
-	appState.AYStext = text;
-	appState.AYScallback = callback;
-	appState.AYSoptions = options;
-	appState.showAYSModal = true;
 }
 
 export function snapToGrid(value) {

@@ -2,6 +2,8 @@
 	// @ts-nocheck
 	import { Column } from '$lib/core/Column.svelte';
 
+	let selectedPlotIds = $state();
+
 	import { appConsts, appState, core } from '$lib/core/core.svelte';
 	let _counter = 0;
 	function getNextId() {
@@ -13,43 +15,27 @@
 		return thePlot;
 	}
 
-	function deletePlotIds(ids) {
-		for (const id of ids) {
-			const index = core.plots.findIndex((p) => p.id === id);
-			if (index !== -1) core.plots.splice(index, 1);
-		}
-	}
-
 	export function removePlots(ids) {
+		//make selectedPLotIds an array if not already
 		if (!Array.isArray(ids)) ids = [ids];
-
-		const selectedPlots = core.plots.filter((p) => p.selected);
-		const clickedIsSelected = ids.length === 1 && selectedPlots.some((p) => p.id === ids[0]);
-
-		if (clickedIsSelected && selectedPlots.length > 1) {
-			// Single click on a plot that's part of a multi-selection: offer choice.
-			const clickedName = core.plots.find((p) => p.id === ids[0]).name;
-			const allSelectedIds = selectedPlots.map((p) => p.id);
-			const optJust = `Just "${clickedName}"`;
-			const optAll = `All ${selectedPlots.length} plots`;
-			appState.AYStext = `Delete just "${clickedName}" or all ${selectedPlots.length} selected plots?`;
-			appState.AYSoptions = [optJust, optAll, 'Cancel'];
-			appState.AYScallback = (option) => {
-				if (option === optJust) deletePlotIds(ids);
-				else if (option === optAll) deletePlotIds(allSelectedIds);
-			};
-		} else {
-			// Normal flow: confirm deletion of the given set.
-			appState.AYStext =
-				ids.length === 1
-					? `Are you sure you want to remove ${core.plots.find((p) => p.id === ids[0]).name}?`
-					: `Are you sure you want to remove these ${ids.length} plots?`;
-			appState.AYSoptions = ['Yes', 'No'];
-			appState.AYScallback = (option) => {
-				if (option === 'Yes') deletePlotIds(ids);
-			};
-		}
+		selectedPlotIds = ids;
+		appState.AYStext =
+			ids.length == 1
+				? `Are you sure you want to remove ${core.plots[core.plots.findIndex((p) => p.id === ids[0])].name}?`
+				: `Are you sure you want to remove these ${ids.length} plots?`;
+		appState.AYScallback = handleAYS;
 		appState.showAYSModal = true;
+	}
+	function handleAYS(option) {
+		//console.log('SELECTED: ', option);
+		if (option === 'Yes') {
+			for (const id of selectedPlotIds) {
+				const index = core.plots.findIndex((p) => p.id === id);
+				if (index !== -1) {
+					core.plots.splice(index, 1);
+				}
+			}
+		}
 	}
 
 	export function selectPlot(e, id) {

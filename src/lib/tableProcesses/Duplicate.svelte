@@ -28,7 +28,6 @@
 </script>
 
 <script>
-	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
@@ -64,11 +63,7 @@
 	let previewStart = $state(1);
 	let displayResult = $derived(
 		result && xIN_col?.type === 'time'
-			? result.map((v) => ({
-					isTime: true,
-					raw: formatTimeFromUNIX(v),
-					computed: ((v - result[0]) / 3600000).toFixed(2)
-				}))
+			? result.map((v) => formatTimeFromUNIX(v))
 			: result
 	);
 	function doDuplicate() {

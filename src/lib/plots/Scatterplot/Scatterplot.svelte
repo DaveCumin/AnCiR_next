@@ -191,19 +191,14 @@
 			let xmax = -Infinity;
 
 			this.data.forEach((d, i) => {
-				const xCol = this.data[i].x;
-				if (this.anyXdataTime && xCol.type !== 'time' && xCol.originTime_ms == null) {
-					// skip pure-number columns that have no time origin
+				if (this.anyXdataTime && this.data[i].x.type !== 'time') {
+					//skip time data here
 					return;
 				}
-				let tempx = xCol.getData() ?? [];
+				let tempx = this.data[i].x.getData() ?? [];
 				let tempy = this.data[i].y.getData() ?? [];
 
-				tempx = tempx.filter((x, i) => x != null && !isNaN(x) && tempy[i] != null && !isNaN(tempy[i])); // Ensure all values are valid (not null or NaN) — do NOT exclude zeros
-				// Convert origin-aware hour columns to ms for limit calculation
-				if (this.anyXdataTime && xCol.type !== 'time' && xCol.originTime_ms != null) {
-					tempx = tempx.map((h) => xCol.originTime_ms + h * 3600000);
-				}
+				tempx = tempx.filter((x, i) => Number(x) && Number(tempy[i])); // Ensure all values are numbers and there is a y-value associated
 				xmin = Math.floor(min([xmin, ...tempx]));
 				xmax = Math.ceil(max([xmax, ...tempx]));
 			});
@@ -252,7 +247,7 @@
 			if (this.data.length === 0) {
 				return false;
 			}
-			return this.data.some((d) => d.x.type === 'time' || d.x.originTime_ms != null);
+			return this.data.some((d) => d.x.type === 'time');
 		});
 
 		constructor(parent, dataIN) {
@@ -732,10 +727,12 @@
 						<p>Min</p>
 						<input
 							type="datetime-local"
-							value={(() => { const v = theData.xlimsIN[0] ?? theData.xlims[0]; return Number.isFinite(v) ? new Date(v).toISOString().substring(0, 16) : ''; })()}
+							value={theData.xlimsIN[0]
+								? new Date(theData.xlimsIN[0]).toISOString().substring(0, 16)
+								: new Date(theData.xlims[0]).toISOString().substring(0, 16)}
 							oninput={(e) => {
 								const val = e.target.value;
-								theData.xlimsIN[0] = val ? Number(new Date(val)) : null;
+								theData.xlimsIN[0] = Number(new Date(val));
 							}}
 						/>
 					</div>
@@ -744,10 +741,12 @@
 						<p>Max</p>
 						<input
 							type="datetime-local"
-							value={(() => { const v = theData.xlimsIN[1] ?? theData.xlims[1]; return Number.isFinite(v) ? new Date(v).toISOString().substring(0, 16) : ''; })()}
+							value={theData.xlimsIN[1]
+								? new Date(theData.xlimsIN[1]).toISOString().substring(0, 16)
+								: new Date(theData.xlims[1]).toISOString().substring(0, 16)}
 							oninput={(e) => {
 								const val = e.target.value;
-								theData.xlimsIN[1] = val ? Number(new Date(val)) : null;
+								theData.xlimsIN[1] = Number(new Date(val));
 							}}
 						/>
 					</div>
@@ -973,7 +972,7 @@
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
 				{@const xDATA =
 					theData.plot.anyXdataTime && datum.x.type !== 'time'
-						? datum.x.getData().map((d) => (datum.x.originTime_ms ?? theData.plot.xlims[0]) + d * 3600000)
+						? datum.x.getData().map((d) => theData.plot.xlims[0] + d * 3600000)
 						: datum.x.getData()}
 				{@const yScale =
 					datum.yAxis === 'left' ? theData.plot.YScaleLeft : theData.plot.YScaleRight}

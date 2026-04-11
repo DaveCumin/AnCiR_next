@@ -6,16 +6,12 @@
 
 	let { value = $bindable(), onChange = () => {} } = $props();
 
-	const allOptions = [
+	const options = [
 		{ label: 'Time', value: 'time', icon: 'clock' },
 		{ label: 'Number', value: 'number', icon: 'math' },
 		{ label: 'Bin', value: 'bin', icon: 'table' },
 		{ label: 'Category', value: 'category', icon: 'list' }
 	];
-
-	const options = $derived(
-		value === 'bin' ? allOptions : allOptions.filter((o) => o.value !== 'bin')
-	);
 
 	let selected = $state();
 
@@ -35,8 +31,6 @@
 	function toggleDropdown(e) {
 		e.preventDefault();
 		e.stopPropagation();
-
-		if (value === 'bin') return;
 
 		const rect = e.currentTarget.getBoundingClientRect();
 		top = rect.bottom;

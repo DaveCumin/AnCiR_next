@@ -348,22 +348,12 @@
 			return [{ x_out: [], y_out: [] }, false];
 		}
 
-		const xInCol = getColumnById(xIN);
-		const isTimeInput = xInCol?.type === 'time';
-		const originTime_ms = isTimeInput ? xInCol.getData()[0] : null;
-
-		// x_out is always hours-since-start; originTime_ms lets callers convert back to UNIX ms
-		const result = { x_out: xVals, y_out: smoothedY, originTime_ms };
+		const result = { x_out: xVals, y_out: smoothedY };
 
 		if (xOUT != -1 && yOUT != -1) {
-			const xOutValues = isTimeInput
-				? result.x_out.map((h) => originTime_ms + h * 3600000)
-				: result.x_out;
-
-			core.rawData.set(xOUT, xOutValues);
+			core.rawData.set(xOUT, result.x_out);
 			getColumnById(xOUT).data = xOUT;
-			getColumnById(xOUT).type = isTimeInput ? 'time' : 'number';
-			if (isTimeInput) getColumnById(xOUT).timeFormat = null;
+			getColumnById(xOUT).type = 'number';
 
 			core.rawData.set(yOUT, result.y_out);
 			getColumnById(yOUT).data = yOUT;
@@ -380,13 +370,11 @@
 </script>
 
 <script>
-	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { onMount, untrack } from 'svelte';
-	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 
 	let { p = $bindable() } = $props();
 
@@ -397,7 +385,6 @@
 	// Reactivity
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	let yIN_col = $derived.by(() => (p.args.yIN >= 0 ? getColumnById(p.args.yIN) : null));
-	let xIsTime = $derived(xIN_col?.type === 'time');
 	let getHash = $derived.by(() => {
 		let out = '';
 		out += xIN_col?.getDataHash;
@@ -583,18 +570,11 @@
 		</div>
 	{:else if p.args.valid}
 		{@const totalRows = smoothedResult.x_out.length}
-		{@const xSlice = smoothedResult.x_out.slice(previewStart - 1, previewStart + 5)}
 		<p>Preview:</p>
 		<Table
 			headers={['smoothed x', 'smoothed y']}
 			data={[
-				xIsTime
-					? xSlice.map((v) => ({
-							isTime: true,
-							raw: formatTimeFromUNIX(smoothedResult.originTime_ms + v * 3600000),
-							computed: v.toFixed(2)
-					  }))
-					: xSlice.map((x) => x.toFixed(2)),
+				smoothedResult.x_out.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2)),
 				smoothedResult.y_out.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2))
 			]}
 		/>

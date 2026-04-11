@@ -1,7 +1,4 @@
 <script module>
-	import { KahanSum, kahanMean } from '$lib/utils/numerics.js';
-	import { min, max } from '$lib/utils/MathsStats.js';
-
 	export function normalize(x, args) {
 		const type = args.normalizationType || 'z-score';
 		const customMin = Number(args.customMin || 0);
@@ -15,24 +12,23 @@
 		}
 
 		switch (type) {
-			case 'z-score': {
+			case 'z-score':
 				// Z-score normalization: (x - mean) / std
-				const mean = kahanMean(validData);
-				const k = new KahanSum();
-				for (const val of validData) k.add(Math.pow(val - mean, 2));
-				const std = Math.sqrt(k.value / validData.length);
+				const mean = validData.reduce((sum, val) => sum + val, 0) / validData.length;
+				const variance =
+					validData.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / validData.length;
+				const std = Math.sqrt(variance);
 
 				if (std === 0) {
 					return x.map(() => 0); // All values are the same
 				}
 				return x.map((val) => (val == null || isNaN(val) ? val : (val - mean) / std));
-			}
 
-			case 'min-max': {
+			case 'min-max':
 				// Min-Max normalization to [customMin, customMax]
-				const minVal = min(validData);
-				const maxVal = max(validData);
-				const range = maxVal - minVal;
+				const min = Math.min(...validData);
+				const max = Math.max(...validData);
+				const range = max - min;
 
 				if (range === 0) {
 					return x.map((val) => (val == null || isNaN(val) ? val : customMin));
@@ -40,11 +36,10 @@
 				return x.map((val) =>
 					val == null || isNaN(val)
 						? val
-						: ((val - minVal) / range) * (customMax - customMin) + customMin
+						: ((val - min) / range) * (customMax - customMin) + customMin
 				);
-			}
 
-			case 'robust': {
+			case 'robust':
 				// Robust normalization using median and MAD
 				const sorted = [...validData].sort((a, b) => a - b);
 				const median =
@@ -65,19 +60,15 @@
 					return x.map(() => 0);
 				}
 				return x.map((val) => (val == null || isNaN(val) ? val : (val - median) / mad));
-			}
 
-			case 'unit-vector': {
+			case 'unit-vector':
 				// Unit vector normalization: x / ||x||
-				const kMag = new KahanSum();
-				for (const val of validData) kMag.add(val * val);
-				const magnitude = Math.sqrt(kMag.value);
+				const magnitude = Math.sqrt(validData.reduce((sum, val) => sum + val * val, 0));
 
 				if (magnitude === 0) {
 					return x.map(() => 0);
 				}
 				return x.map((val) => (val == null || isNaN(val) ? val : val / magnitude));
-			}
 
 			default:
 				return [...x]; // Return original data if unknown type
