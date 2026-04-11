@@ -1,13 +1,14 @@
 <script module>
 	// @ts-nocheck
 	import Papa from 'papaparse';
+	import { showError } from '$lib/core/core.svelte.js';
 	import * as XLSX from '$lib/utils/xlsxLite';
 	import { DateTime } from 'luxon';
 
 	import { appConsts, core, pushObj, appState } from '$lib/core/core.svelte';
 	import { Table } from '$lib/core/Table.svelte';
 	import { Column } from '$lib/core/Column.svelte';
-	import { guessDateofArray, forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
+	import { guessDateofArray, forceFormat, getPeriod, convertFormat } from '$lib/utils/time/TimeUtils';
 	import { numToString } from '$lib/utils/GeneralUtils';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
@@ -94,6 +95,14 @@
 		showImportModal = true;
 		await tick();
 		fileInput?.click();
+	}
+
+	export async function openImportModalWithUrl(url) {
+		resetValues();
+		dataUrl = url;
+		showImportModal = true;
+		await tick();
+		await doPreviewFromURL();
 	}
 
 	async function onFileChange(e) {
@@ -229,7 +238,7 @@
 				error: (err) => {
 					error = { err, reason: 'Failed to fetch URL' };
 					errorInfile = true;
-					alert(`Failed to fetch data from URL.\n\n${err.message ?? err}`);
+					showError(`Failed to fetch data from URL. \n\n${err.message ?? err}`);
 					resolve();
 				}
 			});
@@ -256,12 +265,13 @@
 				delimiter: delimiter,
 				complete: async (results) => {
 					const allData = convertArrayToObject(results.data);
-					const filteredData =
+					let filteredData =
 						selectedColumns.size < headers.length
 							? Object.fromEntries(
 									[...selectedColumns].filter((c) => allData[c]).map((c) => [c, allData[c]])
 								)
 							: allData;
+					filteredData = sortDataByTimestamp(filteredData);
 					const urlName = dataUrl.split('/').pop() || 'url-data';
 					await doBasicFileImport(filteredData, urlName);
 					resolve();
@@ -724,6 +734,10 @@
 			}
 		}
 
+		loadProgress = { stage: 'Loading data', detail: 'Sorting by timestamp…' };
+		await tick();
+		parsedData = sortDataByTimestamp(parsedData);
+
 		loadProgress = { stage: 'Loading data', detail: 'Building columns…' };
 		await tick();
 		await new Promise((resolve) => setTimeout(resolve, 10));
@@ -764,14 +778,56 @@
 			appState.loadingState.loadingMsg = '';
 			awaitingLoad = false;
 			const msg = error?.message ?? String(error);
-			alert(`Failed to load session from URL.\n\n${msg}`);
+			showError(`Failed to load session from URL. \n\n${msg}`);
 			console.error('loadFromURL error:', error);
 		}
 	}
 
+	/**
+	 * Sort all columns in a column-oriented data object by the first time column found.
+	 * Rows are kept together across all columns.
+	 */
+	function sortDataByTimestamp(data) {
+		const cols = Object.keys(data);
+		if (cols.length === 0) return data;
+
+		// Find the first column that looks like timestamps
+		let timeCol = null;
+		let timeFmt = null;
+		for (const col of cols) {
+			const fmt = guessDateofArray(data[col]);
+			if (fmt !== -1 && fmt !== null && fmt !== undefined && fmt !== '' && fmt.length > 0) {
+				timeCol = col;
+				timeFmt = fmt;
+				break;
+			}
+		}
+
+		if (!timeCol) return data; // No time column found — leave unsorted
+
+		const luxonFmt = convertFormat(timeFmt);
+		const timeValues = data[timeCol];
+		const n = timeValues.length;
+
+		// Build array of [index, parsedMs] and sort by ms
+		const indices = Array.from({ length: n }, (_, i) => {
+			const ms = DateTime.fromFormat(String(timeValues[i]), luxonFmt).toMillis();
+			return { i, ms };
+		});
+		indices.sort((a, b) => a.ms - b.ms);
+
+		// Reorder every column using the sorted indices
+		const sorted = {};
+		for (const col of cols) {
+			sorted[col] = indices.map(({ i }) => data[col][i]);
+		}
+		return sorted;
+	}
+
 	async function doBasicFileImport(result, fname) {
 		const newDataEntry = new Table();
-		newDataEntry.setName(`data_${newDataEntry.id}`);
+		const baseName = fname ? fname.replace(/\.[^.]+$/, '') : `data_${newDataEntry.id}`;
+		newDataEntry.setName(baseName);
 
 		const keys = Object.keys(result);
 		const totalColumns = keys.length;

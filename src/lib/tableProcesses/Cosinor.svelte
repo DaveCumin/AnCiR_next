@@ -66,6 +66,18 @@
 				outputXData = outputXData.filter((v) => !isNaN(v));
 			}
 
+			// Determine origin time for converting hours → ms on the x output
+			let originTime_ms = null;
+			if (outputXId != -1) {
+				const _outputXColForOrigin = getColumnById(outputXId);
+				if (_outputXColForOrigin && _outputXColForOrigin.type === 'time') {
+					originTime_ms = _outputXColForOrigin.getData()[0];
+				}
+			}
+			if (originTime_ms == null && tCol.type === 'time') {
+				originTime_ms = tCol.getData()[0];
+			}
+
 			if (useFixedPeriod) {
 				// ── Fixed-period (classical Halberg) cosinor ──
 				const fixedResult = fitCosinorFixed(tt, yy, fixedPeriod, nHarmonics, alpha);
@@ -89,9 +101,13 @@
 						const xColOut = getColumnById(xOUT);
 						const yColOut = getColumnById(yOUT);
 						if (xColOut && yColOut) {
-							core.rawData.set(xOUT, xOutData);
+							const xOutMs = originTime_ms != null
+								? xOutData.map((h) => originTime_ms + h * 3600000)
+								: xOutData;
+							core.rawData.set(xOUT, xOutMs);
 							xColOut.data = xOUT;
-							xColOut.type = 'number';
+							xColOut.type = originTime_ms != null ? 'time' : 'number';
+							if (originTime_ms != null) xColOut.timeFormat = null;
 							core.rawData.set(yOUT, yOutData);
 							yColOut.data = yOUT;
 							yColOut.type = 'number';
@@ -117,7 +133,8 @@
 							rSquared: fixedResult.R2
 						},
 						fixedStats: fixedResult,
-						predicted: outputXData ? yOutData : null
+						predicted: outputXData ? yOutData : null,
+						originTime_ms
 					};
 				}
 			} else {
@@ -134,9 +151,13 @@
 					if (xColOut && yColOut) {
 						const xOutData = outputXData ?? tt;
 						const yOutData = predicted ?? fittedData.fitted;
-						core.rawData.set(xOUT, xOutData);
+						const xOutMs = originTime_ms != null
+							? xOutData.map((h) => originTime_ms + h * 3600000)
+							: xOutData;
+						core.rawData.set(xOUT, xOutMs);
 						xColOut.data = xOUT;
-						xColOut.type = 'number';
+						xColOut.type = originTime_ms != null ? 'time' : 'number';
+						if (originTime_ms != null) xColOut.timeFormat = null;
 						core.rawData.set(yOUT, yOutData);
 						yColOut.data = yOUT;
 						yColOut.type = 'number';
@@ -151,7 +172,8 @@
 					outputXData,
 					fittedData: { ...fittedData },
 					fixedStats: null,
-					predicted
+					predicted,
+					originTime_ms
 				};
 				valid = fittedData.fitted.length > 0;
 			}
@@ -162,13 +184,16 @@
 </script>
 
 <script>
+	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
 	let { p = $bindable() } = $props();
 
@@ -182,11 +207,14 @@
 	let showOutputX = $state(p.args.outputX !== -1);
 	let mounted = $state(false);
 	let previewStart = $state(1);
+	let calculating = $state(false);
+	let _calcToken = 0;
 
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	let yIN_col = $derived.by(() => (p.args.yIN >= 0 ? getColumnById(p.args.yIN) : null));
 	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
+	let xIsTime = $derived(xIN_col?.type === 'time' || outputX_col?.type === 'time');
 	let getHash = $derived.by(() => {
 		let out = '';
 		out += xIN_col?.getDataHash;
@@ -200,17 +228,29 @@
 		const dataHash = getHash;
 		if (!mounted) return;
 		if (lastHash !== dataHash) {
-			untrack(() => {
-				previewStart = 1;
-				[cosinorData, p.args.valid] = cosinor(p.args);
-			});
-			lastHash = getHash; // read after untrack so mutations to p.args.valid don't re-trigger
+			lastHash = getHash; // read before untrack so it's tracked
+			calculating = true;
+			const token = ++_calcToken;
+			setTimeout(() => {
+				if (token !== _calcToken) return; // superseded by a newer request
+				untrack(() => {
+					previewStart = 1;
+					[cosinorData, p.args.valid] = cosinor(p.args);
+					calculating = false;
+				});
+			}, 0);
 		}
 	});
 	//------------
 	function getCosinor() {
 		previewStart = 1;
-		[cosinorData, p.args.valid] = cosinor(p.args);
+		calculating = true;
+		const token = ++_calcToken;
+		setTimeout(() => {
+			if (token !== _calcToken) return;
+			[cosinorData, p.args.valid] = cosinor(p.args);
+			calculating = false;
+		}, 0);
 	}
 
 	onMount(() => {
@@ -356,7 +396,9 @@
 		<span>Output</span>
 	</div>
 	<div class="section-content">
-		{#if p.args.valid && p.args.out.cosinorx != -1 && p.args.out.cosinory != -1}
+		{#if calculating}
+			<LoadingSpinner message="Fitting cosinor…" />
+		{:else if p.args.valid && p.args.out.cosinorx != -1 && p.args.out.cosinory != -1}
 			{@const xout = getColumnById(p.args.out.cosinorx)}
 			<ColumnComponent col={xout} />
 			{@const yout = getColumnById(p.args.out.cosinory)}
@@ -488,7 +530,11 @@
 			<Table
 				headers={['x', cosinorData.outputXData ? 'predicted y' : 'fitted y']}
 				data={[
-					xData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2)),
+					xData.slice(previewStart - 1, previewStart + 5).map((x) =>
+						xIsTime && cosinorData.originTime_ms != null
+							? { isTime: true, raw: formatTimeFromUNIX(cosinorData.originTime_ms + x * 3600000), computed: x.toFixed(2) }
+							: x.toFixed(2)
+					),
 					yData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2))
 				]}
 			/>

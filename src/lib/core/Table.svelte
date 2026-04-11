@@ -143,9 +143,21 @@
 
 					//add the process
 					table.processes.push(tempProcess);
-
 				});
 			}
+
+			// Backward-compatibility: older saved sessions had process output columns
+			// stripped from columnRefs on load. Re-add any that are missing.
+			const existingRefs = new Set(table.columnRefs);
+			for (const process of table.processes) {
+				for (const colId of Object.values(process.args.out)) {
+					if (colId >= 0 && !existingRefs.has(colId)) {
+						table.columnRefs = [colId, ...table.columnRefs];
+						existingRefs.add(colId);
+					}
+				}
+			}
+
 			return table;
 		}
 	}

@@ -1,3 +1,5 @@
+import { KahanSum, kahanMean } from '$lib/utils/numerics.js';
+
 //Bin data in binSize bins starting at binStart - takes the average y-value and returns the starting x positions
 export function binData(
 	xValues,
@@ -118,34 +120,39 @@ export function linearRegression(x, y) {
 		throw new Error('Input arrays must have the same non-zero length');
 	}
 
-	let sumX = 0;
-	let sumY = 0;
-	let sumXY = 0;
-	let sumXSquare = 0;
+	const kX = new KahanSum();
+	const kY = new KahanSum();
+	const kXY = new KahanSum();
+	const kXX = new KahanSum();
 
 	for (let i = 0; i < n; i++) {
-		sumX += x[i];
-		sumY += y[i];
-		sumXY += x[i] * y[i];
-		sumXSquare += x[i] * x[i];
+		kX.add(x[i]);
+		kY.add(y[i]);
+		kXY.add(x[i] * y[i]);
+		kXX.add(x[i] * x[i]);
 	}
+
+	const sumX = kX.value;
+	const sumY = kY.value;
+	const sumXY = kXY.value;
+	const sumXSquare = kXX.value;
 
 	const slope = (n * sumXY - sumX * sumY) / (n * sumXSquare - sumX * sumX);
 	const intercept = (sumY - slope * sumX) / n;
 
 	// Calculate R-squared and rmse
-	let ssTotal = 0;
-	let ssResidual = 0;
+	const kSSTot = new KahanSum();
+	const kSSRes = new KahanSum();
 	const meanY = sumY / n;
 
 	for (let i = 0; i < n; i++) {
 		const predictedY = slope * x[i] + intercept;
-		ssTotal += (y[i] - meanY) ** 2;
-		ssResidual += (y[i] - predictedY) ** 2;
+		kSSTot.add((y[i] - meanY) ** 2);
+		kSSRes.add((y[i] - predictedY) ** 2);
 	}
 
-	const rSquared = 1 - ssResidual / ssTotal;
-	const rmse = Math.sqrt(ssResidual / n);
+	const rSquared = 1 - kSSRes.value / kSSTot.value;
+	const rmse = Math.sqrt(kSSRes.value / n);
 
 	return { slope, intercept, rSquared, rmse };
 }
@@ -165,15 +172,7 @@ export function removeNullsFromXY(x, y) {
 
 //Calculate mean
 export function mean(data) {
-	let sum = 0;
-	let count = 0;
-	for (let i = 0; i < data.length; i++) {
-		if (data[i] !== undefined && !isNaN(data[i])) {
-			sum += data[i];
-			count++;
-		}
-	}
-	return count > 0 ? sum / count : 0;
+	return kahanMean(data);
 }
 
 //Calculate min and max

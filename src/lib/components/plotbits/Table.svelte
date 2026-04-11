@@ -88,7 +88,7 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each new Array(Math.max(...data.map((col) => col?.length ?? 0))) as d, r}
+			{#each new Array(Math.max(0, ...data.map((col) => col?.length ?? 0))) as d, r}
 				<tr>
 					{#each data as col, c}
 						<td style="width: {widths[c]}">

@@ -81,11 +81,14 @@
 </script>
 
 <script>
+	// @ts-nocheck
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { formatTimeFromISO } from '$lib/utils/time/TimeUtils.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
 
 	import { onMount } from 'svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
@@ -173,7 +176,9 @@
 		<div style="display: flex; justify-content: space-between; align-items: center;">
 			<strong>Section {index + 1}</strong>
 			{#if p.args.sections.length > 1}
-				<button onclick={() => removeSection(index)} style="color: red;">Remove</button>
+				<button class="icon" onclick={() => removeSection(index)}>
+					<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
+				</button>
 			{/if}
 		</div>
 
@@ -256,7 +261,9 @@
 <div class="section-row">
 	<div class="tableProcess-label">
 		<span>Data sections</span>
-		<button onclick={addSection} style="margin-left: 10px;">+ Add Section</button>
+		<button class="icon" onclick={addSection}>
+			<Icon name="add" width={16} height={16} className="control-component-title-icon" />
+		</button>
 	</div>
 </div>
 
@@ -282,7 +289,11 @@
 		<Table
 			headers={['Time', 'Data']}
 			data={[
-				simulatedTime.slice(previewStart - 1, previewStart + 5),
+				simulatedTime.slice(previewStart - 1, previewStart + 5).map((v) => ({
+					isTime: true,
+					raw: formatTimeFromISO(v),
+					computed: ((new Date(v).getTime() - p.args.startTime) / 3600000).toFixed(2)
+				})),
 				simulatedValues.slice(previewStart - 1, previewStart + 5).map((y) => y.toFixed(2))
 			]}
 		/>

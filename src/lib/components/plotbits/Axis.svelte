@@ -50,6 +50,7 @@
 		plotPadding = { top: 0, right: 0, bottom: 0, left: 0 },
 		position, //where the axis should be (x or y etc)
 		scale, //the d3s scale to use
+		tickFormat = null, // optional custom tick formatter, e.g. (d) => String(d)
 		which,
 		title = 'Axis'
 	} = $props();
@@ -81,6 +82,7 @@
 				axis = axisBottom(scale).ticks(axisData.nticks);
 			}
 			axis = axis.tickSize(ticklength).tickPadding(tickspace);
+			if (tickFormat) axis = axis.tickFormat(tickFormat);
 			select(axisGroup)
 				.call(axis)
 				.style('transform', `translate(${plotPadding.left}px, ${height + plotPadding.top}px)`);
@@ -92,6 +94,7 @@
 				axis = axisTop(scale).ticks(axisData.nticks);
 			}
 			axis = axis.tickSize(ticklength).tickPadding(tickspace);
+			if (tickFormat) axis = axis.tickFormat(tickFormat);
 			select(axisGroup)
 				.call(axis)
 				.style('transform', `translate(${plotPadding.left}px, ${plotPadding.top}px)`);
@@ -103,6 +106,7 @@
 				axis = axisLeft(scale).ticks(axisData.nticks);
 			}
 			axis = axis.tickSize(ticklength).tickPadding(tickspace);
+			if (tickFormat) axis = axis.tickFormat(tickFormat);
 			select(axisGroup)
 				.call(axis)
 				.style('transform', `translate(${plotPadding.left}px, ${plotPadding.top}px)`);
@@ -114,6 +118,7 @@
 				axis = axisRight(scale).ticks(axisData.nticks);
 			}
 			axis = axis.tickSize(ticklength).tickPadding(tickspace);
+			if (tickFormat) axis = axis.tickFormat(tickFormat);
 			select(axisGroup)
 				.call(axis)
 				.style('transform', `translate(${width + plotPadding.left}px, ${plotPadding.top}px)`);

@@ -141,8 +141,10 @@
 			displayMin,
 			displayMax
 		) {
-			// Skip if data is invalid
+			// Skip if data is invalid — also clear any stale cached result
 			if (!xData || !yData || xData.length === 0 || yData.length === 0) {
+				this.periodData = { x: [], y: [], threshold: [], pvalue: [] };
+				this._cache.dataFingerprint = null;
 				return;
 			}
 

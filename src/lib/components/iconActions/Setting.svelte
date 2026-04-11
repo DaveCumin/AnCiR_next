@@ -1,5 +1,6 @@
 <script module>
 	import { appState } from '$lib/core/core.svelte';
+	import { showError } from '$lib/core/core.svelte.js';
 	export function exportJson() {
 		try {
 			// Get JSON string and validate
@@ -36,7 +37,7 @@
 			}, 10); // Delay cleanup to ensure download starts
 		} catch (error) {
 			console.error('Failed to export JSON:', error.message);
-			alert('Error exporting JSON: ' + error.message); // Notify user of error
+			showError('Error exporting JSON: ' + error.message);
 		}
 	}
 
@@ -164,12 +165,42 @@
 
 	let { showDropdown = $bindable(false), dropdownTop = 0, dropdownLeft = 0 } = $props();
 
+	let exampleSessionMenuItem = $state();
+
+	const exampleSessions = [
+		{
+			name: 'Example session',
+			url: 'https://raw.githubusercontent.com/DaveCumin/AnCiR_next/refs/heads/main/test/testJSON.json'
+		}
+	];
+
 	async function openImportModal() {
 		showImportModal = true;
 		awaitingLoad = false;
 		loadProgressDetail = '';
 		await tick();
 		chooseFile();
+	}
+
+	async function openExampleSession(url) {
+		showImportModal = true;
+		awaitingLoad = false;
+		loadProgressDetail = '';
+		urlFetching = true;
+		try {
+			const response = await fetch(url);
+			if (!response.ok) throw new Error(`HTTP ${response.status}`);
+			jsonData = await response.json();
+			fileName = url.split('/').pop() || 'example-session';
+			error = '';
+			importReady = true;
+		} catch (err) {
+			error = `Failed to fetch: ${err.message}`;
+			jsonData = null;
+			importReady = false;
+			showError(`Failed to load session from URL. \n\n${err.message}`);
+		}
+		urlFetching = false;
 	}
 
 	function chooseFile() {
@@ -214,7 +245,7 @@
 			error = `Failed to fetch: ${err.message}`;
 			jsonData = null;
 			importReady = false;
-			alert(`Failed to load session from URL.\n\n${err.message}`);
+			showError(`Failed to load session from URL. \n\n${err.message}`);
 		}
 		urlFetching = false;
 	}
@@ -240,17 +271,63 @@
 </script>
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
-	{#snippet groups()}
-		<div class="action" onclick={(e) => openImportModal()}>
+	{#snippet groups({ showSubmenu, hideSubmenu, keepSubmenuOpen, activeSubmenu, closeDropdown })}
+		<div
+			class="action"
+			onclick={(e) => openImportModal()}
+			onmouseenter={() => hideSubmenu('examples', 0)}
+		>
 			<button> Load session</button>
 		</div>
 
-		<div class="action" onclick={(e) => exportJson()}>
+		<div
+			class="action dropdown-item has-submenu"
+			bind:this={exampleSessionMenuItem}
+			onmouseenter={() => showSubmenu('examples')}
+			onmouseleave={() => hideSubmenu('examples', 150)}
+		>
+			<button class="menubutton">Use example session</button>
+		</div>
+
+		{#if activeSubmenu === 'examples' && exampleSessionMenuItem}
+			<div
+				class="submenu-bridge"
+				style="top: {dropdownTop + exampleSessionMenuItem.offsetTop + 6}px; left: {dropdownLeft +
+					200}px; width: 5px; height: {exampleSessionMenuItem.getBoundingClientRect().height}px;"
+				onmouseenter={() => keepSubmenuOpen('examples')}
+			></div>
+			<div
+				class="submenu"
+				style="top: {dropdownTop + exampleSessionMenuItem.offsetTop - 40}px; left: {dropdownLeft +
+					205}px;"
+				onmouseenter={() => keepSubmenuOpen('examples')}
+				onmouseleave={() => hideSubmenu('examples', 150)}
+			>
+				{#each exampleSessions as session}
+					<button
+						class="submenu-item"
+						onclick={() => {
+							closeDropdown();
+							openExampleSession(session.url);
+						}}
+					>
+						{session.name}
+					</button>
+				{/each}
+			</div>
+		{/if}
+
+		<div
+			class="action"
+			onclick={(e) => exportJson()}
+			onmouseenter={() => hideSubmenu('examples', 0)}
+		>
 			<button> Save session </button>
 		</div>
 
 		<div
 			class="action"
+			onmouseenter={() => hideSubmenu('examples', 0)}
 			onclick={(e) => {
 				showSettingsModal = true;
 			}}
@@ -357,8 +434,53 @@
 		font: inherit;
 		border-radius: 0;
 		appearance: none;
-
 		cursor: pointer;
+	}
+
+	.menubutton {
+		background: transparent;
+		border: none;
+		font: inherit;
+		padding: 0;
+		text-align: left;
+		cursor: pointer;
+		margin-left: 0.4em !important;
+	}
+
+	.submenu-bridge {
+		position: fixed;
+		background: transparent;
+		z-index: 1002;
+		pointer-events: auto;
+	}
+
+	.submenu {
+		position: fixed;
+		min-width: 180px;
+		background-color: white;
+		border-radius: 4px;
+		border: 1px solid var(--color-lightness-85);
+		box-shadow:
+			0 4px 8px 0 rgba(0, 0, 0, 0.2),
+			0 6px 10px 0 rgba(0, 0, 0, 0.1);
+		z-index: 1001;
+		padding: 0;
+	}
+
+	.submenu-item {
+		display: block;
+		padding: 0.6em;
+		cursor: pointer;
+		border: none;
+		background: transparent;
+		text-align: left;
+		font: inherit;
+		width: 100%;
+		font-size: 14px;
+	}
+
+	.submenu-item:hover {
+		background-color: var(--color-lightness-95);
 	}
 
 	.heading {

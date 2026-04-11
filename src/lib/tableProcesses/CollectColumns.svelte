@@ -2,6 +2,8 @@
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { KahanSum, kahanMean } from '$lib/utils/numerics.js';
+	import { min, max } from '$lib/utils/MathsStats.js';
 
 	export const collectcolumns_displayName = 'Collect Columns';
 	export const collectcolumns_defaults = new Map([
@@ -81,14 +83,16 @@
 						continue;
 					}
 					if (method === 'min') {
-						aggResult[i] = Math.min(...vals);
+						aggResult[i] = min(vals);
 					} else if (method === 'max') {
-						aggResult[i] = Math.max(...vals);
+						aggResult[i] = max(vals);
 					} else if (method === 'mean') {
-						aggResult[i] = vals.reduce((a, b) => a + b, 0) / vals.length;
+						aggResult[i] = kahanMean(vals);
 					} else if (method === 'std') {
-						const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
-						aggResult[i] = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
+						const m = kahanMean(vals);
+						const k = new KahanSum();
+						for (const v of vals) k.add((v - m) ** 2);
+						aggResult[i] = Math.sqrt(k.value / vals.length);
 					}
 				}
 				core.rawData.set(agg.outColId, aggResult);

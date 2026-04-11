@@ -1,9 +1,11 @@
 <script module>
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
+	import { KahanSum, kahanMean } from '$lib/utils/numerics.js';
+	import { min, max } from '$lib/utils/MathsStats.js';
 
-	export const widetolong_displayName = 'Wide To Long';
-	export const widetolong_defaults = new Map([
+	export const longtowide_displayName = 'Long To Wide';
+	export const longtowide_defaults = new Map([
 		['categoryIN', { val: -1 }],
 		['timeIN', { val: -1 }],
 		['valueIN', { val: -1 }],
@@ -14,7 +16,7 @@
 		['valid', { val: false }]
 	]);
 
-	export function widetolong(argsIN) {
+	export function longtowide(argsIN) {
 		const categoryIN = argsIN.categoryIN;
 		const timeIN = argsIN.timeIN;
 		const valueIN = argsIN.valueIN;
@@ -137,14 +139,16 @@
 						continue;
 					}
 					if (method === 'min') {
-						aggResult[i] = Math.min(...vals);
+						aggResult[i] = min(vals);
 					} else if (method === 'max') {
-						aggResult[i] = Math.max(...vals);
+						aggResult[i] = max(vals);
 					} else if (method === 'mean') {
-						aggResult[i] = vals.reduce((a, b) => a + b, 0) / vals.length;
+						aggResult[i] = kahanMean(vals);
 					} else if (method === 'std') {
-						const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
-						aggResult[i] = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
+						const m = kahanMean(vals);
+						const k = new KahanSum();
+						for (const v of vals) k.add((v - m) ** 2);
+						aggResult[i] = Math.sqrt(k.value / vals.length);
 					}
 				}
 				core.rawData.set(agg.outColId, aggResult);
@@ -165,6 +169,7 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
+	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { Process } from '$lib/core/Process.svelte';
 	import Processcomponent from '$lib/core/Process.svelte';
@@ -172,7 +177,7 @@
 
 	let { p = $bindable() } = $props();
 
-	let wideToLongResult = $state();
+	let longToWideResult = $state();
 	let mounted = $state(false);
 	let previewStart = $state(1);
 	let errorMessage = $state('');
@@ -199,6 +204,7 @@
 		p.args.categoryIN >= 0 ? getColumnById(p.args.categoryIN) : null
 	);
 	let timeIN_col = $derived.by(() => (p.args.timeIN >= 0 ? getColumnById(p.args.timeIN) : null));
+	let timeIsTime = $derived(timeIN_col?.type === 'time');
 	let valueIN_col = $derived.by(() => (p.args.valueIN >= 0 ? getColumnById(p.args.valueIN) : null));
 	let getHash = $derived.by(() => {
 		let h = '';
@@ -239,7 +245,7 @@
 		if (!mounted) return;
 		if (dataHash !== lastHash) {
 			untrack(() => {
-				doWideToLong();
+				doLongToWide();
 			});
 			lastHash = dataHash;
 		}
@@ -278,7 +284,7 @@
 		}
 		errorMessage = '';
 		p.args.categoryIN = categoryIN_local;
-		doWideToLong();
+		doLongToWide();
 	}
 
 	function onTimeChange() {
@@ -290,7 +296,7 @@
 		}
 		errorMessage = '';
 		p.args.timeIN = timeIN_local;
-		doWideToLong();
+		doLongToWide();
 	}
 
 	function onValueChange() {
@@ -302,7 +308,7 @@
 		}
 		errorMessage = '';
 		p.args.valueIN = valueIN_local;
-		doWideToLong();
+		doLongToWide();
 	}
 
 	function addPreProcess() {
@@ -322,13 +328,13 @@
 		}
 		p.args.preProcesses = [...p.args.preProcesses];
 		preProcessProcs = [...preProcessProcs];
-		doWideToLong();
+		doLongToWide();
 	}
 
 	function removePreProcess(idx) {
 		p.args.preProcesses = p.args.preProcesses.filter((_, i) => i !== idx);
 		preProcessProcs = preProcessProcs.filter((_, i) => i !== idx);
-		doWideToLong();
+		doLongToWide();
 	}
 
 	function createAggregateColumn(label) {
@@ -346,7 +352,7 @@
 			agg.outColId = createAggregateColumn('aggregate_' + idx + '_' + p.id);
 		}
 		p.args.aggregates = [...p.args.aggregates, agg];
-		doWideToLong();
+		doLongToWide();
 	}
 
 	function removeAggregate(idx) {
@@ -356,11 +362,11 @@
 			removeColumn(agg.outColId);
 		}
 		p.args.aggregates = p.args.aggregates.filter((_, i) => i !== idx);
-		doWideToLong();
+		doLongToWide();
 	}
 
 	function onAggMethodChange() {
-		doWideToLong();
+		doLongToWide();
 	}
 
 	function toggleExcludeForAgg(idx, colId) {
@@ -373,10 +379,10 @@
 			i === idx ? { ...a, excludedColIds: newExcluded } : a
 		);
 		p.args.aggregates = newAggregates;
-		doWideToLong();
+		doLongToWide();
 	}
 
-	function doWideToLong() {
+	function doLongToWide() {
 		previewStart = 1;
 		if (p.args.categoryIN >= 0 && p.args.timeIN >= 0 && p.args.valueIN >= 0) {
 			const catData = getColumnById(p.args.categoryIN).getData();
@@ -436,7 +442,7 @@
 				});
 			}
 		}
-		[wideToLongResult, p.args.valid] = widetolong(p.args);
+		[longToWideResult, p.args.valid] = longtowide(p.args);
 	}
 
 	onMount(() => {
@@ -459,11 +465,11 @@
 		const timeKey = p.args.out.time;
 		if (timeKey >= 0 && core.rawData.has(timeKey) && core.rawData.get(timeKey).length > 0) {
 			const time = core.rawData.get(timeKey);
-			wideToLongResult = { time };
+			longToWideResult = { time };
 			for (const cat of p.args.categories) {
 				const outColId = p.args.out['value_' + cat];
 				if (outColId >= 0 && core.rawData.has(outColId)) {
-					wideToLongResult['value_' + cat] = core.rawData.get(outColId);
+					longToWideResult['value_' + cat] = core.rawData.get(outColId);
 				}
 			}
 			p.args.valid = true;
@@ -530,7 +536,7 @@
 <!-- Output / Preview -->
 <div class="section-row">
 	<div class="section-content">
-		{#key wideToLongResult}
+		{#key longToWideResult}
 			{#if p.args.valid && p.args.out.time >= 0}
 				<div class="tableProcess-label"><span>Output</span></div>
 				<ColumnComponent col={getColumnById(p.args.out.time)} />
@@ -539,14 +545,20 @@
 						<ColumnComponent col={getColumnById(p.args.out['value_' + cat])} />
 					{/if}
 				{/each}
-			{:else if p.args.valid && wideToLongResult?.time?.length}
-				{@const totalRows = wideToLongResult.time.length}
+			{:else if p.args.valid && longToWideResult?.time?.length}
+				{@const totalRows = longToWideResult.time.length}
 				<Table
 					headers={['time', ...p.args.categories]}
 					data={[
-						wideToLongResult.time.slice(previewStart - 1, previewStart + 5),
+						timeIsTime
+							? longToWideResult.time.slice(previewStart - 1, previewStart + 5).map((t) => ({
+									isTime: true,
+									raw: formatTimeFromUNIX(t),
+									computed: ((t - longToWideResult.time[0]) / 3600000).toFixed(2)
+								}))
+							: longToWideResult.time.slice(previewStart - 1, previewStart + 5),
 						...p.args.categories.map((cat) =>
-							wideToLongResult['value_' + cat].slice(previewStart - 1, previewStart + 5)
+							longToWideResult['value_' + cat].slice(previewStart - 1, previewStart + 5)
 						)
 					]}
 				/>

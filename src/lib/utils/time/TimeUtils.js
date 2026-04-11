@@ -13,7 +13,7 @@ export function formatDate(dateIN) {
 	return formattedDate;
 }
 
-function convertFormat(formatIN) {
+export function convertFormat(formatIN) {
 	if (!formatIN || typeof formatIN == 'number') return formatIN;
 
 	//moment format string to luxon format string (https://moment.github.io/luxon/#/parsing?id=table-of-tokens)
@@ -161,7 +161,10 @@ export function formatTimeFromISO(timeString) {
 	if (timeString) {
 		const [datePart, timePart] = timeString.split('T');
 		const [year, month, day] = datePart.split('-');
-		const [hours, minutes] = timePart.split(':');
+		const timeParts = timePart.split(':');
+		const hours = timeParts[0];
+		const minutes = timeParts[1];
+		const seconds = timeParts[2] ? timeParts[2].split('.')[0] : '00';
 
 		const monthLookup = [
 			'Jan',
@@ -179,7 +182,7 @@ export function formatTimeFromISO(timeString) {
 		];
 		const monthText = monthLookup[+month - 1];
 
-		return `${day} ${monthText} ${year} ${hours}:${minutes}`;
+		return `${day} ${monthText} ${year} ${hours}:${minutes}:${seconds}`;
 	} else {
 		return '';
 	}

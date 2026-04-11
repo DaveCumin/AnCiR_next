@@ -5,6 +5,7 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import { core } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 
 	export const Tableplot_defaultDataInputs = [];
 	export const Tableplot_controlHeaders = ['Properties and Data'];
@@ -151,11 +152,14 @@
 					const rawArr = core.rawData.get(col.data);
 					if (Array.isArray(rawArr)) {
 						const start = this.colCurrent - 1;
-						const rawStrings = rawArr.slice(start, start + this.Ncolumns);
+						const rawSlice = rawArr.slice(start, start + this.Ncolumns);
 						const hours = (col.hoursSinceStart ?? [])
 							.slice(start, start + this.Ncolumns)
 							.map((x) => (Number.isFinite(x) ? x.toFixed(this.decimalPlaces) : String(x)));
-						out.push(rawStrings.map((t, j) => ({ raw: t, computed: hours[j], isTime: true })));
+						// If raw data is UNIX ms (numbers from tableProcess output), format as readable date
+						const isUnixMs = rawSlice.length > 0 && typeof rawSlice[0] === 'number';
+						const displayStrings = isUnixMs ? rawSlice.map(formatTimeFromUNIX) : rawSlice;
+						out.push(displayStrings.map((t, j) => ({ raw: t, computed: hours[j], isTime: true })));
 					} else {
 						// AWD or missing rawData — fall back to numeric display
 						const data = col
@@ -231,6 +235,7 @@
 <script>
 	// @ts-nocheck
 	import { slide } from 'svelte/transition';
+	import { DateTime } from 'luxon';
 
 	let { theData, which } = $props();
 
@@ -363,12 +368,22 @@
 		const rowIndex = Number(edit.row) + theData.plot.colCurrent - 1;
 		if (rowIndex >= theData.plot.longestCol) return;
 
-		// Time columns: edit the raw string in rawData directly
+		// Time columns: edit the raw data directly
 		if (column.type === 'time' && !column.isReferencial() && column.compression !== 'awd') {
 			const rawArr = core.rawData.get(column.data);
 			if (Array.isArray(rawArr) && rowIndex < rawArr.length) {
-				rawArr[rowIndex] = edit.value;
-				column.rawDataVersion++;
+				if (typeof rawArr[0] === 'number') {
+					// UNIX ms time data from tableProcess output — parse "DD MMM YYYY HH:mm:ss" back to ms
+					const dt = DateTime.fromFormat(edit.value, 'dd MMM yyyy HH:mm:ss', { zone: 'utc' });
+					if (dt.isValid) {
+						rawArr[rowIndex] = dt.toMillis();
+						column.rawDataVersion++;
+					}
+				} else {
+					// Raw string time data (imported) — store edited string directly
+					rawArr[rowIndex] = edit.value;
+					column.rawDataVersion++;
+				}
 			}
 			return;
 		}

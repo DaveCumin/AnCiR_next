@@ -1,22 +1,18 @@
 // @ts-nocheck
+import { KahanSum, kahanMean } from './numerics.js';
+
 export function calculateStandardDeviation(arr) {
-  // Step 1: Calculate the mean (average) of the array
-  const meanVal = mean(arr);
+  const validArr = arr.filter((v) => v !== undefined && !isNaN(v));
+  if (validArr.length === 0) return NaN;
 
-  // Step 2: Calculate the squared differences from the mean
-  const squaredDifferences = arr.map((value) =>
-    Math.pow(value - memeanValan, 2)
-  );
+  const meanVal = kahanMean(validArr);
 
-  // Step 3: Calculate the average of the squared differences
-  const meanSquaredDifferences =
-    squaredDifferences.reduce((acc, value) => acc + value, 0) /
-    squaredDifferences.length;
+  const k = new KahanSum();
+  for (const value of validArr) {
+    k.add(Math.pow(value - meanVal, 2));
+  }
 
-  // Step 4: Calculate the square root of the mean squared differences
-  const standardDeviation = Math.sqrt(meanSquaredDifferences);
-
-  return standardDeviation;
+  return Math.sqrt(k.value / validArr.length);
 }
 
 //make an array from start to end, in steps
@@ -29,7 +25,7 @@ export function createSequenceArray(start, end, step = 1) {
 }
 
 export function mean(data) {
-  return data.reduce((sum, value) => sum + value, 0) / data.length;
+  return kahanMean(data);
 }
 
 export function max(data) {

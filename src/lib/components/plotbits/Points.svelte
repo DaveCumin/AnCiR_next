@@ -91,6 +91,26 @@
 		return out;
 	});
 
+	//HELPER FUNCTION
+	function safeFormat(value, dp, type) {
+		//if time then return the time
+		if (type === 'time') {
+			try {
+				return new Date(value).toLocaleString(); // works even if value is invalid date
+			} catch (e) {
+				return value;
+			}
+		}
+
+		//else try as a number
+		try {
+			return value.toFixed(dp); // will throw if value isn't a number
+		} catch (e) {
+			//otherwise just return the value as is
+			return value;
+		}
+	}
+
 	function handleHover(e) {
 		const dp = 3;
 		if (!tooltip) return;
@@ -99,10 +119,9 @@
 		const closest = qt.find(mouseX, mouseY, pointsData.radius * 2);
 
 		if (closest) {
-			let content = `(${closest.x.toFixed(dp)}, ${closest.y.toFixed(dp)})`;
-			if (xtype == 'time') {
-				content = `(${new Date(closest.x).toLocaleString()}, ${closest.y.toFixed(dp)})`;
-			}
+			let content = '';
+
+			content = `(${safeFormat(closest.x, dp, xtype)}, ${safeFormat(closest.y, dp)})`;
 
 			//make sure the tooltip stays 'in bounds'
 			const srcRect = e.srcElement.getBoundingClientRect();
