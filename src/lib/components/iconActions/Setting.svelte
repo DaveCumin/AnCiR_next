@@ -1,6 +1,6 @@
 <script module>
 	import { appState } from '$lib/core/core.svelte';
-	import { showError } from '$lib/core/notifications.svelte.js';
+	import { showError } from '$lib/core/core.svelte.js';
 	export function exportJson() {
 		try {
 			// Get JSON string and validate

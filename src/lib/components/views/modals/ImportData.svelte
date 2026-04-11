@@ -1,7 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import Papa from 'papaparse';
-	import { showError } from '$lib/core/notifications.svelte.js';
+	import { showError } from '$lib/core/core.svelte.js';
 	import * as XLSX from '$lib/utils/xlsxLite';
 	import { DateTime } from 'luxon';
 
