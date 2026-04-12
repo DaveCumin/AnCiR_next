@@ -25,8 +25,8 @@ export function fitCosineCurves(t, x, N, options = {}) {
 
 	const {
 		initialGuess = null,
-		maxIterations = 2000,
-		tolerance = 1e-7,
+		maxIterations = 10000,
+		tolerance = 1e-6,
 		useMultiStart = true,
 		numStarts = 5
 	} = options;
@@ -35,7 +35,7 @@ export function fitCosineCurves(t, x, N, options = {}) {
 		return fitWithInitialGuess(t, x, N, initialGuess, maxIterations, tolerance);
 	}
 
-	if (useMultiStart) {
+	if (useMultiStart && N > 1) {
 		return fitWithMultiStart(t, x, N, numStarts, maxIterations, tolerance);
 	} else {
 		const params = generateInitialGuess(t, x, N, 0);
@@ -204,7 +204,7 @@ function computeNormalEquations(t, x, params, N) {
 			const arg = params[3 * j + 1] * ti + params[3 * j + 2];
 			const s = Math.sin(arg);
 			const c = Math.cos(arg);
-			jRow[3 * j]     = -c;
+			jRow[3 * j] = -c;
 			jRow[3 * j + 1] = B * ti * s;
 			jRow[3 * j + 2] = B * s;
 		}
@@ -220,9 +220,7 @@ function computeNormalEquations(t, x, params, N) {
 	}
 
 	// Symmetrise JᵀJ
-	for (let j = 0; j < n; j++)
-		for (let k = j + 1; k < n; k++)
-			JtJ[k][j] = JtJ[j][k];
+	for (let j = 0; j < n; j++) for (let k = j + 1; k < n; k++) JtJ[k][j] = JtJ[j][k];
 
 	return { JtJ, JtR, rss };
 }
@@ -240,8 +238,8 @@ function estimateDominantPeriods(t, x, numPeriods = 3) {
 	const tMax = max(t);
 	const totalTime = tMax - tMin;
 
-	const minPeriod = totalTime / (n / 2);    // ≥2 samples per period
-	const maxPeriod = totalTime * 0.75;        // allows ~1.3 periods in window
+	const minPeriod = totalTime / (n / 2); // ≥2 samples per period
+	const maxPeriod = totalTime * 0.75; // allows ~1.3 periods in window
 	const numCandidates = Math.min(500, n * 5);
 
 	const candidates = [];
@@ -256,12 +254,14 @@ function estimateDominantPeriods(t, x, numPeriods = 3) {
 }
 
 function scorePeriodCandidate(t, x, frequency) {
-	let cosSum = 0, sinSum = 0, norm = 0;
+	let cosSum = 0,
+		sinSum = 0,
+		norm = 0;
 	for (let i = 0; i < t.length; i++) {
 		const phase = frequency * t[i];
 		cosSum += x[i] * Math.cos(phase);
 		sinSum += x[i] * Math.sin(phase);
-		norm   += x[i] * x[i];
+		norm += x[i] * x[i];
 	}
 	if (norm === 0) return 0;
 	return Math.sqrt(cosSum * cosSum + sinSum * sinSum) / Math.sqrt(norm * t.length);
@@ -271,7 +271,7 @@ function scorePeriodCandidate(t, x, frequency) {
 
 function generateInitialGuess(t, x, N, seed = 0) {
 	const mean = x.reduce((s, v) => s + v, 0) / x.length;
-	const std  = Math.sqrt(x.reduce((s, v) => s + (v - mean) ** 2, 0) / x.length);
+	const std = Math.sqrt(x.reduce((s, v) => s + (v - mean) ** 2, 0) / x.length);
 
 	const params = [];
 
@@ -280,13 +280,13 @@ function generateInitialGuess(t, x, N, seed = 0) {
 		const numCandidatePeriods = 5;
 		const dominantPeriods = estimateDominantPeriods(t, x, numCandidatePeriods);
 		const periodIdx = Math.min(seed, dominantPeriods.length - 1);
-		const frequency = dominantPeriods.length > 0
-			? dominantPeriods[periodIdx].frequency
-			: (2 * Math.PI) / 24;
+		const frequency =
+			dominantPeriods.length > 0 ? dominantPeriods[periodIdx].frequency : (2 * Math.PI) / 24;
 
 		// Amplitude & phase from projection onto cos/sin at detected frequency
 		const detrended = x.map((v) => v - mean);
-		let cosSum = 0, sinSum = 0;
+		let cosSum = 0,
+			sinSum = 0;
 		for (let i = 0; i < t.length; i++) {
 			cosSum += detrended[i] * Math.cos(frequency * t[i]);
 			sinSum += detrended[i] * Math.sin(frequency * t[i]);
@@ -295,7 +295,7 @@ function generateInitialGuess(t, x, N, seed = 0) {
 		sinSum *= 2 / t.length;
 
 		const amplitude = Math.sqrt(cosSum * cosSum + sinSum * sinSum);
-		const phase     = -Math.atan2(sinSum, cosSum);
+		const phase = -Math.atan2(sinSum, cosSum);
 
 		// Layout: [B, w, o, O]
 		params.push(amplitude, frequency, phase, mean);
@@ -308,9 +308,10 @@ function generateInitialGuess(t, x, N, seed = 0) {
 
 	for (let i = 0; i < N; i++) {
 		params.push(std * (1 / (i + 1)) * (0.5 + 0.5 * rng())); // B_i
-		const frequency = i < dominantPeriods.length
-			? dominantPeriods[i].frequency
-			: (dominantPeriods[0]?.frequency ?? (2 * Math.PI) / 24) * (i + 1) * (0.5 + rng());
+		const frequency =
+			i < dominantPeriods.length
+				? dominantPeriods[i].frequency
+				: (dominantPeriods[0]?.frequency ?? (2 * Math.PI) / 24) * (i + 1) * (0.5 + rng());
 		params.push(frequency); // w_i
 		params.push(((2 * Math.PI * (seed * 7 + i * 11)) / 17) % (2 * Math.PI)); // o_i
 	}
@@ -389,8 +390,11 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 	}
 
 	let coeffs;
-	try { coeffs = solveLinearSystem(XtX, Xty); }
-	catch { return null; }
+	try {
+		coeffs = solveLinearSystem(XtX, Xty);
+	} catch {
+		return null;
+	}
 
 	const M = coeffs[0];
 
@@ -402,7 +406,7 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 		let val = M;
 		for (let k = 1; k <= nHarmonics; k++) {
 			val += coeffs[2 * k - 1] * Math.cos(k * omega * ti);
-			val += coeffs[2 * k]     * Math.sin(k * omega * ti);
+			val += coeffs[2 * k] * Math.sin(k * omega * ti);
 		}
 		return val;
 	});
@@ -415,11 +419,11 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 	}
 	const SStot = sstotAcc.value;
 	const SSres = ssresAcc.value;
-	const MSE   = SSres / df_res;
-	const RMSE  = Math.sqrt(MSE);
-	const R2    = SStot > 0 ? 1 - SSres / SStot : 0;
+	const MSE = SSres / df_res;
+	const RMSE = Math.sqrt(MSE);
+	const R2 = SStot > 0 ? 1 - SSres / SStot : 0;
 	const F_stat = MSE > 0 ? (SStot - SSres) / (2 * nHarmonics) / MSE : NaN;
-	const pF     = isNaN(F_stat) ? NaN : pf(F_stat, 2 * nHarmonics, df_res, 1);
+	const pF = isNaN(F_stat) ? NaN : pf(F_stat, 2 * nHarmonics, df_res, 1);
 
 	// Covariance matrix V = MSE · (XᵀX)⁻¹
 	const XtX_inv = Array.from({ length: nParams }, () => new Array(nParams).fill(0));
@@ -429,7 +433,9 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 		try {
 			const sol = solveLinearSystem(XtX, e);
 			for (let row = 0; row < nParams; row++) XtX_inv[row][col] = sol[row];
-		} catch { /* leave as zeros */ }
+		} catch {
+			/* leave as zeros */
+		}
 	}
 
 	const t_crit = qt(1 - alpha / 2, df_res, 0);
@@ -441,16 +447,16 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 	for (let k = 1; k <= nHarmonics; k++) {
 		const bIdx = 2 * k - 1;
 		const gIdx = 2 * k;
-		const beta_k  = coeffs[bIdx];
+		const beta_k = coeffs[bIdx];
 		const gamma_k = coeffs[gIdx];
 
-		const A_k   = Math.sqrt(beta_k ** 2 + gamma_k ** 2);
+		const A_k = Math.sqrt(beta_k ** 2 + gamma_k ** 2);
 		const phi_k = Math.atan2(-gamma_k, beta_k);
 
 		let acrophase_hrs = (phi_k * period) / (2 * Math.PI * k);
 		if (acrophase_hrs < 0) acrophase_hrs += period / k;
 
-		const varBeta  = MSE * XtX_inv[bIdx][bIdx];
+		const varBeta = MSE * XtX_inv[bIdx][bIdx];
 		const varGamma = MSE * XtX_inv[gIdx][gIdx];
 
 		const varA = A_k > 0 ? (beta_k ** 2 * varBeta + gamma_k ** 2 * varGamma) / A_k ** 2 : 0;
@@ -458,14 +464,40 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 		const CI_A = [Math.max(0, A_k - t_crit * SE_A), A_k + t_crit * SE_A];
 
 		const varPhi = A_k > 0 ? (gamma_k ** 2 * varBeta + beta_k ** 2 * varGamma) / A_k ** 4 : 0;
-		const SE_acrophase_hrs = Math.sqrt(Math.max(0, varPhi)) * period / (2 * Math.PI * k);
+		const SE_acrophase_hrs = (Math.sqrt(Math.max(0, varPhi)) * period) / (2 * Math.PI * k);
 		const CI_acrophase = [
 			acrophase_hrs - t_crit * SE_acrophase_hrs,
 			acrophase_hrs + t_crit * SE_acrophase_hrs
 		];
 
-		harmonics.push({ k, beta: beta_k, gamma: gamma_k, amplitude: A_k, acrophase_hrs, phi_rad: phi_k, SE_A, SE_acrophase_hrs, CI_A, CI_acrophase });
+		harmonics.push({
+			k,
+			beta: beta_k,
+			gamma: gamma_k,
+			amplitude: A_k,
+			acrophase_hrs,
+			phi_rad: phi_k,
+			SE_A,
+			SE_acrophase_hrs,
+			CI_A,
+			CI_acrophase
+		});
 	}
 
-	return { M, SE_M, CI_M, harmonics, F_stat, df: [2 * nHarmonics, df_res], pF, R2, RMSE, fitted, n, period, nHarmonics, alpha };
+	return {
+		M,
+		SE_M,
+		CI_M,
+		harmonics,
+		F_stat,
+		df: [2 * nHarmonics, df_res],
+		pF,
+		R2,
+		RMSE,
+		fitted,
+		n,
+		period,
+		nHarmonics,
+		alpha
+	};
 }
