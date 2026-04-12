@@ -40,8 +40,8 @@ export function fitRectangularWave(t, x, options = {}) {
 		fixedKappa = 5,
 		fixedOmega = null,
 		fixedDutyCycle = 0.5,
-		maxIterations = 2000,
-		tolerance = 1e-7,
+		maxIterations = 10000,
+		tolerance = 1e-6,
 		numStarts = 5
 	} = options;
 
@@ -136,9 +136,7 @@ function computeNormalEqs(t, x, params, freeIndices) {
 		}
 	}
 
-	for (let j = 0; j < nFree; j++)
-		for (let k = j + 1; k < nFree; k++)
-			JtJ[k][j] = JtJ[j][k];
+	for (let j = 0; j < nFree; j++) for (let k = j + 1; k < nFree; k++) JtJ[k][j] = JtJ[j][k];
 
 	return { JtJ, JtR, rss };
 }
@@ -172,9 +170,9 @@ function fitWithLM(t, x, params, freeIndices, maxIterations, tolerance) {
 		}
 
 		// Clamp parameters to valid ranges
-		newP[2] = Math.max(0.01, newP[2]);                     // κ > 0
-		newP[3] = Math.max(0.001, Math.min(newP[3], 100));     // ω ∈ (0, 100]
-		newP[5] = Math.max(0.01, Math.min(newP[5], 0.99));     // d ∈ (0, 1)
+		newP[2] = Math.max(0.01, newP[2]); // κ > 0
+		newP[3] = Math.max(0.001, Math.min(newP[3], 100)); // ω ∈ (0, 100]
+		newP[5] = Math.max(0.01, Math.min(newP[5], 0.99)); // d ∈ (0, 1)
 
 		const { JtJ: newJtJ, JtR: newJtR, rss: newRss } = computeNormalEqs(t, x, newP, freeIndices);
 
@@ -303,9 +301,7 @@ function estimateDominantPeriods(t, x, numPeriods = 5) {
 			norm += detrended[j] * detrended[j];
 		}
 		const score =
-			norm === 0
-				? 0
-				: Math.sqrt(cosSum * cosSum + sinSum * sinSum) / Math.sqrt(norm * n);
+			norm === 0 ? 0 : Math.sqrt(cosSum * cosSum + sinSum * sinSum) / Math.sqrt(norm * n);
 		candidates.push({ period, frequency, score });
 	}
 

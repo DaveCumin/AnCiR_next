@@ -77,12 +77,12 @@ function computeNormalEqsNP(tArr, x, params, freeIndices) {
 
 		// ∂R/∂param = −∂f/∂param
 		const jFull = [
-			-1,                       // ∂R/∂M
-			-(s1 - s2),               // ∂R/∂A
-			-A * s1p * (ti - t1),     // ∂R/∂k1
-			A * k1 * s1p,             // ∂R/∂t1
-			A * s2p * (ti - t2),      // ∂R/∂k2
-			-A * k2 * s2p             // ∂R/∂t2
+			-1, // ∂R/∂M
+			-(s1 - s2), // ∂R/∂A
+			-A * s1p * (ti - t1), // ∂R/∂k1
+			A * k1 * s1p, // ∂R/∂t1
+			A * s2p * (ti - t2), // ∂R/∂k2
+			-A * k2 * s2p // ∂R/∂t2
 		];
 
 		const jRow = freeIndices.map((idx) => jFull[idx]);
@@ -92,8 +92,7 @@ function computeNormalEqsNP(tArr, x, params, freeIndices) {
 		}
 	}
 
-	for (let j = 0; j < nFree; j++)
-		for (let k = j + 1; k < nFree; k++) JtJ[k][j] = JtJ[j][k];
+	for (let j = 0; j < nFree; j++) for (let k = j + 1; k < nFree; k++) JtJ[k][j] = JtJ[j][k];
 
 	return { JtJ, JtR, rss };
 }
@@ -138,13 +137,13 @@ function computeNormalEqsP(tArr, x, params, freeIndices) {
 
 		// ∂R/∂T = A·Σ_j j·(k1·s1p_j − k2·s2p_j)  [from ∂/∂T(-j·T) in each sigmoid arg]
 		const jFull = [
-			-1,                           // ∂R/∂M
-			-sumS1mS2,                    // ∂R/∂A
-			-A * sumS1pDt,                // ∂R/∂k1
-			A * k1 * sumS1p,              // ∂R/∂t1
-			A * sumS2pDt,                 // ∂R/∂k2
-			-A * k2 * sumS2p,             // ∂R/∂t2
-			A * (sumJk1s1p - sumJk2s2p)   // ∂R/∂T
+			-1, // ∂R/∂M
+			-sumS1mS2, // ∂R/∂A
+			-A * sumS1pDt, // ∂R/∂k1
+			A * k1 * sumS1p, // ∂R/∂t1
+			A * sumS2pDt, // ∂R/∂k2
+			-A * k2 * sumS2p, // ∂R/∂t2
+			A * (sumJk1s1p - sumJk2s2p) // ∂R/∂T
 		];
 
 		const jRow = freeIndices.map((idx) => jFull[idx]);
@@ -154,8 +153,7 @@ function computeNormalEqsP(tArr, x, params, freeIndices) {
 		}
 	}
 
-	for (let j = 0; j < nFree; j++)
-		for (let k = j + 1; k < nFree; k++) JtJ[k][j] = JtJ[j][k];
+	for (let j = 0; j < nFree; j++) for (let k = j + 1; k < nFree; k++) JtJ[k][j] = JtJ[j][k];
 
 	return { JtJ, JtR, rss };
 }
@@ -193,10 +191,10 @@ function fitWithLM(tArr, x, params, freeIndices, periodic, maxIterations, tolera
 		}
 
 		// Clamp: rates must be positive; t2 must be after t1; period must be positive
-		newP[2] = Math.max(1e-4, newP[2]);     // k1 > 0
-		newP[4] = Math.max(1e-4, newP[4]);     // k2 > 0
+		newP[2] = Math.max(1e-4, newP[2]); // k1 > 0
+		newP[4] = Math.max(1e-4, newP[4]); // k2 > 0
 		if (periodic) {
-			newP[6] = Math.max(0.1, newP[6]);  // T > 0
+			newP[6] = Math.max(0.1, newP[6]); // T > 0
 		}
 		// Ensure t2 > t1 with at least a small gap
 		if (newP[5] <= newP[3]) newP[5] = newP[3] + 0.01;
@@ -219,9 +217,7 @@ function fitWithLM(tArr, x, params, freeIndices, periodic, maxIterations, tolera
 
 	const n = tArr.length;
 	const jRangeF = periodic ? computeJRange(tArr, p[3], p[5], p[6]) : null;
-	const fitted = tArr.map((ti) =>
-		periodic ? evalP(ti, p, jRangeF) : evalNP(ti, p)
-	);
+	const fitted = tArr.map((ti) => (periodic ? evalP(ti, p, jRangeF) : evalNP(ti, p)));
 
 	const xMeanAcc = new KahanSum();
 	for (const v of x) xMeanAcc.add(v);
@@ -316,7 +312,7 @@ function generateInitialGuessP(
 	const dc = dutyCycleSeeds[seed % dutyCycleSeeds.length];
 
 	// Phase-fold and find median above-mean phase
-	const phases = tArr.map((t) => ((t - tMin) % T + T) % T);
+	const phases = tArr.map((t) => (((t - tMin) % T) + T) % T);
 	const abovePhases = phases.filter((_, i) => x[i] > mean).sort((a, b) => a - b);
 	let onsetPhase = T * (0.5 - dc / 2);
 	let offsetPhase = T * (0.5 + dc / 2);
@@ -352,7 +348,9 @@ function estimateDominantPeriods(tArr, x, numPeriods = 5) {
 	for (let i = 0; i < numCandidates; i++) {
 		const period = minPeriod + ((maxPeriod - minPeriod) * i) / (numCandidates - 1);
 		const freq = (2 * Math.PI) / period;
-		let cs = 0, ss = 0, norm = 0;
+		let cs = 0,
+			ss = 0,
+			norm = 0;
 		for (let j = 0; j < n; j++) {
 			const ph = freq * tArr[j];
 			cs += detrended[j] * Math.cos(ph);
@@ -396,8 +394,8 @@ export function fitDoubleLogistic(t, x, options = {}) {
 		fixedK1 = 0.5,
 		fixedK2 = 0.5,
 		fixedPeriod = 24,
-		maxIterations = 2000,
-		tolerance = 1e-7,
+		maxIterations = 10000,
+		tolerance = 1e-6,
 		numStarts = 5
 	} = options;
 
