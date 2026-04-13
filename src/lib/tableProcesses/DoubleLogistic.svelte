@@ -195,6 +195,7 @@
 		const xKey = p.args.out.dlogx;
 		const yKey = p.args.out.dlogy;
 		if (xKey >= 0 && yKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
+			// Show the saved curve immediately while the re-fit runs in the background.
 			dlData = {
 				t: core.rawData.get(xKey),
 				outputXData: null,
@@ -203,7 +204,6 @@
 				originTime_ms: null
 			};
 			p.args.valid = true;
-			lastHash = getHash;
 		}
 		mounted = true;
 	});

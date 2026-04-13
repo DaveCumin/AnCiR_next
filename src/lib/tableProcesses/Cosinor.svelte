@@ -254,7 +254,8 @@
 	}
 
 	onMount(() => {
-		//If data already exists (e.g. imported from JSON), use it instead of regenerating
+		// If saved column data exists, show the fitted curve immediately while the
+		// re-fit runs in the background (the $effect fires once mounted = true).
 		const xKey = p.args.out.cosinorx;
 		const yKey = p.args.out.cosinory;
 		if (xKey >= 0 && yKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
@@ -264,7 +265,6 @@
 				fittedData: { fitted: core.rawData.get(yKey), parameters: { cosines: [] }, rmse: NaN }
 			};
 			p.args.valid = true;
-			lastHash = getHash; // prevent $effect from recalculating
 		}
 		mounted = true;
 	});

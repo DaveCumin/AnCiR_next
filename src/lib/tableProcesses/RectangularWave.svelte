@@ -216,7 +216,7 @@
 			core.rawData.has(xKey) &&
 			core.rawData.get(xKey).length > 0
 		) {
-			// Restore from saved session without re-fitting
+			// Show the saved curve immediately while the re-fit runs in the background.
 			rwave = {
 				t: core.rawData.get(xKey),
 				outputXData: null,
@@ -225,7 +225,6 @@
 				originTime_ms: null
 			};
 			p.args.valid = true;
-			lastHash = getHash;
 		}
 		mounted = true;
 	});
