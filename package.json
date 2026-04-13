@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "node src/lib/utils/generateBuild.js && vite build",
-		"postbuild": "if [ \"$CF_PAGES\" = \"1\" ]; then echo '🌐 Cloudflare Pages detected — skipping FTP upload (local .env only)'; else node --env-file=.env -e \"const {execSync}=require('child_process'); const cmd=process.env.DEPLOY_COMMAND; if(cmd){console.log('🚀 Uploading to FTP...'); execSync(cmd,{stdio:'inherit',cwd:process.cwd()}); console.log('✅ FTP upload completed!');} else {console.warn('⚠️ No DEPLOY_COMMAND in .env');}\" ; fi",
+		"postbuild": "node --env-file=.env -e \"const {execSync}=require('child_process'); const cmd=process.env.DEPLOY_COMMAND; if(cmd){console.log('🚀 Uploading to FTP...'); execSync(cmd,{stdio:'inherit',cwd:process.cwd()}); console.log('✅ FTP upload completed!');} else {console.warn('⚠️ No DEPLOY_COMMAND in .env');}\" || echo '⚠️ FTP upload skipped.'",
 		"testbuild": "vitest run && node src/lib/utils/generateBuild.js && vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
