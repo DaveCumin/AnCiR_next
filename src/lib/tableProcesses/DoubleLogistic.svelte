@@ -171,34 +171,25 @@
 	let calculating = $state(false);
 	let _calcToken = 0;
 
-	let selectedYIds = $state(p.args.yIN ?? []);
+	// Track previous Y IDs to detect what changed (non-reactive)
+	let prevYIds = [...(p.args.yIN ?? [])].map(Number);
 
-	// Watch for changes to selectedYIds and reconcile output columns
-	$effect(() => {
-		const newIds = selectedYIds;
-		if (!mounted) return;
-		untrack(() => {
-			onYSelectionChange(newIds);
-		});
-	});
+	// Called when Y selection changes in the multi-select.
+	// bind:value has already updated p.args.yIN, so we compare against prevYIds.
+	function onYSelectionChange() {
+		const newIds = (p.args.yIN ?? []).map(Number).filter((id) => id >= 0);
+		const newSet = new Set(newIds);
+		const oldSet = new Set(prevYIds);
 
-	function onYSelectionChange(newIds) {
-		const newIdSet = new Set(newIds.map(Number));
-		const oldIds = p.args.yIN ?? [];
-
-		// Same set? Skip
-		if (
-			newIds.length === oldIds.length &&
-			[...newIdSet].every((id) => oldIds.map(Number).includes(id))
-		)
-			return;
+		// Skip if no actual change
+		if (newIds.length === prevYIds.length && newIds.every((id) => oldSet.has(id))) return;
 
 		// Remove output columns for deselected Y inputs
-		for (const oldId of oldIds) {
-			if (!newIdSet.has(Number(oldId))) {
+		for (const oldId of prevYIds) {
+			if (!newSet.has(oldId)) {
 				const outKey = 'dlogy_' + oldId;
 				const outColId = p.args.out[outKey];
-				if (outColId !== undefined && outColId >= 0) {
+				if (outColId != null && outColId >= 0) {
 					core.rawData.delete(outColId);
 					removeColumn(outColId);
 				}
@@ -209,9 +200,9 @@
 		// Create output columns for newly selected Y inputs
 		for (const newId of newIds) {
 			const outKey = 'dlogy_' + newId;
-			if (p.args.out[outKey] === undefined || p.args.out[outKey] === -1) {
+			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
 				if (p.parent) {
-					const srcName = getColumnById(Number(newId))?.name ?? String(newId);
+					const srcName = getColumnById(newId)?.name ?? String(newId);
 					const yCol = new Column({});
 					yCol.name = 'dlog_' + srcName + '_' + p.id;
 					pushObj(yCol);
@@ -221,7 +212,10 @@
 			}
 		}
 
-		p.args.yIN = [...newIds].map(Number);
+		// Update tracking
+		prevYIds = [...newIds];
+
+		// Recompute
 		getFit();
 	}
 
@@ -279,6 +273,7 @@
 			if (token !== _calcToken) return;
 			[dlData, p.args.valid] = doublelogistic(p.args);
 			calculating = false;
+			lastHash = getHash;
 		}, 0);
 	}
 
@@ -331,7 +326,7 @@
 		</div>
 		<div class="control-input">
 			<p>Y column(s)</p>
-			<ColumnSelector bind:value={selectedYIds} excludeColIds={yExcludeIds} multiple={true} />
+			<ColumnSelector bind:value={p.args.yIN} excludeColIds={yExcludeIds} multiple={true} onChange={onYSelectionChange} />
 		</div>
 	</div>
 </div>
@@ -528,23 +523,30 @@
 			<LoadingSpinner message="Fitting double logistic…" />
 		{:else if p.args.valid && p.args.out.dlogx != -1}
 			{@const xout = getColumnById(p.args.out.dlogx)}
-			<ColumnComponent col={xout} />
-			{#each p.args.yIN ?? [] as yId}
-				{@const outKey = 'dlogy_' + yId}
-				{@const yOutId = p.args.out[outKey]}
-				{#if yOutId >= 0}
-					{@const yout = getColumnById(yOutId)}
-					{#if yout}
-						<ColumnComponent col={yout} />
+			<div class="tp-outputs">
+				<div class="tp-output-row">
+					<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
+					<ColumnComponent col={xout} />
+				</div>
+				{#each p.args.yIN ?? [] as yId}
+					{@const outKey = 'dlogy_' + yId}
+					{@const yOutId = p.args.out[outKey]}
+					{#if yOutId >= 0}
+						{@const yout = getColumnById(yOutId)}
+						{#if yout}
+							{@const yResult = dlData?.y_results?.[yId]}
+							{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+							<div class="tp-output-row">
+								<span class="tp-output-label">{srcName}</span>
+								<ColumnComponent col={yout} />
+								{#if yResult}
+									{@render dlogStats(yResult, srcName)}
+								{/if}
+							</div>
+						{/if}
 					{/if}
-				{/if}
-			{/each}
-			{#each Object.entries(dlData?.y_results ?? {}) as [yId, yResult]}
-				{@const srcName = getColumnById(Number(yId))?.name ?? yId}
-				<div class="div-line"></div>
-				<p><strong>{srcName}</strong></p>
-				{@render dlogStats(yResult, srcName)}
-			{/each}
+				{/each}
+			</div>
 		{:else if p.args.valid}
 			<p>Preview:</p>
 			{#each Object.entries(dlData?.y_results ?? {}) as [yId, yResult]}
@@ -594,3 +596,26 @@
 		{/if}
 	</div>
 </div>
+
+<style>
+	.tp-outputs {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin-top: 0.25rem;
+	}
+
+	.tp-output-row {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		border-left: 2px solid var(--color-lightness-85);
+		padding-left: 0.5rem;
+	}
+
+	.tp-output-label {
+		font-size: 11px;
+		color: var(--color-lightness-45, #666);
+		font-style: italic;
+	}
+</style>

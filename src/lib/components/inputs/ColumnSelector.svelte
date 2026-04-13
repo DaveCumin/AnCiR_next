@@ -66,7 +66,9 @@
 					const ref = core.tables[t].processes[p].args.out[key];
 					if (ref !== -1 && !excludeColIds.includes(ref)) {
 						const processCol = getColumnById(ref);
-						out.set(core.tables[t].name + ' : ' + processCol.name, processCol.id);
+						if (processCol) {
+							out.set(core.tables[t].name + ' : ' + processCol.name, processCol.id);
+						}
 					}
 				});
 			}
@@ -87,7 +89,7 @@
 </script>
 
 {#if multiple}
-	<select bind:value onchange={(e) => onChange(e.target.value)} multiple>
+	<select bind:value onchange={() => onChange(value)} multiple>
 		{#each Array.from(options.entries()) as [key, val] (val)}
 			<option value={val}>{key}</option>
 		{/each}

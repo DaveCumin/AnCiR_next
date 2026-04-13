@@ -24,7 +24,7 @@ beforeEach(() => {
 	Object.keys(mockColumns).forEach((k) => delete mockColumns[k]);
 });
 
-const preview = { trendx: -1, trendy: -1 };
+const preview = { trendx: -1 };
 
 describe('trendfit', () => {
 	it('returns invalid when inputs are -1', () => {
@@ -39,8 +39,8 @@ describe('trendfit', () => {
 		mockColumns[2] = { type: 'number', getData: () => y };
 		const [result, valid] = trendfit({ xIN: 1, yIN: 2, model: 'linear', out: preview, outputX: -1 });
 		expect(valid).toBe(true);
-		expect(result.fittedData.fitted).toHaveLength(x.length);
-		result.fittedData.fitted.forEach((v, i) => expect(v).toBeCloseTo(y[i], 3));
+		expect(result.y_results[2].fittedData.fitted).toHaveLength(x.length);
+		result.y_results[2].fittedData.fitted.forEach((v, i) => expect(v).toBeCloseTo(y[i], 3));
 	});
 
 	it('fits a polynomial model', () => {
@@ -50,6 +50,6 @@ describe('trendfit', () => {
 		mockColumns[2] = { type: 'number', getData: () => y };
 		const [result, valid] = trendfit({ xIN: 1, yIN: 2, model: 'polynomial', polyDegree: 2, out: preview, outputX: -1 });
 		expect(valid).toBe(true);
-		expect(result.fittedData.rSquared).toBeCloseTo(1, 4);
+		expect(result.y_results[2].fittedData.rSquared).toBeCloseTo(1, 4);
 	});
 });

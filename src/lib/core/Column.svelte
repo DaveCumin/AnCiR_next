@@ -292,7 +292,7 @@
 			let out = [];
 			//if there is a reference, then just get that data
 			if (this.refId != null) {
-				out = getColumnById(this.refId).getData();
+				out = getColumnById(this.refId)?.getData();
 			} else {
 				//deal with compressed data
 				if (this.compression === 'awd') {
@@ -515,7 +515,7 @@
 				class="clps-title-container"
 				onclick={(e) => e.preventDefault()}
 				onkeydown={(e) => {
-					if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+					if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) e.preventDefault();
 				}}
 			>
 				<!-- <div class="column-indicator"></div> -->

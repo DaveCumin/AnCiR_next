@@ -12,7 +12,7 @@ beforeEach(() => {
 	Object.keys(mockColumns).forEach((k) => delete mockColumns[k]);
 });
 
-const preview = { smoothedx: -1, smoothedy: -1 };
+const preview = { smoothedx: -1 };
 
 describe('smootheddata', () => {
 	it('returns invalid when inputs are -1', () => {
@@ -33,7 +33,7 @@ describe('smootheddata', () => {
 			out: preview
 		});
 		expect(valid).toBe(true);
-		expect(result.y_out).toHaveLength(y.length);
+		expect(result.y_results[2]).toHaveLength(y.length);
 	});
 
 	it('output x matches input x', () => {

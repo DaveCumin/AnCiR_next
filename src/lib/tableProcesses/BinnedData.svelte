@@ -103,16 +103,29 @@
 
 	let { p = $bindable() } = $props();
 
-	// Backward compat: convert legacy single yIN to array
+	// --- Backward compat ---
+	// Convert legacy single yIN number to array
 	if (typeof p.args.yIN === 'number') {
 		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
+	}
+	// Migrate old 'binnedy' output key to per-Y format ('binnedy_{yId}')
+	// This preserves the column ID so downstream references stay linked
+	if (p.args.out.binnedy != null) {
+		if (p.args.out.binnedy >= 0 && p.args.yIN.length > 0) {
+			p.args.out['binnedy_' + p.args.yIN[0]] = p.args.out.binnedy;
+		}
+		delete p.args.out.binnedy;
 	}
 
 	let binnedData = $state();
 	let previewStart = $state(1);
-	let selectedYIds = $state(p.args.yIN ?? []);
+	let differentstepsize = $state(false);
+	let mounted = $state(false);
 
-	// Reactivity
+	// Track previous Y IDs to detect what changed (non-reactive)
+	let prevYIds = [...(p.args.yIN ?? [])].map(Number);
+
+	// Reactivity — mirrors original pattern
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	let getHash = $derived.by(() => {
 		let h = '';
@@ -125,8 +138,9 @@
 		return h;
 	});
 	let lastHash = '';
-	let mounted = $state(false);
 
+	// Single data effect — mirrors original pattern
+	// Only recomputes when data or params change; does NOT create/remove columns
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
@@ -139,29 +153,22 @@
 		}
 	});
 
-	// Watch for changes to selectedYIds and reconcile output columns
-	$effect(() => {
-		const newIds = selectedYIds;
-		if (!mounted) return;
-		untrack(() => {
-			onYSelectionChange(newIds);
-		});
-	});
+	// Called when Y selection changes in the multi-select.
+	// bind:value has already updated p.args.yIN, so we compare against prevYIds.
+	function onYSelectionChange() {
+		const newIds = (p.args.yIN ?? []).map(Number).filter((id) => id >= 0);
+		const newSet = new Set(newIds);
+		const oldSet = new Set(prevYIds);
 
-	function onYSelectionChange(newIds) {
-		const newIdSet = new Set(newIds.map(Number));
-		const oldIds = p.args.yIN ?? [];
-		if (
-			newIds.length === oldIds.length &&
-			[...newIdSet].every((id) => oldIds.map(Number).includes(id))
-		)
-			return;
+		// Skip if no actual change
+		if (newIds.length === prevYIds.length && newIds.every((id) => oldSet.has(id))) return;
 
-		for (const oldId of oldIds) {
-			if (!newIdSet.has(Number(oldId))) {
+		// Remove output columns for deselected Y inputs
+		for (const oldId of prevYIds) {
+			if (!newSet.has(oldId)) {
 				const outKey = 'binnedy_' + oldId;
 				const outColId = p.args.out[outKey];
-				if (outColId !== undefined && outColId >= 0) {
+				if (outColId != null && outColId >= 0) {
 					core.rawData.delete(outColId);
 					removeColumn(outColId);
 				}
@@ -169,11 +176,12 @@
 			}
 		}
 
+		// Create output columns for newly selected Y inputs
 		for (const newId of newIds) {
 			const outKey = 'binnedy_' + newId;
-			if (p.args.out[outKey] === undefined || p.args.out[outKey] === -1) {
+			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
 				if (p.parent) {
-					const srcName = getColumnById(Number(newId))?.name ?? String(newId);
+					const srcName = getColumnById(newId)?.name ?? String(newId);
 					const yCol = new Column({});
 					yCol.name = 'bin_' + srcName + '_' + p.id;
 					pushObj(yCol);
@@ -183,16 +191,18 @@
 			}
 		}
 
-		p.args.yIN = [...newIds].map(Number);
+		// Update tracking
+		prevYIds = [...newIds];
+
+		// Recompute
 		getBinnedData();
 	}
 
 	function getBinnedData() {
 		previewStart = 1;
 		[binnedData, p.args.valid] = binneddata(p.args, differentstepsize);
+		lastHash = getHash;
 	}
-
-	let differentstepsize = $state(false);
 
 	// Exclude own output column IDs from the Y selector
 	let yExcludeIds = $derived.by(() => {
@@ -235,7 +245,12 @@
 		</div>
 		<div class="control-input">
 			<p>Y columns</p>
-			<ColumnSelector bind:value={selectedYIds} excludeColIds={yExcludeIds} multiple={true} />
+			<ColumnSelector
+				bind:value={p.args.yIN}
+				excludeColIds={yExcludeIds}
+				multiple={true}
+				onChange={onYSelectionChange}
+			/>
 		</div>
 	</div>
 </div>
@@ -296,17 +311,25 @@
 			{#if p.args.valid && p.args.out.binnedx != -1}
 				{@const xout = getColumnById(p.args.out.binnedx)}
 				<div class="tableProcess-label"><span>Output</span></div>
-				<ColumnComponent col={xout} />
-				{#each p.args.yIN ?? [] as yId}
-					{@const outKey = 'binnedy_' + yId}
-					{@const yOutId = p.args.out[outKey]}
-					{#if yOutId >= 0}
-						{@const yout = getColumnById(yOutId)}
-						{#if yout}
-							<ColumnComponent col={yout} />
+				<div class="tp-outputs">
+					<div class="tp-output-row">
+						<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
+						<ColumnComponent col={xout} />
+					</div>
+					{#each p.args.yIN ?? [] as yId}
+						{@const outKey = 'binnedy_' + yId}
+						{@const yOutId = p.args.out[outKey]}
+						{#if yOutId >= 0}
+							{@const yout = getColumnById(yOutId)}
+							{#if yout}
+								<div class="tp-output-row">
+									<span class="tp-output-label">{getColumnById(Number(yId))?.name ?? yId}</span>
+									<ColumnComponent col={yout} />
+								</div>
+							{/if}
 						{/if}
-					{/if}
-				{/each}
+					{/each}
+				</div>
 			{:else if p.args.valid && binnedData?.bins?.length}
 				{@const totalRows = binnedData.bins.length}
 				{@const yIds = Object.keys(binnedData.y_results)}
@@ -341,3 +364,26 @@
 		{/key}
 	</div>
 </div>
+
+<style>
+	.tp-outputs {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin-top: 0.25rem;
+	}
+
+	.tp-output-row {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		border-left: 2px solid var(--color-lightness-85);
+		padding-left: 0.5rem;
+	}
+
+	.tp-output-label {
+		font-size: 11px;
+		color: var(--color-lightness-45, #666);
+		font-style: italic;
+	}
+</style>

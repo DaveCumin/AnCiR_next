@@ -13,11 +13,14 @@ beforeEach(() => {
 	Object.keys(mockColumns).forEach((k) => delete mockColumns[k]);
 });
 
-const preview = { binnedx: -1, binnedy: -1 };
+const preview = { binnedx: -1 };
 
 describe('binneddata', () => {
 	it('returns invalid when inputs are missing', () => {
-		const [, valid] = binneddata({ xIN: -1, yIN: -1, binSize: 1, binStart: 0, out: preview }, false);
+		const [, valid] = binneddata(
+			{ xIN: -1, yIN: -1, binSize: 1, binStart: 0, out: preview },
+			false
+		);
 		expect(valid).toBe(false);
 	});
 
@@ -37,7 +40,7 @@ describe('binneddata', () => {
 		);
 		expect(valid).toBe(true);
 		expect(result.bins.length).toBeGreaterThan(0);
-		expect(result.bins.length).toBe(result.y_out.length);
+		expect(result.bins.length).toBe(result.y_results[2].length);
 	});
 
 	it('mean aggregation averages values within each bin', () => {
@@ -48,6 +51,6 @@ describe('binneddata', () => {
 			{ xIN: 1, yIN: 2, binSize: 1, binStart: 0, aggFunction: 'mean', out: preview },
 			false
 		);
-		expect(result.y_out[0]).toBeCloseTo(15, 6);
+		expect(result.y_results[2][0]).toBeCloseTo(15, 6);
 	});
 });

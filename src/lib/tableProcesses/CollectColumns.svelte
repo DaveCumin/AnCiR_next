@@ -51,6 +51,43 @@
 			}
 		}
 
+		// Compute row-wise aggregates
+		for (const agg of argsIN.aggregates ?? []) {
+			const { method, excludedColIds = [], outColId } = agg;
+			if (outColId === undefined || Number(outColId) < 0) continue;
+
+			const includedColIds = colIds.filter((id) => !excludedColIds.includes(id));
+			if (includedColIds.length === 0) continue;
+
+			const nRows = result[includedColIds[0]]?.length ?? 0;
+			const aggData = [];
+
+			for (let i = 0; i < nRows; i++) {
+				const rowVals = includedColIds
+					.map((id) => result[id][i])
+					.filter((v) => v != null && !isNaN(v));
+				let aggVal;
+				if (method === 'mean') {
+					aggVal = rowVals.reduce((a, b) => a + b, 0) / rowVals.length;
+				} else if (method === 'min') {
+					aggVal = Math.min(...rowVals);
+				} else if (method === 'max') {
+					aggVal = Math.max(...rowVals);
+				} else if (method === 'sum') {
+					aggVal = rowVals.reduce((a, b) => a + b, 0);
+				}
+				aggData.push(aggVal);
+			}
+
+			core.rawData.set(outColId, aggData);
+			const aggCol = getColumnById(outColId);
+			if (aggCol) {
+				aggCol.data = outColId;
+				aggCol.type = 'number';
+				aggCol.tableProcessGUId = crypto.randomUUID();
+			}
+		}
+
 		return [result, colIds.length > 0];
 	}
 </script>

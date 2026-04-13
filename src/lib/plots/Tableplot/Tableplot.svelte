@@ -447,7 +447,7 @@
 						class="clps-title-container"
 						onclick={(e) => e.preventDefault()}
 						onkeydown={(e) => {
-							if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+							if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) e.preventDefault();
 						}}
 					>
 						<div class="clps-title">
@@ -517,7 +517,7 @@
 							class="clps-title-container"
 							onclick={(e) => e.preventDefault()}
 							onkeydown={(e) => {
-								if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+								if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) e.preventDefault();
 							}}
 						>
 							<div class="clps-title">
