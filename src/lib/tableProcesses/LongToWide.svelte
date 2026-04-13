@@ -309,9 +309,13 @@
 
 	// ─── Table process management ──────────────────────────────────────────────
 
+	// ─── ColumnSelector registration key helpers ─────────────────────────────
+	function _tpXKey(tp) { return 'tp_' + tp.id + '_x'; }
+	function _tpYKey(tp, colId) { return 'tp_' + tp.id + '_y_' + colId; }
+
 	function addTableProcess(type) {
 		if (!type) return;
-		const tp = { type, excludedColIds: [], args: { ...TP_DEFAULTS[type] }, out: {} };
+		const tp = { id: crypto.randomUUID(), type, excludedColIds: [], args: { ...TP_DEFAULTS[type] }, xOutId: -1, out: {} };
 		p.args.tableProcesses = [...p.args.tableProcesses, tp];
 		const newIdx = p.args.tableProcesses.length - 1;
 		reconcileTableProcessOutputCols(newIdx);
@@ -320,9 +324,13 @@
 
 	function removeTableProcess(idx) {
 		const tp = p.args.tableProcesses[idx];
-		for (const outPair of Object.values(tp.out ?? {})) {
-			if (outPair.xOutId >= 0) { core.rawData.delete(outPair.xOutId); removeColumn(outPair.xOutId); }
-			if (outPair.yOutId >= 0) { core.rawData.delete(outPair.yOutId); removeColumn(outPair.yOutId); }
+		// Remove shared x column
+		if (tp.xOutId >= 0) { core.rawData.delete(tp.xOutId); removeColumn(tp.xOutId); }
+		if (tp.id) delete p.args.out[_tpXKey(tp)];
+		// Remove per-column y columns
+		for (const [colIdStr, yOutId] of Object.entries(tp.out ?? {})) {
+			if (yOutId >= 0) { core.rawData.delete(yOutId); removeColumn(yOutId); }
+			if (tp.id) delete p.args.out[_tpYKey(tp, colIdStr)];
 		}
 		p.args.tableProcesses = p.args.tableProcesses.filter((_, i) => i !== idx);
 		tableProcessResults = tableProcessResults.filter((_, i) => i !== idx);
@@ -341,33 +349,52 @@
 
 	function reconcileTableProcessOutputCols(tpIdx) {
 		const tp = p.args.tableProcesses[tpIdx];
+		// Ensure tp has a stable UUID
+		if (!tp.id) tp.id = crypto.randomUUID();
+
 		const activeValueColIds = (p.args.categories ?? [])
 			.map((cat) => p.args.out?.['value_' + cat])
 			.filter((id) => id !== undefined && id >= 0);
 
-		// Add output col pairs for newly-appeared value columns
+		// Ensure shared x column exists (one per table process)
+		if ((tp.xOutId === undefined || tp.xOutId === -1) && p.parent) {
+			const xCol = new Column({});
+			xCol.name = `${tp.type}x_${p.id}`;
+			pushObj(xCol);
+			p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
+			tp.xOutId = xCol.id;
+		} else if (tp.xOutId === undefined) {
+			tp.xOutId = -1;
+		}
+		// Register shared x in p.args.out so ColumnSelector can find it
+		if (tp.xOutId >= 0) p.args.out[_tpXKey(tp)] = tp.xOutId;
+
+		// Add y column for newly-appeared value columns
 		for (const colId of activeValueColIds) {
-			if (!tp.out[colId]) {
+			const existing = tp.out[colId];
+			if (existing === undefined || existing === -1) {
 				if (p.parent) {
-					const xCol = new Column({});
-					xCol.name = `${tp.type}x_${tpIdx}_${p.id}`;
+					const srcName = getColumnById(colId)?.name ?? String(colId);
 					const yCol = new Column({});
-					yCol.name = `${tp.type}y_${tpIdx}_${p.id}`;
-					pushObj(xCol);
+					yCol.name = srcName + '_biny';
 					pushObj(yCol);
-					p.parent.columnRefs = [xCol.id, yCol.id, ...p.parent.columnRefs];
-					tp.out[colId] = { xOutId: xCol.id, yOutId: yCol.id };
+					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
+					tp.out[colId] = yCol.id;
+					p.args.out[_tpYKey(tp, colId)] = yCol.id;
 				} else {
-					tp.out[colId] = { xOutId: -1, yOutId: -1 };
+					tp.out[colId] = -1;
 				}
+			} else if (existing >= 0) {
+				// Already exists — ensure registered in p.args.out
+				p.args.out[_tpYKey(tp, colId)] = existing;
 			}
 		}
 
-		// Remove output col pairs for value columns that are gone
-		for (const [colIdStr, outPair] of Object.entries(tp.out)) {
+		// Remove y columns for value columns that are gone
+		for (const [colIdStr, yOutId] of Object.entries(tp.out)) {
 			if (!activeValueColIds.includes(Number(colIdStr))) {
-				if (outPair.xOutId >= 0) { core.rawData.delete(outPair.xOutId); removeColumn(outPair.xOutId); }
-				if (outPair.yOutId >= 0) { core.rawData.delete(outPair.yOutId); removeColumn(outPair.yOutId); }
+				if (yOutId >= 0) { core.rawData.delete(yOutId); removeColumn(yOutId); }
+				delete p.args.out[_tpYKey(tp, colIdStr)];
 				delete tp.out[colIdStr];
 			}
 		}
@@ -398,16 +425,17 @@
 				.map((cat) => p.args.out?.['value_' + cat])
 				.filter((id) => id !== undefined && id >= 0 && !excluded.includes(id));
 
+			let xWritten = false;
 			return activeValueColIds.map((colId) => {
-				const outPair = tp.out?.[colId];
-				if (!outPair || outPair.xOutId === -1 || outPair.yOutId === -1) {
-					return { colId, valid: false };
-				}
+				const yOutId = tp.out?.[colId];
 				const col = getColumnById(colId);
 				if (!col) return { colId, valid: false };
 
 				const values = col.getData();
-				const res = applyOneTableProcess(tp, times_hrs, values, originTime_ms, isTimeCol, outPair);
+				// Write shared x only for the first column that succeeds
+				const writeX = !xWritten;
+				const res = applyOneTableProcess(tp, times_hrs, values, originTime_ms, isTimeCol, tp.xOutId, yOutId ?? -1, writeX);
+				if (res.valid) xWritten = true;
 				return { colId, ...res };
 			});
 		});
@@ -415,7 +443,8 @@
 		untrack(() => { tableProcessResults = newResults; });
 	}
 
-	function applyOneTableProcess(tp, times_hrs, values, originTime_ms, isTimeCol, outPair) {
+	// xOutId / yOutId may be -1 in preview mode — computation still runs, writes are skipped
+	function applyOneTableProcess(tp, times_hrs, values, originTime_ms, isTimeCol, xOutId, yOutId, writeX) {
 		// Filter out NaN / null pairs
 		const validIdx = times_hrs
 			.map((t, i) => (!isNaN(t) && values[i] != null && !isNaN(values[i])) ? i : -1)
@@ -503,24 +532,31 @@
 
 		if (!xOut || !yOut) return { valid: false };
 
-		// Write to output columns
-		const xColOut = getColumnById(outPair.xOutId);
-		const yColOut = getColumnById(outPair.yOutId);
-		if (!xColOut || !yColOut) return { valid: false };
-
 		const xOutFinal = isTimeCol ? xOut.map((h) => originTime_ms + h * 3600000) : xOut;
-		core.rawData.set(outPair.xOutId, xOutFinal);
-		xColOut.data = outPair.xOutId;
-		xColOut.type = isTimeCol ? 'time' : 'number';
-		if (isTimeCol) xColOut.timeFormat = null;
-
-		core.rawData.set(outPair.yOutId, yOut);
-		yColOut.data = outPair.yOutId;
-		yColOut.type = 'number';
-
 		const hash = crypto.randomUUID();
-		xColOut.tableProcessGUId = hash;
-		yColOut.tableProcessGUId = hash;
+
+		// Write shared x column (only for the first column in this tp)
+		if (writeX && xOutId >= 0) {
+			const xColOut = getColumnById(xOutId);
+			if (xColOut) {
+				core.rawData.set(xOutId, xOutFinal);
+				xColOut.data = xOutId;
+				xColOut.type = isTimeCol ? 'time' : 'number';
+				if (isTimeCol) xColOut.timeFormat = null;
+				xColOut.tableProcessGUId = hash;
+			}
+		}
+
+		// Write per-column y
+		if (yOutId >= 0) {
+			const yColOut = getColumnById(yOutId);
+			if (yColOut) {
+				core.rawData.set(yOutId, yOut);
+				yColOut.data = yOutId;
+				yColOut.type = 'number';
+				yColOut.tableProcessGUId = hash;
+			}
+		}
 
 		return { valid: true, stats };
 	}
@@ -586,6 +622,33 @@
 	onMount(() => {
 		// Backfill tableProcesses for old sessions
 		if (p.args.tableProcesses === undefined) p.args.tableProcesses = [];
+
+		// Migrate old tp structure: { out: { [colId]: { xOutId, yOutId } } }
+		// to new: { id, xOutId, out: { [colId]: yOutId } }
+		for (const tp of p.args.tableProcesses) {
+			if (!tp.id) tp.id = crypto.randomUUID();
+			if (tp.xOutId === undefined) {
+				// Find first valid xOutId from old structure
+				const firstPair = Object.values(tp.out ?? {}).find((v) => v && typeof v === 'object');
+				tp.xOutId = firstPair?.xOutId ?? -1;
+				// Flatten out to just yOutIds; remove duplicate x columns
+				const newOut = {};
+				let first = true;
+				for (const [colIdStr, pair] of Object.entries(tp.out ?? {})) {
+					if (pair && typeof pair === 'object') {
+						if (!first && pair.xOutId >= 0) {
+							core.rawData.delete(pair.xOutId);
+							removeColumn(pair.xOutId);
+						}
+						newOut[colIdStr] = pair.yOutId ?? -1;
+						first = false;
+					} else {
+						newOut[colIdStr] = pair; // already a number (yOutId)
+					}
+				}
+				tp.out = newOut;
+			}
+		}
 
 		// Backfill preProcesses for old sessions
 		if (p.args.preProcesses === undefined) {
@@ -964,20 +1027,23 @@
 						</div>
 					{/if}
 
-					<!-- Per-column output columns and stats -->
+					<!-- Shared x output + per-column y outputs and stats -->
 					{#if tableProcessResults[tpIdx]?.some((r) => r.valid)}
 						<div class="tp-outputs">
-							{#each tableProcessResults[tpIdx] as colResult}
+							{#if tp.xOutId >= 0}
+								<div class="tp-output-row">
+									<span class="tp-output-label">x (shared)</span>
+									<ColumnComponent col={getColumnById(tp.xOutId)} />
+								</div>
+							{/if}
+							{#each tableProcessResults[tpIdx] as colResult (colResult.colId)}
 								{#if colResult.valid}
-									{@const outPair = tp.out?.[colResult.colId]}
+									{@const yOutId = tp.out?.[colResult.colId]}
 									{@const srcName = getColumnById(colResult.colId)?.name ?? ''}
 									<div class="tp-output-row">
 										<span class="tp-output-label">{srcName}</span>
-										{#if outPair?.xOutId >= 0}
-											<ColumnComponent col={getColumnById(outPair.xOutId)} />
-										{/if}
-										{#if outPair?.yOutId >= 0}
-											<ColumnComponent col={getColumnById(outPair.yOutId)} />
+										{#if yOutId >= 0}
+											<ColumnComponent col={getColumnById(yOutId)} />
 										{/if}
 										{#if colResult.stats?.rmse != null && !isNaN(colResult.stats.rmse)}
 											<p class="tp-stat">RMSE: {colResult.stats.rmse.toFixed(3)}{colResult.stats.r2 != null ? ` · R²: ${colResult.stats.r2.toFixed(3)}` : ''}</p>
