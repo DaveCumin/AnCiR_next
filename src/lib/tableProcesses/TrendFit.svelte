@@ -227,32 +227,54 @@
 	});
 
 	onMount(() => {
-		const xKey = p.args.out.trendx;
-		if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
-			const y_results = {};
-			for (const yId of p.args.yIN ?? []) {
-				const outKey = 'trendy_' + yId;
-				const yOutId = p.args.out[outKey];
-				if (yOutId >= 0 && core.rawData.has(yOutId)) {
-					y_results[yId] = {
-						fittedData: {
-							fitted: core.rawData.get(yOutId),
-							parameters: {},
-							rmse: NaN,
-							rSquared: NaN
-						},
-						predicted: null,
-						t: core.rawData.get(xKey)
-					};
+		// Create output columns for any Y inputs that don't have them yet
+		let needsCompute = false;
+		for (const yId of p.args.yIN ?? []) {
+			const outKey = 'trendy_' + yId;
+			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
+				if (p.parent) {
+					const srcName = getColumnById(Number(yId))?.name ?? String(yId);
+					const yCol = new Column({});
+					yCol.name = 'trend_' + srcName + '_' + p.id;
+					pushObj(yCol);
+					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
+					p.args.out[outKey] = yCol.id;
+					needsCompute = true;
 				}
 			}
-			trendData = {
-				t: core.rawData.get(xKey),
-				outputXData: null,
-				y_results
-			};
-			p.args.valid = true;
-			lastHash = getHash;
+		}
+		prevYIds = [...(p.args.yIN ?? [])].map(Number);
+
+		if (needsCompute) {
+			getTrend();
+		} else {
+			const xKey = p.args.out.trendx;
+			if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
+				const y_results = {};
+				for (const yId of p.args.yIN ?? []) {
+					const outKey = 'trendy_' + yId;
+					const yOutId = p.args.out[outKey];
+					if (yOutId >= 0 && core.rawData.has(yOutId)) {
+						y_results[yId] = {
+							fittedData: {
+								fitted: core.rawData.get(yOutId),
+								parameters: {},
+								rmse: NaN,
+								rSquared: NaN
+							},
+							predicted: null,
+							t: core.rawData.get(xKey)
+						};
+					}
+				}
+				trendData = {
+					t: core.rawData.get(xKey),
+					outputXData: null,
+					y_results
+				};
+				p.args.valid = true;
+				lastHash = getHash;
+			}
 		}
 		mounted = true;
 	});

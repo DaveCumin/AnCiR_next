@@ -296,27 +296,49 @@
 	});
 
 	onMount(() => {
-		const xKey = p.args.out.rectwavex;
-		if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
-			const y_results = {};
-			for (const yId of p.args.yIN ?? []) {
-				const outKey = 'rectwavey_' + yId;
-				const yOutId = p.args.out[outKey];
-				if (yOutId >= 0 && core.rawData.has(yOutId)) {
-					y_results[yId] = {
-						fitResult: null,
-						fitted: core.rawData.get(yOutId),
-						t: core.rawData.get(xKey)
-					};
+		// Create output columns for any Y inputs that don't have them yet
+		let needsCompute = false;
+		for (const yId of p.args.yIN ?? []) {
+			const outKey = 'rectwavey_' + yId;
+			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
+				if (p.parent) {
+					const srcName = getColumnById(Number(yId))?.name ?? String(yId);
+					const yCol = new Column({});
+					yCol.name = 'rectwave_' + srcName + '_' + p.id;
+					pushObj(yCol);
+					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
+					p.args.out[outKey] = yCol.id;
+					needsCompute = true;
 				}
 			}
-			rwave = {
-				t: core.rawData.get(xKey),
-				outputXData: null,
-				y_results,
-				originTime_ms: null
-			};
-			p.args.valid = true;
+		}
+		prevYIds = [...(p.args.yIN ?? [])].map(Number);
+
+		if (needsCompute) {
+			getRwave();
+		} else {
+			const xKey = p.args.out.rectwavex;
+			if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
+				const y_results = {};
+				for (const yId of p.args.yIN ?? []) {
+					const outKey = 'rectwavey_' + yId;
+					const yOutId = p.args.out[outKey];
+					if (yOutId >= 0 && core.rawData.has(yOutId)) {
+						y_results[yId] = {
+							fitResult: null,
+							fitted: core.rawData.get(yOutId),
+							t: core.rawData.get(xKey)
+						};
+					}
+				}
+				rwave = {
+					t: core.rawData.get(xKey),
+					outputXData: null,
+					y_results,
+					originTime_ms: null
+				};
+				p.args.valid = true;
+			}
 		}
 		mounted = true;
 	});

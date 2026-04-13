@@ -331,31 +331,53 @@
 	});
 
 	onMount(() => {
-		const xKey = p.args.out.cosinorx;
-		if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
-			const y_results = {};
-			for (const yId of p.args.yIN ?? []) {
-				const outKey = 'cosinory_' + yId;
-				const yOutId = p.args.out[outKey];
-				if (yOutId >= 0 && core.rawData.has(yOutId)) {
-					y_results[yId] = {
-						fittedData: {
-							fitted: core.rawData.get(yOutId),
-							parameters: { cosines: [] },
-							rmse: NaN
-						},
-						fixedStats: null,
-						predicted: null,
-						t: core.rawData.get(xKey)
-					};
+		// Create output columns for any Y inputs that don't have them yet
+		let needsCompute = false;
+		for (const yId of p.args.yIN ?? []) {
+			const outKey = 'cosinory_' + yId;
+			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
+				if (p.parent) {
+					const srcName = getColumnById(Number(yId))?.name ?? String(yId);
+					const yCol = new Column({});
+					yCol.name = 'cosinor_' + srcName + '_' + p.id;
+					pushObj(yCol);
+					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
+					p.args.out[outKey] = yCol.id;
+					needsCompute = true;
 				}
 			}
-			cosinorData = {
-				t: core.rawData.get(xKey),
-				outputXData: null,
-				y_results
-			};
-			p.args.valid = true;
+		}
+		prevYIds = [...(p.args.yIN ?? [])].map(Number);
+
+		if (needsCompute) {
+			getCosinor();
+		} else {
+			const xKey = p.args.out.cosinorx;
+			if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
+				const y_results = {};
+				for (const yId of p.args.yIN ?? []) {
+					const outKey = 'cosinory_' + yId;
+					const yOutId = p.args.out[outKey];
+					if (yOutId >= 0 && core.rawData.has(yOutId)) {
+						y_results[yId] = {
+							fittedData: {
+								fitted: core.rawData.get(yOutId),
+								parameters: { cosines: [] },
+								rmse: NaN
+							},
+							fixedStats: null,
+							predicted: null,
+							t: core.rawData.get(xKey)
+						};
+					}
+				}
+				cosinorData = {
+					t: core.rawData.get(xKey),
+					outputXData: null,
+					y_results
+				};
+				p.args.valid = true;
+			}
 		}
 		lastHash = getHash;
 		mounted = true;

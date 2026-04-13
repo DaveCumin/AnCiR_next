@@ -513,20 +513,42 @@
 	});
 
 	onMount(() => {
-		// If data already exists (e.g. imported from JSON), use it
-		const xKey = p.args.out.smoothedx;
-		if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
-			const y_results = {};
-			for (const yId of p.args.yIN ?? []) {
-				const outKey = 'smoothedy_' + yId;
-				const yOutId = p.args.out[outKey];
-				if (yOutId >= 0 && core.rawData.has(yOutId)) {
-					y_results[yId] = core.rawData.get(yOutId);
+		// Create output columns for any Y inputs that don't have them yet
+		// (e.g. when the process was created programmatically with yIN pre-set)
+		let needsCompute = false;
+		for (const yId of p.args.yIN ?? []) {
+			const outKey = 'smoothedy_' + yId;
+			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
+				if (p.parent) {
+					const srcName = getColumnById(Number(yId))?.name ?? String(yId);
+					const yCol = new Column({});
+					yCol.name = 'smooth_' + srcName + '_' + p.id;
+					pushObj(yCol);
+					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
+					p.args.out[outKey] = yCol.id;
+					needsCompute = true;
 				}
 			}
-			smoothedResult = { x_out: core.rawData.get(xKey), y_results };
-			p.args.valid = true;
-			lastHash = getHash;
+		}
+		prevYIds = [...(p.args.yIN ?? [])].map(Number);
+
+		if (needsCompute) {
+			getSmoothedData();
+		} else {
+			const xKey = p.args.out.smoothedx;
+			if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
+				const y_results = {};
+				for (const yId of p.args.yIN ?? []) {
+					const outKey = 'smoothedy_' + yId;
+					const yOutId = p.args.out[outKey];
+					if (yOutId >= 0 && core.rawData.has(yOutId)) {
+						y_results[yId] = core.rawData.get(yOutId);
+					}
+				}
+				smoothedResult = { x_out: core.rawData.get(xKey), y_results };
+				p.args.valid = true;
+				lastHash = getHash;
+			}
 		}
 		mounted = true;
 	});

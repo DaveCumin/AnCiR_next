@@ -396,16 +396,17 @@
 					name: 'BinnedData',
 					args: {
 						xIN: d0id,
-						yIN: d1id,
+						yIN: [d1id],
 						binSize: 2,
 						binStart: 0,
 						stepSize: 2,
-						out: { binnedx: -1, binnedy: -1 }
+						out: { binnedx: -1 }
 					}
 				},
 				core.tables[1]
 			)
 		);
+		console.log($state.snapshot(core.tables[1]));
 
 		appState.loadingState.loadingMsg = 'Making scatterplot...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
