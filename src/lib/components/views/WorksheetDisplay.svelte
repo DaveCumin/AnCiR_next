@@ -137,7 +137,8 @@
 						selectPlot(e, plot.id);
 					}}
 					onkeydown={(e) => {
-						if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) e.preventDefault();
+						if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget)
+							e.preventDefault();
 					}}
 				>
 					<div class="drag-handle" title="Drag to reorder">⠇</div>

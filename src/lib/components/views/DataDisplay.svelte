@@ -44,7 +44,6 @@
 		showNewCol = true;
 	}
 
-
 	let showSingleTableDropdown = $state(false);
 
 	function openSingleTableDropdown(e, id) {
@@ -85,7 +84,8 @@
 					class="clps-title-container"
 					onclick={(e) => e.preventDefault()}
 					onkeydown={(e) => {
-						if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) e.preventDefault();
+						if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget)
+							e.preventDefault();
 					}}
 				>
 					<div class="clps-title">
@@ -118,9 +118,19 @@
 							}}
 						>
 							{#if openClps[table.id]}
-								<Icon name="caret-down" width={20} height={20} className="first-detail-title-icon" />
+								<Icon
+									name="caret-down"
+									width={20}
+									height={20}
+									className="first-detail-title-icon"
+								/>
 							{:else}
-								<Icon name="caret-right" width={20} height={20} className="first-detail-title-icon" />
+								<Icon
+									name="caret-right"
+									width={20}
+									height={20}
+									className="first-detail-title-icon"
+								/>
 							{/if}
 						</button>
 					</div>

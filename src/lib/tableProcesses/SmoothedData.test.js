@@ -16,7 +16,14 @@ const preview = { smoothedx: -1 };
 
 describe('smootheddata', () => {
 	it('returns invalid when inputs are -1', () => {
-		const [, valid] = smootheddata({ xIN: -1, yIN: -1, smootherType: 'moving', movingAvgWindowSize: 3, movingAvgType: 'simple', out: preview });
+		const [, valid] = smootheddata({
+			xIN: -1,
+			yIN: -1,
+			smootherType: 'moving',
+			movingAvgWindowSize: 3,
+			movingAvgType: 'simple',
+			out: preview
+		});
 		expect(valid).toBe(false);
 	});
 
@@ -26,7 +33,8 @@ describe('smootheddata', () => {
 		mockColumns[1] = { type: 'number', getData: () => x };
 		mockColumns[2] = { type: 'number', getData: () => y };
 		const [result, valid] = smootheddata({
-			xIN: 1, yIN: 2,
+			xIN: 1,
+			yIN: 2,
 			smootherType: 'moving',
 			movingAvgWindowSize: 3,
 			movingAvgType: 'simple',
@@ -42,7 +50,8 @@ describe('smootheddata', () => {
 		mockColumns[1] = { type: 'number', getData: () => x };
 		mockColumns[2] = { type: 'number', getData: () => y };
 		const [result] = smootheddata({
-			xIN: 1, yIN: 2,
+			xIN: 1,
+			yIN: 2,
 			smootherType: 'moving',
 			movingAvgWindowSize: 3,
 			movingAvgType: 'simple',

@@ -37,7 +37,13 @@ describe('trendfit', () => {
 		const y = x.map((xi) => 2 * xi + 1);
 		mockColumns[1] = { type: 'number', getData: () => x };
 		mockColumns[2] = { type: 'number', getData: () => y };
-		const [result, valid] = trendfit({ xIN: 1, yIN: 2, model: 'linear', out: preview, outputX: -1 });
+		const [result, valid] = trendfit({
+			xIN: 1,
+			yIN: 2,
+			model: 'linear',
+			out: preview,
+			outputX: -1
+		});
 		expect(valid).toBe(true);
 		expect(result.y_results[2].fittedData.fitted).toHaveLength(x.length);
 		result.y_results[2].fittedData.fitted.forEach((v, i) => expect(v).toBeCloseTo(y[i], 3));
@@ -48,7 +54,14 @@ describe('trendfit', () => {
 		const y = x.map((xi) => xi * xi);
 		mockColumns[1] = { type: 'number', getData: () => x };
 		mockColumns[2] = { type: 'number', getData: () => y };
-		const [result, valid] = trendfit({ xIN: 1, yIN: 2, model: 'polynomial', polyDegree: 2, out: preview, outputX: -1 });
+		const [result, valid] = trendfit({
+			xIN: 1,
+			yIN: 2,
+			model: 'polynomial',
+			polyDegree: 2,
+			out: preview,
+			outputX: -1
+		});
 		expect(valid).toBe(true);
 		expect(result.y_results[2].fittedData.rSquared).toBeCloseTo(1, 4);
 	});

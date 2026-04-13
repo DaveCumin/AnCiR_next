@@ -342,7 +342,12 @@
 		</div>
 		<div class="control-input">
 			<p>Y columns</p>
-			<ColumnSelector bind:value={p.args.yIN} excludeColIds={yExcludeIds} multiple={true} onChange={onYSelectionChange} />
+			<ColumnSelector
+				bind:value={p.args.yIN}
+				excludeColIds={yExcludeIds}
+				multiple={true}
+				onChange={onYSelectionChange}
+			/>
 		</div>
 	</div>
 </div>

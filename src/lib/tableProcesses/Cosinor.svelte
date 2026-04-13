@@ -385,7 +385,12 @@
 		<div class="control-input-vertical">
 			<div class="control-input">
 				<p>Y columns</p>
-				<ColumnSelector bind:value={p.args.yIN} excludeColIds={yExcludeIds} multiple={true} onChange={onYSelectionChange} />
+				<ColumnSelector
+					bind:value={p.args.yIN}
+					excludeColIds={yExcludeIds}
+					multiple={true}
+					onChange={onYSelectionChange}
+				/>
 			</div>
 		</div>
 	</div>
@@ -653,17 +658,15 @@
 					)
 				]}
 				data={[
-					xData
-						.slice(previewStart - 1, previewStart + 5)
-						.map((x) =>
-							xIsTime && cosinorData.originTime_ms != null
-								? {
-										isTime: true,
-										raw: formatTimeFromUNIX(cosinorData.originTime_ms + x * 3600000),
-										computed: x.toFixed(2)
-									}
-								: x.toFixed(2)
-						),
+					xData.slice(previewStart - 1, previewStart + 5).map((x) =>
+						xIsTime && cosinorData.originTime_ms != null
+							? {
+									isTime: true,
+									raw: formatTimeFromUNIX(cosinorData.originTime_ms + x * 3600000),
+									computed: x.toFixed(2)
+								}
+							: x.toFixed(2)
+					),
 					...yIds.map((id) => {
 						const yr = cosinorData.y_results[id];
 						const yData = yr.predicted ?? yr.fittedData.fitted;
