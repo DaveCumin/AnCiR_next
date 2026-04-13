@@ -87,13 +87,11 @@
 </script>
 
 {#if multiple}
-	{#key options}
-		<select bind:value onchange={(e) => onChange(e.target.value)} multiple>
-			{#each Array.from(options.entries()) as [key, val] (val)}
-				<option value={val}>{key}</option>
-			{/each}
-		</select>
-	{/key}
+	<select bind:value onchange={(e) => onChange(e.target.value)} multiple>
+		{#each Array.from(options.entries()) as [key, val] (val)}
+			<option value={val}>{key}</option>
+		{/each}
+	</select>
 {:else}
 	{#key options}
 		<select name="columnSelect" onchange={(e) => onChange(e.target.value)} bind:value>

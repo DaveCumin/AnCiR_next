@@ -303,7 +303,7 @@
 					}
 				} else {
 					//get the raw data
-					out = core.rawData.get(this.data);
+					out = core.rawData.get(this.data) ?? [];
 				}
 			}
 
@@ -559,7 +559,12 @@
 						{#if openClps[col.id]}
 							<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />
 						{:else}
-							<Icon name="caret-right" width={20} height={20} className="second-detail-title-icon" />
+							<Icon
+								name="caret-right"
+								width={20}
+								height={20}
+								className="second-detail-title-icon"
+							/>
 						{/if}
 					</button>
 				</div>

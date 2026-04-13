@@ -7,7 +7,7 @@
 
 	export const rectangularwave_defaults = new Map([
 		['xIN', { val: -1 }],
-		['yIN', { val: -1 }],
+		['yIN', { val: [] }],
 		['outputX', { val: -1 }],
 		['fixKappa', { val: false }],
 		['fixedKappa', { val: 5 }],
@@ -15,16 +15,16 @@
 		['fixedPeriod', { val: 24 }],
 		['fixDutyCycle', { val: false }],
 		['fixedDutyCycle', { val: 0.5 }],
-		['out', { rectwavex: { val: -1 }, rectwavey: { val: -1 } }],
+		['out', { rectwavex: { val: -1 } }],
 		['valid', { val: false }]
 	]);
 
 	export function rectangularwave(argsIN) {
 		const xIN = argsIN.xIN;
-		const yIN = argsIN.yIN;
+		let yINs = argsIN.yIN;
+		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
 		const outputXId = argsIN.outputX;
 		const xOUT = argsIN.out.rectwavex;
-		const yOUT = argsIN.out.rectwavey;
 		const fixKappa = argsIN.fixKappa ?? false;
 		const fixedKappa = argsIN.fixedKappa ?? 5;
 		const fixOmega = argsIN.fixOmega ?? false;
@@ -32,53 +32,58 @@
 		const fixDutyCycle = argsIN.fixDutyCycle ?? false;
 		const fixedDutyCycle = argsIN.fixedDutyCycle ?? 0.5;
 
-		let result = null;
-		let valid = false;
+		let result = {
+			t: [],
+			outputXData: null,
+			y_results: {},
+			originTime_ms: null
+		};
+		let anyValid = false;
 
-		const canRun =
-			xIN != -1 &&
-			yIN != -1 &&
-			getColumnById(xIN) &&
-			getColumnById(yIN);
+		const canRunBase = xIN != -1 && getColumnById(xIN) && yINs.length > 0;
+		if (!canRunBase) return [result, false];
 
-		if (canRun) {
-			const tCol = getColumnById(xIN);
-			const yCol = getColumnById(yIN);
+		const tCol = getColumnById(xIN);
+		const t = tCol.type === 'time' ? tCol.hoursSinceStart : tCol.getData();
 
-			const t = tCol.type === 'time' ? tCol.hoursSinceStart : tCol.getData();
+		// Get outputX data if specified
+		let outputXData = null;
+		if (outputXId != -1 && getColumnById(outputXId)) {
+			const outputXCol = getColumnById(outputXId);
+			outputXData = outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
+			outputXData = outputXData.filter((v) => !isNaN(v));
+		}
+
+		// Determine origin time for time columns
+		let originTime_ms = null;
+		if (outputXId != -1) {
+			const outputXColForOrigin = getColumnById(outputXId);
+			if (outputXColForOrigin && outputXColForOrigin.type === 'time') {
+				originTime_ms = outputXColForOrigin.getData()[0];
+			}
+		}
+		if (originTime_ms == null && tCol.type === 'time') {
+			originTime_ms = tCol.getData()[0];
+		}
+
+		result.outputXData = outputXData;
+		result.originTime_ms = originTime_ms;
+
+		const fixedOmega = fixOmega ? (2 * Math.PI) / fixedPeriod : null;
+
+		for (const yId of yINs) {
+			if (yId == null || yId === -1) continue;
+			const yCol = getColumnById(yId);
+			if (!yCol) continue;
+
 			const y = yCol.getData();
-
 			const validIndices = t
 				.map((v, i) => (isNaN(v) || isNaN(y[i]) ? -1 : i))
 				.filter((i) => i !== -1);
-
 			const tt = validIndices.map((i) => t[i]);
 			const yy = validIndices.map((i) => y[i]);
 
-			if (tt.length < 4) return [null, false];
-
-			// Get outputX data if specified
-			let outputXData = null;
-			if (outputXId != -1 && getColumnById(outputXId)) {
-				const outputXCol = getColumnById(outputXId);
-				outputXData =
-					outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
-				outputXData = outputXData.filter((v) => !isNaN(v));
-			}
-
-			// Determine origin time for time columns
-			let originTime_ms = null;
-			if (outputXId != -1) {
-				const outputXColForOrigin = getColumnById(outputXId);
-				if (outputXColForOrigin && outputXColForOrigin.type === 'time') {
-					originTime_ms = outputXColForOrigin.getData()[0];
-				}
-			}
-			if (originTime_ms == null && tCol.type === 'time') {
-				originTime_ms = tCol.getData()[0];
-			}
-
-			const fixedOmega = fixOmega ? (2 * Math.PI) / fixedPeriod : null;
+			if (tt.length < 4) continue;
 
 			const fitResult = fitRectangularWave(tt, yy, {
 				fixKappa,
@@ -90,44 +95,58 @@
 			});
 
 			if (fitResult) {
-				valid = true;
 				const xOutData = outputXData ?? tt;
 				const yOutData = outputXData
 					? evaluateRectWaveAtPoints(fitResult.parameters, outputXData)
 					: fitResult.fitted;
 
-				if (xOUT != -1 && yOUT != -1) {
-					const xColOut = getColumnById(xOUT);
-					const yColOut = getColumnById(yOUT);
-					if (xColOut && yColOut) {
-						const xOutMs =
-							originTime_ms != null
-								? xOutData.map((h) => originTime_ms + h * 3600000)
-								: xOutData;
-						core.rawData.set(xOUT, xOutMs);
-						xColOut.data = xOUT;
-						xColOut.type = originTime_ms != null ? 'time' : 'number';
-						if (originTime_ms != null) xColOut.timeFormat = null;
-						core.rawData.set(yOUT, yOutData);
-						yColOut.data = yOUT;
-						yColOut.type = 'number';
-						const processHash = crypto.randomUUID();
-						xColOut.tableProcessGUId = processHash;
-						yColOut.tableProcessGUId = processHash;
-					}
-				}
-
-				result = {
-					t: tt,
-					outputXData,
+				result.y_results[yId] = {
 					fitResult,
 					fitted: yOutData,
-					originTime_ms
+					t: tt,
+					xOutData,
+					yOutData
 				};
+				if (result.t.length === 0) result.t = tt;
+				anyValid = true;
 			}
 		}
 
-		return [result, valid];
+		// Write output columns
+		if (anyValid && xOUT !== -1) {
+			const processHash = crypto.randomUUID();
+
+			const firstYId = Object.keys(result.y_results)[0];
+			const firstYResult = result.y_results[firstYId];
+			const xOutData = firstYResult.xOutData ?? outputXData ?? firstYResult.t;
+			const xOutMs =
+				originTime_ms != null ? xOutData.map((h) => originTime_ms + h * 3600000) : xOutData;
+			const xColOut = getColumnById(xOUT);
+			if (xColOut) {
+				core.rawData.set(xOUT, xOutMs);
+				xColOut.data = xOUT;
+				xColOut.type = originTime_ms != null ? 'time' : 'number';
+				if (originTime_ms != null) xColOut.timeFormat = null;
+				xColOut.tableProcessGUId = processHash;
+			}
+
+			for (const yId of yINs) {
+				const outKey = 'rectwavey_' + yId;
+				const yOUT = argsIN.out[outKey];
+				const yResult = result.y_results[yId];
+				if (yOUT != null && yOUT !== -1 && yResult) {
+					const yColOut = getColumnById(yOUT);
+					if (yColOut) {
+						core.rawData.set(yOUT, yResult.yOutData);
+						yColOut.data = yOUT;
+						yColOut.type = 'number';
+						yColOut.tableProcessGUId = processHash;
+					}
+				}
+			}
+		}
+
+		return [result, anyValid];
 	}
 </script>
 
@@ -139,11 +158,17 @@
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
-	import { getColumnById } from '$lib/core/Column.svelte';
+	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
+	import { pushObj } from '$lib/core/core.svelte.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
+
+	// Backward compat: convert legacy single yIN to array
+	if (typeof p.args.yIN === 'number') {
+		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
+	}
 
 	// Backwards compatibility — initialise any fields absent in older saved sessions
 	if (p.args.fixKappa === undefined) p.args.fixKappa = false;
@@ -159,17 +184,20 @@
 	let previewStart = $state(1);
 	let calculating = $state(false);
 	let _calcToken = 0;
+	let selectedYIds = $state(p.args.yIN ?? []);
 
 	// Reactivity: re-run when input data or fixed-parameter settings change
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
-	let yIN_col = $derived.by(() => (p.args.yIN >= 0 ? getColumnById(p.args.yIN) : null));
 	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
 	let xIsTime = $derived(xIN_col?.type === 'time' || outputX_col?.type === 'time');
 
 	let getHash = $derived.by(() => {
 		let out = '';
 		out += xIN_col?.getDataHash;
-		out += yIN_col?.getDataHash;
+		for (const yId of p.args.yIN ?? []) {
+			const col = yId >= 0 ? getColumnById(yId) : null;
+			out += col?.getDataHash ?? '';
+		}
 		out += outputX_col?.getDataHash;
 		out += p.args.fixKappa;
 		out += p.args.fixOmega;
@@ -196,6 +224,54 @@
 		}
 	});
 
+	// Watch for changes to selectedYIds and reconcile output columns
+	$effect(() => {
+		const newIds = selectedYIds;
+		if (!mounted) return;
+		untrack(() => {
+			onYSelectionChange(newIds);
+		});
+	});
+
+	function onYSelectionChange(newIds) {
+		const newIdSet = new Set(newIds.map(Number));
+		const oldIds = p.args.yIN ?? [];
+		if (
+			newIds.length === oldIds.length &&
+			[...newIdSet].every((id) => oldIds.map(Number).includes(id))
+		)
+			return;
+
+		for (const oldId of oldIds) {
+			if (!newIdSet.has(Number(oldId))) {
+				const outKey = 'rectwavey_' + oldId;
+				const outColId = p.args.out[outKey];
+				if (outColId !== undefined && outColId >= 0) {
+					core.rawData.delete(outColId);
+					removeColumn(outColId);
+				}
+				delete p.args.out[outKey];
+			}
+		}
+
+		for (const newId of newIds) {
+			const outKey = 'rectwavey_' + newId;
+			if (p.args.out[outKey] === undefined || p.args.out[outKey] === -1) {
+				if (p.parent) {
+					const srcName = getColumnById(Number(newId))?.name ?? String(newId);
+					const yCol = new Column({});
+					yCol.name = 'rectwave_' + srcName + '_' + p.id;
+					pushObj(yCol);
+					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
+					p.args.out[outKey] = yCol.id;
+				}
+			}
+		}
+
+		p.args.yIN = [...newIds].map(Number);
+		getRwave();
+	}
+
 	function getRwave() {
 		previewStart = 1;
 		calculating = true;
@@ -207,21 +283,37 @@
 		}, 0);
 	}
 
+	// Exclude own output column IDs from the Y selector
+	let yExcludeIds = $derived.by(() => {
+		const ids = [p.args.xIN];
+		if (p.args.out.rectwavex >= 0) ids.push(p.args.out.rectwavex);
+		for (const key of Object.keys(p.args.out)) {
+			if (key.startsWith('rectwavey_') && p.args.out[key] >= 0) {
+				ids.push(p.args.out[key]);
+			}
+		}
+		return ids;
+	});
+
 	onMount(() => {
 		const xKey = p.args.out.rectwavex;
-		const yKey = p.args.out.rectwavey;
-		if (
-			xKey >= 0 &&
-			yKey >= 0 &&
-			core.rawData.has(xKey) &&
-			core.rawData.get(xKey).length > 0
-		) {
-			// Show the saved curve immediately while the re-fit runs in the background.
+		if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
+			const y_results = {};
+			for (const yId of p.args.yIN ?? []) {
+				const outKey = 'rectwavey_' + yId;
+				const yOutId = p.args.out[outKey];
+				if (yOutId >= 0 && core.rawData.has(yOutId)) {
+					y_results[yId] = {
+						fitResult: null,
+						fitted: core.rawData.get(yOutId),
+						t: core.rawData.get(xKey)
+					};
+				}
+			}
 			rwave = {
 				t: core.rawData.get(xKey),
 				outputXData: null,
-				fitResult: null,
-				fitted: core.rawData.get(yKey),
+				y_results,
 				originTime_ms: null
 			};
 			p.args.valid = true;
@@ -249,8 +341,8 @@
 			<ColumnSelector bind:value={p.args.xIN} />
 		</div>
 		<div class="control-input">
-			<p>Y column</p>
-			<ColumnSelector bind:value={p.args.yIN} excludeColIds={[p.args.xIN]} />
+			<p>Y columns</p>
+			<ColumnSelector bind:value={selectedYIds} excludeColIds={yExcludeIds} multiple={true} />
 		</div>
 	</div>
 </div>
@@ -272,12 +364,7 @@
 		<div class="control-input-horizontal">
 			<div class="control-input">
 				<p>κ value</p>
-				<NumberWithUnits
-					bind:value={p.args.fixedKappa}
-					min="0.1"
-					step="0.5"
-					onInput={getRwave}
-				/>
+				<NumberWithUnits bind:value={p.args.fixedKappa} min="0.1" step="0.5" onInput={getRwave} />
 			</div>
 		</div>
 	{/if}
@@ -347,14 +434,93 @@
 		<div class="control-input-vertical">
 			<div class="control-input">
 				<p>Output X column</p>
-				<ColumnSelector
-					bind:value={p.args.outputX}
-					excludeColIds={[p.args.out.rectwavex, p.args.out.rectwavey]}
-				/>
+				<ColumnSelector bind:value={p.args.outputX} excludeColIds={yExcludeIds} />
 			</div>
 		</div>
 	{/if}
 </div>
+
+{#snippet rwaveStats(yResult, yName)}
+	{#if yResult?.fitResult}
+		{@const fr = yResult.fitResult}
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>
+					Period: {fr.period.toFixed(3)} hrs
+					<StoreValueButton
+						label="Period"
+						getter={() => yResult?.fitResult?.period}
+						defaultName={`rectwave_period_${yName}`}
+						source="Rectangular Wave"
+					/>
+				</p>
+				<p>
+					Acrophase: {fr.acrophase.toFixed(3)} hrs
+					<StoreValueButton
+						label="Acrophase"
+						getter={() => yResult?.fitResult?.acrophase}
+						defaultName={`rectwave_acrophase_${yName}`}
+						source="Rectangular Wave"
+					/>
+				</p>
+				<p>
+					Duty cycle: {(fr.parameters.dutyCycle * 100).toFixed(1)}%
+					<StoreValueButton
+						label="Duty cycle"
+						getter={() => yResult?.fitResult?.parameters?.dutyCycle}
+						defaultName={`rectwave_dutycycle_${yName}`}
+						source="Rectangular Wave"
+					/>
+				</p>
+				<p>
+					Sharpness (κ): {fr.parameters.kappa.toFixed(3)}
+					<StoreValueButton
+						label="Kappa"
+						getter={() => yResult?.fitResult?.parameters?.kappa}
+						defaultName={`rectwave_kappa_${yName}`}
+						source="Rectangular Wave"
+					/>
+				</p>
+				<p>
+					Half-amplitude (A): {fr.parameters.A.toFixed(3)}
+					<StoreValueButton
+						label="Half-amplitude"
+						getter={() => yResult?.fitResult?.parameters?.A}
+						defaultName={`rectwave_amplitude_${yName}`}
+						source="Rectangular Wave"
+					/>
+				</p>
+				<p>
+					Mesor (M): {fr.parameters.M.toFixed(3)}
+					<StoreValueButton
+						label="Mesor"
+						getter={() => yResult?.fitResult?.parameters?.M}
+						defaultName={`rectwave_mesor_${yName}`}
+						source="Rectangular Wave"
+					/>
+				</p>
+				<p>
+					RMSE: {fr.rmse.toFixed(3)}
+					<StoreValueButton
+						label="RMSE"
+						getter={() => yResult?.fitResult?.rmse}
+						defaultName={`rectwave_rmse_${yName}`}
+						source="Rectangular Wave"
+					/>
+				</p>
+				<p>
+					R²: {fr.rSquared.toFixed(3)}
+					<StoreValueButton
+						label="R²"
+						getter={() => yResult?.fitResult?.rSquared}
+						defaultName={`rectwave_r2_${yName}`}
+						source="Rectangular Wave"
+					/>
+				</p>
+			</div>
+		</div>
+	{/if}
+{/snippet}
 
 <!-- Output -->
 <div class="section-row">
@@ -364,174 +530,45 @@
 	<div class="section-content">
 		{#if calculating}
 			<LoadingSpinner message="Fitting rectangular wave…" />
-		{:else if p.args.valid && p.args.out.rectwavex != -1 && p.args.out.rectwavey != -1}
+		{:else if p.args.valid && p.args.out.rectwavex != -1}
 			{@const xout = getColumnById(p.args.out.rectwavex)}
 			<ColumnComponent col={xout} />
-			{@const yout = getColumnById(p.args.out.rectwavey)}
-			<ColumnComponent col={yout} />
-			{#if rwave?.fitResult}
-				{@const fr = rwave.fitResult}
-				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>
-							Period: {fr.period.toFixed(3)} hrs
-							<StoreValueButton
-								label="Period"
-								getter={() => rwave?.fitResult?.period}
-								defaultName="rectwave_period"
-								source="Rectangular Wave"
-							/>
-						</p>
-						<p>
-							Acrophase: {fr.acrophase.toFixed(3)} hrs
-							<StoreValueButton
-								label="Acrophase"
-								getter={() => rwave?.fitResult?.acrophase}
-								defaultName="rectwave_acrophase"
-								source="Rectangular Wave"
-							/>
-						</p>
-						<p>
-							Duty cycle: {(fr.parameters.dutyCycle * 100).toFixed(1)}%
-							<StoreValueButton
-								label="Duty cycle"
-								getter={() => rwave?.fitResult?.parameters?.dutyCycle}
-								defaultName="rectwave_dutycycle"
-								source="Rectangular Wave"
-							/>
-						</p>
-						<p>
-							Sharpness (κ): {fr.parameters.kappa.toFixed(3)}
-							<StoreValueButton
-								label="Kappa"
-								getter={() => rwave?.fitResult?.parameters?.kappa}
-								defaultName="rectwave_kappa"
-								source="Rectangular Wave"
-							/>
-						</p>
-						<p>
-							Half-amplitude (A): {fr.parameters.A.toFixed(3)}
-							<StoreValueButton
-								label="Half-amplitude"
-								getter={() => rwave?.fitResult?.parameters?.A}
-								defaultName="rectwave_amplitude"
-								source="Rectangular Wave"
-							/>
-						</p>
-						<p>
-							Mesor (M): {fr.parameters.M.toFixed(3)}
-							<StoreValueButton
-								label="Mesor"
-								getter={() => rwave?.fitResult?.parameters?.M}
-								defaultName="rectwave_mesor"
-								source="Rectangular Wave"
-							/>
-						</p>
-						<p>
-							RMSE: {fr.rmse.toFixed(3)}
-							<StoreValueButton
-								label="RMSE"
-								getter={() => rwave?.fitResult?.rmse}
-								defaultName="rectwave_rmse"
-								source="Rectangular Wave"
-							/>
-						</p>
-						<p>
-							R²: {fr.rSquared.toFixed(3)}
-							<StoreValueButton
-								label="R²"
-								getter={() => rwave?.fitResult?.rSquared}
-								defaultName="rectwave_r2"
-								source="Rectangular Wave"
-							/>
-						</p>
-					</div>
-				</div>
-			{/if}
-		{:else if p.args.valid && rwave?.fitResult}
-			{@const fr = rwave.fitResult}
+			{#each p.args.yIN ?? [] as yId}
+				{@const outKey = 'rectwavey_' + yId}
+				{@const yOutId = p.args.out[outKey]}
+				{#if yOutId >= 0}
+					{@const yout = getColumnById(yOutId)}
+					{#if yout}
+						<ColumnComponent col={yout} />
+					{/if}
+				{/if}
+			{/each}
+			{#each Object.entries(rwave?.y_results ?? {}) as [yId, yResult]}
+				{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+				<div class="div-line"></div>
+				<p><strong>{srcName}</strong></p>
+				{@render rwaveStats(yResult, srcName)}
+			{/each}
+		{:else if p.args.valid}
 			<p>Preview:</p>
-			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>
-						Period: {fr.period.toFixed(3)} hrs
-						<StoreValueButton
-							label="Period"
-							getter={() => rwave?.fitResult?.period}
-							defaultName="rectwave_period"
-							source="Rectangular Wave"
-						/>
-					</p>
-					<p>
-						Acrophase: {fr.acrophase.toFixed(3)} hrs
-						<StoreValueButton
-							label="Acrophase"
-							getter={() => rwave?.fitResult?.acrophase}
-							defaultName="rectwave_acrophase"
-							source="Rectangular Wave"
-						/>
-					</p>
-					<p>
-						Duty cycle: {(fr.parameters.dutyCycle * 100).toFixed(1)}%
-						<StoreValueButton
-							label="Duty cycle"
-							getter={() => rwave?.fitResult?.parameters?.dutyCycle}
-							defaultName="rectwave_dutycycle"
-							source="Rectangular Wave"
-						/>
-					</p>
-					<p>
-						Sharpness (κ): {fr.parameters.kappa.toFixed(3)}
-						<StoreValueButton
-							label="Kappa"
-							getter={() => rwave?.fitResult?.parameters?.kappa}
-							defaultName="rectwave_kappa"
-							source="Rectangular Wave"
-						/>
-					</p>
-					<p>
-						Half-amplitude (A): {fr.parameters.A.toFixed(3)}
-						<StoreValueButton
-							label="Half-amplitude"
-							getter={() => rwave?.fitResult?.parameters?.A}
-							defaultName="rectwave_amplitude"
-							source="Rectangular Wave"
-						/>
-					</p>
-					<p>
-						Mesor (M): {fr.parameters.M.toFixed(3)}
-						<StoreValueButton
-							label="Mesor"
-							getter={() => rwave?.fitResult?.parameters?.M}
-							defaultName="rectwave_mesor"
-							source="Rectangular Wave"
-						/>
-					</p>
-					<p>
-						RMSE: {fr.rmse.toFixed(3)}
-						<StoreValueButton
-							label="RMSE"
-							getter={() => rwave?.fitResult?.rmse}
-							defaultName="rectwave_rmse"
-							source="Rectangular Wave"
-						/>
-					</p>
-					<p>
-						R²: {fr.rSquared.toFixed(3)}
-						<StoreValueButton
-							label="R²"
-							getter={() => rwave?.fitResult?.rSquared}
-							defaultName="rectwave_r2"
-							source="Rectangular Wave"
-						/>
-					</p>
-				</div>
-			</div>
+			{#each Object.entries(rwave?.y_results ?? {}) as [yId, yResult]}
+				{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+				<div class="div-line"></div>
+				<p><strong>{srcName}</strong></p>
+				{@render rwaveStats(yResult, srcName)}
+			{/each}
 			{@const xData = rwave.outputXData ?? rwave.t}
-			{@const yData = rwave.fitted}
+			{@const yIds = Object.keys(rwave?.y_results ?? {})}
 			{@const totalRows = xData.length}
 			<Table
-				headers={['x', rwave.outputXData ? 'predicted y' : 'fitted y']}
+				headers={[
+					'x',
+					...yIds.map(
+						(id) =>
+							(rwave.outputXData ? 'predicted ' : 'fitted ') +
+							(getColumnById(Number(id))?.name ?? id)
+					)
+				]}
 				data={[
 					xData.slice(previewStart - 1, previewStart + 5).map((x) =>
 						xIsTime && rwave.originTime_ms != null
@@ -542,7 +579,10 @@
 								}
 							: x.toFixed(2)
 					),
-					yData.slice(previewStart - 1, previewStart + 5).map((y) => y.toFixed(2))
+					...yIds.map((id) => {
+						const yr = rwave.y_results[id];
+						return yr.fitted.slice(previewStart - 1, previewStart + 5).map((y) => y.toFixed(2));
+					})
 				]}
 			/>
 			<p>

@@ -7,7 +7,7 @@
 
 	export const doublelogistic_defaults = new Map([
 		['xIN', { val: -1 }],
-		['yIN', { val: -1 }],
+		['yIN', { val: [] }],
 		['outputX', { val: -1 }],
 		['fixK1', { val: false }],
 		['fixedK1', { val: 0.5 }],
@@ -15,16 +15,15 @@
 		['fixedK2', { val: 0.5 }],
 		['fixPeriod', { val: false }],
 		['fixedPeriod', { val: 24 }],
-		['out', { dlogx: { val: -1 }, dlogy: { val: -1 } }],
+		['out', { dlogx: { val: -1 } }],
 		['valid', { val: false }]
 	]);
 
 	export function doublelogistic(argsIN) {
 		const xIN = argsIN.xIN;
-		const yIN = argsIN.yIN;
+		const yINraw = argsIN.yIN;
+		const yINs = Array.isArray(yINraw) ? yINraw : yINraw != null && yINraw !== -1 ? [yINraw] : [];
 		const outputXId = argsIN.outputX;
-		const xOUT = argsIN.out.dlogx;
-		const yOUT = argsIN.out.dlogy;
 		const fixK1 = argsIN.fixK1 ?? false;
 		const fixedK1 = argsIN.fixedK1 ?? 0.5;
 		const fixK2 = argsIN.fixK2 ?? false;
@@ -32,45 +31,45 @@
 		const fixPeriod = argsIN.fixPeriod ?? false;
 		const fixedPeriod = argsIN.fixedPeriod ?? 24;
 
-		let result = null;
-		let valid = false;
+		if (xIN == -1 || !getColumnById(xIN) || yINs.length === 0) return [null, false];
 
-		const canRun = xIN != -1 && yIN != -1 && getColumnById(xIN) && getColumnById(yIN);
+		const tCol = getColumnById(xIN);
+		const t = tCol.type === 'time' ? tCol.hoursSinceStart : tCol.getData();
 
-		if (canRun) {
-			const tCol = getColumnById(xIN);
-			const yCol = getColumnById(yIN);
+		// Output X data
+		let outputXData = null;
+		if (outputXId != -1 && getColumnById(outputXId)) {
+			const outputXCol = getColumnById(outputXId);
+			outputXData = outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
+			outputXData = outputXData.filter((v) => !isNaN(v));
+		}
 
-			const t = tCol.type === 'time' ? tCol.hoursSinceStart : tCol.getData();
+		// Origin time for datetime display
+		let originTime_ms = null;
+		if (outputXId != -1) {
+			const col = getColumnById(outputXId);
+			if (col?.type === 'time') originTime_ms = col.getData()[0];
+		}
+		if (originTime_ms == null && tCol.type === 'time') {
+			originTime_ms = tCol.getData()[0];
+		}
+
+		const y_results = {};
+		let sharedT = null;
+
+		for (const yId of yINs) {
+			const yCol = getColumnById(yId);
+			if (!yCol) continue;
+
 			const y = yCol.getData();
-
 			const validIndices = t
 				.map((v, i) => (isNaN(v) || isNaN(y[i]) ? -1 : i))
 				.filter((i) => i !== -1);
-
 			const tt = validIndices.map((i) => t[i]);
 			const yy = validIndices.map((i) => y[i]);
 
-			if (tt.length < 4) return [null, false];
-
-			// Output X data
-			let outputXData = null;
-			if (outputXId != -1 && getColumnById(outputXId)) {
-				const outputXCol = getColumnById(outputXId);
-				outputXData =
-					outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
-				outputXData = outputXData.filter((v) => !isNaN(v));
-			}
-
-			// Origin time for datetime display
-			let originTime_ms = null;
-			if (outputXId != -1) {
-				const col = getColumnById(outputXId);
-				if (col?.type === 'time') originTime_ms = col.getData()[0];
-			}
-			if (originTime_ms == null && tCol.type === 'time') {
-				originTime_ms = tCol.getData()[0];
-			}
+			if (tt.length < 4) continue;
+			if (!sharedT) sharedT = tt;
 
 			const fitResult = fitDoubleLogistic(tt, yy, {
 				periodic: true,
@@ -83,36 +82,50 @@
 			});
 
 			if (fitResult) {
-				valid = true;
 				const xOutData = outputXData ?? tt;
 				const yOutData = outputXData
 					? evaluateDoubleLogisticAtPoints(fitResult.parameters, true, outputXData)
 					: fitResult.fitted;
 
-				if (xOUT != -1 && yOUT != -1) {
-					const xColOut = getColumnById(xOUT);
-					const yColOut = getColumnById(yOUT);
-					if (xColOut && yColOut) {
-						const xOutMs =
-							originTime_ms != null ? xOutData.map((h) => originTime_ms + h * 3600000) : xOutData;
-						core.rawData.set(xOUT, xOutMs);
-						xColOut.data = xOUT;
-						xColOut.type = originTime_ms != null ? 'time' : 'number';
-						if (originTime_ms != null) xColOut.timeFormat = null;
-						core.rawData.set(yOUT, yOutData);
-						yColOut.data = yOUT;
-						yColOut.type = 'number';
-						const processHash = crypto.randomUUID();
-						xColOut.tableProcessGUId = processHash;
-						yColOut.tableProcessGUId = processHash;
-					}
-				}
-
-				result = { t: tt, outputXData, fitResult, fitted: yOutData, originTime_ms };
+				y_results[yId] = { fitResult, fitted: yOutData, t: tt, xOutData, yOutData };
 			}
 		}
 
-		return [result, valid];
+		if (Object.keys(y_results).length === 0) return [null, false];
+
+		// Write shared X output
+		const finalXData = outputXData ?? sharedT;
+		const xOUT = argsIN.out.dlogx;
+		if (xOUT != -1) {
+			const xColOut = getColumnById(xOUT);
+			if (xColOut) {
+				const xOutMs =
+					originTime_ms != null ? finalXData.map((h) => originTime_ms + h * 3600000) : finalXData;
+				core.rawData.set(xOUT, xOutMs);
+				xColOut.data = xOUT;
+				xColOut.type = originTime_ms != null ? 'time' : 'number';
+				if (originTime_ms != null) xColOut.timeFormat = null;
+				const processHash = crypto.randomUUID();
+				xColOut.tableProcessGUId = processHash;
+
+				// Write per-Y outputs
+				for (const yId of Object.keys(y_results)) {
+					const outKey = 'dlogy_' + yId;
+					const yOutId = argsIN.out[outKey];
+					if (yOutId >= 0) {
+						const yColOut = getColumnById(yOutId);
+						if (yColOut) {
+							core.rawData.set(yOutId, y_results[yId].yOutData);
+							yColOut.data = yOutId;
+							yColOut.type = 'number';
+							yColOut.tableProcessGUId = processHash;
+						}
+					}
+				}
+			}
+		}
+
+		return [{ t: sharedT, outputXData, y_results, originTime_ms }, true];
 	}
 </script>
 
@@ -124,13 +137,26 @@
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
-	import { getColumnById } from '$lib/core/Column.svelte';
+	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
+	import { pushObj } from '$lib/core/core.svelte.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
-	// Backwards compatibility
+	// Backwards compatibility: convert single yIN to array
+	if (typeof p.args.yIN === 'number') {
+		p.args.yIN = p.args.yIN === -1 ? [] : [p.args.yIN];
+	}
+	// Migrate old single dlogy key to per-Y key
+	if (p.args.out.dlogy != null) {
+		const oldY = p.args.out.dlogy;
+		delete p.args.out.dlogy;
+		if (oldY >= 0 && p.args.yIN.length === 1) {
+			p.args.out['dlogy_' + p.args.yIN[0]] = oldY;
+		}
+	}
+
 	if (p.args.fixK1 === undefined) p.args.fixK1 = false;
 	if (p.args.fixedK1 === undefined) p.args.fixedK1 = 0.5;
 	if (p.args.fixK2 === undefined) p.args.fixK2 = false;
@@ -145,15 +171,80 @@
 	let calculating = $state(false);
 	let _calcToken = 0;
 
+	let selectedYIds = $state(p.args.yIN ?? []);
+
+	// Watch for changes to selectedYIds and reconcile output columns
+	$effect(() => {
+		const newIds = selectedYIds;
+		if (!mounted) return;
+		untrack(() => {
+			onYSelectionChange(newIds);
+		});
+	});
+
+	function onYSelectionChange(newIds) {
+		const newIdSet = new Set(newIds.map(Number));
+		const oldIds = p.args.yIN ?? [];
+
+		// Same set? Skip
+		if (
+			newIds.length === oldIds.length &&
+			[...newIdSet].every((id) => oldIds.map(Number).includes(id))
+		)
+			return;
+
+		// Remove output columns for deselected Y inputs
+		for (const oldId of oldIds) {
+			if (!newIdSet.has(Number(oldId))) {
+				const outKey = 'dlogy_' + oldId;
+				const outColId = p.args.out[outKey];
+				if (outColId !== undefined && outColId >= 0) {
+					core.rawData.delete(outColId);
+					removeColumn(outColId);
+				}
+				delete p.args.out[outKey];
+			}
+		}
+
+		// Create output columns for newly selected Y inputs
+		for (const newId of newIds) {
+			const outKey = 'dlogy_' + newId;
+			if (p.args.out[outKey] === undefined || p.args.out[outKey] === -1) {
+				if (p.parent) {
+					const srcName = getColumnById(Number(newId))?.name ?? String(newId);
+					const yCol = new Column({});
+					yCol.name = 'dlog_' + srcName + '_' + p.id;
+					pushObj(yCol);
+					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
+					p.args.out[outKey] = yCol.id;
+				}
+			}
+		}
+
+		p.args.yIN = [...newIds].map(Number);
+		getFit();
+	}
+
+	let yExcludeIds = $derived.by(() => {
+		const ids = [p.args.xIN, p.args.out.dlogx];
+		for (const yId of p.args.yIN ?? []) {
+			const outKey = 'dlogy_' + yId;
+			if (p.args.out[outKey] >= 0) ids.push(p.args.out[outKey]);
+		}
+		return ids.filter((id) => id >= 0);
+	});
+
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
-	let yIN_col = $derived.by(() => (p.args.yIN >= 0 ? getColumnById(p.args.yIN) : null));
 	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
 	let xIsTime = $derived(xIN_col?.type === 'time' || outputX_col?.type === 'time');
 
 	let getHash = $derived.by(() => {
 		let out = '';
 		out += xIN_col?.getDataHash;
-		out += yIN_col?.getDataHash;
+		for (const yId of p.args.yIN ?? []) {
+			const yCol = getColumnById(yId);
+			out += yCol?.getDataHash;
+		}
 		out += outputX_col?.getDataHash;
 		out += p.args.fixK1;
 		out += p.args.fixK2;
@@ -193,18 +284,27 @@
 
 	onMount(() => {
 		const xKey = p.args.out.dlogx;
-		const yKey = p.args.out.dlogy;
-		if (xKey >= 0 && yKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
-			// Show the saved curve immediately while the re-fit runs in the background.
-			dlData = {
-				t: core.rawData.get(xKey),
-				outputXData: null,
-				fitResult: null,
-				fitted: core.rawData.get(yKey),
-				originTime_ms: null
-			};
-			p.args.valid = true;
+		if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
+			const y_results = {};
+			for (const yId of p.args.yIN ?? []) {
+				const outKey = 'dlogy_' + yId;
+				const yOutId = p.args.out[outKey];
+				if (yOutId >= 0 && core.rawData.has(yOutId)) {
+					y_results[yId] = {
+						fitResult: null,
+						fitted: core.rawData.get(yOutId),
+						t: core.rawData.get(xKey),
+						xOutData: core.rawData.get(xKey),
+						yOutData: core.rawData.get(yOutId)
+					};
+				}
+			}
+			if (Object.keys(y_results).length > 0) {
+				dlData = { t: core.rawData.get(xKey), outputXData: null, y_results, originTime_ms: null };
+				p.args.valid = true;
+			}
 		}
+		lastHash = getHash;
 		mounted = true;
 	});
 
@@ -230,8 +330,8 @@
 			<ColumnSelector bind:value={p.args.xIN} />
 		</div>
 		<div class="control-input">
-			<p>Y column</p>
-			<ColumnSelector bind:value={p.args.yIN} excludeColIds={[p.args.xIN]} />
+			<p>Y column(s)</p>
+			<ColumnSelector bind:value={selectedYIds} excludeColIds={yExcludeIds} multiple={true} />
 		</div>
 	</div>
 </div>
@@ -311,14 +411,112 @@
 		<div class="control-input-vertical">
 			<div class="control-input">
 				<p>Output X column</p>
-				<ColumnSelector
-					bind:value={p.args.outputX}
-					excludeColIds={[p.args.out.dlogx, p.args.out.dlogy]}
-				/>
+				<ColumnSelector bind:value={p.args.outputX} excludeColIds={yExcludeIds} />
 			</div>
 		</div>
 	{/if}
 </div>
+
+{#snippet dlogStats(yResult, yName)}
+	{#if yResult?.fitResult}
+		{@const fr = yResult.fitResult}
+		{@const p_ = fr.parameters}
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>
+					Period: {fmt(p_.T)} hrs
+					<StoreValueButton
+						label="Period"
+						getter={() => yResult?.fitResult?.parameters?.T}
+						defaultName={`dlog_period_${yName}`}
+						source="Double Logistic"
+					/>
+				</p>
+				<p>
+					Onset phase: {fmt(fr.onsetPhase)} hrs
+					<StoreValueButton
+						label="Onset phase"
+						getter={() => yResult?.fitResult?.onsetPhase}
+						defaultName={`dlog_onset_${yName}`}
+						source="Double Logistic"
+					/>
+				</p>
+				<p>
+					Offset phase: {fmt(fr.offsetPhase)} hrs
+					<StoreValueButton
+						label="Offset phase"
+						getter={() => yResult?.fitResult?.offsetPhase}
+						defaultName={`dlog_offset_${yName}`}
+						source="Double Logistic"
+					/>
+				</p>
+				<p>
+					Duty cycle: {fmt(fr.dutyCycle != null ? fr.dutyCycle * 100 : null, 1)}%
+					<StoreValueButton
+						label="Duty cycle"
+						getter={() => yResult?.fitResult?.dutyCycle}
+						defaultName={`dlog_dutycycle_${yName}`}
+						source="Double Logistic"
+					/>
+				</p>
+				<p>
+					Rise rate (k1): {fmt(p_.k1, 4)} /hr
+					<StoreValueButton
+						label="Rise rate"
+						getter={() => yResult?.fitResult?.parameters?.k1}
+						defaultName={`dlog_k1_${yName}`}
+						source="Double Logistic"
+					/>
+				</p>
+				<p>
+					Fall rate (k2): {fmt(p_.k2, 4)} /hr
+					<StoreValueButton
+						label="Fall rate"
+						getter={() => yResult?.fitResult?.parameters?.k2}
+						defaultName={`dlog_k2_${yName}`}
+						source="Double Logistic"
+					/>
+				</p>
+				<p>
+					Amplitude (A): {fmt(p_.A)}
+					<StoreValueButton
+						label="Amplitude"
+						getter={() => yResult?.fitResult?.parameters?.A}
+						defaultName={`dlog_amplitude_${yName}`}
+						source="Double Logistic"
+					/>
+				</p>
+				<p>
+					Mesor (M): {fmt(p_.M)}
+					<StoreValueButton
+						label="Mesor"
+						getter={() => yResult?.fitResult?.parameters?.M}
+						defaultName={`dlog_mesor_${yName}`}
+						source="Double Logistic"
+					/>
+				</p>
+				<p>
+					RMSE: {fmt(fr.rmse)}
+					<StoreValueButton
+						label="RMSE"
+						getter={() => yResult?.fitResult?.rmse}
+						defaultName={`dlog_rmse_${yName}`}
+						source="Double Logistic"
+					/>
+				</p>
+				<p>
+					R²: {fmt(fr.rSquared)}
+					<StoreValueButton
+						label="R²"
+						getter={() => yResult?.fitResult?.rSquared}
+						defaultName={`dlog_r2_${yName}`}
+						source="Double Logistic"
+					/>
+				</p>
+			</div>
+		</div>
+	{/if}
+{/snippet}
 
 <!-- Output -->
 <div class="section-row">
@@ -328,92 +526,45 @@
 	<div class="section-content">
 		{#if calculating}
 			<LoadingSpinner message="Fitting double logistic…" />
-		{:else if p.args.valid && p.args.out.dlogx != -1 && p.args.out.dlogy != -1}
+		{:else if p.args.valid && p.args.out.dlogx != -1}
 			{@const xout = getColumnById(p.args.out.dlogx)}
 			<ColumnComponent col={xout} />
-			{@const yout = getColumnById(p.args.out.dlogy)}
-			<ColumnComponent col={yout} />
-			{#if dlData?.fitResult}
-				{@const fr = dlData.fitResult}
-				{@const p_ = fr.parameters}
-				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>Period: {fmt(p_.T)} hrs
-							<StoreValueButton label="Period" getter={() => dlData?.fitResult?.parameters?.T} defaultName="dlog_period" source="Double Logistic" />
-						</p>
-						<p>Onset phase: {fmt(fr.onsetPhase)} hrs
-							<StoreValueButton label="Onset phase" getter={() => dlData?.fitResult?.onsetPhase} defaultName="dlog_onset" source="Double Logistic" />
-						</p>
-						<p>Offset phase: {fmt(fr.offsetPhase)} hrs
-							<StoreValueButton label="Offset phase" getter={() => dlData?.fitResult?.offsetPhase} defaultName="dlog_offset" source="Double Logistic" />
-						</p>
-						<p>Duty cycle: {fmt(fr.dutyCycle != null ? fr.dutyCycle * 100 : null, 1)}%
-							<StoreValueButton label="Duty cycle" getter={() => dlData?.fitResult?.dutyCycle} defaultName="dlog_dutycycle" source="Double Logistic" />
-						</p>
-						<p>Rise rate (k1): {fmt(p_.k1, 4)} /hr
-							<StoreValueButton label="Rise rate" getter={() => dlData?.fitResult?.parameters?.k1} defaultName="dlog_k1" source="Double Logistic" />
-						</p>
-						<p>Fall rate (k2): {fmt(p_.k2, 4)} /hr
-							<StoreValueButton label="Fall rate" getter={() => dlData?.fitResult?.parameters?.k2} defaultName="dlog_k2" source="Double Logistic" />
-						</p>
-						<p>Amplitude (A): {fmt(p_.A)}
-							<StoreValueButton label="Amplitude" getter={() => dlData?.fitResult?.parameters?.A} defaultName="dlog_amplitude" source="Double Logistic" />
-						</p>
-						<p>Mesor (M): {fmt(p_.M)}
-							<StoreValueButton label="Mesor" getter={() => dlData?.fitResult?.parameters?.M} defaultName="dlog_mesor" source="Double Logistic" />
-						</p>
-						<p>RMSE: {fmt(fr.rmse)}
-							<StoreValueButton label="RMSE" getter={() => dlData?.fitResult?.rmse} defaultName="dlog_rmse" source="Double Logistic" />
-						</p>
-						<p>R²: {fmt(fr.rSquared)}
-							<StoreValueButton label="R²" getter={() => dlData?.fitResult?.rSquared} defaultName="dlog_r2" source="Double Logistic" />
-						</p>
-					</div>
-				</div>
-			{/if}
-		{:else if p.args.valid && dlData?.fitResult}
-			{@const fr = dlData.fitResult}
-			{@const p_ = fr.parameters}
+			{#each p.args.yIN ?? [] as yId}
+				{@const outKey = 'dlogy_' + yId}
+				{@const yOutId = p.args.out[outKey]}
+				{#if yOutId >= 0}
+					{@const yout = getColumnById(yOutId)}
+					{#if yout}
+						<ColumnComponent col={yout} />
+					{/if}
+				{/if}
+			{/each}
+			{#each Object.entries(dlData?.y_results ?? {}) as [yId, yResult]}
+				{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+				<div class="div-line"></div>
+				<p><strong>{srcName}</strong></p>
+				{@render dlogStats(yResult, srcName)}
+			{/each}
+		{:else if p.args.valid}
 			<p>Preview:</p>
-			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Period: {fmt(p_.T)} hrs
-						<StoreValueButton label="Period" getter={() => dlData?.fitResult?.parameters?.T} defaultName="dlog_period" source="Double Logistic" />
-					</p>
-					<p>Onset phase: {fmt(fr.onsetPhase)} hrs
-						<StoreValueButton label="Onset phase" getter={() => dlData?.fitResult?.onsetPhase} defaultName="dlog_onset" source="Double Logistic" />
-					</p>
-					<p>Offset phase: {fmt(fr.offsetPhase)} hrs
-						<StoreValueButton label="Offset phase" getter={() => dlData?.fitResult?.offsetPhase} defaultName="dlog_offset" source="Double Logistic" />
-					</p>
-					<p>Duty cycle: {fmt(fr.dutyCycle != null ? fr.dutyCycle * 100 : null, 1)}%
-						<StoreValueButton label="Duty cycle" getter={() => dlData?.fitResult?.dutyCycle} defaultName="dlog_dutycycle" source="Double Logistic" />
-					</p>
-					<p>Rise rate (k1): {fmt(p_.k1, 4)} /hr
-						<StoreValueButton label="Rise rate" getter={() => dlData?.fitResult?.parameters?.k1} defaultName="dlog_k1" source="Double Logistic" />
-					</p>
-					<p>Fall rate (k2): {fmt(p_.k2, 4)} /hr
-						<StoreValueButton label="Fall rate" getter={() => dlData?.fitResult?.parameters?.k2} defaultName="dlog_k2" source="Double Logistic" />
-					</p>
-					<p>Amplitude (A): {fmt(p_.A)}
-						<StoreValueButton label="Amplitude" getter={() => dlData?.fitResult?.parameters?.A} defaultName="dlog_amplitude" source="Double Logistic" />
-					</p>
-					<p>Mesor (M): {fmt(p_.M)}
-						<StoreValueButton label="Mesor" getter={() => dlData?.fitResult?.parameters?.M} defaultName="dlog_mesor" source="Double Logistic" />
-					</p>
-					<p>RMSE: {fmt(fr.rmse)}
-						<StoreValueButton label="RMSE" getter={() => dlData?.fitResult?.rmse} defaultName="dlog_rmse" source="Double Logistic" />
-					</p>
-					<p>R²: {fmt(fr.rSquared)}
-						<StoreValueButton label="R²" getter={() => dlData?.fitResult?.rSquared} defaultName="dlog_r2" source="Double Logistic" />
-					</p>
-				</div>
-			</div>
+			{#each Object.entries(dlData?.y_results ?? {}) as [yId, yResult]}
+				{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+				<div class="div-line"></div>
+				<p><strong>{srcName}</strong></p>
+				{@render dlogStats(yResult, srcName)}
+			{/each}
 			{@const xData = dlData.outputXData ?? dlData.t}
-			{@const yData = dlData.fitted}
+			{@const yIds = Object.keys(dlData?.y_results ?? {})}
 			{@const totalRows = xData.length}
 			<Table
-				headers={['x', dlData.outputXData ? 'predicted y' : 'fitted y']}
+				headers={[
+					'x',
+					...yIds.map(
+						(id) =>
+							(dlData.outputXData ? 'predicted ' : 'fitted ') +
+							(getColumnById(Number(id))?.name ?? id)
+					)
+				]}
 				data={[
 					xData.slice(previewStart - 1, previewStart + 5).map((x) =>
 						xIsTime && dlData.originTime_ms != null
@@ -424,7 +575,10 @@
 								}
 							: fmt(x, 2)
 					),
-					yData.slice(previewStart - 1, previewStart + 5).map((y) => fmt(y, 2))
+					...yIds.map((id) => {
+						const yr = dlData.y_results[id];
+						return yr.fitted.slice(previewStart - 1, previewStart + 5).map((y) => fmt(y, 2));
+					})
 				]}
 			/>
 			<p>

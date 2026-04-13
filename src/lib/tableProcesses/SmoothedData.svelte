@@ -5,7 +5,7 @@
 	export const smootheddata_displayName = 'Smooth Data';
 	export const smootheddata_defaults = new Map([
 		['xIN', { val: -1 }],
-		['yIN', { val: -1 }],
+		['yIN', { val: [] }],
 		['smootherType', { val: 'moving' }],
 		['whittakerLambda', { val: 100 }],
 		['whittakerOrder', { val: 2 }],
@@ -14,7 +14,7 @@
 		['loessBandwidth', { val: 0.3 }],
 		['movingAvgWindowSize', { val: 5 }],
 		['movingAvgType', { val: 'simple' }],
-		['out', { smoothedx: { val: -1 }, smoothedy: { val: -1 } }],
+		['out', { smoothedx: { val: -1 } }],
 		['valid', { val: false }]
 	]);
 
@@ -296,66 +296,73 @@
 
 	export function smootheddata(argsIN) {
 		const xIN = argsIN.xIN;
-		const yIN = argsIN.yIN;
+		// Backward compat: accept single number or array
+		let yINs = argsIN.yIN;
+		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
 		const smootherType = argsIN.smootherType;
 		const xOUT = argsIN.out.smoothedx;
-		const yOUT = argsIN.out.smoothedy;
 
-		if (xIN == undefined || yIN == undefined || xIN == -1 || yIN == -1) {
-			return [{ x_out: [], y_out: [] }, false];
-		}
-
-		const xData =
-			getColumnById(xIN).type == 'time'
-				? getColumnById(xIN).hoursSinceStart
-				: getColumnById(xIN).getData();
-		const yData = getColumnById(yIN).getData();
-
-		// Filter out invalid data
-		const filteredData = xData
-			.map((x, i) => ({ x, y: yData[i] }))
-			.filter((d) => d.x != null && d.y != null && !isNaN(d.x) && !isNaN(d.y));
-
-		if (filteredData.length < 3) {
-			return [{ x_out: [], y_out: [] }, false];
-		}
-
-		// Sort by x values
-		filteredData.sort((a, b) => a.x - b.x);
-		const xVals = filteredData.map((d) => d.x);
-		const yVals = filteredData.map((d) => d.y);
-
-		let smoothedY;
-		try {
-			switch (smootherType) {
-				case 'whittaker':
-					smoothedY = whittakerEilers(yVals, argsIN.whittakerLambda, argsIN.whittakerOrder);
-					break;
-				case 'savitzky':
-					smoothedY = savitzkyGolay(yVals, argsIN.savitzkyWindowSize, argsIN.savitzkyPolyOrder);
-					break;
-				case 'loess':
-					smoothedY = loess(xVals, yVals, argsIN.loessBandwidth);
-					break;
-				case 'moving':
-					smoothedY = movingAverage(yVals, argsIN.movingAvgWindowSize, argsIN.movingAvgType);
-					break;
-				default:
-					return [{ x_out: [], y_out: [] }, false];
-			}
-		} catch (error) {
-			console.warn('Smoothing failed:', error);
-			return [{ x_out: [], y_out: [] }, false];
+		if (xIN == undefined || xIN == -1 || yINs.length === 0) {
+			return [{ x_out: [], y_results: {} }, false];
 		}
 
 		const xInCol = getColumnById(xIN);
-		const isTimeInput = xInCol?.type === 'time';
+		if (!xInCol) return [{ x_out: [], y_results: {} }, false];
+
+		const xData = xInCol.type === 'time' ? xInCol.hoursSinceStart : xInCol.getData();
+		const isTimeInput = xInCol.type === 'time';
 		const originTime_ms = isTimeInput ? xInCol.getData()[0] : null;
 
-		// x_out is always hours-since-start; originTime_ms lets callers convert back to UNIX ms
-		const result = { x_out: xVals, y_out: smoothedY, originTime_ms };
+		const result = { x_out: [], y_results: {}, originTime_ms };
+		let anyValid = false;
 
-		if (xOUT != -1 && yOUT != -1) {
+		for (const yId of yINs) {
+			if (yId == null || yId === -1) continue;
+			const yCol = getColumnById(yId);
+			if (!yCol) continue;
+			const yData = yCol.getData();
+
+			const filteredData = xData
+				.map((x, i) => ({ x, y: yData[i] }))
+				.filter((d) => d.x != null && d.y != null && !isNaN(d.x) && !isNaN(d.y));
+
+			if (filteredData.length < 3) continue;
+
+			filteredData.sort((a, b) => a.x - b.x);
+			const xVals = filteredData.map((d) => d.x);
+			const yVals = filteredData.map((d) => d.y);
+
+			let smoothedY;
+			try {
+				switch (smootherType) {
+					case 'whittaker':
+						smoothedY = whittakerEilers(yVals, argsIN.whittakerLambda, argsIN.whittakerOrder);
+						break;
+					case 'savitzky':
+						smoothedY = savitzkyGolay(yVals, argsIN.savitzkyWindowSize, argsIN.savitzkyPolyOrder);
+						break;
+					case 'loess':
+						smoothedY = loess(xVals, yVals, argsIN.loessBandwidth);
+						break;
+					case 'moving':
+						smoothedY = movingAverage(yVals, argsIN.movingAvgWindowSize, argsIN.movingAvgType);
+						break;
+					default:
+						continue;
+				}
+			} catch (error) {
+				console.warn('Smoothing failed for column', yId, ':', error);
+				continue;
+			}
+
+			// Use first valid Y's x values as the shared x output
+			if (result.x_out.length === 0) result.x_out = xVals;
+			result.y_results[yId] = smoothedY;
+			anyValid = true;
+		}
+
+		if (anyValid && xOUT != -1) {
+			const processHash = crypto.randomUUID();
 			const xOutValues = isTimeInput
 				? result.x_out.map((h) => originTime_ms + h * 3600000)
 				: result.x_out;
@@ -364,18 +371,21 @@
 			getColumnById(xOUT).data = xOUT;
 			getColumnById(xOUT).type = isTimeInput ? 'time' : 'number';
 			if (isTimeInput) getColumnById(xOUT).timeFormat = null;
-
-			core.rawData.set(yOUT, result.y_out);
-			getColumnById(yOUT).data = yOUT;
-			getColumnById(yOUT).type = 'number';
-
-			const processHash = crypto.randomUUID();
 			getColumnById(xOUT).tableProcessGUId = processHash;
-			getColumnById(yOUT).tableProcessGUId = processHash;
+
+			for (const yId of yINs) {
+				const outKey = 'smoothedy_' + yId;
+				const yOUT = argsIN.out[outKey];
+				if (yOUT != null && yOUT !== -1 && result.y_results[yId]) {
+					core.rawData.set(yOUT, result.y_results[yId]);
+					getColumnById(yOUT).data = yOUT;
+					getColumnById(yOUT).type = 'number';
+					getColumnById(yOUT).tableProcessGUId = processHash;
+				}
+			}
 		}
 
-		console.log('smootheddata result: ', result);
-		return [result, result.x_out.length > 0];
+		return [result, anyValid];
 	}
 </script>
 
@@ -384,24 +394,35 @@
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
-	import { getColumnById } from '$lib/core/Column.svelte';
+	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
+	import { pushObj } from '$lib/core/core.svelte.js';
 	import { onMount, untrack } from 'svelte';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 
 	let { p = $bindable() } = $props();
 
+	// Backward compat: convert legacy single yIN to array
+	if (typeof p.args.yIN === 'number') {
+		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
+	}
+
 	let smoothedResult = $state();
 	let mounted = $state(false);
 	let previewStart = $state(1);
+	let selectedYIds = $state(p.args.yIN ?? []);
 
 	// Reactivity
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
-	let yIN_col = $derived.by(() => (p.args.yIN >= 0 ? getColumnById(p.args.yIN) : null));
 	let xIsTime = $derived(xIN_col?.type === 'time');
+
+	// Build a hash that tracks input data + all selected Y columns + smoother params
 	let getHash = $derived.by(() => {
 		let out = '';
 		out += xIN_col?.getDataHash;
-		out += yIN_col?.getDataHash;
+		for (const yId of p.args.yIN ?? []) {
+			const col = yId >= 0 ? getColumnById(yId) : null;
+			out += col?.getDataHash ?? '';
+		}
 		out += p.args.smootherType;
 		out += p.args.whittakerLambda;
 		out += p.args.whittakerOrder;
@@ -413,10 +434,11 @@
 		return out;
 	});
 	let lastHash = '';
+
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (lastHash !== dataHash) {
+		if (dataHash !== lastHash) {
 			untrack(() => {
 				previewStart = 1;
 				[smoothedResult, p.args.valid] = smootheddata(p.args);
@@ -425,19 +447,90 @@
 		}
 	});
 
+	// Watch for changes to selectedYIds and reconcile output columns
+	$effect(() => {
+		const newIds = selectedYIds;
+		if (!mounted) return;
+		untrack(() => {
+			onYSelectionChange(newIds);
+		});
+	});
+
+	function onYSelectionChange(newIds) {
+		const newIdSet = new Set(newIds.map(Number));
+		const oldIds = p.args.yIN ?? [];
+
+		// Same set? Skip
+		if (
+			newIds.length === oldIds.length &&
+			[...newIdSet].every((id) => oldIds.map(Number).includes(id))
+		)
+			return;
+
+		// Remove output columns for deselected Y inputs
+		for (const oldId of oldIds) {
+			if (!newIdSet.has(Number(oldId))) {
+				const outKey = 'smoothedy_' + oldId;
+				const outColId = p.args.out[outKey];
+				if (outColId !== undefined && outColId >= 0) {
+					core.rawData.delete(outColId);
+					removeColumn(outColId);
+				}
+				delete p.args.out[outKey];
+			}
+		}
+
+		// Create output columns for newly selected Y inputs
+		for (const newId of newIds) {
+			const outKey = 'smoothedy_' + newId;
+			if (p.args.out[outKey] === undefined || p.args.out[outKey] === -1) {
+				if (p.parent) {
+					const srcName = getColumnById(Number(newId))?.name ?? String(newId);
+					const yCol = new Column({});
+					yCol.name = 'smooth_' + srcName + '_' + p.id;
+					pushObj(yCol);
+					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
+					p.args.out[outKey] = yCol.id;
+				}
+			}
+		}
+
+		p.args.yIN = [...newIds].map(Number);
+		getSmoothedData();
+	}
+
 	function getSmoothedData() {
 		previewStart = 1;
 		[smoothedResult, p.args.valid] = smootheddata(p.args);
 	}
 
+	// Exclude own output column IDs from the Y selector
+	let yExcludeIds = $derived.by(() => {
+		const ids = [p.args.xIN];
+		if (p.args.out.smoothedx >= 0) ids.push(p.args.out.smoothedx);
+		for (const key of Object.keys(p.args.out)) {
+			if (key.startsWith('smoothedy_') && p.args.out[key] >= 0) {
+				ids.push(p.args.out[key]);
+			}
+		}
+		return ids;
+	});
+
 	onMount(() => {
-		//If data already exists (e.g. imported from JSON), use it instead of regenerating
+		// If data already exists (e.g. imported from JSON), use it
 		const xKey = p.args.out.smoothedx;
-		const yKey = p.args.out.smoothedy;
-		if (xKey >= 0 && yKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
-			smoothedResult = { x_out: core.rawData.get(xKey), y_out: core.rawData.get(yKey) };
+		if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
+			const y_results = {};
+			for (const yId of p.args.yIN ?? []) {
+				const outKey = 'smoothedy_' + yId;
+				const yOutId = p.args.out[outKey];
+				if (yOutId >= 0 && core.rawData.has(yOutId)) {
+					y_results[yId] = core.rawData.get(yOutId);
+				}
+			}
+			smoothedResult = { x_out: core.rawData.get(xKey), y_results };
 			p.args.valid = true;
-			lastHash = getHash; // prevent $effect from recalculating
+			lastHash = getHash;
 		}
 		mounted = true;
 	});
@@ -456,12 +549,8 @@
 		</div>
 		<div class="control-input-vertical">
 			<div class="control-input">
-				<p>Y column</p>
-				<ColumnSelector
-					bind:value={p.args.yIN}
-					excludeColIds={[p.args.xIN]}
-					onChange={(e) => getSmoothedData()}
-				/>
+				<p>Y columns</p>
+				<ColumnSelector bind:value={selectedYIds} excludeColIds={yExcludeIds} multiple={true} />
 			</div>
 		</div>
 	</div>
@@ -570,35 +659,57 @@
 </div>
 
 {#key smoothedResult}
-	{#if p.args.valid && p.args.out.smoothedx != -1 && p.args.out.smoothedy != -1}
+	{#if p.args.valid && p.args.out.smoothedx != -1}
 		{@const xout = getColumnById(p.args.out.smoothedx)}
-
-		{@const yout = getColumnById(p.args.out.smoothedy)}
 		<div class="section-row">
 			<div class="tableProcess-label">
 				<span>Output</span>
 			</div>
 			<ColumnComponent col={xout} />
-			<ColumnComponent col={yout} />
+			{#each p.args.yIN ?? [] as yId}
+				{@const outKey = 'smoothedy_' + yId}
+				{@const yOutId = p.args.out[outKey]}
+				{#if yOutId >= 0}
+					{@const yout = getColumnById(yOutId)}
+					{#if yout}
+						<ColumnComponent col={yout} />
+					{/if}
+				{/if}
+			{/each}
 		</div>
 	{:else if p.args.valid}
 		{@const totalRows = smoothedResult.x_out.length}
 		{@const xSlice = smoothedResult.x_out.slice(previewStart - 1, previewStart + 5)}
+		{@const yIds = Object.keys(smoothedResult.y_results)}
 		<p>Preview:</p>
 		<Table
-			headers={['smoothed x', 'smoothed y']}
+			headers={[
+				'smoothed x',
+				...yIds.map((id) => 'smoothed y (' + (getColumnById(Number(id))?.name ?? id) + ')')
+			]}
 			data={[
 				xIsTime
 					? xSlice.map((v) => ({
 							isTime: true,
 							raw: formatTimeFromUNIX(smoothedResult.originTime_ms + v * 3600000),
 							computed: v.toFixed(2)
-					  }))
+						}))
 					: xSlice.map((x) => x.toFixed(2)),
-				smoothedResult.y_out.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2))
+				...yIds.map((id) =>
+					smoothedResult.y_results[id]
+						.slice(previewStart - 1, previewStart + 5)
+						.map((x) => x.toFixed(2))
+				)
 			]}
 		/>
-		<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
+		<p>
+			Row <NumberWithUnits
+				min={1}
+				max={Math.max(1, totalRows - 5)}
+				step={1}
+				bind:value={previewStart}
+			/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+		</p>
 	{:else}
 		<p>Need to have valid inputs to create columns.</p>
 	{/if}

@@ -4,78 +4,91 @@
 	export const binneddata_displayName = 'Bin Data';
 	export const binneddata_defaults = new Map([
 		['xIN', { val: -1 }],
-		['yIN', { val: -1 }],
+		['yIN', { val: [] }],
 		['binSize', { val: 0.25 }],
 		['binStart', { val: 0 }],
 		['stepSize', { val: 0.25 }], //null = use binSize as step
 		['aggFunction', { val: 'mean' }], // mean | median | min | max | stddev
-		['out', { binnedx: { val: -1 }, binnedy: { val: -1 } }],
+		['out', { binnedx: { val: -1 } }],
 		['valid', { val: false }]
 	]);
 
 	export function binneddata(argsIN, differentstepsize) {
 		const xIN = argsIN.xIN;
-		const yIN = argsIN.yIN;
+		// Backward compat: accept single number or array
+		let yINs = argsIN.yIN;
+		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
 		const binSize = argsIN.binSize;
 		const binStart = argsIN.binStart;
 		const stepSize = differentstepsize ? argsIN.stepSize : binSize;
 		const aggFunction = argsIN.aggFunction || 'mean';
 		const xOUT = argsIN.out.binnedx;
-		const yOUT = argsIN.out.binnedy;
 
 		if (
 			xIN == undefined ||
-			yIN == undefined ||
 			binSize == undefined ||
 			binStart == undefined ||
 			xIN == -1 ||
-			yIN == -1 ||
+			yINs.length === 0 ||
 			binSize <= 0
 		) {
-			return [{ bins: [], y_out: [] }, false];
+			return [{ bins: [], y_results: {} }, false];
 		}
 
-		const xData =
-			getColumnById(xIN).type === 'time'
-				? getColumnById(xIN).hoursSinceStart
-				: getColumnById(xIN).getData();
+		const xInCol = getColumnById(xIN);
+		if (!xInCol) return [{ bins: [], y_results: {} }, false];
 
-		const yData = getColumnById(yIN).getData();
+		const xData = xInCol.type === 'time' ? xInCol.hoursSinceStart : xInCol.getData();
 
-		const theBinnedData = binData(xData, yData, binSize, binStart, stepSize, aggFunction);
+		const result = { bins: [], y_results: {} };
+		let anyValid = false;
 
-		// console.log('in: ', { xData: xData.slice(0, 5), yData: yData.slice(0, 5) });
-		// console.log('binning parameters: ', { binSize, binStart, stepSize, aggFunction });
-		// console.log('out: ', {
-		// 	bins: theBinnedData.bins.slice(0, 5),
-		// 	y_out: theBinnedData.y_out.slice(0, 5)
-		// });
+		for (const yId of yINs) {
+			if (yId == null || yId === -1) continue;
+			const yCol = getColumnById(yId);
+			if (!yCol) continue;
+			const yData = yCol.getData();
 
-		if (xOUT !== -1 && yOUT !== -1) {
-			core.rawData.set(xOUT, theBinnedData.bins);
+			const theBinnedData = binData(xData, yData, binSize, binStart, stepSize, aggFunction);
+
+			if (theBinnedData.bins.length > 0) {
+				// Use first valid Y's bins as the shared x output
+				if (result.bins.length === 0) result.bins = theBinnedData.bins;
+				result.y_results[yId] = theBinnedData.y_out;
+				anyValid = true;
+			}
+		}
+
+		if (anyValid && xOUT !== -1) {
+			const processHash = crypto.randomUUID();
+
+			core.rawData.set(xOUT, result.bins);
 			getColumnById(xOUT).data = xOUT;
 			getColumnById(xOUT).type = 'bin';
 			getColumnById(xOUT).binWidth = binSize;
 			getColumnById(xOUT).binStep = stepSize;
 			getColumnById(xOUT).aggFunction = aggFunction;
-			// Store the origin timestamp so the actogram can align bins to time-of-day
-			if (getColumnById(xIN)?.type === 'time') {
-				const xRawData = getColumnById(xIN).getData();
+			if (xInCol.type === 'time') {
+				const xRawData = xInCol.getData();
 				if (xRawData?.length > 0) {
 					getColumnById(xOUT).originTime_ms = xRawData[0];
 				}
 			}
-
-			core.rawData.set(yOUT, theBinnedData.y_out);
-			getColumnById(yOUT).data = yOUT;
-			getColumnById(yOUT).type = 'number';
-
-			const processHash = crypto.randomUUID();
 			getColumnById(xOUT).tableProcessGUId = processHash;
-			getColumnById(yOUT).tableProcessGUId = processHash;
+
+			for (const yId of yINs) {
+				const outKey = 'binnedy_' + yId;
+				const yOUT = argsIN.out[outKey];
+				if (yOUT != null && yOUT !== -1 && result.y_results[yId]) {
+					core.rawData.set(yOUT, result.y_results[yId]);
+					getColumnById(yOUT).data = yOUT;
+					getColumnById(yOUT).type = 'number';
+					getColumnById(yOUT).tableProcessGUId = processHash;
+				}
+			}
 		}
 
-		return [theBinnedData, theBinnedData.bins.length > 0];
+		return [result, anyValid];
 	}
 </script>
 
@@ -84,21 +97,30 @@
 	import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
-	import { getColumnById } from '$lib/core/Column.svelte';
+	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
+	import { pushObj } from '$lib/core/core.svelte.js';
 	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
 
+	// Backward compat: convert legacy single yIN to array
+	if (typeof p.args.yIN === 'number') {
+		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
+	}
+
 	let binnedData = $state();
 	let previewStart = $state(1);
+	let selectedYIds = $state(p.args.yIN ?? []);
 
 	// Reactivity
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
-	let yIN_col = $derived.by(() => (p.args.yIN >= 0 ? getColumnById(p.args.yIN) : null));
 	let getHash = $derived.by(() => {
 		let h = '';
 		h += xIN_col?.getDataHash ?? '';
-		h += yIN_col?.getDataHash ?? '';
+		for (const yId of p.args.yIN ?? []) {
+			const col = yId >= 0 ? getColumnById(yId) : null;
+			h += col?.getDataHash ?? '';
+		}
 		h += p.args.binSize + p.args.binStart + (p.args.stepSize ?? '') + p.args.aggFunction;
 		return h;
 	});
@@ -117,6 +139,54 @@
 		}
 	});
 
+	// Watch for changes to selectedYIds and reconcile output columns
+	$effect(() => {
+		const newIds = selectedYIds;
+		if (!mounted) return;
+		untrack(() => {
+			onYSelectionChange(newIds);
+		});
+	});
+
+	function onYSelectionChange(newIds) {
+		const newIdSet = new Set(newIds.map(Number));
+		const oldIds = p.args.yIN ?? [];
+		if (
+			newIds.length === oldIds.length &&
+			[...newIdSet].every((id) => oldIds.map(Number).includes(id))
+		)
+			return;
+
+		for (const oldId of oldIds) {
+			if (!newIdSet.has(Number(oldId))) {
+				const outKey = 'binnedy_' + oldId;
+				const outColId = p.args.out[outKey];
+				if (outColId !== undefined && outColId >= 0) {
+					core.rawData.delete(outColId);
+					removeColumn(outColId);
+				}
+				delete p.args.out[outKey];
+			}
+		}
+
+		for (const newId of newIds) {
+			const outKey = 'binnedy_' + newId;
+			if (p.args.out[outKey] === undefined || p.args.out[outKey] === -1) {
+				if (p.parent) {
+					const srcName = getColumnById(Number(newId))?.name ?? String(newId);
+					const yCol = new Column({});
+					yCol.name = 'bin_' + srcName + '_' + p.id;
+					pushObj(yCol);
+					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
+					p.args.out[outKey] = yCol.id;
+				}
+			}
+		}
+
+		p.args.yIN = [...newIds].map(Number);
+		getBinnedData();
+	}
+
 	function getBinnedData() {
 		previewStart = 1;
 		[binnedData, p.args.valid] = binneddata(p.args, differentstepsize);
@@ -124,14 +194,32 @@
 
 	let differentstepsize = $state(false);
 
+	// Exclude own output column IDs from the Y selector
+	let yExcludeIds = $derived.by(() => {
+		const ids = [p.args.xIN];
+		if (p.args.out.binnedx >= 0) ids.push(p.args.out.binnedx);
+		for (const key of Object.keys(p.args.out)) {
+			if (key.startsWith('binnedy_') && p.args.out[key] >= 0) {
+				ids.push(p.args.out[key]);
+			}
+		}
+		return ids;
+	});
+
 	onMount(() => {
-		//If data already exists (e.g. imported from JSON), use it instead of regenerating
 		const xKey = p.args.out.binnedx;
-		const yKey = p.args.out.binnedy;
-		if (xKey >= 0 && yKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
-			binnedData = { bins: core.rawData.get(xKey), y_out: core.rawData.get(yKey) };
+		if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
+			const y_results = {};
+			for (const yId of p.args.yIN ?? []) {
+				const outKey = 'binnedy_' + yId;
+				const yOutId = p.args.out[outKey];
+				if (yOutId >= 0 && core.rawData.has(yOutId)) {
+					y_results[yId] = core.rawData.get(yOutId);
+				}
+			}
+			binnedData = { bins: core.rawData.get(xKey), y_results };
 			p.args.valid = true;
-			lastHash = getHash; // prevent $effect from recalculating
+			lastHash = getHash;
 		}
 		mounted = true;
 	});
@@ -146,12 +234,8 @@
 			<ColumnSelector bind:value={p.args.xIN} onChange={getBinnedData} />
 		</div>
 		<div class="control-input">
-			<p>Y column</p>
-			<ColumnSelector
-				bind:value={p.args.yIN}
-				excludeColIds={[p.args.xIN]}
-				onChange={getBinnedData}
-			/>
+			<p>Y columns</p>
+			<ColumnSelector bind:value={selectedYIds} excludeColIds={yExcludeIds} multiple={true} />
 		</div>
 	</div>
 </div>
@@ -209,22 +293,38 @@
 <div class="section-row">
 	<div class="section-content">
 		{#key binnedData}
-			{#if p.args.valid && p.args.out.binnedx != -1 && p.args.out.binnedy != -1}
+			{#if p.args.valid && p.args.out.binnedx != -1}
 				{@const xout = getColumnById(p.args.out.binnedx)}
-				{@const yout = getColumnById(p.args.out.binnedy)}
 				<div class="tableProcess-label"><span>Output</span></div>
 				<ColumnComponent col={xout} />
-				<ColumnComponent col={yout} />
+				{#each p.args.yIN ?? [] as yId}
+					{@const outKey = 'binnedy_' + yId}
+					{@const yOutId = p.args.out[outKey]}
+					{#if yOutId >= 0}
+						{@const yout = getColumnById(yOutId)}
+						{#if yout}
+							<ColumnComponent col={yout} />
+						{/if}
+					{/if}
+				{/each}
 			{:else if p.args.valid && binnedData?.bins?.length}
 				{@const totalRows = binnedData.bins.length}
+				{@const yIds = Object.keys(binnedData.y_results)}
 				<p>Preview ({p.args.aggFunction}{p.args.stepSize ? `, step=${p.args.stepSize}` : ''}):</p>
 				<Table
-					headers={['binned x (center)', 'binned y']}
+					headers={[
+						'binned x (center)',
+						...yIds.map((id) => 'binned y (' + (getColumnById(Number(id))?.name ?? id) + ')')
+					]}
 					data={[
 						binnedData.bins
 							.slice(previewStart - 1, previewStart + 5)
 							.map((x) => (x + p.args.stepSize / 2).toFixed(4)),
-						binnedData.y_out.slice(previewStart - 1, previewStart + 5).map((y) => y.toFixed(4))
+						...yIds.map((id) =>
+							binnedData.y_results[id]
+								.slice(previewStart - 1, previewStart + 5)
+								.map((y) => y.toFixed(4))
+						)
 					]}
 				/>
 				<p>

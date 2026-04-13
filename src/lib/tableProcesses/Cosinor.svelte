@@ -5,11 +5,11 @@
 
 	export const cosinor_defaults = new Map([
 		['xIN', { val: -1 }],
-		['yIN', { val: -1 }],
+		['yIN', { val: [] }],
 		['Ncurves', { val: 0 }],
 		['outputX', { val: -1 }],
-		['out', { cosinorx: { val: -1 }, cosinory: { val: -1 } }], //needed to set up the output columns
-		['valid', { val: false }], //needed for the progress step logic
+		['out', { cosinorx: { val: -1 } }],
+		['valid', { val: false }],
 		['useFixedPeriod', { val: false }],
 		['fixedPeriod', { val: 24 }],
 		['nHarmonics', { val: 1 }],
@@ -18,11 +18,11 @@
 
 	export function cosinor(argsIN) {
 		const xIN = argsIN.xIN;
-		const yIN = argsIN.yIN;
+		let yINs = argsIN.yIN;
+		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
 		const Ncurves = argsIN.Ncurves;
 		const outputXId = argsIN.outputX;
 		const xOUT = argsIN.out.cosinorx;
-		const yOUT = argsIN.out.cosinory;
 		const useFixedPeriod = argsIN.useFixedPeriod ?? false;
 		const fixedPeriod = argsIN.fixedPeriod ?? 24;
 		const nHarmonics = argsIN.nHarmonics ?? 1;
@@ -31,95 +31,84 @@
 		let result = {
 			t: [],
 			outputXData: null,
-			fittedData: { fitted: [], parameters: { cosines: [] }, rmse: NaN, rSquared: NaN },
-			fixedStats: null
+			y_results: {},
+			originTime_ms: null
 		};
-		let valid = false;
+		let anyValid = false;
 
-		const canRun =
+		const canRunBase =
 			xIN != -1 &&
-			yIN != -1 &&
 			getColumnById(xIN) &&
-			getColumnById(yIN) &&
+			yINs.length > 0 &&
 			(useFixedPeriod ? nHarmonics >= 1 : Ncurves >= 1);
 
-		if (canRun) {
-			const tCol = getColumnById(xIN);
-			const yCol = getColumnById(yIN);
+		if (!canRunBase) return [result, false];
 
-			const t = tCol.type === 'time' ? tCol.hoursSinceStart : tCol.getData();
+		const tCol = getColumnById(xIN);
+		const t = tCol.type === 'time' ? tCol.hoursSinceStart : tCol.getData();
+
+		// Get outputX data if specified
+		let outputXData = null;
+		if (outputXId != -1 && getColumnById(outputXId)) {
+			const outputXCol = getColumnById(outputXId);
+			outputXData = outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
+			outputXData = outputXData.filter((v) => !isNaN(v));
+		}
+
+		// Determine origin time for converting hours → ms on the x output
+		let originTime_ms = null;
+		if (outputXId != -1) {
+			const _outputXColForOrigin = getColumnById(outputXId);
+			if (_outputXColForOrigin && _outputXColForOrigin.type === 'time') {
+				originTime_ms = _outputXColForOrigin.getData()[0];
+			}
+		}
+		if (originTime_ms == null && tCol.type === 'time') {
+			originTime_ms = tCol.getData()[0];
+		}
+
+		result.outputXData = outputXData;
+		result.originTime_ms = originTime_ms;
+
+		for (const yId of yINs) {
+			if (yId == null || yId === -1) continue;
+			const yCol = getColumnById(yId);
+			if (!yCol) continue;
+
 			const y = yCol.getData();
-
 			const validIndices = t
 				.map((v, i) => (isNaN(v) || isNaN(y[i]) ? -1 : i))
 				.filter((i) => i !== -1);
-
 			const tt = validIndices.map((i) => t[i]);
 			const yy = validIndices.map((i) => y[i]);
 
-			// Get outputX data if specified
-			let outputXData = null;
-			if (outputXId != -1 && getColumnById(outputXId)) {
-				const outputXCol = getColumnById(outputXId);
-				outputXData =
-					outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
-				outputXData = outputXData.filter((v) => !isNaN(v));
-			}
+			if (tt.length === 0) continue;
 
-			// Determine origin time for converting hours → ms on the x output
-			let originTime_ms = null;
-			if (outputXId != -1) {
-				const _outputXColForOrigin = getColumnById(outputXId);
-				if (_outputXColForOrigin && _outputXColForOrigin.type === 'time') {
-					originTime_ms = _outputXColForOrigin.getData()[0];
-				}
-			}
-			if (originTime_ms == null && tCol.type === 'time') {
-				originTime_ms = tCol.getData()[0];
-			}
+			let yResult = {
+				fittedData: { fitted: [], parameters: { cosines: [] }, rmse: NaN, rSquared: NaN },
+				fixedStats: null,
+				predicted: null,
+				t: tt,
+				xOutData: null,
+				yOutData: null
+			};
 
 			if (useFixedPeriod) {
-				// ── Fixed-period (classical Halberg) cosinor ──
 				const fixedResult = fitCosinorFixed(tt, yy, fixedPeriod, nHarmonics, alpha);
 				if (fixedResult) {
-					valid = true;
 					const omega = (2 * Math.PI) / fixedPeriod;
 					const xOutData = outputXData ?? tt;
 					const yOutData = outputXData
 						? outputXData.map((ti) => {
 								let val = fixedResult.M;
 								for (const h of fixedResult.harmonics) {
-									val +=
-										h.beta * Math.cos(h.k * omega * ti) +
-										h.gamma * Math.sin(h.k * omega * ti);
+									val += h.beta * Math.cos(h.k * omega * ti) + h.gamma * Math.sin(h.k * omega * ti);
 								}
 								return val;
 							})
 						: fixedResult.fitted;
 
-					if (xOUT != -1 && yOUT != -1) {
-						const xColOut = getColumnById(xOUT);
-						const yColOut = getColumnById(yOUT);
-						if (xColOut && yColOut) {
-							const xOutMs = originTime_ms != null
-								? xOutData.map((h) => originTime_ms + h * 3600000)
-								: xOutData;
-							core.rawData.set(xOUT, xOutMs);
-							xColOut.data = xOUT;
-							xColOut.type = originTime_ms != null ? 'time' : 'number';
-							if (originTime_ms != null) xColOut.timeFormat = null;
-							core.rawData.set(yOUT, yOutData);
-							yColOut.data = yOUT;
-							yColOut.type = 'number';
-							const processHash = crypto.randomUUID();
-							xColOut.tableProcessGUId = processHash;
-							yColOut.tableProcessGUId = processHash;
-						}
-					}
-
-					result = {
-						t: tt,
-						outputXData,
+					yResult = {
 						fittedData: {
 							fitted: fixedResult.fitted,
 							parameters: {
@@ -134,52 +123,70 @@
 						},
 						fixedStats: fixedResult,
 						predicted: outputXData ? yOutData : null,
-						originTime_ms
+						t: tt,
+						xOutData,
+						yOutData
 					};
+					anyValid = true;
 				}
 			} else {
-				// ── Free-parameter cosinor (original behaviour) ──
 				const fittedData = fitCosineCurves(tt, yy, Ncurves);
-
 				const predicted = outputXData
 					? evaluateCosinorAtPoints(fittedData.parameters, outputXData)
 					: null;
 
-				if (xOUT != -1 && yOUT != -1) {
-					const xColOut = getColumnById(xOUT);
-					const yColOut = getColumnById(yOUT);
-					if (xColOut && yColOut) {
-						const xOutData = outputXData ?? tt;
-						const yOutData = predicted ?? fittedData.fitted;
-						const xOutMs = originTime_ms != null
-							? xOutData.map((h) => originTime_ms + h * 3600000)
-							: xOutData;
-						core.rawData.set(xOUT, xOutMs);
-						xColOut.data = xOUT;
-						xColOut.type = originTime_ms != null ? 'time' : 'number';
-						if (originTime_ms != null) xColOut.timeFormat = null;
-						core.rawData.set(yOUT, yOutData);
-						yColOut.data = yOUT;
-						yColOut.type = 'number';
-						const processHash = crypto.randomUUID();
-						xColOut.tableProcessGUId = processHash;
-						yColOut.tableProcessGUId = processHash;
-					}
-				}
-
-				result = {
-					t: tt,
-					outputXData,
+				yResult = {
 					fittedData: { ...fittedData },
 					fixedStats: null,
 					predicted,
-					originTime_ms
+					t: tt,
+					xOutData: outputXData ?? tt,
+					yOutData: predicted ?? fittedData.fitted
 				};
-				valid = fittedData.fitted.length > 0;
+				if (fittedData.fitted.length > 0) anyValid = true;
+			}
+
+			result.y_results[yId] = yResult;
+			if (result.t.length === 0) result.t = tt;
+		}
+
+		// Write output columns
+		if (anyValid && xOUT !== -1) {
+			const processHash = crypto.randomUUID();
+
+			// Use first valid Y's x output data for the shared X column
+			const firstYId = Object.keys(result.y_results)[0];
+			const firstYResult = result.y_results[firstYId];
+			const xOutData = firstYResult.xOutData ?? outputXData ?? firstYResult.t;
+			const xOutMs =
+				originTime_ms != null ? xOutData.map((h) => originTime_ms + h * 3600000) : xOutData;
+			const xColOut = getColumnById(xOUT);
+			if (xColOut) {
+				core.rawData.set(xOUT, xOutMs);
+				xColOut.data = xOUT;
+				xColOut.type = originTime_ms != null ? 'time' : 'number';
+				if (originTime_ms != null) xColOut.timeFormat = null;
+				xColOut.tableProcessGUId = processHash;
+			}
+
+			for (const yId of yINs) {
+				const outKey = 'cosinory_' + yId;
+				const yOUT = argsIN.out[outKey];
+				const yResult = result.y_results[yId];
+				if (yOUT != null && yOUT !== -1 && yResult) {
+					const yOutData = yResult.yOutData ?? yResult.predicted ?? yResult.fittedData.fitted;
+					const yColOut = getColumnById(yOUT);
+					if (yColOut) {
+						core.rawData.set(yOUT, yOutData);
+						yColOut.data = yOUT;
+						yColOut.type = 'number';
+						yColOut.tableProcessGUId = processHash;
+					}
+				}
 			}
 		}
 
-		return [result, valid];
+		return [result, anyValid];
 	}
 </script>
 
@@ -190,12 +197,18 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 
-	import { getColumnById } from '$lib/core/Column.svelte';
+	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
+	import { pushObj } from '$lib/core/core.svelte.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
 	let { p = $bindable() } = $props();
+
+	// Backward compat: convert legacy single yIN to array
+	if (typeof p.args.yIN === 'number') {
+		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
+	}
 
 	// Backwards compatibility: initialise fields absent in sessions saved before this version
 	if (p.args.useFixedPeriod === undefined) p.args.useFixedPeriod = false;
@@ -209,16 +222,19 @@
 	let previewStart = $state(1);
 	let calculating = $state(false);
 	let _calcToken = 0;
+	let selectedYIds = $state(p.args.yIN ?? []);
 
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
-	let yIN_col = $derived.by(() => (p.args.yIN >= 0 ? getColumnById(p.args.yIN) : null));
 	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
 	let xIsTime = $derived(xIN_col?.type === 'time' || outputX_col?.type === 'time');
 	let getHash = $derived.by(() => {
 		let out = '';
 		out += xIN_col?.getDataHash;
-		out += yIN_col?.getDataHash;
+		for (const yId of p.args.yIN ?? []) {
+			const col = yId >= 0 ? getColumnById(yId) : null;
+			out += col?.getDataHash ?? '';
+		}
 		out += outputX_col?.getDataHash;
 		out += p.args.useFixedPeriod;
 		return out;
@@ -241,6 +257,55 @@
 			}, 0);
 		}
 	});
+
+	// Watch for changes to selectedYIds and reconcile output columns
+	$effect(() => {
+		const newIds = selectedYIds;
+		if (!mounted) return;
+		untrack(() => {
+			onYSelectionChange(newIds);
+		});
+	});
+
+	function onYSelectionChange(newIds) {
+		const newIdSet = new Set(newIds.map(Number));
+		const oldIds = p.args.yIN ?? [];
+		if (
+			newIds.length === oldIds.length &&
+			[...newIdSet].every((id) => oldIds.map(Number).includes(id))
+		)
+			return;
+
+		for (const oldId of oldIds) {
+			if (!newIdSet.has(Number(oldId))) {
+				const outKey = 'cosinory_' + oldId;
+				const outColId = p.args.out[outKey];
+				if (outColId !== undefined && outColId >= 0) {
+					core.rawData.delete(outColId);
+					removeColumn(outColId);
+				}
+				delete p.args.out[outKey];
+			}
+		}
+
+		for (const newId of newIds) {
+			const outKey = 'cosinory_' + newId;
+			if (p.args.out[outKey] === undefined || p.args.out[outKey] === -1) {
+				if (p.parent) {
+					const srcName = getColumnById(Number(newId))?.name ?? String(newId);
+					const yCol = new Column({});
+					yCol.name = 'cosinor_' + srcName + '_' + p.id;
+					pushObj(yCol);
+					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
+					p.args.out[outKey] = yCol.id;
+				}
+			}
+		}
+
+		p.args.yIN = [...newIds].map(Number);
+		getCosinor();
+	}
+
 	//------------
 	function getCosinor() {
 		previewStart = 1;
@@ -253,19 +318,46 @@
 		}, 0);
 	}
 
+	// Exclude own output column IDs from the Y selector
+	let yExcludeIds = $derived.by(() => {
+		const ids = [p.args.xIN];
+		if (p.args.out.cosinorx >= 0) ids.push(p.args.out.cosinorx);
+		for (const key of Object.keys(p.args.out)) {
+			if (key.startsWith('cosinory_') && p.args.out[key] >= 0) {
+				ids.push(p.args.out[key]);
+			}
+		}
+		return ids;
+	});
+
 	onMount(() => {
-		// If saved column data exists, show the fitted curve immediately while the
-		// re-fit runs in the background (the $effect fires once mounted = true).
 		const xKey = p.args.out.cosinorx;
-		const yKey = p.args.out.cosinory;
-		if (xKey >= 0 && yKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
+		if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
+			const y_results = {};
+			for (const yId of p.args.yIN ?? []) {
+				const outKey = 'cosinory_' + yId;
+				const yOutId = p.args.out[outKey];
+				if (yOutId >= 0 && core.rawData.has(yOutId)) {
+					y_results[yId] = {
+						fittedData: {
+							fitted: core.rawData.get(yOutId),
+							parameters: { cosines: [] },
+							rmse: NaN
+						},
+						fixedStats: null,
+						predicted: null,
+						t: core.rawData.get(xKey)
+					};
+				}
+			}
 			cosinorData = {
 				t: core.rawData.get(xKey),
 				outputXData: null,
-				fittedData: { fitted: core.rawData.get(yKey), parameters: { cosines: [] }, rmse: NaN }
+				y_results
 			};
 			p.args.valid = true;
 		}
+		lastHash = getHash;
 		mounted = true;
 	});
 
@@ -292,11 +384,8 @@
 
 		<div class="control-input-vertical">
 			<div class="control-input">
-				<p>Y column</p>
-				<ColumnSelector
-					bind:value={p.args.yIN}
-					excludeColIds={[p.xIN]}
-				/>
+				<p>Y columns</p>
+				<ColumnSelector bind:value={selectedYIds} excludeColIds={yExcludeIds} multiple={true} />
 			</div>
 		</div>
 	</div>
@@ -311,10 +400,7 @@
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<label>
-				<input
-					type="checkbox"
-					bind:checked={p.args.useFixedPeriod}
-				/>
+				<input type="checkbox" bind:checked={p.args.useFixedPeriod} />
 				Use fixed period
 			</label>
 		</div>
@@ -381,14 +467,136 @@
 		<div class="control-input-vertical">
 			<div class="control-input">
 				<p>Output X column</p>
-				<ColumnSelector
-					bind:value={p.args.outputX}
-					excludeColIds={[p.args.out.cosinorx, p.args.out.cosinory]}
-				/>
+				<ColumnSelector bind:value={p.args.outputX} excludeColIds={yExcludeIds} />
 			</div>
 		</div>
 	{/if}
 </div>
+
+{#snippet cosinorStats(yResult, yName)}
+	<div class="control-input-horizontal">
+		<div class="control-input">
+			<p>
+				RMSE: {yResult?.fittedData?.rmse.toFixed(3)}
+				<StoreValueButton
+					label="RMSE"
+					getter={() => yResult?.fittedData?.rmse}
+					defaultName={`cosinor_rmse_${yName}`}
+					source="Cosinor"
+				/>
+			</p>
+			{#if yResult?.fittedData?.rSquared != null}
+				<p>
+					R²: {yResult.fittedData.rSquared.toFixed(3)}
+					<StoreValueButton
+						label="R²"
+						getter={() => yResult?.fittedData?.rSquared}
+						defaultName={`cosinor_r2_${yName}`}
+						source="Cosinor"
+					/>
+				</p>
+			{/if}
+		</div>
+	</div>
+	{#each yResult?.fittedData?.parameters.cosines ?? [] as cosine, i}
+		{@const period = 2 * Math.PI * (1 / cosine.frequency)}
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>
+					Period: {period.toFixed(2)}
+					<StoreValueButton
+						label="Period"
+						getter={() => {
+							const c = yResult?.fittedData?.parameters?.cosines?.[i];
+							return c ? (2 * Math.PI) / c.frequency : NaN;
+						}}
+						defaultName={`cosinor_period_${yName}${(yResult?.fittedData?.parameters?.cosines?.length ?? 0) > 1 ? '_' + (i + 1) : ''}`}
+						source="Cosinor"
+					/>
+				</p>
+				<p>
+					Amplitude: {cosine.amplitude.toFixed(2)}
+					<StoreValueButton
+						label="Amplitude"
+						getter={() => yResult?.fittedData?.parameters?.cosines?.[i]?.amplitude}
+						defaultName={`cosinor_amplitude_${yName}${(yResult?.fittedData?.parameters?.cosines?.length ?? 0) > 1 ? '_' + (i + 1) : ''}`}
+						source="Cosinor"
+					/>
+				</p>
+				<p>
+					Phase: {cosine.phase.toFixed(2)}
+					<StoreValueButton
+						label="Phase"
+						getter={() => yResult?.fittedData?.parameters?.cosines?.[i]?.phase}
+						defaultName={`cosinor_phase_${yName}${(yResult?.fittedData?.parameters?.cosines?.length ?? 0) > 1 ? '_' + (i + 1) : ''}`}
+						source="Cosinor"
+					/>
+				</p>
+				{#if !yResult?.fixedStats}
+					<p>
+						Equation: {cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(
+							2
+						)})
+					</p>
+				{/if}
+			</div>
+		</div>
+	{/each}
+	{#if yResult?.fixedStats}
+		{@const s = yResult.fixedStats}
+		<div class="div-line"></div>
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>
+					Mesor: {s.M.toFixed(3)} &nbsp;[{Math.round((1 - s.alpha) * 100)}% CI: {s.CI_M[0].toFixed(
+						3
+					)}, {s.CI_M[1].toFixed(3)}]
+					<StoreValueButton
+						label="Mesor"
+						getter={() => yResult?.fixedStats?.M}
+						defaultName={`cosinor_mesor_${yName}`}
+						source="Cosinor (fixed)"
+					/>
+				</p>
+				{#each s.harmonics as h}
+					<p>
+						H{h.k} Amplitude: {h.amplitude.toFixed(3)} &nbsp;[CI: {h.CI_A[0].toFixed(3)}, {h.CI_A[1].toFixed(
+							3
+						)}]
+						<StoreValueButton
+							label={`H${h.k} Amplitude`}
+							getter={() => yResult?.fixedStats?.harmonics?.[h.k - 1]?.amplitude}
+							defaultName={`cosinor_amplitude_${yName}${s.harmonics.length > 1 ? '_H' + h.k : ''}`}
+							source="Cosinor (fixed)"
+						/>
+					</p>
+					<p>
+						H{h.k} Acrophase: {h.acrophase_hrs.toFixed(2)} h &nbsp;[CI: {h.CI_acrophase[0].toFixed(
+							2
+						)}, {h.CI_acrophase[1].toFixed(2)}]
+						<StoreValueButton
+							label={`H${h.k} Acrophase`}
+							getter={() => yResult?.fixedStats?.harmonics?.[h.k - 1]?.acrophase_hrs}
+							defaultName={`cosinor_acrophase_${yName}${s.harmonics.length > 1 ? '_H' + h.k : ''}`}
+							source="Cosinor (fixed)"
+						/>
+					</p>
+				{/each}
+				<p>
+					F({s.df[0]}, {s.df[1]}) = {s.F_stat.toFixed(3)}, p {s.pF < 0.001
+						? '< 0.001'
+						: '= ' + s.pF.toFixed(3)}
+					<StoreValueButton
+						label="p-value"
+						getter={() => yResult?.fixedStats?.pF}
+						defaultName={`cosinor_pvalue_${yName}`}
+						source="Cosinor (fixed)"
+					/>
+				</p>
+			</div>
+		</div>
+	{/if}
+{/snippet}
 
 <!-- Output Section -->
 <div class="section-row">
@@ -398,147 +606,72 @@
 	<div class="section-content">
 		{#if calculating}
 			<LoadingSpinner message="Fitting cosinor…" />
-		{:else if p.args.valid && p.args.out.cosinorx != -1 && p.args.out.cosinory != -1}
+		{:else if p.args.valid && p.args.out.cosinorx != -1}
 			{@const xout = getColumnById(p.args.out.cosinorx)}
 			<ColumnComponent col={xout} />
-			{@const yout = getColumnById(p.args.out.cosinory)}
-			<ColumnComponent col={yout} />
-			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}
-						<StoreValueButton label="RMSE" getter={() => cosinorData?.fittedData?.rmse} defaultName="cosinor_rmse" source="Cosinor" />
-					</p>
-					{#if cosinorData?.fittedData?.rSquared != null}
-						<p>R²: {cosinorData.fittedData.rSquared.toFixed(3)}
-							<StoreValueButton label="R²" getter={() => cosinorData?.fittedData?.rSquared} defaultName="cosinor_r2" source="Cosinor" />
-						</p>
+			{#each p.args.yIN ?? [] as yId}
+				{@const outKey = 'cosinory_' + yId}
+				{@const yOutId = p.args.out[outKey]}
+				{#if yOutId >= 0}
+					{@const yout = getColumnById(yOutId)}
+					{#if yout}
+						<ColumnComponent col={yout} />
 					{/if}
-				</div>
-			</div>
-			{#each cosinorData?.fittedData?.parameters.cosines as cosine, i}
-				{@const period = 2 * Math.PI * (1 / cosine.frequency)}
-				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>
-							Period: {period.toFixed(2)}
-							<StoreValueButton label="Period" getter={() => { const c = cosinorData?.fittedData?.parameters?.cosines?.[i]; return c ? 2 * Math.PI / c.frequency : NaN; }} defaultName={`cosinor_period${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
-						</p>
-
-						<p>
-							Amplitude: {cosine.amplitude.toFixed(2)}
-							<StoreValueButton label="Amplitude" getter={() => cosinorData?.fittedData?.parameters?.cosines?.[i]?.amplitude} defaultName={`cosinor_amplitude${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
-						</p>
-
-						<p>
-							Phase: {cosine.phase.toFixed(2)}
-							<StoreValueButton label="Phase" getter={() => cosinorData?.fittedData?.parameters?.cosines?.[i]?.phase} defaultName={`cosinor_phase${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
-						</p>
-
-						{#if !cosinorData?.fixedStats}
-							<p>
-								Equation: {cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(2)})
-							</p>
-						{/if}
-					</div>
-				</div>
+				{/if}
 			{/each}
-			{#if cosinorData?.fixedStats}
-				{@const s = cosinorData.fixedStats}
+			{#each Object.entries(cosinorData?.y_results ?? {}) as [yId, yResult]}
+				{@const srcName = getColumnById(Number(yId))?.name ?? yId}
 				<div class="div-line"></div>
-				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>Mesor: {s.M.toFixed(3)} &nbsp;[{Math.round((1 - s.alpha) * 100)}% CI: {s.CI_M[0].toFixed(3)}, {s.CI_M[1].toFixed(3)}]
-							<StoreValueButton label="Mesor" getter={() => cosinorData?.fixedStats?.M} defaultName="cosinor_mesor" source="Cosinor (fixed)" />
-						</p>
-						{#each s.harmonics as h}
-							<p>H{h.k} Amplitude: {h.amplitude.toFixed(3)} &nbsp;[CI: {h.CI_A[0].toFixed(3)}, {h.CI_A[1].toFixed(3)}]
-								<StoreValueButton label={`H${h.k} Amplitude`} getter={() => cosinorData?.fixedStats?.harmonics?.[h.k - 1]?.amplitude} defaultName={`cosinor_amplitude${s.harmonics.length > 1 ? '_H' + h.k : ''}`} source="Cosinor (fixed)" />
-							</p>
-							<p>H{h.k} Acrophase: {h.acrophase_hrs.toFixed(2)} h &nbsp;[CI: {h.CI_acrophase[0].toFixed(2)}, {h.CI_acrophase[1].toFixed(2)}]
-								<StoreValueButton label={`H${h.k} Acrophase`} getter={() => cosinorData?.fixedStats?.harmonics?.[h.k - 1]?.acrophase_hrs} defaultName={`cosinor_acrophase${s.harmonics.length > 1 ? '_H' + h.k : ''}`} source="Cosinor (fixed)" />
-							</p>
-						{/each}
-						<p>F({s.df[0]}, {s.df[1]}) = {s.F_stat.toFixed(3)}, p {s.pF < 0.001 ? '< 0.001' : '= ' + s.pF.toFixed(3)}
-							<StoreValueButton label="p-value" getter={() => cosinorData?.fixedStats?.pF} defaultName="cosinor_pvalue" source="Cosinor (fixed)" />
-						</p>
-					</div>
-				</div>
-			{/if}
+				<p><strong>{srcName}</strong></p>
+				{@render cosinorStats(yResult, srcName)}
+			{/each}
 		{:else if p.args.valid}
 			<p>Preview:</p>
-			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>RMSE: {cosinorData?.fittedData?.rmse.toFixed(3)}
-						<StoreValueButton label="RMSE" getter={() => cosinorData?.fittedData?.rmse} defaultName="cosinor_rmse" source="Cosinor" />
-					</p>
-					{#if cosinorData?.fittedData?.rSquared != null}
-						<p>R²: {cosinorData.fittedData.rSquared.toFixed(3)}
-							<StoreValueButton label="R²" getter={() => cosinorData?.fittedData?.rSquared} defaultName="cosinor_r2" source="Cosinor" />
-						</p>
-					{/if}
-				</div>
-			</div>
-			{#each cosinorData?.fittedData?.parameters.cosines as cosine, i}
-				{@const period = 2 * Math.PI * (1 / cosine.frequency)}
-				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>
-							Period: {period.toFixed(2)}
-							<StoreValueButton label="Period" getter={() => { const c = cosinorData?.fittedData?.parameters?.cosines?.[i]; return c ? 2 * Math.PI / c.frequency : NaN; }} defaultName={`cosinor_period${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
-						</p>
-						<p>
-							Amplitude: {cosine.amplitude.toFixed(2)}
-							<StoreValueButton label="Amplitude" getter={() => cosinorData?.fittedData?.parameters?.cosines?.[i]?.amplitude} defaultName={`cosinor_amplitude${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
-						</p>
-						<p>
-							Phase: {cosine.phase.toFixed(2)}
-							<StoreValueButton label="Phase" getter={() => cosinorData?.fittedData?.parameters?.cosines?.[i]?.phase} defaultName={`cosinor_phase${cosinorData.fittedData.parameters.cosines.length > 1 ? '_' + (i + 1) : ''}`} source="Cosinor" />
-						</p>
-						{#if !cosinorData?.fixedStats}
-							<p>
-								Equation: {cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(2)})
-							</p>
-						{/if}
-					</div>
-				</div>
-			{/each}
-			{#if cosinorData?.fixedStats}
-				{@const s = cosinorData.fixedStats}
+			{#each Object.entries(cosinorData?.y_results ?? {}) as [yId, yResult]}
+				{@const srcName = getColumnById(Number(yId))?.name ?? yId}
 				<div class="div-line"></div>
-				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>Mesor: {s.M.toFixed(3)} &nbsp;[{Math.round((1 - s.alpha) * 100)}% CI: {s.CI_M[0].toFixed(3)}, {s.CI_M[1].toFixed(3)}]
-							<StoreValueButton label="Mesor" getter={() => cosinorData?.fixedStats?.M} defaultName="cosinor_mesor" source="Cosinor (fixed)" />
-						</p>
-						{#each s.harmonics as h}
-							<p>H{h.k} Amplitude: {h.amplitude.toFixed(3)} &nbsp;[CI: {h.CI_A[0].toFixed(3)}, {h.CI_A[1].toFixed(3)}]
-								<StoreValueButton label={`H${h.k} Amplitude`} getter={() => cosinorData?.fixedStats?.harmonics?.[h.k - 1]?.amplitude} defaultName={`cosinor_amplitude${s.harmonics.length > 1 ? '_H' + h.k : ''}`} source="Cosinor (fixed)" />
-							</p>
-							<p>H{h.k} Acrophase: {h.acrophase_hrs.toFixed(2)} h &nbsp;[CI: {h.CI_acrophase[0].toFixed(2)}, {h.CI_acrophase[1].toFixed(2)}]
-								<StoreValueButton label={`H${h.k} Acrophase`} getter={() => cosinorData?.fixedStats?.harmonics?.[h.k - 1]?.acrophase_hrs} defaultName={`cosinor_acrophase${s.harmonics.length > 1 ? '_H' + h.k : ''}`} source="Cosinor (fixed)" />
-							</p>
-						{/each}
-						<p>F({s.df[0]}, {s.df[1]}) = {s.F_stat.toFixed(3)}, p {s.pF < 0.001 ? '< 0.001' : '= ' + s.pF.toFixed(3)}
-							<StoreValueButton label="p-value" getter={() => cosinorData?.fixedStats?.pF} defaultName="cosinor_pvalue" source="Cosinor (fixed)" />
-						</p>
-					</div>
-				</div>
-			{/if}
+				<p><strong>{srcName}</strong></p>
+				{@render cosinorStats(yResult, srcName)}
+			{/each}
 			{@const xData = cosinorData.outputXData ?? cosinorData.t}
-			{@const yData = cosinorData.predicted ?? cosinorData.fittedData.fitted}
+			{@const yIds = Object.keys(cosinorData?.y_results ?? {})}
 			{@const totalRows = xData.length}
 			<Table
-				headers={['x', cosinorData.outputXData ? 'predicted y' : 'fitted y']}
+				headers={[
+					'x',
+					...yIds.map(
+						(id) =>
+							(cosinorData.outputXData ? 'predicted ' : 'fitted ') +
+							(getColumnById(Number(id))?.name ?? id)
+					)
+				]}
 				data={[
-					xData.slice(previewStart - 1, previewStart + 5).map((x) =>
-						xIsTime && cosinorData.originTime_ms != null
-							? { isTime: true, raw: formatTimeFromUNIX(cosinorData.originTime_ms + x * 3600000), computed: x.toFixed(2) }
-							: x.toFixed(2)
-					),
-					yData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2))
+					xData
+						.slice(previewStart - 1, previewStart + 5)
+						.map((x) =>
+							xIsTime && cosinorData.originTime_ms != null
+								? {
+										isTime: true,
+										raw: formatTimeFromUNIX(cosinorData.originTime_ms + x * 3600000),
+										computed: x.toFixed(2)
+									}
+								: x.toFixed(2)
+						),
+					...yIds.map((id) => {
+						const yr = cosinorData.y_results[id];
+						const yData = yr.predicted ?? yr.fittedData.fitted;
+						return yData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2));
+					})
 				]}
 			/>
-			<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
+			<p>
+				Row <NumberWithUnits
+					min={1}
+					max={Math.max(1, totalRows - 5)}
+					step={1}
+					bind:value={previewStart}
+				/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+			</p>
 		{:else}
 			<p>Need to have valid inputs to create columns.</p>
 		{/if}
