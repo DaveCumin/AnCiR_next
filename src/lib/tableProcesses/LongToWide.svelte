@@ -131,9 +131,7 @@
 					return col ? col.getData() : result['value_' + cat];
 				});
 				for (let i = 0; i < n; i++) {
-					const vals = processedArrays
-						.map((arr) => arr[i])
-						.filter((v) => v != null && !isNaN(v));
+					const vals = processedArrays.map((arr) => arr[i]).filter((v) => v != null && !isNaN(v));
 					if (vals.length === 0) {
 						aggResult[i] = NaN;
 						continue;
@@ -218,19 +216,21 @@
 			if (colId >= 0) {
 				const col = getColumnById(colId);
 				if (col) {
-					h += col.processes.map((proc) => `${proc.id}:${proc.name}:${JSON.stringify(proc.args)}`).join('|');
+					h += col.processes
+						.map((proc) => `${proc.id}:${proc.name}:${JSON.stringify(proc.args)}`)
+						.join('|');
 				}
 			}
 		}
 		// Track preProcesses name and args changes
-		h += preProcessProcs.map((proc) => `${proc.name}:${JSON.stringify(proc.args)}`).join('|');
+		h += preProcessProcs.map((proc) => `${proc?.name ?? ''}:${JSON.stringify(proc?.args ?? {})}`).join('|');
 		return h;
 	});
 	let lastHash = '';
 
 	// Sync preProcessProcs args back to p.args so they persist in the session JSON
 	$effect(() => {
-		const snapshots = preProcessProcs.map((proc) => JSON.stringify(proc.args)); // establish tracking
+		const snapshots = preProcessProcs.map((proc) => JSON.stringify(proc?.args ?? {})); // establish tracking
 		untrack(() => {
 			for (let i = 0; i < snapshots.length; i++) {
 				if (p.args.preProcesses[i]) {
@@ -491,9 +491,7 @@
 		}
 		// Restore Process instances for each saved pre-process
 		preProcessProcs = p.args.preProcesses.map((pp) =>
-			pp.processName
-				? new Process({ name: pp.processName, args: pp.processArgs }, null)
-				: null
+			pp.processName ? new Process({ name: pp.processName, args: pp.processArgs }, null) : null
 		);
 		// Sync local selector state from committed args (handles loaded sessions)
 		categoryIN_local = p.args.categoryIN;
@@ -586,14 +584,13 @@
 				<div class="aggregate-block">
 					<div class="aggregate-header">
 						<span class="aggregate-title">Step {idx + 1}</span>
-						<button class="remove-btn" onclick={() => removePreProcess(idx)} title="Remove">×</button>
+						<button class="remove-btn" onclick={() => removePreProcess(idx)} title="Remove"
+							>×</button
+						>
 					</div>
 					<div class="control-input">
 						<p>Process</p>
-						<select
-							value={pp.processName}
-							onchange={(e) => setPreProcess(idx, e.target.value)}
-						>
+						<select value={pp.processName} onchange={(e) => setPreProcess(idx, e.target.value)}>
 							<option value="">Select…</option>
 							{#each sortedProcesses as [key, value] (key)}
 								<option value={key}>{value.displayName || key}</option>
