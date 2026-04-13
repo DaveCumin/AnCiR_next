@@ -217,6 +217,36 @@ export function loess(x, y, bandwidth = 0.3) {
  * @param {string}   type       - 'simple' | 'weighted' | 'exponential'
  * @returns {number[]}
  */
+/**
+ * Dispatch to the appropriate smoother based on `smootherType`.
+ * Expects pre-filtered, sorted, NaN-free arrays.
+ *
+ * @param {number[]} xVals       - sorted x values
+ * @param {number[]} yVals       - corresponding y values
+ * @param {string}   smootherType - 'moving' | 'whittaker' | 'savitzky' | 'loess'
+ * @param {object}   options     - type-specific params
+ * @returns {{ x_out: number[], y_out: number[] }}
+ */
+export function smoothArrays(xVals, yVals, smootherType, options = {}) {
+	let smoothedY;
+	switch (smootherType) {
+		case 'whittaker':
+			smoothedY = whittakerEilers(yVals, options.whittakerLambda ?? 100, options.whittakerOrder ?? 2);
+			break;
+		case 'savitzky':
+			smoothedY = savitzkyGolay(yVals, options.savitzkyWindowSize ?? 5, options.savitzkyPolyOrder ?? 2);
+			break;
+		case 'loess':
+			smoothedY = loess(xVals, yVals, options.loessBandwidth ?? 0.3);
+			break;
+		case 'moving':
+		default:
+			smoothedY = movingAverage(yVals, options.movingAvgWindowSize ?? 5, options.movingAvgType ?? 'simple');
+			break;
+	}
+	return { x_out: xVals, y_out: smoothedY };
+}
+
 export function movingAverage(y, windowSize = 5, type = 'simple') {
 	const result = [...y];
 	const halfWindow = Math.floor(windowSize / 2);

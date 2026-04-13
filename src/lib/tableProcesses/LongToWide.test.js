@@ -27,7 +27,7 @@ beforeEach(() => {
 
 describe('longtowide', () => {
 	it('returns invalid when inputs are -1', () => {
-		const [, valid] = longtowide({ categoryIN: -1, timeIN: -1, valueIN: -1, out: { time: -1 }, preProcesses: [], aggregates: [] });
+		const [, valid] = longtowide({ categoryIN: -1, timeIN: -1, valueIN: -1, out: { time: -1 }, preProcesses: [] });
 		expect(valid).toBe(false);
 	});
 
@@ -38,7 +38,7 @@ describe('longtowide', () => {
 
 		const [result, valid] = longtowide({
 			categoryIN: 1, timeIN: 2, valueIN: 3,
-			out: { time: -1 }, preProcesses: [], aggregates: []
+			out: { time: -1 }, preProcesses: []
 		});
 
 		expect(valid).toBe(true);
@@ -55,7 +55,7 @@ describe('longtowide', () => {
 
 		const [result] = longtowide({
 			categoryIN: 1, timeIN: 2, valueIN: 3,
-			out: { time: -1 }, preProcesses: [], aggregates: []
+			out: { time: -1 }, preProcesses: []
 		});
 
 		expect(isNaN(result.value_A[1])).toBe(true); // A has no value at time 1
@@ -69,7 +69,7 @@ describe('longtowide', () => {
 
 		const [, valid] = longtowide({
 			categoryIN: 1, timeIN: 2, valueIN: 3,
-			out: { time: -1 }, preProcesses: [], aggregates: []
+			out: { time: -1 }, preProcesses: []
 		});
 
 		expect(valid).toBe(false);
