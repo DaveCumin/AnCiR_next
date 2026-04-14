@@ -3,7 +3,7 @@
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 	import { core } from '$lib/core/core.svelte';
 	import { removePlots } from '$lib/core/Plot.svelte';
-	import { convertToImage, saveDataAsCSV } from '$lib/components/plotbits/helpers/save.svelte.js';
+	import { convertToImage, saveDataAsCSV, showDataAsTable } from '$lib/components/plotbits/helpers/save.svelte.js';
 
 	let {
 		showDropdown = $bindable(false),
@@ -56,6 +56,15 @@
 			onmouseleave={() => hideSubmenu('save', 150)}
 		>
 			<button>Save</button>
+		</div>
+
+		<!-- View data option -->
+		<div
+			class="dropdown-item"
+			onclick={() => { showDataAsTable(plotId); closeDropdown(); }}
+			onmouseenter={() => hideSubmenu('save', 0)}
+		>
+			<button>View data</button>
 		</div>
 
 		<!-- Download data option -->

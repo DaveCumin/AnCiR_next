@@ -1,5 +1,6 @@
 import { appState } from '$lib/core/core.svelte.js';
 import { core } from '$lib/core/core.svelte';
+import { Plot } from '$lib/core/Plot.svelte';
 import { tick } from 'svelte';
 import { showError } from '$lib/core/core.svelte.js';
 
@@ -31,6 +32,26 @@ export function saveDataAsCSV(plotId) {
 	link.click();
 	document.body.removeChild(link);
 	URL.revokeObjectURL(url);
+}
+
+/**
+ * Open a DataView plot on the canvas showing the data from the given plot.
+ * @param {number} plotId - The index of the source plot in core.plots
+ */
+export function showDataAsTable(plotId) {
+	const sourcePlot = core.plots[plotId];
+	if (!sourcePlot?.plot || typeof sourcePlot.plot.getDownloadData !== 'function') return;
+
+	const newPlot = new Plot({
+		name: 'Data: ' + (sourcePlot.name || 'Plot'),
+		type: 'dataview'
+	});
+	newPlot.x = sourcePlot.x + 20;
+	newPlot.y = sourcePlot.y + 20;
+	newPlot.width = Math.max(sourcePlot.width, 400);
+	newPlot.height = 300;
+	newPlot.plot.sourcePlotId = sourcePlot.id;
+	core.plots.push(newPlot);
 }
 
 function escapeCSV(value) {

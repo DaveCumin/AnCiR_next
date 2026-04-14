@@ -434,7 +434,15 @@
 			const columns = [];
 			this.data.forEach((datum, d) => {
 				const label = datum.label || `Data ${d}`;
-				const xData = datum.x.getData() ?? [];
+				let xData = datum.x.getData() ?? [];
+				// Convert datetime x values to ISO strings for readability
+				if (this.anyXdataTime) {
+					if (datum.x.type === 'time') {
+						xData = xData.map((/** @type {number} */ ms) => new Date(ms).toISOString());
+					} else if (datum.x.originTime_ms != null) {
+						xData = xData.map((/** @type {number} */ h) => new Date(datum.x.originTime_ms + h * 3600000).toISOString());
+					}
+				}
 				const yData = datum.y.getData() ?? [];
 				headers.push(`x_${label}`, `y_${label}`);
 				columns.push(xData, yData);

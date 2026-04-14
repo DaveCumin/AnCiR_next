@@ -3,7 +3,8 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
-	import Box, { BoxClass } from '$lib/components/plotbits/Box.svelte';
+	import Box, { BoxClass, calculateBoxPlotStats } from '$lib/components/plotbits/Box.svelte';
+	import { mean, calculateStandardDeviation } from '$lib/utils/MathsStats.js';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
@@ -243,20 +244,83 @@
 		});
 
 		getDownloadData() {
-			const headers = [];
-			const columns = [];
-			this.data.forEach((datum, d) => {
+			const allCategories = [...this.uniqueXValues];
+			const multiSeries = this.data.length > 1;
+
+			// Compute stats for every series × category up front
+			const seriesStats = this.data.map((datum, d) => {
 				const label = datum.label || `Data ${d}`;
 				const xData = datum.x.getData() ?? [];
 				const yData = datum.y.getData() ?? [];
-				headers.push(`Category_${label}`, `Value_${label}`);
-				columns.push(xData, yData);
+				const groups = new Map();
+				xData.forEach((cat, i) => {
+					const val = yData[i];
+					if (cat == null || val == null || isNaN(val)) return;
+					if (!groups.has(cat)) groups.set(cat, []);
+					groups.get(cat).push(val);
+				});
+				// Pre-compute stats per category
+				const statsMap = new Map();
+				allCategories.forEach((cat) => {
+					const vals = groups.get(cat) ?? [];
+					const box = calculateBoxPlotStats(vals);
+					if (!box || vals.length === 0) { statsMap.set(cat, null); return; }
+					const validVals = vals.filter((v) => v != null && !isNaN(v));
+					statsMap.set(cat, {
+						count: validVals.length,
+						mean: mean(validVals),
+						std: calculateStandardDeviation(validVals),
+						min: box.min,
+						q1: box.q1,
+						median: box.q2,
+						q3: box.q3,
+						max: box.max,
+						outliers: box.outliers
+					});
+				});
+				return { label, statsMap };
 			});
-			const maxLen = Math.max(...columns.map((c) => c.length), 0);
+
+			// Find the maximum number of outliers across all series × categories
+			let maxOutliers = 0;
+			seriesStats.forEach(({ statsMap }) => {
+				statsMap.forEach((s) => { if (s) maxOutliers = Math.max(maxOutliers, s.outliers.length); });
+			});
+
+			const statKeys = ['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max', 'n_outliers',
+				...Array.from({ length: maxOutliers }, (_, i) => `outlier_${i + 1}`)];
+
+			const headers = multiSeries
+				? ['DataSeries', 'Stat', ...allCategories.map(String)]
+				: ['Stat', ...allCategories.map(String)];
+
 			const rows = [];
-			for (let i = 0; i < maxLen; i++) {
-				rows.push(columns.map((col) => (i < col.length ? col[i] : '')));
-			}
+			seriesStats.forEach(({ label, statsMap }) => {
+				statKeys.forEach((key) => {
+					const row = multiSeries ? [label, key] : [key];
+					allCategories.forEach((cat) => {
+						const s = statsMap.get(cat);
+						if (!s) { row.push(''); return; }
+						switch (key) {
+							case 'count':     row.push(s.count); break;
+							case 'mean':      row.push(s.mean); break;
+							case 'std':       row.push(s.std); break;
+							case 'min':       row.push(s.min); break;
+							case '25%':       row.push(s.q1); break;
+							case '50%':       row.push(s.median); break;
+							case '75%':       row.push(s.q3); break;
+							case 'max':       row.push(s.max); break;
+							case 'n_outliers': row.push(s.outliers.length); break;
+							default: {
+								const idx = parseInt(key.split('_')[1]) - 1;
+								row.push(s.outliers[idx] ?? '');
+							}
+						}
+					});
+					rows.push(row);
+				});
+			});
+
 			return { headers, rows };
 		}
 

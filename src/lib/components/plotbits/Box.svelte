@@ -72,7 +72,8 @@
 		}
 	}
 
-	function calculateBoxPlotStats(data) {
+	/** @param {number[]} data */
+	export function calculateBoxPlotStats(data) {
 		if (!data || data.length === 0) return null;
 
 		const validData = data.filter((d) => d != null && !isNaN(d));
