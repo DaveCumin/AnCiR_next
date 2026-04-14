@@ -114,6 +114,7 @@
 	style="top: 0;
 			left: {leftPx}px;
 			width: {canvasWidthPx}px;
+			height: 100vh;
 			"
 >
 	<div
