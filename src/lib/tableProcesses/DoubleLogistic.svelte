@@ -141,6 +141,10 @@
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
+	import {
+		showStaticDataAsTable,
+		saveStaticDataAsCSV
+	} from '$lib/components/plotbits/helpers/save.svelte.js';
 
 	let { p = $bindable() } = $props();
 
@@ -333,6 +337,30 @@
 	function fmt(val, decimals = 3) {
 		if (val == null || !isFinite(val)) return '—';
 		return val.toFixed(decimals);
+	}
+
+	function getDlogStatsData() {
+		if (!dlData?.y_results) return { headers: [], rows: [] };
+		const validEntries = Object.entries(dlData.y_results).filter(([, r]) => r.fitResult);
+		if (!validEntries.length) return { headers: [], rows: [] };
+		const headers = ['column', 'rmse', 'r2', 'period', 'M', 'A', 'k1', 'onset', 'k2', 'offset'];
+		const rows = validEntries.map(([yId, r]) => {
+			const name = getColumnById(Number(yId))?.name ?? String(yId);
+			const fr = r.fitResult;
+			return [
+				name,
+				fr.rmse,
+				fr.rSquared,
+				fr.parameters?.T,
+				fr.parameters?.M,
+				fr.parameters?.A,
+				fr.parameters?.k1,
+				fr.parameters?.t1,
+				fr.parameters?.k2,
+				fr.parameters?.t2
+			];
+		});
+		return { headers, rows };
 	}
 </script>
 
@@ -574,6 +602,22 @@
 					{/if}
 				{/each}
 			</div>
+			<div class="tp-stat-actions">
+				<button
+					class="tp-stat-btn"
+					onclick={() => {
+						const { headers, rows } = getDlogStatsData();
+						showStaticDataAsTable('Double logistic stats', headers, rows, getDlogStatsData);
+					}}>View stats</button
+				>
+				<button
+					class="tp-stat-btn"
+					onclick={() => {
+						const { headers, rows } = getDlogStatsData();
+						saveStaticDataAsCSV('double_logistic_stats', headers, rows);
+					}}>Download stats</button
+				>
+			</div>
 		{:else if p.args.valid}
 			<p>Preview:</p>
 			{#each Object.entries(dlData?.y_results ?? {}) as [yId, yResult]}
@@ -644,5 +688,26 @@
 		font-size: 11px;
 		color: var(--color-lightness-45, #666);
 		font-style: italic;
+	}
+
+	.tp-stat-actions {
+		display: flex;
+		gap: 0.4rem;
+		margin-top: 0.3rem;
+	}
+
+	.tp-stat-btn {
+		font-size: 11px;
+		padding: 0.25rem 0.5rem;
+		border: 1px solid var(--color-lightness-75, #aaa);
+		border-radius: 3px;
+		background: none;
+		cursor: pointer;
+		color: var(--color-lightness-35, #555);
+	}
+
+	.tp-stat-btn:hover {
+		background: var(--color-lightness-95);
+		border-color: var(--color-lightness-55, #888);
 	}
 </style>

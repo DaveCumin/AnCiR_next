@@ -3,10 +3,11 @@
 
 	let { headers, data, editable = false, onInput = () => {} } = $props();
 
-	// Initialize widths array with equal distribution
-	let widths = $state(headers.map(() => 100 / headers.length + '%'));
+	// Initialize widths array with fixed pixel widths so columns don't shrink
+	// to fit and the table can overflow its container (enabling horizontal scroll).
+	const defaultColWidth = 120; // px
+	let widths = $state(headers.map(() => defaultColWidth + 'px'));
 	let resizingIndex = -1;
-	let totalWidth = 0;
 	let table;
 	const minWidth = 30; // Minimum column width in pixels
 
@@ -18,43 +19,16 @@
 
 	function handleMouseMove(event) {
 		if (resizingIndex >= 0) {
-			totalWidth = table.offsetWidth;
 			const th = table.querySelectorAll('th')[resizingIndex];
-			const newWidth = event.clientX - th.getBoundingClientRect().left;
-
-			// Convert pixel width to percentage
-			const newWidthPercent = Math.max(
-				(newWidth / totalWidth) * 100,
-				(minWidth / totalWidth) * 100
-			);
-
-			// Calculate the adjustment needed
-			const oldWidth = parseFloat(widths[resizingIndex]);
-			const widthDiff = newWidthPercent - oldWidth;
-
-			// Update widths while maintaining total width
-			widths = widths.map((w, i) => {
-				if (i === resizingIndex) {
-					return `${newWidthPercent}%`;
-				}
-				if (i === resizingIndex + 1) {
-					const currentWidth = parseFloat(w);
-					const newAdjustedWidth = Math.max(
-						currentWidth - widthDiff,
-						(minWidth / totalWidth) * 100
-					);
-					return `${newAdjustedWidth}%`;
-				}
-
-				return w;
-			});
+			const newWidth = Math.max(minWidth, event.clientX - th.getBoundingClientRect().left);
+			widths = widths.map((w, i) => (i === resizingIndex ? `${newWidth}px` : w));
 		}
 	}
 
-	//update the widths when data is changed.
+	// Reset widths when column set changes.
 	$effect(() => {
 		if (headers) {
-			widths = headers.map(() => 100 / headers.length + '%');
+			widths = headers.map(() => defaultColWidth + 'px');
 		}
 	});
 
@@ -126,6 +100,8 @@
 	/* preview table */
 	:global(.preview-table-wrapper) {
 		overflow-x: auto;
+		overflow-y: hidden;
+		height: 100%;
 	}
 
 	:global(.preview-table-wrapper table) {

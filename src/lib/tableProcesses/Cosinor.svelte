@@ -201,6 +201,10 @@
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
+	import {
+		showStaticDataAsTable,
+		saveStaticDataAsCSV
+	} from '$lib/components/plotbits/helpers/save.svelte.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
 	let { p = $bindable() } = $props();
@@ -388,6 +392,85 @@
 			p.args.outputX = -1;
 		} else {
 			p.args.outputX = p.args.xIN; // default to input X
+		}
+	}
+
+	function getCosinorStatsData() {
+		if (!cosinorData?.y_results) return { headers: [], rows: [] };
+		const useFixed = p.args.useFixedPeriod ?? false;
+		const validEntries = Object.entries(cosinorData.y_results).filter(
+			([, r]) => (r.fittedData?.fitted?.length ?? 0) > 0
+		);
+		if (!validEntries.length) return { headers: [], rows: [] };
+
+		if (useFixed) {
+			const maxH = Math.max(...validEntries.map(([, r]) => r.fixedStats?.harmonics?.length ?? 0));
+			const headers = [
+				'column',
+				'rmse',
+				'r2',
+				'mesor',
+				'mesor_ci_lo',
+				'mesor_ci_hi',
+				'F_stat',
+				'p_value'
+			];
+			for (let h = 1; h <= maxH; h++) {
+				headers.push(
+					`H${h}_amplitude`,
+					`H${h}_amp_ci_lo`,
+					`H${h}_amp_ci_hi`,
+					`H${h}_acrophase_hrs`,
+					`H${h}_acro_ci_lo`,
+					`H${h}_acro_ci_hi`
+				);
+			}
+			const rows = validEntries.map(([yId, r]) => {
+				const name = getColumnById(Number(yId))?.name ?? String(yId);
+				const s = r.fixedStats;
+				const row = [
+					name,
+					r.fittedData.rmse,
+					r.fittedData.rSquared,
+					s?.M ?? null,
+					s?.CI_M?.[0] ?? null,
+					s?.CI_M?.[1] ?? null,
+					s?.F_stat ?? null,
+					s?.pF ?? null
+				];
+				for (let h = 0; h < maxH; h++) {
+					const hd = s?.harmonics?.[h];
+					row.push(
+						hd?.amplitude ?? null,
+						hd?.CI_A?.[0] ?? null,
+						hd?.CI_A?.[1] ?? null,
+						hd?.acrophase_hrs ?? null,
+						hd?.CI_acrophase?.[0] ?? null,
+						hd?.CI_acrophase?.[1] ?? null
+					);
+				}
+				return row;
+			});
+			return { headers, rows };
+		} else {
+			const maxC = Math.max(
+				...validEntries.map(([, r]) => r.fittedData?.parameters?.cosines?.length ?? 0)
+			);
+			const headers = ['column', 'rmse', 'r2'];
+			for (let c = 1; c <= maxC; c++) {
+				headers.push(`curve${c}_period`, `curve${c}_amplitude`, `curve${c}_phase`);
+			}
+			const rows = validEntries.map(([yId, r]) => {
+				const name = getColumnById(Number(yId))?.name ?? String(yId);
+				const row = [name, r.fittedData.rmse, r.fittedData.rSquared];
+				for (let c = 0; c < maxC; c++) {
+					const cd = r.fittedData.parameters?.cosines?.[c];
+					const period = cd?.frequency ? (2 * Math.PI) / cd.frequency : null;
+					row.push(period, cd?.amplitude ?? null, cd?.phase ?? null);
+				}
+				return row;
+			});
+			return { headers, rows };
 		}
 	}
 </script>
@@ -659,6 +742,22 @@
 					{/if}
 				{/each}
 			</div>
+			<div class="tp-stat-actions">
+				<button
+					class="tp-stat-btn"
+					onclick={() => {
+						const { headers, rows } = getCosinorStatsData();
+						showStaticDataAsTable('Cosinor stats', headers, rows, getCosinorStatsData);
+					}}>View stats</button
+				>
+				<button
+					class="tp-stat-btn"
+					onclick={() => {
+						const { headers, rows } = getCosinorStatsData();
+						saveStaticDataAsCSV('cosinor_stats', headers, rows);
+					}}>Download stats</button
+				>
+			</div>
 		{:else if p.args.valid}
 			<p>Preview:</p>
 			{#each Object.entries(cosinorData?.y_results ?? {}) as [yId, yResult]}
@@ -730,5 +829,26 @@
 		font-size: 11px;
 		color: var(--color-lightness-45, #666);
 		font-style: italic;
+	}
+
+	.tp-stat-actions {
+		display: flex;
+		gap: 0.4rem;
+		margin-top: 0.3rem;
+	}
+
+	.tp-stat-btn {
+		font-size: 11px;
+		padding: 0.25rem 0.5rem;
+		border: 1px solid var(--color-lightness-75, #aaa);
+		border-radius: 3px;
+		background: none;
+		cursor: pointer;
+		color: var(--color-lightness-35, #555);
+	}
+
+	.tp-stat-btn:hover {
+		background: var(--color-lightness-95);
+		border-color: var(--color-lightness-55, #888);
 	}
 </style>

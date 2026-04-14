@@ -102,6 +102,15 @@
 	import { Process } from '$lib/core/Process.svelte';
 	import Processcomponent from '$lib/core/Process.svelte';
 	import { onMount, untrack } from 'svelte';
+	import {
+		showStaticDataAsTable,
+		saveStaticDataAsCSV
+	} from '$lib/components/plotbits/helpers/save.svelte.js';
+	import {
+		TP_LABELS,
+		STATS_TYPES,
+		getTableProcessStatsData
+	} from '$lib/tableProcesses/nestedStats.js';
 
 	// Algorithm imports for per-column table processes
 	import { fitCosineCurves, fitCosinorFixed } from '$lib/utils/cosinor.js';
@@ -182,7 +191,9 @@
 		const dataHash = getHash;
 		if (!mounted) return;
 		if (dataHash !== lastHash) {
-			untrack(() => { doCollect(); });
+			untrack(() => {
+				doCollect();
+			});
 			lastHash = dataHash;
 		}
 	});
@@ -190,13 +201,19 @@
 	$effect(() => {
 		const newIds = selectedColIds;
 		if (!mounted) return;
-		untrack(() => { onSelectionChange(newIds); });
+		untrack(() => {
+			onSelectionChange(newIds);
+		});
 	});
 
 	function onSelectionChange(newIds) {
 		const newIdSet = new Set(newIds.map(Number));
 		const oldIds = p.args.colIds ?? [];
-		if (newIds.length === oldIds.length && [...newIdSet].every((id) => oldIds.map(Number).includes(id))) return;
+		if (
+			newIds.length === oldIds.length &&
+			[...newIdSet].every((id) => oldIds.map(Number).includes(id))
+		)
+			return;
 		for (const oldId of oldIds) {
 			if (!newIdSet.has(Number(oldId))) {
 				const outKey = 'col_' + oldId;
@@ -217,12 +234,16 @@
 		preProcessProcs = [...preProcessProcs, null];
 	}
 
+	// Minimal stand-in for a Column so process components that
+	// access p.parentCol.id / .type / .removeProcess() don't crash.
+	const _dummyParentCol = { id: -1, type: 'number', removeProcess() {} };
+
 	function setPreProcess(idx, processName) {
 		if (!processName) {
 			p.args.preProcesses[idx] = { processName: '', processArgs: {} };
 			preProcessProcs[idx] = null;
 		} else {
-			const proc = new Process({ name: processName }, null);
+			const proc = new Process({ name: processName }, _dummyParentCol);
 			p.args.preProcesses[idx] = { processName, processArgs: proc.args };
 			preProcessProcs[idx] = proc;
 		}
@@ -240,30 +261,56 @@
 	// ─── Table process constants ───────────────────────────────────────────────
 
 	const TP_DEFAULTS = {
-		cosinor:  { useFixedPeriod: true, fixedPeriod: 24, nHarmonics: 1, alpha: 0.05, Ncurves: 1 },
-		bin:      { binSize: 1, binStart: 0, stepSize: 1, diffStep: false, aggFunction: 'mean' },
-		smooth:   { smootherType: 'moving', whittakerLambda: 100, whittakerOrder: 2, savitzkyWindowSize: 5, savitzkyPolyOrder: 2, loessBandwidth: 0.3, movingAvgWindowSize: 5, movingAvgType: 'simple' },
-		trend:    { model: 'linear', polyDegree: 2 },
-		rectwave: { fixKappa: false, fixedKappa: 5, fixOmega: false, fixedPeriod: 24, fixDutyCycle: false, fixedDutyCycle: 0.5 },
-		dlog:     { fixK1: false, fixedK1: 0.5, fixK2: false, fixedK2: 0.5, fixPeriod: false, fixedPeriod: 24 }
-	};
-
-	const TP_LABELS = {
-		cosinor:  'Cosinor fit',
-		bin:      'Bin data',
-		smooth:   'Smooth data',
-		trend:    'Trend fit',
-		rectwave: 'Rectangular wave fit',
-		dlog:     'Double logistic fit'
+		cosinor: { useFixedPeriod: true, fixedPeriod: 24, nHarmonics: 1, alpha: 0.05, Ncurves: 1 },
+		bin: { binSize: 1, binStart: 0, stepSize: 1, diffStep: false, aggFunction: 'mean' },
+		smooth: {
+			smootherType: 'moving',
+			whittakerLambda: 100,
+			whittakerOrder: 2,
+			savitzkyWindowSize: 5,
+			savitzkyPolyOrder: 2,
+			loessBandwidth: 0.3,
+			movingAvgWindowSize: 5,
+			movingAvgType: 'simple'
+		},
+		trend: { model: 'linear', polyDegree: 2 },
+		rectwave: {
+			fixKappa: false,
+			fixedKappa: 5,
+			fixOmega: false,
+			fixedPeriod: 24,
+			fixDutyCycle: false,
+			fixedDutyCycle: 0.5
+		},
+		dlog: {
+			fixK1: false,
+			fixedK1: 0.5,
+			fixK2: false,
+			fixedK2: 0.5,
+			fixPeriod: false,
+			fixedPeriod: 24
+		}
 	};
 
 	// ─── ColumnSelector registration key helpers ─────────────────────────────
-	function _tpXKey(tp) { return 'tp_' + tp.id + '_x'; }
-	function _tpYKey(tp, colId) { return 'tp_' + tp.id + '_y_' + colId; }
+	function _tpXKey(tp) {
+		return 'tp_' + tp.id + '_x';
+	}
+	function _tpYKey(tp, colId) {
+		return 'tp_' + tp.id + '_y_' + colId;
+	}
 
 	function addTableProcess(type) {
 		if (!type) return;
-		const tp = { id: crypto.randomUUID(), type, xColId: -1, excludedColIds: [], args: { ...TP_DEFAULTS[type] }, xOutId: -1, out: {} };
+		const tp = {
+			id: crypto.randomUUID(),
+			type,
+			xColId: -1,
+			excludedColIds: [],
+			args: { ...TP_DEFAULTS[type] },
+			xOutId: -1,
+			out: {}
+		};
 		p.args.tableProcesses = [...p.args.tableProcesses, tp];
 		const newIdx = p.args.tableProcesses.length - 1;
 		reconcileTableProcessOutputCols(newIdx);
@@ -272,10 +319,16 @@
 
 	function removeTableProcess(idx) {
 		const tp = p.args.tableProcesses[idx];
-		if (tp.xOutId >= 0) { core.rawData.delete(tp.xOutId); removeColumn(tp.xOutId); }
+		if (tp.xOutId >= 0) {
+			core.rawData.delete(tp.xOutId);
+			removeColumn(tp.xOutId);
+		}
 		if (tp.id) delete p.args.out[_tpXKey(tp)];
 		for (const [colIdStr, yOutId] of Object.entries(tp.out ?? {})) {
-			if (yOutId >= 0) { core.rawData.delete(yOutId); removeColumn(yOutId); }
+			if (yOutId >= 0) {
+				core.rawData.delete(yOutId);
+				removeColumn(yOutId);
+			}
 			if (tp.id) delete p.args.out[_tpYKey(tp, colIdStr)];
 		}
 		p.args.tableProcesses = p.args.tableProcesses.filter((_, i) => i !== idx);
@@ -334,7 +387,10 @@
 		// Remove y columns for output columns that are gone
 		for (const [colIdStr, yOutId] of Object.entries(tp.out)) {
 			if (!activeOutColIds.includes(Number(colIdStr))) {
-				if (yOutId >= 0) { core.rawData.delete(yOutId); removeColumn(yOutId); }
+				if (yOutId >= 0) {
+					core.rawData.delete(yOutId);
+					removeColumn(yOutId);
+				}
 				delete p.args.out[_tpYKey(tp, colIdStr)];
 				delete tp.out[colIdStr];
 			}
@@ -344,37 +400,53 @@
 	}
 
 	function applyTableProcesses() {
-		if (!p.args.valid) { tableProcessResults = []; return; }
+		if (!p.args.valid) {
+			tableProcessResults = [];
+			return;
+		}
+
+		const committed = (p.args.outColIds?.length ?? 0) > 0;
+		const activeColSource = committed ? p.args.outColIds : (p.args.colIds ?? []);
 
 		const newResults = (p.args.tableProcesses ?? []).map((tp) => {
 			const excluded = tp.excludedColIds ?? [];
-			const activeOutColIds = (p.args.outColIds ?? []).filter((id) => !excluded.includes(id));
+			const activeOutColIds = activeColSource.filter((id) => !excluded.includes(id));
+
+			// Get data: from core.rawData when committed, from collectResult in preview
+			function getColData(colId) {
+				if (committed) return core.rawData.get(colId) ?? [];
+				return collectResult?.[colId] ?? [];
+			}
 
 			// Build x values: from selected column or row indices
-			const nRows = activeOutColIds.length > 0 ? (core.rawData.get(activeOutColIds[0])?.length ?? 0) : 0;
-			const xVals = tp.xColId >= 0
-				? (core.rawData.get(tp.xColId) ?? Array.from({ length: nRows }, (_, i) => i))
-				: Array.from({ length: nRows }, (_, i) => i);
+			const firstData = activeOutColIds.length > 0 ? getColData(activeOutColIds[0]) : [];
+			const nRows = firstData.length;
+			const xVals =
+				tp.xColId >= 0
+					? (core.rawData.get(tp.xColId) ?? Array.from({ length: nRows }, (_, i) => i))
+					: Array.from({ length: nRows }, (_, i) => i);
 
 			let xWritten = false;
 			return activeOutColIds.map((colId) => {
-				const yOutId = tp.out?.[colId];
-				const values = core.rawData.get(colId) ?? [];
+				const yOutId = tp.out?.[colId] ?? -1;
+				const values = getColData(colId);
 				if (!values.length) return { colId, valid: false };
 				const writeX = !xWritten;
-				const res = applyOneTableProcess(tp, xVals, values, tp.xOutId, yOutId ?? -1, writeX);
+				const res = applyOneTableProcess(tp, xVals, values, tp.xOutId ?? -1, yOutId, writeX);
 				if (res.valid) xWritten = true;
 				return { colId, ...res };
 			});
 		});
 
-		untrack(() => { tableProcessResults = newResults; });
+		untrack(() => {
+			tableProcessResults = newResults;
+		});
 	}
 
 	// xOutId / yOutId may be -1 in preview mode — computation still runs, writes are skipped
 	function applyOneTableProcess(tp, xVals, values, xOutId, yOutId, writeX) {
 		const validIdx = xVals
-			.map((x, i) => (!isNaN(x) && values[i] != null && !isNaN(values[i])) ? i : -1)
+			.map((x, i) => (!isNaN(x) && values[i] != null && !isNaN(values[i]) ? i : -1))
 			.filter((i) => i >= 0);
 		if (validIdx.length < 3) return { valid: false };
 
@@ -388,64 +460,141 @@
 				case 'cosinor': {
 					const a = tp.args;
 					if (a.useFixedPeriod) {
-						const fit = fitCosinorFixed(tt, yy, a.fixedPeriod ?? 24, a.nHarmonics ?? 1, a.alpha ?? 0.05);
+						const fit = fitCosinorFixed(
+							tt,
+							yy,
+							a.fixedPeriod ?? 24,
+							a.nHarmonics ?? 1,
+							a.alpha ?? 0.05
+						);
 						if (!fit) return { valid: false };
-						xOut = tt; yOut = fit.fitted;
-						stats = { rmse: fit.RMSE, r2: fit.R2, mesor: fit.M };
+						xOut = tt;
+						yOut = fit.fitted;
+						stats = {
+							rmse: fit.RMSE,
+							r2: fit.R2,
+							mesor: fit.M,
+							mesor_ci_lo: fit.CI_M?.[0],
+							mesor_ci_hi: fit.CI_M?.[1],
+							F_stat: fit.F_stat,
+							p_value: fit.pF,
+							harmonics: (fit.harmonics ?? []).map((h) => ({
+								k: h.k,
+								amplitude: h.amplitude,
+								amplitude_ci_lo: h.CI_A?.[0],
+								amplitude_ci_hi: h.CI_A?.[1],
+								acrophase_hrs: h.acrophase_hrs,
+								acrophase_ci_lo: h.CI_acrophase?.[0],
+								acrophase_ci_hi: h.CI_acrophase?.[1]
+							}))
+						};
 					} else {
 						const fit = fitCosineCurves(tt, yy, a.Ncurves ?? 1);
 						if (!fit?.fitted?.length) return { valid: false };
-						xOut = tt; yOut = fit.fitted;
-						stats = { rmse: fit.rmse, r2: fit.rSquared };
+						xOut = tt;
+						yOut = fit.fitted;
+						stats = {
+							rmse: fit.rmse,
+							r2: fit.rSquared,
+							cosines: (fit.parameters?.cosines ?? []).map((c) => ({
+								period: c.frequency ? (2 * Math.PI) / c.frequency : null,
+								amplitude: c.amplitude,
+								phase: c.phase
+							}))
+						};
 					}
 					break;
 				}
 				case 'bin': {
 					const a = tp.args;
 					const step = a.diffStep ? (a.stepSize ?? a.binSize) : (a.binSize ?? 1);
-					const res = binData(tt, yy, a.binSize ?? 1, a.binStart ?? 0, step, a.aggFunction ?? 'mean');
+					const res = binData(
+						tt,
+						yy,
+						a.binSize ?? 1,
+						a.binStart ?? 0,
+						step,
+						a.aggFunction ?? 'mean'
+					);
 					if (!res?.bins?.length) return { valid: false };
-					xOut = res.bins; yOut = res.y_out; stats = {};
+					xOut = res.bins;
+					yOut = res.y_out;
+					stats = {};
 					break;
 				}
 				case 'smooth': {
 					const a = tp.args;
 					const res = smoothArrays(tt, yy, a.smootherType ?? 'moving', a);
 					if (!res?.y_out?.length) return { valid: false };
-					xOut = res.x_out; yOut = res.y_out; stats = {};
+					xOut = res.x_out;
+					yOut = res.y_out;
+					stats = {};
 					break;
 				}
 				case 'trend': {
 					const a = tp.args;
 					const res = fitTrend(tt, yy, a.model ?? 'linear', a.polyDegree ?? 2);
 					if (!res?.fitted?.length) return { valid: false };
-					xOut = tt; yOut = res.fitted;
-					stats = { rmse: res.rmse, r2: res.rSquared };
+					xOut = tt;
+					yOut = res.fitted;
+					stats = {
+						rmse: res.rmse,
+						r2: res.rSquared,
+						model: a.model ?? 'linear',
+						parameters: res.parameters
+					};
 					break;
 				}
 				case 'rectwave': {
 					const a = tp.args;
 					const fit = fitRectangularWave(tt, yy, {
-						fixKappa: a.fixKappa, fixedKappa: a.fixedKappa,
-						fixOmega: a.fixOmega, fixedPeriod: a.fixedPeriod,
-						fixDutyCycle: a.fixDutyCycle, fixedDutyCycle: a.fixedDutyCycle
+						fixKappa: a.fixKappa,
+						fixedKappa: a.fixedKappa,
+						fixOmega: a.fixOmega,
+						fixedPeriod: a.fixedPeriod,
+						fixDutyCycle: a.fixDutyCycle,
+						fixedDutyCycle: a.fixedDutyCycle
 					});
 					if (!fit) return { valid: false };
-					xOut = tt; yOut = evaluateRectWaveAtPoints(fit.parameters, tt);
-					stats = { rmse: fit.rmse, r2: fit.rSquared, period: fit.parameters?.period };
+					xOut = tt;
+					yOut = evaluateRectWaveAtPoints(fit.parameters, tt);
+					stats = {
+						rmse: fit.rmse,
+						r2: fit.rSquared,
+						period: fit.period,
+						acrophase: fit.acrophase,
+						M: fit.parameters?.M,
+						A: fit.parameters?.A,
+						kappa: fit.parameters?.kappa,
+						dutyCycle: fit.parameters?.dutyCycle
+					};
 					break;
 				}
 				case 'dlog': {
 					const a = tp.args;
 					const fit = fitDoubleLogistic(tt, yy, {
 						periodic: true,
-						fixK1: a.fixK1, fixedK1: a.fixedK1,
-						fixK2: a.fixK2, fixedK2: a.fixedK2,
-						fixPeriod: a.fixPeriod, fixedPeriod: a.fixedPeriod
+						fixK1: a.fixK1,
+						fixedK1: a.fixedK1,
+						fixK2: a.fixK2,
+						fixedK2: a.fixedK2,
+						fixPeriod: a.fixPeriod,
+						fixedPeriod: a.fixedPeriod
 					});
 					if (!fit) return { valid: false };
-					xOut = tt; yOut = evaluateDoubleLogisticAtPoints(fit.parameters, true, tt);
-					stats = { rmse: fit.rmse, r2: fit.rSquared };
+					xOut = tt;
+					yOut = evaluateDoubleLogisticAtPoints(fit.parameters, true, tt);
+					stats = {
+						rmse: fit.rmse,
+						r2: fit.rSquared,
+						period: fit.parameters?.T,
+						M: fit.parameters?.M,
+						A: fit.parameters?.A,
+						k1: fit.parameters?.k1,
+						t1: fit.parameters?.t1,
+						k2: fit.parameters?.k2,
+						t2: fit.parameters?.t2
+					};
 					break;
 				}
 				default:
@@ -529,7 +678,10 @@
 				let first = true;
 				for (const [colIdStr, pair] of Object.entries(tp.out ?? {})) {
 					if (pair && typeof pair === 'object') {
-						if (!first && pair.xOutId >= 0) { core.rawData.delete(pair.xOutId); removeColumn(pair.xOutId); }
+						if (!first && pair.xOutId >= 0) {
+							core.rawData.delete(pair.xOutId);
+							removeColumn(pair.xOutId);
+						}
 						newOut[colIdStr] = pair.yOutId ?? -1;
 						first = false;
 					} else {
@@ -541,7 +693,11 @@
 		}
 
 		const firstOutId = Object.values(p.args.out ?? {}).find((v) => typeof v === 'number' && v >= 0);
-		if (firstOutId !== undefined && core.rawData.has(firstOutId) && core.rawData.get(firstOutId).length > 0) {
+		if (
+			firstOutId !== undefined &&
+			core.rawData.has(firstOutId) &&
+			core.rawData.get(firstOutId).length > 0
+		) {
 			collectResult = {};
 			for (const colId of p.args.colIds) {
 				const outColId = p.args.out['col_' + colId];
@@ -559,7 +715,9 @@
 		}
 
 		preProcessProcs = p.args.preProcesses.map((pp) =>
-			pp.processName ? new Process({ name: pp.processName, args: pp.processArgs }, null) : null
+			pp.processName
+				? new Process({ name: pp.processName, args: pp.processArgs }, _dummyParentCol)
+				: null
 		);
 		selectedColIds = [...(p.args.colIds ?? [])];
 		mounted = true;
@@ -571,11 +729,7 @@
 	<div class="tableProcess-label"><span>Input columns</span></div>
 	<div class="control-input-vertical">
 		<p class="hint">Ctrl/Cmd-click or Shift-click to select multiple columns</p>
-		<ColumnSelector
-			multiple={true}
-			bind:value={selectedColIds}
-			excludeColIds={tpExcludeIds}
-		/>
+		<ColumnSelector multiple={true} bind:value={selectedColIds} excludeColIds={tpExcludeIds} />
 	</div>
 </div>
 
@@ -588,7 +742,9 @@
 				<div class="tp-block">
 					<div class="tp-header">
 						<span class="tp-title">Step {idx + 1}</span>
-						<button class="remove-btn" onclick={() => removePreProcess(idx)} title="Remove">×</button>
+						<button class="remove-btn" onclick={() => removePreProcess(idx)} title="Remove"
+							>×</button
+						>
 					</div>
 					<div class="control-input">
 						<p>Process</p>
@@ -639,7 +795,9 @@
 				<div class="tp-block">
 					<div class="tp-header">
 						<span class="tp-title">{TP_LABELS[tp.type] ?? tp.type}</span>
-						<button class="remove-btn" onclick={() => removeTableProcess(tpIdx)} title="Remove">×</button>
+						<button class="remove-btn" onclick={() => removeTableProcess(tpIdx)} title="Remove"
+							>×</button
+						>
 					</div>
 
 					<!-- X-axis column selector -->
@@ -656,7 +814,11 @@
 					{#if tp.type === 'cosinor'}
 						<div class="control-input">
 							<label>
-								<input type="checkbox" bind:checked={tp.args.useFixedPeriod} onchange={() => doCollect()} />
+								<input
+									type="checkbox"
+									bind:checked={tp.args.useFixedPeriod}
+									onchange={() => doCollect()}
+								/>
 								Use fixed period
 							</label>
 						</div>
@@ -664,11 +826,21 @@
 							<div class="control-input-horizontal">
 								<div class="control-input">
 									<p>Period</p>
-									<NumberWithUnits bind:value={tp.args.fixedPeriod} onInput={() => doCollect()} min="0.1" step="0.5" />
+									<NumberWithUnits
+										bind:value={tp.args.fixedPeriod}
+										onInput={() => doCollect()}
+										min="0.1"
+										step="0.5"
+									/>
 								</div>
 								<div class="control-input">
 									<p>N harmonics</p>
-									<NumberWithUnits bind:value={tp.args.nHarmonics} onInput={() => doCollect()} min="1" step="1" />
+									<NumberWithUnits
+										bind:value={tp.args.nHarmonics}
+										onInput={() => doCollect()}
+										min="1"
+										step="1"
+									/>
 								</div>
 							</div>
 							<div class="control-input">
@@ -681,15 +853,24 @@
 						{:else}
 							<div class="control-input">
 								<p>N cosine curves</p>
-								<NumberWithUnits bind:value={tp.args.Ncurves} onInput={() => doCollect()} min="1" step="1" />
+								<NumberWithUnits
+									bind:value={tp.args.Ncurves}
+									onInput={() => doCollect()}
+									min="1"
+									step="1"
+								/>
 							</div>
 						{/if}
-
 					{:else if tp.type === 'bin'}
 						<div class="control-input-horizontal">
 							<div class="control-input">
 								<p>Bin size</p>
-								<NumberWithUnits bind:value={tp.args.binSize} onInput={() => doCollect()} min="0.01" step="0.01" />
+								<NumberWithUnits
+									bind:value={tp.args.binSize}
+									onInput={() => doCollect()}
+									min="0.01"
+									step="0.01"
+								/>
 							</div>
 							<div class="control-input">
 								<p>Bin start</p>
@@ -698,14 +879,23 @@
 						</div>
 						<div class="control-input">
 							<label>
-								<input type="checkbox" bind:checked={tp.args.diffStep} onchange={() => doCollect()} />
+								<input
+									type="checkbox"
+									bind:checked={tp.args.diffStep}
+									onchange={() => doCollect()}
+								/>
 								Different step size
 							</label>
 						</div>
 						{#if tp.args.diffStep}
 							<div class="control-input">
 								<p>Step size</p>
-								<NumberWithUnits bind:value={tp.args.stepSize} onInput={() => doCollect()} min="0.01" step="0.01" />
+								<NumberWithUnits
+									bind:value={tp.args.stepSize}
+									onInput={() => doCollect()}
+									min="0.01"
+									step="0.01"
+								/>
 							</div>
 						{/if}
 						<div class="control-input">
@@ -718,7 +908,6 @@
 								<option value="stddev">Std dev</option>
 							</select>
 						</div>
-
 					{:else if tp.type === 'smooth'}
 						<div class="control-input">
 							<p>Smoother</p>
@@ -733,7 +922,12 @@
 							<div class="control-input-horizontal">
 								<div class="control-input">
 									<p>Window size</p>
-									<NumberWithUnits bind:value={tp.args.movingAvgWindowSize} onInput={() => doCollect()} min="1" step="1" />
+									<NumberWithUnits
+										bind:value={tp.args.movingAvgWindowSize}
+										onInput={() => doCollect()}
+										min="1"
+										step="1"
+									/>
 								</div>
 								<div class="control-input">
 									<p>Type</p>
@@ -748,31 +942,56 @@
 							<div class="control-input-horizontal">
 								<div class="control-input">
 									<p>Lambda</p>
-									<NumberWithUnits bind:value={tp.args.whittakerLambda} onInput={() => doCollect()} min="0.01" />
+									<NumberWithUnits
+										bind:value={tp.args.whittakerLambda}
+										onInput={() => doCollect()}
+										min="0.01"
+									/>
 								</div>
 								<div class="control-input">
 									<p>Order</p>
-									<NumberWithUnits bind:value={tp.args.whittakerOrder} onInput={() => doCollect()} min="1" max="3" step="1" />
+									<NumberWithUnits
+										bind:value={tp.args.whittakerOrder}
+										onInput={() => doCollect()}
+										min="1"
+										max="3"
+										step="1"
+									/>
 								</div>
 							</div>
 						{:else if tp.args.smootherType === 'savitzky'}
 							<div class="control-input-horizontal">
 								<div class="control-input">
 									<p>Window size</p>
-									<NumberWithUnits bind:value={tp.args.savitzkyWindowSize} onInput={() => doCollect()} min="3" step="2" />
+									<NumberWithUnits
+										bind:value={tp.args.savitzkyWindowSize}
+										onInput={() => doCollect()}
+										min="3"
+										step="2"
+									/>
 								</div>
 								<div class="control-input">
 									<p>Poly order</p>
-									<NumberWithUnits bind:value={tp.args.savitzkyPolyOrder} onInput={() => doCollect()} min="1" step="1" />
+									<NumberWithUnits
+										bind:value={tp.args.savitzkyPolyOrder}
+										onInput={() => doCollect()}
+										min="1"
+										step="1"
+									/>
 								</div>
 							</div>
 						{:else if tp.args.smootherType === 'loess'}
 							<div class="control-input">
 								<p>Bandwidth</p>
-								<NumberWithUnits bind:value={tp.args.loessBandwidth} onInput={() => doCollect()} min="0.01" max="1" step="0.05" />
+								<NumberWithUnits
+									bind:value={tp.args.loessBandwidth}
+									onInput={() => doCollect()}
+									min="0.01"
+									max="1"
+									step="0.05"
+								/>
 							</div>
 						{/if}
-
 					{:else if tp.type === 'trend'}
 						<div class="control-input">
 							<p>Model</p>
@@ -786,47 +1005,88 @@
 						{#if tp.args.model === 'polynomial'}
 							<div class="control-input">
 								<p>Degree</p>
-								<NumberWithUnits bind:value={tp.args.polyDegree} onInput={() => doCollect()} min="2" max="8" step="1" />
+								<NumberWithUnits
+									bind:value={tp.args.polyDegree}
+									onInput={() => doCollect()}
+									min="2"
+									max="8"
+									step="1"
+								/>
 							</div>
 						{/if}
-
 					{:else if tp.type === 'rectwave'}
 						<div class="control-input-horizontal">
 							<label class="col-check-item">
-								<input type="checkbox" bind:checked={tp.args.fixOmega} onchange={() => doCollect()} />
+								<input
+									type="checkbox"
+									bind:checked={tp.args.fixOmega}
+									onchange={() => doCollect()}
+								/>
 								Fix period
 							</label>
 							{#if tp.args.fixOmega}
-								<NumberWithUnits bind:value={tp.args.fixedPeriod} onInput={() => doCollect()} min="0.1" step="0.5" />
+								<NumberWithUnits
+									bind:value={tp.args.fixedPeriod}
+									onInput={() => doCollect()}
+									min="0.1"
+									step="0.5"
+								/>
 							{/if}
 						</div>
 						<div class="control-input-horizontal">
 							<label class="col-check-item">
-								<input type="checkbox" bind:checked={tp.args.fixKappa} onchange={() => doCollect()} />
+								<input
+									type="checkbox"
+									bind:checked={tp.args.fixKappa}
+									onchange={() => doCollect()}
+								/>
 								Fix kappa (sharpness)
 							</label>
 							{#if tp.args.fixKappa}
-								<NumberWithUnits bind:value={tp.args.fixedKappa} onInput={() => doCollect()} min="0.1" step="0.5" />
+								<NumberWithUnits
+									bind:value={tp.args.fixedKappa}
+									onInput={() => doCollect()}
+									min="0.1"
+									step="0.5"
+								/>
 							{/if}
 						</div>
 						<div class="control-input-horizontal">
 							<label class="col-check-item">
-								<input type="checkbox" bind:checked={tp.args.fixDutyCycle} onchange={() => doCollect()} />
+								<input
+									type="checkbox"
+									bind:checked={tp.args.fixDutyCycle}
+									onchange={() => doCollect()}
+								/>
 								Fix duty cycle
 							</label>
 							{#if tp.args.fixDutyCycle}
-								<NumberWithUnits bind:value={tp.args.fixedDutyCycle} onInput={() => doCollect()} min="0.01" max="0.99" step="0.05" />
+								<NumberWithUnits
+									bind:value={tp.args.fixedDutyCycle}
+									onInput={() => doCollect()}
+									min="0.01"
+									max="0.99"
+									step="0.05"
+								/>
 							{/if}
 						</div>
-
 					{:else if tp.type === 'dlog'}
 						<div class="control-input-horizontal">
 							<label class="col-check-item">
-								<input type="checkbox" bind:checked={tp.args.fixPeriod} onchange={() => doCollect()} />
+								<input
+									type="checkbox"
+									bind:checked={tp.args.fixPeriod}
+									onchange={() => doCollect()}
+								/>
 								Fix period
 							</label>
 							{#if tp.args.fixPeriod}
-								<NumberWithUnits bind:value={tp.args.fixedPeriod} onInput={() => doCollect()} min="0.1" step="0.5" />
+								<NumberWithUnits
+									bind:value={tp.args.fixedPeriod}
+									onInput={() => doCollect()}
+									min="0.1"
+									step="0.5"
+								/>
 							{/if}
 						</div>
 						<div class="control-input-horizontal">
@@ -835,7 +1095,12 @@
 								Fix rise rate (k1)
 							</label>
 							{#if tp.args.fixK1}
-								<NumberWithUnits bind:value={tp.args.fixedK1} onInput={() => doCollect()} min="0.01" step="0.1" />
+								<NumberWithUnits
+									bind:value={tp.args.fixedK1}
+									onInput={() => doCollect()}
+									min="0.01"
+									step="0.1"
+								/>
 							{/if}
 						</div>
 						<div class="control-input-horizontal">
@@ -844,19 +1109,26 @@
 								Fix fall rate (k2)
 							</label>
 							{#if tp.args.fixK2}
-								<NumberWithUnits bind:value={tp.args.fixedK2} onInput={() => doCollect()} min="0.01" step="0.1" />
+								<NumberWithUnits
+									bind:value={tp.args.fixedK2}
+									onInput={() => doCollect()}
+									min="0.01"
+									step="0.1"
+								/>
 							{/if}
 						</div>
 					{/if}
 
 					<!-- Column checklist (include/exclude) -->
-					{#if (p.args.outColIds ?? []).length > 0}
+					{#if (p.args.outColIds?.length ?? 0) > 0 || (p.args.colIds?.length ?? 0) > 0}
+						{@const checkColIds =
+							(p.args.outColIds?.length ?? 0) > 0 ? p.args.outColIds : (p.args.colIds ?? [])}
 						{@const excluded = tp.excludedColIds ?? []}
-						{@const nActive = (p.args.outColIds ?? []).length - excluded.length}
+						{@const nActive = checkColIds.length - excluded.length}
 						<div class="control-input-vertical">
-							<p>Columns ({nActive} of {(p.args.outColIds ?? []).length} included)</p>
+							<p>Columns ({nActive} of {checkColIds.length} included)</p>
 							<div class="col-checklist">
-								{#each p.args.outColIds ?? [] as colId (colId)}
+								{#each checkColIds as colId (colId)}
 									{@const col = getColumnById(colId)}
 									{@const included = !excluded.includes(colId)}
 									<label class="col-check-item">
@@ -891,17 +1163,58 @@
 											<ColumnComponent col={getColumnById(yOutId)} />
 										{/if}
 										{#if colResult.stats?.rmse != null && !isNaN(colResult.stats.rmse)}
-											<p class="tp-stat">RMSE: {colResult.stats.rmse.toFixed(3)}{colResult.stats.r2 != null ? ` · R²: ${colResult.stats.r2.toFixed(3)}` : ''}</p>
+											<p class="tp-stat">
+												RMSE: {colResult.stats.rmse.toFixed(3)}{colResult.stats.r2 != null
+													? ` · R²: ${colResult.stats.r2.toFixed(3)}`
+													: ''}
+											</p>
 										{/if}
 									</div>
 								{/if}
 							{/each}
 						</div>
+						{#if STATS_TYPES.includes(tp.type)}
+							<div class="tp-stat-actions">
+								<button
+									class="tp-stat-btn"
+									onclick={() => {
+										const { headers, rows } = getTableProcessStatsData(
+											tp,
+											tableProcessResults[tpIdx],
+											getColumnById
+										);
+										showStaticDataAsTable(
+											`${TP_LABELS[tp.type] ?? tp.type} stats`,
+											headers,
+											rows,
+											() => getTableProcessStatsData(tp, tableProcessResults[tpIdx], getColumnById)
+										);
+									}}>View stats</button
+								>
+								<button
+									class="tp-stat-btn"
+									onclick={() => {
+										const { headers, rows } = getTableProcessStatsData(
+											tp,
+											tableProcessResults[tpIdx],
+											getColumnById
+										);
+										saveStaticDataAsCSV(`${TP_LABELS[tp.type] ?? tp.type}_stats`, headers, rows);
+									}}>Download stats</button
+								>
+							</div>
+						{/if}
 					{/if}
 				</div>
 			{/each}
 
-			<select class="add-tp-select" onchange={(e) => { addTableProcess(e.target.value); e.target.value = ''; }}>
+			<select
+				class="add-tp-select"
+				onchange={(e) => {
+					addTableProcess(e.target.value);
+					e.target.value = '';
+				}}
+			>
 				<option value="">+ Add table process…</option>
 				<option value="cosinor">Cosinor fit</option>
 				<option value="bin">Bin data</option>
@@ -994,17 +1307,41 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.1rem;
+		border-left: 2px solid var(--color-lightness-85);
+		padding-left: 0.5rem;
 	}
 
 	.tp-output-label {
 		font-size: 11px;
-		color: var(--color-lightness-55, #888);
+		color: var(--color-lightness-45, #666);
+		font-style: italic;
 	}
 
 	.tp-stat {
 		font-size: 11px;
 		color: var(--color-lightness-45, #666);
 		margin: 0;
+	}
+
+	.tp-stat-actions {
+		display: flex;
+		gap: 0.4rem;
+		margin-top: 0.3rem;
+	}
+
+	.tp-stat-btn {
+		font-size: 11px;
+		padding: 0.25rem 0.5rem;
+		border: 1px solid var(--color-lightness-75, #aaa);
+		border-radius: 3px;
+		background: none;
+		cursor: pointer;
+		color: var(--color-lightness-35, #555);
+	}
+
+	.tp-stat-btn:hover {
+		background: var(--color-lightness-95);
+		border-color: var(--color-lightness-55, #888);
 	}
 
 	.col-checklist {

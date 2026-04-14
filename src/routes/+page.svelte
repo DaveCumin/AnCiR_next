@@ -1185,10 +1185,12 @@
 		flex-direction: column;
 
 		border: 0.1rem solid var(--color-lightness-85);
-		padding-right: 0.25rem;
+		padding: 0 0.25rem 0 0.4rem;
 		margin-left: -0.25rem;
 		margin-right: 0.5rem;
 		border-radius: 0.25rem;
+		overflow: hidden;
+		box-sizing: border-box;
 	}
 
 	:global(.section-row) {

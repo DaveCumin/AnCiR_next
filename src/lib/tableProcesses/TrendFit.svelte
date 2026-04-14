@@ -112,6 +112,7 @@
 </script>
 
 <script>
+	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
@@ -120,6 +121,10 @@
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { onMount, untrack } from 'svelte';
+	import {
+		showStaticDataAsTable,
+		saveStaticDataAsCSV
+	} from '$lib/components/plotbits/helpers/save.svelte.js';
 
 	let { p = $bindable() } = $props();
 
@@ -285,6 +290,44 @@
 		} else {
 			p.args.outputX = p.args.xIN;
 		}
+	}
+
+	function getTrendStatsData() {
+		if (!trendData?.y_results) return { headers: [], rows: [] };
+		const model = p.args.model ?? 'linear';
+		const validEntries = Object.entries(trendData.y_results).filter(
+			([, r]) => (r.fittedData?.fitted?.length ?? 0) > 0
+		);
+		if (!validEntries.length) return { headers: [], rows: [] };
+		let paramHeaders;
+		if (model === 'linear') {
+			paramHeaders = ['slope', 'intercept'];
+		} else if (model === 'exponential' || model === 'logarithmic') {
+			paramHeaders = ['a', 'b'];
+		} else {
+			const maxC = Math.max(
+				...validEntries.map(([, r]) => r.fittedData?.parameters?.coeffs?.length ?? 0)
+			);
+			paramHeaders = Array.from({ length: maxC }, (_, i) => `c${i}`);
+		}
+		const headers = ['column', 'rmse', 'r2', ...paramHeaders];
+		const rows = validEntries.map(([yId, r]) => {
+			const name = getColumnById(Number(yId))?.name ?? String(yId);
+			const row = [name, r.fittedData.rmse, r.fittedData.rSquared];
+			if (model === 'linear') {
+				row.push(
+					r.fittedData.parameters?.slope ?? null,
+					r.fittedData.parameters?.intercept ?? null
+				);
+			} else if (model === 'exponential' || model === 'logarithmic') {
+				row.push(r.fittedData.parameters?.a ?? null, r.fittedData.parameters?.b ?? null);
+			} else {
+				for (const c of r.fittedData.parameters?.coeffs ?? []) row.push(c);
+				while (row.length < headers.length) row.push(null);
+			}
+			return row;
+		});
+		return { headers, rows };
 	}
 </script>
 
@@ -518,6 +561,22 @@
 					{/if}
 				{/each}
 			</div>
+			<div class="tp-stat-actions">
+				<button
+					class="tp-stat-btn"
+					onclick={() => {
+						const { headers, rows } = getTrendStatsData();
+						showStaticDataAsTable('Trend fit stats', headers, rows, getTrendStatsData);
+					}}>View stats</button
+				>
+				<button
+					class="tp-stat-btn"
+					onclick={() => {
+						const { headers, rows } = getTrendStatsData();
+						saveStaticDataAsCSV('trend_fit_stats', headers, rows);
+					}}>Download stats</button
+				>
+			</div>
 		{:else if p.args.valid}
 			<p>Preview:</p>
 			{#each Object.entries(trendData?.y_results ?? {}) as [yId, yResult]}
@@ -581,5 +640,26 @@
 		font-size: 11px;
 		color: var(--color-lightness-45, #666);
 		font-style: italic;
+	}
+
+	.tp-stat-actions {
+		display: flex;
+		gap: 0.4rem;
+		margin-top: 0.3rem;
+	}
+
+	.tp-stat-btn {
+		font-size: 11px;
+		padding: 0.25rem 0.5rem;
+		border: 1px solid var(--color-lightness-75, #aaa);
+		border-radius: 3px;
+		background: none;
+		cursor: pointer;
+		color: var(--color-lightness-35, #555);
+	}
+
+	.tp-stat-btn:hover {
+		background: var(--color-lightness-95);
+		border-color: var(--color-lightness-55, #888);
 	}
 </style>

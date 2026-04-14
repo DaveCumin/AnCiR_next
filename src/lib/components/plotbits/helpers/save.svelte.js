@@ -54,6 +54,53 @@ export function showDataAsTable(plotId) {
 	core.plots.push(newPlot);
 }
 
+/**
+ * Open a DataView plot on the canvas with static header/row data (e.g. table process stats).
+ * @param {string} name - The plot title
+ * @param {string[]} headers
+ * @param {any[][]} rows
+ * @param {(() => {headers: string[], rows: any[][]}) | null} [statsGetter] - optional live getter for reactive updates
+ */
+export function showStaticDataAsTable(name, headers, rows, statsGetter = null) {
+	if (!headers?.length || !rows?.length) return;
+	const newPlot = new Plot({ name, type: 'dataview' });
+	// Place near centre of visible area with a reasonable default size
+	newPlot.x = 80;
+	newPlot.y = 80;
+	newPlot.width = Math.max(400, headers.length * 90);
+	newPlot.height = Math.min(500, 100 + rows.length * 33);
+	newPlot.plot.sourceType = 'static';
+	newPlot.plot.staticHeaders = headers;
+	newPlot.plot.staticRows = rows;
+	if (statsGetter) {
+		newPlot.plot.statsGetter = statsGetter;
+	}
+	core.plots.push(newPlot);
+}
+
+/**
+ * Trigger a CSV download from static header/row data (e.g. table process stats).
+ * @param {string} name - The base filename (without extension)
+ * @param {string[]} headers
+ * @param {any[][]} rows
+ */
+export function saveStaticDataAsCSV(name, headers, rows) {
+	if (!headers?.length || !rows?.length) return;
+	const csvContent = [
+		headers.map(escapeCSV).join(','),
+		...rows.map((row) => row.map(escapeCSV).join(','))
+	].join('\n');
+	const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+	const url = URL.createObjectURL(blob);
+	const link = document.createElement('a');
+	link.href = url;
+	link.download = name.replace(/[/\\:*?"<>|]/g, '_') + '.csv';
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
+	URL.revokeObjectURL(url);
+}
+
 function escapeCSV(value) {
 	if (value == null) return '';
 	const str = String(value);

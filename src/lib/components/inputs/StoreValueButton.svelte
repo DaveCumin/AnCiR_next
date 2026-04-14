@@ -23,6 +23,13 @@
 		storeValue(storedName, getter, source);
 	});
 
+	// Keep the stored getter up-to-date when the getter prop changes
+	$effect(() => {
+		if (storedName) {
+			storeValue(storedName, getter, source);
+		}
+	});
+
 	onDestroy(() => {
 		if (storedName) {
 			removeStoredValue(storedName);

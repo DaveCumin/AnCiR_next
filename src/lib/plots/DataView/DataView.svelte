@@ -11,6 +11,10 @@
 	export class DataViewclass {
 		parentBox = $state();
 		sourcePlotId = $state(null);
+		sourceType = $state('reactive'); // 'reactive' or 'static'
+		staticHeaders = $state([]);
+		staticRows = $state([]);
+		statsGetter = null; // live getter for reactive stats (not serialised)
 		colCurrent = $state(1);
 		decimalPlaces = $state(2);
 
@@ -27,6 +31,9 @@
 		});
 
 		downloadData = $derived.by(() => {
+			if (this.sourceType === 'static') {
+				return { headers: this.staticHeaders, rows: this.staticRows };
+			}
 			const sp = this.sourcePlot;
 			if (!sp?.plot || typeof sp.plot.getDownloadData !== 'function') {
 				return { headers: [], rows: [] };
@@ -59,6 +66,9 @@
 			this.parentBox = parent;
 			if (dataIN) {
 				this.sourcePlotId = dataIN.sourcePlotId ?? null;
+				this.sourceType = dataIN.sourceType ?? 'reactive';
+				this.staticHeaders = dataIN.staticHeaders ?? [];
+				this.staticRows = dataIN.staticRows ?? [];
 				this.colCurrent = dataIN.colCurrent ?? 1;
 				this.decimalPlaces = dataIN.decimalPlaces ?? 2;
 			}
@@ -71,6 +81,9 @@
 		toJSON() {
 			return {
 				sourcePlotId: this.sourcePlotId,
+				sourceType: this.sourceType,
+				staticHeaders: this.headers,
+				staticRows: this.rows,
 				colCurrent: this.colCurrent,
 				decimalPlaces: this.decimalPlaces
 			};
@@ -80,6 +93,9 @@
 			const dv = new DataViewclass(parent, null);
 			if (json) {
 				dv.sourcePlotId = json.sourcePlotId ?? null;
+				dv.sourceType = json.sourceType ?? 'reactive';
+				dv.staticHeaders = json.staticHeaders ?? [];
+				dv.staticRows = json.staticRows ?? [];
 				dv.colCurrent = json.colCurrent ?? 1;
 				dv.decimalPlaces = json.decimalPlaces ?? 2;
 			}
@@ -90,7 +106,28 @@
 
 <script>
 	// @ts-nocheck
+	import { untrack } from 'svelte';
 	let { theData, which } = $props();
+
+	// Bridge reactive stats: the getter reads $state from the source component,
+	// so running it inside an $effect establishes proper dependencies.
+	// When the source data changes, the effect re-fires, updating staticHeaders/staticRows.
+	$effect(() => {
+		const plot = theData?.plot;
+		if (plot?.sourceType === 'static' && typeof plot.statsGetter === 'function') {
+			try {
+				const result = plot.statsGetter();
+				if (result?.headers?.length) {
+					untrack(() => {
+						plot.staticHeaders = result.headers;
+						plot.staticRows = result.rows;
+					});
+				}
+			} catch (e) {
+				console.warn('Stats getter update failed:', e.message);
+			}
+		}
+	});
 </script>
 
 {#snippet controls(theData)}
@@ -100,7 +137,11 @@
 			<div class="control-input">
 				<p>Source</p>
 				<p class="source-name">
-					{theData.sourcePlot?.name ?? '(source plot not found)'}
+					{#if theData.sourceType === 'static'}
+						(table process stats)
+					{:else}
+						{theData.sourcePlot?.name ?? '(source plot not found)'}
+					{/if}
 				</p>
 			</div>
 		</div>
@@ -111,18 +152,14 @@
 			</div>
 			<div class="control-input">
 				<p>Starting row</p>
-				<NumberWithUnits
-					min="1"
-					max={theData.totalRows}
-					bind:value={theData.colCurrent}
-				/>
+				<NumberWithUnits min="1" max={theData.totalRows} bind:value={theData.colCurrent} />
 			</div>
 		</div>
 	</div>
 {/snippet}
 
 {#snippet plot(theData)}
-	{#if theData.plot.sourcePlot == null}
+	{#if theData.plot.sourceType !== 'static' && theData.plot.sourcePlot == null}
 		<div class="no-source">
 			<p>Source plot not found.</p>
 		</div>
@@ -133,11 +170,7 @@
 	{:else}
 		<div class="tableplot-layout">
 			<div class="tableplot-body">
-				<Table
-					headers={theData.plot.headers}
-					data={theData.plot.tableData}
-					editable={false}
-				/>
+				<Table headers={theData.plot.headers} data={theData.plot.tableData} editable={false} />
 			</div>
 			<p class="row-indicator">
 				Row <NumberWithUnits
@@ -146,10 +179,8 @@
 					step="1"
 					bind:value={theData.plot.colCurrent}
 				/>
-				to {Math.min(
-					theData.plot.colCurrent + theData.plot.Ncolumns - 1,
-					theData.plot.totalRows
-				)} of {theData.plot.totalRows}
+				to {Math.min(theData.plot.colCurrent + theData.plot.Ncolumns - 1, theData.plot.totalRows)} of
+				{theData.plot.totalRows}
 			</p>
 		</div>
 	{/if}

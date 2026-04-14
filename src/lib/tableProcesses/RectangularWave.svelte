@@ -162,6 +162,10 @@
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
+	import {
+		showStaticDataAsTable,
+		saveStaticDataAsCSV
+	} from '$lib/components/plotbits/helpers/save.svelte.js';
 
 	let { p = $bindable() } = $props();
 
@@ -349,6 +353,39 @@
 		} else {
 			p.args.outputX = p.args.xIN;
 		}
+	}
+
+	function getRwaveStatsData() {
+		if (!rwave?.y_results) return { headers: [], rows: [] };
+		const validEntries = Object.entries(rwave.y_results).filter(([, r]) => r.fitResult);
+		if (!validEntries.length) return { headers: [], rows: [] };
+		const headers = [
+			'column',
+			'rmse',
+			'r2',
+			'period',
+			'acrophase',
+			'duty_cycle',
+			'kappa',
+			'M',
+			'A'
+		];
+		const rows = validEntries.map(([yId, r]) => {
+			const name = getColumnById(Number(yId))?.name ?? String(yId);
+			const fr = r.fitResult;
+			return [
+				name,
+				fr.rmse,
+				fr.rSquared,
+				fr.period,
+				fr.acrophase,
+				fr.parameters?.dutyCycle,
+				fr.parameters?.kappa,
+				fr.parameters?.M,
+				fr.parameters?.A
+			];
+		});
+		return { headers, rows };
 	}
 </script>
 
@@ -583,6 +620,22 @@
 					{/if}
 				{/each}
 			</div>
+			<div class="tp-stat-actions">
+				<button
+					class="tp-stat-btn"
+					onclick={() => {
+						const { headers, rows } = getRwaveStatsData();
+						showStaticDataAsTable('Rectangular wave stats', headers, rows, getRwaveStatsData);
+					}}>View stats</button
+				>
+				<button
+					class="tp-stat-btn"
+					onclick={() => {
+						const { headers, rows } = getRwaveStatsData();
+						saveStaticDataAsCSV('rectwave_stats', headers, rows);
+					}}>Download stats</button
+				>
+			</div>
 		{:else if p.args.valid}
 			<p>Preview:</p>
 			{#each Object.entries(rwave?.y_results ?? {}) as [yId, yResult]}
@@ -653,5 +706,26 @@
 		font-size: 11px;
 		color: var(--color-lightness-45, #666);
 		font-style: italic;
+	}
+
+	.tp-stat-actions {
+		display: flex;
+		gap: 0.4rem;
+		margin-top: 0.3rem;
+	}
+
+	.tp-stat-btn {
+		font-size: 11px;
+		padding: 0.25rem 0.5rem;
+		border: 1px solid var(--color-lightness-75, #aaa);
+		border-radius: 3px;
+		background: none;
+		cursor: pointer;
+		color: var(--color-lightness-35, #555);
+	}
+
+	.tp-stat-btn:hover {
+		background: var(--color-lightness-95);
+		border-color: var(--color-lightness-55, #888);
 	}
 </style>
