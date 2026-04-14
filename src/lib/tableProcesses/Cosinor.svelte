@@ -648,13 +648,13 @@
 						source="Cosinor"
 					/>
 				</p>
-				{#if !yResult?.fixedStats}
+				<!-- {#if !yResult?.fixedStats}
 					<p>
 						Equation: {cosine.amplitude.toFixed(2)}*cos({cosine.frequency.toFixed(2)}*t + {cosine.phase.toFixed(
 							2
 						)})
 					</p>
-				{/if}
+				{/if} -->
 			</div>
 		</div>
 	{/each}

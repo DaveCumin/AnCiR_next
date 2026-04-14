@@ -39,12 +39,11 @@
 		// back into a 'time' typed output column, getData() would try to re-parse them → NaN.
 		// Accessing rawData directly gives us the original strings to store instead.
 		const inputTimeCol = getColumnById(timeIN);
-		const canUseRawStrings = (
+		const canUseRawStrings =
 			inputTimeCol.type === 'time' &&
 			!inputTimeCol.isReferencial() &&
 			inputTimeCol.processes.length === 0 &&
-			inputTimeCol.compression !== 'awd'
-		);
+			inputTimeCol.compression !== 'awd';
 		const rawTimeInput = canUseRawStrings ? (core.rawData.get(inputTimeCol.data) ?? []) : null;
 
 		// Build union of all time values (deduplicated, sorted by UNIX ms)
@@ -331,7 +330,7 @@
 
 	// Overrides applied on top of TP defaults when used in collected mode
 	const _COLLECTED_OVERRIDES = {
-		cosinor: { useFixedPeriod: true, Ncurves: 1 },
+		cosinor: { useFixedPeriod: false, Ncurves: 1 },
 		bin: { binSize: 1, stepSize: 1 }
 	};
 
