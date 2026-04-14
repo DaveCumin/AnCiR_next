@@ -16,7 +16,9 @@
 		['fixPeriod', { val: false }],
 		['fixedPeriod', { val: 24 }],
 		['out', { dlogx: { val: -1 } }],
-		['valid', { val: false }]
+		['valid', { val: false }],
+		['forcollected', { val: true }],
+		['collectedType', { val: 'dlog' }]
 	]);
 
 	export function doublelogistic(argsIN) {
@@ -146,7 +148,7 @@
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
 
-	let { p = $bindable() } = $props();
+	let { p = $bindable(), hideInputs = false } = $props();
 
 	// Backwards compatibility: convert single yIN to array
 	if (typeof p.args.yIN === 'number') {
@@ -208,7 +210,7 @@
 				if (p.parent) {
 					const srcName = getColumnById(newId)?.name ?? String(newId);
 					const yCol = new Column({});
-					yCol.name = 'dlog_' + srcName + '_' + p.id;
+					yCol.name = 'dlog_' + srcName;
 					pushObj(yCol);
 					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
 					p.args.out[outKey] = yCol.id;
@@ -281,16 +283,33 @@
 		}, 0);
 	}
 
+	$effect(() => {
+		const _yIN = p.args.yIN;
+		if (!mounted) return;
+		untrack(() => onYSelectionChange());
+	});
+
 	onMount(() => {
-		// Create output columns for any Y inputs that don't have them yet
+		// Create X output column if not present (needed in collected mode)
 		let needsCompute = false;
+		if (p.args.out.dlogx == null || p.args.out.dlogx < 0) {
+			if (p.parent) {
+				const xCol = new Column({});
+				xCol.name = 'dlogx_' + p.id;
+				pushObj(xCol);
+				p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
+				p.args.out.dlogx = xCol.id;
+				needsCompute = true;
+			}
+		}
+		// Create output columns for any Y inputs that don't have them yet
 		for (const yId of p.args.yIN ?? []) {
 			const outKey = 'dlogy_' + yId;
 			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
 				if (p.parent) {
 					const srcName = getColumnById(Number(yId))?.name ?? String(yId);
 					const yCol = new Column({});
-					yCol.name = 'dlog_' + srcName + '_' + p.id;
+					yCol.name = 'dlog_' + srcName;
 					pushObj(yCol);
 					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
 					p.args.out[outKey] = yCol.id;
@@ -364,27 +383,29 @@
 	}
 </script>
 
-<!-- Input -->
-<div class="section-row">
-	<div class="tableProcess-label">
-		<span>Input</span>
-	</div>
-	<div class="control-input-vertical">
-		<div class="control-input">
-			<p>X column</p>
-			<ColumnSelector bind:value={p.args.xIN} />
+{#if !hideInputs}
+	<!-- Input -->
+	<div class="section-row">
+		<div class="tableProcess-label">
+			<span>Input</span>
 		</div>
-		<div class="control-input">
-			<p>Y column(s)</p>
-			<ColumnSelector
-				bind:value={p.args.yIN}
-				excludeColIds={yExcludeIds}
-				multiple={true}
-				onChange={onYSelectionChange}
-			/>
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>X column</p>
+				<ColumnSelector bind:value={p.args.xIN} />
+			</div>
+			<div class="control-input">
+				<p>Y column(s)</p>
+				<ColumnSelector
+					bind:value={p.args.yIN}
+					excludeColIds={yExcludeIds}
+					multiple={true}
+					onChange={onYSelectionChange}
+				/>
+			</div>
 		</div>
 	</div>
-</div>
+{/if}
 
 <!-- Options -->
 <div class="section-row">
@@ -446,24 +467,26 @@
 		</div>
 	{/if}
 
-	<!-- Output X -->
-	<div class="control-input-horizontal">
-		<div class="control-input-checkbox">
-			<input
-				type="checkbox"
-				bind:checked={showOutputX}
-				onchange={(e) => toggleOutputX(e.target.checked)}
-			/>
-			<p>Specify output x values</p>
-		</div>
-	</div>
-	{#if showOutputX}
-		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Output X column</p>
-				<ColumnSelector bind:value={p.args.outputX} excludeColIds={yExcludeIds} />
+	{#if !hideInputs}
+		<!-- Output X -->
+		<div class="control-input-horizontal">
+			<div class="control-input-checkbox">
+				<input
+					type="checkbox"
+					bind:checked={showOutputX}
+					onchange={(e) => toggleOutputX(e.target.checked)}
+				/>
+				<p>Specify output x values</p>
 			</div>
 		</div>
+		{#if showOutputX}
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Output X column</p>
+					<ColumnSelector bind:value={p.args.outputX} excludeColIds={yExcludeIds} />
+				</div>
+			</div>
+		{/if}
 	{/if}
 </div>
 
@@ -669,27 +692,6 @@
 </div>
 
 <style>
-	.tp-outputs {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		margin-top: 0.25rem;
-	}
-
-	.tp-output-row {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-		border-left: 2px solid var(--color-lightness-85);
-		padding-left: 0.5rem;
-	}
-
-	.tp-output-label {
-		font-size: 11px;
-		color: var(--color-lightness-45, #666);
-		font-style: italic;
-	}
-
 	.tp-stat-actions {
 		display: flex;
 		gap: 0.4rem;

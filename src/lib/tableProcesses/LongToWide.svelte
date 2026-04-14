@@ -34,16 +34,33 @@
 		const timeData = getColumnById(timeIN).getData();
 		const valueData = getColumnById(valueIN).getData();
 
-		// Build union of all time values (deduplicated, sorted)
+		// Get the raw (unparsed) time strings from the input column for output column storage.
+		// getData() on a 'time' column converts strings → UNIX ms; if we store those UNIX ms
+		// back into a 'time' typed output column, getData() would try to re-parse them → NaN.
+		// Accessing rawData directly gives us the original strings to store instead.
+		const inputTimeCol = getColumnById(timeIN);
+		const canUseRawStrings = (
+			inputTimeCol.type === 'time' &&
+			!inputTimeCol.isReferencial() &&
+			inputTimeCol.processes.length === 0 &&
+			inputTimeCol.compression !== 'awd'
+		);
+		const rawTimeInput = canUseRawStrings ? (core.rawData.get(inputTimeCol.data) ?? []) : null;
+
+		// Build union of all time values (deduplicated, sorted by UNIX ms)
 		const seenTimes = new Set();
-		const unionTimes = [];
-		for (const t of timeData) {
+		const unionEntries = []; // { unix: UNIX ms, raw: original string or UNIX ms }
+		for (let i = 0; i < timeData.length; i++) {
+			const t = timeData[i];
 			if (!seenTimes.has(t)) {
 				seenTimes.add(t);
-				unionTimes.push(t);
+				unionEntries.push({ unix: t, raw: rawTimeInput != null ? rawTimeInput[i] : t });
 			}
 		}
-		unionTimes.sort((a, b) => a - b);
+		unionEntries.sort((a, b) => a.unix - b.unix);
+
+		const unionTimes = unionEntries.map((e) => e.unix);
+		const unionTimesForStorage = unionEntries.map((e) => e.raw);
 
 		// Get unique categories (preserving order of first appearance)
 		const seenCats = new Set();
@@ -86,11 +103,16 @@
 			}
 
 			const timeColId = argsIN.out.time;
-			core.rawData.set(timeColId, unionTimes);
+			// Store raw strings when available so that getData() (which re-parses via getUNIXDate)
+			// produces correct UNIX ms. When raw strings are unavailable, store UNIX ms directly
+			// and clear timeFormat so getUNIXDate short-circuits and returns them unchanged.
+			core.rawData.set(timeColId, unionTimesForStorage);
 			getColumnById(timeColId).data = timeColId;
 			getColumnById(timeColId).type = getColumnById(timeIN).type;
-			if (getColumnById(timeIN).timeFormat) {
+			if (rawTimeInput != null && getColumnById(timeIN).timeFormat) {
 				getColumnById(timeColId).timeFormat = getColumnById(timeIN).timeFormat;
+			} else if (rawTimeInput == null) {
+				getColumnById(timeColId).timeFormat = '';
 			}
 
 			const processHash = crypto.randomUUID();
@@ -124,33 +146,12 @@
 	import { Process } from '$lib/core/Process.svelte';
 	import Processcomponent from '$lib/core/Process.svelte';
 	import { onMount, untrack } from 'svelte';
-	import {
-		showStaticDataAsTable,
-		saveStaticDataAsCSV
-	} from '$lib/components/plotbits/helpers/save.svelte.js';
-	import {
-		TP_LABELS,
-		STATS_TYPES,
-		getTableProcessStatsData
-	} from '$lib/tableProcesses/nestedStats.js';
-
-	// Algorithm imports for per-column table processes
-	import { fitCosineCurves, fitCosinorFixed } from '$lib/utils/cosinor.js';
-	import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
-	import { smoothArrays } from '$lib/utils/smoothing.js';
-	import { fitTrend } from '$lib/utils/trendfit.js';
-	import { fitRectangularWave, evaluateRectWaveAtPoints } from '$lib/utils/rectwave.js';
-	import { fitDoubleLogistic, evaluateDoubleLogisticAtPoints } from '$lib/utils/doublelogistic.js';
-
 	let { p = $bindable() } = $props();
 
 	let longToWideResult = $state();
 	let mounted = $state(false);
 	let previewStart = $state(1);
 	let errorMessage = $state('');
-
-	// tableProcessResults[tpIdx] = array of { colId, valid, stats }
-	let tableProcessResults = $state([]);
 
 	// Local state bound to selectors
 	let categoryIN_local = $state(p.args.categoryIN);
@@ -317,82 +318,79 @@
 
 	// ─── Table process constants ───────────────────────────────────────────────
 
-	const TP_DEFAULTS = {
-		cosinor: { useFixedPeriod: true, fixedPeriod: 24, nHarmonics: 1, alpha: 0.05, Ncurves: 1 },
-		bin: { binSize: 1, binStart: 0, stepSize: 1, diffStep: false, aggFunction: 'mean' },
-		smooth: {
-			smootherType: 'moving',
-			whittakerLambda: 100,
-			whittakerOrder: 2,
-			savitzkyWindowSize: 5,
-			savitzkyPolyOrder: 2,
-			loessBandwidth: 0.3,
-			movingAvgWindowSize: 5,
-			movingAvgType: 'simple'
-		},
-		trend: { model: 'linear', polyDegree: 2 },
-		rectwave: {
-			fixKappa: false,
-			fixedKappa: 5,
-			fixOmega: false,
-			fixedPeriod: 24,
-			fixDutyCycle: false,
-			fixedDutyCycle: 0.5
-		},
-		dlog: {
-			fixK1: false,
-			fixedK1: 0.5,
-			fixK2: false,
-			fixedK2: 0.5,
-			fixPeriod: false,
-			fixedPeriod: 24
-		}
+	// Keys in TP defaults that are infrastructure, not user-facing parameters
+	const _TP_INFRA_KEYS = new Set([
+		'xIN',
+		'yIN',
+		'out',
+		'valid',
+		'forcollected',
+		'collectedType',
+		'outputX'
+	]);
+
+	// Overrides applied on top of TP defaults when used in collected mode
+	const _COLLECTED_OVERRIDES = {
+		cosinor: { useFixedPeriod: true, Ncurves: 1 },
+		bin: { binSize: 1, stepSize: 1 }
 	};
+
+	/** Build a map from collectedType → { component, paramDefaults } from the global tableProcessMap */
+	let collectedTPMap = $derived.by(() => {
+		const map = {};
+		for (const [, entry] of appConsts.tableProcessMap) {
+			const defs = entry.defaults;
+			if (!defs?.get?.('forcollected')?.val) continue;
+			const cType = defs.get('collectedType')?.val;
+			if (!cType) continue;
+			// Extract parameter-only defaults
+			const params = {};
+			for (const [key, def] of defs) {
+				if (_TP_INFRA_KEYS.has(key)) continue;
+				params[key] = def.val ?? def;
+			}
+			// Apply collected-mode overrides
+			const overrides = _COLLECTED_OVERRIDES[cType] ?? {};
+			map[cType] = {
+				component: entry.component,
+				displayName: entry.displayName,
+				paramDefaults: { ...params, ...overrides }
+			};
+		}
+		return map;
+	});
 
 	// ─── Table process management ──────────────────────────────────────────────
 
-	// ─── ColumnSelector registration key helpers ─────────────────────────────
-	function _tpXKey(tp) {
-		return 'tp_' + tp.id + '_x';
-	}
-	function _tpYKey(tp, colId) {
-		return 'tp_' + tp.id + '_y_' + colId;
-	}
-
 	function addTableProcess(type) {
-		if (!type) return;
+		if (!type || !collectedTPMap[type]) return;
+		const timeColId = p.args.out?.time ?? -1;
+		const valueColIds = [...(p.args.valueColIds ?? [])];
 		const tp = {
 			id: crypto.randomUUID(),
 			type,
 			excludedColIds: [],
-			args: { ...TP_DEFAULTS[type] },
-			xOutId: -1,
-			out: {}
+			args: {
+				...collectedTPMap[type].paramDefaults,
+				xIN: timeColId,
+				yIN: valueColIds,
+				out: {},
+				valid: false
+			}
 		};
 		p.args.tableProcesses = [...p.args.tableProcesses, tp];
-		const newIdx = p.args.tableProcesses.length - 1;
-		reconcileTableProcessOutputCols(newIdx);
-		applyTableProcesses();
 	}
 
 	function removeTableProcess(idx) {
 		const tp = p.args.tableProcesses[idx];
-		// Remove shared x column
-		if (tp.xOutId >= 0) {
-			core.rawData.delete(tp.xOutId);
-			removeColumn(tp.xOutId);
-		}
-		if (tp.id) delete p.args.out[_tpXKey(tp)];
-		// Remove per-column y columns
-		for (const [colIdStr, yOutId] of Object.entries(tp.out ?? {})) {
-			if (yOutId >= 0) {
-				core.rawData.delete(yOutId);
-				removeColumn(yOutId);
+		// Remove all output columns stored in tp.args.out
+		for (const colId of Object.values(tp.args?.out ?? {})) {
+			if (colId != null && colId >= 0) {
+				core.rawData.delete(colId);
+				removeColumn(colId);
 			}
-			if (tp.id) delete p.args.out[_tpYKey(tp, colIdStr)];
 		}
 		p.args.tableProcesses = p.args.tableProcesses.filter((_, i) => i !== idx);
-		tableProcessResults = tableProcessResults.filter((_, i) => i !== idx);
 	}
 
 	function toggleExcludeForTp(tpIdx, colId) {
@@ -401,348 +399,10 @@
 		const newExcluded = excluded.includes(colId)
 			? excluded.filter((id) => id !== colId)
 			: [...excluded, colId];
-		p.args.tableProcesses[tpIdx] = { ...tp, excludedColIds: newExcluded };
+		tp.excludedColIds = newExcluded;
+		const valueColIds = p.args.valueColIds ?? [];
+		tp.args.yIN = valueColIds.filter((id) => !newExcluded.includes(id));
 		p.args.tableProcesses = [...p.args.tableProcesses];
-		applyTableProcesses();
-	}
-
-	function reconcileTableProcessOutputCols(tpIdx) {
-		const tp = p.args.tableProcesses[tpIdx];
-		// Ensure tp has a stable UUID
-		if (!tp.id) tp.id = crypto.randomUUID();
-
-		const activeValueColIds = (p.args.categories ?? [])
-			.map((cat) => p.args.out?.['value_' + cat])
-			.filter((id) => id !== undefined && id >= 0);
-
-		// Ensure shared x column exists (one per table process)
-		if ((tp.xOutId === undefined || tp.xOutId === -1) && p.parent) {
-			const xCol = new Column({});
-			xCol.name = `${tp.type}x_${p.id}`;
-			pushObj(xCol);
-			p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
-			tp.xOutId = xCol.id;
-		} else if (tp.xOutId === undefined) {
-			tp.xOutId = -1;
-		}
-		// Register shared x in p.args.out so ColumnSelector can find it
-		if (tp.xOutId >= 0) p.args.out[_tpXKey(tp)] = tp.xOutId;
-
-		// Add y column for newly-appeared value columns
-		for (const colId of activeValueColIds) {
-			const existing = tp.out[colId];
-			if (existing === undefined || existing === -1) {
-				if (p.parent) {
-					const srcName = getColumnById(colId)?.name ?? String(colId);
-					const yCol = new Column({});
-					yCol.name = srcName + '_biny';
-					pushObj(yCol);
-					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
-					tp.out[colId] = yCol.id;
-					p.args.out[_tpYKey(tp, colId)] = yCol.id;
-				} else {
-					tp.out[colId] = -1;
-				}
-			} else if (existing >= 0) {
-				// Already exists — ensure registered in p.args.out
-				p.args.out[_tpYKey(tp, colId)] = existing;
-			}
-		}
-
-		// Remove y columns for value columns that are gone
-		for (const [colIdStr, yOutId] of Object.entries(tp.out)) {
-			if (!activeValueColIds.includes(Number(colIdStr))) {
-				if (yOutId >= 0) {
-					core.rawData.delete(yOutId);
-					removeColumn(yOutId);
-				}
-				delete p.args.out[_tpYKey(tp, colIdStr)];
-				delete tp.out[colIdStr];
-			}
-		}
-
-		p.args.tableProcesses = [...p.args.tableProcesses];
-	}
-
-	function applyTableProcesses() {
-		if (!p.args.valid) {
-			tableProcessResults = [];
-			return;
-		}
-
-		const committed = p.args.out?.time >= 0;
-		let times_raw, isTimeCol, originTime_ms, times_hrs;
-
-		if (committed) {
-			const timeCol = getColumnById(p.args.out.time);
-			if (!timeCol) {
-				tableProcessResults = [];
-				return;
-			}
-			isTimeCol = timeCol.type === 'time';
-			times_raw = core.rawData.get(p.args.out.time) ?? [];
-		} else {
-			// Preview mode: use longToWideResult
-			if (!longToWideResult?.time?.length) {
-				tableProcessResults = [];
-				return;
-			}
-			times_raw = longToWideResult.time;
-			isTimeCol = timeIsTime;
-		}
-
-		originTime_ms = isTimeCol ? (times_raw[0] ?? 0) : null;
-		times_hrs = isTimeCol ? times_raw.map((t) => (t - originTime_ms) / 3600000) : times_raw;
-
-		const newResults = (p.args.tableProcesses ?? []).map((tp) => {
-			const excluded = tp.excludedColIds ?? [];
-			let activeCols;
-			if (committed) {
-				activeCols = (p.args.categories ?? [])
-					.map((cat) => ({ colId: p.args.out?.['value_' + cat], cat }))
-					.filter((c) => c.colId !== undefined && c.colId >= 0 && !excluded.includes(c.colId));
-			} else {
-				// Preview: use category names as synthetic IDs
-				activeCols = (p.args.categories ?? [])
-					.map((cat) => ({ colId: cat, cat }))
-					.filter((c) => !excluded.includes(c.colId));
-			}
-
-			let xWritten = false;
-			return activeCols.map(({ colId, cat }) => {
-				const yOutId = tp.out?.[colId] ?? -1;
-				let values;
-				if (committed) {
-					const col = getColumnById(colId);
-					if (!col) return { colId, valid: false };
-					values = col.getData();
-				} else {
-					values = longToWideResult['value_' + cat];
-					if (!values?.length) return { colId, valid: false };
-				}
-				const writeX = !xWritten;
-				const res = applyOneTableProcess(
-					tp,
-					times_hrs,
-					values,
-					originTime_ms,
-					isTimeCol,
-					tp.xOutId,
-					yOutId,
-					writeX
-				);
-				if (res.valid) xWritten = true;
-				return { colId, ...res };
-			});
-		});
-
-		untrack(() => {
-			tableProcessResults = newResults;
-		});
-	}
-
-	// xOutId / yOutId may be -1 in preview mode — computation still runs, writes are skipped
-	function applyOneTableProcess(
-		tp,
-		times_hrs,
-		values,
-		originTime_ms,
-		isTimeCol,
-		xOutId,
-		yOutId,
-		writeX
-	) {
-		// Filter out NaN / null pairs
-		const validIdx = times_hrs
-			.map((t, i) => (!isNaN(t) && values[i] != null && !isNaN(values[i]) ? i : -1))
-			.filter((i) => i >= 0);
-		if (validIdx.length < 3) return { valid: false };
-
-		const tt = validIdx.map((i) => times_hrs[i]);
-		const yy = validIdx.map((i) => values[i]);
-
-		let xOut, yOut, stats;
-
-		try {
-			switch (tp.type) {
-				case 'cosinor': {
-					const a = tp.args;
-					if (a.useFixedPeriod) {
-						const fit = fitCosinorFixed(
-							tt,
-							yy,
-							a.fixedPeriod ?? 24,
-							a.nHarmonics ?? 1,
-							a.alpha ?? 0.05
-						);
-						if (!fit) return { valid: false };
-						xOut = tt;
-						yOut = fit.fitted;
-						stats = {
-							rmse: fit.RMSE,
-							r2: fit.R2,
-							mesor: fit.M,
-							mesor_ci_lo: fit.CI_M?.[0],
-							mesor_ci_hi: fit.CI_M?.[1],
-							F_stat: fit.F_stat,
-							p_value: fit.pF,
-							harmonics: (fit.harmonics ?? []).map((h) => ({
-								k: h.k,
-								amplitude: h.amplitude,
-								amplitude_ci_lo: h.CI_A?.[0],
-								amplitude_ci_hi: h.CI_A?.[1],
-								acrophase_hrs: h.acrophase_hrs,
-								acrophase_ci_lo: h.CI_acrophase?.[0],
-								acrophase_ci_hi: h.CI_acrophase?.[1]
-							}))
-						};
-					} else {
-						const fit = fitCosineCurves(tt, yy, a.Ncurves ?? 1);
-						if (!fit?.fitted?.length) return { valid: false };
-						xOut = tt;
-						yOut = fit.fitted;
-						stats = {
-							rmse: fit.rmse,
-							r2: fit.rSquared,
-							cosines: (fit.parameters?.cosines ?? []).map((c) => ({
-								period: c.frequency ? (2 * Math.PI) / c.frequency : null,
-								amplitude: c.amplitude,
-								phase: c.phase
-							}))
-						};
-					}
-					break;
-				}
-				case 'bin': {
-					const a = tp.args;
-					const step = a.diffStep ? (a.stepSize ?? a.binSize) : (a.binSize ?? 1);
-					const res = binData(
-						tt,
-						yy,
-						a.binSize ?? 1,
-						a.binStart ?? 0,
-						step,
-						a.aggFunction ?? 'mean'
-					);
-					if (!res?.bins?.length) return { valid: false };
-					xOut = res.bins;
-					yOut = res.y_out;
-					stats = {};
-					break;
-				}
-				case 'smooth': {
-					const a = tp.args;
-					// smooth expects sorted data — tt from longtowide is already sorted
-					const res = smoothArrays(tt, yy, a.smootherType ?? 'moving', a);
-					if (!res?.y_out?.length) return { valid: false };
-					xOut = res.x_out;
-					yOut = res.y_out;
-					stats = {};
-					break;
-				}
-				case 'trend': {
-					const a = tp.args;
-					const res = fitTrend(tt, yy, a.model ?? 'linear', a.polyDegree ?? 2);
-					if (!res?.fitted?.length) return { valid: false };
-					xOut = tt;
-					yOut = res.fitted;
-					stats = {
-						rmse: res.rmse,
-						r2: res.rSquared,
-						model: a.model ?? 'linear',
-						parameters: res.parameters
-					};
-					break;
-				}
-				case 'rectwave': {
-					const a = tp.args;
-					const fit = fitRectangularWave(tt, yy, {
-						fixKappa: a.fixKappa,
-						fixedKappa: a.fixedKappa,
-						fixOmega: a.fixOmega,
-						fixedPeriod: a.fixedPeriod,
-						fixDutyCycle: a.fixDutyCycle,
-						fixedDutyCycle: a.fixedDutyCycle
-					});
-					if (!fit) return { valid: false };
-					xOut = tt;
-					yOut = evaluateRectWaveAtPoints(fit.parameters, tt);
-					stats = {
-						rmse: fit.rmse,
-						r2: fit.rSquared,
-						period: fit.period,
-						acrophase: fit.acrophase,
-						M: fit.parameters?.M,
-						A: fit.parameters?.A,
-						kappa: fit.parameters?.kappa,
-						dutyCycle: fit.parameters?.dutyCycle
-					};
-					break;
-				}
-				case 'dlog': {
-					const a = tp.args;
-					const fit = fitDoubleLogistic(tt, yy, {
-						periodic: true,
-						fixK1: a.fixK1,
-						fixedK1: a.fixedK1,
-						fixK2: a.fixK2,
-						fixedK2: a.fixedK2,
-						fixPeriod: a.fixPeriod,
-						fixedPeriod: a.fixedPeriod
-					});
-					if (!fit) return { valid: false };
-					xOut = tt;
-					yOut = evaluateDoubleLogisticAtPoints(fit.parameters, true, tt);
-					stats = {
-						rmse: fit.rmse,
-						r2: fit.rSquared,
-						period: fit.parameters?.T,
-						M: fit.parameters?.M,
-						A: fit.parameters?.A,
-						k1: fit.parameters?.k1,
-						t1: fit.parameters?.t1,
-						k2: fit.parameters?.k2,
-						t2: fit.parameters?.t2
-					};
-					break;
-				}
-				default:
-					return { valid: false };
-			}
-		} catch (e) {
-			console.warn('LongToWide table process failed:', e);
-			return { valid: false };
-		}
-
-		if (!xOut || !yOut) return { valid: false };
-
-		const xOutFinal = isTimeCol ? xOut.map((h) => originTime_ms + h * 3600000) : xOut;
-		const hash = crypto.randomUUID();
-
-		// Write shared x column (only for the first column in this tp)
-		if (writeX && xOutId >= 0) {
-			const xColOut = getColumnById(xOutId);
-			if (xColOut) {
-				core.rawData.set(xOutId, xOutFinal);
-				xColOut.data = xOutId;
-				xColOut.type = isTimeCol ? 'time' : 'number';
-				if (isTimeCol) xColOut.timeFormat = null;
-				xColOut.tableProcessGUId = hash;
-			}
-		}
-
-		// Write per-column y
-		if (yOutId >= 0) {
-			const yColOut = getColumnById(yOutId);
-			if (yColOut) {
-				core.rawData.set(yOutId, yOut);
-				yColOut.data = yOutId;
-				yColOut.type = 'number';
-				yColOut.tableProcessGUId = hash;
-			}
-		}
-
-		return { valid: true, stats };
 	}
 
 	// ─── Main reshape ──────────────────────────────────────────────────────────
@@ -797,12 +457,16 @@
 
 		[longToWideResult, p.args.valid] = longtowide(p.args);
 
-		// Reconcile and run per-column table processes
-		if (p.args.valid) {
-			for (let i = 0; i < (p.args.tableProcesses ?? []).length; i++) {
-				reconcileTableProcessOutputCols(i);
-			}
-			applyTableProcesses();
+		// Update xIN / yIN for each table process after reshape
+		const newTimeColId = p.args.out?.time ?? -1;
+		const newValueColIds = [...(p.args.valueColIds ?? [])];
+		for (const tp of p.args.tableProcesses ?? []) {
+			tp.args.xIN = newTimeColId;
+			const excluded = tp.excludedColIds ?? [];
+			tp.args.yIN = newValueColIds.filter((id) => !excluded.includes(id));
+		}
+		if ((p.args.tableProcesses ?? []).length > 0) {
+			p.args.tableProcesses = [...p.args.tableProcesses];
 		}
 	}
 
@@ -810,16 +474,31 @@
 		// Backfill tableProcesses for old sessions
 		if (p.args.tableProcesses === undefined) p.args.tableProcesses = [];
 
-		// Migrate old tp structure: { out: { [colId]: { xOutId, yOutId } } }
-		// to new: { id, xOutId, out: { [colId]: yOutId } }
+		// Migrate old tp structures to new format: { args: { ..., xIN, yIN, out, valid } }
+		const _TP_X_KEY = {
+			cosinor: 'cosinorx',
+			bin: 'binnedx',
+			smooth: 'smoothedx',
+			trend: 'trendx',
+			rectwave: 'rectwavex',
+			dlog: 'dlogx'
+		};
+		const _TP_Y_PREFIX = {
+			cosinor: 'cosinory_',
+			bin: 'binnedy_',
+			smooth: 'smoothedy_',
+			trend: 'trendy_',
+			rectwave: 'rectwavey_',
+			dlog: 'dlogy_'
+		};
 		for (const tp of p.args.tableProcesses) {
 			if (!tp.id) tp.id = crypto.randomUUID();
-			if (tp.xOutId === undefined) {
-				// Find first valid xOutId from old structure
+			if (!tp.args) tp.args = {};
+			// Very-old format: out[colId] = { xOutId, yOutId }
+			if (tp.xOutId === undefined && typeof Object.values(tp.out ?? {})[0] === 'object') {
 				const firstPair = Object.values(tp.out ?? {}).find((v) => v && typeof v === 'object');
 				tp.xOutId = firstPair?.xOutId ?? -1;
-				// Flatten out to just yOutIds; remove duplicate x columns
-				const newOut = {};
+				const flatOut = {};
 				let first = true;
 				for (const [colIdStr, pair] of Object.entries(tp.out ?? {})) {
 					if (pair && typeof pair === 'object') {
@@ -827,14 +506,35 @@
 							core.rawData.delete(pair.xOutId);
 							removeColumn(pair.xOutId);
 						}
-						newOut[colIdStr] = pair.yOutId ?? -1;
+						flatOut[colIdStr] = pair.yOutId ?? -1;
 						first = false;
 					} else {
-						newOut[colIdStr] = pair; // already a number (yOutId)
+						flatOut[colIdStr] = pair;
 					}
 				}
-				tp.out = newOut;
+				tp.out = flatOut;
 			}
+			// Mid-old format: xOutId at tp level, out[colId] = yId
+			if ('xOutId' in tp) {
+				const xKey = _TP_X_KEY[tp.type] ?? 'x_out';
+				const yPrefix = _TP_Y_PREFIX[tp.type] ?? 'y_out_';
+				const migrOut = {};
+				migrOut[xKey] = tp.xOutId ?? -1;
+				for (const [colId, yId] of Object.entries(tp.out ?? {})) {
+					migrOut[yPrefix + colId] = yId;
+				}
+				tp.args.out = migrOut;
+				tp.args.yIN = [];
+				tp.args.xIN = p.args.out?.time ?? -1;
+				tp.args.valid = false;
+				delete tp.xOutId;
+				delete tp.out;
+			}
+			// Ensure required fields exist
+			if (!tp.args.out) tp.args.out = {};
+			if (!tp.args.yIN) tp.args.yIN = [];
+			if (tp.args.xIN === undefined) tp.args.xIN = p.args.out?.time ?? -1;
+			if (tp.args.valid === undefined) tp.args.valid = false;
 		}
 
 		// Backfill preProcesses for old sessions
@@ -871,6 +571,20 @@
 				p.args.valueColIds = p.args.categories
 					.map((cat) => p.args.out['value_' + cat])
 					.filter((id) => id !== undefined && id >= 0);
+			}
+		}
+
+		// Sync xIN/yIN for each table process from current state
+		if (p.args.valid) {
+			const initTimeColId = p.args.out?.time ?? -1;
+			const initValueColIds = [...(p.args.valueColIds ?? [])];
+			for (const tp of p.args.tableProcesses ?? []) {
+				tp.args.xIN = initTimeColId;
+				const excluded = tp.excludedColIds ?? [];
+				tp.args.yIN = initValueColIds.filter((id) => !excluded.includes(id));
+			}
+			if ((p.args.tableProcesses ?? []).length > 0) {
+				p.args.tableProcesses = [...p.args.tableProcesses];
 			}
 		}
 
@@ -992,328 +706,11 @@
 			{#each p.args.tableProcesses as tp, tpIdx (tpIdx)}
 				<div class="tp-block">
 					<div class="tp-header">
-						<span class="tp-title">{TP_LABELS[tp.type] ?? tp.type}</span>
+						<span class="tp-title">{collectedTPMap[tp.type]?.displayName ?? tp.type}</span>
 						<button class="remove-btn" onclick={() => removeTableProcess(tpIdx)} title="Remove"
 							>×</button
 						>
 					</div>
-
-					<!-- Type-specific parameters -->
-					{#if tp.type === 'cosinor'}
-						<div class="control-input">
-							<label>
-								<input
-									type="checkbox"
-									bind:checked={tp.args.useFixedPeriod}
-									onchange={() => doLongToWide()}
-								/>
-								Use fixed period
-							</label>
-						</div>
-						{#if tp.args.useFixedPeriod}
-							<div class="control-input-horizontal">
-								<div class="control-input">
-									<p>Period (hrs)</p>
-									<NumberWithUnits
-										bind:value={tp.args.fixedPeriod}
-										onInput={() => doLongToWide()}
-										min="0.1"
-										step="0.5"
-									/>
-								</div>
-								<div class="control-input">
-									<p>N harmonics</p>
-									<NumberWithUnits
-										bind:value={tp.args.nHarmonics}
-										onInput={() => doLongToWide()}
-										min="1"
-										step="1"
-									/>
-								</div>
-							</div>
-							<div class="control-input">
-								<p>CI level</p>
-								<select bind:value={tp.args.alpha} onchange={() => doLongToWide()}>
-									<option value={0.05}>95%</option>
-									<option value={0.01}>99%</option>
-								</select>
-							</div>
-						{:else}
-							<div class="control-input">
-								<p>N cosine curves</p>
-								<NumberWithUnits
-									bind:value={tp.args.Ncurves}
-									onInput={() => doLongToWide()}
-									min="1"
-									step="1"
-								/>
-							</div>
-						{/if}
-					{:else if tp.type === 'bin'}
-						<div class="control-input-horizontal">
-							<div class="control-input">
-								<p>Bin size (hrs)</p>
-								<NumberWithUnits
-									bind:value={tp.args.binSize}
-									onInput={() => doLongToWide()}
-									min="0.01"
-									step="0.01"
-								/>
-							</div>
-							<div class="control-input">
-								<p>Bin start (hr)</p>
-								<NumberWithUnits bind:value={tp.args.binStart} onInput={() => doLongToWide()} />
-							</div>
-						</div>
-						<div class="control-input">
-							<label>
-								<input
-									type="checkbox"
-									bind:checked={tp.args.diffStep}
-									onchange={() => doLongToWide()}
-								/>
-								Different step size
-							</label>
-						</div>
-						{#if tp.args.diffStep}
-							<div class="control-input">
-								<p>Step size (hrs)</p>
-								<NumberWithUnits
-									bind:value={tp.args.stepSize}
-									onInput={() => doLongToWide()}
-									min="0.01"
-									step="0.01"
-								/>
-							</div>
-						{/if}
-						<div class="control-input">
-							<p>Aggregation</p>
-							<select bind:value={tp.args.aggFunction} onchange={() => doLongToWide()}>
-								<option value="mean">Mean</option>
-								<option value="median">Median</option>
-								<option value="min">Min</option>
-								<option value="max">Max</option>
-								<option value="stddev">Std dev</option>
-							</select>
-						</div>
-					{:else if tp.type === 'smooth'}
-						<div class="control-input">
-							<p>Smoother</p>
-							<select bind:value={tp.args.smootherType} onchange={() => doLongToWide()}>
-								<option value="moving">Moving average</option>
-								<option value="whittaker">Whittaker-Eilers</option>
-								<option value="savitzky">Savitzky-Golay</option>
-								<option value="loess">LOESS</option>
-							</select>
-						</div>
-						{#if tp.args.smootherType === 'moving'}
-							<div class="control-input-horizontal">
-								<div class="control-input">
-									<p>Window size</p>
-									<NumberWithUnits
-										bind:value={tp.args.movingAvgWindowSize}
-										onInput={() => doLongToWide()}
-										min="1"
-										step="1"
-									/>
-								</div>
-								<div class="control-input">
-									<p>Type</p>
-									<select bind:value={tp.args.movingAvgType} onchange={() => doLongToWide()}>
-										<option value="simple">Simple</option>
-										<option value="weighted">Weighted</option>
-										<option value="exponential">Exponential</option>
-									</select>
-								</div>
-							</div>
-						{:else if tp.args.smootherType === 'whittaker'}
-							<div class="control-input-horizontal">
-								<div class="control-input">
-									<p>Lambda</p>
-									<NumberWithUnits
-										bind:value={tp.args.whittakerLambda}
-										onInput={() => doLongToWide()}
-										min="0.01"
-									/>
-								</div>
-								<div class="control-input">
-									<p>Order</p>
-									<NumberWithUnits
-										bind:value={tp.args.whittakerOrder}
-										onInput={() => doLongToWide()}
-										min="1"
-										max="3"
-										step="1"
-									/>
-								</div>
-							</div>
-						{:else if tp.args.smootherType === 'savitzky'}
-							<div class="control-input-horizontal">
-								<div class="control-input">
-									<p>Window size</p>
-									<NumberWithUnits
-										bind:value={tp.args.savitzkyWindowSize}
-										onInput={() => doLongToWide()}
-										min="3"
-										step="2"
-									/>
-								</div>
-								<div class="control-input">
-									<p>Poly order</p>
-									<NumberWithUnits
-										bind:value={tp.args.savitzkyPolyOrder}
-										onInput={() => doLongToWide()}
-										min="1"
-										step="1"
-									/>
-								</div>
-							</div>
-						{:else if tp.args.smootherType === 'loess'}
-							<div class="control-input">
-								<p>Bandwidth</p>
-								<NumberWithUnits
-									bind:value={tp.args.loessBandwidth}
-									onInput={() => doLongToWide()}
-									min="0.01"
-									max="1"
-									step="0.05"
-								/>
-							</div>
-						{/if}
-					{:else if tp.type === 'trend'}
-						<div class="control-input">
-							<p>Model</p>
-							<select bind:value={tp.args.model} onchange={() => doLongToWide()}>
-								<option value="linear">Linear</option>
-								<option value="exponential">Exponential</option>
-								<option value="logarithmic">Logarithmic</option>
-								<option value="polynomial">Polynomial</option>
-							</select>
-						</div>
-						{#if tp.args.model === 'polynomial'}
-							<div class="control-input">
-								<p>Degree</p>
-								<NumberWithUnits
-									bind:value={tp.args.polyDegree}
-									onInput={() => doLongToWide()}
-									min="2"
-									max="8"
-									step="1"
-								/>
-							</div>
-						{/if}
-					{:else if tp.type === 'rectwave'}
-						<div class="control-input-horizontal">
-							<label class="col-check-item">
-								<input
-									type="checkbox"
-									bind:checked={tp.args.fixOmega}
-									onchange={() => doLongToWide()}
-								/>
-								Fix period
-							</label>
-							{#if tp.args.fixOmega}
-								<NumberWithUnits
-									bind:value={tp.args.fixedPeriod}
-									onInput={() => doLongToWide()}
-									min="0.1"
-									step="0.5"
-								/>
-							{/if}
-						</div>
-						<div class="control-input-horizontal">
-							<label class="col-check-item">
-								<input
-									type="checkbox"
-									bind:checked={tp.args.fixKappa}
-									onchange={() => doLongToWide()}
-								/>
-								Fix kappa (sharpness)
-							</label>
-							{#if tp.args.fixKappa}
-								<NumberWithUnits
-									bind:value={tp.args.fixedKappa}
-									onInput={() => doLongToWide()}
-									min="0.1"
-									step="0.5"
-								/>
-							{/if}
-						</div>
-						<div class="control-input-horizontal">
-							<label class="col-check-item">
-								<input
-									type="checkbox"
-									bind:checked={tp.args.fixDutyCycle}
-									onchange={() => doLongToWide()}
-								/>
-								Fix duty cycle
-							</label>
-							{#if tp.args.fixDutyCycle}
-								<NumberWithUnits
-									bind:value={tp.args.fixedDutyCycle}
-									onInput={() => doLongToWide()}
-									min="0.01"
-									max="0.99"
-									step="0.05"
-								/>
-							{/if}
-						</div>
-					{:else if tp.type === 'dlog'}
-						<div class="control-input-horizontal">
-							<label class="col-check-item">
-								<input
-									type="checkbox"
-									bind:checked={tp.args.fixPeriod}
-									onchange={() => doLongToWide()}
-								/>
-								Fix period
-							</label>
-							{#if tp.args.fixPeriod}
-								<NumberWithUnits
-									bind:value={tp.args.fixedPeriod}
-									onInput={() => doLongToWide()}
-									min="0.1"
-									step="0.5"
-								/>
-							{/if}
-						</div>
-						<div class="control-input-horizontal">
-							<label class="col-check-item">
-								<input
-									type="checkbox"
-									bind:checked={tp.args.fixK1}
-									onchange={() => doLongToWide()}
-								/>
-								Fix rise rate (k1)
-							</label>
-							{#if tp.args.fixK1}
-								<NumberWithUnits
-									bind:value={tp.args.fixedK1}
-									onInput={() => doLongToWide()}
-									min="0.01"
-									step="0.1"
-								/>
-							{/if}
-						</div>
-						<div class="control-input-horizontal">
-							<label class="col-check-item">
-								<input
-									type="checkbox"
-									bind:checked={tp.args.fixK2}
-									onchange={() => doLongToWide()}
-								/>
-								Fix fall rate (k2)
-							</label>
-							{#if tp.args.fixK2}
-								<NumberWithUnits
-									bind:value={tp.args.fixedK2}
-									onInput={() => doLongToWide()}
-									min="0.01"
-									step="0.1"
-								/>
-							{/if}
-						</div>
-					{/if}
 
 					<!-- Column checklist (include/exclude) -->
 					{#if true}
@@ -1346,67 +743,10 @@
 						{/if}
 					{/if}
 
-					<!-- Shared x output + per-column y outputs and stats -->
-					{#if tableProcessResults[tpIdx]?.some((r) => r.valid)}
-						<div class="tp-outputs">
-							{#if tp.xOutId >= 0}
-								<div class="tp-output-row">
-									<span class="tp-output-label">x (shared)</span>
-									<ColumnComponent col={getColumnById(tp.xOutId)} />
-								</div>
-							{/if}
-							{#each tableProcessResults[tpIdx] as colResult (colResult.colId)}
-								{#if colResult.valid}
-									{@const yOutId = tp.out?.[colResult.colId]}
-									{@const srcName =
-										getColumnById(Number(colResult.colId))?.name ?? String(colResult.colId)}
-									<div class="tp-output-row">
-										<span class="tp-output-label">{srcName}</span>
-										{#if yOutId >= 0}
-											<ColumnComponent col={getColumnById(yOutId)} />
-										{/if}
-										{#if colResult.stats?.rmse != null && !isNaN(colResult.stats.rmse)}
-											<p class="tp-stat">
-												RMSE: {colResult.stats.rmse.toFixed(3)}{colResult.stats.r2 != null
-													? ` · R²: ${colResult.stats.r2.toFixed(3)}`
-													: ''}
-											</p>
-										{/if}
-									</div>
-								{/if}
-							{/each}
-						</div>
-						{#if STATS_TYPES.includes(tp.type)}
-							<div class="tp-stat-actions">
-								<button
-									class="tp-stat-btn"
-									onclick={() => {
-										const { headers, rows } = getTableProcessStatsData(
-											tp,
-											tableProcessResults[tpIdx],
-											getColumnById
-										);
-										showStaticDataAsTable(
-											`${TP_LABELS[tp.type] ?? tp.type} stats`,
-											headers,
-											rows,
-											() => getTableProcessStatsData(tp, tableProcessResults[tpIdx], getColumnById)
-										);
-									}}>View stats</button
-								>
-								<button
-									class="tp-stat-btn"
-									onclick={() => {
-										const { headers, rows } = getTableProcessStatsData(
-											tp,
-											tableProcessResults[tpIdx],
-											getColumnById
-										);
-										saveStaticDataAsCSV(`${TP_LABELS[tp.type] ?? tp.type}_stats`, headers, rows);
-									}}>Download stats</button
-								>
-							</div>
-						{/if}
+					<!-- Type-specific parameters (rendered by the TP component) -->
+					{#if collectedTPMap[tp.type]?.component}
+						{@const DynamicTP = collectedTPMap[tp.type].component}
+						<DynamicTP p={{ id: tp.id, args: tp.args, parent: p.parent }} hideInputs={true} />
 					{/if}
 				</div>
 			{/each}
@@ -1420,12 +760,9 @@
 				}}
 			>
 				<option value="">+ Add table process…</option>
-				<option value="cosinor">Cosinor fit</option>
-				<option value="bin">Bin data</option>
-				<option value="smooth">Smooth data</option>
-				<option value="trend">Trend fit</option>
-				<option value="rectwave">Rectangular wave fit</option>
-				<option value="dlog">Double logistic fit</option>
+				{#each Object.entries(collectedTPMap) as [cType, entry] (cType)}
+					<option value={cType}>{entry.displayName}</option>
+				{/each}
 			</select>
 		</div>
 	</div>
@@ -1445,6 +782,7 @@
 		border: 1px solid var(--color-lightness-85);
 		border-radius: 4px;
 		padding: 0.5rem 0.6rem;
+		width: 100%;
 	}
 
 	.tp-header {
@@ -1522,53 +860,5 @@
 		font-size: 12px;
 		cursor: pointer;
 		padding: 0.1rem 0;
-	}
-
-	.tp-outputs {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		margin-top: 0.25rem;
-	}
-
-	.tp-output-row {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-		border-left: 2px solid var(--color-lightness-85);
-		padding-left: 0.5rem;
-	}
-
-	.tp-output-label {
-		font-size: 11px;
-		color: var(--color-lightness-45, #666);
-		font-style: italic;
-	}
-
-	.tp-stat {
-		font-size: 11px;
-		color: var(--color-lightness-45, #666);
-		margin: 0;
-	}
-
-	.tp-stat-actions {
-		display: flex;
-		gap: 0.4rem;
-		margin-top: 0.3rem;
-	}
-
-	.tp-stat-btn {
-		font-size: 11px;
-		padding: 0.25rem 0.5rem;
-		border: 1px solid var(--color-lightness-75, #aaa);
-		border-radius: 3px;
-		background: none;
-		cursor: pointer;
-		color: var(--color-lightness-35, #555);
-	}
-
-	.tp-stat-btn:hover {
-		background: var(--color-lightness-95);
-		border-color: var(--color-lightness-55, #888);
 	}
 </style>

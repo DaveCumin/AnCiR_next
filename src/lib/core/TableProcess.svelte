@@ -187,6 +187,7 @@
 				<Icon name="minus" width={16} height={16} className="menu-icon" />
 			</button>
 		</div>
+		<div style="margin-top: 0.7rem;">{p.displayName}</div>
 		<TheTableProcess bind:p />
 	</div>
 {/if}

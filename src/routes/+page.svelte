@@ -1148,6 +1148,27 @@
 		padding: 0;
 	}
 
+	/* table process outputs */
+	:global(.tp-outputs) {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin-top: 0.25rem;
+	}
+
+	:global(.tp-output-row) {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		padding-left: 0.5rem;
+	}
+
+	:global(.tp-output-label) {
+		font-size: 11px;
+		color: var(--color-lightness-45, #666);
+		font-style: italic;
+	}
+
 	:global(input[type='checkbox']) {
 		width: 1rem;
 		height: 1rem;

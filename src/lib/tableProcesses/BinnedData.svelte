@@ -8,9 +8,12 @@
 		['binSize', { val: 0.25 }],
 		['binStart', { val: 0 }],
 		['stepSize', { val: 0.25 }], //null = use binSize as step
+		['diffStep', { val: false }],
 		['aggFunction', { val: 'mean' }], // mean | median | min | max | stddev
 		['out', { binnedx: { val: -1 } }],
-		['valid', { val: false }]
+		['valid', { val: false }],
+		['forcollected', { val: true }],
+		['collectedType', { val: 'bin' }]
 	]);
 
 	export function binneddata(argsIN, differentstepsize) {
@@ -101,7 +104,7 @@
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { onMount, untrack } from 'svelte';
 
-	let { p = $bindable() } = $props();
+	let { p = $bindable(), hideInputs = false } = $props();
 
 	// --- Backward compat ---
 	// Convert legacy single yIN number to array
@@ -109,17 +112,17 @@
 		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
 	}
 	// Migrate old 'binnedy' output key to per-Y format ('binnedy_{yId}')
-	// This preserves the column ID so downstream references stay linked
-	if (p.args.out.binnedy != null) {
+	if (p.args.out?.binnedy != null) {
 		if (p.args.out.binnedy >= 0 && p.args.yIN.length > 0) {
 			p.args.out['binnedy_' + p.args.yIN[0]] = p.args.out.binnedy;
 		}
 		delete p.args.out.binnedy;
 	}
+	// Migrate: ensure diffStep exists
+	if (p.args.diffStep === undefined) p.args.diffStep = false;
 
 	let binnedData = $state();
 	let previewStart = $state(1);
-	let differentstepsize = $state(false);
 	let mounted = $state(false);
 
 	// Track previous Y IDs to detect what changed (non-reactive)
@@ -147,7 +150,7 @@
 		if (dataHash !== lastHash) {
 			untrack(() => {
 				previewStart = 1;
-				[binnedData, p.args.valid] = binneddata(p.args, differentstepsize);
+				[binnedData, p.args.valid] = binneddata(p.args, p.args.diffStep);
 			});
 			lastHash = dataHash;
 		}
@@ -183,7 +186,7 @@
 				if (p.parent) {
 					const srcName = getColumnById(newId)?.name ?? String(newId);
 					const yCol = new Column({});
-					yCol.name = 'bin_' + srcName + '_' + p.id;
+					yCol.name = 'bin_' + srcName;
 					pushObj(yCol);
 					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
 					p.args.out[outKey] = yCol.id;
@@ -200,12 +203,13 @@
 
 	function getBinnedData() {
 		previewStart = 1;
-		[binnedData, p.args.valid] = binneddata(p.args, differentstepsize);
+		[binnedData, p.args.valid] = binneddata(p.args, p.args.diffStep);
 		lastHash = getHash;
 	}
 
 	// Exclude own output column IDs from the Y selector
 	let yExcludeIds = $derived.by(() => {
+		if (hideInputs) return [];
 		const ids = [p.args.xIN];
 		if (p.args.out.binnedx >= 0) ids.push(p.args.out.binnedx);
 		for (const key of Object.keys(p.args.out)) {
@@ -216,7 +220,24 @@
 		return ids;
 	});
 
+	// Reconcile output columns when yIN changes externally (e.g. from parent in collected mode)
+	$effect(() => {
+		p.args.yIN; // read to track as reactive dependency
+		if (!mounted) return;
+		untrack(() => onYSelectionChange());
+	});
+
 	onMount(() => {
+		if (!p.args.out) p.args.out = {};
+		// Ensure X output column exists (created by TableProcess.svelte in standalone;
+		// must be created here in collected mode)
+		if ((p.args.out.binnedx == null || p.args.out.binnedx < 0) && p.parent) {
+			const xCol = new Column({});
+			xCol.name = 'binnedx_' + p.id;
+			pushObj(xCol);
+			p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
+			p.args.out.binnedx = xCol.id;
+		}
 		// Create output columns for any Y inputs that don't have them yet
 		// (e.g. when the process was created programmatically with yIN pre-set)
 		let needsCompute = false;
@@ -226,7 +247,7 @@
 				if (p.parent) {
 					const srcName = getColumnById(Number(yId))?.name ?? String(yId);
 					const yCol = new Column({});
-					yCol.name = 'bin_' + srcName + '_' + p.id;
+					yCol.name = 'bin_' + srcName;
 					pushObj(yCol);
 					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
 					p.args.out[outKey] = yCol.id;
@@ -259,24 +280,26 @@
 </script>
 
 <!-- Input Section -->
-<div class="section-row">
-	<div class="tableProcess-label"><span>Input</span></div>
-	<div class="control-input-vertical">
-		<div class="control-input">
-			<p>X column</p>
-			<ColumnSelector bind:value={p.args.xIN} onChange={getBinnedData} />
-		</div>
-		<div class="control-input">
-			<p>Y columns</p>
-			<ColumnSelector
-				bind:value={p.args.yIN}
-				excludeColIds={yExcludeIds}
-				multiple={true}
-				onChange={onYSelectionChange}
-			/>
+{#if !hideInputs}
+	<div class="section-row">
+		<div class="tableProcess-label"><span>Input</span></div>
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>X column</p>
+				<ColumnSelector bind:value={p.args.xIN} onChange={getBinnedData} />
+			</div>
+			<div class="control-input">
+				<p>Y columns</p>
+				<ColumnSelector
+					bind:value={p.args.yIN}
+					excludeColIds={yExcludeIds}
+					multiple={true}
+					onChange={onYSelectionChange}
+				/>
+			</div>
 		</div>
 	</div>
-</div>
+{/if}
 
 <!-- Bin Parameters -->
 <div class="section-row">
@@ -295,14 +318,15 @@
 	<p>Different step size</p>
 	<input
 		type="checkbox"
-		bind:checked={differentstepsize}
-		onchange={(e) => {
-			p.args.stepSize = differentstepsize ? p.args.binSize : null;
+		bind:checked={p.args.diffStep}
+		onchange={() => {
+			p.args.stepSize = p.args.diffStep ? p.args.binSize : null;
+			getBinnedData();
 		}}
 	/>
 
 	<div class="control-input-horizontal">
-		{#if differentstepsize}
+		{#if p.args.diffStep}
 			<div class="control-input">
 				<p>Step size (hrs)</p>
 
@@ -388,25 +412,3 @@
 	</div>
 </div>
 
-<style>
-	.tp-outputs {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		margin-top: 0.25rem;
-	}
-
-	.tp-output-row {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-		border-left: 2px solid var(--color-lightness-85);
-		padding-left: 0.5rem;
-	}
-
-	.tp-output-label {
-		font-size: 11px;
-		color: var(--color-lightness-45, #666);
-		font-style: italic;
-	}
-</style>

@@ -15,7 +15,9 @@
 		['movingAvgWindowSize', { val: 5 }],
 		['movingAvgType', { val: 'simple' }],
 		['out', { smoothedx: { val: -1 } }],
-		['valid', { val: false }]
+		['valid', { val: false }],
+		['forcollected', { val: true }],
+		['collectedType', { val: 'smooth' }]
 	]);
 
 	// Smoother implementations
@@ -399,7 +401,7 @@
 	import { onMount, untrack } from 'svelte';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 
-	let { p = $bindable() } = $props();
+	let { p = $bindable(), hideInputs = false } = $props();
 
 	// Backward compat: convert legacy single yIN to array
 	if (typeof p.args.yIN === 'number') {
@@ -479,7 +481,7 @@
 				if (p.parent) {
 					const srcName = getColumnById(newId)?.name ?? String(newId);
 					const yCol = new Column({});
-					yCol.name = 'smooth_' + srcName + '_' + p.id;
+					yCol.name = 'smooth_' + srcName;
 					pushObj(yCol);
 					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
 					p.args.out[outKey] = yCol.id;
@@ -502,6 +504,7 @@
 
 	// Exclude own output column IDs from the Y selector
 	let yExcludeIds = $derived.by(() => {
+		if (hideInputs) return [];
 		const ids = [p.args.xIN];
 		if (p.args.out.smoothedx >= 0) ids.push(p.args.out.smoothedx);
 		for (const key of Object.keys(p.args.out)) {
@@ -512,7 +515,23 @@
 		return ids;
 	});
 
+	// Reconcile output columns when yIN changes externally (e.g. from parent in collected mode)
+	$effect(() => {
+		const _yIN = p.args.yIN;
+		if (!mounted) return;
+		untrack(() => onYSelectionChange());
+	});
+
 	onMount(() => {
+		if (!p.args.out) p.args.out = {};
+		// Ensure X output column exists
+		if ((p.args.out.smoothedx == null || p.args.out.smoothedx < 0) && p.parent) {
+			const xCol = new Column({});
+			xCol.name = 'smoothedx_' + p.id;
+			pushObj(xCol);
+			p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
+			p.args.out.smoothedx = xCol.id;
+		}
 		// Create output columns for any Y inputs that don't have them yet
 		// (e.g. when the process was created programmatically with yIN pre-set)
 		let needsCompute = false;
@@ -522,7 +541,7 @@
 				if (p.parent) {
 					const srcName = getColumnById(Number(yId))?.name ?? String(yId);
 					const yCol = new Column({});
-					yCol.name = 'smooth_' + srcName + '_' + p.id;
+					yCol.name = 'smooth_' + srcName;
 					pushObj(yCol);
 					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
 					p.args.out[outKey] = yCol.id;
@@ -555,29 +574,31 @@
 </script>
 
 <!-- Input Section -->
-<div class="section-row">
-	<div class="tableProcess-label">
-		<span>Input</span>
-	</div>
-
-	<div class="control-input-vertical">
-		<div class="control-input">
-			<p>X column</p>
-			<ColumnSelector bind:value={p.args.xIN} onChange={(e) => getSmoothedData()} /> <br />
+{#if !hideInputs}
+	<div class="section-row">
+		<div class="tableProcess-label">
+			<span>Input</span>
 		</div>
+
 		<div class="control-input-vertical">
 			<div class="control-input">
-				<p>Y columns</p>
-				<ColumnSelector
-					bind:value={p.args.yIN}
-					excludeColIds={yExcludeIds}
-					multiple={true}
-					onChange={onYSelectionChange}
-				/>
+				<p>X column</p>
+				<ColumnSelector bind:value={p.args.xIN} onChange={(e) => getSmoothedData()} /> <br />
+			</div>
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Y columns</p>
+					<ColumnSelector
+						bind:value={p.args.yIN}
+						excludeColIds={yExcludeIds}
+						multiple={true}
+						onChange={onYSelectionChange}
+					/>
+				</div>
 			</div>
 		</div>
 	</div>
-</div>
+{/if}
 
 <div class="section-row">
 	<div class="tableProcess-label">
@@ -746,25 +767,3 @@
 	{/if}
 {/key}
 
-<style>
-	.tp-outputs {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		margin-top: 0.25rem;
-	}
-
-	.tp-output-row {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-		border-left: 2px solid var(--color-lightness-85);
-		padding-left: 0.5rem;
-	}
-
-	.tp-output-label {
-		font-size: 11px;
-		color: var(--color-lightness-45, #666);
-		font-style: italic;
-	}
-</style>

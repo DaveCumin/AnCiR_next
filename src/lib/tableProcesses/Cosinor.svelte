@@ -13,7 +13,9 @@
 		['useFixedPeriod', { val: false }],
 		['fixedPeriod', { val: 24 }],
 		['nHarmonics', { val: 1 }],
-		['alpha', { val: 0.05 }]
+		['alpha', { val: 0.05 }],
+		['forcollected', { val: true }],
+		['collectedType', { val: 'cosinor' }]
 	]);
 
 	export function cosinor(argsIN) {
@@ -196,7 +198,6 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
-
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
@@ -207,7 +208,7 @@
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
-	let { p = $bindable() } = $props();
+	let { p = $bindable(), hideInputs = false } = $props();
 
 	// Backward compat: convert legacy single yIN to array
 	if (typeof p.args.yIN === 'number') {
@@ -264,50 +265,47 @@
 		}
 	});
 
-	// Called when Y selection changes in the multi-select.
-	// bind:value has already updated p.args.yIN, so we compare against prevYIds.
-	function onYSelectionChange() {
-		const newIds = (p.args.yIN ?? []).map(Number).filter((id) => id >= 0);
-		const newSet = new Set(newIds);
-		const oldSet = new Set(prevYIds);
+	// Reconcile output columns when yIN changes (from ColumnSelector or parent)
+	$effect(() => {
+		const currentYIN = (p.args.yIN ?? []).map(Number).filter((id) => id >= 0);
+		if (!mounted) return;
+		untrack(() => {
+			const newSet = new Set(currentYIN);
+			const oldSet = new Set(prevYIds);
+			if (currentYIN.length === prevYIds.length && currentYIN.every((id) => oldSet.has(id))) return;
 
-		// Skip if no actual change
-		if (newIds.length === prevYIds.length && newIds.every((id) => oldSet.has(id))) return;
-
-		// Remove output columns for deselected Y inputs
-		for (const oldId of prevYIds) {
-			if (!newSet.has(oldId)) {
-				const outKey = 'cosinory_' + oldId;
-				const outColId = p.args.out[outKey];
-				if (outColId != null && outColId >= 0) {
-					core.rawData.delete(outColId);
-					removeColumn(outColId);
-				}
-				delete p.args.out[outKey];
-			}
-		}
-
-		// Create output columns for newly selected Y inputs
-		for (const newId of newIds) {
-			const outKey = 'cosinory_' + newId;
-			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
-				if (p.parent) {
-					const srcName = getColumnById(newId)?.name ?? String(newId);
-					const yCol = new Column({});
-					yCol.name = 'cosinor_' + srcName + '_' + p.id;
-					pushObj(yCol);
-					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
-					p.args.out[outKey] = yCol.id;
+			// Remove output columns for deselected Y inputs
+			for (const oldId of prevYIds) {
+				if (!newSet.has(oldId)) {
+					const outKey = 'cosinory_' + oldId;
+					const outColId = p.args.out?.[outKey];
+					if (outColId != null && outColId >= 0) {
+						core.rawData.delete(outColId);
+						removeColumn(outColId);
+					}
+					if (p.args.out) delete p.args.out[outKey];
 				}
 			}
-		}
 
-		// Update tracking
-		prevYIds = [...newIds];
+			// Create output columns for newly selected Y inputs
+			for (const newId of currentYIN) {
+				const outKey = 'cosinory_' + newId;
+				if (p.args.out?.[outKey] == null || p.args.out[outKey] === -1) {
+					if (p.parent) {
+						const srcName = getColumnById(newId)?.name ?? String(newId);
+						const yCol = new Column({});
+						yCol.name = 'cosinor_' + srcName;
+						pushObj(yCol);
+						p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
+						p.args.out[outKey] = yCol.id;
+					}
+				}
+			}
 
-		// Recompute
-		getCosinor();
-	}
+			prevYIds = [...currentYIN];
+			getCosinor();
+		});
+	});
 
 	//------------
 	function getCosinor() {
@@ -335,15 +333,26 @@
 	});
 
 	onMount(() => {
-		// Create output columns for any Y inputs that don't have them yet
+		// Create X output column if not present (needed in collected mode)
 		let needsCompute = false;
+		if (p.args.out.cosinorx == null || p.args.out.cosinorx < 0) {
+			if (p.parent) {
+				const xCol = new Column({});
+				xCol.name = 'cosinorx_' + p.id;
+				pushObj(xCol);
+				p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
+				p.args.out.cosinorx = xCol.id;
+				needsCompute = true;
+			}
+		}
+		// Create output columns for any Y inputs that don't have them yet
 		for (const yId of p.args.yIN ?? []) {
 			const outKey = 'cosinory_' + yId;
 			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
 				if (p.parent) {
 					const srcName = getColumnById(Number(yId))?.name ?? String(yId);
 					const yCol = new Column({});
-					yCol.name = 'cosinor_' + srcName + '_' + p.id;
+					yCol.name = 'cosinor_' + srcName;
 					pushObj(yCol);
 					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
 					p.args.out[outKey] = yCol.id;
@@ -476,30 +485,27 @@
 </script>
 
 <!-- Input Section -->
-<div class="section-row">
-	<div class="tableProcess-label">
-		<span>Input</span>
-	</div>
-
-	<div class="control-input-vertical">
-		<div class="control-input">
-			<p>X column</p>
-			<ColumnSelector bind:value={p.args.xIN} />
+{#if !hideInputs}
+	<div class="section-row">
+		<div class="tableProcess-label">
+			<span>Input</span>
 		</div>
 
 		<div class="control-input-vertical">
 			<div class="control-input">
-				<p>Y columns</p>
-				<ColumnSelector
-					bind:value={p.args.yIN}
-					excludeColIds={yExcludeIds}
-					multiple={true}
-					onChange={onYSelectionChange}
-				/>
+				<p>X column</p>
+				<ColumnSelector bind:value={p.args.xIN} />
+			</div>
+
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Y columns</p>
+					<ColumnSelector bind:value={p.args.yIN} excludeColIds={yExcludeIds} multiple={true} />
+				</div>
 			</div>
 		</div>
 	</div>
-</div>
+{/if}
 
 <!-- Process Section -->
 <div class="section-row">
@@ -723,7 +729,7 @@
 					<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
 					<ColumnComponent col={xout} />
 				</div>
-				{#each p.args.yIN ?? [] as yId}
+				{#each p.args.yIN ?? [] as yId (yId)}
 					{@const outKey = 'cosinory_' + yId}
 					{@const yOutId = p.args.out[outKey]}
 					{#if yOutId >= 0}
@@ -735,7 +741,7 @@
 								<span class="tp-output-label">{srcName}</span>
 								<ColumnComponent col={yout} />
 								{#if yResult}
-									{@render cosinorStats(yResult, srcName)}
+									{@render cosinorStats(yResult, yout.name)}
 								{/if}
 							</div>
 						{/if}
@@ -760,7 +766,7 @@
 			</div>
 		{:else if p.args.valid}
 			<p>Preview:</p>
-			{#each Object.entries(cosinorData?.y_results ?? {}) as [yId, yResult]}
+			{#each Object.entries(cosinorData?.y_results ?? {}) as [yId, yResult] (yId)}
 				{@const srcName = getColumnById(Number(yId))?.name ?? yId}
 				<div class="div-line"></div>
 				<p><strong>{srcName}</strong></p>
@@ -810,27 +816,6 @@
 </div>
 
 <style>
-	.tp-outputs {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		margin-top: 0.25rem;
-	}
-
-	.tp-output-row {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-		border-left: 2px solid var(--color-lightness-85);
-		padding-left: 0.5rem;
-	}
-
-	.tp-output-label {
-		font-size: 11px;
-		color: var(--color-lightness-45, #666);
-		font-style: italic;
-	}
-
 	.tp-stat-actions {
 		display: flex;
 		gap: 0.4rem;

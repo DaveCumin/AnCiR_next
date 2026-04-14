@@ -13,7 +13,9 @@
 		['polyDegree', { val: 2 }],
 		['outputX', { val: -1 }],
 		['out', { trendx: { val: -1 } }],
-		['valid', { val: false }]
+		['valid', { val: false }],
+		['forcollected', { val: true }],
+		['collectedType', { val: 'trend' }]
 	]);
 
 	export function trendfit(argsIN) {
@@ -126,7 +128,7 @@
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
 
-	let { p = $bindable() } = $props();
+	let { p = $bindable(), hideInputs = false } = $props();
 
 	// Backward compat: convert legacy single yIN to array
 	if (typeof p.args.yIN === 'number') {
@@ -197,7 +199,7 @@
 				if (p.parent) {
 					const srcName = getColumnById(newId)?.name ?? String(newId);
 					const yCol = new Column({});
-					yCol.name = 'trend_' + srcName + '_' + p.id;
+					yCol.name = 'trend_' + srcName;
 					pushObj(yCol);
 					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
 					p.args.out[outKey] = yCol.id;
@@ -221,6 +223,7 @@
 
 	// Exclude own output column IDs from the Y selector
 	let yExcludeIds = $derived.by(() => {
+		if (hideInputs) return [];
 		const ids = [p.args.xIN];
 		if (p.args.out.trendx >= 0) ids.push(p.args.out.trendx);
 		for (const key of Object.keys(p.args.out)) {
@@ -231,7 +234,23 @@
 		return ids;
 	});
 
+	// Reconcile output columns when yIN changes externally (e.g. from parent in collected mode)
+	$effect(() => {
+		const _yIN = p.args.yIN;
+		if (!mounted) return;
+		untrack(() => onYSelectionChange());
+	});
+
 	onMount(() => {
+		if (!p.args.out) p.args.out = {};
+		// Ensure X output column exists
+		if ((p.args.out.trendx == null || p.args.out.trendx < 0) && p.parent) {
+			const xCol = new Column({});
+			xCol.name = 'trendx_' + p.id;
+			pushObj(xCol);
+			p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
+			p.args.out.trendx = xCol.id;
+		}
 		// Create output columns for any Y inputs that don't have them yet
 		let needsCompute = false;
 		for (const yId of p.args.yIN ?? []) {
@@ -240,7 +259,7 @@
 				if (p.parent) {
 					const srcName = getColumnById(Number(yId))?.name ?? String(yId);
 					const yCol = new Column({});
-					yCol.name = 'trend_' + srcName + '_' + p.id;
+					yCol.name = 'trend_' + srcName;
 					pushObj(yCol);
 					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
 					p.args.out[outKey] = yCol.id;
@@ -331,31 +350,33 @@
 	}
 </script>
 
-<!-- Input Section -->
-<div class="section-row">
-	<div class="tableProcess-label">
-		<span>Input</span>
-	</div>
-
-	<div class="control-input-vertical">
-		<div class="control-input">
-			<p>X column</p>
-			<ColumnSelector bind:value={p.args.xIN} />
+{#if !hideInputs}
+	<!-- Input Section -->
+	<div class="section-row">
+		<div class="tableProcess-label">
+			<span>Input</span>
 		</div>
 
 		<div class="control-input-vertical">
 			<div class="control-input">
-				<p>Y columns</p>
-				<ColumnSelector
-					bind:value={p.args.yIN}
-					excludeColIds={yExcludeIds}
-					multiple={true}
-					onChange={onYSelectionChange}
-				/>
+				<p>X column</p>
+				<ColumnSelector bind:value={p.args.xIN} />
+			</div>
+
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Y columns</p>
+					<ColumnSelector
+						bind:value={p.args.yIN}
+						excludeColIds={yExcludeIds}
+						multiple={true}
+						onChange={onYSelectionChange}
+					/>
+				</div>
 			</div>
 		</div>
 	</div>
-</div>
+{/if}
 
 <!-- Process Section -->
 <div class="section-row">
@@ -389,26 +410,28 @@
 		</div>
 	{/if}
 
-	<div class="control-input-horizontal">
-		<div class="control-input">
-			<label>
-				<input
-					type="checkbox"
-					bind:checked={showOutputX}
-					onchange={(e) => toggleOutputX(e.target.checked)}
-				/>
-				Specify output x values
-			</label>
-		</div>
-	</div>
-
-	{#if showOutputX}
-		<div class="control-input-vertical">
+	{#if !hideInputs}
+		<div class="control-input-horizontal">
 			<div class="control-input">
-				<p>Output X column</p>
-				<ColumnSelector bind:value={p.args.outputX} excludeColIds={yExcludeIds} />
+				<label>
+					<input
+						type="checkbox"
+						bind:checked={showOutputX}
+						onchange={(e) => toggleOutputX(e.target.checked)}
+					/>
+					Specify output x values
+				</label>
 			</div>
 		</div>
+
+		{#if showOutputX}
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Output X column</p>
+					<ColumnSelector bind:value={p.args.outputX} excludeColIds={yExcludeIds} />
+				</div>
+			</div>
+		{/if}
 	{/if}
 </div>
 
@@ -621,27 +644,6 @@
 </div>
 
 <style>
-	.tp-outputs {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		margin-top: 0.25rem;
-	}
-
-	.tp-output-row {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-		border-left: 2px solid var(--color-lightness-85);
-		padding-left: 0.5rem;
-	}
-
-	.tp-output-label {
-		font-size: 11px;
-		color: var(--color-lightness-45, #666);
-		font-style: italic;
-	}
-
 	.tp-stat-actions {
 		display: flex;
 		gap: 0.4rem;
