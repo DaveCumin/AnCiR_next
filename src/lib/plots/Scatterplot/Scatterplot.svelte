@@ -2,7 +2,7 @@
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
-	import { scaleLinear, scaleTime, scaleLog } from 'd3-scale';
+	import { scaleLinear, scaleTime, scaleUtc, scaleLog } from 'd3-scale';
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
@@ -129,7 +129,7 @@
 		xLogScale = $state(false);
 		XScale = $derived.by(() => {
 			if (this.anyXdataTime) {
-				return scaleTime().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth]);
+				return scaleUtc().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth]);
 			}
 			if (this.xLogScale && this.xlims[0] > 0 && this.xlims[1] > 0) {
 				return scaleLog().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth]);
@@ -199,7 +199,9 @@
 				let tempx = xCol.getData() ?? [];
 				let tempy = this.data[i].y.getData() ?? [];
 
-				tempx = tempx.filter((x, i) => x != null && !isNaN(x) && tempy[i] != null && !isNaN(tempy[i])); // Ensure all values are valid (not null or NaN) — do NOT exclude zeros
+				tempx = tempx.filter(
+					(x, i) => x != null && !isNaN(x) && tempy[i] != null && !isNaN(tempy[i])
+				); // Ensure all values are valid (not null or NaN) — do NOT exclude zeros
 				// Convert origin-aware hour columns to ms for limit calculation
 				if (this.anyXdataTime && xCol.type !== 'time' && xCol.originTime_ms != null) {
 					tempx = tempx.map((h) => xCol.originTime_ms + h * 3600000);
@@ -529,6 +531,7 @@
 	import { tick } from 'svelte';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
+	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 
 	let { theData, which } = $props();
 
@@ -735,24 +738,26 @@
 				{#if theData.anyXdataTime}
 					<div class="control-input">
 						<p>Min</p>
-						<input
-							type="datetime-local"
-							value={(() => { const v = theData.xlimsIN[0] ?? theData.xlims[0]; return Number.isFinite(v) ? new Date(v).toISOString().substring(0, 16) : ''; })()}
-							oninput={(e) => {
-								const val = e.target.value;
-								theData.xlimsIN[0] = val ? Number(new Date(val)) : null;
+						<DateTimeHrs
+							value={(() => {
+								const v = theData.xlimsIN[0] ?? theData.xlims[0];
+								return v;
+							})()}
+							onChange={(val) => {
+								theData.xlimsIN[0] = val ? Number(new Date(new Date(val).toUTCString())) : null;
 							}}
 						/>
 					</div>
 
 					<div class="control-input">
 						<p>Max</p>
-						<input
-							type="datetime-local"
-							value={(() => { const v = theData.xlimsIN[1] ?? theData.xlims[1]; return Number.isFinite(v) ? new Date(v).toISOString().substring(0, 16) : ''; })()}
-							oninput={(e) => {
-								const val = e.target.value;
-								theData.xlimsIN[1] = val ? Number(new Date(val)) : null;
+						<DateTimeHrs
+							value={(() => {
+								const v = theData.xlimsIN[1] ?? theData.xlims[1];
+								return v;
+							})()}
+							onChange={(val) => {
+								theData.xlimsIN[1] = val ? Number(new Date(new Date(val).toUTCString())) : null;
 							}}
 						/>
 					</div>
@@ -979,7 +984,9 @@
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
 				{@const xDATA =
 					theData.plot.anyXdataTime && datum.x.type !== 'time'
-						? datum.x.getData().map((d) => (datum.x.originTime_ms ?? theData.plot.xlims[0]) + d * 3600000)
+						? datum.x
+								.getData()
+								.map((d) => (datum.x.originTime_ms ?? theData.plot.xlims[0]) + d * 3600000)
 						: datum.x.getData()}
 				{@const yScale =
 					datum.yAxis === 'left' ? theData.plot.YScaleLeft : theData.plot.YScaleRight}
