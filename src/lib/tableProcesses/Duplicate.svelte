@@ -11,10 +11,10 @@
 	]);
 
 	export function duplicate(argsIN) {
-		if (argsIN.xIN == null || argsIN.xIN === -1) return [null, false];
+		if (argsIN.xIN == null || argsIN.xIN === -1) return [[], false];
 
 		const srcCol = getColumnById(argsIN.xIN);
-		if (!srcCol) return [null, false];
+		if (!srcCol) return [[], false];
 
 		const result = srcCol.getData();
 
