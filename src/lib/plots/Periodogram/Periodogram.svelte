@@ -141,7 +141,9 @@
 			chiSquaredAlpha,
 			periodSteps,
 			displayMin,
-			displayMax
+			displayMax,
+			xDataHash,
+			yDataHash
 		) {
 			// Skip if data is invalid — also clear any stale cached result
 			if (!xData || !yData || xData.length === 0 || yData.length === 0) {
@@ -197,7 +199,7 @@
 			}
 
 			// Build fingerprint for data-related params
-			const fp = buildDataFingerprint(xData, yData, binSize, method, chiSquaredAlpha, periodSteps);
+			const fp = buildDataFingerprint(xData, yData, binSize, method, chiSquaredAlpha, periodSteps, xDataHash, yDataHash);
 
 			// Check cache
 			const dataChanged = fp !== this._cache.dataFingerprint;
@@ -549,6 +551,8 @@
 			theData.plot.data.forEach((datum) => {
 				const xData = datum.x.hoursSinceStart;
 				const yData = datum.y.getData();
+				const xDataHash = datum.x.getDataHash ?? '';
+				const yDataHash = datum.y.getDataHash ?? '';
 				const binSize = datum.binSize;
 				const method = datum.method;
 				const chiSquaredAlpha = datum.chiSquaredAlpha;
@@ -564,7 +568,9 @@
 					chiSquaredAlpha,
 					periodSteps,
 					displayMin,
-					displayMax
+					displayMax,
+					xDataHash,
+					yDataHash
 				);
 			});
 		}

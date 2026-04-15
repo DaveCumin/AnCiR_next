@@ -1171,19 +1171,17 @@
 		{:else}
 			<div class="heading">
 				<h2>Import Data</h2>
-				<div class="choose-file-container">
-					<button class="choose-file-button" onclick={(e) => fileInput.click()}>{buttonText}</button
-					>
-					<div class="filename">
-						<p class="filename-preview">
-							Selected:
-							{#if targetFiles.length > 1}
-								{targetFiles.length} files
-							{:else if targetFile}
-								{targetFile.name}
-							{/if}
-						</p>
-					</div>
+				<div class="control-input-horizontal" style="align-items: center; margin-top: 0.5rem;">
+					<button class="dialog-button" style="margin-top:0;" onclick={(e) => fileInput.click()}>{buttonText}</button>
+					<p class="filename-preview">
+						{#if targetFiles.length > 1}
+							{targetFiles.length} files selected
+						{:else if targetFile}
+							{targetFile.name}
+						{:else}
+							No file selected
+						{/if}
+					</p>
 				</div>
 				<!-- <div class="url-input-container">
 					<input
@@ -1221,63 +1219,76 @@
 			<div class="import-container">
 				<div class="preview-placeholder">
 					{#if parsedData && importReady}
-						<p>
-							Header: <input type="checkbox" bind:checked={hasHeader} onchange={() => reParse()} />
-							Delimiter:
-							<select bind:value={delimiter} onchange={() => reParse()}>
-								<option value="">auto</option>
-								<option value=",">, (comma)</option>
-								<option value=";">; (semicolon)</option>
-								<option value="\t">Tab</option>
-								<option value="|">| (pipe)</option>
-								<option value=" ">(space)</option>
-							</select>
-						</p>
-						<p>
-							Skip lines: <NumberWithUnits
-								bind:value={skipLines}
-								min="0"
-								onInput={() => reParse()}
-							/>
-						</p>
+						<div class="section-row">
+							<div class="control-input-horizontal">
+								<div class="control-input-checkbox">
+									<input type="checkbox" bind:checked={hasHeader} onchange={() => reParse()} />
+									<p>Has header row</p>
+								</div>
+								<div class="control-input">
+									<p>Delimiter</p>
+									<select bind:value={delimiter} onchange={() => reParse()}>
+										<option value="">auto</option>
+										<option value=",">, (comma)</option>
+										<option value=";">; (semicolon)</option>
+										<option value="\t">Tab</option>
+										<option value="|">| (pipe)</option>
+										<option value=" ">(space)</option>
+									</select>
+								</div>
+								<div class="control-input">
+									<p>Skip lines</p>
+									<NumberWithUnits
+										bind:value={skipLines}
+										min="0"
+										onInput={() => reParse()}
+									/>
+								</div>
+							</div>
+						</div>
 
 						{#if totalRowCount > ROW_THRESHOLD}
-							<div class="binning-panel">
+							<div class="section-row binning-panel">
 								<p class="binning-warning">
 									This file has ~{totalRowCount.toLocaleString()} rows. Consider binning to reduce data
 									size.
 								</p>
-								<p>
-									<label>
+								<div class="control-input-horizontal">
+									<div class="control-input-checkbox">
 										<input type="checkbox" bind:checked={binningEnabled} />
-										Bin data to
-									</label>
-									<NumberWithUnits bind:value={binIntervalMin} min={1} step={1} /> mins intervals
-									{#if binningEnabled}
-										<span class="binning-estimate">
-											(~{estimatedBinnedRows.toLocaleString()} rows after binning, {dataIntervalMin} min
-											intervals detected)
-										</span>
-									{/if}
-								</p>
+										<p>Bin data to</p>
+									</div>
+									<div class="control-input">
+										<p>Interval (mins)</p>
+										<NumberWithUnits bind:value={binIntervalMin} min={1} step={1} />
+									</div>
+								</div>
+								{#if binningEnabled}
+									<p class="binning-estimate">
+										~{estimatedBinnedRows.toLocaleString()} rows after binning, {dataIntervalMin} min
+										intervals detected
+									</p>
+								{/if}
 							</div>
 						{/if}
 
-						<div class="period-selection-actions">
-							<button
-								class="period-select-btn"
-								onclick={() => {
-									//mark all the headings as selected
-									selectedColumns = new Set(headers);
-								}}>All</button
-							>
-							<button
-								class="period-select-btn"
-								onclick={() => {
-									//unselect all headers
-									selectedColumns = new Set();
-								}}>None</button
-							>
+						<div class="section-row">
+							<div class="col-select-actions">
+								<button
+									class="dialog-button"
+									style="margin-top:0;"
+									onclick={() => {
+										selectedColumns = new Set(headers);
+									}}>All</button
+								>
+								<button
+									class="dialog-button"
+									style="margin-top:0;"
+									onclick={() => {
+										selectedColumns = new Set();
+									}}>None</button
+								>
+							</div>
 						</div>
 
 						<div class="preview-table-wrapper" style="overflow-x: auto; max-width: 100%;">
@@ -1323,14 +1334,16 @@
 								</tbody>
 							</table>
 						</div>
-						<p>
-							Row <NumberWithUnits
+						<div class="control-input" style="flex-direction: row; align-items: center; gap: 0.25rem; flex-wrap: wrap;">
+							<p style="margin:0;">Row</p>
+							<NumberWithUnits
 								min={1}
 								max={Math.max(1, previewRowCount - 5)}
 								step={1}
 								bind:value={previewDisplayStart}
-							/> to {Math.min(previewDisplayStart + 5, previewRowCount)} of {previewRowCount} (preview)
-						</p>
+							/>
+							<p style="margin:0;">to {Math.min(previewDisplayStart + 5, previewRowCount)} of {previewRowCount} (preview)</p>
+						</div>
 
 						{#if targetFiles.length > 1}
 							<div class="multi-file-list">
@@ -1387,22 +1400,60 @@
 </Modal>
 
 <style>
-	/* ── URL import ──────────────────────────────────────────────────────────── */
-	.url-input-container {
+	.heading {
+		margin-bottom: 0.5rem;
+	}
+
+	.filename-preview {
+		font-size: 12px;
+		color: var(--color-lightness-50);
+		margin: 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.col-select-actions {
 		display: flex;
 		flex-direction: row;
-		align-items: center;
 		gap: 0.5rem;
+	}
+
+	/* ── Preview table ───────────────────────────────────────────────────────── */
+	.preview-table-wrapper {
 		margin-top: 0.5rem;
 	}
 
-	.url-input {
-		flex: 1;
-		font-size: 13px;
+	.preview-table {
+		border-collapse: collapse;
+		font-size: 12px;
+	}
+
+	.preview-table th,
+	.preview-table td {
 		padding: 0.2rem 0.5rem;
-		border: 1px solid var(--color-lightness-85);
-		border-radius: 2px;
-		background: var(--color-lightness-97);
+		border: 1px solid var(--color-lightness-90);
+		white-space: nowrap;
+	}
+
+	.preview-table th.selected,
+	.preview-table td.selected {
+		background-color: var(--color-lightness-97);
+	}
+
+	.preview-table th.unselected,
+	.preview-table td.unselected {
+		opacity: 0.35;
+		background-color: var(--color-lightness-95);
+	}
+
+	.header-checkbox {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		cursor: pointer;
+		font-size: 12px;
+		color: var(--color-lightness-35);
 	}
 
 	/* ── Multi-file concatenation UI ─────────────────────────────────────────── */
