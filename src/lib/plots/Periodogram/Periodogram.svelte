@@ -23,7 +23,7 @@
 	 * Build a fingerprint string from the data-related params (everything
 	 * EXCEPT period range). When this changes, we must always recalculate.
 	 */
-	function buildDataFingerprint(xData, yData, binSize, method, chiSquaredAlpha, periodSteps) {
+	function buildDataFingerprint(xData, yData, binSize, method, chiSquaredAlpha, periodSteps, xDataHash, yDataHash) {
 		return JSON.stringify({
 			xLen: xData?.length ?? 0,
 			xFirst: xData?.[0] ?? null,
@@ -34,7 +34,9 @@
 			binSize,
 			method,
 			chiSquaredAlpha,
-			periodSteps
+			periodSteps,
+			xDataHash,
+			yDataHash
 		});
 	}
 

@@ -178,11 +178,8 @@
 	</div>
 	<div class="control-input">
 		<p>Function</p>
-		<select
-			bind:value={p.args.func}
-			onchange={() => doColumnFunction()}
-			disabled={p.args.out.result > 0}
-		>
+		<p>{p.args.out.result}</p>
+		<select bind:value={p.args.func} onchange={() => doColumnFunction()}>
 			{#each funcOptions as opt}
 				<option value={opt.value}>{opt.label}</option>
 			{/each}
@@ -191,11 +188,7 @@
 	<div class="control-input">
 		<p>Columns</p>
 	</div>
-	<ColumnSelector
-		bind:value={p.args.xsIN}
-		onChange={() => doColumnFunction()}
-		multiple={true}
-	/>
+	<ColumnSelector bind:value={p.args.xsIN} onChange={() => doColumnFunction()} multiple={true} />
 
 	{#each p.args.xsIN as _, i}
 		<a>{getColumnById(p.args.xsIN[i]).name}</a>
@@ -214,7 +207,14 @@
 		{@const totalRows = result.length}
 		<p>Preview:</p>
 		<Table headers={['Result']} data={[result.slice(previewStart - 1, previewStart + 5)]} />
-		<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
+		<p>
+			Row <NumberWithUnits
+				min={1}
+				max={Math.max(1, totalRows - 5)}
+				step={1}
+				bind:value={previewStart}
+			/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+		</p>
 	{:else if p.args.out.result > 0}
 		<div class="section-row">
 			<div class="tableProcess-label">

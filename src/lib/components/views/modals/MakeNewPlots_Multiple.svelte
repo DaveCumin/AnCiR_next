@@ -175,6 +175,7 @@
 				bind:value={plotType}
 				label="Plot Type"
 				options={['actogram', 'correlogram', 'fft', 'periodogram', 'scatterplot']}
+				optionsDisplay={['Actogram', 'Correlogram', 'FFT', 'Periodogram', 'Scatterplot']}
 				onChange={() => {
 					steps[0].completed = true;
 					enforceSequentialCompletion(0);

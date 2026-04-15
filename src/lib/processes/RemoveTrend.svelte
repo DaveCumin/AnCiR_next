@@ -168,6 +168,7 @@
 	// Reactively compute trend fit stats for display
 	let trendStats = $derived.by(() => {
 		const col = p.parentCol;
+		if (!col?.processes) return null;
 		const processIndex = col.processes.findIndex((proc) => proc.id === p.id);
 		if (processIndex < 0) return null;
 

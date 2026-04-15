@@ -86,6 +86,7 @@
 
 	const removedValues = $derived.by(() => {
 		const col = p.parentCol;
+		if (!col?.processes) return [];
 		const processIndex = col.processes.findIndex((proc) => proc.id === p.id);
 		if (processIndex < 0) return [];
 
