@@ -174,7 +174,7 @@
 			<AttributeSelect
 				bind:value={plotType}
 				label="Plot Type"
-				options={['actogram', 'periodogram', 'scatterplot']}
+				options={['actogram', 'correlogram', 'fft', 'periodogram', 'scatterplot']}
 				onChange={() => {
 					steps[0].completed = true;
 					enforceSequentialCompletion(0);

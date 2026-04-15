@@ -17,6 +17,7 @@
 		// silently drop one when two columns share the same table+name string).
 		/** @type {{ label: string; id: number }[]} */
 		let out = [];
+		const seenIds = new Set();
 
 		//get the other data in plots - TODO!!
 		// Is this the best way?
@@ -49,10 +50,14 @@
 								'tempGroup = ',
 								tempGroup
 							);
-							out.push({
-								label: core.plots[p].name + ' : ' + core.plots[p].plot.data[d][key].name,
-								id: core.plots[p].plot.data[d][key].id
-							});
+							const _plotColId = core.plots[p].plot.data[d][key].id;
+							if (!seenIds.has(_plotColId)) {
+								seenIds.add(_plotColId);
+								out.push({
+									label: core.plots[p].name + ' : ' + core.plots[p].plot.data[d][key].name,
+									id: _plotColId
+								});
+							}
 						}
 					});
 				}
@@ -69,7 +74,8 @@
 					const ref = core.tables[t].processes[p].args.out[key];
 					if (ref !== -1 && !excludeColIds.includes(ref)) {
 						const processCol = getColumnById(ref);
-						if (processCol) {
+						if (processCol && !seenIds.has(processCol.id)) {
+							seenIds.add(processCol.id);
 							out.push({ label: core.tables[t].name + ' : ' + processCol.name, id: processCol.id });
 						}
 					}
@@ -78,10 +84,12 @@
 
 			//columns
 			for (let c = 0; c < core.tables[t].columns.length; c++) {
-				if (!excludeColIds.includes(core.tables[t].columns[c].id)) {
+				const col = core.tables[t].columns[c];
+				if (!excludeColIds.includes(col.id) && !seenIds.has(col.id)) {
+					seenIds.add(col.id);
 					out.push({
-						label: core.tables[t].name + ' : ' + core.tables[t].columns[c].name,
-						id: core.tables[t].columns[c].id
+						label: core.tables[t].name + ' : ' + col.name,
+						id: col.id
 					});
 				}
 			}
