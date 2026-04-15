@@ -8,7 +8,7 @@
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
 		['splitTimes', { val: [] }],
-		['out', { val: {} }],
+		['out', {}],
 		['valid', { val: false }],
 		['forcollected', { val: false }],
 		['collectedType', { val: 'split' }]
@@ -38,7 +38,6 @@
 
 		const segmentCount = splitTimes.length + 1;
 		const y_results = {};
-		let totalRows = 0;
 
 		// Process each Y column
 		for (const yId of yINs) {
@@ -48,43 +47,26 @@
 
 			const y = yCol.getData();
 
-			// Find valid indices (non-NaN time and y values)
-			const validIndices = t
-				.map((v, i) => (v == null || isNaN(v) || y[i] == null || isNaN(y[i]) ? -1 : i))
-				.filter((i) => i !== -1);
-
-			if (validIndices.length < 1) continue;
-
-			// Extract valid data
-			const tt = validIndices.map((i) => t[i]);
-			const yy = validIndices.map((i) => y[i]);
-
-			// Create segments
+			// Create full-length segments with null for non-matching rows (like Filter)
 			const segments = [];
 			let prevTime = -Infinity;
 
 			for (let seg = 0; seg < segmentCount; seg++) {
 				const nextTime = seg < splitTimes.length ? splitTimes[seg] : Infinity;
 
-				// Collect data for this segment: prevTime ≤ t < nextTime
-				const segmentIndices = tt
-					.map((time, idx) => {
-						const inRange = typeof time === 'number' && time >= prevTime && time < nextTime;
-						return inRange ? idx : -1;
-					})
-					.filter((i) => i !== -1);
+				const segmentData = t.map((time, i) => {
+					if (time == null || isNaN(time) || y[i] == null || isNaN(y[i])) return null;
+					if (typeof time === 'number' && time >= prevTime && time < nextTime) return y[i];
+					return null;
+				});
 
-				const segmentData = segmentIndices.map((i) => yy[i]).filter((v) => v != null);
 				segments.push(segmentData);
-				totalRows += segmentData.length;
-
 				prevTime = nextTime;
 			}
 
 			y_results[yId] = {
 				segments,
-				sourceColName: yCol.name || String(yId),
-				validIndices
+				sourceColName: yCol.name || String(yId)
 			};
 		}
 
@@ -92,13 +74,32 @@
 			return [null, false];
 		}
 
+		// Write to output columns if committed
+		const hasOut = Object.values(argsIN.out ?? {}).some((v) => Number(v) >= 0);
+		if (hasOut) {
+			const processHash = crypto.randomUUID();
+			for (const yId of Object.keys(y_results)) {
+				for (let seg = 0; seg < segmentCount; seg++) {
+					const outKey = `${yId}_${seg + 1}`;
+					const outId = argsIN.out[outKey];
+					if (outId != null && Number(outId) >= 0 && y_results[yId].segments[seg]) {
+						core.rawData.set(outId, y_results[yId].segments[seg]);
+						const outCol = getColumnById(outId);
+						if (outCol) {
+							outCol.data = outId;
+							outCol.type = 'number';
+							outCol.tableProcessGUId = processHash;
+						}
+					}
+				}
+			}
+		}
+
 		return [
 			{
 				y_results,
 				splitTimes,
-				segmentCount,
-				totalRows,
-				t
+				segmentCount
 			},
 			true
 		];
@@ -111,6 +112,8 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
+	import Table from '$lib/components/plotbits/Table.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
@@ -129,9 +132,50 @@
 		p.args.out = {};
 	}
 
+	// Migrate old key formats: remove "split_*" keys and 0-indexed "*_0" keys
+	for (const key of Object.keys(p.args.out)) {
+		if (key.startsWith('split_') || key.endsWith('_0')) {
+			const outColId = p.args.out[key];
+			if (outColId != null && outColId >= 0) {
+				core.rawData.delete(outColId);
+				removeColumn(outColId);
+				if (p.parent) {
+					p.parent.columnRefs = p.parent.columnRefs.filter((id) => id !== outColId);
+				}
+			}
+			delete p.args.out[key];
+		}
+	}
+
+	// Clean up orphaned columns: any column in columnRefs that isn't tracked by a current p.args.out value
+	if (p.parent) {
+		const activeOutIds = new Set(
+			Object.values(p.args.out)
+				.filter((v) => v != null && v >= 0)
+		);
+		// Also collect IDs from other tableprocesses on this table so we don't remove their columns
+		const inputIds = new Set([p.args.xIN, ...(p.args.yIN ?? [])].filter((v) => v >= 0));
+		const orphans = p.parent.columnRefs.filter((id) => {
+			if (activeOutIds.has(id)) return false; // currently tracked output
+			if (inputIds.has(id)) return false; // input column
+			const col = getColumnById(id);
+			if (!col) return true; // column doesn't exist, clean up ref
+			// Only remove columns that look like split outputs (name contains "_split" or matches old patterns)
+			return col.name?.includes('_split') || col.name?.match(/^.+_\d+$/);
+		});
+		for (const orphanId of orphans) {
+			core.rawData.delete(orphanId);
+			removeColumn(orphanId);
+		}
+		if (orphans.length > 0) {
+			p.parent.columnRefs = p.parent.columnRefs.filter((id) => !orphans.includes(id));
+		}
+	}
+
 	let splitResult = $state(null);
 	let mounted = $state(false);
 	let calculating = $state(false);
+	let previewStart = $state(1);
 	let _calcToken = 0;
 
 	// Track previous Y IDs
@@ -193,7 +237,7 @@
 		for (const oldId of prevYIds) {
 			if (!newSet.has(oldId)) {
 				for (let seg = 0; seg < segmentCount; seg++) {
-					const outKey = `split_${oldId}_seg${seg}`;
+					const outKey = `${oldId}_${seg + 1}`;
 					const outColId = p.args.out[outKey];
 					if (outColId != null && outColId >= 0) {
 						core.rawData.delete(outColId);
@@ -208,11 +252,12 @@
 		for (const newId of newIds) {
 			const srcName = getColumnById(newId)?.name ?? String(newId);
 			for (let seg = 0; seg < segmentCount; seg++) {
-				const outKey = `split_${newId}_seg${seg}`;
+				const outKey = `${newId}_${seg + 1}`;
 				if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
 					if (p.parent) {
 						const yCol = new Column({});
-						yCol.name = `split_${srcName}_seg${seg}`;
+						yCol.name = `${srcName}_split${seg + 1}`;
+						yCol.tableProcessGUId = p.parent.id;
 						pushObj(yCol);
 						p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
 						p.args.out[outKey] = yCol.id;
@@ -271,11 +316,12 @@
 		for (const yId of p.args.yIN ?? []) {
 			const srcName = getColumnById(yId)?.name ?? String(yId);
 			for (let seg = 0; seg < segmentCount; seg++) {
-				const outKey = `split_${yId}_seg${seg}`;
+				const outKey = `${yId}_${seg + 1}`;
 				if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
 					if (p.parent) {
 						const yCol = new Column({});
-						yCol.name = `split_${srcName}_seg${seg}`;
+						yCol.name = `${srcName}_split${seg + 1}`;
+						yCol.tableProcessGUId = p.parent.id;
 						pushObj(yCol);
 						p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
 						p.args.out[outKey] = yCol.id;
@@ -301,7 +347,7 @@
 					const srcName = getColumnById(yId)?.name ?? String(yId);
 					const segments = [];
 					for (let seg = 0; seg < segmentCount; seg++) {
-						const outKey = `split_${yId}_seg${seg}`;
+						const outKey = `${yId}_${seg + 1}`;
 						const outColId = p.args.out[outKey];
 						if (outColId >= 0 && core.rawData.has(outColId)) {
 							segments.push(core.rawData.get(outColId));
@@ -312,14 +358,11 @@
 					}
 				}
 				if (Object.keys(y_results).length > 0) {
+					previewStart = 1;
 					splitResult = {
 						y_results,
 						splitTimes: p.args.splitTimes,
-						segmentCount,
-						totalRows: Object.values(y_results).reduce(
-							(sum, yr) => sum + yr.segments.reduce((s, seg) => s + seg.length, 0),
-							0
-						)
+						segmentCount
 					};
 					p.args.valid = true;
 				}
@@ -330,25 +373,6 @@
 		mounted = true;
 	});
 
-	// Write data to output columns when valid
-	$effect(() => {
-		if (!splitResult || !p.args.valid) return;
-
-		for (const [yId, yResult] of Object.entries(splitResult.y_results)) {
-			for (let seg = 0; seg < segmentCount; seg++) {
-				const outKey = `split_${yId}_seg${seg}`;
-				const outId = p.args.out[outKey];
-				if (outId >= 0 && yResult.segments[seg]) {
-					core.rawData.set(outId, yResult.segments[seg]);
-					const outCol = getColumnById(outId);
-					if (outCol) {
-						outCol.data = outId;
-						outCol.type = 'number';
-					}
-				}
-			}
-		}
-	});
 </script>
 
 {#if !hideInputs}
@@ -389,13 +413,9 @@
 					{:else}
 						<NumberWithUnits bind:value={p.args.splitTimes[idx]} step="0.1" />
 					{/if}
-					<button
-						class="remove-btn"
-						onclick={() => {
-							removeSplitTime(idx);
-						}}
-					>
-						Remove ×
+
+					<button class="icon" onclick={() => removeSplitTime(idx)}>
+						<Icon name="minus" width={16} height={16} className="menu-icon" />
 					</button>
 				</div>
 			{/each}
@@ -417,59 +437,70 @@
 	</div>
 </div>
 
-<!-- Output/Preview -->
+<!-- Output -->
 <div class="section-row">
-	<div class="tableProcess-label">
-		<span>Output</span>
-	</div>
 	<div class="section-content">
 		{#if calculating}
 			<LoadingSpinner message="Splitting data…" />
+		{:else if p.args.valid && splitResult && Object.values(p.args.out).some((id) => id >= 0)}
+			<div class="tableProcess-label"><span>Output</span></div>
+			{#each p.args.yIN ?? [] as yId}
+				{@const yResult = splitResult.y_results[yId]}
+				{#if yResult}
+					{#each yResult.segments as _, segIdx}
+						{@const outKey = `${yId}_${segIdx + 1}`}
+						{@const outId = p.args.out[outKey]}
+						{#if outId >= 0}
+							{@const outCol = getColumnById(outId)}
+							{#if outCol}
+								<ColumnComponent col={outCol} />
+							{/if}
+						{/if}
+					{/each}
+				{/if}
+			{/each}
 		{:else if p.args.valid && splitResult}
-			<div class="split-outputs">
-				{#each p.args.yIN ?? [] as yId}
-					{@const yResult = splitResult.y_results[yId]}
-					{#if yResult}
-						<div class="split-output-group">
-							<h4>{yResult.sourceColName} ({segmentCount} segments)</h4>
-							<div class="segments-preview">
-								{#each yResult.segments as segmentData, segIdx}
-									{@const outKey = `split_${yId}_seg${segIdx}`}
-									{@const outId = p.args.out[outKey]}
-									<div class="segment-preview">
-										<p class="segment-header">
-											Segment {segIdx}:
-											{#if segIdx === 0}
-												time &lt; {formatSplitLabel(sortedSplitTimes[0])}
-											{:else if segIdx < segmentCount - 1}
-												{formatSplitLabel(sortedSplitTimes[segIdx - 1])} ≤ time &lt;
-												{formatSplitLabel(sortedSplitTimes[segIdx])}
-											{:else}
-												time ≥ {formatSplitLabel(sortedSplitTimes[segmentCount - 2])}
-											{/if}
-											 — {segmentData.length} rows
-										</p>
-
-										<div class="segment-output">
-											{#if outId >= 0}
-												{@const outCol = getColumnById(outId)}
-												{#if outCol}
-													<ColumnComponent col={outCol} />
-												{/if}
-											{/if}
-										</div>
-									</div>
-								{/each}
-							</div>
-						</div>
-					{/if}
-				{/each}
-			</div>
-
-			<div class="split-stats">
-				<p>Total segments: <strong>{segmentCount}</strong></p>
-				<p>Total rows: <strong>{splitResult.totalRows}</strong></p>
-			</div>
+			<!-- Preview table (before commit) -->
+			{@const tCol = getColumnById(p.args.xIN)}
+			{@const tData = tCol?.getData() ?? []}
+			{@const totalRows = tData.length}
+			{@const previewHeaders = [
+				tCol?.name ?? 'x',
+				...(p.args.yIN ?? []).flatMap((yId) => {
+					const yResult = splitResult.y_results[yId];
+					if (!yResult) return [];
+					return yResult.segments.map((_, segIdx) => {
+						return `${yResult.sourceColName}_split${segIdx + 1}`;
+					});
+				})
+			]}
+			{@const previewData = [
+				xIsTime
+					? tData.slice(previewStart - 1, previewStart + 5).map((t) => ({
+							isTime: true,
+							raw: formatTimeFromUNIX(t),
+							computed: ((t - tData[0]) / 3600000).toFixed(2)
+						}))
+					: tData.slice(previewStart - 1, previewStart + 5),
+				...(p.args.yIN ?? []).flatMap((yId) => {
+					const yResult = splitResult.y_results[yId];
+					if (!yResult) return [];
+					return yResult.segments.map((seg) =>
+						seg.slice(previewStart - 1, previewStart + 5)
+					);
+				})
+			]}
+			{#if totalRows > 0}
+				<Table headers={previewHeaders} data={previewData} />
+				<p>
+					Row <NumberWithUnits
+						min={1}
+						max={Math.max(1, totalRows - 5)}
+						step={1}
+						bind:value={previewStart}
+					/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+				</p>
+			{/if}
 		{:else if p.args.valid === false && p.args.xIN >= 0}
 			<p>Need valid time and value columns to split data. Ensure X and Y are selected.</p>
 		{:else}
@@ -490,22 +521,6 @@
 		display: flex;
 		gap: 0.5rem;
 		align-items: center;
-	}
-
-	.remove-btn {
-		padding: 0.4rem 0.8rem;
-		font-size: 12px;
-		border: 1px solid var(--color-lightness-75, #aaa);
-		border-radius: 3px;
-		background: none;
-		cursor: pointer;
-		color: var(--color-lightness-35, #555);
-		white-space: nowrap;
-	}
-
-	.remove-btn:hover {
-		background: var(--color-lightness-95);
-		border-color: var(--color-lightness-55, #888);
 	}
 
 	.add-split-time-btn {
@@ -542,55 +557,5 @@
 		font-size: 12px;
 		color: var(--color-lightness-40, #666);
 		margin-top: 0.5rem;
-	}
-
-	.split-outputs {
-		display: flex;
-		flex-direction: column;
-		gap: 1.5rem;
-		margin-bottom: 1rem;
-	}
-
-	.split-output-group h4 {
-		margin: 0 0 0.8rem 0;
-		font-size: 14px;
-		color: var(--color-lightness-20, #222);
-		border-bottom: 1px solid var(--color-lightness-85, #ccc);
-		padding-bottom: 0.4rem;
-	}
-
-	.segments-preview {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.segment-preview {
-		background: var(--color-lightness-98);
-		border: 1px solid var(--color-lightness-90, #ddd);
-		border-radius: 4px;
-		padding: 0.8rem;
-	}
-
-	.segment-header {
-		margin: 0 0 0.6rem 0;
-		font-size: 12px;
-		font-weight: 600;
-		color: var(--color-lightness-30, #333);
-	}
-
-	.segment-output {
-		margin-top: 0.6rem;
-	}
-
-	.split-stats {
-		font-size: 12px;
-		color: var(--color-lightness-40, #666);
-		padding-top: 0.8rem;
-		border-top: 1px solid var(--color-lightness-90, #ddd);
-	}
-
-	.split-stats p {
-		margin: 0.4rem 0;
 	}
 </style>

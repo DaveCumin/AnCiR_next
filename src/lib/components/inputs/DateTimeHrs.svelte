@@ -1,47 +1,55 @@
 <script>
 	import { DateTime } from 'luxon';
-	let { value = $bindable(), zone = 'utc', hours = false, onChange = () => {} } = $props();
 
-	// Use $derived to automatically update when value changes
-	let displayDate = $derived(DateTime.fromMillis(value, { zone: zone }).toISO().substring(0, 16));
-	let displayHours = $derived(value / 3600000);
+	let { value = $bindable(), zone = 'utc', onChange = () => {} } = $props();
 
-	// Store local editing state
-	let editingDate = $state(displayDate);
-	let editingHours = $state(displayHours);
-
-	// Sync editing state when value changes externally
-	$effect(() => {
-		editingDate = displayDate;
-		editingHours = displayHours;
+	// Normalize value (supports Date object or timestamp)
+	let dt = $derived.by(() => {
+		if (value instanceof Date) return DateTime.fromJSDate(value, { zone });
+		if (typeof value === 'number') return DateTime.fromMillis(value, { zone });
+		return DateTime.now();
 	});
 
-	function dateToValue() {
-		const dt = DateTime.fromISO(editingDate, { zone: zone });
-		if (!dt.isValid) return;
-		value = dt.toMillis();
-		onChange(value);
-	}
+	let displayDate = $derived(dt.toISODate());
+	let displayTime = $derived(dt.toISOTime({ suppressMilliseconds: true }).slice(0, 5));
 
-	function numberToValue() {
-		const parsed = parseFloat(editingHours);
-		if (isNaN(parsed)) {
-			console.log('ERROR HERE');
-			return;
+	// Local editing state
+	let editingDate = $state(displayDate);
+	let editingTime = $state(displayTime);
+
+	// Sync when parent value changes
+	$effect(() => {
+		editingDate = displayDate;
+		editingTime = displayTime;
+	});
+
+	function updateValue() {
+		const newDt = DateTime.fromISO(`${editingDate}T${editingTime}`, { zone });
+		if (newDt.isValid) {
+			const newValue = newDt.toMillis();
+			value = newValue;
+			onChange(newValue);
 		}
-		value = parsed * 3600000;
-		onChange(value);
 	}
 </script>
 
-{#if hours}
-	<input type="number" bind:value={editingHours} oninput={numberToValue} />
-{:else}
-	<input type="datetime-local" bind:value={editingDate} oninput={dateToValue} />
-	<!-- <input type="text" bind:value={zone} oninput={dateToValue} /> -->
-{/if}
+<div class="datetime-container">
+	<input type="date" bind:value={editingDate} oninput={updateValue} />
 
-<!-- <p>{displayDate}</p>
-<p>{displayHours}</p>
-<p>{Number(new Date(value))}</p>
-<p><strong>{value}</strong></p> -->
+	<input type="time" bind:value={editingTime} oninput={updateValue} />
+</div>
+
+<style>
+	.datetime-container {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	input {
+		width: 100%;
+		padding: 8px;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+	}
+</style>
