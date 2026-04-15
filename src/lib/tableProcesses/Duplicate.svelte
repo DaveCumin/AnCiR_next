@@ -103,7 +103,12 @@
 	onMount(() => {
 		const outId = p.args.out?.result;
 
-		if (outId != null && outId >= 0 && core.rawData.has(outId) && core.rawData.get(outId).length > 0) {
+		if (
+			outId != null &&
+			outId >= 0 &&
+			core.rawData.has(outId) &&
+			core.rawData.get(outId).length > 0
+		) {
 			// Existing committed data — load without recomputing
 			duplicateResult = core.rawData.get(outId);
 			p.args.valid = true;
