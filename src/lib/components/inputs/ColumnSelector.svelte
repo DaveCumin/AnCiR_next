@@ -13,7 +13,10 @@
 
 	//set up the values and labels for the data
 	let options = $derived.by(() => {
-		let out = new Map();
+		// Use an array of {label, id} so duplicate column names both appear (Map keys would
+		// silently drop one when two columns share the same table+name string).
+		/** @type {{ label: string; id: number }[]} */
+		let out = [];
 
 		//get the other data in plots - TODO!!
 		// Is this the best way?
@@ -46,10 +49,10 @@
 								'tempGroup = ',
 								tempGroup
 							);
-							out.set(
-								core.plots[p].name + ' : ' + core.plots[p].plot.data[d][key].name,
-								core.plots[p].plot.data[d][key].id
-							);
+							out.push({
+								label: core.plots[p].name + ' : ' + core.plots[p].plot.data[d][key].name,
+								id: core.plots[p].plot.data[d][key].id
+							});
 						}
 					});
 				}
@@ -67,7 +70,7 @@
 					if (ref !== -1 && !excludeColIds.includes(ref)) {
 						const processCol = getColumnById(ref);
 						if (processCol) {
-							out.set(core.tables[t].name + ' : ' + processCol.name, processCol.id);
+							out.push({ label: core.tables[t].name + ' : ' + processCol.name, id: processCol.id });
 						}
 					}
 				});
@@ -76,10 +79,10 @@
 			//columns
 			for (let c = 0; c < core.tables[t].columns.length; c++) {
 				if (!excludeColIds.includes(core.tables[t].columns[c].id)) {
-					out.set(
-						core.tables[t].name + ' : ' + core.tables[t].columns[c].name,
-						core.tables[t].columns[c].id
-					);
+					out.push({
+						label: core.tables[t].name + ' : ' + core.tables[t].columns[c].name,
+						id: core.tables[t].columns[c].id
+					});
 				}
 			}
 		}
@@ -90,15 +93,15 @@
 
 {#if multiple}
 	<select bind:value onchange={() => onChange(value)} multiple>
-		{#each Array.from(options.entries()) as [key, val] (val)}
-			<option value={val}>{key}</option>
+		{#each options as { label, id } (id)}
+			<option value={id}>{label}</option>
 		{/each}
 	</select>
 {:else}
 	{#key options}
 		<select name="columnSelect" onchange={(e) => onChange(e.target.value)} bind:value>
-			{#each Array.from(options.entries()) as [key, value] (value)}
-				<option {value}>{key}</option>
+			{#each options as { label, id } (id)}
+				<option value={id}>{label}</option>
 			{/each}
 			<!-- add in columns that are not in core.data but not core.tables -->
 		</select>
