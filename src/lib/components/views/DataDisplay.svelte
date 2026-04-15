@@ -136,7 +136,7 @@
 					</div>
 				</summary>
 
-				{#each table.processes as p}
+				{#each table.processes as p (p.id)}
 					<div class="second-clps">
 						<TableProcess {p} />
 					</div>

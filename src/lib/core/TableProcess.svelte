@@ -137,7 +137,9 @@
 			else if (dataIN.args) {
 				this.args = dataIN.args;
 				//MAKE THE OUTPUTS (defined in the defaults with 'OUT') AND ASSOCIATE THEM
-				const theTable = getTableById(this.parent.id);
+				// Use this.parent directly — getTableById fails when loading from JSON
+				// because the table isn't yet in core.tables at construction time.
+				const theTable = this.parent ?? getTableById(this.parent.id);
 				const processHash = crypto.randomUUID();
 
 				for (let i = 0; i < Object.keys(this.args.out).length; i++) {

@@ -184,8 +184,10 @@
 	// Reactivity: recompute when inputs or split times change
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	let xIsTime = $derived(xIN_col?.type === 'time');
-	let sortedSplitTimes = $derived([...p.args.splitTimes].sort((a, b) => a - b));
-	let timesWereReordered = $derived(p.args.splitTimes.some((t, i) => t !== sortedSplitTimes[i]));
+	let sortedSplitTimes = $derived([...(p.args.splitTimes ?? [])].sort((a, b) => a - b));
+	let timesWereReordered = $derived(
+		(p.args.splitTimes ?? []).some((t, i) => t !== sortedSplitTimes[i])
+	);
 	let segmentCount = $derived(sortedSplitTimes.length + 1);
 
 	function formatSplitLabel(val) {
