@@ -49,7 +49,11 @@ describe('split', () => {
 	});
 
 	it('returns invalid when yIN is empty', () => {
-		mockColumns[1] = { type: 'number', getData: () => [0, 5, 10, 15, 20], hoursSinceStart: [0, 5, 10, 15, 20] };
+		mockColumns[1] = {
+			type: 'number',
+			getData: () => [0, 5, 10, 15, 20],
+			hoursSinceStart: [0, 5, 10, 15, 20]
+		};
 
 		const [result, valid] = split({
 			xIN: 1,
@@ -73,7 +77,11 @@ describe('split', () => {
 	});
 
 	it('returns invalid when splitTimes is empty', () => {
-		mockColumns[1] = { type: 'number', getData: () => [0, 5, 10, 15, 20], hoursSinceStart: [0, 5, 10, 15, 20] };
+		mockColumns[1] = {
+			type: 'number',
+			getData: () => [0, 5, 10, 15, 20],
+			hoursSinceStart: [0, 5, 10, 15, 20]
+		};
 		mockColumns[2] = { type: 'number', getData: () => [10, 20, 30, 40, 50] };
 
 		const [result, valid] = split({
