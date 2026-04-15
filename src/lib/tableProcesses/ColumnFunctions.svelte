@@ -5,9 +5,12 @@
 	export const columnfunctions_defaults = new Map([
 		['func', { val: 'add' }],
 		['xsIN', { val: [] }],
+		['yIN', { val: [] }], //for collected mode: receives input columns from CollectColumns
 		['out', { result: { val: -1 } }], //needed to set up the output columns
 		['data', { val: [] }], //Need a 'data' to work
-		['valid', { val: false }] //needed for the progress step logic
+		['valid', { val: false }], //needed for the progress step logic
+		['forcollected', { val: true }],
+		['collectedType', { val: 'columnfunc' }]
 	]);
 
 	export function columnfunctions(argsIN) {
@@ -69,7 +72,7 @@
 				return [[], false];
 		}
 
-		if (argsIN.out.result !== -1) {
+		if (argsIN.out.result != null && argsIN.out.result >= 0) {
 			core.rawData.set(argsIN.out.result, result);
 			getColumnById(argsIN.out.result).data = argsIN.out.result;
 			getColumnById(argsIN.out.result).type = typeof result[0] !== 'string' ? 'category' : 'number';
@@ -85,10 +88,11 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-	import { getColumnById } from '$lib/core/Column.svelte';
+	import { Column, getColumnById } from '$lib/core/Column.svelte';
+	import { pushObj } from '$lib/core/core.svelte.js';
 	import { onMount, untrack } from 'svelte';
 
-	let { p = $bindable() } = $props();
+	let { p = $bindable(), hideInputs = false } = $props();
 
 	const funcOptions = [
 		{ value: 'add', label: 'Add' },
@@ -132,7 +136,29 @@
 		[result, p.args.valid] = columnfunctions(p.args);
 	}
 
+	// Sync yIN → xsIN when used inside CollectColumns (collected mode)
+	$effect(() => {
+		p.args.yIN; // track as reactive dependency
+		if (!mounted || !hideInputs) return;
+		untrack(() => {
+			p.args.xsIN = [...(p.args.yIN ?? [])];
+		});
+	});
+
 	onMount(() => {
+		if (!p.args.out) p.args.out = {};
+		// In collected mode, create the output column here (TableProcess.svelte won't do it)
+		if ((p.args.out.result == null || p.args.out.result < 0) && p.parent) {
+			const outCol = new Column(null);
+			outCol.name = 'colFunc_' + p.id;
+			pushObj(outCol);
+			p.parent.columnRefs = [outCol.id, ...p.parent.columnRefs];
+			p.args.out.result = outCol.id;
+		}
+		// Seed xsIN from yIN if arriving in collected mode with pre-set yIN
+		if (hideInputs && (p.args.yIN ?? []).length > 0) {
+			p.args.xsIN = [...p.args.yIN];
+		}
 		//If data already exists (e.g. imported from JSON), use it instead of regenerating
 		const outKey = p.args.out.result;
 		if (outKey >= 0 && core.rawData.has(outKey) && core.rawData.get(outKey).length > 0) {
