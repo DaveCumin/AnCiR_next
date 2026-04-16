@@ -7,7 +7,7 @@
 
 	import { appConsts, core, pushObj, appState } from '$lib/core/core.svelte';
 	import { Table } from '$lib/core/Table.svelte';
-	import { Column } from '$lib/core/Column.svelte';
+	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import {
 		guessDateofArray,
 		forceFormat,
@@ -156,6 +156,108 @@
 		return result;
 	}
 
+	// Replace existing columns mode
+	let replaceMode = $state(false);
+	let columnMappings = $state({}); // { importColName: existingColId | null }
+
+	/**
+	 * Build the list of existing columns across all tables for the replace dropdown.
+	 * Returns [{ label: "TableName : ColName", id: number, name: string }]
+	 */
+	function getExistingColumnOptions() {
+		const out = [];
+		const seenIds = new Set();
+		for (let t = 0; t < core.tables.length; t++) {
+			// Table process outputs
+			for (let p = 0; p < core.tables[t].processes.length; p++) {
+				const args = core.tables[t].processes[p].args;
+				if (args.out) {
+					Object.keys(args.out).forEach((key) => {
+						const ref = args.out[key];
+						if (ref !== -1 && !seenIds.has(ref)) {
+							const col = getColumnById(ref);
+							if (col) {
+								seenIds.add(col.id);
+								out.push({
+									label: core.tables[t].name + ' : ' + col.name,
+									id: col.id,
+									name: col.name
+								});
+							}
+						}
+					});
+				}
+			}
+			// Direct columns
+			for (let c = 0; c < core.tables[t].columns.length; c++) {
+				const col = core.tables[t].columns[c];
+				if (!seenIds.has(col.id)) {
+					seenIds.add(col.id);
+					out.push({
+						label: core.tables[t].name + ' : ' + col.name,
+						id: col.id,
+						name: col.name
+					});
+				}
+			}
+		}
+		return out;
+	}
+
+	/**
+	 * Get the effective column names for mapping, considering date+time combine.
+	 * Returns an array of { name, isOriginal } where combined columns use the merged name.
+	 */
+	function getEffectiveImportColumns() {
+		const combinedDateCols = new Set();
+		const combinedTimeCols = new Set();
+		for (const idx of combinePairs) {
+			const pair = dateTimePairs[idx];
+			combinedDateCols.add(pair.dateCol);
+			combinedTimeCols.add(pair.timeCol);
+		}
+
+		const result = [];
+		for (const col of headers) {
+			if (!selectedColumns.has(col)) continue;
+			if (combinedTimeCols.has(col)) continue; // skip; merged into date col
+			if (combinedDateCols.has(col)) {
+				// Find the pair and use combined name
+				const pairIdx = [...combinePairs].find((i) => dateTimePairs[i].dateCol === col);
+				if (pairIdx !== undefined) {
+					const pair = dateTimePairs[pairIdx];
+					result.push(`${pair.dateCol} ${pair.timeCol}`);
+				} else {
+					result.push(col);
+				}
+			} else {
+				result.push(col);
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * Auto-suggest mappings: match import column names to existing column names (case-insensitive).
+	 */
+	function autoSuggestMappings() {
+		const existing = getExistingColumnOptions();
+		const effectiveCols = getEffectiveImportColumns();
+		const newMappings = {};
+		for (const colName of effectiveCols) {
+			const match = existing.find(
+				(e) => e.name.toLowerCase() === colName.toLowerCase()
+			);
+			newMappings[colName] = match ? match.id : null;
+		}
+		columnMappings = newMappings;
+	}
+
+	// Derived sets for combined columns (used in preview table)
+	let combinedTimeCols = $derived(new Set([...combinePairs].map((i) => dateTimePairs[i]?.timeCol)));
+	let combinedDateCols = $derived(new Set([...combinePairs].map((i) => dateTimePairs[i]?.dateCol)));
+	let existingColumnOptions = $derived(replaceMode ? getExistingColumnOptions() : []);
+
 	// Multi-file concatenation support
 	let targetFiles = $state([]); // All selected files
 	let extraFileErrors = $state([]); // [{ filename, error }] for header mismatches
@@ -182,6 +284,8 @@
 		selectedColumns.clear();
 		dateTimePairs = [];
 		combinePairs = new Set();
+		replaceMode = false;
+		columnMappings = {};
 		extraFileErrors = [];
 		checkingHeaders = false;
 		dataUrl = '';
@@ -938,64 +1042,119 @@
 	}
 
 	async function doBasicFileImport(result, fname) {
-		const newDataEntry = new Table();
-		const baseName = fname ? fname.replace(/\.[^.]+$/, '') : `data_${newDataEntry.id}`;
-		newDataEntry.setName(baseName);
-
 		const keys = Object.keys(result);
 		const totalColumns = keys.length;
 
-		for (let i = 0; i < totalColumns; i++) {
-			const f = keys[i];
+		// Separate columns into "replace existing" and "import as new"
+		const replaceEntries = []; // [{ colName, targetId }]
+		const newEntries = []; // [colName]
+		for (const f of keys) {
+			const targetId = replaceMode ? columnMappings[f] : null;
+			if (targetId != null) {
+				replaceEntries.push({ colName: f, targetId });
+			} else {
+				newEntries.push(f);
+			}
+		}
+
+		// Handle replacements: overwrite existing column data
+		const processHash = crypto.randomUUID();
+		for (let i = 0; i < replaceEntries.length; i++) {
+			const { colName, targetId } = replaceEntries[i];
 
 			loadProgress = {
 				stage: 'Loading data',
-				detail: `Processing column ${i + 1} of ${totalColumns}: "${f}"`
+				detail: `Replacing column ${i + 1} of ${replaceEntries.length}: "${colName}"`
 			};
 			if (i % 5 === 0) {
 				await tick();
 				await yieldToUI();
 			}
 
-			const df = new Column({});
+			const existingCol = getColumnById(targetId);
+			if (!existingCol) continue;
 
-			if (awdMeta && f === 'DateTime') {
-				// Special handling: compressed time column
-				df.type = 'time';
-				df.compression = 'awd';
-				df.name = 'DateTime'; // or 'Time since start (h)', etc. — you can rename later
-				core.rawData.set(df.id, {
-					start: awdMeta.startMs,
-					step: awdMeta.stepMs,
-					length: awdMeta.count // note: length = number of epochs
-				});
-				df.data = df.id;
+			// Update data
+			core.rawData.set(targetId, result[colName]);
+			existingCol.data = targetId;
+
+			// Update type/format
+			const guessedFormat = guessDateofArray(result[colName]);
+			if (guessedFormat !== -1 && guessedFormat.length > 0) {
+				existingCol.type = 'time';
+				existingCol.timeFormat = guessedFormat;
 			} else {
-				// Normal columns
-				const datum = getFirstValid(result[f], 5);
-				const guessedFormat = guessDateofArray(result[f]);
-
-				if (guessedFormat !== -1 && guessedFormat.length > 0) {
-					df.type = 'time';
-					df.timeFormat = guessedFormat;
-				} else if (typeof datum === 'number' && !isNaN(datum)) {
-					df.type = 'number';
+				const datum = getFirstValid(result[colName], 5);
+				if (typeof datum === 'number' && !isNaN(datum)) {
+					existingCol.type = 'number';
 				} else {
-					df.type = 'category';
+					existingCol.type = 'category';
 				}
-
-				df.name = f;
-				core.rawData.set(df.id, result[f]);
-				df.data = df.id;
 			}
 
-			newDataEntry.addColumn(df);
+			// Trigger reactivity
+			existingCol.tableProcessGUId = processHash;
 		}
 
-		loadProgress = { stage: 'Loading data', detail: 'Finalising…' };
-		await tick();
+		// Handle new columns: create a new table if there are any
+		if (newEntries.length > 0) {
+			const newDataEntry = new Table();
+			const baseName = fname ? fname.replace(/\.[^.]+$/, '') : `data_${newDataEntry.id}`;
+			newDataEntry.setName(baseName);
 
-		pushObj(newDataEntry);
+			for (let i = 0; i < newEntries.length; i++) {
+				const f = newEntries[i];
+
+				loadProgress = {
+					stage: 'Loading data',
+					detail: `Processing column ${i + 1} of ${newEntries.length}: "${f}"`
+				};
+				if (i % 5 === 0) {
+					await tick();
+					await yieldToUI();
+				}
+
+				const df = new Column({});
+
+				if (awdMeta && f === 'DateTime') {
+					df.type = 'time';
+					df.compression = 'awd';
+					df.name = 'DateTime';
+					core.rawData.set(df.id, {
+						start: awdMeta.startMs,
+						step: awdMeta.stepMs,
+						length: awdMeta.count
+					});
+					df.data = df.id;
+				} else {
+					const datum = getFirstValid(result[f], 5);
+					const guessedFormat = guessDateofArray(result[f]);
+
+					if (guessedFormat !== -1 && guessedFormat.length > 0) {
+						df.type = 'time';
+						df.timeFormat = guessedFormat;
+					} else if (typeof datum === 'number' && !isNaN(datum)) {
+						df.type = 'number';
+					} else {
+						df.type = 'category';
+					}
+
+					df.name = f;
+					core.rawData.set(df.id, result[f]);
+					df.data = df.id;
+				}
+
+				newDataEntry.addColumn(df);
+			}
+
+			loadProgress = { stage: 'Loading data', detail: 'Finalising…' };
+			await tick();
+
+			pushObj(newDataEntry);
+		} else {
+			loadProgress = { stage: 'Loading data', detail: 'Finalising…' };
+			await tick();
+		}
 
 		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms || 10));
 	}
@@ -1404,6 +1563,22 @@
 							</div>
 						{/if}
 
+						{#if core.tables.length > 0}
+							<div class="section-row">
+								<div class="control-input-checkbox">
+									<input
+										type="checkbox"
+										bind:checked={replaceMode}
+										onchange={() => {
+											if (replaceMode) autoSuggestMappings();
+											else columnMappings = {};
+										}}
+									/>
+									<p>Replace existing columns</p>
+								</div>
+							</div>
+						{/if}
+
 						<div class="section-row">
 							<div class="col-select-actions">
 								<button
@@ -1427,25 +1602,62 @@
 							<table class="preview-table">
 								<thead>
 									<tr>
-										{#each headers as col, i (`${i}-${selectedColumns.has(col)}`)}
-											<th
-												class:selected={selectedColumns.has(col)}
-												class:unselected={!selectedColumns.has(col)}
-											>
-												<label class="header-checkbox">
-													<input
-														type="checkbox"
-														checked={selectedColumns.has(col)}
-														onchange={(e) => {
-															const checked = e.currentTarget.checked;
-															selectedColumns = checked
-																? new Set([...selectedColumns, col]) // new set
-																: new Set([...selectedColumns].filter((c) => c !== col));
-														}}
-													/>
-													<span class="col-name">{col}</span>
-												</label>
-											</th>
+										{#each headers as col, i (`${i}-${selectedColumns.has(col)}-${combinedTimeCols.has(col)}`)}
+											{#if combinedTimeCols.has(col)}
+												<!-- skip: merged into date col -->
+											{:else}
+												{@const isCombinedDate = combinedDateCols.has(col)}
+												{@const combinedName = isCombinedDate
+													? (() => {
+														const pIdx = [...combinePairs].find((j) => dateTimePairs[j].dateCol === col);
+														return pIdx !== undefined ? `${col} ${dateTimePairs[pIdx].timeCol}` : col;
+													})()
+													: col}
+												<th
+													class:selected={selectedColumns.has(col)}
+													class:unselected={!selectedColumns.has(col)}
+												>
+													<label class="header-checkbox">
+														<input
+															type="checkbox"
+															checked={selectedColumns.has(col)}
+															onchange={(e) => {
+																const checked = e.currentTarget.checked;
+																if (isCombinedDate) {
+																	const pIdx = [...combinePairs].find((j) => dateTimePairs[j].dateCol === col);
+																	const timeCol = pIdx !== undefined ? dateTimePairs[pIdx].timeCol : null;
+																	if (checked) {
+																		selectedColumns = new Set([...selectedColumns, col, ...(timeCol ? [timeCol] : [])]);
+																	} else {
+																		selectedColumns = new Set([...selectedColumns].filter((c) => c !== col && c !== timeCol));
+																	}
+																} else {
+																	selectedColumns = checked
+																		? new Set([...selectedColumns, col])
+																		: new Set([...selectedColumns].filter((c) => c !== col));
+																}
+															}}
+														/>
+														<span class="col-name">{combinedName}</span>
+													</label>
+													{#if replaceMode && selectedColumns.has(col)}
+														<select
+															class="mapping-select"
+															value={columnMappings[combinedName] ?? ''}
+															onchange={(e) => {
+																const val = e.currentTarget.value;
+																columnMappings[combinedName] = val === '' ? null : Number(val);
+																columnMappings = { ...columnMappings };
+															}}
+														>
+															<option value="">New column</option>
+															{#each existingColumnOptions as opt (opt.id)}
+																<option value={opt.id}>{opt.label}</option>
+															{/each}
+														</select>
+													{/if}
+												</th>
+											{/if}
 										{/each}
 									</tr>
 								</thead>
@@ -1454,12 +1666,25 @@
 										{@const rowIdx = previewDisplayStart - 1 + i}
 										<tr>
 											{#each headers as col}
-												<td
-													class:selected={selectedColumns.has(col)}
-													class:unselected={!selectedColumns.has(col)}
-												>
-													{parsedData[col]?.[rowIdx] ?? '—'}
-												</td>
+												{#if combinedTimeCols.has(col)}
+													<!-- skip: merged -->
+												{:else if combinedDateCols.has(col)}
+													{@const pIdx = [...combinePairs].find((j) => dateTimePairs[j].dateCol === col)}
+													{@const timeColName = pIdx !== undefined ? dateTimePairs[pIdx].timeCol : null}
+													<td
+														class:selected={selectedColumns.has(col)}
+														class:unselected={!selectedColumns.has(col)}
+													>
+														{parsedData[col]?.[rowIdx] ?? ''} {timeColName ? (parsedData[timeColName]?.[rowIdx] ?? '') : ''}
+													</td>
+												{:else}
+													<td
+														class:selected={selectedColumns.has(col)}
+														class:unselected={!selectedColumns.has(col)}
+													>
+														{parsedData[col]?.[rowIdx] ?? '—'}
+													</td>
+												{/if}
 											{/each}
 										</tr>
 									{/each}
@@ -1705,5 +1930,20 @@
 		font-size: 0.85em;
 		cursor: pointer;
 		margin: 0.2em 0;
+	}
+
+	/* ── Mapping dropdown in replace mode ───────────────────────────────────── */
+	.mapping-select {
+		display: block;
+		width: 100%;
+		margin-top: 0.25em;
+		font-size: 11px;
+		padding: 0.15rem 0.2rem;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 2px;
+		background-color: var(--color-lightness-97);
+	}
+	.mapping-select:hover {
+		border-color: var(--color-lightness-35);
 	}
 </style>
