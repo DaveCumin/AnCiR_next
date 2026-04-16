@@ -131,8 +131,8 @@
 	}
 
 	.remove-btn:hover {
-		background: #fee;
-		color: #c00;
+		background: var(--color-error-bg);
+		color: var(--color-error);
 	}
 
 	.footer {

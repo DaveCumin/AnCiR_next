@@ -222,7 +222,17 @@ return _r;`
 	let acItems = $derived(ac.mode === 'col' ? filteredColumns : filteredStoredValues);
 
 	function closeAc() {
-		ac = { show: false, tokenIndex: -1, filter: '', triggerStart: -1, selIdx: 0, mode: 'col', fixedTop: 0, fixedLeft: 0, fixedWidth: 0 };
+		ac = {
+			show: false,
+			tokenIndex: -1,
+			filter: '',
+			triggerStart: -1,
+			selIdx: 0,
+			mode: 'col',
+			fixedTop: 0,
+			fixedLeft: 0,
+			fixedWidth: 0
+		};
 	}
 
 	function getDropdownPosition() {
@@ -259,7 +269,17 @@ return _r;`
 		if (triggerPos >= 0) {
 			const filter = val.slice(triggerPos + 1, cursor);
 			const { fixedTop, fixedLeft, fixedWidth } = getDropdownPosition();
-			ac = { show: true, tokenIndex, filter, triggerStart: triggerPos, selIdx: 0, mode, fixedTop, fixedLeft, fixedWidth };
+			ac = {
+				show: true,
+				tokenIndex,
+				filter,
+				triggerStart: triggerPos,
+				selIdx: 0,
+				mode,
+				fixedTop,
+				fixedLeft,
+				fixedWidth
+			};
 		} else {
 			closeAc();
 		}
@@ -373,7 +393,17 @@ return _r;`
 				focusTextToken(newTextIdx);
 				const { fixedTop, fixedLeft, fixedWidth } = getDropdownPosition();
 				// triggerStart = index of '$' inside separator (', $' → position 2)
-				ac = { show: true, tokenIndex: newTextIdx, filter: '', triggerStart: 2, selIdx: 0, mode: 'col', fixedTop, fixedLeft, fixedWidth };
+				ac = {
+					show: true,
+					tokenIndex: newTextIdx,
+					filter: '',
+					triggerStart: 2,
+					selIdx: 0,
+					mode: 'col',
+					fixedTop,
+					fixedLeft,
+					fixedWidth
+				};
 			}
 		});
 	}
@@ -432,7 +462,17 @@ return _r;`
 			if (newTextIdx >= 0) {
 				focusTextToken(newTextIdx);
 				const { fixedTop, fixedLeft, fixedWidth } = getDropdownPosition();
-				ac = { show: true, tokenIndex: newTextIdx, filter: '', triggerStart: 2, selIdx: 0, mode: 'stored', fixedTop, fixedLeft, fixedWidth };
+				ac = {
+					show: true,
+					tokenIndex: newTextIdx,
+					filter: '',
+					triggerStart: 2,
+					selIdx: 0,
+					mode: 'stored',
+					fixedTop,
+					fixedLeft,
+					fixedWidth
+				};
 			}
 		});
 	}
@@ -531,7 +571,11 @@ return _r;`
 
 		<!-- Inline autocomplete dropdown -->
 		{#if ac.show}
-			<div class="ac-dropdown" role="listbox" style="top:{ac.fixedTop}px; left:{ac.fixedLeft}px; width:{ac.fixedWidth}px;">
+			<div
+				class="ac-dropdown"
+				role="listbox"
+				style="top:{ac.fixedTop}px; left:{ac.fixedLeft}px; width:{ac.fixedWidth}px;"
+			>
 				{#if ac.mode === 'col'}
 					{#if filteredColumns.length === 0}
 						<div class="ac-empty">No matching columns</div>
@@ -587,7 +631,10 @@ return _r;`
 		{/if}
 	</div>
 
-	<p class="formula-hint">Tip: type <kbd>$</kbd> for columns, <kbd>#</kbd> for stored values · Shift/Alt+click (or Shift+Enter) to add multiple</p>
+	<p class="formula-hint">
+		Tip: type <kbd>$</kbd> for columns, <kbd>#</kbd> for stored values · Shift/Alt+click (or Shift+Enter)
+		to add multiple
+	</p>
 
 	{#if formulaError}
 		<p class="formula-error">{formulaError}</p>
@@ -657,7 +704,7 @@ return _r;`
 		gap: 0.2rem;
 		padding: 0.15rem 0.4rem 0.15rem 0.55rem;
 		border-radius: 999px;
-		background-color: #4a90d966;
+		background-color: var(--color-info-bg);
 		color: #1a3a5c;
 		font-size: 12px;
 		font-weight: 600;

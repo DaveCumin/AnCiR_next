@@ -1863,25 +1863,25 @@
 		color: #555;
 	}
 	.badge-checking {
-		background: #e8f0fe;
-		color: #1a73e8;
+		background: var(--color-info-bg);
+		color: var(--color-info-text);
 	}
 	.badge-ok {
-		background: #e6f4ea;
-		color: #137333;
+		background: var(--color-success-bg);
+		color: var(--color-success);
 	}
 	.badge-error {
-		background: #fce8e6;
-		color: #c5221f;
+		background: var(--color-error-bg);
+		color: var(--color-error);
 		cursor: help;
 	}
 	.mismatch-warning {
 		margin-top: 0.5em;
 		padding: 0.4em 0.6em;
-		border: 1px solid #f5c6cb;
+		border: 1px solid var(--color-error-border);
 		border-radius: 3px;
-		background: #fce8e6;
-		color: #c5221f;
+		background: var(--color-error-bg);
+		color: var(--color-error);
 		font-size: 0.82em;
 	}
 	.mismatch-warning-title {
@@ -1897,9 +1897,9 @@
 	.binning-panel {
 		margin: 0.5em 0;
 		padding: 0.5em 0.75em;
-		border: 1px solid var(--color-warning, #e6a817);
+		border: 1px solid var(--color-warning);
 		border-radius: 4px;
-		background: var(--color-warning-bg, #fef9e7);
+		background: var(--color-warning-bg);
 	}
 	.binning-warning {
 		font-weight: 600;
@@ -1914,9 +1914,9 @@
 	.combine-panel {
 		margin: 0.5em 0;
 		padding: 0.5em 0.75em;
-		border: 1px solid var(--color-info, #4a90d9);
+		border: 1px solid var(--color-info);
 		border-radius: 4px;
-		background: var(--color-info-bg, #eaf2fb);
+		background: var(--color-info-bg);
 	}
 	.combine-title {
 		font-weight: 600;

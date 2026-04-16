@@ -21,6 +21,18 @@
 
 	--color-hover: #6a9fd4; /* Subtle change to align with the colour palette*/
 
+	/* semantic status colours */
+	--color-warning: #e6a817;
+	--color-warning-bg: #fef9e7;
+	--color-info: #4a90d9;
+	--color-info-bg: #eaf2fb;
+	--color-info-text: #1a73e8;
+	--color-success: #137333;
+	--color-success-bg: #e6f4ea;
+	--color-error: #c5221f;
+	--color-error-bg: #fce8e6;
+	--color-error-border: #f5c6cb;
+
 	/* font */
 	font-family:
 		system-ui,
