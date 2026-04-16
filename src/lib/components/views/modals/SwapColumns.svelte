@@ -1,46 +1,62 @@
 <script>
 	// @ts-nocheck
-	import { swapColumnRefs } from '$lib/core/core.svelte.js';
+	import { swapColumnRefsBulk } from '$lib/core/core.svelte.js';
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 
 	let { showModal = $bindable(false) } = $props();
 
-	let colA = $state(-1);
-	let colB = $state(-1);
+	let pairs = $state([{ from: -1, to: -1 }]);
 
-	const canSwap = $derived(colA >= 0 && colB >= 0 && colA !== colB);
+	const canSwap = $derived(pairs.some((p) => p.from >= 0 && p.to >= 0 && p.from !== p.to));
+
+	function addRow() {
+		pairs = [...pairs, { from: -1, to: -1 }];
+	}
+
+	function removeRow(index) {
+		pairs = pairs.filter((_, i) => i !== index);
+		if (pairs.length === 0) pairs = [{ from: -1, to: -1 }];
+	}
 
 	function doSwap() {
-		swapColumnRefs(colA, colB);
+		const valid = pairs
+			.filter((p) => p.from >= 0 && p.to >= 0 && p.from !== p.to)
+			.map((p) => [p.from, p.to]);
+		swapColumnRefsBulk(valid);
 		showModal = false;
-		colA = -1;
-		colB = -1;
+		pairs = [{ from: -1, to: -1 }];
 	}
 </script>
 
 <Modal bind:showModal>
 	<div class="swap-header">
-		<h2>Swap Columns</h2>
+		<h2>Swap Table</h2>
 		<p>
-			All downstream processes, table processes, and plots will be rewired to swap the two columns.
+			Define column pairs to swap. All downstream processes, table processes, and plots will be
+			rewired.
 		</p>
 	</div>
 	<div class="swap-container">
-		<div class="row">
-			<label for="colA">Column A:</label>
-			<ColumnSelector bind:value={colA} />
+		<div class="table-header">
+			<span class="col-label">From</span>
+			<span class="col-label">To</span>
+			<span class="col-action"></span>
 		</div>
-		<div class="arrow" title="These two columns will have all their references swapped">⇅</div>
-		<div class="row">
-			<label for="colB">Column B:</label>
-			<ColumnSelector bind:value={colB} />
-		</div>
-		{#if canSwap}
-			<div class="footer">
-				<button class="swap-btn" onclick={doSwap}>Swap references</button>
+		{#each pairs as pair, i (i)}
+			<div class="swap-row">
+				<ColumnSelector bind:value={pair.from} />
+				<span class="arrow" title="Swap direction">&#8644;</span>
+				<ColumnSelector bind:value={pair.to} />
+				<button class="remove-btn" onclick={() => removeRow(i)} title="Remove row">&times;</button>
 			</div>
-		{/if}
+		{/each}
+		<div class="footer">
+			<button class="add-btn" onclick={addRow}>+ Add pair</button>
+			{#if canSwap}
+				<button class="swap-btn" onclick={doSwap}>Swap all</button>
+			{/if}
+		</div>
 	</div>
 </Modal>
 
@@ -63,34 +79,82 @@
 	.swap-container {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
-		min-width: 300px;
+		gap: 6px;
+		min-width: 400px;
 	}
 
-	.row {
+	.table-header {
 		display: flex;
 		align-items: center;
-		gap: 10px;
+		gap: 8px;
+		padding: 0 2px;
 	}
 
-	label {
-		font-size: 13px;
-		min-width: 80px;
-		flex-shrink: 0;
+	.col-label {
+		flex: 1;
+		font-size: 12px;
+		font-weight: 600;
+		color: #666;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	.col-action {
+		width: 24px;
+	}
+
+	.swap-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
 	}
 
 	.arrow {
-		text-align: center;
-		font-size: 22px;
+		font-size: 18px;
 		color: #888;
-		line-height: 1;
+		flex-shrink: 0;
 		cursor: default;
+	}
+
+	.remove-btn {
+		width: 24px;
+		height: 24px;
+		padding: 0;
+		border: none;
+		background: transparent;
+		color: #999;
+		font-size: 18px;
+		cursor: pointer;
+		border-radius: 3px;
+		line-height: 1;
+		flex-shrink: 0;
+	}
+
+	.remove-btn:hover {
+		background: #fee;
+		color: #c00;
 	}
 
 	.footer {
 		display: flex;
-		justify-content: flex-end;
+		justify-content: space-between;
+		align-items: center;
 		margin-top: 8px;
+	}
+
+	.add-btn {
+		padding: 4px 12px;
+		background: transparent;
+		border: 1px dashed #aaa;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 13px;
+		color: #555;
+	}
+
+	.add-btn:hover {
+		border-color: #666;
+		color: #333;
 	}
 
 	.swap-btn {

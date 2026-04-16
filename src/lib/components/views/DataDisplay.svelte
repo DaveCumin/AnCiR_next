@@ -66,7 +66,7 @@
 	<p>Data Sources</p>
 
 	<div class="databuttons">
-		<button class="icon" onclick={() => (showSwapColumns = true)} title="Swap column references">
+		<button class="icon" onclick={() => (showSwapColumns = true)} title="Swap table">
 			<Icon name="swap" width={16} height={16} />
 		</button>
 		<button class="icon" onclick={openDropdown}>

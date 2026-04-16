@@ -60,7 +60,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.22.1',
+	version: 'β.23.0',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
@@ -316,6 +316,29 @@ export function swapColumnRefs(idA, idB) {
 	replaceColumnRefs(TEMP_ID, idA);
 	replaceColumnRefs(idA, idB);
 	replaceColumnRefs(idB, TEMP_ID);
+}
+
+/**
+ * Atomically swap all downstream references for multiple column pairs.
+ * @param {Array<[number, number]>} pairs - array of [fromId, toId] pairs to swap
+ */
+export function swapColumnRefsBulk(pairs) {
+	if (!pairs.length) return;
+	const valid = pairs.filter(([a, b]) => a !== b && a >= 0 && b >= 0);
+	if (!valid.length) return;
+
+	const allIds = core.data.map((c) => c.id);
+	let tempBase = allIds.length ? Math.min(...allIds) - 1 : -1;
+
+	// Assign a unique temp ID per pair
+	const temps = valid.map(() => tempBase--);
+
+	// Phase 1: move all "from" refs to temp IDs
+	valid.forEach(([from], i) => replaceColumnRefs(temps[i], from));
+	// Phase 2: move all "to" refs to the corresponding "from" slots
+	valid.forEach(([from, to]) => replaceColumnRefs(from, to));
+	// Phase 3: move temp IDs into the "to" slots
+	valid.forEach(([, to], i) => replaceColumnRefs(to, temps[i]));
 }
 
 export function outputCoreAsJson() {

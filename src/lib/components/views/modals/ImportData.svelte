@@ -8,7 +8,12 @@
 	import { appConsts, core, pushObj, appState } from '$lib/core/core.svelte';
 	import { Table } from '$lib/core/Table.svelte';
 	import { Column } from '$lib/core/Column.svelte';
-	import { guessDateofArray, forceFormat, getPeriod, convertFormat } from '$lib/utils/time/TimeUtils';
+	import {
+		guessDateofArray,
+		forceFormat,
+		getPeriod,
+		convertFormat
+	} from '$lib/utils/time/TimeUtils';
 	import { numToString } from '$lib/utils/GeneralUtils';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
@@ -18,6 +23,11 @@
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import { importJson } from '$lib/components/iconActions/Setting.svelte';
 	import { tick } from 'svelte';
+
+	/** Yield to the browser so it can repaint (keeps spinner alive). */
+	function yieldToUI() {
+		return new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+	}
 	import { stackOrderInsideOut } from 'd3-shape';
 	import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 
@@ -721,7 +731,7 @@
 					detail: `Concatenating file ${i + 1} of ${targetFiles.length}: ${extraFile.name}`
 				};
 				await tick();
-				await new Promise((r) => setTimeout(r, 10));
+				await yieldToUI();
 
 				const extraData = await parseAdditionalFileData(extraFile);
 
@@ -740,7 +750,7 @@
 
 		loadProgress = { stage: 'Loading data', detail: 'Building columns…' };
 		await tick();
-		await new Promise((resolve) => setTimeout(resolve, 10));
+		await yieldToUI();
 
 		const importName =
 			targetFiles.length > 1
@@ -841,7 +851,7 @@
 			};
 			if (i % 5 === 0) {
 				await tick();
-				await new Promise((r) => setTimeout(r, 0));
+				await yieldToUI();
 			}
 
 			const df = new Column({});
@@ -1172,7 +1182,9 @@
 			<div class="heading">
 				<h2>Import Data</h2>
 				<div class="control-input-horizontal" style="align-items: center; margin-top: 0.5rem;">
-					<button class="dialog-button" style="margin-top:0;" onclick={(e) => fileInput.click()}>{buttonText}</button>
+					<button class="dialog-button" style="margin-top:0;" onclick={(e) => fileInput.click()}
+						>{buttonText}</button
+					>
 					<p class="filename-preview">
 						{#if targetFiles.length > 1}
 							{targetFiles.length} files selected
@@ -1238,11 +1250,7 @@
 								</div>
 								<div class="control-input">
 									<p>Skip lines</p>
-									<NumberWithUnits
-										bind:value={skipLines}
-										min="0"
-										onInput={() => reParse()}
-									/>
+									<NumberWithUnits bind:value={skipLines} min="0" onInput={() => reParse()} />
 								</div>
 							</div>
 						</div>
@@ -1334,7 +1342,10 @@
 								</tbody>
 							</table>
 						</div>
-						<div class="control-input" style="flex-direction: row; align-items: center; gap: 0.25rem; flex-wrap: wrap;">
+						<div
+							class="control-input"
+							style="flex-direction: row; align-items: center; gap: 0.25rem; flex-wrap: wrap;"
+						>
 							<p style="margin:0;">Row</p>
 							<NumberWithUnits
 								min={1}
@@ -1342,7 +1353,9 @@
 								step={1}
 								bind:value={previewDisplayStart}
 							/>
-							<p style="margin:0;">to {Math.min(previewDisplayStart + 5, previewRowCount)} of {previewRowCount} (preview)</p>
+							<p style="margin:0;">
+								to {Math.min(previewDisplayStart + 5, previewRowCount)} of {previewRowCount} (preview)
+							</p>
 						</div>
 
 						{#if targetFiles.length > 1}

@@ -649,7 +649,7 @@
 
 	{#if tooltip.visible}
 		<div class="tooltip" style={`left: ${tooltip.x}px; top: ${tooltip.y}px;`}>
-			{tooltip.content}
+			{@html tooltip.content}
 		</div>
 	{/if}
 {/snippet}

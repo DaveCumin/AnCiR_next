@@ -16,7 +16,6 @@
 	import { makeSeqArray, max, min } from '$lib/components/plotbits/helpers/wrangleData';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
-	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import { core } from '$lib/core/core.svelte.js';
@@ -516,7 +515,7 @@
 
 			//make sure the tooltip stays 'in bounds'
 			const srcRect = e.srcElement.getBoundingClientRect();
-			const xPos = mouseX + 110 > srcRect.width ? mouseX - 120 : mouseX + 10;
+			const xPos = mouseX + 180 > srcRect.width ? mouseX - 190 : mouseX + 10;
 			const yPos = mouseY < 20 ? mouseY + 40 : mouseY + 10;
 
 			tooltip = {
@@ -535,22 +534,56 @@
 				? theData.plot.paddingIN.top + theData.plot.lightBands.height * 2
 				: theData.plot.paddingIN.top;
 
+		const period = theData.plot.periodHrs;
+		const doublePlot = theData.plot.doublePlot;
+
 		const xscale = scaleLinear()
-			.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
+			.domain([0, period * doublePlot])
 			.range([0, theData.plot.plotwidth]);
 
-		const yscale = scaleLinear().domain([0, 100]).range([theData.plot.eachplotheight, 0]);
+		// Which day row is the cursor on?
+		const dayIndex = Math.floor(
+			(y - allTopPadding) / (theData.plot.eachplotheight + theData.plot.spaceBetween)
+		);
+		// Hours into the period from the x position
+		const hrsIntoRow = xscale.invert(x - theData.plot.padding.left);
 
-		const unixTime =
-			theData.plot.startTime +
-			3600000 *
-				24 *
-				Math.floor(
-					(y - allTopPadding) / (theData.plot.eachplotheight + theData.plot.spaceBetween)
-				) +
-			3600000 * xscale.invert(x - theData.plot.padding.left);
+		// Absolute hours since plot start
+		const absHrs = dayIndex * period + hrsIntoRow;
 
-		return `${formatTimeFromUNIX(unixTime)}`;
+		// Convert to unix time for display
+		const unixTime = theData.plot.startTime + absHrs * 3600000;
+		const dt = new Date(unixTime);
+		const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+		const dateStr = `${dt.getUTCDate()} ${months[dt.getUTCMonth()]}, ${String(dt.getUTCHours()).padStart(2,'0')}:${String(dt.getUTCMinutes()).padStart(2,'0')}`;
+
+		let content = `<span style="opacity:0.7">Time:</span> ${dateStr}`;
+
+		// Look up the actual data value for each series using allBins
+		for (const datum of theData.plot.data) {
+			if (!datum.draw) continue;
+			const bins = datum.allBins;
+			if (!bins?.length) continue;
+
+			// allBins stores {start, end, y} in offset-corrected hours.
+			// absHrs is also in offset-corrected hours (from plot start).
+			// Find the bin that contains this time.
+			let foundVal = null;
+			for (const bin of bins) {
+				if (absHrs >= bin.start && absHrs < bin.end) {
+					foundVal = bin.y;
+					break;
+				}
+			}
+
+			if (foundVal == null || isNaN(foundVal)) continue;
+
+			const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${datum.colour};margin-right:4px;vertical-align:middle;"></span>`;
+			const label = datum.label || datum.y.name || 'Data';
+			content += `<br/>${dot}<strong>${label}:</strong> ${Number(foundVal).toFixed(1)}`;
+		}
+
+		return content;
 	}
 
 	function handleClick(e) {
@@ -982,7 +1015,7 @@
 
 	{#if tooltip.visible}
 		<div class="tooltip" style={`left: ${tooltip.x}px; top: ${tooltip.y}px;`}>
-			{tooltip.content}
+			{@html tooltip.content}
 		</div>
 	{/if}
 {/snippet}
@@ -994,7 +1027,4 @@
 {/if}
 
 <style>
-	.tooltip {
-		width: 100px;
-	}
 </style>

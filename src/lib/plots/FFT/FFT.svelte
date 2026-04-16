@@ -1111,6 +1111,10 @@
 					yoffset={theData.plot.padding.top}
 					xoffset={theData.plot.padding.left}
 					tooltip={true}
+					dataLabel={datum.y.name || ''}
+					dataColour={datum.points.colour}
+					xLabel={theData.plot.xAxis.label || 'Frequency'}
+					yLabel={theData.plot.yAxisMag.label || 'Magnitude'}
 					which="plot"
 				/>
 
@@ -1135,6 +1139,10 @@
 						yoffset={theData.plot.padding.top}
 						xoffset={theData.plot.padding.left}
 						tooltip={true}
+						dataLabel={datum.y.name ? datum.y.name + ' (phase)' : 'Phase'}
+						dataColour={datum.phasePoints.colour}
+						xLabel={theData.plot.xAxis.label || 'Frequency'}
+						yLabel={theData.plot.yAxisPhase.label || 'Phase (radians)'}
 						which="plot"
 					/>
 				{/if}
@@ -1144,7 +1152,7 @@
 
 	{#if tooltip.visible}
 		<div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">
-			{tooltip.content}
+			{@html tooltip.content}
 		</div>
 	{/if}
 {/snippet}

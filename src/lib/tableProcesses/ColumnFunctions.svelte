@@ -191,7 +191,7 @@
 	<ColumnSelector bind:value={p.args.xsIN} onChange={() => doColumnFunction()} multiple={true} />
 
 	{#each p.args.xsIN as _, i}
-		<a>{getColumnById(p.args.xsIN[i]).name}</a>
+		<a>{getColumnById(p.args.xsIN[i])?.name ?? '?'}</a>
 		<button
 			onclick={() => {
 				p.args.xsIN.splice(i, 1);

@@ -47,7 +47,11 @@
 		xoffset,
 		tooltip = false,
 		xtype = 'number',
-		which
+		which,
+		dataLabel = '',
+		dataColour = '',
+		xLabel = 'x',
+		yLabel = 'y'
 	} = $props();
 
 	let qt;
@@ -119,13 +123,15 @@
 		const closest = qt.find(mouseX, mouseY, pointsData.radius * 2);
 
 		if (closest) {
-			let content = '';
-
-			content = `(${safeFormat(closest.x, dp, xtype)}, ${safeFormat(closest.y, dp)})`;
+			const colourDot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dataColour || pointsData.colour};margin-right:4px;vertical-align:middle;"></span>`;
+			const name = dataLabel ? `${colourDot}<strong>${dataLabel}</strong><br/>` : '';
+			const xLbl = xLabel || 'x';
+			const yLbl = yLabel || 'y';
+			const content = `${name}<span style="opacity:0.7">${xLbl}:</span> ${safeFormat(closest.x, dp, xtype)}<br/><span style="opacity:0.7">${yLbl}:</span> ${safeFormat(closest.y, dp)}`;
 
 			//make sure the tooltip stays 'in bounds'
 			const srcRect = e.srcElement.getBoundingClientRect();
-			const xPos = mouseX + 110 > srcRect.width ? mouseX - 120 : mouseX + 10;
+			const xPos = mouseX + 180 > srcRect.width ? mouseX - 190 : mouseX + 10;
 			const yPos = mouseY < 20 ? mouseY + 40 : mouseY + 10;
 			const event = new CustomEvent('tooltip', {
 				detail: {

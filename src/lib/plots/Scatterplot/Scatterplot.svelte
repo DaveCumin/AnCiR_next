@@ -440,7 +440,9 @@
 					if (datum.x.type === 'time') {
 						xData = xData.map((/** @type {number} */ ms) => new Date(ms).toISOString());
 					} else if (datum.x.originTime_ms != null) {
-						xData = xData.map((/** @type {number} */ h) => new Date(datum.x.originTime_ms + h * 3600000).toISOString());
+						xData = xData.map((/** @type {number} */ h) =>
+							new Date(datum.x.originTime_ms + h * 3600000).toISOString()
+						);
 					}
 				}
 				const yData = datum.y.getData() ?? [];
@@ -1020,6 +1022,12 @@
 					yoffset={theData.plot.padding.top}
 					xoffset={theData.plot.padding.left}
 					tooltip={true}
+					dataLabel={datum.label || ''}
+					dataColour={datum.points.colour}
+					xLabel={theData.plot.xAxis.label || 'x'}
+					yLabel={datum.yAxis === 'left'
+						? theData.plot.yAxisLeft.label || 'y'
+						: theData.plot.yAxisRight.label || 'y'}
 					which="plot"
 				/>
 			{/if}
@@ -1035,7 +1043,7 @@
 	</svg>
 	{#if tooltip.visible}
 		<div class="tooltip" style={`left: ${tooltip.x}px; top: ${tooltip.y}px;`}>
-			{tooltip.content}
+			{@html tooltip.content}
 		</div>
 	{/if}
 {/snippet}

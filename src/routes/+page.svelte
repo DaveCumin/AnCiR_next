@@ -1191,14 +1191,16 @@
 
 	:global(.tooltip) {
 		position: absolute;
-		background-color: rgba(0, 0, 0, 0.7);
+		background-color: rgba(0, 0, 0, 0.75);
 		color: white;
-		padding: 0.5rem 0.8rem;
-		border-radius: 4px;
+		padding: 0.4rem 0.6rem;
+		border-radius: 6px;
 		pointer-events: none;
-		font-size: 0.8rem;
+		font-size: 0.78rem;
+		line-height: 1.4;
 		z-index: 9999;
-		width: 100px;
+		white-space: nowrap;
+		backdrop-filter: blur(4px);
 	}
 
 	:global(.tableProcess-container) {
