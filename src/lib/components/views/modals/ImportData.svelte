@@ -70,6 +70,92 @@
 
 	let selectedColumns = $state(new Set());
 
+	// Date+Time column combination
+	let dateTimePairs = $state([]); // [{ dateCol, timeCol, dateFormat, timeFormat }]
+	let combinePairs = $state(new Set()); // indices into dateTimePairs that the user wants to merge
+
+	/**
+	 * Scan preview columns for date-only / time-only pairs that could be combined.
+	 * A "date-only" format contains day/month/year tokens but no hour/minute.
+	 * A "time-only" format contains hour/minute tokens but no day/month/year.
+	 */
+	function detectDateTimePairs() {
+		dateTimePairs = [];
+		combinePairs = new Set();
+		if (!parsedData || headers.length < 2) return;
+
+		const dateTokens = /[DdMYy]/; // day, month, year tokens (Moment-style)
+		const timeTokens = /[Hhms]/;  // hour, minute, second tokens
+
+		const dateCols = [];
+		const timeCols = [];
+
+		for (const col of headers) {
+			const fmt = guessDateofArray(parsedData[col]);
+			if (fmt === -1 || !fmt || fmt.length === 0) continue;
+			const fmtStr = String(fmt);
+			const hasDate = dateTokens.test(fmtStr);
+			const hasTime = timeTokens.test(fmtStr);
+
+			if (hasDate && !hasTime) {
+				dateCols.push({ col, fmt: fmtStr });
+			} else if (hasTime && !hasDate) {
+				timeCols.push({ col, fmt: fmtStr });
+			}
+		}
+
+		// Pair them up: for now, match in order (first date col with first time col, etc.)
+		const pairCount = Math.min(dateCols.length, timeCols.length);
+		for (let i = 0; i < pairCount; i++) {
+			dateTimePairs.push({
+				dateCol: dateCols[i].col,
+				timeCol: timeCols[i].col,
+				dateFormat: dateCols[i].fmt,
+				timeFormat: timeCols[i].fmt
+			});
+			// Enable combination by default
+			combinePairs.add(i);
+		}
+	}
+
+	/**
+	 * Merge date+time column pairs in the given data object.
+	 * Returns a new data object with combined columns replacing the originals.
+	 */
+	function applyDateTimeCombination(data) {
+		if (combinePairs.size === 0) return data;
+
+		const result = { ...data };
+		for (const idx of combinePairs) {
+			const pair = dateTimePairs[idx];
+			if (!result[pair.dateCol] || !result[pair.timeCol]) continue;
+
+			const combinedName = `${pair.dateCol} ${pair.timeCol}`;
+			const combinedValues = result[pair.dateCol].map((d, i) => {
+				const dateStr = String(d ?? '').trim();
+				const timeStr = String(result[pair.timeCol]?.[i] ?? '').trim();
+				if (!dateStr || !timeStr) return dateStr || timeStr || '';
+				return `${dateStr} ${timeStr}`;
+			});
+
+			// Insert combined column at the position of the date column, remove both originals
+			const newResult = {};
+			for (const key of Object.keys(result)) {
+				if (key === pair.dateCol) {
+					newResult[combinedName] = combinedValues;
+				} else if (key === pair.timeCol) {
+					// skip - merged into combined
+				} else {
+					newResult[key] = result[key];
+				}
+			}
+			// Update result for next iteration
+			Object.keys(result).forEach((k) => delete result[k]);
+			Object.assign(result, newResult);
+		}
+		return result;
+	}
+
 	// Multi-file concatenation support
 	let targetFiles = $state([]); // All selected files
 	let extraFileErrors = $state([]); // [{ filename, error }] for header mismatches
@@ -94,6 +180,8 @@
 		binningEnabled = false;
 		binIntervalMin = 15;
 		selectedColumns.clear();
+		dateTimePairs = [];
+		combinePairs = new Set();
 		extraFileErrors = [];
 		checkingHeaders = false;
 		dataUrl = '';
@@ -149,6 +237,9 @@
 		if (totalRowCount > ROW_THRESHOLD) {
 			binningEnabled = true;
 		}
+
+		// Detect date-only + time-only column pairs
+		detectDateTimePairs();
 
 		loadProgress = { stage: '', detail: '' };
 		awaitingPreview = false;
@@ -259,6 +350,9 @@
 		}
 		totalRowCount = parsedData ? (parsedData[headers[0]]?.length ?? 0) : 0;
 
+		// Detect date-only + time-only column pairs
+		detectDateTimePairs();
+
 		loadProgress = { stage: '', detail: '' };
 		awaitingPreview = false;
 		if (!errorInfile) importReady = true;
@@ -281,6 +375,10 @@
 									[...selectedColumns].filter((c) => allData[c]).map((c) => [c, allData[c]])
 								)
 							: allData;
+					// Combine date+time column pairs if requested
+					if (combinePairs.size > 0) {
+						filteredData = applyDateTimeCombination(filteredData);
+					}
 					filteredData = sortDataByTimestamp(filteredData);
 					const urlName = dataUrl.split('/').pop() || 'url-data';
 					await doBasicFileImport(filteredData, urlName);
@@ -721,6 +819,11 @@
 
 		parsedData = getFilteredData();
 		console.log(selectedColumns);
+
+		// Combine date+time column pairs if requested
+		if (combinePairs.size > 0) {
+			parsedData = applyDateTimeCombination(parsedData);
+		}
 
 		// ─────────────── Concatenate additional files (multi-file mode) ──────────
 		if (targetFiles.length > 1) {
@@ -1280,6 +1383,27 @@
 							</div>
 						{/if}
 
+						{#if dateTimePairs.length > 0}
+							<div class="section-row combine-panel">
+								<p class="combine-title">Separate Date and Time columns detected:</p>
+								{#each dateTimePairs as pair, idx}
+									<label class="combine-checkbox">
+										<input
+											type="checkbox"
+											checked={combinePairs.has(idx)}
+											onchange={(e) => {
+												const checked = e.currentTarget.checked;
+												combinePairs = checked
+													? new Set([...combinePairs, idx])
+													: new Set([...combinePairs].filter((i) => i !== idx));
+											}}
+										/>
+										Combine "{pair.dateCol}" + "{pair.timeCol}" into a single DateTime column
+									</label>
+								{/each}
+							</div>
+						{/if}
+
 						<div class="section-row">
 							<div class="col-select-actions">
 								<button
@@ -1559,5 +1683,27 @@
 	.binning-estimate {
 		opacity: 0.7;
 		font-size: 0.9em;
+	}
+
+	/* ── Date+Time combine panel ────────────────────────────────────────────── */
+	.combine-panel {
+		margin: 0.5em 0;
+		padding: 0.5em 0.75em;
+		border: 1px solid var(--color-info, #4a90d9);
+		border-radius: 4px;
+		background: var(--color-info-bg, #eaf2fb);
+	}
+	.combine-title {
+		font-weight: 600;
+		margin: 0 0 0.25em 0;
+		font-size: 0.9em;
+	}
+	.combine-checkbox {
+		display: flex;
+		align-items: center;
+		gap: 0.4em;
+		font-size: 0.85em;
+		cursor: pointer;
+		margin: 0.2em 0;
 	}
 </style>
