@@ -85,7 +85,7 @@
 		if (!parsedData || headers.length < 2) return;
 
 		const dateTokens = /[DdMYy]/; // day, month, year tokens (Moment-style)
-		const timeTokens = /[Hhms]/;  // hour, minute, second tokens
+		const timeTokens = /[Hhms]/; // hour, minute, second tokens
 
 		const dateCols = [];
 		const timeCols = [];
@@ -245,9 +245,7 @@
 		const effectiveCols = getEffectiveImportColumns();
 		const newMappings = {};
 		for (const colName of effectiveCols) {
-			const match = existing.find(
-				(e) => e.name.toLowerCase() === colName.toLowerCase()
-			);
+			const match = existing.find((e) => e.name.toLowerCase() === colName.toLowerCase());
 			newMappings[colName] = match ? match.id : null;
 		}
 		columnMappings = newMappings;
@@ -1614,9 +1612,13 @@
 												{@const isCombinedDate = combinedDateCols.has(col)}
 												{@const combinedName = isCombinedDate
 													? (() => {
-														const pIdx = [...combinePairs].find((j) => dateTimePairs[j].dateCol === col);
-														return pIdx !== undefined ? `${col} ${dateTimePairs[pIdx].timeCol}` : col;
-													})()
+															const pIdx = [...combinePairs].find(
+																(j) => dateTimePairs[j].dateCol === col
+															);
+															return pIdx !== undefined
+																? `${col} ${dateTimePairs[pIdx].timeCol}`
+																: col;
+														})()
 													: col}
 												<th
 													class:selected={selectedColumns.has(col)}
@@ -1629,12 +1631,21 @@
 															onchange={(e) => {
 																const checked = e.currentTarget.checked;
 																if (isCombinedDate) {
-																	const pIdx = [...combinePairs].find((j) => dateTimePairs[j].dateCol === col);
-																	const timeCol = pIdx !== undefined ? dateTimePairs[pIdx].timeCol : null;
+																	const pIdx = [...combinePairs].find(
+																		(j) => dateTimePairs[j].dateCol === col
+																	);
+																	const timeCol =
+																		pIdx !== undefined ? dateTimePairs[pIdx].timeCol : null;
 																	if (checked) {
-																		selectedColumns = new Set([...selectedColumns, col, ...(timeCol ? [timeCol] : [])]);
+																		selectedColumns = new Set([
+																			...selectedColumns,
+																			col,
+																			...(timeCol ? [timeCol] : [])
+																		]);
 																	} else {
-																		selectedColumns = new Set([...selectedColumns].filter((c) => c !== col && c !== timeCol));
+																		selectedColumns = new Set(
+																			[...selectedColumns].filter((c) => c !== col && c !== timeCol)
+																		);
 																	}
 																} else {
 																	selectedColumns = checked
@@ -1674,13 +1685,17 @@
 												{#if combinedTimeCols.has(col)}
 													<!-- skip: merged -->
 												{:else if combinedDateCols.has(col)}
-													{@const pIdx = [...combinePairs].find((j) => dateTimePairs[j].dateCol === col)}
-													{@const timeColName = pIdx !== undefined ? dateTimePairs[pIdx].timeCol : null}
+													{@const pIdx = [...combinePairs].find(
+														(j) => dateTimePairs[j].dateCol === col
+													)}
+													{@const timeColName =
+														pIdx !== undefined ? dateTimePairs[pIdx].timeCol : null}
 													<td
 														class:selected={selectedColumns.has(col)}
 														class:unselected={!selectedColumns.has(col)}
 													>
-														{parsedData[col]?.[rowIdx] ?? ''} {timeColName ? (parsedData[timeColName]?.[rowIdx] ?? '') : ''}
+														{parsedData[col]?.[rowIdx] ?? ''}
+														{timeColName ? (parsedData[timeColName]?.[rowIdx] ?? '') : ''}
 													</td>
 												{:else}
 													<td

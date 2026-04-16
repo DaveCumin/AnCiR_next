@@ -188,7 +188,14 @@
 	<div class="control-input">
 		<p>Columns</p>
 	</div>
-	<ColumnSelector value={p.args.xsIN} onChange={(val) => { p.args.xsIN = val; doColumnFunction(); }} multiple={true} />
+	<ColumnSelector
+		value={p.args.xsIN}
+		onChange={(val) => {
+			p.args.xsIN = val;
+			doColumnFunction();
+		}}
+		multiple={true}
+	/>
 
 	{#each p.args.xsIN as _, i}
 		<a>{getColumnById(p.args.xsIN[i])?.name ?? '?'}</a>
