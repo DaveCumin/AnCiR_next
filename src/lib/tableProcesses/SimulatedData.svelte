@@ -14,7 +14,10 @@
 						duration_hours: 4 * 24,
 						rhythmPeriod_hours: 24,
 						rhythmPhase_hours: 0,
-						rhythmAmplitude: 100
+						rhythmAmplitude: 100,
+						noiseEnabled: true,
+						noiseMode: 'multiply',
+						noiseAmplitude: 1
 					}
 				]
 			}
@@ -41,6 +44,9 @@
 			const period = section.rhythmPeriod_hours;
 			const phase = section.rhythmPhase_hours || 0;
 			const amplitude = section.rhythmAmplitude;
+			const noiseEnabled = section.noiseEnabled ?? true;
+			const noiseMode = section.noiseMode ?? 'multiply';
+			const noiseAmplitude = section.noiseAmplitude ?? 1;
 
 			for (let i = 0; i < duration; i += samplingPeriod_hours) {
 				simulatedTime.push(
@@ -50,7 +56,18 @@
 				// Apply phase shift to the rhythm calculation
 				const phaseShiftedTime = i + phase;
 				const currentAmplitude = Math.floor(phaseShiftedTime % period) < period / 2 ? amplitude : 1;
-				const value = Math.random() * currentAmplitude;
+
+				let value;
+				if (noiseEnabled) {
+					const noise = Math.random() * noiseAmplitude;
+					if (noiseMode === 'multiply') {
+						value = noise * currentAmplitude;
+					} else {
+						value = currentAmplitude + noise;
+					}
+				} else {
+					value = currentAmplitude;
+				}
 				simulatedValues.push(value);
 			}
 			currentTime += duration;
@@ -88,6 +105,7 @@
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { formatTimeFromISO } from '$lib/utils/time/TimeUtils.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import Toggle from '$lib/components/inputs/Toggle.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 
 	import { onMount } from 'svelte';
@@ -111,7 +129,10 @@
 				duration_hours: 7 * 24,
 				rhythmPeriod_hours: 24,
 				rhythmPhase_hours: 0,
-				rhythmAmplitude: 100
+				rhythmAmplitude: 100,
+				noiseEnabled: true,
+				noiseMode: 'multiply',
+				noiseAmplitude: 1
 			}
 		];
 		doSimulated();
@@ -123,10 +144,22 @@
 	}
 
 	onMount(() => {
+		// Backfill noise fields for old saved sessions
+		for (const section of p.args.sections) {
+			if (section.noiseEnabled === undefined) section.noiseEnabled = true;
+			if (section.noiseMode === undefined) section.noiseMode = 'multiply';
+			if (section.noiseAmplitude === undefined) section.noiseAmplitude = 1;
+		}
+
 		//If data already exists (e.g. imported from JSON), use it instead of regenerating
 		const timeKey = p.args.out.time;
 		const valKey = p.args.out.values;
-		if (timeKey >= 0 && valKey >= 0 && core.rawData.has(timeKey) && core.rawData.get(timeKey).length > 0) {
+		if (
+			timeKey >= 0 &&
+			valKey >= 0 &&
+			core.rawData.has(timeKey) &&
+			core.rawData.get(timeKey).length > 0
+		) {
 			simulatedTime = core.rawData.get(timeKey);
 			simulatedValues = core.rawData.get(valKey);
 			p.args.valid = simulatedValues.length > 0;
@@ -255,6 +288,35 @@
 				/>
 			</div>
 		</div>
+
+		<div class="control-input-checkbox">
+			<input type="checkbox" bind:checked={section.noiseEnabled} onchange={doSimulated} />
+			<p>Noise</p>
+		</div>
+
+		{#if section.noiseEnabled}
+			<div class="control-input">
+				<p>Noise mode</p>
+				<Toggle
+					Labels={['Multiply', 'Add']}
+					onChange={(v) => {
+						section.noiseMode = v ? 'add' : 'multiply';
+						doSimulated();
+					}}
+				/>
+			</div>
+
+			<div class="control-input">
+				<p>Noise amplitude</p>
+				<NumberWithUnits
+					bind:value={section.noiseAmplitude}
+					min="0.01"
+					step="0.1"
+					max={1000}
+					onInput={doSimulated}
+				/>
+			</div>
+		{/if}
 	</div>
 {/each}
 
@@ -297,7 +359,14 @@
 				simulatedValues.slice(previewStart - 1, previewStart + 5).map((y) => y.toFixed(2))
 			]}
 		/>
-		<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
+		<p>
+			Row <NumberWithUnits
+				min={1}
+				max={Math.max(1, totalRows - 5)}
+				step={1}
+				bind:value={previewStart}
+			/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+		</p>
 	{:else}
 		<p>Need to have valid inputs to create columns.</p>
 	{/if}
