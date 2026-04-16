@@ -924,12 +924,12 @@
 		parsedData = getFilteredData();
 		console.log(selectedColumns);
 
-		// Combine date+time column pairs if requested
-		if (combinePairs.size > 0) {
-			parsedData = applyDateTimeCombination(parsedData);
-		}
-
 		// ─────────────── Concatenate additional files (multi-file mode) ──────────
+		// Must happen BEFORE applyDateTimeCombination so that the raw date/time
+		// columns (which are in selectedColumns) can be matched in extraData.
+		// After combination the combined key (e.g. "Date Time") would not be
+		// present in selectedColumns, causing the time column to remain at file-1
+		// length and sortDataByTimestamp to truncate all other columns to match.
 		if (targetFiles.length > 1) {
 			for (let i = 1; i < targetFiles.length; i++) {
 				const extraFile = targetFiles[i];
@@ -949,6 +949,12 @@
 					}
 				}
 			}
+		}
+
+		// Combine date+time column pairs if requested (after concat so the full
+		// date and time arrays from all files are combined together)
+		if (combinePairs.size > 0) {
+			parsedData = applyDateTimeCombination(parsedData);
 		}
 
 		loadProgress = { stage: 'Loading data', detail: 'Sorting by timestamp…' };
@@ -1058,7 +1064,6 @@
 		}
 
 		// Handle replacements: overwrite existing column data
-		const processHash = crypto.randomUUID();
 		for (let i = 0; i < replaceEntries.length; i++) {
 			const { colName, targetId } = replaceEntries[i];
 
@@ -1092,8 +1097,8 @@
 				}
 			}
 
-			// Trigger reactivity
-			existingCol.tableProcessGUId = processHash;
+			// Trigger reactivity by bumping rawDataVersion (tableProcessGUId must stay '' for raw columns)
+			existingCol.rawDataVersion++;
 		}
 
 		// Handle new columns: create a new table if there are any
