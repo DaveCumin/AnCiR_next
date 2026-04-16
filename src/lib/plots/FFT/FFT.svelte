@@ -153,7 +153,11 @@
 				if (magnitudes[i] > magnitudes[maxIdx]) maxIdx = i;
 			}
 			const freq = frequencies[maxIdx];
-			return { frequency: freq, period: freq !== 0 ? 1 / freq : null, magnitude: magnitudes[maxIdx] };
+			return {
+				frequency: freq,
+				period: freq !== 0 ? 1 / freq : null,
+				magnitude: magnitudes[maxIdx]
+			};
 		});
 
 		// Peak within the visible x-axis range
@@ -164,7 +168,11 @@
 			const [xMin, xMax] = this.parentPlot?.xlims ?? [0, Infinity];
 			const visibleIndices = [];
 			for (let i = 0; i < frequencies.length; i++) {
-				const xVal = showPeriod ? (frequencies[i] !== 0 ? 1 / frequencies[i] : null) : frequencies[i];
+				const xVal = showPeriod
+					? frequencies[i] !== 0
+						? 1 / frequencies[i]
+						: null
+					: frequencies[i];
 				if (xVal != null && xVal >= xMin && xVal <= xMax) visibleIndices.push(i);
 			}
 			if (visibleIndices.length === 0) return null;
@@ -173,7 +181,11 @@
 				if (magnitudes[visibleIndices[i]] > magnitudes[maxIdx]) maxIdx = visibleIndices[i];
 			}
 			const freq = frequencies[maxIdx];
-			return { frequency: freq, period: freq !== 0 ? 1 / freq : null, magnitude: magnitudes[maxIdx] };
+			return {
+				frequency: freq,
+				period: freq !== 0 ? 1 / freq : null,
+				magnitude: magnitudes[maxIdx]
+			};
 		});
 
 		dataWarnings = $derived.by(() => {
@@ -402,9 +414,21 @@
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
-			this.xAxis = new AxisClass({ label: dataIN?.xAxis?.label ?? 'Frequency', gridlines: dataIN?.xAxis?.gridlines ?? true, nticks: dataIN?.xAxis?.nticks ?? 5 });
-			this.yAxisMag = new AxisClass({ label: dataIN?.yAxisMag?.label ?? 'Magnitude', gridlines: dataIN?.yAxisMag?.gridlines ?? true, nticks: dataIN?.yAxisMag?.nticks ?? 5 });
-			this.yAxisPhase = new AxisClass({ label: dataIN?.yAxisPhase?.label ?? 'Phase (radians)', gridlines: dataIN?.yAxisPhase?.gridlines ?? false, nticks: dataIN?.yAxisPhase?.nticks ?? 5 });
+			this.xAxis = new AxisClass({
+				label: dataIN?.xAxis?.label ?? 'Frequency',
+				gridlines: dataIN?.xAxis?.gridlines ?? true,
+				nticks: dataIN?.xAxis?.nticks ?? 5
+			});
+			this.yAxisMag = new AxisClass({
+				label: dataIN?.yAxisMag?.label ?? 'Magnitude',
+				gridlines: dataIN?.yAxisMag?.gridlines ?? true,
+				nticks: dataIN?.yAxisMag?.nticks ?? 5
+			});
+			this.yAxisPhase = new AxisClass({
+				label: dataIN?.yAxisPhase?.label ?? 'Phase (radians)',
+				gridlines: dataIN?.yAxisPhase?.gridlines ?? false,
+				nticks: dataIN?.yAxisPhase?.nticks ?? 5
+			});
 			if (dataIN) {
 				this.addData(dataIN);
 			}
@@ -988,11 +1012,17 @@
 							{#if datum.visiblePeak.period != null}
 								<p><strong>Peak Period: {datum.visiblePeak.period.toFixed(2)} hrs</strong></p>
 							{/if}
-							<p><strong>Peak Frequency: {datum.visiblePeak.frequency.toFixed(4)} cycles/hr</strong></p>
+							<p>
+								<strong>Peak Frequency: {datum.visiblePeak.frequency.toFixed(4)} cycles/hr</strong>
+							</p>
 							<p><strong>Peak Magnitude: {datum.visiblePeak.magnitude.toFixed(2)}</strong></p>
 							{#if datum.peak && Math.abs(datum.visiblePeak.frequency - datum.peak.frequency) > 0.000001}
 								<div class="data-warning">
-									<p>⚠ Overall peak at {datum.peak.period != null ? datum.peak.period.toFixed(2) + ' hrs / ' : ''}{datum.peak.frequency.toFixed(4)} cycles/hr is outside the displayed range</p>
+									<p>
+										⚠ Overall peak at {datum.peak.period != null
+											? datum.peak.period.toFixed(2) + ' hrs / '
+											: ''}{datum.peak.frequency.toFixed(4)} cycles/hr is outside the displayed range
+									</p>
 								</div>
 							{/if}
 						{:else if datum.peak}

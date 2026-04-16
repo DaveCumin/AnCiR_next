@@ -23,7 +23,16 @@
 	 * Build a fingerprint string from the data-related params (everything
 	 * EXCEPT period range). When this changes, we must always recalculate.
 	 */
-	function buildDataFingerprint(xData, yData, binSize, method, chiSquaredAlpha, periodSteps, xDataHash, yDataHash) {
+	function buildDataFingerprint(
+		xData,
+		yData,
+		binSize,
+		method,
+		chiSquaredAlpha,
+		periodSteps,
+		xDataHash,
+		yDataHash
+	) {
 		return JSON.stringify({
 			xLen: xData?.length ?? 0,
 			xFirst: xData?.[0] ?? null,
@@ -165,12 +174,11 @@
 
 				const nanYCount = yData.filter((v) => v === null || v === undefined || isNaN(v)).length;
 				if (nanYCount > 0) {
-					const yMsg = method === 'Chi-squared'
-						? 'empty bins distort the chi-squared statistic'
-						: 'empty bins are treated as zero and bias the Enright autocorrelation';
-					warnings.push(
-						`${nanYCount} missing y value${nanYCount > 1 ? 's' : ''} — ${yMsg}.`
-					);
+					const yMsg =
+						method === 'Chi-squared'
+							? 'empty bins distort the chi-squared statistic'
+							: 'empty bins are treated as zero and bias the Enright autocorrelation';
+					warnings.push(`${nanYCount} missing y value${nanYCount > 1 ? 's' : ''} — ${yMsg}.`);
 				}
 
 				// Check for time gaps larger than the bin size
@@ -184,9 +192,10 @@
 						if (gap > maxGap) maxGap = gap;
 					}
 					if (maxGap > binSize * 1.5) {
-						const gapMsg = method === 'Chi-squared'
-							? 'inflate the chi-squared statistic and may produce false peaks'
-							: 'are treated as zero and bias the Enright autocorrelation';
+						const gapMsg =
+							method === 'Chi-squared'
+								? 'inflate the chi-squared statistic and may produce false peaks'
+								: 'are treated as zero and bias the Enright autocorrelation';
 						warnings.push(
 							`Data has gaps up to ${maxGap.toFixed(1)} h (bin size: ${binSize} h) — empty bins ${gapMsg}.`
 						);
@@ -199,7 +208,16 @@
 			}
 
 			// Build fingerprint for data-related params
-			const fp = buildDataFingerprint(xData, yData, binSize, method, chiSquaredAlpha, periodSteps, xDataHash, yDataHash);
+			const fp = buildDataFingerprint(
+				xData,
+				yData,
+				binSize,
+				method,
+				chiSquaredAlpha,
+				periodSteps,
+				xDataHash,
+				yDataHash
+			);
 
 			// Check cache
 			const dataChanged = fp !== this._cache.dataFingerprint;
@@ -322,8 +340,16 @@
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
-			this.xAxis = new AxisClass({ label: dataIN?.xAxis?.label ?? 'Period (hours)', gridlines: dataIN?.xAxis?.gridlines ?? true, nticks: dataIN?.xAxis?.nticks ?? 5 });
-			this.yAxis = new AxisClass({ label: dataIN?.yAxis?.label ?? 'Power', gridlines: dataIN?.yAxis?.gridlines ?? true, nticks: dataIN?.yAxis?.nticks ?? 5 });
+			this.xAxis = new AxisClass({
+				label: dataIN?.xAxis?.label ?? 'Period (hours)',
+				gridlines: dataIN?.xAxis?.gridlines ?? true,
+				nticks: dataIN?.xAxis?.nticks ?? 5
+			});
+			this.yAxis = new AxisClass({
+				label: dataIN?.yAxis?.label ?? 'Power',
+				gridlines: dataIN?.yAxis?.gridlines ?? true,
+				nticks: dataIN?.yAxis?.nticks ?? 5
+			});
 			if (dataIN) {
 				this.addData(dataIN);
 			}
@@ -494,7 +520,10 @@
 			if (json.xAxis) {
 				periodogram.xAxis = AxisClass.fromJSON(json.xAxis);
 			} else {
-				periodogram.xAxis = new AxisClass({ label: 'Period (hours)', gridlines: json.xgridlines ?? true });
+				periodogram.xAxis = new AxisClass({
+					label: 'Period (hours)',
+					gridlines: json.xgridlines ?? true
+				});
 			}
 			if (json.yAxis) {
 				periodogram.yAxis = AxisClass.fromJSON(json.yAxis);
@@ -899,7 +928,9 @@
 							<p><strong>Peak Power: {datum.visiblePeak.power.toFixed(2)}</strong></p>
 							{#if datum.peak && Math.abs(datum.visiblePeak.period - datum.peak.period) > 0.001}
 								<div class="data-warning">
-									<p>⚠ Overall peak at {datum.peak.period.toFixed(2)} hrs is outside the displayed range</p>
+									<p>
+										⚠ Overall peak at {datum.peak.period.toFixed(2)} hrs is outside the displayed range
+									</p>
 								</div>
 							{/if}
 						{:else if datum.peak}

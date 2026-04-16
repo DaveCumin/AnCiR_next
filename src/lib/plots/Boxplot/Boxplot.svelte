@@ -160,8 +160,16 @@
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
 			this.legend = new LegendClass(dataIN?.legend);
-			this.xAxis = new AxisClass({ label: dataIN?.xAxis?.label ?? '', gridlines: dataIN?.xAxis?.gridlines ?? false, nticks: dataIN?.xAxis?.nticks ?? 5 });
-			this.yAxis = new AxisClass({ label: dataIN?.yAxis?.label ?? '', gridlines: dataIN?.yAxis?.gridlines ?? true, nticks: dataIN?.yAxis?.nticks ?? 5 });
+			this.xAxis = new AxisClass({
+				label: dataIN?.xAxis?.label ?? '',
+				gridlines: dataIN?.xAxis?.gridlines ?? false,
+				nticks: dataIN?.xAxis?.nticks ?? 5
+			});
+			this.yAxis = new AxisClass({
+				label: dataIN?.yAxis?.label ?? '',
+				gridlines: dataIN?.yAxis?.gridlines ?? true,
+				nticks: dataIN?.yAxis?.nticks ?? 5
+			});
 			if (dataIN) {
 				this.addData(dataIN);
 			}
@@ -264,7 +272,10 @@
 				allCategories.forEach((cat) => {
 					const vals = groups.get(cat) ?? [];
 					const box = calculateBoxPlotStats(vals);
-					if (!box || vals.length === 0) { statsMap.set(cat, null); return; }
+					if (!box || vals.length === 0) {
+						statsMap.set(cat, null);
+						return;
+					}
 					const validVals = vals.filter((v) => v != null && !isNaN(v));
 					statsMap.set(cat, {
 						count: validVals.length,
@@ -284,11 +295,23 @@
 			// Find the maximum number of outliers across all series × categories
 			let maxOutliers = 0;
 			seriesStats.forEach(({ statsMap }) => {
-				statsMap.forEach((s) => { if (s) maxOutliers = Math.max(maxOutliers, s.outliers.length); });
+				statsMap.forEach((s) => {
+					if (s) maxOutliers = Math.max(maxOutliers, s.outliers.length);
+				});
 			});
 
-			const statKeys = ['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max', 'n_outliers',
-				...Array.from({ length: maxOutliers }, (_, i) => `outlier_${i + 1}`)];
+			const statKeys = [
+				'count',
+				'mean',
+				'std',
+				'min',
+				'25%',
+				'50%',
+				'75%',
+				'max',
+				'n_outliers',
+				...Array.from({ length: maxOutliers }, (_, i) => `outlier_${i + 1}`)
+			];
 
 			const headers = multiSeries
 				? ['DataSeries', 'Stat', ...allCategories.map(String)]
@@ -300,17 +323,38 @@
 					const row = multiSeries ? [label, key] : [key];
 					allCategories.forEach((cat) => {
 						const s = statsMap.get(cat);
-						if (!s) { row.push(''); return; }
+						if (!s) {
+							row.push('');
+							return;
+						}
 						switch (key) {
-							case 'count':     row.push(s.count); break;
-							case 'mean':      row.push(s.mean); break;
-							case 'std':       row.push(s.std); break;
-							case 'min':       row.push(s.min); break;
-							case '25%':       row.push(s.q1); break;
-							case '50%':       row.push(s.median); break;
-							case '75%':       row.push(s.q3); break;
-							case 'max':       row.push(s.max); break;
-							case 'n_outliers': row.push(s.outliers.length); break;
+							case 'count':
+								row.push(s.count);
+								break;
+							case 'mean':
+								row.push(s.mean);
+								break;
+							case 'std':
+								row.push(s.std);
+								break;
+							case 'min':
+								row.push(s.min);
+								break;
+							case '25%':
+								row.push(s.q1);
+								break;
+							case '50%':
+								row.push(s.median);
+								break;
+							case '75%':
+								row.push(s.q3);
+								break;
+							case 'max':
+								row.push(s.max);
+								break;
+							case 'n_outliers':
+								row.push(s.outliers.length);
+								break;
 							default: {
 								const idx = parseInt(key.split('_')[1]) - 1;
 								row.push(s.outliers[idx] ?? '');
@@ -350,12 +394,18 @@
 			if (json.xAxis) {
 				chart.xAxis = AxisClass.fromJSON(json.xAxis);
 			} else {
-				chart.xAxis = new AxisClass({ label: json.xlabel ?? '', gridlines: json.xgridlines ?? false });
+				chart.xAxis = new AxisClass({
+					label: json.xlabel ?? '',
+					gridlines: json.xgridlines ?? false
+				});
 			}
 			if (json.yAxis) {
 				chart.yAxis = AxisClass.fromJSON(json.yAxis);
 			} else {
-				chart.yAxis = new AxisClass({ label: json.ylabel ?? '', gridlines: json.ygridlines ?? true });
+				chart.yAxis = new AxisClass({
+					label: json.ylabel ?? '',
+					gridlines: json.ygridlines ?? true
+				});
 			}
 
 			if (json.data) {

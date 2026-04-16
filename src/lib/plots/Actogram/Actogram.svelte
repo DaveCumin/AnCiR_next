@@ -554,8 +554,21 @@
 		// Convert to unix time for display
 		const unixTime = theData.plot.startTime + absHrs * 3600000;
 		const dt = new Date(unixTime);
-		const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-		const dateStr = `${dt.getUTCDate()} ${months[dt.getUTCMonth()]}, ${String(dt.getUTCHours()).padStart(2,'0')}:${String(dt.getUTCMinutes()).padStart(2,'0')}`;
+		const months = [
+			'Jan',
+			'Feb',
+			'Mar',
+			'Apr',
+			'May',
+			'Jun',
+			'Jul',
+			'Aug',
+			'Sep',
+			'Oct',
+			'Nov',
+			'Dec'
+		];
+		const dateStr = `${dt.getUTCDate()} ${months[dt.getUTCMonth()]}, ${String(dt.getUTCHours()).padStart(2, '0')}:${String(dt.getUTCMinutes()).padStart(2, '0')}`;
 
 		let content = `<span style="opacity:0.7">Time:</span> ${dateStr}`;
 

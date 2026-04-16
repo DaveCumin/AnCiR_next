@@ -362,8 +362,16 @@
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
-			this.xAxis = new AxisClass({ label: dataIN?.xAxis?.label ?? 'Lag (hours)', gridlines: dataIN?.xAxis?.gridlines ?? true, nticks: dataIN?.xAxis?.nticks ?? 5 });
-			this.yAxis = new AxisClass({ label: dataIN?.yAxis?.label ?? 'Autocorrelation', gridlines: dataIN?.yAxis?.gridlines ?? true, nticks: dataIN?.yAxis?.nticks ?? 5 });
+			this.xAxis = new AxisClass({
+				label: dataIN?.xAxis?.label ?? 'Lag (hours)',
+				gridlines: dataIN?.xAxis?.gridlines ?? true,
+				nticks: dataIN?.xAxis?.nticks ?? 5
+			});
+			this.yAxis = new AxisClass({
+				label: dataIN?.yAxis?.label ?? 'Autocorrelation',
+				gridlines: dataIN?.yAxis?.gridlines ?? true,
+				nticks: dataIN?.yAxis?.nticks ?? 5
+			});
 			if (dataIN) {
 				this.addData(dataIN);
 			}
@@ -502,12 +510,18 @@
 			if (json.xAxis) {
 				correlogram.xAxis = AxisClass.fromJSON(json.xAxis);
 			} else {
-				correlogram.xAxis = new AxisClass({ label: 'Lag (hours)', gridlines: json.xgridlines ?? true });
+				correlogram.xAxis = new AxisClass({
+					label: 'Lag (hours)',
+					gridlines: json.xgridlines ?? true
+				});
 			}
 			if (json.yAxis) {
 				correlogram.yAxis = AxisClass.fromJSON(json.yAxis);
 			} else {
-				correlogram.yAxis = new AxisClass({ label: 'Autocorrelation', gridlines: json.ygridlines ?? true });
+				correlogram.yAxis = new AxisClass({
+					label: 'Autocorrelation',
+					gridlines: json.ygridlines ?? true
+				});
 			}
 
 			if (json.data) {
@@ -848,7 +862,9 @@
 							<p><strong>Peak Correlation: {datum.visiblePeak.correlation.toFixed(3)}</strong></p>
 							{#if datum.peak && Math.abs(datum.visiblePeak.lag - datum.peak.lag) > 0.001}
 								<div class="data-warning">
-									<p>⚠ Overall peak at {datum.peak.lag.toFixed(2)} hrs is outside the displayed range</p>
+									<p>
+										⚠ Overall peak at {datum.peak.lag.toFixed(2)} hrs is outside the displayed range
+									</p>
 								</div>
 							{/if}
 						{:else if datum.peak}
