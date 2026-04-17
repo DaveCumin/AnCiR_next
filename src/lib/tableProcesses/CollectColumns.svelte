@@ -550,7 +550,7 @@
 
 					<!-- X-axis column selector -->
 					<div class="control-input">
-						<p>X column (optional)</p>
+						<p>X column</p>
 						<ColumnSelector
 							bind:value={tp.xColId}
 							allowNone={true}
