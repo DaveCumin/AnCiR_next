@@ -109,7 +109,7 @@
 
 <div
 	onclick={handleClick}
-	ondblclick={(appState.showControlPanel = false)}
+	ondblclick={() => (appState.showControlPanel = false)}
 	class="canvas"
 	style="top: 0;
 			left: {leftPx}px;

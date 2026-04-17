@@ -14,6 +14,7 @@ export function binData(
 	if (n === 0) return { bins: [], y_out: [] };
 
 	const step = stepSize > 0 ? stepSize : binSize;
+	if (!(step > 0) || !isFinite(step)) return { bins: [], y_out: [] };
 
 	// Pair and sort by x once
 	const paired = xValues.map((x, i) => ({ x, y: yValues[i] })).sort((a, b) => a.x - b.x);
@@ -93,7 +94,7 @@ export function binData(
 
 		y_out.push(func(ys, startIdx, endIdx));
 
-		if (currentStart >= xs[n - 1]) break;
+		if (!isFinite(xs[n - 1]) || currentStart >= xs[n - 1]) break;
 
 		binIndex++;
 		currentStart = binStart + binIndex * step;

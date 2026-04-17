@@ -17,13 +17,13 @@
 		['out', { smoothedx: { val: -1 } }],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
-	['collectedType', { val: 'smooth' }],
-	['preProcesses', { val: [] }],
-	['tableProcesses', { val: [] }]
-]);
+		['collectedType', { val: 'smooth' }],
+		['preProcesses', { val: [] }],
+		['tableProcesses', { val: [] }]
+	]);
 
-export const smootheddata_xOutKey = 'smoothedx';
-export const smootheddata_yOutKeyPrefix = 'smoothedy_';
+	export const smootheddata_xOutKey = 'smoothedx';
+	export const smootheddata_yOutKeyPrefix = 'smoothedy_';
 	function whittakerEilers(y, lambda = 100, order = 2) {
 		const n = y.length;
 		if (n < 3) return y;
@@ -782,4 +782,3 @@ export const smootheddata_yOutKeyPrefix = 'smoothedy_';
 		<p>Need to have valid inputs to create columns.</p>
 	{/if}
 {/key}
-

@@ -60,7 +60,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.25.4',
+	version: 'β.26.1',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
@@ -260,6 +260,65 @@ function findNextAvailablePosition(existingPlots) {
 }
 
 /**
+ * The set of TP args fields that hold a single column ID (scalar).
+ * Add to this list when new TPs introduce non-standard column-ID fields.
+ */
+const _SCALAR_COLID_FIELDS = new Set([
+	'xIN',
+	'yIN', // legacy scalar; modern TPs use array — handled below too
+	'categoryIN', // LongToWide
+	'timeIN', // LongToWide, WideToLong
+	'valueIN' // LongToWide
+]);
+
+/**
+ * The set of TP args fields that hold an *array* of column IDs.
+ */
+const _ARRAY_COLID_FIELDS = new Set([
+	'yIN', // BinnedData, Cosinor, etc. (modern array form)
+	'xsIN',
+	'valueColIds', // WideToLong
+	'colIds', // CollectColumns
+	'outColIds' // CollectColumns
+]);
+
+/**
+ * Recursively replace `oldColId` with `newColId` inside a TP's args object,
+ * including nested tableProcesses.
+ */
+function _replaceInTPArgs(args, oldColId, newColId) {
+	if (!args || typeof args !== 'object') return;
+
+	// Scalar column-ID fields
+	for (const field of _SCALAR_COLID_FIELDS) {
+		if (typeof args[field] === 'number' && args[field] === oldColId) {
+			args[field] = newColId;
+		}
+	}
+
+	// Array column-ID fields
+	for (const field of _ARRAY_COLID_FIELDS) {
+		if (Array.isArray(args[field])) {
+			args[field] = args[field].map((id) => (id === oldColId ? newColId : id));
+		}
+	}
+
+	// Output map (object with column ID values)
+	if (args.out && typeof args.out === 'object') {
+		for (const key of Object.keys(args.out)) {
+			if (args.out[key] === oldColId) args.out[key] = newColId;
+		}
+	}
+
+	// Recurse into nested tableProcesses (e.g. bin/cosinor inside L2W)
+	if (Array.isArray(args.tableProcesses)) {
+		for (const nested of args.tableProcesses) {
+			if (nested?.args) _replaceInTPArgs(nested.args, oldColId, newColId);
+		}
+	}
+}
+
+/**
  * Replace all downstream references to `oldColId` with `newColId`.
  * Updates: column refIds, table-process input args and output args,
  * table columnRefs, and plot data refs.
@@ -274,16 +333,7 @@ export function replaceColumnRefs(newColId, oldColId) {
 	core.tables.forEach((table) => {
 		table.columnRefs = table.columnRefs.map((id) => (id === oldColId ? newColId : id));
 		table.processes.forEach((tp) => {
-			if (tp.args.xIN === oldColId) tp.args.xIN = newColId;
-			if (tp.args.yIN === oldColId) tp.args.yIN = newColId;
-			if (Array.isArray(tp.args.xsIN)) {
-				tp.args.xsIN = tp.args.xsIN.map((id) => (id === oldColId ? newColId : id));
-			}
-			if (tp.args.out) {
-				Object.keys(tp.args.out).forEach((key) => {
-					if (tp.args.out[key] === oldColId) tp.args.out[key] = newColId;
-				});
-			}
+			_replaceInTPArgs(tp.args, oldColId, newColId);
 		});
 	});
 

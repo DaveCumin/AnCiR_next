@@ -23,8 +23,8 @@
 		['tableProcesses', { val: [] }]
 	]);
 
-export const doublelogistic_xOutKey = 'dlogx';
-export const doublelogistic_yOutKeyPrefix = 'dlogy_';
+	export const doublelogistic_xOutKey = 'dlogx';
+	export const doublelogistic_yOutKeyPrefix = 'dlogy_';
 
 	export function doublelogistic(argsIN) {
 		const xIN = argsIN.xIN;

@@ -96,6 +96,7 @@
 	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
+	import ChainedPanel from '$lib/components/reusables/ChainedPanel.svelte';
 	import { Column, removeColumn } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { Process } from '$lib/core/Process.svelte';
@@ -275,7 +276,9 @@
 			map[cType] = {
 				component: entry.component,
 				displayName: entry.displayName,
-				paramDefaults: { ...params, ...overrides }
+				paramDefaults: { ...params, ...overrides },
+				xOutKey: entry.xOutKey ?? null,
+				yOutKeyPrefix: entry.yOutKeyPrefix ?? null
 			};
 		}
 		return map;
@@ -565,6 +568,22 @@
 					{#if collectedTPMap[tp.type]?.component}
 						{@const DynamicTP = collectedTPMap[tp.type].component}
 						<DynamicTP p={{ id: tp.id, args: tp.args, parent: p.parent }} hideInputs={true} />
+					{/if}
+
+					<!-- ChainedPanel for chainable sub-TPs -->
+					{#if collectedTPMap[tp.type]?.xOutKey && tp.args?.valid}
+						{@const _tpEntry = collectedTPMap[tp.type]}
+						{@const _subXOut = tp.args?.out?.[_tpEntry.xOutKey] ?? -1}
+						{@const _subYOuts = Object.entries(tp.args?.out ?? {})
+							.filter(([k]) => k.startsWith(_tpEntry.yOutKeyPrefix))
+							.map(([, id]) => id)
+							.filter((id) => typeof id === 'number' && id >= 0)}
+						<ChainedPanel
+							bind:p={p.args.tableProcesses[tpIdx]}
+							xOutColId={_subXOut}
+							yOutColIds={_subYOuts}
+							parentRef={p.parent}
+						/>
 					{/if}
 
 					<!-- Column checklist (include/exclude) -->

@@ -20,8 +20,8 @@
 		['tableProcesses', { val: [] }]
 	]);
 
-export const trendfit_xOutKey = 'trendx';
-export const trendfit_yOutKeyPrefix = 'trendy_';
+	export const trendfit_xOutKey = 'trendx';
+	export const trendfit_yOutKeyPrefix = 'trendy_';
 
 	export function trendfit(argsIN) {
 		const xIN = argsIN.xIN;
@@ -90,7 +90,10 @@ export const trendfit_yOutKeyPrefix = 'trendy_';
 			if (proc?.func) {
 				for (const yId of yINs) {
 					if (result.y_results[yId]) {
-						result.y_results[yId].yOutData = proc.func(result.y_results[yId].yOutData, pp.processArgs ?? {});
+						result.y_results[yId].yOutData = proc.func(
+							result.y_results[yId].yOutData,
+							pp.processArgs ?? {}
+						);
 					}
 				}
 			}

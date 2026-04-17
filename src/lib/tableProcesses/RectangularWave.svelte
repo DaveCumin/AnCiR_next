@@ -23,8 +23,8 @@
 		['tableProcesses', { val: [] }]
 	]);
 
-export const rectangularwave_xOutKey = 'rectwavex';
-export const rectangularwave_yOutKeyPrefix = 'rectwavey_';
+	export const rectangularwave_xOutKey = 'rectwavex';
+	export const rectangularwave_yOutKeyPrefix = 'rectwavey_';
 
 	export function rectangularwave(argsIN) {
 		const xIN = argsIN.xIN;
@@ -126,7 +126,10 @@ export const rectangularwave_yOutKeyPrefix = 'rectwavey_';
 			if (proc?.func) {
 				for (const yId of yINs) {
 					if (result.y_results[yId]) {
-						result.y_results[yId].yOutData = proc.func(result.y_results[yId].yOutData, pp.processArgs ?? {});
+						result.y_results[yId].yOutData = proc.func(
+							result.y_results[yId].yOutData,
+							pp.processArgs ?? {}
+						);
 					}
 				}
 			}

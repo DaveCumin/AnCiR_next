@@ -19,7 +19,7 @@
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { onMount, untrack } from 'svelte';
 
-	let { p = $bindable(), xOutColId = -1, yOutColIds = [] } = $props();
+	let { p = $bindable(), xOutColId = -1, yOutColIds = [], parentRef = undefined } = $props();
 
 	// ─── Sorted process list for pre-process selects ───────────────────────────
 	let sortedProcesses = $derived.by(() => {
@@ -118,7 +118,7 @@
 		const tp = {
 			id: crypto.randomUUID(),
 			type,
-			xColId: xOutColId,   // seed from parent's x-output
+			xColId: xOutColId, // seed from parent's x-output
 			excludedColIds: [],
 			args: {
 				...chainedTPMap[type].paramDefaults,
@@ -219,7 +219,9 @@
 			<div class="tp-block">
 				<div class="tp-header">
 					<span class="tp-title">{chainedTPMap[tp.type]?.displayName ?? tp.type}</span>
-					<button class="remove-btn" onclick={() => removeTableProcess(tpIdx)} title="Remove">×</button>
+					<button class="remove-btn" onclick={() => removeTableProcess(tpIdx)} title="Remove"
+						>×</button
+					>
 				</div>
 
 				<!-- X-axis column selector (seeded to parent's x-output, user can override) -->
@@ -237,7 +239,10 @@
 
 				<!-- Type-specific parameters (rendered by the TP component, inputs hidden) -->
 				{#if DynamicTP}
-					<DynamicTP p={{ id: tp.id, args: tp.args, parent: p.parent }} hideInputs={true} />
+					<DynamicTP
+						p={{ id: tp.id, args: tp.args, parent: parentRef ?? p.parent }}
+						hideInputs={true}
+					/>
 				{/if}
 
 				<!-- Column inclusion checklist -->
