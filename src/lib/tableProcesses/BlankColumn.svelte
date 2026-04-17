@@ -1,8 +1,8 @@
 <script module>
 	import { core, getStoredValue } from '$lib/core/core.svelte';
 
-	export const blankcolumn_displayName = 'Blank Column';
-	export const blankcolumn_defaults = new Map([
+	const displayName = 'Blank Column';
+	const defaults = new Map([
 		['N', { val: 10 }],
 		['storedValueRefs', { val: {} }],
 		['out', { result: { val: -1 } }],
@@ -43,6 +43,8 @@
 
 		return [result, true];
 	}
+
+	export const definition = { displayName, defaults, func: blankcolumn };
 </script>
 
 <script>

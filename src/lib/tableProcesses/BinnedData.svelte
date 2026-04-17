@@ -1,8 +1,8 @@
 <script module>
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-	export const binneddata_displayName = 'Bin Data';
-	export const binneddata_defaults = new Map([
+	const displayName = 'Bin Data';
+	const defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
 		['binSize', { val: 0.25 }],
@@ -18,8 +18,13 @@
 		['tableProcesses', { val: [] }]
 	]);
 
-	export const binneddata_xOutKey = 'binnedx';
-	export const binneddata_yOutKeyPrefix = 'binnedy_';
+	export const definition = {
+		displayName,
+		defaults,
+		func: binneddata,
+		xOutKey: 'binnedx',
+		yOutKeyPrefix: 'binnedy_'
+	};
 
 	export function binneddata(argsIN, differentstepsize) {
 		const xIN = argsIN.xIN;

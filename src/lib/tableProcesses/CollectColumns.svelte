@@ -3,8 +3,8 @@
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 
-	export const collectcolumns_displayName = 'Collect Columns';
-	export const collectcolumns_defaults = new Map([
+	const displayName = 'Collect Columns';
+	const defaults = new Map([
 		['colIds', { val: [] }],
 		['out', {}],
 		['outColIds', { val: [] }],
@@ -90,6 +90,8 @@
 
 		return [result, colIds.length > 0];
 	}
+
+	export const definition = { displayName, defaults, func: collectcolumns };
 </script>
 
 <script>

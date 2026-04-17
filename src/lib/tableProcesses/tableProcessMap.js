@@ -1,5 +1,4 @@
 export async function loadTableProcesses() {
-	// Same loadPlots implementation as above
 	const sveltePaths = import.meta.glob('$lib/tableProcesses/*.svelte', { eager: false });
 	const tableProcessMap = new Map();
 	for (const sveltePath in sveltePaths) {
@@ -9,18 +8,25 @@ export async function loadTableProcesses() {
 		try {
 			const svelteModule = await sveltePaths[sveltePath]();
 			const component = svelteModule.default;
-			const tableProcessFunc = svelteModule[funcName];
-			const displayName = svelteModule[`${funcName}_displayName`] || formatDisplayName(fileName);
-			const xOutKey = svelteModule[`${funcName}_xOutKey`] ?? null;
-			const yOutKeyPrefix = svelteModule[`${funcName}_yOutKeyPrefix`] ?? null;
+
+			// Prefer the consolidated `definition` export; fall back to the old
+			// scattered named exports so existing files keep working during migration.
+			const def = svelteModule.definition;
+			const tableProcessFunc = def?.func ?? svelteModule[funcName];
+			const displayName =
+				def?.displayName ?? svelteModule[`${funcName}_displayName`] ?? formatDisplayName(fileName);
+			const xOutKey = def?.xOutKey ?? svelteModule[`${funcName}_xOutKey`] ?? null;
+			const yOutKeyPrefix =
+				def?.yOutKeyPrefix ?? svelteModule[`${funcName}_yOutKeyPrefix`] ?? null;
+			const defaults = def?.defaults ?? svelteModule[`${funcName}_defaults`] ?? new Map();
 
 			tableProcessMap.set(fileName, {
-				component: component,
-				defaults: svelteModule[`${funcName}_defaults`] || new Map(),
+				component,
+				defaults,
 				func: tableProcessFunc,
-				displayName: displayName,
-				xOutKey: xOutKey,
-				yOutKeyPrefix: yOutKeyPrefix
+				displayName,
+				xOutKey,
+				yOutKeyPrefix
 			});
 		} catch (error) {
 			console.error(`Error loading ${sveltePath}:`, error);

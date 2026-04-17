@@ -1,8 +1,7 @@
 <script module>
 	import { core } from '$lib/core/core.svelte';
-	export const columnfunctions_displayName = 'Column Function';
-
-	export const columnfunctions_defaults = new Map([
+	const displayName = 'Column Function';
+	const defaults = new Map([
 		['func', { val: 'add' }],
 		['xsIN', { val: [] }],
 		['yIN', { val: [] }], //for collected mode: receives input columns from CollectColumns
