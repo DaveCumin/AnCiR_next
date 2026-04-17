@@ -28,7 +28,7 @@
 			}
 		}
 
-		return [result, true];
+		return [result, result.length > 0];
 	}
 
 	export const definition = { displayName, defaults, func: duplicate };
