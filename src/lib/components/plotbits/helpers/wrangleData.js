@@ -9,15 +9,19 @@ export function binData(
 	stepSize = null,
 	aggFunc = 'mean'
 ) {
-	const n = xValues.length;
-
-	if (n === 0) return { bins: [], y_out: [] };
+	if (!xValues || xValues.length === 0) return { bins: [], y_out: [] };
 
 	const step = stepSize > 0 ? stepSize : binSize;
 	if (!(step > 0) || !isFinite(step)) return { bins: [], y_out: [] };
 
-	// Pair and sort by x once
-	const paired = xValues.map((x, i) => ({ x, y: yValues[i] })).sort((a, b) => a.x - b.x);
+	// Pair, drop non-finite x/y values (e.g. NaN from failed time parses), then sort by x
+	const paired = xValues
+		.map((x, i) => ({ x, y: yValues[i] }))
+		.filter((p) => isFinite(p.x) && isFinite(p.y))
+		.sort((a, b) => a.x - b.x);
+
+	const n = paired.length;
+	if (n === 0) return { bins: [], y_out: [] };
 
 	const xs = paired.map((p) => p.x);
 	const ys = paired.map((p) => p.y);
