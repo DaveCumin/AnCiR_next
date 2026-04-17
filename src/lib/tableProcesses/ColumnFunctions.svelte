@@ -188,30 +188,32 @@
 			{/each}
 		</select>
 	</div>
-	<div class="control-input">
-		<p>Columns</p>
-	</div>
-	<ColumnSelector
-		value={p.args.xsIN}
-		onChange={(val) => {
-			p.args.xsIN = val;
-			doColumnFunction();
-		}}
-		multiple={true}
-	/>
-
-	{#each p.args.xsIN as _, i}
-		<a>{getColumnById(p.args.xsIN[i])?.name ?? '?'}</a>
-		<button
-			onclick={() => {
-				p.args.xsIN.splice(i, 1);
+	{#if !hideInputs}
+		<div class="control-input">
+			<p>Columns</p>
+		</div>
+		<ColumnSelector
+			value={p.args.xsIN}
+			onChange={(val) => {
+				p.args.xsIN = val;
 				doColumnFunction();
-			}}>-</button
-		>
-		{#if p.args.xsIN.length > 1 && i < p.args.xsIN.length - 1}
-			<a>{separator}</a>
-		{/if}
-	{/each}
+			}}
+			multiple={true}
+		/>
+
+		{#each p.args.xsIN as _, i}
+			<a>{getColumnById(p.args.xsIN[i])?.name ?? '?'}</a>
+			<button
+				onclick={() => {
+					p.args.xsIN.splice(i, 1);
+					doColumnFunction();
+				}}>-</button
+			>
+			{#if p.args.xsIN.length > 1 && i < p.args.xsIN.length - 1}
+				<a>{separator}</a>
+			{/if}
+		{/each}
+	{/if}
 
 	{#if p.args.valid && p.args.out.result == -1}
 		{@const totalRows = result.length}

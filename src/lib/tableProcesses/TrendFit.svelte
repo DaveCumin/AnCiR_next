@@ -1,6 +1,6 @@
 <script module>
 	// @ts-nocheck
-	import { core } from '$lib/core/core.svelte';
+	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { fitTrend, evaluateTrendAtPoints } from '$lib/utils/trendfit.js';
@@ -15,8 +15,13 @@
 		['out', { trendx: { val: -1 } }],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
-		['collectedType', { val: 'trend' }]
+		['collectedType', { val: 'trend' }],
+		['preProcesses', { val: [] }],
+		['tableProcesses', { val: [] }]
 	]);
+
+export const trendfit_xOutKey = 'trendx';
+export const trendfit_yOutKeyPrefix = 'trendy_';
 
 	export function trendfit(argsIN) {
 		const xIN = argsIN.xIN;
@@ -76,6 +81,19 @@
 			};
 			if (result.t.length === 0) result.t = tt;
 			if (fittedData.fitted.length > 0) anyValid = true;
+		}
+
+		// Apply pre-processes to y results before writing
+		for (const pp of argsIN.preProcesses ?? []) {
+			if (!pp.processName) continue;
+			const proc = appConsts.processMap.get(pp.processName);
+			if (proc?.func) {
+				for (const yId of yINs) {
+					if (result.y_results[yId]) {
+						result.y_results[yId].yOutData = proc.func(result.y_results[yId].yOutData, pp.processArgs ?? {});
+					}
+				}
+			}
 		}
 
 		// Write output columns

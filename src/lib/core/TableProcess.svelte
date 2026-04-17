@@ -91,6 +91,23 @@
 			core.data = core.data.filter((c) => c.id !== colID);
 		});
 
+		// Step 2g: Remove output columns from any sub-TPs in args.tableProcesses
+		for (const subTP of tableProcess.args?.tableProcesses ?? []) {
+			for (const colId of Object.values(subTP.args?.out ?? {})) {
+				if (colId != null && colId >= 0) {
+					removeColumnFromPlots(colId);
+					const tableIdx = core.tables.findIndex((t) => t.id === tableProcess.parent.id);
+					if (tableIdx >= 0) {
+						core.tables[tableIdx].columnRefs = core.tables[tableIdx].columnRefs.filter(
+							(cr) => cr !== colId
+						);
+					}
+					removeColumn(colId);
+					core.data = core.data.filter((c) => c.id !== colId);
+				}
+			}
+		}
+
 		// Step 3: Remove the table process itself from the parent table
 		const parentTable = getTableById(tableProcess.parent.id);
 		parentTable.processes = parentTable.processes.filter((tp) => tp.id !== tableProcess.id);
@@ -171,7 +188,30 @@
 
 <script>
 	import Icon from '$lib/icons/Icon.svelte';
+	import ChainedPanel from '$lib/components/reusables/ChainedPanel.svelte';
 	let { p = $bindable() } = $props();
+
+	// Derive the tableProcessMap entry for this TP
+	const entry = $derived(appConsts.tableProcessMap.get(p?.name));
+
+	// A TP is chainable when it exports xOutKey (BinnedData, Cosinor, etc.)
+	// CollectColumns and LongToWide manage sub-TPs internally, so they are excluded.
+	const isChainable = $derived(entry?.xOutKey != null);
+
+	// The parent's x-output column ID (seeded into child sub-TP xIN)
+	const xOutColId = $derived.by(() => {
+		if (!isChainable) return -1;
+		return p.args?.out?.[entry.xOutKey] ?? -1;
+	});
+
+	// All of the parent's y-output column IDs (seeded into child sub-TP yIN)
+	const yOutColIds = $derived.by(() => {
+		if (!isChainable || !entry.yOutKeyPrefix) return [];
+		return Object.entries(p.args?.out ?? {})
+			.filter(([key]) => key.startsWith(entry.yOutKeyPrefix))
+			.map(([, colId]) => colId)
+			.filter((id) => typeof id === 'number' && id >= 0);
+	});
 </script>
 
 {#if p}
@@ -191,5 +231,8 @@
 		</div>
 		<div style="margin-top: 0.7rem;">{p.displayName}</div>
 		<TheTableProcess bind:p />
+		{#if isChainable && p.args?.valid}
+			<ChainedPanel bind:p {xOutColId} {yOutColIds} />
+		{/if}
 	</div>
 {/if}

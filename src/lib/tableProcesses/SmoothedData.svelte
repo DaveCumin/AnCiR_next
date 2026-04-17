@@ -1,5 +1,5 @@
 <script module>
-	import { core } from '$lib/core/core.svelte';
+	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	export const smootheddata_displayName = 'Smooth Data';
@@ -17,10 +17,13 @@
 		['out', { smoothedx: { val: -1 } }],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
-		['collectedType', { val: 'smooth' }]
-	]);
+	['collectedType', { val: 'smooth' }],
+	['preProcesses', { val: [] }],
+	['tableProcesses', { val: [] }]
+]);
 
-	// Smoother implementations
+export const smootheddata_xOutKey = 'smoothedx';
+export const smootheddata_yOutKeyPrefix = 'smoothedy_';
 	function whittakerEilers(y, lambda = 100, order = 2) {
 		const n = y.length;
 		if (n < 3) return y;
@@ -361,6 +364,19 @@
 			if (result.x_out.length === 0) result.x_out = xVals;
 			result.y_results[yId] = smoothedY;
 			anyValid = true;
+		}
+
+		// Apply pre-processes to y results before writing
+		for (const pp of argsIN.preProcesses ?? []) {
+			if (!pp.processName) continue;
+			const proc = appConsts.processMap.get(pp.processName);
+			if (proc?.func) {
+				for (const yId of yINs) {
+					if (result.y_results[yId]) {
+						result.y_results[yId] = proc.func(result.y_results[yId], pp.processArgs ?? {});
+					}
+				}
+			}
 		}
 
 		if (anyValid && xOUT != -1) {

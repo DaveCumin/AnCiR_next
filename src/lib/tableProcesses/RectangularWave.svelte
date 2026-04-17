@@ -1,5 +1,5 @@
 <script module>
-	import { core } from '$lib/core/core.svelte';
+	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { fitRectangularWave, evaluateRectWaveAtPoints } from '$lib/utils/rectwave.js';
 
@@ -18,8 +18,13 @@
 		['out', { rectwavex: { val: -1 } }],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
-		['collectedType', { val: 'rectwave' }]
+		['collectedType', { val: 'rectwave' }],
+		['preProcesses', { val: [] }],
+		['tableProcesses', { val: [] }]
 	]);
+
+export const rectangularwave_xOutKey = 'rectwavex';
+export const rectangularwave_yOutKeyPrefix = 'rectwavey_';
 
 	export function rectangularwave(argsIN) {
 		const xIN = argsIN.xIN;
@@ -111,6 +116,19 @@
 				};
 				if (result.t.length === 0) result.t = tt;
 				anyValid = true;
+			}
+		}
+
+		// Apply pre-processes to y results before writing
+		for (const pp of argsIN.preProcesses ?? []) {
+			if (!pp.processName) continue;
+			const proc = appConsts.processMap.get(pp.processName);
+			if (proc?.func) {
+				for (const yId of yINs) {
+					if (result.y_results[yId]) {
+						result.y_results[yId].yOutData = proc.func(result.y_results[yId].yOutData, pp.processArgs ?? {});
+					}
+				}
 			}
 		}
 

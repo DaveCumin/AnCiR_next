@@ -1,5 +1,5 @@
 <script module>
-	import { core } from '$lib/core/core.svelte';
+	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { fitDoubleLogistic, evaluateDoubleLogisticAtPoints } from '$lib/utils/doublelogistic.js';
 
@@ -18,8 +18,13 @@
 		['out', { dlogx: { val: -1 } }],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
-		['collectedType', { val: 'dlog' }]
+		['collectedType', { val: 'dlog' }],
+		['preProcesses', { val: [] }],
+		['tableProcesses', { val: [] }]
 	]);
+
+export const doublelogistic_xOutKey = 'dlogx';
+export const doublelogistic_yOutKeyPrefix = 'dlogy_';
 
 	export function doublelogistic(argsIN) {
 		const xIN = argsIN.xIN;
@@ -94,6 +99,19 @@
 		}
 
 		if (Object.keys(y_results).length === 0) return [null, false];
+
+		// Apply pre-processes to y results before writing
+		for (const pp of argsIN.preProcesses ?? []) {
+			if (!pp.processName) continue;
+			const proc = appConsts.processMap.get(pp.processName);
+			if (proc?.func) {
+				for (const yId of Object.keys(y_results)) {
+					if (y_results[yId]?.yOutData) {
+						y_results[yId].yOutData = proc.func(y_results[yId].yOutData, pp.processArgs ?? {});
+					}
+				}
+			}
+		}
 
 		// Write shared X output
 		const finalXData = outputXData ?? sharedT;

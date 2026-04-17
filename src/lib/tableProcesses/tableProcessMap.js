@@ -11,12 +11,16 @@ export async function loadTableProcesses() {
 			const component = svelteModule.default;
 			const tableProcessFunc = svelteModule[funcName];
 			const displayName = svelteModule[`${funcName}_displayName`] || formatDisplayName(fileName);
+		const xOutKey = svelteModule[`${funcName}_xOutKey`] ?? null;
+		const yOutKeyPrefix = svelteModule[`${funcName}_yOutKeyPrefix`] ?? null;
 
-			tableProcessMap.set(fileName, {
-				component: component,
-				defaults: svelteModule[`${funcName}_defaults`] || new Map(),
-				func: tableProcessFunc,
-				displayName: displayName
+		tableProcessMap.set(fileName, {
+			component: component,
+			defaults: svelteModule[`${funcName}_defaults`] || new Map(),
+			func: tableProcessFunc,
+			displayName: displayName,
+			xOutKey: xOutKey,
+			yOutKeyPrefix: yOutKeyPrefix
 			});
 		} catch (error) {
 			console.error(`Error loading ${sveltePath}:`, error);

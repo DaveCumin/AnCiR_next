@@ -1,5 +1,5 @@
 <script module>
-	import { core } from '$lib/core/core.svelte';
+	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { fitCosineCurves, evaluateCosinorAtPoints, fitCosinorFixed } from '$lib/utils/cosinor.js';
 
@@ -15,8 +15,13 @@
 		['nHarmonics', { val: 1 }],
 		['alpha', { val: 0.05 }],
 		['forcollected', { val: true }],
-		['collectedType', { val: 'cosinor' }]
+		['collectedType', { val: 'cosinor' }],
+		['preProcesses', { val: [] }],
+		['tableProcesses', { val: [] }]
 	]);
+
+export const cosinor_xOutKey = 'cosinorx';
+export const cosinor_yOutKeyPrefix = 'cosinory_';
 
 	export function cosinor(argsIN) {
 		const xIN = argsIN.xIN;
@@ -150,6 +155,19 @@
 
 			result.y_results[yId] = yResult;
 			if (result.t.length === 0) result.t = tt;
+		}
+
+		// Apply pre-processes to y results before writing
+		for (const pp of argsIN.preProcesses ?? []) {
+			if (!pp.processName) continue;
+			const proc = appConsts.processMap.get(pp.processName);
+			if (proc?.func) {
+				for (const yId of yINs) {
+					if (result.y_results[yId]) {
+						result.y_results[yId].yOutData = proc.func(result.y_results[yId].yOutData, pp.processArgs ?? {});
+					}
+				}
+			}
 		}
 
 		// Write output columns

@@ -1,5 +1,5 @@
 <script module>
-	import { core } from '$lib/core/core.svelte';
+	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	export const binneddata_displayName = 'Bin Data';
 	export const binneddata_defaults = new Map([
@@ -13,8 +13,13 @@
 		['out', { binnedx: { val: -1 } }],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
-		['collectedType', { val: 'bin' }]
+		['collectedType', { val: 'bin' }],
+		['preProcesses', { val: [] }],
+		['tableProcesses', { val: [] }]
 	]);
+
+export const binneddata_xOutKey = 'binnedx';
+export const binneddata_yOutKeyPrefix = 'binnedy_';
 
 	export function binneddata(argsIN, differentstepsize) {
 		const xIN = argsIN.xIN;
@@ -59,6 +64,19 @@
 				if (result.bins.length === 0) result.bins = theBinnedData.bins;
 				result.y_results[yId] = theBinnedData.y_out;
 				anyValid = true;
+			}
+		}
+
+		// Apply pre-processes to y results before writing
+		for (const pp of argsIN.preProcesses ?? []) {
+			if (!pp.processName) continue;
+			const proc = appConsts.processMap.get(pp.processName);
+			if (proc?.func) {
+				for (const yId of yINs) {
+					if (result.y_results[yId]) {
+						result.y_results[yId] = proc.func(result.y_results[yId], pp.processArgs ?? {});
+					}
+				}
 			}
 		}
 
