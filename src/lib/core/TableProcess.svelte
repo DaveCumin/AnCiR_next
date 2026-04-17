@@ -112,6 +112,15 @@
 		const parentTable = getTableById(tableProcess.parent.id);
 		parentTable.processes = parentTable.processes.filter((tp) => tp.id !== tableProcess.id);
 
+		// Step 4: Clear refTPId on any TP that chained from the deleted one
+		core.tables.forEach((table) => {
+			table.processes.forEach((tp) => {
+				if (tp.refTPId === tableProcess.id) {
+					tp.refTPId = null;
+				}
+			});
+		});
+
 		return {
 			success: true,
 			processId: tableProcess.id,
@@ -128,6 +137,7 @@
 		name = '';
 		displayName = $state('');
 		args = $state({});
+		refTPId = $state(null);
 
 		constructor({ ...dataIN }, parent, id = null) {
 			if (id === null) {
@@ -141,6 +151,7 @@
 			this.parent = parent;
 
 			this.name = dataIN.name;
+			this.refTPId = dataIN.refTPId ?? null;
 
 			// Get display name from the tableProcessMap
 			const tableProcessInfo = appConsts.tableProcessMap.get(this.name);
@@ -180,7 +191,8 @@
 			return {
 				id: this.id,
 				name: this.name,
-				args: this.args
+				args: this.args,
+				refTPId: this.refTPId
 			};
 		}
 	}
@@ -189,6 +201,7 @@
 <script>
 	import Icon from '$lib/icons/Icon.svelte';
 	import ChainedPanel from '$lib/components/reusables/ChainedPanel.svelte';
+	import { untrack } from 'svelte';
 	let { p = $bindable() } = $props();
 
 	// Derive the tableProcessMap entry for this TP
@@ -212,6 +225,52 @@
 			.map(([, colId]) => colId)
 			.filter((id) => typeof id === 'number' && id >= 0);
 	});
+
+	// --- refTPId chaining ---
+
+	// Find the upstream TP that this one chains from
+	const refTP = $derived.by(() => {
+		if (p?.refTPId == null) return null;
+		for (const table of core.tables) {
+			for (const tp of table.processes) {
+				if (tp.id === p.refTPId) return tp;
+			}
+		}
+		return null;
+	});
+
+	const refTPEntry = $derived.by(() => (refTP ? appConsts.tableProcessMap.get(refTP.name) : null));
+
+	// Sync this TP's xIN/yIN from the upstream TP's outputs whenever they change
+	$effect(() => {
+		if (!refTP || !refTPEntry) return;
+		const xOutKey = refTPEntry.xOutKey;
+		const yPrefix = refTPEntry.yOutKeyPrefix ?? '';
+		const xId = refTP.args?.out?.[xOutKey] ?? -1;
+		const yIds = Object.entries(refTP.args?.out ?? {})
+			.filter(([k]) => k.startsWith(yPrefix))
+			.map(([, id]) => id)
+			.filter((id) => typeof id === 'number' && id >= 0);
+		untrack(() => {
+			p.args.xIN = xId;
+			p.args.yIN = yIds;
+		});
+	});
+
+	// Chainable TPs that appear BEFORE this TP in the same table
+	const chainablePrecedingTPs = $derived.by(() => {
+		if (!p?.parent) return [];
+		const result = [];
+		for (const tp of p.parent.processes) {
+			if (tp.id === p.id) break;
+			const tpEntry = appConsts.tableProcessMap.get(tp.name);
+			if (tpEntry?.xOutKey) result.push(tp);
+		}
+		return result;
+	});
+
+	// Show chain selector only for TPs that have xIN/yIN inputs
+	const showChainSelector = $derived('xIN' in (p?.args ?? {}));
 </script>
 
 {#if p}
@@ -230,9 +289,42 @@
 			</button>
 		</div>
 		<div style="margin-top: 0.7rem;">{p.displayName}</div>
-		<TheTableProcess bind:p />
+		{#if showChainSelector && chainablePrecedingTPs.length > 0}
+			<div class="chain-selector">
+				<label for="chain-{p.id}">Chain from:</label>
+				<select
+					id="chain-{p.id}"
+					value={p.refTPId ?? ''}
+					onchange={(e) => {
+						const val = e.target.value;
+						p.refTPId = val === '' ? null : Number(val);
+					}}
+				>
+					<option value="">— none —</option>
+					{#each chainablePrecedingTPs as upstream}
+						<option value={upstream.id}>{upstream.displayName} #{upstream.id}</option>
+					{/each}
+				</select>
+			</div>
+		{/if}
+		<TheTableProcess bind:p hideInputs={p.refTPId != null} />
 		{#if isChainable && p.args?.valid}
 			<ChainedPanel bind:p {xOutColId} {yOutColIds} />
 		{/if}
 	</div>
 {/if}
+
+<style>
+	.chain-selector {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: 0.8rem;
+		padding: 0.2rem 0.5rem;
+		color: var(--text-muted, #888);
+	}
+	.chain-selector select {
+		font-size: 0.8rem;
+		padding: 0.1rem 0.25rem;
+	}
+</style>
