@@ -519,25 +519,28 @@
 {/if}
 
 <!-- Output / Preview -->
-<div class="section-row">
-	<div class="section-content">
-		{#key collectResult}
-			{#if p.args.valid && (p.args.outColIds?.length ?? 0) > 0}
-				<div class="tableProcess-label"><span>Output</span></div>
-				{#each p.args.colIds as colId (colId)}
-					{@const outColId = p.args.out['col_' + colId]}
-					{#if outColId >= 0}
-						<ColumnComponent col={getColumnById(outColId)} />
-					{/if}
-				{/each}
-			{:else if p.args.valid && collectResult}
-				<p>Select a table to commit outputs.</p>
-			{:else}
-				<p>Select columns above to begin.</p>
-			{/if}
-		{/key}
+<details open>
+	<summary class="section-details-summary">Output</summary>
+	<div class="section-row">
+		<div class="section-content">
+			{#key collectResult}
+				{#if p.args.valid && (p.args.outColIds?.length ?? 0) > 0}
+					<div class="tableProcess-label"><span>Output</span></div>
+					{#each p.args.colIds as colId (colId)}
+						{@const outColId = p.args.out['col_' + colId]}
+						{#if outColId >= 0}
+							<ColumnComponent col={getColumnById(outColId)} />
+						{/if}
+					{/each}
+				{:else if p.args.valid && collectResult}
+					<p>Select a table to commit outputs.</p>
+				{:else}
+					<p>Select columns above to begin.</p>
+				{/if}
+			{/key}
+		</div>
 	</div>
-</div>
+</details>
 
 <!-- Table Processes Section -->
 {#if p.args.valid}

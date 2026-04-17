@@ -138,39 +138,42 @@
 </div>
 
 <!-- Output -->
-<div class="section-row">
-	<div class="section-content">
-		{#if p.args.out.result >= 0}
-			{@const outCol = getColumnById(p.args.out.result)}
-			{#if outCol}
-				<div class="tableProcess-label"><span>Output</span></div>
-				<ColumnComponent col={outCol} />
+<details open>
+	<summary class="section-details-summary">Output</summary>
+	<div class="section-row">
+		<div class="section-content">
+			{#if p.args.out.result >= 0}
+				{@const outCol = getColumnById(p.args.out.result)}
+				{#if outCol}
+					<div class="tableProcess-label"><span>Output</span></div>
+					<ColumnComponent col={outCol} />
+				{/if}
+			{:else if p.args.valid && duplicateResult}
+				<!-- Preview mode: shown in MakeNewColumn modal before parent table is set -->
+				{@const totalRows = duplicateResult.length}
+				{@const displayData = xIsTime
+					? duplicateResult.map((v) => ({
+							isTime: true,
+							raw: formatTimeFromUNIX(v),
+							computed: ((v - duplicateResult[0]) / 3600000).toFixed(2)
+						}))
+					: duplicateResult}
+				<div class="tableProcess-label"><span>Preview</span></div>
+				<TablePlot
+					headers={[xIN_col?.name ?? 'Result']}
+					data={[displayData.slice(previewStart - 1, previewStart + 5)]}
+				/>
+				<p>
+					Row <NumberWithUnits
+						min={1}
+						max={Math.max(1, totalRows - 5)}
+						step={1}
+						bind:value={previewStart}
+					/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+				</p>
+			{:else}
+				<p>Select a column to duplicate.</p>
 			{/if}
-		{:else if p.args.valid && duplicateResult}
-			<!-- Preview mode: shown in MakeNewColumn modal before parent table is set -->
-			{@const totalRows = duplicateResult.length}
-			{@const displayData = xIsTime
-				? duplicateResult.map((v) => ({
-						isTime: true,
-						raw: formatTimeFromUNIX(v),
-						computed: ((v - duplicateResult[0]) / 3600000).toFixed(2)
-					}))
-				: duplicateResult}
-			<div class="tableProcess-label"><span>Preview</span></div>
-			<TablePlot
-				headers={[xIN_col?.name ?? 'Result']}
-				data={[displayData.slice(previewStart - 1, previewStart + 5)]}
-			/>
-			<p>
-				Row <NumberWithUnits
-					min={1}
-					max={Math.max(1, totalRows - 5)}
-					step={1}
-					bind:value={previewStart}
-				/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
-			</p>
-		{:else}
-			<p>Select a column to duplicate.</p>
-		{/if}
+		</div>
 	</div>
-</div>
+</details>

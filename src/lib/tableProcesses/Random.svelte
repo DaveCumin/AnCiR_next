@@ -80,14 +80,19 @@
 	{@const totalRows = result.length}
 	<p>Preview:</p>
 	<Table headers={['Result']} data={[result.slice(previewStart - 1, previewStart + 5)]} />
-	<p>Row <NumberWithUnits min={1} max={Math.max(1, totalRows - 5)} step={1} bind:value={previewStart} /> to {Math.min(previewStart + 5, totalRows)} of {totalRows}</p>
+	<p>
+		Row <NumberWithUnits
+			min={1}
+			max={Math.max(1, totalRows - 5)}
+			step={1}
+			bind:value={previewStart}
+		/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+	</p>
 {:else if p.args.out.result > 0}
-	<div class="section-row">
-		<div class="tableProcess-label">
-			<span>Output</span>
-		</div>
-	</div>
-	<ColumnComponent col={getColumnById(p.args.out.result)} />
+	<details open>
+		<summary class="section-details-summary">Output</summary>
+		<ColumnComponent col={getColumnById(p.args.out.result)} />
+	</details>
 {:else}
 	<p>Need to have valid inputs to create columns.</p>
 {/if}

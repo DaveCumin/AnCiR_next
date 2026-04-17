@@ -266,7 +266,10 @@
 					y_results
 				};
 				p.args.valid = true;
-				lastHash = getHash;
+				const inputsAreStale =
+					(p.args.xIN >= 0 && (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0) ||
+					(p.args.yIN ?? []).some((id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0);
+				if (!inputsAreStale) lastHash = getHash;
 			}
 		}
 		mounted = true;
@@ -522,95 +525,97 @@
 {/snippet}
 
 <!-- Output Section -->
-<div class="section-row">
-	<div class="tableProcess-label">
-		<span>Output</span>
-	</div>
-	<div class="section-content">
-		{#if p.args.valid && p.args.out.trendx != -1}
-			{@const xout = getColumnById(p.args.out.trendx)}
-			<div class="tp-outputs">
-				<div class="tp-output-row">
-					<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
-					<ColumnComponent col={xout} />
-				</div>
-				{#each p.args.yIN ?? [] as yId}
-					{@const outKey = 'trendy_' + yId}
-					{@const yOutId = p.args.out[outKey]}
-					{#if yOutId >= 0}
-						{@const yout = getColumnById(yOutId)}
-						{#if yout}
-							{@const yResult = trendData?.y_results?.[yId]}
-							{@const srcName = getColumnById(Number(yId))?.name ?? yId}
-							<div class="tp-output-row">
-								<span class="tp-output-label">{srcName}</span>
-								<ColumnComponent col={yout} />
-								{#if yResult}
-									{@render trendStats(yResult, srcName)}
-								{/if}
-							</div>
+<details open>
+	<summary class="section-details-summary">Output</summary>
+	<div class="section-row">
+		<div class="section-content">
+			{#if p.args.valid && p.args.out.trendx != -1}
+				{@const xout = getColumnById(p.args.out.trendx)}
+				<div class="tp-outputs">
+					<div class="tp-output-row">
+						<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
+						<ColumnComponent col={xout} />
+					</div>
+					{#each p.args.yIN ?? [] as yId}
+						{@const outKey = 'trendy_' + yId}
+						{@const yOutId = p.args.out[outKey]}
+						{#if yOutId >= 0}
+							{@const yout = getColumnById(yOutId)}
+							{#if yout}
+								{@const yResult = trendData?.y_results?.[yId]}
+								{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+								<div class="tp-output-row">
+									<span class="tp-output-label">{srcName}</span>
+									<ColumnComponent col={yout} />
+									{#if yResult}
+										{@render trendStats(yResult, srcName)}
+									{/if}
+								</div>
+							{/if}
 						{/if}
-					{/if}
+					{/each}
+				</div>
+			{:else if p.args.valid}
+				<p>Preview:</p>
+				{#each Object.entries(trendData?.y_results ?? {}) as [yId, yResult]}
+					{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+					<div class="div-line"></div>
+					<p><strong>{srcName}</strong></p>
+					{@render trendStats(yResult, srcName)}
 				{/each}
-			</div>
-			<div class="tp-stat-actions">
-				<button
-					class="tp-stat-btn"
-					onclick={() => {
-						const { headers, rows } = getTrendStatsData();
-						showStaticDataAsTable('Trend fit stats', headers, rows, getTrendStatsData);
-					}}>View stats</button
-				>
-				<button
-					class="tp-stat-btn"
-					onclick={() => {
-						const { headers, rows } = getTrendStatsData();
-						saveStaticDataAsCSV('trend_fit_stats', headers, rows);
-					}}>Download stats</button
-				>
-			</div>
-		{:else if p.args.valid}
-			<p>Preview:</p>
-			{#each Object.entries(trendData?.y_results ?? {}) as [yId, yResult]}
-				{@const srcName = getColumnById(Number(yId))?.name ?? yId}
-				<div class="div-line"></div>
-				<p><strong>{srcName}</strong></p>
-				{@render trendStats(yResult, srcName)}
-			{/each}
-			{@const xData = trendData.outputXData ?? trendData.t}
-			{@const yIds = Object.keys(trendData?.y_results ?? {})}
-			{@const totalRows = xData.length}
-			<Table
-				headers={[
-					'x',
-					...yIds.map(
-						(id) =>
-							(trendData.outputXData ? 'predicted ' : 'fitted ') +
-							(getColumnById(Number(id))?.name ?? id)
-					)
-				]}
-				data={[
-					xData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2)),
-					...yIds.map((id) => {
-						const yr = trendData.y_results[id];
-						const yData = yr.predicted ?? yr.fittedData.fitted;
-						return yData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2));
-					})
-				]}
-			/>
-			<p>
-				Row <NumberWithUnits
-					min={1}
-					max={Math.max(1, totalRows - 5)}
-					step={1}
-					bind:value={previewStart}
-				/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
-			</p>
-		{:else}
-			<p>Need to have valid inputs to create columns.</p>
-		{/if}
+				{@const xData = trendData.outputXData ?? trendData.t}
+				{@const yIds = Object.keys(trendData?.y_results ?? {})}
+				{@const totalRows = xData.length}
+				<Table
+					headers={[
+						'x',
+						...yIds.map(
+							(id) =>
+								(trendData.outputXData ? 'predicted ' : 'fitted ') +
+								(getColumnById(Number(id))?.name ?? id)
+						)
+					]}
+					data={[
+						xData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2)),
+						...yIds.map((id) => {
+							const yr = trendData.y_results[id];
+							const yData = yr.predicted ?? yr.fittedData.fitted;
+							return yData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2));
+						})
+					]}
+				/>
+				<p>
+					Row <NumberWithUnits
+						min={1}
+						max={Math.max(1, totalRows - 5)}
+						step={1}
+						bind:value={previewStart}
+					/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+				</p>
+			{:else}
+				<p>Need to have valid inputs to create columns.</p>
+			{/if}
+		</div>
 	</div>
-</div>
+</details>
+{#if p.args.valid && p.args.out.trendx != -1}
+	<div class="tp-stat-actions">
+		<button
+			class="tp-stat-btn"
+			onclick={() => {
+				const { headers, rows } = getTrendStatsData();
+				showStaticDataAsTable('Trend fit stats', headers, rows, getTrendStatsData);
+			}}>View stats</button
+		>
+		<button
+			class="tp-stat-btn"
+			onclick={() => {
+				const { headers, rows } = getTrendStatsData();
+				saveStaticDataAsCSV('trend_fit_stats', headers, rows);
+			}}>Download stats</button
+		>
+	</div>
+{/if}
 
 <style>
 	.tp-stat-actions {

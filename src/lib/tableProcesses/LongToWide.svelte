@@ -655,48 +655,51 @@
 </div>
 
 <!-- Output / Preview -->
-<div class="section-row">
-	<div class="section-content">
-		{#key longToWideResult}
-			{#if p.args.valid && p.args.out.time >= 0}
-				<div class="tableProcess-label"><span>Output</span></div>
-				<ColumnComponent col={getColumnById(p.args.out.time)} />
-				{#each p.args.categories as cat}
-					{#if p.args.out['value_' + cat] >= 0}
-						<ColumnComponent col={getColumnById(p.args.out['value_' + cat])} />
-					{/if}
-				{/each}
-			{:else if p.args.valid && longToWideResult?.time?.length}
-				{@const totalRows = longToWideResult.time.length}
-				<Table
-					headers={['time', ...p.args.categories]}
-					data={[
-						timeIsTime
-							? longToWideResult.time.slice(previewStart - 1, previewStart + 5).map((t) => ({
-									isTime: true,
-									raw: formatTimeFromUNIX(t),
-									computed: ((t - longToWideResult.time[0]) / 3600000).toFixed(2)
-								}))
-							: longToWideResult.time.slice(previewStart - 1, previewStart + 5),
-						...p.args.categories.map((cat) =>
-							longToWideResult['value_' + cat].slice(previewStart - 1, previewStart + 5)
-						)
-					]}
-				/>
-				<p>
-					Row <NumberWithUnits
-						min={1}
-						max={Math.max(1, totalRows - 5)}
-						step={1}
-						bind:value={previewStart}
-					/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
-				</p>
-			{:else}
-				<p>Select valid input columns to see preview.</p>
-			{/if}
-		{/key}
+<details open>
+	<summary class="section-details-summary">Output</summary>
+	<div class="section-row">
+		<div class="section-content">
+			{#key longToWideResult}
+				{#if p.args.valid && p.args.out.time >= 0}
+					<div class="tableProcess-label"><span>Output</span></div>
+					<ColumnComponent col={getColumnById(p.args.out.time)} />
+					{#each p.args.categories as cat}
+						{#if p.args.out['value_' + cat] >= 0}
+							<ColumnComponent col={getColumnById(p.args.out['value_' + cat])} />
+						{/if}
+					{/each}
+				{:else if p.args.valid && longToWideResult?.time?.length}
+					{@const totalRows = longToWideResult.time.length}
+					<Table
+						headers={['time', ...p.args.categories]}
+						data={[
+							timeIsTime
+								? longToWideResult.time.slice(previewStart - 1, previewStart + 5).map((t) => ({
+										isTime: true,
+										raw: formatTimeFromUNIX(t),
+										computed: ((t - longToWideResult.time[0]) / 3600000).toFixed(2)
+									}))
+								: longToWideResult.time.slice(previewStart - 1, previewStart + 5),
+							...p.args.categories.map((cat) =>
+								longToWideResult['value_' + cat].slice(previewStart - 1, previewStart + 5)
+							)
+						]}
+					/>
+					<p>
+						Row <NumberWithUnits
+							min={1}
+							max={Math.max(1, totalRows - 5)}
+							step={1}
+							bind:value={previewStart}
+						/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+					</p>
+				{:else}
+					<p>Select valid input columns to see preview.</p>
+				{/if}
+			{/key}
+		</div>
 	</div>
-</div>
+</details>
 
 <!-- Pre-process Section -->
 {#if p.args.valid}

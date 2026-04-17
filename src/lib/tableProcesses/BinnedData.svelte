@@ -317,62 +317,65 @@
 </div>
 
 <!-- Output / Preview -->
-<div class="section-row">
-	<div class="section-content">
-		{#key binnedData}
-			{#if p.args.valid && p.args.out.binnedx != -1}
-				{@const xout = getColumnById(p.args.out.binnedx)}
-				<div class="tableProcess-label"><span>Output</span></div>
-				<div class="tp-outputs">
-					<div class="tp-output-row">
-						<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
-						<ColumnComponent col={xout} />
-					</div>
-					{#each p.args.yIN ?? [] as yId}
-						{@const outKey = 'binnedy_' + yId}
-						{@const yOutId = p.args.out[outKey]}
-						{#if yOutId >= 0}
-							{@const yout = getColumnById(yOutId)}
-							{#if yout}
-								<div class="tp-output-row">
-									<span class="tp-output-label">{getColumnById(Number(yId))?.name ?? yId}</span>
-									<ColumnComponent col={yout} />
-								</div>
+<details open>
+	<summary class="section-details-summary">Output</summary>
+	<div class="section-row">
+		<div class="section-content">
+			{#key binnedData}
+				{#if p.args.valid && p.args.out.binnedx != -1}
+					{@const xout = getColumnById(p.args.out.binnedx)}
+					<div class="tableProcess-label"><span>Output</span></div>
+					<div class="tp-outputs">
+						<div class="tp-output-row">
+							<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
+							<ColumnComponent col={xout} />
+						</div>
+						{#each p.args.yIN ?? [] as yId}
+							{@const outKey = 'binnedy_' + yId}
+							{@const yOutId = p.args.out[outKey]}
+							{#if yOutId >= 0}
+								{@const yout = getColumnById(yOutId)}
+								{#if yout}
+									<div class="tp-output-row">
+										<span class="tp-output-label">{getColumnById(Number(yId))?.name ?? yId}</span>
+										<ColumnComponent col={yout} />
+									</div>
+								{/if}
 							{/if}
-						{/if}
-					{/each}
-				</div>
-			{:else if p.args.valid && binnedData?.bins?.length}
-				{@const totalRows = binnedData.bins.length}
-				{@const yIds = Object.keys(binnedData.y_results)}
-				<p>Preview ({p.args.aggFunction}{p.args.stepSize ? `, step=${p.args.stepSize}` : ''}):</p>
-				<Table
-					headers={[
-						'binned x (center)',
-						...yIds.map((id) => 'binned y (' + (getColumnById(Number(id))?.name ?? id) + ')')
-					]}
-					data={[
-						binnedData.bins
-							.slice(previewStart - 1, previewStart + 5)
-							.map((x) => (x + p.args.stepSize / 2).toFixed(4)),
-						...yIds.map((id) =>
-							binnedData.y_results[id]
+						{/each}
+					</div>
+				{:else if p.args.valid && binnedData?.bins?.length}
+					{@const totalRows = binnedData.bins.length}
+					{@const yIds = Object.keys(binnedData.y_results)}
+					<p>Preview ({p.args.aggFunction}{p.args.stepSize ? `, step=${p.args.stepSize}` : ''}):</p>
+					<Table
+						headers={[
+							'binned x (center)',
+							...yIds.map((id) => 'binned y (' + (getColumnById(Number(id))?.name ?? id) + ')')
+						]}
+						data={[
+							binnedData.bins
 								.slice(previewStart - 1, previewStart + 5)
-								.map((y) => y.toFixed(4))
-						)
-					]}
-				/>
-				<p>
-					Row <NumberWithUnits
-						min={1}
-						max={Math.max(1, totalRows - 5)}
-						step={1}
-						bind:value={previewStart}
-					/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
-				</p>
-			{:else}
-				<p>Select valid input columns and parameters to see preview.</p>
-			{/if}
-		{/key}
+								.map((x) => (x + p.args.stepSize / 2).toFixed(4)),
+							...yIds.map((id) =>
+								binnedData.y_results[id]
+									.slice(previewStart - 1, previewStart + 5)
+									.map((y) => y.toFixed(4))
+							)
+						]}
+					/>
+					<p>
+						Row <NumberWithUnits
+							min={1}
+							max={Math.max(1, totalRows - 5)}
+							step={1}
+							bind:value={previewStart}
+						/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+					</p>
+				{:else}
+					<p>Select valid input columns and parameters to see preview.</p>
+				{/if}
+			{/key}
+		</div>
 	</div>
-</div>
+</details>

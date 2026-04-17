@@ -513,7 +513,10 @@ return _r;`
 		if (outKey >= 0 && core.rawData.has(outKey) && core.rawData.get(outKey).length > 0) {
 			result = core.rawData.get(outKey);
 			p.args.valid = true;
-			lastHash = getHash;
+			const inputsAreStale = (p.args.tokens ?? [])
+				.filter((t) => t.type === 'col')
+				.some((t) => (getColumnById(t.id)?.rawDataVersion ?? 0) > 0);
+			if (!inputsAreStale) lastHash = getHash;
 		}
 		mounted = true;
 	});
@@ -654,12 +657,10 @@ return _r;`
 			/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
 		</p>
 	{:else if p.args.out.result > 0}
-		<div class="section-row">
-			<div class="tableProcess-label">
-				<span>Output</span>
-			</div>
-		</div>
-		<ColumnComponent col={getColumnById(p.args.out.result)} />
+		<details open>
+			<summary class="section-details-summary">Output</summary>
+			<ColumnComponent col={getColumnById(p.args.out.result)} />
+		</details>
 	{:else}
 		<p>Need to have valid inputs to create columns.</p>
 	{/if}

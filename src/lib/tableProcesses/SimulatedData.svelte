@@ -333,15 +333,13 @@
 
 {#key simulatedValues}
 	{#if p.args.valid && p.args.out.time != -1 && p.args.out.values != -1}
-		<div class="section-row">
-			<div class="tableProcess-label">
-				<span>Output</span>
-			</div>
-		</div>
 		{@const timeOut = getColumnById(p.args.out.time)}
-		<ColumnComponent col={timeOut} />
 		{@const yout = getColumnById(p.args.out.values)}
-		<ColumnComponent col={yout} />
+		<details open>
+			<summary class="section-details-summary">Output</summary>
+			<ColumnComponent col={timeOut} />
+			<ColumnComponent col={yout} />
+		</details>
 	{:else if p.args.valid}
 		{@const totalRows = simulatedTime.length}
 		<p>Preview:</p>

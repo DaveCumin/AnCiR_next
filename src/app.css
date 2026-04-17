@@ -50,3 +50,63 @@
 	/* control */
 	--control-input-height: calc(16px + 0.4rem + 2px);
 }
+
+/* Collapsible output sections in table processes */
+details.section-output-details {
+	width: 100%;
+}
+
+summary.section-details-summary {
+	list-style: none;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+
+	cursor: pointer;
+	user-select: none;
+
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--color-lightness-45);
+
+	padding: 0.35rem 0.5rem;
+	border-radius: 4px;
+	border-top: 1px solid var(--color-lightness-85);
+
+	transition: background 0.15s;
+}
+
+summary.section-details-summary:hover {
+	background: var(--color-lightness-98);
+}
+
+summary.section-details-summary::-webkit-details-marker,
+summary.section-details-summary::marker {
+	display: none;
+	content: '';
+}
+
+summary.section-details-summary::after {
+	content: '';
+	display: block;
+	width: 20px;
+	height: 20px;
+	flex-shrink: 0;
+	background-color: var(--color-lightness-35);
+	/* caret-right */
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 640'%3E%3Cpath d='M224 160C224 147.1 231.8 135.4 243.8 130.4C255.8 125.4 269.5 128.2 278.7 137.3L438.7 297.3C451.2 309.8 451.2 330.1 438.7 342.6L278.7 502.6C269.5 511.8 255.8 514.5 243.8 509.5C231.8 504.5 224 492.9 224 480L224 160Z'/%3E%3C/svg%3E");
+	mask-size: 20px 20px;
+	mask-repeat: no-repeat;
+	mask-position: center;
+	transition: background-color 0.2s ease;
+}
+
+details[open] > summary.section-details-summary::after {
+	/* caret-down */
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 640'%3E%3Cpath d='M480 224C492.9 224 504.6 231.8 509.6 243.8C514.6 255.8 511.8 269.5 502.7 278.7L342.7 438.7C330.2 451.2 309.9 451.2 297.4 438.7L137.4 278.7C128.2 269.5 125.5 255.8 130.5 243.8C135.5 231.8 147.1 224 160 224L480 224Z'/%3E%3C/svg%3E");
+}
+
+summary.section-details-summary:hover::after {
+	background-color: var(--color-hover);
+}

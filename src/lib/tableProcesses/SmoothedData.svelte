@@ -668,30 +668,30 @@
 {#key smoothedResult}
 	{#if p.args.valid && p.args.out.smoothedx != -1}
 		{@const xout = getColumnById(p.args.out.smoothedx)}
-		<div class="section-row">
-			<div class="tableProcess-label">
-				<span>Output</span>
-			</div>
-			<div class="tp-outputs">
-				<div class="tp-output-row">
-					<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
-					<ColumnComponent col={xout} />
-				</div>
-				{#each p.args.yIN ?? [] as yId}
-					{@const outKey = 'smoothedy_' + yId}
-					{@const yOutId = p.args.out[outKey]}
-					{#if yOutId >= 0}
-						{@const yout = getColumnById(yOutId)}
-						{#if yout}
-							<div class="tp-output-row">
-								<span class="tp-output-label">{getColumnById(Number(yId))?.name ?? yId}</span>
-								<ColumnComponent col={yout} />
-							</div>
+		<details open>
+			<summary class="section-details-summary">Output</summary>
+			<div class="section-row">
+				<div class="tp-outputs">
+					<div class="tp-output-row">
+						<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
+						<ColumnComponent col={xout} />
+					</div>
+					{#each p.args.yIN ?? [] as yId}
+						{@const outKey = 'smoothedy_' + yId}
+						{@const yOutId = p.args.out[outKey]}
+						{#if yOutId >= 0}
+							{@const yout = getColumnById(yOutId)}
+							{#if yout}
+								<div class="tp-output-row">
+									<span class="tp-output-label">{getColumnById(Number(yId))?.name ?? yId}</span>
+									<ColumnComponent col={yout} />
+								</div>
+							{/if}
 						{/if}
-					{/if}
-				{/each}
+					{/each}
+				</div>
 			</div>
-		</div>
+		</details>
 	{:else if p.args.valid}
 		{@const totalRows = smoothedResult.x_out.length}
 		{@const xSlice = smoothedResult.x_out.slice(previewStart - 1, previewStart + 5)}

@@ -296,86 +296,86 @@
 </div>
 
 {#if p.args.out.result > 0}
-	<div class="section-row">
-		<div class="tableProcess-label">
-			<span>Output</span>
-		</div>
-	</div>
-	<ColumnComponent col={getColumnById(p.args.out.result)} />
+	<details open>
+		<summary class="section-details-summary">Output</summary>
+		<ColumnComponent col={getColumnById(p.args.out.result)} />
 
-	<div class="section-row">
-		<div class="tableProcess-label">
-			<span>Edit data</span>
+		<div class="section-row">
+			<div class="tableProcess-label">
+				<span>Edit data</span>
+			</div>
 		</div>
-	</div>
-	<p class="hint">
-		Click cells to edit. Paste from a spreadsheet into any cell. Type <kbd>#</kbd> for stored values.
-	</p>
-	<div class="editable-table" onpaste={handlePaste}>
-		<table>
-			<thead>
-				<tr><th>Row</th><th>Value</th></tr>
-			</thead>
-			<tbody>
-				{#each editableData as cell, i (i)}
-					<tr>
-						<td class="row-num">{i + 1}</td>
-						<td>
-							{#if p.args.storedValueRefs[i]}
-								{@const key = p.args.storedValueRefs[i]}
-								{@const exists = key in core.storedValues}
-								<span class="chip chip-stored" class:chip-invalid={!exists}>
-									<span class="sv-name">{key}</span>
-									{#if exists}
-										<span class="sv-value">= {getStoredValue(key)}</span>
-									{:else}
-										<span class="sv-value">(removed)</span>
-									{/if}
-									<button class="chip-remove" onclick={() => removeStoredValueRef(i)} title="Remove"
-										>×</button
-									>
-								</span>
-							{:else}
-								<input
-									type="text"
-									value={cell}
-									data-index={i}
-									oninput={(e) => handleCellInput(e, i)}
-									onkeydown={(e) => handleCellKeydown(e, i)}
-								/>
-							{/if}
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
+		<p class="hint">
+			Click cells to edit. Paste from a spreadsheet into any cell. Type <kbd>#</kbd> for stored values.
+		</p>
+		<div class="editable-table" onpaste={handlePaste}>
+			<table>
+				<thead>
+					<tr><th>Row</th><th>Value</th></tr>
+				</thead>
+				<tbody>
+					{#each editableData as cell, i (i)}
+						<tr>
+							<td class="row-num">{i + 1}</td>
+							<td>
+								{#if p.args.storedValueRefs[i]}
+									{@const key = p.args.storedValueRefs[i]}
+									{@const exists = key in core.storedValues}
+									<span class="chip chip-stored" class:chip-invalid={!exists}>
+										<span class="sv-name">{key}</span>
+										{#if exists}
+											<span class="sv-value">= {getStoredValue(key)}</span>
+										{:else}
+											<span class="sv-value">(removed)</span>
+										{/if}
+										<button
+											class="chip-remove"
+											onclick={() => removeStoredValueRef(i)}
+											title="Remove">×</button
+										>
+									</span>
+								{:else}
+									<input
+										type="text"
+										value={cell}
+										data-index={i}
+										oninput={(e) => handleCellInput(e, i)}
+										onkeydown={(e) => handleCellKeydown(e, i)}
+									/>
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 
-	{#if ac.show}
-		<div class="ac-dropdown" style="left: {acPos.left}px; top: {acPos.top}px;" role="listbox">
-			{#if filteredStoredValues.length === 0}
-				<div class="ac-empty">No matching stored values</div>
-			{:else}
-				{#each filteredStoredValues as sv, j (sv.key)}
-					<div
-						class="ac-item"
-						class:ac-selected={j === ac.selIdx}
-						role="option"
-						tabindex="-1"
-						aria-selected={j === ac.selIdx}
-						onmousedown={(e) => {
-							e.preventDefault();
-							assignStoredValue(sv.key, ac.cellIndex);
-						}}
-						onmouseenter={() => (ac.selIdx = j)}
-					>
-						<span class="ac-sv-name">{sv.key}</span>
-						<span class="ac-sv-value">= {sv.value}</span>
-					</div>
-				{/each}
-			{/if}
-		</div>
-	{/if}
+		{#if ac.show}
+			<div class="ac-dropdown" style="left: {acPos.left}px; top: {acPos.top}px;" role="listbox">
+				{#if filteredStoredValues.length === 0}
+					<div class="ac-empty">No matching stored values</div>
+				{:else}
+					{#each filteredStoredValues as sv, j (sv.key)}
+						<div
+							class="ac-item"
+							class:ac-selected={j === ac.selIdx}
+							role="option"
+							tabindex="-1"
+							aria-selected={j === ac.selIdx}
+							onmousedown={(e) => {
+								e.preventDefault();
+								assignStoredValue(sv.key, ac.cellIndex);
+							}}
+							onmouseenter={() => (ac.selIdx = j)}
+						>
+							<span class="ac-sv-name">{sv.key}</span>
+							<span class="ac-sv-value">= {sv.value}</span>
+						</div>
+					{/each}
+				{/if}
+			</div>
+		{/if}
+	</details>
 {:else}
 	<p>Column will be created with {p.args.N} blank rows.</p>
 {/if}

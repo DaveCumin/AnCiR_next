@@ -312,7 +312,11 @@
 				}
 			}
 		}
-		lastHash = getHash;
+		const inputsAreStale =
+			!needsCompute &&
+			((p.args.xIN >= 0 && (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0) ||
+				(p.args.yIN ?? []).some((id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0));
+		if (!inputsAreStale) lastHash = getHash;
 		mounted = true;
 	});
 
@@ -560,104 +564,106 @@
 {/snippet}
 
 <!-- Output -->
-<div class="section-row">
-	<div class="tableProcess-label">
-		<span>Output</span>
-	</div>
-	<div class="section-content">
-		{#if calculating}
-			<LoadingSpinner message="Fitting double logistic…" />
-		{:else if p.args.valid && p.args.out.dlogx != -1}
-			{@const xout = getColumnById(p.args.out.dlogx)}
-			<div class="tp-outputs">
-				<div class="tp-output-row">
-					<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
-					<ColumnComponent col={xout} />
-				</div>
-				{#each p.args.yIN ?? [] as yId}
-					{@const outKey = 'dlogy_' + yId}
-					{@const yOutId = p.args.out[outKey]}
-					{#if yOutId >= 0}
-						{@const yout = getColumnById(yOutId)}
-						{#if yout}
-							{@const yResult = dlData?.y_results?.[yId]}
-							{@const srcName = getColumnById(Number(yId))?.name ?? yId}
-							<div class="tp-output-row">
-								<span class="tp-output-label">{srcName}</span>
-								<ColumnComponent col={yout} />
-								{#if yResult}
-									{@render dlogStats(yResult, srcName)}
-								{/if}
-							</div>
+<details open>
+	<summary class="section-details-summary">Output</summary>
+	<div class="section-row">
+		<div class="section-content">
+			{#if calculating}
+				<LoadingSpinner message="Fitting double logistic…" />
+			{:else if p.args.valid && p.args.out.dlogx != -1}
+				{@const xout = getColumnById(p.args.out.dlogx)}
+				<div class="tp-outputs">
+					<div class="tp-output-row">
+						<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
+						<ColumnComponent col={xout} />
+					</div>
+					{#each p.args.yIN ?? [] as yId}
+						{@const outKey = 'dlogy_' + yId}
+						{@const yOutId = p.args.out[outKey]}
+						{#if yOutId >= 0}
+							{@const yout = getColumnById(yOutId)}
+							{#if yout}
+								{@const yResult = dlData?.y_results?.[yId]}
+								{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+								<div class="tp-output-row">
+									<span class="tp-output-label">{srcName}</span>
+									<ColumnComponent col={yout} />
+									{#if yResult}
+										{@render dlogStats(yResult, srcName)}
+									{/if}
+								</div>
+							{/if}
 						{/if}
-					{/if}
+					{/each}
+				</div>
+			{:else if p.args.valid}
+				<p>Preview:</p>
+				{#each Object.entries(dlData?.y_results ?? {}) as [yId, yResult]}
+					{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+					<div class="div-line"></div>
+					<p><strong>{srcName}</strong></p>
+					{@render dlogStats(yResult, srcName)}
 				{/each}
-			</div>
-			<div class="tp-stat-actions">
-				<button
-					class="tp-stat-btn"
-					onclick={() => {
-						const { headers, rows } = getDlogStatsData();
-						showStaticDataAsTable('Double logistic stats', headers, rows, getDlogStatsData);
-					}}>View stats</button
-				>
-				<button
-					class="tp-stat-btn"
-					onclick={() => {
-						const { headers, rows } = getDlogStatsData();
-						saveStaticDataAsCSV('double_logistic_stats', headers, rows);
-					}}>Download stats</button
-				>
-			</div>
-		{:else if p.args.valid}
-			<p>Preview:</p>
-			{#each Object.entries(dlData?.y_results ?? {}) as [yId, yResult]}
-				{@const srcName = getColumnById(Number(yId))?.name ?? yId}
-				<div class="div-line"></div>
-				<p><strong>{srcName}</strong></p>
-				{@render dlogStats(yResult, srcName)}
-			{/each}
-			{@const xData = dlData.outputXData ?? dlData.t}
-			{@const yIds = Object.keys(dlData?.y_results ?? {})}
-			{@const totalRows = xData.length}
-			<Table
-				headers={[
-					'x',
-					...yIds.map(
-						(id) =>
-							(dlData.outputXData ? 'predicted ' : 'fitted ') +
-							(getColumnById(Number(id))?.name ?? id)
-					)
-				]}
-				data={[
-					xData.slice(previewStart - 1, previewStart + 5).map((x) =>
-						xIsTime && dlData.originTime_ms != null
-							? {
-									isTime: true,
-									raw: formatTimeFromUNIX(dlData.originTime_ms + x * 3600000),
-									computed: fmt(x, 2)
-								}
-							: fmt(x, 2)
-					),
-					...yIds.map((id) => {
-						const yr = dlData.y_results[id];
-						return yr.fitted.slice(previewStart - 1, previewStart + 5).map((y) => fmt(y, 2));
-					})
-				]}
-			/>
-			<p>
-				Row <NumberWithUnits
-					min={1}
-					max={Math.max(1, totalRows - 5)}
-					step={1}
-					bind:value={previewStart}
-				/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
-			</p>
-		{:else}
-			<p>Need valid inputs to fit a double logistic.</p>
-		{/if}
+				{@const xData = dlData.outputXData ?? dlData.t}
+				{@const yIds = Object.keys(dlData?.y_results ?? {})}
+				{@const totalRows = xData.length}
+				<Table
+					headers={[
+						'x',
+						...yIds.map(
+							(id) =>
+								(dlData.outputXData ? 'predicted ' : 'fitted ') +
+								(getColumnById(Number(id))?.name ?? id)
+						)
+					]}
+					data={[
+						xData.slice(previewStart - 1, previewStart + 5).map((x) =>
+							xIsTime && dlData.originTime_ms != null
+								? {
+										isTime: true,
+										raw: formatTimeFromUNIX(dlData.originTime_ms + x * 3600000),
+										computed: fmt(x, 2)
+									}
+								: fmt(x, 2)
+						),
+						...yIds.map((id) => {
+							const yr = dlData.y_results[id];
+							return yr.fitted.slice(previewStart - 1, previewStart + 5).map((y) => fmt(y, 2));
+						})
+					]}
+				/>
+				<p>
+					Row <NumberWithUnits
+						min={1}
+						max={Math.max(1, totalRows - 5)}
+						step={1}
+						bind:value={previewStart}
+					/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+				</p>
+			{:else}
+				<p>Need valid inputs to fit a double logistic.</p>
+			{/if}
+		</div>
 	</div>
-</div>
+</details>
+{#if !calculating && p.args.valid && p.args.out.dlogx != -1}
+	<div class="tp-stat-actions">
+		<button
+			class="tp-stat-btn"
+			onclick={() => {
+				const { headers, rows } = getDlogStatsData();
+				showStaticDataAsTable('Double logistic stats', headers, rows, getDlogStatsData);
+			}}>View stats</button
+		>
+		<button
+			class="tp-stat-btn"
+			onclick={() => {
+				const { headers, rows } = getDlogStatsData();
+				saveStaticDataAsCSV('double_logistic_stats', headers, rows);
+			}}>Download stats</button
+		>
+	</div>
+{/if}
 
 <style>
 	.tp-stat-actions {

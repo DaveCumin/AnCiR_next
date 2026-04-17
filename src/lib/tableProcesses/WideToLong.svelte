@@ -322,12 +322,12 @@
 		to {previewEnd} of {previewTotalRows}
 	</p>
 {:else if p.args.valid && Number(p.args.out.time) >= 0}
-	<div class="section-row">
-		<div class="tableProcess-label"><span>Output</span></div>
-	</div>
-	<ColumnComponent col={getColumnById(p.args.out.time)} />
-	<ColumnComponent col={getColumnById(p.args.out.category)} />
-	<ColumnComponent col={getColumnById(p.args.out.value)} />
+	<details open>
+		<summary class="section-details-summary">Output</summary>
+		<ColumnComponent col={getColumnById(p.args.out.time)} />
+		<ColumnComponent col={getColumnById(p.args.out.category)} />
+		<ColumnComponent col={getColumnById(p.args.out.value)} />
+	</details>
 {:else}
 	<p>Select one time column and at least one wide value column to begin.</p>
 {/if}

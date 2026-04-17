@@ -148,10 +148,7 @@
 
 	// Clean up orphaned columns: any column in columnRefs that isn't tracked by a current p.args.out value
 	if (p.parent) {
-		const activeOutIds = new Set(
-			Object.values(p.args.out)
-				.filter((v) => v != null && v >= 0)
-		);
+		const activeOutIds = new Set(Object.values(p.args.out).filter((v) => v != null && v >= 0));
 		// Also collect IDs from other tableprocesses on this table so we don't remove their columns
 		const inputIds = new Set([p.args.xIN, ...(p.args.yIN ?? [])].filter((v) => v >= 0));
 		const orphans = p.parent.columnRefs.filter((id) => {
@@ -370,10 +367,13 @@
 			}
 		}
 
-		lastHash = getHash;
+		const inputsAreStale =
+			!needsCompute &&
+			((p.args.xIN >= 0 && (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0) ||
+				(p.args.yIN ?? []).some((id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0));
+		if (!inputsAreStale) lastHash = getHash;
 		mounted = true;
 	});
-
 </script>
 
 {#if !hideInputs}
@@ -439,76 +439,77 @@
 </div>
 
 <!-- Output -->
-<div class="section-row">
-	<div class="section-content">
-		{#if calculating}
-			<LoadingSpinner message="Splitting data…" />
-		{:else if p.args.valid && splitResult && Object.values(p.args.out).some((id) => id >= 0)}
-			<div class="tableProcess-label"><span>Output</span></div>
-			{#each p.args.yIN ?? [] as yId}
-				{@const yResult = splitResult.y_results[yId]}
-				{#if yResult}
-					{#each yResult.segments as _, segIdx}
-						{@const outKey = `${yId}_${segIdx + 1}`}
-						{@const outId = p.args.out[outKey]}
-						{#if outId >= 0}
-							{@const outCol = getColumnById(outId)}
-							{#if outCol}
-								<ColumnComponent col={outCol} />
+<details open>
+	<summary class="section-details-summary">Output</summary>
+	<div class="section-row">
+		<div class="section-content">
+			{#if calculating}
+				<LoadingSpinner message="Splitting data…" />
+			{:else if p.args.valid && splitResult && Object.values(p.args.out).some((id) => id >= 0)}
+				<div class="tableProcess-label"><span>Output</span></div>
+				{#each p.args.yIN ?? [] as yId}
+					{@const yResult = splitResult.y_results[yId]}
+					{#if yResult}
+						{#each yResult.segments as _, segIdx}
+							{@const outKey = `${yId}_${segIdx + 1}`}
+							{@const outId = p.args.out[outKey]}
+							{#if outId >= 0}
+								{@const outCol = getColumnById(outId)}
+								{#if outCol}
+									<ColumnComponent col={outCol} />
+								{/if}
 							{/if}
-						{/if}
-					{/each}
+						{/each}
+					{/if}
+				{/each}
+			{:else if p.args.valid && splitResult}
+				<!-- Preview table (before commit) -->
+				{@const tCol = getColumnById(p.args.xIN)}
+				{@const tData = tCol?.getData() ?? []}
+				{@const totalRows = tData.length}
+				{@const previewHeaders = [
+					tCol?.name ?? 'x',
+					...(p.args.yIN ?? []).flatMap((yId) => {
+						const yResult = splitResult.y_results[yId];
+						if (!yResult) return [];
+						return yResult.segments.map((_, segIdx) => {
+							return `${yResult.sourceColName}_split${segIdx + 1}`;
+						});
+					})
+				]}
+				{@const previewData = [
+					xIsTime
+						? tData.slice(previewStart - 1, previewStart + 5).map((t) => ({
+								isTime: true,
+								raw: formatTimeFromUNIX(t),
+								computed: ((t - tData[0]) / 3600000).toFixed(2)
+							}))
+						: tData.slice(previewStart - 1, previewStart + 5),
+					...(p.args.yIN ?? []).flatMap((yId) => {
+						const yResult = splitResult.y_results[yId];
+						if (!yResult) return [];
+						return yResult.segments.map((seg) => seg.slice(previewStart - 1, previewStart + 5));
+					})
+				]}
+				{#if totalRows > 0}
+					<Table headers={previewHeaders} data={previewData} />
+					<p>
+						Row <NumberWithUnits
+							min={1}
+							max={Math.max(1, totalRows - 5)}
+							step={1}
+							bind:value={previewStart}
+						/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+					</p>
 				{/if}
-			{/each}
-		{:else if p.args.valid && splitResult}
-			<!-- Preview table (before commit) -->
-			{@const tCol = getColumnById(p.args.xIN)}
-			{@const tData = tCol?.getData() ?? []}
-			{@const totalRows = tData.length}
-			{@const previewHeaders = [
-				tCol?.name ?? 'x',
-				...(p.args.yIN ?? []).flatMap((yId) => {
-					const yResult = splitResult.y_results[yId];
-					if (!yResult) return [];
-					return yResult.segments.map((_, segIdx) => {
-						return `${yResult.sourceColName}_split${segIdx + 1}`;
-					});
-				})
-			]}
-			{@const previewData = [
-				xIsTime
-					? tData.slice(previewStart - 1, previewStart + 5).map((t) => ({
-							isTime: true,
-							raw: formatTimeFromUNIX(t),
-							computed: ((t - tData[0]) / 3600000).toFixed(2)
-						}))
-					: tData.slice(previewStart - 1, previewStart + 5),
-				...(p.args.yIN ?? []).flatMap((yId) => {
-					const yResult = splitResult.y_results[yId];
-					if (!yResult) return [];
-					return yResult.segments.map((seg) =>
-						seg.slice(previewStart - 1, previewStart + 5)
-					);
-				})
-			]}
-			{#if totalRows > 0}
-				<Table headers={previewHeaders} data={previewData} />
-				<p>
-					Row <NumberWithUnits
-						min={1}
-						max={Math.max(1, totalRows - 5)}
-						step={1}
-						bind:value={previewStart}
-					/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
-				</p>
+			{:else if p.args.valid === false && p.args.xIN >= 0}
+				<p>Need valid time and value columns to split data. Ensure X and Y are selected.</p>
+			{:else}
+				<p>Select X (time) and Y (value) columns to begin splitting.</p>
 			{/if}
-		{:else if p.args.valid === false && p.args.xIN >= 0}
-			<p>Need valid time and value columns to split data. Ensure X and Y are selected.</p>
-		{:else}
-			<p>Select X (time) and Y (value) columns to begin splitting.</p>
-		{/if}
+		</div>
 	</div>
-</div>
+</details>
 
 <style>
 	.split-times-list {
