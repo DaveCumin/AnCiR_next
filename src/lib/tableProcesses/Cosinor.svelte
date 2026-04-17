@@ -20,8 +20,8 @@
 		['tableProcesses', { val: [] }]
 	]);
 
-export const cosinor_xOutKey = 'cosinorx';
-export const cosinor_yOutKeyPrefix = 'cosinory_';
+	export const cosinor_xOutKey = 'cosinorx';
+	export const cosinor_yOutKeyPrefix = 'cosinory_';
 
 	export function cosinor(argsIN) {
 		const xIN = argsIN.xIN;
@@ -164,7 +164,10 @@ export const cosinor_yOutKeyPrefix = 'cosinory_';
 			if (proc?.func) {
 				for (const yId of yINs) {
 					if (result.y_results[yId]) {
-						result.y_results[yId].yOutData = proc.func(result.y_results[yId].yOutData, pp.processArgs ?? {});
+						result.y_results[yId].yOutData = proc.func(
+							result.y_results[yId].yOutData,
+							pp.processArgs ?? {}
+						);
 					}
 				}
 			}
@@ -410,7 +413,6 @@ export const cosinor_yOutKeyPrefix = 'cosinory_';
 				p.args.valid = true;
 			}
 		}
-		lastHash = getHash;
 		mounted = true;
 	});
 

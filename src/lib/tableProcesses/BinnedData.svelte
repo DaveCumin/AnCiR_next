@@ -18,8 +18,8 @@
 		['tableProcesses', { val: [] }]
 	]);
 
-export const binneddata_xOutKey = 'binnedx';
-export const binneddata_yOutKeyPrefix = 'binnedy_';
+	export const binneddata_xOutKey = 'binnedx';
+	export const binneddata_yOutKeyPrefix = 'binnedy_';
 
 	export function binneddata(argsIN, differentstepsize) {
 		const xIN = argsIN.xIN;
@@ -290,7 +290,6 @@ export const binneddata_yOutKeyPrefix = 'binnedy_';
 				}
 				binnedData = { bins: core.rawData.get(xKey), y_results };
 				p.args.valid = true;
-				lastHash = getHash;
 			}
 		}
 		mounted = true;
@@ -429,4 +428,3 @@ export const binneddata_yOutKeyPrefix = 'binnedy_';
 		{/key}
 	</div>
 </div>
-

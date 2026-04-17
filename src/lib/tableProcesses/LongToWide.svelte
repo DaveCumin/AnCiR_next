@@ -62,9 +62,11 @@
 		const unionTimesForStorage = unionEntries.map((e) => e.raw);
 
 		// Get unique categories (preserving order of first appearance)
+		// Skip null/undefined/empty-string values from sparse CSV data
 		const seenCats = new Set();
 		const categories = [];
 		for (const c of categoryData) {
+			if (c == null || c === '') continue;
 			if (!seenCats.has(c)) {
 				seenCats.add(c);
 				categories.push(c);
@@ -137,6 +139,7 @@
 	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
+	import ChainedPanel from '$lib/components/reusables/ChainedPanel.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
@@ -353,7 +356,9 @@
 			map[cType] = {
 				component: entry.component,
 				displayName: entry.displayName,
-				paramDefaults: { ...params, ...overrides }
+				paramDefaults: { ...params, ...overrides },
+				xOutKey: entry.xOutKey ?? null,
+				yOutKeyPrefix: entry.yOutKeyPrefix ?? null
 			};
 		}
 		return map;
@@ -413,6 +418,7 @@
 			const seenCats = new Set();
 			const categories = [];
 			for (const c of catData) {
+				if (c == null || c === '') continue;
 				if (!seenCats.has(c)) {
 					seenCats.add(c);
 					categories.push(c);
@@ -472,6 +478,21 @@
 	onMount(() => {
 		// Backfill tableProcesses for old sessions
 		if (p.args.tableProcesses === undefined) p.args.tableProcesses = [];
+
+		// Migrate: remove any null/empty-string phantom categories persisted from old sessions
+		if (Array.isArray(p.args.categories)) {
+			const nullCats = p.args.categories.filter((c) => c == null || c === '');
+			for (const nullCat of nullCats) {
+				const outKey = 'value_' + nullCat; // 'value_null' or 'value_'
+				const colId = p.args.out?.[outKey];
+				if (colId !== undefined && colId >= 0) {
+					core.rawData.delete(colId);
+					removeColumn(colId);
+				}
+				if (p.args.out) delete p.args.out[outKey];
+			}
+			p.args.categories = p.args.categories.filter((c) => c != null && c !== '');
+		}
 
 		// Migrate old tp structures to new format: { args: { ..., xIN, yIN, out, valid } }
 		const _TP_X_KEY = {
@@ -565,7 +586,6 @@
 				}
 			}
 			p.args.valid = true;
-			lastHash = getHash;
 			if (!p.args.valueColIds) {
 				p.args.valueColIds = p.args.categories
 					.map((cat) => p.args.out['value_' + cat])
@@ -746,6 +766,22 @@
 					{#if collectedTPMap[tp.type]?.component}
 						{@const DynamicTP = collectedTPMap[tp.type].component}
 						<DynamicTP p={{ id: tp.id, args: tp.args, parent: p.parent }} hideInputs={true} />
+					{/if}
+
+					<!-- ChainedPanel for chainable sub-TPs -->
+					{#if collectedTPMap[tp.type]?.xOutKey && tp.args?.valid}
+						{@const _tpEntry = collectedTPMap[tp.type]}
+						{@const _subXOut = tp.args?.out?.[_tpEntry.xOutKey] ?? -1}
+						{@const _subYOuts = Object.entries(tp.args?.out ?? {})
+							.filter(([k]) => k.startsWith(_tpEntry.yOutKeyPrefix))
+							.map(([, id]) => id)
+							.filter((id) => typeof id === 'number' && id >= 0)}
+						<ChainedPanel
+							bind:p={p.args.tableProcesses[tpIdx]}
+							xOutColId={_subXOut}
+							yOutColIds={_subYOuts}
+							parentRef={p.parent}
+						/>
 					{/if}
 				</div>
 			{/each}
