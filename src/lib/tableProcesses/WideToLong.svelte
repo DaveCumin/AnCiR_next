@@ -3,8 +3,8 @@
 	import { core as coreForTransform } from '$lib/core/core.svelte';
 	import { getColumnById as getColumnByIdForTransform } from '$lib/core/Column.svelte';
 
-	export const widetolong_displayName = 'Wide To Long';
-	export const widetolong_defaults = new Map([
+	const displayName = 'Wide To Long';
+	const defaults = new Map([
 		['timeIN', { val: -1 }],
 		['valueColIds', { val: [] }],
 		['out', { time: { val: -1 }, category: { val: -1 }, value: { val: -1 } }],
@@ -100,6 +100,8 @@
 
 		return [result, result.time.length > 0];
 	}
+
+	export const definition = { displayName, defaults, func: widetolong };
 </script>
 
 <script>

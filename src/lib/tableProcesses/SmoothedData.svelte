@@ -2,8 +2,8 @@
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
-	export const smootheddata_displayName = 'Smooth Data';
-	export const smootheddata_defaults = new Map([
+	const displayName = 'Smooth Data';
+	const defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
 		['smootherType', { val: 'moving' }],
@@ -22,8 +22,13 @@
 		['tableProcesses', { val: [] }]
 	]);
 
-	export const smootheddata_xOutKey = 'smoothedx';
-	export const smootheddata_yOutKeyPrefix = 'smoothedy_';
+	export const definition = {
+		displayName,
+		defaults,
+		func: smootheddata,
+		xOutKey: 'smoothedx',
+		yOutKeyPrefix: 'smoothedy_'
+	};
 	function whittakerEilers(y, lambda = 100, order = 2) {
 		const n = y.length;
 		if (n < 3) return y;
@@ -412,8 +417,9 @@
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
-	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
+	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
+	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { onMount, untrack } from 'svelte';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 
@@ -428,8 +434,7 @@
 	let mounted = $state(false);
 	let previewStart = $state(1);
 
-	// Track previous Y IDs to detect what changed (non-reactive)
-	let prevYIds = [...(p.args.yIN ?? [])].map(Number);
+	const { syncYColumns, initYColumns } = useMultiYTP(p, 'smoothedy_', 'smooth_');
 
 	// Reactivity
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -467,49 +472,8 @@
 		}
 	});
 
-	// Called when Y selection changes in the multi-select.
-	// bind:value has already updated p.args.yIN, so we compare against prevYIds.
 	function onYSelectionChange() {
-		const newIds = (p.args.yIN ?? []).map(Number).filter((id) => id >= 0);
-		const newSet = new Set(newIds);
-		const oldSet = new Set(prevYIds);
-
-		// Skip if no actual change
-		if (newIds.length === prevYIds.length && newIds.every((id) => oldSet.has(id))) return;
-
-		// Remove output columns for deselected Y inputs
-		for (const oldId of prevYIds) {
-			if (!newSet.has(oldId)) {
-				const outKey = 'smoothedy_' + oldId;
-				const outColId = p.args.out[outKey];
-				if (outColId != null && outColId >= 0) {
-					core.rawData.delete(outColId);
-					removeColumn(outColId);
-				}
-				delete p.args.out[outKey];
-			}
-		}
-
-		// Create output columns for newly selected Y inputs
-		for (const newId of newIds) {
-			const outKey = 'smoothedy_' + newId;
-			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
-				if (p.parent) {
-					const srcName = getColumnById(newId)?.name ?? String(newId);
-					const yCol = new Column({});
-					yCol.name = 'smooth_' + srcName;
-					pushObj(yCol);
-					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
-					p.args.out[outKey] = yCol.id;
-				}
-			}
-		}
-
-		// Update tracking
-		prevYIds = [...newIds];
-
-		// Recompute
-		getSmoothedData();
+		if (syncYColumns()) getSmoothedData();
 	}
 
 	function getSmoothedData() {
@@ -548,24 +512,7 @@
 			p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
 			p.args.out.smoothedx = xCol.id;
 		}
-		// Create output columns for any Y inputs that don't have them yet
-		// (e.g. when the process was created programmatically with yIN pre-set)
-		let needsCompute = false;
-		for (const yId of p.args.yIN ?? []) {
-			const outKey = 'smoothedy_' + yId;
-			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
-				if (p.parent) {
-					const srcName = getColumnById(Number(yId))?.name ?? String(yId);
-					const yCol = new Column({});
-					yCol.name = 'smooth_' + srcName;
-					pushObj(yCol);
-					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
-					p.args.out[outKey] = yCol.id;
-					needsCompute = true;
-				}
-			}
-		}
-		prevYIds = [...(p.args.yIN ?? [])].map(Number);
+		const needsCompute = initYColumns();
 
 		if (needsCompute) {
 			getSmoothedData();

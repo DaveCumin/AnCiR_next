@@ -16,8 +16,7 @@ export async function loadTableProcesses() {
 			const displayName =
 				def?.displayName ?? svelteModule[`${funcName}_displayName`] ?? formatDisplayName(fileName);
 			const xOutKey = def?.xOutKey ?? svelteModule[`${funcName}_xOutKey`] ?? null;
-			const yOutKeyPrefix =
-				def?.yOutKeyPrefix ?? svelteModule[`${funcName}_yOutKeyPrefix`] ?? null;
+			const yOutKeyPrefix = def?.yOutKeyPrefix ?? svelteModule[`${funcName}_yOutKeyPrefix`] ?? null;
 			const defaults = def?.defaults ?? svelteModule[`${funcName}_defaults`] ?? new Map();
 
 			tableProcessMap.set(fileName, {

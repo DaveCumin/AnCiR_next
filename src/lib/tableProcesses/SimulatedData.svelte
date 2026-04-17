@@ -3,8 +3,8 @@
 
 	import { core } from '$lib/core/core.svelte';
 
-	export const simulateddata_displayName = 'Simulate Data';
-	export const simulateddata_defaults = new Map([
+	const displayName = 'Simulate Data';
+	const defaults = new Map([
 		['startTime', { val: DateTime.fromISO(new Date().toISOString(), { zone: 'utc' }).toMillis() }],
 		[
 			'sections',
@@ -95,6 +95,8 @@
 
 		return [simulatedTime, simulatedValues, simulatedValues.length > 0];
 	}
+
+	export const definition = { displayName, defaults, func: simulateddata };
 </script>
 
 <script>

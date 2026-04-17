@@ -5,8 +5,8 @@
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { fitTrend, evaluateTrendAtPoints } from '$lib/utils/trendfit.js';
 
-	export const trendfit_displayName = 'Fit Trend Curves';
-	export const trendfit_defaults = new Map([
+	const displayName = 'Fit Trend Curves';
+	const defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
 		['model', { val: 'linear' }],
@@ -20,8 +20,13 @@
 		['tableProcesses', { val: [] }]
 	]);
 
-	export const trendfit_xOutKey = 'trendx';
-	export const trendfit_yOutKeyPrefix = 'trendy_';
+	export const definition = {
+		displayName,
+		defaults,
+		func: trendfit,
+		xOutKey: 'trendx',
+		yOutKeyPrefix: 'trendy_'
+	};
 
 	export function trendfit(argsIN) {
 		const xIN = argsIN.xIN;
@@ -141,8 +146,9 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 
-	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
+	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
+	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { onMount, untrack } from 'svelte';
 	import {
 		showStaticDataAsTable,
@@ -161,8 +167,7 @@
 	let mounted = $state(false);
 	let previewStart = $state(1);
 
-	// Track previous Y IDs to detect what changed (non-reactive)
-	let prevYIds = [...(p.args.yIN ?? [])].map(Number);
+	const { syncYColumns, initYColumns } = useMultiYTP(p, 'trendy_', 'trend_');
 
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -190,49 +195,8 @@
 		}
 	});
 
-	// Called when Y selection changes in the multi-select.
-	// bind:value has already updated p.args.yIN, so we compare against prevYIds.
 	function onYSelectionChange() {
-		const newIds = (p.args.yIN ?? []).map(Number).filter((id) => id >= 0);
-		const newSet = new Set(newIds);
-		const oldSet = new Set(prevYIds);
-
-		// Skip if no actual change
-		if (newIds.length === prevYIds.length && newIds.every((id) => oldSet.has(id))) return;
-
-		// Remove output columns for deselected Y inputs
-		for (const oldId of prevYIds) {
-			if (!newSet.has(oldId)) {
-				const outKey = 'trendy_' + oldId;
-				const outColId = p.args.out[outKey];
-				if (outColId != null && outColId >= 0) {
-					core.rawData.delete(outColId);
-					removeColumn(outColId);
-				}
-				delete p.args.out[outKey];
-			}
-		}
-
-		// Create output columns for newly selected Y inputs
-		for (const newId of newIds) {
-			const outKey = 'trendy_' + newId;
-			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
-				if (p.parent) {
-					const srcName = getColumnById(newId)?.name ?? String(newId);
-					const yCol = new Column({});
-					yCol.name = 'trend_' + srcName;
-					pushObj(yCol);
-					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
-					p.args.out[outKey] = yCol.id;
-				}
-			}
-		}
-
-		// Update tracking
-		prevYIds = [...newIds];
-
-		// Recompute
-		getTrend();
+		if (syncYColumns()) getTrend();
 	}
 
 	//------------
@@ -272,23 +236,7 @@
 			p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
 			p.args.out.trendx = xCol.id;
 		}
-		// Create output columns for any Y inputs that don't have them yet
-		let needsCompute = false;
-		for (const yId of p.args.yIN ?? []) {
-			const outKey = 'trendy_' + yId;
-			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
-				if (p.parent) {
-					const srcName = getColumnById(Number(yId))?.name ?? String(yId);
-					const yCol = new Column({});
-					yCol.name = 'trend_' + srcName;
-					pushObj(yCol);
-					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
-					p.args.out[outKey] = yCol.id;
-					needsCompute = true;
-				}
-			}
-		}
-		prevYIds = [...(p.args.yIN ?? [])].map(Number);
+		const needsCompute = initYColumns();
 
 		if (needsCompute) {
 			getTrend();

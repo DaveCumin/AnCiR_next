@@ -2,9 +2,8 @@
 	import { core } from '$lib/core/core.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 
-	export const duplicate_displayName = 'Duplicate';
-
-	export const duplicate_defaults = new Map([
+	const displayName = 'Duplicate';
+	const defaults = new Map([
 		['xIN', { val: -1 }],
 		['out', {}],
 		['valid', { val: false }]
@@ -29,8 +28,10 @@
 			}
 		}
 
-		return [result, result.length > 0];
+		return [result, true];
 	}
+
+	export const definition = { displayName, defaults, func: duplicate };
 </script>
 
 <script>

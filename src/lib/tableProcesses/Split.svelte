@@ -2,9 +2,8 @@
 	import { core } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
-	export const split_displayName = 'Split data';
-
-	export const split_defaults = new Map([
+	const displayName = 'Split data';
+	const defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
 		['splitTimes', { val: [] }],
@@ -104,12 +103,12 @@
 			true
 		];
 	}
+
+	export const definition = { displayName, defaults, func: split };
 </script>
 
 <script>
 	// @ts-nocheck
-	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
-	import ColumnComponent from '$lib/core/Column.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';

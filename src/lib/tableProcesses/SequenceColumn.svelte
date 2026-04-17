@@ -2,8 +2,8 @@
 	import { DateTime } from 'luxon';
 	import { core } from '$lib/core/core.svelte';
 
-	export const sequencecolumn_displayName = 'Sequence Column';
-	export const sequencecolumn_defaults = new Map([
+	const displayName = 'Sequence Column';
+	const defaults = new Map([
 		['seqType', { val: 'number' }], // 'number' or 'time'
 		['start', { val: 0 }],
 		['step', { val: 1 }],
@@ -59,6 +59,8 @@
 
 		return [result, result.length > 0];
 	}
+
+	export const definition = { displayName, defaults, func: sequencecolumn };
 </script>
 
 <script>

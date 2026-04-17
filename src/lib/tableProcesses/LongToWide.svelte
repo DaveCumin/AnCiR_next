@@ -2,8 +2,8 @@
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
 
-	export const longtowide_displayName = 'Long To Wide';
-	export const longtowide_defaults = new Map([
+	const displayName = 'Long To Wide';
+	const defaults = new Map([
 		['categoryIN', { val: -1 }],
 		['timeIN', { val: -1 }],
 		['valueIN', { val: -1 }],
@@ -133,6 +133,8 @@
 
 		return [result, unionTimes.length > 0];
 	}
+
+	export const definition = { displayName, defaults, func: longtowide };
 </script>
 
 <script>

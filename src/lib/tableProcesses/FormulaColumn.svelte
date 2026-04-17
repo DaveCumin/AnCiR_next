@@ -1,9 +1,8 @@
 <script module>
 	import { core, getStoredValue } from '$lib/core/core.svelte';
 
-	export const formulacolumn_displayName = 'Formula Column';
-
-	export const formulacolumn_defaults = new Map([
+	const displayName = 'Formula Column';
+	const defaults = new Map([
 		['tokens', { val: [] }],
 		['out', { result: { val: -1 } }],
 		['valid', { val: false }]
@@ -82,6 +81,8 @@ return _r;`
 
 		return [result, result.length > 0];
 	}
+
+	export const definition = { displayName, defaults, func: formulacolumn };
 </script>
 
 <script>

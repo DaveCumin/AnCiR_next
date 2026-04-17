@@ -2,7 +2,8 @@
 	import { core } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
-	export const random_defaults = new Map([
+	const displayName = 'Random';
+	const defaults = new Map([
 		['offset', { val: 0 }],
 		['multiply', { val: 10 }],
 		['N', { val: 10 }],
@@ -27,6 +28,8 @@
 
 		return [result, result.length > 0];
 	}
+
+	export const definition = { displayName, defaults, func: random };
 </script>
 
 <script>

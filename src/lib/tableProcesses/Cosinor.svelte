@@ -3,7 +3,8 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { fitCosineCurves, evaluateCosinorAtPoints, fitCosinorFixed } from '$lib/utils/cosinor.js';
 
-	export const cosinor_defaults = new Map([
+	const displayName = 'Cosinor';
+	const defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
 		['Ncurves', { val: 0 }],
@@ -20,8 +21,13 @@
 		['tableProcesses', { val: [] }]
 	]);
 
-	export const cosinor_xOutKey = 'cosinorx';
-	export const cosinor_yOutKeyPrefix = 'cosinory_';
+	export const definition = {
+		displayName,
+		defaults,
+		func: cosinor,
+		xOutKey: 'cosinorx',
+		yOutKeyPrefix: 'cosinory_'
+	};
 
 	export function cosinor(argsIN) {
 		const xIN = argsIN.xIN;
@@ -219,8 +225,9 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
-	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
+	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
+	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
 	import {
@@ -249,8 +256,7 @@
 	let calculating = $state(false);
 	let _calcToken = 0;
 
-	// Track previous Y IDs to detect what changed (non-reactive)
-	let prevYIds = [...(p.args.yIN ?? [])].map(Number);
+	const { syncYColumns, initYColumns } = useMultiYTP(p, 'cosinory_', 'cosinor_');
 
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -288,44 +294,9 @@
 
 	// Reconcile output columns when yIN changes (from ColumnSelector or parent)
 	$effect(() => {
-		const currentYIN = (p.args.yIN ?? []).map(Number).filter((id) => id >= 0);
+		p.args.yIN;
 		if (!mounted) return;
-		untrack(() => {
-			const newSet = new Set(currentYIN);
-			const oldSet = new Set(prevYIds);
-			if (currentYIN.length === prevYIds.length && currentYIN.every((id) => oldSet.has(id))) return;
-
-			// Remove output columns for deselected Y inputs
-			for (const oldId of prevYIds) {
-				if (!newSet.has(oldId)) {
-					const outKey = 'cosinory_' + oldId;
-					const outColId = p.args.out?.[outKey];
-					if (outColId != null && outColId >= 0) {
-						core.rawData.delete(outColId);
-						removeColumn(outColId);
-					}
-					if (p.args.out) delete p.args.out[outKey];
-				}
-			}
-
-			// Create output columns for newly selected Y inputs
-			for (const newId of currentYIN) {
-				const outKey = 'cosinory_' + newId;
-				if (p.args.out?.[outKey] == null || p.args.out[outKey] === -1) {
-					if (p.parent) {
-						const srcName = getColumnById(newId)?.name ?? String(newId);
-						const yCol = new Column({});
-						yCol.name = 'cosinor_' + srcName;
-						pushObj(yCol);
-						p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
-						p.args.out[outKey] = yCol.id;
-					}
-				}
-			}
-
-			prevYIds = [...currentYIN];
-			getCosinor();
-		});
+		untrack(() => { if (syncYColumns()) getCosinor(); });
 	});
 
 	//------------
@@ -366,22 +337,7 @@
 				needsCompute = true;
 			}
 		}
-		// Create output columns for any Y inputs that don't have them yet
-		for (const yId of p.args.yIN ?? []) {
-			const outKey = 'cosinory_' + yId;
-			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
-				if (p.parent) {
-					const srcName = getColumnById(Number(yId))?.name ?? String(yId);
-					const yCol = new Column({});
-					yCol.name = 'cosinor_' + srcName;
-					pushObj(yCol);
-					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
-					p.args.out[outKey] = yCol.id;
-					needsCompute = true;
-				}
-			}
-		}
-		prevYIds = [...(p.args.yIN ?? [])].map(Number);
+		if (initYColumns()) needsCompute = true;
 
 		if (needsCompute) {
 			getCosinor();
