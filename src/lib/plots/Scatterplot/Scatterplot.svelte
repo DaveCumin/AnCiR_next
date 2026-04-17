@@ -993,10 +993,10 @@
 		{#each theData.plot.data as datum}
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
 				{@const xDATA =
-					theData.plot.anyXdataTime && datum.x.type !== 'time'
+					theData.plot.anyXdataTime && datum.x.type !== 'time' && datum.x.originTime_ms != null
 						? datum.x
 								.getData()
-								.map((d) => (datum.x.originTime_ms ?? theData.plot.xlims[0]) + d * 3600000)
+								.map((d) => datum.x.originTime_ms + d * 3600000)
 						: datum.x.getData()}
 				{@const yScale =
 					datum.yAxis === 'left' ? theData.plot.YScaleLeft : theData.plot.YScaleRight}
@@ -1013,7 +1013,7 @@
 				<Points
 					pointsData={datum.points}
 					x={xDATA}
-					xtype={datum.x.type}
+					xtype={theData.plot.anyXdataTime && datum.x.originTime_ms != null ? 'time' : datum.x.type}
 					y={datum.y.getData()}
 					xscale={theData.plot.XScale}
 					yscale={yScale}

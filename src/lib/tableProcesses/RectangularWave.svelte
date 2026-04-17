@@ -312,25 +312,33 @@
 		} else {
 			const xKey = p.args.out.rectwavex;
 			if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
-				const y_results = {};
-				for (const yId of p.args.yIN ?? []) {
-					const outKey = 'rectwavey_' + yId;
-					const yOutId = p.args.out[outKey];
-					if (yOutId >= 0 && core.rawData.has(yOutId)) {
-						y_results[yId] = {
-							fitResult: null,
-							fitted: core.rawData.get(yOutId),
-							t: core.rawData.get(xKey)
-						};
+				// Check if any input columns have been replaced since session was saved
+				const inputsAreStale =
+					(p.args.xIN >= 0 && (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0) ||
+					(p.args.yIN ?? []).some((id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0);
+				if (!inputsAreStale) {
+					const y_results = {};
+					for (const yId of p.args.yIN ?? []) {
+						const outKey = 'rectwavey_' + yId;
+						const yOutId = p.args.out[outKey];
+						if (yOutId >= 0 && core.rawData.has(yOutId)) {
+							y_results[yId] = {
+								fitResult: null,
+								fitted: core.rawData.get(yOutId),
+								t: core.rawData.get(xKey)
+							};
+						}
 					}
+					rwave = {
+						t: core.rawData.get(xKey),
+						outputXData: null,
+						y_results,
+						originTime_ms: null
+					};
+					p.args.valid = true;
 				}
-				rwave = {
-					t: core.rawData.get(xKey),
-					outputXData: null,
-					y_results,
-					originTime_ms: null
-				};
-				p.args.valid = true;
+				// Note: lastHash is NOT set here, so $effect will always fire after mount
+				// and recompute from current inputs regardless of staleness
 			}
 		}
 		mounted = true;

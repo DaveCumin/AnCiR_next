@@ -44,9 +44,16 @@
 				const outColId = argsIN.out['col_' + colId];
 				if (outColId !== undefined && Number(outColId) >= 0) {
 					core.rawData.set(outColId, result[colId]);
-					getColumnById(outColId).data = outColId;
-					getColumnById(outColId).type = getColumnById(colId)?.type ?? 'number';
-					getColumnById(outColId).tableProcessGUId = processHash;
+					const outCol = getColumnById(outColId);
+					const inCol = getColumnById(colId);
+					outCol.data = outColId;
+					outCol.type = inCol?.type ?? 'number';
+					// For time columns: the collected data is already parsed UNIX ms,
+					// so clear timeFormat to prevent getData() from re-parsing.
+					if (outCol.type === 'time') {
+						outCol.timeFormat = null;
+					}
+					outCol.tableProcessGUId = processHash;
 				}
 			}
 		}
@@ -438,6 +445,10 @@
 			core.rawData.has(firstOutId) &&
 			core.rawData.get(firstOutId).length > 0
 		) {
+			// Check if any input columns have been replaced since session was saved
+			const inputsAreStale = (p.args.colIds ?? []).some(
+				(id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0
+			);
 			collectResult = {};
 			for (const colId of p.args.colIds) {
 				const outColId = p.args.out['col_' + colId];
@@ -451,7 +462,7 @@
 					.map((colId) => p.args.out['col_' + colId])
 					.filter((id) => id !== undefined && id >= 0);
 			}
-			lastHash = getHash;
+			if (!inputsAreStale) lastHash = getHash;
 		}
 
 		// Sync xIN/yIN for each table process from current state
