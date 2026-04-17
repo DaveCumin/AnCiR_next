@@ -16,6 +16,9 @@
 	export function columnfunctions(argsIN) {
 		if (argsIN.xsIN == undefined || argsIN.xsIN.length == 0) return [[], false];
 
+		// Guard against stale IDs that no longer exist in core.data (e.g. after a second data replace)
+		if (argsIN.xsIN.some((id) => getColumnById(id) == null)) return [[], false];
+
 		const columns = argsIN.xsIN.map((id) => getColumnById(id).getData());
 		const n = columns[0].length;
 		const nCols = columns.length;
