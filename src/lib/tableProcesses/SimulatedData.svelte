@@ -340,7 +340,7 @@
 			<ColumnComponent col={timeOut} />
 			<ColumnComponent col={yout} />
 		</details>
-	{:else if p.args.valid}
+	{:else if p.args.valid && simulatedTime}
 		{@const totalRows = simulatedTime.length}
 		<p>Preview:</p>
 		<p>
