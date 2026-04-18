@@ -192,19 +192,17 @@
 
 			this.data.forEach((d, i) => {
 				const xCol = this.data[i].x;
-				if (this.anyXdataTime && xCol.type !== 'time' && xCol.originTime_ms == null) {
-					// skip pure-number columns that have no time origin
-					return;
-				}
 				let tempx = xCol.getData() ?? [];
 				let tempy = this.data[i].y.getData() ?? [];
 
 				tempx = tempx.filter(
 					(x, i) => x != null && !isNaN(x) && tempy[i] != null && !isNaN(tempy[i])
 				); // Ensure all values are valid (not null or NaN) — do NOT exclude zeros
-				// Convert origin-aware hour columns to ms for limit calculation
-				if (this.anyXdataTime && xCol.type !== 'time' && xCol.originTime_ms != null) {
-					tempx = tempx.map((h) => xCol.originTime_ms + h * 3600000);
+				// Convert non-time hour columns to ms using their own origin or the shared reference
+				if (this.anyXdataTime && xCol.type !== 'time') {
+					const origin = xCol.originTime_ms ?? this.xReferenceOrigin_ms;
+					if (origin == null) return; // no time reference available — skip
+					tempx = tempx.map((h) => origin + h * 3600000);
 				}
 				xmin = Math.floor(min([xmin, ...tempx]));
 				xmax = Math.ceil(max([xmax, ...tempx]));
@@ -255,6 +253,19 @@
 				return false;
 			}
 			return this.data.some((d) => d.x.type === 'time' || d.x.originTime_ms != null);
+		});
+
+		// The reference origin (ms) for pure-numeric series plotted alongside time series.
+		// Uses the first available originTime_ms or the first raw timestamp from a time column.
+		xReferenceOrigin_ms = $derived.by(() => {
+			for (const d of this.data) {
+				if (d.x.originTime_ms != null) return d.x.originTime_ms;
+				if (d.x.type === 'time') {
+					const raw = d.x.getData();
+					if (raw?.length > 0) return raw[0];
+				}
+			}
+			return null;
 		});
 
 		anyXCategoryData = $derived.by(() => {
@@ -439,10 +450,13 @@
 				if (this.anyXdataTime) {
 					if (datum.x.type === 'time') {
 						xData = xData.map((/** @type {number} */ ms) => new Date(ms).toISOString());
-					} else if (datum.x.originTime_ms != null) {
-						xData = xData.map((/** @type {number} */ h) =>
-							new Date(datum.x.originTime_ms + h * 3600000).toISOString()
-						);
+					} else {
+						const origin = datum.x.originTime_ms ?? this.xReferenceOrigin_ms;
+						if (origin != null) {
+							xData = xData.map((/** @type {number} */ h) =>
+								new Date(origin + h * 3600000).toISOString()
+							);
+						}
 					}
 				}
 				const yData = datum.y.getData() ?? [];
@@ -993,8 +1007,8 @@
 		{#each theData.plot.data as datum}
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
 				{@const xDATA =
-					theData.plot.anyXdataTime && datum.x.type !== 'time' && datum.x.originTime_ms != null
-						? datum.x.getData().map((d) => datum.x.originTime_ms + d * 3600000)
+					theData.plot.anyXdataTime && datum.x.type !== 'time'
+						? datum.x.getData().map((d) => (datum.x.originTime_ms ?? theData.plot.xReferenceOrigin_ms) + d * 3600000)
 						: datum.x.getData()}
 				{@const yScale =
 					datum.yAxis === 'left' ? theData.plot.YScaleLeft : theData.plot.YScaleRight}
@@ -1011,7 +1025,7 @@
 				<Points
 					pointsData={datum.points}
 					x={xDATA}
-					xtype={theData.plot.anyXdataTime && datum.x.originTime_ms != null ? 'time' : datum.x.type}
+					xtype={theData.plot.anyXdataTime ? 'time' : datum.x.type}
 					y={datum.y.getData()}
 					xscale={theData.plot.XScale}
 					yscale={yScale}
