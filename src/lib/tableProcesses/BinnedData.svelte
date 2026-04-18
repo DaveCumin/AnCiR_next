@@ -153,6 +153,30 @@
 
 	// Reactivity — mirrors original pattern
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
+	let xIsTime = $derived(xIN_col?.type === 'time');
+	// First raw timestamp (ms) of the x input — the zero-point for binStart when x is time
+	let xStartTime_ms = $derived(xIsTime ? (xIN_col?.getData()?.[0] ?? null) : null);
+
+	function toDatetimeLocal(ms) {
+		if (ms == null) return '';
+		const d = new Date(ms);
+		const pad = (n) => String(n).padStart(2, '0');
+		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+	}
+
+	let binStartDatetimeStr = $derived(
+		xIsTime && xStartTime_ms != null
+			? toDatetimeLocal(xStartTime_ms + p.args.binStart * 3600000)
+			: ''
+	);
+
+	function handleBinStartDatetime(e) {
+		const ms = new Date(e.target.value).getTime();
+		if (!isNaN(ms) && xStartTime_ms != null) {
+			p.args.binStart = (ms - xStartTime_ms) / 3600000;
+			getBinnedData();
+		}
+	}
 	let getHash = $derived.by(() => {
 		let h = '';
 		h += xIN_col?.getDataHash ?? '';
@@ -283,8 +307,18 @@
 			<NumberWithUnits bind:value={p.args.binSize} onInput={getBinnedData} min="0.01" step="0.01" />
 		</div>
 		<div class="control-input">
-			<p>Bin start (hr)</p>
-			<NumberWithUnits bind:value={p.args.binStart} onInput={getBinnedData} />
+			{#if xIsTime}
+				<p>Bin start</p>
+				<input
+					type="datetime-local"
+					step="1"
+					value={binStartDatetimeStr}
+					onchange={handleBinStartDatetime}
+				/>
+			{:else}
+				<p>Bin start (hr)</p>
+				<NumberWithUnits bind:value={p.args.binStart} onInput={getBinnedData} />
+			{/if}
 		</div>
 	</div>
 
@@ -358,13 +392,17 @@
 					<p>Preview ({p.args.aggFunction}{p.args.stepSize ? `, step=${p.args.stepSize}` : ''}):</p>
 					<Table
 						headers={[
-							'binned x (center)',
+							xIsTime ? 'binned x (start)' : 'binned x (center)',
 							...yIds.map((id) => 'binned y (' + (getColumnById(Number(id))?.name ?? id) + ')')
 						]}
 						data={[
 							binnedData.bins
 								.slice(previewStart - 1, previewStart + 5)
-								.map((x) => (x + p.args.stepSize / 2).toFixed(4)),
+								.map((x) =>
+									xIsTime && xStartTime_ms != null
+										? new Date(xStartTime_ms + x * 3600000).toLocaleString()
+										: (x + p.args.stepSize / 2).toFixed(4)
+								),
 							...yIds.map((id) =>
 								binnedData.y_results[id]
 									.slice(previewStart - 1, previewStart + 5)
