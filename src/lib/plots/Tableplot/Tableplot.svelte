@@ -168,6 +168,15 @@
 							.map((x) => (Number.isFinite(x) ? x.toFixed(this.decimalPlaces) : x));
 						out.push(data);
 					}
+				} else if (col.type === 'bin' && col.originTime_ms != null) {
+					const origin = col.originTime_ms;
+					const data = col
+						.getData()
+						.slice(this.colCurrent - 1, this.colCurrent + this.Ncolumns)
+						.map((h) =>
+							Number.isFinite(h) ? new Date(origin + h * 3600000).toLocaleString() : String(h)
+						);
+					out.push(data);
 				} else {
 					const data = col
 						.getData()

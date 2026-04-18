@@ -177,6 +177,21 @@
 			getBinnedData();
 		}
 	}
+
+	// Reset binStart to 0 when x column switches between time and non-time,
+	// so the hours offset is always relative to the new column's reference point.
+	let prevXIsTime = false;
+	$effect(() => {
+		const nowIsTime = xIsTime;
+		if (nowIsTime !== prevXIsTime) {
+			prevXIsTime = nowIsTime;
+			untrack(() => {
+				p.args.binStart = 0;
+				if (mounted) getBinnedData();
+			});
+		}
+	});
+
 	let getHash = $derived.by(() => {
 		let h = '';
 		h += xIN_col?.getDataHash ?? '';
@@ -392,17 +407,20 @@
 					<p>Preview ({p.args.aggFunction}{p.args.stepSize ? `, step=${p.args.stepSize}` : ''}):</p>
 					<Table
 						headers={[
-							xIsTime ? 'binned x (start)' : 'binned x (center)',
+							xIsTime ? 'binned x' : 'binned x (center)',
 							...yIds.map((id) => 'binned y (' + (getColumnById(Number(id))?.name ?? id) + ')')
 						]}
 						data={[
 							binnedData.bins
 								.slice(previewStart - 1, previewStart + 5)
-								.map((x) =>
-									xIsTime && xStartTime_ms != null
-										? new Date(xStartTime_ms + x * 3600000).toLocaleString()
-										: (x + p.args.stepSize / 2).toFixed(4)
-								),
+								.map((x) => {
+									if (xIsTime && xStartTime_ms != null) {
+										const half = p.args.binSize / 2;
+										const centerMs = xStartTime_ms + (x + half) * 3600000;
+										return `${new Date(centerMs).toLocaleString()} ±${half.toFixed(2)}h`;
+									}
+									return (x + p.args.stepSize / 2).toFixed(4);
+								}),
 							...yIds.map((id) =>
 								binnedData.y_results[id]
 									.slice(previewStart - 1, previewStart + 5)
