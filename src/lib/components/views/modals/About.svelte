@@ -61,6 +61,13 @@
 			This is our 'AnCiR' to the need for a simple-to-use (GUI; no coding) tool for analysis of
 			circadian rhythms.
 		</p>
+		<p>
+			A handbook for chronobiological analysis that includes steps in AnCiR is <a
+				href="./handbook.html"
+				target="_blank">here</a
+			>. There is also a video introduction available
+			<a href="https://youtu.be/R7TW3fxsGBM" target="_blank">here</a>.
+		</p>
 
 		<p>
 			This version was financially supported by a University of Auckland Teaching and Learning
