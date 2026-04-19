@@ -99,6 +99,9 @@
 				if (xRawData?.length > 0) {
 					getColumnById(xOUT).originTime_ms = xRawData[0];
 				}
+			} else {
+				const xOutCol = /** @type {any} */ (getColumnById(xOUT));
+				if (xOutCol) xOutCol.originTime_ms = null;
 			}
 			getColumnById(xOUT).tableProcessGUId = processHash;
 
@@ -417,9 +420,18 @@
 									if (xIsTime && xStartTime_ms != null) {
 										const half = p.args.binSize / 2;
 										const centerMs = xStartTime_ms + (x + half) * 3600000;
-										return `${new Date(centerMs).toLocaleString()} ±${half.toFixed(2)}h`;
+										return {
+											raw: new Date(centerMs).toLocaleString(),
+											computed: `±${half.toFixed(2)}`,
+											isTime: true
+										};
 									}
-									return (x + p.args.stepSize / 2).toFixed(4);
+									const center = (x + p.args.stepSize / 2).toFixed(4);
+									return {
+										raw: center,
+										computed: `±${(p.args.binSize / 2).toFixed(2)}`,
+										isTime: true
+									};
 								}),
 							...yIds.map((id) =>
 								binnedData.y_results[id]

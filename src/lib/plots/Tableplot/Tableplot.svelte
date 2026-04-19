@@ -148,7 +148,39 @@
 					continue;
 				}
 
-				if (col.type === 'time' && !col.isReferencial() && col.compression !== 'awd') {
+				if (col.type === 'bin') {
+					const rawArr = core.rawData.get(col.data);
+					if (Array.isArray(rawArr)) {
+						const start = this.colCurrent - 1;
+						const binStep = col.binStep ?? col.binWidth ?? 0;
+						const halfRange = (col.binWidth ?? 0) / 2;
+						const rangeStr = `±${halfRange.toFixed(2)}`;
+						if (col.originTime_ms != null) {
+							// Time-based bins: show center as datetime
+							out.push(
+								rawArr.slice(start, start + this.Ncolumns).map((x) => {
+									const centerMs = col.originTime_ms + (x + binStep / 2) * 3600000;
+									return {
+										raw: new Date(centerMs).toLocaleString(),
+										computed: rangeStr,
+										isTime: true
+									};
+								})
+							);
+						} else {
+							// Numeric bins: show center value with ± range
+							out.push(
+								rawArr.slice(start, start + this.Ncolumns).map((x) => ({
+									raw: (x + binStep / 2).toFixed(this.decimalPlaces),
+									computed: rangeStr,
+									isTime: true
+								}))
+							);
+						}
+					} else {
+						out.push(Array(this.Ncolumns).fill('—'));
+					}
+				} else if (col.type === 'time' && !col.isReferencial() && col.compression !== 'awd') {
 					const rawArr = core.rawData.get(col.data);
 					if (Array.isArray(rawArr)) {
 						const start = this.colCurrent - 1;
@@ -168,15 +200,6 @@
 							.map((x) => (Number.isFinite(x) ? x.toFixed(this.decimalPlaces) : x));
 						out.push(data);
 					}
-				} else if (col.type === 'bin' && col.originTime_ms != null) {
-					const origin = col.originTime_ms;
-					const data = col
-						.getData()
-						.slice(this.colCurrent - 1, this.colCurrent + this.Ncolumns)
-						.map((h) =>
-							Number.isFinite(h) ? new Date(origin + h * 3600000).toLocaleString() : String(h)
-						);
-					out.push(data);
 				} else {
 					const data = col
 						.getData()
