@@ -358,92 +358,78 @@
 		getAutoScaleValues() {
 			let axisWidths = { left: null, right: null, top: null, bottom: null };
 
-			const leftSVG = document.getElementById('plot' + this.parentBox.id)?.getBoundingClientRect();
+			const plotEl = document.getElementById('plot' + this.parentBox.id);
+			if (!plotEl) return axisWidths;
 
 			//LEFT
-			const allLeftAxes = document
-				.getElementById('plot' + this.parentBox.id)
-				?.getElementsByClassName('axis-left');
-			if (allLeftAxes.length == 0) {
-			} else {
-				if (allLeftAxes) {
-					let leftMost = 0;
-					let leftAxisWhole = allLeftAxes[0].getBoundingClientRect().left;
-					for (let i = 1; i < allLeftAxes.length; i++) {
-						if (allLeftAxes[i].getBoundingClientRect().left < leftAxisWhole) {
-							leftMost = i;
-							leftAxisWhole = allLeftAxes[i].getBoundingClientRect().left;
-						}
+			const allLeftAxes = plotEl.getElementsByClassName('axis-left');
+			if (allLeftAxes.length > 0) {
+				let leftMost = 0;
+				let leftAxisWhole = allLeftAxes[0].getBoundingClientRect().left;
+				for (let i = 1; i < allLeftAxes.length; i++) {
+					if (allLeftAxes[i].getBoundingClientRect().left < leftAxisWhole) {
+						leftMost = i;
+						leftAxisWhole = allLeftAxes[i].getBoundingClientRect().left;
 					}
-					const leftAxisLine = allLeftAxes[leftMost]
-						.getElementsByClassName('domain')[0]
-						.getBoundingClientRect().left;
+				}
+				// Domain line may be absent during axis re-mount (see #key in Axis.svelte)
+				const domain = allLeftAxes[leftMost].getElementsByClassName('domain')[0];
+				if (domain) {
+					const leftAxisLine = domain.getBoundingClientRect().left;
 					axisWidths.left = Math.round(leftAxisLine - leftAxisWhole + 6);
 				}
 			}
 
 			//RIGHT
-			const allRightAxes = document
-				.getElementById('plot' + this.parentBox.id)
-				.getElementsByClassName('axis-right');
-			if (allRightAxes.length == 0) {
-			} else {
-				if (allRightAxes) {
-					let rightMost = 0;
-					let rightAxisWhole = allRightAxes[0].getBoundingClientRect().right;
-					for (let i = 1; i < allRightAxes.length; i++) {
-						if (allRightAxes[i].getBoundingClientRect().right > rightAxisWhole) {
-							rightMost = i;
-							rightAxisWhole = allRightAxes[i].getBoundingClientRect().right;
-						}
+			const allRightAxes = plotEl.getElementsByClassName('axis-right');
+			if (allRightAxes.length > 0) {
+				let rightMost = 0;
+				let rightAxisWhole = allRightAxes[0].getBoundingClientRect().right;
+				for (let i = 1; i < allRightAxes.length; i++) {
+					if (allRightAxes[i].getBoundingClientRect().right > rightAxisWhole) {
+						rightMost = i;
+						rightAxisWhole = allRightAxes[i].getBoundingClientRect().right;
 					}
-					const rightAxisLine = allRightAxes[rightMost]
-						.getElementsByClassName('domain')[0]
-						.getBoundingClientRect().right;
+				}
+				const domain = allRightAxes[rightMost].getElementsByClassName('domain')[0];
+				if (domain) {
+					const rightAxisLine = domain.getBoundingClientRect().right;
 					axisWidths.right = Math.round(rightAxisWhole - rightAxisLine + 6);
 				}
 			}
 
 			//TOP
-			const allTopAxes = document
-				.getElementById('plot' + this.parentBox.id)
-				.getElementsByClassName('axis-top');
-			if (allTopAxes.length == 0) {
-			} else {
-				if (allTopAxes) {
-					let topMost = 0;
-					let topAxisWhole = allTopAxes[0].getBoundingClientRect().top;
-					for (let i = 1; i < allTopAxes.length; i++) {
-						if (allTopAxes[i].getBoundingClientRect().top < topAxisWhole) {
-							topMost = i;
-							topAxisWhole = allTopAxes[i].getBoundingClientRect().top;
-						}
+			const allTopAxes = plotEl.getElementsByClassName('axis-top');
+			if (allTopAxes.length > 0) {
+				let topMost = 0;
+				let topAxisWhole = allTopAxes[0].getBoundingClientRect().top;
+				for (let i = 1; i < allTopAxes.length; i++) {
+					if (allTopAxes[i].getBoundingClientRect().top < topAxisWhole) {
+						topMost = i;
+						topAxisWhole = allTopAxes[i].getBoundingClientRect().top;
 					}
-					const topAxisLine = allTopAxes[topMost]
-						.getElementsByClassName('domain')[0]
-						.getBoundingClientRect().top;
+				}
+				const domain = allTopAxes[topMost].getElementsByClassName('domain')[0];
+				if (domain) {
+					const topAxisLine = domain.getBoundingClientRect().top;
 					axisWidths.top = Math.round(topAxisLine - topAxisWhole + 6);
 				}
 			}
 
 			//BOTTOM
-			const allBottomAxes = document
-				.getElementById('plot' + this.parentBox.id)
-				.getElementsByClassName('axis-bottom');
-			if (allBottomAxes.length == 0) {
-			} else {
-				if (allBottomAxes) {
-					let bottomMost = 0;
-					let bottomAxisWhole = allBottomAxes[0].getBoundingClientRect().bottom;
-					for (let i = 1; i < allBottomAxes.length; i++) {
-						if (allBottomAxes[i].getBoundingClientRect().bottom > bottomAxisWhole) {
-							bottomMost = i;
-							bottomAxisWhole = allBottomAxes[i].getBoundingClientRect().bottom;
-						}
+			const allBottomAxes = plotEl.getElementsByClassName('axis-bottom');
+			if (allBottomAxes.length > 0) {
+				let bottomMost = 0;
+				let bottomAxisWhole = allBottomAxes[0].getBoundingClientRect().bottom;
+				for (let i = 1; i < allBottomAxes.length; i++) {
+					if (allBottomAxes[i].getBoundingClientRect().bottom > bottomAxisWhole) {
+						bottomMost = i;
+						bottomAxisWhole = allBottomAxes[i].getBoundingClientRect().bottom;
 					}
-					const bottomAxisLine = allBottomAxes[bottomMost]
-						.getElementsByClassName('domain')[0]
-						.getBoundingClientRect().bottom;
+				}
+				const domain = allBottomAxes[bottomMost].getElementsByClassName('domain')[0];
+				if (domain) {
+					const bottomAxisLine = domain.getBoundingClientRect().bottom;
 					axisWidths.bottom = Math.round(bottomAxisWhole - bottomAxisLine + 12);
 				}
 			}

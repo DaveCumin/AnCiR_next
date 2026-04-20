@@ -10,7 +10,6 @@
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
-	import Toggle from '$lib/components/inputs/Toggle.svelte';
 	import { tick } from 'svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 
@@ -23,7 +22,7 @@
 
 	let xCol = $state();
 	let yCols = $state([]); // contains column id
-	let combinePlots = $state(false); // false = separate plots, true = combined into one plot
+	let combinePlots = $state(false); // tracks which mode was chosen; used for header/spinner text
 
 	async function confirmMakeCombinedPlot() {
 		awaitingMake = true;
@@ -182,9 +181,6 @@
 				}}
 			/>
 		</div>
-		<div class="combine-toggle">
-			<Toggle Labels={['Separate plots', 'Combined plot']} onChange={(v) => (combinePlots = v)} />
-		</div>
 	{/if}
 	{#if index === 1}
 		<AttributeSelect
@@ -202,30 +198,46 @@
 
 		<div class="import-container">
 			<div class="preview-placeholder">
-				<p>Alt-click to select multiple</p>
 				<span>ys:</span>
 				<ColumnSelector bind:value={yCols} multiple={true} />
 			</div>
 		</div>
 
 		{#if yCols[0] != null && Number(xCol) >= 0}
-			<div class="dialog-button-container">
-				<button
-					id="makePlots"
-					class="dialog-button"
-					onclick={(e) => {
-						e.stopPropagation();
-						if (combinePlots) {
-							confirmMakeCombinedPlot();
-						} else {
+			{#if yCols.length == 1}
+				<div class="dialog-button-container">
+					<button
+						id="makePlots"
+						class="dialog-button"
+						onclick={(e) => {
+							e.stopPropagation();
+							combinePlots = false;
 							confirmMakePlots();
-						}
-					}}
-					>{combinePlots
-						? `Combine ${yCols.length} data sets into one plot`
-						: `Make these ${yCols.length} plots`}</button
-				>
-			</div>
+						}}>Make the plot</button
+					>
+				</div>
+			{:else if yCols.length >= 2}
+				<div class="dialog-button-container">
+					<button
+						id="makePlots"
+						class="dialog-button"
+						onclick={(e) => {
+							e.stopPropagation();
+							combinePlots = false;
+							confirmMakePlots();
+						}}>Make {yCols.length} plots</button
+					>
+					<button
+						id="combinePlots"
+						class="dialog-button"
+						onclick={(e) => {
+							e.stopPropagation();
+							combinePlots = true;
+							confirmMakeCombinedPlot();
+						}}>Combine {yCols.length} data</button
+					>
+				</div>
+			{/if}
 		{/if}
 	{/if}
 {/snippet}
@@ -276,13 +288,6 @@
 		flex-direction: row;
 		align-items: center;
 		gap: 1rem;
-	}
-
-	.combine-toggle {
-		margin-top: 0.5em;
-		display: flex;
-		align-items: center;
-		font-size: 14px;
 	}
 
 	.preview-placeholder {

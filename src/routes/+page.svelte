@@ -613,8 +613,7 @@
 	:global(.dialog-button-container) {
 		display: flex;
 		justify-content: flex-end;
-
-		cursor: pointer;
+		gap: 0.5em;
 	}
 
 	:global(button.dialog-button) {

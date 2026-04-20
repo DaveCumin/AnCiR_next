@@ -450,10 +450,12 @@
 						leftAxisWhole = allLeftAxes[i].getBoundingClientRect().left;
 					}
 				}
-				const leftAxisLine = allLeftAxes[leftMost]
-					.getElementsByClassName('domain')[0]
-					.getBoundingClientRect().left;
-				axisWidths.left = Math.round(leftAxisLine - leftAxisWhole + 6);
+				// Domain line may be absent during axis re-mount (see #key in Axis.svelte)
+				const domain = allLeftAxes[leftMost].getElementsByClassName('domain')[0];
+				if (domain) {
+					const leftAxisLine = domain.getBoundingClientRect().left;
+					axisWidths.left = Math.round(leftAxisLine - leftAxisWhole + 6);
+				}
 			}
 
 			const allRightAxes = plotElem.getElementsByClassName('axis-right');
@@ -466,10 +468,11 @@
 						rightAxisWhole = allRightAxes[i].getBoundingClientRect().right;
 					}
 				}
-				const rightAxisLine = allRightAxes[rightMost]
-					.getElementsByClassName('domain')[0]
-					.getBoundingClientRect().right;
-				axisWidths.right = Math.round(rightAxisWhole - rightAxisLine + 6);
+				const domain = allRightAxes[rightMost].getElementsByClassName('domain')[0];
+				if (domain) {
+					const rightAxisLine = domain.getBoundingClientRect().right;
+					axisWidths.right = Math.round(rightAxisWhole - rightAxisLine + 6);
+				}
 			}
 
 			const allTopAxes = plotElem.getElementsByClassName('axis-top');
@@ -482,10 +485,11 @@
 						topAxisWhole = allTopAxes[i].getBoundingClientRect().top;
 					}
 				}
-				const topAxisLine = allTopAxes[topMost]
-					.getElementsByClassName('domain')[0]
-					.getBoundingClientRect().top;
-				axisWidths.top = Math.round(topAxisLine - topAxisWhole + 6);
+				const domain = allTopAxes[topMost].getElementsByClassName('domain')[0];
+				if (domain) {
+					const topAxisLine = domain.getBoundingClientRect().top;
+					axisWidths.top = Math.round(topAxisLine - topAxisWhole + 6);
+				}
 			}
 
 			const allBottomAxes = plotElem.getElementsByClassName('axis-bottom');
@@ -498,10 +502,11 @@
 						bottomAxisWhole = allBottomAxes[i].getBoundingClientRect().bottom;
 					}
 				}
-				const bottomAxisLine = allBottomAxes[bottomMost]
-					.getElementsByClassName('domain')[0]
-					.getBoundingClientRect().bottom;
-				axisWidths.bottom = Math.round(bottomAxisWhole - bottomAxisLine + 12);
+				const domain = allBottomAxes[bottomMost].getElementsByClassName('domain')[0];
+				if (domain) {
+					const bottomAxisLine = domain.getBoundingClientRect().bottom;
+					axisWidths.bottom = Math.round(bottomAxisWhole - bottomAxisLine + 12);
+				}
 			}
 
 			return axisWidths;
