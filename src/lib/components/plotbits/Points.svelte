@@ -1,11 +1,14 @@
 <script module>
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import { POINT_SHAPES, POINT_SHAPE_LABELS, getPointPath } from './pointShapes.js';
 
 	export class PointsClass {
 		colour = $state(getPaletteColor(0));
 		radius = $state(4);
+		shape = $state('circle');
 		draw = $state(true);
 
 		constructor(dataIN, parent) {
@@ -13,6 +16,7 @@
 			this.colour =
 				dataIN?.colour ?? getPaletteColor(parent.parentPlot.data.length) ?? getPaletteColor(0);
 			this.radius = dataIN?.radius ?? 4;
+			this.shape = POINT_SHAPES.includes(dataIN?.shape) ? dataIN.shape : 'circle';
 			this.draw = dataIN?.draw ?? true;
 		}
 
@@ -20,6 +24,7 @@
 			return {
 				colour: this.colour,
 				radius: this.radius,
+				shape: this.shape,
 				draw: this.draw
 			};
 		}
@@ -28,6 +33,7 @@
 			return new PointsClass({
 				colour: json.colour,
 				radius: json.radius,
+				shape: json.shape,
 				draw: json.draw
 			});
 		}
@@ -79,9 +85,10 @@
 			);
 
 		if (!pointsData?.draw || !x || !y) return null;
+		const shape = pointsData.shape || 'circle';
 		let out = '';
 		filteredData.forEach((p) => {
-			out += `M${xscale(p.x)} ${yscale(p.y)} m-${pointsData.radius} 0 a${pointsData.radius} ${pointsData.radius} 0 1 0 ${2 * pointsData.radius} 0 a${pointsData.radius} ${pointsData.radius} 0 1 0 -${2 * pointsData.radius} 0 `;
+			out += getPointPath(shape, xscale(p.x), yscale(p.y), pointsData.radius) + ' ';
 		});
 
 		//Set up the quadtree for hovering
@@ -192,6 +199,16 @@
 				<div class="control-input">
 					<p>Radius</p>
 					<NumberWithUnits step="0.2" min={0.1} bind:value={pointsData.radius} />
+				</div>
+			</div>
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Shape</p>
+					<AttributeSelect
+						bind:value={pointsData.shape}
+						options={POINT_SHAPES}
+						optionsDisplay={POINT_SHAPE_LABELS}
+					/>
 				</div>
 			</div>
 		{/if}

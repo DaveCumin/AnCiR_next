@@ -50,6 +50,8 @@
 </script>
 
 <script>
+	import { getPointPath } from './pointShapes.js';
+
 	let { legendData, items = [], plotWidth, plotHeight, padding, which = 'plot' } = $props();
 
 	let labelWidths = $state([]); // width of each <text> element
@@ -256,7 +258,10 @@
 									stroke-dasharray={el.stroke}
 								/>
 							{:else if el.type === 'points'}
-								<circle cx={10} cy={0} r={el.size} fill={el.color} />
+								<path
+									d={getPointPath(el.shape || 'circle', 10, 0, el.size)}
+									fill={el.color}
+								/>
 							{/if}
 						{/each}
 						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendData.fontSize} fill="black">
@@ -281,7 +286,10 @@
 									stroke-dasharray={el.stroke}
 								/>
 							{:else if el.type === 'points'}
-								<circle cx={10} cy={0} r={el.size} fill={el.color} />
+								<path
+									d={getPointPath(el.shape || 'circle', 10, 0, el.size)}
+									fill={el.color}
+								/>
 							{/if}
 						{/each}
 						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendData.fontSize} fill="black">
