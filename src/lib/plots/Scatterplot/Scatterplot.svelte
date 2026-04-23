@@ -6,6 +6,7 @@
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import { findNearestY } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import NightBand, { NightBandClass } from './NightBand.svelte';
 
@@ -570,6 +571,30 @@
 		tooltip = event.detail;
 	}
 
+	// Build the siblings list so every series hover shows all series' values at the hovered x.
+	let scatterSiblings = $derived.by(() => {
+		if (which !== 'plot' || !theData?.plot?.data) return [];
+		return theData.plot.data
+			.filter((d) => d.x?.getData()?.length > 0 && d.y?.getData()?.length > 0)
+			.map((d) => {
+				const xD =
+					theData.plot.anyXdataTime && d.x.type !== 'time'
+						? d.x
+								.getData()
+								.map(
+									(v) =>
+										(d.x.originTime_ms ?? theData.plot.xReferenceOrigin_ms) + v * 3600000
+								)
+						: d.x.getData();
+				const yArr = d.y.getData();
+				return {
+					label: d.label || d.y?.name || '',
+					colour: d.points?.colour || d.line?.colour || 'black',
+					findYAt: (x) => findNearestY(xD, yArr, x)
+				};
+			});
+	});
+
 	onMount(() => {
 		if (which == 'plot') {
 			theData.plot.autoScalePadding('all');
@@ -1033,6 +1058,7 @@
 					yLabel={datum.yAxis === 'left'
 						? theData.plot.yAxisLeft.label || 'y'
 						: theData.plot.yAxisRight.label || 'y'}
+					siblings={scatterSiblings}
 					which="plot"
 				/>
 				<Points
@@ -1053,6 +1079,7 @@
 					yLabel={datum.yAxis === 'left'
 						? theData.plot.yAxisLeft.label || 'y'
 						: theData.plot.yAxisRight.label || 'y'}
+					siblings={scatterSiblings}
 					which="plot"
 				/>
 			{/if}

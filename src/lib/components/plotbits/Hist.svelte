@@ -17,6 +17,14 @@
 </script>
 
 <script>
+	import {
+		buildAggregatedContent,
+		computeTooltipPosition,
+		dispatchTooltip,
+		hideTooltip,
+		findBinValue
+	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
+
 	let {
 		xStart, // Array of start x positions for each bar
 		xEnd, // Array of end x positions for each bar
@@ -25,7 +33,27 @@
 		yscale, // D3 scale for y-axis
 		colour, // Fill color for bars
 		yoffset = 0, // Y translation offset
-		xoffset = 0 // X translation offset
+		xoffset = 0, // X translation offset
+		// Tooltip props (same shape as Points/Line)
+		tooltip = false,
+		xtype = 'number',
+		xLabel = 'x',
+		yLabel = 'y',
+		dataLabel = '',
+		dataColour = '',
+		// Optional custom x formatter (e.g. for time axes that need app-specific formatting)
+		xFormatter = null,
+		// Added to the mouse-derived x before sibling lookup; lets Actogram map
+		// hrs-into-day-row to absolute hours by passing dayIndex * periodHrs.
+		xDataOffset = 0,
+		// When true, tooltip only fires while the Alt key is held (Actogram behaviour).
+		requireAlt = false,
+		// Height (px) of the transparent hitbox that catches hover across the whole row.
+		// When 0/null, hover events only fire over drawn bars (the polyline fill).
+		hitboxHeight = 0,
+		// When provided, tooltip aggregates y values across sibling series at the hovered x.
+		// Shape: [{label, colour, findYAt(x)}]
+		siblings = null
 	} = $props();
 
 	// Validate input arrays have same length
@@ -68,6 +96,56 @@
 		if (strokeWidth > 0) styles.push(`stroke-width: ${strokeWidth}px`);
 		return styles.length > 0 ? styles.join('; ') : '';
 	});
+
+	function handleHover(e) {
+		if (!tooltip) return;
+		if (requireAlt && !e.altKey) {
+			hideTooltip(e.target);
+			return;
+		}
+		const mouseX = e.offsetX;
+		const mouseY = e.offsetY;
+
+		// Map pixel x to data x (in this row's coordinate system), then add any
+		// caller-provided offset to arrive at the true "absolute" x used for lookups.
+		const rawDataX = xscale.invert(mouseX - xoffset);
+		const dataX = rawDataX + xDataOffset;
+
+		const series = siblings
+			? siblings.map((s) => ({
+					label: s.label,
+					colour: s.colour,
+					yValue: s.findYAt ? s.findYAt(dataX) : null
+				}))
+			: [
+					{
+						label: dataLabel,
+						colour: dataColour || colour,
+						yValue: findBinValue(xStart, xEnd, y, rawDataX),
+						yLabel
+					}
+				];
+
+		const content = buildAggregatedContent({
+			xLabel: xLabel || 'x',
+			xValue: dataX,
+			xtype,
+			xFormatter,
+			series
+		});
+
+		const srcRect = e.srcElement.getBoundingClientRect();
+		const { x: xPos, y: yPos } = computeTooltipPosition(mouseX, mouseY, srcRect);
+		dispatchTooltip(e.target, { visible: true, x: xPos, y: yPos, content });
+	}
+
+	function handleMouseLeave(e) {
+		if (!tooltip) return;
+		hideTooltip(e.target);
+	}
+
+	let useHitbox = $derived(tooltip && hitboxHeight > 0);
+	let hitboxWidth = $derived(xscale?.range ? xscale.range()[1] : 0);
 </script>
 
 <polyline
@@ -75,4 +153,18 @@
 	fill={colour}
 	style={styleString}
 	transform="translate({xoffset}, {yoffset})"
+	onmousemove={tooltip && !useHitbox ? handleHover : undefined}
+	onmouseleave={tooltip && !useHitbox ? handleMouseLeave : undefined}
 />
+{#if useHitbox}
+	<rect
+		x={xoffset}
+		y={yoffset}
+		width={hitboxWidth}
+		height={hitboxHeight}
+		fill="transparent"
+		pointer-events="all"
+		onmousemove={handleHover}
+		onmouseleave={handleMouseLeave}
+	/>
+{/if}

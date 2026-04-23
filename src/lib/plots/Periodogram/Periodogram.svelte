@@ -8,6 +8,7 @@
 
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
+	import { findNearestY } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
 	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
@@ -543,6 +544,18 @@
 		tooltip = event.detail;
 	}
 
+	// Siblings for aggregated tooltips — show every series' y at the hovered period.
+	let periodogramSiblings = $derived.by(() => {
+		if (which !== 'plot' || !theData?.plot?.data) return [];
+		return theData.plot.data
+			.filter((d) => d.periodData?.x?.length > 0 && d.periodData?.y?.length > 0)
+			.map((d) => ({
+				label: d.y?.name || '',
+				colour: d.points?.colour || d.line?.colour || 'black',
+				findYAt: (x) => findNearestY(d.periodData.x, d.periodData.y, x)
+			}));
+	});
+
 	onMount(() => {
 		if (which == 'plot') {
 			theData.plot.autoScalePadding('all');
@@ -1017,6 +1030,7 @@
 				dataColour={datum.line.colour}
 				xLabel={theData.plot.xAxis.label || 'Period (hours)'}
 				yLabel={theData.plot.yAxis.label || 'Power'}
+				siblings={periodogramSiblings}
 				which="plot"
 			/>
 			<Points
@@ -1036,6 +1050,7 @@
 				dataColour={datum.points.colour}
 				xLabel={theData.plot.xAxis.label || 'Period (hours)'}
 				yLabel={theData.plot.yAxis.label || 'Power'}
+				siblings={periodogramSiblings}
 				which="plot"
 			/>
 			{#if datum.method === 'Chi-squared'}

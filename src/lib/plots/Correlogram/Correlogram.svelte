@@ -7,6 +7,7 @@
 
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
+	import { findNearestY } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import { computeAutocorrelation } from '$lib/utils/correlogram.js';
 
@@ -420,6 +421,17 @@
 	function handleTooltip(event) {
 		tooltip = event.detail;
 	}
+
+	let correlogramSiblings = $derived.by(() => {
+		if (which !== 'plot' || !theData?.plot?.data) return [];
+		return theData.plot.data
+			.filter((d) => d.acfData?.lags?.length > 0 && d.acfData?.correlations?.length > 0)
+			.map((d) => ({
+				label: d.y?.name || '',
+				colour: d.line?.colour || d.points?.colour || 'black',
+				findYAt: (x) => findNearestY(d.acfData.lags, d.acfData.correlations, x)
+			}));
+	});
 
 	onMount(() => {
 		if (which == 'plot') {
@@ -840,6 +852,7 @@
 				dataColour={datum.line.colour}
 				xLabel={theData.plot.xAxis.label || 'Lag (hours)'}
 				yLabel={theData.plot.yAxis.label || 'Autocorrelation'}
+				siblings={correlogramSiblings}
 				which="plot"
 			/>
 			<Points
@@ -859,6 +872,7 @@
 				dataColour={datum.points.colour}
 				xLabel={theData.plot.xAxis.label || 'Lag (hours)'}
 				yLabel={theData.plot.yAxis.label || 'Autocorrelation'}
+				siblings={correlogramSiblings}
 				which="plot"
 			/>
 

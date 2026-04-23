@@ -43,6 +43,12 @@
 
 <script>
 	import { quadtree } from 'd3-quadtree';
+	import {
+		buildAggregatedContent,
+		computeTooltipPosition,
+		dispatchTooltip,
+		hideTooltip
+	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 
 	let {
 		lineData = $bindable(),
@@ -59,7 +65,10 @@
 		dataLabel = '',
 		dataColour = '',
 		xLabel = 'x',
-		yLabel = 'y'
+		yLabel = 'y',
+		// When provided, the tooltip aggregates and displays the y value at the
+		// hovered x for every sibling series. Shape: [{label, colour, findYAt(x)}]
+		siblings = null
 	} = $props();
 	let width = $derived(xscale.range()[1]);
 	let height = $derived(yscale.range()[0]);
@@ -105,72 +114,47 @@
 		return lineGenerator(filteredData);
 	});
 
-	//HELPER FUNCTION
-	function safeFormat(value, dp, type) {
-		//if time then return the time
-		if (type === 'time') {
-			try {
-				return new Date(value).toLocaleString(); // works even if value is invalid date
-			} catch (e) {
-				return value;
-			}
-		}
-
-		//else try as a number
-		try {
-			return value.toFixed(dp); // will throw if value isn't a number
-		} catch (e) {
-			//otherwise just return the value as is
-			return value;
-		}
-	}
-
 	function handleHover(e) {
-		const dp = 3;
 		if (!tooltip || !qt) return;
 		const mouseX = e.offsetX;
 		const mouseY = e.offsetY;
 		const closest = qt.find(mouseX, mouseY);
 
-		if (closest) {
-			const colourDot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dataColour || lineData.colour};margin-right:4px;vertical-align:middle;"></span>`;
-			const name = dataLabel ? `${colourDot}<strong>${dataLabel}</strong><br/>` : '';
-			const xLbl = xLabel || 'x';
-			const yLbl = yLabel || 'y';
-			const content = `${name}<span style="opacity:0.7">${xLbl}:</span> ${safeFormat(closest.x, dp, xtype)}<br/><span style="opacity:0.7">${yLbl}:</span> ${safeFormat(closest.y, dp)}`;
-
-			//make sure the tooltip stays 'in bounds'
-			const srcRect = e.srcElement.getBoundingClientRect();
-			const xPos = mouseX + 180 > srcRect.width ? mouseX - 190 : mouseX + 10;
-			const yPos = mouseY < 20 ? mouseY + 40 : mouseY + 10;
-			const event = new CustomEvent('tooltip', {
-				detail: {
-					visible: true,
-					x: xPos,
-					y: yPos,
-					content: content
-				},
-				bubbles: true
-			});
-			e.target.dispatchEvent(event);
-		} else {
-			e.target.dispatchEvent(
-				new CustomEvent('tooltip', {
-					detail: { visible: false },
-					bubbles: true
-				})
-			);
+		if (!closest) {
+			hideTooltip(e.target);
+			return;
 		}
+
+		const series = siblings
+			? siblings.map((s) => ({
+					label: s.label,
+					colour: s.colour,
+					yValue: s.findYAt ? s.findYAt(closest.x) : null
+				}))
+			: [
+					{
+						label: dataLabel,
+						colour: dataColour || lineData.colour,
+						yValue: closest.y,
+						yLabel
+					}
+				];
+
+		const content = buildAggregatedContent({
+			xLabel: xLabel || 'x',
+			xValue: closest.x,
+			xtype,
+			series
+		});
+
+		const srcRect = e.srcElement.getBoundingClientRect();
+		const { x: xPos, y: yPos } = computeTooltipPosition(mouseX, mouseY, srcRect);
+		dispatchTooltip(e.target, { visible: true, x: xPos, y: yPos, content });
 	}
 
 	function handleMouseLeave(e) {
 		if (!tooltip) return;
-		e.target.dispatchEvent(
-			new CustomEvent('tooltip', {
-				detail: { visible: false },
-				bubbles: true
-			})
-		);
+		hideTooltip(e.target);
 	}
 </script>
 

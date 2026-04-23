@@ -9,6 +9,7 @@
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import { computeFFT } from '$lib/utils/fft.js';
+	import { findNearestY } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 
 	export const FFT_defaultDataInputs = ['time', 'values'];
 	export const FFT_controlHeaders = ['Properties', 'Data'];
@@ -508,6 +509,57 @@
 	function handleTooltip(event) {
 		tooltip = event.detail;
 	}
+
+	// Helpers to build the x/y arrays used for tooltip lookups (accounts for
+	// showPeriod filtering so the hovered x matches the drawn data).
+	function buildFFTxy(datum, showPeriod, which) {
+		const freqs = datum.fftData.frequencies;
+		const vals =
+			which === 'phase' ? datum.fftData.phases : datum.fftData.magnitudes;
+		if (!freqs || !vals) return { x: [], y: [] };
+		if (showPeriod) {
+			const x = [];
+			const y = [];
+			for (let i = 0; i < freqs.length; i++) {
+				if (freqs[i] > 0) {
+					x.push(1 / freqs[i]);
+					y.push(vals[i]);
+				}
+			}
+			return { x, y };
+		}
+		return { x: freqs, y: vals };
+	}
+
+	let fftMagnitudeSiblings = $derived.by(() => {
+		if (which !== 'plot' || !theData?.plot?.data) return [];
+		const showPeriod = theData.plot.showPeriod;
+		return theData.plot.data
+			.filter((d) => d.fftData?.frequencies?.length > 0)
+			.map((d) => {
+				const { x, y } = buildFFTxy(d, showPeriod, 'mag');
+				return {
+					label: d.y?.name || '',
+					colour: d.line?.colour || d.points?.colour || 'black',
+					findYAt: (xVal) => findNearestY(x, y, xVal)
+				};
+			});
+	});
+
+	let fftPhaseSiblings = $derived.by(() => {
+		if (which !== 'plot' || !theData?.plot?.data) return [];
+		const showPeriod = theData.plot.showPeriod;
+		return theData.plot.data
+			.filter((d) => d.showPhase && d.fftData?.frequencies?.length > 0)
+			.map((d) => {
+				const { x, y } = buildFFTxy(d, showPeriod, 'phase');
+				return {
+					label: d.y?.name ? d.y.name + ' (phase)' : 'Phase',
+					colour: d.phaseLine?.colour || d.phasePoints?.colour || 'black',
+					findYAt: (xVal) => findNearestY(x, y, xVal)
+				};
+			});
+	});
 
 	onMount(() => {
 		if (which == 'plot') {
@@ -1027,6 +1079,7 @@
 					dataColour={datum.line.colour}
 					xLabel={theData.plot.xAxis.label || 'Frequency'}
 					yLabel={theData.plot.yAxisMag.label || 'Magnitude'}
+					siblings={fftMagnitudeSiblings}
 					which="plot"
 				/>
 				<Points
@@ -1042,6 +1095,7 @@
 					dataColour={datum.points.colour}
 					xLabel={theData.plot.xAxis.label || 'Frequency'}
 					yLabel={theData.plot.yAxisMag.label || 'Magnitude'}
+					siblings={fftMagnitudeSiblings}
 					which="plot"
 				/>
 
@@ -1060,6 +1114,7 @@
 						dataColour={datum.phaseLine.colour}
 						xLabel={theData.plot.xAxis.label || 'Frequency'}
 						yLabel={theData.plot.yAxisPhase.label || 'Phase (radians)'}
+						siblings={fftPhaseSiblings}
 						which="plot"
 					/>
 					<Points
@@ -1075,6 +1130,7 @@
 						dataColour={datum.phasePoints.colour}
 						xLabel={theData.plot.xAxis.label || 'Frequency'}
 						yLabel={theData.plot.yAxisPhase.label || 'Phase (radians)'}
+						siblings={fftPhaseSiblings}
 						which="plot"
 					/>
 				{/if}

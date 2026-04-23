@@ -513,111 +513,58 @@
 
 	let { theData, which } = $props();
 
-	let isAltKeyDown = $state(false);
-	document.addEventListener('keydown', (e) => {
-		if (e.key === 'Alt') {
-			isAltKeyDown = true;
-		}
-	});
-
+	// Alt-keyup hides any currently-visible tooltip. The Hist plotbit itself
+	// gates tooltip display on e.altKey via requireAlt={true}, so we don't need
+	// a keydown listener — just hide on release so a stale tooltip doesn't stick.
 	document.addEventListener('keyup', (e) => {
 		if (e.key === 'Alt') {
-			isAltKeyDown = false;
 			tooltip.visible = false;
 		}
 	});
 
-	function handleHover(e) {
-		if (isAltKeyDown && which === 'plot') {
-			//tooltip for time and values if control-click
-			const mouseX = e.offsetX;
-			const mouseY = e.offsetY;
+	const MONTHS = [
+		'Jan',
+		'Feb',
+		'Mar',
+		'Apr',
+		'May',
+		'Jun',
+		'Jul',
+		'Aug',
+		'Sep',
+		'Oct',
+		'Nov',
+		'Dec'
+	];
 
-			//make sure the tooltip stays 'in bounds'
-			const srcRect = e.srcElement.getBoundingClientRect();
-			const xPos = mouseX + 180 > srcRect.width ? mouseX - 190 : mouseX + 10;
-			const yPos = mouseY < 20 ? mouseY + 40 : mouseY + 10;
-
-			tooltip = {
-				visible: true,
-				x: xPos, // Offset to avoid cursor overlap
-				y: yPos,
-				content: getTimeFromMouse(mouseX, mouseY)
-			};
-		}
-	}
-
-	//take in a mouse position and return the day from the y value
-	function getTimeFromMouse(x, y) {
-		const allTopPadding =
-			theData.plot.lightBands.length > 0
-				? theData.plot.paddingIN.top + theData.plot.lightBands.height * 2
-				: theData.plot.paddingIN.top;
-
-		const period = theData.plot.periodHrs;
-		const doublePlot = theData.plot.doublePlot;
-
-		const xscale = scaleLinear()
-			.domain([0, period * doublePlot])
-			.range([0, theData.plot.plotwidth]);
-
-		// Which day row is the cursor on?
-		const dayIndex = Math.floor(
-			(y - allTopPadding) / (theData.plot.eachplotheight + theData.plot.spaceBetween)
-		);
-		// Hours into the period from the x position
-		const hrsIntoRow = xscale.invert(x - theData.plot.padding.left);
-
-		// Absolute hours since plot start
-		const absHrs = dayIndex * period + hrsIntoRow;
-
-		// Convert to unix time for display
+	// Format an absolute-hours-since-plot-start value as a date/time string.
+	function actogramXFormatter(absHrs) {
+		if (absHrs == null || isNaN(absHrs)) return '';
 		const unixTime = theData.plot.startTime + absHrs * 3600000;
 		const dt = new Date(unixTime);
-		const months = [
-			'Jan',
-			'Feb',
-			'Mar',
-			'Apr',
-			'May',
-			'Jun',
-			'Jul',
-			'Aug',
-			'Sep',
-			'Oct',
-			'Nov',
-			'Dec'
-		];
-		const dateStr = `${dt.getUTCDate()} ${months[dt.getUTCMonth()]}, ${String(dt.getUTCHours()).padStart(2, '0')}:${String(dt.getUTCMinutes()).padStart(2, '0')}`;
-
-		let content = `<span style="opacity:0.7">Time:</span> ${dateStr}`;
-
-		// Look up the actual data value for each series using allBins
-		for (const datum of theData.plot.data) {
-			if (!datum.draw) continue;
-			const bins = datum.allBins;
-			if (!bins?.length) continue;
-
-			// allBins stores {start, end, y} in offset-corrected hours.
-			// absHrs is also in offset-corrected hours (from plot start).
-			// Find the bin that contains this time.
-			let foundVal = null;
-			for (const bin of bins) {
-				if (absHrs >= bin.start && absHrs < bin.end) {
-					foundVal = bin.y;
-					break;
-				}
-			}
-
-			if (foundVal == null || isNaN(foundVal)) continue;
-
-			const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${datum.colour};margin-right:4px;vertical-align:middle;"></span>`;
-			const label = datum.label || datum.y.name || 'Data';
-			content += `<br/>${dot}<strong>${label}:</strong> ${Number(foundVal).toFixed(1)}`;
-		}
-
-		return content;
+		return `${dt.getUTCDate()} ${MONTHS[dt.getUTCMonth()]}, ${String(dt.getUTCHours()).padStart(2, '0')}:${String(dt.getUTCMinutes()).padStart(2, '0')}`;
 	}
+
+	// allBins stores {start, end, y} in offset-corrected absolute hours.
+	// absHrs passed in is also offset-corrected, so a direct containment check works.
+	function findBinY(bins, absHrs) {
+		if (!bins?.length) return null;
+		for (const bin of bins) {
+			if (absHrs >= bin.start && absHrs < bin.end) return bin.y;
+		}
+		return null;
+	}
+
+	let actogramSiblings = $derived.by(() => {
+		if (which !== 'plot' || !theData?.plot?.data) return [];
+		return theData.plot.data
+			.filter((d) => d.draw && d.allBins?.length > 0)
+			.map((d) => ({
+				label: d.label || d.y?.name || 'Data',
+				colour: d.colour,
+				findYAt: (absHrs) => findBinY(d.allBins, absHrs)
+			}));
+	});
 
 	function handleClick(e) {
 		// add markers if selected
@@ -948,7 +895,6 @@
 		height={theData.plot.parentBox.height}
 		style={`background: white; position: absolute;`}
 		onclick={(e) => handleClick(e)}
-		onmousemove={(e) => handleHover(e)}
 		ontooltip={handleTooltip}
 	>
 		<defs>
@@ -976,41 +922,46 @@
 		/>
 
 		{#each theData.plot.data as datum, d}
-			<g
-				class="actogram"
-				transform="translate({theData.plot.padding.left}, {theData.plot.padding.top})"
-			>
-				{#if datum.draw}
-					<!-- Make the histogram for each period using new xStart/xEnd format -->
-					{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
-						{@const thisScale = scaleLinear()
-							.domain([theData.plot.ylims[d][day][0], theData.plot.ylims[d][day][1]])
-							.range([theData.plot.eachplotheight, 0])}
+			{#if datum.draw}
+				<!-- Make the histogram for each period using new xStart/xEnd format -->
+				{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
+					{@const thisScale = scaleLinear()
+						.domain([theData.plot.ylims[d][day][0], theData.plot.ylims[d][day][1]])
+						.range([theData.plot.eachplotheight, 0])}
 
-						{@const bins = getBinsForPeriods(
-							datum.binsByPeriod,
-							day,
-							day + theData.plot.doublePlot,
-							theData.plot.periodHrs
-						)}
+					{@const bins = getBinsForPeriods(
+						datum.binsByPeriod,
+						day,
+						day + theData.plot.doublePlot,
+						theData.plot.periodHrs
+					)}
 
-						{#if bins.xStart.length > 0}
-							<Hist
-								xStart={bins.xStart}
-								xEnd={bins.xEnd}
-								y={bins.y}
-								xscale={scaleLinear()
-									.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
-									.range([0, theData.plot.plotwidth])}
-								yscale={thisScale}
-								colour={datum.colour}
-								yoffset={day * (theData.plot.spaceBetween + theData.plot.eachplotheight) +
-									theData.plot.spaceBetween}
-							/>
-						{/if}
-					{/each}
-				{/if}
-			</g>
+					{#if bins.xStart.length > 0}
+						<Hist
+							xStart={bins.xStart}
+							xEnd={bins.xEnd}
+							y={bins.y}
+							xscale={scaleLinear()
+								.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
+								.range([0, theData.plot.plotwidth])}
+							yscale={thisScale}
+							colour={datum.colour}
+							xoffset={theData.plot.padding.left}
+							yoffset={theData.plot.padding.top +
+								day * (theData.plot.spaceBetween + theData.plot.eachplotheight) +
+								theData.plot.spaceBetween}
+							tooltip={true}
+							requireAlt={false}
+							hitboxHeight={theData.plot.eachplotheight}
+							xDataOffset={day * theData.plot.periodHrs}
+							xLabel="Time"
+							xtype="string"
+							xFormatter={actogramXFormatter}
+							siblings={actogramSiblings}
+						/>
+					{/if}
+				{/each}
+			{/if}
 			<!-- THE MARKERS (clipped to plot area) -->
 			<g clip-path={'url(#actogram-clip-' + theData.plot.parentBox.id + ')'}>
 				{#each datum.phaseMarkers as marker}
