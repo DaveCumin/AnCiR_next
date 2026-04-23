@@ -1022,6 +1022,11 @@
 					yscale={yScale}
 					yoffset={theData.plot.padding.top}
 					xoffset={theData.plot.padding.left}
+					tooltip={true}
+					dataLabel={datum.y.name || ''}
+					dataColour={datum.line.colour}
+					xLabel={theData.plot.xAxis.label || 'Frequency'}
+					yLabel={theData.plot.yAxisMag.label || 'Magnitude'}
 					which="plot"
 				/>
 				<Points
@@ -1050,6 +1055,11 @@
 						yscale={phaseYScale}
 						yoffset={theData.plot.padding.top}
 						xoffset={theData.plot.padding.left}
+						tooltip={true}
+						dataLabel={datum.y.name ? datum.y.name + ' (phase)' : 'Phase'}
+						dataColour={datum.phaseLine.colour}
+						xLabel={theData.plot.xAxis.label || 'Frequency'}
+						yLabel={theData.plot.yAxisPhase.label || 'Phase (radians)'}
 						which="plot"
 					/>
 					<Points

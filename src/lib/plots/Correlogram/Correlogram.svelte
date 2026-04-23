@@ -835,6 +835,11 @@
 					.range([theData.plot.plotheight, 0])}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
+				tooltip={true}
+				dataLabel={datum.y.name || ''}
+				dataColour={datum.line.colour}
+				xLabel={theData.plot.xAxis.label || 'Lag (hours)'}
+				yLabel={theData.plot.yAxis.label || 'Autocorrelation'}
 				which="plot"
 			/>
 			<Points

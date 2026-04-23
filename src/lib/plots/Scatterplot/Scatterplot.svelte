@@ -1025,6 +1025,14 @@
 					yscale={yScale}
 					xoffset={theData.plot.padding.left}
 					yoffset={theData.plot.padding.top}
+					tooltip={true}
+					xtype={theData.plot.anyXdataTime ? 'time' : datum.x.type}
+					dataLabel={datum.label || ''}
+					dataColour={datum.line.colour}
+					xLabel={theData.plot.xAxis.label || 'x'}
+					yLabel={datum.yAxis === 'left'
+						? theData.plot.yAxisLeft.label || 'y'
+						: theData.plot.yAxisRight.label || 'y'}
 					which="plot"
 				/>
 				<Points

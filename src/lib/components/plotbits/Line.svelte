@@ -42,6 +42,8 @@
 </script>
 
 <script>
+	import { quadtree } from 'd3-quadtree';
+
 	let {
 		lineData = $bindable(),
 		x,
@@ -51,11 +53,19 @@
 		yoffset = 0,
 		xoffset = 0,
 		which,
-		title = 'Line'
+		title = 'Line',
+		tooltip = false,
+		xtype = 'number',
+		dataLabel = '',
+		dataColour = '',
+		xLabel = 'x',
+		yLabel = 'y'
 	} = $props();
 	let width = $derived(xscale.range()[1]);
 	let height = $derived(yscale.range()[0]);
 	let clipKey = $derived(`line-${xoffset}-${yoffset}-${width}-${height}`);
+
+	let qt;
 
 	let theline = $derived.by(() => {
 		if (!lineData?.draw || !x || !y) return null;
@@ -84,8 +94,84 @@
 		// eg:
 		// lineGenerator = lineGenerator.curve(curveBundle.beta(0.5));
 
+		//Set up the quadtree for hovering
+		if (tooltip) {
+			qt = quadtree()
+				.x((d) => xscale(d.x) + xoffset)
+				.y((d) => yscale(d.y) + yoffset)
+				.addAll(filteredData);
+		}
+
 		return lineGenerator(filteredData);
 	});
+
+	//HELPER FUNCTION
+	function safeFormat(value, dp, type) {
+		//if time then return the time
+		if (type === 'time') {
+			try {
+				return new Date(value).toLocaleString(); // works even if value is invalid date
+			} catch (e) {
+				return value;
+			}
+		}
+
+		//else try as a number
+		try {
+			return value.toFixed(dp); // will throw if value isn't a number
+		} catch (e) {
+			//otherwise just return the value as is
+			return value;
+		}
+	}
+
+	function handleHover(e) {
+		const dp = 3;
+		if (!tooltip || !qt) return;
+		const mouseX = e.offsetX;
+		const mouseY = e.offsetY;
+		const closest = qt.find(mouseX, mouseY);
+
+		if (closest) {
+			const colourDot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dataColour || lineData.colour};margin-right:4px;vertical-align:middle;"></span>`;
+			const name = dataLabel ? `${colourDot}<strong>${dataLabel}</strong><br/>` : '';
+			const xLbl = xLabel || 'x';
+			const yLbl = yLabel || 'y';
+			const content = `${name}<span style="opacity:0.7">${xLbl}:</span> ${safeFormat(closest.x, dp, xtype)}<br/><span style="opacity:0.7">${yLbl}:</span> ${safeFormat(closest.y, dp)}`;
+
+			//make sure the tooltip stays 'in bounds'
+			const srcRect = e.srcElement.getBoundingClientRect();
+			const xPos = mouseX + 180 > srcRect.width ? mouseX - 190 : mouseX + 10;
+			const yPos = mouseY < 20 ? mouseY + 40 : mouseY + 10;
+			const event = new CustomEvent('tooltip', {
+				detail: {
+					visible: true,
+					x: xPos,
+					y: yPos,
+					content: content
+				},
+				bubbles: true
+			});
+			e.target.dispatchEvent(event);
+		} else {
+			e.target.dispatchEvent(
+				new CustomEvent('tooltip', {
+					detail: { visible: false },
+					bubbles: true
+				})
+			);
+		}
+	}
+
+	function handleMouseLeave(e) {
+		if (!tooltip) return;
+		e.target.dispatchEvent(
+			new CustomEvent('tooltip', {
+				detail: { visible: false },
+				bubbles: true
+			})
+		);
+	}
 </script>
 
 {#snippet controls(lineData)}
@@ -150,7 +236,11 @@
 				fill="none"
 				stroke={lineData.colour}
 				stroke-width={lineData.strokeWidth}
-				style="transform: translate({xoffset}px, {yoffset}px); stroke-dasharray: {lineData.stroke};"
+				style="transform: translate({xoffset}px, {yoffset}px); stroke-dasharray: {lineData.stroke}; pointer-events: visibleStroke;"
+				onmousemove={(e) => {
+					handleHover(e);
+				}}
+				onmouseleave={handleMouseLeave}
 			/>
 		</g>
 	{/if}
