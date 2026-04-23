@@ -1,6 +1,7 @@
 <script module>
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import { min as arrayMin } from '$lib/components/plotbits/helpers/wrangleData.js';
 	const displayName = 'Bin Data';
 	const defaults = new Map([
 		['xIN', { val: -1 }],
@@ -88,22 +89,28 @@
 		if (anyValid && xOUT !== -1) {
 			const processHash = crypto.randomUUID();
 
-			core.rawData.set(xOUT, result.bins);
-			getColumnById(xOUT).data = xOUT;
-			getColumnById(xOUT).type = 'bin';
-			getColumnById(xOUT).binWidth = binSize;
-			getColumnById(xOUT).binStep = stepSize;
-			getColumnById(xOUT).aggFunction = aggFunction;
+			const xOutCol = getColumnById(xOUT);
+			xOutCol.data = xOUT;
+			xOutCol.binWidth = binSize;
+			xOutCol.binStep = stepSize;
+			xOutCol.aggFunction = aggFunction;
 			if (xInCol.type === 'time') {
-				const xRawData = xInCol.getData();
-				if (xRawData?.length > 0) {
-					getColumnById(xOUT).originTime_ms = xRawData[0];
-				}
+				// Anchor to min(raw) — the same baseline hoursSinceStart uses for
+				// computing bins; xRawData[0] would drift if data isn't sorted or
+				// the first row was filtered to null.
+				const baseline = arrayMin(xInCol.getData());
+				const origin = baseline ?? 0;
+				// Store ms timestamps so the column reads as real time data.
+				core.rawData.set(xOUT, result.bins.map((h) => origin + h * 3600000));
+				xOutCol.type = 'time';
+				xOutCol.timeFormat = null;
+				if (baseline != null) xOutCol.originTime_ms = baseline;
 			} else {
-				const xOutCol = /** @type {any} */ (getColumnById(xOUT));
-				if (xOutCol) xOutCol.originTime_ms = null;
+				core.rawData.set(xOUT, result.bins);
+				xOutCol.type = 'bin';
+				xOutCol.originTime_ms = null;
 			}
-			getColumnById(xOUT).tableProcessGUId = processHash;
+			xOutCol.tableProcessGUId = processHash;
 
 			for (const yId of yINs) {
 				const outKey = 'binnedy_' + yId;
@@ -157,8 +164,9 @@
 	// Reactivity — mirrors original pattern
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	let xIsTime = $derived(xIN_col?.type === 'time');
-	// First raw timestamp (ms) of the x input — the zero-point for binStart when x is time
-	let xStartTime_ms = $derived(xIsTime ? (xIN_col?.getData()?.[0] ?? null) : null);
+	// Zero-point (ms) for binStart when x is time — must match the baseline that
+	// hoursSinceStart uses (min of raw), not getData()[0].
+	let xStartTime_ms = $derived(xIsTime ? (arrayMin(xIN_col?.getData() ?? []) ?? null) : null);
 
 	function toDatetimeLocal(ms) {
 		if (ms == null) return '';

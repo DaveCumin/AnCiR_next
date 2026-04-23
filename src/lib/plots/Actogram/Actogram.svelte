@@ -43,10 +43,21 @@
 		label = $state();
 
 		binSize = $derived.by(() => {
-			// The step size between x values. Use length-1 to get the actual interval (not off by one).
-			const n = this.x.hoursSinceStart?.length ?? 0;
-			if (n <= 1) return 0;
-			return (this.x.hoursSinceStart[n - 1] - this.x.hoursSinceStart[0]) / (n - 1);
+			// Step size between x values. Scan for the first and last non-null
+			// entries so a filter that nulls either endpoint doesn't collapse
+			// binSize to 0 (or flip it negative) — which would make bars invisible.
+			const hss = this.x.hoursSinceStart;
+			if (!hss || hss.length <= 1) return 0;
+			let first = -1;
+			let last = -1;
+			for (let i = 0; i < hss.length; i++) {
+				if (hss[i] != null && !isNaN(hss[i])) {
+					if (first === -1) first = i;
+					last = i;
+				}
+			}
+			if (first === -1 || last === first) return 0;
+			return (hss[last] - hss[first]) / (last - first);
 		});
 
 		colour = $state();
@@ -54,7 +65,7 @@
 		offset = $derived.by(() => {
 			if (this.x?.getData()) {
 				if (this.x.type == 'time') {
-					return (this.parentPlot?.startTime - Number(this.x?.getData()[0])) / 3600000;
+					return (this.parentPlot?.startTime - min(this.x?.getData())) / 3600000;
 				} else if (this.x.type === 'bin') {
 					// Read raw bin-start directly from rawData, bypassing getData()'s +binWidth/2 centering.
 					const rawDataKey = this.x.data ?? this.x.refColumn?.data;
@@ -63,7 +74,7 @@
 					const timeOfDayShift = (this.parentPlot?.startTime - originMs) / 3600000;
 					return -rawBinStart0 + timeOfDayShift;
 				} else {
-					return -Number(this.x?.getData()[0]);
+					return -min(this.x?.getData());
 				}
 			} else {
 				return 0;
@@ -115,9 +126,9 @@
 				// This ensures raw-time and binned-column bars are perfectly aligned.
 				let binStart, binEnd;
 
-				if (this.x.type === 'bin' && this.x.binWidth) {
-					// hoursSinceStart[i] equals rawBinStart[i] (relative to first bin start),
-					// so after subtracting offset it maps to the absolute bin-start hour in the plot.
+				if (this.x.binWidth) {
+					// Bin-aware path: works for type='bin' and for time-typed outputs
+					// (e.g. BinnedData/MovingAnalysis) that carry binWidth metadata.
 					binStart = tempx[i];
 					binEnd = tempx[i] + this.x.binWidth;
 				} else {
@@ -291,20 +302,29 @@
 		startTime = $derived.by(() => {
 			let minTime = Infinity;
 
-			//Only update the startTime (minTime) if there is time data with a valid y value
+			// Find the earliest x where BOTH x and y are valid. A filter process
+			// replaces filtered rows with null, so we can't trust that any single
+			// index (including the first valid-y index) has a valid x.
 			this.data.forEach((datum) => {
 				if (datum.x.type == 'time') {
 					const xData = datum.x.getData();
 					const yData = datum.y.getData();
 					if (!xData?.length || !yData?.length) return;
-					for (let i = 0; i < Math.min(xData.length, yData.length); i++) {
-						if (yData[i] != null && !isNaN(Number(yData[i]))) {
-							minTime = Math.min(minTime, Number(xData[i]));
-							break;
+					const len = Math.min(xData.length, yData.length);
+					for (let i = 0; i < len; i++) {
+						if (
+							xData[i] != null &&
+							yData[i] != null &&
+							!isNaN(Number(xData[i])) &&
+							!isNaN(Number(yData[i]))
+						) {
+							const t = Number(xData[i]);
+							if (t < minTime) minTime = t;
 						}
 					}
 				}
 			});
+			console.log('startTime calc, minTime: ', minTime);
 			//if no time data then make the startTime 0 (to start with)
 			if (minTime === Infinity) {
 				minTime = 0;

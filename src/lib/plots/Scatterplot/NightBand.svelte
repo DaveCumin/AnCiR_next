@@ -67,11 +67,14 @@
 					bandStart += step;
 				}
 			} else if (mode === 'custom') {
+				const msPerUnit = parent.anyXdataTime ? 3600000 : 1;
 				this.customBands.forEach((band, idx) => {
-					if (band.startTime != null && band.endTime != null && band.startTime < band.endTime) {
+					if (band.startTime == null || band.durationHours == null) return;
+					const endTime = band.startTime + band.durationHours * msPerUnit;
+					if (band.durationHours > 0 && endTime > band.startTime) {
 						bands.push({
 							startTime: band.startTime,
-							endTime: band.endTime,
+							endTime,
 							label: band.label || `Night ${idx + 1}`
 						});
 					}
@@ -93,37 +96,72 @@
 				this.nightDurationHours = Number(dataIN.nightDurationHours) || 12;
 				this.startTimeHours = Number(dataIN.startTimeHours) || 0;
 				this.useDataMin = dataIN.useDataMin ?? true;
-				this.customBands = dataIN.customBands || [];
+				this.customBands = (dataIN.customBands || []).map((b) => this._normaliseBand(b));
 			}
 		}
 
-		addCustomBand(startTime = 0, endTime = 1) {
+		// ms per "duration unit": duration input is always in hours. For non-time x-axes the hours
+		// value is treated as raw x-axis units (mirrors repeating-mode behaviour).
+		get _msPerDurationUnit() {
+			return this.parentPlot?.anyXdataTime ? 3600000 : 1;
+		}
+
+		// Store primary fields (startTime, durationHours); endTime is derived. Supports legacy
+		// bands that stored endTime directly.
+		_normaliseBand(band) {
+			const msPerUnit = this._msPerDurationUnit;
+			let startTime = band.startTime ?? null;
+			let durationHours = band.durationHours ?? null;
+			if (durationHours == null && band.endTime != null && startTime != null) {
+				durationHours = (band.endTime - startTime) / msPerUnit;
+			}
+			return {
+				label: band.label,
+				startTime,
+				durationHours: durationHours ?? 0
+			};
+		}
+
+		addCustomBand() {
+			const parent = this.parentPlot;
+			const xmin = parent?.xlims?.[0] ?? 0;
+			const xmax = parent?.xlims?.[1] ?? 1;
+			const msPerUnit = this._msPerDurationUnit;
+			const defaultDurationHours = parent?.anyXdataTime
+				? 12
+				: Math.max((xmax - xmin) / msPerUnit / 10, 1);
 			this.customBands.push({
 				label: `Band ${this.customBands.length + 1}`,
-				startTime: startTime,
-				endTime: endTime
+				startTime: xmin,
+				durationHours: defaultDurationHours
 			});
-			// Trigger reactivity by reassigning the array
-			this.customBands = this.customBands;
 		}
 
 		removeCustomBand(index) {
 			this.customBands.splice(index, 1);
-			// Trigger reactivity by reassigning the array
-			this.customBands = this.customBands;
 		}
 
-		updateCustomBand(index, startTime, endTime, label) {
-			if (index >= 0 && index < this.customBands.length) {
-				this.customBands[index] = {
-					...this.customBands[index],
-					startTime,
-					endTime,
-					label: label || this.customBands[index].label
-				};
-				// Trigger reactivity by reassigning the array
-				this.customBands = this.customBands;
+		// Update one field; mirrors actogram annotation behaviour:
+		//   - editing start keeps duration (end moves with start)
+		//   - editing end keeps start (duration changes)
+		//   - editing duration keeps start (end moves)
+		updateCustomBandField(index, field, value) {
+			if (index < 0 || index >= this.customBands.length) return;
+			const band = { ...this.customBands[index] };
+			const msPerUnit = this._msPerDurationUnit;
+
+			if (field === 'label') {
+				band.label = value;
+			} else if (field === 'start') {
+				band.startTime = Number(value);
+			} else if (field === 'end') {
+				const newDuration = (Number(value) - band.startTime) / msPerUnit;
+				band.durationHours = Math.max(0, newDuration);
+			} else if (field === 'duration') {
+				band.durationHours = Math.max(0, Number(value));
 			}
+
+			this.customBands[index] = band;
 		}
 
 		toJSON() {
@@ -313,6 +351,8 @@
 				<p>Click + to add a custom band</p>
 			</div>
 		{:else}
+			{@const isTime = nightBand.parentPlot?.anyXdataTime}
+			{@const msPerUnit = isTime ? 3600000 : 1}
 			{#each nightBand.customBands as band, idx (idx)}
 				<div
 					class="custom-band-container"
@@ -320,37 +360,67 @@
 					in:slide={{ duration: 300, axis: 'y' }}
 					out:slide={{ duration: 300, axis: 'y' }}
 				>
-					<div class="control-input">
-						<p>Label</p>
-						<input
-							value={band.label}
-							onchange={(e) =>
-								nightBand.updateCustomBand(idx, band.startTime, band.endTime, e.target.value)}
-						/>
-					</div>
-
 					<div class="control-input-horizontal">
-						<div class="control-input">
-							<p>Start (hours)</p>
-							<NumberWithUnits
-								step="0.1"
-								value={band.startTime}
-								onInput={(val) => nightBand.updateCustomBand(idx, val, band.endTime, band.label)}
+						<div class="control-input" style="flex: 1;">
+							<p>Label</p>
+							<input
+								value={band.label}
+								onchange={(e) =>
+									nightBand.updateCustomBandField(idx, 'label', e.currentTarget.value)}
 							/>
 						</div>
-
-						<div class="control-input">
-							<p>End (hours)</p>
-							<NumberWithUnits
-								step="0.1"
-								value={band.endTime}
-								onInput={(val) => nightBand.updateCustomBand(idx, band.startTime, val, band.label)}
-							/>
-						</div>
-
 						<button class="icon" onclick={() => nightBand.removeCustomBand(idx)}>
 							<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
 						</button>
+					</div>
+
+					<div class="control-input-vertical">
+						<div class="control-input">
+							<p>Start{isTime ? '' : ' (hours)'}</p>
+							{#if isTime}
+								<DateTimeHrs
+									value={band.startTime}
+									onChange={(/** @type {number} */ val) =>
+										nightBand.updateCustomBandField(idx, 'start', Number(val))}
+								/>
+							{:else}
+								<NumberWithUnits
+									step={0.1}
+									value={band.startTime}
+									onInput={(/** @type {number} */ val) =>
+										nightBand.updateCustomBandField(idx, 'start', val)}
+								/>
+							{/if}
+						</div>
+
+						<div class="control-input">
+							<p>End{isTime ? '' : ' (hours)'}</p>
+							{#if isTime}
+								<DateTimeHrs
+									value={band.startTime + band.durationHours * msPerUnit}
+									onChange={(/** @type {number} */ val) =>
+										nightBand.updateCustomBandField(idx, 'end', Number(val))}
+								/>
+							{:else}
+								<NumberWithUnits
+									step={0.1}
+									value={band.startTime + band.durationHours * msPerUnit}
+									onInput={(/** @type {number} */ val) =>
+										nightBand.updateCustomBandField(idx, 'end', val)}
+								/>
+							{/if}
+						</div>
+
+						<div class="control-input">
+							<p>Duration (hours)</p>
+							<NumberWithUnits
+								min={0}
+								step={0.1}
+								value={band.durationHours}
+								onInput={(/** @type {number} */ val) =>
+									nightBand.updateCustomBandField(idx, 'duration', val)}
+							/>
+						</div>
 					</div>
 					<div class="div-line" style="margin-top: 0.5rem; margin-bottom: 0;"></div>
 				</div>

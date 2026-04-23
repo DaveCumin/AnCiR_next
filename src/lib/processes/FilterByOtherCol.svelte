@@ -57,11 +57,12 @@
 
 			if (byColType === 'category') {
 				for (let i = 0; i < byColData.length; i++) {
-					resultMask[i] = compareValues(byColData[i], isOperator, byColValue);
+					resultMask[i] = resultMask[i] && compareValues(byColData[i], isOperator, byColValue);
 				}
 			} else {
 				for (let i = 0; i < byColData.length; i++) {
-					resultMask[i] = compareValues(Number(byColData[i]), isOperator, Number(byColValue));
+					resultMask[i] =
+						resultMask[i] && compareValues(Number(byColData[i]), isOperator, Number(byColValue));
 				}
 			}
 		}
@@ -156,7 +157,7 @@
 				</button>
 			{/if}
 			{#if p.args.conditions.length > 1 && index < p.args.conditions.length - 1}
-				<p>or</p>
+				<p>and</p>
 			{/if}
 		</div>
 	{/each}

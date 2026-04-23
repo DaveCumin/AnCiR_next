@@ -5,127 +5,14 @@
 	import { scaleLinear, scaleLog } from 'd3-scale';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
-	import { mean } from '$lib/components/plotbits/helpers/wrangleData.js';
-
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import { computeFFT } from '$lib/utils/fft.js';
 
 	export const FFT_defaultDataInputs = ['time', 'values'];
 	export const FFT_controlHeaders = ['Properties', 'Data'];
 	export const FFT_displayName = 'Fourier analysis';
-
-	// FFT implementation using Cooley-Tukey algorithm
-	function fft(signal) {
-		const n = signal.length;
-		if (n <= 1) return signal;
-
-		const even = fft(signal.filter((_, i) => i % 2 === 0));
-		const odd = fft(signal.filter((_, i) => i % 2 === 1));
-
-		const result = new Array(n);
-		for (let k = 0; k < n / 2; k++) {
-			const angle = (-2 * Math.PI * k) / n;
-			const t = {
-				re: Math.cos(angle) * odd[k].re - Math.sin(angle) * odd[k].im,
-				im: Math.cos(angle) * odd[k].im + Math.sin(angle) * odd[k].re
-			};
-
-			result[k] = {
-				re: even[k].re + t.re,
-				im: even[k].im + t.im
-			};
-			result[k + n / 2] = {
-				re: even[k].re - t.re,
-				im: even[k].im - t.im
-			};
-		}
-		return result;
-	}
-
-	function computeFFT(times, values, freqStep = null) {
-		if (
-			!times ||
-			!values ||
-			times.length < 2 ||
-			values.length < 2 ||
-			times.length !== values.length
-		) {
-			return {
-				frequencies: [],
-				magnitudes: [],
-				phases: [],
-				samplingRate: 0,
-				nyquistFreq: 0,
-				minPeriod: 0
-			};
-		}
-
-		const validIndices = times
-			.map((t, i) => (isNaN(t) || isNaN(values[i]) ? -1 : i))
-			.filter((i) => i !== -1);
-
-		if (validIndices.length === 0) {
-			return {
-				frequencies: [],
-				magnitudes: [],
-				phases: [],
-				samplingRate: 0,
-				nyquistFreq: 0,
-				minPeriod: 0
-			};
-		}
-
-		const t = validIndices.map((i) => times[i]);
-		const y = validIndices.map((i) => values[i]);
-
-		const yMean = mean(y);
-		const yDetrended = y.map((val) => val - yMean);
-
-		// Calculate sampling rate (times are in hours)
-		const dt = t.length > 1 ? (t[t.length - 1] - t[0]) / (t.length - 1) : 1;
-		const samplingRate = 1 / dt; // (cycles per hour)
-		const nyquistFreq = samplingRate / 2;
-		const minPeriod = 2 * dt; // hours
-
-		// Determine target number of points
-		let n;
-		if (freqStep && freqStep > 0) {
-			// Calculate n to achieve desired frequency step
-			// freqStep = samplingRate / n  =>  n = samplingRate / freqStep
-			n = Math.ceil(samplingRate / freqStep);
-			// Round up to next power of 2 for efficiency
-			n = Math.pow(2, Math.ceil(Math.log2(n)));
-		} else {
-			// Default: just use next power of 2
-			n = Math.pow(2, Math.ceil(Math.log2(yDetrended.length)));
-		}
-		// Safety check: ensure n is at least as large as yDetrended.length
-		if (n < yDetrended.length) {
-			n = Math.pow(2, Math.ceil(Math.log2(yDetrended.length)));
-		}
-		const padded = [...yDetrended, ...new Array(n - yDetrended.length).fill(0)];
-		const signal = padded.map((val) => ({ re: val, im: 0 }));
-
-		const fftResult = fft(signal);
-
-		const halfN = Math.floor(n / 2);
-		const frequencies = [];
-		const magnitudes = [];
-		const phases = [];
-
-		for (let i = 1; i < halfN; i++) {
-			// Start from 1 to skip DC component
-			const freq = (i * samplingRate) / n;
-			if (freq > nyquistFreq) break; // Don't go beyond Nyquist
-			frequencies.push(freq);
-			const magnitude = (Math.sqrt(fftResult[i].re ** 2 + fftResult[i].im ** 2) * 2) / n;
-			magnitudes.push(magnitude);
-			phases.push(Math.atan2(fftResult[i].im, fftResult[i].re));
-		}
-
-		return { frequencies, magnitudes, phases, samplingRate, nyquistFreq, minPeriod };
-	}
 
 	class FFTDataclass {
 		parentPlot = $state();

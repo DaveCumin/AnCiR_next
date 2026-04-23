@@ -40,8 +40,8 @@
 		// Create process in a non-reactive context
 		const newProcess = new TableProcess(
 			{
-				name: tableProcessChosen,
-				args: theDefaults
+				name: theP.name,
+				args: theP.args
 			},
 			getTableById(tableId)
 		);
@@ -52,7 +52,7 @@
 
 		//clear the defaults
 		tableProcessChosen = '';
-		theDefaults = null;
+		theP = null;
 		awaitingLoad = false;
 		await tick();
 
@@ -101,7 +101,7 @@
 	}
 	// //This checks for validity based on the TableProcess (they must have a 'valid' entry for the logic; just like they must have an 'out' for the output logic to work)
 	$effect(() => {
-		if (theDefaults?.valid) {
+		if (theP?.args?.valid) {
 			steps[1].completed = true;
 		} else {
 			steps[1].completed = false;
@@ -112,7 +112,7 @@
 	$effect(async () => {
 		if (!show) {
 			tableProcessChosen = '';
-			theDefaults = null;
+			theP = null;
 			awaitingLoad = false;
 			await tick();
 		}
@@ -128,9 +128,10 @@
 		return result;
 	}
 
-	let theDefaults = $state(null);
+	/** @type {{ name: string, args: Record<string, any> } | null} */
+	let theP = $state(null);
 	function setupProcess() {
-		theDefaults = Object.fromEntries(
+		const defaults = Object.fromEntries(
 			Array.from(appConsts.tableProcessMap.get(tableProcessChosen).defaults.entries()).map(
 				([key, value]) => {
 					if (key === 'out') {
@@ -140,6 +141,7 @@
 				}
 			)
 		);
+		theP = { name: tableProcessChosen, args: defaults };
 		defaultsReady = true;
 		enforceSequentialCompletion(0);
 	}
@@ -151,9 +153,9 @@
 			Process to use:
 			<select
 				onchange={(e) => {
-					theDefaults = null;
+					theP = null;
 					defaultsReady = false;
-					tableProcessChosen = e.target.value; // had to do it this way, else the component would mount before theDefaults were set
+					tableProcessChosen = e.target.value; // had to do it this way, else the component would mount before theP was set
 					setupProcess();
 				}}
 			>
@@ -164,15 +166,10 @@
 			</select>
 		</div>
 	{:else if index === 1}
-		<!-- ensure component mounts after theDefaults change -->
-		{#if tableProcessChosen && tableProcessChosen !== '' && defaultsReady && theDefaults !== null && theDefaults !== undefined}
+		<!-- ensure component mounts after theP change -->
+		{#if tableProcessChosen && tableProcessChosen !== '' && defaultsReady && theP !== null && theP !== undefined}
 			{@const TableProcess = appConsts.tableProcessMap.get(tableProcessChosen)?.component}
-			<TableProcess
-				p={{
-					name: tableProcessChosen,
-					args: theDefaults
-				}}
-			/>
+			<TableProcess bind:p={theP} />
 		{/if}
 	{/if}
 {/snippet}

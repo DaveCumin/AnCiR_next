@@ -5,6 +5,7 @@
 	import { core, appConsts } from '$lib/core/core.svelte.js';
 	// import { timeParse } from 'd3-time-format';
 	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
+	import { min } from '$lib/components/plotbits/helpers/wrangleData';
 
 	/**
 	 * Add the same process to multiple columns at once.
@@ -168,7 +169,10 @@
 		rawDataVersion = $state(0);
 
 		hoursSinceStart = $derived.by(() => {
-			if (this.isReferencial()) {
+			// Only delegate to the ref column when this column has no processes
+			// of its own; otherwise getData() differs from the ref's data and
+			// we'd return offsets that don't match our own (filtered) values.
+			if (this.isReferencial() && this.processes.length === 0) {
 				return this.refColumn?.hoursSinceStart;
 			}
 
@@ -199,24 +203,31 @@
 			}
 			//Other cases
 			const thedata = this.getData();
+			// Use the minimum valid value as the baseline; thedata[0] may be null
+			// after a filter process, which would coerce to 0 and yield huge offsets.
+			const baseline = min(thedata);
+			if (baseline == null) return [];
+			// Preserve null/NaN so downstream null-checks still catch filtered rows;
+			// without this, (null - baseline) coerces to -baseline and leaks through.
+			const isInvalid = (v) => v == null || isNaN(v);
 			if (this.type == 'number') {
 				let out = Array(thedata.length);
 				for (let i = 0; i < thedata.length; i++) {
-					out[i] = thedata[i] - thedata[0];
+					out[i] = isInvalid(thedata[i]) ? null : thedata[i] - baseline;
 				}
 				return out;
 			}
 			if (this.type == 'bin') {
 				let out = Array(thedata.length);
 				for (let i = 0; i < thedata.length; i++) {
-					out[i] = thedata[i] - thedata[0];
+					out[i] = isInvalid(thedata[i]) ? null : thedata[i] - baseline;
 				}
 				return out;
 			}
 			if (this.type == 'time') {
 				let out = Array(thedata.length);
 				for (let i = 0; i < thedata.length; i++) {
-					out[i] = (thedata[i] - thedata[0]) / 3600000;
+					out[i] = isInvalid(thedata[i]) ? null : (thedata[i] - baseline) / 3600000;
 				}
 				return out;
 			}

@@ -184,7 +184,7 @@ export function mean(data) {
 export function min(data) {
 	let out = Infinity;
 	for (let i = 0; i < data.length; i++) {
-		if (data[i] !== undefined && !isNaN(data[i]) && data[i] < out) {
+		if (data[i] !== undefined && !isNaN(data[i]) && data[i] < out && data[i] != null) {
 			out = data[i];
 		}
 	}
