@@ -46,8 +46,6 @@
 		// Added to the mouse-derived x before sibling lookup; lets Actogram map
 		// hrs-into-day-row to absolute hours by passing dayIndex * periodHrs.
 		xDataOffset = 0,
-		// When true, tooltip only fires while the Alt key is held (Actogram behaviour).
-		requireAlt = false,
 		// Height (px) of the transparent hitbox that catches hover across the whole row.
 		// When 0/null, hover events only fire over drawn bars (the polyline fill).
 		hitboxHeight = 0,
@@ -99,10 +97,7 @@
 
 	function handleHover(e) {
 		if (!tooltip) return;
-		if (requireAlt && !e.altKey) {
-			hideTooltip(e.target);
-			return;
-		}
+
 		const mouseX = e.offsetX;
 		const mouseY = e.offsetY;
 

@@ -509,18 +509,10 @@
 	import { tick } from 'svelte';
 	import { appState } from '$lib/core/core.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
+	import { bindAltTooltipToggle } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import { DateTime } from 'luxon';
 
 	let { theData, which } = $props();
-
-	// Alt-keyup hides any currently-visible tooltip. The Hist plotbit itself
-	// gates tooltip display on e.altKey via requireAlt={true}, so we don't need
-	// a keydown listener — just hide on release so a stale tooltip doesn't stick.
-	document.addEventListener('keyup', (e) => {
-		if (e.key === 'Alt') {
-			tooltip.visible = false;
-		}
-	});
 
 	const MONTHS = [
 		'Jan',
@@ -610,9 +602,12 @@
 
 	//Tooltip
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
-	function handleTooltip(event) {
-		tooltip = event.detail;
-	}
+	const handleTooltip = bindAltTooltipToggle(
+		() => tooltip,
+		(v) => {
+			tooltip = v;
+		}
+	);
 </script>
 
 {#snippet controls(theData)}
@@ -951,7 +946,6 @@
 								day * (theData.plot.spaceBetween + theData.plot.eachplotheight) +
 								theData.plot.spaceBetween}
 							tooltip={true}
-							requireAlt={false}
 							hitboxHeight={theData.plot.eachplotheight}
 							xDataOffset={day * theData.plot.periodHrs}
 							xLabel="Time"

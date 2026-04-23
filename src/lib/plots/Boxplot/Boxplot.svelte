@@ -431,13 +431,17 @@
 	import { tick } from 'svelte';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
+	import { bindAltTooltipToggle } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 
 	let { theData, which } = $props();
 
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
-	function handleTooltip(event) {
-		tooltip = event.detail;
-	}
+	const handleTooltip = bindAltTooltipToggle(
+		() => tooltip,
+		(v) => {
+			tooltip = v;
+		}
+	);
 
 	onMount(() => {
 		if (which == 'plot') {

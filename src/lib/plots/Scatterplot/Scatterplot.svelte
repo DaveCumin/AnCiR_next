@@ -6,7 +6,10 @@
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
-	import { findNearestY } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
+	import {
+		findNearestY,
+		bindAltTooltipToggle
+	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import NightBand, { NightBandClass } from './NightBand.svelte';
 
@@ -567,9 +570,12 @@
 
 	//Tooltip
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
-	function handleTooltip(event) {
-		tooltip = event.detail;
-	}
+	const handleTooltip = bindAltTooltipToggle(
+		() => tooltip,
+		(v) => {
+			tooltip = v;
+		}
+	);
 
 	// Build the siblings list so every series hover shows all series' values at the hovered x.
 	let scatterSiblings = $derived.by(() => {
@@ -581,10 +587,7 @@
 					theData.plot.anyXdataTime && d.x.type !== 'time'
 						? d.x
 								.getData()
-								.map(
-									(v) =>
-										(d.x.originTime_ms ?? theData.plot.xReferenceOrigin_ms) + v * 3600000
-								)
+								.map((v) => (d.x.originTime_ms ?? theData.plot.xReferenceOrigin_ms) + v * 3600000)
 						: d.x.getData();
 				const yArr = d.y.getData();
 				return {
@@ -1038,7 +1041,11 @@
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
 				{@const xDATA =
 					theData.plot.anyXdataTime && datum.x.type !== 'time'
-						? datum.x.getData().map((d) => (datum.x.originTime_ms ?? theData.plot.xReferenceOrigin_ms) + d * 3600000)
+						? datum.x
+								.getData()
+								.map(
+									(d) => (datum.x.originTime_ms ?? theData.plot.xReferenceOrigin_ms) + d * 3600000
+								)
 						: datum.x.getData()}
 				{@const yScale =
 					datum.yAxis === 'left' ? theData.plot.YScaleLeft : theData.plot.YScaleRight}
@@ -1059,6 +1066,7 @@
 						? theData.plot.yAxisLeft.label || 'y'
 						: theData.plot.yAxisRight.label || 'y'}
 					siblings={scatterSiblings}
+					hideOnAlt={true}
 					which="plot"
 				/>
 				<Points
@@ -1080,6 +1088,7 @@
 						? theData.plot.yAxisLeft.label || 'y'
 						: theData.plot.yAxisRight.label || 'y'}
 					siblings={scatterSiblings}
+					hideOnAlt={true}
 					which="plot"
 				/>
 			{/if}

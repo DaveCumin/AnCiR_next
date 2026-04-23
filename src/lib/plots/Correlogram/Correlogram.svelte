@@ -7,7 +7,10 @@
 
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
-	import { findNearestY } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
+	import {
+		findNearestY,
+		bindAltTooltipToggle
+	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import { computeAutocorrelation } from '$lib/utils/correlogram.js';
 
@@ -418,9 +421,12 @@
 	let { theData, which } = $props();
 
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
-	function handleTooltip(event) {
-		tooltip = event.detail;
-	}
+	const handleTooltip = bindAltTooltipToggle(
+		() => tooltip,
+		(v) => {
+			tooltip = v;
+		}
+	);
 
 	let correlogramSiblings = $derived.by(() => {
 		if (which !== 'plot' || !theData?.plot?.data) return [];

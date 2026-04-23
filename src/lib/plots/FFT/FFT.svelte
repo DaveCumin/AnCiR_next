@@ -9,7 +9,10 @@
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import { computeFFT } from '$lib/utils/fft.js';
-	import { findNearestY } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
+	import {
+		findNearestY,
+		bindAltTooltipToggle
+	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 
 	export const FFT_defaultDataInputs = ['time', 'values'];
 	export const FFT_controlHeaders = ['Properties', 'Data'];
@@ -506,9 +509,12 @@
 	let { theData, which } = $props();
 
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
-	function handleTooltip(event) {
-		tooltip = event.detail;
-	}
+	const handleTooltip = bindAltTooltipToggle(
+		() => tooltip,
+		(v) => {
+			tooltip = v;
+		}
+	);
 
 	// Helpers to build the x/y arrays used for tooltip lookups (accounts for
 	// showPeriod filtering so the hovered x matches the drawn data).

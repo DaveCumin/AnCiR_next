@@ -8,7 +8,10 @@
 
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
-	import { findNearestY } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
+	import {
+		findNearestY,
+		bindAltTooltipToggle
+	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
 	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
@@ -540,9 +543,12 @@
 
 	//Tooltip
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
-	function handleTooltip(event) {
-		tooltip = event.detail;
-	}
+	const handleTooltip = bindAltTooltipToggle(
+		() => tooltip,
+		(v) => {
+			tooltip = v;
+		}
+	);
 
 	// Siblings for aggregated tooltips — show every series' y at the hovered period.
 	let periodogramSiblings = $derived.by(() => {

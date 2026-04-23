@@ -103,8 +103,7 @@ export function buildAggregatedContent({
  * hovered SVG (so its width is the plot width).
  */
 export function computeTooltipPosition(mouseX, mouseY, srcRect, tooltipWidth = 180) {
-	const xPos =
-		mouseX + tooltipWidth > srcRect.width ? mouseX - (tooltipWidth + 10) : mouseX + 10;
+	const xPos = mouseX + tooltipWidth > srcRect.width ? mouseX - tooltipWidth * 0.7 : mouseX + 20;
 	const yPos = mouseY < 20 ? mouseY + 40 : mouseY + 10;
 	return { x: xPos, y: yPos };
 }
@@ -117,4 +116,50 @@ export function dispatchTooltip(target, detail) {
 /** Dispatch a tooltip-hidden CustomEvent. */
 export function hideTooltip(target) {
 	dispatchTooltip(target, { visible: false });
+}
+
+/**
+ * Wire up Alt-toggle behaviour for a plot's tooltip state. Holding Alt hides
+ * the tooltip immediately; releasing Alt restores the last visible tooltip,
+ * even without any further mouse movement.
+ *
+ * Usage in a plot:
+ *   let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
+ *   const handleTooltip = bindAltTooltipToggle(
+ *     () => tooltip,
+ *     (v) => { tooltip = v; }
+ *   );
+ *   // then: <svg ontooltip={handleTooltip} />
+ *
+ * Returns the ontooltip handler. Document keydown/keyup listeners are added
+ * once per call; they are not removed (plot components are long-lived).
+ */
+export function bindAltTooltipToggle(getTooltip, setTooltip) {
+	let stashed = null;
+	let altDown = false;
+
+	document.addEventListener('keydown', (e) => {
+		if (e.key === 'Alt' && !altDown) {
+			altDown = true;
+			const t = getTooltip();
+			if (t?.visible) setTooltip({ ...t, visible: false });
+		}
+	});
+	document.addEventListener('keyup', (e) => {
+		if (e.key === 'Alt') {
+			altDown = false;
+			if (stashed?.visible) setTooltip(stashed);
+		}
+	});
+
+	return (event) => {
+		const detail = event.detail;
+		if (detail?.visible) {
+			stashed = detail;
+			if (altDown) return; // suppress dispatches while Alt is held
+		} else {
+			stashed = null;
+		}
+		setTooltip(detail);
+	};
 }

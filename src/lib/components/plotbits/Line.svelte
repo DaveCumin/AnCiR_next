@@ -68,7 +68,8 @@
 		yLabel = 'y',
 		// When provided, the tooltip aggregates and displays the y value at the
 		// hovered x for every sibling series. Shape: [{label, colour, findYAt(x)}]
-		siblings = null
+		siblings = null,
+		hideOnAlt = false
 	} = $props();
 	let width = $derived(xscale.range()[1]);
 	let height = $derived(yscale.range()[0]);
@@ -116,6 +117,12 @@
 
 	function handleHover(e) {
 		if (!tooltip || !qt) return;
+
+		if (hideOnAlt && e.altKey) {
+			hideTooltip(e.target);
+			return;
+		}
+
 		const mouseX = e.offsetX;
 		const mouseY = e.offsetY;
 		const closest = qt.find(mouseX, mouseY);
