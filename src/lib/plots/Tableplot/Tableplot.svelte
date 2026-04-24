@@ -262,6 +262,13 @@
 			return table;
 		}
 	}
+
+	export const definition = {
+		displayName: Tableplot_displayName,
+		defaultDataInputs: Tableplot_defaultDataInputs,
+		controlHeaders: Tableplot_controlHeaders,
+		plotClass: Tableplotclass
+	};
 </script>
 
 <script>

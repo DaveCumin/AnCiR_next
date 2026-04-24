@@ -199,8 +199,8 @@
 </script>
 
 <script>
-	import Icon from '$lib/icons/Icon.svelte';
 	import ChainedPanel from '$lib/components/reusables/ChainedPanel.svelte';
+	import TableProcessShell from '$lib/core/TableProcessShell.svelte';
 	import { untrack } from 'svelte';
 	let { p = $bindable() } = $props();
 
@@ -275,20 +275,7 @@
 
 {#if p}
 	{@const TheTableProcess = appConsts.tableProcessMap.get(p.name)?.component}
-	<div class="tableProcess-container">
-		<div
-			class="control-component-title-icons"
-			style="
-    margin-bottom: -1.75rem;
-    z-index: 9999;
-    margin-top: 0.25rem;
-"
-		>
-			<button class="icon" onclick={() => doDeleteTableProcess(p)}>
-				<Icon name="minus" width={16} height={16} className="menu-icon" />
-			</button>
-		</div>
-		<div style="margin-top: 0.7rem;">{p.displayName}</div>
+	<TableProcessShell {p} onDelete={doDeleteTableProcess}>
 		{#if showChainSelector && chainablePrecedingTPs.length > 0}
 			<div class="chain-selector">
 				<label for="chain-{p.id}">Chain from:</label>
@@ -311,7 +298,7 @@
 		{#if isChainable && p.args?.valid}
 			<ChainedPanel bind:p {xOutColId} {yOutColIds} />
 		{/if}
-	</div>
+	</TableProcessShell>
 {/if}
 
 <style>

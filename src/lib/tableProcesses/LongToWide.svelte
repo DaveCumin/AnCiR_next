@@ -134,7 +134,12 @@
 		return [result, unionTimes.length > 0];
 	}
 
-	export const definition = { displayName, defaults, func: longtowide };
+	export const definition = {
+		displayName,
+		defaults,
+		func: longtowide,
+		columnIdFields: { scalar: ['categoryIN', 'timeIN', 'valueIN'] }
+	};
 </script>
 
 <script>

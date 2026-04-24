@@ -1,50 +1,43 @@
 export async function loadPlots() {
-	// Same loadPlots implementation as above
 	const sveltePaths = import.meta.glob('$lib/plots/**/*.svelte', { eager: false });
 	const plotMap = new Map();
 	for (const sveltePath in sveltePaths) {
 		const fileName = sveltePath.split('/').pop();
-		//console.log('Loading plot from:', sveltePath, 'with file name:', fileName);
 		const folderName = sveltePath.split('/').slice(-2)[0];
 
+		// Only load the folder's main plot file (other .svelte files are imported by it).
+		if (folderName.toLowerCase() !== fileName?.toLowerCase().slice(0, -7)) continue;
+
 		try {
-			if (folderName.toLowerCase() === fileName?.toLowerCase().slice(0, -7)) {
-				// Make sure to only read in the file with the same name (other files should be imported by that one)
-				const svelteModule = await sveltePaths[sveltePath]();
-				const component = svelteModule.default;
-				const className = fileName.split('.')[0] + 'class';
-				const plotClass = svelteModule[className];
-				const defaultInputs = svelteModule[fileName.split('.')[0] + '_defaultDataInputs'];
-				const controlHeaders = svelteModule[fileName.split('.')[0] + '_controlHeaders'];
-				const displayName = svelteModule[fileName.split('.')[0] + '_displayName'] || formatDisplayName(folderName);
-
-				if (!plotClass) {
-					console.warn(
-						`No valid plot class found in ${sveltePath}. Expected a named export like ${className}.`
-					);
-					continue;
-				}
-
-				plotMap.set(folderName.toLowerCase(), {
-					plot: component,
-					data: plotClass,
-					defaultInputs: defaultInputs || [],
-					controlHeaders: controlHeaders || [],
-					displayName: displayName
-				});
+			const svelteModule = await sveltePaths[sveltePath]();
+			const def = svelteModule.definition;
+			if (!def) {
+				console.warn(`Plot ${sveltePath} is missing a \`definition\` export`);
+				continue;
 			}
+			if (!def.plotClass) {
+				console.warn(`Plot ${sveltePath} definition is missing \`plotClass\``);
+				continue;
+			}
+
+			plotMap.set(folderName.toLowerCase(), {
+				plot: svelteModule.default,
+				data: def.plotClass,
+				defaultInputs: def.defaultDataInputs ?? [],
+				controlHeaders: def.controlHeaders ?? [],
+				displayName: def.displayName ?? formatDisplayName(folderName),
+				definition: def
+			});
 		} catch (error) {
 			console.error(`Error loading ${sveltePath}:`, error);
 		}
 	}
-	//console.log('plotMap:', plotMap);
 	return plotMap;
 }
 
-// Helper function to convert camelCase/PascalCase to readable format
 function formatDisplayName(name) {
 	return name
-		.replace(/([A-Z])/g, ' $1') // Add space before capital letters
-		.replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+		.replace(/([A-Z])/g, ' $1')
+		.replace(/^./, (str) => str.toUpperCase())
 		.trim();
 }

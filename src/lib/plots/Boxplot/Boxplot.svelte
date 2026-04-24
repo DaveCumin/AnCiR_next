@@ -419,6 +419,12 @@
 			return chart;
 		}
 	}
+
+	export const definition = {
+		defaultDataInputs: Boxplot_defaultDataInputs,
+		controlHeaders: Boxplot_controlHeaders,
+		plotClass: Boxplotclass
+	};
 </script>
 
 <script>

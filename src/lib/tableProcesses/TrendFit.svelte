@@ -24,6 +24,7 @@
 		displayName,
 		defaults,
 		func: trendfit,
+		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'trendx',
 		yOutKeyPrefix: 'trendy_'
 	};

@@ -352,12 +352,13 @@
 				return 0;
 			}
 			let maxPeriod = -1;
-			this.data.forEach((d) => {
-				const keys = Object.keys(d.dataByDays.xByPeriod).map(Number);
-				if (keys.length > 0) {
-					maxPeriod = Math.max(maxPeriod, Math.max(...keys));
+			for (const d of this.data) {
+				const keys = Object.keys(d.dataByDays.xByPeriod);
+				for (const k of keys) {
+					const v = +k;
+					if (v > maxPeriod) maxPeriod = v;
 				}
-			});
+			}
 			return maxPeriod + 1;
 		});
 
@@ -501,6 +502,12 @@
 			return actogram;
 		}
 	}
+
+	export const definition = {
+		defaultDataInputs: Actogram_defaultDataInputs,
+		controlHeaders: Actogram_controlHeaders,
+		plotClass: Actogramclass
+	};
 </script>
 
 <script>

@@ -301,110 +301,44 @@
 		}
 
 		getAutoScaleValues() {
-			//set up outputs
-			let axisWidths = { left: null, right: null, top: null, bottom: null };
-			if (!document.getElementById('plot' + this.parentBox.id)) {
-				return axisWidths;
-			}
-			//LEFT
-			//find the left-most axis
-			const allLeftAxes = document
-				.getElementById('plot' + this.parentBox.id)
-				?.getElementsByClassName('axis-left');
+			/** @type {Record<string, number|null>} */
+			const axisWidths = { left: null, right: null, top: null, bottom: null };
+			const root = document.getElementById('plot' + this.parentBox.id);
+			if (!root) return axisWidths;
 
-			if (allLeftAxes.length == 0) {
-				//do nothing if there aren't any axes
-			} else {
-				if (allLeftAxes) {
-					let leftMost = 0;
-					let leftAxisWhole = allLeftAxes[0].getBoundingClientRect().left;
-					for (let i = 1; i < allLeftAxes.length; i++) {
-						if (allLeftAxes[i].getBoundingClientRect().left < leftAxisWhole) {
-							leftMost = i;
-							leftAxisWhole = allLeftAxes[i].getBoundingClientRect().left;
-						}
-					}
-					// Domain line may be absent during axis re-mount (see #key in Axis.svelte)
-					const domain = allLeftAxes[leftMost].getElementsByClassName('domain')[0];
-					if (domain) {
-						const leftAxisLine = domain.getBoundingClientRect().left;
-						axisWidths.left = Math.round(leftAxisLine - leftAxisWhole + 6);
+			// side → which rect edge to pick the "outer-most" axis by, and the
+			// direction (outer-most = smallest for left/top, largest for right/bottom).
+			// Bottom gets a larger padding allowance (12 vs 6) for tick labels.
+			/**
+			 * @type {Array<{side:'left'|'right'|'top'|'bottom', edge:'left'|'right'|'top'|'bottom',
+			 *   pickMax:boolean, pad:number, width:(whole:number, line:number)=>number}>}
+			 */
+			const sides = [
+				{ side: 'left', edge: 'left', pickMax: false, pad: 6, width: (whole, line) => line - whole },
+				{ side: 'right', edge: 'right', pickMax: true, pad: 6, width: (whole, line) => whole - line },
+				{ side: 'top', edge: 'top', pickMax: false, pad: 6, width: (whole, line) => line - whole },
+				{ side: 'bottom', edge: 'bottom', pickMax: true, pad: 12, width: (whole, line) => whole - line }
+			];
+
+			for (const cfg of sides) {
+				const axes = root.getElementsByClassName('axis-' + cfg.side);
+				if (!axes || axes.length === 0) continue;
+
+				let outerIdx = 0;
+				let outerEdge = axes[0].getBoundingClientRect()[cfg.edge];
+				for (let i = 1; i < axes.length; i++) {
+					const e = axes[i].getBoundingClientRect()[cfg.edge];
+					if (cfg.pickMax ? e > outerEdge : e < outerEdge) {
+						outerIdx = i;
+						outerEdge = e;
 					}
 				}
-			}
 
-			//RIGHT
-			//find the left-most axis
-			const allRightAxes = document
-				.getElementById('plot' + this.parentBox.id)
-				.getElementsByClassName('axis-right');
-			if (allRightAxes.length == 0) {
-				//do nothing if there aren't any axes
-			} else {
-				if (allRightAxes) {
-					let rightMost = 0;
-					let rightAxisWhole = allRightAxes[0].getBoundingClientRect().right;
-					for (let i = 1; i < allRightAxes.length; i++) {
-						if (allRightAxes[i].getBoundingClientRect().right > rightAxisWhole) {
-							rightMost = i;
-							rightAxisWhole = allRightAxes[i].getBoundingClientRect().right;
-						}
-					}
-					const domain = allRightAxes[rightMost].getElementsByClassName('domain')[0];
-					if (domain) {
-						const rightAxisLine = domain.getBoundingClientRect().right;
-						axisWidths.right = Math.round(rightAxisWhole - rightAxisLine + 6);
-					}
-				}
-			}
-
-			//TOP
-			//find the top-most axis
-			const allTopAxes = document
-				.getElementById('plot' + this.parentBox.id)
-				.getElementsByClassName('axis-top');
-			if (allTopAxes.length == 0) {
-				//do nothing if there aren't any axes
-			} else {
-				if (allTopAxes) {
-					let topMost = 0;
-					let topAxisWhole = allTopAxes[0].getBoundingClientRect().top;
-					for (let i = 1; i < allTopAxes.length; i++) {
-						if (allTopAxes[i].getBoundingClientRect().top < topAxisWhole) {
-							topMost = i;
-							topAxisWhole = allTopAxes[i].getBoundingClientRect().top;
-						}
-					}
-					const domain = allTopAxes[topMost].getElementsByClassName('domain')[0];
-					if (domain) {
-						const topAxisLine = domain.getBoundingClientRect().top;
-						axisWidths.top = Math.round(topAxisLine - topAxisWhole + 6);
-					}
-				}
-			}
-
-			//BOTTOM
-			//find the left-most axis
-			const allBottomAxes = document
-				.getElementById('plot' + this.parentBox.id)
-				.getElementsByClassName('axis-bottom');
-			if (allBottomAxes.length == 0) {
-				//do nothing if there aren't any axes
-			} else {
-				if (allBottomAxes) {
-					let bottomMost = 0;
-					let bottomAxisWhole = allBottomAxes[0].getBoundingClientRect().bottom;
-					for (let i = 1; i < allBottomAxes.length; i++) {
-						if (allBottomAxes[i].getBoundingClientRect().bottom > bottomAxisWhole) {
-							bottomMost = i;
-							bottomAxisWhole = allBottomAxes[i].getBoundingClientRect().bottom;
-						}
-					}
-					const domain = allBottomAxes[bottomMost].getElementsByClassName('domain')[0];
-					if (domain) {
-						const bottomAxisLine = domain.getBoundingClientRect().bottom;
-						axisWidths.bottom = Math.round(bottomAxisWhole - bottomAxisLine + 12);
-					}
+				// Domain line may be absent during axis re-mount (see #key in Axis.svelte)
+				const domain = axes[outerIdx].getElementsByClassName('domain')[0];
+				if (domain) {
+					const lineEdge = domain.getBoundingClientRect()[cfg.edge];
+					axisWidths[cfg.side] = Math.round(cfg.width(outerEdge, lineEdge) + cfg.pad);
 				}
 			}
 
@@ -551,6 +485,13 @@
 			return scatter;
 		}
 	}
+
+	export const definition = {
+		displayName: Scatterplot_displayName,
+		defaultDataInputs: Scatterplot_defaultDataInputs,
+		controlHeaders: Scatterplot_controlHeaders,
+		plotClass: Scatterplotclass
+	};
 </script>
 
 <script>
@@ -580,22 +521,25 @@
 	// Build the siblings list so every series hover shows all series' values at the hovered x.
 	let scatterSiblings = $derived.by(() => {
 		if (which !== 'plot' || !theData?.plot?.data) return [];
-		return theData.plot.data
-			.filter((d) => d.x?.getData()?.length > 0 && d.y?.getData()?.length > 0)
-			.map((d) => {
-				const xD =
-					theData.plot.anyXdataTime && d.x.type !== 'time'
-						? d.x
-								.getData()
-								.map((v) => (d.x.originTime_ms ?? theData.plot.xReferenceOrigin_ms) + v * 3600000)
-						: d.x.getData();
-				const yArr = d.y.getData();
-				return {
-					label: d.label || d.y?.name || '',
-					colour: d.points?.colour || d.line?.colour || 'black',
-					findYAt: (x) => findNearestY(xD, yArr, x)
-				};
+		const out = [];
+		for (const d of theData.plot.data) {
+			const xArr = d.x?.getData();
+			const yArr = d.y?.getData();
+			if (!xArr?.length || !yArr?.length) continue;
+			const xD =
+				theData.plot.anyXdataTime && d.x.type !== 'time'
+					? xArr.map(
+							/** @param {number} v */ (v) =>
+								(d.x.originTime_ms ?? theData.plot.xReferenceOrigin_ms) + v * 3600000
+						)
+					: xArr;
+			out.push({
+				label: d.label || d.y?.name || '',
+				colour: d.points?.colour || d.line?.colour || 'black',
+				findYAt: /** @param {number} x */ (x) => findNearestY(xD, yArr, x)
 			});
+		}
+		return out;
 	});
 
 	onMount(() => {

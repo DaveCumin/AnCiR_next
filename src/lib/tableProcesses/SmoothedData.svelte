@@ -26,6 +26,7 @@
 		displayName,
 		defaults,
 		func: smootheddata,
+		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'smoothedx',
 		yOutKeyPrefix: 'smoothedy_'
 	};

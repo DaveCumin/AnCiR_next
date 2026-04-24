@@ -5,30 +5,20 @@
 		const value = Number(args.value);
 		return x.map((i) => i * value);
 	}
-	export const multiply_defaults = new Map([['value', { val: Number(1) }]]);
+	const multiply_defaults = new Map([['value', { val: Number(1) }]]);
+
+	export const definition = { displayName: 'Multiply', func: multiply, defaults: multiply_defaults };
 </script>
 
 <script>
-	import Icon from '$lib/icons/Icon.svelte';
+	import ProcessShell from '$lib/core/ProcessShell.svelte';
 
 	let { p = $bindable() } = $props();
 </script>
 
-<div class="control-input process">
-	<div class="process-title">
-		<p>{p.name}</p>
-		<button
-			class="icon"
-			onclick={(e) => {
-				e.stopPropagation();
-				p.parentCol.removeProcess(p.id);
-			}}
-		>
-			<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
-		</button>
-	</div>
+<ProcessShell {p}>
 	<NumberWithUnits bind:value={p.args.value} step="0.001" />
-</div>
+</ProcessShell>
 
 <style>
 </style>

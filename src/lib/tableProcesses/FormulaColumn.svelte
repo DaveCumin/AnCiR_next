@@ -82,7 +82,15 @@ return _r;`
 		return [result, result.length > 0];
 	}
 
-	export const definition = { displayName, defaults, func: formulacolumn };
+	export const definition = {
+		displayName,
+		defaults,
+		func: formulacolumn,
+		// FormulaColumn stores column refs inline inside args.tokens ({type:'col', id}),
+		// not in a flat scalar/array slot, so the generic registry can't reach them.
+		// It handles its own ref updates in-component.
+		columnIdFields: {}
+	};
 </script>
 
 <script>

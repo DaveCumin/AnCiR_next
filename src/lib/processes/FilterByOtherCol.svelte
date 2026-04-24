@@ -71,8 +71,7 @@
 		const out = x.map((val, i) => (resultMask[i] ? val : null));
 		return out;
 	}
-	export const filterbyothercol_displayName = 'Filter';
-	export const filterbyothercol_defaults = new Map([
+	const filterbyothercol_defaults = new Map([
 		[
 			'conditions',
 			{
@@ -80,11 +79,17 @@
 			}
 		]
 	]);
+
+	export const definition = {
+		displayName: 'Filter',
+		func: filterbyothercol,
+		defaults: filterbyothercol_defaults
+	};
 </script>
 
 <script>
-	import Icon from '$lib/icons/Icon.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
+	import ProcessShell from '$lib/core/ProcessShell.svelte';
 
 	let { p = $bindable() } = $props();
 	p.args.parentColId = p.parentCol.id; //so we can access the parent col in the module script
@@ -100,19 +105,7 @@
 	}
 </script>
 
-<div class="control-input process">
-	<div class="process-title">
-		<p>Filter conditions</p>
-		<button
-			class="icon"
-			onclick={(e) => {
-				e.stopPropagation();
-				p.parentCol.removeProcess(p.id);
-			}}
-		>
-			<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
-		</button>
-	</div>
+<ProcessShell {p} title="Filter conditions">
 	{#each p.args.conditions as condition, index}
 		<div class="conditions">
 			<div class="second-level-condition">
@@ -162,7 +155,7 @@
 		</div>
 	{/each}
 	<button class="add-condition-button" onclick={addCondition}>Add Condition</button>
-</div>
+</ProcessShell>
 
 <style>
 	.conditions {

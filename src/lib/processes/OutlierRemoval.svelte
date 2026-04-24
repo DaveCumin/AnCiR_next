@@ -3,8 +3,7 @@
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { KahanSum, kahanMean } from '$lib/utils/numerics.js';
 
-	export const outlierremoval_displayName = 'Remove Outliers';
-	export const outlierremoval_defaults = new Map([
+	const outlierremoval_defaults = new Map([
 		['method', { val: 'zscore' }],
 		['iqrMultiplier', { val: 1.5 }],
 		['zThreshold', { val: 3 }]
@@ -75,10 +74,16 @@
 		}
 		return out;
 	}
+
+	export const definition = {
+		displayName: 'Remove Outliers',
+		func: outlierremoval,
+		defaults: outlierremoval_defaults
+	};
 </script>
 
 <script>
-	import Icon from '$lib/icons/Icon.svelte';
+	import ProcessShell from '$lib/core/ProcessShell.svelte';
 	import { core } from '$lib/core/core.svelte.js';
 	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
 
@@ -152,19 +157,7 @@
 	});
 </script>
 
-<div class="control-input process">
-	<div class="process-title">
-		<p>{p.name}</p>
-		<button
-			class="icon"
-			onclick={(e) => {
-				e.stopPropagation();
-				p.parentCol.removeProcess(p.id);
-			}}
-		>
-			<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
-		</button>
-	</div>
+<ProcessShell {p}>
 	<div class="control-input">
 		<p>Method</p>
 		<AttributeSelect
@@ -197,7 +190,7 @@
 			</div>
 		</div>
 	{/if}
-</div>
+</ProcessShell>
 
 <style>
 	.removed-values-list {

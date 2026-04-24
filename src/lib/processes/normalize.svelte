@@ -84,16 +84,22 @@
 		}
 	}
 
-	export const normalize_defaults = new Map([
+	const normalize_defaults = new Map([
 		['normalizationType', { val: 'z-score' }],
 		['customMin', { val: 0 }],
 		['customMax', { val: 1 }]
 	]);
+
+	export const definition = {
+		displayName: 'Normalize',
+		func: normalize,
+		defaults: normalize_defaults
+	};
 </script>
 
 <script>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-	import Icon from '$lib/icons/Icon.svelte';
+	import ProcessShell from '$lib/core/ProcessShell.svelte';
 
 	let { p = $bindable() } = $props();
 
@@ -105,20 +111,7 @@
 	];
 </script>
 
-<div class="control-input process">
-	<div class="process-title">
-		<p>{p.name}</p>
-		<button
-			class="icon"
-			onclick={(e) => {
-				e.stopPropagation();
-				p.parentCol.removeProcess(p.id);
-			}}
-		>
-			<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
-		</button>
-	</div>
-
+<ProcessShell {p}>
 	<div class="control-input">
 		<select bind:value={p.args.normalizationType}>
 			{#each normalizationTypes as type}
@@ -151,7 +144,7 @@
 			Normalize to unit length
 		{/if}
 	</div>
-</div>
+</ProcessShell>
 
 <style>
 	.range-controls {

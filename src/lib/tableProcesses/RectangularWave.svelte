@@ -26,6 +26,7 @@
 		displayName,
 		defaults,
 		func: rectangularwave,
+		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'rectwavex',
 		yOutKeyPrefix: 'rectwavey_'
 	};

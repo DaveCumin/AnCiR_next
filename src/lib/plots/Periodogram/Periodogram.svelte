@@ -15,6 +15,7 @@
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
 	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
+	import { minMaxAcross } from '$lib/utils/stats.js';
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
 	export const Periodogram_controlHeaders = ['Properties', 'Data'];
@@ -327,13 +328,12 @@
 				return [0, 0];
 			}
 
-			let ymin = Infinity;
-			let ymax = -Infinity;
-			this.data.forEach((d, i) => {
-				let tempy = this.data[i].periodData.y;
-				ymin = Math.floor(Math.min(ymin, Math.min(...tempy)));
-				ymax = Math.ceil(Math.max(ymax, Math.max(...tempy)));
-			});
+			const { min: mnRaw, max: mxRaw } = minMaxAcross(
+				this.data.map((d) => d.periodData.y)
+			);
+			if (mnRaw == null || mxRaw == null) return [0, 0];
+			const ymin = Math.floor(mnRaw);
+			const ymax = Math.ceil(mxRaw);
 			return [
 				this.ylimsIN[0] != null ? this.ylimsIN[0] : ymin,
 				this.ylimsIN[1] != null ? this.ylimsIN[1] : ymax
@@ -527,6 +527,12 @@
 			return periodogram;
 		}
 	}
+
+	export const definition = {
+		defaultDataInputs: Periodogram_defaultDataInputs,
+		controlHeaders: Periodogram_controlHeaders,
+		plotClass: Periodogramclass
+	};
 </script>
 
 <script>

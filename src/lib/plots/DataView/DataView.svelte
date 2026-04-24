@@ -102,6 +102,13 @@
 			return dv;
 		}
 	}
+
+	export const definition = {
+		displayName: DataView_displayName,
+		defaultDataInputs: DataView_defaultDataInputs,
+		controlHeaders: DataView_controlHeaders,
+		plotClass: DataViewclass
+	};
 </script>
 
 <script>

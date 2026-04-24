@@ -2,10 +2,26 @@
 	// @ts-nocheck
 
 	import { Process, nextLinkedGroupId, getLinkedProcesses } from '$lib/core/Process.svelte';
-	import { core, appConsts } from '$lib/core/core.svelte.js';
-	// import { timeParse } from 'd3-time-format';
+	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
 	import { min } from '$lib/components/plotbits/helpers/wrangleData';
+
+	// Monotonic counter bumped whenever any Column's getDataHash $derived re-runs.
+	// Returning a fresh integer gives us cheap !== equality for cache invalidation
+	// without having to serialise the args tree on every read.
+	let _hashCounter = 0;
+
+	// Walk a reactive tree to register Svelte dependencies on every leaf, without
+	// allocating a string. Any mutation inside the tree signals the $derived to
+	// re-run and bump _hashCounter, so the cached data on the Column is busted.
+	function _touchTree(v) {
+		if (v == null || typeof v !== 'object') return;
+		if (Array.isArray(v)) {
+			for (let i = 0; i < v.length; i++) _touchTree(v[i]);
+			return;
+		}
+		for (const k in v) _touchTree(v[k]);
+	}
 
 	/**
 	 * Add the same process to multiple columns at once.
@@ -270,15 +286,28 @@
 		#cachedData = null;
 		#lastDataHash = null;
 
+		// getDataHash is a monotonic integer that changes iff any reactive source
+		// below changes. Svelte's $derived memoises, so repeated reads inside one
+		// tick return the same value; only a dependency change re-runs the body
+		// and bumps the counter. Avoids JSON.stringify-per-read of process args.
 		getDataHash = $derived.by(() => {
-			const processHash = this.processes
-				.map((p) => {
-					const argsStr = JSON.stringify(p.args); // Deep hash of process args
-					return `${p.id}:${p.name}:${argsStr}`;
-				})
-				.join('|');
-			const refDataHash = this.isReferencial() ? this.refColumn?.getDataHash : '';
-			return `${this.refId ?? '_'}:${this.compression || ''}:${this.type}:${this.timeFormat}:${this.binWidth || ''}:${processHash}:${refDataHash}:${this.tableProcessGUId}:${this.rawDataVersion}`;
+			this.refId;
+			this.compression;
+			this.type;
+			this.timeFormat;
+			this.binWidth;
+			this.tableProcessGUId;
+			this.rawDataVersion;
+
+			for (const p of this.processes) {
+				p.id;
+				p.name;
+				_touchTree(p.args);
+			}
+
+			if (this.isReferencial()) this.refColumn?.getDataHash;
+
+			return ++_hashCounter;
 		});
 
 		//--- FUNCTION TO GET THE DATA
@@ -428,9 +457,7 @@
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
 
-	import { appState } from '$lib/core/core.svelte.js';
 	import Editable from '$lib/components/inputs/Editable.svelte';
-	import { get } from 'svelte/store';
 	import { guessDateofArray } from '$lib/utils/time/TimeUtils.js';
 
 	let { col = $bindable(), canChange = false, onChange = () => {} } = $props();
@@ -457,7 +484,7 @@
 
 		columnSelected = id;
 
-		const rect = event.currentTarget.getBoundingClientRect();
+		const rect = e.currentTarget.getBoundingClientRect();
 		dropdownTop = rect.top + window.scrollY;
 		dropdownLeft = rect.right + window.scrollX + 12;
 		showAddProcess = true;

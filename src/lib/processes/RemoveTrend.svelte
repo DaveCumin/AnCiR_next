@@ -3,8 +3,7 @@
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { linearRegression } from '$lib/components/plotbits/helpers/wrangleData.js';
 
-	export const removetrend_displayName = 'Remove Trend';
-	export const removetrend_defaults = new Map([
+	const removetrend_defaults = new Map([
 		['xColId', { val: -1 }],
 		['model', { val: 'linear' }],
 		['polyDegree', { val: 2 }],
@@ -152,14 +151,20 @@
 		for (let k = 0; k < validIndices.length; k++) out[validIndices[k]] = detrended[k];
 		return out;
 	}
+
+	export const definition = {
+		displayName: 'Remove Trend',
+		func: removetrend,
+		defaults: removetrend_defaults
+	};
 </script>
 
 <script>
 	// @ts-nocheck
-	import Icon from '$lib/icons/Icon.svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
+	import ProcessShell from '$lib/core/ProcessShell.svelte';
 	import { core } from '$lib/core/core.svelte.js';
 	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
 
@@ -217,20 +222,7 @@
 	});
 </script>
 
-<div class="control-input process">
-	<div class="process-title">
-		<p>{p.name}</p>
-		<button
-			class="icon"
-			onclick={(e) => {
-				e.stopPropagation();
-				p.parentCol.removeProcess(p.id);
-			}}
-		>
-			<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
-		</button>
-	</div>
-
+<ProcessShell {p}>
 	<!-- X column for trend fitting -->
 	<div class="control-input">
 		<p>X axis</p>
@@ -286,7 +278,7 @@
 			&ensp;R²={trendStats.rSquared?.toFixed(3)}&ensp;RMSE={trendStats.rmse?.toFixed(3)}
 		</div>
 	{/if}
-</div>
+</ProcessShell>
 
 <style>
 	.info-text {

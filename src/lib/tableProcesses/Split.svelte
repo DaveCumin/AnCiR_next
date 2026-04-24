@@ -104,7 +104,12 @@
 		];
 	}
 
-	export const definition = { displayName, defaults, func: split };
+	export const definition = {
+		displayName,
+		defaults,
+		func: split,
+		columnIdFields: { scalar: ['xIN'], array: ['yIN'] }
+	};
 </script>
 
 <script>

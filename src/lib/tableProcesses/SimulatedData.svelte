@@ -96,7 +96,7 @@
 		return [simulatedTime, simulatedValues, simulatedValues.length > 0];
 	}
 
-	export const definition = { displayName, defaults, func: simulateddata };
+	export const definition = { displayName, defaults, func: simulateddata, columnIdFields: {} };
 </script>
 
 <script>

@@ -26,6 +26,7 @@
 		displayName,
 		defaults,
 		func: doublelogistic,
+		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'dlogx',
 		yOutKeyPrefix: 'dlogy_'
 	};

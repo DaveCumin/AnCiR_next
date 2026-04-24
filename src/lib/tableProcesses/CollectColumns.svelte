@@ -2,6 +2,7 @@
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { min as arrMin, max as arrMax } from '$lib/utils/stats.js';
 
 	const displayName = 'Collect Columns';
 	const defaults = new Map([
@@ -77,9 +78,9 @@
 				if (method === 'mean') {
 					aggVal = rowVals.reduce((a, b) => a + b, 0) / rowVals.length;
 				} else if (method === 'min') {
-					aggVal = Math.min(...rowVals);
+					aggVal = arrMin(rowVals);
 				} else if (method === 'max') {
-					aggVal = Math.max(...rowVals);
+					aggVal = arrMax(rowVals);
 				} else if (method === 'sum') {
 					aggVal = rowVals.reduce((a, b) => a + b, 0);
 				}
@@ -98,7 +99,12 @@
 		return [result, colIds.length > 0];
 	}
 
-	export const definition = { displayName, defaults, func: collectcolumns };
+	export const definition = {
+		displayName,
+		defaults,
+		func: collectcolumns,
+		columnIdFields: { array: ['colIds', 'outColIds'] }
+	};
 </script>
 
 <script>

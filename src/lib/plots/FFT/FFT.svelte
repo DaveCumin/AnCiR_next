@@ -9,6 +9,7 @@
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import { computeFFT } from '$lib/utils/fft.js';
+	import { minMax, minMaxAcross, max as arrMax } from '$lib/utils/stats.js';
 	import {
 		findNearestY,
 		bindAltTooltipToggle
@@ -191,12 +192,12 @@
 
 		maxFrequency = $derived.by(() => {
 			if (this.data.length === 0) return 1; // sane default for empty plot
-			return Math.max(...this.nyquistFreqs);
+			return arrMax(this.nyquistFreqs) ?? 1;
 		});
 
 		minPeriod = $derived.by(() => {
 			if (this.data.length === 0) return 0.1;
-			return Math.max(...this.data.map((d) => d.fftData.minPeriod || 0.1));
+			return arrMax(this.data.map((d) => d.fftData.minPeriod || 0.1)) ?? 0.1;
 		});
 
 		xlims = $derived.by(() => {
@@ -222,10 +223,14 @@
 					defMin = minPeriod;
 					defMax = 100;
 				} else {
-					const minF = Math.min(...freqs);
-					const maxF = Math.max(...freqs);
-					defMin = Math.max(1 / maxF, minPeriod);
-					defMax = 1 / minF;
+					const { min: minF, max: maxF } = minMax(freqs);
+					if (minF == null || maxF == null) {
+						defMin = minPeriod;
+						defMax = 100;
+					} else {
+						defMin = Math.max(1 / maxF, minPeriod);
+						defMax = 1 / minF;
+					}
 				}
 			} else {
 				defMin = 0;
@@ -251,18 +256,13 @@
 				return [0, 1];
 			}
 
-			let ymin = Infinity;
-			let ymax = -Infinity;
-			this.data.forEach((d) => {
-				if (d.fftData.magnitudes.length > 0) {
-					ymin = Math.min(ymin, Math.min(...d.fftData.magnitudes));
-					ymax = Math.max(ymax, Math.max(...d.fftData.magnitudes));
-				}
-			});
-
-			const range = ymax - ymin;
-			ymin = Math.max(ymin - range * 0.1, 0);
-			ymax = ymax + range * 0.1;
+			const { min: mnRaw, max: mxRaw } = minMaxAcross(
+				this.data.map((d) => d.fftData.magnitudes)
+			);
+			if (mnRaw == null || mxRaw == null) return [0, 1];
+			const range = mxRaw - mnRaw;
+			const ymin = Math.max(mnRaw - range * 0.1, 0);
+			const ymax = mxRaw + range * 0.1;
 
 			return [
 				this.ylimsIN[0] != null ? this.ylimsIN[0] : ymin,
@@ -276,21 +276,16 @@
 			const hasPhase = this.data.some((d) => d.showPhase);
 			if (!hasPhase) return [-Math.PI, Math.PI];
 
-			let ymin = Infinity;
-			let ymax = -Infinity;
-			this.data.forEach((d) => {
-				if (d.showPhase && d.fftData.phases.length > 0) {
-					ymin = Math.min(ymin, Math.min(...d.fftData.phases));
-					ymax = Math.max(ymax, Math.max(...d.fftData.phases));
-				}
-			});
+			const { min: mnRaw, max: mxRaw } = minMaxAcross(
+				this.data.filter((d) => d.showPhase).map((d) => d.fftData.phases)
+			);
 
 			// Default to -π to π if no valid data
-			if (ymin === Infinity) return [-Math.PI, Math.PI];
+			if (mnRaw == null || mxRaw == null) return [-Math.PI, Math.PI];
 
-			const range = ymax - ymin;
-			ymin = ymin - range * 0.1;
-			ymax = ymax + range * 0.1;
+			const range = mxRaw - mnRaw;
+			let ymin = mnRaw - range * 0.1;
+			let ymax = mxRaw + range * 0.1;
 
 			return [
 				this.phaseYlimsIN[0] != null ? this.phaseYlimsIN[0] : ymin,
@@ -495,6 +490,13 @@
 			return fft;
 		}
 	}
+
+	export const definition = {
+		displayName: FFT_displayName,
+		defaultDataInputs: FFT_defaultDataInputs,
+		controlHeaders: FFT_controlHeaders,
+		plotClass: FFTclass
+	};
 </script>
 
 <script>

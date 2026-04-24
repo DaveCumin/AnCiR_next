@@ -9,7 +9,7 @@
 	import { computeAutocorrelation } from '$lib/utils/correlogram.js';
 	import { fitRectangularWave } from '$lib/utils/rectwave.js';
 	import { fitDoubleLogistic } from '$lib/utils/doublelogistic.js';
-	import { min as arrayMin } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import { min as arrayMin, minMax as arrayMinMax } from '$lib/utils/stats.js';
 
 	const displayName = 'Moving Analysis';
 	const defaults = new Map([
@@ -61,7 +61,8 @@
 	export const definition = {
 		displayName,
 		defaults,
-		func: movinganalysis
+		func: movinganalysis,
+		columnIdFields: { scalar: ['xIN'], array: ['yIN'] }
 	};
 
 	/**
@@ -286,8 +287,8 @@
 		const isInvalid = (v) => v == null || isNaN(v);
 		const validX = tAll.filter((v) => !isInvalid(v));
 		if (validX.length < 3) return [empty, false];
-		const xMin = Math.min(...validX);
-		const xMax = Math.max(...validX);
+		const { min: xMin, max: xMax } = arrayMinMax(validX);
+		if (xMin == null || xMax == null) return [empty, false];
 		if (xMax - xMin < windowSize) return [empty, false];
 
 		// Window starts: xMin, xMin+step, ... up to xMax - windowSize

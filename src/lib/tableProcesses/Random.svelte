@@ -29,7 +29,7 @@
 		return [result, result.length > 0];
 	}
 
-	export const definition = { displayName, defaults, func: random };
+	export const definition = { displayName, defaults, func: random, columnIdFields: {} };
 </script>
 
 <script>

@@ -17,11 +17,18 @@
 		return result;
 	}
 
-	export const editvalue_defaults = new Map([['edits', []]]);
+	const editvalue_defaults = new Map([['edits', []]]);
+
+	export const definition = {
+		displayName: 'Edit value',
+		func: editvalue,
+		defaults: editvalue_defaults
+	};
 </script>
 
 <script>
 	import Icon from '$lib/icons/Icon.svelte';
+	import ProcessShell from '$lib/core/ProcessShell.svelte';
 
 	let { p = $bindable() } = $props();
 
@@ -61,20 +68,7 @@
 	}
 </script>
 
-<div class="control-input process">
-	<div class="process-title">
-		<p>{p.name}</p>
-		<button
-			class="icon"
-			onclick={(e) => {
-				e.stopPropagation();
-				p.parentCol.removeProcess(p.id);
-			}}
-		>
-			<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
-		</button>
-	</div>
-
+<ProcessShell {p}>
 	<div class="edits-container">
 		<button class="icon" onclick={addEdit}>
 			<Icon name="plus" width={16} height={16} />
@@ -105,4 +99,4 @@
 			</div>
 		{/each}
 	</div>
-</div>
+</ProcessShell>

@@ -1,4 +1,5 @@
-import { KahanSum, kahanMean } from '$lib/utils/numerics.js';
+import { KahanSum } from '$lib/utils/numerics.js';
+export { min, max, minMax, mean } from '$lib/utils/stats.js';
 
 //Bin data in binSize bins starting at binStart - takes the average y-value and returns the starting x positions
 export function binData(
@@ -173,47 +174,4 @@ export function removeNullsFromXY(x, y) {
 		}
 	}
 	return [outX, outY];
-}
-
-//Calculate mean
-export function mean(data) {
-	return kahanMean(data);
-}
-
-//Calculate min and max
-export function min(data) {
-	let out = Infinity;
-	for (let i = 0; i < data.length; i++) {
-		if (data[i] !== undefined && !isNaN(data[i]) && data[i] < out && data[i] != null) {
-			out = data[i];
-		}
-	}
-	return out === Infinity ? null : out;
-}
-
-export function max(data) {
-	let out = -Infinity;
-	for (let i = 0; i < data.length; i++) {
-		if (data[i] !== undefined && !isNaN(data[i]) && data[i] > out) {
-			out = data[i];
-		}
-	}
-	return out === -Infinity ? null : out;
-}
-
-//DO MIN AND MAX TOGETHER TO SAVE COMPUTATION TIME
-export function minMax(data) {
-	let minVal = Infinity;
-	let maxVal = -Infinity;
-	for (let i = 0; i < data.length; i++) {
-		if (data[i] !== undefined && !isNaN(data[i])) {
-			if (data[i] < minVal) {
-				minVal = data[i];
-			}
-			if (data[i] > maxVal) {
-				maxVal = data[i];
-			}
-		}
-	}
-	return { min: minVal === Infinity ? null : minVal, max: maxVal === -Infinity ? null : maxVal };
 }

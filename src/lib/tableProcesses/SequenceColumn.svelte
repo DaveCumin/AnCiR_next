@@ -60,7 +60,7 @@
 		return [result, result.length > 0];
 	}
 
-	export const definition = { displayName, defaults, func: sequencecolumn };
+	export const definition = { displayName, defaults, func: sequencecolumn, columnIdFields: {} };
 </script>
 
 <script>

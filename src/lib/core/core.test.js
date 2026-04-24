@@ -4,7 +4,13 @@ vi.mock('$lib/core/Column.svelte', () => ({ Column: vi.fn(), getColumnById: vi.f
 vi.mock('$lib/core/Plot.svelte', () => ({ Plot: vi.fn() }));
 vi.mock('$lib/core/Table.svelte', () => ({ Table: vi.fn() }));
 
-import { core, replaceColumnRefs, swapColumnRefs, swapColumnRefsBulk } from '$lib/core/core.svelte';
+import {
+	core,
+	appConsts,
+	replaceColumnRefs,
+	swapColumnRefs,
+	swapColumnRefsBulk
+} from '$lib/core/core.svelte';
 
 // ── helpers ──────────────────────────────────────────────────────────
 function seedCore({ data = [], tables = [], plots = [] } = {}) {
@@ -14,6 +20,15 @@ function seedCore({ data = [], tables = [], plots = [] } = {}) {
 	tables.forEach((t) => core.tables.push(t));
 	core.plots.length = 0;
 	plots.forEach((p) => core.plots.push(p));
+
+	// Seed a minimal tableProcessMap so the ref-rewriting helpers know
+	// which arg fields hold column IDs (replaces the old hardcoded lists).
+	appConsts.tableProcessMap.clear();
+	appConsts.tableProcessMap.set('fake', {
+		definition: {
+			columnIdFields: { scalar: ['xIN', 'yIN'], array: ['xsIN'] }
+		}
+	});
 }
 
 beforeEach(() => seedCore());

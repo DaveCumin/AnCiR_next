@@ -25,6 +25,7 @@
 		displayName,
 		defaults,
 		func: cosinor,
+		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'cosinorx',
 		yOutKeyPrefix: 'cosinory_'
 	};

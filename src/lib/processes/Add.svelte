@@ -5,30 +5,20 @@
 		const value = Number(args.value);
 		return x.map((i) => i + value);
 	}
-	export const add_defaults = new Map([['value', { val: Number(0) }]]);
+	const add_defaults = new Map([['value', { val: Number(0) }]]);
+
+	export const definition = { displayName: 'Add', func: add, defaults: add_defaults };
 </script>
 
 <script>
-	import Icon from '$lib/icons/Icon.svelte';
+	import ProcessShell from '$lib/core/ProcessShell.svelte';
 
 	let { p = $bindable() } = $props();
 </script>
 
-<div class="control-input process">
-	<div class="process-title">
-		<p>{p.name}</p>
-		<button
-			class="icon"
-			onclick={(e) => {
-				e.stopPropagation();
-				p.parentCol.removeProcess(p.id);
-			}}
-		>
-			<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
-		</button>
-	</div>
+<ProcessShell {p}>
 	<NumberWithUnits bind:value={p.args.value} step="0.01" />
-</div>
+</ProcessShell>
 
 <style>
 </style>

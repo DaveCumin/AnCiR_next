@@ -31,7 +31,12 @@
 		return [result, result.length > 0];
 	}
 
-	export const definition = { displayName, defaults, func: duplicate };
+	export const definition = {
+		displayName,
+		defaults,
+		func: duplicate,
+		columnIdFields: { scalar: ['xIN'] }
+	};
 </script>
 
 <script>

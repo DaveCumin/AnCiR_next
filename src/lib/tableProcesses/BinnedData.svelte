@@ -23,6 +23,7 @@
 		displayName,
 		defaults,
 		func: binneddata,
+		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'binnedx',
 		yOutKeyPrefix: 'binnedy_'
 	};

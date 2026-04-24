@@ -101,7 +101,12 @@
 		return [result, result.time.length > 0];
 	}
 
-	export const definition = { displayName, defaults, func: widetolong };
+	export const definition = {
+		displayName,
+		defaults,
+		func: widetolong,
+		columnIdFields: { scalar: ['timeIN'], array: ['valueColIds'] }
+	};
 </script>
 
 <script>

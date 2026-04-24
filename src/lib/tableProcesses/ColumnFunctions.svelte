@@ -84,7 +84,12 @@
 		return [result, result.length > 0];
 	}
 
-	export const definition = { displayName, defaults, func: columnfunctions };
+	export const definition = {
+		displayName,
+		defaults,
+		func: columnfunctions,
+		columnIdFields: { array: ['xsIN', 'yIN'] }
+	};
 </script>
 
 <script>

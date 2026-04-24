@@ -44,7 +44,7 @@
 		return [result, true];
 	}
 
-	export const definition = { displayName, defaults, func: blankcolumn };
+	export const definition = { displayName, defaults, func: blankcolumn, columnIdFields: {} };
 </script>
 
 <script>

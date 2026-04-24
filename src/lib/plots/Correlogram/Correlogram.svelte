@@ -13,6 +13,7 @@
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import { computeAutocorrelation } from '$lib/utils/correlogram.js';
+	import { minMaxAcross, max as arrMax } from '$lib/utils/stats.js';
 
 	export const Correlogram_defaultDataInputs = ['time', 'values'];
 	export const Correlogram_controlHeaders = ['Properties', 'Data'];
@@ -191,11 +192,10 @@
 			if (this.data.length === 0) return [0, 10];
 
 			let maxLag = 0;
-			this.data.forEach((d) => {
-				if (d.acfData.lags.length > 0) {
-					maxLag = Math.max(maxLag, Math.max(...d.acfData.lags));
-				}
-			});
+			for (const d of this.data) {
+				const m = arrMax(d.acfData.lags);
+				if (m != null && m > maxLag) maxLag = m;
+			}
 
 			return [
 				this.laglimsIN[0] != null ? this.laglimsIN[0] : 0,
@@ -209,19 +209,14 @@
 				return [-1, 1];
 			}
 
-			let ymin = Infinity;
-			let ymax = -Infinity;
-			this.data.forEach((d) => {
-				if (d.acfData.correlations.length > 0) {
-					ymin = Math.min(ymin, Math.min(...d.acfData.correlations));
-					ymax = Math.max(ymax, Math.max(...d.acfData.correlations));
-				}
-			});
+			const { min: mnRaw, max: mxRaw } = minMaxAcross(
+				this.data.map((d) => d.acfData.correlations)
+			);
+			if (mnRaw == null || mxRaw == null) return [-1, 1];
 
-			// Add padding
-			const range = ymax - ymin;
-			ymin = Math.max(ymin - range * 0.1, -1);
-			ymax = Math.min(ymax + range * 0.1, 1);
+			const range = mxRaw - mnRaw;
+			const ymin = Math.max(mnRaw - range * 0.1, -1);
+			const ymax = Math.min(mxRaw + range * 0.1, 1);
 
 			return [
 				this.ylimsIN[0] != null ? this.ylimsIN[0] : ymin,
@@ -407,6 +402,12 @@
 			return correlogram;
 		}
 	}
+
+	export const definition = {
+		defaultDataInputs: Correlogram_defaultDataInputs,
+		controlHeaders: Correlogram_controlHeaders,
+		plotClass: Correlogramclass
+	};
 </script>
 
 <script>

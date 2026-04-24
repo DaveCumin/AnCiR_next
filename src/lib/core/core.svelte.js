@@ -1,8 +1,8 @@
 // @ts-nocheck
 
 import { Column } from '$lib/core/Column.svelte';
-import { Plot } from '$lib/core//Plot.svelte';
-import { Table } from '$lib/core//Table.svelte';
+import { Plot } from '$lib/core/Plot.svelte';
+import { Table } from '$lib/core/Table.svelte';
 import * as jsonpatch from 'fast-json-patch';
 
 export const core = $state({
@@ -60,7 +60,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.28.5',
+	version: 'β.29.0',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
@@ -235,52 +235,45 @@ export function snapToGrid(value) {
 }
 
 // TODO: change to grid* layout
-let _attempt = 0;
 function findNextAvailablePosition(existingPlots) {
 	const baseX = 10;
 	const baseY = 20;
 	const offsetX = 40;
 	const offsetY = 40;
 
-	while (true) {
-		const rawX = baseX + _attempt * offsetX;
-		const rawY = baseY + _attempt * offsetY;
-
-		const x = snapToGrid(rawX);
-		const y = snapToGrid(rawY);
-
+	// Scan from zero each call; restarting avoids unbounded drift once plots
+	// are deleted and prior slots become free again.
+	for (let attempt = 0; attempt < 1000; attempt++) {
+		const x = snapToGrid(baseX + attempt * offsetX);
+		const y = snapToGrid(baseY + attempt * offsetY);
 		const collision = existingPlots.some((p) => Math.abs(p.x - x) < 30 && Math.abs(p.y - y) < 30);
-
-		if (!collision) {
-			return { x, y };
-		}
-
-		_attempt++;
+		if (!collision) return { x, y };
 	}
+	return { x: snapToGrid(baseX), y: snapToGrid(baseY) };
 }
 
 /**
- * The set of TP args fields that hold a single column ID (scalar).
- * Add to this list when new TPs introduce non-standard column-ID fields.
+ * Union of scalar / array column-ID field names across every registered
+ * tableProcess. Each tableProcess declares its own columnIdFields on its
+ * definition (see each TP's `export const definition`); this function
+ * collects them so the generic ref-rewriting helpers don't need a
+ * central hardcoded registry. Called lazily to give tableProcessMap time
+ * to populate during module init.
  */
-const _SCALAR_COLID_FIELDS = new Set([
-	'xIN',
-	'yIN', // legacy scalar; modern TPs use array — handled below too
-	'categoryIN', // LongToWide
-	'timeIN', // LongToWide, WideToLong
-	'valueIN' // LongToWide
-]);
-
-/**
- * The set of TP args fields that hold an *array* of column IDs.
- */
-const _ARRAY_COLID_FIELDS = new Set([
-	'yIN', // BinnedData, Cosinor, etc. (modern array form)
-	'xsIN',
-	'valueColIds', // WideToLong
-	'colIds', // CollectColumns
-	'outColIds' // CollectColumns
-]);
+function _getColIdFieldSets() {
+	const scalar = new Set();
+	const array = new Set();
+	const map = appConsts.tableProcessMap;
+	if (map && typeof map.values === 'function') {
+		for (const entry of map.values()) {
+			const fields = entry?.definition?.columnIdFields ?? entry?.columnIdFields;
+			if (!fields) continue;
+			for (const f of fields.scalar ?? []) scalar.add(f);
+			for (const f of fields.array ?? []) array.add(f);
+		}
+	}
+	return { scalar, array };
+}
 
 /**
  * Recursively replace `oldColId` with `newColId` inside a TP's args object,
@@ -289,15 +282,17 @@ const _ARRAY_COLID_FIELDS = new Set([
 function _replaceInTPArgs(args, oldColId, newColId) {
 	if (!args || typeof args !== 'object') return;
 
+	const { scalar, array } = _getColIdFieldSets();
+
 	// Scalar column-ID fields
-	for (const field of _SCALAR_COLID_FIELDS) {
+	for (const field of scalar) {
 		if (typeof args[field] === 'number' && args[field] === oldColId) {
 			args[field] = newColId;
 		}
 	}
 
 	// Array column-ID fields
-	for (const field of _ARRAY_COLID_FIELDS) {
+	for (const field of array) {
 		if (Array.isArray(args[field])) {
 			args[field] = args[field].map((id) => (id === oldColId ? newColId : id));
 		}
@@ -369,7 +364,45 @@ export function swapColumnRefs(idA, idB) {
 }
 
 /**
- * Atomically swap all downstream references for multiple column pairs.
+ * Walk a TP args tree applying an id→id swap map in-place.
+ * Each slot is visited once, so a single map holding {a→b, b→a} yields
+ * the same atomic swap as the 3-phase temp-id approach.
+ */
+function _remapInTPArgs(args, map) {
+	if (!args || typeof args !== 'object') return;
+
+	const { scalar, array } = _getColIdFieldSets();
+
+	for (const field of scalar) {
+		const v = args[field];
+		if (typeof v === 'number' && map.has(v)) args[field] = map.get(v);
+	}
+
+	for (const field of array) {
+		const arr = args[field];
+		if (Array.isArray(arr)) {
+			for (let i = 0; i < arr.length; i++) {
+				if (map.has(arr[i])) arr[i] = map.get(arr[i]);
+			}
+		}
+	}
+
+	if (args.out && typeof args.out === 'object') {
+		for (const key of Object.keys(args.out)) {
+			if (map.has(args.out[key])) args.out[key] = map.get(args.out[key]);
+		}
+	}
+
+	if (Array.isArray(args.tableProcesses)) {
+		for (const nested of args.tableProcesses) {
+			if (nested?.args) _remapInTPArgs(nested.args, map);
+		}
+	}
+}
+
+/**
+ * Atomically swap all downstream references for multiple column pairs in a
+ * single pass over core.data / tables / plots.
  * @param {Array<[number, number]>} pairs - array of [fromId, toId] pairs to swap
  */
 export function swapColumnRefsBulk(pairs) {
@@ -377,18 +410,40 @@ export function swapColumnRefsBulk(pairs) {
 	const valid = pairs.filter(([a, b]) => a !== b && a >= 0 && b >= 0);
 	if (!valid.length) return;
 
-	const allIds = core.data.map((c) => c.id);
-	let tempBase = allIds.length ? Math.min(...allIds) - 1 : -1;
+	const map = new Map();
+	for (const [a, b] of valid) {
+		map.set(a, b);
+		map.set(b, a);
+	}
 
-	// Assign a unique temp ID per pair
-	const temps = valid.map(() => tempBase--);
+	core.data.forEach((col) => {
+		if (map.has(col.refId)) col.refId = map.get(col.refId);
+	});
 
-	// Phase 1: move all "from" refs to temp IDs
-	valid.forEach(([from], i) => replaceColumnRefs(temps[i], from));
-	// Phase 2: move all "to" refs to the corresponding "from" slots
-	valid.forEach(([from, to]) => replaceColumnRefs(from, to));
-	// Phase 3: move temp IDs into the "to" slots
-	valid.forEach(([, to], i) => replaceColumnRefs(to, temps[i]));
+	core.tables.forEach((table) => {
+		const refs = table.columnRefs;
+		for (let i = 0; i < refs.length; i++) {
+			if (map.has(refs[i])) refs[i] = map.get(refs[i]);
+		}
+		table.processes.forEach((tp) => _remapInTPArgs(tp.args, map));
+	});
+
+	core.plots.forEach((plot) => {
+		if (plot.type === 'tableplot') {
+			const refs = plot.plot.columnRefs;
+			if (refs) {
+				for (let i = 0; i < refs.length; i++) {
+					if (map.has(refs[i])) refs[i] = map.get(refs[i]);
+				}
+			}
+		} else {
+			plot.plot.data?.forEach((d) => {
+				for (const axis of ['x', 'y', 'z']) {
+					if (d[axis] && map.has(d[axis].refId)) d[axis].refId = map.get(d[axis].refId);
+				}
+			});
+		}
+	});
 }
 
 export function outputCoreAsJson() {
@@ -433,110 +488,148 @@ export function getCoreAsPlainObject() {
  * re-renders the affected components.
  */
 export function applyPatchToCore(patch) {
-	// Work on a plain snapshot of the current state
-	const snap = getCoreAsPlainObject();
+	// Classify which top-level slices the patch actually touches so we can
+	// skip reconcile work (and, for rawData, avoid even snapshotting megabytes
+	// of measured arrays) when nothing in that slice changed.
+	const touches = { rawData: false, data: false, tables: false, plots: false, storedValues: false };
+	for (const op of patch) {
+		const p = op.path || '';
+		if (p === '/rawData' || p.startsWith('/rawData/')) touches.rawData = true;
+		else if (p === '/data' || p.startsWith('/data/')) touches.data = true;
+		else if (p === '/tables' || p.startsWith('/tables/')) touches.tables = true;
+		else if (p === '/plots' || p.startsWith('/plots/')) touches.plots = true;
+		else if (p === '/storedValues' || p.startsWith('/storedValues/')) touches.storedValues = true;
+	}
+
+	// Build a starting snapshot that omits rawData unless the patch actually
+	// targets it — history excludes rawData from its patches, so the common
+	// case never needs the expensive full snapshot.
+	const snap = touches.rawData
+		? getCoreAsPlainObject()
+		: (() => {
+				const s = JSON.parse(
+					JSON.stringify(
+						{
+							data: core.data,
+							tables: core.tables,
+							plots: core.plots,
+							storedValues: core.storedValues
+						},
+						(key, val) => (typeof val === 'function' ? undefined : val)
+					)
+				);
+				return s;
+			})();
 
 	// Apply the patch to the snapshot
 	jsonpatch.applyPatch(snap, patch);
 
-	// --- Reconcile rawData ---
-	const patchedRawData = snap.rawData ?? {};
-	// Remove keys that no longer exist
-	for (const key of core.rawData.keys()) {
-		if (!(String(key) in patchedRawData)) {
-			core.rawData.delete(key);
+	// --- Reconcile rawData (only if the patch touched it) ---
+	if (touches.rawData) {
+		const patchedRawData = snap.rawData ?? {};
+		for (const key of core.rawData.keys()) {
+			if (!(String(key) in patchedRawData)) {
+				core.rawData.delete(key);
+			}
 		}
-	}
-	// Add/update keys
-	for (const [k, v] of Object.entries(patchedRawData)) {
-		core.rawData.set(+k, v);
+		for (const [k, v] of Object.entries(patchedRawData)) {
+			core.rawData.set(+k, v);
+		}
 	}
 
 	// --- Reconcile core.data (columns) by id ---
-	const patchedDataIds = (snap.data ?? []).map((c) => c.id);
-	// Remove stale columns
-	core.data = core.data.filter((col) => patchedDataIds.includes(col.id));
-	// Update existing or add new
-	for (const colSnap of snap.data ?? []) {
-		const existing = core.data.find((c) => c.id === colSnap.id);
-		if (existing) {
-			// Update mutable properties in-place
-			existing.customName = colSnap.name ?? null;
-			existing.refId = colSnap.refId ?? null;
-			existing.data = colSnap.data ?? null;
-			existing.compression = colSnap.compression ?? null;
-			existing.timeFormat = colSnap.timeFormat ?? [];
-			existing.tableProcessGUId = colSnap.tableProcessGUId ?? '';
-			// Reconcile processes by id
-			const patchedProcIds = (colSnap.processes ?? []).map((p) => p.id);
-			existing.processes = existing.processes.filter((p) => patchedProcIds.includes(p.id));
-			for (const pSnap of colSnap.processes ?? []) {
-				const ep = existing.processes.find((p) => p.id === pSnap.id);
-				if (ep) {
-					ep.name = pSnap.name;
-					ep.displayName = pSnap.displayName ?? ep.displayName;
-					ep.args = pSnap.args ?? ep.args;
-				} else {
-					// New process — re-import via Column.fromJSON for a single process
-					const tmpCol = Column.fromJSON({ ...colSnap, processes: [pSnap] });
-					existing.processes.push(tmpCol.processes[0]);
+	if (touches.data) {
+		const patchedDataIds = (snap.data ?? []).map((c) => c.id);
+		// Remove stale columns
+		core.data = core.data.filter((col) => patchedDataIds.includes(col.id));
+		// Update existing or add new
+		for (const colSnap of snap.data ?? []) {
+			const existing = core.data.find((c) => c.id === colSnap.id);
+			if (existing) {
+				// Update mutable properties in-place
+				existing.customName = colSnap.name ?? null;
+				existing.refId = colSnap.refId ?? null;
+				existing.data = colSnap.data ?? null;
+				existing.compression = colSnap.compression ?? null;
+				existing.timeFormat = colSnap.timeFormat ?? [];
+				existing.tableProcessGUId = colSnap.tableProcessGUId ?? '';
+				// Reconcile processes by id
+				const patchedProcIds = (colSnap.processes ?? []).map((p) => p.id);
+				existing.processes = existing.processes.filter((p) => patchedProcIds.includes(p.id));
+				for (const pSnap of colSnap.processes ?? []) {
+					const ep = existing.processes.find((p) => p.id === pSnap.id);
+					if (ep) {
+						ep.name = pSnap.name;
+						ep.displayName = pSnap.displayName ?? ep.displayName;
+						ep.args = pSnap.args ?? ep.args;
+					} else {
+						// New process — re-import via Column.fromJSON for a single process
+						const tmpCol = Column.fromJSON({ ...colSnap, processes: [pSnap] });
+						existing.processes.push(tmpCol.processes[0]);
+					}
 				}
+			} else {
+				// Entirely new column
+				core.data.push(Column.fromJSON(colSnap));
 			}
-		} else {
-			// Entirely new column
-			core.data.push(Column.fromJSON(colSnap));
 		}
 	}
 
 	// --- Reconcile core.tables by id ---
-	const patchedTableIds = (snap.tables ?? []).map((t) => t.id);
-	core.tables = core.tables.filter((t) => patchedTableIds.includes(t.id));
-	for (const tableSnap of snap.tables ?? []) {
-		const existing = core.tables.find((t) => t.id === tableSnap.id);
-		if (existing) {
-			existing.name = tableSnap.name;
-			existing.columnRefs = tableSnap.columnRefs ?? [];
-			// Reconcile table processes
-			const patchedTPIds = (tableSnap.processes ?? []).map((p) => p.id);
-			existing.processes = existing.processes.filter((p) => patchedTPIds.includes(p.id));
-			for (const pSnap of tableSnap.processes ?? []) {
-				const ep = existing.processes.find((p) => p.id === pSnap.id);
-				if (ep) {
-					ep.name = pSnap.name;
-					ep.displayName = pSnap.displayName ?? ep.displayName;
-					ep.args = pSnap.args ?? ep.args;
-				} else {
-					const tmpTable = Table.fromJSON({ ...tableSnap, processes: [pSnap] });
-					existing.processes.push(tmpTable.processes[0]);
+	if (touches.tables) {
+		const patchedTableIds = (snap.tables ?? []).map((t) => t.id);
+		core.tables = core.tables.filter((t) => patchedTableIds.includes(t.id));
+		for (const tableSnap of snap.tables ?? []) {
+			const existing = core.tables.find((t) => t.id === tableSnap.id);
+			if (existing) {
+				existing.name = tableSnap.name;
+				existing.columnRefs = tableSnap.columnRefs ?? [];
+				// Reconcile table processes
+				const patchedTPIds = (tableSnap.processes ?? []).map((p) => p.id);
+				existing.processes = existing.processes.filter((p) => patchedTPIds.includes(p.id));
+				for (const pSnap of tableSnap.processes ?? []) {
+					const ep = existing.processes.find((p) => p.id === pSnap.id);
+					if (ep) {
+						ep.name = pSnap.name;
+						ep.displayName = pSnap.displayName ?? ep.displayName;
+						ep.args = pSnap.args ?? ep.args;
+					} else {
+						const tmpTable = Table.fromJSON({ ...tableSnap, processes: [pSnap] });
+						existing.processes.push(tmpTable.processes[0]);
+					}
 				}
+			} else {
+				core.tables.push(Table.fromJSON(tableSnap));
 			}
-		} else {
-			core.tables.push(Table.fromJSON(tableSnap));
 		}
 	}
 
 	// --- Reconcile core.plots by id ---
-	const patchedPlotIds = (snap.plots ?? []).map((p) => p.id);
-	core.plots = core.plots.filter((p) => patchedPlotIds.includes(p.id));
-	for (const plotSnap of snap.plots ?? []) {
-		const existing = core.plots.find((p) => p.id === plotSnap.id);
-		if (existing) {
-			existing.name = plotSnap.name;
-			existing.x = plotSnap.x;
-			existing.y = plotSnap.y;
-			existing.width = plotSnap.width;
-			existing.height = plotSnap.height;
-			existing.selected = plotSnap.selected;
-			// Re-hydrate the inner plot data from JSON
-			const plotTypeEntry = appConsts.plotMap.get(existing.type);
-			if (plotTypeEntry?.data?.fromJSON) {
-				existing.plot = plotTypeEntry.data.fromJSON(existing, plotSnap.plot);
+	if (touches.plots) {
+		const patchedPlotIds = (snap.plots ?? []).map((p) => p.id);
+		core.plots = core.plots.filter((p) => patchedPlotIds.includes(p.id));
+		for (const plotSnap of snap.plots ?? []) {
+			const existing = core.plots.find((p) => p.id === plotSnap.id);
+			if (existing) {
+				existing.name = plotSnap.name;
+				existing.x = plotSnap.x;
+				existing.y = plotSnap.y;
+				existing.width = plotSnap.width;
+				existing.height = plotSnap.height;
+				existing.selected = plotSnap.selected;
+				// Re-hydrate the inner plot data from JSON
+				const plotTypeEntry = appConsts.plotMap.get(existing.type);
+				if (plotTypeEntry?.data?.fromJSON) {
+					existing.plot = plotTypeEntry.data.fromJSON(existing, plotSnap.plot);
+				}
+			} else {
+				core.plots.push(Plot.fromJSON(plotSnap));
 			}
-		} else {
-			core.plots.push(Plot.fromJSON(plotSnap));
 		}
 	}
 
 	// --- Reconcile core.storedValues ---
-	core.storedValues = snap.storedValues ?? {};
+	if (touches.storedValues) {
+		core.storedValues = snap.storedValues ?? {};
+	}
 }
