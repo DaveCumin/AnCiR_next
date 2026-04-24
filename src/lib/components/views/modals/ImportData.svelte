@@ -258,8 +258,10 @@
 
 	// Multi-file concatenation support
 	let targetFiles = $state([]); // All selected files
-	let extraFileErrors = $state([]); // [{ filename, error }] for header mismatches
+	let extraFileErrors = $state([]); // Fatal errors only (AWD mix, parse failure, no common cols)
 	let checkingHeaders = $state(false); // True while validating additional file headers
+	let commonColumns = $state([]); // Columns present in ALL files (intersection)
+	let mismatchedColumns = $state([]); // [{ column, missingFrom: [filenames] }]
 
 	function resetValues() {
 		parsedData = null;
@@ -286,6 +288,8 @@
 		columnMappings = {};
 		extraFileErrors = [];
 		checkingHeaders = false;
+		commonColumns = [];
+		mismatchedColumns = [];
 		dataUrl = '';
 		isUrlMode = false;
 	}
@@ -762,12 +766,18 @@
 		});
 	}
 
-	/** Check that each additional file's headers match the reference (first) file. */
+	/**
+	 * Compute the column intersection across the reference (first) file and all
+	 * additional files. Mismatched columns are reported as a soft warning so
+	 * the intersection can still be imported. Fatal conditions (AWD mix, parse
+	 * failure, no common columns) are recorded in extraFileErrors to block import.
+	 */
 	async function checkAdditionalHeaders(additionalFiles) {
 		checkingHeaders = true;
 		extraFileErrors = [];
+		mismatchedColumns = [];
+		commonColumns = [];
 
-		// AWD primary file: multi-file not supported
 		if (targetFile?.name.toLowerCase().endsWith('.awd')) {
 			extraFileErrors = additionalFiles.map((f) => ({
 				filename: f.name,
@@ -778,21 +788,13 @@
 		}
 
 		const refHeaders = [...headers];
+		const fileHeadersMap = new Map();
+		fileHeadersMap.set(targetFile.name, refHeaders);
 
 		for (const file of additionalFiles) {
 			try {
 				const fileHdrs = await getFileHeaders(file);
-				const match =
-					fileHdrs.length === refHeaders.length && fileHdrs.every((h, i) => h === refHeaders[i]);
-				if (!match) {
-					extraFileErrors = [
-						...extraFileErrors,
-						{
-							filename: file.name,
-							error: `Headers don't match. Expected [${refHeaders.join(', ')}], got [${fileHdrs.join(', ')}]`
-						}
-					];
-				}
+				fileHeadersMap.set(file.name, fileHdrs);
 			} catch (err) {
 				extraFileErrors = [
 					...extraFileErrors,
@@ -801,7 +803,82 @@
 			}
 		}
 
+		const parsedHeaderLists = [...fileHeadersMap.values()];
+		commonColumns = refHeaders.filter((h) =>
+			parsedHeaderLists.every((hdrs) => hdrs.includes(h))
+		);
+		const commonSet = new Set(commonColumns);
+
+		const unionSet = new Set();
+		for (const hdrs of parsedHeaderLists) hdrs.forEach((h) => unionSet.add(h));
+		const mismatched = [];
+		for (const col of unionSet) {
+			if (commonSet.has(col)) continue;
+			const missingFrom = [];
+			for (const [fname, hdrs] of fileHeadersMap) {
+				if (!hdrs.includes(col)) missingFrom.push(fname);
+			}
+			mismatched.push({ column: col, missingFrom });
+		}
+		mismatchedColumns = mismatched;
+
+		if (commonColumns.length === 0 && extraFileErrors.length === 0) {
+			extraFileErrors = [
+				{
+					filename: 'all files',
+					error: 'No columns are common across all selected files.'
+				}
+			];
+		}
+
+		// Restrict selection and date+time pairs to the common columns so the
+		// preview and import stay coherent.
+		if (commonColumns.length > 0) {
+			selectedColumns = new Set([...selectedColumns].filter((c) => commonSet.has(c)));
+
+			const newPairs = [];
+			const newCombine = new Set();
+			dateTimePairs.forEach((pair, oldIdx) => {
+				if (commonSet.has(pair.dateCol) && commonSet.has(pair.timeCol)) {
+					const newIdx = newPairs.length;
+					newPairs.push(pair);
+					if (combinePairs.has(oldIdx)) newCombine.add(newIdx);
+				}
+			});
+			dateTimePairs = newPairs;
+			combinePairs = newCombine;
+		}
+
 		checkingHeaders = false;
+	}
+
+	/**
+	 * Convert Papa results.data into a column-oriented object keyed by each
+	 * file's OWN headers. Works for hasHeader=true (rows are objects) and
+	 * hasHeader=false (rows are arrays — mapped positionally to numToString keys
+	 * to match the reference file's auto-generated headers).
+	 */
+	function rowsToOwnColumnObject(rows) {
+		const result = {};
+		if (!rows || rows.length === 0) return result;
+
+		if (hasHeader) {
+			const keys = Object.keys(rows[0]);
+			for (const k of keys) result[k] = [];
+			for (const row of rows) {
+				for (const k of keys) result[k].push(row[k]);
+			}
+		} else {
+			const colCount = rows[0].length;
+			const keys = Array.from({ length: colCount }, (_, i) => numToString(i));
+			for (const k of keys) result[k] = [];
+			for (const row of rows) {
+				for (let i = 0; i < colCount; i++) {
+					result[keys[i]].push(row[i]);
+				}
+			}
+		}
+		return result;
 	}
 
 	/** Fully parse an additional file and return column-oriented data. */
@@ -821,7 +898,7 @@
 							header: hasHeader,
 							dynamicTyping: true,
 							skipEmptyLines: 'greedy',
-							complete: (results) => resolve(convertArrayToObject(results.data)),
+							complete: (results) => resolve(rowsToOwnColumnObject(results.data)),
 							error: reject
 						});
 					} catch (err) {
@@ -841,7 +918,7 @@
 				skipEmptyLines: 'greedy',
 				skipFirstNLines: skipLines,
 				delimiter: delimiter,
-				complete: (results) => resolve(convertArrayToObject(results.data)),
+				complete: (results) => resolve(rowsToOwnColumnObject(results.data)),
 				error: reject
 			});
 		});
@@ -929,6 +1006,14 @@
 		// present in selectedColumns, causing the time column to remain at file-1
 		// length and sortDataByTimestamp to truncate all other columns to match.
 		if (targetFiles.length > 1) {
+			// Only columns present in every file are safe to concatenate. Drop
+			// anything outside that set from parsedData so row counts stay aligned.
+			const commonSet = new Set(commonColumns);
+			for (const col of Object.keys(parsedData)) {
+				if (!commonSet.has(col)) delete parsedData[col];
+			}
+			selectedColumns = new Set([...selectedColumns].filter((c) => commonSet.has(c)));
+
 			for (let i = 1; i < targetFiles.length; i++) {
 				const extraFile = targetFiles[i];
 				loadProgress = {
@@ -940,7 +1025,6 @@
 
 				const extraData = await parseAdditionalFileData(extraFile);
 
-				// Append each selected column's values from the extra file
 				for (const col of selectedColumns) {
 					if (parsedData[col] && extraData[col]) {
 						parsedData[col] = [...parsedData[col], ...extraData[col]];
@@ -1739,9 +1823,14 @@
 											{:else if checkingHeaders}
 												<span class="badge badge-checking">checking…</span>
 											{:else}
-												{@const err = extraFileErrors.find((e) => e.filename === file.name)}
-												{#if err}
-													<span class="badge badge-error" title={err.error}>✗ mismatch</span>
+												{@const fatal = extraFileErrors.find((e) => e.filename === file.name)}
+												{@const partial = mismatchedColumns.some((m) =>
+													m.missingFrom.includes(file.name)
+												)}
+												{#if fatal}
+													<span class="badge badge-error" title={fatal.error}>✗ error</span>
+												{:else if partial}
+													<span class="badge badge-warn">⚠ partial</span>
 												{:else}
 													<span class="badge badge-ok">✓ ok</span>
 												{/if}
@@ -1751,11 +1840,23 @@
 								</ul>
 								{#if extraFileErrors.length > 0}
 									<div class="mismatch-warning">
-										<p class="mismatch-warning-title">Header mismatches prevent concatenation:</p>
+										<p class="mismatch-warning-title">Cannot import these files:</p>
 										{#each extraFileErrors as err}
 											<p class="mismatch-detail">
 												<strong>{err.filename}:</strong>
 												{err.error}
+											</p>
+										{/each}
+									</div>
+								{:else if mismatchedColumns.length > 0}
+									<div class="mismatch-warning-soft">
+										<p class="mismatch-warning-title">
+											Some columns are not present in every file. Only the {commonColumns.length}
+											common column{commonColumns.length === 1 ? '' : 's'} will be imported.
+										</p>
+										{#each mismatchedColumns as m}
+											<p class="mismatch-detail">
+												<strong>{m.column}</strong> — missing from: {m.missingFrom.join(', ')}
 											</p>
 										{/each}
 									</div>
@@ -1894,6 +1995,19 @@
 		background: var(--color-error-bg);
 		color: var(--color-error);
 		cursor: help;
+	}
+	.badge-warn {
+		background: var(--color-warning-bg);
+		color: var(--color-warning);
+	}
+	.mismatch-warning-soft {
+		margin-top: 0.5em;
+		padding: 0.4em 0.6em;
+		border: 1px solid var(--color-warning);
+		border-radius: 3px;
+		background: var(--color-warning-bg);
+		color: var(--color-warning);
+		font-size: 0.82em;
 	}
 	.mismatch-warning {
 		margin-top: 0.5em;
