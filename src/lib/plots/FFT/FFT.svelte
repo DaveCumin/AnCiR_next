@@ -507,6 +507,7 @@
 	import { tick } from 'svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
+	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 
 	let { theData, which } = $props();
 
@@ -962,12 +963,34 @@
 
 						{#if datum.visiblePeak}
 							{#if datum.visiblePeak.period != null}
-								<p><strong>Peak Period: {datum.visiblePeak.period.toFixed(2)} hrs</strong></p>
+								<p>
+									<strong>Peak Period: {datum.visiblePeak.period.toFixed(2)} hrs</strong>
+									<StoreValueButton
+										label="Peak Period"
+										getter={() => datum.visiblePeak?.period}
+										defaultName={`fft_peak_period_${datum.y?.name || 'data' + i}`}
+										source="FFT"
+									/>
+								</p>
 							{/if}
 							<p>
 								<strong>Peak Frequency: {datum.visiblePeak.frequency.toFixed(4)} cycles/hr</strong>
+								<StoreValueButton
+									label="Peak Frequency"
+									getter={() => datum.visiblePeak?.frequency}
+									defaultName={`fft_peak_frequency_${datum.y?.name || 'data' + i}`}
+									source="FFT"
+								/>
 							</p>
-							<p><strong>Peak Magnitude: {datum.visiblePeak.magnitude.toFixed(2)}</strong></p>
+							<p>
+								<strong>Peak Magnitude: {datum.visiblePeak.magnitude.toFixed(2)}</strong>
+								<StoreValueButton
+									label="Peak Magnitude"
+									getter={() => datum.visiblePeak?.magnitude}
+									defaultName={`fft_peak_magnitude_${datum.y?.name || 'data' + i}`}
+									source="FFT"
+								/>
+							</p>
 							{#if datum.peak && Math.abs(datum.visiblePeak.frequency - datum.peak.frequency) > 0.000001}
 								<div class="data-warning">
 									<p>
@@ -979,10 +1002,34 @@
 							{/if}
 						{:else if datum.peak}
 							{#if datum.peak.period != null}
-								<p><strong>Peak Period: {datum.peak.period.toFixed(2)} hrs</strong></p>
+								<p>
+									<strong>Peak Period: {datum.peak.period.toFixed(2)} hrs</strong>
+									<StoreValueButton
+										label="Peak Period"
+										getter={() => datum.peak?.period}
+										defaultName={`fft_peak_period_${datum.y?.name || 'data' + i}`}
+										source="FFT"
+									/>
+								</p>
 							{/if}
-							<p><strong>Peak Frequency: {datum.peak.frequency.toFixed(4)} cycles/hr</strong></p>
-							<p><strong>Peak Magnitude: {datum.peak.magnitude.toFixed(2)}</strong></p>
+							<p>
+								<strong>Peak Frequency: {datum.peak.frequency.toFixed(4)} cycles/hr</strong>
+								<StoreValueButton
+									label="Peak Frequency"
+									getter={() => datum.peak?.frequency}
+									defaultName={`fft_peak_frequency_${datum.y?.name || 'data' + i}`}
+									source="FFT"
+								/>
+							</p>
+							<p>
+								<strong>Peak Magnitude: {datum.peak.magnitude.toFixed(2)}</strong>
+								<StoreValueButton
+									label="Peak Magnitude"
+									getter={() => datum.peak?.magnitude}
+									defaultName={`fft_peak_magnitude_${datum.y?.name || 'data' + i}`}
+									source="FFT"
+								/>
+							</p>
 						{/if}
 
 						<Line lineData={datum.line} which="controls" title="Magnitude" />

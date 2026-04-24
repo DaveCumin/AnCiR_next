@@ -544,6 +544,7 @@
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 
 	let { theData, which } = $props();
 
@@ -935,8 +936,24 @@
 						{/if}
 
 						{#if datum.visiblePeak}
-							<p><strong>Peak Period: {datum.visiblePeak.period.toFixed(2)} hrs</strong></p>
-							<p><strong>Peak Power: {datum.visiblePeak.power.toFixed(2)}</strong></p>
+							<p>
+								<strong>Peak Period: {datum.visiblePeak.period.toFixed(2)} hrs</strong>
+								<StoreValueButton
+									label="Peak Period"
+									getter={() => datum.visiblePeak?.period}
+									defaultName={`periodogram_peak_period_${datum.y?.name || 'data' + i}`}
+									source="Periodogram"
+								/>
+							</p>
+							<p>
+								<strong>Peak Power: {datum.visiblePeak.power.toFixed(2)}</strong>
+								<StoreValueButton
+									label="Peak Power"
+									getter={() => datum.visiblePeak?.power}
+									defaultName={`periodogram_peak_power_${datum.y?.name || 'data' + i}`}
+									source="Periodogram"
+								/>
+							</p>
 							{#if datum.peak && Math.abs(datum.visiblePeak.period - datum.peak.period) > 0.001}
 								<div class="data-warning">
 									<p>
@@ -945,8 +962,24 @@
 								</div>
 							{/if}
 						{:else if datum.peak}
-							<p><strong>Peak Period: {datum.peak.period.toFixed(2)} hrs</strong></p>
-							<p><strong>Peak Power: {datum.peak.power.toFixed(2)}</strong></p>
+							<p>
+								<strong>Peak Period: {datum.peak.period.toFixed(2)} hrs</strong>
+								<StoreValueButton
+									label="Peak Period"
+									getter={() => datum.peak?.period}
+									defaultName={`periodogram_peak_period_${datum.y?.name || 'data' + i}`}
+									source="Periodogram"
+								/>
+							</p>
+							<p>
+								<strong>Peak Power: {datum.peak.power.toFixed(2)}</strong>
+								<StoreValueButton
+									label="Peak Power"
+									getter={() => datum.peak?.power}
+									defaultName={`periodogram_peak_power_${datum.y?.name || 'data' + i}`}
+									source="Periodogram"
+								/>
+							</p>
 						{/if}
 
 						<Line lineData={datum.line} which="controls" />

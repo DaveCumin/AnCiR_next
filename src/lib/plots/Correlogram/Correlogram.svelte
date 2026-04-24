@@ -418,6 +418,7 @@
 	import { tick } from 'svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
+	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 
 	let { theData, which } = $props();
 
@@ -750,8 +751,24 @@
 						{/if}
 
 						{#if datum.visiblePeak}
-							<p><strong>Peak Lag: {datum.visiblePeak.lag.toFixed(2)} hrs</strong></p>
-							<p><strong>Peak Correlation: {datum.visiblePeak.correlation.toFixed(3)}</strong></p>
+							<p>
+								<strong>Peak Lag: {datum.visiblePeak.lag.toFixed(2)} hrs</strong>
+								<StoreValueButton
+									label="Peak Lag"
+									getter={() => datum.visiblePeak?.lag}
+									defaultName={`correlogram_peak_lag_${datum.y?.name || 'data' + i}`}
+									source="Correlogram"
+								/>
+							</p>
+							<p>
+								<strong>Peak Correlation: {datum.visiblePeak.correlation.toFixed(3)}</strong>
+								<StoreValueButton
+									label="Peak Correlation"
+									getter={() => datum.visiblePeak?.correlation}
+									defaultName={`correlogram_peak_correlation_${datum.y?.name || 'data' + i}`}
+									source="Correlogram"
+								/>
+							</p>
 							{#if datum.peak && Math.abs(datum.visiblePeak.lag - datum.peak.lag) > 0.001}
 								<div class="data-warning">
 									<p>
@@ -760,8 +777,24 @@
 								</div>
 							{/if}
 						{:else if datum.peak}
-							<p><strong>Peak Lag: {datum.peak.lag.toFixed(2)} hrs</strong></p>
-							<p><strong>Peak Correlation: {datum.peak.correlation.toFixed(3)}</strong></p>
+							<p>
+								<strong>Peak Lag: {datum.peak.lag.toFixed(2)} hrs</strong>
+								<StoreValueButton
+									label="Peak Lag"
+									getter={() => datum.peak?.lag}
+									defaultName={`correlogram_peak_lag_${datum.y?.name || 'data' + i}`}
+									source="Correlogram"
+								/>
+							</p>
+							<p>
+								<strong>Peak Correlation: {datum.peak.correlation.toFixed(3)}</strong>
+								<StoreValueButton
+									label="Peak Correlation"
+									getter={() => datum.peak?.correlation}
+									defaultName={`correlogram_peak_correlation_${datum.y?.name || 'data' + i}`}
+									source="Correlogram"
+								/>
+							</p>
 						{/if}
 
 						<Line lineData={datum.line} which="controls" title="Line" />
