@@ -6,14 +6,13 @@
 	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
 	import { computeFFT } from '$lib/utils/fft.js';
 	import { computeAutocorrelation } from '$lib/utils/correlogram.js';
-	import { fitCosineCurves, fitCosinorFixed } from '$lib/utils/cosinor.js';
 
 	const displayName = 'Rhythmicity Analysis';
 
 	const defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
-		// 'periodogram' | 'fft' | 'correlogram' | 'cosinor'
+		// 'periodogram' | 'fft' | 'correlogram'
 		['analysis', { val: 'periodogram' }],
 		// periodogram params
 		['pgMethod', { val: 'Lomb-Scargle' }],
@@ -25,13 +24,8 @@
 		// fft params
 		['fftFreqStep', { val: 0 }],
 		// correlogram params
+		['corrMinLag', { val: 0 }],
 		['corrMaxLag', { val: 0 }],
-		// cosinor params
-		['useFixedPeriod', { val: true }],
-		['fixedPeriod', { val: 24 }],
-		['nHarmonics', { val: 1 }],
-		['Ncurves', { val: 1 }],
-		['alpha', { val: 0.05 }],
 		// outputs & misc
 		['out', {}],
 		['valid', { val: false }],
@@ -59,7 +53,6 @@
 		if (args.analysis === 'periodogram') return { x: 'period', y: 'power' };
 		if (args.analysis === 'fft') return { x: 'period', y: 'magnitude' };
 		if (args.analysis === 'correlogram') return { x: 'lag', y: 'correlation' };
-		if (args.analysis === 'cosinor') return { x: 'time', y: 'fitted' };
 		return { x: null, y: null };
 	}
 
@@ -75,7 +68,6 @@
 		}
 		if (args.analysis === 'fft') return ['frequency', 'period', 'magnitude', 'phase'];
 		if (args.analysis === 'correlogram') return ['lag', 'correlation'];
-		if (args.analysis === 'cosinor') return ['time', 'fitted'];
 		return [];
 	}
 
@@ -87,20 +79,6 @@
 		if (args.analysis === 'periodogram') return ['peak_period', 'peak_power'];
 		if (args.analysis === 'fft') return ['peak_period', 'peak_frequency', 'peak_magnitude'];
 		if (args.analysis === 'correlogram') return ['peak_lag', 'peak_correlation'];
-		if (args.analysis === 'cosinor') {
-			if (args.useFixedPeriod) {
-				const keys = ['mesor'];
-				const H = Math.max(1, args.nHarmonics ?? 1);
-				for (let h = 1; h <= H; h++) keys.push(`H${h}_amplitude`, `H${h}_acrophase`);
-				keys.push('r2', 'rmse', 'pvalue');
-				return keys;
-			}
-			const keys = [];
-			const N = Math.max(1, args.Ncurves ?? 1);
-			for (let c = 1; c <= N; c++) keys.push(`C${c}_period`, `C${c}_amplitude`, `C${c}_phase`);
-			keys.push('r2', 'rmse');
-			return keys;
-		}
 		return [];
 	}
 
@@ -160,55 +138,20 @@
 		}
 
 		if (args.analysis === 'correlogram') {
+			const minLag = args.corrMinLag > 0 ? args.corrMinLag : 0;
 			const maxLag = args.corrMaxLag > 0 ? args.corrMaxLag : null;
-			const r = computeAutocorrelation(tt, yy, null, maxLag);
+			const r = computeAutocorrelation(tt, yy, null, maxLag, minLag);
 			outputs.lag = r.lags ?? [];
 			outputs.correlation = r.correlations ?? [];
-			if (!r.lags || r.lags.length < 2) return { outputs, stats };
-			let bestIdx = 1;
-			for (let i = 2; i < r.correlations.length; i++) {
+			if (!r.lags?.length) return { outputs, stats };
+			// Skip lag=0 (trivial correlation=1); otherwise the first entry is a valid peak candidate
+			let bestIdx = r.lags[0] === 0 ? 1 : 0;
+			if (bestIdx >= r.correlations.length) return { outputs, stats };
+			for (let i = bestIdx + 1; i < r.correlations.length; i++) {
 				if (r.correlations[i] > r.correlations[bestIdx]) bestIdx = i;
 			}
 			stats.peak_lag = r.lags[bestIdx];
 			stats.peak_correlation = r.correlations[bestIdx];
-			return { outputs, stats };
-		}
-
-		if (args.analysis === 'cosinor') {
-			if (args.useFixedPeriod) {
-				const r = fitCosinorFixed(
-					tt,
-					yy,
-					args.fixedPeriod ?? 24,
-					Math.max(1, args.nHarmonics ?? 1),
-					args.alpha ?? 0.05
-				);
-				if (!r) return { outputs, stats };
-				outputs.time = tt;
-				outputs.fitted = r.fitted;
-				stats.mesor = r.M;
-				for (let h = 0; h < r.harmonics.length; h++) {
-					stats[`H${h + 1}_amplitude`] = r.harmonics[h].amplitude;
-					stats[`H${h + 1}_acrophase`] = r.harmonics[h].acrophase_hrs;
-				}
-				stats.r2 = r.R2;
-				stats.rmse = r.RMSE;
-				stats.pvalue = r.pF;
-				return { outputs, stats };
-			}
-			const N = Math.max(1, args.Ncurves ?? 1);
-			const r = fitCosineCurves(tt, yy, N);
-			if (!r?.parameters?.cosines?.length) return { outputs, stats };
-			outputs.time = tt;
-			outputs.fitted = r.fitted ?? [];
-			for (let c = 0; c < r.parameters.cosines.length; c++) {
-				const cos = r.parameters.cosines[c];
-				stats[`C${c + 1}_period`] = cos.frequency ? (2 * Math.PI) / cos.frequency : NaN;
-				stats[`C${c + 1}_amplitude`] = cos.amplitude;
-				stats[`C${c + 1}_phase`] = cos.phase;
-			}
-			stats.r2 = r.rSquared;
-			stats.rmse = r.rmse;
 			return { outputs, stats };
 		}
 
@@ -307,16 +250,8 @@
 						break;
 					}
 				}
-				// For cosinor with a time-typed input X, convert hrs-since-start back to ms
 				let xType = 'number';
 				let xOut = xData;
-				if (argsIN.analysis === 'cosinor' && tCol.type === 'time') {
-					const originMs = tCol.getData()[0];
-					if (originMs != null) {
-						xOut = xData.map((h) => originMs + h * 3600000);
-						xType = 'time';
-					}
-				}
 				const xCol = getColumnById(sharedXId);
 				if (xCol) {
 					core.rawData.set(sharedXId, xOut);
@@ -403,6 +338,8 @@
 			p.args.pgAlpha +
 			'|' +
 			p.args.fftFreqStep +
+			'|' +
+			p.args.corrMinLag +
 			'|' +
 			p.args.corrMaxLag +
 			'|' +
@@ -643,8 +580,8 @@
 			<p>Analysis</p>
 			<AttributeSelect
 				bind:value={p.args.analysis}
-				options={['periodogram', 'fft', 'cosinor', 'correlogram']}
-				optionsDisplay={['Periodogram', 'FFT', 'Cosinor', 'Correlogram']}
+				options={['periodogram', 'fft', 'correlogram']}
+				optionsDisplay={['Periodogram', 'FFT', 'Correlogram']}
 			/>
 		</div>
 	</div>
@@ -698,47 +635,16 @@
 	{:else if p.args.analysis === 'correlogram'}
 		<div class="control-input-horizontal">
 			<div class="control-input">
+				<p>Min lag (hrs)</p>
+				<NumberWithUnits bind:value={p.args.corrMinLag} min="0" step="1" />
+			</div>
+		</div>
+		<div class="control-input-horizontal">
+			<div class="control-input">
 				<p>Max lag (hrs; 0 = half range)</p>
 				<NumberWithUnits bind:value={p.args.corrMaxLag} min="0" step="1" />
 			</div>
 		</div>
-	{:else if p.args.analysis === 'cosinor'}
-		<div class="control-input-horizontal">
-			<div class="control-input">
-				<label>
-					<input type="checkbox" bind:checked={p.args.useFixedPeriod} />
-					Use fixed period
-				</label>
-			</div>
-		</div>
-		{#if p.args.useFixedPeriod}
-			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Period (hrs)</p>
-					<NumberWithUnits bind:value={p.args.fixedPeriod} min="0.1" step="0.5" />
-				</div>
-				<div class="control-input">
-					<p>N harmonics</p>
-					<NumberWithUnits bind:value={p.args.nHarmonics} min="1" step="1" />
-				</div>
-			</div>
-			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>CI level</p>
-					<select bind:value={p.args.alpha}>
-						<option value={0.05}>95%</option>
-						<option value={0.01}>99%</option>
-					</select>
-				</div>
-			</div>
-		{:else}
-			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>N cosine curves</p>
-					<NumberWithUnits bind:value={p.args.Ncurves} min="1" step="1" />
-				</div>
-			</div>
-		{/if}
 	{/if}
 </div>
 

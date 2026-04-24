@@ -37,6 +37,7 @@
 		// fft params
 		['fftFreqStep', { val: 0 }], // 0 = auto (next power of two)
 		// correlogram params
+		['corrMinLag', { val: 0 }], // 0 = no lower bound (includes lag=0 except for peak-pick)
 		['corrMaxLag', { val: 0 }], // 0 = auto (half window)
 		// rectangular-wave fit params
 		['rwFixKappa', { val: false }],
@@ -191,12 +192,14 @@
 		}
 
 		if (args.analysis === 'correlogram') {
+			const minLag = args.corrMinLag > 0 ? args.corrMinLag : 0;
 			const maxLag = args.corrMaxLag > 0 ? args.corrMaxLag : null;
-			const r = computeAutocorrelation(tt, yy, null, maxLag);
-			if (!r.lags || r.lags.length < 2) return stats;
-			// Skip lag 0 (always 1) when picking the peak
-			let bestIdx = 1;
-			for (let i = 2; i < r.correlations.length; i++) {
+			const r = computeAutocorrelation(tt, yy, null, maxLag, minLag);
+			if (!r.lags?.length) return stats;
+			// Skip lag 0 (always 1) when picking the peak; when minLag > 0, first entry is already valid
+			let bestIdx = r.lags[0] === 0 ? 1 : 0;
+			if (bestIdx >= r.correlations.length) return stats;
+			for (let i = bestIdx + 1; i < r.correlations.length; i++) {
 				if (r.correlations[i] > r.correlations[bestIdx]) bestIdx = i;
 			}
 			stats.peak_lag = r.lags[bestIdx];
@@ -466,6 +469,8 @@
 			p.args.Ncurves +
 			'|' +
 			p.args.fftFreqStep +
+			'|' +
+			p.args.corrMinLag +
 			'|' +
 			p.args.corrMaxLag +
 			'|' +
@@ -780,6 +785,10 @@
 		</div>
 	{:else if p.args.analysis === 'correlogram'}
 		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>Min lag (hrs)</p>
+				<NumberWithUnits bind:value={p.args.corrMinLag} min="0" step="1" />
+			</div>
 			<div class="control-input">
 				<p>Max lag (hrs; 0 = half window)</p>
 				<NumberWithUnits bind:value={p.args.corrMaxLag} min="0" step="1" />

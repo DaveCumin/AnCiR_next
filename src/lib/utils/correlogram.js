@@ -11,9 +11,10 @@ import { mean } from '$lib/components/plotbits/helpers/wrangleData.js';
  * @param {number[]} values     - Signal values aligned to `times`.
  * @param {number|null} binSize - Lag bin width (hours); null = derive from data spacing.
  * @param {number|null} maxLag  - Maximum lag (hours); null = (timespan)/2.
+ * @param {number}      minLag  - Minimum lag (hours); defaults to 0. Lags below this are dropped.
  * @returns {{ lags: number[], correlations: number[], dt: number }}
  */
-export function computeAutocorrelation(times, values, binSize = null, maxLag = null) {
+export function computeAutocorrelation(times, values, binSize = null, maxLag = null, minLag = 0) {
 	if (
 		!times ||
 		!values ||
@@ -48,8 +49,14 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 	}
 
 	const maxLagTime = maxLag ? maxLag : (t[t.length - 1] - t[0]) / 2;
+	const minLagTime = Number.isFinite(minLag) && minLag > 0 ? minLag : 0;
+
+	if (minLagTime >= maxLagTime) {
+		return { lags: [], correlations: [], dt };
+	}
 
 	const nLags = Math.min(Math.floor(maxLagTime / dt), Math.floor(n / 2));
+	const startLagIdx = Math.ceil(minLagTime / dt);
 
 	const yMean = mean(y);
 	const yVariance = y.reduce((sum, val) => sum + (val - yMean) ** 2, 0) / n;
@@ -73,7 +80,7 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 	timeDiffs.sort((a, b) => a - b);
 
 	if (isUniform(timeDiffs)) {
-		for (let lag = 0; lag <= nLags; lag++) {
+		for (let lag = startLagIdx; lag <= nLags; lag++) {
 			let sum = 0;
 			let count = 0;
 			for (let i = 0; i < n - lag; i++) {
@@ -87,7 +94,7 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 			correlations.push(correlation);
 		}
 	} else {
-		for (let lagIdx = 0; lagIdx <= nLags; lagIdx++) {
+		for (let lagIdx = startLagIdx; lagIdx <= nLags; lagIdx++) {
 			const targetLag = lagIdx * dt;
 			let sum = 0;
 			let count = 0;

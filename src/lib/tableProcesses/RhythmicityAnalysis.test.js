@@ -74,30 +74,6 @@ vi.mock('$lib/utils/correlogram.js', () => ({
 	}))
 }));
 
-vi.mock('$lib/utils/cosinor.js', () => ({
-	fitCosineCurves: vi.fn(() => ({
-		parameters: {
-			cosines: [{ amplitude: 2, frequency: (2 * Math.PI) / 24, phase: 0.3 }],
-			O: 1
-		},
-		fitted: [1, 1.5, 2, 1.5],
-		rmse: 0.2,
-		rSquared: 0.95
-	})),
-	fitCosinorFixed: vi.fn(() => ({
-		M: 1.5,
-		harmonics: [
-			{ k: 1, amplitude: 3, acrophase_hrs: 6.25, phi_rad: 0, CI_A: [0, 0], CI_acrophase: [0, 0] }
-		],
-		fitted: [1, 2, 3, 2],
-		R2: 0.9,
-		RMSE: 0.15,
-		pF: 0.001,
-		F_stat: 99,
-		df: [2, 45]
-	}))
-}));
-
 import {
 	rhythmicityanalysis,
 	getOutputKeys,
@@ -139,12 +115,6 @@ describe('getOutputKeys', () => {
 		expect(getOutputKeys({ analysis: 'correlogram' })).toEqual(['lag', 'correlation']);
 	});
 
-	it('returns cosinor outputs', () => {
-		expect(getOutputKeys({ analysis: 'cosinor', useFixedPeriod: true })).toEqual([
-			'time',
-			'fitted'
-		]);
-	});
 });
 
 describe('getStatKeys', () => {
@@ -164,22 +134,6 @@ describe('getStatKeys', () => {
 		expect(getStatKeys({ analysis: 'correlogram' })).toEqual(['peak_lag', 'peak_correlation']);
 	});
 
-	it('returns fixed cosinor stats with expected harmonic keys', () => {
-		const keys = getStatKeys({ analysis: 'cosinor', useFixedPeriod: true, nHarmonics: 2 });
-		expect(keys).toContain('mesor');
-		expect(keys).toContain('H1_amplitude');
-		expect(keys).toContain('H2_acrophase');
-		expect(keys).toContain('r2');
-		expect(keys).toContain('rmse');
-		expect(keys).toContain('pvalue');
-	});
-
-	it('returns free cosinor stats scaled by Ncurves', () => {
-		const keys = getStatKeys({ analysis: 'cosinor', useFixedPeriod: false, Ncurves: 2 });
-		expect(keys).toContain('C1_period');
-		expect(keys).toContain('C2_amplitude');
-		expect(keys).toContain('r2');
-	});
 });
 
 describe('rhythmicityanalysis', () => {
@@ -278,56 +232,6 @@ describe('rhythmicityanalysis', () => {
 		expect(r.stats.peak_correlation).toBe(0.8);
 	});
 
-	it('runs fixed cosinor and fills mesor/amplitude stats', () => {
-		const t = Array.from({ length: 48 }, (_, i) => i);
-		const y = t.map((ti) => 1.5 + 3 * Math.cos((2 * Math.PI * (ti - 6.25)) / 24));
-		mockColumns[1] = { type: 'number', getData: () => t };
-		mockColumns[2] = { getData: () => y };
-
-		const [result, valid] = rhythmicityanalysis({
-			...baseArgs,
-			xIN: 1,
-			yIN: [2],
-			analysis: 'cosinor',
-			useFixedPeriod: true,
-			nHarmonics: 1
-		});
-		expect(valid).toBe(true);
-		const r = result.y_results[2];
-		expect(r.outputs.time.length).toBe(48);
-		expect(r.outputs.fitted).toEqual([1, 2, 3, 2]);
-		expect(r.stats.mesor).toBe(1.5);
-		expect(r.stats.H1_amplitude).toBe(3);
-		expect(r.stats.H1_acrophase).toBeCloseTo(6.25, 6);
-		expect(r.stats.r2).toBe(0.9);
-		expect(r.stats.rmse).toBe(0.15);
-		expect(r.stats.pvalue).toBe(0.001);
-	});
-
-	it('runs free cosinor and fills C1 period/amplitude/phase stats', () => {
-		const t = Array.from({ length: 48 }, (_, i) => i);
-		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
-		mockColumns[1] = { type: 'number', getData: () => t };
-		mockColumns[2] = { getData: () => y };
-
-		const [result, valid] = rhythmicityanalysis({
-			...baseArgs,
-			xIN: 1,
-			yIN: [2],
-			analysis: 'cosinor',
-			useFixedPeriod: false,
-			Ncurves: 1
-		});
-		expect(valid).toBe(true);
-		const r = result.y_results[2];
-		expect(r.outputs.fitted).toEqual([1, 1.5, 2, 1.5]);
-		expect(r.stats.C1_period).toBeCloseTo(24, 6);
-		expect(r.stats.C1_amplitude).toBe(2);
-		expect(r.stats.C1_phase).toBe(0.3);
-		expect(r.stats.r2).toBe(0.95);
-		expect(r.stats.rmse).toBe(0.2);
-	});
-
 	it('handles multiple Y inputs independently', () => {
 		const t = Array.from({ length: 48 }, (_, i) => i);
 		const y1 = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
@@ -375,9 +279,6 @@ describe('getPrimaryKeys', () => {
 	});
 	it('returns lag/correlation for correlogram', () => {
 		expect(getPrimaryKeys({ analysis: 'correlogram' })).toEqual({ x: 'lag', y: 'correlation' });
-	});
-	it('returns time/fitted for cosinor', () => {
-		expect(getPrimaryKeys({ analysis: 'cosinor' })).toEqual({ x: 'time', y: 'fitted' });
 	});
 });
 
@@ -477,55 +378,6 @@ describe('rhythmicityanalysis — collected mode (shared X + per-Y primary Y)', 
 		expect(valid).toBe(true);
 		expect(rawDataStore.get(100)).toEqual([0, 12, 24, 36]);
 		expect(rawDataStore.get(101)).toEqual([1, -0.2, 0.8, -0.1]);
-	});
-
-	it('writes time/fitted for cosinor, keeping number type when input X is numeric', () => {
-		const t = Array.from({ length: 48 }, (_, i) => i);
-		const y = t.map((ti) => 1.5 + 3 * Math.cos((2 * Math.PI * (ti - 6.25)) / 24));
-		mockColumns[1] = { type: 'number', getData: () => t };
-		mockColumns[2] = { getData: () => y };
-		mockColumns[100] = { data: 100, type: 'number' };
-		mockColumns[101] = { data: 101, type: 'number' };
-
-		const [, valid] = rhythmicityanalysis({
-			...baseArgs,
-			xIN: 1,
-			yIN: [2],
-			out: { rhythmicityx: 100, rhythmicityy_2: 101 },
-			analysis: 'cosinor',
-			useFixedPeriod: true
-		});
-		expect(valid).toBe(true);
-		// fitted comes from the mock
-		expect(rawDataStore.get(101)).toEqual([1, 2, 3, 2]);
-		// X is the input times (since xIN is number-type, no ms conversion)
-		expect(mockColumns[100].type).toBe('number');
-	});
-
-	it('converts shared X to ms + marks time-typed for cosinor when input X is time', () => {
-		const originMs = 1_700_000_000_000;
-		const t = Array.from({ length: 48 }, (_, i) => i); // hoursSinceStart
-		const tMs = Array.from({ length: 48 }, (_, i) => originMs + i * 3600000);
-		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
-		mockColumns[1] = { type: 'time', hoursSinceStart: t, getData: () => tMs };
-		mockColumns[2] = { getData: () => y };
-		mockColumns[100] = { data: 100, type: 'number' };
-		mockColumns[101] = { data: 101, type: 'number' };
-
-		const [, valid] = rhythmicityanalysis({
-			...baseArgs,
-			xIN: 1,
-			yIN: [2],
-			out: { rhythmicityx: 100, rhythmicityy_2: 101 },
-			analysis: 'cosinor',
-			useFixedPeriod: true
-		});
-		expect(valid).toBe(true);
-		const xOut = rawDataStore.get(100);
-		// First two entries should be originMs and originMs + 3_600_000
-		expect(xOut[0]).toBe(originMs);
-		expect(xOut[1]).toBe(originMs + 3600000);
-		expect(mockColumns[100].type).toBe('time');
 	});
 
 	it('writes both standalone and collected keys when both are present', () => {

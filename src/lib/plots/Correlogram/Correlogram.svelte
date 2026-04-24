@@ -23,6 +23,7 @@
 		x = $state();
 		y = $state();
 		maxLag = $state(null); // null = auto (n/2), otherwise max lag in hours
+		minLag = $state(0); // 0 = include lag from 0 (with lag=0 point); otherwise drop lags below this
 
 		line = $state();
 		points = $state();
@@ -44,7 +45,7 @@
 				binSize = (times[times.length - 1] - times[0]) / (times.length - 1);
 			}
 
-			return computeAutocorrelation(times, values, binSize, this.maxLag);
+			return computeAutocorrelation(times, values, binSize, this.maxLag, this.minLag);
 		});
 
 		confidenceBounds = $derived.by(() => {
@@ -149,6 +150,7 @@
 			this.confidenceLine.strokeWidth = dataIN?.confidenceLine?.strokeWidth ?? 1;
 			this.points = new PointsClass(dataIN?.points, this);
 			this.maxLag = dataIN?.maxLag ?? null;
+			this.minLag = dataIN?.minLag ?? 0;
 			this.showConfidenceBounds = dataIN?.showConfidenceBounds ?? true;
 			this.confidenceLevel = dataIN?.confidenceLevel ?? 0.95;
 		}
@@ -161,6 +163,7 @@
 				confidenceLine: this.confidenceLine.toJSON(),
 				points: this.points.toJSON(),
 				maxLag: this.maxLag,
+				minLag: this.minLag,
 				showConfidenceBounds: this.showConfidenceBounds,
 				confidenceLevel: this.confidenceLevel
 			};
@@ -174,6 +177,7 @@
 				confidenceLine: LineClass.fromJSON(json.confidenceLine),
 				points: PointsClass.fromJSON(json.points),
 				maxLag: json.maxLag,
+				minLag: json.minLag,
 				showConfidenceBounds: json.showConfidenceBounds,
 				confidenceLevel: json.confidenceLevel
 			});
