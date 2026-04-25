@@ -1,5 +1,8 @@
 node_modules
 
+# The transpiler
+/tools/*
+
 # Output
 /build/*
 !/build/index.html

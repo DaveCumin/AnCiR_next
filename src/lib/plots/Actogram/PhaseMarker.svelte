@@ -60,6 +60,10 @@
 		showMarkers = $state();
 		lineWidth = $state(3);
 		markerSize = $state(5);
+		// Optional clip range for the regression line (1-indexed day numbers
+		// matching the period checkbox list). null = unbounded on that side.
+		lineMinDay = $state(null);
+		lineMaxDay = $state(null);
 		selectedPeriods = $state([]);
 		manualMarkers = $state([]);
 
@@ -285,6 +289,8 @@
 				this.showMarkers = dataIN.showMarkers || true;
 				this.lineWidth = dataIN.lineWidth || 1;
 				this.markerSize = dataIN.markerSize || 5;
+				this.lineMinDay = dataIN.lineMinDay ?? null;
+				this.lineMaxDay = dataIN.lineMaxDay ?? null;
 				const periodKeys = Object.keys(parent.dataByDays.xByPeriod).map(Number);
 				const numPeriods = periodKeys.length > 0 ? Math.max(...periodKeys) + 1 : 0;
 				if (dataIN.selectedPeriods) {
@@ -314,6 +320,8 @@
 				showMarkers: this.showMarkers,
 				lineWidth: this.lineWidth,
 				markerSize: this.markerSize,
+				lineMinDay: this.lineMinDay,
+				lineMaxDay: this.lineMaxDay,
 				selectedPeriods: this.selectedPeriods,
 				manualMarkers: this.manualMarkers
 			};
@@ -331,6 +339,8 @@
 				showMarkers: json.showMarkers,
 				lineWidth: json.lineWidth,
 				markerSize: json.markerSize,
+				lineMinDay: json.lineMinDay,
+				lineMaxDay: json.lineMaxDay,
 				selectedPeriods: json.selectedPeriods,
 				periodRangeMin: json.periodRangeMin,
 				periodRangeMax: json.periodRangeMax,
@@ -536,27 +546,69 @@
 				<input type="checkbox" bind:checked={marker.showLine} />
 				<p>Show Line</p>
 			</div>
+			{#if marker.showLine}
+				<div class="control-input-horizontal">
+					<div class="control-input">
+						<p>Line min day</p>
+						<input
+							type="number"
+							min="1"
+							max={marker.parentData.parentPlot.Ndays}
+							step="1"
+							placeholder="1"
+							value={marker.lineMinDay ?? ''}
+							onchange={(e) => {
+								const v = /** @type {HTMLInputElement} */ (e.currentTarget).value;
+								marker.lineMinDay = v === '' ? null : parseInt(v, 10);
+							}}
+						/>
+					</div>
+					<div class="control-input">
+						<p>Line max day</p>
+						<input
+							type="number"
+							min="1"
+							max={marker.parentData.parentPlot.Ndays}
+							step="1"
+							placeholder={String(marker.parentData.parentPlot.Ndays)}
+							value={marker.lineMaxDay ?? ''}
+							onchange={(e) => {
+								const v = /** @type {HTMLInputElement} */ (e.currentTarget).value;
+								marker.lineMaxDay = v === '' ? null : parseInt(v, 10);
+							}}
+						/>
+					</div>
+				</div>
+			{/if}
 		{/if}
 	</div>
 {/snippet}
 
 {#snippet plot(marker)}
 	{#if marker.showLine && marker.linearRegression?.slope}
-		<line
-			x1={xscale(marker.linearRegression.intercept) + marker.parentData.parentPlot.padding.left}
-			y1={marker.parentData.parentPlot.padding.top}
-			x2={xscale(
-				marker.linearRegression.intercept +
-					marker.parentData.parentPlot.Ndays *
-						(marker.linearRegression.slope - marker.parentData.parentPlot.periodHrs)
-			) + marker.parentData.parentPlot.padding.left}
-			y2={(marker.parentData.parentPlot.Ndays - 1) *
-				(marker.parentData.parentPlot.eachplotheight + marker.parentData.parentPlot.spaceBetween) +
-				marker.parentData.parentPlot.eachplotheight +
-				marker.parentData.parentPlot.padding.top}
-			stroke={marker.colour}
-			stroke-width={marker.lineWidth}
-		/>
+		{@const Ndays = marker.parentData.parentPlot.Ndays}
+		{@const eph = marker.parentData.parentPlot.eachplotheight}
+		{@const sb = marker.parentData.parentPlot.spaceBetween}
+		{@const periodHrs = marker.parentData.parentPlot.periodHrs}
+		{@const padTop = marker.parentData.parentPlot.padding.top}
+		{@const padLeft = marker.parentData.parentPlot.padding.left}
+		<!-- 1-indexed day range from UI (null = unbounded). Clamp to plot. -->
+		{@const lo = Math.max(1, marker.lineMinDay ?? 1)}
+		{@const hi = Math.min(Ndays, marker.lineMaxDay ?? Ndays)}
+		{#if hi >= lo}
+			{@const dx = marker.linearRegression.slope - periodHrs}
+			<!-- y at top of day d (0-indexed) = padTop + d*(eph+sb).
+			     y at bottom of day d         = padTop + d*(eph+sb) + eph.
+			     x at top of day d            = intercept + d*dx. -->
+			<line
+				x1={xscale(marker.linearRegression.intercept + (lo - 1) * dx) + padLeft}
+				y1={padTop + (lo - 1) * (eph + sb)}
+				x2={xscale(marker.linearRegression.intercept + hi * dx) + padLeft}
+				y2={padTop + (hi - 1) * (eph + sb) + eph}
+				stroke={marker.colour}
+				stroke-width={marker.lineWidth}
+			/>
+		{/if}
 	{/if}
 	<path d={marker.markerPoints} fill={marker.colour} stroke="none" />
 {/snippet}
