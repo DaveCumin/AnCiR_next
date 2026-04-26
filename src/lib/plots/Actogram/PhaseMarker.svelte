@@ -197,6 +197,23 @@
 			return linearRegression(xs, ys);
 		});
 
+		// Predicted phase (marker time within periodHrs) at the line's start
+		// day. Uses the regression line directly so it matches the drawn line.
+		// Reports a 1-indexed reference day so the user can see where the
+		// phase is anchored.
+		estimatedPhase = $derived.by(() => {
+			const reg = this.linearRegression;
+			if (!reg || typeof reg !== 'object' || !reg.slope) return null;
+			const periodHrs = this.parentData.parentPlot.periodHrs;
+			const Ndays = this.parentData.parentPlot.Ndays;
+			const lo = Math.max(1, this.lineMinDay ?? 1);
+			const refDay = Math.min(lo, Math.max(1, Ndays));
+			const yPred = reg.slope * refDay + reg.intercept;
+			const markerHourPred = yPred - refDay * periodHrs;
+			const wrapped = ((markerHourPred % periodHrs) + periodHrs) % periodHrs;
+			return { phase: wrapped, refDay };
+		});
+
 		// Check harmonics of the estimated tau against the periodogram
 		harmonicCheck = $derived.by(() => {
 			if (!this.linearRegression?.slope) return null;
@@ -520,6 +537,22 @@
 						label="τ"
 						getter={() => marker.harmonicCheck.strongest.peakPeriod}
 						defaultName={'tau_' + marker.name}
+						source={'Actogram phase marker (' + marker.name + ')'}
+					/>
+				</p>
+			{/if}
+
+			{#if marker.estimatedPhase}
+				<p>
+					<strong
+						>Est φ (day {marker.estimatedPhase.refDay}): {marker.estimatedPhase.phase.toFixed(
+							2
+						)} hrs</strong
+					>
+					<StoreValueButton
+						label="φ"
+						getter={() => marker.estimatedPhase.phase}
+						defaultName={'phi_' + marker.name}
 						source={'Actogram phase marker (' + marker.name + ')'}
 					/>
 				</p>

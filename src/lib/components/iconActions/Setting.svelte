@@ -41,16 +41,24 @@
 		}
 	}
 
+	/** Yield once: flush Svelte updates AND give the browser a frame to
+	 *  repaint (so the spinner stays visually responsive). */
+	async function yieldFrame() {
+		await tick();
+		await new Promise((r) => requestAnimationFrame(() => r()));
+	}
+
 	export async function importJson(jsonData, onProgress) {
 		//reset existing workflow
 		core.data = [];
 		core.tables = [];
 		core.plots = [];
 
-		if (onProgress) onProgress('Loading raw data…');
-		await tick();
-		await new Promise((r) => setTimeout(r, 0));
+		if (onProgress) onProgress(`Loading ${jsonData.data.length} columns…`);
+		await yieldFrame();
 
+		// Build the rawData Map once, then push all columns in one synchronous
+		// sweep. Yielding inside the loop just causes per-column re-renders.
 		if (!jsonData.rawData) {
 			//legacy support for rawData as array
 			core.rawData = new Map(
@@ -59,15 +67,7 @@
 					data.data
 				])
 			);
-			const totalData = jsonData.data.length;
-			for (let i = 0; i < totalData; i++) {
-				if (onProgress && i % 10 === 0) {
-					onProgress(`Loading columns… ${i + 1} of ${totalData}`);
-					await tick();
-					await new Promise((r) => setTimeout(r, 0));
-				}
-				pushObj(Column.fromJSON(jsonData.data[i]));
-			}
+			for (const cd of jsonData.data) pushObj(Column.fromJSON(cd));
 			for (let i = 0; i < core.data.length; i++) {
 				core.data[i].data = Array.isArray(core.data[i].data) ? core.data[i].id : -1;
 			}
@@ -75,59 +75,38 @@
 			core.rawData = new Map(
 				Object.entries($state.snapshot(jsonData.rawData)).map(([key, value]) => [+key, value])
 			);
-			const totalData = jsonData.data.length;
-			for (let i = 0; i < totalData; i++) {
-				if (onProgress && i % 10 === 0) {
-					onProgress(`Loading columns… ${i + 1} of ${totalData}`);
-					await tick();
-					await new Promise((r) => setTimeout(r, 0));
-				}
-				pushObj(Column.fromJSON(jsonData.data[i]));
-			}
+			for (const cd of jsonData.data) pushObj(Column.fromJSON(cd));
 		}
 
 		// Re-link shared args for linked processes after deserialization
 		relinkLinkedProcessArgs();
 
-		if (onProgress) onProgress('Building tables…');
-		await tick();
-		await new Promise((r) => setTimeout(r, 0));
-
 		const totalTables = jsonData.tables.length;
 		for (let i = 0; i < totalTables; i++) {
-			if (onProgress && totalTables > 1) {
-				onProgress(`Building table ${i + 1} of ${totalTables}…`);
-				await tick();
-				await new Promise((r) => setTimeout(r, 0));
-			}
+			if (onProgress) onProgress(`Building table ${i + 1} of ${totalTables}…`);
+			await yieldFrame();
 			pushObj(Table.fromJSON(jsonData.tables[i]));
 		}
 
-		if (onProgress) onProgress('Rebuilding plots…');
-		await tick();
-		await new Promise((r) => setTimeout(r, 0));
-
+		// Plots: yield between each push so the canvas re-render is split
+		// across frames. A single batched push freezes the compositor (and the
+		// spinner) for the entire build, which is what we want to avoid here.
 		const totalPlots = jsonData.plots.length;
 		for (let i = 0; i < totalPlots; i++) {
-			if (onProgress && totalPlots > 1) {
-				onProgress(`Rebuilding plot ${i + 1} of ${totalPlots}…`);
-				await tick();
-				await new Promise((r) => setTimeout(r, 0));
-			}
+			if (onProgress) onProgress(`Rebuilding plot ${i + 1} of ${totalPlots}…`);
+			await yieldFrame();
 			pushObj(Plot.fromJSON(jsonData.plots[i]), false);
 		}
 
 		if (jsonData.appState) {
 			if (onProgress) onProgress('Restoring settings…');
-			await tick();
+			await yieldFrame();
 			loadAppState(jsonData.appState);
 		}
 
-		if (onProgress) onProgress('Computing time axes…');
-		await tick();
-		for (const col of core.data) {
-			void col.hoursSinceStart; //pre-compute better performance
-		}
+		// hoursSinceStart is already pre-computed in pushObj; no second pass.
+		if (onProgress) onProgress('Finalising…');
+		await yieldFrame();
 	}
 </script>
 

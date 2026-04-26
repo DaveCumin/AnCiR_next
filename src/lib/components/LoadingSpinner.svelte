@@ -1,10 +1,24 @@
 <script>
-	import Icon from '$lib/icons/Icon.svelte';
 	let { message = 'Loading...', detail = '' } = $props();
 </script>
 
 <div class="title-container">
-	<Icon name="spinner" width={32} height={32} className="spinner" />
+	<!-- Inline SVG (rather than <Icon name="spinner" />) so the spinner is
+		 painted on first render and isn't blocked by a dynamic-import that
+		 can't resolve while the main thread is busy importing a session. -->
+	<svg
+		xmlns="http://www.w3.org/2000/svg"
+		width="32"
+		height="32"
+		viewBox="0 0 640 640"
+		class="spinner"
+		aria-hidden="true"
+	>
+		<path
+			fill="currentColor"
+			d="M272 112C272 85.5 293.5 64 320 64C346.5 64 368 85.5 368 112C368 138.5 346.5 160 320 160C293.5 160 272 138.5 272 112zM272 528C272 501.5 293.5 480 320 480C346.5 480 368 501.5 368 528C368 554.5 346.5 576 320 576C293.5 576 272 554.5 272 528zM112 272C138.5 272 160 293.5 160 320C160 346.5 138.5 368 112 368C85.5 368 64 346.5 64 320C64 293.5 85.5 272 112 272zM480 320C480 293.5 501.5 272 528 272C554.5 272 576 293.5 576 320C576 346.5 554.5 368 528 368C501.5 368 480 346.5 480 320zM139 433.1C157.8 414.3 188.1 414.3 206.9 433.1C225.7 451.9 225.7 482.2 206.9 501C188.1 519.8 157.8 519.8 139 501C120.2 482.2 120.2 451.9 139 433.1zM139 139C157.8 120.2 188.1 120.2 206.9 139C225.7 157.8 225.7 188.1 206.9 206.9C188.1 225.7 157.8 225.7 139 206.9C120.2 188.1 120.2 157.8 139 139zM501 433.1C519.8 451.9 519.8 482.2 501 501C482.2 519.8 451.9 519.8 433.1 501C414.3 482.2 414.3 451.9 433.1 433.1C451.9 414.3 482.2 414.3 501 433.1z"
+		/>
+	</svg>
 	<div>
 		<p>{message}</p>
 		{#if detail}
@@ -23,6 +37,23 @@
 
 	.title-container p {
 		margin: 0;
+	}
+
+	.spinner {
+		fill: var(--color-lightness-35);
+		animation: spin 1s linear infinite;
+		/* Pin the rotation to the compositor so it keeps animating even
+		   while the main thread is busy. */
+		will-change: transform;
+	}
+
+	@keyframes spin {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.progress-detail {
