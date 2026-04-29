@@ -1,12 +1,17 @@
 <script>
 	import { DateTime } from 'luxon';
+	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
 
-	let { value = $bindable(), zone = 'utc', onChange = () => {} } = $props();
+	let { value = $bindable(), zone = null, onChange = () => {} } = $props();
+
+	// Fall back to the app-wide display zone when no explicit zone is passed,
+	// so changing appState.displayTimezone propagates to every input.
+	let effectiveZone = $derived(zone ?? getDisplayZone());
 
 	// Normalize value (supports Date object or timestamp)
 	let dt = $derived.by(() => {
-		if (value instanceof Date) return DateTime.fromJSDate(value, { zone });
-		if (typeof value === 'number') return DateTime.fromMillis(value, { zone });
+		if (value instanceof Date) return DateTime.fromJSDate(value).setZone(effectiveZone);
+		if (typeof value === 'number') return DateTime.fromMillis(value).setZone(effectiveZone);
 		return DateTime.now();
 	});
 
@@ -24,7 +29,7 @@
 	});
 
 	function updateValue() {
-		const newDt = DateTime.fromISO(`${editingDate}T${editingTime}`, { zone });
+		const newDt = DateTime.fromISO(`${editingDate}T${editingTime}`, { zone: effectiveZone });
 		if (newDt.isValid) {
 			const newValue = newDt.toMillis();
 			value = newValue;

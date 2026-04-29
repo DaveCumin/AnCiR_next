@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { DateTime } from 'luxon';
 import { guessFormat } from './guessTimeFormat';
+import { getDisplayZone } from './displayTime.js';
 import { min, max } from '$lib/utils/MathsStats';
 import { createSequenceArray } from '$lib/utils/MathsStats';
 
@@ -153,8 +154,8 @@ export function forceFormat(dataIN, formatIN) {
 }
 
 export function formatTimeFromUNIX(timeUNIX) {
-	const dt = DateTime.fromMillis(timeUNIX);
-	return formatTimeFromISO(dt.toUTC().toISO());
+	const dt = DateTime.fromMillis(timeUNIX).setZone(getDisplayZone());
+	return formatTimeFromISO(dt.toISO({ includeOffset: false }));
 }
 
 export function formatTimeFromISO(timeString) {

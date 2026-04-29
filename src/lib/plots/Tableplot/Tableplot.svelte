@@ -6,6 +6,7 @@
 	import { core } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
+	import { formatDateTime } from '$lib/utils/time/displayTime.js';
 
 	export const Tableplot_defaultDataInputs = [];
 	export const Tableplot_controlHeaders = ['Properties and Data'];
@@ -161,7 +162,7 @@
 								rawArr.slice(start, start + this.Ncolumns).map((x) => {
 									const centerMs = col.originTime_ms + (x + binStep / 2) * 3600000;
 									return {
-										raw: new Date(centerMs).toLocaleString(),
+										raw: formatDateTime(centerMs),
 										computed: rangeStr,
 										isTime: true
 									};

@@ -19,6 +19,7 @@
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import { core } from '$lib/core/core.svelte.js';
+	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
 
 	export const Actogram_defaultDataInputs = ['time', 'values'];
 	export const Actogram_controlHeaders = ['Properties', 'Data', 'Annotations'];
@@ -330,8 +331,10 @@
 				minTime = 0;
 			}
 
-			//Keep the timezone as UTC to avoid daylight savings issues; and set to the start of the day (at least to start)
-			return DateTime.fromMillis(minTime, { zone: 'utc' })
+			// Snap to start-of-day in the configured display zone.
+			// Default 'utc' avoids DST jumps; switch via appState.displayTimezone.
+			return DateTime.fromMillis(minTime)
+				.setZone(getDisplayZone())
 				.set({
 					hour: 0,
 					minute: 0,
@@ -521,27 +524,12 @@
 
 	let { theData, which } = $props();
 
-	const MONTHS = [
-		'Jan',
-		'Feb',
-		'Mar',
-		'Apr',
-		'May',
-		'Jun',
-		'Jul',
-		'Aug',
-		'Sep',
-		'Oct',
-		'Nov',
-		'Dec'
-	];
-
-	// Format an absolute-hours-since-plot-start value as a date/time string.
+	// Format an absolute-hours-since-plot-start value as a date/time string
+	// in the configured display zone (e.g. "24 Apr, 11:48").
 	function actogramXFormatter(absHrs) {
 		if (absHrs == null || isNaN(absHrs)) return '';
 		const unixTime = theData.plot.startTime + absHrs * 3600000;
-		const dt = new Date(unixTime);
-		return `${dt.getUTCDate()} ${MONTHS[dt.getUTCMonth()]}, ${String(dt.getUTCHours()).padStart(2, '0')}:${String(dt.getUTCMinutes()).padStart(2, '0')}`;
+		return DateTime.fromMillis(unixTime).setZone(getDisplayZone()).toFormat('d LLL, HH:mm');
 	}
 
 	// allBins stores {start, end, y} in offset-corrected absolute hours.

@@ -5,19 +5,17 @@
 // plotbit dispatches this event from its hover handlers; helpers here
 // handle formatting, value lookup across sibling series, and positioning.
 
+import { formatDateTime } from '$lib/utils/time/displayTime.js';
+
 /**
  * Format a value for display.
- * - type='time' renders via Date.toLocaleString (assumes value is ms or parseable)
+ * - type='time' renders via the app-wide displayTimezone (default UTC)
  * - numbers are rendered with `dp` decimal places
  * - anything else is returned as-is
  */
 export function safeFormat(value, dp = 3, type = 'number') {
 	if (type === 'time') {
-		try {
-			return new Date(value).toLocaleString();
-		} catch (e) {
-			return value;
-		}
+		return formatDateTime(value);
 	}
 	try {
 		return value.toFixed(dp);

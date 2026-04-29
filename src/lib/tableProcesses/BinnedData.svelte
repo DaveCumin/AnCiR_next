@@ -138,6 +138,11 @@
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { onMount, untrack } from 'svelte';
+	import {
+		formatDateTime,
+		formatDateTimeLocalInput,
+		parseDateTimeLocalInput
+	} from '$lib/utils/time/displayTime.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -169,21 +174,14 @@
 	// hoursSinceStart uses (min of raw), not getData()[0].
 	let xStartTime_ms = $derived(xIsTime ? (arrayMin(xIN_col?.getData() ?? []) ?? null) : null);
 
-	function toDatetimeLocal(ms) {
-		if (ms == null) return '';
-		const d = new Date(ms);
-		const pad = (n) => String(n).padStart(2, '0');
-		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-	}
-
 	let binStartDatetimeStr = $derived(
 		xIsTime && xStartTime_ms != null
-			? toDatetimeLocal(xStartTime_ms + p.args.binStart * 3600000)
+			? formatDateTimeLocalInput(xStartTime_ms + p.args.binStart * 3600000)
 			: ''
 	);
 
 	function handleBinStartDatetime(e) {
-		const ms = new Date(e.target.value).getTime();
+		const ms = parseDateTimeLocalInput(e.target.value);
 		if (!isNaN(ms) && xStartTime_ms != null) {
 			p.args.binStart = (ms - xStartTime_ms) / 3600000;
 			getBinnedData();
@@ -430,7 +428,7 @@
 										const half = p.args.binSize / 2;
 										const centerMs = xStartTime_ms + (x + half) * 3600000;
 										return {
-											raw: new Date(centerMs).toLocaleString(),
+											raw: formatDateTime(centerMs),
 											computed: `±${half.toFixed(2)}`,
 											isTime: true
 										};
