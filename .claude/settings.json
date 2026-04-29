@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Read(//private/tmp/**)",
-      "Bash(rm -rf ancir_analysis_output)"
+      "Bash(rm -rf ancir_analysis_output)",
+      "Bash(pkill -f \"vite dev\")",
+      "Bash(git switch *)"
     ]
   }
 }

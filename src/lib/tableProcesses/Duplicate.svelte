@@ -69,6 +69,16 @@
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	let xIsTime = $derived(xIN_col?.type === 'time');
 
+	// Own output column IDs — selecting these as input would create a
+	// self-referential compute loop.
+	let ownOutputIds = $derived.by(() => {
+		const ids = [];
+		for (const key of Object.keys(p.args.out ?? {})) {
+			if (p.args.out[key] >= 0) ids.push(p.args.out[key]);
+		}
+		return ids;
+	});
+
 	let getHash = $derived.by(() => xIN_col?.getDataHash ?? '');
 	let lastHash = '';
 
@@ -138,7 +148,7 @@
 	</div>
 	<div class="control-input">
 		<p>Column to duplicate</p>
-		<ColumnSelector bind:value={p.args.xIN} onChange={onXChange} />
+		<ColumnSelector bind:value={p.args.xIN} onChange={onXChange} excludeColIds={ownOutputIds} />
 	</div>
 </div>
 
