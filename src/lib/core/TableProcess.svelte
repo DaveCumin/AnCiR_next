@@ -153,9 +153,11 @@
 			this.name = dataIN.name;
 			this.refTPId = dataIN.refTPId ?? null;
 
-			// Get display name from the tableProcessMap
+			// Honor a persisted/user-edited displayName when present; otherwise fall
+			// back to the default from tableProcessMap.
 			const tableProcessInfo = appConsts.tableProcessMap.get(this.name);
-			this.displayName = tableProcessInfo?.displayName || this.name;
+			this.displayName =
+				dataIN.displayName || tableProcessInfo?.displayName || this.name;
 
 			//If there is a column out ref set (i.e. reading from JSON)
 			if (dataIN.args.out[Object.keys(dataIN.args.out)[0]] >= 0) {
@@ -191,6 +193,7 @@
 			return {
 				id: this.id,
 				name: this.name,
+				displayName: this.displayName,
 				args: this.args,
 				refTPId: this.refTPId
 			};

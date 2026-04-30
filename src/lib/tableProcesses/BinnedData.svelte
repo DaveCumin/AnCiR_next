@@ -238,17 +238,21 @@
 		lastHash = getHash;
 	}
 
+	// Own output column IDs — selecting any of these as an input creates a
+	// self-referential compute loop (compute writes the column's
+	// tableProcessGUId, which feeds back into getHash and refires the effect).
+	let ownOutputIds = $derived.by(() => {
+		const ids = [];
+		for (const key of Object.keys(p.args.out)) {
+			if (p.args.out[key] >= 0) ids.push(p.args.out[key]);
+		}
+		return ids;
+	});
+
 	// Exclude own output column IDs from the Y selector
 	let yExcludeIds = $derived.by(() => {
 		if (hideInputs) return [];
-		const ids = [p.args.xIN];
-		if (p.args.out.binnedx >= 0) ids.push(p.args.out.binnedx);
-		for (const key of Object.keys(p.args.out)) {
-			if (key.startsWith('binnedy_') && p.args.out[key] >= 0) {
-				ids.push(p.args.out[key]);
-			}
-		}
-		return ids;
+		return [p.args.xIN, ...ownOutputIds];
 	});
 
 	// Reconcile output columns when yIN changes externally (e.g. from parent in collected mode)
@@ -308,7 +312,11 @@
 		<div class="control-input-vertical">
 			<div class="control-input">
 				<p>X column</p>
-				<ColumnSelector bind:value={p.args.xIN} onChange={getBinnedData} />
+				<ColumnSelector
+					bind:value={p.args.xIN}
+					onChange={getBinnedData}
+					excludeColIds={ownOutputIds}
+				/>
 			</div>
 			<div class="control-input">
 				<p>Y columns</p>

@@ -9,6 +9,7 @@
 	import { computeAutocorrelation } from '$lib/utils/correlogram.js';
 	import { fitRectangularWave } from '$lib/utils/rectwave.js';
 	import { fitDoubleLogistic } from '$lib/utils/doublelogistic.js';
+	import { fitTrend } from '$lib/utils/trendfit.js';
 	import { min as arrayMin, minMax as arrayMinMax } from '$lib/utils/stats.js';
 
 	const displayName = 'Moving Analysis';
@@ -19,8 +20,12 @@
 		['stepSize', { val: 12 }], // hours
 		// 'start' | 'center' | 'end'
 		['binLabel', { val: 'center' }],
-		// 'periodogram' | 'cosinor' | 'fft' | 'correlogram' | 'rectfit' | 'doublelogistic'
+		// 'periodogram' | 'cosinor' | 'fft' | 'correlogram' | 'rectfit' | 'doublelogistic' | 'trend'
 		['analysis', { val: 'periodogram' }],
+		// trend-fit params (used when analysis === 'trend')
+		// 'linear' | 'polynomial' | 'logarithmic' | 'exponential'
+		['trendModel', { val: 'linear' }],
+		['trendPolyDegree', { val: 2 }],
 		// periodogram params
 		['pgMethod', { val: 'Lomb-Scargle' }], // 'Lomb-Scargle' | 'Chi-squared' | 'Enright'
 		['periodMin', { val: 20 }],
@@ -106,6 +111,19 @@
 			if (args.dlPeriodic) keys.push('period');
 			keys.push('r2', 'rmse');
 			return keys;
+		}
+		if (args.analysis === 'trend') {
+			const model = args.trendModel ?? 'linear';
+			if (model === 'linear') return ['slope', 'intercept', 'r2', 'rmse'];
+			// y = a*exp(b*x)  or  y = a + b*log(x)
+			if (model === 'exponential' || model === 'logarithmic') return ['a', 'b', 'r2', 'rmse'];
+			if (model === 'polynomial') {
+				const deg = Math.max(0, Math.floor(args.trendPolyDegree ?? 2));
+				const keys = [];
+				for (let i = 0; i <= deg; i++) keys.push(`c${i}`);
+				keys.push('r2', 'rmse');
+				return keys;
+			}
 		}
 		return [];
 	}
@@ -249,6 +267,40 @@
 			stats.k1 = r.parameters.k1;
 			stats.k2 = r.parameters.k2;
 			if (periodic) stats.period = r.parameters.T;
+			stats.r2 = r.rSquared;
+			stats.rmse = r.rmse;
+			return stats;
+		}
+
+		if (args.analysis === 'trend') {
+			const model = args.trendModel ?? 'linear';
+			const polyDegree = Math.max(0, Math.floor(args.trendPolyDegree ?? 2));
+
+			// fitTrend's logarithmic branch takes log(x) and exponential branch
+			// takes log(y); guard the windows where those would be NaN/-Infinity
+			// so a single bad sample doesn't corrupt the whole fit.
+			if (model === 'logarithmic' && tt.some((v) => !(v > 0))) return stats;
+			if (model === 'exponential' && yy.some((v) => !(v > 0))) return stats;
+			if (model === 'polynomial' && tt.length <= polyDegree) return stats;
+
+			let r;
+			try {
+				r = fitTrend(tt, yy, model, polyDegree);
+			} catch {
+				return stats;
+			}
+			if (!r || !r.parameters) return stats;
+
+			if (model === 'linear') {
+				stats.slope = r.parameters.slope;
+				stats.intercept = r.parameters.intercept;
+			} else if (model === 'exponential' || model === 'logarithmic') {
+				stats.a = r.parameters.a;
+				stats.b = r.parameters.b;
+			} else if (model === 'polynomial') {
+				const coeffs = r.parameters.coeffs ?? [];
+				for (let i = 0; i < coeffs.length; i++) stats[`c${i}`] = coeffs[i];
+			}
 			stats.r2 = r.rSquared;
 			stats.rmse = r.rmse;
 			return stats;
@@ -421,6 +473,10 @@
 	if (typeof p.args.out !== 'object' || p.args.out === null) {
 		p.args.out = { movex: -1 };
 	}
+	// Initialise trend-fit args for sessions saved before the trend analysis
+	// option existed.
+	if (p.args.trendModel === undefined) p.args.trendModel = 'linear';
+	if (p.args.trendPolyDegree === undefined) p.args.trendPolyDegree = 2;
 
 	let result = $state();
 	let mounted = $state(false);
@@ -491,6 +547,10 @@
 			p.args.dlFixK2 +
 			'|' +
 			p.args.dlFixedK2 +
+			'|' +
+			(p.args.trendModel ?? '') +
+			'|' +
+			(p.args.trendPolyDegree ?? '') +
 			'|' +
 			currentStatKeys.join(',');
 		return out;
@@ -702,14 +762,23 @@
 			<p>Analysis</p>
 			<AttributeSelect
 				bind:value={p.args.analysis}
-				options={['periodogram', 'cosinor', 'fft', 'correlogram', 'rectfit', 'doublelogistic']}
+				options={[
+					'periodogram',
+					'cosinor',
+					'fft',
+					'correlogram',
+					'rectfit',
+					'doublelogistic',
+					'trend'
+				]}
 				optionsDisplay={[
 					'Periodogram',
 					'Cosinor',
 					'FFT',
 					'Correlogram',
 					'Rectangular wave fit',
-					'Double logistic fit'
+					'Double logistic fit',
+					'Trend fit'
 				]}
 			/>
 		</div>
@@ -890,6 +959,23 @@
 				<div class="control-input">
 					<p>k2</p>
 					<NumberWithUnits bind:value={p.args.dlFixedK2} min="0.001" step="0.1" />
+				</div>
+			{/if}
+		</div>
+	{:else if p.args.analysis === 'trend'}
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>Model</p>
+				<AttributeSelect
+					bind:value={p.args.trendModel}
+					options={['linear', 'exponential', 'logarithmic', 'polynomial']}
+					optionsDisplay={['Linear', 'Exponential', 'Logarithmic', 'Polynomial']}
+				/>
+			</div>
+			{#if p.args.trendModel === 'polynomial'}
+				<div class="control-input">
+					<p>Degree</p>
+					<NumberWithUnits bind:value={p.args.trendPolyDegree} min="1" step="1" />
 				</div>
 			{/if}
 		</div>
