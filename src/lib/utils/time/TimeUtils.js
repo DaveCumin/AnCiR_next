@@ -7,6 +7,60 @@ import { createSequenceArray } from '$lib/utils/MathsStats';
 
 const decimalPlaces = 4;
 
+// Translate a legacy Luxon-style format string (saved by older sessions) into
+// the moment/dayjs vocabulary that dayjs expects. New code should write
+// dayjs-style strings directly, but stored column.timeFormat values from
+// sessions saved on a previous version flow through here so they keep working.
+//
+// Luxon → dayjs differences:
+//   yyyy/yy → YYYY/YY        (year)
+//   LLLL/LLL/LL/L → MMMM/MMM/MM/M (month, both standalone and format)
+//   dd/d → DD/D              (day-of-month)
+//   a → a                    (am/pm — same)
+//   S → SSS                  (Luxon "S" is fractional seconds; ours is ms)
+//   'X' → [X]                (literals: Luxon uses single-quotes, dayjs uses [])
+//
+// `Z` (offset token) is the same in both — only its escaping differs.
+export function normalizeTimeFormat(fmt) {
+	if (!fmt || typeof fmt !== 'string') return fmt;
+
+	// If it already uses dayjs-style literal brackets, assume it's been
+	// authored against the new vocabulary and pass through unchanged.
+	const usesBrackets = /\[[^\]]+\]/.test(fmt);
+	const usesQuotes = /'[^']+'/.test(fmt);
+	const looksLuxon = /\b(yyyy|yy|LL+|dd|^d$|S(?!S))\b/.test(fmt) || usesQuotes;
+	if (usesBrackets && !usesQuotes && !looksLuxon) return fmt;
+
+	let out = fmt;
+
+	// 1) Convert single-quoted literal segments to bracketed literals first.
+	//    Doing this before token replacement avoids accidentally rewriting
+	//    tokens that live inside a literal string.
+	out = out.replace(/'([^']*)'/g, (_, body) => `[${body}]`);
+
+	// 2) Token replacements. Order matters: longer tokens before shorter ones
+	//    so e.g. `LLLL` doesn't get partially eaten by `LL`.
+	const replacements = [
+		[/yyyy/g, 'YYYY'],
+		[/yy/g, 'YY'],
+		[/LLLL/g, 'MMMM'],
+		[/LLL/g, 'MMM'],
+		[/LL/g, 'MM'],
+		[/\bL\b/g, 'M'],
+		[/dd/g, 'DD'],
+		[/\bd\b/g, 'D'],
+		// Luxon's single `S` is "fractional seconds (any precision)". Our
+		// stored format has a literal `.S` followed by ms digits, so widen
+		// to 3-digit milliseconds (`SSS`). If a user-saved format genuinely
+		// wanted a single digit, this errs on the side of working for ISO
+		// timestamps like ".894".
+		[/(?<!S)S(?!S)/g, 'SSS']
+	];
+	for (const [re, to] of replacements) out = out.replace(re, to);
+
+	return out;
+}
+
 export function formatDate(dateIN) {
 	const dt = dayjs(dateIN);
 	if (!dt.isValid()) return '';
@@ -89,8 +143,9 @@ export function calculateTimeDifference(start, end, dateFormat) {
 	if (start === null || end === null || start === undefined || end === undefined) {
 		return null;
 	}
-	const startDt = dayjs(start, dateFormat, true);
-	const endDt = dayjs(end, dateFormat, true);
+	const fmt = normalizeTimeFormat(dateFormat);
+	const startDt = dayjs(start, fmt, true);
+	const endDt = dayjs(end, fmt, true);
 	// dayjs.diff returns a number; pass `true` for fractional hours.
 	return endDt.diff(startDt, 'hour', true).toFixed(decimalPlaces);
 }
@@ -112,7 +167,7 @@ export function getPeriod(timeData, timefmt) {
 //data. Calculates the offset for actograms (and other plots).
 export function getstartTimeOffset(inputTime, firstTime, timeFormat) {
 	const start = dayjs(inputTime);
-	const end = dayjs(firstTime, timeFormat, true);
+	const end = dayjs(firstTime, normalizeTimeFormat(timeFormat), true);
 	return end.diff(start, 'hour', true).toFixed(decimalPlaces);
 }
 
@@ -176,11 +231,11 @@ export function formatTimeFromISO(timeString) {
 }
 export function getISODate(stringIN, formatIN) {
 	if (!formatIN) return stringIN;
-	return dayjs.utc(stringIN, formatIN, true).toISOString();
+	return dayjs.utc(stringIN, normalizeTimeFormat(formatIN), true).toISOString();
 }
 export function getUNIXDate(stringIN, formatIN) {
 	if (!formatIN) return stringIN;
-	return dayjs.utc(stringIN, formatIN, true).valueOf();
+	return dayjs.utc(stringIN, normalizeTimeFormat(formatIN), true).valueOf();
 }
 export function addTime(start, hoursIN) {
 	return formatTimeFromISO(dayjs(start).add(hoursIN, 'hour').toISOString());

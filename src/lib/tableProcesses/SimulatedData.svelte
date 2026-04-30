@@ -81,7 +81,7 @@
 			core.rawData.set(timeOUT, simulatedTime);
 			getColumnById(timeOUT).data = timeOUT;
 			getColumnById(timeOUT).type = 'time';
-			getColumnById(timeOUT).timeFormat = "YYYY-MM-DD'T'HH:mm:ss.S'Z'";
+			getColumnById(timeOUT).timeFormat = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';
 
 			core.rawData.set(valuesOUT, simulatedValues);
 			getColumnById(valuesOUT).data = valuesOUT;

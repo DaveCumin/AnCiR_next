@@ -51,7 +51,7 @@
 			getColumnById(argsIN.out.result).data = argsIN.out.result;
 			getColumnById(argsIN.out.result).type = argsIN.seqType === 'time' ? 'time' : 'number';
 			if (argsIN.seqType === 'time') {
-				getColumnById(argsIN.out.result).timeFormat = "YYYY-MM-DD'T'HH:mm:ss.S'Z'";
+				getColumnById(argsIN.out.result).timeFormat = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';
 			}
 			const processHash = crypto.randomUUID();
 			getColumnById(argsIN.out.result).tableProcessGUId = processHash;
