@@ -275,7 +275,7 @@
 <script>
 	// @ts-nocheck
 	import { slide } from 'svelte/transition';
-	import { DateTime } from 'luxon';
+	import dayjs from '$lib/utils/time/dayjsSetup.js';
 
 	let { theData, which } = $props();
 
@@ -414,9 +414,9 @@
 			if (Array.isArray(rawArr) && rowIndex < rawArr.length) {
 				if (typeof rawArr[0] === 'number') {
 					// UNIX ms time data from tableProcess output — parse "DD MMM YYYY HH:mm:ss" back to ms
-					const dt = DateTime.fromFormat(edit.value, 'dd MMM yyyy HH:mm:ss', { zone: 'utc' });
-					if (dt.isValid) {
-						rawArr[rowIndex] = dt.toMillis();
+					const dt = dayjs.utc(edit.value, 'DD MMM YYYY HH:mm:ss', true);
+					if (dt.isValid()) {
+						rawArr[rowIndex] = dt.valueOf();
 						column.rawDataVersion++;
 					}
 				} else {

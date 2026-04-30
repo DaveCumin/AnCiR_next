@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { DateTime } from 'luxon';
+import dayjs from './dayjsSetup.js';
 import { guessFormat } from './guessTimeFormat';
 import { getDisplayZone } from './displayTime.js';
 import { min, max } from '$lib/utils/MathsStats';
@@ -8,32 +8,14 @@ import { createSequenceArray } from '$lib/utils/MathsStats';
 const decimalPlaces = 4;
 
 export function formatDate(dateIN) {
-	dateIN = DateTime.fromISO(dateIN);
-
-	const formattedDate = dateIN.toLocaleString(DateTime.DATETIME_MED);
-	return formattedDate;
-}
-
-export function convertFormat(formatIN) {
-	if (!formatIN || typeof formatIN == 'number') return formatIN;
-
-	//moment format string to luxon format string (https://moment.github.io/luxon/#/parsing?id=table-of-tokens)
-	const map = {
-		from: ['A', 'D', 'DD', 'M', 'MM', 'YY', 'YYYY'],
-		to: ['a', 'd', 'dd', 'L', 'LL', 'yy', 'yyyy']
-	};
-
-	let formatOUT = formatIN;
-	if (formatIN == '' || formatIN == null || formatIN == undefined) return '';
-
-	map.from.forEach((from, index) => {
-		const to = map.to[index];
-		const regex = new RegExp(`\\b${from}\\b`, 'g'); // Using word boundaries to match whole words
-
-		formatOUT = formatOUT.replace(regex, to);
+	const dt = dayjs(dateIN);
+	if (!dt.isValid()) return '';
+	// Mirrors Luxon's DATETIME_MED ("Oct 14, 1983, 1:30 PM") via Intl, so the
+	// output stays locale-aware without dragging in a localizedFormat plugin.
+	return dt.toDate().toLocaleString(undefined, {
+		dateStyle: 'medium',
+		timeStyle: 'short'
 	});
-
-	return formatOUT;
 }
 
 function guessDateFormat(dateString) {
@@ -81,7 +63,8 @@ export function guessDateofArray(dates) {
 		let guessScore = guessesArray.map((guess) => {
 			let score = 0;
 			for (let i = 0; i < datesToCheck.length; i++) {
-				if (DateTime.fromFormat(datesToCheck[i], convertFormat(guess)).invalid == null) {
+				// Strict parse so a token-mismatch counts as a miss for scoring.
+				if (dayjs(datesToCheck[i], guess, true).isValid()) {
 					score++;
 				}
 			}
@@ -99,22 +82,24 @@ export function guessDateofArray(dates) {
 	}
 }
 
+// `dateFormat` is a moment-style token string (e.g. 'YYYY-MM-DD HH:mm:ss')
+// — the same vocabulary saved sessions store, since `convertFormat` (which
+// previously translated to Luxon tokens) has been removed.
 export function calculateTimeDifference(start, end, dateFormat) {
 	if (start === null || end === null || start === undefined || end === undefined) {
 		return null;
 	}
-	start = DateTime.fromFormat(start, dateFormat);
-	end = DateTime.fromFormat(end, dateFormat);
-
-	var diffTime = end.diff(start, 'hours');
-	return diffTime.hours.toFixed(decimalPlaces);
+	const startDt = dayjs(start, dateFormat, true);
+	const endDt = dayjs(end, dateFormat, true);
+	// dayjs.diff returns a number; pass `true` for fractional hours.
+	return endDt.diff(startDt, 'hour', true).toFixed(decimalPlaces);
 }
 
 //get the minimum period and if all the steps are the same
 export function getPeriod(timeData, timefmt) {
 	let diffs = new Array(timeData.length - 1);
 	for (let i = 1; i < timeData.length; i++) {
-		diffs[i - 1] = calculateTimeDifference(timeData[i - 1], timeData[i], convertFormat(timefmt));
+		diffs[i - 1] = calculateTimeDifference(timeData[i - 1], timeData[i], timefmt);
 	}
 
 	return {
@@ -126,15 +111,15 @@ export function getPeriod(timeData, timefmt) {
 // Takes in an inputted value (ISO format) and the first time and format of
 //data. Calculates the offset for actograms (and other plots).
 export function getstartTimeOffset(inputTime, firstTime, timeFormat) {
-	let start = DateTime.fromISO(inputTime);
-	let end = DateTime.fromFormat(firstTime, convertFormat(timeFormat));
-	return end.diff(start, 'hours').hours.toFixed(decimalPlaces);
+	const start = dayjs(inputTime);
+	const end = dayjs(firstTime, timeFormat, true);
+	return end.diff(start, 'hour', true).toFixed(decimalPlaces);
 }
 
 export function makeTimeProcessedData(rawData) {
 	let guessedFormat = guessDateofArray(rawData);
 	const dataout = rawData.map((date) => {
-		calculateTimeDifference(rawData[0], date, convertFormat(guessedFormat)); //convert for Luxon
+		calculateTimeDifference(rawData[0], date, guessedFormat);
 	});
 	return dataout;
 }
@@ -147,15 +132,16 @@ export function getGuessedFormat(dataIN) {
 }
 
 export function forceFormat(dataIN, formatIN) {
-	const dataout = dataIN.map((date) =>
-		calculateTimeDifference(dataIN[0], date, convertFormat(formatIN))
-	);
+	const dataout = dataIN.map((date) => calculateTimeDifference(dataIN[0], date, formatIN));
 	return dataout;
 }
 
 export function formatTimeFromUNIX(timeUNIX) {
-	const dt = DateTime.fromMillis(timeUNIX).setZone(getDisplayZone());
-	return formatTimeFromISO(dt.toISO({ includeOffset: false }));
+	const zone = getDisplayZone();
+	const dt = zone === 'utc' ? dayjs.utc(timeUNIX) : dayjs(timeUNIX).tz(zone);
+	// Hand off to formatTimeFromISO so any external consumers of the wire
+	// format ("DD MMM YYYY HH:mm:ss") see exactly the same string.
+	return formatTimeFromISO(dt.format('YYYY-MM-DDTHH:mm:ss.SSS'));
 }
 
 export function formatTimeFromISO(timeString) {
@@ -190,14 +176,14 @@ export function formatTimeFromISO(timeString) {
 }
 export function getISODate(stringIN, formatIN) {
 	if (!formatIN) return stringIN;
-	return DateTime.fromFormat(stringIN, convertFormat(formatIN), { zone: 'utc' }).toISO();
+	return dayjs.utc(stringIN, formatIN, true).toISOString();
 }
 export function getUNIXDate(stringIN, formatIN) {
 	if (!formatIN) return stringIN;
-	return DateTime.fromFormat(stringIN, convertFormat(formatIN), { zone: 'utc' }).toMillis();
+	return dayjs.utc(stringIN, formatIN, true).valueOf();
 }
 export function addTime(start, hoursIN) {
-	return formatTimeFromISO(DateTime.fromISO(start).plus({ hours: hoursIN }).toISO());
+	return formatTimeFromISO(dayjs(start).add(hoursIN, 'hour').toISOString());
 }
 
 /*

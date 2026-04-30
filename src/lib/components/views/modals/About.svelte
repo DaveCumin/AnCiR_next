@@ -109,7 +109,7 @@
 				> <a href="https://github.com/ytliu0">@ytliu0</a> (GPL-3.0 licensed).
 			</li>
 			<li>
-				<a href="https://www.npmjs.com/package/luxon">Luxon</a> is used for date manipulation and caluclations
+				<a href="https://www.npmjs.com/package/dayjs">Day.js</a> is used for date manipulation and calculations
 				(MIT licensed).
 			</li>
 		</ul>

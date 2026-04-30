@@ -3,17 +3,12 @@
 	import Papa from 'papaparse';
 	import { showError } from '$lib/core/core.svelte.js';
 	import * as XLSX from '$lib/utils/xlsxLite';
-	import { DateTime } from 'luxon';
+	import dayjs from '$lib/utils/time/dayjsSetup.js';
 
 	import { appConsts, core, pushObj, appState } from '$lib/core/core.svelte';
 	import { Table } from '$lib/core/Table.svelte';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
-	import {
-		guessDateofArray,
-		forceFormat,
-		getPeriod,
-		convertFormat
-	} from '$lib/utils/time/TimeUtils';
+	import { guessDateofArray, forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
 	import { numToString } from '$lib/utils/GeneralUtils';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
@@ -1110,13 +1105,12 @@
 
 		if (!timeCol) return data; // No time column found — leave unsorted
 
-		const luxonFmt = convertFormat(timeFmt);
 		const timeValues = data[timeCol];
 		const n = timeValues.length;
 
 		// Build array of [index, parsedMs] and sort by ms
 		const indices = Array.from({ length: n }, (_, i) => {
-			const ms = DateTime.fromFormat(String(timeValues[i]), luxonFmt).toMillis();
+			const ms = dayjs(String(timeValues[i]), timeFmt, true).valueOf();
 			return { i, ms };
 		});
 		indices.sort((a, b) => a.ms - b.ms);
@@ -1266,26 +1260,26 @@
 		// intervalRaw × 15 = seconds per epoch
 		const epochSeconds = intervalRaw * 15;
 
-		// Parse start date — try full year first, then 2-digit
-		let startDate = DateTime.fromFormat(dateStr, 'dd-MMM-yyyy', { locale: 'en' });
-		if (!startDate.isValid) {
-			startDate = DateTime.fromFormat(dateStr, 'dd-MMM-yy', { locale: 'en' });
+		// Parse start date — try full year first, then 2-digit. AWD files emit
+		// dates like "12-Mar-2024" or "12-Mar-24", always English month names.
+		let startDate = dayjs(dateStr, 'DD-MMM-YYYY', 'en', true);
+		if (!startDate.isValid()) {
+			startDate = dayjs(dateStr, 'DD-MMM-YY', 'en', true);
 		}
-		if (!startDate.isValid) {
+		if (!startDate.isValid()) {
 			console.warn('Invalid AWD start date:', dateStr);
-			startDate = DateTime.now().startOf('day');
+			startDate = dayjs().startOf('day');
 		}
 
 		// Add start time
 		let startDT = startDate;
 		const timeMatch = timeStr.match(/^(\d{1,2}):(\d{2})$/);
 		if (timeMatch) {
-			startDT = startDate.set({
-				hour: Number(timeMatch[1]),
-				minute: Number(timeMatch[2]),
-				second: 0,
-				millisecond: 0
-			});
+			startDT = startDate
+				.hour(Number(timeMatch[1]))
+				.minute(Number(timeMatch[2]))
+				.second(0)
+				.millisecond(0);
 		} else {
 			console.warn('Invalid AWD start time:', timeStr);
 		}
@@ -1303,7 +1297,7 @@
 
 		// Metadata for time compression (used only for non-DateTime columns if you want later)
 		awdMeta = {
-			startMs: startDT.toMillis(),
+			startMs: startDT.valueOf(),
 			stepMs: epochSeconds * 1000,
 			count: dataRows.length
 		};
@@ -1313,8 +1307,8 @@
 			const obj = {};
 
 			// Always generate proper ISO-like datetime for DateTime column (needed for type guessing)
-			const dt = startDT.plus({ seconds: i * epochSeconds });
-			obj.DateTime = dt.toFormat('yyyy-MM-dd HH:mm:ss');
+			const dt = startDT.add(i * epochSeconds, 'second');
+			obj.DateTime = dt.format('YYYY-MM-DD HH:mm:ss');
 
 			// Other columns: numbers
 			obj.Activity = row[0] != null ? Number(row[0]) : 0;
@@ -1397,26 +1391,24 @@
 		if (awdMeta && timeKey === 'DateTime') {
 			// AWD: compute hours directly from metadata — no string parsing needed
 			const stepHours = awdMeta.stepMs / 3_600_000;
-			firstDt = DateTime.fromMillis(awdMeta.startMs);
+			firstDt = dayjs(awdMeta.startMs);
 			timeHours = new Array(rowCount);
 			for (let i = 0; i < rowCount; i++) {
 				timeHours[i] = i * stepHours;
 			}
 		} else {
-			// General case: parse time strings
+			// General case: parse time strings. Try the guessed format first
+			// (strict), then fall back to dayjs's permissive ISO parser which
+			// also covers SQL-ish "YYYY-MM-DD HH:mm:ss".
 			const timeStrings = data[timeKey];
 
-			// Try multiple Luxon parsers to find one that works
 			function parseDt(s) {
 				if (s == null) return null;
 				const str = String(s);
-				let dt = DateTime.fromFormat(str, timeFormat);
-				if (dt.isValid) return dt;
-				dt = DateTime.fromSQL(str);
-				if (dt.isValid) return dt;
-				dt = DateTime.fromISO(str);
-				if (dt.isValid) return dt;
-				return null;
+				let dt = dayjs(str, timeFormat, true);
+				if (dt.isValid()) return dt;
+				dt = dayjs(str);
+				return dt.isValid() ? dt : null;
 			}
 
 			firstDt = parseDt(timeStrings[0]);
@@ -1427,7 +1419,7 @@
 
 			timeHours = timeStrings.map((t) => {
 				const dt = parseDt(t);
-				return dt ? dt.diff(firstDt, 'hours').hours : NaN;
+				return dt ? dt.diff(firstDt, 'hour', true) : NaN;
 			});
 		}
 

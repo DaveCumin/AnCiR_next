@@ -1,7 +1,7 @@
 <script>
 	// @ts-nocheck
 	import { formatDate } from './TimeUtils';
-	import { DateTime } from 'luxon';
+	import dayjs from './dayjsSetup.js';
 
 	//params
 	export let thedatetime;
@@ -14,14 +14,16 @@
 	}
 
 	function handleInput(event) {
-		// Update thedatetime
-		thedatetime = DateTime.fromISO(event.target.value);
+		// Update thedatetime — keep parity with the previous Luxon impl, which
+		// returned a DateTime instance. Callers downstream that need ms can
+		// use `.valueOf()` / `.toISOString()`.
+		thedatetime = dayjs(event.target.value);
 	}
 
 	//This is needed to make the picker have the correct time
 	$: inputDate = getInputDate(thedatetime);
 	function getInputDate(dateIN) {
-		return DateTime.fromISO(dateIN).toFormat("yyyy-LL-dd'T'HH:mm");
+		return dayjs(dateIN).format('YYYY-MM-DD[T]HH:mm');
 	}
 </script>
 
