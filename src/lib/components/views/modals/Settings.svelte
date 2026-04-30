@@ -9,6 +9,49 @@
 	import ColourPaletteSelect from '$lib/components/inputs/ColourPaletteSelect.svelte';
 	let { showModal = $bindable(false) } = $props();
 
+	// Build the IANA zone list once on first render. `supportedValuesOf` is in
+	// every modern browser; if it's missing we fall back to UTC + browser-local
+	// so the picker still does something useful.
+	const allZones =
+		typeof Intl?.supportedValuesOf === 'function'
+			? Intl.supportedValuesOf('timeZone')
+			: [Intl.DateTimeFormat().resolvedOptions().timeZone];
+
+	// Local mirror of the displayed string so the user can type freely without
+	// each keystroke clobbering appState. Commit to appState only when a valid
+	// zone is selected/typed.
+	let zoneInput = $state(appState.displayTimezone ?? 'utc');
+	let zoneError = $state('');
+
+	function isValidZone(z) {
+		if (!z) return false;
+		const norm = String(z).trim();
+		if (norm.toLowerCase() === 'utc') return true;
+		// Intl will throw on invalid zones; cheaper than scanning allZones.
+		try {
+			new Intl.DateTimeFormat('en-US', { timeZone: norm });
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
+	function applyZone(z) {
+		const norm = String(z ?? '').trim();
+		if (!isValidZone(norm)) {
+			zoneError = `Unknown timezone: "${norm}"`;
+			return;
+		}
+		zoneError = '';
+		appState.displayTimezone = norm.toLowerCase() === 'utc' ? 'utc' : norm;
+		zoneInput = appState.displayTimezone;
+	}
+
+	function detectLocalZone() {
+		const local = Intl.DateTimeFormat().resolvedOptions().timeZone;
+		applyZone(local);
+	}
+
 	function changeDefaultPalette(palette) {
 		appState.appColours = appConsts.colourPalettes[palette];
 		//update the favicon
@@ -36,5 +79,65 @@
 		<p>
 			Zoom: <NumberWithUnits bind:value={appState.canvasScale} min="0.01" max="10" step="0.05" />
 		</p>
+
+		<p>
+			Timezone:
+			<input
+				class="zone-input"
+				type="text"
+				list="ancir-timezone-list"
+				bind:value={zoneInput}
+				onchange={() => applyZone(zoneInput)}
+				onblur={() => applyZone(zoneInput)}
+				onkeydown={(e) => {
+					if (e.key === 'Enter') applyZone(zoneInput);
+				}}
+				placeholder="utc"
+			/>
+			<button class="zone-button" type="button" onclick={detectLocalZone}>
+				Detect from browser
+			</button>
+			<datalist id="ancir-timezone-list">
+				<option value="utc"></option>
+				{#each allZones as z (z)}
+					<option value={z}></option>
+				{/each}
+			</datalist>
+			{#if zoneError}
+				<span class="zone-error">{zoneError}</span>
+			{/if}
+		</p>
 	{/snippet}
 </Modal>
+
+<style>
+	.zone-input {
+		font: inherit;
+		padding: 0.2rem 0.4rem;
+		min-width: 16ch;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 2px;
+		background: var(--color-lightness-97);
+	}
+
+	.zone-button {
+		font: inherit;
+		padding: 0.2rem 0.6rem;
+		margin-left: 0.4rem;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 2px;
+		background: var(--color-lightness-95);
+		cursor: pointer;
+	}
+
+	.zone-button:hover {
+		background: var(--color-lightness-90);
+	}
+
+	.zone-error {
+		display: block;
+		margin-top: 0.25rem;
+		font-size: 0.85em;
+		color: var(--color-error, #c5221f);
+	}
+</style>
