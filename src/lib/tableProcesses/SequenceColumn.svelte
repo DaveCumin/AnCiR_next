@@ -1,5 +1,5 @@
 <script module>
-	import { DateTime } from 'luxon';
+	import dayjs from '$lib/utils/time/dayjsSetup.js';
 	import { core } from '$lib/core/core.svelte';
 
 	const displayName = 'Sequence Column';
@@ -10,9 +10,9 @@
 		['count', { val: 10 }],
 		['end', { val: 9 }],
 		// time-specific defaults (stored in ms)
-		['startTime', { val: DateTime.utc().toMillis() }],
+		['startTime', { val: dayjs.utc().valueOf() }],
 		['stepHours', { val: 1 }],
-		['endTime', { val: DateTime.utc().plus({ days: 1 }).toMillis() }],
+		['endTime', { val: dayjs.utc().add(1, 'day').valueOf() }],
 		['out', { result: { val: -1 } }],
 		['valid', { val: false }]
 	]);
@@ -51,7 +51,7 @@
 			getColumnById(argsIN.out.result).data = argsIN.out.result;
 			getColumnById(argsIN.out.result).type = argsIN.seqType === 'time' ? 'time' : 'number';
 			if (argsIN.seqType === 'time') {
-				getColumnById(argsIN.out.result).timeFormat = "YYYY-MM-DD'T'HH:mm:ss.S'Z'";
+				getColumnById(argsIN.out.result).timeFormat = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';
 			}
 			const processHash = crypto.randomUUID();
 			getColumnById(argsIN.out.result).tableProcessGUId = processHash;

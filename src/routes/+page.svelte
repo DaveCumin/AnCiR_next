@@ -386,8 +386,11 @@
 			'time',
 			'REALTIME',
 			'Just made up'
-		); //yyyy-LL-dd'T'HH:mm:ss.S'Z'
-		core.data[core.data.length - 1].timeFormat = "yyyy-LL-dd'T'HH:mm:ss.S'Z'"; //'%Y-%m-%dT%H:%M:%S.%L%Z';
+		);
+		// dayjs token syntax: literals in [], `Z` is the offset token so it
+		// must be escaped to be matched literally as the trailing "Z" of an
+		// ISO-8601 UTC timestamp like "2026-04-30T05:38:03.894Z".
+		core.data[core.data.length - 1].timeFormat = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';
 
 		appState.loadingState.loadingMsg = 'Putting data into tables...';
 		await new Promise((resolve) => setTimeout(resolve, 10));

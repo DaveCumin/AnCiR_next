@@ -1,11 +1,11 @@
 <script module>
-	import { DateTime } from 'luxon';
+	import dayjs from '$lib/utils/time/dayjsSetup.js';
 
 	import { core } from '$lib/core/core.svelte';
 
 	const displayName = 'Simulate Data';
 	const defaults = new Map([
-		['startTime', { val: DateTime.fromISO(new Date().toISOString(), { zone: 'utc' }).toMillis() }],
+		['startTime', { val: dayjs.utc().valueOf() }],
 		[
 			'sections',
 			{
@@ -81,7 +81,7 @@
 			core.rawData.set(timeOUT, simulatedTime);
 			getColumnById(timeOUT).data = timeOUT;
 			getColumnById(timeOUT).type = 'time';
-			getColumnById(timeOUT).timeFormat = "YYYY-MM-DD'T'HH:mm:ss.S'Z'";
+			getColumnById(timeOUT).timeFormat = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';
 
 			core.rawData.set(valuesOUT, simulatedValues);
 			getColumnById(valuesOUT).data = valuesOUT;

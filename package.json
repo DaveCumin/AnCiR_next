@@ -8,6 +8,7 @@
 		"build": "node src/lib/utils/generateBuild.js && vite build",
 		"postbuild": "node --env-file=.env -e \"const {execSync}=require('child_process'); const cmd=process.env.DEPLOY_COMMAND; if(cmd){console.log('🚀 Uploading to FTP...'); execSync(cmd,{stdio:'inherit',cwd:process.cwd()}); console.log('✅ FTP upload completed!');} else {console.warn('⚠️ No DEPLOY_COMMAND in .env');}\" || echo '⚠️ FTP upload skipped.'",
 		"testbuild": "vitest run && node src/lib/utils/generateBuild.js && vite build",
+		"buildonly": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
@@ -60,9 +61,9 @@
 		"d3-shape": "^3.2.0",
 		"d3-time-format": "^4.1.0",
 		"d3-transition": "^3.0.1",
+		"dayjs": "^1.11.20",
 		"fast-json-patch": "^3.1.1",
 		"fflate": "^0.8.2",
-		"luxon": "^3.7.2",
 		"papaparse": "^5.5.3",
 		"rollup-plugin-visualizer": "^6.0.5"
 	}

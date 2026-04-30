@@ -7,17 +7,12 @@
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 >>>>>>> Stashed changes
 	import * as XLSX from '$lib/utils/xlsxLite';
-	import { DateTime } from 'luxon';
+	import dayjs from '$lib/utils/time/dayjsSetup.js';
 
 	import { appConsts, core, pushObj, appState } from '$lib/core/core.svelte';
 	import { Table } from '$lib/core/Table.svelte';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
-	import {
-		guessDateofArray,
-		forceFormat,
-		getPeriod,
-		convertFormat
-	} from '$lib/utils/time/TimeUtils';
+	import { guessDateofArray, forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
 	import { numToString } from '$lib/utils/GeneralUtils';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
@@ -120,6 +115,55 @@
 			// Enable combination by default
 			combinePairs.add(i);
 		}
+	}
+
+	// Update a pair's date/time column choice. Re-guesses the format string so
+	// downstream metadata stays in sync with the user's manual selection.
+	function updatePair(idx, field, value) {
+		if (idx < 0 || idx >= dateTimePairs.length) return;
+		const pair = { ...dateTimePairs[idx], [field]: value };
+		const fmtField = field === 'dateCol' ? 'dateFormat' : 'timeFormat';
+		const sample = parsedData?.[value];
+		if (sample && sample.length) {
+			const fmt = guessDateofArray(sample);
+			pair[fmtField] = fmt && fmt !== -1 ? String(fmt) : '';
+		} else {
+			pair[fmtField] = '';
+		}
+		dateTimePairs[idx] = pair;
+	}
+
+	// Append a fresh pair, picking sensible defaults from unused headers.
+	function addPair() {
+		const used = new Set();
+		for (const p of dateTimePairs) {
+			if (p.dateCol) used.add(p.dateCol);
+			if (p.timeCol) used.add(p.timeCol);
+		}
+		const free = headers.filter((h) => !used.has(h));
+		const dateCol = free[0] ?? headers[0] ?? '';
+		const timeCol = free[1] ?? headers[1] ?? headers[0] ?? '';
+		const newIdx = dateTimePairs.length;
+		dateTimePairs = [
+			...dateTimePairs,
+			{ dateCol, timeCol, dateFormat: '', timeFormat: '' }
+		];
+		// Re-guess formats based on actual sample data.
+		updatePair(newIdx, 'dateCol', dateCol);
+		updatePair(newIdx, 'timeCol', timeCol);
+		// Enabled by default — adding a pair implies the user wants to merge it.
+		combinePairs = new Set([...combinePairs, newIdx]);
+	}
+
+	// Remove a pair and shift any larger indices in the combine-set.
+	function removePair(idx) {
+		dateTimePairs = dateTimePairs.filter((_, i) => i !== idx);
+		const next = new Set();
+		for (const i of combinePairs) {
+			if (i < idx) next.add(i);
+			else if (i > idx) next.add(i - 1);
+		}
+		combinePairs = next;
 	}
 
 	/**
@@ -1122,13 +1166,12 @@
 
 		if (!timeCol) return data; // No time column found — leave unsorted
 
-		const luxonFmt = convertFormat(timeFmt);
 		const timeValues = data[timeCol];
 		const n = timeValues.length;
 
 		// Build array of [index, parsedMs] and sort by ms
 		const indices = Array.from({ length: n }, (_, i) => {
-			const ms = DateTime.fromFormat(String(timeValues[i]), luxonFmt).toMillis();
+			const ms = dayjs(String(timeValues[i]), timeFmt, true).valueOf();
 			return { i, ms };
 		});
 		indices.sort((a, b) => a.ms - b.ms);
@@ -1278,26 +1321,26 @@
 		// intervalRaw × 15 = seconds per epoch
 		const epochSeconds = intervalRaw * 15;
 
-		// Parse start date — try full year first, then 2-digit
-		let startDate = DateTime.fromFormat(dateStr, 'dd-MMM-yyyy', { locale: 'en' });
-		if (!startDate.isValid) {
-			startDate = DateTime.fromFormat(dateStr, 'dd-MMM-yy', { locale: 'en' });
+		// Parse start date — try full year first, then 2-digit. AWD files emit
+		// dates like "12-Mar-2024" or "12-Mar-24", always English month names.
+		let startDate = dayjs(dateStr, 'DD-MMM-YYYY', 'en', true);
+		if (!startDate.isValid()) {
+			startDate = dayjs(dateStr, 'DD-MMM-YY', 'en', true);
 		}
-		if (!startDate.isValid) {
+		if (!startDate.isValid()) {
 			console.warn('Invalid AWD start date:', dateStr);
-			startDate = DateTime.now().startOf('day');
+			startDate = dayjs().startOf('day');
 		}
 
 		// Add start time
 		let startDT = startDate;
 		const timeMatch = timeStr.match(/^(\d{1,2}):(\d{2})$/);
 		if (timeMatch) {
-			startDT = startDate.set({
-				hour: Number(timeMatch[1]),
-				minute: Number(timeMatch[2]),
-				second: 0,
-				millisecond: 0
-			});
+			startDT = startDate
+				.hour(Number(timeMatch[1]))
+				.minute(Number(timeMatch[2]))
+				.second(0)
+				.millisecond(0);
 		} else {
 			console.warn('Invalid AWD start time:', timeStr);
 		}
@@ -1315,7 +1358,7 @@
 
 		// Metadata for time compression (used only for non-DateTime columns if you want later)
 		awdMeta = {
-			startMs: startDT.toMillis(),
+			startMs: startDT.valueOf(),
 			stepMs: epochSeconds * 1000,
 			count: dataRows.length
 		};
@@ -1325,8 +1368,8 @@
 			const obj = {};
 
 			// Always generate proper ISO-like datetime for DateTime column (needed for type guessing)
-			const dt = startDT.plus({ seconds: i * epochSeconds });
-			obj.DateTime = dt.toFormat('yyyy-MM-dd HH:mm:ss');
+			const dt = startDT.add(i * epochSeconds, 'second');
+			obj.DateTime = dt.format('YYYY-MM-DD HH:mm:ss');
 
 			// Other columns: numbers
 			obj.Activity = row[0] != null ? Number(row[0]) : 0;
@@ -1409,26 +1452,24 @@
 		if (awdMeta && timeKey === 'DateTime') {
 			// AWD: compute hours directly from metadata — no string parsing needed
 			const stepHours = awdMeta.stepMs / 3_600_000;
-			firstDt = DateTime.fromMillis(awdMeta.startMs);
+			firstDt = dayjs(awdMeta.startMs);
 			timeHours = new Array(rowCount);
 			for (let i = 0; i < rowCount; i++) {
 				timeHours[i] = i * stepHours;
 			}
 		} else {
-			// General case: parse time strings
+			// General case: parse time strings. Try the guessed format first
+			// (strict), then fall back to dayjs's permissive ISO parser which
+			// also covers SQL-ish "YYYY-MM-DD HH:mm:ss".
 			const timeStrings = data[timeKey];
 
-			// Try multiple Luxon parsers to find one that works
 			function parseDt(s) {
 				if (s == null) return null;
 				const str = String(s);
-				let dt = DateTime.fromFormat(str, timeFormat);
-				if (dt.isValid) return dt;
-				dt = DateTime.fromSQL(str);
-				if (dt.isValid) return dt;
-				dt = DateTime.fromISO(str);
-				if (dt.isValid) return dt;
-				return null;
+				let dt = dayjs(str, timeFormat, true);
+				if (dt.isValid()) return dt;
+				dt = dayjs(str);
+				return dt.isValid() ? dt : null;
 			}
 
 			firstDt = parseDt(timeStrings[0]);
@@ -1439,7 +1480,7 @@
 
 			timeHours = timeStrings.map((t) => {
 				const dt = parseDt(t);
-				return dt ? dt.diff(firstDt, 'hours').hours : NaN;
+				return dt ? dt.diff(firstDt, 'hour', true) : NaN;
 			});
 		}
 
@@ -1641,26 +1682,63 @@
 							</div>
 						{/if}
 
-						{#if dateTimePairs.length > 0}
-							<div class="section-row combine-panel">
-								<p class="combine-title">Separate Date and Time columns detected:</p>
-								{#each dateTimePairs as pair, idx}
-									<label class="combine-checkbox">
-										<input
-											type="checkbox"
-											checked={combinePairs.has(idx)}
-											onchange={(e) => {
-												const checked = e.currentTarget.checked;
-												combinePairs = checked
-													? new Set([...combinePairs, idx])
-													: new Set([...combinePairs].filter((i) => i !== idx));
-											}}
-										/>
-										Combine "{pair.dateCol}" + "{pair.timeCol}" into a single DateTime column
-									</label>
-								{/each}
-							</div>
-						{/if}
+						<div class="section-row combine-panel">
+							<p class="combine-title">
+								Combine separate Date and Time columns into a single DateTime column:
+							</p>
+							{#if dateTimePairs.length === 0}
+								<p class="combine-empty">
+									No date/time pairs detected. Click "Add pair" to choose two columns to merge.
+								</p>
+							{/if}
+							{#each dateTimePairs as pair, idx (idx)}
+								<div class="combine-row">
+									<input
+										type="checkbox"
+										title="Merge this pair on import"
+										checked={combinePairs.has(idx)}
+										onchange={(e) => {
+											const checked = e.currentTarget.checked;
+											combinePairs = checked
+												? new Set([...combinePairs, idx])
+												: new Set([...combinePairs].filter((i) => i !== idx));
+										}}
+									/>
+									<select
+										class="combine-select"
+										value={pair.dateCol}
+										onchange={(e) => updatePair(idx, 'dateCol', e.currentTarget.value)}
+									>
+										{#each headers as h (h)}
+											<option value={h}>{h}</option>
+										{/each}
+									</select>
+									<span class="combine-plus">+</span>
+									<select
+										class="combine-select"
+										value={pair.timeCol}
+										onchange={(e) => updatePair(idx, 'timeCol', e.currentTarget.value)}
+									>
+										{#each headers as h (h)}
+											<option value={h}>{h}</option>
+										{/each}
+									</select>
+									<button
+										type="button"
+										class="combine-remove"
+										title="Remove this pair"
+										onclick={() => removePair(idx)}
+									>
+										×
+									</button>
+								</div>
+							{/each}
+							{#if headers.length >= 2}
+								<button type="button" class="combine-add" onclick={addPair}>
+									+ Add pair
+								</button>
+							{/if}
+						</div>
 
 						{#if core.tables.length > 0}
 							<div class="section-row">
@@ -2069,13 +2147,60 @@
 		margin: 0 0 0.25em 0;
 		font-size: 0.9em;
 	}
-	.combine-checkbox {
+	.combine-empty {
+		margin: 0.25em 0;
+		font-size: 0.85em;
+		color: var(--color-lightness-50);
+		font-style: italic;
+	}
+	.combine-row {
 		display: flex;
 		align-items: center;
 		gap: 0.4em;
 		font-size: 0.85em;
+		margin: 0.25em 0;
+	}
+	.combine-select {
+		flex: 1 1 auto;
+		min-width: 6ch;
+		font: inherit;
+		padding: 0.15rem 0.3rem;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 2px;
+		background: var(--color-lightness-97);
+	}
+	.combine-plus {
+		font-weight: 700;
+		color: var(--color-lightness-50);
+	}
+	.combine-remove {
+		font: inherit;
+		font-size: 1.1em;
+		line-height: 1;
+		padding: 0 0.4em;
+		border: 1px solid transparent;
+		border-radius: 2px;
+		background: transparent;
+		color: var(--color-lightness-50);
 		cursor: pointer;
-		margin: 0.2em 0;
+	}
+	.combine-remove:hover {
+		color: var(--color-error, #c5221f);
+		border-color: currentColor;
+	}
+	.combine-add {
+		font: inherit;
+		font-size: 0.85em;
+		margin-top: 0.4em;
+		padding: 0.2em 0.6em;
+		border: 1px dashed var(--color-info);
+		border-radius: 2px;
+		background: transparent;
+		color: var(--color-info-text, #1a73e8);
+		cursor: pointer;
+	}
+	.combine-add:hover {
+		background: var(--color-info-bg);
 	}
 
 	/* ── Mapping dropdown in replace mode ───────────────────────────────────── */

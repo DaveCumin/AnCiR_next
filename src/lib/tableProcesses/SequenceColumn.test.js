@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('$lib/core/core.svelte', () => ({ core: { rawData: new Map() } }));
 vi.mock('$lib/core/Column.svelte', () => ({ getColumnById: vi.fn() }));
-vi.mock('luxon', () => ({ DateTime: { utc: () => ({ toMillis: () => 0, plus: () => ({ toMillis: () => 86400000 }) }) } }));
 
 import { sequencecolumn } from './SequenceColumn.svelte';
 

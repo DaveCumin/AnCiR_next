@@ -1,5 +1,5 @@
 <script>
-	import { DateTime } from 'luxon';
+	import dayjs from '$lib/utils/time/dayjsSetup.js';
 	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
 
 	let { value = $bindable(), zone = null, onChange = () => {} } = $props();
@@ -8,15 +8,22 @@
 	// so changing appState.displayTimezone propagates to every input.
 	let effectiveZone = $derived(zone ?? getDisplayZone());
 
+	function inZone(input) {
+		// Anchor a Date or ms value to `effectiveZone`. UTC takes a fast path
+		// because dayjs.utc avoids the Intl.DateTimeFormat lookup.
+		if (effectiveZone === 'utc') return dayjs.utc(input);
+		return dayjs(input).tz(effectiveZone);
+	}
+
 	// Normalize value (supports Date object or timestamp)
 	let dt = $derived.by(() => {
-		if (value instanceof Date) return DateTime.fromJSDate(value).setZone(effectiveZone);
-		if (typeof value === 'number') return DateTime.fromMillis(value).setZone(effectiveZone);
-		return DateTime.now();
+		if (value instanceof Date) return inZone(value);
+		if (typeof value === 'number') return inZone(value);
+		return effectiveZone === 'utc' ? dayjs.utc() : dayjs().tz(effectiveZone);
 	});
 
-	let displayDate = $derived(dt.toISODate());
-	let displayTime = $derived(dt.toISOTime({ suppressMilliseconds: true }).slice(0, 5));
+	let displayDate = $derived(dt.format('YYYY-MM-DD'));
+	let displayTime = $derived(dt.format('HH:mm'));
 
 	// Local editing state
 	let editingDate = $state(displayDate);
@@ -29,9 +36,13 @@
 	});
 
 	function updateValue() {
-		const newDt = DateTime.fromISO(`${editingDate}T${editingTime}`, { zone: effectiveZone });
-		if (newDt.isValid) {
-			const newValue = newDt.toMillis();
+		const wallClock = `${editingDate}T${editingTime}`;
+		// Wall-clock interpretation: same string, different absolute instant
+		// depending on the chosen zone.
+		const newDt =
+			effectiveZone === 'utc' ? dayjs.utc(wallClock) : dayjs.tz(wallClock, effectiveZone);
+		if (newDt.isValid()) {
+			const newValue = newDt.valueOf();
 			value = newValue;
 			onChange(newValue);
 		}

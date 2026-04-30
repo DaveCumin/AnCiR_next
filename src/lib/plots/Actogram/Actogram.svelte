@@ -20,6 +20,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import { core } from '$lib/core/core.svelte.js';
 	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
+	import dayjs from '$lib/utils/time/dayjsSetup.js';
 
 	export const Actogram_defaultDataInputs = ['time', 'values'];
 	export const Actogram_controlHeaders = ['Properties', 'Data', 'Annotations'];
@@ -333,15 +334,9 @@
 
 			// Snap to start-of-day in the configured display zone.
 			// Default 'utc' avoids DST jumps; switch via appState.displayTimezone.
-			return DateTime.fromMillis(minTime)
-				.setZone(getDisplayZone())
-				.set({
-					hour: 0,
-					minute: 0,
-					second: 0,
-					millisecond: 0
-				})
-				.toMillis();
+			const zone = getDisplayZone();
+			const dt = zone === 'utc' ? dayjs.utc(minTime) : dayjs(minTime).tz(zone);
+			return dt.startOf('day').valueOf();
 		});
 
 		spaceBetween = $state(2);
@@ -520,7 +515,6 @@
 	import { appState } from '$lib/core/core.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import { bindAltTooltipToggle } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
-	import { DateTime } from 'luxon';
 
 	let { theData, which } = $props();
 
@@ -529,7 +523,9 @@
 	function actogramXFormatter(absHrs) {
 		if (absHrs == null || isNaN(absHrs)) return '';
 		const unixTime = theData.plot.startTime + absHrs * 3600000;
-		return DateTime.fromMillis(unixTime).setZone(getDisplayZone()).toFormat('d LLL, HH:mm');
+		const zone = getDisplayZone();
+		const dt = zone === 'utc' ? dayjs.utc(unixTime) : dayjs(unixTime).tz(zone);
+		return dt.format('D MMM, HH:mm');
 	}
 
 	// allBins stores {start, end, y} in offset-corrected absolute hours.
