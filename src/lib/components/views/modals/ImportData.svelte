@@ -113,6 +113,55 @@
 		}
 	}
 
+	// Update a pair's date/time column choice. Re-guesses the format string so
+	// downstream metadata stays in sync with the user's manual selection.
+	function updatePair(idx, field, value) {
+		if (idx < 0 || idx >= dateTimePairs.length) return;
+		const pair = { ...dateTimePairs[idx], [field]: value };
+		const fmtField = field === 'dateCol' ? 'dateFormat' : 'timeFormat';
+		const sample = parsedData?.[value];
+		if (sample && sample.length) {
+			const fmt = guessDateofArray(sample);
+			pair[fmtField] = fmt && fmt !== -1 ? String(fmt) : '';
+		} else {
+			pair[fmtField] = '';
+		}
+		dateTimePairs[idx] = pair;
+	}
+
+	// Append a fresh pair, picking sensible defaults from unused headers.
+	function addPair() {
+		const used = new Set();
+		for (const p of dateTimePairs) {
+			if (p.dateCol) used.add(p.dateCol);
+			if (p.timeCol) used.add(p.timeCol);
+		}
+		const free = headers.filter((h) => !used.has(h));
+		const dateCol = free[0] ?? headers[0] ?? '';
+		const timeCol = free[1] ?? headers[1] ?? headers[0] ?? '';
+		const newIdx = dateTimePairs.length;
+		dateTimePairs = [
+			...dateTimePairs,
+			{ dateCol, timeCol, dateFormat: '', timeFormat: '' }
+		];
+		// Re-guess formats based on actual sample data.
+		updatePair(newIdx, 'dateCol', dateCol);
+		updatePair(newIdx, 'timeCol', timeCol);
+		// Enabled by default — adding a pair implies the user wants to merge it.
+		combinePairs = new Set([...combinePairs, newIdx]);
+	}
+
+	// Remove a pair and shift any larger indices in the combine-set.
+	function removePair(idx) {
+		dateTimePairs = dateTimePairs.filter((_, i) => i !== idx);
+		const next = new Set();
+		for (const i of combinePairs) {
+			if (i < idx) next.add(i);
+			else if (i > idx) next.add(i - 1);
+		}
+		combinePairs = next;
+	}
+
 	/**
 	 * Merge date+time column pairs in the given data object.
 	 * Returns a new data object with combined columns replacing the originals.
@@ -1621,26 +1670,63 @@
 							</div>
 						{/if}
 
-						{#if dateTimePairs.length > 0}
-							<div class="section-row combine-panel">
-								<p class="combine-title">Separate Date and Time columns detected:</p>
-								{#each dateTimePairs as pair, idx}
-									<label class="combine-checkbox">
-										<input
-											type="checkbox"
-											checked={combinePairs.has(idx)}
-											onchange={(e) => {
-												const checked = e.currentTarget.checked;
-												combinePairs = checked
-													? new Set([...combinePairs, idx])
-													: new Set([...combinePairs].filter((i) => i !== idx));
-											}}
-										/>
-										Combine "{pair.dateCol}" + "{pair.timeCol}" into a single DateTime column
-									</label>
-								{/each}
-							</div>
-						{/if}
+						<div class="section-row combine-panel">
+							<p class="combine-title">
+								Combine separate Date and Time columns into a single DateTime column:
+							</p>
+							{#if dateTimePairs.length === 0}
+								<p class="combine-empty">
+									No date/time pairs detected. Click "Add pair" to choose two columns to merge.
+								</p>
+							{/if}
+							{#each dateTimePairs as pair, idx (idx)}
+								<div class="combine-row">
+									<input
+										type="checkbox"
+										title="Merge this pair on import"
+										checked={combinePairs.has(idx)}
+										onchange={(e) => {
+											const checked = e.currentTarget.checked;
+											combinePairs = checked
+												? new Set([...combinePairs, idx])
+												: new Set([...combinePairs].filter((i) => i !== idx));
+										}}
+									/>
+									<select
+										class="combine-select"
+										value={pair.dateCol}
+										onchange={(e) => updatePair(idx, 'dateCol', e.currentTarget.value)}
+									>
+										{#each headers as h (h)}
+											<option value={h}>{h}</option>
+										{/each}
+									</select>
+									<span class="combine-plus">+</span>
+									<select
+										class="combine-select"
+										value={pair.timeCol}
+										onchange={(e) => updatePair(idx, 'timeCol', e.currentTarget.value)}
+									>
+										{#each headers as h (h)}
+											<option value={h}>{h}</option>
+										{/each}
+									</select>
+									<button
+										type="button"
+										class="combine-remove"
+										title="Remove this pair"
+										onclick={() => removePair(idx)}
+									>
+										×
+									</button>
+								</div>
+							{/each}
+							{#if headers.length >= 2}
+								<button type="button" class="combine-add" onclick={addPair}>
+									+ Add pair
+								</button>
+							{/if}
+						</div>
 
 						{#if core.tables.length > 0}
 							<div class="section-row">
@@ -2049,13 +2135,60 @@
 		margin: 0 0 0.25em 0;
 		font-size: 0.9em;
 	}
-	.combine-checkbox {
+	.combine-empty {
+		margin: 0.25em 0;
+		font-size: 0.85em;
+		color: var(--color-lightness-50);
+		font-style: italic;
+	}
+	.combine-row {
 		display: flex;
 		align-items: center;
 		gap: 0.4em;
 		font-size: 0.85em;
+		margin: 0.25em 0;
+	}
+	.combine-select {
+		flex: 1 1 auto;
+		min-width: 6ch;
+		font: inherit;
+		padding: 0.15rem 0.3rem;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 2px;
+		background: var(--color-lightness-97);
+	}
+	.combine-plus {
+		font-weight: 700;
+		color: var(--color-lightness-50);
+	}
+	.combine-remove {
+		font: inherit;
+		font-size: 1.1em;
+		line-height: 1;
+		padding: 0 0.4em;
+		border: 1px solid transparent;
+		border-radius: 2px;
+		background: transparent;
+		color: var(--color-lightness-50);
 		cursor: pointer;
-		margin: 0.2em 0;
+	}
+	.combine-remove:hover {
+		color: var(--color-error, #c5221f);
+		border-color: currentColor;
+	}
+	.combine-add {
+		font: inherit;
+		font-size: 0.85em;
+		margin-top: 0.4em;
+		padding: 0.2em 0.6em;
+		border: 1px dashed var(--color-info);
+		border-radius: 2px;
+		background: transparent;
+		color: var(--color-info-text, #1a73e8);
+		cursor: pointer;
+	}
+	.combine-add:hover {
+		background: var(--color-info-bg);
 	}
 
 	/* ── Mapping dropdown in replace mode ───────────────────────────────────── */
