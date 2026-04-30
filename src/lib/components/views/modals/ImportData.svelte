@@ -1,7 +1,11 @@
 <script module>
 	// @ts-nocheck
 	import Papa from 'papaparse';
+<<<<<<< Updated upstream
 	import { showError } from '$lib/core/core.svelte.js';
+=======
+	import { addNotification } from '$lib/core/notifications.svelte.js';
+>>>>>>> Stashed changes
 	import * as XLSX from '$lib/utils/xlsxLite';
 	import { DateTime } from 'luxon';
 
@@ -445,7 +449,11 @@
 				error: (err) => {
 					error = { err, reason: 'Failed to fetch URL' };
 					errorInfile = true;
+<<<<<<< Updated upstream
 					showError(`Failed to fetch data from URL. \n\n${err.message ?? err}`);
+=======
+					addNotification(`Failed to fetch data from URL.\n\n${err.message ?? err}`);
+>>>>>>> Stashed changes
 					resolve();
 				}
 			});
@@ -1083,7 +1091,11 @@
 			appState.loadingState.loadingMsg = '';
 			awaitingLoad = false;
 			const msg = error?.message ?? String(error);
+<<<<<<< Updated upstream
 			showError(`Failed to load session from URL. \n\n${msg}`);
+=======
+			addNotification(`Failed to load session from URL.\n\n${msg}`);
+>>>>>>> Stashed changes
 			console.error('loadFromURL error:', error);
 		}
 	}
