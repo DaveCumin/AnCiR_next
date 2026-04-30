@@ -19,21 +19,21 @@
 		parentData = $state();
 		id;
 		name = $state('');
-		startTime = $state(1);
+		// Absolute start timestamp (ms). Anchoring to absolute time means the
+		// annotation stays at the same real-world moment when the actogram's
+		// start time is changed; the rendered hour-offset updates instead.
+		startMs = $state(0);
 		duration = $state(1);
 		colour = $state('#0000FFFF'); // Default to blue
 
-		// Derive endTime to avoid circular updates
+		// Hour offset from the actogram's start — used by the renderer.
+		startTime = $derived.by(() => {
+			return (this.startMs - (this.parentData?.startTime ?? 0)) / 3600000;
+		});
 		endTime = $derived(this.startTime + this.duration);
 
-		// Convert hour offset to milliseconds timestamp
-		startDateTime = $derived.by(() => {
-			return (this.parentData?.startTime ?? 0) + this.startTime * 3600000;
-		});
-
-		endDateTime = $derived.by(() => {
-			return (this.parentData?.startTime ?? 0) + this.endTime * 3600000;
-		});
+		startDateTime = $derived(this.startMs);
+		endDateTime = $derived(this.startMs + this.duration * 3600000);
 
 		// Calculate segments for rendering (handles period wrapping)
 		segments = $derived.by(() => {
@@ -79,14 +79,32 @@
 			this.parentData = parent;
 			this.id = _annotationCounter++;
 
+			const parentStart = parent?.startTime ?? 0;
+
 			if (dataIN) {
 				this.name = dataIN.name || 'annotation ' + this.id;
-				this.startTime = Number(dataIN.startTime) || 1;
-				this.duration = Number(dataIN.endTime - dataIN.startTime) || 1;
 				this.colour = dataIN.colour || '#0000FF';
+
+				if (dataIN.startMs != null) {
+					// New format — absolute timestamp in ms.
+					this.startMs = Number(dataIN.startMs);
+				} else if (dataIN.startTime != null) {
+					// Legacy format — hour offset from parent.startTime at save time.
+					this.startMs = parentStart + Number(dataIN.startTime) * 3600000;
+				} else {
+					this.startMs = parentStart + 3600000;
+				}
+
+				if (dataIN.duration != null) {
+					this.duration = Number(dataIN.duration);
+				} else if (dataIN.endTime != null && dataIN.startTime != null) {
+					this.duration = Math.max(0, Number(dataIN.endTime) - Number(dataIN.startTime));
+				} else {
+					this.duration = 1;
+				}
 			} else {
 				this.name = 'annotation ' + this.id;
-				this.startTime = 1;
+				this.startMs = parentStart + 3600000;
 				this.duration = 1;
 				this.colour = '#0000FF';
 			}
@@ -95,9 +113,11 @@
 		toJSON() {
 			return {
 				name: this.name,
+				startMs: this.startMs,
+				duration: this.duration,
+				// Kept for backward compatibility with any older readers.
 				startTime: this.startTime,
 				endTime: this.endTime,
-				duration: this.duration,
 				colour: this.colour
 			};
 		}
@@ -105,8 +125,10 @@
 		static fromJSON(json, parent) {
 			return new AnnotationClass(parent, {
 				name: json.name,
+				startMs: json.startMs,
 				startTime: json.startTime,
 				endTime: json.endTime,
+				duration: json.duration,
 				colour: json.colour
 			});
 		}
@@ -116,13 +138,19 @@
 <script>
 	let { annotation, which } = $props();
 
-	function changedStartTime() {
-		annotation.startTime = Number(annotation.startTime);
+	function parentStart() {
+		return annotation.parentData?.startTime ?? 0;
 	}
 
-	function changedEndTime(newend) {
-		const newEndTime = Number(newend) || 0;
-		annotation.duration = Math.max(0, newEndTime - annotation.startTime);
+	function changedStartTime(val) {
+		// "Start (hours)" is hour-offset from the actogram's start. Convert
+		// back to an absolute ms timestamp before storing.
+		annotation.startMs = parentStart() + Number(val) * 3600000;
+	}
+
+	function changedEndTime(val) {
+		const newEndHrs = Number(val) || 0;
+		annotation.duration = Math.max(0, newEndHrs - annotation.startTime);
 	}
 
 	function changedDuration() {
@@ -130,12 +158,11 @@
 	}
 
 	function changedStartDateTime(dt) {
-		annotation.startTime = (dt - annotation.parentData.startTime) / 3600000;
+		annotation.startMs = Number(dt);
 	}
 
 	function changedEndDateTime(dt) {
-		const newEndTimeHrs = (dt - annotation.parentData.startTime) / 3600000;
-		annotation.duration = Math.max(0, newEndTimeHrs - annotation.startTime);
+		annotation.duration = Math.max(0, (Number(dt) - annotation.startMs) / 3600000);
 	}
 
 	function handleHover(e) {
@@ -196,7 +223,7 @@
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>Start (hours)</p>
-			<NumberWithUnits step="0.1" bind:value={annotation.startTime} onInput={changedStartTime} />
+			<NumberWithUnits step="0.1" value={annotation.startTime} onInput={changedStartTime} />
 		</div>
 
 		<div class="control-input">
@@ -221,12 +248,12 @@
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>Start Date/Time</p>
-			<DateTimeHrs bind:value={annotation.startDateTime} onChange={changedStartDateTime} />
+			<DateTimeHrs value={annotation.startDateTime} onChange={changedStartDateTime} />
 		</div>
 
 		<div class="control-input">
 			<p>End Date/Time</p>
-			<DateTimeHrs bind:value={annotation.endDateTime} onChange={changedEndDateTime} />
+			<DateTimeHrs value={annotation.endDateTime} onChange={changedEndDateTime} />
 		</div>
 	</div>
 {/snippet}
