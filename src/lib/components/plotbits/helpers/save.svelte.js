@@ -1,12 +1,8 @@
 import { appState } from '$lib/core/core.svelte.js';
 import { core } from '$lib/core/core.svelte';
-<<<<<<< Updated upstream
 import { Plot } from '$lib/core/Plot.svelte';
-=======
 import { addNotification } from '$lib/core/notifications.svelte.js';
->>>>>>> Stashed changes
 import { tick } from 'svelte';
-import { showError } from '$lib/core/core.svelte.js';
 
 /**
  * Convert headers and rows to a CSV string and trigger a download.
@@ -154,11 +150,7 @@ export async function convertToImage(svgId, filetype = 'png') {
 			svgHeight = bbox.height;
 		} catch (e) {
 			console.error('Could not determine SVG dimensions:', e);
-<<<<<<< Updated upstream
-			showError('Error: Could not determine plot dimensions');
-=======
 			addNotification('Error: Could not determine plot dimensions');
->>>>>>> Stashed changes
 			return;
 		}
 	}

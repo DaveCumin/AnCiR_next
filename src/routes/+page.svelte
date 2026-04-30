@@ -10,12 +10,8 @@
 	import PlotDisplay from '$lib/components/views/PlotDisplay.svelte';
 
 	import AreYouSure from '$lib/components/views/modals/AreYouSure.svelte';
-<<<<<<< Updated upstream
-	import { showError } from '$lib/core/core.svelte.js';
-=======
 	import Notifications from '$lib/components/reusables/Notifications.svelte';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
->>>>>>> Stashed changes
 
 	import { loadProcesses } from '$lib/processes/processMap.js';
 	import { loadPlots } from '$lib/plots/plotMap.js';
@@ -222,11 +218,7 @@
 						}, 10); // Delay cleanup to ensure download starts
 					} catch (error) {
 						console.error('Failed to export JSON:', error.message);
-<<<<<<< Updated upstream
-						showError('Error exporting JSON: ' + error.message);
-=======
 						addNotification('Error exporting JSON: ' + error.message);
->>>>>>> Stashed changes
 					}
 				}
 			}
@@ -565,16 +557,13 @@
 	<ControlPanel />
 {/if}
 
-<<<<<<< Updated upstream
 <AreYouSure
 	bind:showModal={appState.showAYSModal}
 	text={appState.AYStext}
 	callback={appState.AYScallback}
 	options={appState.AYSoptions}
 />
-=======
 <Notifications />
->>>>>>> Stashed changes
 {#if appState.loadingState.isLoading}
 	<div class="backdrop" transition:fade={{ duration: 360 }}>
 		<div class="loading-container">
