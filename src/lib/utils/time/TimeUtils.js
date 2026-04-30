@@ -192,42 +192,48 @@ export function forceFormat(dataIN, formatIN) {
 }
 
 export function formatTimeFromUNIX(timeUNIX) {
+	if (timeUNIX == null || !Number.isFinite(Number(timeUNIX))) return '';
 	const zone = getDisplayZone();
 	const dt = zone === 'utc' ? dayjs.utc(timeUNIX) : dayjs(timeUNIX).tz(zone);
+	if (!dt.isValid()) return '';
 	// Hand off to formatTimeFromISO so any external consumers of the wire
 	// format ("DD MMM YYYY HH:mm:ss") see exactly the same string.
 	return formatTimeFromISO(dt.format('YYYY-MM-DDTHH:mm:ss.SSS'));
 }
 
+// Reformat an ISO-ish "YYYY-MM-DDTHH:mm[:ss[.SSS]]" string as
+// "DD MMM YYYY HH:mm:ss". Returns '' for any input we can't parse cleanly,
+// rather than throwing — table plots iterate over millions of cells, so a
+// single malformed value mustn't take the whole render down.
 export function formatTimeFromISO(timeString) {
-	if (timeString) {
-		const [datePart, timePart] = timeString.split('T');
-		const [year, month, day] = datePart.split('-');
-		const timeParts = timePart.split(':');
-		const hours = timeParts[0];
-		const minutes = timeParts[1];
-		const seconds = timeParts[2] ? timeParts[2].split('.')[0] : '00';
+	if (typeof timeString !== 'string' || !timeString) return '';
+	const [datePart, timePart] = timeString.split('T');
+	if (!datePart || !timePart) return '';
+	const [year, month, day] = datePart.split('-');
+	if (year == null || month == null || day == null) return '';
+	const timeParts = timePart.split(':');
+	if (timeParts.length < 2) return '';
+	const hours = timeParts[0];
+	const minutes = timeParts[1];
+	const seconds = timeParts[2] ? timeParts[2].split('.')[0] : '00';
 
-		const monthLookup = [
-			'Jan',
-			'Feb',
-			'Mar',
-			'Apr',
-			'May',
-			'Jun',
-			'Jul',
-			'Aug',
-			'Sep',
-			'Oct',
-			'Nov',
-			'Dec'
-		];
-		const monthText = monthLookup[+month - 1];
+	const monthLookup = [
+		'Jan',
+		'Feb',
+		'Mar',
+		'Apr',
+		'May',
+		'Jun',
+		'Jul',
+		'Aug',
+		'Sep',
+		'Oct',
+		'Nov',
+		'Dec'
+	];
+	const monthText = monthLookup[+month - 1];
 
-		return `${day} ${monthText} ${year} ${hours}:${minutes}:${seconds}`;
-	} else {
-		return '';
-	}
+	return `${day} ${monthText} ${year} ${hours}:${minutes}:${seconds}`;
 }
 export function getISODate(stringIN, formatIN) {
 	if (!formatIN) return stringIN;

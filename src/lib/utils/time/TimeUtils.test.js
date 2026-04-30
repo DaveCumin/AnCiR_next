@@ -3,7 +3,13 @@ import { describe, it, expect, vi } from 'vitest';
 // TimeUtils touches `appState.displayTimezone` via displayTime.js.
 vi.mock('$lib/core/core.svelte', () => ({ appState: { displayTimezone: 'utc' } }));
 
-import { normalizeTimeFormat, getUNIXDate, getISODate } from './TimeUtils.js';
+import {
+	normalizeTimeFormat,
+	getUNIXDate,
+	getISODate,
+	formatTimeFromUNIX,
+	formatTimeFromISO
+} from './TimeUtils.js';
 
 describe('normalizeTimeFormat — Luxon → dayjs format string conversion', () => {
 	it('translates the saved-session timestamp format', () => {
@@ -48,5 +54,31 @@ describe('getUNIXDate / getISODate — parses the ISO timestamp the user reporte
 
 	it('round-trips ISO via getISODate', () => {
 		expect(getISODate(ISO, LEGACY_FMT)).toBe(ISO);
+	});
+});
+
+describe('formatTimeFromUNIX / formatTimeFromISO — defensive against bad input', () => {
+	// Regression: a single null/NaN cell in a UNIX-ms time column used to throw
+	// "Cannot read properties of undefined (reading 'split')" because dayjs
+	// returned the literal "Invalid Date" string and formatTimeFromISO split it
+	// into ["Invalid Date"], leaving timePart undefined.
+	it('formatTimeFromUNIX returns "" for null/undefined/NaN', () => {
+		expect(formatTimeFromUNIX(null)).toBe('');
+		expect(formatTimeFromUNIX(undefined)).toBe('');
+		expect(formatTimeFromUNIX(NaN)).toBe('');
+	});
+
+	it('formatTimeFromISO returns "" instead of throwing for malformed input', () => {
+		expect(formatTimeFromISO('Invalid Date')).toBe('');
+		expect(formatTimeFromISO('')).toBe('');
+		expect(formatTimeFromISO(null)).toBe('');
+		expect(formatTimeFromISO('2026-04-30')).toBe(''); // missing time part
+		expect(formatTimeFromISO('2026-04-30T')).toBe(''); // empty time part
+	});
+
+	it('formatTimeFromUNIX still formats valid timestamps', () => {
+		// 2026-04-30 05:38:03 UTC
+		const ms = Date.UTC(2026, 3, 30, 5, 38, 3);
+		expect(formatTimeFromUNIX(ms)).toBe('30 Apr 2026 05:38:03');
 	});
 });
