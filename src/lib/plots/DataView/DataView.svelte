@@ -103,11 +103,20 @@
 		}
 	}
 
+	export const DataView_sharedFields = [
+		{ path: 'width', label: 'Width', input: 'number', group: 'Dimension' },
+		{ path: 'height', label: 'Height', input: 'number', group: 'Dimension' },
+		{ path: 'plot.decimalPlaces', label: 'Decimal places', input: 'number', group: 'Display' },
+		{ path: 'plot.colCurrent', label: 'Starting row', input: 'number', group: 'Display' }
+	];
+
 	export const definition = {
 		displayName: DataView_displayName,
 		defaultDataInputs: DataView_defaultDataInputs,
 		controlHeaders: DataView_controlHeaders,
-		plotClass: DataViewclass
+		plotClass: DataViewclass,
+		sharedFields: DataView_sharedFields,
+		dataSharedFields: []
 	};
 </script>
 

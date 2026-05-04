@@ -528,10 +528,40 @@
 		}
 	}
 
+	export const Periodogram_sharedFields = [
+		{ path: 'width', label: 'Width', input: 'number', group: 'Dimension' },
+		{ path: 'height', label: 'Height', input: 'number', group: 'Dimension' },
+
+		{ path: 'plot.padding.top', label: 'Top', input: 'number', group: 'Padding' },
+		{ path: 'plot.padding.bottom', label: 'Bottom', input: 'number', group: 'Padding' },
+		{ path: 'plot.padding.left', label: 'Left', input: 'number', group: 'Padding' },
+		{ path: 'plot.padding.right', label: 'Right', input: 'number', group: 'Padding' },
+
+		{ path: 'plot.periodlimsIN[0]', label: 'Period min', input: 'number', group: 'Period' },
+		{ path: 'plot.periodlimsIN[1]', label: 'Period max', input: 'number', group: 'Period' },
+		{ path: 'plot.periodSteps', label: 'Step', input: 'number', step: 0.05, group: 'Period' },
+
+		{ path: 'plot.ylimsIN[0]', label: 'Power min', input: 'number', group: 'Y-axis' },
+		{ path: 'plot.ylimsIN[1]', label: 'Power max', input: 'number', group: 'Y-axis' }
+	];
+
+	export const Periodogram_dataSharedFields = [
+		{ path: 'binSize', label: 'Bin size (h)', input: 'number', step: 0.1 },
+		{
+			path: 'method',
+			label: 'Method',
+			input: 'select',
+			options: ['Lomb-Scargle', 'Chi-squared', 'Enright']
+		},
+		{ path: 'chiSquaredAlpha', label: 'Alpha', input: 'number', step: 0.01 }
+	];
+
 	export const definition = {
 		defaultDataInputs: Periodogram_defaultDataInputs,
 		controlHeaders: Periodogram_controlHeaders,
-		plotClass: Periodogramclass
+		plotClass: Periodogramclass,
+		sharedFields: Periodogram_sharedFields,
+		dataSharedFields: Periodogram_dataSharedFields
 	};
 </script>
 

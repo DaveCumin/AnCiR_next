@@ -15,77 +15,93 @@
 		}
 	}
 
-	const toShow = { width: 'number', height: 'number', 'plot.data.*.*.refId': 'Column' };
-
-	function filterPaths(paths) {
-		// Helper function to check if a path matches a pattern
-		function isMatch(path, pattern) {
-			// Convert pattern to regex, escaping dots and replacing * with .*
-			const regexPattern = '^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$';
-			return new RegExp(regexPattern).test(path);
-		}
-
-		// Filter paths based on toShow
-		return paths.filter((item) => Object.keys(toShow).some((key) => isMatch(item.path, key)));
+	// --- Path helpers used by the multi-select shared-options UI ---
+	// Accept dot or bracket notation:
+	//   'plot.paddingIN.top'   → plot.plot.paddingIN.top
+	//   'plot.xlimsIN[0]'      → plot.plot.xlimsIN[0]
+	function splitPath(path) {
+		// Match any run of chars that isn't `.`, `[`, or `]`.
+		return path.match(/[^.[\]]+/g) ?? [];
 	}
 
-	function compareJson(jsonArray) {
-		const matches = [];
-
-		// Helper function to get all keys, including private ones
-		function getKeys(obj) {
-			if (typeof obj.getAllFields === 'function') {
-				return Object.keys(obj.getAllFields());
-			}
-			return Object.keys(obj);
+	export function getByPath(obj, path) {
+		if (!obj || !path) return undefined;
+		const segments = splitPath(path);
+		let cur = obj;
+		for (const seg of segments) {
+			if (cur == null) return undefined;
+			cur = cur[seg];
 		}
+		return cur;
+	}
 
-		// Helper function to get value, handling private fields
-		function getValue(obj, key) {
-			if (typeof obj.getAllFields === 'function') {
-				return obj.getAllFields()[key];
-			}
-			return obj[key];
+	export function setByPath(obj, path, val) {
+		if (!obj || !path) return;
+		const segments = splitPath(path);
+		let cur = obj;
+		for (let i = 0; i < segments.length - 1; i++) {
+			if (cur == null) return;
+			cur = cur[segments[i]];
 		}
+		if (cur != null) cur[segments[segments.length - 1]] = val;
+	}
 
-		// Helper function to recursively compare objects
-		function compare(objects, path = '') {
-			// Ensure all inputs are objects
-			if (objects.some((obj) => !obj || typeof obj !== 'object')) {
-				return;
+	// Intersect a per-plot list of schema fields by `path`, preserving the
+	// order from the first plot's schema. Mixed-type selections drop fields
+	// that aren't in every type's schema.
+	export function intersectFields(perPlotSchemas) {
+		if (perPlotSchemas.length === 0) return [];
+		const result = [];
+		for (const field of perPlotSchemas[0]) {
+			if (perPlotSchemas.every((s) => s.some((f) => f.path === field.path))) {
+				result.push(field);
 			}
+		}
+		return result;
+	}
 
-			// Get keys from all objects
-			const keySets = objects.map((obj) => new Set(getKeys(obj)));
-			// Find common keys (intersection of all key sets)
-			const commonKeys = [...keySets[0]].filter((key) => keySets.every((set) => set.has(key)));
-
-			for (const key of commonKeys) {
-				const newPath = path ? `${path}.${key}` : key;
-
-				// Get values for the key from all objects
-				const values = objects.map((obj) => getValue(obj, key));
-
-				// Check if values are objects (not arrays) for recursion
-				if (values.every((val) => typeof val === 'object')) {
-					compare(values, newPath);
-				} else {
-					// Check if all values are equal (using deep comparison for arrays)
-					const areEqual = values.every(
-						(val, i, arr) => JSON.stringify(val) === JSON.stringify(arr[0])
-					);
-
-					// Store the common value or null
-					matches.push({
-						path: newPath,
-						value: areEqual ? values[0] : null
-					});
+	// For each schema field, read the value from each source object and decide
+	// whether they all agree. `distinctValues` drives the "Set all to …" pills
+	// shown when the field is mixed.
+	export function evaluateFields(schema, sources) {
+		return schema.map((field) => {
+			const perPlotValues = sources.map((s) => getByPath(s, field.path));
+			const stringified = perPlotValues.map((v) => JSON.stringify(v));
+			const allEqual = stringified.every((s) => s === stringified[0]);
+			const distinctValues = [];
+			const seenKeys = [];
+			perPlotValues.forEach((v, i) => {
+				const k = stringified[i];
+				if (!seenKeys.includes(k)) {
+					seenKeys.push(k);
+					distinctValues.push(v);
 				}
-			}
-		}
+			});
+			return {
+				...field,
+				perPlotValues,
+				allEqual,
+				value: allEqual ? perPlotValues[0] : null,
+				distinctValues
+			};
+		});
+	}
 
-		compare(jsonArray);
-		return matches;
+	// Group items by a key function. Returns an array of [key, items[]] tuples
+	// (preserves insertion order; plain object/Map avoided to keep the linter
+	// happy and because the result is immediately consumed by an {#each}).
+	export function groupByKey(items, keyFn) {
+		const out = [];
+		for (const item of items) {
+			const k = keyFn(item) ?? '';
+			let bucket = out.find((b) => b[0] === k);
+			if (!bucket) {
+				bucket = [k, []];
+				out.push(bucket);
+			}
+			bucket[1].push(item);
+		}
+		return out;
 	}
 </script>
 
@@ -96,7 +112,6 @@
 
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
-	import { select } from 'd3-selection';
 	import { selectPlot, removePlots, getPlotById } from '$lib/core/Plot.svelte';
 	import Editable from '../inputs/Editable.svelte';
 
@@ -120,34 +135,61 @@
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
 
-	// get the options that are the same for all selected plots
-	const theSameOptions = $derived.by(() => {
-		// Get all plot objects using $state.snapshot
-		const plots = $state.snapshot(core.plots.filter((p) => p.selected));
-		console.log('plots: ', plots);
-
-		// Compare all plots
-		let options = compareJson(plots);
-		console.log('options: ', options);
-
-		// Filter paths
-		options = filterPaths(options);
-		console.log('filtered', options);
-		return options;
+	// Schema-driven shared properties. Read from each selected plot's plotMap
+	// entry (mixed-type selections still see common fields like width/height).
+	const sharedFields = $derived.by(() => {
+		const plots = core.plots.filter((p) => p.selected);
+		if (plots.length < 2) return [];
+		const perPlotSchemas = plots.map(
+			(p) => appConsts.plotMap.get(p.type)?.sharedFields ?? []
+		);
+		const schema = intersectFields(perPlotSchemas);
+		return evaluateFields(schema, plots);
 	});
 
-	function updateOptions(samepath) {
-		console.log('updating...');
-		const val = $state.snapshot(theSameOptions.filter((p) => p.path == samepath)[0].value);
-		core.plots.forEach((plot) => {
-			console.log('ap: ', plot.id);
-			if (plot.selected) {
-				console.log('p ', plot.id);
-				console.log('s ', samepath);
-				console.log('val ', val);
-				plot[samepath] = val;
-			}
+	const sharedFieldsByGroup = $derived(groupByKey(sharedFields, (f) => f.group ?? ''));
+
+	// Per-row data fields, paired by index. Limited to the smallest data array
+	// length so we never read off the end of a plot.
+	const sharedDataRows = $derived.by(() => {
+		const plots = core.plots.filter((p) => p.selected);
+		if (plots.length < 2) return { rows: [], rowCount: 0 };
+		const perPlotSchemas = plots.map(
+			(p) => appConsts.plotMap.get(p.type)?.dataSharedFields ?? []
+		);
+		const schema = intersectFields(perPlotSchemas);
+		if (schema.length === 0) return { rows: [], rowCount: 0 };
+		const counts = plots.map((p) => p.plot?.data?.length ?? 0);
+		const rowCount = Math.min(...counts);
+		const rows = [];
+		for (let i = 0; i < rowCount; i++) {
+			const sources = plots.map((p) => p.plot.data[i]);
+			rows.push({ index: i, fields: evaluateFields(schema, sources) });
+		}
+		return { rows, rowCount };
+	});
+
+	// Apply a value to all selected plots at the given dotted path.
+	function setSharedField(path, val) {
+		core.plots.forEach((p) => {
+			if (p.selected) setByPath(p, path, val);
 		});
+	}
+
+	// Apply a value to data row [rowIndex] of every selected plot.
+	function setSharedDataField(rowIndex, path, val) {
+		core.plots.forEach((p) => {
+			if (!p.selected) return;
+			const row = p.plot?.data?.[rowIndex];
+			if (row) setByPath(row, path, val);
+		});
+	}
+
+	function formatPillValue(val, input) {
+		if (val == null) return '—';
+		if (input === 'boolean') return val ? 'on' : 'off';
+		if (input === 'number') return String(val);
+		return String(val);
 	}
 
 	function alignPlots(by) {
@@ -390,7 +432,7 @@
 								className="control-component-title-icon"
 							/>
 						</button>
-						<button class="icon" onclick={(e) => alignPlots('centre')}>
+						<button class="icon" onclick={(e) => alignPlots('center')}>
 							<Icon
 								name="align-centre"
 								width={24}
@@ -474,29 +516,167 @@
 			<div class="div-line"></div>
 		</div>
 
-		<p>
-			{core.plots
-				.filter((p) => p.selected)
-				.map((p) => p.id)
-				.join(', ')}
-		</p>
-		<p>{JSON.stringify(theSameOptions, null, 2)}</p>
-		<!-- This may need to be layed out, like the others, with loops only for the data (that way, easier to set min/max input values and label appropriately -->
-		{#each theSameOptions as same}
-			{#if toShow[same.path] == 'number'}
-				<p>
-					{same.path}
-					<NumberWithUnits
-						bind:value={same.value}
-						step={appState.gridSize}
-						units={{}}
-						onInput={() => updateOptions(same.path)}
-					/>
-				</p>
-			{:else}
-				<p>{same.path} {toShow[same.path]} {same.value}</p>
-			{/if}
-		{/each}
+		<!-- Shared properties, schema-driven. One block per `group`. -->
+		{#if sharedFieldsByGroup.length > 0}
+			<div class="control-component">
+				<div class="control-component-title">
+					<p>Shared properties</p>
+				</div>
+
+				{#each sharedFieldsByGroup as [groupName, fields] (groupName)}
+					{#if groupName}
+						<div class="control-component-subtitle">
+							<p>{groupName}</p>
+						</div>
+					{/if}
+					<div class="control-input-vertical">
+						{#each fields as field (field.path)}
+							<div class="control-input">
+								<p>
+									{field.label}
+									{#if !field.allEqual}<span class="mixed-tag">mixed</span>{/if}
+								</p>
+
+								{#if field.input === 'number'}
+									<NumberWithUnits
+										value={field.allEqual ? field.value : (field.distinctValues[0] ?? 0)}
+										step={field.step ?? appState.gridSize}
+										onInput={(v) => setSharedField(field.path, parseFloat(v))}
+									/>
+								{:else if field.input === 'boolean'}
+									<input
+										type="checkbox"
+										checked={field.value === true}
+										indeterminate={!field.allEqual}
+										onchange={(e) => setSharedField(field.path, e.currentTarget.checked)}
+									/>
+								{:else if field.input === 'select'}
+									<select
+										value={field.allEqual ? String(field.value ?? '') : ''}
+										onchange={(e) => {
+											const raw = e.currentTarget.value;
+											const match = field.options.find((o) => String(o) === raw);
+											setSharedField(field.path, match !== undefined ? match : raw);
+										}}
+									>
+										{#if !field.allEqual}<option value="" disabled>(mixed)</option>{/if}
+										{#each field.options as opt (String(opt))}
+											<option value={String(opt)}>{opt}</option>
+										{/each}
+									</select>
+								{:else if field.input === 'text'}
+									<input
+										type="text"
+										value={field.allEqual ? (field.value ?? '') : ''}
+										placeholder={field.allEqual ? '' : '(mixed)'}
+										oninput={(e) => setSharedField(field.path, e.currentTarget.value)}
+									/>
+								{/if}
+							</div>
+
+							{#if !field.allEqual}
+								<div class="set-all-row">
+									<span class="muted">Set all to:</span>
+									{#each field.distinctValues as dv (JSON.stringify(dv))}
+										<button
+											class="value-pill"
+											onclick={() => setSharedField(field.path, dv)}
+										>
+											{formatPillValue(dv, field.input)}
+										</button>
+									{/each}
+								</div>
+							{/if}
+						{/each}
+					</div>
+				{/each}
+			</div>
+
+			<div class="div-line"></div>
+		{/if}
+
+		<!-- Shared data rows, paired by index. Hidden when row counts differ. -->
+		{#if sharedDataRows.rowCount > 0}
+			<div class="control-component">
+				<div class="control-component-title">
+					<p>Shared data ({sharedDataRows.rowCount} row{sharedDataRows.rowCount === 1 ? '' : 's'} per plot)</p>
+				</div>
+
+				{#each sharedDataRows.rows as row (row.index)}
+					<div class="dataBlock">
+						<div class="control-component-subtitle">
+							<p>Row {row.index + 1}</p>
+						</div>
+						<div class="control-input-vertical">
+							{#each row.fields as field (field.path)}
+								<div class="control-input">
+									<p>
+										{field.label}
+										{#if !field.allEqual}<span class="mixed-tag">mixed</span>{/if}
+									</p>
+
+									{#if field.input === 'number'}
+										<NumberWithUnits
+											value={field.allEqual ? field.value : (field.distinctValues[0] ?? 0)}
+											step={field.step ?? appState.gridSize}
+											onInput={(v) => setSharedDataField(row.index, field.path, parseFloat(v))}
+										/>
+									{:else if field.input === 'boolean'}
+										<input
+											type="checkbox"
+											checked={field.value === true}
+											indeterminate={!field.allEqual}
+											onchange={(e) =>
+												setSharedDataField(row.index, field.path, e.currentTarget.checked)}
+										/>
+									{:else if field.input === 'select'}
+										<select
+											value={field.allEqual ? String(field.value ?? '') : ''}
+											onchange={(e) => {
+												const raw = e.currentTarget.value;
+												const match = field.options.find((o) => String(o) === raw);
+												setSharedDataField(
+													row.index,
+													field.path,
+													match !== undefined ? match : raw
+												);
+											}}
+										>
+											{#if !field.allEqual}<option value="" disabled>(mixed)</option>{/if}
+											{#each field.options as opt (String(opt))}
+												<option value={String(opt)}>{opt}</option>
+											{/each}
+										</select>
+									{:else if field.input === 'text'}
+										<input
+											type="text"
+											value={field.allEqual ? (field.value ?? '') : ''}
+											placeholder={field.allEqual ? '' : '(mixed)'}
+											oninput={(e) =>
+												setSharedDataField(row.index, field.path, e.currentTarget.value)}
+										/>
+									{/if}
+								</div>
+
+								{#if !field.allEqual}
+									<div class="set-all-row">
+										<span class="muted">Set all to:</span>
+										{#each field.distinctValues as dv (JSON.stringify(dv))}
+											<button
+												class="value-pill"
+												onclick={() => setSharedDataField(row.index, field.path, dv)}
+											>
+												{formatPillValue(dv, field.input)}
+											</button>
+										{/each}
+									</div>
+								{/if}
+							{/each}
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
 	{:else if selectedPlots.length == 1}
 		{@const plot = core.plots.filter((p) => p.selected)[0]}
 		{#if plot}
@@ -597,5 +777,49 @@
 
 		padding-left: 1rem;
 		padding-right: 1rem;
+	}
+
+	.control-component-subtitle {
+		font-size: 0.85rem;
+		font-weight: 600;
+		opacity: 0.75;
+		margin: 0.4rem 0 0.2rem;
+	}
+
+	.mixed-tag {
+		display: inline-block;
+		font-size: 0.7rem;
+		padding: 0 0.3rem;
+		margin-left: 0.3rem;
+		border-radius: 0.2rem;
+		background-color: #f3d27a;
+		color: #4a3500;
+		vertical-align: middle;
+	}
+
+	.set-all-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.3rem;
+		margin: 0.1rem 0 0.4rem 0.4rem;
+		font-size: 0.75rem;
+	}
+
+	.muted {
+		opacity: 0.65;
+	}
+
+	.value-pill {
+		font-size: 0.75rem;
+		padding: 0.05rem 0.4rem;
+		border: 1px solid #ccc;
+		border-radius: 0.5rem;
+		background-color: #f7f7f7;
+		cursor: pointer;
+	}
+
+	.value-pill:hover {
+		background-color: #e9e9e9;
 	}
 </style>

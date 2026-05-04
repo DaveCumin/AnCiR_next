@@ -420,10 +420,27 @@
 		}
 	}
 
+	export const Boxplot_sharedFields = [
+		{ path: 'width', label: 'Width', input: 'number', group: 'Dimension' },
+		{ path: 'height', label: 'Height', input: 'number', group: 'Dimension' },
+
+		{ path: 'plot.padding.top', label: 'Top', input: 'number', group: 'Padding' },
+		{ path: 'plot.padding.bottom', label: 'Bottom', input: 'number', group: 'Padding' },
+		{ path: 'plot.padding.left', label: 'Left', input: 'number', group: 'Padding' },
+		{ path: 'plot.padding.right', label: 'Right', input: 'number', group: 'Padding' },
+
+		{ path: 'plot.ylimsIN[0]', label: 'Y min', input: 'number', group: 'Y-axis' },
+		{ path: 'plot.ylimsIN[1]', label: 'Y max', input: 'number', group: 'Y-axis' }
+	];
+
+	export const Boxplot_dataSharedFields = [{ path: 'label', label: 'Label', input: 'text' }];
+
 	export const definition = {
 		defaultDataInputs: Boxplot_defaultDataInputs,
 		controlHeaders: Boxplot_controlHeaders,
-		plotClass: Boxplotclass
+		plotClass: Boxplotclass,
+		sharedFields: Boxplot_sharedFields,
+		dataSharedFields: Boxplot_dataSharedFields
 	};
 </script>
 

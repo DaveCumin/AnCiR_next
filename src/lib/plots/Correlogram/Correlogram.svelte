@@ -407,10 +407,40 @@
 		}
 	}
 
+	export const Correlogram_sharedFields = [
+		{ path: 'width', label: 'Width', input: 'number', group: 'Dimension' },
+		{ path: 'height', label: 'Height', input: 'number', group: 'Dimension' },
+
+		{ path: 'plot.padding.top', label: 'Top', input: 'number', group: 'Padding' },
+		{ path: 'plot.padding.bottom', label: 'Bottom', input: 'number', group: 'Padding' },
+		{ path: 'plot.padding.left', label: 'Left', input: 'number', group: 'Padding' },
+		{ path: 'plot.padding.right', label: 'Right', input: 'number', group: 'Padding' },
+
+		{ path: 'plot.laglimsIN[0]', label: 'Lag min', input: 'number', group: 'X-axis (lag)' },
+		{ path: 'plot.laglimsIN[1]', label: 'Lag max', input: 'number', group: 'X-axis (lag)' },
+
+		{ path: 'plot.ylimsIN[0]', label: 'Correlation min', input: 'number', group: 'Y-axis' },
+		{ path: 'plot.ylimsIN[1]', label: 'Correlation max', input: 'number', group: 'Y-axis' }
+	];
+
+	export const Correlogram_dataSharedFields = [
+		{ path: 'maxLag', label: 'Max lag (h)', input: 'number' },
+		{ path: 'minLag', label: 'Min lag (h)', input: 'number' },
+		{ path: 'showConfidenceBounds', label: 'Show confidence bounds', input: 'boolean' },
+		{
+			path: 'confidenceLevel',
+			label: 'Confidence level',
+			input: 'select',
+			options: [0.95, 0.99]
+		}
+	];
+
 	export const definition = {
 		defaultDataInputs: Correlogram_defaultDataInputs,
 		controlHeaders: Correlogram_controlHeaders,
-		plotClass: Correlogramclass
+		plotClass: Correlogramclass,
+		sharedFields: Correlogram_sharedFields,
+		dataSharedFields: Correlogram_dataSharedFields
 	};
 </script>
 

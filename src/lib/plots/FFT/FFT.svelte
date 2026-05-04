@@ -491,11 +491,39 @@
 		}
 	}
 
+	export const FFT_sharedFields = [
+		{ path: 'width', label: 'Width', input: 'number', group: 'Dimension' },
+		{ path: 'height', label: 'Height', input: 'number', group: 'Dimension' },
+
+		{ path: 'plot.padding.top', label: 'Top', input: 'number', group: 'Padding' },
+		{ path: 'plot.padding.bottom', label: 'Bottom', input: 'number', group: 'Padding' },
+		{ path: 'plot.padding.left', label: 'Left', input: 'number', group: 'Padding' },
+		{ path: 'plot.padding.right', label: 'Right', input: 'number', group: 'Padding' },
+
+		{ path: 'plot.xlimsIN[0]', label: 'X min', input: 'number', group: 'X-axis' },
+		{ path: 'plot.xlimsIN[1]', label: 'X max', input: 'number', group: 'X-axis' },
+		{ path: 'plot.showPeriod', label: 'Show as period', input: 'boolean', group: 'X-axis' },
+
+		{ path: 'plot.ylimsIN[0]', label: 'Magnitude min', input: 'number', group: 'Y-axis' },
+		{ path: 'plot.ylimsIN[1]', label: 'Magnitude max', input: 'number', group: 'Y-axis' },
+		{ path: 'plot.logScale', label: 'Log scale', input: 'boolean', group: 'Y-axis' },
+
+		{ path: 'plot.phaseYlimsIN[0]', label: 'Phase min', input: 'number', group: 'Phase' },
+		{ path: 'plot.phaseYlimsIN[1]', label: 'Phase max', input: 'number', group: 'Phase' }
+	];
+
+	export const FFT_dataSharedFields = [
+		{ path: 'showPhase', label: 'Show phase', input: 'boolean' },
+		{ path: 'freqStep', label: 'Freq step (cyc/h)', input: 'number', step: 0.001 }
+	];
+
 	export const definition = {
 		displayName: FFT_displayName,
 		defaultDataInputs: FFT_defaultDataInputs,
 		controlHeaders: FFT_controlHeaders,
-		plotClass: FFTclass
+		plotClass: FFTclass,
+		sharedFields: FFT_sharedFields,
+		dataSharedFields: FFT_dataSharedFields
 	};
 </script>
 
