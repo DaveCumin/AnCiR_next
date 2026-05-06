@@ -213,9 +213,7 @@
 				return [-1, 1];
 			}
 
-			const { min: mnRaw, max: mxRaw } = minMaxAcross(
-				this.data.map((d) => d.acfData.correlations)
-			);
+			const { min: mnRaw, max: mxRaw } = minMaxAcross(this.data.map((d) => d.acfData.correlations));
 			if (mnRaw == null || mxRaw == null) return [-1, 1];
 
 			const range = mxRaw - mnRaw;
@@ -728,7 +726,7 @@
 							<p>Data {i}</p>
 							<button class="icon" onclick={() => theData.removeData(i)}>
 								<Icon
-									name="minus"
+									name="trash"
 									width={16}
 									height={16}
 									className="control-component-title-icon"

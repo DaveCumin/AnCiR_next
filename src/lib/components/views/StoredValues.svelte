@@ -1,5 +1,10 @@
 <script>
-	import { core, getStoredValue, removeStoredValue, renameStoredValue } from '$lib/core/core.svelte.js';
+	import {
+		core,
+		getStoredValue,
+		removeStoredValue,
+		renameStoredValue
+	} from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 
 	let editingKey = $state(null);
@@ -44,14 +49,24 @@
 						bind:value={editName}
 						onkeydown={(e) => handleKeydown(e, key)}
 					/>
-					<span class="sv-value">{typeof getStoredValue(key) === 'number' ? getStoredValue(key).toPrecision(6) : getStoredValue(key)}</span>
-					<button class="sv-action sv-action-visible" onclick={() => commitEdit(key)} title="Save">✓</button>
+					<span class="sv-value"
+						>{typeof getStoredValue(key) === 'number'
+							? getStoredValue(key).toPrecision(6)
+							: getStoredValue(key)}</span
+					>
+					<button class="sv-action sv-action-visible" onclick={() => commitEdit(key)} title="Save"
+						>✓</button
+					>
 				{:else}
 					<span class="sv-name" title={entry.source || key}>{key}</span>
-					<span class="sv-value">{typeof getStoredValue(key) === 'number' ? getStoredValue(key).toPrecision(6) : getStoredValue(key)}</span>
+					<span class="sv-value"
+						>{typeof getStoredValue(key) === 'number'
+							? getStoredValue(key).toPrecision(6)
+							: getStoredValue(key)}</span
+					>
 					<button class="sv-action" onclick={() => startEdit(key)} title="Rename">✏️</button>
 					<button class="sv-action" onclick={() => removeStoredValue(key)} title="Delete">
-						<Icon name="minus" width={14} height={14} className="menu-icon" />
+						<Icon name="trash" width={14} height={14} className="menu-icon" />
 					</button>
 				{/if}
 			</div>

@@ -421,7 +421,7 @@
 					{/if}
 
 					<button class="icon" onclick={() => removeSplitTime(idx)}>
-						<Icon name="minus" width={16} height={16} className="menu-icon" />
+						<Icon name="trash" width={16} height={16} className="menu-icon" />
 					</button>
 				</div>
 			{/each}

@@ -808,7 +808,7 @@
 						<div class="control-component-title-icons">
 							<button class="icon" onclick={() => theData.removeData(i)}>
 								<Icon
-									name="minus"
+									name="trash"
 									width={16}
 									height={16}
 									className="control-component-title-icon"

@@ -228,7 +228,7 @@
 			onmouseenter={handleMouseEnter}
 			onmouseleave={handleMouseLeave}
 		>
-			<Icon name="minus" width={16} height={16} className="menu-icon" />
+			<Icon name="trash" width={16} height={16} className="menu-icon" />
 		</button>
 	</div>
 
@@ -370,7 +370,7 @@
 							/>
 						</div>
 						<button class="icon" onclick={() => nightBand.removeCustomBand(idx)}>
-							<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
+							<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
 						</button>
 					</div>
 

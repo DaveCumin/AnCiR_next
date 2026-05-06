@@ -60,6 +60,15 @@
 		in:fly={{ x: appState.widthControlPanel, duration: 600 }}
 		out:fly={{ x: appState.widthControlPanel, duration: 600 }}
 	>
+		<div
+			class="close-control-panel-icon-container"
+			in:fade={{ duration: 600 }}
+			out:fly={{ x: -appState.widthControlPanel, duration: 600 }}
+		>
+			<button class="icon" onclick={() => (appState.showControlPanel = false)}>
+				<Icon name="circle-chevron-left" width={32} height={32} />
+			</button>
+		</div>
 		<ControlDisplay />
 	</div>
 	<div
@@ -151,13 +160,15 @@
 		right: 0;
 		z-index: 999;
 
-		/* display: flex;
-		justify-content: center;
-		align-items: center;
-
-		height: 100%; */
-
 		margin: 0;
+		padding: 0;
+	}
+	.close-control-panel-icon-container {
+		position: fixed;
+		top: calc(100vh * 9 / 20);
+		z-index: 999;
+		rotate: 180deg;
+		margin: 0px -30px;
 		padding: 0;
 	}
 

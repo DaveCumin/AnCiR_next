@@ -168,7 +168,7 @@
 					/>
 				</div>
 				<button class="icon" onclick={() => bands.removeBand(i)}>
-					<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
+					<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
 				</button>
 			</div>
 		{/each}

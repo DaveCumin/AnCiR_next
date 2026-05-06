@@ -212,7 +212,7 @@
 			<strong>Section {index + 1}</strong>
 			{#if p.args.sections.length > 1}
 				<button class="icon" onclick={() => removeSection(index)}>
-					<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
+					<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
 				</button>
 			{/if}
 		</div>

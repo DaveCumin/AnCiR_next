@@ -314,10 +314,28 @@
 			 *   pickMax:boolean, pad:number, width:(whole:number, line:number)=>number}>}
 			 */
 			const sides = [
-				{ side: 'left', edge: 'left', pickMax: false, pad: 6, width: (whole, line) => line - whole },
-				{ side: 'right', edge: 'right', pickMax: true, pad: 6, width: (whole, line) => whole - line },
+				{
+					side: 'left',
+					edge: 'left',
+					pickMax: false,
+					pad: 6,
+					width: (whole, line) => line - whole
+				},
+				{
+					side: 'right',
+					edge: 'right',
+					pickMax: true,
+					pad: 6,
+					width: (whole, line) => whole - line
+				},
 				{ side: 'top', edge: 'top', pickMax: false, pad: 6, width: (whole, line) => line - whole },
-				{ side: 'bottom', edge: 'bottom', pickMax: true, pad: 12, width: (whole, line) => whole - line }
+				{
+					side: 'bottom',
+					edge: 'bottom',
+					pickMax: true,
+					pad: 12,
+					width: (whole, line) => whole - line
+				}
 			];
 
 			for (const cfg of sides) {
@@ -886,7 +904,7 @@
 
 						<button class="icon" onclick={() => theData.removeData(i)}
 							><Icon
-								name="minus"
+								name="trash"
 								width={16}
 								height={16}
 								className="control-component-title-icon"

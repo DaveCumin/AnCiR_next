@@ -613,7 +613,7 @@
 						<p><Editable bind:value={datum.label} /></p>
 
 						<button class="icon" onclick={() => theData.removeData(i)}>
-							<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
+							<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
 						</button>
 					</div>
 

@@ -109,7 +109,7 @@
 								deleteTable(table.id);
 							}}
 						>
-							<Icon name="minus" width={20} height={20} className="menu-icon" />
+							<Icon name="trash" width={20} height={20} className="menu-icon" />
 						</button>
 						<button
 							class="icon"

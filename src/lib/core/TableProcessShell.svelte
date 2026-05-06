@@ -22,7 +22,7 @@
 			style="margin-bottom: -1.75rem; z-index: 9999; margin-top: 0.25rem;"
 		>
 			<button class="icon" onclick={() => onDelete(p)}>
-				<Icon name="minus" width={16} height={16} className="menu-icon" />
+				<Icon name="trash" width={16} height={16} className="menu-icon" />
 			</button>
 		</div>
 		<div style="margin-top: 0.7rem;">{p.displayName}</div>

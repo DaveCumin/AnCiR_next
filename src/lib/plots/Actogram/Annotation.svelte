@@ -207,7 +207,7 @@
 			class="icon"
 			onclick={() => deleteAnnotation(annotation.parentData.parentBox.id, annotation.id)}
 		>
-			<Icon name="minus" width={16} height={16} className="menu-icon" />
+			<Icon name="trash" width={16} height={16} className="menu-icon" />
 		</button>
 	</div>
 	<div class="control-input-horizontal">

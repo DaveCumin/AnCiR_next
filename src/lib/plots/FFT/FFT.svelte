@@ -256,9 +256,7 @@
 				return [0, 1];
 			}
 
-			const { min: mnRaw, max: mxRaw } = minMaxAcross(
-				this.data.map((d) => d.fftData.magnitudes)
-			);
+			const { min: mnRaw, max: mxRaw } = minMaxAcross(this.data.map((d) => d.fftData.magnitudes));
 			if (mnRaw == null || mxRaw == null) return [0, 1];
 			const range = mxRaw - mnRaw;
 			const ymin = Math.max(mnRaw - range * 0.1, 0);
@@ -551,8 +549,7 @@
 	// showPeriod filtering so the hovered x matches the drawn data).
 	function buildFFTxy(datum, showPeriod, which) {
 		const freqs = datum.fftData.frequencies;
-		const vals =
-			which === 'phase' ? datum.fftData.phases : datum.fftData.magnitudes;
+		const vals = which === 'phase' ? datum.fftData.phases : datum.fftData.magnitudes;
 		if (!freqs || !vals) return { x: [], y: [] };
 		if (showPeriod) {
 			const x = [];
@@ -920,7 +917,7 @@
 							<p>Data {i}</p>
 							<button class="icon" onclick={() => theData.removeData(i)}>
 								<Icon
-									name="minus"
+									name="trash"
 									width={16}
 									height={16}
 									className="control-component-title-icon"

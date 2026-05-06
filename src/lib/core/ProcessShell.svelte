@@ -28,7 +28,7 @@
 				p.parentCol.removeProcess(p.id);
 			}}
 		>
-			<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
+			<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
 		</button>
 	</div>
 	{@render children?.()}

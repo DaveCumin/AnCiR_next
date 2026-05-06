@@ -394,7 +394,7 @@
 						);
 					}}
 				>
-					<Icon name="minus" width={16} height={16} className="control-component-title-icon" />
+					<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
 				</button>
 			</div>
 		</div>
@@ -545,9 +545,7 @@
 			{#if marker.estimatedPhase}
 				<p>
 					<strong
-						>Est φ (day {marker.estimatedPhase.refDay}): {marker.estimatedPhase.phase.toFixed(
-							2
-						)} hrs</strong
+						>Est φ (day {marker.estimatedPhase.refDay}): {marker.estimatedPhase.phase.toFixed(2)} hrs</strong
 					>
 					<StoreValueButton
 						label="φ"

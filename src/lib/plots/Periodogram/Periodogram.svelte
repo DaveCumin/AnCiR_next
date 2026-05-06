@@ -328,9 +328,7 @@
 				return [0, 0];
 			}
 
-			const { min: mnRaw, max: mxRaw } = minMaxAcross(
-				this.data.map((d) => d.periodData.y)
-			);
+			const { min: mnRaw, max: mxRaw } = minMaxAcross(this.data.map((d) => d.periodData.y));
 			if (mnRaw == null || mxRaw == null) return [0, 0];
 			const ymin = Math.floor(mnRaw);
 			const ymax = Math.ceil(mxRaw);
@@ -902,7 +900,7 @@
 							</p>
 							<button class="icon" onclick={() => theData.removeData(i)}
 								><Icon
-									name="minus"
+									name="trash"
 									width={16}
 									height={16}
 									className="control-component-title-icon"

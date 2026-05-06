@@ -140,9 +140,7 @@
 	const sharedFields = $derived.by(() => {
 		const plots = core.plots.filter((p) => p.selected);
 		if (plots.length < 2) return [];
-		const perPlotSchemas = plots.map(
-			(p) => appConsts.plotMap.get(p.type)?.sharedFields ?? []
-		);
+		const perPlotSchemas = plots.map((p) => appConsts.plotMap.get(p.type)?.sharedFields ?? []);
 		const schema = intersectFields(perPlotSchemas);
 		return evaluateFields(schema, plots);
 	});
@@ -154,9 +152,7 @@
 	const sharedDataRows = $derived.by(() => {
 		const plots = core.plots.filter((p) => p.selected);
 		if (plots.length < 2) return { rows: [], rowCount: 0 };
-		const perPlotSchemas = plots.map(
-			(p) => appConsts.plotMap.get(p.type)?.dataSharedFields ?? []
-		);
+		const perPlotSchemas = plots.map((p) => appConsts.plotMap.get(p.type)?.dataSharedFields ?? []);
 		const schema = intersectFields(perPlotSchemas);
 		if (schema.length === 0) return { rows: [], rowCount: 0 };
 		const counts = plots.map((p) => p.plot?.data?.length ?? 0);
@@ -379,7 +375,7 @@
 							removePlots(selectedPlots.map((p) => p.id));
 						}}
 					>
-						<Icon name="minus" width={20} height={20} className="menu-icon" />
+						<Icon name="trash" width={20} height={20} className="menu-icon" />
 					</button>
 				</div>
 			</div>
@@ -578,10 +574,7 @@
 								<div class="set-all-row">
 									<span class="muted">Set all to:</span>
 									{#each field.distinctValues as dv (JSON.stringify(dv))}
-										<button
-											class="value-pill"
-											onclick={() => setSharedField(field.path, dv)}
-										>
+										<button class="value-pill" onclick={() => setSharedField(field.path, dv)}>
 											{formatPillValue(dv, field.input)}
 										</button>
 									{/each}
@@ -599,7 +592,9 @@
 		{#if sharedDataRows.rowCount > 0}
 			<div class="control-component">
 				<div class="control-component-title">
-					<p>Shared data ({sharedDataRows.rowCount} row{sharedDataRows.rowCount === 1 ? '' : 's'} per plot)</p>
+					<p>
+						Shared data ({sharedDataRows.rowCount} row{sharedDataRows.rowCount === 1 ? '' : 's'} per plot)
+					</p>
 				</div>
 
 				{#each sharedDataRows.rows as row (row.index)}
@@ -704,7 +699,7 @@
 									removePlots([plot.id]);
 								}}
 							>
-								<Icon name="minus" width={20} height={20} className="menu-icon" />
+								<Icon name="trash" width={20} height={20} className="menu-icon" />
 							</button>
 						</div>
 					</div>

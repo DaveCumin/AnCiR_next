@@ -585,7 +585,7 @@
 
 					{#if col.tableProcessGUId == '' && col.refId == null}
 						<button class="icon" onclick={(e) => doRemoveColumn(col.id)}>
-							<Icon name="minus" width={18} height={18} className="menu-icon" />
+							<Icon name="trash" width={18} height={18} className="menu-icon" />
 						</button>
 					{/if}
 

@@ -94,7 +94,7 @@
 					onclick={() => removeEdit(edit.id)}
 					style="margin-top: 1rem;"
 				>
-					<Icon name="minus" width={16} height={16} />
+					<Icon name="trash" width={16} height={16} />
 				</button>
 			</div>
 		{/each}
