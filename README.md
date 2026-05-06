@@ -12,10 +12,12 @@ The following packages were used in this project:
 - [Papaparse](https://www.papaparse.com/) is used for importing the data (MIT licensed).
 - [SheetJS](https://www.npmjs.com/package/xlsx) was the basis for a light version implementation to import data from xlsx files (Apache 2.0).
 - [Moment-guess](https://www.npmjs.com/package/moment-guess) was adapted to guess the time format of data (MIT licensed).
-- [Stats functions from](https://github.com/ytliu0/p-value_calculators/blob/master/statFunctions.js) [@ytliu0](https://github.com/ytliu0) (GPL-3.0 licensed).
+- Stats functions from [stdlib.io](https://github.com/stdlib-js/stdlib) (Apache-2.0 license).
 - [Day.js](https://www.npmjs.com/package/dayjs) is used for date manipulation and calculations (MIT licensed).
 - Icons are from [FontAwesome](https://github.com/FortAwesome/Font-Awesome) (CC BY 4.0 Licensed) and the [Tabler set](https://icon-sets.iconify.design/tabler) (MIT Licensed).
 
 Default colours for the plots are taken from the [maps designed and curated by Fabio Crameri](https://www.fabiocrameri.ch/colourmaps/) (MIT licensed). See Crameri, F., G.E. Shephard, and P.J. Heron (2020), The misuse of colour in science communication, Nature Communications, 11, 5444.
 
-As such, this software is licensed under the stricter of the above - the GPL-3.0 license ([http://fsf.org/](http://fsf.org/)). [![DOI](https://zenodo.org/badge/967164279.svg)](https://doi.org/10.5281/zenodo.19340642)
+As such, this software is licensed under the stricter of the above - the [Apache-2.0 license](http://www.apache.org/licenses/).
+
+[![DOI](https://zenodo.org/badge/967164279.svg)](https://doi.org/10.5281/zenodo.19340642)

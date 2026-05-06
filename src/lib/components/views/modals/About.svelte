@@ -104,9 +104,7 @@
 			</li>
 
 			<li>
-				<a href="https://github.com/ytliu0/p-value_calculators/blob/master/statFunctions.js"
-					>Stats functions from</a
-				> <a href="https://github.com/ytliu0">@ytliu0</a> (GPL-3.0 licensed).
+				Stats functions from <a href="https://github.com/stdlib-js/stdlib">stdlib.io</a> (Apache-2.0 license).
 			</li>
 			<li>
 				<a href="https://www.npmjs.com/package/dayjs">Day.js</a> is used for date manipulation and calculations
@@ -128,9 +126,9 @@
 			>.
 		</p>
 		<p>
-			As such, this software is licensed under the stricter of the above - the GPL-3.0 license (<a
-				href="http://fsf.org/">http://fsf.org/</a
-			>).
+			As such, this software is licensed under the stricter of the above - the <a
+				href="http://www.apache.org/licenses/">Apache-2.0 license</a
+			>.
 		</p>
 		<p>
 			<a href="https://doi.org/10.5281/zenodo.19340642"

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { KahanSum } from './numerics.js';
-import { pf, qt } from '$lib/data/CDFs.js';
+import quantile_t from '@stdlib/stats-base-dists-t-quantile';
+import cdf_f from '@stdlib/stats-base-dists-f-cdf';
 import { min, max } from './MathsStats.js';
 
 /**
@@ -423,7 +424,7 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 	const RMSE = Math.sqrt(MSE);
 	const R2 = SStot > 0 ? 1 - SSres / SStot : 0;
 	const F_stat = MSE > 0 ? (SStot - SSres) / (2 * nHarmonics) / MSE : NaN;
-	const pF = isNaN(F_stat) ? NaN : pf(F_stat, 2 * nHarmonics, df_res, 1);
+	const pF = isNaN(F_stat) ? NaN : cdf_f(F_stat, 2 * nHarmonics, df_res, 1);
 
 	// Covariance matrix V = MSE · (XᵀX)⁻¹
 	const XtX_inv = Array.from({ length: nParams }, () => new Array(nParams).fill(0));
@@ -438,7 +439,7 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 		}
 	}
 
-	const t_crit = qt(1 - alpha / 2, df_res, 0);
+	const t_crit = quantile_t(1 - alpha / 2, df_res, 0);
 
 	const SE_M = Math.sqrt(Math.max(0, MSE * XtX_inv[0][0]));
 	const CI_M = [M - t_crit * SE_M, M + t_crit * SE_M];

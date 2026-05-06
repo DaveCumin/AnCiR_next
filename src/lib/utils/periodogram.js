@@ -2,7 +2,8 @@
 // Periodogram calculations — extracted from web worker, using native JS with Kahan summation.
 
 import { KahanSum, kahanMean, makeSeqArray } from '$lib/utils/numerics.js';
-import { pchisq, qchisq } from '$lib/data/CDFs.js';
+import cdf_chisq from '@stdlib/stats-base-dists-chisquare-cdf';
+import quantile_chisq from '@stdlib/stats-base-dists-chisquare-quantile';
 import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 
 // ========== Periodogram Calculation Functions ==========
@@ -226,9 +227,15 @@ export function runPeriodogramCalculation(params, onProgress) {
 				threshold[p] = NaN;
 				pvalue[p] = NaN;
 			} else {
-				power[p] = calculateChiSquaredPower(data, params.binSize, periods[p], avgAll, denomAcc.value);
-				threshold[p] = qchisq(1 - correctedAlpha, df);
-				pvalue[p] = 1 - pchisq(power[p], df);
+				power[p] = calculateChiSquaredPower(
+					data,
+					params.binSize,
+					periods[p],
+					avgAll,
+					denomAcc.value
+				);
+				threshold[p] = quantile_chisq(1 - correctedAlpha, df);
+				pvalue[p] = 1 - cdf_chisq(power[p], df);
 			}
 
 			if (onProgress && p % 10 === 0) {
