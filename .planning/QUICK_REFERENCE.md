@@ -1,13 +1,16 @@
 # Quick Reference: Stats-to-Boxplot Architecture
 
 ## The Problem You're Solving
+
 Currently:
+
 - Cosinor computes stats (amplitude, phase, period, p-values, etc.)
 - Stats only shown in **preview table** or **CSV export**
 - **Not plottable** in boxplot
 - **No statistical testing** (t-test, ANOVA) on stat distributions
 
 Goal:
+
 - Make stats **directly plottable in boxplots** ✓
 - Enable **full reactivity** (auto-update when data changes) ✓
 - Perform **t-test & ANOVA** with one-click ✓
@@ -16,6 +19,7 @@ Goal:
 ---
 
 ## The Solution in One Sentence
+
 **Create individual stat columns from Cosinor (following MovingAnalysis pattern), making them regular plottable columns with reactive updates via Svelte $effect.**
 
 ---
@@ -23,7 +27,7 @@ Goal:
 ## Architecture at a Glance
 
 ```
-Raw Data → Cosinor → {X col, fitted Y col, individual stat cols} 
+Raw Data → Cosinor → {X col, fitted Y col, individual stat cols}
                               ↓
                         Stat cols are normal columns!
                               ↓
@@ -38,12 +42,12 @@ Raw Data → Cosinor → {X col, fitted Y col, individual stat cols}
 
 ## 4 Layers (Pick Your Path)
 
-| Layer | What | When | Time | Priority |
-|-------|------|------|------|----------|
-| **1** | Individual stat columns from Cosinor | TODAY | 2h | 🔴 DO THIS |
-| **2** | StatsByCategory reshape (for grouping) | Tomorrow | 3h | 🟡 Nice to have |
-| **3** | t-test/ANOVA utilities | Day 3 | 4h | 🟡 Nice to have |
-| **4** | Boxplot UI buttons + annotations | Day 4 | 2h | 🟢 Polish |
+| Layer | What                                   | When     | Time | Priority        |
+| ----- | -------------------------------------- | -------- | ---- | --------------- |
+| **1** | Individual stat columns from Cosinor   | TODAY    | 2h   | 🔴 DO THIS      |
+| **2** | StatsByCategory reshape (for grouping) | Tomorrow | 3h   | 🟡 Nice to have |
+| **3** | t-test/ANOVA utilities                 | Day 3    | 4h   | 🟡 Nice to have |
+| **4** | Boxplot UI buttons + annotations       | Day 4    | 2h   | 🟢 Polish       |
 
 **Minimum viable**: Layer 1 only (2 hours). You get stats in boxplots with reactivity.  
 **Full power**: All layers (11 hours). Professional stats workflow.
@@ -52,25 +56,25 @@ Raw Data → Cosinor → {X col, fitted Y col, individual stat cols}
 
 ## Why This Design is Best
 
-| Aspect | Why It Works |
-|--------|-------------|
-| **Pattern** | Copies proven MovingAnalysis approach (already in codebase) |
-| **Reactivity** | Uses Svelte $effect on data hash (no polling, fully automatic) |
-| **Composability** | Stats are regular columns; can feed to any plot or TP |
-| **Testability** | Each layer testable independently (stat functions are pure JS) |
-| **Backward Compat** | Toggle feature; doesn't break existing Cosinor usage |
-| **Minimal UI** | Leverages existing plot infrastructure; ~40 new UI lines |
+| Aspect              | Why It Works                                                   |
+| ------------------- | -------------------------------------------------------------- |
+| **Pattern**         | Copies proven MovingAnalysis approach (already in codebase)    |
+| **Reactivity**      | Uses Svelte $effect on data hash (no polling, fully automatic) |
+| **Composability**   | Stats are regular columns; can feed to any plot or TP          |
+| **Testability**     | Each layer testable independently (stat functions are pure JS) |
+| **Backward Compat** | Toggle feature; doesn't break existing Cosinor usage           |
+| **Minimal UI**      | Leverages existing plot infrastructure; ~40 new UI lines       |
 
 ---
 
 ## Data Flow (Interactive)
 
-**User edits source data** 
-→ `getDataHash` changes 
-→ `$effect()` fires 
-→ `cosinor()` recomputes stats 
-→ `core.rawData.set(statColId, values)` updates columns 
-→ Plots auto-subscribe to new data 
+**User edits source data**
+→ `getDataHash` changes
+→ `$effect()` fires
+→ `cosinor()` recomputes stats
+→ `core.rawData.set(statColId, values)` updates columns
+→ Plots auto-subscribe to new data
 → Boxplot re-renders instantly
 
 **No manual refresh. No polling. Pure Svelte reactivity.**
@@ -80,6 +84,7 @@ Raw Data → Cosinor → {X col, fitted Y col, individual stat cols}
 ## Phase 1 Implementation Sketch (2 hours)
 
 ### Step 1: Add helpers to Cosinor module function
+
 ```js
 function getCosinorStatKeys(args) {
   if (args.useFixedPeriod) {
@@ -95,28 +100,31 @@ function extractStats(y_results, yId, args) {
 ```
 
 ### Step 2: Add toggle UI
+
 ```svelte
 <input type="checkbox" bind:checked={p.args.exportStatColumns} />
 Export individual stat columns
 ```
 
 ### Step 3: Write stat columns (in cosinor function)
+
 ```js
 if (anyValid && p.args.exportStatColumns) {
-  for (const yId of yINs) {
-    const stats = extractStats(result.y_results, yId, argsIN);
-    for (const [key, value] of Object.entries(stats)) {
-      const colId = argsIN.out[`stat_${key}_${yId}`];
-      if (colId >= 0) {
-        core.rawData.set(colId, [value]);  // or array if multi-row
-        getColumnById(colId).type = 'number';
-      }
-    }
-  }
+	for (const yId of yINs) {
+		const stats = extractStats(result.y_results, yId, argsIN);
+		for (const [key, value] of Object.entries(stats)) {
+			const colId = argsIN.out[`stat_${key}_${yId}`];
+			if (colId >= 0) {
+				core.rawData.set(colId, [value]); // or array if multi-row
+				getColumnById(colId).type = 'number';
+			}
+		}
+	}
 }
 ```
 
 ### Step 4: Test
+
 - Run Cosinor with toggle ON
 - Verify stat columns appear in column list
 - Select stat column as Y in boxplot
@@ -127,16 +135,19 @@ if (anyValid && p.args.exportStatColumns) {
 ## Phase 2+3+4 (If You Want Full Testing)
 
 ### Phase 2: StatsByCategory TP
+
 - **Input**: Stat columns + grouping column
 - **Output**: Long format (category, stat_name, stat_value)
 - **Rationale**: Enables comparisons across conditions
 
 ### Phase 3: StatTests Utilities
+
 - **Functions**: `tTest()`, `anova()`
 - **File**: `src/lib/utils/statTests.js`
 - **Use**: Pure JS functions (testable independently)
 
 ### Phase 4: UI Buttons
+
 - **Where**: Cosinor output or Boxplot controls
 - **What**: "Run t-test", "Run ANOVA" buttons
 - **Result**: Modal with p-value, effect size, CI
@@ -165,22 +176,26 @@ if (anyValid && p.args.exportStatColumns) {
 ## Recommended Implementation Order
 
 ### Day 1 (Phase 1: 2 hrs)
+
 - [ ] Extract `getCosinorStatKeys()` and `extractStats()` from Cosinor logic
 - [ ] Add `exportStatColumns` toggle UI
 - [ ] Write stat columns in `cosinor()` function
 - [ ] Test: stat columns appear, plottable in boxplot, reactive on data change
 
-### Day 2 (Phase 2: 3 hrs) — *Optional*
+### Day 2 (Phase 2: 3 hrs) — _Optional_
+
 - [ ] Create `StatsByCategory.svelte` TP
 - [ ] Test reshape: stat columns + grouping → long format
 - [ ] Verify boxplot works with reshaped data
 
-### Day 3 (Phase 3: 4 hrs) — *Optional*
+### Day 3 (Phase 3: 4 hrs) — _Optional_
+
 - [ ] Implement `tTest()` and `anova()` in `statTests.js`
 - [ ] Unit test against reference implementations (R or Python)
 - [ ] Add stat test button in Cosinor output preview
 
-### Day 4 (Phase 4: 2 hrs) — *Optional*
+### Day 4 (Phase 4: 2 hrs) — _Optional_
+
 - [ ] Add "Run test" button in Boxplot controls
 - [ ] Modal display for p-value + effect size
 - [ ] (Nice to have) p-value annotation overlay on boxplot
@@ -190,17 +205,21 @@ if (anyValid && p.args.exportStatColumns) {
 ## Files to Modify/Create
 
 ### Phase 1 (2 hrs)
+
 - ✏️ `src/lib/tableProcesses/Cosinor.svelte` — Modify
 - 📋 `.planning/stats-boxplot-architecture.md` — Reference
 
 ### Phase 2 (3 hrs)
+
 - ✨ `src/lib/tableProcesses/StatsByCategory.svelte` — Create
 
 ### Phase 3 (4 hrs)
+
 - ✨ `src/lib/utils/statTests.js` — Create
 - ✨ `src/lib/utils/__tests__/statTests.test.js` — Create
 
 ### Phase 4 (2 hrs)
+
 - ✏️ `src/lib/plots/Boxplot/Boxplot.svelte` — Modify
 - ✨ `src/lib/components/StatTestModal.svelte` — Create
 
@@ -209,20 +228,23 @@ if (anyValid && p.args.exportStatColumns) {
 ## Success Criteria
 
 ### Phase 1: ✓ Complete
+
 - [ ] Cosinor toggle exists and works
 - [ ] Stat columns created when toggle ON
 - [ ] Stat columns visible in column list
 - [ ] Can select stat as Y in boxplot
-- [ ] Boxplot visualizes stat distribution  
+- [ ] Boxplot visualizes stat distribution
 - [ ] Boxplot updates when input data changes (reactivity test)
 
 ### Phase 2: ✓ Complete
+
 - [ ] StatsByCategory TP exists
 - [ ] Takes stat columns + grouping column as input
 - [ ] Outputs long format: category, stat_name, stat_value
 - [ ] Boxplot works with reshaped data
 
 ### Phase 3: ✓ Complete
+
 - [ ] `tTest()` function implemented
 - [ ] `anova()` function implemented
 - [ ] Both tested against reference implementations
@@ -230,6 +252,7 @@ if (anyValid && p.args.exportStatColumns) {
 - [ ] p-value Modal displays result
 
 ### Phase 4: ✓ Complete
+
 - [ ] "Run test" buttons in Boxplot controls
 - [ ] p-value overlay annotation on plot (optional)
 - [ ] Export p-value as column option

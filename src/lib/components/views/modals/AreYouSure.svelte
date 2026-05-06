@@ -26,7 +26,12 @@
 			const isNo = /^no$/i.test(value);
 			const isCancel = /^cancel$/i.test(value);
 			const isOk = /^ok$/i.test(value);
-			const label = isYes && destructiveAction ? destructiveAction : isNo && destructiveAction ? 'Cancel' : value;
+			const label =
+				isYes && destructiveAction
+					? destructiveAction
+					: isNo && destructiveAction
+						? 'Cancel'
+						: value;
 
 			let tone = 'secondary';
 			if (isCancel || isNo) {
@@ -59,15 +64,15 @@
 			</div>
 			<div class="button-row">
 				{#each renderedOptions as option}
-				<button
-					class={`dialog-button ${option.tone}`}
-					onclick={() => {
-						if (callback) callback(option.value);
-						showModal = false;
-					}}
-				>
-					{option.label}
-				</button>
+					<button
+						class={`dialog-button ${option.tone}`}
+						onclick={() => {
+							if (callback) callback(option.value);
+							showModal = false;
+						}}
+					>
+						{option.label}
+					</button>
 				{/each}
 			</div>
 		</div>
