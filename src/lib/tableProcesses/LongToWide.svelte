@@ -14,7 +14,7 @@
 		['valid', { val: false }]
 	]);
 
-	export function longtowide(argsIN) {
+	export function evaluateLongToWide(argsIN) {
 		const categoryIN = argsIN.categoryIN;
 		const timeIN = argsIN.timeIN;
 		const valueIN = argsIN.valueIN;
@@ -90,48 +90,69 @@
 			result['value_' + cat] = vals;
 		}
 
-		// Write to output columns if committed
-		if (argsIN.out.time !== -1) {
-			// Apply pre-processes (in order) to each category's values before writing
-			for (const pp of argsIN.preProcesses ?? []) {
-				if (!pp.processName) continue;
-				const proc = appConsts.processMap.get(pp.processName);
-				if (proc?.func) {
-					for (const cat of categories) {
-						result['value_' + cat] = proc.func(result['value_' + cat], pp.processArgs ?? {});
-					}
-				}
-			}
+		return [
+			{
+				result,
+				categories,
+				unionTimes,
+				unionTimesForStorage,
+				rawTimeInput,
+				timeIN,
+				valueIN
+			},
+			unionTimes.length > 0
+		];
+	}
 
-			const timeColId = argsIN.out.time;
-			// Store raw strings when available so that getData() (which re-parses via getUNIXDate)
-			// produces correct UNIX ms. When raw strings are unavailable, store UNIX ms directly
-			// and clear timeFormat so getUNIXDate short-circuits and returns them unchanged.
-			core.rawData.set(timeColId, unionTimesForStorage);
-			getColumnById(timeColId).data = timeColId;
-			getColumnById(timeColId).type = getColumnById(timeIN).type;
-			if (rawTimeInput != null && getColumnById(timeIN).timeFormat) {
-				getColumnById(timeColId).timeFormat = getColumnById(timeIN).timeFormat;
-			} else if (rawTimeInput == null) {
-				getColumnById(timeColId).timeFormat = '';
-			}
+	function writeLongToWideOutputs(argsIN, evalData) {
+		if (!evalData?.result) return;
+		if (argsIN.out.time === -1) return;
 
-			const processHash = crypto.randomUUID();
-			getColumnById(timeColId).tableProcessGUId = processHash;
+		const { result, categories, unionTimesForStorage, rawTimeInput, timeIN, valueIN } = evalData;
 
-			for (const cat of categories) {
-				const outKey = 'value_' + cat;
-				const outColId = argsIN.out[outKey];
-				if (outColId !== undefined && outColId !== -1) {
-					core.rawData.set(outColId, result[outKey]);
-					getColumnById(outColId).data = outColId;
-					getColumnById(outColId).type = getColumnById(valueIN).type;
-					getColumnById(outColId).tableProcessGUId = processHash;
+		// Apply pre-processes (in order) to each category's values before writing
+		for (const pp of argsIN.preProcesses ?? []) {
+			if (!pp.processName) continue;
+			const proc = appConsts.processMap.get(pp.processName);
+			if (proc?.func) {
+				for (const cat of categories) {
+					result['value_' + cat] = proc.func(result['value_' + cat], pp.processArgs ?? {});
 				}
 			}
 		}
 
-		return [result, unionTimes.length > 0];
+		const timeColId = argsIN.out.time;
+		// Store raw strings when available so that getData() (which re-parses via getUNIXDate)
+		// produces correct UNIX ms. When raw strings are unavailable, store UNIX ms directly
+		// and clear timeFormat so getUNIXDate short-circuits and returns them unchanged.
+		core.rawData.set(timeColId, unionTimesForStorage);
+		getColumnById(timeColId).data = timeColId;
+		getColumnById(timeColId).type = getColumnById(timeIN).type;
+		if (rawTimeInput != null && getColumnById(timeIN).timeFormat) {
+			getColumnById(timeColId).timeFormat = getColumnById(timeIN).timeFormat;
+		} else if (rawTimeInput == null) {
+			getColumnById(timeColId).timeFormat = '';
+		}
+
+		const processHash = crypto.randomUUID();
+		getColumnById(timeColId).tableProcessGUId = processHash;
+
+		for (const cat of categories) {
+			const outKey = 'value_' + cat;
+			const outColId = argsIN.out[outKey];
+			if (outColId !== undefined && outColId !== -1) {
+				core.rawData.set(outColId, result[outKey]);
+				getColumnById(outColId).data = outColId;
+				getColumnById(outColId).type = getColumnById(valueIN).type;
+				getColumnById(outColId).tableProcessGUId = processHash;
+			}
+		}
+	}
+
+	export function longtowide(argsIN) {
+		const [evalData, valid] = evaluateLongToWide(argsIN);
+		if (valid && evalData) writeLongToWideOutputs(argsIN, evalData);
+		return [evalData?.result ?? {}, valid];
 	}
 
 	export const definition = {
