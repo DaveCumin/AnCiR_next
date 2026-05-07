@@ -146,6 +146,9 @@
 		refId = $state(null); //if it is a column that is based on another
 		refColumn = $derived(getColumnById(this.refId)); // Direct reference to the referenced column
 		tableProcessGUId = $state('');
+		producerNodeId = $state(null);
+		producerPort = $state(null);
+		producerArtifactKind = $state(null);
 		data = null; //if it has raw data, store the id here
 		compression = $state(null); //if any compression is used, store the info here
 		binWidth = $derived.by(() => {
@@ -399,6 +402,9 @@
 				jsonOut.compression = this.compression;
 			}
 			jsonOut.tableProcessGUId = this.tableProcessGUId;
+			jsonOut.producerNodeId = this.producerNodeId;
+			jsonOut.producerPort = this.producerPort;
+			jsonOut.producerArtifactKind = this.producerArtifactKind;
 			jsonOut.provenance = this.provenance;
 			jsonOut.processes = this.processes;
 
@@ -416,6 +422,9 @@
 				binWidth,
 				originTime_ms,
 				tableProcessGUId,
+				producerNodeId,
+				producerPort,
+				producerArtifactKind,
 				processes,
 				compression,
 				provenance
@@ -429,6 +438,9 @@
 					timeFormat: timeFormat ?? '',
 					binWidth: binWidth ?? null,
 					tableProcessGUId: tableProcessGUId ?? '',
+					producerNodeId: producerNodeId ?? null,
+					producerPort: producerPort ?? null,
+					producerArtifactKind: producerArtifactKind ?? null,
 					originTime_ms: originTime_ms ?? null,
 
 					compression: compression ?? null,

@@ -3,6 +3,7 @@
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
 import { Table } from '$lib/core/Table.svelte';
+import { getCachedProcessNodeGraph } from '$lib/core/ProcessNode.svelte.js';
 import * as jsonpatch from 'fast-json-patch';
 
 export const core = $state({
@@ -467,6 +468,14 @@ export function outputCoreAsJson() {
 	coreOut.storedValues = resolvedSV;
 	const output = { ...coreOut, appState, version: appConsts.version };
 	return JSON.stringify(output, null, 2);
+}
+
+/**
+ * Normalized workflow graph view (cached by core topology/data hash).
+ * Keeps graph derivation out of UI components.
+ */
+export function getProcessNodeGraph() {
+	return getCachedProcessNodeGraph(core, appConsts);
 }
 
 /** Returns a plain-object snapshot of core (no class instances). */

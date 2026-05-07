@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	import { core, appState, appConsts, replaceColumnRefs } from '$lib/core/core.svelte.js';
+	import { core, appState, appConsts, replaceColumnRefs, getProcessNodeGraph } from '$lib/core/core.svelte.js';
 	import { selectPlot, deselectAllPlots } from '$lib/core/Plot.svelte';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import WorkflowEdges from './WorkflowEdges.svelte';
@@ -50,125 +50,13 @@
 	let addProcessDropX = $state(0);
 	let addProcessDropY = $state(0);
 
-	// Derive all nodes from core — include live process/tp object references
+	// Derive workflow nodes from the cached ProcessNode graph adapter.
 	const allNodes = $derived.by(() => {
-		const result = [];
-
-		// Build set of TP output column IDs (these go in col 3, not col 0)
-		const tpOutputColIds = new Set();
-		core.tables.forEach((table) => {
-			table.processes.forEach((tp) => {
-				if (tp.args.out) {
-					Object.values(tp.args.out).forEach((id) => {
-						if (id != null && id >= 0) tpOutputColIds.add(id);
-					});
-				}
-			});
-		});
-
-		// Build colId → table colour (stable by table index)
-		const colToColor = new Map();
-		core.tables.forEach((table, idx) => {
-			const color = TABLE_COLOURS[idx % TABLE_COLOURS.length];
-			table.columnRefs.forEach((colId) => colToColor.set(colId, color));
-			table.processes.forEach((tp) => {
-				if (tp.args.out) {
-					Object.values(tp.args.out).forEach((colId) => {
-						if (colId != null && colId >= 0) colToColor.set(colId, color);
-					});
-				}
-			});
-		});
-
-		// Col 0: regular input data nodes (not TP outputs)
-		core.data.forEach((col) => {
-			if (tpOutputColIds.has(col.id)) return;
-			result.push({
-				id: `data_${col.id}`,
-				label: col.name,
-				sublabel: col.type,
-				type: 'data',
-				col: 0,
-				refId: col.id,
-				tableColor: colToColor.get(col.id)
-			});
-		});
-
-		// Col 1: column process nodes (all columns including TP outputs)
-		core.data.forEach((col) => {
-			col.processes.forEach((p) => {
-				result.push({
-					id: `process_${p.id}`,
-					label: p.displayName || p.name,
-					type: 'process',
-					col: 1,
-					refId: p.id,
-					processObj: p,
-					processName: p.name
-				});
-			});
-		});
-
-		// Col 2: table process nodes
-		core.tables.forEach((table) => {
-			table.processes.forEach((tp) => {
-				result.push({
-					id: `tableprocess_${tp.id}`,
-					label: tp.displayName || tp.name,
-					sublabel: table.name,
-					type: 'tableprocess',
-					col: 2,
-					refId: tp.id,
-					tpObj: tp,
-					tpName: tp.name
-				});
-			});
-		});
-
-		// Col 3: TP output data nodes, ordered by TP so they appear near their parent TP
-		core.tables.forEach((table, tableIdx) => {
-			const color = TABLE_COLOURS[tableIdx % TABLE_COLOURS.length];
-			table.processes.forEach((tp) => {
-				if (!tp.args.out) return;
-				Object.values(tp.args.out).forEach((colId) => {
-					if (colId == null || colId < 0) return;
-					const col = core.data.find((d) => d.id === colId);
-					if (!col) return;
-					result.push({
-						id: `data_${col.id}`,
-						label: col.name,
-						sublabel: col.type,
-						type: 'data',
-						col: 3,
-						refId: col.id,
-						tableColor: color,
-						isTPOutput: true
-					});
-				});
-			});
-		});
-
-		// Col 4: plot nodes (was col 3)
-		core.plots.forEach((plot) => {
-			result.push({
-				id: `plot_${plot.id}`,
-				label: plot.name,
-				sublabel: plot.type,
-				type: 'plot',
-				col: 4,
-				refId: plot.id,
-				plotObj: plot
-			});
-		});
-
-		return result;
+		const graph = getProcessNodeGraph();
+		return graph.nodes ?? [];
 	});
 
 	// --- Edge derivation split into topology + positioned ---
-
-	function isValidRef(id) {
-		return id != null && id >= 0;
-	}
 
 	/**
 	 * Returns true if two NODE_WIDTH×NODE_HEIGHT boxes (each described by top-left {x,y})
@@ -185,82 +73,14 @@
 
 	// Step 1: edge connectivity only (re-derives when core changes, NOT when positions change)
 	const edgeTopology = $derived.by(() => {
-		const edges = [];
-		const seen = new Set();
-
-		function addEdge(fromId, toId, type) {
-			const key = `${fromId}|${toId}|${type}`;
-			if (seen.has(key)) return;
-			seen.add(key);
-			edges.push({ fromId, toId, type });
-		}
-
-		// data → process chains
-		core.data.forEach((col) => {
-			let prevId = `data_${col.id}`;
-			col.processes.forEach((p) => {
-				const processId = `process_${p.id}`;
-				addEdge(prevId, processId, 'data-process');
-				prevId = processId;
-			});
-		});
-
-		// tableprocess input/output edges
-		core.tables.forEach((table) => {
-			table.processes.forEach((tp) => {
-				const tpNodeId = `tableprocess_${tp.id}`;
-
-				function addInputEdge(colId) {
-					if (!isValidRef(colId)) return;
-					const col = core.data.find((d) => d.id === colId);
-					if (!col) return;
-					const lastId =
-						col.processes.length > 0
-							? `process_${col.processes[col.processes.length - 1].id}`
-							: `data_${colId}`;
-					addEdge(lastId, tpNodeId, 'data-tp');
-				}
-
-				addInputEdge(tp.args.xIN);
-				addInputEdge(tp.args.yIN);
-				if (Array.isArray(tp.args.xsIN)) tp.args.xsIN.forEach(addInputEdge);
-
-				if (tp.args.out) {
-					Object.values(tp.args.out).forEach((colId) => {
-						if (!isValidRef(colId)) return;
-						addEdge(tpNodeId, `data_${colId}`, 'tp-data');
-					});
-				}
-			});
-		});
-
-		// data → plot edges
-		core.plots.forEach((plot) => {
-			const plotNodeId = `plot_${plot.id}`;
-
-			function addPlotEdge(colId) {
-				if (!isValidRef(colId)) return;
-				const col = core.data.find((d) => d.id === colId);
-				if (!col) return;
-				const lastId =
-					col.processes.length > 0
-						? `process_${col.processes[col.processes.length - 1].id}`
-						: `data_${colId}`;
-				addEdge(lastId, plotNodeId, 'data-plot');
-			}
-
-			if (plot.type === 'tableplot') {
-				plot.plot.columnRefs?.forEach(addPlotEdge);
-			} else {
-				plot.plot.data?.forEach((dataPoint) => {
-					['x', 'y', 'z'].forEach((axis) => {
-						if (dataPoint[axis]?.refId != null) addPlotEdge(dataPoint[axis].refId);
-					});
-				});
-			}
-		});
-
-		return edges;
+		const graph = getProcessNodeGraph();
+		return (graph.connections ?? []).map((e) => ({
+			fromId: e.fromId,
+			toId: e.toId,
+			type: e.type,
+			fromPort: e.fromPort,
+			toPort: e.toPort
+		}));
 	});
 
 	/**
