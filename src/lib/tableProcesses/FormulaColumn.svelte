@@ -89,7 +89,12 @@ return _r;`
 		// FormulaColumn stores column refs inline inside args.tokens ({type:'col', id}),
 		// not in a flat scalar/array slot, so the generic registry can't reach them.
 		// It handles its own ref updates in-component.
-		columnIdFields: {}
+		columnIdFields: {},
+		nodeSpec: {
+			id: 'tableprocess.formulacolumn',
+			inputs: [{ name: 'tokens', kind: 'column', cardinality: 'many' }],
+			outputs: [{ name: 'result', kind: 'column', cardinality: 'one' }]
+		}
 	};
 </script>
 

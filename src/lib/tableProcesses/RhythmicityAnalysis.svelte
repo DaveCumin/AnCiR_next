@@ -41,7 +41,18 @@
 		func: rhythmicityanalysis,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'rhythmicityx',
-		yOutKeyPrefix: 'rhythmicityy_'
+		yOutKeyPrefix: 'rhythmicityy_',
+		nodeSpec: {
+			id: 'tableprocess.rhythmicityanalysis',
+			inputs: [
+				{ name: 'xIN', kind: 'column', cardinality: 'one' },
+				{ name: 'yIN', kind: 'column', cardinality: 'many' }
+			],
+			outputs: [
+				{ name: 'rhythmicityx', kind: 'column', cardinality: 'one' },
+				{ name: 'rhythmicityy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'rhythmicityy_' }
+			]
+		}
 	};
 
 	/**

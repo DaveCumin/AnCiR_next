@@ -26,7 +26,18 @@
 		func: trendfit,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'trendx',
-		yOutKeyPrefix: 'trendy_'
+		yOutKeyPrefix: 'trendy_',
+		nodeSpec: {
+			id: 'tableprocess.trendfit',
+			inputs: [
+				{ name: 'xIN', kind: 'column', cardinality: 'one' },
+				{ name: 'yIN', kind: 'column', cardinality: 'many' }
+			],
+			outputs: [
+				{ name: 'trendx', kind: 'column', cardinality: 'one' },
+				{ name: 'trendy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'trendy_' }
+			]
+		}
 	};
 
 	export function trendfit(argsIN) {

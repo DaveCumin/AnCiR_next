@@ -22,7 +22,12 @@
 	export const definition = {
 		displayName: 'Edit value',
 		func: editvalue,
-		defaults: editvalue_defaults
+		defaults: editvalue_defaults,
+		nodeSpec: {
+			id: 'process.editvalue',
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
+		}
 	};
 </script>
 

@@ -93,7 +93,12 @@
 	export const definition = {
 		displayName: 'Normalize',
 		func: normalize,
-		defaults: normalize_defaults
+		defaults: normalize_defaults,
+		nodeSpec: {
+			id: 'process.normalize',
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
+		}
 	};
 </script>
 

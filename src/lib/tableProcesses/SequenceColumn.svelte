@@ -60,7 +60,17 @@
 		return [result, result.length > 0];
 	}
 
-	export const definition = { displayName, defaults, func: sequencecolumn, columnIdFields: {} };
+	export const definition = {
+		displayName,
+		defaults,
+		func: sequencecolumn,
+		columnIdFields: {},
+		nodeSpec: {
+			id: 'tableprocess.sequencecolumn',
+			inputs: [],
+			outputs: [{ name: 'result', kind: 'column', cardinality: 'one' }]
+		}
+	};
 </script>
 
 <script>

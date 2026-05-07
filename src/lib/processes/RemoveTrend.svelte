@@ -155,7 +155,12 @@
 	export const definition = {
 		displayName: 'Remove Trend',
 		func: removetrend,
-		defaults: removetrend_defaults
+		defaults: removetrend_defaults,
+		nodeSpec: {
+			id: 'process.removetrend',
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
+		}
 	};
 </script>
 

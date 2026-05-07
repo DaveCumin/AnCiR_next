@@ -88,7 +88,12 @@
 		displayName,
 		defaults,
 		func: columnfunctions,
-		columnIdFields: { array: ['xsIN', 'yIN'] }
+		columnIdFields: { array: ['xsIN', 'yIN'] },
+		nodeSpec: {
+			id: 'tableprocess.columnfunctions',
+			inputs: [{ name: 'xsIN', kind: 'column', cardinality: 'many' }],
+			outputs: [{ name: 'result', kind: 'column', cardinality: 'one' }]
+		}
 	};
 </script>
 

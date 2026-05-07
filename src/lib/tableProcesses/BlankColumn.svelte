@@ -44,7 +44,17 @@
 		return [result, true];
 	}
 
-	export const definition = { displayName, defaults, func: blankcolumn, columnIdFields: {} };
+	export const definition = {
+		displayName,
+		defaults,
+		func: blankcolumn,
+		columnIdFields: {},
+		nodeSpec: {
+			id: 'tableprocess.blankcolumn',
+			inputs: [],
+			outputs: [{ name: 'result', kind: 'column', cardinality: 'one' }]
+		}
+	};
 </script>
 
 <script>

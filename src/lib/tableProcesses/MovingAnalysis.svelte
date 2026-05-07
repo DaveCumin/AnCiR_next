@@ -68,7 +68,17 @@
 		displayName,
 		defaults,
 		func: movinganalysis,
-		columnIdFields: { scalar: ['xIN'], array: ['yIN'] }
+		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
+		nodeSpec: {
+			id: 'tableprocess.movinganalysis',
+			inputs: [
+				{ name: 'xIN', kind: 'column', cardinality: 'one' },
+				{ name: 'yIN', kind: 'column', cardinality: 'many' }
+			],
+			outputs: [
+				{ name: 'stats_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'stats_' }
+			]
+		}
 	};
 
 	/**

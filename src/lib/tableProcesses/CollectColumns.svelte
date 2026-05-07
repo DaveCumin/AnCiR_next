@@ -103,7 +103,12 @@
 		displayName,
 		defaults,
 		func: collectcolumns,
-		columnIdFields: { array: ['colIds', 'outColIds'] }
+		columnIdFields: { array: ['colIds', 'outColIds'] },
+		nodeSpec: {
+			id: 'tableprocess.collectcolumns',
+			inputs: [{ name: 'colIds', kind: 'column', cardinality: 'many' }],
+			outputs: [{ name: 'outCols', kind: 'column', cardinality: 'many' }]
+		}
 	};
 </script>
 

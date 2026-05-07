@@ -78,7 +78,12 @@
 	export const definition = {
 		displayName: 'Remove Outliers',
 		func: outlierremoval,
-		defaults: outlierremoval_defaults
+		defaults: outlierremoval_defaults,
+		nodeSpec: {
+			id: 'process.outlierremoval',
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
+		}
 	};
 </script>
 

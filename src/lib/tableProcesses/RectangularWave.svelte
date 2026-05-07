@@ -28,7 +28,18 @@
 		func: rectangularwave,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'rectwavex',
-		yOutKeyPrefix: 'rectwavey_'
+		yOutKeyPrefix: 'rectwavey_',
+		nodeSpec: {
+			id: 'tableprocess.rectangularwave',
+			inputs: [
+				{ name: 'xIN', kind: 'column', cardinality: 'one' },
+				{ name: 'yIN', kind: 'column', cardinality: 'many' }
+			],
+			outputs: [
+				{ name: 'rectwavex', kind: 'column', cardinality: 'one' },
+				{ name: 'rectwavey_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'rectwavey_' }
+			]
+		}
 	};
 
 	export function rectangularwave(argsIN) {

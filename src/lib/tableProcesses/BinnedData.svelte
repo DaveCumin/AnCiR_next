@@ -25,7 +25,18 @@
 		func: binneddata,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'binnedx',
-		yOutKeyPrefix: 'binnedy_'
+		yOutKeyPrefix: 'binnedy_',
+		nodeSpec: {
+			id: 'tableprocess.binneddata',
+			inputs: [
+				{ name: 'xIN', kind: 'column', cardinality: 'one' },
+				{ name: 'yIN', kind: 'column', cardinality: 'many' }
+			],
+			outputs: [
+				{ name: 'binnedx', kind: 'column', cardinality: 'one' },
+				{ name: 'binnedy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'binnedy_' }
+			]
+		}
 	};
 
 	export function binneddata(argsIN, differentstepsize) {

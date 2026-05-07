@@ -35,7 +35,12 @@
 		displayName,
 		defaults,
 		func: duplicate,
-		columnIdFields: { scalar: ['xIN'] }
+		columnIdFields: { scalar: ['xIN'] },
+		nodeSpec: {
+			id: 'tableprocess.duplicate',
+			inputs: [{ name: 'xIN', kind: 'column', cardinality: 'one' }],
+			outputs: [{ name: 'result', kind: 'column', cardinality: 'one' }]
+		}
 	};
 </script>
 

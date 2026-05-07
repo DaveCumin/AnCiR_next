@@ -28,7 +28,18 @@
 		func: smootheddata,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'smoothedx',
-		yOutKeyPrefix: 'smoothedy_'
+		yOutKeyPrefix: 'smoothedy_',
+		nodeSpec: {
+			id: 'tableprocess.smootheddata',
+			inputs: [
+				{ name: 'xIN', kind: 'column', cardinality: 'one' },
+				{ name: 'yIN', kind: 'column', cardinality: 'many' }
+			],
+			outputs: [
+				{ name: 'smoothedx', kind: 'column', cardinality: 'one' },
+				{ name: 'smoothedy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'smoothedy_' }
+			]
+		}
 	};
 	function whittakerEilers(y, lambda = 100, order = 2) {
 		const n = y.length;

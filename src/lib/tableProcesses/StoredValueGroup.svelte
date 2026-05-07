@@ -70,7 +70,15 @@
 		displayName,
 		defaults,
 		func: storedvaluegroup,
-		columnIdFields: {}
+		columnIdFields: {},
+		nodeSpec: {
+			id: 'tableprocess.storedvaluegroup',
+			inputs: [],
+			outputs: [
+				{ name: 'category', kind: 'column', cardinality: 'one' },
+				{ name: 'value', kind: 'column', cardinality: 'one' }
+			]
+		}
 	};
 </script>
 

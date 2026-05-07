@@ -105,7 +105,19 @@
 		displayName,
 		defaults,
 		func: widetolong,
-		columnIdFields: { scalar: ['timeIN'], array: ['valueColIds'] }
+		columnIdFields: { scalar: ['timeIN'], array: ['valueColIds'] },
+		nodeSpec: {
+			id: 'tableprocess.widetolong',
+			inputs: [
+				{ name: 'timeIN', kind: 'column', cardinality: 'one' },
+				{ name: 'valueColIds', kind: 'column', cardinality: 'many' }
+			],
+			outputs: [
+				{ name: 'time', kind: 'column', cardinality: 'one' },
+				{ name: 'category', kind: 'column', cardinality: 'one' },
+				{ name: 'value', kind: 'column', cardinality: 'one' }
+			]
+		}
 	};
 </script>
 

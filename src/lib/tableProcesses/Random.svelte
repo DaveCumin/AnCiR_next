@@ -29,7 +29,17 @@
 		return [result, result.length > 0];
 	}
 
-	export const definition = { displayName, defaults, func: random, columnIdFields: {} };
+	export const definition = {
+		displayName,
+		defaults,
+		func: random,
+		columnIdFields: {},
+		nodeSpec: {
+			id: 'tableprocess.random',
+			inputs: [],
+			outputs: [{ name: 'result', kind: 'column', cardinality: 'one' }]
+		}
+	};
 </script>
 
 <script>

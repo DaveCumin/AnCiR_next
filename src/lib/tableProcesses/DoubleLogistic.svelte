@@ -28,7 +28,18 @@
 		func: doublelogistic,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'dlogx',
-		yOutKeyPrefix: 'dlogy_'
+		yOutKeyPrefix: 'dlogy_',
+		nodeSpec: {
+			id: 'tableprocess.doublelogistic',
+			inputs: [
+				{ name: 'xIN', kind: 'column', cardinality: 'one' },
+				{ name: 'yIN', kind: 'column', cardinality: 'many' }
+			],
+			outputs: [
+				{ name: 'dlogx', kind: 'column', cardinality: 'one' },
+				{ name: 'dlogy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'dlogy_' }
+			]
+		}
 	};
 
 	export function doublelogistic(argsIN) {

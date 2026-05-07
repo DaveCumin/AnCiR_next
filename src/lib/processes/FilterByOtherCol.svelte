@@ -83,7 +83,12 @@
 	export const definition = {
 		displayName: 'Filter',
 		func: filterbyothercol,
-		defaults: filterbyothercol_defaults
+		defaults: filterbyothercol_defaults,
+		nodeSpec: {
+			id: 'process.filter',
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
+		}
 	};
 </script>
 
