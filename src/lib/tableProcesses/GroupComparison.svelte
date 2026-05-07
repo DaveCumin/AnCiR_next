@@ -51,6 +51,13 @@
 		return Number.isFinite(v) ? Math.sqrt(v) : NaN;
 	}
 
+	function median(arr) {
+		if (!arr.length) return NaN;
+		const sorted = [...arr].sort((a, b) => a - b);
+		const mid = Math.floor(sorted.length / 2);
+		return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+	}
+
 	function safePUpperFromF(fValue, df1, df2) {
 		if (!Number.isFinite(fValue) || !Number.isFinite(df1) || !Number.isFinite(df2)) return NaN;
 		if (df1 <= 0 || df2 <= 0 || fValue < 0) return NaN;
@@ -898,11 +905,18 @@
 	}
 
 	function getGroupSummaryData() {
-		const headers = ['column', 'group', 'n', 'mean', 'sd'];
+		const headers = ['column', 'group', 'n', 'mean', 'sd', 'min', 'max', 'median', 'jb_p'];
 		const rows = [];
 		for (const result of Object.values(comparisonData?.comparisons ?? {})) {
 			for (const g of result?.groups ?? []) {
-				rows.push([result.columnName, g.name, g.n, g.mean, g.sd]);
+				const vals = g.values ?? [];
+				const gMin = vals.length ? Math.min(...vals) : NaN;
+				const gMax = vals.length ? Math.max(...vals) : NaN;
+				const gMed = median(vals);
+				// JB requires n >= 8; use null when not evaluable so formatter renders '-'
+				const jb = jarqueBeraNormality(vals);
+				const jbP = jb.evaluable ? jb.pValue : null;
+				rows.push([result.columnName, g.name, g.n, g.mean, g.sd, gMin, gMax, gMed, jbP]);
 			}
 		}
 		return { headers, rows };
@@ -966,26 +980,19 @@
 			<summary class="tp-output-summary">Stats table</summary>
 			{#if statsTableData.rows.length > 0}
 				{#each getPreviewRows(statsTableData.rows, statsPreviewStart) as row}
-					<div class="tp-value-block">
-						{#each statsTableData.headers as header, idx}
-							{#if row[idx] != null && row[idx] !== ''}
-								<p>
-									<span class="tp-value-key">{formatValueLabel(header)}:</span>
-									{formatValueDisplay(row[idx])}
-								</p>
-							{/if}
-						{/each}
+					<div class="control-input-horizontal">
+						<div class="control-input">
+							{#each statsTableData.headers as header, idx}
+								{#if row[idx] != null && row[idx] !== ''}
+									<p>
+										<strong>{formatValueLabel(header)}:</strong>
+										{formatValueDisplay(row[idx])}
+									</p>
+								{/if}
+							{/each}
+						</div>
 					</div>
 				{/each}
-				<p>
-					Row <NumberWithUnits
-						min={1}
-						max={Math.max(1, statsTableData.rows.length - 5)}
-						step={1}
-						bind:value={statsPreviewStart}
-					/> to {Math.min(statsPreviewStart + 5, statsTableData.rows.length)} of {statsTableData
-						.rows.length}
-				</p>
 			{/if}
 			<div class="tp-stat-actions">
 				<button
@@ -1013,23 +1020,20 @@
 			<summary class="tp-output-summary">Group summary</summary>
 			{#if groupSummaryTableData.rows.length > 0}
 				{#each getPreviewRows(groupSummaryTableData.rows, summaryPreviewStart) as row}
-					<div class="tp-value-block">
-						<p><span class="tp-value-key">Column:</span> {formatValueDisplay(row[0])}</p>
-						<p><span class="tp-value-key">Group:</span> {formatValueDisplay(row[1])}</p>
-						<p><span class="tp-value-key">n:</span> {formatValueDisplay(row[2])}</p>
-						<p><span class="tp-value-key">Mean:</span> {formatValueDisplay(row[3])}</p>
-						<p><span class="tp-value-key">SD:</span> {formatValueDisplay(row[4])}</p>
+					<div class="control-input-horizontal">
+						<div class="control-input">
+							<p><strong>Column:</strong> {formatValueDisplay(row[0])}</p>
+							<p><strong>Group:</strong> {formatValueDisplay(row[1])}</p>
+							<p><strong>n:</strong> {formatValueDisplay(row[2])}</p>
+							<p><strong>Mean:</strong> {formatValueDisplay(row[3])}</p>
+							<p><strong>SD:</strong> {formatValueDisplay(row[4])}</p>
+							<p><strong>Min:</strong> {formatValueDisplay(row[5])}</p>
+							<p><strong>Max:</strong> {formatValueDisplay(row[6])}</p>
+							<p><strong>Median:</strong> {formatValueDisplay(row[7])}</p>
+							<p><strong>JB p:</strong> {formatValueDisplay(row[8])}</p>
+						</div>
 					</div>
 				{/each}
-				<p>
-					Row <NumberWithUnits
-						min={1}
-						max={Math.max(1, groupSummaryTableData.rows.length - 5)}
-						step={1}
-						bind:value={summaryPreviewStart}
-					/> to {Math.min(summaryPreviewStart + 5, groupSummaryTableData.rows.length)} of {groupSummaryTableData
-						.rows.length}
-				</p>
 			{/if}
 			<div class="tp-stat-actions">
 				<button
@@ -1049,28 +1053,21 @@
 				<summary class="tp-output-summary">Post-hoc comparisons</summary>
 				{#if postHocTableData.rows.length > 0}
 					{#each getPreviewRows(postHocTableData.rows, postHocPreviewStart) as row}
-						<div class="tp-value-block">
-							<p>
-								<strong>{formatValueDisplay(row[0])}:</strong>
-								{formatValueDisplay(row[2])} vs {formatValueDisplay(row[3])}
-							</p>
-							<p><span class="tp-value-key">Family:</span> {formatValueDisplay(row[1])}</p>
-							<p><span class="tp-value-key">Difference/Stat:</span> {formatValueDisplay(row[4])}</p>
-							<p><span class="tp-value-key">Test Statistic:</span> {formatValueDisplay(row[5])}</p>
-							<p><span class="tp-value-key">p Raw:</span> {formatValueDisplay(row[6])}</p>
-							<p><span class="tp-value-key">p Adjusted:</span> {formatValueDisplay(row[7])}</p>
-							<p><span class="tp-value-key">Significant:</span> {formatValueDisplay(row[8])}</p>
+						<div class="control-input-horizontal">
+							<div class="control-input">
+								<p>
+									<strong>{formatValueDisplay(row[0])}:</strong>
+									{formatValueDisplay(row[2])} vs {formatValueDisplay(row[3])}
+								</p>
+								<p><strong>Family:</strong> {formatValueDisplay(row[1])}</p>
+								<p><strong>Difference/Stat:</strong> {formatValueDisplay(row[4])}</p>
+								<p><strong>Test Statistic:</strong> {formatValueDisplay(row[5])}</p>
+								<p><strong>p Raw:</strong> {formatValueDisplay(row[6])}</p>
+								<p><strong>p Adjusted:</strong> {formatValueDisplay(row[7])}</p>
+								<p><strong>Significant:</strong> {formatValueDisplay(row[8])}</p>
+							</div>
 						</div>
 					{/each}
-					<p>
-						Row <NumberWithUnits
-							min={1}
-							max={Math.max(1, postHocTableData.rows.length - 5)}
-							step={1}
-							bind:value={postHocPreviewStart}
-						/> to {Math.min(postHocPreviewStart + 5, postHocTableData.rows.length)} of {postHocTableData
-							.rows.length}
-					</p>
 				{/if}
 				<div class="tp-stat-actions">
 					<button
@@ -1198,12 +1195,12 @@
 		border: 1px solid var(--stroke2, var(--color-lightness-85, #d7d7d7));
 		border-radius: 0.375rem;
 		background: var(--color-lightness-99, #fcfcfc);
-		font-size: 12px;
-		line-height: 1.3;
+		font-size: 11px;
+		line-height: 1.25;
 	}
 
 	.tp-output-panel[open] {
-		max-height: 18rem;
+		max-height: 14rem;
 		overflow-y: auto;
 		scrollbar-gutter: stable;
 	}
@@ -1218,22 +1215,13 @@
 		padding: 0.1rem 0;
 	}
 
-	.tp-value-block {
-		margin-top: 0.45rem;
-		padding: 0.35rem 0.45rem;
-		border: 1px solid var(--color-lightness-93, #ececec);
-		border-radius: 0.35rem;
-		background: var(--color-lightness-100, #fff);
+	.result-card {
 		font-size: 11px;
-		line-height: 1.25;
+		line-height: 1.2;
 	}
 
-	.tp-value-block p {
-		margin: 0.08rem 0;
-	}
-
-	.tp-value-key {
-		font-weight: 600;
+	.result-card p {
+		margin: 0.14rem 0;
 	}
 
 	.tp-stat-actions {

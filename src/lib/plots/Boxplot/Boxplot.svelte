@@ -525,7 +525,11 @@
 				const statsMap = new Map();
 				allCategories.forEach((cat) => {
 					const vals = groups.get(cat) ?? [];
-					const box = calculateBoxPlotStats(vals);
+					const box = calculateBoxPlotStats(vals, {
+						method: datum.boxPlot.outlierMethod,
+						iqrMultiplier: datum.boxPlot.iqrMultiplier,
+						zThreshold: datum.boxPlot.zThreshold
+					});
 					if (!box || vals.length === 0) {
 						statsMap.set(cat, null);
 						return;
@@ -919,20 +923,22 @@
 						<details class="tp-output-panel">
 							<summary class="tp-output-summary">Pairwise comparisons</summary>
 							{#each theData.getSigBarPreviewPairs() as pair}
-								<div class="tp-value-block">
-									<p><strong>{pair.groupA}</strong> vs <strong>{pair.groupB}</strong></p>
-									<p>
-										<span class="tp-value-key">p-value:</span>
-										{Number.isFinite(pair.pValue) ? pair.pValue.toPrecision(4) : 'NaN'}
-									</p>
-									<p>
-										<span class="tp-value-key">p-adjusted:</span>
-										{Number.isFinite(pair.pAdjusted) ? pair.pAdjusted.toPrecision(4) : 'NaN'}
-									</p>
-									<p>
-										<span class="tp-value-key">Significant:</span>
-										{pair.significant ? 'Yes' : 'No'}
-									</p>
+								<div class="control-input-horizontal">
+									<div class="control-input">
+										<p><strong>{pair.groupA}</strong> vs <strong>{pair.groupB}</strong></p>
+										<p>
+											<strong>p-value:</strong>
+											{Number.isFinite(pair.pValue) ? pair.pValue.toPrecision(4) : 'NaN'}
+										</p>
+										<p>
+											<strong>p-adjusted:</strong>
+											{Number.isFinite(pair.pAdjusted) ? pair.pAdjusted.toPrecision(4) : 'NaN'}
+										</p>
+										<p>
+											<strong>Significant:</strong>
+											{pair.significant ? 'Yes' : 'No'}
+										</p>
+									</div>
 								</div>
 							{/each}
 							<p>
@@ -1169,12 +1175,12 @@
 		border: 1px solid var(--stroke2, var(--color-lightness-85, #d7d7d7));
 		border-radius: 0.375rem;
 		background: var(--color-lightness-99, #fcfcfc);
-		font-size: 12px;
-		line-height: 1.3;
+		font-size: 11px;
+		line-height: 1.25;
 	}
 
 	.tp-output-panel[open] {
-		max-height: 16rem;
+		max-height: 12rem;
 		overflow-y: auto;
 		scrollbar-gutter: stable;
 	}
@@ -1187,23 +1193,5 @@
 		z-index: 1;
 		background: var(--color-lightness-99, #fcfcfc);
 		padding: 0.1rem 0;
-	}
-
-	.tp-value-block {
-		margin-top: 0.4rem;
-		padding: 0.35rem 0.45rem;
-		border: 1px solid var(--color-lightness-93, #ececec);
-		border-radius: 0.35rem;
-		background: var(--color-lightness-100, #fff);
-		font-size: 11px;
-		line-height: 1.25;
-	}
-
-	.tp-value-block p {
-		margin: 0.08rem 0;
-	}
-
-	.tp-value-key {
-		font-weight: 600;
 	}
 </style>

@@ -52,6 +52,10 @@
 	"dependencies": {
 		"@fortawesome/free-solid-svg-icons": "^6.7.2",
 		"@fortawesome/svelte-fontawesome": "^0.2.4",
+		"@stdlib/random-base-exponential": "^0.2.2",
+		"@stdlib/random-base-minstd-shuffle": "^0.2.3",
+		"@stdlib/random-base-normal": "^0.2.2",
+		"@stdlib/random-base-uniform": "^0.2.3",
 		"@stdlib/stats-base-dists-chisquare-cdf": "^0.3.1",
 		"@stdlib/stats-base-dists-chisquare-quantile": "^0.2.3",
 		"@stdlib/stats-base-dists-f-cdf": "^0.2.3",

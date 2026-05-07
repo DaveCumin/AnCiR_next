@@ -9,8 +9,11 @@
 		['zThreshold', { val: 3 }]
 	]);
 
+	export const outlierRemovalMethodOptions = ['iqr', 'zscore'];
+	export const outlierRemovalMethodDisplay = ['IQR', 'Z-Score'];
+
 	// Outlier detection functions
-	function detectOutliersIQR(y, multiplier = 1.5) {
+	export function detectOutliersIQR(y, multiplier = 1.5) {
 		const sorted = [...y].sort((a, b) => a - b);
 		const n = sorted.length;
 		const q1Index = Math.floor(n / 4);
@@ -23,7 +26,7 @@
 		return y.map((val) => val < lowerBound || val > upperBound);
 	}
 
-	function detectOutliersZScore(y, threshold = 3) {
+	export function detectOutliersZScore(y, threshold = 3) {
 		const mean = kahanMean(y);
 		const sumSq = new KahanSum();
 		for (let val of y) {

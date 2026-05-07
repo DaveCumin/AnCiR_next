@@ -4,6 +4,16 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { isValidStroke } from '$lib/components/plotbits/helpers/misc.js';
+	import {
+		detectOutliersIQR,
+		detectOutliersZScore,
+		outlierRemovalMethodDisplay,
+		outlierRemovalMethodOptions
+	} from '$lib/processes/OutlierRemoval.svelte';
+
+	export const boxplotDefaultOutlierMethod = 'iqr';
+	const boxplotOutlierMethodOptions = [...outlierRemovalMethodOptions];
+	const boxplotOutlierMethodDisplay = [...outlierRemovalMethodDisplay];
 
 	export class BoxClass {
 		colour = $state(getPaletteColor(0));
@@ -14,6 +24,9 @@
 		draw = $state(true);
 		showOutliers = $state(true);
 		outlierSize = $state(3);
+		outlierMethod = $state(boxplotDefaultOutlierMethod);
+		iqrMultiplier = $state(1.5);
+		zThreshold = $state(3);
 		whiskerWidth = $state(0.5);
 		boxWidth = $state(0.8);
 		medianWidth = $state(2);
@@ -31,6 +44,12 @@
 			this.draw = dataIN?.draw ?? true;
 			this.showOutliers = dataIN?.showOutliers ?? true;
 			this.outlierSize = dataIN?.outlierSize ?? 3;
+			this.outlierMethod =
+				dataIN?.outlierMethod === 'boxplot'
+					? 'iqr'
+					: dataIN?.outlierMethod ?? boxplotDefaultOutlierMethod;
+			this.iqrMultiplier = dataIN?.iqrMultiplier ?? 1.5;
+			this.zThreshold = dataIN?.zThreshold ?? 3;
 			this.whiskerWidth = dataIN?.whiskerWidth ?? 0.5;
 			this.boxWidth = dataIN?.boxWidth ?? 0.8;
 			this.medianWidth = dataIN?.medianWidth ?? 2;
@@ -47,6 +66,9 @@
 				draw: this.draw,
 				showOutliers: this.showOutliers,
 				outlierSize: this.outlierSize,
+				outlierMethod: this.outlierMethod,
+				iqrMultiplier: this.iqrMultiplier,
+				zThreshold: this.zThreshold,
 				whiskerWidth: this.whiskerWidth,
 				boxWidth: this.boxWidth,
 				medianWidth: this.medianWidth,
@@ -64,6 +86,9 @@
 				draw: json.draw,
 				showOutliers: json.showOutliers,
 				outlierSize: json.outlierSize,
+				outlierMethod: json.outlierMethod,
+				iqrMultiplier: json.iqrMultiplier,
+				zThreshold: json.zThreshold,
 				whiskerWidth: json.whiskerWidth,
 				boxWidth: json.boxWidth,
 				medianWidth: json.medianWidth,
@@ -72,8 +97,19 @@
 		}
 	}
 
+	function getOutlierMask(validData, outlierSettings = {}) {
+		const method = outlierSettings?.method ?? boxplotDefaultOutlierMethod;
+		if (method === 'zscore') {
+			return detectOutliersZScore(validData, outlierSettings?.zThreshold ?? 3);
+		}
+		if (method === 'iqr' || method === 'boxplot') {
+			return detectOutliersIQR(validData, outlierSettings?.iqrMultiplier ?? 1.5);
+		}
+		return detectOutliersIQR(validData, outlierSettings?.iqrMultiplier ?? 1.5);
+	}
+
 	/** @param {number[]} data */
-	export function calculateBoxPlotStats(data) {
+	export function calculateBoxPlotStats(data, outlierSettings = {}) {
 		if (!data || data.length === 0) return null;
 
 		const validData = data.filter((d) => d != null && !isNaN(d));
@@ -90,15 +126,12 @@
 		const q2 = sorted[q2Index];
 		const q3 = sorted[q3Index];
 
-		const iqr = q3 - q1;
-		const lowerFence = q1 - 1.5 * iqr;
-		const upperFence = q3 + 1.5 * iqr;
-
-		const lowerWhisker = sorted.find((d) => d >= lowerFence) ?? sorted[0];
-		const reverseSorted = [...sorted].reverse();
-		const upperWhisker = reverseSorted.find((d) => d <= upperFence) ?? sorted[sorted.length - 1];
-
-		const outliers = validData.filter((d) => d < lowerFence || d > upperFence);
+		const outlierMask = getOutlierMask(validData, outlierSettings);
+		const outliers = validData.filter((_, i) => outlierMask[i]);
+		const inliers = validData.filter((_, i) => !outlierMask[i]);
+		const sortedInliers = [...inliers].sort((a, b) => a - b);
+		const lowerWhisker = sortedInliers[0] ?? sorted[0];
+		const upperWhisker = sortedInliers[sortedInliers.length - 1] ?? sorted[sorted.length - 1];
 
 		return {
 			q1,
@@ -155,7 +188,11 @@
 
 		return Array.from(groups.entries())
 			.map(([category, values]) => {
-				const stats = calculateBoxPlotStats(values);
+				const stats = calculateBoxPlotStats(values, {
+					method: boxPlotData?.outlierMethod,
+					iqrMultiplier: boxPlotData?.iqrMultiplier,
+					zThreshold: boxPlotData?.zThreshold
+				});
 				if (!stats) return null;
 				return { category, ...stats };
 			})
@@ -184,6 +221,11 @@
 	});
 
 	let whiskerHalfWidth = $derived(boxHalfWidth * boxPlotData.whiskerWidth);
+
+	let outlierValues = $derived.by(() => {
+		if (!groupedStats.length) return [];
+		return groupedStats.flatMap((group) => group.outliers ?? []);
+	});
 
 	// Calculate dodge offset for multiple series
 	let dodgeOffset = $derived.by(() => {
@@ -273,6 +315,27 @@
 			</div>
 			<div class="control-input-horizontal">
 				<div class="control-input">
+					<p>Outlier Method</p>
+					<AttributeSelect
+						bind:value={boxPlotData.outlierMethod}
+						options={boxplotOutlierMethodOptions}
+						optionsDisplay={boxplotOutlierMethodDisplay}
+					/>
+				</div>
+				{#if boxPlotData.outlierMethod === 'iqr'}
+					<div class="control-input">
+						<p>IQR Multiplier</p>
+						<NumberWithUnits step="0.1" min={0.1} max={5} bind:value={boxPlotData.iqrMultiplier} />
+					</div>
+				{:else if boxPlotData.outlierMethod === 'zscore'}
+					<div class="control-input">
+						<p>Z-Score Threshold</p>
+						<NumberWithUnits step="0.1" min={1} max={10} bind:value={boxPlotData.zThreshold} />
+					</div>
+				{/if}
+			</div>
+			<div class="control-input-horizontal">
+				<div class="control-input">
 					<p>Show Outliers</p>
 					<input type="checkbox" bind:checked={boxPlotData.showOutliers} />
 				</div>
@@ -283,6 +346,19 @@
 					</div>
 				{/if}
 			</div>
+			{#if outlierValues.length > 0}
+				<div>
+					<p>Outliers</p>
+					<div class="removed-values-list">
+						{#each outlierValues as value, i}
+							<div class="removed-value-row">
+								<span class="removed-value-number">{i + 1}:</span>
+								<span class="removed-value">{parseFloat(value.toFixed(2))}</span>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
 		{/if}
 	</div>
 {/snippet}
@@ -382,3 +458,35 @@
 {:else if which === 'controls'}
 	{@render controls(boxPlotData)}
 {/if}
+
+<style>
+	.removed-values-list {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		max-height: 150px;
+		overflow-y: auto;
+		border: 1px solid #e1e9f6;
+		border-radius: 4px;
+		padding: 4px;
+	}
+
+	.removed-value-row {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 11px;
+	}
+
+	.removed-value-number {
+		color: var(--color-lightness-35);
+		min-width: 24px;
+		flex-shrink: 0;
+	}
+
+	.removed-value {
+		width: 70px;
+		font-size: 11px;
+		padding: 1px 4px;
+	}
+</style>
