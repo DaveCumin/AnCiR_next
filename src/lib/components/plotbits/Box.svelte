@@ -346,19 +346,6 @@
 					</div>
 				{/if}
 			</div>
-			{#if outlierValues.length > 0}
-				<div>
-					<p>Outliers</p>
-					<div class="removed-values-list">
-						{#each outlierValues as value, i}
-							<div class="removed-value-row">
-								<span class="removed-value-number">{i + 1}:</span>
-								<span class="removed-value">{parseFloat(value.toFixed(2))}</span>
-							</div>
-						{/each}
-					</div>
-				</div>
-			{/if}
 		{/if}
 	</div>
 {/snippet}
