@@ -9,10 +9,18 @@
 		plot: '#b3f2cc'
 	};
 
-	const bgColor = node.tableColor ?? typeColors[node.type] ?? '#eee';
-	const isEditable = node.type === 'process' || node.type === 'tableprocess';
+	let bgColor = $derived(node.tableColor ?? typeColors[node.type] ?? '#eee');
+	let isEditable = $derived(node.type === 'process' || node.type === 'tableprocess');
 	// Plot nodes always have a preview panel below, so apply the expanded border style
-	const hasPanel = node.type === 'plot' || expanded;
+	let hasPanel = $derived(node.type === 'plot' || expanded);
+
+	let inputPorts = $derived(node.ports?.inputs ?? []);
+	let outputPorts = $derived(node.ports?.outputs ?? []);
+
+	function portY(index, count) {
+		if (!count) return 24;
+		return ((index + 1) * 48) / (count + 1);
+	}
 </script>
 
 <div
@@ -37,12 +45,29 @@
 	{#if node.sublabel}
 		<div class="node-sublabel">{node.sublabel}</div>
 	{/if}
+
+	{#each inputPorts as port, i (`in_${port.name}_${i}`)}
+		<div
+			class="port-handle port-in"
+			style="top:{portY(i, inputPorts.length)}px;"
+			title={`Input: ${port.name}`}
+		></div>
+	{/each}
+
+	{#each outputPorts as port, i (`out_${port.name}_${i}`)}
+		<div
+			class="port-handle port-out"
+			style="top:{portY(i, outputPorts.length)}px;"
+			title={`Output: ${port.name}`}
+		></div>
+	{/each}
 </div>
 
 <style>
 	.workflow-node {
 		width: 160px;
 		min-height: 48px;
+		position: relative;
 		border-radius: 6px;
 		border: 1.5px solid rgba(0, 0, 0, 0.15);
 		padding: 6px 10px;
@@ -116,5 +141,24 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		max-width: 100%;
+	}
+
+	.port-handle {
+		position: absolute;
+		width: 8px;
+		height: 8px;
+		border-radius: 999px;
+		background: #ffffff;
+		border: 1px solid rgba(0, 0, 0, 0.45);
+		transform: translateY(-50%);
+		pointer-events: none;
+	}
+
+	.port-in {
+		left: -4px;
+	}
+
+	.port-out {
+		right: -4px;
 	}
 </style>

@@ -55,6 +55,93 @@ function makeProcessNodeHash(core) {
 
 let _cachedHash = '';
 let _cachedGraph = { nodes: [], connections: [] };
+let _cachedNodeExecutionKeys = new Map();
+
+function _safeJson(value) {
+	try {
+		return JSON.stringify(value ?? {});
+	} catch {
+		return String(value);
+	}
+}
+
+function _colDataHash(core, colId) {
+	const col = core.data.find((d) => d.id === colId);
+	if (!col) return 'missing';
+	return String(col.getDataHash ?? col.rawDataVersion ?? '0');
+}
+
+function buildNodeExecutionKey(core, node) {
+	if (node.meta.type === 'data') {
+		const col = core.data.find((d) => d.id === node.refId);
+		if (!col) return `data:${node.id}:missing`;
+		return [
+			`data:${node.id}`,
+			String(col.getDataHash ?? ''),
+			String(col.refId ?? ''),
+			String(col.tableProcessGUId ?? ''),
+			_safeJson(col.processes?.map((p) => ({ id: p.id, name: p.name, args: p.args })))
+		].join('|');
+	}
+
+	if (node.meta.type === 'process') {
+		const p = node.meta.processObj;
+		if (!p) return `process:${node.id}:missing`;
+		const parentCol = core.data.find((d) => (d.processes ?? []).some((x) => x.id === p.id));
+		return [
+			`process:${node.id}`,
+			String(parentCol?.getDataHash ?? 'missing'),
+			String(p.name ?? ''),
+			_safeJson(p.args)
+		].join('|');
+	}
+
+	if (node.meta.type === 'tableprocess') {
+		const tp = node.meta.tpObj;
+		if (!tp) return `tp:${node.id}:missing`;
+		const inHashes = [];
+		if (typeof tp.args?.xIN === 'number' && tp.args.xIN >= 0)
+			inHashes.push(_colDataHash(core, tp.args.xIN));
+		if (typeof tp.args?.yIN === 'number' && tp.args.yIN >= 0)
+			inHashes.push(_colDataHash(core, tp.args.yIN));
+		for (const colId of tp.args?.yIN ?? []) {
+			if (typeof colId === 'number' && colId >= 0) inHashes.push(_colDataHash(core, colId));
+		}
+		for (const colId of tp.args?.xsIN ?? []) {
+			if (typeof colId === 'number' && colId >= 0) inHashes.push(_colDataHash(core, colId));
+		}
+		return [
+			`tp:${node.id}`,
+			String(tp.name ?? ''),
+			String(tp.refTPId ?? ''),
+			_safeJson(tp.args),
+			inHashes.join(',')
+		].join('|');
+	}
+
+	if (node.meta.type === 'plot') {
+		const plot = node.meta.plotObj;
+		if (!plot) return `plot:${node.id}:missing`;
+		const refs = [];
+		if (plot.type === 'tableplot') {
+			for (const colId of plot.plot?.columnRefs ?? []) refs.push(_colDataHash(core, colId));
+		} else {
+			for (const d of plot.plot?.data ?? []) {
+				for (const axis of ['x', 'y', 'z']) {
+					if (d?.[axis]?.refId != null) refs.push(_colDataHash(core, d[axis].refId));
+				}
+			}
+		}
+		return [
+			`plot:${node.id}`,
+			String(plot.type ?? ''),
+			_safeJson(plot.plot ?? {}),
+			refs.join(',')
+		].join('|');
+	}
+
+	return `node:${node.id}`;
+}
 
 /**
  * Build a normalized process-node graph from existing core classes.
@@ -139,8 +226,10 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			const entry = appConsts.tableProcessMap.get(tp.name);
 			const inputPorts = [];
 			if ('xIN' in (tp.args ?? {})) inputPorts.push(makeNodePort('xIN', 'input', 'column'));
-			if ('yIN' in (tp.args ?? {})) inputPorts.push(makeNodePort('yIN', 'input', 'column', Array.isArray(tp.args?.yIN)));
-			if (Array.isArray(tp.args?.xsIN)) inputPorts.push(makeNodePort('xsIN', 'input', 'column', true));
+			if ('yIN' in (tp.args ?? {}))
+				inputPorts.push(makeNodePort('yIN', 'input', 'column', Array.isArray(tp.args?.yIN)));
+			if (Array.isArray(tp.args?.xsIN))
+				inputPorts.push(makeNodePort('xsIN', 'input', 'column', true));
 
 			const outputPorts = [];
 			for (const [outKey] of Object.entries(tp.args?.out ?? {})) {
@@ -292,25 +381,37 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		}
 	}
 
-	const workflowNodes = nodes.map((n) => ({
-		id: n.id,
-		label: n.label,
-		sublabel: n.sublabel,
-		type: n.meta.type,
-		refId: n.refId,
-		ports: n.ports,
-		...n.meta
-	}));
+	const changedNodeIds = [];
+	const nextKeys = new Map();
+
+	const workflowNodes = nodes.map((n) => {
+		const executionKey = buildNodeExecutionKey(core, n);
+		nextKeys.set(n.id, executionKey);
+		if (_cachedNodeExecutionKeys.get(n.id) !== executionKey) changedNodeIds.push(n.id);
+		return {
+			id: n.id,
+			label: n.label,
+			sublabel: n.sublabel,
+			type: n.meta.type,
+			refId: n.refId,
+			ports: n.ports,
+			executionKey,
+			...n.meta
+		};
+	});
 
 	_cachedHash = nextHash;
+	_cachedNodeExecutionKeys = nextKeys;
 	_cachedGraph = {
 		nodes: workflowNodes,
-		connections
+		connections,
+		changedNodeIds
 	};
 	return _cachedGraph;
 }
 
 export function clearProcessNodeGraphCache() {
 	_cachedHash = '';
+	_cachedNodeExecutionKeys = new Map();
 	_cachedGraph = { nodes: [], connections: [] };
 }

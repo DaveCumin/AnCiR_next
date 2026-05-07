@@ -1,6 +1,12 @@
 <script>
 	// @ts-nocheck
-	import { core, appState, appConsts, replaceColumnRefs, getProcessNodeGraph } from '$lib/core/core.svelte.js';
+	import {
+		core,
+		appState,
+		appConsts,
+		replaceColumnRefs,
+		getProcessNodeGraph
+	} from '$lib/core/core.svelte.js';
 	import { selectPlot, deselectAllPlots } from '$lib/core/Plot.svelte';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import WorkflowEdges from './WorkflowEdges.svelte';
@@ -50,11 +56,12 @@
 	let addProcessDropX = $state(0);
 	let addProcessDropY = $state(0);
 
+	const processGraph = $derived.by(() => getProcessNodeGraph());
+
 	// Derive workflow nodes from the cached ProcessNode graph adapter.
-	const allNodes = $derived.by(() => {
-		const graph = getProcessNodeGraph();
-		return graph.nodes ?? [];
-	});
+	const allNodes = $derived.by(() => processGraph.nodes ?? []);
+
+	const changedNodeIds = $derived.by(() => new Set(processGraph.changedNodeIds ?? []));
 
 	// --- Edge derivation split into topology + positioned ---
 
@@ -71,10 +78,20 @@
 		);
 	}
 
+	function getPortAnchorY(node, portName, direction) {
+		const ports = direction === 'out' ? (node.ports?.outputs ?? []) : (node.ports?.inputs ?? []);
+		if (ports.length === 0) return NODE_HEIGHT / 2;
+		const idx = Math.max(
+			0,
+			ports.findIndex((p) => p.name === portName)
+		);
+		const segment = NODE_HEIGHT / (ports.length + 1);
+		return segment * (idx + 1);
+	}
+
 	// Step 1: edge connectivity only (re-derives when core changes, NOT when positions change)
 	const edgeTopology = $derived.by(() => {
-		const graph = getProcessNodeGraph();
-		return (graph.connections ?? []).map((e) => ({
+		return (processGraph.connections ?? []).map((e) => ({
 			fromId: e.fromId,
 			toId: e.toId,
 			type: e.type,
@@ -211,15 +228,24 @@
 
 	// Step 2: attach positions (re-derives when topology OR any position changes)
 	const allEdges = $derived.by(() => {
+		const nodeById = new Map(allNodes.map((n) => [n.id, n]));
 		return edgeTopology.flatMap((edge) => {
 			const fromPos = stablePositions[edge.fromId] ?? defaultPositions.positions[edge.fromId];
 			const toPos = stablePositions[edge.toId] ?? defaultPositions.positions[edge.toId];
+			const fromNode = nodeById.get(edge.fromId);
+			const toNode = nodeById.get(edge.toId);
 			if (!fromPos || !toPos) return [];
 			return [
 				{
 					...edge,
-					from: { x: fromPos.x + NODE_WIDTH, y: fromPos.y + NODE_HEIGHT / 2 },
-					to: { x: toPos.x, y: toPos.y + NODE_HEIGHT / 2 }
+					from: {
+						x: fromPos.x + NODE_WIDTH,
+						y: fromPos.y + getPortAnchorY(fromNode, edge.fromPort, 'out')
+					},
+					to: {
+						x: toPos.x,
+						y: toPos.y + getPortAnchorY(toNode, edge.toPort, 'in')
+					}
 				}
 			];
 		});
@@ -569,6 +595,7 @@
 				{@const isExpanded = expandedNodeId === node.id}
 				{@const isDragging = dragInfo?.nodeId === node.id && dragInfo?.moved}
 				{@const isDimmed = connectedNodeIds !== null && !connectedNodeIds.has(node.id)}
+				{@const isRecentlyChanged = changedNodeIds.has(node.id)}
 				{@const isDropTarget = dropTargetNodeId === node.id}
 				{@const nodeZIndex = isDragging ? 30 : isExpanded ? 20 : 1}
 				{#if pos}
@@ -576,6 +603,7 @@
 						class="workflow-node-wrapper"
 						class:dragging={isDragging}
 						class:dimmed={isDimmed}
+						class:changed={isRecentlyChanged}
 						style="position: absolute; left: {pos.x}px; top: {pos.y}px; z-index: {nodeZIndex};"
 						title={node.type === 'data'
 							? 'Drag onto another data node to replace all its downstream references'
@@ -788,6 +816,22 @@
 	.workflow-node-wrapper.dimmed {
 		opacity: 0.2;
 		pointer-events: none;
+	}
+
+	.workflow-node-wrapper.changed {
+		animation: wfPulse 500ms ease-out;
+	}
+
+	@keyframes wfPulse {
+		0% {
+			filter: drop-shadow(0 0 0 rgba(2, 117, 255, 0));
+		}
+		50% {
+			filter: drop-shadow(0 0 6px rgba(2, 117, 255, 0.45));
+		}
+		100% {
+			filter: drop-shadow(0 0 0 rgba(2, 117, 255, 0));
+		}
 	}
 
 	.process-editor-panel {
