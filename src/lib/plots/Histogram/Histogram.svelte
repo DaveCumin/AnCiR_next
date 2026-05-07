@@ -19,7 +19,7 @@
 		label = $state('Histogram 1');
 		binMode = $state('uniform'); // 'uniform' | 'cuts'
 		binSize = $state(1);
-		binStart = $state(0);
+		binStart = $state(/** @type {number|null} */ (null));
 		stepSize = $state(/** @type {number|null} */ (null));
 		diffStep = $state(false);
 		cuts = $state(/** @type {number[]} */ ([]));
@@ -38,7 +38,7 @@
 			this.label = dataIN?.label ?? 'Histogram ' + (parent.data.length + 1);
 			this.binMode = dataIN?.binMode === 'cuts' ? 'cuts' : 'uniform';
 			this.binSize = dataIN?.binSize ?? 1;
-			this.binStart = dataIN?.binStart ?? 0;
+			this.binStart = dataIN?.binStart ?? null;
 			this.stepSize = dataIN?.stepSize ?? null;
 			this.diffStep = dataIN?.diffStep ?? false;
 			this.cuts = Array.isArray(dataIN?.cuts) ? dataIN.cuts.slice() : [];
@@ -47,6 +47,15 @@
 			this.strokeWidth = dataIN?.strokeWidth ?? 1;
 			this.stroke = dataIN?.stroke ?? '#000000';
 		}
+
+		autoBinStart = $derived.by(() => {
+			const values = this.column?.getData?.() ?? [];
+			const valid = values.filter((value) => value != null && !isNaN(value));
+			if (this.column?.type === 'time' || valid.length === 0) return 0;
+			return Math.floor(Math.min(...valid));
+		});
+
+		effectiveBinStart = $derived(this.binStart ?? this.autoBinStart);
 
 		// Derived: compute bins/counts from the current column + bin config.
 		// Returns { bins, binEnds, y_out, droppedCount } from the helper.
@@ -65,7 +74,7 @@
 				values,
 				values,
 				this.binSize,
-				this.binStart,
+				this.effectiveBinStart,
 				/** @type {any} */ (step),
 				'count',
 				/** @type {any} */ (cutsArg)
@@ -136,8 +145,8 @@
 			});
 			if (xmin === Infinity || xmax === -Infinity) return [0, 1];
 			return [
-				this.xlimsIN[0] != null ? this.xlimsIN[0] : niceAxisLimit(xmin, 'floor'),
-				this.xlimsIN[1] != null ? this.xlimsIN[1] : niceAxisLimit(xmax, 'ceil')
+				this.xlimsIN[0] != null ? this.xlimsIN[0] : xmin,
+				this.xlimsIN[1] != null ? this.xlimsIN[1] : xmax
 			];
 		});
 
@@ -425,6 +434,13 @@
 						onInput={(/** @type {string} */ v) => (theData.xlimsIN[1] = parseFloat(v))}
 					/>
 				</div>
+				{#if theData.xlimsIN[0] != null || theData.xlimsIN[1] != null}
+					<div class="control-component-input-icons">
+						<button class="icon" onclick={() => (theData.xlimsIN = [null, null])} title="Revert to automatic range">
+							<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
+						</button>
+					</div>
+				{/if}
 			</div>
 		</div>
 	{:else if appState.currentControlTab === 'data'}
@@ -511,8 +527,18 @@
 								</div>
 								<div class="control-input">
 									<p>Bin start</p>
-									<NumberWithUnits bind:value={datum.binStart} />
+									<NumberWithUnits
+										value={datum.binStart ?? datum.autoBinStart}
+										onInput={(/** @type {string} */ v) => (datum.binStart = parseFloat(v))}
+									/>
 								</div>
+								{#if datum.binStart != null}
+									<div class="control-component-input-icons">
+										<button class="icon" onclick={() => (datum.binStart = null)} title="Revert to automatic bin start">
+											<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
+										</button>
+									</div>
+								{/if}
 							</div>
 						{/if}
 
