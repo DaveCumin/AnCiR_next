@@ -258,10 +258,7 @@
 									stroke-dasharray={el.stroke}
 								/>
 							{:else if el.type === 'points'}
-								<path
-									d={getPointPath(el.shape || 'circle', 10, 0, el.size)}
-									fill={el.color}
-								/>
+								<path d={getPointPath(el.shape || 'circle', 10, 0, el.size)} fill={el.color} />
 							{:else if el.type === 'boxplot'}
 								<rect
 									x={3}
@@ -297,10 +294,7 @@
 									stroke-dasharray={el.stroke}
 								/>
 							{:else if el.type === 'points'}
-								<path
-									d={getPointPath(el.shape || 'circle', 10, 0, el.size)}
-									fill={el.color}
-								/>
+								<path d={getPointPath(el.shape || 'circle', 10, 0, el.size)} fill={el.color} />
 							{:else if el.type === 'boxplot'}
 								<rect
 									x={3}

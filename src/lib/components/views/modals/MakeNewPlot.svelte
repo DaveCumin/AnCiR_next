@@ -52,8 +52,7 @@
 	}
 	//This checks for validity based on the TableProcess (they must have a 'valid' entry for the logic; just like they must have an 'out' for the output logic to work)
 	$effect(() => {
-		const optionalInputs =
-			appConsts.plotMap.get(plotType)?.definition?.optionalDataInputs ?? [];
+		const optionalInputs = appConsts.plotMap.get(plotType)?.definition?.optionalDataInputs ?? [];
 		const requiredEntries = Object.entries(inputs).filter(([key]) => !optionalInputs.includes(key));
 		if (
 			Object.values(inputs).length > 0 &&
@@ -85,7 +84,7 @@
 	// Get sorted plot types with column inputs
 	let sortedPlotTypes = $derived.by(() => {
 		return Object.keys(Object.fromEntries(appConsts.plotMap.entries()))
-			.filter(type => appConsts.plotMap.get(type)?.defaultInputs?.length > 0)
+			.filter((type) => appConsts.plotMap.get(type)?.defaultInputs?.length > 0)
 			.sort((a, b) => {
 				const nameA = appConsts.plotMap.get(a)?.displayName || a;
 				const nameB = appConsts.plotMap.get(b)?.displayName || b;
@@ -158,7 +157,11 @@
 							appConsts.plotMap.get(plotType)?.definition?.optionalDataInputs ?? []}
 						Defaults:
 						{#each Object.keys(inputs) as d}
-							<div>{d}{optionalInputs.includes(d) ? ' (optional)' : ''}: <ColumnSelector bind:value={inputs[d]} /></div>
+							<div>
+								{d}{optionalInputs.includes(d) ? ' (optional)' : ''}: <ColumnSelector
+									bind:value={inputs[d]}
+								/>
+							</div>
 						{/each}
 					{/if}
 				</div>
@@ -170,7 +173,9 @@
 {#snippet footerContent()}
 	{#if steps[1].completed}
 		<div class="dialog-button-container">
-			<button id="makePlot" class="dialog-button" onclick={makePlot}>Make the {plotDisplayName}</button>
+			<button id="makePlot" class="dialog-button" onclick={makePlot}
+				>Make the {plotDisplayName}</button
+			>
 		</div>
 	{/if}
 {/snippet}

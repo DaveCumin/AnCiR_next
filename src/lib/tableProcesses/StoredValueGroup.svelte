@@ -164,7 +164,9 @@
 	});
 
 	let getHash = $derived.by(() => {
-		const keysHash = Object.keys(coreState.storedValues ?? {}).sort().join('|');
+		const keysHash = Object.keys(coreState.storedValues ?? {})
+			.sort()
+			.join('|');
 		const selectionHash = JSON.stringify(
 			(p.args.groups ?? []).map((g) => ({
 				id: g.id,
@@ -294,7 +296,9 @@
 							oninput={(e) => renameGroup(group.id, e.target.value)}
 							placeholder="Group name"
 						/>
-						<button class="remove-btn" onclick={() => removeGroup(group.id)} title="Remove">×</button>
+						<button class="remove-btn" onclick={() => removeGroup(group.id)} title="Remove"
+							>×</button
+						>
 					</div>
 
 					{#if filteredSourceGroups.length === 0}
@@ -322,9 +326,9 @@
 													onchange={() => toggleKey(group.id, item.key)}
 												/>
 												<span class="sv-name">{item.key}</span>
-												<span class="sv-value">{Number.isFinite(item.value)
-													? item.value.toPrecision(6)
-													: 'NaN'}</span>
+												<span class="sv-value"
+													>{Number.isFinite(item.value) ? item.value.toPrecision(6) : 'NaN'}</span
+												>
 											</label>
 										{/each}
 									</div>
@@ -355,9 +359,9 @@
 						headers={['category', 'value']}
 						data={[
 							(result.category ?? []).slice(previewStart - 1, previewStart + 5),
-							(result.value ?? []).slice(previewStart - 1, previewStart + 5).map((v) =>
-								Number.isFinite(v) ? v.toFixed(4) : 'NaN'
-							)
+							(result.value ?? [])
+								.slice(previewStart - 1, previewStart + 5)
+								.map((v) => (Number.isFinite(v) ? v.toFixed(4) : 'NaN'))
 						]}
 					/>
 					<p>
