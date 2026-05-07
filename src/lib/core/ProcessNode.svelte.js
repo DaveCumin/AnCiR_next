@@ -33,6 +33,16 @@ function makeNodePort(name, direction, artifactKind = 'column', dynamic = false)
 	return { name, direction, artifactKind, dynamic };
 }
 
+function makePortsFromNodeSpec(nodeSpec = {}, fallback = { inputs: [], outputs: [] }) {
+	const inputs = (nodeSpec.inputs ?? fallback.inputs ?? []).map((p) =>
+		makeNodePort(p.name, 'input', p.kind ?? 'column', p.cardinality === 'many')
+	);
+	const outputs = (nodeSpec.outputs ?? fallback.outputs ?? []).map((p) =>
+		makeNodePort(p.name, 'output', p.kind ?? 'column', p.cardinality === 'many' || !!p.dynamicPrefix)
+	);
+	return { inputs, outputs };
+}
+
 function makeProcessNodeHash(core) {
 	let out = '';
 	for (const col of core.data ?? []) {
@@ -200,15 +210,17 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 
 	for (const col of core.data ?? []) {
 		for (const p of col.processes ?? []) {
+			const entry = appConsts.processMap.get(p.name);
+			const ports = makePortsFromNodeSpec(entry?.nodeSpec, {
+				inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+				outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
+			});
 			nodes.push(
 				new ProcessNode({
 					id: `process_${p.id}`,
 					kind: 'process',
 					label: p.displayName || p.name,
-					ports: {
-						inputs: [makeNodePort('input', 'input', 'column')],
-						outputs: [makeNodePort('output', 'output', 'column')]
-					},
+					ports,
 					refId: p.id,
 					meta: {
 						type: 'process',
@@ -224,18 +236,16 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	for (const table of core.tables ?? []) {
 		for (const tp of table.processes ?? []) {
 			const entry = appConsts.tableProcessMap.get(tp.name);
-			const inputPorts = [];
-			if ('xIN' in (tp.args ?? {})) inputPorts.push(makeNodePort('xIN', 'input', 'column'));
-			if ('yIN' in (tp.args ?? {}))
-				inputPorts.push(makeNodePort('yIN', 'input', 'column', Array.isArray(tp.args?.yIN)));
-			if (Array.isArray(tp.args?.xsIN))
-				inputPorts.push(makeNodePort('xsIN', 'input', 'column', true));
-
-			const outputPorts = [];
-			for (const [outKey] of Object.entries(tp.args?.out ?? {})) {
-				const isDynamicY = Boolean(entry?.yOutKeyPrefix) && outKey.startsWith(entry.yOutKeyPrefix);
-				outputPorts.push(makeNodePort(outKey, 'output', 'column', isDynamicY));
-			}
+			const ports = makePortsFromNodeSpec(entry?.nodeSpec, {
+				inputs: [
+					{ name: 'xIN', kind: 'column', cardinality: 'one' },
+					{ name: 'yIN', kind: 'column', cardinality: 'many' }
+				],
+				outputs: [
+					{ name: entry?.xOutKey ?? 'xOut', kind: 'column', cardinality: 'one' },
+					{ name: (entry?.yOutKeyPrefix ?? 'yOut_') + '*', kind: 'column', cardinality: 'many' }
+				]
+			});
 
 			nodes.push(
 				new ProcessNode({
@@ -243,7 +253,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 					kind: 'tableprocess',
 					label: tp.displayName || tp.name,
 					sublabel: table.name,
-					ports: { inputs: inputPorts, outputs: outputPorts },
+					ports,
 					refId: tp.id,
 					meta: {
 						type: 'tableprocess',

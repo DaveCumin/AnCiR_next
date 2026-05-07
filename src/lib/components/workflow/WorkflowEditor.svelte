@@ -81,10 +81,15 @@
 	function getPortAnchorY(node, portName, direction) {
 		const ports = direction === 'out' ? (node.ports?.outputs ?? []) : (node.ports?.inputs ?? []);
 		if (ports.length === 0) return NODE_HEIGHT / 2;
-		const idx = Math.max(
-			0,
-			ports.findIndex((p) => p.name === portName)
-		);
+		let idx = ports.findIndex((p) => p.name === portName);
+		if (idx < 0) {
+			idx = ports.findIndex((p) => {
+				if (!p?.name?.includes('*')) return false;
+				const prefix = p.name.replace('*', '');
+				return portName?.startsWith(prefix);
+			});
+		}
+		idx = Math.max(0, idx);
 		const segment = NODE_HEIGHT / (ports.length + 1);
 		return segment * (idx + 1);
 	}

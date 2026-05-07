@@ -1,3 +1,5 @@
+import { normalizeNodeDefinition } from '$lib/core/NodeDefinition.svelte.js';
+
 export async function loadProcesses() {
 	const sveltePaths = import.meta.glob('$lib/processes/*.svelte', { eager: false });
 	const processMap = new Map();
@@ -7,6 +9,7 @@ export async function loadProcesses() {
 		try {
 			const svelteModule = await sveltePaths[sveltePath]();
 			const def = svelteModule.definition;
+			const nodeSpec = normalizeNodeDefinition('process', fileName, def);
 			if (!def) {
 				console.warn(`Process ${fileName} is missing a \`definition\` export`);
 				continue;
@@ -17,6 +20,7 @@ export async function loadProcesses() {
 				func: def.func,
 				defaults: def.defaults ?? new Map(),
 				displayName: def.displayName ?? formatDisplayName(fileName),
+				nodeSpec,
 				definition: def
 			});
 		} catch (error) {

@@ -1,3 +1,5 @@
+import { normalizeNodeDefinition } from '$lib/core/NodeDefinition.svelte.js';
+
 export async function loadTableProcesses() {
 	const sveltePaths = import.meta.glob('$lib/tableProcesses/*.svelte', { eager: false });
 	const tableProcessMap = new Map();
@@ -9,6 +11,7 @@ export async function loadTableProcesses() {
 			const component = svelteModule.default;
 
 			const def = svelteModule.definition;
+			const nodeSpec = normalizeNodeDefinition('tableprocess', fileName, def);
 			if (!def) {
 				console.warn(`Table process ${fileName} is missing a \`definition\` export`);
 				continue;
@@ -19,6 +22,7 @@ export async function loadTableProcesses() {
 				defaults: def.defaults ?? new Map(),
 				func: def.func,
 				displayName: def.displayName ?? formatDisplayName(fileName),
+				nodeSpec,
 				xOutKey: def.xOutKey ?? null,
 				yOutKeyPrefix: def.yOutKeyPrefix ?? null,
 				columnIdFields: def.columnIdFields ?? {},
