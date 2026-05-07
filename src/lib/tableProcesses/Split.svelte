@@ -13,7 +13,7 @@
 		['collectedType', { val: 'split' }]
 	]);
 
-	export function split(argsIN) {
+	export function evaluateSplit(argsIN) {
 		const xIN = argsIN.xIN;
 		const yINraw = argsIN.yIN;
 		const yINs = Array.isArray(yINraw) ? yINraw : yINraw != null && yINraw !== -1 ? [yINraw] : [];
@@ -73,27 +73,6 @@
 			return [null, false];
 		}
 
-		// Write to output columns if committed
-		const hasOut = Object.values(argsIN.out ?? {}).some((v) => Number(v) >= 0);
-		if (hasOut) {
-			const processHash = crypto.randomUUID();
-			for (const yId of Object.keys(y_results)) {
-				for (let seg = 0; seg < segmentCount; seg++) {
-					const outKey = `${yId}_${seg + 1}`;
-					const outId = argsIN.out[outKey];
-					if (outId != null && Number(outId) >= 0 && y_results[yId].segments[seg]) {
-						core.rawData.set(outId, y_results[yId].segments[seg]);
-						const outCol = getColumnById(outId);
-						if (outCol) {
-							outCol.data = outId;
-							outCol.type = 'number';
-							outCol.tableProcessGUId = processHash;
-						}
-					}
-				}
-			}
-		}
-
 		return [
 			{
 				y_results,
@@ -102,6 +81,36 @@
 			},
 			true
 		];
+	}
+
+	function writeSplitOutputs(argsIN, splitData) {
+		if (!splitData?.y_results) return;
+		const hasOut = Object.values(argsIN.out ?? {}).some((v) => Number(v) >= 0);
+		if (!hasOut) return;
+
+		const processHash = crypto.randomUUID();
+		for (const yId of Object.keys(splitData.y_results)) {
+			for (let seg = 0; seg < splitData.segmentCount; seg++) {
+				const outKey = `${yId}_${seg + 1}`;
+				const outId = argsIN.out[outKey];
+				const segData = splitData.y_results[yId]?.segments?.[seg];
+				if (outId != null && Number(outId) >= 0 && segData) {
+					core.rawData.set(outId, segData);
+					const outCol = getColumnById(outId);
+					if (outCol) {
+						outCol.data = outId;
+						outCol.type = 'number';
+						outCol.tableProcessGUId = processHash;
+					}
+				}
+			}
+		}
+	}
+
+	export function split(argsIN) {
+		const [splitData, valid] = evaluateSplit(argsIN);
+		if (valid && splitData) writeSplitOutputs(argsIN, splitData);
+		return [splitData, valid];
 	}
 
 	export const definition = {

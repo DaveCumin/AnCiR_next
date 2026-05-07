@@ -78,6 +78,7 @@
 			role="button"
 			tabindex="-1"
 		></div>
+		<div class="port-label port-label-in" style="top:{portY(i, inputPorts.length)}px;">{port.name}</div>
 	{/each}
 
 	{#each outputPorts as port, i (`out_${port.name}_${i}`)}
@@ -89,6 +90,9 @@
 			role="button"
 			tabindex="-1"
 		></div>
+		<div class="port-label port-label-out" style="top:{portY(i, outputPorts.length)}px;">
+			{port.name}
+		</div>
 	{/each}
 </div>
 
@@ -190,5 +194,36 @@
 
 	.port-out {
 		right: -4px;
+	}
+
+	.port-label {
+		position: absolute;
+		transform: translateY(-50%);
+		font-size: 9px;
+		line-height: 1;
+		color: rgba(0, 0, 0, 0.65);
+		background: rgba(255, 255, 255, 0.9);
+		border: 1px solid rgba(0, 0, 0, 0.15);
+		border-radius: 3px;
+		padding: 1px 3px;
+		pointer-events: none;
+		opacity: 0;
+		transition: opacity 120ms ease;
+		max-width: 54px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.workflow-node:hover .port-label {
+		opacity: 1;
+	}
+
+	.port-label-in {
+		left: 8px;
+	}
+
+	.port-label-out {
+		right: 8px;
 	}
 </style>
