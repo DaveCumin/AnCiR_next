@@ -7,7 +7,16 @@
 	}
 	const multiply_defaults = new Map([['value', { val: Number(1) }]]);
 
-	export const definition = { displayName: 'Multiply', func: multiply, defaults: multiply_defaults };
+	export const definition = {
+		displayName: 'Multiply',
+		func: multiply,
+		defaults: multiply_defaults,
+		nodeSpec: {
+			id: 'process.multiply',
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
+		}
+	};
 </script>
 
 <script>

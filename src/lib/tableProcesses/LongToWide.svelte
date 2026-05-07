@@ -159,7 +159,19 @@
 		displayName,
 		defaults,
 		func: longtowide,
-		columnIdFields: { scalar: ['categoryIN', 'timeIN', 'valueIN'] }
+		columnIdFields: { scalar: ['categoryIN', 'timeIN', 'valueIN'] },
+		nodeSpec: {
+			id: 'tableprocess.longtowide',
+			inputs: [
+				{ name: 'categoryIN', kind: 'column', cardinality: 'one' },
+				{ name: 'timeIN', kind: 'column', cardinality: 'one' },
+				{ name: 'valueIN', kind: 'column', cardinality: 'one' }
+			],
+			outputs: [
+				{ name: 'time', kind: 'column', cardinality: 'one' },
+				{ name: 'value_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'value_' }
+			]
+		}
 	};
 </script>
 

@@ -27,7 +27,23 @@
 		func: cosinor,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'cosinorx',
-		yOutKeyPrefix: 'cosinory_'
+		yOutKeyPrefix: 'cosinory_',
+		nodeSpec: {
+			id: 'tableprocess.cosinor',
+			inputs: [
+				{ name: 'xIN', kind: 'column', cardinality: 'one' },
+				{ name: 'yIN', kind: 'column', cardinality: 'many' }
+			],
+			outputs: [
+				{ name: 'cosinorx', kind: 'column', cardinality: 'one' },
+				{
+					name: 'cosinory_*',
+					kind: 'column',
+					cardinality: 'many',
+					dynamicPrefix: 'cosinory_'
+				}
+			]
+		}
 	};
 
 	export function evaluateCosinor(argsIN) {

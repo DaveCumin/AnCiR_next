@@ -11,7 +11,16 @@
 		['replace', { val: 0 }]
 	]);
 
-	export const definition = { displayName: 'Substitute', func: sub, defaults: sub_defaults };
+	export const definition = {
+		displayName: 'Substitute',
+		func: sub,
+		defaults: sub_defaults,
+		nodeSpec: {
+			id: 'process.substitute',
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
+		}
+	};
 </script>
 
 <script>

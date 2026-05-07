@@ -43,6 +43,36 @@ function makePortsFromNodeSpec(nodeSpec = {}, fallback = { inputs: [], outputs: 
 	return { inputs, outputs };
 }
 
+function collectTableProcessInputRefs(tpArgs, nodeSpec) {
+	const refs = [];
+	const inputs = nodeSpec?.inputs ?? [];
+
+	if (inputs.length === 0) {
+		if (typeof tpArgs?.xIN === 'number') refs.push({ colId: tpArgs.xIN, port: 'xIN' });
+		if (typeof tpArgs?.yIN === 'number') refs.push({ colId: tpArgs.yIN, port: 'yIN' });
+		if (Array.isArray(tpArgs?.yIN)) {
+			for (const colId of tpArgs.yIN) refs.push({ colId, port: 'yIN' });
+		}
+		if (Array.isArray(tpArgs?.xsIN)) {
+			for (const colId of tpArgs.xsIN) refs.push({ colId, port: 'xsIN' });
+		}
+		return refs;
+	}
+
+	for (const input of inputs) {
+		const port = input?.name;
+		if (!port) continue;
+		const value = tpArgs?.[port];
+		if (Array.isArray(value)) {
+			for (const colId of value) refs.push({ colId, port });
+		} else {
+			refs.push({ colId: value, port });
+		}
+	}
+
+	return refs;
+}
+
 function makeProcessNodeHash(core) {
 	let out = '';
 	for (const col of core.data ?? []) {
@@ -109,17 +139,9 @@ function buildNodeExecutionKey(core, node) {
 	if (node.meta.type === 'tableprocess') {
 		const tp = node.meta.tpObj;
 		if (!tp) return `tp:${node.id}:missing`;
-		const inHashes = [];
-		if (typeof tp.args?.xIN === 'number' && tp.args.xIN >= 0)
-			inHashes.push(_colDataHash(core, tp.args.xIN));
-		if (typeof tp.args?.yIN === 'number' && tp.args.yIN >= 0)
-			inHashes.push(_colDataHash(core, tp.args.yIN));
-		for (const colId of tp.args?.yIN ?? []) {
-			if (typeof colId === 'number' && colId >= 0) inHashes.push(_colDataHash(core, colId));
-		}
-		for (const colId of tp.args?.xsIN ?? []) {
-			if (typeof colId === 'number' && colId >= 0) inHashes.push(_colDataHash(core, colId));
-		}
+		const inHashes = collectTableProcessInputRefs(tp.args, node.meta.nodeSpec)
+			.filter(({ colId }) => typeof colId === 'number' && colId >= 0)
+			.map(({ colId }) => _colDataHash(core, colId));
 		return [
 			`tp:${node.id}`,
 			String(tp.name ?? ''),
@@ -236,6 +258,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	for (const table of core.tables ?? []) {
 		for (const tp of table.processes ?? []) {
 			const entry = appConsts.tableProcessMap.get(tp.name);
+			const nodeSpec = entry?.nodeSpec;
 			const ports = makePortsFromNodeSpec(entry?.nodeSpec, {
 				inputs: [
 					{ name: 'xIN', kind: 'column', cardinality: 'one' },
@@ -259,7 +282,8 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 						type: 'tableprocess',
 						refId: tp.id,
 						tpObj: tp,
-						tpName: tp.name
+						tpName: tp.name,
+						nodeSpec
 					}
 				})
 			);
@@ -339,15 +363,8 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	for (const table of core.tables ?? []) {
 		for (const tp of table.processes ?? []) {
 			const tpNodeId = `tableprocess_${tp.id}`;
-			const tpInputs = [];
-			if (typeof tp.args?.xIN === 'number') tpInputs.push({ colId: tp.args.xIN, port: 'xIN' });
-			if (typeof tp.args?.yIN === 'number') tpInputs.push({ colId: tp.args.yIN, port: 'yIN' });
-			if (Array.isArray(tp.args?.yIN)) {
-				for (const colId of tp.args.yIN) tpInputs.push({ colId, port: 'yIN' });
-			}
-			if (Array.isArray(tp.args?.xsIN)) {
-				for (const colId of tp.args.xsIN) tpInputs.push({ colId, port: 'xsIN' });
-			}
+			const entry = appConsts.tableProcessMap.get(tp.name);
+			const tpInputs = collectTableProcessInputRefs(tp.args, entry?.nodeSpec);
 
 			for (const { colId, port } of tpInputs) {
 				if (colId == null || colId < 0) continue;

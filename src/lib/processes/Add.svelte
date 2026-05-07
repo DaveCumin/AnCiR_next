@@ -7,7 +7,16 @@
 	}
 	const add_defaults = new Map([['value', { val: Number(0) }]]);
 
-	export const definition = { displayName: 'Add', func: add, defaults: add_defaults };
+	export const definition = {
+		displayName: 'Add',
+		func: add,
+		defaults: add_defaults,
+		nodeSpec: {
+			id: 'process.add',
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
+		}
+	};
 </script>
 
 <script>

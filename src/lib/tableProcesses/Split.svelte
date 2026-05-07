@@ -117,7 +117,15 @@
 		displayName,
 		defaults,
 		func: split,
-		columnIdFields: { scalar: ['xIN'], array: ['yIN'] }
+		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
+		nodeSpec: {
+			id: 'tableprocess.split',
+			inputs: [
+				{ name: 'xIN', kind: 'column', cardinality: 'one' },
+				{ name: 'yIN', kind: 'column', cardinality: 'many' }
+			],
+			outputs: [{ name: 'segments', kind: 'column', cardinality: 'many' }]
+		}
 	};
 </script>
 

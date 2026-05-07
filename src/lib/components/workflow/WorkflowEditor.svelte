@@ -487,7 +487,24 @@
 		panY = e.clientY - panStartY;
 	}
 
-	function resolveOutputColumnId(nodeId) {
+	function findPortDef(node, direction, portName) {
+		const ports = direction === 'in' ? (node.ports?.inputs ?? []) : (node.ports?.outputs ?? []);
+		let port = ports.find((p) => p.name === portName);
+		if (port) return port;
+		port = ports.find((p) => {
+			if (!p?.name?.includes('*')) return false;
+			const prefix = p.name.replace('*', '');
+			return portName?.startsWith(prefix);
+		});
+		return port;
+	}
+
+	function isManyInputPort(node, portName) {
+		const port = findPortDef(node, 'in', portName);
+		return !!port?.dynamic;
+	}
+
+	function resolveOutputColumnId(nodeId, portName) {
 		const node = allNodes.find((n) => n.id === nodeId);
 		if (!node) return -1;
 		if (node.type === 'data') return node.refId ?? -1;
@@ -495,34 +512,38 @@
 			const parent = core.data.find((c) => (c.processes ?? []).some((p) => p.id === node.refId));
 			return parent?.id ?? -1;
 		}
+		if (node.type === 'tableprocess' && node.tpObj) {
+			const out = node.tpObj.args?.out ?? {};
+			if (typeof out[portName] === 'number') return out[portName];
+			if (portName?.includes('*')) {
+				const prefix = portName.replace('*', '');
+				for (const [k, v] of Object.entries(out)) {
+					if (k.startsWith(prefix) && typeof v === 'number' && v >= 0) return v;
+				}
+			}
+			for (const v of Object.values(out)) {
+				if (typeof v === 'number' && v >= 0) return v;
+			}
+		}
 		return -1;
 	}
 
 	function applyConnection(fromNodeId, fromPort, toNodeId, toPort) {
-		const colId = resolveOutputColumnId(fromNodeId);
+		const colId = resolveOutputColumnId(fromNodeId, fromPort);
 		if (colId < 0) return;
 		const target = allNodes.find((n) => n.id === toNodeId);
 		if (!target) return;
 
 		if (target.type === 'tableprocess' && target.tpObj) {
 			const tp = target.tpObj;
-			if (toPort === 'xIN') {
-				tp.args.xIN = colId;
-				return;
+			if (!toPort?.endsWith('IN')) return;
+			if (isManyInputPort(target, toPort)) {
+				const next = Array.isArray(tp.args[toPort]) ? tp.args[toPort] : [];
+				if (!next.includes(colId)) tp.args[toPort] = [...next, colId];
+			} else {
+				tp.args[toPort] = colId;
 			}
-			if (toPort === 'yIN') {
-				if (Array.isArray(tp.args.yIN)) {
-					if (!tp.args.yIN.includes(colId)) tp.args.yIN = [...tp.args.yIN, colId];
-				} else {
-					tp.args.yIN = colId;
-				}
-				return;
-			}
-			if (toPort === 'xsIN') {
-				const next = Array.isArray(tp.args.xsIN) ? tp.args.xsIN : [];
-				if (!next.includes(colId)) tp.args.xsIN = [...next, colId];
-				return;
-			}
+			return;
 		}
 
 		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && toPort === 'series') {
@@ -537,9 +558,8 @@
 
 		if (target.type === 'tableprocess' && target.tpObj) {
 			const tp = target.tpObj;
-			if (portName === 'xIN') tp.args.xIN = -1;
-			else if (portName === 'yIN') tp.args.yIN = Array.isArray(tp.args.yIN) ? [] : -1;
-			else if (portName === 'xsIN') tp.args.xsIN = [];
+			if (!portName?.endsWith('IN')) return;
+			tp.args[portName] = isManyInputPort(target, portName) ? [] : -1;
 			return;
 		}
 
