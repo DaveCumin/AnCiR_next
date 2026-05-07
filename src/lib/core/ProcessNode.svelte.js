@@ -38,7 +38,12 @@ function makePortsFromNodeSpec(nodeSpec = {}, fallback = { inputs: [], outputs: 
 		makeNodePort(p.name, 'input', p.kind ?? 'column', p.cardinality === 'many')
 	);
 	const outputs = (nodeSpec.outputs ?? fallback.outputs ?? []).map((p) =>
-		makeNodePort(p.name, 'output', p.kind ?? 'column', p.cardinality === 'many' || !!p.dynamicPrefix)
+		makeNodePort(
+			p.name,
+			'output',
+			p.kind ?? 'column',
+			p.cardinality === 'many' || !!p.dynamicPrefix
+		)
 	);
 	return { inputs, outputs };
 }
@@ -193,6 +198,11 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			for (const colId of Object.values(tp.args?.out ?? {})) {
 				if (colId != null && colId >= 0) tpOutputColIds.add(colId);
 			}
+			for (const nestedTp of tp.args?.tableProcesses ?? []) {
+				for (const colId of Object.values(nestedTp.args?.out ?? {})) {
+					if (colId != null && colId >= 0) tpOutputColIds.add(colId);
+				}
+			}
 		}
 	}
 
@@ -205,6 +215,11 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			Object.values(tp.args?.out ?? {}).forEach((colId) => {
 				if (colId != null && colId >= 0) colToColor.set(colId, color);
 			});
+			for (const nestedTp of tp.args?.tableProcesses ?? []) {
+				Object.values(nestedTp.args?.out ?? {}).forEach((colId) => {
+					if (colId != null && colId >= 0) colToColor.set(colId, color);
+				});
+			}
 		});
 	});
 
@@ -287,6 +302,46 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 					}
 				})
 			);
+
+			for (const nestedTp of tp.args?.tableProcesses ?? []) {
+				const nestedEntry = [...appConsts.tableProcessMap.values()].find(
+					(e) => e.defaults?.get?.('collectedType')?.val === nestedTp.type
+				);
+				const nestedNodeSpec = nestedEntry?.nodeSpec;
+				const nestedPorts = makePortsFromNodeSpec(nestedNodeSpec, {
+					inputs: [
+						{ name: 'xIN', kind: 'column', cardinality: 'one' },
+						{ name: 'yIN', kind: 'column', cardinality: 'many' }
+					],
+					outputs: [
+						{ name: nestedEntry?.xOutKey ?? 'xOut', kind: 'column', cardinality: 'one' },
+						{
+							name: (nestedEntry?.yOutKeyPrefix ?? 'yOut_') + '*',
+							kind: 'column',
+							cardinality: 'many'
+						}
+					]
+				});
+				nodes.push(
+					new ProcessNode({
+						id: `tableprocess_nested_${nestedTp.id}`,
+						kind: 'tableprocess',
+						label: nestedEntry?.displayName || nestedTp.type,
+						sublabel: `${table.name} › ${tp.displayName || tp.name}`,
+						ports: nestedPorts,
+						refId: nestedTp.id,
+						meta: {
+							type: 'tableprocess',
+							refId: nestedTp.id,
+							tpObj: nestedTp,
+							tpName: nestedTp.type,
+							nodeSpec: nestedNodeSpec,
+							isNested: true,
+							parentTpId: tp.id
+						}
+					})
+				);
+			}
 		}
 	}
 
@@ -317,6 +372,33 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 					})
 				);
 			});
+
+			for (const nestedTp of tp.args?.tableProcesses ?? []) {
+				Object.values(nestedTp.args?.out ?? {}).forEach((colId) => {
+					if (colId == null || colId < 0) return;
+					const col = core.data.find((d) => d.id === colId);
+					if (!col) return;
+					nodes.push(
+						new ProcessNode({
+							id: `data_${col.id}`,
+							kind: 'data',
+							label: col.name,
+							sublabel: col.type,
+							ports: {
+								inputs: [],
+								outputs: [makeNodePort('column', 'output', 'column')]
+							},
+							refId: col.id,
+							meta: {
+								type: 'data',
+								refId: col.id,
+								tableColor: color,
+								isTPOutput: true
+							}
+						})
+					);
+				});
+			}
 		});
 	});
 
@@ -380,6 +462,22 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			for (const [outKey, colId] of Object.entries(tp.args?.out ?? {})) {
 				if (colId == null || colId < 0) continue;
 				addConnection(tpNodeId, `data_${colId}`, 'tp-data', outKey, 'column');
+			}
+
+			for (const nestedTp of tp.args?.tableProcesses ?? []) {
+				const nestedNodeId = `tableprocess_nested_${nestedTp.id}`;
+				const nestedEntry = [...appConsts.tableProcessMap.values()].find(
+					(e) => e.defaults?.get?.('collectedType')?.val === nestedTp.type
+				);
+				const nestedInputRefs = collectTableProcessInputRefs(nestedTp.args, nestedEntry?.nodeSpec);
+				for (const { colId, port } of nestedInputRefs) {
+					if (colId == null || colId < 0) continue;
+					addConnection(`data_${colId}`, nestedNodeId, 'data-tp', 'output', port);
+				}
+				for (const [outKey, colId] of Object.entries(nestedTp.args?.out ?? {})) {
+					if (colId == null || colId < 0) continue;
+					addConnection(nestedNodeId, `data_${colId}`, 'tp-data', outKey, 'column');
+				}
 			}
 		}
 	}

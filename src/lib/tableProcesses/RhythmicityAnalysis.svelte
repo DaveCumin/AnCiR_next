@@ -50,7 +50,12 @@
 			],
 			outputs: [
 				{ name: 'rhythmicityx', kind: 'column', cardinality: 'one' },
-				{ name: 'rhythmicityy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'rhythmicityy_' }
+				{
+					name: 'rhythmicityy_*',
+					kind: 'column',
+					cardinality: 'many',
+					dynamicPrefix: 'rhythmicityy_'
+				}
 			]
 		}
 	};

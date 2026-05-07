@@ -113,7 +113,10 @@
 				const baseline = arrayMin(xInCol.getData());
 				const origin = baseline ?? 0;
 				// Store ms timestamps so the column reads as real time data.
-				core.rawData.set(xOUT, result.bins.map((h) => origin + h * 3600000));
+				core.rawData.set(
+					xOUT,
+					result.bins.map((h) => origin + h * 3600000)
+				);
 				xOutCol.type = 'time';
 				xOutCol.timeFormat = null;
 				if (baseline != null) xOutCol.originTime_ms = baseline;
@@ -440,25 +443,23 @@
 							...yIds.map((id) => 'binned y (' + (getColumnById(Number(id))?.name ?? id) + ')')
 						]}
 						data={[
-							binnedData.bins
-								.slice(previewStart - 1, previewStart + 5)
-								.map((x) => {
-									if (xIsTime && xStartTime_ms != null) {
-										const half = p.args.binSize / 2;
-										const centerMs = xStartTime_ms + (x + half) * 3600000;
-										return {
-											raw: formatDateTime(centerMs),
-											computed: `±${half.toFixed(2)}`,
-											isTime: true
-										};
-									}
-									const center = (x + p.args.stepSize / 2).toFixed(4);
+							binnedData.bins.slice(previewStart - 1, previewStart + 5).map((x) => {
+								if (xIsTime && xStartTime_ms != null) {
+									const half = p.args.binSize / 2;
+									const centerMs = xStartTime_ms + (x + half) * 3600000;
 									return {
-										raw: center,
-										computed: `±${(p.args.binSize / 2).toFixed(2)}`,
+										raw: formatDateTime(centerMs),
+										computed: `±${half.toFixed(2)}`,
 										isTime: true
 									};
-								}),
+								}
+								const center = (x + p.args.stepSize / 2).toFixed(4);
+								return {
+									raw: center,
+									computed: `±${(p.args.binSize / 2).toFixed(2)}`,
+									isTime: true
+								};
+							}),
 							...yIds.map((id) =>
 								binnedData.y_results[id]
 									.slice(previewStart - 1, previewStart + 5)

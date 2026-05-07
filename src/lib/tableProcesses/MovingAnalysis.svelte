@@ -75,9 +75,7 @@
 				{ name: 'xIN', kind: 'column', cardinality: 'one' },
 				{ name: 'yIN', kind: 'column', cardinality: 'many' }
 			],
-			outputs: [
-				{ name: 'stats_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'stats_' }
-			]
+			outputs: [{ name: 'stats_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'stats_' }]
 		}
 	};
 
@@ -345,7 +343,7 @@
 		// hoursSinceStart is relative to min(getData()), so anchor origin to the
 		// same baseline; using getData()[0] breaks when the first row is null or
 		// when the data isn't sorted.
-		const originTime_ms = isTimeX ? arrayMin(tCol.getData()) ?? null : null;
+		const originTime_ms = isTimeX ? (arrayMin(tCol.getData()) ?? null) : null;
 
 		// hoursSinceStart now preserves null for filtered rows; isNaN(null) is false,
 		// so we have to guard against null explicitly or Math.min/max coerce it to 0.
@@ -364,8 +362,7 @@
 		if (starts.length === 0) return [empty, false];
 
 		const binLabel = argsIN.binLabel ?? 'center';
-		const binOffset =
-			binLabel === 'start' ? 0 : binLabel === 'end' ? windowSize : windowSize / 2;
+		const binOffset = binLabel === 'start' ? 0 : binLabel === 'end' ? windowSize : windowSize / 2;
 		const bins = starts.map((s) => s + binOffset);
 
 		const statKeys = getStatKeys(argsIN);
@@ -428,7 +425,10 @@
 				// real time data. windowSize/stepSize stay on the column as metadata
 				// so plots can show window extent.
 				if (originTime_ms != null) {
-					core.rawData.set(xOUT, bins.map((h) => originTime_ms + h * 3600000));
+					core.rawData.set(
+						xOUT,
+						bins.map((h) => originTime_ms + h * 3600000)
+					);
 					xColOut.type = 'time';
 					xColOut.timeFormat = null;
 				} else {
@@ -686,9 +686,7 @@
 				// Convert stored ms timestamps back to hour offsets for the in-memory
 				// preview (which expects bins to be hours so labelForBin can render).
 				const bins =
-					originTime_ms != null
-						? storedX.map((ms) => (ms - originTime_ms) / 3600000)
-						: storedX;
+					originTime_ms != null ? storedX.map((ms) => (ms - originTime_ms) / 3600000) : storedX;
 				const y_results = {};
 				for (const yId of p.args.yIN ?? []) {
 					const per = {};
@@ -912,12 +910,7 @@
 			{#if p.args.rwFixDutyCycle}
 				<div class="control-input">
 					<p>Duty cycle (0–1)</p>
-					<NumberWithUnits
-						bind:value={p.args.rwFixedDutyCycle}
-						min="0.01"
-						max="0.99"
-						step="0.05"
-					/>
+					<NumberWithUnits bind:value={p.args.rwFixedDutyCycle} min="0.01" max="0.99" step="0.05" />
 				</div>
 			{/if}
 		</div>

@@ -1,6 +1,12 @@
 <script>
 	// @ts-nocheck
-	let { edges = [], width = 0, height = 0, highlightedIds = null, provisionalEdge = null } = $props();
+	let {
+		edges = [],
+		width = 0,
+		height = 0,
+		highlightedIds = null,
+		provisionalEdge = null
+	} = $props();
 
 	const edgeColors = {
 		'data-process': '#aaaaaa',

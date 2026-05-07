@@ -78,7 +78,9 @@
 			role="button"
 			tabindex="-1"
 		></div>
-		<div class="port-label port-label-in" style="top:{portY(i, inputPorts.length)}px;">{port.name}</div>
+		<div class="port-label port-label-in" style="top:{portY(i, inputPorts.length)}px;">
+			{port.name}
+		</div>
 	{/each}
 
 	{#each outputPorts as port, i (`out_${port.name}_${i}`)}
@@ -138,6 +140,8 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 4px;
+		position: relative;
+		z-index: 1;
 	}
 
 	.node-label {
@@ -152,6 +156,7 @@
 		font-size: 9px;
 		color: #666;
 		flex-shrink: 0;
+		pointer-events: none;
 	}
 
 	.drop-badge {

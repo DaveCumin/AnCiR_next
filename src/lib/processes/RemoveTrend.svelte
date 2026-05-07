@@ -19,8 +19,7 @@
 		const result = Array.from({ length: rows }, () => Array(cols).fill(0));
 		for (let i = 0; i < rows; i++)
 			for (let j = 0; j < cols; j++)
-				for (let k = 0; k < common; k++)
-					result[i][j] += A[i][k] * B[k][j];
+				for (let k = 0; k < common; k++) result[i][j] += A[i][k] * B[k][j];
 		return result;
 	}
 
@@ -33,8 +32,7 @@
 		const aug = A.map((row, i) => [...row, b[i]]);
 		for (let i = 0; i < n; i++) {
 			let mx = i;
-			for (let k = i + 1; k < n; k++)
-				if (Math.abs(aug[k][i]) > Math.abs(aug[mx][i])) mx = k;
+			for (let k = i + 1; k < n; k++) if (Math.abs(aug[k][i]) > Math.abs(aug[mx][i])) mx = k;
 			[aug[i], aug[mx]] = [aug[mx], aug[i]];
 			for (let k = i + 1; k < n; k++) {
 				const f = aug[k][i] / aug[i][i];
@@ -60,7 +58,10 @@
 		}
 		const AT = transpose(A);
 		const ATA = multiplyMatrices(AT, A);
-		const ATy = multiplyMatrices(AT, y.map((v) => [v])).map((r) => r[0]);
+		const ATy = multiplyMatrices(
+			AT,
+			y.map((v) => [v])
+		).map((r) => r[0]);
 		return solveLinearSystem(ATA, ATy);
 	}
 
@@ -102,9 +103,7 @@
 			fitted = x.map((xi) => evaluatePolynomial(coeffs, xi));
 			rSquared = computeRSquared(y, fitted);
 		}
-		const rmse = Math.sqrt(
-			fitted.reduce((s, fi, i) => s + Math.pow(y[i] - fi, 2), 0) / x.length
-		);
+		const rmse = Math.sqrt(fitted.reduce((s, fi, i) => s + Math.pow(y[i] - fi, 2), 0) / x.length);
 		return { parameters, fitted, rmse, rSquared };
 	}
 
@@ -113,7 +112,8 @@
 		return data.map((_, i) => {
 			const start = Math.max(0, i - half);
 			const end = Math.min(data.length - 1, i + half);
-			let sum = 0, sumSq = 0;
+			let sum = 0,
+				sumSq = 0;
 			const count = end - start + 1;
 			for (let j = start; j <= end; j++) {
 				sum += data[j];
@@ -129,7 +129,9 @@
 		const xColId = args.xColId;
 		const xCol = xColId != -1 ? getColumnById(xColId) : null;
 		const t = xCol
-			? (xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData())
+			? xCol.type === 'time'
+				? xCol.hoursSinceStart
+				: xCol.getData()
 			: x.map((_, i) => i);
 
 		const validIndices = t
@@ -198,7 +200,11 @@
 				data = [...rawData];
 			}
 			if (col.type === 'time' && col.compression !== 'awd') {
-				try { data = data.map((v) => Number(getUNIXDate(v, col.timeFormat))); } catch { /* ignore */ }
+				try {
+					data = data.map((v) => Number(getUNIXDate(v, col.timeFormat)));
+				} catch {
+					/* ignore */
+				}
 			}
 			if (col.type === 'bin') data = data.map((v) => v + col.binWidth / 2);
 		}
@@ -206,7 +212,9 @@
 
 		const statsXCol = p.args.xColId != -1 ? getColumnById(p.args.xColId) : null;
 		const t = statsXCol
-			? (statsXCol.type === 'time' ? statsXCol.hoursSinceStart : statsXCol.getData())
+			? statsXCol.type === 'time'
+				? statsXCol.hoursSinceStart
+				: statsXCol.getData()
 			: data.map((_, i) => i);
 
 		const validIndices = t
@@ -272,7 +280,9 @@
 		<div class="info-text">
 			<span class="stat-label">Trend:</span>
 			{#if p.args.model === 'linear'}
-				{trendStats.parameters?.slope?.toFixed(3)}·x + {trendStats.parameters?.intercept?.toFixed(3)}
+				{trendStats.parameters?.slope?.toFixed(3)}·x + {trendStats.parameters?.intercept?.toFixed(
+					3
+				)}
 			{:else if p.args.model === 'exponential'}
 				{trendStats.parameters?.a?.toFixed(3)}·e^({trendStats.parameters?.b?.toFixed(3)}·x)
 			{:else if p.args.model === 'logarithmic'}
