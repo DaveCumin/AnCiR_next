@@ -94,7 +94,6 @@
 
 	let result = $state({ groups: {}, category: [], value: [] });
 	let mounted = $state(false);
-	let searchTerm = $state('');
 	let previewStart = $state(1);
 	let lastHash = '';
 
@@ -155,20 +154,6 @@
 				source,
 				items: items.sort((a, b) => a.key.localeCompare(b.key))
 			}));
-	});
-
-	let filteredSourceGroups = $derived.by(() => {
-		const term = searchTerm.trim().toLowerCase();
-		if (!term) return sourceGroups;
-		return sourceGroups
-			.map((g) => {
-				const sourceMatch = g.source.toLowerCase().includes(term);
-				const items = sourceMatch
-					? g.items
-					: g.items.filter((i) => i.key.toLowerCase().includes(term));
-				return items.length ? { source: g.source, items } : null;
-			})
-			.filter(Boolean);
 	});
 
 	let getHash = $derived.by(() => {
@@ -281,10 +266,6 @@
 		<span>Stored value groups</span>
 	</div>
 	<div class="control-input-vertical">
-		<div class="control-input">
-			<p>Search stored values</p>
-			<input type="text" bind:value={searchTerm} placeholder="Filter by key or source" />
-		</div>
 		<button class="tp-stat-btn" onclick={addGroup}>+ Add group</button>
 	</div>
 </div>
@@ -309,11 +290,11 @@
 						>
 					</div>
 
-					{#if filteredSourceGroups.length === 0}
-						<p class="hint">No stored values match the current filter.</p>
+					{#if sourceGroups.length === 0}
+						<p class="hint">No stored values available.</p>
 					{:else}
 						<div class="source-tree">
-							{#each filteredSourceGroups as src}
+							{#each sourceGroups as src}
 								{@const keys = src.items.map((it) => it.key)}
 								{@const sel = sourceSelectionState(group, keys)}
 								<div class="source-block">
@@ -361,16 +342,19 @@
 	<div class="section-row">
 		<div class="section-content">
 			{#if p.args.valid}
-				{@const totalRows = result.value?.length ?? 0}
+				{@const groupCols = (p.args.groups ?? []).map((g, i) => ({
+					name: result.groups?.[g.id]?.name ?? safeGroupName(g, i),
+					values: result.groups?.[g.id]?.values ?? []
+				}))}
+				{@const totalRows = Math.max(0, ...groupCols.map((c) => c.values.length))}
 				{#if totalRows > 0}
 					<Table
-						headers={['category', 'value']}
-						data={[
-							(result.category ?? []).slice(previewStart - 1, previewStart + 5),
-							(result.value ?? [])
+						headers={groupCols.map((c) => c.name)}
+						data={groupCols.map((c) =>
+							c.values
 								.slice(previewStart - 1, previewStart + 5)
 								.map((v) => (Number.isFinite(v) ? v.toFixed(4) : 'NaN'))
-						]}
+						)}
 					/>
 					<p>
 						Row <NumberWithUnits
