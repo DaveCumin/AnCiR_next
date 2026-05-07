@@ -38,10 +38,13 @@
 		});
 
 		for (let i = 0; i < yCols.length; i++) {
-			newPlot.plot.addData({
-				x: { refId: Number(xCol) },
+			const dataIn = {
 				y: { refId: yCols[i] }
-			});
+			};
+			if (!(plotType === 'boxplot' && Number(xCol) < 0)) {
+				dataIn.x = { refId: Number(xCol) };
+			}
+			newPlot.plot.addData(dataIn);
 		}
 
 		pushObj(newPlot);
@@ -95,10 +98,13 @@
 				width: snapToGrid(width),
 				height: snapToGrid(height)
 			});
-			newPlot.plot.addData({
-				x: { refId: Number(xCol) },
+			const dataIn = {
 				y: { refId: yCols[i] }
-			});
+			};
+			if (!(plotType === 'boxplot' && Number(xCol) < 0)) {
+				dataIn.x = { refId: Number(xCol) };
+			}
+			newPlot.plot.addData(dataIn);
 			core.plots.push(newPlot);
 
 			await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
@@ -173,8 +179,8 @@
 			<AttributeSelect
 				bind:value={plotType}
 				label="Plot Type"
-				options={['actogram', 'correlogram', 'fft', 'periodogram', 'scatterplot']}
-				optionsDisplay={['Actogram', 'Correlogram', 'FFT', 'Periodogram', 'Scatterplot']}
+				options={['actogram', 'boxplot', 'correlogram', 'fft', 'periodogram', 'scatterplot']}
+				optionsDisplay={['Actogram', 'Boxplot', 'Correlogram', 'FFT', 'Periodogram', 'Scatterplot']}
 				onChange={() => {
 					steps[0].completed = true;
 					enforceSequentialCompletion(0);
@@ -183,18 +189,25 @@
 		</div>
 	{/if}
 	{#if index === 1}
-		<AttributeSelect
-			bind:value={xCol}
-			label={plotType == 'scatterplot' ? 'x' : 'time'}
-			options={core.tables.flatMap((table) => table.columns.map((col) => col.id))}
-			optionsDisplay={core.tables.flatMap((table) =>
-				table.columns.map((col) => table.name + ': ' + col.name)
-			)}
-			onChange={() => {
-				steps[0].completed = true;
-				enforceSequentialCompletion(0);
-			}}
-		/>
+		{#if plotType === 'boxplot'}
+			<div class="control-input">
+				<p>x (categories, optional)</p>
+				<ColumnSelector bind:value={xCol} />
+			</div>
+		{:else}
+			<AttributeSelect
+				bind:value={xCol}
+				label={plotType == 'scatterplot' ? 'x' : 'time'}
+				options={core.tables.flatMap((table) => table.columns.map((col) => col.id))}
+				optionsDisplay={core.tables.flatMap((table) =>
+					table.columns.map((col) => table.name + ': ' + col.name)
+				)}
+				onChange={() => {
+					steps[0].completed = true;
+					enforceSequentialCompletion(0);
+				}}
+			/>
+		{/if}
 
 		<div class="import-container">
 			<div class="preview-placeholder">
@@ -203,7 +216,7 @@
 			</div>
 		</div>
 
-		{#if yCols[0] != null && Number(xCol) >= 0}
+		{#if yCols[0] != null && (plotType === 'boxplot' || Number(xCol) >= 0)}
 			{#if yCols.length == 1}
 				<div class="dialog-button-container">
 					<button

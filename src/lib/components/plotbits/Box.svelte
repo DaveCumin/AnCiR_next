@@ -126,6 +126,7 @@
 		uniqueXValues = [],
 		seriesIndex = 0,
 		totalSeries = 1,
+		dodgeEnabled = true,
 		title = 'Box Plot'
 	} = $props();
 
@@ -174,19 +175,19 @@
 		if (uniqueXValues.length === 1) {
 			// Single category - use a reasonable width
 			const rangeWidth = xscale.range()[1] - xscale.range()[0];
-			return (rangeWidth * 0.2 * boxPlotData.boxWidth) / (2 * totalSeries);
+			return Math.max(2, (rangeWidth * 0.2 * boxPlotData.boxWidth) / (2 * totalSeries));
 		}
 
 		// Multiple categories - base width on spacing
 		const spacing = (xscale.range()[1] - xscale.range()[0]) / uniqueXValues.length;
-		return (spacing * boxPlotData.boxWidth) / (2 * totalSeries);
+		return Math.max(2, (spacing * boxPlotData.boxWidth) / (2 * totalSeries));
 	});
 
 	let whiskerHalfWidth = $derived(boxHalfWidth * boxPlotData.whiskerWidth);
 
 	// Calculate dodge offset for multiple series
 	let dodgeOffset = $derived.by(() => {
-		if (totalSeries <= 1) return 0;
+		if (!dodgeEnabled || totalSeries <= 1) return 0;
 		const totalWidth = boxHalfWidth * 2 * totalSeries;
 		const step = totalWidth / totalSeries;
 		return (seriesIndex - (totalSeries - 1) / 2) * step;

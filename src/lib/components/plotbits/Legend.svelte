@@ -262,6 +262,17 @@
 									d={getPointPath(el.shape || 'circle', 10, 0, el.size)}
 									fill={el.color}
 								/>
+							{:else if el.type === 'boxplot'}
+								<rect
+									x={3}
+									y={-6}
+									width={14}
+									height={12}
+									fill={el.fillColor ?? 'none'}
+									fill-opacity={el.fillOpacity ?? 0.3}
+									stroke={el.color}
+									stroke-width={2}
+								/>
 							{/if}
 						{/each}
 						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendData.fontSize} fill="black">
@@ -289,6 +300,17 @@
 								<path
 									d={getPointPath(el.shape || 'circle', 10, 0, el.size)}
 									fill={el.color}
+								/>
+							{:else if el.type === 'boxplot'}
+								<rect
+									x={3}
+									y={-6}
+									width={14}
+									height={12}
+									fill={el.fillColor ?? 'none'}
+									fill-opacity={el.fillOpacity ?? 0.3}
+									stroke={el.color}
+									stroke-width={2}
 								/>
 							{/if}
 						{/each}

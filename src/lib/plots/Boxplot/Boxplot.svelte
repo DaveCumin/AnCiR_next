@@ -24,11 +24,7 @@
 			if (dataIN?.x) {
 				this.x = ColumnClass.fromJSON(dataIN.x);
 			} else {
-				if (parent.data.length > 0) {
-					this.x = new ColumnClass({ refId: parent.data[parent.data.length - 1].x.refId });
-				} else {
-					this.x = new ColumnClass({ refId: -1 });
-				}
+				this.x = new ColumnClass({ refId: -1 });
 			}
 
 			if (dataIN?.y) {
@@ -96,14 +92,29 @@
 		// Get all unique x values across all data series
 		uniqueXValues = $derived.by(() => {
 			const allXValues = new Set();
-			this.data.forEach((d) => {
+			this.data.forEach((d, i) => {
 				const xData = d.x.getData() ?? [];
-				xData.forEach((val) => {
-					if (val != null) {
-						// ← removed !isNaN
-						allXValues.add(val);
+				const yData = d.y.getData() ?? [];
+
+				let addedAny = false;
+				if (xData.length > 0) {
+					xData.forEach((val, idx) => {
+						const yVal = yData[idx];
+						if (val != null && yVal != null && !isNaN(yVal)) {
+							allXValues.add(val);
+							addedAny = true;
+						}
+					});
+				}
+
+				// If no category x data is provided, treat the whole series as one category
+				// named by its data label so single-value columns can render one box each.
+				if (!addedAny) {
+					const hasAnyY = yData.some((v) => v != null && !isNaN(v));
+					if (hasAnyY) {
+						allXValues.add(d.label || `Box Plot ${i + 1}`);
 					}
-				});
+				}
 			});
 			return Array.from(allXValues).sort((a, b) => {
 				// Safe sort for numbers or strings
@@ -270,6 +281,15 @@
 					if (!groups.has(cat)) groups.set(cat, []);
 					groups.get(cat).push(val);
 				});
+
+				if (groups.size === 0) {
+					yData.forEach((val) => {
+						if (val == null || isNaN(val)) return;
+						const fallbackCategory = label;
+						if (!groups.has(fallbackCategory)) groups.set(fallbackCategory, []);
+						groups.get(fallbackCategory).push(val);
+					});
+				}
 				// Pre-compute stats per category
 				const statsMap = new Map();
 				allCategories.forEach((cat) => {
@@ -438,6 +458,7 @@
 	export const definition = {
 		defaultDataInputs: Boxplot_defaultDataInputs,
 		controlHeaders: Boxplot_controlHeaders,
+		optionalDataInputs: ['x'],
 		plotClass: Boxplotclass,
 		sharedFields: Boxplot_sharedFields,
 		dataSharedFields: Boxplot_dataSharedFields
@@ -487,6 +508,34 @@
 	// Custom tick values for x-axis to show actual unique x values
 	function getXAxisTickValues(uniqueXValues) {
 		return uniqueXValues.map((val, i) => ({ position: i, label: String(val) }));
+	}
+
+	function formatCategoryTick(value, categories) {
+		const idx = Math.round(Number(value));
+		if (!Number.isFinite(idx) || idx < 0 || idx >= categories.length) return '';
+		return String(categories[idx]);
+	}
+
+	function hasCategoryXData(datum) {
+		return (datum.x.getData()?.length ?? 0) > 0;
+	}
+
+	function xDataForDatum(datum, idx) {
+		if (hasCategoryXData(datum)) return datum.x.getData() ?? [];
+		return new Array((datum.y.getData() ?? []).length).fill(datum.label || `Box Plot ${idx + 1}`);
+	}
+
+	function getManualCategoryTicks(categories) {
+		return categories.map((_, i) => i);
+	}
+
+	function getXAxisForManualCategories(axisData, categories) {
+		return {
+			label: axisData.label,
+			gridlines: false,
+			nticks: categories.length,
+			manualTicks: getManualCategoryTicks(categories)
+		};
 	}
 </script>
 
@@ -580,7 +629,17 @@
 
 		<div class="div-line"></div>
 
-		<Axis axisData={theData.xAxis} which="controls" title="X-Axis" />
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>X-Axis</p>
+			</div>
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Label</p>
+					<input bind:value={theData.xAxis.label} />
+				</div>
+			</div>
+		</div>
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<div class="control-data-add">
@@ -620,9 +679,20 @@
 					<div class="data-wrapper">
 						<div class="y-select">
 							<div class="control-input">
-								<p>x (categories)</p>
+								<p>x (categories, optional)</p>
 							</div>
 							<Column col={datum.x} canChange={true} />
+							{#if datum.x.refId >= 0}
+								<button
+									type="button"
+									class="icon"
+									onclick={() => {
+										datum.x.refId = -1;
+									}}
+								>
+									<Icon name="reset" width={14} height={14} />
+								</button>
+							{/if}
 						</div>
 						<div class="y-select">
 							<div class="control-input">
@@ -633,11 +703,12 @@
 
 						<Box
 							boxPlotData={datum.boxPlot}
-							x={datum.x.getData() ?? []}
+							x={xDataForDatum(datum, i)}
 							y={datum.y.getData() ?? []}
 							uniqueXValues={theData.uniqueXValues}
 							seriesIndex={i}
 							totalSeries={theData.data.length}
+							dodgeEnabled={hasCategoryXData(datum)}
 							xscale={scaleLinear()
 								.domain([theData.xlims[0], theData.xlims[1]])
 								.range([0, theData.plotwidth])}
@@ -687,13 +758,14 @@
 				.range([0, theData.plot.plotwidth])}
 			position="bottom"
 			plotPadding={theData.plot.padding}
-			axisData={theData.plot.xAxis}
+			axisData={getXAxisForManualCategories(theData.plot.xAxis, theData.plot.uniqueXValues)}
+			tickFormat={(d) => formatCategoryTick(d, theData.plot.uniqueXValues)}
 			which="plot"
 		/>
 
 		<!-- Box plots -->
 		{#each theData.plot.data as datum, i}
-			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
+			{#if datum.y.getData()?.length > 0}
 				{@const xScale = scaleLinear()
 					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
 					.range([0, theData.plot.plotwidth])}
@@ -703,11 +775,12 @@
 
 				<Box
 					boxPlotData={datum.boxPlot}
-					x={datum.x.getData() ?? []}
+					x={xDataForDatum(datum, i)}
 					y={datum.y.getData() ?? []}
 					uniqueXValues={theData.plot.uniqueXValues}
 					seriesIndex={i}
 					totalSeries={theData.plot.data.length}
+					dodgeEnabled={hasCategoryXData(datum)}
 					xscale={xScale}
 					yscale={yScale}
 					xoffset={theData.plot.padding.left}

@@ -52,7 +52,14 @@
 	}
 	//This checks for validity based on the TableProcess (they must have a 'valid' entry for the logic; just like they must have an 'out' for the output logic to work)
 	$effect(() => {
-		if (Object.values(inputs).length > 0 && Object.values(inputs).every((value) => value >= 0)) {
+		const optionalInputs =
+			appConsts.plotMap.get(plotType)?.definition?.optionalDataInputs ?? [];
+		const requiredEntries = Object.entries(inputs).filter(([key]) => !optionalInputs.includes(key));
+		if (
+			Object.values(inputs).length > 0 &&
+			requiredEntries.length > 0 &&
+			requiredEntries.every(([, value]) => value >= 0)
+		) {
 			steps[1].completed = true;
 		} else {
 			steps[1].completed = false;
@@ -147,9 +154,11 @@
 					<!-- TODO: make these draggable? -->
 					<!-- TODO: interface control -->
 					{#if appConsts.plotMap.get(plotType)?.defaultInputs?.length > 0}
+						{@const optionalInputs =
+							appConsts.plotMap.get(plotType)?.definition?.optionalDataInputs ?? []}
 						Defaults:
 						{#each Object.keys(inputs) as d}
-							<div>{d}: <ColumnSelector bind:value={inputs[d]} /></div>
+							<div>{d}{optionalInputs.includes(d) ? ' (optional)' : ''}: <ColumnSelector bind:value={inputs[d]} /></div>
 						{/each}
 					{/if}
 				</div>
