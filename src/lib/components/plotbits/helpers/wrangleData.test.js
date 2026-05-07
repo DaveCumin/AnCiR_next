@@ -233,3 +233,110 @@ describe('binData — step size', () => {
 		expect(sliding.bins.length).toBeGreaterThan(fixed.bins.length);
 	});
 });
+
+describe('binData — uniform mode return shape', () => {
+	it('returns binEnds matching bins length', () => {
+		const result = binData([0, 1, 2, 3], [0, 1, 2, 3], 2, 0);
+		expect(result.binEnds).toHaveLength(result.bins.length);
+		// For uniform: binEnds[i] = bins[i] + binSize
+		result.bins.forEach((b, i) => expect(result.binEnds[i]).toBeCloseTo(b + 2, 8));
+	});
+
+	it('returns droppedCount = 0 when all points fit', () => {
+		const result = binData([0, 1, 2, 3], [0, 1, 2, 3], 2, 0);
+		expect(result.droppedCount).toBe(0);
+	});
+
+	it('counts points below binStart as dropped', () => {
+		const result = binData([-2, -1, 0, 1, 2], [1, 1, 1, 1, 1], 1, 0);
+		expect(result.droppedCount).toBe(2);
+	});
+});
+
+describe('binData — count aggregation', () => {
+	it('returns row counts and ignores y values', () => {
+		// Three points in [0,2): x=0,1,1.5; one point in [2,4): x=3
+		const result = binData([0, 1, 1.5, 3], [99, 99, 99, 99], 2, 0, null, 'count');
+		expect(result.y_out[0]).toBe(3);
+		expect(result.y_out[1]).toBe(1);
+	});
+
+	it('count works with x=y for single-column histogramming', () => {
+		const values = [0.1, 0.5, 0.9, 1.2, 1.7, 2.5];
+		const result = binData(values, values, 1, 0, null, 'count');
+		// [0,1): 0.1, 0.5, 0.9 → 3
+		// [1,2): 1.2, 1.7 → 2
+		// [2,3): 2.5 → 1
+		expect(result.y_out[0]).toBe(3);
+		expect(result.y_out[1]).toBe(2);
+		expect(result.y_out[2]).toBe(1);
+	});
+});
+
+describe('binData — custom cuts', () => {
+	it('produces n-1 bins for n cut edges', () => {
+		const result = binData([1, 2, 3, 4], [1, 1, 1, 1], 0, 0, null, 'count', [0, 2, 5]);
+		expect(result.bins).toEqual([0, 2]);
+		expect(result.binEnds).toEqual([2, 5]);
+	});
+
+	it('uses cut edges literally (variable width)', () => {
+		const cuts = [0, 1, 2.5, 5, 10];
+		// values: 0.5 → [0,1), 2 → [1,2.5), 3,4 → [2.5,5), 6,9,10 → [5,10]
+		const x = [0.5, 2, 3, 4, 6, 9, 10];
+		const result = binData(x, x, 0, 0, null, 'count', cuts);
+		expect(result.y_out).toEqual([1, 1, 2, 3]);
+		expect(result.binEnds).toEqual([1, 2.5, 5, 10]);
+	});
+
+	it('final bin is right-inclusive on cuts[n-1]', () => {
+		// 10 should land in the final bin [5,10], not be dropped
+		const result = binData([10], [10], 0, 0, null, 'count', [0, 5, 10]);
+		expect(result.y_out[1]).toBe(1);
+		expect(result.droppedCount).toBe(0);
+	});
+
+	it('non-final bins are half-open on the right', () => {
+		// value exactly at an interior edge falls in the higher bin
+		const result = binData([2.5], [2.5], 0, 0, null, 'count', [0, 2.5, 5]);
+		expect(result.y_out).toEqual([0, 1]);
+	});
+
+	it('counts droppedCount for points below first cut and above last cut', () => {
+		const result = binData([-1, 0, 5, 11], [1, 1, 1, 1], 0, 0, null, 'count', [0, 5, 10]);
+		// 0 → bin 0, 5 → bin 1, -1 dropped (below), 11 dropped (above)
+		expect(result.droppedCount).toBe(2);
+	});
+
+	it('non-ascending cuts → empty result', () => {
+		const result = binData([1, 2, 3], [1, 1, 1], 0, 0, null, 'count', [5, 2, 8]);
+		expect(result.bins).toEqual([]);
+		expect(result.y_out).toEqual([]);
+	});
+
+	it('duplicate cuts (not strictly ascending) → empty result', () => {
+		const result = binData([1, 2, 3], [1, 1, 1], 0, 0, null, 'count', [0, 5, 5, 10]);
+		expect(result.bins).toEqual([]);
+	});
+
+	it('single-bin cuts (length=2) work', () => {
+		const result = binData([0, 1, 2], [0, 1, 2], 0, 0, null, 'count', [0, 2]);
+		expect(result.bins).toEqual([0]);
+		expect(result.binEnds).toEqual([2]);
+		expect(result.y_out).toEqual([3]); // 0, 1, 2 all in [0,2]
+	});
+
+	it('< 2 cuts falls back to uniform mode (cuts ignored)', () => {
+		const result = binData([0, 1, 2], [0, 1, 2], 1, 0, null, 'count', [5]);
+		// Should behave like uniform binSize=1
+		expect(result.bins[0]).toBe(0);
+		expect(result.bins[1]).toBe(1);
+	});
+
+	it('mean aggregation with custom cuts', () => {
+		// bin [0,2): values 1, 3 → mean=2; bin [2,5): values 4, 6 → mean=5
+		const result = binData([0, 1.5, 2, 4], [1, 3, 4, 6], 0, 0, null, 'mean', [0, 2, 5]);
+		expect(result.y_out[0]).toBeCloseTo(2, 6);
+		expect(result.y_out[1]).toBeCloseTo(5, 6);
+	});
+});
