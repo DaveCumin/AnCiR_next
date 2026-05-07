@@ -921,13 +921,18 @@
 							{#each theData.getSigBarPreviewPairs() as pair}
 								<div class="tp-value-block">
 									<p><strong>{pair.groupA}</strong> vs <strong>{pair.groupB}</strong></p>
-									<p><span class="tp-value-key">p-value:</span> {Number.isFinite(pair.pValue)
-										? pair.pValue.toPrecision(4)
-										: 'NaN'}</p>
-									<p><span class="tp-value-key">p-adjusted:</span> {Number.isFinite(pair.pAdjusted)
-										? pair.pAdjusted.toPrecision(4)
-										: 'NaN'}</p>
-									<p><span class="tp-value-key">Significant:</span> {pair.significant ? 'Yes' : 'No'}</p>
+									<p>
+										<span class="tp-value-key">p-value:</span>
+										{Number.isFinite(pair.pValue) ? pair.pValue.toPrecision(4) : 'NaN'}
+									</p>
+									<p>
+										<span class="tp-value-key">p-adjusted:</span>
+										{Number.isFinite(pair.pAdjusted) ? pair.pAdjusted.toPrecision(4) : 'NaN'}
+									</p>
+									<p>
+										<span class="tp-value-key">Significant:</span>
+										{pair.significant ? 'Yes' : 'No'}
+									</p>
 								</div>
 							{/each}
 							<p>
@@ -936,7 +941,8 @@
 									max={Math.max(1, theData.sigBarResult.pairs.length - 5)}
 									step={1}
 									bind:value={theData.sigBarPreviewStart}
-								/> to {Math.min(theData.sigBarPreviewStart + 5, theData.sigBarResult.pairs.length)} of {theData.sigBarResult.pairs.length}
+								/> to {Math.min(theData.sigBarPreviewStart + 5, theData.sigBarResult.pairs.length)} of
+								{theData.sigBarResult.pairs.length}
 							</p>
 						</details>
 					{/if}
