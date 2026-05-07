@@ -236,7 +236,7 @@
 						type: 'boxplot',
 						color: this.boxPlot.colour,
 						fillColor: this.boxPlot.fillColour,
-						fillOpacity: this.boxPlot.fillOpacity
+						fillOpacity: 1
 					}
 				]
 			};
@@ -277,6 +277,11 @@
 		sigMethod = $state('auto'); // 'auto' | 'anova' | 'kruskal'
 		sigAlpha = $state(0.05);
 		showNs = $state(false);
+		sigBarThickness = $state(1);
+		sigBarColor = $state('#000000');
+		sigBarFontSize = $state(11);
+		sigBarYOffset = $state(0);
+		sigBarSpacing = $state(1);
 
 		// Get all unique x values across all data series
 		uniqueXValues = $derived.by(() => {
@@ -318,6 +323,12 @@
 			if (!this.showSigBars) return { pairs: [], dataMax: -Infinity };
 			const groups = buildSigBarGroups(this.data, this.uniqueXValues);
 			return runSigBarStats(groups, this.sigMethod, this.sigAlpha, this.showNs);
+		});
+
+		sigTableResult = $derived.by(() => {
+			const groups = buildSigBarGroups(this.data, this.uniqueXValues);
+			// Always include non-significant rows in the table, independent of bar plotting.
+			return runSigBarStats(groups, this.sigMethod, this.sigAlpha, true);
 		});
 
 		sigBarLevels = $derived.by(() => {
@@ -369,7 +380,8 @@
 					const dataRange = yTop - yBot;
 					const numLevels = Math.max(...levels.map((e) => e.level)) + 1;
 					const base = Number.isFinite(dataMax) ? dataMax : ymax;
-					const topNeeded = base + dataRange * 0.1 * (numLevels + 1);
+					const levelStep = dataRange * 0.1 * this.sigBarSpacing;
+					const topNeeded = base + levelStep * (numLevels + 1);
 					if (topNeeded > yTop) yTop = niceAxisLimit(topNeeded, 'ceil');
 				}
 			}
@@ -396,7 +408,7 @@
 
 		getSigBarPreviewPairs(count = 6) {
 			const start = Math.max(0, this.sigBarPreviewStart - 1);
-			return this.sigBarResult.pairs.slice(start, start + count);
+			return this.sigTableResult.pairs.slice(start, start + count);
 		}
 
 		constructor(parent, dataIN) {
@@ -638,7 +650,12 @@
 				showSigBars: this.showSigBars,
 				sigMethod: this.sigMethod,
 				sigAlpha: this.sigAlpha,
-				showNs: this.showNs
+				showNs: this.showNs,
+				sigBarThickness: this.sigBarThickness,
+				sigBarColor: this.sigBarColor,
+				sigBarFontSize: this.sigBarFontSize,
+				sigBarYOffset: this.sigBarYOffset,
+				sigBarSpacing: this.sigBarSpacing
 			};
 		}
 
@@ -679,6 +696,11 @@
 			chart.sigMethod = json.sigMethod ?? 'auto';
 			chart.sigAlpha = json.sigAlpha ?? 0.05;
 			chart.showNs = json.showNs ?? false;
+			chart.sigBarThickness = json.sigBarThickness ?? 1;
+			chart.sigBarColor = json.sigBarColor ?? '#000000';
+			chart.sigBarFontSize = json.sigBarFontSize ?? 11;
+			chart.sigBarYOffset = json.sigBarYOffset ?? 0;
+			chart.sigBarSpacing = json.sigBarSpacing ?? 1;
 			return chart;
 		}
 	}
@@ -710,6 +732,7 @@
 
 <script>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appState } from '$lib/core/core.svelte';
 	import { onMount } from 'svelte';
@@ -895,21 +918,47 @@
 					<p>Show</p>
 					<input type="checkbox" bind:checked={theData.showSigBars} />
 				</div>
+				<div class="control-input">
+					<p>Method</p>
+					<select bind:value={theData.sigMethod}>
+						<option value="auto">Auto (t-test / ANOVA)</option>
+						<option value="kruskal">Kruskal-Wallis / Mann-Whitney</option>
+					</select>
+				</div>
+				<div class="control-input">
+					<p>α</p>
+					<NumberWithUnits bind:value={theData.sigAlpha} step={0.01} />
+				</div>
 				{#if theData.showSigBars}
-					<div class="control-input">
-						<p>Method</p>
-						<select bind:value={theData.sigMethod}>
-							<option value="auto">Auto (t-test / ANOVA)</option>
-							<option value="kruskal">Kruskal-Wallis / Mann-Whitney</option>
-						</select>
-					</div>
-					<div class="control-input">
-						<p>α</p>
-						<NumberWithUnits bind:value={theData.sigAlpha} step={0.01} />
-					</div>
 					<div class="control-input">
 						<p>Show ns</p>
 						<input type="checkbox" bind:checked={theData.showNs} />
+					</div>
+					<div class="control-input-horizontal">
+						<div class="control-input" style="max-width: 1.5rem;">
+							<p>Bar Colour</p>
+							<ColourPicker bind:value={theData.sigBarColor} />
+						</div>
+						<div class="control-input">
+							<p>Thickness</p>
+							<NumberWithUnits bind:value={theData.sigBarThickness} step={0.1} min={0.1} />
+						</div>
+					</div>
+					<div class="control-input-horizontal">
+						<div class="control-input">
+							<p>Font Size</p>
+							<NumberWithUnits bind:value={theData.sigBarFontSize} step={1} min={1} />
+						</div>
+						<div class="control-input">
+							<p>Spread</p>
+							<NumberWithUnits bind:value={theData.sigBarSpacing} step={0.1} min={0.1} />
+						</div>
+					</div>
+					<div class="control-input-horizontal">
+						<div class="control-input">
+							<p>Y Offset</p>
+							<NumberWithUnits bind:value={theData.sigBarYOffset} step={1} />
+						</div>
 					</div>
 					{#if theData.sigBarWarnings.length > 0}
 						<div class="data-warning">
@@ -918,40 +967,31 @@
 							{/each}
 						</div>
 					{/if}
+				{/if}
 
-					{#if theData.sigBarResult.pairs.length > 0}
-						<details class="tp-output-panel">
-							<summary class="tp-output-summary">Pairwise comparisons</summary>
-							{#each theData.getSigBarPreviewPairs() as pair}
-								<div class="control-input-horizontal">
-									<div class="control-input">
-										<p><strong>{pair.groupA}</strong> vs <strong>{pair.groupB}</strong></p>
-										<p>
-											<strong>p-value:</strong>
-											{Number.isFinite(pair.pValue) ? pair.pValue.toPrecision(4) : 'NaN'}
-										</p>
-										<p>
-											<strong>p-adjusted:</strong>
-											{Number.isFinite(pair.pAdjusted) ? pair.pAdjusted.toPrecision(4) : 'NaN'}
-										</p>
-										<p>
-											<strong>Significant:</strong>
-											{pair.significant ? 'Yes' : 'No'}
-										</p>
-									</div>
+				{#if theData.sigTableResult.pairs.length > 0}
+					<details class="tp-output-panel">
+						<summary class="tp-output-summary">Pairwise comparisons</summary>
+						{#each theData.getSigBarPreviewPairs() as pair}
+							<div class="control-input-horizontal">
+								<div class="control-input">
+									<p><strong>{pair.groupA}</strong> vs <strong>{pair.groupB}</strong></p>
+									<p>
+										<strong>p-value:</strong>
+										{Number.isFinite(pair.pValue) ? pair.pValue.toPrecision(4) : 'NaN'}
+									</p>
+									<p>
+										<strong>p-adjusted:</strong>
+										{Number.isFinite(pair.pAdjusted) ? pair.pAdjusted.toPrecision(4) : 'NaN'}
+									</p>
+									<p>
+										<strong>Significant:</strong>
+										{pair.significant ? 'Yes' : 'No'}
+									</p>
 								</div>
-							{/each}
-							<p>
-								Row <NumberWithUnits
-									min={1}
-									max={Math.max(1, theData.sigBarResult.pairs.length - 5)}
-									step={1}
-									bind:value={theData.sigBarPreviewStart}
-								/> to {Math.min(theData.sigBarPreviewStart + 5, theData.sigBarResult.pairs.length)} of
-								{theData.sigBarResult.pairs.length}
-							</p>
-						</details>
-					{/if}
+							</div>
+						{/each}
+					</details>
 				{/if}
 			</div>
 		</div>
@@ -1124,19 +1164,46 @@
 				.range([theData.plot.plotheight, 0])}
 			{@const { dataMax } = theData.plot.sigBarResult}
 			{@const dataRange = theData.plot.ylims[1] - theData.plot.ylims[0]}
-			{@const levelStep = dataRange * 0.1}
+			{@const levelStep = dataRange * 0.1 * theData.plot.sigBarSpacing}
 			{#each theData.plot.sigBarLevels as entry}
 				{@const xi = sigXScale(entry.i) + theData.plot.padding.left}
 				{@const xj = sigXScale(entry.j) + theData.plot.padding.left}
 				{@const barYData =
 					(Number.isFinite(dataMax) ? dataMax : theData.plot.ylims[1]) +
 					levelStep * (entry.level + 1)}
-				{@const barY = sigYScale(barYData) + theData.plot.padding.top}
-				<line x1={xi} y1={barY + 4} x2={xi} y2={barY} stroke="black" stroke-width="1" />
-				<line x1={xi} y1={barY} x2={xj} y2={barY} stroke="black" stroke-width="1" />
-				<line x1={xj} y1={barY} x2={xj} y2={barY + 4} stroke="black" stroke-width="1" />
-				<text x={(xi + xj) / 2} y={barY - 3} text-anchor="middle" font-size="11" fill="black"
-					>{formatSigLabel(entry.pair.pAdjusted)}</text
+				{@const barY = sigYScale(barYData) + theData.plot.padding.top + theData.plot.sigBarYOffset}
+				<line
+					x1={xi}
+					y1={barY + 4}
+					x2={xi}
+					y2={barY}
+					stroke={theData.plot.sigBarColor}
+					stroke-width={theData.plot.sigBarThickness}
+				/>
+				<line
+					x1={xi}
+					y1={barY}
+					x2={xj}
+					y2={barY}
+					stroke={theData.plot.sigBarColor}
+					stroke-width={theData.plot.sigBarThickness}
+				/>
+				<line
+					x1={xj}
+					y1={barY}
+					x2={xj}
+					y2={barY + 4}
+					stroke={theData.plot.sigBarColor}
+					stroke-width={theData.plot.sigBarThickness}
+				/>
+				<text
+					x={(xi + xj) / 2}
+					y={barY + theData.plot.sigBarFontSize / 3 - 2}
+					text-anchor="middle"
+					font-size={theData.plot.sigBarFontSize}
+					fill={theData.plot.sigBarColor}
+				>
+					{formatSigLabel(entry.pair.pAdjusted)}</text
 				>
 			{/each}
 		{/if}

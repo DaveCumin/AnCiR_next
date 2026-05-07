@@ -264,10 +264,6 @@
 					<p>Fill</p>
 					<ColourPicker bind:value={boxPlotData.fillColour} />
 				</div>
-				<div class="control-input">
-					<p>Opacity</p>
-					<NumberWithUnits step="0.1" min={0} max={1} bind:value={boxPlotData.fillOpacity} />
-				</div>
 			</div>
 			<div class="control-input-horizontal">
 				<div class="control-input">
@@ -400,7 +396,6 @@
 					width={boxHalfWidth * 2}
 					height={yscale(group.q1) - yscale(group.q3)}
 					fill={boxPlotData.fillColour}
-					fill-opacity={boxPlotData.fillOpacity}
 					stroke={boxPlotData.colour}
 					stroke-width={boxPlotData.strokeWidth}
 					stroke-dasharray={boxPlotData.stroke}
