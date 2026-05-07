@@ -1169,11 +1169,24 @@
 		border: 1px solid var(--stroke2, var(--color-lightness-85, #d7d7d7));
 		border-radius: 0.375rem;
 		background: var(--color-lightness-99, #fcfcfc);
+		font-size: 12px;
+		line-height: 1.3;
+	}
+
+	.tp-output-panel[open] {
+		max-height: 16rem;
+		overflow-y: auto;
+		scrollbar-gutter: stable;
 	}
 
 	.tp-output-summary {
 		cursor: pointer;
 		font-weight: 600;
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		background: var(--color-lightness-99, #fcfcfc);
+		padding: 0.1rem 0;
 	}
 
 	.tp-value-block {
@@ -1182,10 +1195,12 @@
 		border: 1px solid var(--color-lightness-93, #ececec);
 		border-radius: 0.35rem;
 		background: var(--color-lightness-100, #fff);
+		font-size: 11px;
+		line-height: 1.25;
 	}
 
 	.tp-value-block p {
-		margin: 0.12rem 0;
+		margin: 0.08rem 0;
 	}
 
 	.tp-value-key {
