@@ -6,11 +6,13 @@
 	const defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
+		['binMode', { val: 'uniform' }], // 'uniform' | 'cuts'
 		['binSize', { val: 0.25 }],
 		['binStart', { val: 0 }],
 		['stepSize', { val: 0.25 }], //null = use binSize as step
 		['diffStep', { val: false }],
-		['aggFunction', { val: 'mean' }], // mean | median | min | max | stddev
+		['cuts', { val: [] }], // sorted ascending; only used when binMode === 'cuts'
+		['aggFunction', { val: 'mean' }], // mean | median | min | max | stddev | count
 		['out', { binnedx: { val: -1 } }],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
@@ -39,34 +41,65 @@
 		}
 	};
 
+	/**
+	 * @typedef {{bins: number[], binEnds: number[], y_results: Record<string, number[]>, droppedCount: number}} BinnedDataResult
+	 */
+
+	/**
+	 * @param {any} argsIN
+	 * @param {boolean} differentstepsize
+	 * @returns {[BinnedDataResult, boolean]}
+	 */
 	export function binneddata(argsIN, differentstepsize) {
 		const xIN = argsIN.xIN;
 		// Backward compat: accept single number or array
 		let yINs = argsIN.yIN;
 		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
+		const binMode = argsIN.binMode === 'cuts' ? 'cuts' : 'uniform';
 		const binSize = argsIN.binSize;
 		const binStart = argsIN.binStart;
 		const stepSize = differentstepsize ? argsIN.stepSize : binSize;
 		const aggFunction = argsIN.aggFunction || 'mean';
 		const xOUT = argsIN.out.binnedx;
+		// Sort + dedupe cuts at the TP boundary so the helper sees a clean ascending array
+		/** @type {number[]} */
+		const rawCuts = Array.isArray(argsIN.cuts) ? argsIN.cuts : [];
+		const cuts = [...new Set(rawCuts.filter((/** @type {number} */ c) => isFinite(c)))].sort(
+			(a, b) => a - b
+		);
 
-		if (
-			xIN == undefined ||
-			binSize == undefined ||
-			binStart == undefined ||
-			xIN == -1 ||
-			yINs.length === 0 ||
-			binSize <= 0
-		) {
-			return [{ bins: [], y_results: {} }, false];
+		/** @returns {BinnedDataResult} */
+		const empty = () => ({ bins: [], binEnds: [], y_results: {}, droppedCount: 0 });
+
+		if (xIN == undefined || xIN == -1 || yINs.length === 0) {
+			return [empty(), false];
 		}
 
+		/** @type {any} */
 		const xInCol = getColumnById(xIN);
-		if (!xInCol) return [{ bins: [], y_results: {} }, false];
+		if (!xInCol) return [empty(), false];
+
+		// Custom cuts not allowed for time-typed X (deferred to a future version)
+		if (binMode === 'cuts' && xInCol.type === 'time') {
+			return [empty(), false];
+		}
+
+		if (binMode === 'uniform') {
+			if (binSize == undefined || binStart == undefined || binSize <= 0) {
+				return [empty(), false];
+			}
+		} else {
+			// cuts mode: need at least 2 valid edges, strictly ascending after dedupe
+			if (cuts.length < 2) {
+				return [empty(), false];
+			}
+		}
 
 		const xData = xInCol.type === 'time' ? xInCol.hoursSinceStart : xInCol.getData();
 
-		const result = { bins: [], y_results: {} };
+		const cutsArg = /** @type {any} */ (binMode === 'cuts' ? cuts : null);
+		/** @type {BinnedDataResult} */
+		const result = { bins: [], binEnds: [], y_results: {}, droppedCount: 0 };
 		let anyValid = false;
 
 		for (const yId of yINs) {
@@ -75,12 +108,24 @@
 			if (!yCol) continue;
 			const yData = yCol.getData();
 
-			const theBinnedData = binData(xData, yData, binSize, binStart, stepSize, aggFunction);
+			const theBinnedData = binData(
+				xData,
+				yData,
+				binSize,
+				binStart,
+				stepSize,
+				aggFunction,
+				cutsArg
+			);
 
 			if (theBinnedData.bins.length > 0) {
 				// Use first valid Y's bins as the shared x output
-				if (result.bins.length === 0) result.bins = theBinnedData.bins;
+				if (result.bins.length === 0) {
+					result.bins = theBinnedData.bins;
+					result.binEnds = theBinnedData.binEnds;
+				}
 				result.y_results[yId] = theBinnedData.y_out;
+				result.droppedCount += theBinnedData.droppedCount ?? 0;
 				anyValid = true;
 			}
 		}
@@ -101,10 +146,18 @@
 		if (anyValid && xOUT !== -1) {
 			const processHash = crypto.randomUUID();
 
+			/** @type {any} */
 			const xOutCol = getColumnById(xOUT);
 			xOutCol.data = xOUT;
-			xOutCol.binWidth = binSize;
-			xOutCol.binStep = stepSize;
+			if (binMode === 'cuts') {
+				xOutCol.binWidth = null;
+				xOutCol.binStep = null;
+				xOutCol.cutsList = cuts.slice();
+			} else {
+				xOutCol.binWidth = binSize;
+				xOutCol.binStep = stepSize;
+				xOutCol.cutsList = null;
+			}
 			xOutCol.aggFunction = aggFunction;
 			if (xInCol.type === 'time') {
 				// Anchor to min(raw) — the same baseline hoursSinceStart uses for
@@ -174,6 +227,27 @@
 	}
 	// Migrate: ensure diffStep exists
 	if (p.args.diffStep === undefined) p.args.diffStep = false;
+	// Migrate: ensure binMode and cuts exist (added 2026-05-07)
+	if (p.args.binMode === undefined) p.args.binMode = 'uniform';
+	if (!Array.isArray(p.args.cuts)) p.args.cuts = [];
+
+	// Local text mirror for the cut-edges input. Source of truth is p.args.cuts;
+	// we re-serialise from the parsed array so the input survives session reload
+	// even if the user typed something exotic ("0,1, , 5").
+	let cutsText = $state(p.args.cuts.length > 0 ? p.args.cuts.join(', ') : '');
+
+	function parseCutsText(/** @type {string} */ text) {
+		const parts = text.split(/[,\s]+/).filter(Boolean);
+		const nums = parts.map(parseFloat).filter((n) => !isNaN(n));
+		return [...new Set(nums)].sort((a, b) => a - b);
+	}
+
+	function handleCutsInput(/** @type {Event} */ e) {
+		const target = /** @type {HTMLInputElement} */ (e.target);
+		cutsText = target.value;
+		p.args.cuts = parseCutsText(cutsText);
+		getBinnedData();
+	}
 
 	let binnedData = $state();
 	let previewStart = $state(1);
@@ -224,6 +298,7 @@
 			h += col?.getDataHash ?? '';
 		}
 		h += p.args.binSize + p.args.binStart + (p.args.stepSize ?? '') + p.args.aggFunction;
+		h += '|' + p.args.binMode + '|' + JSON.stringify(p.args.cuts ?? []);
 		return h;
 	});
 	let lastHash = '';
@@ -348,53 +423,41 @@
 <!-- Bin Parameters -->
 <div class="section-row">
 	<div class="tableProcess-label"><span>Bin parameters</span></div>
-	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Bin size (hrs)</p>
-			<NumberWithUnits bind:value={p.args.binSize} onInput={getBinnedData} min="0.01" step="0.01" />
-		</div>
-		<div class="control-input">
-			{#if xIsTime}
-				<p>Bin start</p>
-				<input
-					type="datetime-local"
-					step="1"
-					value={binStartDatetimeStr}
-					onchange={handleBinStartDatetime}
-				/>
-			{:else}
-				<p>Bin start (hr)</p>
-				<NumberWithUnits bind:value={p.args.binStart} onInput={getBinnedData} />
-			{/if}
-		</div>
+
+	<div class="control-input">
+		<p>Bin mode</p>
+		<select
+			bind:value={p.args.binMode}
+			onchange={getBinnedData}
+			disabled={xIsTime}
+			title={xIsTime ? 'Custom edges not supported for time-typed X (v1)' : ''}
+		>
+			<option value="uniform">Uniform</option>
+			<option value="cuts">Custom edges</option>
+		</select>
 	</div>
 
-	<p>Different step size</p>
-	<input
-		type="checkbox"
-		bind:checked={p.args.diffStep}
-		onchange={() => {
-			p.args.stepSize = p.args.diffStep ? p.args.binSize : null;
-			getBinnedData();
-		}}
-	/>
-
-	<div class="control-input-horizontal">
-		{#if p.args.diffStep}
-			<div class="control-input">
-				<p>Step size (hrs)</p>
-
-				<NumberWithUnits
-					bind:value={p.args.stepSize}
-					onInput={getBinnedData}
-					min="0.01"
-					step="0.01"
-				/>
-			</div>
-		{/if}
+	{#if p.args.binMode === 'cuts' && !xIsTime}
+		<div class="control-input">
+			<p>Cut edges (comma- or space-separated)</p>
+			<input
+				type="text"
+				value={cutsText}
+				oninput={handleCutsInput}
+				placeholder="e.g. 0, 1, 2.5, 5, 10"
+			/>
+			<p class="cuts-summary">
+				{#if p.args.cuts.length >= 2}
+					{p.args.cuts.length} edges → {p.args.cuts.length - 1} bins
+				{:else}
+					Enter at least 2 distinct numeric edges
+				{/if}
+			</p>
+		</div>
 		<div class="control-input">
 			<p>Function</p>
 			<select bind:value={p.args.aggFunction} onchange={getBinnedData}>
+				<option value="count">Count</option>
 				<option value="mean">Mean</option>
 				<option value="median">Median</option>
 				<option value="min">Minimum</option>
@@ -402,8 +465,95 @@
 				<option value="stddev">Std Dev</option>
 			</select>
 		</div>
-	</div>
+	{:else}
+		<div class="control-input-horizontal">
+			<div class="control-input">
+				<p>Bin size (hrs)</p>
+				<NumberWithUnits
+					bind:value={p.args.binSize}
+					onInput={getBinnedData}
+					min="0.01"
+					step="0.01"
+				/>
+			</div>
+			<div class="control-input">
+				{#if xIsTime}
+					<p>Bin start</p>
+					<input
+						type="datetime-local"
+						step="1"
+						value={binStartDatetimeStr}
+						onchange={handleBinStartDatetime}
+					/>
+				{:else}
+					<p>Bin start (hr)</p>
+					<NumberWithUnits bind:value={p.args.binStart} onInput={getBinnedData} />
+				{/if}
+			</div>
+		</div>
+
+		<p>Different step size</p>
+		<input
+			type="checkbox"
+			bind:checked={p.args.diffStep}
+			onchange={() => {
+				p.args.stepSize = p.args.diffStep ? p.args.binSize : null;
+				getBinnedData();
+			}}
+		/>
+
+		<div class="control-input-horizontal">
+			{#if p.args.diffStep}
+				<div class="control-input">
+					<p>Step size (hrs)</p>
+
+					<NumberWithUnits
+						bind:value={p.args.stepSize}
+						onInput={getBinnedData}
+						min="0.01"
+						step="0.01"
+					/>
+				</div>
+			{/if}
+			<div class="control-input">
+				<p>Function</p>
+				<select bind:value={p.args.aggFunction} onchange={getBinnedData}>
+					<option value="count">Count</option>
+					<option value="mean">Mean</option>
+					<option value="median">Median</option>
+					<option value="min">Minimum</option>
+					<option value="max">Maximum</option>
+					<option value="stddev">Std Dev</option>
+				</select>
+			</div>
+		</div>
+	{/if}
+
+	{#if binnedData?.droppedCount > 0}
+		<div class="data-warning">
+			<p>⚠ {binnedData.droppedCount} value{binnedData.droppedCount === 1 ? '' : 's'} dropped (outside bin range)</p>
+		</div>
+	{/if}
 </div>
+
+<style>
+	.cuts-summary {
+		font-size: 0.85em;
+		color: var(--color-lightness-50, #777);
+		margin: 0.2rem 0 0;
+	}
+	.data-warning {
+		margin-top: 0.4rem;
+		padding: 0.45rem 0.6rem;
+		border-radius: 0.375rem;
+		background: color-mix(in srgb, #f5c76a 18%, white);
+		border: 1px solid color-mix(in srgb, #d89c1b 35%, white);
+	}
+	.data-warning p {
+		margin: 0.15rem 0;
+		font-size: 0.92em;
+	}
+</style>
 
 <!-- Output / Preview -->
 <details open>
