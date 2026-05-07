@@ -47,7 +47,7 @@
 			this.outlierMethod =
 				dataIN?.outlierMethod === 'boxplot'
 					? 'iqr'
-					: dataIN?.outlierMethod ?? boxplotDefaultOutlierMethod;
+					: (dataIN?.outlierMethod ?? boxplotDefaultOutlierMethod);
 			this.iqrMultiplier = dataIN?.iqrMultiplier ?? 1.5;
 			this.zThreshold = dataIN?.zThreshold ?? 3;
 			this.whiskerWidth = dataIN?.whiskerWidth ?? 0.5;
