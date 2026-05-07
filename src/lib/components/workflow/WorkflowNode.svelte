@@ -1,6 +1,8 @@
 <script>
 	// @ts-nocheck
+	import { createEventDispatcher } from 'svelte';
 	let { node, selected = false, expanded = false, isDropTarget = false } = $props();
+	const dispatch = createEventDispatcher();
 
 	const typeColors = {
 		data: '#b3d9f2',
@@ -20,6 +22,25 @@
 	function portY(index, count) {
 		if (!count) return 24;
 		return ((index + 1) * 48) / (count + 1);
+	}
+
+	function startFromOutput(e, portName) {
+		e.stopPropagation();
+		e.preventDefault();
+		dispatch('portstart', { nodeId: node.id, port: portName, direction: 'out' });
+	}
+
+	function endAtInput(e, portName) {
+		e.stopPropagation();
+		e.preventDefault();
+		dispatch('portend', { nodeId: node.id, port: portName, direction: 'in' });
+	}
+
+	function disconnectInput(e, portName) {
+		e.stopPropagation();
+		if (!e.shiftKey && e.button !== 2) return;
+		e.preventDefault();
+		dispatch('portdisconnect', { nodeId: node.id, port: portName, direction: 'in' });
 	}
 </script>
 
@@ -51,6 +72,11 @@
 			class="port-handle port-in"
 			style="top:{portY(i, inputPorts.length)}px;"
 			title={`Input: ${port.name}`}
+			onmousedown={(e) => disconnectInput(e, port.name)}
+			onmouseup={(e) => endAtInput(e, port.name)}
+			oncontextmenu={(e) => disconnectInput(e, port.name)}
+			role="button"
+			tabindex="-1"
 		></div>
 	{/each}
 
@@ -59,6 +85,9 @@
 			class="port-handle port-out"
 			style="top:{portY(i, outputPorts.length)}px;"
 			title={`Output: ${port.name}`}
+			onmousedown={(e) => startFromOutput(e, port.name)}
+			role="button"
+			tabindex="-1"
 		></div>
 	{/each}
 </div>
@@ -151,7 +180,8 @@
 		background: #ffffff;
 		border: 1px solid rgba(0, 0, 0, 0.45);
 		transform: translateY(-50%);
-		pointer-events: none;
+		pointer-events: auto;
+		cursor: crosshair;
 	}
 
 	.port-in {

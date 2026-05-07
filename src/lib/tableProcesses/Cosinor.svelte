@@ -30,13 +30,12 @@
 		yOutKeyPrefix: 'cosinory_'
 	};
 
-	export function cosinor(argsIN) {
+	export function evaluateCosinor(argsIN) {
 		const xIN = argsIN.xIN;
 		let yINs = argsIN.yIN;
 		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
 		const Ncurves = argsIN.Ncurves;
 		const outputXId = argsIN.outputX;
-		const xOUT = argsIN.out.cosinorx;
 		const useFixedPeriod = argsIN.useFixedPeriod ?? false;
 		const fixedPeriod = argsIN.fixedPeriod ?? 24;
 		const nHarmonics = argsIN.nHarmonics ?? 1;
@@ -180,42 +179,60 @@
 			}
 		}
 
-		// Write output columns
-		if (anyValid && xOUT !== -1) {
-			const processHash = crypto.randomUUID();
+		return [result, anyValid];
+	}
 
-			// Use first valid Y's x output data for the shared X column
-			const firstYId = Object.keys(result.y_results)[0];
-			const firstYResult = result.y_results[firstYId];
-			const xOutData = firstYResult.xOutData ?? outputXData ?? firstYResult.t;
-			const xOutMs =
-				originTime_ms != null ? xOutData.map((h) => originTime_ms + h * 3600000) : xOutData;
-			const xColOut = getColumnById(xOUT);
-			if (xColOut) {
-				core.rawData.set(xOUT, xOutMs);
-				xColOut.data = xOUT;
-				xColOut.type = originTime_ms != null ? 'time' : 'number';
-				if (originTime_ms != null) xColOut.timeFormat = null;
-				xColOut.tableProcessGUId = processHash;
-			}
+	function writeCosinorOutputs(argsIN, result) {
+		const xOUT = argsIN.out.cosinorx;
+		if (xOUT == null || xOUT === -1) return;
 
-			for (const yId of yINs) {
-				const outKey = 'cosinory_' + yId;
-				const yOUT = argsIN.out[outKey];
-				const yResult = result.y_results[yId];
-				if (yOUT != null && yOUT !== -1 && yResult) {
-					const yOutData = yResult.yOutData ?? yResult.predicted ?? yResult.fittedData.fitted;
-					const yColOut = getColumnById(yOUT);
-					if (yColOut) {
-						core.rawData.set(yOUT, yOutData);
-						yColOut.data = yOUT;
-						yColOut.type = 'number';
-						yColOut.tableProcessGUId = processHash;
-					}
+		const yINs = Array.isArray(argsIN.yIN)
+			? argsIN.yIN
+			: argsIN.yIN != null && argsIN.yIN !== -1
+				? [argsIN.yIN]
+				: [];
+		if (!Object.keys(result.y_results ?? {}).length) return;
+
+		const processHash = crypto.randomUUID();
+
+		const firstYId = Object.keys(result.y_results)[0];
+		const firstYResult = result.y_results[firstYId];
+		const xOutData = firstYResult.xOutData ?? result.outputXData ?? firstYResult.t;
+		const xOutMs =
+			result.originTime_ms != null
+				? xOutData.map((h) => result.originTime_ms + h * 3600000)
+				: xOutData;
+		const xColOut = getColumnById(xOUT);
+		if (xColOut) {
+			core.rawData.set(xOUT, xOutMs);
+			xColOut.data = xOUT;
+			xColOut.type = result.originTime_ms != null ? 'time' : 'number';
+			if (result.originTime_ms != null) xColOut.timeFormat = null;
+			xColOut.tableProcessGUId = processHash;
+		}
+
+		for (const yId of yINs) {
+			const outKey = 'cosinory_' + yId;
+			const yOUT = argsIN.out[outKey];
+			const yResult = result.y_results[yId];
+			if (yOUT != null && yOUT !== -1 && yResult) {
+				const yOutData = yResult.yOutData ?? yResult.predicted ?? yResult.fittedData.fitted;
+				const yColOut = getColumnById(yOUT);
+				if (yColOut) {
+					core.rawData.set(yOUT, yOutData);
+					yColOut.data = yOUT;
+					yColOut.type = 'number';
+					yColOut.tableProcessGUId = processHash;
 				}
 			}
 		}
+	}
 
+	export function cosinor(argsIN) {
+		const [result, anyValid] = evaluateCosinor(argsIN);
+		if (anyValid && argsIN?.out?.cosinorx !== -1) {
+			writeCosinorOutputs(argsIN, result);
+		}
 		return [result, anyValid];
 	}
 </script>

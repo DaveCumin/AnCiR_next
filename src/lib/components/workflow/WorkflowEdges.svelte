@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	let { edges = [], width = 0, height = 0, highlightedIds = null } = $props();
+	let { edges = [], width = 0, height = 0, highlightedIds = null, provisionalEdge = null } = $props();
 
 	const edgeColors = {
 		'data-process': '#aaaaaa',
@@ -41,4 +41,19 @@
 			/>
 		{/if}
 	{/each}
+	{#if provisionalEdge?.from && provisionalEdge?.to}
+		<path
+			d={cubicBezierPath(
+				provisionalEdge.from.x,
+				provisionalEdge.from.y,
+				provisionalEdge.to.x,
+				provisionalEdge.to.y
+			)}
+			stroke="#0275ff"
+			stroke-width="1.5"
+			stroke-dasharray="4 3"
+			fill="none"
+			opacity="0.8"
+		/>
+	{/if}
 </svg>

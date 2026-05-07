@@ -277,6 +277,8 @@
 	// --- Plot resize state ---
 	// { nodeId, plotObj, startMouse:{x,y}, startW, startH, startPlotW, startPlotH }
 	let resizeInfo = $state(null);
+	let pendingConnection = $state(null); // { fromNodeId, fromPort }
+	let mouseCanvas = $state({ x: 0, y: 0 });
 
 	// --- Expanded process editor ---
 	let expandedNodeId = $state(null);
@@ -415,6 +417,8 @@
 	}
 
 	function handleMouseMove(e) {
+		mouseCanvas = toCanvasCoords(e.clientX, e.clientY);
+
 		if (resizeInfo) {
 			const dx = (e.clientX - resizeInfo.startMouse.x) / zoom;
 			const dy = (e.clientY - resizeInfo.startMouse.y) / zoom;
@@ -478,6 +482,90 @@
 		panY = e.clientY - panStartY;
 	}
 
+	function resolveOutputColumnId(nodeId) {
+		const node = allNodes.find((n) => n.id === nodeId);
+		if (!node) return -1;
+		if (node.type === 'data') return node.refId ?? -1;
+		if (node.type === 'process') {
+			const parent = core.data.find((c) => (c.processes ?? []).some((p) => p.id === node.refId));
+			return parent?.id ?? -1;
+		}
+		return -1;
+	}
+
+	function applyConnection(fromNodeId, fromPort, toNodeId, toPort) {
+		const colId = resolveOutputColumnId(fromNodeId);
+		if (colId < 0) return;
+		const target = allNodes.find((n) => n.id === toNodeId);
+		if (!target) return;
+
+		if (target.type === 'tableprocess' && target.tpObj) {
+			const tp = target.tpObj;
+			if (toPort === 'xIN') {
+				tp.args.xIN = colId;
+				return;
+			}
+			if (toPort === 'yIN') {
+				if (Array.isArray(tp.args.yIN)) {
+					if (!tp.args.yIN.includes(colId)) tp.args.yIN = [...tp.args.yIN, colId];
+				} else {
+					tp.args.yIN = colId;
+				}
+				return;
+			}
+			if (toPort === 'xsIN') {
+				const next = Array.isArray(tp.args.xsIN) ? tp.args.xsIN : [];
+				if (!next.includes(colId)) tp.args.xsIN = [...next, colId];
+				return;
+			}
+		}
+
+		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && toPort === 'series') {
+			const refs = target.plotObj.plot.columnRefs ?? [];
+			if (!refs.includes(colId)) target.plotObj.plot.columnRefs = [...refs, colId];
+		}
+	}
+
+	function disconnectInputPort(nodeId, portName) {
+		const target = allNodes.find((n) => n.id === nodeId);
+		if (!target) return;
+
+		if (target.type === 'tableprocess' && target.tpObj) {
+			const tp = target.tpObj;
+			if (portName === 'xIN') tp.args.xIN = -1;
+			else if (portName === 'yIN') tp.args.yIN = Array.isArray(tp.args.yIN) ? [] : -1;
+			else if (portName === 'xsIN') tp.args.xsIN = [];
+			return;
+		}
+
+		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && portName === 'series') {
+			target.plotObj.plot.columnRefs = [];
+		}
+	}
+
+	function handlePortStart(e) {
+		e.stopPropagation();
+		pendingConnection = { fromNodeId: e.detail.nodeId, fromPort: e.detail.port };
+	}
+
+	function handlePortEnd(e) {
+		e.stopPropagation();
+		if (!pendingConnection) return;
+		applyConnection(
+			pendingConnection.fromNodeId,
+			pendingConnection.fromPort,
+			e.detail.nodeId,
+			e.detail.port
+		);
+		pendingConnection = null;
+	}
+
+	function handlePortDisconnect(e) {
+		e.stopPropagation();
+		disconnectInputPort(e.detail.nodeId, e.detail.port);
+		if (pendingConnection) pendingConnection = null;
+	}
+
 	function handleNodeWrapperMouseUp(e, node) {
 		if (dragInfo && !dragInfo.moved) {
 			// Short press with no movement → treat as a click
@@ -525,6 +613,7 @@
 		deselectAllPlots();
 		expandedNodeId = null;
 		focusedNodeId = null;
+		pendingConnection = null;
 	}
 
 	function handleKeyDown(e) {
@@ -532,8 +621,25 @@
 			deselectAllPlots();
 			expandedNodeId = null;
 			focusedNodeId = null;
+			pendingConnection = null;
 		}
 	}
+
+	const provisionalEdge = $derived.by(() => {
+		if (!pendingConnection) return null;
+		const fromNode = allNodes.find((n) => n.id === pendingConnection.fromNodeId);
+		const fromPos =
+			stablePositions[pendingConnection.fromNodeId] ??
+			defaultPositions.positions[pendingConnection.fromNodeId];
+		if (!fromNode || !fromPos) return null;
+		return {
+			from: {
+				x: fromPos.x + NODE_WIDTH,
+				y: fromPos.y + getPortAnchorY(fromNode, pendingConnection.fromPort, 'out')
+			},
+			to: { x: mouseCanvas.x, y: mouseCanvas.y }
+		};
+	});
 </script>
 
 <div
@@ -588,6 +694,7 @@
 				width={canvasWidth}
 				height={canvasHeight}
 				highlightedIds={connectedNodeIds}
+				{provisionalEdge}
 			/>
 
 			{#each allNodes as node (node.id)}
@@ -621,6 +728,9 @@
 							selected={selectedPlotNodeId === node.id}
 							expanded={isExpanded}
 							{isDropTarget}
+							on:portstart={handlePortStart}
+							on:portend={handlePortEnd}
+							on:portdisconnect={handlePortDisconnect}
 						/>
 
 						{#if node.type === 'data'}
@@ -677,6 +787,8 @@
 										class="plot-resize-handle"
 										onmousedown={(e) => handleResizeMouseDown(e, node)}
 										title="Drag to resize"
+										role="button"
+										tabindex="-1"
 									>
 										⤡
 									</div>
@@ -892,23 +1004,6 @@
 		flex-direction: column;
 		gap: 4px;
 		z-index: 10;
-	}
-
-	.zoom-btn {
-		width: 28px;
-		height: 28px;
-		background: white;
-		border: 1px solid var(--color-lightness-85);
-		border-radius: 4px;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
-	}
-
-	.zoom-btn:hover {
-		background: var(--color-lightness-95);
 	}
 
 	/* "+ Process" button on data nodes */
