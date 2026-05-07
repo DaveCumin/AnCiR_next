@@ -7,9 +7,193 @@
 	import { mean, calculateStandardDeviation } from '$lib/utils/MathsStats.js';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import {
+		getComparisonWarnings,
+		welchTTest,
+		oneWayAnova,
+		tukeyKramerPostHoc,
+		mannWhitneyTwoGroups,
+		pairwiseMannWhitney
+	} from '$lib/tableProcesses/GroupComparison.svelte';
+
+	/**
+	 * Round a value outward to a "nice" axis limit.
+	 * The step is chosen based on the order of magnitude of the value so that
+	 * the resulting limit always encompasses the data value.
+	 *
+	 * @param {number} value - The raw min or max from the data.
+	 * @param {'floor'|'ceil'} direction - 'floor' for the lower limit, 'ceil' for upper.
+	 * @returns {number}
+	 */
+	export function niceAxisLimit(value, direction) {
+		if (!isFinite(value)) return value;
+		if (value === 0) return 0;
+
+		const abs = Math.abs(value);
+		// Pick a "nice" step: the largest of {1, 2, 5} × 10^n that fits below abs
+		const mag = Math.pow(10, Math.floor(Math.log10(abs)));
+		// Always round to the full leading decade — gives generous outer padding
+		const step = mag;
+
+		if (direction === 'floor') {
+			return value < 0
+				? -Math.ceil(Math.abs(value) / step) * step
+				: Math.floor(value / step) * step;
+		} else {
+			return value < 0
+				? -Math.floor(Math.abs(value) / step) * step
+				: Math.ceil(value / step) * step;
+		}
+	}
 
 	export const Boxplot_defaultDataInputs = ['x', 'y'];
 	export const Boxplot_controlHeaders = ['Properties', 'Data'];
+
+	// ------ Significance bar helpers ------
+
+	function resolveSigMethod(method, groupCount) {
+		if (method === 'kruskal' || method === 'mannwhitney') {
+			return groupCount === 2 ? 'mannwhitney' : 'kruskal';
+		}
+		return groupCount === 2 ? 'ttest' : 'anova';
+	}
+
+	/**
+	 * Build stat-test group objects from the boxplot's data series.
+	 * - If any series has a categorical x column, groups = unique x categories (pooled).
+	 * - Otherwise each series becomes one group.
+	 */
+	function buildSigBarGroups(data, uniqueXValues) {
+		const hasCatX = data.some((d) => (d.x.getData()?.length ?? 0) > 0);
+		if (!hasCatX) {
+			return data.map((d, i) => {
+				const values = (d.y.getData() ?? []).filter((v) => v != null && !isNaN(v));
+				const n = values.length;
+				const m = n > 0 ? values.reduce((a, b) => a + b, 0) / n : 0;
+				const sd = n > 1 ? Math.sqrt(values.reduce((a, v) => a + (v - m) ** 2, 0) / (n - 1)) : 0;
+				return { name: d.label || `Box Plot ${i + 1}`, values, n, mean: m, sd };
+			});
+		}
+
+		const groupMap = new Map(uniqueXValues.map((v) => [v, []]));
+		data.forEach((d) => {
+			const xData = d.x.getData() ?? [];
+			const yData = d.y.getData() ?? [];
+			xData.forEach((cat, i) => {
+				const val = yData[i];
+				if (cat == null || val == null || isNaN(val)) return;
+				if (groupMap.has(cat)) groupMap.get(cat).push(val);
+			});
+		});
+
+		return uniqueXValues
+			.map((cat) => {
+				const values = groupMap.get(cat) ?? [];
+				const n = values.length;
+				const m = n > 0 ? values.reduce((a, b) => a + b, 0) / n : 0;
+				const sd = n > 1 ? Math.sqrt(values.reduce((a, v) => a + (v - m) ** 2, 0) / (n - 1)) : 0;
+				return { name: String(cat), values, n, mean: m, sd };
+			})
+			.filter((g) => g.n > 0);
+	}
+
+	/**
+	 * Run pairwise significance tests and return { pairs, dataMax }.
+	 * dataMax is the highest data value across all groups.
+	 */
+	function runSigBarStats(groups, method, alpha, showNs) {
+		if (groups.length < 2) return { pairs: [], dataMax: -Infinity };
+
+		let dataMax = -Infinity;
+		groups.forEach((g) => {
+			if (g.values.length > 0) {
+				const gMax = Math.max(...g.values);
+				if (gMax > dataMax) dataMax = gMax;
+			}
+		});
+
+		const n = groups.length;
+		const chosen = resolveSigMethod(method, n);
+		let rawPairs = [];
+		if (n === 2) {
+			const useNonParam = chosen === 'mannwhitney';
+			if (useNonParam) {
+				const res = mannWhitneyTwoGroups(groups[0], groups[1]);
+				if (res.valid)
+					rawPairs = [
+						{
+							groupA: groups[0].name,
+							groupB: groups[1].name,
+							pValue: res.pValue,
+							pAdjusted: res.pValue,
+							significant: res.pValue < alpha
+						}
+					];
+			} else {
+				const res = welchTTest(groups[0], groups[1], alpha);
+				if (res.valid)
+					rawPairs = [
+						{
+							groupA: groups[0].name,
+							groupB: groups[1].name,
+							pValue: res.pValue,
+							pAdjusted: res.pValue,
+							significant: res.pValue < alpha
+						}
+					];
+			}
+		} else {
+			const useNonParam = chosen === 'kruskal';
+			if (useNonParam) {
+				rawPairs = pairwiseMannWhitney(groups, alpha);
+			} else {
+				const aRes = oneWayAnova(groups);
+				if (aRes.valid) rawPairs = tukeyKramerPostHoc(groups, aRes.msWithin, aRes.dfWithin, alpha);
+			}
+		}
+
+		const filteredPairs = showNs ? rawPairs : rawPairs.filter((p) => p.significant);
+		return { pairs: filteredPairs, dataMax };
+	}
+
+	/** Convert an adjusted p-value to a star label. */
+	export function formatSigLabel(pAdjusted) {
+		if (pAdjusted < 0.001) return '***';
+		if (pAdjusted < 0.01) return '**';
+		if (pAdjusted < 0.05) return '*';
+		return 'ns';
+	}
+
+	/**
+	 * Assign each pair to the lowest bracket level with no x-range overlap.
+	 * Returns entries with { pair, i, j, level }.
+	 */
+	function assignBracketLevels(pairs, uniqueXValues) {
+		const entries = pairs
+			.map((p) => {
+				const i = uniqueXValues.findIndex((v) => String(v) === p.groupA);
+				const j = uniqueXValues.findIndex((v) => String(v) === p.groupB);
+				return { pair: p, i: Math.min(i, j), j: Math.max(i, j), level: -1 };
+			})
+			.filter((e) => e.i >= 0 && e.j >= 0)
+			.sort((a, b) => a.j - a.i - (b.j - b.i) || a.i - b.i);
+
+		const levelRanges = [];
+		for (const entry of entries) {
+			let level = 0;
+			while (true) {
+				if (!levelRanges[level]) levelRanges[level] = [];
+				const blocked = levelRanges[level].some((r) => !(entry.j < r.i || entry.i > r.j));
+				if (!blocked) {
+					levelRanges[level].push({ i: entry.i, j: entry.j });
+					entry.level = level;
+					break;
+				}
+				level++;
+			}
+		}
+		return entries;
+	}
 
 	class BoxPlotDataClass {
 		parentPlot = $state();
@@ -89,6 +273,11 @@
 		xlimsIN = $state([null, null]);
 		ylimsIN = $state([null, null]);
 
+		showSigBars = $state(false);
+		sigMethod = $state('auto'); // 'auto' | 'anova' | 'kruskal'
+		sigAlpha = $state(0.05);
+		showNs = $state(false);
+
 		// Get all unique x values across all data series
 		uniqueXValues = $derived.by(() => {
 			const allXValues = new Set();
@@ -125,6 +314,29 @@
 			});
 		});
 
+		sigBarResult = $derived.by(() => {
+			if (!this.showSigBars) return { pairs: [], dataMax: -Infinity };
+			const groups = buildSigBarGroups(this.data, this.uniqueXValues);
+			return runSigBarStats(groups, this.sigMethod, this.sigAlpha, this.showNs);
+		});
+
+		sigBarLevels = $derived.by(() => {
+			const { pairs } = this.sigBarResult;
+			if (pairs.length === 0) return [];
+			return assignBracketLevels(pairs, this.uniqueXValues);
+		});
+
+		sigBarWarnings = $derived.by(() => {
+			if (!this.showSigBars) return [];
+			const groups = buildSigBarGroups(this.data, this.uniqueXValues);
+			if (groups.length < 2) return [];
+			return getComparisonWarnings(
+				groups,
+				resolveSigMethod(this.sigMethod, groups.length),
+				this.sigAlpha
+			);
+		});
+
 		ylims = $derived.by(() => {
 			if (this.data.length === 0) {
 				return [0, 10];
@@ -146,10 +358,23 @@
 				return [0, 10];
 			}
 
-			return [
-				this.ylimsIN[0] != null ? this.ylimsIN[0] : ymin,
-				this.ylimsIN[1] != null ? this.ylimsIN[1] : ymax
-			];
+			const yBot = this.ylimsIN[0] != null ? this.ylimsIN[0] : niceAxisLimit(ymin, 'floor');
+			let yTop = this.ylimsIN[1] != null ? this.ylimsIN[1] : niceAxisLimit(ymax, 'ceil');
+
+			// Extend top to accommodate sig bar brackets when auto-scaling
+			if (this.showSigBars && this.ylimsIN[1] == null) {
+				const levels = this.sigBarLevels;
+				if (levels.length > 0) {
+					const { dataMax } = this.sigBarResult;
+					const dataRange = yTop - yBot;
+					const numLevels = Math.max(...levels.map((e) => e.level)) + 1;
+					const base = Number.isFinite(dataMax) ? dataMax : ymax;
+					const topNeeded = base + dataRange * 0.1 * (numLevels + 1);
+					if (topNeeded > yTop) yTop = niceAxisLimit(topNeeded, 'ceil');
+				}
+			}
+
+			return [yBot, yTop];
 		});
 
 		// X-axis is categorical (0 to n-1 for n unique values)
@@ -167,6 +392,12 @@
 
 		xAxis = $state();
 		yAxis = $state();
+		sigBarPreviewStart = $state(1);
+
+		getSigBarPreviewPairs(count = 6) {
+			const start = Math.max(0, this.sigBarPreviewStart - 1);
+			return this.sigBarResult.pairs.slice(start, start + count);
+		}
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
@@ -399,7 +630,11 @@
 				xAxis: this.xAxis.toJSON(),
 				yAxis: this.yAxis.toJSON(),
 				data: this.data,
-				legend: this.legend.toJSON()
+				legend: this.legend.toJSON(),
+				showSigBars: this.showSigBars,
+				sigMethod: this.sigMethod,
+				sigAlpha: this.sigAlpha,
+				showNs: this.showNs
 			};
 		}
 
@@ -436,6 +671,10 @@
 			}
 
 			chart.legend = LegendClass.fromJSON(json.legend);
+			chart.showSigBars = json.showSigBars ?? false;
+			chart.sigMethod = json.sigMethod ?? 'auto';
+			chart.sigAlpha = json.sigAlpha ?? 0.05;
+			chart.showNs = json.showNs ?? false;
 			return chart;
 		}
 	}
@@ -640,6 +879,70 @@
 				</div>
 			</div>
 		</div>
+
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Significance bars</p>
+			</div>
+			<div class="control-input-vertical">
+				<div class="control-input">
+					<p>Show</p>
+					<input type="checkbox" bind:checked={theData.showSigBars} />
+				</div>
+				{#if theData.showSigBars}
+					<div class="control-input">
+						<p>Method</p>
+						<select bind:value={theData.sigMethod}>
+							<option value="auto">Auto (t-test / ANOVA)</option>
+							<option value="kruskal">Kruskal-Wallis / Mann-Whitney</option>
+						</select>
+					</div>
+					<div class="control-input">
+						<p>α</p>
+						<NumberWithUnits bind:value={theData.sigAlpha} step={0.01} />
+					</div>
+					<div class="control-input">
+						<p>Show ns</p>
+						<input type="checkbox" bind:checked={theData.showNs} />
+					</div>
+					{#if theData.sigBarWarnings.length > 0}
+						<div class="data-warning">
+							{#each theData.sigBarWarnings as warning}
+								<p>⚠ {warning}</p>
+							{/each}
+						</div>
+					{/if}
+
+					{#if theData.sigBarResult.pairs.length > 0}
+						<details class="tp-output-panel">
+							<summary class="tp-output-summary">Pairwise comparisons</summary>
+							{#each theData.getSigBarPreviewPairs() as pair}
+								<div class="tp-value-block">
+									<p><strong>{pair.groupA}</strong> vs <strong>{pair.groupB}</strong></p>
+									<p><span class="tp-value-key">p-value:</span> {Number.isFinite(pair.pValue)
+										? pair.pValue.toPrecision(4)
+										: 'NaN'}</p>
+									<p><span class="tp-value-key">p-adjusted:</span> {Number.isFinite(pair.pAdjusted)
+										? pair.pAdjusted.toPrecision(4)
+										: 'NaN'}</p>
+									<p><span class="tp-value-key">Significant:</span> {pair.significant ? 'Yes' : 'No'}</p>
+								</div>
+							{/each}
+							<p>
+								Row <NumberWithUnits
+									min={1}
+									max={Math.max(1, theData.sigBarResult.pairs.length - 5)}
+									step={1}
+									bind:value={theData.sigBarPreviewStart}
+								/> to {Math.min(theData.sigBarPreviewStart + 5, theData.sigBarResult.pairs.length)} of {theData.sigBarResult.pairs.length}
+							</p>
+						</details>
+					{/if}
+				{/if}
+			</div>
+		</div>
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<div class="control-data-add">
@@ -798,6 +1101,33 @@
 			padding={theData.plot.padding}
 			which="plot"
 		/>
+
+		<!-- Significance brackets -->
+		{#if theData.plot.showSigBars && theData.plot.sigBarLevels.length > 0}
+			{@const sigXScale = scaleLinear()
+				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+				.range([0, theData.plot.plotwidth])}
+			{@const sigYScale = scaleLinear()
+				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+				.range([theData.plot.plotheight, 0])}
+			{@const { dataMax } = theData.plot.sigBarResult}
+			{@const dataRange = theData.plot.ylims[1] - theData.plot.ylims[0]}
+			{@const levelStep = dataRange * 0.1}
+			{#each theData.plot.sigBarLevels as entry}
+				{@const xi = sigXScale(entry.i) + theData.plot.padding.left}
+				{@const xj = sigXScale(entry.j) + theData.plot.padding.left}
+				{@const barYData =
+					(Number.isFinite(dataMax) ? dataMax : theData.plot.ylims[1]) +
+					levelStep * (entry.level + 1)}
+				{@const barY = sigYScale(barYData) + theData.plot.padding.top}
+				<line x1={xi} y1={barY + 4} x2={xi} y2={barY} stroke="black" stroke-width="1" />
+				<line x1={xi} y1={barY} x2={xj} y2={barY} stroke="black" stroke-width="1" />
+				<line x1={xj} y1={barY} x2={xj} y2={barY + 4} stroke="black" stroke-width="1" />
+				<text x={(xi + xj) / 2} y={barY - 3} text-anchor="middle" font-size="11" fill="black"
+					>{formatSigLabel(entry.pair.pAdjusted)}</text
+				>
+			{/each}
+		{/if}
 	</svg>
 
 	{#if tooltip.visible}
@@ -812,3 +1142,47 @@
 {:else if which === 'controls'}
 	{@render controls(theData)}
 {/if}
+
+<style>
+	.data-warning {
+		margin-top: 0.4rem;
+		padding: 0.45rem 0.6rem;
+		border-radius: 0.375rem;
+		background: color-mix(in srgb, #f5c76a 18%, white);
+		border: 1px solid color-mix(in srgb, #d89c1b 35%, white);
+	}
+
+	.data-warning p {
+		margin: 0.15rem 0;
+		font-size: 0.92em;
+	}
+
+	.tp-output-panel {
+		margin-top: 0.6rem;
+		padding: 0.45rem 0.55rem;
+		border: 1px solid var(--stroke2, var(--color-lightness-85, #d7d7d7));
+		border-radius: 0.375rem;
+		background: var(--color-lightness-99, #fcfcfc);
+	}
+
+	.tp-output-summary {
+		cursor: pointer;
+		font-weight: 600;
+	}
+
+	.tp-value-block {
+		margin-top: 0.4rem;
+		padding: 0.35rem 0.45rem;
+		border: 1px solid var(--color-lightness-93, #ececec);
+		border-radius: 0.35rem;
+		background: var(--color-lightness-100, #fff);
+	}
+
+	.tp-value-block p {
+		margin: 0.12rem 0;
+	}
+
+	.tp-value-key {
+		font-weight: 600;
+	}
+</style>
