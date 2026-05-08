@@ -125,6 +125,7 @@
 	let isOpen = $state(false);
 	let searchTerm = $state('');
 	let editingKey = $state(null);
+	let lastSelectedLeafValue = $state(null);
 	let containerEl;
 	let triggerEl;
 	// Position the dropdown with fixed coordinates so it can escape any
@@ -218,6 +219,29 @@
 
 	function selectLeaf(optValue, e) {
 		e.stopPropagation();
+		if (e.shiftKey) e.preventDefault();
+
+		if (multiple && e.shiftKey) {
+			const leavesInView = flattenLeaves(filteredGroups).map((o) => o.value);
+			const current = asArray(value);
+			const anchor = leavesInView.includes(lastSelectedLeafValue)
+				? lastSelectedLeafValue
+				: leavesInView.includes(current[0])
+					? current[0]
+					: null;
+
+			if (anchor != null && leavesInView.includes(optValue)) {
+				const a = leavesInView.indexOf(anchor);
+				const b = leavesInView.indexOf(optValue);
+				const [start, end] = a <= b ? [a, b] : [b, a];
+				const range = leavesInView.slice(start, end + 1);
+				value = e.altKey ? [...new Set([...current, ...range])] : range;
+				onChange(value);
+				lastSelectedLeafValue = optValue;
+				return;
+			}
+		}
+
 		if (e.altKey) {
 			// Alt+click toggles in/out of the selection (multi-select).
 			const current = asArray(value);
@@ -226,11 +250,13 @@
 				: [...current, optValue];
 			value = multiple ? next : next.length === 1 ? next[0] : next;
 			onChange(value);
+			lastSelectedLeafValue = optValue;
 		} else {
 			// Regular click: replace selection. Shape matches the consumer's
 			// expectation (array when multiple, scalar otherwise).
 			value = multiple ? [optValue] : optValue;
 			onChange(value);
+			lastSelectedLeafValue = optValue;
 			isOpen = false;
 		}
 	}
@@ -365,6 +391,9 @@
 		<button
 			class="option"
 			class:selected={isSelected(node.value)}
+			onmousedown={(e) => {
+				if (e.shiftKey) e.preventDefault();
+			}}
 			onclick={(e) => selectLeaf(node.value, e)}
 			type="button"
 			style="padding-left: {20 + depth * 14}px"
@@ -578,6 +607,8 @@
 		cursor: pointer;
 		color: inherit;
 		font-size: 13px;
+		user-select: none;
+		-webkit-user-select: none;
 	}
 
 	.option:hover {

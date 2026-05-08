@@ -8,7 +8,7 @@
 	import { appConsts, core, pushObj, appState } from '$lib/core/core.svelte';
 	import { Table } from '$lib/core/Table.svelte';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
-	import { guessDateofArray, forceFormat, getPeriod } from '$lib/utils/time/TimeUtils';
+	import { guessDateofArray, forceFormat, getPeriod, normalizeTimeFormat } from '$lib/utils/time/TimeUtils';
 	import { numToString } from '$lib/utils/GeneralUtils';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
@@ -36,6 +36,8 @@
 	let previewIN = $state(50);
 	let previewDisplayStart = $state(1);
 	let previewRowCount = $derived(parsedData ? parsedData[headers[0]]?.length || 0 : 0);
+	let enspirePlateInfoRows = $derived(enspireMultiplatePayload?.plateInfoRows ?? 0);
+	let enspireBinnedRows = $derived(enspireMultiplatePayload?.binnedRows ?? 0);
 	let skipLines = $state(0);
 	let error = $state({});
 	let parsedData = $state(null);
@@ -44,6 +46,7 @@
 	let awaitingPreview = $state(false);
 	let awaitingLoad = $state(false);
 	let awdMeta = $state(null); // { startMs, stepMs, count } for AWD time compression
+	let enspireMultiplatePayload = $state(null);
 	let dataUrl = $state('');
 	let isUrlMode = $state(false);
 
@@ -69,6 +72,30 @@
 	let dateTimePairs = $state([]); // [{ dateCol, timeCol, dateFormat, timeFormat }]
 	let combinePairs = $state(new Set()); // indices into dateTimePairs that the user wants to merge
 
+	function parseUTCStrict(value, fmt) {
+		const text = String(value ?? '').trim();
+		if (!text) return null;
+		const normalized = normalizeTimeFormat(fmt);
+		if (normalized) {
+			const strict = dayjs.utc(text, normalized, true);
+			if (strict.isValid()) return strict;
+		}
+		const fallback = dayjs.utc(text);
+		return fallback.isValid() ? fallback : null;
+	}
+
+	function classifyFormatKind(fmt) {
+		if (!fmt || fmt === -1) return 'none';
+		const normalized = normalizeTimeFormat(String(fmt));
+		const tokenString = normalized.replace(/\[[^\]]*\]/g, '');
+		const hasDateTokens = /Y|M|D|Q|Do|DDD|DDDD/.test(tokenString);
+		const hasTimeTokens = /H|h|m|s|S|A|a|k/.test(tokenString);
+		if (hasDateTokens && hasTimeTokens) return 'datetime';
+		if (hasDateTokens) return 'date';
+		if (hasTimeTokens) return 'time';
+		return 'none';
+	}
+
 	/**
 	 * Scan preview columns for date-only / time-only pairs that could be combined.
 	 * A "date-only" format contains day/month/year tokens but no hour/minute.
@@ -79,23 +106,29 @@
 		combinePairs = new Set();
 		if (!parsedData || headers.length < 2) return;
 
-		const dateTokens = /[DdMYy]/; // day, month, year tokens (Moment-style)
-		const timeTokens = /[Hhms]/; // hour, minute, second tokens
-
 		const dateCols = [];
 		const timeCols = [];
 
 		for (const col of headers) {
-			const fmt = guessDateofArray(parsedData[col]);
+			const sample = parsedData[col] ?? [];
+			const nonEmpty = sample.filter((v) => String(v ?? '').trim() !== '').slice(0, 25);
+			if (nonEmpty.length < 3) continue;
+
+			const fmt = guessDateofArray(nonEmpty);
 			if (fmt === -1 || !fmt || fmt.length === 0) continue;
 			const fmtStr = String(fmt);
-			const hasDate = dateTokens.test(fmtStr);
-			const hasTime = timeTokens.test(fmtStr);
+			const kind = classifyFormatKind(fmtStr);
 
-			if (hasDate && !hasTime) {
-				dateCols.push({ col, fmt: fmtStr });
-			} else if (hasTime && !hasDate) {
-				timeCols.push({ col, fmt: fmtStr });
+			if (kind === 'date') {
+				const valid = nonEmpty.filter((v) => parseUTCStrict(v, fmtStr)?.isValid()).length;
+				if (valid >= Math.ceil(nonEmpty.length * 0.8)) {
+					dateCols.push({ col, fmt: fmtStr });
+				}
+			} else if (kind === 'time') {
+				const valid = nonEmpty.filter((v) => parseUTCStrict(v, fmtStr)?.isValid()).length;
+				if (valid >= Math.ceil(nonEmpty.length * 0.8)) {
+					timeCols.push({ col, fmt: fmtStr });
+				}
 			}
 		}
 
@@ -140,10 +173,7 @@
 		const dateCol = free[0] ?? headers[0] ?? '';
 		const timeCol = free[1] ?? headers[1] ?? headers[0] ?? '';
 		const newIdx = dateTimePairs.length;
-		dateTimePairs = [
-			...dateTimePairs,
-			{ dateCol, timeCol, dateFormat: '', timeFormat: '' }
-		];
+		dateTimePairs = [...dateTimePairs, { dateCol, timeCol, dateFormat: '', timeFormat: '' }];
 		// Re-guess formats based on actual sample data.
 		updatePair(newIdx, 'dateCol', dateCol);
 		updatePair(newIdx, 'timeCol', timeCol);
@@ -322,6 +352,7 @@
 		specialRecognised = false;
 		loadProgress = { stage: '', detail: '' };
 		awdMeta = null;
+		enspireMultiplatePayload = null;
 		totalRowCount = 0;
 		binningEnabled = false;
 		binIntervalMin = 15;
@@ -336,6 +367,274 @@
 		mismatchedColumns = [];
 		dataUrl = '';
 		isUrlMode = false;
+	}
+
+	function stripCsvValue(v) {
+		return String(v ?? '')
+			.trim()
+			.replace(/^="?/, '')
+			.replace(/"?$/, '');
+	}
+
+	function parseMaybeNumber(v) {
+		const s = stripCsvValue(v);
+		if (!s) return null;
+		const n = Number(s);
+		return Number.isFinite(n) ? n : null;
+	}
+
+	function parseEnspireDateTimeMs(v) {
+		const s = stripCsvValue(v);
+		if (!s) return null;
+		const formats = ['D/M/YYYY h:mm:ss A', 'DD/MM/YYYY h:mm:ss A'];
+		for (const f of formats) {
+			const dt = dayjs.utc(s, f, true);
+			if (dt.isValid()) return dt.valueOf();
+		}
+		const fallback = dayjs.utc(s);
+		return fallback.isValid() ? fallback.valueOf() : null;
+	}
+
+	function median(nums) {
+		if (!nums || nums.length === 0) return null;
+		const sorted = [...nums].sort((a, b) => a - b);
+		const mid = Math.floor(sorted.length / 2);
+		if (sorted.length % 2 === 0) {
+			return (sorted[mid - 1] + sorted[mid]) / 2;
+		}
+		return sorted[mid];
+	}
+
+	function parseEnspireMultiplateRows(rows) {
+		const cell = (r, i) => String(r?.[i] ?? '').trim();
+		const isBlankRow = (r) => !r || r.every((c) => String(c ?? '').trim() === '');
+
+		const plateHeaderIdx = rows.findIndex(
+			(r) =>
+				cell(r, 0) === 'Plate' &&
+				cell(r, 1) === 'Repeat' &&
+				cell(r, 3).toLowerCase().includes('measurement date')
+		);
+		if (plateHeaderIdx < 0) return null;
+
+		const plateRows = [];
+		for (let i = plateHeaderIdx + 1; i < rows.length; i++) {
+			const r = rows[i];
+			if (isBlankRow(r)) break;
+			const plate = Number(cell(r, 0));
+			const repeat = Number(cell(r, 1));
+			if (!Number.isFinite(plate) || !Number.isFinite(repeat)) break;
+
+			plateRows.push({
+				plate,
+				repeat,
+				time: stripCsvValue(cell(r, 3)),
+				insideStart: parseMaybeNumber(cell(r, 4)),
+				insideEnd: parseMaybeNumber(cell(r, 5)),
+				ambientStart: parseMaybeNumber(cell(r, 6)),
+				ambientEnd: parseMaybeNumber(cell(r, 7))
+			});
+		}
+		if (plateRows.length === 0) return null;
+
+		const wellHeaderIndices = [];
+		for (let i = 0; i < rows.length; i++) {
+			if (cell(rows[i], 0) === 'Well' && cell(rows[i], 1) === 'Repeat') {
+				wellHeaderIndices.push(i);
+			}
+		}
+		if (wellHeaderIndices.length === 0) return null;
+
+		const firstWellHeader = rows[wellHeaderIndices[0]];
+		const repeatLabels = firstWellHeader
+			.slice(2)
+			.map((x) => Number(String(x ?? '').trim()))
+			.filter((x) => Number.isFinite(x));
+		if (repeatLabels.length === 0) return null;
+
+		const plateSet = new Set(plateRows.map((r) => r.plate));
+		const plateOrder = [...plateSet].sort((a, b) => a - b);
+
+		const repeatWindows = new Map();
+		for (const r of plateRows) {
+			const ms = parseEnspireDateTimeMs(r.time);
+			if (!Number.isFinite(ms)) continue;
+			const existing = repeatWindows.get(r.repeat);
+			if (!existing) {
+				repeatWindows.set(r.repeat, { min: ms, max: ms });
+			} else {
+				existing.min = Math.min(existing.min, ms);
+				existing.max = Math.max(existing.max, ms);
+			}
+		}
+
+		const timeStartsMs = [];
+		const widths = [];
+		for (const rep of repeatLabels) {
+			const w = repeatWindows.get(rep);
+			if (!w) {
+				timeStartsMs.push(null);
+				continue;
+			}
+			timeStartsMs.push(w.min);
+			if (Number.isFinite(w.min) && Number.isFinite(w.max) && w.max > w.min) {
+				widths.push(w.max - w.min);
+			}
+		}
+		const timeBinWidthMs = median(widths) ?? 60 * 60 * 1000;
+		const validStarts = timeStartsMs.filter((x) => Number.isFinite(x));
+		const timeOriginMs = validStarts.length > 0 ? Math.min(...validStarts) : null;
+		const timeStartsHours = timeStartsMs.map((x) =>
+			Number.isFinite(x) && Number.isFinite(timeOriginMs) ? (x - timeOriginMs) / 3600000 : null
+		);
+
+		const wellValueColumns = {};
+		for (let chunkIdx = 0; chunkIdx < wellHeaderIndices.length; chunkIdx++) {
+			const start = wellHeaderIndices[chunkIdx] + 1;
+			const end =
+				chunkIdx < wellHeaderIndices.length - 1 ? wellHeaderIndices[chunkIdx + 1] : rows.length;
+			const plateId = plateOrder[chunkIdx] ?? chunkIdx + 1;
+
+			for (let i = start; i < end; i++) {
+				const r = rows[i];
+				if (isBlankRow(r)) continue;
+				const well = cell(r, 0).toUpperCase();
+				const metric = cell(r, 1);
+				if (!/^[A-H]\d{2}$/.test(well)) continue;
+				if (!/result/i.test(metric)) continue;
+
+				const colName = `P${plateId}_${well}`;
+				const values = new Array(repeatLabels.length).fill(null);
+				for (let j = 0; j < repeatLabels.length; j++) {
+					values[j] = parseMaybeNumber(r[j + 2]);
+				}
+				wellValueColumns[colName] = values;
+			}
+		}
+
+		if (Object.keys(wellValueColumns).length === 0) return null;
+
+		const plateInfoData = {
+			Plate: plateRows.map((r) => r.plate),
+			Repeat: plateRows.map((r) => r.repeat),
+			Time: plateRows.map((r) => r.time),
+			InsideTempStart: plateRows.map((r) => r.insideStart),
+			InsideTempEnd: plateRows.map((r) => r.insideEnd),
+			AmbientTempStart: plateRows.map((r) => r.ambientStart),
+			AmbientTempEnd: plateRows.map((r) => r.ambientEnd)
+		};
+
+		const binnedWideData = {
+			Time: timeStartsHours,
+			...wellValueColumns
+		};
+
+		return {
+			plateInfoData,
+			binnedWideData,
+			timeOriginMs,
+			timeBinWidthMs,
+			timeBinWidthHours: timeBinWidthMs / 3600000,
+			repeatsCount: repeatLabels.length,
+			wellsCount: Object.keys(wellValueColumns).length,
+			plateInfoRows: plateRows.length,
+			binnedRows: repeatLabels.length
+		};
+	}
+
+	async function tryParseEnspireMultiplate(file) {
+		if (!file || !file.name.toLowerCase().match(/\.(csv|txt)$/)) return null;
+
+		const text = await new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = (e) => resolve(String(e.target.result ?? ''));
+			reader.onerror = () => reject(reader.error);
+			reader.readAsText(file);
+		});
+
+		if (!text.includes('Plate information') || !text.includes('Well,Repeat')) {
+			return null;
+		}
+
+		const parsed = Papa.parse(text, {
+			delimiter: ',',
+			skipEmptyLines: false,
+			dynamicTyping: false
+		});
+		if (!parsed?.data?.length) return null;
+
+		return parseEnspireMultiplateRows(parsed.data);
+	}
+
+	async function importColumnObjectAsTable(dataObj, tableName, schema = {}) {
+		const keys = Object.keys(dataObj);
+		if (keys.length === 0) return;
+
+		const table = new Table();
+		table.setName(tableName);
+
+		for (const key of keys) {
+			const col = new Column({});
+			col.name = key;
+			const values = dataObj[key] ?? [];
+			const spec = schema[key] ?? null;
+
+			if (spec?.type === 'time') {
+				col.type = 'time';
+				col.timeFormat = spec.timeFormat ?? 'D/M/YYYY h:mm:ss A';
+			} else if (spec?.type === 'bin') {
+				col.type = 'bin';
+				col.binWidth = spec.binWidth ?? 1;
+				if (spec.binStep != null) col.binStep = spec.binStep;
+				if (spec.originTime_ms != null) col.originTime_ms = spec.originTime_ms;
+			} else if (spec?.type === 'number') {
+				col.type = 'number';
+			} else {
+				const guessedFormat = guessDateofArray(values);
+				if (guessedFormat !== -1 && guessedFormat.length > 0) {
+					col.type = 'time';
+					col.timeFormat = guessedFormat;
+				} else {
+					const datum = getFirstValid(values);
+					col.type = typeof datum === 'number' && !isNaN(datum) ? 'number' : 'category';
+				}
+			}
+
+			core.rawData.set(col.id, values);
+			col.data = col.id;
+			table.addColumn(col);
+		}
+
+		pushObj(table);
+	}
+
+	async function importEnspireMultiplatePayload(payload) {
+		const baseName = targetFile?.name?.replace(/\.[^.]+$/, '') ?? 'multiplate-import';
+
+		loadProgress = { stage: 'Loading data', detail: 'Building plate info table…' };
+		await tick();
+		await yieldToUI();
+		await importColumnObjectAsTable(payload.plateInfoData, `${baseName} - plate info`, {
+			Plate: { type: 'number' },
+			Repeat: { type: 'number' },
+			Time: { type: 'time', timeFormat: 'D/M/YYYY h:mm:ss A' },
+			InsideTempStart: { type: 'number' },
+			InsideTempEnd: { type: 'number' },
+			AmbientTempStart: { type: 'number' },
+			AmbientTempEnd: { type: 'number' }
+		});
+
+		loadProgress = { stage: 'Loading data', detail: 'Building binned well table…' };
+		await tick();
+		await yieldToUI();
+		await importColumnObjectAsTable(payload.binnedWideData, `${baseName} - binned wells`, {
+			Time: {
+				type: 'bin',
+				binWidth: payload.timeBinWidthHours,
+				binStep: payload.timeBinWidthHours,
+				originTime_ms: payload.timeOriginMs
+			}
+		});
 	}
 
 	export async function openImportModal() {
@@ -382,20 +681,36 @@
 			headers.forEach((col) => selectedColumns.add(col));
 		}
 
-		// Count total rows to decide whether to suggest binning
-		await countRows();
-		if (totalRowCount > ROW_THRESHOLD) {
-			binningEnabled = true;
-		}
+		if (enspireMultiplatePayload) {
+			totalRowCount = parsedData ? (parsedData[headers[0]]?.length ?? 0) : 0;
+			binningEnabled = false;
+			dateTimePairs = [];
+			combinePairs = new Set();
+			if (targetFiles.length > 1) {
+				extraFileErrors = [
+					{
+						filename: 'all files',
+						error:
+							'Multi-file concatenation is not supported for this EnSpire multi-plate format. Select one file at a time.'
+					}
+				];
+			}
+		} else {
+			// Count total rows to decide whether to suggest binning
+			await countRows();
+			if (totalRowCount > ROW_THRESHOLD) {
+				binningEnabled = true;
+			}
 
-		// Detect date-only + time-only column pairs
-		detectDateTimePairs();
+			// Detect date-only + time-only column pairs
+			detectDateTimePairs();
+		}
 
 		loadProgress = { stage: '', detail: '' };
 		awaitingPreview = false;
 
 		// Re-validate additional file headers whenever preview settings change
-		if (targetFiles.length > 1) {
+		if (targetFiles.length > 1 && !enspireMultiplatePayload) {
 			await checkAdditionalHeaders(targetFiles.slice(1));
 		}
 
@@ -634,11 +949,24 @@
 		}
 
 		errorInfile = false;
+		enspireMultiplatePayload = null;
 
 		const isExcel = targetFile.name.toLowerCase().match(/\.(xlsx|xls)$/);
 
 		if (isExcel) {
 			return await parseXLSX(targetFile);
+		}
+
+		const enspirePayload = await tryParseEnspireMultiplate(targetFile);
+		if (enspirePayload) {
+			specialRecognised = 'enspire-multiplate';
+			hasHeader = true;
+			skipLines = 0;
+			delimiter = ',';
+			enspireMultiplatePayload = enspirePayload;
+			headers = Object.keys(enspirePayload.plateInfoData);
+			parsedData = enspirePayload.plateInfoData;
+			return;
 		}
 
 		return new Promise((resolve, reject) => {
@@ -848,9 +1176,7 @@
 		}
 
 		const parsedHeaderLists = [...fileHeadersMap.values()];
-		commonColumns = refHeaders.filter((h) =>
-			parsedHeaderLists.every((hdrs) => hdrs.includes(h))
-		);
+		commonColumns = refHeaders.filter((h) => parsedHeaderLists.every((hdrs) => hdrs.includes(h)));
 		const commonSet = new Set(commonColumns);
 
 		const unionSet = new Set();
@@ -1004,6 +1330,12 @@
 	}
 
 	async function loadData() {
+		if (enspireMultiplatePayload) {
+			await importEnspireMultiplatePayload(enspireMultiplatePayload);
+			awaitingLoad = false;
+			return;
+		}
+
 		previewIN = 0;
 		awaitingLoad = true;
 
@@ -1159,7 +1491,8 @@
 
 		// Build array of [index, parsedMs] and sort by ms
 		const indices = Array.from({ length: n }, (_, i) => {
-			const ms = dayjs(String(timeValues[i]), timeFmt, true).valueOf();
+			const parsed = parseUTCStrict(timeValues[i], timeFmt);
+			const ms = parsed ? parsed.valueOf() : NaN;
 			return { i, ms };
 		});
 		indices.sort((a, b) => a.ms - b.ms);
@@ -1452,12 +1785,7 @@
 			const timeStrings = data[timeKey];
 
 			function parseDt(s) {
-				if (s == null) return null;
-				const str = String(s);
-				let dt = dayjs(str, timeFormat, true);
-				if (dt.isValid()) return dt;
-				dt = dayjs(str);
-				return dt.isValid() ? dt : null;
+				return parseUTCStrict(s, timeFormat);
 			}
 
 			firstDt = parseDt(timeStrings[0]);
@@ -1621,7 +1949,25 @@
 			<div class="import-container">
 				<div class="preview-placeholder">
 					{#if parsedData && importReady}
-						<div class="section-row">
+						{#if enspireMultiplatePayload}
+							<div class="section-row enspire-summary-panel">
+								<p class="enspire-summary-title">EnSpire multi-plate format detected</p>
+								<p class="enspire-summary-detail">
+									This import will create two tables. No preview is shown for this format.
+								</p>
+								<p class="enspire-summary-detail">
+									Plate info table rows: <strong>{enspirePlateInfoRows.toLocaleString()}</strong>
+								</p>
+								<p class="enspire-summary-detail">
+									Binned wells table rows: <strong>{enspireBinnedRows.toLocaleString()}</strong>
+								</p>
+								<p class="enspire-summary-detail">
+									Time axis will be imported as time bins with per-repeat windows.
+								</p>
+								<p class="enspire-summary-proceed">Proceed with import?</p>
+							</div>
+						{:else}
+							<div class="section-row">
 							<div class="control-input-horizontal">
 								<div class="control-input-checkbox">
 									<input type="checkbox" bind:checked={hasHeader} onchange={() => reParse()} />
@@ -1670,7 +2016,7 @@
 							</div>
 						{/if}
 
-						<div class="section-row combine-panel">
+							<div class="section-row combine-panel">
 							<p class="combine-title">
 								Combine separate Date and Time columns into a single DateTime column:
 							</p>
@@ -1722,13 +2068,11 @@
 								</div>
 							{/each}
 							{#if headers.length >= 2}
-								<button type="button" class="combine-add" onclick={addPair}>
-									+ Add pair
-								</button>
+								<button type="button" class="combine-add" onclick={addPair}> + Add pair </button>
 							{/if}
 						</div>
 
-						{#if core.tables.length > 0}
+							{#if core.tables.length > 0}
 							<div class="section-row">
 								<div class="control-input-checkbox">
 									<input
@@ -1744,7 +2088,7 @@
 							</div>
 						{/if}
 
-						<div class="section-row">
+							<div class="section-row">
 							<div class="col-select-actions">
 								<button
 									class="dialog-button"
@@ -1763,7 +2107,7 @@
 							</div>
 						</div>
 
-						<div class="preview-table-wrapper" style="overflow-x: auto; max-width: 100%;">
+							<div class="preview-table-wrapper" style="overflow-x: auto; max-width: 100%;">
 							<table class="preview-table">
 								<thead>
 									<tr>
@@ -1873,7 +2217,7 @@
 								</tbody>
 							</table>
 						</div>
-						<div
+							<div
 							class="control-input"
 							style="flex-direction: row; align-items: center; gap: 0.25rem; flex-wrap: wrap;"
 						>
@@ -1889,7 +2233,7 @@
 							</p>
 						</div>
 
-						{#if targetFiles.length > 1}
+							{#if targetFiles.length > 1}
 							<div class="multi-file-list">
 								<p class="multi-file-title">Files to concatenate ({targetFiles.length}):</p>
 								<ul>
@@ -1940,6 +2284,7 @@
 									</div>
 								{/if}
 							</div>
+							{/if}
 						{/if}
 					{:else if !awaitingPreview && !awaitingLoad}
 						<p>Choose file to preview data</p>
@@ -1953,7 +2298,7 @@
 		<div class="dialog-button-container">
 			{#if importReady && !awaitingPreview && !awaitingLoad && !checkingHeaders && extraFileErrors.length === 0}
 				<button id="confirmImport" class="dialog-button" onclick={confirmImport}
-					>Confirm Import</button
+					>{enspireMultiplatePayload ? 'Proceed Import' : 'Confirm Import'}</button
 				>
 			{/if}
 		</div>
@@ -1972,6 +2317,29 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	.enspire-summary-panel {
+		margin: 0.5rem 0;
+		padding: 0.75rem 0.9rem;
+		border: 1px solid var(--color-info);
+		border-radius: 4px;
+		background: var(--color-info-bg);
+	}
+
+	.enspire-summary-title {
+		margin: 0 0 0.35rem 0;
+		font-weight: 700;
+	}
+
+	.enspire-summary-detail {
+		margin: 0.2rem 0;
+		font-size: 0.9em;
+	}
+
+	.enspire-summary-proceed {
+		margin: 0.55rem 0 0 0;
+		font-weight: 600;
 	}
 
 	.col-select-actions {
