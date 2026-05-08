@@ -77,8 +77,18 @@
 	let dateTimePairs = $state([]); // [{ dateCol, timeCol, dateFormat, timeFormat }]
 	let combinePairs = $state(new Set()); // indices into dateTimePairs that the user wants to merge
 
+	function normalizeMeridiemText(value) {
+		if (value == null) return value;
+		if (typeof value !== 'string') return value;
+		return value.replace(/(^|[^A-Za-z])([aApP])\.?m\.?([^A-Za-z]|$)/g, (_, pre, ap, post) => {
+			const isUpper = ap === ap.toUpperCase();
+			const meridiem = ap.toLowerCase() === 'a' ? (isUpper ? 'AM' : 'am') : isUpper ? 'PM' : 'pm';
+			return `${pre}${meridiem}${post}`;
+		});
+	}
+
 	function parseUTCStrict(value, fmt) {
-		const text = String(value ?? '').trim();
+		const text = normalizeMeridiemText(String(value ?? '').trim());
 		if (!text) return null;
 		const normalized = normalizeTimeFormat(fmt);
 		if (normalized) {
@@ -389,7 +399,7 @@
 	}
 
 	function parseEnspireDateTimeMs(v) {
-		const s = stripCsvValue(v);
+		const s = normalizeMeridiemText(stripCsvValue(v));
 		if (!s) return null;
 		const formats = [
 			'D/M/YYYY h:mm:ss A',
@@ -495,23 +505,19 @@
 
 		/** Parse a single time string → ms. Uses detected format first, then hardcoded fallbacks. */
 		function parsePlateTimeMs(v) {
-			console.log('here, ', v);
-			const s = stripCsvValue(v);
+			const s = normalizeMeridiemText(stripCsvValue(v));
 
 			if (!s) return null;
 			if (detectedTimeFmt && detectedTimeFmt !== -1 && detectedTimeFmt.length > 0) {
 				const normalized = normalizeTimeFormat(detectedTimeFmt);
-				console.log('normalized ', normalized, detectedTimeFmt);
 				if (normalized) {
 					const dt = dayjs.utc(s, normalized, true);
 					if (dt.isValid()) return dt.valueOf();
 				}
 				// Non-strict attempt with detected format
 				const dt2 = dayjs.utc(s, normalizeTimeFormat(detectedTimeFmt));
-				console.log('also here ', dt2, detectedTimeFmt);
 				if (dt2.isValid()) return dt2.valueOf();
 			}
-			console.log('falling back to hardcoded formats:', parseEnspireDateTimeMs(v));
 			// Fall through to parseEnspireDateTimeMs hardcoded formats
 			return parseEnspireDateTimeMs(v);
 		}

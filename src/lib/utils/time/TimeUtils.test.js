@@ -8,14 +8,15 @@ import {
 	getUNIXDate,
 	getISODate,
 	formatTimeFromUNIX,
-	formatTimeFromISO
+	formatTimeFromISO,
+	guessDateofArray,
+	calculateTimeDifference
 } from './TimeUtils.js';
+import { formatTimeAxisTick } from './displayTime.js';
 
 describe('normalizeTimeFormat — Luxon → dayjs format string conversion', () => {
 	it('translates the saved-session timestamp format', () => {
-		expect(normalizeTimeFormat("yyyy-LL-dd'T'HH:mm:ss.S'Z'")).toBe(
-			'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]'
-		);
+		expect(normalizeTimeFormat("yyyy-LL-dd'T'HH:mm:ss.S'Z'")).toBe('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]');
 	});
 
 	it('translates a date-only Luxon format', () => {
@@ -80,5 +81,64 @@ describe('formatTimeFromUNIX / formatTimeFromISO — defensive against bad input
 		// 2026-04-30 05:38:03 UTC
 		const ms = Date.UTC(2026, 3, 30, 5, 38, 3);
 		expect(formatTimeFromUNIX(ms)).toBe('30 Apr 2026 05:38:03');
+	});
+});
+
+describe('dotted meridiem (a.m./p.m.) parsing', () => {
+	it('guesses a usable format and parses to UNIX ms', () => {
+		const sample = [
+			'20/04/2026 5:27:54 p.m.',
+			'20/04/2026 5:48:07 p.m.',
+			'21/04/2026 12:12:20 a.m.'
+		];
+		const guessed = guessDateofArray(sample);
+		expect(typeof guessed).toBe('string');
+
+		const ms0 = getUNIXDate(sample[0], guessed);
+		const ms1 = getUNIXDate(sample[1], guessed);
+		expect(Number.isFinite(ms0)).toBe(true);
+		expect(Number.isFinite(ms1)).toBe(true);
+		expect(ms1).toBeGreaterThan(ms0);
+	});
+
+	it('calculates time differences correctly across midnight with dotted meridiem', () => {
+		const fmt = 'DD/MM/YYYY h:mm:s a';
+		const h = calculateTimeDifference('20/04/2026 11:52:07 p.m.', '21/04/2026 12:12:20 a.m.', fmt);
+		expect(Number(h)).toBeGreaterThan(0);
+		expect(Number(h)).toBeCloseTo(0.337, 2); // ~20m13s
+	});
+});
+
+describe('formatTimeAxisTick — multi-resolution axis tick labels', () => {
+	it('returns "" for nullish or non-numeric input', () => {
+		expect(formatTimeAxisTick(null)).toBe('');
+		expect(formatTimeAxisTick(undefined)).toBe('');
+		expect(formatTimeAxisTick(NaN)).toBe('');
+		expect(formatTimeAxisTick('not a number')).toBe('');
+	});
+
+	it('shows fractional seconds when the tick has sub-second precision', () => {
+		expect(formatTimeAxisTick(Date.UTC(2026, 3, 30, 14, 30, 45, 123))).toBe('.123');
+	});
+
+	it('shows :ss when the tick lands on a non-round minute', () => {
+		expect(formatTimeAxisTick(Date.UTC(2026, 3, 30, 14, 30, 45))).toBe(':45');
+	});
+
+	it('shows HH:mm for hour and minute ticks within a day', () => {
+		expect(formatTimeAxisTick(Date.UTC(2026, 3, 30, 14, 30))).toBe('14:30');
+		expect(formatTimeAxisTick(Date.UTC(2026, 3, 30, 14, 0))).toBe('14:00');
+	});
+
+	it('shows day + month for midnight ticks that are not the 1st of the month', () => {
+		expect(formatTimeAxisTick(Date.UTC(2026, 3, 30))).toBe('30 Apr');
+	});
+
+	it('shows month for first-of-month ticks (excluding January)', () => {
+		expect(formatTimeAxisTick(Date.UTC(2026, 3, 1))).toBe('Apr');
+	});
+
+	it('shows year for January 1st ticks', () => {
+		expect(formatTimeAxisTick(Date.UTC(2026, 0, 1))).toBe('2026');
 	});
 });

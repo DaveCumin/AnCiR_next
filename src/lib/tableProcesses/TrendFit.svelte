@@ -70,6 +70,22 @@
 		}
 		result.outputXData = outputXData;
 
+		// Output x type follows input x type: if either the chosen outputX column
+		// or the input t column is time-typed, anchor the hour-offset results to
+		// that column's first timestamp so the output column can be stored as ms
+		// and typed 'time'. Mirrors the Cosinor / DoubleLogistic pattern.
+		let originTime_ms = null;
+		if (outputXId != -1) {
+			const outputXColForOrigin = getColumnById(outputXId);
+			if (outputXColForOrigin?.type === 'time') {
+				originTime_ms = outputXColForOrigin.getData()[0];
+			}
+		}
+		if (originTime_ms == null && tCol.type === 'time') {
+			originTime_ms = tCol.getData()[0];
+		}
+		result.originTime_ms = originTime_ms;
+
 		for (const yId of yINs) {
 			if (yId == null || yId === -1) continue;
 			const yCol = getColumnById(yId);
@@ -123,11 +139,14 @@
 			const firstYId = Object.keys(result.y_results)[0];
 			const firstYResult = result.y_results[firstYId];
 			const xOutData = firstYResult.xOutData ?? outputXData ?? firstYResult.t;
+			const xOutMs =
+				originTime_ms != null ? xOutData.map((h) => originTime_ms + h * 3600000) : xOutData;
 			const xColOut = getColumnById(xOUT);
 			if (xColOut) {
-				core.rawData.set(xOUT, xOutData);
+				core.rawData.set(xOUT, xOutMs);
 				xColOut.data = xOUT;
-				xColOut.type = 'number';
+				xColOut.type = originTime_ms != null ? 'time' : 'number';
+				if (originTime_ms != null) xColOut.timeFormat = null;
 				xColOut.tableProcessGUId = processHash;
 			}
 

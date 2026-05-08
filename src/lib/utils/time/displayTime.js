@@ -44,3 +44,21 @@ export function parseDateTimeLocalInput(str) {
 	const dt = zone === 'utc' ? dayjs.utc(str) : dayjs.tz(str, zone);
 	return dt.isValid() ? dt.valueOf() : NaN;
 }
+
+// Multi-resolution tick label for a time-based plot axis. Picks the most
+// concise format that still distinguishes ticks at the displayed resolution,
+// in the configured displayTimezone. Mirrors d3-scale's scaleUtc auto-formatter
+// — we override d3's default purely to honour the user's chosen zone.
+export function formatTimeAxisTick(ms) {
+	const n = Number(ms);
+	if (ms == null || Number.isNaN(n)) return '';
+	const dt = dtAt(n);
+	if (!dt.isValid()) return '';
+
+	if (dt.millisecond() !== 0) return dt.format('[.]SSS');
+	if (dt.second() !== 0) return dt.format('[:]ss');
+	if (dt.minute() !== 0 || dt.hour() !== 0) return dt.format('HH:mm');
+	if (dt.date() !== 1) return dt.format('D MMM');
+	if (dt.month() !== 0) return dt.format('MMM');
+	return dt.format('YYYY');
+}

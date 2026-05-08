@@ -1,5 +1,6 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import { getColumnById } from '$lib/core/Column.svelte';
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear, scaleTime, scaleUtc, scaleLog } from 'd3-scale';
@@ -202,10 +203,8 @@
 				tempx = tempx.filter(
 					(x, i) => x != null && !isNaN(x) && tempy[i] != null && !isNaN(tempy[i])
 				); // Ensure all values are valid (not null or NaN) — do NOT exclude zeros
-				// Convert non-time hour columns to ms using their own origin or the shared reference
-				if (this.anyXdataTime && xCol.type !== 'time') {
-					const origin = xCol.originTime_ms ?? this.xReferenceOrigin_ms;
-					if (origin == null) return; // no time reference available — skip
+				const origin = this.xOriginFor(xCol);
+				if (origin != null) {
 					tempx = tempx.map((h) => origin + h * 3600000);
 				}
 				xmin = Math.floor(min([xmin, ...tempx]));
@@ -245,6 +244,43 @@
 
 		nightBands = $state([]);
 
+		// Origin (ms) to use when converting an hour-offset series onto the plot's
+		// X scale, or null if no conversion should happen. Time-typed columns are
+		// already in ms; pure-number plots stay on a linear numeric scale. Mixed
+		// plots (a number/origin-less bin alongside a time series) borrow the
+		// plot's reference origin so the numeric values are interpreted as
+		// hours-from-origin instead of being silently dropped at near-epoch.
+		xOriginFor(xCol) {
+			if (xCol?.type === 'time') return null;
+			if (!this.anyXdataTime) return null;
+			return this.resolveXOriginMs(xCol) ?? this.xReferenceOrigin_ms;
+		}
+
+		resolveXOriginMs(xCol) {
+			// Number(null) === 0 — guard so a literal-null override doesn't lie.
+			const directRaw = xCol?.originTime_ms;
+			if (directRaw != null) {
+				const direct = Number(directRaw);
+				if (Number.isFinite(direct)) return direct;
+			}
+
+			let refId = xCol?.refId;
+			const seen = new Set();
+			while (refId != null && !seen.has(refId)) {
+				seen.add(refId);
+				const refCol = /** @type {any} */ (getColumnById(refId));
+				if (!refCol) break;
+				const refOriginRaw = refCol.originTime_ms;
+				if (refOriginRaw != null) {
+					const refOrigin = Number(refOriginRaw);
+					if (Number.isFinite(refOrigin)) return refOrigin;
+				}
+				refId = refCol.refId;
+			}
+
+			return null;
+		}
+
 		hasRightAxisData = $derived.by(() => {
 			return this.data.some((d) => d.yAxis === 'right');
 		});
@@ -256,14 +292,15 @@
 			if (this.data.length === 0) {
 				return false;
 			}
-			return this.data.some((d) => d.x.type === 'time' || d.x.originTime_ms != null);
+			return this.data.some((d) => d.x.type === 'time' || this.resolveXOriginMs(d.x) != null);
 		});
 
 		// The reference origin (ms) for pure-numeric series plotted alongside time series.
 		// Uses the first available originTime_ms or the first raw timestamp from a time column.
 		xReferenceOrigin_ms = $derived.by(() => {
 			for (const d of this.data) {
-				if (d.x.originTime_ms != null) return d.x.originTime_ms;
+				const resolvedOrigin = this.resolveXOriginMs(d.x);
+				if (resolvedOrigin != null) return resolvedOrigin;
 				if (d.x.type === 'time') {
 					const raw = d.x.getData();
 					if (raw?.length > 0) return raw[0];
@@ -412,7 +449,7 @@
 					if (datum.x.type === 'time') {
 						xData = xData.map((/** @type {number} */ ms) => new Date(ms).toISOString());
 					} else {
-						const origin = datum.x.originTime_ms ?? this.xReferenceOrigin_ms;
+						const origin = this.xOriginFor(datum.x);
 						if (origin != null) {
 							xData = xData.map((/** @type {number} */ h) =>
 								new Date(origin + h * 3600000).toISOString()
@@ -566,6 +603,7 @@
 	import Toggle from '$lib/components/inputs/Toggle.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appState } from '$lib/core/core.svelte';
+	import { formatTimeAxisTick } from '$lib/utils/time/displayTime.js';
 	import { onMount } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
@@ -593,13 +631,8 @@
 			const xArr = d.x?.getData();
 			const yArr = d.y?.getData();
 			if (!xArr?.length || !yArr?.length) continue;
-			const xD =
-				theData.plot.anyXdataTime && d.x.type !== 'time'
-					? xArr.map(
-							/** @param {number} v */ (v) =>
-								(d.x.originTime_ms ?? theData.plot.xReferenceOrigin_ms) + v * 3600000
-						)
-					: xArr;
+			const origin = theData.plot.xOriginFor(d.x);
+			const xD = origin != null ? xArr.map(/** @param {number} v */ (v) => origin + v * 3600000) : xArr;
 			out.push({
 				label: d.label || d.y?.name || '',
 				colour: d.points?.colour || d.line?.colour || 'black',
@@ -1017,7 +1050,11 @@
 			position="bottom"
 			plotPadding={theData.plot.padding}
 			axisData={theData.plot.xAxis}
-			tickFormat={theData.plot.anyXCategoryData ? (/** @type {any} */ d) => String(d) : null}
+			tickFormat={theData.plot.anyXCategoryData
+				? (/** @type {any} */ d) => String(d)
+				: theData.plot.anyXdataTime
+					? (/** @type {any} */ d) => formatTimeAxisTick(d)
+					: null}
 			which="plot"
 		/>
 
@@ -1050,13 +1087,10 @@
 
 		{#each theData.plot.data as datum}
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
+				{@const _xOrigin = theData.plot.xOriginFor(datum.x)}
 				{@const xDATA =
-					theData.plot.anyXdataTime && datum.x.type !== 'time'
-						? datum.x
-								.getData()
-								.map(
-									(d) => (datum.x.originTime_ms ?? theData.plot.xReferenceOrigin_ms) + d * 3600000
-								)
+					_xOrigin != null
+						? datum.x.getData().map((d) => _xOrigin + d * 3600000)
 						: datum.x.getData()}
 				{@const yScale =
 					datum.yAxis === 'left' ? theData.plot.YScaleLeft : theData.plot.YScaleRight}

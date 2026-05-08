@@ -429,25 +429,28 @@
 				compression,
 				provenance
 			} = json;
-			let column = new Column(
-				{
-					name,
-					type,
-					refId: refId ?? null,
-					data: data ?? null,
-					timeFormat: timeFormat ?? '',
-					binWidth: binWidth ?? null,
-					tableProcessGUId: tableProcessGUId ?? '',
-					producerNodeId: producerNodeId ?? null,
-					producerPort: producerPort ?? null,
-					producerArtifactKind: producerArtifactKind ?? null,
-					originTime_ms: originTime_ms ?? null,
-
-					compression: compression ?? null,
-					provenance: provenance ?? null
-				},
-				id
-			);
+			// `binWidth`, `originTime_ms`, `provenance`, `name`, `type` are $derived
+			// getters that delegate to refColumn for referencial columns. Object.assign
+			// silently overrides a derived only when the value is non-undefined, so
+			// passing `null` for a missing field destroys the delegation. Build the
+			// columnData object so missing values stay undefined (no-op) while real
+			// values continue to override (which is how non-ref columns store them).
+			const columnData = {
+				refId: refId ?? null,
+				data: data ?? null,
+				timeFormat: timeFormat ?? '',
+				tableProcessGUId: tableProcessGUId ?? '',
+				producerNodeId: producerNodeId ?? null,
+				producerPort: producerPort ?? null,
+				producerArtifactKind: producerArtifactKind ?? null,
+				compression: compression ?? null
+			};
+			if (name !== undefined) columnData.name = name;
+			if (type !== undefined) columnData.type = type;
+			if (binWidth != null) columnData.binWidth = binWidth;
+			if (originTime_ms != null) columnData.originTime_ms = originTime_ms;
+			if (provenance != null) columnData.provenance = provenance;
+			let column = new Column(columnData, id);
 
 			column.processes = [];
 			if (Array.isArray(processes)) {

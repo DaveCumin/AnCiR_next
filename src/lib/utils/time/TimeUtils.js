@@ -49,6 +49,9 @@ export function normalizeTimeFormat(fmt) {
 		[/\bL\b/g, 'M'],
 		[/dd/g, 'DD'],
 		[/\bd\b/g, 'D'],
+		// Dayjs strict parsing is more reliable with `ss` for two-digit seconds.
+		// If a guess yields a lone `s`, widen it to `ss`.
+		[/(?<!s)s(?!s)/g, 'ss'],
 		// Luxon's single `S` is "fractional seconds (any precision)". Our
 		// stored format has a literal `.S` followed by ms digits, so widen
 		// to 3-digit milliseconds (`SSS`). If a user-saved format genuinely
@@ -59,6 +62,18 @@ export function normalizeTimeFormat(fmt) {
 	for (const [re, to] of replacements) out = out.replace(re, to);
 
 	return out;
+}
+
+// Accept dotted meridiem variants (a.m./p.m.) anywhere in imported text.
+// Dayjs `a`/`A` tokens parse `am/pm` and `AM/PM`, so normalize input first.
+function normalizeMeridiemText(value) {
+	if (value == null) return value;
+	if (typeof value !== 'string') return value;
+	return value.replace(/(^|[^A-Za-z])([aApP])\.?m\.?([^A-Za-z]|$)/g, (_, pre, ap, post) => {
+		const isUpper = ap === ap.toUpperCase();
+		const meridiem = ap.toLowerCase() === 'a' ? (isUpper ? 'AM' : 'am') : isUpper ? 'PM' : 'pm';
+		return `${pre}${meridiem}${post}`;
+	});
 }
 
 export function formatDate(dateIN) {
@@ -118,7 +133,7 @@ export function guessDateofArray(dates) {
 			let score = 0;
 			for (let i = 0; i < datesToCheck.length; i++) {
 				// Strict parse so a token-mismatch counts as a miss for scoring.
-				if (dayjs(datesToCheck[i], guess, true).isValid()) {
+				if (dayjs(normalizeMeridiemText(datesToCheck[i]), guess, true).isValid()) {
 					score++;
 				}
 			}
@@ -144,8 +159,8 @@ export function calculateTimeDifference(start, end, dateFormat) {
 		return null;
 	}
 	const fmt = normalizeTimeFormat(dateFormat);
-	const startDt = dayjs(start, fmt, true);
-	const endDt = dayjs(end, fmt, true);
+	const startDt = dayjs(normalizeMeridiemText(start), fmt, true);
+	const endDt = dayjs(normalizeMeridiemText(end), fmt, true);
 	// dayjs.diff returns a number; pass `true` for fractional hours.
 	return endDt.diff(startDt, 'hour', true).toFixed(decimalPlaces);
 }
@@ -167,7 +182,7 @@ export function getPeriod(timeData, timefmt) {
 //data. Calculates the offset for actograms (and other plots).
 export function getstartTimeOffset(inputTime, firstTime, timeFormat) {
 	const start = dayjs(inputTime);
-	const end = dayjs(firstTime, normalizeTimeFormat(timeFormat), true);
+	const end = dayjs(normalizeMeridiemText(firstTime), normalizeTimeFormat(timeFormat), true);
 	return end.diff(start, 'hour', true).toFixed(decimalPlaces);
 }
 
@@ -237,11 +252,13 @@ export function formatTimeFromISO(timeString) {
 }
 export function getISODate(stringIN, formatIN) {
 	if (!formatIN) return stringIN;
-	return dayjs.utc(stringIN, normalizeTimeFormat(formatIN), true).toISOString();
+	return dayjs
+		.utc(normalizeMeridiemText(stringIN), normalizeTimeFormat(formatIN), true)
+		.toISOString();
 }
 export function getUNIXDate(stringIN, formatIN) {
 	if (!formatIN) return stringIN;
-	return dayjs.utc(stringIN, normalizeTimeFormat(formatIN), true).valueOf();
+	return dayjs.utc(normalizeMeridiemText(stringIN), normalizeTimeFormat(formatIN), true).valueOf();
 }
 export function addTime(start, hoursIN) {
 	return formatTimeFromISO(dayjs(start).add(hoursIN, 'hour').toISOString());

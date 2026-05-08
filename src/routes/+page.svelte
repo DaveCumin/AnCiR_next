@@ -404,6 +404,7 @@
 						binSize: 2,
 						binStart: 0,
 						stepSize: 2,
+						aggFunction: 'mean',
 						out: { binnedx: -1 }
 					}
 				},
