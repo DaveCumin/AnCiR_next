@@ -28,7 +28,27 @@
 			return table.columns
 				.map((col) => {
 					const data = col.getData();
-					return rowIndex < data.length ? data[rowIndex] : defaultValue;
+					const val = rowIndex < data.length ? data[rowIndex] : defaultValue;
+					if (val === defaultValue || val == null) return defaultValue;
+					// Time columns: getData() returns UNIX ms — format as YYYY-MM-DD HH:mm:ss (UTC)
+					if (col.type === 'time') {
+						const ms = Number(val);
+						if (Number.isFinite(ms)) {
+							return new Date(ms).toISOString().replace('T', ' ').slice(0, 19);
+						}
+						// Parse failed — fall back to original raw string
+						const rawArr = core.rawData.get(col.data);
+						return rawArr?.[rowIndex] ?? defaultValue;
+					}
+					// Time-bin columns: getData() returns midpoint in hours from origin
+					if (col.type === 'bin' && col.originTime_ms != null) {
+						const ms = col.originTime_ms + Number(val) * 3_600_000;
+						if (Number.isFinite(ms)) {
+							return new Date(ms).toISOString().replace('T', ' ').slice(0, 19);
+						}
+						return val;
+					}
+					return val;
 				})
 				.join(',');
 		}).join('\n');

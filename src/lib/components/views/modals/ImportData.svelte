@@ -391,7 +391,18 @@
 	function parseEnspireDateTimeMs(v) {
 		const s = stripCsvValue(v);
 		if (!s) return null;
-		const formats = ['D/M/YYYY h:mm:ss A', 'DD/MM/YYYY h:mm:ss A'];
+		const formats = [
+			'D/M/YYYY h:mm:ss A',
+			'DD/MM/YYYY h:mm:ss A',
+			'D/M/YYYY H:mm:ss',
+			'DD/MM/YYYY H:mm:ss',
+			'M/D/YYYY h:mm:ss A',
+			'MM/DD/YYYY h:mm:ss A',
+			'M/D/YYYY H:mm:ss',
+			'YYYY-MM-DD H:mm:ss',
+			'YYYY-MM-DD h:mm:ss A',
+			'YYYY-MM-DDTHH:mm:ss'
+		];
 		for (const f of formats) {
 			const dt = dayjs.utc(s, f, true);
 			if (dt.isValid()) return dt.valueOf();
@@ -414,13 +425,31 @@
 		const cell = (r, i) => String(r?.[i] ?? '').trim();
 		const isBlankRow = (r) => !r || r.every((c) => String(c ?? '').trim() === '');
 
+		// Find the plate info header row; locate "Measurement date" column dynamically
 		const plateHeaderIdx = rows.findIndex(
 			(r) =>
 				cell(r, 0) === 'Plate' &&
 				cell(r, 1) === 'Repeat' &&
-				cell(r, 3).toLowerCase().includes('measurement date')
+				r.some((c) =>
+					String(c ?? '')
+						.toLowerCase()
+						.includes('measurement date')
+				)
 		);
 		if (plateHeaderIdx < 0) return null;
+
+		const plateHeaderRow = rows[plateHeaderIdx];
+		const measurementDateColIdx = plateHeaderRow.findIndex((c) =>
+			String(c ?? '')
+				.toLowerCase()
+				.includes('measurement date')
+		);
+
+		// Temperature columns follow the date column
+		const insideStartIdx = measurementDateColIdx + 1;
+		const insideEndIdx = measurementDateColIdx + 2;
+		const ambientStartIdx = measurementDateColIdx + 3;
+		const ambientEndIdx = measurementDateColIdx + 4;
 
 		const plateRows = [];
 		for (let i = plateHeaderIdx + 1; i < rows.length; i++) {
@@ -433,11 +462,11 @@
 			plateRows.push({
 				plate,
 				repeat,
-				time: stripCsvValue(cell(r, 3)),
-				insideStart: parseMaybeNumber(cell(r, 4)),
-				insideEnd: parseMaybeNumber(cell(r, 5)),
-				ambientStart: parseMaybeNumber(cell(r, 6)),
-				ambientEnd: parseMaybeNumber(cell(r, 7))
+				time: stripCsvValue(cell(r, measurementDateColIdx)),
+				insideStart: parseMaybeNumber(cell(r, insideStartIdx)),
+				insideEnd: parseMaybeNumber(cell(r, insideEndIdx)),
+				ambientStart: parseMaybeNumber(cell(r, ambientStartIdx)),
+				ambientEnd: parseMaybeNumber(cell(r, ambientEndIdx))
 			});
 		}
 		if (plateRows.length === 0) return null;
@@ -460,9 +489,36 @@
 		const plateSet = new Set(plateRows.map((r) => r.plate));
 		const plateOrder = [...plateSet].sort((a, b) => a - b);
 
+		// Auto-detect the date/time format from the plate info time strings
+		const timeStrings = plateRows.map((r) => r.time).filter((s) => s && s.length > 0);
+		const detectedTimeFmt = timeStrings.length > 0 ? guessDateofArray(timeStrings) : null;
+
+		/** Parse a single time string → ms. Uses detected format first, then hardcoded fallbacks. */
+		function parsePlateTimeMs(v) {
+			console.log('here, ', v);
+			const s = stripCsvValue(v);
+
+			if (!s) return null;
+			if (detectedTimeFmt && detectedTimeFmt !== -1 && detectedTimeFmt.length > 0) {
+				const normalized = normalizeTimeFormat(detectedTimeFmt);
+				console.log('normalized ', normalized, detectedTimeFmt);
+				if (normalized) {
+					const dt = dayjs.utc(s, normalized, true);
+					if (dt.isValid()) return dt.valueOf();
+				}
+				// Non-strict attempt with detected format
+				const dt2 = dayjs.utc(s, normalizeTimeFormat(detectedTimeFmt));
+				console.log('also here ', dt2, detectedTimeFmt);
+				if (dt2.isValid()) return dt2.valueOf();
+			}
+			console.log('falling back to hardcoded formats:', parseEnspireDateTimeMs(v));
+			// Fall through to parseEnspireDateTimeMs hardcoded formats
+			return parseEnspireDateTimeMs(v);
+		}
+
 		const repeatWindows = new Map();
 		for (const r of plateRows) {
-			const ms = parseEnspireDateTimeMs(r.time);
+			const ms = parsePlateTimeMs(r.time);
 			if (!Number.isFinite(ms)) continue;
 			const existing = repeatWindows.get(r.repeat);
 			if (!existing) {
@@ -537,6 +593,7 @@
 		return {
 			plateInfoData,
 			binnedWideData,
+			detectedTimeFmt,
 			timeOriginMs,
 			timeBinWidthMs,
 			timeBinWidthHours: timeBinWidthMs / 3600000,
@@ -619,10 +676,16 @@
 		loadProgress = { stage: 'Loading data', detail: 'Building plate info table…' };
 		await tick();
 		await yieldToUI();
+		const plateTimeFormat =
+			payload.detectedTimeFmt &&
+			payload.detectedTimeFmt !== -1 &&
+			payload.detectedTimeFmt.length > 0
+				? payload.detectedTimeFmt
+				: 'DD/MM/YYYY h:mm:ss A';
 		await importColumnObjectAsTable(payload.plateInfoData, `${baseName} - plate info`, {
 			Plate: { type: 'number' },
 			Repeat: { type: 'number' },
-			Time: { type: 'time', timeFormat: 'D/M/YYYY h:mm:ss A' },
+			Time: { type: 'time', timeFormat: plateTimeFormat },
 			InsideTempStart: { type: 'number' },
 			InsideTempEnd: { type: 'number' },
 			AmbientTempStart: { type: 'number' },
@@ -632,14 +695,22 @@
 		loadProgress = { stage: 'Loading data', detail: 'Building binned well table…' };
 		await tick();
 		await yieldToUI();
-		await importColumnObjectAsTable(payload.binnedWideData, `${baseName} - binned wells`, {
+		const wellSchema = {
 			Time: {
 				type: 'bin',
 				binWidth: payload.timeBinWidthHours,
 				binStep: payload.timeBinWidthHours,
 				originTime_ms: payload.timeOriginMs
 			}
-		});
+		};
+		for (const key of Object.keys(payload.binnedWideData)) {
+			if (key !== 'Time') wellSchema[key] = { type: 'number' };
+		}
+		await importColumnObjectAsTable(
+			payload.binnedWideData,
+			`${baseName} - binned wells`,
+			wellSchema
+		);
 	}
 
 	export async function openImportModal() {

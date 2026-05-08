@@ -160,10 +160,13 @@
 							// Time-based bins: show center as datetime
 							out.push(
 								rawArr.slice(start, start + this.Ncolumns).map((x) => {
+									if (!Number.isFinite(x)) {
+										return { raw: '-', computed: '-', isTime: true };
+									}
 									const centerMs = col.originTime_ms + (x + binStep / 2) * 3600000;
 									return {
-										raw: formatDateTime(centerMs),
-										computed: rangeStr,
+										raw: Number.isFinite(centerMs) ? formatDateTime(centerMs) : '-',
+										computed: Number.isFinite(centerMs) ? rangeStr : '-',
 										isTime: true
 									};
 								})
@@ -171,11 +174,16 @@
 						} else {
 							// Numeric bins: show center value with ± range
 							out.push(
-								rawArr.slice(start, start + this.Ncolumns).map((x) => ({
-									raw: (x + binStep / 2).toFixed(this.decimalPlaces),
-									computed: rangeStr,
-									isTime: true
-								}))
+								rawArr.slice(start, start + this.Ncolumns).map((x) => {
+									if (!Number.isFinite(x)) {
+										return { raw: '-', computed: '-', isTime: true };
+									}
+									return {
+										raw: (x + binStep / 2).toFixed(this.decimalPlaces),
+										computed: rangeStr,
+										isTime: true
+									};
+								})
 							);
 						}
 					} else {

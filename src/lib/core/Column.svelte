@@ -361,7 +361,7 @@
 
 			//deal with bins
 			if (this.type === 'bin') {
-				out = out.map((x) => x + this.binWidth / 2);
+				out = out.map((x) => (x != null && Number.isFinite(x) ? x + this.binWidth / 2 : x));
 			}
 
 			//If no data, return empty

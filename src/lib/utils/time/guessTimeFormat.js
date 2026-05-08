@@ -99,7 +99,7 @@ const dayOfMonthAndMonthNameDateFormatParser = new Parser(
 			'(?<millisecond>\\d{3})' +
 			')?' +
 			'(?<delim11>\\s)?' +
-			'(?<meridiem>am|pm|AM|PM)?' +
+			'(?<meridiem>a\\.?m\\.?|p\\.?m\\.?|A\\.?M\\.?|P\\.?M\\.?)?' +
 			'(?:' +
 			'(?<delim12>\\s)' +
 			`(?<timezone>[+-]\\d{2}(?::?\\d{2})?|Z|${abbreviatedTimezones})` +
@@ -182,7 +182,7 @@ const monthNameAndDayOfMonthDateFormatParser = new Parser(
 			'(?<millisecond>\\d{3})' +
 			')?' +
 			'(?<delim11>\\s)?' +
-			'(?<meridiem>am|pm|AM|PM)?' +
+			'(?<meridiem>a\\.?m\\.?|p\\.?m\\.?|A\\.?M\\.?|P\\.?M\\.?)?' +
 			'(?:' +
 			'(?<delim12>\\s)' +
 			`(?<timezone>[+-]\\d{2}(?::?\\d{2})?|Z|${abbreviatedTimezones})` +
@@ -234,7 +234,7 @@ const slashDelimitedDateTimeFormatParser = new Parser(
 			'(?<millisecond>\\d{3})' +
 			')?' +
 			'(?<delim8>\\s)?' +
-			'(?<meridiem>am|pm|AM|PM)?' +
+			'(?<meridiem>a\\.?m\\.?|p\\.?m\\.?|A\\.?M\\.?|P\\.?M\\.?)?' +
 			'(?:' +
 			'(?<delim9>\\s)' +
 			`(?<timezone>[+-]\\d{2}(?::?\\d{2})?|Z|${abbreviatedTimezones})` +
@@ -262,7 +262,7 @@ const twelveHourTimeFormatParser = new Parser(
 			'(?<millisecond>\\d{3})' +
 			')?' +
 			'(?<delim4>\\s)?' +
-			'(?<meridiem>am|pm|AM|PM)' +
+			'(?<meridiem>a\\.?m\\.?|p\\.?m\\.?|A\\.?M\\.?|P\\.?M\\.?)' +
 			'(?:' +
 			'(?<delim5>\\s)' +
 			`(?<timezone>[+-]\\d{2}(?::?\\d{2})?|Z|${abbreviatedTimezones})` +
@@ -321,7 +321,7 @@ const uKStyleSlashDelimitedDateTimeFormatParser = new Parser(
 			'(?<millisecond>\\d{3})' +
 			')?' +
 			'(?<delim8>\\s)?' +
-			'(?<meridiem>am|pm|AM|PM)?' +
+			'(?<meridiem>a\\.?m\\.?|p\\.?m\\.?|A\\.?M\\.?|P\\.?M\\.?)?' +
 			'(?:' +
 			'(?<delim9>\\s)' +
 			`(?<timezone>[+-]\\d{2}(?::?\\d{2})?|Z|${abbreviatedTimezones})` +
@@ -360,7 +360,7 @@ const uSStyleSlashDelimitedDateTimeFormatParser = new Parser(
 			'(?<millisecond>\\d{3})' +
 			')?' +
 			'(?<delim8>\\s)?' +
-			'(?<meridiem>am|pm|AM|PM)?' +
+			'(?<meridiem>a\\.?m\\.?|p\\.?m\\.?|A\\.?M\\.?|P\\.?M\\.?)?' +
 			'(?:' +
 			'(?<delim9>\\s)' +
 			`(?<timezone>[+-]\\d{2}(?::?\\d{2})?|Z|${abbreviatedTimezones})` +
@@ -399,7 +399,7 @@ const dashDelimitedWithMonthNameDateTimeFormatParser = new Parser(
 			'(?<millisecond>\\d{3})' +
 			')?' +
 			'(?<delim8>\\s)?' +
-			'(?<meridiem>am|pm|AM|PM)?' +
+			'(?<meridiem>a\\.?m\\.?|p\\.?m\\.?|A\\.?M\\.?|P\\.?M\\.?)?' +
 			'(?:' +
 			'(?<delim9>\\s)' +
 			`(?<timezone>[+-]\\d{2}(?::?\\d{2})?|Z|${abbreviatedTimezones})` +
@@ -893,11 +893,11 @@ class MeridiemFormatTokenAssigner {
 		this.format = format;
 		this._map = new Map();
 		if (!format || format === 'default') {
-			this._map.set(/am|pm/, 'a');
-			this._map.set(/AM|PM/, 'A');
+			this._map.set(/^(am|pm|a\.m\.|p\.m\.)$/, 'a');
+			this._map.set(/^(AM|PM|A\.M\.|P\.M\.)$/, 'A');
 		} else {
-			this._map.set(/am|pm/, '%P');
-			this._map.set(/AM|PM/, '%p');
+			this._map.set(/^(am|pm|a\.m\.|p\.m\.)$/, '%P');
+			this._map.set(/^(AM|PM|A\.M\.|P\.M\.)$/, '%p');
 		}
 	}
 	_testTokenType(token) {
