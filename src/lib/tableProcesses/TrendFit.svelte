@@ -3,7 +3,7 @@
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
-	import { fitTrend, evaluateTrendAtPoints } from '$lib/utils/trendfit.js';
+	import { fitTrendSync, evaluateTrendAtPoints } from '$lib/utils/trendfit.js';
 
 	const displayName = 'Fit Trend Curves';
 	const defaults = new Map([
@@ -100,7 +100,7 @@
 
 			if (tt.length === 0) continue;
 
-			const fittedData = fitTrend(tt, yy, model, polyDegree);
+			const fittedData = fitTrendSync(tt, yy, model, polyDegree);
 			const predicted = outputXData
 				? evaluateTrendAtPoints(fittedData.parameters, model, outputXData)
 				: null;
@@ -176,6 +176,7 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
@@ -185,6 +186,8 @@
 		showStaticDataAsTable,
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
+	import { fitTrend } from '$lib/utils/trendfit.js';
+	import { recommendPermutations } from '$lib/utils/permutationTest.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -198,7 +201,21 @@
 	let mounted = $state(false);
 	let previewStart = $state(1);
 
+	// Permutation test state
+	let enablePermutation = $state(false);
+	let nPermutations = $state(999);
+	let permutationInProgress = $state(false);
+	let permutationProgress = $state(0);
+	let permutationSeed = $state(Math.floor(Math.random() * 2147483646));
+	let autoNPermutations = $state(false);
+	let permutationStatistic = $state('rSquared');
+
 	const { syncYColumns, initYColumns } = useMultiYTP(p, 'trendy_', 'trend_');
+	const { syncYColumns: syncPermColumns, initYColumns: initPermColumns } = useMultiYTP(
+		p,
+		'permstats_',
+		'permstats_'
+	);
 
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -227,14 +244,140 @@
 	});
 
 	function onYSelectionChange() {
-		if (syncYColumns()) getTrend();
+		const fitColsChanged = syncYColumns();
+		const permColsChanged = syncPermColumns();
+		if (fitColsChanged || permColsChanged) getTrend();
 	}
 
 	//------------
-	function getTrend() {
+	async function getTrend() {
 		previewStart = 1;
-		[trendData, p.args.valid] = trendfit(p.args);
-		lastHash = getHash;
+
+		if (enablePermutation && p.args.yIN && p.args.yIN.length > 0) {
+			permutationInProgress = true;
+			permutationProgress = 0;
+
+			const xIN = p.args.xIN;
+			const yINs = p.args.yIN;
+			const model = p.args.model;
+			const polyDegree = p.args.polyDegree;
+
+			const xCol = getColumnById(xIN);
+			const t = xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData();
+
+			// Build result with permutation tests
+			let result = {
+				t: [],
+				outputXData: null,
+				y_results: {}
+			};
+
+			for (const yId of yINs) {
+				if (yId == null || yId === -1) continue;
+				const yCol = getColumnById(yId);
+				if (!yCol) continue;
+
+				const y = yCol.getData();
+				const validIndices = t
+					.map((v, i) => (isNaN(v) || isNaN(y[i]) ? -1 : i))
+					.filter((i) => i !== -1);
+				const tt = validIndices.map((i) => t[i]);
+				const yy = validIndices.map((i) => y[i]);
+
+				if (tt.length === 0) continue;
+
+				// Determine recommended permutations if auto mode
+				const nPerms = autoNPermutations ? recommendPermutations(tt.length) : nPermutations;
+
+				// Run async fit with permutation test
+				const fittedData = await fitTrend(tt, yy, model, polyDegree, {
+					permuteTest: true,
+					nPermutations: nPerms,
+					testStatistic: permutationStatistic,
+					seed: permutationSeed,
+					onProgress: (current, total) => {
+						permutationProgress = Math.round((current / total) * 100);
+					}
+				});
+
+				const predicted = fitTrendSync(tt, yy, model, polyDegree);
+				result.y_results[yId] = {
+					fittedData,
+					predicted: null,
+					t: tt,
+					xOutData: tt,
+					yOutData: fittedData.fitted
+				};
+
+				if (result.t.length === 0) result.t = tt;
+			}
+
+			const anyValid = Object.values(result.y_results).some(
+				(r) => (r?.fittedData?.fitted?.length ?? 0) > 0
+			);
+			if (anyValid && p.args.out.trendx !== -1) {
+				const processHash = crypto.randomUUID();
+				const firstYId = Object.keys(result.y_results)[0];
+				const firstYResult = result.y_results[firstYId];
+				const xOutData = firstYResult?.xOutData ?? result.outputXData ?? firstYResult?.t ?? [];
+				const xColOut = getColumnById(p.args.out.trendx);
+				if (xColOut) {
+					core.rawData.set(p.args.out.trendx, xOutData);
+					xColOut.data = p.args.out.trendx;
+					xColOut.type = 'number';
+					xColOut.tableProcessGUId = processHash;
+				}
+
+				for (const yId of yINs) {
+					const yResult = result.y_results[yId];
+					const yOutId = p.args.out['trendy_' + yId];
+					if (yOutId != null && yOutId !== -1 && yResult) {
+						const yColOut = getColumnById(yOutId);
+						if (yColOut) {
+							core.rawData.set(yOutId, yResult.yOutData ?? []);
+							yColOut.data = yOutId;
+							yColOut.type = 'number';
+							yColOut.tableProcessGUId = processHash;
+						}
+					}
+
+					const permOutId = p.args.out['permstats_' + yId];
+					if (permOutId != null && permOutId !== -1) {
+						const permColOut = getColumnById(permOutId);
+						if (permColOut) {
+							core.rawData.set(
+								permOutId,
+								Array.isArray(yResult?.fittedData?.permutedStats)
+									? yResult.fittedData.permutedStats
+									: []
+							);
+							permColOut.data = permOutId;
+							permColOut.type = 'number';
+							permColOut.tableProcessGUId = processHash;
+						}
+					}
+				}
+			}
+
+			trendData = result;
+			p.args.valid = Object.keys(result.y_results).length > 0;
+			permutationInProgress = false;
+			lastHash = getHash;
+		} else {
+			[trendData, p.args.valid] = trendfit(p.args);
+			for (const yId of p.args.yIN ?? []) {
+				const permOutId = p.args.out['permstats_' + yId];
+				if (permOutId != null && permOutId !== -1) {
+					const permColOut = getColumnById(permOutId);
+					if (permColOut) {
+						core.rawData.set(permOutId, []);
+						permColOut.data = permOutId;
+						permColOut.type = 'number';
+					}
+				}
+			}
+			lastHash = getHash;
+		}
 	}
 
 	// Exclude own output column IDs from the Y selector
@@ -243,7 +386,7 @@
 		const ids = [p.args.xIN];
 		if (p.args.out.trendx >= 0) ids.push(p.args.out.trendx);
 		for (const key of Object.keys(p.args.out)) {
-			if (key.startsWith('trendy_') && p.args.out[key] >= 0) {
+			if ((key.startsWith('trendy_') || key.startsWith('permstats_')) && p.args.out[key] >= 0) {
 				ids.push(p.args.out[key]);
 			}
 		}
@@ -267,7 +410,7 @@
 			p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
 			p.args.out.trendx = xCol.id;
 		}
-		const needsCompute = initYColumns();
+		const needsCompute = initYColumns() || initPermColumns();
 
 		if (needsCompute) {
 			getTrend();
@@ -321,6 +464,10 @@
 			([, r]) => (r.fittedData?.fitted?.length ?? 0) > 0
 		);
 		if (!validEntries.length) return { headers: [], rows: [] };
+		const includePermutation = validEntries.some(
+			([, r]) =>
+				Number.isFinite(r.fittedData?.pValue) || typeof r.fittedData?.significant === 'boolean'
+		);
 		let paramHeaders;
 		if (model === 'linear') {
 			paramHeaders = ['slope', 'intercept'];
@@ -332,7 +479,13 @@
 			);
 			paramHeaders = Array.from({ length: maxC }, (_, i) => `c${i}`);
 		}
-		const headers = ['column', 'rmse', 'r2', ...paramHeaders];
+		const headers = [
+			'column',
+			'rmse',
+			'r2',
+			...paramHeaders,
+			...(includePermutation ? ['pValue', 'significant'] : [])
+		];
 		const rows = validEntries.map(([yId, r]) => {
 			const name = getColumnById(Number(yId))?.name ?? String(yId);
 			const row = [name, r.fittedData.rmse, r.fittedData.rSquared];
@@ -345,7 +498,13 @@
 				row.push(r.fittedData.parameters?.a ?? null, r.fittedData.parameters?.b ?? null);
 			} else {
 				for (const c of r.fittedData.parameters?.coeffs ?? []) row.push(c);
-				while (row.length < headers.length) row.push(null);
+				while (row.length < 3 + paramHeaders.length) row.push(null);
+			}
+			if (includePermutation) {
+				row.push(
+					r.fittedData?.pValue ?? null,
+					typeof r.fittedData?.significant === 'boolean' ? r.fittedData.significant : null
+				);
 			}
 			return row;
 		});
@@ -413,6 +572,76 @@
 		</div>
 	{/if}
 
+	<!-- Permutation Test Controls -->
+	<div class="control-input-horizontal">
+		<div class="control-input">
+			<label>
+				<input type="checkbox" bind:checked={enablePermutation} disabled={permutationInProgress} />
+				Permutation test (for significance)
+			</label>
+		</div>
+	</div>
+
+	{#if enablePermutation}
+		<div
+			class="control-input-vertical"
+			style="background-color: var(--color-lightness-95); padding: 10px; border-radius: 4px; margin: 10px 0;"
+		>
+			<div class="control-input">
+				<label>
+					<input
+						type="checkbox"
+						bind:checked={autoNPermutations}
+						disabled={permutationInProgress}
+					/>
+					Auto (based on data size)
+				</label>
+			</div>
+
+			{#if !autoNPermutations}
+				<div class="control-input">
+					<p>Permutations</p>
+					<NumberWithUnits
+						bind:value={nPermutations}
+						min="99"
+						max="9999"
+						step="100"
+						disabled={permutationInProgress}
+					/>
+				</div>
+			{/if}
+
+			<div class="control-input">
+				<p>Statistic</p>
+				<AttributeSelect
+					bind:value={permutationStatistic}
+					options={['rSquared', 'rmse']}
+					optionsDisplay={['R²', 'RMSE']}
+					disabled={permutationInProgress}
+				/>
+			</div>
+
+			<div class="control-input">
+				<p>Seed (for reproducibility)</p>
+				<NumberWithUnits
+					bind:value={permutationSeed}
+					min="1"
+					max="2147483646"
+					step="1"
+					disabled={permutationInProgress}
+				/>
+			</div>
+
+			<button onclick={() => getTrend()} disabled={permutationInProgress} style="margin-top: 10px;">
+				{#if permutationInProgress}
+					Testing... {permutationProgress}%
+				{:else}
+					Run Permutation Test
+				{/if}
+			</button>
+		</div>
+	{/if}
+
 	{#if !hideInputs}
 		<div class="control-input-horizontal">
 			<div class="control-input">
@@ -457,6 +686,20 @@
 					source={'Trend Fit (' + p.args.model + ')'}
 				/>
 			</p>
+			{#if Array.isArray(yResult?.fittedData?.permutedStats) && yResult.fittedData.permutedStats.length > 0 && Number.isFinite(yResult?.fittedData?.pValue)}
+				<p
+					style="color: {yResult.fittedData.significant
+						? '#10b981'
+						: '#f59e0b'}; font-weight: bold;"
+				>
+					Perm p-value: {yResult?.fittedData?.pValue?.toFixed(4)}
+					{#if yResult.fittedData.significant}
+						✓ Significant (p &lt; 0.05)
+					{:else}
+						⚠ Not significant (p ≥ 0.05)
+					{/if}
+				</p>
+			{/if}
 		</div>
 	</div>
 	<div class="control-input-horizontal">
@@ -558,76 +801,86 @@
 <!-- Output Section -->
 <details open>
 	<summary class="section-details-summary">Output</summary>
-	<div class="section-row">
-		<div class="section-content">
-			{#if p.args.valid && p.args.out.trendx != -1}
-				{@const xout = getColumnById(p.args.out.trendx)}
-				<div class="tp-outputs">
-					<div class="tp-output-row">
-						<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
-						<ColumnComponent col={xout} />
-					</div>
-					{#each p.args.yIN ?? [] as yId}
-						{@const outKey = 'trendy_' + yId}
-						{@const yOutId = p.args.out[outKey]}
-						{#if yOutId >= 0}
-							{@const yout = getColumnById(yOutId)}
-							{#if yout}
-								{@const yResult = trendData?.y_results?.[yId]}
-								{@const srcName = getColumnById(Number(yId))?.name ?? yId}
-								<div class="tp-output-row">
-									<span class="tp-output-label">{srcName}</span>
-									<ColumnComponent col={yout} />
-									{#if yResult}
-										{@render trendStats(yResult, srcName)}
-									{/if}
-								</div>
+	{#if permutationInProgress}
+		<LoadingSpinner message="Running permutation test" detail="{permutationProgress}% complete" />
+	{:else}
+		<div class="section-row">
+			<div class="section-content">
+				{#if p.args.valid && p.args.out.trendx != -1}
+					{@const xout = getColumnById(p.args.out.trendx)}
+					<div class="tp-outputs">
+						<div class="tp-output-row">
+							<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
+							<ColumnComponent col={xout} />
+						</div>
+						{#each p.args.yIN ?? [] as yId}
+							{@const outKey = 'trendy_' + yId}
+							{@const yOutId = p.args.out[outKey]}
+							{#if yOutId >= 0}
+								{@const yout = getColumnById(yOutId)}
+								{#if yout}
+									{@const yResult = trendData?.y_results?.[yId]}
+									{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+									{@const permOutKey = 'permstats_' + yId}
+									{@const permOutId = p.args.out[permOutKey]}
+									{@const permOut = permOutId >= 0 ? getColumnById(permOutId) : null}
+									<div class="tp-output-row">
+										<span class="tp-output-label">{srcName}</span>
+										<ColumnComponent col={yout} />
+										{#if permOut}
+											<ColumnComponent col={permOut} />
+										{/if}
+										{#if yResult}
+											{@render trendStats(yResult, srcName)}
+										{/if}
+									</div>
+								{/if}
 							{/if}
-						{/if}
+						{/each}
+					</div>
+				{:else if p.args.valid}
+					<p>Preview:</p>
+					{#each Object.entries(trendData?.y_results ?? {}) as [yId, yResult]}
+						{@const srcName = getColumnById(Number(yId))?.name ?? yId}
+						<div class="div-line"></div>
+						<p><strong>{srcName}</strong></p>
+						{@render trendStats(yResult, srcName)}
 					{/each}
-				</div>
-			{:else if p.args.valid}
-				<p>Preview:</p>
-				{#each Object.entries(trendData?.y_results ?? {}) as [yId, yResult]}
-					{@const srcName = getColumnById(Number(yId))?.name ?? yId}
-					<div class="div-line"></div>
-					<p><strong>{srcName}</strong></p>
-					{@render trendStats(yResult, srcName)}
-				{/each}
-				{@const xData = trendData.outputXData ?? trendData.t}
-				{@const yIds = Object.keys(trendData?.y_results ?? {})}
-				{@const totalRows = xData.length}
-				<Table
-					headers={[
-						'x',
-						...yIds.map(
-							(id) =>
-								(trendData.outputXData ? 'predicted ' : 'fitted ') +
-								(getColumnById(Number(id))?.name ?? id)
-						)
-					]}
-					data={[
-						xData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2)),
-						...yIds.map((id) => {
-							const yr = trendData.y_results[id];
-							const yData = yr.predicted ?? yr.fittedData.fitted;
-							return yData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2));
-						})
-					]}
-				/>
-				<p>
-					Row <NumberWithUnits
-						min={1}
-						max={Math.max(1, totalRows - 5)}
-						step={1}
-						bind:value={previewStart}
-					/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
-				</p>
-			{:else}
-				<p>Need to have valid inputs to create columns.</p>
-			{/if}
+					{@const xData = trendData.outputXData ?? trendData.t}
+					{@const yIds = Object.keys(trendData?.y_results ?? {})}
+					{@const totalRows = xData.length}
+					<Table
+						headers={[
+							'x',
+							...yIds.map(
+								(id) =>
+									(trendData.outputXData ? 'predicted ' : 'fitted ') +
+									(getColumnById(Number(id))?.name ?? id)
+							)
+						]}
+						data={[
+							xData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2)),
+							...yIds.map((id) => {
+								const yr = trendData.y_results[id];
+								const yData = yr.predicted ?? yr.fittedData.fitted;
+								return yData.slice(previewStart - 1, previewStart + 5).map((x) => x.toFixed(2));
+							})
+						]}
+					/>
+					<p>
+						Row <NumberWithUnits
+							min={1}
+							max={Math.max(1, totalRows - 5)}
+							step={1}
+							bind:value={previewStart}
+						/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
+					</p>
+				{:else}
+					<p>Need to have valid inputs to create columns.</p>
+				{/if}
+			</div>
 		</div>
-	</div>
+	{/if}
 </details>
 {#if p.args.valid && p.args.out.trendx != -1}
 	<div class="tp-stat-actions">

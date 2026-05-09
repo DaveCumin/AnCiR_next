@@ -54,7 +54,12 @@
 		core.tables = [];
 		core.plots = [];
 
-		if (onProgress) onProgress(`Loading ${jsonData.data.length} columns…`);
+		const dataEntries = Array.isArray(jsonData?.data) ? jsonData.data : [];
+		const columnCount = jsonData?.rawData
+			? Object.keys(jsonData.rawData).length
+			: dataEntries.length;
+
+		if (onProgress) onProgress(`Loading ${columnCount} columns…`);
 		await yieldFrame();
 
 		// Build the rawData Map once, then push all columns in one synchronous
@@ -67,7 +72,7 @@
 					data.data
 				])
 			);
-			for (const cd of jsonData.data) pushObj(Column.fromJSON(cd));
+			for (const cd of dataEntries) pushObj(Column.fromJSON(cd));
 			for (let i = 0; i < core.data.length; i++) {
 				core.data[i].data = Array.isArray(core.data[i].data) ? core.data[i].id : -1;
 			}
@@ -75,13 +80,13 @@
 			core.rawData = new Map(
 				Object.entries($state.snapshot(jsonData.rawData)).map(([key, value]) => [+key, value])
 			);
-			for (const cd of jsonData.data) pushObj(Column.fromJSON(cd));
+			for (const cd of dataEntries) pushObj(Column.fromJSON(cd));
 		}
 
 		// Re-link shared args for linked processes after deserialization
 		relinkLinkedProcessArgs();
 
-		const totalTables = jsonData.tables.length;
+		const totalTables = jsonData.tables?.length ?? 0;
 		for (let i = 0; i < totalTables; i++) {
 			if (onProgress) onProgress(`Building table ${i + 1} of ${totalTables}…`);
 			await yieldFrame();
@@ -91,7 +96,7 @@
 		// Plots: yield between each push so the canvas re-render is split
 		// across frames. A single batched push freezes the compositor (and the
 		// spinner) for the entire build, which is what we want to avoid here.
-		const totalPlots = jsonData.plots.length;
+		const totalPlots = jsonData.plots?.length ?? 0;
 		for (let i = 0; i < totalPlots; i++) {
 			if (onProgress) onProgress(`Rebuilding plot ${i + 1} of ${totalPlots}…`);
 			await yieldFrame();
@@ -376,7 +381,11 @@
 					{#if jsonData}
 						<div class="preview-table-wrapper">
 							<p>Tables imported: {jsonData.tables.length}</p>
-							<p>Data imported: {jsonData.data.length}</p>
+							<p>
+								Data imported: {Array.isArray(jsonData?.data)
+									? jsonData.data.length
+									: Object.keys(jsonData?.rawData ?? {}).length}
+							</p>
 							<p>Plots imported: {jsonData.plots.length}</p>
 						</div>
 					{/if}

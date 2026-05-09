@@ -22,7 +22,7 @@
 		['offset', { val: 0 }],
 		['multiply', { val: 10 }],
 		['N', { val: 10 }],
-		['seed', { val: 12345 }],
+		['seed', { val: Math.floor(Math.random() * 100000) }],
 		['distribution', { val: 'uniform' }],
 		['out', { result: { val: -1 } }], //needed to set upu the output columns
 		['valid', { val: false }] //needed for the progress step logic

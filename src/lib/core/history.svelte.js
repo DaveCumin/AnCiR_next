@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { tick } from 'svelte';
-import { core, appState, applyPatchToCore, getStoredValue } from './core.svelte';
+import { core, appState, applyPatchToCore, getCoreAsPlainObject } from './core.svelte';
 import * as jsonpatch from 'fast-json-patch';
 
 // History snapshots intentionally exclude core.rawData — the imported
@@ -8,19 +8,26 @@ import * as jsonpatch from 'fast-json-patch';
 // dominated the snapshot cost, and undoing an "import data" action is not
 // a workflow users expect.
 function snapshotCore() {
-	const s = $state.snapshot(core);
+	const s = getCoreAsPlainObject();
 	delete s.rawData;
-	// storedValues holds live getter functions; $state.snapshot drops those,
-	// so resolve each entry to its current static value for diff purposes.
-	const resolved = {};
-	for (const [name, entry] of Object.entries(core.storedValues)) {
-		resolved[name] = {
-			source: entry.source,
-			staticValue: getStoredValue(name)
-		};
-	}
-	s.storedValues = resolved;
 	return s;
+}
+
+function touchHistoryDependencies() {
+	JSON.stringify(
+		{
+			data: core.data,
+			tables: core.tables,
+			plots: core.plots
+		},
+		(key, val) => (typeof val === 'function' ? undefined : val)
+	);
+
+	for (const [name, entry] of Object.entries(core.storedValues)) {
+		name;
+		entry?.source;
+		entry?.staticValue;
+	}
 }
 
 class HistoryManager {
@@ -38,10 +45,9 @@ class HistoryManager {
 		$effect(() => {
 			if (this.isRestoring) return;
 
-			// $state.snapshot walks all reactive reads, so this single call
-			// registers dependencies on every nested $state field — no need
-			// to hand-traverse columns/processes/plots to subscribe.
-			$state.snapshot(core);
+			// Track the serializable core slices needed for history without
+			// touching stored-value getter functions.
+			touchHistoryDependencies();
 
 			const isStructuralChange = this.detectStructuralChange();
 			const debounceMs = isStructuralChange ? 100 : 500;

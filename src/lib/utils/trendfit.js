@@ -2,6 +2,7 @@
 // Trend-fitting algorithms — extracted so they can be reused outside TrendFit.svelte.
 
 import { linearRegression } from '$lib/components/plotbits/helpers/wrangleData.js';
+import { permutationTestAsync } from './permutationTest.js';
 
 function _multiplyMatrices(A, B) {
 	const rows = A.length;
@@ -71,15 +72,10 @@ function _computeRSquared(y, fitted) {
 }
 
 /**
- * Fit a trend model to x/y arrays.
- *
- * @param {number[]} x         - x values (hours or arbitrary numeric)
- * @param {number[]} y         - y values
- * @param {string}   model     - 'linear' | 'exponential' | 'logarithmic' | 'polynomial'
- * @param {number}   polyDegree - only used when model === 'polynomial'
- * @returns {{ parameters: object, fitted: number[], rmse: number, rSquared: number }}
+ * Internal fit function (no permutation test)
+ * @private
  */
-export function fitTrend(x, y, model, polyDegree = 2) {
+function _fitTrendInternal(x, y, model, polyDegree = 2) {
 	let parameters, fitted, rSquared;
 	if (model === 'linear') {
 		const reg = linearRegression(x, y);
@@ -106,10 +102,69 @@ export function fitTrend(x, y, model, polyDegree = 2) {
 		fitted = x.map((xi) => _evaluatePolynomial(coeffs, xi));
 		rSquared = _computeRSquared(y, fitted);
 	}
-	const rmse = Math.sqrt(
-		fitted.reduce((sum, fi, i) => sum + Math.pow(y[i] - fi, 2), 0) / x.length
-	);
+	const rmse = Math.sqrt(fitted.reduce((sum, fi, i) => sum + Math.pow(y[i] - fi, 2), 0) / x.length);
 	return { parameters, fitted, rmse, rSquared };
+}
+
+/**
+ * Fit a trend model to x/y arrays.
+ *
+ * @param {number[]} x         - x values (hours or arbitrary numeric)
+ * @param {number[]} y         - y values
+ * @param {string}   model     - 'linear' | 'exponential' | 'logarithmic' | 'polynomial'
+ * @param {number|Object}   polyDegree - polynomial degree (default: 2), or options object for permutation test
+ * @param {Object}   options   - optional {permuteTest, nPermutations, seed, testStatistic, onProgress}
+ * @returns {Promise<Object>|Object} result with {parameters, fitted, rmse, rSquared, [pValue, significant]}
+ *
+ * If options.permuteTest is true, returns a Promise. Otherwise returns synchronously.
+ */
+export async function fitTrend(x, y, model, polyDegree = 2, options = {}) {
+	// Handle case where polyDegree is actually an options object
+	if (typeof polyDegree === 'object' && polyDegree !== null) {
+		options = polyDegree;
+		polyDegree = options.polyDegree || 2;
+	}
+
+	const result = _fitTrendInternal(x, y, model, polyDegree);
+
+	// Optional permutation test
+	if (options.permuteTest) {
+		const { testStatistic = 'rSquared', nPermutations = 999, seed, onProgress } = options;
+
+		const permResult = await permutationTestAsync(
+			x,
+			y,
+			(xp, yp) => _fitTrendInternal(xp, yp, model, polyDegree),
+			{
+				statistic: testStatistic,
+				nPermutations,
+				seed,
+				onProgress
+			}
+		);
+
+		result.pValue = permResult.pValue;
+		result.significant = permResult.significant;
+		result.permutedStats = permResult.permutedStats;
+		result.permutationSeed = permResult.seed;
+		result.permutationNPermutations = permResult.nPermutations;
+	}
+
+	return result;
+}
+
+/**
+ * Fit a trend model synchronously (no permutation test)
+ * Use this when you don't need permutation testing.
+ *
+ * @param {number[]} x         - x values (hours or arbitrary numeric)
+ * @param {number[]} y         - y values
+ * @param {string}   model     - 'linear' | 'exponential' | 'logarithmic' | 'polynomial'
+ * @param {number}   polyDegree - polynomial degree (default: 2)
+ * @returns {Object} result with {parameters, fitted, rmse, rSquared}
+ */
+export function fitTrendSync(x, y, model, polyDegree = 2) {
+	return _fitTrendInternal(x, y, model, polyDegree);
 }
 
 /**

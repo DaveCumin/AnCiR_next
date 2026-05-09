@@ -109,9 +109,24 @@
 		}
 
 		static fromJSON(json, parent) {
+			// Only feed the refId of the wrapper columns through Column.fromJSON.
+			// The wrapper is meant to be a thin reference to an underlying column;
+			// passing the saved `type`/`name`/`originTime_ms`/etc. would cause
+			// Object.assign in Column's constructor to silently overwrite the
+			// $derived getters with literal values (Svelte 5 allows this), which
+			// freezes the wrapper's view of the underlying column. Reading still
+			// works (the saved literal usually matches), but the live delegation
+			// to refColumn is severed — including the `customName` side-effect in
+			// the `name` derived that other code (and the data hash) relies on.
+			// Behavioural symptom: scatterplots loaded from JSON sometimes render
+			// blank until the data series is removed and re-added (which goes
+			// through `new ColumnClass({ refId })` and keeps the derivations
+			// intact).
+			const slimX = json.x?.refId != null ? { refId: json.x.refId } : json.x;
+			const slimY = json.y?.refId != null ? { refId: json.y.refId } : json.y;
 			return new ScatterDataclass(parent, {
-				x: json.x,
-				y: json.y,
+				x: slimX,
+				y: slimY,
 				label: json.label,
 				yAxis: json.yAxis,
 				line: LineClass.fromJSON(json.line),
