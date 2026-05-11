@@ -53,7 +53,83 @@ vi.mock('$lib/core/Process.svelte', () => ({
 	getLinkedProcesses: () => []
 }));
 
+// Minimal stubs for Scatterplot's heavyweight plotbit imports so the
+// module can load in a test context without pulling in d3 + UI deps.
+vi.mock('$lib/components/plotbits/Axis.svelte', () => ({
+	default: {},
+	AxisClass: class {
+		constructor(json) {
+			Object.assign(this, json ?? {});
+		}
+		toJSON() {
+			return {};
+		}
+		static fromJSON(json) {
+			return new this(json);
+		}
+	}
+}));
+vi.mock('$lib/components/plotbits/Line.svelte', () => ({
+	default: {},
+	LineClass: class {
+		constructor(json, parent) {
+			Object.assign(this, json ?? {});
+			this.parentData = parent;
+			this.draw = json?.draw ?? true;
+		}
+		toJSON() {
+			return {};
+		}
+		static fromJSON(json) {
+			return new this(json);
+		}
+	}
+}));
+vi.mock('$lib/components/plotbits/Points.svelte', () => ({
+	default: {},
+	PointsClass: class {
+		constructor(json, parent) {
+			Object.assign(this, json ?? {});
+			this.parentData = parent;
+			this.draw = json?.draw ?? true;
+		}
+		toJSON() {
+			return {};
+		}
+		static fromJSON(json) {
+			return new this(json);
+		}
+	}
+}));
+vi.mock('$lib/plots/Scatterplot/NightBand.svelte', () => ({
+	default: {},
+	NightBandClass: class {
+		constructor(parent, json) {
+			Object.assign(this, json ?? {});
+		}
+		toJSON() {
+			return {};
+		}
+		static fromJSON(parent, json) {
+			return new this(parent, json);
+		}
+	}
+}));
+vi.mock('$lib/components/plotbits/helpers/wrangleData.js', () => ({
+	min: (a) => Math.min(...a),
+	max: (a) => Math.max(...a)
+}));
+vi.mock('$lib/components/plotbits/helpers/tooltipHelpers.js', () => ({
+	findNearestY: () => null,
+	bindAltTooltipToggle: () => {}
+}));
+vi.mock('$lib/components/views/ControlDisplay.svelte', () => ({
+	default: {},
+	dataSettingsScrollTo: () => {}
+}));
+
 import { Column as ColumnClass } from '$lib/core/Column.svelte';
+import { ScatterDataclass } from '$lib/plots/Scatterplot/Scatterplot.svelte';
 
 beforeEach(() => {
 	fakeCore.data.length = 0;
@@ -135,5 +211,77 @@ describe('Loading a saved scatter with time + number series (testJSON shape)', (
 		expect(Number.isFinite(lo)).toBe(true);
 		expect(Number.isFinite(hi)).toBe(true);
 		expect(hi).toBeGreaterThan(lo);
+	});
+});
+
+describe('ScatterDataclass.fromJSON preserves serialised wrapper state', () => {
+	it('keeps the saved wrapper id so downstream references stay stable', () => {
+		fakeCore.rawData.set(0, [0, 1, 2]);
+		fakeCore.data.push(
+			ColumnClass.fromJSON({ id: 0, name: 'src', data: 0, type: 'number' })
+		);
+
+		const parent = { data: [] };
+		const savedScatterData = {
+			x: { id: 200, refId: 0, name: 'src*', type: 'number', processes: [] },
+			y: { id: 201, refId: 0, name: 'src*', type: 'number', processes: [] },
+			label: 'd1',
+			yAxis: 'left',
+			line: {},
+			points: {}
+		};
+
+		const sd = ScatterDataclass.fromJSON(savedScatterData, parent);
+		expect(sd.x.id).toBe(200);
+		expect(sd.y.id).toBe(201);
+	});
+
+	it('keeps wrapper-column processes that were attached in the plot', () => {
+		// Underlying source column the wrapper points at.
+		fakeCore.rawData.set(0, [1, 2, 3, 4]);
+		fakeCore.data.push(
+			ColumnClass.fromJSON({ id: 0, name: 'src', data: 0, type: 'number' })
+		);
+
+		const parent = { data: [] };
+		const savedScatterData = {
+			x: {
+				id: 300,
+				refId: 0,
+				name: 'src*',
+				type: 'number',
+				processes: [
+					{ id: 9001, name: 'normalize', args: { mode: 'zscore' } }
+				]
+			},
+			y: {
+				id: 301,
+				refId: 0,
+				name: 'src*',
+				type: 'number',
+				processes: [
+					{ id: 9002, name: 'normalize', args: { mode: 'minmax' } },
+					{ id: 9003, name: 'detrend', args: {} }
+				]
+			},
+			label: 'd1',
+			yAxis: 'left',
+			line: {},
+			points: {}
+		};
+
+		const sd = ScatterDataclass.fromJSON(savedScatterData, parent);
+
+		// Regression guard: 32.6 introduced a slim that stripped wrapper JSON
+		// down to `{refId}`, silently dropping every saved process. Anything
+		// the user attached to plot columns (filter, normalize, detrend, etc.)
+		// vanished on reload.
+		expect(sd.x.processes).toHaveLength(1);
+		expect(sd.x.processes[0].name).toBe('normalize');
+		expect(sd.x.processes[0].args).toEqual({ mode: 'zscore' });
+
+		expect(sd.y.processes).toHaveLength(2);
+		expect(sd.y.processes.map((p) => p.name)).toEqual(['normalize', 'detrend']);
+		expect(sd.y.processes[0].args).toEqual({ mode: 'minmax' });
 	});
 });

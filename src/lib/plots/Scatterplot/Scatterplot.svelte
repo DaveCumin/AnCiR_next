@@ -18,7 +18,7 @@
 	export const Scatterplot_controlHeaders = ['Properties', 'Data', 'Bands'];
 	export const Scatterplot_displayName = 'Scatterplot';
 
-	class ScatterDataclass {
+	export class ScatterDataclass {
 		parentPlot = $state();
 		x = $state();
 		y = $state();
@@ -109,7 +109,7 @@
 		}
 
 		static fromJSON(json, parent) {
-			// Only feed the refId of the wrapper columns through Column.fromJSON.
+			// Only feed refId-safe fields of wrapper columns through Column.fromJSON.
 			// The wrapper is meant to be a thin reference to an underlying column;
 			// passing the saved `type`/`name`/`originTime_ms`/etc. would cause
 			// Object.assign in Column's constructor to silently overwrite the
@@ -122,8 +122,20 @@
 			// blank until the data series is removed and re-added (which goes
 			// through `new ColumnClass({ refId })` and keeps the derivations
 			// intact).
-			const slimX = json.x?.refId != null ? { refId: json.x.refId } : json.x;
-			const slimY = json.y?.refId != null ? { refId: json.y.refId } : json.y;
+			//
+			// `id` is consumed by Column.fromJSON before Object.assign (passed as
+			// the 2nd ctor arg), and `processes` is rebuilt after the constructor
+			// runs, so both bypass the derived-override hazard and must be
+			// preserved — otherwise plot-column processes (filter, normalize,
+			// detrend, etc.) silently vanish on reload, and wrapper ids reshuffle.
+			const slimX =
+				json.x?.refId != null
+					? { id: json.x.id, refId: json.x.refId, processes: json.x.processes }
+					: json.x;
+			const slimY =
+				json.y?.refId != null
+					? { id: json.y.id, refId: json.y.refId, processes: json.y.processes }
+					: json.y;
 			return new ScatterDataclass(parent, {
 				x: slimX,
 				y: slimY,
