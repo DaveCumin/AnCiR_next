@@ -21,7 +21,7 @@
 	class="nav-btn"
 	disabled={!history.canUndo}
 	onclick={() => history.undo()}
-	{...tooltip(`Undo${history.canUndo ? ` (${history.undoCount} step${history.undoCount > 1 ? 's' : ''})` : ''}`)}
+	{...tooltip(`Undo (Cmd/Ctrl+Z)${history.canUndo ? ` — ${history.undoCount} step${history.undoCount > 1 ? 's' : ''}` : ''}`)}
 >
 	<span class="glyph" aria-hidden="true">↶</span>
 </button>
@@ -31,7 +31,7 @@
 	class="nav-btn"
 	disabled={!history.canRedo}
 	onclick={() => history.redo()}
-	{...tooltip(`Redo${history.canRedo ? ` (${history.redoCount} step${history.redoCount > 1 ? 's' : ''})` : ''}`)}
+	{...tooltip(`Redo (Cmd/Ctrl+Shift+Z)${history.canRedo ? ` — ${history.redoCount} step${history.redoCount > 1 ? 's' : ''}` : ''}`)}
 >
 	<span class="glyph" aria-hidden="true">↷</span>
 </button>

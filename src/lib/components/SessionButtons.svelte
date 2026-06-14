@@ -47,7 +47,7 @@
 	type="button"
 	class="nav-btn"
 	onclick={exportJson}
-	{...tooltip('Save session to file')}
+	{...tooltip('Save session to file (Cmd/Ctrl+S)')}
 >
 	<Icon name="disk" />
 </button>
@@ -56,7 +56,7 @@
 	type="button"
 	class="nav-btn"
 	onclick={() => fileInput?.click()}
-	{...tooltip('Load session from file')}
+	{...tooltip('Load session from file (Cmd/Ctrl+O)')}
 >
 	<Icon name="add-file" />
 </button>
