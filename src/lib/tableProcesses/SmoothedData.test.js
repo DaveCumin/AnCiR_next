@@ -15,8 +15,8 @@ beforeEach(() => {
 const preview = { smoothedx: -1 };
 
 describe('smootheddata', () => {
-	it('returns invalid when inputs are -1', () => {
-		const [, valid] = smootheddata({
+	it('returns invalid when inputs are -1', async () => {
+		const [, valid] = await smootheddata({
 			xIN: -1,
 			yIN: -1,
 			smootherType: 'moving',
@@ -27,12 +27,12 @@ describe('smootheddata', () => {
 		expect(valid).toBe(false);
 	});
 
-	it('moving average smooths a noisy signal', () => {
+	it('moving average smooths a noisy signal', async () => {
 		const x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 		const y = [10, 11, 9, 10, 11, 9, 10, 11, 9, 10];
 		mockColumns[1] = { type: 'number', getData: () => x };
 		mockColumns[2] = { type: 'number', getData: () => y };
-		const [result, valid] = smootheddata({
+		const [result, valid] = await smootheddata({
 			xIN: 1,
 			yIN: 2,
 			smootherType: 'moving',
@@ -44,12 +44,12 @@ describe('smootheddata', () => {
 		expect(result.y_results[2]).toHaveLength(y.length);
 	});
 
-	it('output x matches input x', () => {
+	it('output x matches input x', async () => {
 		const x = [0, 1, 2, 3, 4];
 		const y = [5, 6, 5, 6, 5];
 		mockColumns[1] = { type: 'number', getData: () => x };
 		mockColumns[2] = { type: 'number', getData: () => y };
-		const [result] = smootheddata({
+		const [result] = await smootheddata({
 			xIN: 1,
 			yIN: 2,
 			smootherType: 'moving',
