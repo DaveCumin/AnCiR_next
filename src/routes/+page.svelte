@@ -41,6 +41,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import { history } from '$lib/core/history.svelte';
+	import { paramDiffWatcher } from '$lib/core/paramDiffWatcher.svelte.js';
 
 	// import { testjson } from '$lib/test.svelte.js';
 
@@ -51,6 +52,7 @@
 
 	// Initialize history watching (must be in component context)
 	history.init();
+	paramDiffWatcher.init();
 
 	// const timesToTest = ['2025/10/01', '2025/12/01', '2025/13/01'];
 	// console.log('times to test: ', timesToTest);
