@@ -158,26 +158,26 @@ describe('rhythmicityanalysis', () => {
 		preProcesses: []
 	};
 
-	it('returns invalid when inputs are missing', () => {
-		const [, valid] = rhythmicityanalysis({ ...baseArgs });
+	it('returns invalid when inputs are missing', async () => {
+		const [, valid] = await rhythmicityanalysis({ ...baseArgs });
 		expect(valid).toBe(false);
 	});
 
-	it('returns invalid when data has fewer than 3 points', () => {
+	it('returns invalid when data has fewer than 3 points', async () => {
 		mockColumns[1] = { type: 'number', getData: () => [0, 1] };
 		mockColumns[2] = { getData: () => [0.1, 0.2] };
-		const [, valid] = rhythmicityanalysis({ ...baseArgs, xIN: 1, yIN: [2] });
+		const [, valid] = await rhythmicityanalysis({ ...baseArgs, xIN: 1, yIN: [2] });
 		expect(valid).toBe(false);
 	});
 
-	it('runs periodogram and picks peak near 24h', () => {
+	it('runs periodogram and picks peak near 24h', async () => {
 		const n = 100;
 		const t = Array.from({ length: n }, (_, i) => i);
 		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
 
-		const [result, valid] = rhythmicityanalysis({
+		const [result, valid] = await rhythmicityanalysis({
 			...baseArgs,
 			xIN: 1,
 			yIN: [2],
@@ -191,13 +191,18 @@ describe('rhythmicityanalysis', () => {
 		expect(r.stats.peak_power).toBeCloseTo(10, 1);
 	});
 
-	it('runs fft and populates frequency/period/magnitude/phase arrays', () => {
+	it('runs fft and populates frequency/period/magnitude/phase arrays', async () => {
 		const t = Array.from({ length: 48 }, (_, i) => i);
 		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
 
-		const [result, valid] = rhythmicityanalysis({ ...baseArgs, xIN: 1, yIN: [2], analysis: 'fft' });
+		const [result, valid] = await rhythmicityanalysis({
+			...baseArgs,
+			xIN: 1,
+			yIN: [2],
+			analysis: 'fft'
+		});
 		expect(valid).toBe(true);
 		const r = result.y_results[2];
 		expect(r.outputs.frequency).toEqual([0, 1 / 24, 1 / 12, 1 / 8]);
@@ -211,13 +216,13 @@ describe('rhythmicityanalysis', () => {
 		expect(r.stats.peak_magnitude).toBe(5);
 	});
 
-	it('runs correlogram and picks peak correlation away from lag 0', () => {
+	it('runs correlogram and picks peak correlation away from lag 0', async () => {
 		const t = Array.from({ length: 48 }, (_, i) => i);
 		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
 
-		const [result, valid] = rhythmicityanalysis({
+		const [result, valid] = await rhythmicityanalysis({
 			...baseArgs,
 			xIN: 1,
 			yIN: [2],
@@ -232,7 +237,7 @@ describe('rhythmicityanalysis', () => {
 		expect(r.stats.peak_correlation).toBe(0.8);
 	});
 
-	it('handles multiple Y inputs independently', () => {
+	it('handles multiple Y inputs independently', async () => {
 		const t = Array.from({ length: 48 }, (_, i) => i);
 		const y1 = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
 		const y2 = t.map((ti) => Math.sin((2 * Math.PI * ti) / 24));
@@ -240,7 +245,7 @@ describe('rhythmicityanalysis', () => {
 		mockColumns[2] = { getData: () => y1 };
 		mockColumns[3] = { getData: () => y2 };
 
-		const [result, valid] = rhythmicityanalysis({
+		const [result, valid] = await rhythmicityanalysis({
 			...baseArgs,
 			xIN: 1,
 			yIN: [2, 3],
@@ -253,13 +258,13 @@ describe('rhythmicityanalysis', () => {
 		expect(result.statKeys).toEqual(['peak_period', 'peak_power']);
 	});
 
-	it('skips rows where x or y is NaN', () => {
+	it('skips rows where x or y is NaN', async () => {
 		const t = [0, 1, NaN, 3, 4, 5, 6, 7, 8, 9];
 		const y = [0.1, 0.2, 0.3, NaN, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
 
-		const [, valid] = rhythmicityanalysis({
+		const [, valid] = await rhythmicityanalysis({
 			...baseArgs,
 			xIN: 1,
 			yIN: [2],
@@ -304,7 +309,7 @@ describe('rhythmicityanalysis — collected mode (shared X + per-Y primary Y)', 
 		preProcesses: []
 	};
 
-	it('writes one shared X and one Y per input (periodogram)', () => {
+	it('writes one shared X and one Y per input (periodogram)', async () => {
 		const t = Array.from({ length: 48 }, (_, i) => i);
 		const y1 = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
 		const y2 = t.map((ti) => Math.sin((2 * Math.PI * ti) / 24));
@@ -316,7 +321,7 @@ describe('rhythmicityanalysis — collected mode (shared X + per-Y primary Y)', 
 		mockColumns[101] = { data: 101, type: 'number' };
 		mockColumns[102] = { data: 102, type: 'number' };
 
-		const [, valid] = rhythmicityanalysis({
+		const [, valid] = await rhythmicityanalysis({
 			...baseArgs,
 			xIN: 1,
 			yIN: [2, 3],
@@ -336,7 +341,7 @@ describe('rhythmicityanalysis — collected mode (shared X + per-Y primary Y)', 
 		expect(rawDataStore.size).toBe(3);
 	});
 
-	it('writes period (not frequency) as shared X for fft', () => {
+	it('writes period (not frequency) as shared X for fft', async () => {
 		const t = Array.from({ length: 48 }, (_, i) => i);
 		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
 		mockColumns[1] = { type: 'number', getData: () => t };
@@ -344,7 +349,7 @@ describe('rhythmicityanalysis — collected mode (shared X + per-Y primary Y)', 
 		mockColumns[100] = { data: 100, type: 'number' };
 		mockColumns[101] = { data: 101, type: 'number' };
 
-		const [, valid] = rhythmicityanalysis({
+		const [, valid] = await rhythmicityanalysis({
 			...baseArgs,
 			xIN: 1,
 			yIN: [2],
@@ -360,7 +365,7 @@ describe('rhythmicityanalysis — collected mode (shared X + per-Y primary Y)', 
 		expect(rawDataStore.get(101)).toEqual([0, 5, 1, 0.5]);
 	});
 
-	it('writes lag/correlation as shared X + per-Y for correlogram', () => {
+	it('writes lag/correlation as shared X + per-Y for correlogram', async () => {
 		const t = Array.from({ length: 48 }, (_, i) => i);
 		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
 		mockColumns[1] = { type: 'number', getData: () => t };
@@ -368,7 +373,7 @@ describe('rhythmicityanalysis — collected mode (shared X + per-Y primary Y)', 
 		mockColumns[100] = { data: 100, type: 'number' };
 		mockColumns[101] = { data: 101, type: 'number' };
 
-		const [, valid] = rhythmicityanalysis({
+		const [, valid] = await rhythmicityanalysis({
 			...baseArgs,
 			xIN: 1,
 			yIN: [2],
@@ -380,7 +385,7 @@ describe('rhythmicityanalysis — collected mode (shared X + per-Y primary Y)', 
 		expect(rawDataStore.get(101)).toEqual([1, -0.2, 0.8, -0.1]);
 	});
 
-	it('writes both standalone and collected keys when both are present', () => {
+	it('writes both standalone and collected keys when both are present', async () => {
 		const t = Array.from({ length: 48 }, (_, i) => i);
 		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
 		mockColumns[1] = { type: 'number', getData: () => t };
@@ -390,7 +395,7 @@ describe('rhythmicityanalysis — collected mode (shared X + per-Y primary Y)', 
 		mockColumns[100] = { data: 100, type: 'number' };
 		mockColumns[101] = { data: 101, type: 'number' };
 
-		const [, valid] = rhythmicityanalysis({
+		const [, valid] = await rhythmicityanalysis({
 			...baseArgs,
 			xIN: 1,
 			yIN: [2],

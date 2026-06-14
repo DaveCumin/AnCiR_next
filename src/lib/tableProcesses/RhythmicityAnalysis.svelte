@@ -3,9 +3,12 @@
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
-	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
 	import { computeFFT } from '$lib/utils/fft.js';
 	import { computeAutocorrelation } from '$lib/utils/correlogram.js';
+	import { runComputeTask } from '$lib/workers/workerPool.js';
+	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
+	// Side-effect: registers 'periodogram.compute' on the main thread so sync fallback works.
+	import { periodogramCompute } from '$lib/utils/periodogram.worker-task.js';
 
 	const displayName = 'Rhythmicity Analysis';
 
@@ -98,7 +101,7 @@
 		return [];
 	}
 
-	function runAnalysis(tt, yy, args) {
+	async function runAnalysis(tt, yy, args) {
 		const outputs = {};
 		const stats = {};
 		for (const k of getOutputKeys(args)) outputs[k] = [];
@@ -107,7 +110,7 @@
 		if (tt.length < 3) return { outputs, stats };
 
 		if (args.analysis === 'periodogram') {
-			const res = runPeriodogramCalculation({
+			const params = {
 				method: args.pgMethod ?? 'Lomb-Scargle',
 				xData: tt,
 				yData: yy,
@@ -116,7 +119,10 @@
 				periodSteps: args.periodStep,
 				binSize: args.pgBinSize ?? 0.25,
 				chiSquaredAlpha: args.pgAlpha ?? 0.05
-			});
+			};
+			const res = shouldUseWorkers({ inputLen: tt.length })
+				? await runComputeTask('periodogram.compute', params)
+				: periodogramCompute(params);
 			outputs.period = res.x ?? [];
 			outputs.power = res.y ?? [];
 			if (args.pgMethod === 'Chi-squared') outputs.threshold = res.threshold ?? [];
@@ -174,7 +180,7 @@
 		return { outputs, stats };
 	}
 
-	export function rhythmicityanalysis(argsIN) {
+	export async function rhythmicityanalysis(argsIN) {
 		const xIN = argsIN.xIN;
 		let yINs = argsIN.yIN;
 		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
@@ -210,7 +216,7 @@
 			}
 			if (tt.length < 3) continue;
 
-			const { outputs, stats } = runAnalysis(tt, yy, argsIN);
+			const { outputs, stats } = await runAnalysis(tt, yy, argsIN);
 			y_results[yId] = { outputs, stats };
 			if (outputKeys.some((k) => (outputs[k]?.length ?? 0) > 0)) anyValid = true;
 		}
@@ -395,9 +401,13 @@
 	function recompute() {
 		calculating = true;
 		const token = ++_calcToken;
-		setTimeout(() => {
+		setTimeout(async () => {
 			if (token !== _calcToken) return;
-			[result, p.args.valid] = rhythmicityanalysis(p.args);
+			const promise = untrack(() => rhythmicityanalysis(p.args));
+			const [data, valid] = await promise;
+			if (token !== _calcToken) return; // re-check after await
+			result = data;
+			p.args.valid = valid;
 			calculating = false;
 			lastHash = getHash;
 		}, 0);
