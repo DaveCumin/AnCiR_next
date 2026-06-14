@@ -183,10 +183,16 @@
 				}
 
 				//--------------------------
-				// - now run the process
-				appConsts.tableProcessMap.get(this.name).func(this.args);
+				// - now run the process (fire-and-forget: result lands via Svelte reactivity)
+				this.doProcess();
 				//--------------------------
 			}
+		}
+
+		async doProcess() {
+			const entry = appConsts.tableProcessMap.get(this.name);
+			if (!entry?.func) return null;
+			return await entry.func(this.args);
 		}
 
 		toJSON() {
