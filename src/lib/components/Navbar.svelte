@@ -7,6 +7,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import Setting from '$lib/components/iconActions/Setting.svelte';
 	import About from './views/modals/About.svelte';
+	import UndoRedoButtons from './UndoRedoButtons.svelte';
 
 	let gearBtnRef;
 	let showSetting = $state(false);
@@ -100,6 +101,7 @@
 	</div>
 
 	<div class="icon-container">
+		<UndoRedoButtons {handleTooltip} />
 		<button
 			bind:this={gearBtnRef}
 			onclick={openDropdown}
