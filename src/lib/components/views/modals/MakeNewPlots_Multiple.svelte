@@ -3,8 +3,9 @@
 	import ProgressIndicator from '$lib/components/ProgressIndicator.svelte';
 
 	import { core, pushObj, appConsts, appState, snapToGrid } from '$lib/core/core.svelte';
-	import { Plot, deselectAllPlots } from '$lib/core/Plot.svelte';
+	import { deselectAllPlots } from '$lib/core/Plot.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { mutationService } from '$lib/core/mutationService.js';
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
@@ -88,7 +89,7 @@
 
 			console.log('making new plot with x,y: ', xCol, yCols[i]);
 
-			const newPlot = new Plot({
+			const newPlot = mutationService.addPlot({
 				name: getColumnById(yCols[i]).name,
 				type: plotType,
 				x: snapToGrid(col * (width + padding) + (col + 1) * padding + container.scrollLeft),
@@ -104,8 +105,11 @@
 			if (!(plotType === 'boxplot' && Number(xCol) < 0)) {
 				dataIn.x = { refId: Number(xCol) };
 			}
-			newPlot.plot.addData(dataIn);
-			core.plots.push(newPlot);
+			// addData is per-plot-type and not captured by the addPlot op's plot snapshot;
+			// undo removes the entire plot, but redo will replay the addPlot op without the
+			// dataIn wiring. Migrating the data wiring into the snapshot would require per-plot-type
+			// fromJSON support for raw refs and is deferred to a follow-up.
+			newPlot?.plot?.addData(dataIn);
 
 			await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
 		}
