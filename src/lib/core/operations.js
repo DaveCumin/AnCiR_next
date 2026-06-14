@@ -5,6 +5,8 @@ import { core } from './core.svelte.js';
 import { Plot } from './Plot.svelte';
 import { Column } from './Column.svelte';
 import { Process } from './Process.svelte';
+import { Table } from './Table.svelte';
+import { TableProcess } from './TableProcess.svelte';
 
 /**
  * @typedef {Object} OpAddColumn
@@ -196,6 +198,16 @@ function applyForward(op) {
             return op_removeProcess(op);
         case 'setProcessArg':
             return op_setProcessArg(op);
+        case 'addTable':
+            return op_addTable(op);
+        case 'removeTable':
+            return op_removeTable(op);
+        case 'addTableProcess':
+            return op_addTableProcess(op);
+        case 'removeTableProcess':
+            return op_removeTableProcess(op);
+        case 'setTableProcessArg':
+            return op_setTableProcessArg(op);
         default:
             throw new Error(`applyOp: unknown kind '${op?.kind}'`);
     }
@@ -332,6 +344,96 @@ function op_setProcessArg(op) {
         kind: 'setProcessArg',
         columnId: op.columnId,
         processId: op.processId,
+        key: op.key,
+        value: before
+    });
+}
+
+function snapshotTable(table) {
+    return JSON.parse(JSON.stringify(table, (k, v) => (typeof v === 'function' ? undefined : v)));
+}
+
+function op_addTable(op) {
+    const table = Table.fromJSON(op.tableData);
+    core.tables.push(table);
+    return pair(
+        { kind: 'addTable', tableData: snapshotTable(table) },
+        { kind: 'removeTable', id: table.id }
+    );
+}
+
+function op_removeTable(op) {
+    const idx = core.tables.findIndex((t) => t.id === op.id);
+    if (idx < 0) return null;
+    const before = snapshotTable(core.tables[idx]);
+    core.tables.splice(idx, 1);
+    return pair(op, { kind: 'addTable', tableData: before });
+}
+
+function op_addTableProcess(op) {
+    const table = core.tables.find((t) => t.id === op.tableId);
+    if (!table) return null;
+    // TableProcess constructor expects { name, args, ... } in dataIN. It RUNS func()
+    // during construction (Phase 1 made this an async fire-and-forget via doProcess).
+    const tp = new TableProcess(
+        { name: op.tpType, args: op.args ?? {} },
+        table,
+        op.tpId ?? null
+    );
+    if (op.index != null && op.index >= 0 && op.index < table.processes.length) {
+        table.processes.splice(op.index, 0, tp);
+    } else {
+        table.processes.push(tp);
+    }
+    return pair(
+        {
+            kind: 'addTableProcess',
+            tableId: op.tableId,
+            tpType: op.tpType,
+            tpId: tp.id,
+            args: JSON.parse(JSON.stringify(op.args ?? {})),
+            ...(op.index != null && { index: op.index })
+        },
+        { kind: 'removeTableProcess', tableId: op.tableId, tpId: tp.id }
+    );
+}
+
+function op_removeTableProcess(op) {
+    const table = core.tables.find((t) => t.id === op.tableId);
+    if (!table) return null;
+    const idx = table.processes.findIndex((tp) => tp.id === op.tpId);
+    if (idx < 0) return null;
+    const before = table.processes[idx];
+    const snap = {
+        tpType: before.name,
+        tpId: before.id,
+        args: JSON.parse(JSON.stringify(before.args ?? {})),
+        index: idx
+    };
+    table.processes.splice(idx, 1);
+    return pair(op, {
+        kind: 'addTableProcess',
+        tableId: op.tableId,
+        tpType: snap.tpType,
+        tpId: snap.tpId,
+        args: snap.args,
+        index: snap.index
+    });
+}
+
+function op_setTableProcessArg(op) {
+    const table = core.tables.find((t) => t.id === op.tableId);
+    if (!table) return null;
+    const tp = table.processes.find((x) => x.id === op.tpId);
+    if (!tp) return null;
+    if (!tp.args) tp.args = {};
+    const before = tp.args[op.key];
+    if (before === op.value) return null;
+    tp.args[op.key] = op.value;
+    return pair(op, {
+        kind: 'setTableProcessArg',
+        tableId: op.tableId,
+        tpId: op.tpId,
         key: op.key,
         value: before
     });
