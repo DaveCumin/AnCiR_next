@@ -2,8 +2,7 @@
 	// @ts-nocheck
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 
-	import { core } from '$lib/core/core.svelte';
-	import { Plot } from '$lib/core/Plot.svelte';
+	import { mutationService } from '$lib/core/mutationService.js';
 	import { getTableById, exportTable, deleteTable } from '$lib/core/Table.svelte';
 
 	let {
@@ -16,13 +15,17 @@
 	let showModal = $state(false);
 
 	function makeNewTablePlot(id) {
-		core.plots.push(new Plot({ name: 'Data from ' + getTableById(id).name, type: 'tableplot' }));
-		core.plots[core.plots.length - 1].x = 250;
-		core.plots[core.plots.length - 1].y = 250;
-		core.plots[core.plots.length - 1].plot.columnRefs = getTableById(id).columnRefs;
-		core.plots[core.plots.length - 1].plot.showCol = new Array(
-			getTableById(id).columnRefs.length
-		).fill(true);
+		const table = getTableById(id);
+		mutationService.addPlot({
+			name: 'Data from ' + table.name,
+			type: 'tableplot',
+			x: 250,
+			y: 250,
+			plot: {
+				columnRefs: table.columnRefs,
+				showCol: new Array(table.columnRefs.length).fill(true)
+			}
+		});
 	}
 </script>
 
