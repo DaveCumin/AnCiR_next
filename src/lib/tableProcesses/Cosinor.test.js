@@ -32,18 +32,18 @@ beforeEach(() => {
 const preview = { cosinorx: -1, cosinory: -1 };
 
 describe('cosinor', () => {
-	it('returns invalid when inputs are -1', () => {
-		const [, valid] = cosinor({ xIN: -1, yIN: -1, Ncurves: 1, outputX: -1, out: preview, useFixedPeriod: false, fixedPeriod: 24, nHarmonics: 1, alpha: 0.05 });
+	it('returns invalid when inputs are -1', async () => {
+		const [, valid] = await cosinor({ xIN: -1, yIN: -1, Ncurves: 1, outputX: -1, out: preview, useFixedPeriod: false, fixedPeriod: 24, nHarmonics: 1, alpha: 0.05 });
 		expect(valid).toBe(false);
 	});
 
-	it('runs with auto-fit mode and returns valid', () => {
+	it('runs with auto-fit mode and returns valid', async () => {
 		const t = Array.from({ length: 48 }, (_, i) => i);
 		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
 		mockColumns[1] = { type: 'number', getData: () => t, hoursSinceStart: t };
 		mockColumns[2] = { getData: () => y };
 
-		const [, valid] = cosinor({
+		const [, valid] = await cosinor({
 			xIN: 1, yIN: 2, Ncurves: 1, outputX: -1,
 			out: preview, useFixedPeriod: false,
 			fixedPeriod: 24, nHarmonics: 1, alpha: 0.05
@@ -51,13 +51,13 @@ describe('cosinor', () => {
 		expect(valid).toBe(true);
 	});
 
-	it('runs with fixed-period mode and returns valid', () => {
+	it('runs with fixed-period mode and returns valid', async () => {
 		const t = Array.from({ length: 48 }, (_, i) => i);
 		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
 		mockColumns[1] = { type: 'number', getData: () => t, hoursSinceStart: t };
 		mockColumns[2] = { getData: () => y };
 
-		const [, valid] = cosinor({
+		const [, valid] = await cosinor({
 			xIN: 1, yIN: 2, Ncurves: 0, outputX: -1,
 			out: preview, useFixedPeriod: true,
 			fixedPeriod: 24, nHarmonics: 1, alpha: 0.05

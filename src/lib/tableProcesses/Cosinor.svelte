@@ -1,7 +1,11 @@
 <script module>
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-	import { fitCosineCurves, evaluateCosinorAtPoints, fitCosinorFixed } from '$lib/utils/cosinor.js';
+	import { evaluateCosinorAtPoints } from '$lib/utils/cosinor.js';
+	import { runComputeTask } from '$lib/workers/workerPool.js';
+	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
+	// Side-effect: registers 'cosinor.fitMany' on the main thread so sync fallback works.
+	import { cosinorFitMany } from '$lib/utils/cosinor.worker-task.js';
 
 	const displayName = 'Cosinor';
 	const defaults = new Map([
@@ -46,7 +50,7 @@
 		}
 	};
 
-	export function evaluateCosinor(argsIN) {
+	export async function evaluateCosinor(argsIN) {
 		const xIN = argsIN.xIN;
 		let yINs = argsIN.yIN;
 		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
@@ -56,6 +60,25 @@
 		const fixedPeriod = argsIN.fixedPeriod ?? 24;
 		const nHarmonics = argsIN.nHarmonics ?? 1;
 		const alpha = argsIN.alpha ?? 0.05;
+
+		async function fitOne(tt, yy) {
+			const payload = {
+				t: tt,
+				ys: [yy],
+				Ncurves,
+				useFixedPeriod,
+				fixedPeriod,
+				nHarmonics,
+				alpha
+			};
+			let results;
+			if (shouldUseWorkers({ inputLen: tt.length })) {
+				({ results } = await runComputeTask('cosinor.fitMany', payload));
+			} else {
+				({ results } = cosinorFitMany(payload));
+			}
+			return results[0];
+		}
 
 		let result = {
 			t: [],
@@ -123,7 +146,7 @@
 			};
 
 			if (useFixedPeriod) {
-				const fixedResult = fitCosinorFixed(tt, yy, fixedPeriod, nHarmonics, alpha);
+				const fixedResult = await fitOne(tt, yy);
 				if (fixedResult) {
 					const omega = (2 * Math.PI) / fixedPeriod;
 					const xOutData = outputXData ?? tt;
@@ -159,20 +182,22 @@
 					anyValid = true;
 				}
 			} else {
-				const fittedData = fitCosineCurves(tt, yy, Ncurves);
-				const predicted = outputXData
-					? evaluateCosinorAtPoints(fittedData.parameters, outputXData)
-					: null;
+				const fittedData = await fitOne(tt, yy);
+				if (fittedData) {
+					const predicted = outputXData
+						? evaluateCosinorAtPoints(fittedData.parameters, outputXData)
+						: null;
 
-				yResult = {
-					fittedData: { ...fittedData },
-					fixedStats: null,
-					predicted,
-					t: tt,
-					xOutData: outputXData ?? tt,
-					yOutData: predicted ?? fittedData.fitted
-				};
-				if (fittedData.fitted.length > 0) anyValid = true;
+					yResult = {
+						fittedData: { ...fittedData },
+						fixedStats: null,
+						predicted,
+						t: tt,
+						xOutData: outputXData ?? tt,
+						yOutData: predicted ?? fittedData.fitted
+					};
+					if (fittedData.fitted.length > 0) anyValid = true;
+				}
 			}
 
 			result.y_results[yId] = yResult;
@@ -244,8 +269,8 @@
 		}
 	}
 
-	export function cosinor(argsIN) {
-		const [result, anyValid] = evaluateCosinor(argsIN);
+	export async function cosinor(argsIN) {
+		const [result, anyValid] = await evaluateCosinor(argsIN);
 		if (anyValid && argsIN?.out?.cosinorx !== -1) {
 			writeCosinorOutputs(argsIN, result);
 		}
@@ -315,13 +340,15 @@
 			lastHash = getHash; // read before untrack so it's tracked
 			calculating = true;
 			const token = ++_calcToken;
-			setTimeout(() => {
+			setTimeout(async () => {
 				if (token !== _calcToken) return; // superseded by a newer request
-				untrack(() => {
-					previewStart = 1;
-					[cosinorData, p.args.valid] = cosinor(p.args);
-					calculating = false;
-				});
+				previewStart = 1;
+				const promise = untrack(() => cosinor(p.args));
+				const [data, valid] = await promise;
+				if (token !== _calcToken) return; // re-check after await
+				cosinorData = data;
+				p.args.valid = valid;
+				calculating = false;
 			}, 0);
 		}
 	});
@@ -340,9 +367,13 @@
 		previewStart = 1;
 		calculating = true;
 		const token = ++_calcToken;
-		setTimeout(() => {
+		setTimeout(async () => {
 			if (token !== _calcToken) return;
-			[cosinorData, p.args.valid] = cosinor(p.args);
+			const promise = untrack(() => cosinor(p.args));
+			const [data, valid] = await promise;
+			if (token !== _calcToken) return; // re-check after await
+			cosinorData = data;
+			p.args.valid = valid;
 			calculating = false;
 			lastHash = getHash;
 		}, 0);

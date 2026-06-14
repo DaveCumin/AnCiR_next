@@ -26,4 +26,18 @@ describe('cosinor.fitMany worker task', () => {
 		expect(out.results).toHaveLength(1);
 		expect(out.results[0].harmonics[0].amplitude).toBeCloseTo(2, 1);
 	});
+
+	it('returns null for fits that fail (insufficient data)', () => {
+		const fn = getComputeTask('cosinor.fitMany');
+		// Two points: not enough for a fixed cosinor with nHarmonics=1 (needs > 2*1+1 = 3)
+		const out = fn({
+			t: [0, 1],
+			ys: [[0, 1]],
+			useFixedPeriod: true,
+			fixedPeriod: 24,
+			nHarmonics: 1,
+			alpha: 0.05
+		});
+		expect(out.results[0]).toBeNull();
+	});
 });

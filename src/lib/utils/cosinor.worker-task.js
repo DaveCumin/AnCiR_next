@@ -18,7 +18,7 @@ import { registerComputeTask } from '$lib/workers/computeTasks.js';
  * Returns:
  *   { results: Array<...fit result objects...> }
  */
-function cosinorFitMany(args) {
+export function cosinorFitMany(args) {
 	const {
 		t,
 		ys,
@@ -31,9 +31,11 @@ function cosinorFitMany(args) {
 	const results = ys.map((y) => {
 		if (useFixedPeriod) {
 			const r = fitCosinorFixed(t, y, fixedPeriod, nHarmonics, alpha);
+			if (r == null) return null;
 			return { ...r, period: fixedPeriod, valid: r?.valid !== false };
 		}
 		const r = fitCosineCurves(t, y, Ncurves, alpha);
+		if (r == null) return null;
 		return { ...r, valid: r?.valid !== false };
 	});
 	return { results };
