@@ -1,7 +1,7 @@
 import { appState } from '$lib/core/core.svelte.js';
 import { core } from '$lib/core/core.svelte';
-import { Plot } from '$lib/core/Plot.svelte';
 import { addNotification } from '$lib/core/notifications.svelte.js';
+import { mutationService } from '$lib/core/mutationService.js';
 import { tick } from 'svelte';
 
 /**
@@ -42,16 +42,15 @@ export function showDataAsTable(plotId) {
 	const sourcePlot = core.plots[plotId];
 	if (!sourcePlot?.plot || typeof sourcePlot.plot.getDownloadData !== 'function') return;
 
-	const newPlot = new Plot({
+	mutationService.addPlot({
 		name: 'Data: ' + (sourcePlot.name || 'Plot'),
-		type: 'dataview'
+		type: 'dataview',
+		x: sourcePlot.x + 20,
+		y: sourcePlot.y + 20,
+		width: Math.max(sourcePlot.width, 400),
+		height: 300,
+		plot: { sourcePlotId: sourcePlot.id }
 	});
-	newPlot.x = sourcePlot.x + 20;
-	newPlot.y = sourcePlot.y + 20;
-	newPlot.width = Math.max(sourcePlot.width, 400);
-	newPlot.height = 300;
-	newPlot.plot.sourcePlotId = sourcePlot.id;
-	core.plots.push(newPlot);
 }
 
 /**
@@ -63,19 +62,18 @@ export function showDataAsTable(plotId) {
  */
 export function showStaticDataAsTable(name, headers, rows, statsGetter = null) {
 	if (!headers?.length || !rows?.length) return;
-	const newPlot = new Plot({ name, type: 'dataview' });
-	// Place near centre of visible area with a reasonable default size
-	newPlot.x = 80;
-	newPlot.y = 80;
-	newPlot.width = Math.max(400, headers.length * 90);
-	newPlot.height = Math.min(500, 100 + rows.length * 33);
-	newPlot.plot.sourceType = 'static';
-	newPlot.plot.staticHeaders = headers;
-	newPlot.plot.staticRows = rows;
-	if (statsGetter) {
-		newPlot.plot.statsGetter = statsGetter;
-	}
-	core.plots.push(newPlot);
+	const newPlot = mutationService.addPlot({
+		name,
+		type: 'dataview',
+		x: 80,
+		y: 80,
+		width: Math.max(400, headers.length * 90),
+		height: Math.min(500, 100 + rows.length * 33),
+		plot: { sourceType: 'static', staticHeaders: headers, staticRows: rows }
+	});
+	// statsGetter is intentionally non-serialised (functions don't survive snapshots);
+	// attach post-creation so the live reactive stats path still works.
+	if (newPlot && statsGetter) newPlot.plot.statsGetter = statsGetter;
 }
 
 /**
