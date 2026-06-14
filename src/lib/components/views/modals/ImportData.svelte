@@ -44,6 +44,7 @@
 	let enspirePlateInfoRows = $derived(enspireMultiplatePayload?.plateInfoRows ?? 0);
 	let enspireBinnedRows = $derived(enspireMultiplatePayload?.binnedRows ?? 0);
 	let skipLines = $state(0);
+	let sortBy = $state('__time__'); // sentinel: '__none__' | '__time__' | <column name>
 	let error = $state({});
 	let parsedData = $state(null);
 	let errorInfile = $state(false);
@@ -362,6 +363,7 @@
 		previewIN = 50;
 		previewDisplayStart = 1;
 		skipLines = 0;
+		sortBy = '__time__';
 		errorInfile = false;
 		error = {};
 		specialRecognised = false;
@@ -1497,9 +1499,15 @@
 			parsedData = applyDateTimeCombination(parsedData);
 		}
 
-		loadProgress = { stage: 'Loading data', detail: 'Sorting by timestamp…' };
-		await tick();
-		parsedData = sortDataByTimestamp(parsedData);
+		if (sortBy !== '__none__') {
+			const sortLabel = sortBy === '__time__' ? 'timestamp' : sortBy;
+			loadProgress = { stage: 'Loading data', detail: `Sorting by ${sortLabel}…` };
+			await tick();
+			parsedData =
+				sortBy === '__time__'
+					? sortDataByTimestamp(parsedData)
+					: sortDataByColumn(parsedData, sortBy);
+		}
 
 		loadProgress = { stage: 'Loading data', detail: 'Building columns…' };
 		await tick();
@@ -1584,6 +1592,46 @@
 		for (const col of cols) {
 			sorted[col] = indices.map(({ i }) => data[col][i]);
 		}
+		return sorted;
+	}
+
+	/**
+	 * Sort all columns by the given column name. Time-formatted columns parse via
+	 * guessDateofArray + parseUTCStrict; numeric columns sort numerically; otherwise
+	 * lexicographically. Missing values (null / undefined / NaN / unparseable) go LAST.
+	 */
+	function sortDataByColumn(data, sortColName) {
+		if (!sortColName) return data;
+		const cols = Object.keys(data);
+		if (!cols.includes(sortColName)) return data;
+		const values = data[sortColName];
+		const n = values.length;
+
+		const fmt = guessDateofArray(values);
+		const isTime = fmt !== -1 && fmt !== null && fmt !== undefined && fmt !== '' && fmt.length > 0;
+
+		const indices = Array.from({ length: n }, (_, i) => {
+			const raw = values[i];
+			if (raw == null) return { i, key: Infinity, missing: true };
+			if (isTime) {
+				const parsed = parseUTCStrict(raw, fmt);
+				const ms = parsed ? parsed.valueOf() : NaN;
+				return { i, key: isNaN(ms) ? Infinity : ms, missing: isNaN(ms) };
+			}
+			const num = Number(raw);
+			if (!isNaN(num)) return { i, key: num, missing: false };
+			return { i, key: String(raw), missing: false };
+		});
+		indices.sort((a, b) => {
+			if (a.missing && !b.missing) return 1;
+			if (!a.missing && b.missing) return -1;
+			if (typeof a.key === 'string' || typeof b.key === 'string') {
+				return String(a.key).localeCompare(String(b.key));
+			}
+			return a.key - b.key;
+		});
+		const sorted = {};
+		for (const col of cols) sorted[col] = indices.map(({ i }) => data[col][i]);
 		return sorted;
 	}
 
@@ -2069,6 +2117,16 @@
 									<div class="control-input">
 										<p>Skip lines</p>
 										<NumberWithUnits bind:value={skipLines} min="0" onInput={() => reParse()} />
+									</div>
+									<div class="control-input">
+										<p>Sort by</p>
+										<select bind:value={sortBy} disabled={awaitingLoad}>
+											<option value="__none__">None (keep file order)</option>
+											<option value="__time__">Time (auto-detect)</option>
+											{#each headers as h}
+												<option value={h}>{h}</option>
+											{/each}
+										</select>
 									</div>
 								</div>
 							</div>
