@@ -129,6 +129,8 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
+	import { dev } from '$app/environment';
+
 	let showSettingsModal = $state(false);
 
 	let showImportModal = $state(false);
@@ -235,6 +237,9 @@
 	}
 
 	async function doImport() {
+		if (dev) {
+			performance.mark('importSession-start');
+		}
 		awaitingLoad = true;
 		loadProgressDetail = 'Starting…';
 		appState.loadingState.isLoading = true;
@@ -251,6 +256,12 @@
 		loadProgressDetail = '';
 		showImportModal = false;
 		importReady = false;
+		if (dev) {
+			performance.mark('importSession-end');
+			performance.measure('importSession', 'importSession-start', 'importSession-end');
+			const measure = performance.getEntriesByName('importSession')[0];
+			console.log(`Session import took ${measure.duration.toFixed(2)} ms`);
+		}
 	}
 </script>
 

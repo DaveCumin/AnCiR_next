@@ -22,6 +22,8 @@
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 
+	import { dev } from '$app/environment';
+
 	import {
 		core,
 		pushObj,
@@ -96,6 +98,10 @@
 	//------------------------------------
 
 	onMount(async () => {
+		if (dev) {
+			console.log('moutning app in dev mode');
+			performance.mark('load-start');
+		}
 		//load the maps
 		appState.loadingState.loadingMsg = 'Loading processes ...';
 		appConsts.processMap = await loadProcesses();
@@ -232,6 +238,12 @@
 		if (query != 'No query parameter found') {
 			loadFromURL(query);
 			window.history.replaceState({}, document.title, window.location.pathname);
+		}
+
+		if (dev) {
+			performance.mark('load-end');
+			const m = performance.measure('loading time', 'load-start', 'load-end');
+			console.log('[loading time load', m.duration.toFixed(1), 'ms');
 		}
 
 		//remove the listeners on close

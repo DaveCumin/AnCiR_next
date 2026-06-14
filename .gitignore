@@ -27,3 +27,8 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 nohup.out
 node_modules/
+
+# Local tooling / planning (not for remote)
+.claude/
+docs/
+.planning/
