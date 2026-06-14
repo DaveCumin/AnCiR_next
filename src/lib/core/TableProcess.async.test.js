@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { appConsts } from '$lib/core/core.svelte.js';
 

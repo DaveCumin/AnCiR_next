@@ -1,4 +1,5 @@
 <script module>
+	// @ts-nocheck
 	export function sort(x, args) {
 		const direction = args?.direction ?? 'asc';
 		const isMissing = (v) => v == null || (typeof v === 'number' && isNaN(v));

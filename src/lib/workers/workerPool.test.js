@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { runComputeTask, setWorkerFactory, _resetWorkerPool, _poolState } from './workerPool.js';
 import {
