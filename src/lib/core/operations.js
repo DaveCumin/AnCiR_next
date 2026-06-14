@@ -1,6 +1,9 @@
 // src/lib/core/operations.js
 // @ts-nocheck
 
+import { core } from './core.svelte.js';
+import { Plot } from './Plot.svelte';
+
 /**
  * @typedef {Object} OpAddColumn
  * @property {'addColumn'} kind
@@ -162,7 +165,70 @@ export function applyOps(ops) {
     return inverses;
 }
 
+function pair(canonical, inverse) {
+    return { canonical, inverse };
+}
+
+function snapshotPlot(plot) {
+    // Cheap deep clone; drop functions so Svelte $state proxies don't smuggle methods.
+    return JSON.parse(JSON.stringify(plot, (k, v) => (typeof v === 'function' ? undefined : v)));
+}
+
 function applyForward(op) {
-    // Stub — concrete handlers implemented in subsequent tasks.
-    throw new Error(`applyOp: unknown kind ${op?.kind}`);
+    switch (op.kind) {
+        case 'addPlot':
+            return op_addPlot(op);
+        case 'removePlot':
+            return op_removePlot(op);
+        case 'setPlotProperty':
+            return op_setPlotProperty(op);
+        case 'setPlotPosition':
+            return op_setPlotPosition(op);
+        default:
+            throw new Error(`applyOp: unknown kind '${op?.kind}'`);
+    }
+}
+
+function op_addPlot(op) {
+    const plot = Plot.fromJSON(op.plotData);
+    core.plots.push(plot);
+    return pair(
+        { kind: 'addPlot', plotData: snapshotPlot(plot) },
+        { kind: 'removePlot', id: plot.id }
+    );
+}
+
+function op_removePlot(op) {
+    const idx = core.plots.findIndex((p) => p.id === op.id);
+    if (idx < 0) return null;
+    const before = snapshotPlot(core.plots[idx]);
+    core.plots.splice(idx, 1);
+    return pair(op, { kind: 'addPlot', plotData: before });
+}
+
+function op_setPlotProperty(op) {
+    const plot = core.plots.find((p) => p.id === op.id);
+    if (!plot) return null;
+    const before = plot[op.key];
+    if (before === op.value) return null;
+    plot[op.key] = op.value;
+    return pair(op, { kind: 'setPlotProperty', id: op.id, key: op.key, value: before });
+}
+
+function op_setPlotPosition(op) {
+    const plot = core.plots.find((p) => p.id === op.id);
+    if (!plot) return null;
+    const before = { x: plot.x, y: plot.y, width: plot.width, height: plot.height };
+    if (op.x != null) plot.x = op.x;
+    if (op.y != null) plot.y = op.y;
+    if (op.width != null) plot.width = op.width;
+    if (op.height != null) plot.height = op.height;
+    return pair(op, {
+        kind: 'setPlotPosition',
+        id: op.id,
+        x: before.x,
+        y: before.y,
+        width: before.width,
+        height: before.height
+    });
 }
