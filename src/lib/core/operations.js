@@ -1,7 +1,7 @@
 // src/lib/core/operations.js
 // @ts-nocheck
 
-import { core } from './core.svelte.js';
+import { core, replaceColumnRefs, swapColumnRefs } from './core.svelte.js';
 import { Plot } from './Plot.svelte';
 import { Column } from './Column.svelte';
 import { Process } from './Process.svelte';
@@ -208,6 +208,18 @@ function applyForward(op) {
             return op_removeTableProcess(op);
         case 'setTableProcessArg':
             return op_setTableProcessArg(op);
+        case 'setStoredValue':
+            return op_setStoredValue(op);
+        case 'removeStoredValue':
+            return op_removeStoredValue(op);
+        case 'renameStoredValue':
+            return op_renameStoredValue(op);
+        case 'replaceColumnRefs':
+            return op_replaceColumnRefs(op);
+        case 'swapColumnRefs':
+            return op_swapColumnRefs(op);
+        case 'batch':
+            return op_batch(op);
         default:
             throw new Error(`applyOp: unknown kind '${op?.kind}'`);
     }
@@ -437,4 +449,51 @@ function op_setTableProcessArg(op) {
         key: op.key,
         value: before
     });
+}
+
+function op_setStoredValue(op) {
+    const before = core.storedValues[op.name];
+    core.storedValues[op.name] = { ...op.entry };
+    return pair(
+        op,
+        before
+            ? { kind: 'setStoredValue', name: op.name, entry: { ...before } }
+            : { kind: 'removeStoredValue', name: op.name }
+    );
+}
+
+function op_removeStoredValue(op) {
+    const before = core.storedValues[op.name];
+    if (!before) return null;
+    delete core.storedValues[op.name];
+    return pair(op, { kind: 'setStoredValue', name: op.name, entry: { ...before } });
+}
+
+function op_renameStoredValue(op) {
+    const entry = core.storedValues[op.oldName];
+    if (!entry || core.storedValues[op.newName]) return null;
+    core.storedValues[op.newName] = entry;
+    delete core.storedValues[op.oldName];
+    return pair(op, { kind: 'renameStoredValue', oldName: op.newName, newName: op.oldName });
+}
+
+function op_replaceColumnRefs(op) {
+    // Note: this is one-directional in current AnCiR. The inverse re-applies with
+    // arguments swapped; round-trip restores the original ref topology.
+    replaceColumnRefs(op.newColId, op.oldColId);
+    return pair(op, { kind: 'replaceColumnRefs', newColId: op.oldColId, oldColId: op.newColId });
+}
+
+function op_swapColumnRefs(op) {
+    swapColumnRefs(op.idA, op.idB);
+    return pair(op, { kind: 'swapColumnRefs', idA: op.idA, idB: op.idB });
+}
+
+function op_batch(op) {
+    const inverses = [];
+    for (const child of op.ops) {
+        const result = applyForward(child);
+        if (result) inverses.unshift(result.inverse);
+    }
+    return pair(op, { kind: 'batch', ops: inverses });
 }

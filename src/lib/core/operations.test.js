@@ -227,3 +227,60 @@ describe('applyOp: table + tableprocess ops', () => {
         expect(inv.value).toBe(60);
     });
 });
+
+describe('applyOp: stored values + batch', () => {
+    beforeEach(() => {
+        for (const k of Object.keys(core.storedValues)) {
+            delete core.storedValues[k];
+        }
+    });
+
+    it('setStoredValue adds and returns removeStoredValue', () => {
+        const inv = applyOp({
+            kind: 'setStoredValue',
+            name: 'tau',
+            entry: { staticValue: 24, source: 'manual' }
+        });
+        expect(core.storedValues.tau.staticValue).toBe(24);
+        expect(inv).toEqual({ kind: 'removeStoredValue', name: 'tau' });
+    });
+
+    it('setStoredValue overwrites and returns setStoredValue with prior entry', () => {
+        applyOp({ kind: 'setStoredValue', name: 'tau', entry: { staticValue: 24, source: 'a' } });
+        const inv = applyOp({ kind: 'setStoredValue', name: 'tau', entry: { staticValue: 25, source: 'b' } });
+        expect(core.storedValues.tau.staticValue).toBe(25);
+        expect(inv.kind).toBe('setStoredValue');
+        expect(inv.entry.staticValue).toBe(24);
+    });
+
+    it('removeStoredValue returns setStoredValue with prior entry', () => {
+        applyOp({ kind: 'setStoredValue', name: 'tau', entry: { staticValue: 24, source: 'manual' } });
+        const inv = applyOp({ kind: 'removeStoredValue', name: 'tau' });
+        expect(core.storedValues.tau).toBeUndefined();
+        expect(inv.kind).toBe('setStoredValue');
+        expect(inv.entry.staticValue).toBe(24);
+    });
+
+    it('renameStoredValue moves an entry and returns the inverse', () => {
+        applyOp({ kind: 'setStoredValue', name: 'old', entry: { staticValue: 1, source: 's' } });
+        const inv = applyOp({ kind: 'renameStoredValue', oldName: 'old', newName: 'new' });
+        expect(core.storedValues.new.staticValue).toBe(1);
+        expect(core.storedValues.old).toBeUndefined();
+        expect(inv).toEqual({ kind: 'renameStoredValue', oldName: 'new', newName: 'old' });
+    });
+
+    it('batch applies in order and inverse undoes in reverse order', () => {
+        const inv = applyOp({
+            kind: 'batch',
+            ops: [
+                { kind: 'setStoredValue', name: 'a', entry: { staticValue: 1, source: 'test' } },
+                { kind: 'setStoredValue', name: 'b', entry: { staticValue: 2, source: 'test' } }
+            ]
+        });
+        expect(core.storedValues.a.staticValue).toBe(1);
+        expect(core.storedValues.b.staticValue).toBe(2);
+        applyOp(inv);
+        expect(core.storedValues.a).toBeUndefined();
+        expect(core.storedValues.b).toBeUndefined();
+    });
+});
