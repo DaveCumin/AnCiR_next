@@ -6,16 +6,19 @@ import { getComputeTask, listComputeTasks } from './computeTasks.js';
 import { prepareTransferable, restoreFromTransferable } from './workerTransfer.js';
 
 const POOL_SIZE_FALLBACK = 3;
+const POOL_SIZE_MAX = 8;
 function defaultPoolSize() {
 	const n =
 		typeof navigator !== 'undefined' && Number(navigator.hardwareConcurrency)
 			? Number(navigator.hardwareConcurrency) - 1
 			: POOL_SIZE_FALLBACK;
-	return Math.min(Math.max(n, 1), 8);
+	return Math.min(Math.max(n, 1), POOL_SIZE_MAX);
 }
 
 let _factory = null;
 let _slots = null;
+// _nextId is intentionally NOT reset by _resetWorkerPool to avoid id collisions
+// with stragglers from terminated workers.
 let _nextId = 1;
 const _pending = new Map(); // id -> { slotIdx, resolve, reject }
 
@@ -23,11 +26,20 @@ function defaultFactory() {
 	return new Worker(new URL('./compute.worker.js', import.meta.url), { type: 'module' });
 }
 
+/**
+ * Replace the Worker factory (used by tests to inject a FakeWorker).
+ * Also resets the pool so subsequent dispatches build fresh slots with the new factory.
+ * Not intended to be called mid-flight in production — pending tasks will not settle.
+ */
 export function setWorkerFactory(factory) {
 	_factory = factory;
 	_resetWorkerPool();
 }
 
+/**
+ * Terminate all worker slots and clear pending state. Test-only / startup-only:
+ * callers awaiting in-flight tasks will not be settled.
+ */
 export function _resetWorkerPool() {
 	if (_slots) {
 		for (const s of _slots) s.worker?.terminate?.();
@@ -93,6 +105,15 @@ function runSync(name, args) {
 	return fn(args);
 }
 
+/**
+ * Dispatch a registered compute task to the worker pool. Falls back to
+ * synchronous execution on the main thread when the worker errors, when
+ * postMessage throws, or when the task is not registered on the worker side.
+ *
+ * @param {string} name - name of a registered compute task
+ * @param {object} args - plain-data payload for the task
+ * @returns {Promise<any>} task result (Float64Arrays restored to number[])
+ */
 export function runComputeTask(name, args) {
 	ensurePool();
 	return new Promise((resolve, reject) => {
@@ -110,8 +131,9 @@ export function runComputeTask(name, args) {
 		const idx = leastBusyIdx();
 		const slot = _slots[idx];
 		const id = _nextId++;
-		const transfers = [];
-		const payload = prepareTransferable(args, transfers);
+		// `entry.reject` runs sync fallback (not a true reject): a worker-reported
+		// error or a slot crash both retry on the main thread, where a genuinely
+		// bad input will throw again and the catch rejects with the main-thread error.
 		_pending.set(id, {
 			slotIdx: idx,
 			resolve,
@@ -125,6 +147,8 @@ export function runComputeTask(name, args) {
 		});
 		slot.inflight++;
 		try {
+			const transfers = [];
+			const payload = prepareTransferable(args, transfers);
 			slot.worker.postMessage({ id, name, payload }, transfers);
 		} catch (postErr) {
 			_pending.delete(id);
