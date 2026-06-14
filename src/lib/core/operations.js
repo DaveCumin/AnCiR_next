@@ -3,6 +3,8 @@
 
 import { core } from './core.svelte.js';
 import { Plot } from './Plot.svelte';
+import { Column } from './Column.svelte';
+import { Process } from './Process.svelte';
 
 /**
  * @typedef {Object} OpAddColumn
@@ -184,6 +186,16 @@ function applyForward(op) {
             return op_setPlotProperty(op);
         case 'setPlotPosition':
             return op_setPlotPosition(op);
+        case 'addColumn':
+            return op_addColumn(op);
+        case 'removeColumn':
+            return op_removeColumn(op);
+        case 'addProcess':
+            return op_addProcess(op);
+        case 'removeProcess':
+            return op_removeProcess(op);
+        case 'setProcessArg':
+            return op_setProcessArg(op);
         default:
             throw new Error(`applyOp: unknown kind '${op?.kind}'`);
     }
@@ -230,5 +242,97 @@ function op_setPlotPosition(op) {
         y: before.y,
         width: before.width,
         height: before.height
+    });
+}
+
+function snapshotColumn(col) {
+    return JSON.parse(JSON.stringify(col, (k, v) => (typeof v === 'function' ? undefined : v)));
+}
+
+function op_addColumn(op) {
+    const data = op.columnData;
+    const col = Column.fromJSON(data);
+    core.data.push(col);
+    return pair(
+        { kind: 'addColumn', columnData: snapshotColumn(col) },
+        { kind: 'removeColumn', id: col.id }
+    );
+}
+
+function op_removeColumn(op) {
+    const idx = core.data.findIndex((c) => c.id === op.id);
+    if (idx < 0) return null;
+    const before = snapshotColumn(core.data[idx]);
+    core.data.splice(idx, 1);
+    return pair(op, { kind: 'addColumn', columnData: before });
+}
+
+function op_addProcess(op) {
+    const col = core.data.find((c) => c.id === op.columnId);
+    if (!col) return null;
+    const proc = new Process(
+        { name: op.processType, args: op.args ?? {}, linkedGroupId: op.linkedGroupId ?? null },
+        col,
+        op.processId ?? null
+    );
+    if (op.index != null && op.index >= 0 && op.index < col.processes.length) {
+        col.processes.splice(op.index, 0, proc);
+    } else {
+        col.processes.push(proc);
+    }
+    return pair(
+        {
+            kind: 'addProcess',
+            columnId: op.columnId,
+            processType: op.processType,
+            processId: proc.id,
+            args: JSON.parse(JSON.stringify(op.args ?? {})),
+            ...(op.linkedGroupId != null && { linkedGroupId: op.linkedGroupId }),
+            ...(op.index != null && { index: op.index })
+        },
+        { kind: 'removeProcess', columnId: op.columnId, processId: proc.id }
+    );
+}
+
+function op_removeProcess(op) {
+    const col = core.data.find((c) => c.id === op.columnId);
+    if (!col) return null;
+    const procIdx = col.processes.findIndex((p) => p.id === op.processId);
+    if (procIdx < 0) return null;
+    const before = col.processes[procIdx];
+    const snap = {
+        processType: before.name,
+        processId: before.id,
+        args: JSON.parse(JSON.stringify(before.args ?? {})),
+        linkedGroupId: before.linkedGroupId ?? null,
+        index: procIdx
+    };
+    col.processes.splice(procIdx, 1);
+    return pair(op, {
+        kind: 'addProcess',
+        columnId: op.columnId,
+        processType: snap.processType,
+        processId: snap.processId,
+        args: snap.args,
+        ...(snap.linkedGroupId != null && { linkedGroupId: snap.linkedGroupId }),
+        index: snap.index
+    });
+}
+
+function op_setProcessArg(op) {
+    const col = core.data.find((c) => c.id === op.columnId);
+    if (!col) return null;
+    const proc = col.processes.find((p) => p.id === op.processId);
+    if (!proc) return null;
+    if (!proc.args) proc.args = {};
+    const before = proc.args[op.key];
+    if (before === op.value) return null;
+    proc.args[op.key] = op.value;
+    return pair(op, {
+        kind: 'setProcessArg',
+        columnId: op.columnId,
+        processId: op.processId,
+        key: op.key,
+        value: before
     });
 }

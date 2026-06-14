@@ -3,6 +3,7 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { addOpListener, withSuppressedListeners, applyOp } from './operations.js';
 import { appConsts, core } from './core.svelte.js';
+import { Column } from './Column.svelte';
 
 beforeAll(() => {
     // Register a minimal stub for 'scatterplot' so Plot's constructor can
@@ -14,6 +15,13 @@ beforeAll(() => {
             data: {
                 fromJSON: (_plot, plotData) => plotData ?? {}
             }
+        });
+    }
+    if (!appConsts.processMap.has('Normalize')) {
+        appConsts.processMap.set('Normalize', {
+            displayName: 'Normalize (test stub)',
+            defaults: new Map([['normalizationType', { val: 'z-score' }]]),
+            func: (data, args) => data // no-op
         });
     }
 });
@@ -85,5 +93,66 @@ describe('applyOp: plot ops', () => {
         expect(inv.kind).toBe('setPlotPosition');
         expect(inv.x).toBe(0);
         expect(inv.y).toBe(0);
+    });
+});
+
+describe('applyOp: column + process ops', () => {
+    beforeEach(() => {
+        core.data.length = 0;
+    });
+
+    it('addColumn pushes a column and returns removeColumn', () => {
+        const inv = applyOp({
+            kind: 'addColumn',
+            columnData: { name: 'X', type: 'number' }
+        });
+        expect(core.data).toHaveLength(1);
+        expect(typeof core.data[0].id).toBe('number');
+        expect(inv).toEqual({ kind: 'removeColumn', id: core.data[0].id });
+    });
+
+    it('removeColumn removes and inverse re-adds with the same id', () => {
+        applyOp({ kind: 'addColumn', columnData: { name: 'X', type: 'number' } });
+        const id = core.data[0].id;
+        const inv = applyOp({ kind: 'removeColumn', id });
+        expect(core.data).toHaveLength(0);
+        expect(inv.kind).toBe('addColumn');
+        expect(inv.columnData.id).toBe(id);
+    });
+
+    it('addProcess appends and returns removeProcess', () => {
+        applyOp({ kind: 'addColumn', columnData: { name: 'X', type: 'number' } });
+        const colId = core.data[0].id;
+        const inv = applyOp({
+            kind: 'addProcess',
+            columnId: colId,
+            processType: 'Normalize',
+            args: { normalizationType: 'z-score' }
+        });
+        const col = core.data.find((c) => c.id === colId);
+        expect(col.processes).toHaveLength(1);
+        expect(typeof col.processes[0].id).toBe('number');
+        expect(inv).toEqual({ kind: 'removeProcess', columnId: colId, processId: col.processes[0].id });
+    });
+
+    it('setProcessArg updates an arg and returns the previous value', () => {
+        applyOp({ kind: 'addColumn', columnData: { name: 'X', type: 'number' } });
+        const colId = core.data[0].id;
+        applyOp({
+            kind: 'addProcess',
+            columnId: colId,
+            processType: 'Normalize',
+            args: { normalizationType: 'z-score' }
+        });
+        const procId = core.data[0].processes[0].id;
+        const inv = applyOp({
+            kind: 'setProcessArg',
+            columnId: colId,
+            processId: procId,
+            key: 'normalizationType',
+            value: 'min-max'
+        });
+        expect(core.data[0].processes[0].args.normalizationType).toBe('min-max');
+        expect(inv.value).toBe('z-score');
     });
 });
