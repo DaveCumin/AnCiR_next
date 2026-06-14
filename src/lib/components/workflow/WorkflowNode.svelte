@@ -1,6 +1,8 @@
 <script>
 	// @ts-nocheck
 	import { createEventDispatcher } from 'svelte';
+	import MiniDataTable from './MiniDataTable.svelte';
+	import { getColumnById } from '$lib/core/Column.svelte';
 	let { node, selected = false, expanded = false, isDropTarget = false } = $props();
 	const dispatch = createEventDispatcher();
 
@@ -65,6 +67,13 @@
 	</div>
 	{#if node.sublabel}
 		<div class="node-sublabel">{node.sublabel}</div>
+	{/if}
+
+	{#if node.type === 'data' && node.refId != null}
+		{@const col = getColumnById(node.refId)}
+		{#if col}
+			<MiniDataTable column={col} maxRows={5} />
+		{/if}
 	{/if}
 
 	{#each inputPorts as port, i (`in_${port.name}_${i}`)}
