@@ -424,7 +424,9 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 	const RMSE = Math.sqrt(MSE);
 	const R2 = SStot > 0 ? 1 - SSres / SStot : 0;
 	const F_stat = MSE > 0 ? (SStot - SSres) / (2 * nHarmonics) / MSE : NaN;
-	const pF = isNaN(F_stat) ? NaN : cdf_f(F_stat, 2 * nHarmonics, df_res, 1);
+	// Upper-tail p-value: P(F > F_stat) = 1 - CDF(F_stat). The stdlib cdf_f is
+	// strictly lower-tail; using it directly inverted significance everywhere.
+	const pF = isNaN(F_stat) ? NaN : 1 - cdf_f(F_stat, 2 * nHarmonics, df_res);
 
 	// Covariance matrix V = MSE · (XᵀX)⁻¹
 	const XtX_inv = Array.from({ length: nParams }, () => new Array(nParams).fill(0));
