@@ -229,19 +229,28 @@
 	let stablePositions = $state(loadNodePositions());
 	let _knownNodeIds = new Set(Object.keys(stablePositions));
 
+	// Queue of canvas-coord {x, y} positions to assign to the NEXT N newly-
+	// appeared nodes (one position consumed per node). Pushed by NodePalette
+	// before each user-initiated spawn so the new node lands at the centre of
+	// the current viewport instead of wherever the topo layout placed it.
+	let _spawnPositionQueue = [];
+
 	$effect(() => {
 		const currentNodes = allNodes;
 		const currentIds = new Set(currentNodes.map((n) => n.id));
 		const defaults = defaultPositions.positions;
 		const prev = _knownNodeIds;
 
-		// Assign default positions to newly appeared nodes only. Groups carry
-		// their own x/y in core.groups (the user picked them via createGroup),
-		// so prefer those over the topo-layered default.
+		// Assign positions to newly appeared nodes only. Priority order:
+		//   1. Group nodes use their own persisted x/y (createGroup sets it).
+		//   2. Palette-spawned queue (viewport-centred) — consumed FIFO.
+		//   3. Fall back to the topo-layered default.
 		for (const node of currentNodes) {
 			if (prev.has(node.id)) continue;
 			if (node.type === 'group' && node.groupObj) {
 				stablePositions[node.id] = { x: node.groupObj.x, y: node.groupObj.y };
+			} else if (_spawnPositionQueue.length > 0) {
+				stablePositions[node.id] = _spawnPositionQueue.shift();
 			} else if (defaults[node.id]) {
 				stablePositions[node.id] = { ...defaults[node.id] };
 			}
@@ -369,6 +378,57 @@
 		panX = 0;
 		panY = 0;
 		zoom = 1;
+	}
+
+	/**
+	 * Compute the canvas-coord of the current viewport centre, minus half a
+	 * default node so the spawn lands centred under the cursor's mental model.
+	 * Small random jitter so consecutive spawns don't stack pixel-perfect.
+	 */
+	function getViewportSpawnPoint() {
+		const rect = canvasViewportEl?.getBoundingClientRect();
+		if (!rect) return { x: 80, y: 80 };
+		const cx = (rect.width / 2 - panX) / zoom - NODE_WIDTH / 2;
+		const cy = (rect.height / 2 - panY) / zoom - NODE_HEIGHT;
+		const jitter = (() => Math.round((Math.random() - 0.5) * 60));
+		return { x: Math.round(cx + jitter()), y: Math.round(cy + jitter()) };
+	}
+
+	function queueSpawnPositionAtViewport() {
+		_spawnPositionQueue.push(getViewportSpawnPoint());
+	}
+
+	/**
+	 * Palette entry point for column processes. Picks a target column (the
+	 * currently focused data node, or — if none — the first data column in
+	 * core.data) and adds the requested process to it via mutationService.
+	 * The freshly-created process node will land at the queued viewport
+	 * position via the stablePositions effect.
+	 */
+	function spawnColumnProcessFromPalette(processType) {
+		let targetCol = null;
+		if (focusedNodeId) {
+			const focusedNode = allNodes.find((n) => n.id === focusedNodeId);
+			if (focusedNode?.type === 'data' && focusedNode.refId != null) {
+				targetCol = core.data.find((c) => c.id === focusedNode.refId) ?? null;
+			}
+		}
+		if (!targetCol) {
+			// Fall back to the first non-TP-output data column (so the new process
+			// chains onto an actual source, not a generated output).
+			const tpOutputs = new Set();
+			for (const table of core.tables ?? []) {
+				for (const tp of table.processes ?? []) {
+					for (const cid of Object.values(tp.args?.out ?? {})) {
+						if (typeof cid === 'number' && cid >= 0) tpOutputs.add(cid);
+					}
+				}
+			}
+			targetCol = core.data.find((c) => !tpOutputs.has(c.id)) ?? core.data[0] ?? null;
+		}
+		if (!targetCol) return { ok: false, reason: 'no-columns' };
+		mutationService.addProcess(targetCol.id, processType, {});
+		return { ok: true, columnId: targetCol.id };
 	}
 
 	// One-shot guard: after the canvas mounts and the first non-empty node set is
@@ -1164,7 +1224,10 @@
 			pathFocus={pathFocusEnabled}
 			onTogglePathFocus={() => (pathFocusEnabled = !pathFocusEnabled)}
 		/>
-		<NodePalette />
+		<NodePalette
+			queueSpawnPosition={queueSpawnPositionAtViewport}
+			onSpawnColumnProcess={spawnColumnProcessFromPalette}
+		/>
 		<div
 			class="canvas-inner"
 			style="transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0; width: {canvasWidth}px; height: {canvasHeight}px; position: relative;"

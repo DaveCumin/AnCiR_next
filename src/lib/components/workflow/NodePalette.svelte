@@ -52,6 +52,16 @@
 		BlankColumn: 'blank'
 	};
 
+	let {
+		// Called by NodePalette right before any user-initiated spawn so the
+		// next-to-appear node lands at the centre of the current viewport.
+		queueSpawnPosition = null,
+		// Spawns a column process on the currently-focused data column (or the
+		// first data column if none is focused). Returns
+		// { ok: boolean, columnId?: number, reason?: string }.
+		onSpawnColumnProcess = null
+	} = $props();
+
 	let showMenu = $state(false);
 	let query = $state('');
 	let showAddPlotModal = $state(false);
@@ -187,18 +197,25 @@
 	// ---- Spawn handlers --------------------------------------------------
 	function handlePick(item) {
 		if (item.kind === 'note') {
-			createNote({ x: 80 + Math.round(Math.random() * 60), y: 80 + Math.round(Math.random() * 60) });
+			// Notes carry x/y on the entity itself; ask WorkflowEditor where the
+			// viewport is and seed createNote with that point. The
+			// stablePositions effect will still pick the same spot via the
+			// spawn queue, so the node visually lands at the viewport centre.
+			queueSpawnPosition?.();
+			createNote();
 			closeMenu();
 			return;
 		}
 
 		if (item.kind === 'group') {
-			createGroup({ x: 80 + Math.round(Math.random() * 60), y: 80 + Math.round(Math.random() * 60) });
+			queueSpawnPosition?.();
+			createGroup();
 			closeMenu();
 			return;
 		}
 
 		if (item.kind === 'plot') {
+			queueSpawnPosition?.();
 			plotInitialType = item.type;
 			showAddPlotModal = true;
 			closeMenu();
@@ -208,16 +225,19 @@
 		if (item.kind === 'tableProcess') {
 			const sourceModal = SOURCE_MODAL_BY_TYPE[item.type];
 			if (sourceModal === 'simulate') {
+				queueSpawnPosition?.();
 				showSimulateModal = true;
 				closeMenu();
 				return;
 			}
 			if (sourceModal === 'sequence') {
+				queueSpawnPosition?.();
 				showSequenceModal = true;
 				closeMenu();
 				return;
 			}
 			if (sourceModal === 'blank') {
+				queueSpawnPosition?.();
 				showBlankModal = true;
 				closeMenu();
 				return;
@@ -233,6 +253,7 @@
 				return;
 			}
 			if (tables.length === 1) {
+				queueSpawnPosition?.();
 				addTPTableId = tables[0].id;
 				addTPInitialType = item.type;
 				showAddTPModal = true;
@@ -244,20 +265,39 @@
 			return;
 		}
 
-		// item.kind === 'process' — these are column-level and need a target
-		// column. The palette can't (yet) spawn a draggable column-process
-		// node onto a wire; the splice-on-drop plumbing exists in
-		// WorkflowEditor.spliceNodeOntoEdge but isn't wired to the palette.
-		// Punt with a hint and close.
-		addNotification(
-			`"${item.displayName}" is a column process. Drag this node onto a wire to splice it in (coming soon).`,
-			'info'
-		);
+		// item.kind === 'process' — column-level. WorkflowEditor handles the
+		// "which column?" decision (currently: focused data node, else first
+		// non-TP-output data column). Spawn at the viewport centre via the
+		// queued position; the user can then drag-onto-edge to splice into a
+		// different chain if they want.
+		if (typeof onSpawnColumnProcess === 'function') {
+			queueSpawnPosition?.();
+			const result = onSpawnColumnProcess(item.type);
+			if (!result?.ok) {
+				if (result?.reason === 'no-columns') {
+					addNotification(
+						`No data columns yet — import or create one before adding "${item.displayName}".`,
+						'info'
+					);
+				} else {
+					addNotification(
+						`Could not add "${item.displayName}".`,
+						'info'
+					);
+				}
+			}
+		} else {
+			addNotification(
+				`"${item.displayName}" needs a target column. (Spawn handler not wired.)`,
+				'info'
+			);
+		}
 		closeMenu();
 	}
 
 	function pickTableForPending(tableId) {
 		if (!pickingTableForType) return;
+		queueSpawnPosition?.();
 		addTPTableId = tableId;
 		addTPInitialType = pickingTableForType.type;
 		showAddTPModal = true;
@@ -266,6 +306,7 @@
 	}
 
 	function startAddTableProcessForTable(tableId) {
+		queueSpawnPosition?.();
 		addTPTableId = tableId;
 		addTPInitialType = '';
 		showAddTPModal = true;
