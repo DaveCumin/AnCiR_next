@@ -7,8 +7,6 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import Setting from '$lib/components/iconActions/Setting.svelte';
 	import About from './views/modals/About.svelte';
-	import UndoRedoButtons from './UndoRedoButtons.svelte';
-	import SessionButtons from './SessionButtons.svelte';
 
 	let gearBtnRef;
 	let showSetting = $state(false);
@@ -102,8 +100,6 @@
 	</div>
 
 	<div class="icon-container">
-		<UndoRedoButtons {handleTooltip} />
-		<SessionButtons {handleTooltip} />
 		<button
 			bind:this={gearBtnRef}
 			onclick={openDropdown}

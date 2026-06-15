@@ -14,6 +14,7 @@
 	import MakeNewPlot from '$lib/components/views/modals/MakeNewPlot.svelte';
 	import MakeNewColumn from '$lib/components/views/modals/MakeNewColumn.svelte';
 	import AddProcess from '$lib/components/iconActions/AddProcess.svelte';
+	import FloatingActions from './FloatingActions.svelte';
 
 	let { inline = false } = $props();
 
@@ -718,6 +719,7 @@
 	</div>
 
 	<div class="canvas-viewport" bind:this={canvasViewportEl} class:panning={isPanning && !dragInfo}>
+		<FloatingActions />
 		<div
 			class="canvas-inner"
 			style="transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0; width: {canvasWidth}px; height: {canvasHeight}px; position: relative;"
