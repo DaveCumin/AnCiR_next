@@ -268,9 +268,43 @@
 	});
 
 	// --- Pan / zoom ---
-	let panX = $state(0);
-	let panY = $state(0);
-	let zoom = $state(1);
+	// Restore the user's last viewport position so reopening the canvas keeps the
+	// same in-flight layout instead of snapping back to the origin every time.
+	const VIEWPORT_STORAGE_KEY = 'ancir.canvas.viewport';
+
+	function loadViewport() {
+		try {
+			const raw = typeof localStorage !== 'undefined' && localStorage.getItem(VIEWPORT_STORAGE_KEY);
+			if (!raw) return { x: 0, y: 0, z: 1 };
+			const parsed = JSON.parse(raw);
+			const x = Number(parsed?.x);
+			const y = Number(parsed?.y);
+			const z = Number(parsed?.z);
+			return {
+				x: Number.isFinite(x) ? x : 0,
+				y: Number.isFinite(y) ? y : 0,
+				z: Number.isFinite(z) && z > 0 ? z : 1
+			};
+		} catch {
+			return { x: 0, y: 0, z: 1 };
+		}
+	}
+
+	const initialViewport = loadViewport();
+	let panX = $state(initialViewport.x);
+	let panY = $state(initialViewport.y);
+	let zoom = $state(initialViewport.z);
+
+	// Persist viewport whenever the user pans or zooms. Cheap: a small object every
+	// state change. No throttling needed — these only fire during user gestures.
+	$effect(() => {
+		const payload = JSON.stringify({ x: panX, y: panY, z: zoom });
+		try {
+			if (typeof localStorage !== 'undefined') localStorage.setItem(VIEWPORT_STORAGE_KEY, payload);
+		} catch {
+			/* ignore quota / private-mode errors */
+		}
+	});
 	let isPanning = $state(false);
 	/** Bound to the .canvas-viewport element for precise coordinate conversion. */
 	let canvasViewportEl = $state(null);
