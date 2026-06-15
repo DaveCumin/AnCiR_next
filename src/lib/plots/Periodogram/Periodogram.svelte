@@ -521,6 +521,10 @@
 
 			if (json.data) {
 				periodogram.data = json.data.map((d) => PeriodogramDataclass.fromJSON(d, periodogram));
+			} else if (json.dataIn) {
+				// Creation-time hint: wire raw column refs via the live addData path so
+				// undo/redo of a brand-new plot replays its data wiring (see addPlot op).
+				periodogram.addData(json.dataIn);
 			}
 			return periodogram;
 		}

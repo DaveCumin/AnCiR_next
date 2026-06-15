@@ -89,7 +89,16 @@
 
 			console.log('making new plot with x,y: ', xCol, yCols[i]);
 
-			const newPlot = mutationService.addPlot({
+			const dataIn = {
+				y: { refId: yCols[i] }
+			};
+			if (!(plotType === 'boxplot' && Number(xCol) < 0)) {
+				dataIn.x = { refId: Number(xCol) };
+			}
+			// Pass dataIn into plotData.plot so the plot type's fromJSON runs addData during
+			// construction. The post-construction snapshot taken by op_addPlot then includes
+			// the resulting `data` array, so redo replays the wiring losslessly.
+			mutationService.addPlot({
 				name: getColumnById(yCols[i]).name,
 				type: plotType,
 				x: snapToGrid(col * (width + padding) + (col + 1) * padding + container.scrollLeft),
@@ -97,19 +106,9 @@
 					row * (height + padding) + (row + 1) * padding + row * 2 * padding + container.scrollTop
 				),
 				width: snapToGrid(width),
-				height: snapToGrid(height)
+				height: snapToGrid(height),
+				plot: { dataIn }
 			});
-			const dataIn = {
-				y: { refId: yCols[i] }
-			};
-			if (!(plotType === 'boxplot' && Number(xCol) < 0)) {
-				dataIn.x = { refId: Number(xCol) };
-			}
-			// addData is per-plot-type and not captured by the addPlot op's plot snapshot;
-			// undo removes the entire plot, but redo will replay the addPlot op without the
-			// dataIn wiring. Migrating the data wiring into the snapshot would require per-plot-type
-			// fromJSON support for raw refs and is deferred to a follow-up.
-			newPlot?.plot?.addData(dataIn);
 
 			await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
 		}

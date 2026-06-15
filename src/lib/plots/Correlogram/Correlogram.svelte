@@ -400,6 +400,10 @@
 
 			if (json.data) {
 				correlogram.data = json.data.map((d) => CorrelogramDataclass.fromJSON(d, correlogram));
+			} else if (json.dataIn) {
+				// Creation-time hint: wire raw column refs via the live addData path so
+				// undo/redo of a brand-new plot replays its data wiring (see addPlot op).
+				correlogram.addData(json.dataIn);
 			}
 			return correlogram;
 		}

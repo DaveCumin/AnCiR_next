@@ -280,6 +280,10 @@
 			chart.legend = LegendClass.fromJSON(json.legend);
 			if (json.data) {
 				chart.data = json.data.map((/** @type {any} */ d) => HistogramDataclass.fromJSON(d, chart));
+			} else if (json.dataIn) {
+				// Creation-time hint: wire raw column refs via the live addData path so
+				// undo/redo of a brand-new plot replays its data wiring (see addPlot op).
+				chart.addData(json.dataIn);
 			}
 			return chart;
 		}

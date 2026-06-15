@@ -689,6 +689,10 @@
 
 			if (json.data) {
 				chart.data = json.data.map((d) => BoxPlotDataClass.fromJSON(d, chart));
+			} else if (json.dataIn) {
+				// Creation-time hint: wire raw column refs via the live addData path so
+				// undo/redo of a brand-new plot replays its data wiring (see addPlot op).
+				chart.addData(json.dataIn);
 			}
 
 			chart.legend = LegendClass.fromJSON(json.legend);

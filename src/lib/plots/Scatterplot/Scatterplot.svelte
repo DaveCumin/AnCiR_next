@@ -557,6 +557,10 @@
 				console.log('json.data', $state.snapshot(json.data));
 
 				scatter.data = json.data.map((d) => ScatterDataclass.fromJSON(d, scatter));
+			} else if (json.dataIn) {
+				// Creation-time hint: wire raw column refs via the live addData path so
+				// undo/redo of a brand-new plot replays its data wiring (see addPlot op).
+				scatter.addData(json.dataIn);
 			}
 			if (json.nightBands) {
 				json.nightBands.forEach((band) => {
