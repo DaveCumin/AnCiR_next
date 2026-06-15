@@ -4,18 +4,31 @@
 		core,
 		appState,
 		appConsts,
-		getProcessNodeGraph
+		getProcessNodeGraph,
+		absorbColumnIntoGroup,
+		extractColumnFromAnyGroup,
+		getGroupForColumn,
+		createNote,
+		createGroup,
+		createOrphanProcess,
+		removeOrphanProcess,
+		attachOrphanProcessToColumn,
+		pushObj
 	} from '$lib/core/core.svelte.js';
+	import { Column } from '$lib/core/Column.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { deleteTableProcess } from '$lib/core/TableProcess.svelte';
 	import { selectPlot, deselectAllPlots } from '$lib/core/Plot.svelte';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import GroupNode from './GroupNode.svelte';
+	import { getGroupPortY } from './groupPortPositions.svelte.js';
 	import WorkflowEdges from './WorkflowEdges.svelte';
 	import EmbeddedPlot from './EmbeddedPlot.svelte';
+	import MiniDataTable from './MiniDataTable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import FloatingActions from './FloatingActions.svelte';
 	import NodePalette from './NodePalette.svelte';
+	import { tooltip } from '$lib/utils/tooltip.js';
 
 	let { inline = false } = $props();
 
@@ -75,6 +88,14 @@
 	}
 
 	function getPortAnchorY(node, portName, direction) {
+		// Group rows can expand to show MiniDataTable previews, which makes
+		// the simple index-based formula wrong. GroupNode publishes per-port Y
+		// after layout — use that when available, otherwise fall through to
+		// the formula (covers initial paint and non-group nodes).
+		if (node?.type === 'group') {
+			const published = getGroupPortY(node.id, portName);
+			if (typeof published === 'number') return published;
+		}
 		const ports = direction === 'out' ? (node.ports?.outputs ?? []) : (node.ports?.inputs ?? []);
 		if (ports.length === 0) return HEADER_H + PORT_H / 2;
 		let idx = ports.findIndex((p) => p.name === portName);
@@ -87,6 +108,16 @@
 		}
 		idx = Math.max(0, idx);
 		return HEADER_H + idx * PORT_H + PORT_H / 2;
+	}
+
+	/**
+	 * Width of a node's card, used to compute the right-edge anchor X for
+	 * outgoing edges. Group cards can be wider than the default NODE_WIDTH and
+	 * are user-resizable, so we look up the live width on the group object.
+	 */
+	function getNodeWidth(node) {
+		if (node?.type === 'group') return node?.groupObj?.width ?? NODE_WIDTH;
+		return NODE_WIDTH;
 	}
 
 	/** Visual height of a node EXCLUDING any plot-preview/MiniDataTable body. */
@@ -242,12 +273,18 @@
 		const prev = _knownNodeIds;
 
 		// Assign positions to newly appeared nodes only. Priority order:
-		//   1. Group nodes use their own persisted x/y (createGroup sets it).
-		//   2. Palette-spawned queue (viewport-centred) — consumed FIFO.
-		//   3. Fall back to the topo-layered default.
+		//   1. Already pinned in stablePositions before the effect ran (e.g.
+		//      paste writes the position directly so the user sees the new
+		//      node at the intended +40,+40 offset, not at whatever stale
+		//      entry the palette queue happens to hold).
+		//   2. Group nodes use their own persisted x/y (createGroup sets it).
+		//   3. Palette-spawned queue (viewport-centred) — consumed FIFO.
+		//   4. Fall back to the topo-layered default.
 		for (const node of currentNodes) {
 			if (prev.has(node.id)) continue;
-			if (node.type === 'group' && node.groupObj) {
+			if (stablePositions[node.id]) {
+				// Already pinned by the caller — leave it untouched.
+			} else if (node.type === 'group' && node.groupObj) {
 				stablePositions[node.id] = { x: node.groupObj.x, y: node.groupObj.y };
 			} else if (_spawnPositionQueue.length > 0) {
 				stablePositions[node.id] = _spawnPositionQueue.shift();
@@ -315,7 +352,7 @@
 				{
 					...edge,
 					from: {
-						x: fromPos.x + NODE_WIDTH,
+						x: fromPos.x + getNodeWidth(fromNode),
 						y: fromPos.y + getPortAnchorY(fromNode, edge.fromPort, 'out')
 					},
 					to: {
@@ -399,36 +436,22 @@
 	}
 
 	/**
-	 * Palette entry point for column processes. Picks a target column (the
-	 * currently focused data node, or — if none — the first data column in
-	 * core.data) and adds the requested process to it via mutationService.
-	 * The freshly-created process node will land at the queued viewport
-	 * position via the stablePositions effect.
+	 * Palette entry point for column processes. Spawns the process as an
+	 * orphan (no parent column) so it appears disconnected; the user then
+	 * wires it to a data column's output to attach it. Uses the queued
+	 * viewport-spawn position so the node lands under the cursor's mental
+	 * model rather than at a topo-derived default.
 	 */
 	function spawnColumnProcessFromPalette(processType) {
-		let targetCol = null;
-		if (focusedNodeId) {
-			const focusedNode = allNodes.find((n) => n.id === focusedNodeId);
-			if (focusedNode?.type === 'data' && focusedNode.refId != null) {
-				targetCol = core.data.find((c) => c.id === focusedNode.refId) ?? null;
-			}
-		}
-		if (!targetCol) {
-			// Fall back to the first non-TP-output data column (so the new process
-			// chains onto an actual source, not a generated output).
-			const tpOutputs = new Set();
-			for (const table of core.tables ?? []) {
-				for (const tp of table.processes ?? []) {
-					for (const cid of Object.values(tp.args?.out ?? {})) {
-						if (typeof cid === 'number' && cid >= 0) tpOutputs.add(cid);
-					}
-				}
-			}
-			targetCol = core.data.find((c) => !tpOutputs.has(c.id)) ?? core.data[0] ?? null;
-		}
-		if (!targetCol) return { ok: false, reason: 'no-columns' };
-		mutationService.addProcess(targetCol.id, processType, {});
-		return { ok: true, columnId: targetCol.id };
+		const proc = createOrphanProcess(processType, {});
+		if (!proc) return { ok: false, reason: 'create-failed' };
+		const newId = `process_${proc.id}`;
+		const queued = _spawnPositionQueue.shift();
+		const pos = queued ?? getViewportSpawnPoint();
+		stablePositions[newId] = { x: pos.x, y: pos.y };
+		focusedNodeId = newId;
+		multiSelectedNodeIds = new Set([newId]);
+		return { ok: true, orphanProcessId: proc.id };
 	}
 
 	// One-shot guard: after the canvas mounts and the first non-empty node set is
@@ -478,6 +501,12 @@
 	// output, stopAll() splices the node onto that edge (flowtest-style).
 	let dropTargetEdgeKey = $state(null);
 
+	// Output-port the user is currently dragging a node toward, formatted as
+	// `${sourceNodeId}|${portName}`. Takes priority over dropTargetEdgeKey
+	// because it expresses a more specific intent ("insert here, between this
+	// source and ALL its consumers"). Cleared in stopAll.
+	let dropTargetPortKey = $state(null);
+
 	// Set during drag whenever the dragged node's bbox overlaps a group's bbox.
 	// Drives the .drop-target highlight on GroupNode so the user can see the
 	// drop will be captured. Cleared in stopAll.
@@ -489,11 +518,39 @@
 	let pendingConnection = $state(null); // { fromNodeId, fromPort }
 	let mouseCanvas = $state({ x: 0, y: 0 });
 
+	// Extract-a-source-from-group gesture state. Mirrors flowtest's
+	// `uiState.extractGesture`: pointerdown on a row's grip → window-level
+	// pointermove tracks whether the pointer has left the group's bbox →
+	// pointerup decides between cancel (still inside) and extract (outside).
+	// Extract removes the column from its group, which makes ProcessNode re-
+	// derive a standalone `data_${colId}` node. We seed `_spawnPositionQueue`
+	// so the new node lands where the user dropped instead of at the topo-
+	// derived default.
+	let extractGesture = $state(null);
+
 	// --- Expanded process editor ---
 	let expandedNodeId = $state(null);
 
 	// --- Focus / connected-node highlight ---
 	let focusedNodeId = $state(null);
+
+	// Multi-select set. Holds every node id currently part of the marquee-style
+	// selection (built up via alt/meta/shift-click on additional nodes). The
+	// focused id is always inside the set when at least one node is selected;
+	// `focusedNodeId` is the "primary" one whose editor shows in the panel for
+	// size === 1. For size > 1 the panel shows a count message instead.
+	let multiSelectedNodeIds = $state(new Set());
+
+	// Mirror selection to appState so the ControlPanel can render a node-
+	// specific editor for the selection. One-way (canvas → appState); nothing
+	// else writes these. Auto-opens the panel on selection so the editor is
+	// immediately visible — closing the panel doesn't clear focus; the next
+	// selection re-opens it.
+	$effect(() => {
+		appState.canvasSelectedNodeId = focusedNodeId;
+		appState.canvasMultiSelectedCount = multiSelectedNodeIds.size;
+		if (focusedNodeId != null) appState.showControlPanel = true;
+	});
 
 	// Path-focus dim mode (flowtest-style). When true AND a node is selected,
 	// non-connected nodes dim out. Toggled via the FloatingActions button.
@@ -638,25 +695,27 @@
 		const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id];
 		if (!pos) return;
 
-		// When dragging a group, snapshot every child's starting position so
-		// the mousemove handler can apply the same delta to each child.
-		let groupChildren = [];
-		if (node.type === 'group') {
-			const g = core.groups.find((gg) => gg.id === node.id);
-			if (g) {
-				for (const childId of g.childIds ?? []) {
-					const cp = stablePositions[childId] ?? defaultPositions.positions[childId];
-					if (cp) groupChildren.push({ id: childId, startPos: { x: cp.x, y: cp.y } });
-				}
+		// Source-groups carry their absorbed columns inline (as rows inside
+		// the card), so dragging the group moves them automatically. No
+		// separate per-child position bookkeeping is needed any more.
+		//
+		// Multi-select drag: if the node being dragged is in the multi-select
+		// set, snapshot every other selected node's starting position so the
+		// move handler can apply the same delta to all of them in lockstep.
+		const companions = [];
+		if (multiSelectedNodeIds.has(node.id) && multiSelectedNodeIds.size > 1) {
+			for (const otherId of multiSelectedNodeIds) {
+				if (otherId === node.id) continue;
+				const op = stablePositions[otherId] ?? defaultPositions.positions[otherId];
+				if (op) companions.push({ id: otherId, startPos: { x: op.x, y: op.y } });
 			}
 		}
-
 		dragInfo = {
 			nodeId: node.id,
 			startMouseCanvas: { x: canvasX, y: canvasY },
 			startPos: { x: pos.x, y: pos.y },
 			moved: false,
-			groupChildren
+			companions
 		};
 	}
 
@@ -717,60 +776,115 @@
 					stablePositions[dragInfo.nodeId] = { x: nx, y: ny };
 				}
 
-				// If this is a group, drag every child by the same delta so the
-				// container visually carries its members. Uses the per-child
-				// startPos snapshot captured at mousedown to avoid drift.
-				if (dragInfo.groupChildren?.length) {
-					for (const child of dragInfo.groupChildren) {
-						const nxC = child.startPos.x + dx;
-						const nyC = child.startPos.y + dy;
-						if (stablePositions[child.id]) {
-							stablePositions[child.id].x = nxC;
-							stablePositions[child.id].y = nyC;
+				// Apply the same delta to every co-selected node so the whole
+				// multi-selection moves as one body.
+				if (dragInfo.companions?.length) {
+					for (const c of dragInfo.companions) {
+						const cx = c.startPos.x + dx;
+						const cy = c.startPos.y + dy;
+						if (stablePositions[c.id]) {
+							stablePositions[c.id].x = cx;
+							stablePositions[c.id].y = cy;
 						} else {
-							stablePositions[child.id] = { x: nxC, y: nyC };
+							stablePositions[c.id] = { x: cx, y: cy };
 						}
 					}
 				}
 
-				// Splice-on-edge detection: only relevant if the dragged node has
-				// exactly one input and one output (any other shape doesn't fit
-				// cleanly into a 1:1 wire). Uses elementFromPoint to find an
-				// .edge-hit path under the cursor.
+				// Splice / insert detection. Bbox-overlap based (instead of the
+				// old elementFromPoint approach, which fails because the dragged
+				// node is rendered AT the cursor and blocks hit-testing of the
+				// edge or port underneath). Gated to ORPHAN column-processes
+				// only: once a process is already wired into a chain, dragging
+				// it shouldn't yank it out and splice it elsewhere — the user
+				// has to first detach it (delete its chain edge) to move it.
 				const draggedNode = allNodes.find((n) => n.id === dragInfo.nodeId);
-				if (
+				const draggedFits =
 					draggedNode &&
+					draggedNode.type === 'process' &&
+					draggedNode.processObj &&
+					!draggedNode.processObj.parentCol &&
 					(draggedNode.ports?.inputs?.length ?? 0) === 1 &&
-					(draggedNode.ports?.outputs?.length ?? 0) === 1
-				) {
-					const el = document.elementFromPoint(e.clientX, e.clientY);
-					const edgeEl = el?.closest?.('.edge-hit');
-					const key = edgeEl?.getAttribute?.('data-edge-key') ?? null;
-					// Don't splice a node onto an edge it's already part of.
-					if (key) {
-						const candidate = edgeTopology.find((edge) => edgeKeyFor(edge) === key);
-						if (
-							candidate &&
-							candidate.fromId !== draggedNode.id &&
-							candidate.toId !== draggedNode.id
-						) {
-							dropTargetEdgeKey = key;
-						} else {
-							dropTargetEdgeKey = null;
+					(draggedNode.ports?.outputs?.length ?? 0) === 1;
+				if (draggedFits) {
+					const dw = getNodeWidth(draggedNode);
+					const dh = getNodePortAreaHeight(draggedNode);
+					const cx = nx + dw / 2;
+					const cy = ny + dh / 2;
+					const draggedBox = { x1: nx, y1: ny, x2: nx + dw, y2: ny + dh };
+
+					// 1) Source output port hit — preferred. Picks the closest
+					//    overlapping output port to the dragged node's centre.
+					let bestPort = null;
+					let bestPortDist = Infinity;
+					for (const node of allNodes) {
+						if (node.id === draggedNode.id) continue;
+						const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id];
+						if (!pos) continue;
+						const nw = getNodeWidth(node);
+						for (const port of node.ports?.outputs ?? []) {
+							const portX = pos.x + nw;
+							const portY = pos.y + getPortAnchorY(node, port.name, 'out');
+							if (
+								portX < draggedBox.x1 ||
+								portX > draggedBox.x2 ||
+								portY < draggedBox.y1 ||
+								portY > draggedBox.y2
+							)
+								continue;
+							const d = (portX - cx) ** 2 + (portY - cy) ** 2;
+							if (d < bestPortDist) {
+								bestPortDist = d;
+								bestPort = `${node.id}|${port.name}`;
+							}
 						}
-					} else {
-						dropTargetEdgeKey = null;
 					}
+
+					// 2) Edge bbox overlap — fallback when no port is in range.
+					let bestEdge = null;
+					let bestEdgeDist = Infinity;
+					if (!bestPort) {
+						const pad = 6;
+						for (const edge of allEdges) {
+							if (
+								!edge.from ||
+								!edge.to ||
+								edge.fromId === draggedNode.id ||
+								edge.toId === draggedNode.id
+							)
+								continue;
+							const ex1 = Math.min(edge.from.x, edge.to.x) - pad;
+							const ey1 = Math.min(edge.from.y, edge.to.y) - pad;
+							const ex2 = Math.max(edge.from.x, edge.to.x) + pad;
+							const ey2 = Math.max(edge.from.y, edge.to.y) + pad;
+							if (
+								ex2 < draggedBox.x1 ||
+								ex1 > draggedBox.x2 ||
+								ey2 < draggedBox.y1 ||
+								ey1 > draggedBox.y2
+							)
+								continue;
+							const mx = (edge.from.x + edge.to.x) / 2;
+							const my = (edge.from.y + edge.to.y) / 2;
+							const d = (mx - cx) ** 2 + (my - cy) ** 2;
+							if (d < bestEdgeDist) {
+								bestEdgeDist = d;
+								bestEdge = edgeKeyFor(edge);
+							}
+						}
+					}
+
+					dropTargetPortKey = bestPort;
+					dropTargetEdgeKey = bestEdge;
 				} else {
+					dropTargetPortKey = null;
 					dropTargetEdgeKey = null;
 				}
 
-				// Live group-hover detection so the user gets visual feedback that
-				// the drop will be captured by a group. Permissive bbox overlap
-				// (NOT a centre-point test) since data-node bodies vary in height
-				// and a strict centre test makes "drop onto a group" feel finicky.
+				// Live drop-target highlight on the Group being hovered. Only
+				// data nodes can be absorbed, so other drags never highlight.
 				const draggedNodeForGroup = allNodes.find((n) => n.id === dragInfo.nodeId);
-				if (draggedNodeForGroup && draggedNodeForGroup.type !== 'group') {
+				if (draggedNodeForGroup?.type === 'data') {
 					let hover = null;
 					for (const g of core.groups) {
 						const gpos = stablePositions[g.id] ?? { x: g.x, y: g.y };
@@ -835,9 +949,24 @@
 		const node = allNodes.find((n) => n.id === nodeId);
 		if (!node) return -1;
 		if (node.type === 'data') return node.refId ?? -1;
+		if (node.type === 'group') {
+			// `col_${colId}` is the per-source port; `all` is handled separately
+			// by callers that want fan-out (see applyConnection).
+			if (typeof portName === 'string' && portName.startsWith('col_')) {
+				const id = Number(portName.slice(4));
+				return Number.isFinite(id) ? id : -1;
+			}
+			return -1;
+		}
 		if (node.type === 'process') {
 			const parent = core.data.find((c) => (c.processes ?? []).some((p) => p.id === node.refId));
-			return parent?.id ?? -1;
+			if (!parent) return -1;
+			// If a tap exists at this process step, downstream wires reference the
+			// tap column (not the parent's full-chain output). Prefer the tap so
+			// removeEdge/splice can find it; fall back to parent for intra-chain
+			// edges (which the existing branch-less consumers harmlessly ignore).
+			const tap = findExistingTap(parent.id, node.refId);
+			return tap ? tap.id : parent.id;
 		}
 		if (node.type === 'tableprocess' && node.tpObj) {
 			const out = node.tpObj.args?.out ?? {};
@@ -855,11 +984,76 @@
 		return -1;
 	}
 
+	// Look up an existing tap column for (parentCol, processId). Returns null if
+	// none yet exists. Pure lookup — never creates.
+	function findExistingTap(parentColId, processId) {
+		return core.data.find(
+			(c) => c.refId === parentColId && c.refUpToProcessId === processId
+		);
+	}
+
+	// Find an existing tap for this (parent, process) or create one. The tap is
+	// a normal Column with refUpToProcessId set; ProcessNode graph hides its
+	// data_X node and routes consumers' wires from process_<process.id>.output.
+	function findOrCreateTapColumn(parent, process) {
+		const existing = findExistingTap(parent.id, process.id);
+		if (existing) return existing;
+		const tap = new Column({
+			refId: parent.id,
+			refUpToProcessId: process.id
+		});
+		tap.customName = `${parent.name}@${process.displayName || process.name}`;
+		core.data.push(tap);
+		return tap;
+	}
+
 	function applyConnection(fromNodeId, fromPort, toNodeId, toPort) {
-		const colId = resolveOutputColumnId(fromNodeId, fromPort);
+		// Group 'all' port: fan out, calling per-source connections one at a
+		// time. The downstream consumer (tableplot, table-process yIN) already
+		// handles many-cardinality inputs by accumulating refs.
+		if (fromPort === 'all') {
+			const fromNode = allNodes.find((n) => n.id === fromNodeId);
+			if (fromNode?.type === 'group') {
+				const g = fromNode.groupObj;
+				const all = g?.sourceColumnIds ?? [];
+				const filter = Array.isArray(g?.allColumnIds) ? new Set(g.allColumnIds) : null;
+				for (const cid of all) {
+					if (filter && !filter.has(cid)) continue;
+					applyConnection(fromNodeId, `col_${cid}`, toNodeId, toPort);
+				}
+				return;
+			}
+		}
+
+		// Process output → non-process target: this is a tap. Reuse or create a
+		// tap column for (parent, process) so consumers can ref it like any col.
+		const fromNode = allNodes.find((n) => n.id === fromNodeId);
+		let colId;
+		if (fromNode?.type === 'process') {
+			const parent = core.data.find((c) =>
+				(c.processes ?? []).some((p) => p.id === fromNode.refId)
+			);
+			const proc = parent?.processes.find((p) => p.id === fromNode.refId);
+			if (!parent || !proc) return;
+			colId = findOrCreateTapColumn(parent, proc).id;
+		} else {
+			colId = resolveOutputColumnId(fromNodeId, fromPort);
+		}
 		if (colId < 0) return;
 		const target = allNodes.find((n) => n.id === toNodeId);
 		if (!target) return;
+
+		// Column process: only orphans accept user-drawn wires. Attaching
+		// moves the Process from core.orphanProcesses into the source
+		// column's processes[] chain. Already-attached processes don't
+		// expose any user-wireable port (the chain edge is implicit), so
+		// we no-op for them.
+		if (target.type === 'process' && target.processObj && toPort === 'input') {
+			if (!target.processObj.parentCol) {
+				attachOrphanProcessToColumn(target.processObj.id, colId);
+			}
+			return;
+		}
 
 		if (target.type === 'tableprocess' && target.tpObj) {
 			const tp = target.tpObj;
@@ -897,8 +1091,11 @@
 			if (xMatch) {
 				if (setIdx < groups.length) {
 					// Update every data point in this set: new shared x.
+					// Mutate refId in place so the ColumnClass instance (and its
+					// getData() prototype) survives. Replacing dp.x with a plain
+					// object spread silently breaks the reactive plot derivations.
 					for (const dp of groups[setIdx].dataPoints) {
-						dp.x = { ...(dp.x ?? {}), refId: colId };
+						if (dp?.x) dp.x.refId = colId;
 					}
 				} else {
 					// Trailing empty pair — seed a new set with x but no y yet.
@@ -947,8 +1144,9 @@
 			const g = groups[setIdx];
 			if (xMatch) {
 				// Orphan the set: clear x.refId on every data point in this group.
+				// Mutate in place; see the note at the connect path above.
 				for (const dp of g.dataPoints) {
-					if (dp?.x) dp.x = { ...dp.x, refId: -1 };
+					if (dp?.x) dp.x.refId = -1;
 				}
 			} else {
 				// Drop every data point in the set (matches the tableplot
@@ -962,6 +1160,50 @@
 	function handlePortStart(e) {
 		e.stopPropagation();
 		pendingConnection = { fromNodeId: e.detail.nodeId, fromPort: e.detail.port };
+	}
+
+	function pointerOutsideGroupRect(groupId, clientX, clientY) {
+		const el = document.querySelector(`[data-group-id="${CSS.escape(groupId)}"]`);
+		if (!el) return true;
+		const r = el.getBoundingClientRect();
+		return clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom;
+	}
+
+	function onExtractMove(e) {
+		if (!extractGesture) return;
+		// Small dead-zone so a stray click on the grip doesn't immediately
+		// register as "outside" if the user happens to click near the card edge.
+		const dx = e.clientX - extractGesture.startClientX;
+		const dy = e.clientY - extractGesture.startClientY;
+		const moved = Math.hypot(dx, dy) > 6;
+		extractGesture.outside =
+			moved && pointerOutsideGroupRect(extractGesture.groupId, e.clientX, e.clientY);
+	}
+
+	function onExtractUp(e) {
+		window.removeEventListener('pointermove', onExtractMove);
+		const g = extractGesture;
+		extractGesture = null;
+		if (!g) return;
+		if (!g.outside) return;
+		// Land the resurfaced data_X node at the drop pointer (top-left of card).
+		const c = toCanvasCoords(e.clientX - NODE_WIDTH / 2, e.clientY - HEADER_H / 2);
+		_spawnPositionQueue.push({ x: c.x, y: c.y });
+		extractColumnFromAnyGroup(g.colId);
+	}
+
+	function handleExtractStart(e) {
+		const { groupId, colId, clientX, clientY } = e.detail ?? {};
+		if (groupId == null || colId == null) return;
+		extractGesture = {
+			groupId,
+			colId,
+			startClientX: clientX,
+			startClientY: clientY,
+			outside: false
+		};
+		window.addEventListener('pointermove', onExtractMove);
+		window.addEventListener('pointerup', onExtractUp, { once: true });
 	}
 
 	function handlePortEnd(e) {
@@ -984,24 +1226,28 @@
 
 	function handleNodeWrapperMouseUp(e, node) {
 		if (dragInfo && !dragInfo.moved) {
-			// Short press with no movement → treat as a click
-			handleNodeAction(node);
+			// Short press with no movement → treat as a click. Pass the event
+			// so handleNodeAction can read alt/meta/ctrl/shift for additive
+			// multi-select.
+			handleNodeAction(node, e);
 		}
 		// Don't clear dragInfo here — stopAll (which always fires) handles the drop and cleanup
 	}
 
 	/**
-	 * After a non-group node finishes a drag, decide whether the node lands
-	 * inside any group's rect (centre-point hit-test) and update the relevant
-	 * group's childIds list. Only one group claims the node at a time.
+	 * After a data node finishes a drag, if it landed inside a Group's bbox,
+	 * absorb its column into that group as a Source row. The standalone
+	 * `data_${colId}` canvas node disappears on the next derive (suppressed in
+	 * ProcessNode.svelte.js) and reappears as a row inside the group card.
+	 * Non-data nodes are ignored — Source groups only accept columns.
 	 */
 	function reconcileGroupMembership(nodeId) {
 		const draggedNode = allNodes.find((n) => n.id === nodeId);
-		if (!draggedNode || draggedNode.type === 'group') return;
+		if (!draggedNode || draggedNode.type !== 'data') return;
+		const colId = draggedNode.refId;
+		if (typeof colId !== 'number') return;
 		const pos = stablePositions[nodeId] ?? defaultPositions.positions[nodeId];
 		if (!pos) return;
-		// Permissive bbox overlap (same test the live hover uses) so the drop
-		// behaviour matches what the user saw during the drag.
 		const ax1 = pos.x;
 		const ay1 = pos.y;
 		const ax2 = pos.x + NODE_WIDTH;
@@ -1018,20 +1264,22 @@
 				break;
 			}
 		}
-		for (const g of core.groups) {
-			const inThisGroup = (g.childIds ?? []).includes(nodeId);
-			if (g === landedGroup && !inThisGroup) {
-				g.childIds = [...(g.childIds ?? []), nodeId];
-			} else if (g !== landedGroup && inThisGroup) {
-				g.childIds = (g.childIds ?? []).filter((id) => id !== nodeId);
-			}
+		if (landedGroup) {
+			absorbColumnIntoGroup(colId, landedGroup.id);
 		}
 	}
 
 	function stopAll() {
-		// Splice-on-edge: if the user dropped a 1-in/1-out node onto an edge,
-		// move the underlying entity so the data chain flows through it.
-		if (dragInfo?.moved && dropTargetEdgeKey) {
+		// Splice-on-port takes priority over splice-on-edge — it expresses a
+		// more specific intent ("between this source and ALL its consumers").
+		if (dragInfo?.moved && dropTargetPortKey) {
+			const draggedNode = allNodes.find((n) => n.id === dragInfo.nodeId);
+			const [sourceNodeId, sourcePort] = dropTargetPortKey.split('|');
+			if (draggedNode && sourceNodeId && sourcePort) {
+				spliceNodeOntoSourceOutput(draggedNode, sourceNodeId, sourcePort);
+			}
+		} else if (dragInfo?.moved && dropTargetEdgeKey) {
+			// Splice-on-edge: dropped onto a wire (edge bbox-overlap).
 			const draggedNode = allNodes.find((n) => n.id === dragInfo.nodeId);
 			const targetEdge = edgeTopology.find((edge) => edgeKeyFor(edge) === dropTargetEdgeKey);
 			if (draggedNode && targetEdge) spliceNodeOntoEdge(draggedNode, targetEdge);
@@ -1042,6 +1290,7 @@
 			reconcileGroupMembership(dragInfo.nodeId);
 		}
 		dropTargetEdgeKey = null;
+		dropTargetPortKey = null;
 		dragHoverGroupId = null;
 		dragInfo = null;
 		resizeInfo = null;
@@ -1056,35 +1305,247 @@
 	 */
 	function spliceNodeOntoEdge(draggedNode, edge) {
 		if (draggedNode.type !== 'process' || !draggedNode.processObj) return;
+		const proc = draggedNode.processObj;
+
+		// Chain edge (data_X → process_Y, or process_A → process_B): insert
+		// the dragged process AT the target's chain position so it becomes
+		// the new immediate upstream of the target. This is the "insert
+		// between" gesture the user expects when dropping onto a chain wire.
+		if (
+			edge.type === 'data-process' &&
+			typeof edge.toId === 'string' &&
+			edge.toId.startsWith('process_')
+		) {
+			const targetProcId = Number(edge.toId.slice('process_'.length));
+			if (!Number.isFinite(targetProcId)) return;
+			const targetCol = core.data.find((c) =>
+				(c.processes ?? []).some((p) => p.id === targetProcId)
+			);
+			if (!targetCol) return;
+			// Detach from current home (column processes[] OR orphans) BEFORE
+			// computing the insert index so cross-column or same-column moves
+			// don't shift the index out from under us.
+			if (proc.parentCol && Array.isArray(proc.parentCol.processes)) {
+				proc.parentCol.processes = proc.parentCol.processes.filter((p) => p.id !== proc.id);
+			}
+			core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== proc.id);
+			const insertIdx = targetCol.processes.findIndex((p) => p.id === targetProcId);
+			if (insertIdx < 0) return;
+			proc.parentCol = targetCol;
+			targetCol.processes = [
+				...targetCol.processes.slice(0, insertIdx),
+				proc,
+				...targetCol.processes.slice(insertIdx)
+			];
+			return;
+		}
+
+		// Non-chain edge (process → TP input, data → TP input, process → plot,
+		// data → plot). Scope the splice to JUST this edge — even if the
+		// source has other consumers, they keep reading the original column.
+		// Implementation:
+		//   1. Create a hidden "tap" column Y that exposes the source's data
+		//      at the precise pipeline point this edge originates from
+		//      (refUpToProcessId = the edge's source process, or null when
+		//      the edge originates from a raw data/group/TP-output column).
+		//   2. Move the orphan into Y.processes so the canvas chain becomes
+		//      `source.output → orphan.input → orphan.output`.
+		//   3. Re-route ONLY this edge's consumer field to reference Y.
 		const sourceColId = resolveOutputColumnId(edge.fromId, edge.fromPort);
 		if (sourceColId == null || sourceColId < 0) return;
-		const targetCol = core.data.find((c) => c.id === sourceColId);
-		if (!targetCol) return;
-		const proc = draggedNode.processObj;
-		const oldParent = proc.parentCol;
-		if (oldParent === targetCol) return; // already on this column
-		if (oldParent && Array.isArray(oldParent.processes)) {
-			oldParent.processes = oldParent.processes.filter((p) => p.id !== proc.id);
+		const sourceCol = core.data.find((c) => c.id === sourceColId);
+		if (!sourceCol) return;
+
+		let refUpToProcessId = null;
+		if (typeof edge.fromId === 'string' && edge.fromId.startsWith('process_')) {
+			const pid = Number(edge.fromId.slice('process_'.length));
+			if (Number.isFinite(pid)) refUpToProcessId = pid;
 		}
-		proc.parentCol = targetCol;
-		targetCol.processes = [...(targetCol.processes ?? []), proc];
+
+		// Build the tap column and attach the orphan as its sole process. The
+		// adapter hides tap columns from the canvas (no data_X node) and
+		// re-routes their incoming chain wire via columnSourceRef — so the
+		// only canvas node that materialises from this op is the orphan
+		// itself, which now sits on a fresh disconnected chain.
+		const tapCol = new Column({
+			refId: sourceColId,
+			refUpToProcessId: refUpToProcessId ?? null
+		});
+		tapCol.isTap = true;
+		tapCol.customName = `${sourceCol.name ?? 'col'} → ${proc.displayName || proc.name}`;
+		pushObj(tapCol);
+
+		if (proc.parentCol && Array.isArray(proc.parentCol.processes)) {
+			proc.parentCol.processes = proc.parentCol.processes.filter((p) => p.id !== proc.id);
+		}
+		core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== proc.id);
+		proc.parentCol = tapCol;
+		tapCol.processes = [proc];
+
+		rerouteEdgeConsumer(edge, sourceColId, tapCol.id);
 	}
 
-	function handleNodeAction(node) {
-		// Toggle focus: click same node again to deselect
-		focusedNodeId = focusedNodeId === node.id ? null : node.id;
-		// Selecting a node clears any edge selection.
+	/**
+	 * Swap a single column reference on the edge's consumer (TP arg / plot
+	 * data point) from oldColId → newColId, scoped to the specific edge's
+	 * port. Other consumers of oldColId — and other refs on the same node
+	 * but different ports — are untouched.
+	 */
+	function rerouteEdgeConsumer(edge, oldColId, newColId) {
+		const target = allNodes.find((n) => n.id === edge.toId);
+		if (!target) return;
+
+		if (target.type === 'tableprocess' && target.tpObj) {
+			const tp = target.tpObj;
+			const port = edge.toPort;
+			if (!port?.endsWith('IN')) return;
+			if (isManyInputPort(target, port)) {
+				const arr = Array.isArray(tp.args[port]) ? tp.args[port] : [];
+				const idx = arr.indexOf(oldColId);
+				if (idx < 0) return;
+				const next = [...arr];
+				next[idx] = newColId;
+				tp.args[port] = next;
+			} else if (tp.args[port] === oldColId) {
+				tp.args[port] = newColId;
+			}
+			return;
+		}
+
+		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && edge.toPort === 'series') {
+			const refs = target.plotObj.plot.columnRefs ?? [];
+			const idx = refs.indexOf(oldColId);
+			if (idx < 0) return;
+			const next = [...refs];
+			next[idx] = newColId;
+			target.plotObj.plot.columnRefs = next;
+			return;
+		}
+
+		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot') {
+			const plot = target.plotObj.plot;
+			if (!plot?.data) return;
+			const xMatch = edge.toPort?.match(/^x(\d+)$/);
+			const ysMatch = edge.toPort?.match(/^ys(\d+)$/);
+			if (!xMatch && !ysMatch) return;
+			const groups = groupPlotData(plot.data);
+			const setIdx = Number((xMatch ?? ysMatch)[1]) - 1;
+			if (setIdx >= groups.length) return;
+			const g = groups[setIdx];
+			if (xMatch) {
+				// Update every data point in this set whose x matches the edge.
+				for (const dp of g.dataPoints) {
+					if (dp?.x && dp.x.refId === oldColId) dp.x.refId = newColId;
+				}
+			} else {
+				// ys: re-route every data point in this set whose y matches.
+				for (const dp of g.dataPoints) {
+					if (dp?.y && dp.y.refId === oldColId) dp.y.refId = newColId;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Insert the dragged process so it sits BETWEEN the given source output and
+	 * everything that source feeds. Used when the user drops onto a source's
+	 * output port.
+	 *
+	 *   - Source = data column / group / TP output  → insert at the FRONT of
+	 *     the source column's chain. All downstream consumers (chain + any
+	 *     TP/plot reading "col's last process output") still see the same
+	 *     last-process source; only the front of the chain changes.
+	 *   - Source = a column process  → insert immediately AFTER that process
+	 *     in its column's chain. If the source was the last process, the new
+	 *     process becomes the last, and any TP/plot reading the column's
+	 *     last output now reads through the new process.
+	 */
+	function spliceNodeOntoSourceOutput(draggedNode, sourceNodeId, sourcePort) {
+		if (draggedNode.type !== 'process' || !draggedNode.processObj) return;
+		const proc = draggedNode.processObj;
+		const sourceNode = allNodes.find((n) => n.id === sourceNodeId);
+		if (!sourceNode) return;
+		// Resolve the column whose chain we're going to insert into.
+		const colId = resolveOutputColumnId(sourceNodeId, sourcePort);
+		if (colId == null || colId < 0) return;
+		const targetCol = core.data.find((c) => c.id === colId);
+		if (!targetCol) return;
+
+		// Detach from current home first so cross-column / same-column moves
+		// don't shift indices unexpectedly.
+		if (proc.parentCol && Array.isArray(proc.parentCol.processes)) {
+			proc.parentCol.processes = proc.parentCol.processes.filter((p) => p.id !== proc.id);
+		}
+		core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== proc.id);
+
+		proc.parentCol = targetCol;
+
+		if (sourceNode.type === 'process' && sourceNode.processObj) {
+			const sourceProcId = sourceNode.processObj.id;
+			const procIdx = targetCol.processes.findIndex((p) => p.id === sourceProcId);
+			if (procIdx < 0) {
+				// Source process isn't in the resolved column — unexpected; fall
+				// back to appending so we never leave the orphan in a half-state.
+				targetCol.processes = [...(targetCol.processes ?? []), proc];
+				return;
+			}
+			targetCol.processes = [
+				...targetCol.processes.slice(0, procIdx + 1),
+				proc,
+				...targetCol.processes.slice(procIdx + 1)
+			];
+		} else {
+			// Source is a data column, group output, or TP output column —
+			// the dragged process should be the FIRST step in the chain.
+			targetCol.processes = [proc, ...(targetCol.processes ?? [])];
+		}
+	}
+
+	function handleNodeAction(node, e = null) {
+		const additive = !!(e && (e.altKey || e.metaKey || e.ctrlKey || e.shiftKey));
+
+		// Selecting a node clears any edge selection regardless of mode.
 		selectedEdgeKey = null;
+
+		if (additive) {
+			// Additive: toggle this node in the multi-select set without
+			// touching focus on the others. The focused id moves to whichever
+			// node was just acted on so the ControlPanel reflects it.
+			toggleMultiSelect(node.id);
+			focusedNodeId = node.id;
+		} else {
+			// Plain click: replace selection with just this node. We do NOT
+			// toggle off on a second click on the same node — that interferes
+			// with double-click expansion (the second click would deselect
+			// before dblclick fires, leaving an expanded-but-unselected node).
+			// To deselect, click the background or press Escape.
+			focusedNodeId = node.id;
+			multiSelectedNodeIds = new Set([node.id]);
+		}
+
+		// Inline expansion is now decoupled from selection — toggle it only on
+		// double-click (see handleNodeDblClick). Single-click never expands.
 
 		if (node.type === 'plot') {
 			// Synthesise a minimal event-like object for selectPlot (needs altKey)
-			selectPlot({ altKey: false }, node.refId);
-		} else if (node.type === 'data') {
+			selectPlot({ altKey: additive }, node.refId);
+		} else if (node.type === 'data' && !additive) {
 			appState.currentTab = 'data';
 			appState.showDisplayPanel = true;
-		} else if (node.type === 'process' || node.type === 'tableprocess') {
-			expandedNodeId = expandedNodeId === node.id ? null : node.id;
 		}
+	}
+
+	/** Toggle inline expand for process/tableprocess on double-click. */
+	function handleNodeDblClick(node) {
+		if (node.type !== 'process' && node.type !== 'tableprocess') return;
+		expandedNodeId = expandedNodeId === node.id ? null : node.id;
+	}
+
+	function toggleMultiSelect(id) {
+		const next = new Set(multiSelectedNodeIds);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		multiSelectedNodeIds = next;
 	}
 
 	function handleBackgroundClick() {
@@ -1099,6 +1560,7 @@
 		deselectAllPlots();
 		expandedNodeId = null;
 		focusedNodeId = null;
+		multiSelectedNodeIds = new Set();
 		selectedEdgeKey = null;
 		pendingConnection = null;
 	}
@@ -1110,8 +1572,26 @@
 	 */
 	function removeEdge(edge) {
 		const target = allNodes.find((n) => n.id === edge.toId);
+		if (!target) return;
+
+		// Chain edge into a column-process: the edge is implicit (derived from
+		// ordering in col.processes). "Deleting" it orphans the target process
+		// — it leaves the column, joins core.orphanProcesses, and the rest of
+		// the chain shifts forward (now downstream of whatever previously fed
+		// the deleted edge's source). The user can re-wire the orphan to any
+		// other column afterwards.
+		if (target.type === 'process' && target.processObj && edge.type === 'data-process') {
+			const proc = target.processObj;
+			const parent = proc.parentCol;
+			if (!parent || !Array.isArray(parent.processes)) return;
+			parent.processes = parent.processes.filter((p) => p.id !== proc.id);
+			proc.parentCol = null;
+			core.orphanProcesses = [...core.orphanProcesses, proc];
+			return;
+		}
+
 		const colId = resolveOutputColumnId(edge.fromId, edge.fromPort);
-		if (!target || colId == null || colId < 0) return;
+		if (colId == null || colId < 0) return;
 
 		if (target.type === 'tableprocess' && target.tpObj) {
 			const tp = target.tpObj;
@@ -1148,10 +1628,11 @@
 			if (xMatch) {
 				// Edge for the set's shared x: clear x.refId on every data point
 				// in this group so the set becomes "orphaned" (next derive groups
-				// them under xRefId = -1).
+				// them under xRefId = -1). Mutate in place to preserve the
+				// ColumnClass prototype (see connect path).
 				if (g.xRefId === colId) {
 					for (const dp of g.dataPoints) {
-						if (dp?.x) dp.x = { ...dp.x, refId: -1 };
+						if (dp?.x) dp.x.refId = -1;
 					}
 				}
 				return;
@@ -1173,7 +1654,11 @@
 		}
 		if (node.type === 'process') {
 			const parent = core.data.find((c) => (c.processes ?? []).some((p) => p.id === node.refId));
-			if (parent) mutationService.removeProcess(parent.id, node.refId);
+			if (parent) {
+				mutationService.removeProcess(parent.id, node.refId);
+			} else if (core.orphanProcesses.some((p) => p.id === node.refId)) {
+				removeOrphanProcess(node.refId);
+			}
 			return;
 		}
 		if (node.type === 'tableprocess' && node.tpObj) {
@@ -1193,12 +1678,293 @@
 			selectedEdgeKey = null;
 			return;
 		}
-		if (focusedNodeId) {
-			const node = allNodes.find((n) => n.id === focusedNodeId);
-			removeNode(node);
-			focusedNodeId = null;
-			expandedNodeId = null;
+		const targets =
+			multiSelectedNodeIds.size > 1
+				? Array.from(multiSelectedNodeIds)
+				: focusedNodeId
+					? [focusedNodeId]
+					: [];
+		if (targets.length === 0) return;
+		for (const id of targets) {
+			const node = allNodes.find((n) => n.id === id);
+			if (node) removeNode(node);
 		}
+		focusedNodeId = null;
+		multiSelectedNodeIds = new Set();
+		expandedNodeId = null;
+	}
+
+	// --- Clipboard for copy/paste ---
+	// Each entry: { type, payload } where payload is whatever the corresponding
+	// paste branch needs to recreate the node. Module-scoped (per workflow
+	// instance) so it survives ControlPanel re-renders.
+	let _clipboard = [];
+
+	// Dev-only diagnostic. Vite statically replaces import.meta.env.DEV with
+	// `false` in production builds, so this whole helper is dropped from the
+	// shipped bundle. Use for copy/paste/keydown tracing.
+	const DEV = !!import.meta.env?.DEV;
+	function _dbg(...args) {
+		if (DEV) console.log('[canvas]', ...args);
+	}
+
+	function isEditableTarget(target) {
+		if (!target) return false;
+		const tag = target?.tagName;
+		return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable;
+	}
+
+	/** Wipe every user-drawable column-ref input from a TP args object so the
+	 *  pasted node lands without any of its previous incoming wires. Also
+	 *  resets args.out values to -1 so the TP constructor allocates fresh
+	 *  output columns (otherwise the new TP would alias the original's
+	 *  output column ids — instant collision). */
+	function clearTPInputsAndOutputs(args, nodeSpec) {
+		const out = { ...(args ?? {}) };
+		for (const inp of nodeSpec?.inputs ?? []) {
+			if (!inp?.name) continue;
+			out[inp.name] = inp.cardinality === 'many' ? [] : -1;
+		}
+		// Defensive fallback: any remaining key ending in 'IN' is also an
+		// input port (matches the existing disconnectInputPort heuristic).
+		for (const key of Object.keys(out)) {
+			if (key.endsWith('IN')) {
+				out[key] = Array.isArray(out[key]) ? [] : -1;
+			}
+		}
+		if (out.out && typeof out.out === 'object') {
+			const freshOut = {};
+			for (const key of Object.keys(out.out)) freshOut[key] = -1;
+			out.out = freshOut;
+		}
+		return out;
+	}
+
+	/** Strip every incoming column-ref from a cloned plot payload so the
+	 *  pasted plot lands with no wires. For non-tableplot plots we drop the
+	 *  data array entirely (each entry is a wire pair); tableplots clear
+	 *  columnRefs. */
+	function clearPlotInputs(plotData) {
+		if (!plotData) return plotData;
+		const out = { ...plotData };
+		if (out.type === 'tableplot') {
+			out.plot = { ...(out.plot ?? {}), columnRefs: [] };
+		} else {
+			out.plot = { ...(out.plot ?? {}), data: [] };
+		}
+		return out;
+	}
+
+	/** Safely deep-clone Svelte $state-backed values via JSON, dropping any
+	 *  functions. structuredClone can throw on $state proxies in some Svelte 5
+	 *  versions, which would silently abort copy and leave the clipboard
+	 *  empty. JSON cloning matches what operations.js uses internally. */
+	function jsonClone(value) {
+		try {
+			return JSON.parse(
+				JSON.stringify(value ?? null, (_k, v) => (typeof v === 'function' ? undefined : v))
+			);
+		} catch (err) {
+			console.warn('[canvas copy] failed to clone value:', err);
+			return null;
+		}
+	}
+
+	/** Build a clipboard entry from one canvas node. Returns null when the
+	 *  node type can't be sensibly copied (e.g. TP-output data columns). */
+	function snapshotNode(node) {
+		const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id] ?? { x: 80, y: 80 };
+		const base = { id: node.id, pos: { x: pos.x, y: pos.y } };
+		if (node.type === 'process' && node.processObj) {
+			// Snapshot only the process type + args. Pasting always spawns an
+			// orphan (unconnected) so we don't need the original parent column
+			// id; the user wires the pasted node to whichever column they like.
+			return {
+				...base,
+				type: 'process',
+				processType: node.processObj.name,
+				args: jsonClone(node.processObj.args ?? {}) ?? {}
+			};
+		}
+		if (node.type === 'tableprocess' && node.tpObj) {
+			const table = core.tables.find((t) =>
+				(t.processes ?? []).some((tp) => tp.id === node.tpObj.id)
+			);
+			if (!table) return null;
+			const cloned = jsonClone(node.tpObj.args ?? {}) ?? {};
+			return {
+				...base,
+				type: 'tableprocess',
+				tpType: node.tpObj.name ?? node.tpName,
+				tableId: table.id,
+				args: clearTPInputsAndOutputs(cloned, node.nodeSpec)
+			};
+		}
+		if (node.type === 'plot' && node.plotObj) {
+			const snapshot =
+				typeof node.plotObj.toJSON === 'function' ? node.plotObj.toJSON() : { ...node.plotObj };
+			const cloned = jsonClone(snapshot);
+			if (!cloned) return null;
+			delete cloned.id;
+			delete cloned.selected;
+			return { ...base, type: 'plot', plotData: clearPlotInputs(cloned) };
+		}
+		if (node.type === 'note' && node.noteObj) {
+			return { ...base, type: 'note', text: node.noteObj.text ?? '' };
+		}
+		if (node.type === 'group' && node.groupObj) {
+			return {
+				...base,
+				type: 'group',
+				name: node.groupObj.name,
+				width: node.groupObj.width,
+				height: node.groupObj.height
+			};
+		}
+		if (node.type === 'data' && node.refId != null) {
+			// Skip TP-output columns — those are derived; copying them as
+			// standalone columns would orphan the data from its producer.
+			const col = core.data.find((c) => c.id === node.refId);
+			if (!col || typeof col.toJSON !== 'function') return null;
+			const isTPOutput = (core.tables ?? []).some((t) =>
+				(t.processes ?? []).some((tp) =>
+					Object.values(tp.args?.out ?? {}).some((cid) => cid === col.id)
+				)
+			);
+			if (isTPOutput) return null;
+			const cloned = jsonClone(col.toJSON());
+			if (!cloned) return null;
+			delete cloned.id;
+			// Strip processes so the cloned column starts as a plain data
+			// carrier; the source column's processes carry stale ids that
+			// would collide on import.
+			cloned.processes = [];
+			cloned.name = `${cloned.name ?? 'column'} copy`;
+			return { ...base, type: 'data', columnData: cloned };
+		}
+		return null;
+	}
+
+	function copySelection() {
+		const ids =
+			multiSelectedNodeIds.size > 0
+				? Array.from(multiSelectedNodeIds)
+				: focusedNodeId
+					? [focusedNodeId]
+					: [];
+		_dbg('copy: selection ids =', ids);
+		if (ids.length === 0) {
+			_dbg('copy: nothing selected — aborting');
+			return;
+		}
+		const snapshots = [];
+		const skipped = [];
+		for (const id of ids) {
+			const node = allNodes.find((n) => n.id === id);
+			if (!node) {
+				_dbg('copy: id not in allNodes —', id);
+				continue;
+			}
+			const snap = snapshotNode(node);
+			if (snap) {
+				_dbg('copy: snapshot for', id, '→', snap);
+				snapshots.push(snap);
+			} else {
+				_dbg('copy: snapshotNode returned null for', id, '(type:', node.type + ')');
+				skipped.push(`${node.id} (${node.type})`);
+			}
+		}
+		if (snapshots.length > 0) {
+			_clipboard = snapshots;
+			_dbg('copy: clipboard now holds', _clipboard.length, 'entries');
+			if (skipped.length > 0) {
+				console.warn('[canvas copy] some nodes skipped (not copyable):', skipped);
+			}
+		} else {
+			console.warn(
+				'[canvas copy] nothing copyable in selection (TP-output data columns are skipped)'
+			);
+		}
+	}
+
+	function pasteClipboard() {
+		_dbg('paste: invoked. clipboard length =', _clipboard.length);
+		if (!_clipboard.length) {
+			console.warn('[canvas paste] clipboard is empty — nothing to paste');
+			return;
+		}
+		const PASTE_OFFSET = 40;
+		const newIds = new Set();
+		for (const entry of _clipboard) {
+			const newPos = {
+				x: (entry.pos?.x ?? 80) + PASTE_OFFSET,
+				y: (entry.pos?.y ?? 80) + PASTE_OFFSET
+			};
+			let newCanvasId = null;
+			_dbg('paste: entry', entry.type, 'target pos', newPos, 'entry =', entry);
+			try {
+				if (entry.type === 'process') {
+					// Spawn as orphan so the pasted process lands with no
+					// chain edges. The user wires it to a column afterwards.
+					const proc = createOrphanProcess(entry.processType, entry.args ?? {});
+					_dbg('paste: createOrphanProcess →', proc?.id ?? null);
+					if (proc) newCanvasId = `process_${proc.id}`;
+				} else if (entry.type === 'tableprocess') {
+					const table = core.tables.find((t) => t.id === entry.tableId);
+					if (!table) {
+						console.warn('[canvas paste] parent table gone for tableprocess — skipped');
+						continue;
+					}
+					const tp = mutationService.addTableProcess(table.id, entry.tpType, entry.args);
+					_dbg('paste: addTableProcess →', tp?.id ?? null);
+					if (tp) newCanvasId = `tableprocess_${tp.id}`;
+				} else if (entry.type === 'plot') {
+					const seed = { ...entry.plotData, x: newPos.x, y: newPos.y };
+					const plot = mutationService.addPlot(seed);
+					_dbg('paste: addPlot →', plot?.id ?? null);
+					if (plot) newCanvasId = `plot_${plot.id}`;
+				} else if (entry.type === 'note') {
+					const id = createNote({ x: newPos.x, y: newPos.y, text: entry.text });
+					_dbg('paste: createNote →', id);
+					newCanvasId = id;
+				} else if (entry.type === 'group') {
+					const id = createGroup({ x: newPos.x, y: newPos.y, name: `${entry.name} copy` });
+					const g = core.groups.find((gg) => gg.id === id);
+					if (g) {
+						if (entry.width) g.width = entry.width;
+						if (entry.height) g.height = entry.height;
+					}
+					_dbg('paste: createGroup →', id);
+					newCanvasId = id;
+				} else if (entry.type === 'data') {
+					const col = mutationService.addColumn(entry.columnData);
+					_dbg('paste: addColumn →', col?.id ?? null);
+					if (col) newCanvasId = `data_${col.id}`;
+				} else {
+					_dbg('paste: unknown entry type', entry.type);
+				}
+			} catch (err) {
+				console.warn('[canvas paste] entry failed:', entry?.type, err);
+			}
+			if (newCanvasId) {
+				newIds.add(newCanvasId);
+				// Pin the position synchronously so it doesn't depend on the
+				// $effect that consumes _spawnPositionQueue. Belt-and-braces.
+				stablePositions[newCanvasId] = { x: newPos.x, y: newPos.y };
+				_dbg('paste: pinned position for', newCanvasId, '@', newPos);
+			}
+		}
+		if (newIds.size === 0) {
+			console.warn(
+				'[canvas paste] nothing created. Clipboard entries:',
+				_clipboard.map((e) => e.type)
+			);
+			return;
+		}
+		// Focus the newly pasted set so the user sees what landed.
+		multiSelectedNodeIds = newIds;
+		focusedNodeId = newIds.values().next().value;
+		_dbg('paste: done. created', newIds.size, 'nodes, focused', focusedNodeId);
 	}
 
 	function handleKeyDown(e) {
@@ -1206,11 +1972,42 @@
 			clearSelection();
 			return;
 		}
+		const mod = e.metaKey || e.ctrlKey;
+		if (mod && (e.key === 'c' || e.key === 'C')) {
+			_dbg('keydown: Cmd/Ctrl+C', {
+				editable: isEditableTarget(e.target),
+				focusedNodeId,
+				multiSize: multiSelectedNodeIds.size,
+				target: e.target?.tagName
+			});
+			if (isEditableTarget(e.target)) return;
+			if (focusedNodeId || multiSelectedNodeIds.size > 0) {
+				e.preventDefault();
+				copySelection();
+			} else {
+				_dbg('keydown: Cmd/Ctrl+C ignored — no canvas selection');
+			}
+			return;
+		}
+		if (mod && (e.key === 'v' || e.key === 'V')) {
+			_dbg('keydown: Cmd/Ctrl+V', {
+				editable: isEditableTarget(e.target),
+				clipboardLen: _clipboard.length,
+				target: e.target?.tagName
+			});
+			if (isEditableTarget(e.target)) return;
+			if (_clipboard.length > 0) {
+				e.preventDefault();
+				pasteClipboard();
+			} else {
+				_dbg('keydown: Cmd/Ctrl+V ignored — clipboard empty');
+			}
+			return;
+		}
 		if (e.key === 'Delete' || e.key === 'Backspace') {
 			// Ignore if focus is in an editable text control inside an expanded node panel.
-			const tag = e.target?.tagName;
-			if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return;
-			if (selectedEdgeKey || focusedNodeId) {
+			if (isEditableTarget(e.target)) return;
+			if (selectedEdgeKey || focusedNodeId || multiSelectedNodeIds.size > 0) {
 				e.preventDefault();
 				deleteSelection();
 			}
@@ -1226,13 +2023,18 @@
 		if (!fromNode || !fromPos) return null;
 		return {
 			from: {
-				x: fromPos.x + NODE_WIDTH,
+				x: fromPos.x + getNodeWidth(fromNode),
 				y: fromPos.y + getPortAnchorY(fromNode, pendingConnection.fromPort, 'out')
 			},
 			to: { x: mouseCanvas.x, y: mouseCanvas.y }
 		};
 	});
 </script>
+
+<!-- Window-level keydown so Cmd/Ctrl+C/V, Delete, Backspace, and Escape work
+     without first clicking inside the canvas. handleKeyDown already guards
+     against typing into inputs/textareas via isEditableTarget. -->
+<svelte:window onkeydown={handleKeyDown} />
 
 <div
 	class="workflow-editor"
@@ -1244,22 +2046,22 @@
 	onmouseup={stopAll}
 	onmouseleave={stopAll}
 	onclick={handleBackgroundClick}
-	onkeydown={handleKeyDown}
 	role="presentation"
 	tabindex="-1"
 >
 	{#if !inline}
 		<!-- Legacy fullscreen-modal mode keeps the close-X only. The "+ Plot" / "+ TP"
 		     header buttons moved into NodePalette so canvas mode is chrome-free. -->
-		<button class="close-btn legacy-only" onclick={() => (appState.showWorkflow = false)}>✕</button>
+		<button
+			class="close-btn legacy-only"
+			onclick={() => (appState.showWorkflow = false)}
+			aria-label="Close workflow"
+			{@attach tooltip('Close workflow')}
+		>✕</button>
 	{/if}
 
 	<div class="canvas-viewport" bind:this={canvasViewportEl} class:panning={isPanning && !dragInfo}>
-		<FloatingActions
-			onResetView={resetCanvasView}
-			pathFocus={pathFocusEnabled}
-			onTogglePathFocus={() => (pathFocusEnabled = !pathFocusEnabled)}
-		/>
+		<FloatingActions />
 		<NodePalette
 			queueSpawnPosition={queueSpawnPositionAtViewport}
 			onSpawnColumnProcess={spawnColumnProcessFromPalette}
@@ -1286,7 +2088,10 @@
 				{@const isDimmed = connectedNodeIds !== null && !connectedNodeIds.has(node.id)}
 				{@const isRecentlyChanged = changedNodeIds.has(node.id)}
 				{@const isGroup = node.type === 'group'}
-				{@const nodeZIndex = isDragging ? 30 : isExpanded ? 20 : isGroup ? 0 : 1}
+				{@const isMultiSelected = multiSelectedNodeIds.has(node.id)}
+				{@const isSelected =
+					focusedNodeId === node.id || selectedPlotNodeId === node.id || isMultiSelected}
+				{@const nodeZIndex = isDragging ? 30 : isExpanded ? 20 : 1}
 				{#if pos}
 					<div
 						class="workflow-node-wrapper"
@@ -1294,39 +2099,65 @@
 						class:dimmed={isDimmed}
 						class:changed={isRecentlyChanged}
 						class:group-wrapper={isGroup}
+						class:multi-selected={isMultiSelected && multiSelectedNodeIds.size > 1}
+						data-group-id={isGroup ? node.id : null}
 						style="position: absolute; left: {pos.x}px; top: {pos.y}px; z-index: {nodeZIndex};"
 						aria-label={node.label}
 						onmousedown={(e) => handleNodeWrapperMouseDown(e, node)}
 						onmouseup={(e) => handleNodeWrapperMouseUp(e, node)}
+						ondblclick={(e) => {
+							e.stopPropagation();
+							handleNodeDblClick(node);
+						}}
 						onclick={(e) => e.stopPropagation()}
 						role="presentation"
 					>
 						{#if isGroup}
 							<GroupNode
 								{node}
-								selected={focusedNodeId === node.id || selectedPlotNodeId === node.id}
+								selected={isSelected}
 								isDropTarget={dragHoverGroupId === node.id}
+								spliceTargetPort={dropTargetPortKey?.startsWith(`${node.id}|`)
+									? dropTargetPortKey.slice(node.id.length + 1)
+									: null}
+								on:portstart={handlePortStart}
+								on:portend={handlePortEnd}
+								on:portdisconnect={handlePortDisconnect}
+								on:extractstart={handleExtractStart}
+								on:cardmousedown={(ev) => handleNodeWrapperMouseDown(ev.detail, node)}
 							/>
 						{:else}
 							<WorkflowNode
 								{node}
-								selected={focusedNodeId === node.id || selectedPlotNodeId === node.id}
+								selected={isSelected}
 								expanded={isExpanded}
 								isDropTarget={false}
+								spliceTargetPort={dropTargetPortKey?.startsWith(`${node.id}|`)
+									? dropTargetPortKey.slice(node.id.length + 1)
+									: null}
 								on:portstart={handlePortStart}
 								on:portend={handlePortEnd}
 								on:portdisconnect={handlePortDisconnect}
 							/>
 						{/if}
 
-						{#if isExpanded && node.type === 'process' && node.processObj}
+						{#if isExpanded && node.type === 'process' && node.processObj && node.processObj.parentCol}
 							{@const PComp = appConsts.processMap.get(node.processName)?.component}
+							{@const parent = node.processObj.parentCol}
+							{@const proc = node.processObj}
+							{@const tapPreview = {
+								name: `${parent?.name ?? ''}@${proc.displayName || proc.name}`,
+								getData: () => parent?.getDataUpToProcess?.(proc.id) ?? []
+							}}
 							{#if PComp}
 								<div
 									class="process-editor-panel"
 									style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;"
 								>
 									<PComp p={node.processObj} />
+									<div class="process-intermediate-preview">
+										<MiniDataTable column={tapPreview} maxRows={5} />
+									</div>
 								</div>
 							{/if}
 						{:else if isExpanded && node.type === 'tableprocess' && node.tpObj}
@@ -1358,30 +2189,58 @@
 		</div>
 	</div>
 
-	<div class="zoom-controls">
+	<div
+		class="zoom-controls"
+		style="right: calc({appState.showControlPanel ? appState.widthControlPanel : 0}px + 5px);"
+	>
+		<button
+			type="button"
+			class="icon viewport-btn"
+			onclick={(e) => {
+				e.stopPropagation();
+				pathFocusEnabled = !pathFocusEnabled;
+			}}
+			aria-pressed={pathFocusEnabled}
+			aria-label={pathFocusEnabled ? 'Show all paths' : 'Show connected paths'}
+			{@attach tooltip(pathFocusEnabled ? 'Show all paths' : 'Show connected paths')}
+		>
+			<Icon
+				name={pathFocusEnabled ? 'showconnectedpaths' : 'showallpaths'}
+				width={22}
+				height={22}
+			/>
+		</button>
+		<button
+			type="button"
+			class="icon viewport-btn"
+			onclick={(e) => {
+				e.stopPropagation();
+				resetCanvasView();
+			}}
+			aria-label="Reset viewport"
+			{@attach tooltip('Reset viewport (snap pan + zoom to origin)')}
+		>
+			<Icon name="center" width={22} height={22} />
+		</button>
 		<button
 			class="icon zoomout"
-			style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
-				? appState.widthControlPanel
-				: 0}px + 5px); bottom: 35px;"
 			onclick={(e) => {
 				e.stopPropagation();
 				zoom = Math.max(zoom - ZOOM_STEP, MIN_ZOOM);
 			}}
-			title="Zoom out"
+			aria-label="Zoom out"
+			{@attach tooltip('Zoom out')}
 		>
 			<Icon name="zoom-out" width={24} height={24} />
 		</button>
 		<button
 			class="icon zoomin"
-			style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
-				? appState.widthControlPanel
-				: 0}px + 5px); bottom: 10px;"
 			onclick={(e) => {
 				e.stopPropagation();
 				zoom = Math.min(zoom + ZOOM_STEP, MAX_ZOOM);
 			}}
-			title="Zoom in"
+			aria-label="Zoom in"
+			{@attach tooltip('Zoom in')}
 		>
 			<Icon name="zoom-in" width={24} height={24} />
 		</button>
@@ -1464,9 +2323,29 @@
 		transition: opacity 0.15s;
 	}
 
+	/* When a node's note popover is open, lift the whole wrapper above its
+	   neighbours so the popover paints on top of any adjacent node. Without
+	   this, the popover sits inside a stacking context capped by the
+	   wrapper's own z-index (typically 1) and gets covered by other nearby
+	   nodes painted later in DOM order. `.node-note-popover` is declared in
+	   NodeNoteButton.svelte; mark it :global so Svelte's scoped CSS still
+	   matches it. */
+	.workflow-node-wrapper:has(:global(.node-note-popover)) {
+		z-index: 50 !important;
+	}
+
 	.workflow-node-wrapper.dragging {
 		cursor: grabbing;
 		opacity: 0.85;
+	}
+
+	/* Extra ring around every node in a >1 multi-selection so the user can see
+	   which nodes will move together / be deleted / be copied. The primary
+	   focused node still gets its own per-component "selected" border. */
+	.workflow-node-wrapper.multi-selected {
+		outline: 2px dashed rgba(77, 159, 227, 0.7);
+		outline-offset: 2px;
+		border-radius: 8px;
 	}
 
 	.workflow-node-wrapper.dimmed {
@@ -1501,6 +2380,12 @@
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 		cursor: default;
 		box-sizing: border-box;
+	}
+
+	.process-intermediate-preview {
+		margin-top: 6px;
+		padding-top: 6px;
+		border-top: 1px dashed rgba(0, 0, 0, 0.15);
 	}
 
 	.plot-preview-panel {
@@ -1541,16 +2426,29 @@
 	}
 
 	.zoom-controls {
-		position: absolute;
+		position: fixed;
 		bottom: 10px;
-		right: 10px;
 		display: flex;
 		flex-direction: column;
+		align-items: center;
 		gap: 4px;
-		z-index: 10;
+		z-index: 999;
+		transition: right 0.6s ease;
 	}
 
-	.icon {
-		transition: right 0.6s ease;
+	.viewport-btn {
+		color: var(--color-lightness-45, #6b7280);
+		transition:
+			color 0.18s ease,
+			transform 0.32s ease;
+	}
+
+	.viewport-btn:hover,
+	.viewport-btn[aria-pressed='true'] {
+		color: var(--color-accent, #4d9fe3);
+	}
+
+	.viewport-btn:active {
+		transform: scale(0.95);
 	}
 </style>

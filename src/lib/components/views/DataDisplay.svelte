@@ -2,6 +2,7 @@
 	// @ts-nocheck
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
+	import { tick, untrack } from 'svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import AddTable from '$lib/components/iconActions/AddTable.svelte';
@@ -60,6 +61,53 @@
 	}
 
 	let timeval = $state(Number(new Date()));
+
+	// ─── Canvas-selection mirroring ─────────────────────────────────────────────
+	// Parse appState.canvasSelectedNodeId (e.g. "data_5", "process_7",
+	// "tableprocess_3") into { kind, id }. Other kinds (plot/group/note/
+	// nested-tp) don't appear in this panel and are ignored.
+	const canvasSelection = $derived.by(() => {
+		const raw = appState.canvasSelectedNodeId;
+		if (!raw || typeof raw !== 'string') return null;
+		const m = raw.match(/^(data|process|tableprocess)_(\d+)$/);
+		if (!m) return null;
+		return { kind: m[1], id: Number(m[2]) };
+	});
+
+	// Which table owns the selected item? Needed to auto-open its <details>.
+	const selectedTableId = $derived.by(() => {
+		const sel = canvasSelection;
+		if (!sel) return null;
+		for (const table of core.tables) {
+			if (sel.kind === 'data' && table.columns?.some((c) => c.id === sel.id)) return table.id;
+			if (sel.kind === 'tableprocess' && table.processes?.some((tp) => tp.id === sel.id))
+				return table.id;
+			if (
+				sel.kind === 'process' &&
+				table.columns?.some((c) => c.processes?.some((p) => p.id === sel.id))
+			)
+				return table.id;
+		}
+		return null;
+	});
+
+	// Refs for scroll-into-view, keyed by `${kind}_${id}`
+	let rowRefs = $state({});
+
+	$effect(() => {
+		const sel = canvasSelection;
+		const tid = selectedTableId;
+		if (!sel || tid == null) return;
+		untrack(() => {
+			openClps[tid] = true;
+		});
+		tick().then(() => {
+			const el = rowRefs[`${sel.kind}_${sel.id}`];
+			if (el?.scrollIntoView) {
+				el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+			}
+		});
+	});
 </script>
 
 <div class="heading">
@@ -137,7 +185,12 @@
 				</summary>
 
 				{#each table.processes as p (p.id)}
-					<div class="second-clps">
+					<div
+						class="second-clps"
+						class:canvas-selected={canvasSelection?.kind === 'tableprocess' &&
+							canvasSelection.id === p.id}
+						bind:this={rowRefs[`tableprocess_${p.id}`]}
+					>
 						<TableProcess {p} />
 					</div>
 					<br />
@@ -145,8 +198,19 @@
 
 				{#each table.columns as col (col.id)}
 					{#if col.tableProcessGUId == ''}
-						<div class="second-clps">
-							<ColumnComponent {col} />
+						{@const colSelected =
+							canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
+						{@const ownsSelectedProcess =
+							canvasSelection?.kind === 'process' &&
+							col.processes?.some((pr) => pr.id === canvasSelection.id)}
+						<div
+							class="second-clps"
+							class:canvas-selected={colSelected || ownsSelectedProcess}
+							bind:this={rowRefs[`data_${col.id}`]}
+						>
+							<ColumnComponent {col} canvasSelectedProcessId={ownsSelectedProcess
+								? canvasSelection.id
+								: null} />
 						</div>
 					{/if}
 				{/each}
@@ -244,5 +308,13 @@
 
 	.databuttons {
 		display: flex;
+	}
+
+	/* Mirrors the canvas selection — applied when the corresponding node is
+	   focused in WorkflowEditor (via appState.canvasSelectedNodeId). */
+	.second-clps.canvas-selected {
+		border-radius: 4px;
+		box-shadow: inset 2px 0 0 var(--color-accent, #4d9fe3);
+		background-color: color-mix(in srgb, var(--color-accent, #4d9fe3) 8%, transparent);
 	}
 </style>

@@ -11,6 +11,7 @@
 	import SequenceColumnModal from '$lib/components/views/modals/SequenceColumnModal.svelte';
 	import { core, appConsts, createNote, createGroup } from '$lib/core/core.svelte.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import { tick } from 'svelte';
 
 	// Icons known to exist on disk in src/lib/icons/. Used as the safety net
@@ -332,8 +333,8 @@
 		class="np-btn np-trigger"
 		class:open={showMenu}
 		onclick={() => (showMenu = !showMenu)}
-		title="Add to canvas"
 		aria-label="Add node"
+		{@attach tooltip('Add to canvas')}
 	>
 		<Icon name="plus" width={22} height={22} />
 	</button>
@@ -386,9 +387,9 @@
 								<button
 									type="button"
 									class="palette-tile np-item"
-									title={node.description || node.displayName}
 									aria-label={node.description || node.displayName}
 									onclick={() => handlePick(node)}
+									{@attach tooltip(node.description || node.displayName)}
 								>
 									<span class="palette-tile-icon">
 										<Icon name={node.nodeIcon} width={24} height={24} />

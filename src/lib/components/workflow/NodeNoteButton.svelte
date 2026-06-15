@@ -5,6 +5,7 @@
 	// canvas node id (data_<colId>, process_<procId>, plot_<plotId>, ...).
 	import { tick } from 'svelte';
 	import { core } from '$lib/core/core.svelte.js';
+	import { tooltip } from '$lib/utils/tooltip.js';
 
 	let { nodeId } = $props();
 
@@ -65,8 +66,8 @@
 			toggleEditor();
 		}}
 		onpointerdown={(e) => e.stopPropagation()}
-		title={hasNote ? shortTitle(note) : 'Add note'}
 		aria-label={hasNote ? 'View or edit note' : 'Add note'}
+		{@attach tooltip(hasNote ? shortTitle(note) : 'Add note')}
 	>
 		N
 	</button>

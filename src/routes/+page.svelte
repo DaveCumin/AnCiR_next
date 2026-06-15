@@ -1215,7 +1215,7 @@
 	}
 
 	:global(.tooltip) {
-		position: absolute;
+		position: fixed;
 		background-color: rgba(0, 0, 0, 0.75);
 		color: white;
 		padding: 0.4rem 0.6rem;

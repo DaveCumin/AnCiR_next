@@ -4,8 +4,17 @@
 	import MiniDataTable from './MiniDataTable.svelte';
 	import Editable from '$lib/components/reusables/Editable.svelte';
 	import NodeNoteButton from './NodeNoteButton.svelte';
+	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	let { node, selected = false, expanded = false, isDropTarget = false } = $props();
+	import { guessDateofArray } from '$lib/utils/time/TimeUtils.js';
+	import { core } from '$lib/core/core.svelte.js';
+	let {
+		node,
+		selected = false,
+		expanded = false,
+		isDropTarget = false,
+		spliceTargetPort = null
+	} = $props();
 	const dispatch = createEventDispatcher();
 
 	function renameDataNode(next) {
@@ -14,6 +23,23 @@
 		const trimmed = (next ?? '').trim();
 		// Empty input restores the auto-derived name.
 		col.customName = trimmed === '' ? null : trimmed;
+	}
+
+	// Mirror the legacy Column.svelte behaviour: when the user picks "time" and
+	// no format is set yet, sniff one from the first few raw rows.
+	function onColumnTypeChange(newType) {
+		const col = node.refId != null ? getColumnById(node.refId) : null;
+		if (!col || newType !== 'time') return;
+		const fmt = col.timeFormat;
+		const isEmpty = !fmt || (Array.isArray(fmt) ? fmt.length === 0 : fmt === '');
+		if (!isEmpty) return;
+		const rawData = core.rawData.get(col.data);
+		if (!Array.isArray(rawData) || rawData.length === 0) return;
+		const sample = rawData.slice(0, 10);
+		const guessed = guessDateofArray(sample);
+		if (guessed !== -1 && guessed.length > 0) {
+			col.timeFormat = guessed;
+		}
 	}
 
 	// Shared port-layout constants (mirrors WorkflowEditor.svelte). Re-declared locally
@@ -60,6 +86,11 @@
 	<div class="node-header">
 		{#if node.type === 'data' && node.refId != null}
 			{@const liveCol = getColumnById(node.refId)}
+			{#if liveCol}
+				<div class="node-type" onpointerdown={(e) => e.stopPropagation()}>
+					<TypeSelector bind:value={liveCol.type} onChange={onColumnTypeChange} />
+				</div>
+			{/if}
 			<div class="node-label" onpointerdown={(e) => e.stopPropagation()}>
 				<Editable
 					value={liveCol?.name ?? node.label}
@@ -102,6 +133,7 @@
 				<div class="port-row output" style="top:{i * PORT_H}px;">
 					<div
 						class="port-dot dot-output"
+						class:splice-target={spliceTargetPort === port.name}
 						title={`Output: ${port.name}${port.dynamic ? ' (many)' : ''}`}
 						onmousedown={(e) => startFromOutput(e, port.name)}
 						role="button"
@@ -202,6 +234,12 @@
 		text-overflow: ellipsis;
 	}
 
+	.node-type {
+		display: flex;
+		align-items: center;
+		flex-shrink: 0;
+	}
+
 	.expand-indicator {
 		font-size: 9px;
 		color: #666;
@@ -267,6 +305,15 @@
 	.port-dot:hover {
 		background: var(--color-accent, #4d9fe3);
 		border-color: var(--color-accent, #4d9fe3);
+	}
+
+	/* Active drop target while dragging an orphan / 1-in-1-out process onto
+	   this output port. Slightly larger ring + accent fill mirrors the wire
+	   splice-target highlight in WorkflowEdges. */
+	.port-dot.splice-target {
+		background: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent, #4d9fe3);
+		box-shadow: 0 0 0 4px rgba(77, 159, 227, 0.35);
 	}
 
 	.port-label {

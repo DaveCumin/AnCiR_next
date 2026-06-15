@@ -40,6 +40,68 @@ describe('paramDiffWatcher', () => {
         expect(proc.args.normalizationType).toBe('z-score');
     });
 
+    it('live $effect wiring picks up direct arg mutations without a manual flush', async () => {
+        const col = M.addColumn({ name: 'L', type: 'number' });
+        const proc = M.addProcess(col.id, 'Normalize', { normalizationType: 'z-score' });
+
+        paramDiffWatcher.init();
+        try {
+            const before = history.undoCount;
+
+            proc.args.normalizationType = 'min-max';
+
+            // The live effect runs on the microtask queue; wait one tick.
+            await Promise.resolve();
+            await Promise.resolve();
+
+            expect(history.undoCount).toBe(before + 1);
+            history.undo();
+            expect(proc.args.normalizationType).toBe('z-score');
+        } finally {
+            paramDiffWatcher._disposeForTests();
+        }
+    });
+
+    it('undo does not re-record itself as a fresh op (no undo loop)', async () => {
+        const col = M.addColumn({ name: 'U', type: 'number' });
+        const proc = M.addProcess(col.id, 'Normalize', { normalizationType: 'z-score' });
+
+        paramDiffWatcher.init();
+        try {
+            const baseline = history.undoCount;
+
+            // Direct mutation → live effect records one op.
+            proc.args.normalizationType = 'min-max';
+            await Promise.resolve();
+            await Promise.resolve();
+            expect(history.undoCount).toBe(baseline + 1);
+
+            // Undo: should restore the value AND drop the stack back to baseline.
+            // The watcher's reactive run after the restore must NOT re-record
+            // the reverse mutation as a brand-new setProcessArg op.
+            history.undo();
+            await Promise.resolve();
+            await Promise.resolve();
+
+            expect(proc.args.normalizationType).toBe('z-score');
+            expect(history.undoCount).toBe(baseline);
+            expect(history.redoCount).toBe(1);
+
+            // Redo should round-trip: redoStack stays consistent, undoCount goes
+            // back up by one, value is restored to 'min-max'. Same anti-loop
+            // requirement applies on the redo path.
+            history.redo();
+            await Promise.resolve();
+            await Promise.resolve();
+
+            expect(proc.args.normalizationType).toBe('min-max');
+            expect(history.undoCount).toBe(baseline + 1);
+            expect(history.redoCount).toBe(0);
+        } finally {
+            paramDiffWatcher._disposeForTests();
+        }
+    });
+
     it('detects multiple changes in a single flush', async () => {
         const col = M.addColumn({ name: 'Y', type: 'number' });
         const proc = M.addProcess(col.id, 'Normalize', { normalizationType: 'z-score' });

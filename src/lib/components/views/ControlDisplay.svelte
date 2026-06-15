@@ -114,6 +114,20 @@
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 	import { selectPlot, removePlots, getPlotById } from '$lib/core/Plot.svelte';
 	import Editable from '../inputs/Editable.svelte';
+	import CanvasNodeControls from './CanvasNodeControls.svelte';
+
+	// True when there's a non-plot canvas node selected. Plot nodes are
+	// already handled by the existing selectedPlots branches below, so we
+	// only fall back to CanvasNodeControls for everything else.
+	const hasNonPlotCanvasSelection = $derived(
+		appState.canvasSelectedNodeId != null &&
+			!String(appState.canvasSelectedNodeId).startsWith('plot_')
+	);
+	// A canvas multi-selection of 2+ nodes always routes to CanvasNodeControls
+	// (which shows the count), regardless of whether any of them are plots —
+	// the per-plot "shared properties" UI only applies to plot-only multi-
+	// selection driven by alt-click in the legacy plot view.
+	const hasCanvasMultiSelection = $derived(appState.canvasMultiSelectedCount > 1);
 
 	let addBtnRef;
 	let showSavePlot = $state(false);
@@ -359,7 +373,9 @@
 <div class="control-display">
 	<!-- This is only for the first selected plot - need an #if to take care of multiple selections -->
 
-	{#if selectedPlots.length > 1}
+	{#if hasCanvasMultiSelection}
+		<CanvasNodeControls />
+	{:else if selectedPlots.length > 1}
 		<div class="control-banner">
 			<div class="control-banner-title">
 				<p>{selectedPlots.length} plots selected</p>
@@ -730,6 +746,8 @@
 				<Plot theData={plot.plot} which="controls" />
 			{/if}
 		{/if}
+	{:else if hasNonPlotCanvasSelection}
+		<CanvasNodeControls />
 	{:else}
 		<div class="control-banner">
 			<p>Control Panel</p>

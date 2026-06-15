@@ -229,32 +229,12 @@
 </script>
 
 <script>
-	import ChainedPanel from '$lib/components/reusables/ChainedPanel.svelte';
 	import TableProcessShell from '$lib/core/TableProcessShell.svelte';
 	import { untrack } from 'svelte';
 	let { p = $bindable() } = $props();
 
 	// Derive the tableProcessMap entry for this TP
 	const entry = $derived(appConsts.tableProcessMap.get(p?.name));
-
-	// A TP is chainable when it exports xOutKey (BinnedData, Cosinor, etc.)
-	// CollectColumns and LongToWide manage sub-TPs internally, so they are excluded.
-	const isChainable = $derived(entry?.xOutKey != null);
-
-	// The parent's x-output column ID (seeded into child sub-TP xIN)
-	const xOutColId = $derived.by(() => {
-		if (!isChainable) return -1;
-		return p.args?.out?.[entry.xOutKey] ?? -1;
-	});
-
-	// All of the parent's y-output column IDs (seeded into child sub-TP yIN)
-	const yOutColIds = $derived.by(() => {
-		if (!isChainable || !entry.yOutKeyPrefix) return [];
-		return Object.entries(p.args?.out ?? {})
-			.filter(([key]) => key.startsWith(entry.yOutKeyPrefix))
-			.map(([, colId]) => colId)
-			.filter((id) => typeof id === 'number' && id >= 0);
-	});
 
 	// --- refTPId chaining ---
 
@@ -325,9 +305,6 @@
 			</div>
 		{/if}
 		<TheTableProcess bind:p hideInputs={p.refTPId != null} />
-		{#if isChainable && p.args?.valid}
-			<ChainedPanel bind:p {xOutColId} {yOutColIds} />
-		{/if}
 	</TableProcessShell>
 {/if}
 

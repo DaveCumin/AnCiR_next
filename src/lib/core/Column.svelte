@@ -144,6 +144,16 @@
 	export class Column {
 		id; //Unique Id for the column
 		refId = $state(null); //if it is a column that is based on another
+		// Tap point: when set, getData() pulls refColumn's chain truncated AFTER
+		// this process id (inclusive), exposing the intermediate state of refColumn
+		// at that step. -1 marks a broken tap (the referenced process was deleted).
+		// null means "no tap" (normal full-chain ref behaviour).
+		refUpToProcessId = $state(null);
+		// Synthetic tap marker: set true for columns created internally to scope
+		// a single-edge process-splice. The canvas adapter hides these columns
+		// (no data_X node) and routes their chain wire from the original
+		// source. Distinguishes a user-created ref column from one we made.
+		isTap = $state(false);
 		refColumn = $derived(getColumnById(this.refId)); // Direct reference to the referenced column
 		tableProcessGUId = $state('');
 		producerNodeId = $state(null);
@@ -277,6 +287,14 @@
 		}
 
 		removeProcess(id) {
+			// Break any tap columns that reference this specific process step.
+			// Mirrors the broken-ref convention from removeColumn: set the marker
+			// to -1 so getData() returns [] and the user can clean up the tap.
+			for (const col of core.data) {
+				if (col.refId === this.id && col.refUpToProcessId === id) {
+					col.refUpToProcessId = -1;
+				}
+			}
 			this.processes = this.processes.filter((p) => p.id !== id);
 		}
 
@@ -295,6 +313,7 @@
 		// and bumps the counter. Avoids JSON.stringify-per-read of process args.
 		getDataHash = $derived.by(() => {
 			this.refId;
+			this.refUpToProcessId;
 			this.compression;
 			this.type;
 			this.timeFormat;
@@ -315,29 +334,44 @@
 
 		//--- FUNCTION TO GET THE DATA
 		getData() {
-			// Create a hash of all inputs to detect changes
 			const dataHash = this.getDataHash;
-			// console.log('data hash: ', dataHash, ' for ', this.id, this.name);
-			// console.log('last hash: ', this.#lastDataHash);
 			if (this.#lastDataHash === dataHash && this.#cachedData) {
-				// console.log('returning cached');
 				return this.#cachedData;
 			}
+			const out = this.#computePipeline(null);
+			this.#cachedData = out;
+			this.#lastDataHash = dataHash;
+			return out;
+		}
 
-			// console.warn('recalculating');
+		// Tap accessor: run the pipeline but stop AFTER the named process (inclusive).
+		// Used by tap columns (refUpToProcessId set) so consumers see the intermediate
+		// state. Not cached here — callers that wrap this in getData() get the cache.
+		getDataUpToProcess(stopAfterProcessId) {
+			if (stopAfterProcessId == null) return this.getData();
+			return this.#computePipeline(stopAfterProcessId);
+		}
 
+		#computePipeline(stopAfterProcessId) {
 			if (this.refId === -1) {
-				//broken reference
 				console.warn('Column ', this.id, this.name, ' has a broken reference.');
+				return [];
+			}
+			// Broken tap (the referenced process was deleted). Match the broken-ref
+			// convention: warn + return empty so downstream consumers degrade safely.
+			if (this.refUpToProcessId === -1) {
+				console.warn('Column ', this.id, this.name, ' has a broken tap reference.');
 				return [];
 			}
 
 			let out = [];
-			//if there is a reference, then just get that data
 			if (this.refId != null) {
-				out = getColumnById(this.refId)?.getData();
+				const ref = getColumnById(this.refId);
+				out =
+					this.refUpToProcessId != null
+						? (ref?.getDataUpToProcess(this.refUpToProcessId) ?? [])
+						: (ref?.getData() ?? []);
 			} else {
-				//deal with compressed data
 				if (this.compression === 'awd') {
 					const raw = core.rawData.get(this.data);
 					out = new Array(raw.length);
@@ -345,38 +379,28 @@
 						out[i] = raw.start + i * raw.step;
 					}
 				} else {
-					//get the raw data
 					out = core.rawData.get(this.data) ?? [];
 				}
 			}
 
-			//deal with timestamps (skip for AWD-compressed columns — already UNIX ms)
 			if (this.type === 'time' && !this.isReferencial() && this.compression !== 'awd') {
 				try {
-					out = out.map((x) => Number(getUNIXDate(x, this.timeFormat))); // Turn into UNIX values of time
+					out = out.map((x) => Number(getUNIXDate(x, this.timeFormat)));
 				} catch {
 					console.warn('Error parsing time data for column ', this.id, this.name);
 				}
 			}
 
-			//deal with bins
 			if (this.type === 'bin') {
 				out = out.map((x) => (x != null && Number.isFinite(x) ? x + this.binWidth / 2 : x));
 			}
 
-			//If no data, return empty
 			if (out == []) return [];
 
-			//otherwise apply the processes
 			for (const p of this.processes) {
 				out = p.doProcess(out);
+				if (p.id === stopAfterProcessId) return out;
 			}
-
-			//save hash
-			this.#cachedData = out;
-			this.#lastDataHash = dataHash;
-
-			//return data
 			return out;
 		}
 
@@ -385,6 +409,10 @@
 			let jsonOut = { id: this.id, name: this.name };
 			if (this.refId != null) {
 				jsonOut.refId = this.refId;
+				if (this.refUpToProcessId != null) {
+					jsonOut.refUpToProcessId = this.refUpToProcessId;
+				}
+				if (this.isTap) jsonOut.isTap = true;
 			} else {
 				jsonOut.data = this.data;
 			}
@@ -417,6 +445,8 @@
 				name,
 				type,
 				refId,
+				refUpToProcessId,
+				isTap,
 				data,
 				timeFormat,
 				binWidth,
@@ -437,6 +467,7 @@
 			// values continue to override (which is how non-ref columns store them).
 			const columnData = {
 				refId: refId ?? null,
+				refUpToProcessId: refUpToProcessId ?? null,
 				data: data ?? null,
 				timeFormat: timeFormat ?? '',
 				tableProcessGUId: tableProcessGUId ?? '',
@@ -451,6 +482,7 @@
 			if (originTime_ms != null) columnData.originTime_ms = originTime_ms;
 			if (provenance != null) columnData.provenance = provenance;
 			let column = new Column(columnData, id);
+			if (isTap === true) column.isTap = true;
 
 			column.processes = [];
 			if (Array.isArray(processes)) {
@@ -475,7 +507,12 @@
 	import Editable from '$lib/components/inputs/Editable.svelte';
 	import { guessDateofArray } from '$lib/utils/time/TimeUtils.js';
 
-	let { col = $bindable(), canChange = false, onChange = () => {} } = $props();
+	let {
+		col = $bindable(),
+		canChange = false,
+		onChange = () => {},
+		canvasSelectedProcessId = null
+	} = $props();
 
 	let addBtnRef;
 	let showAddProcess = $state(false);
@@ -662,6 +699,7 @@
 								class="single-process-container"
 								class:linked-process={p.linkedGroupId != null}
 								class:drag-over={dragOverIdx === i && dragIdx !== i}
+								class:canvas-selected={canvasSelectedProcessId === p.id}
 								draggable="true"
 								ondragstart={(e) => onDragStart(e, i)}
 								ondragover={(e) => onDragOver(e, i)}
@@ -905,5 +943,13 @@
 
 	.drag-over {
 		border-top: 2px solid var(--color-lightness-35, #555);
+	}
+
+	/* Mirrors the canvas selection — applied when this process is the focused
+	   node in WorkflowEditor (via appState.canvasSelectedNodeId). */
+	.single-process-container.canvas-selected {
+		border-radius: 4px;
+		box-shadow: inset 2px 0 0 var(--color-accent, #4d9fe3);
+		background-color: color-mix(in srgb, var(--color-accent, #4d9fe3) 8%, transparent);
 	}
 </style>

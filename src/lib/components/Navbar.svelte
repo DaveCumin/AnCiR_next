@@ -7,18 +7,13 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import Setting from '$lib/components/iconActions/Setting.svelte';
 	import About from './views/modals/About.svelte';
+	import { tooltip } from '$lib/utils/tooltip.js';
 
 	let gearBtnRef;
 	let showSetting = $state(false);
 	let dropdownTop = $state(0);
 	let dropdownLeft = $state(0);
 	let showAbout = $state(false);
-
-	//Tooltip
-	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
-	function handleTooltip(event) {
-		tooltip = event.detail;
-	}
 
 	function recalculateDropdownPosition() {
 		if (!gearBtnRef) return;
@@ -35,109 +30,70 @@
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
 
-	function switchTab(tab) {
-		if (appState.currentTab == tab && appState.showDisplayPanel) {
+	function toggleDataView() {
+		// Data panel is independent of the canvas view — it can be open or
+		// closed alongside either the plot canvas or the workflow canvas.
+		if (appState.currentTab === 'data' && appState.showDisplayPanel) {
 			appState.showDisplayPanel = false;
 			appState.currentTab = null;
 		} else {
 			appState.showDisplayPanel = true;
-			appState.currentTab = tab;
+			appState.currentTab = 'data';
+		}
+	}
+
+	function selectWorksheetView() {
+		// Worksheet view = plot canvas + worksheet layer panel. Clicking the
+		// button when the worksheet panel is already open toggles the panel
+		// off but leaves the plot canvas active.
+		appState.view = 'plots';
+		if (appState.currentTab === 'worksheet' && appState.showDisplayPanel) {
+			appState.showDisplayPanel = false;
+			appState.currentTab = null;
+		} else {
+			appState.currentTab = 'worksheet';
+			appState.showDisplayPanel = true;
+		}
+	}
+
+	function selectWorkflowView() {
+		// Workflow view = workflow canvas. Close the worksheet panel if it
+		// was open; leave a data panel alone since data is orthogonal.
+		appState.view = 'canvas';
+		if (appState.currentTab === 'worksheet') {
+			appState.currentTab = null;
+			appState.showDisplayPanel = false;
 		}
 	}
 </script>
 
-{#if tooltip.visible}
-	<div class="tooltip" style={`left: ${tooltip.x}px; top: ${tooltip.y}px;`}>
-		{tooltip.content}
-	</div>
-{/if}
-
 <nav class="container" style="width: {appState.widthNavBar}px;">
 	<div class="icon-container">
-		<button
-			onclick={() => switchTab('data')}
-			onmouseenter={(e) =>
-				handleTooltip({
-					detail: { visible: true, x: e.clientX + 10, y: e.clientY + 10, content: 'Data View' }
-				})}
-			onmouseleave={(e) =>
-				handleTooltip({
-					detail: { visible: false, x: e.clientX + 10, y: e.clientY + 10, content: '' }
-				})}
-		>
+		<button onclick={toggleDataView} {@attach tooltip('Data View')}>
 			<Icon name="table" className={appState.currentTab === 'data' ? 'icon active' : 'icon'} />
-			<!-- <TableIcon /> -->
 		</button>
 
-		<button
-			onclick={() => switchTab('worksheet')}
-			onmouseenter={(e) =>
-				handleTooltip({
-					detail: { visible: true, x: e.clientX + 10, y: e.clientY + 10, content: 'Worksheet View' }
-				})}
-			onmouseleave={(e) =>
-				handleTooltip({
-					detail: { visible: false, x: e.clientX + 10, y: e.clientY + 10, content: '' }
-				})}
-		>
-			<Icon name="layer" className={appState.currentTab === 'worksheet' ? 'icon active' : 'icon'} />
-			<!-- <WorksheetIcon /> -->
+		<button onclick={selectWorksheetView} {@attach tooltip('Worksheet View')}>
+			<Icon name="layer" className={appState.view === 'plots' ? 'icon active' : 'icon'} />
 		</button>
 
-		<button
-			onclick={() =>
-				(appState.view = appState.view === 'canvas' ? 'plots' : 'canvas')}
-			onmouseenter={(e) =>
-				handleTooltip({
-					detail: {
-						visible: true,
-						x: e.clientX + 10,
-						y: e.clientY + 10,
-						content:
-							appState.view === 'canvas'
-								? 'Switch to plot grid view'
-								: 'Switch to workflow canvas'
-					}
-				})}
-			onmouseleave={(e) =>
-				handleTooltip({
-					detail: { visible: false, x: e.clientX + 10, y: e.clientY + 10, content: '' }
-				})}
-		>
+		<button onclick={selectWorkflowView} {@attach tooltip('Workflow View')}>
 			<Icon
-				name={appState.view === 'canvas' ? 'layer' : 'process'}
+				name="process"
 				className={appState.view === 'canvas' ? 'icon active' : 'icon'}
 			/>
 		</button>
 	</div>
 
 	<div class="icon-container">
-		<button
-			bind:this={gearBtnRef}
-			onclick={openDropdown}
-			onmouseenter={(e) =>
-				handleTooltip({
-					detail: { visible: true, x: e.clientX + 10, y: e.clientY + 10, content: 'Settings' }
-				})}
-			onmouseleave={(e) =>
-				handleTooltip({
-					detail: { visible: false, x: e.clientX + 10, y: e.clientY + 10, content: '' }
-				})}
-		>
+		<button bind:this={gearBtnRef} onclick={openDropdown} {@attach tooltip('Settings')}>
 			<Icon name="gear" />
 		</button>
 		<button
 			onclick={() => {
 				showAbout = true;
 			}}
-			onmouseenter={(e) =>
-				handleTooltip({
-					detail: { visible: true, x: e.clientX + 10, y: e.clientY + 10, content: 'About AnCiR' }
-				})}
-			onmouseleave={(e) =>
-				handleTooltip({
-					detail: { visible: false, x: e.clientX + 10, y: e.clientY + 10, content: '' }
-				})}
+			{@attach tooltip('About AnCiR')}
 		>
 			<Icon name="query" />
 		</button>

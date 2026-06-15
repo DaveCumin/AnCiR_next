@@ -3,6 +3,7 @@
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
 import { Table } from '$lib/core/Table.svelte';
+import { Process } from '$lib/core/Process.svelte';
 import { getCachedProcessNodeGraph } from '$lib/core/ProcessNode.svelte.js';
 import * as jsonpatch from 'fast-json-patch';
 
@@ -19,11 +20,21 @@ export const core = $state({
 	// shaped like `{ id, text, x, y, width, height }`. They render as a node
 	// on the canvas but have no input/output ports.
 	notes: [],
-	// groups — visual container nodes spawnable via the palette. Each is a
-	// dashed-frame box on the canvas that membership of data/process nodes is
-	// reconciled into when they're dragged inside its rect. Shape:
-	// `{ id, name, x, y, width, height, childIds: string[] }`.
-	groups: []
+	// groups — flowtest-style Source-group nodes. Each absorbs data columns as
+	// internal source rows with dynamic output ports. Shape:
+	// `{ id, name, x, y, width, height,
+	//    sourceColumnIds: number[],        // column ids absorbed as rows; order = row order
+	//    allColumnIds: number[] | null,    // subset filter for the 'all' port (null = all sources)
+	//    collapsed: boolean,               // hide/show the sources list
+	//    rowState: { [colId]: { expanded: boolean } }  // per-row mini-table expansion
+	// }`.
+	groups: [],
+	// orphanProcesses — column processes spawned via the palette or paste that
+	// haven't been wired up to a parent column yet. Each is a real Process
+	// instance with parentCol = null. The canvas renders them with an input
+	// port; dragging a wire from any column output to that port attaches the
+	// process to that column (moves it out of this list into col.processes).
+	orphanProcesses: []
 });
 
 let _nextNoteId = 1;
@@ -41,14 +52,109 @@ export function removeNote(id) {
 let _nextGroupId = 1;
 export function createGroup({ x = 80, y = 80, name = 'Group' } = {}) {
 	const id = `group_${_nextGroupId++}`;
-	core.groups.push({ id, name, x, y, width: 280, height: 220, childIds: [] });
+	core.groups.push({
+		id,
+		name,
+		x,
+		y,
+		width: 240,
+		height: 180,
+		sourceColumnIds: [],
+		allColumnIds: null,
+		collapsed: false,
+		rowState: {}
+	});
 	return id;
 }
 
 export function removeGroup(id) {
 	core.groups = core.groups.filter((g) => g.id !== id);
-	// Also delete the per-node-note keyed by this group id if any.
+	// Absorbed columns aren't deleted — they resurface as standalone data_X
+	// canvas nodes on the next derive. Just drop the per-group note if any.
 	delete core.nodeNotes[id];
+}
+
+/**
+ * Create a Process with no parent column. The new process lands in
+ * core.orphanProcesses and renders on the canvas as a free-standing node
+ * with an `input` port the user can wire to. When wired, the canvas moves
+ * the process from orphans into the target column's processes[] chain.
+ *
+ * Returns the new Process instance (so the caller can pin its canvas
+ * position via stablePositions[`process_${proc.id}`]).
+ */
+export function createOrphanProcess(name, args = {}) {
+	if (!name) return null;
+	const proc = new Process({ name, args }, null);
+	core.orphanProcesses = [...core.orphanProcesses, proc];
+	return proc;
+}
+
+/** Remove an orphan process by id. Used by the delete handler. */
+export function removeOrphanProcess(id) {
+	core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== id);
+	delete core.nodeNotes[`process_${id}`];
+}
+
+/**
+ * Move an orphan process out of core.orphanProcesses and onto a column's
+ * processes chain. No-op if the process isn't in orphans (e.g. already
+ * attached). Returns true on success.
+ */
+export function attachOrphanProcessToColumn(processId, columnId) {
+	const idx = core.orphanProcesses.findIndex((p) => p.id === processId);
+	if (idx < 0) return false;
+	const col = core.data.find((c) => c.id === columnId);
+	if (!col) return false;
+	const proc = core.orphanProcesses[idx];
+	core.orphanProcesses = [
+		...core.orphanProcesses.slice(0, idx),
+		...core.orphanProcesses.slice(idx + 1)
+	];
+	proc.parentCol = col;
+	col.processes = [...(col.processes ?? []), proc];
+	return true;
+}
+
+/** Returns the group that currently absorbs colId, or null. */
+export function getGroupForColumn(colId) {
+	for (const g of core.groups ?? []) {
+		if ((g.sourceColumnIds ?? []).includes(colId)) return g;
+	}
+	return null;
+}
+
+/** Add colId to groupId's sources (and remove from any other group). */
+export function absorbColumnIntoGroup(colId, groupId) {
+	for (const g of core.groups ?? []) {
+		const has = (g.sourceColumnIds ?? []).includes(colId);
+		if (g.id === groupId && !has) {
+			g.sourceColumnIds = [...(g.sourceColumnIds ?? []), colId];
+		} else if (g.id !== groupId && has) {
+			g.sourceColumnIds = (g.sourceColumnIds ?? []).filter((id) => id !== colId);
+			if (Array.isArray(g.allColumnIds)) {
+				g.allColumnIds = g.allColumnIds.filter((id) => id !== colId);
+			}
+		}
+	}
+}
+
+/** Remove colId from every group's sources list. Returns the group it left, or null. */
+export function extractColumnFromAnyGroup(colId) {
+	let left = null;
+	for (const g of core.groups ?? []) {
+		if ((g.sourceColumnIds ?? []).includes(colId)) {
+			g.sourceColumnIds = g.sourceColumnIds.filter((id) => id !== colId);
+			if (Array.isArray(g.allColumnIds)) {
+				g.allColumnIds = g.allColumnIds.filter((id) => id !== colId);
+			}
+			if (g.rowState && colId in g.rowState) {
+				delete g.rowState[colId];
+			}
+			left = g;
+		}
+	}
+	return left;
 }
 
 export const appState = $state({
@@ -84,6 +190,16 @@ export const appState = $state({
 	displayTimezone: 'utc',
 
 	invisiblePlotIds: [],
+
+	// id of the currently selected canvas node (process/tableprocess/data/
+	// group/note/plot). Lifted out of WorkflowEditor so the ControlPanel can
+	// render a node-specific editor for the selection. `null` when nothing
+	// is focused. Plot selection still flows through core.plots[].selected
+	// for backwards compat, but this is set in parallel.
+	canvasSelectedNodeId: null,
+	// Count of nodes in the multi-select set. >1 → ControlPanel shows a
+	// "X nodes selected" placeholder instead of a single-node editor.
+	canvasMultiSelectedCount: 0,
 
 	appColours: [
 		'#234154',

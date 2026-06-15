@@ -179,7 +179,6 @@
 	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
-	import ChainedPanel from '$lib/components/reusables/ChainedPanel.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
@@ -822,21 +821,6 @@
 						<DynamicTP p={{ id: tp.id, args: tp.args, parent: p.parent }} hideInputs={true} />
 					{/if}
 
-					<!-- ChainedPanel for chainable sub-TPs -->
-					{#if collectedTPMap[tp.type]?.xOutKey && tp.args?.valid}
-						{@const _tpEntry = collectedTPMap[tp.type]}
-						{@const _subXOut = tp.args?.out?.[_tpEntry.xOutKey] ?? -1}
-						{@const _subYOuts = Object.entries(tp.args?.out ?? {})
-							.filter(([k]) => k.startsWith(_tpEntry.yOutKeyPrefix))
-							.map(([, id]) => id)
-							.filter((id) => typeof id === 'number' && id >= 0)}
-						<ChainedPanel
-							bind:p={p.args.tableProcesses[tpIdx]}
-							xOutColId={_subXOut}
-							yOutColIds={_subYOuts}
-							parentRef={p.parent}
-						/>
-					{/if}
 				</div>
 			{/each}
 

@@ -125,6 +125,7 @@ import { TableProcess } from './TableProcess.svelte';
  */
 
 const opListeners = new Set();
+const stateChangeHooks = new Set();
 
 /**
  * Add a listener that fires synchronously after every successful top-level applyOp.
@@ -134,6 +135,19 @@ const opListeners = new Set();
 export function addOpListener(fn) {
     opListeners.add(fn);
     return () => opListeners.delete(fn);
+}
+
+/**
+ * Add a hook that fires synchronously after every successful applyOp, including
+ * under listener suppression (i.e. during history.undo / history.redo). Used by
+ * state mirrors that need to stay in sync with core even when op recording is
+ * muted, e.g. paramDiffWatcher's `prev` snapshot — otherwise an undo's mutation
+ * would look like a fresh user edit on the watcher's next reactive run and get
+ * re-recorded as a new op, creating an undo loop.
+ */
+export function addStateChangeHook(fn) {
+    stateChangeHooks.add(fn);
+    return () => stateChangeHooks.delete(fn);
 }
 
 let suppressed = 0;
@@ -157,6 +171,7 @@ export function applyOp(op) {
     const result = applyForward(op);
     if (!result) return null;
     emit(result.canonical, result.inverse);
+    for (const h of stateChangeHooks) h(result.canonical, result.inverse);
     return result.inverse;
 }
 

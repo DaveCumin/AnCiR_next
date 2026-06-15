@@ -18,6 +18,16 @@
 	export const Scatterplot_controlHeaders = ['Properties', 'Data', 'Bands'];
 	export const Scatterplot_displayName = 'Scatterplot';
 
+	// Defence in depth: if a data point's column wrapper has lost its
+	// ColumnClass prototype (e.g. it was replaced by an object spread
+	// somewhere upstream), treat it as empty rather than crashing the
+	// reactive plot. Warn once so dev still sees the shape regression.
+	function safeColumnData(col) {
+		if (typeof col?.getData === 'function') return col.getData() ?? [];
+		console.warn('Scatterplot: column lacks getData(); treating as empty', col);
+		return [];
+	}
+
 	export class ScatterDataclass {
 		parentPlot = $state();
 		x = $state();
@@ -184,7 +194,7 @@
 			let ymin = Infinity;
 			let ymax = -Infinity;
 			leftData.forEach((d) => {
-				let tempy = d.y.getData() ?? [];
+				let tempy = safeColumnData(d.y);
 				ymin = min([ymin, ...tempy]);
 				ymax = max([ymax, ...tempy]);
 			});
@@ -204,7 +214,7 @@
 			let ymin = Infinity;
 			let ymax = -Infinity;
 			rightData.forEach((d) => {
-				let tempy = d.y.getData() ?? [];
+				let tempy = safeColumnData(d.y);
 				ymin = min([ymin, ...tempy]);
 				ymax = max([ymax, ...tempy]);
 			});
@@ -224,8 +234,8 @@
 
 			this.data.forEach((d, i) => {
 				const xCol = this.data[i].x;
-				let tempx = xCol.getData() ?? [];
-				let tempy = this.data[i].y.getData() ?? [];
+				let tempx = safeColumnData(xCol);
+				let tempy = safeColumnData(this.data[i].y);
 
 				tempx = tempx.filter(
 					(x, i) => x != null && !isNaN(x) && tempy[i] != null && !isNaN(tempy[i])

@@ -9,13 +9,8 @@
 	import { exportJson, importJson } from '$lib/components/iconActions/Setting.svelte';
 	import { appState } from '$lib/core/core.svelte.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import { tick } from 'svelte';
-
-	let {
-		onResetView = null,
-		pathFocus = false,
-		onTogglePathFocus = null
-	} = $props();
 
 	let fileInput;
 
@@ -47,8 +42,8 @@
 			type="button"
 			class="fa-btn"
 			onclick={() => fileInput?.click()}
-			title="Load a session"
 			aria-label="Load session"
+			{@attach tooltip('Load a session')}
 		>
 			<Icon name="sessionload" width={24} height={24} />
 		</button>
@@ -56,8 +51,8 @@
 			type="button"
 			class="fa-btn"
 			onclick={exportJson}
-			title="Save this session"
 			aria-label="Save session"
+			{@attach tooltip('Save this session')}
 		>
 			<Icon name="sessionsave" width={24} height={24} />
 		</button>
@@ -69,8 +64,10 @@
 			class="fa-btn"
 			onclick={() => history.undo()}
 			disabled={!history.canUndo}
-			title={`Undo (Cmd/Ctrl+Z)${history.canUndo ? ` — ${history.undoCount} step${history.undoCount > 1 ? 's' : ''}` : ''}`}
 			aria-label="Undo"
+			{@attach tooltip(
+				`Undo (Cmd/Ctrl+Z)${history.canUndo ? ` — ${history.undoCount} step${history.undoCount > 1 ? 's' : ''}` : ''}`
+			)}
 		>
 			<Icon name="undo" width={22} height={22} />
 		</button>
@@ -79,38 +76,13 @@
 			class="fa-btn"
 			onclick={() => history.redo()}
 			disabled={!history.canRedo}
-			title={`Redo (Cmd/Ctrl+Shift+Z)${history.canRedo ? ` — ${history.redoCount} step${history.redoCount > 1 ? 's' : ''}` : ''}`}
 			aria-label="Redo"
+			{@attach tooltip(
+				`Redo (Cmd/Ctrl+Shift+Z)${history.canRedo ? ` — ${history.redoCount} step${history.redoCount > 1 ? 's' : ''}` : ''}`
+			)}
 		>
 			<Icon name="redo" width={22} height={22} />
 		</button>
-		{#if onResetView}
-			<button
-				type="button"
-				class="fa-btn"
-				onclick={() => onResetView()}
-				title="Reset viewport (snap pan + zoom to origin)"
-				aria-label="Reset viewport"
-			>
-				<Icon name="center" width={22} height={22} />
-			</button>
-		{/if}
-		{#if onTogglePathFocus}
-			<button
-				type="button"
-				class="fa-btn"
-				onclick={() => onTogglePathFocus()}
-				title={pathFocus ? 'Show all paths' : 'Show connected paths'}
-				aria-label={pathFocus ? 'Show all paths' : 'Show connected paths'}
-				aria-pressed={pathFocus}
-			>
-				<Icon
-					name={pathFocus ? 'showconnectedpaths' : 'showallpaths'}
-					width={22}
-					height={22}
-				/>
-			</button>
-		{/if}
 	</div>
 
 	<input

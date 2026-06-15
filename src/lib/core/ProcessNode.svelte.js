@@ -108,7 +108,10 @@ function makeProcessNodeHash(core) {
 		// `col.name` is included so renaming a data node invalidates the graph
 		// cache and the node re-renders with the new label. customName mutates
 		// col.name via Column's $derived; name flows through here.
-		out += `c:${col.id}:${col.name ?? ''}:${col.refId ?? ''}:${col.tableProcessGUId ?? ''}:${col.getDataHash ?? ''}|`;
+		// `refUpToProcessId` is included so that creating, breaking, or moving
+		// a tap point re-derives the graph (tap columns are hidden, and their
+		// downstream wires reroute through process_<refUpToProcessId>.output).
+		out += `c:${col.id}:${col.name ?? ''}:${col.refId ?? ''}:${col.refUpToProcessId ?? ''}:${col.isTap ? 't' : ''}:${col.tableProcessGUId ?? ''}:${col.getDataHash ?? ''}|`;
 		for (const p of col.processes ?? []) {
 			out += `p:${p.id}:${p.name}:${JSON.stringify(p.args ?? {})}|`;
 		}
@@ -128,7 +131,14 @@ function makeProcessNodeHash(core) {
 		out += `n:${note.id}|`;
 	}
 	for (const group of core.groups ?? []) {
-		out += `g:${group.id}:${group.name}:${group.width}:${group.height}:${(group.childIds ?? []).join(',')}|`;
+		const srcIds = (group.sourceColumnIds ?? []).join(',');
+		const allIds = Array.isArray(group.allColumnIds) ? group.allColumnIds.join(',') : 'null';
+		const collapsed = group.collapsed === true ? 'c' : 'e';
+		out += `g:${group.id}:${group.name}:${group.width}:${group.height}:${srcIds}:${allIds}:${collapsed}|`;
+	}
+	// Orphan processes invalidate the graph when added, removed, or re-named.
+	for (const p of core.orphanProcesses ?? []) {
+		out += `op:${p.id}:${p.name}:${JSON.stringify(p.args ?? {})}|`;
 	}
 	return out;
 }
@@ -241,6 +251,70 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		}
 	}
 
+	// Map colId → owning groupId for any column absorbed as a Source-group row.
+	// Standalone `data_${col.id}` nodes are suppressed for absorbed columns; edges
+	// that previously emitted from those data nodes get re-routed to a per-row
+	// output port on the owning group (`col_${colId}`). Table-process output
+	// columns are never absorbable here (they have no standalone data node to
+	// drag from), so we just ignore those entries.
+	const absorbedColToGroup = new Map();
+	for (const group of core.groups ?? []) {
+		for (const colId of group.sourceColumnIds ?? []) {
+			if (typeof colId !== 'number') continue;
+			if (tpOutputColIds.has(colId)) continue;
+			absorbedColToGroup.set(colId, group.id);
+		}
+	}
+
+	// Tap columns: hidden from the canvas, used as an internal carrier so a
+	// process inserted by single-edge splice doesn't have to physically join
+	// the source column's process chain (which would re-route every other
+	// consumer of that source). Two ways a column qualifies:
+	//   - `refUpToProcessId` set & non-broken: tap exposes refColumn's state
+	//     truncated AFTER that process id.
+	//   - `isTap === true`: synthetic tap (the only way to mark a tap whose
+	//     source has no processes — refUpToProcessId is null in that case).
+	// Broken taps (refUpToProcessId === -1) are skipped so their consumers
+	// fall back to the normal data_X path (where getData() returns []).
+	const tapColMeta = new Map(); // colId → { refId, refUpToProcessId }
+	for (const col of core.data ?? []) {
+		const hasUpTo = col.refUpToProcessId != null && col.refUpToProcessId !== -1;
+		if (hasUpTo || (col.isTap === true && col.refId != null)) {
+			tapColMeta.set(col.id, {
+				refId: col.refId,
+				refUpToProcessId: hasUpTo ? col.refUpToProcessId : null
+			});
+		}
+	}
+
+	// Resolve a column's "starting" canvas node + port. For absorbed columns
+	// this is the owning group's per-row output port; for tap columns we
+	// route to the source's pipeline end (either a specific process for
+	// truncated taps, or the source's own last process / data node for
+	// synthetic full-pass taps); otherwise it's the standalone
+	// `data_${col.id}` node's `column` port.
+	function columnSourceRef(colId) {
+		const tap = tapColMeta.get(colId);
+		if (tap) {
+			if (tap.refUpToProcessId != null) {
+				return { nodeId: `process_${tap.refUpToProcessId}`, port: 'output' };
+			}
+			// Synthetic raw-data tap: chain wire comes from the source's
+			// last-process output, OR from the source's own data node if
+			// the source has no processes. Recurse so absorbed/tap chains
+			// of taps still resolve.
+			const refCol = (core.data ?? []).find((c) => c.id === tap.refId);
+			if (refCol && (refCol.processes ?? []).length > 0) {
+				const last = refCol.processes[refCol.processes.length - 1];
+				return { nodeId: `process_${last.id}`, port: 'output' };
+			}
+			return columnSourceRef(tap.refId);
+		}
+		const gid = absorbedColToGroup.get(colId);
+		if (gid) return { nodeId: gid, port: `col_${colId}` };
+		return { nodeId: `data_${colId}`, port: 'column' };
+	}
+
 	const tableColours = ['#c8d8f0', '#f0c8d8', '#c8f0d8', '#d8c8f0', '#f0d8c8', '#d8f0c8'];
 	const colToColor = new Map();
 	(core.tables ?? []).forEach((table, idx) => {
@@ -260,12 +334,17 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 
 	for (const col of core.data ?? []) {
 		if (tpOutputColIds.has(col.id)) continue;
+		// Columns absorbed by a group render as inline rows on that group, not
+		// as standalone canvas nodes.
+		if (absorbedColToGroup.has(col.id)) continue;
+		// Tap columns are model-only: hidden on the canvas, with their consumer
+		// wires re-routed via columnSourceRef to come from process_<...>.output.
+		if (tapColMeta.has(col.id)) continue;
 		nodes.push(
 			new ProcessNode({
 				id: `data_${col.id}`,
 				kind: 'data',
 				label: col.name,
-				sublabel: col.type,
 				ports: {
 					inputs: [],
 					outputs: [makeNodePort('column', 'output', 'column')]
@@ -303,6 +382,35 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				})
 			);
 		}
+	}
+
+	// Orphan column-processes: spawned via palette / paste, not yet wired to a
+	// parent column. They render with the same ports as attached processes but
+	// emit no chain edges; wiring a column output to their `input` port moves
+	// them out of orphans into that column's processes[] (see
+	// attachOrphanProcessToColumn).
+	for (const p of core.orphanProcesses ?? []) {
+		const entry = appConsts.processMap.get(p.name);
+		const ports = makePortsFromNodeSpec(entry?.nodeSpec, {
+			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
+		});
+		nodes.push(
+			new ProcessNode({
+				id: `process_${p.id}`,
+				kind: 'process',
+				label: p.displayName || p.name,
+				ports,
+				refId: p.id,
+				meta: {
+					type: 'process',
+					refId: p.id,
+					processObj: p,
+					processName: p.name,
+					isOrphan: true
+				}
+			})
+		);
 	}
 
 	for (const table of core.tables ?? []) {
@@ -392,7 +500,6 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 						id: `data_${col.id}`,
 						kind: 'data',
 						label: col.name,
-						sublabel: col.type,
 						ports: {
 							inputs: [],
 							outputs: [makeNodePort('column', 'output', 'column')]
@@ -418,7 +525,6 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 							id: `data_${col.id}`,
 							kind: 'data',
 							label: col.name,
-							sublabel: col.type,
 							ports: {
 								inputs: [],
 								outputs: [makeNodePort('column', 'output', 'column')]
@@ -494,16 +600,25 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		);
 	}
 
-	// Group nodes — visual containers, no ports, no edges. Membership is
-	// reconciled in WorkflowEditor.stopAll based on drop position.
+	// Group nodes — flowtest-style Source group. One output port per absorbed
+	// column (`col_${colId}`) plus an `all` port that fans out to every source
+	// (filtered by group.allColumnIds when non-null). The standalone `data_X`
+	// nodes for absorbed columns are suppressed above, and downstream edges get
+	// re-routed via `columnSourceRef` below.
 	for (const group of core.groups ?? []) {
+		const sourceIds = (group.sourceColumnIds ?? []).filter((id) => typeof id === 'number');
+		const outputs = [];
+		outputs.push(makeNodePort('all', 'output', 'column', true));
+		for (const colId of sourceIds) {
+			outputs.push(makeNodePort(`col_${colId}`, 'output', 'column'));
+		}
 		nodes.push(
 			new ProcessNode({
 				id: group.id,
 				kind: 'group',
 				label: group.name,
 				sublabel: '',
-				ports: { inputs: [], outputs: [] },
+				ports: { inputs: [], outputs },
 				refId: group.id,
 				meta: {
 					type: 'group',
@@ -525,11 +640,14 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	}
 
 	for (const col of core.data ?? []) {
-		let prevId = `data_${col.id}`;
+		const initial = columnSourceRef(col.id);
+		let prevId = initial.nodeId;
+		let prevPort = initial.port;
 		for (const p of col.processes ?? []) {
 			const pid = `process_${p.id}`;
-			addConnection(prevId, pid, 'data-process', 'column', 'input');
+			addConnection(prevId, pid, 'data-process', prevPort, 'input');
 			prevId = pid;
+			prevPort = 'column';
 		}
 	}
 
@@ -543,11 +661,16 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				if (colId == null || colId < 0) continue;
 				const col = core.data.find((d) => d.id === colId);
 				if (!col) continue;
-				const lastId =
-					(col.processes ?? []).length > 0
-						? `process_${col.processes[col.processes.length - 1].id}`
-						: `data_${colId}`;
-				addConnection(lastId, tpNodeId, 'data-tp', 'output', port);
+				let fromId, fromPort;
+				if ((col.processes ?? []).length > 0) {
+					fromId = `process_${col.processes[col.processes.length - 1].id}`;
+					fromPort = 'output';
+				} else {
+					const src = columnSourceRef(colId);
+					fromId = src.nodeId;
+					fromPort = src.port;
+				}
+				addConnection(fromId, tpNodeId, 'data-tp', fromPort, port);
 			}
 
 			for (const [outKey, colId] of Object.entries(tp.args?.out ?? {})) {
@@ -563,7 +686,8 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				const nestedInputRefs = collectTableProcessInputRefs(nestedTp.args, nestedEntry?.nodeSpec);
 				for (const { colId, port } of nestedInputRefs) {
 					if (colId == null || colId < 0) continue;
-					addConnection(`data_${colId}`, nestedNodeId, 'data-tp', 'output', port);
+					const src = columnSourceRef(colId);
+					addConnection(src.nodeId, nestedNodeId, 'data-tp', src.port, port);
 				}
 				for (const [outKey, colId] of Object.entries(nestedTp.args?.out ?? {})) {
 					if (colId == null || colId < 0) continue;
@@ -579,11 +703,16 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			if (colId == null || colId < 0) return;
 			const col = core.data.find((d) => d.id === colId);
 			if (!col) return;
-			const lastId =
-				(col.processes ?? []).length > 0
-					? `process_${col.processes[col.processes.length - 1].id}`
-					: `data_${colId}`;
-			addConnection(lastId, plotNodeId, 'data-plot', 'output', port);
+			let fromId, fromPort;
+			if ((col.processes ?? []).length > 0) {
+				fromId = `process_${col.processes[col.processes.length - 1].id}`;
+				fromPort = 'output';
+			} else {
+				const src = columnSourceRef(colId);
+				fromId = src.nodeId;
+				fromPort = src.port;
+			}
+			addConnection(fromId, plotNodeId, 'data-plot', fromPort, port);
 		}
 
 		if (plot.type === 'tableplot') {

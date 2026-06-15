@@ -7,6 +7,7 @@
 		uniqueStoredValueName
 	} from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
+	import { tooltip } from '$lib/utils/tooltip.js';
 
 	let { label, getter, defaultName = '', source = '' } = $props();
 	let storedName = $state('');
@@ -16,7 +17,6 @@
 	let popoverEl = $state(null);
 	let buttonEl = $state(null);
 	let popoverPos = $state({ left: 0, top: 0 });
-	let tooltip = $state({ visible: false, x: 0, y: 0 });
 
 	onMount(() => {
 		storedName = uniqueStoredValueName(defaultName || label || 'stored_value');
@@ -39,7 +39,6 @@
 	function openPopover() {
 		editValue = storedName;
 		showPopover = true;
-		tooltip.visible = false;
 		setTimeout(() => {
 			if (buttonEl) {
 				const btnRect = buttonEl.getBoundingClientRect();
@@ -75,25 +74,7 @@
 			showPopover = false;
 		}
 	}
-
-	function showTooltip(e) {
-		let x = e.clientX + 10;
-		let y = e.clientY + 10;
-		if (x + 100 > window.innerWidth) x = window.innerWidth - 110;
-		if (y + 30 > window.innerHeight) y = e.clientY - 30;
-		tooltip = { visible: true, x, y };
-	}
-
-	function hideTooltip() {
-		tooltip = { visible: false, x: 0, y: 0 };
-	}
 </script>
-
-{#if tooltip.visible}
-	<div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">
-		{storedName}
-	</div>
-{/if}
 
 {#if showPopover}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -119,8 +100,7 @@
 		class="icon"
 		bind:this={buttonEl}
 		onclick={openPopover}
-		onmouseenter={showTooltip}
-		onmouseleave={hideTooltip}
+		{@attach tooltip(storedName)}
 	>
 		<Icon name="edit" width={14} height={14} />
 	</button>
@@ -153,17 +133,6 @@
 	}
 	:global(.store-btn:hover .store-icon) {
 		fill: var(--color-hover, #333);
-	}
-	.tooltip {
-		position: fixed;
-		z-index: 10000;
-		background: rgba(0, 0, 0, 0.75);
-		color: white;
-		font-size: 11px;
-		padding: 3px 7px;
-		border-radius: 3px;
-		pointer-events: none;
-		white-space: nowrap;
 	}
 	.popover-backdrop {
 		position: fixed;

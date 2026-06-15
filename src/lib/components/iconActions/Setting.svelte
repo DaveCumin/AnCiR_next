@@ -53,6 +53,9 @@
 		core.data = [];
 		core.tables = [];
 		core.plots = [];
+		// Orphan processes are session-only; clear on import so the next
+		// block can rehydrate them from the JSON if present.
+		core.orphanProcesses = [];
 
 		const dataEntries = Array.isArray(jsonData?.data) ? jsonData.data : [];
 		const columnCount = jsonData?.rawData
@@ -103,6 +106,25 @@
 			pushObj(Plot.fromJSON(jsonData.plots[i]), false);
 		}
 
+		// Orphan column-processes (unconnected, spawned via palette/paste).
+		// Rehydrated as Process instances with parentCol = null so the canvas
+		// re-renders them; the user re-wires after load.
+		const orphanSnapshots = Array.isArray(jsonData.orphanProcesses)
+			? jsonData.orphanProcesses
+			: [];
+		if (orphanSnapshots.length > 0) {
+			core.orphanProcesses = orphanSnapshots
+				.map((p) => {
+					try {
+						return Process.fromJSON(p, null);
+					} catch (e) {
+						console.warn('Failed to rehydrate orphan process', p, e);
+						return null;
+					}
+				})
+				.filter(Boolean);
+		}
+
 		if (jsonData.appState) {
 			if (onProgress) onProgress('Restoring settings…');
 			await yieldFrame();
@@ -122,6 +144,7 @@
 	import { Column, relinkLinkedProcessArgs } from '$lib/core/Column.svelte';
 	import { Table } from '$lib/core/Table.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
+	import { Process } from '$lib/core/Process.svelte';
 
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
