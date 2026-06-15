@@ -6,10 +6,10 @@ import { tick } from 'svelte';
 
 /**
  * Convert headers and rows to a CSV string and trigger a download.
- * @param {number} plotId - The plot index in core.plots
+ * @param {number} plotId - The plot id (core.plots[].id), not the array index
  */
 export function saveDataAsCSV(plotId) {
-	const plot = core.plots[plotId];
+	const plot = core.plots.find((p) => p.id === plotId);
 	if (!plot || !plot.plot) return;
 
 	const plotData = plot.plot;
@@ -36,10 +36,10 @@ export function saveDataAsCSV(plotId) {
 
 /**
  * Open a DataView plot on the canvas showing the data from the given plot.
- * @param {number} plotId - The index of the source plot in core.plots
+ * @param {number} plotId - The id of the source plot (core.plots[].id), not the array index
  */
 export function showDataAsTable(plotId) {
-	const sourcePlot = core.plots[plotId];
+	const sourcePlot = core.plots.find((p) => p.id === plotId);
 	if (!sourcePlot?.plot || typeof sourcePlot.plot.getDownloadData !== 'function') return;
 
 	const newPlot = new Plot({
@@ -117,7 +117,8 @@ export async function convertToImage(svgId, filetype = 'png') {
 	// await tick();
 	await tick();
 
-	const plotName = core.plots[Number(svgId.replace('plot', ''))]?.name ?? svgId;
+	const plotId = Number(svgId.replace('plot', ''));
+	const plotName = core.plots.find((p) => p.id === plotId)?.name ?? svgId;
 
 	if (filetype == 'svg') {
 		exportSVG(svgId, plotName);
