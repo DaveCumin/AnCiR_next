@@ -208,6 +208,11 @@
 
 			if (!this.isReferencial() && this.compression === 'awd' && this.processes.length === 0) {
 				const raw = core.rawData.get(this.data);
+				// A missing rawData entry (id diverged after a legacy-session migration,
+				// or the stored array was never written) must degrade to an empty series
+				// rather than throw — a throw here aborts importJson mid-load and blanks
+				// the Data Sources panel.
+				if (raw == null) return [];
 				const length = raw.length;
 				const step = raw.step;
 				const out = new Array(length);
@@ -375,9 +380,15 @@
 			} else {
 				if (this.compression === 'awd') {
 					const raw = core.rawData.get(this.data);
-					out = new Array(raw.length);
-					for (let i = 0; i < raw.length; i++) {
-						out[i] = raw.start + i * raw.step;
+					// Missing rawData entry: degrade to empty rather than throw on
+					// raw.length (see hoursSinceStart for the same guard and rationale).
+					if (raw == null) {
+						out = [];
+					} else {
+						out = new Array(raw.length);
+						for (let i = 0; i < raw.length; i++) {
+							out[i] = raw.start + i * raw.step;
+						}
 					}
 				} else {
 					out = core.rawData.get(this.data) ?? [];
