@@ -9,7 +9,7 @@
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 
-	let { showModal = $bindable(false) } = $props();
+	let { showModal = $bindable(false), initialType = $bindable('') } = $props();
 
 	//------------- STUFF TO DO WITH THE PROGRESS
 
@@ -68,6 +68,18 @@
 	//-------------------
 
 	let plotType = $state();
+	// When the palette pre-picks a type, seed plotType and advance to step 2 once
+	// the modal opens.
+	$effect(() => {
+		if (showModal && initialType && plotType !== initialType) {
+			plotType = initialType;
+			makeInputs();
+		}
+		if (!showModal) {
+			// reset so a subsequent open without initialType starts fresh
+			initialType = '';
+		}
+	});
 	let plotDisplayName = $derived.by(() => {
 		return plotType ? appConsts.plotMap.get(plotType)?.displayName || plotType : '';
 	});

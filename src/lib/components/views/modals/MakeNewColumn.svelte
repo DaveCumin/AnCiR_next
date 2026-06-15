@@ -8,11 +8,25 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
-	let { show = $bindable(), tableId } = $props();
+	let { show = $bindable(), tableId, initialType = $bindable('') } = $props();
 
 	///-----------
 	let tableProcessChosen = $state();
 	let awaitingLoad = $state(false);
+
+	// When the palette pre-picks a table-process type, seed `tableProcessChosen`
+	// once the modal opens so the user lands on step 2.
+	$effect(() => {
+		if (show && initialType && tableProcessChosen !== initialType) {
+			tableProcessChosen = initialType;
+			theP = null;
+			defaultsReady = false;
+			setupProcess();
+		}
+		if (!show) {
+			initialType = '';
+		}
+	});
 
 	// Get sorted table processes by display name
 	let sortedTableProcesses = $derived.by(() => {

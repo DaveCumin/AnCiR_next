@@ -1,4 +1,5 @@
 import { normalizeNodeDefinition } from '$lib/core/NodeDefinition.svelte.js';
+import { getNodeMeta } from '$lib/core/nodeMeta.js';
 
 export async function loadProcesses() {
 	const sveltePaths = import.meta.glob('$lib/processes/*.svelte', { eager: false });
@@ -15,13 +16,18 @@ export async function loadProcesses() {
 				continue;
 			}
 
+			const nodeMeta = getNodeMeta(fileName);
 			processMap.set(fileName, {
 				component: svelteModule.default,
 				func: def.func,
 				defaults: def.defaults ?? new Map(),
 				displayName: def.displayName ?? formatDisplayName(fileName),
 				nodeSpec,
-				definition: def
+				definition: def,
+				family: nodeMeta.family,
+				nodeIcon: nodeMeta.nodeIcon,
+				description: nodeMeta.description,
+				kind: 'process'
 			});
 		} catch (error) {
 			console.error(`Error loading ${sveltePath}:`, error);

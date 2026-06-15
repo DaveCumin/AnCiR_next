@@ -1,3 +1,5 @@
+import { getNodeMeta } from '$lib/core/nodeMeta.js';
+
 export async function loadPlots() {
 	const sveltePaths = import.meta.glob('$lib/plots/**/*.svelte', { eager: false });
 	const plotMap = new Map();
@@ -20,7 +22,9 @@ export async function loadPlots() {
 				continue;
 			}
 
-			plotMap.set(folderName.toLowerCase(), {
+			const plotKey = folderName.toLowerCase();
+			const nodeMeta = getNodeMeta(plotKey);
+			plotMap.set(plotKey, {
 				plot: svelteModule.default,
 				data: def.plotClass,
 				defaultInputs: def.defaultDataInputs ?? [],
@@ -28,7 +32,11 @@ export async function loadPlots() {
 				displayName: def.displayName ?? formatDisplayName(folderName),
 				sharedFields: def.sharedFields ?? [],
 				dataSharedFields: def.dataSharedFields ?? [],
-				definition: def
+				definition: def,
+				family: nodeMeta.family,
+				nodeIcon: nodeMeta.nodeIcon,
+				description: nodeMeta.description,
+				kind: 'plot'
 			});
 		} catch (error) {
 			console.error(`Error loading ${sveltePath}:`, error);

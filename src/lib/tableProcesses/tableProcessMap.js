@@ -1,4 +1,5 @@
 import { normalizeNodeDefinition } from '$lib/core/NodeDefinition.svelte.js';
+import { getNodeMeta } from '$lib/core/nodeMeta.js';
 
 export async function loadTableProcesses() {
 	const sveltePaths = import.meta.glob('$lib/tableProcesses/*.svelte', { eager: false });
@@ -17,6 +18,7 @@ export async function loadTableProcesses() {
 				continue;
 			}
 
+			const nodeMeta = getNodeMeta(fileName);
 			tableProcessMap.set(fileName, {
 				component,
 				defaults: def.defaults ?? new Map(),
@@ -26,7 +28,11 @@ export async function loadTableProcesses() {
 				xOutKey: def.xOutKey ?? null,
 				yOutKeyPrefix: def.yOutKeyPrefix ?? null,
 				columnIdFields: def.columnIdFields ?? {},
-				definition: def
+				definition: def,
+				family: nodeMeta.family,
+				nodeIcon: nodeMeta.nodeIcon,
+				description: nodeMeta.description,
+				kind: 'tableProcess'
 			});
 		} catch (error) {
 			console.error(`Error loading ${sveltePath}:`, error);
