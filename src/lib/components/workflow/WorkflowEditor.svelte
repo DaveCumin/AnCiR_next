@@ -637,6 +637,21 @@
 		return !!port?.dynamic;
 	}
 
+	/** Mirrors groupPlotData in ProcessNode.svelte.js. Keep in sync. */
+	function groupPlotData(data) {
+		const groups = [];
+		for (const dp of data ?? []) {
+			const xRef = dp?.x?.refId ?? -1;
+			let g = groups.find((gg) => gg.xRefId === xRef);
+			if (!g) {
+				g = { xRefId: xRef, dataPoints: [] };
+				groups.push(g);
+			}
+			g.dataPoints.push(dp);
+		}
+		return groups;
+	}
+
 	function resolveOutputColumnId(nodeId, portName) {
 		const node = allNodes.find((n) => n.id === nodeId);
 		if (!node) return -1;
@@ -685,29 +700,41 @@
 			return;
 		}
 
-		// Non-tableplot plots: each port is many-cardinality. A drop on any of
-		// xs/ys/zs appends a new data point with that axis set, so mixed x axes
-		// across series (and ys-without-x or x-without-y placeholders) are allowed.
+		// Non-tableplot plots: per-set {xN, ysN} ports. Existing sets reuse the
+		// pair; the trailing empty pair (one past the last group) appends a new
+		// set when a wire drops on it.
 		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot') {
 			const plot = target.plotObj.plot;
 			if (!plot) return;
 			plot.data = plot.data ?? [];
 
-			let dataIn = null;
-			if (toPort === 'xs') {
-				dataIn = { x: { refId: colId }, y: { refId: -1 } };
-			} else if (toPort === 'ys') {
-				const sharedX = plot.data[0]?.x?.refId ?? -1;
-				dataIn = { x: { refId: sharedX }, y: { refId: colId } };
-			} else if (toPort === 'zs') {
-				const sharedX = plot.data[0]?.x?.refId ?? -1;
-				dataIn = { x: { refId: sharedX }, y: { refId: -1 }, z: { refId: colId } };
+			const xMatch = toPort?.match(/^x(\d+)$/);
+			const ysMatch = toPort?.match(/^ys(\d+)$/);
+			if (!xMatch && !ysMatch) return;
+
+			const groups = groupPlotData(plot.data);
+			const setIdx = Number((xMatch ?? ysMatch)[1]) - 1;
+
+			if (xMatch) {
+				if (setIdx < groups.length) {
+					// Update every data point in this set: new shared x.
+					for (const dp of groups[setIdx].dataPoints) {
+						dp.x = { ...(dp.x ?? {}), refId: colId };
+					}
+				} else {
+					// Trailing empty pair — seed a new set with x but no y yet.
+					const dataIn = { x: { refId: colId }, y: { refId: -1 } };
+					if (typeof plot.addData === 'function') plot.addData(dataIn);
+					else plot.data = [...plot.data, dataIn];
+				}
+				return;
 			}
 
-			if (dataIn) {
-				if (typeof plot.addData === 'function') plot.addData(dataIn);
-				else plot.data = [...plot.data, dataIn];
-			}
+			// ysMatch: append a new series to (or seed) the chosen set.
+			const setX = setIdx < groups.length ? groups[setIdx].xRefId : -1;
+			const dataIn = { x: { refId: setX }, y: { refId: colId } };
+			if (typeof plot.addData === 'function') plot.addData(dataIn);
+			else plot.data = [...plot.data, dataIn];
 		}
 	}
 
@@ -730,14 +757,25 @@
 		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot') {
 			const plot = target.plotObj.plot;
 			if (!plot?.data) return;
-			if (portName === 'xs') {
-				plot.data = plot.data.filter((dp) => !(dp?.x?.refId >= 0));
-			} else if (portName === 'ys') {
-				plot.data = plot.data.filter((dp) => !(dp?.y?.refId >= 0));
-			} else if (portName === 'zs') {
-				for (const dp of plot.data) {
-					if (dp?.z) dp.z = { ...dp.z, refId: -1 };
+			const xMatch = portName?.match(/^x(\d+)$/);
+			const ysMatch = portName?.match(/^ys(\d+)$/);
+			if (!xMatch && !ysMatch) return;
+
+			const groups = groupPlotData(plot.data);
+			const setIdx = Number((xMatch ?? ysMatch)[1]) - 1;
+			if (setIdx >= groups.length) return; // trailing empty pair — nothing to disconnect
+
+			const g = groups[setIdx];
+			if (xMatch) {
+				// Orphan the set: clear x.refId on every data point in this group.
+				for (const dp of g.dataPoints) {
+					if (dp?.x) dp.x = { ...dp.x, refId: -1 };
 				}
+			} else {
+				// Drop every data point in the set (matches the tableplot
+				// "clear all wires on this port" semantic).
+				const toRemove = new Set(g.dataPoints);
+				plot.data = plot.data.filter((dp) => !toRemove.has(dp));
 			}
 		}
 	}
@@ -859,14 +897,32 @@
 		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot') {
 			const plot = target.plotObj.plot;
 			if (!plot?.data) return;
-			const axisKey = edge.toPort === 'xs' ? 'x' : edge.toPort === 'ys' ? 'y' : edge.toPort === 'zs' ? 'z' : null;
-			if (!axisKey) return;
-			// Remove the FIRST data point that matches this colId on the axis. Others
-			// stay (handles duplicate wires that flowtest dedup'd visually but kept
-			// separately in the data model).
-			const idx = plot.data.findIndex((dp) => dp?.[axisKey]?.refId === colId);
+			const xMatch = edge.toPort?.match(/^x(\d+)$/);
+			const ysMatch = edge.toPort?.match(/^ys(\d+)$/);
+			if (!xMatch && !ysMatch) return;
+
+			const groups = groupPlotData(plot.data);
+			const setIdx = Number((xMatch ?? ysMatch)[1]) - 1;
+			if (setIdx >= groups.length) return;
+			const g = groups[setIdx];
+
+			if (xMatch) {
+				// Edge for the set's shared x: clear x.refId on every data point
+				// in this group so the set becomes "orphaned" (next derive groups
+				// them under xRefId = -1).
+				if (g.xRefId === colId) {
+					for (const dp of g.dataPoints) {
+						if (dp?.x) dp.x = { ...dp.x, refId: -1 };
+					}
+				}
+				return;
+			}
+
+			// ysMatch: drop the first data point in this set whose y matches.
+			const idx = g.dataPoints.findIndex((dp) => dp?.y?.refId === colId);
 			if (idx < 0) return;
-			plot.data = [...plot.data.slice(0, idx), ...plot.data.slice(idx + 1)];
+			const removedDp = g.dataPoints[idx];
+			plot.data = plot.data.filter((dp) => dp !== removedDp);
 		}
 	}
 

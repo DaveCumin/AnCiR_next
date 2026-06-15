@@ -33,6 +33,30 @@ function makeNodePort(name, direction, artifactKind = 'column', dynamic = false)
 	return { name, direction, artifactKind, dynamic };
 }
 
+/**
+ * Group plot data points by x.refId so each unique x forms a "set" with its
+ * own `xN`/`ysN` port pair. Preserves the order in which xRefIds first appear
+ * in the data array. Data points with no x ref (refId === -1 or null) form
+ * their own "orphan" set keyed by -1, so the user can wire an x to them later.
+ *
+ * Shared by ProcessNode (port emission + connection routing) and WorkflowEditor
+ * (apply/disconnect/edge-delete routing). Re-declared locally there to avoid
+ * an extra import cycle.
+ */
+function groupPlotData(data) {
+	const groups = [];
+	for (const dp of data ?? []) {
+		const xRef = dp?.x?.refId ?? -1;
+		let g = groups.find((gg) => gg.xRefId === xRef);
+		if (!g) {
+			g = { xRefId: xRef, dataPoints: [] };
+			groups.push(g);
+		}
+		g.dataPoints.push(dp);
+	}
+	return groups;
+}
+
 function makePortsFromNodeSpec(nodeSpec = {}, fallback = { inputs: [], outputs: [] }) {
 	const inputs = (nodeSpec.inputs ?? fallback.inputs ?? []).map((p) =>
 		makeNodePort(p.name, 'input', p.kind ?? 'column', p.cardinality === 'many')
@@ -410,13 +434,17 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		if (plot.type === 'tableplot') {
 			inputs.push(makeNodePort('series', 'input', 'column', true));
 		} else {
-			// All three axes are many-cardinality. Each data point in plot.plot.data
-			// emits its own wire so users can mix x columns across series, exactly
-			// like flowtest's dynamic ports.
-			const hasZ = (plot.plot?.data ?? []).some((dp) => dp?.z?.refId != null);
-			inputs.push(makeNodePort('xs', 'input', 'column', true));
-			inputs.push(makeNodePort('ys', 'input', 'column', true));
-			if (hasZ) inputs.push(makeNodePort('zs', 'input', 'column', true));
+			// Per-x "set" ports: each unique x.refId in plot.plot.data becomes an
+			// (xN, ysN) pair, and a trailing empty pair is always appended so the
+			// user can drop a wire to begin a new set.
+			const groups = groupPlotData(plot.plot?.data);
+			groups.forEach((_, i) => {
+				inputs.push(makeNodePort(`x${i + 1}`, 'input', 'column', false));
+				inputs.push(makeNodePort(`ys${i + 1}`, 'input', 'column', true));
+			});
+			const next = groups.length + 1;
+			inputs.push(makeNodePort(`x${next}`, 'input', 'column', false));
+			inputs.push(makeNodePort(`ys${next}`, 'input', 'column', true));
 		}
 
 		nodes.push(
@@ -511,13 +539,17 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		if (plot.type === 'tableplot') {
 			(plot.plot?.columnRefs ?? []).forEach((colId) => addPlotCol(colId, 'series'));
 		} else {
-			// One wire per (data point, axis). No de-dup on x — multiple series with
-			// different x columns each get their own wire to the `xs` port.
-			for (const dp of plot.plot?.data ?? []) {
-				if (dp?.x?.refId != null) addPlotCol(dp.x.refId, 'xs');
-				if (dp?.y?.refId != null) addPlotCol(dp.y.refId, 'ys');
-				if (dp?.z?.refId != null) addPlotCol(dp.z.refId, 'zs');
-			}
+			// Per-set wires: each group contributes ONE x wire (since all data
+			// points in the set share x) and one ys wire per data point.
+			const groups = groupPlotData(plot.plot?.data);
+			groups.forEach((g, i) => {
+				const portX = `x${i + 1}`;
+				const portYs = `ys${i + 1}`;
+				if (g.xRefId != null && g.xRefId >= 0) addPlotCol(g.xRefId, portX);
+				for (const dp of g.dataPoints) {
+					if (dp?.y?.refId != null && dp.y.refId >= 0) addPlotCol(dp.y.refId, portYs);
+				}
+			});
 		}
 	}
 
