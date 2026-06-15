@@ -11,6 +11,8 @@
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { tick } from 'svelte';
 
+	let { onResetView = null } = $props();
+
 	let fileInput;
 
 	async function handleLoad(e) {
@@ -78,6 +80,17 @@
 		>
 			<Icon name="redo" width={22} height={22} />
 		</button>
+		{#if onResetView}
+			<button
+				type="button"
+				class="fa-btn"
+				onclick={() => onResetView()}
+				title="Reset viewport (snap pan + zoom to origin)"
+				aria-label="Reset viewport"
+			>
+				<Icon name="center" width={22} height={22} />
+			</button>
+		{/if}
 	</div>
 
 	<input

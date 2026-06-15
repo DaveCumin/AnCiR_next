@@ -348,6 +348,46 @@
 			/* ignore quota / private-mode errors */
 		}
 	});
+
+	/** Reset pan + zoom so the user can always recover when the persisted viewport
+	 *  has stranded the visible area away from any nodes. */
+	function resetCanvasView() {
+		panX = 0;
+		panY = 0;
+		zoom = 1;
+	}
+
+	// One-shot guard: after the canvas mounts and the first non-empty node set is
+	// laid out, sanity-check that AT LEAST ONE node falls inside the viewport. If
+	// not (e.g. the persisted pan/zoom from a previous session leaves the user on
+	// blank canvas), snap the viewport back to the origin. Without this, the user
+	// has no UI affordance to recover.
+	let _viewportSanityChecked = false;
+	$effect(() => {
+		if (_viewportSanityChecked) return;
+		if (!canvasViewportEl) return;
+		const nodes = allNodes;
+		if (!nodes || nodes.length === 0) return;
+		const rect = canvasViewportEl.getBoundingClientRect();
+		if (!(rect.width > 0 && rect.height > 0)) return;
+		const positions = stablePositions;
+		const defaults = defaultPositions.positions;
+		const margin = NODE_WIDTH; // half-node grace either side
+		const anyVisible = nodes.some((n) => {
+			const p = positions[n.id] ?? defaults[n.id];
+			if (!p) return false;
+			const sx = panX + p.x * zoom;
+			const sy = panY + p.y * zoom;
+			return (
+				sx > -margin &&
+				sx < rect.width + margin &&
+				sy > -margin &&
+				sy < rect.height + margin
+			);
+		});
+		if (!anyVisible) resetCanvasView();
+		_viewportSanityChecked = true;
+	});
 	let isPanning = $state(false);
 	/** Bound to the .canvas-viewport element for precise coordinate conversion. */
 	let canvasViewportEl = $state(null);
@@ -920,7 +960,7 @@
 	{/if}
 
 	<div class="canvas-viewport" bind:this={canvasViewportEl} class:panning={isPanning && !dragInfo}>
-		<FloatingActions />
+		<FloatingActions onResetView={resetCanvasView} />
 		<NodePalette />
 		<div
 			class="canvas-inner"
