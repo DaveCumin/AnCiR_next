@@ -7,6 +7,7 @@
 		getProcessNodeGraph
 	} from '$lib/core/core.svelte.js';
 	import { mutationService } from '$lib/core/mutationService.js';
+	import { deleteTableProcess } from '$lib/core/TableProcess.svelte';
 	import { selectPlot, deselectAllPlots } from '$lib/core/Plot.svelte';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import WorkflowEdges from './WorkflowEdges.svelte';
@@ -331,6 +332,20 @@
 	// --- Focus / connected-node highlight ---
 	let focusedNodeId = $state(null);
 
+	// --- Click-selection (drives Delete/Backspace) ---
+	// Either a node id OR an edge key (see edgeKeyFor below). At most one is set.
+	let selectedEdgeKey = $state(null);
+
+	function edgeKeyFor(edge) {
+		return `${edge.fromId}|${edge.fromPort}|${edge.toId}|${edge.toPort}|${edge.type}`;
+	}
+
+	function selectEdge(edge) {
+		selectedEdgeKey = edgeKeyFor(edge);
+		focusedNodeId = null;
+		expandedNodeId = null;
+	}
+
 	// BFS both directions in the edge graph to find the full connected subgraph
 	const connectedNodeIds = $derived.by(() => {
 		if (!focusedNodeId) return null;
@@ -589,32 +604,26 @@
 			return;
 		}
 
-		// Non-tableplot plots use the flowtest-style {x, ys[, zs]} ports.
-		// `x` is treated as one shared column across all data points; dropping on
-		// `ys` (or `zs`) appends a new series that inherits the current shared x.
+		// Non-tableplot plots: each port is many-cardinality. A drop on any of
+		// xs/ys/zs appends a new data point with that axis set, so mixed x axes
+		// across series (and ys-without-x or x-without-y placeholders) are allowed.
 		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot') {
 			const plot = target.plotObj.plot;
 			if (!plot) return;
 			plot.data = plot.data ?? [];
 
-			if (toPort === 'x') {
-				if (plot.data.length === 0) {
-					const dataIn = { x: { refId: colId }, y: { refId: -1 } };
-					if (typeof plot.addData === 'function') plot.addData(dataIn);
-					else plot.data = [dataIn];
-				} else {
-					for (const dp of plot.data) {
-						dp.x = { ...(dp.x ?? {}), refId: colId };
-					}
-				}
+			let dataIn = null;
+			if (toPort === 'xs') {
+				dataIn = { x: { refId: colId }, y: { refId: -1 } };
 			} else if (toPort === 'ys') {
 				const sharedX = plot.data[0]?.x?.refId ?? -1;
-				const dataIn = { x: { refId: sharedX }, y: { refId: colId } };
-				if (typeof plot.addData === 'function') plot.addData(dataIn);
-				else plot.data = [...plot.data, dataIn];
+				dataIn = { x: { refId: sharedX }, y: { refId: colId } };
 			} else if (toPort === 'zs') {
 				const sharedX = plot.data[0]?.x?.refId ?? -1;
-				const dataIn = { x: { refId: sharedX }, y: { refId: -1 }, z: { refId: colId } };
+				dataIn = { x: { refId: sharedX }, y: { refId: -1 }, z: { refId: colId } };
+			}
+
+			if (dataIn) {
 				if (typeof plot.addData === 'function') plot.addData(dataIn);
 				else plot.data = [...plot.data, dataIn];
 			}
@@ -640,13 +649,9 @@
 		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot') {
 			const plot = target.plotObj.plot;
 			if (!plot?.data) return;
-			if (portName === 'x') {
-				for (const dp of plot.data) {
-					if (dp?.x) dp.x = { ...dp.x, refId: -1 };
-				}
+			if (portName === 'xs') {
+				plot.data = plot.data.filter((dp) => !(dp?.x?.refId >= 0));
 			} else if (portName === 'ys') {
-				// Drop every series that has a wired y. Matches the tableplot
-				// "clear all wires on this port" semantic.
 				plot.data = plot.data.filter((dp) => !(dp?.y?.refId >= 0));
 			} else if (portName === 'zs') {
 				for (const dp of plot.data) {
@@ -710,6 +715,8 @@
 	function handleNodeAction(node) {
 		// Toggle focus: click same node again to deselect
 		focusedNodeId = focusedNodeId === node.id ? null : node.id;
+		// Selecting a node clears any edge selection.
+		selectedEdgeKey = null;
 
 		if (node.type === 'plot') {
 			// Synthesise a minimal event-like object for selectPlot (needs altKey)
@@ -726,15 +733,111 @@
 		deselectAllPlots();
 		expandedNodeId = null;
 		focusedNodeId = null;
+		selectedEdgeKey = null;
 		pendingConnection = null;
+	}
+
+	function clearSelection() {
+		deselectAllPlots();
+		expandedNodeId = null;
+		focusedNodeId = null;
+		selectedEdgeKey = null;
+		pendingConnection = null;
+	}
+
+	/**
+	 * Granular per-wire delete. Removes only the (fromId → toPort) connection,
+	 * not every wire on the port. For chain-implied connections (data→firstProcess,
+	 * tp→its-output-column) we no-op rather than tear out the surrounding node.
+	 */
+	function removeEdge(edge) {
+		const target = allNodes.find((n) => n.id === edge.toId);
+		const colId = resolveOutputColumnId(edge.fromId, edge.fromPort);
+		if (!target || colId == null || colId < 0) return;
+
+		if (target.type === 'tableprocess' && target.tpObj) {
+			const tp = target.tpObj;
+			const port = edge.toPort;
+			if (!port?.endsWith('IN')) return;
+			if (isManyInputPort(target, port)) {
+				const arr = Array.isArray(tp.args[port]) ? tp.args[port] : [];
+				tp.args[port] = arr.filter((id) => id !== colId);
+			} else if (tp.args[port] === colId) {
+				tp.args[port] = -1;
+			}
+			return;
+		}
+
+		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && edge.toPort === 'series') {
+			target.plotObj.plot.columnRefs = (target.plotObj.plot.columnRefs ?? []).filter(
+				(id) => id !== colId
+			);
+			return;
+		}
+
+		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot') {
+			const plot = target.plotObj.plot;
+			if (!plot?.data) return;
+			const axisKey = edge.toPort === 'xs' ? 'x' : edge.toPort === 'ys' ? 'y' : edge.toPort === 'zs' ? 'z' : null;
+			if (!axisKey) return;
+			// Remove the FIRST data point that matches this colId on the axis. Others
+			// stay (handles duplicate wires that flowtest dedup'd visually but kept
+			// separately in the data model).
+			const idx = plot.data.findIndex((dp) => dp?.[axisKey]?.refId === colId);
+			if (idx < 0) return;
+			plot.data = [...plot.data.slice(0, idx), ...plot.data.slice(idx + 1)];
+		}
+	}
+
+	function removeNode(node) {
+		if (!node) return;
+		if (node.type === 'data') {
+			mutationService.removeColumn(node.refId);
+			return;
+		}
+		if (node.type === 'process') {
+			const parent = core.data.find((c) => (c.processes ?? []).some((p) => p.id === node.refId));
+			if (parent) mutationService.removeProcess(parent.id, node.refId);
+			return;
+		}
+		if (node.type === 'tableprocess' && node.tpObj) {
+			// Goes through the existing "Are you sure?" modal flow.
+			deleteTableProcess(node.tpObj);
+			return;
+		}
+		if (node.type === 'plot' && node.refId != null) {
+			mutationService.removePlot(node.refId);
+		}
+	}
+
+	function deleteSelection() {
+		if (selectedEdgeKey) {
+			const edge = edgeTopology.find((e) => edgeKeyFor(e) === selectedEdgeKey);
+			if (edge) removeEdge(edge);
+			selectedEdgeKey = null;
+			return;
+		}
+		if (focusedNodeId) {
+			const node = allNodes.find((n) => n.id === focusedNodeId);
+			removeNode(node);
+			focusedNodeId = null;
+			expandedNodeId = null;
+		}
 	}
 
 	function handleKeyDown(e) {
 		if (e.key === 'Escape') {
-			deselectAllPlots();
-			expandedNodeId = null;
-			focusedNodeId = null;
-			pendingConnection = null;
+			clearSelection();
+			return;
+		}
+		if (e.key === 'Delete' || e.key === 'Backspace') {
+			// Ignore if focus is in an editable text control inside an expanded node panel.
+			const tag = e.target?.tagName;
+			if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return;
+			if (selectedEdgeKey || focusedNodeId) {
+				e.preventDefault();
+				deleteSelection();
+			}
 		}
 	}
 
@@ -788,6 +891,8 @@
 				height={canvasHeight}
 				highlightedIds={connectedNodeIds}
 				{provisionalEdge}
+				{selectedEdgeKey}
+				onEdgeClick={selectEdge}
 			/>
 
 			{#each allNodes as node (node.id)}
@@ -818,7 +923,7 @@
 					>
 						<WorkflowNode
 							{node}
-							selected={selectedPlotNodeId === node.id}
+							selected={focusedNodeId === node.id || selectedPlotNodeId === node.id}
 							expanded={isExpanded}
 							{isDropTarget}
 							on:portstart={handlePortStart}

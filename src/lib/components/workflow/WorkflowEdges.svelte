@@ -9,8 +9,14 @@
 		width = 0,
 		height = 0,
 		highlightedIds = null,
-		provisionalEdge = null
+		provisionalEdge = null,
+		selectedEdgeKey = null,
+		onEdgeClick = null
 	} = $props();
+
+	function edgeKey(edge) {
+		return `${edge.fromId}|${edge.fromPort}|${edge.toId}|${edge.toPort}|${edge.type}`;
+	}
 
 	function bezier(sx, sy, tx, ty) {
 		const dx = Math.max(40, Math.abs(tx - sx) / 2);
@@ -30,12 +36,21 @@
 	{height}
 	aria-hidden="true"
 >
-	{#each edges as edge (`${edge.fromId}_${edge.toId}_${edge.type}`)}
+	{#each edges as edge (edgeKey(edge))}
 		{#if edge.from && edge.to}
 			{@const d = bezier(edge.from.x, edge.from.y, edge.to.x, edge.to.y)}
+			{@const k = edgeKey(edge)}
+			{@const isSelected = selectedEdgeKey === k}
 			<g style="opacity:{edgeOpacity(edge)};">
-				<path class="edge-hit" {d} />
-				<path class="edge-line" {d} />
+				<path
+					class="edge-hit"
+					{d}
+					onclick={(e) => {
+						e.stopPropagation();
+						onEdgeClick?.(edge);
+					}}
+				/>
+				<path class="edge-line" class:selected={isSelected} {d} />
 				<circle
 					class="edge-flow-dot"
 					r="4"
@@ -72,6 +87,15 @@
 		stroke-width: 2;
 		fill: none;
 		pointer-events: none;
+		transition:
+			stroke 0.12s ease,
+			stroke-width 0.12s ease;
+	}
+
+	.edge-line.selected {
+		stroke: var(--color-accent, #4d9fe3);
+		stroke-width: 3;
+		filter: drop-shadow(0 0 4px rgba(77, 159, 227, 0.5));
 	}
 
 	.edge-flow-dot {

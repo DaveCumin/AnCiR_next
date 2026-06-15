@@ -410,8 +410,11 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		if (plot.type === 'tableplot') {
 			inputs.push(makeNodePort('series', 'input', 'column', true));
 		} else {
+			// All three axes are many-cardinality. Each data point in plot.plot.data
+			// emits its own wire so users can mix x columns across series, exactly
+			// like flowtest's dynamic ports.
 			const hasZ = (plot.plot?.data ?? []).some((dp) => dp?.z?.refId != null);
-			inputs.push(makeNodePort('x', 'input', 'column', false));
+			inputs.push(makeNodePort('xs', 'input', 'column', true));
 			inputs.push(makeNodePort('ys', 'input', 'column', true));
 			if (hasZ) inputs.push(makeNodePort('zs', 'input', 'column', true));
 		}
@@ -508,16 +511,10 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		if (plot.type === 'tableplot') {
 			(plot.plot?.columnRefs ?? []).forEach((colId) => addPlotCol(colId, 'series'));
 		} else {
-			// `x` is conceptually a single shared port: even if every data point reuses
-			// the same x column, only one wire should show on the canvas. `ys`/`zs` are
-			// per-series so one wire per data point is correct.
-			const xSeen = new Set();
+			// One wire per (data point, axis). No de-dup on x — multiple series with
+			// different x columns each get their own wire to the `xs` port.
 			for (const dp of plot.plot?.data ?? []) {
-				const xRef = dp?.x?.refId;
-				if (xRef != null && xRef >= 0 && !xSeen.has(xRef)) {
-					addPlotCol(xRef, 'x');
-					xSeen.add(xRef);
-				}
+				if (dp?.x?.refId != null) addPlotCol(dp.x.refId, 'xs');
 				if (dp?.y?.refId != null) addPlotCol(dp.y.refId, 'ys');
 				if (dp?.z?.refId != null) addPlotCol(dp.z.refId, 'zs');
 			}
