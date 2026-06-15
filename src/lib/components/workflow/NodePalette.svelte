@@ -9,7 +9,7 @@
 	import SimulateData from '$lib/components/views/modals/SimulateData.svelte';
 	import BlankColumnModal from '$lib/components/views/modals/BlankColumnModal.svelte';
 	import SequenceColumnModal from '$lib/components/views/modals/SequenceColumnModal.svelte';
-	import { core, appConsts, createNote } from '$lib/core/core.svelte.js';
+	import { core, appConsts, createNote, createGroup } from '$lib/core/core.svelte.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { tick } from 'svelte';
 
@@ -108,6 +108,16 @@
 			nodeIcon: resolveIcon('edit-value'),
 			description: 'Standalone canvas note. Free-form text annotation.'
 		});
+		// Visual-container node — group/box that data nodes can be dragged into.
+		items.push({
+			type: 'group',
+			kind: 'group',
+			displayName: 'Group',
+			family: 'Other',
+			nodeIcon: resolveIcon('layer'),
+			description:
+				'A visual container. Drag data nodes into it to group them; drag out to release.'
+		});
 		return items.sort(
 			(a, b) =>
 				a.family.localeCompare(b.family) || a.displayName.localeCompare(b.displayName)
@@ -178,6 +188,12 @@
 	function handlePick(item) {
 		if (item.kind === 'note') {
 			createNote({ x: 80 + Math.round(Math.random() * 60), y: 80 + Math.round(Math.random() * 60) });
+			closeMenu();
+			return;
+		}
+
+		if (item.kind === 'group') {
+			createGroup({ x: 80 + Math.round(Math.random() * 60), y: 80 + Math.round(Math.random() * 60) });
 			closeMenu();
 			return;
 		}

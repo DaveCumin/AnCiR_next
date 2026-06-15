@@ -119,6 +119,14 @@ function makeProcessNodeHash(core) {
 	for (const plot of core.plots ?? []) {
 		out += `pl:${plot.id}:${plot.type}:${JSON.stringify(plot.plot ?? {})}|`;
 	}
+	// Notes and groups don't drive data flow but their presence/identity must
+	// invalidate the graph cache so they appear / disappear as canvas nodes.
+	for (const note of core.notes ?? []) {
+		out += `n:${note.id}|`;
+	}
+	for (const group of core.groups ?? []) {
+		out += `g:${group.id}:${group.name}:${group.width}:${group.height}:${(group.childIds ?? []).join(',')}|`;
+	}
 	return out;
 }
 
@@ -478,6 +486,26 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 					type: 'note',
 					refId: note.id,
 					noteObj: note
+				}
+			})
+		);
+	}
+
+	// Group nodes — visual containers, no ports, no edges. Membership is
+	// reconciled in WorkflowEditor.stopAll based on drop position.
+	for (const group of core.groups ?? []) {
+		nodes.push(
+			new ProcessNode({
+				id: group.id,
+				kind: 'group',
+				label: group.name,
+				sublabel: '',
+				ports: { inputs: [], outputs: [] },
+				refId: group.id,
+				meta: {
+					type: 'group',
+					refId: group.id,
+					groupObj: group
 				}
 			})
 		);

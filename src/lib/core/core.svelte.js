@@ -18,7 +18,12 @@ export const core = $state({
 	// notes — standalone Note nodes spawnable via the palette. Plain objects
 	// shaped like `{ id, text, x, y, width, height }`. They render as a node
 	// on the canvas but have no input/output ports.
-	notes: []
+	notes: [],
+	// groups — visual container nodes spawnable via the palette. Each is a
+	// dashed-frame box on the canvas that membership of data/process nodes is
+	// reconciled into when they're dragged inside its rect. Shape:
+	// `{ id, name, x, y, width, height, childIds: string[] }`.
+	groups: []
 });
 
 let _nextNoteId = 1;
@@ -30,6 +35,19 @@ export function createNote({ x = 80, y = 80, text = '' } = {}) {
 
 export function removeNote(id) {
 	core.notes = core.notes.filter((n) => n.id !== id);
+	delete core.nodeNotes[id];
+}
+
+let _nextGroupId = 1;
+export function createGroup({ x = 80, y = 80, name = 'Group' } = {}) {
+	const id = `group_${_nextGroupId++}`;
+	core.groups.push({ id, name, x, y, width: 280, height: 220, childIds: [] });
+	return id;
+}
+
+export function removeGroup(id) {
+	core.groups = core.groups.filter((g) => g.id !== id);
+	// Also delete the per-node-note keyed by this group id if any.
 	delete core.nodeNotes[id];
 }
 

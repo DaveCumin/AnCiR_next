@@ -10,6 +10,7 @@
 	import { deleteTableProcess } from '$lib/core/TableProcess.svelte';
 	import { selectPlot, deselectAllPlots } from '$lib/core/Plot.svelte';
 	import WorkflowNode from './WorkflowNode.svelte';
+	import GroupNode from './GroupNode.svelte';
 	import WorkflowEdges from './WorkflowEdges.svelte';
 	import EmbeddedPlot from './EmbeddedPlot.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
@@ -234,9 +235,14 @@
 		const defaults = defaultPositions.positions;
 		const prev = _knownNodeIds;
 
-		// Assign default positions to newly appeared nodes only
+		// Assign default positions to newly appeared nodes only. Groups carry
+		// their own x/y in core.groups (the user picked them via createGroup),
+		// so prefer those over the topo-layered default.
 		for (const node of currentNodes) {
-			if (!prev.has(node.id) && defaults[node.id]) {
+			if (prev.has(node.id)) continue;
+			if (node.type === 'group' && node.groupObj) {
+				stablePositions[node.id] = { x: node.groupObj.x, y: node.groupObj.y };
+			} else if (defaults[node.id]) {
 				stablePositions[node.id] = { ...defaults[node.id] };
 			}
 		}
@@ -249,6 +255,19 @@
 		}
 
 		_knownNodeIds = currentIds;
+	});
+
+	// Mirror stablePositions[group.id] → group.x/y so that resize / drag of a
+	// group survives serialisation via outputCoreAsJson (which only walks
+	// core.groups, not stablePositions). This keeps the canvas-runtime
+	// position and the persisted position in sync.
+	$effect(() => {
+		for (const g of core.groups) {
+			const p = stablePositions[g.id];
+			if (!p) continue;
+			if (g.x !== p.x) g.x = p.x;
+			if (g.y !== p.y) g.y = p.y;
+		}
 	});
 
 	// Mirror stablePositions to localStorage. Reads every entry to register the
@@ -534,16 +553,34 @@
 		// Skip if the click is inside panels or action buttons that handle their own events
 		if (e.target.closest('.process-editor-panel')) return;
 		if (e.target.closest('.plot-resize-handle')) return;
+		// Group header/body has its own resize-handle and delete-X which stop
+		// propagation themselves. We only need to swallow events landing on the
+		// resize handle so a drag from there doesn't start a node-move.
+		if (e.target.closest('.group-resize-handle')) return;
 
 		const { x: canvasX, y: canvasY } = toCanvasCoords(e.clientX, e.clientY);
 		const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id];
 		if (!pos) return;
 
+		// When dragging a group, snapshot every child's starting position so
+		// the mousemove handler can apply the same delta to each child.
+		let groupChildren = [];
+		if (node.type === 'group') {
+			const g = core.groups.find((gg) => gg.id === node.id);
+			if (g) {
+				for (const childId of g.childIds ?? []) {
+					const cp = stablePositions[childId] ?? defaultPositions.positions[childId];
+					if (cp) groupChildren.push({ id: childId, startPos: { x: cp.x, y: cp.y } });
+				}
+			}
+		}
+
 		dragInfo = {
 			nodeId: node.id,
 			startMouseCanvas: { x: canvasX, y: canvasY },
 			startPos: { x: pos.x, y: pos.y },
-			moved: false
+			moved: false,
+			groupChildren
 		};
 	}
 
@@ -602,6 +639,22 @@
 					stablePositions[dragInfo.nodeId].y = ny;
 				} else {
 					stablePositions[dragInfo.nodeId] = { x: nx, y: ny };
+				}
+
+				// If this is a group, drag every child by the same delta so the
+				// container visually carries its members. Uses the per-child
+				// startPos snapshot captured at mousedown to avoid drift.
+				if (dragInfo.groupChildren?.length) {
+					for (const child of dragInfo.groupChildren) {
+						const nxC = child.startPos.x + dx;
+						const nyC = child.startPos.y + dy;
+						if (stablePositions[child.id]) {
+							stablePositions[child.id].x = nxC;
+							stablePositions[child.id].y = nyC;
+						} else {
+							stablePositions[child.id] = { x: nxC, y: nyC };
+						}
+					}
 				}
 
 				// Splice-on-edge detection: only relevant if the dragged node has
@@ -834,6 +887,41 @@
 		// Don't clear dragInfo here — stopAll (which always fires) handles the drop and cleanup
 	}
 
+	/**
+	 * After a non-group node finishes a drag, decide whether the node lands
+	 * inside any group's rect (centre-point hit-test) and update the relevant
+	 * group's childIds list. Only one group claims the node at a time.
+	 */
+	function reconcileGroupMembership(nodeId) {
+		const draggedNode = allNodes.find((n) => n.id === nodeId);
+		if (!draggedNode || draggedNode.type === 'group') return;
+		const pos = stablePositions[nodeId] ?? defaultPositions.positions[nodeId];
+		if (!pos) return;
+		const cx = pos.x + NODE_WIDTH / 2;
+		const cy = pos.y + NODE_HEIGHT / 2;
+		let landedGroup = null;
+		for (const g of core.groups) {
+			const gpos = stablePositions[g.id] ?? { x: g.x, y: g.y };
+			if (
+				cx >= gpos.x &&
+				cx <= gpos.x + g.width &&
+				cy >= gpos.y &&
+				cy <= gpos.y + g.height
+			) {
+				landedGroup = g;
+				break;
+			}
+		}
+		for (const g of core.groups) {
+			const inThisGroup = (g.childIds ?? []).includes(nodeId);
+			if (g === landedGroup && !inThisGroup) {
+				g.childIds = [...(g.childIds ?? []), nodeId];
+			} else if (g !== landedGroup && inThisGroup) {
+				g.childIds = (g.childIds ?? []).filter((id) => id !== nodeId);
+			}
+		}
+	}
+
 	function stopAll() {
 		// Splice-on-edge: if the user dropped a 1-in/1-out node onto an edge,
 		// move the underlying entity so the data chain flows through it.
@@ -841,6 +929,11 @@
 			const draggedNode = allNodes.find((n) => n.id === dragInfo.nodeId);
 			const targetEdge = edgeTopology.find((edge) => edgeKeyFor(edge) === dropTargetEdgeKey);
 			if (draggedNode && targetEdge) spliceNodeOntoEdge(draggedNode, targetEdge);
+		}
+		// Group-membership reconciliation runs AFTER the splice check so a
+		// node that just spliced onto a wire can still wind up inside a group.
+		if (dragInfo?.moved && dragInfo.nodeId) {
+			reconcileGroupMembership(dragInfo.nodeId);
 		}
 		dropTargetEdgeKey = null;
 		dragInfo = null;
@@ -1082,13 +1175,15 @@
 				{@const isDragging = dragInfo?.nodeId === node.id && dragInfo?.moved}
 				{@const isDimmed = connectedNodeIds !== null && !connectedNodeIds.has(node.id)}
 				{@const isRecentlyChanged = changedNodeIds.has(node.id)}
-				{@const nodeZIndex = isDragging ? 30 : isExpanded ? 20 : 1}
+				{@const isGroup = node.type === 'group'}
+				{@const nodeZIndex = isDragging ? 30 : isExpanded ? 20 : isGroup ? 0 : 1}
 				{#if pos}
 					<div
 						class="workflow-node-wrapper"
 						class:dragging={isDragging}
 						class:dimmed={isDimmed}
 						class:changed={isRecentlyChanged}
+						class:group-wrapper={isGroup}
 						style="position: absolute; left: {pos.x}px; top: {pos.y}px; z-index: {nodeZIndex};"
 						aria-label={node.label}
 						onmousedown={(e) => handleNodeWrapperMouseDown(e, node)}
@@ -1096,15 +1191,22 @@
 						onclick={(e) => e.stopPropagation()}
 						role="presentation"
 					>
-						<WorkflowNode
-							{node}
-							selected={focusedNodeId === node.id || selectedPlotNodeId === node.id}
-							expanded={isExpanded}
-							isDropTarget={false}
-							on:portstart={handlePortStart}
-							on:portend={handlePortEnd}
-							on:portdisconnect={handlePortDisconnect}
-						/>
+						{#if isGroup}
+							<GroupNode
+								{node}
+								selected={focusedNodeId === node.id || selectedPlotNodeId === node.id}
+							/>
+						{:else}
+							<WorkflowNode
+								{node}
+								selected={focusedNodeId === node.id || selectedPlotNodeId === node.id}
+								expanded={isExpanded}
+								isDropTarget={false}
+								on:portstart={handlePortStart}
+								on:portend={handlePortEnd}
+								on:portdisconnect={handlePortDisconnect}
+							/>
+						{/if}
 
 						{#if isExpanded && node.type === 'process' && node.processObj}
 							{@const PComp = appConsts.processMap.get(node.processName)?.component}
