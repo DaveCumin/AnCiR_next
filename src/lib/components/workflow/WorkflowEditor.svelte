@@ -932,9 +932,23 @@
 		flex: 1;
 		overflow: hidden;
 		cursor: grab;
-		background-color: #fafafa;
-		background-image: radial-gradient(circle, #d0d0d0 1px, transparent 1px);
-		background-size: 20px 20px;
+		/* flowtest-style line grid: subtle 20px x 20px squares. */
+		background-color: #f7f8fa;
+		background-image:
+			repeating-linear-gradient(
+				to right,
+				rgba(0, 0, 0, 0.05) 0,
+				rgba(0, 0, 0, 0.05) 1px,
+				transparent 1px,
+				transparent 20px
+			),
+			repeating-linear-gradient(
+				to bottom,
+				rgba(0, 0, 0, 0.05) 0,
+				rgba(0, 0, 0, 0.05) 1px,
+				transparent 1px,
+				transparent 20px
+			);
 	}
 
 	.canvas-viewport.panning {

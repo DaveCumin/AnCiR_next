@@ -51,11 +51,10 @@
 	class:selected
 	class:expanded={hasPanel}
 	class:drop-target={isDropTarget}
-	style="background-color: {bgColor};"
 	role="button"
 	tabindex="0"
 >
-	<div class="node-header">
+	<div class="node-header" style="background-color: {bgColor};">
 		<div class="node-label">{node.label}</div>
 		{#if isDropTarget}
 			<span class="drop-badge" title="Drop to replace all references">↓ replace</span>
@@ -72,7 +71,9 @@
 	{#if node.type === 'data' && node.refId != null}
 		{@const col = getColumnById(node.refId)}
 		{#if col}
-			<MiniDataTable column={col} maxRows={5} />
+			<div class="node-body-padded">
+				<MiniDataTable column={col} maxRows={5} />
+			</div>
 		{/if}
 	{/if}
 
@@ -113,23 +114,30 @@
 		min-height: 48px;
 		position: relative;
 		border-radius: 6px;
-		border: 1.5px solid rgba(0, 0, 0, 0.15);
-		padding: 6px 10px;
+		border: 1px solid rgba(0, 0, 0, 0.18);
+		background: #ffffff;
 		cursor: grab;
 		user-select: none;
 		box-sizing: border-box;
 		font-size: 12px;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-		transition: border-color 0.1s;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+		transition:
+			border-color 0.12s ease,
+			box-shadow 0.12s ease,
+			transform 0.12s ease;
+		overflow: hidden; /* clip the type-colour header to the rounded corners */
 	}
 
 	.workflow-node:hover {
-		border-color: rgba(0, 0, 0, 0.3);
+		border-color: rgba(0, 0, 0, 0.35);
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 	}
 
 	.workflow-node.selected {
-		border: 2px solid #0275ff;
-		box-shadow: 0 0 0 2px rgba(2, 117, 255, 0.2);
+		border-color: var(--color-accent, #4d9fe3);
+		box-shadow:
+			0 1px 3px rgba(0, 0, 0, 0.08),
+			0 0 0 2px rgba(77, 159, 227, 0.28);
 	}
 
 	.workflow-node.expanded {
@@ -151,6 +159,11 @@
 		gap: 4px;
 		position: relative;
 		z-index: 1;
+		/* Type-coloured strip at the top of the card; rest of the node stays white. */
+		padding: 4px 10px;
+		font-weight: 600;
+		border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+		min-height: 22px;
 	}
 
 	.node-label {
@@ -179,15 +192,19 @@
 	.node-sublabel {
 		font-size: 10px;
 		color: #555;
-		background-color: rgba(0, 0, 0, 0.08);
+		background-color: rgba(0, 0, 0, 0.06);
 		border-radius: 3px;
 		padding: 1px 4px;
 		display: inline-block;
-		margin-top: 2px;
+		margin: 4px 10px 2px;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		max-width: 100%;
+		max-width: calc(100% - 20px);
+	}
+
+	.node-body-padded {
+		padding: 6px 10px 8px;
 	}
 
 	.port-handle {
