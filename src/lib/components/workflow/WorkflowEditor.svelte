@@ -10,6 +10,7 @@
 	import { selectPlot, deselectAllPlots } from '$lib/core/Plot.svelte';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import WorkflowEdges from './WorkflowEdges.svelte';
+	import EmbeddedPlot from './EmbeddedPlot.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import MakeNewPlot from '$lib/components/views/modals/MakeNewPlot.svelte';
 	import MakeNewColumn from '$lib/components/views/modals/MakeNewColumn.svelte';
@@ -803,32 +804,15 @@
 						{/if}
 
 						{#if node.type === 'plot' && node.plotObj}
-							{@const PlotComp = appConsts.plotMap.get(node.plotObj.type)?.plot}
 							{@const pSize = plotPreviewSizes[node.id] ?? {
 								w: PLOT_PREVIEW_DEFAULT_W,
 								h: getDefaultPreviewH(node.plotObj)
 							}}
-							{@const previewScale = pSize.w / node.plotObj.width}
-							{#if PlotComp}
-								<div class="plot-preview-panel" style="width:{pSize.w}px; height:{pSize.h}px;">
-									<div
-										class="plot-preview-inner"
-										style="transform:scale({previewScale}); transform-origin:top left; width:{node
-											.plotObj.width}px; height:{node.plotObj.height}px;"
-									>
-										<PlotComp theData={node.plotObj} which="plot" />
-									</div>
-									<div
-										class="plot-resize-handle"
-										onmousedown={(e) => handleResizeMouseDown(e, node)}
-										title="Drag to resize"
-										role="button"
-										tabindex="-1"
-									>
-										⤡
-									</div>
-								</div>
-							{/if}
+							<EmbeddedPlot
+								plot={node.plotObj}
+								size={pSize}
+								onResizeMouseDown={(e) => handleResizeMouseDown(e, node)}
+							/>
 						{/if}
 					</div>
 				{/if}
