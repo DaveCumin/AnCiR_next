@@ -4,9 +4,9 @@
 		core,
 		appState,
 		appConsts,
-		replaceColumnRefs,
 		getProcessNodeGraph
 	} from '$lib/core/core.svelte.js';
+	import { mutationService } from '$lib/core/mutationService.js';
 	import { selectPlot, deselectAllPlots } from '$lib/core/Plot.svelte';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import WorkflowEdges from './WorkflowEdges.svelte';
@@ -614,7 +614,7 @@
 			const sourceNode = allNodes.find((n) => n.id === dragInfo.nodeId);
 			const targetNode = allNodes.find((n) => n.id === dropTargetNodeId);
 			if (sourceNode?.type === 'data' && targetNode?.type === 'data') {
-				replaceColumnRefs(sourceNode.refId, targetNode.refId);
+				mutationService.replaceColumnRefs(sourceNode.refId, targetNode.refId);
 				// Snap the dragged node back to its default layout position
 				const dp = defaultPositions.positions[dragInfo.nodeId];
 				if (dp) stablePositions[dragInfo.nodeId] = { ...dp };
