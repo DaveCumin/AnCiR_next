@@ -172,6 +172,27 @@
 				const theTable = this.parent ?? getTableById(this.parent.id);
 				const processHash = crypto.randomUUID();
 
+				// Pre-seed dynamic per-Y output keys for multi-Y table processes
+				// (BinnedData, Cosinor, SmoothedData, RhythmicityAnalysis, etc.) so
+				// their per-Y output columns get materialised up-front instead of
+				// waiting for the component's onMount → useMultiYTP.initYColumns.
+				// Without this the workflow graph shows only the X output until the
+				// user expands the node.
+				const tpEntry = tableProcessInfo;
+				const yPrefix = tpEntry?.yOutKeyPrefix;
+				const yINs = Array.isArray(this.args.yIN)
+					? this.args.yIN
+					: this.args.yIN != null && this.args.yIN !== -1
+						? [this.args.yIN]
+						: [];
+				if (yPrefix && yINs.length > 0) {
+					for (const yId of yINs) {
+						if (yId == null || yId < 0) continue;
+						const outKey = yPrefix + yId;
+						if (!(outKey in this.args.out)) this.args.out[outKey] = -1;
+					}
+				}
+
 				for (let i = 0; i < Object.keys(this.args.out).length; i++) {
 					//Create a new column with the given name and assign it a tableProcessGUId
 					const tempCol = new Column({});
