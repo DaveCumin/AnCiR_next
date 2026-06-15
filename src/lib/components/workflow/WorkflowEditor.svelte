@@ -518,6 +518,17 @@
 	}
 
 	function handleWheel(e) {
+		// Don't hijack wheel events that originate inside floating overlays —
+		// modal bodies, the palette popover, expanded process-editor panels,
+		// node note popovers, plot resize handles, embedded plots' own scrollers.
+		// Without this, scrolling inside any of those moves the canvas instead.
+		if (e.target?.closest?.(
+			'dialog, .backdrop, .np-menu, .palette-menu, .modal, .modal-content, ' +
+			'.modal-overlay, .dropdown, .dropdown-menu, .submenu, .process-editor-panel, ' +
+			'.node-note-popover, .plot-preview-panel, .plot-preview-inner, textarea'
+		)) {
+			return;
+		}
 		e.preventDefault();
 		if (e.ctrlKey || e.metaKey) {
 			// Pinch-to-zoom: ctrl/meta + wheel zooms
