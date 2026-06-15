@@ -2,9 +2,8 @@
 	// @ts-nocheck
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import SequenceColumn from '$lib/tableProcesses/SequenceColumn.svelte';
-	import { core, appConsts } from '$lib/core/core.svelte';
-	import { Table } from '$lib/core/Table.svelte';
-	import { TableProcess } from '$lib/core/TableProcess.svelte';
+	import { appConsts } from '$lib/core/core.svelte';
+	import { mutationService } from '$lib/core/mutationService.js';
 </script>
 
 <script>
@@ -28,15 +27,9 @@
 		)
 	);
 	function confirmAddColumn() {
-		core.tables.push(new Table());
-		core.tables[core.tables.length - 1].name = 'Sequence_' + core.tables[core.tables.length - 1].id;
-		const tb = new TableProcess(
-			{ name: 'SequenceColumn', args: p.args },
-			core.tables[core.tables.length - 1]
-		);
-
-		core.tables[core.tables.length - 1].processes.push(tb);
-
+		const table = mutationService.addTable({});
+		table.name = 'Sequence_' + table.id;
+		mutationService.addTableProcess(table.id, 'SequenceColumn', p.args);
 		showModal = false;
 	}
 </script>
