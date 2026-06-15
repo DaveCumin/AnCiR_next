@@ -586,6 +586,38 @@
 		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && toPort === 'series') {
 			const refs = target.plotObj.plot.columnRefs ?? [];
 			if (!refs.includes(colId)) target.plotObj.plot.columnRefs = [...refs, colId];
+			return;
+		}
+
+		// Non-tableplot plots use the flowtest-style {x, ys[, zs]} ports.
+		// `x` is treated as one shared column across all data points; dropping on
+		// `ys` (or `zs`) appends a new series that inherits the current shared x.
+		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot') {
+			const plot = target.plotObj.plot;
+			if (!plot) return;
+			plot.data = plot.data ?? [];
+
+			if (toPort === 'x') {
+				if (plot.data.length === 0) {
+					const dataIn = { x: { refId: colId }, y: { refId: -1 } };
+					if (typeof plot.addData === 'function') plot.addData(dataIn);
+					else plot.data = [dataIn];
+				} else {
+					for (const dp of plot.data) {
+						dp.x = { ...(dp.x ?? {}), refId: colId };
+					}
+				}
+			} else if (toPort === 'ys') {
+				const sharedX = plot.data[0]?.x?.refId ?? -1;
+				const dataIn = { x: { refId: sharedX }, y: { refId: colId } };
+				if (typeof plot.addData === 'function') plot.addData(dataIn);
+				else plot.data = [...plot.data, dataIn];
+			} else if (toPort === 'zs') {
+				const sharedX = plot.data[0]?.x?.refId ?? -1;
+				const dataIn = { x: { refId: sharedX }, y: { refId: -1 }, z: { refId: colId } };
+				if (typeof plot.addData === 'function') plot.addData(dataIn);
+				else plot.data = [...plot.data, dataIn];
+			}
 		}
 	}
 
@@ -602,6 +634,25 @@
 
 		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && portName === 'series') {
 			target.plotObj.plot.columnRefs = [];
+			return;
+		}
+
+		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot') {
+			const plot = target.plotObj.plot;
+			if (!plot?.data) return;
+			if (portName === 'x') {
+				for (const dp of plot.data) {
+					if (dp?.x) dp.x = { ...dp.x, refId: -1 };
+				}
+			} else if (portName === 'ys') {
+				// Drop every series that has a wired y. Matches the tableplot
+				// "clear all wires on this port" semantic.
+				plot.data = plot.data.filter((dp) => !(dp?.y?.refId >= 0));
+			} else if (portName === 'zs') {
+				for (const dp of plot.data) {
+					if (dp?.z) dp.z = { ...dp.z, refId: -1 };
+				}
+			}
 		}
 	}
 

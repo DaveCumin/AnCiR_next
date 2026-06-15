@@ -403,16 +403,26 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	});
 
 	for (const plot of core.plots ?? []) {
+		// Tableplots have a flat `columnRefs` list — keep them as a single `series`
+		// port. Every other plot type carries `data: [{x: {refId}, y: {refId}, z?:
+		// {refId}}, ...]`, so expose flowtest-style {x, ys[, zs]} ports.
+		const inputs = [];
+		if (plot.type === 'tableplot') {
+			inputs.push(makeNodePort('series', 'input', 'column', true));
+		} else {
+			const hasZ = (plot.plot?.data ?? []).some((dp) => dp?.z?.refId != null);
+			inputs.push(makeNodePort('x', 'input', 'column', false));
+			inputs.push(makeNodePort('ys', 'input', 'column', true));
+			if (hasZ) inputs.push(makeNodePort('zs', 'input', 'column', true));
+		}
+
 		nodes.push(
 			new ProcessNode({
 				id: `plot_${plot.id}`,
 				kind: 'plot',
 				label: plot.name,
 				sublabel: plot.type,
-				ports: {
-					inputs: [makeNodePort('series', 'input', 'column', true)],
-					outputs: []
-				},
+				ports: { inputs, outputs: [] },
 				refId: plot.id,
 				meta: {
 					type: 'plot',
@@ -484,7 +494,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 
 	for (const plot of core.plots ?? []) {
 		const plotNodeId = `plot_${plot.id}`;
-		function addPlotCol(colId) {
+		function addPlotCol(colId, port) {
 			if (colId == null || colId < 0) return;
 			const col = core.data.find((d) => d.id === colId);
 			if (!col) return;
@@ -492,17 +502,25 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				(col.processes ?? []).length > 0
 					? `process_${col.processes[col.processes.length - 1].id}`
 					: `data_${colId}`;
-			addConnection(lastId, plotNodeId, 'data-plot', 'output', 'series');
+			addConnection(lastId, plotNodeId, 'data-plot', 'output', port);
 		}
 
 		if (plot.type === 'tableplot') {
-			(plot.plot?.columnRefs ?? []).forEach(addPlotCol);
+			(plot.plot?.columnRefs ?? []).forEach((colId) => addPlotCol(colId, 'series'));
 		} else {
-			(plot.plot?.data ?? []).forEach((dataPoint) => {
-				for (const axis of ['x', 'y', 'z']) {
-					if (dataPoint?.[axis]?.refId != null) addPlotCol(dataPoint[axis].refId);
+			// `x` is conceptually a single shared port: even if every data point reuses
+			// the same x column, only one wire should show on the canvas. `ys`/`zs` are
+			// per-series so one wire per data point is correct.
+			const xSeen = new Set();
+			for (const dp of plot.plot?.data ?? []) {
+				const xRef = dp?.x?.refId;
+				if (xRef != null && xRef >= 0 && !xSeen.has(xRef)) {
+					addPlotCol(xRef, 'x');
+					xSeen.add(xRef);
 				}
-			});
+				if (dp?.y?.refId != null) addPlotCol(dp.y.refId, 'ys');
+				if (dp?.z?.refId != null) addPlotCol(dp.z.refId, 'zs');
+			}
 		}
 	}
 
