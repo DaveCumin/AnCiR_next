@@ -558,6 +558,8 @@
 </svelte:head>
 
 {#if appState.showWorkflow}
+	<!-- Legacy fullscreen-modal entry retained for callers that still set
+	     appState.showWorkflow; the canvas-default view below replaces normal use. -->
 	<WorkflowEditor />
 {/if}
 {#if !appState.loadingState.isLoading || core.data.length > 0}
@@ -567,7 +569,11 @@
 
 	<DisplayPanel />
 
-	<PlotDisplay />
+	{#if appState.view === 'canvas'}
+		<WorkflowEditor inline={true} />
+	{:else}
+		<PlotDisplay />
+	{/if}
 
 	<ControlPanel />
 {/if}

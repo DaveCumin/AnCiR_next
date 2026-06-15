@@ -37,6 +37,10 @@ export const appState = $state({
 	canvasOffset: { x: 0, y: 0 },
 	canvasScale: 1.0,
 
+	// 'canvas' (default): WorkflowEditor renders inline as the centre pane.
+	// 'plots': legacy free-positioned PlotDisplay grid.
+	view: 'canvas',
+
 	// IANA timezone name used for all user-visible date/time formatting and
 	// for parsing values typed into <input type="datetime-local"> controls.
 	// Defaults to UTC; change to e.g. 'Pacific/Auckland' to localise.

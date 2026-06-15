@@ -15,6 +15,8 @@
 	import MakeNewColumn from '$lib/components/views/modals/MakeNewColumn.svelte';
 	import AddProcess from '$lib/components/iconActions/AddProcess.svelte';
 
+	let { inline = false } = $props();
+
 	const NODE_WIDTH = 160;
 	const NODE_HEIGHT = 48;
 	const COL_WIDTH = 220;
@@ -326,6 +328,9 @@
 			? appState.widthDisplayPanel + appState.widthNavBar
 			: appState.widthNavBar;
 	});
+
+	// Right offset to avoid the ControlPanel when present (only relevant for inline mode).
+	const rightPx = $derived.by(() => (appState.showControlPanel ? appState.widthControlPanel : 0));
 
 	// --- Event handlers ---
 
@@ -669,7 +674,8 @@
 
 <div
 	class="workflow-editor"
-	style="left: {leftPx}px;"
+	class:inline
+	style="left: {leftPx}px; right: {rightPx}px;"
 	onwheel={handleWheel}
 	onmousedown={handleCanvasMouseDown}
 	onmousemove={handleMouseMove}
@@ -706,7 +712,9 @@
 				</button>
 			{/each}
 		</div>
-		<button class="close-btn" onclick={() => (appState.showWorkflow = false)}>✕</button>
+		{#if !inline}
+			<button class="close-btn" onclick={() => (appState.showWorkflow = false)}>✕</button>
+		{/if}
 	</div>
 
 	<div class="canvas-viewport" bind:this={canvasViewportEl} class:panning={isPanning && !dragInfo}>
@@ -880,6 +888,13 @@
 		flex-direction: column;
 		overflow: hidden;
 		border-left: 1px solid var(--color-lightness-85);
+	}
+
+	.workflow-editor.inline {
+		/* Inline mode keeps the same fixed-pane positioning model as PlotDisplay,
+		   but drops the modal overlay z-index and the close-X chrome. */
+		z-index: 1;
+		border-left: none;
 	}
 
 	.workflow-header {
