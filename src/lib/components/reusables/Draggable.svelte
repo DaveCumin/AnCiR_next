@@ -22,6 +22,9 @@
 		canvasHeight = 50000
 	} = $props();
 
+	const nodeNote = $derived(core.nodeNotes?.[`plot_${id}`] ?? '');
+	const hasNodeNote = $derived(nodeNote.trim().length > 0);
+
 	const minWidth = 100;
 	const minHeight = 100;
 
@@ -415,6 +418,10 @@
 	>
 		<p><Editable bind:value={title} /></p>
 
+		{#if hasNodeNote}
+			<p class="node-note" title={nodeNote}>{nodeNote}</p>
+		{/if}
+
 		<div class="clps-title-button">
 			<button
 				class="icon"
@@ -486,6 +493,19 @@
 
 	.plot-header p {
 		margin: 0;
+	}
+
+	.plot-header p.node-note {
+		flex: 1 1 auto;
+		min-width: 0;
+		margin: 0 0.6rem;
+		font-weight: normal;
+		font-style: italic;
+		font-size: 0.8rem;
+		color: var(--color-lightness-45, #6b6b6b);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.plot-header button {

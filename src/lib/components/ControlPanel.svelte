@@ -4,7 +4,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import ControlDisplay from './views/ControlDisplay.svelte';
 	import { fly, fade } from 'svelte/transition';
-	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
+	import WorksheetAddPalette from '$lib/components/views/WorksheetAddPalette.svelte';
 
 	let container;
 	const minWidth = 200;
@@ -108,10 +108,10 @@
 		<Icon name="add" width={24} height={24} />
 	</button>
 
-	<AddPlot
-		bind:showDropdown={showNewPlotModalconst}
-		dropdownTop={15}
-		dropdownLeft={window.innerWidth}
+	<WorksheetAddPalette
+		bind:open={showNewPlotModalconst}
+		top={50}
+		left={Math.max(0, window.innerWidth - (appState.showControlPanel ? appState.widthControlPanel : 0) - 360)}
 	/>
 {/if}
 

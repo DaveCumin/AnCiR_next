@@ -71,11 +71,7 @@
 	let showBlankModal = $state(false);
 	let showSequenceModal = $state(false);
 	let showAddTPModal = $state(false);
-	let addTPTableId = $state(null);
 	let addTPInitialType = $state('');
-	// When the user picks a non-source table process and there are >1 tables,
-	// drop into an inline sub-list of tables to disambiguate.
-	let pickingTableForType = $state(null);
 
 	// ---- Build the flat list of palette items ---------------------------
 	const allItems = $derived.by(() => {
@@ -187,7 +183,6 @@
 			});
 		} else {
 			query = '';
-			pickingTableForType = null;
 		}
 	});
 
@@ -243,26 +238,13 @@
 				closeMenu();
 				return;
 			}
-			// Non-source table process: needs a target table.
-			const tables = core.tables ?? [];
-			if (tables.length === 0) {
-				addNotification(
-					`No tables yet. Import or create one before adding a "${item.displayName}" process.`,
-					'info'
-				);
-				closeMenu();
-				return;
-			}
-			if (tables.length === 1) {
-				queueSpawnPosition?.();
-				addTPTableId = tables[0].id;
-				addTPInitialType = item.type;
-				showAddTPModal = true;
-				closeMenu();
-				return;
-			}
-			// >1 tables: show inline sub-list so user picks which one.
-			pickingTableForType = item;
+			// Non-source table process: free-spawn through MakeNewColumn. The
+			// resulting TP lands in core.tableProcesses with no parent table;
+			// the user wires its xIN/yIN inputs from any data node.
+			queueSpawnPosition?.();
+			addTPInitialType = item.type;
+			showAddTPModal = true;
+			closeMenu();
 			return;
 		}
 
@@ -293,24 +275,6 @@
 				'info'
 			);
 		}
-		closeMenu();
-	}
-
-	function pickTableForPending(tableId) {
-		if (!pickingTableForType) return;
-		queueSpawnPosition?.();
-		addTPTableId = tableId;
-		addTPInitialType = pickingTableForType.type;
-		showAddTPModal = true;
-		pickingTableForType = null;
-		closeMenu();
-	}
-
-	function startAddTableProcessForTable(tableId) {
-		queueSpawnPosition?.();
-		addTPTableId = tableId;
-		addTPInitialType = '';
-		showAddTPModal = true;
 		closeMenu();
 	}
 
@@ -351,32 +315,7 @@
 				/>
 			</div>
 
-			{#if pickingTableForType}
-				<div class="palette-family-block">
-					<div class="palette-family-header">
-						Add {pickingTableForType.displayName} to which table?
-					</div>
-					<div class="np-table-list">
-						{#each core.tables as table (table.id)}
-							<button
-								type="button"
-								class="np-item np-table-item"
-								role="menuitem"
-								onclick={() => pickTableForPending(table.id)}
-							>
-								<span class="np-item-title">{table.name}</span>
-							</button>
-						{/each}
-					</div>
-					<button
-						type="button"
-						class="np-back"
-						onclick={() => (pickingTableForType = null)}
-					>
-						Cancel
-					</button>
-				</div>
-			{:else if hasNoResults}
+			{#if hasNoResults}
 				<div class="palette-empty">No nodes match "{query}".</div>
 			{:else}
 				{#each families as fam (fam.family)}
@@ -400,22 +339,6 @@
 						</div>
 					</section>
 				{/each}
-
-				{#if !query && core.tables?.length > 0}
-					<div class="np-divider"></div>
-					<div class="palette-family-header">Quick add to table</div>
-					{#each core.tables as table (table.id)}
-						<button
-							type="button"
-							class="np-item np-shortcut"
-							role="menuitem"
-							onclick={() => startAddTableProcessForTable(table.id)}
-						>
-							<span class="np-item-title">Add process to {table.name}</span>
-							<span class="np-item-sub">Cosinor, Smooth, Periodogram…</span>
-						</button>
-					{/each}
-				{/if}
 			{/if}
 		</div>
 	{/if}
@@ -426,11 +349,7 @@
 <BlankColumnModal bind:showModal={showBlankModal} />
 <SequenceColumnModal bind:showModal={showSequenceModal} />
 {#if showAddTPModal}
-	<MakeNewColumn
-		bind:show={showAddTPModal}
-		tableId={addTPTableId}
-		bind:initialType={addTPInitialType}
-	/>
+	<MakeNewColumn bind:show={showAddTPModal} bind:initialType={addTPInitialType} />
 {/if}
 
 <style>
@@ -606,60 +525,4 @@
 		-webkit-box-orient: vertical;
 	}
 
-	.np-table-list {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-		margin-bottom: 0.4rem;
-	}
-
-	.np-back {
-		align-self: flex-start;
-		background: transparent;
-		border: none;
-		color: var(--color-lightness-45, #6b7280);
-		font-size: 0.78rem;
-		cursor: pointer;
-		padding: 0.2rem 0.4rem;
-	}
-	.np-back:hover {
-		color: var(--color-accent, #4d9fe3);
-	}
-
-	.np-divider {
-		height: 1px;
-		background: var(--color-lightness-90, #eee);
-		margin: 4px 6px;
-	}
-
-	.np-shortcut,
-	.np-table-item {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		text-align: left;
-		gap: 2px;
-		padding: 6px 10px;
-		border: none;
-		background: transparent;
-		border-radius: 5px;
-		cursor: pointer;
-		color: var(--color-lightness-25, #333);
-		font-size: 13px;
-		width: 100%;
-	}
-
-	.np-shortcut:hover,
-	.np-table-item:hover {
-		background: var(--color-lightness-95, #f1f1f1);
-	}
-
-	.np-item-title {
-		font-weight: 600;
-	}
-
-	.np-item-sub {
-		font-size: 11px;
-		color: var(--color-lightness-50, #888);
-	}
 </style>

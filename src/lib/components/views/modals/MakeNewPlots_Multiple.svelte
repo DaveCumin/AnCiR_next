@@ -201,10 +201,8 @@
 			<AttributeSelect
 				bind:value={xCol}
 				label={plotType == 'scatterplot' ? 'x' : 'time'}
-				options={core.tables.flatMap((table) => table.columns.map((col) => col.id))}
-				optionsDisplay={core.tables.flatMap((table) =>
-					table.columns.map((col) => table.name + ': ' + col.name)
-				)}
+				options={(core.data ?? []).map((col) => col.id)}
+				optionsDisplay={(core.data ?? []).map((col) => col.name)}
 				onChange={() => {
 					steps[0].completed = true;
 					enforceSequentialCompletion(0);

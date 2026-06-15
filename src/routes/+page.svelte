@@ -30,10 +30,11 @@
 		appConsts,
 		appState,
 		snapToGrid,
-		outputCoreAsJson
+		outputCoreAsJson,
+		createGroup,
+		absorbColumnIntoGroup
 	} from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
-	import { Table } from '$lib/core/Table.svelte';
 	import { Plot, selectAllPlots } from '$lib/core/Plot.svelte';
 	import { Process } from '$lib/core/Process.svelte';
 	import { TableProcess } from '$lib/core/TableProcess.svelte';
@@ -336,7 +337,9 @@
 	async function refresh() {
 		//Clear everything
 		core.data = [];
-		core.tables = [];
+		core.tableProcesses = [];
+		core.groups = [];
+		core.notes = [];
 		core.plots = [];
 		core.rawData = new Map();
 		await new Promise((resolve) => setTimeout(resolve, 10));
@@ -401,14 +404,18 @@
 		appState.loadingState.loadingMsg = 'Putting data into tables...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
-		core.tables.push(new Table({ name: 'my first table' }));
-		core.tables[0].columnRefs = [testtimestring, testawd.id, testref.id, testrefref.id];
-		core.tables.push(new Table({ name: 'table too' }));
-		core.tables[1].columnRefs = [d1id, d0id, d2id]; //Do we want to be able to have the same data in more than one table? Might need to ensure this doesn't happen.
+		const g1 = createGroup({ name: 'my first table' });
+		for (const cid of [testtimestring, testawd.id, testref.id, testrefref.id]) {
+			absorbColumnIntoGroup(cid, g1);
+		}
+		const g2 = createGroup({ name: 'table too' });
+		for (const cid of [d1id, d0id, d2id]) {
+			absorbColumnIntoGroup(cid, g2);
+		}
 
 		appState.loadingState.loadingMsg = 'Putting binned data...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
-		core.tables[1].processes.push(
+		core.tableProcesses.push(
 			new TableProcess(
 				{
 					name: 'BinnedData',
@@ -422,10 +429,9 @@
 						out: { binnedx: -1 }
 					}
 				},
-				core.tables[1]
+				null
 			)
 		);
-		console.log($state.snapshot(core.tables[1]));
 
 		appState.loadingState.loadingMsg = 'Making scatterplot...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
@@ -533,7 +539,7 @@
 
 		//--------
 		//Add another tableprocess to test removal
-		core.tables[1].processes.push(
+		core.tableProcesses.push(
 			new TableProcess(
 				{
 					name: 'Duplicate',
@@ -542,7 +548,7 @@
 						out: { result: -1 }
 					}
 				},
-				core.tables[1]
+				null
 			)
 		);
 		core.plots[0].plot.data[1].y.refId = core.data[core.data.length - 1].id;

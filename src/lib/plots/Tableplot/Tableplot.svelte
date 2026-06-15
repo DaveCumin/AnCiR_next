@@ -391,9 +391,12 @@
 	}
 
 	let standaloneColumns = $derived.by(() => {
-		const inTables = new Set();
-		core.tables?.forEach((t) => t?.columnRefs?.forEach((id) => inTables.add(id)));
-		return core.data?.filter((c) => !inTables.has(c.id)) ?? [];
+		// "Standalone" = columns not absorbed by any Group node.
+		const grouped = new Set();
+		for (const g of core.groups ?? []) {
+			for (const cid of g.sourceColumnIds ?? []) grouped.add(cid);
+		}
+		return core.data?.filter((c) => !grouped.has(c.id)) ?? [];
 	});
 
 	function makeEdits(edit) {
@@ -498,9 +501,9 @@
 		</div>
 
 		<div class="tree-list display-list">
-			<!-- Tables -->
-			{#each core.tables as table (table.id)}
-				<details class="clps-item" open={expandedTables.has(table.id)}>
+			<!-- Groups (replace tables) -->
+			{#each core.groups as group (group.id)}
+				<details class="clps-item" open={expandedTables.has(group.id)}>
 					<summary
 						class="clps-title-container"
 						onclick={(e) => e.preventDefault()}
@@ -512,43 +515,44 @@
 						<div class="clps-title">
 							<input
 								type="checkbox"
-								checked={isTableSelected(table)}
+								checked={(group.sourceColumnIds ?? []).every((cid) =>
+									isColumnSelected(cid)
+								)}
 								onclick={(e) => {
 									e.stopPropagation();
-									toggleTableSelection(table);
+									const all = (group.sourceColumnIds ?? []).every((cid) =>
+										isColumnSelected(cid)
+									);
+									for (const cid of group.sourceColumnIds ?? []) {
+										if (all) {
+											if (isColumnSelected(cid)) toggleColumnSelection(cid);
+										} else {
+											if (!isColumnSelected(cid)) toggleColumnSelection(cid);
+										}
+									}
 								}}
 							/>
-							<span class="tree-name">{table.name}</span>
+							<span class="tree-name">{group.name}</span>
 						</div>
 
 						<div class="clps-title-button">
 							<button
 								class="icon"
 								onclick={() => {
-									toggleTable(table.id);
+									toggleTable(group.id);
 								}}
 							>
-								{#if expandedTables.has(table.id)}
-									<Icon
-										name="caret-down"
-										width={20}
-										height={20}
-										className="first-detail-title-icon"
-									/>
+								{#if expandedTables.has(group.id)}
+									<Icon name="caret-down" width={20} height={20} />
 								{:else}
-									<Icon
-										name="caret-right"
-										width={20}
-										height={20}
-										className="first-detail-title-icon"
-									/>
+									<Icon name="caret-right" width={20} height={20} />
 								{/if}
 							</button>
 						</div>
 					</summary>
 
 					<div class="tree-children">
-						{#each table.columnRefs as colId (colId)}
+						{#each group.sourceColumnIds ?? [] as colId (colId)}
 							{@const col = getColumnById(colId)}
 							{#if col}
 								<div class="tree-item-child">
@@ -558,8 +562,6 @@
 										onchange={() => toggleColumnSelection(colId)}
 									/>
 									<span class="tree-name">{col.name}</span>
-									<!-- <span class="tree-type">{col.type}</span> -->
-									<!-- optional -->
 								</div>
 							{/if}
 						{/each}
@@ -652,7 +654,7 @@
 				</div>
 			{/each}
 
-			{#if !core.tables.length && !core.plots.length && !standaloneColumns.length}
+			{#if !core.groups.length && !core.plots.length && !standaloneColumns.length}
 				<p class="empty-state">No data available</p>
 			{/if}
 		</div>

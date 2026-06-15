@@ -4,7 +4,6 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { addOpListener, withSuppressedListeners, applyOp } from './operations.js';
 import { appConsts, core } from './core.svelte.js';
 import { Column } from './Column.svelte';
-import { Table } from './Table.svelte';
 
 beforeAll(() => {
     // Register a minimal stub for 'scatterplot' so Plot's constructor can
@@ -166,64 +165,53 @@ describe('applyOp: column + process ops', () => {
     });
 });
 
-describe('applyOp: table + tableprocess ops', () => {
+describe('applyOp: free tableprocess ops', () => {
     beforeEach(() => {
-        core.tables.length = 0;
+        core.tableProcesses.length = 0;
         core.data.length = 0; // TableProcess construction may try to read columns
     });
 
-    it('addTable inserts and returns removeTable', () => {
+    it('addFreeTableProcess appends and returns removeFreeTableProcess', () => {
         const inv = applyOp({
-            kind: 'addTable',
-            tableData: { name: 'T', columnRefs: [] }
-        });
-        expect(core.tables).toHaveLength(1);
-        expect(typeof core.tables[0].id).toBe('number');
-        expect(inv).toEqual({ kind: 'removeTable', id: core.tables[0].id });
-    });
-
-    it('removeTable removes and inverse re-adds with same id', () => {
-        applyOp({ kind: 'addTable', tableData: { name: 'T', columnRefs: [] } });
-        const id = core.tables[0].id;
-        const inv = applyOp({ kind: 'removeTable', id });
-        expect(core.tables).toHaveLength(0);
-        expect(inv.kind).toBe('addTable');
-        expect(inv.tableData.id).toBe(id);
-    });
-
-    it('addTableProcess appends and returns removeTableProcess', () => {
-        applyOp({ kind: 'addTable', tableData: { name: 'T', columnRefs: [] } });
-        const tableId = core.tables[0].id;
-        const inv = applyOp({
-            kind: 'addTableProcess',
-            tableId,
+            kind: 'addFreeTableProcess',
             tpType: 'BinnedData',
             args: { binSize: 60, out: {} }
         });
-        const t = core.tables.find((x) => x.id === tableId);
-        expect(t.processes).toHaveLength(1);
-        expect(typeof t.processes[0].id).toBe('number');
-        expect(inv).toEqual({ kind: 'removeTableProcess', tableId, tpId: t.processes[0].id });
+        expect(core.tableProcesses).toHaveLength(1);
+        expect(typeof core.tableProcesses[0].id).toBe('number');
+        expect(inv).toEqual({
+            kind: 'removeFreeTableProcess',
+            tpId: core.tableProcesses[0].id
+        });
     });
 
-    it('setTableProcessArg returns the previous value', () => {
-        applyOp({ kind: 'addTable', tableData: { name: 'T', columnRefs: [] } });
-        const tableId = core.tables[0].id;
+    it('removeFreeTableProcess removes and inverse re-adds with same id', () => {
         applyOp({
-            kind: 'addTableProcess',
-            tableId,
+            kind: 'addFreeTableProcess',
             tpType: 'BinnedData',
             args: { binSize: 60, out: {} }
         });
-        const tpId = core.tables[0].processes[0].id;
+        const id = core.tableProcesses[0].id;
+        const inv = applyOp({ kind: 'removeFreeTableProcess', tpId: id });
+        expect(core.tableProcesses).toHaveLength(0);
+        expect(inv.kind).toBe('addFreeTableProcess');
+        expect(inv.tpId).toBe(id);
+    });
+
+    it('setFreeTableProcessArg returns the previous value', () => {
+        applyOp({
+            kind: 'addFreeTableProcess',
+            tpType: 'BinnedData',
+            args: { binSize: 60, out: {} }
+        });
+        const tpId = core.tableProcesses[0].id;
         const inv = applyOp({
-            kind: 'setTableProcessArg',
-            tableId,
+            kind: 'setFreeTableProcessArg',
             tpId,
             key: 'binSize',
             value: 120
         });
-        expect(core.tables[0].processes[0].args.binSize).toBe(120);
+        expect(core.tableProcesses[0].args.binSize).toBe(120);
         expect(inv.value).toBe(60);
     });
 });

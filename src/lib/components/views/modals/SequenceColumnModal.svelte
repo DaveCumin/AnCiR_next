@@ -27,9 +27,7 @@
 		)
 	);
 	function confirmAddColumn() {
-		const table = mutationService.addTable({});
-		table.name = 'Sequence_' + table.id;
-		mutationService.addTableProcess(table.id, 'SequenceColumn', p.args);
+		mutationService.addFreeTableProcess('SequenceColumn', p.args);
 		showModal = false;
 	}
 </script>

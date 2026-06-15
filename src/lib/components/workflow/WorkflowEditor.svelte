@@ -9,7 +9,9 @@
 		extractColumnFromAnyGroup,
 		getGroupForColumn,
 		createNote,
+		removeNote,
 		createGroup,
+		removeGroup,
 		createOrphanProcess,
 		removeOrphanProcess,
 		attachOrphanProcessToColumn,
@@ -17,6 +19,7 @@
 	} from '$lib/core/core.svelte.js';
 	import { Column } from '$lib/core/Column.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
+	import { history } from '$lib/core/opHistory.svelte.js';
 	import { deleteTableProcess } from '$lib/core/TableProcess.svelte';
 	import { selectPlot, deselectAllPlots } from '$lib/core/Plot.svelte';
 	import WorkflowNode from './WorkflowNode.svelte';
@@ -364,12 +367,6 @@
 		});
 	});
 
-	// --- Selected plot highlight ---
-	const selectedPlotNodeId = $derived.by(() => {
-		const p = core.plots.find((p) => p.selected);
-		return p ? `plot_${p.id}` : null;
-	});
-
 	// --- Pan / zoom ---
 	// Restore the user's last viewport position so reopening the canvas keeps the
 	// same in-flight layout instead of snapping back to the origin every time.
@@ -528,8 +525,8 @@
 	// derived default.
 	let extractGesture = $state(null);
 
-	// --- Expanded process editor ---
-	let expandedNodeId = $state(null);
+	// --- Expanded process editors (set, so multiple can stay expanded at once) ---
+	let expandedNodeIds = $state(new Set());
 
 	// --- Focus / connected-node highlight ---
 	let focusedNodeId = $state(null);
@@ -584,7 +581,8 @@
 	function selectEdge(edge) {
 		selectedEdgeKey = edgeKeyFor(edge);
 		focusedNodeId = null;
-		expandedNodeId = null;
+		// Expansion is a separate, explicit gesture (double-click) — leave it
+		// alone when the user selects an edge so already-expanded nodes stay open.
 	}
 
 	// BFS both directions in the edge graph to find the full connected subgraph.
@@ -611,11 +609,65 @@
 		return connected;
 	});
 
-	// Auto-clear expandedNodeId if the node is removed from core
+	// Auto-prune expandedNodeIds when a referenced node is genuinely deleted.
+	//
+	// Checked against `core` (the source of truth) rather than the derived
+	// `allNodes` graph. The projected graph can be transiently stale right after
+	// an undo/redo restore — pruning against it then wrongly dropped ids for
+	// nodes that still exist, which is what collapsed user-expanded nodes on
+	// undo. `core` is never transiently empty, so this is race-free and node
+	// expansion is now fully decoupled from undo/redo. The set built below is a
+	// superset of every expandable (process / tableprocess) node id the
+	// projection can emit, so a live node is never pruned — only truly-removed
+	// ones are. (Id sources mirror ProcessNode.svelte.js: attached processes,
+	// orphan processes, table processes, and nested table processes.)
 	$effect(() => {
-		if (expandedNodeId && !allNodes.find((n) => n.id === expandedNodeId)) {
-			expandedNodeId = null;
+		if (expandedNodeIds.size === 0) return;
+		const liveIds = new Set();
+		for (const col of core.data ?? []) {
+			for (const p of col.processes ?? []) liveIds.add(`process_${p.id}`);
 		}
+		for (const p of core.orphanProcesses ?? []) liveIds.add(`process_${p.id}`);
+		for (const tp of core.tableProcesses ?? []) {
+			liveIds.add(`tableprocess_${tp.id}`);
+			for (const nested of tp.args?.tableProcesses ?? []) {
+				liveIds.add(`tableprocess_nested_${nested.id}`);
+			}
+		}
+		let changed = false;
+		const next = new Set();
+		for (const id of expandedNodeIds) {
+			if (liveIds.has(id)) next.add(id);
+			else changed = true;
+		}
+		if (changed) expandedNodeIds = next;
+	});
+
+	// Hook canvas selection into the undo/redo stack so that undoing a delete
+	// restores the prior selection, and redoing re-applies the post-op state.
+	// uiBefore is captured at the moment the op is recorded (selection updates
+	// from the same gesture run synchronously after applyOp, so this is pre-
+	// gesture state); uiAfter is captured via a microtask after the gesture
+	// completes.
+	//
+	// NOTE: node expansion (`expandedNodeIds`) is deliberately NOT part of this
+	// snapshot. Expansion is an explicit per-node UI gesture (double-click) and
+	// must stay put across undo/redo — restoring it here used to collapse nodes
+	// the user had expanded whenever any op was undone/redone. Deleted nodes are
+	// cleaned out of `expandedNodeIds` by the auto-prune effect above instead.
+	$effect(() => {
+		return history.registerUiHandlers(
+			() => ({
+				focusedNodeId,
+				multiSelectedNodeIds: Array.from(multiSelectedNodeIds),
+				selectedEdgeKey
+			}),
+			(snap) => {
+				focusedNodeId = snap.focusedNodeId ?? null;
+				multiSelectedNodeIds = new Set(snap.multiSelectedNodeIds ?? []);
+				selectedEdgeKey = snap.selectedEdgeKey ?? null;
+			}
+		);
 	});
 
 	// Left offset to avoid the nav + display panels
@@ -644,7 +696,8 @@
 		// modal bodies, the palette popover, expanded process-editor panels,
 		// node note popovers, plot resize handles, embedded plots' own scrollers.
 		// Without this, scrolling inside any of those moves the canvas instead.
-		if (e.target?.closest?.(
+		// Exception: ctrl/meta + wheel is always a zoom gesture, so let it through.
+		if (!e.ctrlKey && !e.metaKey && e.target?.closest?.(
 			'dialog, .backdrop, .np-menu, .palette-menu, .modal, .modal-content, ' +
 			'.modal-overlay, .dropdown, .dropdown-menu, .submenu, .process-editor-panel, ' +
 			'.node-note-popover, .plot-preview-panel, .plot-preview-inner, textarea'
@@ -1535,10 +1588,14 @@
 		}
 	}
 
-	/** Toggle inline expand for process/tableprocess on double-click. */
+	/** Toggle inline expand for process/tableprocess on double-click. Operates
+	 *  on a Set so expanding a second node doesn't collapse the first. */
 	function handleNodeDblClick(node) {
 		if (node.type !== 'process' && node.type !== 'tableprocess') return;
-		expandedNodeId = expandedNodeId === node.id ? null : node.id;
+		const next = new Set(expandedNodeIds);
+		if (next.has(node.id)) next.delete(node.id);
+		else next.add(node.id);
+		expandedNodeIds = next;
 	}
 
 	function toggleMultiSelect(id) {
@@ -1550,15 +1607,15 @@
 
 	function handleBackgroundClick() {
 		deselectAllPlots();
-		expandedNodeId = null;
 		focusedNodeId = null;
+		multiSelectedNodeIds = new Set();
 		selectedEdgeKey = null;
 		pendingConnection = null;
 	}
 
 	function clearSelection() {
 		deselectAllPlots();
-		expandedNodeId = null;
+		expandedNodeIds = new Set();
 		focusedNodeId = null;
 		multiSelectedNodeIds = new Set();
 		selectedEdgeKey = null;
@@ -1668,6 +1725,14 @@
 		}
 		if (node.type === 'plot' && node.refId != null) {
 			mutationService.removePlot(node.refId);
+			return;
+		}
+		if (node.type === 'note' && node.refId != null) {
+			removeNote(node.refId);
+			return;
+		}
+		if (node.type === 'group' && node.refId != null) {
+			removeGroup(node.refId);
 		}
 	}
 
@@ -1691,7 +1756,8 @@
 		}
 		focusedNodeId = null;
 		multiSelectedNodeIds = new Set();
-		expandedNodeId = null;
+		// Deleted nodes auto-prune from expandedNodeIds via the effect above;
+		// surviving expansions stay open.
 	}
 
 	// --- Clipboard for copy/paste ---
@@ -1787,16 +1853,11 @@
 			};
 		}
 		if (node.type === 'tableprocess' && node.tpObj) {
-			const table = core.tables.find((t) =>
-				(t.processes ?? []).some((tp) => tp.id === node.tpObj.id)
-			);
-			if (!table) return null;
 			const cloned = jsonClone(node.tpObj.args ?? {}) ?? {};
 			return {
 				...base,
 				type: 'tableprocess',
 				tpType: node.tpObj.name ?? node.tpName,
-				tableId: table.id,
 				args: clearTPInputsAndOutputs(cloned, node.nodeSpec)
 			};
 		}
@@ -1826,10 +1887,8 @@
 			// standalone columns would orphan the data from its producer.
 			const col = core.data.find((c) => c.id === node.refId);
 			if (!col || typeof col.toJSON !== 'function') return null;
-			const isTPOutput = (core.tables ?? []).some((t) =>
-				(t.processes ?? []).some((tp) =>
-					Object.values(tp.args?.out ?? {}).some((cid) => cid === col.id)
-				)
+			const isTPOutput = (core.tableProcesses ?? []).some((tp) =>
+				Object.values(tp.args?.out ?? {}).some((cid) => cid === col.id)
 			);
 			if (isTPOutput) return null;
 			const cloned = jsonClone(col.toJSON());
@@ -1910,13 +1969,8 @@
 					_dbg('paste: createOrphanProcess →', proc?.id ?? null);
 					if (proc) newCanvasId = `process_${proc.id}`;
 				} else if (entry.type === 'tableprocess') {
-					const table = core.tables.find((t) => t.id === entry.tableId);
-					if (!table) {
-						console.warn('[canvas paste] parent table gone for tableprocess — skipped');
-						continue;
-					}
-					const tp = mutationService.addTableProcess(table.id, entry.tpType, entry.args);
-					_dbg('paste: addTableProcess →', tp?.id ?? null);
+					const tp = mutationService.addFreeTableProcess(entry.tpType, entry.args);
+					_dbg('paste: addFreeTableProcess →', tp?.id ?? null);
 					if (tp) newCanvasId = `tableprocess_${tp.id}`;
 				} else if (entry.type === 'plot') {
 					const seed = { ...entry.plotData, x: newPos.x, y: newPos.y };
@@ -2083,14 +2137,13 @@
 
 			{#each allNodes as node (node.id)}
 				{@const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id]}
-				{@const isExpanded = expandedNodeId === node.id}
+				{@const isExpanded = expandedNodeIds.has(node.id)}
 				{@const isDragging = dragInfo?.nodeId === node.id && dragInfo?.moved}
 				{@const isDimmed = connectedNodeIds !== null && !connectedNodeIds.has(node.id)}
 				{@const isRecentlyChanged = changedNodeIds.has(node.id)}
 				{@const isGroup = node.type === 'group'}
 				{@const isMultiSelected = multiSelectedNodeIds.has(node.id)}
-				{@const isSelected =
-					focusedNodeId === node.id || selectedPlotNodeId === node.id || isMultiSelected}
+				{@const isSelected = focusedNodeId === node.id || isMultiSelected}
 				{@const nodeZIndex = isDragging ? 30 : isExpanded ? 20 : 1}
 				{#if pos}
 					<div

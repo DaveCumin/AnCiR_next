@@ -30,13 +30,13 @@ function snapshot() {
         }
         snap[String(col.id)] = procs;
     }
-    for (const t of core.tables) {
-        const tps = {};
-        for (const tp of t.processes ?? []) {
-            tps[String(tp.id)] = JSON.parse(JSON.stringify(tp.args ?? {}));
-        }
-        snap[`table:${t.id}`] = tps;
+    // Free TPs use a single synthetic owner so the diff key uniformly carries
+    // the TP id; the mutation routes through setFreeTableProcessArg.
+    const freeTps = {};
+    for (const tp of core.tableProcesses ?? []) {
+        freeTps[String(tp.id)] = JSON.parse(JSON.stringify(tp.args ?? {}));
     }
+    snap[`freetp:`] = freeTps;
     return snap;
 }
 
@@ -55,15 +55,17 @@ function diffAndEmit() {
             const b = nextProcs[procId];
             for (const key of Object.keys(b)) {
                 if (JSON.stringify(a[key]) !== JSON.stringify(b[key])) {
-                    const isTable = colKey.startsWith('table:');
-                    const ownerId = isTable ? colKey.slice(6) : colKey;
-                    const owner = isTable
-                        ? core.tables.find((t) => String(t.id) === ownerId)
-                        : core.data.find((c) => String(c.id) === ownerId);
-                    if (!owner) continue;
-                    const list = owner.processes ?? [];
-                    const proc = list.find((p) => String(p.id) === procId);
-                    if (!proc) continue;
+                    const isFreeTP = colKey === 'freetp:';
+                    let owner;
+                    let proc;
+                    if (isFreeTP) {
+                        proc = core.tableProcesses.find((tp) => String(tp.id) === procId);
+                        owner = proc; // free TPs are their own owner
+                    } else {
+                        owner = core.data.find((c) => String(c.id) === colKey);
+                        proc = owner?.processes?.find((p) => String(p.id) === procId);
+                    }
+                    if (!owner || !proc) continue;
                     const liveOwnerId = owner.id;
                     const liveProcId = proc.id;
 
@@ -81,8 +83,8 @@ function diffAndEmit() {
                     } finally {
                         suppress = false;
                     }
-                    if (isTable) {
-                        mutationService.setTableProcessArg(liveOwnerId, liveProcId, key, b[key]);
+                    if (isFreeTP) {
+                        mutationService.setFreeTableProcessArg(liveProcId, key, b[key]);
                     } else {
                         mutationService.setProcessArg(liveOwnerId, liveProcId, key, b[key]);
                     }
@@ -142,12 +144,10 @@ export const paramDiffWatcher = {
                         }
                     }
                 }
-                for (const t of core.tables ?? []) {
-                    for (const tp of t.processes ?? []) {
-                        if (!tp.args) continue;
-                        for (const k of Object.keys(tp.args)) {
-                            tp.args[k]; // tracked read
-                        }
+                for (const tp of core.tableProcesses ?? []) {
+                    if (!tp.args) continue;
+                    for (const k of Object.keys(tp.args)) {
+                        tp.args[k]; // tracked read
                     }
                 }
                 diffAndEmit();

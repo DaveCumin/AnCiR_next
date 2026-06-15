@@ -14,15 +14,64 @@ class OpHistoryManager {
     undoStack = $state([]);
     redoStack = $state([]);
     maxStackSize = 50;
-    isRestoring = false;
+    // Reactive so UI side-effects (e.g. auto-clear of stale selection) can
+    // skip work while a restore is in flight.
+    isRestoring = $state(false);
     #lastTs = 0;
     #initialized = false;
     #unsubscribe = null;
+    #uiCapture = null;
+    #uiRestore = null;
 
     init() {
         if (this.#initialized) return;
         this.#initialized = true;
         this.#unsubscribe = addOpListener((forward, reverse) => this.#record(forward, reverse));
+    }
+
+    /**
+     * Register canvas selection/expansion snapshot handlers. `capture` returns
+     * a plain object describing the current UI selection; `restore` applies it
+     * back. Returns an unregister callback. Only the most recently registered
+     * pair is used.
+     */
+    registerUiHandlers(capture, restore) {
+        this.#uiCapture = capture;
+        this.#uiRestore = restore;
+        return () => {
+            if (this.#uiCapture === capture) this.#uiCapture = null;
+            if (this.#uiRestore === restore) this.#uiRestore = null;
+        };
+    }
+
+    #captureUi() {
+        if (!this.#uiCapture) return null;
+        try {
+            return this.#uiCapture();
+        } catch {
+            return null;
+        }
+    }
+
+    #applyUi(snap) {
+        if (!snap || !this.#uiRestore) return;
+        try {
+            this.#uiRestore(snap);
+        } catch {
+            /* ignore — UI restore is best-effort */
+        }
+    }
+
+    // Defer until end of current sync gesture so any selection updates the
+    // caller performs after applyOp (e.g. clearing after delete) land in
+    // `uiAfter`. Only updates `entry` if it's still the top of the stack;
+    // a newer op manages its own snapshot.
+    #scheduleAfterCapture(entry) {
+        queueMicrotask(() => {
+            if (this.isRestoring) return;
+            const top = this.undoStack[this.undoStack.length - 1];
+            if (top === entry) entry.uiAfter = this.#captureUi();
+        });
     }
 
     #record(forward, reverse) {
@@ -37,12 +86,17 @@ class OpHistoryManager {
             this.#sameTarget(top.forward, forward)
         ) {
             // Forward keeps the latest value; reverse stays the original (top.reverse).
+            // uiBefore stays from the original entry; uiAfter refreshes via microtask.
             top.forward = forward;
             this.#lastTs = now;
+            this.#scheduleAfterCapture(top);
         } else {
-            this.undoStack.push({ forward, reverse });
+            const uiBefore = this.#captureUi();
+            const entry = { forward, reverse, uiBefore, uiAfter: uiBefore };
+            this.undoStack.push(entry);
             this.#lastTs = now;
             if (this.undoStack.length > this.maxStackSize) this.undoStack.shift();
+            this.#scheduleAfterCapture(entry);
         }
         this.redoStack = [];
     }
@@ -61,6 +115,17 @@ class OpHistoryManager {
         return false;
     }
 
+    // Holds isRestoring=true across the Svelte effect flush that follows a
+    // restore, then flips it back to false. Subscribers (e.g. the canvas's
+    // auto-prune of expandedNodeIds) see it as true on their first re-run after
+    // the restore — by which point any structural state changes have settled
+    // — so they don't race the restore.
+    #scheduleClearRestoring() {
+        queueMicrotask(() => {
+            this.isRestoring = false;
+        });
+    }
+
     undo() {
         if (this.undoStack.length === 0) return;
         const entry = this.undoStack[this.undoStack.length - 1];
@@ -68,10 +133,13 @@ class OpHistoryManager {
         this.isRestoring = true;
         try {
             withSuppressedListeners(() => applyOp(entry.reverse));
-        } finally {
+            this.#applyUi(entry.uiBefore);
+        } catch (e) {
             this.isRestoring = false;
+            throw e;
         }
         this.redoStack.push(entry);
+        this.#scheduleClearRestoring();
     }
 
     redo() {
@@ -81,10 +149,13 @@ class OpHistoryManager {
         this.isRestoring = true;
         try {
             withSuppressedListeners(() => applyOp(entry.forward));
-        } finally {
+            this.#applyUi(entry.uiAfter);
+        } catch (e) {
             this.isRestoring = false;
+            throw e;
         }
         this.undoStack.push(entry);
+        this.#scheduleClearRestoring();
     }
 
     clear() {

@@ -28,10 +28,7 @@
 	);
 	// console.log('p.args', $state.snapshot(p.args));
 	function confirmAddColumn() {
-		const table = mutationService.addTable({});
-		// Name is derived from the assigned id; direct mutation is acceptable cosmetic state.
-		table.name = 'Simulated_' + table.id;
-		mutationService.addTableProcess(table.id, 'SimulatedData', p.args);
+		mutationService.addFreeTableProcess('SimulatedData', p.args);
 		showModal = false;
 	}
 </script>

@@ -2,8 +2,8 @@
 
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
-import { Table } from '$lib/core/Table.svelte';
 import { Process } from '$lib/core/Process.svelte';
+import { TableProcess } from '$lib/core/TableProcess.svelte';
 import { getCachedProcessNodeGraph } from '$lib/core/ProcessNode.svelte.js';
 import * as jsonpatch from 'fast-json-patch';
 
@@ -11,7 +11,10 @@ export const core = $state({
 	rawData: new Map(),
 	data: [],
 	plots: [],
-	tables: [],
+	// tableProcesses — free-standing TableProcess instances. Each TP's outputs
+	// live in core.data like any other column; the TP itself just declares its
+	// input refs and runs its func() reactively.
+	tableProcesses: [],
 	storedValues: {},
 	// nodeNotes — per-node text annotations keyed by canvas node id (e.g.
 	// `data_5`, `process_3`, `plot_2`, `note_1`). Plain string values.
@@ -72,6 +75,32 @@ export function removeGroup(id) {
 	// Absorbed columns aren't deleted — they resurface as standalone data_X
 	// canvas nodes on the next derive. Just drop the per-group note if any.
 	delete core.nodeNotes[id];
+}
+
+/**
+ * Create a free-standing TableProcess (no parent Table) and push it into
+ * core.tableProcesses. The TP's output columns are materialised in core.data
+ * via the constructor's existing pushObj() calls. Returns the new TP, or
+ * null if `name` is falsy.
+ */
+export function createFreeTableProcess(name, args = {}) {
+	if (!name) return null;
+	const tp = new TableProcess({ name, args }, null);
+	core.tableProcesses.push(tp);
+	return tp;
+}
+
+/** Remove a free-standing TableProcess by id. Cleanup of its output columns
+ *  is handled by deleteTableProcess in TableProcess.svelte. */
+export function removeFreeTableProcess(id) {
+	core.tableProcesses = core.tableProcesses.filter((tp) => tp.id !== id);
+	delete core.nodeNotes[`tableprocess_${id}`];
+}
+
+/** Find a TableProcess by id in core.tableProcesses. */
+export function findTableProcessById(id) {
+	for (const tp of core.tableProcesses) if (tp.id === id) return tp;
+	return null;
 }
 
 /**
@@ -223,7 +252,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.40.0',
+	version: 'β.41.0',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
@@ -292,8 +321,8 @@ export function pushObj(obj, autoPosition = true) {
 		core.data.push(obj);
 		void obj.hoursSinceStart; // eagerly compute while spinner is showing
 		// console.log('Pushed column with id', obj.id, 'and name', obj.name);
-	} else if (obj instanceof Table) {
-		core.tables.push(obj);
+	} else if (obj instanceof TableProcess) {
+		core.tableProcesses.push(obj);
 	} else if (obj instanceof Plot) {
 		if (autoPosition) {
 			const pos = findNextAvailablePosition(core.plots);
@@ -488,11 +517,8 @@ export function replaceColumnRefs(newColId, oldColId) {
 		if (col.refId === oldColId) col.refId = newColId;
 	});
 
-	core.tables.forEach((table) => {
-		table.columnRefs = table.columnRefs.map((id) => (id === oldColId ? newColId : id));
-		table.processes.forEach((tp) => {
-			_replaceInTPArgs(tp.args, oldColId, newColId);
-		});
+	core.tableProcesses.forEach((tp) => {
+		_replaceInTPArgs(tp.args, oldColId, newColId);
 	});
 
 	core.plots.forEach((plot) => {
@@ -583,13 +609,7 @@ export function swapColumnRefsBulk(pairs) {
 		if (map.has(col.refId)) col.refId = map.get(col.refId);
 	});
 
-	core.tables.forEach((table) => {
-		const refs = table.columnRefs;
-		for (let i = 0; i < refs.length; i++) {
-			if (map.has(refs[i])) refs[i] = map.get(refs[i]);
-		}
-		table.processes.forEach((tp) => _remapInTPArgs(tp.args, map));
-	});
+	core.tableProcesses.forEach((tp) => _remapInTPArgs(tp.args, map));
 
 	core.plots.forEach((plot) => {
 		if (plot.type === 'tableplot') {
@@ -662,12 +682,19 @@ export function applyPatchToCore(patch) {
 	// Classify which top-level slices the patch actually touches so we can
 	// skip reconcile work (and, for rawData, avoid even snapshotting megabytes
 	// of measured arrays) when nothing in that slice changed.
-	const touches = { rawData: false, data: false, tables: false, plots: false, storedValues: false };
+	const touches = {
+		rawData: false,
+		data: false,
+		tableProcesses: false,
+		plots: false,
+		storedValues: false
+	};
 	for (const op of patch) {
 		const p = op.path || '';
 		if (p === '/rawData' || p.startsWith('/rawData/')) touches.rawData = true;
 		else if (p === '/data' || p.startsWith('/data/')) touches.data = true;
-		else if (p === '/tables' || p.startsWith('/tables/')) touches.tables = true;
+		else if (p === '/tableProcesses' || p.startsWith('/tableProcesses/'))
+			touches.tableProcesses = true;
 		else if (p === '/plots' || p.startsWith('/plots/')) touches.plots = true;
 		else if (p === '/storedValues' || p.startsWith('/storedValues/')) touches.storedValues = true;
 	}
@@ -682,7 +709,7 @@ export function applyPatchToCore(patch) {
 					JSON.stringify(
 						{
 							data: core.data,
-							tables: core.tables,
+							tableProcesses: core.tableProcesses,
 							plots: core.plots,
 							storedValues: core.storedValues
 						},
@@ -746,31 +773,22 @@ export function applyPatchToCore(patch) {
 		}
 	}
 
-	// --- Reconcile core.tables by id ---
-	if (touches.tables) {
-		const patchedTableIds = (snap.tables ?? []).map((t) => t.id);
-		core.tables = core.tables.filter((t) => patchedTableIds.includes(t.id));
-		for (const tableSnap of snap.tables ?? []) {
-			const existing = core.tables.find((t) => t.id === tableSnap.id);
+	// --- Reconcile core.tableProcesses by id ---
+	if (touches.tableProcesses) {
+		const patchedIds = (snap.tableProcesses ?? []).map((tp) => tp.id);
+		core.tableProcesses = core.tableProcesses.filter((tp) => patchedIds.includes(tp.id));
+		for (const tpSnap of snap.tableProcesses ?? []) {
+			const existing = core.tableProcesses.find((tp) => tp.id === tpSnap.id);
 			if (existing) {
-				existing.name = tableSnap.name;
-				existing.columnRefs = tableSnap.columnRefs ?? [];
-				// Reconcile table processes
-				const patchedTPIds = (tableSnap.processes ?? []).map((p) => p.id);
-				existing.processes = existing.processes.filter((p) => patchedTPIds.includes(p.id));
-				for (const pSnap of tableSnap.processes ?? []) {
-					const ep = existing.processes.find((p) => p.id === pSnap.id);
-					if (ep) {
-						ep.name = pSnap.name;
-						ep.displayName = pSnap.displayName ?? ep.displayName;
-						ep.args = pSnap.args ?? ep.args;
-					} else {
-						const tmpTable = Table.fromJSON({ ...tableSnap, processes: [pSnap] });
-						existing.processes.push(tmpTable.processes[0]);
-					}
-				}
+				existing.name = tpSnap.name;
+				existing.displayName = tpSnap.displayName ?? existing.displayName;
+				existing.args = tpSnap.args ?? existing.args;
+				existing.refTPId = tpSnap.refTPId ?? null;
 			} else {
-				core.tables.push(Table.fromJSON(tableSnap));
+				// Reconstitute. Snapshot already has output column IDs (>=0), so
+				// the constructor takes the load-from-JSON path and doesn't
+				// re-create output columns.
+				core.tableProcesses.push(new TableProcess(tpSnap, null, tpSnap.id));
 			}
 		}
 	}

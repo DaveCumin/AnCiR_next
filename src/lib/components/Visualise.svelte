@@ -31,32 +31,47 @@
 		// Track the maximum level for column processes
 		let maxColumnProcessLevel = 1;
 
-		// Process tables and their columns
-		core?.tables?.forEach((table) => {
-			const tableId = `table_${table.id}`;
-			addNode(tableId, `Table ${table.id}: ${table.name}`, 'table', 0);
+		// Process groups (replaces tables) and their absorbed columns
+		const renderColumn = (columnId, parentNodeId, levelOffset = 0) => {
+			const data = core?.data?.find((d) => d.id === columnId);
+			if (!data) return;
+			addNode(columnId, `Column ${columnId}: ${data.name}`, 'column', 1 + levelOffset);
+			if (parentNodeId != null) edges.push({ from: parentNodeId, to: columnId });
 
-			table.columnRefs.forEach((columnId) => {
-				const data = core?.data?.find((d) => d.id === columnId);
-				if (data) {
-					addNode(columnId, `Column ${columnId}: ${data.name}`, 'column', 1);
-					edges.push({ from: tableId, to: columnId });
-
-					// Handle column processes
-					let currentLevel = 2; // Start processes at level 2
-					let previous = columnId;
-					data.processes.forEach((process) => {
-						const processId = `process_${process.id}`;
-						addNode(processId, `Process ${process.id}: ${process.name}`, 'process', currentLevel);
-						edges.push({ from: previous, to: processId });
-						previous = processId;
-						currentLevel += 0.5;
-					});
-					maxColumnProcessLevel = Math.max(maxColumnProcessLevel, currentLevel - 0.5);
-					columnLastProcess[columnId] = data.processes.length > 0 ? previous : columnId;
-				}
+			let currentLevel = 2 + levelOffset;
+			let previous = columnId;
+			data.processes.forEach((process) => {
+				const processId = `process_${process.id}`;
+				addNode(processId, `Process ${process.id}: ${process.name}`, 'process', currentLevel);
+				edges.push({ from: previous, to: processId });
+				previous = processId;
+				currentLevel += 0.5;
 			});
+			maxColumnProcessLevel = Math.max(maxColumnProcessLevel, currentLevel - 0.5);
+			columnLastProcess[columnId] = data.processes.length > 0 ? previous : columnId;
+		};
+
+		core?.groups?.forEach((group) => {
+			const groupNodeId = `group_${group.id}`;
+			addNode(groupNodeId, `Group: ${group.name}`, 'table', 0);
+			for (const colId of group.sourceColumnIds ?? []) renderColumn(colId, groupNodeId);
 		});
+
+		// Standalone columns (not in any group, not a TP output)
+		const tpOutIds = new Set();
+		for (const tp of core?.tableProcesses ?? []) {
+			for (const cid of Object.values(tp.args?.out ?? {})) {
+				if (typeof cid === 'number' && cid >= 0) tpOutIds.add(cid);
+			}
+		}
+		const grouped = new Set();
+		for (const g of core?.groups ?? []) {
+			for (const cid of g.sourceColumnIds ?? []) grouped.add(cid);
+		}
+		for (const col of core?.data ?? []) {
+			if (grouped.has(col.id) || tpOutIds.has(col.id)) continue;
+			renderColumn(col.id, null);
+		}
 
 		// Levels for plot.data and their processes
 		const plotDataLevelstart = maxColumnProcessLevel + 1; // Plot data after column processes

@@ -170,25 +170,39 @@ return _r;`
 	let allColumns = $derived.by(() => {
 		const seen = new Set();
 		const cols = [];
-		for (const table of core.tables) {
-			for (const proc of table.processes) {
-				for (const key of Object.keys(proc.args.out)) {
-					const id = proc.args.out[key];
-					if (id >= 0 && !seen.has(id)) {
-						const col = getColumnById(id);
-						if (col) {
-							seen.add(id);
-							cols.push({ id: col.id, name: col.name, tableName: table.name });
-						}
+		// Map colId → owning Group name (best-effort label).
+		const colToGroupName = new Map();
+		for (const g of core.groups ?? []) {
+			for (const cid of g.sourceColumnIds ?? []) {
+				if (!colToGroupName.has(cid)) colToGroupName.set(cid, g.name);
+			}
+		}
+		// Free TPs: include each output column.
+		for (const proc of core.tableProcesses ?? []) {
+			for (const key of Object.keys(proc.args?.out ?? {})) {
+				const id = proc.args.out[key];
+				if (id >= 0 && !seen.has(id)) {
+					const col = getColumnById(id);
+					if (col) {
+						seen.add(id);
+						cols.push({
+							id: col.id,
+							name: col.name,
+							tableName: proc.displayName || proc.name
+						});
 					}
 				}
 			}
-			for (const col of table.columns) {
-				if (!seen.has(col.id)) {
-					seen.add(col.id);
-					cols.push({ id: col.id, name: col.name, tableName: table.name });
-				}
-			}
+		}
+		// Standalone columns (in core.data, not yet seen).
+		for (const col of core.data ?? []) {
+			if (seen.has(col.id)) continue;
+			seen.add(col.id);
+			cols.push({
+				id: col.id,
+				name: col.name,
+				tableName: colToGroupName.get(col.id) ?? ''
+			});
 		}
 		return cols;
 	});

@@ -51,8 +51,11 @@
 	export async function importJson(jsonData, onProgress) {
 		//reset existing workflow
 		core.data = [];
-		core.tables = [];
+		core.tableProcesses = [];
 		core.plots = [];
+		core.groups = [];
+		core.notes = [];
+		core.nodeNotes = {};
 		// Orphan processes are session-only; clear on import so the next
 		// block can rehydrate them from the JSON if present.
 		core.orphanProcesses = [];
@@ -89,11 +92,96 @@
 		// Re-link shared args for linked processes after deserialization
 		relinkLinkedProcessArgs();
 
+		// New sessions persist groups + free TPs directly. Rehydrate those
+		// before processing any legacy tables.
+		if (Array.isArray(jsonData.groups)) {
+			for (const g of jsonData.groups) {
+				core.groups.push({
+					id: g.id,
+					name: g.name ?? 'Group',
+					x: g.x ?? 80,
+					y: g.y ?? 80,
+					width: g.width ?? 240,
+					height: g.height ?? 180,
+					sourceColumnIds: Array.isArray(g.sourceColumnIds) ? [...g.sourceColumnIds] : [],
+					allColumnIds: Array.isArray(g.allColumnIds) ? [...g.allColumnIds] : null,
+					collapsed: g.collapsed === true,
+					rowState: g.rowState ?? {}
+				});
+			}
+		}
+		if (Array.isArray(jsonData.notes)) {
+			for (const n of jsonData.notes) {
+				core.notes.push({
+					id: n.id,
+					text: n.text ?? '',
+					x: n.x ?? 80,
+					y: n.y ?? 80,
+					width: n.width ?? 200,
+					height: n.height ?? 120
+				});
+			}
+		}
+		if (jsonData.nodeNotes && typeof jsonData.nodeNotes === 'object') {
+			core.nodeNotes = { ...jsonData.nodeNotes };
+		}
+		if (Array.isArray(jsonData.tableProcesses)) {
+			for (const tp of jsonData.tableProcesses) {
+				core.tableProcesses.push(new TableProcess(tp, null, tp.id));
+			}
+		}
+
+		// Legacy: convert each saved `tables[]` into a Group node + free TPs.
+		// The Group's sources = columns from columnRefs that AREN'T outputs of
+		// any of this table's processes (i.e. the original sources only).
+		// TableProcesses migrate to core.tableProcesses with parent = null.
+		// Table.svelte is gone (Phase D), so we parse the legacy shape inline.
 		const totalTables = jsonData.tables?.length ?? 0;
 		for (let i = 0; i < totalTables; i++) {
-			if (onProgress) onProgress(`Building table ${i + 1} of ${totalTables}…`);
+			if (onProgress) onProgress(`Migrating legacy table ${i + 1} of ${totalTables}…`);
 			await yieldFrame();
-			pushObj(Table.fromJSON(jsonData.tables[i]));
+			const legacy = jsonData.tables[i];
+			const tableId = legacy.id ?? legacy.tableid ?? i;
+			const tableName = legacy.name ?? `Table ${tableId}`;
+			const columnRefs = Array.isArray(legacy.columnRefs) ? legacy.columnRefs : [];
+
+			// 1. Reconstitute each TableProcess as free-standing.
+			const newTPs = [];
+			for (const procJson of legacy.processes ?? []) {
+				try {
+					newTPs.push(new TableProcess(procJson, null, procJson.id));
+				} catch (e) {
+					console.warn('Failed to migrate legacy TableProcess', procJson, e);
+				}
+			}
+
+			// 2. Collect TP-output column ids (these are NOT sources).
+			const tpOutIds = new Set();
+			for (const tp of newTPs) {
+				for (const cid of Object.values(tp.args?.out ?? {})) {
+					if (typeof cid === 'number' && cid >= 0) tpOutIds.add(cid);
+				}
+			}
+
+			// 3. Build a Group with the table's original source columns.
+			const sources = columnRefs.filter((cid) => !tpOutIds.has(cid));
+			if (sources.length > 0 || newTPs.length === 0) {
+				core.groups.push({
+					id: `group_legacy_${tableId}`,
+					name: tableName,
+					x: 80 + i * 40,
+					y: 80 + i * 40,
+					width: 240,
+					height: 180,
+					sourceColumnIds: sources,
+					allColumnIds: null,
+					collapsed: false,
+					rowState: {}
+				});
+			}
+
+			// 4. Push the migrated TPs into the free store.
+			for (const tp of newTPs) core.tableProcesses.push(tp);
 		}
 
 		// Plots: yield between each push so the canvas re-render is split
@@ -142,7 +230,7 @@
 	import { tick } from 'svelte';
 	import { core, pushObj, outputCoreAsJson, loadAppState } from '$lib/core/core.svelte';
 	import { Column, relinkLinkedProcessArgs } from '$lib/core/Column.svelte';
-	import { Table } from '$lib/core/Table.svelte';
+	import { TableProcess } from '$lib/core/TableProcess.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
 	import { Process } from '$lib/core/Process.svelte';
 

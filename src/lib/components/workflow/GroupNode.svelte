@@ -336,7 +336,7 @@
 					onkeydown={onAllMenuKeydown}
 					onpointerdown={stopPointer}
 					onmousedown={stopPointer}
-					onwheel={(e) => e.stopPropagation()}
+					onwheel={(e) => { if (!e.ctrlKey && !e.metaKey) e.stopPropagation(); }}
 				>
 					<div class="all-menu-title">Include in "all" output</div>
 					<div class="all-menu-list">
@@ -373,7 +373,7 @@
 	</div>
 
 	{#if !collapsed}
-		<div class="group-rows" onwheel={(e) => e.stopPropagation()} role="presentation">
+		<div class="group-rows" onwheel={(e) => { if (!e.ctrlKey && !e.metaKey) e.stopPropagation(); }} role="presentation">
 			{#each sourceColumns as { id, col } (id)}
 				{@const meta = typeMeta(col)}
 				{@const expanded = group?.rowState?.[id]?.expanded === true}

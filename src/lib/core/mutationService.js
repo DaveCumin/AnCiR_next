@@ -51,26 +51,17 @@ export const mutationService = {
         applyOp({ kind: 'setProcessArg', columnId, processId, key, value });
     },
 
-    // --- Table ops ---
-    addTable(tableData) {
-        const inv = applyOp({ kind: 'addTable', tableData });
+    // --- Free TableProcess ops (no parent Table) ---
+    addFreeTableProcess(tpType, args = {}) {
+        const inv = applyOp({ kind: 'addFreeTableProcess', tpType, args });
         if (!inv) return null;
-        return core.tables.find((t) => t.id === inv.id) ?? null;
+        return core.tableProcesses.find((tp) => tp.id === inv.tpId) ?? null;
     },
-    removeTable(id) {
-        applyOp({ kind: 'removeTable', id });
+    removeFreeTableProcess(tpId) {
+        applyOp({ kind: 'removeFreeTableProcess', tpId });
     },
-    addTableProcess(tableId, tpType, args = {}) {
-        const inv = applyOp({ kind: 'addTableProcess', tableId, tpType, args });
-        if (!inv) return null;
-        const table = core.tables.find((t) => t.id === tableId);
-        return table?.processes.find((tp) => tp.id === inv.tpId) ?? null;
-    },
-    removeTableProcess(tableId, tpId) {
-        applyOp({ kind: 'removeTableProcess', tableId, tpId });
-    },
-    setTableProcessArg(tableId, tpId, key, value) {
-        applyOp({ kind: 'setTableProcessArg', tableId, tpId, key, value });
+    setFreeTableProcessArg(tpId, key, value) {
+        applyOp({ kind: 'setFreeTableProcessArg', tpId, key, value });
     },
 
     // --- Stored values ---

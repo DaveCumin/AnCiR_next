@@ -1,14 +1,13 @@
 <script>
 	import ProgressIndicator from '$lib/components/ProgressIndicator.svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
-	import { getTableById } from '$lib/core/Table.svelte';
-	import { TableProcess } from '$lib/core/TableProcess.svelte';
 	import { appConsts } from '$lib/core/core.svelte.js';
+	import { mutationService } from '$lib/core/mutationService.js';
 	import { tick } from 'svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
-	let { show = $bindable(), tableId, initialType = $bindable('') } = $props();
+	let { show = $bindable(), initialType = $bindable('') } = $props();
 
 	///-----------
 	let tableProcessChosen = $state();
@@ -51,18 +50,7 @@
 		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms)); // short wait to make sure the spinner will show
 		await tick();
 
-		// Create process in a non-reactive context
-		const newProcess = new TableProcess(
-			{
-				name: theP.name,
-				args: theP.args
-			},
-			getTableById(tableId)
-		);
-
-		//add table processes in reverse order so the most recent shows at the top
-		const theTable = getTableById(tableId);
-		theTable.processes = [newProcess, ...theTable.processes];
+		mutationService.addFreeTableProcess(theP.name, theP.args);
 
 		//clear the defaults
 		tableProcessChosen = '';

@@ -14,8 +14,9 @@
 	// @ts-nocheck
 	import Draggable from '$lib/components/reusables/Draggable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import AddPlot from '$lib/components/iconActions/AddPlot.svelte';
-	import AddTable from '$lib/components/iconActions/AddTable.svelte';
+	import FloatingActions from '$lib/components/workflow/FloatingActions.svelte';
+	import NoteCard from '$lib/components/views/NoteCard.svelte';
+	import WorksheetAddPalette from '$lib/components/views/WorksheetAddPalette.svelte';
 
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 	import { onMount, tick } from 'svelte';
@@ -59,28 +60,6 @@
 		}
 	});
 
-	// AddTable dropdown
-	let addBtnRef;
-	let showAddTable = $state(false);
-	let dropdownTop = $state(0);
-	let dropdownLeft = $state(0);
-
-	function recalculateDropdownPosition() {
-		if (!addBtnRef) return;
-		const rect = addBtnRef.getBoundingClientRect();
-
-		dropdownTop = rect.top + window.scrollY;
-		dropdownLeft = rect.right + window.scrollX + 12;
-	}
-
-	function openDropdown(e) {
-		e.stopPropagation();
-		recalculateDropdownPosition();
-		showAddTable = true;
-
-		window.addEventListener('resize', recalculateDropdownPosition);
-	}
-
 	let showNewPlotModal = $state(false);
 
 	function handleClick(e) {
@@ -96,13 +75,21 @@
 	});
 
 	let gridBackgroundWidthPx = $derived.by(() => {
-		const rightMostPlot = Math.max(...core.plots.map((p) => p.x + p.width));
-		return Math.max(canvasWidthPx, rightMostPlot + 200);
+		const rights = [
+			...core.plots.map((p) => p.x + p.width),
+			...core.notes.map((n) => n.x + n.width)
+		];
+		const rightMost = rights.length ? Math.max(...rights) : 0;
+		return Math.max(canvasWidthPx, rightMost + 200);
 	});
 
 	let gridBackgroundHeightPx = $derived.by(() => {
-		const bottomMostPlot = Math.max(...core.plots.map((p) => p.y + p.height));
-		return Math.max(appState.windowHeight, bottomMostPlot + 200);
+		const bottoms = [
+			...core.plots.map((p) => p.y + p.height),
+			...core.notes.map((n) => n.y + n.height)
+		];
+		const bottomMost = bottoms.length ? Math.max(...bottoms) : 0;
+		return Math.max(appState.windowHeight, bottomMost + 200);
 	});
 
 	//more efficient way to open the dataDisplay on import (fewer reactive checks)
@@ -139,6 +126,16 @@
 		};
 	});
 </script>
+
+<!-- FloatingActions sits in its own fixed-bounds host so the load/save and
+     undo/redo buttons stay pinned to the worksheet corners and don't scroll
+     with the panning canvas. -->
+<div
+	class="fa-host"
+	style="top: 0; left: {leftPx}px; width: {canvasWidthPx}px; height: 100vh;"
+>
+	<FloatingActions />
+</div>
 
 <div
 	onclick={handleClick}
@@ -182,6 +179,10 @@
 				);
 			"
 		>
+			{#each core.notes as note (note.id)}
+				<NoteCard {note} />
+			{/each}
+
 			{#if core.plots.length > 0}
 				{#each core.plots as plot, i (plot.id)}
 					{#if !appState.invisiblePlotIds.includes(plot.id)}
@@ -199,37 +200,27 @@
 						</Draggable>
 					{/if}
 				{/each}
+			{:else if core.notes.length > 0}
+				<!-- Notes are rendered above; suppress the empty-state prompt. -->
 			{:else if core.data.length > 0}
 				<div class="no-plot-prompt" out:fade={{ duration: 600 }}>
 					<button class="icon" onclick={() => (showNewPlotModal = true)}>
 						<Icon name="add" width={24} height={24} />
 					</button>
-					<p style="margin-left: 10px">Click to add a new plot</p>
+					<p style="margin-left: 10px">Click to add a plot or note</p>
 				</div>
 
-				<AddPlot
-					bind:showDropdown={showNewPlotModal}
-					dropdownTop={window.innerHeight / 2 - 25}
-					dropdownLeft={window.innerWidth / 2 - 40}
+				<WorksheetAddPalette
+					bind:open={showNewPlotModal}
+					top={window.innerHeight / 2 - 25}
+					left={window.innerWidth / 2 - 40}
 				/>
 			{:else}
 				<div class="no-plot-prompt" in:fade={{ duration: 600 }}>
-					<button
-						class="icon"
-						bind:this={addBtnRef}
-						onclick={openDropdown}
-						out:fly={{
-							x: 100,
-							y: -100,
-							duration: 600
-						}}
-					>
-						<Icon name="add" width={24} height={24} />
-					</button>
-					<p style="margin-left: 10px" out:fade={{ duration: 600 }}>Click to add new data</p>
+					<p style="margin-left: 10px" out:fade={{ duration: 600 }}>
+						No data yet — switch to the workflow canvas to import or simulate columns.
+					</p>
 				</div>
-
-				<AddTable bind:showDropdown={showAddTable} {dropdownTop} {dropdownLeft} />
 			{/if}
 		</div>
 	</div>
@@ -239,6 +230,15 @@
 	.canvas {
 		position: fixed;
 		overflow: auto;
+		transition:
+			width 0.6s ease,
+			left 0.6s ease;
+	}
+
+	.fa-host {
+		position: fixed;
+		pointer-events: none;
+		z-index: 30;
 		transition:
 			width 0.6s ease,
 			left 0.6s ease;

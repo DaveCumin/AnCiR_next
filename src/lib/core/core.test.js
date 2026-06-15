@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('$lib/core/Column.svelte', () => ({ Column: vi.fn(), getColumnById: vi.fn() }));
 vi.mock('$lib/core/Plot.svelte', () => ({ Plot: vi.fn() }));
-vi.mock('$lib/core/Table.svelte', () => ({ Table: vi.fn() }));
 
 import {
 	core,
@@ -13,11 +12,11 @@ import {
 } from '$lib/core/core.svelte';
 
 // ── helpers ──────────────────────────────────────────────────────────
-function seedCore({ data = [], tables = [], plots = [] } = {}) {
+function seedCore({ data = [], tableProcesses = [], plots = [] } = {}) {
 	core.data.length = 0;
 	data.forEach((d) => core.data.push(d));
-	core.tables.length = 0;
-	tables.forEach((t) => core.tables.push(t));
+	core.tableProcesses.length = 0;
+	tableProcesses.forEach((tp) => core.tableProcesses.push(tp));
 	core.plots.length = 0;
 	plots.forEach((p) => core.plots.push(p));
 
@@ -53,29 +52,14 @@ describe('replaceColumnRefs', () => {
 		expect(core.data[1].refId).toBe(20);
 	});
 
-	it('replaces columnRefs in tables', () => {
+	it('replaces xIN, yIN, xsIN, and out in free table processes', () => {
 		seedCore({
-			tables: [{ columnRefs: [10, 20, 10], processes: [] }]
-		});
-		replaceColumnRefs(99, 10);
-		expect(core.tables[0].columnRefs).toEqual([99, 20, 99]);
-	});
-
-	it('replaces xIN, yIN, xsIN, and out in table processes', () => {
-		seedCore({
-			tables: [
-				{
-					columnRefs: [],
-					processes: [
-						{
-							args: { xIN: 10, yIN: 20, xsIN: [10, 30], out: { a: 10, b: 40 } }
-						}
-					]
-				}
+			tableProcesses: [
+				{ args: { xIN: 10, yIN: 20, xsIN: [10, 30], out: { a: 10, b: 40 } } }
 			]
 		});
 		replaceColumnRefs(99, 10);
-		const args = core.tables[0].processes[0].args;
+		const args = core.tableProcesses[0].args;
 		expect(args.xIN).toBe(99);
 		expect(args.yIN).toBe(20);
 		expect(args.xsIN).toEqual([99, 30]);
@@ -124,12 +108,13 @@ describe('swapColumnRefs', () => {
 				{ id: 1, refId: 10 },
 				{ id: 2, refId: 20 }
 			],
-			tables: [{ columnRefs: [10, 20], processes: [] }]
+			tableProcesses: [{ args: { xIN: 10, yIN: 20, out: {} } }]
 		});
 		swapColumnRefs(10, 20);
 		expect(core.data[0].refId).toBe(20);
 		expect(core.data[1].refId).toBe(10);
-		expect(core.tables[0].columnRefs).toEqual([20, 10]);
+		expect(core.tableProcesses[0].args.xIN).toBe(20);
+		expect(core.tableProcesses[0].args.yIN).toBe(10);
 	});
 
 	it('handles swap when only one ID is present', () => {
@@ -169,12 +154,13 @@ describe('swapColumnRefsBulk', () => {
 				{ id: 1, refId: 10 },
 				{ id: 2, refId: 20 }
 			],
-			tables: [{ columnRefs: [10, 20], processes: [] }]
+			tableProcesses: [{ args: { xIN: 10, yIN: 20, out: {} } }]
 		});
 		swapColumnRefsBulk([[10, 20]]);
 		expect(core.data[0].refId).toBe(20);
 		expect(core.data[1].refId).toBe(10);
-		expect(core.tables[0].columnRefs).toEqual([20, 10]);
+		expect(core.tableProcesses[0].args.xIN).toBe(20);
+		expect(core.tableProcesses[0].args.yIN).toBe(10);
 	});
 
 	it('swaps multiple independent pairs simultaneously', () => {
@@ -185,7 +171,7 @@ describe('swapColumnRefsBulk', () => {
 				{ id: 3, refId: 30 },
 				{ id: 4, refId: 40 }
 			],
-			tables: [{ columnRefs: [10, 20, 30, 40], processes: [] }]
+			tableProcesses: [{ args: { xIN: 10, yIN: 30, xsIN: [20, 40], out: {} } }]
 		});
 		swapColumnRefsBulk([
 			[10, 20],
@@ -195,21 +181,19 @@ describe('swapColumnRefsBulk', () => {
 		expect(core.data[1].refId).toBe(10);
 		expect(core.data[2].refId).toBe(40);
 		expect(core.data[3].refId).toBe(30);
-		expect(core.tables[0].columnRefs).toEqual([20, 10, 40, 30]);
+		const args = core.tableProcesses[0].args;
+		expect(args.xIN).toBe(20);
+		expect(args.yIN).toBe(40);
+		expect(args.xsIN).toEqual([10, 30]);
 	});
 
-	it('swaps across tables, processes, and plots together', () => {
+	it('swaps across tableProcesses and plots together', () => {
 		seedCore({
 			data: [
 				{ id: 1, refId: 10 },
 				{ id: 2, refId: 20 }
 			],
-			tables: [
-				{
-					columnRefs: [10, 20],
-					processes: [{ args: { xIN: 10, yIN: 20, out: { a: 10 } } }]
-				}
-			],
+			tableProcesses: [{ args: { xIN: 10, yIN: 20, out: { a: 10 } } }],
 			plots: [
 				{
 					type: 'scatter',
@@ -219,8 +203,7 @@ describe('swapColumnRefsBulk', () => {
 		});
 		swapColumnRefsBulk([[10, 20]]);
 
-		expect(core.tables[0].columnRefs).toEqual([20, 10]);
-		const args = core.tables[0].processes[0].args;
+		const args = core.tableProcesses[0].args;
 		expect(args.xIN).toBe(20);
 		expect(args.yIN).toBe(10);
 		expect(args.out.a).toBe(20);

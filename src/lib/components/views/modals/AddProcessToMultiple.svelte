@@ -19,9 +19,15 @@ let sortedProcesses = $derived.by(() => {
 	});
 });
 
-// All column IDs across all tables (for select-all)
+// All non-output column IDs (raw + source) for select-all.
 let allColIds = $derived.by(() => {
-	return core.tables.flatMap((t) => t.columns.filter((c) => c != null).map((c) => c.id));
+	const tpOutputIds = new Set();
+	for (const tp of core.tableProcesses ?? []) {
+		for (const cid of Object.values(tp.args?.out ?? {})) {
+			if (typeof cid === 'number' && cid >= 0) tpOutputIds.add(cid);
+		}
+	}
+	return (core.data ?? []).filter((c) => !tpOutputIds.has(c.id)).map((c) => c.id);
 });
 
 function selectAll() {

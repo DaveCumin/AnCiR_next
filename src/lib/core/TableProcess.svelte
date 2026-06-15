@@ -1,6 +1,5 @@
 <script module>
 	import { appState, appConsts, pushObj, core } from '$lib/core/core.svelte.js';
-	import { getTableById } from '$lib/core/Table.svelte';
 	import { removeColumnFromPlots } from '$lib/core/Plot.svelte';
 	import { Column, removeColumn, getColumnById } from '$lib/core/Column.svelte';
 	let _tableprocessidCounter = 0;
@@ -15,12 +14,29 @@
 		appState.showAYSModal = true;
 	}
 
+	/**
+	 * Sweep a single TP's args[*IN] entries, dropping any reference to colID.
+	 * Records every touched (processId, argument) pair into `affected`.
+	 */
+	function _scrubTPInputRefs(tp, colID, affected) {
+		Object.keys(tp.args).forEach((argKey) => {
+			if (argKey.slice(-2) !== 'IN') return;
+			if (Array.isArray(tp.args[argKey])) {
+				const before = tp.args[argKey].length;
+				tp.args[argKey] = tp.args[argKey].filter((id) => id !== colID);
+				if (before !== tp.args[argKey].length) {
+					affected.push({ processId: tp.id, processName: tp.name, argument: argKey });
+				}
+			} else if (tp.args[argKey] === colID) {
+				tp.args[argKey] = -1;
+				affected.push({ processId: tp.id, processName: tp.name, argument: argKey });
+			}
+		});
+	}
+
 	export function deleteTableProcess(tableProcess) {
-		if (!tableProcess || !tableProcess.parent) {
-			return {
-				success: false,
-				message: 'Invalid table process provided'
-			};
+		if (!tableProcess) {
+			return { success: false, message: 'Invalid table process provided' };
 		}
 
 		const removedColumns = [];
@@ -35,59 +51,29 @@
 		outputColumnIds.forEach((colID) => {
 			removedColumns.push(colID);
 
-			// Step 2a: Remove from plots/tables that display them
+			// Step 2a: Remove from plots that display them
 			removeColumnFromPlots(colID);
 
-			// Step 2b: Remove from input references in other table processes
-			core.tables.forEach((table, tableIdx) => {
-				table.processes.forEach((process, processIdx) => {
-					// Check all argument keys for references to this column
-					Object.keys(process.args).forEach((argKey) => {
-						// Only process input arguments (ending with 'IN')
-						if (argKey.slice(-2) === 'IN') {
-							if (typeof process.args[argKey] === 'object') {
-								// Array input (e.g., xsIN) - filter out the column
-								const before = process.args[argKey].length;
-								process.args[argKey] = process.args[argKey].filter((id) => id !== colID);
-								if (before !== process.args[argKey].length) {
-									affectedProcesses.push({
-										processId: process.id,
-										processName: process.name,
-										argument: argKey
-									});
-								}
-							} else if (process.args[argKey] === colID) {
-								// Single input (e.g., xIN, yIN) - set to -1
-								process.args[argKey] = -1;
-								affectedProcesses.push({
-									processId: process.id,
-									processName: process.name,
-									argument: argKey
-								});
-							}
-						}
-					});
-				});
+			// Step 2b: Remove input refs from every TP
+			core.tableProcesses.forEach((tp) => _scrubTPInputRefs(tp, colID, affectedProcesses));
+
+			// Step 2c: Drop from any Group that absorbed this column
+			core.groups.forEach((g) => {
+				if ((g.sourceColumnIds ?? []).includes(colID)) {
+					g.sourceColumnIds = g.sourceColumnIds.filter((id) => id !== colID);
+					if (Array.isArray(g.allColumnIds)) {
+						g.allColumnIds = g.allColumnIds.filter((id) => id !== colID);
+					}
+				}
 			});
 
-			// Step 2c: Remove from table's column references
-			const tableIdx = core.tables.findIndex((t) => t.id === tableProcess.parent.id);
-			if (tableIdx >= 0) {
-				core.tables[tableIdx].columnRefs = core.tables[tableIdx].columnRefs.filter(
-					(cr) => cr !== colID
-				);
-			}
-
-			// Step 2d: Remove columns that reference this column (break dependency chain)
-			const dependentColumns = core.data.filter((col) => col.refId === colID);
-			dependentColumns.forEach((depCol) => {
-				depCol.refId = -1; // Break the reference
+			// Step 2d: Break refId dependency chain
+			core.data.filter((col) => col.refId === colID).forEach((depCol) => {
+				depCol.refId = -1;
 			});
 
-			// Step 2e: Remove from internal column reference system
+			// Step 2e+f: Remove from internal column system and core.data
 			removeColumn(colID);
-
-			// Step 2f: Remove from core data completely
 			core.data = core.data.filter((c) => c.id !== colID);
 		});
 
@@ -96,30 +82,22 @@
 			for (const colId of Object.values(subTP.args?.out ?? {})) {
 				if (colId != null && colId >= 0) {
 					removeColumnFromPlots(colId);
-					const tableIdx = core.tables.findIndex((t) => t.id === tableProcess.parent.id);
-					if (tableIdx >= 0) {
-						core.tables[tableIdx].columnRefs = core.tables[tableIdx].columnRefs.filter(
-							(cr) => cr !== colId
-						);
-					}
 					removeColumn(colId);
 					core.data = core.data.filter((c) => c.id !== colId);
 				}
 			}
 		}
 
-		// Step 3: Remove the table process itself from the parent table
-		const parentTable = getTableById(tableProcess.parent.id);
-		parentTable.processes = parentTable.processes.filter((tp) => tp.id !== tableProcess.id);
+		// Step 3: Remove the TP itself from core.tableProcesses.
+		core.tableProcesses = core.tableProcesses.filter((tp) => tp.id !== tableProcess.id);
 
-		// Step 4: Clear refTPId on any TP that chained from the deleted one
-		core.tables.forEach((table) => {
-			table.processes.forEach((tp) => {
-				if (tp.refTPId === tableProcess.id) {
-					tp.refTPId = null;
-				}
-			});
+		// Step 4: Clear refTPId on any TP that chained from this one
+		core.tableProcesses.forEach((tp) => {
+			if (tp.refTPId === tableProcess.id) tp.refTPId = null;
 		});
+
+		// Drop any per-node note attached to this TP's canvas node.
+		delete core.nodeNotes[`tableprocess_${tableProcess.id}`];
 
 		return {
 			success: true,
@@ -139,7 +117,7 @@
 		args = $state({});
 		refTPId = $state(null);
 
-		constructor({ ...dataIN }, parent, id = null) {
+		constructor({ ...dataIN }, _parent = null, id = null) {
 			if (id === null) {
 				this.id = id ?? _tableprocessidCounter;
 				_tableprocessidCounter++;
@@ -147,8 +125,6 @@
 				this.id = id;
 				_tableprocessidCounter = Math.max(id + 1, _tableprocessidCounter + 1);
 			}
-
-			this.parent = parent;
 
 			this.name = dataIN.name;
 			this.refTPId = dataIN.refTPId ?? null;
@@ -166,11 +142,7 @@
 			//If the out refs are not yet defined (i.e. creating new)
 			else if (dataIN.args) {
 				this.args = dataIN.args;
-				//MAKE THE OUTPUTS (defined in the defaults with 'OUT') AND ASSOCIATE THEM
-				// Use this.parent directly — getTableById fails when loading from JSON
-				// because the table isn't yet in core.tables at construction time.
-				const theTable = this.parent ?? getTableById(this.parent.id);
-				const processHash = crypto.randomUUID();
+				// Outputs go straight to core.data (free-standing TPs).
 
 				// Pre-seed dynamic per-Y output keys for multi-Y table processes
 				// (BinnedData, Cosinor, SmoothedData, RhythmicityAnalysis, etc.) so
@@ -194,13 +166,10 @@
 				}
 
 				for (let i = 0; i < Object.keys(this.args.out).length; i++) {
-					//Create a new column with the given name and assign it a tableProcessGUId
 					const tempCol = new Column({});
 					tempCol.name = Object.keys(this.args.out)[i] + '_' + this.id;
-					//now put that column ID in the out
 					this.args.out[Object.keys(this.args.out)[i]] = tempCol.id;
-					pushObj(tempCol); // add the column to core
-					theTable.columnRefs = [tempCol.id, ...theTable.columnRefs]; //add to table
+					pushObj(tempCol);
 				}
 
 				//--------------------------
@@ -238,14 +207,10 @@
 
 	// --- refTPId chaining ---
 
-	// Find the upstream TP that this one chains from
+	// Find the upstream TP that this one chains from.
 	const refTP = $derived.by(() => {
 		if (p?.refTPId == null) return null;
-		for (const table of core.tables) {
-			for (const tp of table.processes) {
-				if (tp.id === p.refTPId) return tp;
-			}
-		}
+		for (const tp of core.tableProcesses) if (tp.id === p.refTPId) return tp;
 		return null;
 	});
 
@@ -267,12 +232,13 @@
 		});
 	});
 
-	// Chainable TPs that appear BEFORE this TP in the same table
+	// Chainable TPs: any TP other than self that emits an x output. The user
+	// picks one from the dropdown to wire xIN/yIN from.
 	const chainablePrecedingTPs = $derived.by(() => {
-		if (!p?.parent) return [];
+		if (!p) return [];
 		const result = [];
-		for (const tp of p.parent.processes) {
-			if (tp.id === p.id) break;
+		for (const tp of core.tableProcesses) {
+			if (tp.id === p.id) continue;
 			const tpEntry = appConsts.tableProcessMap.get(tp.name);
 			if (tpEntry?.xOutKey) result.push(tp);
 		}

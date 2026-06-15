@@ -2,7 +2,7 @@
 	// @ts-nocheck
 
 	import Icon from '$lib/icons/Icon.svelte';
-	import AddPlot from '../iconActions/AddPlot.svelte';
+	import WorksheetAddPalette from './WorksheetAddPalette.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 
@@ -11,7 +11,7 @@
 	import Editable from '../inputs/Editable.svelte';
 
 	let addBtnRef;
-	let showAddPlot = $state(false);
+	let showAddPalette = $state(false);
 	let dropdownTop = $state(0);
 	let dropdownLeft = $state(0);
 	let draggedIndex = $state(null);
@@ -40,7 +40,7 @@
 
 	function openDropdown() {
 		recalculateDropdownPosition();
-		requestAnimationFrame(() => (showAddPlot = true));
+		requestAnimationFrame(() => (showAddPalette = true));
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
 
@@ -114,7 +114,7 @@
 	</div>
 </div>
 
-<AddPlot bind:showDropdown={showAddPlot} {dropdownTop} {dropdownLeft} />
+<WorksheetAddPalette bind:open={showAddPalette} top={dropdownTop} left={dropdownLeft} />
 
 <div class="display-list">
 	{#each core.plots.toReversed() as plot, i (plot.id)}

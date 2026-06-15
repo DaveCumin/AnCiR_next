@@ -5,10 +5,25 @@ import { core, replaceColumnRefs, swapColumnRefs } from './core.svelte.js';
 import { Plot } from './Plot.svelte';
 import { Column } from './Column.svelte';
 import { Process } from './Process.svelte';
-import { Table } from './Table.svelte';
 import { TableProcess } from './TableProcess.svelte';
 
 /**
+ * @typedef {Object} OpAddFreeTableProcess
+ * @property {'addFreeTableProcess'} kind
+ * @property {string} tpType
+ * @property {string} [tpId]
+ * @property {Object} [args]
+ *
+ * @typedef {Object} OpRemoveFreeTableProcess
+ * @property {'removeFreeTableProcess'} kind
+ * @property {string} tpId
+ *
+ * @typedef {Object} OpSetFreeTableProcessArg
+ * @property {'setFreeTableProcessArg'} kind
+ * @property {string} tpId
+ * @property {string} key
+ * @property {unknown} value
+ *
  * @typedef {Object} OpAddColumn
  * @property {'addColumn'} kind
  * @property {string} [id]              optional pre-assigned id for replay
@@ -61,34 +76,6 @@ import { TableProcess } from './TableProcess.svelte';
  * @property {number} [width]
  * @property {number} [height]
  *
- * @typedef {Object} OpAddTable
- * @property {'addTable'} kind
- * @property {Object} tableData
- *
- * @typedef {Object} OpRemoveTable
- * @property {'removeTable'} kind
- * @property {string} id
- *
- * @typedef {Object} OpAddTableProcess
- * @property {'addTableProcess'} kind
- * @property {string} tableId
- * @property {string} tpType
- * @property {string} [tpId]
- * @property {Object} [args]
- * @property {number} [index]
- *
- * @typedef {Object} OpRemoveTableProcess
- * @property {'removeTableProcess'} kind
- * @property {string} tableId
- * @property {string} tpId
- *
- * @typedef {Object} OpSetTableProcessArg
- * @property {'setTableProcessArg'} kind
- * @property {string} tableId
- * @property {string} tpId
- * @property {string} key
- * @property {unknown} value
- *
  * @typedef {Object} OpSetStoredValue
  * @property {'setStoredValue'} kind
  * @property {string} name
@@ -119,8 +106,8 @@ import { TableProcess } from './TableProcess.svelte';
  *
  * @typedef {OpAddColumn | OpRemoveColumn | OpAddProcess | OpRemoveProcess |
  *   OpSetProcessArg | OpAddPlot | OpRemovePlot | OpSetPlotProperty | OpSetPlotPosition |
- *   OpAddTable | OpRemoveTable | OpAddTableProcess | OpRemoveTableProcess |
- *   OpSetTableProcessArg | OpSetStoredValue | OpRemoveStoredValue |
+ *   OpAddFreeTableProcess | OpRemoveFreeTableProcess | OpSetFreeTableProcessArg |
+ *   OpSetStoredValue | OpRemoveStoredValue |
  *   OpRenameStoredValue | OpReplaceColumnRefs | OpSwapColumnRefs | OpBatch} GraphOperation
  */
 
@@ -213,16 +200,12 @@ function applyForward(op) {
             return op_removeProcess(op);
         case 'setProcessArg':
             return op_setProcessArg(op);
-        case 'addTable':
-            return op_addTable(op);
-        case 'removeTable':
-            return op_removeTable(op);
-        case 'addTableProcess':
-            return op_addTableProcess(op);
-        case 'removeTableProcess':
-            return op_removeTableProcess(op);
-        case 'setTableProcessArg':
-            return op_setTableProcessArg(op);
+        case 'addFreeTableProcess':
+            return op_addFreeTableProcess(op);
+        case 'removeFreeTableProcess':
+            return op_removeFreeTableProcess(op);
+        case 'setFreeTableProcessArg':
+            return op_setFreeTableProcessArg(op);
         case 'setStoredValue':
             return op_setStoredValue(op);
         case 'removeStoredValue':
@@ -376,90 +359,51 @@ function op_setProcessArg(op) {
     });
 }
 
-function snapshotTable(table) {
-    return JSON.parse(JSON.stringify(table, (k, v) => (typeof v === 'function' ? undefined : v)));
-}
-
-function op_addTable(op) {
-    const table = Table.fromJSON(op.tableData);
-    core.tables.push(table);
-    return pair(
-        { kind: 'addTable', tableData: snapshotTable(table) },
-        { kind: 'removeTable', id: table.id }
-    );
-}
-
-function op_removeTable(op) {
-    const idx = core.tables.findIndex((t) => t.id === op.id);
-    if (idx < 0) return null;
-    const before = snapshotTable(core.tables[idx]);
-    core.tables.splice(idx, 1);
-    return pair(op, { kind: 'addTable', tableData: before });
-}
-
-function op_addTableProcess(op) {
-    const table = core.tables.find((t) => t.id === op.tableId);
-    if (!table) return null;
-    // TableProcess constructor expects { name, args, ... } in dataIN. It RUNS func()
-    // during construction (Phase 1 made this an async fire-and-forget via doProcess).
+function op_addFreeTableProcess(op) {
     const tp = new TableProcess(
         { name: op.tpType, args: op.args ?? {} },
-        table,
+        null,
         op.tpId ?? null
     );
-    if (op.index != null && op.index >= 0 && op.index < table.processes.length) {
-        table.processes.splice(op.index, 0, tp);
-    } else {
-        table.processes.push(tp);
-    }
+    core.tableProcesses.push(tp);
     return pair(
         {
-            kind: 'addTableProcess',
-            tableId: op.tableId,
+            kind: 'addFreeTableProcess',
             tpType: op.tpType,
             tpId: tp.id,
-            args: JSON.parse(JSON.stringify(op.args ?? {})),
-            ...(op.index != null && { index: op.index })
+            args: JSON.parse(JSON.stringify(op.args ?? {}))
         },
-        { kind: 'removeTableProcess', tableId: op.tableId, tpId: tp.id }
+        { kind: 'removeFreeTableProcess', tpId: tp.id }
     );
 }
 
-function op_removeTableProcess(op) {
-    const table = core.tables.find((t) => t.id === op.tableId);
-    if (!table) return null;
-    const idx = table.processes.findIndex((tp) => tp.id === op.tpId);
+function op_removeFreeTableProcess(op) {
+    const idx = core.tableProcesses.findIndex((tp) => tp.id === op.tpId);
     if (idx < 0) return null;
-    const before = table.processes[idx];
+    const before = core.tableProcesses[idx];
     const snap = {
         tpType: before.name,
         tpId: before.id,
-        args: JSON.parse(JSON.stringify(before.args ?? {})),
-        index: idx
+        args: JSON.parse(JSON.stringify(before.args ?? {}))
     };
-    table.processes.splice(idx, 1);
+    core.tableProcesses.splice(idx, 1);
     return pair(op, {
-        kind: 'addTableProcess',
-        tableId: op.tableId,
+        kind: 'addFreeTableProcess',
         tpType: snap.tpType,
         tpId: snap.tpId,
-        args: snap.args,
-        index: snap.index
+        args: snap.args
     });
 }
 
-function op_setTableProcessArg(op) {
-    const table = core.tables.find((t) => t.id === op.tableId);
-    if (!table) return null;
-    const tp = table.processes.find((x) => x.id === op.tpId);
+function op_setFreeTableProcessArg(op) {
+    const tp = core.tableProcesses.find((x) => x.id === op.tpId);
     if (!tp) return null;
     if (!tp.args) tp.args = {};
     const before = tp.args[op.key];
     if (before === op.value) return null;
     tp.args[op.key] = op.value;
     return pair(op, {
-        kind: 'setTableProcessArg',
-        tableId: op.tableId,
+        kind: 'setFreeTableProcessArg',
         tpId: op.tpId,
         key: op.key,
         value: before

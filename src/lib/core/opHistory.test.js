@@ -1,6 +1,6 @@
 // src/lib/core/opHistory.test.js
 // @ts-nocheck
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import { history } from './opHistory.svelte.js';
 import { mutationService as M } from './mutationService.js';
 import { core, appConsts } from './core.svelte.js';
@@ -63,5 +63,81 @@ describe('opHistory', () => {
             M.addPlot({ type: 'scatterplot', x: 0, y: 0, width: 1, height: 1 });
         }
         expect(history.undoCount).toBe(50);
+    });
+
+    describe('UI snapshot handlers', () => {
+        let uiState;
+        let unregister;
+
+        // NOTE: the real WorkflowEditor handlers snapshot selection only
+        // (focused + multi-selected + edge), NOT node expansion — expansion is a
+        // sticky per-node gesture that must survive undo/redo untouched. These
+        // tests mirror that handler shape and verify the generic snapshot plumbing.
+        beforeEach(() => {
+            uiState = {
+                focusedNodeId: null,
+                multiSelectedNodeIds: [],
+                selectedEdgeKey: null
+            };
+            unregister = history.registerUiHandlers(
+                () => ({
+                    ...uiState,
+                    multiSelectedNodeIds: [...uiState.multiSelectedNodeIds]
+                }),
+                (snap) => {
+                    uiState = {
+                        focusedNodeId: snap.focusedNodeId ?? null,
+                        multiSelectedNodeIds: [...(snap.multiSelectedNodeIds ?? [])],
+                        selectedEdgeKey: snap.selectedEdgeKey ?? null
+                    };
+                }
+            );
+        });
+
+        afterEach(() => {
+            unregister?.();
+        });
+
+        it('restores focused + selection together on undo', async () => {
+            const col = M.addColumn({ name: 'X', type: 'number' });
+            const proc = M.addProcess(col.id, 'Normalize', { normalizationType: 'z-score' });
+
+            // Simulate user selecting the process node, then editing.
+            uiState.focusedNodeId = `process_${proc.id}`;
+            uiState.multiSelectedNodeIds = [`process_${proc.id}`];
+
+            M.setProcessArg(col.id, proc.id, 'normalizationType', 'min-max');
+            // Let the microtask scheduled by #record run so uiAfter is captured.
+            await Promise.resolve();
+
+            // Pretend the user clicked away before pressing undo.
+            uiState.focusedNodeId = null;
+            uiState.multiSelectedNodeIds = [];
+
+            history.undo();
+
+            expect(proc.args.normalizationType).toBe('z-score');
+            expect(uiState.focusedNodeId).toBe(`process_${proc.id}`);
+            expect(uiState.multiSelectedNodeIds).toEqual([`process_${proc.id}`]);
+        });
+
+        it('restores post-op state on redo', async () => {
+            const col = M.addColumn({ name: 'X', type: 'number' });
+            const proc = M.addProcess(col.id, 'Normalize', { normalizationType: 'z-score' });
+
+            // After-op state: node selected (e.g. user selected then edited).
+            uiState.focusedNodeId = `process_${proc.id}`;
+            uiState.multiSelectedNodeIds = [`process_${proc.id}`];
+
+            M.setProcessArg(col.id, proc.id, 'normalizationType', 'min-max');
+            await Promise.resolve();
+
+            history.undo();
+            history.redo();
+
+            expect(proc.args.normalizationType).toBe('min-max');
+            expect(uiState.focusedNodeId).toBe(`process_${proc.id}`);
+            expect(uiState.multiSelectedNodeIds).toEqual([`process_${proc.id}`]);
+        });
     });
 });

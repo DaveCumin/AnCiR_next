@@ -87,32 +87,33 @@
 			col.refId = -1;
 		});
 
-		// Step 3: Remove from all table processes
-		core.tables.forEach((table) => {
-			table.processes.forEach((process) => {
-				const args = process.args;
+		// Step 3: Scrub refs from every table process.
+		function scrubTP(process) {
+			const args = process.args;
+			if (args.xIN === columnId) args.xIN = -1;
+			if (args.yIN === columnId) args.yIN = -1;
+			if (Array.isArray(args.xsIN)) {
+				args.xsIN = args.xsIN.filter((id) => id !== columnId);
+			}
+			if (Array.isArray(args.yIN)) {
+				args.yIN = args.yIN.filter((id) => id !== columnId);
+			}
+			if (args.out) {
+				Object.keys(args.out).forEach((outKey) => {
+					if (args.out[outKey] === columnId) args.out[outKey] = -1;
+				});
+			}
+		}
+		core.tableProcesses.forEach(scrubTP);
 
-				// Handle single column inputs (xIN, yIN, etc.)
-				if (args.xIN === columnId) args.xIN = -1;
-				if (args.yIN === columnId) args.yIN = -1;
-
-				// Handle array of column inputs (xsIN, etc.)
-				if (Array.isArray(args.xsIN)) {
-					args.xsIN = args.xsIN.filter((id) => id !== columnId);
+		// Step 3b: Drop from any group's source list
+		core.groups.forEach((g) => {
+			if ((g.sourceColumnIds ?? []).includes(columnId)) {
+				g.sourceColumnIds = g.sourceColumnIds.filter((id) => id !== columnId);
+				if (Array.isArray(g.allColumnIds)) {
+					g.allColumnIds = g.allColumnIds.filter((id) => id !== columnId);
 				}
-
-				// Handle output columns - if this is an output column, mark it invalid
-				if (args.out) {
-					Object.keys(args.out).forEach((outKey) => {
-						if (args.out[outKey] === columnId) {
-							args.out[outKey] = -1;
-						}
-					});
-				}
-			});
-
-			// Remove from table's column references
-			table.columnRefs = table.columnRefs.filter((colId) => colId !== columnId);
+			}
 		});
 
 		// Step 4: Remove from all plots/tables

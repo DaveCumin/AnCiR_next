@@ -27,9 +27,7 @@
 		)
 	);
 	function confirmAddColumn() {
-		const table = mutationService.addTable({});
-		table.name = 'Blank_' + table.id;
-		mutationService.addTableProcess(table.id, 'BlankColumn', p.args);
+		mutationService.addFreeTableProcess('BlankColumn', p.args);
 		showModal = false;
 	}
 </script>

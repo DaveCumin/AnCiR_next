@@ -5,8 +5,14 @@
 	import * as XLSX from '$lib/utils/xlsxLite';
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
 
-	import { appConsts, core, pushObj, appState } from '$lib/core/core.svelte';
-	import { Table } from '$lib/core/Table.svelte';
+	import {
+		appConsts,
+		core,
+		pushObj,
+		appState,
+		createGroup,
+		absorbColumnIntoGroup
+	} from '$lib/core/core.svelte';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import {
 		guessDateofArray,
@@ -251,45 +257,25 @@
 	let columnMappings = $state({}); // { importColName: existingColId | null }
 
 	/**
-	 * Build the list of existing columns across all tables for the replace dropdown.
-	 * Returns [{ label: "TableName : ColName", id: number, name: string }]
+	 * Build the list of existing columns for the replace dropdown.
+	 * Labels prefer the owning Group's name when the column was absorbed; otherwise
+	 * bare column name. Returns [{ label, id, name }].
 	 */
 	function getExistingColumnOptions() {
 		const out = [];
-		const seenIds = new Set();
-		for (let t = 0; t < core.tables.length; t++) {
-			// Table process outputs
-			for (let p = 0; p < core.tables[t].processes.length; p++) {
-				const args = core.tables[t].processes[p].args;
-				if (args.out) {
-					Object.keys(args.out).forEach((key) => {
-						const ref = args.out[key];
-						if (ref !== -1 && !seenIds.has(ref)) {
-							const col = getColumnById(ref);
-							if (col) {
-								seenIds.add(col.id);
-								out.push({
-									label: core.tables[t].name + ' : ' + col.name,
-									id: col.id,
-									name: col.name
-								});
-							}
-						}
-					});
-				}
+		const colToGroupName = new Map();
+		for (const g of core.groups ?? []) {
+			for (const cid of g.sourceColumnIds ?? []) {
+				colToGroupName.set(cid, g.name);
 			}
-			// Direct columns
-			for (let c = 0; c < core.tables[t].columns.length; c++) {
-				const col = core.tables[t].columns[c];
-				if (!seenIds.has(col.id)) {
-					seenIds.add(col.id);
-					out.push({
-						label: core.tables[t].name + ' : ' + col.name,
-						id: col.id,
-						name: col.name
-					});
-				}
-			}
+		}
+		for (const col of core.data ?? []) {
+			const groupName = colToGroupName.get(col.id);
+			out.push({
+				label: groupName ? `${groupName} : ${col.name}` : col.name,
+				id: col.id,
+				name: col.name
+			});
 		}
 		return out;
 	}
@@ -640,8 +626,7 @@
 		const keys = Object.keys(dataObj);
 		if (keys.length === 0) return;
 
-		const table = new Table();
-		table.setName(tableName);
+		const groupId = createGroup({ name: tableName });
 
 		for (const key of keys) {
 			const col = new Column({});
@@ -672,10 +657,9 @@
 
 			core.rawData.set(col.id, values);
 			col.data = col.id;
-			table.addColumn(col);
+			pushObj(col);
+			absorbColumnIntoGroup(col.id, groupId);
 		}
-
-		pushObj(table);
 	}
 
 	async function importEnspireMultiplatePayload(payload) {
@@ -1689,11 +1673,11 @@
 			existingCol.rawDataVersion++;
 		}
 
-		// Handle new columns: create a new table if there are any
+		// Handle new columns: create a Group node + free-standing columns.
+		let newGroupId = null;
 		if (newEntries.length > 0) {
-			const newDataEntry = new Table();
-			const baseName = fname ? fname.replace(/\.[^.]+$/, '') : `data_${newDataEntry.id}`;
-			newDataEntry.setName(baseName);
+			const baseName = fname ? fname.replace(/\.[^.]+$/, '') : 'imported';
+			newGroupId = createGroup({ name: baseName });
 
 			for (let i = 0; i < newEntries.length; i++) {
 				const f = newEntries[i];
@@ -1737,13 +1721,12 @@
 					df.data = df.id;
 				}
 
-				newDataEntry.addColumn(df);
+				pushObj(df);
+				if (newGroupId != null) absorbColumnIntoGroup(df.id, newGroupId);
 			}
 
 			loadProgress = { stage: 'Loading data', detail: 'Finalising…' };
 			await tick();
-
-			pushObj(newDataEntry);
 		} else {
 			loadProgress = { stage: 'Loading data', detail: 'Finalising…' };
 			await tick();
@@ -2212,7 +2195,7 @@
 								{/if}
 							</div>
 
-							{#if core.tables.length > 0}
+							{#if (core.data ?? []).length > 0}
 								<div class="section-row">
 									<div class="control-input-checkbox">
 										<input

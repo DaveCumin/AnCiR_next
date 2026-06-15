@@ -47,47 +47,69 @@
 			}
 		}
 
-		for (const table of core.tables) {
-			const groupChildren = [];
-			const processOutputIds = new Set();
+		// Helper: build a sub-group for a TP's outputs (when there are >=2 outputs).
+		function tpToGroup(proc) {
+			const outEntries = Object.entries(proc.args?.out ?? {})
+				.filter(([, colId]) => colId !== -1 && !excludeColIds.includes(colId))
+				.filter(([, colId]) => !seenIds.has(colId));
+			if (outEntries.length <= 1) return null;
+			const procChildren = [];
+			for (const [, colId] of outEntries) {
+				const col = getColumnById(colId);
+				if (!col) continue;
+				seenIds.add(colId);
+				procChildren.push({ key: `c:${colId}`, label: col.name, value: colId });
+			}
+			if (procChildren.length === 0) return null;
+			return {
+				key: `tp:${proc.id}`,
+				label: proc.displayName || proc.name,
+				options: procChildren,
+				proc
+			};
+		}
 
-			for (const proc of table.processes) {
-				const outEntries = Object.entries(proc.args.out ?? {})
-					.filter(([, colId]) => colId !== -1 && !excludeColIds.includes(colId))
-					.filter(([, colId]) => !seenIds.has(colId));
+		// Canvas Groups (the replacement for tables).
+		for (const group of core.groups) {
+			const children = [];
+			for (const colId of group.sourceColumnIds ?? []) {
+				if (excludeColIds.includes(colId)) continue;
+				if (seenIds.has(colId)) continue;
+				const col = getColumnById(colId);
+				if (!col) continue;
+				seenIds.add(colId);
+				children.push({ key: `c:${colId}`, label: col.name, value: colId });
+			}
+			if (children.length > 0) {
+				tree.push({ key: `g:${group.id}`, label: group.name, options: children });
+			}
+		}
 
-				if (outEntries.length > 1) {
-					const procChildren = [];
-					for (const [, colId] of outEntries) {
-						const col = getColumnById(colId);
-						if (!col) continue;
-						seenIds.add(colId);
-						processOutputIds.add(colId);
-						procChildren.push({ key: `c:${colId}`, label: col.name, value: colId });
-					}
-					if (procChildren.length > 0) {
-						groupChildren.push({
-							key: `tp:${proc.id}`,
-							label: proc.displayName || proc.name,
-							options: procChildren,
-							proc
-						});
-					}
+		// Free TPs (each becomes its own group if it has >=2 outputs; single-output
+		// TPs contribute their lone output column directly to the orphan section below).
+		const freeTPOutputColIds = new Set();
+		for (const proc of core.tableProcesses) {
+			const g = tpToGroup(proc);
+			if (g) {
+				tree.push(g);
+				for (const child of g.options) freeTPOutputColIds.add(child.value);
+			} else {
+				for (const colId of Object.values(proc.args?.out ?? {})) {
+					if (typeof colId === 'number' && colId >= 0) freeTPOutputColIds.add(colId);
 				}
 			}
+		}
 
-			for (const col of table.columns) {
-				if (!col) continue;
-				if (excludeColIds.includes(col.id)) continue;
-				if (processOutputIds.has(col.id)) continue;
-				if (seenIds.has(col.id)) continue;
-				seenIds.add(col.id);
-				groupChildren.push({ key: `c:${col.id}`, label: col.name, value: col.id });
-			}
-
-			if (groupChildren.length > 0) {
-				tree.push({ key: `t:${table.id}`, label: table.name, options: groupChildren });
-			}
+		// Orphan columns: in core.data, not absorbed by any group, not already seen.
+		const orphanCols = [];
+		for (const col of core.data ?? []) {
+			if (excludeColIds.includes(col.id)) continue;
+			if (seenIds.has(col.id)) continue;
+			seenIds.add(col.id);
+			orphanCols.push({ key: `c:${col.id}`, label: col.name, value: col.id });
+		}
+		if (orphanCols.length > 0) {
+			tree.push({ key: 'orphan', label: 'Columns', options: orphanCols });
 		}
 
 		return tree;
