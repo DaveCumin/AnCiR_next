@@ -478,6 +478,11 @@
 	// output, stopAll() splices the node onto that edge (flowtest-style).
 	let dropTargetEdgeKey = $state(null);
 
+	// Set during drag whenever the dragged node's bbox overlaps a group's bbox.
+	// Drives the .drop-target highlight on GroupNode so the user can see the
+	// drop will be captured. Cleared in stopAll.
+	let dragHoverGroupId = $state(null);
+
 	// --- Plot resize state ---
 	// { nodeId, plotObj, startMouse:{x,y}, startW, startH, startPlotW, startPlotH }
 	let resizeInfo = $state(null);
@@ -759,6 +764,33 @@
 				} else {
 					dropTargetEdgeKey = null;
 				}
+
+				// Live group-hover detection so the user gets visual feedback that
+				// the drop will be captured by a group. Permissive bbox overlap
+				// (NOT a centre-point test) since data-node bodies vary in height
+				// and a strict centre test makes "drop onto a group" feel finicky.
+				const draggedNodeForGroup = allNodes.find((n) => n.id === dragInfo.nodeId);
+				if (draggedNodeForGroup && draggedNodeForGroup.type !== 'group') {
+					let hover = null;
+					for (const g of core.groups) {
+						const gpos = stablePositions[g.id] ?? { x: g.x, y: g.y };
+						const ax1 = nx;
+						const ay1 = ny;
+						const ax2 = nx + NODE_WIDTH;
+						const ay2 = ny + NODE_HEIGHT;
+						const bx1 = gpos.x;
+						const by1 = gpos.y;
+						const bx2 = gpos.x + g.width;
+						const by2 = gpos.y + g.height;
+						if (ax1 < bx2 && ax2 > bx1 && ay1 < by2 && ay2 > by1) {
+							hover = g.id;
+							break;
+						}
+					}
+					dragHoverGroupId = hover;
+				} else {
+					dragHoverGroupId = null;
+				}
 			}
 			return;
 		}
@@ -968,17 +1000,20 @@
 		if (!draggedNode || draggedNode.type === 'group') return;
 		const pos = stablePositions[nodeId] ?? defaultPositions.positions[nodeId];
 		if (!pos) return;
-		const cx = pos.x + NODE_WIDTH / 2;
-		const cy = pos.y + NODE_HEIGHT / 2;
+		// Permissive bbox overlap (same test the live hover uses) so the drop
+		// behaviour matches what the user saw during the drag.
+		const ax1 = pos.x;
+		const ay1 = pos.y;
+		const ax2 = pos.x + NODE_WIDTH;
+		const ay2 = pos.y + NODE_HEIGHT;
 		let landedGroup = null;
 		for (const g of core.groups) {
 			const gpos = stablePositions[g.id] ?? { x: g.x, y: g.y };
-			if (
-				cx >= gpos.x &&
-				cx <= gpos.x + g.width &&
-				cy >= gpos.y &&
-				cy <= gpos.y + g.height
-			) {
+			const bx1 = gpos.x;
+			const by1 = gpos.y;
+			const bx2 = gpos.x + g.width;
+			const by2 = gpos.y + g.height;
+			if (ax1 < bx2 && ax2 > bx1 && ay1 < by2 && ay2 > by1) {
 				landedGroup = g;
 				break;
 			}
@@ -1007,6 +1042,7 @@
 			reconcileGroupMembership(dragInfo.nodeId);
 		}
 		dropTargetEdgeKey = null;
+		dragHoverGroupId = null;
 		dragInfo = null;
 		resizeInfo = null;
 		isPanning = false;
@@ -1269,6 +1305,7 @@
 							<GroupNode
 								{node}
 								selected={focusedNodeId === node.id || selectedPlotNodeId === node.id}
+								isDropTarget={dragHoverGroupId === node.id}
 							/>
 						{:else}
 							<WorkflowNode

@@ -8,7 +8,7 @@
 	import NodeNoteButton from './NodeNoteButton.svelte';
 	import { removeGroup } from '$lib/core/core.svelte.js';
 
-	let { node, selected = false } = $props();
+	let { node, selected = false, isDropTarget = false } = $props();
 
 	let group = $derived(node.groupObj);
 
@@ -54,6 +54,7 @@
 <div
 	class="group-node"
 	class:selected
+	class:drop-target={isDropTarget}
 	style="width:{group?.width ?? 280}px; height:{group?.height ?? 220}px;"
 >
 	<div class="group-header" onpointerdown={(e) => e.stopPropagation()} role="presentation">
@@ -97,6 +98,12 @@
 	.group-node.selected {
 		border-color: var(--color-accent, #4d9fe3);
 		background: rgba(77, 159, 227, 0.08);
+	}
+	.group-node.drop-target {
+		border-color: #28a745;
+		border-style: solid;
+		background: rgba(40, 167, 69, 0.1);
+		box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.25);
 	}
 	.group-header {
 		display: flex;

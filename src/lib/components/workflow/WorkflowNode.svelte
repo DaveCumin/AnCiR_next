@@ -59,9 +59,10 @@
 >
 	<div class="node-header">
 		{#if node.type === 'data' && node.refId != null}
+			{@const liveCol = getColumnById(node.refId)}
 			<div class="node-label" onpointerdown={(e) => e.stopPropagation()}>
 				<Editable
-					value={node.label}
+					value={liveCol?.name ?? node.label}
 					placeholder="column name"
 					ariaLabel="Rename column"
 					title="Double-click to rename"

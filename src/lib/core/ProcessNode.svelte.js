@@ -105,7 +105,10 @@ function collectTableProcessInputRefs(tpArgs, nodeSpec) {
 function makeProcessNodeHash(core) {
 	let out = '';
 	for (const col of core.data ?? []) {
-		out += `c:${col.id}:${col.refId ?? ''}:${col.tableProcessGUId ?? ''}:${col.getDataHash ?? ''}|`;
+		// `col.name` is included so renaming a data node invalidates the graph
+		// cache and the node re-renders with the new label. customName mutates
+		// col.name via Column's $derived; name flows through here.
+		out += `c:${col.id}:${col.name ?? ''}:${col.refId ?? ''}:${col.tableProcessGUId ?? ''}:${col.getDataHash ?? ''}|`;
 		for (const p of col.processes ?? []) {
 			out += `p:${p.id}:${p.name}:${JSON.stringify(p.args ?? {})}|`;
 		}
