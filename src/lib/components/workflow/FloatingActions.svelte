@@ -11,7 +11,11 @@
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { tick } from 'svelte';
 
-	let { onResetView = null } = $props();
+	let {
+		onResetView = null,
+		pathFocus = false,
+		onTogglePathFocus = null
+	} = $props();
 
 	let fileInput;
 
@@ -89,6 +93,22 @@
 				aria-label="Reset viewport"
 			>
 				<Icon name="center" width={22} height={22} />
+			</button>
+		{/if}
+		{#if onTogglePathFocus}
+			<button
+				type="button"
+				class="fa-btn"
+				onclick={() => onTogglePathFocus()}
+				title={pathFocus ? 'Show all paths' : 'Show connected paths'}
+				aria-label={pathFocus ? 'Show all paths' : 'Show connected paths'}
+				aria-pressed={pathFocus}
+			>
+				<Icon
+					name={pathFocus ? 'showconnectedpaths' : 'showallpaths'}
+					width={22}
+					height={22}
+				/>
 			</button>
 		{/if}
 	</div>

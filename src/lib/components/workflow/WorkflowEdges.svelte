@@ -11,6 +11,7 @@
 		highlightedIds = null,
 		provisionalEdge = null,
 		selectedEdgeKey = null,
+		dropTargetEdgeKey = null,
 		onEdgeClick = null
 	} = $props();
 
@@ -41,16 +42,23 @@
 			{@const d = bezier(edge.from.x, edge.from.y, edge.to.x, edge.to.y)}
 			{@const k = edgeKey(edge)}
 			{@const isSelected = selectedEdgeKey === k}
+			{@const isSpliceTarget = dropTargetEdgeKey === k}
 			<g style="opacity:{edgeOpacity(edge)};">
 				<path
 					class="edge-hit"
+					data-edge-key={k}
 					{d}
 					onclick={(e) => {
 						e.stopPropagation();
 						onEdgeClick?.(edge);
 					}}
 				/>
-				<path class="edge-line" class:selected={isSelected} {d} />
+				<path
+					class="edge-line"
+					class:selected={isSelected}
+					class:splice-target={isSpliceTarget}
+					{d}
+				/>
 				<circle
 					class="edge-flow-dot"
 					r="4"
@@ -96,6 +104,13 @@
 		stroke: var(--color-accent, #4d9fe3);
 		stroke-width: 3;
 		filter: drop-shadow(0 0 4px rgba(77, 159, 227, 0.5));
+	}
+
+	.edge-line.splice-target {
+		stroke: var(--color-accent, #4d9fe3);
+		stroke-width: 3.5;
+		stroke-dasharray: 6 4;
+		filter: drop-shadow(0 0 6px rgba(77, 159, 227, 0.8));
 	}
 
 	.edge-flow-dot {

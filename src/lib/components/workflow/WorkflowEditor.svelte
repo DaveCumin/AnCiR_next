@@ -13,7 +13,6 @@
 	import WorkflowEdges from './WorkflowEdges.svelte';
 	import EmbeddedPlot from './EmbeddedPlot.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import AddProcess from '$lib/components/iconActions/AddProcess.svelte';
 	import FloatingActions from './FloatingActions.svelte';
 	import NodePalette from './NodePalette.svelte';
 
@@ -51,10 +50,6 @@
 	const plotPreviewSizes = $state({});
 
 	// --- Insert modals ---
-	let showAddProcessDropdown = $state(false);
-	let addProcessColumn = $state(null);
-	let addProcessDropX = $state(0);
-	let addProcessDropY = $state(0);
 
 	const processGraph = $derived.by(() => getProcessNodeGraph());
 
@@ -399,7 +394,10 @@
 	let dragInfo = $state(null);
 
 	// --- Column drag-to-replace drop target ---
-	let dropTargetNodeId = $state(null);
+	// Edge-key of the wire the user is currently dragging a node toward.
+	// When non-null on drop AND the dragged node has exactly one input and one
+	// output, stopAll() splices the node onto that edge (flowtest-style).
+	let dropTargetEdgeKey = $state(null);
 
 	// --- Plot resize state ---
 	// { nodeId, plotObj, startMouse:{x,y}, startW, startH, startPlotW, startPlotH }
@@ -412,6 +410,27 @@
 
 	// --- Focus / connected-node highlight ---
 	let focusedNodeId = $state(null);
+
+	// Path-focus dim mode (flowtest-style). When true AND a node is selected,
+	// non-connected nodes dim out. Toggled via the FloatingActions button.
+	// Persisted to localStorage so the user's preference sticks across reloads.
+	const PATH_FOCUS_KEY = 'ancir.canvas.pathFocus';
+	let pathFocusEnabled = $state(
+		(() => {
+			try {
+				return localStorage?.getItem(PATH_FOCUS_KEY) === 'true';
+			} catch {
+				return false;
+			}
+		})()
+	);
+	$effect(() => {
+		try {
+			localStorage?.setItem(PATH_FOCUS_KEY, String(pathFocusEnabled));
+		} catch {
+			/* private mode / quota — ignore */
+		}
+	});
 
 	// --- Click-selection (drives Delete/Backspace) ---
 	// Either a node id OR an edge key (see edgeKeyFor below). At most one is set.
@@ -427,8 +446,10 @@
 		expandedNodeId = null;
 	}
 
-	// BFS both directions in the edge graph to find the full connected subgraph
+	// BFS both directions in the edge graph to find the full connected subgraph.
+	// Only computed when the user has enabled path-focus mode (flowtest behaviour).
 	const connectedNodeIds = $derived.by(() => {
+		if (!pathFocusEnabled) return null;
 		if (!focusedNodeId) return null;
 		const connected = new Set([focusedNodeId]);
 		const queue = [focusedNodeId];
@@ -513,7 +534,6 @@
 		// Skip if the click is inside panels or action buttons that handle their own events
 		if (e.target.closest('.process-editor-panel')) return;
 		if (e.target.closest('.plot-resize-handle')) return;
-		if (e.target.closest('.node-add-btn')) return;
 
 		const { x: canvasX, y: canvasY } = toCanvasCoords(e.clientX, e.clientY);
 		const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id];
@@ -543,15 +563,6 @@
 			startPlotW: node.plotObj.width,
 			startPlotH: node.plotObj.height
 		};
-	}
-
-	function openAddProcess(e, col) {
-		e.stopPropagation();
-		addProcessColumn = col;
-		const rect = e.currentTarget.getBoundingClientRect();
-		addProcessDropX = rect.right + 4;
-		addProcessDropY = rect.top;
-		showAddProcessDropdown = true;
 	}
 
 	function handleMouseMove(e) {
@@ -593,24 +604,36 @@
 					stablePositions[dragInfo.nodeId] = { x: nx, y: ny };
 				}
 
-				// Drop-target detection: compare dragged node's bbox against each data node's bbox.
-				// Both positions are in canvas space, so no viewport-offset error.
+				// Splice-on-edge detection: only relevant if the dragged node has
+				// exactly one input and one output (any other shape doesn't fit
+				// cleanly into a 1:1 wire). Uses elementFromPoint to find an
+				// .edge-hit path under the cursor.
 				const draggedNode = allNodes.find((n) => n.id === dragInfo.nodeId);
-				if (draggedNode?.type === 'data') {
-					const draggedBox = { x: nx, y: ny };
-					let found = null;
-					for (const node of allNodes) {
-						if (node.type !== 'data' || node.id === dragInfo.nodeId) continue;
-						const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id];
-						if (!pos) continue;
-						if (boxesOverlap(draggedBox, pos)) {
-							found = node.id;
-							break;
+				if (
+					draggedNode &&
+					(draggedNode.ports?.inputs?.length ?? 0) === 1 &&
+					(draggedNode.ports?.outputs?.length ?? 0) === 1
+				) {
+					const el = document.elementFromPoint(e.clientX, e.clientY);
+					const edgeEl = el?.closest?.('.edge-hit');
+					const key = edgeEl?.getAttribute?.('data-edge-key') ?? null;
+					// Don't splice a node onto an edge it's already part of.
+					if (key) {
+						const candidate = edgeTopology.find((edge) => edgeKeyFor(edge) === key);
+						if (
+							candidate &&
+							candidate.fromId !== draggedNode.id &&
+							candidate.toId !== draggedNode.id
+						) {
+							dropTargetEdgeKey = key;
+						} else {
+							dropTargetEdgeKey = null;
 						}
+					} else {
+						dropTargetEdgeKey = null;
 					}
-					dropTargetNodeId = found;
 				} else {
-					dropTargetNodeId = null;
+					dropTargetEdgeKey = null;
 				}
 			}
 			return;
@@ -812,23 +835,39 @@
 	}
 
 	function stopAll() {
-		// Perform column-replace drop if applicable.
-		// dropTargetNodeId is only non-null when cursor is over a *different* data node,
-		// so no guard against accidental same-node drops is needed.
-		if (dragInfo?.moved && dropTargetNodeId) {
-			const sourceNode = allNodes.find((n) => n.id === dragInfo.nodeId);
-			const targetNode = allNodes.find((n) => n.id === dropTargetNodeId);
-			if (sourceNode?.type === 'data' && targetNode?.type === 'data') {
-				mutationService.replaceColumnRefs(sourceNode.refId, targetNode.refId);
-				// Snap the dragged node back to its default layout position
-				const dp = defaultPositions.positions[dragInfo.nodeId];
-				if (dp) stablePositions[dragInfo.nodeId] = { ...dp };
-			}
+		// Splice-on-edge: if the user dropped a 1-in/1-out node onto an edge,
+		// move the underlying entity so the data chain flows through it.
+		if (dragInfo?.moved && dropTargetEdgeKey) {
+			const draggedNode = allNodes.find((n) => n.id === dragInfo.nodeId);
+			const targetEdge = edgeTopology.find((edge) => edgeKeyFor(edge) === dropTargetEdgeKey);
+			if (draggedNode && targetEdge) spliceNodeOntoEdge(draggedNode, targetEdge);
 		}
-		dropTargetNodeId = null;
+		dropTargetEdgeKey = null;
 		dragInfo = null;
 		resizeInfo = null;
 		isPanning = false;
+	}
+
+	/**
+	 * Splice a 1-in/1-out node into a wire. For AnCiR's column-process model the
+	 * actual operation is "move the process to the source column's chain", since
+	 * processes are bound to their parent column and the graph connections are
+	 * derived from column ordering rather than stored as discrete edges.
+	 */
+	function spliceNodeOntoEdge(draggedNode, edge) {
+		if (draggedNode.type !== 'process' || !draggedNode.processObj) return;
+		const sourceColId = resolveOutputColumnId(edge.fromId, edge.fromPort);
+		if (sourceColId == null || sourceColId < 0) return;
+		const targetCol = core.data.find((c) => c.id === sourceColId);
+		if (!targetCol) return;
+		const proc = draggedNode.processObj;
+		const oldParent = proc.parentCol;
+		if (oldParent === targetCol) return; // already on this column
+		if (oldParent && Array.isArray(oldParent.processes)) {
+			oldParent.processes = oldParent.processes.filter((p) => p.id !== proc.id);
+		}
+		proc.parentCol = targetCol;
+		targetCol.processes = [...(targetCol.processes ?? []), proc];
 	}
 
 	function handleNodeAction(node) {
@@ -1016,7 +1055,11 @@
 	{/if}
 
 	<div class="canvas-viewport" bind:this={canvasViewportEl} class:panning={isPanning && !dragInfo}>
-		<FloatingActions onResetView={resetCanvasView} />
+		<FloatingActions
+			onResetView={resetCanvasView}
+			pathFocus={pathFocusEnabled}
+			onTogglePathFocus={() => (pathFocusEnabled = !pathFocusEnabled)}
+		/>
 		<NodePalette />
 		<div
 			class="canvas-inner"
@@ -1029,6 +1072,7 @@
 				highlightedIds={connectedNodeIds}
 				{provisionalEdge}
 				{selectedEdgeKey}
+				{dropTargetEdgeKey}
 				onEdgeClick={selectEdge}
 			/>
 
@@ -1038,7 +1082,6 @@
 				{@const isDragging = dragInfo?.nodeId === node.id && dragInfo?.moved}
 				{@const isDimmed = connectedNodeIds !== null && !connectedNodeIds.has(node.id)}
 				{@const isRecentlyChanged = changedNodeIds.has(node.id)}
-				{@const isDropTarget = dropTargetNodeId === node.id}
 				{@const nodeZIndex = isDragging ? 30 : isExpanded ? 20 : 1}
 				{#if pos}
 					<div
@@ -1047,12 +1090,7 @@
 						class:dimmed={isDimmed}
 						class:changed={isRecentlyChanged}
 						style="position: absolute; left: {pos.x}px; top: {pos.y}px; z-index: {nodeZIndex};"
-						title={node.type === 'data'
-							? 'Drag onto another data node to replace all its downstream references'
-							: undefined}
-						aria-label={node.type === 'data'
-							? `${node.label} data node — drag onto another data node to replace all downstream references`
-							: node.label}
+						aria-label={node.label}
 						onmousedown={(e) => handleNodeWrapperMouseDown(e, node)}
 						onmouseup={(e) => handleNodeWrapperMouseUp(e, node)}
 						onclick={(e) => e.stopPropagation()}
@@ -1062,23 +1100,11 @@
 							{node}
 							selected={focusedNodeId === node.id || selectedPlotNodeId === node.id}
 							expanded={isExpanded}
-							{isDropTarget}
+							isDropTarget={false}
 							on:portstart={handlePortStart}
 							on:portend={handlePortEnd}
 							on:portdisconnect={handlePortDisconnect}
 						/>
-
-						{#if node.type === 'data'}
-							{@const col = core.data.find((d) => d.id === node.refId)}
-							{#if col}
-								<button
-									class="node-add-btn"
-									onmousedown={(e) => e.stopPropagation()}
-									onclick={(e) => openAddProcess(e, col)}
-									title="Add process to {col.name}">+ Process</button
-								>
-							{/if}
-						{/if}
 
 						{#if isExpanded && node.type === 'process' && node.processObj}
 							{@const PComp = appConsts.processMap.get(node.processName)?.component}
@@ -1149,13 +1175,6 @@
 	</div>
 </div>
 
-<!-- Insert modals / dropdowns rendered outside the transformed canvas -->
-<AddProcess
-	bind:showDropdown={showAddProcessDropdown}
-	columnSelected={addProcessColumn}
-	dropdownTop={addProcessDropY}
-	dropdownLeft={addProcessDropX}
-/>
 
 <style>
 	.workflow-editor {
@@ -1316,30 +1335,6 @@
 		flex-direction: column;
 		gap: 4px;
 		z-index: 10;
-	}
-
-	/* "+ Process" button on data nodes */
-	.node-add-btn {
-		display: none;
-		font-size: 10px;
-		padding: 2px 6px;
-		background: rgba(0, 0, 0, 0.07);
-		border: 1px solid rgba(0, 0, 0, 0.15);
-		border-radius: 3px;
-		cursor: pointer;
-		color: #444;
-		width: 100%;
-		box-sizing: border-box;
-		text-align: left;
-		margin-top: 2px;
-	}
-
-	.workflow-node-wrapper:hover .node-add-btn {
-		display: block;
-	}
-
-	.node-add-btn:hover {
-		background: rgba(0, 0, 0, 0.13);
 	}
 
 	.icon {
