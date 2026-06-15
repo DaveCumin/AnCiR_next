@@ -11,8 +11,27 @@ export const core = $state({
 	data: [],
 	plots: [],
 	tables: [],
-	storedValues: {}
+	storedValues: {},
+	// nodeNotes — per-node text annotations keyed by canvas node id (e.g.
+	// `data_5`, `process_3`, `plot_2`, `note_1`). Plain string values.
+	nodeNotes: {},
+	// notes — standalone Note nodes spawnable via the palette. Plain objects
+	// shaped like `{ id, text, x, y, width, height }`. They render as a node
+	// on the canvas but have no input/output ports.
+	notes: []
 });
+
+let _nextNoteId = 1;
+export function createNote({ x = 80, y = 80, text = '' } = {}) {
+	const id = `note_${_nextNoteId++}`;
+	core.notes.push({ id, text, x, y, width: 200, height: 120 });
+	return id;
+}
+
+export function removeNote(id) {
+	core.notes = core.notes.filter((n) => n.id !== id);
+	delete core.nodeNotes[id];
+}
 
 export const appState = $state({
 	currentTab: initialiseCurrentTab(false, false), // change values if panel visibility initialised differently

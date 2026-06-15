@@ -464,6 +464,25 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		);
 	}
 
+	// Standalone Note nodes — pure annotation, no ports, no edges.
+	for (const note of core.notes ?? []) {
+		nodes.push(
+			new ProcessNode({
+				id: note.id,
+				kind: 'note',
+				label: 'Note',
+				sublabel: '',
+				ports: { inputs: [], outputs: [] },
+				refId: note.id,
+				meta: {
+					type: 'note',
+					refId: note.id,
+					noteObj: note
+				}
+			})
+		);
+	}
+
 	const nodeMap = new Map(nodes.map((n) => [n.id, n]));
 
 	function addConnection(fromId, toId, type, fromPort = 'output', toPort = 'input') {

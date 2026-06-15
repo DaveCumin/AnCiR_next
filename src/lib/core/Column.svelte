@@ -173,7 +173,7 @@
 			}
 			return this.customName || 'Unnamed';
 		});
-		customName = null;
+		customName = $state(null);
 		//Type of data - if it is referencial, then get the type from the reference
 		type = $derived.by(() => {
 			if (this.isReferencial()) return this.refColumn?.type;

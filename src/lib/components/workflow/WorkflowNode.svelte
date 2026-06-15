@@ -2,9 +2,19 @@
 	// @ts-nocheck
 	import { createEventDispatcher } from 'svelte';
 	import MiniDataTable from './MiniDataTable.svelte';
+	import Editable from '$lib/components/reusables/Editable.svelte';
+	import NodeNoteButton from './NodeNoteButton.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	let { node, selected = false, expanded = false, isDropTarget = false } = $props();
 	const dispatch = createEventDispatcher();
+
+	function renameDataNode(next) {
+		const col = node.refId != null ? getColumnById(node.refId) : null;
+		if (!col) return;
+		const trimmed = (next ?? '').trim();
+		// Empty input restores the auto-derived name.
+		col.customName = trimmed === '' ? null : trimmed;
+	}
 
 	// Shared port-layout constants (mirrors WorkflowEditor.svelte). Re-declared locally
 	// — they're trivial numbers and the duplication is contained to these two files.
@@ -48,7 +58,19 @@
 	tabindex="0"
 >
 	<div class="node-header">
-		<div class="node-label">{node.label}</div>
+		{#if node.type === 'data' && node.refId != null}
+			<div class="node-label" onpointerdown={(e) => e.stopPropagation()}>
+				<Editable
+					value={node.label}
+					placeholder="column name"
+					ariaLabel="Rename column"
+					title="Double-click to rename"
+					onCommit={renameDataNode}
+				/>
+			</div>
+		{:else}
+			<div class="node-label">{node.label}</div>
+		{/if}
 		{#if isDropTarget}
 			<span class="drop-badge" title="Drop to replace all references">↓ replace</span>
 		{:else if isEditable}
@@ -56,6 +78,7 @@
 				{expanded ? '▲' : '▼'}
 			</span>
 		{/if}
+		<NodeNoteButton nodeId={node.id} />
 	</div>
 
 	{#if portRows > 0}
@@ -98,6 +121,21 @@
 		{#if col}
 			<div class="node-body-padded"><MiniDataTable column={col} maxRows={5} /></div>
 		{/if}
+	{/if}
+
+	{#if node.type === 'note' && node.noteObj}
+		<div
+			class="note-body"
+			onpointerdown={(e) => e.stopPropagation()}
+			role="presentation"
+		>
+			<textarea
+				class="note-textarea"
+				value={node.noteObj.text ?? ''}
+				placeholder="Write a note"
+				oninput={(e) => (node.noteObj.text = e.currentTarget.value)}
+			></textarea>
+		</div>
 	{/if}
 </div>
 
@@ -255,5 +293,29 @@
 
 	.node-body-padded {
 		padding: 6px 10px 8px;
+	}
+
+	.note-body {
+		padding: 6px 10px 8px;
+		background: #fffde7;
+	}
+
+	.note-textarea {
+		width: 100%;
+		min-height: 80px;
+		resize: vertical;
+		border: 1px solid rgba(0, 0, 0, 0.15);
+		border-radius: 3px;
+		padding: 4px 6px;
+		font-family: inherit;
+		font-size: 11px;
+		line-height: 1.4;
+		background: #fffef6;
+		outline: none;
+		box-sizing: border-box;
+	}
+
+	.note-textarea:focus {
+		border-color: var(--color-accent, #4d9fe3);
 	}
 </style>

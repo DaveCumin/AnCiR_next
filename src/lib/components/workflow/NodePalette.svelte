@@ -9,7 +9,7 @@
 	import SimulateData from '$lib/components/views/modals/SimulateData.svelte';
 	import BlankColumnModal from '$lib/components/views/modals/BlankColumnModal.svelte';
 	import SequenceColumnModal from '$lib/components/views/modals/SequenceColumnModal.svelte';
-	import { core, appConsts } from '$lib/core/core.svelte.js';
+	import { core, appConsts, createNote } from '$lib/core/core.svelte.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { tick } from 'svelte';
 
@@ -99,6 +99,15 @@
 				description: entry.description || ''
 			});
 		}
+		// Annotation node — pure-canvas Note, no data behaviour.
+		items.push({
+			type: 'note',
+			kind: 'note',
+			displayName: 'Note',
+			family: 'Other',
+			nodeIcon: resolveIcon('edit-value'),
+			description: 'Standalone canvas note. Free-form text annotation.'
+		});
 		return items.sort(
 			(a, b) =>
 				a.family.localeCompare(b.family) || a.displayName.localeCompare(b.displayName)
@@ -167,6 +176,12 @@
 
 	// ---- Spawn handlers --------------------------------------------------
 	function handlePick(item) {
+		if (item.kind === 'note') {
+			createNote({ x: 80 + Math.round(Math.random() * 60), y: 80 + Math.round(Math.random() * 60) });
+			closeMenu();
+			return;
+		}
+
 		if (item.kind === 'plot') {
 			plotInitialType = item.type;
 			showAddPlotModal = true;
