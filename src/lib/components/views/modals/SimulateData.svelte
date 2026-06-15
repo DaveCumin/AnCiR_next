@@ -2,9 +2,8 @@
 	// @ts-nocheck
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import SimulatedData from '$lib/tableProcesses/SimulatedData.svelte';
-	import { core, appConsts } from '$lib/core/core.svelte';
-	import { Table } from '$lib/core/Table.svelte';
-	import { TableProcess } from '$lib/core/TableProcess.svelte';
+	import { appConsts } from '$lib/core/core.svelte';
+	import { mutationService } from '$lib/core/mutationService.js';
 </script>
 
 <script>
@@ -29,18 +28,10 @@
 	);
 	// console.log('p.args', $state.snapshot(p.args));
 	function confirmAddColumn() {
-		//make new table
-		core.tables.push(new Table());
-		core.tables[core.tables.length - 1].name =
-			'Simulated_' + core.tables[core.tables.length - 1].id;
-		//make new table process
-		const tb = new TableProcess(
-			{ name: 'SimulatedData', args: p.args },
-			core.tables[core.tables.length - 1]
-		);
-
-		core.tables[core.tables.length - 1].processes.push(tb);
-
+		const table = mutationService.addTable({});
+		// Name is derived from the assigned id; direct mutation is acceptable cosmetic state.
+		table.name = 'Simulated_' + table.id;
+		mutationService.addTableProcess(table.id, 'SimulatedData', p.args);
 		showModal = false;
 	}
 </script>
