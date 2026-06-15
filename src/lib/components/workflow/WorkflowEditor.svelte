@@ -204,9 +204,34 @@
 		return { positions, maxLayer, layerOffsets };
 	});
 
-	// Persistent positions — preserves layout when topology changes
-	let stablePositions = $state({});
-	let _knownNodeIds = new Set();
+	// Persistent positions — preserves layout when topology changes AND survives
+	// view switches / page reloads via localStorage. Keyed by node id (strings like
+	// `data_<colId>`, `process_<procId>`, `plot_<plotId>`, etc.) which stay stable
+	// across reloads because the underlying col/process/plot ids are persisted in
+	// core too.
+	const NODE_POSITIONS_STORAGE_KEY = 'ancir.workflow.nodePositions';
+
+	function loadNodePositions() {
+		try {
+			const raw = typeof localStorage !== 'undefined' && localStorage.getItem(NODE_POSITIONS_STORAGE_KEY);
+			if (!raw) return {};
+			const parsed = JSON.parse(raw);
+			if (!parsed || typeof parsed !== 'object') return {};
+			// Strip non-{x,y} entries defensively.
+			const out = {};
+			for (const [id, pos] of Object.entries(parsed)) {
+				const x = Number(pos?.x);
+				const y = Number(pos?.y);
+				if (Number.isFinite(x) && Number.isFinite(y)) out[id] = { x, y };
+			}
+			return out;
+		} catch {
+			return {};
+		}
+	}
+
+	let stablePositions = $state(loadNodePositions());
+	let _knownNodeIds = new Set(Object.keys(stablePositions));
 
 	$effect(() => {
 		const currentNodes = allNodes;
@@ -229,6 +254,22 @@
 		}
 
 		_knownNodeIds = currentIds;
+	});
+
+	// Mirror stablePositions to localStorage. Reads every entry to register the
+	// $derived dep, so dragging a node (which mutates one entry) triggers a save.
+	$effect(() => {
+		const snapshot = {};
+		for (const [id, pos] of Object.entries(stablePositions)) {
+			snapshot[id] = { x: pos.x, y: pos.y };
+		}
+		try {
+			if (typeof localStorage !== 'undefined') {
+				localStorage.setItem(NODE_POSITIONS_STORAGE_KEY, JSON.stringify(snapshot));
+			}
+		} catch {
+			/* private mode / quota — ignore */
+		}
 	});
 
 	// Canvas dimensions

@@ -89,7 +89,7 @@
 	</div>
 {/if}
 
-{#if core.plots.length > 0 && !appState.showWorkflow}
+{#if core.plots.length > 0 && !appState.showWorkflow && appState.view !== 'canvas'}
 	<button
 		class="icon newplotconstant"
 		style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
