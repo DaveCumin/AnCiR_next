@@ -6,25 +6,18 @@
 	let { node, selected = false, expanded = false, isDropTarget = false } = $props();
 	const dispatch = createEventDispatcher();
 
-	const typeColors = {
-		data: '#b3d9f2',
-		process: '#fffacc',
-		tableprocess: '#ffe0b3',
-		plot: '#b3f2cc'
-	};
+	// Shared port-layout constants (mirrors WorkflowEditor.svelte). Re-declared locally
+	// — they're trivial numbers and the duplication is contained to these two files.
+	const HEADER_H = 26;
+	const PORT_H = 22;
 
-	let bgColor = $derived(node.tableColor ?? typeColors[node.type] ?? '#eee');
 	let isEditable = $derived(node.type === 'process' || node.type === 'tableprocess');
 	// Plot nodes always have a preview panel below, so apply the expanded border style
 	let hasPanel = $derived(node.type === 'plot' || expanded);
 
 	let inputPorts = $derived(node.ports?.inputs ?? []);
 	let outputPorts = $derived(node.ports?.outputs ?? []);
-
-	function portY(index, count) {
-		if (!count) return 24;
-		return ((index + 1) * 48) / (count + 1);
-	}
+	let portRows = $derived(Math.max(inputPorts.length, outputPorts.length));
 
 	function startFromOutput(e, portName) {
 		e.stopPropagation();
@@ -54,7 +47,7 @@
 	role="button"
 	tabindex="0"
 >
-	<div class="node-header" style="background-color: {bgColor};">
+	<div class="node-header">
 		<div class="node-label">{node.label}</div>
 		{#if isDropTarget}
 			<span class="drop-badge" title="Drop to replace all references">↓ replace</span>
@@ -64,6 +57,38 @@
 			</span>
 		{/if}
 	</div>
+
+	{#if portRows > 0}
+		<div class="node-ports" style="height:{portRows * PORT_H}px;">
+			{#each inputPorts as port, i (`in_${port.name}_${i}`)}
+				<div class="port-row input" style="top:{i * PORT_H}px;">
+					<div
+						class="port-dot dot-input"
+						title={`Input: ${port.name}${port.dynamic ? ' (many)' : ''}`}
+						onmousedown={(e) => disconnectInput(e, port.name)}
+						onmouseup={(e) => endAtInput(e, port.name)}
+						oncontextmenu={(e) => disconnectInput(e, port.name)}
+						role="button"
+						tabindex="-1"
+					></div>
+					<span class="port-label">{port.name}{port.dynamic ? '*' : ''}</span>
+				</div>
+			{/each}
+			{#each outputPorts as port, i (`out_${port.name}_${i}`)}
+				<div class="port-row output" style="top:{i * PORT_H}px;">
+					<div
+						class="port-dot dot-output"
+						title={`Output: ${port.name}${port.dynamic ? ' (many)' : ''}`}
+						onmousedown={(e) => startFromOutput(e, port.name)}
+						role="button"
+						tabindex="-1"
+					></div>
+					<span class="port-label">{port.name}{port.dynamic ? '*' : ''}</span>
+				</div>
+			{/each}
+		</div>
+	{/if}
+
 	{#if node.sublabel}
 		<div class="node-sublabel">{node.sublabel}</div>
 	{/if}
@@ -71,47 +96,14 @@
 	{#if node.type === 'data' && node.refId != null}
 		{@const col = getColumnById(node.refId)}
 		{#if col}
-			<div class="node-body-padded">
-				<MiniDataTable column={col} maxRows={5} />
-			</div>
+			<div class="node-body-padded"><MiniDataTable column={col} maxRows={5} /></div>
 		{/if}
 	{/if}
-
-	{#each inputPorts as port, i (`in_${port.name}_${i}`)}
-		<div
-			class="port-handle port-in"
-			style="top:{portY(i, inputPorts.length)}px;"
-			title={`Input: ${port.name}`}
-			onmousedown={(e) => disconnectInput(e, port.name)}
-			onmouseup={(e) => endAtInput(e, port.name)}
-			oncontextmenu={(e) => disconnectInput(e, port.name)}
-			role="button"
-			tabindex="-1"
-		></div>
-		<div class="port-label port-label-in" style="top:{portY(i, inputPorts.length)}px;">
-			{port.name}
-		</div>
-	{/each}
-
-	{#each outputPorts as port, i (`out_${port.name}_${i}`)}
-		<div
-			class="port-handle port-out"
-			style="top:{portY(i, outputPorts.length)}px;"
-			title={`Output: ${port.name}`}
-			onmousedown={(e) => startFromOutput(e, port.name)}
-			role="button"
-			tabindex="-1"
-		></div>
-		<div class="port-label port-label-out" style="top:{portY(i, outputPorts.length)}px;">
-			{port.name}
-		</div>
-	{/each}
 </div>
 
 <style>
 	.workflow-node {
 		width: 160px;
-		min-height: 48px;
 		position: relative;
 		border-radius: 6px;
 		border: 1px solid rgba(0, 0, 0, 0.18);
@@ -125,7 +117,6 @@
 			border-color 0.12s ease,
 			box-shadow 0.12s ease,
 			transform 0.12s ease;
-		overflow: hidden; /* clip the type-colour header to the rounded corners */
 	}
 
 	.workflow-node:hover {
@@ -149,7 +140,6 @@
 	.workflow-node.drop-target {
 		border: 2px dashed #28a745;
 		box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.25);
-		background-color: #e8f8ec !important;
 	}
 
 	.node-header {
@@ -157,21 +147,20 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 4px;
-		position: relative;
-		z-index: 1;
-		/* Type-coloured strip at the top of the card; rest of the node stays white. */
-		padding: 4px 10px;
+		padding: 0 10px;
+		height: 26px; /* HEADER_H */
+		background: var(--color-lightness-97, #f4f4f4);
+		border-bottom: 1px solid var(--color-lightness-90, #e7e7e7);
+		border-radius: 6px 6px 0 0;
 		font-weight: 600;
-		border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-		min-height: 22px;
+		color: var(--color-lightness-25, #333);
 	}
 
 	.node-label {
-		font-weight: 600;
+		flex: 1;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		flex: 1;
 	}
 
 	.expand-indicator {
@@ -180,7 +169,6 @@
 		flex-shrink: 0;
 		pointer-events: none;
 	}
-
 	.drop-badge {
 		font-size: 9px;
 		font-weight: 700;
@@ -189,14 +177,76 @@
 		white-space: nowrap;
 	}
 
+	.node-ports {
+		position: relative;
+	}
+
+	.port-row {
+		position: absolute;
+		display: flex;
+		align-items: center;
+		height: 22px; /* PORT_H */
+		font-size: 11px;
+		color: var(--color-lightness-40, #5b5b5b);
+		pointer-events: none; /* let only the dot capture clicks */
+	}
+
+	.port-row.input {
+		left: 0;
+		padding-left: 14px;
+		flex-direction: row;
+	}
+
+	.port-row.output {
+		right: 0;
+		padding-right: 14px;
+		flex-direction: row-reverse;
+	}
+
+	.port-dot {
+		position: relative;
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background: var(--color-lightness-95, #ececec);
+		border: 1px solid var(--color-lightness-60, #8a8a8a);
+		cursor: crosshair;
+		flex-shrink: 0;
+		padding: 0;
+		overflow: visible;
+		pointer-events: auto;
+	}
+
+	/* Sit halfway outside the card so wires meet the dot, not the card edge. */
+	.port-dot.dot-input {
+		transform: translateX(-150%);
+	}
+	.port-dot.dot-output {
+		transform: translateX(150%);
+	}
+
+	.port-dot:hover {
+		background: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent, #4d9fe3);
+	}
+
+	.port-label {
+		padding: 0 4px;
+		pointer-events: none;
+		white-space: nowrap;
+		max-width: 80px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
 	.node-sublabel {
 		font-size: 10px;
 		color: #555;
-		background-color: rgba(0, 0, 0, 0.06);
+		background-color: rgba(0, 0, 0, 0.04);
 		border-radius: 3px;
 		padding: 1px 4px;
 		display: inline-block;
-		margin: 4px 10px 2px;
+		margin: 6px 10px 2px;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -205,56 +255,5 @@
 
 	.node-body-padded {
 		padding: 6px 10px 8px;
-	}
-
-	.port-handle {
-		position: absolute;
-		width: 8px;
-		height: 8px;
-		border-radius: 999px;
-		background: #ffffff;
-		border: 1px solid rgba(0, 0, 0, 0.45);
-		transform: translateY(-50%);
-		pointer-events: auto;
-		cursor: crosshair;
-	}
-
-	.port-in {
-		left: -4px;
-	}
-
-	.port-out {
-		right: -4px;
-	}
-
-	.port-label {
-		position: absolute;
-		transform: translateY(-50%);
-		font-size: 9px;
-		line-height: 1;
-		color: rgba(0, 0, 0, 0.65);
-		background: rgba(255, 255, 255, 0.9);
-		border: 1px solid rgba(0, 0, 0, 0.15);
-		border-radius: 3px;
-		padding: 1px 3px;
-		pointer-events: none;
-		opacity: 0;
-		transition: opacity 120ms ease;
-		max-width: 54px;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.workflow-node:hover .port-label {
-		opacity: 1;
-	}
-
-	.port-label-in {
-		left: 8px;
-	}
-
-	.port-label-out {
-		right: 8px;
 	}
 </style>

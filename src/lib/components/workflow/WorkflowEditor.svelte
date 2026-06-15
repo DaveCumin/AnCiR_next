@@ -20,6 +20,8 @@
 
 	const NODE_WIDTH = 160;
 	const NODE_HEIGHT = 48;
+	const HEADER_H = 26; // px, header strip height (matches flowtest's --header-h)
+	const PORT_H = 22; // px, height of each port row
 	const COL_WIDTH = 220;
 	const ROW_HEIGHT = 80;
 	const PADDING = 40;
@@ -77,7 +79,7 @@
 
 	function getPortAnchorY(node, portName, direction) {
 		const ports = direction === 'out' ? (node.ports?.outputs ?? []) : (node.ports?.inputs ?? []);
-		if (ports.length === 0) return NODE_HEIGHT / 2;
+		if (ports.length === 0) return HEADER_H + PORT_H / 2;
 		let idx = ports.findIndex((p) => p.name === portName);
 		if (idx < 0) {
 			idx = ports.findIndex((p) => {
@@ -87,8 +89,15 @@
 			});
 		}
 		idx = Math.max(0, idx);
-		const segment = NODE_HEIGHT / (ports.length + 1);
-		return segment * (idx + 1);
+		return HEADER_H + idx * PORT_H + PORT_H / 2;
+	}
+
+	/** Visual height of a node EXCLUDING any plot-preview/MiniDataTable body. */
+	function getNodePortAreaHeight(node) {
+		const ins = node?.ports?.inputs?.length ?? 0;
+		const outs = node?.ports?.outputs?.length ?? 0;
+		const rows = Math.max(1, ins, outs);
+		return HEADER_H + rows * PORT_H;
 	}
 
 	// Step 1: edge connectivity only (re-derives when core changes, NOT when positions change)
@@ -185,9 +194,9 @@
 			if (node.type === 'plot') {
 				const ps = plotPreviewSizes[node.id];
 				const h = ps ? ps.h : getDefaultPreviewH(node.plotObj);
-				layerOffsets[layer] += NODE_HEIGHT + h + 24;
+				layerOffsets[layer] += getNodePortAreaHeight(node) + h + 24;
 			} else {
-				layerOffsets[layer] += ROW_HEIGHT;
+				layerOffsets[layer] += getNodePortAreaHeight(node) + 24; // 24px vertical gap
 			}
 		}
 
