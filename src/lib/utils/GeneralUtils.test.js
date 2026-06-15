@@ -14,4 +14,33 @@ describe('numToString', () => {
 		const unique = new Set(values);
 		expect(unique.size).toBe(101);
 	});
+
+	// Spreadsheet-column boundaries (the classic off-by-one cases).
+	it('converts 701 → "ZZ" (last two-letter column)', () => {
+		expect(numToString(701)).toBe('ZZ');
+	});
+
+	it('converts 702 → "AAA" (first three-letter column)', () => {
+		expect(numToString(702)).toBe('AAA');
+	});
+
+	it('returns undefined for negative input', () => {
+		expect(numToString(-5)).toBeUndefined();
+	});
+
+	it('produces strictly increasing, distinct values across the 2→3 letter boundary', () => {
+		const values = Array.from({ length: 1000 }, (_, i) => numToString(i));
+		// All distinct.
+		expect(new Set(values).size).toBe(1000);
+		// Length is non-decreasing as n grows (A.. , AA.. , AAA..).
+		for (let i = 1; i < values.length; i++) {
+			expect(values[i].length).toBeGreaterThanOrEqual(values[i - 1].length);
+		}
+	});
+
+	it('uses only uppercase A–Z characters', () => {
+		for (let i = 0; i < 200; i++) {
+			expect(numToString(i)).toMatch(/^[A-Z]+$/);
+		}
+	});
 });

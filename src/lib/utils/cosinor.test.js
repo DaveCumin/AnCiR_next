@@ -89,4 +89,101 @@ describe('fitCosinorFixed', () => {
 		// pF is upper-tail: small value = significant
 		expect(result.pF).toBeLessThan(0.001);
 	});
+
+	it('recovers the acrophase of a known cosine', () => {
+		// y = 2·cos(2π/24·t + 0.5) + 5.  The classical acrophase φ = -0.5 rad
+		// → acrophase_hrs = (-φ)·period/2π = 0.5·24/2π ≈ 1.91h.
+		const { t, y } = syntheticData();
+		const result = fitCosinorFixed(t, y, 24, 1);
+		const expectedAcroHrs = (0.5 * 24) / (2 * Math.PI);
+		expect(result.harmonics[0].acrophase_hrs).toBeCloseTo(expectedAcroHrs, 1);
+	});
+
+	it('acrophase is reported within [0, period)', () => {
+		const { t, y } = syntheticData();
+		const result = fitCosinorFixed(t, y, 24, 1);
+		const acro = result.harmonics[0].acrophase_hrs;
+		expect(acro).toBeGreaterThanOrEqual(0);
+		expect(acro).toBeLessThan(24);
+	});
+
+	it('amplitude confidence interval brackets the true amplitude', () => {
+		const { t, y } = syntheticData();
+		const result = fitCosinorFixed(t, y, 24, 1);
+		const [lo, hi] = result.harmonics[0].CI_A;
+		expect(lo).toBeLessThanOrEqual(2);
+		expect(hi).toBeGreaterThanOrEqual(2);
+	});
+
+	it('fitted array reproduces the model at the data points', () => {
+		const { t, y } = syntheticData();
+		const result = fitCosinorFixed(t, y, 24, 1);
+		for (let i = 0; i < t.length; i++) {
+			expect(result.fitted[i]).toBeCloseTo(y[i], 4);
+		}
+	});
+
+	it('a flat (constant) signal yields R² = 0', () => {
+		const t = Array.from({ length: 50 }, (_, i) => i);
+		const y = new Array(50).fill(3);
+		const result = fitCosinorFixed(t, y, 24, 1);
+		expect(result).not.toBeNull();
+		// SStot = 0 → R² short-circuits to 0
+		expect(result.R2).toBe(0);
+	});
+
+	it('fits a two-harmonic model with R² > 0.99 on a two-harmonic signal', () => {
+		const t = [];
+		const y = [];
+		for (let ti = 0; ti <= 96; ti += 0.25) {
+			t.push(ti);
+			const omega = (2 * Math.PI) / 24;
+			y.push(
+				10 + 2 * Math.cos(omega * ti + 0.3) + 1 * Math.cos(2 * omega * ti + 1.1)
+			);
+		}
+		const result = fitCosinorFixed(t, y, 24, 2);
+		expect(result).not.toBeNull();
+		expect(result.harmonics).toHaveLength(2);
+		expect(result.R2).toBeGreaterThan(0.99);
+		expect(result.M).toBeCloseTo(10, 1);
+	});
+});
+
+describe('fitCosineCurves — additional edge cases', () => {
+	function syntheticData(step = 0.5, duration = 96) {
+		const t = [];
+		const y = [];
+		for (let ti = 0; ti <= duration; ti += step) {
+			t.push(ti);
+			y.push(2 * Math.cos((2 * Math.PI * ti) / 24 + 0.5) + 5);
+		}
+		return { t, y };
+	}
+
+	it('throws if the provided initial guess has the wrong length', () => {
+		const { t, y } = syntheticData();
+		// N=1 needs 3N+1 = 4 params; give it 3.
+		expect(() => fitCosineCurves(t, y, 1, { initialGuess: [1, 2, 3] })).toThrow();
+	});
+
+	it('recovers the offset (mesor) close to 5', () => {
+		const { t, y } = syntheticData();
+		const result = fitCosineCurves(t, y, 1);
+		expect(result.parameters.O).toBeCloseTo(5, 0);
+	});
+
+	it('residuals are small and fitted+residuals reconstruct the data', () => {
+		const { t, y } = syntheticData();
+		const result = fitCosineCurves(t, y, 1);
+		for (let i = 0; i < t.length; i++) {
+			expect(result.fitted[i] + result.residuals[i]).toBeCloseTo(y[i], 8);
+		}
+	});
+
+	it('a single-start fit (useMultiStart false) still converges on clean data', () => {
+		const { t, y } = syntheticData();
+		const result = fitCosineCurves(t, y, 1, { useMultiStart: false });
+		expect(result.rSquared).toBeGreaterThan(0.99);
+	});
 });

@@ -241,6 +241,7 @@
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
 	import { dev } from '$app/environment';
+	import { base } from '$app/paths';
 
 	let showSettingsModal = $state(false);
 
@@ -264,12 +265,42 @@
 
 	let exampleSessionMenuItem = $state();
 
-	const exampleSessions = [
-		{
-			name: 'Example session',
-			url: 'https://raw.githubusercontent.com/DaveCumin/AnCiR_next/refs/heads/main/test/testJSON.json'
+	// Example sessions are listed from a manifest fetched at runtime (so the demo
+	// files live outside the app bundle, under static/sessions/demos/). The
+	// manifest is lazy-loaded the first time the user opens the submenu.
+	let exampleSessions = $state([]);
+	let examplesRequested = $state(false);
+	let examplesError = $state('');
+
+	const exampleGroups = $derived.by(() => {
+		const groups = new Map();
+		for (const s of exampleSessions) {
+			const family = s.family || 'Examples';
+			if (!groups.has(family)) groups.set(family, []);
+			groups.get(family).push(s);
 		}
-	];
+		return [...groups.entries()];
+	});
+
+	async function ensureExampleIndex() {
+		if (examplesRequested) return;
+		examplesRequested = true;
+		examplesError = '';
+		try {
+			const res = await fetch(`${base}/sessions/demos/index.json`);
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			const idx = await res.json();
+			exampleSessions = Array.isArray(idx?.sessions) ? idx.sessions : [];
+		} catch (err) {
+			examplesError = err.message;
+			examplesRequested = false; // allow a retry on next hover
+		}
+	}
+
+	// Resolve a (possibly relative) manifest URL against the app base path.
+	function resolveExampleUrl(url) {
+		return /^https?:\/\//.test(url) ? url : `${base}/${url.replace(/^\//, '')}`;
+	}
 
 	async function openImportModal() {
 		showImportModal = true;
@@ -389,7 +420,10 @@
 		<div
 			class="action dropdown-item has-submenu"
 			bind:this={exampleSessionMenuItem}
-			onmouseenter={() => showSubmenu('examples')}
+			onmouseenter={() => {
+				showSubmenu('examples');
+				ensureExampleIndex();
+			}}
 			onmouseleave={() => hideSubmenu('examples', 150)}
 		>
 			<button class="menubutton">Use example session</button>
@@ -409,17 +443,27 @@
 				onmouseenter={() => keepSubmenuOpen('examples')}
 				onmouseleave={() => hideSubmenu('examples', 150)}
 			>
-				{#each exampleSessions as session}
-					<button
-						class="submenu-item"
-						onclick={() => {
-							closeDropdown();
-							openExampleSession(session.url);
-						}}
-					>
-						{session.name}
-					</button>
-				{/each}
+				{#if examplesError}
+					<div class="submenu-item submenu-muted">Could not load examples</div>
+				{:else if exampleSessions.length === 0}
+					<div class="submenu-item submenu-muted">Loading examples…</div>
+				{:else}
+					{#each exampleGroups as [family, sessions]}
+						<div class="submenu-group-label">{family}</div>
+						{#each sessions as session}
+							<button
+								class="submenu-item"
+								title={session.description ?? ''}
+								onclick={() => {
+									closeDropdown();
+									openExampleSession(resolveExampleUrl(session.url));
+								}}
+							>
+								{session.name}
+							</button>
+						{/each}
+					{/each}
+				{/if}
 			</div>
 		{/if}
 
@@ -591,6 +635,21 @@
 
 	.submenu-item:hover {
 		background-color: var(--color-lightness-95);
+	}
+
+	.submenu-group-label {
+		padding: 0.4em 0.6em 0.2em;
+		font-size: 11px;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		opacity: 0.6;
+	}
+
+	.submenu-muted {
+		opacity: 0.6;
+		font-style: italic;
+		cursor: default;
 	}
 
 	.heading {

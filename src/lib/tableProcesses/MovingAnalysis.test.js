@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockColumns = {};
+const { mockRawDataSet } = vi.hoisted(() => ({ mockRawDataSet: vi.fn() }));
 vi.mock('$lib/core/core.svelte', () => ({
-	core: { rawData: { set: vi.fn(), get: vi.fn(), has: vi.fn() } },
+	core: { rawData: { set: mockRawDataSet, get: vi.fn(), has: vi.fn() } },
 	appConsts: { processMap: new Map() }
 }));
 vi.mock('$lib/core/Column.svelte', () => ({
@@ -15,7 +16,11 @@ vi.mock('$lib/components/inputs/ColumnSelector.svelte', () => ({ default: {} }))
 vi.mock('$lib/components/inputs/AttributeSelect.svelte', () => ({ default: {} }));
 vi.mock('$lib/components/plotbits/Table.svelte', () => ({ default: {} }));
 vi.mock('$lib/components/LoadingSpinner.svelte', () => ({ default: {} }));
-vi.mock('$lib/core/core.svelte.js', () => ({ pushObj: vi.fn() }));
+vi.mock('$lib/core/core.svelte.js', () => ({
+	pushObj: vi.fn(),
+	core: { rawData: { set: mockRawDataSet, get: vi.fn(), has: vi.fn() } },
+	appConsts: { processMap: new Map() }
+}));
 vi.mock('$lib/utils/time/TimeUtils.js', () => ({ formatTimeFromUNIX: (ms) => String(ms) }));
 
 vi.mock('$lib/utils/periodogram.js', () => ({
@@ -194,5 +199,118 @@ describe('movinganalysis', () => {
 		// With our mocked fit, amplitude should always be 3
 		for (const a of per.H1_amplitude) expect(a).toBeCloseTo(3, 6);
 		for (const m of per.mesor) expect(m).toBeCloseTo(1.5, 6);
+	});
+
+	// --- Added edge cases ---
+
+	it('returns invalid when fewer than 3 valid X points', () => {
+		mockColumns[1] = { type: 'number', getData: () => [0, 100] };
+		mockColumns[2] = { getData: () => [1, 2] };
+		const [, valid] = movinganalysis({
+			...baseArgs, xIN: 1, yIN: [2], windowSize: 48, stepSize: 24
+		});
+		expect(valid).toBe(false);
+	});
+
+	it('fails safe (no throw) when a Y column ref is missing', () => {
+		const n = 240;
+		const t = Array.from({ length: n }, (_, i) => i);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		// yId 999 absent
+		expect(() =>
+			movinganalysis({ ...baseArgs, xIN: 1, yIN: [999], windowSize: 48, stepSize: 24 })
+		).not.toThrow();
+		const [, valid] = movinganalysis({
+			...baseArgs, xIN: 1, yIN: [999], windowSize: 48, stepSize: 24
+		});
+		expect(valid).toBe(false);
+	});
+
+	it('accepts a scalar (non-array) yIN', () => {
+		const n = 120;
+		const t = Array.from({ length: n }, (_, i) => i);
+		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => y };
+		const [result, valid] = movinganalysis({
+			...baseArgs, xIN: 1, yIN: 2, windowSize: 48, stepSize: 24, analysis: 'periodogram'
+		});
+		expect(valid).toBe(true);
+		expect(result.y_results[2]).toBeDefined();
+	});
+
+	it('labels bin at window end when binLabel=end', () => {
+		const n = 120;
+		const t = Array.from({ length: n }, (_, i) => i);
+		const y = t.map((ti) => Math.sin((2 * Math.PI * ti) / 24));
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => y };
+		const [result] = movinganalysis({
+			...baseArgs, xIN: 1, yIN: [2], windowSize: 48, stepSize: 24, binLabel: 'end'
+		});
+		expect(result.bins[0]).toBeCloseTo(48, 6); // first window 0..48 labelled at end
+	});
+
+	it('handles multiple Y inputs producing parallel stat arrays', () => {
+		const n = 240;
+		const t = Array.from({ length: n }, (_, i) => i);
+		const y1 = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
+		const y2 = t.map((ti) => Math.sin((2 * Math.PI * ti) / 24));
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => y1 };
+		mockColumns[3] = { getData: () => y2 };
+		const [result, valid] = movinganalysis({
+			...baseArgs, xIN: 1, yIN: [2, 3], windowSize: 48, stepSize: 24, analysis: 'periodogram'
+		});
+		expect(valid).toBe(true);
+		expect(result.y_results[2].peak_period.length).toBe(result.bins.length);
+		expect(result.y_results[3].peak_period.length).toBe(result.bins.length);
+	});
+
+	it('windows with too few points stay NaN (gappy data)', () => {
+		// Dense at the start, then a big gap, then dense again so a middle window is empty
+		const t = [0, 1, 2, ...Array.from({ length: 50 }, (_, i) => 200 + i)];
+		const y = t.map(() => 1);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => y };
+		const [result, valid] = movinganalysis({
+			...baseArgs, xIN: 1, yIN: [2], windowSize: 24, stepSize: 24, analysis: 'periodogram'
+		});
+		expect(valid).toBe(true);
+		// At least one window (over the gap) should have produced NaN peak_period
+		const peaks = result.y_results[2].peak_period;
+		expect(peaks.some((v) => Number.isNaN(v))).toBe(true);
+	});
+
+	it('writes per-stat output columns and the bin x column when committed', () => {
+		mockRawDataSet.mockClear();
+		const n = 240;
+		const t = Array.from({ length: n }, (_, i) => i);
+		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => y };
+		mockColumns[90] = { data: null, type: null, tableProcessGUId: null }; // movex
+		mockColumns[91] = { data: null, type: null, tableProcessGUId: null }; // 2_peak_period
+		mockColumns[92] = { data: null, type: null, tableProcessGUId: null }; // 2_peak_power
+
+		const [result, valid] = movinganalysis({
+			...baseArgs,
+			xIN: 1,
+			yIN: [2],
+			windowSize: 48,
+			stepSize: 24,
+			analysis: 'periodogram',
+			out: { movex: 90, '2_peak_period': 91, '2_peak_power': 92 }
+		});
+
+		expect(valid).toBe(true);
+		const xCall = mockRawDataSet.mock.calls.find(([id]) => id === 90);
+		const ppCall = mockRawDataSet.mock.calls.find(([id]) => id === 91);
+		expect(xCall[1]).toEqual(result.bins);
+		expect(ppCall[1]).toEqual(result.y_results[2].peak_period);
+		expect(mockColumns[90].binWidth).toBe(48);
+		expect(mockColumns[90].binStep).toBe(24);
+		expect(mockColumns[91].type).toBe('number');
+		expect(mockColumns[91].tableProcessGUId).toBe(mockColumns[90].tableProcessGUId);
 	});
 });

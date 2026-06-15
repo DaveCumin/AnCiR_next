@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "count": 3,
+  "sessions": [
+    {
+      "id": "scatter-rhythm",
+      "name": "Scatter — activity vs hour",
+      "family": "Plots",
+      "description": "A simple scatterplot of a noisy ~24 h rhythmic signal against hours since start (7 days, hourly).",
+      "url": "sessions/demos/demo-scatter-rhythm.json"
+    },
+    {
+      "id": "histogram-normal",
+      "name": "Histogram — distribution",
+      "family": "Plots",
+      "description": "Histogram of 500 samples drawn from a normal distribution (mean 100, sd 15).",
+      "url": "sessions/demos/demo-histogram-normal.json"
+    },
+    {
+      "id": "boxplot-by-day",
+      "name": "Boxplot — activity by day",
+      "family": "Plots",
+      "description": "Boxplot of daily activity values grouped by day index (7 days × 24 hourly points).",
+      "url": "sessions/demos/demo-boxplot-by-day.json"
+    }
+  ]
+}

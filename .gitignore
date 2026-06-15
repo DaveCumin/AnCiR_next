@@ -32,3 +32,6 @@ node_modules/
 .claude/
 docs/
 .planning/
+
+# Local MCP workspace (not for the repo)
+/mcp/

@@ -37,7 +37,7 @@
 	{height}
 	aria-hidden="true"
 >
-	{#each edges as edge (edgeKey(edge))}
+	{#each edges as edge, i (edgeKey(edge))}
 		{#if edge.from && edge.to}
 			{@const d = bezier(edge.from.x, edge.from.y, edge.to.x, edge.to.y)}
 			{@const k = edgeKey(edge)}
@@ -63,7 +63,7 @@
 					class="edge-flow-dot"
 					r="4"
 					style:offset-path={`path('${d}')`}
-					style:animation-delay={`${(edge.fromId * 137 + edge.toId * 53) % 600}ms`}
+					style:animation-delay={`${i * Math.abs(Math.random() * 10) * 0.01}s`}
 				/>
 			</g>
 		{/if}

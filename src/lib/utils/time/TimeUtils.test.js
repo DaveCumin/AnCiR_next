@@ -10,7 +10,12 @@ import {
 	formatTimeFromUNIX,
 	formatTimeFromISO,
 	guessDateofArray,
-	calculateTimeDifference
+	calculateTimeDifference,
+	getPeriod,
+	getstartTimeOffset,
+	addTime,
+	forceFormat,
+	getGuessedFormat
 } from './TimeUtils.js';
 import { formatTimeAxisTick } from './displayTime.js';
 
@@ -106,6 +111,122 @@ describe('dotted meridiem (a.m./p.m.) parsing', () => {
 		const h = calculateTimeDifference('20/04/2026 11:52:07 p.m.', '21/04/2026 12:12:20 a.m.', fmt);
 		expect(Number(h)).toBeGreaterThan(0);
 		expect(Number(h)).toBeCloseTo(0.337, 2); // ~20m13s
+	});
+});
+
+describe('normalizeTimeFormat — additional token rules', () => {
+	it('widens a lone "s" to "ss"', () => {
+		expect(normalizeTimeFormat('HH:mm:s')).toBe('HH:mm:ss');
+	});
+
+	it('leaves an existing "ss" untouched', () => {
+		expect(normalizeTimeFormat('HH:mm:ss')).toBe('HH:mm:ss');
+	});
+
+	it('converts single-quoted literals to bracketed literals', () => {
+		expect(normalizeTimeFormat("yyyy'T'LL")).toBe('YYYY[T]MM');
+	});
+
+	it('translates a lone Luxon day token "d" to "D"', () => {
+		expect(normalizeTimeFormat('yyyy-LL-d')).toBe('YYYY-MM-D');
+	});
+
+	it('translates standalone month token "L" to "M"', () => {
+		expect(normalizeTimeFormat('L/d/yyyy')).toBe('M/D/YYYY');
+	});
+});
+
+describe('calculateTimeDifference — null/undefined handling', () => {
+	const fmt = 'YYYY-MM-DD HH:mm:ss';
+
+	it('returns null when start is null/undefined', () => {
+		expect(calculateTimeDifference(null, '2024-01-01 02:00:00', fmt)).toBeNull();
+		expect(calculateTimeDifference(undefined, '2024-01-01 02:00:00', fmt)).toBeNull();
+	});
+
+	it('returns null when end is null/undefined', () => {
+		expect(calculateTimeDifference('2024-01-01 00:00:00', null, fmt)).toBeNull();
+		expect(calculateTimeDifference('2024-01-01 00:00:00', undefined, fmt)).toBeNull();
+	});
+
+	it('returns a fixed-precision fractional-hour difference', () => {
+		expect(calculateTimeDifference('2024-01-01 00:00:00', '2024-01-01 02:30:00', fmt)).toBe(
+			'2.5000'
+		);
+	});
+
+	it('returns a negative difference when end precedes start', () => {
+		const h = Number(
+			calculateTimeDifference('2024-01-01 05:00:00', '2024-01-01 02:00:00', fmt)
+		);
+		expect(h).toBeCloseTo(-3, 4);
+	});
+});
+
+describe('getPeriod', () => {
+	const fmt = 'YYYY-MM-DD HH:mm:ss';
+
+	it('reports a constant 1-hour spacing', () => {
+		const times = [
+			'2024-01-01 00:00:00',
+			'2024-01-01 01:00:00',
+			'2024-01-01 02:00:00',
+			'2024-01-01 03:00:00'
+		];
+		const p = getPeriod(times, fmt);
+		expect(Number(p.minDiff)).toBeCloseTo(1, 4);
+		expect(p.constant).toBe(true);
+	});
+
+	it('flags non-constant spacing', () => {
+		const times = ['2024-01-01 00:00:00', '2024-01-01 01:00:00', '2024-01-01 03:00:00'];
+		const p = getPeriod(times, fmt);
+		expect(Number(p.minDiff)).toBeCloseTo(1, 4);
+		expect(p.constant).toBe(false);
+	});
+});
+
+describe('forceFormat / getGuessedFormat', () => {
+	const fmt = 'YYYY-MM-DD HH:mm:ss';
+
+	it('forceFormat returns hours-from-first for each row', () => {
+		const times = [
+			'2024-01-01 00:00:00',
+			'2024-01-01 01:00:00',
+			'2024-01-01 02:00:00',
+			'2024-01-01 03:00:00'
+		];
+		expect(forceFormat(times, fmt)).toEqual(['0.0000', '1.0000', '2.0000', '3.0000']);
+	});
+
+	it('getGuessedFormat returns a usable format string for ISO data', () => {
+		const guessed = getGuessedFormat(['2024-08-06T00:00:00', '2024-08-06T01:00:00']);
+		expect(typeof guessed).toBe('string');
+		expect(getUNIXDate('2024-08-06T01:00:00', guessed)).toBeGreaterThan(
+			getUNIXDate('2024-08-06T00:00:00', guessed)
+		);
+	});
+});
+
+describe('addTime', () => {
+	it('adds whole hours and rolls over to the next day', () => {
+		// 2024-01-01 00:00 UTC + 25h = 2024-01-02 01:00
+		expect(addTime('2024-01-01T00:00:00.000Z', 25)).toBe('02 Jan 2024 01:00:00');
+	});
+
+	it('subtracts hours for a negative offset', () => {
+		expect(addTime('2024-01-02T01:00:00.000Z', -25)).toBe('01 Jan 2024 00:00:00');
+	});
+});
+
+describe('getstartTimeOffset', () => {
+	const fmt = 'YYYY-MM-DD HH:mm:ss';
+
+	it('returns a fixed-precision numeric string', () => {
+		const offset = getstartTimeOffset('2024-01-01T00:00:00.000Z', '2024-01-01 06:00:00', fmt);
+		// Format is "x.xxxx" (4 decimals); exact sign depends on the runner's
+		// local zone since firstTime is parsed as wall-clock, so just check shape.
+		expect(offset).toMatch(/^-?\d+\.\d{4}$/);
 	});
 });
 

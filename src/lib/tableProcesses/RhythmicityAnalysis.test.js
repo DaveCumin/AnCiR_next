@@ -273,6 +273,69 @@ describe('rhythmicityanalysis', () => {
 		// 8 valid pairs is enough for periodogram
 		expect(valid).toBe(true);
 	});
+
+	// --- Added edge cases ---
+
+	it('returns invalid for empty input data', async () => {
+		mockColumns[1] = { type: 'number', getData: () => [] };
+		mockColumns[2] = { getData: () => [] };
+		const [, valid] = await rhythmicityanalysis({ ...baseArgs, xIN: 1, yIN: [2] });
+		expect(valid).toBe(false);
+	});
+
+	it('fails safe (no throw) when a Y column ref is missing', async () => {
+		const t = Array.from({ length: 48 }, (_, i) => i);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		// yId 999 absent → skipped, no valid Y → invalid (and must not throw)
+		const [, valid] = await rhythmicityanalysis({ ...baseArgs, xIN: 1, yIN: [999] });
+		expect(valid).toBe(false);
+	});
+
+	it('accepts a scalar (non-array) yIN', async () => {
+		const t = Array.from({ length: 48 }, (_, i) => i);
+		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => y };
+		const [result, valid] = await rhythmicityanalysis({
+			...baseArgs, xIN: 1, yIN: 2, analysis: 'periodogram'
+		});
+		expect(valid).toBe(true);
+		expect(result.y_results[2]).toBeDefined();
+	});
+
+	it('Chi-squared periodogram includes a threshold output array', async () => {
+		const t = Array.from({ length: 48 }, (_, i) => i);
+		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => y };
+		const [result, valid] = await rhythmicityanalysis({
+			...baseArgs, xIN: 1, yIN: [2], analysis: 'periodogram', pgMethod: 'Chi-squared'
+		});
+		expect(valid).toBe(true);
+		expect(result.outputKeys).toContain('threshold');
+		expect(Array.isArray(result.y_results[2].outputs.threshold)).toBe(true);
+	});
+
+	it('writes standalone per-key outputs without collected keys', async () => {
+		const t = Array.from({ length: 48 }, (_, i) => i);
+		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => y };
+		mockColumns[60] = { data: 60, type: 'number' };
+		mockColumns[61] = { data: 61, type: 'number' };
+
+		const [, valid] = await rhythmicityanalysis({
+			...baseArgs,
+			xIN: 1,
+			yIN: [2],
+			out: { '2_period': 60, '2_power': 61 },
+			analysis: 'periodogram'
+		});
+		expect(valid).toBe(true);
+		expect(rawDataStore.has(60)).toBe(true);
+		expect(rawDataStore.has(61)).toBe(true);
+		expect(rawDataStore.get(60).length).toBe(rawDataStore.get(61).length);
+	});
 });
 
 describe('getPrimaryKeys', () => {

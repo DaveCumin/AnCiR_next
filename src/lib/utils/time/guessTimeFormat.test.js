@@ -77,4 +77,48 @@ describe('guessFormat', () => {
 			expect(fmt).toBeTruthy();
 		});
 	});
+
+	describe('non-date input', () => {
+		it('returns an empty array for an empty string', () => {
+			expect(guessFormat('')).toEqual([]);
+		});
+
+		it('returns an empty array for plain non-date text', () => {
+			expect(guessFormat('hello world')).toEqual([]);
+		});
+	});
+
+	describe('day-vs-month disambiguation', () => {
+		it('reads "31/12/2020" as DD/MM/YYYY (31 cannot be a month)', () => {
+			expect(getFormat('31/12/2020')).toBe('DD/MM/YYYY');
+		});
+
+		it('reads "12/31/2020" as MM/DD/YYYY (31 cannot be a month)', () => {
+			expect(getFormat('12/31/2020')).toBe('MM/DD/YYYY');
+		});
+
+		it('offers both interpretations for the ambiguous "8/6/2024, ..."', () => {
+			const result = guessFormat('8/6/2024, 12:00:00 AM');
+			const arr = Array.isArray(result) ? result : [result];
+			expect(arr).toContain('D/M/YYYY, h:mm:ss A');
+			expect(arr).toContain('M/D/YYYY, h:mm:ss A');
+		});
+	});
+
+	describe('produced format strings actually parse their source', () => {
+		// A guessed format should parse the very string it was guessed from.
+		const cases = [
+			'2024-08-06T00:00:00',
+			'2024-08-06 14:30:00',
+			'31/12/2020',
+			'06/08/2024 00:00'
+		];
+		for (const src of cases) {
+			it(`round-trips "${src}"`, async () => {
+				const { default: dayjs } = await import('./dayjsSetup.js');
+				const fmt = getFormat(src);
+				expect(dayjs(src, fmt, true).isValid()).toBe(true);
+			});
+		}
+	});
 });

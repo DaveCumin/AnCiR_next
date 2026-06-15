@@ -84,4 +84,103 @@ describe('collectcolumns', () => {
 		const call = mockRawDataSet.mock.calls.find(([id]) => id === 20);
 		expect(call[1]).toEqual([3, 5]);
 	});
+
+	// --- Added edge cases ---
+
+	it('computes max and sum aggregates', () => {
+		mockColumns[1] = { getData: () => [10, 5], type: 'number', data: null, tableProcessGUId: null };
+		mockColumns[2] = { getData: () => [3, 8], type: 'number', data: null, tableProcessGUId: null };
+		mockColumns[20] = { data: null, type: null, tableProcessGUId: null };
+		mockColumns[21] = { data: null, type: null, tableProcessGUId: null };
+
+		collectcolumns({
+			colIds: [1, 2],
+			out: {},
+			preProcesses: [],
+			aggregates: [
+				{ method: 'max', excludedColIds: [], outColId: 20 },
+				{ method: 'sum', excludedColIds: [], outColId: 21 }
+			]
+		});
+
+		expect(mockRawDataSet.mock.calls.find(([id]) => id === 20)[1]).toEqual([10, 8]);
+		expect(mockRawDataSet.mock.calls.find(([id]) => id === 21)[1]).toEqual([13, 13]);
+	});
+
+	it('excludes columns listed in excludedColIds from the aggregate', () => {
+		mockColumns[1] = { getData: () => [2, 2], type: 'number', data: null, tableProcessGUId: null };
+		mockColumns[2] = { getData: () => [100, 100], type: 'number', data: null, tableProcessGUId: null };
+		mockColumns[20] = { data: null, type: null, tableProcessGUId: null };
+
+		collectcolumns({
+			colIds: [1, 2],
+			out: {},
+			preProcesses: [],
+			aggregates: [{ method: 'mean', excludedColIds: [2], outColId: 20 }]
+		});
+
+		// Only column 1 included → mean is just its values
+		expect(mockRawDataSet.mock.calls.find(([id]) => id === 20)[1]).toEqual([2, 2]);
+	});
+
+	it('skips null/NaN values when aggregating a row', () => {
+		mockColumns[1] = { getData: () => [2, NaN], type: 'number', data: null, tableProcessGUId: null };
+		mockColumns[2] = { getData: () => [4, 8], type: 'number', data: null, tableProcessGUId: null };
+		mockColumns[20] = { data: null, type: null, tableProcessGUId: null };
+
+		collectcolumns({
+			colIds: [1, 2],
+			out: {},
+			preProcesses: [],
+			aggregates: [{ method: 'mean', excludedColIds: [], outColId: 20 }]
+		});
+
+		const agg = mockRawDataSet.mock.calls.find(([id]) => id === 20)[1];
+		expect(agg[0]).toBeCloseTo(3, 6); // mean(2,4)
+		expect(agg[1]).toBeCloseTo(8, 6); // NaN skipped → mean(8)
+	});
+
+	it('skips an aggregate whose outColId is unset (-1)', () => {
+		mockColumns[1] = { getData: () => [1, 2], type: 'number', data: null, tableProcessGUId: null };
+		collectcolumns({
+			colIds: [1],
+			out: {},
+			preProcesses: [],
+			aggregates: [{ method: 'mean', excludedColIds: [], outColId: -1 }]
+		});
+		expect(mockRawDataSet.mock.calls.length).toBe(0);
+	});
+
+	it('preview result is a copy, not a reference to the source array', () => {
+		const src = [1, 2, 3];
+		mockColumns[1] = { getData: () => src, type: 'number' };
+		const [result] = collectcolumns({ colIds: [1], out: {}, preProcesses: [], aggregates: [] });
+		expect(result[1]).toEqual([1, 2, 3]);
+		expect(result[1]).not.toBe(src);
+	});
+
+	it('applies a registered pre-process to every collected column', async () => {
+		const { appConsts } = await import('$lib/core/core.svelte');
+		appConsts.processMap.set('double', { func: (arr) => arr.map((v) => v * 2) });
+		mockColumns[1] = { getData: () => [1, 2], type: 'number' };
+		mockColumns[2] = { getData: () => [3, 4], type: 'number' };
+
+		const [result] = collectcolumns({
+			colIds: [1, 2],
+			out: {},
+			preProcesses: [{ processName: 'double', processArgs: {} }],
+			aggregates: []
+		});
+
+		expect(result[1]).toEqual([2, 4]);
+		expect(result[2]).toEqual([6, 8]);
+		appConsts.processMap.delete('double');
+	});
+
+	it('single column collection works', () => {
+		mockColumns[1] = { getData: () => [7], type: 'number' };
+		const [result, valid] = collectcolumns({ colIds: [1], out: {}, preProcesses: [], aggregates: [] });
+		expect(valid).toBe(true);
+		expect(result[1]).toEqual([7]);
+	});
 });

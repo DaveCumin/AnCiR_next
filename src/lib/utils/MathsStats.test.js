@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { calculateStandardDeviation, mean, max, min } from './MathsStats.js';
+import {
+	calculateStandardDeviation,
+	mean,
+	max,
+	min,
+	createSequenceArray
+} from './MathsStats.js';
 
 describe('mean', () => {
 	it('returns the average of an array', () => {
@@ -68,5 +74,54 @@ describe('calculateStandardDeviation', () => {
 	it('handles negative values', () => {
 		// [-1, 0, 1]: mean=0, pop-std=sqrt(2/3)
 		expect(calculateStandardDeviation([-1, 0, 1])).toBeCloseTo(Math.sqrt(2 / 3), 5);
+	});
+
+	it('returns NaN for an empty array', () => {
+		expect(calculateStandardDeviation([])).toBeNaN();
+	});
+
+	it('ignores null / undefined / NaN entries', () => {
+		expect(calculateStandardDeviation([2, null, 4, undefined, 4, NaN, 4, 5, 5, 7, 9])).toBeCloseTo(
+			2,
+			5
+		);
+	});
+});
+
+describe('MathsStats wrappers — NaN (not null) for empty input', () => {
+	it('mean returns 0 for empty (delegates to kahanMean)', () => {
+		expect(mean([])).toBe(0);
+	});
+
+	it('min/max return NaN when every entry is invalid', () => {
+		expect(min([NaN, null, undefined])).toBeNaN();
+		expect(max([NaN, null, undefined])).toBeNaN();
+	});
+
+	it('min/max skip null and undefined', () => {
+		expect(min([5, null, 2, undefined, 8])).toBe(2);
+		expect(max([5, null, 2, undefined, 8])).toBe(8);
+	});
+});
+
+describe('createSequenceArray', () => {
+	it('generates an inclusive integer sequence with the default step', () => {
+		expect(createSequenceArray(0, 5)).toEqual([0, 1, 2, 3, 4, 5]);
+	});
+
+	it('honours a custom step', () => {
+		expect(createSequenceArray(0, 10, 2)).toEqual([0, 2, 4, 6, 8, 10]);
+	});
+
+	it('returns a single element when start === end', () => {
+		expect(createSequenceArray(3, 3)).toEqual([3]);
+	});
+
+	it('returns an empty array when start > end with a positive step', () => {
+		expect(createSequenceArray(5, 0, 1)).toEqual([]);
+	});
+
+	it('handles negative start values', () => {
+		expect(createSequenceArray(-2, 2)).toEqual([-2, -1, 0, 1, 2]);
 	});
 });

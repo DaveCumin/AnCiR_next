@@ -84,4 +84,97 @@ describe('makeSeqArray', () => {
 	it('generates a single element when from === to', () => {
 		expect(makeSeqArray(5, 5, 1)).toEqual([5]);
 	});
+
+	it('returns an empty array when from > to with a positive step', () => {
+		// floor((0-5)/1) = -5  →  loop never runs
+		expect(makeSeqArray(5, 0, 1)).toEqual([]);
+	});
+
+	it('handles negative ranges', () => {
+		expect(makeSeqArray(-3, 0, 1)).toEqual([-3, -2, -1, 0]);
+	});
+
+	it('every element equals from + i*step (no accumulation)', () => {
+		const from = 1.1;
+		const step = 0.1;
+		const seq = makeSeqArray(from, from + 5, step);
+		for (let i = 0; i < seq.length; i++) {
+			expect(seq[i]).toBeCloseTo(from + i * step, 12);
+		}
+	});
+
+	// BUG: step === 0 makes n = floor((to-from)/0) = Infinity, so the
+	// `for (i = 0; i <= n; i++)` loop never terminates (the function hangs).
+	// Expected: guard a zero step and return [] or [from] rather than looping
+	// forever. Left as a todo so the suite does not hang.
+	it.todo('does not hang when step is 0 (should return [] or [from])');
+});
+
+describe('KahanSum — edge cases', () => {
+	it('starts at zero with no additions', () => {
+		expect(new KahanSum().value).toBe(0);
+	});
+
+	it('handles negative and mixed-sign values', () => {
+		const k = new KahanSum();
+		k.add(-5).add(10).add(-2.5);
+		expect(k.value).toBeCloseTo(2.5, 12);
+	});
+
+	it('propagates NaN once a NaN is added', () => {
+		const k = new KahanSum();
+		k.add(1).add(NaN).add(2);
+		expect(k.value).toBeNaN();
+	});
+
+	it('propagates Infinity', () => {
+		const k = new KahanSum();
+		k.add(1).add(Infinity);
+		expect(k.value).toBe(Infinity);
+	});
+
+	it('add() is chainable and returns the instance', () => {
+		const k = new KahanSum();
+		expect(k.add(1)).toBe(k);
+	});
+
+	it('preserves a small running value against alternating ±1e8 terms better than naive', () => {
+		// A magnitude gap that Kahan can recover (unlike a gap at the eps limit).
+		const big = 1e8;
+		const small = 1;
+		const k = new KahanSum();
+		let naive = 0;
+		k.add(small);
+		naive += small;
+		for (let i = 0; i < 5000; i++) {
+			k.add(big).add(-big);
+			naive += big;
+			naive -= big;
+		}
+		// True sum is `small`. Kahan should land exactly on it here.
+		expect(k.value).toBe(small);
+		expect(Math.abs(k.value - small)).toBeLessThanOrEqual(Math.abs(naive - small));
+	});
+});
+
+describe('kahanMean — edge cases', () => {
+	it('handles a single element', () => {
+		expect(kahanMean([42])).toBe(42);
+	});
+
+	it('handles negative numbers', () => {
+		expect(kahanMean([-2, 0, 2])).toBeCloseTo(0, 12);
+	});
+
+	it('mixes valid and invalid entries, dividing by the valid count only', () => {
+		// valid: 2, 4, 6 → mean 4
+		expect(kahanMean([2, NaN, 4, undefined, 6])).toBeCloseTo(4, 12);
+	});
+
+	it('does NOT skip null (null coerces to 0 in arithmetic)', () => {
+		// Documents current behaviour: null passes the `!== undefined && !isNaN`
+		// guard because isNaN(null) === false, and null is summed as 0.
+		// mean of [2, null→0, 4] over count 3 = 2
+		expect(kahanMean([2, null, 4])).toBeCloseTo(2, 12);
+	});
 });

@@ -299,6 +299,107 @@ describe('groupcomparison', () => {
 		expect(result.comparisons[2].warnings.length).toBeGreaterThan(0);
 		expect(result.warnings.some((warning) => warning.includes('non-normal'))).toBe(true);
 	});
+
+	// --- Added edge cases ---
+
+	it('returns invalid with a single group (need >=2 groups)', () => {
+		mockColumns[1] = { name: 'group', getData: () => ['A', 'A', 'A', 'A'] };
+		mockColumns[2] = { name: 'value', getData: () => [1, 2, 3, 4] };
+		const [result, valid] = groupcomparison({ ...baseArgs, xIN: 1, yIN: [2], method: 'auto' });
+		expect(valid).toBe(false);
+		expect(result.comparisons[2].valid).toBe(false);
+	});
+
+	it('fails safe (no throw) when a Y column ref is missing', () => {
+		mockColumns[1] = { name: 'group', getData: () => ['A', 'A', 'B', 'B'] };
+		expect(() =>
+			groupcomparison({ ...baseArgs, xIN: 1, yIN: [999], method: 'auto' })
+		).not.toThrow();
+		const [, valid] = groupcomparison({ ...baseArgs, xIN: 1, yIN: [999], method: 'auto' });
+		expect(valid).toBe(false);
+	});
+
+	it('drops rows with NaN/null Y values when building groups', () => {
+		mockColumns[1] = { name: 'group', getData: () => ['A', 'A', 'A', 'B', 'B', 'B'] };
+		mockColumns[2] = { name: 'value', getData: () => [1, NaN, 2, 8, null, 10] };
+		const [result, valid] = groupcomparison({ ...baseArgs, xIN: 1, yIN: [2], method: 'auto' });
+		expect(valid).toBe(true);
+		const groups = result.comparisons[2].groups;
+		const a = groups.find((g) => g.name === 'A');
+		const b = groups.find((g) => g.name === 'B');
+		expect(a.n).toBe(2); // NaN dropped
+		expect(b.n).toBe(2); // null dropped
+	});
+
+	it('handles unequal group sizes', () => {
+		mockColumns[1] = { name: 'group', getData: () => ['A', 'A', 'A', 'A', 'A', 'B', 'B'] };
+		mockColumns[2] = { name: 'value', getData: () => [1, 2, 1, 2, 1, 9, 10] };
+		const [result, valid] = groupcomparison({ ...baseArgs, xIN: 1, yIN: [2], method: 'auto' });
+		expect(valid).toBe(true);
+		const groups = result.comparisons[2].groups;
+		expect(groups.find((g) => g.name === 'A').n).toBe(5);
+		expect(groups.find((g) => g.name === 'B').n).toBe(2);
+		expect(result.comparisons[2].test).toBe('Welch t-test');
+	});
+
+	it('ANOVA on identical groups yields a non-significant (or degenerate) result', () => {
+		// All groups equal → between-group variance ~0 → not significant
+		mockColumns[1] = { name: 'group', getData: () => ['A', 'A', 'A', 'B', 'B', 'B', 'C', 'C', 'C'] };
+		mockColumns[2] = { name: 'value', getData: () => [5, 5, 5, 5, 5, 5, 5, 5, 5] };
+		const [result, valid] = groupcomparison({ ...baseArgs, xIN: 1, yIN: [2], method: 'anova' });
+		// With zero within-group variance the test may be flagged invalid; either way it must not be "significant".
+		if (valid && Number.isFinite(result.comparisons[2].pValue)) {
+			expect(result.comparisons[2].pValue).toBeGreaterThanOrEqual(0.05);
+		} else {
+			expect(result.comparisons[2].valid === false || Number.isNaN(result.comparisons[2].pValue)).toBe(true);
+		}
+	});
+
+	it('forced mannwhitney on three groups returns invalid', () => {
+		mockColumns[1] = { name: 'group', getData: () => ['A', 'A', 'B', 'B', 'C', 'C'] };
+		mockColumns[2] = { name: 'value', getData: () => [1, 2, 5, 6, 9, 10] };
+		const [result, valid] = groupcomparison({ ...baseArgs, xIN: 1, yIN: [2], method: 'mannwhitney' });
+		expect(valid).toBe(false);
+		expect(result.comparisons[2].valid).toBe(false);
+	});
+});
+
+describe('welchTTest extra edge cases', () => {
+	it('identical constant groups give t=0 and a non-significant p-value', () => {
+		const a = { name: 'A', values: [5, 5, 5], n: 3, mean: 5 };
+		const b = { name: 'B', values: [5, 5, 5], n: 3, mean: 5 };
+		const res = welchTTest(a, b, 0.05);
+		expect(res.valid).toBe(true);
+		expect(res.t).toBe(0);
+		expect(res.difference).toBe(0);
+		expect(res.pValue).toBeGreaterThanOrEqual(0.05); // not significant
+	});
+
+	it('constant groups with separated means give an infinite t and significant p', () => {
+		const a = { name: 'A', values: [1, 1, 1], n: 3, mean: 1 };
+		const b = { name: 'B', values: [9, 9, 9], n: 3, mean: 9 };
+		const res = welchTTest(a, b, 0.05);
+		expect(res.valid).toBe(true);
+		expect(res.t).toBe(Number.POSITIVE_INFINITY);
+		expect(res.pValue).toBe(0); // se=0, t=Infinity → p forced to 0
+	});
+});
+
+describe('mannWhitneyTwoGroups ties', () => {
+	it('handles tied values across groups without throwing', () => {
+		const a = { name: 'A', values: [1, 1, 2, 2], n: 4, mean: 1.5 };
+		const b = { name: 'B', values: [1, 2, 2, 3], n: 4, mean: 2 };
+		const res = mannWhitneyTwoGroups(a, b);
+		expect(res.valid).toBe(true);
+		expect(Number.isFinite(res.pValue)).toBe(true);
+	});
+});
+
+describe('kruskalWallis requires multiple groups', () => {
+	it('is invalid with a single group', () => {
+		const res = kruskalWallis([{ name: 'A', values: [1, 2, 3], n: 3, mean: 2 }]);
+		expect(res.valid).toBe(false);
+	});
 });
 
 describe('warning helpers', () => {

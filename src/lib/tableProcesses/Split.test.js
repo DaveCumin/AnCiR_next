@@ -415,4 +415,75 @@ describe('split', () => {
 		expect(result.y_results[2].segments[0]).toEqual([10, null, null, null, null]);
 		expect(result.y_results[2].segments[1]).toEqual([null, null, 30, null, 50]);
 	});
+
+	// --- Added edge cases ---
+
+	it('accepts a scalar (non-array) yIN', () => {
+		const t = [0, 5, 10];
+		const y = [10, 20, 30];
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { type: 'number', getData: () => y, name: 'y' };
+
+		const [result, valid] = split({ xIN: 1, yIN: 2, splitTimes: [10] });
+		expect(valid).toBe(true);
+		expect(result.y_results[2].segments[0]).toEqual([10, 20, null]);
+		expect(result.y_results[2].segments[1]).toEqual([null, null, 30]);
+	});
+
+	it('partition property: each valid row appears in exactly one segment', () => {
+		const t = [0, 5, 10, 15, 20, 25, 30];
+		const y = [1, 2, 3, 4, 5, 6, 7];
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { type: 'number', getData: () => y };
+
+		const [result] = split({ xIN: 1, yIN: [2], splitTimes: [10, 20] });
+		const segs = result.y_results[2].segments;
+
+		for (let i = 0; i < t.length; i++) {
+			const nonNull = segs.filter((s) => s[i] != null);
+			expect(nonNull.length).toBe(1); // exactly one segment holds this row
+			expect(nonNull[0][i]).toBe(y[i]); // and it holds the original value
+		}
+	});
+
+	it('duplicate split times create an empty middle segment but no data loss', () => {
+		const t = [0, 5, 10, 15, 20];
+		const y = [1, 2, 3, 4, 5];
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { type: 'number', getData: () => y };
+
+		const [result, valid] = split({ xIN: 1, yIN: [2], splitTimes: [10, 10] });
+		expect(valid).toBe(true);
+		expect(result.segmentCount).toBe(3);
+		// [t<10], [10<=t<10 => empty], [t>=10]
+		expect(result.y_results[2].segments[0]).toEqual([1, 2, null, null, null]);
+		expect(result.y_results[2].segments[1]).toEqual([null, null, null, null, null]);
+		expect(result.y_results[2].segments[2]).toEqual([null, null, 3, 4, 5]);
+	});
+
+	it('writes each segment to its committed output column', async () => {
+		const { core } = await import('$lib/core/core.svelte');
+		core.rawData.set.mockClear();
+		const t = [0, 5, 10, 15];
+		const y = [1, 2, 3, 4];
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { type: 'number', getData: () => y, name: 'y' };
+		mockColumns[50] = { data: null, type: null, tableProcessGUId: null };
+		mockColumns[51] = { data: null, type: null, tableProcessGUId: null };
+
+		const [, valid] = split({
+			xIN: 1,
+			yIN: [2],
+			splitTimes: [10],
+			out: { '2_1': 50, '2_2': 51 }
+		});
+
+		expect(valid).toBe(true);
+		const c50 = core.rawData.set.mock.calls.find(([id]) => id === 50);
+		const c51 = core.rawData.set.mock.calls.find(([id]) => id === 51);
+		expect(c50[1]).toEqual([1, 2, null, null]);
+		expect(c51[1]).toEqual([null, null, 3, 4]);
+		expect(mockColumns[50].type).toBe('number');
+		expect(mockColumns[51].tableProcessGUId).toBe(mockColumns[50].tableProcessGUId);
+	});
 });
