@@ -85,17 +85,29 @@
 		</button>
 
 		<button
-			onclick={() => (appState.showWorkflow = !appState.showWorkflow)}
+			onclick={() =>
+				(appState.view = appState.view === 'canvas' ? 'plots' : 'canvas')}
 			onmouseenter={(e) =>
 				handleTooltip({
-					detail: { visible: true, x: e.clientX + 10, y: e.clientY + 10, content: 'Workflow View' }
+					detail: {
+						visible: true,
+						x: e.clientX + 10,
+						y: e.clientY + 10,
+						content:
+							appState.view === 'canvas'
+								? 'Switch to plot grid view'
+								: 'Switch to workflow canvas'
+					}
 				})}
 			onmouseleave={(e) =>
 				handleTooltip({
 					detail: { visible: false, x: e.clientX + 10, y: e.clientY + 10, content: '' }
 				})}
 		>
-			<Icon name="process" className={appState.showWorkflow ? 'icon active' : 'icon'} />
+			<Icon
+				name={appState.view === 'canvas' ? 'layer' : 'process'}
+				className={appState.view === 'canvas' ? 'icon active' : 'icon'}
+			/>
 		</button>
 	</div>
 

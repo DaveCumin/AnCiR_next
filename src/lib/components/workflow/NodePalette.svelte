@@ -5,15 +5,24 @@
 	// just opens the right modal.
 	import Icon from '$lib/icons/Icon.svelte';
 	import MakeNewPlot from '$lib/components/views/modals/MakeNewPlot.svelte';
+	import MakeNewColumn from '$lib/components/views/modals/MakeNewColumn.svelte';
 	import SimulateData from '$lib/components/views/modals/SimulateData.svelte';
 	import BlankColumnModal from '$lib/components/views/modals/BlankColumnModal.svelte';
 	import SequenceColumnModal from '$lib/components/views/modals/SequenceColumnModal.svelte';
+	import { core } from '$lib/core/core.svelte.js';
 
 	let showMenu = $state(false);
 	let showAddPlotModal = $state(false);
 	let showSimulateModal = $state(false);
 	let showBlankModal = $state(false);
 	let showSequenceModal = $state(false);
+	let showAddTPModal = $state(false);
+	let addTPTableId = $state(null);
+
+	function startAddTableProcess(tableId) {
+		addTPTableId = tableId;
+		showAddTPModal = true;
+	}
 
 	function pick(action) {
 		showMenu = false;
@@ -83,6 +92,21 @@
 				<span class="np-item-title">Sequence column</span>
 				<span class="np-item-sub">Numeric/time sequence generator</span>
 			</button>
+
+			{#if core.tables?.length > 0}
+				<div class="np-divider"></div>
+				{#each core.tables as table (table.id)}
+					<button
+						type="button"
+						class="np-item"
+						role="menuitem"
+						onclick={() => pick(() => startAddTableProcess(table.id))}
+					>
+						<span class="np-item-title">Add process to {table.name}</span>
+						<span class="np-item-sub">Cosinor, Smooth, Periodogram…</span>
+					</button>
+				{/each}
+			{/if}
 		</div>
 	{/if}
 </div>
@@ -91,6 +115,9 @@
 <SimulateData bind:showModal={showSimulateModal} />
 <BlankColumnModal bind:showModal={showBlankModal} />
 <SequenceColumnModal bind:showModal={showSequenceModal} />
+{#if showAddTPModal}
+	<MakeNewColumn bind:show={showAddTPModal} tableId={addTPTableId} />
+{/if}
 
 <style>
 	.np-anchor {
@@ -101,36 +128,35 @@
 		pointer-events: auto;
 	}
 
+	/* Match flowtest's .fa-btn shape: transparent + borderless icon button. */
 	.np-btn {
-		width: 38px;
-		height: 38px;
+		pointer-events: auto;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(255, 255, 255, 0.9);
-		border: 1px solid var(--color-lightness-85, #e6e6e6);
-		border-radius: 8px;
-		cursor: pointer;
-		color: var(--color-lightness-35, #555);
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-		transition:
-			background 0.12s ease,
-			border-color 0.12s ease,
-			transform 0.12s ease;
+		width: 34px;
+		height: 26px;
 		padding: 0;
+		color: var(--color-lightness-45, #6b7280);
+		background: transparent;
+		border: 0;
+		cursor: pointer;
+		transition:
+			color 0.18s ease,
+			transform 0.32s ease;
 	}
 
 	.np-btn:hover {
-		background: #fff;
-		border-color: var(--color-lightness-70, #c5c5c5);
-		color: var(--color-lightness-20, #333);
+		color: var(--color-accent, #4d9fe3);
+	}
+
+	.np-btn:active {
+		transform: scale(0.95);
 	}
 
 	.np-trigger.open {
 		transform: rotate(45deg);
-		background: var(--color-accent, #4d9fe3);
-		color: #fff;
-		border-color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent, #4d9fe3);
 	}
 
 	.np-menu {
@@ -174,5 +200,11 @@
 	.np-item-sub {
 		font-size: 11px;
 		color: var(--color-lightness-50, #888);
+	}
+
+	.np-divider {
+		height: 1px;
+		background: var(--color-lightness-90, #eee);
+		margin: 4px 6px;
 	}
 </style>

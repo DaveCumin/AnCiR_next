@@ -12,8 +12,6 @@
 	import WorkflowEdges from './WorkflowEdges.svelte';
 	import EmbeddedPlot from './EmbeddedPlot.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import MakeNewPlot from '$lib/components/views/modals/MakeNewPlot.svelte';
-	import MakeNewColumn from '$lib/components/views/modals/MakeNewColumn.svelte';
 	import AddProcess from '$lib/components/iconActions/AddProcess.svelte';
 	import FloatingActions from './FloatingActions.svelte';
 	import NodePalette from './NodePalette.svelte';
@@ -40,9 +38,6 @@
 	const MIN_PLOT_W = 100; // px — minimum actual plot width
 	const MIN_PLOT_H = 80; // px — minimum actual plot height
 
-	// Pastel colour palette for data nodes grouped by source table (cycles when > 6 tables)
-	const TABLE_COLOURS = ['#c8d8f0', '#f0c8d8', '#c8f0d8', '#d8c8f0', '#f0d8c8', '#d8f0c8'];
-
 	// Derive the natural preview height from a plot's aspect ratio (no cropping by default)
 	function getDefaultPreviewH(plotObj) {
 		if (!plotObj?.width) return PLOT_PREVIEW_DEFAULT_W; // fallback: square if no width info
@@ -53,9 +48,6 @@
 	const plotPreviewSizes = $state({});
 
 	// --- Insert modals ---
-	let showAddPlotModal = $state(false);
-	let showAddColumnModal = $state(false);
-	let addColumnTableId = $state(null);
 	let showAddProcessDropdown = $state(false);
 	let addProcessColumn = $state(null);
 	let addProcessDropX = $state(0);
@@ -457,12 +449,6 @@
 		showAddProcessDropdown = true;
 	}
 
-	function openAddTableProcess(e, tableId) {
-		e.stopPropagation();
-		addColumnTableId = tableId;
-		showAddColumnModal = true;
-	}
-
 	function handleMouseMove(e) {
 		mouseCanvas = toCanvasCoords(e.clientX, e.clientY);
 
@@ -723,36 +709,11 @@
 	role="presentation"
 	tabindex="-1"
 >
-	<div class="workflow-header">
-		<span class="workflow-title">Workflow</span>
-		<div class="header-legend">
-			{#each core.tables as table, idx (table.id)}
-				<span class="legend-item" style="background:{TABLE_COLOURS[idx % TABLE_COLOURS.length]};"
-					>{table.name}</span
-				>
-			{/each}
-			<span class="legend-item" style="background:#fffacc;">process</span>
-			<span class="legend-item" style="background:#ffe0b3;">table process</span>
-			<span class="legend-item" style="background:#b3f2cc;">plot</span>
-		</div>
-		<div class="header-add-actions">
-			<button class="header-add-btn" onclick={() => (showAddPlotModal = true)} title="Add new plot"
-				>+ Plot</button
-			>
-			{#each core.tables as table (table.id)}
-				<button
-					class="header-add-btn header-add-tp"
-					onclick={(e) => openAddTableProcess(e, table.id)}
-					title="Add table process to {table.name}"
-				>
-					+ TP: {table.name}
-				</button>
-			{/each}
-		</div>
-		{#if !inline}
-			<button class="close-btn" onclick={() => (appState.showWorkflow = false)}>✕</button>
-		{/if}
-	</div>
+	{#if !inline}
+		<!-- Legacy fullscreen-modal mode keeps the close-X only. The "+ Plot" / "+ TP"
+		     header buttons moved into NodePalette so canvas mode is chrome-free. -->
+		<button class="close-btn legacy-only" onclick={() => (appState.showWorkflow = false)}>✕</button>
+	{/if}
 
 	<div class="canvas-viewport" bind:this={canvasViewportEl} class:panning={isPanning && !dragInfo}>
 		<FloatingActions />
@@ -887,10 +848,6 @@
 </div>
 
 <!-- Insert modals / dropdowns rendered outside the transformed canvas -->
-<MakeNewPlot bind:showModal={showAddPlotModal} />
-{#if showAddColumnModal}
-	<MakeNewColumn bind:show={showAddColumnModal} tableId={addColumnTableId} />
-{/if}
 <AddProcess
 	bind:showDropdown={showAddProcessDropdown}
 	columnSelected={addProcessColumn}
@@ -919,35 +876,12 @@
 		border-left: none;
 	}
 
-	.workflow-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 8px 16px;
-		border-bottom: 1px solid var(--color-lightness-85);
-		background: var(--color-lightness-98);
-		flex-shrink: 0;
-		gap: 12px;
-	}
-
-	.workflow-title {
-		font-weight: bold;
-		color: var(--color-lightness-35);
-		white-space: nowrap;
-	}
-
-	.header-legend {
-		display: flex;
-		gap: 6px;
-		flex-wrap: wrap;
-	}
-
-	.legend-item {
-		font-size: 10px;
-		padding: 2px 6px;
-		border-radius: 4px;
-		border: 1px solid rgba(0, 0, 0, 0.1);
-		color: #333;
+	/* Legacy fullscreen-modal mode only: the close-X overlay button. */
+	.close-btn.legacy-only {
+		position: absolute;
+		top: 8px;
+		right: 12px;
+		z-index: 40;
 	}
 
 	.close-btn {
@@ -1106,32 +1040,6 @@
 		background: rgba(0, 0, 0, 0.13);
 	}
 
-	/* Header insert buttons */
-	.header-add-actions {
-		display: flex;
-		gap: 4px;
-		flex-wrap: wrap;
-		align-items: center;
-	}
-
-	.header-add-btn {
-		font-size: 10px;
-		padding: 2px 7px;
-		background: transparent;
-		border: 1px solid var(--color-lightness-85);
-		border-radius: 3px;
-		cursor: pointer;
-		color: var(--color-lightness-35);
-		white-space: nowrap;
-	}
-
-	.header-add-btn:hover {
-		background: var(--color-lightness-95);
-	}
-
-	.header-add-tp {
-		border-color: #ffe0b3;
-	}
 	.icon {
 		transition: right 0.6s ease;
 	}

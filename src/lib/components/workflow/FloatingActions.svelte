@@ -117,33 +117,34 @@
 		pointer-events: auto;
 	}
 
+	/* Match flowtest's .fa-btn exactly: transparent, borderless, icon-only. */
 	.fa-btn {
-		width: 38px;
-		height: 38px;
+		pointer-events: auto;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(255, 255, 255, 0.9);
-		border: 1px solid var(--color-lightness-85, #e6e6e6);
-		border-radius: 8px;
-		cursor: pointer;
-		color: var(--color-lightness-35, #555);
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-		transition:
-			background 0.12s ease,
-			border-color 0.12s ease,
-			opacity 0.12s ease;
+		width: 34px;
+		height: 26px;
 		padding: 0;
+		color: var(--color-lightness-45, #6b7280);
+		background: transparent;
+		border: 0;
+		cursor: pointer;
+		transition:
+			color 0.18s ease,
+			transform 0.32s ease;
 	}
 
 	.fa-btn:hover:not(:disabled) {
-		background: #fff;
-		border-color: var(--color-lightness-70, #c5c5c5);
-		color: var(--color-lightness-20, #333);
+		color: var(--color-accent, #4d9fe3);
+	}
+
+	.fa-btn:active:not(:disabled) {
+		transform: scale(0.95);
 	}
 
 	.fa-btn:disabled {
-		opacity: 0.45;
+		opacity: 0.4;
 		cursor: not-allowed;
 	}
 </style>
