@@ -16,6 +16,7 @@
 	import MakeNewColumn from '$lib/components/views/modals/MakeNewColumn.svelte';
 	import AddProcess from '$lib/components/iconActions/AddProcess.svelte';
 	import FloatingActions from './FloatingActions.svelte';
+	import NodePalette from './NodePalette.svelte';
 
 	let { inline = false } = $props();
 
@@ -721,6 +722,7 @@
 
 	<div class="canvas-viewport" bind:this={canvasViewportEl} class:panning={isPanning && !dragInfo}>
 		<FloatingActions />
+		<NodePalette />
 		<div
 			class="canvas-inner"
 			style="transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0; width: {canvasWidth}px; height: {canvasHeight}px; position: relative;"
