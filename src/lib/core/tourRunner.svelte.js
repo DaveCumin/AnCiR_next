@@ -19,7 +19,9 @@
 //   }
 
 // Each value is a function returning a Promise of the module — loaded on demand.
-const tourModules = import.meta.glob('$lib/tours/*.js');
+// Exclude *.test.js: the glob otherwise pulls test files (which import node:fs /
+// node:path) into the browser build and breaks `vite build`.
+const tourModules = import.meta.glob(['$lib/tours/*.js', '!$lib/tours/*.test.js']);
 
 // Reactive engine state shared across components (picker + overlay).
 export const tourState = $state({
