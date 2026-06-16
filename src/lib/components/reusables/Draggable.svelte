@@ -8,6 +8,7 @@
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 	import { getCanvasWidthPx } from '$lib/components/views/PlotDisplay.svelte';
 	import Editable from '../inputs/Editable.svelte';
+	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
 	let plotElement;
 
 	let {
@@ -18,8 +19,7 @@
 		title = $bindable(''),
 		id,
 		selected = $bindable(false),
-		canvasWidth = 50000,
-		canvasHeight = 50000
+		viewportEl = null
 	} = $props();
 
 	const nodeNote = $derived(core.nodeNotes?.[`plot_${id}`] ?? '');
@@ -35,10 +35,32 @@
 
 	let dragStartX, dragStartY;
 	let mouseStartX, mouseStartY;
+	// Cursor canvas-coords captured at mousedown. Used as the reference point so
+	// drag math stays correct when edge-pan moves the canvas during the drag.
+	let mouseStartCanvasX = 0;
+	let mouseStartCanvasY = 0;
 
 	let isDragging = false;
 	let hasMouseMoved = false;
 	let dragThreshold = 5; // pixels before considering it a drag
+
+	function clientToCanvas(clientX, clientY) {
+		const rect = viewportEl?.getBoundingClientRect() ?? { left: 0, top: 0 };
+		const z = appState.canvasScale ?? 1;
+		const offX = appState.canvasOffset?.x ?? 0;
+		const offY = appState.canvasOffset?.y ?? 0;
+		return {
+			x: (clientX - rect.left - offX) / z,
+			y: (clientY - rect.top - offY) / z
+		};
+	}
+
+	function applyEdgePan(dx, dy) {
+		appState.canvasOffset = {
+			x: (appState.canvasOffset?.x ?? 0) + dx,
+			y: (appState.canvasOffset?.y ?? 0) + dy
+		};
+	}
 
 	let dragStartPositions = {};
 	let fullscreen = $state(false);
@@ -87,6 +109,9 @@
 		const pos = getPointerPosition(e);
 		mouseStartX = pos.x;
 		mouseStartY = pos.y;
+		const startCanvas = clientToCanvas(pos.x, pos.y);
+		mouseStartCanvasX = startCanvas.x;
+		mouseStartCanvasY = startCanvas.y;
 
 		dragStartPositions = {};
 		hasMouseMoved = false;
@@ -126,6 +151,13 @@
 			}
 		});
 		moving = true && doMove;
+		if (moving && viewportEl) {
+			startEdgePan({
+				getViewportRect: () => viewportEl.getBoundingClientRect(),
+				applyPan: applyEdgePan
+			});
+			noteEdgePanMouse(pos.x, pos.y);
+		}
 	}
 
 	function onMouseDown(e, doMove = true) {
@@ -133,6 +165,9 @@
 
 		mouseStartX = e.clientX;
 		mouseStartY = e.clientY;
+		const startCanvas = clientToCanvas(e.clientX, e.clientY);
+		mouseStartCanvasX = startCanvas.x;
+		mouseStartCanvasY = startCanvas.y;
 
 		dragStartPositions = {};
 
@@ -162,26 +197,25 @@
 			}
 		});
 		moving = true && doMove;
+		if (moving && viewportEl) {
+			startEdgePan({
+				getViewportRect: () => viewportEl.getBoundingClientRect(),
+				applyPan: applyEdgePan
+			});
+			noteEdgePanMouse(e.clientX, e.clientY);
+		}
 	}
 
 	function onTouchStart(e, doMove = true) {
 		onPointerDown(e, doMove);
 	}
 
-	function anySelectedPlotEdge(xOffset, yOffset) {
-		let result = false;
-
-		core.plots.forEach((p) => {
-			if (p.selected && (p.x + xOffset <= 0 || p.y + yOffset <= 0)) {
-				result = true;
-			}
-		});
-
-		return result;
-	}
-
 	function onPointerMove(e) {
 		const pos = getPointerPosition(e);
+
+		// Keep edge-pan engine fed with the latest cursor position while a drag
+		// or resize is in progress so it can nudge the canvas toward the cursor.
+		if (moving || resizing) noteEdgePanMouse(pos.x, pos.y);
 
 		if (moving && !isDragging) {
 			const deltaX = Math.abs(pos.x - mouseStartX);
@@ -194,57 +228,29 @@
 		}
 
 		if (moving && isDragging) {
-			const deltaX = (pos.x - mouseStartX) / appState.canvasScale;
-			const deltaY = (pos.y - mouseStartY) / appState.canvasScale;
+			// Drag math runs in canvas coords so edge-pan moving the canvas mid-drag
+			// still leaves the plot under the cursor.
+			const cur = clientToCanvas(pos.x, pos.y);
+			const deltaX = cur.x - mouseStartCanvasX;
+			const deltaY = cur.y - mouseStartCanvasY;
 
 			core.plots.forEach((p) => {
 				if (p.selected || p.id == id) {
-					if (anySelectedPlotEdge(e.movementX, e.movementY)) return;
-
 					const start = dragStartPositions[p.id];
+					if (!start) return;
 
-					const newX = snapToGrid(start.x + deltaX);
-					const newY = snapToGrid(start.y + deltaY);
-
-					p.x = Math.max(0, Math.min(newX, canvasWidth - width - 20));
-					p.y = Math.max(0, Math.min(newY, canvasHeight - height - 50));
+					p.x = snapToGrid(start.x + deltaX);
+					p.y = snapToGrid(start.y + deltaY);
 				}
 			});
 		} else if (resizing) {
+			// Resize uses absolute screen-delta / zoom — independent of pan because
+			// the corner being dragged stays under the cursor without further math.
 			let deltaX = (pos.x - initialMouseX) / appState.canvasScale;
 			let deltaY = (pos.y - initialMouseY) / appState.canvasScale;
 
-			const maxWidth = canvasWidth - x - 20;
-			const maxHeight = canvasHeight - y - 50;
-
-			width = snapToGrid(Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth)));
-			height = snapToGrid(Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight)));
-		}
-
-		// Auto-scroll functionality
-		if (resizing || moving) {
-			const rightLim =
-				window.innerWidth -
-				(appState.showControlPanel ? appState.widthControlPanel / appState.canvasScale : 0);
-
-			const currentTop = document.getElementsByClassName('canvas')[0].scrollTop;
-			const currentLeft = document.getElementsByClassName('canvas')[0].scrollLeft;
-
-			if (pos.x > rightLim) {
-				document.getElementsByClassName('canvas')[0].scrollTo({
-					top: currentTop,
-					left: currentLeft + appState.gridSize,
-					behavior: 'smooth'
-				});
-			}
-
-			if (pos.y > window.innerHeight) {
-				document.getElementsByClassName('canvas')[0].scrollTo({
-					top: currentTop + appState.gridSize,
-					left: currentLeft,
-					behavior: 'smooth'
-				});
-			}
+			width = snapToGrid(Math.max(minWidth, initialWidth + deltaX));
+			height = snapToGrid(Math.max(minHeight, initialHeight + deltaY));
 		}
 	}
 
@@ -266,6 +272,7 @@
 		isDragging = false;
 		hasMouseMoved = false;
 		isTouch = false;
+		stopEdgePan();
 	}
 
 	function onMouseUp() {

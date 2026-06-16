@@ -17,6 +17,7 @@
 	import FloatingActions from '$lib/components/workflow/FloatingActions.svelte';
 	import NoteCard from '$lib/components/views/NoteCard.svelte';
 	import WorksheetAddPalette from '$lib/components/views/WorksheetAddPalette.svelte';
+	import { tooltip } from '$lib/utils/tooltip.js';
 
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 	import { onMount, tick } from 'svelte';
@@ -24,6 +25,10 @@
 
 	import { deselectAllPlots } from '$lib/core/Plot.svelte';
 	import { removePlots } from '$lib/core/Plot.svelte';
+
+	const MIN_ZOOM = 0.15;
+	const MAX_ZOOM = 4;
+	const ZOOM_STEP = 0.1;
 
 	let selectedPlotIds = $derived.by(() => core.plots.filter((p) => p.selected).map((p) => p.id));
 
@@ -41,7 +46,8 @@
 			const y = Number(parsed?.y);
 			const z = Number(parsed?.z);
 			if (Number.isFinite(x) && Number.isFinite(y)) appState.canvasOffset = { x, y };
-			if (Number.isFinite(z) && z > 0) appState.canvasScale = z;
+			if (Number.isFinite(z) && z > 0)
+				appState.canvasScale = Math.min(Math.max(z, MIN_ZOOM), MAX_ZOOM);
 		} catch {
 			/* parse / quota errors — keep defaults */
 		}
@@ -61,8 +67,18 @@
 	});
 
 	let showNewPlotModal = $state(false);
+	let canvasViewportEl = $state(null);
+	let isPanning = $state(false);
+	let panStartX = $state(0);
+	let panStartY = $state(0);
 
 	function handleClick(e) {
+		// Suppress the deselect-all if we just panned: mouseup synthesises a click
+		// at the same coords, and we don't want a pan-end to also clear selection.
+		if (panMoved) {
+			panMoved = false;
+			return;
+		}
 		e.stopPropagation();
 		deselectAllPlots();
 	}
@@ -74,22 +90,121 @@
 		return appState.widthNavBar;
 	});
 
-	let gridBackgroundWidthPx = $derived.by(() => {
-		const rights = [
-			...core.plots.map((p) => p.x + p.width),
-			...core.notes.map((n) => n.x + n.width)
-		];
-		const rightMost = rights.length ? Math.max(...rights) : 0;
-		return Math.max(canvasWidthPx, rightMost + 200);
-	});
+	let rightPx = $derived.by(() => (appState.showControlPanel ? appState.widthControlPanel : 0));
 
-	let gridBackgroundHeightPx = $derived.by(() => {
-		const bottoms = [
-			...core.plots.map((p) => p.y + p.height),
-			...core.notes.map((n) => n.y + n.height)
+	function resetCanvasView() {
+		appState.canvasOffset = { x: 0, y: 0 };
+		appState.canvasScale = 1;
+	}
+
+	function setZoom(newZoom) {
+		appState.canvasScale = Math.min(Math.max(newZoom, MIN_ZOOM), MAX_ZOOM);
+	}
+
+	function handleWheel(e) {
+		// Don't hijack wheel events that originate inside floating overlays —
+		// modal bodies, dropdowns, plot internals. Without this, scrolling inside
+		// any of those moves the canvas instead. Ctrl/meta + wheel always zooms,
+		// so let it through.
+		if (
+			!e.ctrlKey &&
+			!e.metaKey &&
+			e.target?.closest?.(
+				'dialog, .backdrop, .np-menu, .palette-menu, .modal, .modal-content, ' +
+					'.modal-overlay, .dropdown, .dropdown-menu, .submenu, textarea, ' +
+					'.control-panel'
+			)
+		) {
+			return;
+		}
+		e.preventDefault();
+		if (e.ctrlKey || e.metaKey) {
+			const factor = e.deltaY > 0 ? 0.9 : 1.1;
+			const oldZoom = appState.canvasScale ?? 1;
+			const newZoom = Math.min(Math.max(oldZoom * factor, MIN_ZOOM), MAX_ZOOM);
+			// Keep the canvas point under the cursor fixed while zooming.
+			const rect = canvasViewportEl?.getBoundingClientRect() ?? { left: 0, top: 0 };
+			const relX = e.clientX - rect.left;
+			const relY = e.clientY - rect.top;
+			const offX = appState.canvasOffset?.x ?? 0;
+			const offY = appState.canvasOffset?.y ?? 0;
+			const canvasX = (relX - offX) / oldZoom;
+			const canvasY = (relY - offY) / oldZoom;
+			appState.canvasOffset = {
+				x: relX - canvasX * newZoom,
+				y: relY - canvasY * newZoom
+			};
+			appState.canvasScale = newZoom;
+		} else {
+			appState.canvasOffset = {
+				x: (appState.canvasOffset?.x ?? 0) - e.deltaX,
+				y: (appState.canvasOffset?.y ?? 0) - e.deltaY
+			};
+		}
+	}
+
+	let panMoved = false;
+
+	function handleCanvasMouseDown(e) {
+		if (e.button !== 0) return;
+		// Only pan when the click lands on the canvas surface itself, not on a
+		// plot, note, palette, or zoom-control button. Draggable.svelte's own
+		// mousedown stops propagation before we see it, so any event that reaches
+		// here started on the empty canvas.
+		isPanning = true;
+		panMoved = false;
+		panStartX = e.clientX - (appState.canvasOffset?.x ?? 0);
+		panStartY = e.clientY - (appState.canvasOffset?.y ?? 0);
+	}
+
+	function handleMouseMove(e) {
+		if (!isPanning) return;
+		const nx = e.clientX - panStartX;
+		const ny = e.clientY - panStartY;
+		if (
+			!panMoved &&
+			(Math.abs(nx - (appState.canvasOffset?.x ?? 0)) > 2 ||
+				Math.abs(ny - (appState.canvasOffset?.y ?? 0)) > 2)
+		) {
+			panMoved = true;
+		}
+		appState.canvasOffset = { x: nx, y: ny };
+	}
+
+	function stopPan() {
+		isPanning = false;
+	}
+
+	// Viewport sanity check: on first content render, if nothing is visible in the
+	// current viewport (stale persisted pan/zoom), snap back to origin so the user
+	// has a recovery affordance. Mirrors the same guard in WorkflowEditor.
+	let _viewportSanityChecked = false;
+	$effect(() => {
+		if (_viewportSanityChecked) return;
+		if (!canvasViewportEl) return;
+		const items = [
+			...core.plots.map((p) => ({ x: p.x, y: p.y, w: p.width + 20, h: p.height + 50 })),
+			...core.notes.map((n) => ({ x: n.x, y: n.y, w: n.width, h: n.height }))
 		];
-		const bottomMost = bottoms.length ? Math.max(...bottoms) : 0;
-		return Math.max(appState.windowHeight, bottomMost + 200);
+		if (items.length === 0) return;
+		const rect = canvasViewportEl.getBoundingClientRect();
+		if (!(rect.width > 0 && rect.height > 0)) return;
+		const z = appState.canvasScale ?? 1;
+		const offX = appState.canvasOffset?.x ?? 0;
+		const offY = appState.canvasOffset?.y ?? 0;
+		const margin = 100;
+		const anyVisible = items.some((it) => {
+			const sx = offX + it.x * z;
+			const sy = offY + it.y * z;
+			return (
+				sx + it.w * z > -margin &&
+				sx < rect.width + margin &&
+				sy + it.h * z > -margin &&
+				sy < rect.height + margin
+			);
+		});
+		if (!anyVisible) resetCanvasView();
+		_viewportSanityChecked = true;
 	});
 
 	//more efficient way to open the dataDisplay on import (fewer reactive checks)
@@ -102,6 +217,19 @@
 			appState.showDisplayPanel = true;
 		}
 	});
+
+	// Background grid: rendered on the static viewport so it covers the whole
+	// visible area regardless of pan. Cell size scales with zoom and the pattern
+	// is offset by (canvasOffset modulo cellSize) so it slides smoothly under
+	// the content as the user pans, keeping the visual grid aligned with the
+	// snap-to-grid positions of plots.
+	let gridCellPx = $derived((appState.gridSize ?? 15) * (appState.canvasScale ?? 1));
+	let gridOffsetX = $derived(
+		gridCellPx > 0 ? (((appState.canvasOffset?.x ?? 0) % gridCellPx) + gridCellPx) % gridCellPx : 0
+	);
+	let gridOffsetY = $derived(
+		gridCellPx > 0 ? (((appState.canvasOffset?.y ?? 0) % gridCellPx) + gridCellPx) % gridCellPx : 0
+	);
 
 	onMount(() => {
 		const onKeyDown = (e) => {
@@ -146,38 +274,25 @@
 			width: {canvasWidthPx}px;
 			height: 100vh;
 			"
+	onwheel={handleWheel}
+	onmousedown={handleCanvasMouseDown}
+	onmousemove={handleMouseMove}
+	onmouseup={stopPan}
+	onmouseleave={stopPan}
+	role="presentation"
 >
 	<div
-		class="canvas-panel"
-		style="
-		position: relative;
-		transform-origin: top left;
-		width: {Math.max(canvasWidthPx, canvasWidthPx / appState.canvasScale)}px;
-		height: 100vh;
-		transform: scale({appState.canvasScale});
-	"
+		class="canvas-viewport"
+		class:panning={isPanning}
+		bind:this={canvasViewportEl}
+		style="--grid-cell: {gridCellPx}px; --grid-x: {gridOffsetX}px; --grid-y: {gridOffsetY}px;"
 	>
 		<div
-			class="canvas-background"
+			class="canvas-inner"
 			style="
-			width: {Math.max(gridBackgroundWidthPx, gridBackgroundWidthPx / appState.canvasScale)}px;
-			height: {Math.max(gridBackgroundHeightPx, gridBackgroundHeightPx / appState.canvasScale)}px;
-			background-image:
-				repeating-linear-gradient(
-				to right,
-				var(--color-lightness-95) 0,
-				var(--color-lightness-95) 1px,
-				transparent 1px,
-				transparent {appState.gridSize}px
-				),
-				repeating-linear-gradient(
-				to bottom,
-				var(--color-lightness-95) 0,
-				var(--color-lightness-95) 1px,
-				transparent 1px,
-				transparent {appState.gridSize}px
-				);
-			"
+			transform: translate({appState.canvasOffset?.x ?? 0}px, {appState.canvasOffset?.y ?? 0}px) scale({appState.canvasScale});
+			transform-origin: 0 0;
+		"
 		>
 			{#each core.notes as note (note.id)}
 				<NoteCard {note} />
@@ -194,15 +309,18 @@
 							bind:title={plot.name}
 							id={plot.id}
 							bind:selected={plot.selected}
+							viewportEl={canvasViewportEl}
 						>
 							{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 							<Plot theData={plot} which="plot" />
 						</Draggable>
 					{/if}
 				{/each}
-			{:else if core.notes.length > 0}
-				<!-- Notes are rendered above; suppress the empty-state prompt. -->
-			{:else if core.data.length > 0}
+			{/if}
+		</div>
+
+		{#if core.plots.length === 0 && core.notes.length === 0}
+			{#if core.data.length > 0}
 				<div class="no-plot-prompt" out:fade={{ duration: 600 }}>
 					<button class="icon" onclick={() => (showNewPlotModal = true)}>
 						<Icon name="add" width={24} height={24} />
@@ -222,17 +340,91 @@
 					</p>
 				</div>
 			{/if}
-		</div>
+		{/if}
 	</div>
+</div>
+
+<div class="zoom-controls" style="right: calc({rightPx}px + 5px);">
+	<button
+		type="button"
+		class="icon viewport-btn"
+		onclick={(e) => {
+			e.stopPropagation();
+			resetCanvasView();
+		}}
+		aria-label="Reset viewport"
+		{@attach tooltip('Reset viewport (snap pan + zoom to origin)')}
+	>
+		<Icon name="center" width={22} height={22} />
+	</button>
+	<button
+		class="icon zoomout viewport-btn"
+		onclick={(e) => {
+			e.stopPropagation();
+			setZoom((appState.canvasScale ?? 1) - ZOOM_STEP);
+		}}
+		aria-label="Zoom out"
+		{@attach tooltip('Zoom out')}
+	>
+		<Icon name="zoom-out" width={24} height={24} />
+	</button>
+	<button
+		class="icon zoomin viewport-btn"
+		onclick={(e) => {
+			e.stopPropagation();
+			setZoom((appState.canvasScale ?? 1) + ZOOM_STEP);
+		}}
+		aria-label="Zoom in"
+		{@attach tooltip('Zoom in')}
+	>
+		<Icon name="zoom-in" width={24} height={24} />
+	</button>
 </div>
 
 <style>
 	.canvas {
 		position: fixed;
-		overflow: auto;
+		overflow: hidden;
 		transition:
 			width 0.6s ease,
 			left 0.6s ease;
+	}
+
+	.canvas-viewport {
+		position: relative;
+		width: 100%;
+		height: 100%;
+		overflow: hidden;
+		cursor: grab;
+		/* Background grid: pattern is cell-sized and shifted by the pan offset so
+		   it stays aligned with snap-to-grid plot positions while panning/zooming. */
+		background-image:
+			linear-gradient(
+				to right,
+				var(--color-lightness-95) 0,
+				var(--color-lightness-95) 1px,
+				transparent 1px
+			),
+			linear-gradient(
+				to bottom,
+				var(--color-lightness-95) 0,
+				var(--color-lightness-95) 1px,
+				transparent 1px
+			);
+		background-size: var(--grid-cell, 15px) var(--grid-cell, 15px);
+		background-position: var(--grid-x, 0) var(--grid-y, 0);
+	}
+
+	.canvas-viewport.panning {
+		cursor: grabbing;
+	}
+
+	.canvas-inner {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 0;
+		height: 0;
 	}
 
 	.fa-host {
@@ -245,24 +437,49 @@
 	}
 
 	.no-plot-prompt {
+		position: absolute;
+		inset: 0;
 		display: flex;
 		flex-direction: row;
 		align-items: center;
 		justify-content: center;
 
-		width: 100%;
-		height: 100%;
-
 		font-weight: bold;
+		pointer-events: none;
+	}
+
+	.no-plot-prompt button,
+	.no-plot-prompt p {
+		pointer-events: auto;
 	}
 
 	.no-plot-prompt p {
 		color: var(--color-lightness-75);
 	}
 
-	.newplotconstant {
+	.zoom-controls {
 		position: fixed;
-		right: 15px;
-		transition: right 0.5s ease;
+		bottom: 10px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 4px;
+		z-index: 999;
+		transition: right 0.6s ease;
+	}
+
+	.viewport-btn {
+		color: var(--color-lightness-45, #6b7280);
+		transition:
+			color 0.18s ease,
+			transform 0.32s ease;
+	}
+
+	.viewport-btn:hover {
+		color: var(--color-accent, #4d9fe3);
+	}
+
+	.viewport-btn:active {
+		transform: scale(0.95);
 	}
 </style>

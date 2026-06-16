@@ -115,33 +115,6 @@
 	/>
 {/if}
 
-{#if !appState.showWorkflow}
-	<button
-		class="icon zoomout"
-		style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
-			? appState.widthControlPanel
-			: 0}px + 5px); bottom: 35px;"
-		onclick={(e) => {
-			e.stopPropagation();
-			appState.canvasScale -= 0.05;
-		}}
-	>
-		<Icon name="zoom-out" width={24} height={24} />
-	</button>
-
-	<button
-		class="icon zoomin"
-		style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
-			? appState.widthControlPanel
-			: 0}px + 5px); bottom: 10px;"
-		onclick={(e) => {
-			e.stopPropagation();
-			appState.canvasScale += 0.05;
-		}}
-	>
-		<Icon name="zoom-in" width={24} height={24} />
-	</button>
-{/if}
 
 <style>
 	.icon {

@@ -32,6 +32,7 @@
 	import FloatingActions from './FloatingActions.svelte';
 	import NodePalette from './NodePalette.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
+	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
 
 	let { inline = false } = $props();
 
@@ -770,6 +771,16 @@
 			moved: false,
 			companions
 		};
+		if (canvasViewportEl) {
+			startEdgePan({
+				getViewportRect: () => canvasViewportEl.getBoundingClientRect(),
+				applyPan: (dx, dy) => {
+					panX += dx;
+					panY += dy;
+				}
+			});
+			noteEdgePanMouse(e.clientX, e.clientY);
+		}
 	}
 
 	function handleResizeMouseDown(e, node) {
@@ -792,6 +803,10 @@
 
 	function handleMouseMove(e) {
 		mouseCanvas = toCanvasCoords(e.clientX, e.clientY);
+
+		// Feed the edge-pan engine so it nudges the canvas toward the cursor
+		// while a node drag is in progress.
+		if (dragInfo) noteEdgePanMouse(e.clientX, e.clientY);
 
 		if (resizeInfo) {
 			const dx = (e.clientX - resizeInfo.startMouse.x) / zoom;
@@ -1126,6 +1141,24 @@
 			return;
 		}
 
+		// Single-input non-x/y plots (e.g. Histogram) expose a single dynamic `data`
+		// port. Dropping a wire appends a new series with that column.
+		if (
+			target.type === 'plot' &&
+			target.plotObj &&
+			target.plotObj.type !== 'tableplot' &&
+			toPort === 'data'
+		) {
+			const plot = target.plotObj.plot;
+			const defaultInputs = appConsts.plotMap.get(target.plotObj.type)?.defaultInputs ?? [];
+			if (!plot || defaultInputs.length !== 1) return;
+			const field = defaultInputs[0];
+			const dataIn = { [field]: { refId: colId } };
+			if (typeof plot.addData === 'function') plot.addData(dataIn);
+			else plot.data = [...(plot.data ?? []), dataIn];
+			return;
+		}
+
 		// Non-tableplot plots: per-set {xN, ysN} ports. Existing sets reuse the
 		// pair; the trailing empty pair (one past the last group) appends a new
 		// set when a wire drops on it.
@@ -1180,6 +1213,18 @@
 
 		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && portName === 'series') {
 			target.plotObj.plot.columnRefs = [];
+			return;
+		}
+
+		// Single-input non-x/y plots: clearing the `data` port drops every series.
+		if (
+			target.type === 'plot' &&
+			target.plotObj &&
+			target.plotObj.type !== 'tableplot' &&
+			portName === 'data'
+		) {
+			const plot = target.plotObj.plot;
+			if (plot) plot.data = [];
 			return;
 		}
 
@@ -1348,6 +1393,7 @@
 		dragInfo = null;
 		resizeInfo = null;
 		isPanning = false;
+		stopEdgePan();
 	}
 
 	/**
@@ -1472,6 +1518,26 @@
 			const next = [...refs];
 			next[idx] = newColId;
 			target.plotObj.plot.columnRefs = next;
+			return;
+		}
+
+		// Single-input non-x/y plots: swap the column ref on the matching series.
+		if (
+			target.type === 'plot' &&
+			target.plotObj &&
+			target.plotObj.type !== 'tableplot' &&
+			edge.toPort === 'data'
+		) {
+			const plot = target.plotObj.plot;
+			const defaultInputs = appConsts.plotMap.get(target.plotObj.type)?.defaultInputs ?? [];
+			if (!plot?.data || defaultInputs.length !== 1) return;
+			const field = defaultInputs[0];
+			for (const dp of plot.data) {
+				if (dp?.[field]?.refId === oldColId) {
+					dp[field].refId = newColId;
+					return;
+				}
+			}
 			return;
 		}
 
@@ -1667,6 +1733,24 @@
 			target.plotObj.plot.columnRefs = (target.plotObj.plot.columnRefs ?? []).filter(
 				(id) => id !== colId
 			);
+			return;
+		}
+
+		// Single-input non-x/y plots: removing one wire on `data` drops the
+		// matching series (the datum whose input column refs this colId).
+		if (
+			target.type === 'plot' &&
+			target.plotObj &&
+			target.plotObj.type !== 'tableplot' &&
+			edge.toPort === 'data'
+		) {
+			const plot = target.plotObj.plot;
+			const defaultInputs = appConsts.plotMap.get(target.plotObj.type)?.defaultInputs ?? [];
+			if (!plot?.data || defaultInputs.length !== 1) return;
+			const field = defaultInputs[0];
+			const idx = plot.data.findIndex((dp) => dp?.[field]?.refId === colId);
+			if (idx < 0) return;
+			plot.data = plot.data.filter((_, i) => i !== idx);
 			return;
 		}
 

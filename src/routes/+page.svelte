@@ -164,11 +164,11 @@
 
 				// CHANGE SCALE - ZOOM IN
 				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'p') {
-					appState.canvasScale += 0.1;
+					appState.canvasScale = Math.min(appState.canvasScale + 0.1, 4);
 				}
 				// CHANGE SCALE - ZOOM OUT
 				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'o') {
-					appState.canvasScale -= 0.1;
+					appState.canvasScale = Math.max(appState.canvasScale - 0.1, 0.15);
 				}
 				// SELCT ALL PLOTS
 				if (MODIFIER && event.key.toLowerCase() === 'a') {

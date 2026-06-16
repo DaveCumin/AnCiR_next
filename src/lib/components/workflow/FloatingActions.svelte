@@ -6,34 +6,11 @@
 	//   · Bottom-left: undo / redo
 	import Icon from '$lib/icons/Icon.svelte';
 	import { history } from '$lib/core/history.svelte.js';
-	import { exportJson, importJson } from '$lib/components/iconActions/Setting.svelte';
-	import { appState } from '$lib/core/core.svelte.js';
-	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import { exportJson } from '$lib/components/iconActions/Setting.svelte';
+	import LoadSessionModal from './LoadSessionModal.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
-	import { tick } from 'svelte';
 
-	let fileInput;
-
-	async function handleLoad(e) {
-		const file = e.target.files?.[0];
-		if (!file) return;
-		try {
-			const text = await file.text();
-			const json = JSON.parse(text);
-			appState.loadingState.isLoading = true;
-			appState.loadingState.loadingMsg = 'Loading session…';
-			await tick();
-			await importJson(json, (detail) => {
-				appState.loadingState.loadingMsg = detail;
-			});
-		} catch (err) {
-			addNotification(`Failed to load session: ${err?.message ?? err}`);
-		} finally {
-			appState.loadingState.isLoading = false;
-			appState.loadingState.loadingMsg = '';
-			e.target.value = '';
-		}
-	}
+	let showLoadModal = $state(false);
 </script>
 
 <div class="fa-layer" aria-label="Canvas actions">
@@ -41,7 +18,7 @@
 		<button
 			type="button"
 			class="fa-btn"
-			onclick={() => fileInput?.click()}
+			onclick={() => (showLoadModal = true)}
 			aria-label="Load session"
 			{@attach tooltip('Load a session')}
 		>
@@ -85,14 +62,9 @@
 		</button>
 	</div>
 
-	<input
-		bind:this={fileInput}
-		type="file"
-		accept="application/json"
-		style="display: none"
-		onchange={handleLoad}
-	/>
 </div>
+
+<LoadSessionModal bind:showModal={showLoadModal} />
 
 <style>
 	.fa-layer {
