@@ -38,6 +38,10 @@
 	}
 
 	class ActogramDataclass {
+		static descriptors = {
+			draw: { label: 'Visible' }
+		};
+
 		parentPlot = $state();
 		x = $state();
 		y = $state();
@@ -278,6 +282,21 @@
 	}
 
 	export class Actogramclass {
+		static descriptors = {
+			paddingIN: { group: 'Padding' },
+			spaceBetween: { group: 'Padding', label: 'Space between' },
+			showDayNumbers: { group: 'Padding', label: 'Show period numbers' },
+			periodHrs: { group: 'Time', label: 'Period (h)', step: 0.1 },
+			doublePlot: { group: 'Time', label: 'Repeat' },
+			ylimsOption: {
+				group: 'Y-lims',
+				label: 'Scale Y-axis',
+				input: 'select',
+				options: ['overall', 'byperiod', 'manual']
+			},
+			ylimsIN: { group: 'Y-lims', _children: { 0: { label: 'Y min' }, 1: { label: 'Y max' } } }
+		};
+
 		parentBox = $state();
 		data = $state([]);
 		annotations = $state([]);
@@ -505,53 +524,10 @@
 		}
 	}
 
-	// Schemas for the multi-select control panel. Each entry declares a
-	// user-editable field on a plot of this type so ControlDisplay can render
-	// it as a "shared" control across many selected plots.
-	// `path` is a dotted path on the Plot wrapper (e.g. 'plot.paddingIN.top').
-	// Only writable fields belong here — derived state (startTime, padding,
-	// ylims, Ndays, …) cannot be set and must stay out.
-	export const Actogram_sharedFields = [
-		{ path: 'width', label: 'Width', input: 'number', group: 'Dimension' },
-		{ path: 'height', label: 'Height', input: 'number', group: 'Dimension' },
-
-		{ path: 'plot.paddingIN.top', label: 'Top', input: 'number', group: 'Padding' },
-		{ path: 'plot.paddingIN.bottom', label: 'Bottom', input: 'number', group: 'Padding' },
-		{ path: 'plot.paddingIN.left', label: 'Left', input: 'number', group: 'Padding' },
-		{ path: 'plot.paddingIN.right', label: 'Right', input: 'number', group: 'Padding' },
-		{ path: 'plot.spaceBetween', label: 'Space between', input: 'number', group: 'Padding' },
-		{
-			path: 'plot.showDayNumbers',
-			label: 'Show period numbers',
-			input: 'boolean',
-			group: 'Padding'
-		},
-
-		{ path: 'plot.periodHrs', label: 'Period (h)', input: 'number', step: 0.1, group: 'Time' },
-		{ path: 'plot.doublePlot', label: 'Repeat', input: 'number', group: 'Time' },
-		{ path: 'plot.xAxis.nticks', label: 'X ticks', input: 'number', group: 'Time' },
-
-		{
-			path: 'plot.ylimsOption',
-			label: 'Scale Y-axis',
-			input: 'select',
-			options: ['overall', 'byperiod', 'manual'],
-			group: 'Y-lims'
-		}
-	];
-
-	// Per-data-row fields. Paths are relative to one entry of `plot.data[]`.
-	export const Actogram_dataSharedFields = [
-		{ path: 'draw', label: 'Visible', input: 'boolean' },
-		{ path: 'label', label: 'Label', input: 'text' }
-	];
-
 	export const definition = {
 		defaultDataInputs: Actogram_defaultDataInputs,
 		controlHeaders: Actogram_controlHeaders,
-		plotClass: Actogramclass,
-		sharedFields: Actogram_sharedFields,
-		dataSharedFields: Actogram_dataSharedFields
+		plotClass: Actogramclass
 	};
 </script>
 

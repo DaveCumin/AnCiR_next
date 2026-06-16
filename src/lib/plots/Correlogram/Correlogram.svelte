@@ -19,6 +19,13 @@
 	export const Correlogram_controlHeaders = ['Properties', 'Data'];
 
 	class CorrelogramDataclass {
+		static descriptors = {
+			maxLag: { label: 'Max lag (h)' },
+			minLag: { label: 'Min lag (h)' },
+			showConfidenceBounds: { label: 'Show confidence bounds' },
+			confidenceLevel: { label: 'Confidence level', input: 'select', options: [0.95, 0.99] }
+		};
+
 		parentPlot = $state();
 		x = $state();
 		y = $state();
@@ -185,6 +192,18 @@
 	}
 
 	export class Correlogramclass {
+		static descriptors = {
+			padding: { group: 'Padding' },
+			laglimsIN: {
+				group: 'X-axis (lag)',
+				_children: { 0: { label: 'Lag min' }, 1: { label: 'Lag max' } }
+			},
+			ylimsIN: {
+				group: 'Y-axis',
+				_children: { 0: { label: 'Correlation min' }, 1: { label: 'Correlation max' } }
+			}
+		};
+
 		parentBox = $state();
 		data = $state([]);
 		padding = $state({ top: 15, right: 20, bottom: 30, left: 50 });
@@ -409,40 +428,10 @@
 		}
 	}
 
-	export const Correlogram_sharedFields = [
-		{ path: 'width', label: 'Width', input: 'number', group: 'Dimension' },
-		{ path: 'height', label: 'Height', input: 'number', group: 'Dimension' },
-
-		{ path: 'plot.padding.top', label: 'Top', input: 'number', group: 'Padding' },
-		{ path: 'plot.padding.bottom', label: 'Bottom', input: 'number', group: 'Padding' },
-		{ path: 'plot.padding.left', label: 'Left', input: 'number', group: 'Padding' },
-		{ path: 'plot.padding.right', label: 'Right', input: 'number', group: 'Padding' },
-
-		{ path: 'plot.laglimsIN[0]', label: 'Lag min', input: 'number', group: 'X-axis (lag)' },
-		{ path: 'plot.laglimsIN[1]', label: 'Lag max', input: 'number', group: 'X-axis (lag)' },
-
-		{ path: 'plot.ylimsIN[0]', label: 'Correlation min', input: 'number', group: 'Y-axis' },
-		{ path: 'plot.ylimsIN[1]', label: 'Correlation max', input: 'number', group: 'Y-axis' }
-	];
-
-	export const Correlogram_dataSharedFields = [
-		{ path: 'maxLag', label: 'Max lag (h)', input: 'number' },
-		{ path: 'minLag', label: 'Min lag (h)', input: 'number' },
-		{ path: 'showConfidenceBounds', label: 'Show confidence bounds', input: 'boolean' },
-		{
-			path: 'confidenceLevel',
-			label: 'Confidence level',
-			input: 'select',
-			options: [0.95, 0.99]
-		}
-	];
-
 	export const definition = {
 		defaultDataInputs: Correlogram_defaultDataInputs,
 		controlHeaders: Correlogram_controlHeaders,
-		plotClass: Correlogramclass,
-		sharedFields: Correlogram_sharedFields,
-		dataSharedFields: Correlogram_dataSharedFields
+		plotClass: Correlogramclass
 	};
 </script>
 

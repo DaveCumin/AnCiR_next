@@ -14,6 +14,8 @@
 	export const Histogram_displayName = 'Histogram';
 
 	class HistogramDataclass {
+		static descriptors = {};
+
 		parentPlot = $state();
 		column = $state();
 		label = $state('Histogram 1');
@@ -118,6 +120,12 @@
 	}
 
 	export class Histogramclass {
+		static descriptors = {
+			padding: { group: 'Padding' },
+			xlimsIN: { group: 'X-axis', _children: { 0: { label: 'X min' }, 1: { label: 'X max' } } },
+			ylimsIN: { group: 'Y-axis', _children: { 0: { label: 'Y min' }, 1: { label: 'Y max' } } }
+		};
+
 		parentBox = $state();
 		data = $state(/** @type {HistogramDataclass[]} */ ([]));
 		legend = $state();
@@ -289,28 +297,11 @@
 		}
 	}
 
-	export const Histogram_sharedFields = [
-		{ path: 'width', label: 'Width', input: 'number', group: 'Dimension' },
-		{ path: 'height', label: 'Height', input: 'number', group: 'Dimension' },
-		{ path: 'plot.padding.top', label: 'Top', input: 'number', group: 'Padding' },
-		{ path: 'plot.padding.bottom', label: 'Bottom', input: 'number', group: 'Padding' },
-		{ path: 'plot.padding.left', label: 'Left', input: 'number', group: 'Padding' },
-		{ path: 'plot.padding.right', label: 'Right', input: 'number', group: 'Padding' },
-		{ path: 'plot.ylimsIN[0]', label: 'Y min', input: 'number', group: 'Y-axis' },
-		{ path: 'plot.ylimsIN[1]', label: 'Y max', input: 'number', group: 'Y-axis' },
-		{ path: 'plot.xlimsIN[0]', label: 'X min', input: 'number', group: 'X-axis' },
-		{ path: 'plot.xlimsIN[1]', label: 'X max', input: 'number', group: 'X-axis' }
-	];
-
-	export const Histogram_dataSharedFields = [{ path: 'label', label: 'Label', input: 'text' }];
-
 	export const definition = {
 		displayName: Histogram_displayName,
 		defaultDataInputs: Histogram_defaultDataInputs,
 		controlHeaders: Histogram_controlHeaders,
-		plotClass: Histogramclass,
-		sharedFields: Histogram_sharedFields,
-		dataSharedFields: Histogram_dataSharedFields
+		plotClass: Histogramclass
 	};
 </script>
 

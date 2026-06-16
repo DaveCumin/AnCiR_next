@@ -21,7 +21,32 @@
 	}
 
 	// Expand state — keyed by section id (group id, '__tps__', '__ungrouped__').
-	let openSections = $state({});
+	// The Computed (table-process) section starts open so TP nodes are always
+	// visible without needing a canvas double-click to reveal them.
+	let openSections = $state({ __tps__: true });
+
+	// Toggle a section open/closed from a header click. `<details>` uses
+	// `bind:open`, so we MUST preventDefault to stop the browser's native toggle
+	// from also flipping `open` — without it the native toggle and this manual
+	// flip cancel out (double-toggle) and the section never expands. That double
+	// flip is why, previously, sections only opened via canvas selection (which
+	// set the state directly). Skip clicks on the inline name editor or buttons
+	// so renaming / the caret keep their own behaviour.
+	function toggleSection(e, id) {
+		e.preventDefault();
+		if (e.target?.closest?.('.inline-edit-span, .inline-edit-input, input, textarea, button')) {
+			return;
+		}
+		openSections[id] = !openSections[id];
+	}
+
+	// Caret-button toggle: preventDefault for the same reason as above, plus
+	// stopPropagation so the surrounding summary handler doesn't also fire.
+	function toggleSectionFromCaret(e, id) {
+		e.preventDefault();
+		e.stopPropagation();
+		openSections[id] = !openSections[id];
+	}
 
 	// ─── Canvas-selection mirroring ─────────────────────────────────────────────
 	const canvasSelection = $derived.by(() => {
@@ -210,18 +235,12 @@
 			ondrop={(e) => onDropSection(e, '__group_order__', group.id)}
 		>
 			<details class="clps-item" bind:open={openSections[group.id]}>
-				<summary class="clps-title-container" onclick={(e) => e.preventDefault()}>
+				<summary class="clps-title-container" onclick={(e) => toggleSection(e, group.id)}>
 					<div class="clps-title">
 						<p><Editable bind:value={group.name} /></p>
 					</div>
 					<div class="clps-title-button">
-						<button
-							class="icon"
-							onclick={(e) => {
-								e.stopPropagation();
-								openSections[group.id] = !openSections[group.id];
-							}}
-						>
+						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, group.id)}>
 							{#if openSections[group.id]}
 								<Icon name="caret-down" width={20} height={20} />
 							{:else}
@@ -271,18 +290,12 @@
 	{#if (core.tableProcesses?.length ?? 0) > 0}
 		<div class="clps-container">
 			<details class="clps-item" bind:open={openSections['__tps__']}>
-				<summary class="clps-title-container" onclick={(e) => e.preventDefault()}>
+				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__tps__')}>
 					<div class="clps-title">
 						<p>Computed</p>
 					</div>
 					<div class="clps-title-button">
-						<button
-							class="icon"
-							onclick={(e) => {
-								e.stopPropagation();
-								openSections['__tps__'] = !openSections['__tps__'];
-							}}
-						>
+						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__tps__')}>
 							{#if openSections['__tps__']}
 								<Icon name="caret-down" width={20} height={20} />
 							{:else}
@@ -314,18 +327,12 @@
 	{#if ungroupedColumns.length > 0}
 		<div class="clps-container">
 			<details class="clps-item" bind:open={openSections['__ungrouped__']}>
-				<summary class="clps-title-container" onclick={(e) => e.preventDefault()}>
+				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__ungrouped__')}>
 					<div class="clps-title">
 						<p>Ungrouped</p>
 					</div>
 					<div class="clps-title-button">
-						<button
-							class="icon"
-							onclick={(e) => {
-								e.stopPropagation();
-								openSections['__ungrouped__'] = !openSections['__ungrouped__'];
-							}}
-						>
+						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__ungrouped__')}>
 							{#if openSections['__ungrouped__']}
 								<Icon name="caret-down" width={20} height={20} />
 							{:else}
@@ -428,15 +435,20 @@
 		padding: 0;
 	}
 
+	/* Expand/collapse caret is always visible (and clickable) so sections can be
+	   expanded directly, not only when their node is selected on the canvas. */
 	summary .icon {
-		opacity: 0;
-		pointer-events: none;
+		opacity: 0.55;
+		pointer-events: auto;
 		transition: opacity 0.2s ease;
 	}
 
 	details:hover summary .icon {
 		opacity: 1;
-		pointer-events: auto;
+	}
+
+	.clps-title-container {
+		cursor: pointer;
 	}
 
 	.databuttons {

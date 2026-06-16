@@ -181,8 +181,8 @@
 		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
 
-		showPeriod = $state(false); // Toggle between frequency and period
-		xlimsIN = $state([null, null]);
+		showPeriod = $state(true); // Toggle between frequency and period
+		xlimsIN = $state([4, 30]);
 
 		// Get max frequency and min period from data
 		nyquistFreqs = $derived.by(() => this.data.map((d) => d.fftData.nyquistFreq || 0));
@@ -299,7 +299,7 @@
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
 			this.xAxis = new AxisClass({
-				label: dataIN?.xAxis?.label ?? 'Frequency',
+				label: dataIN?.xAxis?.label ?? 'Period (hours)',
 				gridlines: dataIN?.xAxis?.gridlines ?? true,
 				nticks: dataIN?.xAxis?.nticks ?? 5
 			});
@@ -484,10 +484,6 @@
 
 			if (json.data) {
 				fft.data = json.data.map((d) => FFTDataclass.fromJSON(d, fft));
-			} else if (json.dataIn) {
-				// Creation-time hint: wire raw column refs via the live addData path so
-				// undo/redo of a brand-new plot replays its data wiring (see addPlot op).
-				fft.addData(json.dataIn);
 			}
 			return fft;
 		}

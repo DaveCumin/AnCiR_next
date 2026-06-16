@@ -3,7 +3,7 @@
 <!-- Navbar.svelte -->
 <script>
 	// @ts-nocheck
-	import { appState } from '$lib/core/core.svelte.js';
+	import { appState, core } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import Setting from '$lib/components/iconActions/Setting.svelte';
 	import About from './views/modals/About.svelte';
@@ -46,6 +46,11 @@
 		// Worksheet view = plot canvas + worksheet layer panel. Clicking the
 		// button when the worksheet panel is already open toggles the panel
 		// off but leaves the plot canvas active.
+		// Before unmounting the workflow canvas, transfer any plot nodes that
+		// were canvas-multi-selected over to plots-view selection (so the
+		// shared-properties panel activates). Non-plot canvas selections are
+		// dropped — they're irrelevant in plots view.
+		syncCanvasSelectionToPlotsView();
 		appState.view = 'plots';
 		if (appState.currentTab === 'worksheet' && appState.showDisplayPanel) {
 			appState.showDisplayPanel = false;
@@ -53,6 +58,31 @@
 		} else {
 			appState.currentTab = 'worksheet';
 			appState.showDisplayPanel = true;
+		}
+	}
+
+	function syncCanvasSelectionToPlotsView() {
+		const ids = appState.canvasMultiSelectedNodeIds ?? [];
+		if (ids.length === 0) return;
+		const kept = [];
+		for (const id of ids) {
+			if (typeof id === 'string' && id.startsWith('plot_')) {
+				const plotId = Number(id.slice(5));
+				const plot = core.plots.find((p) => p.id === plotId);
+				if (plot) {
+					plot.selected = true;
+					kept.push(id);
+				}
+			}
+		}
+		if (kept.length === ids.length) return;
+		appState.canvasMultiSelectedNodeIds = kept;
+		appState.canvasMultiSelectedCount = kept.length;
+		if (
+			appState.canvasSelectedNodeId != null &&
+			!kept.includes(appState.canvasSelectedNodeId)
+		) {
+			appState.canvasSelectedNodeId = null;
 		}
 	}
 

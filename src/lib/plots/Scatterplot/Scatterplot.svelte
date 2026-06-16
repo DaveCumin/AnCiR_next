@@ -29,6 +29,10 @@
 	}
 
 	export class ScatterDataclass {
+		static descriptors = {
+			yAxis: { label: 'Y-axis', input: 'select', options: ['left', 'right'] }
+		};
+
 		parentPlot = $state();
 		x = $state();
 		y = $state();
@@ -158,6 +162,22 @@
 	}
 
 	export class Scatterplotclass {
+		static descriptors = {
+			padding: { group: 'Padding' },
+			xlimsIN: { group: 'X-axis', _children: { 0: { label: 'X min' }, 1: { label: 'X max' } } },
+			xLogScale: { group: 'X-axis', label: 'X log scale' },
+			ylimsLeftIN: {
+				group: 'Y-axis (left)',
+				_children: { 0: { label: 'Y min (left)' }, 1: { label: 'Y max (left)' } }
+			},
+			yLogScaleLeft: { group: 'Y-axis (left)', label: 'Log scale (left)' },
+			ylimsRightIN: {
+				group: 'Y-axis (right)',
+				_children: { 0: { label: 'Y min (right)' }, 1: { label: 'Y max (right)' } }
+			},
+			yLogScaleRight: { group: 'Y-axis (right)', label: 'Log scale (right)' }
+		};
+
 		parentBox = $state();
 		data = $state([]);
 		legend = $state();
@@ -582,60 +602,11 @@
 		}
 	}
 
-	export const Scatterplot_sharedFields = [
-		{ path: 'width', label: 'Width', input: 'number', group: 'Dimension' },
-		{ path: 'height', label: 'Height', input: 'number', group: 'Dimension' },
-
-		{ path: 'plot.padding.top', label: 'Top', input: 'number', group: 'Padding' },
-		{ path: 'plot.padding.bottom', label: 'Bottom', input: 'number', group: 'Padding' },
-		{ path: 'plot.padding.left', label: 'Left', input: 'number', group: 'Padding' },
-		{ path: 'plot.padding.right', label: 'Right', input: 'number', group: 'Padding' },
-
-		{ path: 'plot.xlimsIN[0]', label: 'X min', input: 'number', group: 'X-axis' },
-		{ path: 'plot.xlimsIN[1]', label: 'X max', input: 'number', group: 'X-axis' },
-		{ path: 'plot.xLogScale', label: 'X log scale', input: 'boolean', group: 'X-axis' },
-
-		{ path: 'plot.ylimsLeftIN[0]', label: 'Y min (left)', input: 'number', group: 'Y-axis (left)' },
-		{ path: 'plot.ylimsLeftIN[1]', label: 'Y max (left)', input: 'number', group: 'Y-axis (left)' },
-		{
-			path: 'plot.yLogScaleLeft',
-			label: 'Log scale (left)',
-			input: 'boolean',
-			group: 'Y-axis (left)'
-		},
-
-		{
-			path: 'plot.ylimsRightIN[0]',
-			label: 'Y min (right)',
-			input: 'number',
-			group: 'Y-axis (right)'
-		},
-		{
-			path: 'plot.ylimsRightIN[1]',
-			label: 'Y max (right)',
-			input: 'number',
-			group: 'Y-axis (right)'
-		},
-		{
-			path: 'plot.yLogScaleRight',
-			label: 'Log scale (right)',
-			input: 'boolean',
-			group: 'Y-axis (right)'
-		}
-	];
-
-	export const Scatterplot_dataSharedFields = [
-		{ path: 'label', label: 'Label', input: 'text' },
-		{ path: 'yAxis', label: 'Y-axis', input: 'select', options: ['left', 'right'] }
-	];
-
 	export const definition = {
 		displayName: Scatterplot_displayName,
 		defaultDataInputs: Scatterplot_defaultDataInputs,
 		controlHeaders: Scatterplot_controlHeaders,
-		plotClass: Scatterplotclass,
-		sharedFields: Scatterplot_sharedFields,
-		dataSharedFields: Scatterplot_dataSharedFields
+		plotClass: Scatterplotclass
 	};
 </script>
 

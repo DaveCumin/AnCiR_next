@@ -13,6 +13,12 @@
 	export const Tableplot_displayName = 'Table';
 
 	export class Tableplotclass {
+		static descriptors = {
+			showColNumber: { group: 'Display', label: 'Show row numbers' },
+			decimalPlaces: { group: 'Display', label: 'Decimal places' },
+			colCurrent: { group: 'Display', label: 'Starting row' }
+		};
+
 		parentBox = $state();
 		columnRefs = $state([]);
 		showCol = $state([]);
@@ -272,21 +278,11 @@
 		}
 	}
 
-	export const Tableplot_sharedFields = [
-		{ path: 'width', label: 'Width', input: 'number', group: 'Dimension' },
-		{ path: 'height', label: 'Height', input: 'number', group: 'Dimension' },
-		{ path: 'plot.showColNumber', label: 'Show row numbers', input: 'boolean', group: 'Display' },
-		{ path: 'plot.decimalPlaces', label: 'Decimal places', input: 'number', group: 'Display' },
-		{ path: 'plot.colCurrent', label: 'Starting row', input: 'number', group: 'Display' }
-	];
-
 	export const definition = {
 		displayName: Tableplot_displayName,
 		defaultDataInputs: Tableplot_defaultDataInputs,
 		controlHeaders: Tableplot_controlHeaders,
-		plotClass: Tableplotclass,
-		sharedFields: Tableplot_sharedFields,
-		dataSharedFields: []
+		plotClass: Tableplotclass
 	};
 </script>
 

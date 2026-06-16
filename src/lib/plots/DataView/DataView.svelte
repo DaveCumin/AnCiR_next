@@ -9,6 +9,16 @@
 	export const DataView_displayName = 'Data View';
 
 	export class DataViewclass {
+		static descriptors = {
+			decimalPlaces: { group: 'Display', label: 'Decimal places' },
+			colCurrent: { group: 'Display', label: 'Starting row' },
+			// Don't surface in the shared-properties panel.
+			sourcePlotId: { skip: true },
+			sourceType: { skip: true },
+			staticHeaders: { skip: true },
+			staticRows: { skip: true }
+		};
+
 		parentBox = $state();
 		sourcePlotId = $state(null);
 		sourceType = $state('reactive'); // 'reactive' or 'static'
@@ -103,20 +113,11 @@
 		}
 	}
 
-	export const DataView_sharedFields = [
-		{ path: 'width', label: 'Width', input: 'number', group: 'Dimension' },
-		{ path: 'height', label: 'Height', input: 'number', group: 'Dimension' },
-		{ path: 'plot.decimalPlaces', label: 'Decimal places', input: 'number', group: 'Display' },
-		{ path: 'plot.colCurrent', label: 'Starting row', input: 'number', group: 'Display' }
-	];
-
 	export const definition = {
 		displayName: DataView_displayName,
 		defaultDataInputs: DataView_defaultDataInputs,
 		controlHeaders: DataView_controlHeaders,
-		plotClass: DataViewclass,
-		sharedFields: DataView_sharedFields,
-		dataSharedFields: []
+		plotClass: DataViewclass
 	};
 </script>
 

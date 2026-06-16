@@ -115,6 +115,7 @@
 	import { selectPlot, removePlots, getPlotById } from '$lib/core/Plot.svelte';
 	import Editable from '../inputs/Editable.svelte';
 	import CanvasNodeControls from './CanvasNodeControls.svelte';
+	import { getSharedSchema, getSharedDataSchema } from '$lib/plots/sharedControls.js';
 
 	// True when there's a non-plot canvas node selected. Plot nodes are
 	// already handled by the existing selectedPlots branches below, so we
@@ -123,11 +124,26 @@
 		appState.canvasSelectedNodeId != null &&
 			!String(appState.canvasSelectedNodeId).startsWith('plot_')
 	);
-	// A canvas multi-selection of 2+ nodes always routes to CanvasNodeControls
-	// (which shows the count), regardless of whether any of them are plots —
-	// the per-plot "shared properties" UI only applies to plot-only multi-
-	// selection driven by alt-click in the legacy plot view.
-	const hasCanvasMultiSelection = $derived(appState.canvasMultiSelectedCount > 1);
+	// A canvas multi-selection of 2+ nodes routes to CanvasNodeControls (which
+	// shows a count) when the selection is mixed or non-plot. A canvas multi-
+	// selection that is plot-only is treated the same as a plot-view multi-
+	// selection (alt-click) — both feed into `selectedPlots` and surface the
+	// shared-properties UI.
+	const canvasSelectedPlotIds = $derived.by(() => {
+		const out = [];
+		for (const id of appState.canvasMultiSelectedNodeIds ?? []) {
+			if (typeof id === 'string' && id.startsWith('plot_')) {
+				const n = Number(id.slice(5));
+				if (Number.isFinite(n)) out.push(n);
+			}
+		}
+		return out;
+	});
+	const canvasHasNonPlotMultiSelection = $derived(
+		(appState.canvasMultiSelectedNodeIds?.length ?? 0) > 1 &&
+			canvasSelectedPlotIds.length !== appState.canvasMultiSelectedNodeIds.length
+	);
+	const hasCanvasMultiSelection = $derived(canvasHasNonPlotMultiSelection);
 
 	let addBtnRef;
 	let showSavePlot = $state(false);
@@ -149,12 +165,12 @@
 		window.addEventListener('resize', recalculateDropdownPosition);
 	}
 
-	// Schema-driven shared properties. Read from each selected plot's plotMap
-	// entry (mixed-type selections still see common fields like width/height).
+	// Schema-driven shared properties. Discovered by reflecting on each selected
+	// plot's class (mixed-type selections still see common fields like width/height).
 	const sharedFields = $derived.by(() => {
 		const plots = core.plots.filter((p) => p.selected);
 		if (plots.length < 2) return [];
-		const perPlotSchemas = plots.map((p) => appConsts.plotMap.get(p.type)?.sharedFields ?? []);
+		const perPlotSchemas = plots.map((p) => getSharedSchema(p));
 		const schema = intersectFields(perPlotSchemas);
 		return evaluateFields(schema, plots);
 	});
@@ -166,7 +182,7 @@
 	const sharedDataRows = $derived.by(() => {
 		const plots = core.plots.filter((p) => p.selected);
 		if (plots.length < 2) return { rows: [], rowCount: 0 };
-		const perPlotSchemas = plots.map((p) => appConsts.plotMap.get(p.type)?.dataSharedFields ?? []);
+		const perPlotSchemas = plots.map((p) => getSharedDataSchema(p));
 		const schema = intersectFields(perPlotSchemas);
 		if (schema.length === 0) return { rows: [], rowCount: 0 };
 		const counts = plots.map((p) => p.plot?.data?.length ?? 0);
@@ -341,7 +357,19 @@
 		}
 	}
 
-	let selectedPlots = $derived(core.plots.filter((p) => p.selected));
+	// Union of plot-view-selected plots and any plots multi-selected on the
+	// workflow canvas — both routes contribute to the shared-properties UI.
+	let selectedPlots = $derived.by(() => {
+		const map = new Map();
+		for (const p of core.plots) {
+			if (p.selected) map.set(p.id, p);
+		}
+		for (const plotId of canvasSelectedPlotIds) {
+			const p = core.plots.find((q) => q.id === plotId);
+			if (p) map.set(p.id, p);
+		}
+		return [...map.values()];
+	});
 
 	let horizontalGapIN = $state(null);
 	let horizontalGap = $derived.by(() => {

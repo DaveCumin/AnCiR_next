@@ -55,6 +55,16 @@
 	}
 
 	class PeriodogramDataclass {
+		static descriptors = {
+			binSize: { label: 'Bin size (h)', step: 0.1 },
+			method: {
+				label: 'Method',
+				input: 'select',
+				options: ['Lomb-Scargle', 'Chi-squared', 'Enright']
+			},
+			chiSquaredAlpha: { label: 'Alpha', step: 0.01 }
+		};
+
 		parentPlot = $state();
 		x = $state();
 		y = $state();
@@ -314,6 +324,19 @@
 	}
 
 	export class Periodogramclass {
+		static descriptors = {
+			padding: { group: 'Padding' },
+			periodlimsIN: {
+				group: 'Period',
+				_children: { 0: { label: 'Period min' }, 1: { label: 'Period max' } }
+			},
+			periodSteps: { group: 'Period', label: 'Step', step: 0.05 },
+			ylimsIN: {
+				group: 'Y-axis',
+				_children: { 0: { label: 'Power min' }, 1: { label: 'Power max' } }
+			}
+		};
+
 		parentBox = $state();
 		data = $state([]);
 		padding = $state({ top: 15, right: 20, bottom: 30, left: 30 });
@@ -530,40 +553,10 @@
 		}
 	}
 
-	export const Periodogram_sharedFields = [
-		{ path: 'width', label: 'Width', input: 'number', group: 'Dimension' },
-		{ path: 'height', label: 'Height', input: 'number', group: 'Dimension' },
-
-		{ path: 'plot.padding.top', label: 'Top', input: 'number', group: 'Padding' },
-		{ path: 'plot.padding.bottom', label: 'Bottom', input: 'number', group: 'Padding' },
-		{ path: 'plot.padding.left', label: 'Left', input: 'number', group: 'Padding' },
-		{ path: 'plot.padding.right', label: 'Right', input: 'number', group: 'Padding' },
-
-		{ path: 'plot.periodlimsIN[0]', label: 'Period min', input: 'number', group: 'Period' },
-		{ path: 'plot.periodlimsIN[1]', label: 'Period max', input: 'number', group: 'Period' },
-		{ path: 'plot.periodSteps', label: 'Step', input: 'number', step: 0.05, group: 'Period' },
-
-		{ path: 'plot.ylimsIN[0]', label: 'Power min', input: 'number', group: 'Y-axis' },
-		{ path: 'plot.ylimsIN[1]', label: 'Power max', input: 'number', group: 'Y-axis' }
-	];
-
-	export const Periodogram_dataSharedFields = [
-		{ path: 'binSize', label: 'Bin size (h)', input: 'number', step: 0.1 },
-		{
-			path: 'method',
-			label: 'Method',
-			input: 'select',
-			options: ['Lomb-Scargle', 'Chi-squared', 'Enright']
-		},
-		{ path: 'chiSquaredAlpha', label: 'Alpha', input: 'number', step: 0.01 }
-	];
-
 	export const definition = {
 		defaultDataInputs: Periodogram_defaultDataInputs,
 		controlHeaders: Periodogram_controlHeaders,
-		plotClass: Periodogramclass,
-		sharedFields: Periodogram_sharedFields,
-		dataSharedFields: Periodogram_dataSharedFields
+		plotClass: Periodogramclass
 	};
 </script>
 

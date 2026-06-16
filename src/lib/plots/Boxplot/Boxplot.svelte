@@ -196,6 +196,8 @@
 	}
 
 	class BoxPlotDataClass {
+		static descriptors = {};
+
 		parentPlot = $state();
 		x = $state();
 		y = $state();
@@ -262,6 +264,29 @@
 	}
 
 	export class Boxplotclass {
+		static descriptors = {
+			padding: { group: 'Padding' },
+			xlimsIN: { group: 'X-axis', _children: { 0: { label: 'X min' }, 1: { label: 'X max' } } },
+			ylimsIN: { group: 'Y-axis', _children: { 0: { label: 'Y min' }, 1: { label: 'Y max' } } },
+			// Sig-test fields are writable on every Boxplot. Surfacing them in the
+			// multi-select panel is an intentional improvement over the old schema,
+			// which omitted them.
+			showSigBars: { group: 'Sig bars', label: 'Show sig bars' },
+			sigMethod: {
+				group: 'Sig bars',
+				label: 'Sig method',
+				input: 'select',
+				options: ['auto', 'tukey', 'ttest', 'mannwhitney']
+			},
+			sigAlpha: { group: 'Sig bars', label: 'Alpha', step: 0.01 },
+			showNs: { group: 'Sig bars', label: 'Show n.s.' },
+			sigBarThickness: { group: 'Sig bars', label: 'Thickness' },
+			sigBarColor: { group: 'Sig bars', label: 'Colour' },
+			sigBarFontSize: { group: 'Sig bars', label: 'Font size' },
+			sigBarYOffset: { group: 'Sig bars', label: 'Y offset' },
+			sigBarSpacing: { group: 'Sig bars', label: 'Spacing' }
+		};
+
 		parentBox = $state();
 		data = $state([]);
 		legend = $state();
@@ -709,28 +734,11 @@
 		}
 	}
 
-	export const Boxplot_sharedFields = [
-		{ path: 'width', label: 'Width', input: 'number', group: 'Dimension' },
-		{ path: 'height', label: 'Height', input: 'number', group: 'Dimension' },
-
-		{ path: 'plot.padding.top', label: 'Top', input: 'number', group: 'Padding' },
-		{ path: 'plot.padding.bottom', label: 'Bottom', input: 'number', group: 'Padding' },
-		{ path: 'plot.padding.left', label: 'Left', input: 'number', group: 'Padding' },
-		{ path: 'plot.padding.right', label: 'Right', input: 'number', group: 'Padding' },
-
-		{ path: 'plot.ylimsIN[0]', label: 'Y min', input: 'number', group: 'Y-axis' },
-		{ path: 'plot.ylimsIN[1]', label: 'Y max', input: 'number', group: 'Y-axis' }
-	];
-
-	export const Boxplot_dataSharedFields = [{ path: 'label', label: 'Label', input: 'text' }];
-
 	export const definition = {
 		defaultDataInputs: Boxplot_defaultDataInputs,
 		controlHeaders: Boxplot_controlHeaders,
 		optionalDataInputs: ['x'],
-		plotClass: Boxplotclass,
-		sharedFields: Boxplot_sharedFields,
-		dataSharedFields: Boxplot_dataSharedFields
+		plotClass: Boxplotclass
 	};
 </script>
 

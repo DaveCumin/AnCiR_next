@@ -558,6 +558,7 @@
 	$effect(() => {
 		appState.canvasSelectedNodeId = focusedNodeId;
 		appState.canvasMultiSelectedCount = multiSelectedNodeIds.size;
+		appState.canvasMultiSelectedNodeIds = Array.from(multiSelectedNodeIds);
 		if (focusedNodeId != null) appState.showControlPanel = true;
 	});
 

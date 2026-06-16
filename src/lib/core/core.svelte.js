@@ -229,6 +229,12 @@ export const appState = $state({
 	// Count of nodes in the multi-select set. >1 → ControlPanel shows a
 	// "X nodes selected" placeholder instead of a single-node editor.
 	canvasMultiSelectedCount: 0,
+	// Canvas node ids currently in the multi-select set (e.g. 'plot_3',
+	// 'process_7'). Mirrored from WorkflowEditor's local Set so other parts of
+	// the UI (ControlPanel, Navbar view-switch) can react. One-way:
+	// WorkflowEditor writes, others read; mutate it via Plot.svelte helpers
+	// (which signal back through this same field).
+	canvasMultiSelectedNodeIds: [],
 
 	appColours: [
 		'#234154',
@@ -252,7 +258,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.41.2',
+	version: 'β.41.3',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),

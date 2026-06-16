@@ -30,8 +30,6 @@ export async function loadPlots() {
 				defaultInputs: def.defaultDataInputs ?? [],
 				controlHeaders: def.controlHeaders ?? [],
 				displayName: def.displayName ?? formatDisplayName(folderName),
-				sharedFields: def.sharedFields ?? [],
-				dataSharedFields: def.dataSharedFields ?? [],
 				definition: def,
 				family: nodeMeta.family,
 				nodeIcon: nodeMeta.nodeIcon,
