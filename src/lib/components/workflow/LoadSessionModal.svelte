@@ -33,6 +33,7 @@
 	// manifest is lazy-loaded the first time the Example tab opens.
 	let exampleSessions = $state([]);
 	let examplesRequested = $state(false);
+	let examplesLoading = $state(false);
 	let examplesError = $state('');
 	// Palette-style search across the example gallery. Matches the manifest's
 	// `keywords` blob (node key + display name + family + description) so users can
@@ -73,14 +74,18 @@
 		if (examplesRequested) return;
 		examplesRequested = true;
 		examplesError = '';
+		examplesLoading = true;
 		try {
 			const res = await fetch(`${base}/sessions/demos/index.json`);
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const idx = await res.json();
 			exampleSessions = Array.isArray(idx?.sessions) ? idx.sessions : [];
 		} catch (err) {
+			// Bad connection / missing manifest — fail gracefully (see template).
 			examplesError = err.message;
 			examplesRequested = false; // allow retry on next tab visit
+		} finally {
+			examplesLoading = false;
 		}
 	}
 
@@ -292,14 +297,13 @@
 				</div>
 			{:else}
 				<div class="tab-panel example-list">
-					{#if examplesError}
-						<p class="tab-hint error">Could not load examples: {examplesError}</p>
-					{:else if !examplesRequested || (exampleSessions.length === 0 && !loadError)}
+					{#if examplesLoading}
 						<div class="loading-row">
 							<LoadingSpinner message="Loading examples…" />
 						</div>
-					{:else if exampleSessions.length === 0}
-						<p class="tab-hint">No example sessions available.</p>
+					{:else if examplesError || exampleSessions.length === 0}
+						<!-- Bad connection, missing manifest, or empty list — fail gracefully. -->
+						<p class="tab-hint">Can't find any examples.</p>
 					{:else}
 						<input
 							class="search-input"

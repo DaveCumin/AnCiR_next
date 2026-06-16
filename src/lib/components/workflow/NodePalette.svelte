@@ -281,7 +281,7 @@
 		aria-label="Add node"
 		{@attach tooltip('Add to canvas')}
 	>
-		<Icon name="plus" width={22} height={22} />
+		<Icon name="add" width={24} height={24} />
 	</button>
 
 	{#if showMenu}
@@ -360,7 +360,6 @@
 	}
 
 	.np-trigger.open {
-		transform: rotate(45deg);
 		color: var(--color-accent, #4d9fe3);
 	}
 
