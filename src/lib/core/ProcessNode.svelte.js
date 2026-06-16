@@ -260,13 +260,26 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	const seenConnections = new Set();
 
 	const tpOutputColIds = new Set();
+	// colId → { nodeId, port } pointing at the producing TP node's inline
+	// output-column row. TP output columns render as rows INSIDE the TP node
+	// (flowtest Group-style), not as standalone data_<colId> nodes, so every
+	// downstream consumer anchors its wire on the TP node's `col_<colId>` port.
+	const tpOutputColToTP = new Map();
 	const collectTPOutputs = (tp) => {
+		const tpNodeId = `tableprocess_${tp.id}`;
 		for (const colId of Object.values(tp.args?.out ?? {})) {
-			if (colId != null && colId >= 0) tpOutputColIds.add(colId);
+			if (colId != null && colId >= 0) {
+				tpOutputColIds.add(colId);
+				tpOutputColToTP.set(colId, { nodeId: tpNodeId, port: `col_${colId}` });
+			}
 		}
 		for (const nestedTp of tp.args?.tableProcesses ?? []) {
+			const nestedNodeId = `tableprocess_nested_${nestedTp.id}`;
 			for (const colId of Object.values(nestedTp.args?.out ?? {})) {
-				if (colId != null && colId >= 0) tpOutputColIds.add(colId);
+				if (colId != null && colId >= 0) {
+					tpOutputColIds.add(colId);
+					tpOutputColToTP.set(colId, { nodeId: nestedNodeId, port: `col_${colId}` });
+				}
 			}
 		}
 	};
@@ -333,6 +346,9 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		}
 		const gid = absorbedColToGroup.get(colId);
 		if (gid) return { nodeId: gid, port: `col_${colId}` };
+		// TP-output column: route to the producing TP node's inline row port.
+		const tpRef = tpOutputColToTP.get(colId);
+		if (tpRef) return { nodeId: tpRef.nodeId, port: tpRef.port };
 		return { nodeId: `data_${colId}`, port: 'column' };
 	}
 
@@ -416,19 +432,33 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		);
 	}
 
+	// Ordered list of a TP's output columns ({ key, colId }) from args.out, and
+	// the matching output ports: an `all` fan-out port (flowtest Group-style)
+	// plus one `col_<colId>` port per output column. Output columns render as
+	// inline rows INSIDE the TP node, so there are no abstract xOut/yOut_* ports.
+	const buildTPOutputs = (args) => {
+		const outputColumns = [];
+		for (const [key, colId] of Object.entries(args?.out ?? {})) {
+			if (typeof colId !== 'number' || colId < 0) continue;
+			outputColumns.push({ key, colId });
+		}
+		const outputPorts = [makeNodePort('all', 'output', 'column', true)];
+		for (const { colId } of outputColumns) {
+			outputPorts.push(makeNodePort(`col_${colId}`, 'output', 'column'));
+		}
+		return { outputColumns, outputPorts };
+	};
+
 	const emitTableProcessNode = (tp, parentLabel = '') => {
 		const entry = appConsts.tableProcessMap.get(tp.name);
 		const nodeSpec = entry?.nodeSpec;
-		const ports = makePortsFromNodeSpec(entry?.nodeSpec, {
+		const { inputs } = makePortsFromNodeSpec(entry?.nodeSpec, {
 			inputs: [
 				{ name: 'xIN', kind: 'column', cardinality: 'one' },
 				{ name: 'yIN', kind: 'column', cardinality: 'many' }
-			],
-			outputs: [
-				{ name: entry?.xOutKey ?? 'xOut', kind: 'column', cardinality: 'one' },
-				{ name: (entry?.yOutKeyPrefix ?? 'yOut_') + '*', kind: 'column', cardinality: 'many' }
 			]
 		});
+		const { outputColumns, outputPorts } = buildTPOutputs(tp.args);
 
 		nodes.push(
 			new ProcessNode({
@@ -436,14 +466,15 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				kind: 'tableprocess',
 				label: tp.displayName || tp.name,
 				sublabel: parentLabel,
-				ports,
+				ports: { inputs, outputs: outputPorts },
 				refId: tp.id,
 				meta: {
 					type: 'tableprocess',
 					refId: tp.id,
 					tpObj: tp,
 					tpName: tp.name,
-					nodeSpec
+					nodeSpec,
+					outputColumns
 				}
 			})
 		);
@@ -453,27 +484,22 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				(e) => e.defaults?.get?.('collectedType')?.val === nestedTp.type
 			);
 			const nestedNodeSpec = nestedEntry?.nodeSpec;
-			const nestedPorts = makePortsFromNodeSpec(nestedNodeSpec, {
+			const { inputs: nestedInputs } = makePortsFromNodeSpec(nestedNodeSpec, {
 				inputs: [
 					{ name: 'xIN', kind: 'column', cardinality: 'one' },
 					{ name: 'yIN', kind: 'column', cardinality: 'many' }
-				],
-				outputs: [
-					{ name: nestedEntry?.xOutKey ?? 'xOut', kind: 'column', cardinality: 'one' },
-					{
-						name: (nestedEntry?.yOutKeyPrefix ?? 'yOut_') + '*',
-						kind: 'column',
-						cardinality: 'many'
-					}
 				]
 			});
+			const { outputColumns: nestedOutCols, outputPorts: nestedOutPorts } = buildTPOutputs(
+				nestedTp.args
+			);
 			nodes.push(
 				new ProcessNode({
 					id: `tableprocess_nested_${nestedTp.id}`,
 					kind: 'tableprocess',
 					label: nestedEntry?.displayName || nestedTp.type,
 					sublabel: parentLabel ? `${parentLabel} › ${tp.displayName || tp.name}` : tp.displayName || tp.name,
-					ports: nestedPorts,
+					ports: { inputs: nestedInputs, outputs: nestedOutPorts },
 					refId: nestedTp.id,
 					meta: {
 						type: 'tableprocess',
@@ -482,7 +508,8 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 						tpName: nestedTp.type,
 						nodeSpec: nestedNodeSpec,
 						isNested: true,
-						parentTpId: tp.id
+						parentTpId: tp.id,
+						outputColumns: nestedOutCols
 					}
 				})
 			);
@@ -490,38 +517,6 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	};
 
 	for (const tp of core.tableProcesses ?? []) emitTableProcessNode(tp, '');
-
-	const emitTPOutputDataNode = (colId) => {
-		if (colId == null || colId < 0) return;
-		const col = core.data.find((d) => d.id === colId);
-		if (!col) return;
-		nodes.push(
-			new ProcessNode({
-				id: `data_${col.id}`,
-				kind: 'data',
-				label: col.name,
-				ports: {
-					inputs: [],
-					outputs: [makeNodePort('column', 'output', 'column')]
-				},
-				refId: col.id,
-				meta: {
-					type: 'data',
-					refId: col.id,
-					isTPOutput: true
-				}
-			})
-		);
-	};
-
-	const emitOutputsForTP = (tp) => {
-		Object.values(tp.args?.out ?? {}).forEach(emitTPOutputDataNode);
-		for (const nestedTp of tp.args?.tableProcesses ?? []) {
-			Object.values(nestedTp.args?.out ?? {}).forEach(emitTPOutputDataNode);
-		}
-	};
-
-	for (const tp of core.tableProcesses ?? []) emitOutputsForTP(tp);
 
 	for (const plot of core.plots ?? []) {
 		// Tableplots have a flat `columnRefs` list — keep them as a single `series`
@@ -675,10 +670,9 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			addConnection(fromId, tpNodeId, 'data-tp', fromPort, port);
 		}
 
-		for (const [outKey, colId] of Object.entries(tp.args?.out ?? {})) {
-			if (colId == null || colId < 0) continue;
-			addConnection(tpNodeId, `data_${colId}`, 'tp-data', outKey, 'column');
-		}
+		// No tp→data output edges: TP output columns are inline rows on the TP
+		// node itself, and downstream consumers anchor on `col_<colId>` ports
+		// (resolved via columnSourceRef → tpOutputColToTP).
 
 		for (const nestedTp of tp.args?.tableProcesses ?? []) {
 			const nestedNodeId = `tableprocess_nested_${nestedTp.id}`;
@@ -690,10 +684,6 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				if (colId == null || colId < 0) continue;
 				const src = columnSourceRef(colId);
 				addConnection(src.nodeId, nestedNodeId, 'data-tp', src.port, port);
-			}
-			for (const [outKey, colId] of Object.entries(nestedTp.args?.out ?? {})) {
-				if (colId == null || colId < 0) continue;
-				addConnection(nestedNodeId, `data_${colId}`, 'tp-data', outKey, 'column');
 			}
 		}
 	};

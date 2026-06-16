@@ -24,6 +24,7 @@
 	import { selectPlot, deselectAllPlots } from '$lib/core/Plot.svelte';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import GroupNode from './GroupNode.svelte';
+	import TableProcessNode from './TableProcessNode.svelte';
 	import { getGroupPortY } from './groupPortPositions.svelte.js';
 	import WorkflowEdges from './WorkflowEdges.svelte';
 	import EmbeddedPlot from './EmbeddedPlot.svelte';
@@ -37,6 +38,7 @@
 	let { inline = false } = $props();
 
 	const NODE_WIDTH = 160;
+	const TP_NODE_WIDTH = 230; // mirrors TableProcessNode .tp-card width
 	const NODE_HEIGHT = 48;
 	const HEADER_H = 26; // px, header strip height (matches flowtest's --header-h)
 	const PORT_H = 22; // px, height of each port row
@@ -96,7 +98,7 @@
 		// the simple index-based formula wrong. GroupNode publishes per-port Y
 		// after layout — use that when available, otherwise fall through to
 		// the formula (covers initial paint and non-group nodes).
-		if (node?.type === 'group') {
+		if (node?.type === 'group' || node?.type === 'tableprocess') {
 			const published = getGroupPortY(node.id, portName);
 			if (typeof published === 'number') return published;
 		}
@@ -121,11 +123,20 @@
 	 */
 	function getNodeWidth(node) {
 		if (node?.type === 'group') return node?.groupObj?.width ?? NODE_WIDTH;
+		if (node?.type === 'tableprocess') return TP_NODE_WIDTH;
 		return NODE_WIDTH;
 	}
 
 	/** Visual height of a node EXCLUDING any plot-preview/MiniDataTable body. */
 	function getNodePortAreaHeight(node) {
+		if (node?.type === 'tableprocess') {
+			// Side-by-side: inputs left, output-column rows right. The `all` port
+			// sits in the header, so output rows = outputColumns count.
+			const ins = node?.ports?.inputs?.length ?? 0;
+			const outs = node?.outputColumns?.length ?? 0;
+			const rows = Math.max(1, ins, outs);
+			return HEADER_H + rows * PORT_H;
+		}
 		const ins = node?.ports?.inputs?.length ?? 0;
 		const outs = node?.ports?.outputs?.length ?? 0;
 		const rows = Math.max(1, ins, outs);
@@ -1037,6 +1048,11 @@
 			return tap ? tap.id : parent.id;
 		}
 		if (node.type === 'tableprocess' && node.tpObj) {
+			// Inline output-column rows expose `col_<colId>` ports directly.
+			if (typeof portName === 'string' && portName.startsWith('col_')) {
+				const id = Number(portName.slice(4));
+				return Number.isFinite(id) ? id : -1;
+			}
 			const out = node.tpObj.args?.out ?? {};
 			if (typeof out[portName] === 'number') return out[portName];
 			if (portName?.includes('*')) {
@@ -1085,6 +1101,19 @@
 				const g = fromNode.groupObj;
 				const all = g?.sourceColumnIds ?? [];
 				const filter = Array.isArray(g?.allColumnIds) ? new Set(g.allColumnIds) : null;
+				for (const cid of all) {
+					if (filter && !filter.has(cid)) continue;
+					applyConnection(fromNodeId, `col_${cid}`, toNodeId, toPort);
+				}
+				return;
+			}
+			// TableProcess `all` port: fan out over its inline output columns,
+			// filtered by tp.args.allColumnIds when set to a subset.
+			if (fromNode?.type === 'tableprocess') {
+				const all = (fromNode.outputColumns ?? []).map((c) => c.colId);
+				const filter = Array.isArray(fromNode.tpObj?.args?.allColumnIds)
+					? new Set(fromNode.tpObj.args.allColumnIds)
+					: null;
 				for (const cid of all) {
 					if (filter && !filter.has(cid)) continue;
 					applyConnection(fromNodeId, `col_${cid}`, toNodeId, toPort);
@@ -2261,6 +2290,19 @@
 								on:portend={handlePortEnd}
 								on:portdisconnect={handlePortDisconnect}
 								on:extractstart={handleExtractStart}
+								on:cardmousedown={(ev) => handleNodeWrapperMouseDown(ev.detail, node)}
+							/>
+						{:else if node.type === 'tableprocess'}
+							<TableProcessNode
+								{node}
+								selected={isSelected}
+								expanded={isExpanded}
+								spliceTargetPort={dropTargetPortKey?.startsWith(`${node.id}|`)
+									? dropTargetPortKey.slice(node.id.length + 1)
+									: null}
+								on:portstart={handlePortStart}
+								on:portend={handlePortEnd}
+								on:portdisconnect={handlePortDisconnect}
 								on:cardmousedown={(ev) => handleNodeWrapperMouseDown(ev.detail, node)}
 							/>
 						{:else}
