@@ -6,9 +6,12 @@
 	import Settings from '$lib/components/views/modals/Settings.svelte';
 	import About from './views/modals/About.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
+	import { openPicker } from '$lib/core/tourRunner.svelte.js';
 
 	let showSettings = $state(false);
 	let showAbout = $state(false);
+	let showHelpMenu = $state(false);
+	let helpAnchor;
 
 	function toggleDataView() {
 		// Data panel is independent of the canvas view — it can be open or
@@ -108,16 +111,44 @@
 		<button onclick={() => (showSettings = true)} {@attach tooltip('Settings')}>
 			<Icon name="gear" />
 		</button>
-		<button
-			onclick={() => {
-				showAbout = true;
-			}}
-			{@attach tooltip('About AnCiR')}
-		>
-			<Icon name="query" />
-		</button>
+		<div class="help-anchor" bind:this={helpAnchor}>
+			<button
+				onclick={() => (showHelpMenu = !showHelpMenu)}
+				aria-haspopup="menu"
+				aria-expanded={showHelpMenu}
+				{@attach tooltip('Help — take a tour or about AnCiR')}
+			>
+				<Icon name="query" />
+			</button>
+			{#if showHelpMenu}
+				<div class="help-menu" role="menu">
+					<button
+						type="button"
+						role="menuitem"
+						onclick={() => {
+							showHelpMenu = false;
+							openPicker();
+						}}>Take a tour…</button
+					>
+					<button
+						type="button"
+						role="menuitem"
+						onclick={() => {
+							showHelpMenu = false;
+							showAbout = true;
+						}}>About AnCiR</button
+					>
+				</div>
+			{/if}
+		</div>
 	</div>
 </nav>
+
+<svelte:window
+	onclick={(e) => {
+		if (showHelpMenu && helpAnchor && !helpAnchor.contains(e.target)) showHelpMenu = false;
+	}}
+/>
 
 <Settings bind:showModal={showSettings} />
 
@@ -161,5 +192,41 @@
 		font: inherit;
 		border-radius: 0;
 		appearance: none;
+	}
+
+	.help-anchor {
+		position: relative;
+		display: flex;
+		justify-content: center;
+	}
+
+	/* Pops out to the right of the narrow navbar, anchored near the ? button. */
+	.help-menu {
+		position: absolute;
+		left: calc(100% + 6px);
+		bottom: 0;
+		min-width: 150px;
+		background: #fff;
+		border: 1px solid var(--color-lightness-85, #ddd);
+		border-radius: 8px;
+		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+		padding: 0.25rem;
+		display: flex;
+		flex-direction: column;
+		z-index: 1001;
+	}
+
+	.help-menu button {
+		margin: 0;
+		padding: 0.5rem 0.7rem;
+		border-radius: 6px;
+		text-align: left;
+		font-size: 14px;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.help-menu button:hover {
+		background: var(--color-lightness-95, #f4f4f4);
 	}
 </style>

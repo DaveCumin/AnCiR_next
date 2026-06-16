@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AnCiR Classroom Handbook — Rhythms, Data & Inquiry</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&display=swap");
+      :root {
+        --bg: #fbfaf7;
+        --ink: #21201c;
+        --muted: #6b6862;
+        --rule: #e6e2da;
+        --accent: #2f6f6a;
+        --accent-soft: #e7f1ef;
+        --warn-soft: #fbf0dd;
+        --student-soft: #eef2fb;
+        --max: 760px;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 18px;
+        line-height: 1.65;
+      }
+      .wrap { max-width: var(--max); margin: 0 auto; padding: 48px 24px 120px; }
+      h1, h2, h3, .handbook-title, .chapter-title, .section-head, nav, .pill, th, .callout-title {
+        font-family: Inter, system-ui, sans-serif;
+      }
+      .handbook-title { font-size: 2.3rem; line-height: 1.15; margin: 0 0 8px; font-weight: 700; }
+      .subtitle { color: var(--muted); font-size: 1.05rem; margin: 0 0 32px; }
+      .chapter-title {
+        font-size: 1.6rem; font-weight: 700; margin: 64px 0 4px;
+        padding-top: 24px; border-top: 2px solid var(--rule);
+      }
+      .chapter-num { color: var(--accent); font-weight: 600; font-size: 0.95rem; letter-spacing: .04em; text-transform: uppercase; }
+      .section-head { font-size: 1.15rem; font-weight: 600; margin: 28px 0 6px; }
+      .lead { font-size: 1.1rem; }
+      .question { font-style: italic; color: var(--accent); font-size: 1.15rem; margin: 6px 0 18px; }
+      p { margin: 12px 0; }
+      ul, ol { margin: 12px 0; padding-left: 26px; }
+      li { margin: 6px 0; }
+      code, .math { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.92em; background: #f1efea; padding: 1px 5px; border-radius: 4px; }
+      .math { background: none; color: var(--accent); }
+      nav {
+        background: #fff; border: 1px solid var(--rule); border-radius: 12px;
+        padding: 18px 22px; margin: 0 0 24px; font-size: 0.98rem;
+      }
+      nav strong { display: block; margin-bottom: 8px; color: var(--muted); font-size: 0.8rem; letter-spacing: .06em; text-transform: uppercase; }
+      nav a { display: block; color: var(--ink); text-decoration: none; padding: 3px 0; }
+      nav a:hover { color: var(--accent); }
+      .callout { border-radius: 10px; padding: 14px 18px; margin: 18px 0; font-size: 0.98rem; }
+      .callout-title { font-weight: 600; font-size: 0.8rem; letter-spacing: .06em; text-transform: uppercase; margin: 0 0 6px; }
+      .try { background: var(--warn-soft); }
+      .try .callout-title { color: #9a6a14; }
+      .student { background: var(--student-soft); }
+      .student .callout-title { color: #3a55a6; }
+      .ground { background: var(--accent-soft); }
+      .ground .callout-title { color: var(--accent); }
+      table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 0.9rem; font-family: Inter, sans-serif; }
+      th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+      th { color: var(--muted); font-weight: 600; font-size: 0.78rem; letter-spacing: .04em; text-transform: uppercase; }
+      .pill { display: inline-block; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 2px 10px; font-size: 0.78rem; font-weight: 600; }
+      .footer { margin-top: 80px; padding-top: 20px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.85rem; }
+      a { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section id="home">
+        <h1 class="handbook-title">AnCiR Classroom Handbook</h1>
+        <p class="subtitle">Rhythms, data, and scientific inquiry — four hands-on lessons for senior secondary students. A companion to <a href="handbook.html">A Handbook of Chronobiological Data Analysis</a>.</p>
+
+        <p class="lead">Every living thing keeps time. Your body temperature, alertness,
+        and sleepiness all rise and fall on a roughly 24-hour cycle called a
+        <strong>circadian rhythm</strong>. That makes biological rhythms a perfect
+        playground for learning data analysis: the patterns are real, they matter to
+        you personally, and — because we generate the data here — you can always
+        <em>check whether you found the right answer</em>.</p>
+
+        <p>Each lesson below runs inside <strong><a href="https://ancir.pages.dev" target="_blank" rel="noopener">AnCiR</a></strong>,
+        a free, browser-based analysis tool that needs no installation. Open the
+        matching guided tour (the <strong>?</strong> menu → <em>Take a tour…</em>)
+        and it will load the data and walk you through each step.</p>
+
+        <div class="callout ground">
+          <p class="callout-title">A teaching idea unique to these lessons</p>
+          <p style="margin:0">In real science you never know the "true" answer. Here, the
+          data is simulated with a hidden truth — a real period, a real difference, a
+          real wave. You analyse it as if it were real, then reveal the truth and see
+          how close you got. That is the safest possible way to learn whether a method
+          can be trusted.</p>
+        </div>
+
+        <nav>
+          <strong>Contents</strong>
+          <a href="#l1">1 · Find the hidden rhythm</a>
+          <a href="#l2">2 · Am I a night owl?</a>
+          <a href="#l3">3 · Is the difference real?</a>
+          <a href="#l4">4 · Sine waves are everywhere</a>
+          <a href="#teachers">For teachers — curriculum links</a>
+        </nav>
+      </section>
+
+      <!-- ===================== LESSON 1 ===================== -->
+      <section id="l1">
+        <p class="chapter-num">Lesson 1 · <span class="pill">Yr 11–13</span></p>
+        <h2 class="chapter-title">Find the hidden rhythm</h2>
+        <p class="question">"There is a cycle hidden in this data. How long is it?"</p>
+
+        <h3 class="section-head">The idea</h3>
+        <p>A <strong>rhythm</strong> is a pattern that repeats. The time taken for one
+        full repeat is the <strong>period</strong> (symbol <span class="math">τ</span>,
+        "tau"); how many repeats happen per unit time is the <strong>frequency</strong>.
+        Period and frequency are reciprocals: a rhythm with a period of 24 hours has a
+        frequency of <span class="math">1/24</span> cycles per hour.</p>
+        <p>Real biological data is <strong>noisy</strong> — the clean cycle is buried
+        under random wobble. The skill in this lesson is pulling the period out of the
+        noise. AnCiR's <strong>periodogram</strong> does this: it tests many candidate
+        periods and scores how well each one explains the data. The best-scoring period
+        shows up as a <strong>peak</strong>.</p>
+
+        <h3 class="section-head">AnCiR walkthrough</h3>
+        <ol>
+          <li>Open the tour <em>Find the hidden rhythm</em>. It loads a 7-day signal
+          sampled every hour.</li>
+          <li>Look at the raw scatter first. Can you see a daily cycle by eye? It is
+          hard — that is the point.</li>
+          <li>Find the <strong>periodogram</strong> plot. The x-axis is candidate
+          period (in hours); the y-axis is how well that period fits.</li>
+          <li>Read the period at the tallest peak. Write it down before revealing the
+          answer.</li>
+        </ol>
+
+        <div class="callout try">
+          <p class="callout-title">Try this</p>
+          <p style="margin:0">Increase the noise on the data and re-read the periodogram.
+          How much noise can you add before the peak becomes impossible to trust? This is
+          exactly the problem real scientists face with messy recordings.</p>
+        </div>
+
+        <div class="callout student">
+          <p class="callout-title">What to look for</p>
+          <p style="margin:0">A single sharp peak near 24 h means a strong daily rhythm.
+          A broad or wandering peak means the period is uncertain. Several peaks can mean
+          more than one rhythm is present (you will meet that idea again with the FFT).</p>
+        </div>
+      </section>
+
+      <!-- ===================== LESSON 2 ===================== -->
+      <section id="l2">
+        <p class="chapter-num">Lesson 2 · <span class="pill">Yr 9–13</span></p>
+        <h2 class="chapter-title">Am I a night owl?</h2>
+        <p class="question">"Is this person a morning type or an evening type?"</p>
+
+        <h3 class="section-head">The idea</h3>
+        <p>Your body runs an internal clock that keeps you roughly in step with the
+        day. This is one example of <strong>homeostasis</strong>: the way a body keeps
+        its internal state stable and well-timed despite a changing world. The clock
+        sets <strong>when</strong> you are most active and most sleepy. People differ in
+        their <strong>phase</strong> — morning types ("larks") peak early, evening types
+        ("owls") peak late.</p>
+        <p>An <strong>actogram</strong> is the classic way to see this. It stacks each
+        day's activity in a row, one day under the next, so a daily pattern lines up into
+        a vertical band. The position of that band tells you the phase.</p>
+
+        <h3 class="section-head">AnCiR walkthrough</h3>
+        <ol>
+          <li>Open the tour <em>Am I a night owl?</em>. It loads about a week of
+          activity data.</li>
+          <li>Open the <strong>actogram</strong>. Each row is one day.</li>
+          <li>Find the dark/quiet band (rest) and the busy band (activity). When does
+          activity start each day?</li>
+          <li>Decide: lark or owl? Then reveal the hidden phase offset and check.</li>
+        </ol>
+
+        <div class="callout student">
+          <p class="callout-title">What to look for</p>
+          <p style="margin:0">A consistent vertical band means a stable rhythm. If the
+          band drifts sideways day by day, the clock is not locked to 24 h — a real
+          phenomenon called <em>free-running</em>.</p>
+        </div>
+
+        <div class="callout try">
+          <p class="callout-title">Try this</p>
+          <p style="margin:0">Add a scatter of activity against hour-of-day. The same
+          information appears as a single hump. Which display makes the timing easier to
+          read — the actogram or the scatter? There is no single right answer; that is a
+          real choice scientists make.</p>
+        </div>
+      </section>
+
+      <!-- ===================== LESSON 3 ===================== -->
+      <section id="l3">
+        <p class="chapter-num">Lesson 3 · <span class="pill">Yr 11–13</span></p>
+        <h2 class="chapter-title">Is the difference real?</h2>
+        <p class="question">"Weekday vs weekend activity — real difference, or just chance?"</p>
+
+        <h3 class="section-head">The idea</h3>
+        <p>Two groups almost never have exactly equal averages, even when nothing real
+        separates them — random variation alone creates gaps. The central question of
+        statistics is: <strong>is this gap bigger than chance would produce?</strong></p>
+        <p>This is <strong>statistical inference</strong>. We look at the spread within
+        each group (the boxplot), the size of the gap between them, and how many data
+        points we have. A big gap, tight spreads, and lots of data make a difference
+        believable. A small gap, wide spreads, and little data do not.</p>
+
+        <h3 class="section-head">AnCiR walkthrough</h3>
+        <ol>
+          <li>Open the tour <em>Is the difference real?</em>. It loads two groups of
+          activity values.</li>
+          <li>Open the <strong>boxplot by group</strong>. Compare the medians and the
+          spread of the boxes. Make a guess before any test.</li>
+          <li>Run <strong>GroupComparison</strong>. It chooses an appropriate test and
+          reports whether the difference is statistically significant.</li>
+          <li>Reveal the hidden truth: was there really a difference built in, or was the
+          true difference zero?</li>
+        </ol>
+
+        <div class="callout ground">
+          <p class="callout-title">The deliberate trap</p>
+          <p style="margin:0">Sometimes the hidden truth is "no difference" even though
+          the boxes look a little different. That teaches the single most important idea
+          in data literacy: a visible gap is not automatically a real one.</p>
+        </div>
+
+        <div class="callout try">
+          <p class="callout-title">Try this</p>
+          <p style="margin:0">Shrink the sample size and re-run the test. A difference
+          that was "significant" with lots of data can vanish with little. More data lets
+          you detect smaller real effects.</p>
+        </div>
+      </section>
+
+      <!-- ===================== LESSON 4 ===================== -->
+      <section id="l4">
+        <p class="chapter-num">Lesson 4 · <span class="pill">Yr 12–13</span></p>
+        <h2 class="chapter-title">Sine waves are everywhere</h2>
+        <p class="question">"Can a single cosine curve describe this rhythm?"</p>
+
+        <h3 class="section-head">The idea</h3>
+        <p>The smoothest possible rhythm is a cosine wave. Four numbers describe it
+        completely:</p>
+        <p class="math" style="display:block; text-align:center; font-size:1.05rem;">y = M + A · cos( 2π ( t − φ ) / τ )</p>
+        <ul>
+          <li><strong>M</strong> — the <strong>midline</strong> (called the
+          <em>mesor</em>): the average level the wave oscillates around.</li>
+          <li><strong>A</strong> — the <strong>amplitude</strong>: how far it swings
+          above and below the midline.</li>
+          <li><strong>φ</strong> — the <strong>phase</strong>: where in the cycle the
+          peak falls (the timing).</li>
+          <li><strong>τ</strong> — the <strong>period</strong>: how long one cycle
+          takes.</li>
+        </ul>
+        <p>Fitting this curve to data is called the <strong>cosinor</strong> method.
+        AnCiR finds the values of M, A, and φ that best match the data, and reports
+        <strong>R²</strong> — a number from 0 to 1 saying how much of the pattern the
+        cosine explains. R² near 1 means the rhythm really is wave-shaped; R² near 0
+        means a single cosine is the wrong model.</p>
+
+        <h3 class="section-head">AnCiR walkthrough</h3>
+        <ol>
+          <li>Open the tour <em>Sine waves are everywhere</em>. It loads a rhythmic
+          signal.</li>
+          <li>Open the <strong>Cosinor</strong> node. Read off amplitude, phase,
+          midline, period, and R².</li>
+          <li>Point to where each parameter shows up on the fitted curve.</li>
+          <li>Reveal the true values used to build the data and compare with your fit.</li>
+        </ol>
+
+        <div class="callout try">
+          <p class="callout-title">Try this</p>
+          <p style="margin:0">Add noise and watch R² fall. Then add a second, faster
+          rhythm (a 12-hour component on top of the 24-hour one): a single cosine can no
+          longer fit it well, and R² drops — a clue that the real signal is more
+          complex than one wave.</p>
+        </div>
+      </section>
+
+      <!-- ===================== TEACHERS ===================== -->
+      <section id="teachers">
+        <h2 class="chapter-title">For teachers — curriculum links</h2>
+        <p>Full mapping, sources, and confidence notes are in the curriculum plan
+        (<code>docs/classroom/curriculum-plan.md</code>). NCEA standards below were
+        confirmed against official NZQA standard files; NZC achievement-objective
+        wordings were confirmed via the search index of the official TKI pages.</p>
+
+        <table>
+          <thead>
+            <tr><th>Lesson</th><th>NZC</th><th>NCEA (current)</th><th>International</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1 · Find the hidden rhythm</td>
+              <td>M7-2, M8-7; S8-1 (time series)</td>
+              <td>AS91575 (4cr, Int); AS91580 (4cr, Int)</td>
+              <td>AP Precalc (Trig); A-level Trig; IB composite trig</td>
+            </tr>
+            <tr>
+              <td>2 · Am I a night owl?</td>
+              <td>Living World — Life processes (L7/8)</td>
+              <td>AS91604 (3cr, Int)</td>
+              <td>AP Bio 8.1; IB Bio D3.3; A-level homeostasis</td>
+            </tr>
+            <tr>
+              <td>3 · Is the difference real?</td>
+              <td>S7-1, S8-1</td>
+              <td>AS91264 (4cr, Int); AS91582 (4cr, Int)</td>
+              <td>AP Stats U5/U7; A-level &amp; IB hypothesis testing</td>
+            </tr>
+            <tr>
+              <td>4 · Sine waves are everywhere</td>
+              <td>M8-7, M7-2</td>
+              <td>AS91575 (4cr, Int)</td>
+              <td>AP Precalc (Trig); A-level Trig; IB composite trig</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p style="font-size:0.9rem; color:var(--muted)"><strong>NCEA is changing:</strong>
+        Level 1 is removed from 2028; the NZ Certificate of Education (Year 12) starts
+        2029 and the NZ Advanced Certificate of Education (Year 13) starts 2030. The
+        current AS9xxxx standards above remain valid through the transition.</p>
+      </section>
+
+      <div class="footer">
+        AnCiR Classroom Handbook · draft 2026-06-17 · companion to the Handbook of
+        Chronobiological Data Analysis. Curriculum references verified against NZQA and
+        TKI; see <code>docs/classroom/curriculum-plan.md</code> for sources.
+      </div>
+    </div>
+  </body>
+</html>

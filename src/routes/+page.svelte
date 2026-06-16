@@ -9,6 +9,8 @@
 	import PlotDisplay from '$lib/components/views/PlotDisplay.svelte';
 
 	import AreYouSure from '$lib/components/views/modals/AreYouSure.svelte';
+	import TourOverlay from '$lib/components/tour/TourOverlay.svelte';
+	import TourPicker from '$lib/components/tour/TourPicker.svelte';
 	import ImportData, {
 		loadFromURL,
 		openImportModal,
@@ -140,7 +142,7 @@
 		appConsts.processMap = await loadProcesses();
 		appState.loadingState.loadingMsg = 'Loading plots ...';
 		appConsts.plotMap = await loadPlots();
-		appState.loadingState.loadingMsg = 'Loading table processes ...';
+		appState.loadingState.loadingMsg = 'Loading maths and things ...';
 		appConsts.tableProcessMap = await loadTableProcesses();
 
 		appState.loadingState.isLoading = false;
@@ -614,6 +616,8 @@
 	options={appState.AYSoptions}
 />
 <ImportData />
+<TourPicker />
+<TourOverlay />
 <Notifications />
 {#if appState.loadingState.isLoading}
 	<div class="backdrop" transition:fade={{ duration: 360 }}>

@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "count": 4,
+  "sessions": [
+    {
+      "id": "learn-hidden-rhythm",
+      "name": "Find the hidden rhythm",
+      "family": "Classroom",
+      "description": "A noisy ~24 h signal (7 days, hourly). Use the periodogram to recover the hidden period.",
+      "url": "sessions/classroom/learn-hidden-rhythm.json",
+      "kind": "lesson",
+      "yearLevel": "NZ Yr 11–13",
+      "curriculum": [
+        {
+          "framework": "NZC",
+          "code": "M7-2 / M8-7",
+          "title": "Graphs & modelling of periodic functions",
+          "confidence": "snippet-verified"
+        },
+        {
+          "framework": "NZC",
+          "code": "S8-1",
+          "title": "Statistical enquiry cycle (time series)",
+          "confidence": "snippet-verified"
+        },
+        {
+          "framework": "NCEA",
+          "code": "AS91575",
+          "title": "Apply trigonometric methods (L3, 4cr, Internal)",
+          "confidence": "verified"
+        },
+        {
+          "framework": "NCEA",
+          "code": "AS91580",
+          "title": "Investigate time series data (L3, 4cr, Internal)",
+          "confidence": "verified"
+        }
+      ],
+      "showcases": [
+        "periodogram"
+      ],
+      "keywords": "find the hidden rhythm a noisy ~24 h signal (7 days, hourly). use the periodogram to recover the hidden period. classroom nz yr 11–13 periodogram"
+    },
+    {
+      "id": "learn-night-owl",
+      "name": "Am I a night owl?",
+      "family": "Classroom",
+      "description": "A week of activity for one \"person\". Read the actogram and decide: morning lark or evening owl?",
+      "url": "sessions/classroom/learn-night-owl.json",
+      "kind": "lesson",
+      "yearLevel": "NZ Yr 9–13",
+      "curriculum": [
+        {
+          "framework": "NZC",
+          "code": "Living World — Life processes (L7/8)",
+          "title": "How animals carry out life processes",
+          "confidence": "snippet-verified"
+        },
+        {
+          "framework": "NCEA",
+          "code": "AS91604",
+          "title": "How an animal maintains a stable internal environment (L3, 3cr, Internal)",
+          "confidence": "verified"
+        }
+      ],
+      "showcases": [
+        "actogram"
+      ],
+      "keywords": "am i a night owl? a week of activity for one \"person\". read the actogram and decide: morning lark or evening owl? classroom nz yr 9–13 actogram"
+    },
+    {
+      "id": "learn-difference-real",
+      "name": "Is the difference real?",
+      "family": "Classroom",
+      "description": "Weekday vs weekend activity. Compare the groups and decide whether the difference is real or chance.",
+      "url": "sessions/classroom/learn-difference-real.json",
+      "kind": "lesson",
+      "yearLevel": "NZ Yr 11–13",
+      "curriculum": [
+        {
+          "framework": "NZC",
+          "code": "S7-1 / S8-1",
+          "title": "Statistical enquiry cycle & inference",
+          "confidence": "snippet-verified"
+        },
+        {
+          "framework": "NCEA",
+          "code": "AS91264",
+          "title": "Use statistical methods to make an inference (L2, 4cr, Internal)",
+          "confidence": "verified"
+        },
+        {
+          "framework": "NCEA",
+          "code": "AS91582",
+          "title": "Use statistical methods to make a formal inference (L3, 4cr, Internal)",
+          "confidence": "verified"
+        }
+      ],
+      "showcases": [
+        "boxplot"
+      ],
+      "keywords": "is the difference real? weekday vs weekend activity. compare the groups and decide whether the difference is real or chance. classroom nz yr 11–13 boxplot"
+    },
+    {
+      "id": "learn-sine-waves",
+      "name": "Sine waves are everywhere",
+      "family": "Classroom",
+      "description": "Fit a single cosine to a rhythm. Read amplitude, phase, midline, period and R²; compare with the truth.",
+      "url": "sessions/classroom/learn-sine-waves.json",
+      "kind": "lesson",
+      "yearLevel": "NZ Yr 12–13",
+      "curriculum": [
+        {
+          "framework": "NZC",
+          "code": "M8-7 / M7-2",
+          "title": "Trig equations & graphs (amplitude/period/phase)",
+          "confidence": "snippet-verified"
+        },
+        {
+          "framework": "NCEA",
+          "code": "AS91575",
+          "title": "Apply trigonometric methods (L3, 4cr, Internal)",
+          "confidence": "verified"
+        }
+      ],
+      "showcases": [
+        "scatterplot"
+      ],
+      "keywords": "sine waves are everywhere fit a single cosine to a rhythm. read amplitude, phase, midline, period and r²; compare with the truth. classroom nz yr 12–13 scatterplot"
+    }
+  ]
+}

@@ -326,10 +326,14 @@
 </div>
 
 <style>
+	/* Anchored top-right, 5px inside the canvas-viewport's right edge (which the
+	   editor already insets by the control-panel width). This mirrors the bottom
+	   zoom-controls' `right: calc(controlPanel + 5px)` so the add button sits in
+	   the exact same screen spot as the worksheet's add button. */
 	.np-anchor {
 		position: absolute;
-		top: 12px;
-		right: 12px;
+		top: 10px;
+		right: 5px;
 		z-index: 30;
 		pointer-events: auto;
 	}

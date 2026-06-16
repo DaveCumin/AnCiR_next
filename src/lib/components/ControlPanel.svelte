@@ -94,7 +94,7 @@
 		class="icon newplotconstant"
 		style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
 			? appState.widthControlPanel
-			: 0}px + 5px); top: 15px;"
+			: 0}px + 5px); top: 10px;"
 		onclick={(e) => {
 			e.stopPropagation();
 			showNewPlotModalconst = true;
@@ -119,6 +119,16 @@
 <style>
 	.icon {
 		transition: right 0.6s ease;
+	}
+	/* Match the workflow NodePalette trigger (.np-btn) exactly so the add button
+	   sits in the same spot/size when switching views. */
+	.newplotconstant {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 34px;
+		height: 26px;
+		padding: 0;
 	}
 	.openControlPanel {
 		position: fixed;
