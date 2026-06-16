@@ -58,18 +58,20 @@ describe('demo sessions load + render-safe', () => {
 		expect(demoFiles.length).toBeGreaterThan(0);
 	});
 
-	it('the example gallery covers every standard plot type', () => {
-		// DataView is a viewer wired to a source plot, not a standalone session, so
-		// it is exempt; every other registered plot type must appear in the gallery.
-		const covered = new Set();
-		for (const file of demoFiles) {
-			const jsonData = JSON.parse(readFileSync(join(DIR, file), 'utf8'));
-			for (const p of jsonData.plots ?? []) covered.add(p.type);
+	it('the example gallery showcases every node type', () => {
+		// Drive coverage off the manifest's `showcases`/`kind` metadata (the same
+		// fields the modal search uses). DataView is a viewer wired to a source
+		// plot, not a standalone session, so it is exempt.
+		const idx = JSON.parse(readFileSync(join(DIR, 'index.json'), 'utf8'));
+		const showcasedBy = (kind) =>
+			new Set(idx.sessions.filter((s) => s.kind === kind).flatMap((s) => s.showcases ?? []));
+
+		const plots = showcasedBy('plot');
+		for (const type of [...appConsts.plotMap.keys()].filter((k) => k !== 'dataview')) {
+			expect(plots.has(type), `gallery showcases plot ${type}`).toBe(true);
 		}
-		const expected = [...appConsts.plotMap.keys()].filter((k) => k !== 'dataview');
-		for (const type of expected) {
-			expect(covered.has(type), `gallery includes a ${type} demo`).toBe(true);
-		}
+		expect(showcasedBy('process')).toEqual(new Set([...appConsts.processMap.keys()]));
+		expect(showcasedBy('tableProcess')).toEqual(new Set([...appConsts.tableProcessMap.keys()]));
 	});
 
 	for (const file of demoFiles) {
@@ -88,12 +90,29 @@ describe('demo sessions load + render-safe', () => {
 			expect(core.plots.length).toBe((jsonData.plots ?? []).length);
 			expect(core.plots.length).toBeGreaterThan(0);
 
-			// Every base data column resolves to a finite-bearing array.
+			// Table-process OUTPUT columns are computed at runtime when the TP node
+			// mounts on load, so they are legitimately empty in the serialized file;
+			// exclude them from the finite check (source columns must still resolve).
+			const tpOutIds = new Set();
+			for (const tp of jsonData.tableProcesses ?? []) {
+				for (const v of Object.values(tp.args?.out ?? {})) {
+					if (typeof v === 'number' && v >= 0) tpOutIds.add(v);
+				}
+			}
+
+			// Every base (source) data column resolves to a non-empty array. Numeric
+			// and time columns must carry finite values; category columns hold
+			// (non-empty) string labels.
 			for (const col of core.data) {
+				if (tpOutIds.has(col.id)) continue;
 				const d = col.getData();
 				expect(Array.isArray(d)).toBe(true);
 				expect(d.length).toBeGreaterThan(0);
-				expect(d.some((v) => Number.isFinite(v))).toBe(true);
+				if (col.type === 'category') {
+					expect(d.some((v) => v != null && v !== '')).toBe(true);
+				} else {
+					expect(d.some((v) => Number.isFinite(v))).toBe(true);
+				}
 			}
 
 			// Every plot wrapper column points at a real base column (refId present

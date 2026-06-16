@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "3": [
+    "4": [
       94.6474998383402,
       76.91520978067693,
       94.72974943407392,
@@ -505,9 +505,9 @@
   },
   "data": [
     {
-      "id": 3,
+      "id": 4,
       "name": "measurement",
-      "data": 3,
+      "data": 4,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -557,9 +557,9 @@
         "data": [
           {
             "column": {
-              "id": 6,
+              "id": 5,
               "name": "measurement",
-              "refId": 3,
+              "refId": 4,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -649,5 +649,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.41.3"
+  "version": "β.42.0"
 }

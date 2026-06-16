@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "12": [
+    "22": [
       0,
       1,
       2,
@@ -194,7 +194,7 @@
       190,
       191
     ],
-    "13": [
+    "23": [
       61.037491948115374,
       64.99236592704621,
       74.20658521498542,
@@ -391,9 +391,9 @@
   },
   "data": [
     {
-      "id": 12,
+      "id": 22,
       "name": "hour",
-      "data": 12,
+      "data": 22,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -403,9 +403,9 @@
       "processes": []
     },
     {
-      "id": 13,
+      "id": 23,
       "name": "signal",
-      "data": 13,
+      "data": 23,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -463,9 +463,9 @@
         "data": [
           {
             "x": {
-              "id": 25,
+              "id": 24,
               "name": "hour",
-              "refId": 12,
+              "refId": 22,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -475,9 +475,9 @@
               "processes": []
             },
             "y": {
-              "id": 26,
+              "id": 25,
               "name": "signal",
-              "refId": 13,
+              "refId": 23,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -571,5 +571,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.41.3"
+  "version": "β.42.0"
 }

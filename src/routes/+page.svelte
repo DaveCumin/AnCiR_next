@@ -33,7 +33,6 @@
 		absorbColumnIntoGroup
 	} from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
-	import { buildAllNodes } from '$lib/_demos/nodeCatalog.js';
 	import { Plot, selectAllPlots } from '$lib/core/Plot.svelte';
 	import { TableProcess } from '$lib/core/TableProcess.svelte';
 
@@ -537,24 +536,6 @@
 			)
 		);
 		core.plots[0].plot.data[1].y.refId = core.data[core.data.length - 1].id;
-
-		// Full node coverage: append one correctly-wired instance of every plot,
-		// column-process and table-process below the curated demo, so the example
-		// exercises (and visually shows the wiring of) every node type. The same
-		// catalog is asserted complete + connected by allNodesCoverage.test.js.
-		appState.loadingState.loadingMsg = 'Adding one of every node…';
-		await new Promise((resolve) => setTimeout(resolve, 10));
-		buildAllNodes({ x0: 40, y0: snapToGrid(1400) });
-
-		// A standalone Note node, for completeness of the canvas node types.
-		core.notes.push({
-			id: `note_demo_${Date.now()}`,
-			text: 'Demo: one of every node type is laid out below.',
-			x: snapToGrid(40),
-			y: snapToGrid(1320),
-			width: 320,
-			height: 80
-		});
 
 		appState.loadingState.isLoading = false;
 	}

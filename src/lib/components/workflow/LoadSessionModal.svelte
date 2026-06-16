@@ -32,10 +32,34 @@
 	let exampleSessions = $state([]);
 	let examplesRequested = $state(false);
 	let examplesError = $state('');
+	// Palette-style search across the example gallery. Matches the manifest's
+	// `keywords` blob (node key + display name + family + description) so users can
+	// find a session by the node/function it showcases.
+	let exampleSearch = $state('');
+
+	function sessionSearchText(s) {
+		return (
+			s.keywords ||
+			[s.name, s.description, s.family, ...(s.showcases ?? [])]
+				.filter(Boolean)
+				.join(' ')
+				.toLowerCase()
+		);
+	}
+
+	const filteredSessions = $derived.by(() => {
+		const q = exampleSearch.trim().toLowerCase();
+		if (!q) return exampleSessions;
+		const terms = q.split(/\s+/);
+		return exampleSessions.filter((s) => {
+			const hay = sessionSearchText(s);
+			return terms.every((t) => hay.includes(t));
+		});
+	});
 
 	const exampleGroups = $derived.by(() => {
 		const groups = new Map();
-		for (const s of exampleSessions) {
+		for (const s of filteredSessions) {
 			const family = s.family || 'Examples';
 			if (!groups.has(family)) groups.set(family, []);
 			groups.get(family).push(s);
@@ -76,6 +100,7 @@
 			fileName = '';
 			activeExampleUrl = null;
 			loadError = '';
+			exampleSearch = '';
 			if (fileInput) fileInput.value = '';
 		}
 	});
@@ -234,8 +259,7 @@
 						Choose .json file
 					</button>
 					<p class="tab-hint">
-						Pick a previously saved <code>.json</code> session file. It loads as
-						soon as you select it.
+						Pick a previously saved <code>.json</code> session file. It loads as soon as you select it.
 					</p>
 				</div>
 			{:else if sourceMode === 'url'}
@@ -275,6 +299,17 @@
 					{:else if exampleSessions.length === 0}
 						<p class="tab-hint">No example sessions available.</p>
 					{:else}
+						<input
+							class="search-input"
+							type="search"
+							bind:value={exampleSearch}
+							placeholder="Search examples by node or function (e.g. fourier, bin, cosinor)…"
+							disabled={loading}
+							aria-label="Search example sessions"
+						/>
+						{#if filteredSessions.length === 0}
+							<p class="tab-hint">No examples match “{exampleSearch}”.</p>
+						{/if}
 						{#each exampleGroups as [family, sessions] (family)}
 							<div class="example-group-label">{family}</div>
 							{#each sessions as session (session.id ?? session.url)}
@@ -422,6 +457,25 @@
 		max-height: 50vh;
 		overflow-y: auto;
 		padding-right: 4px;
+	}
+
+	.search-input {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		width: 100%;
+		box-sizing: border-box;
+		font-size: 13px;
+		padding: 0.4rem 0.5rem;
+		margin-bottom: 0.2rem;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 4px;
+		background: var(--color-lightness-97);
+	}
+
+	.search-input:focus {
+		outline: none;
+		border-color: var(--color-hover);
 	}
 
 	.example-group-label {

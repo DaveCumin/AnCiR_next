@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "6": [
+    "10": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "7": [
+    "11": [
       0,
       0,
       0,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 6,
+      "id": 10,
       "name": "hour",
-      "data": 6,
+      "data": 10,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -355,9 +355,9 @@
       "processes": []
     },
     {
-      "id": 7,
+      "id": 11,
       "name": "activity",
-      "data": 7,
+      "data": 11,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -404,9 +404,9 @@
         "data": [
           {
             "x": {
-              "id": 13,
+              "id": 12,
               "name": "hour",
-              "refId": 6,
+              "refId": 10,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -416,9 +416,9 @@
               "processes": []
             },
             "y": {
-              "id": 14,
+              "id": 13,
               "name": "activity",
-              "refId": 7,
+              "refId": 11,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -489,5 +489,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.41.3"
+  "version": "β.42.0"
 }

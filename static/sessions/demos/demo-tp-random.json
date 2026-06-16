@@ -1,0 +1,165 @@
+{
+  "rawData": {
+    "82": [
+      9.23,
+      3.33,
+      1.98,
+      9.49,
+      7.84,
+      9.84,
+      9.14,
+      5.83,
+      2.09,
+      1.78,
+      9.31,
+      7.1,
+      0.34,
+      3.57,
+      5.12,
+      2.39,
+      9.82,
+      5.31,
+      5.31,
+      9.17,
+      5.99,
+      8.64,
+      2.67,
+      3.35,
+      2.43,
+      0.57,
+      7.25,
+      3.39,
+      0.97,
+      6.95,
+      3.25,
+      1.5,
+      0.52,
+      5.54,
+      6.67,
+      2.66,
+      4.62,
+      9.36,
+      9.42,
+      9.97,
+      5.67,
+      6.05,
+      3.35,
+      2.35,
+      1.42,
+      5.75,
+      6.36,
+      1.67,
+      3.78,
+      6.3
+    ]
+  },
+  "data": [
+    {
+      "id": 82,
+      "name": "result_12",
+      "data": 82,
+      "type": "number",
+      "tableProcessGUId": "093070aa-58d6-4b9f-a7fd-0bfad53f89fd",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    }
+  ],
+  "plots": [
+    {
+      "id": 29,
+      "name": "Random table",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "plot": {
+        "columnRefs": [
+          82
+        ],
+        "showCol": [
+          true
+        ],
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
+    }
+  ],
+  "tableProcesses": [
+    {
+      "id": 12,
+      "name": "Random",
+      "displayName": "Random",
+      "args": {
+        "N": 50,
+        "offset": 0,
+        "multiply": 10,
+        "seed": 12345,
+        "distribution": "uniform",
+        "out": {
+          "result": 82
+        }
+      },
+      "refTPId": null
+    }
+  ],
+  "storedValues": {},
+  "nodeNotes": {},
+  "notes": [],
+  "groups": [],
+  "orphanProcesses": [],
+  "appState": {
+    "currentTab": "null",
+    "currentControlTab": "properties",
+    "loadingState": {
+      "isLoading": true,
+      "loadingMsg": "Warming up..."
+    },
+    "showNavbar": true,
+    "showDisplayPanel": false,
+    "showControlPanel": false,
+    "windowWidth": 1024,
+    "windowHeight": 768,
+    "widthNavBar": 56,
+    "widthDisplayPanel": 250,
+    "widthControlPanel": 250,
+    "gridSize": 15,
+    "canvasOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "canvasScale": 1,
+    "view": "canvas",
+    "displayTimezone": "utc",
+    "invisiblePlotIds": [],
+    "canvasSelectedNodeId": null,
+    "canvasMultiSelectedCount": 0,
+    "canvasMultiSelectedNodeIds": [],
+    "appColours": [
+      "#234154",
+      "#BE796B",
+      "#3E7295",
+      "#EDADAD",
+      "#A6ACD5",
+      "#83422A",
+      "#6B9FD5",
+      "#4A1E0E",
+      "#fbe67280"
+    ],
+    "showColourPicker": false,
+    "showAYSModal": false,
+    "AYStext": "",
+    "AYScallback": null,
+    "AYSoptions": [
+      "Yes",
+      "No"
+    ],
+    "showWorkflow": false
+  },
+  "version": "β.42.0"
+}

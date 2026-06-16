@@ -1,62 +1,474 @@
 {
   "version": 1,
-  "count": 8,
+  "count": 39,
   "sessions": [
     {
       "id": "scatter-rhythm",
       "name": "Scatter — activity vs hour",
       "family": "Plots",
       "description": "A simple scatterplot of a noisy ~24 h rhythmic signal against hours since start (7 days, hourly).",
-      "url": "sessions/demos/demo-scatter-rhythm.json"
+      "url": "sessions/demos/demo-scatter-rhythm.json",
+      "kind": "plot",
+      "showcases": [
+        "scatterplot"
+      ],
+      "keywords": "scatter — activity vs hour a simple scatterplot of a noisy ~24 h rhythmic signal against hours since start (7 days, hourly). plots plot scatterplot"
     },
     {
       "id": "histogram-normal",
       "name": "Histogram — distribution",
       "family": "Plots",
       "description": "Histogram of 500 samples drawn from a normal distribution (mean 100, sd 15).",
-      "url": "sessions/demos/demo-histogram-normal.json"
+      "url": "sessions/demos/demo-histogram-normal.json",
+      "kind": "plot",
+      "showcases": [
+        "histogram"
+      ],
+      "keywords": "histogram — distribution histogram of 500 samples drawn from a normal distribution (mean 100, sd 15). plots plot histogram"
     },
     {
       "id": "boxplot-by-day",
       "name": "Boxplot — activity by day",
       "family": "Plots",
       "description": "Boxplot of daily activity values grouped by day index (7 days × 24 hourly points).",
-      "url": "sessions/demos/demo-boxplot-by-day.json"
+      "url": "sessions/demos/demo-boxplot-by-day.json",
+      "kind": "plot",
+      "showcases": [
+        "boxplot"
+      ],
+      "keywords": "boxplot — activity by day boxplot of daily activity values grouped by day index (7 days × 24 hourly points). plots plot boxplot"
     },
     {
       "id": "actogram-rhythm",
       "name": "Actogram — multi-day activity",
       "family": "Plots",
       "description": "Actogram of a noisy ~24 h rhythm over 7 days (hourly samples).",
-      "url": "sessions/demos/demo-actogram-rhythm.json"
+      "url": "sessions/demos/demo-actogram-rhythm.json",
+      "kind": "plot",
+      "showcases": [
+        "actogram"
+      ],
+      "keywords": "actogram — multi-day activity actogram of a noisy ~24 h rhythm over 7 days (hourly samples). plots plot actogram"
     },
     {
       "id": "periodogram-rhythm",
       "name": "Periodogram — period detection",
       "family": "Plots",
       "description": "Lomb–Scargle periodogram of a ~24 h rhythm (7 days, hourly).",
-      "url": "sessions/demos/demo-periodogram-rhythm.json"
+      "url": "sessions/demos/demo-periodogram-rhythm.json",
+      "kind": "plot",
+      "showcases": [
+        "periodogram"
+      ],
+      "keywords": "periodogram — period detection lomb–scargle periodogram of a ~24 h rhythm (7 days, hourly). plots plot periodogram"
     },
     {
       "id": "correlogram-rhythm",
       "name": "Correlogram — autocorrelation",
       "family": "Plots",
       "description": "Autocorrelogram of a ~24 h rhythm (7 days, hourly).",
-      "url": "sessions/demos/demo-correlogram-rhythm.json"
+      "url": "sessions/demos/demo-correlogram-rhythm.json",
+      "kind": "plot",
+      "showcases": [
+        "correlogram"
+      ],
+      "keywords": "correlogram — autocorrelation autocorrelogram of a ~24 h rhythm (7 days, hourly). plots plot correlogram"
     },
     {
       "id": "fft-rhythm",
       "name": "FFT — frequency spectrum",
       "family": "Plots",
       "description": "Fourier spectrum of a 12 h + 24 h composite rhythm (8 days, hourly).",
-      "url": "sessions/demos/demo-fft-rhythm.json"
+      "url": "sessions/demos/demo-fft-rhythm.json",
+      "kind": "plot",
+      "showcases": [
+        "fft"
+      ],
+      "keywords": "fft — frequency spectrum fourier spectrum of a 12 h + 24 h composite rhythm (8 days, hourly). plots plot fft"
     },
     {
       "id": "table-columns",
       "name": "Table — raw columns",
       "family": "Plots",
       "description": "A tableplot listing an hour index alongside two derived signals.",
-      "url": "sessions/demos/demo-table-columns.json"
+      "url": "sessions/demos/demo-table-columns.json",
+      "kind": "plot",
+      "showcases": [
+        "tableplot"
+      ],
+      "keywords": "table — raw columns a tableplot listing an hour index alongside two derived signals. plots plot tableplot"
+    },
+    {
+      "id": "process-add",
+      "name": "Add (process)",
+      "family": "Column processes",
+      "description": "Add a constant or column to the input column.",
+      "url": "sessions/demos/demo-process-add.json",
+      "kind": "process",
+      "showcases": [
+        "Add"
+      ],
+      "keywords": "add (process) add a constant or column to the input column. column processes process add"
+    },
+    {
+      "id": "process-sub",
+      "name": "Substitute (process)",
+      "family": "Column processes",
+      "description": "Subtract a constant or column from the input column.",
+      "url": "sessions/demos/demo-process-sub.json",
+      "kind": "process",
+      "showcases": [
+        "Sub"
+      ],
+      "keywords": "substitute (process) subtract a constant or column from the input column. column processes process sub"
+    },
+    {
+      "id": "process-multiply",
+      "name": "Multiply (process)",
+      "family": "Column processes",
+      "description": "Multiply the input column by a constant or another column.",
+      "url": "sessions/demos/demo-process-multiply.json",
+      "kind": "process",
+      "showcases": [
+        "Multiply"
+      ],
+      "keywords": "multiply (process) multiply the input column by a constant or another column. column processes process multiply"
+    },
+    {
+      "id": "process-editvalue",
+      "name": "Edit value (process)",
+      "family": "Column processes",
+      "description": "Edit or substitute individual values in a column.",
+      "url": "sessions/demos/demo-process-editvalue.json",
+      "kind": "process",
+      "showcases": [
+        "EditValue"
+      ],
+      "keywords": "edit value (process) edit or substitute individual values in a column. column processes process editvalue"
+    },
+    {
+      "id": "process-filterbyothercol",
+      "name": "Filter (process)",
+      "family": "Column processes",
+      "description": "Filter rows based on the values of another column.",
+      "url": "sessions/demos/demo-process-filterbyothercol.json",
+      "kind": "process",
+      "showcases": [
+        "FilterByOtherCol"
+      ],
+      "keywords": "filter (process) filter rows based on the values of another column. column processes process filterbyothercol"
+    },
+    {
+      "id": "process-outlierremoval",
+      "name": "Remove Outliers (process)",
+      "family": "Column processes",
+      "description": "Detect and remove outliers from the column.",
+      "url": "sessions/demos/demo-process-outlierremoval.json",
+      "kind": "process",
+      "showcases": [
+        "OutlierRemoval"
+      ],
+      "keywords": "remove outliers (process) detect and remove outliers from the column. column processes process outlierremoval"
+    },
+    {
+      "id": "process-removetrend",
+      "name": "Remove Trend (process)",
+      "family": "Column processes",
+      "description": "Remove a fitted trend (linear, polynomial, etc.) from the column.",
+      "url": "sessions/demos/demo-process-removetrend.json",
+      "kind": "process",
+      "showcases": [
+        "RemoveTrend"
+      ],
+      "keywords": "remove trend (process) remove a fitted trend (linear, polynomial, etc.) from the column. column processes process removetrend"
+    },
+    {
+      "id": "process-sort",
+      "name": "Sort (process)",
+      "family": "Column processes",
+      "description": "Sort the table by the chosen column(s).",
+      "url": "sessions/demos/demo-process-sort.json",
+      "kind": "process",
+      "showcases": [
+        "Sort"
+      ],
+      "keywords": "sort (process) sort the table by the chosen column(s). column processes process sort"
+    },
+    {
+      "id": "process-normalize",
+      "name": "Normalize (process)",
+      "family": "Column processes",
+      "description": "Normalize the column to a chosen range or by a reference value.",
+      "url": "sessions/demos/demo-process-normalize.json",
+      "kind": "process",
+      "showcases": [
+        "normalize"
+      ],
+      "keywords": "normalize (process) normalize the column to a chosen range or by a reference value. column processes process normalize"
+    },
+    {
+      "id": "tp-binneddata",
+      "name": "Bin Data (table process)",
+      "family": "Table processes",
+      "description": "Bin time-series values into regular intervals and aggregate per bin.",
+      "url": "sessions/demos/demo-tp-binneddata.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "BinnedData"
+      ],
+      "keywords": "bin data (table process) bin time-series values into regular intervals and aggregate per bin. table processes tableprocess binneddata"
+    },
+    {
+      "id": "tp-blankcolumn",
+      "name": "Blank Column (table process)",
+      "family": "Table processes",
+      "description": "Add a blank column to a table for manual entry.",
+      "url": "sessions/demos/demo-tp-blankcolumn.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "BlankColumn"
+      ],
+      "keywords": "blank column (table process) add a blank column to a table for manual entry. table processes tableprocess blankcolumn"
+    },
+    {
+      "id": "tp-collectcolumns",
+      "name": "Collect Columns (table process)",
+      "family": "Table processes",
+      "description": "Collect (concatenate) several columns into one.",
+      "url": "sessions/demos/demo-tp-collectcolumns.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "CollectColumns"
+      ],
+      "keywords": "collect columns (table process) collect (concatenate) several columns into one. table processes tableprocess collectcolumns"
+    },
+    {
+      "id": "tp-columnfunctions",
+      "name": "Column Function (table process)",
+      "family": "Table processes",
+      "description": "Apply a per-column aggregate function (mean, sum, etc.) across rows or groups.",
+      "url": "sessions/demos/demo-tp-columnfunctions.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "ColumnFunctions"
+      ],
+      "keywords": "column function (table process) apply a per-column aggregate function (mean, sum, etc.) across rows or groups. table processes tableprocess columnfunctions"
+    },
+    {
+      "id": "tp-cosinor",
+      "name": "Cosinor (table process)",
+      "family": "Table processes",
+      "description": "Fit a cosinor model (period, amplitude, acrophase) to the column.",
+      "url": "sessions/demos/demo-tp-cosinor.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "Cosinor"
+      ],
+      "keywords": "cosinor (table process) fit a cosinor model (period, amplitude, acrophase) to the column. table processes tableprocess cosinor"
+    },
+    {
+      "id": "tp-doublelogistic",
+      "name": "Double Logistic (table process)",
+      "family": "Table processes",
+      "description": "Fit a double-logistic curve to the column (useful for phenology / on-off transitions).",
+      "url": "sessions/demos/demo-tp-doublelogistic.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "DoubleLogistic"
+      ],
+      "keywords": "double logistic (table process) fit a double-logistic curve to the column (useful for phenology / on-off transitions). table processes tableprocess doublelogistic"
+    },
+    {
+      "id": "tp-duplicate",
+      "name": "Duplicate (table process)",
+      "family": "Table processes",
+      "description": "Duplicate a column under a new name.",
+      "url": "sessions/demos/demo-tp-duplicate.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "Duplicate"
+      ],
+      "keywords": "duplicate (table process) duplicate a column under a new name. table processes tableprocess duplicate"
+    },
+    {
+      "id": "tp-fitfunction",
+      "name": "Fit Function (table process)",
+      "family": "Table processes",
+      "description": "Fit an arbitrary user-supplied function to the column.",
+      "url": "sessions/demos/demo-tp-fitfunction.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "FitFunction"
+      ],
+      "keywords": "fit function (table process) fit an arbitrary user-supplied function to the column. table processes tableprocess fitfunction"
+    },
+    {
+      "id": "tp-formulacolumn",
+      "name": "Formula Column (table process)",
+      "family": "Table processes",
+      "description": "Compute a new column from a user-supplied formula referencing other columns.",
+      "url": "sessions/demos/demo-tp-formulacolumn.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "FormulaColumn"
+      ],
+      "keywords": "formula column (table process) compute a new column from a user-supplied formula referencing other columns. table processes tableprocess formulacolumn"
+    },
+    {
+      "id": "tp-groupcomparison",
+      "name": "Compare groups (stats) (table process)",
+      "family": "Table processes",
+      "description": "Compare statistics between groups defined by another column.",
+      "url": "sessions/demos/demo-tp-groupcomparison.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "GroupComparison"
+      ],
+      "keywords": "compare groups (stats) (table process) compare statistics between groups defined by another column. table processes tableprocess groupcomparison"
+    },
+    {
+      "id": "tp-longtowide",
+      "name": "Long To Wide (table process)",
+      "family": "Table processes",
+      "description": "Pivot a long-format table into wide format.",
+      "url": "sessions/demos/demo-tp-longtowide.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "LongToWide"
+      ],
+      "keywords": "long to wide (table process) pivot a long-format table into wide format. table processes tableprocess longtowide"
+    },
+    {
+      "id": "tp-movinganalysis",
+      "name": "Moving Analysis (table process)",
+      "family": "Table processes",
+      "description": "Compute a rolling-window analysis across the column.",
+      "url": "sessions/demos/demo-tp-movinganalysis.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "MovingAnalysis"
+      ],
+      "keywords": "moving analysis (table process) compute a rolling-window analysis across the column. table processes tableprocess movinganalysis"
+    },
+    {
+      "id": "tp-random",
+      "name": "Random (table process)",
+      "family": "Table processes",
+      "description": "Generate a column of random values.",
+      "url": "sessions/demos/demo-tp-random.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "Random"
+      ],
+      "keywords": "random (table process) generate a column of random values. table processes tableprocess random"
+    },
+    {
+      "id": "tp-rectangularwave",
+      "name": "Rectangular Wave (table process)",
+      "family": "Table processes",
+      "description": "Fit a rectangular (square) wave model with adjustable duty cycle.",
+      "url": "sessions/demos/demo-tp-rectangularwave.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "RectangularWave"
+      ],
+      "keywords": "rectangular wave (table process) fit a rectangular (square) wave model with adjustable duty cycle. table processes tableprocess rectangularwave"
+    },
+    {
+      "id": "tp-rhythmicityanalysis",
+      "name": "Rhythmicity Analysis (table process)",
+      "family": "Table processes",
+      "description": "Run rhythmicity statistics over the column.",
+      "url": "sessions/demos/demo-tp-rhythmicityanalysis.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "RhythmicityAnalysis"
+      ],
+      "keywords": "rhythmicity analysis (table process) run rhythmicity statistics over the column. table processes tableprocess rhythmicityanalysis"
+    },
+    {
+      "id": "tp-sequencecolumn",
+      "name": "Sequence Column (table process)",
+      "family": "Table processes",
+      "description": "Create a numeric or time sequence column.",
+      "url": "sessions/demos/demo-tp-sequencecolumn.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "SequenceColumn"
+      ],
+      "keywords": "sequence column (table process) create a numeric or time sequence column. table processes tableprocess sequencecolumn"
+    },
+    {
+      "id": "tp-simulateddata",
+      "name": "Simulate Data (table process)",
+      "family": "Table processes",
+      "description": "Generate a synthetic time-series table from a cosine + noise model.",
+      "url": "sessions/demos/demo-tp-simulateddata.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "SimulatedData"
+      ],
+      "keywords": "simulate data (table process) generate a synthetic time-series table from a cosine + noise model. table processes tableprocess simulateddata"
+    },
+    {
+      "id": "tp-smootheddata",
+      "name": "Smooth Data (table process)",
+      "family": "Table processes",
+      "description": "Smooth a column using LOESS, moving average, Savitzky-Golay, or Whittaker-Eilers.",
+      "url": "sessions/demos/demo-tp-smootheddata.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "SmoothedData"
+      ],
+      "keywords": "smooth data (table process) smooth a column using loess, moving average, savitzky-golay, or whittaker-eilers. table processes tableprocess smootheddata"
+    },
+    {
+      "id": "tp-split",
+      "name": "Split data (table process)",
+      "family": "Table processes",
+      "description": "Split a column or table on a delimiter or group key.",
+      "url": "sessions/demos/demo-tp-split.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "Split"
+      ],
+      "keywords": "split data (table process) split a column or table on a delimiter or group key. table processes tableprocess split"
+    },
+    {
+      "id": "tp-storedvaluegroup",
+      "name": "Stored Value Group (table process)",
+      "family": "Table processes",
+      "description": "Group derived stored values together for reuse.",
+      "url": "sessions/demos/demo-tp-storedvaluegroup.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "StoredValueGroup"
+      ],
+      "keywords": "stored value group (table process) group derived stored values together for reuse. table processes tableprocess storedvaluegroup"
+    },
+    {
+      "id": "tp-trendfit",
+      "name": "Fit Trend Curves (table process)",
+      "family": "Table processes",
+      "description": "Fit and store a trend (linear, polynomial, exponential, logarithmic) over the column.",
+      "url": "sessions/demos/demo-tp-trendfit.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "TrendFit"
+      ],
+      "keywords": "fit trend curves (table process) fit and store a trend (linear, polynomial, exponential, logarithmic) over the column. table processes tableprocess trendfit"
+    },
+    {
+      "id": "tp-widetolong",
+      "name": "Wide To Long (table process)",
+      "family": "Table processes",
+      "description": "Pivot a wide-format table into long format.",
+      "url": "sessions/demos/demo-tp-widetolong.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "WideToLong"
+      ],
+      "keywords": "wide to long (table process) pivot a wide-format table into long format. table processes tableprocess widetolong"
     }
   ]
 }

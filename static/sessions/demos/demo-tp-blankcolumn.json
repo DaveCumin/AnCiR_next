@@ -1,0 +1,122 @@
+{
+  "rawData": {
+    "43": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ]
+  },
+  "data": [
+    {
+      "id": 43,
+      "name": "result_1",
+      "data": 43,
+      "type": "category",
+      "tableProcessGUId": "26a13ce1-e2d9-4b9d-b968-aa2b6f8f5eef",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    }
+  ],
+  "plots": [
+    {
+      "id": 18,
+      "name": "Blank Column table",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "plot": {
+        "columnRefs": [
+          43
+        ],
+        "showCol": [
+          true
+        ],
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
+    }
+  ],
+  "tableProcesses": [
+    {
+      "id": 1,
+      "name": "BlankColumn",
+      "displayName": "Blank Column",
+      "args": {
+        "N": 10,
+        "storedValueRefs": {},
+        "out": {
+          "result": 43
+        }
+      },
+      "refTPId": null
+    }
+  ],
+  "storedValues": {},
+  "nodeNotes": {},
+  "notes": [],
+  "groups": [],
+  "orphanProcesses": [],
+  "appState": {
+    "currentTab": "null",
+    "currentControlTab": "properties",
+    "loadingState": {
+      "isLoading": true,
+      "loadingMsg": "Warming up..."
+    },
+    "showNavbar": true,
+    "showDisplayPanel": false,
+    "showControlPanel": false,
+    "windowWidth": 1024,
+    "windowHeight": 768,
+    "widthNavBar": 56,
+    "widthDisplayPanel": 250,
+    "widthControlPanel": 250,
+    "gridSize": 15,
+    "canvasOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "canvasScale": 1,
+    "view": "canvas",
+    "displayTimezone": "utc",
+    "invisiblePlotIds": [],
+    "canvasSelectedNodeId": null,
+    "canvasMultiSelectedCount": 0,
+    "canvasMultiSelectedNodeIds": [],
+    "appColours": [
+      "#234154",
+      "#BE796B",
+      "#3E7295",
+      "#EDADAD",
+      "#A6ACD5",
+      "#83422A",
+      "#6B9FD5",
+      "#4A1E0E",
+      "#fbe67280"
+    ],
+    "showColourPicker": false,
+    "showAYSModal": false,
+    "AYStext": "",
+    "AYScallback": null,
+    "AYSoptions": [
+      "Yes",
+      "No"
+    ],
+    "showWorkflow": false
+  },
+  "version": "β.42.0"
+}

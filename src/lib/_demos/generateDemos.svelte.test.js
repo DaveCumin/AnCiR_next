@@ -19,9 +19,13 @@ import { join } from 'node:path';
 import { core, appConsts, pushObj, outputCoreAsJson } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
+import { TableProcess } from '$lib/core/TableProcess.svelte';
 import { loadProcesses } from '$lib/processes/processMap.js';
 import { loadPlots } from '$lib/plots/plotMap.js';
 import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
+// The per-node specs are shared with allNodesCoverage.test.js so the gallery
+// covers exactly the registered nodes (one example session per process / TP).
+import { PROCESS_SPECS, TP_SPECS, SAMPLE } from './nodeCatalog.js';
 
 const OUT_DIR = join(process.cwd(), 'static', 'sessions', 'demos');
 
@@ -212,6 +216,46 @@ function resetCore() {
 	core.rawData = new Map();
 }
 
+const resolve = (d) => (typeof d === 'function' ? d() : d);
+
+// Column auto-ids share the global Column counter, so columns created here never
+// collide with output columns the TableProcess constructor allocates.
+function mkCol(type, values, name) {
+	const c = new Column({ type, data: -1 });
+	c.customName = name;
+	core.rawData.set(c.id, values);
+	c.data = c.id;
+	if (type === 'time') c.timeFormat = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';
+	core.data.push(c);
+	return c.id;
+}
+
+function tablePlot(name, columnRefs) {
+	const p = new Plot({ name, type: 'tableplot' });
+	p.plot.columnRefs = [...columnRefs];
+	p.plot.showCol = columnRefs.map(() => true);
+	pushObj(p);
+}
+
+// Build one searchable manifest entry. `keywords` collapses everything a user
+// might type (node key, display name, family, description) so the modal search
+// behaves like the node palette.
+function manifestEntry({ id, name, family, description, file, kind, showcases }) {
+	return {
+		id,
+		name,
+		family,
+		description,
+		url: `sessions/demos/${file}`,
+		kind,
+		showcases,
+		keywords: [name, description, family, kind, ...showcases]
+			.filter(Boolean)
+			.join(' ')
+			.toLowerCase()
+	};
+}
+
 describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 	it('writes demo JSON + index.json', async () => {
 		appConsts.processMap = await loadProcesses();
@@ -219,21 +263,19 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 		appConsts.tableProcessMap = await loadTableProcesses();
 
 		const manifest = [];
-		let nextColId = 1;
+		const write = (file, entry) => {
+			writeFileSync(join(OUT_DIR, file), outputCoreAsJson(), 'utf8');
+			manifest.push(entry);
+		};
 
+		// --- Plot demos (hand-crafted, richer narrative) ---------------------
 		for (const demo of DEMOS) {
 			resetCore();
 			const mk = {
-				col(name, type, values) {
-					const id = nextColId++;
-					core.rawData.set(id, values);
-					pushObj(Column.fromJSON({ id, name, data: id, type, processes: [] }));
-					return id;
-				},
+				col: (name, type, values) => mkCol(type, values, name),
 				plot(type, name, inputs) {
 					const p = new Plot({ name, type });
 					if (type === 'tableplot') {
-						// Tableplots carry a flat columnRefs list, not addData series.
 						p.plot.columnRefs = [...(inputs.columnRefs ?? [])];
 						p.plot.showCol = p.plot.columnRefs.map(() => true);
 					} else {
@@ -247,17 +289,85 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 			};
 			demo.build(mk);
 			prewarmWrapperNames();
+			const showcases = [...new Set(core.plots.map((p) => p.type))];
+			write(
+				`demo-${demo.id}.json`,
+				manifestEntry({
+					id: demo.id,
+					name: demo.name,
+					family: demo.family,
+					description: demo.description,
+					file: `demo-${demo.id}.json`,
+					kind: 'plot',
+					showcases
+				})
+			);
+		}
 
-			const json = outputCoreAsJson();
-			const file = `demo-${demo.id}.json`;
-			writeFileSync(join(OUT_DIR, file), json, 'utf8');
-			manifest.push({
-				id: demo.id,
-				name: demo.name,
-				family: demo.family,
-				description: demo.description,
-				url: `sessions/demos/${file}`
-			});
+		// --- Column-process demos (one per process) --------------------------
+		for (const spec of PROCESS_SPECS) {
+			resetCore();
+			const entry = appConsts.processMap.get(spec.name);
+			const selfId = mkCol(spec.colType, resolve(spec.data), `${spec.name} input`);
+			const otherId = spec.needsOther ? mkCol('number', SAMPLE.index(), 'filter source') : -1;
+			const col = core.data.find((c) => c.id === selfId);
+			col.addProcess(spec.name);
+			const proc = col.processes[col.processes.length - 1];
+			spec.setup?.(proc.args, { selfId, otherId });
+			const refs = otherId >= 0 ? [selfId, otherId] : [selfId];
+			tablePlot(`${entry?.displayName ?? spec.name} result`, refs);
+			prewarmWrapperNames();
+			const file = `demo-process-${spec.name.toLowerCase()}.json`;
+			write(
+				file,
+				manifestEntry({
+					id: `process-${spec.name.toLowerCase()}`,
+					name: `${entry?.displayName ?? spec.name} (process)`,
+					family: 'Column processes',
+					description:
+						entry?.description ||
+						`Showcases the ${spec.name} column process applied to sample data.`,
+					file,
+					kind: 'process',
+					showcases: [spec.name]
+				})
+			);
+		}
+
+		// --- Table-process demos (one per table process) ---------------------
+		for (const spec of TP_SPECS) {
+			resetCore();
+			const entry = appConsts.tableProcessMap.get(spec.name);
+			const ids = spec.inputs.map((inp) =>
+				mkCol(inp.type, resolve(inp.data), `${spec.name} input`)
+			);
+			if (spec.needsStoredValues) {
+				core.storedValues.demoSV1 = { staticValue: 12, source: 'manual' };
+				core.storedValues.demoSV2 = { staticValue: 34, source: 'manual' };
+			}
+			const tp = new TableProcess({ name: spec.name, args: spec.args(ids) }, null);
+			pushObj(tp);
+			// Showcase the node's inputs + any allocated output columns. Output data
+			// is computed when the TP node mounts on load (see LoadSessionModal).
+			const outIds = Object.values(tp.args.out ?? {}).filter(
+				(v) => typeof v === 'number' && v >= 0
+			);
+			tablePlot(`${entry?.displayName ?? spec.name} table`, [...ids, ...outIds]);
+			prewarmWrapperNames();
+			const file = `demo-tp-${spec.name.toLowerCase()}.json`;
+			write(
+				file,
+				manifestEntry({
+					id: `tp-${spec.name.toLowerCase()}`,
+					name: `${entry?.displayName ?? spec.name} (table process)`,
+					family: 'Table processes',
+					description:
+						entry?.description || `Showcases the ${spec.name} table process on sample data.`,
+					file,
+					kind: 'tableProcess',
+					showcases: [spec.name]
+				})
+			);
 		}
 
 		const index = { version: 1, count: manifest.length, sessions: manifest };

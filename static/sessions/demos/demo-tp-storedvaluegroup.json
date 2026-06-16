@@ -1,0 +1,131 @@
+{
+  "rawData": {
+    "104": [
+      12,
+      34
+    ]
+  },
+  "data": [
+    {
+      "id": 104,
+      "name": "group_g1_19",
+      "data": 104,
+      "type": "number",
+      "tableProcessGUId": "cda35f12-eef9-4c21-973f-d27aaf950ff3",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    }
+  ],
+  "plots": [
+    {
+      "id": 36,
+      "name": "Stored Value Group table",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "plot": {
+        "columnRefs": [
+          104
+        ],
+        "showCol": [
+          true
+        ],
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
+    }
+  ],
+  "tableProcesses": [
+    {
+      "id": 19,
+      "name": "StoredValueGroup",
+      "displayName": "Stored Value Group",
+      "args": {
+        "groups": [
+          {
+            "id": "g1",
+            "name": "GroupA",
+            "keys": [
+              "demoSV1",
+              "demoSV2"
+            ]
+          }
+        ],
+        "out": {
+          "group_g1": 104
+        }
+      },
+      "refTPId": null
+    }
+  ],
+  "storedValues": {
+    "demoSV1": {
+      "source": "manual",
+      "staticValue": 12
+    },
+    "demoSV2": {
+      "source": "manual",
+      "staticValue": 34
+    }
+  },
+  "nodeNotes": {},
+  "notes": [],
+  "groups": [],
+  "orphanProcesses": [],
+  "appState": {
+    "currentTab": "null",
+    "currentControlTab": "properties",
+    "loadingState": {
+      "isLoading": true,
+      "loadingMsg": "Warming up..."
+    },
+    "showNavbar": true,
+    "showDisplayPanel": false,
+    "showControlPanel": false,
+    "windowWidth": 1024,
+    "windowHeight": 768,
+    "widthNavBar": 56,
+    "widthDisplayPanel": 250,
+    "widthControlPanel": 250,
+    "gridSize": 15,
+    "canvasOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "canvasScale": 1,
+    "view": "canvas",
+    "displayTimezone": "utc",
+    "invisiblePlotIds": [],
+    "canvasSelectedNodeId": null,
+    "canvasMultiSelectedCount": 0,
+    "canvasMultiSelectedNodeIds": [],
+    "appColours": [
+      "#234154",
+      "#BE796B",
+      "#3E7295",
+      "#EDADAD",
+      "#A6ACD5",
+      "#83422A",
+      "#6B9FD5",
+      "#4A1E0E",
+      "#fbe67280"
+    ],
+    "showColourPicker": false,
+    "showAYSModal": false,
+    "AYStext": "",
+    "AYScallback": null,
+    "AYSoptions": [
+      "Yes",
+      "No"
+    ],
+    "showWorkflow": false
+  },
+  "version": "β.42.0"
+}

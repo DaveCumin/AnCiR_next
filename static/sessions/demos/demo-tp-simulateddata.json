@@ -1,0 +1,237 @@
+{
+  "rawData": {
+    "93": [
+      "2024-01-01T00:00:00.000Z",
+      "2024-01-01T01:00:00.000Z",
+      "2024-01-01T02:00:00.000Z",
+      "2024-01-01T03:00:00.000Z",
+      "2024-01-01T04:00:00.000Z",
+      "2024-01-01T05:00:00.000Z",
+      "2024-01-01T06:00:00.000Z",
+      "2024-01-01T07:00:00.000Z",
+      "2024-01-01T08:00:00.000Z",
+      "2024-01-01T09:00:00.000Z",
+      "2024-01-01T10:00:00.000Z",
+      "2024-01-01T11:00:00.000Z",
+      "2024-01-01T12:00:00.000Z",
+      "2024-01-01T13:00:00.000Z",
+      "2024-01-01T14:00:00.000Z",
+      "2024-01-01T15:00:00.000Z",
+      "2024-01-01T16:00:00.000Z",
+      "2024-01-01T17:00:00.000Z",
+      "2024-01-01T18:00:00.000Z",
+      "2024-01-01T19:00:00.000Z",
+      "2024-01-01T20:00:00.000Z",
+      "2024-01-01T21:00:00.000Z",
+      "2024-01-01T22:00:00.000Z",
+      "2024-01-01T23:00:00.000Z",
+      "2024-01-02T00:00:00.000Z",
+      "2024-01-02T01:00:00.000Z",
+      "2024-01-02T02:00:00.000Z",
+      "2024-01-02T03:00:00.000Z",
+      "2024-01-02T04:00:00.000Z",
+      "2024-01-02T05:00:00.000Z",
+      "2024-01-02T06:00:00.000Z",
+      "2024-01-02T07:00:00.000Z",
+      "2024-01-02T08:00:00.000Z",
+      "2024-01-02T09:00:00.000Z",
+      "2024-01-02T10:00:00.000Z",
+      "2024-01-02T11:00:00.000Z",
+      "2024-01-02T12:00:00.000Z",
+      "2024-01-02T13:00:00.000Z",
+      "2024-01-02T14:00:00.000Z",
+      "2024-01-02T15:00:00.000Z",
+      "2024-01-02T16:00:00.000Z",
+      "2024-01-02T17:00:00.000Z",
+      "2024-01-02T18:00:00.000Z",
+      "2024-01-02T19:00:00.000Z",
+      "2024-01-02T20:00:00.000Z",
+      "2024-01-02T21:00:00.000Z",
+      "2024-01-02T22:00:00.000Z",
+      "2024-01-02T23:00:00.000Z"
+    ],
+    "94": [
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  "data": [
+    {
+      "id": 93,
+      "name": "time_16",
+      "data": 93,
+      "type": "time",
+      "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
+      "tableProcessGUId": "54a9af39-7b44-489b-8aaf-c63c61a9531e",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 94,
+      "name": "values_16",
+      "data": 94,
+      "type": "number",
+      "tableProcessGUId": "54a9af39-7b44-489b-8aaf-c63c61a9531e",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    }
+  ],
+  "plots": [
+    {
+      "id": 33,
+      "name": "Simulate Data table",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "plot": {
+        "columnRefs": [
+          93,
+          94
+        ],
+        "showCol": [
+          true,
+          true
+        ],
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
+    }
+  ],
+  "tableProcesses": [
+    {
+      "id": 16,
+      "name": "SimulatedData",
+      "displayName": "Simulate Data",
+      "args": {
+        "startTime": "2024-01-01T00:00:00.000Z",
+        "sections": [
+          {
+            "duration_hours": 48,
+            "rhythmPeriod_hours": 24,
+            "rhythmPhase_hours": 0,
+            "rhythmAmplitude": 100,
+            "noiseEnabled": false,
+            "noiseMode": "multiply",
+            "noiseAmplitude": 1
+          }
+        ],
+        "samplingPeriod_hours": 1,
+        "out": {
+          "time": 93,
+          "values": 94
+        }
+      },
+      "refTPId": null
+    }
+  ],
+  "storedValues": {},
+  "nodeNotes": {},
+  "notes": [],
+  "groups": [],
+  "orphanProcesses": [],
+  "appState": {
+    "currentTab": "null",
+    "currentControlTab": "properties",
+    "loadingState": {
+      "isLoading": true,
+      "loadingMsg": "Warming up..."
+    },
+    "showNavbar": true,
+    "showDisplayPanel": false,
+    "showControlPanel": false,
+    "windowWidth": 1024,
+    "windowHeight": 768,
+    "widthNavBar": 56,
+    "widthDisplayPanel": 250,
+    "widthControlPanel": 250,
+    "gridSize": 15,
+    "canvasOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "canvasScale": 1,
+    "view": "canvas",
+    "displayTimezone": "utc",
+    "invisiblePlotIds": [],
+    "canvasSelectedNodeId": null,
+    "canvasMultiSelectedCount": 0,
+    "canvasMultiSelectedNodeIds": [],
+    "appColours": [
+      "#234154",
+      "#BE796B",
+      "#3E7295",
+      "#EDADAD",
+      "#A6ACD5",
+      "#83422A",
+      "#6B9FD5",
+      "#4A1E0E",
+      "#fbe67280"
+    ],
+    "showColourPicker": false,
+    "showAYSModal": false,
+    "AYStext": "",
+    "AYScallback": null,
+    "AYSoptions": [
+      "Yes",
+      "No"
+    ],
+    "showWorkflow": false
+  },
+  "version": "β.42.0"
+}
