@@ -81,7 +81,8 @@ const DEMOS = [
 		id: 'boxplot-by-day',
 		name: 'Boxplot — activity by day',
 		family: 'Plots',
-		description: 'Boxplot of daily activity values grouped by day index (7 days × 24 hourly points).',
+		description:
+			'Boxplot of daily activity values grouped by day index (7 days × 24 hourly points).',
 		build(mk) {
 			const rng = mulberry32(3);
 			const day = [];
@@ -95,6 +96,89 @@ const DEMOS = [
 			const xId = mk.col('day', 'number', day);
 			const yId = mk.col('activity', 'number', value);
 			mk.plot('boxplot', 'Activity by day', { x: xId, y: yId });
+		}
+	},
+	{
+		id: 'actogram-rhythm',
+		name: 'Actogram — multi-day activity',
+		family: 'Plots',
+		description: 'Actogram of a noisy ~24 h rhythm over 7 days (hourly samples).',
+		build(mk) {
+			const rng = mulberry32(4);
+			const hours = Array.from({ length: 24 * 7 }, (_, i) => i);
+			const activity = hours.map((h) =>
+				Math.max(0, 60 * Math.sin((2 * Math.PI * h) / 24 - Math.PI / 2) + normal(rng, 10, 8))
+			);
+			const t = mk.col('hour', 'number', hours);
+			const v = mk.col('activity', 'number', activity);
+			mk.plot('actogram', 'Activity actogram', { time: t, values: v });
+		}
+	},
+	{
+		id: 'periodogram-rhythm',
+		name: 'Periodogram — period detection',
+		family: 'Plots',
+		description: 'Lomb–Scargle periodogram of a ~24 h rhythm (7 days, hourly).',
+		build(mk) {
+			const rng = mulberry32(5);
+			const hours = Array.from({ length: 24 * 7 }, (_, i) => i);
+			const activity = hours.map(
+				(h) => 50 + 40 * Math.sin((2 * Math.PI * h) / 24) + normal(rng, 0, 6)
+			);
+			const t = mk.col('hour', 'number', hours);
+			const v = mk.col('activity', 'number', activity);
+			mk.plot('periodogram', 'Activity periodogram', { time: t, values: v });
+		}
+	},
+	{
+		id: 'correlogram-rhythm',
+		name: 'Correlogram — autocorrelation',
+		family: 'Plots',
+		description: 'Autocorrelogram of a ~24 h rhythm (7 days, hourly).',
+		build(mk) {
+			const rng = mulberry32(6);
+			const hours = Array.from({ length: 24 * 7 }, (_, i) => i);
+			const activity = hours.map(
+				(h) => 50 + 40 * Math.cos((2 * Math.PI * h) / 24) + normal(rng, 0, 6)
+			);
+			const t = mk.col('hour', 'number', hours);
+			const v = mk.col('activity', 'number', activity);
+			mk.plot('correlogram', 'Activity correlogram', { time: t, values: v });
+		}
+	},
+	{
+		id: 'fft-rhythm',
+		name: 'FFT — frequency spectrum',
+		family: 'Plots',
+		description: 'Fourier spectrum of a 12 h + 24 h composite rhythm (8 days, hourly).',
+		build(mk) {
+			const rng = mulberry32(7);
+			const hours = Array.from({ length: 24 * 8 }, (_, i) => i);
+			const activity = hours.map(
+				(h) =>
+					50 +
+					30 * Math.sin((2 * Math.PI * h) / 24) +
+					15 * Math.sin((2 * Math.PI * h) / 12) +
+					normal(rng, 0, 4)
+			);
+			const t = mk.col('hour', 'number', hours);
+			const v = mk.col('signal', 'number', activity);
+			mk.plot('fft', 'Signal FFT', { time: t, values: v });
+		}
+	},
+	{
+		id: 'table-columns',
+		name: 'Table — raw columns',
+		family: 'Plots',
+		description: 'A tableplot listing an hour index alongside two derived signals.',
+		build(mk) {
+			const hours = Array.from({ length: 48 }, (_, i) => i);
+			const a = hours.map((h) => Math.round(50 + 40 * Math.sin((2 * Math.PI * h) / 24)));
+			const b = hours.map((h) => Math.round(20 + 10 * Math.cos((2 * Math.PI * h) / 24)));
+			const hId = mk.col('hour', 'number', hours);
+			const aId = mk.col('signalA', 'number', a);
+			const bId = mk.col('signalB', 'number', b);
+			mk.plot('tableplot', 'Signal table', { columnRefs: [hId, aId, bId] });
 		}
 	}
 ];
@@ -148,9 +232,15 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 				},
 				plot(type, name, inputs) {
 					const p = new Plot({ name, type });
-					const data = {};
-					for (const [k, colId] of Object.entries(inputs)) data[k] = { refId: colId };
-					p.plot.addData(data);
+					if (type === 'tableplot') {
+						// Tableplots carry a flat columnRefs list, not addData series.
+						p.plot.columnRefs = [...(inputs.columnRefs ?? [])];
+						p.plot.showCol = p.plot.columnRefs.map(() => true);
+					} else {
+						const data = {};
+						for (const [k, colId] of Object.entries(inputs)) data[k] = { refId: colId };
+						p.plot.addData(data);
+					}
 					pushObj(p);
 					return p;
 				}

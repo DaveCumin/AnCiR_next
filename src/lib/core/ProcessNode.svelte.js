@@ -57,31 +57,6 @@ function groupPlotData(data) {
 	return groups;
 }
 
-// Plots whose data-point shape isn't `{x, y, ...}` (Histogram has `column`;
-// Periodogram/Correlogram/FFT/Actogram use `time` + `values`) need their own
-// canvas wires. Walks each data point's *declared* input fields (from the plot
-// type's defaultDataInputs) and yields one entry per (datum × field) with a
-// port name of `${field}${datumIdx + 1}` so multiple datums get distinct ports.
-// Iterating declared names instead of `Object.keys(dp)` avoids depending on
-// Svelte 5 $state field enumerability.
-function collectAuxPlotInputs(data, fieldNames) {
-	const entries = [];
-	const fields = (fieldNames ?? []).filter((f) => f !== 'x' && f !== 'y');
-	if (fields.length === 0) return entries;
-	const list = data ?? [];
-	for (let i = 0; i < list.length; i++) {
-		const dp = list[i];
-		if (!dp || typeof dp !== 'object') continue;
-		for (const f of fields) {
-			const v = dp[f];
-			if (v && typeof v === 'object' && typeof v.refId === 'number') {
-				entries.push({ datumIdx: i, field: f, refId: v.refId });
-			}
-		}
-	}
-	return entries;
-}
-
 function makePortsFromNodeSpec(nodeSpec = {}, fallback = { inputs: [], outputs: [] }) {
 	const inputs = (nodeSpec.inputs ?? fallback.inputs ?? []).map((p) =>
 		makeNodePort(p.name, 'input', p.kind ?? 'column', p.cardinality === 'many')
@@ -118,7 +93,17 @@ function collectTableProcessInputRefs(tpArgs, nodeSpec) {
 		if (!port) continue;
 		const value = tpArgs?.[port];
 		if (Array.isArray(value)) {
-			for (const colId of value) refs.push({ colId, port });
+			for (const item of value) {
+				// FormulaColumn-style token arrays hold {type, id|value} objects; only
+				// `col` tokens reference a column. Plain-number arrays (yIN, colIds,
+				// valueColIds, …) fall through to the numeric branch unchanged.
+				if (item && typeof item === 'object') {
+					if (item.type === 'col' && typeof item.id === 'number')
+						refs.push({ colId: item.id, port });
+				} else {
+					refs.push({ colId: item, port });
+				}
+			}
 		} else {
 			refs.push({ colId: value, port });
 		}
@@ -230,8 +215,10 @@ function buildNodeExecutionKey(core, node) {
 		if (plot.type === 'tableplot') {
 			for (const colId of plot.plot?.columnRefs ?? []) refs.push(_colDataHash(core, colId));
 		} else {
+			// `column` covers single-input plots (Histogram); x/y/z cover every
+			// other plot (including the time-series plots, which store x/y).
 			for (const d of plot.plot?.data ?? []) {
-				for (const axis of ['x', 'y', 'z']) {
+				for (const axis of ['x', 'y', 'z', 'column']) {
 					if (d?.[axis]?.refId != null) refs.push(_colDataHash(core, d[axis].refId));
 				}
 			}
@@ -498,7 +485,9 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 					id: `tableprocess_nested_${nestedTp.id}`,
 					kind: 'tableprocess',
 					label: nestedEntry?.displayName || nestedTp.type,
-					sublabel: parentLabel ? `${parentLabel} › ${tp.displayName || tp.name}` : tp.displayName || tp.name,
+					sublabel: parentLabel
+						? `${parentLabel} › ${tp.displayName || tp.name}`
+						: tp.displayName || tp.name,
 					ports: { inputs: nestedInputs, outputs: nestedOutPorts },
 					refId: nestedTp.id,
 					meta: {
@@ -527,12 +516,19 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			inputs.push(makeNodePort('series', 'input', 'column', true));
 		} else {
 			const defaultInputs = appConsts?.plotMap?.get(plot.type)?.defaultInputs ?? [];
-			const usesXY = defaultInputs.includes('x') || defaultInputs.includes('y');
 
-			if (usesXY) {
-				// Per-x "set" ports: each unique x.refId in plot.plot.data becomes an
-				// (xN, ysN) pair, and a trailing empty pair is always appended so the
-				// user can drop a wire to begin a new set.
+			if (defaultInputs.length === 1) {
+				// Single-input plots (Histogram). One dynamic `data` port: each wire
+				// becomes its own series with independent binning/colour. Mirrors the
+				// tableplot `series` pattern.
+				inputs.push(makeNodePort('data', 'input', 'column', true));
+			} else {
+				// Every other plot stores its data points as {x, y} — Scatterplot and
+				// Boxplot label these x/y, while the time-series plots (Actogram,
+				// Periodogram, Correlogram, FFT) label them time/values but addData()
+				// remaps those to x/y. So they all share the x/y "set" port scheme:
+				// each unique x.refId becomes an (xN, ysN) pair, and a trailing empty
+				// pair is always appended so the user can drop a wire to start a set.
 				const groups = groupPlotData(plot.plot?.data);
 				groups.forEach((_, i) => {
 					inputs.push(makeNodePort(`x${i + 1}`, 'input', 'column', false));
@@ -541,24 +537,6 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				const next = groups.length + 1;
 				inputs.push(makeNodePort(`x${next}`, 'input', 'column', false));
 				inputs.push(makeNodePort(`ys${next}`, 'input', 'column', true));
-			} else if (defaultInputs.length === 1) {
-				// Single-input plots (Histogram). One dynamic `data` port: each wire
-				// becomes its own series with independent binning/colour. Mirrors the
-				// tableplot `series` pattern.
-				inputs.push(makeNodePort('data', 'input', 'column', true));
-			} else {
-				// Multi-input plots (Periodogram/Correlogram/FFT/Actogram use
-				// `time` + `values`). One port per (datum × field) plus a trailing
-				// empty per-field set so the user can drop a wire to add a new series.
-				const datumCount = (plot.plot?.data ?? []).length;
-				for (let i = 0; i < datumCount; i++) {
-					for (const field of defaultInputs) {
-						inputs.push(makeNodePort(`${field}${i + 1}`, 'input', 'column', false));
-					}
-				}
-				for (const field of defaultInputs) {
-					inputs.push(makeNodePort(`${field}${datumCount + 1}`, 'input', 'column', false));
-				}
 			}
 		}
 
@@ -712,11 +690,19 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			(plot.plot?.columnRefs ?? []).forEach((colId) => addPlotCol(colId, 'series'));
 		} else {
 			const defaultInputs = appConsts?.plotMap?.get(plot.type)?.defaultInputs ?? [];
-			const usesXY = defaultInputs.includes('x') || defaultInputs.includes('y');
 
-			if (usesXY) {
-				// Per-set wires: each group contributes ONE x wire (since all data
-				// points in the set share x) and one ys wire per data point.
+			if (defaultInputs.length === 1) {
+				// Single-input plots: every datum's input column wires into the same
+				// dynamic `data` port (one wire per series).
+				const field = defaultInputs[0];
+				for (const dp of plot.plot?.data ?? []) {
+					const refId = dp?.[field]?.refId;
+					if (refId != null && refId >= 0) addPlotCol(refId, 'data');
+				}
+			} else {
+				// All other plots store {x, y} data points (see the port block
+				// above). Per-set wires: each group contributes ONE x wire (since all
+				// data points in the set share x) and one ys wire per data point.
 				const groups = groupPlotData(plot.plot?.data);
 				groups.forEach((g, i) => {
 					const portX = `x${i + 1}`;
@@ -726,19 +712,6 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 						if (dp?.y?.refId != null && dp.y.refId >= 0) addPlotCol(dp.y.refId, portYs);
 					}
 				});
-			} else if (defaultInputs.length === 1) {
-				// Single-input plots: every datum's input column wires into the same
-				// dynamic `data` port (one wire per series).
-				const field = defaultInputs[0];
-				for (const dp of plot.plot?.data ?? []) {
-					const refId = dp?.[field]?.refId;
-					if (refId != null && refId >= 0) addPlotCol(refId, 'data');
-				}
-			} else {
-				// Per-field wires for multi-input non-x/y plots.
-				for (const { datumIdx, field, refId } of collectAuxPlotInputs(plot.plot?.data, defaultInputs)) {
-					addPlotCol(refId, `${field}${datumIdx + 1}`);
-				}
 			}
 		}
 	}

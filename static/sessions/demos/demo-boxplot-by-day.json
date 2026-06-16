@@ -505,6 +505,7 @@
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
+    "canvasMultiSelectedNodeIds": [],
     "appColours": [
       "#234154",
       "#BE796B",
@@ -526,5 +527,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.41.0"
+  "version": "β.41.3"
 }

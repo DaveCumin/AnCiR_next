@@ -1,5 +1,5 @@
 <script module>
-	import { appState, appConsts } from '$lib/core/core.svelte';
+	import { appConsts, outputCoreAsJson } from '$lib/core/core.svelte';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	export function exportJson() {
 		try {
@@ -208,7 +208,8 @@
 					if (w && typeof w === 'object' && 'refId' in w && w.customName == null) {
 						const real = core.data.find((c) => c.id === w.refId);
 						w.customName =
-							(real ? `${real.name}` : 'col') + (typeof w.refId === 'number' && w.refId >= 0 ? '' : '');
+							(real ? `${real.name}` : 'col') +
+							(typeof w.refId === 'number' && w.refId >= 0 ? '' : '');
 					}
 				}
 			}
@@ -217,9 +218,7 @@
 		// Orphan column-processes (unconnected, spawned via palette/paste).
 		// Rehydrated as Process instances with parentCol = null so the canvas
 		// re-renders them; the user re-wires after load.
-		const orphanSnapshots = Array.isArray(jsonData.orphanProcesses)
-			? jsonData.orphanProcesses
-			: [];
+		const orphanSnapshots = Array.isArray(jsonData.orphanProcesses) ? jsonData.orphanProcesses : [];
 		if (orphanSnapshots.length > 0) {
 			core.orphanProcesses = orphanSnapshots
 				.map((p) => {

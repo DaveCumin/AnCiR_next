@@ -24,9 +24,7 @@ function loadSession(jsonData) {
 	core.plots = [];
 	core.tableProcesses = [];
 	core.groups = [];
-	core.rawData = new Map(
-		Object.entries(jsonData.rawData ?? {}).map(([k, v]) => [+k, v])
-	);
+	core.rawData = new Map(Object.entries(jsonData.rawData ?? {}).map(([k, v]) => [+k, v]));
 	for (const cd of jsonData.data ?? []) pushObj(Column.fromJSON(cd));
 	for (const pj of jsonData.plots ?? []) pushObj(Plot.fromJSON(pj), false);
 }
@@ -58,6 +56,20 @@ describe('demo sessions load + render-safe', () => {
 
 	it('has demo files to validate', () => {
 		expect(demoFiles.length).toBeGreaterThan(0);
+	});
+
+	it('the example gallery covers every standard plot type', () => {
+		// DataView is a viewer wired to a source plot, not a standalone session, so
+		// it is exempt; every other registered plot type must appear in the gallery.
+		const covered = new Set();
+		for (const file of demoFiles) {
+			const jsonData = JSON.parse(readFileSync(join(DIR, file), 'utf8'));
+			for (const p of jsonData.plots ?? []) covered.add(p.type);
+		}
+		const expected = [...appConsts.plotMap.keys()].filter((k) => k !== 'dataview');
+		for (const type of expected) {
+			expect(covered.has(type), `gallery includes a ${type} demo`).toBe(true);
+		}
 	});
 
 	for (const file of demoFiles) {

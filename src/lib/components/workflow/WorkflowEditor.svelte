@@ -7,7 +7,6 @@
 		getProcessNodeGraph,
 		absorbColumnIntoGroup,
 		extractColumnFromAnyGroup,
-		getGroupForColumn,
 		createNote,
 		removeNote,
 		createGroup,
@@ -79,19 +78,6 @@
 	const changedNodeIds = $derived.by(() => new Set(processGraph.changedNodeIds ?? []));
 
 	// --- Edge derivation split into topology + positioned ---
-
-	/**
-	 * Returns true if two NODE_WIDTH×NODE_HEIGHT boxes (each described by top-left {x,y})
-	 * overlap. Used for drag-to-replace drop detection in canvas coordinate space.
-	 */
-	function boxesOverlap(a, b) {
-		return (
-			a.x < b.x + NODE_WIDTH &&
-			a.x + NODE_WIDTH > b.x &&
-			a.y < b.y + NODE_HEIGHT &&
-			a.y + NODE_HEIGHT > b.y
-		);
-	}
 
 	function getPortAnchorY(node, portName, direction) {
 		// Group rows can expand to show MiniDataTable previews, which makes
@@ -255,7 +241,8 @@
 
 	function loadNodePositions() {
 		try {
-			const raw = typeof localStorage !== 'undefined' && localStorage.getItem(NODE_POSITIONS_STORAGE_KEY);
+			const raw =
+				typeof localStorage !== 'undefined' && localStorage.getItem(NODE_POSITIONS_STORAGE_KEY);
 			if (!raw) return {};
 			const parsed = JSON.parse(raw);
 			if (!parsed || typeof parsed !== 'object') return {};
@@ -436,7 +423,7 @@
 		if (!rect) return { x: 80, y: 80 };
 		const cx = (rect.width / 2 - panX) / zoom - NODE_WIDTH / 2;
 		const cy = (rect.height / 2 - panY) / zoom - NODE_HEIGHT;
-		const jitter = (() => Math.round((Math.random() - 0.5) * 60));
+		const jitter = () => Math.round((Math.random() - 0.5) * 60);
 		return { x: Math.round(cx + jitter()), y: Math.round(cy + jitter()) };
 	}
 
@@ -484,12 +471,7 @@
 			if (!p) return false;
 			const sx = panX + p.x * zoom;
 			const sy = panY + p.y * zoom;
-			return (
-				sx > -margin &&
-				sx < rect.width + margin &&
-				sy > -margin &&
-				sy < rect.height + margin
-			);
+			return sx > -margin && sx < rect.width + margin && sy > -margin && sy < rect.height + margin;
 		});
 		if (!anyVisible) resetCanvasView();
 		_viewportSanityChecked = true;
@@ -710,11 +692,15 @@
 		// node note popovers, plot resize handles, embedded plots' own scrollers.
 		// Without this, scrolling inside any of those moves the canvas instead.
 		// Exception: ctrl/meta + wheel is always a zoom gesture, so let it through.
-		if (!e.ctrlKey && !e.metaKey && e.target?.closest?.(
-			'dialog, .backdrop, .np-menu, .palette-menu, .modal, .modal-content, ' +
-			'.modal-overlay, .dropdown, .dropdown-menu, .submenu, .process-editor-panel, ' +
-			'.node-note-popover, .plot-preview-panel, .plot-preview-inner, textarea'
-		)) {
+		if (
+			!e.ctrlKey &&
+			!e.metaKey &&
+			e.target?.closest?.(
+				'dialog, .backdrop, .np-menu, .palette-menu, .modal, .modal-content, ' +
+					'.modal-overlay, .dropdown, .dropdown-menu, .submenu, .process-editor-panel, ' +
+					'.node-note-popover, .plot-preview-panel, .plot-preview-inner, textarea'
+			)
+		) {
 			return;
 		}
 		e.preventDefault();
@@ -1072,9 +1058,7 @@
 	// Look up an existing tap column for (parentCol, processId). Returns null if
 	// none yet exists. Pure lookup — never creates.
 	function findExistingTap(parentColId, processId) {
-		return core.data.find(
-			(c) => c.refId === parentColId && c.refUpToProcessId === processId
-		);
+		return core.data.find((c) => c.refId === parentColId && c.refUpToProcessId === processId);
 	}
 
 	// Find an existing tap for this (parent, process) or create one. The tap is
@@ -1541,7 +1525,11 @@
 			return;
 		}
 
-		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && edge.toPort === 'series') {
+		if (
+			target.type === 'plot' &&
+			target.plotObj?.type === 'tableplot' &&
+			edge.toPort === 'series'
+		) {
 			const refs = target.plotObj.plot.columnRefs ?? [];
 			const idx = refs.indexOf(oldColId);
 			if (idx < 0) return;
@@ -1759,7 +1747,11 @@
 			return;
 		}
 
-		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && edge.toPort === 'series') {
+		if (
+			target.type === 'plot' &&
+			target.plotObj?.type === 'tableplot' &&
+			edge.toPort === 'series'
+		) {
 			target.plotObj.plot.columnRefs = (target.plotObj.plot.columnRefs ?? []).filter(
 				(id) => id !== colId
 			);
@@ -2224,8 +2216,8 @@
 			class="close-btn legacy-only"
 			onclick={() => (appState.showWorkflow = false)}
 			aria-label="Close workflow"
-			{@attach tooltip('Close workflow')}
-		>✕</button>
+			{@attach tooltip('Close workflow')}>✕</button
+		>
 	{/if}
 
 	<div class="canvas-viewport" bind:this={canvasViewportEl} class:panning={isPanning && !dragInfo}>
@@ -2426,7 +2418,6 @@
 		</button>
 	</div>
 </div>
-
 
 <style>
 	.workflow-editor {

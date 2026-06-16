@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 3,
+  "count": 8,
   "sessions": [
     {
       "id": "scatter-rhythm",
@@ -22,6 +22,41 @@
       "family": "Plots",
       "description": "Boxplot of daily activity values grouped by day index (7 days × 24 hourly points).",
       "url": "sessions/demos/demo-boxplot-by-day.json"
+    },
+    {
+      "id": "actogram-rhythm",
+      "name": "Actogram — multi-day activity",
+      "family": "Plots",
+      "description": "Actogram of a noisy ~24 h rhythm over 7 days (hourly samples).",
+      "url": "sessions/demos/demo-actogram-rhythm.json"
+    },
+    {
+      "id": "periodogram-rhythm",
+      "name": "Periodogram — period detection",
+      "family": "Plots",
+      "description": "Lomb–Scargle periodogram of a ~24 h rhythm (7 days, hourly).",
+      "url": "sessions/demos/demo-periodogram-rhythm.json"
+    },
+    {
+      "id": "correlogram-rhythm",
+      "name": "Correlogram — autocorrelation",
+      "family": "Plots",
+      "description": "Autocorrelogram of a ~24 h rhythm (7 days, hourly).",
+      "url": "sessions/demos/demo-correlogram-rhythm.json"
+    },
+    {
+      "id": "fft-rhythm",
+      "name": "FFT — frequency spectrum",
+      "family": "Plots",
+      "description": "Fourier spectrum of a 12 h + 24 h composite rhythm (8 days, hourly).",
+      "url": "sessions/demos/demo-fft-rhythm.json"
+    },
+    {
+      "id": "table-columns",
+      "name": "Table — raw columns",
+      "family": "Plots",
+      "description": "A tableplot listing an hour index alongside two derived signals.",
+      "url": "sessions/demos/demo-table-columns.json"
     }
   ]
 }

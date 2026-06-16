@@ -5,7 +5,6 @@ import { Plot } from '$lib/core/Plot.svelte';
 import { Process } from '$lib/core/Process.svelte';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
 import { getCachedProcessNodeGraph } from '$lib/core/ProcessNode.svelte.js';
-import * as jsonpatch from 'fast-json-patch';
 
 export const core = $state({
 	rawData: new Map(),
@@ -77,30 +76,11 @@ export function removeGroup(id) {
 	delete core.nodeNotes[id];
 }
 
-/**
- * Create a free-standing TableProcess (no parent Table) and push it into
- * core.tableProcesses. The TP's output columns are materialised in core.data
- * via the constructor's existing pushObj() calls. Returns the new TP, or
- * null if `name` is falsy.
- */
-export function createFreeTableProcess(name, args = {}) {
-	if (!name) return null;
-	const tp = new TableProcess({ name, args }, null);
-	core.tableProcesses.push(tp);
-	return tp;
-}
-
 /** Remove a free-standing TableProcess by id. Cleanup of its output columns
  *  is handled by deleteTableProcess in TableProcess.svelte. */
 export function removeFreeTableProcess(id) {
 	core.tableProcesses = core.tableProcesses.filter((tp) => tp.id !== id);
 	delete core.nodeNotes[`tableprocess_${id}`];
-}
-
-/** Find a TableProcess by id in core.tableProcesses. */
-export function findTableProcessById(id) {
-	for (const tp of core.tableProcesses) if (tp.id === id) return tp;
-	return null;
 }
 
 /**
@@ -143,14 +123,6 @@ export function attachOrphanProcessToColumn(processId, columnId) {
 	proc.parentCol = col;
 	col.processes = [...(col.processes ?? []), proc];
 	return true;
-}
-
-/** Returns the group that currently absorbs colId, or null. */
-export function getGroupForColumn(colId) {
-	for (const g of core.groups ?? []) {
-		if ((g.sourceColumnIds ?? []).includes(colId)) return g;
-	}
-	return null;
 }
 
 /** Add colId to groupId's sources (and remove from any other group). */
@@ -258,7 +230,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.41.3',
+	version: 'β.42.0',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
@@ -410,22 +382,6 @@ export function renameStoredValue(oldName, newName) {
 	core.storedValues[finalName] = core.storedValues[oldName];
 	delete core.storedValues[oldName];
 	return finalName;
-}
-
-/** Show an error modal with a single OK button. */
-export function showError(message) {
-	appState.AYStext = message;
-	appState.AYScallback = null;
-	appState.AYSoptions = ['OK'];
-	appState.showAYSModal = true;
-}
-
-/** Show an "Are you sure?" confirmation modal. */
-export function showAYS(text, callback, options = ['Yes', 'No']) {
-	appState.AYStext = text;
-	appState.AYScallback = callback;
-	appState.AYSoptions = options;
-	appState.showAYSModal = true;
 }
 
 export function snapToGrid(value) {
@@ -659,172 +615,4 @@ export function outputCoreAsJson() {
  */
 export function getProcessNodeGraph() {
 	return getCachedProcessNodeGraph(core, appConsts);
-}
-
-/** Returns a plain-object snapshot of core (no class instances). */
-export function getCoreAsPlainObject() {
-	const snap = JSON.parse(
-		JSON.stringify(core, (key, val) => (typeof val === 'function' ? undefined : val))
-	);
-	snap.rawData = Object.fromEntries(core.rawData);
-	// Resolve live getters into static snapshots
-	const resolvedSV = {};
-	for (const [name, entry] of Object.entries(core.storedValues)) {
-		resolvedSV[name] = {
-			source: entry.source,
-			staticValue: getStoredValue(name)
-		};
-	}
-	snap.storedValues = resolvedSV;
-	return snap;
-}
-
-/**
- * Applies a JSON Patch (RFC 6902 array) to core in-place,
- * reconciling only the changed arrays/maps so Svelte only
- * re-renders the affected components.
- */
-export function applyPatchToCore(patch) {
-	// Classify which top-level slices the patch actually touches so we can
-	// skip reconcile work (and, for rawData, avoid even snapshotting megabytes
-	// of measured arrays) when nothing in that slice changed.
-	const touches = {
-		rawData: false,
-		data: false,
-		tableProcesses: false,
-		plots: false,
-		storedValues: false
-	};
-	for (const op of patch) {
-		const p = op.path || '';
-		if (p === '/rawData' || p.startsWith('/rawData/')) touches.rawData = true;
-		else if (p === '/data' || p.startsWith('/data/')) touches.data = true;
-		else if (p === '/tableProcesses' || p.startsWith('/tableProcesses/'))
-			touches.tableProcesses = true;
-		else if (p === '/plots' || p.startsWith('/plots/')) touches.plots = true;
-		else if (p === '/storedValues' || p.startsWith('/storedValues/')) touches.storedValues = true;
-	}
-
-	// Build a starting snapshot that omits rawData unless the patch actually
-	// targets it — history excludes rawData from its patches, so the common
-	// case never needs the expensive full snapshot.
-	const snap = touches.rawData
-		? getCoreAsPlainObject()
-		: (() => {
-				const s = JSON.parse(
-					JSON.stringify(
-						{
-							data: core.data,
-							tableProcesses: core.tableProcesses,
-							plots: core.plots,
-							storedValues: core.storedValues
-						},
-						(key, val) => (typeof val === 'function' ? undefined : val)
-					)
-				);
-				return s;
-			})();
-
-	// Apply the patch to the snapshot
-	jsonpatch.applyPatch(snap, patch);
-
-	// --- Reconcile rawData (only if the patch touched it) ---
-	if (touches.rawData) {
-		const patchedRawData = snap.rawData ?? {};
-		for (const key of core.rawData.keys()) {
-			if (!(String(key) in patchedRawData)) {
-				core.rawData.delete(key);
-			}
-		}
-		for (const [k, v] of Object.entries(patchedRawData)) {
-			core.rawData.set(+k, v);
-		}
-	}
-
-	// --- Reconcile core.data (columns) by id ---
-	if (touches.data) {
-		const patchedDataIds = (snap.data ?? []).map((c) => c.id);
-		// Remove stale columns
-		core.data = core.data.filter((col) => patchedDataIds.includes(col.id));
-		// Update existing or add new
-		for (const colSnap of snap.data ?? []) {
-			const existing = core.data.find((c) => c.id === colSnap.id);
-			if (existing) {
-				// Update mutable properties in-place
-				existing.customName = colSnap.name ?? null;
-				existing.refId = colSnap.refId ?? null;
-				existing.data = colSnap.data ?? null;
-				existing.compression = colSnap.compression ?? null;
-				existing.timeFormat = colSnap.timeFormat ?? [];
-				existing.tableProcessGUId = colSnap.tableProcessGUId ?? '';
-				// Reconcile processes by id
-				const patchedProcIds = (colSnap.processes ?? []).map((p) => p.id);
-				existing.processes = existing.processes.filter((p) => patchedProcIds.includes(p.id));
-				for (const pSnap of colSnap.processes ?? []) {
-					const ep = existing.processes.find((p) => p.id === pSnap.id);
-					if (ep) {
-						ep.name = pSnap.name;
-						ep.displayName = pSnap.displayName ?? ep.displayName;
-						ep.args = pSnap.args ?? ep.args;
-					} else {
-						// New process — re-import via Column.fromJSON for a single process
-						const tmpCol = Column.fromJSON({ ...colSnap, processes: [pSnap] });
-						existing.processes.push(tmpCol.processes[0]);
-					}
-				}
-			} else {
-				// Entirely new column
-				core.data.push(Column.fromJSON(colSnap));
-			}
-		}
-	}
-
-	// --- Reconcile core.tableProcesses by id ---
-	if (touches.tableProcesses) {
-		const patchedIds = (snap.tableProcesses ?? []).map((tp) => tp.id);
-		core.tableProcesses = core.tableProcesses.filter((tp) => patchedIds.includes(tp.id));
-		for (const tpSnap of snap.tableProcesses ?? []) {
-			const existing = core.tableProcesses.find((tp) => tp.id === tpSnap.id);
-			if (existing) {
-				existing.name = tpSnap.name;
-				existing.displayName = tpSnap.displayName ?? existing.displayName;
-				existing.args = tpSnap.args ?? existing.args;
-				existing.refTPId = tpSnap.refTPId ?? null;
-			} else {
-				// Reconstitute. Snapshot already has output column IDs (>=0), so
-				// the constructor takes the load-from-JSON path and doesn't
-				// re-create output columns.
-				core.tableProcesses.push(new TableProcess(tpSnap, null, tpSnap.id));
-			}
-		}
-	}
-
-	// --- Reconcile core.plots by id ---
-	if (touches.plots) {
-		const patchedPlotIds = (snap.plots ?? []).map((p) => p.id);
-		core.plots = core.plots.filter((p) => patchedPlotIds.includes(p.id));
-		for (const plotSnap of snap.plots ?? []) {
-			const existing = core.plots.find((p) => p.id === plotSnap.id);
-			if (existing) {
-				existing.name = plotSnap.name;
-				existing.x = plotSnap.x;
-				existing.y = plotSnap.y;
-				existing.width = plotSnap.width;
-				existing.height = plotSnap.height;
-				existing.selected = plotSnap.selected;
-				// Re-hydrate the inner plot data from JSON
-				const plotTypeEntry = appConsts.plotMap.get(existing.type);
-				if (plotTypeEntry?.data?.fromJSON) {
-					existing.plot = plotTypeEntry.data.fromJSON(existing, plotSnap.plot);
-				}
-			} else {
-				core.plots.push(Plot.fromJSON(plotSnap));
-			}
-		}
-	}
-
-	// --- Reconcile core.storedValues ---
-	if (touches.storedValues) {
-		core.storedValues = snap.storedValues ?? {};
-	}
 }
