@@ -8,6 +8,8 @@
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 	import { getCanvasWidthPx } from '$lib/components/views/PlotDisplay.svelte';
 	import Editable from '../inputs/Editable.svelte';
+	import NodeNoteButton from '$lib/components/workflow/NodeNoteButton.svelte';
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
 	let plotElement;
 
@@ -21,9 +23,6 @@
 		selected = $bindable(false),
 		viewportEl = null
 	} = $props();
-
-	const nodeNote = $derived(core.nodeNotes?.[`plot_${id}`] ?? '');
-	const hasNodeNote = $derived(nodeNote.trim().length > 0);
 
 	const minWidth = 100;
 	const minHeight = 100;
@@ -423,28 +422,34 @@
 			onTouchStart(e);
 		}}
 	>
-		<p><Editable bind:value={title} /></p>
-
-		{#if hasNodeNote}
-			<p class="node-note" title={nodeNote}>{nodeNote}</p>
-		{/if}
+		<p class="plot-title"><Editable bind:value={title} /></p>
 
 		<div class="clps-title-button">
+			<div onmousedown={(e) => e.stopPropagation()} role="presentation">
+				<NodeNoteButton nodeId={`plot_${id}`} />
+			</div>
 			<button
 				class="icon"
 				onclick={(e) => {
 					e.stopPropagation();
 					toggleFullscreen();
 				}}
+				{@attach tooltip(fullscreen ? 'Restore size' : 'Maximise')}
 			>
 				{#if fullscreen}
-					<Icon name="minimise" width={20} height={20} className="menu-icon plot-options-button" />
+					<Icon name="minimise" width={18} height={18} className="menu-icon plot-options-button" />
 				{:else}
-					<Icon name="maximise" width={20} height={20} className="menu-icon plot-options-button" />
+					<Icon name="maximise" width={18} height={18} className="menu-icon plot-options-button" />
 				{/if}
 			</button>
-			<button class="icon" onclick={() => removePlots(id)}>
-				<!-- <Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" /> -->
+			<button
+				class="icon"
+				onclick={(e) => {
+					e.stopPropagation();
+					removePlots(id);
+				}}
+				{@attach tooltip('Delete plot')}
+			>
 				<Icon name="close" width={16} height={16} className="icon close" />
 			</button>
 		</div>
@@ -473,6 +478,9 @@
 		flex-direction: column;
 		min-width: 200px;
 		z-index: 1;
+		/* The canvas behind shows a grab cursor; a plot is a fixed object, not the
+		   panning surface, so reset it. The header opts back into `move`. */
+		cursor: default;
 	}
 
 	.selected {
@@ -480,39 +488,45 @@
 		box-shadow: 0 2px 5px rgba(2, 117, 255, 0.5);
 	}
 
+	/* Matches the workflow node header (WorkflowNode .node-header) so a plot looks
+	   the same in both views: compact bar, light surface, subtle divider. */
 	.plot-header {
 		display: flex;
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-between;
+		gap: 4px;
 
 		flex-shrink: 0;
 		cursor: move;
 
-		padding: 0.5rem;
-		padding-left: 1rem;
-		padding-right: 0.4rem;
-		background-color: var(--color-lightness-98);
-		border-bottom: 1px solid var(--color-lightness-85);
+		padding: 0 0.4rem 0 0.6rem;
+		min-height: 28px;
+		background-color: var(--color-lightness-97, #f4f4f4);
+		border-bottom: 1px solid var(--color-lightness-90, #e7e7e7);
 
-		font-weight: bold;
+		font-weight: 600;
+		color: var(--color-lightness-25, #333);
 	}
 
 	.plot-header p {
 		margin: 0;
 	}
 
-	.plot-header p.node-note {
+	.plot-header p.plot-title {
 		flex: 1 1 auto;
 		min-width: 0;
-		margin: 0 0.6rem;
-		font-weight: normal;
-		font-style: italic;
-		font-size: 0.8rem;
-		color: var(--color-lightness-45, #6b6b6b);
-		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.clps-title-button {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		gap: 2px;
+		flex-shrink: 0;
 	}
 
 	.plot-header button {

@@ -129,8 +129,7 @@
 			series
 		});
 
-		const srcRect = e.srcElement.getBoundingClientRect();
-		const { x: xPos, y: yPos } = computeTooltipPosition(mouseX, mouseY, srcRect);
+		const { x: xPos, y: yPos } = computeTooltipPosition(e.clientX, e.clientY);
 		dispatchTooltip(e.target, { visible: true, x: xPos, y: yPos, content });
 	}
 

@@ -110,3 +110,27 @@ details[open] > summary.section-details-summary::after {
 summary.section-details-summary:hover::after {
 	background-color: var(--color-hover);
 }
+
+/* Canvas file-drop overlay (workflow + worksheet). Shown while an OS file is
+   dragged over the canvas; see canvasFileDrop.js. */
+.canvas-file-drop-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 200;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	pointer-events: none;
+	background: color-mix(in srgb, var(--color-accent, #4d9fe3) 10%, transparent);
+	border: 3px dashed var(--color-accent, #4d9fe3);
+	border-radius: 8px;
+}
+
+.canvas-file-drop-overlay span {
+	padding: 0.6rem 1rem;
+	background: white;
+	border-radius: 8px;
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+	font-weight: 600;
+	color: var(--color-accent, #4d9fe3);
+}

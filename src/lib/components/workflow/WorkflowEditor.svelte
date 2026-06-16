@@ -13,7 +13,6 @@
 		removeGroup,
 		createOrphanProcess,
 		removeOrphanProcess,
-		attachOrphanProcessToColumn,
 		pushObj
 	} from '$lib/core/core.svelte.js';
 	import { Column } from '$lib/core/Column.svelte';
@@ -31,7 +30,12 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import FloatingActions from './FloatingActions.svelte';
 	import NodePalette from './NodePalette.svelte';
+	import AddDataPrompt from '$lib/components/views/AddDataPrompt.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
+	import { canvasFileDrop } from '$lib/core/canvasFileDrop.js';
+	import { handleCanvasFileDrop } from '$lib/core/dataSourceActions.js';
+	import SelectionLayoutToolbar from '$lib/components/reusables/SelectionLayoutToolbar.svelte';
+	import { alignBoxes, distributeBoxes } from '$lib/core/layoutHelpers.js';
 	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
 
 	let { inline = false } = $props();
@@ -109,7 +113,15 @@
 	 */
 	function getNodeWidth(node) {
 		if (node?.type === 'group') return node?.groupObj?.width ?? NODE_WIDTH;
-		if (node?.type === 'tableprocess') return TP_NODE_WIDTH;
+		// Plot nodes match their (resizable) preview width. Process / table-process
+		// nodes widen to the editor-panel width when expanded so the header and the
+		// expanded panel form one clean column. This is the single source of truth
+		// for the node's rendered width AND its output-port anchor X, so edges stay
+		// attached when a node grows on expand.
+		if (node?.type === 'plot') return plotPreviewSizes[node.id]?.w ?? PLOT_PREVIEW_DEFAULT_W;
+		const expanded = expandedNodeIds.has(node?.id);
+		if (node?.type === 'tableprocess') return expanded ? EDITOR_PANEL_WIDTH : TP_NODE_WIDTH;
+		if (node?.type === 'process') return expanded ? EDITOR_PANEL_WIDTH : NODE_WIDTH;
 		return NODE_WIDTH;
 	}
 
@@ -450,6 +462,50 @@
 		return { ok: true, orphanProcessId: proc.id };
 	}
 
+	// Build a table process's default args from its registry `defaults` map (same
+	// shape MakeNewColumn used). `out` is a nested {key:{val}} structure.
+	function buildTableProcessDefaults(entry) {
+		const fromNested = (obj) => {
+			const r = {};
+			for (const [k, v] of Object.entries(obj)) {
+				r[k] = v && v.val !== undefined ? v.val : fromNested(v ?? {});
+			}
+			return r;
+		};
+		return Object.fromEntries(
+			Array.from(entry.defaults?.entries() ?? []).map(([key, value]) =>
+				key === 'out' ? ['out', fromNested(value)] : [key, value?.val]
+			)
+		);
+	}
+
+	// Workflow-canvas adds skip the modal: spawn the node with defaults at the
+	// viewport centre and (for editable nodes) open it inline, so the user
+	// configures in place. Returns { ok }.
+	function spawnTableProcessFromPalette(tpType) {
+		const entry = appConsts.tableProcessMap.get(tpType);
+		if (!entry) return { ok: false, reason: 'unknown-type' };
+		queueSpawnPositionAtViewport();
+		const tp = mutationService.addFreeTableProcess(tpType, buildTableProcessDefaults(entry));
+		if (!tp) return { ok: false };
+		const nodeId = `tableprocess_${tp.id}`;
+		focusedNodeId = nodeId;
+		multiSelectedNodeIds = new Set([nodeId]);
+		expandedNodeIds = new Set([...expandedNodeIds, nodeId]);
+		return { ok: true };
+	}
+
+	function spawnPlotFromPalette(plotType) {
+		queueSpawnPositionAtViewport();
+		const displayName = appConsts.plotMap.get(plotType)?.displayName ?? plotType;
+		const plot = mutationService.addPlot({ name: displayName, type: plotType });
+		if (!plot) return { ok: false };
+		const nodeId = `plot_${plot.id}`;
+		focusedNodeId = nodeId;
+		multiSelectedNodeIds = new Set([nodeId]);
+		return { ok: true };
+	}
+
 	// One-shot guard: after the canvas mounts and the first non-empty node set is
 	// laid out, sanity-check that AT LEAST ONE node falls inside the viewport. If
 	// not (e.g. the persisted pan/zoom from a previous session leaves the user on
@@ -534,14 +590,14 @@
 
 	// Mirror selection to appState so the ControlPanel can render a node-
 	// specific editor for the selection. One-way (canvas → appState); nothing
-	// else writes these. Auto-opens the panel on selection so the editor is
-	// immediately visible — closing the panel doesn't clear focus; the next
-	// selection re-opens it.
+	// else writes these. The panel is NOT auto-opened on selection — single-click
+	// only selects. The panel opens explicitly via double-click (handleNodeDblClick)
+	// or the header arrow, and its open/closed state otherwise persists: an open
+	// panel just re-renders for the newly selected node; a closed one stays closed.
 	$effect(() => {
 		appState.canvasSelectedNodeId = focusedNodeId;
 		appState.canvasMultiSelectedCount = multiSelectedNodeIds.size;
 		appState.canvasMultiSelectedNodeIds = Array.from(multiSelectedNodeIds);
-		if (focusedNodeId != null) appState.showControlPanel = true;
 	});
 
 	// Path-focus dim mode (flowtest-style). When true AND a node is selected,
@@ -580,26 +636,76 @@
 		// alone when the user selects an edge so already-expanded nodes stay open.
 	}
 
-	// BFS both directions in the edge graph to find the full connected subgraph.
-	// Only computed when the user has enabled path-focus mode (flowtest behaviour).
+	// Node currently under the cursor — drives path-focus highlighting on hover
+	// (flowtest behaviour), in addition to the selected node.
+	let hoveredNodeId = $state(null);
+
+	// True while an OS file is dragged over the canvas (drop-to-import).
+	let fileDragOver = $state(false);
+
+	// --- Multi-node align / distribute + auto-tidy ---
+	function getNodeRenderHeight(node) {
+		const base = getNodePortAreaHeight(node);
+		if (node.type === 'plot') {
+			const ps = plotPreviewSizes[node.id];
+			return base + (ps ? ps.h : getDefaultPreviewH(node.plotObj));
+		}
+		return base;
+	}
+	function selectedNodeBoxes() {
+		const out = [];
+		for (const id of multiSelectedNodeIds) {
+			const node = allNodes.find((n) => n.id === id);
+			if (!node) continue;
+			const pos = stablePositions[id] ?? defaultPositions.positions[id];
+			if (!pos) continue;
+			out.push({ id, x: pos.x, y: pos.y, w: getNodeWidth(node), h: getNodeRenderHeight(node) });
+		}
+		return out;
+	}
+	function applyNodePositions(map) {
+		for (const [id, pos] of map) {
+			if (stablePositions[id]) {
+				stablePositions[id].x = pos.x;
+				stablePositions[id].y = pos.y;
+			} else {
+				stablePositions[id] = { x: pos.x, y: pos.y };
+			}
+		}
+	}
+	function alignSelectedNodes(mode) {
+		applyNodePositions(alignBoxes(selectedNodeBoxes(), mode));
+	}
+	function distributeSelectedNodes(axis) {
+		applyNodePositions(distributeBoxes(selectedNodeBoxes(), axis));
+	}
+	// Re-run the topological layered layout for every node, restoring the clean
+	// left-to-right DAG arrangement (the same engine used on first load).
+	function tidyLayout() {
+		const defs = defaultPositions.positions;
+		for (const node of allNodes) {
+			const d = defs[node.id];
+			if (!d) continue;
+			if (stablePositions[node.id]) {
+				stablePositions[node.id].x = d.x;
+				stablePositions[node.id].y = d.y;
+			} else {
+				stablePositions[node.id] = { ...d };
+			}
+		}
+	}
+
+	// Path-focus: when enabled, highlight the active node (hovered, else selected)
+	// plus its IMMEDIATE (1-hop) neighbours and lowlight everything else — matching
+	// flowtest. Hovering a node previews its direct connections without selecting.
 	const connectedNodeIds = $derived.by(() => {
 		if (!pathFocusEnabled) return null;
-		if (!focusedNodeId) return null;
-		const connected = new Set([focusedNodeId]);
-		const queue = [focusedNodeId];
-		let head = 0; // O(1) dequeue with index pointer
-		while (head < queue.length) {
-			const current = queue[head++];
-			for (const edge of edgeTopology) {
-				if (edge.fromId === current && !connected.has(edge.toId)) {
-					connected.add(edge.toId);
-					queue.push(edge.toId);
-				}
-				if (edge.toId === current && !connected.has(edge.fromId)) {
-					connected.add(edge.fromId);
-					queue.push(edge.fromId);
-				}
-			}
+		const active = hoveredNodeId ?? focusedNodeId;
+		if (!active) return null;
+		const connected = new Set([active]);
+		for (const edge of edgeTopology) {
+			if (edge.fromId === active) connected.add(edge.toId);
+			if (edge.toId === active) connected.add(edge.fromId);
 		}
 		return connected;
 	});
@@ -1125,14 +1231,24 @@
 		const target = allNodes.find((n) => n.id === toNodeId);
 		if (!target) return;
 
-		// Column process: only orphans accept user-drawn wires. Attaching
-		// moves the Process from core.orphanProcesses into the source
-		// column's processes[] chain. Already-attached processes don't
-		// expose any user-wireable port (the chain edge is implicit), so
-		// we no-op for them.
+		// Column process: only orphans accept user-drawn wires. Wiring a column
+		// into a process input creates a BRANCH (a hidden tap column off the
+		// source, with the orphan as its sole process) rather than appending the
+		// orphan to the source column's own processes[] chain. This is the same
+		// mechanism the edge-splice uses, and it means the source column's
+		// EXISTING consumers keep reading the unmodified column — adding a process
+		// taps off the data, it doesn't reroute everything downstream.
 		if (target.type === 'process' && target.processObj && toPort === 'input') {
-			if (!target.processObj.parentCol) {
-				attachOrphanProcessToColumn(target.processObj.id, colId);
+			const proc = target.processObj;
+			if (!proc.parentCol) {
+				const sourceCol = core.data.find((c) => c.id === colId);
+				const tapCol = new Column({ refId: colId, refUpToProcessId: null });
+				tapCol.isTap = true;
+				tapCol.customName = `${sourceCol?.name ?? 'col'} → ${proc.displayName || proc.name}`;
+				pushObj(tapCol);
+				core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== proc.id);
+				proc.parentCol = tapCol;
+				tapCol.processes = [proc];
 			}
 			return;
 		}
@@ -1672,9 +1788,19 @@
 		}
 	}
 
-	/** Toggle inline expand for process/tableprocess on double-click. Operates
-	 *  on a Set so expanding a second node doesn't collapse the first. */
+	/** Double-click opens the side Control Panel for the node (consistent with the
+	 *  worksheet's double-click behaviour). Single-click only selects; the in-node
+	 *  inline editor is toggled separately by the header arrow. */
 	function handleNodeDblClick(node) {
+		focusedNodeId = node.id;
+		multiSelectedNodeIds = new Set([node.id]);
+		appState.showControlPanel = true;
+	}
+
+	/** Toggle the in-node inline editor (process/tableprocess) — driven by the
+	 *  header expand arrow. Operates on a Set so expanding a second node doesn't
+	 *  collapse the first. */
+	function handleNodeToggleExpand(node) {
 		if (node.type !== 'process' && node.type !== 'tableprocess') return;
 		const next = new Set(expandedNodeIds);
 		if (next.has(node.id)) next.delete(node.id);
@@ -2206,6 +2332,7 @@
 	onmouseup={stopAll}
 	onmouseleave={stopAll}
 	onclick={handleBackgroundClick}
+	use:canvasFileDrop={{ onActive: (v) => (fileDragOver = v), onDrop: handleCanvasFileDrop }}
 	role="presentation"
 	tabindex="-1"
 >
@@ -2220,11 +2347,23 @@
 		>
 	{/if}
 
+	{#if multiSelectedNodeIds.size >= 2}
+		<div class="selection-toolbar-host">
+			<SelectionLayoutToolbar
+				onAlign={alignSelectedNodes}
+				onDistribute={distributeSelectedNodes}
+				canDistribute={multiSelectedNodeIds.size >= 3}
+			/>
+		</div>
+	{/if}
+
 	<div class="canvas-viewport" bind:this={canvasViewportEl} class:panning={isPanning && !dragInfo}>
 		<FloatingActions />
 		<NodePalette
 			queueSpawnPosition={queueSpawnPositionAtViewport}
 			onSpawnColumnProcess={spawnColumnProcessFromPalette}
+			onSpawnTableProcess={spawnTableProcessFromPalette}
+			onSpawnPlot={spawnPlotFromPalette}
 		/>
 		<div
 			class="canvas-inner"
@@ -2264,6 +2403,10 @@
 						aria-label={node.label}
 						onmousedown={(e) => handleNodeWrapperMouseDown(e, node)}
 						onmouseup={(e) => handleNodeWrapperMouseUp(e, node)}
+						onmouseenter={() => (hoveredNodeId = node.id)}
+						onmouseleave={() => {
+							if (hoveredNodeId === node.id) hoveredNodeId = null;
+						}}
 						ondblclick={(e) => {
 							e.stopPropagation();
 							handleNodeDblClick(node);
@@ -2290,12 +2433,14 @@
 								{node}
 								selected={isSelected}
 								expanded={isExpanded}
+								width={getNodeWidth(node)}
 								spliceTargetPort={dropTargetPortKey?.startsWith(`${node.id}|`)
 									? dropTargetPortKey.slice(node.id.length + 1)
 									: null}
 								on:portstart={handlePortStart}
 								on:portend={handlePortEnd}
 								on:portdisconnect={handlePortDisconnect}
+								on:toggleexpand={() => handleNodeToggleExpand(node)}
 								on:cardmousedown={(ev) => handleNodeWrapperMouseDown(ev.detail, node)}
 							/>
 						{:else}
@@ -2303,6 +2448,7 @@
 								{node}
 								selected={isSelected}
 								expanded={isExpanded}
+								width={getNodeWidth(node)}
 								isDropTarget={false}
 								spliceTargetPort={dropTargetPortKey?.startsWith(`${node.id}|`)
 									? dropTargetPortKey.slice(node.id.length + 1)
@@ -2310,6 +2456,7 @@
 								on:portstart={handlePortStart}
 								on:portend={handlePortEnd}
 								on:portdisconnect={handlePortDisconnect}
+								on:toggleexpand={() => handleNodeToggleExpand(node)}
 							/>
 						{/if}
 
@@ -2359,12 +2506,32 @@
 				{/if}
 			{/each}
 		</div>
+
+		{#if core.data.length === 0}
+			<AddDataPrompt />
+		{/if}
+
+		{#if fileDragOver}
+			<div class="canvas-file-drop-overlay"><span>Drop a data file to import</span></div>
+		{/if}
 	</div>
 
 	<div
 		class="zoom-controls"
 		style="right: calc({appState.showControlPanel ? appState.widthControlPanel : 0}px + 5px);"
 	>
+		<button
+			type="button"
+			class="icon viewport-btn"
+			onclick={(e) => {
+				e.stopPropagation();
+				tidyLayout();
+			}}
+			aria-label="Tidy layout"
+			{@attach tooltip('Tidy layout — arrange nodes left-to-right')}
+		>
+			<Icon name="distribute-vertical" width={22} height={22} />
+		</button>
 		<button
 			type="button"
 			class="icon viewport-btn"
@@ -2605,6 +2772,15 @@
 		gap: 4px;
 		z-index: 999;
 		transition: right 0.6s ease;
+	}
+
+	.selection-toolbar-host {
+		position: absolute;
+		top: 12px;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 40;
+		pointer-events: none;
 	}
 
 	.viewport-btn {

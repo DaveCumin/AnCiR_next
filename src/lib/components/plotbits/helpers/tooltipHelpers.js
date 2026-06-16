@@ -96,14 +96,23 @@ export function buildAggregatedContent({
 }
 
 /**
- * Compute tooltip-div placement in container-local coords, avoiding overflow
- * on the right edge. srcRect should be the bounding client rect of the
- * hovered SVG (so its width is the plot width).
+ * Compute tooltip placement in VIEWPORT (client) coordinates, flipping near the
+ * right/bottom edges. Pass the pointer event's clientX/clientY. Viewport coords
+ * are required because the tooltip is portalled to <body> and positioned
+ * `fixed` — using SVG-local coords broke placement once the canvas was panned or
+ * zoomed (a `fixed` element nested in a CSS-transformed ancestor is captured by
+ * that transform).
  */
-export function computeTooltipPosition(mouseX, mouseY, srcRect, tooltipWidth = 180) {
-	const xPos = mouseX + tooltipWidth > srcRect.width ? mouseX - tooltipWidth * 0.7 : mouseX + 20;
-	const yPos = mouseY < 20 ? mouseY + 40 : mouseY + 10;
-	return { x: xPos, y: yPos };
+export function computeTooltipPosition(clientX, clientY, tooltipWidth = 180) {
+	const vw = typeof window !== 'undefined' ? window.innerWidth : Infinity;
+	const vh = typeof window !== 'undefined' ? window.innerHeight : Infinity;
+	let x = clientX + 16;
+	let y = clientY + 14;
+	if (x + tooltipWidth > vw - 4) x = clientX - tooltipWidth - 12;
+	if (x < 4) x = 4;
+	if (y + 44 > vh - 4) y = clientY - 44;
+	if (y < 4) y = 4;
+	return { x, y };
 }
 
 /** Dispatch a tooltip-visible CustomEvent that bubbles up to the plot container. */

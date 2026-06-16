@@ -166,15 +166,14 @@
 	}
 
 	function handleHover(e) {
-		const mouseX = e.offsetX;
-		const mouseY = e.offsetY;
-
+		// Viewport coords (not offsetX/Y) so the body-portalled tooltip lands at
+		// the cursor regardless of canvas pan/zoom.
 		if (annotation.name != '') {
 			const event = new CustomEvent('tooltip', {
 				detail: {
 					visible: true,
-					x: mouseX + 10,
-					y: mouseY + 10,
+					x: e.clientX + 16,
+					y: e.clientY + 14,
 					content: annotation.name
 				},
 				bubbles: true

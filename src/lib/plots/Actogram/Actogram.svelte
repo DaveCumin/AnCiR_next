@@ -538,6 +538,7 @@
 	import { appState } from '$lib/core/core.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import { bindAltTooltipToggle } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
+	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
 
 	let { theData, which } = $props();
 
@@ -1005,11 +1006,7 @@
 		{/if}
 	</svg>
 
-	{#if tooltip.visible}
-		<div class="tooltip" style={`left: ${tooltip.x}px; top: ${tooltip.y}px;`}>
-			{@html tooltip.content}
-		</div>
-	{/if}
+	<PlotTooltip visible={tooltip.visible} x={tooltip.x} y={tooltip.y} content={tooltip.content} />
 {/snippet}
 
 {#if which === 'plot'}

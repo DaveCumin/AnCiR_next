@@ -13,7 +13,8 @@
 		selected = false,
 		expanded = false,
 		isDropTarget = false,
-		spliceTargetPort = null
+		spliceTargetPort = null,
+		width = null
 	} = $props();
 	const dispatch = createEventDispatcher();
 
@@ -80,6 +81,7 @@
 	class:selected
 	class:expanded={hasPanel}
 	class:drop-target={isDropTarget}
+	style={width != null ? `width:${width}px;` : ''}
 	role="button"
 	tabindex="0"
 >
@@ -106,9 +108,20 @@
 		{#if isDropTarget}
 			<span class="drop-badge" title="Drop to replace all references">↓ replace</span>
 		{:else if isEditable}
-			<span class="expand-indicator" title={expanded ? 'Collapse' : 'Expand to edit'}>
+			<button
+				type="button"
+				class="expand-indicator"
+				title={expanded ? 'Collapse controls' : 'Expand controls'}
+				aria-label={expanded ? 'Collapse controls' : 'Expand controls'}
+				aria-expanded={expanded}
+				onpointerdown={(e) => e.stopPropagation()}
+				onclick={(e) => {
+					e.stopPropagation();
+					dispatch('toggleexpand');
+				}}
+			>
 				{expanded ? '▲' : '▼'}
-			</span>
+			</button>
 		{/if}
 		<NodeNoteButton nodeId={node.id} />
 	</div>
@@ -244,7 +257,17 @@
 		font-size: 9px;
 		color: #666;
 		flex-shrink: 0;
-		pointer-events: none;
+		padding: 2px 4px;
+		border: none;
+		border-radius: 3px;
+		background: transparent;
+		cursor: pointer;
+		line-height: 1;
+	}
+
+	.expand-indicator:hover {
+		color: var(--color-accent, #4d9fe3);
+		background: rgba(0, 0, 0, 0.05);
 	}
 	.drop-badge {
 		font-size: 9px;

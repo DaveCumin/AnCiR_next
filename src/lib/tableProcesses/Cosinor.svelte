@@ -13,7 +13,12 @@
 		['yIN', { val: [] }],
 		['Ncurves', { val: 0 }],
 		['outputX', { val: -1 }],
-		['out', { cosinorx: { val: -1 } }],
+		// `cosinorx` + per-y `cosinory_<id>` are the fitted curve outputs. The
+		// `period`/`amplitude`/`rsquared` outputs are scalar metrics exposed as
+		// PORTS (the "stored values as output ports" pilot): each is an array with
+		// one value per y input, so wiring e.g. `period` straight into a boxplot
+		// compares the metric across series/animals without the global registry.
+		['out', { cosinorx: { val: -1 }, period: { val: -1 }, amplitude: { val: -1 }, rsquared: { val: -1 } }],
 		['valid', { val: false }],
 		['useFixedPeriod', { val: false }],
 		['fixedPeriod', { val: 24 }],
@@ -45,7 +50,11 @@
 					kind: 'column',
 					cardinality: 'many',
 					dynamicPrefix: 'cosinory_'
-				}
+				},
+				// Scalar-metric ports (one value per y input).
+				{ name: 'period', kind: 'column', cardinality: 'one' },
+				{ name: 'amplitude', kind: 'column', cardinality: 'one' },
+				{ name: 'rsquared', kind: 'column', cardinality: 'one' }
 			]
 		}
 	};
@@ -267,6 +276,48 @@
 				}
 			}
 		}
+
+		// Scalar-metric ports: one value per y input, in yIN order. Reuses the
+		// exact expressions behind the per-y StoreValueButtons so the wired values
+		// match what users previously stored by name.
+		const useFixed = argsIN.useFixedPeriod ?? false;
+		const fixedPeriod = argsIN.fixedPeriod ?? 24;
+		const periodArr = [];
+		const amplitudeArr = [];
+		const rsquaredArr = [];
+		for (const yId of yINs) {
+			const yr = result.y_results[yId];
+			let period = NaN;
+			let amplitude = NaN;
+			let rsq = NaN;
+			if (yr) {
+				rsq = yr.fittedData?.rSquared ?? NaN;
+				if (useFixed && yr.fixedStats) {
+					period = fixedPeriod;
+					amplitude = yr.fixedStats.harmonics?.[0]?.amplitude ?? NaN;
+				} else {
+					const c = yr.fittedData?.parameters?.cosines?.[0];
+					period = c?.frequency ? (2 * Math.PI) / c.frequency : NaN;
+					amplitude = c?.amplitude ?? NaN;
+				}
+			}
+			periodArr.push(period);
+			amplitudeArr.push(amplitude);
+			rsquaredArr.push(rsq);
+		}
+		const writeScalarOut = (key, arr) => {
+			const id = argsIN.out[key];
+			if (id == null || id === -1) return;
+			const col = getColumnById(id);
+			if (!col) return;
+			core.rawData.set(id, arr);
+			col.data = id;
+			col.type = 'number';
+			col.tableProcessGUId = processHash;
+		};
+		writeScalarOut('period', periodArr);
+		writeScalarOut('amplitude', amplitudeArr);
+		writeScalarOut('rsquared', rsquaredArr);
 	}
 
 	export async function cosinor(argsIN) {

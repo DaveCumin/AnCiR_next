@@ -17,6 +17,7 @@
 	import FloatingActions from '$lib/components/workflow/FloatingActions.svelte';
 	import NoteCard from '$lib/components/views/NoteCard.svelte';
 	import WorksheetAddPalette from '$lib/components/views/WorksheetAddPalette.svelte';
+	import AddDataPrompt from '$lib/components/views/AddDataPrompt.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
@@ -25,6 +26,46 @@
 
 	import { deselectAllPlots } from '$lib/core/Plot.svelte';
 	import { removePlots } from '$lib/core/Plot.svelte';
+	import { canvasFileDrop } from '$lib/core/canvasFileDrop.js';
+	import { handleCanvasFileDrop } from '$lib/core/dataSourceActions.js';
+	import SelectionLayoutToolbar from '$lib/components/reusables/SelectionLayoutToolbar.svelte';
+	import { alignBoxes, distributeBoxes, arrangeGrid } from '$lib/core/layoutHelpers.js';
+	import { snapToGrid } from '$lib/core/core.svelte.js';
+
+	let fileDragOver = $state(false);
+
+	// --- Multi-plot align / distribute / grid (worksheet) ---
+	let selectedPlots = $derived(core.plots.filter((p) => p.selected));
+
+	// Box footprint mirrors Draggable's rendered size (width + 20, height + 50)
+	// so alignment uses what the user actually sees.
+	function plotBoxes() {
+		return selectedPlots.map((p) => ({
+			id: p.id,
+			x: p.x,
+			y: p.y,
+			w: (p.width ?? 200) + 20,
+			h: (p.height ?? 150) + 50
+		}));
+	}
+	function applyPlotPositions(map) {
+		for (const p of core.plots) {
+			const np = map.get(p.id);
+			if (np) {
+				p.x = snapToGrid(np.x);
+				p.y = snapToGrid(np.y);
+			}
+		}
+	}
+	function alignSelectedPlots(mode) {
+		applyPlotPositions(alignBoxes(plotBoxes(), mode));
+	}
+	function distributeSelectedPlots(axis) {
+		applyPlotPositions(distributeBoxes(plotBoxes(), axis));
+	}
+	function gridSelectedPlots() {
+		applyPlotPositions(arrangeGrid(plotBoxes(), { snap: snapToGrid }));
+	}
 
 	const MIN_ZOOM = 0.15;
 	const MAX_ZOOM = 4;
@@ -279,8 +320,24 @@
 	onmousemove={handleMouseMove}
 	onmouseup={stopPan}
 	onmouseleave={stopPan}
+	use:canvasFileDrop={{ onActive: (v) => (fileDragOver = v), onDrop: handleCanvasFileDrop }}
 	role="presentation"
 >
+	{#if fileDragOver}
+		<div class="canvas-file-drop-overlay"><span>Drop a data file to import</span></div>
+	{/if}
+
+	{#if selectedPlots.length >= 2}
+		<div class="selection-toolbar-host">
+			<SelectionLayoutToolbar
+				onAlign={alignSelectedPlots}
+				onDistribute={distributeSelectedPlots}
+				onGrid={gridSelectedPlots}
+				showGrid={true}
+				canDistribute={selectedPlots.length >= 3}
+			/>
+		</div>
+	{/if}
 	<div
 		class="canvas-viewport"
 		class:panning={isPanning}
@@ -325,7 +382,7 @@
 					<button class="icon" onclick={() => (showNewPlotModal = true)}>
 						<Icon name="add" width={24} height={24} />
 					</button>
-					<p style="margin-left: 10px">Click to add a plot or note</p>
+					<p style="margin-left: 10px">Click here to add a plot</p>
 				</div>
 
 				<WorksheetAddPalette
@@ -334,11 +391,7 @@
 					left={window.innerWidth / 2 - 40}
 				/>
 			{:else}
-				<div class="no-plot-prompt" in:fade={{ duration: 600 }}>
-					<p style="margin-left: 10px" out:fade={{ duration: 600 }}>
-						No data yet — switch to the workflow canvas to import or simulate columns.
-					</p>
-				</div>
+				<AddDataPrompt />
 			{/if}
 		{/if}
 	</div>
@@ -434,6 +487,15 @@
 		transition:
 			width 0.6s ease,
 			left 0.6s ease;
+	}
+
+	.selection-toolbar-host {
+		position: absolute;
+		top: 12px;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 40;
+		pointer-events: none;
 	}
 
 	.no-plot-prompt {

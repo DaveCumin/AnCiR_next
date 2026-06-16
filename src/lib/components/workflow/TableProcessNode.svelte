@@ -26,7 +26,8 @@
 		node,
 		selected = false,
 		expanded = false,
-		spliceTargetPort = null
+		spliceTargetPort = null,
+		width = null
 	} = $props();
 
 	const dispatch = createEventDispatcher();
@@ -205,6 +206,7 @@
 	class="tp-card"
 	class:selected
 	class:expanded
+	style={width != null ? `width:${width}px;` : ''}
 	onmousedown={onCardMouseDown}
 	role="button"
 	tabindex="0"
@@ -219,9 +221,20 @@
 				onCommit={renameTP}
 			/>
 		</div>
-		<span class="expand-indicator" title={expanded ? 'Collapse' : 'Expand to edit'}>
+		<button
+			type="button"
+			class="expand-indicator"
+			title={expanded ? 'Collapse controls' : 'Expand controls'}
+			aria-label={expanded ? 'Collapse controls' : 'Expand controls'}
+			aria-expanded={expanded}
+			onpointerdown={stopPointer}
+			onclick={(e) => {
+				e.stopPropagation();
+				dispatch('toggleexpand');
+			}}
+		>
 			{expanded ? '▲' : '▼'}
-		</span>
+		</button>
 		<NodeNoteButton nodeId={node.id} />
 		<div class="all-port-wrap">
 			<button
@@ -422,7 +435,17 @@
 		font-size: 9px;
 		color: #666;
 		flex-shrink: 0;
-		pointer-events: none;
+		padding: 2px 4px;
+		border: none;
+		border-radius: 3px;
+		background: transparent;
+		cursor: pointer;
+		line-height: 1;
+	}
+
+	.expand-indicator:hover {
+		color: var(--color-accent, #4d9fe3);
+		background: rgba(0, 0, 0, 0.05);
 	}
 
 	.tp-sublabel {

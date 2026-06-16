@@ -720,6 +720,21 @@
 		await doPreviewFromURL();
 	}
 
+	// Open the import modal pre-seeded with already-chosen File objects (e.g.
+	// dropped onto the canvas), going straight to the preview without the OS file
+	// picker.
+	export async function openImportModalWithFiles(fileList) {
+		resetValues();
+		showImportModal = true;
+		await tick();
+		const files = [...(fileList ?? [])];
+		targetFiles = files;
+		targetFile = files[0] ?? null;
+		if (targetFile) {
+			await doPreview();
+		}
+	}
+
 	async function onFileChange(e) {
 		const files = [...e.target.files];
 		targetFiles = files;

@@ -1,16 +1,14 @@
 <script>
 	// @ts-nocheck
 	// Flowtest-style floating add-node palette in the top-right of the canvas.
-	// Renders a search box + family-grouped icon tiles. Each tile delegates to
-	// the existing creation modals so the underlying spawn flow is unchanged.
+	// Renders a search box + family-grouped icon tiles. Picking a tile spawns the
+	// node directly on the canvas (table processes land default-expanded) — no
+	// modal; the user configures it inline. Notes/groups spawn directly too, and
+	// "Import file" opens the file picker.
 	import Icon from '$lib/icons/Icon.svelte';
-	import MakeNewPlot from '$lib/components/views/modals/MakeNewPlot.svelte';
-	import MakeNewColumn from '$lib/components/views/modals/MakeNewColumn.svelte';
-	import SimulateData from '$lib/components/views/modals/SimulateData.svelte';
-	import BlankColumnModal from '$lib/components/views/modals/BlankColumnModal.svelte';
-	import SequenceColumnModal from '$lib/components/views/modals/SequenceColumnModal.svelte';
 	import { core, appConsts, createNote, createGroup } from '$lib/core/core.svelte.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import { openImportData } from '$lib/core/dataSourceActions.js';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { tick } from 'svelte';
 
@@ -43,16 +41,6 @@
 		return 'gear';
 	}
 
-	// ---- Spawn-routing kinds --------------------------------------------
-	// Source table processes get their own dedicated modal; everything else
-	// goes through MakeNewColumn (table process) or the splice-on-drop hint
-	// (column process).
-	const SOURCE_MODAL_BY_TYPE = {
-		SimulatedData: 'simulate',
-		SequenceColumn: 'sequence',
-		BlankColumn: 'blank'
-	};
-
 	let {
 		// Called by NodePalette right before any user-initiated spawn so the
 		// next-to-appear node lands at the centre of the current viewport.
@@ -60,22 +48,31 @@
 		// Spawns a column process on the currently-focused data column (or the
 		// first data column if none is focused). Returns
 		// { ok: boolean, columnId?: number, reason?: string }.
-		onSpawnColumnProcess = null
+		onSpawnColumnProcess = null,
+		// Spawns a (free) table process directly on the canvas, default-expanded —
+		// no modal. Returns { ok }.
+		onSpawnTableProcess = null,
+		// Spawns a plot directly on the canvas — no modal. Returns { ok }.
+		onSpawnPlot = null
 	} = $props();
 
 	let showMenu = $state(false);
 	let query = $state('');
-	let showAddPlotModal = $state(false);
-	let plotInitialType = $state('');
-	let showSimulateModal = $state(false);
-	let showBlankModal = $state(false);
-	let showSequenceModal = $state(false);
-	let showAddTPModal = $state(false);
-	let addTPInitialType = $state('');
 
 	// ---- Build the flat list of palette items ---------------------------
 	const allItems = $derived.by(() => {
 		const items = [];
+		// Import-from-file source. Not a registered table process (the import flow
+		// is a modal), so it's injected here so users can always reach it from the
+		// Sources family alongside Simulate / Sequence / Blank.
+		items.push({
+			type: 'import-file',
+			kind: 'import',
+			displayName: 'Import file',
+			family: 'Sources',
+			nodeIcon: resolveIcon('add-file'),
+			description: 'Import data from a CSV, Excel or AWD file on your computer.'
+		});
 		for (const [key, entry] of appConsts.processMap.entries()) {
 			items.push({
 				type: key,
@@ -192,6 +189,12 @@
 
 	// ---- Spawn handlers --------------------------------------------------
 	function handlePick(item) {
+		if (item.kind === 'import') {
+			openImportData();
+			closeMenu();
+			return;
+		}
+
 		if (item.kind === 'note') {
 			// Notes carry x/y on the entity itself; ask WorkflowEditor where the
 			// viewport is and seed createNote with that point. The
@@ -211,39 +214,17 @@
 		}
 
 		if (item.kind === 'plot') {
-			queueSpawnPosition?.();
-			plotInitialType = item.type;
-			showAddPlotModal = true;
+			// Workflow add: spawn the plot directly (no modal); the user wires its
+			// x/y inputs on the canvas.
+			onSpawnPlot?.(item.type);
 			closeMenu();
 			return;
 		}
 
 		if (item.kind === 'tableProcess') {
-			const sourceModal = SOURCE_MODAL_BY_TYPE[item.type];
-			if (sourceModal === 'simulate') {
-				queueSpawnPosition?.();
-				showSimulateModal = true;
-				closeMenu();
-				return;
-			}
-			if (sourceModal === 'sequence') {
-				queueSpawnPosition?.();
-				showSequenceModal = true;
-				closeMenu();
-				return;
-			}
-			if (sourceModal === 'blank') {
-				queueSpawnPosition?.();
-				showBlankModal = true;
-				closeMenu();
-				return;
-			}
-			// Non-source table process: free-spawn through MakeNewColumn. The
-			// resulting TP lands in core.tableProcesses with no parent table;
-			// the user wires its xIN/yIN inputs from any data node.
-			queueSpawnPosition?.();
-			addTPInitialType = item.type;
-			showAddTPModal = true;
+			// Workflow add: spawn the table process directly with defaults,
+			// default-expanded, so the user configures it inline (no modal).
+			onSpawnTableProcess?.(item.type);
 			closeMenu();
 			return;
 		}
@@ -343,14 +324,6 @@
 		</div>
 	{/if}
 </div>
-
-<MakeNewPlot bind:showModal={showAddPlotModal} bind:initialType={plotInitialType} />
-<SimulateData bind:showModal={showSimulateModal} />
-<BlankColumnModal bind:showModal={showBlankModal} />
-<SequenceColumnModal bind:showModal={showSequenceModal} />
-{#if showAddTPModal}
-	<MakeNewColumn bind:show={showAddTPModal} bind:initialType={addTPInitialType} />
-{/if}
 
 <style>
 	.np-anchor {

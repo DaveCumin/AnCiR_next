@@ -36,6 +36,30 @@ export function useMultiYTP(p, yPrefix, yColNamePrefix) {
 	// prevYIds is a plain mutable variable — no reactivity needed, just change-tracking.
 	let prevYIds = [...(p.args.yIN ?? [])].map(Number);
 
+	// True once `p` is a real, committed TableProcess (has an id and is in
+	// core.tableProcesses). The MakeNewColumn modal mounts the component against a
+	// plain `{ name, args }` preview object with no id — we must NOT create output
+	// columns in that context (they'd leak as orphan data nodes).
+	function isCommitted() {
+		return p?.id != null && (core.tableProcesses ?? []).some((tp) => tp.id === p.id);
+	}
+
+	// Create one output column for a Y input and return its id. Free-standing
+	// table processes have no `parent`, so outputs live directly in core.data
+	// (matching the TableProcess constructor). The legacy Table model kept a
+	// `parent.columnRefs` list — still maintained when a parent is present so old
+	// sessions keep working.
+	function makeYColumn(yId) {
+		const srcName = getColumnById(Number(yId))?.name ?? String(yId);
+		const yCol = new Column({});
+		yCol.name = yColNamePrefix + srcName;
+		pushObj(yCol);
+		if (p.parent && Array.isArray(p.parent.columnRefs)) {
+			p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
+		}
+		return yCol.id;
+	}
+
 	/**
 	 * Reconcile output Y columns with the current p.args.yIN selection.
 	 * - Removes rawData + Column for any Y that was deselected.
@@ -50,30 +74,31 @@ export function useMultiYTP(p, yPrefix, yColNamePrefix) {
 		// No change — return early so callers skip unnecessary recomputes.
 		if (newIds.length === prevYIds.length && newIds.every((id) => oldSet.has(id))) return false;
 
-		// Remove output columns for deselected Y inputs.
-		for (const oldId of prevYIds) {
-			if (!newSet.has(oldId)) {
-				const outKey = yPrefix + oldId;
-				const outColId = p.args.out[outKey];
-				if (outColId != null && outColId >= 0) {
-					core.rawData.delete(outColId);
-					removeColumn(outColId);
+		// Only materialise output columns for a COMMITTED table process (has an
+		// id and lives in core.tableProcesses). In the MakeNewColumn modal the
+		// component is mounted against a plain preview object with no id — creating
+		// columns there leaks orphan data nodes (the TableProcess constructor
+		// creates the real outputs on commit). We still report the change so the
+		// preview recomputes.
+		if (isCommitted()) {
+			// Remove output columns for deselected Y inputs.
+			for (const oldId of prevYIds) {
+				if (!newSet.has(oldId)) {
+					const outKey = yPrefix + oldId;
+					const outColId = p.args.out[outKey];
+					if (outColId != null && outColId >= 0) {
+						core.rawData.delete(outColId);
+						removeColumn(outColId);
+					}
+					delete p.args.out[outKey];
 				}
-				delete p.args.out[outKey];
 			}
-		}
 
-		// Create output columns for newly selected Y inputs.
-		for (const newId of newIds) {
-			const outKey = yPrefix + newId;
-			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
-				if (p.parent) {
-					const srcName = getColumnById(newId)?.name ?? String(newId);
-					const yCol = new Column({});
-					yCol.name = yColNamePrefix + srcName;
-					pushObj(yCol);
-					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
-					p.args.out[outKey] = yCol.id;
+			// Create output columns for newly selected Y inputs.
+			for (const newId of newIds) {
+				const outKey = yPrefix + newId;
+				if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
+					p.args.out[outKey] = makeYColumn(newId);
 				}
 			}
 		}
@@ -89,19 +114,18 @@ export function useMultiYTP(p, yPrefix, yColNamePrefix) {
 	 * Returns true when at least one column was created (caller should recompute).
 	 */
 	function initYColumns() {
+		// Skip in the modal/preview context — only a committed TP materialises
+		// outputs (the constructor handles the committed case up-front).
+		if (!isCommitted()) {
+			prevYIds = [...(p.args.yIN ?? [])].map(Number);
+			return false;
+		}
 		let needsCompute = false;
 		for (const yId of p.args.yIN ?? []) {
 			const outKey = yPrefix + yId;
 			if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
-				if (p.parent) {
-					const srcName = getColumnById(Number(yId))?.name ?? String(yId);
-					const yCol = new Column({});
-					yCol.name = yColNamePrefix + srcName;
-					pushObj(yCol);
-					p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
-					p.args.out[outKey] = yCol.id;
-					needsCompute = true;
-				}
+				p.args.out[outKey] = makeYColumn(yId);
+				needsCompute = true;
 			}
 		}
 		// Sync prevYIds to the current state after init.

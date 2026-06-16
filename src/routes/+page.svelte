@@ -9,14 +9,19 @@
 	import PlotDisplay from '$lib/components/views/PlotDisplay.svelte';
 
 	import AreYouSure from '$lib/components/views/modals/AreYouSure.svelte';
+	import ImportData, {
+		loadFromURL,
+		openImportModal,
+		openImportModalWithFiles
+	} from '$lib/components/views/modals/ImportData.svelte';
 	import Notifications from '$lib/components/reusables/Notifications.svelte';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import { registerDataSourceActions } from '$lib/core/dataSourceActions.js';
+	import { importJson } from '$lib/components/iconActions/Setting.svelte';
 
 	import { loadProcesses } from '$lib/processes/processMap.js';
 	import { loadPlots } from '$lib/plots/plotMap.js';
 	import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
-	import { loadFromURL } from '$lib/components/views/modals/ImportData.svelte';
-
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 
@@ -45,6 +50,40 @@
 	// Initialize history watching (must be in component context)
 	history.init();
 	paramDiffWatcher.init();
+
+	// Single ImportData modal instance for the whole app (mounted below). Its
+	// open/close state lives in module scope, so empty-state prompts, the node
+	// palette, and canvas file-drop open it through the dataSourceActions registry
+	// rather than mounting their own copy.
+	function loadSessionFromFile(file) {
+		const reader = new FileReader();
+		reader.onload = async (e) => {
+			let parsed;
+			try {
+				parsed = JSON.parse(e.target.result);
+			} catch (err) {
+				addNotification('Invalid JSON session file: ' + (err?.message ?? err));
+				return;
+			}
+			appState.loadingState.isLoading = true;
+			appState.loadingState.loadingMsg = `Loading session from ${file.name}…`;
+			try {
+				await importJson(parsed, (msg) => (appState.loadingState.loadingMsg = msg));
+			} catch (err) {
+				addNotification('Failed to load session: ' + (err?.message ?? err));
+			} finally {
+				appState.loadingState.isLoading = false;
+				appState.loadingState.loadingMsg = '';
+			}
+		};
+		reader.onerror = () => addNotification('Failed to read dropped file.');
+		reader.readAsText(file);
+	}
+	registerDataSourceActions({
+		openImport: openImportModal,
+		openImportFiles: openImportModalWithFiles,
+		loadSessionFile: loadSessionFromFile
+	});
 
 	// const timesToTest = ['2025/10/01', '2025/12/01', '2025/13/01'];
 	// console.log('times to test: ', timesToTest);
@@ -574,6 +613,7 @@
 	callback={appState.AYScallback}
 	options={appState.AYSoptions}
 />
+<ImportData />
 <Notifications />
 {#if appState.loadingState.isLoading}
 	<div class="backdrop" transition:fade={{ duration: 360 }}>

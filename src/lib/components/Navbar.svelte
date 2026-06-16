@@ -1,34 +1,14 @@
-<!-- TODO: fix setting dropdown position -->
-
 <!-- Navbar.svelte -->
 <script>
 	// @ts-nocheck
 	import { appState, core } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
-	import Setting from '$lib/components/iconActions/Setting.svelte';
+	import Settings from '$lib/components/views/modals/Settings.svelte';
 	import About from './views/modals/About.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 
-	let gearBtnRef;
-	let showSetting = $state(false);
-	let dropdownTop = $state(0);
-	let dropdownLeft = $state(0);
+	let showSettings = $state(false);
 	let showAbout = $state(false);
-
-	function recalculateDropdownPosition() {
-		if (!gearBtnRef) return;
-		const rect = gearBtnRef.getBoundingClientRect();
-
-		dropdownTop = rect.top + window.scrollY;
-		dropdownLeft = rect.right + window.scrollX + 12;
-	}
-
-	function openDropdown() {
-		recalculateDropdownPosition();
-		showSetting = true;
-
-		window.addEventListener('resize', recalculateDropdownPosition);
-	}
 
 	function toggleDataView() {
 		// Data panel is independent of the canvas view — it can be open or
@@ -99,15 +79,24 @@
 
 <nav class="container" style="width: {appState.widthNavBar}px;">
 	<div class="icon-container">
-		<button onclick={toggleDataView} {@attach tooltip('Data View')}>
+		<button
+			onclick={toggleDataView}
+			{@attach tooltip('Data — view and edit your imported columns')}
+		>
 			<Icon name="table" className={appState.currentTab === 'data' ? 'icon active' : 'icon'} />
 		</button>
 
-		<button onclick={selectWorksheetView} {@attach tooltip('Worksheet View')}>
+		<button
+			onclick={selectWorksheetView}
+			{@attach tooltip('Worksheet — arrange and style your plots')}
+		>
 			<Icon name="layer" className={appState.view === 'plots' ? 'icon active' : 'icon'} />
 		</button>
 
-		<button onclick={selectWorkflowView} {@attach tooltip('Workflow View')}>
+		<button
+			onclick={selectWorkflowView}
+			{@attach tooltip('Workflow — wire and inspect the analysis pipeline')}
+		>
 			<Icon
 				name="process"
 				className={appState.view === 'canvas' ? 'icon active' : 'icon'}
@@ -116,7 +105,7 @@
 	</div>
 
 	<div class="icon-container">
-		<button bind:this={gearBtnRef} onclick={openDropdown} {@attach tooltip('Settings')}>
+		<button onclick={() => (showSettings = true)} {@attach tooltip('Settings')}>
 			<Icon name="gear" />
 		</button>
 		<button
@@ -130,7 +119,7 @@
 	</div>
 </nav>
 
-<Setting bind:showDropdown={showSetting} {dropdownTop} {dropdownLeft} />
+<Settings bind:showModal={showSettings} />
 
 <About bind:showModal={showAbout} />
 

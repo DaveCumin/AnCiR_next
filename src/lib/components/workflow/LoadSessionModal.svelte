@@ -11,11 +11,13 @@
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { importJson } from '$lib/components/iconActions/Setting.svelte';
 
-	let { showModal = $bindable(false) } = $props();
+	let { showModal = $bindable(false), initialSourceMode = 'file' } = $props();
 
 	// Tabbed source picker. 'file' is the default since it's the most common
 	// path; switching tabs is one click and the demo index is fetched lazily.
-	let sourceMode = $state('file');
+	// Callers can open straight to a given tab (e.g. 'example') via
+	// `initialSourceMode`; the close-reset below restores that choice.
+	let sourceMode = $state(initialSourceMode);
 
 	let fileInput;
 	let sessionUrl = $state('');
@@ -93,7 +95,7 @@
 	// Reset transient state when the modal closes so reopening starts clean.
 	$effect(() => {
 		if (!showModal) {
-			sourceMode = 'file';
+			sourceMode = initialSourceMode;
 			sessionUrl = '';
 			loading = false;
 			progressDetail = '';
