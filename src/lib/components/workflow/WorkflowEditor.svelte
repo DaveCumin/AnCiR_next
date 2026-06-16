@@ -45,9 +45,12 @@
 	const NODE_HEIGHT = 48;
 	const HEADER_H = 26; // px, header strip height (matches flowtest's --header-h)
 	const PORT_H = 22; // px, height of each port row
-	const COL_WIDTH = 220;
-	const ROW_HEIGHT = 80;
-	const PADDING = 40;
+	// Per-layer horizontal step for the topological (Tidy) layout. Nodes are
+	// 160–240px wide, so this needs generous headroom to leave a clear gap and
+	// room for the connecting wires between columns.
+	const COL_WIDTH = 320;
+	const ROW_HEIGHT = 280;
+	const PADDING = 50;
 	const EDITOR_PANEL_WIDTH = 220;
 	const EDITOR_PANEL_MAX_HEIGHT = 320;
 
