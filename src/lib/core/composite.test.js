@@ -1,5 +1,31 @@
 import { describe, it, expect } from 'vitest';
-import { computeInterface } from './composite.js';
+import { computeInterface, flattenMembers, nestedCompositeIds } from './composite.js';
+
+describe('flattenMembers / nestedCompositeIds', () => {
+	const composites = [
+		{ id: 'composite_1', memberIds: ['process_1', 'composite_2'] },
+		{ id: 'composite_2', memberIds: ['tableprocess_3', 'process_4'] }
+	];
+	it('flattens nested composites to leaf node ids', () => {
+		expect(flattenMembers(['composite_1'], composites)).toEqual([
+			'process_1',
+			'tableprocess_3',
+			'process_4'
+		]);
+	});
+	it('passes through plain leaf members', () => {
+		expect(flattenMembers(['process_9', 'tableprocess_8'], composites)).toEqual([
+			'process_9',
+			'tableprocess_8'
+		]);
+	});
+	it('collects nested composite ids transitively', () => {
+		expect(nestedCompositeIds(['composite_1', 'process_9'], composites)).toEqual([
+			'composite_1',
+			'composite_2'
+		]);
+	});
+});
 
 const members = ['tableprocess_1'];
 const conns = [

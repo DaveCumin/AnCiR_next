@@ -35,3 +35,52 @@ export function computeInterface(memberIds, connections) {
 	}
 	return { inputs: [...inMap.values()], outputs: [...outMap.values()] };
 }
+
+/**
+ * Flatten a member list to leaf operation-node ids, expanding any nested
+ * composite members recursively. `members` is a memberIds array (may contain
+ * `composite_*` ids); `composites` is the full core.composites list.
+ * @returns {string[]} leaf node ids (process_/tableprocess_), de-duplicated, order-preserving.
+ */
+export function flattenMembers(members, composites) {
+	const byId = new Map((composites ?? []).map((c) => [c.id, c]));
+	const out = [];
+	const seenComposite = new Set();
+	const seenLeaf = new Set();
+	const walk = (ids) => {
+		for (const id of ids ?? []) {
+			if (typeof id === 'string' && id.startsWith('composite_')) {
+				if (seenComposite.has(id)) continue;
+				seenComposite.add(id);
+				walk(byId.get(id)?.memberIds);
+			} else if (!seenLeaf.has(id)) {
+				seenLeaf.add(id);
+				out.push(id);
+			}
+		}
+	};
+	walk(members);
+	return out;
+}
+
+/**
+ * All composite ids nested (transitively) inside a member list. Used to hide
+ * child-composite nodes when an ancestor is collapsed.
+ * @returns {string[]} composite ids
+ */
+export function nestedCompositeIds(members, composites) {
+	const byId = new Map((composites ?? []).map((c) => [c.id, c]));
+	const out = [];
+	const seen = new Set();
+	const walk = (ids) => {
+		for (const id of ids ?? []) {
+			if (typeof id === 'string' && id.startsWith('composite_') && !seen.has(id)) {
+				seen.add(id);
+				out.push(id);
+				walk(byId.get(id)?.memberIds);
+			}
+		}
+	};
+	walk(members);
+	return out;
+}

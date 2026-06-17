@@ -17,7 +17,7 @@
 		removeOrphanProcess,
 		pushObj
 	} from '$lib/core/core.svelte.js';
-	import { computeInterface } from '$lib/core/composite.js';
+	import { computeInterface, flattenMembers } from '$lib/core/composite.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { Column } from '$lib/core/Column.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
@@ -2371,8 +2371,10 @@
 		const ops = sel.filter(COMPOSABLE);
 		const comps = sel.filter((id) => id?.startsWith('composite_'));
 		return {
-			// new composite from >=2 ops, OR add ops into exactly one selected composite
-			canCombine: ops.length >= 2 || (comps.length === 1 && ops.length >= 1),
+			// Combine when there are >=2 composable items total: >=2 ops (new
+			// composite), 1 composite + ops (add to it), or >=2 composites
+			// (nest into a parent). A lone composite (1 comp, 0 ops) can't combine.
+			canCombine: ops.length + comps.length >= 2,
 			canUncombine: comps.length >= 1 || !!focusedNodeId?.startsWith('composite_')
 		};
 	});
@@ -2381,26 +2383,29 @@
 		const sel = [...multiSelectedNodeIds];
 		const ops = sel.filter(COMPOSABLE);
 		const comps = sel.filter((id) => id?.startsWith('composite_'));
-		// Add to an existing composite: one composite + one or more operation nodes.
+		// Add to an existing composite: exactly one composite + one or more ops.
 		if (comps.length === 1 && ops.length >= 1) {
 			addToComposite(comps[0], ops);
 			return;
 		}
-		if (ops.length < 2) {
-			addNotification('Select at least two analysis/process nodes to combine.');
+		// New composite. Members may include other composites (→ nesting).
+		const members = [...ops, ...comps];
+		if (members.length < 2) {
+			addNotification('Select at least two nodes (analyses or composites) to combine.');
 			return;
 		}
-		// Persist each member's position now (before they're hidden on collapse) so
-		// the composite can drag them as a unit and the expanded frame lays out.
-		persistPositions(ops);
-		const iface = computeInterface(new Set(ops), processGraph.rawConnections ?? []);
-		const ps = ops
+		// Interface is over the flattened LEAF operation nodes (nested composites
+		// expanded). Persist leaf + child-composite positions before they hide.
+		const leaves = flattenMembers(members, core.composites);
+		persistPositions([...leaves, ...comps]);
+		const iface = computeInterface(new Set(leaves), processGraph.rawConnections ?? []);
+		const ps = members
 			.map((id) => stablePositions[id] ?? defaultPositions.positions[id])
 			.filter(Boolean);
 		const cx = ps.length ? Math.round(ps.reduce((s, p) => s + p.x, 0) / ps.length) : 80;
 		const cy = ps.length ? Math.round(ps.reduce((s, p) => s + p.y, 0) / ps.length) : 80;
 		const cid = createComposite({
-			memberIds: ops,
+			memberIds: members,
 			interface: iface,
 			x: cx,
 			y: cy,
@@ -2438,7 +2443,10 @@
 		if (!toAdd.length) return;
 		persistPositions(toAdd);
 		comp.memberIds = [...comp.memberIds, ...toAdd];
-		comp.interface = computeInterface(new Set(comp.memberIds), processGraph.rawConnections ?? []);
+		comp.interface = computeInterface(
+			new Set(flattenMembers(comp.memberIds, core.composites)),
+			processGraph.rawConnections ?? []
+		);
 		if (select) {
 			focusedNodeId = compositeId;
 			multiSelectedNodeIds = new Set([compositeId]);
@@ -2664,6 +2672,11 @@
 						class="composite-frame-title"
 						role="presentation"
 						onmousedown={(e) => handleNodeWrapperMouseDown(e, { id: cc.id, type: 'composite' })}
+						onmouseup={(e) => handleNodeWrapperMouseUp(e, { id: cc.id, type: 'composite' })}
+						ondblclick={(e) => {
+							e.stopPropagation();
+							handleNodeDblClick({ id: cc.id, type: 'composite', compositeObj: cc.comp });
+						}}
 					>
 						<span class="composite-frame-name">{cc.name}</span>
 						<button

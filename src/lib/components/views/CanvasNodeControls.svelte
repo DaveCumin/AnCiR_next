@@ -5,9 +5,54 @@
 	// editor for processes/tableprocesses (same component, same target object,
 	// so reactivity keeps both views in sync) and exposes lightweight editors
 	// for data / group / note nodes that don't otherwise have a side panel.
-	import { core, appState, appConsts, getProcessNodeGraph, extractColumnFromAnyGroup } from '$lib/core/core.svelte.js';
+	import {
+		core,
+		appState,
+		appConsts,
+		getProcessNodeGraph,
+		extractColumnFromAnyGroup,
+		removeComposite
+	} from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { computeInterface } from '$lib/core/composite.js';
 	import Editable from '$lib/components/reusables/Editable.svelte';
+
+	// Friendly label for a composite member node id (members may be hidden, so
+	// resolve from core rather than the rendered graph).
+	function memberLabel(id) {
+		if (id?.startsWith('tableprocess_')) {
+			const tp = core.tableProcesses.find((t) => `tableprocess_${t.id}` === id);
+			return tp?.displayName || tp?.name || id;
+		}
+		if (id?.startsWith('composite_')) {
+			return core.composites.find((c) => c.id === id)?.name || id;
+		}
+		if (id?.startsWith('process_')) {
+			const pid = Number(id.slice('process_'.length));
+			for (const col of core.data) {
+				const p = (col.processes ?? []).find((x) => x.id === pid);
+				if (p) return p.displayName || p.name || id;
+			}
+			const op = (core.orphanProcesses ?? []).find((x) => x.id === pid);
+			if (op) return op.displayName || op.name || id;
+		}
+		return id;
+	}
+
+	// Remove a member from a composite; recompute its interface, or dissolve the
+	// composite entirely if nothing is left.
+	function removeMember(comp, mid) {
+		comp.memberIds = comp.memberIds.filter((id) => id !== mid);
+		if (comp.memberIds.length === 0) {
+			removeComposite(comp.id);
+			appState.canvasSelectedNodeId = null;
+			return;
+		}
+		comp.interface = computeInterface(
+			new Set(comp.memberIds),
+			getProcessNodeGraph().rawConnections ?? []
+		);
+	}
 
 	// Pull the live node object out of the cached graph so processObj/tpObj/
 	// groupObj/noteObj are spread onto the result (see getCachedProcessNodeGraph).
@@ -139,6 +184,43 @@
 									class="remove-btn"
 									title="Extract from group"
 									onclick={() => extractColumnFromAnyGroup(colId)}
+								>
+									✕
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+		</div>
+	{:else if node.type === 'composite' && node.compositeObj}
+		{@const comp = node.compositeObj}
+		<div class="control-component">
+			<div class="control-input">
+				<p>Name</p>
+				<Editable
+					value={comp.name}
+					placeholder="composite name"
+					onCommit={(v) => {
+						const trimmed = (v ?? '').trim();
+						comp.name = trimmed === '' ? 'Composite' : trimmed;
+					}}
+				/>
+			</div>
+			<div class="control-input vertical">
+				<p>Nodes inside ({(comp.memberIds ?? []).length})</p>
+				{#if (comp.memberIds ?? []).length === 0}
+					<span class="muted">Empty composite.</span>
+				{:else}
+					<ul class="source-list">
+						{#each comp.memberIds as mid (mid)}
+							<li>
+								<span class="source-name">{memberLabel(mid)}</span>
+								<button
+									type="button"
+									class="remove-btn"
+									title="Remove from composite"
+									onclick={() => removeMember(comp, mid)}
 								>
 									✕
 								</button>

@@ -773,7 +773,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	// --- Composite nodes: add one node per composite; when collapsed, hide its
 	// member nodes and reroute their boundary edges through the composite's
 	// interface ports (display-only — mirrors group absorption). ---------------
-	const memberToCollapsed = new Map(); // member node id -> its collapsed composite
+	const compById = new Map((core.composites ?? []).map((c) => [c.id, c]));
 	for (const comp of core.composites ?? []) {
 		const cnode = {
 			id: comp.id,
@@ -787,11 +787,25 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		};
 		nodes.push(cnode);
 		nodeMap.set(comp.id, cnode);
-		if (comp.collapsed) {
-			for (const mid of comp.memberIds ?? []) memberToCollapsed.set(mid, comp);
+	}
+	// Transitive collapse: walk each collapsed composite; leaf member ids map to
+	// the TOP collapsed composite, and any nested composite ids are hidden too.
+	const memberToCollapsed = new Map();
+	const hiddenComposites = new Set();
+	for (const comp of core.composites ?? []) {
+		if (!comp.collapsed) continue;
+		const stack = [...(comp.memberIds ?? [])];
+		while (stack.length) {
+			const m = stack.pop();
+			if (typeof m === 'string' && m.startsWith('composite_')) {
+				hiddenComposites.add(m);
+				stack.push(...(compById.get(m)?.memberIds ?? []));
+			} else if (!memberToCollapsed.has(m)) {
+				memberToCollapsed.set(m, comp);
+			}
 		}
 	}
-	if (memberToCollapsed.size) {
+	if (memberToCollapsed.size || hiddenComposites.size) {
 		const portIdFor = (comp, list, member, port) =>
 			(comp.interface?.[list] ?? []).find((p) => p.member === member && p.port === port)?.id;
 		const rerouted = [];
@@ -820,7 +834,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		}
 		connections.length = 0;
 		connections.push(...rerouted);
-		const hidden = new Set(memberToCollapsed.keys());
+		const hidden = new Set([...memberToCollapsed.keys(), ...hiddenComposites]);
 		for (let i = nodes.length - 1; i >= 0; i--) {
 			if (hidden.has(nodes[i].id)) nodes.splice(i, 1);
 		}
