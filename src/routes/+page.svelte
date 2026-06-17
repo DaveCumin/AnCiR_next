@@ -160,6 +160,17 @@
 				navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
 			const MODIFIER = ISMAC ? event.metaKey : event.ctrlKey;
 
+			// When the user is typing in a text field, let the browser handle
+			// shortcuts like Cmd/Ctrl+A natively (select the field's text) rather
+			// than running app-level shortcuts (e.g. select-all-plots).
+			const el = event.target;
+			const editableFocused =
+				!!el &&
+				(el.tagName === 'INPUT' ||
+					el.tagName === 'TEXTAREA' ||
+					el.tagName === 'SELECT' ||
+					el.isContentEditable === true);
+
 			if (!appState.loadingState.isLoading) {
 				// Don't allow keypresses if loading
 
@@ -202,8 +213,9 @@
 				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'o') {
 					appState.canvasScale = Math.max(appState.canvasScale - 0.1, 0.15);
 				}
-				// SELCT ALL PLOTS
-				if (MODIFIER && event.key.toLowerCase() === 'a') {
+				// SELECT ALL PLOTS — but if a text field is focused, let the browser
+				// select the field's text instead.
+				if (MODIFIER && event.key.toLowerCase() === 'a' && !editableFocused) {
 					event.preventDefault();
 					selectAllPlots();
 				}
