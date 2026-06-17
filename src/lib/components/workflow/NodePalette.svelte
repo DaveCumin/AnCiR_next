@@ -16,23 +16,102 @@
 	// for the fallback chain so we never render a broken <svg> for a missing
 	// SVG file.
 	const KNOWN_ICONS = new Set([
-		'add-file', 'add', 'align-bottom', 'align-centre', 'align-left', 'align-middle',
-		'align-right', 'align-top', 'caret-down', 'caret-right', 'caret-up', 'center',
-		'circle-chevron-left', 'clock', 'close', 'collect-columns', 'column-add',
-		'column-avg', 'column-max', 'column-min', 'column-sd', 'dataview', 'deleteBox',
-		'disk', 'distribute-horizontal', 'distribute-vertical', 'edit-value', 'edit',
-		'eye-slash', 'eye', 'gear', 'layer', 'layerDown', 'layerUp', 'list', 'math',
-		'maximise', 'menu-horizontal-dots', 'menu-vertical-dots', 'minimise', 'minus',
-		'node-add', 'node-bin-data', 'node-cosinor', 'node-double-logistic',
-		'node-filter', 'node-formula-column', 'node-long-to-wide', 'node-multiply',
-		'node-normalize', 'node-periodogram', 'node-rectangular-wave',
-		'node-remove-outliers', 'node-remove-trend', 'node-smooth-data',
-		'node-substitute', 'pin', 'plus', 'process', 'query', 'redo',
-		'remove-trend-exponential', 'remove-trend-linear', 'remove-trend-logarithmic',
-		'remove-trend-polynomial', 'reset', 'resizeHandle', 'search', 'sessionload',
-		'sessionsave', 'showallpaths', 'showconnectedpaths', 'smooth-loess',
-		'smooth-movingavg', 'smooth-savitzkygolay', 'smooth-whittakereilers', 'spinner',
-		'swap', 'table'
+		'add-file',
+		'add',
+		'align-bottom',
+		'align-centre',
+		'align-left',
+		'align-middle',
+		'align-right',
+		'align-top',
+		'caret-down',
+		'caret-right',
+		'caret-up',
+		'center',
+		'circle-chevron-left',
+		'clock',
+		'close',
+		'collect-columns',
+		'column-add',
+		'column-avg',
+		'column-max',
+		'column-min',
+		'column-sd',
+		'dataview',
+		'deleteBox',
+		'disk',
+		'distribute-horizontal',
+		'distribute-vertical',
+		'edit-value',
+		'edit',
+		'eye-slash',
+		'eye',
+		'gear',
+		'layer',
+		'layerDown',
+		'layerUp',
+		'list',
+		'math',
+		'maximise',
+		'menu-horizontal-dots',
+		'menu-vertical-dots',
+		'minimise',
+		'minus',
+		'node-add',
+		'node-bin-data',
+		'node-cosinor',
+		'node-double-logistic',
+		'node-filter',
+		'node-formula-column',
+		'node-long-to-wide',
+		'node-multiply',
+		'node-normalize',
+		'node-periodogram',
+		'node-rectangular-wave',
+		'node-remove-outliers',
+		'node-remove-trend',
+		'node-smooth-data',
+		'node-substitute',
+		'pin',
+		'plus',
+		'process',
+		'query',
+		'redo',
+		'remove-trend-exponential',
+		'remove-trend-linear',
+		'remove-trend-logarithmic',
+		'remove-trend-polynomial',
+		'reset',
+		'resizeHandle',
+		'search',
+		'sessionload',
+		'sessionsave',
+		'showallpaths',
+		'showconnectedpaths',
+		'smooth-loess',
+		'smooth-movingavg',
+		'smooth-savitzkygolay',
+		'smooth-whittakereilers',
+		'spinner',
+		'swap',
+		'table',
+		// flowtest node/plot glyphs (stroke + currentColor, recolour-ready)
+		'blank-column',
+		'correlogram',
+		'fft',
+		'fit-function',
+		'group-comp',
+		'linear-fit',
+		'moving-analysis',
+		'random',
+		'scatterplot',
+		'sequence-col',
+		'simulated-data',
+		'split',
+		'wide-to-long',
+		'actogram',
+		'boxplot',
+		'histogram'
 	]);
 
 	function resolveIcon(name) {
@@ -119,12 +198,10 @@
 			displayName: 'Group',
 			family: 'Other',
 			nodeIcon: resolveIcon('layer'),
-			description:
-				'A visual container. Drag data nodes into it to group them; drag out to release.'
+			description: 'A visual container. Drag data nodes into it to group them; drag out to release.'
 		});
 		return items.sort(
-			(a, b) =>
-				a.family.localeCompare(b.family) || a.displayName.localeCompare(b.displayName)
+			(a, b) => a.family.localeCompare(b.family) || a.displayName.localeCompare(b.displayName)
 		);
 	});
 
@@ -165,7 +242,9 @@
 				family,
 				nodes: nodes.sort((a, b) => a.displayName.localeCompare(b.displayName))
 			}))
-			.sort((a, b) => familyRank(a.family) - familyRank(b.family) || a.family.localeCompare(b.family));
+			.sort(
+				(a, b) => familyRank(a.family) - familyRank(b.family) || a.family.localeCompare(b.family)
+			);
 	});
 
 	const hasNoResults = $derived(filteredItems.length === 0);
@@ -244,10 +323,7 @@
 						'info'
 					);
 				} else {
-					addNotification(
-						`Could not add "${item.displayName}".`,
-						'info'
-					);
+					addNotification(`Could not add "${item.displayName}".`, 'info');
 				}
 			}
 		} else {
@@ -500,5 +576,4 @@
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
 	}
-
 </style>

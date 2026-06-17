@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "43": [
+    "101": [
       "",
       "",
       "",
@@ -15,11 +15,11 @@
   },
   "data": [
     {
-      "id": 43,
+      "id": 101,
       "name": "result_1",
-      "data": 43,
+      "data": 101,
       "type": "category",
-      "tableProcessGUId": "26a13ce1-e2d9-4b9d-b968-aa2b6f8f5eef",
+      "tableProcessGUId": "f1ee0db5-6378-4629-9497-6e5f817dc944",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -30,7 +30,7 @@
   "plots": [
     {
       "id": 18,
-      "name": "Blank Column table",
+      "name": "Blank Column result",
       "x": 350,
       "y": 150,
       "width": 500,
@@ -39,7 +39,7 @@
       "selected": false,
       "plot": {
         "columnRefs": [
-          43
+          101
         ],
         "showCol": [
           true
@@ -59,7 +59,7 @@
         "N": 10,
         "storedValueRefs": {},
         "out": {
-          "result": 43
+          "result": 101
         }
       },
       "refTPId": null
@@ -118,5 +118,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }

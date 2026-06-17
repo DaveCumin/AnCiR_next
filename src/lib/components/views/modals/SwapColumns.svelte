@@ -33,7 +33,7 @@
 	<div class="swap-header">
 		<h2>Swap Table</h2>
 		<p>
-			Define column pairs to swap. All downstream processes, table processes, and plots will be
+			Define column pairs to swap. All downstream processes, analyses, and plots will be
 			rewired.
 		</p>
 	</div>

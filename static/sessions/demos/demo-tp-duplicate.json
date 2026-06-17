@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "59": [
+    "125": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "60": [
+    "126": [
       0,
       1,
       2,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 59,
+      "id": 125,
       "name": "Duplicate input",
-      "data": 59,
+      "data": 125,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -119,11 +119,11 @@
       "processes": []
     },
     {
-      "id": 60,
+      "id": 126,
       "name": "result_6",
-      "data": 60,
+      "data": 126,
       "type": "number",
-      "tableProcessGUId": "d921478e-8450-4b35-aed5-97f53f51dacf",
+      "tableProcessGUId": "7962e176-025a-4cec-b6c8-71fe8d65f60f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -134,7 +134,7 @@
   "plots": [
     {
       "id": 23,
-      "name": "Duplicate table",
+      "name": "Duplicate result",
       "x": 350,
       "y": 150,
       "width": 500,
@@ -143,8 +143,8 @@
       "selected": false,
       "plot": {
         "columnRefs": [
-          59,
-          60
+          125,
+          126
         ],
         "showCol": [
           true,
@@ -162,9 +162,9 @@
       "name": "Duplicate",
       "displayName": "Duplicate",
       "args": {
-        "xIN": 59,
+        "xIN": 125,
         "out": {
-          "result": 60
+          "result": 126
         }
       },
       "refTPId": null
@@ -223,5 +223,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }

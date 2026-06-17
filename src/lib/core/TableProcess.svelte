@@ -36,7 +36,7 @@
 
 	export function deleteTableProcess(tableProcess) {
 		if (!tableProcess) {
-			return { success: false, message: 'Invalid table process provided' };
+			return { success: false, message: 'Invalid analysis provided' };
 		}
 
 		const removedColumns = [];
@@ -106,7 +106,7 @@
 			removedOutputColumns: removedColumns.length,
 			affectedInputReferences: affectedProcesses.length,
 			affectedProcesses: affectedProcesses,
-			message: `Table process "${tableProcess.name}" safely removed. ${removedColumns.length} output column(s) deleted. ${affectedProcesses.length} other process(es) had input references cleaned up.`
+			message: `Analysis "${tableProcess.name}" safely removed. ${removedColumns.length} output column(s) deleted. ${affectedProcesses.length} other process(es) had input references cleaned up.`
 		};
 	}
 

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "105": [
+    "185": [
       0,
       1,
       2,
@@ -52,59 +52,59 @@
       48,
       49
     ],
-    "106": [
-      1,
-      3,
-      5,
-      7,
-      9,
-      11,
-      13,
-      15,
-      17,
-      19,
-      21,
-      23,
-      25,
-      27,
-      29,
-      31,
-      33,
-      35,
-      37,
-      39,
-      41,
-      43,
-      45,
-      47,
-      49,
-      51,
-      53,
-      55,
-      57,
-      59,
-      61,
-      63,
-      65,
-      67,
-      69,
-      71,
-      73,
-      75,
-      77,
-      79,
-      81,
-      83,
-      85,
-      87,
-      89,
-      91,
-      93,
-      95,
-      97,
-      99
+    "186": [
+      7.673945782302198,
+      -1.879285133127806,
+      10.089269516954142,
+      10.596485195471297,
+      8.161029635859103,
+      13.681226110102159,
+      26.735480623873976,
+      0.4755050282271327,
+      17.350924954782943,
+      24.84017756091917,
+      30.567006178574996,
+      27.052189113743175,
+      20.37860310297848,
+      18.769807240914062,
+      27.027468169597224,
+      33.280600736274955,
+      41.823579918545946,
+      29.35896700715772,
+      38.31398622956262,
+      45.932943288001894,
+      39.728749497898214,
+      42.63655213515867,
+      43.79654864881627,
+      50.07995543153807,
+      48.8861828183495,
+      44.88794712215628,
+      48.4064970797384,
+      59.19718600511181,
+      64.14389216232922,
+      53.64464595979867,
+      64.20266126167189,
+      63.48432800846688,
+      62.820338210278415,
+      63.494324944748556,
+      56.7495123288619,
+      63.62972343529573,
+      72.35424943306231,
+      64.1682907027743,
+      68.14174429272566,
+      83.9678528466312,
+      77.42728838665597,
+      74.76472744133697,
+      76.82877283733843,
+      78.18585478576706,
+      91.65775531494548,
+      83.89659972832575,
+      87.60652690660054,
+      89.70800702051064,
+      95.32890446343086,
+      89.84737077710555
     ],
-    "107": [
+    "187": [
       0,
       1,
       2,
@@ -156,64 +156,64 @@
       48,
       49
     ],
-    "108": [
-      1,
-      3,
-      5,
-      7,
-      9,
-      11,
-      13,
-      15,
-      17,
-      19,
-      21,
-      23,
-      25,
-      27,
-      29,
-      31,
-      33,
-      35,
-      37,
-      39,
-      41,
-      43,
-      45,
-      47,
-      49,
-      51,
-      53,
-      55,
-      57,
-      59,
-      61,
-      63,
-      65,
-      67,
-      69,
-      71,
-      73,
-      75,
-      77,
-      79,
-      81,
-      83,
-      85,
-      87,
-      89,
-      91,
-      93,
-      95,
-      97,
-      99
+    "188": [
+      4.350114419162737,
+      6.159418238991315,
+      7.968722058819893,
+      9.77802587864847,
+      11.587329698477049,
+      13.396633518305627,
+      15.205937338134206,
+      17.015241157962784,
+      18.824544977791362,
+      20.633848797619937,
+      22.443152617448515,
+      24.252456437277093,
+      26.06176025710567,
+      27.87106407693425,
+      29.680367896762828,
+      31.489671716591406,
+      33.29897553641999,
+      35.108279356248566,
+      36.91758317607714,
+      38.726886995905716,
+      40.536190815734294,
+      42.34549463556287,
+      44.15479845539145,
+      45.96410227522003,
+      47.77340609504861,
+      49.582709914877185,
+      51.39201373470576,
+      53.20131755453434,
+      55.01062137436292,
+      56.8199251941915,
+      58.629229014020076,
+      60.438532833848654,
+      62.24783665367723,
+      64.05714047350581,
+      65.8664442933344,
+      67.67574811316297,
+      69.48505193299154,
+      71.29435575282012,
+      73.1036595726487,
+      74.91296339247728,
+      76.72226721230585,
+      78.53157103213444,
+      80.34087485196301,
+      82.1501786717916,
+      83.95948249162016,
+      85.76878631144875,
+      87.57809013127732,
+      89.3873939511059,
+      91.19669777093448,
+      93.00600159076306
     ]
   },
   "data": [
     {
-      "id": 105,
-      "name": "TrendFit input",
-      "data": 105,
+      "id": 185,
+      "name": "x",
+      "data": 185,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -223,9 +223,9 @@
       "processes": []
     },
     {
-      "id": 106,
-      "name": "TrendFit input",
-      "data": 106,
+      "id": 186,
+      "name": "y",
+      "data": 186,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -235,11 +235,11 @@
       "processes": []
     },
     {
-      "id": 107,
+      "id": 187,
       "name": "trendx_20",
-      "data": 107,
+      "data": 187,
       "type": "number",
-      "tableProcessGUId": "0c6d9e5c-a223-43c7-a133-ec30aae0aa4e",
+      "tableProcessGUId": "6ef6d55c-f14b-44e2-a3b8-6ea5a1fc376a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -247,11 +247,11 @@
       "processes": []
     },
     {
-      "id": 108,
-      "name": "trendy_106_20",
-      "data": 108,
+      "id": 188,
+      "name": "trendy_186_20",
+      "data": 188,
       "type": "number",
-      "tableProcessGUId": "0c6d9e5c-a223-43c7-a133-ec30aae0aa4e",
+      "tableProcessGUId": "6ef6d55c-f14b-44e2-a3b8-6ea5a1fc376a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -262,29 +262,147 @@
   "plots": [
     {
       "id": 37,
-      "name": "Fit Trend Curves table",
+      "name": "Fit Trend Curves: data + fit",
       "x": 350,
       "y": 150,
       "width": 500,
       "height": 250,
-      "type": "tableplot",
+      "type": "scatterplot",
       "selected": false,
       "plot": {
-        "columnRefs": [
-          105,
-          106,
-          107,
-          108
+        "xlimsIN": [
+          null,
+          null
         ],
-        "showCol": [
-          true,
-          true,
-          true,
-          true
+        "xLogScale": false,
+        "ylimsLeftIN": [
+          null,
+          null
         ],
-        "colCurrent": 1,
-        "showColNumber": false,
-        "decimalPlaces": 2
+        "ylimsRightIN": [
+          null,
+          null
+        ],
+        "yLogScaleLeft": false,
+        "yLogScaleRight": false,
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 30
+        },
+        "xAxis": {
+          "label": "x",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisLeft": {
+          "label": "y",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisRight": {
+          "label": "",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 189,
+              "name": "x",
+              "refId": 185,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to x which is ",
+              "processes": []
+            },
+            "y": {
+              "id": 190,
+              "name": "y",
+              "refId": 186,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to y which is ",
+              "processes": []
+            },
+            "label": "Data",
+            "yAxis": "left",
+            "line": {
+              "colour": "#234154",
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": false
+            },
+            "points": {
+              "colour": "#234154",
+              "radius": 3,
+              "shape": "circle",
+              "draw": true
+            }
+          },
+          {
+            "x": {
+              "id": 191,
+              "name": "trendx_20",
+              "refId": 187,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to trendx_20 which is ",
+              "processes": []
+            },
+            "y": {
+              "id": 192,
+              "name": "trendy_186_20",
+              "refId": 188,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to trendy_186_20 which is ",
+              "processes": []
+            },
+            "label": "Fit Trend Curves",
+            "yAxis": "left",
+            "line": {
+              "colour": "#BE796B",
+              "strokeWidth": 2.5,
+              "stroke": "solid",
+              "draw": true
+            },
+            "points": {
+              "colour": "#BE796B",
+              "radius": 3,
+              "shape": "circle",
+              "draw": false
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "topright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "#ccc",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "nightBands": []
       }
     }
   ],
@@ -294,17 +412,17 @@
       "name": "TrendFit",
       "displayName": "Fit Trend Curves",
       "args": {
-        "xIN": 105,
+        "xIN": 185,
         "yIN": [
-          106
+          186
         ],
         "model": "linear",
         "polyDegree": 2,
         "outputX": -1,
         "preProcesses": [],
         "out": {
-          "trendx": 107,
-          "trendy_106": 108
+          "trendx": 187,
+          "trendy_186": 188
         }
       },
       "refTPId": null
@@ -363,5 +481,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }

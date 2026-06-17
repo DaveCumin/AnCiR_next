@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "65": [
+    "135": [
       1,
       2,
       3,
@@ -52,7 +52,7 @@
       49,
       50
     ],
-    "66": [
+    "136": [
       10,
       20,
       30,
@@ -104,7 +104,7 @@
       490,
       500
     ],
-    "67": [
+    "137": [
       11,
       22,
       33,
@@ -159,9 +159,9 @@
   },
   "data": [
     {
-      "id": 65,
-      "name": "FormulaColumn input",
-      "data": 65,
+      "id": 135,
+      "name": "Formula Column input",
+      "data": 135,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -171,9 +171,9 @@
       "processes": []
     },
     {
-      "id": 66,
-      "name": "FormulaColumn input",
-      "data": 66,
+      "id": 136,
+      "name": "Formula Column input",
+      "data": 136,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -183,11 +183,11 @@
       "processes": []
     },
     {
-      "id": 67,
+      "id": 137,
       "name": "result_8",
-      "data": 67,
+      "data": 137,
       "type": "number",
-      "tableProcessGUId": "59f48e26-ed57-443a-a7ac-641ccc918543",
+      "tableProcessGUId": "6898b6ae-37c6-4f0f-b3fd-6c9f5e0cabf9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -198,7 +198,7 @@
   "plots": [
     {
       "id": 25,
-      "name": "Formula Column table",
+      "name": "Formula Column result",
       "x": 350,
       "y": 150,
       "width": 500,
@@ -207,9 +207,9 @@
       "selected": false,
       "plot": {
         "columnRefs": [
-          65,
-          66,
-          67
+          135,
+          136,
+          137
         ],
         "showCol": [
           true,
@@ -231,7 +231,7 @@
         "tokens": [
           {
             "type": "col",
-            "id": 65
+            "id": 135
           },
           {
             "type": "text",
@@ -239,11 +239,11 @@
           },
           {
             "type": "col",
-            "id": 66
+            "id": 136
           }
         ],
         "out": {
-          "result": 67
+          "result": 137
         }
       },
       "refTPId": null
@@ -302,5 +302,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }

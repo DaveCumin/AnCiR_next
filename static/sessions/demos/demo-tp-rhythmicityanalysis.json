@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "87": [
+    "163": [
       0,
       1,
       2,
@@ -98,7 +98,7 @@
       94,
       95
     ],
-    "88": [
+    "164": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -195,13 +195,70 @@
       0.7071067811865462,
       0.8660254037844385,
       0.9659258262890685
+    ],
+    "165": [
+      20,
+      20.5,
+      21,
+      21.5,
+      22,
+      22.5,
+      23,
+      23.5,
+      24,
+      24.5,
+      25,
+      25.5,
+      26,
+      26.5,
+      27,
+      27.5,
+      28
+    ],
+    "166": [
+      3.144005364276371,
+      8.504174741930575,
+      15.908518499286092,
+      24.4130660152653,
+      32.58336002875654,
+      39.13594646724102,
+      43.69685123267655,
+      46.48500877635978,
+      47.49999999999999,
+      46.39792723111555,
+      43.07100196750555,
+      38.04439077521965,
+      32.22784723393115,
+      26.40779740830276,
+      21.008631234006195,
+      16.183865626474635,
+      11.990851873584786
+    ],
+    "167": [
+      3.144005364276371,
+      8.504174741930575,
+      15.908518499286092,
+      24.4130660152653,
+      32.58336002875654,
+      39.13594646724102,
+      43.69685123267655,
+      46.48500877635978,
+      47.49999999999999,
+      46.39792723111555,
+      43.07100196750555,
+      38.04439077521965,
+      32.22784723393115,
+      26.40779740830276,
+      21.008631234006195,
+      16.183865626474635,
+      11.990851873584786
     ]
   },
   "data": [
     {
-      "id": 87,
-      "name": "RhythmicityAnalysis input",
-      "data": 87,
+      "id": 163,
+      "name": "Rhythmicity Analysis input",
+      "data": 163,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -211,9 +268,9 @@
       "processes": []
     },
     {
-      "id": 88,
-      "name": "RhythmicityAnalysis input",
-      "data": 88,
+      "id": 164,
+      "name": "Rhythmicity Analysis input",
+      "data": 164,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -223,10 +280,11 @@
       "processes": []
     },
     {
-      "id": 89,
-      "name": "88_period_14",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 165,
+      "name": "164_period_14",
+      "data": 165,
+      "type": "number",
+      "tableProcessGUId": "d12a2d4b-01ea-4f7a-afbd-1e18815865dc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -234,10 +292,11 @@
       "processes": []
     },
     {
-      "id": 90,
-      "name": "88_power_14",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 166,
+      "name": "164_power_14",
+      "data": 166,
+      "type": "number",
+      "tableProcessGUId": "d12a2d4b-01ea-4f7a-afbd-1e18815865dc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -245,10 +304,11 @@
       "processes": []
     },
     {
-      "id": 91,
-      "name": "rhythmicityy_88_14",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 167,
+      "name": "rhythmicityy_164_14",
+      "data": 167,
+      "type": "number",
+      "tableProcessGUId": "d12a2d4b-01ea-4f7a-afbd-1e18815865dc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -259,7 +319,7 @@
   "plots": [
     {
       "id": 31,
-      "name": "Rhythmicity Analysis table",
+      "name": "Rhythmicity Analysis result",
       "x": 350,
       "y": 150,
       "width": 500,
@@ -268,11 +328,11 @@
       "selected": false,
       "plot": {
         "columnRefs": [
-          87,
-          88,
-          89,
-          90,
-          91
+          163,
+          164,
+          165,
+          166,
+          167
         ],
         "showCol": [
           true,
@@ -293,9 +353,9 @@
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis",
       "args": {
-        "xIN": 87,
+        "xIN": 163,
         "yIN": [
-          88
+          164
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -309,9 +369,9 @@
         "corrMaxLag": 0,
         "preProcesses": [],
         "out": {
-          "88_period": 89,
-          "88_power": 90,
-          "rhythmicityy_88": 91
+          "164_period": 165,
+          "164_power": 166,
+          "rhythmicityy_164": 167
         }
       },
       "refTPId": null
@@ -370,5 +430,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }

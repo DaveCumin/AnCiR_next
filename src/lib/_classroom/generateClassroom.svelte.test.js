@@ -45,6 +45,10 @@ function normal(rng, mean = 0, sd = 1) {
 }
 const seq = (n, f) => Array.from({ length: n }, (_, i) => f(i));
 
+// Showcase palette: raw data in navy, fitted curve in terracotta.
+const RAW_COLOUR = '#234154';
+const FIT_COLOUR = '#BE796B';
+
 function resetCore() {
 	core.data = [];
 	core.plots = [];
@@ -74,6 +78,23 @@ function addPlot(type, name, inputs) {
 	const data = {};
 	for (const [k, colId] of Object.entries(inputs)) data[k] = { refId: colId };
 	p.plot.addData(data);
+	pushObj(p);
+	return p;
+}
+
+// Scatterplot from explicit series; each: { x, y, label, kind:'points'|'line', colour }.
+function addScatter(name, series) {
+	const p = new Plot({ name, type: 'scatterplot' });
+	for (const s of series) {
+		const isLine = s.kind === 'line';
+		p.plot.addData({
+			x: { refId: s.x },
+			y: { refId: s.y },
+			label: s.label,
+			line: { colour: s.colour, draw: isLine, strokeWidth: isLine ? 2.5 : 2, stroke: 'solid' },
+			points: { colour: s.colour, draw: !isLine, radius: 3, shape: 'circle' }
+		});
+	}
 	pushObj(p);
 	return p;
 }
@@ -115,25 +136,78 @@ const LESSONS = [
 		description:
 			'A noisy ~24 h signal (7 days, hourly). Use the periodogram to recover the hidden period.',
 		curriculum: [
-			{ framework: 'NZC', code: 'M7-2 / M8-7', title: 'Graphs & modelling of periodic functions', confidence: 'snippet-verified' },
-			{ framework: 'NZC', code: 'S8-1', title: 'Statistical enquiry cycle (time series)', confidence: 'snippet-verified' },
-			{ framework: 'NCEA', code: 'AS91575', title: 'Apply trigonometric methods (L3, 4cr, Internal)', confidence: 'verified' },
-			{ framework: 'NCEA', code: 'AS91580', title: 'Investigate time series data (L3, 4cr, Internal)', confidence: 'verified' }
+			{
+				framework: 'NZC',
+				code: 'M7-2 / M8-7',
+				title: 'Graphs & modelling of periodic functions',
+				confidence: 'snippet-verified'
+			},
+			{
+				framework: 'NZC',
+				code: 'S8-1',
+				title: 'Statistical enquiry cycle (time series)',
+				confidence: 'snippet-verified'
+			},
+			{
+				framework: 'NCEA',
+				code: 'AS91575',
+				title: 'Apply trigonometric methods (L3, 4cr, Internal)',
+				confidence: 'verified'
+			},
+			{
+				framework: 'NCEA',
+				code: 'AS91580',
+				title: 'Investigate time series data (L3, 4cr, Internal)',
+				confidence: 'verified'
+			}
 		],
-		build() {
-			const rng = mulberry32(101);
+		async build() {
 			const PERIOD = 24;
-			const hours = seq(24 * 7, (i) => i);
-			const activity = hours.map(
-				(h) => 50 + 40 * Math.sin((2 * Math.PI * h) / PERIOD) + normal(rng, 0, 6)
+			const NOISE = 20;
+			// Use a Simulate-data node as the source so the student can open it and
+			// turn the Noise slider up (the lesson's "try this"). The node writes a
+			// time column + a values column we plot and analyse.
+			const sim = new TableProcess(
+				{
+					name: 'SimulatedData',
+					args: {
+						startTime: new Date(Date.UTC(2024, 0, 1)).toISOString(),
+						sections: [
+							{
+								duration_hours: 24 * 7,
+								rhythmPeriod_hours: PERIOD,
+								rhythmPhase_hours: 0,
+								rhythmAmplitude: 40,
+								noiseEnabled: true,
+								noiseMode: 'add',
+								noiseAmplitude: NOISE
+							}
+						],
+						samplingPeriod_hours: 1,
+						out: { time: -1, values: -1 }
+					}
+				},
+				null
 			);
-			const t = mkCol('number', hours, 'hour');
-			const v = mkCol('number', activity, 'activity');
-			addPlot('periodogram', 'Activity periodogram', { time: t, values: v });
+			pushObj(sim);
+			await sim.doProcess();
+			const t = sim.args.out.time;
+			const v = sim.args.out.values;
+			const sc = addScatter('Raw signal', [
+				{ x: t, y: v, label: 'Activity', kind: 'points', colour: RAW_COLOUR }
+			]);
+			sc.x = 760;
+			sc.y = 60;
+			const pg = addPlot('periodogram', 'Activity periodogram', { time: t, values: v });
+			pg.x = 760;
+			pg.y = 440;
 			teacherNote(
 				`FIND THE HIDDEN RHYTHM — ${this.yearLevel}\n\n` +
-					`Hidden truth: the signal has a period of ${PERIOD} h (amplitude 40, ` +
-					`midline 50) plus Gaussian noise (sd 6). The periodogram peak should sit at ${PERIOD} h.\n\n` +
+					`Hidden truth: the Simulate-data node builds a ${PERIOD} h rhythm (active half ` +
+					`the cycle at amplitude 40, low otherwise) with random noise up to ${NOISE}. The ` +
+					`raw scatter looks messy, but the periodogram peak should sit at ${PERIOD} h.\n\n` +
+					`Try it live: open the Simulate-data node and raise the Noise slider — the scatter ` +
+					`gets messier and the periodogram peak shrinks and broadens.\n\n` +
 					`Curriculum (NZ): NZC M7-2 / M8-7 (periodic functions), S8-1 (time series); ` +
 					`NCEA AS91575 (trig methods), AS91580 (time series). Physics: waves.\n${NCEA_TRANSITION}\n\n${HANDBOOK_REF}`
 			);
@@ -146,8 +220,18 @@ const LESSONS = [
 		description:
 			'A week of activity for one "person". Read the actogram and decide: morning lark or evening owl?',
 		curriculum: [
-			{ framework: 'NZC', code: 'Living World — Life processes (L7/8)', title: 'How animals carry out life processes', confidence: 'snippet-verified' },
-			{ framework: 'NCEA', code: 'AS91604', title: 'How an animal maintains a stable internal environment (L3, 3cr, Internal)', confidence: 'verified' }
+			{
+				framework: 'NZC',
+				code: 'Living World — Life processes (L7/8)',
+				title: 'How animals carry out life processes',
+				confidence: 'snippet-verified'
+			},
+			{
+				framework: 'NCEA',
+				code: 'AS91604',
+				title: 'How an animal maintains a stable internal environment (L3, 3cr, Internal)',
+				confidence: 'verified'
+			}
 		],
 		build() {
 			const rng = mulberry32(202);
@@ -155,7 +239,10 @@ const LESSONS = [
 			const hours = seq(24 * 7, (i) => i);
 			// peak at PEAK_HOUR: sin peaks 6 h after its phase ref → shift by PEAK_HOUR-6
 			const activity = hours.map((h) =>
-				Math.max(0, 8 + 55 * Math.sin((2 * Math.PI * (h - (PEAK_HOUR - 6))) / 24) + normal(rng, 10, 8))
+				Math.max(
+					0,
+					8 + 55 * Math.sin((2 * Math.PI * (h - (PEAK_HOUR - 6))) / 24) + normal(rng, 10, 8)
+				)
 			);
 			const t = mkCol('number', hours, 'hour');
 			const v = mkCol('number', activity, 'activity');
@@ -177,9 +264,24 @@ const LESSONS = [
 		description:
 			'Weekday vs weekend activity. Compare the groups and decide whether the difference is real or chance.',
 		curriculum: [
-			{ framework: 'NZC', code: 'S7-1 / S8-1', title: 'Statistical enquiry cycle & inference', confidence: 'snippet-verified' },
-			{ framework: 'NCEA', code: 'AS91264', title: 'Use statistical methods to make an inference (L2, 4cr, Internal)', confidence: 'verified' },
-			{ framework: 'NCEA', code: 'AS91582', title: 'Use statistical methods to make a formal inference (L3, 4cr, Internal)', confidence: 'verified' }
+			{
+				framework: 'NZC',
+				code: 'S7-1 / S8-1',
+				title: 'Statistical enquiry cycle & inference',
+				confidence: 'snippet-verified'
+			},
+			{
+				framework: 'NCEA',
+				code: 'AS91264',
+				title: 'Use statistical methods to make an inference (L2, 4cr, Internal)',
+				confidence: 'verified'
+			},
+			{
+				framework: 'NCEA',
+				code: 'AS91582',
+				title: 'Use statistical methods to make a formal inference (L3, 4cr, Internal)',
+				confidence: 'verified'
+			}
 		],
 		build() {
 			const rng = mulberry32(303);
@@ -226,10 +328,20 @@ const LESSONS = [
 		description:
 			'Fit a single cosine to a rhythm. Read amplitude, phase, midline, period and R²; compare with the truth.',
 		curriculum: [
-			{ framework: 'NZC', code: 'M8-7 / M7-2', title: 'Trig equations & graphs (amplitude/period/phase)', confidence: 'snippet-verified' },
-			{ framework: 'NCEA', code: 'AS91575', title: 'Apply trigonometric methods (L3, 4cr, Internal)', confidence: 'verified' }
+			{
+				framework: 'NZC',
+				code: 'M8-7 / M7-2',
+				title: 'Trig equations & graphs (amplitude/period/phase)',
+				confidence: 'snippet-verified'
+			},
+			{
+				framework: 'NCEA',
+				code: 'AS91575',
+				title: 'Apply trigonometric methods (L3, 4cr, Internal)',
+				confidence: 'verified'
+			}
 		],
-		build() {
+		async build() {
 			const rng = mulberry32(404);
 			const PERIOD = 24;
 			const AMP = 40;
@@ -241,7 +353,6 @@ const LESSONS = [
 			);
 			const t = mkCol('number', hours, 'hour');
 			const v = mkCol('number', signal, 'signal');
-			addPlot('scatterplot', 'Signal vs hour', { x: t, y: v });
 			const tp = new TableProcess(
 				{
 					name: 'Cosinor',
@@ -261,6 +372,17 @@ const LESSONS = [
 				null
 			);
 			pushObj(tp);
+			// Run the fit so its fitted curve is baked into the session, then plot
+			// the raw points with the fitted cosine drawn through them as a line.
+			await tp.doProcess();
+			const xOut = tp.args.out.cosinorx;
+			const yOut = tp.args.out['cosinory_' + v];
+			const sc = addScatter('Signal vs hour', [
+				{ x: t, y: v, label: 'Data', kind: 'points', colour: RAW_COLOUR },
+				{ x: xOut, y: yOut, label: 'Cosinor fit', kind: 'line', colour: FIT_COLOUR }
+			]);
+			sc.x = 760;
+			sc.y = 80;
 			teacherNote(
 				`SINE WAVES ARE EVERYWHERE — ${this.yearLevel}\n\n` +
 					`Hidden truth: midline (mesor) ${MESOR}, amplitude ${AMP}, period ${PERIOD} h, ` +
@@ -302,7 +424,7 @@ describe.runIf(process.env.GEN_CLASSROOM)('generate classroom sessions', () => {
 		for (const lesson of LESSONS) {
 			resetCore();
 			noteSeq = 0;
-			lesson.build();
+			await lesson.build();
 			prewarmWrapperNames();
 			const file = `${lesson.id}.json`;
 			writeFileSync(join(OUT_DIR, file), outputCoreAsJson(), 'utf8');

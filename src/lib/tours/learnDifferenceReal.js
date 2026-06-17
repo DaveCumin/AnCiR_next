@@ -6,7 +6,8 @@ import { loadLesson } from '$lib/core/classroomTour.js';
 export const tour = {
 	id: 'learn-difference-real',
 	name: 'Lesson: Is the difference real?',
-	description: 'Compare weekday vs weekend activity and decide if the difference is real or chance.',
+	description:
+		'Compare weekday vs weekend activity and decide if the difference is real or chance.',
 	estMinutes: 5,
 	order: 5,
 	steps: [
@@ -38,7 +39,7 @@ export const tour = {
 		{
 			target: null,
 			title: 'Try this',
-			body: 'Shrink the sample size and re-run the test. A difference that was “significant” with lots of data can vanish with little — more data lets you detect smaller real effects. Reopen anytime from the <strong>?</strong> menu.',
+			body: 'Here’s the idea to take away: the same gap can be “significant” with a large sample yet not with a small one — more data lets you detect smaller real effects. Try it on your own data: compare two groups and see what the test says. Reopen anytime from the <strong>?</strong> menu.',
 			advance: { on: 'next' }
 		}
 	]

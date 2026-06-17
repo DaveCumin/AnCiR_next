@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "68": [
+    "138": [
       "A",
       "B",
       "C",
@@ -52,7 +52,7 @@
       "A",
       "B"
     ],
-    "69": [
+    "139": [
       0,
       6,
       12,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 68,
-      "name": "GroupComparison input",
-      "data": 68,
+      "id": 138,
+      "name": "Compare groups (stats) input",
+      "data": 138,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -119,9 +119,9 @@
       "processes": []
     },
     {
-      "id": 69,
-      "name": "GroupComparison input",
-      "data": 69,
+      "id": 139,
+      "name": "Compare groups (stats) input",
+      "data": 139,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -134,25 +134,106 @@
   "plots": [
     {
       "id": 26,
-      "name": "Compare groups (stats) table",
+      "name": "Compare groups (stats): groups",
       "x": 350,
       "y": 150,
       "width": 500,
       "height": 250,
-      "type": "tableplot",
+      "type": "boxplot",
       "selected": false,
       "plot": {
-        "columnRefs": [
-          68,
-          69
+        "xlimsIN": [
+          null,
+          null
         ],
-        "showCol": [
-          true,
-          true
+        "ylimsIN": [
+          null,
+          null
         ],
-        "colCurrent": 1,
-        "showColNumber": false,
-        "decimalPlaces": 2
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 50
+        },
+        "xAxis": {
+          "label": "Group",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxis": {
+          "label": "Value",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 140,
+              "name": "Compare groups (stats) input",
+              "refId": 138,
+              "type": "category",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to Compare groups (stats) input which is ",
+              "processes": []
+            },
+            "y": {
+              "id": 141,
+              "name": "Compare groups (stats) input",
+              "refId": 139,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to Compare groups (stats) input which is ",
+              "processes": []
+            },
+            "label": "Box Plot 1",
+            "boxPlot": {
+              "colour": "#234154",
+              "fillColour": "#234154",
+              "fillOpacity": 0.3,
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": true,
+              "showOutliers": true,
+              "outlierSize": 3,
+              "outlierMethod": "iqr",
+              "iqrMultiplier": 1.5,
+              "zThreshold": 3,
+              "whiskerWidth": 0.5,
+              "boxWidth": 0.8,
+              "medianWidth": 2,
+              "medianColour": "#000000"
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "topright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "#ccc",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "showSigBars": false,
+        "sigMethod": "auto",
+        "sigAlpha": 0.05,
+        "showNs": false,
+        "sigBarThickness": 1,
+        "sigBarColor": "#000000",
+        "sigBarFontSize": 11,
+        "sigBarYOffset": 0,
+        "sigBarSpacing": 1
       }
     }
   ],
@@ -162,9 +243,9 @@
       "name": "GroupComparison",
       "displayName": "Compare groups (stats)",
       "args": {
-        "xIN": 68,
+        "xIN": 138,
         "yIN": [
-          69
+          139
         ],
         "method": "auto",
         "alpha": 0.05,
@@ -227,5 +308,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }

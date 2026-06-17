@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "8": [
+    "10": [
       "Weekday",
       "Weekday",
       "Weekday",
@@ -122,7 +122,7 @@
       "Weekend",
       "Weekend"
     ],
-    "9": [
+    "11": [
       51.492381104639755,
       32.586238420751684,
       40.39914254462381,
@@ -247,9 +247,9 @@
   },
   "data": [
     {
-      "id": 8,
+      "id": 10,
       "name": "day type",
-      "data": 8,
+      "data": 10,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -259,9 +259,9 @@
       "processes": []
     },
     {
-      "id": 9,
+      "id": 11,
       "name": "activity",
-      "data": 9,
+      "data": 11,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -273,7 +273,7 @@
   ],
   "plots": [
     {
-      "id": 2,
+      "id": 3,
       "name": "Activity by day type",
       "x": 350,
       "y": 150,
@@ -311,9 +311,9 @@
         "data": [
           {
             "x": {
-              "id": 10,
+              "id": 12,
               "name": "day type",
-              "refId": 8,
+              "refId": 10,
               "type": "category",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -323,9 +323,9 @@
               "processes": []
             },
             "y": {
-              "id": 11,
+              "id": 13,
               "name": "activity",
-              "refId": 9,
+              "refId": 11,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -379,13 +379,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 0,
+      "id": 1,
       "name": "GroupComparison",
       "displayName": "Compare groups (stats)",
       "args": {
-        "xIN": 8,
+        "xIN": 10,
         "yIN": [
-          9
+          11
         ],
         "method": "auto",
         "alpha": 0.05,
@@ -457,5 +457,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.3"
+  "version": "β.43.2"
 }

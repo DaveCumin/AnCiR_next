@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "48": [
+    "106": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "49": [
+    "107": [
       1,
       3,
       5,
@@ -104,7 +104,7 @@
       97,
       99
     ],
-    "50": [
+    "108": [
       1,
       4,
       7,
@@ -159,9 +159,9 @@
   },
   "data": [
     {
-      "id": 48,
-      "name": "ColumnFunctions input",
-      "data": 48,
+      "id": 106,
+      "name": "Column Function input",
+      "data": 106,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -171,9 +171,9 @@
       "processes": []
     },
     {
-      "id": 49,
-      "name": "ColumnFunctions input",
-      "data": 49,
+      "id": 107,
+      "name": "Column Function input",
+      "data": 107,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -183,11 +183,11 @@
       "processes": []
     },
     {
-      "id": 50,
+      "id": 108,
       "name": "result_3",
-      "data": 50,
+      "data": 108,
       "type": "category",
-      "tableProcessGUId": "817844e4-3092-41e7-880f-f90560dde8d8",
+      "tableProcessGUId": "ba315684-956d-4f73-91e8-3cad25cfa30c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -198,7 +198,7 @@
   "plots": [
     {
       "id": 20,
-      "name": "Column Function table",
+      "name": "Column Function result",
       "x": 350,
       "y": 150,
       "width": 500,
@@ -207,9 +207,9 @@
       "selected": false,
       "plot": {
         "columnRefs": [
-          48,
-          49,
-          50
+          106,
+          107,
+          108
         ],
         "showCol": [
           true,
@@ -230,11 +230,11 @@
       "args": {
         "func": "add",
         "xsIN": [
-          48,
-          49
+          106,
+          107
         ],
         "out": {
-          "result": 50
+          "result": 108
         }
       },
       "refTPId": null
@@ -293,5 +293,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }

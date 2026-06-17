@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "82": [
+    "154": [
       9.23,
       3.33,
       1.98,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 82,
+      "id": 154,
       "name": "result_12",
-      "data": 82,
+      "data": 154,
       "type": "number",
-      "tableProcessGUId": "093070aa-58d6-4b9f-a7fd-0bfad53f89fd",
+      "tableProcessGUId": "2710e7c6-a976-4179-a6ff-16a5db8c59ae",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -70,7 +70,7 @@
   "plots": [
     {
       "id": 29,
-      "name": "Random table",
+      "name": "Random result",
       "x": 350,
       "y": 150,
       "width": 500,
@@ -79,7 +79,7 @@
       "selected": false,
       "plot": {
         "columnRefs": [
-          82
+          154
         ],
         "showCol": [
           true
@@ -102,7 +102,7 @@
         "seed": 12345,
         "distribution": "uniform",
         "out": {
-          "result": 82
+          "result": 154
         }
       },
       "refTPId": null
@@ -161,5 +161,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }

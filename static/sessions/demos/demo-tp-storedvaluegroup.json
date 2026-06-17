@@ -1,17 +1,17 @@
 {
   "rawData": {
-    "104": [
+    "184": [
       12,
       34
     ]
   },
   "data": [
     {
-      "id": 104,
+      "id": 184,
       "name": "group_g1_19",
-      "data": 104,
+      "data": 184,
       "type": "number",
-      "tableProcessGUId": "cda35f12-eef9-4c21-973f-d27aaf950ff3",
+      "tableProcessGUId": "67b2e51a-241c-4844-bad3-318e01f7e8f0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -22,7 +22,7 @@
   "plots": [
     {
       "id": 36,
-      "name": "Stored Value Group table",
+      "name": "Stored Value Group result",
       "x": 350,
       "y": 150,
       "width": 500,
@@ -31,7 +31,7 @@
       "selected": false,
       "plot": {
         "columnRefs": [
-          104
+          184
         ],
         "showCol": [
           true
@@ -59,7 +59,7 @@
           }
         ],
         "out": {
-          "group_g1": 104
+          "group_g1": 184
         }
       },
       "refTPId": null
@@ -127,5 +127,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }

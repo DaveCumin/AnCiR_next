@@ -155,7 +155,7 @@
 				<p>Source</p>
 				<p class="source-name">
 					{#if theData.sourceType === 'static'}
-						(table process stats)
+						(analysis stats)
 					{:else}
 						{theData.sourcePlot?.name ?? '(source plot not found)'}
 					{/if}

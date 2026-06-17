@@ -393,13 +393,13 @@
           "left": 50
         },
         "xAxis": {
-          "label": "",
+          "label": "Day",
           "gridlines": false,
           "nticks": 5,
           "manualTicks": null
         },
         "yAxis": {
-          "label": "",
+          "label": "Activity",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -527,5 +527,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }
