@@ -38,6 +38,13 @@
 	import SelectionLayoutToolbar from '$lib/components/reusables/SelectionLayoutToolbar.svelte';
 	import { alignBoxes, distributeBoxes } from '$lib/core/layoutHelpers.js';
 	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
+	import CompactNode from './CompactNode.svelte';
+	import {
+		COMPACT_W,
+		SQUARED_KINDS,
+		compactNodeHeight,
+		compactPortAnchorY
+	} from './nodeGeometry.js';
 
 	let { inline = false } = $props();
 
@@ -89,7 +96,22 @@
 
 	// --- Edge derivation split into topology + positioned ---
 
+	// A squared-kind node (data/process/tableprocess/plot) is compact unless it's
+	// been expanded via double-click. Notes and groups are never compact.
+	function isCompact(node) {
+		return SQUARED_KINDS.has(node?.type) && !expandedNodeIds.has(node?.id);
+	}
+
 	function getPortAnchorY(node, portName, direction) {
+		// Compact nodes distribute their ports as a centered stack over the square
+		// body (no header), so the anchor is purely formula-based here.
+		if (isCompact(node)) {
+			const ports = direction === 'out' ? (node.ports?.outputs ?? []) : (node.ports?.inputs ?? []);
+			const h = compactNodeHeight(node.ports?.inputs?.length ?? 0, node.ports?.outputs?.length ?? 0);
+			let idx = ports.findIndex((p) => p.name === portName);
+			if (idx < 0) idx = 0;
+			return compactPortAnchorY(idx, ports.length, h);
+		}
 		// Group rows can expand to show MiniDataTable previews, which makes
 		// the simple index-based formula wrong. GroupNode publishes per-port Y
 		// after layout — use that when available, otherwise fall through to
@@ -128,6 +150,7 @@
 	 * are user-resizable, so we look up the live width on the group object.
 	 */
 	function getNodeWidth(node) {
+		if (isCompact(node)) return COMPACT_W;
 		if (node?.type === 'group') return node?.groupObj?.width ?? NODE_WIDTH;
 		// Plot nodes match their (resizable) preview width. Process / table-process
 		// nodes widen to the editor-panel width when expanded so the header and the
@@ -145,6 +168,9 @@
 
 	/** Visual height of a node EXCLUDING any plot-preview/MiniDataTable body. */
 	function getNodePortAreaHeight(node) {
+		if (isCompact(node)) {
+			return compactNodeHeight(node?.ports?.inputs?.length ?? 0, node?.ports?.outputs?.length ?? 0);
+		}
 		if (node?.type === 'tableprocess') {
 			// Side-by-side: inputs left, output-column rows right. The `all` port
 			// sits in the header, so output rows = outputColumns count.
@@ -1847,13 +1873,15 @@
 		focusedNodeId = node.id;
 		multiSelectedNodeIds = new Set([node.id]);
 		appState.showControlPanel = true;
+		handleNodeToggleExpand(node);
 	}
 
-	/** Toggle the in-node inline editor (process/tableprocess) — driven by the
-	 *  header expand arrow. Operates on a Set so expanding a second node doesn't
+	/** Toggle a squared-kind node between Compact (square) and Detailed (today's
+	 *  full view: table / chart / editor). Also driven by the header expand arrow
+	 *  while detailed. Operates on a Set so expanding a second node doesn't
 	 *  collapse the first. */
 	function handleNodeToggleExpand(node) {
-		if (node.type !== 'process' && node.type !== 'tableprocess') return;
+		if (!SQUARED_KINDS.has(node.type)) return;
 		const next = new Set(expandedNodeIds);
 		if (next.has(node.id)) next.delete(node.id);
 		else next.add(node.id);
@@ -2435,6 +2463,7 @@
 			{#each allNodes as node (node.id)}
 				{@const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id]}
 				{@const isExpanded = expandedNodeIds.has(node.id)}
+				{@const compact = isCompact(node)}
 				{@const isDragging = dragInfo?.nodeId === node.id && dragInfo?.moved}
 				{@const isDimmed = connectedNodeIds !== null && !connectedNodeIds.has(node.id)}
 				{@const isRecentlyChanged = changedNodeIds.has(node.id)}
@@ -2479,6 +2508,17 @@
 								on:portdisconnect={handlePortDisconnect}
 								on:extractstart={handleExtractStart}
 								on:cardmousedown={(ev) => handleNodeWrapperMouseDown(ev.detail, node)}
+							/>
+						{:else if compact}
+							<CompactNode
+								{node}
+								selected={isSelected}
+								spliceTargetPort={dropTargetPortKey?.startsWith(`${node.id}|`)
+									? dropTargetPortKey.slice(node.id.length + 1)
+									: null}
+								on:portstart={handlePortStart}
+								on:portend={handlePortEnd}
+								on:portdisconnect={handlePortDisconnect}
 							/>
 						{:else if node.type === 'tableprocess'}
 							<TableProcessNode
@@ -2544,7 +2584,7 @@
 							{/if}
 						{/if}
 
-						{#if node.type === 'plot' && node.plotObj}
+						{#if node.type === 'plot' && node.plotObj && isExpanded}
 							{@const pSize = plotPreviewSizes[node.id] ?? {
 								w: PLOT_PREVIEW_DEFAULT_W,
 								h: getDefaultPreviewH(node.plotObj)
