@@ -31,6 +31,13 @@ export const core = $state({
 	//    rowState: { [colId]: { expanded: boolean } }  // per-row mini-table expansion
 	// }`.
 	groups: [],
+	// composites — folded sub-pipelines of operation nodes (process / tableprocess).
+	// Members stay in the normal arrays; a composite just owns their node ids + the
+	// auto-detected boundary interface. Shape:
+	// `{ id, name, x, y, collapsed, originId,
+	//    memberIds: string[],                       // graph node ids ('process_N' | 'tableprocess_N')
+	//    interface: { inputs: Port[], outputs: Port[] } }`  // Port = { id, name, member, port }
+	composites: [],
 	// orphanProcesses — column processes spawned via the palette or paste that
 	// haven't been wired up to a parent column yet. Each is a real Process
 	// instance with parentCol = null. The canvas renders them with an input
@@ -73,6 +80,38 @@ export function removeGroup(id) {
 	core.groups = core.groups.filter((g) => g.id !== id);
 	// Absorbed columns aren't deleted — they resurface as standalone data_X
 	// canvas nodes on the next derive. Just drop the per-group note if any.
+	delete core.nodeNotes[id];
+}
+
+let _nextCompositeId = 1;
+/** Fold a set of operation-node ids into a composite. Members stay in their
+ *  normal arrays; the composite owns their ids + the boundary interface. */
+export function createComposite({
+	memberIds,
+	interface: iface,
+	x = 80,
+	y = 80,
+	name = 'Composite',
+	originId = null
+} = {}) {
+	const id = `composite_${_nextCompositeId++}`;
+	core.composites.push({
+		id,
+		name,
+		x,
+		y,
+		collapsed: true,
+		originId: originId ?? id,
+		memberIds: [...(memberIds ?? [])],
+		interface: iface ?? { inputs: [], outputs: [] }
+	});
+	return id;
+}
+
+/** Remove a composite (= "uncombine"). Members aren't deleted — they resurface
+ *  as standalone canvas nodes on the next derive. */
+export function removeComposite(id) {
+	core.composites = core.composites.filter((c) => c.id !== id);
 	delete core.nodeNotes[id];
 }
 

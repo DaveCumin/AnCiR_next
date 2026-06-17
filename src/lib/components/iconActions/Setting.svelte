@@ -54,6 +54,7 @@
 		core.tableProcesses = [];
 		core.plots = [];
 		core.groups = [];
+		core.composites = [];
 		core.notes = [];
 		core.nodeNotes = {};
 		// Orphan processes are session-only; clear on import so the next
@@ -107,6 +108,23 @@
 					allColumnIds: Array.isArray(g.allColumnIds) ? [...g.allColumnIds] : null,
 					collapsed: g.collapsed === true,
 					rowState: g.rowState ?? {}
+				});
+			}
+		}
+		if (Array.isArray(jsonData.composites)) {
+			for (const c of jsonData.composites) {
+				core.composites.push({
+					id: c.id,
+					name: c.name ?? 'Composite',
+					x: c.x ?? 80,
+					y: c.y ?? 80,
+					collapsed: c.collapsed !== false,
+					originId: c.originId ?? c.id,
+					memberIds: Array.isArray(c.memberIds) ? [...c.memberIds] : [],
+					interface: {
+						inputs: Array.isArray(c.interface?.inputs) ? [...c.interface.inputs] : [],
+						outputs: Array.isArray(c.interface?.outputs) ? [...c.interface.outputs] : []
+					}
 				});
 			}
 		}
