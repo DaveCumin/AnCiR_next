@@ -2,7 +2,6 @@
 	// @ts-nocheck
 	import { createEventDispatcher } from 'svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import { tooltip } from '$lib/utils/tooltip.js';
 	import { appConsts } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { COMPACT_W, compactNodeHeight, compactPortAnchorY, columnTypeIcon } from './nodeGeometry.js';
@@ -25,10 +24,22 @@
 		if (node.type === 'tableprocess')
 			return appConsts.tableProcessMap?.get(node.tpName)?.nodeIcon || 'gear';
 		if (node.type === 'plot') return appConsts.plotMap?.get(node.plotObj?.type)?.nodeIcon || 'gear';
+		if (node.type === 'group') return 'layer';
 		return 'gear';
 	});
 
 	const dotTop = (slot, count) => compactPortAnchorY(slot, count, height) - 5; // dot is 10px
+
+	// Hover tooltip: "<node name> — <port>". For per-column ports (col_<id>, used
+	// by groups and table-process outputs) resolve the friendly column name.
+	function portTip(port) {
+		let label = port.name;
+		if (typeof port.name === 'string' && port.name.startsWith('col_')) {
+			const col = getColumnById(Number(port.name.slice(4)));
+			if (col?.name) label = col.name;
+		}
+		return `${node.label} — ${label}${port.dynamic ? ' (many)' : ''}`;
+	}
 
 	function startFromOutput(e, portName) {
 		e.stopPropagation();
@@ -54,7 +65,7 @@
 	style="width:{COMPACT_W}px; height:{height}px;"
 	role="button"
 	tabindex="0"
-	{@attach tooltip(node.label ?? '')}
+	title={node.label ?? ''}
 >
 	<span class="compact-icon"><Icon name={iconName} width={22} height={22} /></span>
 
@@ -65,7 +76,7 @@
 			data-node-id={node.id}
 			data-port-name={port.name}
 			data-port-dir="in"
-			title={`Input: ${port.name}${port.dynamic ? ' (many)' : ''}`}
+			title={portTip(port)}
 			onmousedown={(e) => disconnectInput(e, port.name)}
 			onmouseup={(e) => endAtInput(e, port.name)}
 			oncontextmenu={(e) => disconnectInput(e, port.name)}
@@ -81,7 +92,7 @@
 			data-node-id={node.id}
 			data-port-name={port.name}
 			data-port-dir="out"
-			title={`Output: ${port.name}${port.dynamic ? ' (many)' : ''}`}
+			title={portTip(port)}
 			onmousedown={(e) => startFromOutput(e, port.name)}
 			role="button"
 			tabindex="-1"

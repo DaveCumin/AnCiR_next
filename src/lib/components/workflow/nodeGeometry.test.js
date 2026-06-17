@@ -41,7 +41,7 @@ describe('compact node geometry', () => {
 		expect(columnTypeIcon(undefined)).toBe('math');
 	});
 
-	it('exposes the squared kinds set', () => {
-		expect([...SQUARED_KINDS].sort()).toEqual(['data', 'plot', 'process', 'tableprocess']);
+	it('exposes the squared kinds set (plots excluded; groups handled separately)', () => {
+		expect([...SQUARED_KINDS].sort()).toEqual(['data', 'process', 'tableprocess']);
 	});
 });

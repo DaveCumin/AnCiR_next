@@ -6,8 +6,11 @@ export const COMPACT_W = 56; // px — compact square width (fixed)
 export const COMPACT_PORT_H = 18; // px — vertical step per port in compact mode
 export const COMPACT_V_PAD = 12; // px — total vertical padding around the port stack
 
-// Node kinds that collapse to a compact square. Notes and groups are excluded.
-export const SQUARED_KINDS = new Set(['data', 'process', 'tableprocess', 'plot']);
+// Node kinds whose compact/detailed state is tracked via expandedNodeIds.
+// Plots always show their chart (never compact); notes are plain text. Groups
+// collapse too, but via their own persisted `collapsed` flag (handled in
+// WorkflowEditor.isCompact), not this set.
+export const SQUARED_KINDS = new Set(['data', 'process', 'tableprocess']);
 
 /** Compact body height: a square unless one side has enough ports to need more. */
 export function compactNodeHeight(nInputs = 0, nOutputs = 0) {
