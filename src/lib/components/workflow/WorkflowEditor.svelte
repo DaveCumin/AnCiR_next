@@ -64,6 +64,8 @@
 	const PLOT_PREVIEW_DEFAULT_W = 240; // px — default preview width (wider than node header)
 	const MIN_PREVIEW_W = 80; // px — minimum preview panel width when resizing
 	const MIN_PREVIEW_H = 60; // px — minimum preview panel height when resizing
+	const MIN_NOTE_W = 140; // px — minimum note node width when resizing
+	const MIN_NOTE_H = 70; // px — minimum note body height when resizing
 	const MIN_PLOT_W = 100; // px — minimum actual plot width
 	const MIN_PLOT_H = 80; // px — minimum actual plot height
 
@@ -133,6 +135,8 @@
 		// for the node's rendered width AND its output-port anchor X, so edges stay
 		// attached when a node grows on expand.
 		if (node?.type === 'plot') return plotPreviewSizes[node.id]?.w ?? PLOT_PREVIEW_DEFAULT_W;
+		// Notes carry their own resizable width on the note object.
+		if (node?.type === 'note') return node?.noteObj?.width ?? 200;
 		const expanded = expandedNodeIds.has(node?.id);
 		if (node?.type === 'tableprocess') return expanded ? EDITOR_PANEL_WIDTH : TP_NODE_WIDTH;
 		if (node?.type === 'process') return expanded ? EDITOR_PANEL_WIDTH : NODE_WIDTH;
@@ -674,6 +678,8 @@
 			const ps = plotPreviewSizes[node.id];
 			return base + (ps ? ps.h : getDefaultPreviewH(node.plotObj));
 		}
+		// Note nodes are a header + a resizable body of the stored height.
+		if (node.type === 'note') return HEADER_H + (node.noteObj?.height ?? 120);
 		return base;
 	}
 	function selectedNodeBoxes() {
@@ -868,6 +874,7 @@
 		// Skip if the click is inside panels or action buttons that handle their own events
 		if (e.target.closest('.process-editor-panel')) return;
 		if (e.target.closest('.plot-resize-handle')) return;
+		if (e.target.closest('.note-resize-handle')) return;
 		// Group header/body has its own resize-handle and delete-X which stop
 		// propagation themselves. We only need to swallow events landing on the
 		// resize handle so a drag from there doesn't start a node-move.
@@ -911,6 +918,21 @@
 		}
 	}
 
+	// Note resize: same "drag the bottom-right handle, position stays put" model as
+	// plots, but writes width/height straight onto the note object.
+	function handleNoteResizeMouseDown(e, node) {
+		e.stopPropagation();
+		const n = node.noteObj;
+		if (!n) return;
+		resizeInfo = {
+			nodeId: node.id,
+			noteObj: n,
+			startMouse: { x: e.clientX, y: e.clientY },
+			startW: n.width ?? 200,
+			startH: n.height ?? 120
+		};
+	}
+
 	function handleResizeMouseDown(e, node) {
 		e.stopPropagation();
 		const id = node.id;
@@ -939,6 +961,12 @@
 		if (resizeInfo) {
 			const dx = (e.clientX - resizeInfo.startMouse.x) / zoom;
 			const dy = (e.clientY - resizeInfo.startMouse.y) / zoom;
+			// Notes resize their own width/height in place (position fixed), like a plot.
+			if (resizeInfo.noteObj) {
+				resizeInfo.noteObj.width = Math.max(MIN_NOTE_W, Math.round(resizeInfo.startW + dx));
+				resizeInfo.noteObj.height = Math.max(MIN_NOTE_H, Math.round(resizeInfo.startH + dy));
+				return;
+			}
 			const nw = Math.max(MIN_PREVIEW_W, resizeInfo.startW + dx);
 			const nh = Math.max(MIN_PREVIEW_H, resizeInfo.startH + dy);
 			plotPreviewSizes[resizeInfo.nodeId] = { w: nw, h: nh };
@@ -2481,6 +2509,7 @@
 								on:portend={handlePortEnd}
 								on:portdisconnect={handlePortDisconnect}
 								on:toggleexpand={() => handleNodeToggleExpand(node)}
+								on:resizestart={(ev) => handleNoteResizeMouseDown(ev.detail, node)}
 							/>
 						{/if}
 

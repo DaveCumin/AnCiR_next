@@ -216,6 +216,7 @@
 	{#if node.type === 'note' && node.noteObj}
 		<div
 			class="note-body"
+			style="height:{node.noteObj.height ?? 120}px;"
 			onpointerdown={(e) => e.stopPropagation()}
 			role="presentation"
 		>
@@ -226,6 +227,17 @@
 				oninput={(e) => (node.noteObj.text = e.currentTarget.value)}
 			></textarea>
 		</div>
+		<!-- Plot-style resize: drag the corner; the node grows in place (no move).
+		     WorkflowEditor handles the drag via on:resizestart. -->
+		<div
+			class="note-resize-handle"
+			role="presentation"
+			title="Drag to resize"
+			onmousedown={(e) => {
+				e.stopPropagation();
+				dispatch('resizestart', e);
+			}}
+		></div>
 	{/if}
 </div>
 
@@ -449,12 +461,14 @@
 	.note-body {
 		padding: 6px 10px 8px;
 		background: #fffde7;
+		box-sizing: border-box;
 	}
 
 	.note-textarea {
 		width: 100%;
-		min-height: 80px;
-		resize: vertical;
+		height: 100%;
+		/* Sized by the node (drag the corner handle); no native textarea grip. */
+		resize: none;
 		border: 1px solid rgba(0, 0, 0, 0.15);
 		border-radius: 3px;
 		padding: 4px 6px;
@@ -468,5 +482,24 @@
 
 	.note-textarea:focus {
 		border-color: var(--color-accent, #4d9fe3);
+	}
+
+	/* Bottom-right resize grip, mirroring the plot resize handle. */
+	.note-resize-handle {
+		position: absolute;
+		right: 0;
+		bottom: 0;
+		width: 14px;
+		height: 14px;
+		cursor: nwse-resize;
+		background: linear-gradient(
+			135deg,
+			transparent 0 50%,
+			var(--color-lightness-60, #8a8a8a) 50% 60%,
+			transparent 60% 70%,
+			var(--color-lightness-60, #8a8a8a) 70% 80%,
+			transparent 80%
+		);
+		border-bottom-right-radius: 6px;
 	}
 </style>
