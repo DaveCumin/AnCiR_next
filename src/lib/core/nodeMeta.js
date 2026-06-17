@@ -27,7 +27,7 @@ const meta = new Map([
 		'SimulatedData',
 		{
 			family: 'Sources',
-			nodeIcon: 'node-rectangular-wave', // no dedicated 'simulate' icon; reuse rectangular-wave as a generic-signal cue
+			nodeIcon: 'simulated-data',
 			description: 'Generate a synthetic time-series table from a cosine + noise model.'
 		}
 	],
@@ -35,7 +35,7 @@ const meta = new Map([
 		'SequenceColumn',
 		{
 			family: 'Sources',
-			nodeIcon: 'column-add',
+			nodeIcon: 'sequence-col',
 			description: 'Create a numeric or time sequence column.'
 		}
 	],
@@ -43,7 +43,7 @@ const meta = new Map([
 		'BlankColumn',
 		{
 			family: 'Sources',
-			nodeIcon: 'column-add',
+			nodeIcon: 'blank-column',
 			description: 'Add a blank column to a table for manual entry.'
 		}
 	],
@@ -51,7 +51,7 @@ const meta = new Map([
 		'Random',
 		{
 			family: 'Sources',
-			nodeIcon: 'column-add', // no dedicated random icon
+			nodeIcon: 'random',
 			description: 'Generate a column of random values.'
 		}
 	],
@@ -69,7 +69,7 @@ const meta = new Map([
 		'Sub',
 		{
 			family: 'Arithmetic',
-			nodeIcon: 'node-add', // no dedicated subtract icon; reuse add icon
+			nodeIcon: 'node-substitute',
 			description: 'Subtract a constant or column from the input column.'
 		}
 	],
@@ -146,7 +146,8 @@ const meta = new Map([
 		{
 			family: 'Smoothing',
 			nodeIcon: 'node-smooth-data',
-			description: 'Smooth a column using LOESS, moving average, Savitzky-Golay, or Whittaker-Eilers.'
+			description:
+				'Smooth a column using LOESS, moving average, Savitzky-Golay, or Whittaker-Eilers.'
 		}
 	],
 
@@ -173,7 +174,7 @@ const meta = new Map([
 		'FitFunction',
 		{
 			family: 'Fitting',
-			nodeIcon: 'node-cosinor', // no generic fit icon; reuse cosinor as a fit cue
+			nodeIcon: 'fit-function',
 			description: 'Fit an arbitrary user-supplied function to the column.'
 		}
 	],
@@ -182,15 +183,17 @@ const meta = new Map([
 		{
 			family: 'Fitting',
 			nodeIcon: 'node-double-logistic',
-			description: 'Fit a double-logistic curve to the column (useful for phenology / on-off transitions).'
+			description:
+				'Fit a double-logistic curve to the column (useful for phenology / on-off transitions).'
 		}
 	],
 	[
 		'TrendFit',
 		{
 			family: 'Fitting',
-			nodeIcon: 'remove-trend-linear', // no dedicated trend-fit icon; reuse the linear trend glyph
-			description: 'Fit and store a trend (linear, polynomial, exponential, logarithmic) over the column.'
+			nodeIcon: 'linear-fit',
+			description:
+				'Fit and store a trend (linear, polynomial, exponential, logarithmic) over the column.'
 		}
 	],
 	[
@@ -215,7 +218,7 @@ const meta = new Map([
 		'MovingAnalysis',
 		{
 			family: 'Analysis',
-			nodeIcon: 'node-periodogram', // no dedicated moving-analysis icon
+			nodeIcon: 'moving-analysis',
 			description: 'Compute a rolling-window analysis across the column.'
 		}
 	],
@@ -223,7 +226,7 @@ const meta = new Map([
 		'GroupComparison',
 		{
 			family: 'Analysis',
-			nodeIcon: 'column-avg', // no dedicated group-comparison icon
+			nodeIcon: 'group-comp',
 			description: 'Compare statistics between groups defined by another column.'
 		}
 	],
@@ -241,7 +244,7 @@ const meta = new Map([
 		'WideToLong',
 		{
 			family: 'Transform',
-			nodeIcon: 'node-long-to-wide', // no dedicated wide-to-long icon; reuse the same glyph
+			nodeIcon: 'wide-to-long',
 			description: 'Pivot a wide-format table into long format.'
 		}
 	],
@@ -273,7 +276,7 @@ const meta = new Map([
 		'Split',
 		{
 			family: 'Transform',
-			nodeIcon: 'node-substitute', // no dedicated split icon; substitute is the closest neutral glyph
+			nodeIcon: 'split',
 			description: 'Split a column or table on a delimiter or group key.'
 		}
 	],
@@ -291,7 +294,7 @@ const meta = new Map([
 		'scatterplot',
 		{
 			family: 'Plots',
-			nodeIcon: 'process', // no plot-specific icon; use generic process glyph
+			nodeIcon: 'scatterplot',
 			description: 'Scatterplot of one column versus another.'
 		}
 	],
@@ -299,7 +302,7 @@ const meta = new Map([
 		'actogram',
 		{
 			family: 'Plots',
-			nodeIcon: 'process',
+			nodeIcon: 'actogram',
 			description: 'Actogram (double-plotted activity over days).'
 		}
 	],
@@ -315,7 +318,7 @@ const meta = new Map([
 		'fft',
 		{
 			family: 'Plots',
-			nodeIcon: 'node-periodogram', // FFT and periodogram both show a spectrum
+			nodeIcon: 'fft',
 			description: 'Fourier analysis (FFT) spectrum of a time-series.'
 		}
 	],
@@ -323,7 +326,7 @@ const meta = new Map([
 		'correlogram',
 		{
 			family: 'Plots',
-			nodeIcon: 'process',
+			nodeIcon: 'correlogram',
 			description: 'Autocorrelation / cross-correlation plot.'
 		}
 	],
@@ -331,7 +334,7 @@ const meta = new Map([
 		'boxplot',
 		{
 			family: 'Plots',
-			nodeIcon: 'process',
+			nodeIcon: 'boxplot',
 			description: 'Boxplot summarising the distribution of a column by group.'
 		}
 	],
@@ -339,7 +342,7 @@ const meta = new Map([
 		'histogram',
 		{
 			family: 'Plots',
-			nodeIcon: 'process',
+			nodeIcon: 'histogram',
 			description: 'Histogram of a column.'
 		}
 	],

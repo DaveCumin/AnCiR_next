@@ -216,7 +216,7 @@
 			<Editable
 				value={tp?.displayName ?? node.label}
 				placeholder="Process"
-				ariaLabel="Rename table process"
+				ariaLabel="Rename analysis"
 				title="Double-click to rename"
 				onCommit={renameTP}
 			/>

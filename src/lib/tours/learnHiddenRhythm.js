@@ -20,7 +20,7 @@ export const tour = {
 		{
 			target: null,
 			title: 'Look at the raw signal first',
-			body: 'You have 7 days of activity, sampled every hour. Can you see a clean 24-hour cycle just by eye? It’s hard — the <strong>noise</strong> hides it. That’s exactly the problem real scientists face.',
+			body: 'Look at the <strong>Raw signal</strong> scatter: 7 days of activity, sampled every hour. Can you see a clean 24-hour cycle just by eye? It’s hard — the <strong>noise</strong> hides it. That’s exactly the problem real scientists face.',
 			advance: { on: 'next' }
 		},
 		{
@@ -38,7 +38,7 @@ export const tour = {
 		{
 			target: null,
 			title: 'Try this',
-			body: 'Increase the noise on the activity column and watch the peak get harder to trust. How much noise can you add before you can no longer find the rhythm? Reopen this lesson anytime from the <strong>?</strong> menu.',
+			body: 'Open the <strong>Simulate data</strong> node and drag its <strong>Noise</strong> slider up, then watch the periodogram peak shrink and broaden. How much noise can you add before you can no longer find the rhythm? Reopen this lesson anytime from the <strong>?</strong> menu.',
 			advance: { on: 'next' }
 		}
 	]

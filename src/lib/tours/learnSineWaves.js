@@ -6,7 +6,8 @@ import { loadLesson } from '$lib/core/classroomTour.js';
 export const tour = {
 	id: 'learn-sine-waves',
 	name: 'Lesson: Sine waves are everywhere',
-	description: 'Fit a single cosine to a rhythm and read its amplitude, phase, midline, period and R².',
+	description:
+		'Fit a single cosine to a rhythm and read its amplitude, phase, midline, period and R².',
 	estMinutes: 5,
 	order: 6,
 	steps: [
@@ -26,7 +27,7 @@ export const tour = {
 		{
 			target: null,
 			title: 'Read the parameters on the graph',
-			body: 'On the scatter: the <strong>midline</strong> is the level it oscillates around; the <strong>amplitude</strong> is how far it swings; the <strong>phase</strong> is where the peak falls. Match each number to what you see.',
+			body: 'On the scatter, the terracotta line is the <strong>fitted cosine</strong> drawn through the data points. The <strong>midline</strong> is the level it oscillates around; the <strong>amplitude</strong> is how far it swings; the <strong>phase</strong> is where the peak falls. Match each number to the curve.',
 			advance: { on: 'next' }
 		},
 		{
@@ -38,7 +39,7 @@ export const tour = {
 		{
 			target: null,
 			title: 'Try this',
-			body: 'Add noise and watch R² fall. Then add a faster (12 h) component on top: a single cosine can no longer fit it well and R² drops — a clue the real signal is more complex than one wave. Reopen anytime from the <strong>?</strong> menu.',
+			body: 'In the <strong>Cosinor</strong> node, switch the period from <em>fixed</em> to free and see whether it still finds 24 h. <strong>R²</strong> tells you how well one cosine explains the data — real signals with extra rhythms (say a 12 h component) fit a single cosine less well. Reopen anytime from the <strong>?</strong> menu.',
 			advance: { on: 'next' }
 		}
 	]

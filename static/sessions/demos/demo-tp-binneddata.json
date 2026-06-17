@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "39": [
+    "93": [
       0,
       1,
       2,
@@ -52,59 +52,59 @@
       48,
       49
     ],
-    "40": [
-      10,
-      11.362966948437268,
-      15.35898384862245,
-      21.7157287525381,
-      30,
-      39.64723819589917,
-      50,
-      60.35276180410083,
-      70,
-      78.2842712474619,
-      84.64101615137756,
-      88.63703305156272,
-      90,
-      88.63703305156272,
-      84.64101615137756,
-      78.28427124746192,
-      70.00000000000001,
-      60.35276180410082,
-      50.00000000000001,
-      39.647238195899185,
-      29.999999999999996,
-      21.7157287525381,
-      15.358983848622458,
-      11.362966948437276,
-      10,
-      11.362966948437276,
-      15.358983848622458,
-      21.71572875253809,
-      29.999999999999982,
-      39.64723819589917,
-      49.99999999999996,
-      60.35276180410081,
-      69.99999999999997,
-      78.28427124746192,
-      84.64101615137756,
-      88.63703305156272,
-      90,
-      88.63703305156274,
-      84.64101615137756,
-      78.28427124746193,
-      70,
-      60.3527618041009,
-      50.000000000000014,
-      39.64723819589919,
-      30.000000000000032,
-      21.715728752538084,
-      15.358983848622486,
-      11.362966948437276,
-      10,
-      11.362966948437261
+    "94": [
+      52.522025082939734,
+      68.09116741301771,
+      73.44958693280898,
+      87.3556504373661,
+      86.66323811830115,
+      82.28540300465913,
+      108.47259849842035,
+      103.68105730209521,
+      86.97687093885385,
+      91.73888100913649,
+      70.51038027401839,
+      69.82049168981042,
+      60.468957839428896,
+      55.16907088859213,
+      39.97122284314707,
+      13.515526465565301,
+      16.68785923166558,
+      17.519793110860366,
+      11.435014653902282,
+      33.06789157238601,
+      16.173996711616905,
+      24.74516554979043,
+      32.66397953250595,
+      38.85872315071947,
+      39.1364581561253,
+      72.8833256284188,
+      72.44886536942789,
+      77.65668628330029,
+      85.37752903596943,
+      79.59301134426093,
+      85.48361807438306,
+      92.74542982997843,
+      84.15535106101461,
+      92.10800469524754,
+      51.66777483033223,
+      65.42143802947885,
+      44.93714088957948,
+      31.282687752097566,
+      12.285825283040282,
+      19.12739426460972,
+      7.987052377616383,
+      0.8329890444742443,
+      14.808985927790241,
+      15.398887756888612,
+      4.502951153968366,
+      36.53860883487218,
+      27.556184570115246,
+      45.15798663327163,
+      47.59352161612626,
+      59.5535187385039
     ],
-    "41": [
+    "95": [
       0,
       2,
       4,
@@ -132,40 +132,40 @@
       48,
       50
     ],
-    "42": [
-      10.681483474218634,
-      18.537356300580278,
-      34.82361909794959,
-      55.17638090205041,
-      74.14213562373095,
-      86.63902460147014,
-      89.31851652578136,
-      81.46264369941974,
-      65.17638090205043,
-      44.823619097949596,
-      25.85786437626905,
-      13.360975398529867,
-      10.681483474218638,
-      18.537356300580274,
-      34.823619097949575,
-      55.17638090205038,
-      74.14213562373095,
-      86.63902460147014,
-      89.31851652578138,
-      81.46264369941974,
-      65.17638090205045,
-      44.8236190979496,
-      25.857864376269056,
-      13.360975398529881,
-      10.68148347421863,
+    "96": [
+      60.306596247978725,
+      80.40261868508753,
+      84.47432056148014,
+      106.07682790025778,
+      89.35787597399516,
+      70.16543598191441,
+      57.81901436401051,
+      26.743374654356185,
+      17.103826171262973,
+      22.251453113144144,
+      20.45958113070367,
+      35.76135134161271,
+      56.00989189227205,
+      75.0527758263641,
+      82.48527019011519,
+      89.11452395218075,
+      88.13167787813109,
+      58.54460642990554,
+      38.10991432083853,
+      15.706609773825,
+      4.410020711045314,
+      15.103936842339426,
+      20.520779994420273,
+      36.35708560169344,
+      53.573520177315075,
       null
     ]
   },
   "data": [
     {
-      "id": 39,
-      "name": "BinnedData input",
-      "data": 39,
+      "id": 93,
+      "name": "x",
+      "data": 93,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -175,9 +175,9 @@
       "processes": []
     },
     {
-      "id": 40,
-      "name": "BinnedData input",
-      "data": 40,
+      "id": 94,
+      "name": "y",
+      "data": 94,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -187,12 +187,12 @@
       "processes": []
     },
     {
-      "id": 41,
+      "id": 95,
       "name": "binnedx_0",
-      "data": 41,
+      "data": 95,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "c4ea2949-c675-4f82-b518-c214aad89173",
+      "tableProcessGUId": "5ad502bb-f182-428c-9e7a-9ecfe3c6c6cf",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -200,11 +200,11 @@
       "processes": []
     },
     {
-      "id": 42,
-      "name": "binnedy_40_0",
-      "data": 42,
+      "id": 96,
+      "name": "binnedy_94_0",
+      "data": 96,
       "type": "number",
-      "tableProcessGUId": "c4ea2949-c675-4f82-b518-c214aad89173",
+      "tableProcessGUId": "5ad502bb-f182-428c-9e7a-9ecfe3c6c6cf",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -215,29 +215,148 @@
   "plots": [
     {
       "id": 17,
-      "name": "Bin Data table",
+      "name": "Bin Data: data + fit",
       "x": 350,
       "y": 150,
       "width": 500,
       "height": 250,
-      "type": "tableplot",
+      "type": "scatterplot",
       "selected": false,
       "plot": {
-        "columnRefs": [
-          39,
-          40,
-          41,
-          42
+        "xlimsIN": [
+          null,
+          null
         ],
-        "showCol": [
-          true,
-          true,
-          true,
-          true
+        "xLogScale": false,
+        "ylimsLeftIN": [
+          null,
+          null
         ],
-        "colCurrent": 1,
-        "showColNumber": false,
-        "decimalPlaces": 2
+        "ylimsRightIN": [
+          null,
+          null
+        ],
+        "yLogScaleLeft": false,
+        "yLogScaleRight": false,
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 30
+        },
+        "xAxis": {
+          "label": "x",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisLeft": {
+          "label": "Value",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisRight": {
+          "label": "",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 97,
+              "name": "x",
+              "refId": 93,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to x which is ",
+              "processes": []
+            },
+            "y": {
+              "id": 98,
+              "name": "y",
+              "refId": 94,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to y which is ",
+              "processes": []
+            },
+            "label": "Data",
+            "yAxis": "left",
+            "line": {
+              "colour": "#234154",
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": false
+            },
+            "points": {
+              "colour": "#234154",
+              "radius": 3,
+              "shape": "circle",
+              "draw": true
+            }
+          },
+          {
+            "x": {
+              "id": 99,
+              "name": "binnedx_0",
+              "refId": 95,
+              "type": "bin",
+              "binWidth": 2,
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to binnedx_0 which is ",
+              "processes": []
+            },
+            "y": {
+              "id": 100,
+              "name": "binnedy_94_0",
+              "refId": 96,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to binnedy_94_0 which is ",
+              "processes": []
+            },
+            "label": "Bin Data",
+            "yAxis": "left",
+            "line": {
+              "colour": "#BE796B",
+              "strokeWidth": 2.5,
+              "stroke": "solid",
+              "draw": true
+            },
+            "points": {
+              "colour": "#BE796B",
+              "radius": 3,
+              "shape": "circle",
+              "draw": false
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "topright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "#ccc",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "nightBands": []
       }
     }
   ],
@@ -247,9 +366,9 @@
       "name": "BinnedData",
       "displayName": "Bin Data",
       "args": {
-        "xIN": 39,
+        "xIN": 93,
         "yIN": [
-          40
+          94
         ],
         "binMode": "uniform",
         "binSize": 2,
@@ -260,8 +379,8 @@
         "aggFunction": "mean",
         "preProcesses": [],
         "out": {
-          "binnedx": 41,
-          "binnedy_40": 42
+          "binnedx": 95,
+          "binnedy_94": 96
         }
       },
       "refTPId": null
@@ -320,5 +439,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }

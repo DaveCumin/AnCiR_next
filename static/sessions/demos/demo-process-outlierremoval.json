@@ -1,6 +1,90 @@
 {
   "rawData": {
-    "35": [
+    "65": [
+      27.551922941389016,
+      30.742227919011125,
+      37.77291452943708,
+      37.492713591087416,
+      39.93085271435162,
+      38.03935827060996,
+      38.4499618301218,
+      41.82373185202325,
+      32.5299474843242,
+      34.27253950227692,
+      30.285232752398187,
+      24.772429188574254,
+      22.016250459018543,
+      22.968856209177407,
+      18.913126292859797,
+      18.172879045182505,
+      19.443546978287312,
+      20.21166530480902,
+      95,
+      26.953603479165896,
+      32.00855035782853,
+      33.31493824921458,
+      37.18952340392364,
+      40.37274569798629,
+      38.81984896313082,
+      40.60415337108202,
+      40.2168866557441,
+      39.087238532507456,
+      40.990641389745605,
+      34.09619243403112,
+      30.023627905334735,
+      30.078176963499615,
+      26.977287348000033,
+      21.89320499464643,
+      23.836068662759,
+      20.242348155001498,
+      20.269110835964792,
+      20.831178978104056,
+      20.726357791048297,
+      26.912964433448387
+    ],
+    "66": [
+      27.551922941389016,
+      30.742227919011125,
+      37.77291452943708,
+      37.492713591087416,
+      39.93085271435162,
+      38.03935827060996,
+      38.4499618301218,
+      41.82373185202325,
+      32.5299474843242,
+      34.27253950227692,
+      30.285232752398187,
+      24.772429188574254,
+      22.016250459018543,
+      22.968856209177407,
+      18.913126292859797,
+      18.172879045182505,
+      19.443546978287312,
+      20.21166530480902,
+      95,
+      26.953603479165896,
+      32.00855035782853,
+      33.31493824921458,
+      37.18952340392364,
+      40.37274569798629,
+      38.81984896313082,
+      40.60415337108202,
+      40.2168866557441,
+      39.087238532507456,
+      40.990641389745605,
+      34.09619243403112,
+      30.023627905334735,
+      30.078176963499615,
+      26.977287348000033,
+      21.89320499464643,
+      23.836068662759,
+      20.242348155001498,
+      20.269110835964792,
+      20.831178978104056,
+      20.726357791048297,
+      26.912964433448387
+    ],
+    "67": [
       0,
       1,
       2,
@@ -40,25 +124,26 @@
       36,
       37,
       38,
-      39,
-      40,
-      41,
-      42,
-      43,
-      44,
-      45,
-      46,
-      47,
-      48,
-      49,
-      1000
+      39
     ]
   },
   "data": [
     {
-      "id": 35,
-      "name": "OutlierRemoval input",
-      "data": 35,
+      "id": 65,
+      "name": "input",
+      "data": 65,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 66,
+      "name": "remove outliers result",
+      "data": 66,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -76,28 +161,164 @@
           }
         }
       ]
+    },
+    {
+      "id": 67,
+      "name": "index",
+      "data": 67,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
     }
   ],
   "plots": [
     {
       "id": 13,
-      "name": "Remove Outliers result",
+      "name": "Remove Outliers: before vs after",
       "x": 350,
       "y": 150,
       "width": 500,
       "height": 250,
-      "type": "tableplot",
+      "type": "scatterplot",
       "selected": false,
       "plot": {
-        "columnRefs": [
-          35
+        "xlimsIN": [
+          null,
+          null
         ],
-        "showCol": [
-          true
+        "xLogScale": false,
+        "ylimsLeftIN": [
+          null,
+          null
         ],
-        "colCurrent": 1,
-        "showColNumber": false,
-        "decimalPlaces": 2
+        "ylimsRightIN": [
+          null,
+          null
+        ],
+        "yLogScaleLeft": false,
+        "yLogScaleRight": false,
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 30
+        },
+        "xAxis": {
+          "label": "Index",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisLeft": {
+          "label": "Value",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisRight": {
+          "label": "",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 68,
+              "name": "index",
+              "refId": 67,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to index which is ",
+              "processes": []
+            },
+            "y": {
+              "id": 69,
+              "name": "input",
+              "refId": 65,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to input which is ",
+              "processes": []
+            },
+            "label": "Before",
+            "yAxis": "left",
+            "line": {
+              "colour": "#234154",
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": false
+            },
+            "points": {
+              "colour": "#234154",
+              "radius": 3,
+              "shape": "circle",
+              "draw": true
+            }
+          },
+          {
+            "x": {
+              "id": 70,
+              "name": "index",
+              "refId": 67,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to index which is ",
+              "processes": []
+            },
+            "y": {
+              "id": 71,
+              "name": "remove outliers result",
+              "refId": 66,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to remove outliers result which is ",
+              "processes": []
+            },
+            "label": "After",
+            "yAxis": "left",
+            "line": {
+              "colour": "#BE796B",
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": false
+            },
+            "points": {
+              "colour": "#BE796B",
+              "radius": 3,
+              "shape": "circle",
+              "draw": true
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "topright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "#ccc",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "nightBands": []
       }
     }
   ],
@@ -155,5 +376,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }

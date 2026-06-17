@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "4": [
+    "6": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "5": [
+    "7": [
       81.40288825421004,
       42.95276252909872,
       42.266355430910934,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 4,
+      "id": 6,
       "name": "hour",
-      "data": 4,
+      "data": 6,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -355,9 +355,9 @@
       "processes": []
     },
     {
-      "id": 5,
+      "id": 7,
       "name": "activity",
-      "data": 5,
+      "data": 7,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -369,7 +369,7 @@
   ],
   "plots": [
     {
-      "id": 1,
+      "id": 2,
       "name": "Activity actogram",
       "x": 350,
       "y": 150,
@@ -404,9 +404,9 @@
         "data": [
           {
             "x": {
-              "id": 6,
+              "id": 8,
               "name": "hour",
-              "refId": 4,
+              "refId": 6,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -416,9 +416,9 @@
               "processes": []
             },
             "y": {
-              "id": 7,
+              "id": 9,
               "name": "activity",
-              "refId": 5,
+              "refId": 7,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -498,5 +498,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.3"
+  "version": "β.43.2"
 }

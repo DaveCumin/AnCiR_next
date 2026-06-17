@@ -400,13 +400,13 @@
           "left": 30
         },
         "xAxis": {
-          "label": "",
+          "label": "Hour",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
         },
         "yAxisLeft": {
-          "label": "",
+          "label": "Activity",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -528,5 +528,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }

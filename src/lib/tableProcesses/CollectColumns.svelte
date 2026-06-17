@@ -630,7 +630,7 @@
 					e.target.value = '';
 				}}
 			>
-				<option value="">+ Add table process…</option>
+				<option value="">+ Add analysis…</option>
 				{#each Object.entries(collectedTPMap) as [cType, entry] (cType)}
 					<option value={cType}>{entry.displayName}</option>
 				{/each}

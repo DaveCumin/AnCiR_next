@@ -1,17 +1,31 @@
 /**
  * Demo-session generator (NOT a normal test).
  *
- * Mints AnCiR-native example sessions using the real Column/Plot classes and
- * the same serialization the app uses (outputCoreAsJson), then writes them to
- * static/sessions/demos/ along with an index.json manifest. The load-session
- * modal fetches that manifest and lists the demos under "examples".
+ * Mints AnCiR-native example sessions using the real Column/Plot/TableProcess
+ * classes and the same serialization the app uses (outputCoreAsJson), then
+ * writes them to static/sessions/demos/ along with an index.json manifest. The
+ * load-session modal fetches that manifest and lists the demos under "examples".
  *
  * Run it explicitly (it is gated so it never runs in the normal suite):
  *   GEN_DEMOS=1 npx vitest run src/lib/_demos/generateDemos.svelte.test.js
  *
- * Adding a demo: append a spec to DEMOS below. Each spec builds some synthetic
- * columns and one or more plots. To add time-based plots (Actogram/Periodogram)
- * later, create a 'time'-typed column with a timeFormat and ISO-string rawData.
+ * Design notes
+ * ------------
+ * Each demo is meant to *show the node doing its job*, not just list numbers:
+ *   - Plot demos render one plot on representative data.
+ *   - Column-process demos render a before/after scatter so the effect is
+ *     visible (input cloud vs processed cloud).
+ *   - Analysis (table-process) demos AWAIT the analysis so its outputs are
+ *     baked into the session. Curve-fitting analyses (Cosinor, Smooth, Bin,
+ *     Trend, Double-logistic, Rectangular wave, Fit function) render the raw
+ *     points plus the fitted curve as a line (the pattern users expect); the
+ *     rest render a tableplot of real inputs + outputs, or a fitting-specific
+ *     plot (boxplot for group comparison).
+ *
+ * Grouping/wording: families and descriptions come from the real node registry
+ * (nodeMeta via processMap / tableProcessMap), so the gallery matches the
+ * in-app palette (Arithmetic, Fitting, Analysis, Transform, …) and never uses
+ * internal jargon like "table process".
  */
 import { describe, it } from 'vitest';
 import { writeFileSync } from 'node:fs';
@@ -29,6 +43,28 @@ import { PROCESS_SPECS, TP_SPECS, SAMPLE } from './nodeCatalog.js';
 
 const OUT_DIR = join(process.cwd(), 'static', 'sessions', 'demos');
 
+// Showcase palette: raw data in navy, derived/fitted curve in terracotta.
+const RAW_COLOUR = '#234154';
+const FIT_COLOUR = '#BE796B';
+
+// Order the gallery the way the node palette is ordered (NodePalette.svelte).
+const FAMILY_ORDER = [
+	'Sources',
+	'Arithmetic',
+	'Filtering',
+	'Smoothing',
+	'Binning',
+	'Fitting',
+	'Analysis',
+	'Transform',
+	'Plots',
+	'Other'
+];
+const familyRank = (f) => {
+	const i = FAMILY_ORDER.indexOf(f);
+	return i === -1 ? FAMILY_ORDER.length : i;
+};
+
 // --- synthetic data helpers (deterministic; no Math.random) -------------------
 function mulberry32(seed) {
 	return function () {
@@ -45,6 +81,7 @@ function normal(rng, mean = 0, sd = 1) {
 	const v = rng();
 	return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
+const seq = (n, f) => Array.from({ length: n }, (_, i) => f(i));
 
 /**
  * A demo spec returns the list of plots to build given a `mk` toolkit:
@@ -66,7 +103,7 @@ const DEMOS = [
 			);
 			const xId = mk.col('hour', 'number', hours);
 			const yId = mk.col('activity', 'number', activity);
-			mk.plot('scatterplot', 'Activity vs hour', { x: xId, y: yId });
+			mk.plot('scatterplot', 'Activity vs hour', { x: xId, y: yId }, { x: 'Hour', y: 'Activity' });
 		}
 	},
 	{
@@ -78,7 +115,12 @@ const DEMOS = [
 			const rng = mulberry32(2);
 			const samples = Array.from({ length: 500 }, () => normal(rng, 100, 15));
 			const cId = mk.col('measurement', 'number', samples);
-			mk.plot('histogram', 'Measurement distribution', { column: cId });
+			mk.plot(
+				'histogram',
+				'Measurement distribution',
+				{ column: cId },
+				{ x: 'Measurement', y: 'Count' }
+			);
 		}
 	},
 	{
@@ -99,7 +141,7 @@ const DEMOS = [
 			}
 			const xId = mk.col('day', 'number', day);
 			const yId = mk.col('activity', 'number', value);
-			mk.plot('boxplot', 'Activity by day', { x: xId, y: yId });
+			mk.plot('boxplot', 'Activity by day', { x: xId, y: yId }, { x: 'Day', y: 'Activity' });
 		}
 	},
 	{
@@ -187,23 +229,92 @@ const DEMOS = [
 	}
 ];
 
-// Pre-set customName on referencial plot-wrapper columns so the `name` $derived
-// short-circuits instead of mutating state during serialization (the app builds
-// in production where that DEV-only guard is off; the generator runs under DEV).
-function prewarmWrapperNames() {
-	for (const plot of core.plots) {
-		for (const series of plot.plot?.data ?? []) {
-			for (const field of ['x', 'y', 'column']) {
-				const w = series?.[field];
-				if (w && typeof w === 'object' && 'refId' in w && w.customName == null) {
-					const real = core.data.find((c) => c.id === w.refId);
-					w.customName = (real ? `${real.name}` : 'col') + (w.refId >= 0 ? '' : '');
-				}
-			}
-		}
+// Column-process demos that benefit from custom, good-looking demo data
+// (otherwise the before/after scatter is hard to read). Keyed by process name;
+// anything not listed falls back to the nodeCatalog spec's data.
+const PROCESS_DEMO_DATA = {
+	// One obvious outlier sitting above a gentle rhythm, so removal is visible
+	// without a single huge value squashing the y-axis.
+	OutlierRemoval: () => {
+		const rng = mulberry32(21);
+		const base = seq(40, (i) => 30 + 10 * Math.sin((2 * Math.PI * i) / 20) + normal(rng, 0, 2));
+		base[18] = 95; // the outlier
+		return base;
+	},
+	// A clear upward trend with scatter, so "remove trend" visibly flattens it.
+	RemoveTrend: () => {
+		const rng = mulberry32(22);
+		return seq(40, (i) => 5 + 1.5 * i + normal(rng, 0, 4));
+	},
+	// Noisy rhythm so normalising to a range is a meaningful rescale.
+	normalize: () => {
+		const rng = mulberry32(23);
+		return seq(40, (i) => 200 + 60 * Math.sin((2 * Math.PI * i) / 24) + normal(rng, 0, 8));
 	}
-}
+};
 
+// Analyses that produce a fitted/derived curve aligned to an x grid. For these
+// we draw the raw points + the fitted curve as a line. Their y-input is made
+// noisy (below) so the fit visibly threads through scattered points.
+const FIT_ANALYSES = new Set([
+	'Cosinor',
+	'FitFunction',
+	'DoubleLogistic',
+	'TrendFit',
+	'SmoothedData',
+	'BinnedData',
+	'RectangularWave'
+]);
+
+// Per-fit-analysis noisy y data + axis labels. The x input and the args still
+// come from the shared nodeCatalog spec; we only swap in nicer demo y data.
+const FIT_DEMO = {
+	Cosinor: {
+		seed: 31,
+		y: (rng) =>
+			seq(50, (i) => 50 + 40 * Math.sin((2 * Math.PI * i) / 24 - Math.PI / 2) + normal(rng, 0, 7)),
+		axes: { x: 'Hour', y: 'Activity' }
+	},
+	FitFunction: {
+		seed: 32,
+		y: (rng) =>
+			seq(50, (i) => 50 + 40 * Math.sin((2 * Math.PI * i) / 24 - Math.PI / 2) + normal(rng, 0, 7)),
+		axes: { x: 'Hour', y: 'Signal' }
+	},
+	DoubleLogistic: {
+		seed: 33,
+		y: (rng) =>
+			seq(
+				50,
+				(i) =>
+					25 + 50 / (1 + Math.exp(-(i - 12))) - 50 / (1 + Math.exp(-(i - 36))) + normal(rng, 0, 3)
+			),
+		axes: { x: 'Time', y: 'Level' }
+	},
+	TrendFit: {
+		seed: 34,
+		y: (rng) => seq(50, (i) => 5 + 1.8 * i + normal(rng, 0, 6)),
+		axes: { x: 'x', y: 'y' }
+	},
+	SmoothedData: {
+		seed: 35,
+		y: (rng) => seq(50, (i) => 30 + 15 * Math.sin((2 * Math.PI * i) / 25) + normal(rng, 0, 6)),
+		axes: { x: 'x', y: 'Value' }
+	},
+	BinnedData: {
+		seed: 36,
+		y: (rng) => seq(50, (i) => 50 + 40 * Math.sin((2 * Math.PI * i) / 24) + normal(rng, 0, 9)),
+		axes: { x: 'x', y: 'Value' }
+	},
+	RectangularWave: {
+		seed: 37,
+		x: () => seq(48, (i) => i),
+		y: (rng) => seq(48, (i) => (i % 24 < 12 ? 75 : 25) + normal(rng, 0, 5)),
+		axes: { x: 'Hour', y: 'Signal' }
+	}
+};
+
+// Reset core to a clean slate between demos.
 function resetCore() {
 	core.data = [];
 	core.plots = [];
@@ -230,16 +341,61 @@ function mkCol(type, values, name) {
 	return c.id;
 }
 
+function setAxisLabels(p, axes) {
+	if (!axes) return;
+	// Axis objects vary by plot type (scatter has xAxis/yAxisLeft; others differ).
+	if (axes.x != null && p.plot.xAxis) p.plot.xAxis.label = axes.x;
+	if (axes.y != null && p.plot.yAxisLeft) p.plot.yAxisLeft.label = axes.y;
+	if (axes.y != null && !p.plot.yAxisLeft && p.plot.yAxis) p.plot.yAxis.label = axes.y;
+}
+
+// Build a scatterplot from explicit series. Each series:
+//   { x, y, label, kind: 'points'|'line', colour }
+function scatterPlot(name, series, axes) {
+	const p = new Plot({ name, type: 'scatterplot' });
+	for (const s of series) {
+		const isLine = s.kind === 'line';
+		p.plot.addData({
+			x: { refId: s.x },
+			y: { refId: s.y },
+			label: s.label,
+			line: { colour: s.colour, draw: isLine, strokeWidth: isLine ? 2.5 : 2, stroke: 'solid' },
+			points: { colour: s.colour, draw: !isLine, radius: 3, shape: 'circle' }
+		});
+	}
+	setAxisLabels(p, axes);
+	pushObj(p);
+	return p;
+}
+
 function tablePlot(name, columnRefs) {
 	const p = new Plot({ name, type: 'tableplot' });
 	p.plot.columnRefs = [...columnRefs];
 	p.plot.showCol = columnRefs.map(() => true);
 	pushObj(p);
+	return p;
+}
+
+// Pre-set customName on referencial plot-wrapper columns so the `name` $derived
+// short-circuits instead of mutating state during serialization (the app builds
+// in production where that DEV-only guard is off; the generator runs under DEV).
+function prewarmWrapperNames() {
+	for (const plot of core.plots) {
+		for (const series of plot.plot?.data ?? []) {
+			for (const field of ['x', 'y', 'column', 'time', 'values']) {
+				const w = series?.[field];
+				if (w && typeof w === 'object' && 'refId' in w && w.customName == null) {
+					const real = core.data.find((c) => c.id === w.refId);
+					w.customName = real ? `${real.name}` : 'col';
+				}
+			}
+		}
+	}
 }
 
 // Build one searchable manifest entry. `keywords` collapses everything a user
-// might type (node key, display name, family, description) so the modal search
-// behaves like the node palette.
+// might type (display name, family, description, showcased node) so the modal
+// search behaves like the node palette.
 function manifestEntry({ id, name, family, description, file, kind, showcases }) {
 	return {
 		id,
@@ -249,10 +405,7 @@ function manifestEntry({ id, name, family, description, file, kind, showcases })
 		url: `sessions/demos/${file}`,
 		kind,
 		showcases,
-		keywords: [name, description, family, kind, ...showcases]
-			.filter(Boolean)
-			.join(' ')
-			.toLowerCase()
+		keywords: [name, description, family, ...showcases].filter(Boolean).join(' ').toLowerCase()
 	};
 }
 
@@ -273,7 +426,7 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 			resetCore();
 			const mk = {
 				col: (name, type, values) => mkCol(type, values, name),
-				plot(type, name, inputs) {
+				plot(type, name, inputs, axes) {
 					const p = new Plot({ name, type });
 					if (type === 'tableplot') {
 						p.plot.columnRefs = [...(inputs.columnRefs ?? [])];
@@ -282,6 +435,7 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 						const data = {};
 						for (const [k, colId] of Object.entries(inputs)) data[k] = { refId: colId };
 						p.plot.addData(data);
+						setAxisLabels(p, axes);
 					}
 					pushObj(p);
 					return p;
@@ -289,7 +443,6 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 			};
 			demo.build(mk);
 			prewarmWrapperNames();
-			const showcases = [...new Set(core.plots.map((p) => p.type))];
 			write(
 				`demo-${demo.id}.json`,
 				manifestEntry({
@@ -299,34 +452,59 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 					description: demo.description,
 					file: `demo-${demo.id}.json`,
 					kind: 'plot',
-					showcases
+					showcases: [...new Set(core.plots.map((p) => p.type))]
 				})
 			);
 		}
 
-		// --- Column-process demos (one per process) --------------------------
+		// --- Column-process demos (before/after scatter) ---------------------
 		for (const spec of PROCESS_SPECS) {
 			resetCore();
 			const entry = appConsts.processMap.get(spec.name);
-			const selfId = mkCol(spec.colType, resolve(spec.data), `${spec.name} input`);
-			const otherId = spec.needsOther ? mkCol('number', SAMPLE.index(), 'filter source') : -1;
-			const col = core.data.find((c) => c.id === selfId);
-			col.addProcess(spec.name);
-			const proc = col.processes[col.processes.length - 1];
-			spec.setup?.(proc.args, { selfId, otherId });
-			const refs = otherId >= 0 ? [selfId, otherId] : [selfId];
-			tablePlot(`${entry?.displayName ?? spec.name} result`, refs);
+			const display = entry?.displayName ?? spec.name;
+			const data = PROCESS_DEMO_DATA[spec.name]
+				? PROCESS_DEMO_DATA[spec.name]()
+				: resolve(spec.data);
+
+			// "before" = a plain copy of the input; "after" = the same data with
+			// the process attached (getData() applies it live on load).
+			const beforeId = mkCol(spec.colType, [...data], 'input');
+			const afterId = mkCol(spec.colType, [...data], `${display.toLowerCase()} result`);
+			const otherId = spec.needsOther
+				? mkCol(
+						'number',
+						data.map((_, i) => i),
+						'reference'
+					)
+				: -1;
+			const afterCol = core.data.find((c) => c.id === afterId);
+			afterCol.addProcess(spec.name);
+			const proc = afterCol.processes[afterCol.processes.length - 1];
+			spec.setup?.(proc.args, { selfId: afterId, otherId });
+
+			const idx = mkCol(
+				'number',
+				data.map((_, i) => i),
+				'index'
+			);
+			scatterPlot(
+				`${display}: before vs after`,
+				[
+					{ x: idx, y: beforeId, label: 'Before', kind: 'points', colour: RAW_COLOUR },
+					{ x: idx, y: afterId, label: 'After', kind: 'points', colour: FIT_COLOUR }
+				],
+				{ x: 'Index', y: 'Value' }
+			);
 			prewarmWrapperNames();
 			const file = `demo-process-${spec.name.toLowerCase()}.json`;
 			write(
 				file,
 				manifestEntry({
 					id: `process-${spec.name.toLowerCase()}`,
-					name: `${entry?.displayName ?? spec.name} (process)`,
-					family: 'Column processes',
+					name: display,
+					family: entry?.family ?? 'Other',
 					description:
-						entry?.description ||
-						`Showcases the ${spec.name} column process applied to sample data.`,
+						entry?.description || `Showcases the ${spec.name} process applied to sample data.`,
 					file,
 					kind: 'process',
 					showcases: [spec.name]
@@ -334,41 +512,91 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 			);
 		}
 
-		// --- Table-process demos (one per table process) ---------------------
+		// --- Analysis (table-process) demos ----------------------------------
 		for (const spec of TP_SPECS) {
 			resetCore();
 			const entry = appConsts.tableProcessMap.get(spec.name);
-			const ids = spec.inputs.map((inp) =>
-				mkCol(inp.type, resolve(inp.data), `${spec.name} input`)
-			);
+			const display = entry?.displayName ?? spec.name;
+			const isFit = FIT_ANALYSES.has(spec.name);
+
+			// Build the input columns. For fit analyses we swap in nicer noisy y
+			// data (and sometimes x) so the fitted curve threads through scatter.
+			let ids;
+			if (isFit) {
+				const cfg = FIT_DEMO[spec.name];
+				const rng = mulberry32(cfg.seed);
+				ids = spec.inputs.map((inp, i) => {
+					let values = resolve(inp.data);
+					if (i === 0 && cfg.x) values = cfg.x();
+					if (i === 1 && cfg.y) values = cfg.y(rng);
+					const label = i === 0 ? 'x' : 'y';
+					return mkCol(inp.type, values, label);
+				});
+			} else {
+				ids = spec.inputs.map((inp) => mkCol(inp.type, resolve(inp.data), `${display} input`));
+			}
+
 			if (spec.needsStoredValues) {
 				core.storedValues.demoSV1 = { staticValue: 12, source: 'manual' };
 				core.storedValues.demoSV2 = { staticValue: 34, source: 'manual' };
 			}
+
 			const tp = new TableProcess({ name: spec.name, args: spec.args(ids) }, null);
 			pushObj(tp);
-			// Showcase the node's inputs + any allocated output columns. Output data
-			// is computed when the TP node mounts on load (see LoadSessionModal).
-			const outIds = Object.values(tp.args.out ?? {}).filter(
-				(v) => typeof v === 'number' && v >= 0
-			);
-			tablePlot(`${entry?.displayName ?? spec.name} table`, [...ids, ...outIds]);
+			// Actually run the analysis so its outputs are populated (and baked into
+			// the saved session). Workers are bypassed for small inputs / in node.
+			try {
+				await tp.doProcess();
+			} catch (err) {
+				// eslint-disable-next-line no-console
+				console.warn(`doProcess failed for ${spec.name}:`, err?.message ?? err);
+			}
+
+			if (isFit) {
+				// raw points + fitted curve as a line
+				const cfg = FIT_DEMO[spec.name];
+				const xRaw = ids[0];
+				const yRaw = ids[1];
+				const xOut = tp.args.out[entry.xOutKey];
+				const yOut = tp.args.out[(entry.yOutKeyPrefix ?? '') + yRaw];
+				const series = [{ x: xRaw, y: yRaw, label: 'Data', kind: 'points', colour: RAW_COLOUR }];
+				if (xOut >= 0 && yOut >= 0) {
+					series.push({ x: xOut, y: yOut, label: display, kind: 'line', colour: FIT_COLOUR });
+				}
+				scatterPlot(`${display}: data + fit`, series, cfg.axes);
+			} else if (spec.name === 'GroupComparison') {
+				// the comparison itself is read off the node; show the groups as a boxplot
+				const p = new Plot({ name: `${display}: groups`, type: 'boxplot' });
+				p.plot.addData({ x: { refId: ids[0] }, y: { refId: ids[1] } });
+				setAxisLabels(p, { x: 'Group', y: 'Value' });
+				pushObj(p);
+			} else {
+				// tableplot of real inputs + any allocated output columns
+				const outIds = Object.values(tp.args.out ?? {}).filter(
+					(v) => typeof v === 'number' && v >= 0
+				);
+				tablePlot(`${display} result`, [...ids, ...outIds]);
+			}
+
 			prewarmWrapperNames();
 			const file = `demo-tp-${spec.name.toLowerCase()}.json`;
 			write(
 				file,
 				manifestEntry({
 					id: `tp-${spec.name.toLowerCase()}`,
-					name: `${entry?.displayName ?? spec.name} (table process)`,
-					family: 'Table processes',
-					description:
-						entry?.description || `Showcases the ${spec.name} table process on sample data.`,
+					name: display,
+					family: entry?.family ?? 'Other',
+					description: entry?.description || `Showcases the ${spec.name} analysis on sample data.`,
 					file,
 					kind: 'tableProcess',
 					showcases: [spec.name]
 				})
 			);
 		}
+
+		// Order the gallery like the palette (Sources → … → Plots), keeping each
+		// family's members in their generation order.
+		manifest.sort((a, b) => familyRank(a.family) - familyRank(b.family));
 
 		const index = { version: 1, count: manifest.length, sessions: manifest };
 		writeFileSync(join(OUT_DIR, 'index.json'), JSON.stringify(index, null, 2), 'utf8');

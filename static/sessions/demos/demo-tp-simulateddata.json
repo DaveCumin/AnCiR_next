@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "93": [
+    "169": [
       "2024-01-01T00:00:00.000Z",
       "2024-01-01T01:00:00.000Z",
       "2024-01-01T02:00:00.000Z",
@@ -50,7 +50,7 @@
       "2024-01-02T22:00:00.000Z",
       "2024-01-02T23:00:00.000Z"
     ],
-    "94": [
+    "170": [
       100,
       100,
       100,
@@ -103,12 +103,12 @@
   },
   "data": [
     {
-      "id": 93,
+      "id": 169,
       "name": "time_16",
-      "data": 93,
+      "data": 169,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "54a9af39-7b44-489b-8aaf-c63c61a9531e",
+      "tableProcessGUId": "ad619bb8-f136-448a-b1ce-897b7b6aea2c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -116,11 +116,11 @@
       "processes": []
     },
     {
-      "id": 94,
+      "id": 170,
       "name": "values_16",
-      "data": 94,
+      "data": 170,
       "type": "number",
-      "tableProcessGUId": "54a9af39-7b44-489b-8aaf-c63c61a9531e",
+      "tableProcessGUId": "ad619bb8-f136-448a-b1ce-897b7b6aea2c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -131,7 +131,7 @@
   "plots": [
     {
       "id": 33,
-      "name": "Simulate Data table",
+      "name": "Simulate Data result",
       "x": 350,
       "y": 150,
       "width": 500,
@@ -140,8 +140,8 @@
       "selected": false,
       "plot": {
         "columnRefs": [
-          93,
-          94
+          169,
+          170
         ],
         "showCol": [
           true,
@@ -173,8 +173,8 @@
         ],
         "samplingPeriod_hours": 1,
         "out": {
-          "time": 93,
-          "values": 94
+          "time": 169,
+          "values": 170
         }
       },
       "refTPId": null
@@ -233,5 +233,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }

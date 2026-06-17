@@ -37,9 +37,10 @@
         }
       ],
       "showcases": [
+        "scatterplot",
         "periodogram"
       ],
-      "keywords": "find the hidden rhythm a noisy ~24 h signal (7 days, hourly). use the periodogram to recover the hidden period. classroom nz yr 11–13 periodogram"
+      "keywords": "find the hidden rhythm a noisy ~24 h signal (7 days, hourly). use the periodogram to recover the hidden period. classroom nz yr 11–13 scatterplot periodogram"
     },
     {
       "id": "learn-night-owl",

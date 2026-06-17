@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "92": [
+    "168": [
       0,
       1,
       2,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 92,
+      "id": 168,
       "name": "result_15",
-      "data": 92,
+      "data": 168,
       "type": "number",
-      "tableProcessGUId": "fae74a73-cb0f-440a-aa46-c8d3ded2ecba",
+      "tableProcessGUId": "5cd929e5-82fa-428f-acd3-9493b9f6143e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -70,7 +70,7 @@
   "plots": [
     {
       "id": 32,
-      "name": "Sequence Column table",
+      "name": "Sequence Column result",
       "x": 350,
       "y": 150,
       "width": 500,
@@ -79,7 +79,7 @@
       "selected": false,
       "plot": {
         "columnRefs": [
-          92
+          168
         ],
         "showCol": [
           true
@@ -102,7 +102,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 92
+          "result": 168
         }
       },
       "refTPId": null
@@ -161,5 +161,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }

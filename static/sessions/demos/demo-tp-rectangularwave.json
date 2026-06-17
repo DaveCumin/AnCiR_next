@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "83": [
+    "155": [
       0,
       1,
       2,
@@ -50,57 +50,57 @@
       46,
       47
     ],
-    "84": [
-      75,
-      75,
-      75,
-      75,
-      75,
-      75,
-      75,
-      75,
-      75,
-      75,
-      75,
-      75,
-      25,
-      25,
-      25,
-      25,
-      25,
-      25,
-      25,
-      25,
-      25,
-      25,
-      25,
-      25,
-      75,
-      75,
-      75,
-      75,
-      75,
-      75,
-      75,
-      75,
-      75,
-      75,
-      75,
-      75,
-      25,
-      25,
-      25,
-      25,
-      25,
-      25,
-      25,
-      25,
-      25,
-      25,
-      25,
-      25
+    "156": [
+      80.74815343291546,
+      74.1026647241765,
+      67.34975964373878,
+      83.99551730320745,
+      70.26968802671647,
+      76.40919045989413,
+      74.71184636881401,
+      76.44963357212467,
+      75.20093210068795,
+      75.04652156582142,
+      64.60525021539745,
+      69.8231639277063,
+      25.181022137371556,
+      21.14822131182754,
+      19.634147140003652,
+      24.226973570093808,
+      17.932082227917583,
+      33.449967668777475,
+      26.46871655185021,
+      17.172639267751283,
+      23.27800097486563,
+      26.236908658458578,
+      20.748964065386087,
+      12.408209158988871,
+      75.56218438984645,
+      71.43640091766031,
+      80.93534149200735,
+      70.0779356663376,
+      74.87139210318246,
+      72.81170291238344,
+      81.21959854542415,
+      74.82519414486733,
+      84.03805792517005,
+      71.10818773287635,
+      78.65879343516997,
+      77.82274438291613,
+      18.776229206560398,
+      21.601604928306237,
+      29.42737286088412,
+      24.014153849644266,
+      31.907106883185588,
+      24.5475648672021,
+      39.48353409562165,
+      19.069478550325325,
+      16.985808677723227,
+      15.284567203885567,
+      25.36953942083682,
+      31.225353920755683
     ],
-    "85": [
+    "157": [
       0,
       1,
       2,
@@ -150,62 +150,62 @@
       46,
       47
     ],
-    "86": [
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      74.99999999999997,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025,
-      25.000000000000025
+    "158": [
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      69.77429562735063,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.56576031105484,
+      75.31550624256181,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.31550624457671,
+      75.3155062443813,
+      23.565781911814245,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747,
+      23.565758048919747
     ]
   },
   "data": [
     {
-      "id": 83,
-      "name": "RectangularWave input",
-      "data": 83,
+      "id": 155,
+      "name": "x",
+      "data": 155,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -215,9 +215,9 @@
       "processes": []
     },
     {
-      "id": 84,
-      "name": "RectangularWave input",
-      "data": 84,
+      "id": 156,
+      "name": "y",
+      "data": 156,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -227,11 +227,11 @@
       "processes": []
     },
     {
-      "id": 85,
+      "id": 157,
       "name": "rectwavex_13",
-      "data": 85,
+      "data": 157,
       "type": "number",
-      "tableProcessGUId": "7275d02a-c541-44d8-8df4-737c08ac983c",
+      "tableProcessGUId": "d719b8e5-de09-4032-b8cb-3b60c461ba55",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -239,11 +239,11 @@
       "processes": []
     },
     {
-      "id": 86,
-      "name": "rectwavey_84_13",
-      "data": 86,
+      "id": 158,
+      "name": "rectwavey_156_13",
+      "data": 158,
       "type": "number",
-      "tableProcessGUId": "7275d02a-c541-44d8-8df4-737c08ac983c",
+      "tableProcessGUId": "d719b8e5-de09-4032-b8cb-3b60c461ba55",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -254,29 +254,147 @@
   "plots": [
     {
       "id": 30,
-      "name": "Rectangular Wave table",
+      "name": "Rectangular Wave: data + fit",
       "x": 350,
       "y": 150,
       "width": 500,
       "height": 250,
-      "type": "tableplot",
+      "type": "scatterplot",
       "selected": false,
       "plot": {
-        "columnRefs": [
-          83,
-          84,
-          85,
-          86
+        "xlimsIN": [
+          null,
+          null
         ],
-        "showCol": [
-          true,
-          true,
-          true,
-          true
+        "xLogScale": false,
+        "ylimsLeftIN": [
+          null,
+          null
         ],
-        "colCurrent": 1,
-        "showColNumber": false,
-        "decimalPlaces": 2
+        "ylimsRightIN": [
+          null,
+          null
+        ],
+        "yLogScaleLeft": false,
+        "yLogScaleRight": false,
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 30
+        },
+        "xAxis": {
+          "label": "Hour",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisLeft": {
+          "label": "Signal",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisRight": {
+          "label": "",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 159,
+              "name": "x",
+              "refId": 155,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to x which is ",
+              "processes": []
+            },
+            "y": {
+              "id": 160,
+              "name": "y",
+              "refId": 156,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to y which is ",
+              "processes": []
+            },
+            "label": "Data",
+            "yAxis": "left",
+            "line": {
+              "colour": "#234154",
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": false
+            },
+            "points": {
+              "colour": "#234154",
+              "radius": 3,
+              "shape": "circle",
+              "draw": true
+            }
+          },
+          {
+            "x": {
+              "id": 161,
+              "name": "rectwavex_13",
+              "refId": 157,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to rectwavex_13 which is ",
+              "processes": []
+            },
+            "y": {
+              "id": 162,
+              "name": "rectwavey_156_13",
+              "refId": 158,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to rectwavey_156_13 which is ",
+              "processes": []
+            },
+            "label": "Rectangular Wave",
+            "yAxis": "left",
+            "line": {
+              "colour": "#BE796B",
+              "strokeWidth": 2.5,
+              "stroke": "solid",
+              "draw": true
+            },
+            "points": {
+              "colour": "#BE796B",
+              "radius": 3,
+              "shape": "circle",
+              "draw": false
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "topright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "#ccc",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "nightBands": []
       }
     }
   ],
@@ -286,9 +404,9 @@
       "name": "RectangularWave",
       "displayName": "Rectangular Wave",
       "args": {
-        "xIN": 83,
+        "xIN": 155,
         "yIN": [
-          84
+          156
         ],
         "outputX": -1,
         "fixKappa": false,
@@ -299,8 +417,8 @@
         "fixedDutyCycle": 0.5,
         "preProcesses": [],
         "out": {
-          "rectwavex": 85,
-          "rectwavey_84": 86
+          "rectwavex": 157,
+          "rectwavey_156": 158
         }
       },
       "refTPId": null
@@ -359,5 +477,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.42.0"
+  "version": "β.43.2"
 }
