@@ -38,6 +38,13 @@
 	import SelectionLayoutToolbar from '$lib/components/reusables/SelectionLayoutToolbar.svelte';
 	import { alignBoxes, distributeBoxes } from '$lib/core/layoutHelpers.js';
 	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
+	import CompactNode from './CompactNode.svelte';
+	import {
+		COMPACT_W,
+		SQUARED_KINDS,
+		compactNodeHeight,
+		compactPortAnchorY
+	} from './nodeGeometry.js';
 
 	let { inline = false } = $props();
 
@@ -89,7 +96,30 @@
 
 	// --- Edge derivation split into topology + positioned ---
 
+	// Whether a node renders as a compact square. Groups track this via their own
+	// persisted `collapsed` flag (so new groups start detailed and the state is
+	// saved); data/process/tableprocess use the ephemeral expandedNodeIds set.
+	// Plots and notes are never compact.
+	function isCompact(node) {
+		if (node?.type === 'group') return node?.groupObj?.collapsed === true;
+		return SQUARED_KINDS.has(node?.type) && !expandedNodeIds.has(node?.id);
+	}
+
+	// Nodes that offer a compact/detailed toggle (the hover button on the card).
+	function canToggleCompact(node) {
+		return SQUARED_KINDS.has(node?.type) || node?.type === 'group';
+	}
+
 	function getPortAnchorY(node, portName, direction) {
+		// Compact nodes distribute their ports as a centered stack over the square
+		// body (no header), so the anchor is purely formula-based here.
+		if (isCompact(node)) {
+			const ports = direction === 'out' ? (node.ports?.outputs ?? []) : (node.ports?.inputs ?? []);
+			const h = compactNodeHeight(node.ports?.inputs?.length ?? 0, node.ports?.outputs?.length ?? 0);
+			let idx = ports.findIndex((p) => p.name === portName);
+			if (idx < 0) idx = 0;
+			return compactPortAnchorY(idx, ports.length, h);
+		}
 		// Group rows can expand to show MiniDataTable previews, which makes
 		// the simple index-based formula wrong. GroupNode publishes per-port Y
 		// after layout — use that when available, otherwise fall through to
@@ -128,6 +158,7 @@
 	 * are user-resizable, so we look up the live width on the group object.
 	 */
 	function getNodeWidth(node) {
+		if (isCompact(node)) return COMPACT_W;
 		if (node?.type === 'group') return node?.groupObj?.width ?? NODE_WIDTH;
 		// Plot nodes match their (resizable) preview width. Process / table-process
 		// nodes widen to the editor-panel width when expanded so the header and the
@@ -145,6 +176,9 @@
 
 	/** Visual height of a node EXCLUDING any plot-preview/MiniDataTable body. */
 	function getNodePortAreaHeight(node) {
+		if (isCompact(node)) {
+			return compactNodeHeight(node?.ports?.inputs?.length ?? 0, node?.ports?.outputs?.length ?? 0);
+		}
 		if (node?.type === 'tableprocess') {
 			// Side-by-side: inputs left, output-column rows right. The `all` port
 			// sits in the header, so output rows = outputColumns count.
@@ -1849,11 +1883,17 @@
 		appState.showControlPanel = true;
 	}
 
-	/** Toggle the in-node inline editor (process/tableprocess) — driven by the
-	 *  header expand arrow. Operates on a Set so expanding a second node doesn't
-	 *  collapse the first. */
+	/** Toggle a node between Compact (square) and Detailed (full view: table /
+	 *  editor / group rows). Driven by the hover toggle button on the card.
+	 *  Groups persist this on their own `collapsed` flag; other squared kinds use
+	 *  the ephemeral expandedNodeIds set (so expanding a second node doesn't
+	 *  collapse the first). */
 	function handleNodeToggleExpand(node) {
-		if (node.type !== 'process' && node.type !== 'tableprocess') return;
+		if (node.type === 'group') {
+			if (node.groupObj) node.groupObj.collapsed = !node.groupObj.collapsed;
+			return;
+		}
+		if (!SQUARED_KINDS.has(node.type)) return;
 		const next = new Set(expandedNodeIds);
 		if (next.has(node.id)) next.delete(node.id);
 		else next.add(node.id);
@@ -2435,6 +2475,7 @@
 			{#each allNodes as node (node.id)}
 				{@const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id]}
 				{@const isExpanded = expandedNodeIds.has(node.id)}
+				{@const compact = isCompact(node)}
 				{@const isDragging = dragInfo?.nodeId === node.id && dragInfo?.moved}
 				{@const isDimmed = connectedNodeIds !== null && !connectedNodeIds.has(node.id)}
 				{@const isRecentlyChanged = changedNodeIds.has(node.id)}
@@ -2466,7 +2507,18 @@
 						onclick={(e) => e.stopPropagation()}
 						role="presentation"
 					>
-						{#if isGroup}
+						{#if compact}
+							<CompactNode
+								{node}
+								selected={isSelected}
+								spliceTargetPort={dropTargetPortKey?.startsWith(`${node.id}|`)
+									? dropTargetPortKey.slice(node.id.length + 1)
+									: null}
+								on:portstart={handlePortStart}
+								on:portend={handlePortEnd}
+								on:portdisconnect={handlePortDisconnect}
+							/>
+						{:else if isGroup}
 							<GroupNode
 								{node}
 								selected={isSelected}
@@ -2511,6 +2563,22 @@
 								on:toggleexpand={() => handleNodeToggleExpand(node)}
 								on:resizestart={(ev) => handleNoteResizeMouseDown(ev.detail, node)}
 							/>
+						{/if}
+
+						{#if canToggleCompact(node)}
+							<button
+								type="button"
+								class="node-compact-toggle"
+								title={compact ? 'Expand node' : 'Collapse node'}
+								aria-label={compact ? 'Expand node' : 'Collapse node'}
+								onpointerdown={(e) => e.stopPropagation()}
+								onclick={(e) => {
+									e.stopPropagation();
+									handleNodeToggleExpand(node);
+								}}
+							>
+								{compact ? '⤢' : '⤡'}
+							</button>
 						{/if}
 
 						{#if isExpanded && node.type === 'process' && node.processObj && node.processObj.parentCol}
@@ -2714,6 +2782,37 @@
 	.workflow-node-wrapper {
 		cursor: grab;
 		transition: opacity 0.15s;
+	}
+
+	/* Hover-revealed compact/detailed toggle, pinned to the card's top-right. */
+	.node-compact-toggle {
+		position: absolute;
+		top: -9px;
+		right: -9px;
+		width: 18px;
+		height: 18px;
+		padding: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 11px;
+		line-height: 1;
+		color: var(--color-lightness-35, #555);
+		background: #ffffff;
+		border: 1px solid var(--color-lightness-70, #bbb);
+		border-radius: 50%;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+		cursor: pointer;
+		opacity: 0;
+		transition: opacity 0.12s ease;
+		z-index: 5;
+	}
+	.workflow-node-wrapper:hover .node-compact-toggle {
+		opacity: 1;
+	}
+	.node-compact-toggle:hover {
+		color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent, #4d9fe3);
 	}
 
 	/* When a node's note popover is open, lift the whole wrapper above its
