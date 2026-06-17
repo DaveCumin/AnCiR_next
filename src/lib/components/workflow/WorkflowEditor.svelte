@@ -2448,6 +2448,50 @@
 		}
 	}
 
+	// Expanded composites render as an auto-sized bordered frame behind their
+	// member nodes (bounding box of the members + padding, with room for a title).
+	const COMPOSITE_FRAME = { padX: 22, padTop: 30, padBottom: 22 };
+	const expandedComposites = $derived.by(() => {
+		const out = [];
+		for (const comp of core.composites ?? []) {
+			if (comp.collapsed) continue;
+			let x0 = Infinity,
+				y0 = Infinity,
+				x1 = -Infinity,
+				y1 = -Infinity;
+			let found = 0;
+			for (const mid of comp.memberIds ?? []) {
+				const n = allNodes.find((nn) => nn.id === mid);
+				const p = stablePositions[mid] ?? defaultPositions.positions[mid];
+				if (!n || !p) continue;
+				found++;
+				const w = getNodeWidth(n);
+				// Include the editor panel when a member node is individually expanded,
+				// since it renders below the node body and getNodeRenderHeight omits it.
+				const editorH =
+					expandedNodeIds.has(n.id) && (n.type === 'process' || n.type === 'tableprocess')
+						? EDITOR_PANEL_MAX_HEIGHT
+						: 0;
+				const h = getNodeRenderHeight(n) + editorH;
+				x0 = Math.min(x0, p.x);
+				y0 = Math.min(y0, p.y);
+				x1 = Math.max(x1, p.x + w);
+				y1 = Math.max(y1, p.y + h);
+			}
+			if (!found || !isFinite(x0)) continue;
+			out.push({
+				id: comp.id,
+				name: comp.name,
+				comp,
+				x: x0 - COMPOSITE_FRAME.padX,
+				y: y0 - COMPOSITE_FRAME.padTop,
+				w: x1 - x0 + COMPOSITE_FRAME.padX * 2,
+				h: y1 - y0 + COMPOSITE_FRAME.padTop + COMPOSITE_FRAME.padBottom
+			});
+		}
+		return out;
+	});
+
 	const provisionalEdge = $derived.by(() => {
 		if (!pendingConnection) return null;
 		const fromNode = allNodes.find((n) => n.id === pendingConnection.fromNodeId);
@@ -2495,13 +2539,41 @@
 		>
 	{/if}
 
-	{#if multiSelectedNodeIds.size >= 2}
+	{#if multiSelectedNodeIds.size >= 2 || focusedNodeId?.startsWith('composite_')}
 		<div class="selection-toolbar-host">
-			<SelectionLayoutToolbar
-				onAlign={alignSelectedNodes}
-				onDistribute={distributeSelectedNodes}
-				canDistribute={multiSelectedNodeIds.size >= 3}
-			/>
+			{#if multiSelectedNodeIds.size >= 2}
+				<SelectionLayoutToolbar
+					onAlign={alignSelectedNodes}
+					onDistribute={distributeSelectedNodes}
+					canDistribute={multiSelectedNodeIds.size >= 3}
+				/>
+				<button
+					type="button"
+					class="selection-action-btn"
+					onpointerdown={(e) => e.stopPropagation()}
+					onclick={(e) => {
+						e.stopPropagation();
+						combineSelection();
+					}}
+					{@attach tooltip('Combine into a composite (Cmd/Ctrl+G)')}
+				>
+					⧉ Combine
+				</button>
+			{/if}
+			{#if focusedNodeId?.startsWith('composite_')}
+				<button
+					type="button"
+					class="selection-action-btn"
+					onpointerdown={(e) => e.stopPropagation()}
+					onclick={(e) => {
+						e.stopPropagation();
+						uncombineSelection();
+					}}
+					{@attach tooltip('Uncombine (Cmd/Ctrl+Shift+G)')}
+				>
+					⤢ Uncombine
+				</button>
+			{/if}
 		</div>
 	{/if}
 
@@ -2517,6 +2589,28 @@
 			class="canvas-inner"
 			style="transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0; width: {canvasWidth}px; height: {canvasHeight}px; position: relative;"
 		>
+			{#each expandedComposites as cc (cc.id)}
+				<div
+					class="composite-frame"
+					style="left:{cc.x}px; top:{cc.y}px; width:{cc.w}px; height:{cc.h}px;"
+				>
+					<div class="composite-frame-title">
+						<span class="composite-frame-name">{cc.name}</span>
+						<button
+							type="button"
+							class="composite-frame-collapse"
+							title="Collapse composite"
+							aria-label="Collapse composite"
+							onpointerdown={(e) => e.stopPropagation()}
+							onclick={(e) => {
+								e.stopPropagation();
+								handleNodeToggleExpand({ type: 'composite', id: cc.id, compositeObj: cc.comp });
+							}}>⤡</button
+						>
+					</div>
+				</div>
+			{/each}
+
 			<WorkflowEdges
 				edges={allEdges}
 				width={canvasWidth}
@@ -2539,7 +2633,9 @@
 				{@const isMultiSelected = multiSelectedNodeIds.has(node.id)}
 				{@const isSelected = focusedNodeId === node.id || isMultiSelected}
 				{@const nodeZIndex = isDragging ? 30 : isExpanded ? 20 : 1}
-				{#if pos}
+				<!-- Expanded composites render as the bordered frame backdrop above,
+				     not as a node wrapper, so skip them here. -->
+				{#if pos && !(node.type === 'composite' && !compact)}
 					<div
 						class="workflow-node-wrapper"
 						class:dragging={isDragging}
@@ -2866,6 +2962,48 @@
 	.workflow-node-wrapper:hover .node-compact-toggle {
 		opacity: 1;
 	}
+
+	/* Expanded-composite frame: auto-sized backdrop behind member nodes. The
+	   body is click-through (pointer-events:none) so panning + member interaction
+	   pass through; only the title bar/button are interactive. */
+	.composite-frame {
+		position: absolute;
+		z-index: 0;
+		box-sizing: border-box;
+		border: 1.5px dashed var(--color-accent, #4d9fe3);
+		border-radius: 10px;
+		background: rgba(77, 159, 227, 0.06);
+		pointer-events: none;
+	}
+	.composite-frame-title {
+		position: absolute;
+		top: -11px;
+		left: 10px;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		height: 20px;
+		padding: 0 8px;
+		background: #ffffff;
+		border: 1px solid var(--color-accent, #4d9fe3);
+		border-radius: 10px;
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--color-lightness-25, #333);
+		pointer-events: auto;
+	}
+	.composite-frame-collapse {
+		border: none;
+		background: transparent;
+		cursor: pointer;
+		font-size: 11px;
+		line-height: 1;
+		padding: 0;
+		color: var(--color-lightness-45, #777);
+	}
+	.composite-frame-collapse:hover {
+		color: var(--color-accent, #4d9fe3);
+	}
 	.node-compact-toggle:hover {
 		color: var(--color-accent, #4d9fe3);
 		border-color: var(--color-accent, #4d9fe3);
@@ -2991,6 +3129,30 @@
 		transform: translateX(-50%);
 		z-index: 40;
 		pointer-events: none;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.selection-action-btn {
+		pointer-events: auto;
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		height: 30px;
+		padding: 0 10px;
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--color-lightness-25, #333);
+		background: #ffffff;
+		border: 1px solid var(--color-lightness-80, #ccc);
+		border-radius: 6px;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+		cursor: pointer;
+	}
+	.selection-action-btn:hover {
+		border-color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent, #4d9fe3);
 	}
 
 	.viewport-btn {
