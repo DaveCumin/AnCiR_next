@@ -11,10 +11,14 @@
 		removeNote,
 		createGroup,
 		removeGroup,
+		createComposite,
+		removeComposite,
 		createOrphanProcess,
 		removeOrphanProcess,
 		pushObj
 	} from '$lib/core/core.svelte.js';
+	import { computeInterface } from '$lib/core/composite.js';
+	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { Column } from '$lib/core/Column.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
@@ -2345,12 +2349,59 @@
 		_dbg('paste: done. created', newIds.size, 'nodes, focused', focusedNodeId);
 	}
 
+	// --- Composite (combine / uncombine) ---
+	const COMPOSABLE = (id) => id?.startsWith('process_') || id?.startsWith('tableprocess_');
+
+	function combineSelection() {
+		const ids = [...multiSelectedNodeIds].filter(COMPOSABLE);
+		if (ids.length < 2) {
+			addNotification('Select at least two analysis/process nodes to combine.');
+			return;
+		}
+		const iface = computeInterface(new Set(ids), processGraph.connections ?? []);
+		const ps = ids
+			.map((id) => stablePositions[id] ?? defaultPositions.positions[id])
+			.filter(Boolean);
+		const cx = ps.length ? Math.round(ps.reduce((s, p) => s + p.x, 0) / ps.length) : 80;
+		const cy = ps.length ? Math.round(ps.reduce((s, p) => s + p.y, 0) / ps.length) : 80;
+		const cid = createComposite({
+			memberIds: ids,
+			interface: iface,
+			x: cx,
+			y: cy,
+			name: 'Composite'
+		});
+		stablePositions[cid] = { x: cx, y: cy };
+		focusedNodeId = cid;
+		multiSelectedNodeIds = new Set([cid]);
+	}
+
+	function uncombineSelection() {
+		const composites = [...multiSelectedNodeIds].filter((id) => id?.startsWith('composite_'));
+		const target = composites[0] ?? (focusedNodeId?.startsWith('composite_') ? focusedNodeId : null);
+		if (!target) {
+			addNotification('Select a composite to uncombine.');
+			return;
+		}
+		removeComposite(target);
+		focusedNodeId = null;
+		multiSelectedNodeIds = new Set();
+	}
+
 	function handleKeyDown(e) {
 		if (e.key === 'Escape') {
 			clearSelection();
 			return;
 		}
 		const mod = e.metaKey || e.ctrlKey;
+		// Cmd/Ctrl+G — combine selection; Cmd/Ctrl+Shift+G — uncombine.
+		if (mod && (e.key === 'g' || e.key === 'G')) {
+			if (isEditableTarget(e.target)) return;
+			e.preventDefault();
+			if (e.shiftKey) uncombineSelection();
+			else combineSelection();
+			return;
+		}
 		if (mod && (e.key === 'c' || e.key === 'C')) {
 			_dbg('keydown: Cmd/Ctrl+C', {
 				editable: isEditableTarget(e.target),
