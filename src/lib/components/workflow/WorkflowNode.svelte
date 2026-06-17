@@ -8,6 +8,7 @@
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { guessDateofArray } from '$lib/utils/time/TimeUtils.js';
 	import { core } from '$lib/core/core.svelte.js';
+	import { plotPortRows } from '$lib/core/ProcessNode.svelte.js';
 	let {
 		node,
 		selected = false,
@@ -55,6 +56,13 @@
 	let inputPorts = $derived(node.ports?.inputs ?? []);
 	let outputPorts = $derived(node.ports?.outputs ?? []);
 	let portRows = $derived(Math.max(inputPorts.length, outputPorts.length));
+
+	// Plot nodes whose inputs carry series metadata (axis/series) render grouped
+	// under "Series N" headers with friendly x/y labels. plotPortRows() is the
+	// single source of truth for slot order — WorkflowEditor's edge anchor uses
+	// the same helper so wires stay attached.
+	let isPlotGrouped = $derived(node.type === 'plot' && inputPorts.some((p) => p?.axis));
+	let groupedRows = $derived(isPlotGrouped ? plotPortRows(inputPorts) : []);
 
 	function startFromOutput(e, portName) {
 		e.stopPropagation();
@@ -126,12 +134,45 @@
 		<NodeNoteButton nodeId={node.id} />
 	</div>
 
-	{#if portRows > 0}
+	{#if isPlotGrouped}
+		<div class="node-ports grouped" style="height:{groupedRows.length * PORT_H}px;">
+			{#each groupedRows as row, i (`r_${i}`)}
+				{#if row.kind === 'header'}
+					<div class="series-header" style="top:{i * PORT_H}px;">
+						{row.label}
+					</div>
+				{:else}
+					<div class="port-row input" style="top:{i * PORT_H}px;">
+						<div
+							class="port-dot dot-input"
+							data-node-id={node.id}
+							data-port-name={row.port.name}
+							data-port-dir="in"
+							title={`Input: ${row.port.display ?? row.port.name}${row.port.dynamic ? ' — accepts one or more columns' : ''}`}
+							onmousedown={(e) => disconnectInput(e, row.port.name)}
+							onmouseup={(e) => endAtInput(e, row.port.name)}
+							oncontextmenu={(e) => disconnectInput(e, row.port.name)}
+							role="button"
+							tabindex="-1"
+						></div>
+						<span class="port-label"
+							>{row.port.display ?? row.port.name}{#if row.port.dynamic}<span class="dyn-star"
+									>*</span
+								>{/if}</span
+						>
+					</div>
+				{/if}
+			{/each}
+		</div>
+	{:else if portRows > 0}
 		<div class="node-ports" style="height:{portRows * PORT_H}px;">
 			{#each inputPorts as port, i (`in_${port.name}_${i}`)}
 				<div class="port-row input" style="top:{i * PORT_H}px;">
 					<div
 						class="port-dot dot-input"
+						data-node-id={node.id}
+						data-port-name={port.name}
+						data-port-dir="in"
 						title={`Input: ${port.name}${port.dynamic ? ' (many)' : ''}`}
 						onmousedown={(e) => disconnectInput(e, port.name)}
 						onmouseup={(e) => endAtInput(e, port.name)}
@@ -147,6 +188,9 @@
 					<div
 						class="port-dot dot-output"
 						class:splice-target={spliceTargetPort === port.name}
+						data-node-id={node.id}
+						data-port-name={port.name}
+						data-port-dir="out"
 						title={`Output: ${port.name}${port.dynamic ? ' (many)' : ''}`}
 						onmousedown={(e) => startFromOutput(e, port.name)}
 						role="button"
@@ -281,6 +325,32 @@
 		position: relative;
 	}
 
+	/* Faint "Series N" caption grouping each (x, y) pair on plot nodes. Occupies
+	   one PORT_H slot so it lines up with the absolute port rows below it. */
+	.series-header {
+		position: absolute;
+		left: 0;
+		right: 0;
+		height: 22px; /* PORT_H */
+		display: flex;
+		align-items: center;
+		padding-left: 10px;
+		font-size: 9.5px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--color-lightness-55, #9a9a9a);
+		pointer-events: none;
+		border-top: 1px solid var(--color-lightness-90, #ededed);
+	}
+	/* "*" marks a dynamic port that accepts one or more columns. Plain text colour
+	   (not accent) so it reads as a footnote marker, not a link. */
+	.dyn-star {
+		margin-left: 1px;
+		color: inherit;
+		font-weight: 700;
+	}
+
 	.port-row {
 		position: absolute;
 		display: flex;
@@ -315,6 +385,16 @@
 		padding: 0;
 		overflow: visible;
 		pointer-events: auto;
+	}
+
+	/* Invisible enlarged hit area so the user doesn't have to land exactly on the
+	   10px dot to start or finish a wire. Wider than tall so it doesn't swallow the
+	   neighbouring row's dot (rows are PORT_H = 22px apart). */
+	.port-dot::before {
+		content: '';
+		position: absolute;
+		inset: -6px -12px;
+		border-radius: 8px;
 	}
 
 	/* Sit halfway outside the card so wires meet the dot, not the card edge. */

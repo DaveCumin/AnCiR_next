@@ -317,6 +317,9 @@
 				class:subset={allIsSubset}
 				class:splice-target={spliceTargetPort === 'all'}
 				bind:this={allPortEl}
+				data-node-id={node.id}
+				data-port-name="all"
+				data-port-dir="out"
 				onmousedown={(e) => onPortMouseDown(e, 'all')}
 				oncontextmenu={onAllPortContextMenu}
 				ondblclick={onAllPortDblClick}
@@ -416,6 +419,9 @@
 							class="port-dot dot-output inline-port row-port"
 							class:splice-target={spliceTargetPort === `col_${id}`}
 							bind:this={rowPortEls[id]}
+							data-node-id={node.id}
+							data-port-name={`col_${id}`}
+							data-port-dir="out"
 							onmousedown={(e) => onPortMouseDown(e, `col_${id}`)}
 							oncontextmenu={onPortContextMenu}
 							title={`output: ${col.name}`}
@@ -646,6 +652,15 @@
 		border: 1px solid var(--color-lightness-60, #8a8a8a);
 		cursor: crosshair;
 		padding: 0;
+		overflow: visible;
+	}
+
+	/* Invisible enlarged hit area so wiring doesn't require a pixel-perfect drop. */
+	.inline-port::before {
+		content: '';
+		position: absolute;
+		inset: -6px -12px;
+		border-radius: 8px;
 	}
 	.inline-port:hover {
 		background: var(--color-accent, #4d9fe3);

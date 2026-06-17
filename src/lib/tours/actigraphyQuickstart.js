@@ -1,48 +1,52 @@
 // actigraphyQuickstart.js — domain hands-on walkthrough for chronobiologists.
-// Builds the canonical pipeline AND has the user wire each connection:
-// data → Bin → Actogram, Periodogram, Cosinor → plot the Cosinor fit on a
-// Scatterplot. "Add" steps highlight the + palette; "wire" steps are an
-// out-of-the-way bottom hint bar (no dim) so the user can see and drag the
-// ports. Wire steps only advance once wiring is COMPLETE (every required port),
-// and their body updates live to tick off each input + nudge what's still
-// missing. Loaded on demand by tourRunner.
+// Builds the canonical pipeline AND has the user wire each connection, one axis
+// at a time (x first, then y): data → Bin → Actogram, Periodogram, Cosinor →
+// plot the Cosinor fit on a Scatterplot. "Add" steps highlight the + palette;
+// each "wire" step is an out-of-the-way bottom hint bar (no dim) while the
+// overlay rings the exact source/target dot and animates an edge between them.
+// A wire step advances as soon as ITS axis is connected. Loaded on demand.
 import { core, appState } from '$lib/core/core.svelte.js';
 import {
 	findTP,
 	tpStatus,
 	plotStatus,
 	cosinorFitStatus,
-	wiringHint
+	axisHint,
+	tpNodeId,
+	plotNodeId,
+	tpInPortEl,
+	plotInPortEl,
+	sourceOutElForAxis
 } from '$lib/core/tourWiring.js';
 
 const ensureCanvas = () => {
 	appState.view = 'canvas';
 };
 
-// Shared shape for the "now drag the wires" hint-bar steps. `body` is a function
-// so it re-renders live as the user connects ports; `when` gates on COMPLETE
-// wiring (status.done), not a single wire.
-const wireStep = (title, body, status) => ({
+// One single-axis "drag this wire" step: bottom hint bar + a ringed source/target
+// dot with an animated edge (`wire`). Advances when this axis (x|y) is connected.
+const wireAxisStep = (title, body, statusFn, axis, wire) => ({
 	target: null,
 	dim: false,
 	placement: 'screen-bottom',
 	title,
 	body,
 	beforeShow: ensureCanvas,
-	advance: { when: () => status().done }
+	wire,
+	advance: { when: () => !!statusFn()[axis === 'x' ? 'xOk' : 'yOk'] }
 });
 
 export const tour = {
 	id: 'actigraphy-quickstart',
 	name: 'Actigraphy quick-start',
 	description: 'Build a circadian pipeline: data → Bin → Actogram → Periodogram → Cosinor fit.',
-	estMinutes: 6,
+	estMinutes: 7,
 	order: 2,
 	steps: [
 		{
 			target: null,
 			title: 'Actigraphy quick-start',
-			body: 'We’ll build the classic circadian workflow and wire it up by hand: bin activity, draw an actogram, find the period, fit a rhythm, and plot the fit. Let’s go.',
+			body: 'We’ll build the classic circadian workflow and wire it up by hand, one connection at a time: bin activity, draw an actogram, find the period, fit a rhythm, and plot the fit. Let’s go.',
 			advance: { on: 'next' }
 		},
 		{
@@ -61,18 +65,26 @@ export const tour = {
 			beforeShow: ensureCanvas,
 			advance: { when: () => !!findTP('BinnedData') }
 		},
-		wireStep(
-			'Wire data → Bin Data',
+		wireAxisStep(
+			'Wire the time → Bin Data',
+			() => axisHint('First, connect your time column:', 'time', 'xIN', tpStatus('BinnedData').xOk),
+			() => tpStatus('BinnedData'),
+			'x',
+			{
+				from: () => sourceOutElForAxis('x', tpNodeId('BinnedData')),
+				to: () => tpInPortEl('BinnedData', 'xIN')
+			}
+		),
+		wireAxisStep(
+			'Wire the activity → Bin Data',
 			() =>
-				wiringHint(
-					'Connect your data into Bin Data:',
-					'time',
-					'xIN',
-					'activity',
-					'yIN',
-					tpStatus('BinnedData')
-				),
-			() => tpStatus('BinnedData')
+				axisHint('Now connect your activity column:', 'activity', 'yIN', tpStatus('BinnedData').yOk),
+			() => tpStatus('BinnedData'),
+			'y',
+			{
+				from: () => sourceOutElForAxis('y', tpNodeId('BinnedData')),
+				to: () => tpInPortEl('BinnedData', 'yIN')
+			}
 		),
 		{
 			target: '.np-trigger',
@@ -82,18 +94,25 @@ export const tour = {
 			beforeShow: ensureCanvas,
 			advance: { when: () => core.plots.some((p) => p.type === 'actogram') }
 		},
-		wireStep(
-			'Wire the binned data → Actogram',
-			() =>
-				wiringHint(
-					'Connect the binned series to the Actogram:',
-					'binned time',
-					'x',
-					'binned activity',
-					'y',
-					plotStatus('actogram')
-				),
-			() => plotStatus('actogram')
+		wireAxisStep(
+			'Wire the binned time → Actogram',
+			() => axisHint('Connect the binned time to the Actogram:', 'binned time', 'x', plotStatus('actogram').xOk),
+			() => plotStatus('actogram'),
+			'x',
+			{
+				from: () => sourceOutElForAxis('x', plotNodeId('actogram')),
+				to: () => plotInPortEl('actogram', 'x1')
+			}
+		),
+		wireAxisStep(
+			'Wire the binned activity → Actogram',
+			() => axisHint('Now the binned activity:', 'binned activity', 'y', plotStatus('actogram').yOk),
+			() => plotStatus('actogram'),
+			'y',
+			{
+				from: () => sourceOutElForAxis('y', plotNodeId('actogram')),
+				to: () => plotInPortEl('actogram', 'ys1')
+			}
 		),
 		{
 			target: '.np-trigger',
@@ -103,18 +122,25 @@ export const tour = {
 			beforeShow: ensureCanvas,
 			advance: { when: () => core.plots.some((p) => p.type === 'periodogram') }
 		},
-		wireStep(
-			'Wire data → Periodogram',
-			() =>
-				wiringHint(
-					'Connect your series to the Periodogram:',
-					'time',
-					'x',
-					'activity',
-					'y',
-					plotStatus('periodogram')
-				),
-			() => plotStatus('periodogram')
+		wireAxisStep(
+			'Wire the time → Periodogram',
+			() => axisHint('Connect your time to the Periodogram:', 'time', 'x', plotStatus('periodogram').xOk),
+			() => plotStatus('periodogram'),
+			'x',
+			{
+				from: () => sourceOutElForAxis('x', plotNodeId('periodogram')),
+				to: () => plotInPortEl('periodogram', 'x1')
+			}
+		),
+		wireAxisStep(
+			'Wire the activity → Periodogram',
+			() => axisHint('Now your activity:', 'activity', 'y', plotStatus('periodogram').yOk),
+			() => plotStatus('periodogram'),
+			'y',
+			{
+				from: () => sourceOutElForAxis('y', plotNodeId('periodogram')),
+				to: () => plotInPortEl('periodogram', 'ys1')
+			}
 		),
 		{
 			target: '.np-trigger',
@@ -124,18 +150,26 @@ export const tour = {
 			beforeShow: ensureCanvas,
 			advance: { when: () => !!findTP('Cosinor') }
 		},
-		wireStep(
-			'Wire data → Cosinor',
+		wireAxisStep(
+			'Wire the time → Cosinor',
+			() => axisHint('Connect your time to the Cosinor:', 'time', 'xIN', tpStatus('Cosinor').xOk),
+			() => tpStatus('Cosinor'),
+			'x',
+			{
+				from: () => sourceOutElForAxis('x', tpNodeId('Cosinor')),
+				to: () => tpInPortEl('Cosinor', 'xIN')
+			}
+		),
+		wireAxisStep(
+			'Wire the activity → Cosinor',
 			() =>
-				wiringHint(
-					'Connect your data into the Cosinor:',
-					'time',
-					'xIN',
-					'activity',
-					'yIN',
-					tpStatus('Cosinor')
-				),
-			() => tpStatus('Cosinor')
+				axisHint('Now your activity — it fits each y you wire in:', 'activity', 'yIN', tpStatus('Cosinor').yOk),
+			() => tpStatus('Cosinor'),
+			'y',
+			{
+				from: () => sourceOutElForAxis('y', tpNodeId('Cosinor')),
+				to: () => tpInPortEl('Cosinor', 'yIN')
+			}
 		),
 		{
 			target: '.np-trigger',
@@ -145,19 +179,32 @@ export const tour = {
 			beforeShow: ensureCanvas,
 			advance: { when: () => core.plots.some((p) => p.type === 'scatterplot') }
 		},
-		wireStep(
-			'Plot the Cosinor fit',
+		wireAxisStep(
+			'Plot the Cosinor fit — x',
+			() => axisHint('Wire the fitted curve’s x onto the Scatterplot:', 'cosinorx', 'x', cosinorFitStatus().xOk),
+			() => cosinorFitStatus(),
+			'x',
+			{
+				from: () => sourceOutElForAxis('x', plotNodeId('scatterplot')),
+				to: () => plotInPortEl('scatterplot', 'x1')
+			}
+		),
+		wireAxisStep(
+			'Plot the Cosinor fit — y',
 			() =>
-				wiringHint(
-					'Overlay the fitted curve on the Scatterplot:',
-					'cosinorx',
-					'x',
+				axisHint(
+					'Now the fitted curve’s y:',
 					'a cosinory',
 					'y',
-					cosinorFitStatus(),
+					cosinorFitStatus().yOk,
 					'Tip: add your raw activity as a second series to see the fit over the data.'
 				),
-			() => cosinorFitStatus()
+			() => cosinorFitStatus(),
+			'y',
+			{
+				from: () => sourceOutElForAxis('y', plotNodeId('scatterplot')),
+				to: () => plotInPortEl('scatterplot', 'ys1')
+			}
 		),
 		{
 			target: null,

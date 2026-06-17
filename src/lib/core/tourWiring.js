@@ -12,6 +12,61 @@ export const findTP = (name) => (core.tableProcesses ?? []).find((tp) => tp.name
 // Most-recently-added plot of a type — the one the tour just had the user add.
 export const lastPlot = (type) => [...core.plots].reverse().find((p) => p.type === type);
 
+// --- Port-element resolvers for the tour's "highlight ports + animated edge" ---
+// The workflow node ids mirror ProcessNode.svelte.js: `tableprocess_<id>`,
+// `plot_<id>`, `data_<id>`. Port dots carry data-node-id / data-port-name /
+// data-port-dir so the tour can find the exact dot to ring and wire to/from.
+export const tpNodeId = (name) => {
+	const t = findTP(name);
+	return t ? `tableprocess_${t.id}` : null;
+};
+export const plotNodeId = (type) => {
+	const p = lastPlot(type);
+	return p ? `plot_${p.id}` : null;
+};
+export const portEl = (nodeId, portName, dir) => {
+	if (!nodeId || typeof document === 'undefined') return null;
+	const dirSel = dir ? `[data-port-dir="${dir}"]` : '';
+	return document.querySelector(
+		`[data-node-id="${nodeId}"][data-port-name="${portName}"]${dirSel}`
+	);
+};
+export const tpInPortEl = (name, portName) => portEl(tpNodeId(name), portName, 'in');
+export const plotInPortEl = (type, portName) => portEl(plotNodeId(type), portName, 'in');
+
+// Type-agnostic: the named input dot on the LAST plot node on the canvas
+// (getting-started lets the user pick any plot type).
+export const anyPlotInPortEl = (portName) => {
+	if (typeof document === 'undefined') return null;
+	const dots = [...document.querySelectorAll(`[data-port-dir="in"][data-port-name="${portName}"]`)].filter(
+		(d) => (d.getAttribute('data-node-id') || '').startsWith('plot_')
+	);
+	return dots[dots.length - 1] || null;
+};
+
+// Candidate SOURCE output dots to animate the demo edge from: all output dots
+// that aren't on the target node and aren't the bundled `all` port, in DOM order.
+const sourceOutDots = (excludeNodeId) => {
+	if (typeof document === 'undefined') return [];
+	const all = [...document.querySelectorAll('[data-port-dir="out"]')].filter(
+		(d) => d.getAttribute('data-node-id') !== excludeNodeId
+	);
+	const named = all.filter((d) => d.getAttribute('data-port-name') !== 'all');
+	return named.length ? named : all;
+};
+
+// A representative source output dot for the demo edge. First non-`all` output.
+export const firstSourceOutEl = (excludeNodeId) => sourceOutDots(excludeNodeId)[0] ?? null;
+
+// Axis-aware source: the x edge comes from the FIRST output (the time/x column),
+// the y edge from the SECOND (the values/y column) — so the demo doesn't draw the
+// y wire from the time output. Falls back to the first when there's only one.
+export const sourceOutElForAxis = (axis, excludeNodeId) => {
+	const dots = sourceOutDots(excludeNodeId);
+	if (!dots.length) return null;
+	return axis === 'y' ? (dots[1] ?? dots[0]) : dots[0];
+};
+
 // Wiring state for a multi-Y table process: needs an x input and ≥1 y input.
 export const tpStatus = (name) => {
 	const t = findTP(name);
@@ -86,4 +141,12 @@ export const wiringHint = (intro, xLabel, xPort, yLabel, yPort, status, tip = ''
 		yLabel,
 		yPort
 	)}<br><br><em>${nudge}</em>${tipHtml}`;
+};
+
+// Single-axis hint for the split "wire x, then wire y" steps. `ok` ticks the line
+// and switches the nudge to a confirmation.
+export const axisHint = (intro, label, port, ok, tip = '') => {
+	const nudge = ok ? 'Connected — moving on…' : `Drag <strong>${label}</strong> onto <strong>${port}</strong>.`;
+	const tipHtml = tip ? `<br><span class="tour-tip">${tip}</span>` : '';
+	return `${intro}<br><br>${ok ? '✅' : '⬜️'} ${label} → <strong>${port}</strong><br><br><em>${nudge}</em>${tipHtml}`;
 };

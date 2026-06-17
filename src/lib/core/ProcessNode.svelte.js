@@ -34,6 +34,33 @@ function makeNodePort(name, direction, artifactKind = 'column', dynamic = false)
 }
 
 /**
+ * Lay out a plot node's input ports as a flat list of rows for rendering AND for
+ * edge anchoring — both must agree on each port's slot index. Ports tagged with
+ * `axis === 'x'` start a new series, so a `header` row is emitted before them.
+ * Every row (header or port) occupies one PORT_H slot. Ports without `axis`
+ * (e.g. Histogram's single `data` port) produce no headers — just port rows, so
+ * non-grouped plots and all other node types fall back to the plain layout.
+ */
+export function plotPortRows(inputs = []) {
+	const rows = [];
+	for (const p of inputs) {
+		// A "Series N" header before each pair's x port — including the trailing
+		// empty pair, so every {x, y} pair is clearly titled.
+		if (p?.axis === 'x') {
+			rows.push({ kind: 'header', series: p.series, label: `Series ${p.series}` });
+		}
+		rows.push({ kind: 'port', port: p });
+	}
+	return rows;
+}
+
+/** Slot index (row position) of a named input port in plotPortRows, or -1. */
+export function plotPortSlotIndex(inputs, portName) {
+	const rows = plotPortRows(inputs);
+	return rows.findIndex((r) => r.kind === 'port' && r.port?.name === portName);
+}
+
+/**
  * Group plot data points by x.refId so each unique x forms a "set" with its
  * own `xN`/`ysN` port pair. Preserves the order in which xRefIds first appear
  * in the data array. Data points with no x ref (refId === -1 or null) form
@@ -530,13 +557,28 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				// each unique x.refId becomes an (xN, ysN) pair, and a trailing empty
 				// pair is always appended so the user can drop a wire to start a set.
 				const groups = groupPlotData(plot.plot?.data);
-				groups.forEach((_, i) => {
-					inputs.push(makeNodePort(`x${i + 1}`, 'input', 'column', false));
-					inputs.push(makeNodePort(`ys${i + 1}`, 'input', 'column', true));
-				});
-				const next = groups.length + 1;
-				inputs.push(makeNodePort(`x${next}`, 'input', 'column', false));
-				inputs.push(makeNodePort(`ys${next}`, 'input', 'column', true));
+				// Each (xN, ysN) pair is one plot "series". We tag the ports with
+				// display metadata (axis/series/newSeries/display) so the node can
+				// render them grouped under a "Series N" header with friendly x/y
+				// labels. Internal port.name stays xN/ysN so wiring is unchanged.
+				const addSeriesPorts = (n, isNew) => {
+					inputs.push({
+						...makeNodePort(`x${n}`, 'input', 'column', false),
+						axis: 'x',
+						series: n,
+						newSeries: isNew,
+						display: 'x'
+					});
+					inputs.push({
+						...makeNodePort(`ys${n}`, 'input', 'column', true),
+						axis: 'y',
+						series: n,
+						newSeries: isNew,
+						display: 'y'
+					});
+				};
+				groups.forEach((_, i) => addSeriesPorts(i + 1, false));
+				addSeriesPorts(groups.length + 1, true);
 			}
 		}
 

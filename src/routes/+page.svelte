@@ -138,11 +138,11 @@
 			performance.mark('load-start');
 		}
 		//load the maps
-		appState.loadingState.loadingMsg = 'Loading processes ...';
+		appState.loadingState.loadingMsg = 'Loading maths ...';
 		appConsts.processMap = await loadProcesses();
 		appState.loadingState.loadingMsg = 'Loading plots ...';
 		appConsts.plotMap = await loadPlots();
-		appState.loadingState.loadingMsg = 'Loading maths and things ...';
+		appState.loadingState.loadingMsg = 'Loading more maths ...';
 		appConsts.tableProcessMap = await loadTableProcesses();
 
 		appState.loadingState.isLoading = false;

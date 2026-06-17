@@ -2,7 +2,7 @@
 // Loaded on demand by tourRunner (import.meta.glob). Predicates read live app
 // state so steps that ask the user to DO something auto-advance when done.
 import { core, appState } from '$lib/core/core.svelte.js';
-import { anyPlotStatus, wiringHint } from '$lib/core/tourWiring.js';
+import { anyPlotStatus, axisHint, anyPlotInPortEl, sourceOutElForAxis } from '$lib/core/tourWiring.js';
 
 export const tour = {
 	id: 'getting-started',
@@ -48,24 +48,48 @@ export const tour = {
 			advance: { when: () => core.plots.length > 0 }
 		},
 		{
-			target: '.plot-preview-panel',
-			placement: 'right',
-			title: 'Connect data to the plot',
-			// Reactive: ticks off each input and only advances once BOTH x and y are
-			// wired, so the user learns to connect the whole plot, not just one dot.
+			target: null,
+			dim: false,
+			placement: 'screen-bottom',
+			title: 'Connect data — the x axis',
+			// The overlay rings the highlighted dots and animates a demo edge (see
+			// `wire`). x first; advances as soon as x is wired.
 			body: () =>
-				wiringHint(
-					'Drag from a data column’s output dot (right edge of the data node) onto the plot’s input dots (left edge):',
+				axisHint(
+					'Plots have an <strong>x</strong> (across) and a <strong>y</strong> (up) input. Drag from a data column’s <strong>output dot</strong> (right edge of the data node) onto the highlighted <strong>x</strong> dot.',
 					'a column',
 					'x',
-					'a column',
-					'y',
-					anyPlotStatus()
+					anyPlotStatus().xOk
 				),
 			beforeShow: () => {
 				appState.view = 'canvas';
 			},
-			advance: { when: () => anyPlotStatus().done }
+			wire: {
+				from: () => sourceOutElForAxis('x', null),
+				to: () => anyPlotInPortEl('x1')
+			},
+			advance: { when: () => anyPlotStatus().xOk }
+		},
+		{
+			target: null,
+			dim: false,
+			placement: 'screen-bottom',
+			title: 'Connect data — the y axis',
+			body: () =>
+				axisHint(
+					'Now drag a column onto the <strong>y</strong> dot. The <strong>y</strong> shows a <strong>*</strong> because it can take several columns at once to overlay series.',
+					'a column',
+					'y',
+					anyPlotStatus().yOk
+				),
+			beforeShow: () => {
+				appState.view = 'canvas';
+			},
+			wire: {
+				from: () => sourceOutElForAxis('y', null),
+				to: () => anyPlotInPortEl('ys1')
+			},
+			advance: { when: () => anyPlotStatus().yOk }
 		},
 		{
 			target: null,

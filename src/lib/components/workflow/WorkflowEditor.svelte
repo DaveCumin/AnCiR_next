@@ -20,6 +20,7 @@
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { deleteTableProcess } from '$lib/core/TableProcess.svelte';
 	import { selectPlot, deselectAllPlots } from '$lib/core/Plot.svelte';
+	import { plotPortRows, plotPortSlotIndex } from '$lib/core/ProcessNode.svelte.js';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import GroupNode from './GroupNode.svelte';
 	import TableProcessNode from './TableProcessNode.svelte';
@@ -95,6 +96,16 @@
 			const published = getGroupPortY(node.id, portName);
 			if (typeof published === 'number') return published;
 		}
+		// Grouped plot inputs include "Series N" header rows, so a port's slot index
+		// differs from its array index. plotPortRows() is shared with WorkflowNode's
+		// renderer so the anchor lines up exactly with the rendered dot.
+		if (node?.type === 'plot' && direction !== 'out') {
+			const ins = node.ports?.inputs ?? [];
+			if (ins.some((p) => p?.axis)) {
+				const slot = plotPortSlotIndex(ins, portName);
+				if (slot >= 0) return HEADER_H + slot * PORT_H + PORT_H / 2;
+			}
+		}
 		const ports = direction === 'out' ? (node.ports?.outputs ?? []) : (node.ports?.inputs ?? []);
 		if (ports.length === 0) return HEADER_H + PORT_H / 2;
 		let idx = ports.findIndex((p) => p.name === portName);
@@ -137,6 +148,13 @@
 			const outs = node?.outputColumns?.length ?? 0;
 			const rows = Math.max(1, ins, outs);
 			return HEADER_H + rows * PORT_H;
+		}
+		// Grouped plot inputs add a "Series N" header row per series, so count the
+		// rendered rows (headers + ports) rather than just the port count.
+		if (node?.type === 'plot') {
+			const ins = node?.ports?.inputs ?? [];
+			const rows = ins.some((p) => p?.axis) ? plotPortRows(ins).length : ins.length;
+			return HEADER_H + Math.max(1, rows) * PORT_H;
 		}
 		const ins = node?.ports?.inputs?.length ?? 0;
 		const outs = node?.ports?.outputs?.length ?? 0;
@@ -462,6 +480,9 @@
 		stablePositions[newId] = { x: pos.x, y: pos.y };
 		focusedNodeId = newId;
 		multiSelectedNodeIds = new Set([newId]);
+		// Open it inline by default (same as table-process adds) — no modal, configure
+		// in place.
+		expandedNodeIds = new Set([...expandedNodeIds, newId]);
 		return { ok: true, orphanProcessId: proc.id };
 	}
 
@@ -2511,7 +2532,9 @@
 		</div>
 
 		{#if core.data.length === 0}
-			<AddDataPrompt />
+			<!-- On the canvas, "Simulate data" spawns the node directly (expanded,
+			     no modal) like every other workflow add. -->
+			<AddDataPrompt onSimulate={() => spawnTableProcessFromPalette('SimulatedData')} />
 		{/if}
 
 		{#if fileDragOver}

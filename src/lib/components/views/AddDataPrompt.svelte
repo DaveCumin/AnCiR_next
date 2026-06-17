@@ -14,7 +14,10 @@
 	import LoadSessionModal from '$lib/components/workflow/LoadSessionModal.svelte';
 	import { openImportData } from '$lib/core/dataSourceActions.js';
 
-	let { message = 'Click here to add data' } = $props();
+	// `onSimulate`, when provided (workflow canvas), spawns a Simulate Data NODE
+	// directly (expanded, no modal) instead of opening the SimulateData modal. The
+	// worksheet leaves it unset so simulate still opens the modal there.
+	let { message = 'Click here to add data', onSimulate = null } = $props();
 
 	let open = $state(false);
 	let showSimulate = $state(false);
@@ -33,7 +36,7 @@
 			icon: 'node-rectangular-wave',
 			title: 'Simulate data',
 			subtitle: 'Generate rhythmic test data to explore',
-			action: () => (showSimulate = true)
+			action: () => (onSimulate ? onSimulate() : (showSimulate = true))
 		},
 		{
 			key: 'example',

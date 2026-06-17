@@ -23,6 +23,12 @@
 	let tooltipEl = $state(null);
 	let trackCleanup = [];
 
+	// "Wire these ports" hint visuals (set from a step's `wire` descriptor): a ring
+	// around each source/target port dot + an animated dashed edge between them.
+	// Viewport coords, recomputed every reposition so they track pan/zoom.
+	let wireRings = $state([]); // [{cx,cy}] port-dot centres
+	let wireEdges = $state([]); // [{from:{x,y}, to:{x,y}}]
+
 	// True while the canvas is actively panning/zooming — disables the position
 	// glide so the ring/tooltip snap to the moving target instead of lagging.
 	// Auto-clears ~160ms after the last canvas move, restoring the glide.
@@ -141,6 +147,49 @@
 		return a.top === b.top && a.left === b.left && a.width === b.width && a.height === b.height;
 	}
 
+	const elCenter = (el) => {
+		const r = el.getBoundingClientRect();
+		return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+	};
+
+	// Cubic bezier between two viewport points (mirrors WorkflowEdges' wire shape).
+	function wirePath(a, b) {
+		const dx = Math.max(30, Math.abs(b.x - a.x) / 2);
+		return `M ${a.x},${a.y} C ${a.x + dx},${a.y} ${b.x - dx},${b.y} ${b.x},${b.y}`;
+	}
+
+	// Resolve a step's `wire` descriptor into port-dot centres (to ring) + edges
+	// (to animate). `from` is a single source dot; `to` is one dot or an array.
+	function updateWire(s) {
+		const w = s?.wire;
+		if (!w) {
+			if (wireRings.length) wireRings = [];
+			if (wireEdges.length) wireEdges = [];
+			return;
+		}
+		let fromEl = null;
+		let toEls = [];
+		try {
+			fromEl = typeof w.from === 'function' ? w.from() : null;
+			const t = typeof w.to === 'function' ? w.to() : null;
+			toEls = (Array.isArray(t) ? t : [t]).filter(Boolean);
+		} catch {
+			fromEl = null;
+			toEls = [];
+		}
+		const rings = [];
+		const edges = [];
+		const fromPt = fromEl ? elCenter(fromEl) : null;
+		if (fromPt) rings.push({ cx: fromPt.x, cy: fromPt.y });
+		for (const te of toEls) {
+			const toPt = elCenter(te);
+			rings.push({ cx: toPt.x, cy: toPt.y });
+			if (fromPt) edges.push({ from: fromPt, to: toPt });
+		}
+		wireRings = rings;
+		wireEdges = edges;
+	}
+
 	function updateRect(s) {
 		const el = resolveTarget(s?.target);
 		let next = null;
@@ -152,6 +201,7 @@
 		const ttW = tooltipEl?.offsetWidth || 320;
 		const ttH = tooltipEl?.offsetHeight || 160;
 		tooltipPos = pickTooltipPos(next, s, ttW, ttH);
+		updateWire(s);
 	}
 
 	function clearTrack() {
@@ -231,9 +281,19 @@
 			schedule(60);
 			schedule(220);
 		};
+		// Canvas zoom (ctrl/⌘+wheel) and wheel-pan are instant, so recompute right
+		// after the wheel — this reliably keeps the port rings + demo edges glued to
+		// the moving dots (the MutationObserver loop alone can leave them a step
+		// stale during rapid zoom). A trailing tick catches the settled frame.
+		const onWheel = () => {
+			markLiveTracking();
+			onChange();
+			schedule(40);
+		};
 		window.addEventListener('resize', onChange);
 		window.addEventListener('scroll', onChange, true);
 		window.addEventListener('pointerup', onPointerUp, true);
+		window.addEventListener('wheel', onWheel, { passive: true, capture: true });
 		trackCleanup.push(() => {
 			cancelAnimationFrame(raf);
 			cancelAnimationFrame(followRaf);
@@ -246,6 +306,7 @@
 			window.removeEventListener('resize', onChange);
 			window.removeEventListener('scroll', onChange, true);
 			window.removeEventListener('pointerup', onPointerUp, true);
+			window.removeEventListener('wheel', onWheel, true);
 		});
 	}
 
@@ -350,6 +411,34 @@
 		<div class="tour-backdrop"></div>
 	{/if}
 
+	{#if wireRings.length || wireEdges.length}
+		<svg class="tour-wire-layer" aria-hidden="true">
+			{#each wireEdges as e, i (`e_${i}`)}
+				<path
+					class="tour-wire"
+					d={wirePath(e.from, e.to)}
+					marker-end="url(#tour-wire-arrow)"
+				/>
+			{/each}
+			{#each wireRings as r, i (`pr_${i}`)}
+				<circle class="tour-wire-ring" cx={r.cx} cy={r.cy} r="11" />
+			{/each}
+			<defs>
+				<marker
+					id="tour-wire-arrow"
+					viewBox="0 0 10 10"
+					refX="8"
+					refY="5"
+					markerWidth="7"
+					markerHeight="7"
+					orient="auto-start-reverse"
+				>
+					<path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-accent, #4d9fe3)" />
+				</marker>
+			</defs>
+		</svg>
+	{/if}
+
 	<div
 		class="tour-tooltip"
 		class:shown
@@ -432,6 +521,49 @@
 		z-index: 100000;
 		background: rgba(0, 0, 0, 0.32);
 		pointer-events: none;
+	}
+
+	/* "Wire these ports" demo layer: rings on the source/target dots + an animated
+	   dashed edge between them. Full-screen, click-through (the user wires the real
+	   dots underneath). */
+	.tour-wire-layer {
+		position: fixed;
+		inset: 0;
+		width: 100vw;
+		height: 100vh;
+		z-index: 100000;
+		pointer-events: none;
+		overflow: visible;
+	}
+	.tour-wire {
+		fill: none;
+		stroke: var(--color-accent, #4d9fe3);
+		stroke-width: 2.5;
+		stroke-linecap: round;
+		stroke-dasharray: 7 6;
+		animation: tour-wire-flow 0.6s linear infinite;
+	}
+	@keyframes tour-wire-flow {
+		to {
+			stroke-dashoffset: -13;
+		}
+	}
+	.tour-wire-ring {
+		fill: none;
+		stroke: var(--color-accent, #4d9fe3);
+		stroke-width: 2.5;
+		animation: tour-wire-pulse 1.4s ease-in-out infinite;
+	}
+	@keyframes tour-wire-pulse {
+		0%,
+		100% {
+			opacity: 0.55;
+			r: 10;
+		}
+		50% {
+			opacity: 1;
+			r: 13;
+		}
 	}
 
 	.tour-tooltip {

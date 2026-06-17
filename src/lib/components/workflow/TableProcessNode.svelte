@@ -243,6 +243,9 @@
 				class:subset={allIsSubset}
 				class:splice-target={spliceTargetPort === 'all'}
 				bind:this={allPortEl}
+				data-node-id={node.id}
+				data-port-name="all"
+				data-port-dir="out"
 				onmousedown={(e) => startFromOutput(e, 'all')}
 				oncontextmenu={onAllPortContextMenu}
 				ondblclick={onAllPortDblClick}
@@ -306,6 +309,9 @@
 						type="button"
 						class="port-dot dot-input inline-port in-port"
 						bind:this={inPortEls[port.name]}
+						data-node-id={node.id}
+						data-port-name={port.name}
+						data-port-dir="in"
 						title={`Input: ${port.name}${port.dynamic ? ' (many)' : ''}`}
 						onmousedown={(e) => disconnectInput(e, port.name)}
 						onmouseup={(e) => endAtInput(e, port.name)}
@@ -315,9 +321,6 @@
 					<span class="in-label">{port.name}{port.dynamic ? '*' : ''}</span>
 				</div>
 			{/each}
-			{#if inputPorts.length === 0}
-				<div class="empty-hint side">No inputs</div>
-			{/if}
 		</div>
 
 		<div
@@ -357,6 +360,9 @@
 							class="port-dot dot-output inline-port row-port"
 							class:splice-target={spliceTargetPort === `col_${colId}`}
 							bind:this={rowPortEls[colId]}
+							data-node-id={node.id}
+							data-port-name={`col_${colId}`}
+							data-port-dir="out"
 							onmousedown={(e) => startFromOutput(e, `col_${colId}`)}
 							oncontextmenu={onPortContextMenu}
 							onclick={(e) => e.stopPropagation()}
@@ -560,6 +566,15 @@
 		border: 1px solid var(--color-lightness-60, #8a8a8a);
 		cursor: crosshair;
 		padding: 0;
+		overflow: visible;
+	}
+
+	/* Invisible enlarged hit area so wiring doesn't require a pixel-perfect drop. */
+	.inline-port::before {
+		content: '';
+		position: absolute;
+		inset: -6px -12px;
+		border-radius: 8px;
 	}
 	.inline-port:hover {
 		background: var(--color-accent, #4d9fe3);
@@ -600,10 +615,6 @@
 		font-size: 11px;
 		color: rgba(0, 0, 0, 0.45);
 		text-align: center;
-	}
-	.empty-hint.side {
-		padding: 6px 4px;
-		font-size: 10px;
 	}
 
 	.all-menu-popover {
