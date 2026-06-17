@@ -106,12 +106,13 @@
 	// Plots and notes are never compact.
 	function isCompact(node) {
 		if (node?.type === 'group') return node?.groupObj?.collapsed === true;
+		if (node?.type === 'composite') return node?.compositeObj?.collapsed === true;
 		return SQUARED_KINDS.has(node?.type) && !expandedNodeIds.has(node?.id);
 	}
 
 	// Nodes that offer a compact/detailed toggle (the hover button on the card).
 	function canToggleCompact(node) {
-		return SQUARED_KINDS.has(node?.type) || node?.type === 'group';
+		return SQUARED_KINDS.has(node?.type) || node?.type === 'group' || node?.type === 'composite';
 	}
 
 	function getPortAnchorY(node, portName, direction) {
@@ -1895,6 +1896,10 @@
 	function handleNodeToggleExpand(node) {
 		if (node.type === 'group') {
 			if (node.groupObj) node.groupObj.collapsed = !node.groupObj.collapsed;
+			return;
+		}
+		if (node.type === 'composite') {
+			if (node.compositeObj) node.compositeObj.collapsed = !node.compositeObj.collapsed;
 			return;
 		}
 		if (!SQUARED_KINDS.has(node.type)) return;

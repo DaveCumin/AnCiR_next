@@ -25,6 +25,7 @@
 			return appConsts.tableProcessMap?.get(node.tpName)?.nodeIcon || 'gear';
 		if (node.type === 'plot') return appConsts.plotMap?.get(node.plotObj?.type)?.nodeIcon || 'gear';
 		if (node.type === 'group') return 'layer';
+		if (node.type === 'composite') return 'collect-columns';
 		return 'gear';
 	});
 
@@ -33,9 +34,11 @@
 	// Hover tooltip: "<node name> — <port>". For per-column ports (col_<id>, used
 	// by groups and table-process outputs) resolve the friendly column name.
 	function portTip(port) {
-		let label = port.name;
-		if (typeof port.name === 'string' && port.name.startsWith('col_')) {
-			const col = getColumnById(Number(port.name.slice(4)));
+		// Prefer a friendly display label (composite interface ports carry one);
+		// otherwise resolve col_<id> ports to the column's name.
+		let label = port.display ?? port.name;
+		if (typeof label === 'string' && label.startsWith('col_')) {
+			const col = getColumnById(Number(label.slice(4)));
 			if (col?.name) label = col.name;
 		}
 		return `${node.label} — ${label}${port.dynamic ? ' (many)' : ''}`;

@@ -174,6 +174,13 @@ function makeProcessNodeHash(core) {
 	for (const p of core.orphanProcesses ?? []) {
 		out += `op:${p.id}:${p.name}:${JSON.stringify(p.args ?? {})}|`;
 	}
+	// Composites: identity, name, collapse state, members, and interface port
+	// ids all affect which nodes/edges render, so they invalidate the cache.
+	for (const comp of core.composites ?? []) {
+		const ins = (comp.interface?.inputs ?? []).map((p) => p.id).join(',');
+		const outs = (comp.interface?.outputs ?? []).map((p) => p.id).join(',');
+		out += `cmp:${comp.id}:${comp.name}:${comp.collapsed ? 'c' : 'e'}:${(comp.memberIds ?? []).join(',')}:${ins}:${outs}|`;
+	}
 	return out;
 }
 
@@ -755,6 +762,62 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 					}
 				});
 			}
+		}
+	}
+
+	// --- Composite nodes: add one node per composite; when collapsed, hide its
+	// member nodes and reroute their boundary edges through the composite's
+	// interface ports (display-only — mirrors group absorption). ---------------
+	const memberToCollapsed = new Map(); // member node id -> its collapsed composite
+	for (const comp of core.composites ?? []) {
+		const cnode = {
+			id: comp.id,
+			label: comp.name,
+			refId: comp.id,
+			ports: {
+				inputs: (comp.interface?.inputs ?? []).map((p) => ({ name: p.id, display: p.name })),
+				outputs: (comp.interface?.outputs ?? []).map((p) => ({ name: p.id, display: p.name }))
+			},
+			meta: { type: 'composite', refId: comp.id, compositeObj: comp }
+		};
+		nodes.push(cnode);
+		nodeMap.set(comp.id, cnode);
+		if (comp.collapsed) {
+			for (const mid of comp.memberIds ?? []) memberToCollapsed.set(mid, comp);
+		}
+	}
+	if (memberToCollapsed.size) {
+		const portIdFor = (comp, list, member, port) =>
+			(comp.interface?.[list] ?? []).find((p) => p.member === member && p.port === port)?.id;
+		const rerouted = [];
+		const seen = new Set();
+		for (const c of connections) {
+			const fromComp = memberToCollapsed.get(c.fromId);
+			const toComp = memberToCollapsed.get(c.toId);
+			if (fromComp && toComp && fromComp.id === toComp.id) continue; // internal edge — drop
+			let { fromId, fromPort, toId, toPort, type } = c;
+			if (fromComp) {
+				const pid = portIdFor(fromComp, 'outputs', c.fromId, c.fromPort);
+				if (!pid) continue; // member output not exposed — drop from display
+				fromId = fromComp.id;
+				fromPort = pid;
+			}
+			if (toComp) {
+				const pid = portIdFor(toComp, 'inputs', c.toId, c.toPort);
+				if (!pid) continue;
+				toId = toComp.id;
+				toPort = pid;
+			}
+			const key = `${fromId}|${fromPort}|${toId}|${toPort}|${type}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			rerouted.push({ fromId, fromPort, toId, toPort, type });
+		}
+		connections.length = 0;
+		connections.push(...rerouted);
+		const hidden = new Set(memberToCollapsed.keys());
+		for (let i = nodes.length - 1; i >= 0; i--) {
+			if (hidden.has(nodes[i].id)) nodes.splice(i, 1);
 		}
 	}
 
