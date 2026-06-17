@@ -115,22 +115,9 @@
 		{/if}
 		{#if isDropTarget}
 			<span class="drop-badge" title="Drop to replace all references">↓ replace</span>
-		{:else if isEditable}
-			<button
-				type="button"
-				class="expand-indicator"
-				title={expanded ? 'Collapse controls' : 'Expand controls'}
-				aria-label={expanded ? 'Collapse controls' : 'Expand controls'}
-				aria-expanded={expanded}
-				onpointerdown={(e) => e.stopPropagation()}
-				onclick={(e) => {
-					e.stopPropagation();
-					dispatch('toggleexpand');
-				}}
-			>
-				{expanded ? '▲' : '▼'}
-			</button>
 		{/if}
+		<!-- Compact↔detailed is toggled by the hover button on the node wrapper
+		     (WorkflowEditor), so the old per-node expand arrow is removed. -->
 		<NodeNoteButton nodeId={node.id} />
 	</div>
 

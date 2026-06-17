@@ -2,6 +2,7 @@
 	// @ts-nocheck
 	import { createEventDispatcher } from 'svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import { appConsts } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { COMPACT_W, compactNodeHeight, compactPortAnchorY, columnTypeIcon } from './nodeGeometry.js';
@@ -68,7 +69,7 @@
 	style="width:{COMPACT_W}px; height:{height}px;"
 	role="button"
 	tabindex="0"
-	title={node.label ?? ''}
+	{@attach tooltip(node.label ?? '')}
 >
 	<span class="compact-icon"><Icon name={iconName} width={22} height={22} /></span>
 
@@ -79,7 +80,7 @@
 			data-node-id={node.id}
 			data-port-name={port.name}
 			data-port-dir="in"
-			title={portTip(port)}
+			{@attach tooltip(portTip(port))}
 			onmousedown={(e) => disconnectInput(e, port.name)}
 			onmouseup={(e) => endAtInput(e, port.name)}
 			oncontextmenu={(e) => disconnectInput(e, port.name)}
@@ -95,7 +96,7 @@
 			data-node-id={node.id}
 			data-port-name={port.name}
 			data-port-dir="out"
-			title={portTip(port)}
+			{@attach tooltip(portTip(port))}
 			onmousedown={(e) => startFromOutput(e, port.name)}
 			role="button"
 			tabindex="-1"

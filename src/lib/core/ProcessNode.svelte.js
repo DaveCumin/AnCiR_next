@@ -765,6 +765,11 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		}
 	}
 
+	// Snapshot the un-rerouted connections so callers (combine / add-to-composite)
+	// can recompute a composite's interface from the true member edges regardless
+	// of any composite's collapsed/rerouted display state.
+	const rawConnections = connections.map((c) => ({ ...c }));
+
 	// --- Composite nodes: add one node per composite; when collapsed, hide its
 	// member nodes and reroute their boundary edges through the composite's
 	// interface ports (display-only — mirrors group absorption). ---------------
@@ -845,6 +850,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	_cachedGraph = {
 		nodes: workflowNodes,
 		connections,
+		rawConnections,
 		changedNodeIds
 	};
 	return _cachedGraph;

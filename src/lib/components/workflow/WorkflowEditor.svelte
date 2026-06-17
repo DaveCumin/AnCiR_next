@@ -931,12 +931,19 @@
 		// set, snapshot every other selected node's starting position so the
 		// move handler can apply the same delta to all of them in lockstep.
 		const companions = [];
+		const addCompanion = (otherId) => {
+			if (otherId === node.id || companions.some((c) => c.id === otherId)) return;
+			const op = stablePositions[otherId] ?? defaultPositions.positions[otherId];
+			if (op) companions.push({ id: otherId, startPos: { x: op.x, y: op.y } });
+		};
 		if (multiSelectedNodeIds.has(node.id) && multiSelectedNodeIds.size > 1) {
-			for (const otherId of multiSelectedNodeIds) {
-				if (otherId === node.id) continue;
-				const op = stablePositions[otherId] ?? defaultPositions.positions[otherId];
-				if (op) companions.push({ id: otherId, startPos: { x: op.x, y: op.y } });
-			}
+			for (const otherId of multiSelectedNodeIds) addCompanion(otherId);
+		}
+		// Dragging a composite drags all its member nodes with it (collapsed or
+		// expanded), so the bundle moves as one body.
+		if (node.type === 'composite') {
+			const comp = core.composites.find((c) => c.id === node.id);
+			for (const mid of comp?.memberIds ?? []) addCompanion(mid);
 		}
 		dragInfo = {
 			nodeId: node.id,
@@ -1607,6 +1614,7 @@
 		// node that just spliced onto a wire can still wind up inside a group.
 		if (dragInfo?.moved && dragInfo.nodeId) {
 			reconcileGroupMembership(dragInfo.nodeId);
+			reconcileCompositeMembership(dragInfo.nodeId);
 		}
 		dropTargetEdgeKey = null;
 		dropTargetPortKey = null;
@@ -2357,20 +2365,42 @@
 	// --- Composite (combine / uncombine) ---
 	const COMPOSABLE = (id) => id?.startsWith('process_') || id?.startsWith('tableprocess_');
 
+	// Selection-shape info that drives the toolbar combine/uncombine buttons.
+	const compositeSelection = $derived.by(() => {
+		const sel = [...multiSelectedNodeIds];
+		const ops = sel.filter(COMPOSABLE);
+		const comps = sel.filter((id) => id?.startsWith('composite_'));
+		return {
+			// new composite from >=2 ops, OR add ops into exactly one selected composite
+			canCombine: ops.length >= 2 || (comps.length === 1 && ops.length >= 1),
+			canUncombine: comps.length >= 1 || !!focusedNodeId?.startsWith('composite_')
+		};
+	});
+
 	function combineSelection() {
-		const ids = [...multiSelectedNodeIds].filter(COMPOSABLE);
-		if (ids.length < 2) {
+		const sel = [...multiSelectedNodeIds];
+		const ops = sel.filter(COMPOSABLE);
+		const comps = sel.filter((id) => id?.startsWith('composite_'));
+		// Add to an existing composite: one composite + one or more operation nodes.
+		if (comps.length === 1 && ops.length >= 1) {
+			addToComposite(comps[0], ops);
+			return;
+		}
+		if (ops.length < 2) {
 			addNotification('Select at least two analysis/process nodes to combine.');
 			return;
 		}
-		const iface = computeInterface(new Set(ids), processGraph.connections ?? []);
-		const ps = ids
+		// Persist each member's position now (before they're hidden on collapse) so
+		// the composite can drag them as a unit and the expanded frame lays out.
+		persistPositions(ops);
+		const iface = computeInterface(new Set(ops), processGraph.rawConnections ?? []);
+		const ps = ops
 			.map((id) => stablePositions[id] ?? defaultPositions.positions[id])
 			.filter(Boolean);
 		const cx = ps.length ? Math.round(ps.reduce((s, p) => s + p.x, 0) / ps.length) : 80;
 		const cy = ps.length ? Math.round(ps.reduce((s, p) => s + p.y, 0) / ps.length) : 80;
 		const cid = createComposite({
-			memberIds: ids,
+			memberIds: ops,
 			interface: iface,
 			x: cx,
 			y: cy,
@@ -2379,6 +2409,65 @@
 		stablePositions[cid] = { x: cx, y: cy };
 		focusedNodeId = cid;
 		multiSelectedNodeIds = new Set([cid]);
+	}
+
+	// Add operation nodes to an existing composite and recompute its interface
+	// from the true (un-rerouted) member edges. Only operation nodes can join.
+	// Give each node an explicit stablePositions entry so it persists even while
+	// hidden inside a composite (and can be dragged with it). Reads the live
+	// rendered position from the DOM (offsetLeft/Top are canvas coords, since
+	// wrappers are absolutely positioned within canvas-inner) — reliable while
+	// the member is still visible at combine time, where defaultPositions can lag.
+	function persistPositions(ids) {
+		for (const id of ids) {
+			if (stablePositions[id]) continue;
+			const el = document.querySelector(`[data-node-id="${CSS.escape(id)}"]`);
+			if (el) {
+				stablePositions[id] = { x: el.offsetLeft, y: el.offsetTop };
+			} else {
+				const p = defaultPositions.positions[id];
+				if (p) stablePositions[id] = { x: p.x, y: p.y };
+			}
+		}
+	}
+
+	function addToComposite(compositeId, opIds, { select = true } = {}) {
+		const comp = core.composites.find((c) => c.id === compositeId);
+		if (!comp) return;
+		const toAdd = opIds.filter((id) => COMPOSABLE(id) && !comp.memberIds.includes(id));
+		if (!toAdd.length) return;
+		persistPositions(toAdd);
+		comp.memberIds = [...comp.memberIds, ...toAdd];
+		comp.interface = computeInterface(new Set(comp.memberIds), processGraph.rawConnections ?? []);
+		if (select) {
+			focusedNodeId = compositeId;
+			multiSelectedNodeIds = new Set([compositeId]);
+		}
+	}
+
+	// After an explicit splice, absorb the spliced operation node into a composite
+	// IFF it is now fully internal to one composite (every neighbour is a member of
+	// the same composite). Touching anything external / a 2nd composite → skip.
+	function reconcileCompositeMembership(nodeId) {
+		if (!COMPOSABLE(nodeId)) return;
+		if (core.composites.some((c) => c.memberIds.includes(nodeId))) return;
+		const conns = processGraph.rawConnections ?? [];
+		const neighbours = new Set();
+		for (const c of conns) {
+			if (c.fromId === nodeId) neighbours.add(c.toId);
+			else if (c.toId === nodeId) neighbours.add(c.fromId);
+		}
+		if (!neighbours.size) return;
+		const memberToComp = new Map();
+		for (const comp of core.composites) for (const m of comp.memberIds) memberToComp.set(m, comp.id);
+		let target = null;
+		for (const nb of neighbours) {
+			const cid = memberToComp.get(nb);
+			if (!cid) return; // external neighbour — not fully internal
+			if (target && target !== cid) return; // bridges two composites
+			target = cid;
+		}
+		if (target) addToComposite(target, [nodeId], { select: false });
 	}
 
 	function uncombineSelection() {
@@ -2539,41 +2628,18 @@
 		>
 	{/if}
 
-	{#if multiSelectedNodeIds.size >= 2 || focusedNodeId?.startsWith('composite_')}
+	{#if multiSelectedNodeIds.size >= 2 || compositeSelection.canUncombine}
 		<div class="selection-toolbar-host">
-			{#if multiSelectedNodeIds.size >= 2}
-				<SelectionLayoutToolbar
-					onAlign={alignSelectedNodes}
-					onDistribute={distributeSelectedNodes}
-					canDistribute={multiSelectedNodeIds.size >= 3}
-				/>
-				<button
-					type="button"
-					class="selection-action-btn"
-					onpointerdown={(e) => e.stopPropagation()}
-					onclick={(e) => {
-						e.stopPropagation();
-						combineSelection();
-					}}
-					{@attach tooltip('Combine into a composite (Cmd/Ctrl+G)')}
-				>
-					⧉ Combine
-				</button>
-			{/if}
-			{#if focusedNodeId?.startsWith('composite_')}
-				<button
-					type="button"
-					class="selection-action-btn"
-					onpointerdown={(e) => e.stopPropagation()}
-					onclick={(e) => {
-						e.stopPropagation();
-						uncombineSelection();
-					}}
-					{@attach tooltip('Uncombine (Cmd/Ctrl+Shift+G)')}
-				>
-					⤢ Uncombine
-				</button>
-			{/if}
+			<SelectionLayoutToolbar
+				onAlign={alignSelectedNodes}
+				onDistribute={distributeSelectedNodes}
+				canDistribute={multiSelectedNodeIds.size >= 3}
+				showAlign={multiSelectedNodeIds.size >= 2}
+				onCombine={combineSelection}
+				canCombine={compositeSelection.canCombine}
+				onUncombine={uncombineSelection}
+				canUncombine={compositeSelection.canUncombine}
+			/>
 		</div>
 	{/if}
 
@@ -2594,13 +2660,18 @@
 					class="composite-frame"
 					style="left:{cc.x}px; top:{cc.y}px; width:{cc.w}px; height:{cc.h}px;"
 				>
-					<div class="composite-frame-title">
+					<div
+						class="composite-frame-title"
+						role="presentation"
+						onmousedown={(e) => handleNodeWrapperMouseDown(e, { id: cc.id, type: 'composite' })}
+					>
 						<span class="composite-frame-name">{cc.name}</span>
 						<button
 							type="button"
 							class="composite-frame-collapse"
 							title="Collapse composite"
 							aria-label="Collapse composite"
+							onmousedown={(e) => e.stopPropagation()}
 							onpointerdown={(e) => e.stopPropagation()}
 							onclick={(e) => {
 								e.stopPropagation();
@@ -2643,6 +2714,7 @@
 						class:changed={isRecentlyChanged}
 						class:group-wrapper={isGroup}
 						class:multi-selected={isMultiSelected && multiSelectedNodeIds.size > 1}
+						data-node-id={node.id}
 						data-group-id={isGroup ? node.id : null}
 						style="position: absolute; left: {pos.x}px; top: {pos.y}px; z-index: {nodeZIndex};"
 						aria-label={node.label}
@@ -2991,6 +3063,8 @@
 		font-weight: 600;
 		color: var(--color-lightness-25, #333);
 		pointer-events: auto;
+		cursor: grab;
+		user-select: none;
 	}
 	.composite-frame-collapse {
 		border: none;

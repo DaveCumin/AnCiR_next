@@ -221,20 +221,8 @@
 				onCommit={renameTP}
 			/>
 		</div>
-		<button
-			type="button"
-			class="expand-indicator"
-			title={expanded ? 'Collapse controls' : 'Expand controls'}
-			aria-label={expanded ? 'Collapse controls' : 'Expand controls'}
-			aria-expanded={expanded}
-			onpointerdown={stopPointer}
-			onclick={(e) => {
-				e.stopPropagation();
-				dispatch('toggleexpand');
-			}}
-		>
-			{expanded ? '▲' : '▼'}
-		</button>
+		<!-- Compact↔detailed is toggled by the hover button on the node wrapper
+		     (WorkflowEditor); the old per-node expand arrow is removed. -->
 		<NodeNoteButton nodeId={node.id} />
 		<div class="all-port-wrap">
 			<button

@@ -12,7 +12,12 @@
 		onDistribute,
 		onGrid = null,
 		showGrid = false,
-		canDistribute = true
+		canDistribute = true,
+		showAlign = true,
+		onCombine = null,
+		onUncombine = null,
+		canCombine = false,
+		canUncombine = false
 	} = $props();
 
 	const aligns = [
@@ -26,64 +31,100 @@
 </script>
 
 <div class="layout-toolbar" role="toolbar" aria-label="Align and arrange selection">
-	{#each aligns as a (a.mode)}
-		<button
-			type="button"
-			class="lt-btn"
-			onclick={(e) => {
-				e.stopPropagation();
-				onAlign?.(a.mode);
-			}}
-			aria-label={a.label}
-			{@attach tooltip(a.label)}
-		>
-			<Icon name={a.icon} width={18} height={18} />
-		</button>
-	{/each}
+	{#if showAlign}
+		{#each aligns as a (a.mode)}
+			<button
+				type="button"
+				class="lt-btn"
+				onclick={(e) => {
+					e.stopPropagation();
+					onAlign?.(a.mode);
+				}}
+				aria-label={a.label}
+				{@attach tooltip(a.label)}
+			>
+				<Icon name={a.icon} width={18} height={18} />
+			</button>
+		{/each}
 
-	<span class="lt-sep" aria-hidden="true"></span>
-
-	<button
-		type="button"
-		class="lt-btn"
-		disabled={!canDistribute}
-		onclick={(e) => {
-			e.stopPropagation();
-			onDistribute?.('h');
-		}}
-		aria-label="Distribute horizontally"
-		{@attach tooltip('Distribute horizontally (equal gaps)')}
-	>
-		<Icon name="distribute-horizontal" width={18} height={18} />
-	</button>
-	<button
-		type="button"
-		class="lt-btn"
-		disabled={!canDistribute}
-		onclick={(e) => {
-			e.stopPropagation();
-			onDistribute?.('v');
-		}}
-		aria-label="Distribute vertically"
-		{@attach tooltip('Distribute vertically (equal gaps)')}
-	>
-		<Icon name="distribute-vertical" width={18} height={18} />
-	</button>
-
-	{#if onGrid && showGrid}
 		<span class="lt-sep" aria-hidden="true"></span>
+
 		<button
 			type="button"
 			class="lt-btn"
+			disabled={!canDistribute}
 			onclick={(e) => {
 				e.stopPropagation();
-				onGrid?.();
+				onDistribute?.('h');
 			}}
-			aria-label="Arrange in a grid"
-			{@attach tooltip('Arrange selection in a grid')}
+			aria-label="Distribute horizontally"
+			{@attach tooltip('Distribute horizontally (equal gaps)')}
 		>
-			<Icon name="table" width={18} height={18} />
+			<Icon name="distribute-horizontal" width={18} height={18} />
 		</button>
+		<button
+			type="button"
+			class="lt-btn"
+			disabled={!canDistribute}
+			onclick={(e) => {
+				e.stopPropagation();
+				onDistribute?.('v');
+			}}
+			aria-label="Distribute vertically"
+			{@attach tooltip('Distribute vertically (equal gaps)')}
+		>
+			<Icon name="distribute-vertical" width={18} height={18} />
+		</button>
+
+		{#if onGrid && showGrid}
+			<span class="lt-sep" aria-hidden="true"></span>
+			<button
+				type="button"
+				class="lt-btn"
+				onclick={(e) => {
+					e.stopPropagation();
+					onGrid?.();
+				}}
+				aria-label="Arrange in a grid"
+				{@attach tooltip('Arrange selection in a grid')}
+			>
+				<Icon name="table" width={18} height={18} />
+			</button>
+		{/if}
+	{/if}
+
+	{#if onCombine || onUncombine}
+		{#if showAlign}<span class="lt-sep" aria-hidden="true"></span>{/if}
+		{#if onCombine}
+			<button
+				type="button"
+				class="lt-btn"
+				disabled={!canCombine}
+				onclick={(e) => {
+					e.stopPropagation();
+					onCombine?.();
+				}}
+				aria-label="Combine into composite"
+				{@attach tooltip('Combine into a composite (Cmd/Ctrl+G)')}
+			>
+				<Icon name="collect-columns" width={18} height={18} />
+			</button>
+		{/if}
+		{#if onUncombine}
+			<button
+				type="button"
+				class="lt-btn"
+				disabled={!canUncombine}
+				onclick={(e) => {
+					e.stopPropagation();
+					onUncombine?.();
+				}}
+				aria-label="Uncombine composite"
+				{@attach tooltip('Uncombine (Cmd/Ctrl+Shift+G)')}
+			>
+				<Icon name="split" width={18} height={18} />
+			</button>
+		{/if}
 	{/if}
 </div>
 
