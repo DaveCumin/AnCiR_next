@@ -823,6 +823,10 @@
 		border-radius: 4px;
 		background: #fff;
 		font-size: 14px;
+		/* On the workflow canvas the plot preview wrapper sets pointer-events:none
+		   (so the node stays draggable); re-enable it here so the table can be
+		   scrolled/edited. The node is still draggable via its header. */
+		pointer-events: auto;
 	}
 
 	/* Full height of .tp-scroll so the fill VirtualList can take the space left
