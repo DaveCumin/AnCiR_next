@@ -44,7 +44,7 @@ const meta = new Map([
 		{
 			family: 'Sources',
 			nodeIcon: 'blank-column',
-			description: 'Add a blank column to a table for manual entry.'
+			description: 'Enter data by hand, or paste CSV/JSON.'
 		}
 	],
 	[

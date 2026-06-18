@@ -1,7 +1,15 @@
 <script>
 	// @ts-nocheck
 	// Inline-edit text field: shows a span when idle, swaps to an input on
-	// double-click / Enter / F2. Commits on blur or Enter, cancels on Escape.
+	// double-click / Enter / F2.
+	//
+	// Standard editing model (see also $lib/core/nodeNaming.js):
+	//   - onInput(value)  fires live on every keystroke — write the raw value so
+	//                     dependent views update immediately.
+	//   - onCommit(value) fires on blur / Enter — normalise here (trim, restore
+	//                     defaults for empty input).
+	//   - Escape          reverts live edits (re-fires onInput with the original)
+	//                     and does not commit.
 	// Ported from flowtest's Editable.svelte.
 	import { tick } from 'svelte';
 
@@ -12,7 +20,7 @@
 		ariaLabel = '',
 		title = '',
 		onCommit = null,
-		onChange = null
+		onInput = null
 	} = $props();
 
 	let buffer = $state(value);
@@ -44,14 +52,14 @@
 	function cancel() {
 		if (!isEditing) return;
 		buffer = original;
-		onChange?.(original);
+		onInput?.(original); // revert any live edits to the original
 		isEditing = false;
 	}
 
 	function handleInput(e) {
 		const next = e.currentTarget.value;
 		buffer = next;
-		onChange?.(next);
+		onInput?.(next); // live update
 	}
 
 	function handleKeydown(e) {

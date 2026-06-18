@@ -15,6 +15,7 @@
 	} from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { computeInterface } from '$lib/core/composite.js';
+	import { getNodeName, setNodeName, isNodeNameEditable } from '$lib/core/nodeNaming.js';
 	import Editable from '$lib/components/reusables/Editable.svelte';
 
 	// Friendly label for a composite member node id (members may be hidden, so
@@ -76,12 +77,6 @@
 		}
 	}
 
-	function renameColumn(colId, next) {
-		const col = getColumnById(colId);
-		if (!col) return;
-		const trimmed = (next ?? '').trim();
-		col.customName = trimmed === '' ? null : trimmed;
-	}
 </script>
 
 {#if appState.canvasMultiSelectedCount > 1}
@@ -97,10 +92,20 @@
 {:else if node}
 	<div class="control-banner">
 		<div class="control-banner-title">
-			<p class="node-title">
-				{node.label}
-				<span class="node-type-tag">{node.type}</span>
-			</p>
+			{#if isNodeNameEditable(node)}
+				<p class="node-title">
+					<Editable
+						value={getNodeName(node)}
+						placeholder="name"
+						ariaLabel="Rename node"
+						title="Double-click to rename"
+						onInput={(v) => setNodeName(node, v)}
+						onCommit={(v) => setNodeName(node, v, { commit: true })}
+					/>
+				</p>
+			{:else}
+				<p class="node-title">{node.label}</p>
+			{/if}
 		</div>
 	</div>
 
@@ -134,16 +139,6 @@
 		{#if col}
 			<div class="control-component">
 				<div class="control-input">
-					<p>Name</p>
-					<Editable
-						value={col.name}
-						placeholder="column name"
-						ariaLabel="Rename column"
-						title="Double-click to rename"
-						onCommit={(v) => renameColumn(node.refId, v)}
-					/>
-				</div>
-				<div class="control-input">
 					<p>Rows</p>
 					<span class="muted">{col.getData?.()?.length ?? 0}</span>
 				</div>
@@ -158,17 +153,6 @@
 	{:else if node.type === 'group' && node.groupObj}
 		{@const g = node.groupObj}
 		<div class="control-component">
-			<div class="control-input">
-				<p>Name</p>
-				<Editable
-					value={g.name}
-					placeholder="group name"
-					onCommit={(v) => {
-						const trimmed = (v ?? '').trim();
-						g.name = trimmed === '' ? 'Group' : trimmed;
-					}}
-				/>
-			</div>
 			<div class="control-input vertical">
 				<p>Source columns ({(g.sourceColumnIds ?? []).length})</p>
 				{#if (g.sourceColumnIds ?? []).length === 0}
@@ -196,17 +180,6 @@
 	{:else if node.type === 'composite' && node.compositeObj}
 		{@const comp = node.compositeObj}
 		<div class="control-component">
-			<div class="control-input">
-				<p>Name</p>
-				<Editable
-					value={comp.name}
-					placeholder="composite name"
-					onCommit={(v) => {
-						const trimmed = (v ?? '').trim();
-						comp.name = trimmed === '' ? 'Composite' : trimmed;
-					}}
-				/>
-			</div>
 			<div class="control-input vertical">
 				<p>Nodes inside ({(comp.memberIds ?? []).length})</p>
 				{#if (comp.memberIds ?? []).length === 0}
@@ -275,16 +248,6 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-	}
-	.node-type-tag {
-		font-size: 0.65rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-		padding: 0.1rem 0.35rem;
-		border-radius: 0.2rem;
-		background: rgba(0, 0, 0, 0.06);
-		color: rgba(0, 0, 0, 0.55);
 	}
 	.control-component {
 		padding: 0.4rem 0;

@@ -17,6 +17,7 @@
 	import MiniDataTable from './MiniDataTable.svelte';
 	import NodeNoteButton from './NodeNoteButton.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { getNodeName, setNodeName } from '$lib/core/nodeNaming.js';
 	import {
 		setGroupPortY,
 		clearGroupPortPositions
@@ -70,16 +71,15 @@
 		if (tp) tp.args.allColumnIds = null;
 	}
 
-	function renameTP(next) {
-		if (!tp) return;
-		const trimmed = (next ?? '').trim();
-		tp.displayName = trimmed === '' ? tp.name : trimmed;
-	}
-
-	function renameColumn(col, next) {
+	// Output-column rename: live on input, normalise (empty → auto name) on commit.
+	function renameColumn(col, next, commit = false) {
 		if (!col) return;
-		const trimmed = (next ?? '').trim();
-		col.customName = trimmed === '' ? null : trimmed;
+		if (commit) {
+			const trimmed = (next ?? '').trim();
+			col.customName = trimmed === '' ? null : trimmed;
+		} else {
+			col.customName = next ?? '';
+		}
 	}
 
 	function toggleRowExpanded(colId, e) {
@@ -214,11 +214,12 @@
 	<div class="tp-header">
 		<div class="tp-title" onpointerdown={stopPointer} role="presentation">
 			<Editable
-				value={tp?.displayName ?? node.label}
+				value={getNodeName(node)}
 				placeholder="Process"
 				ariaLabel="Rename analysis"
 				title="Double-click to rename"
-				onCommit={renameTP}
+				onInput={(v) => setNodeName(node, v)}
+				onCommit={(v) => setNodeName(node, v, { commit: true })}
 			/>
 		</div>
 		<!-- Compact↔detailed is toggled by the hover button on the node wrapper
@@ -340,7 +341,8 @@
 								placeholder="column"
 								ariaLabel="Rename output column"
 								title="Double-click to rename"
-								onCommit={(v) => renameColumn(col, v)}
+								onInput={(v) => renameColumn(col, v)}
+								onCommit={(v) => renameColumn(col, v, true)}
 							/>
 						</div>
 						<button

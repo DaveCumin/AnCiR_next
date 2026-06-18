@@ -7,6 +7,12 @@ export default defineConfig({
 		assetsInlineLimit: Infinity
 	},
 
+	// Honour a PORT injected by the environment (e.g. the preview harness) so the
+	// dev server listens where the proxy expects. Falls back to Vite's default.
+	server: process.env.PORT
+		? { port: Number(process.env.PORT), strictPort: true }
+		: undefined,
+
 	plugins: [
 		sveltekit(),
 		visualizer({

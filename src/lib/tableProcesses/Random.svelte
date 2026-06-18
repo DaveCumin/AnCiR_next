@@ -79,7 +79,7 @@
 		for (let i = 0; i < n; i++) {
 			result.push(Number(generator().toFixed(2)));
 		}
-		if (!(argsIN.out.result == -1 || !argsIN.out.result)) {
+		if (argsIN.out.result != null && argsIN.out.result >= 0) {
 			core.rawData.set(argsIN.out.result, result);
 			const outCol = /** @type {any} */ (getColumnById(argsIN.out.result));
 			if (outCol) {
@@ -189,7 +189,7 @@
 			bind:value={previewStart}
 		/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
 	</p>
-{:else if p.args.out.result > 0}
+{:else if p.args.out.result >= 0}
 	<details open>
 		<summary class="section-details-summary">Output</summary>
 		<ColumnComponent col={getColumnById(p.args.out.result)} />

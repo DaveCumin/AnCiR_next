@@ -35,7 +35,7 @@
 <Modal bind:showModal>
 	{#snippet header()}
 		<div class="heading">
-			<h2>Blank Column</h2>
+			<h2>Enter Data</h2>
 		</div>
 	{/snippet}
 

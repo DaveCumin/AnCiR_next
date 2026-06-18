@@ -57,6 +57,9 @@
 		core.composites = [];
 		core.notes = [];
 		core.nodeNotes = {};
+		// Cleared here; restored from the JSON below (or left empty for legacy
+		// sessions, in which case nodes fall back to default/topo layout).
+		core.nodeLayout = {};
 		// Orphan processes are session-only; clear on import so the next
 		// block can rehydrate them from the JSON if present.
 		core.orphanProcesses = [];
@@ -142,6 +145,12 @@
 		}
 		if (jsonData.nodeNotes && typeof jsonData.nodeNotes === 'object') {
 			core.nodeNotes = { ...jsonData.nodeNotes };
+		}
+		// Workflow-canvas layout (positions + collapsed). A fresh object identity
+		// signals WorkflowEditor to adopt it (overriding any stale per-browser
+		// localStorage positions for the same node ids).
+		if (jsonData.nodeLayout && typeof jsonData.nodeLayout === 'object') {
+			core.nodeLayout = { ...jsonData.nodeLayout };
 		}
 		if (Array.isArray(jsonData.tableProcesses)) {
 			for (const tp of jsonData.tableProcesses) {

@@ -2,7 +2,6 @@
 	// @ts-nocheck
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import Table from '$lib/components/plotbits/Table.svelte';
 	import { core } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
@@ -288,13 +287,92 @@
 
 <script>
 	// @ts-nocheck
-	import { slide } from 'svelte/transition';
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
+	import VirtualList from '$lib/components/reusables/VirtualList.svelte';
+	import Editable from '$lib/components/inputs/Editable.svelte';
 
 	let { theData, which } = $props();
 
 	let expandedTables = $state(new Set());
 	let expandedPlots = $state(new Set());
+
+	// ── Virtualised body helpers ──────────────────────────────────────────────
+	// The table renders the FULL series via a windowed list (only on-screen rows in
+	// the DOM), with per-cell formatting computed lazily, replacing the old
+	// "Starting row + Ncolumns" pager.
+	let visibleColumns = $derived.by(() => {
+		const tp = theData?.plot;
+		if (!tp) return [];
+		const out = [];
+		for (let i = 0; i < tp.columnRefs.length; i++) {
+			// Columns added by WIRING only extend columnRefs (not showCol), so an
+			// undefined entry means "not hidden" — default to visible.
+			if (tp.showCol[i] === false) continue;
+			const col = getColumnById(tp.columnRefs[i]);
+			out.push({ colId: tp.columnRefs[i], col });
+		}
+		return out;
+	});
+	let rowCount = $derived(theData?.plot?.longestCol ?? 0);
+	let rowItems = $derived(Array.from({ length: rowCount }, (_, i) => i));
+	let hasTwoLineCol = $derived(
+		visibleColumns.some(
+			(c) =>
+				c.col &&
+				(c.col.type === 'bin' ||
+					(c.col.type === 'time' && !c.col.isReferencial() && c.col.compression !== 'awd'))
+		)
+	);
+	let rowH = $derived(hasTwoLineCol ? 42 : 28);
+	let colOffsetPx = $derived(theData?.plot?.showColNumber ? '44px ' : '');
+	let gridCols = $derived(
+		`${colOffsetPx}repeat(${Math.max(1, visibleColumns.length)}, minmax(110px, 1fr))`
+	);
+	let tableMinWidth = $derived(
+		(theData?.plot?.showColNumber ? 44 : 0) + Math.max(1, visibleColumns.length) * 110
+	);
+
+	// Format one cell (column, absolute row index) — mirrors the per-type logic the
+	// class used to bake into `tableData`, but one cell at a time.
+	function formatCell(col, i) {
+		if (!col) return '—';
+		const dp = theData.plot.decimalPlaces;
+		if (col.type === 'bin') {
+			const rawArr = core.rawData.get(col.data);
+			if (!Array.isArray(rawArr)) return '—';
+			const x = rawArr[i];
+			if (!Number.isFinite(x)) return { raw: '-', computed: '-', isTime: true };
+			const binStep = col.binStep ?? col.binWidth ?? 0;
+			const rangeStr = `±${((col.binWidth ?? 0) / 2).toFixed(2)}`;
+			if (col.originTime_ms != null) {
+				const centerMs = col.originTime_ms + (x + binStep / 2) * 3600000;
+				return {
+					raw: Number.isFinite(centerMs) ? formatDateTime(centerMs) : '-',
+					computed: Number.isFinite(centerMs) ? rangeStr : '-',
+					isTime: true
+				};
+			}
+			return { raw: (x + binStep / 2).toFixed(dp), computed: rangeStr, isTime: true };
+		}
+		if (col.type === 'time' && !col.isReferencial() && col.compression !== 'awd') {
+			const rawArr = core.rawData.get(col.data);
+			if (Array.isArray(rawArr)) {
+				const v = rawArr[i];
+				const hours = col.hoursSinceStart?.[i];
+				const hoursStr = Number.isFinite(hours) ? hours.toFixed(dp) : String(hours ?? '');
+				const raw = typeof v === 'number' ? formatTimeFromUNIX(v) : v;
+				return { raw, computed: hoursStr, isTime: true };
+			}
+		}
+		const v = col.getData()?.[i];
+		return Number.isFinite(v) ? v.toFixed(theData.plot.decimalPlaces) : (v ?? '');
+	}
+
+	// Visible-column position → the `col` index makeEdits expects (row-number column
+	// occupies slot 0 when shown).
+	function editColIndex(visIndex) {
+		return visIndex + (theData.plot.showColNumber ? 1 : 0);
+	}
 
 	function toggleTable(id) {
 		expandedTables = expandedTables.has(id)
@@ -422,7 +500,7 @@
 			return;
 		}
 
-		const rowIndex = Number(edit.row) + theData.plot.colCurrent - 1;
+		const rowIndex = Number(edit.row); // virtualised rows pass an absolute index
 		if (rowIndex >= theData.plot.longestCol) return;
 
 		// Time columns: edit the raw data directly
@@ -478,10 +556,6 @@
 			<div class="control-input">
 				<p>Decimal places</p>
 				<NumberWithUnits min="0" step="1" bind:value={theData.decimalPlaces} />
-			</div>
-			<div class="control-input">
-				<p>Starting row</p>
-				<NumberWithUnits min="1" max={theData.longestCol} bind:value={theData.colCurrent} />
 			</div>
 		</div>
 	</div>
@@ -658,35 +732,72 @@
 {/snippet}
 
 {#snippet plot(theData)}
-	{#key theData.plot.showCol}
-		{#if theData.plot.showCol.some((s) => s) || theData.plot.showColNumber}
-			<div class="tableplot-layout">
-				<div class="tableplot-body">
-					<Table
-						headers={theData.plot.tableHeadings}
-						data={theData.plot.tableData}
-						editable={true}
-						onInput={makeEdits}
-					/>
+	{#if visibleColumns.length > 0 || theData.plot.showColNumber}
+		<div class="tableplot-layout">
+			<div
+				class="tp-scroll"
+				role="presentation"
+				onwheel={(e) => {
+					if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
+				}}
+			>
+				<div class="tp-inner" style="min-width:{tableMinWidth}px;">
+					<div class="tp-head" style="grid-template-columns:{gridCols};">
+						{#if theData.plot.showColNumber}
+							<div class="tp-th tp-num">#</div>
+						{/if}
+						{#each visibleColumns as vc, vi (vc.colId)}
+							<div class="tp-th">
+								<Editable
+									editable={true}
+									value={vc.col?.name ?? '???'}
+									onInput={(v) => makeEdits({ col: editColIndex(vi), row: 'h', value: v })}
+								/>
+							</div>
+						{/each}
+					</div>
+
+					<VirtualList items={rowItems} fill itemHeight={rowH}>
+						{#snippet row(_, i)}
+							<div class="tp-tr" style="grid-template-columns:{gridCols};">
+								{#if theData.plot.showColNumber}
+									<div class="tp-td tp-num">{i + 1}</div>
+								{/if}
+								{#each visibleColumns as vc, vi (vc.colId)}
+									{@const cell = formatCell(vc.col, i)}
+									<div class="tp-td">
+										{#if cell && cell.isTime}
+											<div class="time-cell">
+												<Editable
+													value={cell.raw}
+													onInput={(v) =>
+														makeEdits({ col: editColIndex(vi), row: i, value: v })}
+												/>
+												{#if String(cell.computed) !== String(cell.raw)}
+													<div class="computed-time">{cell.computed} hrs</div>
+												{/if}
+											</div>
+										{:else if cell == null}
+											<span class="null-value">-</span>
+										{:else}
+											<Editable
+												value={cell}
+												onInput={(v) =>
+													makeEdits({ col: editColIndex(vi), row: i, value: v })}
+											/>
+										{/if}
+									</div>
+								{/each}
+							</div>
+						{/snippet}
+					</VirtualList>
 				</div>
-				<p class="tableplot-row-bar">
-					Row <NumberWithUnits
-						min="1"
-						max={theData.plot.longestCol}
-						step="1"
-						bind:value={theData.plot.colCurrent}
-					/>
-					to {Math.min(
-						theData.plot.colCurrent + theData.plot.Ncolumns - 1,
-						theData.plot.longestCol
-					)} of
-					{theData.plot.longestCol}
-				</p>
 			</div>
-		{:else}
-			<p style="color: #888; font-style: italic;">No columns selected</p>
-		{/if}
-	{/key}
+			<p class="tableplot-row-bar">{rowCount} row{rowCount === 1 ? '' : 's'}</p>
+		</div>
+	{:else}
+		<p style="color: #888; font-style: italic;">No columns selected</p>
+	{/if}
 {/snippet}
 
 {#if which === 'plot'}
@@ -700,16 +811,101 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
+		min-height: 0;
 	}
 
-	.tableplot-body {
+	.tp-scroll {
 		flex: 1;
+		min-height: 0;
+		overflow-x: auto;
+		overflow-y: hidden;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 4px;
+		background: #fff;
+		font-size: 14px;
+	}
+
+	/* Full height of .tp-scroll so the fill VirtualList can take the space left
+	   under the sticky header and scroll vertically. */
+	.tp-inner {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+	}
+
+	.tp-head {
+		display: grid;
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		background: var(--color-lightness-97);
+		flex-shrink: 0;
+	}
+
+	.tp-th {
+		padding: 6px 12px;
+		font-weight: 600;
+		border-bottom: 1px solid var(--color-lightness-85);
+		border-right: 1px solid var(--color-lightness-85);
+		white-space: nowrap;
 		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tp-tr {
+		display: grid;
+	}
+
+	.tp-tr:hover {
+		background: var(--color-lightness-98, #fafafa);
+	}
+
+	.tp-td {
+		padding: 4px 12px;
+		border-bottom: 1px solid var(--color-lightness-90, #eee);
+		border-right: 1px solid var(--color-lightness-90);
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+	}
+
+	.tp-num {
+		color: var(--color-lightness-50, #888);
+		font-size: 12px;
+		text-align: center;
+		justify-content: center;
+	}
+
+	.tp-th:last-child,
+	.tp-td:last-child {
+		border-right: none;
+	}
+
+	.time-cell {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 1px;
+	}
+
+	.computed-time {
+		font-size: 0.75em;
+		color: var(--color-lightness-50, #888);
+		line-height: 1.1;
+		padding-left: 4px;
+		white-space: nowrap;
+	}
+
+	.null-value {
+		color: var(--color-lightness-70, #aaa);
 	}
 
 	.tableplot-row-bar {
 		flex-shrink: 0;
 		margin: 0.4rem 0 0;
+		font-size: 0.8rem;
+		color: var(--color-lightness-50, #888);
 	}
 
 	.display-list {

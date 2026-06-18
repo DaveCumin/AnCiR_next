@@ -44,8 +44,8 @@
 			if (result.length > 100000) result = result.slice(0, 100000);
 		}
 
-		if (argsIN.out.result === -1 || !argsIN.out.result) {
-			// preview only
+		if (argsIN.out.result == null || argsIN.out.result < 0) {
+			// preview only (output column not allocated yet)
 		} else {
 			core.rawData.set(argsIN.out.result, result);
 			getColumnById(argsIN.out.result).data = argsIN.out.result;
@@ -245,7 +245,7 @@
 			bind:value={previewStart}
 		/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
 	</p>
-{:else if p.args.out.result > 0}
+{:else if p.args.out.result >= 0}
 	<details open>
 		<summary class="section-details-summary">Output ({result?.length ?? 0} values)</summary>
 		<ColumnComponent col={getColumnById(p.args.out.result)} />

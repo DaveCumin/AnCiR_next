@@ -43,7 +43,14 @@ export const core = $state({
 	// instance with parentCol = null. The canvas renders them with an input
 	// port; dragging a wire from any column output to that port attaches the
 	// process to that column (moves it out of this list into col.processes).
-	orphanProcesses: []
+	orphanProcesses: [],
+	// nodeLayout — workflow-canvas layout snapshot keyed by canvas node id
+	// (`data_<colId>`, `process_<id>`, `tableprocess_<id>`, `plot_<id>`, group/
+	// composite/note ids): `{ [id]: { x, y, collapsed? } }`. Maintained by
+	// WorkflowEditor and serialised so a saved session restores node positions and
+	// collapsed state on any machine (not just via per-browser localStorage).
+	// `collapsed` is omitted for expanded nodes — absence means expanded (default).
+	nodeLayout: {}
 });
 
 let _nextNoteId = 1;
@@ -269,7 +276,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.44.0',
+	version: 'β.45.0',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),

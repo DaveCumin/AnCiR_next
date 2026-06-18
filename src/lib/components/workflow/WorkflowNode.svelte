@@ -6,6 +6,7 @@
 	import NodeNoteButton from './NodeNoteButton.svelte';
 	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { getNodeName, setNodeName, isNodeNameEditable } from '$lib/core/nodeNaming.js';
 	import { guessDateofArray } from '$lib/utils/time/TimeUtils.js';
 	import { core } from '$lib/core/core.svelte.js';
 	import { plotPortRows } from '$lib/core/ProcessNode.svelte.js';
@@ -18,14 +19,6 @@
 		width = null
 	} = $props();
 	const dispatch = createEventDispatcher();
-
-	function renameDataNode(next) {
-		const col = node.refId != null ? getColumnById(node.refId) : null;
-		if (!col) return;
-		const trimmed = (next ?? '').trim();
-		// Empty input restores the auto-derived name.
-		col.customName = trimmed === '' ? null : trimmed;
-	}
 
 	// Mirror the legacy Column.svelte behaviour: when the user picks "time" and
 	// no format is set yet, sniff one from the first few raw rows.
@@ -103,11 +96,23 @@
 			{/if}
 			<div class="node-label" onpointerdown={(e) => e.stopPropagation()}>
 				<Editable
-					value={liveCol?.name ?? node.label}
+					value={getNodeName(node)}
 					placeholder="column name"
 					ariaLabel="Rename column"
 					title="Double-click to rename"
-					onCommit={renameDataNode}
+					onInput={(v) => setNodeName(node, v)}
+					onCommit={(v) => setNodeName(node, v, { commit: true })}
+				/>
+			</div>
+		{:else if isNodeNameEditable(node)}
+			<div class="node-label" onpointerdown={(e) => e.stopPropagation()}>
+				<Editable
+					value={getNodeName(node)}
+					placeholder="name"
+					ariaLabel="Rename node"
+					title="Double-click to rename"
+					onInput={(v) => setNodeName(node, v)}
+					onCommit={(v) => setNodeName(node, v, { commit: true })}
 				/>
 			</div>
 		{:else}

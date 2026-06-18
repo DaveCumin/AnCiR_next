@@ -17,6 +17,7 @@
 		removeOrphanProcess,
 		pushObj
 	} from '$lib/core/core.svelte.js';
+	import { untrack } from 'svelte';
 	import { computeInterface, flattenMembers } from '$lib/core/composite.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { Column } from '$lib/core/Column.svelte';
@@ -43,6 +44,7 @@
 	import { alignBoxes, distributeBoxes } from '$lib/core/layoutHelpers.js';
 	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
 	import CompactNode from './CompactNode.svelte';
+	import { tourState } from '$lib/core/tourRunner.svelte.js';
 	import {
 		COMPACT_W,
 		SQUARED_KINDS,
@@ -100,14 +102,14 @@
 
 	// --- Edge derivation split into topology + positioned ---
 
-	// Whether a node renders as a compact square. Groups track this via their own
-	// persisted `collapsed` flag (so new groups start detailed and the state is
-	// saved); data/process/tableprocess use the ephemeral expandedNodeIds set.
+	// Whether a node renders as a compact square. Groups/composites track their own
+	// persisted `collapsed` flag; data/process/tableprocess use collapsedNodeIds
+	// (default expanded — a node is compact only if explicitly collapsed).
 	// Plots and notes are never compact.
 	function isCompact(node) {
 		if (node?.type === 'group') return node?.groupObj?.collapsed === true;
 		if (node?.type === 'composite') return node?.compositeObj?.collapsed === true;
-		return SQUARED_KINDS.has(node?.type) && !expandedNodeIds.has(node?.id);
+		return SQUARED_KINDS.has(node?.type) && collapsedNodeIds.has(node?.id);
 	}
 
 	// Nodes that offer a compact/detailed toggle (the hover button on the card).
@@ -173,7 +175,7 @@
 		if (node?.type === 'plot') return plotPreviewSizes[node.id]?.w ?? PLOT_PREVIEW_DEFAULT_W;
 		// Notes carry their own resizable width on the note object.
 		if (node?.type === 'note') return node?.noteObj?.width ?? 200;
-		const expanded = expandedNodeIds.has(node?.id);
+		const expanded = !collapsedNodeIds.has(node?.id);
 		if (node?.type === 'tableprocess') return expanded ? EDITOR_PANEL_WIDTH : TP_NODE_WIDTH;
 		if (node?.type === 'process') return expanded ? EDITOR_PANEL_WIDTH : NODE_WIDTH;
 		return NODE_WIDTH;
@@ -337,6 +339,10 @@
 
 	let stablePositions = $state(loadNodePositions());
 	let _knownNodeIds = new Set(Object.keys(stablePositions));
+	// Last layout object WorkflowEditor itself wrote into core.nodeLayout, so the
+	// adopt-on-import effect can tell its own writes apart from an external (import)
+	// replacement and avoid a feedback loop.
+	let _mirroredLayout = null;
 
 	// Queue of canvas-coord {x, y} positions to assign to the NEXT N newly-
 	// appeared nodes (one position consumed per node). Pushed by NodePalette
@@ -394,13 +400,45 @@
 		}
 	});
 
-	// Mirror stablePositions to localStorage. Reads every entry to register the
-	// $derived dep, so dragging a node (which mutates one entry) triggers a save.
+	// Adopt an externally-supplied layout (a session import replaces core.nodeLayout
+	// with a fresh, non-empty object). Declared BEFORE the mirror effect so on mount
+	// it wins over the mirror's first localStorage-seeded write. Skips its own mirror
+	// writes (identity guard) and empty layouts (so a fresh canvas keeps localStorage).
+	$effect(() => {
+		const cl = core.nodeLayout;
+		if (cl === _mirroredLayout) return; // our own write
+		if (!cl || Object.keys(cl).length === 0) return; // nothing to adopt
+		untrack(() => {
+			const pos = {};
+			const collapsed = new Set();
+			for (const [id, v] of Object.entries(cl)) {
+				if (Number.isFinite(v?.x) && Number.isFinite(v?.y)) pos[id] = { x: +v.x, y: +v.y };
+				if (v?.collapsed === true) collapsed.add(id);
+			}
+			stablePositions = pos;
+			collapsedNodeIds = collapsed;
+			_knownNodeIds = new Set(Object.keys(pos));
+		});
+	});
+
+	// Mirror stablePositions + collapsed state to localStorage AND core.nodeLayout
+	// (the latter is serialised with the session). Reads every entry to register the
+	// $derived dep, so dragging a node (mutating one entry) or collapsing triggers a
+	// save.
 	$effect(() => {
 		const snapshot = {};
 		for (const [id, pos] of Object.entries(stablePositions)) {
 			snapshot[id] = { x: pos.x, y: pos.y };
 		}
+		// Layout snapshot for the session = positions + collapsed flags.
+		const layout = {};
+		for (const id in snapshot) layout[id] = { x: snapshot[id].x, y: snapshot[id].y };
+		for (const id of collapsedNodeIds) layout[id] = { ...(layout[id] ?? {}), collapsed: true };
+		core.nodeLayout = layout;
+		// Capture the PROXY identity Svelte wrapped `layout` in (not the raw object),
+		// read untracked so this effect doesn't depend on core.nodeLayout. The adopt
+		// effect compares against this to ignore our own writes (avoids a feedback loop).
+		_mirroredLayout = untrack(() => core.nodeLayout);
 		try {
 			if (typeof localStorage !== 'undefined') {
 				localStorage.setItem(NODE_POSITIONS_STORAGE_KEY, JSON.stringify(snapshot));
@@ -503,8 +541,37 @@
 		return { x: Math.round(cx + jitter()), y: Math.round(cy + jitter()) };
 	}
 
+	// Place a new node just to the right of the current right-most node, aligned to
+	// its row. Returns null when there are no positioned nodes yet.
+	function getRightmostSpawnPoint() {
+		let maxRight = -Infinity;
+		let yAtMax = null;
+		for (const node of allNodes) {
+			const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id];
+			if (!pos) continue;
+			const right = pos.x + getNodeWidth(node);
+			if (right > maxRight) {
+				maxRight = right;
+				yAtMax = pos.y;
+			}
+		}
+		if (maxRight === -Infinity) return null;
+		return { x: Math.round(maxRight + 70), y: Math.round(yAtMax ?? 80) };
+	}
+
+	// During a guided tour, spawn nodes to the right of the right-most node so the
+	// growing pipeline stays readable and easy to wire (rather than stacking at the
+	// viewport centre). Falls back to the viewport point otherwise.
+	function getSpawnPoint() {
+		if (tourState.activeTour) {
+			const p = getRightmostSpawnPoint();
+			if (p) return p;
+		}
+		return getViewportSpawnPoint();
+	}
+
 	function queueSpawnPositionAtViewport() {
-		_spawnPositionQueue.push(getViewportSpawnPoint());
+		_spawnPositionQueue.push(getSpawnPoint());
 	}
 
 	/**
@@ -519,13 +586,12 @@
 		if (!proc) return { ok: false, reason: 'create-failed' };
 		const newId = `process_${proc.id}`;
 		const queued = _spawnPositionQueue.shift();
-		const pos = queued ?? getViewportSpawnPoint();
+		const pos = queued ?? getSpawnPoint();
 		stablePositions[newId] = { x: pos.x, y: pos.y };
 		focusedNodeId = newId;
 		multiSelectedNodeIds = new Set([newId]);
-		// Open it inline by default (same as table-process adds) — no modal, configure
-		// in place.
-		expandedNodeIds = new Set([...expandedNodeIds, newId]);
+		// New nodes are expanded by default (collapsedNodeIds tracks the exceptions),
+		// so no action needed to open it inline.
 		return { ok: true, orphanProcessId: proc.id };
 	}
 
@@ -558,7 +624,7 @@
 		const nodeId = `tableprocess_${tp.id}`;
 		focusedNodeId = nodeId;
 		multiSelectedNodeIds = new Set([nodeId]);
-		expandedNodeIds = new Set([...expandedNodeIds, nodeId]);
+		// Expanded by default (collapsedNodeIds tracks exceptions).
 		return { ok: true };
 	}
 
@@ -642,8 +708,10 @@
 	// derived default.
 	let extractGesture = $state(null);
 
-	// --- Expanded process editors (set, so multiple can stay expanded at once) ---
-	let expandedNodeIds = $state(new Set());
+	// --- Collapsed (compact) nodes. We track the COLLAPSED set so the default is
+	// EXPANDED (a node not listed is shown in full). Persisted per-session via
+	// core.nodeLayout, so collapsing survives save/load. ---
+	let collapsedNodeIds = $state(new Set());
 
 	// --- Focus / connected-node highlight ---
 	let focusedNodeId = $state(null);
@@ -779,22 +847,20 @@
 		return connected;
 	});
 
-	// Auto-prune expandedNodeIds when a referenced node is genuinely deleted.
+	// Auto-prune collapsedNodeIds when a referenced node is genuinely deleted, so a
+	// reused node id (e.g. a new tableprocess_0 after the old one was deleted)
+	// defaults to expanded rather than inheriting a stale collapsed flag.
 	//
 	// Checked against `core` (the source of truth) rather than the derived
-	// `allNodes` graph. The projected graph can be transiently stale right after
-	// an undo/redo restore — pruning against it then wrongly dropped ids for
-	// nodes that still exist, which is what collapsed user-expanded nodes on
-	// undo. `core` is never transiently empty, so this is race-free and node
-	// expansion is now fully decoupled from undo/redo. The set built below is a
-	// superset of every expandable (process / tableprocess) node id the
-	// projection can emit, so a live node is never pruned — only truly-removed
-	// ones are. (Id sources mirror ProcessNode.svelte.js: attached processes,
-	// orphan processes, table processes, and nested table processes.)
+	// `allNodes` graph, which can be transiently stale right after an undo/redo
+	// restore. The set built below is a superset of every compactable (data /
+	// process / tableprocess) node id the projection can emit, so a live node is
+	// never pruned — only truly-removed ones are.
 	$effect(() => {
-		if (expandedNodeIds.size === 0) return;
+		if (collapsedNodeIds.size === 0) return;
 		const liveIds = new Set();
 		for (const col of core.data ?? []) {
+			liveIds.add(`data_${col.id}`);
 			for (const p of col.processes ?? []) liveIds.add(`process_${p.id}`);
 		}
 		for (const p of core.orphanProcesses ?? []) liveIds.add(`process_${p.id}`);
@@ -806,11 +872,11 @@
 		}
 		let changed = false;
 		const next = new Set();
-		for (const id of expandedNodeIds) {
+		for (const id of collapsedNodeIds) {
 			if (liveIds.has(id)) next.add(id);
 			else changed = true;
 		}
-		if (changed) expandedNodeIds = next;
+		if (changed) collapsedNodeIds = next;
 	});
 
 	// Hook canvas selection into the undo/redo stack so that undoing a delete
@@ -820,11 +886,10 @@
 	// gesture state); uiAfter is captured via a microtask after the gesture
 	// completes.
 	//
-	// NOTE: node expansion (`expandedNodeIds`) is deliberately NOT part of this
-	// snapshot. Expansion is an explicit per-node UI gesture (double-click) and
-	// must stay put across undo/redo — restoring it here used to collapse nodes
-	// the user had expanded whenever any op was undone/redone. Deleted nodes are
-	// cleaned out of `expandedNodeIds` by the auto-prune effect above instead.
+	// NOTE: node collapse (`collapsedNodeIds`) is deliberately NOT part of this
+	// snapshot. Collapse is an explicit per-node UI gesture and must stay put across
+	// undo/redo. Deleted nodes are cleaned out of `collapsedNodeIds` by the
+	// auto-prune effect above instead.
 	$effect(() => {
 		return history.registerUiHandlers(
 			() => ({
@@ -1899,8 +1964,7 @@
 	/** Toggle a node between Compact (square) and Detailed (full view: table /
 	 *  editor / group rows). Driven by the hover toggle button on the card.
 	 *  Groups persist this on their own `collapsed` flag; other squared kinds use
-	 *  the ephemeral expandedNodeIds set (so expanding a second node doesn't
-	 *  collapse the first). */
+	 *  collapsedNodeIds (default expanded), persisted via core.nodeLayout. */
 	function handleNodeToggleExpand(node) {
 		if (node.type === 'group') {
 			if (node.groupObj) node.groupObj.collapsed = !node.groupObj.collapsed;
@@ -1911,10 +1975,10 @@
 			return;
 		}
 		if (!SQUARED_KINDS.has(node.type)) return;
-		const next = new Set(expandedNodeIds);
-		if (next.has(node.id)) next.delete(node.id);
-		else next.add(node.id);
-		expandedNodeIds = next;
+		const next = new Set(collapsedNodeIds);
+		if (next.has(node.id)) next.delete(node.id); // currently collapsed → expand
+		else next.add(node.id); // currently expanded → collapse
+		collapsedNodeIds = next;
 	}
 
 	function toggleMultiSelect(id) {
@@ -1934,7 +1998,8 @@
 
 	function clearSelection() {
 		deselectAllPlots();
-		expandedNodeIds = new Set();
+		// Note: collapse state is intentionally NOT reset here — it's a persistent,
+		// per-node property now (saved with the session), not tied to selection.
 		focusedNodeId = null;
 		multiSelectedNodeIds = new Set();
 		selectedEdgeKey = null;
@@ -2097,8 +2162,8 @@
 		}
 		focusedNodeId = null;
 		multiSelectedNodeIds = new Set();
-		// Deleted nodes auto-prune from expandedNodeIds via the effect above;
-		// surviving expansions stay open.
+		// Deleted nodes auto-prune from collapsedNodeIds via the effect above;
+		// surviving nodes keep their collapse state.
 	}
 
 	// --- Clipboard for copy/paste ---
@@ -2566,7 +2631,7 @@
 				// Include the editor panel when a member node is individually expanded,
 				// since it renders below the node body and getNodeRenderHeight omits it.
 				const editorH =
-					expandedNodeIds.has(n.id) && (n.type === 'process' || n.type === 'tableprocess')
+					!collapsedNodeIds.has(n.id) && (n.type === 'process' || n.type === 'tableprocess')
 						? EDITOR_PANEL_MAX_HEIGHT
 						: 0;
 				const h = getNodeRenderHeight(n) + editorH;
@@ -2708,7 +2773,7 @@
 
 			{#each allNodes as node (node.id)}
 				{@const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id]}
-				{@const isExpanded = expandedNodeIds.has(node.id)}
+				{@const isExpanded = SQUARED_KINDS.has(node.type) && !collapsedNodeIds.has(node.id)}
 				{@const compact = isCompact(node)}
 				{@const isDragging = dragInfo?.nodeId === node.id && dragInfo?.moved}
 				{@const isDimmed = connectedNodeIds !== null && !connectedNodeIds.has(node.id)}
@@ -3242,8 +3307,12 @@
 		color: var(--color-accent, #4d9fe3);
 	}
 
+	/* Most viewport icons (zoom, reset, paths) inherit their fill from the global
+	   .icon rule (var(--color-icon-unselected)). The Tidy icon's SVG uses
+	   fill="currentColor", so it follows `color` instead — match the two palettes
+	   here so all the buttons render the same shade idle and on hover. */
 	.viewport-btn {
-		color: var(--color-lightness-45, #6b7280);
+		color: var(--color-icon-unselected, #d9d9d9);
 		transition:
 			color 0.18s ease,
 			transform 0.32s ease;
@@ -3251,7 +3320,7 @@
 
 	.viewport-btn:hover,
 	.viewport-btn[aria-pressed='true'] {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-hover, #6a9fd4);
 	}
 
 	.viewport-btn:active {

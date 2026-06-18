@@ -64,10 +64,15 @@
 		if (group) group.allColumnIds = null;
 	}
 
-	function renameGroup(next) {
+	// Live on input, normalise (empty → "Group") on commit.
+	function renameGroup(next, commit = false) {
 		if (!group) return;
-		const trimmed = (next ?? '').trim();
-		group.name = trimmed === '' ? 'Group' : trimmed;
+		if (commit) {
+			const trimmed = (next ?? '').trim();
+			group.name = trimmed === '' ? 'Group' : trimmed;
+		} else {
+			group.name = next ?? '';
+		}
 	}
 
 	function deleteGroup(e) {
@@ -94,10 +99,14 @@
 		if (st) st.expanded = !st.expanded;
 	}
 
-	function renameColumn(col, next) {
+	function renameColumn(col, next, commit = false) {
 		if (!col) return;
-		const trimmed = (next ?? '').trim();
-		col.customName = trimmed === '' ? null : trimmed;
+		if (commit) {
+			const trimmed = (next ?? '').trim();
+			col.customName = trimmed === '' ? null : trimmed;
+		} else {
+			col.customName = next ?? '';
+		}
 	}
 
 	function onAllPortContextMenu(e) {
@@ -297,7 +306,8 @@
 				placeholder="Group"
 				ariaLabel="Rename group"
 				title="Double-click to rename"
-				onCommit={renameGroup}
+				onInput={(v) => renameGroup(v)}
+				onCommit={(v) => renameGroup(v, true)}
 			/>
 		</div>
 		<span class="sources-count" title="Source count">{sourceColumnIds.length}</span>
@@ -411,7 +421,8 @@
 								placeholder="column"
 								ariaLabel="Rename column"
 								title="Double-click to rename"
-								onCommit={(v) => renameColumn(col, v)}
+								onInput={(v) => renameColumn(col, v)}
+								onCommit={(v) => renameColumn(col, v, true)}
 							/>
 						</div>
 						<button

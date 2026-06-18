@@ -1,7 +1,7 @@
 <script module>
 	import { core, getStoredValue } from '$lib/core/core.svelte';
 
-	const displayName = 'Blank Column';
+	const displayName = 'Enter Data';
 	const defaults = new Map([
 		['N', { val: 10 }],
 		['storedValueRefs', { val: {} }],
@@ -13,8 +13,8 @@
 		const count = Math.max(0, Math.floor(Number(argsIN.N)));
 		let result = new Array(count).fill('');
 
-		if (argsIN.out.result === -1 || !argsIN.out.result) {
-			// preview only
+		if (argsIN.out.result == null || argsIN.out.result < 0) {
+			// preview only (output column not allocated yet)
 		} else {
 			// Preserve existing data if present and only resize
 			const existing = core.rawData.get(argsIN.out.result);
@@ -59,8 +59,10 @@
 
 <script>
 	import ColumnComponent from '$lib/core/Column.svelte';
-	import { getColumnById } from '$lib/core/Column.svelte';
+	import { getColumnById, removeColumn, Column } from '$lib/core/Column.svelte';
+	import { pushObj } from '$lib/core/core.svelte.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import VirtualList from '$lib/components/reusables/VirtualList.svelte';
 	import { onMount, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
@@ -70,6 +72,33 @@
 	let result = $state([]);
 	let editableData = $state([]);
 
+	// Fixed row height for the virtualised table (must match .vrow CSS height).
+	const ROW_H = 26;
+
+	// Resizable table viewport — drag the handle to see more rows in the node.
+	// Persisted on p.args so it survives save/load (args is a freeform bag).
+	let tableHeight = $state(Math.max(120, Number(p.args.editorHeight) || 300));
+	let resizing = false;
+	function onResizeDown(e) {
+		e.preventDefault();
+		e.stopPropagation();
+		resizing = true;
+		const startY = e.clientY;
+		const startH = tableHeight;
+		const move = (ev) => {
+			if (!resizing) return;
+			tableHeight = Math.max(120, startH + (ev.clientY - startY));
+		};
+		const up = () => {
+			resizing = false;
+			p.args.editorHeight = tableHeight;
+			window.removeEventListener('mousemove', move);
+			window.removeEventListener('mouseup', up);
+		};
+		window.addEventListener('mousemove', move);
+		window.addEventListener('mouseup', up);
+	}
+
 	function doBlank() {
 		// Clean up stored value refs for rows beyond the new count
 		const count = Math.max(0, Math.floor(Number(p.args.N)));
@@ -78,6 +107,16 @@
 		}
 		[result, p.args.valid] = blankcolumn(p.args);
 		editableData = [...result];
+		// Re-commit so the result column gets the same numeric detection as the
+		// extras (blank cells become NaN for a numeric column, not '').
+		commitData();
+		// Keep any extra (pasted) columns the same length as the row count.
+		for (const c of extraCols) {
+			const arr = extraData[c.colId] ?? [];
+			if (arr.length < count) extraData[c.colId] = [...arr, ...new Array(count - arr.length).fill('')];
+			else if (arr.length > count) extraData[c.colId] = arr.slice(0, count);
+			commitExtra(c.colId);
+		}
 	}
 
 	onMount(() => {
@@ -90,6 +129,69 @@
 			doBlank();
 		}
 	});
+
+	// ── Multi-column support ──────────────────────────────────────────────────
+	// All output columns: the default `result` column first, then any `col_<n>`
+	// columns created by a multi-column paste. The result column keeps the full
+	// stored-value editor; the extras render as plain editable text columns.
+	let outputCols = $derived.by(() => {
+		const o = p.args.out || {};
+		const list = [];
+		if (typeof o.result === 'number' && o.result >= 0) list.push({ key: 'result', colId: o.result });
+		for (const k of Object.keys(o)
+			.filter((k) => /^col_\d+$/.test(k))
+			.sort((a, b) => Number(a.slice(4)) - Number(b.slice(4)))) {
+			if (typeof o[k] === 'number' && o[k] >= 0) list.push({ key: k, colId: o[k] });
+		}
+		return list.map((e) => ({ ...e, col: getColumnById(e.colId) })).filter((e) => e.col);
+	});
+	let extraCols = $derived(outputCols.filter((c) => c.key !== 'result'));
+	const COL_MIN_W = 90; // px per data column (keep in sync with the grid minmax below)
+	let gridTemplate = $derived(
+		`44px repeat(${Math.max(1, outputCols.length)}, minmax(${COL_MIN_W}px, 1fr))`
+	);
+	// Min content width so the table scrolls horizontally (instead of squashing
+	// columns) once there are more than fit. Row-number gutter + N data columns.
+	let etMinWidth = $derived(44 + Math.max(1, outputCols.length) * COL_MIN_W);
+
+	// Editable string buffers for the extra columns, keyed by colId (mirrors
+	// `editableData` for the result column so partially-typed numbers aren't
+	// clobbered by the numeric coercion on commit). Adds buffers for new columns
+	// and drops them for removed ones, without discarding in-progress edits.
+	let extraData = $state({});
+	$effect(() => {
+		const ids = extraCols.map((c) => c.colId);
+		untrack(() => {
+			const next = {};
+			for (const id of ids) {
+				next[id] =
+					extraData[id] ?? (core.rawData.get(id) ?? []).map((v) => (v == null ? '' : String(v)));
+			}
+			extraData = next;
+		});
+	});
+
+	function commitExtra(colId) {
+		const col = getColumnById(colId);
+		if (!col) return;
+		const vals = extraData[colId] ?? [];
+		const allNumeric = vals.every((v) => v === '' || !isNaN(Number(v)));
+		if (allNumeric && vals.some((v) => v !== '')) {
+			core.rawData.set(colId, vals.map((v) => (v === '' ? NaN : Number(v))));
+			col.type = 'number';
+		} else {
+			core.rawData.set(colId, vals.map((v) => String(v)));
+			col.type = 'category';
+		}
+		col.data = colId;
+		col.tableProcessGUId = crypto.randomUUID();
+	}
+
+	function handleExtraInput(colId, i, val) {
+		if (!extraData[colId]) extraData[colId] = [];
+		extraData[colId][i] = val;
+		commitExtra(colId);
+	}
 
 	function updateCell(index, value) {
 		editableData[index] = value;
@@ -242,10 +344,206 @@
 		}
 	}
 
+	// ── Multi-column CSV / JSON paste ─────────────────────────────────────────
+	// Parses pasted tabular text into N columns and materialises them as the
+	// node's output columns: column 0 reuses the default `result` column (so the
+	// manual row editor keeps working on it); columns 1..N-1 become extra
+	// `col_<j>` outputs created on the fly. Stale extras from a previous, wider
+	// paste are removed.
+	let pasteText = $state('');
+	let parseStatus = $state(null); // { ok: boolean, msg: string } | null
+
+	function splitCsvLine(line, delim) {
+		const out = [];
+		let cur = '';
+		let inQ = false;
+		for (let i = 0; i < line.length; i++) {
+			const c = line[i];
+			if (inQ) {
+				if (c === '"') {
+					if (line[i + 1] === '"') {
+						cur += '"';
+						i++;
+					} else inQ = false;
+				} else cur += c;
+			} else if (c === '"') inQ = true;
+			else if (c === delim) {
+				out.push(cur);
+				cur = '';
+			} else cur += c;
+		}
+		out.push(cur);
+		return out.map((s) => s.trim());
+	}
+
+	function parseJsonTable(j) {
+		if (Array.isArray(j)) {
+			if (j.length === 0) return null;
+			if (Array.isArray(j[0])) {
+				const ncol = Math.max(...j.map((r) => r.length));
+				const first = j[0].map((v) => String(v));
+				const headerLike = first.every((c) => c === '' || isNaN(Number(c)));
+				const headers = headerLike
+					? first
+					: Array.from({ length: ncol }, (_, i) => `column_${i + 1}`);
+				const dataRows = headerLike ? j.slice(1) : j;
+				return {
+					columns: Array.from({ length: ncol }, (_, i) => ({
+						name: headers[i] || `column_${i + 1}`,
+						values: dataRows.map((r) => r[i] ?? '')
+					})),
+					rows: dataRows.length
+				};
+			}
+			if (typeof j[0] === 'object' && j[0] !== null) {
+				const keys = [];
+				for (const o of j) for (const k of Object.keys(o)) if (!keys.includes(k)) keys.push(k);
+				return { columns: keys.map((k) => ({ name: k, values: j.map((o) => o[k] ?? '') })), rows: j.length };
+			}
+			return { columns: [{ name: 'value', values: j }], rows: j.length };
+		}
+		if (j && typeof j === 'object') {
+			const keys = Object.keys(j).filter((k) => Array.isArray(j[k]));
+			if (keys.length === 0) return null;
+			const rows = Math.max(...keys.map((k) => j[k].length));
+			return { columns: keys.map((k) => ({ name: k, values: j[k] })), rows };
+		}
+		return null;
+	}
+
+	function parseTabular(text) {
+		const t = (text ?? '').trim();
+		if (!t) return null;
+		if (t[0] === '[' || t[0] === '{') {
+			try {
+				return parseJsonTable(JSON.parse(t));
+			} catch {
+				// not JSON — fall through to delimited parsing
+			}
+		}
+		const lines = t.split(/\r?\n/).filter((l, i, a) => !(i === a.length - 1 && l === ''));
+		if (lines.length === 0) return null;
+		const delim = lines[0].includes('\t') ? '\t' : ',';
+		const rows = lines.map((l) => splitCsvLine(l, delim));
+		const ncol = Math.max(...rows.map((r) => r.length));
+		const first = rows[0];
+		const headerLike = first.every((c) => c === '' || isNaN(Number(c))) && first.some((c) => c !== '');
+		const headers = headerLike
+			? first
+			: Array.from({ length: ncol }, (_, i) => `column_${i + 1}`);
+		const dataRows = headerLike ? rows.slice(1) : rows;
+		return {
+			columns: Array.from({ length: ncol }, (_, i) => ({
+				name: (headers[i] ?? `column_${i + 1}`) || `column_${i + 1}`,
+				values: dataRows.map((r) => (r[i] === undefined ? '' : r[i]))
+			})),
+			rows: dataRows.length
+		};
+	}
+
+	// Write a column's data + type (numeric detection mirrors commitData()).
+	function setColData(colId, values) {
+		const col = getColumnById(colId);
+		if (!col) return;
+		const vals = values.map((v) => (v == null ? '' : v));
+		const allNumeric = vals.every((v) => v === '' || !isNaN(Number(v)));
+		if (allNumeric && vals.some((v) => v !== '')) {
+			core.rawData.set(colId, vals.map((v) => (v === '' ? NaN : Number(v))));
+			col.type = 'number';
+		} else {
+			core.rawData.set(colId, vals.map((v) => String(v)));
+			col.type = 'category';
+		}
+		col.data = colId;
+		col.tableProcessGUId = crypto.randomUUID();
+	}
+
+	// Materialise parsed tabular data as the node's output columns: column 0 reuses
+	// the default `result` column (keeping the manual editor in sync); columns 1..N-1
+	// become `col_<j>` outputs created on the fly; stale wider-paste extras removed.
+	function applyParsed(parsed) {
+		const cols = parsed.columns;
+
+		// Column 0 → reuse the default `result` column and keep the manual editor in sync.
+		p.args.storedValueRefs = {}; // a paste overrides any stored-value cells
+		setColData(p.args.out.result, cols[0].values);
+		const c0 = getColumnById(p.args.out.result);
+		if (c0) c0.customName = cols[0].name;
+		editableData = cols[0].values.map((v) => (v == null ? '' : String(v)));
+		p.args.N = editableData.length;
+
+		// Columns 1..N-1 → create/reuse `col_<j>` outputs.
+		for (let j = 1; j < cols.length; j++) {
+			const key = `col_${j}`;
+			let id = p.args.out[key];
+			let col = typeof id === 'number' && id >= 0 ? getColumnById(id) : null;
+			if (!col) {
+				col = new Column({});
+				col.tableProcessGUId = crypto.randomUUID();
+				pushObj(col);
+				id = col.id;
+				p.args.out[key] = id;
+			}
+			setColData(id, cols[j].values);
+			col.customName = cols[j].name;
+			// Refresh the editable buffer (re-pasting the same columns keeps the
+			// colId, so the sync effect wouldn't reload it on its own).
+			extraData[id] = cols[j].values.map((v) => (v == null ? '' : String(v)));
+		}
+
+		// Drop any extra columns left over from a previous, wider paste.
+		for (const key of Object.keys(p.args.out)) {
+			const m = /^col_(\d+)$/.exec(key);
+			if (m && Number(m[1]) >= cols.length) {
+				const id = p.args.out[key];
+				if (typeof id === 'number' && id >= 0) {
+					core.rawData.delete(id);
+					try {
+						removeColumn(id);
+					} catch {
+						/* column may already be gone */
+					}
+				}
+				delete p.args.out[key];
+			}
+		}
+
+		p.args.valid = true;
+		result = [...editableData];
+		parseStatus = {
+			ok: true,
+			msg: `Created ${cols.length} column${cols.length === 1 ? '' : 's'} × ${parsed.rows} row${parsed.rows === 1 ? '' : 's'}.`
+		};
+	}
+
+	// "Paste CSV or JSON" box → button.
+	function createColumnsFromPaste() {
+		const parsed = parseTabular(pasteText);
+		if (!parsed || parsed.columns.length === 0) {
+			parseStatus = { ok: false, msg: 'Could not read any columns from that text.' };
+			return;
+		}
+		if (p.args.out.result < 0) {
+			parseStatus = { ok: false, msg: 'Output column not ready yet — try again.' };
+			return;
+		}
+		applyParsed(parsed);
+		pasteText = '';
+	}
+
 	function handlePaste(event) {
 		event.preventDefault();
 		const text = event.clipboardData.getData('text/plain');
 		if (!text) return;
+
+		// Multi-column paste (CSV with commas, or Excel/Sheets tab-separated, or JSON)
+		// → create one output column per pasted column instead of keeping only the
+		// first. Single-column pastes fall through to the focused-cell fill below.
+		const parsedMulti = parseTabular(text);
+		if (parsedMulti && parsedMulti.columns.length > 1 && p.args.out.result >= 0) {
+			applyParsed(parsedMulti);
+			return;
+		}
 
 		// Split by newlines (handles both \n and \r\n from spreadsheets)
 		const lines = text.split(/\r?\n/).filter((line, i, arr) => {
@@ -296,7 +594,7 @@
 
 <div class="section-row">
 	<div class="tableProcess-label">
-		<span>Blank column settings</span>
+		<span>Data entry settings</span>
 	</div>
 
 	<div class="control-input">
@@ -305,10 +603,37 @@
 	</div>
 </div>
 
-{#if p.args.out.result > 0}
+<details class="paste-section">
+	<summary class="section-details-summary">Paste CSV or JSON</summary>
+	<p class="hint">
+		Paste a table (CSV/TSV, optional header row) or JSON (array of objects, array of arrays, or
+		object of arrays). The first column fills this node; any extra columns are added as outputs.
+	</p>
+	<textarea
+		class="paste-box"
+		bind:value={pasteText}
+		rows="5"
+		placeholder={'name,age\nAda,36\nAlan,41'}
+	></textarea>
+	<div class="paste-actions">
+		<button
+			type="button"
+			class="paste-btn"
+			onclick={createColumnsFromPaste}
+			disabled={!pasteText.trim()}>Create columns</button
+		>
+		{#if parseStatus}
+			<span class="paste-status" class:err={!parseStatus.ok}>{parseStatus.msg}</span>
+		{/if}
+	</div>
+</details>
+
+{#if p.args.out.result >= 0}
 	<details open>
 		<summary class="section-details-summary">Output</summary>
-		<ColumnComponent col={getColumnById(p.args.out.result)} />
+		{#each outputCols as oc (oc.colId)}
+			<ColumnComponent col={oc.col} />
+		{/each}
 
 		<div class="section-row">
 			<div class="tableProcess-label">
@@ -316,48 +641,70 @@
 			</div>
 		</div>
 		<p class="hint">
-			Click cells to edit. Paste from a spreadsheet into any cell. Type <kbd>#</kbd> for stored values.
+			Click cells to edit. Paste a spreadsheet/CSV into any cell to fill multiple columns. Type
+			<kbd>#</kbd> for stored values (first column). Drag the handle below to resize.
 		</p>
 		<div class="editable-table" onpaste={handlePaste}>
-			<table>
-				<thead>
-					<tr><th>Row</th><th>Value</th></tr>
-				</thead>
-				<tbody>
-					{#each editableData as cell, i (i)}
-						<tr>
-							<td class="row-num">{i + 1}</td>
-							<td>
-								{#if p.args.storedValueRefs[i]}
-									{@const key = p.args.storedValueRefs[i]}
-									{@const exists = key in core.storedValues}
-									<span class="chip chip-stored" class:chip-invalid={!exists}>
-										<span class="sv-name">{key}</span>
-										{#if exists}
-											<span class="sv-value">= {getStoredValue(key)}</span>
-										{:else}
-											<span class="sv-value">(removed)</span>
-										{/if}
-										<button
-											class="chip-remove"
-											onclick={() => removeStoredValueRef(i)}
-											title="Remove">×</button
-										>
-									</span>
-								{:else}
-									<input
-										type="text"
-										value={cell}
-										data-index={i}
-										oninput={(e) => handleCellInput(e, i)}
-										onkeydown={(e) => handleCellKeydown(e, i)}
-									/>
-								{/if}
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+			<div class="et-inner" style="min-width:{etMinWidth}px;">
+			<div class="vt-head" style="grid-template-columns:{gridTemplate};">
+				<span class="vt-h-row">Row</span>
+				{#each outputCols as oc (oc.colId)}
+					<span class="vt-h-val" title={oc.col?.name}>{oc.col?.name ?? ''}</span>
+				{/each}
+			</div>
+			<VirtualList items={editableData} height={tableHeight} itemHeight={ROW_H}>
+				{#snippet row(cell, i)}
+					<div class="vrow" style="grid-template-columns:{gridTemplate};">
+						<span class="row-num">{i + 1}</span>
+						<!-- result column: keeps the stored-value (#) editor -->
+						<span class="vcell">
+							{#if p.args.storedValueRefs[i]}
+								{@const key = p.args.storedValueRefs[i]}
+								{@const exists = key in core.storedValues}
+								<span class="chip chip-stored" class:chip-invalid={!exists}>
+									<span class="sv-name">{key}</span>
+									{#if exists}
+										<span class="sv-value">= {getStoredValue(key)}</span>
+									{:else}
+										<span class="sv-value">(removed)</span>
+									{/if}
+									<button
+										class="chip-remove"
+										onclick={() => removeStoredValueRef(i)}
+										title="Remove">×</button
+									>
+								</span>
+							{:else}
+								<input
+									type="text"
+									value={cell}
+									data-index={i}
+									oninput={(e) => handleCellInput(e, i)}
+									onkeydown={(e) => handleCellKeydown(e, i)}
+								/>
+							{/if}
+						</span>
+						<!-- extra (pasted) columns: plain editable text -->
+						{#each extraCols as ec (ec.colId)}
+							<span class="vcell">
+								<input
+									type="text"
+									value={extraData[ec.colId]?.[i] ?? ''}
+									oninput={(e) => handleExtraInput(ec.colId, i, e.currentTarget.value)}
+								/>
+							</span>
+						{/each}
+					</div>
+				{/snippet}
+			</VirtualList>
+			<div
+				class="vt-resize"
+				role="separator"
+				aria-label="Resize table"
+				title="Drag to resize"
+				onmousedown={onResizeDown}
+			></div>
+			</div>
 		</div>
 
 		{#if ac.show}
@@ -397,6 +744,48 @@
 		margin: 0.25rem 0;
 	}
 
+	.paste-section {
+		margin: 0.4rem 0;
+	}
+	.paste-box {
+		width: 100%;
+		box-sizing: border-box;
+		font-family: var(--font-mono, ui-monospace, SF Mono, monospace);
+		font-size: 12px;
+		padding: 0.4rem;
+		border: 1px solid var(--color-lightness-85, #ddd);
+		border-radius: 3px;
+		resize: vertical;
+	}
+	.paste-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.3rem;
+	}
+	.paste-btn {
+		padding: 0.25rem 0.6rem;
+		font-size: 12px;
+		border: 1px solid var(--color-lightness-70, #b0b0b0);
+		border-radius: 3px;
+		background: var(--color-lightness-97, #f8f8f8);
+		cursor: pointer;
+	}
+	.paste-btn:hover:not(:disabled) {
+		background: var(--color-lightness-90, #e8e8e8);
+	}
+	.paste-btn:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+	.paste-status {
+		font-size: 11px;
+		color: var(--color-lightness-45, #2a7a2a);
+	}
+	.paste-status.err {
+		color: #b03030;
+	}
+
 	.hint kbd {
 		background: var(--color-lightness-85, #ddd);
 		border-radius: 3px;
@@ -406,35 +795,69 @@
 	}
 
 	.editable-table {
-		max-height: 300px;
-		overflow: auto;
 		margin: 0.25rem 0;
-	}
-
-	.editable-table table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 13px;
-	}
-
-	.editable-table th,
-	.editable-table td {
 		border: 1px solid var(--color-lightness-85, #ddd);
-		padding: 2px 4px;
+		border-radius: 3px;
+		font-size: 13px;
+		overflow-x: auto; /* scroll horizontally when columns exceed the width */
+	}
+	/* Holds the header + virtual body at a min content width so the wrapper above
+	   scrolls horizontally instead of squashing the columns. */
+	.et-inner {
+		display: flex;
+		flex-direction: column;
 	}
 
-	.editable-table th {
+	.vt-head {
+		display: grid;
+		align-items: center;
 		background: var(--color-lightness-95, #f5f5f5);
-		position: sticky;
-		top: 0;
+		border-bottom: 1px solid var(--color-lightness-85, #ddd);
 		font-weight: 600;
+		height: 24px;
+	}
+	.vt-h-row {
+		text-align: center;
+		font-size: 11px;
+		border-right: 1px solid var(--color-lightness-85, #ddd);
+		align-self: stretch;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.vt-h-val {
+		padding-left: 4px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		border-right: 1px solid var(--color-lightness-90, #eee);
 	}
 
-	.editable-table .row-num {
-		width: 40px;
+	.vrow {
+		display: grid;
+		align-items: center;
+		height: 26px; /* must match ROW_H */
+		border-bottom: 1px solid var(--color-lightness-90, #eee);
+	}
+	.vrow .row-num {
 		text-align: center;
 		color: var(--color-lightness-50, #888);
 		font-size: 11px;
+		border-right: 1px solid var(--color-lightness-85, #ddd);
+		align-self: stretch;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.vcell {
+		min-width: 0;
+		display: flex;
+		align-items: center;
+		padding: 0 4px;
+		border-right: 1px solid var(--color-lightness-90, #eee);
+	}
+	.vcell:last-child {
+		border-right: none;
 	}
 
 	.editable-table input {
@@ -450,6 +873,26 @@
 		outline: 2px solid var(--color-primary, #007bff);
 		outline-offset: -1px;
 		background: var(--color-lightness-97, #fafafa);
+	}
+
+	/* Bottom drag strip to resize the table viewport (see more rows). */
+	.vt-resize {
+		height: 10px;
+		cursor: ns-resize;
+		background: linear-gradient(
+			180deg,
+			transparent 0 40%,
+			var(--color-lightness-60, #8a8a8a) 40% 50%,
+			transparent 50% 60%,
+			var(--color-lightness-60, #8a8a8a) 60% 70%,
+			transparent 70%
+		);
+		background-size: 100% 100%;
+		border-top: 1px solid var(--color-lightness-85, #ddd);
+		opacity: 0.5;
+	}
+	.vt-resize:hover {
+		opacity: 1;
 	}
 
 	.chip {

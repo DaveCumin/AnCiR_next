@@ -156,13 +156,15 @@
 		inset: -6px -10px;
 		border-radius: 8px;
 	}
+	/* Sit just outside the edge (dot touches the border) so the port reads as
+	   attached to the small square rather than floating away from it. */
 	.port-dot.dot-input {
 		left: 0;
-		transform: translateX(-150%);
+		transform: translateX(-100%);
 	}
 	.port-dot.dot-output {
 		right: 0;
-		transform: translateX(150%);
+		transform: translateX(100%);
 	}
 	.port-dot:hover {
 		background: var(--color-accent, #4d9fe3);

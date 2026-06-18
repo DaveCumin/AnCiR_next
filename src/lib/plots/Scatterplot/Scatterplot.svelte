@@ -258,16 +258,32 @@
 				let tempx = safeColumnData(xCol);
 				let tempy = safeColumnData(this.data[i].y);
 
-				tempx = tempx.filter(
-					(x, i) => x != null && !isNaN(x) && tempy[i] != null && !isNaN(tempy[i])
-				); // Ensure all values are valid (not null or NaN) — do NOT exclude zeros
+				// Prefer x values that have a matching y, so the limits frame the
+				// actually-plotted points (do NOT exclude zeros).
+				let validx = tempx.filter(
+					(x, j) => x != null && !isNaN(x) && tempy[j] != null && !isNaN(tempy[j])
+				);
+				// Fallback: if no point has both x AND y (e.g. a time column wired to x
+				// before any y is connected), still derive the x-limits from the valid
+				// x values alone. Without this the domain collapses to [∞,-∞] and a time
+				// axis renders at the epoch (1970) — the "x-axis doesn't work" symptom.
+				if (validx.length === 0) {
+					validx = tempx.filter((x) => x != null && !isNaN(x));
+				}
+				if (validx.length === 0) return;
 				const origin = this.xOriginFor(xCol);
 				if (origin != null) {
-					tempx = tempx.map((h) => origin + h * 3600000);
+					validx = validx.map((h) => origin + h * 3600000);
 				}
-				xmin = Math.floor(min([xmin, ...tempx]));
-				xmax = Math.ceil(max([xmax, ...tempx]));
+				xmin = Math.floor(min([xmin, ...validx]));
+				xmax = Math.ceil(max([xmax, ...validx]));
 			});
+
+			// No valid x anywhere — return a benign finite domain rather than
+			// [∞,-∞] (which d3 renders as epoch ticks for a time scale).
+			if (!Number.isFinite(xmin) || !Number.isFinite(xmax)) {
+				return [this.xlimsIN[0] ?? 0, this.xlimsIN[1] ?? 1];
+			}
 
 			return [
 				this.xlimsIN[0] != null ? this.xlimsIN[0] : xmin,

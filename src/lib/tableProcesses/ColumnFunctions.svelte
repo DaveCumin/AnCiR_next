@@ -241,7 +241,7 @@
 				bind:value={previewStart}
 			/> to {Math.min(previewStart + 5, totalRows)} of {totalRows}
 		</p>
-	{:else if p.args.out.result > 0}
+	{:else if p.args.out.result >= 0}
 		<details open>
 			<summary class="section-details-summary">Output</summary>
 			<ColumnComponent col={getColumnById(p.args.out.result)} />
