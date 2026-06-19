@@ -206,6 +206,42 @@ describe('producer-sourced columns (dataflow model)', () => {
 		});
 	});
 
+	describe('fan-out: one node, many inputs → many outputs', () => {
+		it('each output column resolves its own input plus the shared constant', () => {
+			const A = makeSourceColumn([10, 20]);
+			A.customName = 'A';
+			const B = makeSourceColumn([100, 200]);
+			B.customName = 'B';
+			// One free Add node feeding BOTH columns; the constant (value: 5) is shared.
+			const proc = new Process({ name: 'Add', args: { value: 5, inIN: [A.id, B.id] } }, null);
+			core.orphanProcesses.push(proc);
+			const outA = new Column({
+				type: 'number',
+				producerNodeId: `process_${proc.id}`,
+				producerPort: `out_${A.id}`,
+				producerArtifactKind: 'column'
+			});
+			const outB = new Column({
+				type: 'number',
+				producerNodeId: `process_${proc.id}`,
+				producerPort: `out_${B.id}`,
+				producerArtifactKind: 'column'
+			});
+			core.data.push(outA, outB);
+
+			expect(outA.getData()).toEqual([15, 25]);
+			expect(outB.getData()).toEqual([105, 205]);
+			// Each output names its OWN input, not the first one.
+			expect(outA.name).toBe('A → Add');
+			expect(outB.name).toBe('B → Add');
+
+			// Editing the shared constant updates both outputs.
+			proc.args.value = 1;
+			expect(outA.getData()).toEqual([11, 21]);
+			expect(outB.getData()).toEqual([101, 201]);
+		});
+	});
+
 	it('does not disturb legacy raw + processes[] columns', () => {
 		// A normal column with an owned Add process still works exactly as before.
 		const col = makeSourceColumn([1, 2, 3]);

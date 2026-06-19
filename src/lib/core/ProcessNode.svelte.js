@@ -450,17 +450,28 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		}
 	}
 
-	// Orphan column-processes: spawned via palette / paste, not yet wired to a
-	// parent column. They render with the same ports as attached processes but
-	// emit no chain edges; wiring a column output to their `input` port moves
-	// them out of orphans into that column's processes[] (see
-	// attachOrphanProcessToColumn).
+	// Free (orphan) process nodes: dataflow operations not owned by a column.
+	// They FAN OUT — one growing `input` port (accepts several columns) and one
+	// paired output port per wired column. Each output is named after the producer
+	// column it feeds (`out_<inputColId>`, or legacy `output`) and labelled with
+	// that input column's name, so a node adding a constant to A and B shows two
+	// outputs "A" and "B". A fresh node (no inputs yet) shows a single open output.
 	for (const p of core.orphanProcesses ?? []) {
-		const entry = appConsts.processMap.get(p.name);
-		const ports = makePortsFromNodeSpec(entry?.nodeSpec, {
-			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
-			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
-		});
+		const procNodeId = `process_${p.id}`;
+		const producerCols = (core.data ?? []).filter(
+			(c) => c.producerNodeId === procNodeId && c.refId == null && c.data == null
+		);
+		const fallbackIn = Array.isArray(p.args?.inIN) ? p.args.inIN[0] : p.args?.inIN;
+		const outputs = producerCols.length
+			? producerCols.map((pc) => {
+					const port = makeNodePort(pc.producerPort || 'output', 'output', 'column', false);
+					const m = /^out_(\d+)$/.exec(pc.producerPort || '');
+					const inId = m ? Number(m[1]) : fallbackIn;
+					port.display = (core.data ?? []).find((c) => c.id === inId)?.name ?? port.name;
+					return port;
+				})
+			: [makeNodePort('output', 'output', 'column', true)];
+		const ports = { inputs: [makeNodePort('input', 'input', 'column', true)], outputs };
 		nodes.push(
 			new ProcessNode({
 				id: `process_${p.id}`,
@@ -707,10 +718,13 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	// column's source. Its output feeds a producer column (hidden), so downstream
 	// consumers route to this node's output via columnSourceRef.
 	for (const p of core.orphanProcesses ?? []) {
-		const inId = p.args?.inIN;
-		if (inId == null || inId < 0) continue;
-		const src = columnSourceRef(inId);
-		addConnection(src.nodeId, `process_${p.id}`, 'data-process', src.port, 'input');
+		const raw = p.args?.inIN;
+		const inIN = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+		for (const inId of inIN) {
+			if (inId == null || inId < 0) continue;
+			const src = columnSourceRef(inId);
+			addConnection(src.nodeId, `process_${p.id}`, 'data-process', src.port, 'input');
+		}
 	}
 
 	const emitTPConnections = (tp) => {

@@ -1402,8 +1402,12 @@
 		const fromNode = allNodes.find((n) => n.id === fromNodeId);
 		let colId;
 		if (fromNode?.type === 'process') {
-			// Free process (dataflow): its output is its producer column.
-			const producer = core.data.find((c) => c.producerNodeId === `process_${fromNode.refId}`);
+			// Free process (dataflow): each output port maps to one producer column.
+			const producer = core.data.find(
+				(c) =>
+					c.producerNodeId === `process_${fromNode.refId}` &&
+					(c.producerPort || 'output') === fromPort
+			);
 			if (producer) {
 				colId = producer.id;
 			} else {
@@ -1434,11 +1438,26 @@
 			const proc = target.processObj;
 			if (!proc.parentCol) {
 				const procNodeId = `process_${proc.id}`;
+				// inIN is a list of input columns (fan-out). Append this one.
+				const cur = Array.isArray(proc.args?.inIN)
+					? proc.args.inIN
+					: proc.args?.inIN != null && proc.args.inIN >= 0
+						? [proc.args.inIN]
+						: [];
 				const ops = [];
-				if (proc.args?.inIN !== colId) {
-					ops.push({ kind: 'setOrphanProcessArg', processId: proc.id, key: 'inIN', value: colId });
+				if (!cur.includes(colId)) {
+					ops.push({
+						kind: 'setOrphanProcessArg',
+						processId: proc.id,
+						key: 'inIN',
+						value: [...cur, colId]
+					});
 				}
-				const hasProducer = core.data.some((c) => c.producerNodeId === procNodeId);
+				// One paired producer output column per input, keyed by the input id.
+				const port = `out_${colId}`;
+				const hasProducer = core.data.some(
+					(c) => c.producerNodeId === procNodeId && (c.producerPort || 'output') === port
+				);
 				if (!hasProducer) {
 					const srcType = core.data.find((c) => c.id === colId)?.type ?? 'number';
 					ops.push({
@@ -1446,7 +1465,7 @@
 						columnData: {
 							type: srcType,
 							producerNodeId: procNodeId,
-							producerPort: 'output',
+							producerPort: port,
 							producerArtifactKind: 'column'
 						}
 					});

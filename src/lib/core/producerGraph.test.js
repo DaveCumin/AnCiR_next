@@ -74,3 +74,44 @@ describe('Phase 2: free process + producer column wiring', () => {
 		expect(edge.fromPort).toBe('output');
 	});
 });
+
+// One Add node (process_7) fanning out over two source columns A (1) and B (2),
+// each producing its own output column (out_1, out_2).
+function makeFanOutCore() {
+	return {
+		data: [
+			{ id: 1, name: 'A', refId: null, data: 1, processes: [] },
+			{ id: 2, name: 'B', refId: null, data: 2, processes: [] },
+			{ id: 3, name: 'A → Add', refId: null, data: null, producerNodeId: 'process_7', producerPort: 'out_1', processes: [] },
+			{ id: 4, name: 'B → Add', refId: null, data: null, producerNodeId: 'process_7', producerPort: 'out_2', processes: [] }
+		],
+		orphanProcesses: [{ id: 7, name: 'Add', displayName: 'Add', args: { value: 5, inIN: [1, 2] } }],
+		tableProcesses: [],
+		plots: [],
+		notes: [],
+		groups: []
+	};
+}
+
+describe('Phase 2 fan-out: one node, many inputs → many outputs', () => {
+	it('emits one output port per wired input', () => {
+		const graph = getCachedProcessNodeGraph(makeFanOutCore(), makeAppConsts());
+		const node = graph.nodes.find((n) => n.id === 'process_7');
+		const outNames = node.ports.outputs.map((p) => p.name);
+		expect(outNames).toEqual(expect.arrayContaining(['out_1', 'out_2']));
+		// One growing input port.
+		expect(node.ports.inputs.map((p) => p.name)).toEqual(['input']);
+	});
+
+	it('hides both producer columns and wires an input edge per source', () => {
+		const graph = getCachedProcessNodeGraph(makeFanOutCore(), makeAppConsts());
+		const ids = graph.nodes.map((n) => n.id);
+		expect(ids).not.toContain('data_3');
+		expect(ids).not.toContain('data_4');
+		const inEdges = graph.connections
+			.filter((c) => c.toId === 'process_7' && c.toPort === 'input')
+			.map((e) => e.fromId)
+			.sort();
+		expect(inEdges).toEqual(['data_1', 'data_2']);
+	});
+});

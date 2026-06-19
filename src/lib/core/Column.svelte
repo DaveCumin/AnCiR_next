@@ -6,7 +6,8 @@
 	import {
 		resolveProducer,
 		touchProducerDeps,
-		getProducerProcess
+		getProducerProcess,
+		producerInputColId
 	} from '$lib/core/producerRuntime.js';
 	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
 	import { min } from '$lib/components/plotbits/helpers/wrangleData';
@@ -104,10 +105,13 @@
 	}
 
 	// "<input> → <producing op> [→ <owned process>]..." for a producer column.
+	// The input is this column's specific slot (producerPort), so a fan-out node's
+	// outputs read "A → Add", "B → Add", … rather than all naming the first input.
 	function producerBaseName(col) {
 		const proc = getProducerProcess(col.producerNodeId);
 		if (!proc) return 'output';
-		const inName = columnBaseName(getColumnById(proc.args?.inIN));
+		const inId = producerInputColId(col.producerNodeId, col.producerPort);
+		const inName = columnBaseName(getColumnById(inId));
 		let info = `${inName} → ${_stepLabel(proc)}`;
 		for (const p of col.processes ?? []) info += ` → ${_stepLabel(p)}`;
 		return info;
@@ -403,7 +407,7 @@
 			// Producer-sourced columns (dataflow model): depend on the producing
 			// node and its input so the cache busts when either changes.
 			if (this.producerNodeId != null && this.refId == null) {
-				touchProducerDeps(this.producerNodeId);
+				touchProducerDeps(this.producerNodeId, this.producerPort);
 			}
 
 			return ++_hashCounter;

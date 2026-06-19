@@ -189,7 +189,7 @@
 						role="button"
 						tabindex="-1"
 					></div>
-					<span class="port-label">{port.name}{port.dynamic ? '*' : ''}</span>
+					<span class="port-label">{port.display ?? port.name}{port.dynamic ? '*' : ''}</span>
 				</div>
 			{/each}
 			{#each outputPorts as port, i (`out_${port.name}_${i}`)}
@@ -200,12 +200,12 @@
 						data-node-id={node.id}
 						data-port-name={port.name}
 						data-port-dir="out"
-						{@attach tooltip(`Output: ${port.name}${port.dynamic ? ' (many)' : ''}`)}
+						{@attach tooltip(`Output: ${port.display ?? port.name}${port.dynamic ? ' (many)' : ''}`)}
 						onmousedown={(e) => startFromOutput(e, port.name)}
 						role="button"
 						tabindex="-1"
 					></div>
-					<span class="port-label">{port.name}{port.dynamic ? '*' : ''}</span>
+					<span class="port-label">{port.display ?? port.name}{port.dynamic ? '*' : ''}</span>
 				</div>
 			{/each}
 		</div>

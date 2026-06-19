@@ -55,40 +55,58 @@ function findColumn(id) {
 const _inFlight = new Set();
 
 /**
- * Resolve the data produced by a node port.
+ * The input column id feeding a given output port of a free process node.
  *
- * Currently handles free single-input processes (producerNodeId === "process_<n>"
- * with producerPort "output"/"column"): it reads the process's declared input
- * column from `proc.args.inIN`, fetches that column's data, and runs the process
- * function over it. Unknown producers or broken refs degrade to [] — matching the
- * broken-ref / broken-tap convention used throughout Column.
+ * A free process can fan out: it adds its operation to several input columns at
+ * once, each producing a paired output. Each output port is named `out_<colId>`,
+ * naming the input column it derives from. The legacy single-output ports
+ * "output"/"column" fall back to the process's first declared input (`inIN`,
+ * scalar or array).
  *
  * @param {string} producerNodeId  e.g. "process_5"
- * @param {string} [producerPort]  e.g. "output" (accepted: output | column)
+ * @param {string} [producerPort]  e.g. "out_3" | "output" | "column"
+ * @returns {number|null} the input column id, or null
+ */
+export function producerInputColId(producerNodeId, producerPort = 'output') {
+	const proc = findFreeProcess(producerNodeId);
+	if (!proc) return null;
+	const m = /^out_(\d+)$/.exec(producerPort || '');
+	if (m) return Number(m[1]);
+	const inIN = proc.args?.inIN;
+	return Array.isArray(inIN) ? (inIN.length ? inIN[0] : null) : (inIN ?? null);
+}
+
+/**
+ * Resolve the data produced by a free process node's output port: run the
+ * process over the input column that port derives from (see producerInputColId).
+ * Unknown producers or broken refs degrade to [] — matching the broken-ref /
+ * broken-tap convention used throughout Column. Cycle-guarded per (node, port).
+ *
+ * @param {string} producerNodeId  e.g. "process_5"
+ * @param {string} [producerPort]  e.g. "out_3" | "output"
  * @returns {Array} the produced data array (possibly empty)
  */
 export function resolveProducer(producerNodeId, producerPort = 'output') {
-	if (producerPort != null && producerPort !== 'output' && producerPort !== 'column') {
-		// This slice only models the single "result" output of a process node.
-		return [];
-	}
-
 	const proc = findFreeProcess(producerNodeId);
 	if (!proc) return [];
 
-	if (_inFlight.has(producerNodeId)) {
-		console.warn('producerRuntime: cycle detected at', producerNodeId, '— returning [].');
+	const inColId = producerInputColId(producerNodeId, producerPort);
+	if (inColId == null) return [];
+
+	const key = `${producerNodeId}|${producerPort}`;
+	if (_inFlight.has(key)) {
+		console.warn('producerRuntime: cycle detected at', key, '— returning [].');
 		return [];
 	}
 
-	_inFlight.add(producerNodeId);
+	_inFlight.add(key);
 	try {
-		const inputCol = findColumn(proc.args?.inIN);
+		const inputCol = findColumn(inColId);
 		if (!inputCol) return [];
 		const input = inputCol.getData() ?? [];
 		return proc.doProcess(input);
 	} finally {
-		_inFlight.delete(producerNodeId);
+		_inFlight.delete(key);
 	}
 }
 
@@ -101,13 +119,13 @@ export function resolveProducer(producerNodeId, producerPort = 'output') {
  * Mirrors the dependency-touching that the legacy pipeline does for its own
  * processes (process name + a deep walk of args + the ref column's hash).
  */
-export function touchProducerDeps(producerNodeId) {
+export function touchProducerDeps(producerNodeId, producerPort = 'output') {
 	const proc = findFreeProcess(producerNodeId);
 	if (!proc) return;
 	// Reading these inside the $derived body registers them as dependencies.
 	proc.name;
 	_touch(proc.args);
-	const inputCol = findColumn(proc.args?.inIN);
+	const inputCol = findColumn(producerInputColId(producerNodeId, producerPort));
 	inputCol?.getDataHash;
 }
 
