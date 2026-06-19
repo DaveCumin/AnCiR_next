@@ -17,6 +17,51 @@
 	import { computeInterface } from '$lib/core/composite.js';
 	import { getNodeName, setNodeName, isNodeNameEditable } from '$lib/core/nodeNaming.js';
 	import Editable from '$lib/components/reusables/Editable.svelte';
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import { mutationService } from '$lib/core/mutationService.js';
+
+	// The current input column ids of a free process node (inIN is a list).
+	function processInputIds(proc) {
+		const raw = proc?.args?.inIN;
+		if (Array.isArray(raw)) return raw.filter((id) => typeof id === 'number' && id >= 0);
+		return typeof raw === 'number' && raw >= 0 ? [raw] : [];
+	}
+
+	// Reconcile a free process node's inputs to `nextIds` (from the ColumnSelect):
+	// set inIN, add a producer column for each new input, remove producers for
+	// dropped inputs. Batched so it's one undo. Mirrors WorkflowEditor wiring.
+	function setProcessInputs(proc, nextIds) {
+		const procNodeId = `process_${proc.id}`;
+		const cur = processInputIds(proc);
+		const next = (nextIds ?? []).filter((id) => typeof id === 'number' && id >= 0);
+		const ops = [{ kind: 'setOrphanProcessArg', processId: proc.id, key: 'inIN', value: next }];
+		for (const colId of next) {
+			if (cur.includes(colId)) continue;
+			const port = `out_${colId}`;
+			const exists = core.data.some(
+				(c) => c.producerNodeId === procNodeId && (c.producerPort || '') === port
+			);
+			if (!exists) {
+				ops.push({
+					kind: 'addColumn',
+					columnData: {
+						type: getColumnById(colId)?.type ?? 'number',
+						producerNodeId: procNodeId,
+						producerPort: port,
+						producerArtifactKind: 'column'
+					}
+				});
+			}
+		}
+		for (const colId of cur) {
+			if (next.includes(colId)) continue;
+			const pc = core.data.find(
+				(c) => c.producerNodeId === procNodeId && (c.producerPort || '') === `out_${colId}`
+			);
+			if (pc) ops.push({ kind: 'removeColumn', id: pc.id });
+		}
+		mutationService.batch(ops);
+	}
 
 	// Friendly label for a composite member node id (members may be hidden, so
 	// resolve from core rather than the rendered graph).
@@ -111,20 +156,44 @@
 
 	{#if node.type === 'process' && node.processObj}
 		{@const PComp = appConsts.processMap.get(node.processName)?.component}
-		{#if !node.processObj.parentCol}
-			<!-- Orphan process: most editor components read p.parentCol.type and
-			     crash on null. Block the editor and point the user at wiring. -->
-			<div class="control-component muted">
-				Drag a wire from a data column to this node's input to attach it.
-				Params editor unlocks once a parent column is set.
+		{@const proc = node.processObj}
+		{@const inIN = processInputIds(proc)}
+		{@const producerCols = core.data.filter((c) => c.producerNodeId === `process_${proc.id}`)}
+		<!-- Computed-node editor: pick input column(s) via ColumnSelect, edit the
+		     operation's settings, and see its output columns. -->
+		<div class="control-component">
+			<div class="control-input vertical">
+				<p>Input column{inIN.length === 1 ? '' : 's'}</p>
+				<ColumnSelector
+					multiple
+					value={inIN}
+					excludeColIds={producerCols.map((c) => c.id)}
+					placeholder="Add input column…"
+					onChange={(v) => setProcessInputs(proc, v)}
+				/>
 			</div>
-		{:else if PComp}
+		</div>
+		{#if PComp}
 			<div class="control-component">
-				<PComp p={node.processObj} />
+				<PComp p={proc} />
 			</div>
 		{:else}
 			<div class="control-component muted">No editor registered for "{node.processName}".</div>
 		{/if}
+		<div class="control-component">
+			<div class="control-input vertical">
+				<p>Output{producerCols.length === 1 ? '' : 's'} ({producerCols.length})</p>
+				{#if producerCols.length === 0}
+					<span class="muted">Pick an input column above to create an output.</span>
+				{:else}
+					<ul class="source-list">
+						{#each producerCols as pc (pc.id)}
+							<li><span class="source-name">{pc.name}</span></li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+		</div>
 	{:else if node.type === 'tableprocess' && node.tpObj}
 		{@const TPComp = appConsts.tableProcessMap.get(node.tpName)?.component}
 		{#if TPComp}
