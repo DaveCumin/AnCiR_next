@@ -3,8 +3,9 @@
 	// @ts-nocheck
 	import Icon from '$lib/icons/Icon.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
-	import { appConsts } from '$lib/core/core.svelte.js';
-	import { getColumnById, addProcessToColumns } from '$lib/core/Column.svelte';
+	import { appConsts, createOrphanProcess } from '$lib/core/core.svelte.js';
+	import { getColumnById } from '$lib/core/Column.svelte';
+	import { mutationService } from '$lib/core/mutationService.js';
 	import { on } from 'svelte/events';
 
 	let {
@@ -24,11 +25,31 @@
 		});
 	});
 
+	// Dataflow model: adding an operation to a column no longer creates an inline
+	// "process" inside the column. Instead it creates ONE free operation node that
+	// fans out over the selected column(s), and a derived producer column per
+	// input (e.g. "result_0 → Add"). The node appears on the canvas; the derived
+	// column appears in the Data Sources panel. One mental model: every operation
+	// is a node, every column is a node output.
 	function addTheProcess(name) {
-		if (columnsSelected && columnsSelected.length > 0) {
-			addProcessToColumns(columnsSelected, name);
-		} else if (columnSelected) {
-			columnSelected.addProcess(name);
+		const cols =
+			columnsSelected && columnsSelected.length > 0
+				? columnsSelected
+				: columnSelected
+					? [columnSelected]
+					: [];
+		if (cols.length) {
+			const proc = createOrphanProcess(name, { inIN: cols.map((c) => c.id) });
+			if (proc) {
+				for (const col of cols) {
+					mutationService.addColumn({
+						type: col.type,
+						producerNodeId: `process_${proc.id}`,
+						producerPort: `out_${col.id}`,
+						producerArtifactKind: 'column'
+					});
+				}
+			}
 		}
 		showDropdown = false;
 	}
