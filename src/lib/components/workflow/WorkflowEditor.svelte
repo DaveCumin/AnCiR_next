@@ -21,7 +21,7 @@
 	import { untrack, tick } from 'svelte';
 	import { computeInterface, flattenMembers } from '$lib/core/composite.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
-	import { Column, getColumnById } from '$lib/core/Column.svelte';
+	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { deleteTableProcess } from '$lib/core/TableProcess.svelte';
@@ -1597,6 +1597,12 @@
 		const target = allNodes.find((n) => n.id === nodeId);
 		if (!target) return;
 
+		// Free process node: clear every input (and its paired producer column).
+		if (target.type === 'process' && target.processObj) {
+			for (const c of _procInputIds(target.processObj)) _removeProcInput(target.processObj, c);
+			return;
+		}
+
 		if (target.type === 'tableprocess' && target.tpObj) {
 			const tp = target.tpObj;
 			if (!portName?.endsWith('IN')) return;
@@ -1812,6 +1818,15 @@
 	function _addProcInput(proc, inputColId) {
 		const cur = _procInputIds(proc);
 		if (!cur.includes(inputColId)) proc.args = { ...proc.args, inIN: [...cur, inputColId] };
+	}
+	// Remove input column c from a free process + delete its paired producer column.
+	function _removeProcInput(proc, c) {
+		if (!proc) return;
+		proc.args = { ...proc.args, inIN: _procInputIds(proc).filter((id) => id !== c) };
+		const pc = core.data.find(
+			(col) => col.producerNodeId === `process_${proc.id}` && (col.producerPort || '') === `out_${c}`
+		);
+		if (pc) removeColumn(pc.id);
 	}
 	function _ensureProducerColumn(proc, inputColId) {
 		const procNodeId = `process_${proc.id}`;
@@ -2107,19 +2122,11 @@
 		const target = allNodes.find((n) => n.id === edge.toId);
 		if (!target) return;
 
-		// Chain edge into a column-process: the edge is implicit (derived from
-		// ordering in col.processes). "Deleting" it orphans the target process
-		// — it leaves the column, joins core.orphanProcesses, and the rest of
-		// the chain shifts forward (now downstream of whatever previously fed
-		// the deleted edge's source). The user can re-wire the orphan to any
-		// other column afterwards.
-		if (target.type === 'process' && target.processObj && edge.type === 'data-process') {
-			const proc = target.processObj;
-			const parent = proc.parentCol;
-			if (!parent || !Array.isArray(parent.processes)) return;
-			parent.processes = parent.processes.filter((p) => p.id !== proc.id);
-			proc.parentCol = null;
-			core.orphanProcesses = [...core.orphanProcesses, proc];
+		// Edge into a free process node's input: drop just that one input column
+		// (and its paired producer column). The process stays free.
+		if (target.type === 'process' && target.processObj) {
+			const c = resolveOutputColumnId(edge.fromId, edge.fromPort);
+			if (c != null && c >= 0) _removeProcInput(target.processObj, c);
 			return;
 		}
 
