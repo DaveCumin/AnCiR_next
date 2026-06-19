@@ -15,12 +15,13 @@
 		removeComposite,
 		createOrphanProcess,
 		removeOrphanProcess,
+		replaceColumnRefs,
 		pushObj
 	} from '$lib/core/core.svelte.js';
-	import { untrack } from 'svelte';
+	import { untrack, tick } from 'svelte';
 	import { computeInterface, flattenMembers } from '$lib/core/composite.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
-	import { Column } from '$lib/core/Column.svelte';
+	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { deleteTableProcess } from '$lib/core/TableProcess.svelte';
@@ -531,6 +532,31 @@
 		panY = 0;
 		zoom = 1;
 	}
+
+	/** Pan (without changing zoom) so the given node is centred in the viewport.
+	 *  Used by the Data panel's find/select button via appState.focusNodeRequest. */
+	function panToNode(nodeId) {
+		const node = allNodes.find((n) => n.id === nodeId);
+		const pos = stablePositions[nodeId] ?? defaultPositions.positions?.[nodeId];
+		const rect = canvasViewportEl?.getBoundingClientRect();
+		if (!node || !pos || !rect) return;
+		const w = getNodeWidth(node);
+		const h = getNodeRenderHeight(node);
+		panX = rect.width / 2 - (pos.x + w / 2) * zoom;
+		panY = rect.height / 2 - (pos.y + h / 2) * zoom;
+	}
+
+	// Find/select from the Data Sources panel: when a focus request comes in,
+	// select the node and pan to it (after layout settles).
+	$effect(() => {
+		const req = appState.focusNodeRequest;
+		if (!req?.id) return;
+		untrack(() => {
+			focusedNodeId = req.id;
+			multiSelectedNodeIds = new Set([req.id]);
+			tick().then(() => panToNode(req.id));
+		});
+	});
 
 	/**
 	 * Compute the canvas-coord of the current viewport centre, minus half a
@@ -1756,86 +1782,71 @@
 	 * processes are bound to their parent column and the graph connections are
 	 * derived from column ordering rather than stored as discrete edges.
 	 */
+	// --- Dataflow splice helpers (a free process node stays free; we set its
+	// input column(s) and create paired producer columns, then reroute the
+	// relevant consumers to read through the node). ---
+	function _procInputIds(proc) {
+		const raw = proc?.args?.inIN;
+		if (Array.isArray(raw)) return raw.filter((id) => typeof id === 'number' && id >= 0);
+		return typeof raw === 'number' && raw >= 0 ? [raw] : [];
+	}
+	function _addProcInput(proc, inputColId) {
+		const cur = _procInputIds(proc);
+		if (!cur.includes(inputColId)) proc.args = { ...proc.args, inIN: [...cur, inputColId] };
+	}
+	function _ensureProducerColumn(proc, inputColId) {
+		const procNodeId = `process_${proc.id}`;
+		const port = `out_${inputColId}`;
+		let D = core.data.find(
+			(c) => c.producerNodeId === procNodeId && (c.producerPort || '') === port
+		);
+		if (!D) {
+			D = new Column({
+				type: getColumnById(inputColId)?.type ?? 'number',
+				producerNodeId: procNodeId,
+				producerPort: port,
+				producerArtifactKind: 'column'
+			});
+			pushObj(D);
+		}
+		return D;
+	}
+	// Reroute a downstream process node's input from oldColId → newColId, and
+	// re-key its paired producer column (out_old → out_new) so its output stays.
+	function _rerouteProcessInput(targetNodeId, oldColId, newColId) {
+		const pid = Number(targetNodeId.slice('process_'.length));
+		const tproc = (core.orphanProcesses ?? []).find((p) => p.id === pid);
+		if (!tproc) return;
+		const cur = _procInputIds(tproc);
+		const idx = cur.indexOf(oldColId);
+		if (idx < 0) return;
+		const next = [...cur];
+		next[idx] = newColId;
+		tproc.args = { ...tproc.args, inIN: next };
+		const pc = core.data.find(
+			(c) => c.producerNodeId === targetNodeId && (c.producerPort || '') === `out_${oldColId}`
+		);
+		if (pc) pc.producerPort = `out_${newColId}`;
+	}
+
+	// Dataflow splice onto ONE edge: insert the dragged node between the edge's
+	// source column and JUST this edge's consumer (other consumers untouched).
 	function spliceNodeOntoEdge(draggedNode, edge) {
 		if (draggedNode.type !== 'process' || !draggedNode.processObj) return;
 		const proc = draggedNode.processObj;
-
-		// Chain edge (data_X → process_Y, or process_A → process_B): insert
-		// the dragged process AT the target's chain position so it becomes
-		// the new immediate upstream of the target. This is the "insert
-		// between" gesture the user expects when dropping onto a chain wire.
-		if (
-			edge.type === 'data-process' &&
-			typeof edge.toId === 'string' &&
-			edge.toId.startsWith('process_')
-		) {
-			const targetProcId = Number(edge.toId.slice('process_'.length));
-			if (!Number.isFinite(targetProcId)) return;
-			const targetCol = core.data.find((c) =>
-				(c.processes ?? []).some((p) => p.id === targetProcId)
-			);
-			if (!targetCol) return;
-			// Detach from current home (column processes[] OR orphans) BEFORE
-			// computing the insert index so cross-column or same-column moves
-			// don't shift the index out from under us.
-			if (proc.parentCol && Array.isArray(proc.parentCol.processes)) {
-				proc.parentCol.processes = proc.parentCol.processes.filter((p) => p.id !== proc.id);
-			}
-			core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== proc.id);
-			const insertIdx = targetCol.processes.findIndex((p) => p.id === targetProcId);
-			if (insertIdx < 0) return;
-			proc.parentCol = targetCol;
-			targetCol.processes = [
-				...targetCol.processes.slice(0, insertIdx),
-				proc,
-				...targetCol.processes.slice(insertIdx)
-			];
-			return;
-		}
-
-		// Non-chain edge (process → TP input, data → TP input, process → plot,
-		// data → plot). Scope the splice to JUST this edge — even if the
-		// source has other consumers, they keep reading the original column.
-		// Implementation:
-		//   1. Create a hidden "tap" column Y that exposes the source's data
-		//      at the precise pipeline point this edge originates from
-		//      (refUpToProcessId = the edge's source process, or null when
-		//      the edge originates from a raw data/group/TP-output column).
-		//   2. Move the orphan into Y.processes so the canvas chain becomes
-		//      `source.output → orphan.input → orphan.output`.
-		//   3. Re-route ONLY this edge's consumer field to reference Y.
 		const sourceColId = resolveOutputColumnId(edge.fromId, edge.fromPort);
 		if (sourceColId == null || sourceColId < 0) return;
-		const sourceCol = core.data.find((c) => c.id === sourceColId);
-		if (!sourceCol) return;
-
-		let refUpToProcessId = null;
-		if (typeof edge.fromId === 'string' && edge.fromId.startsWith('process_')) {
-			const pid = Number(edge.fromId.slice('process_'.length));
-			if (Number.isFinite(pid)) refUpToProcessId = pid;
+		_addProcInput(proc, sourceColId);
+		const D = _ensureProducerColumn(proc, sourceColId);
+		if (
+			typeof edge.toId === 'string' &&
+			edge.toId.startsWith('process_') &&
+			edge.toId !== draggedNode.id
+		) {
+			_rerouteProcessInput(edge.toId, sourceColId, D.id);
+		} else {
+			rerouteEdgeConsumer(edge, sourceColId, D.id);
 		}
-
-		// Build the tap column and attach the orphan as its sole process. The
-		// adapter hides tap columns from the canvas (no data_X node) and
-		// re-routes their incoming chain wire via columnSourceRef — so the
-		// only canvas node that materialises from this op is the orphan
-		// itself, which now sits on a fresh disconnected chain.
-		const tapCol = new Column({
-			refId: sourceColId,
-			refUpToProcessId: refUpToProcessId ?? null
-		});
-		tapCol.isTap = true;
-		tapCol.customName = `${sourceCol.name ?? 'col'} → ${proc.displayName || proc.name}`;
-		pushObj(tapCol);
-
-		if (proc.parentCol && Array.isArray(proc.parentCol.processes)) {
-			proc.parentCol.processes = proc.parentCol.processes.filter((p) => p.id !== proc.id);
-		}
-		core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== proc.id);
-		proc.parentCol = tapCol;
-		tapCol.processes = [proc];
-
-		rerouteEdgeConsumer(edge, sourceColId, tapCol.id);
 	}
 
 	/**
@@ -1924,57 +1935,32 @@
 	}
 
 	/**
-	 * Insert the dragged process so it sits BETWEEN the given source output and
-	 * everything that source feeds. Used when the user drops onto a source's
-	 * output port.
-	 *
-	 *   - Source = data column / group / TP output  → insert at the FRONT of
-	 *     the source column's chain. All downstream consumers (chain + any
-	 *     TP/plot reading "col's last process output") still see the same
-	 *     last-process source; only the front of the chain changes.
-	 *   - Source = a column process  → insert immediately AFTER that process
-	 *     in its column's chain. If the source was the last process, the new
-	 *     process becomes the last, and any TP/plot reading the column's
-	 *     last output now reads through the new process.
+	 * Drop the dragged node onto a source's OUTPUT port: insert it between that
+	 * source column and EVERY consumer of the port (tweak #4). The node reads the
+	 * source column and produces a paired output column; all the port's consumers
+	 * — ref-based (plots / table-processes / ref columns) AND downstream process
+	 * nodes — are rerouted to read through the node. The dragged node stays a free
+	 * (orphan) process; nothing moves into a column.
 	 */
 	function spliceNodeOntoSourceOutput(draggedNode, sourceNodeId, sourcePort) {
 		if (draggedNode.type !== 'process' || !draggedNode.processObj) return;
 		const proc = draggedNode.processObj;
-		const sourceNode = allNodes.find((n) => n.id === sourceNodeId);
-		if (!sourceNode) return;
-		// Resolve the column whose chain we're going to insert into.
 		const colId = resolveOutputColumnId(sourceNodeId, sourcePort);
 		if (colId == null || colId < 0) return;
-		const targetCol = core.data.find((c) => c.id === colId);
-		if (!targetCol) return;
 
-		// Detach from current home first so cross-column / same-column moves
-		// don't shift indices unexpectedly.
-		if (proc.parentCol && Array.isArray(proc.parentCol.processes)) {
-			proc.parentCol.processes = proc.parentCol.processes.filter((p) => p.id !== proc.id);
-		}
-		core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== proc.id);
-
-		proc.parentCol = targetCol;
-
-		if (sourceNode.type === 'process' && sourceNode.processObj) {
-			const sourceProcId = sourceNode.processObj.id;
-			const procIdx = targetCol.processes.findIndex((p) => p.id === sourceProcId);
-			if (procIdx < 0) {
-				// Source process isn't in the resolved column — unexpected; fall
-				// back to appending so we never leave the orphan in a half-state.
-				targetCol.processes = [...(targetCol.processes ?? []), proc];
-				return;
+		_addProcInput(proc, colId);
+		const D = _ensureProducerColumn(proc, colId);
+		// Reroute ref-based consumers (plots, table-process args, ref columns) of
+		// colId → D. The node's own inIN is orphan-process args, untouched, so no
+		// cycle.
+		replaceColumnRefs(D.id, colId);
+		// Reroute downstream process-node consumers (inIN) of colId → D too, so the
+		// node truly sits on every edge leaving the port. Skip the dragged node.
+		for (const op of [...(core.orphanProcesses ?? [])]) {
+			if (op.id === proc.id) continue;
+			if (_procInputIds(op).includes(colId)) {
+				_rerouteProcessInput(`process_${op.id}`, colId, D.id);
 			}
-			targetCol.processes = [
-				...targetCol.processes.slice(0, procIdx + 1),
-				proc,
-				...targetCol.processes.slice(procIdx + 1)
-			];
-		} else {
-			// Source is a data column, group output, or TP output column —
-			// the dragged process should be the FIRST step in the chain.
-			targetCol.processes = [proc, ...(targetCol.processes ?? [])];
 		}
 	}
 

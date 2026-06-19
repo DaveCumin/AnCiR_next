@@ -612,12 +612,26 @@
 		canvasSelectedProcessId = null
 	} = $props();
 
-	// Find/select: jump to this column's node on the workflow canvas and open its
-	// editor in the Control Panel. A producer (derived) column is represented by
-	// its producing node; otherwise by its own data node.
+	// The canvas node that represents this column: its producing node (derived),
+	// the table-process that outputs it, the group that absorbs it, or its own
+	// data node (plain source).
+	function columnCanvasNodeId(c) {
+		if (c.producerNodeId) return c.producerNodeId;
+		for (const tp of core.tableProcesses ?? []) {
+			if (Object.values(tp.args?.out ?? {}).includes(c.id)) return `tableprocess_${tp.id}`;
+		}
+		for (const g of core.groups ?? []) {
+			if ((g.sourceColumnIds ?? []).includes(c.id)) return g.id;
+		}
+		return `data_${c.id}`;
+	}
+
+	// Find/select: jump to this column's node on the workflow canvas (select + pan)
+	// and open its editor in the Control Panel.
 	function findSelect() {
-		appState.canvasSelectedNodeId = col.producerNodeId ?? `data_${col.id}`;
-		appState.focusNodeRequest = { id: appState.canvasSelectedNodeId, n: (appState.focusNodeRequest?.n ?? 0) + 1 };
+		const id = columnCanvasNodeId(col);
+		appState.canvasSelectedNodeId = id;
+		appState.focusNodeRequest = { id, n: (appState.focusNodeRequest?.n ?? 0) + 1 };
 		appState.view = 'canvas';
 		appState.showControlPanel = true;
 	}
