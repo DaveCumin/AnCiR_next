@@ -791,30 +791,10 @@
 					{/if}
 				</div>
 
-				<div class="process-container">
-					{#each col.processes as p, i}
-						{#key p.id}
-							<!-- Force the refresh when a process is added or removed (mostly the latter)-->
-							<div
-								class="single-process-container"
-								class:linked-process={p.linkedGroupId != null}
-								class:drag-over={dragOverIdx === i && dragIdx !== i}
-								class:canvas-selected={canvasSelectedProcessId === p.id}
-								draggable="true"
-								ondragstart={(e) => onDragStart(e, i)}
-								ondragover={(e) => onDragOver(e, i)}
-								ondrop={(e) => onDrop(e, i)}
-								ondragend={onDragEnd}
-							>
-								<div class="drag-handle" title="Drag to reorder">⠇</div>
-								{#if p.linkedGroupId != null}
-									<div class="linked-badge" title="Linked – args shared with other columns">⟁</div>
-								{/if}
-								<Processcomponent {p} />
-							</div>
-						{/key}
-					{/each}
-				</div>
+				<!-- Inline column "processes" are retired in the dataflow model: an
+				     operation is a free node producing a derived column (see the "+"
+				     above, AddProcess). Legacy inline processes are migrated to nodes
+				     on session load (dataflowMigration.js), so nothing renders here. -->
 			</div>
 
 			<div class="block"></div>

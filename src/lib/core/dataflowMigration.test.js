@@ -5,7 +5,7 @@ import { appConsts, core } from './core.svelte.js';
 import { Column } from './Column.svelte';
 import { Process } from './Process.svelte';
 import { add } from '$lib/processes/Add.svelte';
-import { migrateAllInlineProcesses, migrateColumnProcesses } from './dataflowMigration.js';
+import { migrateAllInlineProcesses } from './dataflowMigration.js';
 
 beforeAll(() => {
 	if (!appConsts.processMap.has('Add')) {
@@ -32,26 +32,29 @@ function rawColumn(values, name) {
 	return col;
 }
 
+// The derived column produced by migrating `srcName`'s pipeline (by name).
+function derivedNamed(name) {
+	return core.data.find((c) => c.producerNodeId != null && c.name === name);
+}
+
 describe('Phase 4: migrate inline processes → nodes + producer columns', () => {
-	it('migrates a raw column with one process, preserving id and value', () => {
+	it('keeps the column as the source and derives the processed result', () => {
 		const c = rawColumn([1, 2, 3], 'hr');
 		const id = c.id;
 		c.processes.push(new Process({ name: 'Add', args: { value: 5 } }, c));
-		expect(c.getData()).toEqual([6, 7, 8]);
 
 		const res = migrateAllInlineProcesses();
 		expect(res.migrated).toBe(1);
 
-		// Same column object/id, now a producer with no inline processes.
+		// The column keeps its id + raw identity, minus the inline pipeline.
 		expect(c.id).toBe(id);
 		expect(c.processes).toHaveLength(0);
-		expect(c.producerNodeId).toMatch(/^process_\d+$/);
-		// Value preserved exactly.
-		expect(c.getData()).toEqual([6, 7, 8]);
-		// A raw source sibling carries the original name; the column now derives one.
-		expect(core.data.some((x) => x.customName === 'hr' && x.data != null)).toBe(true);
-		expect(c.name).toBe('hr → Add');
-		// Exactly one free node was created.
+		expect(c.producerNodeId).toBeNull();
+		expect(c.getData()).toEqual([1, 2, 3]); // source is the raw value
+		// The processed value lives in a derived column nested under it.
+		const d = derivedNamed('hr → Add');
+		expect(d).toBeTruthy();
+		expect(d.getData()).toEqual([6, 7, 8]);
 		expect(core.orphanProcesses).toHaveLength(1);
 	});
 
@@ -59,46 +62,58 @@ describe('Phase 4: migrate inline processes → nodes + producer columns', () =>
 		const c = rawColumn([10, 20], 'x');
 		c.processes.push(new Process({ name: 'Add', args: { value: 1 } }, c));
 		c.processes.push(new Process({ name: 'Add', args: { value: 100 } }, c));
-		expect(c.getData()).toEqual([111, 121]);
 
 		migrateAllInlineProcesses();
 		expect(core.orphanProcesses).toHaveLength(2);
-		expect(c.getData()).toEqual([111, 121]);
-		expect(c.name).toBe('x → Add → Add');
+		expect(c.getData()).toEqual([10, 20]); // source unchanged
+		const final = derivedNamed('x → Add → Add');
+		expect(final.getData()).toEqual([111, 121]);
 	});
 
-	it('keeps downstream references valid (consumer sees the same final value)', () => {
+	it('repoints existing consumers to the final derived column', () => {
 		const c = rawColumn([1, 2, 3], 'src');
 		c.processes.push(new Process({ name: 'Add', args: { value: 10 } }, c));
-		// A ref column pointing at c (a downstream consumer).
 		const ref = new Column({ refId: c.id, type: 'number' });
 		core.data.push(ref);
 		expect(ref.getData()).toEqual([11, 12, 13]);
 
 		migrateAllInlineProcesses();
-		// ref still points at c.id; c's value is unchanged → consumer unaffected.
+		// ref was repointed from c to the derived column; still the processed value.
+		expect(ref.refId).not.toBe(c.id);
 		expect(ref.getData()).toEqual([11, 12, 13]);
 	});
 
-	it('defers TP-output and tap columns (left as inline)', () => {
-		const tpOut = rawColumn([1, 2], 'out');
+	it('migrates a TP-output column (the deferred case is now handled)', () => {
+		const tpOut = rawColumn([2, 4], 'result_0');
 		tpOut.tableProcessGUId = 'grp_1';
 		tpOut.processes.push(new Process({ name: 'Add', args: { value: 1 } }, tpOut));
-		const tap = new Column({ refId: tpOut.id, refUpToProcessId: 999, type: 'number' });
-		tap.processes.push(new Process({ name: 'Add', args: { value: 1 } }, tap));
-		core.data.push(tap);
 
 		const res = migrateAllInlineProcesses();
-		expect(res.migrated).toBe(0);
-		expect(res.deferred).toBe(2);
-		// Still inline — nothing became invisible.
-		expect(tpOut.processes).toHaveLength(1);
-		expect(tap.processes).toHaveLength(1);
+		expect(res.migrated).toBe(1);
+		expect(tpOut.tableProcessGUId).toBe('grp_1'); // still a TP output
+		expect(tpOut.processes).toHaveLength(0);
+		expect(derivedNamed('result_0 → Add').getData()).toEqual([3, 5]);
+	});
+
+	it('re-anchors a tap column to the producer column for its step', () => {
+		const x = rawColumn([10, 20, 30], 'X');
+		const p1 = new Process({ name: 'Add', args: { value: 1 } }, x);
+		const p2 = new Process({ name: 'Add', args: { value: 100 } }, x);
+		x.processes.push(p1, p2);
+		// A tap onto X after the first process.
+		const tap = new Column({ refId: x.id, refUpToProcessId: p1.id, type: 'number' });
+		core.data.push(tap);
+		expect(tap.getData()).toEqual([11, 21, 31]);
+
+		migrateAllInlineProcesses();
+		// Tap now references the producer column for step p1; value preserved.
+		expect(tap.refUpToProcessId).toBeNull();
+		expect(tap.isTap).toBe(false);
+		expect(tap.getData()).toEqual([11, 21, 31]);
 	});
 
 	it('is a no-op for a session with no inline processes', () => {
 		rawColumn([1, 2, 3], 'a');
-		const res = migrateAllInlineProcesses();
-		expect(res).toEqual({ migrated: 0, deferred: 0 });
+		expect(migrateAllInlineProcesses()).toEqual({ migrated: 0 });
 	});
 });

@@ -3,109 +3,101 @@
 //
 // Phase 4 of the "columns are just node outputs" migration: convert a column's
 // legacy inline `processes[]` pipeline into a chain of free operation nodes
-// (core.orphanProcesses) + producer columns.
+// (core.orphanProcesses) + producer columns, on session load.
 //
-// Safe topology: the column KEEPS its id and final value. We build the chain from
-// the column's pre-process source, create intermediate producer columns for all
-// but the last step, and re-point the column itself to be the LAST node's
-// producer. Because getData() and the column id are preserved, every existing
-// consumer (plots, refs, table-processes) keeps working with no rewiring and no
-// cycle risk. Migrating columns in any order is safe for the same reason.
+// Topology ("keep the source, derive the result"): the column KEEPS its identity
+// (raw / ref / TP-output) and simply loses its inline processes — it becomes the
+// pre-process SOURCE. Each process becomes a free node producing a derived column;
+// the chain reads the source. Existing consumers of the column (which expected the
+// PROCESSED value) are repointed to the final derived column via replaceColumnRefs.
 //
-// Handled: plain raw source columns and plain ref columns. Deferred (skipped,
-// left as inline so nothing becomes invisible): tap columns, TP-output columns,
-// and columns already in the producer model.
+// This works uniformly for every column type because the chain reads the column's
+// getData() rather than its internals, and because replaceColumnRefs repoints
+// column refs / table-process args / plot refs but NOT node inIN — so the chain's
+// own reference to the source is never rewritten (no cycle).
+//
+// Tap columns (refUpToProcessId) are re-anchored to the producer column that now
+// represents that step of the source's pipeline.
 
-import { core, createOrphanProcess } from './core.svelte.js';
+import { core, createOrphanProcess, replaceColumnRefs } from './core.svelte.js';
 import { Column } from './Column.svelte';
 
 function cloneArgs(args) {
 	return JSON.parse(JSON.stringify(args ?? {}));
 }
 
-// Can this column's inline processes be migrated by the safe topology above?
-function isMigratable(col) {
-	if (!col) return false;
-	if ((col.processes ?? []).length === 0) return false;
-	if (col.producerNodeId != null) return false; // already dataflow
-	if (col.tableProcessGUId) return false; // TP-output column — deferred
-	if (col.isTap || col.refUpToProcessId != null) return false; // tap — deferred
-	// Plain raw column (has rawData) or plain ref column (refId set).
-	return col.data != null || col.refId != null;
-}
-
 /**
- * Migrate one column's inline processes into free nodes + producer columns.
- * Returns true if migrated. The column ends up as the final node's producer.
+ * Migrate one column's inline processes into a chain of free nodes + producer
+ * columns, repointing consumers to the final derived column. Records each
+ * process id → its producer column id in `stepMap` (for tap re-anchoring).
+ * Returns true if migrated.
  */
-export function migrateColumnProcesses(col) {
-	if (!isMigratable(col)) return false;
+export function migrateColumnProcesses(col, stepMap) {
+	if (!col) return false;
+	const procs = [...(col.processes ?? [])];
+	if (procs.length === 0) return false;
+	if (col.producerNodeId != null) return false; // already in the dataflow model
 
-	const procs = [...col.processes];
+	const producerType = col.type;
+	let inputColId = col.id; // the chain reads the column itself (the source)
+	let lastDerivedId = col.id;
 
-	// The chain's first input is the column's PRE-process source:
-	//  - raw column: a new sibling source column holding the same rawData,
-	//    carrying the original (raw) name so the source stays recognisable.
-	//  - ref column: the referenced column itself.
-	let inputColId;
-	if (col.data != null) {
-		const source = new Column({
-			data: col.data,
-			type: col.type,
-			timeFormat: col.timeFormat,
-			compression: col.compression,
-			originTime_ms: col.originTime_ms
-		});
-		source.customName = col.customName ?? col.name;
-		core.data.push(source);
-		inputColId = source.id;
-	} else {
-		// ref column: source is the referenced column.
-		inputColId = col.refId;
-	}
-
-	const colType = col.type;
-
-	for (let i = 0; i < procs.length; i++) {
-		const p = procs[i];
+	for (const p of procs) {
 		const node = createOrphanProcess(p.name, { ...cloneArgs(p.args), inIN: [inputColId] });
 		if (!node) return false;
-		const port = `out_${inputColId}`;
-		if (i < procs.length - 1) {
-			const mid = new Column({
-				type: colType,
-				producerNodeId: `process_${node.id}`,
-				producerPort: port,
-				producerArtifactKind: 'column'
-			});
-			core.data.push(mid);
-			inputColId = mid.id;
-		} else {
-			// Last step: re-point THIS column to be the final node's producer.
-			col.processes = [];
-			col.data = null;
-			col.refId = null;
-			col.customName = null; // derive "<source> → Op → …"
-			col.producerNodeId = `process_${node.id}`;
-			col.producerPort = port;
-			col.producerArtifactKind = 'column';
-		}
+		const derived = new Column({
+			type: producerType,
+			producerNodeId: `process_${node.id}`,
+			producerPort: `out_${inputColId}`,
+			producerArtifactKind: 'column'
+		});
+		core.data.push(derived);
+		if (stepMap) stepMap.set(p.id, derived.id);
+		inputColId = derived.id;
+		lastDerivedId = derived.id;
 	}
+
+	// The column is now just the source; drop its inline pipeline.
+	col.processes = [];
+	// Existing consumers wanted the PROCESSED value → repoint them to the final
+	// derived column. The chain's own inIN references are untouched (no cycle).
+	replaceColumnRefs(lastDerivedId, col.id);
 	return true;
 }
 
 /**
- * Migrate every eligible column's inline processes. Safe to call on session load;
- * a no-op for sessions already in the dataflow model. Returns counts.
+ * Migrate every column's inline processes. Idempotent — a no-op for sessions
+ * already in the dataflow model. Tap columns are re-anchored after the main pass.
+ * Returns counts.
  */
 export function migrateAllInlineProcesses() {
+	const stepMap = new Map(); // original process id → producer column id
 	let migrated = 0;
-	let deferred = 0;
-	// Snapshot the list: migration pushes new columns we must not re-scan.
+
+	// Pass 1: non-tap columns (build the stepMap the taps will re-anchor against).
 	for (const col of [...(core.data ?? [])]) {
-		if ((col.processes ?? []).length === 0) continue;
-		if (migrateColumnProcesses(col)) migrated++;
-		else deferred++;
+		if (col.isTap || (col.refUpToProcessId != null && col.refUpToProcessId !== -1)) continue;
+		if (migrateColumnProcesses(col, stepMap)) migrated++;
 	}
-	return { migrated, deferred };
+
+	// Pass 2: re-anchor taps. "X up to process P" becomes a plain ref to the
+	// producer column that now represents X's value after P.
+	for (const col of [...(core.data ?? [])]) {
+		if (col.refUpToProcessId != null && col.refUpToProcessId !== -1) {
+			const producerId = stepMap.get(col.refUpToProcessId);
+			if (producerId != null) {
+				col.refId = producerId;
+				col.refUpToProcessId = null;
+				col.isTap = false;
+			}
+		}
+	}
+
+	// Pass 3: migrate any remaining inline processes (e.g. a re-anchored tap that
+	// also carried its own processes).
+	for (const col of [...(core.data ?? [])]) {
+		if (migrateColumnProcesses(col, stepMap)) migrated++;
+	}
+
+	return { migrated };
 }
