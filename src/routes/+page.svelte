@@ -1,5 +1,3 @@
-<!-- +page.svelte -->
-
 <script>
 	// @ts-nocheck
 	import '../app.css';

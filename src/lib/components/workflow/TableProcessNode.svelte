@@ -15,9 +15,10 @@
 	import Editable from '$lib/components/reusables/Editable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import MiniDataTable from './MiniDataTable.svelte';
-	import NodeNoteButton from './NodeNoteButton.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { core } from '$lib/core/core.svelte.js';
 	import { getNodeName, setNodeName } from '$lib/core/nodeNaming.js';
+	import NodeNoteButton from './NodeNoteButton.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import {
 		setGroupPortY,
@@ -43,6 +44,8 @@
 	const warnings = $derived(Array.isArray(tp?.warnings) ? tp.warnings : []);
 	const hasWarning = $derived(warnings.length > 0);
 	const warningText = $derived(warnings.join('\n'));
+	// Note flag: keeps the left-side note button visible whenever a note exists.
+	const hasNote = $derived(!!core.nodeNotes[node.id]?.trim());
 	const inputPorts = $derived(node.ports?.inputs ?? []);
 	// [{ key, colId }] from ProcessNode meta, resolved to live Column instances.
 	const outputColumns = $derived(
@@ -226,6 +229,18 @@
 				{@attach tooltip(warningText)}>⚠</span
 			>
 		{/if}
+		<!-- Note button sits on the LEFT with the warning (status indicators), so it
+		     doesn't shift when the collapse/delete buttons reveal on the right. Shown
+		     when a note exists, or on hover/selection. -->
+		<div
+			class="note-slot"
+			class:has-note={hasNote}
+			class:sel={selected}
+			onpointerdown={stopPointer}
+			role="presentation"
+		>
+			<NodeNoteButton nodeId={node.id} />
+		</div>
 		<div class="tp-title" onpointerdown={stopPointer} role="presentation">
 			<Editable
 				value={getNodeName(node)}
@@ -236,9 +251,8 @@
 				onCommit={(v) => setNodeName(node, v, { commit: true })}
 			/>
 		</div>
-		<!-- Compact↔detailed is toggled by the hover button on the node wrapper
-		     (WorkflowEditor); the old per-node expand arrow is removed. -->
-		<NodeNoteButton nodeId={node.id} />
+		<!-- Note · collapse · delete live in the shared action cluster pinned to the
+		     header's top-right by WorkflowEditor (NodeActions), not per-node. -->
 		<div class="all-port-wrap">
 			<button
 				type="button"
@@ -452,6 +466,12 @@
 		color: #e0a800;
 		cursor: help;
 		user-select: none;
+	}
+	/* Left-side note button, always visible so the label never shifts. It reads as
+	   a faint "N" until a note exists (then NodeNoteButton turns it green). */
+	.note-slot {
+		flex-shrink: 0;
+		display: flex;
 	}
 	.expand-indicator {
 		font-size: 9px;

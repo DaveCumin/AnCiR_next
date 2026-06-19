@@ -3,8 +3,8 @@
 	import { createEventDispatcher } from 'svelte';
 	import MiniDataTable from './MiniDataTable.svelte';
 	import Editable from '$lib/components/reusables/Editable.svelte';
-	import NodeNoteButton from './NodeNoteButton.svelte';
 	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
+	import NodeNoteButton from './NodeNoteButton.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { getNodeName, setNodeName, isNodeNameEditable } from '$lib/core/nodeNaming.js';
 	import { tooltip } from '$lib/utils/tooltip.js';
@@ -20,6 +20,9 @@
 		width = null
 	} = $props();
 	const dispatch = createEventDispatcher();
+
+	// Note flag: keeps the left-side note button visible whenever a note exists.
+	const hasNote = $derived(!!core.nodeNotes[node.id]?.trim());
 
 	// Mirror the legacy Column.svelte behaviour: when the user picks "time" and
 	// no format is set yet, sniff one from the first few raw rows.
@@ -88,6 +91,18 @@
 	tabindex="0"
 >
 	<div class="node-header">
+		<!-- Note button on the LEFT (status side), so it doesn't shift when the
+		     collapse/delete buttons reveal on the right. Shown when a note exists,
+		     or on hover/selection. -->
+		<div
+			class="note-slot"
+			class:has-note={hasNote}
+			class:sel={selected}
+			onpointerdown={(e) => e.stopPropagation()}
+			role="presentation"
+		>
+			<NodeNoteButton nodeId={node.id} />
+		</div>
 		{#if node.type === 'data' && node.refId != null}
 			{@const liveCol = getColumnById(node.refId)}
 			{#if liveCol}
@@ -122,9 +137,8 @@
 		{#if isDropTarget}
 			<span class="drop-badge" title="Drop to replace all references">↓ replace</span>
 		{/if}
-		<!-- Compact↔detailed is toggled by the hover button on the node wrapper
-		     (WorkflowEditor), so the old per-node expand arrow is removed. -->
-		<NodeNoteButton nodeId={node.id} />
+		<!-- Note · collapse · delete live in the shared action cluster pinned to the
+		     header's top-right by WorkflowEditor (NodeActions), not per-node. -->
 	</div>
 
 	{#if isPlotGrouped}
@@ -296,6 +310,13 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	/* Left-side note button, always visible so the label never shifts. It reads as
+	   a faint "N" until a note exists (then NodeNoteButton turns it green). */
+	.note-slot {
+		flex-shrink: 0;
+		display: flex;
 	}
 
 	.node-type {

@@ -8,6 +8,7 @@
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 	import { getCanvasWidthPx } from '$lib/components/views/PlotDisplay.svelte';
 	import Editable from '../inputs/Editable.svelte';
+	import NodeActions from '$lib/components/workflow/NodeActions.svelte';
 	import NodeNoteButton from '$lib/components/workflow/NodeNoteButton.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
@@ -63,6 +64,9 @@
 
 	let dragStartPositions = {};
 	let fullscreen = $state(false);
+	// Hover state drives the action cluster's reveal (matches the workflow nodes).
+	let hovered = $state(false);
+	let plotHasNote = $derived(!!core.nodeNotes[`plot_${id}`]?.trim());
 	let smallvalues = $state();
 
 	// Touch-specific variables
@@ -403,6 +407,8 @@
 	onmousedown={(e) => onMouseDown(e, false)}
 	ontouchstart={(e) => onTouchStart(e, false)}
 	onclick={(e) => e.stopPropagation()}
+	onmouseenter={() => (hovered = true)}
+	onmouseleave={() => (hovered = false)}
 	class:selected
 	class="draggable"
 	style="left: {x}px;
@@ -422,36 +428,30 @@
 			onTouchStart(e);
 		}}
 	>
+		<!-- Note button on the LEFT (status side), so it doesn't shift when the
+		     maximise/delete buttons reveal on the right. Shown when a note exists,
+		     or on hover/selection. -->
+		<div
+			class="note-slot"
+			class:has-note={plotHasNote}
+			class:sel={hovered || selected}
+			onmousedown={(e) => e.stopPropagation()}
+			role="presentation"
+		>
+			<NodeNoteButton nodeId={`plot_${id}`} />
+		</div>
 		<p class="plot-title"><Editable bind:value={title} /></p>
 
-		<div class="clps-title-button">
-			<div onmousedown={(e) => e.stopPropagation()} role="presentation">
-				<NodeNoteButton nodeId={`plot_${id}`} />
-			</div>
-			<button
-				class="icon"
-				onclick={(e) => {
-					e.stopPropagation();
-					toggleFullscreen();
-				}}
-				{@attach tooltip(fullscreen ? 'Restore size' : 'Maximise')}
-			>
-				{#if fullscreen}
-					<Icon name="minimise" width={18} height={18} className="menu-icon plot-options-button" />
-				{:else}
-					<Icon name="maximise" width={18} height={18} className="menu-icon plot-options-button" />
-				{/if}
-			</button>
-			<button
-				class="icon"
-				onclick={(e) => {
-					e.stopPropagation();
-					removePlots(id);
-				}}
-				{@attach tooltip('Delete plot')}
-			>
-				<Icon name="close" width={16} height={16} className="icon close" />
-			</button>
+		<!-- Shared action cluster (maximise · delete), revealed on hover/selection. -->
+		<div class="plot-actions-host" onmousedown={(e) => e.stopPropagation()} role="presentation">
+			<NodeActions
+				revealed={hovered || selected}
+				showMaximise={true}
+				maximised={fullscreen}
+				onToggleMaximise={() => toggleFullscreen()}
+				onDelete={() => removePlots(id)}
+				deleteTooltip="Delete plot"
+			/>
 		</div>
 	</div>
 	<div class="plot-content">
@@ -527,6 +527,20 @@
 		align-items: center;
 		gap: 2px;
 		flex-shrink: 0;
+	}
+
+	/* Container for the shared action cluster (maximise/delete). NodeActions
+	   handles its own reveal via the `revealed` prop. */
+	.plot-actions-host {
+		display: flex;
+		align-items: center;
+	}
+
+	/* Left-side note button, always visible so the title never shifts. It reads as
+	   a faint "N" until a note exists (then NodeNoteButton turns it green). */
+	.note-slot {
+		flex-shrink: 0;
+		display: flex;
 	}
 
 	.plot-header button {

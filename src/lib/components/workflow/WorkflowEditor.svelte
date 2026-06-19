@@ -44,6 +44,7 @@
 	import { alignBoxes, distributeBoxes } from '$lib/core/layoutHelpers.js';
 	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
 	import CompactNode from './CompactNode.svelte';
+	import NodeActions from './NodeActions.svelte';
 	import { tourState } from '$lib/core/tourRunner.svelte.js';
 	import {
 		COMPACT_W,
@@ -777,6 +778,23 @@
 	// Node currently under the cursor — drives path-focus highlighting on hover
 	// (flowtest behaviour), in addition to the selected node.
 	let hoveredNodeId = $state(null);
+
+	// Separate hover state for the action-button overlay, with a short grace
+	// period on leave so the floating toolbar (which sits just outside the node)
+	// stays visible AND clickable while the cursor travels to it. Kept apart from
+	// hoveredNodeId so edge-highlighting still clears immediately.
+	let actionsHoverId = $state(null);
+	let actionsHoverTimer = null;
+	function showNodeActions(id) {
+		clearTimeout(actionsHoverTimer);
+		actionsHoverId = id;
+	}
+	function hideNodeActionsSoon() {
+		clearTimeout(actionsHoverTimer);
+		actionsHoverTimer = setTimeout(() => {
+			actionsHoverId = null;
+		}, 500);
+	}
 
 	// True while an OS file is dragged over the canvas (drop-to-import).
 	let fileDragOver = $state(false);
@@ -2809,6 +2827,10 @@
 				{@const isMultiSelected = multiSelectedNodeIds.has(node.id)}
 				{@const isSelected = focusedNodeId === node.id || isMultiSelected}
 				{@const nodeZIndex = isDragging ? 30 : isExpanded ? 20 : 1}
+					{@const actionsRevealed = isSelected || actionsHoverId === node.id}
+					{@const clusterNoteId =
+						node.type !== 'group' && node.type !== 'composite' ? node.id : null}
+					{@const clusterHasNote = !!(clusterNoteId && core.nodeNotes[clusterNoteId]?.trim())}
 				<!-- Expanded composites render as the bordered frame backdrop above,
 				     not as a node wrapper, so skip them here. -->
 				{#if pos && !(node.type === 'composite' && !compact)}
@@ -2825,9 +2847,13 @@
 						aria-label={node.label}
 						onmousedown={(e) => handleNodeWrapperMouseDown(e, node)}
 						onmouseup={(e) => handleNodeWrapperMouseUp(e, node)}
-						onmouseenter={() => (hoveredNodeId = node.id)}
+						onmouseenter={() => {
+							hoveredNodeId = node.id;
+							showNodeActions(node.id);
+						}}
 						onmouseleave={() => {
 							if (hoveredNodeId === node.id) hoveredNodeId = null;
+							hideNodeActionsSoon();
 						}}
 						ondblclick={(e) => {
 							e.stopPropagation();
@@ -2894,41 +2920,35 @@
 							/>
 						{/if}
 
-						{#if canToggleCompact(node)}
-							<button
-								type="button"
-								class="node-compact-toggle"
-								title={compact ? 'Expand node' : 'Collapse node'}
-								onpointerdown={(e) => e.stopPropagation()}
-								onclick={(e) => {
-									e.stopPropagation();
-									handleNodeToggleExpand(node);
-								}}
-								{@attach tooltip(compact ? 'Expand' : 'Collapse')}
+						<!-- Grouped action cluster: note · collapse/expand · delete. Sits at
+						     the header's top-right when expanded, and floats as an overlay just
+						     above the square when collapsed (no header to sit in). Action buttons
+						     reveal on hover OR selection (with a grace period so the overlay is
+						     easy to reach); the note button also stays visible whenever a note
+						     exists. Delete routes through the same removeNode() the Delete key
+						     uses (AYS modal for table-processes). Groups carry their own
+						     delete/note; composites use uncombine. -->
+						{#if canToggleCompact(node) || (node.type !== 'group' && node.type !== 'composite')}
+							<div
+								class="node-actions-host"
+								class:compact
+								class:visible={actionsRevealed || (compact && clusterHasNote)}
+								onmouseenter={() => showNodeActions(node.id)}
+								onmouseleave={hideNodeActionsSoon}
+								role="presentation"
 							>
-								{compact ? '⤢' : '⤡'}
-							</button>
-						{/if}
-
-						<!-- Hover-reveal delete button: a non-keyboard way to remove a node.
-						     Routes through the same removeNode() the Delete key uses (so
-						     table-process deletes still get the "Are you sure?" modal).
-						     Groups carry their own delete; composites use uncombine. -->
-						{#if node.type !== 'group' && node.type !== 'composite'}
-							<button
-								type="button"
-								class="node-delete-btn"
-								title="Delete node"
-								onpointerdown={(e) => e.stopPropagation()}
-								onmousedown={(e) => e.stopPropagation()}
-								onclick={(e) => {
-									e.stopPropagation();
-									confirmDeleteNode(node);
-								}}
-								{@attach tooltip('Delete')}
-							>
-								<Icon name="trash" width={11} height={11} />
-							</button>
+								<NodeActions
+									revealed={actionsRevealed}
+									noteNodeId={compact ? clusterNoteId : null}
+									hasNote={clusterHasNote}
+									showCollapse={canToggleCompact(node)}
+									expanded={!compact}
+									onToggleCollapse={() => handleNodeToggleExpand(node)}
+									showDelete={node.type !== 'group' && node.type !== 'composite'}
+									onDelete={() => confirmDeleteNode(node)}
+									deleteTooltip="Delete node"
+								/>
+							</div>
 						{/if}
 
 						{#if isExpanded && node.type === 'process' && node.processObj && node.processObj.parentCol}
@@ -3134,31 +3154,35 @@
 		transition: opacity 0.15s;
 	}
 
-	/* Hover-revealed compact/detailed toggle, pinned to the card's top-right. */
-	.node-compact-toggle {
+	/* Grouped action cluster (NodeActions). Expanded nodes: sits IN the header at
+	   the top-right (transparent, blends in) like the worksheet plot header.
+	   Compact nodes: floats as a small toolbar (with a card background) just above
+	   the square — top-right aligned, clear of the right-edge ports. Visibility is
+	   driven by `.visible` = revealed (hover-with-grace OR selection) OR has-note;
+	   the note button inside stays put while collapse/delete fade in. */
+	.node-actions-host {
 		position: absolute;
-		top: -9px;
-		right: -9px;
-		width: 18px;
-		height: 18px;
-		padding: 0;
+		top: 3px;
+		right: 6px;
+		z-index: 6;
 		display: flex;
 		align-items: center;
-		justify-content: center;
-		font-size: 11px;
-		line-height: 1;
-		color: var(--color-lightness-35, #555);
-		background: #ffffff;
-		border: 1px solid var(--color-lightness-70, #bbb);
-		border-radius: 50%;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-		cursor: pointer;
 		opacity: 0;
-		transition: opacity 0.12s ease;
-		z-index: 5;
+		pointer-events: none;
 	}
-	.workflow-node-wrapper:hover .node-compact-toggle {
+	.node-actions-host.compact {
+		top: auto;
+		bottom: calc(100% + 3px);
+		right: 0;
+		padding: 1px 2px;
+		background: #ffffff;
+		border: 1px solid var(--color-lightness-80, #ccc);
+		border-radius: 6px;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+	}
+	.node-actions-host.visible {
 		opacity: 1;
+		pointer-events: auto;
 	}
 
 	/* Expanded-composite frame: auto-sized backdrop behind member nodes. The
@@ -3203,40 +3227,6 @@
 	}
 	.composite-frame-collapse:hover {
 		color: var(--color-accent, #4d9fe3);
-	}
-	.node-compact-toggle:hover {
-		color: var(--color-accent, #4d9fe3);
-		border-color: var(--color-accent, #4d9fe3);
-	}
-
-	/* Hover-revealed delete button, pinned to the card's top-left (mirrors the
-	   compact toggle on the right). Turns red on hover. */
-	.node-delete-btn {
-		position: absolute;
-		top: -9px;
-		left: -9px;
-		width: 18px;
-		height: 18px;
-		padding: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: var(--color-lightness-45, #777);
-		background: #ffffff;
-		border: 1px solid var(--color-lightness-70, #bbb);
-		border-radius: 50%;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-		cursor: pointer;
-		opacity: 0;
-		transition: opacity 0.12s ease;
-		z-index: 5;
-	}
-	.workflow-node-wrapper:hover .node-delete-btn {
-		opacity: 1;
-	}
-	.node-delete-btn:hover {
-		color: #d23b3b;
-		border-color: #d23b3b;
 	}
 
 	/* When a node's note popover is open, lift the whole wrapper above its
