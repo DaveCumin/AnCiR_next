@@ -3,7 +3,11 @@
 
 	import { Process, nextLinkedGroupId, getLinkedProcesses } from '$lib/core/Process.svelte';
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
-	import { resolveProducer, touchProducerDeps } from '$lib/core/producerRuntime.js';
+	import {
+		resolveProducer,
+		touchProducerDeps,
+		getProducerProcess
+	} from '$lib/core/producerRuntime.js';
 	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
 	import { min } from '$lib/components/plotbits/helpers/wrangleData';
 
@@ -67,6 +71,46 @@
 	export function getColumnById(id) {
 		const theColumn = core.data.find((column) => column.id === id);
 		return theColumn;
+	}
+
+	// --- Producer-column naming (dataflow model) -------------------------------
+	// A produced column's default name describes its provenance: the input column
+	// followed by the steps applied, e.g. "HR → Add" or "HR → Add → Normalize".
+	// This keeps names informative and, after the uniqueness pass in the `name`
+	// getter, unique. A user-set customName always wins (names stay editable).
+	const _nameInFlight = new Set();
+
+	// The label shown for a step (producing op or an owned process).
+	function _stepLabel(proc) {
+		return proc?.displayName || proc?.name || 'node';
+	}
+
+	// A column's base name without the uniqueness suffix. Recurses up the input
+	// chain to name producer inputs; cycle-guarded so a malformed graph can't hang.
+	function columnBaseName(col) {
+		if (!col) return '?';
+		if (col.customName != null) return col.customName;
+		if (col.producerNodeId != null && col.refId == null) {
+			if (_nameInFlight.has(col.id)) return 'output';
+			_nameInFlight.add(col.id);
+			try {
+				return producerBaseName(col);
+			} finally {
+				_nameInFlight.delete(col.id);
+			}
+		}
+		// Fall back to the column's own derived name for non-producer columns.
+		return col.name ?? 'Unnamed';
+	}
+
+	// "<input> → <producing op> [→ <owned process>]..." for a producer column.
+	function producerBaseName(col) {
+		const proc = getProducerProcess(col.producerNodeId);
+		if (!proc) return 'output';
+		const inName = columnBaseName(getColumnById(proc.args?.inIN));
+		let info = `${inName} → ${_stepLabel(proc)}`;
+		for (const p of col.processes ?? []) info += ` → ${_stepLabel(p)}`;
+		return info;
 	}
 
 	function doRemoveColumn(columnId) {
@@ -182,6 +226,24 @@
 			if (this.isReferencial()) {
 				this.customName = this.refColumn?.name + '*';
 				return this.refColumn?.name + '*';
+			}
+			// Producer-sourced columns: descriptive name that shows the steps taken,
+			// disambiguated with a "(n)" suffix when an earlier column has the same
+			// base. Editable — setting customName overrides this entirely.
+			if (this.producerNodeId != null && this.refId == null) {
+				const base = columnBaseName(this);
+				let n = 0;
+				for (const c of core.data) {
+					if (c === this) break;
+					if (
+						c.producerNodeId != null &&
+						c.refId == null &&
+						c.customName == null &&
+						columnBaseName(c) === base
+					)
+						n++;
+				}
+				return n === 0 ? base : `${base} (${n + 1})`;
 			}
 			return this.customName || 'Unnamed';
 		});

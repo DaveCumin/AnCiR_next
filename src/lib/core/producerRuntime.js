@@ -37,6 +37,14 @@ function findFreeProcess(producerNodeId) {
 	return (core.orphanProcesses ?? []).find((p) => p.id === pid) ?? null;
 }
 
+/**
+ * The free process node that produces a column's value, or null. Exposed so
+ * Column can build a descriptive name from the producing op + its input.
+ */
+export function getProducerProcess(producerNodeId) {
+	return findFreeProcess(producerNodeId);
+}
+
 function findColumn(id) {
 	if (id == null) return null;
 	return (core.data ?? []).find((c) => c.id === id) ?? null;

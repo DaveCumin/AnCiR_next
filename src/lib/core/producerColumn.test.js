@@ -119,6 +119,58 @@ describe('producer-sourced columns (dataflow model)', () => {
 		expect(out.getData()).toEqual([]);
 	});
 
+	it('a producer column may carry its own processes[] (composability)', () => {
+		const input = makeSourceColumn([10, 20, 30]);
+		const proc = makeFreeAdd(input, 5); // → [15, 25, 35]
+		const out = makeProducerColumn(proc);
+		core.data.push(out);
+		// Add an owned process on top of the producer-sourced value.
+		const own = new Process({ name: 'Add', args: { value: 100 } }, out);
+		out.processes.push(own);
+		expect(out.getData()).toEqual([115, 125, 135]);
+	});
+
+	describe('descriptive, unique, editable names', () => {
+		it('derives a name showing the input and the producing step', () => {
+			const input = makeSourceColumn([1, 2, 3]);
+			input.customName = 'HR';
+			const proc = makeFreeAdd(input, 5);
+			const out = makeProducerColumn(proc);
+			core.data.push(out);
+			expect(out.name).toBe('HR → Add');
+		});
+
+		it('extends the name with each owned process step', () => {
+			const input = makeSourceColumn([1, 2, 3]);
+			input.customName = 'HR';
+			const proc = makeFreeAdd(input, 5);
+			const out = makeProducerColumn(proc);
+			core.data.push(out);
+			const own = new Process({ name: 'Add', args: { value: 1 } }, out);
+			out.processes.push(own);
+			expect(out.name).toBe('HR → Add → Add');
+		});
+
+		it('disambiguates identical base names with a (n) suffix', () => {
+			const input = makeSourceColumn([1, 2, 3]);
+			input.customName = 'HR';
+			const a = makeProducerColumn(makeFreeAdd(input, 5));
+			const b = makeProducerColumn(makeFreeAdd(input, 5));
+			core.data.push(a, b);
+			expect(a.name).toBe('HR → Add');
+			expect(b.name).toBe('HR → Add (2)');
+		});
+
+		it('lets a user-set customName override the derived name', () => {
+			const input = makeSourceColumn([1, 2, 3]);
+			input.customName = 'HR';
+			const out = makeProducerColumn(makeFreeAdd(input, 5));
+			core.data.push(out);
+			out.customName = 'My result';
+			expect(out.name).toBe('My result');
+		});
+	});
+
 	it('does not disturb legacy raw + processes[] columns', () => {
 		// A normal column with an owned Add process still works exactly as before.
 		const col = makeSourceColumn([1, 2, 3]);
