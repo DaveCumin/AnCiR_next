@@ -342,6 +342,26 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		}
 	}
 
+	// Producer columns (dataflow model): a column whose value IS the output of a
+	// node (producerNodeId/producerPort), with no rawData/ref of its own. Like
+	// taps, they are model-only on the canvas — represented by the producing
+	// node's output port, not a standalone data_<id> node. Consumer wires route
+	// through columnSourceRef → the producing node's output.
+	const producerColMeta = new Map(); // colId → { nodeId, port }
+	for (const col of core.data ?? []) {
+		if (
+			col.producerNodeId != null &&
+			col.refId == null &&
+			col.data == null &&
+			!tapColMeta.has(col.id)
+		) {
+			producerColMeta.set(col.id, {
+				nodeId: col.producerNodeId,
+				port: col.producerPort || 'output'
+			});
+		}
+	}
+
 	// Resolve a column's "starting" canvas node + port. For absorbed columns
 	// this is the owning group's per-row output port; for tap columns we
 	// route to the source's pipeline end (either a specific process for
@@ -370,6 +390,9 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		// TP-output column: route to the producing TP node's inline row port.
 		const tpRef = tpOutputColToTP.get(colId);
 		if (tpRef) return { nodeId: tpRef.nodeId, port: tpRef.port };
+		// Producer column: route to the producing node's output port.
+		const prod = producerColMeta.get(colId);
+		if (prod) return { nodeId: prod.nodeId, port: prod.port };
 		return { nodeId: `data_${colId}`, port: 'column' };
 	}
 
@@ -381,6 +404,9 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		// Tap columns are model-only: hidden on the canvas, with their consumer
 		// wires re-routed via columnSourceRef to come from process_<...>.output.
 		if (tapColMeta.has(col.id)) continue;
+		// Producer columns are likewise model-only: represented by the producing
+		// node's output port, not a standalone data node.
+		if (producerColMeta.has(col.id)) continue;
 		nodes.push(
 			new ProcessNode({
 				id: `data_${col.id}`,
@@ -674,6 +700,17 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			prevId = pid;
 			prevPort = 'column';
 		}
+	}
+
+	// Free process nodes (dataflow model): a process living in core.orphanProcesses
+	// that declares its input column in args.inIN gets an input edge from that
+	// column's source. Its output feeds a producer column (hidden), so downstream
+	// consumers route to this node's output via columnSourceRef.
+	for (const p of core.orphanProcesses ?? []) {
+		const inId = p.args?.inIN;
+		if (inId == null || inId < 0) continue;
+		const src = columnSourceRef(inId);
+		addConnection(src.nodeId, `process_${p.id}`, 'data-process', src.port, 'input');
 	}
 
 	const emitTPConnections = (tp) => {
