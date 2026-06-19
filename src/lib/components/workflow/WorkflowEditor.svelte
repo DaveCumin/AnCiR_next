@@ -712,11 +712,15 @@
 	// output, stopAll() splices the node onto that edge (flowtest-style).
 	let dropTargetEdgeKey = $state(null);
 
-	// Output-port the user is currently dragging a node toward, formatted as
-	// `${sourceNodeId}|${portName}`. Takes priority over dropTargetEdgeKey
-	// because it expresses a more specific intent ("insert here, between this
-	// source and ALL its consumers"). Cleared in stopAll.
+	// Port the user is currently dragging a node toward, formatted as
+	// `${nodeId}|${portName}`. Takes priority over dropTargetEdgeKey because it
+	// expresses a more specific intent: insert the dragged node into EVERY edge at
+	// that port. An OUTPUT port inserts the node after the source (between it and
+	// all its consumers); an INPUT port inserts the node before the target (between
+	// all its sources and it). Cleared in stopAll.
 	let dropTargetPortKey = $state(null);
+	// 'out' | 'in' — which side the detected port is on (drives the splice).
+	let dropTargetPortDir = $state(null);
 
 	// Set during drag whenever the dragged node's bbox overlaps a group's bbox.
 	// Drives the .drop-target highlight on GroupNode so the user can see the
@@ -1196,30 +1200,38 @@
 					const cy = ny + dh / 2;
 					const draggedBox = { x1: nx, y1: ny, x2: nx + dw, y2: ny + dh };
 
-					// 1) Source output port hit — preferred. Picks the closest
-					//    overlapping output port to the dragged node's centre.
+					// 1) Port hit — preferred. Picks the closest overlapping port
+					//    (output on the right edge, input on the left edge) to the
+					//    dragged node's centre. Output → insert after the source;
+					//    input → insert before the target.
 					let bestPort = null;
+					let bestPortDir = null;
 					let bestPortDist = Infinity;
 					for (const node of allNodes) {
 						if (node.id === draggedNode.id) continue;
 						const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id];
 						if (!pos) continue;
 						const nw = getNodeWidth(node);
-						for (const port of node.ports?.outputs ?? []) {
-							const portX = pos.x + nw;
-							const portY = pos.y + getPortAnchorY(node, port.name, 'out');
+						const consider = (portName, portX, portY, dir) => {
 							if (
 								portX < draggedBox.x1 ||
 								portX > draggedBox.x2 ||
 								portY < draggedBox.y1 ||
 								portY > draggedBox.y2
 							)
-								continue;
+								return;
 							const d = (portX - cx) ** 2 + (portY - cy) ** 2;
 							if (d < bestPortDist) {
 								bestPortDist = d;
-								bestPort = `${node.id}|${port.name}`;
+								bestPort = `${node.id}|${portName}`;
+								bestPortDir = dir;
 							}
+						};
+						for (const port of node.ports?.outputs ?? []) {
+							consider(port.name, pos.x + nw, pos.y + getPortAnchorY(node, port.name, 'out'), 'out');
+						}
+						for (const port of node.ports?.inputs ?? []) {
+							consider(port.name, pos.x, pos.y + getPortAnchorY(node, port.name, 'in'), 'in');
 						}
 					}
 
@@ -1258,9 +1270,11 @@
 					}
 
 					dropTargetPortKey = bestPort;
+					dropTargetPortDir = bestPort ? bestPortDir : null;
 					dropTargetEdgeKey = bestEdge;
 				} else {
 					dropTargetPortKey = null;
+					dropTargetPortDir = null;
 					dropTargetEdgeKey = null;
 				}
 
@@ -1751,9 +1765,13 @@
 		// more specific intent ("between this source and ALL its consumers").
 		if (dragInfo?.moved && dropTargetPortKey) {
 			const draggedNode = allNodes.find((n) => n.id === dragInfo.nodeId);
-			const [sourceNodeId, sourcePort] = dropTargetPortKey.split('|');
-			if (draggedNode && sourceNodeId && sourcePort) {
-				spliceNodeOntoSourceOutput(draggedNode, sourceNodeId, sourcePort);
+			const [portNodeId, portName] = dropTargetPortKey.split('|');
+			if (draggedNode && portNodeId && portName) {
+				if (dropTargetPortDir === 'in') {
+					spliceNodeOntoTargetInput(draggedNode, portNodeId, portName);
+				} else {
+					spliceNodeOntoSourceOutput(draggedNode, portNodeId, portName);
+				}
 			}
 		} else if (dragInfo?.moved && dropTargetEdgeKey) {
 			// Splice-on-edge: dropped onto a wire (edge bbox-overlap).
@@ -1769,6 +1787,7 @@
 		}
 		dropTargetEdgeKey = null;
 		dropTargetPortKey = null;
+		dropTargetPortDir = null;
 		dragHoverGroupId = null;
 		dragInfo = null;
 		resizeInfo = null;
@@ -1960,6 +1979,32 @@
 			if (op.id === proc.id) continue;
 			if (_procInputIds(op).includes(colId)) {
 				_rerouteProcessInput(`process_${op.id}`, colId, D.id);
+			}
+		}
+	}
+
+	/**
+	 * Drop the dragged node onto a target's INPUT port: insert it between EVERY
+	 * source feeding that port and the target (tweak #4, the "enter the node"
+	 * case). For each incoming edge at the port, route its source column through
+	 * the node and re-point the target's reference to the node's output.
+	 */
+	function spliceNodeOntoTargetInput(draggedNode, targetNodeId, targetPort) {
+		if (draggedNode.type !== 'process' || !draggedNode.processObj) return;
+		const proc = draggedNode.processObj;
+		const isProcTarget = typeof targetNodeId === 'string' && targetNodeId.startsWith('process_');
+		const edges = (edgeTopology ?? []).filter(
+			(e) => e.toId === targetNodeId && e.toPort === targetPort && e.fromId !== draggedNode.id
+		);
+		for (const edge of edges) {
+			const c = resolveOutputColumnId(edge.fromId, edge.fromPort);
+			if (c == null || c < 0) continue;
+			_addProcInput(proc, c);
+			const D = _ensureProducerColumn(proc, c);
+			if (isProcTarget) {
+				_rerouteProcessInput(targetNodeId, c, D.id);
+			} else {
+				rerouteEdgeConsumer(edge, c, D.id);
 			}
 		}
 	}
