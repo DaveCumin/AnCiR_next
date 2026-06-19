@@ -2,6 +2,7 @@
 	// @ts-nocheck
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { producerInputColId } from '$lib/core/producerRuntime.js';
 	import { tick, untrack } from 'svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
@@ -116,10 +117,25 @@
 		return s;
 	});
 
-	// Columns not in any group and not a TP output column.
+	// A producer column is the output of an operation node (dataflow model). It is
+	// shown nested under its SOURCE column (see derivedChildren / the derivedTree
+	// snippet), never in a flat top-level list.
+	function isProducerColumn(c) {
+		return c?.producerNodeId != null && c.refId == null && c.data == null;
+	}
+
+	// Producer columns whose source (the operation node's input) is colId.
+	function derivedChildren(colId) {
+		return (core.data ?? []).filter(
+			(c) => isProducerColumn(c) && producerInputColId(c.producerNodeId, c.producerPort) === colId
+		);
+	}
+
+	// Columns not in any group, not a TP output column, and not a producer column
+	// (producers render nested under their source, not at the top level).
 	const ungroupedColumns = $derived.by(() => {
 		return (core.data ?? []).filter(
-			(c) => !groupedColumnIds.has(c.id) && !tpOutputColIds.has(c.id)
+			(c) => !groupedColumnIds.has(c.id) && !tpOutputColIds.has(c.id) && !isProducerColumn(c)
 		);
 	});
 
@@ -229,6 +245,21 @@
 </div>
 
 <div class="display-list">
+	<!-- Derived (producer) columns render nested beneath their source column, so the
+	     data flow reads top-to-bottom (e.g. "values_0 → Add" sits under "values_0"). -->
+	{#snippet derivedTree(parentColId, depth)}
+		{#each derivedChildren(parentColId) as child (child.id)}
+			<div
+				class="second-clps derived-col"
+				style="--depth:{depth}"
+				class:canvas-selected={canvasSelection?.kind === 'data' && canvasSelection.id === child.id}
+			>
+				<ColumnComponent col={child} />
+			</div>
+			{@render derivedTree(child.id, depth + 1)}
+		{/each}
+	{/snippet}
+
 	<!-- Groups -->
 	{#each core.groups as group (group.id)}
 		<div
@@ -275,6 +306,7 @@
 								canvasSelectedProcessId={ownsSelectedProcess ? canvasSelection.id : null}
 							/>
 						</div>
+						{@render derivedTree(col.id, 1)}
 					{/if}
 				{/each}
 
@@ -321,6 +353,9 @@
 					>
 						<TableProcess {p} />
 					</div>
+					{#each Object.values(p.args?.out ?? {}) as outColId}
+						{@render derivedTree(outColId, 1)}
+					{/each}
 				{/each}
 			</details>
 		</div>
@@ -364,6 +399,7 @@
 							canvasSelectedProcessId={ownsSelectedProcess ? canvasSelection.id : null}
 						/>
 					</div>
+					{@render derivedTree(col.id, 1)}
 				{/each}
 
 				<!-- Drop zone to remove a column from its group -->
@@ -461,6 +497,14 @@
 		border-radius: 4px;
 		box-shadow: inset 2px 0 0 var(--color-accent, #4d9fe3);
 		background-color: color-mix(in srgb, var(--color-accent, #4d9fe3) 8%, transparent);
+	}
+
+	/* Derived (producer) columns nest under their source: indent by depth and show
+	   a connector rail so the data flow is easy to follow. */
+	.derived-col {
+		margin-left: calc(var(--depth, 1) * 14px);
+		border-left: 2px solid var(--color-lightness-85, #ddd);
+		padding-left: 6px;
 	}
 
 	.dropzone {
