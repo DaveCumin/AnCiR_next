@@ -18,6 +18,7 @@
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { registerDataSourceActions } from '$lib/core/dataSourceActions.js';
 	import { importJson } from '$lib/components/iconActions/Setting.svelte';
+	import { migrateAllInlineProcesses } from '$lib/core/dataflowMigration.js';
 
 	import { loadProcesses } from '$lib/processes/processMap.js';
 	import { loadPlots } from '$lib/plots/plotMap.js';
@@ -587,6 +588,15 @@
 			)
 		);
 		core.plots[0].plot.data[1].y.refId = core.data[core.data.length - 1].id;
+
+		// Dataflow model: the sample data above uses legacy inline col.addProcess();
+		// migrate those to free operation nodes + derived columns, like a loaded
+		// session, so the Add/Sub appear as editable multi-input nodes.
+		try {
+			migrateAllInlineProcesses();
+		} catch (e) {
+			console.error('demo migration failed', e);
+		}
 
 		appState.loadingState.isLoading = false;
 	}

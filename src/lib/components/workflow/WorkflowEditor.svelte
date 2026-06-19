@@ -2989,23 +2989,27 @@
 							</div>
 						{/if}
 
-						{#if isExpanded && node.type === 'process' && node.processObj && node.processObj.parentCol}
+						{#if isExpanded && node.type === 'process' && node.processObj}
 							{@const PComp = appConsts.processMap.get(node.processName)?.component}
-							{@const parent = node.processObj.parentCol}
 							{@const proc = node.processObj}
-							{@const tapPreview = {
-								name: `${parent?.name ?? ''}@${proc.displayName || proc.name}`,
-								getData: () => parent?.getDataUpToProcess?.(proc.id) ?? []
-							}}
+							{@const parent = proc.parentCol}
+							{@const previewCol = parent
+								? {
+										name: `${parent?.name ?? ''}@${proc.displayName || proc.name}`,
+										getData: () => parent?.getDataUpToProcess?.(proc.id) ?? []
+									}
+								: core.data.find((c) => c.producerNodeId === `process_${proc.id}`)}
 							{#if PComp}
 								<div
 									class="process-editor-panel"
 									style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;"
 								>
 									<PComp p={node.processObj} />
-									<div class="process-intermediate-preview">
-										<MiniDataTable column={tapPreview} maxRows={5} />
-									</div>
+									{#if previewCol}
+										<div class="process-intermediate-preview">
+											<MiniDataTable column={previewCol} maxRows={5} />
+										</div>
+									{/if}
 								</div>
 							{/if}
 						{:else if isExpanded && node.type === 'tableprocess' && node.tpObj}
