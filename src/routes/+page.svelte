@@ -18,7 +18,6 @@
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { registerDataSourceActions } from '$lib/core/dataSourceActions.js';
 	import { importJson } from '$lib/components/iconActions/Setting.svelte';
-	import { migrateAllInlineProcesses } from '$lib/core/dataflowMigration.js';
 
 	import { loadProcesses } from '$lib/processes/processMap.js';
 	import { loadPlots } from '$lib/plots/plotMap.js';
@@ -36,7 +35,8 @@
 		snapToGrid,
 		outputCoreAsJson,
 		createGroup,
-		absorbColumnIntoGroup
+		absorbColumnIntoGroup,
+		createOrphanProcess
 	} from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	import { Plot, selectAllPlots } from '$lib/core/Plot.svelte';
@@ -389,8 +389,23 @@
 		let d0id = addData(makeArray(N, 5, 0.15), 'number', 'the time', 'just made this up');
 
 		let d1id = addData(makeRhythmic(N, 24 / 0.15), 'number', 'val1', 'imported from thin air');
-		core.data[1].addProcess('Add');
-		core.data[1].addProcess('Sub');
+		// Dataflow model: demonstrate operations as free nodes producing derived
+		// columns (the new model), rather than legacy inline col.addProcess(). One
+		// Add node fed by val1 → a "val1 → Add" derived column the user can edit and
+		// wire further. (No migration-on-load needed for the demo this way.)
+		{
+			const addNode = createOrphanProcess('Add', { value: 0, inIN: [d1id] });
+			if (addNode) {
+				core.data.push(
+					new Column({
+						type: 'number',
+						producerNodeId: `process_${addNode.id}`,
+						producerPort: `out_${d1id}`,
+						producerArtifactKind: 'column'
+					})
+				);
+			}
+		}
 
 		let d2id = addData(['a', 'b', 'b', 'c'], 'category', 'mycat', 'imported from Egypt');
 
@@ -588,15 +603,6 @@
 			)
 		);
 		core.plots[0].plot.data[1].y.refId = core.data[core.data.length - 1].id;
-
-		// Dataflow model: the sample data above uses legacy inline col.addProcess();
-		// migrate those to free operation nodes + derived columns, like a loaded
-		// session, so the Add/Sub appear as editable multi-input nodes.
-		try {
-			migrateAllInlineProcesses();
-		} catch (e) {
-			console.error('demo migration failed', e);
-		}
 
 		appState.loadingState.isLoading = false;
 	}
