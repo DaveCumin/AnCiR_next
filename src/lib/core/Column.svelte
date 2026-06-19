@@ -3,6 +3,7 @@
 
 	import { Process, nextLinkedGroupId, getLinkedProcesses } from '$lib/core/Process.svelte';
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
+	import { resolveProducer, touchProducerDeps } from '$lib/core/producerRuntime.js';
 	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
 	import { min } from '$lib/components/plotbits/helpers/wrangleData';
 
@@ -326,6 +327,8 @@
 			this.binWidth;
 			this.tableProcessGUId;
 			this.rawDataVersion;
+			this.producerNodeId;
+			this.producerPort;
 
 			for (const p of this.processes) {
 				p.id;
@@ -334,6 +337,12 @@
 			}
 
 			if (this.isReferencial()) this.refColumn?.getDataHash;
+
+			// Producer-sourced columns (dataflow model): depend on the producing
+			// node and its input so the cache busts when either changes.
+			if (this.producerNodeId != null && this.refId == null) {
+				touchProducerDeps(this.producerNodeId);
+			}
 
 			return ++_hashCounter;
 		});
@@ -368,6 +377,19 @@
 			if (this.refUpToProcessId === -1) {
 				console.warn('Column ', this.id, this.name, ' has a broken tap reference.');
 				return [];
+			}
+
+			// Dataflow model: this column is a handle onto a node's output rather
+			// than an owner of raw data. Source its value from the producing node,
+			// then still run any processes the column carries of its own (normally
+			// none). Legacy ref/rawData columns fall through to the branches below.
+			if (this.producerNodeId != null && this.refId == null && this.data == null) {
+				let out = resolveProducer(this.producerNodeId, this.producerPort) ?? [];
+				for (const p of this.processes) {
+					out = p.doProcess(out);
+					if (p.id === stopAfterProcessId) return out;
+				}
+				return out;
 			}
 
 			let out = [];
