@@ -323,7 +323,9 @@
 					(c.col.type === 'time' && !c.col.isReferencial() && c.col.compression !== 'awd'))
 		)
 	);
-	let rowH = $derived(hasTwoLineCol ? 42 : 28);
+	// Row height tracks the 1.5rem (~24px) cell font: ~44px for one line, more for
+	// the two-line time cells (value + "computed hrs" sub-line).
+	let rowH = $derived(hasTwoLineCol ? 64 : 44);
 	let colOffsetPx = $derived(theData?.plot?.showColNumber ? '44px ' : '');
 	let gridCols = $derived(
 		`${colOffsetPx}repeat(${Math.max(1, visibleColumns.length)}, minmax(110px, 1fr))`
@@ -585,14 +587,10 @@
 						<div class="clps-title">
 							<input
 								type="checkbox"
-								checked={(group.sourceColumnIds ?? []).every((cid) =>
-									isColumnSelected(cid)
-								)}
+								checked={(group.sourceColumnIds ?? []).every((cid) => isColumnSelected(cid))}
 								onclick={(e) => {
 									e.stopPropagation();
-									const all = (group.sourceColumnIds ?? []).every((cid) =>
-										isColumnSelected(cid)
-									);
+									const all = (group.sourceColumnIds ?? []).every((cid) => isColumnSelected(cid));
 									for (const cid of group.sourceColumnIds ?? []) {
 										if (all) {
 											if (isColumnSelected(cid)) toggleColumnSelection(cid);
@@ -770,8 +768,7 @@
 											<div class="time-cell">
 												<Editable
 													value={cell.raw}
-													onInput={(v) =>
-														makeEdits({ col: editColIndex(vi), row: i, value: v })}
+													onInput={(v) => makeEdits({ col: editColIndex(vi), row: i, value: v })}
 												/>
 												{#if String(cell.computed) !== String(cell.raw)}
 													<div class="computed-time">{cell.computed} hrs</div>
@@ -782,8 +779,7 @@
 										{:else}
 											<Editable
 												value={cell}
-												onInput={(v) =>
-													makeEdits({ col: editColIndex(vi), row: i, value: v })}
+												onInput={(v) => makeEdits({ col: editColIndex(vi), row: i, value: v })}
 											/>
 										{/if}
 									</div>
@@ -822,7 +818,7 @@
 		border: 1px solid var(--color-lightness-85);
 		border-radius: 4px;
 		background: #fff;
-		font-size: 14px;
+		font-size: 1.5rem;
 		/* On the workflow canvas the plot preview wrapper sets pointer-events:none
 		   (so the node stays draggable); re-enable it here so the table can be
 		   scrolled/edited. The node is still draggable via its header. */
@@ -876,7 +872,7 @@
 
 	.tp-num {
 		color: var(--color-lightness-50, #888);
-		font-size: 12px;
+		font-size: 1rem;
 		text-align: center;
 		justify-content: center;
 	}

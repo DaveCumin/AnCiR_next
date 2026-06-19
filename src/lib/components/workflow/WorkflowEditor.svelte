@@ -122,7 +122,10 @@
 		// body (no header), so the anchor is purely formula-based here.
 		if (isCompact(node)) {
 			const ports = direction === 'out' ? (node.ports?.outputs ?? []) : (node.ports?.inputs ?? []);
-			const h = compactNodeHeight(node.ports?.inputs?.length ?? 0, node.ports?.outputs?.length ?? 0);
+			const h = compactNodeHeight(
+				node.ports?.inputs?.length ?? 0,
+				node.ports?.outputs?.length ?? 0
+			);
 			let idx = ports.findIndex((p) => p.name === portName);
 			if (idx < 0) idx = 0;
 			return compactPortAnchorY(idx, ports.length, h);
@@ -1976,7 +1979,8 @@
 		}
 		if (!SQUARED_KINDS.has(node.type)) return;
 		const next = new Set(collapsedNodeIds);
-		if (next.has(node.id)) next.delete(node.id); // currently collapsed → expand
+		if (next.has(node.id))
+			next.delete(node.id); // currently collapsed → expand
 		else next.add(node.id); // currently expanded → collapse
 		collapsedNodeIds = next;
 	}
@@ -2140,6 +2144,27 @@
 		if (node.type === 'group' && node.refId != null) {
 			removeGroup(node.refId);
 		}
+	}
+
+	// Per-node delete button (canvas). Shows the shared "Are you sure?" modal, then
+	// removes via the same removeNode() the Delete key uses. Mirrors the worksheet's
+	// delete-plot button (which also confirms before removing).
+	function confirmDeleteNode(node) {
+		if (!node) return;
+		const name = node.label?.trim() || 'this node';
+		appState.AYStext = `Are you sure you want to remove ${name}?`;
+		appState.AYSoptions = ['Yes', 'No'];
+		appState.AYScallback = (option) => {
+			if (option !== 'Yes') return;
+			removeNode(node);
+			if (focusedNodeId === node.id) focusedNodeId = null;
+			if (multiSelectedNodeIds.has(node.id)) {
+				const next = new Set(multiSelectedNodeIds);
+				next.delete(node.id);
+				multiSelectedNodeIds = next;
+			}
+		};
+		appState.showAYSModal = true;
 	}
 
 	function deleteSelection() {
@@ -2532,7 +2557,8 @@
 		}
 		if (!neighbours.size) return;
 		const memberToComp = new Map();
-		for (const comp of core.composites) for (const m of comp.memberIds) memberToComp.set(m, comp.id);
+		for (const comp of core.composites)
+			for (const m of comp.memberIds) memberToComp.set(m, comp.id);
 		let target = null;
 		for (const nb of neighbours) {
 			const cid = memberToComp.get(nb);
@@ -2545,7 +2571,8 @@
 
 	function uncombineSelection() {
 		const composites = [...multiSelectedNodeIds].filter((id) => id?.startsWith('composite_'));
-		const target = composites[0] ?? (focusedNodeId?.startsWith('composite_') ? focusedNodeId : null);
+		const target =
+			composites[0] ?? (focusedNodeId?.startsWith('composite_') ? focusedNodeId : null);
 		if (!target) {
 			addNotification('Select a composite to uncombine.');
 			return;
@@ -2748,13 +2775,13 @@
 							type="button"
 							class="composite-frame-collapse"
 							title="Collapse composite"
-							aria-label="Collapse composite"
 							onmousedown={(e) => e.stopPropagation()}
 							onpointerdown={(e) => e.stopPropagation()}
 							onclick={(e) => {
 								e.stopPropagation();
 								handleNodeToggleExpand({ type: 'composite', id: cc.id, compositeObj: cc.comp });
-							}}>⤡</button
+							}}
+							{@attach tooltip('Collapse')}>⤡</button
 						>
 					</div>
 				</div>
@@ -2872,14 +2899,35 @@
 								type="button"
 								class="node-compact-toggle"
 								title={compact ? 'Expand node' : 'Collapse node'}
-								aria-label={compact ? 'Expand node' : 'Collapse node'}
 								onpointerdown={(e) => e.stopPropagation()}
 								onclick={(e) => {
 									e.stopPropagation();
 									handleNodeToggleExpand(node);
 								}}
+								{@attach tooltip(compact ? 'Expand' : 'Collapse')}
 							>
 								{compact ? '⤢' : '⤡'}
+							</button>
+						{/if}
+
+						<!-- Hover-reveal delete button: a non-keyboard way to remove a node.
+						     Routes through the same removeNode() the Delete key uses (so
+						     table-process deletes still get the "Are you sure?" modal).
+						     Groups carry their own delete; composites use uncombine. -->
+						{#if node.type !== 'group' && node.type !== 'composite'}
+							<button
+								type="button"
+								class="node-delete-btn"
+								title="Delete node"
+								onpointerdown={(e) => e.stopPropagation()}
+								onmousedown={(e) => e.stopPropagation()}
+								onclick={(e) => {
+									e.stopPropagation();
+									confirmDeleteNode(node);
+								}}
+								{@attach tooltip('Delete')}
+							>
+								<Icon name="trash" width={11} height={11} />
 							</button>
 						{/if}
 
@@ -3159,6 +3207,36 @@
 	.node-compact-toggle:hover {
 		color: var(--color-accent, #4d9fe3);
 		border-color: var(--color-accent, #4d9fe3);
+	}
+
+	/* Hover-revealed delete button, pinned to the card's top-left (mirrors the
+	   compact toggle on the right). Turns red on hover. */
+	.node-delete-btn {
+		position: absolute;
+		top: -9px;
+		left: -9px;
+		width: 18px;
+		height: 18px;
+		padding: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--color-lightness-45, #777);
+		background: #ffffff;
+		border: 1px solid var(--color-lightness-70, #bbb);
+		border-radius: 50%;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+		cursor: pointer;
+		opacity: 0;
+		transition: opacity 0.12s ease;
+		z-index: 5;
+	}
+	.workflow-node-wrapper:hover .node-delete-btn {
+		opacity: 1;
+	}
+	.node-delete-btn:hover {
+		color: #d23b3b;
+		border-color: #d23b3b;
 	}
 
 	/* When a node's note popover is open, lift the whole wrapper above its

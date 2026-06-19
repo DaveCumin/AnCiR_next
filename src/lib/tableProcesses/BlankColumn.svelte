@@ -11,7 +11,7 @@
 
 	export function blankcolumn(argsIN) {
 		const count = Math.max(0, Math.floor(Number(argsIN.N)));
-		let result = new Array(count).fill('');
+		let result = new Array(count).fill(NaN);
 
 		if (argsIN.out.result == null || argsIN.out.result < 0) {
 			// preview only (output column not allocated yet)
@@ -113,7 +113,8 @@
 		// Keep any extra (pasted) columns the same length as the row count.
 		for (const c of extraCols) {
 			const arr = extraData[c.colId] ?? [];
-			if (arr.length < count) extraData[c.colId] = [...arr, ...new Array(count - arr.length).fill('')];
+			if (arr.length < count)
+				extraData[c.colId] = [...arr, ...new Array(count - arr.length).fill('')];
 			else if (arr.length > count) extraData[c.colId] = arr.slice(0, count);
 			commitExtra(c.colId);
 		}
@@ -137,7 +138,8 @@
 	let outputCols = $derived.by(() => {
 		const o = p.args.out || {};
 		const list = [];
-		if (typeof o.result === 'number' && o.result >= 0) list.push({ key: 'result', colId: o.result });
+		if (typeof o.result === 'number' && o.result >= 0)
+			list.push({ key: 'result', colId: o.result });
 		for (const k of Object.keys(o)
 			.filter((k) => /^col_\d+$/.test(k))
 			.sort((a, b) => Number(a.slice(4)) - Number(b.slice(4)))) {
@@ -177,10 +179,16 @@
 		const vals = extraData[colId] ?? [];
 		const allNumeric = vals.every((v) => v === '' || !isNaN(Number(v)));
 		if (allNumeric && vals.some((v) => v !== '')) {
-			core.rawData.set(colId, vals.map((v) => (v === '' ? NaN : Number(v))));
+			core.rawData.set(
+				colId,
+				vals.map((v) => (v === '' ? NaN : Number(v)))
+			);
 			col.type = 'number';
 		} else {
-			core.rawData.set(colId, vals.map((v) => String(v)));
+			core.rawData.set(
+				colId,
+				vals.map((v) => String(v))
+			);
 			col.type = 'category';
 		}
 		col.data = colId;
@@ -398,7 +406,10 @@
 			if (typeof j[0] === 'object' && j[0] !== null) {
 				const keys = [];
 				for (const o of j) for (const k of Object.keys(o)) if (!keys.includes(k)) keys.push(k);
-				return { columns: keys.map((k) => ({ name: k, values: j.map((o) => o[k] ?? '') })), rows: j.length };
+				return {
+					columns: keys.map((k) => ({ name: k, values: j.map((o) => o[k] ?? '') })),
+					rows: j.length
+				};
 			}
 			return { columns: [{ name: 'value', values: j }], rows: j.length };
 		}
@@ -427,10 +438,9 @@
 		const rows = lines.map((l) => splitCsvLine(l, delim));
 		const ncol = Math.max(...rows.map((r) => r.length));
 		const first = rows[0];
-		const headerLike = first.every((c) => c === '' || isNaN(Number(c))) && first.some((c) => c !== '');
-		const headers = headerLike
-			? first
-			: Array.from({ length: ncol }, (_, i) => `column_${i + 1}`);
+		const headerLike =
+			first.every((c) => c === '' || isNaN(Number(c))) && first.some((c) => c !== '');
+		const headers = headerLike ? first : Array.from({ length: ncol }, (_, i) => `column_${i + 1}`);
 		const dataRows = headerLike ? rows.slice(1) : rows;
 		return {
 			columns: Array.from({ length: ncol }, (_, i) => ({
@@ -448,10 +458,16 @@
 		const vals = values.map((v) => (v == null ? '' : v));
 		const allNumeric = vals.every((v) => v === '' || !isNaN(Number(v)));
 		if (allNumeric && vals.some((v) => v !== '')) {
-			core.rawData.set(colId, vals.map((v) => (v === '' ? NaN : Number(v))));
+			core.rawData.set(
+				colId,
+				vals.map((v) => (v === '' ? NaN : Number(v)))
+			);
 			col.type = 'number';
 		} else {
-			core.rawData.set(colId, vals.map((v) => String(v)));
+			core.rawData.set(
+				colId,
+				vals.map((v) => String(v))
+			);
 			col.type = 'category';
 		}
 		col.data = colId;
@@ -646,64 +662,64 @@
 		</p>
 		<div class="editable-table" onpaste={handlePaste}>
 			<div class="et-inner" style="min-width:{etMinWidth}px;">
-			<div class="vt-head" style="grid-template-columns:{gridTemplate};">
-				<span class="vt-h-row">Row</span>
-				{#each outputCols as oc (oc.colId)}
-					<span class="vt-h-val" title={oc.col?.name}>{oc.col?.name ?? ''}</span>
-				{/each}
-			</div>
-			<VirtualList items={editableData} height={tableHeight} itemHeight={ROW_H}>
-				{#snippet row(cell, i)}
-					<div class="vrow" style="grid-template-columns:{gridTemplate};">
-						<span class="row-num">{i + 1}</span>
-						<!-- result column: keeps the stored-value (#) editor -->
-						<span class="vcell">
-							{#if p.args.storedValueRefs[i]}
-								{@const key = p.args.storedValueRefs[i]}
-								{@const exists = key in core.storedValues}
-								<span class="chip chip-stored" class:chip-invalid={!exists}>
-									<span class="sv-name">{key}</span>
-									{#if exists}
-										<span class="sv-value">= {getStoredValue(key)}</span>
-									{:else}
-										<span class="sv-value">(removed)</span>
-									{/if}
-									<button
-										class="chip-remove"
-										onclick={() => removeStoredValueRef(i)}
-										title="Remove">×</button
-									>
-								</span>
-							{:else}
-								<input
-									type="text"
-									value={cell}
-									data-index={i}
-									oninput={(e) => handleCellInput(e, i)}
-									onkeydown={(e) => handleCellKeydown(e, i)}
-								/>
-							{/if}
-						</span>
-						<!-- extra (pasted) columns: plain editable text -->
-						{#each extraCols as ec (ec.colId)}
+				<div class="vt-head" style="grid-template-columns:{gridTemplate};">
+					<span class="vt-h-row">Row</span>
+					{#each outputCols as oc (oc.colId)}
+						<span class="vt-h-val" title={oc.col?.name}>{oc.col?.name ?? ''}</span>
+					{/each}
+				</div>
+				<VirtualList items={editableData} height={tableHeight} itemHeight={ROW_H}>
+					{#snippet row(cell, i)}
+						<div class="vrow" style="grid-template-columns:{gridTemplate};">
+							<span class="row-num">{i + 1}</span>
+							<!-- result column: keeps the stored-value (#) editor -->
 							<span class="vcell">
-								<input
-									type="text"
-									value={extraData[ec.colId]?.[i] ?? ''}
-									oninput={(e) => handleExtraInput(ec.colId, i, e.currentTarget.value)}
-								/>
+								{#if p.args.storedValueRefs[i]}
+									{@const key = p.args.storedValueRefs[i]}
+									{@const exists = key in core.storedValues}
+									<span class="chip chip-stored" class:chip-invalid={!exists}>
+										<span class="sv-name">{key}</span>
+										{#if exists}
+											<span class="sv-value">= {getStoredValue(key)}</span>
+										{:else}
+											<span class="sv-value">(removed)</span>
+										{/if}
+										<button
+											class="chip-remove"
+											onclick={() => removeStoredValueRef(i)}
+											title="Remove">×</button
+										>
+									</span>
+								{:else}
+									<input
+										type="text"
+										value={cell}
+										data-index={i}
+										oninput={(e) => handleCellInput(e, i)}
+										onkeydown={(e) => handleCellKeydown(e, i)}
+									/>
+								{/if}
 							</span>
-						{/each}
-					</div>
-				{/snippet}
-			</VirtualList>
-			<div
-				class="vt-resize"
-				role="separator"
-				aria-label="Resize table"
-				title="Drag to resize"
-				onmousedown={onResizeDown}
-			></div>
+							<!-- extra (pasted) columns: plain editable text -->
+							{#each extraCols as ec (ec.colId)}
+								<span class="vcell">
+									<input
+										type="text"
+										value={extraData[ec.colId]?.[i] ?? ''}
+										oninput={(e) => handleExtraInput(ec.colId, i, e.currentTarget.value)}
+									/>
+								</span>
+							{/each}
+						</div>
+					{/snippet}
+				</VirtualList>
+				<div
+					class="vt-resize"
+					role="separator"
+					aria-label="Resize table"
+					title="Drag to resize"
+					onmousedown={onResizeDown}
+				></div>
 			</div>
 		</div>
 

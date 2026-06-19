@@ -7,6 +7,7 @@
 	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { getNodeName, setNodeName, isNodeNameEditable } from '$lib/core/nodeNaming.js';
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import { guessDateofArray } from '$lib/utils/time/TimeUtils.js';
 	import { core } from '$lib/core/core.svelte.js';
 	import { plotPortRows } from '$lib/core/ProcessNode.svelte.js';
@@ -140,7 +141,9 @@
 							data-node-id={node.id}
 							data-port-name={row.port.name}
 							data-port-dir="in"
-							title={`Input: ${row.port.display ?? row.port.name}${row.port.dynamic ? ' — accepts one or more columns' : ''}`}
+							{@attach tooltip(
+								`Input: ${row.port.display ?? row.port.name}${row.port.dynamic ? ' — accepts one or more columns' : ''}`
+							)}
 							onmousedown={(e) => disconnectInput(e, row.port.name)}
 							onmouseup={(e) => endAtInput(e, row.port.name)}
 							oncontextmenu={(e) => disconnectInput(e, row.port.name)}
@@ -165,7 +168,7 @@
 						data-node-id={node.id}
 						data-port-name={port.name}
 						data-port-dir="in"
-						title={`Input: ${port.name}${port.dynamic ? ' (many)' : ''}`}
+						{@attach tooltip(`Input: ${port.name}${port.dynamic ? ' (many)' : ''}`)}
 						onmousedown={(e) => disconnectInput(e, port.name)}
 						onmouseup={(e) => endAtInput(e, port.name)}
 						oncontextmenu={(e) => disconnectInput(e, port.name)}
@@ -183,7 +186,7 @@
 						data-node-id={node.id}
 						data-port-name={port.name}
 						data-port-dir="out"
-						title={`Output: ${port.name}${port.dynamic ? ' (many)' : ''}`}
+						{@attach tooltip(`Output: ${port.name}${port.dynamic ? ' (many)' : ''}`)}
 						onmousedown={(e) => startFromOutput(e, port.name)}
 						role="button"
 						tabindex="-1"
@@ -379,8 +382,8 @@
 
 	.port-dot {
 		position: relative;
-		width: 10px;
-		height: 10px;
+		width: 13px;
+		height: 13px;
 		border-radius: 50%;
 		background: var(--color-lightness-95, #ececec);
 		border: 1px solid var(--color-lightness-60, #8a8a8a);
@@ -397,7 +400,7 @@
 	.port-dot::before {
 		content: '';
 		position: absolute;
-		inset: -6px -12px;
+		inset: -4px -16px;
 		border-radius: 8px;
 	}
 

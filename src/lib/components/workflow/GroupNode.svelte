@@ -15,6 +15,7 @@
 	import NodeNoteButton from './NodeNoteButton.svelte';
 	import { core, removeGroup } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import {
 		setGroupPortY,
 		clearGroupPortPositions
@@ -334,9 +335,11 @@
 				oncontextmenu={onAllPortContextMenu}
 				ondblclick={onAllPortDblClick}
 				onclick={(e) => e.stopPropagation()}
-				title={allIsSubset
-					? `all (${allColumnIds.length} of ${sourceColumnIds.length} sources)`
-					: `all (every source)`}
+				{@attach tooltip(
+					allIsSubset
+						? `all (${allColumnIds.length} of ${sourceColumnIds.length} sources)`
+						: `all (every source)`
+				)}
 				aria-label="output port all"
 				aria-haspopup="menu"
 			></button>
@@ -435,7 +438,7 @@
 							data-port-dir="out"
 							onmousedown={(e) => onPortMouseDown(e, `col_${id}`)}
 							oncontextmenu={onPortContextMenu}
-							title={`output: ${col.name}`}
+							{@attach tooltip(`output: ${col.name}`)}
 							aria-label={`output port ${col.name}`}
 						></button>
 					</div>
@@ -656,8 +659,8 @@
 	}
 
 	.inline-port {
-		width: 10px;
-		height: 10px;
+		width: 13px;
+		height: 13px;
 		border-radius: 50%;
 		background: var(--color-lightness-95, #ececec);
 		border: 1px solid var(--color-lightness-60, #8a8a8a);
@@ -670,7 +673,7 @@
 	.inline-port::before {
 		content: '';
 		position: absolute;
-		inset: -6px -12px;
+		inset: -4px -16px;
 		border-radius: 8px;
 	}
 	.inline-port:hover {
@@ -715,8 +718,8 @@
 		right: -13px;
 		top: 50%;
 		transform: translateY(-50%);
-		width: 10px;
-		height: 10px;
+		width: 13px;
+		height: 13px;
 	}
 	.all-menu-popover {
 		position: absolute;

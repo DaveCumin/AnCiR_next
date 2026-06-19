@@ -383,12 +383,16 @@
 		out += p.args.useFixedPeriod;
 		return out;
 	});
-	let lastHash = '';
+	// Persisted in p.args so reopening the control panel (which remounts this
+	// component) doesn't reset it to '' and force a recompute. Only re-runs when
+	// getHash actually differs (an input or arg changed).
+	let lastHash = p.args._fitHash ?? '';
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
 		if (lastHash !== dataHash) {
 			lastHash = getHash; // read before untrack so it's tracked
+			p.args._fitHash = lastHash;
 			calculating = true;
 			const token = ++_calcToken;
 			setTimeout(async () => {
@@ -427,6 +431,7 @@
 			p.args.valid = valid;
 			calculating = false;
 			lastHash = getHash;
+			p.args._fitHash = lastHash;
 		}, 0);
 	}
 
@@ -490,9 +495,13 @@
 						y_results
 					};
 					p.args.valid = true;
+					// The rehydrated output matches the current (non-stale) inputs, so
+					// mark this hash as handled — the $effect then won't recompute on
+					// open. (If inputs ARE stale, we leave lastHash at the persisted
+					// p.args._fitHash so a genuine change still triggers a recompute.)
+					lastHash = getHash;
+					p.args._fitHash = lastHash;
 				}
-				// Note: lastHash is NOT set here, so $effect will always fire after mount
-				// and recompute from current inputs regardless of staleness
 			}
 		}
 		mounted = true;

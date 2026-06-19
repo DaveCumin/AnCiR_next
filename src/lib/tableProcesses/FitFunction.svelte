@@ -334,7 +334,10 @@
 		out += p.args.permutationStatistic;
 		return out;
 	});
-	let lastHash = '';
+	// Persisted in p.args so reopening the control panel (which remounts this
+	// component) doesn't reset it to '' and trigger a needless recompute. The
+	// fit only re-runs when getHash actually differs (an input or arg changed).
+	let lastHash = p.args._fitHash ?? '';
 
 	function onYSelectionChange() {
 		const fitColsChanged = syncYColumns();
@@ -556,6 +559,7 @@
 
 		if (token === _calcToken) calculating = false;
 		lastHash = getHash;
+		p.args._fitHash = lastHash;
 	}
 
 	let yExcludeIds = $derived.by(() => {
@@ -635,7 +639,10 @@
 				const inputsAreStale =
 					(p.args.xIN >= 0 && (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0) ||
 					(p.args.yIN ?? []).some((id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0);
-				if (!inputsAreStale) lastHash = getHash;
+				if (!inputsAreStale) {
+						lastHash = getHash;
+						p.args._fitHash = lastHash;
+					}
 			}
 		}
 		mounted = true;

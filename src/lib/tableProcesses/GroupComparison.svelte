@@ -755,6 +755,10 @@
 
 	function doComparison() {
 		[comparisonData, p.args.valid] = groupcomparison(p.args);
+		// Publish warnings onto the TP object so the node (collapsed or expanded)
+		// can surface them without the control panel being open. See the node
+		// warning badge in TableProcessNode/CompactNode.
+		p.warnings = comparisonData?.warnings ?? [];
 		lastHash = getHash;
 	}
 

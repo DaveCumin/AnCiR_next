@@ -116,6 +116,11 @@
 		displayName = $state('');
 		args = $state({});
 		refTPId = $state(null);
+		// Caution messages published by the TP's editor (e.g. GroupComparison's
+		// normality/variance warnings). Surfaced on the node as a yellow triangle
+		// (expanded) / yellow border (collapsed). Declared as $state so updates are
+		// reactive even though the property is assigned after construction.
+		warnings = $state([]);
 
 		constructor({ ...dataIN }, _parent = null, id = null) {
 			if (id === null) {

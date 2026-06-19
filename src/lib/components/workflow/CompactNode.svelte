@@ -14,6 +14,11 @@
 	let outputs = $derived(node.ports?.outputs ?? []);
 	let height = $derived(compactNodeHeight(inputs.length, outputs.length));
 
+	// Warnings published by a TP's editor (e.g. GroupComparison normality caution).
+	// Shown as a yellow border on the collapsed square; details in the tooltip.
+	let warnings = $derived(Array.isArray(node.tpObj?.warnings) ? node.tpObj.warnings : []);
+	let hasWarning = $derived(warnings.length > 0);
+
 	// Icon name by kind, falling back to a neutral glyph.
 	let iconName = $derived.by(() => {
 		if (node.type === 'data') {
@@ -30,7 +35,7 @@
 		return 'gear';
 	});
 
-	const dotTop = (slot, count) => compactPortAnchorY(slot, count, height) - 5; // dot is 10px
+	const dotTop = (slot, count) => compactPortAnchorY(slot, count, height) - 6.5; // dot is 13px
 
 	// Hover tooltip: "<node name> — <port>". For per-column ports (col_<id>, used
 	// by groups and table-process outputs) resolve the friendly column name.
@@ -66,10 +71,11 @@
 <div
 	class="compact-node"
 	class:selected
+	class:has-warning={hasWarning}
 	style="width:{COMPACT_W}px; height:{height}px;"
 	role="button"
 	tabindex="0"
-	{@attach tooltip(node.label ?? '')}
+	{@attach tooltip(hasWarning ? `${node.label ?? ''}\n⚠ ${warnings.join('\n')}` : (node.label ?? ''))}
 >
 	<span class="compact-icon"><Icon name={iconName} width={22} height={22} /></span>
 
@@ -128,6 +134,14 @@
 			0 1px 3px rgba(0, 0, 0, 0.08),
 			0 0 0 2px rgba(77, 159, 227, 0.28);
 	}
+	/* Analysis has warnings (e.g. non-normal data under a parametric test). The
+	   yellow border survives selection so the caution stays visible. */
+	.compact-node.has-warning {
+		border-color: #e0a800;
+		box-shadow:
+			0 1px 3px rgba(0, 0, 0, 0.08),
+			0 0 0 2px rgba(224, 168, 0, 0.4);
+	}
 	.compact-icon {
 		position: absolute;
 		inset: 0;
@@ -140,8 +154,8 @@
 	/* Port dots — mirror WorkflowNode.svelte so wiring/handlers behave identically. */
 	.port-dot {
 		position: absolute;
-		width: 10px;
-		height: 10px;
+		width: 13px;
+		height: 13px;
 		border-radius: 50%;
 		background: var(--color-lightness-95, #ececec);
 		border: 1px solid var(--color-lightness-60, #8a8a8a);
@@ -153,7 +167,7 @@
 	.port-dot::before {
 		content: '';
 		position: absolute;
-		inset: -6px -10px;
+		inset: -2px -16px;
 		border-radius: 8px;
 	}
 	/* Sit just outside the edge (dot touches the border) so the port reads as

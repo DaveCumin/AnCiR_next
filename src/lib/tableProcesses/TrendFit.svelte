@@ -230,7 +230,10 @@
 		out += outputX_col?.getDataHash;
 		return out;
 	});
-	let lastHash = '';
+	// Persisted in p.args so reopening the control panel (which remounts this
+	// component) doesn't reset it to '' and force a recompute. Only re-runs when
+	// getHash actually differs (an input or arg changed).
+	let lastHash = p.args._fitHash ?? '';
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
@@ -240,6 +243,7 @@
 				[trendData, p.args.valid] = trendfit(p.args);
 			});
 			lastHash = getHash;
+			p.args._fitHash = lastHash;
 		}
 	});
 
@@ -363,6 +367,7 @@
 			p.args.valid = Object.keys(result.y_results).length > 0;
 			permutationInProgress = false;
 			lastHash = getHash;
+			p.args._fitHash = lastHash;
 		} else {
 			[trendData, p.args.valid] = trendfit(p.args);
 			for (const yId of p.args.yIN ?? []) {
@@ -377,6 +382,7 @@
 				}
 			}
 			lastHash = getHash;
+			p.args._fitHash = lastHash;
 		}
 	}
 
@@ -443,7 +449,10 @@
 				const inputsAreStale =
 					(p.args.xIN >= 0 && (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0) ||
 					(p.args.yIN ?? []).some((id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0);
-				if (!inputsAreStale) lastHash = getHash;
+				if (!inputsAreStale) {
+						lastHash = getHash;
+						p.args._fitHash = lastHash;
+					}
 			}
 		}
 		mounted = true;

@@ -8,8 +8,10 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import TableProcess from '$lib/core/TableProcess.svelte';
 	import MakeNewColumn from './modals/MakeNewColumn.svelte';
+	import { openImportData } from '$lib/core/dataSourceActions.js';
 	import SwapColumns from './modals/SwapColumns.svelte';
 	import Editable from '../inputs/Editable.svelte';
+	import { tooltip } from '$lib/utils/tooltip.js';
 
 	let showSwapColumns = $state(false);
 	let showNewCol = $state(false);
@@ -131,10 +133,7 @@
 		e.dataTransfer.effectAllowed = 'move';
 	}
 	function startDragColumn(e, columnId, fromSection) {
-		e.dataTransfer?.setData(
-			'application/x-ancir-drag',
-			`col:${columnId}:${fromSection}`
-		);
+		e.dataTransfer?.setData('application/x-ancir-drag', `col:${columnId}:${fromSection}`);
 		e.dataTransfer.effectAllowed = 'move';
 	}
 	function startDragTP(e, tpId) {
@@ -218,7 +217,12 @@
 		<button class="icon" onclick={() => (showSwapColumns = true)} title="Swap columns">
 			<Icon name="swap" width={16} height={16} />
 		</button>
-		<button class="icon" onclick={openMakeNewColumn} title="Add column">
+		<button
+			class="icon"
+			onclick={() => openImportData()}
+			title="Import data"
+			{@attach tooltip('Import data')}
+		>
 			<Icon name="add" width={16} height={16} />
 		</button>
 	</div>
@@ -253,8 +257,7 @@
 				{#each group.sourceColumnIds ?? [] as colId (colId)}
 					{@const col = getColumnById(colId)}
 					{#if col}
-						{@const colSelected =
-							canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
+						{@const colSelected = canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
 						{@const ownsSelectedProcess =
 							canvasSelection?.kind === 'process' &&
 							col.processes?.some((pr) => pr.id === canvasSelection.id)}
@@ -343,8 +346,7 @@
 				</summary>
 
 				{#each ungroupedColumns as col (col.id)}
-					{@const colSelected =
-						canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
+					{@const colSelected = canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
 					{@const ownsSelectedProcess =
 						canvasSelection?.kind === 'process' &&
 						col.processes?.some((pr) => pr.id === canvasSelection.id)}

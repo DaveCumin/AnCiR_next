@@ -18,6 +18,7 @@
 	import NodeNoteButton from './NodeNoteButton.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { getNodeName, setNodeName } from '$lib/core/nodeNaming.js';
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import {
 		setGroupPortY,
 		clearGroupPortPositions
@@ -37,6 +38,11 @@
 	const PORT_H = 22; // mirrors WorkflowEditor.PORT_H
 
 	const tp = $derived(node.tpObj);
+	// Warnings published by the TP's editor (e.g. GroupComparison's normality /
+	// variance cautions). Shown as a yellow triangle next to the label.
+	const warnings = $derived(Array.isArray(tp?.warnings) ? tp.warnings : []);
+	const hasWarning = $derived(warnings.length > 0);
+	const warningText = $derived(warnings.join('\n'));
 	const inputPorts = $derived(node.ports?.inputs ?? []);
 	// [{ key, colId }] from ProcessNode meta, resolved to live Column instances.
 	const outputColumns = $derived(
@@ -212,6 +218,14 @@
 	tabindex="0"
 >
 	<div class="tp-header">
+		{#if hasWarning}
+			<span
+				class="node-warning-badge"
+				role="img"
+				aria-label={`Warning: ${warningText}`}
+				{@attach tooltip(warningText)}>⚠</span
+			>
+		{/if}
 		<div class="tp-title" onpointerdown={stopPointer} role="presentation">
 			<Editable
 				value={getNodeName(node)}
@@ -239,9 +253,11 @@
 				oncontextmenu={onAllPortContextMenu}
 				ondblclick={onAllPortDblClick}
 				onclick={(e) => e.stopPropagation()}
-				title={allIsSubset
-					? `all (${allColumnIds.length} of ${outputColumns.length} outputs)`
-					: `all (every output)`}
+				{@attach tooltip(
+					allIsSubset
+						? `all (${allColumnIds.length} of ${outputColumns.length} outputs)`
+						: `all (every output)`
+				)}
 				aria-label="output port all"
 				aria-haspopup="menu"
 			></button>
@@ -301,7 +317,7 @@
 						data-node-id={node.id}
 						data-port-name={port.name}
 						data-port-dir="in"
-						title={`Input: ${port.name}${port.dynamic ? ' (many)' : ''}`}
+						{@attach tooltip(`Input: ${port.name}${port.dynamic ? ' (many)' : ''}`)}
 						onmousedown={(e) => disconnectInput(e, port.name)}
 						onmouseup={(e) => endAtInput(e, port.name)}
 						oncontextmenu={(e) => disconnectInput(e, port.name)}
@@ -356,7 +372,7 @@
 							onmousedown={(e) => startFromOutput(e, `col_${colId}`)}
 							oncontextmenu={onPortContextMenu}
 							onclick={(e) => e.stopPropagation()}
-							title={`output: ${col.name}`}
+							{@attach tooltip(`output: ${col.name}`)}
 							aria-label={`output port ${col.name}`}
 						></button>
 					</div>
@@ -426,6 +442,16 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+	/* Yellow caution triangle shown next to the label when the analysis has
+	   warnings (e.g. non-normal data under a parametric test). */
+	.node-warning-badge {
+		flex-shrink: 0;
+		font-size: 13px;
+		line-height: 1;
+		color: #e0a800;
+		cursor: help;
+		user-select: none;
 	}
 	.expand-indicator {
 		font-size: 9px;
@@ -549,8 +575,8 @@
 	}
 
 	.inline-port {
-		width: 10px;
-		height: 10px;
+		width: 13px;
+		height: 13px;
 		border-radius: 50%;
 		background: var(--color-lightness-95, #ececec);
 		border: 1px solid var(--color-lightness-60, #8a8a8a);
@@ -563,7 +589,7 @@
 	.inline-port::before {
 		content: '';
 		position: absolute;
-		inset: -6px -12px;
+		inset: -4px -16px;
 		border-radius: 8px;
 	}
 	.inline-port:hover {
@@ -596,8 +622,8 @@
 		right: -13px; /* -5 dot - 8 header padding, matches GroupNode */
 		top: 50%;
 		transform: translateY(-50%);
-		width: 10px;
-		height: 10px;
+		width: 13px;
+		height: 13px;
 	}
 
 	.empty-hint {
