@@ -259,6 +259,18 @@
 				.filter(Boolean);
 		}
 
+		// Phase 4: migrate any legacy inline column processes into the dataflow
+		// model (free nodes + producer columns). Idempotent — a no-op for sessions
+		// already in the node model; conservative for TP-output / tap columns.
+		try {
+			const { migrated } = migrateAllInlineProcesses();
+			if (migrated > 0 && onProgress) {
+				onProgress(`Migrating ${migrated} column pipeline${migrated === 1 ? '' : 's'} to nodes…`);
+			}
+		} catch (e) {
+			console.warn('Inline-process migration failed', e);
+		}
+
 		if (jsonData.appState) {
 			if (onProgress) onProgress('Restoring settings…');
 			await yieldFrame();
@@ -278,6 +290,7 @@
 	import { TableProcess } from '$lib/core/TableProcess.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';
 	import { Process } from '$lib/core/Process.svelte';
+	import { migrateAllInlineProcesses } from '$lib/core/dataflowMigration.js';
 	import { tick } from 'svelte';
 
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
