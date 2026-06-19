@@ -9,6 +9,7 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { appConsts, core } from './core.svelte.js';
 import { Column } from './Column.svelte';
 import { Process } from './Process.svelte';
+import { applyOp } from './operations.js';
 import { add } from '$lib/processes/Add.svelte';
 
 beforeAll(() => {
@@ -168,6 +169,40 @@ describe('producer-sourced columns (dataflow model)', () => {
 			core.data.push(out);
 			out.customName = 'My result';
 			expect(out.name).toBe('My result');
+		});
+	});
+
+	describe('setOrphanProcessArg op (free-process input wiring)', () => {
+		it('sets a free process arg and returns an invertible op', () => {
+			const input = makeSourceColumn([1, 2, 3]);
+			const proc = makeFreeAdd(input, 5); // args: { value: 5, inIN: input.id }
+			const inv = applyOp({
+				kind: 'setOrphanProcessArg',
+				processId: proc.id,
+				key: 'inIN',
+				value: 999
+			});
+			expect(proc.args.inIN).toBe(999);
+			expect(inv).toEqual({
+				kind: 'setOrphanProcessArg',
+				processId: proc.id,
+				key: 'inIN',
+				value: input.id
+			});
+			applyOp(inv);
+			expect(proc.args.inIN).toBe(input.id);
+		});
+
+		it('no-ops when the value is unchanged', () => {
+			const input = makeSourceColumn([1]);
+			const proc = makeFreeAdd(input, 5);
+			const inv = applyOp({
+				kind: 'setOrphanProcessArg',
+				processId: proc.id,
+				key: 'inIN',
+				value: input.id
+			});
+			expect(inv).toBeNull();
 		});
 	});
 

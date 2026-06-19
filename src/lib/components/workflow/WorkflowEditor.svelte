@@ -1402,12 +1402,19 @@
 		const fromNode = allNodes.find((n) => n.id === fromNodeId);
 		let colId;
 		if (fromNode?.type === 'process') {
-			const parent = core.data.find((c) =>
-				(c.processes ?? []).some((p) => p.id === fromNode.refId)
-			);
-			const proc = parent?.processes.find((p) => p.id === fromNode.refId);
-			if (!parent || !proc) return;
-			colId = findOrCreateTapColumn(parent, proc).id;
+			// Free process (dataflow): its output is its producer column.
+			const producer = core.data.find((c) => c.producerNodeId === `process_${fromNode.refId}`);
+			if (producer) {
+				colId = producer.id;
+			} else {
+				// Legacy: a process living in a column's processes[] chain — tap it.
+				const parent = core.data.find((c) =>
+					(c.processes ?? []).some((p) => p.id === fromNode.refId)
+				);
+				const proc = parent?.processes.find((p) => p.id === fromNode.refId);
+				if (!parent || !proc) return;
+				colId = findOrCreateTapColumn(parent, proc).id;
+			}
 		} else {
 			colId = resolveOutputColumnId(fromNodeId, fromPort);
 		}
@@ -1415,24 +1422,36 @@
 		const target = allNodes.find((n) => n.id === toNodeId);
 		if (!target) return;
 
-		// Column process: only orphans accept user-drawn wires. Wiring a column
-		// into a process input creates a BRANCH (a hidden tap column off the
-		// source, with the orphan as its sole process) rather than appending the
-		// orphan to the source column's own processes[] chain. This is the same
-		// mechanism the edge-splice uses, and it means the source column's
-		// EXISTING consumers keep reading the unmodified column — adding a process
-		// taps off the data, it doesn't reroute everything downstream.
+		// Column process input (dataflow model): only free (orphan) process nodes
+		// accept user-drawn input wires. Wiring a column into a free process input
+		// records the process's input column (args.inIN) and, the first time,
+		// creates a PRODUCER output column that represents the node's result. The
+		// process stays free in core.orphanProcesses — it is no longer shoved onto
+		// a column's processes[] chain. Both steps go through the op layer (batched)
+		// so the wire is a single undo. The producer column is hidden on the canvas;
+		// the node's output port is its handle (see ProcessNode columnSourceRef).
 		if (target.type === 'process' && target.processObj && toPort === 'input') {
 			const proc = target.processObj;
 			if (!proc.parentCol) {
-				const sourceCol = core.data.find((c) => c.id === colId);
-				const tapCol = new Column({ refId: colId, refUpToProcessId: null });
-				tapCol.isTap = true;
-				tapCol.customName = `${sourceCol?.name ?? 'col'} → ${proc.displayName || proc.name}`;
-				pushObj(tapCol);
-				core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== proc.id);
-				proc.parentCol = tapCol;
-				tapCol.processes = [proc];
+				const procNodeId = `process_${proc.id}`;
+				const ops = [];
+				if (proc.args?.inIN !== colId) {
+					ops.push({ kind: 'setOrphanProcessArg', processId: proc.id, key: 'inIN', value: colId });
+				}
+				const hasProducer = core.data.some((c) => c.producerNodeId === procNodeId);
+				if (!hasProducer) {
+					const srcType = core.data.find((c) => c.id === colId)?.type ?? 'number';
+					ops.push({
+						kind: 'addColumn',
+						columnData: {
+							type: srcType,
+							producerNodeId: procNodeId,
+							producerPort: 'output',
+							producerArtifactKind: 'column'
+						}
+					});
+				}
+				if (ops.length) mutationService.batch(ops);
 			}
 			return;
 		}
