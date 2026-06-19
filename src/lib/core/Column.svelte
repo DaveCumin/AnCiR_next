@@ -599,8 +599,6 @@
 <script>
 	// @ts-nocheck
 	import Icon from '$lib/icons/Icon.svelte';
-	import Processcomponent from '$lib/core/Process.svelte'; //Need to rename it because Process is used as the class name in the module, above
-	import AddProcess from '$lib/components/iconActions/AddProcess.svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
 
@@ -614,71 +612,14 @@
 		canvasSelectedProcessId = null
 	} = $props();
 
-	let addBtnRef;
-	let showAddProcess = $state(false);
-	let dropdownTop = $state(0);
-	let dropdownLeft = $state(0);
-
-	function recalculateDropdownPosition() {
-		if (!addBtnRef) return;
-		const rect = addBtnRef.getBoundingClientRect();
-
-		dropdownTop = rect.top + window.scrollY;
-		dropdownLeft = rect.right + window.scrollX + 12;
-	}
-
-	let columnSelected = $state(-1);
-	let openClps = $state({});
-
-	function openDropdown(e, id) {
-		e.preventDefault();
-		e.stopPropagation();
-
-		columnSelected = id;
-
-		const rect = e.currentTarget.getBoundingClientRect();
-		dropdownTop = rect.top + window.scrollY;
-		dropdownLeft = rect.right + window.scrollX + 12;
-		showAddProcess = true;
-
-		openClps[id] = true;
-	}
-
-	let openMenus = $state({});
-	function toggleMenu(id) {
-		openMenus[id] = !openMenus[id];
-	}
-
-	// Drag-to-reorder processes
-	let dragIdx = $state(null);
-	let dragOverIdx = $state(null);
-
-	function onDragStart(e, idx) {
-		dragIdx = idx;
-		e.dataTransfer.effectAllowed = 'move';
-	}
-
-	function onDragOver(e, idx) {
-		e.preventDefault();
-		e.dataTransfer.dropEffect = 'move';
-		dragOverIdx = idx;
-	}
-
-	function onDrop(e, idx) {
-		e.preventDefault();
-		if (dragIdx != null && dragIdx !== idx) {
-			const items = [...col.processes];
-			const [moved] = items.splice(dragIdx, 1);
-			items.splice(idx, 0, moved);
-			col.processes = items;
-		}
-		dragIdx = null;
-		dragOverIdx = null;
-	}
-
-	function onDragEnd() {
-		dragIdx = null;
-		dragOverIdx = null;
+	// Find/select: jump to this column's node on the workflow canvas and open its
+	// editor in the Control Panel. A producer (derived) column is represented by
+	// its producing node; otherwise by its own data node.
+	function findSelect() {
+		appState.canvasSelectedNodeId = col.producerNodeId ?? `data_${col.id}`;
+		appState.focusNodeRequest = { id: appState.canvasSelectedNodeId, n: (appState.focusNodeRequest?.n ?? 0) + 1 };
+		appState.view = 'canvas';
+		appState.showControlPanel = true;
 	}
 
 	function onTypeChange(newType) {
@@ -700,17 +641,10 @@
 	<p>Column is undefined</p>
 {:else}
 	<div class="clps-container">
-		<details class="clps-item" bind:open={openClps[col.id]}>
-			<summary
-				class="clps-title-container"
-				onclick={(e) => e.preventDefault()}
-				onkeydown={(e) => {
-					if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget)
-						e.preventDefault();
-				}}
-			>
-				<!-- <div class="column-indicator"></div> -->
-
+		<!-- Flat column row: no add-process "+" (operations are nodes now) and no
+		     disclosure arrow. Time columns show their format inline by default. -->
+		<div class="clps-item">
+			<div class="clps-title-container">
 				<div class="clps-title">
 					<TypeSelector bind:value={col.type} onChange={onTypeChange} />
 
@@ -725,14 +659,14 @@
 
 				<div class="clps-title-button">
 					<button
-						class="icon"
+						class="icon find-select-btn"
+						title="Find on canvas / edit in panel"
 						onclick={(e) => {
 							e.stopPropagation();
-							toggleMenu(col.id);
-							openDropdown(e, col.id);
+							findSelect();
 						}}
 					>
-						<Icon name="add" width={18} height={18} className="menu-icon" />
+						<Icon name="process" width={16} height={16} className="menu-icon" />
 					</button>
 
 					{#if col.tableProcessGUId == '' && col.refId == null}
@@ -740,71 +674,49 @@
 							<Icon name="trash" width={18} height={18} className="menu-icon" />
 						</button>
 					{/if}
-
-					<button
-						class="icon"
-						onclick={() => {
-							openClps[col.id] = !openClps[col.id];
-						}}
-					>
-						{#if openClps[col.id]}
-							<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />
-						{:else}
-							<Icon
-								name="caret-right"
-								width={20}
-								height={20}
-								className="second-detail-title-icon"
-							/>
-						{/if}
-					</button>
 				</div>
-			</summary>
-
-			<div class="clps-content-container">
-				<div class="data-component-info" style="display:none;">
-					{#if !canChange}
-						{#if !col.isReferencial()}
-							<div>
-								<italic><p>{col.provenance}</p></italic>
-							</div>
-						{:else}
-							<div>
-								<italic><p>primary source</p></italic>
-								<!-- TODO: check with DC how to name-->
-							</div>
-						{/if}
-					{/if}
-				</div>
-
-				<div class="line"></div>
-
-				<!-- {#if col.type == 'number'}[{Math.min(...col.getData())},{Math.max(...col.getData())}]{/if} -->
-				<div class="control-input display">
-					{#if col.type == 'time'}
-						<p>Time Format</p>
-						{#if !canChange}
-							<input bind:value={col.timeFormat} />
-						{:else}
-							{getColumnById(col.refId)?.timeFormat}
-						{/if}
-					{/if}
-				</div>
-
-				<!-- Inline column "processes" are retired in the dataflow model: an
-				     operation is a free node producing a derived column (see the "+"
-				     above, AddProcess). Legacy inline processes are migrated to nodes
-				     on session load (dataflowMigration.js), so nothing renders here. -->
 			</div>
 
-			<div class="block"></div>
-		</details>
+			{#if col.type == 'time'}
+				<div class="control-input display time-format-row">
+					<p>Time Format</p>
+					{#if !canChange}
+						<input bind:value={col.timeFormat} />
+					{:else}
+						<span>{getColumnById(col.refId)?.timeFormat}</span>
+					{/if}
+				</div>
+			{/if}
+		</div>
 	</div>
 {/if}
 
-<AddProcess bind:showDropdown={showAddProcess} columnSelected={col} {dropdownTop} {dropdownLeft} />
-
 <style>
+	/* Find/select reveals on row hover; keeps the row uncluttered at rest. */
+	.find-select-btn {
+		opacity: 0;
+		transition: opacity 0.12s ease;
+	}
+	.clps-item:hover .find-select-btn,
+	.find-select-btn:focus-visible {
+		opacity: 1;
+	}
+	.time-format-row {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: 12px;
+		padding: 2px 4px 4px;
+	}
+	.time-format-row p {
+		margin: 0;
+		color: var(--color-lightness-45, #777);
+	}
+	.time-format-row input {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
 	/* .data-collapsible-title-container {
 		width: 100%;
 		min-width: 0;
