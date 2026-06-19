@@ -135,7 +135,7 @@
 		// the simple index-based formula wrong. GroupNode publishes per-port Y
 		// after layout — use that when available, otherwise fall through to
 		// the formula (covers initial paint and non-group nodes).
-		if (node?.type === 'group' || node?.type === 'tableprocess') {
+		if (node?.type === 'group' || node?.type === 'tableprocess' || node?.type === 'process') {
 			const published = getGroupPortY(node.id, portName);
 			if (typeof published === 'number') return published;
 		}
@@ -180,8 +180,8 @@
 		// Notes carry their own resizable width on the note object.
 		if (node?.type === 'note') return node?.noteObj?.width ?? 200;
 		const expanded = !collapsedNodeIds.has(node?.id);
-		if (node?.type === 'tableprocess') return expanded ? EDITOR_PANEL_WIDTH : TP_NODE_WIDTH;
-		if (node?.type === 'process') return expanded ? EDITOR_PANEL_WIDTH : NODE_WIDTH;
+		if (node?.type === 'tableprocess' || node?.type === 'process')
+			return expanded ? EDITOR_PANEL_WIDTH : TP_NODE_WIDTH;
 		return NODE_WIDTH;
 	}
 
@@ -190,9 +190,10 @@
 		if (isCompact(node)) {
 			return compactNodeHeight(node?.ports?.inputs?.length ?? 0, node?.ports?.outputs?.length ?? 0);
 		}
-		if (node?.type === 'tableprocess') {
+		if (node?.type === 'tableprocess' || node?.type === 'process') {
 			// Side-by-side: inputs left, output-column rows right. The `all` port
-			// sits in the header, so output rows = outputColumns count.
+			// sits in the header, so output rows = outputColumns count. (Free process
+			// nodes render via TableProcessNode too.)
 			const ins = node?.ports?.inputs?.length ?? 0;
 			const outs = node?.outputColumns?.length ?? 0;
 			const rows = Math.max(1, ins, outs);
@@ -2925,7 +2926,7 @@
 								on:extractstart={handleExtractStart}
 								on:cardmousedown={(ev) => handleNodeWrapperMouseDown(ev.detail, node)}
 							/>
-						{:else if node.type === 'tableprocess'}
+						{:else if node.type === 'tableprocess' || node.type === 'process'}
 							<TableProcessNode
 								{node}
 								selected={isSelected}
@@ -2991,25 +2992,15 @@
 
 						{#if isExpanded && node.type === 'process' && node.processObj}
 							{@const PComp = appConsts.processMap.get(node.processName)?.component}
-							{@const proc = node.processObj}
-							{@const parent = proc.parentCol}
-							{@const previewCol = parent
-								? {
-										name: `${parent?.name ?? ''}@${proc.displayName || proc.name}`,
-										getData: () => parent?.getDataUpToProcess?.(proc.id) ?? []
-									}
-								: core.data.find((c) => c.producerNodeId === `process_${proc.id}`)}
 							{#if PComp}
+								<!-- The node card (TableProcessNode) shows inputs + per-output mini
+								     tables; this panel below it holds the operation's settings
+								     (e.g. Add's constant). -->
 								<div
 									class="process-editor-panel"
 									style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;"
 								>
 									<PComp p={node.processObj} />
-									{#if previewCol}
-										<div class="process-intermediate-preview">
-											<MiniDataTable column={previewCol} maxRows={5} />
-										</div>
-									{/if}
 								</div>
 							{/if}
 						{:else if isExpanded && node.type === 'tableprocess' && node.tpObj}

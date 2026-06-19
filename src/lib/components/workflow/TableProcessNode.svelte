@@ -48,9 +48,17 @@
 	const hasNote = $derived(!!core.nodeNotes[node.id]?.trim());
 	const inputPorts = $derived(node.ports?.inputs ?? []);
 	// [{ key, colId }] from ProcessNode meta, resolved to live Column instances.
+	// Each entry's `port` is the output dot's port name (TP: col_<colId>; free
+	// process: the producer column's producerPort, e.g. out_<inputColId>). Falls
+	// back to col_<colId> for older callers.
 	const outputColumns = $derived(
 		(node.outputColumns ?? [])
-			.map(({ key, colId }) => ({ key, colId, col: getColumnById(colId) }))
+			.map(({ key, colId, port }) => ({
+				key,
+				colId,
+				port: port ?? `col_${colId}`,
+				col: getColumnById(colId)
+			}))
 			.filter((entry) => !!entry.col)
 	);
 
@@ -141,10 +149,10 @@
 			else setGroupPortY(node.id, name, HEADER_H + i * PORT_H + PORT_H / 2);
 		}
 		for (let i = 0; i < outputColumns.length; i++) {
-			const { colId } = outputColumns[i];
+			const { colId, port } = outputColumns[i];
 			const el = rowPortEls[colId];
-			if (el) setGroupPortY(node.id, `col_${colId}`, nodeLocalCenterY(el));
-			else setGroupPortY(node.id, `col_${colId}`, HEADER_H + i * PORT_H + PORT_H / 2);
+			if (el) setGroupPortY(node.id, port, nodeLocalCenterY(el));
+			else setGroupPortY(node.id, port, HEADER_H + i * PORT_H + PORT_H / 2);
 		}
 	}
 
@@ -347,7 +355,7 @@
 			onwheel={(e) => { if (!e.ctrlKey && !e.metaKey) e.stopPropagation(); }}
 			role="presentation"
 		>
-			{#each outputColumns as { colId, col } (colId)}
+			{#each outputColumns as { colId, col, port } (colId)}
 				{@const meta = typeMeta(col)}
 				{@const isOpen = rowExpanded[colId] === true}
 				<div class="out-row" class:expanded={isOpen}>
@@ -378,12 +386,12 @@
 						<button
 							type="button"
 							class="port-dot dot-output inline-port row-port"
-							class:splice-target={spliceTargetPort === `col_${colId}`}
+							class:splice-target={spliceTargetPort === port}
 							bind:this={rowPortEls[colId]}
 							data-node-id={node.id}
-							data-port-name={`col_${colId}`}
+							data-port-name={port}
 							data-port-dir="out"
-							onmousedown={(e) => startFromOutput(e, `col_${colId}`)}
+							onmousedown={(e) => startFromOutput(e, port)}
 							oncontextmenu={onPortContextMenu}
 							onclick={(e) => e.stopPropagation()}
 							{@attach tooltip(`output: ${col.name}`)}

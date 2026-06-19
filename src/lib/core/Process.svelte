@@ -52,14 +52,17 @@
 				const processInfo = appConsts.processMap.get(this.name);
 				this.displayName = processInfo.displayName || this.name;
 
-				//Now put in the args, if provided, or use defaults
-				if (dataIN.args) {
-					this.args = dataIN.args;
-				} else {
-					this.args = Object.fromEntries(
-						Array.from(processInfo.defaults.entries()).map(([key, value]) => [key, value.val])
-					);
-				}
+				// Start from the registry defaults, then let any provided args
+				// override. (Provided args alone could omit keys with defaults — e.g.
+				// a palette-spawned Add passing only { inIN } would otherwise have no
+				// `value` and compute NaN.)
+				const defaults = Object.fromEntries(
+					Array.from(processInfo.defaults?.entries() ?? []).map(([key, value]) => [
+						key,
+						value.val
+					])
+				);
+				this.args = { ...defaults, ...(dataIN.args ?? {}) };
 			}
 			//set the type of data of the parent - for display purposes
 			this.parentCol = parent;

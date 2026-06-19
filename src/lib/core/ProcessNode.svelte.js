@@ -472,6 +472,15 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				})
 			: [makeNodePort('output', 'output', 'column', true)];
 		const ports = { inputs: [makeNodePort('input', 'input', 'column', true)], outputs };
+		// Render free process nodes like TableProcess nodes: inline output-column
+		// rows with per-output mini tables. Each entry carries its `port` (the
+		// producer column's producerPort, e.g. out_<inputColId>) so the rendered
+		// dot's name matches what columnSourceRef anchors consumers to.
+		const outputColumns = producerCols.map((pc) => ({
+			key: pc.producerPort || 'output',
+			colId: pc.id,
+			port: pc.producerPort || 'output'
+		}));
 		nodes.push(
 			new ProcessNode({
 				id: `process_${p.id}`,
@@ -484,7 +493,8 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 					refId: p.id,
 					processObj: p,
 					processName: p.name,
-					isOrphan: true
+					isOrphan: true,
+					outputColumns
 				}
 			})
 		);
@@ -498,7 +508,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		const outputColumns = [];
 		for (const [key, colId] of Object.entries(args?.out ?? {})) {
 			if (typeof colId !== 'number' || colId < 0) continue;
-			outputColumns.push({ key, colId });
+			outputColumns.push({ key, colId, port: `col_${colId}` });
 		}
 		const outputPorts = [makeNodePort('all', 'output', 'column', true)];
 		for (const { colId } of outputColumns) {

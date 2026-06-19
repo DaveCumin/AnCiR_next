@@ -95,8 +95,8 @@ describe('TableProcess inline output columns', () => {
 		const graph = getCachedProcessNodeGraph(makeCore(), makeAppConsts());
 		const tp = graph.nodes.find((n) => n.id === 'tableprocess_5');
 		expect(tp.outputColumns).toEqual([
-			{ key: 'xOut', colId: 100 },
-			{ key: 'yOut_101', colId: 101 }
+			{ key: 'xOut', colId: 100, port: 'col_100' },
+			{ key: 'yOut_101', colId: 101, port: 'col_101' }
 		]);
 	});
 
@@ -187,7 +187,7 @@ describe('TableProcess inline output columns', () => {
 		expect(ids).not.toContain('data_200');
 		const nested = graph.nodes.find((n) => n.id === 'tableprocess_nested_9');
 		expect(nested.ports.outputs.map((p) => p.name)).toContain('col_200');
-		expect(nested.outputColumns).toEqual([{ key: 'xOut', colId: 200 }]);
+		expect(nested.outputColumns).toEqual([{ key: 'xOut', colId: 200, port: 'col_200' }]);
 	});
 });
 
