@@ -238,8 +238,12 @@
 		name = $derived.by(() => {
 			if (this.customName !== null) return this.customName;
 			if (this.isReferencial()) {
-				this.customName = this.refColumn?.name + '*';
-				return this.refColumn?.name + '*';
+				// Pure derived: do NOT cache into customName here. Mutating state inside
+				// a $derived is forbidden in Svelte 5 (state_unsafe_mutation) and throws
+				// when the first read happens inside another derived (e.g. the graph
+				// signature serialising a fresh column). Returning the computed name also
+				// keeps it tracking the referenced column if that gets renamed.
+				return (this.refColumn?.name ?? '') + '*';
 			}
 			// Producer-sourced columns: descriptive name that shows the steps taken,
 			// disambiguated with a "(n)" suffix when an earlier column has the same

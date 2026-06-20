@@ -589,6 +589,9 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	for (const tp of core.tableProcesses ?? []) emitTableProcessNode(tp, '');
 
 	for (const plot of core.plots ?? []) {
+		// Facet children are generated views of a generator; they aren't shown as
+		// canvas nodes.
+		if (plot.facetParent != null) continue;
 		// Tableplots have a flat `columnRefs` list — keep them as a single `series`
 		// port. Every other plot type carries `data: [{x: {refId}, y: {refId}, z?:
 		// {refId}}, ...]`, so expose flowtest-style {x, ys[, zs]} ports.
@@ -779,6 +782,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	for (const tp of core.tableProcesses ?? []) emitTPConnections(tp);
 
 	for (const plot of core.plots ?? []) {
+		if (plot.facetParent != null) continue; // facet children have no canvas node
 		const plotNodeId = `plot_${plot.id}`;
 		function addPlotCol(colId, port) {
 			if (colId == null || colId < 0) return;

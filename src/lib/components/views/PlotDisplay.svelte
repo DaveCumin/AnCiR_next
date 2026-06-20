@@ -338,7 +338,8 @@
 
 			{#if core.plots.length > 0}
 				{#each core.plots as plot, i (plot.id)}
-					{#if !appState.invisiblePlotIds.includes(plot.id)}
+					{#if !appState.invisiblePlotIds.includes(plot.id) && !plot.facet}
+						<!-- Facet generators don't render as a card here; their children do. -->
 						<Draggable
 							bind:x={plot.x}
 							bind:y={plot.y}

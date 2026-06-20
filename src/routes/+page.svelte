@@ -22,7 +22,7 @@
 	import { loadProcesses } from '$lib/processes/processMap.js';
 	import { loadPlots } from '$lib/plots/plotMap.js';
 	import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { fade } from 'svelte/transition';
 
 	import { dev } from '$app/environment';
@@ -39,7 +39,7 @@
 		createOrphanProcess
 	} from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
-	import { Plot, selectAllPlots } from '$lib/core/Plot.svelte';
+	import { Plot, selectAllPlots, reconcileAllFacets } from '$lib/core/Plot.svelte';
 	import { TableProcess } from '$lib/core/TableProcess.svelte';
 
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
@@ -51,6 +51,27 @@
 	// Initialize history watching (must be in component context)
 	history.init();
 	paramDiffWatcher.init();
+
+	// Keep facet generators' child plots in sync with their wired series. We track
+	// only the generators' geometry + series refIds; reconciliation runs untracked
+	// and is idempotent, so it won't re-trigger itself in the steady state.
+	$effect(() => {
+		const gens = core.plots.filter((p) => p.facet);
+		for (const g of gens) {
+			void g.x;
+			void g.y;
+			void g.width;
+			void g.height;
+			void g.type;
+			for (const s of g.plot?.data ?? []) {
+				void s?.x?.refId;
+				void s?.y?.refId;
+			}
+		}
+		// Also react to children being added/removed (membership changes).
+		void core.plots.length;
+		untrack(() => reconcileAllFacets());
+	});
 
 	// Single ImportData modal instance for the whole app (mounted below). Its
 	// open/close state lives in module scope, so empty-state prompts, the node

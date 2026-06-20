@@ -1,21 +1,60 @@
 <script>
 	// @ts-nocheck
-	import { appConsts } from '$lib/core/core.svelte.js';
+	import { appConsts, core } from '$lib/core/core.svelte.js';
 
 	let { plot, size, onResizeMouseDown } = $props();
 
 	const PlotComp = $derived(appConsts.plotMap.get(plot?.type)?.plot);
 	const previewScale = $derived(plot?.width ? size.w / plot.width : 1);
+
+	// Facet generator: preview the per-series child plots as a small-multiples grid
+	// (matching the workspace), rather than the single all-series plot.
+	const facetChildren = $derived(
+		plot?.facet ? core.plots.filter((p) => p.facetParent === plot.id) : []
+	);
+	const isFacet = $derived(plot?.facet && facetChildren.length > 0);
+	const gridCols = $derived(Math.max(1, Math.ceil(Math.sqrt(facetChildren.length || 1))));
+	const gridRows = $derived(Math.max(1, Math.ceil(facetChildren.length / gridCols)));
+	// Cell size inside the preview panel, and the scale to fit each child into it.
+	const cellW = $derived(size.w / gridCols);
+	const cellH = $derived(size.h / gridRows);
+	function childScale(child) {
+		if (!child?.width || !child?.height) return 1;
+		return Math.min(cellW / child.width, cellH / child.height);
+	}
 </script>
 
 {#if PlotComp && plot}
 	<div class="plot-preview-panel" style="width:{size.w}px; height:{size.h}px;">
-		<div
-			class="plot-preview-inner"
-			style="transform:scale({previewScale}); transform-origin:top left; width:{plot.width}px; height:{plot.height}px;"
-		>
-			<PlotComp theData={plot} which="plot" />
-		</div>
+		{#if isFacet}
+			<div
+				class="facet-grid"
+				style="grid-template-columns:repeat({gridCols}, 1fr); grid-template-rows:repeat({gridRows}, 1fr);"
+			>
+				{#each facetChildren as child (child.id)}
+					{@const CComp = appConsts.plotMap.get(child.type)?.plot}
+					<div class="facet-cell">
+						{#if CComp}
+							<div
+								class="plot-preview-inner"
+								style="transform:scale({childScale(
+									child
+								)}); transform-origin:top left; width:{child.width}px; height:{child.height}px;"
+							>
+								<CComp theData={child} which="plot" />
+							</div>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		{:else}
+			<div
+				class="plot-preview-inner"
+				style="transform:scale({previewScale}); transform-origin:top left; width:{plot.width}px; height:{plot.height}px;"
+			>
+				<PlotComp theData={plot} which="plot" />
+			</div>
+		{/if}
 		{#if onResizeMouseDown}
 			<div
 				class="plot-resize-handle"
@@ -45,6 +84,20 @@
 
 	.plot-preview-inner {
 		pointer-events: none;
+	}
+
+	.facet-grid {
+		display: grid;
+		width: 100%;
+		height: 100%;
+		gap: 1px;
+		background: var(--divider-soft);
+	}
+
+	.facet-cell {
+		overflow: hidden;
+		background: var(--surface-card);
+		position: relative;
 	}
 
 	.plot-resize-handle {

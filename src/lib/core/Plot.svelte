@@ -1,8 +1,8 @@
 <script module>
 	// @ts-nocheck
-	import { Column } from '$lib/core/Column.svelte';
+	import { Column, getColumnById } from '$lib/core/Column.svelte';
 
-	import { appConsts, appState, core } from '$lib/core/core.svelte';
+	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
 	let _counter = 0;
 	function getNextId() {
 		return _counter++;
@@ -14,9 +14,77 @@
 	}
 
 	function deletePlotIds(ids) {
-		for (const id of ids) {
-			const index = core.plots.findIndex((p) => p.id === id);
-			if (index !== -1) core.plots.splice(index, 1);
+		const idSet = new Set(ids);
+		// Deleting a facet generator also removes its generated children.
+		core.plots = core.plots.filter(
+			(p) => !idSet.has(p.id) && !(p.facetParent != null && idSet.has(p.facetParent))
+		);
+	}
+
+	// Reconcile a facet generator's child plots to its series: one child plot per
+	// series (keyed for stable reuse), auto-arranged in a grid. Called on the facet
+	// toggle and whenever series are wired/unwired. No-op for non-generators (and
+	// removes any stale children if faceting is turned off).
+	export function syncFacetChildren(gen) {
+		if (!gen) return;
+		const series = gen.facet ? (gen.plot?.data ?? []) : [];
+		const padding = appState.gridSize ?? 15;
+		const width = snapToGrid(gen.width ?? 360);
+		const height = snapToGrid(gen.height ?? 220);
+		const nCols = Math.max(1, Math.ceil(Math.sqrt(series.length || 1)));
+		const keep = new Set();
+
+		series.forEach((s, i) => {
+			const yRef = s?.y?.refId;
+			if (yRef == null || yRef < 0) return;
+			const xRef = s?.x?.refId;
+			const key = `${gen.id}:${i}:${yRef}`;
+			keep.add(key);
+			const col = i % nCols;
+			const row = Math.floor(i / nCols);
+			// Lay children out below the generator's position.
+			const x = snapToGrid((gen.x ?? 0) + col * (width + padding));
+			const y = snapToGrid((gen.y ?? 0) + height + 2 * padding + row * (height + padding));
+			const yName = getColumnById(yRef)?.name ?? `series ${i + 1}`;
+
+			let child = core.plots.find((p) => p.facetParent === gen.id && p.facetKey === key);
+			if (!child) {
+				child = new Plot({ type: gen.type, name: yName, x, y, width, height });
+				const dataIn = { y: { refId: yRef } };
+				if (xRef != null && xRef >= 0) dataIn.x = { refId: xRef };
+				child.plot.addData(dataIn);
+				child.facetParent = gen.id;
+				child.facetKey = key;
+				core.plots.push(child);
+			} else {
+				child.x = x;
+				child.y = y;
+				child.width = width;
+				child.height = height;
+				child.name = yName;
+			}
+		});
+
+		// Drop children that no longer correspond to a series. Only reassign when
+		// something actually changed so this is idempotent (safe to call from an
+		// effect without re-triggering itself).
+		const stale = core.plots.filter((p) => p.facetParent === gen.id && !keep.has(p.facetKey));
+		if (stale.length) {
+			const staleSet = new Set(stale);
+			core.plots = core.plots.filter((p) => !staleSet.has(p));
+		}
+	}
+
+	// Reconcile every facet generator and prune children whose parent is no longer
+	// a generator (faceting toggled off, or the generator deleted). Idempotent.
+	export function reconcileAllFacets() {
+		const gens = core.plots.filter((p) => p.facet);
+		for (const g of gens) syncFacetChildren(g);
+		const genIds = new Set(gens.map((g) => g.id));
+		const orphans = core.plots.filter((p) => p.facetParent != null && !genIds.has(p.facetParent));
+		if (orphans.length) {
+			const orphanSet = new Set(orphans);
+			core.plots = core.plots.filter((p) => !orphanSet.has(p));
 		}
 	}
 
@@ -107,6 +175,13 @@
 		typeDisplayName = $state('');
 		selected = $state(false);
 		plot;
+		// Faceting (small multiples): a generator plot has facet=true and produces
+		// one child plot per series. Children carry facetParent (the generator id)
+		// and facetKey (stable id for reconciliation); they aren't shown on the
+		// canvas and the generator itself isn't shown on the workspace.
+		facet = $state(false);
+		facetParent = $state(null);
+		facetKey = $state(null);
 
 		constructor(plotData = {}, id = null) {
 			// console.log('new plot: ', plotData);
@@ -144,6 +219,10 @@
 			this.height = plotData.height ?? 250;
 
 			this.plot = plotTypeEntry.data.fromJSON(this, plotData.plot);
+
+			this.facet = plotData.facet ?? false;
+			this.facetParent = plotData.facetParent ?? null;
+			this.facetKey = plotData.facetKey ?? null;
 		}
 
 		toJSON() {
@@ -156,6 +235,9 @@
 				height: this.height,
 				type: this.type,
 				selected: this.selected,
+				facet: this.facet,
+				facetParent: this.facetParent,
+				facetKey: this.facetKey,
 				plot: this.plot
 			};
 		}
@@ -163,8 +245,11 @@
 			const id = json.id ?? json.plotid;
 			const name = json.name ?? 'Untitled Plot';
 
-			const { x, y, width, height, type, selected, plot } = json;
-			return new Plot({ name, x, y, width, height, type, selected, plot }, id);
+			const { x, y, width, height, type, selected, plot, facet, facetParent, facetKey } = json;
+			return new Plot(
+				{ name, x, y, width, height, type, selected, plot, facet, facetParent, facetKey },
+				id
+			);
 		}
 	}
 </script>
