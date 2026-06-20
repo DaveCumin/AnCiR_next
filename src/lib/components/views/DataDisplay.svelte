@@ -12,6 +12,7 @@
 	import SwapColumns from './modals/SwapColumns.svelte';
 	import Editable from '../inputs/Editable.svelte';
 	import { getNodeName } from '$lib/core/nodeNaming.js';
+	import { getNodeMeta } from '$lib/core/nodeMeta.js';
 	import { selectPlot } from '$lib/core/Plot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 
@@ -156,6 +157,15 @@
 		);
 	});
 
+	// Source/generator nodes (Simulate Data, Random, Sequence Column, Enter Data)
+	// are conceptually data, not processing steps — they belong in the "Data"
+	// section, not "Nodes". Classify via the central node-meta family.
+	function isSourceNode(node) {
+		return getNodeMeta(node.tpName ?? node.processName).family === 'Sources';
+	}
+	const sourceNodeEntries = $derived(nodeEntries.filter(isSourceNode));
+	const operationNodeEntries = $derived(nodeEntries.filter((n) => !isSourceNode(n)));
+
 	// Source columns only: not in a group, not a TP output, not a producer column.
 	// (Outputs of nodes live inside their node entry now.)
 	const ungroupedColumns = $derived.by(() => {
@@ -166,11 +176,6 @@
 
 	// Search-filtered views of each section.
 	const filteredUngrouped = $derived(ungroupedColumns.filter((c) => matches(c.name)));
-	// The "Data" section (groups + ungrouped source columns) has something to show.
-	const dataHasContent = $derived(
-		filteredUngrouped.length > 0 ||
-			(core.groups ?? []).some((g) => groupVisibleColumns(g).length > 0)
-	);
 	function nodeMatches(node) {
 		if (!q) return true;
 		if (matches(getNodeName(node))) return true;
@@ -180,7 +185,16 @@
 		}
 		return false;
 	}
-	const filteredNodeEntries = $derived(nodeEntries.filter(nodeMatches));
+	// Source nodes render inside "Data"; operation nodes inside "Nodes".
+	const filteredSourceNodes = $derived(sourceNodeEntries.filter(nodeMatches));
+	const filteredNodeEntries = $derived(operationNodeEntries.filter(nodeMatches));
+	// The "Data" section (groups + ungrouped source columns + source nodes) has
+	// something to show.
+	const dataHasContent = $derived(
+		filteredUngrouped.length > 0 ||
+			filteredSourceNodes.length > 0 ||
+			(core.groups ?? []).some((g) => groupVisibleColumns(g).length > 0)
+	);
 
 	// ─── Plots section ───────────────────────────────────────────────────────────
 	// The plot list (formerly the standalone Worksheet Layers panel) lives here so
@@ -498,6 +512,18 @@
 							{col}
 							canvasSelectedProcessId={ownsSelectedProcess ? canvasSelection.id : null}
 						/>
+					</div>
+				{/each}
+
+				<!-- Source/generator nodes (Simulate Data, Random, Sequence, Enter Data):
+				     conceptually data, so they live under Data with their output columns. -->
+				{#each filteredSourceNodes as node (node.id)}
+					<div
+						class="second-clps"
+						class:canvas-selected={appState.canvasSelectedNodeId === node.id}
+						bind:this={rowRefs[node.id]}
+					>
+						<NodeSourceItem {node} />
 					</div>
 				{/each}
 
