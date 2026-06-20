@@ -28,7 +28,7 @@
 
 	let { p = $bindable() } = $props();
 	$effect(() => {
-		if (p.parentCol.type == 'number') {
+		if (p.inputCol?.type == 'number') {
 			p.args.find = Number(p.args.find) || 0;
 			p.args.replace = Number(p.args.replace) || 0;
 		}
@@ -37,7 +37,7 @@
 
 <!-- TODO: consider what this should be. Either the replace is for the value, or (more sensibly) it is a replace part of the original string (to change the year, eg), which needs some implementation thought -->
 <ProcessShell {p} title="Substitute">
-	{#if p.parentCol.type == 'number' || p.parentCol.type == 'time'}
+	{#if p.inputCol?.type == 'number' || p.inputCol?.type == 'time'}
 		<div class="control-input-horizontal">
 			<div class="control-input">
 				<p>Find</p>
@@ -50,7 +50,7 @@
 		</div>
 	{/if}
 
-	{#if p.parentCol.type == 'category'}
+	{#if p.inputCol?.type == 'category'}
 		<div class="control-input-horizontal">
 			<div class="control-input">
 				<p>Find</p>
@@ -63,7 +63,7 @@
 		</div>
 	{/if}
 
-	{#if p.parentCol.type == 'bin'}
+	{#if p.inputCol?.type == 'bin'}
 		<div class="control-input-horizontal">
 			<p>Substitution not supported for binned columns, sorry</p>
 		</div>

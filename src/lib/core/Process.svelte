@@ -74,6 +74,18 @@
 			}
 		}
 
+		// The column this process operates on. Inline (legacy) processes carry a
+		// real parentCol; free dataflow nodes don't — their input is the first
+		// column in args.inIN. Editors should read p.inputCol (not p.parentCol) so
+		// they work the same whether the node is free or owned by a column.
+		get inputCol() {
+			if (this.parentCol) return this.parentCol;
+			const raw = this.args?.inIN;
+			const id = Array.isArray(raw) ? raw[0] : raw;
+			if (id == null || id < 0) return null;
+			return core.data.find((c) => c.id === id) ?? null;
+		}
+
 		// Perform processes (add/filer etc)
 		doProcess(data) {
 			const proc = appConsts.processMap.get(this.name);

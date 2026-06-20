@@ -46,7 +46,7 @@
 
 	// Ensure values match the column type
 	$effect(() => {
-		if (p.parentCol.type == 'number' && p.args.edits) {
+		if (p.inputCol?.type == 'number' && p.args.edits) {
 			p.args.edits.forEach((edit) => {
 				edit.position = Number(edit.position) || 0;
 				edit.value = Number(edit.value) || 0;
@@ -62,7 +62,7 @@
 		const newEdit = {
 			id: crypto.randomUUID(),
 			position: 1,
-			value: p.parentCol.type == 'number' ? 0 : ''
+			value: p.inputCol?.type == 'number' ? 0 : ''
 		};
 
 		p.args.edits = [...p.args.edits, newEdit];
@@ -87,9 +87,9 @@
 
 				<div class="control-input">
 					<p>value</p>
-					{#if p.parentCol.type == 'time' || p.parentCol.type == 'number'}
+					{#if p.inputCol?.type == 'time' || p.inputCol?.type == 'number'}
 						<NumberWithUnits bind:value={edit.value} />
-					{:else if p.parentCol.type == 'category'}
+					{:else if p.inputCol?.type == 'category'}
 						<input type="text" bind:value={edit.value} />
 					{/if}
 				</div>

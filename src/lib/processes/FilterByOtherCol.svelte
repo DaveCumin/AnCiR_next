@@ -97,7 +97,11 @@
 	import ProcessShell from '$lib/core/ProcessShell.svelte';
 
 	let { p = $bindable() } = $props();
-	p.args.parentColId = p.parentCol.id; //so we can access the parent col in the module script
+	// Expose the input column id to the module-script filter func. Works for free
+	// dataflow nodes (input via inIN) and legacy inline processes (parentCol).
+	$effect(() => {
+		p.args.parentColId = p.inputCol?.id ?? -1;
+	});
 
 	// Add a new condition
 	function addCondition() {

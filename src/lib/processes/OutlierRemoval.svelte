@@ -99,45 +99,53 @@
 
 	const removedValues = $derived.by(() => {
 		const col = p.parentCol;
-		if (!col?.processes) return [];
-		const processIndex = col.processes.findIndex((proc) => proc.id === p.id);
-		if (processIndex < 0) return [];
-
-		// Reconstruct the data as it enters this process
 		let data;
-		if (col.isReferencial()) {
-			const refData = col.refColumn?.getData();
-			if (!refData) return [];
-			data = [...refData];
+		if (!col) {
+			// Free dataflow node: the data entering this process is its input
+			// column's data (the node reads that column directly).
+			const inData = p.inputCol?.getData();
+			if (!inData) return [];
+			data = [...inData];
 		} else {
-			const rawData = core.rawData.get(col.data);
-			if (!rawData) return [];
+			if (!col.processes) return [];
+			const processIndex = col.processes.findIndex((proc) => proc.id === p.id);
+			if (processIndex < 0) return [];
 
-			if (col.compression === 'awd') {
-				data = new Array(rawData.length);
-				for (let i = 0; i < rawData.length; i++) {
-					data[i] = rawData.start + i * rawData.step;
-				}
+			// Reconstruct the data as it enters this process (legacy inline path)
+			if (col.isReferencial()) {
+				const refData = col.refColumn?.getData();
+				if (!refData) return [];
+				data = [...refData];
 			} else {
-				data = [...rawData];
-			}
+				const rawData = core.rawData.get(col.data);
+				if (!rawData) return [];
 
-			if (col.type === 'time' && col.compression !== 'awd') {
-				try {
-					data = data.map((x) => Number(getUNIXDate(x, col.timeFormat)));
-				} catch {
-					/* ignore */
+				if (col.compression === 'awd') {
+					data = new Array(rawData.length);
+					for (let i = 0; i < rawData.length; i++) {
+						data[i] = rawData.start + i * rawData.step;
+					}
+				} else {
+					data = [...rawData];
+				}
+
+				if (col.type === 'time' && col.compression !== 'awd') {
+					try {
+						data = data.map((x) => Number(getUNIXDate(x, col.timeFormat)));
+					} catch {
+						/* ignore */
+					}
+				}
+
+				if (col.type === 'bin') {
+					data = data.map((x) => x + col.binWidth / 2);
 				}
 			}
 
-			if (col.type === 'bin') {
-				data = data.map((x) => x + col.binWidth / 2);
+			// Apply all processes before this one
+			for (let i = 0; i < processIndex; i++) {
+				data = col.processes[i].doProcess(data);
 			}
-		}
-
-		// Apply all processes before this one
-		for (let i = 0; i < processIndex; i++) {
-			data = col.processes[i].doProcess(data);
 		}
 
 		// Run outlier detection on the input data

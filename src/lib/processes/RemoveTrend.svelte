@@ -180,35 +180,42 @@
 	// Reactively compute trend fit stats for display
 	let trendStats = $derived.by(() => {
 		const col = p.parentCol;
-		if (!col?.processes) return null;
-		const processIndex = col.processes.findIndex((proc) => proc.id === p.id);
-		if (processIndex < 0) return null;
-
-		// Reconstruct data as it enters this process (same pattern as OutlierRemoval)
 		let data;
-		if (col.isReferencial()) {
-			const refData = col.refColumn?.getData();
-			if (!refData) return null;
-			data = [...refData];
+		if (!col) {
+			// Free dataflow node: data entering = the input column's data.
+			const inData = p.inputCol?.getData();
+			if (!inData) return null;
+			data = [...inData];
 		} else {
-			const rawData = core.rawData.get(col.data);
-			if (!rawData) return null;
-			if (col.compression === 'awd') {
-				data = new Array(rawData.length);
-				for (let i = 0; i < rawData.length; i++) data[i] = rawData.start + i * rawData.step;
+			if (!col.processes) return null;
+			const processIndex = col.processes.findIndex((proc) => proc.id === p.id);
+			if (processIndex < 0) return null;
+
+			// Reconstruct data as it enters this process (legacy inline path)
+			if (col.isReferencial()) {
+				const refData = col.refColumn?.getData();
+				if (!refData) return null;
+				data = [...refData];
 			} else {
-				data = [...rawData];
-			}
-			if (col.type === 'time' && col.compression !== 'awd') {
-				try {
-					data = data.map((v) => Number(getUNIXDate(v, col.timeFormat)));
-				} catch {
-					/* ignore */
+				const rawData = core.rawData.get(col.data);
+				if (!rawData) return null;
+				if (col.compression === 'awd') {
+					data = new Array(rawData.length);
+					for (let i = 0; i < rawData.length; i++) data[i] = rawData.start + i * rawData.step;
+				} else {
+					data = [...rawData];
 				}
+				if (col.type === 'time' && col.compression !== 'awd') {
+					try {
+						data = data.map((v) => Number(getUNIXDate(v, col.timeFormat)));
+					} catch {
+						/* ignore */
+					}
+				}
+				if (col.type === 'bin') data = data.map((v) => v + col.binWidth / 2);
 			}
-			if (col.type === 'bin') data = data.map((v) => v + col.binWidth / 2);
+			for (let i = 0; i < processIndex; i++) data = col.processes[i].doProcess(data);
 		}
-		for (let i = 0; i < processIndex; i++) data = col.processes[i].doProcess(data);
 
 		const statsXCol = p.args.xColId != -1 ? getColumnById(p.args.xColId) : null;
 		const t = statsXCol
