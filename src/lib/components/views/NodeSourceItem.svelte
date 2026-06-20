@@ -5,7 +5,7 @@
 	// output columns rendered as normal column rows. Mirrors the canvas node /
 	// Control Panel so a node looks the same everywhere. Rewiring stays on the
 	// canvas / Control Panel — inputs here are display-only.
-	import { core, appState } from '$lib/core/core.svelte.js';
+	import { core, appState, deleteOperationNode } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { getNodeName, setNodeName } from '$lib/core/nodeNaming.js';
@@ -50,6 +50,14 @@
 		appState.view = 'canvas';
 		appState.showControlPanel = true;
 	}
+
+	function deleteNode() {
+		appState.AYStext = `Are you sure you want to remove ${getNodeName(node)}?`;
+		appState.AYScallback = (option) => {
+			if (option === 'Yes') deleteOperationNode(node);
+		};
+		appState.showAYSModal = true;
+	}
 </script>
 
 <div class="node-item">
@@ -59,16 +67,28 @@
 				onInput={(v) => setNodeName(node, v)}
 				onCommit={(v) => setNodeName(node, v, { commit: true })}
 			/></p>
-		<button
-			class="icon find-select-btn"
-			title="Find on canvas / edit in panel"
-			onclick={(e) => {
-				e.stopPropagation();
-				findSelect();
-			}}
-		>
-			<Icon name="process" width={15} height={15} className="menu-icon" />
-		</button>
+		<div class="node-head-btns">
+			<button
+				class="icon node-action-btn"
+				title="Find on canvas / edit in panel"
+				onclick={(e) => {
+					e.stopPropagation();
+					findSelect();
+				}}
+			>
+				<Icon name="process" width={15} height={15} className="menu-icon" />
+			</button>
+			<button
+				class="icon node-action-btn"
+				title="Delete node"
+				onclick={(e) => {
+					e.stopPropagation();
+					deleteNode();
+				}}
+			>
+				<Icon name="trash" width={15} height={15} className="menu-icon" />
+			</button>
+		</div>
 	</div>
 
 	{#if inputCols.length > 0}
@@ -111,13 +131,20 @@
 		min-width: 0;
 		overflow: hidden;
 	}
-	.find-select-btn {
+	/* Find + delete, right-aligned, revealed on hover. */
+	.node-head-btns {
+		display: flex;
+		align-items: center;
+		gap: 0.1rem;
+		flex-shrink: 0;
+	}
+	.node-action-btn {
 		opacity: 0;
 		transition: opacity 0.12s ease;
 		flex-shrink: 0;
 	}
-	.node-item:hover .find-select-btn,
-	.find-select-btn:focus-visible {
+	.node-item:hover .node-action-btn,
+	.node-action-btn:focus-visible {
 		opacity: 1;
 	}
 	.node-inputs {

@@ -237,6 +237,14 @@
 	// works in either the workflow or workspace canvas.
 	function plotSelectAndFind(e, plot) {
 		selectPlot(e ?? {}, plot.id);
+		// Mirror the resulting plot selection into the canvas selection so the
+		// control panel counts exactly the selected plots (it unions plot.selected
+		// with canvasMultiSelectedNodeIds — a stale canvas id otherwise shows e.g.
+		// "2 plots selected" when only one is chosen here).
+		const selIds = (core.plots ?? []).filter((p) => p.selected).map((p) => `plot_${p.id}`);
+		appState.canvasMultiSelectedNodeIds = selIds;
+		appState.canvasMultiSelectedCount = selIds.length;
+		appState.canvasSelectedNodeId = `plot_${plot.id}`;
 		appState.focusNodeRequest = {
 			id: `plot_${plot.id}`,
 			n: (appState.focusNodeRequest?.n ?? 0) + 1
@@ -374,6 +382,7 @@
 		{#if !q || visCols.length > 0}
 			<div
 				class="clps-container"
+				class:canvas-selected={appState.canvasSelectedNodeId === group.id}
 				draggable="true"
 				ondragstart={(e) => startDragGroup(e, group.id)}
 				ondragover={(e) => onDragOverSection(e, '__group_order__', group.id)}
@@ -791,7 +800,8 @@
 		display: flex;
 	}
 
-	.second-clps.canvas-selected {
+	.second-clps.canvas-selected,
+	.clps-container.canvas-selected {
 		border-radius: 4px;
 		box-shadow: inset 2px 0 0 var(--color-accent, #4d9fe3);
 		background-color: color-mix(in srgb, var(--color-accent, #4d9fe3) 8%, transparent);

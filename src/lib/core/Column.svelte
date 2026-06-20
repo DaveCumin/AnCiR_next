@@ -611,6 +611,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
+	import MiniDataTable from '$lib/components/workflow/MiniDataTable.svelte';
 
 	import Editable from '$lib/components/inputs/Editable.svelte';
 	import { guessDateofArray } from '$lib/utils/time/TimeUtils.js';
@@ -621,6 +622,16 @@
 		onChange = () => {},
 		canvasSelectedProcessId = null
 	} = $props();
+
+	// Mini data-table preview, expanded per-row (panel display mode only). Matches
+	// the node output rows on the canvas.
+	let previewOpen = $state(false);
+
+	// Live rename: write to customName so the name survives node-label changes
+	// (an empty value falls back to the auto-derived name).
+	function renameThis(v) {
+		col.customName = v === '' ? null : v;
+	}
 
 	// The canvas node that represents this column: its producing node (derived),
 	// the table-process that outputs it, the group that absorbs it, or its own
@@ -665,10 +676,26 @@
 	<p>Column is undefined</p>
 {:else}
 	<div class="clps-container">
-		<!-- Flat column row: no add-process "+" (operations are nodes now) and no
-		     disclosure arrow. Time columns show their format inline by default. -->
+		<!-- Compact column row matching the canvas node output rows: a chevron to
+		     drop down a mini data-table preview, the type + name, then right-aligned
+		     find / delete buttons (revealed on hover). -->
 		<div class="clps-item">
 			<div class="clps-title-container">
+				{#if !canChange}
+					<button
+						type="button"
+						class="col-chev"
+						aria-expanded={previewOpen}
+						title={previewOpen ? 'Hide preview' : 'Show preview'}
+						onclick={(e) => {
+							e.stopPropagation();
+							previewOpen = !previewOpen;
+						}}
+					>
+						<span class="chev" aria-hidden="true">{previewOpen ? '▾' : '▸'}</span>
+					</button>
+				{/if}
+
 				<div class="clps-title">
 					<TypeSelector bind:value={col.type} onChange={onTypeChange} />
 
@@ -677,7 +704,7 @@
 							<ColumnSelector bind:value={col.refId} bind:onChange />
 						</div>
 					{:else}
-						<p><Editable bind:value={col.name} /></p>
+						<p class="col-name"><Editable value={col.name} onInput={renameThis} /></p>
 					{/if}
 				</div>
 
@@ -690,12 +717,12 @@
 							findSelect();
 						}}
 					>
-						<Icon name="process" width={16} height={16} className="menu-icon" />
+						<Icon name="process" width={15} height={15} className="menu-icon" />
 					</button>
 
 					{#if col.tableProcessGUId == '' && col.refId == null}
-						<button class="icon" onclick={(e) => doRemoveColumn(col.id)}>
-							<Icon name="trash" width={18} height={18} className="menu-icon" />
+						<button class="icon" title="Delete" onclick={(e) => doRemoveColumn(col.id)}>
+							<Icon name="trash" width={15} height={15} className="menu-icon" />
 						</button>
 					{/if}
 				</div>
@@ -711,12 +738,16 @@
 					{/if}
 				</div>
 			{/if}
+
+			{#if previewOpen && !canChange}
+				<div class="col-preview"><MiniDataTable column={col} maxRows={5} /></div>
+			{/if}
 		</div>
 	</div>
 {/if}
 
 <style>
-	/* Type + name on the left, action buttons inline on the right. */
+	/* Chevron + type/name on the left, action buttons inline on the right. */
 	.clps-title-container {
 		display: flex;
 		flex-direction: row;
@@ -724,13 +755,39 @@
 		justify-content: space-between;
 		width: 100%;
 		min-width: 0;
-		gap: 0.25rem;
+		gap: 0.2rem;
 	}
 	.clps-title-button {
 		display: flex;
 		align-items: center;
 		gap: 0.1rem;
 		flex-shrink: 0;
+	}
+
+	/* Chevron to expand a mini data-table preview (matches canvas node outputs). */
+	.col-chev {
+		background: none;
+		border: none;
+		padding: 0 1px;
+		margin: 0;
+		cursor: pointer;
+		color: var(--color-lightness-55, #999);
+		font-size: 10px;
+		line-height: 1;
+		flex-shrink: 0;
+	}
+	.col-chev:hover {
+		color: var(--color-lightness-25, #444);
+	}
+	.col-name {
+		margin: 0;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.col-preview {
+		padding: 2px 4px 4px 18px;
 	}
 
 	/* Both action buttons (find-on-canvas + bin) reveal on row hover; keeps the row
@@ -814,6 +871,7 @@
 	.clps-container {
 		display: flex;
 		flex: 1 1 0;
+		flex-direction: column;
 		position: relative;
 
 		width: 100%;
@@ -821,7 +879,7 @@
 
 		border-radius: 4px;
 
-		margin: 0.25rem 0;
+		margin: 1px 0;
 	}
 
 	.clps-container:hover {
@@ -908,18 +966,19 @@
 		color: var(--color-lightness-35);
 	}
 
-	/* Select and input controls */
+	/* Select and input controls — compact so panel rows match the node output
+	   rows' density. */
 	select,
 	input {
-		height: var(--control-input-height);
+		height: 1.55rem;
 		width: auto;
 		min-width: 0;
 		box-sizing: border-box;
 
-		padding: 0.2rem 0.5rem;
+		padding: 0.1rem 0.35rem;
 		background-color: transparent;
 
-		font-size: 14px;
+		font-size: 13px;
 		font-weight: lighter;
 
 		border: solid 1px transparent;

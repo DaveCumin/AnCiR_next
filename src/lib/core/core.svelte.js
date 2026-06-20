@@ -1,9 +1,9 @@
 // @ts-nocheck
 
-import { Column } from '$lib/core/Column.svelte';
+import { Column, removeColumn } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
 import { Process } from '$lib/core/Process.svelte';
-import { TableProcess } from '$lib/core/TableProcess.svelte';
+import { TableProcess, deleteTableProcess } from '$lib/core/TableProcess.svelte';
 import { getCachedProcessNodeGraph } from '$lib/core/ProcessNode.svelte.js';
 
 export const core = $state({
@@ -149,6 +149,64 @@ export function createOrphanProcess(name, args = {}) {
 export function removeOrphanProcess(id) {
 	core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== id);
 	delete core.nodeNotes[`process_${id}`];
+}
+
+function _procInputIds(proc) {
+	const raw = proc?.args?.inIN;
+	if (Array.isArray(raw)) return raw.filter((id) => typeof id === 'number' && id >= 0);
+	return typeof raw === 'number' && raw >= 0 ? [raw] : [];
+}
+
+// Reroute a downstream free process's input oldColId → newColId and re-key its
+// paired producer column (out_old → out_new) so its output survives.
+function _rerouteProcessInput(targetProcId, oldColId, newColId) {
+	const tproc = (core.orphanProcesses ?? []).find((p) => p.id === targetProcId);
+	if (!tproc) return;
+	const cur = _procInputIds(tproc);
+	const idx = cur.indexOf(oldColId);
+	if (idx < 0) return;
+	const next = [...cur];
+	next[idx] = newColId;
+	tproc.args = { ...tproc.args, inIN: next };
+	const pc = core.data.find(
+		(c) => c.producerNodeId === `process_${targetProcId}` && (c.producerPort || '') === `out_${oldColId}`
+	);
+	if (pc) pc.producerPort = `out_${newColId}`;
+}
+
+/**
+ * Delete an operation node (free process or table-process) from anywhere — the
+ * canvas removeNode handler and the Data panel both route here so behaviour
+ * stays identical. A free 1:1 process is bridged (its output's consumers re-point
+ * to its input source) rather than severed; a table-process removes via the
+ * existing helper.
+ */
+export function deleteOperationNode(node) {
+	if (!node) return;
+	if (node.type === 'tableprocess' && node.tpObj) {
+		deleteTableProcess(node.tpObj);
+		return;
+	}
+	if (node.type === 'process') {
+		const proc = (core.orphanProcesses ?? []).find((p) => p.id === node.refId);
+		if (!proc) return;
+		const inputs = _procInputIds(proc);
+		const producerCols = (core.data ?? []).filter((c) => c.producerNodeId === node.id);
+		// Bridge a 1:1 node: re-point every consumer of its output to its input.
+		if (inputs.length === 1 && producerCols.length === 1) {
+			const sourceColId = inputs[0];
+			const outColId = producerCols[0].id;
+			replaceColumnRefs(sourceColId, outColId);
+			for (const op of [...(core.orphanProcesses ?? [])]) {
+				if (op.id === proc.id) continue;
+				if (_procInputIds(op).includes(outColId)) {
+					_rerouteProcessInput(op.id, outColId, sourceColId);
+				}
+			}
+		}
+		for (const c of producerCols) removeColumn(c.id);
+		removeOrphanProcess(node.refId);
+	}
 }
 
 /**

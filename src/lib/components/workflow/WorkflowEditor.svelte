@@ -16,6 +16,7 @@
 		createOrphanProcess,
 		removeOrphanProcess,
 		replaceColumnRefs,
+		deleteOperationNode,
 		pushObj
 	} from '$lib/core/core.svelte.js';
 	import { untrack, tick } from 'svelte';
@@ -2255,34 +2256,13 @@
 			if (parent) {
 				mutationService.removeProcess(parent.id, node.refId);
 			} else if (core.orphanProcesses.some((p) => p.id === node.refId)) {
-				const proc = core.orphanProcesses.find((p) => p.id === node.refId);
-				const inputs = proc ? _procInputIds(proc) : [];
-				const producerCols = (core.data ?? []).filter((c) => c.producerNodeId === node.id);
-				// Bridge: a 1:1 node deleted mid-chain should rewire as if it weren't
-				// there, not sever the wire. Re-point every consumer of the node's
-				// output back to the node's single input source.
-				if (inputs.length === 1 && producerCols.length === 1) {
-					const sourceColId = inputs[0];
-					const outColId = producerCols[0].id;
-					// Ref-based consumers (plots, table-process args, ref columns).
-					replaceColumnRefs(sourceColId, outColId);
-					// Downstream process-node consumers (their inIN).
-					for (const op of [...(core.orphanProcesses ?? [])]) {
-						if (op.id === proc.id) continue;
-						if (_procInputIds(op).includes(outColId)) {
-							_rerouteProcessInput(`process_${op.id}`, outColId, sourceColId);
-						}
-					}
-				}
-				// Remove the node's output column(s), then the process itself.
-				for (const c of producerCols) removeColumn(c.id);
-				removeOrphanProcess(node.refId);
+				// Free process: bridge + remove (shared with the Data panel's delete).
+				deleteOperationNode(node);
 			}
 			return;
 		}
 		if (node.type === 'tableprocess' && node.tpObj) {
-			// Goes through the existing "Are you sure?" modal flow.
-			deleteTableProcess(node.tpObj);
+			deleteOperationNode(node);
 			return;
 		}
 		if (node.type === 'plot' && node.refId != null) {
