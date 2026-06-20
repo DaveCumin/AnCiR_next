@@ -12,11 +12,13 @@ import { blankcolumn } from './BlankColumn.svelte';
 // Preview mode: out.result === -1
 
 describe('blankcolumn', () => {
-	it('creates N empty strings in preview mode', () => {
+	it('creates N empty (NaN) cells in preview mode', () => {
 		const [result, valid] = blankcolumn({ N: 5, storedValueRefs: {}, out: { result: -1 } });
 		expect(valid).toBe(true);
 		expect(result).toHaveLength(5);
-		result.forEach((v) => expect(v).toBe(''));
+		// Empty cells are NaN (numeric-empty), not '' — the editing grid uses '' only
+		// as its string sentinel and commits NaN for numeric columns.
+		result.forEach((v) => expect(v).toBeNaN());
 	});
 
 	it('N = 0 produces an empty array', () => {
