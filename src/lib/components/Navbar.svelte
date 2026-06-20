@@ -58,10 +58,7 @@
 		if (kept.length === ids.length) return;
 		appState.canvasMultiSelectedNodeIds = kept;
 		appState.canvasMultiSelectedCount = kept.length;
-		if (
-			appState.canvasSelectedNodeId != null &&
-			!kept.includes(appState.canvasSelectedNodeId)
-		) {
+		if (appState.canvasSelectedNodeId != null && !kept.includes(appState.canvasSelectedNodeId)) {
 			appState.canvasSelectedNodeId = null;
 		}
 	}
@@ -97,7 +94,7 @@
 
 		<div class="rail-sep"></div>
 
-		<!-- Session / history actions (moved off the canvas). -->
+		<!-- Load/save session -->
 		<button
 			class="rail-btn"
 			onclick={() => (showLoadModal = true)}
@@ -108,6 +105,10 @@
 		<button class="rail-btn" onclick={exportJson} {@attach tooltip('Save this session')}>
 			<Icon name="sessionsave" width={22} height={22} />
 		</button>
+
+		<div class="rail-sep"></div>
+
+		<!-- Undo redo history -->
 		<button
 			class="rail-btn"
 			onclick={() => history.undo()}
