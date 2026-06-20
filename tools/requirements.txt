@@ -1,0 +1,7 @@
+# Python deps for the AnCiR tools (parity harness, runtime, converter).
+# Create an isolated env:  python3.12 -m venv tools/.venv && tools/.venv/bin/pip install -r tools/requirements.txt
+numpy>=2.0
+scipy>=1.18
+pandas>=3.0
+matplotlib>=3.8
+pytest>=8
