@@ -1,13 +1,12 @@
 <script>
 	// @ts-nocheck
-	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
+	import { core, appConsts, appState, getProcessNodeGraph } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { producerInputColId } from '$lib/core/producerRuntime.js';
 	import { tick, untrack } from 'svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
-	import TableProcess from '$lib/core/TableProcess.svelte';
+	import NodeSourceItem from './NodeSourceItem.svelte';
 	import MakeNewColumn from './modals/MakeNewColumn.svelte';
 	import { openImportData } from '$lib/core/dataSourceActions.js';
 	import SwapColumns from './modals/SwapColumns.svelte';
@@ -26,7 +25,7 @@
 	// Expand state — keyed by section id (group id, '__tps__', '__ungrouped__').
 	// The Computed (table-process) section starts open so TP nodes are always
 	// visible without needing a canvas double-click to reveal them.
-	let openSections = $state({ __tps__: true });
+	let openSections = $state({ __nodes__: true });
 
 	// Toggle a section open/closed from a header click. `<details>` uses
 	// `bind:open`, so we MUST preventDefault to stop the browser's native toggle
@@ -64,14 +63,10 @@
 	const selectedSectionId = $derived.by(() => {
 		const sel = canvasSelection;
 		if (!sel) return null;
-		if (sel.kind === 'tableprocess') return '__tps__';
-		// data or process kind: find the column id, then check group membership.
-		let colId = null;
-		if (sel.kind === 'data') colId = sel.id;
-		else {
-			const owner = core.data.find((c) => (c.processes ?? []).some((p) => p.id === sel.id));
-			colId = owner?.id ?? null;
-		}
+		// Operation nodes (process + table-process) live in the "Nodes" section.
+		if (sel.kind === 'tableprocess' || sel.kind === 'process') return '__nodes__';
+		// data kind: a source column — find its group, else Sources.
+		const colId = sel.id;
 		if (colId == null) return null;
 		for (const g of core.groups ?? []) {
 			if ((g.sourceColumnIds ?? []).includes(colId)) return g.id;
@@ -117,22 +112,26 @@
 		return s;
 	});
 
-	// A producer column is the output of an operation node (dataflow model). It is
-	// shown nested under its SOURCE column (see derivedChildren / the derivedTree
-	// snippet), never in a flat top-level list.
+	// A producer column is the output of an operation node (dataflow model). These
+	// render as a node's outputs in the "Nodes" section, never as standalone rows.
 	function isProducerColumn(c) {
 		return c?.producerNodeId != null && c.refId == null && c.data == null;
 	}
 
-	// Producer columns whose source (the operation node's input) is colId.
-	function derivedChildren(colId) {
-		return (core.data ?? []).filter(
-			(c) => isProducerColumn(c) && producerInputColId(c.producerNodeId, c.producerPort) === colId
+	// Operation nodes (free processes + free table-processes) as their own panel
+	// entries — each rendered with its inputs + outputs by NodeSourceItem. Nested
+	// TPs are members of their parent and aren't listed separately.
+	const nodeEntries = $derived.by(() => {
+		const nodes = getProcessNodeGraph().nodes ?? [];
+		return nodes.filter(
+			(n) =>
+				n.type === 'process' ||
+				(n.type === 'tableprocess' && typeof n.id === 'string' && !n.id.startsWith('tableprocess_nested_'))
 		);
-	}
+	});
 
-	// Columns not in any group, not a TP output column, and not a producer column
-	// (producers render nested under their source, not at the top level).
+	// Source columns only: not in a group, not a TP output, not a producer column.
+	// (Outputs of nodes live inside their node entry now.)
 	const ungroupedColumns = $derived.by(() => {
 		return (core.data ?? []).filter(
 			(c) => !groupedColumnIds.has(c.id) && !tpOutputColIds.has(c.id) && !isProducerColumn(c)
@@ -152,11 +151,6 @@
 		e.dataTransfer?.setData('application/x-ancir-drag', `col:${columnId}:${fromSection}`);
 		e.dataTransfer.effectAllowed = 'move';
 	}
-	function startDragTP(e, tpId) {
-		e.dataTransfer?.setData('application/x-ancir-drag', `tp:${tpId}`);
-		e.dataTransfer.effectAllowed = 'move';
-	}
-
 	function parsePayload(dt) {
 		const raw = dt?.getData?.('application/x-ancir-drag') ?? '';
 		if (!raw) return null;
@@ -245,21 +239,6 @@
 </div>
 
 <div class="display-list">
-	<!-- Derived (producer) columns render nested beneath their source column, so the
-	     data flow reads top-to-bottom (e.g. "values_0 → Add" sits under "values_0"). -->
-	{#snippet derivedTree(parentColId, depth)}
-		{#each derivedChildren(parentColId) as child (child.id)}
-			<div
-				class="second-clps derived-col"
-				style="--depth:{depth}"
-				class:canvas-selected={canvasSelection?.kind === 'data' && canvasSelection.id === child.id}
-			>
-				<ColumnComponent col={child} />
-			</div>
-			{@render derivedTree(child.id, depth + 1)}
-		{/each}
-	{/snippet}
-
 	<!-- Groups -->
 	{#each core.groups as group (group.id)}
 		<div
@@ -306,7 +285,6 @@
 								canvasSelectedProcessId={ownsSelectedProcess ? canvasSelection.id : null}
 							/>
 						</div>
-						{@render derivedTree(col.id, 1)}
 					{/if}
 				{/each}
 
@@ -321,17 +299,18 @@
 		</div>
 	{/each}
 
-	<!-- Free table-processes -->
-	{#if (core.tableProcesses?.length ?? 0) > 0}
+	<!-- Nodes: every operation (process + table-process) as its own entry, with
+	     read-only input(s) and its output columns. -->
+	{#if nodeEntries.length > 0}
 		<div class="clps-container">
-			<details class="clps-item" bind:open={openSections['__tps__']}>
-				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__tps__')}>
+			<details class="clps-item" bind:open={openSections['__nodes__']}>
+				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__nodes__')}>
 					<div class="clps-title">
-						<p>Computed</p>
+						<p>Nodes</p>
 					</div>
 					<div class="clps-title-button">
-						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__tps__')}>
-							{#if openSections['__tps__']}
+						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__nodes__')}>
+							{#if openSections['__nodes__']}
 								<Icon name="caret-down" width={20} height={20} />
 							{:else}
 								<Icon name="caret-right" width={20} height={20} />
@@ -340,22 +319,14 @@
 					</div>
 				</summary>
 
-				{#each core.tableProcesses as p (p.id)}
+				{#each nodeEntries as node (node.id)}
 					<div
 						class="second-clps"
-						class:canvas-selected={canvasSelection?.kind === 'tableprocess' &&
-							canvasSelection.id === p.id}
-						bind:this={rowRefs[`tableprocess_${p.id}`]}
-						draggable="true"
-						ondragstart={(e) => startDragTP(e, p.id)}
-						ondragover={(e) => onDragOverSection(e, '__tps__', p.id)}
-						ondrop={(e) => onDropSection(e, '__tps__', p.id)}
+						class:canvas-selected={appState.canvasSelectedNodeId === node.id}
+						bind:this={rowRefs[node.id]}
 					>
-						<TableProcess {p} />
+						<NodeSourceItem {node} />
 					</div>
-					{#each Object.values(p.args?.out ?? {}) as outColId}
-						{@render derivedTree(outColId, 1)}
-					{/each}
 				{/each}
 			</details>
 		</div>
@@ -367,7 +338,7 @@
 			<details class="clps-item" bind:open={openSections['__ungrouped__']}>
 				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__ungrouped__')}>
 					<div class="clps-title">
-						<p>Ungrouped</p>
+						<p>Sources</p>
 					</div>
 					<div class="clps-title-button">
 						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__ungrouped__')}>
@@ -399,7 +370,6 @@
 							canvasSelectedProcessId={ownsSelectedProcess ? canvasSelection.id : null}
 						/>
 					</div>
-					{@render derivedTree(col.id, 1)}
 				{/each}
 
 				<!-- Drop zone to remove a column from its group -->
@@ -497,14 +467,6 @@
 		border-radius: 4px;
 		box-shadow: inset 2px 0 0 var(--color-accent, #4d9fe3);
 		background-color: color-mix(in srgb, var(--color-accent, #4d9fe3) 8%, transparent);
-	}
-
-	/* Derived (producer) columns nest under their source: indent by depth and show
-	   a connector rail so the data flow is easy to follow. */
-	.derived-col {
-		margin-left: calc(var(--depth, 1) * 14px);
-		border-left: 2px solid var(--color-lightness-85, #ddd);
-		padding-left: 6px;
 	}
 
 	.dropzone {
