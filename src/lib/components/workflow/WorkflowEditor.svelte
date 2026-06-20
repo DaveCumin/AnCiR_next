@@ -1186,13 +1186,20 @@
 				// it shouldn't yank it out and splice it elsewhere — the user
 				// has to first detach it (delete its chain edge) to move it.
 				const draggedNode = allNodes.find((n) => n.id === dragInfo.nodeId);
+				// Only a FRESH, unconnected 1:1 node may be inserted onto an edge or
+				// port. If it already has any wired input or output, dragging it must
+				// not yank it out and splice it elsewhere — detach it first.
+				const draggedHasConnections =
+					!!draggedNode &&
+					allEdges.some((e) => e.fromId === draggedNode.id || e.toId === draggedNode.id);
 				const draggedFits =
 					draggedNode &&
 					draggedNode.type === 'process' &&
 					draggedNode.processObj &&
 					!draggedNode.processObj.parentCol &&
 					(draggedNode.ports?.inputs?.length ?? 0) === 1 &&
-					(draggedNode.ports?.outputs?.length ?? 0) === 1;
+					(draggedNode.ports?.outputs?.length ?? 0) === 1 &&
+					!draggedHasConnections;
 				if (draggedFits) {
 					const dw = getNodeWidth(draggedNode);
 					const dh = getNodePortAreaHeight(draggedNode);
@@ -2219,6 +2226,27 @@
 			if (parent) {
 				mutationService.removeProcess(parent.id, node.refId);
 			} else if (core.orphanProcesses.some((p) => p.id === node.refId)) {
+				const proc = core.orphanProcesses.find((p) => p.id === node.refId);
+				const inputs = proc ? _procInputIds(proc) : [];
+				const producerCols = (core.data ?? []).filter((c) => c.producerNodeId === node.id);
+				// Bridge: a 1:1 node deleted mid-chain should rewire as if it weren't
+				// there, not sever the wire. Re-point every consumer of the node's
+				// output back to the node's single input source.
+				if (inputs.length === 1 && producerCols.length === 1) {
+					const sourceColId = inputs[0];
+					const outColId = producerCols[0].id;
+					// Ref-based consumers (plots, table-process args, ref columns).
+					replaceColumnRefs(sourceColId, outColId);
+					// Downstream process-node consumers (their inIN).
+					for (const op of [...(core.orphanProcesses ?? [])]) {
+						if (op.id === proc.id) continue;
+						if (_procInputIds(op).includes(outColId)) {
+							_rerouteProcessInput(`process_${op.id}`, outColId, sourceColId);
+						}
+					}
+				}
+				// Remove the node's output column(s), then the process itself.
+				for (const c of producerCols) removeColumn(c.id);
 				removeOrphanProcess(node.refId);
 			}
 			return;
