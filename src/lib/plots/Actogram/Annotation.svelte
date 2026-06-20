@@ -197,9 +197,9 @@
 	<div
 		class="control-component-title-icons"
 		style="
-    margin-bottom: -1rem;
+    margin-bottom: -var(--space-6);
     z-index: 9999;
-    margin-top: 0.25rem;
+    margin-top: var(--space-2);
 "
 	>
 		<button

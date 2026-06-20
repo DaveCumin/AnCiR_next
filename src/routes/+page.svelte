@@ -725,8 +725,8 @@
 		height: 1px;
 		width: 100%;
 		background-color: var(--color-lightness-85);
-		margin-top: 1rem;
-		margin-bottom: 0.5rem;
+		margin-top: var(--space-6);
+		margin-bottom: var(--space-4);
 	}
 
 	:global(.div-block) {
@@ -809,7 +809,7 @@
 
 	/* display collapsible */
 	:global(details) {
-		margin: 0.25rem 0.5rem;
+		margin: var(--space-2) var(--space-4);
 		padding: 0;
 	}
 
@@ -841,7 +841,7 @@
 		align-items: center;
 		justify-content: flex-start;
 
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	:global(.clps-title-button) {
@@ -850,8 +850,8 @@
 		align-items: center;
 		justify-content: flex-start;
 
-		margin-left: 0.5rem;
-		gap: 0.25rem;
+		margin-left: var(--space-4);
+		gap: var(--space-2);
 	}
 
 	:global(.clps-icon-container) {
@@ -859,8 +859,8 @@
 		align-items: center;
 		justify-content: center;
 
-		padding: 0.5rem 0.5rem;
-		padding-left: 1rem;
+		padding: var(--space-4) var(--space-4);
+		padding-left: var(--space-6);
 	}
 
 	:global(.clps-icon) {
@@ -870,7 +870,7 @@
 		justify-content: center;
 
 		width: 100%;
-		padding: 0.5rem 0;
+		padding: var(--space-4) 0;
 
 		background-color: var(--surface-card);
 		border-radius: var(--radius-sm);
@@ -893,7 +893,7 @@
 
 	:global(.second-clps) {
 		width: 100%;
-		padding: 0 0 0 0.25rem;
+		padding: 0 0 0 var(--space-2);
 	}
 
 	/* plot control */
@@ -949,7 +949,7 @@
 	:global(.control-tab button) {
 		font-size: var(--font-lg);
 		margin: 0;
-		padding: 0.25rem 0.5rem;
+		padding: var(--space-2) var(--space-4);
 		color: var(--color-lightness-35);
 		background-color: transparent;
 		border-radius: var(--radius-sm);
@@ -981,7 +981,7 @@
 		align-items: flex-start;
 
 		width: 100%;
-		/* margin-bottom: 0.5rem; */
+		/* margin-bottom: var(--space-4); */
 	}
 
 	:global(.control-component-title) {
@@ -996,7 +996,7 @@
 
 	:global(.control-component-title button) {
 		margin: 0;
-		margin-left: 0.5rem;
+		margin-left: var(--space-4);
 		padding: 0;
 	}
 
@@ -1006,7 +1006,7 @@
 		align-items: center;
 		justify-content: flex-start;
 
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	:global(.control-component-title-icons) {
@@ -1022,8 +1022,8 @@
 		align-items: center;
 		justify-content: center;
 		width: 100%;
-		gap: 0.5rem;
-		margin-bottom: 0.5rem;
+		gap: var(--space-4);
+		margin-bottom: var(--space-4);
 	}
 
 	:global(.control-input-horizontal) {
@@ -1032,17 +1032,17 @@
 		align-items: center;
 		justify-content: center;
 		width: 100%;
-		gap: 0.5rem;
-		margin-bottom: 0.5rem;
+		gap: var(--space-4);
+		margin-bottom: var(--space-4);
 	}
 
 	:global(.control-input-square) {
 		width: 100%;
 		display: grid;
 		grid-template-columns: repeat(2, 1fr);
-		gap: 0.5rem;
+		gap: var(--space-4);
 
-		margin-bottom: 0.5rem;
+		margin-bottom: var(--space-4);
 	}
 
 	:global(.control-input-color) {
@@ -1052,7 +1052,7 @@
 		justify-content: space-between;
 
 		width: 100%;
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	:global(.control-input-color button) {
@@ -1090,7 +1090,7 @@
 	:global(.data-warning) {
 		width: 100%;
 		padding: 6px 8px;
-		margin-bottom: 0.5rem;
+		margin-bottom: var(--space-4);
 		background: #fff8e1;
 		border: 1px solid #f9a825;
 		border-radius: var(--radius-sm);
@@ -1118,7 +1118,7 @@
 
 		font-size: var(--font-lg);
 		font-weight: lighter;
-		padding: 0.2rem 0.5rem;
+		padding: 0.2rem var(--space-4);
 		border: solid 1px transparent;
 		background-color: var(--color-lightness-97);
 		border: solid 1px var(--color-lightness-85);
@@ -1127,7 +1127,7 @@
 	}
 
 	:global(.control-input select) {
-		padding: 0.2rem 0.25rem;
+		padding: 0.2rem var(--space-2);
 	}
 
 	:global(.control-input select:hover, .control-input input:hover) {
@@ -1152,7 +1152,7 @@
 		background-color: var(--color-lightness-97);
 		border-radius: var(--radius-sm);
 
-		padding: 0.5rem 0;
+		padding: var(--space-4) 0;
 
 		cursor: pointer;
 	}
@@ -1172,7 +1172,7 @@
 		min-width: 0;
 
 		margin: 0;
-		gap: 0.25rem;
+		gap: var(--space-2);
 	}
 
 	:global(.control-data) {
@@ -1196,7 +1196,7 @@
 		margin: 0;
 		padding: 0;
 
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	:global(.control-data-title p) {
@@ -1237,15 +1237,15 @@
 	:global(.tp-outputs) {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
-		margin-top: 0.25rem;
+		gap: var(--space-4);
+		margin-top: var(--space-2);
 	}
 
 	:global(.tp-output-row) {
 		display: flex;
 		flex-direction: column;
 		gap: 0.15rem;
-		padding-left: 0.5rem;
+		padding-left: var(--space-4);
 	}
 
 	:global(.tp-output-label) {
@@ -1293,9 +1293,9 @@
 		flex-direction: column;
 
 		border: 0.1rem solid var(--color-lightness-85);
-		padding: 0 0.25rem 0 0.4rem;
-		margin-left: -0.25rem;
-		margin-right: 0.5rem;
+		padding: 0 var(--space-2) 0 0.4rem;
+		margin-left: -var(--space-2);
+		margin-right: var(--space-4);
 		border-radius: 0.25rem;
 		overflow: hidden;
 		box-sizing: border-box;
@@ -1305,17 +1305,17 @@
 		display: flex;
 		flex-direction: column;
 		align-items: stretch;
-		gap: 0.25rem;
-		padding-left: 0.25rem;
-		margin-top: 0.5rem;
+		gap: var(--space-2);
+		padding-left: var(--space-2);
+		margin-top: var(--space-4);
 	}
 	:global(.tableProcess-label) {
 		display: flex;
 		align-items: center;
 		margin-bottom: 0rem;
-		margin-left: -0.25rem;
+		margin-left: -var(--space-2);
 		background: var(--surface-card);
-		padding: 0.25rem;
+		padding: var(--space-2);
 	}
 
 	:global(.tableProcess-label span) {

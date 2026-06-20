@@ -202,7 +202,7 @@
 		flex-direction: column;
 		justify-content: center;
 		align-items: center;
-		gap: 0.15rem;
+		gap: var(--space-1);
 	}
 	.icon-container.top {
 		margin-top: 18px;
@@ -215,7 +215,7 @@
 		background-color: transparent;
 		border: none;
 		margin: 0;
-		padding: 0.35rem;
+		padding: var(--space-3);
 		text-align: inherit;
 		font: inherit;
 		border-radius: var(--radius-md);
@@ -240,8 +240,8 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 0.1rem;
-		padding: 0.15rem;
+		gap: var(--space-1);
+		padding: var(--space-1);
 		border-radius: var(--radius-lg);
 		background-color: var(--color-lightness-97, #f7f7f7);
 	}
@@ -250,7 +250,7 @@
 		width: 22px;
 		height: 1px;
 		background-color: var(--color-lightness-85, #ddd);
-		margin: 0.3rem 0;
+		margin: var(--space-2) 0;
 	}
 
 	.help-anchor {
@@ -269,7 +269,7 @@
 		border: 1px solid var(--color-lightness-85, #ddd);
 		border-radius: var(--radius-lg);
 		box-shadow: var(--shadow-3);
-		padding: 0.25rem;
+		padding: var(--space-2);
 		display: flex;
 		flex-direction: column;
 		z-index: 1001;
@@ -277,7 +277,7 @@
 
 	.help-menu button {
 		margin: 0;
-		padding: 0.5rem 0.7rem;
+		padding: var(--space-4) var(--space-5);
 		border-radius: var(--radius-md);
 		text-align: left;
 		font-size: var(--font-lg);

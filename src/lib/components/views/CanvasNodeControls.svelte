@@ -303,9 +303,9 @@
 
 <style>
 	.control-banner {
-		padding: 0.4rem 0 0.2rem;
+		padding: var(--space-3) 0 var(--space-2);
 		border-bottom: 1px solid var(--color-lightness-90, #e7e7e7);
-		margin-bottom: 0.4rem;
+		margin-bottom: var(--space-3);
 	}
 	.control-banner-title {
 		display: flex;
@@ -316,10 +316,10 @@
 		font-weight: 600;
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: var(--space-3);
 	}
 	.control-component {
-		padding: 0.4rem 0;
+		padding: var(--space-3) 0;
 		border-bottom: 1px solid var(--color-lightness-95, #f0f0f0);
 	}
 	.control-component:last-child {
@@ -333,8 +333,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.5rem;
-		padding: 0.25rem 0;
+		gap: var(--space-4);
+		padding: var(--space-2) 0;
 	}
 	.control-input.vertical {
 		flex-direction: column;
@@ -354,22 +354,22 @@
 		opacity: 0.75;
 		font-size: 0.85rem;
 		line-height: 1.35;
-		margin: 0 0 0.5rem;
+		margin: 0 0 var(--space-4);
 	}
 	.source-list {
 		list-style: none;
 		padding: 0;
-		margin: 0.2rem 0 0;
+		margin: var(--space-2) 0 0;
 		display: flex;
 		flex-direction: column;
-		gap: 0.2rem;
+		gap: var(--space-2);
 	}
 	.source-list li {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.4rem;
-		padding: 0.2rem 0.4rem;
+		gap: var(--space-3);
+		padding: var(--space-2) var(--space-3);
 		border: 1px solid rgba(0, 0, 0, 0.08);
 		border-radius: 0.25rem;
 		background: rgba(0, 0, 0, 0.02);
@@ -387,7 +387,7 @@
 		font-size: 0.75rem;
 		color: rgba(176, 48, 48, 0.8);
 		cursor: pointer;
-		padding: 0 0.3rem;
+		padding: 0 var(--space-2);
 		border-radius: 0.2rem;
 	}
 	.remove-btn:hover {
@@ -398,7 +398,7 @@
 		width: 100%;
 		min-height: 64px;
 		resize: vertical;
-		padding: 0.3rem 0.4rem;
+		padding: var(--space-2) var(--space-3);
 		font-family: inherit;
 		font-size: 0.85rem;
 		line-height: 1.3;

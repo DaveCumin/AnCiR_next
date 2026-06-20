@@ -76,6 +76,6 @@
 	}
 	.falseSelection:after {
 		content: 'v';
-		padding-left: 0.25rem;
+		padding-left: var(--space-2);
 	}
 </style>

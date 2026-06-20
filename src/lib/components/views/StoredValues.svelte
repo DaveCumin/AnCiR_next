@@ -90,20 +90,20 @@
 	}
 
 	.heading p {
-		margin-left: 0.75rem;
+		margin-left: var(--space-5);
 		font-weight: bold;
 	}
 
 	.stored-list {
 		width: 100%;
-		margin-top: 0.25rem;
-		padding: 0 0.5rem;
+		margin-top: var(--space-2);
+		padding: 0 var(--space-4);
 	}
 
 	.empty-hint {
 		font-size: var(--font-sm);
 		color: var(--color-lightness-55, #888);
-		padding: 0.5rem;
+		padding: var(--space-4);
 		line-height: 1.4;
 	}
 
@@ -111,7 +111,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.35rem;
-		padding: 0.25rem 0.25rem;
+		padding: var(--space-2) var(--space-2);
 		border-bottom: 1px solid var(--color-lightness-95, #f2f2f2);
 		font-size: var(--font-md);
 	}

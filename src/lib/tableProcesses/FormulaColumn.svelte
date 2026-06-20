@@ -703,7 +703,7 @@ return _r;`
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 0.25rem;
+		gap: var(--space-2);
 		padding: 0.35rem 0.4rem;
 		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-sm);
@@ -776,7 +776,7 @@ return _r;`
 	.ac-item {
 		display: flex;
 		align-items: baseline;
-		gap: 0.5rem;
+		gap: var(--space-4);
 		padding: 0.35rem 0.6rem;
 		cursor: pointer;
 		font-size: var(--font-md);
@@ -821,6 +821,6 @@ return _r;`
 	.formula-error {
 		color: #c0392b;
 		font-size: var(--font-sm);
-		margin: 0.25rem 0;
+		margin: var(--space-2) 0;
 	}
 </style>

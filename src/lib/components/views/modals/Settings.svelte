@@ -136,7 +136,7 @@
 
 	.zone-error {
 		display: block;
-		margin-top: 0.25rem;
+		margin-top: var(--space-2);
 		font-size: 0.85em;
 		color: var(--color-error, #c5221f);
 	}

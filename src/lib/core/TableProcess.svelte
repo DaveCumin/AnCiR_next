@@ -285,11 +285,11 @@
 		align-items: center;
 		gap: 0.4rem;
 		font-size: 0.8rem;
-		padding: 0.2rem 0.5rem;
+		padding: 0.2rem var(--space-4);
 		color: var(--text-muted, #888);
 	}
 	.chain-selector select {
 		font-size: 0.8rem;
-		padding: 0.1rem 0.25rem;
+		padding: 0.1rem var(--space-2);
 	}
 </style>

@@ -715,7 +715,7 @@
 
 	.display-list {
 		width: 100%;
-		margin-top: 0.25rem;
+		margin-top: var(--space-2);
 	}
 
 	/* Plots section rows */
@@ -723,7 +723,7 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		gap: 0.15rem;
+		gap: var(--space-1);
 		width: 100%;
 		cursor: pointer;
 	}
@@ -741,7 +741,7 @@
 		font-size: var(--font-sm);
 		line-height: 1;
 		color: var(--color-lightness-65, #aaa);
-		padding: 0 0.1rem;
+		padding: 0 var(--space-1);
 		opacity: 0;
 		transition: opacity 0.15s ease;
 	}
@@ -774,7 +774,7 @@
 	}
 
 	details {
-		margin: 0.25rem 0.5rem 0.25rem 0.75rem;
+		margin: var(--space-2) var(--space-4) var(--space-2) var(--space-5);
 		padding: 0;
 	}
 

@@ -757,7 +757,7 @@
 	.hint {
 		font-size: var(--font-sm);
 		color: var(--color-lightness-50, #888);
-		margin: 0.25rem 0;
+		margin: var(--space-2) 0;
 	}
 
 	.paste-section {
@@ -776,11 +776,11 @@
 	.paste-actions {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: var(--space-4);
 		margin-top: 0.3rem;
 	}
 	.paste-btn {
-		padding: 0.25rem 0.6rem;
+		padding: var(--space-2) 0.6rem;
 		font-size: var(--font-sm);
 		border: 1px solid var(--color-lightness-70, #b0b0b0);
 		border-radius: 3px;
@@ -811,7 +811,7 @@
 	}
 
 	.editable-table {
-		margin: 0.25rem 0;
+		margin: var(--space-2) 0;
 		border: 1px solid var(--color-lightness-85, #ddd);
 		border-radius: 3px;
 		font-size: var(--font-md);
@@ -977,7 +977,7 @@
 	.ac-item {
 		display: flex;
 		align-items: baseline;
-		gap: 0.5rem;
+		gap: var(--space-4);
 		padding: 0.35rem 0.6rem;
 		cursor: pointer;
 		font-size: var(--font-md);

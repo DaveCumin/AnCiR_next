@@ -755,12 +755,12 @@
 		justify-content: space-between;
 		width: 100%;
 		min-width: 0;
-		gap: 0.2rem;
+		gap: var(--space-2);
 	}
 	.clps-title-button {
 		display: flex;
 		align-items: center;
-		gap: 0.1rem;
+		gap: var(--space-1);
 		flex-shrink: 0;
 	}
 
@@ -803,7 +803,7 @@
 	.time-format-row {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: var(--space-3);
 		font-size: var(--font-sm);
 		padding: 2px 4px 4px;
 	}
@@ -842,7 +842,7 @@
 		margin: 0;
 		padding: 0;
 
-		gap: 0.25rem;
+		gap: var(--space-2);
 	}
 
 	.data-component-info p {
@@ -856,7 +856,7 @@
 
 		background-color: var(--color-lightness-85);
 
-		margin: 0.25rem 0 0.5rem 0;
+		margin: var(--space-2) 0 var(--space-4) 0;
 	}
 
 	.block {
@@ -895,7 +895,7 @@
 		flex-direction: column;
 		flex: 1 1 0;
 
-		margin: 0 0 0 0.5rem;
+		margin: 0 0 0 var(--space-4);
 		padding: 0;
 	}
 
@@ -911,14 +911,14 @@
 		margin: 0;
 		padding: 0;
 
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	details {
 		width: 100%;
 		min-width: 0;
 
-		margin: 0.25rem 0.25rem 0.25rem 0.5rem;
+		margin: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
 		padding: 0;
 	}
 
@@ -975,7 +975,7 @@
 		min-width: 0;
 		box-sizing: border-box;
 
-		padding: 0.1rem 0.35rem;
+		padding: var(--space-1) var(--space-3);
 		background-color: transparent;
 
 		font-size: var(--font-md);
@@ -994,26 +994,26 @@
 
 	.display {
 		margin: 0;
-		margin-bottom: 0.5rem;
+		margin-bottom: var(--space-4);
 	}
 
 	.process-container {
 		display: flex;
 		flex-direction: column;
 		margin: 0;
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	.linked-process {
 		border-left: 2px solid var(--color-lightness-35, #555);
-		padding-left: 0.35rem;
+		padding-left: var(--space-3);
 	}
 
 	.linked-badge {
 		font-size: 10px;
 		color: var(--color-lightness-35, #555);
 		line-height: 1;
-		margin-bottom: 0.1rem;
+		margin-bottom: var(--space-1);
 	}
 
 	.drag-handle {
@@ -1022,7 +1022,7 @@
 		font-size: var(--font-sm);
 		line-height: 1;
 		color: var(--color-lightness-65, #aaa);
-		padding: 0 0.1rem;
+		padding: 0 var(--space-1);
 		opacity: 0;
 		transition: opacity 0.15s ease;
 	}

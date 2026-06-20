@@ -307,12 +307,12 @@
 		font-size: 0.75rem;
 		color: var(--text-secondary, #666);
 		font-style: italic;
-		margin-top: 0.25rem;
+		margin-top: var(--space-2);
 		word-break: break-word;
 	}
 	.stat-label {
 		font-weight: 600;
 		font-style: normal;
-		margin-right: 0.25rem;
+		margin-right: var(--space-2);
 	}
 </style>

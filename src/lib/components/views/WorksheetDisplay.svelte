@@ -207,7 +207,7 @@
 	}
 
 	.heading p {
-		margin-left: 0.75rem;
+		margin-left: var(--space-5);
 		font-weight: bold;
 	}
 
@@ -217,11 +217,11 @@
 
 	.display-list {
 		width: 100%;
-		margin-top: 0.25rem;
+		margin-top: var(--space-2);
 	}
 
 	details {
-		margin: 0.25rem 0.5rem 0.25rem 0.75rem;
+		margin: var(--space-2) var(--space-4) var(--space-2) var(--space-5);
 		padding: 0;
 	}
 

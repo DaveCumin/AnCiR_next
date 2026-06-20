@@ -549,7 +549,7 @@
 
 	.plot-content {
 		flex: 1;
-		padding: 0.5rem;
+		padding: var(--space-4);
 		overflow: hidden;
 	}
 

@@ -193,7 +193,7 @@
 		font-size: var(--font-sm);
 		color: var(--color-lightness-35);
 
-		margin-bottom: 0.25rem;
+		margin-bottom: var(--space-2);
 	}
 	.operator-input {
 		width: 4rem;

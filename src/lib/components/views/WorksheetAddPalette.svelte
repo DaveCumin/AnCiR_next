@@ -245,25 +245,25 @@
 		border: 1px solid var(--color-lightness-80, #ccc);
 		border-radius: var(--radius-lg);
 		box-shadow: var(--shadow-3);
-		padding: 0.75rem;
+		padding: var(--space-5);
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: var(--space-2);
 	}
 
 	.palette-search-wrap {
 		position: sticky;
 		top: 0;
 		z-index: 1;
-		padding-bottom: 0.6rem;
+		padding-bottom: var(--space-4);
 		background: var(--surface-card);
 		border-bottom: 1px solid var(--color-lightness-90, #eee);
-		margin-bottom: 0.5rem;
+		margin-bottom: var(--space-4);
 	}
 
 	.palette-search {
 		width: 100%;
-		padding: 0.45rem 0.6rem;
+		padding: var(--space-4) var(--space-4);
 		border: 1px solid var(--color-lightness-80, #ccc);
 		border-radius: 5px;
 		font-size: 0.85rem;
@@ -281,7 +281,7 @@
 	}
 
 	.palette-empty {
-		padding: 0.8rem 0.3rem;
+		padding: var(--space-5) var(--space-2);
 		font-size: 0.82rem;
 		color: var(--color-lightness-50, #888);
 	}
@@ -289,8 +289,8 @@
 	.palette-grid {
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: 0.4rem;
-		padding-bottom: 0.25rem;
+		gap: var(--space-3);
+		padding-bottom: var(--space-2);
 	}
 
 	.palette-tile {
@@ -298,8 +298,8 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: flex-start;
-		gap: 0.3rem;
-		padding: 0.5rem 0.35rem;
+		gap: var(--space-2);
+		padding: var(--space-4) var(--space-3);
 		min-height: 64px;
 		border: 1px solid transparent;
 		border-radius: var(--radius-md);

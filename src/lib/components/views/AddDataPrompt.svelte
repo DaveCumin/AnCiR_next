@@ -157,10 +157,10 @@
 		border: 1px solid var(--color-lightness-80, #ccc);
 		border-radius: 10px;
 		box-shadow: var(--shadow-3);
-		padding: 0.4rem;
+		padding: var(--space-3);
 		display: flex;
 		flex-direction: column;
-		gap: 0.15rem;
+		gap: var(--space-1);
 		z-index: 1;
 	}
 
@@ -168,9 +168,9 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		gap: 0.7rem;
+		gap: var(--space-5);
 		width: 100%;
-		padding: 0.6rem 0.7rem;
+		padding: var(--space-4) var(--space-5);
 		border: 1px solid transparent;
 		border-radius: var(--radius-lg);
 		background: var(--surface-card);
@@ -205,7 +205,7 @@
 	.add-data-choice-text {
 		display: flex;
 		flex-direction: column;
-		gap: 0.1rem;
+		gap: var(--space-1);
 		min-width: 0;
 	}
 

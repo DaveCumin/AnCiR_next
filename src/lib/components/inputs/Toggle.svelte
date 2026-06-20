@@ -39,7 +39,7 @@
 	.toggle-wrapper {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: var(--space-4);
 		font-size: inherit;
 		font-family: inherit;
 		font-weight: inherit;

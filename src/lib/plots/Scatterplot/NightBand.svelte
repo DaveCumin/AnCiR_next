@@ -220,7 +220,7 @@
 {#snippet controls(nightBand)}
 	<div
 		class="control-component-title-icons"
-		style="margin-bottom: -1rem; z-index: 9999; margin-top: 0.25rem;"
+		style="margin-bottom: -var(--space-6); z-index: 9999; margin-top: var(--space-2);"
 	>
 		<button
 			class="icon"
@@ -244,7 +244,7 @@
 	</div>
 
 	<div class="control-input-horizontal">
-		<label style="display: flex; align-items: center; gap: 0.5rem; flex:  1;">
+		<label style="display: flex; align-items: center; gap: var(--space-4); flex:  1;">
 			<input type="checkbox" bind:checked={nightBand.enabled} />
 			<span style="font-size: var(--font-sm); color: var(--color-lightness-35);">Enabled</span>
 		</label>
@@ -258,7 +258,7 @@
 	</div>
 
 	<div class="control-input-horizontal">
-		<label style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+		<label style="display: flex; align-items: center; gap: var(--space-4); flex: 1;">
 			<input
 				type="radio"
 				name="mode-{nightBand.id}"
@@ -268,7 +268,7 @@
 			/>
 			<span style="font-size: var(--font-sm);">Repeating</span>
 		</label>
-		<label style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+		<label style="display: flex; align-items: center; gap: var(--space-4); flex: 1;">
 			<input
 				type="radio"
 				name="mode-{nightBand.id}"
@@ -289,7 +289,7 @@
 		</div>
 
 		<div class="control-input">
-			<label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+			<label style="display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-4);">
 				<input type="checkbox" bind:checked={nightBand.useDataMin} />
 				<span style="font-size: var(--font-sm);">Use data minimum as reference</span>
 			</label>
@@ -422,7 +422,7 @@
 							/>
 						</div>
 					</div>
-					<div class="div-line" style="margin-top: 0.5rem; margin-bottom: 0;"></div>
+					<div class="div-line" style="margin-top: var(--space-4); margin-bottom: 0;"></div>
 				</div>
 			{/each}
 		{/if}
@@ -459,11 +459,11 @@
 	:global(.custom-band-container) {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
-		padding: 0.5rem;
+		gap: var(--space-4);
+		padding: var(--space-4);
 		background-color: var(--color-lightness-98);
 		border-radius: var(--radius-sm);
-		margin-bottom: 0.5rem;
+		margin-bottom: var(--space-4);
 	}
 
 	input[type='checkbox'],

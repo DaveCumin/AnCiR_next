@@ -845,7 +845,7 @@
 	.error-message {
 		color: #c0392b;
 		font-size: var(--font-sm);
-		margin: 0.25rem 0;
+		margin: var(--space-2) 0;
 	}
 
 	.tp-block {
@@ -854,7 +854,7 @@
 		gap: 0.35rem;
 		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-sm);
-		padding: 0.5rem 0.6rem;
+		padding: var(--space-4) 0.6rem;
 		width: 100%;
 	}
 
@@ -923,7 +923,7 @@
 		overflow-y: auto;
 		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-sm);
-		padding: 0.25rem 0.4rem;
+		padding: var(--space-2) 0.4rem;
 	}
 
 	.col-check-item {

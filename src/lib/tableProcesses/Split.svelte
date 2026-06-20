@@ -537,18 +537,18 @@
 	.split-times-list {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: var(--space-4);
 		margin-bottom: 0.8rem;
 	}
 
 	.split-time-row {
 		display: flex;
-		gap: 0.5rem;
+		gap: var(--space-4);
 		align-items: center;
 	}
 
 	.add-split-time-btn {
-		padding: 0.6rem 1rem;
+		padding: 0.6rem var(--space-6);
 		font-size: var(--font-md);
 		border: 1px dashed var(--color-lightness-55, #888);
 		border-radius: 3px;
@@ -580,6 +580,6 @@
 	.split-info {
 		font-size: var(--font-sm);
 		color: var(--color-lightness-40, #666);
-		margin-top: 0.5rem;
+		margin-top: var(--space-4);
 	}
 </style>

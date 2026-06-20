@@ -405,7 +405,7 @@
 	}
 
 	.import-container {
-		margin-top: 1rem;
+		margin-top: var(--space-6);
 		min-height: 12rem;
 	}
 
@@ -447,13 +447,13 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	.url-input {
 		flex: 1;
 		font-size: var(--font-md);
-		padding: 0.4rem 0.5rem;
+		padding: 0.4rem var(--space-4);
 		border: 1px solid var(--color-lightness-85);
 		border-radius: 2px;
 		background: var(--color-lightness-97);
@@ -472,7 +472,7 @@
 		width: 100%;
 		box-sizing: border-box;
 		font-size: var(--font-md);
-		padding: 0.4rem 0.5rem;
+		padding: 0.4rem var(--space-4);
 		margin-bottom: 0.2rem;
 		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-sm);

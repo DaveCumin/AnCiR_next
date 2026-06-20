@@ -78,7 +78,7 @@
 	:global(.preview-table-wrapper) {
 		overflow-x: auto;
 		margin-top: 1.5rem;
-		margin-bottom: 1rem;
+		margin-bottom: var(--space-6);
 	}
 
 	:global(.preview-table-wrapper table) {

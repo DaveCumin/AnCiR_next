@@ -577,7 +577,7 @@
 		background: var(--surface-card);
 		border-radius: 10px;
 		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-		padding: 0.85rem 1rem 0.75rem;
+		padding: 0.85rem var(--space-6) var(--space-5);
 		pointer-events: auto;
 		font-size: var(--font-lg);
 		color: var(--color-lightness-20, #2a2a2a);
@@ -623,7 +623,7 @@
 	}
 
 	.tour-body {
-		margin: 0 0 0.75rem 0;
+		margin: 0 0 var(--space-5) 0;
 		line-height: 1.45;
 		color: var(--color-lightness-30, #444);
 	}

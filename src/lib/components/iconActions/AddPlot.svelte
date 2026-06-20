@@ -66,7 +66,7 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		gap: 1rem;
+		gap: var(--space-6);
 	}
 
 	.choose-file-button {

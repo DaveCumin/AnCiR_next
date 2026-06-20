@@ -93,7 +93,7 @@
 		background: var(--surface-card);
 		border-radius: 10px;
 		box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
-		padding: 1rem 1.1rem 1.1rem;
+		padding: var(--space-6) 1.1rem 1.1rem;
 		box-sizing: border-box;
 	}
 
@@ -120,7 +120,7 @@
 	}
 
 	.tp-sub {
-		margin: 0.25rem 0 0.9rem;
+		margin: var(--space-2) 0 0.9rem;
 		color: var(--color-lightness-45, #777);
 		font-size: 0.85rem;
 	}
@@ -128,13 +128,13 @@
 	.tp-list {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	.tp-item {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
+		gap: var(--space-5);
 		width: 100%;
 		text-align: left;
 		padding: 0.7rem 0.8rem;
@@ -184,7 +184,7 @@
 	}
 
 	.tp-empty {
-		padding: 1rem 0.3rem;
+		padding: var(--space-6) 0.3rem;
 		color: var(--color-lightness-50, #888);
 		font-size: 0.9rem;
 	}

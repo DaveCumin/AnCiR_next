@@ -97,7 +97,7 @@
 				<button
 					class="icon remove-edit"
 					onclick={() => removeEdit(edit.id)}
-					style="margin-top: 1rem;"
+					style="margin-top: var(--space-6);"
 				>
 					<Icon name="trash" width={16} height={16} />
 				</button>

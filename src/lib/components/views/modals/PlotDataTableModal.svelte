@@ -23,7 +23,7 @@
 	max_height="85vh"
 >
 	{#snippet header()}
-		<h3 style="margin: 0 0 0.75rem 0; font-size: 1rem;">{name}</h3>
+		<h3 style="margin: 0 0 var(--space-5) 0; font-size: 1rem;">{name}</h3>
 	{/snippet}
 
 	{#snippet children()}
@@ -91,7 +91,7 @@
 	}
 
 	.vt-th {
-		padding: 0.5rem 0.75rem;
+		padding: var(--space-4) var(--space-5);
 		font-weight: 600;
 		border-bottom: 2px solid var(--color-lightness-85);
 		border-right: 1px solid var(--color-lightness-90);
@@ -111,7 +111,7 @@
 	}
 
 	.vt-td {
-		padding: 0.35rem 0.75rem;
+		padding: 0.35rem var(--space-5);
 		border-bottom: 1px solid var(--color-lightness-93, #eee);
 		border-right: 1px solid var(--color-lightness-90);
 		font-variant-numeric: tabular-nums;
@@ -126,19 +126,19 @@
 	.row-count {
 		font-size: 0.8rem;
 		color: var(--color-lightness-60);
-		margin: 0.5rem 0 0 0;
+		margin: var(--space-4) 0 0 0;
 	}
 
 	.footer-buttons {
 		display: flex;
 		justify-content: flex-end;
-		gap: 0.5rem;
-		margin-top: 1rem;
+		gap: var(--space-4);
+		margin-top: var(--space-6);
 	}
 
 	.btn-primary,
 	.btn-secondary {
-		padding: 0.4rem 1rem;
+		padding: 0.4rem var(--space-6);
 		border-radius: var(--radius-sm);
 		font: inherit;
 		font-size: 0.9rem;

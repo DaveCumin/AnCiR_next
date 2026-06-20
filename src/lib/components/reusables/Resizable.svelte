@@ -39,7 +39,7 @@
 		display: flex;
 		align-items: center;
 		border: 1px solid #ccc;
-		padding: 0.5rem;
+		padding: var(--space-4);
 		overflow: hidden;
 		white-space: nowrap;
 		text-overflow: ellipsis;

@@ -30,7 +30,7 @@
 		transform: translateX(-50%);
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: var(--space-4);
 		z-index: 9999;
 		pointer-events: none;
 		width: max-content;
@@ -41,7 +41,7 @@
 		display: flex;
 		align-items: flex-start;
 		gap: 0.6rem;
-		padding: 0.75rem 1rem;
+		padding: var(--space-5) var(--space-6);
 		border-radius: var(--radius-md);
 		box-shadow:
 			0 4px 12px rgba(0, 0, 0, 0.15),

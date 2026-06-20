@@ -154,14 +154,14 @@
 <style>
 	.range-controls {
 		display: flex;
-		gap: 0.5rem;
+		gap: var(--space-4);
 		align-items: center;
 	}
 
 	.range-controls .control-input {
 		display: flex;
 		align-items: center;
-		gap: 0.25rem;
+		gap: var(--space-2);
 		margin: 0;
 	}
 
@@ -174,12 +174,12 @@
 		font-size: 0.75rem;
 		color: var(--text-secondary, #666);
 		font-style: italic;
-		margin-top: 0.25rem;
+		margin-top: var(--space-2);
 	}
 
 	select {
 		width: 100%;
-		padding: 0.25rem;
+		padding: var(--space-2);
 		border: 1px solid var(--border-color, #ccc);
 		border-radius: 0.25rem;
 		font-size: 0.9rem;

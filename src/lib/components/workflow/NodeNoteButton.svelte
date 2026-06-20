@@ -142,7 +142,7 @@
 		top: calc(100% + 6px);
 		right: 0;
 		width: 260px;
-		padding: 0.55rem;
+		padding: var(--space-4);
 		border: 1px solid rgba(0, 0, 0, 0.18);
 		border-radius: var(--radius-md);
 		background: var(--surface-card);

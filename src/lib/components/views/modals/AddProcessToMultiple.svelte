@@ -91,12 +91,12 @@ function onClose() {
 
 <style>
 h2 {
-	margin: 0 0 1rem 0;
+	margin: 0 0 var(--space-6) 0;
 	font-size: 1.1rem;
 }
 
 .section {
-	margin-bottom: 1rem;
+	margin-bottom: var(--space-6);
 }
 
 .section-label {
@@ -115,7 +115,7 @@ h2 {
 
 select {
 	width: 100%;
-	padding: 0.35rem 0.5rem;
+	padding: 0.35rem var(--space-4);
 	border: 1px solid var(--color-lightness-85, #ccc);
 	border-radius: var(--radius-sm);
 	font-size: 0.9rem;
@@ -130,7 +130,7 @@ select {
 
 .select-actions {
 	display: flex;
-	gap: 0.5rem;
+	gap: var(--space-4);
 }
 
 .link-btn {
@@ -150,11 +150,11 @@ select {
 .dialog-button-container {
 	display: flex;
 	justify-content: flex-end;
-	margin-top: 0.5rem;
+	margin-top: var(--space-4);
 }
 
 .dialog-button {
-	padding: 0.4rem 1rem;
+	padding: 0.4rem var(--space-6);
 	border: 1px solid var(--color-lightness-85, #ccc);
 	border-radius: var(--radius-sm);
 	background: var(--color-lightness-95, #f5f5f5);

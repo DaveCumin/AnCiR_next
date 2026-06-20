@@ -729,8 +729,8 @@
 		flex-shrink: 0;
 		cursor: move;
 
-		padding: 0.5rem;
-		padding-left: 1rem;
+		padding: var(--space-4);
+		padding-left: var(--space-6);
 		padding-right: 0.4rem;
 		background-color: var(--color-lightness-98);
 		border-bottom: 1px solid var(--color-lightness-85);
@@ -747,7 +747,7 @@
 
 	.cp-content {
 		flex: 1;
-		padding: 0.5rem;
+		padding: var(--space-4);
 		overflow: auto;
 	}
 

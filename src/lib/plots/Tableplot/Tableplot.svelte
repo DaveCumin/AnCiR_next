@@ -910,7 +910,7 @@
 
 	.display-list {
 		width: 100%;
-		margin-top: 0.25rem;
+		margin-top: var(--space-2);
 	}
 
 	.clps-item {
@@ -921,7 +921,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 0.35rem 0.5rem;
+		padding: 0.35rem var(--space-4);
 		border-radius: var(--radius-sm);
 		cursor: pointer;
 		user-select: none;
@@ -935,7 +935,7 @@
 	.clps-title {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: var(--space-4);
 		flex: 1;
 	}
 
@@ -946,7 +946,7 @@
 	.clps-title-button {
 		display: flex;
 		align-items: center;
-		gap: 0.25rem;
+		gap: var(--space-2);
 		opacity: 0.7;
 	}
 
@@ -962,8 +962,8 @@
 	.tree-item-child {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		padding: 0.25rem 0.5rem;
+		gap: var(--space-4);
+		padding: var(--space-2) var(--space-4);
 		border-radius: 3px;
 	}
 
@@ -986,13 +986,13 @@
 		background: var(--color-lightness-92);
 		padding: 1px 5px;
 		border-radius: 3px;
-		margin-left: 0.5rem;
+		margin-left: var(--space-4);
 	}
 
 	.empty-state {
 		color: var(--color-lightness-40);
 		font-size: var(--font-sm);
-		margin: 1rem 0.75rem;
+		margin: var(--space-6) var(--space-5);
 		font-style: italic;
 	}
 

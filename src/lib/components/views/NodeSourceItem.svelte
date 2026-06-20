@@ -118,7 +118,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.4rem;
+		gap: var(--space-3);
 		padding: 3px 4px 3px 6px;
 		border-bottom: 1px solid var(--color-lightness-92, #ededed);
 		background: var(--color-lightness-96, #f3f3f3);
@@ -135,7 +135,7 @@
 	.node-head-btns {
 		display: flex;
 		align-items: center;
-		gap: 0.1rem;
+		gap: var(--space-1);
 		flex-shrink: 0;
 	}
 	.node-action-btn {
