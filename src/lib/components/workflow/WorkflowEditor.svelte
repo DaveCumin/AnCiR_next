@@ -36,7 +36,6 @@
 	import EmbeddedPlot from './EmbeddedPlot.svelte';
 	import MiniDataTable from './MiniDataTable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import FloatingActions from './FloatingActions.svelte';
 	import NodePalette from './NodePalette.svelte';
 	import AddDataPrompt from '$lib/components/views/AddDataPrompt.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
@@ -772,7 +771,7 @@
 	});
 
 	// Path-focus dim mode (flowtest-style). When true AND a node is selected,
-	// non-connected nodes dim out. Toggled via the FloatingActions button.
+	// non-connected nodes dim out. Toggled via the viewport toolbar button.
 	// Persisted to localStorage so the user's preference sticks across reloads.
 	const PATH_FOCUS_KEY = 'ancir.canvas.pathFocus';
 	let pathFocusEnabled = $state(
@@ -2876,7 +2875,6 @@
 	{/if}
 
 	<div class="canvas-viewport" bind:this={canvasViewportEl} class:panning={isPanning && !dragInfo}>
-		<FloatingActions />
 		<NodePalette
 			queueSpawnPosition={queueSpawnPositionAtViewport}
 			onSpawnColumnProcess={spawnColumnProcessFromPalette}
@@ -3162,6 +3160,7 @@
 		>
 			<Icon name="center" width={22} height={22} />
 		</button>
+		<div class="zc-sep"></div>
 		<button
 			class="icon zoomout"
 			onclick={(e) => {
@@ -3439,15 +3438,42 @@
 		background: rgba(255, 255, 255, 1);
 	}
 
+	/* Grouped viewport toolbar — a card matching the selection layout toolbar. */
 	.zoom-controls {
 		position: fixed;
 		bottom: 10px;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 4px;
+		gap: 2px;
 		z-index: 999;
 		transition: right 0.6s ease;
+		background: #fff;
+		border: 1px solid var(--color-lightness-85, #ddd);
+		border-radius: 8px;
+		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+		padding: 4px;
+	}
+	.zoom-controls button {
+		width: 28px;
+		height: 26px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		border-radius: 5px;
+		background: transparent;
+		cursor: pointer;
+		transition: background 0.15s ease;
+	}
+	.zoom-controls button:hover {
+		background: var(--color-lightness-95, #f2f2f2);
+	}
+	.zc-sep {
+		width: 22px;
+		height: 1px;
+		background: var(--color-lightness-90, #e7e7e7);
+		margin: 2px 0;
 	}
 
 	.selection-toolbar-host {
