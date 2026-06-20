@@ -1592,11 +1592,22 @@
 				return;
 			}
 
-			// ysMatch: append a new series to (or seed) the chosen set.
-			const setX = setIdx < groups.length ? groups[setIdx].xRefId : -1;
-			const dataIn = { x: { refId: setX }, y: { refId: colId } };
-			if (typeof plot.addData === 'function') plot.addData(dataIn);
-			else plot.data = [...plot.data, dataIn];
+			// ysMatch: re-use a freed/orphan y-slot in the set if one exists (so
+			// removing a y then adding a new one doesn't leave a duplicate orphan
+			// series); otherwise append a new series to (or seed) the chosen set.
+			const grp = setIdx < groups.length ? groups[setIdx] : null;
+			const setX = grp ? grp.xRefId : -1;
+			const orphanDp = grp?.dataPoints.find(
+				(dp) => (dp?.y?.refId ?? -1) < 0 || !getColumnById(dp?.y?.refId)
+			);
+			if (orphanDp) {
+				if (orphanDp.y) orphanDp.y.refId = colId;
+				else orphanDp.y = { refId: colId };
+			} else {
+				const dataIn = { x: { refId: setX }, y: { refId: colId } };
+				if (typeof plot.addData === 'function') plot.addData(dataIn);
+				else plot.data = [...plot.data, dataIn];
+			}
 		}
 	}
 
@@ -1653,10 +1664,18 @@
 					if (dp?.x) dp.x.refId = -1;
 				}
 			} else {
-				// Drop every data point in the set (matches the tableplot
-				// "clear all wires on this port" semantic).
-				const toRemove = new Set(g.dataPoints);
-				plot.data = plot.data.filter((dp) => !toRemove.has(dp));
+				// Clear every series in the set. If the set's x is still wired, keep
+				// one data point as an x-seed (y = -1) so the x survives; otherwise
+				// drop them all.
+				if ((g.xRefId ?? -1) >= 0 && g.dataPoints[0]?.y) {
+					const [seed, ...rest] = g.dataPoints;
+					seed.y.refId = -1;
+					const drop = new Set(rest);
+					plot.data = plot.data.filter((dp) => !drop.has(dp));
+				} else {
+					const toRemove = new Set(g.dataPoints);
+					plot.data = plot.data.filter((dp) => !toRemove.has(dp));
+				}
 			}
 		}
 	}
@@ -2207,11 +2226,21 @@
 				return;
 			}
 
-			// ysMatch: drop the first data point in this set whose y matches.
+			// ysMatch: drop the data point whose y matches. If it's the last y
+			// sharing this set's x, keep the data point as an x-seed (y = -1) so the
+			// set's x wire survives and a re-added y re-uses the slot; otherwise
+			// remove the data point outright.
 			const idx = g.dataPoints.findIndex((dp) => dp?.y?.refId === colId);
 			if (idx < 0) return;
 			const removedDp = g.dataPoints[idx];
-			plot.data = plot.data.filter((dp) => dp !== removedDp);
+			const otherValidY = g.dataPoints.some(
+				(dp) => dp !== removedDp && (dp?.y?.refId ?? -1) >= 0
+			);
+			if (!otherValidY && (g.xRefId ?? -1) >= 0 && removedDp.y) {
+				removedDp.y.refId = -1;
+			} else {
+				plot.data = plot.data.filter((dp) => dp !== removedDp);
+			}
 		}
 	}
 

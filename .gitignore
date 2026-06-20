@@ -35,3 +35,8 @@ docs/
 
 # Local MCP workspace (not for the repo)
 /mcp/
+
+# Python venv for tools/
+tools/.venv/
+tools/**/__pycache__/
+tools/parity/js_results.json

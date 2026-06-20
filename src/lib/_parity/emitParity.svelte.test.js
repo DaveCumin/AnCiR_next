@@ -2,14 +2,18 @@
  * JS side of the JS↔Python parity harness (NOT a normal test).
  *
  * Runs every fixture in tools/parity/fixtures.json through the REAL AnCiR JS
- * engine (the same Column / TableProcess / process registry the app uses) and
- * writes the outputs to tools/parity/js_results.json. tools/test_parity.py then
+ * engine and writes outputs to tools/parity/js_results.json. tools/test_parity.py
  * runs the same fixtures through ancir_runtime.py and asserts the two agree.
+ *
+ * The JS side is the single source of INPUT data too: fixtures may declare a
+ * seeded `generate` spec (deterministic rhythm / groups / linear data); the
+ * emitter generates the arrays and writes them into js_results.json so the Python
+ * side analyses the *identical* numbers (no RNG to re-implement in Python).
  *
  * Compute runs synchronously: a ThrowOnPost fake worker forces the worker pool's
  * documented sync fallback (workerPool.js), so worker-dispatched analyses
  * (e.g. Cosinor's cosinor.fitMany) execute on the main thread and finish before
- * we read their outputs — no hangs, fully deterministic.
+ * we read their outputs — deterministic, no hangs.
  *
  * Run it explicitly (gated so it never runs in the normal suite):
  *   GEN_PARITY=1 npx vitest run src/lib/_parity/emitParity.svelte.test.js
@@ -27,8 +31,6 @@ import { setWorkerFactory } from '$lib/workers/workerPool.js';
 
 const PARITY_DIR = join(process.cwd(), 'tools', 'parity');
 
-// Force the worker pool's sync fallback: a worker whose postMessage throws makes
-// runComputeTask run the registered task on the main thread (workerPool.js).
 class ThrowOnPost {
 	postMessage() {
 		throw new Error('parity harness: forcing synchronous compute');
@@ -36,6 +38,62 @@ class ThrowOnPost {
 	terminate() {}
 }
 
+// --- deterministic seeded data (mirrors the demo/classroom generators) --------
+function mulberry32(seed) {
+	return function () {
+		seed |= 0;
+		seed = (seed + 0x6d2b79f5) | 0;
+		let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+		t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+		return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+	};
+}
+function normal(rng, mean = 0, sd = 1) {
+	const u = Math.max(rng(), 1e-12);
+	const v = rng();
+	return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+const seq = (n, f) => Array.from({ length: n }, (_, i) => f(i));
+
+// Returns { ref: { type, values } } from a seeded spec. Same seed → same arrays.
+function generateInputs(spec) {
+	const rng = mulberry32(spec.seed ?? 1);
+	if (spec.type === 'rhythm') {
+		const { n, period, amp, mesor = 0, phase = 0, noise = 0, refs } = spec;
+		const t = seq(n, (i) => i);
+		const y = t.map(
+			(h) => mesor + amp * Math.cos((2 * Math.PI * (h - phase)) / period) + (noise ? normal(rng, 0, noise) : 0)
+		);
+		return { [refs.x]: { type: 'number', values: t }, [refs.y]: { type: 'number', values: y } };
+	}
+	if (spec.type === 'linear') {
+		const { n, slope, intercept = 0, noise = 0, refs } = spec;
+		const t = seq(n, (i) => i);
+		const y = t.map((x) => slope * x + intercept + (noise ? normal(rng, 0, noise) : 0));
+		return { [refs.x]: { type: 'number', values: t }, [refs.y]: { type: 'number', values: y } };
+	}
+	if (spec.type === 'groups') {
+		const g = [];
+		const v = [];
+		for (const grp of spec.groups) {
+			for (let i = 0; i < grp.n; i++) {
+				g.push(grp.label);
+				v.push(normal(rng, grp.mean, grp.sd));
+			}
+		}
+		return { [spec.refs.g]: { type: 'category', values: g }, [spec.refs.v]: { type: 'number', values: v } };
+	}
+	throw new Error(`unknown generate type ${spec.type}`);
+}
+
+function tpInputs(fx) {
+	if (fx.generate) return generateInputs(fx.generate);
+	const out = {};
+	for (const inp of fx.inputs) out[inp.ref] = { type: inp.type ?? 'number', values: inp.values };
+	return out;
+}
+
+// --- core helpers -------------------------------------------------------------
 function resetCore() {
 	core.data = [];
 	core.plots = [];
@@ -57,7 +115,6 @@ function mkCol(type, values, name) {
 	return c.id;
 }
 
-// Deep-resolve '@ref' tokens in args to the real column ids created for inputs.
 function resolveTokens(value, idMap) {
 	if (typeof value === 'string' && value.startsWith('@')) {
 		const ref = value.slice(1);
@@ -73,30 +130,37 @@ function resolveTokens(value, idMap) {
 	return value;
 }
 
-// cosinory_13 -> cosinory ; fity_2 -> fity ; cosinorx -> cosinorx (no change).
 function canonicalKey(k) {
 	const m = k.match(/^(.*)_\d+$/);
 	return m ? m[1] : k;
 }
 
-// JSON can't carry NaN/Infinity — encode as null; the Python side treats a null
-// in a numeric output array as NaN so NaN==NaN positions still match.
 function safeArray(arr) {
 	return (arr ?? []).map((v) => (typeof v === 'number' && !Number.isFinite(v) ? null : v));
 }
+function safeNum(v) {
+	return typeof v === 'number' && !Number.isFinite(v) ? null : v;
+}
 
+// Build input columns from a {ref:{type,values}} dict; return idMap + resolved args.
+function buildTableInputs(fx) {
+	const inputs = tpInputs(fx);
+	const idMap = {};
+	for (const [ref, { type, values }] of Object.entries(inputs)) idMap[ref] = mkCol(type, values, ref);
+	return { inputs, idMap, args: resolveTokens(fx.args, idMap) };
+}
+
+// --- runners ------------------------------------------------------------------
 function runColumnProcess(fx) {
 	const def = appConsts.processMap.get(fx.jsName);
 	if (!def?.func) throw new Error(`no JS column process ${fx.jsName}`);
-	return { outputs: { value: safeArray(def.func(fx.input, fx.args ?? {})) } };
+	return { input: safeArray(fx.input), outputs: { value: safeArray(def.func(fx.input, fx.args ?? {})) } };
 }
 
 async function runTableProcess(fx) {
 	const entry = appConsts.tableProcessMap.get(fx.jsName);
 	if (!entry?.func) throw new Error(`no JS table process ${fx.jsName}`);
-	const idMap = {};
-	for (const inp of fx.inputs) idMap[inp.ref] = mkCol(inp.type ?? 'number', inp.values, inp.ref);
-	const args = resolveTokens(fx.args, idMap);
+	const { inputs, args } = buildTableInputs(fx);
 	const tp = new TableProcess({ name: fx.jsName, args }, null);
 	pushObj(tp);
 	await entry.func(tp.args);
@@ -107,10 +171,29 @@ async function runTableProcess(fx) {
 		if (typeof id !== 'number' || id < 0) continue;
 		const canon = canonicalKey(key);
 		if (!want.has(canon)) continue;
-		const col = core.data.find((c) => c.id === id);
-		outputs[canon] = safeArray(col?.getData?.());
+		outputs[canon] = safeArray(core.data.find((c) => c.id === id)?.getData?.());
 	}
-	return { outputs };
+	return { inputs, outputs };
+}
+
+async function runTableProcessResult(fx) {
+	const entry = appConsts.tableProcessMap.get(fx.jsName);
+	if (!entry?.func) throw new Error(`no JS table process ${fx.jsName}`);
+	const { inputs, args } = buildTableInputs(fx);
+	const tp = new TableProcess({ name: fx.jsName, args }, null);
+	pushObj(tp);
+	const ret = await entry.func(tp.args);
+	const result = Array.isArray(ret) ? ret[0] : ret;
+
+	// Single-y fixtures: take the one comparison object (skip the 'multiY' key).
+	const comps = result?.comparisons ?? {};
+	const key = Object.keys(comps).find((k) => k !== 'multiY') ?? Object.keys(comps)[0];
+	const comp = comps[key] ?? {};
+	const fields = {};
+	for (const f of fx.compareFields ?? []) {
+		fields[f] = typeof comp[f] === 'number' ? safeNum(comp[f]) : comp[f];
+	}
+	return { inputs, result: fields };
 }
 
 describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
@@ -124,8 +207,9 @@ describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 		const results = {};
 		for (const fx of fixtures) {
 			resetCore();
-			results[fx.id] =
-				fx.kind === 'columnProcess' ? runColumnProcess(fx) : await runTableProcess(fx);
+			if (fx.kind === 'columnProcess') results[fx.id] = runColumnProcess(fx);
+			else if (fx.kind === 'tableProcessResult') results[fx.id] = await runTableProcessResult(fx);
+			else results[fx.id] = await runTableProcess(fx);
 		}
 
 		mkdirSync(PARITY_DIR, { recursive: true });

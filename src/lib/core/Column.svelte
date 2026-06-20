@@ -167,13 +167,23 @@
 
 		// Step 4: Remove from all plots/tables
 		core.plots.forEach((plot) => {
-			if (plot.plot && plot.plot.columnRefs) {
+			// Table plots: drop the column id from the ref list.
+			if (plot.plot?.columnRefs) {
 				plot.plot.columnRefs = plot.plot.columnRefs.filter((colId) => colId !== columnId);
 			}
 
-			// Handle plot-specific column references
-			if (plot.plot.columnRefs) {
-				plot.plot.columnRefs = plot.plot.columnRefs.filter((colId) => colId !== columnId);
+			// x/y plots: scrub the removed column from each data point so it can't
+			// linger as an orphan series. Clearing a field to -1 (in place, to keep
+			// the Column instance) leaves a data point's shared x as a re-usable
+			// seed; drop points that end up with neither a valid x nor y.
+			if (Array.isArray(plot.plot?.data)) {
+				for (const dp of plot.plot.data) {
+					if (dp?.x?.refId === columnId) dp.x.refId = -1;
+					if (dp?.y?.refId === columnId) dp.y.refId = -1;
+				}
+				plot.plot.data = plot.plot.data.filter(
+					(dp) => (dp?.x?.refId ?? -1) >= 0 || (dp?.y?.refId ?? -1) >= 0
+				);
 			}
 		});
 
