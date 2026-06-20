@@ -706,13 +706,31 @@
 {/if}
 
 <style>
-	/* Find/select reveals on row hover; keeps the row uncluttered at rest. */
-	.find-select-btn {
+	/* Type + name on the left, action buttons inline on the right. */
+	.clps-title-container {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		width: 100%;
+		min-width: 0;
+		gap: 0.25rem;
+	}
+	.clps-title-button {
+		display: flex;
+		align-items: center;
+		gap: 0.1rem;
+		flex-shrink: 0;
+	}
+
+	/* Both action buttons (find-on-canvas + bin) reveal on row hover; keeps the row
+	   uncluttered at rest. */
+	.clps-title-button button {
 		opacity: 0;
 		transition: opacity 0.12s ease;
 	}
-	.clps-item:hover .find-select-btn,
-	.find-select-btn:focus-visible {
+	.clps-container:hover .clps-title-button button,
+	.clps-title-button button:focus-visible {
 		opacity: 1;
 	}
 	.time-format-row {
@@ -817,8 +835,9 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		justify-content: center;
+		justify-content: flex-start;
 
+		flex: 1 1 auto;
 		min-width: 0;
 
 		margin: 0;

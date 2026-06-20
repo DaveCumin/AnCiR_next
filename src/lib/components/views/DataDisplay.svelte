@@ -231,6 +231,26 @@
 		showSinglePlotDropdown = true;
 	}
 
+	// Select a plot from the panel: mark it selected (workspace view) and find it on
+	// the canvas. The focus request also resets the canvas selection to just this
+	// plot, so any other selected nodes are deselected. View is left as-is so it
+	// works in either the workflow or workspace canvas.
+	function plotSelectAndFind(e, plot) {
+		selectPlot(e ?? {}, plot.id);
+		appState.focusNodeRequest = {
+			id: `plot_${plot.id}`,
+			n: (appState.focusNodeRequest?.n ?? 0) + 1
+		};
+	}
+
+	// Find a group's node on the workflow canvas (select + pan + open its panel).
+	function groupFindSelect(group) {
+		appState.canvasSelectedNodeId = group.id;
+		appState.focusNodeRequest = { id: group.id, n: (appState.focusNodeRequest?.n ?? 0) + 1 };
+		appState.view = 'canvas';
+		appState.showControlPanel = true;
+	}
+
 	// ─── Drag-and-drop reorder ─────────────────────────────────────────────────
 	// MIME-style payloads encode kind + ids. Drop targets call the appropriate
 	// reorder helper.
@@ -365,6 +385,16 @@
 							<p><Editable bind:value={group.name} /></p>
 						</div>
 						<div class="clps-title-button">
+							<button
+								class="icon group-find-btn"
+								title="Find on canvas"
+								onclick={(e) => {
+									e.stopPropagation();
+									groupFindSelect(group);
+								}}
+							>
+								<Icon name="process" width={15} height={15} className="menu-icon" />
+							</button>
 							<button class="icon" onclick={(e) => toggleSectionFromCaret(e, group.id)}>
 								{#if isOpen(group.id)}
 									<Icon name="caret-down" width={20} height={20} />
@@ -527,11 +557,11 @@
 							class="plot-row-inner"
 							role="button"
 							tabindex="0"
-							onclick={(e) => selectPlot(e, plot.id)}
+							onclick={(e) => plotSelectAndFind(e, plot)}
 							onkeydown={(e) => {
 								if (e.key === 'Enter' || e.key === ' ') {
 									e.preventDefault();
-									selectPlot(e, plot.id);
+									plotSelectAndFind(e, plot);
 								}
 							}}
 						>
@@ -555,6 +585,16 @@
 								{/if}
 							</button>
 							<p class="plot-name"><Editable bind:value={plot.name} /></p>
+							<button
+								class="icon plot-find-btn"
+								title="Find on canvas"
+								onclick={(e) => {
+									e.stopPropagation();
+									plotSelectAndFind({}, plot);
+								}}
+							>
+								<Icon name="process" width={15} height={15} className="menu-icon" />
+							</button>
 							<button
 								class="icon"
 								title="Plot actions"
@@ -689,6 +729,21 @@
 	}
 	.plot-drag-over {
 		border-top: 2px solid var(--color-lightness-35, #555);
+	}
+
+	/* Find-on-canvas buttons reveal on hover (groups + plots), matching nodes. The
+	   group button needs extra specificity to beat `summary .icon`'s rest opacity. */
+	.clps-container summary .group-find-btn,
+	.plot-row .plot-find-btn {
+		opacity: 0;
+		transition: opacity 0.12s ease;
+		flex-shrink: 0;
+	}
+	.clps-container:hover summary .group-find-btn,
+	.clps-container summary .group-find-btn:focus-visible,
+	.plot-row:hover .plot-find-btn,
+	.plot-row .plot-find-btn:focus-visible {
+		opacity: 1;
 	}
 
 	details {
