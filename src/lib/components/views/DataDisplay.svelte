@@ -11,7 +11,6 @@
 	import { openImportData } from '$lib/core/dataSourceActions.js';
 	import SwapColumns from './modals/SwapColumns.svelte';
 	import Editable from '../inputs/Editable.svelte';
-	import { tooltip } from '$lib/utils/tooltip.js';
 	import { getNodeName } from '$lib/core/nodeNaming.js';
 	import { selectPlot } from '$lib/core/Plot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
@@ -44,7 +43,7 @@
 
 	// Expand state — keyed by section id (group id, '__nodes__', '__ungrouped__',
 	// '__plots__'). Nodes + Plots start open so they're visible without a click.
-	let openSections = $state({ __nodes__: true, __plots__: true });
+	let openSections = $state({ __data__: true, __nodes__: true, __plots__: true });
 
 	// Toggle a section open/closed from a header click. `<details>` uses
 	// `bind:open`, so we MUST preventDefault to stop the browser's native toggle
@@ -79,18 +78,24 @@
 	});
 
 	// Which section owns the selected item? Used to auto-open its <details>.
+	// Source columns (grouped or not) all live in the "Data" section now.
 	const selectedSectionId = $derived.by(() => {
 		const sel = canvasSelection;
 		if (!sel) return null;
-		// Operation nodes (process + table-process) live in the "Nodes" section.
 		if (sel.kind === 'tableprocess' || sel.kind === 'process') return '__nodes__';
-		// data kind: a source column — find its group, else Sources.
-		const colId = sel.id;
-		if (colId == null) return null;
+		if (sel.kind === 'data') return '__data__';
+		return null;
+	});
+
+	// The group nested under "Data" that owns the selected column, so it can also
+	// be expanded when the column is selected on the canvas.
+	const selectedGroupId = $derived.by(() => {
+		const sel = canvasSelection;
+		if (!sel || sel.kind !== 'data') return null;
 		for (const g of core.groups ?? []) {
-			if ((g.sourceColumnIds ?? []).includes(colId)) return g.id;
+			if ((g.sourceColumnIds ?? []).includes(sel.id)) return g.id;
 		}
-		return '__ungrouped__';
+		return null;
 	});
 
 	// Scroll-into-view refs keyed by `${kind}_${id}`
@@ -99,9 +104,11 @@
 	$effect(() => {
 		const sel = canvasSelection;
 		const sid = selectedSectionId;
+		const gid = selectedGroupId;
 		if (!sel || !sid) return;
 		untrack(() => {
 			openSections[sid] = true;
+			if (gid != null) openSections[gid] = true;
 		});
 		tick().then(() => {
 			const el = rowRefs[`${sel.kind}_${sel.id}`];
@@ -159,6 +166,11 @@
 
 	// Search-filtered views of each section.
 	const filteredUngrouped = $derived(ungroupedColumns.filter((c) => matches(c.name)));
+	// The "Data" section (groups + ungrouped source columns) has something to show.
+	const dataHasContent = $derived(
+		filteredUngrouped.length > 0 ||
+			(core.groups ?? []).some((g) => groupVisibleColumns(g).length > 0)
+	);
 	function nodeMatches(node) {
 		if (!q) return true;
 		if (matches(getNodeName(node))) return true;
@@ -341,24 +353,6 @@
 	}
 </script>
 
-<div class="heading">
-	<p>Data Sources</p>
-
-	<div class="databuttons">
-		<button class="icon" onclick={() => (showSwapColumns = true)} title="Swap columns">
-			<Icon name="swap" width={16} height={16} />
-		</button>
-		<button
-			class="icon"
-			onclick={() => openImportData()}
-			title="Import data"
-			{@attach tooltip('Import data')}
-		>
-			<Icon name="add" width={16} height={16} />
-		</button>
-	</div>
-</div>
-
 <div class="search-row">
 	<Icon name="search" width={14} height={14} className="search-icon" />
 	<input
@@ -376,8 +370,46 @@
 </div>
 
 <div class="display-list">
-	<!-- Groups -->
-	{#each core.groups as group (group.id)}
+	<!-- Data: groups + ungrouped source columns. Swap / import sit on the section
+	     header, revealed on hover. -->
+	{#if !q || dataHasContent}
+		<div class="clps-container section">
+			<details class="clps-item" open={isOpen('__data__')}>
+				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__data__')}>
+					<div class="clps-title"><p class="section-label">Data</p></div>
+					<div class="clps-title-button">
+						<button
+							class="icon section-action"
+							title="Swap columns"
+							onclick={(e) => {
+								e.stopPropagation();
+								showSwapColumns = true;
+							}}
+						>
+							<Icon name="swap" width={15} height={15} />
+						</button>
+						<button
+							class="icon section-action"
+							title="Import data"
+							onclick={(e) => {
+								e.stopPropagation();
+								openImportData();
+							}}
+						>
+							<Icon name="add" width={15} height={15} />
+						</button>
+						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__data__')}>
+							{#if isOpen('__data__')}
+								<Icon name="caret-down" width={20} height={20} />
+							{:else}
+								<Icon name="caret-right" width={20} height={20} />
+							{/if}
+						</button>
+					</div>
+				</summary>
+
+				<!-- Groups (nested under Data) -->
+				{#each core.groups as group (group.id)}
 		{@const visCols = groupVisibleColumns(group)}
 		{#if !q || visCols.length > 0}
 			<div
@@ -447,58 +479,7 @@
 		{/if}
 	{/each}
 
-	<!-- Nodes: every operation (process + table-process) as its own entry, with
-	     read-only input(s) and its output columns. -->
-	{#if filteredNodeEntries.length > 0}
-		<div class="clps-container">
-			<details class="clps-item" open={isOpen('__nodes__')}>
-				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__nodes__')}>
-					<div class="clps-title">
-						<p>Nodes</p>
-					</div>
-					<div class="clps-title-button">
-						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__nodes__')}>
-							{#if isOpen('__nodes__')}
-								<Icon name="caret-down" width={20} height={20} />
-							{:else}
-								<Icon name="caret-right" width={20} height={20} />
-							{/if}
-						</button>
-					</div>
-				</summary>
-
-				{#each filteredNodeEntries as node (node.id)}
-					<div
-						class="second-clps"
-						class:canvas-selected={appState.canvasSelectedNodeId === node.id}
-						bind:this={rowRefs[node.id]}
-					>
-						<NodeSourceItem {node} />
-					</div>
-				{/each}
-			</details>
-		</div>
-	{/if}
-
-	<!-- Ungrouped columns -->
-	{#if filteredUngrouped.length > 0}
-		<div class="clps-container">
-			<details class="clps-item" open={isOpen('__ungrouped__')}>
-				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__ungrouped__')}>
-					<div class="clps-title">
-						<p>Sources</p>
-					</div>
-					<div class="clps-title-button">
-						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__ungrouped__')}>
-							{#if isOpen('__ungrouped__')}
-								<Icon name="caret-down" width={20} height={20} />
-							{:else}
-								<Icon name="caret-right" width={20} height={20} />
-							{/if}
-						</button>
-					</div>
-				</summary>
-
+				<!-- Ungrouped source columns (flat, after the groups) -->
 				{#each filteredUngrouped as col (col.id)}
 					{@const colSelected = canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
 					{@const ownsSelectedProcess =
@@ -531,10 +512,47 @@
 		</div>
 	{/if}
 
+	<div class="section-sep"></div>
+
+	<!-- Nodes: every operation (process + table-process) as its own entry, with
+	     read-only input(s) and its output columns. -->
+	{#if filteredNodeEntries.length > 0}
+		<div class="clps-container section">
+			<details class="clps-item" open={isOpen('__nodes__')}>
+				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__nodes__')}>
+					<div class="clps-title">
+						<p>Nodes</p>
+					</div>
+					<div class="clps-title-button">
+						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__nodes__')}>
+							{#if isOpen('__nodes__')}
+								<Icon name="caret-down" width={20} height={20} />
+							{:else}
+								<Icon name="caret-right" width={20} height={20} />
+							{/if}
+						</button>
+					</div>
+				</summary>
+
+				{#each filteredNodeEntries as node (node.id)}
+					<div
+						class="second-clps"
+						class:canvas-selected={appState.canvasSelectedNodeId === node.id}
+						bind:this={rowRefs[node.id]}
+					>
+						<NodeSourceItem {node} />
+					</div>
+				{/each}
+			</details>
+		</div>
+	{/if}
+
+	<div class="section-sep"></div>
+
 	<!-- Plots: the worksheet stacking order. Topmost row = highest z-index; drag to
 	     reorder (disabled while searching). -->
 	{#if displayPlots.length > 0}
-		<div class="clps-container">
+		<div class="clps-container section">
 			<details class="clps-item" open={isOpen('__plots__')}>
 				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__plots__')}>
 					<div class="clps-title">
@@ -634,41 +652,41 @@
 />
 
 <style>
-	.heading {
-		position: sticky;
-		top: 0;
-		width: 100%;
-		height: 2rem;
-		display: flex;
-		flex-direction: row;
-		justify-content: space-between;
-		align-items: center;
-		border-bottom: 1px solid var(--color-lightness-85);
-		background-color: white;
-		z-index: 999;
+	/* Section dividers (between Data / Nodes / Plots), mirroring the nav .rail-sep. */
+	.section-sep {
+		height: 1px;
+		margin: var(--space-3) var(--space-4);
+		background: var(--divider-soft);
 	}
 
-	.heading p {
-		margin-left: 0.75rem;
-		font-weight: bold;
+	.section-label {
+		font-weight: 600;
+		font-size: var(--font-md);
 	}
 
-	.heading button {
-		margin-right: 0.65rem;
+	/* Swap / import buttons on the Data section header — revealed on hover. Extra
+	   specificity so they beat the section header's resting icon opacity. */
+	.section summary .section-action {
+		opacity: 0;
+		transition: opacity 0.12s ease;
+	}
+	.section:hover summary .section-action,
+	.section summary .section-action:focus-visible {
+		opacity: 1;
 	}
 
 	.search-row {
 		position: sticky;
-		top: 2rem;
+		top: 0;
 		z-index: 998;
 		display: flex;
 		align-items: center;
-		gap: 0.35rem;
+		gap: var(--space-3);
 		width: 100%;
 		box-sizing: border-box;
-		padding: 0.3rem 0.65rem;
-		background-color: white;
-		border-bottom: 1px solid var(--color-lightness-92, #ededed);
+		padding: var(--space-3) var(--space-4);
+		background-color: var(--surface-card);
+		border-bottom: 1px solid var(--divider-soft);
 	}
 	.search-row :global(.search-icon) {
 		color: var(--color-lightness-55, #999);
@@ -681,7 +699,7 @@
 		outline: none;
 		background: transparent;
 		font: inherit;
-		font-size: 13px;
+		font-size: var(--font-md);
 		padding: 2px 0;
 	}
 	.search-input::-webkit-search-cancel-button {
@@ -796,9 +814,6 @@
 		cursor: pointer;
 	}
 
-	.databuttons {
-		display: flex;
-	}
 
 	.second-clps.canvas-selected,
 	.clps-container.canvas-selected {

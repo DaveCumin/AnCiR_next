@@ -247,16 +247,8 @@
 		_viewportSanityChecked = true;
 	});
 
-	//more efficient way to open the dataDisplay on import (fewer reactive checks)
-	let hasData = $derived.by(() => {
-		return core.data.length > 0;
-	});
-	$effect(() => {
-		if (hasData) {
-			appState.currentTab = 'data';
-			appState.showDisplayPanel = true;
-		}
-	});
+	// The Data panel is independent of the canvas view — switching to the
+	// workspace must not force it open. It's toggled from the nav rail only.
 
 	// Background grid: rendered on the static viewport so it covers the whole
 	// visible area regardless of pan. Cell size scales with zoom and the pattern
@@ -439,23 +431,13 @@
 		height: 100%;
 		overflow: hidden;
 		cursor: grab;
-		/* Background grid: matches the workflow canvas (same tint + line colour) so
-		   the two views read as one surface. Pattern is cell-sized and shifted by
+		/* Snap grid: plots snap to it, so (unlike the workflow canvas) the workspace
+		   keeps a visible grid. Same base tint; pattern is cell-sized and shifted by
 		   the pan offset so it stays aligned with snap-to-grid plot positions. */
-		background-color: #f7f8fa;
+		background-color: var(--surface-canvas, #f7f8fa);
 		background-image:
-			linear-gradient(
-				to right,
-				rgba(0, 0, 0, 0.05) 0,
-				rgba(0, 0, 0, 0.05) 1px,
-				transparent 1px
-			),
-			linear-gradient(
-				to bottom,
-				rgba(0, 0, 0, 0.05) 0,
-				rgba(0, 0, 0, 0.05) 1px,
-				transparent 1px
-			);
+			linear-gradient(to right, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px),
+			linear-gradient(to bottom, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px);
 		background-size: var(--grid-cell, 15px) var(--grid-cell, 15px);
 		background-position: var(--grid-x, 0) var(--grid-y, 0);
 	}
