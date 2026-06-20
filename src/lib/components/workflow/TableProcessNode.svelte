@@ -48,9 +48,17 @@
 	const hasNote = $derived(!!core.nodeNotes[node.id]?.trim());
 	const inputPorts = $derived(node.ports?.inputs ?? []);
 	// [{ key, colId }] from ProcessNode meta, resolved to live Column instances.
+	// Each entry's `port` is the output dot's port name (TP: col_<colId>; free
+	// process: the producer column's producerPort, e.g. out_<inputColId>). Falls
+	// back to col_<colId> for older callers.
 	const outputColumns = $derived(
 		(node.outputColumns ?? [])
-			.map(({ key, colId }) => ({ key, colId, col: getColumnById(colId) }))
+			.map(({ key, colId, port }) => ({
+				key,
+				colId,
+				port: port ?? `col_${colId}`,
+				col: getColumnById(colId)
+			}))
 			.filter((entry) => !!entry.col)
 	);
 
@@ -141,10 +149,10 @@
 			else setGroupPortY(node.id, name, HEADER_H + i * PORT_H + PORT_H / 2);
 		}
 		for (let i = 0; i < outputColumns.length; i++) {
-			const { colId } = outputColumns[i];
+			const { colId, port } = outputColumns[i];
 			const el = rowPortEls[colId];
-			if (el) setGroupPortY(node.id, `col_${colId}`, nodeLocalCenterY(el));
-			else setGroupPortY(node.id, `col_${colId}`, HEADER_H + i * PORT_H + PORT_H / 2);
+			if (el) setGroupPortY(node.id, port, nodeLocalCenterY(el));
+			else setGroupPortY(node.id, port, HEADER_H + i * PORT_H + PORT_H / 2);
 		}
 	}
 
@@ -347,7 +355,7 @@
 			onwheel={(e) => { if (!e.ctrlKey && !e.metaKey) e.stopPropagation(); }}
 			role="presentation"
 		>
-			{#each outputColumns as { colId, col } (colId)}
+			{#each outputColumns as { colId, col, port } (colId)}
 				{@const meta = typeMeta(col)}
 				{@const isOpen = rowExpanded[colId] === true}
 				<div class="out-row" class:expanded={isOpen}>
@@ -378,12 +386,12 @@
 						<button
 							type="button"
 							class="port-dot dot-output inline-port row-port"
-							class:splice-target={spliceTargetPort === `col_${colId}`}
+							class:splice-target={spliceTargetPort === port}
 							bind:this={rowPortEls[colId]}
 							data-node-id={node.id}
-							data-port-name={`col_${colId}`}
+							data-port-name={port}
 							data-port-dir="out"
-							onmousedown={(e) => startFromOutput(e, `col_${colId}`)}
+							onmousedown={(e) => startFromOutput(e, port)}
 							oncontextmenu={onPortContextMenu}
 							onclick={(e) => e.stopPropagation()}
 							{@attach tooltip(`output: ${col.name}`)}
@@ -408,26 +416,26 @@
 	.tp-card {
 		position: relative;
 		width: 230px;
-		background: #ffffff;
-		border-radius: 6px;
+		background: var(--surface-card);
+		border-radius: var(--radius-md);
 		border: 1px solid rgba(0, 0, 0, 0.18);
 		box-sizing: border-box;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		cursor: grab;
 		user-select: none;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+		box-shadow: var(--shadow-1);
 		transition:
 			border-color 0.12s ease,
 			box-shadow 0.12s ease;
 	}
 	.tp-card:hover {
 		border-color: rgba(0, 0, 0, 0.35);
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+		box-shadow: var(--shadow-1);
 	}
 	.tp-card.selected {
-		border-color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
 		box-shadow:
-			0 1px 3px rgba(0, 0, 0, 0.08),
+			var(--shadow-1),
 			0 0 0 2px rgba(77, 159, 227, 0.28);
 	}
 	.tp-card.expanded {
@@ -461,7 +469,7 @@
 	   warnings (e.g. non-normal data under a parametric test). */
 	.node-warning-badge {
 		flex-shrink: 0;
-		font-size: 13px;
+		font-size: var(--font-md);
 		line-height: 1;
 		color: #e0a800;
 		cursor: help;
@@ -486,7 +494,7 @@
 	}
 
 	.expand-indicator:hover {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 		background: rgba(0, 0, 0, 0.05);
 	}
 
@@ -523,7 +531,7 @@
 		padding-left: 4px;
 	}
 	.in-label {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: var(--color-lightness-40, #5b5b5b);
 		white-space: nowrap;
 		overflow: hidden;
@@ -556,7 +564,7 @@
 		gap: 4px;
 		height: 22px; /* PORT_H */
 		padding: 0 0 0 4px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 	}
 	.row-chev {
 		padding: 0;
@@ -610,15 +618,15 @@
 		content: '';
 		position: absolute;
 		inset: -4px -16px;
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 	}
 	.inline-port:hover {
-		background: var(--color-accent, #4d9fe3);
-		border-color: var(--color-accent, #4d9fe3);
+		background: var(--color-accent);
+		border-color: var(--color-accent);
 	}
 	.inline-port.splice-target {
-		background: var(--color-accent, #4d9fe3);
-		border-color: var(--color-accent, #4d9fe3);
+		background: var(--color-accent);
+		border-color: var(--color-accent);
 		box-shadow: 0 0 0 4px rgba(77, 159, 227, 0.35);
 	}
 	.row-port {
@@ -648,7 +656,7 @@
 
 	.empty-hint {
 		padding: 6px 8px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: rgba(0, 0, 0, 0.45);
 		text-align: center;
 	}
@@ -661,10 +669,10 @@
 		min-width: 200px;
 		max-width: 280px;
 		padding: 6px;
-		background: #fff;
+		background: var(--surface-card);
 		border: 1px solid rgba(0, 0, 0, 0.18);
-		border-radius: 4px;
-		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+		border-radius: var(--radius-sm);
+		box-shadow: var(--shadow-2);
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
@@ -686,7 +694,7 @@
 		align-items: center;
 		gap: 6px;
 		padding: 3px 4px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		cursor: pointer;
 		border-radius: 3px;
 	}

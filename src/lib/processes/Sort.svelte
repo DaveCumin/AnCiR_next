@@ -55,7 +55,7 @@
 <style>
 	select {
 		width: 100%;
-		padding: 0.25rem;
+		padding: var(--space-2);
 		border: 1px solid var(--border-color, #ccc);
 		border-radius: 0.25rem;
 		font-size: 0.9rem;

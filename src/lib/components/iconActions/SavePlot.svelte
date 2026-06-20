@@ -175,7 +175,7 @@
 <style>
 	.dropdown-item {
 		padding: 0.6em;
-		font-size: 14px;
+		font-size: var(--font-lg);
 		cursor: pointer;
 		position: relative;
 	}
@@ -208,10 +208,10 @@
 	.submenu {
 		position: fixed;
 		min-width: 150px;
-		background: white;
-		border-radius: 4px;
+		background: var(--surface-card);
+		border-radius: var(--radius-sm);
 		border: 1px solid var(--color-lightness-85);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+		box-shadow: var(--shadow-2);
 		z-index: 1001;
 		padding: 4px 0;
 	}
@@ -229,7 +229,7 @@
 		background: none;
 		border: none;
 		font: inherit;
-		font-size: 14px;
+		font-size: var(--font-lg);
 		cursor: pointer;
 	}
 

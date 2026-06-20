@@ -771,13 +771,13 @@
 
 <style>
 	.tp-output-block {
-		margin-bottom: 0.5rem;
-		padding-bottom: 0.25rem;
+		margin-bottom: var(--space-4);
+		padding-bottom: var(--space-2);
 		border-bottom: 1px solid var(--color-lightness-95, #eee);
 	}
 	.tp-stats {
-		margin-top: 0.25rem;
-		padding-left: 0.25rem;
+		margin-top: var(--space-2);
+		padding-left: var(--space-2);
 	}
 	.tp-stats p {
 		margin: 0.15rem 0;
@@ -788,8 +788,8 @@
 		margin-top: 0.3rem;
 	}
 	.tp-stat-btn {
-		font-size: 11px;
-		padding: 0.25rem 0.5rem;
+		font-size: var(--font-xs);
+		padding: var(--space-2) var(--space-4);
 		border: 1px solid var(--color-lightness-75, #aaa);
 		border-radius: 3px;
 		background: none;

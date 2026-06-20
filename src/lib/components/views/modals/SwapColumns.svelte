@@ -72,7 +72,7 @@
 
 	.swap-header p {
 		margin: 0;
-		font-size: 13px;
+		font-size: var(--font-md);
 		color: #666;
 	}
 
@@ -92,7 +92,7 @@
 
 	.col-label {
 		flex: 1;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		font-weight: 600;
 		color: #666;
 		text-transform: uppercase;
@@ -146,9 +146,9 @@
 		padding: 4px 12px;
 		background: transparent;
 		border: 1px dashed #aaa;
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		cursor: pointer;
-		font-size: 13px;
+		font-size: var(--font-md);
 		color: #555;
 	}
 
@@ -162,9 +162,9 @@
 		background: #0275ff;
 		color: white;
 		border: none;
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		cursor: pointer;
-		font-size: 13px;
+		font-size: var(--font-md);
 	}
 
 	.swap-btn:hover {

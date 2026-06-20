@@ -15,12 +15,14 @@
 		removeComposite,
 		createOrphanProcess,
 		removeOrphanProcess,
+		replaceColumnRefs,
+		deleteOperationNode,
 		pushObj
 	} from '$lib/core/core.svelte.js';
-	import { untrack } from 'svelte';
+	import { untrack, tick } from 'svelte';
 	import { computeInterface, flattenMembers } from '$lib/core/composite.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
-	import { Column } from '$lib/core/Column.svelte';
+	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { deleteTableProcess } from '$lib/core/TableProcess.svelte';
@@ -34,7 +36,6 @@
 	import EmbeddedPlot from './EmbeddedPlot.svelte';
 	import MiniDataTable from './MiniDataTable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import FloatingActions from './FloatingActions.svelte';
 	import NodePalette from './NodePalette.svelte';
 	import AddDataPrompt from '$lib/components/views/AddDataPrompt.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
@@ -135,7 +136,7 @@
 		// the simple index-based formula wrong. GroupNode publishes per-port Y
 		// after layout — use that when available, otherwise fall through to
 		// the formula (covers initial paint and non-group nodes).
-		if (node?.type === 'group' || node?.type === 'tableprocess') {
+		if (node?.type === 'group' || node?.type === 'tableprocess' || node?.type === 'process') {
 			const published = getGroupPortY(node.id, portName);
 			if (typeof published === 'number') return published;
 		}
@@ -180,8 +181,8 @@
 		// Notes carry their own resizable width on the note object.
 		if (node?.type === 'note') return node?.noteObj?.width ?? 200;
 		const expanded = !collapsedNodeIds.has(node?.id);
-		if (node?.type === 'tableprocess') return expanded ? EDITOR_PANEL_WIDTH : TP_NODE_WIDTH;
-		if (node?.type === 'process') return expanded ? EDITOR_PANEL_WIDTH : NODE_WIDTH;
+		if (node?.type === 'tableprocess' || node?.type === 'process')
+			return expanded ? EDITOR_PANEL_WIDTH : TP_NODE_WIDTH;
 		return NODE_WIDTH;
 	}
 
@@ -190,9 +191,10 @@
 		if (isCompact(node)) {
 			return compactNodeHeight(node?.ports?.inputs?.length ?? 0, node?.ports?.outputs?.length ?? 0);
 		}
-		if (node?.type === 'tableprocess') {
+		if (node?.type === 'tableprocess' || node?.type === 'process') {
 			// Side-by-side: inputs left, output-column rows right. The `all` port
-			// sits in the header, so output rows = outputColumns count.
+			// sits in the header, so output rows = outputColumns count. (Free process
+			// nodes render via TableProcessNode too.)
 			const ins = node?.ports?.inputs?.length ?? 0;
 			const outs = node?.outputColumns?.length ?? 0;
 			const rows = Math.max(1, ins, outs);
@@ -531,6 +533,31 @@
 		zoom = 1;
 	}
 
+	/** Pan (without changing zoom) so the given node is centred in the viewport.
+	 *  Used by the Data panel's find/select button via appState.focusNodeRequest. */
+	function panToNode(nodeId) {
+		const node = allNodes.find((n) => n.id === nodeId);
+		const pos = stablePositions[nodeId] ?? defaultPositions.positions?.[nodeId];
+		const rect = canvasViewportEl?.getBoundingClientRect();
+		if (!node || !pos || !rect) return;
+		const w = getNodeWidth(node);
+		const h = getNodeRenderHeight(node);
+		panX = rect.width / 2 - (pos.x + w / 2) * zoom;
+		panY = rect.height / 2 - (pos.y + h / 2) * zoom;
+	}
+
+	// Find/select from the Data Sources panel: when a focus request comes in,
+	// select the node and pan to it (after layout settles).
+	$effect(() => {
+		const req = appState.focusNodeRequest;
+		if (!req?.id) return;
+		untrack(() => {
+			focusedNodeId = req.id;
+			multiSelectedNodeIds = new Set([req.id]);
+			tick().then(() => panToNode(req.id));
+		});
+	});
+
 	/**
 	 * Compute the canvas-coord of the current viewport centre, minus half a
 	 * default node so the spawn lands centred under the cursor's mental model.
@@ -685,11 +712,15 @@
 	// output, stopAll() splices the node onto that edge (flowtest-style).
 	let dropTargetEdgeKey = $state(null);
 
-	// Output-port the user is currently dragging a node toward, formatted as
-	// `${sourceNodeId}|${portName}`. Takes priority over dropTargetEdgeKey
-	// because it expresses a more specific intent ("insert here, between this
-	// source and ALL its consumers"). Cleared in stopAll.
+	// Port the user is currently dragging a node toward, formatted as
+	// `${nodeId}|${portName}`. Takes priority over dropTargetEdgeKey because it
+	// expresses a more specific intent: insert the dragged node into EVERY edge at
+	// that port. An OUTPUT port inserts the node after the source (between it and
+	// all its consumers); an INPUT port inserts the node before the target (between
+	// all its sources and it). Cleared in stopAll.
 	let dropTargetPortKey = $state(null);
+	// 'out' | 'in' — which side the detected port is on (drives the splice).
+	let dropTargetPortDir = $state(null);
 
 	// Set during drag whenever the dragged node's bbox overlaps a group's bbox.
 	// Drives the .drop-target highlight on GroupNode so the user can see the
@@ -740,7 +771,7 @@
 	});
 
 	// Path-focus dim mode (flowtest-style). When true AND a node is selected,
-	// non-connected nodes dim out. Toggled via the FloatingActions button.
+	// non-connected nodes dim out. Toggled via the viewport toolbar button.
 	// Persisted to localStorage so the user's preference sticks across reloads.
 	const PATH_FOCUS_KEY = 'ancir.canvas.pathFocus';
 	let pathFocusEnabled = $state(
@@ -1155,13 +1186,20 @@
 				// it shouldn't yank it out and splice it elsewhere — the user
 				// has to first detach it (delete its chain edge) to move it.
 				const draggedNode = allNodes.find((n) => n.id === dragInfo.nodeId);
+				// Only a FRESH, unconnected 1:1 node may be inserted onto an edge or
+				// port. If it already has any wired input or output, dragging it must
+				// not yank it out and splice it elsewhere — detach it first.
+				const draggedHasConnections =
+					!!draggedNode &&
+					allEdges.some((e) => e.fromId === draggedNode.id || e.toId === draggedNode.id);
 				const draggedFits =
 					draggedNode &&
 					draggedNode.type === 'process' &&
 					draggedNode.processObj &&
 					!draggedNode.processObj.parentCol &&
 					(draggedNode.ports?.inputs?.length ?? 0) === 1 &&
-					(draggedNode.ports?.outputs?.length ?? 0) === 1;
+					(draggedNode.ports?.outputs?.length ?? 0) === 1 &&
+					!draggedHasConnections;
 				if (draggedFits) {
 					const dw = getNodeWidth(draggedNode);
 					const dh = getNodePortAreaHeight(draggedNode);
@@ -1169,30 +1207,38 @@
 					const cy = ny + dh / 2;
 					const draggedBox = { x1: nx, y1: ny, x2: nx + dw, y2: ny + dh };
 
-					// 1) Source output port hit — preferred. Picks the closest
-					//    overlapping output port to the dragged node's centre.
+					// 1) Port hit — preferred. Picks the closest overlapping port
+					//    (output on the right edge, input on the left edge) to the
+					//    dragged node's centre. Output → insert after the source;
+					//    input → insert before the target.
 					let bestPort = null;
+					let bestPortDir = null;
 					let bestPortDist = Infinity;
 					for (const node of allNodes) {
 						if (node.id === draggedNode.id) continue;
 						const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id];
 						if (!pos) continue;
 						const nw = getNodeWidth(node);
-						for (const port of node.ports?.outputs ?? []) {
-							const portX = pos.x + nw;
-							const portY = pos.y + getPortAnchorY(node, port.name, 'out');
+						const consider = (portName, portX, portY, dir) => {
 							if (
 								portX < draggedBox.x1 ||
 								portX > draggedBox.x2 ||
 								portY < draggedBox.y1 ||
 								portY > draggedBox.y2
 							)
-								continue;
+								return;
 							const d = (portX - cx) ** 2 + (portY - cy) ** 2;
 							if (d < bestPortDist) {
 								bestPortDist = d;
-								bestPort = `${node.id}|${port.name}`;
+								bestPort = `${node.id}|${portName}`;
+								bestPortDir = dir;
 							}
+						};
+						for (const port of node.ports?.outputs ?? []) {
+							consider(port.name, pos.x + nw, pos.y + getPortAnchorY(node, port.name, 'out'), 'out');
+						}
+						for (const port of node.ports?.inputs ?? []) {
+							consider(port.name, pos.x, pos.y + getPortAnchorY(node, port.name, 'in'), 'in');
 						}
 					}
 
@@ -1231,9 +1277,11 @@
 					}
 
 					dropTargetPortKey = bestPort;
+					dropTargetPortDir = bestPort ? bestPortDir : null;
 					dropTargetEdgeKey = bestEdge;
 				} else {
 					dropTargetPortKey = null;
+					dropTargetPortDir = null;
 					dropTargetEdgeKey = null;
 				}
 
@@ -1402,12 +1450,23 @@
 		const fromNode = allNodes.find((n) => n.id === fromNodeId);
 		let colId;
 		if (fromNode?.type === 'process') {
-			const parent = core.data.find((c) =>
-				(c.processes ?? []).some((p) => p.id === fromNode.refId)
+			// Free process (dataflow): each output port maps to one producer column.
+			const producer = core.data.find(
+				(c) =>
+					c.producerNodeId === `process_${fromNode.refId}` &&
+					(c.producerPort || 'output') === fromPort
 			);
-			const proc = parent?.processes.find((p) => p.id === fromNode.refId);
-			if (!parent || !proc) return;
-			colId = findOrCreateTapColumn(parent, proc).id;
+			if (producer) {
+				colId = producer.id;
+			} else {
+				// Legacy: a process living in a column's processes[] chain — tap it.
+				const parent = core.data.find((c) =>
+					(c.processes ?? []).some((p) => p.id === fromNode.refId)
+				);
+				const proc = parent?.processes.find((p) => p.id === fromNode.refId);
+				if (!parent || !proc) return;
+				colId = findOrCreateTapColumn(parent, proc).id;
+			}
 		} else {
 			colId = resolveOutputColumnId(fromNodeId, fromPort);
 		}
@@ -1415,24 +1474,51 @@
 		const target = allNodes.find((n) => n.id === toNodeId);
 		if (!target) return;
 
-		// Column process: only orphans accept user-drawn wires. Wiring a column
-		// into a process input creates a BRANCH (a hidden tap column off the
-		// source, with the orphan as its sole process) rather than appending the
-		// orphan to the source column's own processes[] chain. This is the same
-		// mechanism the edge-splice uses, and it means the source column's
-		// EXISTING consumers keep reading the unmodified column — adding a process
-		// taps off the data, it doesn't reroute everything downstream.
+		// Column process input (dataflow model): only free (orphan) process nodes
+		// accept user-drawn input wires. Wiring a column into a free process input
+		// records the process's input column (args.inIN) and, the first time,
+		// creates a PRODUCER output column that represents the node's result. The
+		// process stays free in core.orphanProcesses — it is no longer shoved onto
+		// a column's processes[] chain. Both steps go through the op layer (batched)
+		// so the wire is a single undo. The producer column is hidden on the canvas;
+		// the node's output port is its handle (see ProcessNode columnSourceRef).
 		if (target.type === 'process' && target.processObj && toPort === 'input') {
 			const proc = target.processObj;
 			if (!proc.parentCol) {
-				const sourceCol = core.data.find((c) => c.id === colId);
-				const tapCol = new Column({ refId: colId, refUpToProcessId: null });
-				tapCol.isTap = true;
-				tapCol.customName = `${sourceCol?.name ?? 'col'} → ${proc.displayName || proc.name}`;
-				pushObj(tapCol);
-				core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== proc.id);
-				proc.parentCol = tapCol;
-				tapCol.processes = [proc];
+				const procNodeId = `process_${proc.id}`;
+				// inIN is a list of input columns (fan-out). Append this one.
+				const cur = Array.isArray(proc.args?.inIN)
+					? proc.args.inIN
+					: proc.args?.inIN != null && proc.args.inIN >= 0
+						? [proc.args.inIN]
+						: [];
+				const ops = [];
+				if (!cur.includes(colId)) {
+					ops.push({
+						kind: 'setOrphanProcessArg',
+						processId: proc.id,
+						key: 'inIN',
+						value: [...cur, colId]
+					});
+				}
+				// One paired producer output column per input, keyed by the input id.
+				const port = `out_${colId}`;
+				const hasProducer = core.data.some(
+					(c) => c.producerNodeId === procNodeId && (c.producerPort || 'output') === port
+				);
+				if (!hasProducer) {
+					const srcType = core.data.find((c) => c.id === colId)?.type ?? 'number';
+					ops.push({
+						kind: 'addColumn',
+						columnData: {
+							type: srcType,
+							producerNodeId: procNodeId,
+							producerPort: port,
+							producerArtifactKind: 'column'
+						}
+					});
+				}
+				if (ops.length) mutationService.batch(ops);
 			}
 			return;
 		}
@@ -1506,17 +1592,34 @@
 				return;
 			}
 
-			// ysMatch: append a new series to (or seed) the chosen set.
-			const setX = setIdx < groups.length ? groups[setIdx].xRefId : -1;
-			const dataIn = { x: { refId: setX }, y: { refId: colId } };
-			if (typeof plot.addData === 'function') plot.addData(dataIn);
-			else plot.data = [...plot.data, dataIn];
+			// ysMatch: re-use a freed/orphan y-slot in the set if one exists (so
+			// removing a y then adding a new one doesn't leave a duplicate orphan
+			// series); otherwise append a new series to (or seed) the chosen set.
+			const grp = setIdx < groups.length ? groups[setIdx] : null;
+			const setX = grp ? grp.xRefId : -1;
+			const orphanDp = grp?.dataPoints.find(
+				(dp) => (dp?.y?.refId ?? -1) < 0 || !getColumnById(dp?.y?.refId)
+			);
+			if (orphanDp) {
+				if (orphanDp.y) orphanDp.y.refId = colId;
+				else orphanDp.y = { refId: colId };
+			} else {
+				const dataIn = { x: { refId: setX }, y: { refId: colId } };
+				if (typeof plot.addData === 'function') plot.addData(dataIn);
+				else plot.data = [...plot.data, dataIn];
+			}
 		}
 	}
 
 	function disconnectInputPort(nodeId, portName) {
 		const target = allNodes.find((n) => n.id === nodeId);
 		if (!target) return;
+
+		// Free process node: clear every input (and its paired producer column).
+		if (target.type === 'process' && target.processObj) {
+			for (const c of _procInputIds(target.processObj)) _removeProcInput(target.processObj, c);
+			return;
+		}
 
 		if (target.type === 'tableprocess' && target.tpObj) {
 			const tp = target.tpObj;
@@ -1561,10 +1664,18 @@
 					if (dp?.x) dp.x.refId = -1;
 				}
 			} else {
-				// Drop every data point in the set (matches the tableplot
-				// "clear all wires on this port" semantic).
-				const toRemove = new Set(g.dataPoints);
-				plot.data = plot.data.filter((dp) => !toRemove.has(dp));
+				// Clear every series in the set. If the set's x is still wired, keep
+				// one data point as an x-seed (y = -1) so the x survives; otherwise
+				// drop them all.
+				if ((g.xRefId ?? -1) >= 0 && g.dataPoints[0]?.y) {
+					const [seed, ...rest] = g.dataPoints;
+					seed.y.refId = -1;
+					const drop = new Set(rest);
+					plot.data = plot.data.filter((dp) => !drop.has(dp));
+				} else {
+					const toRemove = new Set(g.dataPoints);
+					plot.data = plot.data.filter((dp) => !toRemove.has(dp));
+				}
 			}
 		}
 	}
@@ -1686,9 +1797,13 @@
 		// more specific intent ("between this source and ALL its consumers").
 		if (dragInfo?.moved && dropTargetPortKey) {
 			const draggedNode = allNodes.find((n) => n.id === dragInfo.nodeId);
-			const [sourceNodeId, sourcePort] = dropTargetPortKey.split('|');
-			if (draggedNode && sourceNodeId && sourcePort) {
-				spliceNodeOntoSourceOutput(draggedNode, sourceNodeId, sourcePort);
+			const [portNodeId, portName] = dropTargetPortKey.split('|');
+			if (draggedNode && portNodeId && portName) {
+				if (dropTargetPortDir === 'in') {
+					spliceNodeOntoTargetInput(draggedNode, portNodeId, portName);
+				} else {
+					spliceNodeOntoSourceOutput(draggedNode, portNodeId, portName);
+				}
 			}
 		} else if (dragInfo?.moved && dropTargetEdgeKey) {
 			// Splice-on-edge: dropped onto a wire (edge bbox-overlap).
@@ -1704,6 +1819,7 @@
 		}
 		dropTargetEdgeKey = null;
 		dropTargetPortKey = null;
+		dropTargetPortDir = null;
 		dragHoverGroupId = null;
 		dragInfo = null;
 		resizeInfo = null;
@@ -1717,86 +1833,80 @@
 	 * processes are bound to their parent column and the graph connections are
 	 * derived from column ordering rather than stored as discrete edges.
 	 */
+	// --- Dataflow splice helpers (a free process node stays free; we set its
+	// input column(s) and create paired producer columns, then reroute the
+	// relevant consumers to read through the node). ---
+	function _procInputIds(proc) {
+		const raw = proc?.args?.inIN;
+		if (Array.isArray(raw)) return raw.filter((id) => typeof id === 'number' && id >= 0);
+		return typeof raw === 'number' && raw >= 0 ? [raw] : [];
+	}
+	function _addProcInput(proc, inputColId) {
+		const cur = _procInputIds(proc);
+		if (!cur.includes(inputColId)) proc.args = { ...proc.args, inIN: [...cur, inputColId] };
+	}
+	// Remove input column c from a free process + delete its paired producer column.
+	function _removeProcInput(proc, c) {
+		if (!proc) return;
+		proc.args = { ...proc.args, inIN: _procInputIds(proc).filter((id) => id !== c) };
+		const pc = core.data.find(
+			(col) => col.producerNodeId === `process_${proc.id}` && (col.producerPort || '') === `out_${c}`
+		);
+		if (pc) removeColumn(pc.id);
+	}
+	function _ensureProducerColumn(proc, inputColId) {
+		const procNodeId = `process_${proc.id}`;
+		const port = `out_${inputColId}`;
+		let D = core.data.find(
+			(c) => c.producerNodeId === procNodeId && (c.producerPort || '') === port
+		);
+		if (!D) {
+			D = new Column({
+				type: getColumnById(inputColId)?.type ?? 'number',
+				producerNodeId: procNodeId,
+				producerPort: port,
+				producerArtifactKind: 'column'
+			});
+			pushObj(D);
+		}
+		return D;
+	}
+	// Reroute a downstream process node's input from oldColId → newColId, and
+	// re-key its paired producer column (out_old → out_new) so its output stays.
+	function _rerouteProcessInput(targetNodeId, oldColId, newColId) {
+		const pid = Number(targetNodeId.slice('process_'.length));
+		const tproc = (core.orphanProcesses ?? []).find((p) => p.id === pid);
+		if (!tproc) return;
+		const cur = _procInputIds(tproc);
+		const idx = cur.indexOf(oldColId);
+		if (idx < 0) return;
+		const next = [...cur];
+		next[idx] = newColId;
+		tproc.args = { ...tproc.args, inIN: next };
+		const pc = core.data.find(
+			(c) => c.producerNodeId === targetNodeId && (c.producerPort || '') === `out_${oldColId}`
+		);
+		if (pc) pc.producerPort = `out_${newColId}`;
+	}
+
+	// Dataflow splice onto ONE edge: insert the dragged node between the edge's
+	// source column and JUST this edge's consumer (other consumers untouched).
 	function spliceNodeOntoEdge(draggedNode, edge) {
 		if (draggedNode.type !== 'process' || !draggedNode.processObj) return;
 		const proc = draggedNode.processObj;
-
-		// Chain edge (data_X → process_Y, or process_A → process_B): insert
-		// the dragged process AT the target's chain position so it becomes
-		// the new immediate upstream of the target. This is the "insert
-		// between" gesture the user expects when dropping onto a chain wire.
-		if (
-			edge.type === 'data-process' &&
-			typeof edge.toId === 'string' &&
-			edge.toId.startsWith('process_')
-		) {
-			const targetProcId = Number(edge.toId.slice('process_'.length));
-			if (!Number.isFinite(targetProcId)) return;
-			const targetCol = core.data.find((c) =>
-				(c.processes ?? []).some((p) => p.id === targetProcId)
-			);
-			if (!targetCol) return;
-			// Detach from current home (column processes[] OR orphans) BEFORE
-			// computing the insert index so cross-column or same-column moves
-			// don't shift the index out from under us.
-			if (proc.parentCol && Array.isArray(proc.parentCol.processes)) {
-				proc.parentCol.processes = proc.parentCol.processes.filter((p) => p.id !== proc.id);
-			}
-			core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== proc.id);
-			const insertIdx = targetCol.processes.findIndex((p) => p.id === targetProcId);
-			if (insertIdx < 0) return;
-			proc.parentCol = targetCol;
-			targetCol.processes = [
-				...targetCol.processes.slice(0, insertIdx),
-				proc,
-				...targetCol.processes.slice(insertIdx)
-			];
-			return;
-		}
-
-		// Non-chain edge (process → TP input, data → TP input, process → plot,
-		// data → plot). Scope the splice to JUST this edge — even if the
-		// source has other consumers, they keep reading the original column.
-		// Implementation:
-		//   1. Create a hidden "tap" column Y that exposes the source's data
-		//      at the precise pipeline point this edge originates from
-		//      (refUpToProcessId = the edge's source process, or null when
-		//      the edge originates from a raw data/group/TP-output column).
-		//   2. Move the orphan into Y.processes so the canvas chain becomes
-		//      `source.output → orphan.input → orphan.output`.
-		//   3. Re-route ONLY this edge's consumer field to reference Y.
 		const sourceColId = resolveOutputColumnId(edge.fromId, edge.fromPort);
 		if (sourceColId == null || sourceColId < 0) return;
-		const sourceCol = core.data.find((c) => c.id === sourceColId);
-		if (!sourceCol) return;
-
-		let refUpToProcessId = null;
-		if (typeof edge.fromId === 'string' && edge.fromId.startsWith('process_')) {
-			const pid = Number(edge.fromId.slice('process_'.length));
-			if (Number.isFinite(pid)) refUpToProcessId = pid;
+		_addProcInput(proc, sourceColId);
+		const D = _ensureProducerColumn(proc, sourceColId);
+		if (
+			typeof edge.toId === 'string' &&
+			edge.toId.startsWith('process_') &&
+			edge.toId !== draggedNode.id
+		) {
+			_rerouteProcessInput(edge.toId, sourceColId, D.id);
+		} else {
+			rerouteEdgeConsumer(edge, sourceColId, D.id);
 		}
-
-		// Build the tap column and attach the orphan as its sole process. The
-		// adapter hides tap columns from the canvas (no data_X node) and
-		// re-routes their incoming chain wire via columnSourceRef — so the
-		// only canvas node that materialises from this op is the orphan
-		// itself, which now sits on a fresh disconnected chain.
-		const tapCol = new Column({
-			refId: sourceColId,
-			refUpToProcessId: refUpToProcessId ?? null
-		});
-		tapCol.isTap = true;
-		tapCol.customName = `${sourceCol.name ?? 'col'} → ${proc.displayName || proc.name}`;
-		pushObj(tapCol);
-
-		if (proc.parentCol && Array.isArray(proc.parentCol.processes)) {
-			proc.parentCol.processes = proc.parentCol.processes.filter((p) => p.id !== proc.id);
-		}
-		core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== proc.id);
-		proc.parentCol = tapCol;
-		tapCol.processes = [proc];
-
-		rerouteEdgeConsumer(edge, sourceColId, tapCol.id);
 	}
 
 	/**
@@ -1885,57 +1995,58 @@
 	}
 
 	/**
-	 * Insert the dragged process so it sits BETWEEN the given source output and
-	 * everything that source feeds. Used when the user drops onto a source's
-	 * output port.
-	 *
-	 *   - Source = data column / group / TP output  → insert at the FRONT of
-	 *     the source column's chain. All downstream consumers (chain + any
-	 *     TP/plot reading "col's last process output") still see the same
-	 *     last-process source; only the front of the chain changes.
-	 *   - Source = a column process  → insert immediately AFTER that process
-	 *     in its column's chain. If the source was the last process, the new
-	 *     process becomes the last, and any TP/plot reading the column's
-	 *     last output now reads through the new process.
+	 * Drop the dragged node onto a source's OUTPUT port: insert it between that
+	 * source column and EVERY consumer of the port (tweak #4). The node reads the
+	 * source column and produces a paired output column; all the port's consumers
+	 * — ref-based (plots / table-processes / ref columns) AND downstream process
+	 * nodes — are rerouted to read through the node. The dragged node stays a free
+	 * (orphan) process; nothing moves into a column.
 	 */
 	function spliceNodeOntoSourceOutput(draggedNode, sourceNodeId, sourcePort) {
 		if (draggedNode.type !== 'process' || !draggedNode.processObj) return;
 		const proc = draggedNode.processObj;
-		const sourceNode = allNodes.find((n) => n.id === sourceNodeId);
-		if (!sourceNode) return;
-		// Resolve the column whose chain we're going to insert into.
 		const colId = resolveOutputColumnId(sourceNodeId, sourcePort);
 		if (colId == null || colId < 0) return;
-		const targetCol = core.data.find((c) => c.id === colId);
-		if (!targetCol) return;
 
-		// Detach from current home first so cross-column / same-column moves
-		// don't shift indices unexpectedly.
-		if (proc.parentCol && Array.isArray(proc.parentCol.processes)) {
-			proc.parentCol.processes = proc.parentCol.processes.filter((p) => p.id !== proc.id);
-		}
-		core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== proc.id);
-
-		proc.parentCol = targetCol;
-
-		if (sourceNode.type === 'process' && sourceNode.processObj) {
-			const sourceProcId = sourceNode.processObj.id;
-			const procIdx = targetCol.processes.findIndex((p) => p.id === sourceProcId);
-			if (procIdx < 0) {
-				// Source process isn't in the resolved column — unexpected; fall
-				// back to appending so we never leave the orphan in a half-state.
-				targetCol.processes = [...(targetCol.processes ?? []), proc];
-				return;
+		_addProcInput(proc, colId);
+		const D = _ensureProducerColumn(proc, colId);
+		// Reroute ref-based consumers (plots, table-process args, ref columns) of
+		// colId → D. The node's own inIN is orphan-process args, untouched, so no
+		// cycle.
+		replaceColumnRefs(D.id, colId);
+		// Reroute downstream process-node consumers (inIN) of colId → D too, so the
+		// node truly sits on every edge leaving the port. Skip the dragged node.
+		for (const op of [...(core.orphanProcesses ?? [])]) {
+			if (op.id === proc.id) continue;
+			if (_procInputIds(op).includes(colId)) {
+				_rerouteProcessInput(`process_${op.id}`, colId, D.id);
 			}
-			targetCol.processes = [
-				...targetCol.processes.slice(0, procIdx + 1),
-				proc,
-				...targetCol.processes.slice(procIdx + 1)
-			];
-		} else {
-			// Source is a data column, group output, or TP output column —
-			// the dragged process should be the FIRST step in the chain.
-			targetCol.processes = [proc, ...(targetCol.processes ?? [])];
+		}
+	}
+
+	/**
+	 * Drop the dragged node onto a target's INPUT port: insert it between EVERY
+	 * source feeding that port and the target (tweak #4, the "enter the node"
+	 * case). For each incoming edge at the port, route its source column through
+	 * the node and re-point the target's reference to the node's output.
+	 */
+	function spliceNodeOntoTargetInput(draggedNode, targetNodeId, targetPort) {
+		if (draggedNode.type !== 'process' || !draggedNode.processObj) return;
+		const proc = draggedNode.processObj;
+		const isProcTarget = typeof targetNodeId === 'string' && targetNodeId.startsWith('process_');
+		const edges = (edgeTopology ?? []).filter(
+			(e) => e.toId === targetNodeId && e.toPort === targetPort && e.fromId !== draggedNode.id
+		);
+		for (const edge of edges) {
+			const c = resolveOutputColumnId(edge.fromId, edge.fromPort);
+			if (c == null || c < 0) continue;
+			_addProcInput(proc, c);
+			const D = _ensureProducerColumn(proc, c);
+			if (isProcTarget) {
+				_rerouteProcessInput(targetNodeId, c, D.id);
+			} else {
+				rerouteEdgeConsumer(edge, c, D.id);
+			}
 		}
 	}
 
@@ -2037,19 +2148,11 @@
 		const target = allNodes.find((n) => n.id === edge.toId);
 		if (!target) return;
 
-		// Chain edge into a column-process: the edge is implicit (derived from
-		// ordering in col.processes). "Deleting" it orphans the target process
-		// — it leaves the column, joins core.orphanProcesses, and the rest of
-		// the chain shifts forward (now downstream of whatever previously fed
-		// the deleted edge's source). The user can re-wire the orphan to any
-		// other column afterwards.
-		if (target.type === 'process' && target.processObj && edge.type === 'data-process') {
-			const proc = target.processObj;
-			const parent = proc.parentCol;
-			if (!parent || !Array.isArray(parent.processes)) return;
-			parent.processes = parent.processes.filter((p) => p.id !== proc.id);
-			proc.parentCol = null;
-			core.orphanProcesses = [...core.orphanProcesses, proc];
+		// Edge into a free process node's input: drop just that one input column
+		// (and its paired producer column). The process stays free.
+		if (target.type === 'process' && target.processObj) {
+			const c = resolveOutputColumnId(edge.fromId, edge.fromPort);
+			if (c != null && c >= 0) _removeProcInput(target.processObj, c);
 			return;
 		}
 
@@ -2123,11 +2226,21 @@
 				return;
 			}
 
-			// ysMatch: drop the first data point in this set whose y matches.
+			// ysMatch: drop the data point whose y matches. If it's the last y
+			// sharing this set's x, keep the data point as an x-seed (y = -1) so the
+			// set's x wire survives and a re-added y re-uses the slot; otherwise
+			// remove the data point outright.
 			const idx = g.dataPoints.findIndex((dp) => dp?.y?.refId === colId);
 			if (idx < 0) return;
 			const removedDp = g.dataPoints[idx];
-			plot.data = plot.data.filter((dp) => dp !== removedDp);
+			const otherValidY = g.dataPoints.some(
+				(dp) => dp !== removedDp && (dp?.y?.refId ?? -1) >= 0
+			);
+			if (!otherValidY && (g.xRefId ?? -1) >= 0 && removedDp.y) {
+				removedDp.y.refId = -1;
+			} else {
+				plot.data = plot.data.filter((dp) => dp !== removedDp);
+			}
 		}
 	}
 
@@ -2142,13 +2255,13 @@
 			if (parent) {
 				mutationService.removeProcess(parent.id, node.refId);
 			} else if (core.orphanProcesses.some((p) => p.id === node.refId)) {
-				removeOrphanProcess(node.refId);
+				// Free process: bridge + remove (shared with the Data panel's delete).
+				deleteOperationNode(node);
 			}
 			return;
 		}
 		if (node.type === 'tableprocess' && node.tpObj) {
-			// Goes through the existing "Are you sure?" modal flow.
-			deleteTableProcess(node.tpObj);
+			deleteOperationNode(node);
 			return;
 		}
 		if (node.type === 'plot' && node.refId != null) {
@@ -2762,7 +2875,6 @@
 	{/if}
 
 	<div class="canvas-viewport" bind:this={canvasViewportEl} class:panning={isPanning && !dragInfo}>
-		<FloatingActions />
 		<NodePalette
 			queueSpawnPosition={queueSpawnPositionAtViewport}
 			onSpawnColumnProcess={spawnColumnProcessFromPalette}
@@ -2887,7 +2999,7 @@
 								on:extractstart={handleExtractStart}
 								on:cardmousedown={(ev) => handleNodeWrapperMouseDown(ev.detail, node)}
 							/>
-						{:else if node.type === 'tableprocess'}
+						{:else if node.type === 'tableprocess' || node.type === 'process'}
 							<TableProcessNode
 								{node}
 								selected={isSelected}
@@ -2951,23 +3063,17 @@
 							</div>
 						{/if}
 
-						{#if isExpanded && node.type === 'process' && node.processObj && node.processObj.parentCol}
+						{#if isExpanded && node.type === 'process' && node.processObj}
 							{@const PComp = appConsts.processMap.get(node.processName)?.component}
-							{@const parent = node.processObj.parentCol}
-							{@const proc = node.processObj}
-							{@const tapPreview = {
-								name: `${parent?.name ?? ''}@${proc.displayName || proc.name}`,
-								getData: () => parent?.getDataUpToProcess?.(proc.id) ?? []
-							}}
 							{#if PComp}
+								<!-- The node card (TableProcessNode) shows inputs + per-output mini
+								     tables; this panel below it holds the operation's settings
+								     (e.g. Add's constant). -->
 								<div
 									class="process-editor-panel"
 									style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;"
 								>
 									<PComp p={node.processObj} />
-									<div class="process-intermediate-preview">
-										<MiniDataTable column={tapPreview} maxRows={5} />
-									</div>
 								</div>
 							{/if}
 						{:else if isExpanded && node.type === 'tableprocess' && node.tpObj}
@@ -3054,6 +3160,7 @@
 		>
 			<Icon name="center" width={22} height={22} />
 		</button>
+		<div class="zc-sep"></div>
 		<button
 			class="icon zoomout"
 			onclick={(e) => {
@@ -3085,7 +3192,7 @@
 		top: 0;
 		right: 0;
 		bottom: 0;
-		background: white;
+		background: var(--surface-card);
 		z-index: 800;
 		display: flex;
 		flex-direction: column;
@@ -3126,23 +3233,9 @@
 		flex: 1;
 		overflow: hidden;
 		cursor: grab;
-		/* flowtest-style line grid: subtle 20px x 20px squares. */
-		background-color: #f7f8fa;
-		background-image:
-			repeating-linear-gradient(
-				to right,
-				rgba(0, 0, 0, 0.05) 0,
-				rgba(0, 0, 0, 0.05) 1px,
-				transparent 1px,
-				transparent 20px
-			),
-			repeating-linear-gradient(
-				to bottom,
-				rgba(0, 0, 0, 0.05) 0,
-				rgba(0, 0, 0, 0.05) 1px,
-				transparent 1px,
-				transparent 20px
-			);
+		/* No grid here — the workflow canvas is a free layout (nodes don't snap),
+		   so a flat surface distinguishes it from the snap-grid workspace. */
+		background-color: var(--surface-canvas, #f7f8fa);
 	}
 
 	.canvas-viewport.panning {
@@ -3175,10 +3268,10 @@
 		bottom: calc(100% + 3px);
 		right: 0;
 		padding: 1px 2px;
-		background: #ffffff;
+		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-80, #ccc);
-		border-radius: 6px;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+		border-radius: var(--radius-md);
+		box-shadow: var(--shadow-1);
 	}
 	.node-actions-host.visible {
 		opacity: 1;
@@ -3192,7 +3285,7 @@
 		position: absolute;
 		z-index: 0;
 		box-sizing: border-box;
-		border: 1.5px dashed var(--color-accent, #4d9fe3);
+		border: 1.5px dashed var(--color-accent);
 		border-radius: 10px;
 		background: rgba(77, 159, 227, 0.06);
 		pointer-events: none;
@@ -3206,10 +3299,10 @@
 		gap: 6px;
 		height: 20px;
 		padding: 0 8px;
-		background: #ffffff;
-		border: 1px solid var(--color-accent, #4d9fe3);
+		background: var(--surface-card);
+		border: 1px solid var(--color-accent);
 		border-radius: 10px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		font-weight: 600;
 		color: var(--color-lightness-25, #333);
 		pointer-events: auto;
@@ -3220,13 +3313,13 @@
 		border: none;
 		background: transparent;
 		cursor: pointer;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		line-height: 1;
 		padding: 0;
 		color: var(--color-lightness-45, #777);
 	}
 	.composite-frame-collapse:hover {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 	}
 
 	/* When a node's note popover is open, lift the whole wrapper above its
@@ -3251,7 +3344,7 @@
 	.workflow-node-wrapper.multi-selected {
 		outline: 2px dashed rgba(77, 159, 227, 0.7);
 		outline-offset: 2px;
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 	}
 
 	.workflow-node-wrapper.dimmed {
@@ -3277,13 +3370,13 @@
 
 	.process-editor-panel {
 		overflow-y: auto;
-		background: white;
+		background: var(--surface-card);
 		border: 1.5px solid rgba(0, 0, 0, 0.15);
 		border-top: none;
 		border-bottom-left-radius: 6px;
 		border-bottom-right-radius: 6px;
 		padding: 6px 8px;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+		box-shadow: var(--shadow-2);
 		cursor: default;
 		box-sizing: border-box;
 	}
@@ -3300,8 +3393,8 @@
 		border-top: none;
 		border-bottom-left-radius: 6px;
 		border-bottom-right-radius: 6px;
-		background: white;
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+		background: var(--surface-card);
+		box-shadow: var(--shadow-1);
 		box-sizing: border-box;
 		position: relative;
 	}
@@ -3316,7 +3409,7 @@
 		right: 2px;
 		width: 16px;
 		height: 16px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		line-height: 16px;
 		text-align: center;
 		cursor: nwse-resize;
@@ -3331,15 +3424,42 @@
 		background: rgba(255, 255, 255, 1);
 	}
 
+	/* Grouped viewport toolbar — a card matching the selection layout toolbar. */
 	.zoom-controls {
 		position: fixed;
 		bottom: 10px;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 4px;
+		gap: 2px;
 		z-index: 999;
 		transition: right 0.6s ease;
+		background: var(--surface-card);
+		border: 1px solid var(--color-lightness-85, #ddd);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-card);
+		padding: 4px;
+	}
+	.zoom-controls button {
+		width: 28px;
+		height: 26px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		border-radius: 5px;
+		background: transparent;
+		cursor: pointer;
+		transition: background 0.15s ease;
+	}
+	.zoom-controls button:hover {
+		background: var(--color-lightness-95, #f2f2f2);
+	}
+	.zc-sep {
+		width: 22px;
+		height: 1px;
+		background: var(--color-lightness-90, #e7e7e7);
+		margin: 2px 0;
 	}
 
 	.selection-toolbar-host {
@@ -3361,18 +3481,18 @@
 		gap: 4px;
 		height: 30px;
 		padding: 0 10px;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		font-weight: 600;
 		color: var(--color-lightness-25, #333);
-		background: #ffffff;
+		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-80, #ccc);
-		border-radius: 6px;
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+		border-radius: var(--radius-md);
+		box-shadow: var(--shadow-1);
 		cursor: pointer;
 	}
 	.selection-action-btn:hover {
-		border-color: var(--color-accent, #4d9fe3);
-		color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
+		color: var(--color-accent);
 	}
 
 	/* Most viewport icons (zoom, reset, paths) inherit their fill from the global

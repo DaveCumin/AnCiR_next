@@ -39,7 +39,7 @@
 	.toggle-wrapper {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: var(--space-4);
 		font-size: inherit;
 		font-family: inherit;
 		font-weight: inherit;
@@ -91,7 +91,7 @@
 		bottom: 0.1rem;
 		background-color: var(--buttonColour-color);
 		border-radius: 50%;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+		box-shadow: var(--shadow-1);
 		transition: transform 0.3s ease;
 	}
 

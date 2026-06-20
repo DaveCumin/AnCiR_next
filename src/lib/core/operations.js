@@ -76,6 +76,12 @@ import { TableProcess } from './TableProcess.svelte';
  * @property {number} [width]
  * @property {number} [height]
  *
+ * @typedef {Object} OpSetOrphanProcessArg
+ * @property {'setOrphanProcessArg'} kind
+ * @property {string} processId
+ * @property {string} key
+ * @property {unknown} value
+ *
  * @typedef {Object} OpSetStoredValue
  * @property {'setStoredValue'} kind
  * @property {string} name
@@ -107,7 +113,7 @@ import { TableProcess } from './TableProcess.svelte';
  * @typedef {OpAddColumn | OpRemoveColumn | OpAddProcess | OpRemoveProcess |
  *   OpSetProcessArg | OpAddPlot | OpRemovePlot | OpSetPlotProperty | OpSetPlotPosition |
  *   OpAddFreeTableProcess | OpRemoveFreeTableProcess | OpSetFreeTableProcessArg |
- *   OpSetStoredValue | OpRemoveStoredValue |
+ *   OpSetOrphanProcessArg | OpSetStoredValue | OpRemoveStoredValue |
  *   OpRenameStoredValue | OpReplaceColumnRefs | OpSwapColumnRefs | OpBatch} GraphOperation
  */
 
@@ -206,6 +212,8 @@ function applyForward(op) {
             return op_removeFreeTableProcess(op);
         case 'setFreeTableProcessArg':
             return op_setFreeTableProcessArg(op);
+        case 'setOrphanProcessArg':
+            return op_setOrphanProcessArg(op);
         case 'setStoredValue':
             return op_setStoredValue(op);
         case 'removeStoredValue':
@@ -405,6 +413,21 @@ function op_setFreeTableProcessArg(op) {
     return pair(op, {
         kind: 'setFreeTableProcessArg',
         tpId: op.tpId,
+        key: op.key,
+        value: before
+    });
+}
+
+function op_setOrphanProcessArg(op) {
+    const proc = core.orphanProcesses.find((p) => p.id === op.processId);
+    if (!proc) return null;
+    if (!proc.args) proc.args = {};
+    const before = proc.args[op.key];
+    if (before === op.value) return null;
+    proc.args[op.key] = op.value;
+    return pair(op, {
+        kind: 'setOrphanProcessArg',
+        processId: op.processId,
         key: op.key,
         value: before
     });

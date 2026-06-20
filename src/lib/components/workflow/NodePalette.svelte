@@ -432,7 +432,7 @@
 	}
 
 	.np-btn:hover {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 	}
 
 	.np-btn:active {
@@ -440,7 +440,7 @@
 	}
 
 	.np-trigger.open {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 	}
 
 	.np-menu {
@@ -451,34 +451,34 @@
 		max-width: 420px;
 		max-height: min(70vh, 36rem);
 		overflow-y: auto;
-		background: #fff;
+		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-80, #ccc);
-		border-radius: 8px;
-		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-		padding: 0.75rem;
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-3);
+		padding: var(--space-5);
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: var(--space-2);
 	}
 
 	.palette-search-wrap {
 		position: sticky;
 		top: 0;
 		z-index: 1;
-		padding-bottom: 0.6rem;
-		background: #fff;
+		padding-bottom: var(--space-4);
+		background: var(--surface-card);
 		border-bottom: 1px solid var(--color-lightness-90, #eee);
-		margin-bottom: 0.5rem;
+		margin-bottom: var(--space-4);
 	}
 
 	.palette-search {
 		width: 100%;
-		padding: 0.45rem 0.6rem;
+		padding: var(--space-4) var(--space-4);
 		border: 1px solid var(--color-lightness-80, #ccc);
 		border-radius: 5px;
 		font-size: 0.85rem;
 		color: var(--color-lightness-25, #333);
-		background: #fff;
+		background: var(--surface-card);
 		transition:
 			border-color 0.15s ease,
 			box-shadow 0.15s ease;
@@ -486,23 +486,23 @@
 
 	.palette-search:focus {
 		outline: none;
-		border-color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
 		box-shadow: 0 0 0 2px rgba(77, 159, 227, 0.18);
 	}
 
 	.palette-empty {
-		padding: 0.8rem 0.3rem;
+		padding: var(--space-5) var(--space-2);
 		font-size: 0.82rem;
 		color: var(--color-lightness-50, #888);
 	}
 
 	.palette-family-block {
-		padding-top: 0.1rem;
+		padding-top: var(--space-1);
 	}
 
 	.palette-family-header {
-		padding: 0.3rem 0.2rem;
-		margin-bottom: 0.35rem;
+		padding: var(--space-2) var(--space-2);
+		margin-bottom: var(--space-3);
 		font-size: 0.7rem;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
@@ -518,8 +518,8 @@
 	.palette-grid {
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: 0.4rem;
-		padding-bottom: 0.5rem;
+		gap: var(--space-3);
+		padding-bottom: var(--space-4);
 	}
 
 	.palette-tile {
@@ -527,12 +527,12 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: flex-start;
-		gap: 0.3rem;
-		padding: 0.5rem 0.35rem;
+		gap: var(--space-2);
+		padding: var(--space-4) var(--space-3);
 		min-height: 64px;
 		border: 1px solid transparent;
-		border-radius: 6px;
-		background: #fff;
+		border-radius: var(--radius-md);
+		background: var(--surface-card);
 		color: var(--color-lightness-25, #333);
 		text-align: center;
 		cursor: pointer;
@@ -549,7 +549,7 @@
 	}
 
 	.palette-tile:focus-visible {
-		outline: 2px solid var(--color-accent, #4d9fe3);
+		outline: 2px solid var(--color-accent);
 		outline-offset: 1px;
 	}
 
@@ -563,7 +563,7 @@
 	}
 
 	.palette-tile:hover .palette-tile-icon {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 	}
 
 	.palette-tile-name {

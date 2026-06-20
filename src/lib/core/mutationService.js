@@ -64,6 +64,12 @@ export const mutationService = {
         applyOp({ kind: 'setFreeTableProcessArg', tpId, key, value });
     },
 
+    // --- Free (orphan) process ops: a process node not yet owned by a column.
+    // Used by dataflow wiring to record a free process's input column (inIN).
+    setOrphanProcessArg(processId, key, value) {
+        applyOp({ kind: 'setOrphanProcessArg', processId, key, value });
+    },
+
     // --- Stored values ---
     setStoredValue(name, entry) {
         applyOp({ kind: 'setStoredValue', name, entry });

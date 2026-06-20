@@ -1,31 +1,50 @@
 <script>
 	// @ts-nocheck
-	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
+	import { core, appConsts, appState, getProcessNodeGraph } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { tick, untrack } from 'svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
-	import TableProcess from '$lib/core/TableProcess.svelte';
+	import NodeSourceItem from './NodeSourceItem.svelte';
 	import MakeNewColumn from './modals/MakeNewColumn.svelte';
 	import { openImportData } from '$lib/core/dataSourceActions.js';
 	import SwapColumns from './modals/SwapColumns.svelte';
 	import Editable from '../inputs/Editable.svelte';
-	import { tooltip } from '$lib/utils/tooltip.js';
+	import { getNodeName } from '$lib/core/nodeNaming.js';
+	import { getNodeMeta } from '$lib/core/nodeMeta.js';
+	import { selectPlot } from '$lib/core/Plot.svelte';
+	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 
 	let showSwapColumns = $state(false);
 	let showNewCol = $state(false);
 	let newColInitialType = $state('');
+
+	// ─── Search ────────────────────────────────────────────────────────────────
+	// Filters Sources / Nodes / Plots by name. While a query is active, every
+	// section is forced open (see isOpen) so matches are always visible.
+	let query = $state('');
+	const q = $derived(query.trim().toLowerCase());
+	function matches(name) {
+		return !q || (name ?? '').toString().toLowerCase().includes(q);
+	}
+	function isOpen(id) {
+		return openSections[id] || !!q;
+	}
+	function groupVisibleColumns(group) {
+		return (group.sourceColumnIds ?? [])
+			.map((id) => getColumnById(id))
+			.filter((c) => c && matches(c.name));
+	}
 
 	function openMakeNewColumn() {
 		newColInitialType = '';
 		showNewCol = true;
 	}
 
-	// Expand state — keyed by section id (group id, '__tps__', '__ungrouped__').
-	// The Computed (table-process) section starts open so TP nodes are always
-	// visible without needing a canvas double-click to reveal them.
-	let openSections = $state({ __tps__: true });
+	// Expand state — keyed by section id (group id, '__nodes__', '__ungrouped__',
+	// '__plots__'). Nodes + Plots start open so they're visible without a click.
+	let openSections = $state({ __data__: true, __nodes__: true, __plots__: true });
 
 	// Toggle a section open/closed from a header click. `<details>` uses
 	// `bind:open`, so we MUST preventDefault to stop the browser's native toggle
@@ -60,22 +79,24 @@
 	});
 
 	// Which section owns the selected item? Used to auto-open its <details>.
+	// Source columns (grouped or not) all live in the "Data" section now.
 	const selectedSectionId = $derived.by(() => {
 		const sel = canvasSelection;
 		if (!sel) return null;
-		if (sel.kind === 'tableprocess') return '__tps__';
-		// data or process kind: find the column id, then check group membership.
-		let colId = null;
-		if (sel.kind === 'data') colId = sel.id;
-		else {
-			const owner = core.data.find((c) => (c.processes ?? []).some((p) => p.id === sel.id));
-			colId = owner?.id ?? null;
-		}
-		if (colId == null) return null;
+		if (sel.kind === 'tableprocess' || sel.kind === 'process') return '__nodes__';
+		if (sel.kind === 'data') return '__data__';
+		return null;
+	});
+
+	// The group nested under "Data" that owns the selected column, so it can also
+	// be expanded when the column is selected on the canvas.
+	const selectedGroupId = $derived.by(() => {
+		const sel = canvasSelection;
+		if (!sel || sel.kind !== 'data') return null;
 		for (const g of core.groups ?? []) {
-			if ((g.sourceColumnIds ?? []).includes(colId)) return g.id;
+			if ((g.sourceColumnIds ?? []).includes(sel.id)) return g.id;
 		}
-		return '__ungrouped__';
+		return null;
 	});
 
 	// Scroll-into-view refs keyed by `${kind}_${id}`
@@ -84,9 +105,11 @@
 	$effect(() => {
 		const sel = canvasSelection;
 		const sid = selectedSectionId;
+		const gid = selectedGroupId;
 		if (!sel || !sid) return;
 		untrack(() => {
 			openSections[sid] = true;
+			if (gid != null) openSections[gid] = true;
 		});
 		tick().then(() => {
 			const el = rowRefs[`${sel.kind}_${sel.id}`];
@@ -116,12 +139,151 @@
 		return s;
 	});
 
-	// Columns not in any group and not a TP output column.
-	const ungroupedColumns = $derived.by(() => {
-		return (core.data ?? []).filter(
-			(c) => !groupedColumnIds.has(c.id) && !tpOutputColIds.has(c.id)
+	// A producer column is the output of an operation node (dataflow model). These
+	// render as a node's outputs in the "Nodes" section, never as standalone rows.
+	function isProducerColumn(c) {
+		return c?.producerNodeId != null && c.refId == null && c.data == null;
+	}
+
+	// Operation nodes (free processes + free table-processes) as their own panel
+	// entries — each rendered with its inputs + outputs by NodeSourceItem. Nested
+	// TPs are members of their parent and aren't listed separately.
+	const nodeEntries = $derived.by(() => {
+		const nodes = getProcessNodeGraph().nodes ?? [];
+		return nodes.filter(
+			(n) =>
+				n.type === 'process' ||
+				(n.type === 'tableprocess' && typeof n.id === 'string' && !n.id.startsWith('tableprocess_nested_'))
 		);
 	});
+
+	// Source/generator nodes (Simulate Data, Random, Sequence Column, Enter Data)
+	// are conceptually data, not processing steps — they belong in the "Data"
+	// section, not "Nodes". Classify via the central node-meta family.
+	function isSourceNode(node) {
+		return getNodeMeta(node.tpName ?? node.processName).family === 'Sources';
+	}
+	const sourceNodeEntries = $derived(nodeEntries.filter(isSourceNode));
+	const operationNodeEntries = $derived(nodeEntries.filter((n) => !isSourceNode(n)));
+
+	// Source columns only: not in a group, not a TP output, not a producer column.
+	// (Outputs of nodes live inside their node entry now.)
+	const ungroupedColumns = $derived.by(() => {
+		return (core.data ?? []).filter(
+			(c) => !groupedColumnIds.has(c.id) && !tpOutputColIds.has(c.id) && !isProducerColumn(c)
+		);
+	});
+
+	// Search-filtered views of each section.
+	const filteredUngrouped = $derived(ungroupedColumns.filter((c) => matches(c.name)));
+	function nodeMatches(node) {
+		if (!q) return true;
+		if (matches(getNodeName(node))) return true;
+		for (const o of node.outputColumns ?? []) {
+			const c = getColumnById(o.colId);
+			if (c && matches(c.name)) return true;
+		}
+		return false;
+	}
+	// Source nodes render inside "Data"; operation nodes inside "Nodes".
+	const filteredSourceNodes = $derived(sourceNodeEntries.filter(nodeMatches));
+	const filteredNodeEntries = $derived(operationNodeEntries.filter(nodeMatches));
+	// The "Data" section (groups + ungrouped source columns + source nodes) has
+	// something to show.
+	const dataHasContent = $derived(
+		filteredUngrouped.length > 0 ||
+			filteredSourceNodes.length > 0 ||
+			(core.groups ?? []).some((g) => groupVisibleColumns(g).length > 0)
+	);
+
+	// ─── Plots section ───────────────────────────────────────────────────────────
+	// The plot list (formerly the standalone Worksheet Layers panel) lives here so
+	// Sources, Nodes and Plots share one panel + one search box. Display order is
+	// reversed so the topmost row is the plot drawn last (highest z-index); drag to
+	// reorder rewrites core.plots, which is the worksheet stacking order.
+	const filteredPlots = $derived((core.plots ?? []).filter((p) => matches(p.name)));
+	const displayPlots = $derived(q ? filteredPlots : (core.plots ?? []).toReversed());
+
+	let plotDraggedIndex = $state(null);
+	let plotDraggedViewIndex = $state(null);
+	let plotDragOverIdx = $state(null);
+	function plotViewToModel(i) {
+		return core.plots.length - 1 - i;
+	}
+	function plotDragStart(e, i) {
+		plotDraggedViewIndex = i;
+		plotDraggedIndex = plotViewToModel(i);
+		e.dataTransfer.effectAllowed = 'move';
+	}
+	function plotDragOver(e, i) {
+		e.preventDefault();
+		e.dataTransfer.dropEffect = 'move';
+		plotDragOverIdx = i;
+	}
+	function plotDrop(i) {
+		if (plotDraggedIndex === null) return;
+		const target = plotViewToModel(i);
+		if (plotDraggedIndex !== target) {
+			const updated = [...core.plots];
+			const [moved] = updated.splice(plotDraggedIndex, 1);
+			updated.splice(target, 0, moved);
+			core.plots = updated;
+		}
+		plotDragReset();
+	}
+	function plotDragReset() {
+		plotDraggedIndex = null;
+		plotDraggedViewIndex = null;
+		plotDragOverIdx = null;
+	}
+
+	function changePlotVisibility(id) {
+		if (appState.invisiblePlotIds.includes(id)) {
+			appState.invisiblePlotIds = appState.invisiblePlotIds.filter((p) => p !== id);
+		} else {
+			appState.invisiblePlotIds.push(id);
+		}
+	}
+
+	let showSinglePlotDropdown = $state(false);
+	let selectedPlotId = $state(null);
+	let plotDropdownTop = $state(0);
+	let plotDropdownLeft = $state(0);
+	function openSinglePlotDropdown(e, id) {
+		selectedPlotId = id;
+		const r = e.currentTarget.getBoundingClientRect();
+		plotDropdownTop = r.top + window.scrollY;
+		plotDropdownLeft = r.right + window.scrollX + 6;
+		showSinglePlotDropdown = true;
+	}
+
+	// Select a plot from the panel: mark it selected (workspace view) and find it on
+	// the canvas. The focus request also resets the canvas selection to just this
+	// plot, so any other selected nodes are deselected. View is left as-is so it
+	// works in either the workflow or workspace canvas.
+	function plotSelectAndFind(e, plot) {
+		selectPlot(e ?? {}, plot.id);
+		// Mirror the resulting plot selection into the canvas selection so the
+		// control panel counts exactly the selected plots (it unions plot.selected
+		// with canvasMultiSelectedNodeIds — a stale canvas id otherwise shows e.g.
+		// "2 plots selected" when only one is chosen here).
+		const selIds = (core.plots ?? []).filter((p) => p.selected).map((p) => `plot_${p.id}`);
+		appState.canvasMultiSelectedNodeIds = selIds;
+		appState.canvasMultiSelectedCount = selIds.length;
+		appState.canvasSelectedNodeId = `plot_${plot.id}`;
+		appState.focusNodeRequest = {
+			id: `plot_${plot.id}`,
+			n: (appState.focusNodeRequest?.n ?? 0) + 1
+		};
+	}
+
+	// Find a group's node on the workflow canvas (select + pan + open its panel).
+	function groupFindSelect(group) {
+		appState.canvasSelectedNodeId = group.id;
+		appState.focusNodeRequest = { id: group.id, n: (appState.focusNodeRequest?.n ?? 0) + 1 };
+		appState.view = 'canvas';
+		appState.showControlPanel = true;
+	}
 
 	// ─── Drag-and-drop reorder ─────────────────────────────────────────────────
 	// MIME-style payloads encode kind + ids. Drop targets call the appropriate
@@ -136,11 +298,6 @@
 		e.dataTransfer?.setData('application/x-ancir-drag', `col:${columnId}:${fromSection}`);
 		e.dataTransfer.effectAllowed = 'move';
 	}
-	function startDragTP(e, tpId) {
-		e.dataTransfer?.setData('application/x-ancir-drag', `tp:${tpId}`);
-		e.dataTransfer.effectAllowed = 'move';
-	}
-
 	function parsePayload(dt) {
 		const raw = dt?.getData?.('application/x-ancir-drag') ?? '';
 		if (!raw) return null;
@@ -210,42 +367,53 @@
 	}
 </script>
 
-<div class="heading">
-	<p>Data Sources</p>
-
-	<div class="databuttons">
-		<button class="icon" onclick={() => (showSwapColumns = true)} title="Swap columns">
-			<Icon name="swap" width={16} height={16} />
+<div class="search-row">
+	<Icon name="search" width={14} height={14} className="search-icon" />
+	<input
+		class="search-input"
+		type="search"
+		placeholder="Search sources, nodes, plots…"
+		bind:value={query}
+		aria-label="Search sources, nodes and plots"
+	/>
+	{#if q}
+		<button class="icon search-clear" title="Clear search" onclick={() => (query = '')}>
+			<Icon name="close" width={14} height={14} />
 		</button>
-		<button
-			class="icon"
-			onclick={() => openImportData()}
-			title="Import data"
-			{@attach tooltip('Import data')}
-		>
-			<Icon name="add" width={16} height={16} />
-		</button>
-	</div>
+	{/if}
 </div>
 
 <div class="display-list">
-	<!-- Groups -->
-	{#each core.groups as group (group.id)}
-		<div
-			class="clps-container"
-			draggable="true"
-			ondragstart={(e) => startDragGroup(e, group.id)}
-			ondragover={(e) => onDragOverSection(e, '__group_order__', group.id)}
-			ondrop={(e) => onDropSection(e, '__group_order__', group.id)}
-		>
-			<details class="clps-item" bind:open={openSections[group.id]}>
-				<summary class="clps-title-container" onclick={(e) => toggleSection(e, group.id)}>
-					<div class="clps-title">
-						<p><Editable bind:value={group.name} /></p>
-					</div>
+	<!-- Data: groups + ungrouped source columns. Swap / import sit on the section
+	     header, revealed on hover. -->
+	{#if !q || dataHasContent}
+		<div class="clps-container section">
+			<details class="clps-item" open={isOpen('__data__')}>
+				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__data__')}>
+					<div class="clps-title"><p class="section-label">Data</p></div>
 					<div class="clps-title-button">
-						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, group.id)}>
-							{#if openSections[group.id]}
+						<button
+							class="icon section-action"
+							title="Swap columns"
+							onclick={(e) => {
+								e.stopPropagation();
+								showSwapColumns = true;
+							}}
+						>
+							<Icon name="swap" width={15} height={15} />
+						</button>
+						<button
+							class="icon section-action"
+							title="Import data"
+							onclick={(e) => {
+								e.stopPropagation();
+								openImportData();
+							}}
+						>
+							<Icon name="add" width={15} height={15} />
+						</button>
+						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__data__')}>
+							{#if isOpen('__data__')}
 								<Icon name="caret-down" width={20} height={20} />
 							{:else}
 								<Icon name="caret-right" width={20} height={20} />
@@ -254,9 +422,45 @@
 					</div>
 				</summary>
 
-				{#each group.sourceColumnIds ?? [] as colId (colId)}
-					{@const col = getColumnById(colId)}
-					{#if col}
+				<!-- Groups (nested under Data) -->
+				{#each core.groups as group (group.id)}
+		{@const visCols = groupVisibleColumns(group)}
+		{#if !q || visCols.length > 0}
+			<div
+				class="clps-container"
+				class:canvas-selected={appState.canvasSelectedNodeId === group.id}
+				draggable="true"
+				ondragstart={(e) => startDragGroup(e, group.id)}
+				ondragover={(e) => onDragOverSection(e, '__group_order__', group.id)}
+				ondrop={(e) => onDropSection(e, '__group_order__', group.id)}
+			>
+				<details class="clps-item" open={isOpen(group.id)}>
+					<summary class="clps-title-container" onclick={(e) => toggleSection(e, group.id)}>
+						<div class="clps-title">
+							<p><Editable bind:value={group.name} /></p>
+						</div>
+						<div class="clps-title-button">
+							<button
+								class="icon group-find-btn"
+								title="Find on canvas"
+								onclick={(e) => {
+									e.stopPropagation();
+									groupFindSelect(group);
+								}}
+							>
+								<Icon name="process" width={15} height={15} className="menu-icon" />
+							</button>
+							<button class="icon" onclick={(e) => toggleSectionFromCaret(e, group.id)}>
+								{#if isOpen(group.id)}
+									<Icon name="caret-down" width={20} height={20} />
+								{:else}
+									<Icon name="caret-right" width={20} height={20} />
+								{/if}
+							</button>
+						</div>
+					</summary>
+
+					{#each visCols as col (col.id)}
 						{@const colSelected = canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
 						{@const ownsSelectedProcess =
 							canvasSelection?.kind === 'process' &&
@@ -275,77 +479,22 @@
 								canvasSelectedProcessId={ownsSelectedProcess ? canvasSelection.id : null}
 							/>
 						</div>
-					{/if}
-				{/each}
+					{/each}
 
-				<!-- Drop zone at end of group -->
-				<div
-					class="dropzone"
-					class:active={dropHint.section === group.id && dropHint.beforeId == null}
-					ondragover={(e) => onDragOverSection(e, group.id, null)}
-					ondrop={(e) => onDropSection(e, group.id, null)}
-				></div>
-			</details>
-		</div>
+					<!-- Drop zone at end of group -->
+					<div
+						class="dropzone"
+						class:active={dropHint.section === group.id && dropHint.beforeId == null}
+						ondragover={(e) => onDragOverSection(e, group.id, null)}
+						ondrop={(e) => onDropSection(e, group.id, null)}
+					></div>
+				</details>
+			</div>
+		{/if}
 	{/each}
 
-	<!-- Free table-processes -->
-	{#if (core.tableProcesses?.length ?? 0) > 0}
-		<div class="clps-container">
-			<details class="clps-item" bind:open={openSections['__tps__']}>
-				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__tps__')}>
-					<div class="clps-title">
-						<p>Computed</p>
-					</div>
-					<div class="clps-title-button">
-						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__tps__')}>
-							{#if openSections['__tps__']}
-								<Icon name="caret-down" width={20} height={20} />
-							{:else}
-								<Icon name="caret-right" width={20} height={20} />
-							{/if}
-						</button>
-					</div>
-				</summary>
-
-				{#each core.tableProcesses as p (p.id)}
-					<div
-						class="second-clps"
-						class:canvas-selected={canvasSelection?.kind === 'tableprocess' &&
-							canvasSelection.id === p.id}
-						bind:this={rowRefs[`tableprocess_${p.id}`]}
-						draggable="true"
-						ondragstart={(e) => startDragTP(e, p.id)}
-						ondragover={(e) => onDragOverSection(e, '__tps__', p.id)}
-						ondrop={(e) => onDropSection(e, '__tps__', p.id)}
-					>
-						<TableProcess {p} />
-					</div>
-				{/each}
-			</details>
-		</div>
-	{/if}
-
-	<!-- Ungrouped columns -->
-	{#if ungroupedColumns.length > 0}
-		<div class="clps-container">
-			<details class="clps-item" bind:open={openSections['__ungrouped__']}>
-				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__ungrouped__')}>
-					<div class="clps-title">
-						<p>Ungrouped</p>
-					</div>
-					<div class="clps-title-button">
-						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__ungrouped__')}>
-							{#if openSections['__ungrouped__']}
-								<Icon name="caret-down" width={20} height={20} />
-							{:else}
-								<Icon name="caret-right" width={20} height={20} />
-							{/if}
-						</button>
-					</div>
-				</summary>
-
-				{#each ungroupedColumns as col (col.id)}
+				<!-- Ungrouped source columns (flat, after the groups) -->
+				{#each filteredUngrouped as col (col.id)}
 					{@const colSelected = canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
 					{@const ownsSelectedProcess =
 						canvasSelection?.kind === 'process' &&
@@ -366,6 +515,18 @@
 					</div>
 				{/each}
 
+				<!-- Source/generator nodes (Simulate Data, Random, Sequence, Enter Data):
+				     conceptually data, so they live under Data with their output columns. -->
+				{#each filteredSourceNodes as node (node.id)}
+					<div
+						class="second-clps"
+						class:canvas-selected={appState.canvasSelectedNodeId === node.id}
+						bind:this={rowRefs[node.id]}
+					>
+						<NodeSourceItem {node} />
+					</div>
+				{/each}
+
 				<!-- Drop zone to remove a column from its group -->
 				<div
 					class="dropzone"
@@ -377,43 +538,269 @@
 		</div>
 	{/if}
 
+	<div class="section-sep"></div>
+
+	<!-- Nodes: every operation (process + table-process) as its own entry, with
+	     read-only input(s) and its output columns. -->
+	{#if filteredNodeEntries.length > 0}
+		<div class="clps-container section">
+			<details class="clps-item" open={isOpen('__nodes__')}>
+				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__nodes__')}>
+					<div class="clps-title">
+						<p>Nodes</p>
+					</div>
+					<div class="clps-title-button">
+						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__nodes__')}>
+							{#if isOpen('__nodes__')}
+								<Icon name="caret-down" width={20} height={20} />
+							{:else}
+								<Icon name="caret-right" width={20} height={20} />
+							{/if}
+						</button>
+					</div>
+				</summary>
+
+				{#each filteredNodeEntries as node (node.id)}
+					<div
+						class="second-clps"
+						class:canvas-selected={appState.canvasSelectedNodeId === node.id}
+						bind:this={rowRefs[node.id]}
+					>
+						<NodeSourceItem {node} />
+					</div>
+				{/each}
+			</details>
+		</div>
+	{/if}
+
+	<div class="section-sep"></div>
+
+	<!-- Plots: the worksheet stacking order. Topmost row = highest z-index; drag to
+	     reorder (disabled while searching). -->
+	{#if displayPlots.length > 0}
+		<div class="clps-container section">
+			<details class="clps-item" open={isOpen('__plots__')}>
+				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__plots__')}>
+					<div class="clps-title">
+						<p>Plots</p>
+					</div>
+					<div class="clps-title-button">
+						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__plots__')}>
+							{#if isOpen('__plots__')}
+								<Icon name="caret-down" width={20} height={20} />
+							{:else}
+								<Icon name="caret-right" width={20} height={20} />
+							{/if}
+						</button>
+					</div>
+				</summary>
+
+				{#each displayPlots as plot, i (plot.id)}
+					<div
+						class="second-clps plot-row"
+						class:plot-drag-over={!q && plotDragOverIdx === i && plotDraggedViewIndex !== i}
+						class:canvas-selected={plot.selected}
+						draggable={!q}
+						ondragstart={(e) => plotDragStart(e, i)}
+						ondragover={(e) => plotDragOver(e, i)}
+						ondrop={() => plotDrop(i)}
+						ondragend={plotDragReset}
+					>
+						<div
+							class="plot-row-inner"
+							role="button"
+							tabindex="0"
+							onclick={(e) => plotSelectAndFind(e, plot)}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									plotSelectAndFind(e, plot);
+								}
+							}}
+						>
+							{#if !q}
+								<div class="plot-drag-handle" title="Drag to reorder (changes stacking order)">
+									⠇
+								</div>
+							{/if}
+							<button
+								class="icon"
+								title="Toggle visibility"
+								onclick={(e) => {
+									e.stopPropagation();
+									changePlotVisibility(plot.id);
+								}}
+							>
+								{#if appState.invisiblePlotIds.includes(plot.id)}
+									<Icon name="eye-slash" width={16} height={16} />
+								{:else}
+									<Icon name="eye" width={16} height={16} className="visible" />
+								{/if}
+							</button>
+							<p class="plot-name"><Editable bind:value={plot.name} /></p>
+							<button
+								class="icon plot-find-btn"
+								title="Find on canvas"
+								onclick={(e) => {
+									e.stopPropagation();
+									plotSelectAndFind({}, plot);
+								}}
+							>
+								<Icon name="process" width={15} height={15} className="menu-icon" />
+							</button>
+							<button
+								class="icon"
+								title="Plot actions"
+								onclick={(e) => {
+									e.stopPropagation();
+									openSinglePlotDropdown(e, plot.id);
+								}}
+							>
+								<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" />
+							</button>
+						</div>
+					</div>
+				{/each}
+			</details>
+		</div>
+	{/if}
+
 	<div class="div-block"></div>
 </div>
 
 <MakeNewColumn bind:show={showNewCol} bind:initialType={newColInitialType} />
 <SwapColumns bind:showModal={showSwapColumns} />
+<SinglePlotAction
+	bind:showDropdown={showSinglePlotDropdown}
+	dropdownTop={plotDropdownTop}
+	dropdownLeft={plotDropdownLeft}
+	plotId={selectedPlotId}
+/>
 
 <style>
-	.heading {
+	/* Section dividers (between Data / Nodes / Plots), mirroring the nav .rail-sep. */
+	.section-sep {
+		height: 1px;
+		margin: var(--space-3) var(--space-4);
+		background: var(--divider-soft);
+	}
+
+	.section-label {
+		font-weight: 600;
+		font-size: var(--font-md);
+	}
+
+	/* Swap / import buttons on the Data section header — revealed on hover. Extra
+	   specificity so they beat the section header's resting icon opacity. */
+	.section summary .section-action {
+		opacity: 0;
+		transition: opacity 0.12s ease;
+	}
+	.section:hover summary .section-action,
+	.section summary .section-action:focus-visible {
+		opacity: 1;
+	}
+
+	.search-row {
 		position: sticky;
 		top: 0;
-		width: 100%;
-		height: 2rem;
+		z-index: 998;
 		display: flex;
-		flex-direction: row;
-		justify-content: space-between;
 		align-items: center;
-		border-bottom: 1px solid var(--color-lightness-85);
-		background-color: white;
-		z-index: 999;
+		gap: var(--space-3);
+		width: 100%;
+		box-sizing: border-box;
+		padding: var(--space-3) var(--space-4);
+		background-color: var(--surface-card);
+		border-bottom: 1px solid var(--divider-soft);
 	}
-
-	.heading p {
-		margin-left: 0.75rem;
-		font-weight: bold;
+	.search-row :global(.search-icon) {
+		color: var(--color-lightness-55, #999);
+		flex-shrink: 0;
 	}
-
-	.heading button {
-		margin-right: 0.65rem;
+	.search-input {
+		flex: 1;
+		min-width: 0;
+		border: none;
+		outline: none;
+		background: transparent;
+		font: inherit;
+		font-size: var(--font-md);
+		padding: 2px 0;
+	}
+	.search-input::-webkit-search-cancel-button {
+		display: none;
+	}
+	.search-clear {
+		flex-shrink: 0;
+		opacity: 0.6;
+	}
+	.search-clear:hover {
+		opacity: 1;
 	}
 
 	.display-list {
 		width: 100%;
-		margin-top: 0.25rem;
+		margin-top: var(--space-2);
+	}
+
+	/* Plots section rows */
+	.plot-row-inner {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		gap: var(--space-1);
+		width: 100%;
+		cursor: pointer;
+	}
+	.plot-name {
+		flex: 1;
+		margin: 0;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.plot-drag-handle {
+		cursor: grab;
+		user-select: none;
+		font-size: var(--font-sm);
+		line-height: 1;
+		color: var(--color-lightness-65, #aaa);
+		padding: 0 var(--space-1);
+		opacity: 0;
+		transition: opacity 0.15s ease;
+	}
+	.plot-drag-handle:active {
+		cursor: grabbing;
+	}
+	.plot-row:hover .plot-drag-handle {
+		opacity: 1;
+	}
+	.plot-row[draggable='true'] {
+		cursor: grab;
+	}
+	.plot-drag-over {
+		border-top: 2px solid var(--color-lightness-35, #555);
+	}
+
+	/* Find-on-canvas buttons reveal on hover (groups + plots), matching nodes. The
+	   group button needs extra specificity to beat `summary .icon`'s rest opacity. */
+	.clps-container summary .group-find-btn,
+	.plot-row .plot-find-btn {
+		opacity: 0;
+		transition: opacity 0.12s ease;
+		flex-shrink: 0;
+	}
+	.clps-container:hover summary .group-find-btn,
+	.clps-container summary .group-find-btn:focus-visible,
+	.plot-row:hover .plot-find-btn,
+	.plot-row .plot-find-btn:focus-visible {
+		opacity: 1;
 	}
 
 	details {
-		margin: 0.25rem 0.5rem 0.25rem 0.75rem;
+		margin: var(--space-2) var(--space-4) var(--space-2) var(--space-5);
 		padding: 0;
 	}
 
@@ -453,14 +840,12 @@
 		cursor: pointer;
 	}
 
-	.databuttons {
-		display: flex;
-	}
 
-	.second-clps.canvas-selected {
-		border-radius: 4px;
-		box-shadow: inset 2px 0 0 var(--color-accent, #4d9fe3);
-		background-color: color-mix(in srgb, var(--color-accent, #4d9fe3) 8%, transparent);
+	.second-clps.canvas-selected,
+	.clps-container.canvas-selected {
+		border-radius: var(--radius-sm);
+		box-shadow: inset 2px 0 0 var(--color-accent);
+		background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
 	}
 
 	.dropzone {
@@ -470,7 +855,7 @@
 		transition: background-color 0.15s ease;
 	}
 	.dropzone.active {
-		background-color: var(--color-accent, #4d9fe3);
+		background-color: var(--color-accent);
 	}
 
 	.clps-container[draggable='true'] {

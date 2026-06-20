@@ -320,7 +320,7 @@
 				</button>
 			</div>
 			<div class="cp-content">
-				<div style="background:white; padding: 16px; position: relative;">
+				<div style="background: var(--surface-card); padding: 16px; position: relative;">
 					<!-- Color Preview -->
 					<div style="display: flex; gap: 8px; margin-bottom: 16px;">
 						<div>
@@ -381,7 +381,7 @@
 					<label>Alpha</label>
 					<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
 						<div
-							style="position: relative; flex-grow: 1; height: 16px; border-radius: 8px; overflow: hidden;"
+							style="position: relative; flex-grow: 1; height: 16px; border-radius: var(--radius-lg); overflow: hidden;"
 						>
 							<div
 								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
@@ -406,7 +406,7 @@
 							step="1"
 							bind:value={hsvInput.a}
 							onInput={updateFromHsv}
-							style="width: {numberInputWidth}px; height: 16px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+							style="width: {numberInputWidth}px; height: 16px; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
 						/>
 					</div>
 					<button
@@ -415,7 +415,7 @@
 							hexInput = randomCol;
 							updateFromHex(randomCol);
 						}}
-						style="padding: 4px 8px; background-color: #6b7280; color: white; border-radius: 4px; border: none; cursor: pointer;"
+						style="padding: 4px 8px; background-color: #6b7280; color: white; border-radius: var(--radius-sm); border: none; cursor: pointer;"
 					>
 						Pick random colour
 					</button>
@@ -424,14 +424,14 @@
 						{#if caneyedrop}
 							<button
 								onclick={() => eyedropper()}
-								style="padding: 4px 8px; background-color: #6b7280; color: white; border-radius: 4px; border: none; cursor: pointer;"
+								style="padding: 4px 8px; background-color: #6b7280; color: white; border-radius: var(--radius-sm); border: none; cursor: pointer;"
 							>
 								Eyedropper
 							</button>
 						{/if}
 						<button
 							onclick={() => (showAdvanced = !showAdvanced)}
-							style="padding: 4px 8px; background-color: #6b7280; color: white; border-radius: 4px; border: none; cursor: pointer;"
+							style="padding: 4px 8px; background-color: #6b7280; color: white; border-radius: var(--radius-sm); border: none; cursor: pointer;"
 						>
 							{showAdvanced ? 'Hide Advanced' : 'More Options'}
 						</button>
@@ -458,7 +458,7 @@
 							<label>Hue</label>
 							<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
 								<div
-									style="position: relative; flex-grow: 1; height: 16px; border-radius: 8px; overflow: hidden;"
+									style="position: relative; flex-grow: 1; height: 16px; border-radius: var(--radius-lg); overflow: hidden;"
 								>
 									<div
 										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, hsl(0, 100%, 50%), hsl(60, 100%, 50%), hsl(120, 100%, 50%), hsl(180, 100%, 50%), hsl(240, 100%, 50%), hsl(300, 100%, 50%), hsl(360, 100%, 50%));"
@@ -480,14 +480,14 @@
 									step="1"
 									bind:value={hsvInput.h}
 									onInput={updateFromHsv}
-									style="width:  {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									style="width:  {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
 								/>
 							</div>
 
 							<label>Saturation</label>
 							<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
 								<div
-									style="position: relative; flex-grow: 1; height: 16px; border-radius: 8px; overflow: hidden;"
+									style="position: relative; flex-grow: 1; height: 16px; border-radius: var(--radius-lg); overflow: hidden;"
 								>
 									<div
 										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, hsl({hsvInput.h}, 0%, 50%), hsl({hsvInput.h}, 100%, 50%));"
@@ -509,14 +509,14 @@
 									step="1"
 									bind:value={hsvInput.s}
 									onInput={updateFromHsv}
-									style="width: {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									style="width: {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
 								/>
 							</div>
 
 							<label>Value</label>
 							<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
 								<div
-									style="position: relative; flex-grow: 1; height: 16px; border-radius: 8px; overflow: hidden;"
+									style="position: relative; flex-grow: 1; height: 16px; border-radius: var(--radius-lg); overflow: hidden;"
 								>
 									<div
 										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, hsl({hsvInput.h}, {hsvInput.s}%, 0%),hsl({hsvInput.h}, {hsvInput.s}%, 50%), hsl({hsvInput.h}, {hsvInput.s}%, 100%));"
@@ -538,14 +538,14 @@
 									step="1"
 									bind:value={hsvInput.v}
 									onInput={updateFromHsv}
-									style="width: {numberInputWidth}px; height: 16px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									style="width: {numberInputWidth}px; height: 16px; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
 								/>
 							</div>
 
 							<label>Red</label>
 							<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
 								<div
-									style="position: relative; flex-grow: 1; height: 16px; border-radius: 8px; overflow: hidden;"
+									style="position: relative; flex-grow: 1; height: 16px; border-radius: var(--radius-lg); overflow: hidden;"
 								>
 									<div
 										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgb(0, {rgbInput.g}, {rgbInput.b}), rgb(255, {rgbInput.g}, {rgbInput.b}));"
@@ -565,14 +565,14 @@
 									max="255"
 									bind:value={rgbInput.r}
 									onInput={updateFromRgb}
-									style="width:  {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									style="width:  {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
 								/>
 							</div>
 
 							<label>Green</label>
 							<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
 								<div
-									style="position: relative; flex-grow: 1; height: 16px; border-radius: 8px; overflow: hidden;"
+									style="position: relative; flex-grow: 1; height: 16px; border-radius: var(--radius-lg); overflow: hidden;"
 								>
 									<div
 										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgb({rgbInput.r}, 0, {rgbInput.b}), rgb({rgbInput.r}, 255, {rgbInput.b}));"
@@ -592,14 +592,14 @@
 									max="255"
 									bind:value={rgbInput.g}
 									onInput={updateFromRgb}
-									style="width:  {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									style="width:  {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
 								/>
 							</div>
 
 							<label>Blue</label>
 							<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
 								<div
-									style="position: relative; flex-grow: 1; height: 16px; border-radius: 8px; overflow: hidden;"
+									style="position: relative; flex-grow: 1; height: 16px; border-radius: var(--radius-lg); overflow: hidden;"
 								>
 									<div
 										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgb({rgbInput.r}, {rgbInput.g}, 0), rgb({rgbInput.r}, {rgbInput.g}, 255));"
@@ -619,7 +619,7 @@
 									max="255"
 									bind:value={rgbInput.b}
 									onInput={updateFromRgb}
-									style="width: {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									style="width: {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
 								/>
 							</div>
 						</div>
@@ -634,7 +634,7 @@
 									type="text"
 									bind:value={hexInput}
 									oninput={() => updateFromHex(hexInput)}
-									style="width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+									style="width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
 								/>
 							</div>
 						</div>
@@ -645,7 +645,7 @@
 						<div style="display: flex; gap: 8px;">
 							<button
 								onclick={() => saveColor()}
-								style="padding: 4px 8px; background-color: #3b82f6; color: white; border-radius: 4px; border: none; cursor: pointer;"
+								style="padding: 4px 8px; background-color: #3b82f6; color: white; border-radius: var(--radius-sm); border: none; cursor: pointer;"
 							>
 								Save to Palette
 							</button>
@@ -696,7 +696,7 @@
 
 	label {
 		display: block;
-		font-size: 14px;
+		font-size: var(--font-lg);
 		margin-bottom: 4px;
 		color: #333;
 	}
@@ -709,10 +709,10 @@
 		user-select: none;
 		position: absolute;
 		border: solid 1px var(--color-lightness-85);
-		background-color: white;
+		background-color: var(--surface-card);
 		box-sizing: border-box;
-		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-		border-radius: 4px;
+		box-shadow: var(--shadow-1);
+		border-radius: var(--radius-sm);
 		overflow: hidden;
 		display: flex;
 		flex-direction: column;
@@ -729,8 +729,8 @@
 		flex-shrink: 0;
 		cursor: move;
 
-		padding: 0.5rem;
-		padding-left: 1rem;
+		padding: var(--space-4);
+		padding-left: var(--space-6);
 		padding-right: 0.4rem;
 		background-color: var(--color-lightness-98);
 		border-bottom: 1px solid var(--color-lightness-85);
@@ -747,7 +747,7 @@
 
 	.cp-content {
 		flex: 1;
-		padding: 0.5rem;
+		padding: var(--space-4);
 		overflow: auto;
 	}
 

@@ -14,7 +14,6 @@
 	// @ts-nocheck
 	import Draggable from '$lib/components/reusables/Draggable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import FloatingActions from '$lib/components/workflow/FloatingActions.svelte';
 	import NoteCard from '$lib/components/views/NoteCard.svelte';
 	import WorksheetAddPalette from '$lib/components/views/WorksheetAddPalette.svelte';
 	import AddDataPrompt from '$lib/components/views/AddDataPrompt.svelte';
@@ -248,16 +247,8 @@
 		_viewportSanityChecked = true;
 	});
 
-	//more efficient way to open the dataDisplay on import (fewer reactive checks)
-	let hasData = $derived.by(() => {
-		return core.data.length > 0;
-	});
-	$effect(() => {
-		if (hasData) {
-			appState.currentTab = 'data';
-			appState.showDisplayPanel = true;
-		}
-	});
+	// The Data panel is independent of the canvas view — switching to the
+	// workspace must not force it open. It's toggled from the nav rail only.
 
 	// Background grid: rendered on the static viewport so it covers the whole
 	// visible area regardless of pan. Cell size scales with zoom and the pattern
@@ -295,16 +286,6 @@
 		};
 	});
 </script>
-
-<!-- FloatingActions sits in its own fixed-bounds host so the load/save and
-     undo/redo buttons stay pinned to the worksheet corners and don't scroll
-     with the panning canvas. -->
-<div
-	class="fa-host"
-	style="top: 0; left: {leftPx}px; width: {canvasWidthPx}px; height: 100vh;"
->
-	<FloatingActions />
-</div>
 
 <div
 	onclick={handleClick}
@@ -410,6 +391,7 @@
 	>
 		<Icon name="center" width={22} height={22} />
 	</button>
+	<div class="zc-sep"></div>
 	<button
 		class="icon zoomout viewport-btn"
 		onclick={(e) => {
@@ -449,21 +431,13 @@
 		height: 100%;
 		overflow: hidden;
 		cursor: grab;
-		/* Background grid: pattern is cell-sized and shifted by the pan offset so
-		   it stays aligned with snap-to-grid plot positions while panning/zooming. */
+		/* Snap grid: plots snap to it, so (unlike the workflow canvas) the workspace
+		   keeps a visible grid. Same base tint; pattern is cell-sized and shifted by
+		   the pan offset so it stays aligned with snap-to-grid plot positions. */
+		background-color: var(--surface-canvas, #f7f8fa);
 		background-image:
-			linear-gradient(
-				to right,
-				var(--color-lightness-95) 0,
-				var(--color-lightness-95) 1px,
-				transparent 1px
-			),
-			linear-gradient(
-				to bottom,
-				var(--color-lightness-95) 0,
-				var(--color-lightness-95) 1px,
-				transparent 1px
-			);
+			linear-gradient(to right, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px),
+			linear-gradient(to bottom, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px);
 		background-size: var(--grid-cell, 15px) var(--grid-cell, 15px);
 		background-position: var(--grid-x, 0) var(--grid-y, 0);
 	}
@@ -478,15 +452,6 @@
 		left: 0;
 		width: 0;
 		height: 0;
-	}
-
-	.fa-host {
-		position: fixed;
-		pointer-events: none;
-		z-index: 30;
-		transition:
-			width 0.6s ease,
-			left 0.6s ease;
 	}
 
 	.selection-toolbar-host {
@@ -519,15 +484,42 @@
 		color: var(--color-lightness-75);
 	}
 
+	/* Grouped viewport toolbar — a card matching the workflow canvas + selection
+	   layout toolbar. */
 	.zoom-controls {
 		position: fixed;
 		bottom: 10px;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 4px;
+		gap: 2px;
 		z-index: 999;
 		transition: right 0.6s ease;
+		background: var(--surface-card);
+		border: 1px solid var(--color-lightness-85, #ddd);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-card);
+		padding: 4px;
+	}
+	.zoom-controls button {
+		width: 28px;
+		height: 26px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		border-radius: 5px;
+		background: transparent;
+		cursor: pointer;
+	}
+	.zoom-controls button:hover {
+		background: var(--color-lightness-95, #f2f2f2);
+	}
+	.zc-sep {
+		width: 22px;
+		height: 1px;
+		background: var(--color-lightness-90, #e7e7e7);
+		margin: 2px 0;
 	}
 
 	.viewport-btn {
@@ -538,7 +530,7 @@
 	}
 
 	.viewport-btn:hover {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 	}
 
 	.viewport-btn:active {

@@ -10,7 +10,6 @@
 
 	import { appState } from '$lib/core/core.svelte.js';
 	import DataDisplay from '$lib/components/views/DataDisplay.svelte';
-	import WorksheetDisplay from '$lib/components/views/WorksheetDisplay.svelte';
 	import { fly } from 'svelte/transition';
 
 	let container;
@@ -61,10 +60,10 @@
 		in:fly={{ x: -appState.widthDisplayPanel, duration: 600 }}
 		out:fly={{ x: -appState.widthDisplayPanel, duration: 600 }}
 	>
-		{#if appState.currentTab === 'data'}
+		<!-- Sources, Nodes and Plots all live in one panel now; the worksheet plot
+		     list was folded into DataDisplay's "Plots" section. -->
+		{#if appState.currentTab === 'data' || appState.currentTab === 'worksheet'}
 			<DataDisplay />
-		{:else if appState.currentTab === 'worksheet'}
-			<WorksheetDisplay />
 		{/if}
 	</div>
 	<div
@@ -97,7 +96,7 @@
 		left: 56px;
 
 		border-right: 1px solid #d9d9d9;
-		background: #fff;
+		background: var(--surface-card);
 		box-sizing: border-box;
 
 		z-index: 999;

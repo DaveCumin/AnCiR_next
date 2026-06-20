@@ -433,7 +433,7 @@
 					markerHeight="7"
 					orient="auto-start-reverse"
 				>
-					<path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-accent, #4d9fe3)" />
+					<path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-accent)" />
 				</marker>
 			</defs>
 		</svg>
@@ -483,10 +483,10 @@
 	.tour-ring {
 		position: fixed;
 		z-index: 100000;
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 		pointer-events: none;
 		box-shadow:
-			0 0 0 3px var(--color-accent, #4d9fe3),
+			0 0 0 3px var(--color-accent),
 			0 0 0 9999px rgba(0, 0, 0, 0.28);
 		transition:
 			top 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
@@ -537,7 +537,7 @@
 	}
 	.tour-wire {
 		fill: none;
-		stroke: var(--color-accent, #4d9fe3);
+		stroke: var(--color-accent);
 		stroke-width: 2.5;
 		stroke-linecap: round;
 		stroke-dasharray: 7 6;
@@ -550,7 +550,7 @@
 	}
 	.tour-wire-ring {
 		fill: none;
-		stroke: var(--color-accent, #4d9fe3);
+		stroke: var(--color-accent);
 		stroke-width: 2.5;
 		animation: tour-wire-pulse 1.4s ease-in-out infinite;
 	}
@@ -574,12 +574,12 @@
 		width: 320px;
 		max-width: calc(100vw - 16px);
 		box-sizing: border-box;
-		background: #fff;
+		background: var(--surface-card);
 		border-radius: 10px;
 		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-		padding: 0.85rem 1rem 0.75rem;
+		padding: 0.85rem var(--space-6) var(--space-5);
 		pointer-events: auto;
-		font-size: 14px;
+		font-size: var(--font-lg);
 		color: var(--color-lightness-20, #2a2a2a);
 		/* Positioned via translate3d (GPU-composited). Until the card has been
 		   shown once it stays invisible with NO transform transition, so the
@@ -610,7 +610,7 @@
 	.tour-progress {
 		display: flex;
 		justify-content: space-between;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 		color: var(--color-lightness-50, #888);
@@ -623,7 +623,7 @@
 	}
 
 	.tour-body {
-		margin: 0 0 0.75rem 0;
+		margin: 0 0 var(--space-5) 0;
 		line-height: 1.45;
 		color: var(--color-lightness-30, #444);
 	}
@@ -640,11 +640,11 @@
 
 	.tour-btn {
 		font: inherit;
-		font-size: 13px;
+		font-size: var(--font-md);
 		padding: 0.35rem 0.7rem;
 		border: 1px solid var(--color-lightness-85, #ddd);
-		border-radius: 6px;
-		background: #fff;
+		border-radius: var(--radius-md);
+		background: var(--surface-card);
 		cursor: pointer;
 	}
 
@@ -653,14 +653,14 @@
 	}
 
 	.tour-primary {
-		border-color: var(--color-accent, #4d9fe3);
-		background: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
+		background: var(--color-accent);
 		color: #fff;
 	}
 
 	.tour-primary:hover {
 		filter: brightness(0.96);
-		background: var(--color-accent, #4d9fe3);
+		background: var(--color-accent);
 	}
 
 	.tour-skip {
@@ -674,8 +674,8 @@
 	}
 
 	.tour-hint {
-		font-size: 12px;
-		color: var(--color-accent, #4d9fe3);
+		font-size: var(--font-sm);
+		color: var(--color-accent);
 		font-weight: 600;
 	}
 
@@ -684,7 +684,7 @@
 	:global(.tour-body .tour-tip) {
 		display: inline-block;
 		margin-top: 0.4rem;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		color: var(--color-lightness-50, #888);
 	}
 

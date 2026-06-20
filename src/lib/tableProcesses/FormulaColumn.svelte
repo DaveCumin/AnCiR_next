@@ -703,10 +703,10 @@ return _r;`
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 0.25rem;
+		gap: var(--space-2);
 		padding: 0.35rem 0.4rem;
 		border: 1px solid var(--color-lightness-85);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		background-color: var(--color-lightness-97);
 		min-height: 2rem;
 		cursor: text;
@@ -715,7 +715,7 @@ return _r;`
 	.formula-text-input {
 		border: none;
 		background: transparent;
-		font-size: 13px;
+		font-size: var(--font-md);
 		font-family: monospace;
 		outline: none;
 		padding: 0.1rem 0.1rem;
@@ -735,7 +735,7 @@ return _r;`
 		border-radius: 999px;
 		background-color: var(--color-info-bg);
 		color: #1a3a5c;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		font-weight: 600;
 		white-space: nowrap;
 		user-select: none;
@@ -750,7 +750,7 @@ return _r;`
 		background: none;
 		border: none;
 		cursor: pointer;
-		font-size: 14px;
+		font-size: var(--font-lg);
 		line-height: 1;
 		padding: 0;
 		color: inherit;
@@ -768,18 +768,18 @@ return _r;`
 		overflow-y: auto;
 		background: var(--color-lightness-97, #f8f8f8);
 		border: 1px solid var(--color-lightness-85, #ccc);
-		border-radius: 4px;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+		border-radius: var(--radius-sm);
+		box-shadow: var(--shadow-2);
 		z-index: 9999;
 	}
 
 	.ac-item {
 		display: flex;
 		align-items: baseline;
-		gap: 0.5rem;
+		gap: var(--space-4);
 		padding: 0.35rem 0.6rem;
 		cursor: pointer;
-		font-size: 13px;
+		font-size: var(--font-md);
 	}
 
 	.ac-item:hover,
@@ -792,20 +792,20 @@ return _r;`
 	}
 
 	.ac-table-name {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: var(--color-lightness-55, #777);
 	}
 
 	.ac-empty {
 		padding: 0.4rem 0.6rem;
-		font-size: 13px;
+		font-size: var(--font-md);
 		color: var(--color-lightness-55, #777);
 		font-style: italic;
 	}
 
 	/* ── Hints & errors ── */
 	.formula-hint {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: var(--color-lightness-55, #888);
 		margin: 0.2rem 0 0 0;
 	}
@@ -814,13 +814,13 @@ return _r;`
 		background: var(--color-lightness-85, #ddd);
 		border-radius: 3px;
 		padding: 0.05rem 0.3rem;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		font-family: monospace;
 	}
 
 	.formula-error {
 		color: #c0392b;
-		font-size: 12px;
-		margin: 0.25rem 0;
+		font-size: var(--font-sm);
+		margin: var(--space-2) 0;
 	}
 </style>

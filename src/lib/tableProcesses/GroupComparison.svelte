@@ -973,7 +973,7 @@
 
 	{#if p.args.valid}
 		{#if comparisonData.warnings.length > 0}
-			<div class="data-warning" style="margin-top: 0.5rem;">
+			<div class="data-warning" style="margin-top: var(--space-4);">
 				{#each comparisonData.warnings as warning}
 					<p>⚠ {warning}</p>
 				{/each}
@@ -1099,7 +1099,7 @@
 		{#each Object.entries(comparisonData.comparisons) as [yId, res]}
 			<div
 				class="result-card"
-				style="margin-top: 0.5rem; border: 1px solid var(--stroke2); padding: 0.5rem; border-radius: 0.375rem;"
+				style="margin-top: var(--space-4); border: 1px solid var(--stroke2); padding: var(--space-4); border-radius: 0.375rem;"
 			>
 				<p><strong>{res.columnName || 'Column ' + yId}</strong></p>
 				{#if !res.valid}
@@ -1199,7 +1199,7 @@
 		border: 1px solid var(--stroke2, var(--color-lightness-85, #d7d7d7));
 		border-radius: 0.375rem;
 		background: var(--color-lightness-99, #fcfcfc);
-		font-size: 11px;
+		font-size: var(--font-xs);
 		line-height: 1.25;
 	}
 
@@ -1220,7 +1220,7 @@
 	}
 
 	.result-card {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		line-height: 1.2;
 	}
 
@@ -1236,8 +1236,8 @@
 	}
 
 	.tp-stat-btn {
-		font-size: 11px;
-		padding: 0.25rem 0.5rem;
+		font-size: var(--font-xs);
+		padding: var(--space-2) var(--space-4);
 		border: 1px solid var(--color-lightness-75, #aaa);
 		border-radius: 3px;
 		background: none;

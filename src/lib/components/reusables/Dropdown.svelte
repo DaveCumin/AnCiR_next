@@ -97,8 +97,8 @@
 		padding: 0;
 		margin-top: 4px;
 		margin-left: 8px;
-		background-color: white;
-		border-radius: 4px;
+		background-color: var(--surface-card);
+		border-radius: var(--radius-sm);
 		border: 1px solid var(--color-lightness-85);
 		box-shadow:
 			0 4px 8px 0 rgba(0, 0, 0, 0.2), 

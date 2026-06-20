@@ -317,13 +317,16 @@ export const TP_SPECS = [
 	{
 		name: 'MovingAnalysis',
 		inputs: [
-			T('number', () => seq(240, (i) => i)),
-			T('number', () => seq(240, (i) => Math.cos((2 * Math.PI * i) / 24)))
+			// 14 days hourly; a 7-day (168 h) window holds ~7 cycles of the 24 h
+			// rhythm so the Lomb–Scargle peak is sharp (a 48 h / ~2-cycle window
+			// gives a broad, poorly-resolved peak).
+			T('number', () => seq(336, (i) => i)),
+			T('number', () => seq(336, (i) => Math.cos((2 * Math.PI * i) / 24)))
 		],
 		args: ([x, y]) => ({
 			xIN: x,
 			yIN: [y],
-			windowSize: 48,
+			windowSize: 168,
 			stepSize: 24,
 			binLabel: 'center',
 			analysis: 'periodogram',
@@ -378,8 +381,10 @@ export const TP_SPECS = [
 		name: 'RhythmicityAnalysis',
 		isAsync: true,
 		inputs: [
-			T('number', () => seq(96, (i) => i)),
-			T('number', () => seq(96, (i) => Math.cos((2 * Math.PI * i) / 24)))
+			// 14 days hourly (~14 cycles of the 24 h rhythm) so the Lomb–Scargle
+			// peak is sharply resolved instead of broad.
+			T('number', () => seq(336, (i) => i)),
+			T('number', () => seq(336, (i) => Math.cos((2 * Math.PI * i) / 24)))
 		],
 		args: ([x, y]) => ({
 			xIN: x,

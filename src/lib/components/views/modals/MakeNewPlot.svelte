@@ -199,7 +199,7 @@
 <style>
 	.action button {
 		margin: 0.6em;
-		font-size: 14px;
+		font-size: var(--font-lg);
 	}
 
 	.action:hover {
@@ -227,7 +227,7 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		gap: 1rem;
+		gap: var(--space-6);
 	}
 
 	.preview-placeholder {
@@ -237,6 +237,6 @@
 
 	.selected-preview {
 		color: var(--color-lightness-35);
-		font-size: 14px;
+		font-size: var(--font-lg);
 	}
 </style>

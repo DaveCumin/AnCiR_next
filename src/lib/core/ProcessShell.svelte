@@ -21,15 +21,20 @@
 <div class="control-input process">
 	<div class="process-title">
 		<p>{heading}</p>
-		<button
-			class="icon"
-			onclick={(e) => {
-				e.stopPropagation();
-				p.parentCol.removeProcess(p.id);
-			}}
-		>
-			<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
-		</button>
+		<!-- Legacy inline processes had an in-panel delete. Free operation nodes
+		     (parentCol == null) are deleted via the node's own action button, so the
+		     in-panel trash only shows for any remaining parent-owned process. -->
+		{#if p.parentCol}
+			<button
+				class="icon"
+				onclick={(e) => {
+					e.stopPropagation();
+					p.parentCol.removeProcess(p.id);
+				}}
+			>
+				<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
+			</button>
+		{/if}
 	</div>
 	{@render children?.()}
 </div>

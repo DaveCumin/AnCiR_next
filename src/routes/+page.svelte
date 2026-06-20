@@ -35,7 +35,8 @@
 		snapToGrid,
 		outputCoreAsJson,
 		createGroup,
-		absorbColumnIntoGroup
+		absorbColumnIntoGroup,
+		createOrphanProcess
 	} from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	import { Plot, selectAllPlots } from '$lib/core/Plot.svelte';
@@ -388,8 +389,23 @@
 		let d0id = addData(makeArray(N, 5, 0.15), 'number', 'the time', 'just made this up');
 
 		let d1id = addData(makeRhythmic(N, 24 / 0.15), 'number', 'val1', 'imported from thin air');
-		core.data[1].addProcess('Add');
-		core.data[1].addProcess('Sub');
+		// Dataflow model: demonstrate operations as free nodes producing derived
+		// columns (the new model), rather than legacy inline col.addProcess(). One
+		// Add node fed by val1 → a "val1 → Add" derived column the user can edit and
+		// wire further. (No migration-on-load needed for the demo this way.)
+		{
+			const addNode = createOrphanProcess('Add', { value: 0, inIN: [d1id] });
+			if (addNode) {
+				core.data.push(
+					new Column({
+						type: 'number',
+						producerNodeId: `process_${addNode.id}`,
+						producerPort: `out_${d1id}`,
+						producerArtifactKind: 'column'
+					})
+				);
+			}
+		}
 
 		let d2id = addData(['a', 'b', 'b', 'c'], 'category', 'mycat', 'imported from Egypt');
 
@@ -640,12 +656,12 @@
 <style>
 	:global(body) {
 		font-family: system-ui, sans-serif;
-		font-size: 14px;
+		font-size: var(--font-lg);
 	}
 
 	:global(button) {
 		font-family: system-ui, sans-serif;
-		font-size: 14px;
+		font-size: var(--font-lg);
 	}
 
 	:global(button.icon) {
@@ -690,11 +706,11 @@
 		margin-top: 10px;
 		background-color: var(--color-lightness-95);
 		border: transparent;
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		padding: 10px;
 		padding-right: 12px;
 
-		font-size: 14px;
+		font-size: var(--font-lg);
 		text-align: center;
 
 		cursor: pointer;
@@ -709,8 +725,8 @@
 		height: 1px;
 		width: 100%;
 		background-color: var(--color-lightness-85);
-		margin-top: 1rem;
-		margin-bottom: 0.5rem;
+		margin-top: var(--space-6);
+		margin-bottom: var(--space-4);
 	}
 
 	:global(.div-block) {
@@ -724,7 +740,7 @@
 		display: flex;
 		margin: 0.6em;
 
-		font-size: 14px;
+		font-size: var(--font-lg);
 		font: inherit;
 		text-align: inherit;
 
@@ -766,8 +782,8 @@
 	:global(.submenu) {
 		position: fixed;
 		min-width: 150px;
-		background-color: white;
-		border-radius: 4px;
+		background-color: var(--surface-card);
+		border-radius: var(--radius-sm);
 		border: 1px solid var(--color-lightness-85);
 		box-shadow:
 			0 4px 8px 0 rgba(0, 0, 0, 0.2),
@@ -784,7 +800,7 @@
 		text-align: left;
 		font: inherit;
 		width: 100%;
-		font-size: 14px;
+		font-size: var(--font-lg);
 	}
 
 	:global(.submenu-item:hover) {
@@ -793,7 +809,7 @@
 
 	/* display collapsible */
 	:global(details) {
-		margin: 0.25rem 0.5rem;
+		margin: var(--space-2) var(--space-4);
 		padding: 0;
 	}
 
@@ -825,7 +841,7 @@
 		align-items: center;
 		justify-content: flex-start;
 
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	:global(.clps-title-button) {
@@ -834,8 +850,8 @@
 		align-items: center;
 		justify-content: flex-start;
 
-		margin-left: 0.5rem;
-		gap: 0.25rem;
+		margin-left: var(--space-4);
+		gap: var(--space-2);
 	}
 
 	:global(.clps-icon-container) {
@@ -843,8 +859,8 @@
 		align-items: center;
 		justify-content: center;
 
-		padding: 0.5rem 0.5rem;
-		padding-left: 1rem;
+		padding: var(--space-4) var(--space-4);
+		padding-left: var(--space-6);
 	}
 
 	:global(.clps-icon) {
@@ -854,10 +870,10 @@
 		justify-content: center;
 
 		width: 100%;
-		padding: 0.5rem 0;
+		padding: var(--space-4) 0;
 
-		background-color: white;
-		border-radius: 4px;
+		background-color: var(--surface-card);
+		border-radius: var(--radius-sm);
 		border: solid 1px var(--color-lightness-85);
 
 		border-color: none;
@@ -877,7 +893,7 @@
 
 	:global(.second-clps) {
 		width: 100%;
-		padding: 0 0 0 0.25rem;
+		padding: 0 0 0 var(--space-2);
 	}
 
 	/* plot control */
@@ -892,7 +908,7 @@
 		justify-content: center;
 
 		font-weight: bold;
-		background-color: white;
+		background-color: var(--surface-card);
 		z-index: 99;
 	}
 
@@ -931,12 +947,12 @@
 	}
 
 	:global(.control-tab button) {
-		font-size: 14px;
+		font-size: var(--font-lg);
 		margin: 0;
-		padding: 0.25rem 0.5rem;
+		padding: var(--space-2) var(--space-4);
 		color: var(--color-lightness-35);
 		background-color: transparent;
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		border: none;
 		appearance: none;
 		white-space: nowrap; /* Prevent text wrapping within buttons */
@@ -965,7 +981,7 @@
 		align-items: flex-start;
 
 		width: 100%;
-		/* margin-bottom: 0.5rem; */
+		/* margin-bottom: var(--space-4); */
 	}
 
 	:global(.control-component-title) {
@@ -980,7 +996,7 @@
 
 	:global(.control-component-title button) {
 		margin: 0;
-		margin-left: 0.5rem;
+		margin-left: var(--space-4);
 		padding: 0;
 	}
 
@@ -990,7 +1006,7 @@
 		align-items: center;
 		justify-content: flex-start;
 
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	:global(.control-component-title-icons) {
@@ -1006,8 +1022,8 @@
 		align-items: center;
 		justify-content: center;
 		width: 100%;
-		gap: 0.5rem;
-		margin-bottom: 0.5rem;
+		gap: var(--space-4);
+		margin-bottom: var(--space-4);
 	}
 
 	:global(.control-input-horizontal) {
@@ -1016,17 +1032,17 @@
 		align-items: center;
 		justify-content: center;
 		width: 100%;
-		gap: 0.5rem;
-		margin-bottom: 0.5rem;
+		gap: var(--space-4);
+		margin-bottom: var(--space-4);
 	}
 
 	:global(.control-input-square) {
 		width: 100%;
 		display: grid;
 		grid-template-columns: repeat(2, 1fr);
-		gap: 0.5rem;
+		gap: var(--space-4);
 
-		margin-bottom: 0.5rem;
+		margin-bottom: var(--space-4);
 	}
 
 	:global(.control-input-color) {
@@ -1036,7 +1052,7 @@
 		justify-content: space-between;
 
 		width: 100%;
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	:global(.control-input-color button) {
@@ -1065,7 +1081,7 @@
 	}
 
 	:global(.control-input p) {
-		font-size: 12px;
+		font-size: var(--font-sm);
 		text-align: left;
 		color: var(--color-lightness-35);
 		margin: 0 0 4px 0;
@@ -1074,21 +1090,21 @@
 	:global(.data-warning) {
 		width: 100%;
 		padding: 6px 8px;
-		margin-bottom: 0.5rem;
+		margin-bottom: var(--space-4);
 		background: #fff8e1;
 		border: 1px solid #f9a825;
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 	}
 
 	:global(.data-warning p) {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: #795548;
 		margin: 2px 0;
 		line-height: 1.4;
 	}
 
 	:global(.control-input-checkbox p) {
-		font-size: 12px;
+		font-size: var(--font-sm);
 		text-align: left;
 		color: var(--color-lightness-35);
 		margin: 0 0 0 0.2rem;
@@ -1100,9 +1116,9 @@
 		height: var(--control-input-height);
 		box-sizing: border-box;
 
-		font-size: 14px;
+		font-size: var(--font-lg);
 		font-weight: lighter;
-		padding: 0.2rem 0.5rem;
+		padding: 0.2rem var(--space-4);
 		border: solid 1px transparent;
 		background-color: var(--color-lightness-97);
 		border: solid 1px var(--color-lightness-85);
@@ -1111,7 +1127,7 @@
 	}
 
 	:global(.control-input select) {
-		padding: 0.2rem 0.25rem;
+		padding: 0.2rem var(--space-2);
 	}
 
 	:global(.control-input select:hover, .control-input input:hover) {
@@ -1134,9 +1150,9 @@
 
 		border: solid 1px var(--color-lightness-85);
 		background-color: var(--color-lightness-97);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 
-		padding: 0.5rem 0;
+		padding: var(--space-4) 0;
 
 		cursor: pointer;
 	}
@@ -1156,7 +1172,7 @@
 		min-width: 0;
 
 		margin: 0;
-		gap: 0.25rem;
+		gap: var(--space-2);
 	}
 
 	:global(.control-data) {
@@ -1180,7 +1196,7 @@
 		margin: 0;
 		padding: 0;
 
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	:global(.control-data-title p) {
@@ -1221,19 +1237,19 @@
 	:global(.tp-outputs) {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
-		margin-top: 0.25rem;
+		gap: var(--space-4);
+		margin-top: var(--space-2);
 	}
 
 	:global(.tp-output-row) {
 		display: flex;
 		flex-direction: column;
 		gap: 0.15rem;
-		padding-left: 0.5rem;
+		padding-left: var(--space-4);
 	}
 
 	:global(.tp-output-label) {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: var(--color-lightness-45, #666);
 		font-style: italic;
 	}
@@ -1255,7 +1271,7 @@
 		height: 100%;
 		background-color: var(--color-lightness-90);
 
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 	}
 
 	:global(.tooltip) {
@@ -1263,7 +1279,7 @@
 		background-color: rgba(0, 0, 0, 0.75);
 		color: white;
 		padding: 0.4rem 0.6rem;
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		pointer-events: none;
 		font-size: 0.78rem;
 		line-height: 1.4;
@@ -1277,9 +1293,9 @@
 		flex-direction: column;
 
 		border: 0.1rem solid var(--color-lightness-85);
-		padding: 0 0.25rem 0 0.4rem;
-		margin-left: -0.25rem;
-		margin-right: 0.5rem;
+		padding: 0 var(--space-2) 0 0.4rem;
+		margin-left: -var(--space-2);
+		margin-right: var(--space-4);
 		border-radius: 0.25rem;
 		overflow: hidden;
 		box-sizing: border-box;
@@ -1289,17 +1305,17 @@
 		display: flex;
 		flex-direction: column;
 		align-items: stretch;
-		gap: 0.25rem;
-		padding-left: 0.25rem;
-		margin-top: 0.5rem;
+		gap: var(--space-2);
+		padding-left: var(--space-2);
+		margin-top: var(--space-4);
 	}
 	:global(.tableProcess-label) {
 		display: flex;
 		align-items: center;
 		margin-bottom: 0rem;
-		margin-left: -0.25rem;
-		background: white;
-		padding: 0.25rem;
+		margin-left: -var(--space-2);
+		background: var(--surface-card);
+		padding: var(--space-2);
 	}
 
 	:global(.tableProcess-label span) {

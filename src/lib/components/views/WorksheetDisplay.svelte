@@ -203,11 +203,11 @@
 		align-items: center;
 
 		border-bottom: 1px solid var(--color-lightness-85);
-		background-color: white;
+		background-color: var(--surface-card);
 	}
 
 	.heading p {
-		margin-left: 0.75rem;
+		margin-left: var(--space-5);
 		font-weight: bold;
 	}
 
@@ -217,11 +217,11 @@
 
 	.display-list {
 		width: 100%;
-		margin-top: 0.25rem;
+		margin-top: var(--space-2);
 	}
 
 	details {
-		margin: 0.25rem 0.5rem 0.25rem 0.75rem;
+		margin: var(--space-2) var(--space-4) var(--space-2) var(--space-5);
 		padding: 0;
 	}
 
@@ -254,7 +254,7 @@
 	.drag-handle {
 		cursor: grab;
 		user-select: none;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		line-height: 1;
 		color: var(--color-lightness-65, #aaa);
 		padding: 0 0.1rem;

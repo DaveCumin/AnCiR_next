@@ -803,11 +803,11 @@
 		flex-direction: row;
 		justify-content: center;
 		align-items: center;
-		background-color: white;
+		background-color: var(--surface-card);
 	}
 
 	.heading p {
-		margin-left: 0.6rem;
+		margin-left: var(--space-4);
 		/* font-weight: bold; */
 	}
 
@@ -816,22 +816,22 @@
 		top: 0;
 		width: calc(100% - 2rem);
 
-		padding-left: 1rem;
-		padding-right: 1rem;
+		padding-left: var(--space-6);
+		padding-right: var(--space-6);
 	}
 
 	.control-component-subtitle {
 		font-size: 0.85rem;
 		font-weight: 600;
 		opacity: 0.75;
-		margin: 0.4rem 0 0.2rem;
+		margin: var(--space-3) 0 var(--space-2);
 	}
 
 	.mixed-tag {
 		display: inline-block;
 		font-size: 0.7rem;
-		padding: 0 0.3rem;
-		margin-left: 0.3rem;
+		padding: 0 var(--space-2);
+		margin-left: var(--space-2);
 		border-radius: 0.2rem;
 		background-color: #f3d27a;
 		color: #4a3500;
@@ -842,8 +842,8 @@
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 0.3rem;
-		margin: 0.1rem 0 0.4rem 0.4rem;
+		gap: var(--space-2);
+		margin: var(--space-1) 0 var(--space-3) var(--space-3);
 		font-size: 0.75rem;
 	}
 
@@ -853,7 +853,7 @@
 
 	.value-pill {
 		font-size: 0.75rem;
-		padding: 0.05rem 0.4rem;
+		padding: var(--space-1) var(--space-3);
 		border: 1px solid #ccc;
 		border-radius: 0.5rem;
 		background-color: #f7f7f7;

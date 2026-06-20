@@ -90,10 +90,10 @@
 	.tp-card {
 		width: 30rem;
 		max-width: calc(100vw - 24px);
-		background: #fff;
+		background: var(--surface-card);
 		border-radius: 10px;
 		box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
-		padding: 1rem 1.1rem 1.1rem;
+		padding: var(--space-6) 1.1rem 1.1rem;
 		box-sizing: border-box;
 	}
 
@@ -120,7 +120,7 @@
 	}
 
 	.tp-sub {
-		margin: 0.25rem 0 0.9rem;
+		margin: var(--space-2) 0 0.9rem;
 		color: var(--color-lightness-45, #777);
 		font-size: 0.85rem;
 	}
@@ -128,19 +128,19 @@
 	.tp-list {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	.tp-item {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
+		gap: var(--space-5);
 		width: 100%;
 		text-align: left;
 		padding: 0.7rem 0.8rem;
 		border: 1px solid var(--color-lightness-85, #ddd);
-		border-radius: 8px;
-		background: #fff;
+		border-radius: var(--radius-lg);
+		background: var(--surface-card);
 		cursor: pointer;
 		font: inherit;
 		transition:
@@ -150,7 +150,7 @@
 
 	.tp-item:hover {
 		background: var(--color-lightness-97, #f7f7f7);
-		border-color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
 	}
 
 	.tp-item-main {
@@ -184,7 +184,7 @@
 	}
 
 	.tp-empty {
-		padding: 1rem 0.3rem;
+		padding: var(--space-6) 0.3rem;
 		color: var(--color-lightness-50, #888);
 		font-size: 0.9rem;
 	}

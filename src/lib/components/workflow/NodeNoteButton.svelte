@@ -118,7 +118,7 @@
 		line-height: 1;
 		padding: 2px 5px;
 		border: 1px solid transparent;
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		background: transparent;
 		cursor: pointer;
 		font-family: var(--font-mono, ui-monospace, monospace);
@@ -142,17 +142,17 @@
 		top: calc(100% + 6px);
 		right: 0;
 		width: 260px;
-		padding: 0.55rem;
+		padding: var(--space-4);
 		border: 1px solid rgba(0, 0, 0, 0.18);
-		border-radius: 6px;
-		background: #fff;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+		border-radius: var(--radius-md);
+		background: var(--surface-card);
+		box-shadow: var(--shadow-2);
 		z-index: 60;
 		cursor: default;
 	}
 
 	.node-note-label {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		font-weight: 600;
 		margin-bottom: 4px;
 		color: rgba(0, 0, 0, 0.6);
@@ -164,16 +164,16 @@
 		resize: vertical;
 		line-height: 1.3;
 		padding: 4px 6px;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		font-family: inherit;
 		border: 1px solid rgba(0, 0, 0, 0.2);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		outline: none;
 		box-sizing: border-box;
 	}
 
 	.node-note-textarea:focus {
-		border-color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
 	}
 
 	.node-note-actions {
@@ -183,10 +183,10 @@
 	}
 
 	.np-action {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		padding: 3px 8px;
 		border: 1px solid rgba(0, 0, 0, 0.2);
-		background: #fff;
+		background: var(--surface-card);
 		border-radius: 3px;
 		cursor: pointer;
 	}

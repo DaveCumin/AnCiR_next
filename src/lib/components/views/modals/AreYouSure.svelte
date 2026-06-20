@@ -87,7 +87,7 @@
 	.title-container {
 		display: flex;
 		align-items: flex-start;
-		margin-bottom: 1rem;
+		margin-bottom: var(--space-6);
 	}
 
 	h4 {
@@ -107,9 +107,9 @@
 	.dialog-button {
 		background: var(--color-lightness-95);
 		color: var(--color-lightness-35);
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 		border: 1px solid var(--color-lightness-85);
-		padding: 0.55rem 1rem;
+		padding: 0.55rem var(--space-6);
 		font-weight: 600;
 		font-size: 0.95rem;
 		transition:
@@ -145,7 +145,7 @@
 	}
 
 	.dialog-button.ghost {
-		background: white;
+		background: var(--surface-card);
 	}
 
 	.dialog-button:focus-visible {

@@ -7,16 +7,20 @@
 	import About from './views/modals/About.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { openPicker } from '$lib/core/tourRunner.svelte.js';
+	import { history } from '$lib/core/history.svelte.js';
+	import { exportJson } from '$lib/components/iconActions/Setting.svelte';
+	import LoadSessionModal from './workflow/LoadSessionModal.svelte';
 
 	let showSettings = $state(false);
 	let showAbout = $state(false);
 	let showHelpMenu = $state(false);
+	let showLoadModal = $state(false);
 	let helpAnchor;
 
-	function toggleDataView() {
-		// Data panel is independent of the canvas view — it can be open or
-		// closed alongside either the plot canvas or the workflow canvas.
-		if (appState.currentTab === 'data' && appState.showDisplayPanel) {
+	// The Data panel is independent of the canvas mode — it overlays either the
+	// workflow or the workspace canvas. So it's a plain toggle.
+	function toggleDataPanel() {
+		if (appState.showDisplayPanel && appState.currentTab === 'data') {
 			appState.showDisplayPanel = false;
 			appState.currentTab = null;
 		} else {
@@ -25,23 +29,16 @@
 		}
 	}
 
-	function selectWorksheetView() {
-		// Worksheet view = plot canvas + worksheet layer panel. Clicking the
-		// button when the worksheet panel is already open toggles the panel
-		// off but leaves the plot canvas active.
-		// Before unmounting the workflow canvas, transfer any plot nodes that
-		// were canvas-multi-selected over to plots-view selection (so the
-		// shared-properties panel activates). Non-plot canvas selections are
-		// dropped — they're irrelevant in plots view.
+	// Canvas mode is a mutually-exclusive choice: workflow canvas vs workspace
+	// (plots) canvas. These set appState.view only and never touch the panel.
+	function showWorkflowView() {
+		appState.view = 'canvas';
+	}
+	function showWorkspaceView() {
+		// Carry any plot nodes that were canvas-multi-selected over to plots-view
+		// selection so the shared-properties panel activates; drop non-plot ones.
 		syncCanvasSelectionToPlotsView();
 		appState.view = 'plots';
-		if (appState.currentTab === 'worksheet' && appState.showDisplayPanel) {
-			appState.showDisplayPanel = false;
-			appState.currentTab = null;
-		} else {
-			appState.currentTab = 'worksheet';
-			appState.showDisplayPanel = true;
-		}
 	}
 
 	function syncCanvasSelectionToPlotsView() {
@@ -61,58 +58,86 @@
 		if (kept.length === ids.length) return;
 		appState.canvasMultiSelectedNodeIds = kept;
 		appState.canvasMultiSelectedCount = kept.length;
-		if (
-			appState.canvasSelectedNodeId != null &&
-			!kept.includes(appState.canvasSelectedNodeId)
-		) {
+		if (appState.canvasSelectedNodeId != null && !kept.includes(appState.canvasSelectedNodeId)) {
 			appState.canvasSelectedNodeId = null;
-		}
-	}
-
-	function selectWorkflowView() {
-		// Workflow view = workflow canvas. Close the worksheet panel if it
-		// was open; leave a data panel alone since data is orthogonal.
-		appState.view = 'canvas';
-		if (appState.currentTab === 'worksheet') {
-			appState.currentTab = null;
-			appState.showDisplayPanel = false;
 		}
 	}
 </script>
 
 <nav class="container" style="width: {appState.widthNavBar}px;">
-	<div class="icon-container">
+	<div class="icon-container top">
+		<!-- View switching: a Data-panel toggle + a Workflow/Workspace mode pair. -->
 		<button
-			onclick={toggleDataView}
-			{@attach tooltip('Data — view and edit your imported columns')}
+			class="rail-btn"
+			onclick={toggleDataPanel}
+			{@attach tooltip('Data — view and edit your columns, nodes and plots')}
 		>
-			<Icon name="table" className={appState.currentTab === 'data' ? 'icon active' : 'icon'} />
+			<Icon name="table" className={appState.showDisplayPanel ? 'icon active' : 'icon'} />
 		</button>
 
+		<div class="view-pair" role="group" aria-label="Canvas view">
+			<button
+				class="rail-btn"
+				onclick={showWorkflowView}
+				{@attach tooltip('Workflow — wire and inspect the analysis pipeline')}
+			>
+				<Icon name="process" className={appState.view === 'canvas' ? 'icon active' : 'icon'} />
+			</button>
+			<button
+				class="rail-btn"
+				onclick={showWorkspaceView}
+				{@attach tooltip('Workspace — arrange and style your plots')}
+			>
+				<Icon name="layer" className={appState.view === 'plots' ? 'icon active' : 'icon'} />
+			</button>
+		</div>
+
+		<div class="rail-sep"></div>
+
+		<!-- Load/save session -->
 		<button
-			onclick={selectWorksheetView}
-			{@attach tooltip('Worksheet — arrange and style your plots')}
+			class="rail-btn"
+			onclick={() => (showLoadModal = true)}
+			{@attach tooltip('Load a session')}
 		>
-			<Icon name="layer" className={appState.view === 'plots' ? 'icon active' : 'icon'} />
+			<Icon name="sessionload" width={22} height={22} />
+		</button>
+		<button class="rail-btn" onclick={exportJson} {@attach tooltip('Save this session')}>
+			<Icon name="sessionsave" width={22} height={22} />
 		</button>
 
+		<div class="rail-sep"></div>
+
+		<!-- Undo redo history -->
 		<button
-			onclick={selectWorkflowView}
-			{@attach tooltip('Workflow — wire and inspect the analysis pipeline')}
+			class="rail-btn"
+			onclick={() => history.undo()}
+			disabled={!history.canUndo}
+			{@attach tooltip(
+				`Undo (Cmd/Ctrl+Z)${history.canUndo ? ` — ${history.undoCount} step${history.undoCount > 1 ? 's' : ''}` : ''}`
+			)}
 		>
-			<Icon
-				name="process"
-				className={appState.view === 'canvas' ? 'icon active' : 'icon'}
-			/>
+			<Icon name="undo" width={20} height={20} />
+		</button>
+		<button
+			class="rail-btn"
+			onclick={() => history.redo()}
+			disabled={!history.canRedo}
+			{@attach tooltip(
+				`Redo (Cmd/Ctrl+Shift+Z)${history.canRedo ? ` — ${history.redoCount} step${history.redoCount > 1 ? 's' : ''}` : ''}`
+			)}
+		>
+			<Icon name="redo" width={20} height={20} />
 		</button>
 	</div>
 
-	<div class="icon-container">
-		<button onclick={() => (showSettings = true)} {@attach tooltip('Settings')}>
+	<div class="icon-container bottom">
+		<button class="rail-btn" onclick={() => (showSettings = true)} {@attach tooltip('Settings')}>
 			<Icon name="gear" />
 		</button>
 		<div class="help-anchor" bind:this={helpAnchor}>
 			<button
+				class="rail-btn"
 				onclick={() => (showHelpMenu = !showHelpMenu)}
 				aria-haspopup="menu"
 				aria-expanded={showHelpMenu}
@@ -151,8 +176,8 @@
 />
 
 <Settings bind:showModal={showSettings} />
-
 <About bind:showModal={showAbout} />
+<LoadSessionModal bind:showModal={showLoadModal} />
 
 <style>
 	.container {
@@ -162,7 +187,7 @@
 		justify-content: space-between;
 		align-items: center;
 
-		background-color: white;
+		background-color: var(--surface-card);
 
 		position: fixed;
 		top: 0;
@@ -178,20 +203,55 @@
 		flex-direction: column;
 		justify-content: center;
 		align-items: center;
-
-		margin-top: 28px;
-		margin-bottom: 28px;
+		gap: var(--space-1);
+	}
+	.icon-container.top {
+		margin-top: 18px;
+	}
+	.icon-container.bottom {
+		margin-bottom: 18px;
 	}
 
-	button {
+	.rail-btn {
 		background-color: transparent;
 		border: none;
-		margin: 0.5rem;
-		padding: 0;
+		margin: 0;
+		padding: var(--space-3);
 		text-align: inherit;
 		font: inherit;
-		border-radius: 0;
+		border-radius: var(--radius-md);
 		appearance: none;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		transition: background-color 0.15s ease;
+	}
+	.rail-btn:hover:not(:disabled) {
+		background-color: var(--color-lightness-95, #f2f2f2);
+	}
+	.rail-btn:disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
+	}
+
+	/* Workflow/Workspace form one mutually-exclusive group, visually boxed so the
+	   pair reads as "the canvas mode" — distinct from the Data panel toggle. */
+	.view-pair {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--space-1);
+		padding: var(--space-1);
+		border-radius: var(--radius-lg);
+		background-color: var(--color-lightness-97, #f7f7f7);
+	}
+
+	.rail-sep {
+		width: 22px;
+		height: 1px;
+		background-color: var(--color-lightness-85, #ddd);
+		margin: var(--space-2) 0;
 	}
 
 	.help-anchor {
@@ -206,11 +266,11 @@
 		left: calc(100% + 6px);
 		bottom: 0;
 		min-width: 150px;
-		background: #fff;
+		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-85, #ddd);
-		border-radius: 8px;
-		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
-		padding: 0.25rem;
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-3);
+		padding: var(--space-2);
 		display: flex;
 		flex-direction: column;
 		z-index: 1001;
@@ -218,12 +278,14 @@
 
 	.help-menu button {
 		margin: 0;
-		padding: 0.5rem 0.7rem;
-		border-radius: 6px;
+		padding: var(--space-4) var(--space-5);
+		border-radius: var(--radius-md);
 		text-align: left;
-		font-size: 14px;
+		font-size: var(--font-lg);
 		cursor: pointer;
 		white-space: nowrap;
+		background: transparent;
+		border: none;
 	}
 
 	.help-menu button:hover {

@@ -137,7 +137,7 @@
 
 	.add-data-cta:hover,
 	.add-data-cta.open {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 	}
 
 	.add-data-cta-icon {
@@ -153,14 +153,14 @@
 		transform: translateX(-50%);
 		min-width: 320px;
 		max-width: 360px;
-		background: #fff;
+		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-80, #ccc);
 		border-radius: 10px;
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
-		padding: 0.4rem;
+		box-shadow: var(--shadow-3);
+		padding: var(--space-3);
 		display: flex;
 		flex-direction: column;
-		gap: 0.15rem;
+		gap: var(--space-1);
 		z-index: 1;
 	}
 
@@ -168,12 +168,12 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		gap: 0.7rem;
+		gap: var(--space-5);
 		width: 100%;
-		padding: 0.6rem 0.7rem;
+		padding: var(--space-4) var(--space-5);
 		border: 1px solid transparent;
-		border-radius: 8px;
-		background: #fff;
+		border-radius: var(--radius-lg);
+		background: var(--surface-card);
 		text-align: left;
 		cursor: pointer;
 		transition:
@@ -193,19 +193,19 @@
 		justify-content: center;
 		width: 34px;
 		height: 34px;
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 		background: var(--color-lightness-97, #f7f7f7);
 		color: var(--color-lightness-35, #555);
 	}
 
 	.add-data-choice:hover .add-data-choice-icon {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 	}
 
 	.add-data-choice-text {
 		display: flex;
 		flex-direction: column;
-		gap: 0.1rem;
+		gap: var(--space-1);
 		min-width: 0;
 	}
 

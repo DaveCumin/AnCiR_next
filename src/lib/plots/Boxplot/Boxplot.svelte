@@ -1101,7 +1101,7 @@
 		width={theData.plot.parentBox.width}
 		height={theData.plot.parentBox.height}
 		viewBox="0 0 {theData.plot.parentBox.width} {theData.plot.parentBox.height}"
-		style={`background: white; position: absolute;`}
+		style={`background: var(--surface-card); position: absolute;`}
 		ontooltip={handleTooltip}
 	>
 		<!-- Y-axis -->
@@ -1251,7 +1251,7 @@
 		border: 1px solid var(--stroke2, var(--color-lightness-85, #d7d7d7));
 		border-radius: 0.375rem;
 		background: var(--color-lightness-99, #fcfcfc);
-		font-size: 11px;
+		font-size: var(--font-xs);
 		line-height: 1.25;
 	}
 

@@ -3,6 +3,12 @@
 
 	import { Process, nextLinkedGroupId, getLinkedProcesses } from '$lib/core/Process.svelte';
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
+	import {
+		resolveProducer,
+		touchProducerDeps,
+		getProducerProcess,
+		producerInputColId
+	} from '$lib/core/producerRuntime.js';
 	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
 	import { min } from '$lib/components/plotbits/helpers/wrangleData';
 
@@ -68,6 +74,49 @@
 		return theColumn;
 	}
 
+	// --- Producer-column naming (dataflow model) -------------------------------
+	// A produced column's default name describes its provenance: the input column
+	// followed by the steps applied, e.g. "HR → Add" or "HR → Add → Normalize".
+	// This keeps names informative and, after the uniqueness pass in the `name`
+	// getter, unique. A user-set customName always wins (names stay editable).
+	const _nameInFlight = new Set();
+
+	// The label shown for a step (producing op or an owned process).
+	function _stepLabel(proc) {
+		return proc?.displayName || proc?.name || 'node';
+	}
+
+	// A column's base name without the uniqueness suffix. Recurses up the input
+	// chain to name producer inputs; cycle-guarded so a malformed graph can't hang.
+	function columnBaseName(col) {
+		if (!col) return '?';
+		if (col.customName != null) return col.customName;
+		if (col.producerNodeId != null && col.refId == null) {
+			if (_nameInFlight.has(col.id)) return 'output';
+			_nameInFlight.add(col.id);
+			try {
+				return producerBaseName(col);
+			} finally {
+				_nameInFlight.delete(col.id);
+			}
+		}
+		// Fall back to the column's own derived name for non-producer columns.
+		return col.name ?? 'Unnamed';
+	}
+
+	// "<input> → <producing op> [→ <owned process>]..." for a producer column.
+	// The input is this column's specific slot (producerPort), so a fan-out node's
+	// outputs read "A → Add", "B → Add", … rather than all naming the first input.
+	function producerBaseName(col) {
+		const proc = getProducerProcess(col.producerNodeId);
+		if (!proc) return 'output';
+		const inId = producerInputColId(col.producerNodeId, col.producerPort);
+		const inName = columnBaseName(getColumnById(inId));
+		let info = `${inName} → ${_stepLabel(proc)}`;
+		for (const p of col.processes ?? []) info += ` → ${_stepLabel(p)}`;
+		return info;
+	}
+
 	function doRemoveColumn(columnId) {
 		appState.AYStext = `Are you sure you want to delete ${getColumnById(columnId).name}?`;
 		appState.AYScallback = function handleAYS(option) {
@@ -118,13 +167,23 @@
 
 		// Step 4: Remove from all plots/tables
 		core.plots.forEach((plot) => {
-			if (plot.plot && plot.plot.columnRefs) {
+			// Table plots: drop the column id from the ref list.
+			if (plot.plot?.columnRefs) {
 				plot.plot.columnRefs = plot.plot.columnRefs.filter((colId) => colId !== columnId);
 			}
 
-			// Handle plot-specific column references
-			if (plot.plot.columnRefs) {
-				plot.plot.columnRefs = plot.plot.columnRefs.filter((colId) => colId !== columnId);
+			// x/y plots: scrub the removed column from each data point so it can't
+			// linger as an orphan series. Clearing a field to -1 (in place, to keep
+			// the Column instance) leaves a data point's shared x as a re-usable
+			// seed; drop points that end up with neither a valid x nor y.
+			if (Array.isArray(plot.plot?.data)) {
+				for (const dp of plot.plot.data) {
+					if (dp?.x?.refId === columnId) dp.x.refId = -1;
+					if (dp?.y?.refId === columnId) dp.y.refId = -1;
+				}
+				plot.plot.data = plot.plot.data.filter(
+					(dp) => (dp?.x?.refId ?? -1) >= 0 || (dp?.y?.refId ?? -1) >= 0
+				);
 			}
 		});
 
@@ -181,6 +240,24 @@
 			if (this.isReferencial()) {
 				this.customName = this.refColumn?.name + '*';
 				return this.refColumn?.name + '*';
+			}
+			// Producer-sourced columns: descriptive name that shows the steps taken,
+			// disambiguated with a "(n)" suffix when an earlier column has the same
+			// base. Editable — setting customName overrides this entirely.
+			if (this.producerNodeId != null && this.refId == null) {
+				const base = columnBaseName(this);
+				let n = 0;
+				for (const c of core.data) {
+					if (c === this) break;
+					if (
+						c.producerNodeId != null &&
+						c.refId == null &&
+						c.customName == null &&
+						columnBaseName(c) === base
+					)
+						n++;
+				}
+				return n === 0 ? base : `${base} (${n + 1})`;
 			}
 			return this.customName || 'Unnamed';
 		});
@@ -326,6 +403,8 @@
 			this.binWidth;
 			this.tableProcessGUId;
 			this.rawDataVersion;
+			this.producerNodeId;
+			this.producerPort;
 
 			for (const p of this.processes) {
 				p.id;
@@ -334,6 +413,12 @@
 			}
 
 			if (this.isReferencial()) this.refColumn?.getDataHash;
+
+			// Producer-sourced columns (dataflow model): depend on the producing
+			// node and its input so the cache busts when either changes.
+			if (this.producerNodeId != null && this.refId == null) {
+				touchProducerDeps(this.producerNodeId, this.producerPort);
+			}
 
 			return ++_hashCounter;
 		});
@@ -368,6 +453,19 @@
 			if (this.refUpToProcessId === -1) {
 				console.warn('Column ', this.id, this.name, ' has a broken tap reference.');
 				return [];
+			}
+
+			// Dataflow model: this column is a handle onto a node's output rather
+			// than an owner of raw data. Source its value from the producing node,
+			// then still run any processes the column carries of its own (normally
+			// none). Legacy ref/rawData columns fall through to the branches below.
+			if (this.producerNodeId != null && this.refId == null && this.data == null) {
+				let out = resolveProducer(this.producerNodeId, this.producerPort) ?? [];
+				for (const p of this.processes) {
+					out = p.doProcess(out);
+					if (p.id === stopAfterProcessId) return out;
+				}
+				return out;
 			}
 
 			let out = [];
@@ -511,10 +609,9 @@
 <script>
 	// @ts-nocheck
 	import Icon from '$lib/icons/Icon.svelte';
-	import Processcomponent from '$lib/core/Process.svelte'; //Need to rename it because Process is used as the class name in the module, above
-	import AddProcess from '$lib/components/iconActions/AddProcess.svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
+	import MiniDataTable from '$lib/components/workflow/MiniDataTable.svelte';
 
 	import Editable from '$lib/components/inputs/Editable.svelte';
 	import { guessDateofArray } from '$lib/utils/time/TimeUtils.js';
@@ -526,71 +623,38 @@
 		canvasSelectedProcessId = null
 	} = $props();
 
-	let addBtnRef;
-	let showAddProcess = $state(false);
-	let dropdownTop = $state(0);
-	let dropdownLeft = $state(0);
+	// Mini data-table preview, expanded per-row (panel display mode only). Matches
+	// the node output rows on the canvas.
+	let previewOpen = $state(false);
 
-	function recalculateDropdownPosition() {
-		if (!addBtnRef) return;
-		const rect = addBtnRef.getBoundingClientRect();
-
-		dropdownTop = rect.top + window.scrollY;
-		dropdownLeft = rect.right + window.scrollX + 12;
+	// Live rename: write to customName so the name survives node-label changes
+	// (an empty value falls back to the auto-derived name).
+	function renameThis(v) {
+		col.customName = v === '' ? null : v;
 	}
 
-	let columnSelected = $state(-1);
-	let openClps = $state({});
-
-	function openDropdown(e, id) {
-		e.preventDefault();
-		e.stopPropagation();
-
-		columnSelected = id;
-
-		const rect = e.currentTarget.getBoundingClientRect();
-		dropdownTop = rect.top + window.scrollY;
-		dropdownLeft = rect.right + window.scrollX + 12;
-		showAddProcess = true;
-
-		openClps[id] = true;
-	}
-
-	let openMenus = $state({});
-	function toggleMenu(id) {
-		openMenus[id] = !openMenus[id];
-	}
-
-	// Drag-to-reorder processes
-	let dragIdx = $state(null);
-	let dragOverIdx = $state(null);
-
-	function onDragStart(e, idx) {
-		dragIdx = idx;
-		e.dataTransfer.effectAllowed = 'move';
-	}
-
-	function onDragOver(e, idx) {
-		e.preventDefault();
-		e.dataTransfer.dropEffect = 'move';
-		dragOverIdx = idx;
-	}
-
-	function onDrop(e, idx) {
-		e.preventDefault();
-		if (dragIdx != null && dragIdx !== idx) {
-			const items = [...col.processes];
-			const [moved] = items.splice(dragIdx, 1);
-			items.splice(idx, 0, moved);
-			col.processes = items;
+	// The canvas node that represents this column: its producing node (derived),
+	// the table-process that outputs it, the group that absorbs it, or its own
+	// data node (plain source).
+	function columnCanvasNodeId(c) {
+		if (c.producerNodeId) return c.producerNodeId;
+		for (const tp of core.tableProcesses ?? []) {
+			if (Object.values(tp.args?.out ?? {}).includes(c.id)) return `tableprocess_${tp.id}`;
 		}
-		dragIdx = null;
-		dragOverIdx = null;
+		for (const g of core.groups ?? []) {
+			if ((g.sourceColumnIds ?? []).includes(c.id)) return g.id;
+		}
+		return `data_${c.id}`;
 	}
 
-	function onDragEnd() {
-		dragIdx = null;
-		dragOverIdx = null;
+	// Find/select: jump to this column's node on the workflow canvas (select + pan)
+	// and open its editor in the Control Panel.
+	function findSelect() {
+		const id = columnCanvasNodeId(col);
+		appState.canvasSelectedNodeId = id;
+		appState.focusNodeRequest = { id, n: (appState.focusNodeRequest?.n ?? 0) + 1 };
+		appState.view = 'canvas';
+		appState.showControlPanel = true;
 	}
 
 	function onTypeChange(newType) {
@@ -612,16 +676,25 @@
 	<p>Column is undefined</p>
 {:else}
 	<div class="clps-container">
-		<details class="clps-item" bind:open={openClps[col.id]}>
-			<summary
-				class="clps-title-container"
-				onclick={(e) => e.preventDefault()}
-				onkeydown={(e) => {
-					if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget)
-						e.preventDefault();
-				}}
-			>
-				<!-- <div class="column-indicator"></div> -->
+		<!-- Compact column row matching the canvas node output rows: a chevron to
+		     drop down a mini data-table preview, the type + name, then right-aligned
+		     find / delete buttons (revealed on hover). -->
+		<div class="clps-item">
+			<div class="clps-title-container">
+				{#if !canChange}
+					<button
+						type="button"
+						class="col-chev"
+						aria-expanded={previewOpen}
+						title={previewOpen ? 'Hide preview' : 'Show preview'}
+						onclick={(e) => {
+							e.stopPropagation();
+							previewOpen = !previewOpen;
+						}}
+					>
+						<span class="chev" aria-hidden="true">{previewOpen ? '▾' : '▸'}</span>
+					</button>
+				{/if}
 
 				<div class="clps-title">
 					<TypeSelector bind:value={col.type} onChange={onTypeChange} />
@@ -631,112 +704,118 @@
 							<ColumnSelector bind:value={col.refId} bind:onChange />
 						</div>
 					{:else}
-						<p><Editable bind:value={col.name} /></p>
+						<p class="col-name"><Editable value={col.name} onInput={renameThis} /></p>
 					{/if}
 				</div>
 
 				<div class="clps-title-button">
 					<button
-						class="icon"
+						class="icon find-select-btn"
+						title="Find on canvas / edit in panel"
 						onclick={(e) => {
 							e.stopPropagation();
-							toggleMenu(col.id);
-							openDropdown(e, col.id);
+							findSelect();
 						}}
 					>
-						<Icon name="add" width={18} height={18} className="menu-icon" />
+						<Icon name="process" width={15} height={15} className="menu-icon" />
 					</button>
 
 					{#if col.tableProcessGUId == '' && col.refId == null}
-						<button class="icon" onclick={(e) => doRemoveColumn(col.id)}>
-							<Icon name="trash" width={18} height={18} className="menu-icon" />
+						<button class="icon" title="Delete" onclick={(e) => doRemoveColumn(col.id)}>
+							<Icon name="trash" width={15} height={15} className="menu-icon" />
 						</button>
 					{/if}
-
-					<button
-						class="icon"
-						onclick={() => {
-							openClps[col.id] = !openClps[col.id];
-						}}
-					>
-						{#if openClps[col.id]}
-							<Icon name="caret-down" width={20} height={20} className="second-detail-title-icon" />
-						{:else}
-							<Icon
-								name="caret-right"
-								width={20}
-								height={20}
-								className="second-detail-title-icon"
-							/>
-						{/if}
-					</button>
-				</div>
-			</summary>
-
-			<div class="clps-content-container">
-				<div class="data-component-info" style="display:none;">
-					{#if !canChange}
-						{#if !col.isReferencial()}
-							<div>
-								<italic><p>{col.provenance}</p></italic>
-							</div>
-						{:else}
-							<div>
-								<italic><p>primary source</p></italic>
-								<!-- TODO: check with DC how to name-->
-							</div>
-						{/if}
-					{/if}
-				</div>
-
-				<div class="line"></div>
-
-				<!-- {#if col.type == 'number'}[{Math.min(...col.getData())},{Math.max(...col.getData())}]{/if} -->
-				<div class="control-input display">
-					{#if col.type == 'time'}
-						<p>Time Format</p>
-						{#if !canChange}
-							<input bind:value={col.timeFormat} />
-						{:else}
-							{getColumnById(col.refId)?.timeFormat}
-						{/if}
-					{/if}
-				</div>
-
-				<div class="process-container">
-					{#each col.processes as p, i}
-						{#key p.id}
-							<!-- Force the refresh when a process is added or removed (mostly the latter)-->
-							<div
-								class="single-process-container"
-								class:linked-process={p.linkedGroupId != null}
-								class:drag-over={dragOverIdx === i && dragIdx !== i}
-								class:canvas-selected={canvasSelectedProcessId === p.id}
-								draggable="true"
-								ondragstart={(e) => onDragStart(e, i)}
-								ondragover={(e) => onDragOver(e, i)}
-								ondrop={(e) => onDrop(e, i)}
-								ondragend={onDragEnd}
-							>
-								<div class="drag-handle" title="Drag to reorder">⠇</div>
-								{#if p.linkedGroupId != null}
-									<div class="linked-badge" title="Linked – args shared with other columns">⟁</div>
-								{/if}
-								<Processcomponent {p} />
-							</div>
-						{/key}
-					{/each}
 				</div>
 			</div>
 
-			<div class="block"></div>
-		</details>
+			{#if col.type == 'time'}
+				<div class="control-input display time-format-row">
+					<p>Time Format</p>
+					{#if !canChange}
+						<input bind:value={col.timeFormat} />
+					{:else}
+						<span>{getColumnById(col.refId)?.timeFormat}</span>
+					{/if}
+				</div>
+			{/if}
+
+			{#if previewOpen && !canChange}
+				<div class="col-preview"><MiniDataTable column={col} maxRows={5} /></div>
+			{/if}
+		</div>
 	</div>
 {/if}
 
-<AddProcess bind:showDropdown={showAddProcess} columnSelected={col} {dropdownTop} {dropdownLeft} />
-
 <style>
+	/* Chevron + type/name on the left, action buttons inline on the right. */
+	.clps-title-container {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		width: 100%;
+		min-width: 0;
+		gap: var(--space-2);
+	}
+	.clps-title-button {
+		display: flex;
+		align-items: center;
+		gap: var(--space-1);
+		flex-shrink: 0;
+	}
+
+	/* Chevron to expand a mini data-table preview (matches canvas node outputs). */
+	.col-chev {
+		background: none;
+		border: none;
+		padding: 0 1px;
+		margin: 0;
+		cursor: pointer;
+		color: var(--color-lightness-55, #999);
+		font-size: 10px;
+		line-height: 1;
+		flex-shrink: 0;
+	}
+	.col-chev:hover {
+		color: var(--color-lightness-25, #444);
+	}
+	.col-name {
+		margin: 0;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.col-preview {
+		padding: 2px 4px 4px 18px;
+	}
+
+	/* Both action buttons (find-on-canvas + bin) reveal on row hover; keeps the row
+	   uncluttered at rest. */
+	.clps-title-button button {
+		opacity: 0;
+		transition: opacity 0.12s ease;
+	}
+	.clps-container:hover .clps-title-button button,
+	.clps-title-button button:focus-visible {
+		opacity: 1;
+	}
+	.time-format-row {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		font-size: var(--font-sm);
+		padding: 2px 4px 4px;
+	}
+	.time-format-row p {
+		margin: 0;
+		color: var(--color-lightness-45, #777);
+	}
+	.time-format-row input {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
 	/* .data-collapsible-title-container {
 		width: 100%;
 		min-width: 0;
@@ -756,14 +835,14 @@
 		flex-direction: column;
 		width: 100%;
 
-		font-size: 12px;
+		font-size: var(--font-sm);
 		text-align: left;
 		color: var(--color-lightness-35);
 
 		margin: 0;
 		padding: 0;
 
-		gap: 0.25rem;
+		gap: var(--space-2);
 	}
 
 	.data-component-info p {
@@ -777,7 +856,7 @@
 
 		background-color: var(--color-lightness-85);
 
-		margin: 0.25rem 0 0.5rem 0;
+		margin: var(--space-2) 0 var(--space-4) 0;
 	}
 
 	.block {
@@ -792,14 +871,15 @@
 	.clps-container {
 		display: flex;
 		flex: 1 1 0;
+		flex-direction: column;
 		position: relative;
 
 		width: 100%;
 		min-width: 0;
 
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 
-		margin: 0.25rem 0;
+		margin: 1px 0;
 	}
 
 	.clps-container:hover {
@@ -815,7 +895,7 @@
 		flex-direction: column;
 		flex: 1 1 0;
 
-		margin: 0 0 0 0.5rem;
+		margin: 0 0 0 var(--space-4);
 		padding: 0;
 	}
 
@@ -823,21 +903,22 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		justify-content: center;
+		justify-content: flex-start;
 
+		flex: 1 1 auto;
 		min-width: 0;
 
 		margin: 0;
 		padding: 0;
 
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	details {
 		width: 100%;
 		min-width: 0;
 
-		margin: 0.25rem 0.25rem 0.25rem 0.5rem;
+		margin: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
 		padding: 0;
 	}
 
@@ -881,22 +962,23 @@
 	/* Provenance italic style */
 	italic {
 		font-style: italic;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		color: var(--color-lightness-35);
 	}
 
-	/* Select and input controls */
+	/* Select and input controls — compact so panel rows match the node output
+	   rows' density. */
 	select,
 	input {
-		height: var(--control-input-height);
+		height: 1.55rem;
 		width: auto;
 		min-width: 0;
 		box-sizing: border-box;
 
-		padding: 0.2rem 0.5rem;
+		padding: var(--space-1) var(--space-3);
 		background-color: transparent;
 
-		font-size: 14px;
+		font-size: var(--font-md);
 		font-weight: lighter;
 
 		border: solid 1px transparent;
@@ -912,35 +994,35 @@
 
 	.display {
 		margin: 0;
-		margin-bottom: 0.5rem;
+		margin-bottom: var(--space-4);
 	}
 
 	.process-container {
 		display: flex;
 		flex-direction: column;
 		margin: 0;
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	.linked-process {
 		border-left: 2px solid var(--color-lightness-35, #555);
-		padding-left: 0.35rem;
+		padding-left: var(--space-3);
 	}
 
 	.linked-badge {
 		font-size: 10px;
 		color: var(--color-lightness-35, #555);
 		line-height: 1;
-		margin-bottom: 0.1rem;
+		margin-bottom: var(--space-1);
 	}
 
 	.drag-handle {
 		cursor: grab;
 		user-select: none;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		line-height: 1;
 		color: var(--color-lightness-65, #aaa);
-		padding: 0 0.1rem;
+		padding: 0 var(--space-1);
 		opacity: 0;
 		transition: opacity 0.15s ease;
 	}
@@ -960,8 +1042,8 @@
 	/* Mirrors the canvas selection — applied when this process is the focused
 	   node in WorkflowEditor (via appState.canvasSelectedNodeId). */
 	.single-process-container.canvas-selected {
-		border-radius: 4px;
-		box-shadow: inset 2px 0 0 var(--color-accent, #4d9fe3);
-		background-color: color-mix(in srgb, var(--color-accent, #4d9fe3) 8%, transparent);
+		border-radius: var(--radius-sm);
+		box-shadow: inset 2px 0 0 var(--color-accent);
+		background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
 	}
 </style>

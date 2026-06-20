@@ -108,8 +108,8 @@
 		width: auto;
 		table-layout: fixed;
 		border-collapse: collapse;
-		font-size: 14px;
-		background-color: white;
+		font-size: var(--font-lg);
+		background-color: var(--surface-card);
 	}
 
 	:global(.preview-table-wrapper th) {
@@ -133,7 +133,7 @@
 	th,
 	td {
 		border: 1px solid #ccc;
-		padding: 0.5rem;
+		padding: var(--space-4);
 		text-align: left;
 		overflow: hidden;
 	}

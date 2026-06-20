@@ -844,8 +844,8 @@
 <style>
 	.error-message {
 		color: #c0392b;
-		font-size: 12px;
-		margin: 0.25rem 0;
+		font-size: var(--font-sm);
+		margin: var(--space-2) 0;
 	}
 
 	.tp-block {
@@ -853,8 +853,8 @@
 		flex-direction: column;
 		gap: 0.35rem;
 		border: 1px solid var(--color-lightness-85);
-		border-radius: 4px;
-		padding: 0.5rem 0.6rem;
+		border-radius: var(--radius-sm);
+		padding: var(--space-4) 0.6rem;
 		width: 100%;
 	}
 
@@ -865,7 +865,7 @@
 	}
 
 	.tp-title {
-		font-size: 12px;
+		font-size: var(--font-sm);
 		font-weight: 600;
 	}
 
@@ -886,9 +886,9 @@
 	.add-tp-btn {
 		background: none;
 		border: 1px dashed var(--color-lightness-75, #aaa);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		cursor: pointer;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		padding: 0.3rem 0.6rem;
 		color: var(--color-lightness-45, #666);
 		width: 100%;
@@ -903,9 +903,9 @@
 	.add-tp-select {
 		background: none;
 		border: 1px dashed var(--color-lightness-75, #aaa);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		cursor: pointer;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		padding: 0.3rem 0.6rem;
 		color: var(--color-lightness-45, #666);
 		width: 100%;
@@ -922,15 +922,15 @@
 		max-height: 150px;
 		overflow-y: auto;
 		border: 1px solid var(--color-lightness-85);
-		border-radius: 4px;
-		padding: 0.25rem 0.4rem;
+		border-radius: var(--radius-sm);
+		padding: var(--space-2) 0.4rem;
 	}
 
 	.col-check-item {
 		display: flex;
 		align-items: center;
 		gap: 0.35rem;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		cursor: pointer;
 		padding: 0.1rem 0;
 	}

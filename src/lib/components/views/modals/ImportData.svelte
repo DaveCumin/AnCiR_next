@@ -2027,7 +2027,7 @@
 		{:else}
 			<div class="heading">
 				<h2>Import Data</h2>
-				<div class="control-input-horizontal" style="align-items: center; margin-top: 0.5rem;">
+				<div class="control-input-horizontal" style="align-items: center; margin-top: var(--space-4);">
 					<button class="dialog-button" style="margin-top:0;" onclick={(e) => fileInput.click()}
 						>{buttonText}</button
 					>
@@ -2359,7 +2359,7 @@
 							</div>
 							<div
 								class="control-input"
-								style="flex-direction: row; align-items: center; gap: 0.25rem; flex-wrap: wrap;"
+								style="flex-direction: row; align-items: center; gap: var(--space-2); flex-wrap: wrap;"
 							>
 								<p style="margin:0;">Row</p>
 								<NumberWithUnits
@@ -2447,11 +2447,11 @@
 
 <style>
 	.heading {
-		margin-bottom: 0.5rem;
+		margin-bottom: var(--space-4);
 	}
 
 	.filename-preview {
-		font-size: 12px;
+		font-size: var(--font-sm);
 		color: var(--color-lightness-50);
 		margin: 0;
 		white-space: nowrap;
@@ -2460,10 +2460,10 @@
 	}
 
 	.enspire-summary-panel {
-		margin: 0.5rem 0;
-		padding: 0.75rem 0.9rem;
+		margin: var(--space-4) 0;
+		padding: var(--space-5) 0.9rem;
 		border: 1px solid var(--color-info);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		background: var(--color-info-bg);
 	}
 
@@ -2485,22 +2485,22 @@
 	.col-select-actions {
 		display: flex;
 		flex-direction: row;
-		gap: 0.5rem;
+		gap: var(--space-4);
 	}
 
 	/* ── Preview table ───────────────────────────────────────────────────────── */
 	.preview-table-wrapper {
-		margin-top: 0.5rem;
+		margin-top: var(--space-4);
 	}
 
 	.preview-table {
 		border-collapse: collapse;
-		font-size: 12px;
+		font-size: var(--font-sm);
 	}
 
 	.preview-table th,
 	.preview-table td {
-		padding: 0.2rem 0.5rem;
+		padding: 0.2rem var(--space-4);
 		border: 1px solid var(--color-lightness-90);
 		white-space: nowrap;
 	}
@@ -2519,9 +2519,9 @@
 	.header-checkbox {
 		display: flex;
 		align-items: center;
-		gap: 0.25rem;
+		gap: var(--space-2);
 		cursor: pointer;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		color: var(--color-lightness-35);
 	}
 
@@ -2530,7 +2530,7 @@
 		margin-top: 0.75em;
 		padding: 0.5em 0.75em;
 		border: 1px solid var(--color-border, #ccc);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		background: var(--color-surface-alt, #f8f8f8);
 	}
 	.multi-file-title {
@@ -2618,7 +2618,7 @@
 		margin: 0.5em 0;
 		padding: 0.5em 0.75em;
 		border: 1px solid var(--color-warning);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		background: var(--color-warning-bg);
 	}
 	.binning-warning {
@@ -2635,7 +2635,7 @@
 		margin: 0.5em 0;
 		padding: 0.5em 0.75em;
 		border: 1px solid var(--color-info);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		background: var(--color-info-bg);
 	}
 	.combine-title {
@@ -2704,7 +2704,7 @@
 		display: block;
 		width: 100%;
 		margin-top: 0.25em;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		padding: 0.15rem 0.2rem;
 		border: 1px solid var(--color-lightness-85);
 		border-radius: 2px;

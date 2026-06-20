@@ -17,6 +17,51 @@
 	import { computeInterface } from '$lib/core/composite.js';
 	import { getNodeName, setNodeName, isNodeNameEditable } from '$lib/core/nodeNaming.js';
 	import Editable from '$lib/components/reusables/Editable.svelte';
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import { mutationService } from '$lib/core/mutationService.js';
+
+	// The current input column ids of a free process node (inIN is a list).
+	function processInputIds(proc) {
+		const raw = proc?.args?.inIN;
+		if (Array.isArray(raw)) return raw.filter((id) => typeof id === 'number' && id >= 0);
+		return typeof raw === 'number' && raw >= 0 ? [raw] : [];
+	}
+
+	// Reconcile a free process node's inputs to `nextIds` (from the ColumnSelect):
+	// set inIN, add a producer column for each new input, remove producers for
+	// dropped inputs. Batched so it's one undo. Mirrors WorkflowEditor wiring.
+	function setProcessInputs(proc, nextIds) {
+		const procNodeId = `process_${proc.id}`;
+		const cur = processInputIds(proc);
+		const next = (nextIds ?? []).filter((id) => typeof id === 'number' && id >= 0);
+		const ops = [{ kind: 'setOrphanProcessArg', processId: proc.id, key: 'inIN', value: next }];
+		for (const colId of next) {
+			if (cur.includes(colId)) continue;
+			const port = `out_${colId}`;
+			const exists = core.data.some(
+				(c) => c.producerNodeId === procNodeId && (c.producerPort || '') === port
+			);
+			if (!exists) {
+				ops.push({
+					kind: 'addColumn',
+					columnData: {
+						type: getColumnById(colId)?.type ?? 'number',
+						producerNodeId: procNodeId,
+						producerPort: port,
+						producerArtifactKind: 'column'
+					}
+				});
+			}
+		}
+		for (const colId of cur) {
+			if (next.includes(colId)) continue;
+			const pc = core.data.find(
+				(c) => c.producerNodeId === procNodeId && (c.producerPort || '') === `out_${colId}`
+			);
+			if (pc) ops.push({ kind: 'removeColumn', id: pc.id });
+		}
+		mutationService.batch(ops);
+	}
 
 	// Friendly label for a composite member node id (members may be hidden, so
 	// resolve from core rather than the rendered graph).
@@ -111,20 +156,44 @@
 
 	{#if node.type === 'process' && node.processObj}
 		{@const PComp = appConsts.processMap.get(node.processName)?.component}
-		{#if !node.processObj.parentCol}
-			<!-- Orphan process: most editor components read p.parentCol.type and
-			     crash on null. Block the editor and point the user at wiring. -->
-			<div class="control-component muted">
-				Drag a wire from a data column to this node's input to attach it.
-				Params editor unlocks once a parent column is set.
+		{@const proc = node.processObj}
+		{@const inIN = processInputIds(proc)}
+		{@const producerCols = core.data.filter((c) => c.producerNodeId === `process_${proc.id}`)}
+		<!-- Computed-node editor: pick input column(s) via ColumnSelect, edit the
+		     operation's settings, and see its output columns. -->
+		<div class="control-component">
+			<div class="control-input vertical">
+				<p>Input column{inIN.length === 1 ? '' : 's'}</p>
+				<ColumnSelector
+					multiple
+					value={inIN}
+					excludeColIds={producerCols.map((c) => c.id)}
+					placeholder="Add input column…"
+					onChange={(v) => setProcessInputs(proc, v)}
+				/>
 			</div>
-		{:else if PComp}
+		</div>
+		{#if PComp}
 			<div class="control-component">
-				<PComp p={node.processObj} />
+				<PComp p={proc} />
 			</div>
 		{:else}
 			<div class="control-component muted">No editor registered for "{node.processName}".</div>
 		{/if}
+		<div class="control-component">
+			<div class="control-input vertical">
+				<p>Output{producerCols.length === 1 ? '' : 's'} ({producerCols.length})</p>
+				{#if producerCols.length === 0}
+					<span class="muted">Pick an input column above to create an output.</span>
+				{:else}
+					<ul class="source-list">
+						{#each producerCols as pc (pc.id)}
+							<li><span class="source-name">{pc.name}</span></li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+		</div>
 	{:else if node.type === 'tableprocess' && node.tpObj}
 		{@const TPComp = appConsts.tableProcessMap.get(node.tpName)?.component}
 		{#if TPComp}
@@ -234,9 +303,9 @@
 
 <style>
 	.control-banner {
-		padding: 0.4rem 0 0.2rem;
+		padding: var(--space-3) 0 var(--space-2);
 		border-bottom: 1px solid var(--color-lightness-90, #e7e7e7);
-		margin-bottom: 0.4rem;
+		margin-bottom: var(--space-3);
 	}
 	.control-banner-title {
 		display: flex;
@@ -247,10 +316,10 @@
 		font-weight: 600;
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: var(--space-3);
 	}
 	.control-component {
-		padding: 0.4rem 0;
+		padding: var(--space-3) 0;
 		border-bottom: 1px solid var(--color-lightness-95, #f0f0f0);
 	}
 	.control-component:last-child {
@@ -264,8 +333,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.5rem;
-		padding: 0.25rem 0;
+		gap: var(--space-4);
+		padding: var(--space-2) 0;
 	}
 	.control-input.vertical {
 		flex-direction: column;
@@ -285,22 +354,22 @@
 		opacity: 0.75;
 		font-size: 0.85rem;
 		line-height: 1.35;
-		margin: 0 0 0.5rem;
+		margin: 0 0 var(--space-4);
 	}
 	.source-list {
 		list-style: none;
 		padding: 0;
-		margin: 0.2rem 0 0;
+		margin: var(--space-2) 0 0;
 		display: flex;
 		flex-direction: column;
-		gap: 0.2rem;
+		gap: var(--space-2);
 	}
 	.source-list li {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.4rem;
-		padding: 0.2rem 0.4rem;
+		gap: var(--space-3);
+		padding: var(--space-2) var(--space-3);
 		border: 1px solid rgba(0, 0, 0, 0.08);
 		border-radius: 0.25rem;
 		background: rgba(0, 0, 0, 0.02);
@@ -318,7 +387,7 @@
 		font-size: 0.75rem;
 		color: rgba(176, 48, 48, 0.8);
 		cursor: pointer;
-		padding: 0 0.3rem;
+		padding: 0 var(--space-2);
 		border-radius: 0.2rem;
 	}
 	.remove-btn:hover {
@@ -329,7 +398,7 @@
 		width: 100%;
 		min-height: 64px;
 		resize: vertical;
-		padding: 0.3rem 0.4rem;
+		padding: var(--space-2) var(--space-3);
 		font-family: inherit;
 		font-size: 0.85rem;
 		line-height: 1.3;
@@ -340,6 +409,6 @@
 	}
 	.note-textarea:focus,
 	.node-note-textarea:focus {
-		border-color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
 	}
 </style>

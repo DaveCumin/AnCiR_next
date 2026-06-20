@@ -5,6 +5,7 @@
 	import ControlDisplay from './views/ControlDisplay.svelte';
 	import { fly, fade } from 'svelte/transition';
 	import WorksheetAddPalette from '$lib/components/views/WorksheetAddPalette.svelte';
+	import { tooltip } from '$lib/utils/tooltip.js';
 
 	let container;
 	const minWidth = 200;
@@ -64,6 +65,7 @@
 			class="close-control-panel-icon-container"
 			in:fade={{ duration: 600 }}
 			out:fly={{ x: -appState.widthControlPanel, duration: 600 }}
+			{@attach tooltip('Close control panel')}
 		>
 			<button class="icon" onclick={() => (appState.showControlPanel = false)}>
 				<Icon name="circle-chevron-left" width={32} height={32} />
@@ -82,6 +84,7 @@
 		class="open-control-panel-icon-container"
 		in:fade={{ duration: 600 }}
 		out:fly={{ x: -appState.widthControlPanel, duration: 600 }}
+		{@attach tooltip('Open control panel')}
 	>
 		<button class="icon" onclick={() => (appState.showControlPanel = true)}>
 			<Icon name="circle-chevron-left" width={32} height={32} />
@@ -111,10 +114,12 @@
 	<WorksheetAddPalette
 		bind:open={showNewPlotModalconst}
 		top={50}
-		left={Math.max(0, window.innerWidth - (appState.showControlPanel ? appState.widthControlPanel : 0) - 360)}
+		left={Math.max(
+			0,
+			window.innerWidth - (appState.showControlPanel ? appState.widthControlPanel : 0) - 360
+		)}
 	/>
 {/if}
-
 
 <style>
 	.icon {
@@ -171,7 +176,7 @@
 		right: 0;
 
 		border-left: 1px solid #d9d9d9;
-		background: #ffffff;
+		background: var(--surface-card);
 		box-sizing: border-box;
 
 		z-index: 999;

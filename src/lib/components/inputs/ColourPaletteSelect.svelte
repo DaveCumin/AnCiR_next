@@ -55,7 +55,7 @@
 <style>
 	.action button {
 		margin: 0.6em;
-		font-size: 14px;
+		font-size: var(--font-lg);
 	}
 	button {
 		background-color: transparent;
@@ -76,6 +76,6 @@
 	}
 	.falseSelection:after {
 		content: 'v';
-		padding-left: 0.25rem;
+		padding-left: var(--space-2);
 	}
 </style>

@@ -144,12 +144,12 @@
 	.editable-input {
 		border-color: rgba(0, 0, 0, 0.4);
 		border-radius: 2px;
-		background: #fff;
+		background: var(--surface-card);
 		cursor: text;
 	}
 
 	.editable-input:focus {
-		outline: 2px solid var(--color-accent, #4d9fe3);
+		outline: 2px solid var(--color-accent);
 		outline-offset: 1px;
 	}
 </style>

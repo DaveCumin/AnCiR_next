@@ -19,7 +19,7 @@
 	<div class="tableProcess-container">
 		<div
 			class="control-component-title-icons"
-			style="margin-bottom: -1.75rem; z-index: 9999; margin-top: 0.25rem;"
+			style="margin-bottom: -1.75rem; z-index: 9999; margin-top: var(--space-2);"
 		>
 			<button class="icon" onclick={() => onDelete(p)}>
 				<Icon name="trash" width={16} height={16} className="menu-icon" />

@@ -467,14 +467,14 @@
 <style>
 	.group-card {
 		position: relative;
-		background: #ffffff;
-		border-radius: 6px;
+		background: var(--surface-card);
+		border-radius: var(--radius-md);
 		border: 1px solid rgba(0, 0, 0, 0.18);
 		box-sizing: border-box;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		cursor: grab;
 		user-select: none;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+		box-shadow: var(--shadow-1);
 		transition:
 			border-color 0.12s ease,
 			box-shadow 0.12s ease;
@@ -482,13 +482,13 @@
 
 	.group-card:hover {
 		border-color: rgba(0, 0, 0, 0.35);
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+		box-shadow: var(--shadow-1);
 	}
 
 	.group-card.selected {
-		border-color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
 		box-shadow:
-			0 1px 3px rgba(0, 0, 0, 0.08),
+			var(--shadow-1),
 			0 0 0 2px rgba(77, 159, 227, 0.28);
 	}
 
@@ -518,7 +518,7 @@
 		border: 0;
 		cursor: pointer;
 		color: rgba(0, 0, 0, 0.6);
-		font-size: 11px;
+		font-size: var(--font-xs);
 		line-height: 1;
 	}
 	.header-collapse:hover {
@@ -548,7 +548,7 @@
 		font-size: 10px;
 		font-weight: 600;
 		background: rgba(255, 255, 255, 0.6);
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 		color: rgba(0, 0, 0, 0.6);
 	}
 
@@ -557,7 +557,7 @@
 		border: none;
 		cursor: pointer;
 		color: rgba(0, 0, 0, 0.5);
-		font-size: 12px;
+		font-size: var(--font-sm);
 		padding: 0 2px;
 		line-height: 1;
 	}
@@ -574,7 +574,7 @@
 
 	.empty-hint {
 		padding: 8px 10px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: rgba(0, 0, 0, 0.45);
 		text-align: center;
 	}
@@ -600,7 +600,7 @@
 		   (`pos.x + group.width`). The visual buffer between the column name
 		   and the port comes from `.row-name { padding-right }` below. */
 		padding: 0 0 0 4px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 	}
 
 	.row-grip {
@@ -618,7 +618,7 @@
 		cursor: grabbing;
 	}
 	.row-grip:hover {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 	}
 
 	.row-chev {
@@ -674,17 +674,17 @@
 		content: '';
 		position: absolute;
 		inset: -4px -16px;
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 	}
 	.inline-port:hover {
-		background: var(--color-accent, #4d9fe3);
-		border-color: var(--color-accent, #4d9fe3);
+		background: var(--color-accent);
+		border-color: var(--color-accent);
 	}
 	/* Active drop target while dragging a 1-in-1-out process onto this
 	   output port. Mirrors the highlight used in WorkflowNode. */
 	.inline-port.splice-target {
-		background: var(--color-accent, #4d9fe3);
-		border-color: var(--color-accent, #4d9fe3);
+		background: var(--color-accent);
+		border-color: var(--color-accent);
 		box-shadow: 0 0 0 4px rgba(77, 159, 227, 0.35);
 	}
 	.row-port {
@@ -729,10 +729,10 @@
 		min-width: 200px;
 		max-width: 280px;
 		padding: 6px;
-		background: #fff;
+		background: var(--surface-card);
 		border: 1px solid rgba(0, 0, 0, 0.18);
-		border-radius: 4px;
-		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+		border-radius: var(--radius-sm);
+		box-shadow: var(--shadow-2);
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
@@ -754,7 +754,7 @@
 		align-items: center;
 		gap: 6px;
 		padding: 3px 4px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		cursor: pointer;
 		border-radius: 3px;
 	}

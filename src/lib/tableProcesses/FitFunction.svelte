@@ -975,7 +975,7 @@
 	{#if p.args.permuteTest}
 		<div
 			class="control-input-vertical"
-			style="background-color: var(--color-lightness-95); padding: 10px; border-radius: 4px; margin: 10px 0;"
+			style="background-color: var(--color-lightness-95); padding: 10px; border-radius: var(--radius-sm); margin: 10px 0;"
 		>
 			<div class="control-input">
 				<label>
@@ -1260,8 +1260,8 @@
 	}
 
 	.tp-stat-btn {
-		font-size: 11px;
-		padding: 0.25rem 0.5rem;
+		font-size: var(--font-xs);
+		padding: var(--space-2) var(--space-4);
 		border: 1px solid var(--color-lightness-75, #aaa);
 		border-radius: 3px;
 		background: none;

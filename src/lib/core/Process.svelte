@@ -52,14 +52,17 @@
 				const processInfo = appConsts.processMap.get(this.name);
 				this.displayName = processInfo.displayName || this.name;
 
-				//Now put in the args, if provided, or use defaults
-				if (dataIN.args) {
-					this.args = dataIN.args;
-				} else {
-					this.args = Object.fromEntries(
-						Array.from(processInfo.defaults.entries()).map(([key, value]) => [key, value.val])
-					);
-				}
+				// Start from the registry defaults, then let any provided args
+				// override. (Provided args alone could omit keys with defaults — e.g.
+				// a palette-spawned Add passing only { inIN } would otherwise have no
+				// `value` and compute NaN.)
+				const defaults = Object.fromEntries(
+					Array.from(processInfo.defaults?.entries() ?? []).map(([key, value]) => [
+						key,
+						value.val
+					])
+				);
+				this.args = { ...defaults, ...(dataIN.args ?? {}) };
 			}
 			//set the type of data of the parent - for display purposes
 			this.parentCol = parent;
@@ -69,6 +72,18 @@
 				this.linkedGroupId = dataIN.linkedGroupId;
 				_linkedGroupCounter = Math.max(dataIN.linkedGroupId + 1, _linkedGroupCounter);
 			}
+		}
+
+		// The column this process operates on. Inline (legacy) processes carry a
+		// real parentCol; free dataflow nodes don't — their input is the first
+		// column in args.inIN. Editors should read p.inputCol (not p.parentCol) so
+		// they work the same whether the node is free or owned by a column.
+		get inputCol() {
+			if (this.parentCol) return this.parentCol;
+			const raw = this.args?.inIN;
+			const id = Array.isArray(raw) ? raw[0] : raw;
+			if (id == null || id < 0) return null;
+			return core.data.find((c) => c.id === id) ?? null;
 		}
 
 		// Perform processes (add/filer etc)

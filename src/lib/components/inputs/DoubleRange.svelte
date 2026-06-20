@@ -59,7 +59,7 @@
 		width: 20px;
 		border-radius: 50%;
 		border: 3px solid #1b53c0;
-		background-color: #fff;
+		background-color: var(--surface-card);
 		pointer-events: auto;
 		-webkit-appearance: none;
 	}
@@ -68,7 +68,7 @@
 		width: 15px;
 		border-radius: 50%;
 		border: 3px solid #1b53c0;
-		background-color: #fff;
+		background-color: var(--surface-card);
 		pointer-events: auto;
 		-moz-appearance: none;
 	}

@@ -374,13 +374,13 @@
 
 <style>
 	.hint {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: var(--color-lightness-55, #888);
 	}
 
 	.group-card {
 		border: 1px solid var(--color-lightness-90, #e5e5e5);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		padding: 0.45rem;
 		margin-bottom: 0.45rem;
 	}
@@ -409,11 +409,11 @@
 		max-height: 260px;
 		overflow: auto;
 		border-top: 1px solid var(--color-lightness-95, #f0f0f0);
-		padding-top: 0.25rem;
+		padding-top: var(--space-2);
 	}
 
 	.source-block {
-		padding: 0.25rem 0;
+		padding: var(--space-2) 0;
 		border-bottom: 1px solid var(--color-lightness-95, #f1f1f1);
 	}
 
@@ -436,7 +436,7 @@
 		grid-template-columns: 18px 1fr auto;
 		gap: 0.35rem;
 		align-items: center;
-		font-size: 12px;
+		font-size: var(--font-sm);
 	}
 
 	.sv-name {
@@ -447,7 +447,7 @@
 
 	.sv-value {
 		font-family: monospace;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: var(--color-lightness-45, #666);
 	}
 
@@ -456,8 +456,8 @@
 	}
 
 	.tp-stat-btn {
-		font-size: 11px;
-		padding: 0.25rem 0.5rem;
+		font-size: var(--font-xs);
+		padding: var(--space-2) var(--space-4);
 		border: 1px solid var(--color-lightness-75, #aaa);
 		border-radius: 3px;
 		background: none;

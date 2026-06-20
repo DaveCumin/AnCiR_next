@@ -42,23 +42,23 @@
 		background: var(--color-lightness-95, #fafafa);
 		border: 1px solid var(--color-lightness-85, #e8e8e8);
 		border-radius: 0.2rem;
-		padding: 0.25rem 0.4rem;
+		padding: var(--space-2) var(--space-3);
 		min-width: 70px;
 	}
 	.mini-header {
 		font-weight: 600;
-		padding-bottom: 0.2rem;
-		margin-bottom: 0.2rem;
+		padding-bottom: var(--space-2);
+		margin-bottom: var(--space-2);
 		border-bottom: 1px solid var(--color-lightness-85, #e8e8e8);
 		color: var(--color-lightness-25, #333);
 	}
 	.mini-rows {
 		display: flex;
 		flex-direction: column;
-		gap: 0.1rem;
+		gap: var(--space-1);
 	}
 	.mini-row {
-		padding: 0.1rem 0;
+		padding: var(--space-1) 0;
 		color: var(--color-lightness-35, #555);
 	}
 	.mini-row.empty {
@@ -68,8 +68,8 @@
 	.mini-footer {
 		font-size: 0.65rem;
 		color: var(--color-lightness-50, #888);
-		margin-top: 0.2rem;
-		padding-top: 0.2rem;
+		margin-top: var(--space-2);
+		padding-top: var(--space-2);
 		border-top: 1px dashed var(--color-lightness-85, #eee);
 	}
 </style>

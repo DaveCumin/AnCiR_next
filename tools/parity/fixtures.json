@@ -1,0 +1,131 @@
+{
+  "_comment": "Language-neutral parity fixtures: each runs in BOTH the JS engine and ancir_runtime.py; outputs/results are compared within tolerance. The JS emitter is the single source of input DATA: 'generate' specs (seeded rhythm/groups/linear) are realised in JS and written into js_results.json so Python analyses identical arrays. Column refs in args use '@ref' tokens. tableProcess outputs compare by CANONICAL key (trailing _<id> stripped: cosinory_13 -> cosinory). tableProcessResult compares named fields of the single comparison. Add a fixture = add an entry. See tools/README-parity.md.",
+  "tolerance": 1e-6,
+  "fixtures": [
+    {
+      "id": "col-add-5",
+      "kind": "columnProcess",
+      "jsName": "Add",
+      "pyFunc": "add",
+      "input": [1, 2, 3, 4, 5, -2.5, 0],
+      "args": { "value": 5 }
+    },
+    {
+      "id": "col-multiply-3",
+      "kind": "columnProcess",
+      "jsName": "Multiply",
+      "pyFunc": "multiply",
+      "input": [1, 2, 3, 4, 5, -2.5, 0],
+      "args": { "value": 3 }
+    },
+    {
+      "id": "col-sub-2",
+      "kind": "columnProcess",
+      "jsName": "Sub",
+      "pyFunc": "sub",
+      "input": [1, 2, 3, 4, 5, -2.5, 0],
+      "args": { "value": 2 }
+    },
+    {
+      "id": "col-normalize",
+      "kind": "columnProcess",
+      "jsName": "normalize",
+      "pyFunc": "normalize",
+      "input": [10, 20, 30, 40, 50],
+      "args": {}
+    },
+    {
+      "id": "tp-cosinor-fixed24-noisy",
+      "kind": "tableProcess",
+      "jsName": "Cosinor",
+      "pyFunc": "cosinor",
+      "generate": {
+        "type": "rhythm",
+        "n": 168,
+        "period": 24,
+        "amp": 40,
+        "mesor": 50,
+        "phase": 8,
+        "noise": 6,
+        "seed": 11,
+        "refs": { "x": "t", "y": "y" }
+      },
+      "args": {
+        "xIN": "@t",
+        "yIN": ["@y"],
+        "Ncurves": 1,
+        "outputX": -1,
+        "useFixedPeriod": true,
+        "fixedPeriod": 24,
+        "nHarmonics": 1,
+        "alpha": 0.05,
+        "preProcesses": [],
+        "out": { "cosinorx": -1 }
+      },
+      "compareOutputs": ["cosinorx", "cosinory"]
+    },
+    {
+      "id": "tp-fitfunction-cosinor-noisy",
+      "kind": "tableProcess",
+      "jsName": "FitFunction",
+      "pyFunc": "fitfunction",
+      "generate": {
+        "type": "rhythm",
+        "n": 168,
+        "period": 24,
+        "amp": 30,
+        "mesor": 40,
+        "phase": 5,
+        "noise": 5,
+        "seed": 23,
+        "refs": { "x": "t", "y": "y" }
+      },
+      "args": {
+        "xIN": "@t",
+        "yIN": ["@y"],
+        "model": "cosinor",
+        "useFixedPeriod": true,
+        "fixedPeriod": 24,
+        "nHarmonics": 1,
+        "alpha": 0.05,
+        "out": { "fitx": -1 }
+      },
+      "compareOutputs": ["fitx", "fity"]
+    },
+    {
+      "id": "tp-groupcomparison-ttest",
+      "kind": "tableProcessResult",
+      "jsName": "GroupComparison",
+      "pyFunc": "groupcomparison",
+      "generate": {
+        "type": "groups",
+        "seed": 7,
+        "groups": [
+          { "label": "Weekday", "mean": 50, "sd": 12, "n": 40 },
+          { "label": "Weekend", "mean": 62, "sd": 12, "n": 40 }
+        ],
+        "refs": { "g": "grp", "v": "val" }
+      },
+      "args": { "xIN": "@grp", "yIN": ["@val"], "method": "ttest", "alpha": 0.05, "postHocEnabled": true, "out": {} },
+      "compareFields": ["test", "difference", "t", "df", "pValue"]
+    },
+    {
+      "id": "tp-groupcomparison-anova",
+      "kind": "tableProcessResult",
+      "jsName": "GroupComparison",
+      "pyFunc": "groupcomparison",
+      "generate": {
+        "type": "groups",
+        "seed": 9,
+        "groups": [
+          { "label": "A", "mean": 50, "sd": 12, "n": 30 },
+          { "label": "B", "mean": 56, "sd": 12, "n": 30 },
+          { "label": "C", "mean": 62, "sd": 12, "n": 30 }
+        ],
+        "refs": { "g": "grp", "v": "val" }
+      },
+      "args": { "xIN": "@grp", "yIN": ["@val"], "method": "auto", "alpha": 0.05, "postHocEnabled": true, "out": {} },
+      "compareFields": ["test", "f", "ssBetween", "ssWithin", "dfBetween", "dfWithin", "etaSquared", "pValue"]
+    }
+  ]
+}

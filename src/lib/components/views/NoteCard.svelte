@@ -103,8 +103,8 @@
 		box-sizing: border-box;
 		background: #fffde7;
 		border: 1px solid rgba(0, 0, 0, 0.18);
-		border-radius: 4px;
-		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+		border-radius: var(--radius-sm);
+		box-shadow: var(--shadow-1);
 		overflow: hidden;
 		user-select: none;
 		z-index: 5;
@@ -116,7 +116,7 @@
 		align-items: center;
 		justify-content: space-between;
 		flex-shrink: 0;
-		padding: 0.35rem 0.4rem 0.35rem 0.75rem;
+		padding: 0.35rem 0.4rem 0.35rem var(--space-5);
 		background: #fff9c4;
 		border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 		cursor: move;
@@ -133,7 +133,7 @@
 		width: 100%;
 		resize: none;
 		border: none;
-		padding: 0.5rem 0.6rem;
+		padding: var(--space-4) 0.6rem;
 		font-family: inherit;
 		font-size: 0.85rem;
 		line-height: 1.4;
@@ -144,7 +144,7 @@
 	}
 
 	.note-body:focus {
-		background: #fff;
+		background: var(--surface-card);
 	}
 
 	.resize-handle {
