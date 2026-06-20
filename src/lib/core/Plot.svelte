@@ -21,23 +21,40 @@
 		);
 	}
 
-	// Reconcile a facet generator's child plots to its series: one child plot per
-	// series (keyed for stable reuse), auto-arranged in a grid. Called on the facet
-	// toggle and whenever series are wired/unwired. No-op for non-generators (and
-	// removes any stale children if faceting is turned off).
+	// Group a plot's flat data points into series-sets by shared x (mirrors the
+	// per-set (xN, ysN) ports). Each set keeps only valid ys, in wired order.
+	function facetSets(data) {
+		const sets = [];
+		for (const dp of data ?? []) {
+			const xRef = dp?.x?.refId ?? -1;
+			const yRef = dp?.y?.refId ?? -1;
+			let s = sets.find((ss) => ss.xRefId === xRef);
+			if (!s) {
+				s = { xRefId: xRef, ys: [] };
+				sets.push(s);
+			}
+			if (yRef >= 0 && getColumnById(yRef)) s.ys.push(yRef);
+		}
+		return sets;
+	}
+
+	// Reconcile a facet generator's child plots. Set 1 (the first wired x-group)
+	// drives the facets: one child plot per y in set 1. Any further sets (2, 3, …)
+	// are paired by position — the i-th y of set 2/3 is overlaid onto child i — so
+	// e.g. raw points in set 1 and their fitted curves in set 2 land on the same
+	// small multiple. Children are keyed for stable reuse and arranged in a grid.
+	// Idempotent: only writes core.plots / child fields when something changed.
 	export function syncFacetChildren(gen) {
 		if (!gen) return;
-		const series = gen.facet ? (gen.plot?.data ?? []) : [];
+		const sets = gen.facet ? facetSets(gen.plot?.data) : [];
+		const primary = sets[0] ?? { xRefId: -1, ys: [] };
 		const padding = appState.gridSize ?? 15;
 		const width = snapToGrid(gen.width ?? 360);
 		const height = snapToGrid(gen.height ?? 220);
-		const nCols = Math.max(1, Math.ceil(Math.sqrt(series.length || 1)));
+		const nCols = Math.max(1, Math.ceil(Math.sqrt(primary.ys.length || 1)));
 		const keep = new Set();
 
-		series.forEach((s, i) => {
-			const yRef = s?.y?.refId;
-			if (yRef == null || yRef < 0) return;
-			const xRef = s?.x?.refId;
+		primary.ys.forEach((yRef, i) => {
 			const key = `${gen.id}:${i}:${yRef}`;
 			keep.add(key);
 			const col = i % nCols;
@@ -47,12 +64,17 @@
 			const y = snapToGrid((gen.y ?? 0) + height + 2 * padding + row * (height + padding));
 			const yName = getColumnById(yRef)?.name ?? `series ${i + 1}`;
 
+			// Desired series for this facet: the primary y plus the i-th y of each
+			// later set (paired by position).
+			const desired = [{ xRef: primary.xRefId, yRef }];
+			for (let k = 1; k < sets.length; k++) {
+				if (i < sets[k].ys.length) desired.push({ xRef: sets[k].xRefId, yRef: sets[k].ys[i] });
+			}
+			const desiredSig = desired.map((d) => `${d.xRef}:${d.yRef}`).join(',');
+
 			let child = core.plots.find((p) => p.facetParent === gen.id && p.facetKey === key);
 			if (!child) {
 				child = new Plot({ type: gen.type, name: yName, x, y, width, height });
-				const dataIn = { y: { refId: yRef } };
-				if (xRef != null && xRef >= 0) dataIn.x = { refId: xRef };
-				child.plot.addData(dataIn);
 				child.facetParent = gen.id;
 				child.facetKey = key;
 				core.plots.push(child);
@@ -63,9 +85,23 @@
 				child.height = height;
 				child.name = yName;
 			}
+
+			// Sync the child's series to `desired` only when they differ (keeps the
+			// reconciliation idempotent and avoids needless column churn).
+			const currentSig = (child.plot?.data ?? [])
+				.map((dp) => `${dp?.x?.refId ?? -1}:${dp?.y?.refId ?? -1}`)
+				.join(',');
+			if (currentSig !== desiredSig) {
+				child.plot.data = [];
+				for (const d of desired) {
+					const dataIn = { y: { refId: d.yRef } };
+					if (d.xRef != null && d.xRef >= 0) dataIn.x = { refId: d.xRef };
+					child.plot.addData(dataIn);
+				}
+			}
 		});
 
-		// Drop children that no longer correspond to a series. Only reassign when
+		// Drop children that no longer correspond to a facet. Only reassign when
 		// something actually changed so this is idempotent (safe to call from an
 		// effect without re-triggering itself).
 		const stale = core.plots.filter((p) => p.facetParent === gen.id && !keep.has(p.facetKey));
