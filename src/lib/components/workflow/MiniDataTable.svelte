@@ -1,30 +1,84 @@
 <script>
 	// @ts-nocheck
+	import { core } from '$lib/core/core.svelte.js';
+	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
+	import { formatDateTime } from '$lib/utils/time/displayTime.js';
+
 	let { column, maxRows = 5 } = $props();
 
-	const MAX_CELL = 12;
+	const MAX_CELL = 14;
+	const DP = 2; // decimal places (the tableplot uses its own; 2 is a sane preview default)
 
-	function formatCell(v) {
+	// Time / bin columns get the same two-part formatting as the tableplot:
+	//   time → readable time + hours-since-start; bin → midpoint ± half-width.
+	const isTime = $derived(
+		column?.type === 'time' && !column?.isReferencial?.() && column?.compression !== 'awd'
+	);
+	const isBin = $derived(column?.type === 'bin');
+
+	// Raw stored series (used for the time/bin formatting, mirroring the tableplot).
+	const rawArr = $derived(isTime || isBin ? core.rawData.get(column?.data) : null);
+	const data = $derived(typeof column?.getData === 'function' ? column.getData() : []);
+	const total = $derived(
+		(isTime || isBin) && Array.isArray(rawArr) ? rawArr.length : data?.length ?? 0
+	);
+	const previewN = $derived(Math.min(maxRows, total));
+
+	function formatNumber(v) {
 		if (v == null) return '—';
 		if (typeof v === 'number') {
 			if (!Number.isFinite(v)) return String(v);
 			return Number.isInteger(v) ? String(v) : Number(v.toPrecision(4)).toString();
 		}
 		const s = String(v);
-		if (s.length <= MAX_CELL) return s;
-		return s.slice(0, MAX_CELL - 1) + '…';
+		return s.length <= MAX_CELL ? s : s.slice(0, MAX_CELL - 1) + '…';
 	}
 
-	let data = $derived(typeof column?.getData === 'function' ? column.getData() : []);
-	let preview = $derived(data.slice(0, maxRows));
-	let total = $derived(data.length);
+	function cellAt(i) {
+		// Bin: midpoint with ± half-width.
+		if (isBin && Array.isArray(rawArr)) {
+			const x = rawArr[i];
+			if (!Number.isFinite(x)) return { raw: '-', computed: '-', isTime: true };
+			const binStep = column.binStep ?? column.binWidth ?? 0;
+			const rangeStr = `±${((column.binWidth ?? 0) / 2).toFixed(2)}`;
+			if (column.originTime_ms != null) {
+				const centerMs = column.originTime_ms + (x + binStep / 2) * 3600000;
+				return {
+					raw: Number.isFinite(centerMs) ? formatDateTime(centerMs) : '-',
+					computed: rangeStr,
+					isTime: true,
+					unit: 'hrs'
+				};
+			}
+			return { raw: (x + binStep / 2).toFixed(DP), computed: rangeStr, isTime: true, unit: 'hrs' };
+		}
+		// Time: readable time with hours-since-start underneath.
+		if (isTime && Array.isArray(rawArr)) {
+			const v = rawArr[i];
+			const hours = column.hoursSinceStart?.[i];
+			const hoursStr = Number.isFinite(hours) ? hours.toFixed(DP) : String(hours ?? '');
+			const raw = typeof v === 'number' ? formatTimeFromUNIX(v) : v;
+			return { raw, computed: hoursStr, isTime: true, unit: 'hrs' };
+		}
+		return formatNumber(data?.[i]);
+	}
 </script>
 
 <div class="mini-table" role="table" aria-label={`Preview of ${column?.name ?? ''}`}>
 	<div class="mini-header">{column?.name ?? '(unnamed)'}</div>
 	<div class="mini-rows">
-		{#each preview as v}
-			<div class="mini-row">{formatCell(v)}</div>
+		{#each { length: previewN } as _, i (i)}
+			{@const cell = cellAt(i)}
+			<div class="mini-row">
+				{#if cell && cell.isTime}
+					<span class="mt-raw">{cell.raw}</span>
+					{#if String(cell.computed) !== String(cell.raw)}
+						<span class="mt-computed">{cell.computed}{cell.unit ? ' ' + cell.unit : ''}</span>
+					{/if}
+				{:else}
+					{cell}
+				{/if}
+			</div>
 		{/each}
 		{#if total === 0}
 			<div class="mini-row empty">no data</div>
@@ -58,8 +112,15 @@
 		gap: var(--space-1);
 	}
 	.mini-row {
+		display: flex;
+		flex-direction: column;
 		padding: var(--space-1) 0;
 		color: var(--color-lightness-35, #555);
+	}
+	.mt-computed {
+		font-size: 0.85em;
+		color: var(--color-lightness-50, #888);
+		line-height: 1.1;
 	}
 	.mini-row.empty {
 		font-style: italic;

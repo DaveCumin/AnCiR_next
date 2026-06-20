@@ -818,7 +818,10 @@
 		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-sm);
 		background: var(--surface-card);
-		font-size: 1.5rem;
+		/* Workspace renders the table at native 1:1, so use a normal table font.
+		   The workflow node preview (.plot-preview-inner) scales the whole plot
+		   down, so it restores the larger design font below. */
+		font-size: 0.85rem;
 		/* On the workflow canvas the plot preview wrapper sets pointer-events:none
 		   (so the node stays draggable); re-enable it here so the table can be
 		   scrolled/edited. The node is still draggable via its header. */
@@ -872,9 +875,15 @@
 
 	.tp-num {
 		color: var(--color-lightness-50, #888);
-		font-size: 1rem;
+		font-size: 0.8em;
 		text-align: center;
 		justify-content: center;
+	}
+
+	/* Workflow node preview scales the whole plot down, so keep the original
+	   design font there (it reads fine once scaled). */
+	:global(.plot-preview-inner) .tp-scroll {
+		font-size: 1.5rem;
 	}
 
 	.tp-th:last-child,
