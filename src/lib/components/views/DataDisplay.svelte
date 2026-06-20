@@ -12,20 +12,39 @@
 	import SwapColumns from './modals/SwapColumns.svelte';
 	import Editable from '../inputs/Editable.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
+	import { getNodeName } from '$lib/core/nodeNaming.js';
+	import { selectPlot } from '$lib/core/Plot.svelte';
+	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 
 	let showSwapColumns = $state(false);
 	let showNewCol = $state(false);
 	let newColInitialType = $state('');
+
+	// ─── Search ────────────────────────────────────────────────────────────────
+	// Filters Sources / Nodes / Plots by name. While a query is active, every
+	// section is forced open (see isOpen) so matches are always visible.
+	let query = $state('');
+	const q = $derived(query.trim().toLowerCase());
+	function matches(name) {
+		return !q || (name ?? '').toString().toLowerCase().includes(q);
+	}
+	function isOpen(id) {
+		return openSections[id] || !!q;
+	}
+	function groupVisibleColumns(group) {
+		return (group.sourceColumnIds ?? [])
+			.map((id) => getColumnById(id))
+			.filter((c) => c && matches(c.name));
+	}
 
 	function openMakeNewColumn() {
 		newColInitialType = '';
 		showNewCol = true;
 	}
 
-	// Expand state — keyed by section id (group id, '__tps__', '__ungrouped__').
-	// The Computed (table-process) section starts open so TP nodes are always
-	// visible without needing a canvas double-click to reveal them.
-	let openSections = $state({ __nodes__: true });
+	// Expand state — keyed by section id (group id, '__nodes__', '__ungrouped__',
+	// '__plots__'). Nodes + Plots start open so they're visible without a click.
+	let openSections = $state({ __nodes__: true, __plots__: true });
 
 	// Toggle a section open/closed from a header click. `<details>` uses
 	// `bind:open`, so we MUST preventDefault to stop the browser's native toggle
@@ -138,6 +157,80 @@
 		);
 	});
 
+	// Search-filtered views of each section.
+	const filteredUngrouped = $derived(ungroupedColumns.filter((c) => matches(c.name)));
+	function nodeMatches(node) {
+		if (!q) return true;
+		if (matches(getNodeName(node))) return true;
+		for (const o of node.outputColumns ?? []) {
+			const c = getColumnById(o.colId);
+			if (c && matches(c.name)) return true;
+		}
+		return false;
+	}
+	const filteredNodeEntries = $derived(nodeEntries.filter(nodeMatches));
+
+	// ─── Plots section ───────────────────────────────────────────────────────────
+	// The plot list (formerly the standalone Worksheet Layers panel) lives here so
+	// Sources, Nodes and Plots share one panel + one search box. Display order is
+	// reversed so the topmost row is the plot drawn last (highest z-index); drag to
+	// reorder rewrites core.plots, which is the worksheet stacking order.
+	const filteredPlots = $derived((core.plots ?? []).filter((p) => matches(p.name)));
+	const displayPlots = $derived(q ? filteredPlots : (core.plots ?? []).toReversed());
+
+	let plotDraggedIndex = $state(null);
+	let plotDraggedViewIndex = $state(null);
+	let plotDragOverIdx = $state(null);
+	function plotViewToModel(i) {
+		return core.plots.length - 1 - i;
+	}
+	function plotDragStart(e, i) {
+		plotDraggedViewIndex = i;
+		plotDraggedIndex = plotViewToModel(i);
+		e.dataTransfer.effectAllowed = 'move';
+	}
+	function plotDragOver(e, i) {
+		e.preventDefault();
+		e.dataTransfer.dropEffect = 'move';
+		plotDragOverIdx = i;
+	}
+	function plotDrop(i) {
+		if (plotDraggedIndex === null) return;
+		const target = plotViewToModel(i);
+		if (plotDraggedIndex !== target) {
+			const updated = [...core.plots];
+			const [moved] = updated.splice(plotDraggedIndex, 1);
+			updated.splice(target, 0, moved);
+			core.plots = updated;
+		}
+		plotDragReset();
+	}
+	function plotDragReset() {
+		plotDraggedIndex = null;
+		plotDraggedViewIndex = null;
+		plotDragOverIdx = null;
+	}
+
+	function changePlotVisibility(id) {
+		if (appState.invisiblePlotIds.includes(id)) {
+			appState.invisiblePlotIds = appState.invisiblePlotIds.filter((p) => p !== id);
+		} else {
+			appState.invisiblePlotIds.push(id);
+		}
+	}
+
+	let showSinglePlotDropdown = $state(false);
+	let selectedPlotId = $state(null);
+	let plotDropdownTop = $state(0);
+	let plotDropdownLeft = $state(0);
+	function openSinglePlotDropdown(e, id) {
+		selectedPlotId = id;
+		const r = e.currentTarget.getBoundingClientRect();
+		plotDropdownTop = r.top + window.scrollY;
+		plotDropdownLeft = r.right + window.scrollX + 6;
+		showSinglePlotDropdown = true;
+	}
+
 	// ─── Drag-and-drop reorder ─────────────────────────────────────────────────
 	// MIME-style payloads encode kind + ids. Drop targets call the appropriate
 	// reorder helper.
@@ -238,35 +331,51 @@
 	</div>
 </div>
 
+<div class="search-row">
+	<Icon name="search" width={14} height={14} className="search-icon" />
+	<input
+		class="search-input"
+		type="search"
+		placeholder="Search sources, nodes, plots…"
+		bind:value={query}
+		aria-label="Search sources, nodes and plots"
+	/>
+	{#if q}
+		<button class="icon search-clear" title="Clear search" onclick={() => (query = '')}>
+			<Icon name="close" width={14} height={14} />
+		</button>
+	{/if}
+</div>
+
 <div class="display-list">
 	<!-- Groups -->
 	{#each core.groups as group (group.id)}
-		<div
-			class="clps-container"
-			draggable="true"
-			ondragstart={(e) => startDragGroup(e, group.id)}
-			ondragover={(e) => onDragOverSection(e, '__group_order__', group.id)}
-			ondrop={(e) => onDropSection(e, '__group_order__', group.id)}
-		>
-			<details class="clps-item" bind:open={openSections[group.id]}>
-				<summary class="clps-title-container" onclick={(e) => toggleSection(e, group.id)}>
-					<div class="clps-title">
-						<p><Editable bind:value={group.name} /></p>
-					</div>
-					<div class="clps-title-button">
-						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, group.id)}>
-							{#if openSections[group.id]}
-								<Icon name="caret-down" width={20} height={20} />
-							{:else}
-								<Icon name="caret-right" width={20} height={20} />
-							{/if}
-						</button>
-					</div>
-				</summary>
+		{@const visCols = groupVisibleColumns(group)}
+		{#if !q || visCols.length > 0}
+			<div
+				class="clps-container"
+				draggable="true"
+				ondragstart={(e) => startDragGroup(e, group.id)}
+				ondragover={(e) => onDragOverSection(e, '__group_order__', group.id)}
+				ondrop={(e) => onDropSection(e, '__group_order__', group.id)}
+			>
+				<details class="clps-item" open={isOpen(group.id)}>
+					<summary class="clps-title-container" onclick={(e) => toggleSection(e, group.id)}>
+						<div class="clps-title">
+							<p><Editable bind:value={group.name} /></p>
+						</div>
+						<div class="clps-title-button">
+							<button class="icon" onclick={(e) => toggleSectionFromCaret(e, group.id)}>
+								{#if isOpen(group.id)}
+									<Icon name="caret-down" width={20} height={20} />
+								{:else}
+									<Icon name="caret-right" width={20} height={20} />
+								{/if}
+							</button>
+						</div>
+					</summary>
 
-				{#each group.sourceColumnIds ?? [] as colId (colId)}
-					{@const col = getColumnById(colId)}
-					{#if col}
+					{#each visCols as col (col.id)}
 						{@const colSelected = canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
 						{@const ownsSelectedProcess =
 							canvasSelection?.kind === 'process' &&
@@ -285,32 +394,32 @@
 								canvasSelectedProcessId={ownsSelectedProcess ? canvasSelection.id : null}
 							/>
 						</div>
-					{/if}
-				{/each}
+					{/each}
 
-				<!-- Drop zone at end of group -->
-				<div
-					class="dropzone"
-					class:active={dropHint.section === group.id && dropHint.beforeId == null}
-					ondragover={(e) => onDragOverSection(e, group.id, null)}
-					ondrop={(e) => onDropSection(e, group.id, null)}
-				></div>
-			</details>
-		</div>
+					<!-- Drop zone at end of group -->
+					<div
+						class="dropzone"
+						class:active={dropHint.section === group.id && dropHint.beforeId == null}
+						ondragover={(e) => onDragOverSection(e, group.id, null)}
+						ondrop={(e) => onDropSection(e, group.id, null)}
+					></div>
+				</details>
+			</div>
+		{/if}
 	{/each}
 
 	<!-- Nodes: every operation (process + table-process) as its own entry, with
 	     read-only input(s) and its output columns. -->
-	{#if nodeEntries.length > 0}
+	{#if filteredNodeEntries.length > 0}
 		<div class="clps-container">
-			<details class="clps-item" bind:open={openSections['__nodes__']}>
+			<details class="clps-item" open={isOpen('__nodes__')}>
 				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__nodes__')}>
 					<div class="clps-title">
 						<p>Nodes</p>
 					</div>
 					<div class="clps-title-button">
 						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__nodes__')}>
-							{#if openSections['__nodes__']}
+							{#if isOpen('__nodes__')}
 								<Icon name="caret-down" width={20} height={20} />
 							{:else}
 								<Icon name="caret-right" width={20} height={20} />
@@ -319,7 +428,7 @@
 					</div>
 				</summary>
 
-				{#each nodeEntries as node (node.id)}
+				{#each filteredNodeEntries as node (node.id)}
 					<div
 						class="second-clps"
 						class:canvas-selected={appState.canvasSelectedNodeId === node.id}
@@ -333,16 +442,16 @@
 	{/if}
 
 	<!-- Ungrouped columns -->
-	{#if ungroupedColumns.length > 0}
+	{#if filteredUngrouped.length > 0}
 		<div class="clps-container">
-			<details class="clps-item" bind:open={openSections['__ungrouped__']}>
+			<details class="clps-item" open={isOpen('__ungrouped__')}>
 				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__ungrouped__')}>
 					<div class="clps-title">
 						<p>Sources</p>
 					</div>
 					<div class="clps-title-button">
 						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__ungrouped__')}>
-							{#if openSections['__ungrouped__']}
+							{#if isOpen('__ungrouped__')}
 								<Icon name="caret-down" width={20} height={20} />
 							{:else}
 								<Icon name="caret-right" width={20} height={20} />
@@ -351,7 +460,7 @@
 					</div>
 				</summary>
 
-				{#each ungroupedColumns as col (col.id)}
+				{#each filteredUngrouped as col (col.id)}
 					{@const colSelected = canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
 					{@const ownsSelectedProcess =
 						canvasSelection?.kind === 'process' &&
@@ -383,11 +492,97 @@
 		</div>
 	{/if}
 
+	<!-- Plots: the worksheet stacking order. Topmost row = highest z-index; drag to
+	     reorder (disabled while searching). -->
+	{#if displayPlots.length > 0}
+		<div class="clps-container">
+			<details class="clps-item" open={isOpen('__plots__')}>
+				<summary class="clps-title-container" onclick={(e) => toggleSection(e, '__plots__')}>
+					<div class="clps-title">
+						<p>Plots</p>
+					</div>
+					<div class="clps-title-button">
+						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__plots__')}>
+							{#if isOpen('__plots__')}
+								<Icon name="caret-down" width={20} height={20} />
+							{:else}
+								<Icon name="caret-right" width={20} height={20} />
+							{/if}
+						</button>
+					</div>
+				</summary>
+
+				{#each displayPlots as plot, i (plot.id)}
+					<div
+						class="second-clps plot-row"
+						class:plot-drag-over={!q && plotDragOverIdx === i && plotDraggedViewIndex !== i}
+						class:canvas-selected={plot.selected}
+						draggable={!q}
+						ondragstart={(e) => plotDragStart(e, i)}
+						ondragover={(e) => plotDragOver(e, i)}
+						ondrop={() => plotDrop(i)}
+						ondragend={plotDragReset}
+					>
+						<div
+							class="plot-row-inner"
+							role="button"
+							tabindex="0"
+							onclick={(e) => selectPlot(e, plot.id)}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									selectPlot(e, plot.id);
+								}
+							}}
+						>
+							{#if !q}
+								<div class="plot-drag-handle" title="Drag to reorder (changes stacking order)">
+									⠇
+								</div>
+							{/if}
+							<button
+								class="icon"
+								title="Toggle visibility"
+								onclick={(e) => {
+									e.stopPropagation();
+									changePlotVisibility(plot.id);
+								}}
+							>
+								{#if appState.invisiblePlotIds.includes(plot.id)}
+									<Icon name="eye-slash" width={16} height={16} />
+								{:else}
+									<Icon name="eye" width={16} height={16} className="visible" />
+								{/if}
+							</button>
+							<p class="plot-name"><Editable bind:value={plot.name} /></p>
+							<button
+								class="icon"
+								title="Plot actions"
+								onclick={(e) => {
+									e.stopPropagation();
+									openSinglePlotDropdown(e, plot.id);
+								}}
+							>
+								<Icon name="menu-horizontal-dots" width={20} height={20} className="menu-icon" />
+							</button>
+						</div>
+					</div>
+				{/each}
+			</details>
+		</div>
+	{/if}
+
 	<div class="div-block"></div>
 </div>
 
 <MakeNewColumn bind:show={showNewCol} bind:initialType={newColInitialType} />
 <SwapColumns bind:showModal={showSwapColumns} />
+<SinglePlotAction
+	bind:showDropdown={showSinglePlotDropdown}
+	dropdownTop={plotDropdownTop}
+	dropdownLeft={plotDropdownLeft}
+	plotId={selectedPlotId}
+/>
 
 <style>
 	.heading {
@@ -413,9 +608,87 @@
 		margin-right: 0.65rem;
 	}
 
+	.search-row {
+		position: sticky;
+		top: 2rem;
+		z-index: 998;
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		width: 100%;
+		box-sizing: border-box;
+		padding: 0.3rem 0.65rem;
+		background-color: white;
+		border-bottom: 1px solid var(--color-lightness-92, #ededed);
+	}
+	.search-row :global(.search-icon) {
+		color: var(--color-lightness-55, #999);
+		flex-shrink: 0;
+	}
+	.search-input {
+		flex: 1;
+		min-width: 0;
+		border: none;
+		outline: none;
+		background: transparent;
+		font: inherit;
+		font-size: 13px;
+		padding: 2px 0;
+	}
+	.search-input::-webkit-search-cancel-button {
+		display: none;
+	}
+	.search-clear {
+		flex-shrink: 0;
+		opacity: 0.6;
+	}
+	.search-clear:hover {
+		opacity: 1;
+	}
+
 	.display-list {
 		width: 100%;
 		margin-top: 0.25rem;
+	}
+
+	/* Plots section rows */
+	.plot-row-inner {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		gap: 0.15rem;
+		width: 100%;
+		cursor: pointer;
+	}
+	.plot-name {
+		flex: 1;
+		margin: 0;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.plot-drag-handle {
+		cursor: grab;
+		user-select: none;
+		font-size: 12px;
+		line-height: 1;
+		color: var(--color-lightness-65, #aaa);
+		padding: 0 0.1rem;
+		opacity: 0;
+		transition: opacity 0.15s ease;
+	}
+	.plot-drag-handle:active {
+		cursor: grabbing;
+	}
+	.plot-row:hover .plot-drag-handle {
+		opacity: 1;
+	}
+	.plot-row[draggable='true'] {
+		cursor: grab;
+	}
+	.plot-drag-over {
+		border-top: 2px solid var(--color-lightness-35, #555);
 	}
 
 	details {
