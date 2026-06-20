@@ -38,7 +38,7 @@
 <style>
 	.action button {
 		margin: 0.6em;
-		font-size: 14px;
+		font-size: var(--font-lg);
 	}
 
 	.action:hover {
@@ -72,9 +72,9 @@
 	.choose-file-button {
 		background-color: var(--color-lightness-95);
 		padding: 8px 12px;
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 
-		font-size: 14px;
+		font-size: var(--font-lg);
 		text-align: center;
 	}
 
@@ -89,6 +89,6 @@
 
 	.selected-preview {
 		color: var(--color-lightness-35);
-		font-size: 14px;
+		font-size: var(--font-lg);
 	}
 </style>

@@ -659,7 +659,7 @@
 	}
 
 	.period-selection-header p {
-		font-size: 12px;
+		font-size: var(--font-sm);
 		color: var(--color-lightness-35);
 		margin: 0;
 	}
@@ -670,7 +670,7 @@
 	}
 
 	.period-select-btn {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		padding: 1px 6px;
 		cursor: pointer;
 		border: 1px solid #ccc;
@@ -689,7 +689,7 @@
 		max-height: 150px;
 		overflow-y: auto;
 		border: 1px solid #e1e9f6;
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		padding: 4px;
 	}
 
@@ -697,7 +697,7 @@
 		display: flex;
 		align-items: center;
 		gap: 4px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 	}
 
 	.period-marker-row input[type='checkbox'] {
@@ -716,7 +716,7 @@
 
 	.marker-value-input {
 		width: 70px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		padding: 1px 4px;
 		border: 1px solid #ddd;
 		border-radius: 2px;

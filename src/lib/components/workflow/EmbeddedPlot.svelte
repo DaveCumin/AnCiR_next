@@ -37,7 +37,7 @@
 		border-top: none;
 		border-bottom-left-radius: 6px;
 		border-bottom-right-radius: 6px;
-		background: white;
+		background: var(--surface-card);
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 		box-sizing: border-box;
 		position: relative;
@@ -53,7 +53,7 @@
 		right: 2px;
 		width: 16px;
 		height: 16px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		line-height: 16px;
 		text-align: center;
 		cursor: nwse-resize;

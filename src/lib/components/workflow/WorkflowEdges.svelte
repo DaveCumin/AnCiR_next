@@ -101,21 +101,21 @@
 	}
 
 	.edge-line.selected {
-		stroke: var(--color-accent, #4d9fe3);
+		stroke: var(--color-accent);
 		stroke-width: 3;
 		filter: drop-shadow(0 0 4px rgba(77, 159, 227, 0.5));
 	}
 
 	.edge-line.splice-target {
-		stroke: var(--color-accent, #4d9fe3);
+		stroke: var(--color-accent);
 		stroke-width: 3.5;
 		stroke-dasharray: 6 4;
 		filter: drop-shadow(0 0 6px rgba(77, 159, 227, 0.8));
 	}
 
 	.edge-flow-dot {
-		fill: var(--color-accent, #4d9fe3);
-		filter: drop-shadow(0 0 4px var(--color-accent, #4d9fe3));
+		fill: var(--color-accent);
+		filter: drop-shadow(0 0 4px var(--color-accent));
 		stroke: none;
 		opacity: 0;
 		animation: flowDot 1.5s linear forwards;
@@ -140,7 +140,7 @@
 	}
 
 	.edge-temp {
-		stroke: var(--color-accent, #4d9fe3);
+		stroke: var(--color-accent);
 		stroke-width: 2;
 		stroke-dasharray: 4 4;
 		fill: none;

@@ -113,7 +113,7 @@
 	}
 
 	.fa-btn:hover:not(:disabled) {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 	}
 
 	.fa-btn:active:not(:disabled) {

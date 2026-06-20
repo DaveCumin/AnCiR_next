@@ -254,13 +254,13 @@
 	.workflow-node {
 		width: 160px;
 		position: relative;
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		border: 1px solid rgba(0, 0, 0, 0.18);
-		background: #ffffff;
+		background: var(--surface-card);
 		cursor: grab;
 		user-select: none;
 		box-sizing: border-box;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 		transition:
 			border-color 0.12s ease,
@@ -274,7 +274,7 @@
 	}
 
 	.workflow-node.selected {
-		border-color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
 		box-shadow:
 			0 1px 3px rgba(0, 0, 0, 0.08),
 			0 0 0 2px rgba(77, 159, 227, 0.28);
@@ -338,7 +338,7 @@
 	}
 
 	.expand-indicator:hover {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 		background: rgba(0, 0, 0, 0.05);
 	}
 	.drop-badge {
@@ -384,7 +384,7 @@
 		display: flex;
 		align-items: center;
 		height: 22px; /* PORT_H */
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: var(--color-lightness-40, #5b5b5b);
 		pointer-events: none; /* let only the dot capture clicks */
 	}
@@ -422,7 +422,7 @@
 		content: '';
 		position: absolute;
 		inset: -4px -16px;
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 	}
 
 	/* Sit halfway outside the card so wires meet the dot, not the card edge. */
@@ -434,16 +434,16 @@
 	}
 
 	.port-dot:hover {
-		background: var(--color-accent, #4d9fe3);
-		border-color: var(--color-accent, #4d9fe3);
+		background: var(--color-accent);
+		border-color: var(--color-accent);
 	}
 
 	/* Active drop target while dragging an orphan / 1-in-1-out process onto
 	   this output port. Slightly larger ring + accent fill mirrors the wire
 	   splice-target highlight in WorkflowEdges. */
 	.port-dot.splice-target {
-		background: var(--color-accent, #4d9fe3);
-		border-color: var(--color-accent, #4d9fe3);
+		background: var(--color-accent);
+		border-color: var(--color-accent);
 		box-shadow: 0 0 0 4px rgba(77, 159, 227, 0.35);
 	}
 
@@ -489,7 +489,7 @@
 		border-radius: 3px;
 		padding: 4px 6px;
 		font-family: inherit;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		line-height: 1.4;
 		background: #fffef6;
 		outline: none;
@@ -497,7 +497,7 @@
 	}
 
 	.note-textarea:focus {
-		border-color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
 	}
 
 	/* Bottom-right resize grip, mirroring the plot resize handle. */

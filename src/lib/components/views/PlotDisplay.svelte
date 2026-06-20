@@ -495,10 +495,10 @@
 		gap: 2px;
 		z-index: 999;
 		transition: right 0.6s ease;
-		background: #fff;
+		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-85, #ddd);
-		border-radius: 8px;
-		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-card);
 		padding: 4px;
 	}
 	.zoom-controls button {
@@ -530,7 +530,7 @@
 	}
 
 	.viewport-btn:hover {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 	}
 
 	.viewport-btn:active {

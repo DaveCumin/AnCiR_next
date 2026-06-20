@@ -387,7 +387,7 @@
 		padding: 6px 10px;
 		cursor: pointer;
 		color: var(--color-lightness-35);
-		font-size: 14px;
+		font-size: var(--font-lg);
 	}
 
 	.tab-btn:hover:not(:disabled) {
@@ -417,7 +417,7 @@
 
 	.tab-hint {
 		color: var(--color-lightness-35);
-		font-size: 13px;
+		font-size: var(--font-md);
 		margin: 0;
 	}
 
@@ -428,8 +428,8 @@
 	.primary-button {
 		background-color: var(--color-lightness-95);
 		padding: 8px 12px;
-		border-radius: 4px;
-		font-size: 14px;
+		border-radius: var(--radius-sm);
+		font-size: var(--font-lg);
 		text-align: center;
 		align-self: flex-start;
 	}
@@ -452,7 +452,7 @@
 
 	.url-input {
 		flex: 1;
-		font-size: 13px;
+		font-size: var(--font-md);
 		padding: 0.4rem 0.5rem;
 		border: 1px solid var(--color-lightness-85);
 		border-radius: 2px;
@@ -471,11 +471,11 @@
 		z-index: 1;
 		width: 100%;
 		box-sizing: border-box;
-		font-size: 13px;
+		font-size: var(--font-md);
 		padding: 0.4rem 0.5rem;
 		margin-bottom: 0.2rem;
 		border: 1px solid var(--color-lightness-85);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		background: var(--color-lightness-97);
 	}
 
@@ -487,7 +487,7 @@
 	.example-group-label {
 		margin-top: 0.6rem;
 		padding: 2px 2px 4px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
@@ -507,8 +507,8 @@
 		margin-top: 6px;
 		text-align: left;
 		border: 1px solid var(--color-lightness-85);
-		border-radius: 4px;
-		background: white;
+		border-radius: var(--radius-sm);
+		background: var(--surface-card);
 		font: inherit;
 		width: 100%;
 	}
@@ -530,11 +530,11 @@
 
 	.example-name {
 		font-weight: 600;
-		font-size: 14px;
+		font-size: var(--font-lg);
 	}
 
 	.example-description {
-		font-size: 12px;
+		font-size: var(--font-sm);
 		color: var(--color-lightness-35);
 	}
 

@@ -416,11 +416,11 @@
 	.tp-card {
 		position: relative;
 		width: 230px;
-		background: #ffffff;
-		border-radius: 6px;
+		background: var(--surface-card);
+		border-radius: var(--radius-md);
 		border: 1px solid rgba(0, 0, 0, 0.18);
 		box-sizing: border-box;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		cursor: grab;
 		user-select: none;
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -433,7 +433,7 @@
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 	}
 	.tp-card.selected {
-		border-color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
 		box-shadow:
 			0 1px 3px rgba(0, 0, 0, 0.08),
 			0 0 0 2px rgba(77, 159, 227, 0.28);
@@ -469,7 +469,7 @@
 	   warnings (e.g. non-normal data under a parametric test). */
 	.node-warning-badge {
 		flex-shrink: 0;
-		font-size: 13px;
+		font-size: var(--font-md);
 		line-height: 1;
 		color: #e0a800;
 		cursor: help;
@@ -494,7 +494,7 @@
 	}
 
 	.expand-indicator:hover {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 		background: rgba(0, 0, 0, 0.05);
 	}
 
@@ -531,7 +531,7 @@
 		padding-left: 4px;
 	}
 	.in-label {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: var(--color-lightness-40, #5b5b5b);
 		white-space: nowrap;
 		overflow: hidden;
@@ -564,7 +564,7 @@
 		gap: 4px;
 		height: 22px; /* PORT_H */
 		padding: 0 0 0 4px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 	}
 	.row-chev {
 		padding: 0;
@@ -618,15 +618,15 @@
 		content: '';
 		position: absolute;
 		inset: -4px -16px;
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 	}
 	.inline-port:hover {
-		background: var(--color-accent, #4d9fe3);
-		border-color: var(--color-accent, #4d9fe3);
+		background: var(--color-accent);
+		border-color: var(--color-accent);
 	}
 	.inline-port.splice-target {
-		background: var(--color-accent, #4d9fe3);
-		border-color: var(--color-accent, #4d9fe3);
+		background: var(--color-accent);
+		border-color: var(--color-accent);
 		box-shadow: 0 0 0 4px rgba(77, 159, 227, 0.35);
 	}
 	.row-port {
@@ -656,7 +656,7 @@
 
 	.empty-hint {
 		padding: 6px 8px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: rgba(0, 0, 0, 0.45);
 		text-align: center;
 	}
@@ -669,9 +669,9 @@
 		min-width: 200px;
 		max-width: 280px;
 		padding: 6px;
-		background: #fff;
+		background: var(--surface-card);
 		border: 1px solid rgba(0, 0, 0, 0.18);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 		display: flex;
 		flex-direction: column;
@@ -694,7 +694,7 @@
 		align-items: center;
 		gap: 6px;
 		padding: 3px 4px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		cursor: pointer;
 		border-radius: 3px;
 	}

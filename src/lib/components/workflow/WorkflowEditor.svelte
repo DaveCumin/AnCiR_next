@@ -3192,7 +3192,7 @@
 		top: 0;
 		right: 0;
 		bottom: 0;
-		background: white;
+		background: var(--surface-card);
 		z-index: 800;
 		display: flex;
 		flex-direction: column;
@@ -3268,9 +3268,9 @@
 		bottom: calc(100% + 3px);
 		right: 0;
 		padding: 1px 2px;
-		background: #ffffff;
+		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-80, #ccc);
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 	}
 	.node-actions-host.visible {
@@ -3285,7 +3285,7 @@
 		position: absolute;
 		z-index: 0;
 		box-sizing: border-box;
-		border: 1.5px dashed var(--color-accent, #4d9fe3);
+		border: 1.5px dashed var(--color-accent);
 		border-radius: 10px;
 		background: rgba(77, 159, 227, 0.06);
 		pointer-events: none;
@@ -3299,10 +3299,10 @@
 		gap: 6px;
 		height: 20px;
 		padding: 0 8px;
-		background: #ffffff;
-		border: 1px solid var(--color-accent, #4d9fe3);
+		background: var(--surface-card);
+		border: 1px solid var(--color-accent);
 		border-radius: 10px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		font-weight: 600;
 		color: var(--color-lightness-25, #333);
 		pointer-events: auto;
@@ -3313,13 +3313,13 @@
 		border: none;
 		background: transparent;
 		cursor: pointer;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		line-height: 1;
 		padding: 0;
 		color: var(--color-lightness-45, #777);
 	}
 	.composite-frame-collapse:hover {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 	}
 
 	/* When a node's note popover is open, lift the whole wrapper above its
@@ -3344,7 +3344,7 @@
 	.workflow-node-wrapper.multi-selected {
 		outline: 2px dashed rgba(77, 159, 227, 0.7);
 		outline-offset: 2px;
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 	}
 
 	.workflow-node-wrapper.dimmed {
@@ -3370,7 +3370,7 @@
 
 	.process-editor-panel {
 		overflow-y: auto;
-		background: white;
+		background: var(--surface-card);
 		border: 1.5px solid rgba(0, 0, 0, 0.15);
 		border-top: none;
 		border-bottom-left-radius: 6px;
@@ -3393,7 +3393,7 @@
 		border-top: none;
 		border-bottom-left-radius: 6px;
 		border-bottom-right-radius: 6px;
-		background: white;
+		background: var(--surface-card);
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 		box-sizing: border-box;
 		position: relative;
@@ -3409,7 +3409,7 @@
 		right: 2px;
 		width: 16px;
 		height: 16px;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		line-height: 16px;
 		text-align: center;
 		cursor: nwse-resize;
@@ -3434,10 +3434,10 @@
 		gap: 2px;
 		z-index: 999;
 		transition: right 0.6s ease;
-		background: #fff;
+		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-85, #ddd);
-		border-radius: 8px;
-		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-card);
 		padding: 4px;
 	}
 	.zoom-controls button {
@@ -3481,18 +3481,18 @@
 		gap: 4px;
 		height: 30px;
 		padding: 0 10px;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		font-weight: 600;
 		color: var(--color-lightness-25, #333);
-		background: #ffffff;
+		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-80, #ccc);
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 		cursor: pointer;
 	}
 	.selection-action-btn:hover {
-		border-color: var(--color-accent, #4d9fe3);
-		color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
+		color: var(--color-accent);
 	}
 
 	/* Most viewport icons (zoom, reset, paths) inherit their fill from the global

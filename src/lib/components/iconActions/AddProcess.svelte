@@ -84,8 +84,8 @@
 	:global(.preview-table-wrapper table) {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: 14px;
-		background-color: white;
+		font-size: var(--font-lg);
+		background-color: var(--surface-card);
 	}
 
 	/* :global(.preview-table-wrapper thead) {

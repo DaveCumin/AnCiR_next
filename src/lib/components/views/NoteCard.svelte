@@ -103,7 +103,7 @@
 		box-sizing: border-box;
 		background: #fffde7;
 		border: 1px solid rgba(0, 0, 0, 0.18);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
 		overflow: hidden;
 		user-select: none;
@@ -144,7 +144,7 @@
 	}
 
 	.note-body:focus {
-		background: #fff;
+		background: var(--surface-card);
 	}
 
 	.resize-handle {

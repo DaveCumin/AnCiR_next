@@ -186,7 +186,7 @@
 		justify-content: space-between;
 		align-items: center;
 
-		background-color: white;
+		background-color: var(--surface-card);
 
 		position: fixed;
 		top: 0;
@@ -218,7 +218,7 @@
 		padding: 0.35rem;
 		text-align: inherit;
 		font: inherit;
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		appearance: none;
 		cursor: pointer;
 		display: inline-flex;
@@ -242,7 +242,7 @@
 		align-items: center;
 		gap: 0.1rem;
 		padding: 0.15rem;
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 		background-color: var(--color-lightness-97, #f7f7f7);
 	}
 
@@ -265,9 +265,9 @@
 		left: calc(100% + 6px);
 		bottom: 0;
 		min-width: 150px;
-		background: #fff;
+		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-85, #ddd);
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
 		padding: 0.25rem;
 		display: flex;
@@ -278,9 +278,9 @@
 	.help-menu button {
 		margin: 0;
 		padding: 0.5rem 0.7rem;
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		text-align: left;
-		font-size: 14px;
+		font-size: var(--font-lg);
 		cursor: pointer;
 		white-space: nowrap;
 		background: transparent;

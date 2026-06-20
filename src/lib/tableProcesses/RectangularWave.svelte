@@ -709,7 +709,7 @@
 	}
 
 	.tp-stat-btn {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		padding: 0.25rem 0.5rem;
 		border: 1px solid var(--color-lightness-75, #aaa);
 		border-radius: 3px;

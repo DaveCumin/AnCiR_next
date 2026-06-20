@@ -42,7 +42,7 @@
 		align-items: flex-start;
 		gap: 0.6rem;
 		padding: 0.75rem 1rem;
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		box-shadow:
 			0 4px 12px rgba(0, 0, 0, 0.15),
 			0 1px 4px rgba(0, 0, 0, 0.08);

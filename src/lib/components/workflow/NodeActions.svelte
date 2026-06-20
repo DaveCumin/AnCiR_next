@@ -133,7 +133,7 @@
 		padding: 0;
 		border: none;
 		background: transparent;
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		color: var(--color-lightness-35, #555);
 		cursor: pointer;
 		line-height: 1;
@@ -150,7 +150,7 @@
 		color: #d23b3b;
 	}
 	.na-glyph {
-		font-size: 13px;
+		font-size: var(--font-md);
 		line-height: 1;
 	}
 </style>

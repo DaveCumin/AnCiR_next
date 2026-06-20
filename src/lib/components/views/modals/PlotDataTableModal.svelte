@@ -72,7 +72,7 @@
 		overflow-x: auto;
 		overflow-y: hidden;
 		border: 1px solid var(--color-lightness-90);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		font-size: 0.85rem;
 	}
 
@@ -139,7 +139,7 @@
 	.btn-primary,
 	.btn-secondary {
 		padding: 0.4rem 1rem;
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		font: inherit;
 		font-size: 0.9rem;
 		cursor: pointer;
@@ -153,7 +153,7 @@
 	}
 
 	.btn-secondary {
-		background: white;
+		background: var(--surface-card);
 		color: inherit;
 	}
 </style>

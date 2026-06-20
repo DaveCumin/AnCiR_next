@@ -127,7 +127,7 @@
 	.node-name {
 		margin: 0;
 		font-weight: 600;
-		font-size: 13px;
+		font-size: var(--font-md);
 		min-width: 0;
 		overflow: hidden;
 	}

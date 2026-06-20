@@ -190,7 +190,7 @@
 		padding: 0;
 		gap: 0.2rem;
 
-		font-size: 12px;
+		font-size: var(--font-sm);
 		color: var(--color-lightness-35);
 
 		margin-bottom: 0.25rem;

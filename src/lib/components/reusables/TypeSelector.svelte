@@ -101,7 +101,7 @@
 	}
 
 	.type-selector button:hover {
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		background-color: var(--color-lightness-90);
 	}
 

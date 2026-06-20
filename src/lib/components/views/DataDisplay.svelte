@@ -738,7 +738,7 @@
 	.plot-drag-handle {
 		cursor: grab;
 		user-select: none;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		line-height: 1;
 		color: var(--color-lightness-65, #aaa);
 		padding: 0 0.1rem;
@@ -817,9 +817,9 @@
 
 	.second-clps.canvas-selected,
 	.clps-container.canvas-selected {
-		border-radius: 4px;
-		box-shadow: inset 2px 0 0 var(--color-accent, #4d9fe3);
-		background-color: color-mix(in srgb, var(--color-accent, #4d9fe3) 8%, transparent);
+		border-radius: var(--radius-sm);
+		box-shadow: inset 2px 0 0 var(--color-accent);
+		background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
 	}
 
 	.dropzone {
@@ -829,7 +829,7 @@
 		transition: background-color 0.15s ease;
 	}
 	.dropzone.active {
-		background-color: var(--color-accent, #4d9fe3);
+		background-color: var(--color-accent);
 	}
 
 	.clps-container[draggable='true'] {

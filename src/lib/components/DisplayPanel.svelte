@@ -96,7 +96,7 @@
 		left: 56px;
 
 		border-right: 1px solid #d9d9d9;
-		background: #fff;
+		background: var(--surface-card);
 		box-sizing: border-box;
 
 		z-index: 999;

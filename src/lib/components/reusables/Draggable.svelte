@@ -469,10 +469,10 @@
 		user-select: none;
 		position: absolute;
 		border: solid 1px var(--color-lightness-85);
-		background-color: white;
+		background-color: var(--surface-card);
 		box-sizing: border-box;
 		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		overflow: hidden;
 		display: flex;
 		flex-direction: column;

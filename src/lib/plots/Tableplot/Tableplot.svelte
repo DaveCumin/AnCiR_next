@@ -816,8 +816,8 @@
 		overflow-x: auto;
 		overflow-y: hidden;
 		border: 1px solid var(--color-lightness-85);
-		border-radius: 4px;
-		background: #fff;
+		border-radius: var(--radius-sm);
+		background: var(--surface-card);
 		font-size: 1.5rem;
 		/* On the workflow canvas the plot preview wrapper sets pointer-events:none
 		   (so the node stays draggable); re-enable it here so the table can be
@@ -922,7 +922,7 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 0.35rem 0.5rem;
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		cursor: pointer;
 		user-select: none;
 		transition: background 0.15s;
@@ -991,7 +991,7 @@
 
 	.empty-state {
 		color: var(--color-lightness-40);
-		font-size: 12px;
+		font-size: var(--font-sm);
 		margin: 1rem 0.75rem;
 		font-style: italic;
 	}

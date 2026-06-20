@@ -656,12 +656,12 @@
 <style>
 	:global(body) {
 		font-family: system-ui, sans-serif;
-		font-size: 14px;
+		font-size: var(--font-lg);
 	}
 
 	:global(button) {
 		font-family: system-ui, sans-serif;
-		font-size: 14px;
+		font-size: var(--font-lg);
 	}
 
 	:global(button.icon) {
@@ -706,11 +706,11 @@
 		margin-top: 10px;
 		background-color: var(--color-lightness-95);
 		border: transparent;
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		padding: 10px;
 		padding-right: 12px;
 
-		font-size: 14px;
+		font-size: var(--font-lg);
 		text-align: center;
 
 		cursor: pointer;
@@ -740,7 +740,7 @@
 		display: flex;
 		margin: 0.6em;
 
-		font-size: 14px;
+		font-size: var(--font-lg);
 		font: inherit;
 		text-align: inherit;
 
@@ -782,8 +782,8 @@
 	:global(.submenu) {
 		position: fixed;
 		min-width: 150px;
-		background-color: white;
-		border-radius: 4px;
+		background-color: var(--surface-card);
+		border-radius: var(--radius-sm);
 		border: 1px solid var(--color-lightness-85);
 		box-shadow:
 			0 4px 8px 0 rgba(0, 0, 0, 0.2),
@@ -800,7 +800,7 @@
 		text-align: left;
 		font: inherit;
 		width: 100%;
-		font-size: 14px;
+		font-size: var(--font-lg);
 	}
 
 	:global(.submenu-item:hover) {
@@ -872,8 +872,8 @@
 		width: 100%;
 		padding: 0.5rem 0;
 
-		background-color: white;
-		border-radius: 4px;
+		background-color: var(--surface-card);
+		border-radius: var(--radius-sm);
 		border: solid 1px var(--color-lightness-85);
 
 		border-color: none;
@@ -908,7 +908,7 @@
 		justify-content: center;
 
 		font-weight: bold;
-		background-color: white;
+		background-color: var(--surface-card);
 		z-index: 99;
 	}
 
@@ -947,12 +947,12 @@
 	}
 
 	:global(.control-tab button) {
-		font-size: 14px;
+		font-size: var(--font-lg);
 		margin: 0;
 		padding: 0.25rem 0.5rem;
 		color: var(--color-lightness-35);
 		background-color: transparent;
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		border: none;
 		appearance: none;
 		white-space: nowrap; /* Prevent text wrapping within buttons */
@@ -1081,7 +1081,7 @@
 	}
 
 	:global(.control-input p) {
-		font-size: 12px;
+		font-size: var(--font-sm);
 		text-align: left;
 		color: var(--color-lightness-35);
 		margin: 0 0 4px 0;
@@ -1093,18 +1093,18 @@
 		margin-bottom: 0.5rem;
 		background: #fff8e1;
 		border: 1px solid #f9a825;
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 	}
 
 	:global(.data-warning p) {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: #795548;
 		margin: 2px 0;
 		line-height: 1.4;
 	}
 
 	:global(.control-input-checkbox p) {
-		font-size: 12px;
+		font-size: var(--font-sm);
 		text-align: left;
 		color: var(--color-lightness-35);
 		margin: 0 0 0 0.2rem;
@@ -1116,7 +1116,7 @@
 		height: var(--control-input-height);
 		box-sizing: border-box;
 
-		font-size: 14px;
+		font-size: var(--font-lg);
 		font-weight: lighter;
 		padding: 0.2rem 0.5rem;
 		border: solid 1px transparent;
@@ -1150,7 +1150,7 @@
 
 		border: solid 1px var(--color-lightness-85);
 		background-color: var(--color-lightness-97);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 
 		padding: 0.5rem 0;
 
@@ -1249,7 +1249,7 @@
 	}
 
 	:global(.tp-output-label) {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: var(--color-lightness-45, #666);
 		font-style: italic;
 	}
@@ -1271,7 +1271,7 @@
 		height: 100%;
 		background-color: var(--color-lightness-90);
 
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 	}
 
 	:global(.tooltip) {
@@ -1279,7 +1279,7 @@
 		background-color: rgba(0, 0, 0, 0.75);
 		color: white;
 		padding: 0.4rem 0.6rem;
-		border-radius: 6px;
+		border-radius: var(--radius-md);
 		pointer-events: none;
 		font-size: 0.78rem;
 		line-height: 1.4;
@@ -1314,7 +1314,7 @@
 		align-items: center;
 		margin-bottom: 0rem;
 		margin-left: -0.25rem;
-		background: white;
+		background: var(--surface-card);
 		padding: 0.25rem;
 	}
 

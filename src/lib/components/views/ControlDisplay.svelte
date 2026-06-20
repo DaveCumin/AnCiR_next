@@ -803,7 +803,7 @@
 		flex-direction: row;
 		justify-content: center;
 		align-items: center;
-		background-color: white;
+		background-color: var(--surface-card);
 	}
 
 	.heading p {

@@ -755,7 +755,7 @@
 
 <style>
 	.hint {
-		font-size: 12px;
+		font-size: var(--font-sm);
 		color: var(--color-lightness-50, #888);
 		margin: 0.25rem 0;
 	}
@@ -767,7 +767,7 @@
 		width: 100%;
 		box-sizing: border-box;
 		font-family: var(--font-mono, ui-monospace, SF Mono, monospace);
-		font-size: 12px;
+		font-size: var(--font-sm);
 		padding: 0.4rem;
 		border: 1px solid var(--color-lightness-85, #ddd);
 		border-radius: 3px;
@@ -781,7 +781,7 @@
 	}
 	.paste-btn {
 		padding: 0.25rem 0.6rem;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		border: 1px solid var(--color-lightness-70, #b0b0b0);
 		border-radius: 3px;
 		background: var(--color-lightness-97, #f8f8f8);
@@ -795,7 +795,7 @@
 		cursor: default;
 	}
 	.paste-status {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: var(--color-lightness-45, #2a7a2a);
 	}
 	.paste-status.err {
@@ -806,7 +806,7 @@
 		background: var(--color-lightness-85, #ddd);
 		border-radius: 3px;
 		padding: 0.05rem 0.3rem;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		font-family: monospace;
 	}
 
@@ -814,7 +814,7 @@
 		margin: 0.25rem 0;
 		border: 1px solid var(--color-lightness-85, #ddd);
 		border-radius: 3px;
-		font-size: 13px;
+		font-size: var(--font-md);
 		overflow-x: auto; /* scroll horizontally when columns exceed the width */
 	}
 	/* Holds the header + virtual body at a min content width so the wrapper above
@@ -834,7 +834,7 @@
 	}
 	.vt-h-row {
 		text-align: center;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		border-right: 1px solid var(--color-lightness-85, #ddd);
 		align-self: stretch;
 		display: flex;
@@ -858,7 +858,7 @@
 	.vrow .row-num {
 		text-align: center;
 		color: var(--color-lightness-50, #888);
-		font-size: 11px;
+		font-size: var(--font-xs);
 		border-right: 1px solid var(--color-lightness-85, #ddd);
 		align-self: stretch;
 		display: flex;
@@ -881,7 +881,7 @@
 		border: none;
 		background: transparent;
 		padding: 2px;
-		font-size: 13px;
+		font-size: var(--font-md);
 		box-sizing: border-box;
 	}
 
@@ -917,7 +917,7 @@
 		gap: 0.2rem;
 		padding: 0.15rem 0.4rem 0.15rem 0.55rem;
 		border-radius: 999px;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		font-weight: 600;
 		white-space: nowrap;
 		user-select: none;
@@ -942,7 +942,7 @@
 
 	.sv-value {
 		font-weight: 400;
-		font-size: 11px;
+		font-size: var(--font-xs);
 		opacity: 0.75;
 	}
 
@@ -950,7 +950,7 @@
 		background: none;
 		border: none;
 		cursor: pointer;
-		font-size: 14px;
+		font-size: var(--font-lg);
 		line-height: 1;
 		padding: 0;
 		color: inherit;
@@ -969,7 +969,7 @@
 		overflow-y: auto;
 		background: var(--color-lightness-97, #f8f8f8);
 		border: 1px solid var(--color-lightness-85, #ccc);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 		z-index: 200;
 	}
@@ -980,7 +980,7 @@
 		gap: 0.5rem;
 		padding: 0.35rem 0.6rem;
 		cursor: pointer;
-		font-size: 13px;
+		font-size: var(--font-md);
 	}
 
 	.ac-item:hover,
@@ -993,13 +993,13 @@
 	}
 
 	.ac-sv-value {
-		font-size: 11px;
+		font-size: var(--font-xs);
 		color: var(--color-lightness-55, #777);
 	}
 
 	.ac-empty {
 		padding: 0.4rem 0.6rem;
-		font-size: 13px;
+		font-size: var(--font-md);
 		color: var(--color-lightness-55, #777);
 		font-style: italic;
 	}

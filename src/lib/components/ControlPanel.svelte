@@ -171,7 +171,7 @@
 		right: 0;
 
 		border-left: 1px solid #d9d9d9;
-		background: #ffffff;
+		background: var(--surface-card);
 		box-sizing: border-box;
 
 		z-index: 999;

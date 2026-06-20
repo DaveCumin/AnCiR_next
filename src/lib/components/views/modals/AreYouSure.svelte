@@ -107,7 +107,7 @@
 	.dialog-button {
 		background: var(--color-lightness-95);
 		color: var(--color-lightness-35);
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 		border: 1px solid var(--color-lightness-85);
 		padding: 0.55rem 1rem;
 		font-weight: 600;
@@ -145,7 +145,7 @@
 	}
 
 	.dialog-button.ghost {
-		background: white;
+		background: var(--surface-card);
 	}
 
 	.dialog-button:focus-visible {

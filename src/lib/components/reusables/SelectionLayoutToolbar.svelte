@@ -135,10 +135,10 @@
 		align-items: center;
 		gap: 2px;
 		padding: 4px 6px;
-		background: #fff;
+		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-85, #ddd);
-		border-radius: 8px;
-		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-card);
 		pointer-events: auto;
 	}
 
@@ -161,7 +161,7 @@
 
 	.lt-btn:hover:not(:disabled) {
 		background: var(--color-lightness-95, #f2f2f2);
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 	}
 
 	.lt-btn:disabled {

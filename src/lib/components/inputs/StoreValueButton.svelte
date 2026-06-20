@@ -121,7 +121,7 @@
 		padding: 0;
 		margin-left: 4px;
 		cursor: pointer;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		vertical-align: middle;
 		line-height: 1;
 	}
@@ -144,15 +144,15 @@
 		display: flex;
 		gap: 4px;
 		padding: 4px;
-		background: white;
+		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-85, #ccc);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 		z-index: 9999;
 		white-space: nowrap;
 	}
 	.rename-input {
-		font-size: 12px;
+		font-size: var(--font-sm);
 		padding: 2px 6px;
 		border: 1px solid var(--color-lightness-85, #ccc);
 		border-radius: 3px;
@@ -163,7 +163,7 @@
 		border-color: var(--color-lightness-50, #888);
 	}
 	.rename-ok {
-		font-size: 12px;
+		font-size: var(--font-sm);
 		padding: 2px 8px;
 		border: 1px solid var(--color-lightness-85, #ccc);
 		border-radius: 3px;

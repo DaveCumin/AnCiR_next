@@ -323,7 +323,7 @@
 <style>
 	.action button {
 		margin: 0.6em;
-		font-size: 14px;
+		font-size: var(--font-lg);
 	}
 
 	.action:hover {

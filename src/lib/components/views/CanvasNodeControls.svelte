@@ -409,6 +409,6 @@
 	}
 	.note-textarea:focus,
 	.node-note-textarea:focus {
-		border-color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
 	}
 </style>

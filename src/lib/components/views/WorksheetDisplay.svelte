@@ -203,7 +203,7 @@
 		align-items: center;
 
 		border-bottom: 1px solid var(--color-lightness-85);
-		background-color: white;
+		background-color: var(--surface-card);
 	}
 
 	.heading p {
@@ -254,7 +254,7 @@
 	.drag-handle {
 		cursor: grab;
 		user-select: none;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		line-height: 1;
 		color: var(--color-lightness-65, #aaa);
 		padding: 0 0.1rem;

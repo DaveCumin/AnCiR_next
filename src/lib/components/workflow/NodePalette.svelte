@@ -432,7 +432,7 @@
 	}
 
 	.np-btn:hover {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 	}
 
 	.np-btn:active {
@@ -440,7 +440,7 @@
 	}
 
 	.np-trigger.open {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 	}
 
 	.np-menu {
@@ -451,9 +451,9 @@
 		max-width: 420px;
 		max-height: min(70vh, 36rem);
 		overflow-y: auto;
-		background: #fff;
+		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-80, #ccc);
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
 		padding: 0.75rem;
 		display: flex;
@@ -466,7 +466,7 @@
 		top: 0;
 		z-index: 1;
 		padding-bottom: 0.6rem;
-		background: #fff;
+		background: var(--surface-card);
 		border-bottom: 1px solid var(--color-lightness-90, #eee);
 		margin-bottom: 0.5rem;
 	}
@@ -478,7 +478,7 @@
 		border-radius: 5px;
 		font-size: 0.85rem;
 		color: var(--color-lightness-25, #333);
-		background: #fff;
+		background: var(--surface-card);
 		transition:
 			border-color 0.15s ease,
 			box-shadow 0.15s ease;
@@ -486,7 +486,7 @@
 
 	.palette-search:focus {
 		outline: none;
-		border-color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
 		box-shadow: 0 0 0 2px rgba(77, 159, 227, 0.18);
 	}
 
@@ -531,8 +531,8 @@
 		padding: 0.5rem 0.35rem;
 		min-height: 64px;
 		border: 1px solid transparent;
-		border-radius: 6px;
-		background: #fff;
+		border-radius: var(--radius-md);
+		background: var(--surface-card);
 		color: var(--color-lightness-25, #333);
 		text-align: center;
 		cursor: pointer;
@@ -549,7 +549,7 @@
 	}
 
 	.palette-tile:focus-visible {
-		outline: 2px solid var(--color-accent, #4d9fe3);
+		outline: 2px solid var(--color-accent);
 		outline-offset: 1px;
 	}
 
@@ -563,7 +563,7 @@
 	}
 
 	.palette-tile:hover .palette-tile-icon {
-		color: var(--color-accent, #4d9fe3);
+		color: var(--color-accent);
 	}
 
 	.palette-tile-name {

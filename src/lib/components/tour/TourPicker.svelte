@@ -90,7 +90,7 @@
 	.tp-card {
 		width: 30rem;
 		max-width: calc(100vw - 24px);
-		background: #fff;
+		background: var(--surface-card);
 		border-radius: 10px;
 		box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
 		padding: 1rem 1.1rem 1.1rem;
@@ -139,8 +139,8 @@
 		text-align: left;
 		padding: 0.7rem 0.8rem;
 		border: 1px solid var(--color-lightness-85, #ddd);
-		border-radius: 8px;
-		background: #fff;
+		border-radius: var(--radius-lg);
+		background: var(--surface-card);
 		cursor: pointer;
 		font: inherit;
 		transition:
@@ -150,7 +150,7 @@
 
 	.tp-item:hover {
 		background: var(--color-lightness-97, #f7f7f7);
-		border-color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
 	}
 
 	.tp-item-main {

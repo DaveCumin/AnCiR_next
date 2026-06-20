@@ -113,9 +113,9 @@
 <style>
 	.compact-node {
 		position: relative;
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 		border: 1px solid rgba(0, 0, 0, 0.18);
-		background: #ffffff;
+		background: var(--surface-card);
 		cursor: grab;
 		user-select: none;
 		box-sizing: border-box;
@@ -129,7 +129,7 @@
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 	}
 	.compact-node.selected {
-		border-color: var(--color-accent, #4d9fe3);
+		border-color: var(--color-accent);
 		box-shadow:
 			0 1px 3px rgba(0, 0, 0, 0.08),
 			0 0 0 2px rgba(77, 159, 227, 0.28);
@@ -168,7 +168,7 @@
 		content: '';
 		position: absolute;
 		inset: -2px -16px;
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 	}
 	/* Sit just outside the edge (dot touches the border) so the port reads as
 	   attached to the small square rather than floating away from it. */
@@ -181,12 +181,12 @@
 		transform: translateX(100%);
 	}
 	.port-dot:hover {
-		background: var(--color-accent, #4d9fe3);
-		border-color: var(--color-accent, #4d9fe3);
+		background: var(--color-accent);
+		border-color: var(--color-accent);
 	}
 	.port-dot.splice-target {
-		background: var(--color-accent, #4d9fe3);
-		border-color: var(--color-accent, #4d9fe3);
+		background: var(--color-accent);
+		border-color: var(--color-accent);
 		box-shadow: 0 0 0 4px rgba(77, 159, 227, 0.35);
 	}
 </style>

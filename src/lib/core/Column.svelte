@@ -804,7 +804,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		padding: 2px 4px 4px;
 	}
 	.time-format-row p {
@@ -835,7 +835,7 @@
 		flex-direction: column;
 		width: 100%;
 
-		font-size: 12px;
+		font-size: var(--font-sm);
 		text-align: left;
 		color: var(--color-lightness-35);
 
@@ -877,7 +877,7 @@
 		width: 100%;
 		min-width: 0;
 
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 
 		margin: 1px 0;
 	}
@@ -962,7 +962,7 @@
 	/* Provenance italic style */
 	italic {
 		font-style: italic;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		color: var(--color-lightness-35);
 	}
 
@@ -978,7 +978,7 @@
 		padding: 0.1rem 0.35rem;
 		background-color: transparent;
 
-		font-size: 13px;
+		font-size: var(--font-md);
 		font-weight: lighter;
 
 		border: solid 1px transparent;
@@ -1019,7 +1019,7 @@
 	.drag-handle {
 		cursor: grab;
 		user-select: none;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		line-height: 1;
 		color: var(--color-lightness-65, #aaa);
 		padding: 0 0.1rem;
@@ -1042,8 +1042,8 @@
 	/* Mirrors the canvas selection — applied when this process is the focused
 	   node in WorkflowEditor (via appState.canvasSelectedNodeId). */
 	.single-process-container.canvas-selected {
-		border-radius: 4px;
-		box-shadow: inset 2px 0 0 var(--color-accent, #4d9fe3);
-		background-color: color-mix(in srgb, var(--color-accent, #4d9fe3) 8%, transparent);
+		border-radius: var(--radius-sm);
+		box-shadow: inset 2px 0 0 var(--color-accent);
+		background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
 	}
 </style>

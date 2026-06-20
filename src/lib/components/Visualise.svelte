@@ -212,6 +212,6 @@
 		width: 100%;
 		height: 500px;
 		border: 1px solid #ccc;
-		background: white;
+		background: var(--surface-card);
 	}
 </style>

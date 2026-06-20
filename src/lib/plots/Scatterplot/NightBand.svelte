@@ -246,7 +246,7 @@
 	<div class="control-input-horizontal">
 		<label style="display: flex; align-items: center; gap: 0.5rem; flex:  1;">
 			<input type="checkbox" bind:checked={nightBand.enabled} />
-			<span style="font-size:  12px; color: var(--color-lightness-35);">Enabled</span>
+			<span style="font-size: var(--font-sm); color: var(--color-lightness-35);">Enabled</span>
 		</label>
 	</div>
 
@@ -266,7 +266,7 @@
 				checked={nightBand.mode === 'repeating'}
 				onchange={() => (nightBand.mode = 'repeating')}
 			/>
-			<span style="font-size: 12px;">Repeating</span>
+			<span style="font-size: var(--font-sm);">Repeating</span>
 		</label>
 		<label style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
 			<input
@@ -276,7 +276,7 @@
 				checked={nightBand.mode === 'custom'}
 				onchange={() => (nightBand.mode = 'custom')}
 			/>
-			<span style="font-size: 12px;">Custom</span>
+			<span style="font-size: var(--font-sm);">Custom</span>
 		</label>
 	</div>
 
@@ -291,7 +291,7 @@
 		<div class="control-input">
 			<label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
 				<input type="checkbox" bind:checked={nightBand.useDataMin} />
-				<span style="font-size: 12px;">Use data minimum as reference</span>
+				<span style="font-size: var(--font-sm);">Use data minimum as reference</span>
 			</label>
 		</div>
 
@@ -462,7 +462,7 @@
 		gap: 0.5rem;
 		padding: 0.5rem;
 		background-color: var(--color-lightness-98);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		margin-bottom: 0.5rem;
 	}
 

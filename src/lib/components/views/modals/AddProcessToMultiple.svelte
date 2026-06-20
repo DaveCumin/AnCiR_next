@@ -117,7 +117,7 @@ select {
 	width: 100%;
 	padding: 0.35rem 0.5rem;
 	border: 1px solid var(--color-lightness-85, #ccc);
-	border-radius: 4px;
+	border-radius: var(--radius-sm);
 	font-size: 0.9rem;
 }
 
@@ -156,7 +156,7 @@ select {
 .dialog-button {
 	padding: 0.4rem 1rem;
 	border: 1px solid var(--color-lightness-85, #ccc);
-	border-radius: 4px;
+	border-radius: var(--radius-sm);
 	background: var(--color-lightness-95, #f5f5f5);
 	cursor: pointer;
 	font-size: 0.85rem;

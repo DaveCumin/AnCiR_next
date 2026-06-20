@@ -480,7 +480,7 @@
 		align-items: center;
 		min-height: var(--control-input-height);
 		box-sizing: border-box;
-		font-size: 14px;
+		font-size: var(--font-lg);
 		font-weight: lighter;
 		color: inherit;
 		transition: border-color 0.2s;
@@ -505,7 +505,7 @@
 
 	.dropdown {
 		position: fixed;
-		background: white;
+		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-85);
 		border-top: none;
 		z-index: 1000;
@@ -532,7 +532,7 @@
 	.search-wrapper input {
 		width: 100%;
 		padding: 4px 6px;
-		font-size: 13px;
+		font-size: var(--font-md);
 		box-sizing: border-box;
 		border: 1px solid var(--color-lightness-85);
 		border-radius: 2px;
@@ -557,7 +557,7 @@
 		border: none;
 		text-align: left;
 		font-weight: 600;
-		font-size: 13px;
+		font-size: var(--font-md);
 		cursor: pointer;
 		display: flex;
 		align-items: center;
@@ -590,7 +590,7 @@
 		color: inherit;
 		border: 1px solid var(--color-lightness-50);
 		border-radius: 2px;
-		background: white;
+		background: var(--surface-card);
 		outline: none;
 	}
 
@@ -624,11 +624,11 @@
 	.option {
 		padding: 6px 8px;
 		text-align: left;
-		background: white;
+		background: var(--surface-card);
 		border: none;
 		cursor: pointer;
 		color: inherit;
-		font-size: 13px;
+		font-size: var(--font-md);
 		user-select: none;
 		-webkit-user-select: none;
 	}
@@ -646,6 +646,6 @@
 		padding: 24px 16px;
 		text-align: center;
 		color: var(--color-lightness-60);
-		font-size: 13px;
+		font-size: var(--font-md);
 	}
 </style>

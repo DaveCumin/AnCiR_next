@@ -85,7 +85,7 @@
 		justify-content: space-between;
 		align-items: center;
 		border-bottom: 1px solid var(--color-lightness-85);
-		background-color: white;
+		background-color: var(--surface-card);
 		z-index: 999;
 	}
 
@@ -101,7 +101,7 @@
 	}
 
 	.empty-hint {
-		font-size: 12px;
+		font-size: var(--font-sm);
 		color: var(--color-lightness-55, #888);
 		padding: 0.5rem;
 		line-height: 1.4;
@@ -113,7 +113,7 @@
 		gap: 0.35rem;
 		padding: 0.25rem 0.25rem;
 		border-bottom: 1px solid var(--color-lightness-95, #f2f2f2);
-		font-size: 13px;
+		font-size: var(--font-md);
 	}
 
 	.sv-row:hover {
@@ -130,7 +130,7 @@
 
 	.sv-value {
 		font-family: monospace;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		color: var(--color-lightness-45, #555);
 		min-width: 60px;
 		text-align: right;
@@ -141,7 +141,7 @@
 		border: none;
 		cursor: pointer;
 		padding: 2px;
-		font-size: 12px;
+		font-size: var(--font-sm);
 		line-height: 1;
 		opacity: 0;
 		pointer-events: none;
@@ -155,7 +155,7 @@
 	}
 
 	.sv-name-input {
-		font-size: 12px;
+		font-size: var(--font-sm);
 		padding: 0.15rem 0.3rem;
 		border: 1px solid var(--color-lightness-85, #ccc);
 		border-radius: 3px;
