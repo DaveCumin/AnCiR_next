@@ -3271,7 +3271,7 @@
 		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-80, #ccc);
 		border-radius: var(--radius-md);
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+		box-shadow: var(--shadow-1);
 	}
 	.node-actions-host.visible {
 		opacity: 1;
@@ -3376,7 +3376,7 @@
 		border-bottom-left-radius: 6px;
 		border-bottom-right-radius: 6px;
 		padding: 6px 8px;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+		box-shadow: var(--shadow-2);
 		cursor: default;
 		box-sizing: border-box;
 	}
@@ -3394,7 +3394,7 @@
 		border-bottom-left-radius: 6px;
 		border-bottom-right-radius: 6px;
 		background: var(--surface-card);
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+		box-shadow: var(--shadow-1);
 		box-sizing: border-box;
 		position: relative;
 	}
@@ -3487,7 +3487,7 @@
 		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-80, #ccc);
 		border-radius: var(--radius-md);
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+		box-shadow: var(--shadow-1);
 		cursor: pointer;
 	}
 	.selection-action-btn:hover {

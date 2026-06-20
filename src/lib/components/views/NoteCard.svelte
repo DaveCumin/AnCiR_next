@@ -104,7 +104,7 @@
 		background: #fffde7;
 		border: 1px solid rgba(0, 0, 0, 0.18);
 		border-radius: var(--radius-sm);
-		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+		box-shadow: var(--shadow-1);
 		overflow: hidden;
 		user-select: none;
 		z-index: 5;

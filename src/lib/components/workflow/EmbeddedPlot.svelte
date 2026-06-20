@@ -38,7 +38,7 @@
 		border-bottom-left-radius: 6px;
 		border-bottom-right-radius: 6px;
 		background: var(--surface-card);
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+		box-shadow: var(--shadow-1);
 		box-sizing: border-box;
 		position: relative;
 	}

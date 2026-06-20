@@ -509,7 +509,7 @@
 		border: 1px solid var(--color-lightness-85);
 		border-top: none;
 		z-index: 1000;
-		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+		box-shadow: var(--shadow-2);
 		max-height: 360px;
 		overflow: hidden;
 		display: flex;

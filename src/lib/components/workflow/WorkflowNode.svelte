@@ -261,7 +261,7 @@
 		user-select: none;
 		box-sizing: border-box;
 		font-size: var(--font-sm);
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+		box-shadow: var(--shadow-1);
 		transition:
 			border-color 0.12s ease,
 			box-shadow 0.12s ease,
@@ -270,13 +270,13 @@
 
 	.workflow-node:hover {
 		border-color: rgba(0, 0, 0, 0.35);
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+		box-shadow: var(--shadow-1);
 	}
 
 	.workflow-node.selected {
 		border-color: var(--color-accent);
 		box-shadow:
-			0 1px 3px rgba(0, 0, 0, 0.08),
+			var(--shadow-1),
 			0 0 0 2px rgba(77, 159, 227, 0.28);
 	}
 

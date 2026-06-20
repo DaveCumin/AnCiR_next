@@ -70,12 +70,14 @@
 	--radius-md: 6px;
 	--radius-lg: 8px;
 
-	/* spacing */
+	/* spacing scale (canonical step values; prefer these for padding / gap / margin) */
 	--space-1: 2px;
 	--space-2: 4px;
 	--space-3: 6px;
 	--space-4: 8px;
 	--space-5: 12px;
+	--space-6: 16px;
+	--space-7: 24px;
 
 	/* font sizes */
 	--font-xs: 11px;
@@ -83,8 +85,11 @@
 	--font-md: 13px;
 	--font-lg: 14px;
 
-	/* shared shadow for floating cards / toolbars */
-	--shadow-card: 0 4px 14px rgba(0, 0, 0, 0.14);
+	/* elevation — three levels for resting / floating / overlay surfaces */
+	--shadow-1: 0 1px 3px rgba(0, 0, 0, 0.1); /* resting cards, small popovers */
+	--shadow-2: 0 4px 12px rgba(0, 0, 0, 0.13); /* floating toolbars, menus, panels */
+	--shadow-3: 0 8px 24px rgba(0, 0, 0, 0.16); /* modals, large dropdowns */
+	--shadow-card: var(--shadow-2); /* alias kept for existing references */
 }
 
 /* Collapsible output sections in table processes */

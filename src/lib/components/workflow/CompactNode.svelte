@@ -119,19 +119,19 @@
 		cursor: grab;
 		user-select: none;
 		box-sizing: border-box;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+		box-shadow: var(--shadow-1);
 		transition:
 			border-color 0.12s ease,
 			box-shadow 0.12s ease;
 	}
 	.compact-node:hover {
 		border-color: rgba(0, 0, 0, 0.35);
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+		box-shadow: var(--shadow-1);
 	}
 	.compact-node.selected {
 		border-color: var(--color-accent);
 		box-shadow:
-			0 1px 3px rgba(0, 0, 0, 0.08),
+			var(--shadow-1),
 			0 0 0 2px rgba(77, 159, 227, 0.28);
 	}
 	/* Analysis has warnings (e.g. non-normal data under a parametric test). The
@@ -139,7 +139,7 @@
 	.compact-node.has-warning {
 		border-color: #e0a800;
 		box-shadow:
-			0 1px 3px rgba(0, 0, 0, 0.08),
+			var(--shadow-1),
 			0 0 0 2px rgba(224, 168, 0, 0.4);
 	}
 	.compact-icon {

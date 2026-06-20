@@ -147,7 +147,7 @@
 		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-85, #ccc);
 		border-radius: var(--radius-sm);
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+		box-shadow: var(--shadow-1);
 		z-index: 9999;
 		white-space: nowrap;
 	}

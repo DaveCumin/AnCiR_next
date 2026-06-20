@@ -146,7 +146,7 @@
 		border: 1px solid rgba(0, 0, 0, 0.18);
 		border-radius: var(--radius-md);
 		background: var(--surface-card);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+		box-shadow: var(--shadow-2);
 		z-index: 60;
 		cursor: default;
 	}

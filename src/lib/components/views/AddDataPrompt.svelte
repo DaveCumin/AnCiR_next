@@ -156,7 +156,7 @@
 		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-80, #ccc);
 		border-radius: 10px;
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+		box-shadow: var(--shadow-3);
 		padding: 0.4rem;
 		display: flex;
 		flex-direction: column;

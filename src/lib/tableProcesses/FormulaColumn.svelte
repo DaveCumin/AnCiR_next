@@ -769,7 +769,7 @@ return _r;`
 		background: var(--color-lightness-97, #f8f8f8);
 		border: 1px solid var(--color-lightness-85, #ccc);
 		border-radius: var(--radius-sm);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+		box-shadow: var(--shadow-2);
 		z-index: 9999;
 	}
 

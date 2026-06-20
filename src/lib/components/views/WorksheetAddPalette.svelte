@@ -244,7 +244,7 @@
 		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-80, #ccc);
 		border-radius: var(--radius-lg);
-		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+		box-shadow: var(--shadow-3);
 		padding: 0.75rem;
 		display: flex;
 		flex-direction: column;

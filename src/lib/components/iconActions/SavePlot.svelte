@@ -211,7 +211,7 @@
 		background: var(--surface-card);
 		border-radius: var(--radius-sm);
 		border: 1px solid var(--color-lightness-85);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+		box-shadow: var(--shadow-2);
 		z-index: 1001;
 		padding: 4px 0;
 	}

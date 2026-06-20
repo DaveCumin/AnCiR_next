@@ -474,7 +474,7 @@
 		font-size: var(--font-sm);
 		cursor: grab;
 		user-select: none;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+		box-shadow: var(--shadow-1);
 		transition:
 			border-color 0.12s ease,
 			box-shadow 0.12s ease;
@@ -482,13 +482,13 @@
 
 	.group-card:hover {
 		border-color: rgba(0, 0, 0, 0.35);
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+		box-shadow: var(--shadow-1);
 	}
 
 	.group-card.selected {
 		border-color: var(--color-accent);
 		box-shadow:
-			0 1px 3px rgba(0, 0, 0, 0.08),
+			var(--shadow-1),
 			0 0 0 2px rgba(77, 159, 227, 0.28);
 	}
 
@@ -732,7 +732,7 @@
 		background: var(--surface-card);
 		border: 1px solid rgba(0, 0, 0, 0.18);
 		border-radius: var(--radius-sm);
-		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+		box-shadow: var(--shadow-2);
 		display: flex;
 		flex-direction: column;
 		gap: 4px;

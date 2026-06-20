@@ -268,7 +268,7 @@
 		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-85, #ddd);
 		border-radius: var(--radius-lg);
-		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+		box-shadow: var(--shadow-3);
 		padding: 0.25rem;
 		display: flex;
 		flex-direction: column;
