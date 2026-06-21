@@ -70,7 +70,7 @@
 		x = $state();
 		y = $state();
 		binSize = $state(0.25);
-		method = $state('Chi-squared');
+		method = $state('Lomb-Scargle');
 
 		line = $state();
 		points = $state();

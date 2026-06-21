@@ -70,7 +70,8 @@ const meta = new Map([
 		{
 			family: 'Arithmetic',
 			nodeIcon: 'node-substitute',
-			description: 'Subtract a constant or column from the input column.'
+			description:
+				'Find a specific value in the column and replace it with another (e.g. swap a missing-data code like −999 for a different value).'
 		}
 	],
 	[

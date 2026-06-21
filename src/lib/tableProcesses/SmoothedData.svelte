@@ -11,7 +11,7 @@
 	const defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
-		['smootherType', { val: 'moving' }],
+		['smootherType', { val: 'whittaker' }],
 		['whittakerLambda', { val: 100 }],
 		['whittakerOrder', { val: 2 }],
 		['savitzkyWindowSize', { val: 5 }],
