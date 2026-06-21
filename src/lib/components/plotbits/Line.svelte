@@ -7,6 +7,13 @@
 	import { isValidStroke } from '$lib/components/plotbits/helpers/misc.js';
 
 	export class LineClass {
+		// UI metadata for the multi-select shared-options panel (sharedControls.js).
+		static descriptors = {
+			colour: { input: 'color', label: 'Colour', group: 'Line' },
+			strokeWidth: { label: 'Width', step: 0.5, group: 'Line' },
+			stroke: { input: 'select', options: ['solid', '5, 5', '2, 2', '5, 2'], label: 'Style', group: 'Line' },
+			draw: { label: 'Show', group: 'Line' }
+		};
 		colour = $state(getPaletteColor(0));
 		strokeWidth = $state(3);
 		stroke = $state('solid');

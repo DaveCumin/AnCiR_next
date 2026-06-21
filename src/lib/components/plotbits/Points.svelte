@@ -6,6 +6,13 @@
 	import { POINT_SHAPES, POINT_SHAPE_LABELS, getPointPath } from './pointShapes.js';
 
 	export class PointsClass {
+		// UI metadata for the multi-select shared-options panel (sharedControls.js).
+		static descriptors = {
+			colour: { input: 'color', label: 'Colour', group: 'Points' },
+			radius: { label: 'Size', step: 0.5, group: 'Points' },
+			shape: { input: 'select', options: POINT_SHAPES, label: 'Shape', group: 'Points' },
+			draw: { label: 'Show', group: 'Points' }
+		};
 		colour = $state(getPaletteColor(0));
 		radius = $state(4);
 		shape = $state('circle');

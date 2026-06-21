@@ -62,7 +62,35 @@ function fieldsForKey(key, value, descriptors, pathPrefix) {
 	const parentLabel = desc.label ?? titleCase(key);
 	const parentGroup = desc.group;
 
-	if (isClassInstance(value)) return [];
+	if (isClassInstance(value)) {
+		// By default a sub-class instance (an Axis, a Column, …) is opaque. But a
+		// descriptor can opt a *style* sub-object in with `descend: true` (e.g. a
+		// data point's line/points, or a plot's axes), so its scalar leaves —
+		// colour, marker shape, gridlines, … — surface in the shared-options UI.
+		if (!desc.descend) return [];
+		const snapshot = typeof value.toJSON === 'function' ? value.toJSON() : {};
+		const childDescriptors = desc._children ?? value.constructor?.descriptors ?? {};
+		const groupForChildren = parentGroup ?? parentLabel;
+		const out = [];
+		for (const leafKey of Object.keys(snapshot)) {
+			const leafVal = value[leafKey];
+			// Only scalar leaves; don't recurse further into nested objects, arrays
+			// or class instances (keeps the descent to a single, predictable level).
+			if (leafVal != null && typeof leafVal === 'object') continue;
+			const { label: cdLabel, ...cdRest } = childDescriptors[leafKey] ?? {};
+			if (cdRest.skip) continue;
+			const field = buildScalarField(
+				`${pathPrefix}${key}.${leafKey}`,
+				leafVal,
+				`${parentLabel} ${cdLabel ?? titleCase(leafKey)}`,
+				cdRest.group ?? groupForChildren,
+				{},
+				cdRest
+			);
+			if (field) out.push(field);
+		}
+		return out;
+	}
 	if (value === null || value === undefined) return [];
 
 	if (isPlainObjectOfPrimitives(value)) {

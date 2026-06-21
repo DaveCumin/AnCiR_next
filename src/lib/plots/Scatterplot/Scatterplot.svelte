@@ -32,7 +32,11 @@
 
 	export class ScatterDataclass {
 		static descriptors = {
-			yAxis: { label: 'Y-axis', input: 'select', options: ['left', 'right'] }
+			yAxis: { label: 'Y-axis', input: 'select', options: ['left', 'right'] },
+			// Surface per-series line/points style (colour, marker, width …) in the
+			// multi-select shared-data UI. Leaf metadata comes from Line/PointsClass.
+			line: { descend: true, label: 'Line' },
+			points: { descend: true, label: 'Points' }
 		};
 
 		parentPlot = $state();
@@ -177,7 +181,12 @@
 				group: 'Y-axis (right)',
 				_children: { 0: { label: 'Y min (right)' }, 1: { label: 'Y max (right)' } }
 			},
-			yLogScaleRight: { group: 'Y-axis (right)', label: 'Log scale (right)' }
+			yLogScaleRight: { group: 'Y-axis (right)', label: 'Log scale (right)' },
+			// Surface axis label/gridlines/ticks in the multi-select shared-options
+			// UI. Leaf metadata comes from AxisClass.descriptors.
+			xAxis: { descend: true, label: 'X-axis', group: 'X-axis' },
+			yAxisLeft: { descend: true, label: 'Y-axis (left)', group: 'Y-axis (left)' },
+			yAxisRight: { descend: true, label: 'Y-axis (right)', group: 'Y-axis (right)' }
 		};
 
 		parentBox = $state();

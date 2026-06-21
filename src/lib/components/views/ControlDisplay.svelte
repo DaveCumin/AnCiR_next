@@ -583,6 +583,12 @@
 										step={field.step ?? appState.gridSize}
 										onInput={(v) => setSharedField(field.path, parseFloat(v))}
 									/>
+								{:else if field.input === 'color'}
+									<input
+										type="color"
+										value={field.allEqual ? (field.value ?? '#000000') : '#000000'}
+										onchange={(e) => setSharedField(field.path, e.currentTarget.value)}
+									/>
 								{:else if field.input === 'boolean'}
 									<input
 										type="checkbox"
@@ -659,6 +665,12 @@
 											value={field.allEqual ? field.value : (field.distinctValues[0] ?? 0)}
 											step={field.step ?? appState.gridSize}
 											onInput={(v) => setSharedDataField(row.index, field.path, parseFloat(v))}
+										/>
+									{:else if field.input === 'color'}
+										<input
+											type="color"
+											value={field.allEqual ? (field.value ?? '#000000') : '#000000'}
+											onchange={(e) => setSharedDataField(row.index, field.path, e.currentTarget.value)}
 										/>
 									{:else if field.input === 'boolean'}
 										<input

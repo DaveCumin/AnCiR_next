@@ -183,3 +183,59 @@ describe('getSharedDataSchema', () => {
 		expect(getSharedDataSchema(wrapper)).toEqual([]);
 	});
 });
+
+// `descend: true` opts a style sub-object in so its scalar leaves surface, using
+// the sub-class's own `static descriptors` for label/input/options.
+class FakeStyle {
+	static descriptors = {
+		colour: { input: 'color', label: 'Colour', group: 'Style' },
+		shape: { input: 'select', options: ['circle', 'square'], label: 'Shape', group: 'Style' },
+		nested: { skip: false }
+	};
+	colour = '#ff0000';
+	shape = 'circle';
+	nested = { deep: 1 }; // object leaf — must NOT be expanded by the descent
+	toJSON() {
+		return { colour: this.colour, shape: this.shape, nested: this.nested };
+	}
+}
+
+class FakeRowWithStyle {
+	static descriptors = {
+		style: { descend: true, label: 'Style' },
+		plain: { descend: false } // class instance without opt-in stays opaque
+	};
+	style = new FakeStyle();
+	plain = new FakeAxis();
+	toJSON() {
+		return { style: this.style.toJSON(), plain: this.plain.toJSON() };
+	}
+}
+
+describe('descend descriptor', () => {
+	function makeStyledWrapper() {
+		const inner = new FakePlotClass();
+		inner.data = [new FakeRowWithStyle()];
+		return { width: 1, height: 1, name: 'p', plot: inner };
+	}
+
+	it('expands an opted-in style sub-object into prefixed scalar leaves', () => {
+		const schema = getSharedDataSchema(makeStyledWrapper());
+		const colour = schema.find((f) => f.path === 'style.colour');
+		const shape = schema.find((f) => f.path === 'style.shape');
+		expect(colour).toEqual({ path: 'style.colour', label: 'Style Colour', input: 'color', group: 'Style' });
+		expect(shape).toEqual({
+			path: 'style.shape',
+			label: 'Style Shape',
+			input: 'select',
+			options: ['circle', 'square'],
+			group: 'Style'
+		});
+	});
+
+	it('does not descend into non-opted-in class instances, nor expand nested objects', () => {
+		const schema = getSharedDataSchema(makeStyledWrapper());
+		expect(schema.some((f) => f.path.startsWith('plain'))).toBe(false);
+		expect(schema.some((f) => f.path.startsWith('style.nested'))).toBe(false);
+	});
+});

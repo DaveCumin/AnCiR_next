@@ -2,6 +2,13 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	export class AxisClass {
+		// UI metadata for the multi-select shared-options panel (sharedControls.js).
+		static descriptors = {
+			label: { label: 'Label' },
+			gridlines: { label: 'Gridlines' },
+			nticks: { label: 'Ticks' },
+			manualTicks: { skip: true }
+		};
 		label = $state('');
 		gridlines = $state(true);
 		nticks = $state(5);
