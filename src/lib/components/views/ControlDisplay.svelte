@@ -120,8 +120,15 @@
 	// True when there's a non-plot canvas node selected. Plot nodes are
 	// already handled by the existing selectedPlots branches below, so we
 	// only fall back to CanvasNodeControls for everything else.
+	// The workflow-canvas selection is a canvas concept. It must not leak into the
+	// worksheet (plots view): otherwise a stale canvas selection unions with a
+	// freshly clicked worksheet plot and the panel miscounts ("2 plots selected").
+	const activeCanvasMultiIds = $derived(
+		appState.view === 'canvas' ? (appState.canvasMultiSelectedNodeIds ?? []) : []
+	);
 	const hasNonPlotCanvasSelection = $derived(
-		appState.canvasSelectedNodeId != null &&
+		appState.view === 'canvas' &&
+			appState.canvasSelectedNodeId != null &&
 			!String(appState.canvasSelectedNodeId).startsWith('plot_')
 	);
 	// A canvas multi-selection of 2+ nodes routes to CanvasNodeControls (which
@@ -131,7 +138,7 @@
 	// shared-properties UI.
 	const canvasSelectedPlotIds = $derived.by(() => {
 		const out = [];
-		for (const id of appState.canvasMultiSelectedNodeIds ?? []) {
+		for (const id of activeCanvasMultiIds) {
 			if (typeof id === 'string' && id.startsWith('plot_')) {
 				const n = Number(id.slice(5));
 				if (Number.isFinite(n)) out.push(n);
@@ -140,8 +147,7 @@
 		return out;
 	});
 	const canvasHasNonPlotMultiSelection = $derived(
-		(appState.canvasMultiSelectedNodeIds?.length ?? 0) > 1 &&
-			canvasSelectedPlotIds.length !== appState.canvasMultiSelectedNodeIds.length
+		activeCanvasMultiIds.length > 1 && canvasSelectedPlotIds.length !== activeCanvasMultiIds.length
 	);
 	const hasCanvasMultiSelection = $derived(canvasHasNonPlotMultiSelection);
 
@@ -168,7 +174,7 @@
 	// Schema-driven shared properties. Discovered by reflecting on each selected
 	// plot's class (mixed-type selections still see common fields like width/height).
 	const sharedFields = $derived.by(() => {
-		const plots = core.plots.filter((p) => p.selected);
+		const plots = selectedPlots;
 		if (plots.length < 2) return [];
 		const perPlotSchemas = plots.map((p) => getSharedSchema(p));
 		const schema = intersectFields(perPlotSchemas);
@@ -180,7 +186,7 @@
 	// Per-row data fields, paired by index. Limited to the smallest data array
 	// length so we never read off the end of a plot.
 	const sharedDataRows = $derived.by(() => {
-		const plots = core.plots.filter((p) => p.selected);
+		const plots = selectedPlots;
 		if (plots.length < 2) return { rows: [], rowCount: 0 };
 		const perPlotSchemas = plots.map((p) => getSharedDataSchema(p));
 		const schema = intersectFields(perPlotSchemas);
@@ -195,17 +201,14 @@
 		return { rows, rowCount };
 	});
 
-	// Apply a value to all selected plots at the given dotted path.
+	// Apply a value to all edit-target plots at the given dotted path.
 	function setSharedField(path, val) {
-		core.plots.forEach((p) => {
-			if (p.selected) setByPath(p, path, val);
-		});
+		selectedPlots.forEach((p) => setByPath(p, path, val));
 	}
 
-	// Apply a value to data row [rowIndex] of every selected plot.
+	// Apply a value to data row [rowIndex] of every edit-target plot.
 	function setSharedDataField(rowIndex, path, val) {
-		core.plots.forEach((p) => {
-			if (!p.selected) return;
+		selectedPlots.forEach((p) => {
 			const row = p.plot?.data?.[rowIndex];
 			if (row) setByPath(row, path, val);
 		});
@@ -359,7 +362,9 @@
 
 	// Union of plot-view-selected plots and any plots multi-selected on the
 	// workflow canvas — both routes contribute to the shared-properties UI.
-	let selectedPlots = $derived.by(() => {
+	// The literal selection (plot-view + canvas), generators included. Used for
+	// actions that target the selected entity itself (e.g. delete).
+	let rawSelectedPlots = $derived.by(() => {
 		const map = new Map();
 		for (const p of core.plots) {
 			if (p.selected) map.set(p.id, p);
@@ -367,6 +372,22 @@
 		for (const plotId of canvasSelectedPlotIds) {
 			const p = core.plots.find((q) => q.id === plotId);
 			if (p) map.set(p.id, p);
+		}
+		return [...map.values()];
+	});
+
+	// The edit targets. A facet generator isn't drawn itself — its children are —
+	// so editing one routes to its children (the template). Selecting a single
+	// child instead edits just that facet (a per-facet override). Everything that
+	// styles/positions plots works on this expanded set.
+	let selectedPlots = $derived.by(() => {
+		const map = new Map();
+		for (const p of rawSelectedPlots) {
+			if (p?.facet) {
+				for (const c of core.plots) if (c.facetParent === p.id) map.set(c.id, c);
+			} else if (p) {
+				map.set(p.id, p);
+			}
 		}
 		return [...map.values()];
 	});
@@ -406,7 +427,13 @@
 	{:else if selectedPlots.length > 1}
 		<div class="control-banner">
 			<div class="control-banner-title">
-				<p>{selectedPlots.length} plots selected</p>
+				<p>
+					{#if rawSelectedPlots.length === 1 && rawSelectedPlots[0]?.facet}
+						Faceted plot — {selectedPlots.length} facets
+					{:else}
+						{selectedPlots.length} plots selected
+					{/if}
+				</p>
 
 				<div class="control-banner-icons">
 					<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
@@ -416,7 +443,7 @@
 						class="icon"
 						onclick={(e) => {
 							e.stopPropagation();
-							removePlots(selectedPlots.map((p) => p.id));
+							removePlots(rawSelectedPlots.map((p) => p.id));
 						}}
 					>
 						<Icon name="trash" width={20} height={20} className="menu-icon" />
@@ -729,7 +756,7 @@
 			</div>
 		{/if}
 	{:else if selectedPlots.length == 1}
-		{@const plot = core.plots.filter((p) => p.selected)[0]}
+		{@const plot = selectedPlots[0]}
 		{#if plot}
 			{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 			{#if Plot}
@@ -802,7 +829,7 @@
 	bind:showDropdown={showSavePlot}
 	{dropdownTop}
 	{dropdownLeft}
-	Id={core.plots.filter((p) => p.selected).map((p) => p.id)}
+	Id={selectedPlots.map((p) => p.id)}
 />
 
 <style>
