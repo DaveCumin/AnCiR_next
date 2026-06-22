@@ -1479,6 +1479,48 @@
 		// handles many-cardinality inputs by accumulating refs.
 		if (fromPort === 'all') {
 			const fromNode = allNodes.find((n) => n.id === fromNodeId);
+
+			// Atomic same-type guard: an all-bundle wired to a free-process input fans
+			// one shared operation out over every column, so reject the WHOLE bundle
+			// (rather than partially connecting the matching columns and leaving the
+			// user confused) when its types aren't uniform / compatible with the
+			// target's existing inputs.
+			const toNodeObj = allNodes.find((n) => n.id === toNodeId);
+			if (toNodeObj?.type === 'process' && toPort === 'input' && !toNodeObj.processObj?.parentCol) {
+				let bundleColIds = [];
+				if (fromNode?.type === 'group') {
+					const g = fromNode.groupObj;
+					const filter = Array.isArray(g?.allColumnIds) ? new Set(g.allColumnIds) : null;
+					bundleColIds = (g?.sourceColumnIds ?? []).filter((c) => !filter || filter.has(c));
+				} else if (fromNode?.type === 'tableprocess') {
+					const filter = Array.isArray(fromNode.tpObj?.args?.allColumnIds)
+						? new Set(fromNode.tpObj.args.allColumnIds)
+						: null;
+					bundleColIds = (fromNode.outputColumns ?? [])
+						.map((c) => c.colId)
+						.filter((c) => !filter || filter.has(c));
+				} else if (fromNode?.type === 'process') {
+					bundleColIds = (fromNode.outputColumns ?? []).map((c) => c.colId);
+				}
+				const proc = toNodeObj.processObj;
+				const curIn = Array.isArray(proc?.args?.inIN)
+					? proc.args.inIN
+					: proc?.args?.inIN != null && proc.args.inIN >= 0
+						? [proc.args.inIN]
+						: [];
+				const types = new Set(bundleColIds.map((c) => getColumnById(c)?.type).filter(Boolean));
+				if (curIn.length) {
+					const t = getColumnById(curIn[0])?.type;
+					if (t) types.add(t);
+				}
+				if (types.size > 1) {
+					addNotification(
+						`${proc.displayName || proc.name} inputs must all be the same type — that bundle mixes ${[...types].join(' + ')}.`
+					);
+					return;
+				}
+			}
+
 			if (fromNode?.type === 'group') {
 				const g = fromNode.groupObj;
 				const all = g?.sourceColumnIds ?? [];
