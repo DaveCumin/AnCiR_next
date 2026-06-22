@@ -12,12 +12,16 @@
 			colour: { input: 'color', label: 'Colour', group: 'Line' },
 			strokeWidth: { label: 'Width', step: 0.5, group: 'Line' },
 			stroke: { input: 'select', options: ['solid', '5, 5', '2, 2', '5, 2'], label: 'Style', group: 'Line' },
-			draw: { label: 'Show', group: 'Line' }
+			draw: { label: 'Show', group: 'Line' },
+			joinGaps: { input: 'boolean', label: 'Join gaps', group: 'Line' }
 		};
 		colour = $state(getPaletteColor(0));
 		strokeWidth = $state(3);
 		stroke = $state('solid');
 		draw = $state(true);
+		// When false (default) the line breaks at missing (NaN) values, leaving a
+		// gap; when true it connects straight across the gap.
+		joinGaps = $state(false);
 
 		constructor(dataIN, parent) {
 			this.parentData = parent;
@@ -26,6 +30,7 @@
 			this.strokeWidth = dataIN?.strokeWidth ?? 3;
 			this.stroke = dataIN?.stroke ?? 'solid';
 			this.draw = dataIN?.draw ?? true;
+			this.joinGaps = dataIN?.joinGaps ?? false;
 		}
 
 		toJSON() {
@@ -33,7 +38,8 @@
 				colour: this.colour,
 				strokeWidth: this.strokeWidth,
 				stroke: this.stroke,
-				draw: this.draw
+				draw: this.draw,
+				joinGaps: this.joinGaps
 			};
 		}
 
@@ -42,7 +48,8 @@
 				colour: json.colour,
 				strokeWidth: json.strokeWidth,
 				stroke: json.stroke,
-				draw: json.draw
+				draw: json.draw,
+				joinGaps: json.joinGaps
 			});
 		}
 	}
@@ -87,21 +94,13 @@
 	let theline = $derived.by(() => {
 		if (!lineData?.draw || !x || !y) return null;
 
-		//filter out the NaNs and data outside the plot limits
-		const xlims = xscale.domain();
-		const [minX, maxX] = [Math.min(...xlims), Math.max(...xlims)];
-		const ylims = yscale.domain();
-		const [minY, maxY] = [Math.min(...ylims), Math.max(...ylims)];
+		const points = x.map((xVal, i) => ({ x: xVal, y: y[i] }));
+		const isValid = (d) => d.x != null && d.y != null && !isNaN(d.x) && !isNaN(d.y);
 
-		const filteredData = x
-			.map((xVal, i) => ({ x: xVal, y: y[i] }))
-			.filter(
-				(d) =>
-					d.x >= minX && d.x <= maxX && d.y != null && d.x != null && !isNaN(d.y) && !isNaN(d.x)
-			);
-
-		//No Line if only 1 or fewer points
-		if (filteredData.length < 2) return null;
+		// Valid points drive the "< 2 points → no line" guard and the hover quadtree
+		// (clipping to the visible area is handled by the clipPath in the markup).
+		const validData = points.filter(isValid);
+		if (validData.length < 2) return null;
 
 		let lineGenerator = line()
 			.x((d) => xscale(d.x))
@@ -116,10 +115,17 @@
 			qt = quadtree()
 				.x((d) => xscale(d.x) + xoffset)
 				.y((d) => yscale(d.y) + yoffset)
-				.addAll(filteredData);
+				.addAll(validData);
 		}
 
-		return lineGenerator(filteredData);
+		// Default: break the path at missing (NaN) values so gaps are left rather
+		// than bridged. "Join gaps" drops the missing points so the line connects
+		// straight across.
+		if (lineData.joinGaps) {
+			return lineGenerator(validData);
+		}
+		lineGenerator.defined(isValid);
+		return lineGenerator(points);
 	});
 
 	function handleHover(e) {
@@ -215,6 +221,12 @@
 							other={true}
 							placeholder={'eg 5, 5'}
 						/>
+					</div>
+				</div>
+				<div class="control-input-vertical">
+					<div class="control-input-checkbox">
+						<input type="checkbox" bind:checked={lineData.joinGaps} />
+						<p>Join across gaps (missing values)</p>
 					</div>
 				</div>
 			</div>
