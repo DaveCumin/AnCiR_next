@@ -626,6 +626,10 @@
 		core.plots[0].plot.data[1].y.refId = core.data[core.data.length - 1].id;
 
 		appState.loadingState.isLoading = false;
+
+		// Auto-tidy the freshly-seeded nodes (WorkflowEditor watches this counter
+		// and re-runs the layered layout once they've rendered + been measured).
+		appState.tidyLayoutRequest = (appState.tidyLayoutRequest ?? 0) + 1;
 	}
 
 	// TODO: Key Handling accessibility, e.g. ctrl+i == import

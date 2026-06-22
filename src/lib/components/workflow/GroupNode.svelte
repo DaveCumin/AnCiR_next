@@ -720,6 +720,8 @@
 		transform: translateY(-50%);
 		width: 13px;
 		height: 13px;
+		/* Lift above the node's rows so the "all" menu popover renders on top. */
+		z-index: 50;
 	}
 	.all-menu-popover {
 		position: absolute;

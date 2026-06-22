@@ -558,6 +558,35 @@
 		});
 	});
 
+	// Tidy-layout request (e.g. after the demo seed on cmd-shift-s): re-run the
+	// layered layout once the freshly-spawned nodes have settled. The demo adds
+	// nodes asynchronously (plots finish rendering after their workers), so poll
+	// until the node count stops changing, then tidy after a paint so the wrappers
+	// have measurable heights.
+	let _tidyWindowReq = -1;
+	let _tidyWindowUntil = 0;
+	let _tidyDebounceTimer = null;
+	$effect(() => {
+		const req = appState.tidyLayoutRequest;
+		const count = allNodes.length; // track so the effect re-runs as nodes appear
+		if (!req || count === 0) return;
+		untrack(() => {
+			// The demo adds nodes asynchronously (plots finish after their workers). A
+			// new request opens a window; every node-set change within it re-arms a
+			// debounced tidy, so the final tidy fires once the nodes stop changing —
+			// reading the live set + measuring rendered heights for a clean layout.
+			// (setTimeout, not requestAnimationFrame, which is paused for hidden tabs.)
+			const now = performance.now();
+			if (req !== _tidyWindowReq) {
+				_tidyWindowReq = req;
+				_tidyWindowUntil = now + 4000;
+			}
+			if (now > _tidyWindowUntil) return;
+			clearTimeout(_tidyDebounceTimer);
+			_tidyDebounceTimer = setTimeout(() => tidyLayout(), 350);
+		});
+	});
+
 	/**
 	 * Compute the canvas-coord of the current viewport centre, minus half a
 	 * default node so the spawn lands centred under the cursor's mental model.
@@ -1255,7 +1284,12 @@
 							}
 						};
 						for (const port of node.ports?.outputs ?? []) {
-							consider(port.name, pos.x + nw, pos.y + getPortAnchorY(node, port.name, 'out'), 'out');
+							consider(
+								port.name,
+								pos.x + nw,
+								pos.y + getPortAnchorY(node, port.name, 'out'),
+								'out'
+							);
 						}
 						for (const port of node.ports?.inputs ?? []) {
 							consider(port.name, pos.x, pos.y + getPortAnchorY(node, port.name, 'in'), 'in');
@@ -1870,7 +1904,8 @@
 		if (!proc) return;
 		proc.args = { ...proc.args, inIN: _procInputIds(proc).filter((id) => id !== c) };
 		const pc = core.data.find(
-			(col) => col.producerNodeId === `process_${proc.id}` && (col.producerPort || '') === `out_${c}`
+			(col) =>
+				col.producerNodeId === `process_${proc.id}` && (col.producerPort || '') === `out_${c}`
 		);
 		if (pc) removeColumn(pc.id);
 	}
@@ -2253,9 +2288,7 @@
 			const idx = g.dataPoints.findIndex((dp) => dp?.y?.refId === colId);
 			if (idx < 0) return;
 			const removedDp = g.dataPoints[idx];
-			const otherValidY = g.dataPoints.some(
-				(dp) => dp !== removedDp && (dp?.y?.refId ?? -1) >= 0
-			);
+			const otherValidY = g.dataPoints.some((dp) => dp !== removedDp && (dp?.y?.refId ?? -1) >= 0);
 			if (!otherValidY && (g.xRefId ?? -1) >= 0 && removedDp.y) {
 				removedDp.y.refId = -1;
 			} else {
@@ -2959,10 +2992,9 @@
 				{@const isMultiSelected = multiSelectedNodeIds.has(node.id)}
 				{@const isSelected = focusedNodeId === node.id || isMultiSelected}
 				{@const nodeZIndex = isDragging ? 30 : isExpanded ? 20 : 1}
-					{@const actionsRevealed = isSelected || actionsHoverId === node.id}
-					{@const clusterNoteId =
-						node.type !== 'group' && node.type !== 'composite' ? node.id : null}
-					{@const clusterHasNote = !!(clusterNoteId && core.nodeNotes[clusterNoteId]?.trim())}
+				{@const actionsRevealed = isSelected || actionsHoverId === node.id}
+				{@const clusterNoteId = node.type !== 'group' && node.type !== 'composite' ? node.id : null}
+				{@const clusterHasNote = !!(clusterNoteId && core.nodeNotes[clusterNoteId]?.trim())}
 				<!-- Expanded composites render as the bordered frame backdrop above,
 				     not as a node wrapper, so skip them here. -->
 				{#if pos && !(node.type === 'composite' && !compact)}

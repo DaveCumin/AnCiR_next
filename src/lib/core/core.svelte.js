@@ -276,6 +276,10 @@ export const appState = $state({
 	showDisplayPanel: false,
 	showControlPanel: false,
 
+	// Bumped to request a one-shot workflow auto-tidy (e.g. after the demo seed);
+	// WorkflowEditor watches this counter. Pre-declared so the effect subscribes.
+	tidyLayoutRequest: 0,
+
 	windowWidth: window.innerWidth,
 	windowHeight: window.innerHeight,
 	widthNavBar: 56,

@@ -20,10 +20,7 @@
 	import { getNodeName, setNodeName } from '$lib/core/nodeNaming.js';
 	import NodeNoteButton from './NodeNoteButton.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
-	import {
-		setGroupPortY,
-		clearGroupPortPositions
-	} from './groupPortPositions.svelte.js';
+	import { setGroupPortY, clearGroupPortPositions } from './groupPortPositions.svelte.js';
 
 	let {
 		node,
@@ -62,7 +59,9 @@
 			.filter((entry) => !!entry.col)
 	);
 
-	const allColumnIds = $derived(Array.isArray(tp?.args?.allColumnIds) ? tp.args.allColumnIds : null);
+	const allColumnIds = $derived(
+		Array.isArray(tp?.args?.allColumnIds) ? tp.args.allColumnIds : null
+	);
 	const allIsSubset = $derived(allColumnIds !== null);
 
 	let allMenuOpen = $state(false);
@@ -208,8 +207,7 @@
 		e.stopPropagation();
 	}
 
-	const NO_DRAG_SELECTOR =
-		'button, input, textarea, .port-dot, .editable-input';
+	const NO_DRAG_SELECTOR = 'button, input, textarea, .port-dot, .editable-input';
 
 	function onCardMouseDown(e) {
 		if (e.button !== 0) return;
@@ -292,7 +290,9 @@
 					onkeydown={onAllMenuKeydown}
 					onpointerdown={stopPointer}
 					onmousedown={stopPointer}
-					onwheel={(e) => { if (!e.ctrlKey && !e.metaKey) e.stopPropagation(); }}
+					onwheel={(e) => {
+						if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
+					}}
 				>
 					<div class="all-menu-title">Include in "all" output</div>
 					<div class="all-menu-list">
@@ -315,9 +315,11 @@
 							type="button"
 							class="all-menu-btn"
 							onclick={resetAllColumns}
-							disabled={!allIsSubset}
-						>Reset (all)</button>
-						<button type="button" class="all-menu-btn" onclick={() => (allMenuOpen = false)}>Close</button>
+							disabled={!allIsSubset}>Reset (all)</button
+						>
+						<button type="button" class="all-menu-btn" onclick={() => (allMenuOpen = false)}
+							>Close</button
+						>
 					</div>
 				</div>
 			{/if}
@@ -352,7 +354,9 @@
 
 		<div
 			class="tp-outputs"
-			onwheel={(e) => { if (!e.ctrlKey && !e.metaKey) e.stopPropagation(); }}
+			onwheel={(e) => {
+				if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
+			}}
 			role="presentation"
 		>
 			{#each outputColumns as { colId, col, port } (colId)}
@@ -373,7 +377,12 @@
 						<span class="row-type" title={meta.label}>
 							<Icon name={meta.icon} width={12} height={12} className="icon" />
 						</span>
-						<div class="row-name" onpointerdown={stopPointer} onmousedown={stopPointer} role="presentation">
+						<div
+							class="row-name"
+							onpointerdown={stopPointer}
+							onmousedown={stopPointer}
+							role="presentation"
+						>
 							<Editable
 								value={col.name}
 								placeholder="column"
@@ -536,6 +545,7 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		margin-left: var(--space-4);
 	}
 	.in-port {
 		position: absolute;
@@ -652,6 +662,9 @@
 		transform: translateY(-50%);
 		width: 13px;
 		height: 13px;
+		/* Lift above the node's output/input rows (position:relative, z-auto, and
+		   later in the DOM) so the "all" menu popover renders on top of them. */
+		z-index: 50;
 	}
 
 	.empty-hint {

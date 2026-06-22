@@ -806,8 +806,10 @@
 	}
 	.time-format-row {
 		display: flex;
-		align-items: center;
-		gap: var(--space-3);
+		/* The parent .control-input makes this a column, so flex-start left-aligns
+		   the "Time Format" label (centre would centre the shrink-to-fit label). */
+		align-items: flex-start;
+		gap: var(--space-1);
 		font-size: var(--font-sm);
 		padding: 2px 4px 4px;
 	}
