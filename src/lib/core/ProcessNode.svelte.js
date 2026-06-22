@@ -851,6 +851,54 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		}
 	}
 
+	// --- Collapse `all`-port bundles: when every output column of a node flows to
+	// the same target port, draw ONE edge from the node's `all` port instead of N
+	// per-column edges. (Wiring the all-port fans out to per-column connections;
+	// this re-bundles them visually.) Uses only connections + node ports. --------
+	{
+		const colGroups = new Map();
+		for (const c of connections) {
+			const m = /^col_(\d+)$/.exec(c.fromPort);
+			if (!m) continue;
+			const key = `${c.fromId}|${c.toId}|${c.toPort}`;
+			let g = colGroups.get(key);
+			if (!g) {
+				g = { fromId: c.fromId, toId: c.toId, toPort: c.toPort, type: c.type, cols: new Set(), conns: [] };
+				colGroups.set(key, g);
+			}
+			g.cols.add(Number(m[1]));
+			g.conns.push(c);
+		}
+		const drop = new Set();
+		const allEdges = [];
+		for (const g of colGroups.values()) {
+			if (g.cols.size < 2) continue;
+			// Per-series plot ports (xN / ysN / data) keep one edge per series — only
+			// bundle into flat collectors (tableplot `series`, table-process inputs).
+			const tnode = nodeMap.get(g.toId);
+			if (tnode?.meta?.type === 'plot' && g.toPort !== 'series') continue;
+			const node = nodeMap.get(g.fromId);
+			const outs = node?.ports?.outputs ?? [];
+			if (!outs.some((p) => p.name === 'all')) continue;
+			const nodeCols = new Set();
+			for (const p of outs) {
+				const mm = /^col_(\d+)$/.exec(p.name);
+				if (mm) nodeCols.add(Number(mm[1]));
+			}
+			// Collapse only when EVERY output column flows to this one target port.
+			if (nodeCols.size !== g.cols.size) continue;
+			if (![...nodeCols].every((id) => g.cols.has(id))) continue;
+			for (const c of g.conns) drop.add(c);
+			allEdges.push({ fromId: g.fromId, fromPort: 'all', toId: g.toId, toPort: g.toPort, type: g.type });
+		}
+		if (drop.size) {
+			const kept = connections.filter((c) => !drop.has(c));
+			kept.push(...allEdges);
+			connections.length = 0;
+			connections.push(...kept);
+		}
+	}
+
 	const changedNodeIds = [];
 	const nextKeys = new Map();
 

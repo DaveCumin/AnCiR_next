@@ -2200,6 +2200,17 @@
 	 * tp→its-output-column) we no-op rather than tear out the surrounding node.
 	 */
 	function removeEdge(edge) {
+		// A merged `all`-port edge stands in for every output column → remove them
+		// all (the inverse of the all-port fan-out) by deleting each per-column edge.
+		if (edge.fromPort === 'all') {
+			const fromNode = allNodes.find((n) => n.id === edge.fromId);
+			const colPorts = (fromNode?.ports?.outputs ?? [])
+				.map((p) => p.name)
+				.filter((name) => /^col_\d+$/.test(name));
+			for (const port of colPorts) removeEdge({ ...edge, fromPort: port });
+			return;
+		}
+
 		const target = allNodes.find((n) => n.id === edge.toId);
 		if (!target) return;
 

@@ -238,6 +238,26 @@ describe('plot wiring edge cases', () => {
 		expect(toPlot.every((c) => c.toPort === 'data')).toBe(true);
 		expect(toPlot.length).toBe(2);
 	});
+
+	it('collapses an all-output bundle into a single all-port edge (tableplot series)', () => {
+		const core = makeCore();
+		core.plots.push({ id: 50, type: 'tableplot', plot: { columnRefs: [100, 101] } });
+		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
+		const toTable = graph.connections.filter((c) => c.toId === 'plot_50' && c.toPort === 'series');
+		// Both of the TP's outputs flow to the table → one edge from its `all` port.
+		expect(toTable.length).toBe(1);
+		expect(toTable[0].fromId).toBe('tableprocess_5');
+		expect(toTable[0].fromPort).toBe('all');
+	});
+
+	it('does NOT collapse when only some of a node’s outputs feed the target', () => {
+		const core = makeCore();
+		core.plots.push({ id: 51, type: 'tableplot', plot: { columnRefs: [100] } });
+		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
+		const toTable = graph.connections.filter((c) => c.toId === 'plot_51' && c.toPort === 'series');
+		expect(toTable.length).toBe(1);
+		expect(toTable[0].fromPort).toBe('col_100'); // single column → not bundled
+	});
 });
 
 describe('process-chain + token-input wiring', () => {
