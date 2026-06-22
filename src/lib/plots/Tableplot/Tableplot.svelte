@@ -386,8 +386,11 @@
 		}
 		if (col.type === 'time' && !col.isReferencial() && col.compression !== 'awd') {
 			const rawArr = core.rawData.get(col.data);
-			if (Array.isArray(rawArr)) {
-				const v = rawArr[i];
+			// Source columns carry a raw series; producer/derived time columns don't,
+			// so fall back to getData() (UNIX ms) to still render dates.
+			const timeArr = Array.isArray(rawArr) ? rawArr : col.getData();
+			if (Array.isArray(timeArr)) {
+				const v = timeArr[i];
 				const hours = col.hoursSinceStart?.[i];
 				const hoursStr = Number.isFinite(hours) ? hours.toFixed(dp) : String(hours ?? '');
 				const raw = typeof v === 'number' ? formatTimeFromUNIX(v) : v;

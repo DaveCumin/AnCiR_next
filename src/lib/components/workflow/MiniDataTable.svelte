@@ -19,8 +19,18 @@
 	// Raw stored series (used for the time/bin formatting, mirroring the tableplot).
 	const rawArr = $derived(isTime || isBin ? core.rawData.get(column?.data) : null);
 	const data = $derived(typeof column?.getData === 'function' ? column.getData() : []);
+	// Time source: the raw stored series for source columns, else getData() (UNIX
+	// ms) so producer/derived time columns (which carry no rawData) still render as
+	// dates rather than raw numbers.
+	const timeArr = $derived(
+		isTime ? (Array.isArray(rawArr) ? rawArr : Array.isArray(data) ? data : null) : null
+	);
 	const total = $derived(
-		(isTime || isBin) && Array.isArray(rawArr) ? rawArr.length : data?.length ?? 0
+		isTime && Array.isArray(timeArr)
+			? timeArr.length
+			: isBin && Array.isArray(rawArr)
+				? rawArr.length
+				: (data?.length ?? 0)
 	);
 	const previewN = $derived(Math.min(maxRows, total));
 
@@ -53,8 +63,8 @@
 			return { raw: (x + binStep / 2).toFixed(DP), computed: rangeStr, isTime: true, unit: 'hrs' };
 		}
 		// Time: readable time with hours-since-start underneath.
-		if (isTime && Array.isArray(rawArr)) {
-			const v = rawArr[i];
+		if (isTime && Array.isArray(timeArr)) {
+			const v = timeArr[i];
 			const hours = column.hoursSinceStart?.[i];
 			const hoursStr = Number.isFinite(hours) ? hours.toFixed(DP) : String(hours ?? '');
 			const raw = typeof v === 'number' ? formatTimeFromUNIX(v) : v;

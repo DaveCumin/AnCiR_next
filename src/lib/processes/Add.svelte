@@ -23,10 +23,21 @@
 	import ProcessShell from '$lib/core/ProcessShell.svelte';
 
 	let { p = $bindable() } = $props();
+
+	// When the wired input is a time column, getData() is in UNIX ms, so the value
+	// to add is a duration: offer mins / hrs / days and store it in ms (the factors
+	// below), which `add` then adds straight onto the timestamps. Numeric inputs
+	// keep the plain value. The unit choice follows the input column's type.
+	const TIME_UNITS = { default: 'hrs', mins: 60000, hrs: 3600000, days: 86400000 };
+	let isTimeInput = $derived(p?.inputCol?.type === 'time');
 </script>
 
 <ProcessShell {p}>
-	<NumberWithUnits bind:value={p.args.value} step="0.01" />
+	{#if isTimeInput}
+		<NumberWithUnits bind:value={p.args.value} step="0.01" units={TIME_UNITS} />
+	{:else}
+		<NumberWithUnits bind:value={p.args.value} step="0.01" />
+	{/if}
 </ProcessShell>
 
 <style>
