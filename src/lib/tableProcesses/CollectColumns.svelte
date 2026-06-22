@@ -9,7 +9,6 @@
 		['colIds', { val: [] }],
 		['out', {}],
 		['outColIds', { val: [] }],
-		['tableProcesses', { val: [] }],
 		['preProcesses', { val: [] }],
 		['valid', { val: false }]
 	]);
@@ -138,17 +137,6 @@
 
 	let selectedColIds = $state(p.args.colIds ?? []);
 
-	// Exclude tp output IDs from the input column selector
-	let tpExcludeIds = $derived.by(() => {
-		const ids = [];
-		for (const tp of p.args.tableProcesses ?? []) {
-			for (const colId of Object.values(tp.args?.out ?? {})) {
-				if (colId >= 0) ids.push(colId);
-			}
-		}
-		return ids;
-	});
-
 	let getHash = $derived.by(() => {
 		let h = '';
 		for (const colId of p.args.colIds ?? []) {
@@ -165,9 +153,6 @@
 		}
 		h += preProcessProcs
 			.map((proc) => `${proc?.name ?? ''}:${JSON.stringify(proc?.args ?? {})}`)
-			.join('|');
-		h += (p.args.tableProcesses ?? [])
-			.map((tp) => tp.type + JSON.stringify(tp.args) + (tp.excludedColIds ?? []).join(','))
 			.join('|');
 		return h;
 	});
@@ -257,95 +242,6 @@
 		doCollect();
 	}
 
-	// ─── Table process constants ───────────────────────────────────────────────
-
-	// Keys in TP defaults that are infrastructure, not user-facing parameters
-	const _TP_INFRA_KEYS = new Set([
-		'xIN',
-		'yIN',
-		'out',
-		'valid',
-		'forcollected',
-		'collectedType',
-		'outputX'
-	]);
-
-	// Overrides applied on top of TP defaults when used in collected mode
-	const _COLLECTED_OVERRIDES = {
-		cosinor: { useFixedPeriod: true, Ncurves: 1 },
-		bin: { binSize: 1, stepSize: 1 }
-	};
-
-	/** Build a map from collectedType → { component, paramDefaults } from the global tableProcessMap */
-	let collectedTPMap = $derived.by(() => {
-		const map = {};
-		for (const [, entry] of appConsts.tableProcessMap) {
-			const defs = entry.defaults;
-			if (!defs?.get?.('forcollected')?.val) continue;
-			const cType = defs.get('collectedType')?.val;
-			if (!cType) continue;
-			// Extract parameter-only defaults
-			const params = {};
-			for (const [key, def] of defs) {
-				if (_TP_INFRA_KEYS.has(key)) continue;
-				params[key] = def.val ?? def;
-			}
-			// Apply collected-mode overrides
-			const overrides = _COLLECTED_OVERRIDES[cType] ?? {};
-			map[cType] = {
-				component: entry.component,
-				displayName: entry.displayName,
-				paramDefaults: { ...params, ...overrides },
-				xOutKey: entry.xOutKey ?? null,
-				yOutKeyPrefix: entry.yOutKeyPrefix ?? null
-			};
-		}
-		return map;
-	});
-
-	function addTableProcess(type) {
-		if (!type || !collectedTPMap[type]) return;
-		const activeOutColIds = [...(p.args.outColIds ?? [])];
-		const tp = {
-			id: crypto.randomUUID(),
-			type,
-			xColId: -1,
-			excludedColIds: [],
-			args: {
-				...collectedTPMap[type].paramDefaults,
-				xIN: -1,
-				yIN: activeOutColIds,
-				out: {},
-				valid: false
-			}
-		};
-		p.args.tableProcesses = [...p.args.tableProcesses, tp];
-	}
-
-	function removeTableProcess(idx) {
-		const tp = p.args.tableProcesses[idx];
-		// Remove all output columns stored in tp.args.out
-		for (const colId of Object.values(tp.args?.out ?? {})) {
-			if (colId != null && colId >= 0) {
-				core.rawData.delete(colId);
-				removeColumn(colId);
-			}
-		}
-		p.args.tableProcesses = p.args.tableProcesses.filter((_, i) => i !== idx);
-	}
-
-	function toggleExcludeForTp(tpIdx, colId) {
-		const tp = p.args.tableProcesses[tpIdx];
-		const excluded = tp.excludedColIds ?? [];
-		const newExcluded = excluded.includes(colId)
-			? excluded.filter((id) => id !== colId)
-			: [...excluded, colId];
-		tp.excludedColIds = newExcluded;
-		const outColIds = p.args.outColIds ?? p.args.colIds ?? [];
-		tp.args.yIN = outColIds.filter((id) => !newExcluded.includes(id));
-		p.args.tableProcesses = [...p.args.tableProcesses];
-	}
-
 	function doCollect() {
 		if (p.parent && (p.args.colIds?.length ?? 0) > 0) {
 			for (const colId of p.args.colIds) {
@@ -365,89 +261,13 @@
 		}
 
 		[collectResult, p.args.valid] = collectcolumns(p.args);
-
-		// Update xIN / yIN for each table process after collect
-		const newOutColIds = [...(p.args.outColIds ?? [])];
-		for (const tp of p.args.tableProcesses ?? []) {
-			tp.args.xIN = tp.xColId >= 0 ? tp.xColId : -1;
-			const excluded = tp.excludedColIds ?? [];
-			tp.args.yIN = newOutColIds.filter((id) => !excluded.includes(id));
-		}
-		if ((p.args.tableProcesses ?? []).length > 0) {
-			p.args.tableProcesses = [...p.args.tableProcesses];
-		}
 	}
 
 	onMount(() => {
 		if (!p.args.preProcesses) p.args.preProcesses = [];
-		if (!p.args.tableProcesses) p.args.tableProcesses = [];
 		if (!p.args.colIds) p.args.colIds = [];
 		if (!p.args.out) p.args.out = {};
 		if (!p.args.outColIds) p.args.outColIds = [];
-
-		// Migrate old tp structures to new format: { args: { ..., xIN, yIN, out, valid } }
-		const _TP_X_KEY = {
-			cosinor: 'cosinorx',
-			bin: 'binnedx',
-			smooth: 'smoothedx',
-			trend: 'trendx',
-			rectwave: 'rectwavex',
-			dlog: 'dlogx'
-		};
-		const _TP_Y_PREFIX = {
-			cosinor: 'cosinory_',
-			bin: 'binnedy_',
-			smooth: 'smoothedy_',
-			trend: 'trendy_',
-			rectwave: 'rectwavey_',
-			dlog: 'dlogy_'
-		};
-		for (const tp of p.args.tableProcesses) {
-			if (!tp.id) tp.id = crypto.randomUUID();
-			if (tp.xColId === undefined) tp.xColId = -1;
-			if (!tp.args) tp.args = {};
-			// Very-old format: out[colId] = { xOutId, yOutId }
-			if (tp.xOutId === undefined && typeof Object.values(tp.out ?? {})[0] === 'object') {
-				const firstPair = Object.values(tp.out ?? {}).find((v) => v && typeof v === 'object');
-				tp.xOutId = firstPair?.xOutId ?? -1;
-				const flatOut = {};
-				let first = true;
-				for (const [colIdStr, pair] of Object.entries(tp.out ?? {})) {
-					if (pair && typeof pair === 'object') {
-						if (!first && pair.xOutId >= 0) {
-							core.rawData.delete(pair.xOutId);
-							removeColumn(pair.xOutId);
-						}
-						flatOut[colIdStr] = pair.yOutId ?? -1;
-						first = false;
-					} else {
-						flatOut[colIdStr] = pair;
-					}
-				}
-				tp.out = flatOut;
-			}
-			// Mid-old format: xOutId at tp level, out[colId] = yId
-			if ('xOutId' in tp) {
-				const xKey = _TP_X_KEY[tp.type] ?? 'x_out';
-				const yPrefix = _TP_Y_PREFIX[tp.type] ?? 'y_out_';
-				const migrOut = {};
-				migrOut[xKey] = tp.xOutId ?? -1;
-				for (const [colId, yId] of Object.entries(tp.out ?? {})) {
-					migrOut[yPrefix + colId] = yId;
-				}
-				tp.args.out = migrOut;
-				tp.args.yIN = [];
-				tp.args.xIN = tp.xColId >= 0 ? tp.xColId : -1;
-				tp.args.valid = false;
-				delete tp.xOutId;
-				delete tp.out;
-			}
-			// Ensure required fields exist
-			if (!tp.args.out) tp.args.out = {};
-			if (!tp.args.yIN) tp.args.yIN = [];
-			if (tp.args.xIN === undefined) tp.args.xIN = tp.xColId >= 0 ? tp.xColId : -1;
-			if (tp.args.valid === undefined) tp.args.valid = false;
-		}
 
 		const firstOutId = Object.values(p.args.out ?? {}).find((v) => typeof v === 'number' && v >= 0);
 		if (
@@ -475,19 +295,6 @@
 			if (!inputsAreStale) lastHash = getHash;
 		}
 
-		// Sync xIN/yIN for each table process from current state
-		if (p.args.valid) {
-			const initOutColIds = [...(p.args.outColIds ?? [])];
-			for (const tp of p.args.tableProcesses ?? []) {
-				tp.args.xIN = tp.xColId >= 0 ? tp.xColId : -1;
-				const excluded = tp.excludedColIds ?? [];
-				tp.args.yIN = initOutColIds.filter((id) => !excluded.includes(id));
-			}
-			if ((p.args.tableProcesses ?? []).length > 0) {
-				p.args.tableProcesses = [...p.args.tableProcesses];
-			}
-		}
-
 		preProcessProcs = p.args.preProcesses.map((pp) =>
 			pp.processName
 				? new Process({ name: pp.processName, args: pp.processArgs }, _dummyParentCol)
@@ -503,7 +310,7 @@
 	<div class="tableProcess-label"><span>Input columns</span></div>
 	<div class="control-input-vertical">
 		<p class="hint">Ctrl/Cmd-click or Shift-click to select multiple columns</p>
-		<ColumnSelector multiple={true} bind:value={selectedColIds} excludeColIds={tpExcludeIds} />
+		<ColumnSelector multiple={true} bind:value={selectedColIds} />
 	</div>
 </div>
 
@@ -562,82 +369,6 @@
 		</div>
 	</div>
 </details>
-
-<!-- Table Processes Section -->
-{#if p.args.valid}
-	<div class="section-row">
-		<div class="tableProcess-label"><span>Table processes</span></div>
-		<div class="control-input-vertical">
-			{#each p.args.tableProcesses as tp, tpIdx (tpIdx)}
-				<div class="tp-block">
-					<div class="tp-header">
-						<span class="tp-title">{collectedTPMap[tp.type]?.displayName ?? tp.type}</span>
-						<button class="remove-btn" onclick={() => removeTableProcess(tpIdx)} title="Remove"
-							>×</button
-						>
-					</div>
-
-					<!-- X-axis column selector -->
-					<div class="control-input">
-						<p>X column</p>
-						<ColumnSelector
-							bind:value={tp.xColId}
-							allowNone={true}
-							onChange={() => {
-								tp.args.xIN = tp.xColId >= 0 ? tp.xColId : -1;
-								p.args.tableProcesses = [...p.args.tableProcesses];
-							}}
-						/>
-					</div>
-
-					<!-- Type-specific parameters (rendered by the TP component) -->
-					{#if collectedTPMap[tp.type]?.component}
-						{@const DynamicTP = collectedTPMap[tp.type].component}
-						<DynamicTP p={{ id: tp.id, args: tp.args, parent: p.parent }} hideInputs={true} />
-					{/if}
-
-					<!-- Column checklist (include/exclude) -->
-					{#if (p.args.outColIds?.length ?? 0) > 0 || (p.args.colIds?.length ?? 0) > 0}
-						{@const checkColIds =
-							(p.args.outColIds?.length ?? 0) > 0 ? p.args.outColIds : (p.args.colIds ?? [])}
-						{@const excluded = tp.excludedColIds ?? []}
-						{@const nActive = checkColIds.length - excluded.length}
-						<div class="control-input-vertical">
-							<p>Columns ({nActive} of {checkColIds.length} included)</p>
-							<div class="col-checklist">
-								{#each checkColIds as colId (colId)}
-									{@const col = getColumnById(colId)}
-									{@const included = !excluded.includes(colId)}
-									<label class="col-check-item">
-										<input
-											type="checkbox"
-											checked={included}
-											onchange={() => toggleExcludeForTp(tpIdx, colId)}
-										/>
-										{col?.name ?? `col ${colId}`}
-									</label>
-								{/each}
-							</div>
-						</div>
-					{/if}
-				</div>
-			{/each}
-
-			<select
-				class="add-tp-select"
-				onchange={(e) => {
-					addTableProcess(e.target.value);
-					e.target.value = '';
-				}}
-			>
-				<option value="">+ Add analysis…</option>
-				{#each Object.entries(collectedTPMap) as [cType, entry] (cType)}
-					<option value={cType}>{entry.displayName}</option>
-				{/each}
-			</select>
-		</div>
-	</div>
-{/if}
 
 <style>
 	.hint {
@@ -698,34 +429,4 @@
 		color: var(--color-lightness-25, #333);
 	}
 
-	.add-tp-select {
-		font-size: var(--font-sm);
-		padding: 0.3rem 0.4rem;
-		border: 1px dashed var(--color-lightness-75, #aaa);
-		border-radius: var(--radius-sm);
-		background: none;
-		cursor: pointer;
-		color: var(--color-lightness-45, #666);
-		width: 100%;
-	}
-
-	.col-checklist {
-		display: flex;
-		flex-direction: column;
-		gap: 0.1rem;
-		max-height: 150px;
-		overflow-y: auto;
-		border: 1px solid var(--color-lightness-85);
-		border-radius: var(--radius-sm);
-		padding: var(--space-2) 0.4rem;
-	}
-
-	.col-check-item {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		font-size: var(--font-sm);
-		cursor: pointer;
-		padding: 0.1rem 0;
-	}
 </style>

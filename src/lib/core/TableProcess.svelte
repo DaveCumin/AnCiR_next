@@ -77,17 +77,6 @@
 			core.data = core.data.filter((c) => c.id !== colID);
 		});
 
-		// Step 2g: Remove output columns from any sub-TPs in args.tableProcesses
-		for (const subTP of tableProcess.args?.tableProcesses ?? []) {
-			for (const colId of Object.values(subTP.args?.out ?? {})) {
-				if (colId != null && colId >= 0) {
-					removeColumnFromPlots(colId);
-					removeColumn(colId);
-					core.data = core.data.filter((c) => c.id !== colId);
-				}
-			}
-		}
-
 		// Step 3: Remove the TP itself from core.tableProcesses.
 		core.tableProcesses = core.tableProcesses.filter((tp) => tp.id !== tableProcess.id);
 

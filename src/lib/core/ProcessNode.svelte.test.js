@@ -169,26 +169,6 @@ describe('TableProcess inline output columns', () => {
 		expect(inNames).toContain('ys2');
 	});
 
-	it('handles nested TP output columns the same way', () => {
-		const core = makeCore();
-		core.tableProcesses[0].args.tableProcesses.push({
-			id: 9,
-			type: 'fakeTP',
-			args: { xIN: 1, yIN: [], out: { xOut: 200 }, tableProcesses: [] }
-		});
-		core.data.push({ id: 200, name: 'nested out', refId: null, processes: [] });
-		// Make the nested entry discoverable via collectedType lookup.
-		const appConsts = makeAppConsts();
-		appConsts.tableProcessMap.get('fakeTP').defaults = new Map([
-			['collectedType', { val: 'fakeTP' }]
-		]);
-		const graph = getCachedProcessNodeGraph(core, appConsts);
-		const ids = graph.nodes.map((n) => n.id);
-		expect(ids).not.toContain('data_200');
-		const nested = graph.nodes.find((n) => n.id === 'tableprocess_nested_9');
-		expect(nested.ports.outputs.map((p) => p.name)).toContain('col_200');
-		expect(nested.outputColumns).toEqual([{ key: 'xOut', colId: 200, port: 'col_200' }]);
-	});
 });
 
 describe('plot wiring edge cases', () => {
