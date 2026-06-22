@@ -174,6 +174,7 @@
 	// Read-only type icon (mirrors GroupNode).
 	const TYPE_ICON = {
 		number: { icon: 'math', label: 'Numeric' },
+		category: { icon: 'list', label: 'Category' },
 		time: { icon: 'clock', label: 'Time' },
 		bin: { icon: 'table', label: 'Bin' }
 	};

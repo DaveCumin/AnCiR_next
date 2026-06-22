@@ -214,10 +214,11 @@
 		if (group) clearGroupPortPositions(group.id);
 	});
 
-	// Type icon lookup. AnCiR columns use 'number' / 'time' / 'bin'; map onto
-	// the icons we have. Unknown types fall back to math.
+	// Type icon lookup. AnCiR columns use 'number' / 'category' / 'time' / 'bin';
+	// map onto the icons we have. Unknown types fall back to math.
 	const TYPE_ICON = {
 		number: { icon: 'math', label: 'Numeric' },
+		category: { icon: 'list', label: 'Category' },
 		time: { icon: 'clock', label: 'Time' },
 		bin: { icon: 'table', label: 'Bin' }
 	};
