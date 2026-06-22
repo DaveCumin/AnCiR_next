@@ -1417,6 +1417,11 @@
 			return -1;
 		}
 		if (node.type === 'process') {
+			// Free (orphan) process: each output is a producer column keyed by its
+			// producerPort (out_<inputColId>). Resolve via the node's outputColumns
+			// so removeEdge/splice can find the column behind an out_ / all edge.
+			const oc = (node.outputColumns ?? []).find((o) => o.port === portName);
+			if (oc) return oc.colId;
 			const parent = core.data.find((c) => (c.processes ?? []).some((p) => p.id === node.refId));
 			if (!parent) return -1;
 			// If a tap exists at this process step, downstream wires reference the
@@ -1497,6 +1502,14 @@
 				}
 				return;
 			}
+			// Free (orphan) process `all` port: fan out over its producer columns,
+			// wiring each via its own producerPort (out_<inputColId>).
+			if (fromNode?.type === 'process') {
+				for (const oc of fromNode.outputColumns ?? []) {
+					applyConnection(fromNodeId, oc.port, toNodeId, toPort);
+				}
+				return;
+			}
 		}
 
 		// Process output → non-process target: this is a tap. Reuse or create a
@@ -1546,6 +1559,17 @@
 					: proc.args?.inIN != null && proc.args.inIN >= 0
 						? [proc.args.inIN]
 						: [];
+				// Same-type inputs only: a free process fans one shared operation out
+				// over every input, so mixing column types (e.g. number + time, which
+				// take different value units) isn't meaningful. Reject a mismatch.
+				const newType = core.data.find((c) => c.id === colId)?.type;
+				const existingType = cur.length ? getColumnById(cur[0])?.type : null;
+				if (existingType != null && newType != null && existingType !== newType) {
+					addNotification(
+						`${proc.displayName || proc.name} inputs must all be the same type (already ${existingType}).`
+					);
+					return;
+				}
 				const ops = [];
 				if (!cur.includes(colId)) {
 					ops.push({
@@ -2206,7 +2230,7 @@
 			const fromNode = allNodes.find((n) => n.id === edge.fromId);
 			const colPorts = (fromNode?.ports?.outputs ?? [])
 				.map((p) => p.name)
-				.filter((name) => /^col_\d+$/.test(name));
+				.filter((name) => /^(?:col|out)_\d+$/.test(name));
 			for (const port of colPorts) removeEdge({ ...edge, fromPort: port });
 			return;
 		}

@@ -453,14 +453,18 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			(c) => c.producerNodeId === procNodeId && c.refId == null && c.data == null
 		);
 		const fallbackIn = Array.isArray(p.args?.inIN) ? p.args.inIN[0] : p.args?.inIN;
+		const colOutputs = producerCols.map((pc) => {
+			const port = makeNodePort(pc.producerPort || 'output', 'output', 'column', false);
+			const m = /^out_(\d+)$/.exec(pc.producerPort || '');
+			const inId = m ? Number(m[1]) : fallbackIn;
+			port.display = (core.data ?? []).find((c) => c.id === inId)?.name ?? port.name;
+			return port;
+		});
+		// Multi-output free processes get an `all` bundle port too (like TP nodes).
 		const outputs = producerCols.length
-			? producerCols.map((pc) => {
-					const port = makeNodePort(pc.producerPort || 'output', 'output', 'column', false);
-					const m = /^out_(\d+)$/.exec(pc.producerPort || '');
-					const inId = m ? Number(m[1]) : fallbackIn;
-					port.display = (core.data ?? []).find((c) => c.id === inId)?.name ?? port.name;
-					return port;
-				})
+			? producerCols.length > 1
+				? [makeNodePort('all', 'output', 'column', true), ...colOutputs]
+				: colOutputs
 			: [makeNodePort('output', 'output', 'column', true)];
 		const ports = { inputs: [makeNodePort('input', 'input', 'column', true)], outputs };
 		// Render free process nodes like TableProcess nodes: inline output-column
@@ -858,7 +862,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	{
 		const colGroups = new Map();
 		for (const c of connections) {
-			const m = /^col_(\d+)$/.exec(c.fromPort);
+			const m = /^(?:col|out)_(\d+)$/.exec(c.fromPort);
 			if (!m) continue;
 			const key = `${c.fromId}|${c.toId}|${c.toPort}`;
 			let g = colGroups.get(key);
@@ -882,7 +886,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			if (!outs.some((p) => p.name === 'all')) continue;
 			const nodeCols = new Set();
 			for (const p of outs) {
-				const mm = /^col_(\d+)$/.exec(p.name);
+				const mm = /^(?:col|out)_(\d+)$/.exec(p.name);
 				if (mm) nodeCols.add(Number(mm[1]));
 			}
 			// Collapse only when EVERY output column flows to this one target port.

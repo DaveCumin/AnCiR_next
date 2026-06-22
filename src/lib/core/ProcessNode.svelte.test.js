@@ -258,6 +258,32 @@ describe('plot wiring edge cases', () => {
 		expect(toTable.length).toBe(1);
 		expect(toTable[0].fromPort).toBe('col_100'); // single column → not bundled
 	});
+
+	it('gives a multi-output free process an `all` port and collapses its bundle', () => {
+		const core = makeCore();
+		core.orphanProcesses.push({ id: 9, name: 'Add', displayName: 'Add', args: { inIN: [1, 100], value: 0 } });
+		core.data.push(
+			{ id: 200, name: 'A → Add', producerNodeId: 'process_9', producerPort: 'out_1', refId: null, processes: [] },
+			{ id: 201, name: 'X → Add', producerNodeId: 'process_9', producerPort: 'out_100', refId: null, processes: [] }
+		);
+		core.plots.push({ id: 60, type: 'tableplot', plot: { columnRefs: [200, 201] } });
+		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
+		const proc = graph.nodes.find((n) => n.id === 'process_9');
+		expect(proc.ports.outputs.map((p) => p.name)).toContain('all');
+		const toTable = graph.connections.filter((c) => c.toId === 'plot_60' && c.toPort === 'series');
+		expect(toTable.length).toBe(1);
+		expect(toTable[0].fromId).toBe('process_9');
+		expect(toTable[0].fromPort).toBe('all');
+	});
+
+	it('a single-output free process has no `all` port', () => {
+		const core = makeCore();
+		core.orphanProcesses.push({ id: 8, name: 'Add', displayName: 'Add', args: { inIN: [1], value: 0 } });
+		core.data.push({ id: 210, name: 'A → Add', producerNodeId: 'process_8', producerPort: 'out_1', refId: null, processes: [] });
+		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
+		const proc = graph.nodes.find((n) => n.id === 'process_8');
+		expect(proc.ports.outputs.map((p) => p.name)).not.toContain('all');
+	});
 });
 
 describe('process-chain + token-input wiring', () => {
