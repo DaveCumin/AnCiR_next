@@ -868,19 +868,39 @@
 	function distributeSelectedNodes(axis) {
 		applyNodePositions(distributeBoxes(selectedNodeBoxes(), axis));
 	}
+	// Measure a node's actual rendered height (canvas coordinates). offsetHeight is
+	// the untransformed layout height, so it's unaffected by the canvas zoom and
+	// already includes the expanded editor panel / plot preview / note body — which
+	// the cheap port-area estimate used for initial placement does not. Falls back
+	// to the estimate when the element isn't in the DOM (e.g. expanded composites).
+	function measureNodeHeight(node) {
+		if (typeof document !== 'undefined') {
+			const el = document.querySelector(`[data-node-id="${CSS.escape(node.id)}"]`);
+			if (el?.offsetHeight) return el.offsetHeight;
+		}
+		return getNodeRenderHeight(node);
+	}
+
 	// Re-run the topological layered layout for every node, restoring the clean
-	// left-to-right DAG arrangement (the same engine used on first load).
+	// left-to-right DAG arrangement. Same column (layer) assignment as the initial
+	// engine, but each column is re-stacked using measured node heights so expanded
+	// nodes no longer overlap the node below them.
 	function tidyLayout() {
-		const defs = defaultPositions.positions;
+		const layers = computeNodeLayers(allNodes, edgeTopology);
+		const layerOffsets = {};
+		const GAP = 24;
 		for (const node of allNodes) {
-			const d = defs[node.id];
-			if (!d) continue;
+			const layer = layers.get(node.id) ?? 0;
+			if (layerOffsets[layer] == null) layerOffsets[layer] = 0;
+			const x = layer * COL_WIDTH + PADDING;
+			const y = layerOffsets[layer] + PADDING;
 			if (stablePositions[node.id]) {
-				stablePositions[node.id].x = d.x;
-				stablePositions[node.id].y = d.y;
+				stablePositions[node.id].x = x;
+				stablePositions[node.id].y = y;
 			} else {
-				stablePositions[node.id] = { ...d };
+				stablePositions[node.id] = { x, y };
 			}
+			layerOffsets[layer] += measureNodeHeight(node) + GAP;
 		}
 	}
 
