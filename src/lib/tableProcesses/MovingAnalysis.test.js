@@ -63,12 +63,12 @@ beforeEach(() => {
 	Object.keys(mockColumns).forEach((k) => delete mockColumns[k]);
 });
 
-describe('getStatKeys', () => {
-	it('returns periodogram stats', () => {
+describe('getStatKeys', async () => {
+	it('returns periodogram stats', async () => {
 		expect(getStatKeys({ analysis: 'periodogram' })).toEqual(['peak_period', 'peak_power']);
 	});
 
-	it('returns fixed cosinor stats with expected harmonic keys', () => {
+	it('returns fixed cosinor stats with expected harmonic keys', async () => {
 		const keys = getStatKeys({ analysis: 'cosinor', useFixedPeriod: true, nHarmonics: 2 });
 		expect(keys).toContain('mesor');
 		expect(keys).toContain('H1_amplitude');
@@ -78,7 +78,7 @@ describe('getStatKeys', () => {
 		expect(keys).toContain('pvalue');
 	});
 
-	it('returns free cosinor stats scaled by Ncurves', () => {
+	it('returns free cosinor stats scaled by Ncurves', async () => {
 		const keys = getStatKeys({
 			analysis: 'cosinor',
 			useFixedPeriod: false,
@@ -90,7 +90,7 @@ describe('getStatKeys', () => {
 	});
 });
 
-describe('movinganalysis', () => {
+describe('movinganalysis', async () => {
 	const baseArgs = {
 		xIN: -1,
 		yIN: [],
@@ -112,17 +112,17 @@ describe('movinganalysis', () => {
 		out: { movex: -1 }
 	};
 
-	it('returns invalid when inputs are missing', () => {
-		const [, valid] = movinganalysis({ ...baseArgs });
+	it('returns invalid when inputs are missing', async () => {
+		const [, valid] = await movinganalysis({ ...baseArgs });
 		expect(valid).toBe(false);
 	});
 
-	it('returns invalid when data span is shorter than the window', () => {
+	it('returns invalid when data span is shorter than the window', async () => {
 		const t = [0, 1, 2, 3, 4]; // 4 hrs total
 		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
-		const [, valid] = movinganalysis({
+		const [, valid] = await movinganalysis({
 			...baseArgs,
 			xIN: 1,
 			yIN: [2],
@@ -132,14 +132,14 @@ describe('movinganalysis', () => {
 		expect(valid).toBe(false);
 	});
 
-	it('produces one bin per window for periodogram and picks peak near 24h', () => {
+	it('produces one bin per window for periodogram and picks peak near 24h', async () => {
 		const n = 240; // 240 samples, 1 hr apart → 240 hrs
 		const t = Array.from({ length: n }, (_, i) => i);
 		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
 
-		const [result, valid] = movinganalysis({
+		const [result, valid] = await movinganalysis({
 			...baseArgs,
 			xIN: 1,
 			yIN: [2],
@@ -157,14 +157,14 @@ describe('movinganalysis', () => {
 		for (const p of peakPeriods) expect(p).toBeCloseTo(24, 1);
 	});
 
-	it('labels bin at window start when binLabel=start', () => {
+	it('labels bin at window start when binLabel=start', async () => {
 		const n = 120;
 		const t = Array.from({ length: n }, (_, i) => i);
 		const y = t.map((ti) => Math.sin((2 * Math.PI * ti) / 24));
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
 
-		const [result] = movinganalysis({
+		const [result] = await movinganalysis({
 			...baseArgs,
 			xIN: 1,
 			yIN: [2],
@@ -175,14 +175,14 @@ describe('movinganalysis', () => {
 		expect(result.bins[0]).toBeCloseTo(0, 6);
 	});
 
-	it('runs fixed-cosinor analysis and fills amplitude/mesor arrays', () => {
+	it('runs fixed-cosinor analysis and fills amplitude/mesor arrays', async () => {
 		const n = 240;
 		const t = Array.from({ length: n }, (_, i) => i);
 		const y = t.map((ti) => 1.5 + 3 * Math.cos((2 * Math.PI * (ti - 6.25)) / 24));
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
 
-		const [result, valid] = movinganalysis({
+		const [result, valid] = await movinganalysis({
 			...baseArgs,
 			xIN: 1,
 			yIN: [2],
@@ -203,55 +203,55 @@ describe('movinganalysis', () => {
 
 	// --- Added edge cases ---
 
-	it('returns invalid when fewer than 3 valid X points', () => {
+	it('returns invalid when fewer than 3 valid X points', async () => {
 		mockColumns[1] = { type: 'number', getData: () => [0, 100] };
 		mockColumns[2] = { getData: () => [1, 2] };
-		const [, valid] = movinganalysis({
+		const [, valid] = await movinganalysis({
 			...baseArgs, xIN: 1, yIN: [2], windowSize: 48, stepSize: 24
 		});
 		expect(valid).toBe(false);
 	});
 
-	it('fails safe (no throw) when a Y column ref is missing', () => {
+	it('fails safe (no throw) when a Y column ref is missing', async () => {
 		const n = 240;
 		const t = Array.from({ length: n }, (_, i) => i);
 		mockColumns[1] = { type: 'number', getData: () => t };
 		// yId 999 absent
-		expect(() =>
+		await expect(
 			movinganalysis({ ...baseArgs, xIN: 1, yIN: [999], windowSize: 48, stepSize: 24 })
-		).not.toThrow();
-		const [, valid] = movinganalysis({
+		).resolves.toBeDefined();
+		const [, valid] = await movinganalysis({
 			...baseArgs, xIN: 1, yIN: [999], windowSize: 48, stepSize: 24
 		});
 		expect(valid).toBe(false);
 	});
 
-	it('accepts a scalar (non-array) yIN', () => {
+	it('accepts a scalar (non-array) yIN', async () => {
 		const n = 120;
 		const t = Array.from({ length: n }, (_, i) => i);
 		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
-		const [result, valid] = movinganalysis({
+		const [result, valid] = await movinganalysis({
 			...baseArgs, xIN: 1, yIN: 2, windowSize: 48, stepSize: 24, analysis: 'periodogram'
 		});
 		expect(valid).toBe(true);
 		expect(result.y_results[2]).toBeDefined();
 	});
 
-	it('labels bin at window end when binLabel=end', () => {
+	it('labels bin at window end when binLabel=end', async () => {
 		const n = 120;
 		const t = Array.from({ length: n }, (_, i) => i);
 		const y = t.map((ti) => Math.sin((2 * Math.PI * ti) / 24));
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
-		const [result] = movinganalysis({
+		const [result] = await movinganalysis({
 			...baseArgs, xIN: 1, yIN: [2], windowSize: 48, stepSize: 24, binLabel: 'end'
 		});
 		expect(result.bins[0]).toBeCloseTo(48, 6); // first window 0..48 labelled at end
 	});
 
-	it('handles multiple Y inputs producing parallel stat arrays', () => {
+	it('handles multiple Y inputs producing parallel stat arrays', async () => {
 		const n = 240;
 		const t = Array.from({ length: n }, (_, i) => i);
 		const y1 = t.map((ti) => Math.cos((2 * Math.PI * ti) / 24));
@@ -259,7 +259,7 @@ describe('movinganalysis', () => {
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y1 };
 		mockColumns[3] = { getData: () => y2 };
-		const [result, valid] = movinganalysis({
+		const [result, valid] = await movinganalysis({
 			...baseArgs, xIN: 1, yIN: [2, 3], windowSize: 48, stepSize: 24, analysis: 'periodogram'
 		});
 		expect(valid).toBe(true);
@@ -267,13 +267,13 @@ describe('movinganalysis', () => {
 		expect(result.y_results[3].peak_period.length).toBe(result.bins.length);
 	});
 
-	it('windows with too few points stay NaN (gappy data)', () => {
+	it('windows with too few points stay NaN (gappy data)', async () => {
 		// Dense at the start, then a big gap, then dense again so a middle window is empty
 		const t = [0, 1, 2, ...Array.from({ length: 50 }, (_, i) => 200 + i)];
 		const y = t.map(() => 1);
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
-		const [result, valid] = movinganalysis({
+		const [result, valid] = await movinganalysis({
 			...baseArgs, xIN: 1, yIN: [2], windowSize: 24, stepSize: 24, analysis: 'periodogram'
 		});
 		expect(valid).toBe(true);
@@ -282,7 +282,7 @@ describe('movinganalysis', () => {
 		expect(peaks.some((v) => Number.isNaN(v))).toBe(true);
 	});
 
-	it('writes per-stat output columns and the bin x column when committed', () => {
+	it('writes per-stat output columns and the bin x column when committed', async () => {
 		mockRawDataSet.mockClear();
 		const n = 240;
 		const t = Array.from({ length: n }, (_, i) => i);
@@ -293,7 +293,7 @@ describe('movinganalysis', () => {
 		mockColumns[91] = { data: null, type: null, tableProcessGUId: null }; // 2_peak_period
 		mockColumns[92] = { data: null, type: null, tableProcessGUId: null }; // 2_peak_power
 
-		const [result, valid] = movinganalysis({
+		const [result, valid] = await movinganalysis({
 			...baseArgs,
 			xIN: 1,
 			yIN: [2],

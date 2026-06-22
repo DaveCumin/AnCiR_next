@@ -64,9 +64,9 @@ beforeEach(() => {
 	Object.keys(mockColumns).forEach((k) => delete mockColumns[k]);
 });
 
-describe('doublelogistic', () => {
-	it('returns invalid when xIN is -1', () => {
-		const [result, valid] = doublelogistic({
+describe('doublelogistic', async () => {
+	it('returns invalid when xIN is -1', async () => {
+		const [result, valid] = await doublelogistic({
 			xIN: -1,
 			yIN: [1],
 			outputX: -1,
@@ -76,10 +76,10 @@ describe('doublelogistic', () => {
 		expect(result).toBeNull();
 	});
 
-	it('returns invalid when yIN is empty', () => {
+	it('returns invalid when yIN is empty', async () => {
 		mockColumns[1] = { type: 'number', getData: () => [1, 2, 3], hoursSinceStart: [0, 1, 2] };
 
-		const [result, valid] = doublelogistic({
+		const [result, valid] = await doublelogistic({
 			xIN: 1,
 			yIN: [],
 			outputX: -1,
@@ -89,8 +89,8 @@ describe('doublelogistic', () => {
 		expect(result).toBeNull();
 	});
 
-	it('returns invalid when xIN column does not exist', () => {
-		const [result, valid] = doublelogistic({
+	it('returns invalid when xIN column does not exist', async () => {
+		const [result, valid] = await doublelogistic({
 			xIN: 999,
 			yIN: [1],
 			outputX: -1,
@@ -100,14 +100,14 @@ describe('doublelogistic', () => {
 		expect(result).toBeNull();
 	});
 
-	it('fits a double logistic curve to simple numeric data', () => {
+	it('fits a double logistic curve to simple numeric data', async () => {
 		const t = [0, 6, 12, 18, 24, 30, 36, 42];
 		const y = [25, 50, 75, 75, 75, 50, 25, 25];
 
 		mockColumns[1] = { type: 'number', getData: () => t, hoursSinceStart: t };
 		mockColumns[2] = { type: 'number', getData: () => y };
 
-		const [result, valid] = doublelogistic({
+		const [result, valid] = await doublelogistic({
 			xIN: 1,
 			yIN: [2],
 			outputX: -1,
@@ -126,14 +126,14 @@ describe('doublelogistic', () => {
 		expect(result.y_results[2].t).toEqual(t);
 	});
 
-	it('skips data points with NaN values', () => {
+	it('skips data points with NaN values', async () => {
 		const t = [0, 6, 12, 18, 24];
 		const y = [25, NaN, 75, 75, 50];
 
 		mockColumns[1] = { type: 'number', getData: () => t, hoursSinceStart: t };
 		mockColumns[2] = { type: 'number', getData: () => y };
 
-		const [result, valid] = doublelogistic({
+		const [result, valid] = await doublelogistic({
 			xIN: 1,
 			yIN: [2],
 			outputX: -1,
@@ -145,14 +145,14 @@ describe('doublelogistic', () => {
 		expect(result.y_results[2].t.length).toBe(4);
 	});
 
-	it('returns invalid when insufficient valid data points', () => {
+	it('returns invalid when insufficient valid data points', async () => {
 		const t = [0, 6, 12]; // Only 3 points, but need at least 4
 		const y = [25, 75, 50];
 
 		mockColumns[1] = { type: 'number', getData: () => t, hoursSinceStart: t };
 		mockColumns[2] = { type: 'number', getData: () => y };
 
-		const [result, valid] = doublelogistic({
+		const [result, valid] = await doublelogistic({
 			xIN: 1,
 			yIN: [2],
 			outputX: -1,
@@ -163,7 +163,7 @@ describe('doublelogistic', () => {
 		expect(result).toBeNull();
 	});
 
-	it('handles multiple Y columns', () => {
+	it('handles multiple Y columns', async () => {
 		const t = [0, 6, 12, 18, 24];
 		const y1 = [25, 50, 75, 75, 50];
 		const y2 = [30, 60, 80, 80, 55];
@@ -172,7 +172,7 @@ describe('doublelogistic', () => {
 		mockColumns[2] = { type: 'number', getData: () => y1 };
 		mockColumns[3] = { type: 'number', getData: () => y2 };
 
-		const [result, valid] = doublelogistic({
+		const [result, valid] = await doublelogistic({
 			xIN: 1,
 			yIN: [2, 3],
 			outputX: -1,
@@ -184,14 +184,14 @@ describe('doublelogistic', () => {
 		expect(result.y_results[3]).toBeDefined();
 	});
 
-	it('uses fixed period when fixPeriod is true', () => {
+	it('uses fixed period when fixPeriod is true', async () => {
 		const t = [0, 6, 12, 18, 24];
 		const y = [25, 50, 75, 75, 50];
 
 		mockColumns[1] = { type: 'number', getData: () => t, hoursSinceStart: t };
 		mockColumns[2] = { type: 'number', getData: () => y };
 
-		const [result, valid] = doublelogistic({
+		const [result, valid] = await doublelogistic({
 			xIN: 1,
 			yIN: [2],
 			outputX: -1,
@@ -204,14 +204,14 @@ describe('doublelogistic', () => {
 		expect(result.y_results[2].fitResult.parameters.T).toBe(12);
 	});
 
-	it('uses fixed rise rate (k1) when fixK1 is true', () => {
+	it('uses fixed rise rate (k1) when fixK1 is true', async () => {
 		const t = [0, 6, 12, 18, 24];
 		const y = [25, 50, 75, 75, 50];
 
 		mockColumns[1] = { type: 'number', getData: () => t, hoursSinceStart: t };
 		mockColumns[2] = { type: 'number', getData: () => y };
 
-		const [result, valid] = doublelogistic({
+		const [result, valid] = await doublelogistic({
 			xIN: 1,
 			yIN: [2],
 			outputX: -1,
@@ -224,14 +224,14 @@ describe('doublelogistic', () => {
 		expect(result.y_results[2].fitResult.parameters.k1).toBe(0.3);
 	});
 
-	it('uses fixed fall rate (k2) when fixK2 is true', () => {
+	it('uses fixed fall rate (k2) when fixK2 is true', async () => {
 		const t = [0, 6, 12, 18, 24];
 		const y = [25, 50, 75, 75, 50];
 
 		mockColumns[1] = { type: 'number', getData: () => t, hoursSinceStart: t };
 		mockColumns[2] = { type: 'number', getData: () => y };
 
-		const [result, valid] = doublelogistic({
+		const [result, valid] = await doublelogistic({
 			xIN: 1,
 			yIN: [2],
 			outputX: -1,
@@ -244,7 +244,7 @@ describe('doublelogistic', () => {
 		expect(result.y_results[2].fitResult.parameters.k2).toBe(0.35);
 	});
 
-	it('evaluates at specified output X points when provided', () => {
+	it('evaluates at specified output X points when provided', async () => {
 		const t = [0, 6, 12, 18, 24];
 		const y = [25, 50, 75, 75, 50];
 		const outputX = [0, 3, 6, 9, 12];
@@ -253,7 +253,7 @@ describe('doublelogistic', () => {
 		mockColumns[2] = { type: 'number', getData: () => y };
 		mockColumns[3] = { type: 'number', getData: () => outputX, hoursSinceStart: outputX };
 
-		const [result, valid] = doublelogistic({
+		const [result, valid] = await doublelogistic({
 			xIN: 1,
 			yIN: [2],
 			outputX: 3,
@@ -265,7 +265,7 @@ describe('doublelogistic', () => {
 		expect(result.y_results[2].yOutData.length).toBe(outputX.length);
 	});
 
-	it('handles time columns by converting to hoursSinceStart', () => {
+	it('handles time columns by converting to hoursSinceStart', async () => {
 		const hoursSinceStart = [0, 6, 12, 18, 24];
 		const y = [25, 50, 75, 75, 50];
 
@@ -276,7 +276,7 @@ describe('doublelogistic', () => {
 		};
 		mockColumns[2] = { type: 'number', getData: () => y };
 
-		const [result, valid] = doublelogistic({
+		const [result, valid] = await doublelogistic({
 			xIN: 1,
 			yIN: [2],
 			outputX: -1,
@@ -287,7 +287,7 @@ describe('doublelogistic', () => {
 		expect(result.y_results[2].t).toEqual(hoursSinceStart);
 	});
 
-	it('filters NaN values from output X data', () => {
+	it('filters NaN values from output X data', async () => {
 		const t = [0, 6, 12, 18, 24];
 		const y = [25, 50, 75, 75, 50];
 		const outputX = [0, NaN, 6, 9, 12];
@@ -296,7 +296,7 @@ describe('doublelogistic', () => {
 		mockColumns[2] = { type: 'number', getData: () => y };
 		mockColumns[3] = { type: 'number', getData: () => outputX, hoursSinceStart: outputX };
 
-		const [result, valid] = doublelogistic({
+		const [result, valid] = await doublelogistic({
 			xIN: 1,
 			yIN: [2],
 			outputX: 3,
@@ -308,14 +308,14 @@ describe('doublelogistic', () => {
 		expect(result.y_results[2].xOutData.includes(NaN)).toBe(false);
 	});
 
-	it('returns fitted data when no output X is specified', () => {
+	it('returns fitted data when no output X is specified', async () => {
 		const t = [0, 6, 12, 18, 24];
 		const y = [25, 50, 75, 75, 50];
 
 		mockColumns[1] = { type: 'number', getData: () => t, hoursSinceStart: t };
 		mockColumns[2] = { type: 'number', getData: () => y };
 
-		const [result, valid] = doublelogistic({
+		const [result, valid] = await doublelogistic({
 			xIN: 1,
 			yIN: [2],
 			outputX: -1,
@@ -327,7 +327,7 @@ describe('doublelogistic', () => {
 		expect(result.y_results[2].yOutData.length).toBeGreaterThan(0);
 	});
 
-	it('shares t across all Y columns from first valid one', () => {
+	it('shares t across all Y columns from first valid one', async () => {
 		const t = [0, 6, 12, 18, 24];
 		const y1 = [25, 50, 75, 75, 50];
 		const y2 = [30, 60, 80, 80, 55];
@@ -336,7 +336,7 @@ describe('doublelogistic', () => {
 		mockColumns[2] = { type: 'number', getData: () => y1 };
 		mockColumns[3] = { type: 'number', getData: () => y2 };
 
-		const [result] = doublelogistic({
+		const [result] = await doublelogistic({
 			xIN: 1,
 			yIN: [2, 3],
 			outputX: -1,
@@ -346,7 +346,7 @@ describe('doublelogistic', () => {
 		expect(result.t).toEqual(t);
 	});
 
-	it('skips missing or invalid Y columns', () => {
+	it('skips missing or invalid Y columns', async () => {
 		const t = [0, 6, 12, 18, 24];
 		const y = [25, 50, 75, 75, 50];
 
@@ -354,7 +354,7 @@ describe('doublelogistic', () => {
 		mockColumns[2] = { type: 'number', getData: () => y };
 		// mockColumns[3] doesn't exist
 
-		const [result, valid] = doublelogistic({
+		const [result, valid] = await doublelogistic({
 			xIN: 1,
 			yIN: [2, 3, 999],
 			outputX: -1,
@@ -367,14 +367,14 @@ describe('doublelogistic', () => {
 		expect(result.y_results[999]).toBeUndefined();
 	});
 
-	it('returns null and invalid when no Y columns successfully fit', () => {
+	it('returns null and invalid when no Y columns successfully fit', async () => {
 		const t = [0, 1]; // Too few points
 		const y = [25, 50];
 
 		mockColumns[1] = { type: 'number', getData: () => t, hoursSinceStart: t };
 		mockColumns[2] = { type: 'number', getData: () => y };
 
-		const [result, valid] = doublelogistic({
+		const [result, valid] = await doublelogistic({
 			xIN: 1,
 			yIN: [2],
 			outputX: -1,
@@ -385,14 +385,14 @@ describe('doublelogistic', () => {
 		expect(result).toBeNull();
 	});
 
-	it('handles periodic mode with fixed parameters', () => {
+	it('handles periodic mode with fixed parameters', async () => {
 		const t = [0, 6, 12, 18, 24];
 		const y = [25, 50, 75, 75, 50];
 
 		mockColumns[1] = { type: 'number', getData: () => t, hoursSinceStart: t };
 		mockColumns[2] = { type: 'number', getData: () => y };
 
-		const [result, valid] = doublelogistic({
+		const [result, valid] = await doublelogistic({
 			xIN: 1,
 			yIN: [2],
 			outputX: -1,

@@ -4,6 +4,9 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { fitTrendSync, evaluateTrendAtPoints } from '$lib/utils/trendfit.js';
+	import { runComputeTask } from '$lib/workers/workerPool.js';
+	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
+	import '$lib/utils/trendfit.worker-task.js';
 
 	const displayName = 'Fit Trend Curves';
 	const defaults = new Map([
@@ -40,7 +43,7 @@
 		}
 	};
 
-	export function trendfit(argsIN) {
+	export async function trendfit(argsIN) {
 		const xIN = argsIN.xIN;
 		let yINs = argsIN.yIN;
 		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
@@ -100,7 +103,9 @@
 
 			if (tt.length === 0) continue;
 
-			const fittedData = fitTrendSync(tt, yy, model, polyDegree);
+			const fittedData = shouldUseWorkers({ inputLen: tt.length })
+				? await runComputeTask('trendfit.fit', { tt, yy, model, polyDegree })
+				: fitTrendSync(tt, yy, model, polyDegree);
 			const predicted = outputXData
 				? evaluateTrendAtPoints(fittedData.parameters, model, outputXData)
 				: null;

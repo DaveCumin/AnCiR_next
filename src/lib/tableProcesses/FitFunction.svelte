@@ -2,6 +2,9 @@
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { fitCurveModel, evaluateCurveModelAtPoints } from '$lib/utils/fitFunction.js';
+	import { runComputeTask } from '$lib/workers/workerPool.js';
+	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
+	import '$lib/utils/fitFunction.worker-task.js';
 
 	const displayName = 'Fit Function';
 	const defaults = new Map([
@@ -106,8 +109,12 @@
 		};
 	}
 
-	function computeSingleFit(tt, yy, argsIN) {
-		return fitCurveModel(tt, yy, argsIN.model ?? 'cosinor', getModelOptions(argsIN));
+	async function computeSingleFit(tt, yy, argsIN) {
+		const model = argsIN.model ?? 'cosinor';
+		const options = getModelOptions(argsIN);
+		return shouldUseWorkers({ inputLen: tt.length })
+			? await runComputeTask('fitfunction.fit', { tt, yy, model, options })
+			: fitCurveModel(tt, yy, model, options);
 	}
 
 	function evaluateForOutput(fitResult, argsIN, outputXData) {
@@ -115,8 +122,8 @@
 		return evaluateCurveModelAtPoints(fitResult, argsIN.model ?? 'cosinor', outputXData);
 	}
 
-	function buildYResult(tt, yy, argsIN, outputXData) {
-		const fitResult = computeSingleFit(tt, yy, argsIN);
+	async function buildYResult(tt, yy, argsIN, outputXData) {
+		const fitResult = await computeSingleFit(tt, yy, argsIN);
 		if (!fitResult) return null;
 		const predicted = evaluateForOutput(fitResult, argsIN, outputXData);
 		return {
@@ -128,7 +135,7 @@
 		};
 	}
 
-	function buildFitResult(argsIN) {
+	async function buildFitResult(argsIN) {
 		const xIN = argsIN.xIN;
 		let yINs = argsIN.yIN;
 		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
@@ -176,7 +183,7 @@
 			const { tt, yy } = getValidPairs(t, y);
 			if (tt.length === 0) continue;
 
-			const yResult = buildYResult(tt, yy, argsIN, outputXData);
+			const yResult = await buildYResult(tt, yy, argsIN, outputXData);
 			if (!yResult) continue;
 
 			result.y_results[yId] = yResult;
@@ -234,8 +241,8 @@
 		return [result, anyValid];
 	}
 
-	export function fitFunction(argsIN) {
-		return buildFitResult(argsIN);
+	export async function fitFunction(argsIN) {
+		return await buildFitResult(argsIN);
 	}
 </script>
 

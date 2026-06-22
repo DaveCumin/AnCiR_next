@@ -9,6 +9,10 @@ import { restoreFromTransferable, prepareTransferable } from './workerTransfer.j
 import '$lib/utils/cosinor.worker-task.js';
 import '$lib/utils/smoothing.worker-task.js';
 import '$lib/utils/periodogram.worker-task.js';
+import '$lib/utils/movinganalysis.worker-task.js';
+import '$lib/utils/fitFunction.worker-task.js';
+import '$lib/utils/doublelogistic.worker-task.js';
+import '$lib/utils/trendfit.worker-task.js';
 
 self.onmessage = (e) => {
 	const { id, name, payload } = e.data ?? {};

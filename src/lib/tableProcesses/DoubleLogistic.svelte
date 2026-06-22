@@ -2,6 +2,9 @@
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { fitDoubleLogistic, evaluateDoubleLogisticAtPoints } from '$lib/utils/doublelogistic.js';
+	import { runComputeTask } from '$lib/workers/workerPool.js';
+	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
+	import '$lib/utils/doublelogistic.worker-task.js';
 
 	const displayName = 'Double Logistic';
 	const defaults = new Map([
@@ -42,7 +45,7 @@
 		}
 	};
 
-	export function doublelogistic(argsIN) {
+	export async function doublelogistic(argsIN) {
 		const xIN = argsIN.xIN;
 		const yINraw = argsIN.yIN;
 		const yINs = Array.isArray(yINraw) ? yINraw : yINraw != null && yINraw !== -1 ? [yINraw] : [];
@@ -94,7 +97,7 @@
 			if (tt.length < 4) continue;
 			if (!sharedT) sharedT = tt;
 
-			const fitResult = fitDoubleLogistic(tt, yy, {
+			const dlOpts = {
 				periodic: true,
 				fixK1,
 				fixK2,
@@ -102,7 +105,10 @@
 				fixedK1,
 				fixedK2,
 				fixedPeriod
-			});
+			};
+			const fitResult = shouldUseWorkers({ inputLen: tt.length })
+				? await runComputeTask('doublelogistic.fit', { tt, yy, opts: dlOpts })
+				: fitDoubleLogistic(tt, yy, dlOpts);
 
 			if (fitResult) {
 				const xOutData = outputXData ?? tt;
