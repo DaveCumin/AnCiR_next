@@ -69,25 +69,25 @@
 		box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
 	}
 
+	/* Matches the control-panel's .control-input select look. */
 	.palette-trigger {
 		display: inline-flex;
 		align-items: center;
 		gap: var(--space-2);
-		font: inherit;
-		font-size: var(--font-md);
+		height: var(--control-input-height);
+		box-sizing: border-box;
+		font-size: var(--font-lg);
+		font-weight: lighter;
 		cursor: pointer;
-		padding: var(--space-2) var(--space-3);
-		border: 1px solid var(--divider);
-		border-radius: var(--radius-md);
-		background: var(--surface-card);
+		padding: 0.2rem var(--space-4);
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 2px;
+		background: var(--color-lightness-97);
 		color: var(--color-lightness-35);
-		transition:
-			border-color 0.15s,
-			background 0.15s;
+		transition: border-color 0.2s;
 	}
 	.palette-trigger:hover {
-		border-color: var(--color-lightness-75);
-		background: var(--color-lightness-97);
+		border-color: var(--color-lightness-35);
 	}
 	.palette-caret {
 		font-size: 0.8em;

@@ -68,33 +68,40 @@
 	{/snippet}
 
 	{#snippet children()}
-		<div class="settings-form">
-			<div class="form-field">
-				<span class="form-label">Default colour palette</span>
-				<div class="form-field-controls">
-					<ColourPaletteSelect onSelect={(palette) => changeDefaultPalette(palette)} />
-				</div>
+		<!-- Reuses the control-panel patterns (control-component / control-input /
+		     div-line) so the modal matches the rest of the app. -->
+		<div class="control-component">
+			<div class="control-component-title"><p>Appearance</p></div>
+			<div class="control-input">
+				<p>Default colour palette</p>
+				<ColourPaletteSelect onSelect={(palette) => changeDefaultPalette(palette)} />
 			</div>
+		</div>
 
-			<div class="form-field">
-				<span class="form-label">Grid size</span>
-				<div class="form-field-controls">
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<div class="control-component-title"><p>Canvas</p></div>
+			<div class="control-input-horizontal">
+				<div class="control-input">
+					<p>Grid size</p>
 					<NumberWithUnits bind:value={appState.gridSize} min="1" max="100" />
 				</div>
-			</div>
-
-			<div class="form-field">
-				<span class="form-label">Zoom</span>
-				<div class="form-field-controls">
+				<div class="control-input">
+					<p>Zoom</p>
 					<NumberWithUnits bind:value={appState.canvasScale} min="0.01" max="10" step="0.05" />
 				</div>
 			</div>
+		</div>
 
-			<div class="form-field">
-				<span class="form-label">Timezone</span>
-				<div class="form-field-controls">
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<div class="control-component-title"><p>Time</p></div>
+			<div class="control-input">
+				<p>Timezone</p>
+				<div class="tz-row">
 					<input
-						class="form-control zone-input"
 						type="text"
 						list="ancir-timezone-list"
 						bind:value={zoneInput}
@@ -105,7 +112,7 @@
 						}}
 						placeholder="utc"
 					/>
-					<button class="form-btn" type="button" onclick={detectLocalZone}>
+					<button class="tz-detect" type="button" onclick={detectLocalZone}>
 						Detect from browser
 					</button>
 					<datalist id="ancir-timezone-list">
@@ -115,36 +122,55 @@
 						{/each}
 					</datalist>
 				</div>
+				{#if zoneError}
+					<p class="zone-error">{zoneError}</p>
+				{/if}
 			</div>
-
-			{#if zoneError}
-				<div class="zone-error">{zoneError}</div>
-			{/if}
 		</div>
 	{/snippet}
 </Modal>
 
 <style>
 	.settings-heading h2 {
-		margin: 0 0 var(--space-3);
+		margin: 0 0 var(--space-5);
 		padding-bottom: var(--space-3);
-		border-bottom: 1px solid var(--divider-soft);
-		font-size: 1.15rem;
+		border-bottom: 1px solid var(--color-lightness-85);
+		font-size: 1.1rem;
 		font-weight: 600;
 		color: var(--color-lightness-25, #333);
 	}
 
-	.settings-form {
+	/* Timezone input + "Detect" button on one row; the input inherits the global
+	   .control-input input styling, the button matches it. */
+	.tz-row {
 		display: flex;
-		flex-direction: column;
+		align-items: center;
+		gap: var(--space-3);
+		width: 100%;
 	}
-
-	.zone-input {
-		min-width: 16ch;
+	.tz-row > input {
+		flex: 1;
+		width: auto;
+		min-width: 0;
 	}
-
+	.tz-detect {
+		flex: 0 0 auto;
+		height: var(--control-input-height);
+		padding: 0 var(--space-4);
+		font-size: var(--font-sm);
+		white-space: nowrap;
+		color: var(--color-lightness-35);
+		background: var(--color-lightness-97);
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 2px;
+		cursor: pointer;
+		transition: border-color 0.2s;
+	}
+	.tz-detect:hover {
+		border-color: var(--color-lightness-35);
+	}
 	.zone-error {
-		margin-top: var(--space-3);
+		margin: var(--space-2) 0 0;
 		font-size: var(--font-sm);
 		color: var(--color-error, #c5221f);
 	}
