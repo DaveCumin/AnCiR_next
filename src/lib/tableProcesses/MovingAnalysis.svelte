@@ -344,9 +344,12 @@
 		previewStart = 1;
 		calculating = true;
 		const token = ++_calcToken;
-		setTimeout(() => {
+		setTimeout(async () => {
 			if (token !== _calcToken) return;
-			[result, p.args.valid] = movinganalysis(p.args);
+			const [data, valid] = await movinganalysis(p.args);
+			if (token !== _calcToken) return; // re-check after await (analysis is async now)
+			result = data;
+			p.args.valid = valid;
 			calculating = false;
 			lastHash = getHash;
 		}, 0);

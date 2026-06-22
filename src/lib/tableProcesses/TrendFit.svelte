@@ -202,6 +202,7 @@
 	}
 
 	let trendData = $state();
+	let _calcToken = 0; // guards async fit results against stale overwrites
 	let showOutputX = $state(p.args.outputX !== -1);
 	let mounted = $state(false);
 	let previewStart = $state(1);
@@ -243,12 +244,18 @@
 		const dataHash = getHash;
 		if (!mounted) return;
 		if (lastHash !== dataHash) {
-			untrack(() => {
-				previewStart = 1;
-				[trendData, p.args.valid] = trendfit(p.args);
-			});
 			lastHash = getHash;
 			p.args._fitHash = lastHash;
+			previewStart = 1;
+			const token = ++_calcToken;
+			// trendfit is async now; apply when it resolves (token guards staleness).
+			trendfit(p.args).then(([data, valid]) => {
+				if (token !== _calcToken) return;
+				untrack(() => {
+					trendData = data;
+					p.args.valid = valid;
+				});
+			});
 		}
 	});
 
@@ -374,7 +381,7 @@
 			lastHash = getHash;
 			p.args._fitHash = lastHash;
 		} else {
-			[trendData, p.args.valid] = trendfit(p.args);
+			[trendData, p.args.valid] = await trendfit(p.args);
 			for (const yId of p.args.yIN ?? []) {
 				const permOutId = p.args.out['permstats_' + yId];
 				if (permOutId != null && permOutId !== -1) {

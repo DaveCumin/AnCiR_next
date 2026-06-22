@@ -260,11 +260,14 @@
 			lastHash = getHash;
 			calculating = true;
 			const token = ++_calcToken;
-			setTimeout(() => {
+			setTimeout(async () => {
 				if (token !== _calcToken) return;
+				const [data, valid] = await doublelogistic(p.args);
+				if (token !== _calcToken) return; // re-check after await (analysis is async now)
 				untrack(() => {
 					previewStart = 1;
-					[dlData, p.args.valid] = doublelogistic(p.args);
+					dlData = data;
+					p.args.valid = valid;
 					calculating = false;
 				});
 			}, 0);
@@ -275,9 +278,12 @@
 		previewStart = 1;
 		calculating = true;
 		const token = ++_calcToken;
-		setTimeout(() => {
+		setTimeout(async () => {
 			if (token !== _calcToken) return;
-			[dlData, p.args.valid] = doublelogistic(p.args);
+			const [data, valid] = await doublelogistic(p.args);
+			if (token !== _calcToken) return; // re-check after await (analysis is async now)
+			dlData = data;
+			p.args.valid = valid;
 			calculating = false;
 			lastHash = getHash;
 		}, 0);

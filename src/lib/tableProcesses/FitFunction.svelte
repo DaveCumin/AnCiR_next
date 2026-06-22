@@ -451,7 +451,7 @@
 			const { yId, tt, yy } = activeY[index];
 			if (token !== _calcToken) return;
 
-			let yResult = buildYResult(tt, yy, p.args, outputXData);
+			let yResult = await buildYResult(tt, yy, p.args, outputXData);
 			if (!yResult) continue;
 
 			if (p.args.permuteTest) {
