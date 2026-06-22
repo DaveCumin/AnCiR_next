@@ -10,7 +10,7 @@ The following packages were used in this project:
 
 - [D3](https://d3js.org/) is used for plotting (ISC licensed).
 - [Papaparse](https://www.papaparse.com/) is used for importing the data (MIT licensed).
-- [SheetJS](https://www.npmjs.com/package/xlsx) was the basis for a light version implementation to import data from xlsx files (Apache 2.0).
+- [SheetJS](https://www.npmjs.com/package/xlsx) was the basis for a light, custom implementation to import data from xlsx files (Apache 2.0); the actual unzipping is done with [fflate](https://github.com/101arrowz/fflate) (MIT licensed).
 - [Moment-guess](https://www.npmjs.com/package/moment-guess) was adapted to guess the time format of data (MIT licensed).
 - Stats functions from [stdlib.io](https://github.com/stdlib-js/stdlib) (Apache-2.0 license).
 - [Day.js](https://www.npmjs.com/package/dayjs) is used for date manipulation and calculations (MIT licensed).

@@ -95,8 +95,9 @@
 				<a href="https://www.papaparse.com/">Papaparse</a> is used for importing the data (MIT licensed).
 			</li>
 			<li>
-				<a href="https://www.npmjs.com/package/xlsx">SheetJS</a> was the basis for a light version implementation
-				to import data from xlsx files (Apache 2.0).
+				<a href="https://www.npmjs.com/package/xlsx">SheetJS</a> was the basis for a light, custom
+				implementation to import data from xlsx files (Apache 2.0); the actual unzipping is done with
+				<a href="https://github.com/101arrowz/fflate">fflate</a> (MIT licensed).
 			</li>
 			<li>
 				<a href="https://www.npmjs.com/package/moment-guess">Moment-guess</a>

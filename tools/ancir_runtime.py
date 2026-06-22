@@ -12,6 +12,7 @@ Lomb-Scargle / Chi-squared / Enright periodograms, radix-2 FFT, etc.).
 
 from __future__ import annotations
 
+import functools
 import math
 import sys
 from dataclasses import dataclass, field
@@ -1993,6 +1994,96 @@ def tp_split(args, cols, raw_data, _sv):
     return any_valid
 
 
+# --- Sort ---
+# Port of src/lib/tableProcesses/Sort.svelte (module `sortdata`). One
+# multi-column input (`yIN`); one of those columns is the sort key (`sortOnId`,
+# default = first input). All inputs are reordered together by the key's order
+# so rows stay aligned, each writing a `sortedy_<id>` output column. Sort rules
+# mirror src/lib/utils/sortRows.js::sortPermutation: missing values (None/NaN)
+# always sort LAST regardless of direction (stable among themselves); present
+# values compare numerically, or lexicographically if either side is a
+# non-numeric string; ties keep original order (stable sort).
+
+def _sort_permutation(key_values, direction='asc'):
+    """Mirror sortRows.js::sortPermutation — return indices that sort the key."""
+    dir_ = -1 if direction == 'desc' else 1
+
+    decorated = []
+    for i, v in enumerate(key_values):
+        if v is None or (isinstance(v, float) and math.isnan(v)):
+            decorated.append((i, True, None))
+            continue
+        try:
+            num = float(v)
+            key = str(v) if math.isnan(num) else num
+        except (TypeError, ValueError):
+            key = str(v)
+        decorated.append((i, False, key))
+
+    def _cmp(a, b):
+        ai, am, ak = a
+        bi, bm, bk = b
+        # Missing always last, regardless of direction; stable among themselves.
+        if am and bm:
+            return ai - bi
+        if am:
+            return 1
+        if bm:
+            return -1
+        if isinstance(ak, str) or isinstance(bk, str):
+            sa, sb = str(ak), str(bk)
+            c = (sa > sb) - (sa < sb)
+        else:
+            c = (ak > bk) - (ak < bk)
+        if c != 0:
+            return dir_ * c
+        return ai - bi  # stable tie-break
+
+    decorated.sort(key=functools.cmp_to_key(_cmp))
+    return [d[0] for d in decorated]
+
+
+def tp_sort(args, cols, raw_data, _sv):
+    y_ins = _id_list(args.get('yIN'))
+    if not y_ins:
+        return False
+    direction = 'desc' if args.get('direction') == 'desc' else 'asc'
+
+    # Resolve the key column: the chosen sortOnId if it's among the inputs,
+    # otherwise the first input (matches JS resolveSortOn).
+    sort_on = args.get('sortOnId')
+    if sort_on is None or sort_on == -1 or sort_on not in y_ins:
+        sort_on = y_ins[0]
+
+    key_col = cols.get(sort_on)
+    if key_col is None:
+        return False
+    key_data = key_col.get_data()
+    n = len(key_data)
+    if n == 0:
+        return False
+
+    order = _sort_permutation(key_data, direction)
+
+    any_written = False
+    for y_id in y_ins:
+        y_col = cols.get(y_id)
+        if y_col is None:
+            continue
+        out_id = _out_id(args, f'sortedy_{y_id}')
+        if out_id is None or out_id == -1:
+            continue
+        y_data = y_col.get_data()
+        # Only reorder columns row-aligned with the key; others pass through.
+        reordered = ([y_data[i] for i in order]
+                     if len(y_data) == n else list(y_data))
+        _set_col(raw_data, cols, out_id, reordered,
+                 type_=y_col.type, time_format=y_col.time_format)
+        any_written = True
+
+    return any_written
+
+
 # --- TrendFit ---
 
 def tp_trendfit(args, cols, raw_data, _sv):
@@ -2793,6 +2884,7 @@ DISPLAY_TO_TP = {
     'Smooth Data': 'smootheddata',
     'Smoothed Data': 'smootheddata',
     'SmoothedData': 'smootheddata',
+    'Sort': 'sort',
     'Split': 'split',
     'Split data': 'split',
     'Stored Value Group': 'storedvaluegroup',
@@ -2824,6 +2916,7 @@ TABLE_PROCESS_MAP = {
     'sequencecolumn': tp_sequencecolumn,
     'simulateddata': tp_simulateddata,
     'smootheddata': tp_smootheddata,
+    'sort': tp_sort,
     'split': tp_split,
     'trendfit': tp_trendfit,
     'storedvaluegroup': tp_storedvaluegroup,

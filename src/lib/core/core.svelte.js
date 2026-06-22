@@ -169,7 +169,8 @@ function _rerouteProcessInput(targetProcId, oldColId, newColId) {
 	next[idx] = newColId;
 	tproc.args = { ...tproc.args, inIN: next };
 	const pc = core.data.find(
-		(c) => c.producerNodeId === `process_${targetProcId}` && (c.producerPort || '') === `out_${oldColId}`
+		(c) =>
+			c.producerNodeId === `process_${targetProcId}` && (c.producerPort || '') === `out_${oldColId}`
 	);
 	if (pc) pc.producerPort = `out_${newColId}`;
 }
@@ -334,7 +335,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.45.1',
+	version: 'β.45.3',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
