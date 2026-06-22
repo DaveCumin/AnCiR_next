@@ -21,6 +21,7 @@
 		normalizeTimeFormat
 	} from '$lib/utils/time/TimeUtils';
 	import { numToString } from '$lib/utils/GeneralUtils';
+	import { sortPermutation, applyPermutation } from '$lib/utils/sortRows.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	import Modal from '$lib/components/reusables/Modal.svelte';
@@ -1498,14 +1499,22 @@
 			parsedData = applyDateTimeCombination(parsedData);
 		}
 
-		if (sortBy !== '__none__') {
-			const sortLabel = sortBy === '__time__' ? 'timestamp' : sortBy;
+		// If the chosen sort column was deselected for import, fall back to
+		// time-auto-detect (the dropdown only offers selected columns, but a prior
+		// named choice can linger if the user unticks it).
+		const effectiveSortBy =
+			sortBy !== '__none__' && sortBy !== '__time__' && !selectedColumns.has(sortBy)
+				? '__time__'
+				: sortBy;
+
+		if (effectiveSortBy !== '__none__') {
+			const sortLabel = effectiveSortBy === '__time__' ? 'timestamp' : effectiveSortBy;
 			loadProgress = { stage: 'Loading data', detail: `Sorting by ${sortLabel}…` };
 			await tick();
 			parsedData =
-				sortBy === '__time__'
+				effectiveSortBy === '__time__'
 					? sortDataByTimestamp(parsedData)
-					: sortDataByColumn(parsedData, sortBy);
+					: sortDataByColumn(parsedData, effectiveSortBy);
 		}
 
 		loadProgress = { stage: 'Loading data', detail: 'Building columns…' };
@@ -1558,13 +1567,15 @@
 	 * Rows are kept together across all columns.
 	 */
 	function sortDataByTimestamp(data) {
-		const cols = Object.keys(data);
-		if (cols.length === 0) return data;
+		const allCols = Object.keys(data);
+		if (allCols.length === 0) return data;
 
-		// Find the first column that looks like timestamps
+		// Only auto-detect the time column among columns selected for import.
+		const detectCols = allCols.filter((c) => selectedColumns.size === 0 || selectedColumns.has(c));
+
 		let timeCol = null;
 		let timeFmt = null;
-		for (const col of cols) {
+		for (const col of detectCols) {
 			const fmt = guessDateofArray(data[col]);
 			if (fmt !== -1 && fmt !== null && fmt !== undefined && fmt !== '' && fmt.length > 0) {
 				timeCol = col;
@@ -1575,22 +1586,15 @@
 
 		if (!timeCol) return data; // No time column found — leave unsorted
 
-		const timeValues = data[timeCol];
-		const n = timeValues.length;
-
-		// Build array of [index, parsedMs] and sort by ms
-		const indices = Array.from({ length: n }, (_, i) => {
-			const parsed = parseUTCStrict(timeValues[i], timeFmt);
-			const ms = parsed ? parsed.valueOf() : NaN;
-			return { i, ms };
+		// Parse timestamps to epoch-ms, then sort via the shared primitive (missing
+		// values sort last). Every column is reordered to keep rows aligned.
+		const msKeys = data[timeCol].map((v) => {
+			const parsed = parseUTCStrict(v, timeFmt);
+			return parsed ? parsed.valueOf() : NaN;
 		});
-		indices.sort((a, b) => a.ms - b.ms);
-
-		// Reorder every column using the sorted indices
+		const order = sortPermutation(msKeys, { direction: 'asc' });
 		const sorted = {};
-		for (const col of cols) {
-			sorted[col] = indices.map(({ i }) => data[col][i]);
-		}
+		for (const col of allCols) sorted[col] = applyPermutation(data[col], order);
 		return sorted;
 	}
 
@@ -1604,33 +1608,23 @@
 		const cols = Object.keys(data);
 		if (!cols.includes(sortColName)) return data;
 		const values = data[sortColName];
-		const n = values.length;
 
 		const fmt = guessDateofArray(values);
 		const isTime = fmt !== -1 && fmt !== null && fmt !== undefined && fmt !== '' && fmt.length > 0;
 
-		const indices = Array.from({ length: n }, (_, i) => {
-			const raw = values[i];
-			if (raw == null) return { i, key: Infinity, missing: true };
-			if (isTime) {
-				const parsed = parseUTCStrict(raw, fmt);
-				const ms = parsed ? parsed.valueOf() : NaN;
-				return { i, key: isNaN(ms) ? Infinity : ms, missing: isNaN(ms) };
-			}
-			const num = Number(raw);
-			if (!isNaN(num)) return { i, key: num, missing: false };
-			return { i, key: String(raw), missing: false };
-		});
-		indices.sort((a, b) => {
-			if (a.missing && !b.missing) return 1;
-			if (!a.missing && b.missing) return -1;
-			if (typeof a.key === 'string' || typeof b.key === 'string') {
-				return String(a.key).localeCompare(String(b.key));
-			}
-			return a.key - b.key;
-		});
+		// For time columns, parse to epoch-ms; otherwise let the shared primitive
+		// classify each value (numeric vs string) and treat null/NaN as missing-last.
+		const keys = isTime
+			? values.map((v) => {
+					if (v == null) return null;
+					const parsed = parseUTCStrict(v, fmt);
+					return parsed ? parsed.valueOf() : NaN;
+				})
+			: values;
+
+		const order = sortPermutation(keys, { direction: 'asc' });
 		const sorted = {};
-		for (const col of cols) sorted[col] = indices.map(({ i }) => data[col][i]);
+		for (const col of cols) sorted[col] = applyPermutation(data[col], order);
 		return sorted;
 	}
 
@@ -2121,7 +2115,7 @@
 										<select bind:value={sortBy} disabled={awaitingLoad}>
 											<option value="__none__">None (keep file order)</option>
 											<option value="__time__">Time (auto-detect)</option>
-											{#each headers as h}
+											{#each headers.filter((h) => selectedColumns.has(h)) as h}
 												<option value={h}>{h}</option>
 											{/each}
 										</select>

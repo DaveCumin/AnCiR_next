@@ -137,7 +137,8 @@ const meta = new Map([
 		{
 			family: 'Filtering',
 			nodeIcon: 'node-filter', // no dedicated sort icon; reuse filter glyph
-			description: 'Sort the table by the chosen column(s).'
+			description:
+				'Sort rows by a chosen column, keeping the selected columns aligned (ascending or descending).'
 		}
 	],
 

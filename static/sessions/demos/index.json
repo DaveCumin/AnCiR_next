@@ -4,15 +4,15 @@
   "sessions": [
     {
       "id": "tp-blankcolumn",
-      "name": "Blank Column",
+      "name": "Enter Data",
       "family": "Sources",
-      "description": "Add a blank column to a table for manual entry.",
+      "description": "Enter data by hand, or paste CSV/JSON.",
       "url": "sessions/demos/demo-tp-blankcolumn.json",
       "kind": "tableProcess",
       "showcases": [
         "BlankColumn"
       ],
-      "keywords": "blank column add a blank column to a table for manual entry. sources blankcolumn"
+      "keywords": "enter data enter data by hand, or paste csv/json. sources blankcolumn"
     },
     {
       "id": "tp-random",
@@ -66,13 +66,13 @@
       "id": "process-sub",
       "name": "Substitute",
       "family": "Arithmetic",
-      "description": "Subtract a constant or column from the input column.",
+      "description": "Find a specific value in the column and replace it with another (e.g. swap a missing-data code like −999 for a different value).",
       "url": "sessions/demos/demo-process-sub.json",
       "kind": "process",
       "showcases": [
         "Sub"
       ],
-      "keywords": "substitute subtract a constant or column from the input column. arithmetic sub"
+      "keywords": "substitute find a specific value in the column and replace it with another (e.g. swap a missing-data code like −999 for a different value). arithmetic sub"
     },
     {
       "id": "process-multiply",
@@ -159,16 +159,16 @@
       "keywords": "remove trend remove a fitted trend (linear, polynomial, etc.) from the column. filtering removetrend"
     },
     {
-      "id": "process-sort",
+      "id": "tp-sort",
       "name": "Sort",
       "family": "Filtering",
-      "description": "Sort the table by the chosen column(s).",
-      "url": "sessions/demos/demo-process-sort.json",
-      "kind": "process",
+      "description": "Sort rows by a chosen column, keeping the selected columns aligned (ascending or descending).",
+      "url": "sessions/demos/demo-tp-sort.json",
+      "kind": "tableProcess",
       "showcases": [
         "Sort"
       ],
-      "keywords": "sort sort the table by the chosen column(s). filtering sort"
+      "keywords": "sort sort rows by a chosen column, keeping the selected columns aligned (ascending or descending). filtering sort"
     },
     {
       "id": "tp-smootheddata",

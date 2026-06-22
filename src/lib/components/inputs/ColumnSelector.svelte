@@ -168,6 +168,20 @@
 		};
 	}
 
+	// Move the dropdown to <body> so its position:fixed coordinates aren't broken
+	// by an ancestor CSS transform. The workflow canvas applies a translate/scale
+	// transform for pan/zoom; a fixed element inside a transformed ancestor is
+	// positioned relative to that ancestor, which mislocated the menu when a node
+	// was edited inline on the canvas.
+	function portalToBody(node) {
+		document.body.appendChild(node);
+		return {
+			destroy() {
+				if (node.parentNode) node.remove();
+			}
+		};
+	}
+
 	$effect(() => {
 		if (!isOpen) return;
 		updateDropdownPos();
@@ -435,6 +449,7 @@
 {#if isOpen}
 	<div
 		bind:this={dropdownEl}
+		use:portalToBody
 		class="dropdown"
 		class:open-up={dropdownPos.openUp}
 		style="top: {dropdownPos.top}px; left: {dropdownPos.left}px; width: {dropdownPos.width}px;{dropdownPos.openUp

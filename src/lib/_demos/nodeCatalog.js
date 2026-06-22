@@ -145,7 +145,6 @@ export const PROCESS_SPECS = [
 		setup: () => {}
 	},
 	{ name: 'RemoveTrend', colType: 'number', data: SAMPLE.linear, setup: () => {} },
-	{ name: 'Sort', colType: 'number', data: () => SAMPLE.index().reverse(), setup: () => {} },
 	{ name: 'normalize', colType: 'number', data: SAMPLE.index, setup: () => {} }
 ];
 
@@ -171,6 +170,19 @@ export const TP_SPECS = [
 			aggFunction: 'mean',
 			preProcesses: [],
 			out: { binnedx: -1 }
+		})
+	},
+	{
+		name: 'Sort',
+		// Two inputs (a reversed index + a rhythm); sort on the index so both columns
+		// visibly reorder together.
+		inputs: [T('number', () => SAMPLE.index().reverse()), T('number', SAMPLE.rhythm)],
+		args: ([key, y]) => ({
+			yIN: [key, y],
+			sortOnId: key,
+			direction: 'asc',
+			preProcesses: [],
+			out: {}
 		})
 	},
 	{
