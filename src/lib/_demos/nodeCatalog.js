@@ -224,6 +224,7 @@ export const TP_SPECS = [
 	},
 	{
 		name: 'DoubleLogistic',
+		isAsync: true,
 		inputs: [
 			T('number', SAMPLE.hours),
 			T('number', () =>
@@ -250,6 +251,7 @@ export const TP_SPECS = [
 	},
 	{
 		name: 'FitFunction',
+		isAsync: true,
 		inputs: [T('number', SAMPLE.hours), T('number', () => SAMPLE.rhythm(24))],
 		args: ([t, y]) => ({
 			xIN: t,
@@ -328,6 +330,7 @@ export const TP_SPECS = [
 	},
 	{
 		name: 'MovingAnalysis',
+		isAsync: true,
 		inputs: [
 			// 14 days hourly; a 7-day (168 h) window holds ~7 cycles of the 24 h
 			// rhythm so the Lomb–Scargle peak is sharp (a 48 h / ~2-cycle window
@@ -484,6 +487,7 @@ export const TP_SPECS = [
 	},
 	{
 		name: 'TrendFit',
+		isAsync: true,
 		inputs: [T('number', SAMPLE.index), T('number', SAMPLE.linear)],
 		args: ([x, y]) => ({
 			xIN: x,
