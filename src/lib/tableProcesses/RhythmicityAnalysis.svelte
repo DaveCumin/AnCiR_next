@@ -420,8 +420,9 @@
 	 *    mirroring Cosinor so CollectColumns / LongToWide chains stay simple.
 	 */
 	function syncOutputColumns() {
-		if (!p.parent) return false;
-
+		// Free table-process nodes (the dataflow model) have no `parent`; reconcile
+		// output columns in core.data directly so changing the analysis/mode updates
+		// the node's ports. Only touch `parent.columnRefs` when a parent exists.
 		const activeIds = [...new Set((p.args.yIN ?? []).map(Number).filter((id) => id >= 0))];
 		const desired = new Set();
 		if (hideInputs) {
@@ -459,7 +460,7 @@
 				const col = new Column({});
 				col.name = `rhythmicityx_${p.id ?? ''}`;
 				pushObj(col);
-				p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
+				if (p.parent) p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
 				p.args.out.rhythmicityx = col.id;
 				changed = true;
 			}
@@ -470,7 +471,7 @@
 					const col = new Column({});
 					col.name = `rhythmicityy_${srcName}`;
 					pushObj(col);
-					p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
+					if (p.parent) p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
 					p.args.out[key] = col.id;
 					changed = true;
 				}
@@ -484,7 +485,7 @@
 						const col = new Column({});
 						col.name = `${srcName}_${k}`;
 						pushObj(col);
-						p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
+						if (p.parent) p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
 						p.args.out[key] = col.id;
 						changed = true;
 					}

@@ -361,8 +361,10 @@
 	 * Returns true when anything changed so the caller can recompute.
 	 */
 	function syncStatColumns() {
-		if (!p.parent) return false;
-
+		// Free table-process nodes (the dataflow model) have no `parent`; reconcile
+		// the output columns in core.data directly so changing the analysis (which
+		// changes the stat-key set) updates the node's output ports. Only touch
+		// `parent.columnRefs` when a legacy parent container actually exists.
 		const activeIds = new Set((p.args.yIN ?? []).map(Number).filter((id) => id >= 0));
 		const wantedKeys = currentStatKeys;
 		const desired = new Set(['movex']);
@@ -392,7 +394,7 @@
 			const xCol = new Column({});
 			xCol.name = `movex_${p.id}`;
 			pushObj(xCol);
-			p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
+			if (p.parent) p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
 			p.args.out.movex = xCol.id;
 			changed = true;
 		}
@@ -406,7 +408,7 @@
 					const col = new Column({});
 					col.name = `${srcName}_${k}`;
 					pushObj(col);
-					p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
+					if (p.parent) p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
 					p.args.out[key] = col.id;
 					changed = true;
 				}
