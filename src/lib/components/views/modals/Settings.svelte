@@ -62,82 +62,90 @@
 
 <Modal bind:showModal>
 	{#snippet header()}
-		<div class="heading">
+		<div class="settings-heading">
 			<h2>Settings</h2>
 		</div>
 	{/snippet}
 
 	{#snippet children()}
-		<p>
-			Default colour palette: <ColourPaletteSelect
-				onSelect={(palette) => changeDefaultPalette(palette)}
-			/>
-		</p>
-		<p>
-			Grid size: <NumberWithUnits bind:value={appState.gridSize} min="1" max="100" />
-		</p>
-		<p>
-			Zoom: <NumberWithUnits bind:value={appState.canvasScale} min="0.01" max="10" step="0.05" />
-		</p>
+		<div class="settings-form">
+			<div class="form-field">
+				<span class="form-label">Default colour palette</span>
+				<div class="form-field-controls">
+					<ColourPaletteSelect onSelect={(palette) => changeDefaultPalette(palette)} />
+				</div>
+			</div>
 
-		<p>
-			Timezone:
-			<input
-				class="zone-input"
-				type="text"
-				list="ancir-timezone-list"
-				bind:value={zoneInput}
-				onchange={() => applyZone(zoneInput)}
-				onblur={() => applyZone(zoneInput)}
-				onkeydown={(e) => {
-					if (e.key === 'Enter') applyZone(zoneInput);
-				}}
-				placeholder="utc"
-			/>
-			<button class="zone-button" type="button" onclick={detectLocalZone}>
-				Detect from browser
-			</button>
-			<datalist id="ancir-timezone-list">
-				<option value="utc"></option>
-				{#each allZones as z (z)}
-					<option value={z}></option>
-				{/each}
-			</datalist>
+			<div class="form-field">
+				<span class="form-label">Grid size</span>
+				<div class="form-field-controls">
+					<NumberWithUnits bind:value={appState.gridSize} min="1" max="100" />
+				</div>
+			</div>
+
+			<div class="form-field">
+				<span class="form-label">Zoom</span>
+				<div class="form-field-controls">
+					<NumberWithUnits bind:value={appState.canvasScale} min="0.01" max="10" step="0.05" />
+				</div>
+			</div>
+
+			<div class="form-field">
+				<span class="form-label">Timezone</span>
+				<div class="form-field-controls">
+					<input
+						class="form-control zone-input"
+						type="text"
+						list="ancir-timezone-list"
+						bind:value={zoneInput}
+						onchange={() => applyZone(zoneInput)}
+						onblur={() => applyZone(zoneInput)}
+						onkeydown={(e) => {
+							if (e.key === 'Enter') applyZone(zoneInput);
+						}}
+						placeholder="utc"
+					/>
+					<button class="form-btn" type="button" onclick={detectLocalZone}>
+						Detect from browser
+					</button>
+					<datalist id="ancir-timezone-list">
+						<option value="utc"></option>
+						{#each allZones as z (z)}
+							<option value={z}></option>
+						{/each}
+					</datalist>
+				</div>
+			</div>
+
 			{#if zoneError}
-				<span class="zone-error">{zoneError}</span>
+				<div class="zone-error">{zoneError}</div>
 			{/if}
-		</p>
+		</div>
 	{/snippet}
 </Modal>
 
 <style>
+	.settings-heading h2 {
+		margin: 0 0 var(--space-3);
+		padding-bottom: var(--space-3);
+		border-bottom: 1px solid var(--divider-soft);
+		font-size: 1.15rem;
+		font-weight: 600;
+		color: var(--color-lightness-25, #333);
+	}
+
+	.settings-form {
+		display: flex;
+		flex-direction: column;
+	}
+
 	.zone-input {
-		font: inherit;
-		padding: 0.2rem 0.4rem;
 		min-width: 16ch;
-		border: 1px solid var(--color-lightness-85);
-		border-radius: 2px;
-		background: var(--color-lightness-97);
-	}
-
-	.zone-button {
-		font: inherit;
-		padding: 0.2rem 0.6rem;
-		margin-left: 0.4rem;
-		border: 1px solid var(--color-lightness-85);
-		border-radius: 2px;
-		background: var(--color-lightness-95);
-		cursor: pointer;
-	}
-
-	.zone-button:hover {
-		background: var(--color-lightness-90);
 	}
 
 	.zone-error {
-		display: block;
-		margin-top: var(--space-2);
-		font-size: 0.85em;
+		margin-top: var(--space-3);
+		font-size: var(--font-sm);
 		color: var(--color-error, #c5221f);
 	}
 </style>
