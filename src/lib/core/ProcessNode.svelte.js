@@ -501,7 +501,13 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			if (typeof colId !== 'number' || colId < 0) continue;
 			outputColumns.push({ key, colId, port: `col_${colId}` });
 		}
-		const outputPorts = [makeNodePort('all', 'output', 'column', true)];
+		// The `all` port (wire every output at once) is only meaningful when there's
+		// more than one output column — single-output generators (Random, Sequence,
+		// …) would just duplicate their one output port, so omit it there.
+		const outputPorts = [];
+		if (outputColumns.length > 1) {
+			outputPorts.push(makeNodePort('all', 'output', 'column', true));
+		}
 		for (const { colId } of outputColumns) {
 			outputPorts.push(makeNodePort(`col_${colId}`, 'output', 'column'));
 		}

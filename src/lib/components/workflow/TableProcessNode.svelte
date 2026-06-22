@@ -258,7 +258,10 @@
 			/>
 		</div>
 		<!-- Note · collapse · delete live in the shared action cluster pinned to the
-		     header's top-right by WorkflowEditor (NodeActions), not per-node. -->
+		     header's top-right by WorkflowEditor (NodeActions), not per-node. The
+		     `all` port only appears for multi-output nodes (single-output generators
+		     don't need it). -->
+		{#if outputColumns.length > 1}
 		<div class="all-port-wrap">
 			<button
 				type="button"
@@ -324,6 +327,7 @@
 				</div>
 			{/if}
 		</div>
+		{/if}
 	</div>
 
 	{#if node.sublabel}

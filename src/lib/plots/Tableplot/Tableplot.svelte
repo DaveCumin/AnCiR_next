@@ -21,6 +21,7 @@
 		parentBox = $state();
 		columnRefs = $state([]);
 		showCol = $state([]);
+		colWidths = $state({}); // colId -> px width (missing → default); user-resizable
 		colCurrent = $state(1);
 		showColNumber = $state(false);
 		decimalPlaces = $state(2);
@@ -258,6 +259,7 @@
 			return {
 				columnRefs: this.columnRefs,
 				showCol: this.showCol,
+				colWidths: this.colWidths,
 				colCurrent: this.colCurrent,
 				showColNumber: this.showColNumber,
 				decimalPlaces: this.decimalPlaces
@@ -269,6 +271,7 @@
 			if (json) {
 				table.columnRefs = json.columnRefs ?? [];
 				table.showCol = json.showCol ?? Array(table.columnRefs.length).fill(true);
+				table.colWidths = json.colWidths ?? {};
 				table.colCurrent = json.colCurrent ?? 1;
 				table.showColNumber = json.showColNumber ?? false;
 				table.decimalPlaces = json.decimalPlaces ?? 2;
@@ -326,13 +329,38 @@
 	// Row height tracks the 1.5rem (~24px) cell font: ~44px for one line, more for
 	// the two-line time cells (value + "computed hrs" sub-line).
 	let rowH = $derived(hasTwoLineCol ? 64 : 44);
+	const DEFAULT_COL_W = 130;
+	const MIN_COL_W = 56;
+	const widthFor = (colId) => theData?.plot?.colWidths?.[colId] ?? DEFAULT_COL_W;
 	let colOffsetPx = $derived(theData?.plot?.showColNumber ? '44px ' : '');
+	// Fixed px column widths (not 1fr) so the sticky header grid and the row grids
+	// stay aligned regardless of the body's vertical scrollbar, and so columns can
+	// be resized + overflow can ellipsis.
 	let gridCols = $derived(
-		`${colOffsetPx}repeat(${Math.max(1, visibleColumns.length)}, minmax(110px, 1fr))`
+		`${colOffsetPx}${visibleColumns.map((vc) => `${widthFor(vc.colId)}px`).join(' ')}`
 	);
 	let tableMinWidth = $derived(
-		(theData?.plot?.showColNumber ? 44 : 0) + Math.max(1, visibleColumns.length) * 110
+		(theData?.plot?.showColNumber ? 44 : 0) +
+			visibleColumns.reduce((sum, vc) => sum + widthFor(vc.colId), 0)
 	);
+
+	// Drag a column header's right edge to resize that column.
+	function startColResize(e, colId) {
+		e.preventDefault();
+		e.stopPropagation();
+		const startX = e.clientX;
+		const startW = widthFor(colId);
+		const onMove = (ev) => {
+			const w = Math.max(MIN_COL_W, Math.round(startW + (ev.clientX - startX)));
+			theData.plot.colWidths = { ...theData.plot.colWidths, [colId]: w };
+		};
+		const onUp = () => {
+			window.removeEventListener('pointermove', onMove);
+			window.removeEventListener('pointerup', onUp);
+		};
+		window.addEventListener('pointermove', onMove);
+		window.addEventListener('pointerup', onUp);
+	}
 
 	// Format one cell (column, absolute row index) — mirrors the per-type logic the
 	// class used to bake into `tableData`, but one cell at a time.
@@ -751,6 +779,14 @@
 									value={vc.col?.name ?? '???'}
 									onInput={(v) => makeEdits({ col: editColIndex(vi), row: 'h', value: v })}
 								/>
+								<!-- Drag the right edge to resize this column. -->
+								<div
+									class="tp-resize"
+									role="separator"
+									aria-orientation="vertical"
+									title="Drag to resize column"
+									onpointerdown={(e) => startColResize(e, vc.colId)}
+								></div>
 							</div>
 						{/each}
 					</div>
@@ -853,6 +889,34 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		position: relative; /* anchors the resize grip */
+	}
+
+	/* Drag handle straddling each header's right border. */
+	.tp-resize {
+		position: absolute;
+		top: 0;
+		right: -3px;
+		width: 7px;
+		height: 100%;
+		cursor: col-resize;
+		z-index: 2;
+		touch-action: none;
+	}
+	.tp-resize:hover {
+		background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+	}
+
+	/* Truncate over-long cell/header text with an ellipsis (the values are
+	   rendered by the Editable child, hence the :global span target). The fixed
+	   column width gives it something to truncate against. */
+	.tp-th :global(.inline-edit-span),
+	.tp-td :global(.inline-edit-span) {
+		display: block;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.tp-tr {
@@ -868,6 +932,7 @@
 		border-bottom: 1px solid var(--color-lightness-90, #eee);
 		border-right: 1px solid var(--color-lightness-90);
 		overflow: hidden;
+		min-width: 0; /* let the fixed grid track clip overflow rather than expand */
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
@@ -896,6 +961,8 @@
 		flex-direction: column;
 		align-items: flex-start;
 		gap: 1px;
+		min-width: 0;
+		max-width: 100%;
 	}
 
 	.computed-time {
@@ -904,6 +971,9 @@
 		line-height: 1.1;
 		padding-left: 4px;
 		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
 	}
 
 	.null-value {
