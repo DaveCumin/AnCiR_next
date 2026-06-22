@@ -223,12 +223,12 @@
 						/>
 					</div>
 				</div>
-				<div class="control-input-vertical">
-					<div class="control-input-checkbox">
-						<input type="checkbox" bind:checked={lineData.joinGaps} />
-						<p>Join across gaps (missing values)</p>
-					</div>
-				</div>
+			</div>
+			<!-- Full-width row of its own: the long label would otherwise squish the
+			     colour/width/stroke inputs in the horizontal row above. -->
+			<div class="control-input-checkbox join-gaps-row" style="margin-top: var(--space-3);">
+				<input type="checkbox" bind:checked={lineData.joinGaps} />
+				<p>Join across gaps (missing values)</p>
 			</div>
 		{/if}
 	</div>
