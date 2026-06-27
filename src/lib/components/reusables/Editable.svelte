@@ -149,7 +149,7 @@
 	}
 
 	.editable-input:focus {
-		outline: 2px solid var(--color-accent);
+		outline: var(--focus-ring);
 		outline-offset: 1px;
 	}
 </style>

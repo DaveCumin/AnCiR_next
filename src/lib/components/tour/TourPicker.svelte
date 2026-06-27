@@ -113,7 +113,7 @@
 		background: transparent;
 		font-size: 1rem;
 		cursor: pointer;
-		color: var(--color-lightness-45, #777);
+		color: var(--color-text-muted, #666);
 	}
 	.tp-close:hover {
 		color: var(--color-lightness-20, #2a2a2a);
@@ -121,7 +121,7 @@
 
 	.tp-sub {
 		margin: var(--space-2) 0 0.9rem;
-		color: var(--color-lightness-45, #777);
+		color: var(--color-text-muted, #666);
 		font-size: 0.85rem;
 	}
 
@@ -174,18 +174,18 @@
 
 	.tp-item-desc {
 		font-size: 0.82rem;
-		color: var(--color-lightness-45, #777);
+		color: var(--color-text-muted, #666);
 	}
 
 	.tp-item-time {
 		flex: 0 0 auto;
 		font-size: 0.78rem;
-		color: var(--color-lightness-50, #888);
+		color: var(--color-text-muted, #666);
 	}
 
 	.tp-empty {
 		padding: var(--space-6) 0.3rem;
-		color: var(--color-lightness-50, #888);
+		color: var(--color-text-muted, #666);
 		font-size: 0.9rem;
 	}
 </style>

@@ -756,7 +756,7 @@
 <style>
 	.hint {
 		font-size: var(--font-sm);
-		color: var(--color-lightness-50, #888);
+		color: var(--color-text-muted, #666);
 		margin: var(--space-2) 0;
 	}
 
@@ -796,7 +796,7 @@
 	}
 	.paste-status {
 		font-size: var(--font-xs);
-		color: var(--color-lightness-45, #2a7a2a);
+		color: var(--color-text-muted, #666);
 	}
 	.paste-status.err {
 		color: #b03030;
@@ -857,7 +857,7 @@
 	}
 	.vrow .row-num {
 		text-align: center;
-		color: var(--color-lightness-50, #888);
+		color: var(--color-text-muted, #666);
 		font-size: var(--font-xs);
 		border-right: 1px solid var(--color-lightness-85, #ddd);
 		align-self: stretch;
@@ -994,13 +994,13 @@
 
 	.ac-sv-value {
 		font-size: var(--font-xs);
-		color: var(--color-lightness-55, #777);
+		color: var(--color-text-muted, #666);
 	}
 
 	.ac-empty {
 		padding: 0.4rem 0.6rem;
 		font-size: var(--font-md);
-		color: var(--color-lightness-55, #777);
+		color: var(--color-text-muted, #666);
 		font-style: italic;
 	}
 </style>

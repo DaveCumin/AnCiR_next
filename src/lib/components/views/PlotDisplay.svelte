@@ -524,7 +524,7 @@
 	}
 
 	.viewport-btn {
-		color: var(--color-lightness-45, #6b7280);
+		color: var(--color-text-muted, #666);
 		transition:
 			color 0.18s ease,
 			transform 0.32s ease;

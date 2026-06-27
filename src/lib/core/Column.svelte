@@ -775,7 +775,7 @@
 		padding: 0 1px;
 		margin: 0;
 		cursor: pointer;
-		color: var(--color-lightness-55, #999);
+		color: var(--color-text-muted, #666);
 		font-size: 10px;
 		line-height: 1;
 		flex-shrink: 0;
@@ -815,7 +815,7 @@
 	}
 	.time-format-row p {
 		margin: 0;
-		color: var(--color-lightness-45, #777);
+		color: var(--color-text-muted, #666);
 	}
 	.time-format-row input {
 		flex: 1 1 auto;

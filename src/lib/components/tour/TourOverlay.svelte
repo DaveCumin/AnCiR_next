@@ -613,7 +613,7 @@
 		font-size: var(--font-xs);
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
-		color: var(--color-lightness-50, #888);
+		color: var(--color-text-muted, #666);
 		margin-bottom: 0.35rem;
 	}
 
@@ -624,7 +624,8 @@
 
 	.tour-body {
 		margin: 0 0 var(--space-5) 0;
-		line-height: 1.45;
+		font-size: var(--font-body);
+		line-height: 1.5;
 		color: var(--color-lightness-30, #444);
 	}
 
@@ -665,7 +666,7 @@
 
 	.tour-skip {
 		border-color: transparent;
-		color: var(--color-lightness-45, #777);
+		color: var(--color-text-muted, #666);
 		padding-left: 0;
 	}
 	.tour-skip:hover {
@@ -685,7 +686,7 @@
 		display: inline-block;
 		margin-top: 0.4rem;
 		font-size: var(--font-sm);
-		color: var(--color-lightness-50, #888);
+		color: var(--color-text-muted, #666);
 	}
 
 	/* Honour users who prefer reduced motion: snap instead of glide/pulse. */

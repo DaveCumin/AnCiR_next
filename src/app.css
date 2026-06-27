@@ -22,8 +22,10 @@
 	--color-hover: #6a9fd4; /* Subtle change to align with the colour palette*/
 
 	/* semantic status colours */
-	--color-warning: #e6a817;
+	--color-warning: #e6a817; /* accent / border / icon (non-text) */
 	--color-warning-bg: #fef9e7;
+	--color-warning-text: #8a6500; /* dark amber for TEXT on -bg: 5.05:1 (AA); the
+	   bright --color-warning is only 2:1 on its own tint and must not be used as text */
 	--color-info: #4a90d9;
 	--color-info-bg: #eaf2fb;
 	--color-info-text: #1a73e8;
@@ -55,6 +57,17 @@
 	   can be retuned in one place. Components should prefer these over literals. */
 	--color-accent: #4d9fe3;
 
+	/* secondary / muted text — accessible replacement for the mid lightness greys
+	   (45..60) when used as TEXT. #666 is ~5.7:1 on white / ~5.3:1 on surface-muted,
+	   so it clears WCAG AA (4.5:1) while still reading as de-emphasised. The
+	   lightness-* greys remain for borders / icons (non-text, 3:1). */
+	--color-text-muted: #666666;
+
+	/* keyboard focus ring — shared by all interactive controls via the global
+	   :focus-visible rule below. Brand accent, matching the rings already used in
+	   Editable / NodePalette / WorksheetAddPalette. */
+	--focus-ring: 2px solid var(--color-accent);
+
 	/* surfaces */
 	--surface-canvas: #f7f8fa; /* canvas background (workflow + workspace base) */
 	--surface-card: #ffffff; /* floating cards / toolbars / panels */
@@ -79,17 +92,28 @@
 	--space-6: 16px;
 	--space-7: 24px;
 
-	/* font sizes */
+	/* font sizes — xs..lg are dense-UI sizes (nodes, controls, tables); --font-body
+	   is the readable floor (16px) for prose / reading surfaces (modals, tour,
+	   notifications, help). */
 	--font-xs: 11px;
 	--font-sm: 12px;
 	--font-md: 13px;
 	--font-lg: 14px;
+	--font-body: 16px;
 
 	/* elevation — three levels for resting / floating / overlay surfaces */
 	--shadow-1: 0 1px 3px rgba(0, 0, 0, 0.1); /* resting cards, small popovers */
 	--shadow-2: 0 4px 12px rgba(0, 0, 0, 0.13); /* floating toolbars, menus, panels */
 	--shadow-3: 0 8px 24px rgba(0, 0, 0, 0.16); /* modals, large dropdowns */
 	--shadow-card: var(--shadow-2); /* alias kept for existing references */
+}
+
+/* Consistent keyboard-focus ring. Only triggers on :focus-visible (keyboard nav /
+   assistive tech) — mouse clicks never show it, so there is no added visual weight in
+   normal use. :where() keeps specificity at 0 so components can still opt out or restyle. */
+:where(button, input, select, textarea, a[href], [tabindex]:not([tabindex='-1']), .port-dot):focus-visible {
+	outline: var(--focus-ring);
+	outline-offset: 2px;
 }
 
 /* Collapsible output sections in table processes */
@@ -109,7 +133,7 @@ summary.section-details-summary {
 
 	font-size: 12px;
 	font-weight: 600;
-	color: var(--color-lightness-45);
+	color: var(--color-text-muted, #666);
 
 	padding: 0.35rem 0.5rem;
 	border-radius: 4px;

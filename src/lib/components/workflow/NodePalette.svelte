@@ -422,7 +422,7 @@
 		width: 34px;
 		height: 26px;
 		padding: 0;
-		color: var(--color-lightness-45, #6b7280);
+		color: var(--color-text-muted, #666);
 		background: transparent;
 		border: 0;
 		cursor: pointer;
@@ -493,7 +493,7 @@
 	.palette-empty {
 		padding: var(--space-5) var(--space-2);
 		font-size: 0.82rem;
-		color: var(--color-lightness-50, #888);
+		color: var(--color-text-muted, #666);
 	}
 
 	.palette-family-block {
@@ -507,7 +507,7 @@
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
 		font-weight: 700;
-		color: var(--color-lightness-50, #888);
+		color: var(--color-text-muted, #666);
 		border-top: 1px solid var(--color-lightness-90, #eee);
 	}
 
@@ -549,7 +549,7 @@
 	}
 
 	.palette-tile:focus-visible {
-		outline: 2px solid var(--color-accent);
+		outline: var(--focus-ring);
 		outline-offset: 1px;
 	}
 

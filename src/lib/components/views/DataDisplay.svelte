@@ -715,7 +715,7 @@
 		border-bottom: 1px solid var(--divider-soft);
 	}
 	.search-row :global(.search-icon) {
-		color: var(--color-lightness-55, #999);
+		color: var(--color-text-muted, #666);
 		flex-shrink: 0;
 	}
 	.search-input {

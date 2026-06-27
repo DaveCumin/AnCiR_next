@@ -102,7 +102,7 @@
 
 	.empty-hint {
 		font-size: var(--font-sm);
-		color: var(--color-lightness-55, #888);
+		color: var(--color-text-muted, #666);
 		padding: var(--space-4);
 		line-height: 1.4;
 	}
@@ -131,7 +131,7 @@
 	.sv-value {
 		font-family: monospace;
 		font-size: var(--font-sm);
-		color: var(--color-lightness-45, #555);
+		color: var(--color-text-muted, #666);
 		min-width: 60px;
 		text-align: right;
 	}

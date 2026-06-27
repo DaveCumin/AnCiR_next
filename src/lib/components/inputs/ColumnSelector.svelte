@@ -513,7 +513,7 @@
 
 	.arrow {
 		margin-left: 0.4rem;
-		color: var(--color-lightness-50);
+		color: var(--color-text-muted, #666);
 		font-size: 0.75em;
 		flex-shrink: 0;
 	}
@@ -613,7 +613,7 @@
 		width: 14px;
 		display: inline-block;
 		text-align: center;
-		color: var(--color-lightness-50);
+		color: var(--color-text-muted, #666);
 		flex-shrink: 0;
 	}
 
@@ -660,7 +660,7 @@
 	.no-results {
 		padding: 24px 16px;
 		text-align: center;
-		color: var(--color-lightness-60);
+		color: var(--color-text-muted, #666);
 		font-size: var(--font-md);
 	}
 </style>

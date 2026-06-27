@@ -793,20 +793,20 @@ return _r;`
 
 	.ac-table-name {
 		font-size: var(--font-xs);
-		color: var(--color-lightness-55, #777);
+		color: var(--color-text-muted, #666);
 	}
 
 	.ac-empty {
 		padding: 0.4rem 0.6rem;
 		font-size: var(--font-md);
-		color: var(--color-lightness-55, #777);
+		color: var(--color-text-muted, #666);
 		font-style: italic;
 	}
 
 	/* ── Hints & errors ── */
 	.formula-hint {
 		font-size: var(--font-xs);
-		color: var(--color-lightness-55, #888);
+		color: var(--color-text-muted, #666);
 		margin: 0.2rem 0 0 0;
 	}
 

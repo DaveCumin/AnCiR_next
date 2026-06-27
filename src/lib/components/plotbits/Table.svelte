@@ -154,7 +154,7 @@
 
 	.computed-time {
 		font-size: 0.75em;
-		color: var(--color-lightness-50, #888);
+		color: var(--color-text-muted, #666);
 		line-height: 1.2;
 		padding-left: 4px;
 		white-space: nowrap;

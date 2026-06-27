@@ -28,7 +28,7 @@
 
 	{#snippet children()}
 		{#if rows.length === 0}
-			<p style="color: var(--color-lightness-60); font-size: 0.9rem;">No data available.</p>
+			<p style="color: var(--color-text-muted, #666); font-size: 0.9rem;">No data available.</p>
 		{:else}
 			{@const gridCols = `repeat(${Math.max(1, headers.length)}, minmax(110px, 1fr))`}
 			<div class="table-scroll">
@@ -125,7 +125,7 @@
 
 	.row-count {
 		font-size: 0.8rem;
-		color: var(--color-lightness-60);
+		color: var(--color-text-muted, #666);
 		margin: var(--space-4) 0 0 0;
 	}
 

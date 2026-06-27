@@ -80,6 +80,10 @@
 		outline: none;
 		border-right: none;
 	}
+	.other-input:focus-visible {
+		outline: var(--focus-ring);
+		outline-offset: -2px;
+	}
 	.select-container {
 		position: relative;
 	}

@@ -110,7 +110,7 @@ h2 {
 .hint {
 	font-weight: 400;
 	font-size: 0.75rem;
-	color: var(--color-lightness-55, #888);
+	color: var(--color-text-muted, #666);
 }
 
 select {

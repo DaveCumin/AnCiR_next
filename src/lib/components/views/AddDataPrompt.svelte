@@ -217,6 +217,6 @@
 
 	.add-data-choice-subtitle {
 		font-size: 0.76rem;
-		color: var(--color-lightness-45, #777);
+		color: var(--color-text-muted, #666);
 	}
 </style>

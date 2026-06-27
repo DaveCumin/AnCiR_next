@@ -272,7 +272,7 @@
 				</div>
 				<div class="control-input">
 					<p>Stroke Style</p>
-					<div style="border: {boxPlotData.stroke === -1 ? '1' : '0'}px solid red;">
+					<div class="stroke-field" class:invalid={boxPlotData.stroke === -1}>
 						<AttributeSelect
 							onChange={(value) => {
 								if (isValidStroke(value)) {
@@ -287,6 +287,12 @@
 							placeholder={'eg 5, 5'}
 						/>
 					</div>
+					{#if boxPlotData.stroke === -1}
+						<span class="field-error" role="alert">
+							<Icon name="alert-triangle" width={12} height={12} />
+							Invalid pattern
+						</span>
+					{/if}
 				</div>
 			</div>
 			<div class="control-input-horizontal">
@@ -483,5 +489,20 @@
 		width: 70px;
 		font-size: var(--font-xs);
 		padding: 1px 4px;
+	}
+
+	/* Invalid stroke pattern: pair the colour cue with a real outline + an icon and
+	   text message, so the error isn't conveyed by colour alone (WCAG 1.4.1). */
+	.stroke-field.invalid {
+		outline: 1px solid var(--color-error);
+		border-radius: 2px;
+	}
+	.field-error {
+		display: flex;
+		align-items: center;
+		gap: 3px;
+		margin-top: var(--space-1);
+		color: var(--color-error);
+		font-size: var(--font-xs);
 	}
 </style>

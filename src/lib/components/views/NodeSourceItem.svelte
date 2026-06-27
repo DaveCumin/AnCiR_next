@@ -149,7 +149,7 @@
 	}
 	.node-inputs {
 		font-size: 11.5px;
-		color: var(--color-lightness-45, #777);
+		color: var(--color-text-muted, #666);
 		padding: 3px 6px;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -165,7 +165,7 @@
 	}
 	.node-empty {
 		font-size: 11.5px;
-		color: var(--color-lightness-55, #999);
+		color: var(--color-text-muted, #666);
 		padding: 4px 6px;
 	}
 </style>

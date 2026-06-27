@@ -375,7 +375,7 @@
 <style>
 	.hint {
 		font-size: var(--font-xs);
-		color: var(--color-lightness-55, #888);
+		color: var(--color-text-muted, #666);
 	}
 
 	.group-card {
@@ -448,7 +448,7 @@
 	.sv-value {
 		font-family: monospace;
 		font-size: var(--font-xs);
-		color: var(--color-lightness-45, #666);
+		color: var(--color-text-muted, #666);
 	}
 
 	.group-output {

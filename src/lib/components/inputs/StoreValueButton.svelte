@@ -162,6 +162,10 @@
 	.rename-input:focus {
 		border-color: var(--color-lightness-50, #888);
 	}
+	.rename-input:focus-visible {
+		outline: var(--focus-ring);
+		outline-offset: 1px;
+	}
 	.rename-ok {
 		font-size: var(--font-sm);
 		padding: 2px 8px;

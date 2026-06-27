@@ -345,7 +345,7 @@
 					}
 				}
 			});
-			console.log('startTime calc, minTime: ', minTime);
+
 			//if no time data then make the startTime 0 (to start with)
 			if (minTime === Infinity) {
 				minTime = 0;

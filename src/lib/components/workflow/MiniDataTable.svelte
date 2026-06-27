@@ -129,7 +129,7 @@
 	}
 	.mt-computed {
 		font-size: 0.85em;
-		color: var(--color-lightness-50, #888);
+		color: var(--color-text-muted, #666);
 		line-height: 1.1;
 	}
 	.mini-row.empty {
@@ -138,7 +138,7 @@
 	}
 	.mini-footer {
 		font-size: 0.65rem;
-		color: var(--color-lightness-50, #888);
+		color: var(--color-text-muted, #666);
 		margin-top: var(--space-2);
 		padding-top: var(--space-2);
 		border-top: 1px dashed var(--color-lightness-85, #eee);

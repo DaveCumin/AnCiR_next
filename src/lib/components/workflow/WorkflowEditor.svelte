@@ -3445,7 +3445,7 @@
 		font-size: var(--font-xs);
 		line-height: 1;
 		padding: 0;
-		color: var(--color-lightness-45, #777);
+		color: var(--color-text-muted, #666);
 	}
 	.composite-frame-collapse:hover {
 		color: var(--color-accent);

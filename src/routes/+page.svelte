@@ -1275,7 +1275,7 @@
 
 	:global(.tp-output-label) {
 		font-size: var(--font-xs);
-		color: var(--color-lightness-45, #666);
+		color: var(--color-text-muted, #666);
 		font-style: italic;
 	}
 

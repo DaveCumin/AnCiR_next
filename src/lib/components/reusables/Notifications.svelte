@@ -46,8 +46,8 @@
 		box-shadow:
 			0 4px 12px rgba(0, 0, 0, 0.15),
 			0 1px 4px rgba(0, 0, 0, 0.08);
-		font-size: 0.875rem;
-		line-height: 1.4;
+		font-size: var(--font-body);
+		line-height: 1.5;
 		pointer-events: all;
 		border-left: 4px solid transparent;
 	}

@@ -373,7 +373,7 @@
 <style>
 	.hint {
 		font-size: var(--font-xs);
-		color: var(--color-lightness-55, #888);
+		color: var(--color-text-muted, #666);
 		margin: 0 0 var(--space-2) 0;
 	}
 
@@ -404,7 +404,7 @@
 		cursor: pointer;
 		font-size: 16px;
 		line-height: 1;
-		color: var(--color-lightness-55, #888);
+		color: var(--color-text-muted, #666);
 		padding: 0 0.2rem;
 	}
 
@@ -419,7 +419,7 @@
 		cursor: pointer;
 		font-size: var(--font-sm);
 		padding: 0.3rem 0.6rem;
-		color: var(--color-lightness-45, #666);
+		color: var(--color-text-muted, #666);
 		width: 100%;
 		text-align: center;
 	}

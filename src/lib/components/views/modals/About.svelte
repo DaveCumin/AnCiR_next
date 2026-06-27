@@ -137,7 +137,7 @@
 			>
 		</p>
 
-		<p style="font-size:8px;">Build Number: {buildInfo.buildNumber}</p>
+		<p style="font-size:var(--font-sm);">Build Number: {buildInfo.buildNumber}</p>
 	{/snippet}
 </Modal>
 

@@ -640,7 +640,7 @@
 <style>
 	.cuts-summary {
 		font-size: 0.85em;
-		color: var(--color-lightness-50, #777);
+		color: var(--color-text-muted, #666);
 		margin: 0.2rem 0 0;
 	}
 	.data-warning {

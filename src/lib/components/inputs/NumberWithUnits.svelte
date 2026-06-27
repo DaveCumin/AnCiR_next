@@ -115,8 +115,11 @@
 
 	.number-input:focus {
 		outline: none;
-		border-color: #007bff;
-		box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+		border-color: var(--color-accent);
+	}
+	.number-input:focus-visible {
+		outline: var(--focus-ring);
+		outline-offset: 1px;
 	}
 
 	.unitSelect {

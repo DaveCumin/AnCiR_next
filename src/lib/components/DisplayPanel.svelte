@@ -126,10 +126,13 @@
 		z-index: 1000; /* Higher than the container's z-index */
 	}
 	.resizer-overlay {
-		width: 6px;
+		/* invisible drag strip over the panel boundary; 12px (was 6) for an easier grab.
+		   Not the full 24px since it would intercept clicks on panel-edge content. */
+		width: 12px;
 		height: 100vh;
 		position: fixed;
 		top: 0;
+		margin-left: -3px;
 		cursor: ew-resize;
 		background-color: transparent;
 		z-index: 1001;

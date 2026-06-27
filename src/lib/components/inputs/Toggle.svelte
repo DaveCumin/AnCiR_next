@@ -104,6 +104,7 @@
 	}
 
 	.toggle-switch input:focus-visible + .slider {
+		outline: var(--focus-ring);
 		outline-offset: 2px;
 	}
 </style>

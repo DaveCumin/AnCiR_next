@@ -129,7 +129,7 @@
 	/* Placeholder styling for span */
 	.inline-edit-span:empty::before {
 		content: attr(data-placeholder);
-		color: var(--color-lightness-50);
+		color: var(--color-text-muted, #666);
 		font-style: italic;
 	}
 </style>

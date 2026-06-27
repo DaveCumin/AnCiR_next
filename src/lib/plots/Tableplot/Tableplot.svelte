@@ -906,6 +906,13 @@
 		z-index: 2;
 		touch-action: none;
 	}
+	/* Invisible ~25px-wide grab zone so the thin 7px handle still meets the WCAG 2.5.8
+	   24px minimum (the visible hover strip stays 7px). */
+	.tp-resize::before {
+		content: '';
+		position: absolute;
+		inset: 0 -9px;
+	}
 	.tp-resize:hover {
 		background: color-mix(in srgb, var(--color-accent) 35%, transparent);
 	}
@@ -942,7 +949,7 @@
 	}
 
 	.tp-num {
-		color: var(--color-lightness-50, #888);
+		color: var(--color-text-muted, #666);
 		font-size: 0.8em;
 		text-align: center;
 		justify-content: center;
@@ -970,7 +977,7 @@
 
 	.computed-time {
 		font-size: 0.75em;
-		color: var(--color-lightness-50, #888);
+		color: var(--color-text-muted, #666);
 		line-height: 1.1;
 		padding-left: 4px;
 		white-space: nowrap;
@@ -987,7 +994,7 @@
 		flex-shrink: 0;
 		margin: 0.4rem 0 0;
 		font-size: 0.8rem;
-		color: var(--color-lightness-50, #888);
+		color: var(--color-text-muted, #666);
 	}
 
 	.display-list {
@@ -1064,7 +1071,7 @@
 
 	.tree-badge {
 		font-size: 9.5px;
-		color: var(--color-lightness-50);
+		color: var(--color-text-muted, #666);
 		background: var(--color-lightness-92);
 		padding: 1px 5px;
 		border-radius: 3px;

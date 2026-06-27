@@ -91,7 +91,7 @@
 	}
 	.palette-caret {
 		font-size: 0.8em;
-		color: var(--color-lightness-50);
+		color: var(--color-text-muted, #666);
 	}
 
 	.palette-option {

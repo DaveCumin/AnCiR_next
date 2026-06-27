@@ -367,7 +367,7 @@
 		font-weight: 700;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;
-		color: var(--color-lightness-55, #9a9a9a);
+		color: var(--color-text-muted, #666);
 		pointer-events: none;
 		border-top: 1px solid var(--color-lightness-90, #ededed);
 	}

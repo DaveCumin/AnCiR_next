@@ -2446,7 +2446,7 @@
 
 	.filename-preview {
 		font-size: var(--font-sm);
-		color: var(--color-lightness-50);
+		color: var(--color-text-muted, #666);
 		margin: 0;
 		white-space: nowrap;
 		overflow: hidden;
@@ -2578,7 +2578,7 @@
 	}
 	.badge-warn {
 		background: var(--color-warning-bg);
-		color: var(--color-warning);
+		color: var(--color-warning-text);
 	}
 	.mismatch-warning-soft {
 		margin-top: 0.5em;
@@ -2586,7 +2586,7 @@
 		border: 1px solid var(--color-warning);
 		border-radius: 3px;
 		background: var(--color-warning-bg);
-		color: var(--color-warning);
+		color: var(--color-warning-text);
 		font-size: 0.82em;
 	}
 	.mismatch-warning {
@@ -2640,7 +2640,7 @@
 	.combine-empty {
 		margin: 0.25em 0;
 		font-size: 0.85em;
-		color: var(--color-lightness-50);
+		color: var(--color-text-muted, #666);
 		font-style: italic;
 	}
 	.combine-row {
@@ -2661,7 +2661,7 @@
 	}
 	.combine-plus {
 		font-weight: 700;
-		color: var(--color-lightness-50);
+		color: var(--color-text-muted, #666);
 	}
 	.combine-remove {
 		font: inherit;
@@ -2671,7 +2671,7 @@
 		border: 1px solid transparent;
 		border-radius: 2px;
 		background: transparent;
-		color: var(--color-lightness-50);
+		color: var(--color-text-muted, #666);
 		cursor: pointer;
 	}
 	.combine-remove:hover {
