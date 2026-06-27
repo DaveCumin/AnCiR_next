@@ -96,7 +96,11 @@ class OpHistoryManager {
             this.undoStack.push(entry);
             this.#lastTs = now;
             if (this.undoStack.length > this.maxStackSize) this.undoStack.shift();
-            this.#scheduleAfterCapture(entry);
+            // Pass the PROXIED stack entry (read back), not the raw `entry`: the
+            // later `top === entry` check reads `top` from the $state stack (a
+            // proxy), so comparing it against the raw object mismatches and
+            // uiAfter would never be captured (Svelte state_proxy_equality_mismatch).
+            this.#scheduleAfterCapture(this.undoStack[this.undoStack.length - 1]);
         }
         this.redoStack = [];
     }
