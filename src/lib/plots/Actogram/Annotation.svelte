@@ -1,5 +1,6 @@
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Hist from '$lib/components/plotbits/Hist.svelte';
@@ -210,39 +211,35 @@
 		</button>
 	</div>
 	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Name</p>
+		<ControlInput label="Name">
 			<input bind:value={annotation.name} />
-		</div>
+		</ControlInput>
 
 		<div class="control-color">
 			<ColourPicker bind:value={annotation.colour} />
 		</div>
 	</div>
 	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Start (hours)</p>
+		<ControlInput label="Start (hours)">
 			<NumberWithUnits step="0.1" value={annotation.startTime} onInput={changedStartTime} />
-		</div>
+		</ControlInput>
 
-		<div class="control-input">
-			<p>End (hours)</p>
+		<ControlInput label="End (hours)">
 			<NumberWithUnits
 				step="0.1"
 				value={annotation.endTime}
 				onInput={(val) => changedEndTime(val)}
 			/>
-		</div>
+		</ControlInput>
 
-		<div class="control-input">
-			<p>Duration</p>
+		<ControlInput label="Duration">
 			<NumberWithUnits
 				min="0.1"
 				step="0.1"
 				bind:value={annotation.duration}
 				onInput={changedDuration}
 			/>
-		</div>
+		</ControlInput>
 	</div>
 	<div class="control-input-horizontal">
 		<div class="control-input">

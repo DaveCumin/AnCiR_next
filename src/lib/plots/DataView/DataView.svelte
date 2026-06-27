@@ -2,6 +2,7 @@
 	// @ts-nocheck
 	import { core } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 
 	export const DataView_defaultDataInputs = [];
@@ -151,8 +152,7 @@
 	<div class="control-component">
 		<div class="control-component-title"><p>Data View</p></div>
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Source</p>
+			<ControlInput label="Source">
 				<p class="source-name">
 					{#if theData.sourceType === 'static'}
 						(analysis stats)
@@ -160,17 +160,15 @@
 						{theData.sourcePlot?.name ?? '(source plot not found)'}
 					{/if}
 				</p>
-			</div>
+			</ControlInput>
 		</div>
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Decimal places</p>
+			<ControlInput label="Decimal places">
 				<NumberWithUnits min="0" step="1" bind:value={theData.decimalPlaces} />
-			</div>
-			<div class="control-input">
-				<p>Starting row</p>
+			</ControlInput>
+			<ControlInput label="Starting row">
 				<NumberWithUnits min="1" max={theData.totalRows} bind:value={theData.colCurrent} />
-			</div>
+			</ControlInput>
 		</div>
 	</div>
 {/snippet}

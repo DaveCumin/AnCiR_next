@@ -62,6 +62,7 @@
 	import { getColumnById, removeColumn, Column } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import VirtualList from '$lib/components/reusables/VirtualList.svelte';
 	import { onMount, untrack } from 'svelte';
 
@@ -613,10 +614,9 @@
 		<span>Data entry settings</span>
 	</div>
 
-	<div class="control-input">
-		<p>Number of rows</p>
+	<ControlInput label="Number of rows">
 		<NumberWithUnits bind:value={p.args.N} onInput={doBlank} min={1} step={1} />
-	</div>
+	</ControlInput>
 </div>
 
 <details class="paste-section">

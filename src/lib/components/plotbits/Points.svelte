@@ -1,5 +1,6 @@
 <script module>
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
@@ -193,10 +194,9 @@
 
 					<ColourPicker bind:value={pointsData.colour} />
 				</div>
-				<div class="control-input">
-					<p>Radius</p>
+				<ControlInput label="Radius">
 					<NumberWithUnits step="0.2" min={0.1} bind:value={pointsData.radius} />
-				</div>
+				</ControlInput>
 			</div>
 			<div class="control-input-horizontal">
 				<div class="control-input">

@@ -1,5 +1,6 @@
 <script module>
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
@@ -266,10 +267,9 @@
 				</div>
 			</div>
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Stroke Width</p>
+				<ControlInput label="Stroke Width">
 					<NumberWithUnits step="0.2" min={0.1} bind:value={boxPlotData.strokeWidth} />
-				</div>
+				</ControlInput>
 				<div class="control-input">
 					<p>Stroke Style</p>
 					<div class="stroke-field" class:invalid={boxPlotData.stroke === -1}>
@@ -296,24 +296,21 @@
 				</div>
 			</div>
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Box Width</p>
+				<ControlInput label="Box Width">
 					<NumberWithUnits step="0.1" min={0.1} max={1} bind:value={boxPlotData.boxWidth} />
-				</div>
-				<div class="control-input">
-					<p>Whisker Width</p>
+				</ControlInput>
+				<ControlInput label="Whisker Width">
 					<NumberWithUnits step="0.1" min={0.1} max={1} bind:value={boxPlotData.whiskerWidth} />
-				</div>
+				</ControlInput>
 			</div>
 			<div class="control-input-horizontal">
 				<div class="control-input" style="max-width: 1.5rem;">
 					<p>Median</p>
 					<ColourPicker bind:value={boxPlotData.medianColour} />
 				</div>
-				<div class="control-input">
-					<p>Median Width</p>
+				<ControlInput label="Median Width">
 					<NumberWithUnits step="0.2" min={0.1} bind:value={boxPlotData.medianWidth} />
-				</div>
+				</ControlInput>
 			</div>
 			<div class="control-input-horizontal">
 				<div class="control-input">
@@ -325,27 +322,23 @@
 					/>
 				</div>
 				{#if boxPlotData.outlierMethod === 'iqr'}
-					<div class="control-input">
-						<p>IQR Multiplier</p>
+					<ControlInput label="IQR Multiplier">
 						<NumberWithUnits step="0.1" min={0.1} max={5} bind:value={boxPlotData.iqrMultiplier} />
-					</div>
+					</ControlInput>
 				{:else if boxPlotData.outlierMethod === 'zscore'}
-					<div class="control-input">
-						<p>Z-Score Threshold</p>
+					<ControlInput label="Z-Score Threshold">
 						<NumberWithUnits step="0.1" min={1} max={10} bind:value={boxPlotData.zThreshold} />
-					</div>
+					</ControlInput>
 				{/if}
 			</div>
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Show Outliers</p>
+				<ControlInput label="Show Outliers">
 					<input type="checkbox" bind:checked={boxPlotData.showOutliers} />
-				</div>
+				</ControlInput>
 				{#if boxPlotData.showOutliers}
-					<div class="control-input">
-						<p>Outlier Size</p>
+					<ControlInput label="Outlier Size">
 						<NumberWithUnits step="0.5" min={1} bind:value={boxPlotData.outlierSize} />
-					</div>
+					</ControlInput>
 				{/if}
 			</div>
 			{#if outlierValues.length > 0}

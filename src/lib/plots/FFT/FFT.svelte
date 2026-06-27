@@ -4,6 +4,7 @@
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear, scaleLog } from 'd3-scale';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
@@ -620,15 +621,13 @@
 				<p>Dimension</p>
 			</div>
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Width</p>
+				<ControlInput label="Width">
 					<NumberWithUnits bind:value={theData.parentBox.width} />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Height</p>
+				<ControlInput label="Height">
 					<NumberWithUnits bind:value={theData.parentBox.height} />
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -759,8 +758,7 @@
 			</div>
 
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Min</p>
+				<ControlInput label="Min">
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[0] != null ? theData.ylimsIN[0] : theData.ylims[0]}
@@ -768,10 +766,9 @@
 							theData.ylimsIN[0] = parseFloat(val);
 						}}
 					/>
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Max</p>
+				<ControlInput label="Max">
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[1] != null ? theData.ylimsIN[1] : theData.ylims[1]}
@@ -779,7 +776,7 @@
 							theData.ylimsIN[1] = parseFloat(val);
 						}}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -797,8 +794,7 @@
 				</div>
 
 				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>Min</p>
+					<ControlInput label="Min">
 						<NumberWithUnits
 							step="0.1"
 							value={theData.phaseYlimsIN[0] != null
@@ -808,10 +804,9 @@
 								theData.phaseYlimsIN[0] = parseFloat(val);
 							}}
 						/>
-					</div>
+					</ControlInput>
 
-					<div class="control-input">
-						<p>Max</p>
+					<ControlInput label="Max">
 						<NumberWithUnits
 							step="0.1"
 							value={theData.phaseYlimsIN[1] != null
@@ -821,7 +816,7 @@
 								theData.phaseYlimsIN[1] = parseFloat(val);
 							}}
 						/>
-					</div>
+					</ControlInput>
 				</div>
 			</div>
 
@@ -927,16 +922,14 @@
 						</div>
 
 						<div class="control-data">
-							<div class="control-input">
-								<p>x (time)</p>
-							</div>
+							<ControlInput label="x (time)">
+							</ControlInput>
 							<Column col={datum.x} canChange={true} />
 						</div>
 
 						<div class="control-data">
-							<div class="control-input">
-								<p>y (Values)</p>
-							</div>
+							<ControlInput label="y (Values)">
+							</ControlInput>
 							<Column col={datum.y} canChange={true} />
 						</div>
 

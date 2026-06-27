@@ -1,5 +1,6 @@
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { KahanSum, kahanMean } from '$lib/utils/numerics.js';
 
@@ -183,15 +184,13 @@
 		/>
 	</div>
 	{#if p.args.method === 'iqr'}
-		<div class="control-input">
-			<p>IQR Multiplier</p>
+		<ControlInput label="IQR Multiplier">
 			<NumberWithUnits bind:value={p.args.iqrMultiplier} step="0.1" min={0.1} max={5} />
-		</div>
+		</ControlInput>
 	{:else if p.args.method === 'zscore'}
-		<div class="control-input">
-			<p>Z-Score Threshold</p>
+		<ControlInput label="Z-Score Threshold">
 			<NumberWithUnits bind:value={p.args.zThreshold} step="0.1" min={1} max={10} />
-		</div>
+		</ControlInput>
 	{/if}
 	{#if removedValues.length > 0}
 		<div>

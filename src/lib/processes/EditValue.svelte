@@ -1,5 +1,6 @@
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
 	export function editvalue(x, args) {
 		const edits = args.edits || [];
@@ -80,19 +81,17 @@
 		</button>
 		{#each p.args.edits || [] as edit (edit.id)}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>position</p>
+				<ControlInput label="position">
 					<input type="number" bind:value={edit.position} min="1" step="1" />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>value</p>
+				<ControlInput label="value">
 					{#if p.inputCol?.type == 'time' || p.inputCol?.type == 'number'}
 						<NumberWithUnits bind:value={edit.value} />
 					{:else if p.inputCol?.type == 'category'}
 						<input type="text" bind:value={edit.value} />
 					{/if}
-				</div>
+				</ControlInput>
 
 				<button
 					class="icon remove-edit"

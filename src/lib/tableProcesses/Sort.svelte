@@ -103,6 +103,7 @@
 
 <script>
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
@@ -291,8 +292,7 @@
 
 <div class="section-row">
 	<div class="tableProcess-label"><span>Order</span></div>
-	<div class="control-input">
-		<p>Sort on</p>
+	<ControlInput label="Sort on">
 		<select bind:value={p.args.sortOnId} onchange={recompute} disabled={keyOptions.length === 0}>
 			{#if keyOptions.length === 0}
 				<option value={-1}>— add columns first —</option>
@@ -301,14 +301,13 @@
 				<option value={opt.id}>{opt.name}</option>
 			{/each}
 		</select>
-	</div>
-	<div class="control-input">
-		<p>Direction</p>
+	</ControlInput>
+	<ControlInput label="Direction">
 		<select bind:value={p.args.direction} onchange={recompute}>
 			<option value="asc">Ascending</option>
 			<option value="desc">Descending</option>
 		</select>
-	</div>
+	</ControlInput>
 </div>
 
 <details open>

@@ -7,6 +7,7 @@
 
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
@@ -632,15 +633,13 @@
 				<p>Dimension</p>
 			</div>
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Width</p>
+				<ControlInput label="Width">
 					<NumberWithUnits bind:value={theData.parentBox.width} />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Height</p>
+				<ControlInput label="Height">
 					<NumberWithUnits bind:value={theData.parentBox.height} />
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -652,32 +651,27 @@
 			</div>
 
 			<div class="control-input-square">
-				<div class="control-input">
-					<p>Top</p>
+				<ControlInput label="Top">
 					<NumberWithUnits bind:value={theData.paddingIN.top} />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Bottom</p>
+				<ControlInput label="Bottom">
 					<NumberWithUnits bind:value={theData.paddingIN.bottom} />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Left</p>
+				<ControlInput label="Left">
 					<NumberWithUnits bind:value={theData.paddingIN.left} />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Right</p>
+				<ControlInput label="Right">
 					<NumberWithUnits bind:value={theData.paddingIN.right} />
-				</div>
+				</ControlInput>
 			</div>
 
 			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Space Between</p>
+				<ControlInput label="Space Between">
 					<NumberWithUnits bind:value={theData.spaceBetween} />
-				</div>
+				</ControlInput>
 			</div>
 
 			<div class="control-input-checkbox">
@@ -707,20 +701,17 @@
 			</div>
 
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Period</p>
+				<ControlInput label="Period">
 					<NumberWithUnits step="0.1" bind:value={theData.periodHrs} />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Repeat</p>
+				<ControlInput label="Repeat">
 					<NumberWithUnits bind:value={theData.doublePlot} />
-				</div>
+				</ControlInput>
 			</div>
-			<div class="control-input">
-				<p>Nticks</p>
+			<ControlInput label="Nticks">
 				<NumberWithUnits bind:value={theData.xAxis.nticks} />
-			</div>
+			</ControlInput>
 		</div>
 
 		<div class="div-line"></div>
@@ -730,21 +721,19 @@
 				<p>Y-lims</p>
 			</div>
 			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Scale Y-axis:</p>
+				<ControlInput label="Scale Y-axis:">
 					<select bind:value={theData.ylimsOption}>
 						<option value="overall">Overall</option>
 						<option value="byperiod">By Periods</option>
 						<option value="manual">Manual</option>
 					</select>
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
 		{#if theData.ylimsOption == 'manual'}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Min</p>
+				<ControlInput label="Min">
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[0] == null ? theData.ylims[0] : theData.ylimsIN[0]}
@@ -752,10 +741,9 @@
 							theData.ylimsIN[0] = [parseFloat(val)];
 						}}
 					/>
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Max</p>
+				<ControlInput label="Max">
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[1] == null ? theData.ylims[1] : theData.ylimsIN[1]}
@@ -763,7 +751,7 @@
 							theData.ylimsIN[1] = [parseFloat(val)];
 						}}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		{/if}
 	{:else if appState.currentControlTab === 'data'}
@@ -813,17 +801,15 @@
 
 					<div class="control-data-container">
 						<div class="control-data">
-							<div class="control-input">
-								<p>x</p>
-							</div>
+							<ControlInput label="x">
+							</ControlInput>
 
 							<Column col={datum.x} canChange={true} />
 						</div>
 
 						<div class="control-data">
-							<div class="control-input">
-								<p>y</p>
-							</div>
+							<ControlInput label="y">
+							</ControlInput>
 
 							<Column col={datum.y} canChange={true} />
 						</div>

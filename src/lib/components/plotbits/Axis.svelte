@@ -1,5 +1,6 @@
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
 	export class AxisClass {
 		// UI metadata for the multi-select shared-options panel (sharedControls.js).
@@ -233,14 +234,12 @@
 			<p>{title}</p>
 		</div>
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Label</p>
+			<ControlInput label="Label">
 				<input bind:value={axisData.label} />
-			</div>
-			<div class="control-input">
-				<p>N Ticks</p>
+			</ControlInput>
+			<ControlInput label="N Ticks">
 				<NumberWithUnits step="1" min="1" bind:value={axisData.nticks} />
-			</div>
+			</ControlInput>
 		</div>
 		<div class="control-input-vertical">
 			<div class="control-input-checkbox">

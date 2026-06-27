@@ -1,6 +1,7 @@
 <script module>
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { min as arrayMin } from '$lib/components/plotbits/helpers/wrangleData.js';
 	const displayName = 'Bin Data';
 	const defaults = new Map([
@@ -424,8 +425,7 @@
 <div class="section-row">
 	<div class="tableProcess-label"><span>Bin parameters</span></div>
 
-	<div class="control-input">
-		<p>Bin mode</p>
+	<ControlInput label="Bin mode">
 		<select
 			bind:value={p.args.binMode}
 			onchange={getBinnedData}
@@ -435,11 +435,10 @@
 			<option value="uniform">Uniform</option>
 			<option value="cuts">Custom edges</option>
 		</select>
-	</div>
+	</ControlInput>
 
 	{#if p.args.binMode === 'cuts' && !xIsTime}
-		<div class="control-input">
-			<p>Cut edges (comma- or space-separated)</p>
+		<ControlInput label="Cut edges (comma- or space-separated)">
 			<input
 				type="text"
 				value={cutsText}
@@ -453,9 +452,8 @@
 					Enter at least 2 distinct numeric edges
 				{/if}
 			</p>
-		</div>
-		<div class="control-input">
-			<p>Function</p>
+		</ControlInput>
+		<ControlInput label="Function">
 			<select bind:value={p.args.aggFunction} onchange={getBinnedData}>
 				<option value="count">Count</option>
 				<option value="mean">Mean</option>
@@ -464,18 +462,17 @@
 				<option value="max">Maximum</option>
 				<option value="stddev">Std Dev</option>
 			</select>
-		</div>
+		</ControlInput>
 	{:else}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Bin size (hrs)</p>
+			<ControlInput label="Bin size (hrs)">
 				<NumberWithUnits
 					bind:value={p.args.binSize}
 					onInput={getBinnedData}
 					min="0.01"
 					step="0.01"
 				/>
-			</div>
+			</ControlInput>
 			<div class="control-input">
 				{#if xIsTime}
 					<p>Bin start</p>
@@ -504,8 +501,7 @@
 
 		<div class="control-input-horizontal">
 			{#if p.args.diffStep}
-				<div class="control-input">
-					<p>Step size (hrs)</p>
+				<ControlInput label="Step size (hrs)">
 
 					<NumberWithUnits
 						bind:value={p.args.stepSize}
@@ -513,10 +509,9 @@
 						min="0.01"
 						step="0.01"
 					/>
-				</div>
+				</ControlInput>
 			{/if}
-			<div class="control-input">
-				<p>Function</p>
+			<ControlInput label="Function">
 				<select bind:value={p.args.aggFunction} onchange={getBinnedData}>
 					<option value="count">Count</option>
 					<option value="mean">Mean</option>
@@ -525,7 +520,7 @@
 					<option value="max">Maximum</option>
 					<option value="stddev">Std Dev</option>
 				</select>
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 

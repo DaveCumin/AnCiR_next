@@ -18,6 +18,7 @@
 	import { getNodeName, setNodeName, isNodeNameEditable } from '$lib/core/nodeNaming.js';
 	import Editable from '$lib/components/reusables/Editable.svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
 
 	// The current input column ids of a free process node (inIN is a list).
@@ -207,15 +208,13 @@
 		{@const col = getColumnById(node.refId)}
 		{#if col}
 			<div class="control-component">
-				<div class="control-input">
-					<p>Rows</p>
+				<ControlInput label="Rows">
 					<span class="muted">{col.getData?.()?.length ?? 0}</span>
-				</div>
+				</ControlInput>
 				{#if col.timeFormat}
-					<div class="control-input">
-						<p>Time format</p>
+					<ControlInput label="Time format">
 						<span class="muted">{col.timeFormat}</span>
-					</div>
+					</ControlInput>
 				{/if}
 			</div>
 		{/if}

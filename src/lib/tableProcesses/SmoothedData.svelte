@@ -1,6 +1,7 @@
 <script module>
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
@@ -345,8 +346,7 @@
 	<!-- Type-specific parameters -->
 	{#if p.args.smootherType === 'whittaker'}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Lambda (Smoothing)</p>
+			<ControlInput label="Lambda (Smoothing)">
 				<NumberWithUnits
 					step="10"
 					min={1}
@@ -354,9 +354,8 @@
 					bind:value={p.args.whittakerLambda}
 					onInput={() => getSmoothedData()}
 				/>
-			</div>
-			<div class="control-input">
-				<p>Order</p>
+			</ControlInput>
+			<ControlInput label="Order">
 				<NumberWithUnits
 					step="1"
 					min={1}
@@ -364,12 +363,11 @@
 					bind:value={p.args.whittakerOrder}
 					onInput={() => getSmoothedData()}
 				/>
-			</div>
+			</ControlInput>
 		</div>
 	{:else if p.args.smootherType === 'savitzky'}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Window Size</p>
+			<ControlInput label="Window Size">
 				<NumberWithUnits
 					step="2"
 					min={3}
@@ -377,9 +375,8 @@
 					bind:value={p.args.savitzkyWindowSize}
 					onInput={() => getSmoothedData()}
 				/>
-			</div>
-			<div class="control-input">
-				<p>Poly Order</p>
+			</ControlInput>
+			<ControlInput label="Poly Order">
 				<NumberWithUnits
 					step="1"
 					min={1}
@@ -387,12 +384,11 @@
 					bind:value={p.args.savitzkyPolyOrder}
 					onInput={() => getSmoothedData()}
 				/>
-			</div>
+			</ControlInput>
 		</div>
 	{:else if p.args.smootherType === 'loess'}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Bandwidth</p>
+			<ControlInput label="Bandwidth">
 				<NumberWithUnits
 					step="0.01"
 					min={0.01}
@@ -400,12 +396,11 @@
 					bind:value={p.args.loessBandwidth}
 					onInput={() => getSmoothedData()}
 				/>
-			</div>
+			</ControlInput>
 		</div>
 	{:else if p.args.smootherType === 'moving'}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Window Size</p>
+			<ControlInput label="Window Size">
 				<NumberWithUnits
 					step="1"
 					min={3}
@@ -413,7 +408,7 @@
 					bind:value={p.args.movingAvgWindowSize}
 					onInput={() => getSmoothedData()}
 				/>
-			</div>
+			</ControlInput>
 			<div class="control-input">
 				<p>Type</p>
 				<AttributeSelect

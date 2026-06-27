@@ -1,6 +1,7 @@
 <script module>
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { evaluateCosinorAtPoints } from '$lib/utils/cosinor.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
@@ -635,45 +636,41 @@
 
 	{#if p.args.useFixedPeriod}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Period (hrs)</p>
+			<ControlInput label="Period (hrs)">
 				<NumberWithUnits
 					bind:value={p.args.fixedPeriod}
 					onInput={() => getCosinor()}
 					min="0.1"
 					step="0.5"
 				/>
-			</div>
-			<div class="control-input">
-				<p>N harmonics</p>
+			</ControlInput>
+			<ControlInput label="N harmonics">
 				<NumberWithUnits
 					bind:value={p.args.nHarmonics}
 					onInput={() => getCosinor()}
 					min="1"
 					step="1"
 				/>
-			</div>
+			</ControlInput>
 		</div>
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>CI level</p>
+			<ControlInput label="CI level">
 				<select bind:value={p.args.alpha} onchange={() => getCosinor()}>
 					<option value={0.05}>95%</option>
 					<option value={0.01}>99%</option>
 				</select>
-			</div>
+			</ControlInput>
 		</div>
 	{:else}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>N cosine curves</p>
+			<ControlInput label="N cosine curves">
 				<NumberWithUnits
 					bind:value={p.args.Ncurves}
 					onInput={() => getCosinor()}
 					min="1"
 					step="1"
 				/>
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 

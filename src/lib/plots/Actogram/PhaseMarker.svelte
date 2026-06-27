@@ -1,5 +1,6 @@
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
@@ -398,14 +399,13 @@
 				</button>
 			</div>
 		</div>
-		<div class="control-input">
-			<p>Type</p>
+		<ControlInput label="Type">
 			<select bind:value={marker.type}>
 				<option value="onset">Onset</option>
 				<option value="offset">Offset</option>
 				<option value="manual">Manual</option>
 			</select>
-		</div>
+		</ControlInput>
 
 		<div class="control-input-color">
 			<div class="control-color">
@@ -439,20 +439,17 @@
 			</div>
 		{:else}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>N</p>
+				<ControlInput label="N">
 					<NumberWithUnits min="0" max="100" bind:value={marker.templateHrsBefore} />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>M</p>
+				<ControlInput label="M">
 					<NumberWithUnits min="0" max="100" bind:value={marker.templateHrsAfter} />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>%</p>
+				<ControlInput label="%">
 					<NumberWithUnits min="0" max="100" bind:value={marker.centileThreshold} />
-				</div>
+				</ControlInput>
 			</div>
 		{/if}
 		<div>
@@ -579,8 +576,7 @@
 			</div>
 			{#if marker.showLine}
 				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>Line min day</p>
+					<ControlInput label="Line min day">
 						<input
 							type="number"
 							min="1"
@@ -593,9 +589,8 @@
 								marker.lineMinDay = v === '' ? null : parseInt(v, 10);
 							}}
 						/>
-					</div>
-					<div class="control-input">
-						<p>Line max day</p>
+					</ControlInput>
+					<ControlInput label="Line max day">
 						<input
 							type="number"
 							min="1"
@@ -608,7 +603,7 @@
 								marker.lineMaxDay = v === '' ? null : parseInt(v, 10);
 							}}
 						/>
-					</div>
+					</ControlInput>
 				</div>
 			{/if}
 		{/if}

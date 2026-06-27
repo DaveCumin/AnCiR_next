@@ -1,5 +1,6 @@
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
 	export class LightBandClass {
 		parent;
@@ -150,10 +151,9 @@
 
 	{#if bands.bands.length > 0}
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Height</p>
+			<ControlInput label="Height">
 				<NumberWithUnits bind:value={bands.height} min="1" />
-			</div>
+			</ControlInput>
 		</div>
 		{#each bands.bands as b, i}
 			<div class="control-input-color">
@@ -174,9 +174,8 @@
 		{/each}
 	{:else}
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Click + to add a band</p>
-			</div>
+			<ControlInput label="Click + to add a band">
+			</ControlInput>
 		</div>
 	{/if}
 {/snippet}

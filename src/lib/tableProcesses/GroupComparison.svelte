@@ -704,6 +704,7 @@
 <script>
 	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import { getColumnById as getColumnByIdLocal } from '$lib/core/Column.svelte';
@@ -951,8 +952,7 @@
 	{/if}
 
 	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Method</p>
+		<ControlInput label="Method">
 			<select bind:value={p.args.method} onchange={doComparison}>
 				<option value="auto">Auto (2 groups: T-test, 3+ groups: ANOVA)</option>
 				<option value="ttest">Welch T-test (exactly 2 groups)</option>
@@ -960,11 +960,10 @@
 				<option value="mannwhitney">Mann-Whitney U (exactly 2 groups)</option>
 				<option value="kruskal">Kruskal-Wallis (+ pairwise Mann-Whitney)</option>
 			</select>
-		</div>
-		<div class="control-input">
-			<p>Alpha</p>
+		</ControlInput>
+		<ControlInput label="Alpha">
 			<NumberWithUnits min="0.001" max="0.5" step="0.001" bind:value={p.args.alpha} />
-		</div>
+		</ControlInput>
 		<div class="control-input" style="display: flex; align-items: center; gap: 0.4rem;">
 			<input id={'posthoc-' + p.id} type="checkbox" bind:checked={p.args.postHocEnabled} />
 			<label for={'posthoc-' + p.id}>Enable post-hoc</label>

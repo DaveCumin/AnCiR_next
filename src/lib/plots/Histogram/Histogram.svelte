@@ -5,6 +5,7 @@
 	import { scaleLinear } from 'd3-scale';
 	import Hist from '$lib/components/plotbits/Hist.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { binData, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import { niceAxisLimit } from '$lib/plots/Boxplot/Boxplot.svelte';
@@ -347,14 +348,12 @@
 				<p>Dimension</p>
 			</div>
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Width</p>
+				<ControlInput label="Width">
 					<NumberWithUnits bind:value={theData.parentBox.width} />
-				</div>
-				<div class="control-input">
-					<p>Height</p>
+				</ControlInput>
+				<ControlInput label="Height">
 					<NumberWithUnits bind:value={theData.parentBox.height} />
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -367,22 +366,18 @@
 				<p>Padding</p>
 			</div>
 			<div class="control-input-square">
-				<div class="control-input">
-					<p>Top</p>
+				<ControlInput label="Top">
 					<NumberWithUnits bind:value={theData.padding.top} />
-				</div>
-				<div class="control-input">
-					<p>Bottom</p>
+				</ControlInput>
+				<ControlInput label="Bottom">
 					<NumberWithUnits bind:value={theData.padding.bottom} />
-				</div>
-				<div class="control-input">
-					<p>Left</p>
+				</ControlInput>
+				<ControlInput label="Left">
 					<NumberWithUnits bind:value={theData.padding.left} />
-				</div>
-				<div class="control-input">
-					<p>Right</p>
+				</ControlInput>
+				<ControlInput label="Right">
 					<NumberWithUnits bind:value={theData.padding.right} />
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -392,20 +387,18 @@
 
 		<div class="control-component">
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Y min</p>
+				<ControlInput label="Y min">
 					<NumberWithUnits
 						value={theData.ylimsIN[0] ?? theData.ylims[0]}
 						onInput={(/** @type {string} */ v) => (theData.ylimsIN[0] = parseFloat(v))}
 					/>
-				</div>
-				<div class="control-input">
-					<p>Y max</p>
+				</ControlInput>
+				<ControlInput label="Y max">
 					<NumberWithUnits
 						value={theData.ylimsIN[1] ?? theData.ylims[1]}
 						onInput={(/** @type {string} */ v) => (theData.ylimsIN[1] = parseFloat(v))}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -415,20 +408,18 @@
 
 		<div class="control-component">
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>X min</p>
+				<ControlInput label="X min">
 					<NumberWithUnits
 						value={theData.xlimsIN[0] ?? theData.xlims[0]}
 						onInput={(/** @type {string} */ v) => (theData.xlimsIN[0] = parseFloat(v))}
 					/>
-				</div>
-				<div class="control-input">
-					<p>X max</p>
+				</ControlInput>
+				<ControlInput label="X max">
 					<NumberWithUnits
 						value={theData.xlimsIN[1] ?? theData.xlims[1]}
 						onInput={(/** @type {string} */ v) => (theData.xlimsIN[1] = parseFloat(v))}
 					/>
-				</div>
+				</ControlInput>
 				{#if theData.xlimsIN[0] != null || theData.xlimsIN[1] != null}
 					<div class="control-component-input-icons">
 						<button class="icon" onclick={() => (theData.xlimsIN = [null, null])} title="Revert to automatic range">
@@ -471,9 +462,8 @@
 
 					<div class="data-wrapper">
 						<div class="y-select">
-							<div class="control-input">
-								<p>Column</p>
-							</div>
+							<ControlInput label="Column">
+							</ControlInput>
 							<Column col={datum.column} canChange={true} />
 						</div>
 
@@ -483,8 +473,7 @@
 							</div>
 						{/if}
 
-						<div class="control-input">
-							<p>Bin mode</p>
+						<ControlInput label="Bin mode">
 							<select
 								bind:value={datum.binMode}
 								disabled={datum.column?.type === 'time'}
@@ -492,11 +481,10 @@
 								<option value="uniform">Uniform</option>
 								<option value="cuts">Custom edges</option>
 							</select>
-						</div>
+						</ControlInput>
 
 						{#if datum.binMode === 'cuts'}
-							<div class="control-input">
-								<p>Cut edges (comma- or space-separated)</p>
+							<ControlInput label="Cut edges (comma- or space-separated)">
 								<input
 									type="text"
 									value={datum.cuts.join(', ')}
@@ -513,20 +501,18 @@
 										Enter at least 2 distinct numeric edges
 									{/if}
 								</p>
-							</div>
+							</ControlInput>
 						{:else}
 							<div class="control-input-horizontal">
-								<div class="control-input">
-									<p>Bin size</p>
+								<ControlInput label="Bin size">
 									<NumberWithUnits bind:value={datum.binSize} min="0.0001" step="0.01" />
-								</div>
-								<div class="control-input">
-									<p>Bin start</p>
+								</ControlInput>
+								<ControlInput label="Bin start">
 									<NumberWithUnits
 										value={datum.binStart ?? datum.autoBinStart}
 										onInput={(/** @type {string} */ v) => (datum.binStart = parseFloat(v))}
 									/>
-								</div>
+								</ControlInput>
 								{#if datum.binStart != null}
 									<div class="control-component-input-icons">
 										<button class="icon" onclick={() => (datum.binStart = null)} title="Revert to automatic bin start">
@@ -552,14 +538,12 @@
 								<p>Stroke</p>
 								<ColourPicker bind:value={datum.stroke} />
 							</div>
-							<div class="control-input">
-								<p>Opacity</p>
+							<ControlInput label="Opacity">
 								<NumberWithUnits bind:value={datum.fillOpacity} min="0" max="1" step="0.05" />
-							</div>
-							<div class="control-input">
-								<p>Stroke width</p>
+							</ControlInput>
+							<ControlInput label="Stroke width">
 								<NumberWithUnits bind:value={datum.strokeWidth} min="0" step="0.5" />
-							</div>
+							</ControlInput>
 						</div>
 					</div>
 					<div class="div-line"></div>

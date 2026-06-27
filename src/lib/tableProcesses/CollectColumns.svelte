@@ -114,6 +114,7 @@
 <script>
 	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { Column, removeColumn } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
@@ -327,15 +328,14 @@
 							>×</button
 						>
 					</div>
-					<div class="control-input">
-						<p>Process</p>
+					<ControlInput label="Process">
 						<select value={pp.processName} onchange={(e) => setPreProcess(idx, e.target.value)}>
 							<option value="">Select…</option>
 							{#each sortedProcesses as [key, value] (key)}
 								<option value={key}>{value.displayName || key}</option>
 							{/each}
 						</select>
-					</div>
+					</ControlInput>
 					{#if preProcessProcs[idx]}
 						<Processcomponent p={preProcessProcs[idx]} />
 					{/if}

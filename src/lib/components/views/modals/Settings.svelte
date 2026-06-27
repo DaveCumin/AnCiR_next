@@ -5,6 +5,7 @@
 
 <script>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { appConsts, appState } from '$lib/core/core.svelte';
 	import ColourPaletteSelect from '$lib/components/inputs/ColourPaletteSelect.svelte';
 	let { showModal = $bindable(false) } = $props();
@@ -83,14 +84,12 @@
 		<div class="control-component">
 			<div class="control-component-title"><p>Canvas</p></div>
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Grid size</p>
+				<ControlInput label="Grid size">
 					<NumberWithUnits bind:value={appState.gridSize} min="1" max="100" />
-				</div>
-				<div class="control-input">
-					<p>Zoom</p>
+				</ControlInput>
+				<ControlInput label="Zoom">
 					<NumberWithUnits bind:value={appState.canvasScale} min="0.01" max="10" step="0.05" />
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -98,8 +97,7 @@
 
 		<div class="control-component">
 			<div class="control-component-title"><p>Time</p></div>
-			<div class="control-input">
-				<p>Timezone</p>
+			<ControlInput label="Timezone">
 				<div class="tz-row">
 					<input
 						type="text"
@@ -125,7 +123,7 @@
 				{#if zoneError}
 					<p class="zone-error">{zoneError}</p>
 				{/if}
-			</div>
+			</ControlInput>
 		</div>
 	{/snippet}
 </Modal>

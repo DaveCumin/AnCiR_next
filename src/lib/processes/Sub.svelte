@@ -1,5 +1,6 @@
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
 	export function sub(x, args) {
 		const find = args.find;
@@ -39,27 +40,23 @@
 <ProcessShell {p} title="Substitute">
 	{#if p.inputCol?.type == 'number' || p.inputCol?.type == 'time'}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Find</p>
+			<ControlInput label="Find">
 				<NumberWithUnits bind:value={p.args.find} />
-			</div>
-			<div class="control-input">
-				<p>Replace</p>
+			</ControlInput>
+			<ControlInput label="Replace">
 				<NumberWithUnits bind:value={p.args.replace} />
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 
 	{#if p.inputCol?.type == 'category'}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Find</p>
+			<ControlInput label="Find">
 				<input type="text" bind:value={p.args.find} />
-			</div>
-			<div class="control-input">
-				<p>Replace</p>
+			</ControlInput>
+			<ControlInput label="Replace">
 				<input type="text" bind:value={p.args.replace} />
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 

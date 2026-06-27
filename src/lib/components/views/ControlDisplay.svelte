@@ -112,6 +112,7 @@
 
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
+	import ControlInput from '../inputs/ControlInput.svelte';
 	import { selectPlot, removePlots, getPlotById } from '$lib/core/Plot.svelte';
 	import Editable from '../inputs/Editable.svelte';
 	import CanvasNodeControls from './CanvasNodeControls.svelte';
@@ -598,11 +599,7 @@
 					{/if}
 					<div class="control-input-vertical">
 						{#each fields as field (field.path)}
-							<div class="control-input">
-								<p>
-									{field.label}
-									{#if !field.allEqual}<span class="mixed-tag">mixed</span>{/if}
-								</p>
+							<ControlInput labelContent={fieldLabel}>
 
 								{#if field.input === 'number'}
 									<NumberWithUnits
@@ -645,7 +642,11 @@
 										oninput={(e) => setSharedField(field.path, e.currentTarget.value)}
 									/>
 								{/if}
-							</div>
+							</ControlInput>
+							{#snippet fieldLabel()}
+								{field.label}
+								{#if !field.allEqual}<span class="mixed-tag">mixed</span>{/if}
+							{/snippet}
 
 							{#if !field.allEqual}
 								<div class="set-all-row">

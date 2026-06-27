@@ -1,6 +1,7 @@
 <script module>
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { fitRectangularWave, evaluateRectWaveAtPoints } from '$lib/utils/rectwave.js';
 
 	const displayName = 'Rectangular Wave';
@@ -437,10 +438,9 @@
 	</div>
 	{#if p.args.fixKappa}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>κ value</p>
+			<ControlInput label="κ value">
 				<NumberWithUnits bind:value={p.args.fixedKappa} min="0.1" step="0.5" onInput={getRwave} />
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 
@@ -453,8 +453,7 @@
 	</div>
 	{#if p.args.fixOmega}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Period</p>
+			<ControlInput label="Period">
 				<NumberWithUnits
 					bind:value={p.args.fixedPeriod}
 					min="0.1"
@@ -468,7 +467,7 @@
 					}}
 					onInput={getRwave}
 				/>
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 
@@ -481,8 +480,7 @@
 	</div>
 	{#if p.args.fixDutyCycle}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Duty cycle (0–1)</p>
+			<ControlInput label="Duty cycle (0–1)">
 				<NumberWithUnits
 					bind:value={p.args.fixedDutyCycle}
 					min="0.01"
@@ -490,7 +488,7 @@
 					step="0.05"
 					onInput={getRwave}
 				/>
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 

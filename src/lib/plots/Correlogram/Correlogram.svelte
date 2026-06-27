@@ -4,6 +4,7 @@
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
@@ -491,15 +492,13 @@
 				<p>Dimension</p>
 			</div>
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Width</p>
+				<ControlInput label="Width">
 					<NumberWithUnits bind:value={theData.parentBox.width} />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Height</p>
+				<ControlInput label="Height">
 					<NumberWithUnits bind:value={theData.parentBox.height} />
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -623,8 +622,7 @@
 			</div>
 
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Min</p>
+				<ControlInput label="Min">
 					<NumberWithUnits
 						min="-1"
 						max="1"
@@ -634,10 +632,9 @@
 							theData.ylimsIN[0] = parseFloat(val);
 						}}
 					/>
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Max</p>
+				<ControlInput label="Max">
 					<NumberWithUnits
 						min="-1"
 						max="1"
@@ -647,7 +644,7 @@
 							theData.ylimsIN[1] = parseFloat(val);
 						}}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -664,8 +661,7 @@
 			</div>
 
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Min</p>
+				<ControlInput label="Min">
 					<NumberWithUnits
 						min="0"
 						step="1"
@@ -674,10 +670,9 @@
 							theData.laglimsIN[0] = parseFloat(val);
 						}}
 					/>
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Max</p>
+				<ControlInput label="Max">
 					<NumberWithUnits
 						step="1"
 						value={theData.laglimsIN[1] != null ? theData.laglimsIN[1] : theData.laglims[1]}
@@ -685,7 +680,7 @@
 							theData.laglimsIN[1] = parseFloat(val);
 						}}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -729,16 +724,14 @@
 						</div>
 
 						<div class="control-data">
-							<div class="control-input">
-								<p>x (time)</p>
-							</div>
+							<ControlInput label="x (time)">
+							</ControlInput>
 							<Column col={datum.x} canChange={true} />
 						</div>
 
 						<div class="control-data">
-							<div class="control-input">
-								<p>y (values)</p>
-							</div>
+							<ControlInput label="y (values)">
+							</ControlInput>
 							<Column col={datum.y} canChange={true} />
 						</div>
 
@@ -828,13 +821,12 @@
 
 						<Line lineData={datum.confidenceLine} which="controls" title="Confidence Bounds" />
 						{#if datum.confidenceLine.draw}
-							<div class="control-input">
-								<p>Confidence Level</p>
+							<ControlInput label="Confidence Level">
 								<select bind:value={datum.confidenceLevel}>
 									<option value={0.95}>95%</option>
 									<option value={0.99}>99%</option>
 								</select>
-							</div>
+							</ControlInput>
 						{/if}
 
 						<div class="div-line"></div>

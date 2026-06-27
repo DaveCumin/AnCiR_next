@@ -744,6 +744,7 @@
 
 <script>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appState } from '$lib/core/core.svelte';
@@ -825,15 +826,13 @@
 				<p>Dimension</p>
 			</div>
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Width</p>
+				<ControlInput label="Width">
 					<NumberWithUnits bind:value={theData.parentBox.width} />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Height</p>
+				<ControlInput label="Height">
 					<NumberWithUnits bind:value={theData.parentBox.height} />
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -846,25 +845,21 @@
 				<p>Padding</p>
 			</div>
 			<div class="control-input-square">
-				<div class="control-input">
-					<p>Top</p>
+				<ControlInput label="Top">
 					<NumberWithUnits bind:value={theData.padding.top} />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Bottom</p>
+				<ControlInput label="Bottom">
 					<NumberWithUnits bind:value={theData.padding.bottom} />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Left</p>
+				<ControlInput label="Left">
 					<NumberWithUnits bind:value={theData.padding.left} />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Right</p>
+				<ControlInput label="Right">
 					<NumberWithUnits bind:value={theData.padding.right} />
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -874,8 +869,7 @@
 
 		<div class="control-component">
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Min</p>
+				<ControlInput label="Min">
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
@@ -883,10 +877,9 @@
 							theData.ylimsIN[0] = parseFloat(val);
 						}}
 					/>
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Max</p>
+				<ControlInput label="Max">
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
@@ -894,7 +887,7 @@
 							theData.ylimsIN[1] = parseFloat(val);
 						}}
 					/>
-				</div>
+				</ControlInput>
 
 				{#if theData.ylimsIN[0] != null || theData.ylimsIN[1] != null}
 					<div class="control-component-input-icons">
@@ -913,10 +906,9 @@
 				<p>X-Axis</p>
 			</div>
 			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Label</p>
+				<ControlInput label="Label">
 					<input bind:value={theData.xAxis.label} />
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -927,51 +919,43 @@
 				<p>Significance bars</p>
 			</div>
 			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Show</p>
+				<ControlInput label="Show">
 					<input type="checkbox" bind:checked={theData.showSigBars} />
-				</div>
-				<div class="control-input">
-					<p>Method</p>
+				</ControlInput>
+				<ControlInput label="Method">
 					<select bind:value={theData.sigMethod}>
 						<option value="auto">Auto (t-test / ANOVA)</option>
 						<option value="kruskal">Kruskal-Wallis / Mann-Whitney</option>
 					</select>
-				</div>
-				<div class="control-input">
-					<p>α</p>
+				</ControlInput>
+				<ControlInput label="α">
 					<NumberWithUnits bind:value={theData.sigAlpha} step={0.01} />
-				</div>
+				</ControlInput>
 				{#if theData.showSigBars}
-					<div class="control-input">
-						<p>Show ns</p>
+					<ControlInput label="Show ns">
 						<input type="checkbox" bind:checked={theData.showNs} />
-					</div>
+					</ControlInput>
 					<div class="control-input-horizontal">
 						<div class="control-input" style="max-width: 1.5rem;">
 							<p>Bar Colour</p>
 							<ColourPicker bind:value={theData.sigBarColor} />
 						</div>
-						<div class="control-input">
-							<p>Thickness</p>
+						<ControlInput label="Thickness">
 							<NumberWithUnits bind:value={theData.sigBarThickness} step={0.1} min={0.1} />
-						</div>
+						</ControlInput>
 					</div>
 					<div class="control-input-horizontal">
-						<div class="control-input">
-							<p>Font Size</p>
+						<ControlInput label="Font Size">
 							<NumberWithUnits bind:value={theData.sigBarFontSize} step={1} min={1} />
-						</div>
-						<div class="control-input">
-							<p>Spread</p>
+						</ControlInput>
+						<ControlInput label="Spread">
 							<NumberWithUnits bind:value={theData.sigBarSpacing} step={0.1} min={0.1} />
-						</div>
+						</ControlInput>
 					</div>
 					<div class="control-input-horizontal">
-						<div class="control-input">
-							<p>Y Offset</p>
+						<ControlInput label="Y Offset">
 							<NumberWithUnits bind:value={theData.sigBarYOffset} step={1} />
-						</div>
+						</ControlInput>
 					</div>
 					{#if theData.sigBarWarnings.length > 0}
 						<div class="data-warning">
@@ -1046,9 +1030,8 @@
 
 					<div class="data-wrapper">
 						<div class="y-select">
-							<div class="control-input">
-								<p>x (categories, optional)</p>
-							</div>
+							<ControlInput label="x (categories, optional)">
+							</ControlInput>
 							<Column col={datum.x} canChange={true} />
 							{#if datum.x.refId >= 0}
 								<button
@@ -1063,9 +1046,8 @@
 							{/if}
 						</div>
 						<div class="y-select">
-							<div class="control-input">
-								<p>y (values)</p>
-							</div>
+							<ControlInput label="y (values)">
+							</ControlInput>
 							<Column col={datum.y} canChange={true} />
 						</div>
 

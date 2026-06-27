@@ -2,6 +2,7 @@
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { computeFFT } from '$lib/utils/fft.js';
 	import { computeAutocorrelation } from '$lib/utils/correlogram.js';
@@ -625,52 +626,44 @@
 			</div>
 		</div>
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Period min (hrs)</p>
+			<ControlInput label="Period min (hrs)">
 				<NumberWithUnits bind:value={p.args.periodMin} min="0.01" step="0.5" />
-			</div>
-			<div class="control-input">
-				<p>Period max (hrs)</p>
+			</ControlInput>
+			<ControlInput label="Period max (hrs)">
 				<NumberWithUnits bind:value={p.args.periodMax} min="0.01" step="0.5" />
-			</div>
-			<div class="control-input">
-				<p>Period step (hrs)</p>
+			</ControlInput>
+			<ControlInput label="Period step (hrs)">
 				<NumberWithUnits bind:value={p.args.periodStep} min="0.001" step="0.01" />
-			</div>
+			</ControlInput>
 		</div>
 		{#if p.args.pgMethod === 'Chi-squared' || p.args.pgMethod === 'Enright'}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Bin size (hrs)</p>
+				<ControlInput label="Bin size (hrs)">
 					<NumberWithUnits bind:value={p.args.pgBinSize} min="0.01" step="0.05" />
-				</div>
+				</ControlInput>
 				{#if p.args.pgMethod === 'Chi-squared'}
-					<div class="control-input">
-						<p>α (significance)</p>
+					<ControlInput label="α (significance)">
 						<NumberWithUnits bind:value={p.args.pgAlpha} min="0.0001" max="0.9999" step="0.01" />
-					</div>
+					</ControlInput>
 				{/if}
 			</div>
 		{/if}
 	{:else if p.args.analysis === 'fft'}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Frequency step (cycles/hr; 0 = auto)</p>
+			<ControlInput label="Frequency step (cycles/hr; 0 = auto)">
 				<NumberWithUnits bind:value={p.args.fftFreqStep} min="0" step="0.001" />
-			</div>
+			</ControlInput>
 		</div>
 	{:else if p.args.analysis === 'correlogram'}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Min lag (hrs)</p>
+			<ControlInput label="Min lag (hrs)">
 				<NumberWithUnits bind:value={p.args.corrMinLag} min="0" step="1" />
-			</div>
+			</ControlInput>
 		</div>
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Max lag (hrs; 0 = half range)</p>
+			<ControlInput label="Max lag (hrs; 0 = half range)">
 				<NumberWithUnits bind:value={p.args.corrMaxLag} min="0" step="1" />
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 </div>

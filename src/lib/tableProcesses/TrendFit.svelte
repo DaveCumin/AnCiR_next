@@ -2,6 +2,7 @@
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { fitTrendSync, evaluateTrendAtPoints } from '$lib/utils/trendfit.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
@@ -581,15 +582,14 @@
 
 	{#if p.args.model === 'polynomial'}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Degree</p>
+			<ControlInput label="Degree">
 				<NumberWithUnits
 					bind:value={p.args.polyDegree}
 					onInput={() => getTrend()}
 					min="1"
 					step="1"
 				/>
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 
@@ -620,8 +620,7 @@
 			</div>
 
 			{#if !autoNPermutations}
-				<div class="control-input">
-					<p>Permutations</p>
+				<ControlInput label="Permutations">
 					<NumberWithUnits
 						bind:value={nPermutations}
 						min="99"
@@ -629,7 +628,7 @@
 						step="100"
 						disabled={permutationInProgress}
 					/>
-				</div>
+				</ControlInput>
 			{/if}
 
 			<div class="control-input">
@@ -642,8 +641,7 @@
 				/>
 			</div>
 
-			<div class="control-input">
-				<p>Seed (for reproducibility)</p>
+			<ControlInput label="Seed (for reproducibility)">
 				<NumberWithUnits
 					bind:value={permutationSeed}
 					min="1"
@@ -651,7 +649,7 @@
 					step="1"
 					disabled={permutationInProgress}
 				/>
-			</div>
+			</ControlInput>
 
 			<button onclick={() => getTrend()} disabled={permutationInProgress} style="margin-top: 10px;">
 				{#if permutationInProgress}

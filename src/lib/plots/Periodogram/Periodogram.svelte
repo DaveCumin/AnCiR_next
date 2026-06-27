@@ -5,6 +5,7 @@
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
@@ -662,15 +663,13 @@
 				<p>Dimension</p>
 			</div>
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Width</p>
+				<ControlInput label="Width">
 					<NumberWithUnits bind:value={theData.parentBox.width} />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Height</p>
+				<ControlInput label="Height">
 					<NumberWithUnits bind:value={theData.parentBox.height} />
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -799,8 +798,7 @@
 			</div>
 
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Min</p>
+				<ControlInput label="Min">
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
@@ -808,10 +806,9 @@
 							theData.ylimsIN[0] = [parseFloat(val)];
 						}}
 					/>
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Max</p>
+				<ControlInput label="Max">
 					<NumberWithUnits
 						step="0.1"
 						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
@@ -819,7 +816,7 @@
 							theData.ylimsIN[1] = [parseFloat(val)];
 						}}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -831,8 +828,7 @@
 			</div>
 
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Min</p>
+				<ControlInput label="Min">
 					<NumberWithUnits
 						min="0.1"
 						step="0.1"
@@ -841,10 +837,9 @@
 							theData.periodlimsIN[0] = parseFloat(val);
 						}}
 					/>
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Max</p>
+				<ControlInput label="Max">
 					<NumberWithUnits
 						step="0.1"
 						value={theData.periodlimsIN[1] ? theData.periodlimsIN[1] : theData.periodlimsIN[1]}
@@ -852,14 +847,13 @@
 							theData.periodlimsIN[1] = parseFloat(val);
 						}}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 
 			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Period Step</p>
+				<ControlInput label="Period Step">
 					<NumberWithUnits min="0.01" step="0.01" bind:value={theData.periodSteps} />
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -907,41 +901,36 @@
 						</div>
 
 						<div class="control-data">
-							<div class="control-input">
-								<p>x</p>
-							</div>
+							<ControlInput label="x">
+							</ControlInput>
 
 							<Column col={datum.x} canChange={true} />
 						</div>
 
 						<div class="control-data">
-							<div class="control-input">
-								<p>y</p>
-							</div>
+							<ControlInput label="y">
+							</ControlInput>
 
 							<Column col={datum.y} canChange={true} />
 						</div>
 
-						<div class="control-input">
-							<p>Method</p>
+						<ControlInput label="Method">
 							<select bind:value={datum.method}>
 								<option value="Lomb-Scargle">Lomb-Scargle</option>
 								<option value="Chi-squared">Chi-squared</option>
 								<option value="Enright">Enright</option>
 							</select>
-						</div>
+						</ControlInput>
 
 						<!-- New: Method selector -->
 						<div class="control-input-horizontal">
 							<!-- binSize only relevant for Chi-squared -->
 							{#if datum.method === 'Chi-squared'}
-								<div class="control-input">
-									<p>Bin Size</p>
+								<ControlInput label="Bin Size">
 									<input type="number" step="0.01" min="0.01" bind:value={datum.binSize} />
-								</div>
+								</ControlInput>
 
-								<div class="control-input">
-									<p>Alpha</p>
+								<ControlInput label="Alpha">
 									<input
 										type="number"
 										min="0.0001"
@@ -949,7 +938,7 @@
 										step="0.01"
 										bind:value={datum.chiSquaredAlpha}
 									/>
-								</div>
+								</ControlInput>
 							{/if}
 						</div>
 

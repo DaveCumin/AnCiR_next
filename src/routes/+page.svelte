@@ -1105,7 +1105,8 @@
 		margin: 0;
 	}
 
-	:global(.control-input p) {
+	:global(.control-input p),
+	:global(.control-input > .ci-label) {
 		font-size: var(--font-sm);
 		text-align: left;
 		color: var(--color-lightness-35);
@@ -1128,7 +1129,8 @@
 		line-height: 1.4;
 	}
 
-	:global(.control-input-checkbox p) {
+	:global(.control-input-checkbox p),
+	:global(.control-input-checkbox > .ci-label) {
 		font-size: var(--font-sm);
 		text-align: left;
 		color: var(--color-lightness-35);

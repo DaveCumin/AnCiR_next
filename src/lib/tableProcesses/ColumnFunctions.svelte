@@ -99,6 +99,7 @@
 
 <script>
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
@@ -193,19 +194,17 @@
 			<span>Column Function</span>
 		</div>
 	</div>
-	<div class="control-input">
-		<p>Function</p>
+	<ControlInput label="Function">
 		<p>{p.args.out.result}</p>
 		<select bind:value={p.args.func} onchange={() => doColumnFunction()}>
 			{#each funcOptions as opt}
 				<option value={opt.value}>{opt.label}</option>
 			{/each}
 		</select>
-	</div>
+	</ControlInput>
 	{#if !hideInputs}
-		<div class="control-input">
-			<p>Columns</p>
-		</div>
+		<ControlInput label="Columns">
+		</ControlInput>
 		<ColumnSelector
 			value={p.args.xsIN}
 			onChange={(val) => {

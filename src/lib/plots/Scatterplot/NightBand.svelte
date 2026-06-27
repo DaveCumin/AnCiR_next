@@ -1,5 +1,6 @@
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import { scaleLinear, scaleTime } from 'd3-scale';
@@ -233,10 +234,9 @@
 	</div>
 
 	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Name</p>
+		<ControlInput label="Name">
 			<input bind:value={nightBand.name} />
-		</div>
+		</ControlInput>
 
 		<div class="control-color">
 			<ColourPicker bind:value={nightBand.colour} />
@@ -310,20 +310,18 @@
 			</div>
 		{/if}
 
-		<div class="control-input">
-			<p>Period (hours)</p>
+		<ControlInput label="Period (hours)">
 			<NumberWithUnits min="0.5" step="0.5" bind:value={nightBand.repeatEveryHours} />
-		</div>
+		</ControlInput>
 
-		<div class="control-input">
-			<p>Night Duration (hours)</p>
+		<ControlInput label="Night Duration (hours)">
 			<NumberWithUnits
 				min="0.1"
 				max={nightBand.repeatEveryHours * 0.99}
 				step="0.5"
 				bind:value={nightBand.nightDurationHours}
 			/>
-		</div>
+		</ControlInput>
 
 		{#if nightBand.bands.length > 0}
 			<div class="control-input">
@@ -347,9 +345,8 @@
 		</div>
 
 		{#if nightBand.customBands.length === 0}
-			<div class="control-input">
-				<p>Click + to add a custom band</p>
-			</div>
+			<ControlInput label="Click + to add a custom band">
+			</ControlInput>
 		{:else}
 			{@const isTime = nightBand.parentPlot?.anyXdataTime}
 			{@const msPerUnit = isTime ? 3600000 : 1}
@@ -361,14 +358,13 @@
 					out:slide={{ duration: 300, axis: 'y' }}
 				>
 					<div class="control-input-horizontal">
-						<div class="control-input" style="flex: 1;">
-							<p>Label</p>
+						<ControlInput label="Label" style="flex: 1;">
 							<input
 								value={band.label}
 								onchange={(e) =>
 									nightBand.updateCustomBandField(idx, 'label', e.currentTarget.value)}
 							/>
-						</div>
+						</ControlInput>
 						<button class="icon" onclick={() => nightBand.removeCustomBand(idx)}>
 							<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
 						</button>
@@ -411,8 +407,7 @@
 							{/if}
 						</div>
 
-						<div class="control-input">
-							<p>Duration (hours)</p>
+						<ControlInput label="Duration (hours)">
 							<NumberWithUnits
 								min={0}
 								step={0.1}
@@ -420,7 +415,7 @@
 								onInput={(/** @type {number} */ val) =>
 									nightBand.updateCustomBandField(idx, 'duration', val)}
 							/>
-						</div>
+						</ControlInput>
 					</div>
 					<div class="div-line" style="margin-top: var(--space-4); margin-bottom: 0;"></div>
 				</div>

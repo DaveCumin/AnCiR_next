@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { core } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
@@ -586,10 +587,9 @@
 			</div>
 		</div>
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Decimal places</p>
+			<ControlInput label="Decimal places">
 				<NumberWithUnits min="0" step="1" bind:value={theData.decimalPlaces} />
-			</div>
+			</ControlInput>
 		</div>
 	</div>
 

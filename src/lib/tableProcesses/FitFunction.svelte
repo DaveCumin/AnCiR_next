@@ -250,6 +250,7 @@
 	// @ts-nocheck
 	import { tick } from 'svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
@@ -808,26 +809,23 @@
 		</div>
 		{#if p.args.useFixedPeriod}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Fixed period</p>
+				<ControlInput label="Fixed period">
 					<NumberWithUnits
 						bind:value={p.args.fixedPeriod}
 						min="0.1"
 						step="0.1"
 						onInput={() => getFit()}
 					/>
-				</div>
-				<div class="control-input">
-					<p>Harmonics</p>
+				</ControlInput>
+				<ControlInput label="Harmonics">
 					<NumberWithUnits
 						bind:value={p.args.nHarmonics}
 						min="1"
 						step="1"
 						onInput={() => getFit()}
 					/>
-				</div>
-				<div class="control-input">
-					<p>Alpha</p>
+				</ControlInput>
+				<ControlInput label="Alpha">
 					<NumberWithUnits
 						bind:value={p.args.alpha}
 						min="0.001"
@@ -835,14 +833,13 @@
 						step="0.005"
 						onInput={() => getFit()}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		{:else}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Number of cosines</p>
+				<ControlInput label="Number of cosines">
 					<NumberWithUnits bind:value={p.args.Ncurves} min="1" step="1" onInput={() => getFit()} />
-				</div>
+				</ControlInput>
 			</div>
 		{/if}
 	{:else if p.args.model === 'rectangular'}
@@ -867,34 +864,31 @@
 		</div>
 		{#if p.args.fixKappa}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>κ value</p>
+				<ControlInput label="κ value">
 					<NumberWithUnits
 						bind:value={p.args.fixedKappa}
 						min="0.1"
 						step="0.5"
 						onInput={() => getFit()}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		{/if}
 		{#if p.args.fixOmega}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Period</p>
+				<ControlInput label="Period">
 					<NumberWithUnits
 						bind:value={p.args.fixedPeriod}
 						min="0.1"
 						step="0.1"
 						onInput={() => getFit()}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		{/if}
 		{#if p.args.fixDutyCycle}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Duty cycle</p>
+				<ControlInput label="Duty cycle">
 					<NumberWithUnits
 						bind:value={p.args.fixedDutyCycle}
 						min="0.01"
@@ -902,7 +896,7 @@
 						step="0.05"
 						onInput={() => getFit()}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		{/if}
 	{:else if p.args.model === 'doublelogistic'}
@@ -931,41 +925,38 @@
 		</div>
 		{#if p.args.fixK1}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>k1</p>
+				<ControlInput label="k1">
 					<NumberWithUnits
 						bind:value={p.args.fixedK1}
 						min="0.01"
 						step="0.1"
 						onInput={() => getFit()}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		{/if}
 		{#if p.args.fixK2}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>k2</p>
+				<ControlInput label="k2">
 					<NumberWithUnits
 						bind:value={p.args.fixedK2}
 						min="0.01"
 						step="0.1"
 						onInput={() => getFit()}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		{/if}
 		{#if p.args.fixPeriod}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Period</p>
+				<ControlInput label="Period">
 					<NumberWithUnits
 						bind:value={p.args.fixedPeriod}
 						min="0.1"
 						step="0.1"
 						onInput={() => getFit()}
 					/>
-				</div>
+				</ControlInput>
 			</div>
 		{/if}
 	{/if}
@@ -996,8 +987,7 @@
 				</label>
 			</div>
 			{#if !p.args.autoPermutations}
-				<div class="control-input">
-					<p>Permutations</p>
+				<ControlInput label="Permutations">
 					<NumberWithUnits
 						bind:value={p.args.nPermutations}
 						min="99"
@@ -1006,10 +996,9 @@
 						disabled={calculating}
 						onInput={() => getFit()}
 					/>
-				</div>
+				</ControlInput>
 			{/if}
-			<div class="control-input">
-				<p>Seed</p>
+			<ControlInput label="Seed">
 				<NumberWithUnits
 					bind:value={p.args.permutationSeed}
 					min="1"
@@ -1018,7 +1007,7 @@
 					disabled={calculating}
 					onInput={() => getFit()}
 				/>
-			</div>
+			</ControlInput>
 			<div class="control-input">
 				<p>Statistic</p>
 				<AttributeSelect

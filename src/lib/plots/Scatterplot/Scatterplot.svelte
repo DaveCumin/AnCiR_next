@@ -639,6 +639,7 @@
 
 <script>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import Toggle from '$lib/components/inputs/Toggle.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appState } from '$lib/core/core.svelte';
@@ -708,15 +709,13 @@
 				<p>Dimension</p>
 			</div>
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Width</p>
+				<ControlInput label="Width">
 					<NumberWithUnits bind:value={theData.parentBox.width} />
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Height</p>
+				<ControlInput label="Height">
 					<NumberWithUnits bind:value={theData.parentBox.height} />
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -742,39 +741,35 @@
 				<p>Padding</p>
 			</div>
 			<div class="control-input-square">
-				<div class="control-input">
-					<p>Top</p>
+				<ControlInput label="Top">
 					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
 						<NumberWithUnits bind:value={theData.padding.top} />
 					</div>
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Bottom</p>
+				<ControlInput label="Bottom">
 					<div
 						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
 						<NumberWithUnits bind:value={theData.padding.bottom} />
 					</div>
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Left</p>
+				<ControlInput label="Left">
 					<div
 						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
 						<NumberWithUnits bind:value={theData.padding.left} />
 					</div>
-				</div>
+				</ControlInput>
 
-				<div class="control-input">
-					<p>Right</p>
+				<ControlInput label="Right">
 					<div
 						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
 						<NumberWithUnits bind:value={theData.padding.right} />
 					</div>
-				</div>
+				</ControlInput>
 			</div>
 		</div>
 
@@ -785,8 +780,7 @@
 
 			<div class="control-component">
 				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>Min</p>
+					<ControlInput label="Min">
 						<NumberWithUnits
 							step="0.1"
 							value={theData.ylimsLeftIN[0] ? theData.ylimsLeftIN[0] : theData.ylimsLeft[0]}
@@ -794,10 +788,9 @@
 								theData.ylimsLeftIN[0] = parseFloat(val);
 							}}
 						/>
-					</div>
+					</ControlInput>
 
-					<div class="control-input">
-						<p>Max</p>
+					<ControlInput label="Max">
 						<NumberWithUnits
 							step="0.1"
 							value={theData.ylimsLeftIN[1] ? theData.ylimsLeftIN[1] : theData.ylimsLeft[1]}
@@ -805,7 +798,7 @@
 								theData.ylimsLeftIN[1] = parseFloat(val);
 							}}
 						/>
-					</div>
+					</ControlInput>
 
 					{#if theData.ylimsLeftIN[0] != null || theData.ylimsLeftIN[1] != null}
 						<div class="control-component-input-icons">
@@ -837,8 +830,7 @@
 
 			<div class="control-component">
 				<div class="control-input-horizontal">
-					<div class="control-input">
-						<p>Min</p>
+					<ControlInput label="Min">
 						<NumberWithUnits
 							step="0.1"
 							value={theData.ylimsRightIN[0] ? theData.ylimsRightIN[0] : theData.ylimsRight[0]}
@@ -846,10 +838,9 @@
 								theData.ylimsRightIN[0] = parseFloat(val);
 							}}
 						/>
-					</div>
+					</ControlInput>
 
-					<div class="control-input">
-						<p>Max</p>
+					<ControlInput label="Max">
 						<NumberWithUnits
 							step="0.1"
 							value={theData.ylimsRightIN[1] ? theData.ylimsRightIN[1] : theData.ylimsRight[1]}
@@ -857,7 +848,7 @@
 								theData.ylimsRightIN[1] = parseFloat(val);
 							}}
 						/>
-					</div>
+					</ControlInput>
 
 					{#if theData.ylimsRightIN[0] != null || theData.ylimsRightIN[1] != null}
 						<div class="control-component-input-icons">
@@ -915,8 +906,7 @@
 						/>
 					</div>
 				{:else}
-					<div class="control-input">
-						<p>Min</p>
+					<ControlInput label="Min">
 						<NumberWithUnits
 							step="0.1"
 							value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
@@ -924,10 +914,9 @@
 								theData.xlimsIN[0] = parseFloat(val);
 							}}
 						/>
-					</div>
+					</ControlInput>
 
-					<div class="control-input">
-						<p>Max</p>
+					<ControlInput label="Max">
 						<NumberWithUnits
 							step="0.1"
 							value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
@@ -935,7 +924,7 @@
 								theData.xlimsIN[1] = parseFloat(val);
 							}}
 						/>
-					</div>
+					</ControlInput>
 				{/if}
 				{#if theData.xlimsIN[0] != null || theData.xlimsIN[1] != null}
 					<div class="control-component-input-icons">
@@ -999,16 +988,14 @@
 
 					<div class="data-wrapper">
 						<div class="x-select">
-							<div class="control-input">
-								<p>x</p>
-							</div>
+							<ControlInput label="x">
+							</ControlInput>
 
 							<Column col={datum.x} canChange={true} />
 						</div>
 						<div class="y-select">
-							<div class="control-input">
-								<p>y</p>
-							</div>
+							<ControlInput label="y">
+							</ControlInput>
 							<Column col={datum.y} canChange={true} />
 						</div>
 

@@ -2,6 +2,7 @@
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { min as arrayMin, minMax as arrayMinMax } from '$lib/utils/stats.js';
 	// Pure compute (getStatKeys + the windowed loop) lives in utils/ so it can run
@@ -503,14 +504,12 @@
 <div class="section-row">
 	<div class="tableProcess-label"><span>Window</span></div>
 	<div class="control-input-horizontal">
-		<div class="control-input">
-			<p>Window size (hrs)</p>
+		<ControlInput label="Window size (hrs)">
 			<NumberWithUnits bind:value={p.args.windowSize} min="0.1" step="0.5" />
-		</div>
-		<div class="control-input">
-			<p>Step size (hrs)</p>
+		</ControlInput>
+		<ControlInput label="Step size (hrs)">
 			<NumberWithUnits bind:value={p.args.stepSize} min="0.1" step="0.5" />
-		</div>
+		</ControlInput>
 		<div class="control-input">
 			<p>Bin label</p>
 			<AttributeSelect
@@ -564,25 +563,21 @@
 			</div>
 		</div>
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Period min (hrs)</p>
+			<ControlInput label="Period min (hrs)">
 				<NumberWithUnits bind:value={p.args.periodMin} min="0.01" step="0.5" />
-			</div>
-			<div class="control-input">
-				<p>Period max (hrs)</p>
+			</ControlInput>
+			<ControlInput label="Period max (hrs)">
 				<NumberWithUnits bind:value={p.args.periodMax} min="0.01" step="0.5" />
-			</div>
-			<div class="control-input">
-				<p>Period step (hrs)</p>
+			</ControlInput>
+			<ControlInput label="Period step (hrs)">
 				<NumberWithUnits bind:value={p.args.periodStep} min="0.001" step="0.01" />
-			</div>
+			</ControlInput>
 		</div>
 		{#if p.args.pgMethod === 'Chi-squared' || p.args.pgMethod === 'Enright'}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Bin size (hrs)</p>
+				<ControlInput label="Bin size (hrs)">
 					<NumberWithUnits bind:value={p.args.pgBinSize} min="0.01" step="0.05" />
-				</div>
+				</ControlInput>
 			</div>
 		{/if}
 	{:else if p.args.analysis === 'cosinor'}
@@ -596,40 +591,34 @@
 		</div>
 		{#if p.args.useFixedPeriod}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Period (hrs)</p>
+				<ControlInput label="Period (hrs)">
 					<NumberWithUnits bind:value={p.args.fixedPeriod} min="0.1" step="0.5" />
-				</div>
-				<div class="control-input">
-					<p>N harmonics</p>
+				</ControlInput>
+				<ControlInput label="N harmonics">
 					<NumberWithUnits bind:value={p.args.nHarmonics} min="1" step="1" />
-				</div>
+				</ControlInput>
 			</div>
 		{:else}
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>N cosine curves</p>
+				<ControlInput label="N cosine curves">
 					<NumberWithUnits bind:value={p.args.Ncurves} min="1" step="1" />
-				</div>
+				</ControlInput>
 			</div>
 		{/if}
 	{:else if p.args.analysis === 'fft'}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Frequency step (cycles/hr; 0 = auto)</p>
+			<ControlInput label="Frequency step (cycles/hr; 0 = auto)">
 				<NumberWithUnits bind:value={p.args.fftFreqStep} min="0" step="0.001" />
-			</div>
+			</ControlInput>
 		</div>
 	{:else if p.args.analysis === 'correlogram'}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Min lag (hrs)</p>
+			<ControlInput label="Min lag (hrs)">
 				<NumberWithUnits bind:value={p.args.corrMinLag} min="0" step="1" />
-			</div>
-			<div class="control-input">
-				<p>Max lag (hrs; 0 = half window)</p>
+			</ControlInput>
+			<ControlInput label="Max lag (hrs; 0 = half window)">
 				<NumberWithUnits bind:value={p.args.corrMaxLag} min="0" step="1" />
-			</div>
+			</ControlInput>
 		</div>
 	{:else if p.args.analysis === 'rectfit'}
 		<div class="control-input-horizontal">
@@ -640,10 +629,9 @@
 				</label>
 			</div>
 			{#if p.args.useFixedPeriod}
-				<div class="control-input">
-					<p>Period (hrs)</p>
+				<ControlInput label="Period (hrs)">
 					<NumberWithUnits bind:value={p.args.fixedPeriod} min="0.1" step="0.5" />
-				</div>
+				</ControlInput>
 			{/if}
 		</div>
 		<div class="control-input-horizontal">
@@ -654,10 +642,9 @@
 				</label>
 			</div>
 			{#if p.args.rwFixKappa}
-				<div class="control-input">
-					<p>κ</p>
+				<ControlInput label="κ">
 					<NumberWithUnits bind:value={p.args.rwFixedKappa} min="0.01" step="0.5" />
-				</div>
+				</ControlInput>
 			{/if}
 		</div>
 		<div class="control-input-horizontal">
@@ -668,10 +655,9 @@
 				</label>
 			</div>
 			{#if p.args.rwFixDutyCycle}
-				<div class="control-input">
-					<p>Duty cycle (0–1)</p>
+				<ControlInput label="Duty cycle (0–1)">
 					<NumberWithUnits bind:value={p.args.rwFixedDutyCycle} min="0.01" max="0.99" step="0.05" />
-				</div>
+				</ControlInput>
 			{/if}
 		</div>
 	{:else if p.args.analysis === 'doublelogistic'}
@@ -690,10 +676,9 @@
 					</label>
 				</div>
 				{#if p.args.useFixedPeriod}
-					<div class="control-input">
-						<p>Period (hrs)</p>
+					<ControlInput label="Period (hrs)">
 						<NumberWithUnits bind:value={p.args.fixedPeriod} min="0.1" step="0.5" />
-					</div>
+					</ControlInput>
 				{/if}
 			{/if}
 		</div>
@@ -705,10 +690,9 @@
 				</label>
 			</div>
 			{#if p.args.dlFixK1}
-				<div class="control-input">
-					<p>k1</p>
+				<ControlInput label="k1">
 					<NumberWithUnits bind:value={p.args.dlFixedK1} min="0.001" step="0.1" />
-				</div>
+				</ControlInput>
 			{/if}
 		</div>
 		<div class="control-input-horizontal">
@@ -719,10 +703,9 @@
 				</label>
 			</div>
 			{#if p.args.dlFixK2}
-				<div class="control-input">
-					<p>k2</p>
+				<ControlInput label="k2">
 					<NumberWithUnits bind:value={p.args.dlFixedK2} min="0.001" step="0.1" />
-				</div>
+				</ControlInput>
 			{/if}
 		</div>
 	{:else if p.args.analysis === 'trend'}
@@ -736,10 +719,9 @@
 				/>
 			</div>
 			{#if p.args.trendModel === 'polynomial'}
-				<div class="control-input">
-					<p>Degree</p>
+				<ControlInput label="Degree">
 					<NumberWithUnits bind:value={p.args.trendPolyDegree} min="1" step="1" />
-				</div>
+				</ControlInput>
 			{/if}
 		</div>
 	{/if}

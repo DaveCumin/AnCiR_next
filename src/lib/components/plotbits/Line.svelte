@@ -1,6 +1,7 @@
 <script module>
 	import { line, curveBundle } from 'd3-shape';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
@@ -201,10 +202,9 @@
 					<p style="color:{'white'};">Col</p>
 					<ColourPicker bind:value={lineData.colour} />
 				</div>
-				<div class="control-input">
-					<p>Width</p>
+				<ControlInput label="Width">
 					<NumberWithUnits step="0.2" min={0.1} bind:value={lineData.strokeWidth} />
-				</div>
+				</ControlInput>
 				<div class="control-input">
 					<p>Stroke</p>
 					<div class="stroke-field" class:invalid={lineData.stroke === -1}>

@@ -1,6 +1,7 @@
 <script module>
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { fitDoubleLogistic, evaluateDoubleLogisticAtPoints } from '$lib/utils/doublelogistic.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
@@ -418,8 +419,7 @@
 	</div>
 	{#if p.args.fixPeriod}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>Period</p>
+			<ControlInput label="Period">
 				<NumberWithUnits
 					bind:value={p.args.fixedPeriod}
 					min="0.1"
@@ -427,7 +427,7 @@
 					units={{ default: 'hrs', days: 24, hrs: 1, mins: 1 / 60, secs: 1 / (60 * 60) }}
 					onInput={getFit}
 				/>
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 
@@ -440,10 +440,9 @@
 	</div>
 	{#if p.args.fixK1}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>k1 (1/hr)</p>
+			<ControlInput label="k1 (1/hr)">
 				<NumberWithUnits bind:value={p.args.fixedK1} min="0.001" step="0.05" onInput={getFit} />
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 
@@ -456,10 +455,9 @@
 	</div>
 	{#if p.args.fixK2}
 		<div class="control-input-horizontal">
-			<div class="control-input">
-				<p>k2 (1/hr)</p>
+			<ControlInput label="k2 (1/hr)">
 				<NumberWithUnits bind:value={p.args.fixedK2} min="0.001" step="0.05" onInput={getFit} />
-			</div>
+			</ControlInput>
 		</div>
 	{/if}
 

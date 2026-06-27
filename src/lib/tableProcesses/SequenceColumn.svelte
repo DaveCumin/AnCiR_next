@@ -78,6 +78,7 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import { onMount } from 'svelte';
 
@@ -163,13 +164,12 @@
 		<span>Sequence settings</span>
 	</div>
 
-	<div class="control-input">
-		<p>Type</p>
+	<ControlInput label="Type">
 		<select bind:value={p.args.seqType} onchange={doSequence}>
 			<option value="number">Number</option>
 			<option value="time">Time</option>
 		</select>
-	</div>
+	</ControlInput>
 </div>
 
 <div class="section-row">
@@ -179,22 +179,18 @@
 
 	{#if p.args.seqType === 'number'}
 		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Start</p>
+			<ControlInput label="Start">
 				<NumberWithUnits bind:value={p.args.start} onInput={changedStart} step={0.1} />
-			</div>
-			<div class="control-input">
-				<p>Step</p>
+			</ControlInput>
+			<ControlInput label="Step">
 				<NumberWithUnits bind:value={p.args.step} onInput={changedStep} step={0.1} />
-			</div>
-			<div class="control-input">
-				<p>Count (N)</p>
+			</ControlInput>
+			<ControlInput label="Count (N)">
 				<NumberWithUnits bind:value={p.args.count} onInput={changedCount} min={1} step={1} />
-			</div>
-			<div class="control-input">
-				<p>End</p>
+			</ControlInput>
+			<ControlInput label="End">
 				<NumberWithUnits bind:value={p.args.end} onInput={changedEnd} step={0.1} />
-			</div>
+			</ControlInput>
 		</div>
 	{:else}
 		<div class="control-input-vertical">
@@ -202,8 +198,7 @@
 				<p>Start time</p>
 				<DateTimeHrs bind:value={p.args.startTime} onChange={changedStartTime} />
 			</div>
-			<div class="control-input">
-				<p>Step</p>
+			<ControlInput label="Step">
 				<div style="display:flex;">
 					<NumberWithUnits
 						bind:value={p.args.stepHours}
@@ -220,11 +215,10 @@
 						selectedUnitStart="hrs"
 					/>
 				</div>
-			</div>
-			<div class="control-input">
-				<p>Count (N)</p>
+			</ControlInput>
+			<ControlInput label="Count (N)">
 				<NumberWithUnits bind:value={p.args.count} onInput={changedCountTime} min={1} step={1} />
-			</div>
+			</ControlInput>
 			<div class="control-input">
 				<p>End time</p>
 				<DateTimeHrs bind:value={p.args.endTime} onChange={changedEndTime} />

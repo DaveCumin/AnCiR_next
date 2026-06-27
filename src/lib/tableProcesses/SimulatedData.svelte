@@ -120,6 +120,7 @@
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { formatTimeFromISO } from '$lib/utils/time/TimeUtils.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import Toggle from '$lib/components/inputs/Toggle.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 
@@ -194,8 +195,7 @@
 		<DateTimeHrs bind:value={p.args.startTime} onChange={doSimulated} />
 	</div>
 
-	<div class="control-input">
-		<p>Sampling period</p>
+	<ControlInput label="Sampling period">
 		<div style="display:flex;">
 			<NumberWithUnits
 				bind:value={p.args.samplingPeriod_hours}
@@ -213,7 +213,7 @@
 				selectedUnitStart="mins"
 			/>
 		</div>
-	</div>
+	</ControlInput>
 </div>
 
 {#each p.args.sections as section, index}
@@ -230,8 +230,7 @@
 			{/if}
 		</div>
 
-		<div class="control-input">
-			<p>Duration</p>
+		<ControlInput label="Duration">
 			<div style="display:flex;">
 				<NumberWithUnits
 					bind:value={section.duration_hours}
@@ -249,10 +248,9 @@
 					selectedUnitStart="days"
 				/>
 			</div>
-		</div>
+		</ControlInput>
 
-		<div class="control-input">
-			<p>Rhythm period</p>
+		<ControlInput label="Rhythm period">
 			<div style="display:flex;">
 				<NumberWithUnits
 					bind:value={section.rhythmPeriod_hours}
@@ -269,10 +267,9 @@
 					onInput={doSimulated}
 				/>
 			</div>
-		</div>
+		</ControlInput>
 
-		<div class="control-input">
-			<p>Rhythm phase shift</p>
+		<ControlInput label="Rhythm phase shift">
 			<div style="display:flex;">
 				<NumberWithUnits
 					bind:value={section.rhythmPhase_hours}
@@ -289,10 +286,9 @@
 					onInput={doSimulated}
 				/>
 			</div>
-		</div>
+		</ControlInput>
 
-		<div class="control-input">
-			<p>Rhythm amplitude</p>
+		<ControlInput label="Rhythm amplitude">
 			<div style="display:flex;">
 				<NumberWithUnits
 					bind:value={section.rhythmAmplitude}
@@ -302,7 +298,7 @@
 					onInput={doSimulated}
 				/>
 			</div>
-		</div>
+		</ControlInput>
 
 		<div class="control-input-checkbox">
 			<input type="checkbox" bind:checked={section.noiseEnabled} onchange={doSimulated} />
@@ -321,8 +317,7 @@
 				/>
 			</div>
 
-			<div class="control-input">
-				<p>Noise amplitude</p>
+			<ControlInput label="Noise amplitude">
 				<NumberWithUnits
 					bind:value={section.noiseAmplitude}
 					min="0.01"
@@ -330,7 +325,7 @@
 					max={1000}
 					onInput={doSimulated}
 				/>
-			</div>
+			</ControlInput>
 		{/if}
 	</div>
 {/each}

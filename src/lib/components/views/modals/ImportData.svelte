@@ -23,6 +23,7 @@
 	import { numToString } from '$lib/utils/GeneralUtils';
 	import { sortPermutation, applyPermutation } from '$lib/utils/sortRows.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import TableLayout from '$lib/components/plotbits/Table.svelte';
@@ -2095,8 +2096,7 @@
 										<input type="checkbox" bind:checked={hasHeader} onchange={() => reParse()} />
 										<p>Has header row</p>
 									</div>
-									<div class="control-input">
-										<p>Delimiter</p>
+									<ControlInput label="Delimiter">
 										<select bind:value={delimiter} onchange={() => reParse()}>
 											<option value="">auto</option>
 											<option value=",">, (comma)</option>
@@ -2105,13 +2105,11 @@
 											<option value="|">| (pipe)</option>
 											<option value=" ">(space)</option>
 										</select>
-									</div>
-									<div class="control-input">
-										<p>Skip lines</p>
+									</ControlInput>
+									<ControlInput label="Skip lines">
 										<NumberWithUnits bind:value={skipLines} min="0" onInput={() => reParse()} />
-									</div>
-									<div class="control-input">
-										<p>Sort by</p>
+									</ControlInput>
+									<ControlInput label="Sort by">
 										<select bind:value={sortBy} disabled={awaitingLoad}>
 											<option value="__none__">None (keep file order)</option>
 											<option value="__time__">Time (auto-detect)</option>
@@ -2119,7 +2117,7 @@
 												<option value={h}>{h}</option>
 											{/each}
 										</select>
-									</div>
+									</ControlInput>
 								</div>
 							</div>
 
@@ -2134,10 +2132,9 @@
 											<input type="checkbox" bind:checked={binningEnabled} />
 											<p>Bin data to</p>
 										</div>
-										<div class="control-input">
-											<p>Interval (mins)</p>
+										<ControlInput label="Interval (mins)">
 											<NumberWithUnits bind:value={binIntervalMin} min={1} step={1} />
-										</div>
+										</ControlInput>
 									</div>
 									{#if binningEnabled}
 										<p class="binning-estimate">

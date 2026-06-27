@@ -5,6 +5,7 @@
 	import normal from '@stdlib/random-base-normal';
 	import exponential from '@stdlib/random-base-exponential';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
 	const displayName = 'Random';
 	const MINSTD_MAX = 2147483646;
@@ -150,30 +151,25 @@
 	</div>
 
 	<div class="control-input-vertical">
-		<div class="control-input">
-			<p>Distribution</p>
+		<ControlInput label="Distribution">
 			<select bind:value={p.args.distribution} onchange={doRandom}>
 				<option value="uniform">Uniform</option>
 				<option value="gaussian">Gaussian</option>
 				<option value="exponential">Exponential</option>
 			</select>
-		</div>
-		<div class="control-input">
-			<p>Seed</p>
+		</ControlInput>
+		<ControlInput label="Seed">
 			<NumberWithUnits bind:value={p.args.seed} onInput={doRandom} step={1} />
-		</div>
-		<div class="control-input">
-			<p>N</p>
+		</ControlInput>
+		<ControlInput label="N">
 			<NumberWithUnits bind:value={p.args.N} onInput={doRandom} />
-		</div>
-		<div class="control-input">
-			<p>{offsetLabel}</p>
+		</ControlInput>
+		<ControlInput label={offsetLabel}>
 			<NumberWithUnits bind:value={p.args.offset} onInput={doRandom} />
-		</div>
-		<div class="control-input">
-			<p>{multiplyLabel}</p>
+		</ControlInput>
+		<ControlInput label={multiplyLabel}>
 			<NumberWithUnits bind:value={p.args.multiply} onInput={doRandom} />
-		</div>
+		</ControlInput>
 	</div>
 </div>
 

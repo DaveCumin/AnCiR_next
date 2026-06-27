@@ -169,6 +169,7 @@
 <script>
 	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import ProcessShell from '$lib/core/ProcessShell.svelte';
@@ -261,10 +262,9 @@
 	</div>
 
 	{#if p.args.model === 'polynomial'}
-		<div class="control-input">
-			<p>Degree</p>
+		<ControlInput label="Degree">
 			<NumberWithUnits bind:value={p.args.polyDegree} min={1} step={1} />
-		</div>
+		</ControlInput>
 	{/if}
 
 	<!-- Sliding-window standardisation -->
@@ -276,10 +276,9 @@
 	</div>
 
 	{#if p.args.slidingWindow}
-		<div class="control-input">
-			<p>Window size</p>
+		<ControlInput label="Window size">
 			<NumberWithUnits bind:value={p.args.windowSize} min={3} step={1} />
-		</div>
+		</ControlInput>
 	{/if}
 
 	<!-- Trend fit stats -->

@@ -1,6 +1,7 @@
 <script module>
 	import Icon from '$lib/icons/Icon.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
@@ -195,14 +196,12 @@
 			</div>
 
 			<div class="control-input-horizontal">
-				<div class="control-input">
-					<p>Font Size</p>
+				<ControlInput label="Font Size">
 					<NumberWithUnits bind:value={legendData.fontSize} min={8} max={24} />
-				</div>
-				<div class="control-input">
-					<p>Padding</p>
+				</ControlInput>
+				<ControlInput label="Padding">
 					<NumberWithUnits bind:value={legendData.padding} min={0} max={20} />
-				</div>
+				</ControlInput>
 			</div>
 			<!--
 			<div class="control-input-horizontal">
