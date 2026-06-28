@@ -29,10 +29,16 @@
 	let editingDate = $state(displayDate);
 	let editingTime = $state(displayTime);
 
-	// Sync when parent value changes
+	// Track which field is being edited. We must NOT write the reparsed value back
+	// into a field while the user is typing in it: doing so resets the native date
+	// input's segment mid-entry and corrupts multi-digit years (typing 2026 gave
+	// 1926). So sync from the parent value only for the field that isn't focused.
+	let dateFocused = $state(false);
+	let timeFocused = $state(false);
+
 	$effect(() => {
-		editingDate = displayDate;
-		editingTime = displayTime;
+		if (!dateFocused) editingDate = displayDate;
+		if (!timeFocused) editingTime = displayTime;
 	});
 
 	function updateValue() {
@@ -50,9 +56,21 @@
 </script>
 
 <div class="datetime-container">
-	<input type="date" bind:value={editingDate} oninput={updateValue} />
+	<input
+		type="date"
+		bind:value={editingDate}
+		onchange={updateValue}
+		onfocus={() => (dateFocused = true)}
+		onblur={() => (dateFocused = false)}
+	/>
 
-	<input type="time" bind:value={editingTime} oninput={updateValue} />
+	<input
+		type="time"
+		bind:value={editingTime}
+		onchange={updateValue}
+		onfocus={() => (timeFocused = true)}
+		onblur={() => (timeFocused = false)}
+	/>
 </div>
 
 <style>
