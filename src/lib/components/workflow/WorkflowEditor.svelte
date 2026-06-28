@@ -1473,6 +1473,18 @@
 		return tap;
 	}
 
+	// Column types a free process refuses on its input, declared as `disallowTypes`
+	// on the process definition's nodeSpec input (e.g. Substitute blocks 'time').
+	function disallowedInputTypes(proc) {
+		if (!proc) return [];
+		const entry = appConsts.processMap.get(proc.name);
+		return (
+			entry?.definition?.nodeSpec?.inputs?.[0]?.disallowTypes ??
+			entry?.nodeSpec?.inputs?.[0]?.disallowTypes ??
+			[]
+		);
+	}
+
 	function applyConnection(fromNodeId, fromPort, toNodeId, toPort) {
 		// Group 'all' port: fan out, calling per-source connections one at a
 		// time. The downstream consumer (tableplot, table-process yIN) already
@@ -1512,6 +1524,14 @@
 				if (curIn.length) {
 					const t = getColumnById(curIn[0])?.type;
 					if (t) types.add(t);
+				}
+				const bannedBundle = disallowedInputTypes(proc);
+				const bundleHit = [...types].find((t) => bannedBundle.includes(t));
+				if (bundleHit) {
+					addNotification(
+						`${proc.displayName || proc.name} doesn't support ${bundleHit} columns yet.`
+					);
+					return;
 				}
 				if (types.size > 1) {
 					addNotification(
@@ -1605,6 +1625,11 @@
 				// over every input, so mixing column types (e.g. number + time, which
 				// take different value units) isn't meaningful. Reject a mismatch.
 				const newType = core.data.find((c) => c.id === colId)?.type;
+				const banned = disallowedInputTypes(proc);
+				if (newType != null && banned.includes(newType)) {
+					addNotification(`${proc.displayName || proc.name} doesn't support ${newType} columns yet.`);
+					return;
+				}
 				const existingType = cur.length ? getColumnById(cur[0])?.type : null;
 				if (existingType != null && newType != null && existingType !== newType) {
 					addNotification(

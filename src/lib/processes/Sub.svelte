@@ -18,7 +18,13 @@
 		defaults: sub_defaults,
 		nodeSpec: {
 			id: 'process.substitute',
-			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
+			// `disallowTypes` blocks wiring a column of that type into this input
+			// (enforced in WorkflowEditor.applyConnection). Time is blocked for now:
+			// Substitute matches the raw UNIX-ms value, which is meaningless for times
+			// — see "Known Issues and TODOs" until the behaviour is redesigned.
+			inputs: [
+				{ name: 'input', kind: 'column', cardinality: 'one', disallowTypes: ['time'] }
+			],
 			outputs: [{ name: 'output', kind: 'column', cardinality: 'one' }]
 		}
 	};
