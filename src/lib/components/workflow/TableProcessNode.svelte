@@ -14,8 +14,10 @@
 	import { onDestroy, tick, createEventDispatcher } from 'svelte';
 	import Editable from '$lib/components/reusables/Editable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
 	import MiniDataTable from './MiniDataTable.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
 	import { core } from '$lib/core/core.svelte.js';
 	import { getNodeName, setNodeName } from '$lib/core/nodeNaming.js';
 	import NodeNoteButton from './NodeNoteButton.svelte';
@@ -379,8 +381,17 @@
 						>
 							<span class="chev" aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
 						</button>
-						<span class="row-type" title={meta.label}>
-							<Icon name={meta.icon} width={12} height={12} className="icon" />
+						<span
+							class="row-type"
+							title="Change type ({meta.label})"
+							onpointerdown={stopPointer}
+							onmousedown={stopPointer}
+							role="presentation"
+						>
+							<TypeSelector
+								bind:value={col.type}
+								onChange={(t) => sniffTimeFormatOnTypeChange(col, t)}
+							/>
 						</span>
 						<div
 							class="row-name"
