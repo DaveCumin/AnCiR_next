@@ -243,6 +243,19 @@
 	let ac = $state({ show: false, cellIndex: -1, filter: '', selIdx: 0 });
 	let acPos = $state({ left: 0, top: 0 });
 
+	// The node sits inside the zoom/pan canvas (a CSS transform). A `position: fixed`
+	// child of a transformed ancestor anchors to that ancestor, not the viewport, so
+	// the dropdown landed in the wrong place. Portal it to <body> for true
+	// viewport-fixed positioning (getBoundingClientRect coords are already on-screen).
+	function portalToBody(node) {
+		document.body.appendChild(node);
+		return {
+			destroy() {
+				if (node.parentNode) node.remove();
+			}
+		};
+	}
+
 	let allStoredValues = $derived(
 		Object.entries(core.storedValues).map(([key, entry]) => ({
 			key,
@@ -602,7 +615,9 @@
 <!-- Close autocomplete on outside click -->
 <svelte:window
 	onclick={(e) => {
-		if (ac.show && !e.target.closest('.editable-table')) {
+		// .ac-dropdown is portalled to <body> (outside .editable-table), so exclude it
+		// here or selecting an item would close the list before the click registers.
+		if (ac.show && !e.target.closest('.editable-table') && !e.target.closest('.ac-dropdown')) {
 			closeAc();
 			commitData();
 		}
@@ -724,7 +739,12 @@
 		</div>
 
 		{#if ac.show}
-			<div class="ac-dropdown" style="left: {acPos.left}px; top: {acPos.top}px;" role="listbox">
+			<div
+				class="ac-dropdown"
+				use:portalToBody
+				style="left: {acPos.left}px; top: {acPos.top}px;"
+				role="listbox"
+			>
 				{#if filteredStoredValues.length === 0}
 					<div class="ac-empty">No matching stored values</div>
 				{:else}

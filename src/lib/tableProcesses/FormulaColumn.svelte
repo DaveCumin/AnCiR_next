@@ -269,6 +269,20 @@ return _r;`
 		return { fixedTop: rect.bottom + 2, fixedLeft: rect.left, fixedWidth: rect.width };
 	}
 
+	// The node lives inside the zoom/pan canvas, which has a CSS transform. A
+	// `position: fixed` child of a transformed ancestor is positioned relative to
+	// that ancestor, not the viewport — so the dropdown landed in the wrong place.
+	// Portalling it to <body> restores true viewport-fixed positioning (the
+	// getBoundingClientRect coords are already on-screen, so it's zoom-correct).
+	function portalToBody(node) {
+		document.body.appendChild(node);
+		return {
+			destroy() {
+				if (node.parentNode) node.remove();
+			}
+		};
+	}
+
 	function handleTextInput(e, tokenIndex) {
 		// Update the bound token value first, then trigger formula
 		doFormula();
@@ -552,7 +566,14 @@ return _r;`
 <!-- Close autocomplete on outside click -->
 <svelte:window
 	onclick={(e) => {
-		if (ac.show && !e.target.closest('.formula-editor-wrap')) closeAc();
+		// .ac-dropdown is portalled to <body> (outside .formula-editor-wrap), so exclude
+		// it here or selecting an item would close the list before the click registers.
+		if (
+			ac.show &&
+			!e.target.closest('.formula-editor-wrap') &&
+			!e.target.closest('.ac-dropdown')
+		)
+			closeAc();
 	}}
 />
 
@@ -605,6 +626,7 @@ return _r;`
 			<div
 				class="ac-dropdown"
 				role="listbox"
+				use:portalToBody
 				style="top:{ac.fixedTop}px; left:{ac.fixedLeft}px; width:{ac.fixedWidth}px;"
 			>
 				{#if ac.mode === 'col'}
@@ -764,6 +786,7 @@ return _r;`
 	/* ── Autocomplete dropdown ── */
 	.ac-dropdown {
 		position: fixed;
+		min-width: 180px;
 		max-height: 180px;
 		overflow-y: auto;
 		background: var(--color-lightness-97, #f8f8f8);
