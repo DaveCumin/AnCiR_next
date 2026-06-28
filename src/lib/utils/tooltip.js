@@ -48,21 +48,56 @@ function show(node, text, x, y) {
 	owner = node;
 }
 
+// Snap the tooltip to the element's bounding box (centred, below it; flips above
+// when it would overflow the viewport bottom) instead of tracking the cursor.
+// Used where a cursor-following tooltip would cover the element's own content —
+// e.g. the node palette tiles, whose label sits right under the icon.
+function showAnchored(node, text) {
+	if (!text) return;
+	const el = ensureOverlay();
+	if (!el) return;
+	el.textContent = text;
+	el.style.visibility = 'hidden';
+	el.style.left = '0px';
+	el.style.top = '0px';
+	const w = el.offsetWidth;
+	const h = el.offsetHeight;
+	const r = node.getBoundingClientRect();
+	const gap = 8;
+	let left = r.left + r.width / 2 - w / 2;
+	let top = r.bottom + gap; // prefer below the tile
+	if (top + h > window.innerHeight - 4) top = r.top - h - gap; // flip above if needed
+	if (left + w > window.innerWidth - 4) left = window.innerWidth - w - 4;
+	if (left < 4) left = 4;
+	if (top < 4) top = 4;
+	el.style.left = `${left}px`;
+	el.style.top = `${top}px`;
+	el.style.visibility = 'visible';
+	owner = node;
+}
+
 function hide(node) {
 	if (node && owner !== node) return;
 	if (overlay) overlay.style.visibility = 'hidden';
 	owner = null;
 }
 
-/** @param {string | null | undefined} content */
-export function tooltip(content) {
+/**
+ * @param {string | null | undefined} content
+ * @param {{ anchor?: 'cursor' | 'element' }} [opts] anchor 'element' snaps the
+ *   tooltip to the host element's box (no cursor tracking); default 'cursor'.
+ */
+export function tooltip(content, opts = {}) {
+	const anchorEl = opts.anchor === 'element';
 	return (node) => {
 		function onEnter(e) {
 			if (!content) return;
-			show(node, content, e.clientX, e.clientY);
+			if (anchorEl) showAnchored(node, content);
+			else show(node, content, e.clientX, e.clientY);
 		}
 		function onMove(e) {
 			if (!content || owner !== node) return;
+			if (anchorEl) return; // stays snapped to the element
 			show(node, content, e.clientX, e.clientY);
 		}
 		function onLeave() {

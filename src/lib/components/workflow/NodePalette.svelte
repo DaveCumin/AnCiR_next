@@ -385,7 +385,7 @@
 									class="palette-tile np-item"
 									aria-label={node.description || node.displayName}
 									onclick={() => handlePick(node)}
-									{@attach tooltip(node.description || node.displayName)}
+									{@attach tooltip(node.description || node.displayName, { anchor: 'element' })}
 								>
 									<span class="palette-tile-icon">
 										<Icon name={node.nodeIcon} width={24} height={24} />
