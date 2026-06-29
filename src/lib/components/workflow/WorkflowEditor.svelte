@@ -1911,9 +1911,7 @@
 	 */
 	function reconcileGroupMembership(nodeId) {
 		const draggedNode = allNodes.find((n) => n.id === nodeId);
-		if (!draggedNode || draggedNode.type !== 'data') return;
-		const colId = draggedNode.refId;
-		if (typeof colId !== 'number') return;
+		if (!draggedNode) return;
 		const pos = stablePositions[nodeId] ?? defaultPositions.positions[nodeId];
 		if (!pos) return;
 		const ax1 = pos.x;
@@ -1932,8 +1930,18 @@
 				break;
 			}
 		}
-		if (landedGroup) {
-			absorbColumnIntoGroup(colId, landedGroup.id);
+		if (!landedGroup) return;
+		// Only standalone column (data) nodes are absorbed into a group. A source /
+		// analysis node (process / tableprocess) owns its output columns, so it can't
+		// be dropped in — surface a toast so the user understands what groups accept.
+		if (draggedNode.type === 'data') {
+			const colId = draggedNode.refId;
+			if (typeof colId === 'number') absorbColumnIntoGroup(colId, landedGroup.id);
+		} else if (draggedNode.type === 'process' || draggedNode.type === 'tableprocess') {
+			addNotification(
+				'Groups hold individual data columns — a source or analysis node can’t be dropped into one.',
+				'info'
+			);
 		}
 	}
 
