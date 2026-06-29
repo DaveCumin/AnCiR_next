@@ -111,10 +111,11 @@
 
 	const funcOptions = [
 		{ value: 'add', label: 'Add' },
-		{ value: 'average', label: 'Average' },
+		// labels only — internal values ('average', 'sd') stay so saved sessions load
+		{ value: 'average', label: 'Mean' },
 		{ value: 'min', label: 'Min' },
 		{ value: 'max', label: 'Max' },
-		{ value: 'sd', label: 'SD (sample)' }
+		{ value: 'sd', label: 'Std Dev' }
 	];
 
 	let separator = $derived(p.args.func === 'add' ? '+' : ',');

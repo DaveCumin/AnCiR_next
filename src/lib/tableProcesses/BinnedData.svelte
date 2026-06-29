@@ -458,8 +458,8 @@
 				<option value="count">Count</option>
 				<option value="mean">Mean</option>
 				<option value="median">Median</option>
-				<option value="min">Minimum</option>
-				<option value="max">Maximum</option>
+				<option value="min">Min</option>
+				<option value="max">Max</option>
 				<option value="stddev">Std Dev</option>
 			</select>
 		</ControlInput>
@@ -516,8 +516,8 @@
 					<option value="count">Count</option>
 					<option value="mean">Mean</option>
 					<option value="median">Median</option>
-					<option value="min">Minimum</option>
-					<option value="max">Maximum</option>
+					<option value="min">Min</option>
+					<option value="max">Max</option>
 					<option value="stddev">Std Dev</option>
 				</select>
 			</ControlInput>
