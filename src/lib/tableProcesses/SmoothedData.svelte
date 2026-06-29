@@ -336,8 +336,8 @@
 			<p>Type</p>
 			<AttributeSelect
 				bind:value={p.args.smootherType}
-				options={['moving', 'savitzky', 'loess']}
-				optionsDisplay={['Moving Average', 'Savitzky-Golay', 'LOESS']}
+				options={['whittaker', 'moving', 'savitzky', 'loess']}
+				optionsDisplay={['Whittaker', 'Moving Average', 'Savitzky-Golay', 'LOESS']}
 				onChange={() => getSmoothedData()}
 			/>
 		</div>
