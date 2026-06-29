@@ -631,6 +631,19 @@
 	// the node output rows on the canvas.
 	let previewOpen = $state(false);
 
+	// The "Time Format" field is a PARSE format: how the app reads raw text into an
+	// instant. It only applies to columns whose stored data is text (imported /
+	// entered, e.g. "2026-03-10T10:13"). Computed/output time columns (Smooth Data,
+	// Bin Data, Cosinor…) store numeric timestamps (ms), so there's nothing to parse
+	// and the field is inert — so hide it there. (Simulate Data stores ISO strings,
+	// so it correctly keeps the field.)
+	let timeFormatApplies = $derived.by(() => {
+		if (col.type !== 'time') return false;
+		const src = col.refId != null ? getColumnById(col.refId) : col;
+		const arr = src ? core.rawData.get(src.data) : null;
+		return Array.isArray(arr) && arr.some((v) => v != null && typeof v === 'string');
+	});
+
 	// Live rename: write to customName so the name survives node-label changes
 	// (an empty value falls back to the auto-derived name).
 	function renameThis(v) {
@@ -732,7 +745,7 @@
 				</div>
 			</div>
 
-			{#if col.type == 'time'}
+			{#if timeFormatApplies}
 				<div class="control-input display time-format-row">
 					<p>Time Format</p>
 					{#if !canChange}
