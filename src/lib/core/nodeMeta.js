@@ -267,14 +267,6 @@ const meta = new Map([
 		}
 	],
 	[
-		'Duplicate',
-		{
-			family: 'Transform',
-			nodeIcon: 'column-add', // no dedicated duplicate icon
-			description: 'Duplicate a column under a new name.'
-		}
-	],
-	[
 		'Split',
 		{
 			family: 'Transform',

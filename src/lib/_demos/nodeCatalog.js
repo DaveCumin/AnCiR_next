@@ -245,11 +245,6 @@ export const TP_SPECS = [
 		})
 	},
 	{
-		name: 'Duplicate',
-		inputs: [T('number', SAMPLE.index)],
-		args: ([x]) => ({ xIN: x, out: { result: -1 } })
-	},
-	{
 		name: 'FitFunction',
 		isAsync: true,
 		inputs: [T('number', SAMPLE.hours), T('number', () => SAMPLE.rhythm(24))],

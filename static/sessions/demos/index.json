@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 39,
+  "count": 38,
   "sessions": [
     {
       "id": "tp-blankcolumn",
@@ -313,18 +313,6 @@
         "CollectColumns"
       ],
       "keywords": "collect columns collect (concatenate) several columns into one. transform collectcolumns"
-    },
-    {
-      "id": "tp-duplicate",
-      "name": "Duplicate",
-      "family": "Transform",
-      "description": "Duplicate a column under a new name.",
-      "url": "sessions/demos/demo-tp-duplicate.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "Duplicate"
-      ],
-      "keywords": "duplicate duplicate a column under a new name. transform duplicate"
     },
     {
       "id": "tp-longtowide",

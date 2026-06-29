@@ -606,23 +606,6 @@
 		core.plots[core.plots.length - 1].y = snapToGrid(960);
 		core.plots[core.plots.length - 1].width = snapToGrid(510);
 
-		appState.loadingState.loadingMsg = 'Making duplicate data...';
-		await new Promise((resolve) => setTimeout(resolve, 10));
-
-		//--------
-		//Add another tableprocess to test removal
-		core.tableProcesses.push(
-			new TableProcess(
-				{
-					name: 'Duplicate',
-					args: {
-						xIN: core.data[core.data.length - 1].id,
-						out: { result: -1 }
-					}
-				},
-				null
-			)
-		);
 		core.plots[0].plot.data[1].y.refId = core.data[core.data.length - 1].id;
 
 		appState.loadingState.isLoading = false;
