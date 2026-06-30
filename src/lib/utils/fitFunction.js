@@ -2,8 +2,18 @@
 import { fitCosineCurves, fitCosinorFixed, evaluateCosinorAtPoints } from '$lib/utils/cosinor.js';
 import { fitRectangularWave, evaluateRectWaveAtPoints } from '$lib/utils/rectwave.js';
 import { fitDoubleLogistic, evaluateDoubleLogisticAtPoints } from '$lib/utils/doublelogistic.js';
+import { permutationTest } from '$lib/utils/permutationTest.js';
 
 export const FIT_FUNCTION_MODELS = ['cosinor', 'rectangular', 'doublelogistic'];
+
+// Default permutation-test args, shared by the dedicated fit nodes (Cosinor,
+// Rectangular wave, Double logistic) so they all expose the same controls/output.
+export const PERMUTATION_DEFAULTS = {
+	permuteTest: false,
+	nPermutations: 999,
+	permutationSeed: 12345,
+	permutationStatistic: 'rSquared'
+};
 
 function fitCosinorModel(t, x, options = {}) {
 	const useFixedPeriod = options.useFixedPeriod ?? false;
@@ -148,6 +158,23 @@ export function evaluateCurveModelAtPoints(fitResult, model, tPoints) {
 	}
 
 	return tPoints.map(() => NaN);
+}
+
+/**
+ * Permutation-test p-value for a fit of `model` (with `options`) on (tt, yy).
+ * Uses fitCurveModel as the fit, so the observed and permuted statistics are
+ * computed the same way. Returns { pValue, significant } — NaN/false when the
+ * test is disabled or there are too few points.
+ */
+export function fitPermutationPValue(tt, yy, model, options, args) {
+	const n = Array.isArray(tt) ? tt.length : 0;
+	if (!args?.permuteTest || n < 4) return { pValue: NaN, significant: false };
+	const res = permutationTest(tt, yy, (x, y) => fitCurveModel(x, y, model, options), {
+		statistic: args.permutationStatistic ?? 'rSquared',
+		nPermutations: Math.max(1, Math.trunc(Number(args.nPermutations ?? 999))),
+		seed: args.permutationSeed ?? 12345
+	});
+	return { pValue: res.pValue, significant: res.significant };
 }
 
 export function getFitModelDisplayName(model) {

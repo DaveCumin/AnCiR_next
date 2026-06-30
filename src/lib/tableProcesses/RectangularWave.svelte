@@ -3,6 +3,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { fitRectangularWave, evaluateRectWaveAtPoints } from '$lib/utils/rectwave.js';
+	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
 
 	const displayName = 'Rectangular Wave';
 	const defaults = new Map([
@@ -15,7 +16,12 @@
 		['fixedPeriod', { val: 24 }],
 		['fixDutyCycle', { val: false }],
 		['fixedDutyCycle', { val: 0.5 }],
-		['out', { rectwavex: { val: -1 } }],
+		// Permutation test: a model-vs-chance significance test for each y fit.
+		['permuteTest', { val: PERMUTATION_DEFAULTS.permuteTest }],
+		['nPermutations', { val: PERMUTATION_DEFAULTS.nPermutations }],
+		['permutationSeed', { val: PERMUTATION_DEFAULTS.permutationSeed }],
+		['permutationStatistic', { val: PERMUTATION_DEFAULTS.permutationStatistic }],
+		['out', { rectwavex: { val: -1 }, pvalue: { val: -1 } }],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
 		['collectedType', { val: 'rectwave' }],
@@ -38,7 +44,8 @@
 			],
 			outputs: [
 				{ name: 'rectwavex', kind: 'column', cardinality: 'one' },
-				{ name: 'rectwavey_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'rectwavey_' }
+				{ name: 'rectwavey_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'rectwavey_' },
+				{ name: 'pvalue', kind: 'column', cardinality: 'one' }
 			]
 		}
 	};
@@ -94,6 +101,16 @@
 		result.originTime_ms = originTime_ms;
 
 		const fixedOmega = fixOmega ? (2 * Math.PI) / fixedPeriod : null;
+		// Options for the permutation fit, matching this node's fit.
+		const permOptions = {
+			fixKappa,
+			fixedKappa,
+			fixOmega,
+			fixedOmega,
+			fixedPeriod,
+			fixDutyCycle,
+			fixedDutyCycle
+		};
 
 		for (const yId of yINs) {
 			if (yId == null || yId === -1) continue;
@@ -124,12 +141,17 @@
 					? evaluateRectWaveAtPoints(fitResult.parameters, outputXData)
 					: fitResult.fitted;
 
+				const pValue = argsIN.permuteTest
+					? fitPermutationPValue(tt, yy, 'rectangular', permOptions, argsIN).pValue
+					: NaN;
+
 				result.y_results[yId] = {
 					fitResult,
 					fitted: yOutData,
 					t: tt,
 					xOutData,
-					yOutData
+					yOutData,
+					pValue
 				};
 				if (result.t.length === 0) result.t = tt;
 				anyValid = true;
@@ -184,6 +206,21 @@
 					}
 				}
 			}
+
+			// Scalar p-value output: one value per y input, in yIN order.
+			const pvalueOut = argsIN.out.pvalue;
+			if (pvalueOut != null && pvalueOut !== -1) {
+				const pCol = getColumnById(pvalueOut);
+				if (pCol) {
+					core.rawData.set(
+						pvalueOut,
+						yINs.map((yId) => result.y_results[yId]?.pValue ?? NaN)
+					);
+					pCol.data = pvalueOut;
+					pCol.type = 'number';
+					pCol.tableProcessGUId = processHash;
+				}
+			}
 		}
 
 		return [result, anyValid];
@@ -222,6 +259,12 @@
 	if (p.args.fixedPeriod === undefined) p.args.fixedPeriod = 24;
 	if (p.args.fixDutyCycle === undefined) p.args.fixDutyCycle = false;
 	if (p.args.fixedDutyCycle === undefined) p.args.fixedDutyCycle = 0.5;
+	if (p.args.permuteTest === undefined) p.args.permuteTest = PERMUTATION_DEFAULTS.permuteTest;
+	if (p.args.nPermutations === undefined) p.args.nPermutations = PERMUTATION_DEFAULTS.nPermutations;
+	if (p.args.permutationSeed === undefined)
+		p.args.permutationSeed = PERMUTATION_DEFAULTS.permutationSeed;
+	if (p.args.permutationStatistic === undefined)
+		p.args.permutationStatistic = PERMUTATION_DEFAULTS.permutationStatistic;
 
 	let rwave = $state(null);
 	let showOutputX = $state(p.args.outputX !== -1);
@@ -248,6 +291,10 @@
 		out += p.args.fixKappa;
 		out += p.args.fixOmega;
 		out += p.args.fixDutyCycle;
+		out += p.args.permuteTest;
+		out += p.args.nPermutations;
+		out += p.args.permutationSeed;
+		out += p.args.permutationStatistic;
 		return out;
 	});
 	let lastHash = '';
@@ -488,6 +535,24 @@
 					step="0.05"
 					onInput={getRwave}
 				/>
+			</ControlInput>
+		</div>
+	{/if}
+
+	<!-- Permutation test -->
+	<div class="control-input-horizontal">
+		<div class="control-input-checkbox">
+			<input type="checkbox" bind:checked={p.args.permuteTest} onchange={getRwave} />
+			<p>Test significance (model vs chance)</p>
+		</div>
+	</div>
+	{#if p.args.permuteTest}
+		<div class="control-input-horizontal">
+			<ControlInput label="Permutations">
+				<NumberWithUnits bind:value={p.args.nPermutations} min="99" step="100" onInput={getRwave} />
+			</ControlInput>
+			<ControlInput label="Seed">
+				<NumberWithUnits bind:value={p.args.permutationSeed} min="0" step="1" onInput={getRwave} />
 			</ControlInput>
 		</div>
 	{/if}

@@ -3,6 +3,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { fitDoubleLogistic, evaluateDoubleLogisticAtPoints } from '$lib/utils/doublelogistic.js';
+	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import '$lib/utils/doublelogistic.worker-task.js';
@@ -18,7 +19,12 @@
 		['fixedK2', { val: 0.5 }],
 		['fixPeriod', { val: false }],
 		['fixedPeriod', { val: 24 }],
-		['out', { dlogx: { val: -1 } }],
+		// Permutation test: a model-vs-chance significance test for each y fit.
+		['permuteTest', { val: PERMUTATION_DEFAULTS.permuteTest }],
+		['nPermutations', { val: PERMUTATION_DEFAULTS.nPermutations }],
+		['permutationSeed', { val: PERMUTATION_DEFAULTS.permutationSeed }],
+		['permutationStatistic', { val: PERMUTATION_DEFAULTS.permutationStatistic }],
+		['out', { dlogx: { val: -1 }, pvalue: { val: -1 } }],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
 		['collectedType', { val: 'dlog' }],
@@ -41,7 +47,8 @@
 			],
 			outputs: [
 				{ name: 'dlogx', kind: 'column', cardinality: 'one' },
-				{ name: 'dlogy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'dlogy_' }
+				{ name: 'dlogy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'dlogy_' },
+				{ name: 'pvalue', kind: 'column', cardinality: 'one' }
 			]
 		}
 	};
@@ -117,7 +124,11 @@
 					? evaluateDoubleLogisticAtPoints(fitResult.parameters, true, outputXData)
 					: fitResult.fitted;
 
-				y_results[yId] = { fitResult, fitted: yOutData, t: tt, xOutData, yOutData };
+				const pValue = argsIN.permuteTest
+					? fitPermutationPValue(tt, yy, 'doublelogistic', dlOpts, argsIN).pValue
+					: NaN;
+
+				y_results[yId] = { fitResult, fitted: yOutData, t: tt, xOutData, yOutData, pValue };
 			}
 		}
 
@@ -168,6 +179,21 @@
 			}
 		}
 
+		// Scalar p-value output: one value per y input, in yIN order.
+		const pvalueOut = argsIN.out.pvalue;
+		if (pvalueOut != null && pvalueOut !== -1) {
+			const pCol = getColumnById(pvalueOut);
+			if (pCol) {
+				core.rawData.set(
+					pvalueOut,
+					yINs.map((yId) => y_results[yId]?.pValue ?? NaN)
+				);
+				pCol.data = pvalueOut;
+				pCol.type = 'number';
+				pCol.tableProcessGUId = crypto.randomUUID();
+			}
+		}
+
 		return [{ t: sharedT, outputXData, y_results, originTime_ms }, true];
 	}
 </script>
@@ -211,6 +237,12 @@
 	if (p.args.fixedK2 === undefined) p.args.fixedK2 = 0.5;
 	if (p.args.fixPeriod === undefined) p.args.fixPeriod = false;
 	if (p.args.fixedPeriod === undefined) p.args.fixedPeriod = 24;
+	if (p.args.permuteTest === undefined) p.args.permuteTest = PERMUTATION_DEFAULTS.permuteTest;
+	if (p.args.nPermutations === undefined) p.args.nPermutations = PERMUTATION_DEFAULTS.nPermutations;
+	if (p.args.permutationSeed === undefined)
+		p.args.permutationSeed = PERMUTATION_DEFAULTS.permutationSeed;
+	if (p.args.permutationStatistic === undefined)
+		p.args.permutationStatistic = PERMUTATION_DEFAULTS.permutationStatistic;
 
 	let dlData = $state(null);
 	let showOutputX = $state(p.args.outputX !== -1);
@@ -250,6 +282,10 @@
 		out += p.args.fixK1;
 		out += p.args.fixK2;
 		out += p.args.fixPeriod;
+		out += p.args.permuteTest;
+		out += p.args.nPermutations;
+		out += p.args.permutationSeed;
+		out += p.args.permutationStatistic;
 		return out;
 	});
 	let lastHash = '';
@@ -457,6 +493,24 @@
 		<div class="control-input-horizontal">
 			<ControlInput label="k2 (1/hr)">
 				<NumberWithUnits bind:value={p.args.fixedK2} min="0.001" step="0.05" onInput={getFit} />
+			</ControlInput>
+		</div>
+	{/if}
+
+	<!-- Permutation test -->
+	<div class="control-input-horizontal">
+		<div class="control-input-checkbox">
+			<input type="checkbox" bind:checked={p.args.permuteTest} onchange={getFit} />
+			<p>Test significance (model vs chance)</p>
+		</div>
+	</div>
+	{#if p.args.permuteTest}
+		<div class="control-input-horizontal">
+			<ControlInput label="Permutations">
+				<NumberWithUnits bind:value={p.args.nPermutations} min="99" step="100" onInput={getFit} />
+			</ControlInput>
+			<ControlInput label="Seed">
+				<NumberWithUnits bind:value={p.args.permutationSeed} min="0" step="1" onInput={getFit} />
 			</ControlInput>
 		</div>
 	{/if}

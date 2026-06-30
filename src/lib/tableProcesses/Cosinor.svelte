@@ -3,6 +3,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { evaluateCosinorAtPoints } from '$lib/utils/cosinor.js';
+	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	// Side-effect: registers 'cosinor.fitMany' on the main thread so sync fallback works.
@@ -19,12 +20,17 @@
 		// PORTS (the "stored values as output ports" pilot): each is an array with
 		// one value per y input, so wiring e.g. `period` straight into a boxplot
 		// compares the metric across series/animals without the global registry.
-		['out', { cosinorx: { val: -1 }, period: { val: -1 }, amplitude: { val: -1 }, rsquared: { val: -1 } }],
+		['out', { cosinorx: { val: -1 }, period: { val: -1 }, amplitude: { val: -1 }, rsquared: { val: -1 }, pvalue: { val: -1 } }],
 		['valid', { val: false }],
 		['useFixedPeriod', { val: false }],
 		['fixedPeriod', { val: 24 }],
 		['nHarmonics', { val: 1 }],
 		['alpha', { val: 0.05 }],
+		// Permutation test: a model-vs-chance significance test for each y fit.
+		['permuteTest', { val: PERMUTATION_DEFAULTS.permuteTest }],
+		['nPermutations', { val: PERMUTATION_DEFAULTS.nPermutations }],
+		['permutationSeed', { val: PERMUTATION_DEFAULTS.permutationSeed }],
+		['permutationStatistic', { val: PERMUTATION_DEFAULTS.permutationStatistic }],
 		['forcollected', { val: true }],
 		['collectedType', { val: 'cosinor' }],
 		['preProcesses', { val: [] }],
@@ -55,7 +61,8 @@
 				// Scalar-metric ports (one value per y input).
 				{ name: 'period', kind: 'column', cardinality: 'one' },
 				{ name: 'amplitude', kind: 'column', cardinality: 'one' },
-				{ name: 'rsquared', kind: 'column', cardinality: 'one' }
+				{ name: 'rsquared', kind: 'column', cardinality: 'one' },
+				{ name: 'pvalue', kind: 'column', cardinality: 'one' }
 			]
 		}
 	};
@@ -283,9 +290,25 @@
 		// match what users previously stored by name.
 		const useFixed = argsIN.useFixedPeriod ?? false;
 		const fixedPeriod = argsIN.fixedPeriod ?? 24;
+		// Permutation-test inputs (only computed when enabled): the x grid and the
+		// fit options, so the permutation fit matches this node's fit.
+		const permOptions = {
+			useFixedPeriod: useFixed,
+			fixedPeriod,
+			nHarmonics: argsIN.nHarmonics ?? 1,
+			Ncurves: argsIN.Ncurves ?? 1,
+			alpha: argsIN.alpha ?? 0.05
+		};
+		const xColForPerm = argsIN.permuteTest ? getColumnById(argsIN.xIN) : null;
+		const tAll = xColForPerm
+			? xColForPerm.type === 'time'
+				? xColForPerm.hoursSinceStart
+				: xColForPerm.getData()
+			: [];
 		const periodArr = [];
 		const amplitudeArr = [];
 		const rsquaredArr = [];
+		const pvalueArr = [];
 		for (const yId of yINs) {
 			const yr = result.y_results[yId];
 			let period = NaN;
@@ -305,6 +328,18 @@
 			periodArr.push(period);
 			amplitudeArr.push(amplitude);
 			rsquaredArr.push(rsq);
+
+			let pValue = NaN;
+			if (argsIN.permuteTest && yr) {
+				const yAll = getColumnById(yId)?.getData() ?? [];
+				const valid = tAll
+					.map((v, i) => (isNaN(v) || isNaN(yAll[i]) ? -1 : i))
+					.filter((i) => i !== -1);
+				const tt = valid.map((i) => tAll[i]);
+				const yy = valid.map((i) => yAll[i]);
+				pValue = fitPermutationPValue(tt, yy, 'cosinor', permOptions, argsIN).pValue;
+			}
+			pvalueArr.push(pValue);
 		}
 		const writeScalarOut = (key, arr) => {
 			const id = argsIN.out[key];
@@ -319,6 +354,7 @@
 		writeScalarOut('period', periodArr);
 		writeScalarOut('amplitude', amplitudeArr);
 		writeScalarOut('rsquared', rsquaredArr);
+		writeScalarOut('pvalue', pvalueArr);
 	}
 
 	export async function cosinor(argsIN) {
@@ -359,6 +395,12 @@
 	if (p.args.fixedPeriod === undefined) p.args.fixedPeriod = 24;
 	if (p.args.nHarmonics === undefined) p.args.nHarmonics = 1;
 	if (p.args.alpha === undefined) p.args.alpha = 0.05;
+	if (p.args.permuteTest === undefined) p.args.permuteTest = PERMUTATION_DEFAULTS.permuteTest;
+	if (p.args.nPermutations === undefined) p.args.nPermutations = PERMUTATION_DEFAULTS.nPermutations;
+	if (p.args.permutationSeed === undefined)
+		p.args.permutationSeed = PERMUTATION_DEFAULTS.permutationSeed;
+	if (p.args.permutationStatistic === undefined)
+		p.args.permutationStatistic = PERMUTATION_DEFAULTS.permutationStatistic;
 
 	let cosinorData = $state();
 	let showOutputX = $state(p.args.outputX !== -1);
@@ -382,6 +424,10 @@
 		}
 		out += outputX_col?.getDataHash;
 		out += p.args.useFixedPeriod;
+		out += p.args.permuteTest;
+		out += p.args.nPermutations;
+		out += p.args.permutationSeed;
+		out += p.args.permutationStatistic;
 		return out;
 	});
 	// Persisted in p.args so reopening the control panel (which remounts this
@@ -668,6 +714,38 @@
 					bind:value={p.args.Ncurves}
 					onInput={() => getCosinor()}
 					min="1"
+					step="1"
+				/>
+			</ControlInput>
+		</div>
+	{/if}
+
+	<div class="tableProcess-label">
+		<span>Permutation test</span>
+	</div>
+	<div class="control-input-horizontal">
+		<div class="control-input">
+			<label>
+				<input type="checkbox" bind:checked={p.args.permuteTest} onchange={() => getCosinor()} />
+				Test significance (model vs chance)
+			</label>
+		</div>
+	</div>
+	{#if p.args.permuteTest}
+		<div class="control-input-horizontal">
+			<ControlInput label="Permutations">
+				<NumberWithUnits
+					bind:value={p.args.nPermutations}
+					onInput={() => getCosinor()}
+					min="99"
+					step="100"
+				/>
+			</ControlInput>
+			<ControlInput label="Seed">
+				<NumberWithUnits
+					bind:value={p.args.permutationSeed}
+					onInput={() => getCosinor()}
+					min="0"
 					step="1"
 				/>
 			</ControlInput>
