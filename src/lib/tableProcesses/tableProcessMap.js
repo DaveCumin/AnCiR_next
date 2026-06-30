@@ -32,6 +32,7 @@ export async function loadTableProcesses() {
 				family: nodeMeta.family,
 				nodeIcon: nodeMeta.nodeIcon,
 				description: nodeMeta.description,
+				hideFromPalette: nodeMeta.hideFromPalette ?? false,
 				kind: 'tableProcess'
 			});
 		} catch (error) {

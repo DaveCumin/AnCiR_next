@@ -255,7 +255,10 @@ const meta = new Map([
 		{
 			family: 'Transform',
 			nodeIcon: 'collect-columns',
-			description: 'Collect (concatenate) several columns into one.'
+			description: 'Collect (concatenate) several columns into one.',
+			// Hidden from the + palette (use a Group instead). Still registered so the
+			// "collected mode" container other analyses rely on keeps working.
+			hideFromPalette: true
 		}
 	],
 	[
@@ -368,7 +371,8 @@ export function getNodeMeta(key) {
 	return {
 		family: entry?.family ?? 'Other',
 		nodeIcon: entry?.nodeIcon ?? 'gear',
-		description: entry?.description ?? ''
+		description: entry?.description ?? '',
+		hideFromPalette: entry?.hideFromPalette ?? false
 	};
 }
 

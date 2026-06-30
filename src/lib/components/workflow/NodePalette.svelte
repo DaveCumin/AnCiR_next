@@ -163,6 +163,7 @@
 			});
 		}
 		for (const [key, entry] of appConsts.tableProcessMap.entries()) {
+			if (entry.hideFromPalette) continue;
 			items.push({
 				type: key,
 				kind: 'tableProcess',
