@@ -189,6 +189,11 @@
 	import { onMount, untrack } from 'svelte';
 	let { p = $bindable() } = $props();
 
+	// Sessions saved without `categories` (e.g. the demo, whose args omit it) load
+	// with it undefined; the TableProcess constructor doesn't merge defaults. Keep
+	// it an array so every `for (const cat of p.args.categories)` is safe.
+	if (!Array.isArray(p.args.categories)) p.args.categories = [];
+
 	let longToWideResult = $state();
 	let mounted = $state(false);
 	let previewStart = $state(1);

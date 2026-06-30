@@ -132,9 +132,11 @@
 <script>
 	// @ts-nocheck
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import ColumnComponent from '$lib/core/Column.svelte';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
