@@ -39,7 +39,11 @@ describe.runIf(process.env.GEN_DEMOS)('generate table-process demo sessions', ()
 		appConsts.plotMap = await loadPlots();
 		appConsts.tableProcessMap = await loadTableProcesses();
 
+		// Optionally regenerate only specific TPs (comma-separated names) to avoid
+		// churning every demo's GUIds: GEN_ONLY=MovingAnalysis,RhythmicityAnalysis
+		const only = process.env.GEN_ONLY ? new Set(process.env.GEN_ONLY.split(',')) : null;
 		for (const spec of TP_SPECS) {
+			if (only && !only.has(spec.name)) continue;
 			resetCore();
 			const entry = appConsts.tableProcessMap.get(spec.name);
 			const display = entry?.displayName ?? spec.name;

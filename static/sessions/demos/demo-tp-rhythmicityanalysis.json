@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "74": [
+    "9": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "75": [
+    "10": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "76": [
+    "11": [
       20,
       20.5,
       21,
@@ -695,7 +695,7 @@
       27.5,
       28
     ],
-    "77": [
+    "12": [
       0.8924933333937438,
       3.0510601083632705,
       6.090118581951634e-28,
@@ -714,7 +714,7 @@
       1.8553714388763858,
       1.1781833223509954e-29
     ],
-    "78": [
+    "13": [
       0.8924933333937438,
       3.0510601083632705,
       6.090118581951634e-28,
@@ -736,11 +736,11 @@
   },
   "data": [
     {
-      "id": 74,
+      "id": 9,
       "name": "x",
-      "data": 74,
+      "data": 9,
       "type": "number",
-      "tableProcessGUId": "03b0394b-c9e5-4574-a17b-a64bc7a992d2",
+      "tableProcessGUId": "46fe0db3-0039-4797-90f8-138bfe3efe40",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -748,9 +748,9 @@
       "processes": []
     },
     {
-      "id": 75,
+      "id": 10,
       "name": "y",
-      "data": 75,
+      "data": 10,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -760,11 +760,11 @@
       "processes": []
     },
     {
-      "id": 76,
-      "name": "75_period_21",
-      "data": 76,
+      "id": 11,
+      "name": "10_period_3",
+      "data": 11,
       "type": "number",
-      "tableProcessGUId": "492a496a-d294-4680-852c-36e0de0e197c",
+      "tableProcessGUId": "9baf15f8-9007-4dbe-89ae-a13ea4774571",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -772,11 +772,11 @@
       "processes": []
     },
     {
-      "id": 77,
-      "name": "75_power_21",
-      "data": 77,
+      "id": 12,
+      "name": "10_power_3",
+      "data": 12,
       "type": "number",
-      "tableProcessGUId": "492a496a-d294-4680-852c-36e0de0e197c",
+      "tableProcessGUId": "9baf15f8-9007-4dbe-89ae-a13ea4774571",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -784,11 +784,11 @@
       "processes": []
     },
     {
-      "id": 78,
-      "name": "rhythmicityy_75_21",
-      "data": 78,
+      "id": 13,
+      "name": "rhythmicityy_10_3",
+      "data": 13,
       "type": "number",
-      "tableProcessGUId": "492a496a-d294-4680-852c-36e0de0e197c",
+      "tableProcessGUId": "9baf15f8-9007-4dbe-89ae-a13ea4774571",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -798,8 +798,8 @@
   ],
   "plots": [
     {
-      "id": 20,
-      "name": "Rhythmicity Analysis: input",
+      "id": 2,
+      "name": "Rhythmicity Analysis: signal",
       "x": 350,
       "y": 150,
       "width": 500,
@@ -832,13 +832,13 @@
           "left": 30
         },
         "xAxis": {
-          "label": "x",
+          "label": "time",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
         },
         "yAxisLeft": {
-          "label": "value",
+          "label": "signal",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -852,9 +852,9 @@
         "data": [
           {
             "x": {
-              "id": 79,
+              "id": 14,
               "name": "x",
-              "refId": 74,
+              "refId": 9,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -864,9 +864,9 @@
               "processes": []
             },
             "y": {
-              "id": 80,
+              "id": 15,
               "name": "y",
-              "refId": 75,
+              "refId": 10,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -875,7 +875,7 @@
               "provenance": "refers to y which is ",
               "processes": []
             },
-            "label": "Data",
+            "label": "Signal",
             "yAxis": "left",
             "line": {
               "colour": "#234154",
@@ -907,38 +907,118 @@
       }
     },
     {
-      "id": 21,
-      "name": "Rhythmicity Analysis: result",
+      "id": 3,
+      "name": "Rhythmicity Analysis: periodogram",
       "x": 350,
       "y": 150,
       "width": 500,
       "height": 250,
-      "type": "tableplot",
+      "type": "scatterplot",
       "selected": false,
       "facet": false,
       "facetParent": null,
       "facetKey": null,
       "plot": {
-        "columnRefs": [
-          76,
-          77,
-          78
+        "xlimsIN": [
+          null,
+          null
         ],
-        "showCol": [
-          true,
-          true,
-          true
+        "xLogScale": false,
+        "ylimsLeftIN": [
+          null,
+          null
         ],
-        "colWidths": {},
-        "colCurrent": 1,
-        "showColNumber": false,
-        "decimalPlaces": 2
+        "ylimsRightIN": [
+          null,
+          null
+        ],
+        "yLogScaleLeft": false,
+        "yLogScaleRight": false,
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 30
+        },
+        "xAxis": {
+          "label": "period (h)",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisLeft": {
+          "label": "power",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisRight": {
+          "label": "",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 16,
+              "name": "10_period_3",
+              "refId": 11,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to 10_period_3 which is ",
+              "processes": []
+            },
+            "y": {
+              "id": 17,
+              "name": "10_power_3",
+              "refId": 12,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to 10_power_3 which is ",
+              "processes": []
+            },
+            "label": "Power",
+            "yAxis": "left",
+            "line": {
+              "colour": "#BE796B",
+              "strokeWidth": 2.5,
+              "stroke": "solid",
+              "draw": true,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#BE796B",
+              "radius": 3,
+              "shape": "circle",
+              "draw": false
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "topright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "#ccc",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "nightBands": []
       }
     }
   ],
   "tableProcesses": [
     {
-      "id": 20,
+      "id": 2,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -948,19 +1028,19 @@
         "count": 336,
         "end": 335,
         "out": {
-          "result": 74
+          "result": 9
         }
       },
       "refTPId": null
     },
     {
-      "id": 21,
+      "id": 3,
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis",
       "args": {
-        "xIN": 74,
+        "xIN": 9,
         "yIN": [
-          75
+          10
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -974,9 +1054,9 @@
         "corrMaxLag": 0,
         "preProcesses": [],
         "out": {
-          "75_period": 76,
-          "75_power": 77,
-          "rhythmicityy_75": 78
+          "10_period": 11,
+          "10_power": 12,
+          "rhythmicityy_10": 13
         }
       },
       "refTPId": null
@@ -989,23 +1069,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_75": {
+    "data_10": {
       "x": 60,
       "y": 60
     },
-    "tableprocess_20": {
+    "tableprocess_2": {
       "x": 60,
       "y": 560
     },
-    "tableprocess_21": {
+    "tableprocess_3": {
       "x": 440,
       "y": 60
     },
-    "plot_20": {
+    "plot_2": {
       "x": 820,
       "y": 60
     },
-    "plot_21": {
+    "plot_3": {
       "x": 820,
       "y": 560
     }
@@ -1059,5 +1139,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.7"
+  "version": "β.45.8"
 }

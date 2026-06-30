@@ -117,7 +117,8 @@ function mkCol(type, values, name) {
 	return c.id;
 }
 
-/** Build a scatterplot from explicit series. Returns the Plot. */
+// Build a scatterplot from explicit series. Each series may set `yAxis: 'right'`
+// to plot on the second y-axis; `axes.yRight` labels it. Returns the Plot.
 function scatterPlot(name, series, axes) {
 	const p = new Plot({ name, type: 'scatterplot' });
 	for (const s of series) {
@@ -126,12 +127,14 @@ function scatterPlot(name, series, axes) {
 			x: { refId: s.x },
 			y: { refId: s.y },
 			label: s.label,
+			yAxis: s.yAxis || 'left',
 			line: { colour: s.colour, draw: isLine, strokeWidth: isLine ? 2.5 : 2, stroke: 'solid' },
 			points: { colour: s.colour, draw: !isLine, radius: 3, shape: 'circle' }
 		});
 	}
 	if (axes?.x != null && p.plot.xAxis) p.plot.xAxis.label = axes.x;
 	if (axes?.y != null && p.plot.yAxisLeft) p.plot.yAxisLeft.label = axes.y;
+	if (axes?.yRight != null && p.plot.yAxisRight) p.plot.yAxisRight.label = axes.yRight;
 	pushObj(p);
 	return p;
 }
@@ -325,18 +328,55 @@ export async function buildTPDemo(spec, entry, display) {
 		}
 		scatterPlot(`${display}: data + fit`, series, cfg.axes);
 		tablePlot(`${display}: values`, yOut >= 0 ? [yRaw, yOut] : [yRaw]);
-	} else if (analysis) {
-		// windowed/scalar analysis: the raw signal + a table of the outputs.
-		scatterPlot(
-			`${display}: input`,
-			[{ x: ids[0], y: ids[1], label: 'Data', kind: 'points', colour: RAW_COLOUR }],
-			{ x: 'x', y: 'value' }
-		);
+	} else if (spec.name === 'MovingAnalysis') {
+		// Raw signal (left axis) + the windowed period output as a second series on
+		// the right axis (movex → x, peak_period → y).
+		const yId = ids[1];
+		const movex = tp.args.out.movex;
+		const period = tp.args.out[`${yId}_peak_period`];
+		const series = [
+			{ x: ids[0], y: ids[1], label: 'Signal', kind: 'points', colour: RAW_COLOUR, yAxis: 'left' }
+		];
+		if (movex >= 0 && period >= 0) {
+			series.push({
+				x: movex,
+				y: period,
+				label: 'Moving period',
+				kind: 'line',
+				colour: OUT_COLOUR,
+				yAxis: 'right'
+			});
+		}
+		scatterPlot(`${display}: signal + moving period`, series, {
+			x: 'time',
+			y: 'signal',
+			yRight: 'period (h)'
+		});
 		tablePlot(`${display}: result`, outIds.length ? outIds : ids);
+	} else if (spec.name === 'RhythmicityAnalysis') {
+		// Two scatterplots: the raw signal, and the analysis output (periodogram:
+		// power vs period).
+		const yId = ids[1];
+		const period = tp.args.out[`${yId}_period`];
+		const power = tp.args.out[`${yId}_power`];
+		scatterPlot(
+			`${display}: signal`,
+			[{ x: ids[0], y: ids[1], label: 'Signal', kind: 'points', colour: RAW_COLOUR }],
+			{ x: 'time', y: 'signal' }
+		);
+		if (period >= 0 && power >= 0) {
+			scatterPlot(
+				`${display}: periodogram`,
+				[{ x: period, y: power, label: 'Power', kind: 'line', colour: OUT_COLOUR }],
+				{ x: 'period (h)', y: 'power' }
+			);
+		}
 	} else if (spec.name === 'GroupComparison') {
 		const p = new Plot({ name: `${display}: groups`, type: 'boxplot' });
 		p.plot.addData({ x: { refId: ids[0] }, y: { refId: ids[1] } });
 		setAxisLabels(p, { x: 'Group', y: 'Value' });
+		// Show the pairwise significance bars — the whole point of a group comparison.
+		p.plot.showSigBars = true;
 		pushObj(p);
 	} else {
 		tablePlot(`${display} result`, [...ids, ...outIds]);

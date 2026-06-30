@@ -228,7 +228,7 @@
           "itemSpacing": 4,
           "fontSize": 12
         },
-        "showSigBars": false,
+        "showSigBars": true,
         "sigMethod": "auto",
         "sigAlpha": 0.05,
         "showNs": false,
