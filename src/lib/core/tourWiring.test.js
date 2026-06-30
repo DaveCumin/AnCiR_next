@@ -3,9 +3,12 @@ import { core } from './core.svelte.js';
 import {
 	tpStatus,
 	plotStatus,
+	plotSeriesCounts,
 	anyPlotStatus,
 	cosinorFitStatus,
-	wiringHint
+	wiringHint,
+	binnedOutElForAxis,
+	cosinorOutElForAxis
 } from './tourWiring.js';
 
 const series = (x, y) => ({ x: { refId: x }, y: { refId: y } });
@@ -98,6 +101,60 @@ describe('cosinorFitStatus — the fitted curve must be plotted', () => {
 		core.tableProcesses = [cosinor({ cosinorx: 10, cosinory_5: 11, period: 12, amplitude: 13 })];
 		core.plots = [plot('scatterplot', [series(12, 13)])];
 		expect(cosinorFitStatus().done).toBe(false);
+	});
+});
+
+describe('plotSeriesCounts — how many series carry x / y (multi-series steps)', () => {
+	it('counts x- and y-filled series independently', () => {
+		core.plots = [
+			plot('scatterplot', [series(1, 2), { x: { refId: 3 }, y: { refId: -1 } }])
+		];
+		expect(plotSeriesCounts('scatterplot')).toEqual({ withX: 2, withY: 1 });
+	});
+	it('is zero for an unwired plot', () => {
+		core.plots = [plot('scatterplot', [])];
+		expect(plotSeriesCounts('scatterplot')).toEqual({ withX: 0, withY: 0 });
+	});
+});
+
+describe('binned/cosinor output resolvers — map semantic key → col_<colId> dot', () => {
+	// A TP output dot's DOM port name is `col_<colId>`; args.out maps the semantic
+	// key to that colId. The resolvers must follow that indirection.
+	const addOutDot = (nodeId, colId) => {
+		const el = document.createElement('button');
+		el.setAttribute('data-node-id', nodeId);
+		el.setAttribute('data-port-name', `col_${colId}`);
+		el.setAttribute('data-port-dir', 'out');
+		document.body.appendChild(el);
+		return el;
+	};
+	beforeEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	it('finds the Bin Data binnedx / first binnedy_* output dots', () => {
+		core.tableProcesses = [
+			{ name: 'BinnedData', id: 7, args: { out: { binnedx: 42, binnedy_5: 99 } } }
+		];
+		const xDot = addOutDot('tableprocess_7', 42);
+		const yDot = addOutDot('tableprocess_7', 99);
+		expect(binnedOutElForAxis('x')).toBe(xDot);
+		expect(binnedOutElForAxis('y')).toBe(yDot);
+	});
+
+	it('finds the Cosinor cosinorx / first cosinory_* output dots', () => {
+		core.tableProcesses = [
+			{ name: 'Cosinor', id: 3, args: { out: { cosinorx: 11, cosinory_8: 12 } } }
+		];
+		const xDot = addOutDot('tableprocess_3', 11);
+		const yDot = addOutDot('tableprocess_3', 12);
+		expect(cosinorOutElForAxis('x')).toBe(xDot);
+		expect(cosinorOutElForAxis('y')).toBe(yDot);
+	});
+
+	it('returns null when the output is not yet produced (colId < 0)', () => {
+		core.tableProcesses = [{ name: 'Cosinor', id: 3, args: { out: { cosinorx: -1 } } }];
+		expect(cosinorOutElForAxis('x')).toBe(null);
 	});
 });
 

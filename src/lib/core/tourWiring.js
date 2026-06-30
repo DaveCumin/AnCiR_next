@@ -34,6 +34,34 @@ export const portEl = (nodeId, portName, dir) => {
 export const tpInPortEl = (name, portName) => portEl(tpNodeId(name), portName, 'in');
 export const plotInPortEl = (type, portName) => portEl(plotNodeId(type), portName, 'in');
 
+// OUTPUT dots on a table-process node — the demo-edge SOURCE for steps that wire
+// FROM an analysis node (Bin Data, Cosinor) rather than from the raw data source.
+// A TP output dot's DOM port name is `col_<colId>` (see buildTPOutputs), while
+// `args.out` maps the semantic output key (e.g. `binnedx`, `cosinory_<id>`) to
+// that column id — so resolve key → colId → dot. `tpOutPortEl` takes an exact
+// key; `tpOutPortElByPrefix` takes the first key starting with `prefix` (for the
+// dynamic per-Y outputs `binnedy_*` / `cosinory_*`).
+const tpOutDotForColId = (name, colId) => {
+	if (typeof colId !== 'number' || colId < 0) return null;
+	return portEl(tpNodeId(name), `col_${colId}`, 'out');
+};
+export const tpOutPortEl = (name, key) => tpOutDotForColId(name, findTP(name)?.args?.out?.[key]);
+export const tpOutPortElByPrefix = (name, prefix) => {
+	const out = findTP(name)?.args?.out ?? {};
+	const entry = Object.entries(out).find(
+		([k, v]) => k.startsWith(prefix) && typeof v === 'number' && v >= 0
+	);
+	return entry ? tpOutDotForColId(name, entry[1]) : null;
+};
+
+// Axis-aware sources from the canonical analysis nodes: x = the scalar output,
+// y = the first per-Y output. So downstream wire steps draw the edge from the
+// Bin Data / Cosinor node, not from the raw simulated-data source.
+export const binnedOutElForAxis = (axis) =>
+	axis === 'y' ? tpOutPortElByPrefix('BinnedData', 'binnedy_') : tpOutPortEl('BinnedData', 'binnedx');
+export const cosinorOutElForAxis = (axis) =>
+	axis === 'y' ? tpOutPortElByPrefix('Cosinor', 'cosinory_') : tpOutPortEl('Cosinor', 'cosinorx');
+
 // Type-agnostic: the named input dot on the LAST plot node on the canvas
 // (getting-started lets the user pick any plot type).
 export const anyPlotInPortEl = (portName) => {
@@ -85,6 +113,17 @@ export const plotStatus = (type) => {
 		xOk: series.some(seriesXOk),
 		yOk: series.some(seriesYOk),
 		done: series.some((d) => seriesXOk(d) && seriesYOk(d))
+	};
+};
+
+// How many of a plot's series carry x / y. Lets a multi-series wire step advance
+// independently of the previous one — e.g. raw on series 1 (x1/ys1), binned on
+// series 2 (x2/ys2): `withX >= 2` means the second x is now wired.
+export const plotSeriesCounts = (type) => {
+	const series = lastPlot(type)?.plot?.data ?? [];
+	return {
+		withX: series.filter(seriesXOk).length,
+		withY: series.filter(seriesYOk).length
 	};
 };
 
