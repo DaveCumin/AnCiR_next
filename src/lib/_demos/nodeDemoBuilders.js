@@ -296,7 +296,14 @@ export async function buildTPDemo(spec, entry, display) {
 		const yId = mkCol(spec.inputs[1].type, yData, 'y');
 		ids = [x.colId, yId];
 	} else {
-		ids = spec.inputs.map((inp) => mkCol(inp.type, resolve(inp.data), `${display} input`));
+		// Disambiguate when there's more than one input ("… input 1", "… input 2").
+		ids = spec.inputs.map((inp, i) =>
+			mkCol(
+				inp.type,
+				resolve(inp.data),
+				spec.inputs.length > 1 ? `${display} input ${i + 1}` : `${display} input`
+			)
+		);
 	}
 
 	if (spec.needsStoredValues) {

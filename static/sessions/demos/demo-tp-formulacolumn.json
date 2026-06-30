@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "44": [
+    "11": [
       1,
       2,
       3,
@@ -52,7 +52,7 @@
       49,
       50
     ],
-    "45": [
+    "12": [
       10,
       20,
       30,
@@ -104,7 +104,7 @@
       490,
       500
     ],
-    "46": [
+    "13": [
       11,
       22,
       33,
@@ -159,9 +159,9 @@
   },
   "data": [
     {
-      "id": 44,
-      "name": "Formula Column input",
-      "data": 44,
+      "id": 11,
+      "name": "Formula Column input 1",
+      "data": 11,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -171,9 +171,9 @@
       "processes": []
     },
     {
-      "id": 45,
-      "name": "Formula Column input",
-      "data": 45,
+      "id": 12,
+      "name": "Formula Column input 2",
+      "data": 12,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -183,11 +183,11 @@
       "processes": []
     },
     {
-      "id": 46,
-      "name": "result_12",
-      "data": 46,
+      "id": 13,
+      "name": "result_3",
+      "data": 13,
       "type": "number",
-      "tableProcessGUId": "69d0c70d-d8f0-420d-9b03-b100d684bb3d",
+      "tableProcessGUId": "98d0cf87-9e33-4656-8081-c519fc39897a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -197,7 +197,7 @@
   ],
   "plots": [
     {
-      "id": 12,
+      "id": 3,
       "name": "Formula Column result",
       "x": 350,
       "y": 150,
@@ -210,9 +210,9 @@
       "facetKey": null,
       "plot": {
         "columnRefs": [
-          44,
-          45,
-          46
+          11,
+          12,
+          13
         ],
         "showCol": [
           true,
@@ -228,14 +228,14 @@
   ],
   "tableProcesses": [
     {
-      "id": 12,
+      "id": 3,
       "name": "FormulaColumn",
       "displayName": "Formula Column",
       "args": {
         "tokens": [
           {
             "type": "col",
-            "id": 44
+            "id": 11
           },
           {
             "type": "text",
@@ -243,11 +243,11 @@
           },
           {
             "type": "col",
-            "id": 45
+            "id": 12
           }
         ],
         "out": {
-          "result": 46
+          "result": 13
         }
       },
       "refTPId": null
@@ -260,19 +260,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_44": {
+    "data_11": {
       "x": 60,
       "y": 60
     },
-    "data_45": {
+    "data_12": {
       "x": 60,
       "y": 560
     },
-    "tableprocess_12": {
+    "tableprocess_3": {
       "x": 440,
       "y": 60
     },
-    "plot_12": {
+    "plot_3": {
       "x": 820,
       "y": 60
     }
@@ -326,5 +326,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.7"
+  "version": "β.45.9"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "47": [
+    "14": [
       "A",
       "B",
       "C",
@@ -52,7 +52,7 @@
       "A",
       "B"
     ],
-    "48": [
+    "15": [
       0,
       6,
       12,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 47,
-      "name": "Compare groups (stats) input",
-      "data": 47,
+      "id": 14,
+      "name": "Compare groups (stats) input 1",
+      "data": 14,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -119,9 +119,9 @@
       "processes": []
     },
     {
-      "id": 48,
-      "name": "Compare groups (stats) input",
-      "data": 48,
+      "id": 15,
+      "name": "Compare groups (stats) input 2",
+      "data": 15,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -133,7 +133,7 @@
   ],
   "plots": [
     {
-      "id": 13,
+      "id": 4,
       "name": "Compare groups (stats): groups",
       "x": 350,
       "y": 150,
@@ -174,27 +174,27 @@
         "data": [
           {
             "x": {
-              "id": 49,
-              "name": "Compare groups (stats) input",
-              "refId": 47,
+              "id": 16,
+              "name": "Compare groups (stats) input 1",
+              "refId": 14,
               "type": "category",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to Compare groups (stats) input which is ",
+              "provenance": "refers to Compare groups (stats) input 1 which is ",
               "processes": []
             },
             "y": {
-              "id": 50,
-              "name": "Compare groups (stats) input",
-              "refId": 48,
+              "id": 17,
+              "name": "Compare groups (stats) input 2",
+              "refId": 15,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to Compare groups (stats) input which is ",
+              "provenance": "refers to Compare groups (stats) input 2 which is ",
               "processes": []
             },
             "label": "Box Plot 1",
@@ -242,13 +242,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 13,
+      "id": 4,
       "name": "GroupComparison",
       "displayName": "Compare groups (stats)",
       "args": {
-        "xIN": 47,
+        "xIN": 14,
         "yIN": [
-          48
+          15
         ],
         "method": "auto",
         "alpha": 0.05,
@@ -265,19 +265,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_47": {
+    "data_14": {
       "x": 60,
       "y": 60
     },
-    "data_48": {
+    "data_15": {
       "x": 60,
       "y": 560
     },
-    "tableprocess_13": {
+    "tableprocess_4": {
       "x": 440,
       "y": 60
     },
-    "plot_13": {
+    "plot_4": {
       "x": 820,
       "y": 60
     }
@@ -331,5 +331,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.7"
+  "version": "β.45.9"
 }
