@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "57": [
+    "28": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "58": [
+    "29": [
       0,
       1,
       2,
@@ -104,59 +104,7 @@
       48,
       49
     ],
-    "59": [
-      0,
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16,
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23,
-      24,
-      25,
-      26,
-      27,
-      28,
-      29,
-      30,
-      31,
-      32,
-      33,
-      34,
-      35,
-      36,
-      37,
-      38,
-      39,
-      40,
-      41,
-      42,
-      43,
-      44,
-      45,
-      46,
-      47,
-      48,
-      49
-    ],
-    "60": [
+    "30": [
       0,
       1,
       2,
@@ -211,9 +159,21 @@
   },
   "data": [
     {
-      "id": 57,
-      "name": "input",
-      "data": 57,
+      "id": 28,
+      "name": "x",
+      "data": 28,
+      "type": "number",
+      "tableProcessGUId": "d1beb07a-d091-405d-8a41-5f63fda03ca4",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 29,
+      "name": "y",
+      "data": 29,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -223,36 +183,9 @@
       "processes": []
     },
     {
-      "id": 58,
-      "name": "filter result",
-      "data": 58,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "provenance": "",
-      "processes": [
-        {
-          "id": 4,
-          "name": "FilterByOtherCol",
-          "args": {
-            "conditions": [
-              {
-                "byColId": 59,
-                "isOperator": ">",
-                "byColValue": 2
-              }
-            ],
-            "parentColId": 58
-          }
-        }
-      ]
-    },
-    {
-      "id": 59,
+      "id": 30,
       "name": "reference",
-      "data": 59,
+      "data": 30,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -262,21 +195,21 @@
       "processes": []
     },
     {
-      "id": 60,
-      "name": "index",
-      "data": 60,
+      "id": 31,
+      "name": "Filter result",
+      "data": null,
       "type": "number",
       "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
+      "producerNodeId": "process_4",
+      "producerPort": "out_29",
+      "producerArtifactKind": "column",
       "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 12,
+      "id": 8,
       "name": "Filter: before vs after",
       "x": 350,
       "y": 150,
@@ -284,6 +217,9 @@
       "height": 250,
       "type": "scatterplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -307,13 +243,13 @@
           "left": 30
         },
         "xAxis": {
-          "label": "Index",
+          "label": "x",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
         },
         "yAxisLeft": {
-          "label": "Value",
+          "label": "value",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -327,27 +263,27 @@
         "data": [
           {
             "x": {
-              "id": 61,
-              "name": "index",
-              "refId": 60,
+              "id": 32,
+              "name": "x",
+              "refId": 28,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to index which is ",
+              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 62,
-              "name": "input",
-              "refId": 57,
+              "id": 33,
+              "name": "y",
+              "refId": 29,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to input which is ",
+              "provenance": "refers to y which is ",
               "processes": []
             },
             "label": "Before",
@@ -356,7 +292,8 @@
               "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
-              "draw": false
+              "draw": false,
+              "joinGaps": false
             },
             "points": {
               "colour": "#234154",
@@ -367,27 +304,27 @@
           },
           {
             "x": {
-              "id": 63,
-              "name": "index",
-              "refId": 60,
+              "id": 34,
+              "name": "x",
+              "refId": 28,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to index which is ",
+              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 64,
-              "name": "filter result",
-              "refId": 58,
+              "id": 35,
+              "name": "Filter result",
+              "refId": 31,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to filter result which is ",
+              "provenance": "refers to Filter result which is ",
               "processes": []
             },
             "label": "After",
@@ -396,7 +333,8 @@
               "colour": "#BE796B",
               "strokeWidth": 2,
               "stroke": "solid",
-              "draw": false
+              "draw": false,
+              "joinGaps": false
             },
             "points": {
               "colour": "#BE796B",
@@ -419,14 +357,103 @@
         },
         "nightBands": []
       }
+    },
+    {
+      "id": 9,
+      "name": "Filter: values",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "plot": {
+        "columnRefs": [
+          29,
+          31
+        ],
+        "showCol": [
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
     }
   ],
-  "tableProcesses": [],
+  "tableProcesses": [
+    {
+      "id": 4,
+      "name": "SequenceColumn",
+      "displayName": "Sequence Column",
+      "args": {
+        "seqType": "number",
+        "start": 0,
+        "step": 1,
+        "count": 50,
+        "end": 49,
+        "out": {
+          "result": 28
+        }
+      },
+      "refTPId": null
+    }
+  ],
   "storedValues": {},
   "nodeNotes": {},
   "notes": [],
   "groups": [],
-  "orphanProcesses": [],
+  "composites": [],
+  "orphanProcesses": [
+    {
+      "id": 4,
+      "name": "FilterByOtherCol",
+      "args": {
+        "conditions": [
+          {
+            "byColId": 30,
+            "isOperator": ">",
+            "byColValue": 2
+          }
+        ],
+        "inIN": [
+          29
+        ],
+        "parentColId": 29
+      }
+    }
+  ],
+  "nodeLayout": {
+    "data_29": {
+      "x": 60,
+      "y": 60
+    },
+    "data_30": {
+      "x": 60,
+      "y": 560
+    },
+    "tableprocess_4": {
+      "x": 60,
+      "y": 1060
+    },
+    "process_4": {
+      "x": 440,
+      "y": 60
+    },
+    "plot_8": {
+      "x": 820,
+      "y": 60
+    },
+    "plot_9": {
+      "x": 820,
+      "y": 560
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -437,6 +464,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -475,5 +503,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.7"
 }

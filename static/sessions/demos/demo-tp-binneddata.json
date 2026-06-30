@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "93": [
+    "0": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "94": [
+    "1": [
       52.522025082939734,
       68.09116741301771,
       73.44958693280898,
@@ -104,7 +104,7 @@
       47.59352161612626,
       59.5535187385039
     ],
-    "95": [
+    "2": [
       0,
       2,
       4,
@@ -132,7 +132,7 @@
       48,
       50
     ],
-    "96": [
+    "3": [
       60.306596247978725,
       80.40261868508753,
       84.47432056148014,
@@ -163,11 +163,11 @@
   },
   "data": [
     {
-      "id": 93,
+      "id": 0,
       "name": "x",
-      "data": 93,
+      "data": 0,
       "type": "number",
-      "tableProcessGUId": "",
+      "tableProcessGUId": "f2b8daea-dd80-4b2d-87d3-726612ff48a2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -175,9 +175,9 @@
       "processes": []
     },
     {
-      "id": 94,
+      "id": 1,
       "name": "y",
-      "data": 94,
+      "data": 1,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -187,12 +187,12 @@
       "processes": []
     },
     {
-      "id": 95,
-      "name": "binnedx_0",
-      "data": 95,
+      "id": 2,
+      "name": "binnedx_1",
+      "data": 2,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "5ad502bb-f182-428c-9e7a-9ecfe3c6c6cf",
+      "tableProcessGUId": "c5704f8c-194a-4722-843f-bbf320d20358",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -200,11 +200,11 @@
       "processes": []
     },
     {
-      "id": 96,
-      "name": "binnedy_94_0",
-      "data": 96,
+      "id": 3,
+      "name": "binnedy_1_1",
+      "data": 3,
       "type": "number",
-      "tableProcessGUId": "5ad502bb-f182-428c-9e7a-9ecfe3c6c6cf",
+      "tableProcessGUId": "c5704f8c-194a-4722-843f-bbf320d20358",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -214,7 +214,7 @@
   ],
   "plots": [
     {
-      "id": 17,
+      "id": 0,
       "name": "Bin Data: data + fit",
       "x": 350,
       "y": 150,
@@ -222,6 +222,9 @@
       "height": 250,
       "type": "scatterplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -265,9 +268,9 @@
         "data": [
           {
             "x": {
-              "id": 97,
+              "id": 4,
               "name": "x",
-              "refId": 93,
+              "refId": 0,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -277,9 +280,9 @@
               "processes": []
             },
             "y": {
-              "id": 98,
+              "id": 5,
               "name": "y",
-              "refId": 94,
+              "refId": 1,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -294,7 +297,8 @@
               "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
-              "draw": false
+              "draw": false,
+              "joinGaps": false
             },
             "points": {
               "colour": "#234154",
@@ -305,28 +309,28 @@
           },
           {
             "x": {
-              "id": 99,
-              "name": "binnedx_0",
-              "refId": 95,
+              "id": 6,
+              "name": "binnedx_1",
+              "refId": 2,
               "type": "bin",
               "binWidth": 2,
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to binnedx_0 which is ",
+              "provenance": "refers to binnedx_1 which is ",
               "processes": []
             },
             "y": {
-              "id": 100,
-              "name": "binnedy_94_0",
-              "refId": 96,
+              "id": 7,
+              "name": "binnedy_1_1",
+              "refId": 3,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to binnedy_94_0 which is ",
+              "provenance": "refers to binnedy_1_1 which is ",
               "processes": []
             },
             "label": "Bin Data",
@@ -335,7 +339,8 @@
               "colour": "#BE796B",
               "strokeWidth": 2.5,
               "stroke": "solid",
-              "draw": true
+              "draw": true,
+              "joinGaps": false
             },
             "points": {
               "colour": "#BE796B",
@@ -358,17 +363,60 @@
         },
         "nightBands": []
       }
+    },
+    {
+      "id": 1,
+      "name": "Bin Data: values",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "plot": {
+        "columnRefs": [
+          1,
+          3
+        ],
+        "showCol": [
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
     }
   ],
   "tableProcesses": [
     {
       "id": 0,
+      "name": "SequenceColumn",
+      "displayName": "Sequence Column",
+      "args": {
+        "seqType": "number",
+        "start": 0,
+        "step": 1,
+        "count": 50,
+        "end": 49,
+        "out": {
+          "result": 0
+        }
+      },
+      "refTPId": null
+    },
+    {
+      "id": 1,
       "name": "BinnedData",
       "displayName": "Bin Data",
       "args": {
-        "xIN": 93,
+        "xIN": 0,
         "yIN": [
-          94
+          1
         ],
         "binMode": "uniform",
         "binSize": 2,
@@ -379,8 +427,8 @@
         "aggFunction": "mean",
         "preProcesses": [],
         "out": {
-          "binnedx": 95,
-          "binnedy_94": 96
+          "binnedx": 2,
+          "binnedy_1": 3
         }
       },
       "refTPId": null
@@ -390,7 +438,30 @@
   "nodeNotes": {},
   "notes": [],
   "groups": [],
+  "composites": [],
   "orphanProcesses": [],
+  "nodeLayout": {
+    "data_1": {
+      "x": 60,
+      "y": 60
+    },
+    "tableprocess_0": {
+      "x": 60,
+      "y": 560
+    },
+    "tableprocess_1": {
+      "x": 440,
+      "y": 60
+    },
+    "plot_0": {
+      "x": 820,
+      "y": 60
+    },
+    "plot_1": {
+      "x": 820,
+      "y": 560
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -401,6 +472,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -439,5 +511,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.7"
 }

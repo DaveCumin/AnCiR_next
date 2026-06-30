@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "154": [
+    "65": [
       9.23,
       3.33,
       1.98,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 154,
-      "name": "result_12",
-      "data": 154,
+      "id": 65,
+      "name": "result_17",
+      "data": 65,
       "type": "number",
-      "tableProcessGUId": "2710e7c6-a976-4179-a6ff-16a5db8c59ae",
+      "tableProcessGUId": "869b08cd-2703-4d6f-b96f-139fdc8e5161",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -69,7 +69,7 @@
   ],
   "plots": [
     {
-      "id": 29,
+      "id": 17,
       "name": "Random result",
       "x": 350,
       "y": 150,
@@ -77,13 +77,17 @@
       "height": 250,
       "type": "tableplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "columnRefs": [
-          154
+          65
         ],
         "showCol": [
           true
         ],
+        "colWidths": {},
         "colCurrent": 1,
         "showColNumber": false,
         "decimalPlaces": 2
@@ -92,7 +96,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 12,
+      "id": 17,
       "name": "Random",
       "displayName": "Random",
       "args": {
@@ -102,7 +106,7 @@
         "seed": 12345,
         "distribution": "uniform",
         "out": {
-          "result": 154
+          "result": 65
         }
       },
       "refTPId": null
@@ -112,7 +116,18 @@
   "nodeNotes": {},
   "notes": [],
   "groups": [],
+  "composites": [],
   "orphanProcesses": [],
+  "nodeLayout": {
+    "tableprocess_17": {
+      "x": 60,
+      "y": 60
+    },
+    "plot_17": {
+      "x": 820,
+      "y": 60
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -123,6 +138,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -161,5 +177,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.7"
 }

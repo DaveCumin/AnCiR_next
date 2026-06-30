@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { core, appConsts, pushObj } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
+import { Process } from '$lib/core/Process.svelte';
 import { loadProcesses } from '$lib/processes/processMap.js';
 import { loadPlots } from '$lib/plots/plotMap.js';
 import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
@@ -24,8 +25,14 @@ function loadSession(jsonData) {
 	core.plots = [];
 	core.tableProcesses = [];
 	core.groups = [];
+	core.orphanProcesses = [];
 	core.rawData = new Map(Object.entries(jsonData.rawData ?? {}).map(([k, v]) => [+k, v]));
 	for (const cd of jsonData.data ?? []) pushObj(Column.fromJSON(cd));
+	// Rehydrate free (orphan) processes so producer columns (whose value IS a free
+	// node's output, e.g. an Add node) resolve, exactly as Setting.svelte does.
+	core.orphanProcesses = (jsonData.orphanProcesses ?? [])
+		.map((p) => Process.fromJSON(p, null))
+		.filter(Boolean);
 	for (const pj of jsonData.plots ?? []) pushObj(Plot.fromJSON(pj), false);
 }
 

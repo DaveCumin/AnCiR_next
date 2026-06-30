@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "50": [
+    "21": [
       0,
       1,
       2,
@@ -52,59 +52,7 @@
       48,
       49
     ],
-    "51": [
-      0,
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16,
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23,
-      24,
-      25,
-      26,
-      27,
-      28,
-      29,
-      30,
-      31,
-      32,
-      33,
-      34,
-      35,
-      36,
-      37,
-      38,
-      39,
-      40,
-      41,
-      42,
-      43,
-      44,
-      45,
-      46,
-      47,
-      48,
-      49
-    ],
-    "52": [
+    "22": [
       0,
       1,
       2,
@@ -159,9 +107,21 @@
   },
   "data": [
     {
-      "id": 50,
-      "name": "input",
-      "data": 50,
+      "id": 21,
+      "name": "x",
+      "data": 21,
+      "type": "number",
+      "tableProcessGUId": "a81ac5cf-7492-4f26-b7be-f0cf8c951cf3",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 22,
+      "name": "y",
+      "data": 22,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -171,46 +131,21 @@
       "processes": []
     },
     {
-      "id": 51,
-      "name": "edit value result",
-      "data": 51,
+      "id": 23,
+      "name": "Edit value result",
+      "data": null,
       "type": "number",
       "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "provenance": "",
-      "processes": [
-        {
-          "id": 3,
-          "name": "EditValue",
-          "args": {
-            "edits": [
-              {
-                "position": 2,
-                "value": 99
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": 52,
-      "name": "index",
-      "data": 52,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
+      "producerNodeId": "process_3",
+      "producerPort": "out_22",
+      "producerArtifactKind": "column",
       "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 11,
+      "id": 6,
       "name": "Edit value: before vs after",
       "x": 350,
       "y": 150,
@@ -218,6 +153,9 @@
       "height": 250,
       "type": "scatterplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -241,13 +179,13 @@
           "left": 30
         },
         "xAxis": {
-          "label": "Index",
+          "label": "x",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
         },
         "yAxisLeft": {
-          "label": "Value",
+          "label": "value",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -261,27 +199,27 @@
         "data": [
           {
             "x": {
-              "id": 53,
-              "name": "index",
-              "refId": 52,
+              "id": 24,
+              "name": "x",
+              "refId": 21,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to index which is ",
+              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 54,
-              "name": "input",
-              "refId": 50,
+              "id": 25,
+              "name": "y",
+              "refId": 22,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to input which is ",
+              "provenance": "refers to y which is ",
               "processes": []
             },
             "label": "Before",
@@ -290,7 +228,8 @@
               "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
-              "draw": false
+              "draw": false,
+              "joinGaps": false
             },
             "points": {
               "colour": "#234154",
@@ -301,27 +240,27 @@
           },
           {
             "x": {
-              "id": 55,
-              "name": "index",
-              "refId": 52,
+              "id": 26,
+              "name": "x",
+              "refId": 21,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to index which is ",
+              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 56,
-              "name": "edit value result",
-              "refId": 51,
+              "id": 27,
+              "name": "Edit value result",
+              "refId": 23,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to edit value result which is ",
+              "provenance": "refers to Edit value result which is ",
               "processes": []
             },
             "label": "After",
@@ -330,7 +269,8 @@
               "colour": "#BE796B",
               "strokeWidth": 2,
               "stroke": "solid",
-              "draw": false
+              "draw": false,
+              "joinGaps": false
             },
             "points": {
               "colour": "#BE796B",
@@ -353,14 +293,97 @@
         },
         "nightBands": []
       }
+    },
+    {
+      "id": 7,
+      "name": "Edit value: values",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "plot": {
+        "columnRefs": [
+          22,
+          23
+        ],
+        "showCol": [
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
     }
   ],
-  "tableProcesses": [],
+  "tableProcesses": [
+    {
+      "id": 3,
+      "name": "SequenceColumn",
+      "displayName": "Sequence Column",
+      "args": {
+        "seqType": "number",
+        "start": 0,
+        "step": 1,
+        "count": 50,
+        "end": 49,
+        "out": {
+          "result": 21
+        }
+      },
+      "refTPId": null
+    }
+  ],
   "storedValues": {},
   "nodeNotes": {},
   "notes": [],
   "groups": [],
-  "orphanProcesses": [],
+  "composites": [],
+  "orphanProcesses": [
+    {
+      "id": 3,
+      "name": "EditValue",
+      "args": {
+        "edits": [
+          {
+            "position": 2,
+            "value": 99
+          }
+        ],
+        "inIN": [
+          22
+        ]
+      }
+    }
+  ],
+  "nodeLayout": {
+    "data_22": {
+      "x": 60,
+      "y": 60
+    },
+    "tableprocess_3": {
+      "x": 60,
+      "y": 560
+    },
+    "process_3": {
+      "x": 440,
+      "y": 60
+    },
+    "plot_6": {
+      "x": 820,
+      "y": 60
+    },
+    "plot_7": {
+      "x": 820,
+      "y": 560
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -371,6 +394,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -409,5 +433,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.7"
 }

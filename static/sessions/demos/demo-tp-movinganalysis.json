@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "149": [
+    "58": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "150": [
+    "59": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "151": [
+    "60": [
       84,
       108,
       132,
@@ -685,7 +685,7 @@
       204,
       228
     ],
-    "152": [
+    "61": [
       24,
       24,
       24,
@@ -694,7 +694,7 @@
       24,
       24
     ],
-    "153": [
+    "62": [
       83.49999999999999,
       83.49999999999999,
       83.50000000000003,
@@ -706,9 +706,21 @@
   },
   "data": [
     {
-      "id": 149,
-      "name": "Moving Analysis input",
-      "data": 149,
+      "id": 58,
+      "name": "x",
+      "data": 58,
+      "type": "number",
+      "tableProcessGUId": "c5e9166a-265c-455a-a547-6685f333b12b",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 59,
+      "name": "y",
+      "data": 59,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -718,11 +730,11 @@
       "processes": []
     },
     {
-      "id": 150,
-      "name": "Moving Analysis input",
-      "data": 150,
+      "id": 60,
+      "name": "movex_16",
+      "data": 60,
       "type": "number",
-      "tableProcessGUId": "",
+      "tableProcessGUId": "ca29691a-9cc4-4c8f-bf4f-bdd2c6b25585",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -730,11 +742,11 @@
       "processes": []
     },
     {
-      "id": 151,
-      "name": "movex_11",
-      "data": 151,
+      "id": 61,
+      "name": "59_peak_period_16",
+      "data": 61,
       "type": "number",
-      "tableProcessGUId": "aeff387c-0e73-41fd-b622-8404d4256ca0",
+      "tableProcessGUId": "ca29691a-9cc4-4c8f-bf4f-bdd2c6b25585",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -742,23 +754,11 @@
       "processes": []
     },
     {
-      "id": 152,
-      "name": "150_peak_period_11",
-      "data": 152,
+      "id": 62,
+      "name": "59_peak_power_16",
+      "data": 62,
       "type": "number",
-      "tableProcessGUId": "aeff387c-0e73-41fd-b622-8404d4256ca0",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "provenance": "",
-      "processes": []
-    },
-    {
-      "id": 153,
-      "name": "150_peak_power_11",
-      "data": 153,
-      "type": "number",
-      "tableProcessGUId": "aeff387c-0e73-41fd-b622-8404d4256ca0",
+      "tableProcessGUId": "ca29691a-9cc4-4c8f-bf4f-bdd2c6b25585",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -768,29 +768,138 @@
   ],
   "plots": [
     {
-      "id": 28,
-      "name": "Moving Analysis result",
+      "id": 15,
+      "name": "Moving Analysis: input",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "scatterplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "plot": {
+        "xlimsIN": [
+          null,
+          null
+        ],
+        "xLogScale": false,
+        "ylimsLeftIN": [
+          null,
+          null
+        ],
+        "ylimsRightIN": [
+          null,
+          null
+        ],
+        "yLogScaleLeft": false,
+        "yLogScaleRight": false,
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 30
+        },
+        "xAxis": {
+          "label": "x",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisLeft": {
+          "label": "value",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisRight": {
+          "label": "",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 63,
+              "name": "x",
+              "refId": 58,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to x which is ",
+              "processes": []
+            },
+            "y": {
+              "id": 64,
+              "name": "y",
+              "refId": 59,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to y which is ",
+              "processes": []
+            },
+            "label": "Data",
+            "yAxis": "left",
+            "line": {
+              "colour": "#234154",
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": false,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#234154",
+              "radius": 3,
+              "shape": "circle",
+              "draw": true
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "topright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "#ccc",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "nightBands": []
+      }
+    },
+    {
+      "id": 16,
+      "name": "Moving Analysis: result",
       "x": 350,
       "y": 150,
       "width": 500,
       "height": 250,
       "type": "tableplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "columnRefs": [
-          149,
-          150,
-          151,
-          152,
-          153
+          60,
+          61,
+          62
         ],
         "showCol": [
           true,
           true,
-          true,
-          true,
           true
         ],
+        "colWidths": {},
         "colCurrent": 1,
         "showColNumber": false,
         "decimalPlaces": 2
@@ -799,13 +908,29 @@
   ],
   "tableProcesses": [
     {
-      "id": 11,
+      "id": 15,
+      "name": "SequenceColumn",
+      "displayName": "Sequence Column",
+      "args": {
+        "seqType": "number",
+        "start": 0,
+        "step": 1,
+        "count": 336,
+        "end": 335,
+        "out": {
+          "result": 58
+        }
+      },
+      "refTPId": null
+    },
+    {
+      "id": 16,
       "name": "MovingAnalysis",
       "displayName": "Moving Analysis",
       "args": {
-        "xIN": 149,
+        "xIN": 58,
         "yIN": [
-          150
+          59
         ],
         "windowSize": 168,
         "stepSize": 24,
@@ -824,9 +949,9 @@
         "alpha": 0.05,
         "preProcesses": [],
         "out": {
-          "movex": 151,
-          "150_peak_period": 152,
-          "150_peak_power": 153
+          "movex": 60,
+          "59_peak_period": 61,
+          "59_peak_power": 62
         }
       },
       "refTPId": null
@@ -838,7 +963,28 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
-  "nodeLayout": {},
+  "nodeLayout": {
+    "data_59": {
+      "x": 60,
+      "y": 60
+    },
+    "tableprocess_15": {
+      "x": 60,
+      "y": 560
+    },
+    "tableprocess_16": {
+      "x": 440,
+      "y": 60
+    },
+    "plot_15": {
+      "x": 820,
+      "y": 60
+    },
+    "plot_16": {
+      "x": 820,
+      "y": 560
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -849,6 +995,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -887,5 +1034,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.1"
+  "version": "β.45.7"
 }

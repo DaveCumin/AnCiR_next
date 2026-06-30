@@ -119,7 +119,10 @@ export const PROCESS_SPECS = [
 		name: 'Sub',
 		colType: 'number',
 		data: SAMPLE.index,
-		setup: (a) => ((a.find = 0), (a.replace = 0))
+		// find=5 → replace=10 actually substitutes a value (the sample data is 0,1,2,…),
+		// so the before/after scatter shows a visible change. (find=0/replace=0 was a
+		// no-op: it "replaced 0 with 0".)
+		setup: (a) => ((a.find = 5), (a.replace = 10))
 	},
 	{ name: 'Multiply', colType: 'number', data: SAMPLE.index, setup: (a) => (a.value = 2) },
 	{

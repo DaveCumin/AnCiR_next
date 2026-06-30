@@ -1,17 +1,17 @@
 {
   "rawData": {
-    "184": [
+    "97": [
       12,
       34
     ]
   },
   "data": [
     {
-      "id": 184,
-      "name": "group_g1_19",
-      "data": 184,
+      "id": 97,
+      "name": "group_g1_27",
+      "data": 97,
       "type": "number",
-      "tableProcessGUId": "67b2e51a-241c-4844-bad3-318e01f7e8f0",
+      "tableProcessGUId": "7851a1dd-2d5d-45fd-9e87-e813e276b2ed",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -21,7 +21,7 @@
   ],
   "plots": [
     {
-      "id": 36,
+      "id": 27,
       "name": "Stored Value Group result",
       "x": 350,
       "y": 150,
@@ -29,13 +29,17 @@
       "height": 250,
       "type": "tableplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "columnRefs": [
-          184
+          97
         ],
         "showCol": [
           true
         ],
+        "colWidths": {},
         "colCurrent": 1,
         "showColNumber": false,
         "decimalPlaces": 2
@@ -44,7 +48,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 19,
+      "id": 27,
       "name": "StoredValueGroup",
       "displayName": "Stored Value Group",
       "args": {
@@ -59,7 +63,7 @@
           }
         ],
         "out": {
-          "group_g1": 184
+          "group_g1": 97
         }
       },
       "refTPId": null
@@ -78,7 +82,18 @@
   "nodeNotes": {},
   "notes": [],
   "groups": [],
+  "composites": [],
   "orphanProcesses": [],
+  "nodeLayout": {
+    "tableprocess_27": {
+      "x": 60,
+      "y": 60
+    },
+    "plot_27": {
+      "x": 820,
+      "y": 60
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -89,6 +104,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -127,5 +143,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.7"
 }

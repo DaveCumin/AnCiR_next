@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "36": [
+    "7": [
       0,
       1,
       2,
@@ -52,59 +52,7 @@
       48,
       49
     ],
-    "37": [
-      0,
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16,
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23,
-      24,
-      25,
-      26,
-      27,
-      28,
-      29,
-      30,
-      31,
-      32,
-      33,
-      34,
-      35,
-      36,
-      37,
-      38,
-      39,
-      40,
-      41,
-      42,
-      43,
-      44,
-      45,
-      46,
-      47,
-      48,
-      49
-    ],
-    "38": [
+    "8": [
       0,
       1,
       2,
@@ -159,9 +107,21 @@
   },
   "data": [
     {
-      "id": 36,
-      "name": "input",
-      "data": 36,
+      "id": 7,
+      "name": "x",
+      "data": 7,
+      "type": "number",
+      "tableProcessGUId": "705bbb47-533c-48f7-918a-49ec3063f8b2",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 8,
+      "name": "y",
+      "data": 8,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -171,42 +131,21 @@
       "processes": []
     },
     {
-      "id": 37,
-      "name": "substitute result",
-      "data": 37,
+      "id": 9,
+      "name": "Substitute result",
+      "data": null,
       "type": "number",
       "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "provenance": "",
-      "processes": [
-        {
-          "id": 1,
-          "name": "Sub",
-          "args": {
-            "find": 0,
-            "replace": 0
-          }
-        }
-      ]
-    },
-    {
-      "id": 38,
-      "name": "index",
-      "data": 38,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
+      "producerNodeId": "process_1",
+      "producerPort": "out_8",
+      "producerArtifactKind": "column",
       "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 9,
+      "id": 2,
       "name": "Substitute: before vs after",
       "x": 350,
       "y": 150,
@@ -214,6 +153,9 @@
       "height": 250,
       "type": "scatterplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -237,13 +179,13 @@
           "left": 30
         },
         "xAxis": {
-          "label": "Index",
+          "label": "x",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
         },
         "yAxisLeft": {
-          "label": "Value",
+          "label": "value",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -257,27 +199,27 @@
         "data": [
           {
             "x": {
-              "id": 39,
-              "name": "index",
-              "refId": 38,
+              "id": 10,
+              "name": "x",
+              "refId": 7,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to index which is ",
+              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 40,
-              "name": "input",
-              "refId": 36,
+              "id": 11,
+              "name": "y",
+              "refId": 8,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to input which is ",
+              "provenance": "refers to y which is ",
               "processes": []
             },
             "label": "Before",
@@ -286,7 +228,8 @@
               "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
-              "draw": false
+              "draw": false,
+              "joinGaps": false
             },
             "points": {
               "colour": "#234154",
@@ -297,27 +240,27 @@
           },
           {
             "x": {
-              "id": 41,
-              "name": "index",
-              "refId": 38,
+              "id": 12,
+              "name": "x",
+              "refId": 7,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to index which is ",
+              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 42,
-              "name": "substitute result",
-              "refId": 37,
+              "id": 13,
+              "name": "Substitute result",
+              "refId": 9,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to substitute result which is ",
+              "provenance": "refers to Substitute result which is ",
               "processes": []
             },
             "label": "After",
@@ -326,7 +269,8 @@
               "colour": "#BE796B",
               "strokeWidth": 2,
               "stroke": "solid",
-              "draw": false
+              "draw": false,
+              "joinGaps": false
             },
             "points": {
               "colour": "#BE796B",
@@ -349,14 +293,93 @@
         },
         "nightBands": []
       }
+    },
+    {
+      "id": 3,
+      "name": "Substitute: values",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "plot": {
+        "columnRefs": [
+          8,
+          9
+        ],
+        "showCol": [
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
     }
   ],
-  "tableProcesses": [],
+  "tableProcesses": [
+    {
+      "id": 1,
+      "name": "SequenceColumn",
+      "displayName": "Sequence Column",
+      "args": {
+        "seqType": "number",
+        "start": 0,
+        "step": 1,
+        "count": 50,
+        "end": 49,
+        "out": {
+          "result": 7
+        }
+      },
+      "refTPId": null
+    }
+  ],
   "storedValues": {},
   "nodeNotes": {},
   "notes": [],
   "groups": [],
-  "orphanProcesses": [],
+  "composites": [],
+  "orphanProcesses": [
+    {
+      "id": 1,
+      "name": "Sub",
+      "args": {
+        "find": 5,
+        "replace": 10,
+        "inIN": [
+          8
+        ]
+      }
+    }
+  ],
+  "nodeLayout": {
+    "data_8": {
+      "x": 60,
+      "y": 60
+    },
+    "tableprocess_1": {
+      "x": 60,
+      "y": 560
+    },
+    "process_1": {
+      "x": 440,
+      "y": 60
+    },
+    "plot_2": {
+      "x": 820,
+      "y": 60
+    },
+    "plot_3": {
+      "x": 820,
+      "y": 560
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -367,6 +390,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -405,5 +429,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.7"
 }

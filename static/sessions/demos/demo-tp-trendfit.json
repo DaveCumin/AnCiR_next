@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "185": [
+    "98": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "186": [
+    "99": [
       7.673945782302198,
       -1.879285133127806,
       10.089269516954142,
@@ -104,7 +104,7 @@
       95.32890446343086,
       89.84737077710555
     ],
-    "187": [
+    "100": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "188": [
+    "101": [
       4.350114419162737,
       6.159418238991315,
       7.968722058819893,
@@ -211,11 +211,11 @@
   },
   "data": [
     {
-      "id": 185,
+      "id": 98,
       "name": "x",
-      "data": 185,
+      "data": 98,
       "type": "number",
-      "tableProcessGUId": "",
+      "tableProcessGUId": "e3b346d1-1ef1-4ea7-b068-a46e4d1733af",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -223,9 +223,9 @@
       "processes": []
     },
     {
-      "id": 186,
+      "id": 99,
       "name": "y",
-      "data": 186,
+      "data": 99,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -235,11 +235,11 @@
       "processes": []
     },
     {
-      "id": 187,
-      "name": "trendx_20",
-      "data": 187,
+      "id": 100,
+      "name": "trendx_29",
+      "data": 100,
       "type": "number",
-      "tableProcessGUId": "6ef6d55c-f14b-44e2-a3b8-6ea5a1fc376a",
+      "tableProcessGUId": "1630ca15-16de-4186-8668-6184c8d259ff",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -247,11 +247,11 @@
       "processes": []
     },
     {
-      "id": 188,
-      "name": "trendy_186_20",
-      "data": 188,
+      "id": 101,
+      "name": "trendy_99_29",
+      "data": 101,
       "type": "number",
-      "tableProcessGUId": "6ef6d55c-f14b-44e2-a3b8-6ea5a1fc376a",
+      "tableProcessGUId": "1630ca15-16de-4186-8668-6184c8d259ff",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -261,7 +261,7 @@
   ],
   "plots": [
     {
-      "id": 37,
+      "id": 28,
       "name": "Fit Trend Curves: data + fit",
       "x": 350,
       "y": 150,
@@ -269,6 +269,9 @@
       "height": 250,
       "type": "scatterplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -312,9 +315,9 @@
         "data": [
           {
             "x": {
-              "id": 189,
+              "id": 102,
               "name": "x",
-              "refId": 185,
+              "refId": 98,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -324,9 +327,9 @@
               "processes": []
             },
             "y": {
-              "id": 190,
+              "id": 103,
               "name": "y",
-              "refId": 186,
+              "refId": 99,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -341,7 +344,8 @@
               "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
-              "draw": false
+              "draw": false,
+              "joinGaps": false
             },
             "points": {
               "colour": "#234154",
@@ -352,27 +356,27 @@
           },
           {
             "x": {
-              "id": 191,
-              "name": "trendx_20",
-              "refId": 187,
+              "id": 104,
+              "name": "trendx_29",
+              "refId": 100,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to trendx_20 which is ",
+              "provenance": "refers to trendx_29 which is ",
               "processes": []
             },
             "y": {
-              "id": 192,
-              "name": "trendy_186_20",
-              "refId": 188,
+              "id": 105,
+              "name": "trendy_99_29",
+              "refId": 101,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to trendy_186_20 which is ",
+              "provenance": "refers to trendy_99_29 which is ",
               "processes": []
             },
             "label": "Fit Trend Curves",
@@ -381,7 +385,8 @@
               "colour": "#BE796B",
               "strokeWidth": 2.5,
               "stroke": "solid",
-              "draw": true
+              "draw": true,
+              "joinGaps": false
             },
             "points": {
               "colour": "#BE796B",
@@ -404,25 +409,68 @@
         },
         "nightBands": []
       }
+    },
+    {
+      "id": 29,
+      "name": "Fit Trend Curves: values",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "plot": {
+        "columnRefs": [
+          99,
+          101
+        ],
+        "showCol": [
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
     }
   ],
   "tableProcesses": [
     {
-      "id": 20,
+      "id": 28,
+      "name": "SequenceColumn",
+      "displayName": "Sequence Column",
+      "args": {
+        "seqType": "number",
+        "start": 0,
+        "step": 1,
+        "count": 50,
+        "end": 49,
+        "out": {
+          "result": 98
+        }
+      },
+      "refTPId": null
+    },
+    {
+      "id": 29,
       "name": "TrendFit",
       "displayName": "Fit Trend Curves",
       "args": {
-        "xIN": 185,
+        "xIN": 98,
         "yIN": [
-          186
+          99
         ],
         "model": "linear",
         "polyDegree": 2,
         "outputX": -1,
         "preProcesses": [],
         "out": {
-          "trendx": 187,
-          "trendy_186": 188
+          "trendx": 100,
+          "trendy_99": 101
         }
       },
       "refTPId": null
@@ -432,7 +480,30 @@
   "nodeNotes": {},
   "notes": [],
   "groups": [],
+  "composites": [],
   "orphanProcesses": [],
+  "nodeLayout": {
+    "data_99": {
+      "x": 60,
+      "y": 60
+    },
+    "tableprocess_28": {
+      "x": 60,
+      "y": 560
+    },
+    "tableprocess_29": {
+      "x": 440,
+      "y": 60
+    },
+    "plot_28": {
+      "x": 820,
+      "y": 60
+    },
+    "plot_29": {
+      "x": 820,
+      "y": 560
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -443,6 +514,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -481,5 +553,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.7"
 }

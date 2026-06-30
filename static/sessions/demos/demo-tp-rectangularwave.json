@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "155": [
+    "66": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "156": [
+    "67": [
       80.74815343291546,
       74.1026647241765,
       67.34975964373878,
@@ -100,7 +100,7 @@
       25.36953942083682,
       31.225353920755683
     ],
-    "157": [
+    "68": [
       0,
       1,
       2,
@@ -150,7 +150,7 @@
       46,
       47
     ],
-    "158": [
+    "69": [
       75.31550624457671,
       75.31550624457671,
       75.31550624457671,
@@ -203,11 +203,11 @@
   },
   "data": [
     {
-      "id": 155,
+      "id": 66,
       "name": "x",
-      "data": 155,
+      "data": 66,
       "type": "number",
-      "tableProcessGUId": "",
+      "tableProcessGUId": "3465ea0d-3dc9-4786-8b95-70ca06459bf3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -215,9 +215,9 @@
       "processes": []
     },
     {
-      "id": 156,
+      "id": 67,
       "name": "y",
-      "data": 156,
+      "data": 67,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -227,11 +227,11 @@
       "processes": []
     },
     {
-      "id": 157,
-      "name": "rectwavex_13",
-      "data": 157,
+      "id": 68,
+      "name": "rectwavex_19",
+      "data": 68,
       "type": "number",
-      "tableProcessGUId": "d719b8e5-de09-4032-b8cb-3b60c461ba55",
+      "tableProcessGUId": "dfbe51b6-3e59-4871-9dbf-8360b5b9f094",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -239,11 +239,11 @@
       "processes": []
     },
     {
-      "id": 158,
-      "name": "rectwavey_156_13",
-      "data": 158,
+      "id": 69,
+      "name": "rectwavey_67_19",
+      "data": 69,
       "type": "number",
-      "tableProcessGUId": "d719b8e5-de09-4032-b8cb-3b60c461ba55",
+      "tableProcessGUId": "dfbe51b6-3e59-4871-9dbf-8360b5b9f094",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -253,7 +253,7 @@
   ],
   "plots": [
     {
-      "id": 30,
+      "id": 18,
       "name": "Rectangular Wave: data + fit",
       "x": 350,
       "y": 150,
@@ -261,6 +261,9 @@
       "height": 250,
       "type": "scatterplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -304,9 +307,9 @@
         "data": [
           {
             "x": {
-              "id": 159,
+              "id": 70,
               "name": "x",
-              "refId": 155,
+              "refId": 66,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -316,9 +319,9 @@
               "processes": []
             },
             "y": {
-              "id": 160,
+              "id": 71,
               "name": "y",
-              "refId": 156,
+              "refId": 67,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -333,7 +336,8 @@
               "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
-              "draw": false
+              "draw": false,
+              "joinGaps": false
             },
             "points": {
               "colour": "#234154",
@@ -344,27 +348,27 @@
           },
           {
             "x": {
-              "id": 161,
-              "name": "rectwavex_13",
-              "refId": 157,
+              "id": 72,
+              "name": "rectwavex_19",
+              "refId": 68,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to rectwavex_13 which is ",
+              "provenance": "refers to rectwavex_19 which is ",
               "processes": []
             },
             "y": {
-              "id": 162,
-              "name": "rectwavey_156_13",
-              "refId": 158,
+              "id": 73,
+              "name": "rectwavey_67_19",
+              "refId": 69,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to rectwavey_156_13 which is ",
+              "provenance": "refers to rectwavey_67_19 which is ",
               "processes": []
             },
             "label": "Rectangular Wave",
@@ -373,7 +377,8 @@
               "colour": "#BE796B",
               "strokeWidth": 2.5,
               "stroke": "solid",
-              "draw": true
+              "draw": true,
+              "joinGaps": false
             },
             "points": {
               "colour": "#BE796B",
@@ -396,17 +401,60 @@
         },
         "nightBands": []
       }
+    },
+    {
+      "id": 19,
+      "name": "Rectangular Wave: values",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "plot": {
+        "columnRefs": [
+          67,
+          69
+        ],
+        "showCol": [
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
     }
   ],
   "tableProcesses": [
     {
-      "id": 13,
+      "id": 18,
+      "name": "SequenceColumn",
+      "displayName": "Sequence Column",
+      "args": {
+        "seqType": "number",
+        "start": 0,
+        "step": 1,
+        "count": 48,
+        "end": 47,
+        "out": {
+          "result": 66
+        }
+      },
+      "refTPId": null
+    },
+    {
+      "id": 19,
       "name": "RectangularWave",
       "displayName": "Rectangular Wave",
       "args": {
-        "xIN": 155,
+        "xIN": 66,
         "yIN": [
-          156
+          67
         ],
         "outputX": -1,
         "fixKappa": false,
@@ -417,8 +465,8 @@
         "fixedDutyCycle": 0.5,
         "preProcesses": [],
         "out": {
-          "rectwavex": 157,
-          "rectwavey_156": 158
+          "rectwavex": 68,
+          "rectwavey_67": 69
         }
       },
       "refTPId": null
@@ -428,7 +476,30 @@
   "nodeNotes": {},
   "notes": [],
   "groups": [],
+  "composites": [],
   "orphanProcesses": [],
+  "nodeLayout": {
+    "data_67": {
+      "x": 60,
+      "y": 60
+    },
+    "tableprocess_18": {
+      "x": 60,
+      "y": 560
+    },
+    "tableprocess_19": {
+      "x": 440,
+      "y": 60
+    },
+    "plot_18": {
+      "x": 820,
+      "y": 60
+    },
+    "plot_19": {
+      "x": 820,
+      "y": 560
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -439,6 +510,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -477,5 +549,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.7"
 }

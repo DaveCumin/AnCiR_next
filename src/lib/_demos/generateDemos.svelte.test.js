@@ -40,6 +40,9 @@ import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
 // The per-node specs are shared with allNodesCoverage.test.js so the gallery
 // covers exactly the registered nodes (one example session per process / TP).
 import { PROCESS_SPECS, TP_SPECS, SAMPLE } from './nodeCatalog.js';
+// Column-process and table-process demos share builders (Sequence x + y → node,
+// with a scatter + table, tidy baked layout) — same as the focused generators.
+import { buildProcessDemo, buildTPDemo } from './nodeDemoBuilders.js';
 
 const OUT_DIR = join(process.cwd(), 'static', 'sessions', 'demos');
 
@@ -229,91 +232,6 @@ const DEMOS = [
 	}
 ];
 
-// Column-process demos that benefit from custom, good-looking demo data
-// (otherwise the before/after scatter is hard to read). Keyed by process name;
-// anything not listed falls back to the nodeCatalog spec's data.
-const PROCESS_DEMO_DATA = {
-	// One obvious outlier sitting above a gentle rhythm, so removal is visible
-	// without a single huge value squashing the y-axis.
-	OutlierRemoval: () => {
-		const rng = mulberry32(21);
-		const base = seq(40, (i) => 30 + 10 * Math.sin((2 * Math.PI * i) / 20) + normal(rng, 0, 2));
-		base[18] = 95; // the outlier
-		return base;
-	},
-	// A clear upward trend with scatter, so "remove trend" visibly flattens it.
-	RemoveTrend: () => {
-		const rng = mulberry32(22);
-		return seq(40, (i) => 5 + 1.5 * i + normal(rng, 0, 4));
-	},
-	// Noisy rhythm so normalising to a range is a meaningful rescale.
-	normalize: () => {
-		const rng = mulberry32(23);
-		return seq(40, (i) => 200 + 60 * Math.sin((2 * Math.PI * i) / 24) + normal(rng, 0, 8));
-	}
-};
-
-// Analyses that produce a fitted/derived curve aligned to an x grid. For these
-// we draw the raw points + the fitted curve as a line. Their y-input is made
-// noisy (below) so the fit visibly threads through scattered points.
-const FIT_ANALYSES = new Set([
-	'Cosinor',
-	'FitFunction',
-	'DoubleLogistic',
-	'TrendFit',
-	'SmoothedData',
-	'BinnedData',
-	'RectangularWave'
-]);
-
-// Per-fit-analysis noisy y data + axis labels. The x input and the args still
-// come from the shared nodeCatalog spec; we only swap in nicer demo y data.
-const FIT_DEMO = {
-	Cosinor: {
-		seed: 31,
-		y: (rng) =>
-			seq(50, (i) => 50 + 40 * Math.sin((2 * Math.PI * i) / 24 - Math.PI / 2) + normal(rng, 0, 7)),
-		axes: { x: 'Hour', y: 'Activity' }
-	},
-	FitFunction: {
-		seed: 32,
-		y: (rng) =>
-			seq(50, (i) => 50 + 40 * Math.sin((2 * Math.PI * i) / 24 - Math.PI / 2) + normal(rng, 0, 7)),
-		axes: { x: 'Hour', y: 'Signal' }
-	},
-	DoubleLogistic: {
-		seed: 33,
-		y: (rng) =>
-			seq(
-				50,
-				(i) =>
-					25 + 50 / (1 + Math.exp(-(i - 12))) - 50 / (1 + Math.exp(-(i - 36))) + normal(rng, 0, 3)
-			),
-		axes: { x: 'Time', y: 'Level' }
-	},
-	TrendFit: {
-		seed: 34,
-		y: (rng) => seq(50, (i) => 5 + 1.8 * i + normal(rng, 0, 6)),
-		axes: { x: 'x', y: 'y' }
-	},
-	SmoothedData: {
-		seed: 35,
-		y: (rng) => seq(50, (i) => 30 + 15 * Math.sin((2 * Math.PI * i) / 25) + normal(rng, 0, 6)),
-		axes: { x: 'x', y: 'Value' }
-	},
-	BinnedData: {
-		seed: 36,
-		y: (rng) => seq(50, (i) => 50 + 40 * Math.sin((2 * Math.PI * i) / 24) + normal(rng, 0, 9)),
-		axes: { x: 'x', y: 'Value' }
-	},
-	RectangularWave: {
-		seed: 37,
-		x: () => seq(48, (i) => i),
-		y: (rng) => seq(48, (i) => (i % 24 < 12 ? 75 : 25) + normal(rng, 0, 5)),
-		axes: { x: 'Hour', y: 'Signal' }
-	}
-};
-
 // Reset core to a clean slate between demos.
 function resetCore() {
 	core.data = [];
@@ -457,45 +375,15 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 			);
 		}
 
-		// --- Column-process demos (before/after scatter) ---------------------
+		// --- Column-process demos -------------------------------------------
+		// Every process demo is built the same way (Sequence x + one y source →
+		// process node → result, with a Before/After scatter + a table). See
+		// buildProcessDemo in nodeDemoBuilders.js.
 		for (const spec of PROCESS_SPECS) {
 			resetCore();
 			const entry = appConsts.processMap.get(spec.name);
 			const display = entry?.displayName ?? spec.name;
-			const data = PROCESS_DEMO_DATA[spec.name]
-				? PROCESS_DEMO_DATA[spec.name]()
-				: resolve(spec.data);
-
-			// "before" = a plain copy of the input; "after" = the same data with
-			// the process attached (getData() applies it live on load).
-			const beforeId = mkCol(spec.colType, [...data], 'input');
-			const afterId = mkCol(spec.colType, [...data], `${display.toLowerCase()} result`);
-			const otherId = spec.needsOther
-				? mkCol(
-						'number',
-						data.map((_, i) => i),
-						'reference'
-					)
-				: -1;
-			const afterCol = core.data.find((c) => c.id === afterId);
-			afterCol.addProcess(spec.name);
-			const proc = afterCol.processes[afterCol.processes.length - 1];
-			spec.setup?.(proc.args, { selfId: afterId, otherId });
-
-			const idx = mkCol(
-				'number',
-				data.map((_, i) => i),
-				'index'
-			);
-			scatterPlot(
-				`${display}: before vs after`,
-				[
-					{ x: idx, y: beforeId, label: 'Before', kind: 'points', colour: RAW_COLOUR },
-					{ x: idx, y: afterId, label: 'After', kind: 'points', colour: FIT_COLOUR }
-				],
-				{ x: 'Index', y: 'Value' }
-			);
-			prewarmWrapperNames();
+			await buildProcessDemo(spec, display);
 			const file = `demo-process-${spec.name.toLowerCase()}.json`;
 			write(
 				file,
@@ -513,72 +401,14 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 		}
 
 		// --- Analysis (table-process) demos ----------------------------------
+		// Analysis TPs (fits + windowed/scalar) get a Sequence x + y → node shape
+		// with a scatter + table; other TPs keep their natural viz. All get a tidy
+		// baked layout. See buildTPDemo in nodeDemoBuilders.js.
 		for (const spec of TP_SPECS) {
 			resetCore();
 			const entry = appConsts.tableProcessMap.get(spec.name);
 			const display = entry?.displayName ?? spec.name;
-			const isFit = FIT_ANALYSES.has(spec.name);
-
-			// Build the input columns. For fit analyses we swap in nicer noisy y
-			// data (and sometimes x) so the fitted curve threads through scatter.
-			let ids;
-			if (isFit) {
-				const cfg = FIT_DEMO[spec.name];
-				const rng = mulberry32(cfg.seed);
-				ids = spec.inputs.map((inp, i) => {
-					let values = resolve(inp.data);
-					if (i === 0 && cfg.x) values = cfg.x();
-					if (i === 1 && cfg.y) values = cfg.y(rng);
-					const label = i === 0 ? 'x' : 'y';
-					return mkCol(inp.type, values, label);
-				});
-			} else {
-				ids = spec.inputs.map((inp) => mkCol(inp.type, resolve(inp.data), `${display} input`));
-			}
-
-			if (spec.needsStoredValues) {
-				core.storedValues.demoSV1 = { staticValue: 12, source: 'manual' };
-				core.storedValues.demoSV2 = { staticValue: 34, source: 'manual' };
-			}
-
-			const tp = new TableProcess({ name: spec.name, args: spec.args(ids) }, null);
-			pushObj(tp);
-			// Actually run the analysis so its outputs are populated (and baked into
-			// the saved session). Workers are bypassed for small inputs / in node.
-			try {
-				await tp.doProcess();
-			} catch (err) {
-				// eslint-disable-next-line no-console
-				console.warn(`doProcess failed for ${spec.name}:`, err?.message ?? err);
-			}
-
-			if (isFit) {
-				// raw points + fitted curve as a line
-				const cfg = FIT_DEMO[spec.name];
-				const xRaw = ids[0];
-				const yRaw = ids[1];
-				const xOut = tp.args.out[entry.xOutKey];
-				const yOut = tp.args.out[(entry.yOutKeyPrefix ?? '') + yRaw];
-				const series = [{ x: xRaw, y: yRaw, label: 'Data', kind: 'points', colour: RAW_COLOUR }];
-				if (xOut >= 0 && yOut >= 0) {
-					series.push({ x: xOut, y: yOut, label: display, kind: 'line', colour: FIT_COLOUR });
-				}
-				scatterPlot(`${display}: data + fit`, series, cfg.axes);
-			} else if (spec.name === 'GroupComparison') {
-				// the comparison itself is read off the node; show the groups as a boxplot
-				const p = new Plot({ name: `${display}: groups`, type: 'boxplot' });
-				p.plot.addData({ x: { refId: ids[0] }, y: { refId: ids[1] } });
-				setAxisLabels(p, { x: 'Group', y: 'Value' });
-				pushObj(p);
-			} else {
-				// tableplot of real inputs + any allocated output columns
-				const outIds = Object.values(tp.args.out ?? {}).filter(
-					(v) => typeof v === 'number' && v >= 0
-				);
-				tablePlot(`${display} result`, [...ids, ...outIds]);
-			}
-
-			prewarmWrapperNames();
+			await buildTPDemo(spec, entry, display);
 			const file = `demo-tp-${spec.name.toLowerCase()}.json`;
 			write(
 				file,

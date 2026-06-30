@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "138": [
+    "47": [
       "A",
       "B",
       "C",
@@ -52,7 +52,7 @@
       "A",
       "B"
     ],
-    "139": [
+    "48": [
       0,
       6,
       12,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 138,
+      "id": 47,
       "name": "Compare groups (stats) input",
-      "data": 138,
+      "data": 47,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -119,9 +119,9 @@
       "processes": []
     },
     {
-      "id": 139,
+      "id": 48,
       "name": "Compare groups (stats) input",
-      "data": 139,
+      "data": 48,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -133,7 +133,7 @@
   ],
   "plots": [
     {
-      "id": 26,
+      "id": 13,
       "name": "Compare groups (stats): groups",
       "x": 350,
       "y": 150,
@@ -141,6 +141,9 @@
       "height": 250,
       "type": "boxplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -171,9 +174,9 @@
         "data": [
           {
             "x": {
-              "id": 140,
+              "id": 49,
               "name": "Compare groups (stats) input",
-              "refId": 138,
+              "refId": 47,
               "type": "category",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -183,9 +186,9 @@
               "processes": []
             },
             "y": {
-              "id": 141,
+              "id": 50,
               "name": "Compare groups (stats) input",
-              "refId": 139,
+              "refId": 48,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -239,13 +242,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 9,
+      "id": 13,
       "name": "GroupComparison",
       "displayName": "Compare groups (stats)",
       "args": {
-        "xIN": 138,
+        "xIN": 47,
         "yIN": [
-          139
+          48
         ],
         "method": "auto",
         "alpha": 0.05,
@@ -259,7 +262,26 @@
   "nodeNotes": {},
   "notes": [],
   "groups": [],
+  "composites": [],
   "orphanProcesses": [],
+  "nodeLayout": {
+    "data_47": {
+      "x": 60,
+      "y": 60
+    },
+    "data_48": {
+      "x": 60,
+      "y": 560
+    },
+    "tableprocess_13": {
+      "x": 440,
+      "y": 60
+    },
+    "plot_13": {
+      "x": 820,
+      "y": 60
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -270,6 +292,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -308,5 +331,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.7"
 }

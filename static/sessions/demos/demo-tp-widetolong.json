@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "193": [
+    "106": [
       "2024-01-01T00:00:00.000Z",
       "2024-01-01T01:00:00.000Z",
       "2024-01-01T02:00:00.000Z",
@@ -52,7 +52,7 @@
       "2024-01-03T00:00:00.000Z",
       "2024-01-03T01:00:00.000Z"
     ],
-    "194": [
+    "107": [
       10,
       11,
       12,
@@ -104,7 +104,7 @@
       58,
       59
     ],
-    "195": [
+    "108": [
       100,
       99,
       98,
@@ -156,7 +156,7 @@
       52,
       51
     ],
-    "196": [
+    "109": [
       1704067200000,
       1704070800000,
       1704074400000,
@@ -258,7 +258,7 @@
       1704240000000,
       1704243600000
     ],
-    "197": [
+    "110": [
       "Wide To Long input",
       "Wide To Long input",
       "Wide To Long input",
@@ -360,7 +360,7 @@
       "Wide To Long input",
       "Wide To Long input"
     ],
-    "198": [
+    "111": [
       10,
       11,
       12,
@@ -465,9 +465,9 @@
   },
   "data": [
     {
-      "id": 193,
+      "id": 106,
       "name": "Wide To Long input",
-      "data": 193,
+      "data": 106,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
       "tableProcessGUId": "",
@@ -478,9 +478,9 @@
       "processes": []
     },
     {
-      "id": 194,
+      "id": 107,
       "name": "Wide To Long input",
-      "data": 194,
+      "data": 107,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -490,9 +490,9 @@
       "processes": []
     },
     {
-      "id": 195,
+      "id": 108,
       "name": "Wide To Long input",
-      "data": 195,
+      "data": 108,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -502,12 +502,12 @@
       "processes": []
     },
     {
-      "id": 196,
-      "name": "time_21",
-      "data": 196,
+      "id": 109,
+      "name": "time_30",
+      "data": 109,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "3f9fc0b5-5eb8-43c1-9a3c-c56f6f7f8353",
+      "tableProcessGUId": "fca06d9d-728e-4460-a0a1-3e1c3b43bf7e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -515,11 +515,11 @@
       "processes": []
     },
     {
-      "id": 197,
-      "name": "category_21",
-      "data": 197,
+      "id": 110,
+      "name": "category_30",
+      "data": 110,
       "type": "category",
-      "tableProcessGUId": "3f9fc0b5-5eb8-43c1-9a3c-c56f6f7f8353",
+      "tableProcessGUId": "fca06d9d-728e-4460-a0a1-3e1c3b43bf7e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -527,11 +527,11 @@
       "processes": []
     },
     {
-      "id": 198,
-      "name": "value_21",
-      "data": 198,
+      "id": 111,
+      "name": "value_30",
+      "data": 111,
       "type": "number",
-      "tableProcessGUId": "3f9fc0b5-5eb8-43c1-9a3c-c56f6f7f8353",
+      "tableProcessGUId": "fca06d9d-728e-4460-a0a1-3e1c3b43bf7e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -541,7 +541,7 @@
   ],
   "plots": [
     {
-      "id": 38,
+      "id": 30,
       "name": "Wide To Long result",
       "x": 350,
       "y": 150,
@@ -549,14 +549,17 @@
       "height": 250,
       "type": "tableplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "columnRefs": [
-          193,
-          194,
-          195,
-          196,
-          197,
-          198
+          106,
+          107,
+          108,
+          109,
+          110,
+          111
         ],
         "showCol": [
           true,
@@ -566,6 +569,7 @@
           true,
           true
         ],
+        "colWidths": {},
         "colCurrent": 1,
         "showColNumber": false,
         "decimalPlaces": 2
@@ -574,19 +578,19 @@
   ],
   "tableProcesses": [
     {
-      "id": 21,
+      "id": 30,
       "name": "WideToLong",
       "displayName": "Wide To Long",
       "args": {
-        "timeIN": 193,
+        "timeIN": 106,
         "valueColIds": [
-          194,
-          195
+          107,
+          108
         ],
         "out": {
-          "time": 196,
-          "category": 197,
-          "value": 198
+          "time": 109,
+          "category": 110,
+          "value": 111
         }
       },
       "refTPId": null
@@ -596,7 +600,30 @@
   "nodeNotes": {},
   "notes": [],
   "groups": [],
+  "composites": [],
   "orphanProcesses": [],
+  "nodeLayout": {
+    "data_106": {
+      "x": 60,
+      "y": 60
+    },
+    "data_107": {
+      "x": 60,
+      "y": 560
+    },
+    "data_108": {
+      "x": 60,
+      "y": 1060
+    },
+    "tableprocess_30": {
+      "x": 440,
+      "y": 60
+    },
+    "plot_30": {
+      "x": 820,
+      "y": 60
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -607,6 +634,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -645,5 +673,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.7"
 }

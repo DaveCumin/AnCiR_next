@@ -349,6 +349,11 @@
 	// adopt-on-import effect can tell its own writes apart from an external (import)
 	// replacement and avoid a feedback loop.
 	let _mirroredLayout = null;
+	// The layout object adopted from the last session import. The mirror effect
+	// REPLACES core.nodeLayout (dropping entries for nodes not yet on the canvas),
+	// so this retained snapshot is the authority for positioning a node that loads
+	// AFTER its layout was adopted (plots / free processes appear last).
+	let _importedLayout = null;
 
 	// Queue of canvas-coord {x, y} positions to assign to the NEXT N newly-
 	// appeared nodes (one position consumed per node). Pushed by NodePalette
@@ -372,10 +377,18 @@
 		//   4. Fall back to the topo-layered default.
 		for (const node of currentNodes) {
 			if (prev.has(node.id)) continue;
+			const saved = _importedLayout?.[node.id] ?? core.nodeLayout?.[node.id];
 			if (stablePositions[node.id]) {
 				// Already pinned by the caller — leave it untouched.
 			} else if (node.type === 'group' && node.groupObj) {
 				stablePositions[node.id] = { x: node.groupObj.x, y: node.groupObj.y };
+			} else if (Number.isFinite(saved?.x) && Number.isFinite(saved?.y)) {
+				// A persisted session layout pins this node — honour it even if the
+				// node appeared AFTER the adopt-layout effect ran. Without this, a
+				// late-arriving plot / free-process node (loaded after its layout was
+				// adopted) loses its saved position and gets re-flowed by the topo
+				// default, which can land it on top of another node.
+				stablePositions[node.id] = { x: saved.x, y: saved.y };
 			} else if (_spawnPositionQueue.length > 0) {
 				stablePositions[node.id] = _spawnPositionQueue.shift();
 			} else if (defaults[node.id]) {
@@ -424,6 +437,9 @@
 			stablePositions = pos;
 			collapsedNodeIds = collapsed;
 			_knownNodeIds = new Set(Object.keys(pos));
+			// Retain the full imported layout (incl. nodes not yet on the canvas) so
+			// a late-arriving node can still adopt its saved position.
+			_importedLayout = cl;
 		});
 	});
 

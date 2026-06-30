@@ -1,90 +1,6 @@
 {
   "rawData": {
-    "72": [
-      5.324644999382882,
-      8.413766735271011,
-      12.536147503055876,
-      7.1405811578549745,
-      14.054417982083411,
-      18.113418725968703,
-      6.627411702967718,
-      8.175463795458883,
-      10.605192654273582,
-      17.080337010625502,
-      22.291369428967815,
-      18.300020188761877,
-      35.54030210385434,
-      20.748301842675925,
-      25.37909419597354,
-      29.462884795402864,
-      34.999278471058844,
-      28.72901152120321,
-      28.38080174040967,
-      37.53787893203734,
-      22.536244574504824,
-      39.29641702158834,
-      41.80675423635793,
-      31.361700478190894,
-      44.02912297810176,
-      36.28004060440724,
-      40.55972324270114,
-      43.87250332460367,
-      45.91686023913954,
-      47.5513520041091,
-      46.4018942955912,
-      52.96099348636876,
-      53.22726975899299,
-      62.493786715898594,
-      57.348512513256836,
-      61.00514138166625,
-      62.90714742044383,
-      51.247257476335875,
-      59.18879953568457,
-      61.934759775680895
-    ],
-    "73": [
-      5.324644999382882,
-      8.413766735271011,
-      12.536147503055876,
-      7.1405811578549745,
-      14.054417982083411,
-      18.113418725968703,
-      6.627411702967718,
-      8.175463795458883,
-      10.605192654273582,
-      17.080337010625502,
-      22.291369428967815,
-      18.300020188761877,
-      35.54030210385434,
-      20.748301842675925,
-      25.37909419597354,
-      29.462884795402864,
-      34.999278471058844,
-      28.72901152120321,
-      28.38080174040967,
-      37.53787893203734,
-      22.536244574504824,
-      39.29641702158834,
-      41.80675423635793,
-      31.361700478190894,
-      44.02912297810176,
-      36.28004060440724,
-      40.55972324270114,
-      43.87250332460367,
-      45.91686023913954,
-      47.5513520041091,
-      46.4018942955912,
-      52.96099348636876,
-      53.22726975899299,
-      62.493786715898594,
-      57.348512513256836,
-      61.00514138166625,
-      62.90714742044383,
-      51.247257476335875,
-      59.18879953568457,
-      61.934759775680895
-    ],
-    "74": [
+    "43": [
       0,
       1,
       2,
@@ -124,14 +40,88 @@
       36,
       37,
       38,
-      39
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49
+    ],
+    "44": [
+      1,
+      3,
+      5,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      19,
+      21,
+      23,
+      25,
+      27,
+      29,
+      31,
+      33,
+      35,
+      37,
+      39,
+      41,
+      43,
+      45,
+      47,
+      49,
+      51,
+      53,
+      55,
+      57,
+      59,
+      61,
+      63,
+      65,
+      67,
+      69,
+      71,
+      73,
+      75,
+      77,
+      79,
+      81,
+      83,
+      85,
+      87,
+      89,
+      91,
+      93,
+      95,
+      97,
+      99
     ]
   },
   "data": [
     {
-      "id": 72,
-      "name": "input",
-      "data": 72,
+      "id": 43,
+      "name": "x",
+      "data": 43,
+      "type": "number",
+      "tableProcessGUId": "3b3ce622-8e97-41a9-b6ed-a93f9f7f09b6",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 44,
+      "name": "y",
+      "data": 44,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -141,45 +131,21 @@
       "processes": []
     },
     {
-      "id": 73,
-      "name": "remove trend result",
-      "data": 73,
+      "id": 45,
+      "name": "Remove Trend result",
+      "data": null,
       "type": "number",
       "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "provenance": "",
-      "processes": [
-        {
-          "id": 6,
-          "name": "RemoveTrend",
-          "args": {
-            "xColId": -1,
-            "model": "linear",
-            "polyDegree": 2,
-            "slidingWindow": false,
-            "windowSize": 10
-          }
-        }
-      ]
-    },
-    {
-      "id": 74,
-      "name": "index",
-      "data": 74,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
+      "producerNodeId": "process_6",
+      "producerPort": "out_44",
+      "producerArtifactKind": "column",
       "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 14,
+      "id": 12,
       "name": "Remove Trend: before vs after",
       "x": 350,
       "y": 150,
@@ -187,6 +153,9 @@
       "height": 250,
       "type": "scatterplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -210,13 +179,13 @@
           "left": 30
         },
         "xAxis": {
-          "label": "Index",
+          "label": "x",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
         },
         "yAxisLeft": {
-          "label": "Value",
+          "label": "value",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -230,27 +199,27 @@
         "data": [
           {
             "x": {
-              "id": 75,
-              "name": "index",
-              "refId": 74,
+              "id": 46,
+              "name": "x",
+              "refId": 43,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to index which is ",
+              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 76,
-              "name": "input",
-              "refId": 72,
+              "id": 47,
+              "name": "y",
+              "refId": 44,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to input which is ",
+              "provenance": "refers to y which is ",
               "processes": []
             },
             "label": "Before",
@@ -259,7 +228,8 @@
               "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
-              "draw": false
+              "draw": false,
+              "joinGaps": false
             },
             "points": {
               "colour": "#234154",
@@ -270,27 +240,27 @@
           },
           {
             "x": {
-              "id": 77,
-              "name": "index",
-              "refId": 74,
+              "id": 48,
+              "name": "x",
+              "refId": 43,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to index which is ",
+              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 78,
-              "name": "remove trend result",
-              "refId": 73,
+              "id": 49,
+              "name": "Remove Trend result",
+              "refId": 45,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to remove trend result which is ",
+              "provenance": "refers to Remove Trend result which is ",
               "processes": []
             },
             "label": "After",
@@ -299,7 +269,8 @@
               "colour": "#BE796B",
               "strokeWidth": 2,
               "stroke": "solid",
-              "draw": false
+              "draw": false,
+              "joinGaps": false
             },
             "points": {
               "colour": "#BE796B",
@@ -322,14 +293,96 @@
         },
         "nightBands": []
       }
+    },
+    {
+      "id": 13,
+      "name": "Remove Trend: values",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "plot": {
+        "columnRefs": [
+          44,
+          45
+        ],
+        "showCol": [
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
     }
   ],
-  "tableProcesses": [],
+  "tableProcesses": [
+    {
+      "id": 6,
+      "name": "SequenceColumn",
+      "displayName": "Sequence Column",
+      "args": {
+        "seqType": "number",
+        "start": 0,
+        "step": 1,
+        "count": 50,
+        "end": 49,
+        "out": {
+          "result": 43
+        }
+      },
+      "refTPId": null
+    }
+  ],
   "storedValues": {},
   "nodeNotes": {},
   "notes": [],
   "groups": [],
-  "orphanProcesses": [],
+  "composites": [],
+  "orphanProcesses": [
+    {
+      "id": 6,
+      "name": "RemoveTrend",
+      "args": {
+        "xColId": -1,
+        "model": "linear",
+        "polyDegree": 2,
+        "slidingWindow": false,
+        "windowSize": 10,
+        "inIN": [
+          44
+        ]
+      }
+    }
+  ],
+  "nodeLayout": {
+    "data_44": {
+      "x": 60,
+      "y": 60
+    },
+    "tableprocess_6": {
+      "x": 60,
+      "y": 560
+    },
+    "process_6": {
+      "x": 440,
+      "y": 60
+    },
+    "plot_12": {
+      "x": 820,
+      "y": 60
+    },
+    "plot_13": {
+      "x": 820,
+      "y": 560
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -340,6 +393,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -378,5 +432,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.7"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "169": [
+    "82": [
       "2024-01-01T00:00:00.000Z",
       "2024-01-01T01:00:00.000Z",
       "2024-01-01T02:00:00.000Z",
@@ -50,7 +50,7 @@
       "2024-01-02T22:00:00.000Z",
       "2024-01-02T23:00:00.000Z"
     ],
-    "170": [
+    "83": [
       100,
       100,
       100,
@@ -103,12 +103,12 @@
   },
   "data": [
     {
-      "id": 169,
-      "name": "time_16",
-      "data": 169,
+      "id": 82,
+      "name": "time_23",
+      "data": 82,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "ad619bb8-f136-448a-b1ce-897b7b6aea2c",
+      "tableProcessGUId": "9a83266a-b0d1-4742-b71c-db8be9e1f467",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -116,11 +116,11 @@
       "processes": []
     },
     {
-      "id": 170,
-      "name": "values_16",
-      "data": 170,
+      "id": 83,
+      "name": "values_23",
+      "data": 83,
       "type": "number",
-      "tableProcessGUId": "ad619bb8-f136-448a-b1ce-897b7b6aea2c",
+      "tableProcessGUId": "9a83266a-b0d1-4742-b71c-db8be9e1f467",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -130,7 +130,7 @@
   ],
   "plots": [
     {
-      "id": 33,
+      "id": 23,
       "name": "Simulate Data result",
       "x": 350,
       "y": 150,
@@ -138,15 +138,19 @@
       "height": 250,
       "type": "tableplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "columnRefs": [
-          169,
-          170
+          82,
+          83
         ],
         "showCol": [
           true,
           true
         ],
+        "colWidths": {},
         "colCurrent": 1,
         "showColNumber": false,
         "decimalPlaces": 2
@@ -155,7 +159,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 16,
+      "id": 23,
       "name": "SimulatedData",
       "displayName": "Simulate Data",
       "args": {
@@ -173,8 +177,8 @@
         ],
         "samplingPeriod_hours": 1,
         "out": {
-          "time": 169,
-          "values": 170
+          "time": 82,
+          "values": 83
         }
       },
       "refTPId": null
@@ -184,7 +188,18 @@
   "nodeNotes": {},
   "notes": [],
   "groups": [],
+  "composites": [],
   "orphanProcesses": [],
+  "nodeLayout": {
+    "tableprocess_23": {
+      "x": 60,
+      "y": 60
+    },
+    "plot_23": {
+      "x": 820,
+      "y": 60
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -195,6 +210,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -233,5 +249,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.7"
 }

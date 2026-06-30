@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "142": [
+    "51": [
       "A",
       "B",
       "C",
@@ -62,7 +62,7 @@
       "B",
       "C"
     ],
-    "143": [
+    "52": [
       0,
       0,
       0,
@@ -124,7 +124,7 @@
       19,
       19
     ],
-    "144": [
+    "53": [
       0,
       100,
       200,
@@ -186,7 +186,7 @@
       119,
       219
     ],
-    "145": [
+    "54": [
       0,
       1,
       2,
@@ -208,7 +208,7 @@
       18,
       19
     ],
-    "146": [
+    "55": [
       0,
       1,
       2,
@@ -230,7 +230,7 @@
       18,
       19
     ],
-    "147": [
+    "56": [
       100,
       101,
       102,
@@ -252,7 +252,7 @@
       118,
       119
     ],
-    "148": [
+    "57": [
       200,
       201,
       202,
@@ -277,9 +277,9 @@
   },
   "data": [
     {
-      "id": 142,
+      "id": 51,
       "name": "Long To Wide input",
-      "data": 142,
+      "data": 51,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -289,9 +289,9 @@
       "processes": []
     },
     {
-      "id": 143,
+      "id": 52,
       "name": "Long To Wide input",
-      "data": 143,
+      "data": 52,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -301,9 +301,9 @@
       "processes": []
     },
     {
-      "id": 144,
+      "id": 53,
       "name": "Long To Wide input",
-      "data": 144,
+      "data": 53,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -313,11 +313,11 @@
       "processes": []
     },
     {
-      "id": 145,
-      "name": "time_10",
-      "data": 145,
+      "id": 54,
+      "name": "time_14",
+      "data": 54,
       "type": "number",
-      "tableProcessGUId": "430f3114-9eb4-424f-9e20-180bb0379ec8",
+      "tableProcessGUId": "c552cc6f-6c06-4c70-91fe-80310cdc2ce4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -325,11 +325,11 @@
       "processes": []
     },
     {
-      "id": 146,
-      "name": "value_A_10",
-      "data": 146,
+      "id": 55,
+      "name": "value_A_14",
+      "data": 55,
       "type": "number",
-      "tableProcessGUId": "430f3114-9eb4-424f-9e20-180bb0379ec8",
+      "tableProcessGUId": "c552cc6f-6c06-4c70-91fe-80310cdc2ce4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -337,11 +337,11 @@
       "processes": []
     },
     {
-      "id": 147,
-      "name": "value_B_10",
-      "data": 147,
+      "id": 56,
+      "name": "value_B_14",
+      "data": 56,
       "type": "number",
-      "tableProcessGUId": "430f3114-9eb4-424f-9e20-180bb0379ec8",
+      "tableProcessGUId": "c552cc6f-6c06-4c70-91fe-80310cdc2ce4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -349,11 +349,11 @@
       "processes": []
     },
     {
-      "id": 148,
-      "name": "value_C_10",
-      "data": 148,
+      "id": 57,
+      "name": "value_C_14",
+      "data": 57,
       "type": "number",
-      "tableProcessGUId": "430f3114-9eb4-424f-9e20-180bb0379ec8",
+      "tableProcessGUId": "c552cc6f-6c06-4c70-91fe-80310cdc2ce4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -363,7 +363,7 @@
   ],
   "plots": [
     {
-      "id": 27,
+      "id": 14,
       "name": "Long To Wide result",
       "x": 350,
       "y": 150,
@@ -371,15 +371,18 @@
       "height": 250,
       "type": "tableplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "columnRefs": [
-          142,
-          143,
-          144,
-          145,
-          146,
-          147,
-          148
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57
         ],
         "showCol": [
           true,
@@ -390,6 +393,7 @@
           true,
           true
         ],
+        "colWidths": {},
         "colCurrent": 1,
         "showColNumber": false,
         "decimalPlaces": 2
@@ -398,19 +402,19 @@
   ],
   "tableProcesses": [
     {
-      "id": 10,
+      "id": 14,
       "name": "LongToWide",
       "displayName": "Long To Wide",
       "args": {
-        "categoryIN": 142,
-        "timeIN": 143,
-        "valueIN": 144,
+        "categoryIN": 51,
+        "timeIN": 52,
+        "valueIN": 53,
         "preProcesses": [],
         "out": {
-          "time": 145,
-          "value_A": 146,
-          "value_B": 147,
-          "value_C": 148
+          "time": 54,
+          "value_A": 55,
+          "value_B": 56,
+          "value_C": 57
         }
       },
       "refTPId": null
@@ -420,7 +424,30 @@
   "nodeNotes": {},
   "notes": [],
   "groups": [],
+  "composites": [],
   "orphanProcesses": [],
+  "nodeLayout": {
+    "data_51": {
+      "x": 60,
+      "y": 60
+    },
+    "data_52": {
+      "x": 60,
+      "y": 560
+    },
+    "data_53": {
+      "x": 60,
+      "y": 1060
+    },
+    "tableprocess_14": {
+      "x": 440,
+      "y": 60
+    },
+    "plot_14": {
+      "x": 820,
+      "y": 60
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -431,6 +458,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -469,5 +497,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.7"
 }

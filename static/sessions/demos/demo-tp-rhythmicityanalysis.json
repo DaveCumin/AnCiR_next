@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "163": [
+    "74": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "164": [
+    "75": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "165": [
+    "76": [
       20,
       20.5,
       21,
@@ -695,7 +695,7 @@
       27.5,
       28
     ],
-    "166": [
+    "77": [
       0.8924933333937438,
       3.0510601083632705,
       6.090118581951634e-28,
@@ -714,7 +714,7 @@
       1.8553714388763858,
       1.1781833223509954e-29
     ],
-    "167": [
+    "78": [
       0.8924933333937438,
       3.0510601083632705,
       6.090118581951634e-28,
@@ -736,9 +736,21 @@
   },
   "data": [
     {
-      "id": 163,
-      "name": "Rhythmicity Analysis input",
-      "data": 163,
+      "id": 74,
+      "name": "x",
+      "data": 74,
+      "type": "number",
+      "tableProcessGUId": "03b0394b-c9e5-4574-a17b-a64bc7a992d2",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 75,
+      "name": "y",
+      "data": 75,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -748,11 +760,11 @@
       "processes": []
     },
     {
-      "id": 164,
-      "name": "Rhythmicity Analysis input",
-      "data": 164,
+      "id": 76,
+      "name": "75_period_21",
+      "data": 76,
       "type": "number",
-      "tableProcessGUId": "",
+      "tableProcessGUId": "492a496a-d294-4680-852c-36e0de0e197c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -760,11 +772,11 @@
       "processes": []
     },
     {
-      "id": 165,
-      "name": "164_period_14",
-      "data": 165,
+      "id": 77,
+      "name": "75_power_21",
+      "data": 77,
       "type": "number",
-      "tableProcessGUId": "ea22fade-e23d-4475-a523-7c8b01f7396e",
+      "tableProcessGUId": "492a496a-d294-4680-852c-36e0de0e197c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -772,23 +784,11 @@
       "processes": []
     },
     {
-      "id": 166,
-      "name": "164_power_14",
-      "data": 166,
+      "id": 78,
+      "name": "rhythmicityy_75_21",
+      "data": 78,
       "type": "number",
-      "tableProcessGUId": "ea22fade-e23d-4475-a523-7c8b01f7396e",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "provenance": "",
-      "processes": []
-    },
-    {
-      "id": 167,
-      "name": "rhythmicityy_164_14",
-      "data": 167,
-      "type": "number",
-      "tableProcessGUId": "ea22fade-e23d-4475-a523-7c8b01f7396e",
+      "tableProcessGUId": "492a496a-d294-4680-852c-36e0de0e197c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -798,29 +798,138 @@
   ],
   "plots": [
     {
-      "id": 31,
-      "name": "Rhythmicity Analysis result",
+      "id": 20,
+      "name": "Rhythmicity Analysis: input",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "scatterplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "plot": {
+        "xlimsIN": [
+          null,
+          null
+        ],
+        "xLogScale": false,
+        "ylimsLeftIN": [
+          null,
+          null
+        ],
+        "ylimsRightIN": [
+          null,
+          null
+        ],
+        "yLogScaleLeft": false,
+        "yLogScaleRight": false,
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 30
+        },
+        "xAxis": {
+          "label": "x",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisLeft": {
+          "label": "value",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisRight": {
+          "label": "",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 79,
+              "name": "x",
+              "refId": 74,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to x which is ",
+              "processes": []
+            },
+            "y": {
+              "id": 80,
+              "name": "y",
+              "refId": 75,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "provenance": "refers to y which is ",
+              "processes": []
+            },
+            "label": "Data",
+            "yAxis": "left",
+            "line": {
+              "colour": "#234154",
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": false,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#234154",
+              "radius": 3,
+              "shape": "circle",
+              "draw": true
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "topright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "#ccc",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "nightBands": []
+      }
+    },
+    {
+      "id": 21,
+      "name": "Rhythmicity Analysis: result",
       "x": 350,
       "y": 150,
       "width": 500,
       "height": 250,
       "type": "tableplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "columnRefs": [
-          163,
-          164,
-          165,
-          166,
-          167
+          76,
+          77,
+          78
         ],
         "showCol": [
           true,
           true,
-          true,
-          true,
           true
         ],
+        "colWidths": {},
         "colCurrent": 1,
         "showColNumber": false,
         "decimalPlaces": 2
@@ -829,13 +938,29 @@
   ],
   "tableProcesses": [
     {
-      "id": 14,
+      "id": 20,
+      "name": "SequenceColumn",
+      "displayName": "Sequence Column",
+      "args": {
+        "seqType": "number",
+        "start": 0,
+        "step": 1,
+        "count": 336,
+        "end": 335,
+        "out": {
+          "result": 74
+        }
+      },
+      "refTPId": null
+    },
+    {
+      "id": 21,
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis",
       "args": {
-        "xIN": 163,
+        "xIN": 74,
         "yIN": [
-          164
+          75
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -849,9 +974,9 @@
         "corrMaxLag": 0,
         "preProcesses": [],
         "out": {
-          "164_period": 165,
-          "164_power": 166,
-          "rhythmicityy_164": 167
+          "75_period": 76,
+          "75_power": 77,
+          "rhythmicityy_75": 78
         }
       },
       "refTPId": null
@@ -863,7 +988,28 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
-  "nodeLayout": {},
+  "nodeLayout": {
+    "data_75": {
+      "x": 60,
+      "y": 60
+    },
+    "tableprocess_20": {
+      "x": 60,
+      "y": 560
+    },
+    "tableprocess_21": {
+      "x": 440,
+      "y": 60
+    },
+    "plot_20": {
+      "x": 820,
+      "y": 60
+    },
+    "plot_21": {
+      "x": 820,
+      "y": 560
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -874,6 +1020,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -912,5 +1059,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.1"
+  "version": "β.45.7"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "127": [
+    "36": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "128": [
+    "37": [
       12.642866859481796,
       18.907413440058953,
       8.02083029948017,
@@ -104,7 +104,7 @@
       23.83732580196522,
       -2.4027680620561576
     ],
-    "129": [
+    "38": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "130": [
+    "39": [
       9.094870359876616,
       10.003419446394657,
       13.579734705384766,
@@ -211,11 +211,11 @@
   },
   "data": [
     {
-      "id": 127,
+      "id": 36,
       "name": "x",
-      "data": 127,
+      "data": 36,
       "type": "number",
-      "tableProcessGUId": "",
+      "tableProcessGUId": "35090320-29d4-4e8f-b602-1b7186fa67a8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -223,9 +223,9 @@
       "processes": []
     },
     {
-      "id": 128,
+      "id": 37,
       "name": "y",
-      "data": 128,
+      "data": 37,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -235,11 +235,11 @@
       "processes": []
     },
     {
-      "id": 129,
-      "name": "fitx_7",
-      "data": 129,
+      "id": 38,
+      "name": "fitx_11",
+      "data": 38,
       "type": "number",
-      "tableProcessGUId": "bb1e2c40-32b4-4f6f-b485-b2c96a0de4ae",
+      "tableProcessGUId": "c5f68132-b2f1-41b3-a547-0123c0d038e0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -247,11 +247,11 @@
       "processes": []
     },
     {
-      "id": 130,
-      "name": "fity_128_7",
-      "data": 130,
+      "id": 39,
+      "name": "fity_37_11",
+      "data": 39,
       "type": "number",
-      "tableProcessGUId": "bb1e2c40-32b4-4f6f-b485-b2c96a0de4ae",
+      "tableProcessGUId": "c5f68132-b2f1-41b3-a547-0123c0d038e0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -261,7 +261,7 @@
   ],
   "plots": [
     {
-      "id": 24,
+      "id": 10,
       "name": "Fit Function: data + fit",
       "x": 350,
       "y": 150,
@@ -269,6 +269,9 @@
       "height": 250,
       "type": "scatterplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -312,9 +315,9 @@
         "data": [
           {
             "x": {
-              "id": 131,
+              "id": 40,
               "name": "x",
-              "refId": 127,
+              "refId": 36,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -324,9 +327,9 @@
               "processes": []
             },
             "y": {
-              "id": 132,
+              "id": 41,
               "name": "y",
-              "refId": 128,
+              "refId": 37,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -341,7 +344,8 @@
               "colour": "#234154",
               "strokeWidth": 2,
               "stroke": "solid",
-              "draw": false
+              "draw": false,
+              "joinGaps": false
             },
             "points": {
               "colour": "#234154",
@@ -352,27 +356,27 @@
           },
           {
             "x": {
-              "id": 133,
-              "name": "fitx_7",
-              "refId": 129,
+              "id": 42,
+              "name": "fitx_11",
+              "refId": 38,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to fitx_7 which is ",
+              "provenance": "refers to fitx_11 which is ",
               "processes": []
             },
             "y": {
-              "id": 134,
-              "name": "fity_128_7",
-              "refId": 130,
+              "id": 43,
+              "name": "fity_37_11",
+              "refId": 39,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to fity_128_7 which is ",
+              "provenance": "refers to fity_37_11 which is ",
               "processes": []
             },
             "label": "Fit Function",
@@ -381,7 +385,8 @@
               "colour": "#BE796B",
               "strokeWidth": 2.5,
               "stroke": "solid",
-              "draw": true
+              "draw": true,
+              "joinGaps": false
             },
             "points": {
               "colour": "#BE796B",
@@ -404,17 +409,60 @@
         },
         "nightBands": []
       }
+    },
+    {
+      "id": 11,
+      "name": "Fit Function: values",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "plot": {
+        "columnRefs": [
+          37,
+          39
+        ],
+        "showCol": [
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
     }
   ],
   "tableProcesses": [
     {
-      "id": 7,
+      "id": 10,
+      "name": "SequenceColumn",
+      "displayName": "Sequence Column",
+      "args": {
+        "seqType": "number",
+        "start": 0,
+        "step": 1,
+        "count": 50,
+        "end": 49,
+        "out": {
+          "result": 36
+        }
+      },
+      "refTPId": null
+    },
+    {
+      "id": 11,
       "name": "FitFunction",
       "displayName": "Fit Function",
       "args": {
-        "xIN": 127,
+        "xIN": 36,
         "yIN": [
-          128
+          37
         ],
         "model": "cosinor",
         "outputX": -1,
@@ -440,8 +488,8 @@
         "permutationStatistic": "rSquared",
         "preProcesses": [],
         "out": {
-          "fitx": 129,
-          "fity_128": 130
+          "fitx": 38,
+          "fity_37": 39
         }
       },
       "refTPId": null
@@ -451,7 +499,30 @@
   "nodeNotes": {},
   "notes": [],
   "groups": [],
+  "composites": [],
   "orphanProcesses": [],
+  "nodeLayout": {
+    "data_37": {
+      "x": 60,
+      "y": 60
+    },
+    "tableprocess_10": {
+      "x": 60,
+      "y": 560
+    },
+    "tableprocess_11": {
+      "x": 440,
+      "y": 60
+    },
+    "plot_10": {
+      "x": 820,
+      "y": 60
+    },
+    "plot_11": {
+      "x": 820,
+      "y": 560
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -462,6 +533,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -500,5 +572,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.7"
 }

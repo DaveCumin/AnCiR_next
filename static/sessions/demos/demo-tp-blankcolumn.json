@@ -1,25 +1,25 @@
 {
   "rawData": {
-    "101": [
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      ""
+    "12": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
     ]
   },
   "data": [
     {
-      "id": 101,
-      "name": "result_1",
-      "data": 101,
+      "id": 12,
+      "name": "result_3",
+      "data": 12,
       "type": "category",
-      "tableProcessGUId": "f1ee0db5-6378-4629-9497-6e5f817dc944",
+      "tableProcessGUId": "f01a7b39-3f83-4b41-9e3e-acd6f000691f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -29,21 +29,25 @@
   ],
   "plots": [
     {
-      "id": 18,
-      "name": "Blank Column result",
+      "id": 3,
+      "name": "Enter Data result",
       "x": 350,
       "y": 150,
       "width": 500,
       "height": 250,
       "type": "tableplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "columnRefs": [
-          101
+          12
         ],
         "showCol": [
           true
         ],
+        "colWidths": {},
         "colCurrent": 1,
         "showColNumber": false,
         "decimalPlaces": 2
@@ -52,14 +56,14 @@
   ],
   "tableProcesses": [
     {
-      "id": 1,
+      "id": 3,
       "name": "BlankColumn",
-      "displayName": "Blank Column",
+      "displayName": "Enter Data",
       "args": {
         "N": 10,
         "storedValueRefs": {},
         "out": {
-          "result": 101
+          "result": 12
         }
       },
       "refTPId": null
@@ -69,7 +73,18 @@
   "nodeNotes": {},
   "notes": [],
   "groups": [],
+  "composites": [],
   "orphanProcesses": [],
+  "nodeLayout": {
+    "tableprocess_3": {
+      "x": 60,
+      "y": 60
+    },
+    "plot_3": {
+      "x": 820,
+      "y": 60
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -80,6 +95,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -118,5 +134,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.7"
 }

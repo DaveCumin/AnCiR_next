@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "94": [
+    "8": [
       49,
       48,
       47,
@@ -52,7 +52,7 @@
       1,
       0
     ],
-    "95": [
+    "9": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -104,7 +104,7 @@
       10,
       11.362966948437261
     ],
-    "96": [
+    "10": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "97": [
+    "11": [
       11.362966948437261,
       10,
       11.362966948437276,
@@ -211,9 +211,9 @@
   },
   "data": [
     {
-      "id": 94,
+      "id": 8,
       "name": "Sort input",
-      "data": 94,
+      "data": 8,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -223,9 +223,9 @@
       "processes": []
     },
     {
-      "id": 95,
+      "id": 9,
       "name": "Sort input",
-      "data": 95,
+      "data": 9,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -235,11 +235,11 @@
       "processes": []
     },
     {
-      "id": 96,
-      "name": "sortedy_94_1",
-      "data": 96,
+      "id": 10,
+      "name": "sortedy_8_2",
+      "data": 10,
       "type": "number",
-      "tableProcessGUId": "cfcc40e6-87ef-45ef-8c9e-19b71e08e6fd",
+      "tableProcessGUId": "eb1eda3c-4674-41e9-b78c-4454222bd7ae",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -247,11 +247,11 @@
       "processes": []
     },
     {
-      "id": 97,
-      "name": "sortedy_95_1",
-      "data": 97,
+      "id": 11,
+      "name": "sortedy_9_2",
+      "data": 11,
       "type": "number",
-      "tableProcessGUId": "cfcc40e6-87ef-45ef-8c9e-19b71e08e6fd",
+      "tableProcessGUId": "eb1eda3c-4674-41e9-b78c-4454222bd7ae",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -261,7 +261,7 @@
   ],
   "plots": [
     {
-      "id": 17,
+      "id": 2,
       "name": "Sort result",
       "x": 350,
       "y": 150,
@@ -274,10 +274,10 @@
       "facetKey": null,
       "plot": {
         "columnRefs": [
-          94,
-          95,
-          96,
-          97
+          8,
+          9,
+          10,
+          11
         ],
         "showCol": [
           true,
@@ -285,6 +285,7 @@
           true,
           true
         ],
+        "colWidths": {},
         "colCurrent": 1,
         "showColNumber": false,
         "decimalPlaces": 2
@@ -293,20 +294,20 @@
   ],
   "tableProcesses": [
     {
-      "id": 1,
+      "id": 2,
       "name": "Sort",
       "displayName": "Sort",
       "args": {
         "yIN": [
-          94,
-          95
+          8,
+          9
         ],
-        "sortOnId": 94,
+        "sortOnId": 8,
         "direction": "asc",
         "preProcesses": [],
         "out": {
-          "sortedy_94": 96,
-          "sortedy_95": 97
+          "sortedy_8": 10,
+          "sortedy_9": 11
         }
       },
       "refTPId": null
@@ -318,7 +319,24 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
-  "nodeLayout": {},
+  "nodeLayout": {
+    "data_8": {
+      "x": 60,
+      "y": 60
+    },
+    "data_9": {
+      "x": 60,
+      "y": 560
+    },
+    "tableprocess_2": {
+      "x": 440,
+      "y": 60
+    },
+    "plot_2": {
+      "x": 820,
+      "y": 60
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -329,6 +347,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -367,5 +386,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.2"
+  "version": "β.45.7"
 }
