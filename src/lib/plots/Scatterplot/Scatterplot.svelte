@@ -12,7 +12,6 @@
 		bindAltTooltipToggle
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
-	import { syncFacetChildren } from '$lib/core/Plot.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import NightBand, { NightBandClass } from './NightBand.svelte';
 
@@ -716,19 +715,6 @@
 				<ControlInput label="Height">
 					<NumberWithUnits bind:value={theData.parentBox.height} />
 				</ControlInput>
-			</div>
-		</div>
-
-		<div class="control-component">
-			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
-					<input
-						type="checkbox"
-						bind:checked={theData.parentBox.facet}
-						onchange={() => syncFacetChildren(theData.parentBox)}
-					/>
-					<p>One plot per series (facet)</p>
-				</div>
 			</div>
 		</div>
 

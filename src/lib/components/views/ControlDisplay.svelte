@@ -113,7 +113,13 @@
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 	import ControlInput from '../inputs/ControlInput.svelte';
-	import { selectPlot, removePlots, getPlotById } from '$lib/core/Plot.svelte';
+	import {
+		selectPlot,
+		removePlots,
+		getPlotById,
+		FACETABLE_PLOT_TYPES,
+		syncFacetChildren
+	} from '$lib/core/Plot.svelte';
 	import Editable from '../inputs/Editable.svelte';
 	import CanvasNodeControls from './CanvasNodeControls.svelte';
 	import { getSharedSchema, getSharedDataSchema } from '$lib/plots/sharedControls.js';
@@ -452,6 +458,19 @@
 				</div>
 			</div>
 		</div>
+
+		{#if rawSelectedPlots.length === 1 && rawSelectedPlots[0]?.facet}
+			<div class="control-component">
+				<div class="control-input-checkbox">
+					<input
+						type="checkbox"
+						bind:checked={rawSelectedPlots[0].facet}
+						onchange={() => syncFacetChildren(rawSelectedPlots[0])}
+					/>
+					<p>One plot per series (facet)</p>
+				</div>
+			</div>
+		{/if}
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -810,6 +829,19 @@
 					{dropdownLeft}
 					Id={'plot' + plot.plot.parentBox.id}
 				/>
+
+				{#if FACETABLE_PLOT_TYPES.has(plot.type)}
+					<div class="control-component">
+						<div class="control-input-checkbox">
+							<input
+								type="checkbox"
+								bind:checked={plot.facet}
+								onchange={() => syncFacetChildren(plot)}
+							/>
+							<p>One plot per series (facet)</p>
+						</div>
+					</div>
+				{/if}
 
 				<Plot theData={plot.plot} which="controls" />
 			{/if}

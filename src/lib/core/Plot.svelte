@@ -21,6 +21,19 @@
 		);
 	}
 
+	// Plot types that support faceting (small multiples). These all use an x/y
+	// series model the facet engine understands. Histogram is intentionally absent:
+	// its series are column-based (not x/y), so faceting it needs the engine
+	// generalised — tracked as a follow-up.
+	export const FACETABLE_PLOT_TYPES = new Set([
+		'scatterplot',
+		'boxplot',
+		'actogram',
+		'correlogram',
+		'periodogram',
+		'fft'
+	]);
+
 	// Group a plot's flat data points into series-sets by shared x (mirrors the
 	// per-set (xN, ysN) ports). Each set keeps only valid ys, in wired order.
 	function facetSets(data) {
