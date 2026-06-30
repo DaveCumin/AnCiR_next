@@ -5,6 +5,7 @@ import { loadLesson } from '$lib/core/classroomTour.js';
 
 export const tour = {
 	id: 'learn-sine-waves',
+	kind: 'lesson',
 	name: 'Lesson: Sine waves are everywhere',
 	description:
 		'Fit a single cosine to a rhythm and read its amplitude, phase, midline, period and R².',

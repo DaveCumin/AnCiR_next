@@ -5,6 +5,7 @@ import { loadLesson } from '$lib/core/classroomTour.js';
 
 export const tour = {
 	id: 'learn-night-owl',
+	kind: 'lesson',
 	name: 'Lesson: Am I a night owl?',
 	description: 'Read a week of activity on an actogram and decide: morning lark or evening owl?',
 	estMinutes: 4,

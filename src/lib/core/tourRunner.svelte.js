@@ -27,8 +27,18 @@ const tourModules = import.meta.glob(['$lib/tours/*.js', '!$lib/tours/*.test.js'
 export const tourState = $state({
 	pickerOpen: false,
 	activeTour: null, // the resolved definition object
-	index: -1
+	index: -1,
+	// Lessons (kind: 'lesson') are hidden from the picker while they're being
+	// reworked; an admin keystroke flips this to reveal them. Session-only.
+	showLessons: false
 });
+
+// Reveal/hide the classroom lessons in the picker (admin keystroke), and surface
+// the picker so the change is visible. Toggling off leaves the picker open.
+export function toggleLessons() {
+	tourState.showLessons = !tourState.showLessons;
+	tourState.pickerOpen = true;
+}
 
 const DONE_KEY = 'ancir.tours.completed';
 

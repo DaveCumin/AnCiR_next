@@ -20,6 +20,8 @@ describe('classroom lesson tours', () => {
 	it('every tour is well-formed and loads its lesson first', () => {
 		for (const t of TOURS) {
 			expect(t.id).toMatch(/^learn-/);
+			// Lessons are tagged so the picker can hide them behind the admin keystroke.
+			expect(t.kind).toBe('lesson');
 			expect(typeof t.name).toBe('string');
 			expect(Array.isArray(t.steps) && t.steps.length > 0).toBe(true);
 			expect(typeof t.order).toBe('number');

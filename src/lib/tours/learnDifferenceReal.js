@@ -5,6 +5,7 @@ import { loadLesson } from '$lib/core/classroomTour.js';
 
 export const tour = {
 	id: 'learn-difference-real',
+	kind: 'lesson',
 	name: 'Lesson: Is the difference real?',
 	description:
 		'Compare weekday vs weekend activity and decide if the difference is real or chance.',

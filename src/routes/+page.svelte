@@ -9,6 +9,7 @@
 	import AreYouSure from '$lib/components/views/modals/AreYouSure.svelte';
 	import TourOverlay from '$lib/components/tour/TourOverlay.svelte';
 	import TourPicker from '$lib/components/tour/TourPicker.svelte';
+	import { toggleLessons } from '$lib/core/tourRunner.svelte.js';
 	import ImportData, {
 		loadFromURL,
 		openImportModal,
@@ -243,6 +244,11 @@
 				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'x') {
 					event.preventDefault();
 					appState.showWorkflow = !appState.showWorkflow;
+				}
+				// ADMIN: reveal/hide the classroom lessons in the tour picker.
+				if (MODIFIER && event.shiftKey && event.code === 'Space' && !editableFocused) {
+					event.preventDefault();
+					toggleLessons();
 				}
 				// SAVE THE SESSION
 				if (!event.shiftKey && MODIFIER && event.key.toLowerCase() === 's') {

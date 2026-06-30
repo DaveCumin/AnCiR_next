@@ -5,6 +5,7 @@ import { loadLesson } from '$lib/core/classroomTour.js';
 
 export const tour = {
 	id: 'learn-hidden-rhythm',
+	kind: 'lesson',
 	name: 'Lesson: Find the hidden rhythm',
 	description: 'There is a cycle hidden in this data — use the periodogram to find how long it is.',
 	estMinutes: 4,

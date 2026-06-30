@@ -11,6 +11,11 @@
 	let done = $state(new Set());
 	let requested = false;
 
+	// Lessons are hidden until revealed by the admin keystroke (see tourRunner).
+	const visibleTours = $derived(
+		tourState.showLessons ? tours : tours.filter((t) => t.kind !== 'lesson')
+	);
+
 	$effect(() => {
 		if (tourState.pickerOpen && !requested) {
 			requested = true;
@@ -53,15 +58,16 @@
 
 			{#if loading}
 				<div class="tp-empty">Loading tours…</div>
-			{:else if loadError || tours.length === 0}
+			{:else if loadError || visibleTours.length === 0}
 				<div class="tp-empty">No tours available.</div>
 			{:else}
 				<div class="tp-list">
-					{#each tours as t (t.id)}
+					{#each visibleTours as t (t.id)}
 						<button class="tp-item" type="button" onclick={() => pick(t)}>
 							<div class="tp-item-main">
 								<span class="tp-item-name">
 									{t.name}
+									{#if t.kind === 'lesson'}<span class="tp-badge" title="Hidden lesson (admin)">lesson</span>{/if}
 									{#if done.has(t.id)}<span class="tp-done" title="Completed before">✓</span>{/if}
 								</span>
 								<span class="tp-item-desc">{t.description}</span>
@@ -70,6 +76,9 @@
 						</button>
 					{/each}
 				</div>
+				{#if tourState.showLessons}
+					<p class="tp-admin-note">Lessons shown (admin) — press the shortcut again to hide.</p>
+				{/if}
 			{/if}
 		</div>
 	</div>
@@ -170,6 +179,26 @@
 		color: #1f8c4f;
 		margin-left: 0.35rem;
 		font-size: 0.85em;
+	}
+
+	.tp-badge {
+		margin-left: 0.4rem;
+		padding: 0.05rem 0.35rem;
+		border-radius: 999px;
+		background: var(--color-lightness-90, #e8e8e8);
+		color: var(--color-text-muted, #666);
+		font-size: 0.68rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+		vertical-align: middle;
+	}
+
+	.tp-admin-note {
+		margin: 0.9rem 0 0;
+		color: var(--color-text-muted, #666);
+		font-size: 0.76rem;
+		font-style: italic;
 	}
 
 	.tp-item-desc {
