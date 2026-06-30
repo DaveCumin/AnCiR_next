@@ -2,37 +2,24 @@
 	/**
 	 * Inline SVG icon component.
 	 *
-	 * - `eager: true` inlines every SVG at build time (no onMount flash).
+	 * - The icon set is shared with non-component contexts (tour bodies, etc.)
+	 *   through `iconRegistry.js` — one glob, one copy in the bundle.
 	 * - The source SVG is rendered as-is so its own `viewBox` is preserved.
 	 *   Wrapping it in a second `<svg viewBox="0 0 24 24">` (the previous
 	 *   approach) cropped/scaled icons whose source viewBox differed (e.g.
 	 *   FontAwesome's "0 0 512 512").
 	 * - `fill="none"` is preserved so outline-only icons keep their outline.
 	 */
-	const RAW_ICONS = import.meta.glob('./*.svg', {
-		query: '?raw',
-		import: 'default',
-		eager: true
-	}) as Record<string, string>;
-
-	const iconCache = new Map<string, string>();
-	for (const path in RAW_ICONS) {
-		const key = path.split('/').pop()!.replace(/\.svg$/, '');
-		const raw = RAW_ICONS[path] ?? '';
-		const normalized = raw.replace(/fill="[^"]*"/g, (match: string) =>
-			match.includes('none') ? match : 'fill="currentColor"'
-		);
-		iconCache.set(key, normalized);
-	}
+	import { getIconRaw, hasIcon } from './iconRegistry.js';
 </script>
 
 <script>
 	let { name = '', width = 24, height = 24, className = 'icon' } = $props();
 
-	const svg = $derived(iconCache.get(name) ?? '');
+	const svg = $derived(getIconRaw(name));
 
 	$effect(() => {
-		if (name && !iconCache.has(name)) {
+		if (name && !hasIcon(name)) {
 			console.error(`Icon "${name}" not found`);
 		}
 	});
