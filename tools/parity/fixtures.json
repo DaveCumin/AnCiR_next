@@ -93,6 +93,33 @@
       "compareOutputs": ["fitx", "fity"]
     },
     {
+      "id": "tp-npcra-rhythm-noisy",
+      "kind": "tableProcess",
+      "jsName": "NonparametricRA",
+      "pyFunc": "npcra",
+      "generate": {
+        "type": "rhythm",
+        "n": 168,
+        "period": 24,
+        "amp": 40,
+        "mesor": 50,
+        "phase": 8,
+        "noise": 6,
+        "seed": 23,
+        "refs": { "x": "t", "y": "y" }
+      },
+      "args": {
+        "xIN": "@t",
+        "yIN": ["@y"],
+        "epochHours": 1,
+        "period": 24,
+        "mWindow": 10,
+        "lWindow": 5,
+        "out": { "npcrax": -1, "IS": -1, "IV": -1, "RA": -1, "M10": -1, "L5": -1, "M10onset": -1, "L5onset": -1 }
+      },
+      "compareOutputs": ["npcrax", "npcray", "IS", "IV", "RA", "M10", "L5", "M10onset", "L5onset"]
+    },
+    {
       "id": "tp-groupcomparison-ttest",
       "kind": "tableProcessResult",
       "jsName": "GroupComparison",

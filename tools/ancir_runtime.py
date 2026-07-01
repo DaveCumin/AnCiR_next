@@ -1451,6 +1451,161 @@ def tp_binneddata(args, cols, raw_data, _sv):
     return any_valid
 
 
+# --- NonparametricRA (NPCRA) ---
+
+def _js_round(v):
+    """Match JS Math.round (round half toward +inf), unlike Python's banker's round."""
+    return int(math.floor(v + 0.5))
+
+
+def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.0):
+    """Port of src/lib/utils/npcra.js — IS, IV, RA, M10/L5 + onsets on the
+    average 24 h profile. Van Someren et al. 1999, Chronobiol Int 16(4):505-518."""
+    if not (epoch_hours > 0) or not (period > 0):
+        return None
+    pairs = []
+    n = min(len(t), len(y))
+    for i in range(n):
+        try:
+            tf = float(t[i])
+        except (TypeError, ValueError):
+            continue
+        if math.isnan(tf) or math.isinf(tf):
+            continue
+        try:
+            yf = float(y[i])
+        except (TypeError, ValueError):
+            yf = float('nan')
+        pairs.append((tf, yf))
+    if not pairs:
+        return None
+    pairs.sort(key=lambda p: p[0])
+    t0 = pairs[0][0]
+    t_end = pairs[-1][0]
+    e = epoch_hours
+    n_epochs = max(1, math.ceil((t_end - t0) / e + 1e-9))
+    ssum = [0.0] * n_epochs
+    cnt = [0] * n_epochs
+    for (ti, yi) in pairs:
+        if math.isnan(yi):
+            continue
+        k = int(math.floor((ti - t0) / e))
+        if k < 0:
+            k = 0
+        elif k >= n_epochs:
+            k = n_epochs - 1
+        ssum[k] += yi
+        cnt[k] += 1
+    x = [(ssum[k] / cnt[k]) if cnt[k] > 0 else float('nan') for k in range(n_epochs)]
+
+    valid = [v for v in x if not math.isnan(v)]
+    nn = len(valid)
+    if nn == 0:
+        return None
+    xbar = sum(valid) / nn
+    overall_ss = sum((v - xbar) ** 2 for v in valid)
+
+    p = max(1, _js_round(period / e))
+    p_sum = [0.0] * p
+    p_cnt = [0] * p
+    for k in range(n_epochs):
+        if math.isnan(x[k]):
+            continue
+        tod = ((k * e) % period + period) % period
+        h = int(math.floor(tod / e)) % p
+        if h < 0:
+            h += p
+        p_sum[h] += x[k]
+        p_cnt[h] += 1
+    profile = [(p_sum[h] / p_cnt[h]) if p_cnt[h] > 0 else float('nan') for h in range(p)]
+
+    prof_ss = sum((profile[h] - xbar) ** 2 for h in range(p) if not math.isnan(profile[h]))
+    IS = (nn * prof_ss) / (p * overall_ss) if overall_ss > 0 else float('nan')
+
+    diff_ss = 0.0
+    for k in range(1, n_epochs):
+        if not math.isnan(x[k]) and not math.isnan(x[k - 1]):
+            diff_ss += (x[k] - x[k - 1]) ** 2
+    IV = (nn * diff_ss) / ((nn - 1) * overall_ss) if (overall_ss > 0 and nn > 1) else float('nan')
+
+    def roll(width_hours, better):
+        w = min(p, max(1, _js_round(width_hours / e)))
+        best_val = None
+        best_start = 0
+        for s in range(p):
+            ws = 0.0
+            wc = 0
+            for j in range(w):
+                v = profile[(s + j) % p]
+                if not math.isnan(v):
+                    ws += v
+                    wc += 1
+            if wc == 0:
+                continue
+            m = ws / wc
+            if best_val is None or better(m, best_val):
+                best_val = m
+                best_start = s
+        return best_val, best_start * e
+
+    M10, m_onset = roll(m_window, lambda m, b: m > b)
+    L5, l_onset = roll(l_window, lambda m, b: m < b)
+    if M10 is None:
+        M10 = float('nan')
+    if L5 is None:
+        L5 = float('nan')
+    denom = M10 + L5
+    RA = ((M10 - L5) / denom
+          if (not math.isnan(M10) and not math.isnan(L5) and denom != 0) else float('nan'))
+    bin_centres = [h * e + e / 2 for h in range(p)]
+    return {
+        'IS': IS, 'IV': IV, 'RA': RA, 'M10': M10, 'L5': L5,
+        'M10onset': m_onset, 'L5onset': l_onset,
+        'profile': profile, 'bin_centres': bin_centres, 'n': nn, 'p': p, 'n_epochs': n_epochs,
+    }
+
+
+def tp_npcra(args, cols, raw_data, _sv):
+    x_in = args.get('xIN', -1)
+    y_ins = _id_list(args.get('yIN'))
+    if x_in == -1 or x_in not in cols or not y_ins:
+        return False
+    epoch = float(args.get('epochHours', 1))
+    period = float(args.get('period', 24))
+    m_window = float(args.get('mWindow', 10))
+    l_window = float(args.get('lWindow', 5))
+    x_data = _t_for_col(cols[x_in])
+
+    scalar_keys = ['IS', 'IV', 'RA', 'M10', 'L5', 'M10onset', 'L5onset']
+    per_y = {}
+    bin_centres = None
+    any_valid = False
+    for y_id in y_ins:
+        if y_id not in cols:
+            continue
+        res = compute_npcra(x_data, cols[y_id].get_data(), epoch, period, m_window, l_window)
+        if res is None:
+            continue
+        per_y[y_id] = res
+        if bin_centres is None:
+            bin_centres = res['bin_centres']
+            _set_col(raw_data, cols, _out_id(args, 'npcrax'), bin_centres, type_='number')
+        y_out = _out_id(args, f'npcray_{y_id}')
+        if y_out == -1:
+            y_out = _out_id(args, 'npcray')
+        _set_col(raw_data, cols, y_out, res['profile'], type_='number')
+        any_valid = True
+    if not any_valid:
+        return False
+    for key in scalar_keys:
+        oid = _out_id(args, key)
+        if oid == -1:
+            continue
+        arr = [per_y[y][key] if y in per_y else float('nan') for y in y_ins]
+        _set_col(raw_data, cols, oid, arr, type_='number')
+    return any_valid
+
+
 # --- BlankColumn ---
 
 def tp_blankcolumn(args, cols, raw_data, sv):
@@ -2858,7 +3013,6 @@ DISPLAY_TO_TP = {
     'Cosinor': 'cosinor',
     'Double Logistic': 'doublelogistic',
     'DoubleLogistic': 'doublelogistic',
-    'Duplicate': 'duplicate',
     'Enter Data': 'blankcolumn',
     'Fit Function': 'fitfunction',
     'Fit Trend Curves': 'trendfit',
@@ -2871,6 +3025,8 @@ DISPLAY_TO_TP = {
     'LongToWide': 'longtowide',
     'Moving Analysis': 'movinganalysis',
     'MovingAnalysis': 'movinganalysis',
+    'Nonparametric RA': 'nonparametricra',
+    'NonparametricRA': 'nonparametricra',
     'Random': 'random',
     'Rectangular Wave': 'rectangularwave',
     'RectangularWave': 'rectangularwave',
@@ -2910,6 +3066,7 @@ TABLE_PROCESS_MAP = {
     'longtowide': tp_longtowide,
     'widetolong': tp_widetolong,
     'movinganalysis': tp_movinganalysis,
+    'nonparametricra': tp_npcra,
     'random': tp_random,
     'rectangularwave': tp_rectangularwave,
     'rhythmicityanalysis': tp_rhythmicityanalysis,
