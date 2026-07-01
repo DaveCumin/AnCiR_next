@@ -232,6 +232,15 @@ const meta = new Map([
 			description: 'Compare statistics between groups defined by another column.'
 		}
 	],
+	[
+		'NonparametricRA',
+		{
+			family: 'Analysis',
+			nodeIcon: 'actogram',
+			description:
+				'Nonparametric rest-activity variables (IS, IV, RA, M10/L5) — robust to non-sinusoidal rhythms.'
+		}
+	],
 
 	// ---- Transform -------------------------------------------------------
 	[

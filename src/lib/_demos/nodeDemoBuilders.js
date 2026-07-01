@@ -378,6 +378,23 @@ export async function buildTPDemo(spec, entry, display) {
 				{ x: 'period (h)', y: 'power' }
 			);
 		}
+	} else if (spec.name === 'NonparametricRA') {
+		// The average 24 h activity profile (npcrax → x, npcray → y) as a line —
+		// the classic NPCRA view — plus a table of the scalar metrics.
+		const yId = ids[1];
+		const profX = tp.args.out.npcrax;
+		const profY = tp.args.out[`npcray_${yId}`];
+		if (profX >= 0 && profY >= 0) {
+			scatterPlot(
+				`${display}: average day`,
+				[{ x: profX, y: profY, label: 'Average profile', kind: 'line', colour: OUT_COLOUR }],
+				{ x: 'hour of day', y: 'activity' }
+			);
+		}
+		const metricIds = ['IS', 'IV', 'RA', 'M10', 'L5']
+			.map((k) => tp.args.out[k])
+			.filter((v) => typeof v === 'number' && v >= 0);
+		tablePlot(`${display}: metrics`, metricIds.length ? metricIds : outIds);
 	} else if (spec.name === 'GroupComparison') {
 		const p = new Plot({ name: `${display}: groups`, type: 'boxplot' });
 		p.plot.addData({ x: { refId: ids[0] }, y: { refId: ids[1] } });

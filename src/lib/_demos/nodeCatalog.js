@@ -417,6 +417,36 @@ export const TP_SPECS = [
 		})
 	},
 	{
+		name: 'NonparametricRA',
+		isAsync: true,
+		inputs: [
+			// 14 days hourly, a clean square rest-activity rhythm (active 08:00–18:00)
+			// → IS≈1, RA≈1, low IV.
+			T('number', () => seq(336, (i) => i)),
+			T('number', () => seq(336, (i) => (i % 24 >= 8 && i % 24 < 18 ? 100 : 0)))
+		],
+		args: ([x, y]) => ({
+			xIN: x,
+			yIN: [y],
+			epochHours: 1,
+			period: 24,
+			mWindow: 10,
+			lWindow: 5,
+			preProcesses: [],
+			out: {
+				npcrax: -1,
+				[`npcray_${y}`]: -1,
+				IS: -1,
+				IV: -1,
+				RA: -1,
+				M10: -1,
+				L5: -1,
+				M10onset: -1,
+				L5onset: -1
+			}
+		})
+	},
+	{
 		name: 'SequenceColumn',
 		inputs: [],
 		args: () => ({ seqType: 'number', start: 0, step: 1, count: 50, end: 49, out: { result: -1 } })

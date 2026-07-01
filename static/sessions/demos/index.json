@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 38,
+  "count": 39,
   "sessions": [
     {
       "id": "tp-blankcolumn",
@@ -289,6 +289,18 @@
         "RhythmicityAnalysis"
       ],
       "keywords": "rhythmicity analysis run rhythmicity statistics over the column. analysis rhythmicityanalysis"
+    },
+    {
+      "id": "tp-nonparametricra",
+      "name": "Nonparametric RA",
+      "family": "Analysis",
+      "description": "Nonparametric rest-activity variables (IS, IV, RA, M10/L5) — robust to non-sinusoidal rhythms.",
+      "url": "sessions/demos/demo-tp-nonparametricra.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "NonparametricRA"
+      ],
+      "keywords": "nonparametric ra nonparametric rest-activity variables (is, iv, ra, m10/l5) — robust to non-sinusoidal rhythms. analysis nonparametricra"
     },
     {
       "id": "process-editvalue",
