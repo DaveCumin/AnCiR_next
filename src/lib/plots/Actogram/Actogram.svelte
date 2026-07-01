@@ -533,6 +533,7 @@
 </script>
 
 <script>
+	// @ts-nocheck
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
 	import { tick } from 'svelte';
