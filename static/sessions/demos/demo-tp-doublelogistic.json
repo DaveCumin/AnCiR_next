@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "28": [
+    "118": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "29": [
+    "119": [
       24.784209286216505,
       27.918238427560844,
       26.60093560817605,
@@ -104,7 +104,7 @@
       24.95424537696588,
       27.973731986697846
     ],
-    "30": [
+    "120": [
       0,
       1,
       2,
@@ -156,7 +156,10 @@
       48,
       49
     ],
-    "31": [
+    "121": [
+      null
+    ],
+    "122": [
       25.756894538862465,
       24.742714374366138,
       24.385024124035308,
@@ -211,11 +214,11 @@
   },
   "data": [
     {
-      "id": 28,
+      "id": 118,
       "name": "x",
-      "data": 28,
+      "data": 118,
       "type": "number",
-      "tableProcessGUId": "06f45f75-ba00-44b8-ad38-89c1abb566a8",
+      "tableProcessGUId": "101f0ff0-0c93-45e9-9cef-bf322354dd46",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -223,9 +226,9 @@
       "processes": []
     },
     {
-      "id": 29,
+      "id": 119,
       "name": "y",
-      "data": 29,
+      "data": 119,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -235,11 +238,11 @@
       "processes": []
     },
     {
-      "id": 30,
-      "name": "dlogx_9",
-      "data": 30,
+      "id": 120,
+      "name": "dlogx_17",
+      "data": 120,
       "type": "number",
-      "tableProcessGUId": "baae4861-8524-44a1-8711-6acd6d4a63cf",
+      "tableProcessGUId": "63f2a3ca-22b4-45b8-b99c-c7d63bf83418",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -247,11 +250,23 @@
       "processes": []
     },
     {
-      "id": 31,
-      "name": "dlogy_29_9",
-      "data": 31,
+      "id": 121,
+      "name": "pvalue_17",
+      "data": 121,
       "type": "number",
-      "tableProcessGUId": "baae4861-8524-44a1-8711-6acd6d4a63cf",
+      "tableProcessGUId": "c8e21123-01bd-4d9b-8844-cffb3394f5ee",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 122,
+      "name": "dlogy_119_17",
+      "data": 122,
+      "type": "number",
+      "tableProcessGUId": "63f2a3ca-22b4-45b8-b99c-c7d63bf83418",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -261,7 +276,7 @@
   ],
   "plots": [
     {
-      "id": 8,
+      "id": 32,
       "name": "Double Logistic: data + fit",
       "x": 350,
       "y": 150,
@@ -315,9 +330,9 @@
         "data": [
           {
             "x": {
-              "id": 32,
+              "id": 123,
               "name": "x",
-              "refId": 28,
+              "refId": 118,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -327,9 +342,9 @@
               "processes": []
             },
             "y": {
-              "id": 33,
+              "id": 124,
               "name": "y",
-              "refId": 29,
+              "refId": 119,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -356,27 +371,27 @@
           },
           {
             "x": {
-              "id": 34,
-              "name": "dlogx_9",
-              "refId": 30,
+              "id": 125,
+              "name": "dlogx_17",
+              "refId": 120,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to dlogx_9 which is ",
+              "provenance": "refers to dlogx_17 which is ",
               "processes": []
             },
             "y": {
-              "id": 35,
-              "name": "dlogy_29_9",
-              "refId": 31,
+              "id": 126,
+              "name": "dlogy_119_17",
+              "refId": 122,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to dlogy_29_9 which is ",
+              "provenance": "refers to dlogy_119_17 which is ",
               "processes": []
             },
             "label": "Double Logistic",
@@ -411,7 +426,7 @@
       }
     },
     {
-      "id": 9,
+      "id": 33,
       "name": "Double Logistic: values",
       "x": 350,
       "y": 150,
@@ -424,8 +439,8 @@
       "facetKey": null,
       "plot": {
         "columnRefs": [
-          29,
-          31
+          119,
+          122
         ],
         "showCol": [
           true,
@@ -440,7 +455,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 8,
+      "id": 16,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -450,19 +465,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 28
+          "result": 118
         }
       },
       "refTPId": null
     },
     {
-      "id": 9,
+      "id": 17,
       "name": "DoubleLogistic",
       "displayName": "Double Logistic",
       "args": {
-        "xIN": 28,
+        "xIN": 118,
         "yIN": [
-          29
+          119
         ],
         "outputX": -1,
         "fixK1": false,
@@ -472,8 +487,9 @@
         "fixPeriod": false,
         "fixedPeriod": 24,
         "out": {
-          "dlogx": 30,
-          "dlogy_29": 31
+          "dlogx": 120,
+          "pvalue": 121,
+          "dlogy_119": 122
         }
       },
       "refTPId": null
@@ -486,23 +502,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_29": {
+    "data_119": {
       "x": 60,
       "y": 60
     },
-    "tableprocess_8": {
+    "tableprocess_16": {
       "x": 60,
       "y": 560
     },
-    "tableprocess_9": {
+    "tableprocess_17": {
       "x": 440,
       "y": 60
     },
-    "plot_8": {
+    "plot_32": {
       "x": 820,
       "y": 60
     },
-    "plot_9": {
+    "plot_33": {
       "x": 820,
       "y": 560
     }
@@ -556,5 +572,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.7"
+  "version": "β.45.9"
 }

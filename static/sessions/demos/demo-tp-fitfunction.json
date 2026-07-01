@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "36": [
+    "127": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "37": [
+    "128": [
       12.642866859481796,
       18.907413440058953,
       8.02083029948017,
@@ -104,7 +104,7 @@
       23.83732580196522,
       -2.4027680620561576
     ],
-    "38": [
+    "129": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "39": [
+    "130": [
       9.094870359876616,
       10.003419446394657,
       13.579734705384766,
@@ -211,11 +211,11 @@
   },
   "data": [
     {
-      "id": 36,
+      "id": 127,
       "name": "x",
-      "data": 36,
+      "data": 127,
       "type": "number",
-      "tableProcessGUId": "35090320-29d4-4e8f-b602-1b7186fa67a8",
+      "tableProcessGUId": "9b031d85-6aca-4350-8ecd-0a20fb1c91ee",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -223,9 +223,9 @@
       "processes": []
     },
     {
-      "id": 37,
+      "id": 128,
       "name": "y",
-      "data": 37,
+      "data": 128,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -235,11 +235,11 @@
       "processes": []
     },
     {
-      "id": 38,
-      "name": "fitx_11",
-      "data": 38,
+      "id": 129,
+      "name": "fitx_19",
+      "data": 129,
       "type": "number",
-      "tableProcessGUId": "c5f68132-b2f1-41b3-a547-0123c0d038e0",
+      "tableProcessGUId": "eb7e0381-a6fd-4434-a985-4efe9fd689fa",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -247,11 +247,11 @@
       "processes": []
     },
     {
-      "id": 39,
-      "name": "fity_37_11",
-      "data": 39,
+      "id": 130,
+      "name": "fity_128_19",
+      "data": 130,
       "type": "number",
-      "tableProcessGUId": "c5f68132-b2f1-41b3-a547-0123c0d038e0",
+      "tableProcessGUId": "eb7e0381-a6fd-4434-a985-4efe9fd689fa",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -261,7 +261,7 @@
   ],
   "plots": [
     {
-      "id": 10,
+      "id": 34,
       "name": "Fit Function: data + fit",
       "x": 350,
       "y": 150,
@@ -315,9 +315,9 @@
         "data": [
           {
             "x": {
-              "id": 40,
+              "id": 131,
               "name": "x",
-              "refId": 36,
+              "refId": 127,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -327,9 +327,9 @@
               "processes": []
             },
             "y": {
-              "id": 41,
+              "id": 132,
               "name": "y",
-              "refId": 37,
+              "refId": 128,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -356,27 +356,27 @@
           },
           {
             "x": {
-              "id": 42,
-              "name": "fitx_11",
-              "refId": 38,
+              "id": 133,
+              "name": "fitx_19",
+              "refId": 129,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to fitx_11 which is ",
+              "provenance": "refers to fitx_19 which is ",
               "processes": []
             },
             "y": {
-              "id": 43,
-              "name": "fity_37_11",
-              "refId": 39,
+              "id": 134,
+              "name": "fity_128_19",
+              "refId": 130,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to fity_37_11 which is ",
+              "provenance": "refers to fity_128_19 which is ",
               "processes": []
             },
             "label": "Fit Function",
@@ -411,7 +411,7 @@
       }
     },
     {
-      "id": 11,
+      "id": 35,
       "name": "Fit Function: values",
       "x": 350,
       "y": 150,
@@ -424,8 +424,8 @@
       "facetKey": null,
       "plot": {
         "columnRefs": [
-          37,
-          39
+          128,
+          130
         ],
         "showCol": [
           true,
@@ -440,7 +440,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 10,
+      "id": 18,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -450,19 +450,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 36
+          "result": 127
         }
       },
       "refTPId": null
     },
     {
-      "id": 11,
+      "id": 19,
       "name": "FitFunction",
       "displayName": "Fit Function",
       "args": {
-        "xIN": 36,
+        "xIN": 127,
         "yIN": [
-          37
+          128
         ],
         "model": "cosinor",
         "outputX": -1,
@@ -488,8 +488,8 @@
         "permutationStatistic": "rSquared",
         "preProcesses": [],
         "out": {
-          "fitx": 38,
-          "fity_37": 39
+          "fitx": 129,
+          "fity_128": 130
         }
       },
       "refTPId": null
@@ -502,23 +502,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_37": {
+    "data_128": {
       "x": 60,
       "y": 60
     },
-    "tableprocess_10": {
+    "tableprocess_18": {
       "x": 60,
       "y": 560
     },
-    "tableprocess_11": {
+    "tableprocess_19": {
       "x": 440,
       "y": 60
     },
-    "plot_10": {
+    "plot_34": {
       "x": 820,
       "y": 60
     },
-    "plot_11": {
+    "plot_35": {
       "x": 820,
       "y": 560
     }
@@ -572,5 +572,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.7"
+  "version": "β.45.9"
 }

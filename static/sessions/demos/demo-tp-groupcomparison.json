@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "14": [
+    "138": [
       "A",
       "B",
       "C",
@@ -52,7 +52,7 @@
       "A",
       "B"
     ],
-    "15": [
+    "139": [
       0,
       6,
       12,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 14,
+      "id": 138,
       "name": "Compare groups (stats) input 1",
-      "data": 14,
+      "data": 138,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -119,9 +119,9 @@
       "processes": []
     },
     {
-      "id": 15,
+      "id": 139,
       "name": "Compare groups (stats) input 2",
-      "data": 15,
+      "data": 139,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -133,7 +133,7 @@
   ],
   "plots": [
     {
-      "id": 4,
+      "id": 37,
       "name": "Compare groups (stats): groups",
       "x": 350,
       "y": 150,
@@ -174,9 +174,9 @@
         "data": [
           {
             "x": {
-              "id": 16,
+              "id": 140,
               "name": "Compare groups (stats) input 1",
-              "refId": 14,
+              "refId": 138,
               "type": "category",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -186,9 +186,9 @@
               "processes": []
             },
             "y": {
-              "id": 17,
+              "id": 141,
               "name": "Compare groups (stats) input 2",
-              "refId": 15,
+              "refId": 139,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -242,13 +242,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 4,
+      "id": 21,
       "name": "GroupComparison",
       "displayName": "Compare groups (stats)",
       "args": {
-        "xIN": 14,
+        "xIN": 138,
         "yIN": [
-          15
+          139
         ],
         "method": "auto",
         "alpha": 0.05,
@@ -265,19 +265,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_14": {
+    "data_138": {
       "x": 60,
       "y": 60
     },
-    "data_15": {
+    "data_139": {
       "x": 60,
       "y": 560
     },
-    "tableprocess_4": {
+    "tableprocess_21": {
       "x": 440,
       "y": 60
     },
-    "plot_4": {
+    "plot_37": {
       "x": 820,
       "y": 60
     }

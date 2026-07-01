@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "98": [
+    "207": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "99": [
+    "208": [
       7.673945782302198,
       -1.879285133127806,
       10.089269516954142,
@@ -104,7 +104,7 @@
       95.32890446343086,
       89.84737077710555
     ],
-    "100": [
+    "209": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "101": [
+    "210": [
       4.350114419162737,
       6.159418238991315,
       7.968722058819893,
@@ -211,11 +211,11 @@
   },
   "data": [
     {
-      "id": 98,
+      "id": 207,
       "name": "x",
-      "data": 98,
+      "data": 207,
       "type": "number",
-      "tableProcessGUId": "e3b346d1-1ef1-4ea7-b068-a46e4d1733af",
+      "tableProcessGUId": "39ed7631-3da0-4fb4-9d07-e5d5358ca6a1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -223,9 +223,9 @@
       "processes": []
     },
     {
-      "id": 99,
+      "id": 208,
       "name": "y",
-      "data": 99,
+      "data": 208,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -235,11 +235,11 @@
       "processes": []
     },
     {
-      "id": 100,
-      "name": "trendx_29",
-      "data": 100,
+      "id": 209,
+      "name": "trendx_38",
+      "data": 209,
       "type": "number",
-      "tableProcessGUId": "1630ca15-16de-4186-8668-6184c8d259ff",
+      "tableProcessGUId": "dde026b9-8c70-4cfc-8aa6-6e2243ac2a1e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -247,11 +247,11 @@
       "processes": []
     },
     {
-      "id": 101,
-      "name": "trendy_99_29",
-      "data": 101,
+      "id": 210,
+      "name": "trendy_208_38",
+      "data": 210,
       "type": "number",
-      "tableProcessGUId": "1630ca15-16de-4186-8668-6184c8d259ff",
+      "tableProcessGUId": "dde026b9-8c70-4cfc-8aa6-6e2243ac2a1e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -261,7 +261,7 @@
   ],
   "plots": [
     {
-      "id": 28,
+      "id": 54,
       "name": "Fit Trend Curves: data + fit",
       "x": 350,
       "y": 150,
@@ -315,9 +315,9 @@
         "data": [
           {
             "x": {
-              "id": 102,
+              "id": 211,
               "name": "x",
-              "refId": 98,
+              "refId": 207,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -327,9 +327,9 @@
               "processes": []
             },
             "y": {
-              "id": 103,
+              "id": 212,
               "name": "y",
-              "refId": 99,
+              "refId": 208,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -356,27 +356,27 @@
           },
           {
             "x": {
-              "id": 104,
-              "name": "trendx_29",
-              "refId": 100,
+              "id": 213,
+              "name": "trendx_38",
+              "refId": 209,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to trendx_29 which is ",
+              "provenance": "refers to trendx_38 which is ",
               "processes": []
             },
             "y": {
-              "id": 105,
-              "name": "trendy_99_29",
-              "refId": 101,
+              "id": 214,
+              "name": "trendy_208_38",
+              "refId": 210,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to trendy_99_29 which is ",
+              "provenance": "refers to trendy_208_38 which is ",
               "processes": []
             },
             "label": "Fit Trend Curves",
@@ -411,7 +411,7 @@
       }
     },
     {
-      "id": 29,
+      "id": 55,
       "name": "Fit Trend Curves: values",
       "x": 350,
       "y": 150,
@@ -424,8 +424,8 @@
       "facetKey": null,
       "plot": {
         "columnRefs": [
-          99,
-          101
+          208,
+          210
         ],
         "showCol": [
           true,
@@ -440,7 +440,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 28,
+      "id": 37,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -450,27 +450,27 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 98
+          "result": 207
         }
       },
       "refTPId": null
     },
     {
-      "id": 29,
+      "id": 38,
       "name": "TrendFit",
       "displayName": "Fit Trend Curves",
       "args": {
-        "xIN": 98,
+        "xIN": 207,
         "yIN": [
-          99
+          208
         ],
         "model": "linear",
         "polyDegree": 2,
         "outputX": -1,
         "preProcesses": [],
         "out": {
-          "trendx": 100,
-          "trendy_99": 101
+          "trendx": 209,
+          "trendy_208": 210
         }
       },
       "refTPId": null
@@ -483,23 +483,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_99": {
+    "data_208": {
       "x": 60,
       "y": 60
     },
-    "tableprocess_28": {
+    "tableprocess_37": {
       "x": 60,
       "y": 560
     },
-    "tableprocess_29": {
+    "tableprocess_38": {
       "x": 440,
       "y": 60
     },
-    "plot_28": {
+    "plot_54": {
       "x": 820,
       "y": 60
     },
-    "plot_29": {
+    "plot_55": {
       "x": 820,
       "y": 560
     }
@@ -553,5 +553,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.7"
+  "version": "β.45.9"
 }

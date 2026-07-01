@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "65": [
+    "158": [
       9.23,
       3.33,
       1.98,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 65,
-      "name": "result_17",
-      "data": 65,
+      "id": 158,
+      "name": "result_25",
+      "data": 158,
       "type": "number",
-      "tableProcessGUId": "869b08cd-2703-4d6f-b96f-139fdc8e5161",
+      "tableProcessGUId": "6f1f89a3-cbc5-480a-834b-73b1d3d75be1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -69,7 +69,7 @@
   ],
   "plots": [
     {
-      "id": 17,
+      "id": 41,
       "name": "Random result",
       "x": 350,
       "y": 150,
@@ -82,7 +82,7 @@
       "facetKey": null,
       "plot": {
         "columnRefs": [
-          65
+          158
         ],
         "showCol": [
           true
@@ -96,7 +96,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 17,
+      "id": 25,
       "name": "Random",
       "displayName": "Random",
       "args": {
@@ -106,7 +106,7 @@
         "seed": 12345,
         "distribution": "uniform",
         "out": {
-          "result": 65
+          "result": 158
         }
       },
       "refTPId": null
@@ -119,11 +119,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_17": {
+    "tableprocess_25": {
       "x": 60,
       "y": 60
     },
-    "plot_17": {
+    "plot_41": {
       "x": 820,
       "y": 60
     }
@@ -177,5 +177,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.7"
+  "version": "β.45.9"
 }

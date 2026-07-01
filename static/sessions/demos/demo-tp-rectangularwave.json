@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "66": [
+    "159": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "67": [
+    "160": [
       80.74815343291546,
       74.1026647241765,
       67.34975964373878,
@@ -100,7 +100,7 @@
       25.36953942083682,
       31.225353920755683
     ],
-    "68": [
+    "161": [
       0,
       1,
       2,
@@ -150,7 +150,10 @@
       46,
       47
     ],
-    "69": [
+    "162": [
+      null
+    ],
+    "163": [
       75.31550624457671,
       75.31550624457671,
       75.31550624457671,
@@ -203,11 +206,11 @@
   },
   "data": [
     {
-      "id": 66,
+      "id": 159,
       "name": "x",
-      "data": 66,
+      "data": 159,
       "type": "number",
-      "tableProcessGUId": "3465ea0d-3dc9-4786-8b95-70ca06459bf3",
+      "tableProcessGUId": "05ebca70-43b6-43e1-9ce1-caa16e6113ec",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -215,9 +218,9 @@
       "processes": []
     },
     {
-      "id": 67,
+      "id": 160,
       "name": "y",
-      "data": 67,
+      "data": 160,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -227,11 +230,11 @@
       "processes": []
     },
     {
-      "id": 68,
-      "name": "rectwavex_19",
-      "data": 68,
+      "id": 161,
+      "name": "rectwavex_27",
+      "data": 161,
       "type": "number",
-      "tableProcessGUId": "dfbe51b6-3e59-4871-9dbf-8360b5b9f094",
+      "tableProcessGUId": "2b41f2ef-eaa4-4567-af3a-44ceaed82173",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -239,11 +242,23 @@
       "processes": []
     },
     {
-      "id": 69,
-      "name": "rectwavey_67_19",
-      "data": 69,
+      "id": 162,
+      "name": "pvalue_27",
+      "data": 162,
       "type": "number",
-      "tableProcessGUId": "dfbe51b6-3e59-4871-9dbf-8360b5b9f094",
+      "tableProcessGUId": "2b41f2ef-eaa4-4567-af3a-44ceaed82173",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 163,
+      "name": "rectwavey_160_27",
+      "data": 163,
+      "type": "number",
+      "tableProcessGUId": "2b41f2ef-eaa4-4567-af3a-44ceaed82173",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -253,7 +268,7 @@
   ],
   "plots": [
     {
-      "id": 18,
+      "id": 42,
       "name": "Rectangular Wave: data + fit",
       "x": 350,
       "y": 150,
@@ -307,9 +322,9 @@
         "data": [
           {
             "x": {
-              "id": 70,
+              "id": 164,
               "name": "x",
-              "refId": 66,
+              "refId": 159,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -319,9 +334,9 @@
               "processes": []
             },
             "y": {
-              "id": 71,
+              "id": 165,
               "name": "y",
-              "refId": 67,
+              "refId": 160,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -348,27 +363,27 @@
           },
           {
             "x": {
-              "id": 72,
-              "name": "rectwavex_19",
-              "refId": 68,
+              "id": 166,
+              "name": "rectwavex_27",
+              "refId": 161,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to rectwavex_19 which is ",
+              "provenance": "refers to rectwavex_27 which is ",
               "processes": []
             },
             "y": {
-              "id": 73,
-              "name": "rectwavey_67_19",
-              "refId": 69,
+              "id": 167,
+              "name": "rectwavey_160_27",
+              "refId": 163,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to rectwavey_67_19 which is ",
+              "provenance": "refers to rectwavey_160_27 which is ",
               "processes": []
             },
             "label": "Rectangular Wave",
@@ -403,7 +418,7 @@
       }
     },
     {
-      "id": 19,
+      "id": 43,
       "name": "Rectangular Wave: values",
       "x": 350,
       "y": 150,
@@ -416,8 +431,8 @@
       "facetKey": null,
       "plot": {
         "columnRefs": [
-          67,
-          69
+          160,
+          163
         ],
         "showCol": [
           true,
@@ -432,7 +447,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 18,
+      "id": 26,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -442,19 +457,19 @@
         "count": 48,
         "end": 47,
         "out": {
-          "result": 66
+          "result": 159
         }
       },
       "refTPId": null
     },
     {
-      "id": 19,
+      "id": 27,
       "name": "RectangularWave",
       "displayName": "Rectangular Wave",
       "args": {
-        "xIN": 66,
+        "xIN": 159,
         "yIN": [
-          67
+          160
         ],
         "outputX": -1,
         "fixKappa": false,
@@ -465,8 +480,9 @@
         "fixedDutyCycle": 0.5,
         "preProcesses": [],
         "out": {
-          "rectwavex": 68,
-          "rectwavey_67": 69
+          "rectwavex": 161,
+          "pvalue": 162,
+          "rectwavey_160": 163
         }
       },
       "refTPId": null
@@ -479,23 +495,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_67": {
+    "data_160": {
       "x": 60,
       "y": 60
     },
-    "tableprocess_18": {
+    "tableprocess_26": {
       "x": 60,
       "y": 560
     },
-    "tableprocess_19": {
+    "tableprocess_27": {
       "x": 440,
       "y": 60
     },
-    "plot_18": {
+    "plot_42": {
       "x": 820,
       "y": 60
     },
-    "plot_19": {
+    "plot_43": {
       "x": 820,
       "y": 560
     }
@@ -549,5 +565,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.7"
+  "version": "β.45.9"
 }

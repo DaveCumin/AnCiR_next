@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "84": [
+    "193": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "85": [
+    "194": [
       11.229882793897886,
       37.29138111399729,
       35.47426005079059,
@@ -104,7 +104,7 @@
       20.999584523229,
       30.339018292668595
     ],
-    "86": [
+    "195": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "87": [
+    "196": [
       27.99850798622859,
       30.99958480957332,
       33.48990964443412,
@@ -211,11 +211,11 @@
   },
   "data": [
     {
-      "id": 84,
+      "id": 193,
       "name": "x",
-      "data": 84,
+      "data": 193,
       "type": "number",
-      "tableProcessGUId": "1a492ef5-4bfd-48c5-a8e9-88e2feb62417",
+      "tableProcessGUId": "559d066c-57f8-42b5-91a4-d1ba9cfbe466",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -223,9 +223,9 @@
       "processes": []
     },
     {
-      "id": 85,
+      "id": 194,
       "name": "y",
-      "data": 85,
+      "data": 194,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -235,11 +235,11 @@
       "processes": []
     },
     {
-      "id": 86,
-      "name": "smoothedx_25",
-      "data": 86,
+      "id": 195,
+      "name": "smoothedx_34",
+      "data": 195,
       "type": "number",
-      "tableProcessGUId": "e46f9f54-7ea5-4d25-a2a4-7cc00352a154",
+      "tableProcessGUId": "6fb40474-3ec2-429d-a06b-39d66c4f2d79",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -247,11 +247,11 @@
       "processes": []
     },
     {
-      "id": 87,
-      "name": "smoothedy_85_25",
-      "data": 87,
+      "id": 196,
+      "name": "smoothedy_194_34",
+      "data": 196,
       "type": "number",
-      "tableProcessGUId": "e46f9f54-7ea5-4d25-a2a4-7cc00352a154",
+      "tableProcessGUId": "6fb40474-3ec2-429d-a06b-39d66c4f2d79",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -261,7 +261,7 @@
   ],
   "plots": [
     {
-      "id": 24,
+      "id": 50,
       "name": "Smooth Data: data + fit",
       "x": 350,
       "y": 150,
@@ -315,9 +315,9 @@
         "data": [
           {
             "x": {
-              "id": 88,
+              "id": 197,
               "name": "x",
-              "refId": 84,
+              "refId": 193,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -327,9 +327,9 @@
               "processes": []
             },
             "y": {
-              "id": 89,
+              "id": 198,
               "name": "y",
-              "refId": 85,
+              "refId": 194,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -356,27 +356,27 @@
           },
           {
             "x": {
-              "id": 90,
-              "name": "smoothedx_25",
-              "refId": 86,
+              "id": 199,
+              "name": "smoothedx_34",
+              "refId": 195,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to smoothedx_25 which is ",
+              "provenance": "refers to smoothedx_34 which is ",
               "processes": []
             },
             "y": {
-              "id": 91,
-              "name": "smoothedy_85_25",
-              "refId": 87,
+              "id": 200,
+              "name": "smoothedy_194_34",
+              "refId": 196,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to smoothedy_85_25 which is ",
+              "provenance": "refers to smoothedy_194_34 which is ",
               "processes": []
             },
             "label": "Smooth Data",
@@ -411,7 +411,7 @@
       }
     },
     {
-      "id": 25,
+      "id": 51,
       "name": "Smooth Data: values",
       "x": 350,
       "y": 150,
@@ -424,8 +424,8 @@
       "facetKey": null,
       "plot": {
         "columnRefs": [
-          85,
-          87
+          194,
+          196
         ],
         "showCol": [
           true,
@@ -440,7 +440,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 24,
+      "id": 33,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -450,19 +450,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 84
+          "result": 193
         }
       },
       "refTPId": null
     },
     {
-      "id": 25,
+      "id": 34,
       "name": "SmoothedData",
       "displayName": "Smooth Data",
       "args": {
-        "xIN": 84,
+        "xIN": 193,
         "yIN": [
-          85
+          194
         ],
         "smootherType": "moving",
         "whittakerLambda": 100,
@@ -474,8 +474,8 @@
         "movingAvgType": "simple",
         "preProcesses": [],
         "out": {
-          "smoothedx": 86,
-          "smoothedy_85": 87
+          "smoothedx": 195,
+          "smoothedy_194": 196
         }
       },
       "refTPId": null
@@ -488,23 +488,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_85": {
+    "data_194": {
       "x": 60,
       "y": 60
     },
-    "tableprocess_24": {
+    "tableprocess_33": {
       "x": 60,
       "y": 560
     },
-    "tableprocess_25": {
+    "tableprocess_34": {
       "x": 440,
       "y": 60
     },
-    "plot_24": {
+    "plot_50": {
       "x": 820,
       "y": 60
     },
-    "plot_25": {
+    "plot_51": {
       "x": 820,
       "y": 560
     }
@@ -558,5 +558,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.7"
+  "version": "β.45.9"
 }

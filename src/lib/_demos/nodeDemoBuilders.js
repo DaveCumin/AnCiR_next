@@ -311,7 +311,20 @@ export async function buildTPDemo(spec, entry, display) {
 		core.storedValues.demoSV2 = { staticValue: 34, source: 'manual' };
 	}
 
-	const tp = new TableProcess({ name: spec.name, args: spec.args(ids) }, null);
+	const args = spec.args(ids);
+	// Materialise the SAME fixed output ports a freshly-added node exposes. A demo
+	// spec often lists only the primary output (e.g. `cosinorx`), but the node
+	// definition may declare extra fixed scalar-metric ports (period, amplitude,
+	// rsquared, pvalue …). The TableProcess constructor only creates columns for
+	// keys already in args.out, so merge any missing definition-default out keys
+	// here — otherwise the baked demo shows fewer ports than the palette node.
+	const defOut = entry?.defaults?.get?.('out');
+	if (defOut && args.out) {
+		for (const key of Object.keys(defOut)) {
+			if (!(key in args.out)) args.out[key] = -1;
+		}
+	}
+	const tp = new TableProcess({ name: spec.name, args }, null);
 	pushObj(tp);
 	try {
 		await tp.doProcess();

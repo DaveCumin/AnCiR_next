@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "171": [
+    "177": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "172": [
+    "178": [
       0,
       0,
       0,
@@ -676,7 +676,7 @@
       0,
       0
     ],
-    "173": [
+    "179": [
       0.5,
       1.5,
       2.5,
@@ -702,133 +702,61 @@
       22.5,
       23.5
     ],
-    "174": [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      100,
-      100,
-      100,
-      100,
-      100,
-      100,
-      100,
-      100,
-      100,
-      100,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    "175": [
-      1.0000000000000004
-    ],
-    "176": [
-      0.34388059701492557
-    ],
-    "177": [
-      1
-    ],
-    "178": [
-      100
-    ],
-    "179": [
-      0
-    ],
     "180": [
-      8
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
     ],
     "181": [
+      1.0000000000000004
+    ],
+    "182": [
+      0.34388059701492557
+    ],
+    "183": [
+      1
+    ],
+    "184": [
+      100
+    ],
+    "185": [
+      0
+    ],
+    "186": [
+      8
+    ],
+    "187": [
       0
     ]
   },
   "data": [
     {
-      "id": 171,
-      "name": "Nonparametric RA input 1",
-      "data": 171,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "provenance": "",
-      "processes": []
-    },
-    {
-      "id": 172,
-      "name": "Nonparametric RA input 2",
-      "data": 172,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "provenance": "",
-      "processes": []
-    },
-    {
-      "id": 173,
-      "name": "npcrax_30",
-      "data": 173,
-      "type": "number",
-      "tableProcessGUId": "0d394e99-eefc-4ca2-962f-69f26adbfd91",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "provenance": "",
-      "processes": []
-    },
-    {
-      "id": 174,
-      "name": "npcray_172_30",
-      "data": 174,
-      "type": "number",
-      "tableProcessGUId": "0d394e99-eefc-4ca2-962f-69f26adbfd91",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "provenance": "",
-      "processes": []
-    },
-    {
-      "id": 175,
-      "name": "IS_30",
-      "data": 175,
-      "type": "number",
-      "tableProcessGUId": "0d394e99-eefc-4ca2-962f-69f26adbfd91",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "provenance": "",
-      "processes": []
-    },
-    {
-      "id": 176,
-      "name": "IV_30",
-      "data": 176,
-      "type": "number",
-      "tableProcessGUId": "0d394e99-eefc-4ca2-962f-69f26adbfd91",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "provenance": "",
-      "processes": []
-    },
-    {
       "id": 177,
-      "name": "RA_30",
+      "name": "Nonparametric RA input 1",
       "data": 177,
       "type": "number",
-      "tableProcessGUId": "0d394e99-eefc-4ca2-962f-69f26adbfd91",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -837,10 +765,10 @@
     },
     {
       "id": 178,
-      "name": "M10_30",
+      "name": "Nonparametric RA input 2",
       "data": 178,
       "type": "number",
-      "tableProcessGUId": "0d394e99-eefc-4ca2-962f-69f26adbfd91",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -849,10 +777,10 @@
     },
     {
       "id": 179,
-      "name": "L5_30",
+      "name": "npcrax_30",
       "data": 179,
       "type": "number",
-      "tableProcessGUId": "0d394e99-eefc-4ca2-962f-69f26adbfd91",
+      "tableProcessGUId": "20eaef65-b273-4620-8fae-69c163948841",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -861,10 +789,10 @@
     },
     {
       "id": 180,
-      "name": "M10onset_30",
+      "name": "npcray_178_30",
       "data": 180,
       "type": "number",
-      "tableProcessGUId": "0d394e99-eefc-4ca2-962f-69f26adbfd91",
+      "tableProcessGUId": "20eaef65-b273-4620-8fae-69c163948841",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -873,10 +801,82 @@
     },
     {
       "id": 181,
-      "name": "L5onset_30",
+      "name": "IS_30",
       "data": 181,
       "type": "number",
-      "tableProcessGUId": "0d394e99-eefc-4ca2-962f-69f26adbfd91",
+      "tableProcessGUId": "20eaef65-b273-4620-8fae-69c163948841",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 182,
+      "name": "IV_30",
+      "data": 182,
+      "type": "number",
+      "tableProcessGUId": "20eaef65-b273-4620-8fae-69c163948841",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 183,
+      "name": "RA_30",
+      "data": 183,
+      "type": "number",
+      "tableProcessGUId": "20eaef65-b273-4620-8fae-69c163948841",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 184,
+      "name": "M10_30",
+      "data": 184,
+      "type": "number",
+      "tableProcessGUId": "20eaef65-b273-4620-8fae-69c163948841",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 185,
+      "name": "L5_30",
+      "data": 185,
+      "type": "number",
+      "tableProcessGUId": "20eaef65-b273-4620-8fae-69c163948841",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 186,
+      "name": "M10onset_30",
+      "data": 186,
+      "type": "number",
+      "tableProcessGUId": "20eaef65-b273-4620-8fae-69c163948841",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 187,
+      "name": "L5onset_30",
+      "data": 187,
+      "type": "number",
+      "tableProcessGUId": "20eaef65-b273-4620-8fae-69c163948841",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -940,9 +940,9 @@
         "data": [
           {
             "x": {
-              "id": 182,
+              "id": 188,
               "name": "npcrax_30",
-              "refId": 173,
+              "refId": 179,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -952,15 +952,15 @@
               "processes": []
             },
             "y": {
-              "id": 183,
-              "name": "npcray_172_30",
-              "refId": 174,
+              "id": 189,
+              "name": "npcray_178_30",
+              "refId": 180,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to npcray_172_30 which is ",
+              "provenance": "refers to npcray_178_30 which is ",
               "processes": []
             },
             "label": "Average profile",
@@ -1008,11 +1008,11 @@
       "facetKey": null,
       "plot": {
         "columnRefs": [
-          175,
-          176,
-          177,
-          178,
-          179
+          181,
+          182,
+          183,
+          184,
+          185
         ],
         "showCol": [
           true,
@@ -1034,9 +1034,9 @@
       "name": "NonparametricRA",
       "displayName": "Nonparametric RA",
       "args": {
-        "xIN": 171,
+        "xIN": 177,
         "yIN": [
-          172
+          178
         ],
         "epochHours": 1,
         "period": 24,
@@ -1044,15 +1044,15 @@
         "lWindow": 5,
         "preProcesses": [],
         "out": {
-          "npcrax": 173,
-          "npcray_172": 174,
-          "IS": 175,
-          "IV": 176,
-          "RA": 177,
-          "M10": 178,
-          "L5": 179,
-          "M10onset": 180,
-          "L5onset": 181
+          "npcrax": 179,
+          "npcray_178": 180,
+          "IS": 181,
+          "IV": 182,
+          "RA": 183,
+          "M10": 184,
+          "L5": 185,
+          "M10onset": 186,
+          "L5onset": 187
         }
       },
       "refTPId": null
@@ -1065,11 +1065,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_171": {
+    "data_177": {
       "x": 60,
       "y": 60
     },
-    "data_172": {
+    "data_178": {
       "x": 60,
       "y": 560
     },

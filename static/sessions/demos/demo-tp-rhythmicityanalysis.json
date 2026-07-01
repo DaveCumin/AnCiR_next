@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "9": [
+    "168": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "10": [
+    "169": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "11": [
+    "170": [
       20,
       20.5,
       21,
@@ -695,7 +695,7 @@
       27.5,
       28
     ],
-    "12": [
+    "171": [
       0.8924933333937438,
       3.0510601083632705,
       6.090118581951634e-28,
@@ -714,7 +714,7 @@
       1.8553714388763858,
       1.1781833223509954e-29
     ],
-    "13": [
+    "172": [
       0.8924933333937438,
       3.0510601083632705,
       6.090118581951634e-28,
@@ -736,11 +736,11 @@
   },
   "data": [
     {
-      "id": 9,
+      "id": 168,
       "name": "x",
-      "data": 9,
+      "data": 168,
       "type": "number",
-      "tableProcessGUId": "46fe0db3-0039-4797-90f8-138bfe3efe40",
+      "tableProcessGUId": "6d3e5751-79fc-4c23-a1b3-b6742230a129",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -748,9 +748,9 @@
       "processes": []
     },
     {
-      "id": 10,
+      "id": 169,
       "name": "y",
-      "data": 10,
+      "data": 169,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -760,11 +760,11 @@
       "processes": []
     },
     {
-      "id": 11,
-      "name": "10_period_3",
-      "data": 11,
+      "id": 170,
+      "name": "169_period_29",
+      "data": 170,
       "type": "number",
-      "tableProcessGUId": "9baf15f8-9007-4dbe-89ae-a13ea4774571",
+      "tableProcessGUId": "09ac1485-42e4-4283-b4b2-96f743f5ae91",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -772,11 +772,11 @@
       "processes": []
     },
     {
-      "id": 12,
-      "name": "10_power_3",
-      "data": 12,
+      "id": 171,
+      "name": "169_power_29",
+      "data": 171,
       "type": "number",
-      "tableProcessGUId": "9baf15f8-9007-4dbe-89ae-a13ea4774571",
+      "tableProcessGUId": "09ac1485-42e4-4283-b4b2-96f743f5ae91",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -784,11 +784,11 @@
       "processes": []
     },
     {
-      "id": 13,
-      "name": "rhythmicityy_10_3",
-      "data": 13,
+      "id": 172,
+      "name": "rhythmicityy_169_29",
+      "data": 172,
       "type": "number",
-      "tableProcessGUId": "9baf15f8-9007-4dbe-89ae-a13ea4774571",
+      "tableProcessGUId": "09ac1485-42e4-4283-b4b2-96f743f5ae91",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -798,7 +798,7 @@
   ],
   "plots": [
     {
-      "id": 2,
+      "id": 44,
       "name": "Rhythmicity Analysis: signal",
       "x": 350,
       "y": 150,
@@ -852,9 +852,9 @@
         "data": [
           {
             "x": {
-              "id": 14,
+              "id": 173,
               "name": "x",
-              "refId": 9,
+              "refId": 168,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -864,9 +864,9 @@
               "processes": []
             },
             "y": {
-              "id": 15,
+              "id": 174,
               "name": "y",
-              "refId": 10,
+              "refId": 169,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -907,7 +907,7 @@
       }
     },
     {
-      "id": 3,
+      "id": 45,
       "name": "Rhythmicity Analysis: periodogram",
       "x": 350,
       "y": 150,
@@ -961,27 +961,27 @@
         "data": [
           {
             "x": {
-              "id": 16,
-              "name": "10_period_3",
-              "refId": 11,
+              "id": 175,
+              "name": "169_period_29",
+              "refId": 170,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to 10_period_3 which is ",
+              "provenance": "refers to 169_period_29 which is ",
               "processes": []
             },
             "y": {
-              "id": 17,
-              "name": "10_power_3",
-              "refId": 12,
+              "id": 176,
+              "name": "169_power_29",
+              "refId": 171,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to 10_power_3 which is ",
+              "provenance": "refers to 169_power_29 which is ",
               "processes": []
             },
             "label": "Power",
@@ -1018,7 +1018,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 2,
+      "id": 28,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -1028,19 +1028,19 @@
         "count": 336,
         "end": 335,
         "out": {
-          "result": 9
+          "result": 168
         }
       },
       "refTPId": null
     },
     {
-      "id": 3,
+      "id": 29,
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis",
       "args": {
-        "xIN": 9,
+        "xIN": 168,
         "yIN": [
-          10
+          169
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -1054,9 +1054,9 @@
         "corrMaxLag": 0,
         "preProcesses": [],
         "out": {
-          "10_period": 11,
-          "10_power": 12,
-          "rhythmicityy_10": 13
+          "169_period": 170,
+          "169_power": 171,
+          "rhythmicityy_169": 172
         }
       },
       "refTPId": null
@@ -1069,23 +1069,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_10": {
+    "data_169": {
       "x": 60,
       "y": 60
     },
-    "tableprocess_2": {
+    "tableprocess_28": {
       "x": 60,
       "y": 560
     },
-    "tableprocess_3": {
+    "tableprocess_29": {
       "x": 440,
       "y": 60
     },
-    "plot_2": {
+    "plot_44": {
       "x": 820,
       "y": 60
     },
-    "plot_3": {
+    "plot_45": {
       "x": 820,
       "y": 560
     }
@@ -1139,5 +1139,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.8"
+  "version": "β.45.9"
 }

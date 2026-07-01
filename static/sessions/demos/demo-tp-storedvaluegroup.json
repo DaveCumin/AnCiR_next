@@ -1,17 +1,17 @@
 {
   "rawData": {
-    "97": [
+    "206": [
       12,
       34
     ]
   },
   "data": [
     {
-      "id": 97,
-      "name": "group_g1_27",
-      "data": 97,
+      "id": 206,
+      "name": "group_g1_36",
+      "data": 206,
       "type": "number",
-      "tableProcessGUId": "7851a1dd-2d5d-45fd-9e87-e813e276b2ed",
+      "tableProcessGUId": "5c389389-6c57-4e47-a264-763ba9aa29f6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -21,7 +21,7 @@
   ],
   "plots": [
     {
-      "id": 27,
+      "id": 53,
       "name": "Stored Value Group result",
       "x": 350,
       "y": 150,
@@ -34,7 +34,7 @@
       "facetKey": null,
       "plot": {
         "columnRefs": [
-          97
+          206
         ],
         "showCol": [
           true
@@ -48,7 +48,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 27,
+      "id": 36,
       "name": "StoredValueGroup",
       "displayName": "Stored Value Group",
       "args": {
@@ -63,7 +63,7 @@
           }
         ],
         "out": {
-          "group_g1": 97
+          "group_g1": 206
         }
       },
       "refTPId": null
@@ -85,11 +85,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_27": {
+    "tableprocess_36": {
       "x": 60,
       "y": 60
     },
-    "plot_27": {
+    "plot_53": {
       "x": 820,
       "y": 60
     }
@@ -143,5 +143,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.7"
+  "version": "β.45.9"
 }

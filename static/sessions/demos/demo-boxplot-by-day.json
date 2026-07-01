@@ -377,6 +377,9 @@
       "height": 250,
       "type": "boxplot",
       "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -478,7 +481,9 @@
   "nodeNotes": {},
   "notes": [],
   "groups": [],
+  "composites": [],
   "orphanProcesses": [],
+  "nodeLayout": {},
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -489,6 +494,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "tidyLayoutRequest": 0,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -527,5 +533,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.43.2"
+  "version": "β.45.9"
 }

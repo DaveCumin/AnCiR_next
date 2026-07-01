@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "12": [
+    "98": [
       null,
       null,
       null,
@@ -15,11 +15,11 @@
   },
   "data": [
     {
-      "id": 12,
-      "name": "result_3",
-      "data": 12,
+      "id": 98,
+      "name": "result_11",
+      "data": 98,
       "type": "category",
-      "tableProcessGUId": "f01a7b39-3f83-4b41-9e3e-acd6f000691f",
+      "tableProcessGUId": "f303a4a5-602d-4ef7-a76b-0503637bf289",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -29,7 +29,7 @@
   ],
   "plots": [
     {
-      "id": 3,
+      "id": 27,
       "name": "Enter Data result",
       "x": 350,
       "y": 150,
@@ -42,7 +42,7 @@
       "facetKey": null,
       "plot": {
         "columnRefs": [
-          12
+          98
         ],
         "showCol": [
           true
@@ -56,14 +56,14 @@
   ],
   "tableProcesses": [
     {
-      "id": 3,
+      "id": 11,
       "name": "BlankColumn",
       "displayName": "Enter Data",
       "args": {
         "N": 10,
         "storedValueRefs": {},
         "out": {
-          "result": 12
+          "result": 98
         }
       },
       "refTPId": null
@@ -76,11 +76,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_3": {
+    "tableprocess_11": {
       "x": 60,
       "y": 60
     },
-    "plot_3": {
+    "plot_27": {
       "x": 820,
       "y": 60
     }
@@ -134,5 +134,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.7"
+  "version": "β.45.9"
 }

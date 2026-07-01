@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "0": [
+    "149": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "1": [
+    "150": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "2": [
+    "151": [
       84,
       108,
       132,
@@ -685,7 +685,7 @@
       204,
       228
     ],
-    "3": [
+    "152": [
       24,
       24,
       24,
@@ -694,7 +694,7 @@
       24,
       24
     ],
-    "4": [
+    "153": [
       83.49999999999999,
       83.49999999999999,
       83.50000000000003,
@@ -706,11 +706,11 @@
   },
   "data": [
     {
-      "id": 0,
+      "id": 149,
       "name": "x",
-      "data": 0,
+      "data": 149,
       "type": "number",
-      "tableProcessGUId": "1192958c-90b2-4734-8dcc-a8474ebef224",
+      "tableProcessGUId": "e68fbdd8-7ca3-48dc-886b-80a516c57e87",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -718,9 +718,9 @@
       "processes": []
     },
     {
-      "id": 1,
+      "id": 150,
       "name": "y",
-      "data": 1,
+      "data": 150,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -730,11 +730,11 @@
       "processes": []
     },
     {
-      "id": 2,
-      "name": "movex_1",
-      "data": 2,
+      "id": 151,
+      "name": "movex_24",
+      "data": 151,
       "type": "number",
-      "tableProcessGUId": "40306b28-c452-4908-b4dc-896c63974da6",
+      "tableProcessGUId": "5f983c5e-44df-41d0-ad0c-1bafcd028791",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -742,11 +742,11 @@
       "processes": []
     },
     {
-      "id": 3,
-      "name": "1_peak_period_1",
-      "data": 3,
+      "id": 152,
+      "name": "150_peak_period_24",
+      "data": 152,
       "type": "number",
-      "tableProcessGUId": "40306b28-c452-4908-b4dc-896c63974da6",
+      "tableProcessGUId": "5f983c5e-44df-41d0-ad0c-1bafcd028791",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -754,11 +754,11 @@
       "processes": []
     },
     {
-      "id": 4,
-      "name": "1_peak_power_1",
-      "data": 4,
+      "id": 153,
+      "name": "150_peak_power_24",
+      "data": 153,
       "type": "number",
-      "tableProcessGUId": "40306b28-c452-4908-b4dc-896c63974da6",
+      "tableProcessGUId": "5f983c5e-44df-41d0-ad0c-1bafcd028791",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -768,7 +768,7 @@
   ],
   "plots": [
     {
-      "id": 0,
+      "id": 39,
       "name": "Moving Analysis: signal + moving period",
       "x": 350,
       "y": 150,
@@ -822,9 +822,9 @@
         "data": [
           {
             "x": {
-              "id": 5,
+              "id": 154,
               "name": "x",
-              "refId": 0,
+              "refId": 149,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -834,9 +834,9 @@
               "processes": []
             },
             "y": {
-              "id": 6,
+              "id": 155,
               "name": "y",
-              "refId": 1,
+              "refId": 150,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -863,27 +863,27 @@
           },
           {
             "x": {
-              "id": 7,
-              "name": "movex_1",
-              "refId": 2,
+              "id": 156,
+              "name": "movex_24",
+              "refId": 151,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to movex_1 which is ",
+              "provenance": "refers to movex_24 which is ",
               "processes": []
             },
             "y": {
-              "id": 8,
-              "name": "1_peak_period_1",
-              "refId": 3,
+              "id": 157,
+              "name": "150_peak_period_24",
+              "refId": 152,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to 1_peak_period_1 which is ",
+              "provenance": "refers to 150_peak_period_24 which is ",
               "processes": []
             },
             "label": "Moving period",
@@ -918,7 +918,7 @@
       }
     },
     {
-      "id": 1,
+      "id": 40,
       "name": "Moving Analysis: result",
       "x": 350,
       "y": 150,
@@ -931,9 +931,9 @@
       "facetKey": null,
       "plot": {
         "columnRefs": [
-          2,
-          3,
-          4
+          151,
+          152,
+          153
         ],
         "showCol": [
           true,
@@ -949,7 +949,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 0,
+      "id": 23,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -959,19 +959,19 @@
         "count": 336,
         "end": 335,
         "out": {
-          "result": 0
+          "result": 149
         }
       },
       "refTPId": null
     },
     {
-      "id": 1,
+      "id": 24,
       "name": "MovingAnalysis",
       "displayName": "Moving Analysis",
       "args": {
-        "xIN": 0,
+        "xIN": 149,
         "yIN": [
-          1
+          150
         ],
         "windowSize": 168,
         "stepSize": 24,
@@ -990,9 +990,9 @@
         "alpha": 0.05,
         "preProcesses": [],
         "out": {
-          "movex": 2,
-          "1_peak_period": 3,
-          "1_peak_power": 4
+          "movex": 151,
+          "150_peak_period": 152,
+          "150_peak_power": 153
         }
       },
       "refTPId": null
@@ -1005,23 +1005,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_1": {
+    "data_150": {
       "x": 60,
       "y": 60
     },
-    "tableprocess_0": {
+    "tableprocess_23": {
       "x": 60,
       "y": 560
     },
-    "tableprocess_1": {
+    "tableprocess_24": {
       "x": 440,
       "y": 60
     },
-    "plot_0": {
+    "plot_39": {
       "x": 820,
       "y": 60
     },
-    "plot_1": {
+    "plot_40": {
       "x": 820,
       "y": 560
     }
@@ -1075,5 +1075,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.8"
+  "version": "β.45.9"
 }
