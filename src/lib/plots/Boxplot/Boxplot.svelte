@@ -456,9 +456,19 @@
 
 		getAutoScaleValues() {
 			let axisWidths = { left: null, right: null, top: null, bottom: null };
-			if (!document.getElementById('plot' + this.parentBox.id)) {
+			const plotRoot = document.getElementById('plot' + this.parentBox.id);
+			if (!plotRoot) {
 				return axisWidths;
 			}
+			// getBoundingClientRect() is in SCREEN pixels, magnified by the canvas
+			// zoom (the plot renders inside a CSS scale() transform). Padding is in
+			// SVG user units, so divide the measured deltas back out by the effective
+			// scale — otherwise padding grows with zoom and jumps when re-measured at
+			// a different zoom (e.g. when the control panel opens). See Scatterplot.
+			const scale =
+				this.parentBox.width > 0
+					? plotRoot.getBoundingClientRect().width / this.parentBox.width
+					: 1;
 
 			const allLeftAxes = document
 				.getElementById('plot' + this.parentBox.id)
@@ -477,7 +487,7 @@
 				const domain = allLeftAxes[leftMost].getElementsByClassName('domain')[0];
 				if (domain) {
 					const leftAxisLine = domain.getBoundingClientRect().left;
-					axisWidths.left = Math.round(leftAxisLine - leftAxisWhole + 6);
+					axisWidths.left = Math.round((leftAxisLine - leftAxisWhole) / scale + 6);
 				}
 			}
 
@@ -497,7 +507,7 @@
 				const domain = allBottomAxes[bottomMost].getElementsByClassName('domain')[0];
 				if (domain) {
 					const bottomAxisLine = domain.getBoundingClientRect().bottom;
-					axisWidths.bottom = Math.round(bottomAxisWhole - bottomAxisLine + 12);
+					axisWidths.bottom = Math.round((bottomAxisWhole - bottomAxisLine) / scale + 12);
 				}
 			}
 

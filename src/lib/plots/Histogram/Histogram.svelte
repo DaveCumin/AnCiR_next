@@ -233,13 +233,21 @@
 			const root = document.getElementById('plot' + this.parentBox.id);
 			if (!root) return axisWidths;
 
+			// getBoundingClientRect() is in SCREEN pixels, magnified by the canvas
+			// zoom (the plot renders inside a CSS scale() transform). Padding is in
+			// SVG user units, so divide the measured deltas back out by the effective
+			// scale — otherwise padding grows with zoom and jumps when re-measured at
+			// a different zoom (e.g. when the control panel opens). See Scatterplot.
+			const scale =
+				this.parentBox.width > 0 ? root.getBoundingClientRect().width / this.parentBox.width : 1;
+
 			const allLeftAxes = root.getElementsByClassName('axis-left');
 			if (allLeftAxes && allLeftAxes.length > 0) {
 				const whole = allLeftAxes[0].getBoundingClientRect().left;
 				const domain = allLeftAxes[0].getElementsByClassName('domain')[0];
 				if (domain) {
 					const line = domain.getBoundingClientRect().left;
-					axisWidths.left = Math.round(line - whole + 6);
+					axisWidths.left = Math.round((line - whole) / scale + 6);
 				}
 			}
 
@@ -249,7 +257,7 @@
 				const domain = allBottomAxes[0].getElementsByClassName('domain')[0];
 				if (domain) {
 					const line = domain.getBoundingClientRect().bottom;
-					axisWidths.bottom = Math.round(whole - line + 12);
+					axisWidths.bottom = Math.round((whole - line) / scale + 12);
 				}
 			}
 			return axisWidths;

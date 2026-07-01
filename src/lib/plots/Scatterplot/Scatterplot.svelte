@@ -426,6 +426,16 @@
 			const root = document.getElementById('plot' + this.parentBox.id);
 			if (!root) return axisWidths;
 
+			// getBoundingClientRect() reports SCREEN pixels, but the plot is drawn
+			// inside a CSS scale() transform (the workspace / workflow canvas zoom),
+			// so the measured edge deltas are magnified by that zoom. Padding is
+			// stored in SVG *user* units, so divide the deltas back out by the
+			// effective scale (rendered width ÷ the SVG's user-unit width). Without
+			// this the padding grows with zoom and visibly "jumps" whenever it's
+			// re-measured at a different zoom — e.g. when opening the control panel
+			// mounts a second copy of the plot and recomputes padding.
+			const scale = this.parentBox.width > 0 ? root.getBoundingClientRect().width / this.parentBox.width : 1;
+
 			// side → which rect edge to pick the "outer-most" axis by, and the
 			// direction (outer-most = smallest for left/top, largest for right/bottom).
 			// Bottom gets a larger padding allowance (12 vs 6) for tick labels.
@@ -476,7 +486,7 @@
 				const domain = axes[outerIdx].getElementsByClassName('domain')[0];
 				if (domain) {
 					const lineEdge = domain.getBoundingClientRect()[cfg.edge];
-					axisWidths[cfg.side] = Math.round(cfg.width(outerEdge, lineEdge) + cfg.pad);
+					axisWidths[cfg.side] = Math.round(cfg.width(outerEdge, lineEdge) / scale + cfg.pad);
 				}
 			}
 

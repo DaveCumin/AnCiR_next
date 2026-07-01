@@ -388,6 +388,14 @@
 			const plotEl = document.getElementById('plot' + this.parentBox.id);
 			if (!plotEl) return axisWidths;
 
+			// getBoundingClientRect() is in SCREEN pixels, magnified by the canvas
+			// zoom (the plot renders inside a CSS scale() transform). Padding is in
+			// SVG user units, so divide the measured deltas back out by the effective
+			// scale — otherwise padding grows with zoom and jumps when re-measured at
+			// a different zoom (e.g. when the control panel opens). See Scatterplot.
+			const scale =
+				this.parentBox.width > 0 ? plotEl.getBoundingClientRect().width / this.parentBox.width : 1;
+
 			//LEFT
 			const allLeftAxes = plotEl.getElementsByClassName('axis-left');
 			if (allLeftAxes.length > 0) {
@@ -403,7 +411,7 @@
 				const domain = allLeftAxes[leftMost].getElementsByClassName('domain')[0];
 				if (domain) {
 					const leftAxisLine = domain.getBoundingClientRect().left;
-					axisWidths.left = Math.round(leftAxisLine - leftAxisWhole + 6);
+					axisWidths.left = Math.round((leftAxisLine - leftAxisWhole) / scale + 6);
 				}
 			}
 
@@ -421,7 +429,7 @@
 				const domain = allRightAxes[rightMost].getElementsByClassName('domain')[0];
 				if (domain) {
 					const rightAxisLine = domain.getBoundingClientRect().right;
-					axisWidths.right = Math.round(rightAxisWhole - rightAxisLine + 6);
+					axisWidths.right = Math.round((rightAxisWhole - rightAxisLine) / scale + 6);
 				}
 			}
 
@@ -439,7 +447,7 @@
 				const domain = allTopAxes[topMost].getElementsByClassName('domain')[0];
 				if (domain) {
 					const topAxisLine = domain.getBoundingClientRect().top;
-					axisWidths.top = Math.round(topAxisLine - topAxisWhole + 6);
+					axisWidths.top = Math.round((topAxisLine - topAxisWhole) / scale + 6);
 				}
 			}
 
@@ -457,7 +465,7 @@
 				const domain = allBottomAxes[bottomMost].getElementsByClassName('domain')[0];
 				if (domain) {
 					const bottomAxisLine = domain.getBoundingClientRect().bottom;
-					axisWidths.bottom = Math.round(bottomAxisWhole - bottomAxisLine + 12);
+					axisWidths.bottom = Math.round((bottomAxisWhole - bottomAxisLine) / scale + 12);
 				}
 			}
 
