@@ -36,6 +36,10 @@
 		}
 		const variance = sumSq.value / y.length;
 		const std = Math.sqrt(variance);
+		// A flat column has std === 0; every z-score is 0/0 = NaN, which already
+		// flags nothing, but return an explicit all-false mask so the intent is
+		// clear and no future refactor can turn this into an all-outliers wipe.
+		if (std === 0) return y.map(() => false);
 		return y.map((val) => Math.abs((val - mean) / std) > threshold);
 	}
 

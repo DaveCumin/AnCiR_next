@@ -127,13 +127,41 @@ describe('runPeriodogramCalculation — Lomb-Scargle', () => {
 		expect(result.x[peakIdx]).toBeCloseTo(12, 0);
 	});
 
-	// BUG: for Lomb-Scargle the `threshold` and `pvalue` arrays are never
-	// populated (they stay full of `undefined`). The final NaN-removal step then
-	// filters them down to length 0, so they come back misaligned with `x`/`y`
-	// (which keep all 25 entries). A caller indexing `result.pvalue[peakIdx]`
-	// for an LS run would read `undefined`. Expected: either compute thresholds/
-	// p-values for LS, or return them as same-length arrays (e.g. filled NaN).
-	it.todo('Lomb-Scargle should return threshold/pvalue aligned in length with x/y');
+	// Regression: for Lomb-Scargle the `threshold`/`pvalue` arrays used to stay
+	// full of `undefined`, then the NaN-removal step filtered them to length 0 —
+	// misaligned with `x`/`y`. They are now filled with NaN so they stay numeric
+	// and index-aligned; a caller reading pvalue[peakIdx] gets NaN, not undefined.
+	it('returns threshold/pvalue aligned in length with x/y (filled NaN)', () => {
+		const { t, y } = cosineTimeSeries(24, 96, 0.25);
+		const result = runPeriodogramCalculation({
+			method: 'Lomb-Scargle',
+			xData: t,
+			yData: y,
+			periodMin: 18,
+			periodMax: 30,
+			periodSteps: 0.1
+		});
+		expect(result.threshold.length).toBe(result.x.length);
+		expect(result.pvalue.length).toBe(result.x.length);
+		expect(result.threshold.every((v) => Number.isNaN(v))).toBe(true);
+		expect(result.pvalue.every((v) => Number.isNaN(v))).toBe(true);
+	});
+
+	it('returns finite (non-Infinity) power for a flat/zero-variance series', () => {
+		const t = Array.from({ length: 96 }, (_, i) => i * 0.25);
+		const yFlat = t.map(() => 7); // constant → zero variance
+		const result = runPeriodogramCalculation({
+			method: 'Lomb-Scargle',
+			xData: t,
+			yData: yFlat,
+			periodMin: 18,
+			periodMax: 30,
+			periodSteps: 0.5
+		});
+		expect(result.y.length).toBe(result.x.length);
+		expect(result.y.every((v) => Number.isFinite(v))).toBe(true);
+		expect(result.y.every((v) => v === 0)).toBe(true);
+	});
 
 	it('a 24h signal does not peak at an unrelated 9h period', () => {
 		const { t, y } = cosineTimeSeries(24, 96, 0.5);

@@ -122,6 +122,31 @@ export function removeComposite(id) {
 	delete core.nodeNotes[id];
 }
 
+/**
+ * Advance the note/group/composite id counters past any ids already present in
+ * core. Session import pushes loaded nodes directly (not via create*), so
+ * without this the next createGroup() can mint an id (`group_3`) that collides
+ * with a loaded one and overwrites it. Only plain `group_<n>`/`composite_<n>`/
+ * `note_<n>` ids participate; legacy `group_legacy_<n>` ids live in a separate
+ * namespace and are intentionally ignored. Idempotent; safe to call any time.
+ */
+export function syncNodeIdCounters() {
+	const maxSuffix = (arr, re) => {
+		let m = 0;
+		for (const item of arr ?? []) {
+			const match = re.exec(item?.id ?? '');
+			if (match) m = Math.max(m, Number(match[1]));
+		}
+		return m;
+	};
+	_nextNoteId = Math.max(_nextNoteId, maxSuffix(core.notes, /^note_(\d+)$/) + 1);
+	_nextGroupId = Math.max(_nextGroupId, maxSuffix(core.groups, /^group_(\d+)$/) + 1);
+	_nextCompositeId = Math.max(
+		_nextCompositeId,
+		maxSuffix(core.composites, /^composite_(\d+)$/) + 1
+	);
+}
+
 /** Remove a free-standing TableProcess by id. Cleanup of its output columns
  *  is handled by deleteTableProcess in TableProcess.svelte. */
 export function removeFreeTableProcess(id) {

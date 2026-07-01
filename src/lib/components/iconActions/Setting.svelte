@@ -211,6 +211,11 @@
 			for (const tp of newTPs) core.tableProcesses.push(tp);
 		}
 
+		// Loaded notes/groups/composites were pushed directly (not via create*),
+		// so bump the id counters past them; otherwise the next created node can
+		// mint a colliding id and overwrite a loaded one.
+		syncNodeIdCounters();
+
 		// Plots: yield between each push so the canvas re-render is split
 		// across frames. A single batched push freezes the compositor (and the
 		// spinner) for the entire build, which is what we want to avoid here.
@@ -285,7 +290,7 @@
 
 <script>
 	// @ts-nocheck
-	import { core, pushObj, loadAppState } from '$lib/core/core.svelte';
+	import { core, pushObj, loadAppState, syncNodeIdCounters } from '$lib/core/core.svelte';
 	import { Column, relinkLinkedProcessArgs } from '$lib/core/Column.svelte';
 	import { TableProcess } from '$lib/core/TableProcess.svelte';
 	import { Plot } from '$lib/core/Plot.svelte';

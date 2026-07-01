@@ -37,6 +37,14 @@ function calculateLombScarglePower(times, values, frequencies, onProgress) {
 	}
 	const yVariance = varSum.value / (y.length - 1);
 
+	// A flat/degenerate series has zero variance and no spectral power. Bail out
+	// before the `power / (2 * yVariance)` divide below, which would otherwise
+	// leak Infinity/NaN past the isNaN-only strip in runPeriodogramCalculation
+	// and into downstream peak-picking.
+	if (!(yVariance > 0)) {
+		return new Array(frequencies.length).fill(0);
+	}
+
 	const powers = frequencies.map((f, freqIndex) => {
 		const omega = 2 * Math.PI * f;
 
@@ -70,12 +78,19 @@ function calculateLombScarglePower(times, values, frequencies, onProgress) {
 
 		const cosTerm = cosTermAcc.value;
 		const sinTerm = sinTermAcc.value;
-		const power = (cosTerm * cosTerm) / cosDenomAcc.value + (sinTerm * sinTerm) / sinDenomAcc.value;
+		// Guard the denominators: at certain frequencies the cos/sin terms can sum
+		// to zero (e.g. sparse or aliased sampling), which would divide by zero.
+		const cosDenom = cosDenomAcc.value;
+		const sinDenom = sinDenomAcc.value;
+		const power =
+			(cosDenom > 0 ? (cosTerm * cosTerm) / cosDenom : 0) +
+			(sinDenom > 0 ? (sinTerm * sinTerm) / sinDenom : 0);
 
 		if (onProgress && freqIndex % 10 === 0) {
 			onProgress(freqIndex, frequencies.length);
 		}
-		return power / (2 * yVariance);
+		const normalised = power / (2 * yVariance);
+		return Number.isFinite(normalised) ? normalised : 0;
 	});
 
 	return powers;
@@ -246,6 +261,12 @@ export function runPeriodogramCalculation(params, onProgress) {
 		const powers = calculateLombScarglePower(params.xData, params.yData, frequencies, onProgress);
 		for (let p = 0; p < periods.length; p++) {
 			power[p] = powers[p];
+			// Lomb-Scargle/Enright have no analytic significance line here. Emit NaN
+			// (not undefined) so `threshold`/`pvalue` stay numeric and index-aligned
+			// with `x`/`y` after the NaN strip below; callers reading pvalue[peak]
+			// then get NaN instead of undefined.
+			threshold[p] = NaN;
+			pvalue[p] = NaN;
 		}
 	} else if (params.method === 'Enright') {
 		const powers = calculateEnrightPower(
@@ -257,6 +278,8 @@ export function runPeriodogramCalculation(params, onProgress) {
 		);
 		for (let p = 0; p < periods.length; p++) {
 			power[p] = powers[p];
+			threshold[p] = NaN;
+			pvalue[p] = NaN;
 		}
 	}
 

@@ -5,11 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('$lib/components/inputs/NumberWithUnits.svelte', () => ({ default: {} }));
 vi.mock('$lib/components/inputs/AttributeSelect.svelte', () => ({ default: {} }));
 
-import {
-	outlierremoval,
-	detectOutliersIQR,
-	detectOutliersZScore
-} from './OutlierRemoval.svelte';
+import { outlierremoval, detectOutliersIQR, detectOutliersZScore } from './OutlierRemoval.svelte';
 
 // ─── Z-score method ──────────────────────────────────────────────────────────
 
@@ -157,6 +153,10 @@ describe('detectOutliersZScore — boundary', () => {
 
 	it('returns a boolean mask of the same length', () => {
 		expect(detectOutliersZScore([1, 2, 3, 4], 3)).toHaveLength(4);
+	});
+
+	it('flags nothing for a constant array (std === 0 guard, no accidental wipe)', () => {
+		expect(detectOutliersZScore([7, 7, 7, 7, 7], 3)).toEqual([false, false, false, false, false]);
 	});
 });
 

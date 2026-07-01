@@ -8,7 +8,11 @@ import {
 	appConsts,
 	replaceColumnRefs,
 	swapColumnRefs,
-	swapColumnRefsBulk
+	swapColumnRefsBulk,
+	createGroup,
+	createComposite,
+	createNote,
+	syncNodeIdCounters
 } from '$lib/core/core.svelte';
 
 // ── helpers ──────────────────────────────────────────────────────────
@@ -32,6 +36,58 @@ function seedCore({ data = [], tableProcesses = [], plots = [] } = {}) {
 
 beforeEach(() => seedCore());
 
+// ── syncNodeIdCounters (session-load id-collision guard) ──────────────
+describe('syncNodeIdCounters', () => {
+	it('advances the group counter past a loaded id so createGroup cannot collide', () => {
+		core.groups.length = 0;
+		core.groups.push({ id: 'group_5' }); // as if rehydrated from a session
+		syncNodeIdCounters();
+		const id = createGroup();
+		expect(id).not.toBe('group_5');
+		expect(Number(id.replace('group_', ''))).toBeGreaterThan(5);
+		// The new group is genuinely unique (didn't overwrite the loaded one).
+		expect(core.groups.filter((g) => g.id === id)).toHaveLength(1);
+	});
+
+	it('ignores legacy group_legacy_<n> ids (separate namespace)', () => {
+		core.groups.length = 0;
+		core.groups.push({ id: 'group_legacy_99' });
+		syncNodeIdCounters();
+		const id = createGroup();
+		// A legacy id must not push the plain `group_<n>` counter to 100.
+		expect(Number(id.replace('group_', ''))).toBeLessThan(99);
+	});
+
+	it('advances the composite counter past a loaded id', () => {
+		core.composites.length = 0;
+		core.composites.push({ id: 'composite_8' });
+		syncNodeIdCounters();
+		const id = createComposite({ memberIds: [] });
+		expect(id).not.toBe('composite_8');
+		expect(Number(id.replace('composite_', ''))).toBeGreaterThan(8);
+	});
+
+	it('advances the note counter past a loaded id', () => {
+		core.notes.length = 0;
+		core.notes.push({ id: 'note_12' });
+		syncNodeIdCounters();
+		const id = createNote();
+		expect(id).not.toBe('note_12');
+		expect(Number(id.replace('note_', ''))).toBeGreaterThan(12);
+	});
+
+	it('is idempotent and never rewinds the counter', () => {
+		core.groups.length = 0;
+		const first = createGroup(); // e.g. group_N
+		syncNodeIdCounters();
+		syncNodeIdCounters();
+		const second = createGroup();
+		expect(Number(second.replace('group_', ''))).toBeGreaterThan(
+			Number(first.replace('group_', ''))
+		);
+	});
+});
+
 // ── replaceColumnRefs ────────────────────────────────────────────────
 describe('replaceColumnRefs', () => {
 	it('does nothing when newColId === oldColId', () => {
@@ -54,9 +110,7 @@ describe('replaceColumnRefs', () => {
 
 	it('replaces xIN, yIN, xsIN, and out in free table processes', () => {
 		seedCore({
-			tableProcesses: [
-				{ args: { xIN: 10, yIN: 20, xsIN: [10, 30], out: { a: 10, b: 40 } } }
-			]
+			tableProcesses: [{ args: { xIN: 10, yIN: 20, xsIN: [10, 30], out: { a: 10, b: 40 } } }]
 		});
 		replaceColumnRefs(99, 10);
 		const args = core.tableProcesses[0].args;

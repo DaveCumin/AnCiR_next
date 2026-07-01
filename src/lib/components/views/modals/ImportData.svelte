@@ -1133,10 +1133,22 @@
 	}
 
 	function dealWithData(headersIN, dataIN) {
+		// Empty / header-only file: nothing to import. Guard before indexing
+		// dataIN[0], which would throw on an empty array.
+		if (!Array.isArray(dataIN) || dataIN.length === 0) {
+			headers = [];
+			parsedData = {};
+			return;
+		}
+
 		if (hasHeader) {
 			headers = headersIN;
 		} else {
-			headers = Array(dataIN[0].length)
+			const firstRow = dataIN[0];
+			const colCount = Array.isArray(firstRow)
+				? firstRow.length
+				: Object.keys(firstRow ?? {}).length;
+			headers = Array(colCount)
 				.fill(1)
 				.map((_, i) => numToString(i));
 		}
@@ -1388,9 +1400,14 @@
 				resultObject[key] = [];
 			});
 
-			inputArray.forEach((row, r) => {
-				Object.keys(row).forEach((k, idx) => {
-					resultObject[headers[idx]].push(row[k]);
+			// Map each cell to its column by header, not by the positional index of
+			// the row's own keys. A ragged row (a missing/extra field, or keys in a
+			// different order) would otherwise shift every later value into the wrong
+			// column. header:false rows are plain arrays, so index positionally there.
+			inputArray.forEach((row) => {
+				headers.forEach((h, idx) => {
+					const val = Array.isArray(row) ? row[idx] : row[h];
+					resultObject[h].push(val ?? null);
 				});
 			});
 			return resultObject;
@@ -2022,7 +2039,10 @@
 		{:else}
 			<div class="heading">
 				<h2>Import Data</h2>
-				<div class="control-input-horizontal" style="align-items: center; margin-top: var(--space-4);">
+				<div
+					class="control-input-horizontal"
+					style="align-items: center; margin-top: var(--space-4);"
+				>
 					<button class="dialog-button" style="margin-top:0;" onclick={(e) => fileInput.click()}
 						>{buttonText}</button
 					>
