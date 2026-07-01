@@ -287,10 +287,20 @@
 			value = multiple ? next : next.length === 1 ? next[0] : next;
 			onChange(value);
 			lastSelectedLeafValue = optValue;
+		} else if (multiple) {
+			// Multi-select: a plain click toggles this column in/out (checkbox
+			// behaviour) and keeps the menu open so several can be ticked in one
+			// pass. The Close button (or clicking away) dismisses it.
+			const current = asArray(value);
+			const next = current.includes(optValue)
+				? current.filter((v) => v !== optValue)
+				: [...current, optValue];
+			value = next;
+			onChange(value);
+			lastSelectedLeafValue = optValue;
 		} else {
-			// Regular click: replace selection. Shape matches the consumer's
-			// expectation (array when multiple, scalar otherwise).
-			value = multiple ? [optValue] : optValue;
+			// Single-select: pick this one and close.
+			value = optValue;
 			onChange(value);
 			lastSelectedLeafValue = optValue;
 			isOpen = false;
@@ -299,26 +309,33 @@
 
 	function selectAllInGroup(node, e) {
 		e.stopPropagation();
+		e.preventDefault?.();
 		const leafIds = flattenLeaves(node.options ?? []).map((o) => o.value);
 		if (!leafIds.length) return;
 
-		if (e.altKey) {
-			const current = asArray(value);
-			const allSelected = leafIds.every((v) => current.includes(v));
-			const next = allSelected
-				? current.filter((v) => !leafIds.includes(v))
-				: [...new Set([...current, ...leafIds])];
-			value = multiple ? next : next.length === 1 ? next[0] : next;
-			onChange(value);
-		} else {
-			value = multiple ? leafIds : leafIds[0];
-			onChange(value);
-			isOpen = false;
-		}
+		// Group checkbox toggle: if every leaf is already selected, clear them all;
+		// otherwise add them all. Keeps the menu open.
+		const current = asArray(value);
+		const allSelected = leafIds.every((v) => current.includes(v));
+		const next = allSelected
+			? current.filter((v) => !leafIds.includes(v))
+			: [...new Set([...current, ...leafIds])];
+		value = multiple ? next : next.length === 1 ? next[0] : next;
+		onChange(value);
 	}
 
 	function isSelected(optValue) {
 		return Array.isArray(value) ? value.includes(optValue) : value === optValue;
+	}
+
+	// Tri-state for a group's checkbox: 'all' / 'some' / 'none' of its leaves
+	// (recursively) are currently selected.
+	function groupSelectionState(node) {
+		const ids = flattenLeaves(node.options ?? []).map((o) => o.value);
+		if (ids.length === 0) return 'none';
+		const sel = asArray(value);
+		const n = ids.reduce((acc, id) => acc + (sel.includes(id) ? 1 : 0), 0);
+		return n === 0 ? 'none' : n === ids.length ? 'all' : 'some';
 	}
 
 	function startRename(e, node) {
@@ -376,6 +393,23 @@
 			>
 				<span class="chevron">{expandedGroups.has(node.key) ? '−' : '+'}</span>
 
+				{#if multiple}
+					{@const gstate = groupSelectionState(node)}
+					<span
+						class="cs-check"
+						class:checked={gstate === 'all'}
+						class:indeterminate={gstate === 'some'}
+						role="checkbox"
+						aria-checked={gstate === 'all' ? 'true' : gstate === 'some' ? 'mixed' : 'false'}
+						tabindex="0"
+						title="Select/clear all columns in this group"
+						onclick={(e) => selectAllInGroup(node, e)}
+						onkeydown={(e) => {
+							if (e.key === 'Enter' || e.key === ' ') selectAllInGroup(node, e);
+						}}
+					>{gstate === 'all' ? '✓' : gstate === 'some' ? '–' : ''}</span>
+				{/if}
+
 				{#if node.proc && editingKey === node.key}
 					<input
 						class="rename-input"
@@ -399,20 +433,6 @@
 				{:else}
 					<span class="group-label">{node.label}</span>
 				{/if}
-
-				{#if multiple}
-					<span
-						class="all-button"
-						role="button"
-						tabindex="0"
-						onclick={(e) => selectAllInGroup(node, e)}
-						onkeydown={(e) => {
-							if (e.key === 'Enter' || e.key === ' ') selectAllInGroup(node, e);
-						}}
-					>
-						All
-					</span>
-				{/if}
 			</div>
 
 			{#if expandedGroups.has(node.key)}
@@ -427,14 +447,22 @@
 		<button
 			class="option"
 			class:selected={isSelected(node.value)}
+			class:has-check={multiple}
+			role={multiple ? 'checkbox' : undefined}
+			aria-checked={multiple ? (isSelected(node.value) ? 'true' : 'false') : undefined}
 			onmousedown={(e) => {
 				if (e.shiftKey) e.preventDefault();
 			}}
 			onclick={(e) => selectLeaf(node.value, e)}
 			type="button"
-			style="padding-left: {20 + depth * 14}px"
+			style="padding-left: {(multiple ? 6 : 20) + depth * 14}px"
 		>
-			{node.label}
+			{#if multiple}
+				<span class="cs-check" class:checked={isSelected(node.value)}
+					>{isSelected(node.value) ? '✓' : ''}</span
+				>
+			{/if}
+			<span class="option-label">{node.label}</span>
 		</button>
 	{/if}
 {/snippet}
@@ -469,6 +497,12 @@
 			{:else}
 				<div class="no-results">No matches found</div>
 			{/each}
+		</div>
+		<div class="cs-actions">
+			{#if multiple}
+				<span class="cs-count">{asArray(value).length} selected</span>
+			{/if}
+			<button type="button" class="cs-btn" onclick={() => (isOpen = false)}>Close</button>
 		</div>
 	</div>
 {/if}
@@ -617,20 +651,6 @@
 		flex-shrink: 0;
 	}
 
-	.all-button {
-		margin-left: auto;
-		color: var(--color-info-text, #1a73e8);
-		font-size: 0.85em;
-		padding: 1px 6px;
-		border-radius: 3px;
-		cursor: pointer;
-		flex-shrink: 0;
-	}
-
-	.all-button:hover {
-		background: var(--color-info-bg);
-	}
-
 	.group-options {
 		display: flex;
 		flex-direction: column;
@@ -655,6 +675,83 @@
 	.option.selected {
 		background: var(--color-info-bg);
 		color: var(--color-info-text);
+	}
+
+	/* Checkbox row layout for multi-select options. */
+	.option.has-check {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		width: 100%;
+	}
+
+	.option-label {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* Faux checkbox used for both column options and group headers. Kept as a
+	   styled span (not an <input>) so it can live inside the option <button>
+	   without nesting interactive elements, while looking like the .all-menu
+	   checkboxes elsewhere. */
+	.cs-check {
+		flex: 0 0 auto;
+		width: 15px;
+		height: 15px;
+		box-sizing: border-box;
+		border: 1.5px solid var(--color-lightness-55, #999);
+		border-radius: 3px;
+		background: var(--surface-card);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 11px;
+		line-height: 1;
+		color: #fff;
+		cursor: pointer;
+	}
+
+	.cs-check.checked,
+	.cs-check.indeterminate {
+		background: var(--color-info-text, #1a73e8);
+		border-color: var(--color-info-text, #1a73e8);
+	}
+
+	.group-header .cs-check:hover {
+		border-color: var(--color-info-text, #1a73e8);
+	}
+
+	/* Bottom action bar with the Close button (mirrors .all-menu-actions). */
+	.cs-actions {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 8px;
+		padding: 6px 8px;
+		border-top: 1px solid var(--color-lightness-90);
+		background: var(--color-lightness-97);
+		flex-shrink: 0;
+	}
+
+	.cs-count {
+		margin-right: auto;
+		font-size: var(--font-sm, 0.8em);
+		color: var(--color-text-muted, #666);
+	}
+
+	.cs-btn {
+		padding: 3px 12px;
+		font-size: var(--font-md);
+		border: 1px solid var(--color-lightness-75);
+		border-radius: 3px;
+		background: var(--surface-card);
+		cursor: pointer;
+		color: inherit;
+	}
+
+	.cs-btn:hover {
+		background: var(--color-lightness-95);
 	}
 
 	.no-results {
