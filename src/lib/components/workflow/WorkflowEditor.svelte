@@ -1502,94 +1502,6 @@
 	}
 
 	function applyConnection(fromNodeId, fromPort, toNodeId, toPort) {
-		// Group 'all' port: fan out, calling per-source connections one at a
-		// time. The downstream consumer (tableplot, table-process yIN) already
-		// handles many-cardinality inputs by accumulating refs.
-		if (fromPort === 'all') {
-			const fromNode = allNodes.find((n) => n.id === fromNodeId);
-
-			// Atomic same-type guard: an all-bundle wired to a free-process input fans
-			// one shared operation out over every column, so reject the WHOLE bundle
-			// (rather than partially connecting the matching columns and leaving the
-			// user confused) when its types aren't uniform / compatible with the
-			// target's existing inputs.
-			const toNodeObj = allNodes.find((n) => n.id === toNodeId);
-			if (toNodeObj?.type === 'process' && toPort === 'input' && !toNodeObj.processObj?.parentCol) {
-				let bundleColIds = [];
-				if (fromNode?.type === 'group') {
-					const g = fromNode.groupObj;
-					const filter = Array.isArray(g?.allColumnIds) ? new Set(g.allColumnIds) : null;
-					bundleColIds = (g?.sourceColumnIds ?? []).filter((c) => !filter || filter.has(c));
-				} else if (fromNode?.type === 'tableprocess') {
-					const filter = Array.isArray(fromNode.tpObj?.args?.allColumnIds)
-						? new Set(fromNode.tpObj.args.allColumnIds)
-						: null;
-					bundleColIds = (fromNode.outputColumns ?? [])
-						.map((c) => c.colId)
-						.filter((c) => !filter || filter.has(c));
-				} else if (fromNode?.type === 'process') {
-					bundleColIds = (fromNode.outputColumns ?? []).map((c) => c.colId);
-				}
-				const proc = toNodeObj.processObj;
-				const curIn = Array.isArray(proc?.args?.inIN)
-					? proc.args.inIN
-					: proc?.args?.inIN != null && proc.args.inIN >= 0
-						? [proc.args.inIN]
-						: [];
-				const types = new Set(bundleColIds.map((c) => getColumnById(c)?.type).filter(Boolean));
-				if (curIn.length) {
-					const t = getColumnById(curIn[0])?.type;
-					if (t) types.add(t);
-				}
-				const bannedBundle = disallowedInputTypes(proc);
-				const bundleHit = [...types].find((t) => bannedBundle.includes(t));
-				if (bundleHit) {
-					addNotification(
-						`${proc.displayName || proc.name} doesn't support ${bundleHit} columns yet.`
-					);
-					return;
-				}
-				if (types.size > 1) {
-					addNotification(
-						`${proc.displayName || proc.name} inputs must all be the same type — that bundle mixes ${[...types].join(' + ')}.`
-					);
-					return;
-				}
-			}
-
-			if (fromNode?.type === 'group') {
-				const g = fromNode.groupObj;
-				const all = g?.sourceColumnIds ?? [];
-				const filter = Array.isArray(g?.allColumnIds) ? new Set(g.allColumnIds) : null;
-				for (const cid of all) {
-					if (filter && !filter.has(cid)) continue;
-					applyConnection(fromNodeId, `col_${cid}`, toNodeId, toPort);
-				}
-				return;
-			}
-			// TableProcess `all` port: fan out over its inline output columns,
-			// filtered by tp.args.allColumnIds when set to a subset.
-			if (fromNode?.type === 'tableprocess') {
-				const all = (fromNode.outputColumns ?? []).map((c) => c.colId);
-				const filter = Array.isArray(fromNode.tpObj?.args?.allColumnIds)
-					? new Set(fromNode.tpObj.args.allColumnIds)
-					: null;
-				for (const cid of all) {
-					if (filter && !filter.has(cid)) continue;
-					applyConnection(fromNodeId, `col_${cid}`, toNodeId, toPort);
-				}
-				return;
-			}
-			// Free (orphan) process `all` port: fan out over its producer columns,
-			// wiring each via its own producerPort (out_<inputColId>).
-			if (fromNode?.type === 'process') {
-				for (const oc of fromNode.outputColumns ?? []) {
-					applyConnection(fromNodeId, oc.port, toNodeId, toPort);
-				}
-				return;
-			}
-		}
-
 		// Process output → non-process target: this is a tap. Reuse or create a
 		// tap column for (parent, process) so consumers can ref it like any col.
 		const fromNode = allNodes.find((n) => n.id === fromNodeId);
@@ -2315,17 +2227,6 @@
 	 * tp→its-output-column) we no-op rather than tear out the surrounding node.
 	 */
 	function removeEdge(edge) {
-		// A merged `all`-port edge stands in for every output column → remove them
-		// all (the inverse of the all-port fan-out) by deleting each per-column edge.
-		if (edge.fromPort === 'all') {
-			const fromNode = allNodes.find((n) => n.id === edge.fromId);
-			const colPorts = (fromNode?.ports?.outputs ?? [])
-				.map((p) => p.name)
-				.filter((name) => /^(?:col|out)_\d+$/.test(name));
-			for (const port of colPorts) removeEdge({ ...edge, fromPort: port });
-			return;
-		}
-
 		const target = allNodes.find((n) => n.id === edge.toId);
 		if (!target) return;
 

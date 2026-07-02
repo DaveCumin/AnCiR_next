@@ -460,11 +460,8 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			port.display = (core.data ?? []).find((c) => c.id === inId)?.name ?? port.name;
 			return port;
 		});
-		// Multi-output free processes get an `all` bundle port too (like TP nodes).
 		const outputs = producerCols.length
-			? producerCols.length > 1
-				? [makeNodePort('all', 'output', 'column', true), ...colOutputs]
-				: colOutputs
+			? colOutputs
 			: [makeNodePort('output', 'output', 'column', true)];
 		const ports = { inputs: [makeNodePort('input', 'input', 'column', true)], outputs };
 		// Render free process nodes like TableProcess nodes: inline output-column
@@ -496,22 +493,15 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	}
 
 	// Ordered list of a TP's output columns ({ key, colId }) from args.out, and
-	// the matching output ports: an `all` fan-out port (flowtest Group-style)
-	// plus one `col_<colId>` port per output column. Output columns render as
-	// inline rows INSIDE the TP node, so there are no abstract xOut/yOut_* ports.
+	// one `col_<colId>` output port per column. Output columns render as inline
+	// rows INSIDE the TP node, so there are no abstract xOut/yOut_* ports.
 	const buildTPOutputs = (args) => {
 		const outputColumns = [];
 		for (const [key, colId] of Object.entries(args?.out ?? {})) {
 			if (typeof colId !== 'number' || colId < 0) continue;
 			outputColumns.push({ key, colId, port: `col_${colId}` });
 		}
-		// The `all` port (wire every output at once) is only meaningful when there's
-		// more than one output column — single-output generators (Random, Sequence,
-		// …) would just duplicate their one output port, so omit it there.
 		const outputPorts = [];
-		if (outputColumns.length > 1) {
-			outputPorts.push(makeNodePort('all', 'output', 'column', true));
-		}
 		for (const { colId } of outputColumns) {
 			outputPorts.push(makeNodePort(`col_${colId}`, 'output', 'column'));
 		}
@@ -639,14 +629,12 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	}
 
 	// Group nodes — flowtest-style Source group. One output port per absorbed
-	// column (`col_${colId}`) plus an `all` port that fans out to every source
-	// (filtered by group.allColumnIds when non-null). The standalone `data_X`
-	// nodes for absorbed columns are suppressed above, and downstream edges get
-	// re-routed via `columnSourceRef` below.
+	// column (`col_${colId}`). The standalone `data_X` nodes for absorbed columns
+	// are suppressed above, and downstream edges get re-routed via
+	// `columnSourceRef` below.
 	for (const group of core.groups ?? []) {
 		const sourceIds = (group.sourceColumnIds ?? []).filter((id) => typeof id === 'number');
 		const outputs = [];
-		outputs.push(makeNodePort('all', 'output', 'column', true));
 		for (const colId of sourceIds) {
 			outputs.push(makeNodePort(`col_${colId}`, 'output', 'column'));
 		}
@@ -852,54 +840,6 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		const hidden = new Set([...memberToCollapsed.keys(), ...hiddenComposites]);
 		for (let i = nodes.length - 1; i >= 0; i--) {
 			if (hidden.has(nodes[i].id)) nodes.splice(i, 1);
-		}
-	}
-
-	// --- Collapse `all`-port bundles: when every output column of a node flows to
-	// the same target port, draw ONE edge from the node's `all` port instead of N
-	// per-column edges. (Wiring the all-port fans out to per-column connections;
-	// this re-bundles them visually.) Uses only connections + node ports. --------
-	{
-		const colGroups = new Map();
-		for (const c of connections) {
-			const m = /^(?:col|out)_(\d+)$/.exec(c.fromPort);
-			if (!m) continue;
-			const key = `${c.fromId}|${c.toId}|${c.toPort}`;
-			let g = colGroups.get(key);
-			if (!g) {
-				g = { fromId: c.fromId, toId: c.toId, toPort: c.toPort, type: c.type, cols: new Set(), conns: [] };
-				colGroups.set(key, g);
-			}
-			g.cols.add(Number(m[1]));
-			g.conns.push(c);
-		}
-		const drop = new Set();
-		const allEdges = [];
-		for (const g of colGroups.values()) {
-			if (g.cols.size < 2) continue;
-			// Per-series plot ports (xN / ysN / data) keep one edge per series — only
-			// bundle into flat collectors (tableplot `series`, table-process inputs).
-			const tnode = nodeMap.get(g.toId);
-			if (tnode?.meta?.type === 'plot' && g.toPort !== 'series') continue;
-			const node = nodeMap.get(g.fromId);
-			const outs = node?.ports?.outputs ?? [];
-			if (!outs.some((p) => p.name === 'all')) continue;
-			const nodeCols = new Set();
-			for (const p of outs) {
-				const mm = /^(?:col|out)_(\d+)$/.exec(p.name);
-				if (mm) nodeCols.add(Number(mm[1]));
-			}
-			// Collapse only when EVERY output column flows to this one target port.
-			if (nodeCols.size !== g.cols.size) continue;
-			if (![...nodeCols].every((id) => g.cols.has(id))) continue;
-			for (const c of g.conns) drop.add(c);
-			allEdges.push({ fromId: g.fromId, fromPort: 'all', toId: g.toId, toPort: g.toPort, type: g.type });
-		}
-		if (drop.size) {
-			const kept = connections.filter((c) => !drop.has(c));
-			kept.push(...allEdges);
-			connections.length = 0;
-			connections.push(...kept);
 		}
 	}
 

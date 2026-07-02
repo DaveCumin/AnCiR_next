@@ -61,33 +61,8 @@
 			.filter((entry) => !!entry.col)
 	);
 
-	const allColumnIds = $derived(
-		Array.isArray(tp?.args?.allColumnIds) ? tp.args.allColumnIds : null
-	);
-	const allIsSubset = $derived(allColumnIds !== null);
-
-	let allMenuOpen = $state(false);
 	// Per-output-column row expansion (ephemeral UI state, keyed by colId).
 	let rowExpanded = $state({});
-
-	function isInAllOutput(colId) {
-		return !allIsSubset || allColumnIds?.includes(colId);
-	}
-
-	function toggleAllColumnInclusion(colId) {
-		if (!tp) return;
-		const everyId = outputColumns.map((c) => c.colId);
-		const current = allColumnIds ?? everyId.slice();
-		const next = current.includes(colId)
-			? current.filter((id) => id !== colId)
-			: [...current, colId];
-		const everyone = next.length === everyId.length && everyId.every((id) => next.includes(id));
-		tp.args.allColumnIds = everyone ? null : next;
-	}
-
-	function resetAllColumns() {
-		if (tp) tp.args.allColumnIds = null;
-	}
 
 	// Output-column rename: live on input, normalise (empty → auto name) on commit.
 	function renameColumn(col, next, commit = false) {
@@ -105,26 +80,8 @@
 		rowExpanded[colId] = !rowExpanded[colId];
 	}
 
-	function onAllPortContextMenu(e) {
-		e.preventDefault();
-		e.stopPropagation();
-		allMenuOpen = !allMenuOpen;
-	}
-	function onAllPortDblClick(e) {
-		e.preventDefault();
-		e.stopPropagation();
-		allMenuOpen = !allMenuOpen;
-	}
-	function onAllMenuKeydown(e) {
-		if (e.key === 'Escape') {
-			e.preventDefault();
-			allMenuOpen = false;
-		}
-	}
-
 	// --- Port-position publishing ---
 	let cardEl = $state();
-	let allPortEl = $state();
 	const inPortEls = $state({});
 	const rowPortEls = $state({});
 
@@ -139,9 +96,6 @@
 
 	function publishPositions() {
 		if (!node) return;
-		// All port lives in the header strip.
-		if (allPortEl) setGroupPortY(node.id, 'all', nodeLocalCenterY(allPortEl));
-		else setGroupPortY(node.id, 'all', HEADER_H / 2);
 
 		for (let i = 0; i < inputPorts.length; i++) {
 			const name = inputPorts[i].name;
@@ -261,76 +215,7 @@
 			/>
 		</div>
 		<!-- Note · collapse · delete live in the shared action cluster pinned to the
-		     header's top-right by WorkflowEditor (NodeActions), not per-node. The
-		     `all` port only appears for multi-output nodes (single-output generators
-		     don't need it). -->
-		{#if outputColumns.length > 1}
-		<div class="all-port-wrap">
-			<button
-				type="button"
-				class="port-dot dot-output inline-port all-port"
-				class:subset={allIsSubset}
-				class:splice-target={spliceTargetPort === 'all'}
-				bind:this={allPortEl}
-				data-node-id={node.id}
-				data-port-name="all"
-				data-port-dir="out"
-				onmousedown={(e) => startFromOutput(e, 'all')}
-				oncontextmenu={onAllPortContextMenu}
-				ondblclick={onAllPortDblClick}
-				onclick={(e) => e.stopPropagation()}
-				{@attach tooltip(
-					allIsSubset
-						? `all (${allColumnIds.length} of ${outputColumns.length} outputs)`
-						: `all (every output)`
-				)}
-				aria-label="output port all"
-				aria-haspopup="menu"
-			></button>
-			{#if allMenuOpen}
-				<div
-					class="all-menu-popover"
-					role="menu"
-					aria-label="Select outputs for all"
-					tabindex="-1"
-					onkeydown={onAllMenuKeydown}
-					onpointerdown={stopPointer}
-					onmousedown={stopPointer}
-					onwheel={(e) => {
-						if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
-					}}
-				>
-					<div class="all-menu-title">Include in "all" output</div>
-					<div class="all-menu-list">
-						{#each outputColumns as { colId, col } (colId)}
-							<label class="all-menu-item">
-								<input
-									type="checkbox"
-									checked={isInAllOutput(colId)}
-									onchange={() => toggleAllColumnInclusion(colId)}
-								/>
-								<span>{col.name}</span>
-							</label>
-						{/each}
-						{#if outputColumns.length === 0}
-							<div class="all-menu-empty">No outputs yet.</div>
-						{/if}
-					</div>
-					<div class="all-menu-actions">
-						<button
-							type="button"
-							class="all-menu-btn"
-							onclick={resetAllColumns}
-							disabled={!allIsSubset}>Reset (all)</button
-						>
-						<button type="button" class="all-menu-btn" onclick={() => (allMenuOpen = false)}
-							>Close</button
-						>
-					</div>
-				</div>
-			{/if}
-		</div>
-		{/if}
+		     header's top-right by WorkflowEditor (NodeActions), not per-node. -->
 	</div>
 
 	{#if node.sublabel}
@@ -661,28 +546,6 @@
 		top: 50%;
 		transform: translateY(-50%);
 	}
-	.all-port {
-		position: relative;
-		display: block;
-	}
-	.all-port.subset {
-		border-radius: 0 999px 999px 0;
-		width: 7px;
-		background: rgba(106, 159, 212, 0.25);
-		border-color: #6a9fd4;
-	}
-	.all-port-wrap {
-		position: absolute;
-		right: -13px; /* -5 dot - 8 header padding, matches GroupNode */
-		top: 50%;
-		transform: translateY(-50%);
-		width: 13px;
-		height: 13px;
-		/* Lift above the node's output/input rows (position:relative, z-auto, and
-		   later in the DOM) so the "all" menu popover renders on top of them. */
-		z-index: 50;
-	}
-
 	.empty-hint {
 		padding: 6px 8px;
 		font-size: var(--font-xs);
@@ -690,71 +553,4 @@
 		text-align: center;
 	}
 
-	.all-menu-popover {
-		position: absolute;
-		top: calc(100% + 6px);
-		right: -4px;
-		z-index: 40;
-		min-width: 200px;
-		max-width: 280px;
-		padding: 6px;
-		background: var(--surface-card);
-		border: 1px solid rgba(0, 0, 0, 0.18);
-		border-radius: var(--radius-sm);
-		box-shadow: var(--shadow-2);
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-	}
-	.all-menu-title {
-		font-size: 10px;
-		font-weight: 600;
-		color: rgba(0, 0, 0, 0.5);
-		padding: 2px 4px;
-	}
-	.all-menu-list {
-		display: flex;
-		flex-direction: column;
-		max-height: 220px;
-		overflow-y: auto;
-	}
-	.all-menu-item {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 3px 4px;
-		font-size: var(--font-xs);
-		cursor: pointer;
-		border-radius: 3px;
-	}
-	.all-menu-item:hover {
-		background: rgba(0, 0, 0, 0.04);
-	}
-	.all-menu-empty {
-		padding: 4px;
-		font-size: 10px;
-		color: rgba(0, 0, 0, 0.5);
-	}
-	.all-menu-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 4px;
-		border-top: 1px solid rgba(0, 0, 0, 0.08);
-		padding-top: 4px;
-	}
-	.all-menu-btn {
-		padding: 2px 8px;
-		font-size: 10px;
-		background: transparent;
-		border: 1px solid rgba(0, 0, 0, 0.18);
-		border-radius: 3px;
-		cursor: pointer;
-	}
-	.all-menu-btn:hover:not(:disabled) {
-		background: rgba(0, 0, 0, 0.04);
-	}
-	.all-menu-btn:disabled {
-		opacity: 0.5;
-		cursor: default;
-	}
 </style>

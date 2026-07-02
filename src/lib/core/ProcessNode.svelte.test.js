@@ -79,13 +79,14 @@ describe('TableProcess inline output columns', () => {
 		expect(ids).toContain('tableprocess_5');
 	});
 
-	it('exposes per-column output ports (col_<id>) plus an all port on the TP node', () => {
+	it('exposes per-column output ports (col_<id>) on the TP node, and no `all` port', () => {
 		const graph = getCachedProcessNodeGraph(makeCore(), makeAppConsts());
 		const tp = graph.nodes.find((n) => n.id === 'tableprocess_5');
 		const outNames = tp.ports.outputs.map((p) => p.name);
-		expect(outNames).toContain('all');
 		expect(outNames).toContain('col_100');
 		expect(outNames).toContain('col_101');
+		// The `all` bundle port was removed.
+		expect(outNames).not.toContain('all');
 		// No abstract xOut / yOut_* output ports any more.
 		expect(outNames).not.toContain('xOut');
 		expect(outNames.some((n) => n.startsWith('yOut_'))).toBe(false);
@@ -239,27 +240,28 @@ describe('plot wiring edge cases', () => {
 		expect(toPlot.length).toBe(2);
 	});
 
-	it('collapses an all-output bundle into a single all-port edge (tableplot series)', () => {
+	it('emits separate per-column edges (no `all` bundling) when all outputs feed one target', () => {
 		const core = makeCore();
 		core.plots.push({ id: 50, type: 'tableplot', plot: { columnRefs: [100, 101] } });
 		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
 		const toTable = graph.connections.filter((c) => c.toId === 'plot_50' && c.toPort === 'series');
-		// Both of the TP's outputs flow to the table → one edge from its `all` port.
-		expect(toTable.length).toBe(1);
-		expect(toTable[0].fromId).toBe('tableprocess_5');
-		expect(toTable[0].fromPort).toBe('all');
+		// The `all` port + edge-bundling were removed → each output is its own edge.
+		expect(toTable.length).toBe(2);
+		expect(toTable.every((c) => c.fromId === 'tableprocess_5')).toBe(true);
+		expect(toTable.map((c) => c.fromPort).sort()).toEqual(['col_100', 'col_101']);
+		expect(toTable.some((c) => c.fromPort === 'all')).toBe(false);
 	});
 
-	it('does NOT collapse when only some of a node’s outputs feed the target', () => {
+	it('a single output feeding a target is a plain col_ edge', () => {
 		const core = makeCore();
 		core.plots.push({ id: 51, type: 'tableplot', plot: { columnRefs: [100] } });
 		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
 		const toTable = graph.connections.filter((c) => c.toId === 'plot_51' && c.toPort === 'series');
 		expect(toTable.length).toBe(1);
-		expect(toTable[0].fromPort).toBe('col_100'); // single column → not bundled
+		expect(toTable[0].fromPort).toBe('col_100');
 	});
 
-	it('gives a multi-output free process an `all` port and collapses its bundle', () => {
+	it('a multi-output free process exposes per-column ports and no `all` port or bundle', () => {
 		const core = makeCore();
 		core.orphanProcesses.push({ id: 9, name: 'Add', displayName: 'Add', args: { inIN: [1, 100], value: 0 } });
 		core.data.push(
@@ -269,11 +271,11 @@ describe('plot wiring edge cases', () => {
 		core.plots.push({ id: 60, type: 'tableplot', plot: { columnRefs: [200, 201] } });
 		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
 		const proc = graph.nodes.find((n) => n.id === 'process_9');
-		expect(proc.ports.outputs.map((p) => p.name)).toContain('all');
+		expect(proc.ports.outputs.map((p) => p.name)).not.toContain('all');
 		const toTable = graph.connections.filter((c) => c.toId === 'plot_60' && c.toPort === 'series');
-		expect(toTable.length).toBe(1);
-		expect(toTable[0].fromId).toBe('process_9');
-		expect(toTable[0].fromPort).toBe('all');
+		// Two separate per-column edges, no `all` bundle.
+		expect(toTable.length).toBe(2);
+		expect(toTable.some((c) => c.fromPort === 'all')).toBe(false);
 	});
 
 	it('a single-output free process has no `all` port', () => {

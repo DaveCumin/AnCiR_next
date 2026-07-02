@@ -38,34 +38,11 @@
 	const group = $derived(node.groupObj);
 	const sourceColumnIds = $derived(group?.sourceColumnIds ?? []);
 	const collapsed = $derived(group?.collapsed === true);
-	const allColumnIds = $derived(Array.isArray(group?.allColumnIds) ? group.allColumnIds : null);
-	const allIsSubset = $derived(allColumnIds !== null);
 	const sourceColumns = $derived(
 		sourceColumnIds
 			.map((id) => ({ id, col: getColumnById(id) }))
 			.filter((entry) => !!entry.col)
 	);
-
-	let allMenuOpen = $state(false);
-
-	function isInAllOutput(colId) {
-		return !allIsSubset || allColumnIds?.includes(colId);
-	}
-
-	function toggleAllColumnInclusion(colId) {
-		if (!group) return;
-		const current = allColumnIds ?? sourceColumnIds.slice();
-		const next = current.includes(colId)
-			? current.filter((id) => id !== colId)
-			: [...current, colId];
-		const everyone =
-			next.length === sourceColumnIds.length && sourceColumnIds.every((id) => next.includes(id));
-		group.allColumnIds = everyone ? null : next;
-	}
-
-	function resetAllColumns() {
-		if (group) group.allColumnIds = null;
-	}
 
 	// Live on input, normalise (empty → "Group") on commit.
 	function renameGroup(next, commit = false) {
@@ -112,25 +89,6 @@
 		}
 	}
 
-	function onAllPortContextMenu(e) {
-		e.preventDefault();
-		e.stopPropagation();
-		allMenuOpen = !allMenuOpen;
-	}
-
-	function onAllPortDblClick(e) {
-		e.preventDefault();
-		e.stopPropagation();
-		allMenuOpen = !allMenuOpen;
-	}
-
-	function onAllMenuKeydown(e) {
-		if (e.key === 'Escape') {
-			e.preventDefault();
-			allMenuOpen = false;
-		}
-	}
-
 	// Resize handle (bottom-right) — drag to resize the card. Width affects edge
 	// anchor X (WorkflowEditor reads groupObj.width).
 	let resizing = $state(null);
@@ -160,7 +118,6 @@
 
 	// Port-position publishing — measure rendered DOM and emit Y per port.
 	let cardEl = $state();
-	let allPortEl = $state();
 	const rowPortEls = $state({});
 
 	function nodeLocalCenterY(el) {
@@ -174,12 +131,6 @@
 
 	function publishPositions() {
 		if (!group) return;
-		if (allPortEl) {
-			setGroupPortY(group.id, 'all', nodeLocalCenterY(allPortEl));
-		} else {
-			// The 'all' port lives in the header strip, vertically centred.
-			setGroupPortY(group.id, 'all', HEADER_H / 2);
-		}
 		// Row strips start immediately below the header. Each is PORT_H tall,
 		// so the i-th row's port-centre (assuming no rows above are expanded)
 		// sits at HEADER_H + i*PORT_H + PORT_H/2. The DOM-measured Y above
@@ -324,71 +275,6 @@
 			title="Delete group"
 			aria-label="Delete group"
 		>✕</button>
-		<div class="all-port-wrap">
-			<button
-				type="button"
-				class="port-dot dot-output inline-port all-port"
-				class:subset={allIsSubset}
-				class:splice-target={spliceTargetPort === 'all'}
-				bind:this={allPortEl}
-				data-node-id={node.id}
-				data-port-name="all"
-				data-port-dir="out"
-				onmousedown={(e) => onPortMouseDown(e, 'all')}
-				oncontextmenu={onAllPortContextMenu}
-				ondblclick={onAllPortDblClick}
-				onclick={(e) => e.stopPropagation()}
-				{@attach tooltip(
-					allIsSubset
-						? `all (${allColumnIds.length} of ${sourceColumnIds.length} sources)`
-						: `all (every source)`
-				)}
-				aria-label="output port all"
-				aria-haspopup="menu"
-			></button>
-			{#if allMenuOpen}
-				<div
-					class="all-menu-popover"
-					role="menu"
-					aria-label="Select sources for all output"
-					tabindex="-1"
-					onkeydown={onAllMenuKeydown}
-					onpointerdown={stopPointer}
-					onmousedown={stopPointer}
-					onwheel={(e) => { if (!e.ctrlKey && !e.metaKey) e.stopPropagation(); }}
-				>
-					<div class="all-menu-title">Include in "all" output</div>
-					<div class="all-menu-list">
-						{#each sourceColumns as { id, col } (id)}
-							<label class="all-menu-item">
-								<input
-									type="checkbox"
-									checked={isInAllOutput(id)}
-									onchange={() => toggleAllColumnInclusion(id)}
-								/>
-								<span>{col.name}</span>
-							</label>
-						{/each}
-						{#if sourceColumns.length === 0}
-							<div class="all-menu-empty">No sources yet.</div>
-						{/if}
-					</div>
-					<div class="all-menu-actions">
-						<button
-							type="button"
-							class="all-menu-btn"
-							onclick={resetAllColumns}
-							disabled={!allIsSubset}
-						>Reset (all)</button>
-						<button
-							type="button"
-							class="all-menu-btn"
-							onclick={() => (allMenuOpen = false)}
-						>Close</button>
-					</div>
-				</div>
-			{/if}
-		</div>
 	</div>
 
 	{#if !collapsed}
@@ -704,102 +590,6 @@
 		top: 50%;
 		transform: translateY(-50%);
 	}
-	.all-port {
-		/* Inside the wrap; the wrap is what gets pinned to the card's right
-		   edge, so this just fills it. */
-		position: relative;
-		display: block;
-	}
-	.all-port.subset {
-		border-radius: 0 999px 999px 0;
-		width: 7px;
-		background: rgba(106, 159, 212, 0.25);
-		border-color: #6a9fd4;
-	}
-
-	.all-port-wrap {
-		/* Anchored absolutely against the card's right border so the dot's
-		   centre lines up with the edge code's `pos.x + group.width` anchor.
-		   `right` is measured from the containing block's padding-edge — the
-		   header has `padding: 0 8px`, so we need -5 - 8 = -13 to push past
-		   the border edge. Keep this in sync with the header padding above. */
-		position: absolute;
-		right: -13px;
-		top: 50%;
-		transform: translateY(-50%);
-		width: 13px;
-		height: 13px;
-		/* Lift above the node's rows so the "all" menu popover renders on top. */
-		z-index: 50;
-	}
-	.all-menu-popover {
-		position: absolute;
-		top: calc(100% + 6px);
-		right: -4px;
-		z-index: 40;
-		min-width: 200px;
-		max-width: 280px;
-		padding: 6px;
-		background: var(--surface-card);
-		border: 1px solid rgba(0, 0, 0, 0.18);
-		border-radius: var(--radius-sm);
-		box-shadow: var(--shadow-2);
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-	}
-	.all-menu-title {
-		font-size: 10px;
-		font-weight: 600;
-		color: rgba(0, 0, 0, 0.5);
-		padding: 2px 4px;
-	}
-	.all-menu-list {
-		display: flex;
-		flex-direction: column;
-		max-height: 220px;
-		overflow-y: auto;
-	}
-	.all-menu-item {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 3px 4px;
-		font-size: var(--font-xs);
-		cursor: pointer;
-		border-radius: 3px;
-	}
-	.all-menu-item:hover {
-		background: rgba(0, 0, 0, 0.04);
-	}
-	.all-menu-empty {
-		padding: 4px;
-		font-size: 10px;
-		color: rgba(0, 0, 0, 0.5);
-	}
-	.all-menu-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 4px;
-		border-top: 1px solid rgba(0, 0, 0, 0.08);
-		padding-top: 4px;
-	}
-	.all-menu-btn {
-		padding: 2px 8px;
-		font-size: 10px;
-		background: transparent;
-		border: 1px solid rgba(0, 0, 0, 0.18);
-		border-radius: 3px;
-		cursor: pointer;
-	}
-	.all-menu-btn:hover:not(:disabled) {
-		background: rgba(0, 0, 0, 0.04);
-	}
-	.all-menu-btn:disabled {
-		opacity: 0.5;
-		cursor: default;
-	}
-
 	.group-resize-handle {
 		position: absolute;
 		right: 0;
