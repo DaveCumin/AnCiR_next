@@ -15,8 +15,9 @@ import { randomUUID } from 'node:crypto';
 import express from 'express';
 import { buildSession } from './agent.mjs';
 
-const PORT = Number(process.env.APP_PORT) || 5273;
-const HOST = process.env.APP_HOST || '127.0.0.1';
+// PORT is what most hosts inject (Render/Railway/Fly/…); APP_PORT is the local name.
+const PORT = Number(process.env.PORT || process.env.APP_PORT) || 5273;
+const HOST = process.env.APP_HOST || '127.0.0.1'; // set APP_HOST=0.0.0.0 to bind publicly
 // Strip any trailing slash so we never produce `…5173//?loadFromURL=`.
 const ANCIR_BASE = (process.env.ANCIR_BASE_URL || 'http://localhost:5173').replace(/\/+$/, '');
 const SELF_BASE = (process.env.APP_BASE_URL || `http://${HOST}:${PORT}`).replace(/\/+$/, '');
@@ -92,8 +93,11 @@ pre{background:#f4f4f5;padding:.8rem;border-radius:6px;white-space:pre-wrap}smal
     <select id=preset>
       <option value="">— choose a provider —</option>
       <option value="openai">OpenAI</option>
+      <option value="anthropic">Anthropic (Claude)</option>
+      <option value="xai">xAI (Grok)</option>
       <option value="groq">Groq</option>
       <option value="nvidia">NVIDIA</option>
+      <option value="openrouter">OpenRouter (any model)</option>
       <option value="ollama">Ollama (local)</option>
       <option value="lmstudio">LM Studio (local)</option>
     </select>
@@ -111,8 +115,11 @@ const $=s=>document.querySelector(s);
 const LS={base:'ancir.base',key:'ancir.key',model:'ancir.model'};
 const PRESETS={
   openai:['https://api.openai.com/v1','gpt-4o-mini'],
+  anthropic:['https://api.anthropic.com/v1','claude-sonnet-5'],
+  xai:['https://api.x.ai/v1','grok-3'],
   groq:['https://api.groq.com/openai/v1','llama-3.3-70b-versatile'],
   nvidia:['https://integrate.api.nvidia.com/v1','meta/llama-3.3-70b-instruct'],
+  openrouter:['https://openrouter.ai/api/v1','anthropic/claude-sonnet-5'],
   ollama:['http://localhost:11434/v1','llama3.1'],
   lmstudio:['http://localhost:1234/v1','']
 };
