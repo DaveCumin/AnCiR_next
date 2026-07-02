@@ -18,11 +18,26 @@ const MCP_DIR = fileURLToPath(new URL('..', import.meta.url));
 const VITE_NODE = fileURLToPath(new URL('../node_modules/.bin/vite-node', import.meta.url));
 const SERVER = fileURLToPath(new URL('../src/server.js', import.meta.url));
 
-const BASE_URL = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
-// Local servers (Ollama/LM Studio) don't need a key; setting OPENAI_BASE_URL is
-// enough to enter live mode (a dummy key satisfies the Authorization header).
-const API_KEY = process.env.OPENAI_API_KEY || (process.env.OPENAI_BASE_URL ? 'local' : '');
-const MODEL = process.env.MODEL || 'gpt-4o-mini';
+// Server-side defaults (optional). If a deployer sets these, they act as a fallback
+// when a request brings no model config of its own.
+const ENV = {
+	baseUrl: process.env.OPENAI_BASE_URL || '',
+	apiKey: process.env.OPENAI_API_KEY || '',
+	model: process.env.MODEL || ''
+};
+
+// Merge a per-request BYO model config over the server defaults, so users can bring
+// their OWN endpoint/key/model and the deployer never pays for inference. The key is
+// used only for this request and is never logged or stored.
+function resolveLlm(llm = {}) {
+	const explicitBase = llm.baseUrl || ENV.baseUrl;
+	return {
+		baseUrl: llm.baseUrl || ENV.baseUrl || 'https://api.openai.com/v1',
+		model: llm.model || ENV.model || 'gpt-4o-mini',
+		// Local servers (Ollama/LM Studio) don't need a key; a base URL alone is enough.
+		apiKey: llm.apiKey || ENV.apiKey || (explicitBase ? 'local' : '')
+	};
+}
 
 /** Spawn an isolated MCP server, run `fn({call, tools})`, then tear it down. */
 async function withMcp(fn) {
@@ -44,8 +59,8 @@ async function withMcp(fn) {
 	}
 }
 
-/** LLM tool-calling loop against an OpenAI-compatible endpoint. */
-async function runLlm({ prompt, call, tools, trace }) {
+/** LLM tool-calling loop against an OpenAI-compatible endpoint (`cfg`). */
+async function runLlm({ prompt, call, tools, trace, cfg }) {
 	const oaiTools = tools
 		// The model builds the session; we export it ourselves afterwards.
 		.filter((t) => t.name !== 'export_session' && t.name !== 'render_plot')
@@ -108,10 +123,10 @@ async function runLlm({ prompt, call, tools, trace }) {
 	];
 
 	for (let turn = 0; turn < 20; turn++) {
-		const res = await fetch(`${BASE_URL}/chat/completions`, {
+		const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
-			body: JSON.stringify({ model: MODEL, messages, tools: oaiTools, tool_choice: 'auto' })
+			headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.apiKey}` },
+			body: JSON.stringify({ model: cfg.model, messages, tools: oaiTools, tool_choice: 'auto' })
 		});
 		if (!res.ok) {
 			// Providers like Groq validate tool args server-side and 400 with
@@ -188,18 +203,21 @@ async function runScripted({ prompt, call, trace }) {
 
 /**
  * Build an AnCiR session from a natural-language prompt.
- * @param {{prompt:string, sessionId?:string}} opts
- * @returns {Promise<{json:string, trace:string[], planner:'llm'|'scripted'}>}
+ * @param {{prompt:string, sessionId?:string, llm?:{baseUrl?:string, apiKey?:string, model?:string}}} opts
+ *   `llm` is the caller's own model config (BYO); falls back to server env, then the
+ *   no-key scripted planner.
+ * @returns {Promise<{json:string, trace:string[], planner:'llm'|'scripted', model?:string}>}
  */
-export async function buildSession({ prompt, sessionId }) {
+export async function buildSession({ prompt, sessionId, llm }) {
+	const cfg = resolveLlm(llm);
 	return withMcp(async ({ call, tools }) => {
 		const trace = [];
-		const planner = API_KEY ? 'llm' : 'scripted';
+		const planner = cfg.apiKey ? 'llm' : 'scripted';
 		await call('create_session', { id: sessionId ?? 'app' });
 		trace.push('create_session');
-		if (planner === 'llm') await runLlm({ prompt, call, tools, trace });
+		if (planner === 'llm') await runLlm({ prompt, call, tools, trace, cfg });
 		else await runScripted({ prompt, call, trace });
 		const json = await call('export_session', {}); // canonical AnCiR session JSON
-		return { json, trace, planner };
+		return { json, trace, planner, model: planner === 'llm' ? cfg.model : undefined };
 	});
 }

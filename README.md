@@ -231,10 +231,17 @@ flow programmatically and prints `SMOKE OK ✅`.
 ## Prototype: natural-language → AnCiR app (`app/`)
 
 A minimal backend that closes the loop **NL prompt → AnCiR session → opens in the
-GUI**. Each `POST /build` spawns an isolated MCP server, an agent builds the session
-(LLM tool-calling when `OPENAI_API_KEY` is set; a deterministic scripted planner
-otherwise), exports it, hosts it CORS-open, and returns an `ancirUrl` of the form
+GUI**. Each `POST /build` spawns an isolated MCP server, an agent builds the session,
+exports it, hosts it CORS-open, and returns an `ancirUrl` of the form
 `<ANCIR_BASE>/?loadFromURL=<sessionUrl>` — which AnCiR already auto-loads on startup.
+
+**Bring-your-own model.** The chat page has a **Model settings** panel (base URL, API
+key, model, with provider presets) stored in the browser's localStorage and sent per
+request as `{ llm: { baseUrl, apiKey, model } }` — so users drive the build with
+**their own** OpenAI-compatible endpoint (OpenAI / Groq / NVIDIA / Ollama / LM Studio)
+and the deployer never pays for inference. The key is used only for that request and is
+**never logged or stored**. A request with no `llm` falls back to the server's
+`OPENAI_*` env (if set), then to the deterministic scripted planner.
 
 ```bash
 npm run app            # backend on http://127.0.0.1:5273  (open / for a chat box)
@@ -243,8 +250,9 @@ npm run app:e2e        # full proof: builds, opens the session in a running AnCi
                        # Playwright, screenshots it (needs `npm run dev` on :5173)
 ```
 
-Env: `OPENAI_API_KEY`/`OPENAI_BASE_URL`/`MODEL` (LLM planner), `ANCIR_BASE_URL`
-(default `http://localhost:5173`), `APP_PORT` (default 5273).
+Env (all optional): `OPENAI_API_KEY`/`OPENAI_BASE_URL`/`MODEL` — a **server default**
+used only when a request brings no BYO config; `ANCIR_BASE_URL`
+(default `http://localhost:5173`), `APP_PORT` (default 5273), `APP_HOST`.
 
 > This is a prototype kept inside the MCP workspace; for the monetised product it
 > would graduate to its own repo, calling the MCP / `SessionManager` as a service and

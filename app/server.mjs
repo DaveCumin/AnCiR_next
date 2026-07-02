@@ -40,19 +40,27 @@ app.get('/health', (_req, res) => res.json({ ok: true, sessions: store.size }));
 app.post('/build', async (req, res) => {
 	const prompt = (req.body?.prompt ?? '').toString().trim();
 	if (!prompt) return res.status(400).json({ error: 'prompt is required' });
+	// Bring-your-own-model: the caller may supply their own endpoint/key/model. It is
+	// used only for this request and is NEVER logged or stored server-side.
+	const llm = req.body?.llm && typeof req.body.llm === 'object' ? req.body.llm : undefined;
 	try {
 		prune();
-		const { json, trace, planner } = await buildSession({ prompt, sessionId: 'app-' + randomUUID().slice(0, 8) });
+		const { json, trace, planner, model } = await buildSession({
+			prompt,
+			sessionId: 'app-' + randomUUID().slice(0, 8),
+			llm
+		});
 		const id = randomUUID();
 		store.set(id, { json, ts: Date.now() });
 		const sessionUrl = `${SELF_BASE}/sessions/${id}`;
 		const note =
 			planner === 'scripted'
-				? 'SCRIPTED planner — ignores your prompt details and always builds a cosine demo. Set OPENAI_API_KEY (see app/.env.example) for real natural-language following.'
+				? 'SCRIPTED planner (no model configured) — ignores your prompt and always builds a cosine demo. Add your own model in Model settings for real natural-language following.'
 				: undefined;
-		res.json({ id, planner, note, trace, sessionUrl, ancirUrl: ancirUrlFor(sessionUrl) });
+		res.json({ id, planner, model, note, trace, sessionUrl, ancirUrl: ancirUrlFor(sessionUrl) });
 	} catch (err) {
-		console.error('build failed:', err);
+		// Never include the request body (it may carry the user's key) in logs.
+		console.error('build failed:', err?.message || err);
 		res.status(500).json({ error: err?.message || String(err) });
 	}
 });
@@ -70,25 +78,61 @@ app.get('/', (_req, res) => {
 <title>AnCiR — describe an analysis</title>
 <style>body{font:16px system-ui;max-width:680px;margin:3rem auto;padding:0 1rem}
 textarea{width:100%;height:6rem;font:inherit;padding:.6rem}button{font:inherit;padding:.6rem 1.2rem;margin-top:.6rem;cursor:pointer}
+input,select{font:inherit;padding:.35rem;width:100%;box-sizing:border-box}label{display:block;margin:.5rem 0}
+details{margin:.8rem 0;border:1px solid #ddd;border-radius:6px;padding:.4rem .8rem}summary{cursor:pointer;font-weight:600}
 pre{background:#f4f4f5;padding:.8rem;border-radius:6px;white-space:pre-wrap}small{color:#666}</style>
 <h1>Describe an analysis → open it in AnCiR</h1>
 <textarea id=p placeholder="e.g. 48 hours of a 24-hour cosine, fit a cosinor and plot it"></textarea>
+<details id=cfg>
+  <summary>Model settings (bring your own)</summary>
+  <p><small>Your own model does the work. The key is sent to this server only to call your
+  model for this request — it is <b>never stored</b>. Local options (Ollama / LM Studio)
+  keep everything on your machine.</small></p>
+  <label>Preset
+    <select id=preset>
+      <option value="">— choose a provider —</option>
+      <option value="openai">OpenAI</option>
+      <option value="groq">Groq</option>
+      <option value="nvidia">NVIDIA</option>
+      <option value="ollama">Ollama (local)</option>
+      <option value="lmstudio">LM Studio (local)</option>
+    </select>
+  </label>
+  <label>Base URL <input id=base placeholder="https://api.openai.com/v1"></label>
+  <label>API key <input id=key type=password autocomplete=off placeholder="sk-… (leave blank for local)"></label>
+  <label>Model <input id=model placeholder="gpt-4o-mini"></label>
+</details>
 <div><button id=go>Build &amp; open in AnCiR</button> <small id=s></small></div>
-<p><small>Requires the AnCiR GUI running at <code>${ANCIR_BASE}</code> (<code>npm run dev</code> in the repo root).</small></p>
+<p><small>Opens the built session in the AnCiR app at <code>${ANCIR_BASE}</code>.</small></p>
 <pre id=out hidden></pre>
 <p id=link></p>
 <script>
 const $=s=>document.querySelector(s);
+const LS={base:'ancir.base',key:'ancir.key',model:'ancir.model'};
+const PRESETS={
+  openai:['https://api.openai.com/v1','gpt-4o-mini'],
+  groq:['https://api.groq.com/openai/v1','llama-3.3-70b-versatile'],
+  nvidia:['https://integrate.api.nvidia.com/v1','meta/llama-3.3-70b-instruct'],
+  ollama:['http://localhost:11434/v1','llama3.1'],
+  lmstudio:['http://localhost:1234/v1','']
+};
+$('#base').value=localStorage.getItem(LS.base)||'';
+$('#key').value=localStorage.getItem(LS.key)||'';
+$('#model').value=localStorage.getItem(LS.model)||'';
+if($('#base').value||$('#key').value)$('#cfg').open=true;
+$('#preset').onchange=()=>{const pr=PRESETS[$('#preset').value];if(pr){$('#base').value=pr[0];if(pr[1])$('#model').value=pr[1];}};
 $('#go').onclick=async()=>{
   const prompt=$('#p').value.trim(); if(!prompt)return;
+  const baseUrl=$('#base').value.trim(),apiKey=$('#key').value.trim(),model=$('#model').value.trim();
+  localStorage.setItem(LS.base,baseUrl);localStorage.setItem(LS.key,apiKey);localStorage.setItem(LS.model,model);
+  const llm={}; if(baseUrl)llm.baseUrl=baseUrl; if(apiKey)llm.apiKey=apiKey; if(model)llm.model=model;
   $('#s').textContent='building…'; $('#out').hidden=true; $('#link').textContent='';
   try{
-    const r=await fetch('/build',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt})});
+    const r=await fetch('/build',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt,llm})});
     const d=await r.json(); if(!r.ok)throw new Error(d.error||r.status);
-    $('#out').hidden=false; $('#out').textContent='planner: '+d.planner+(d.note?'\\n⚠ '+d.note:'')+'\\n\\n'+d.trace.join('\\n');
-    // Show a clickable link (so a stopped AnCiR isn't a dead end) AND open it.
+    $('#out').hidden=false; $('#out').textContent='planner: '+d.planner+(d.model?' ('+d.model+')':'')+(d.note?'\\n⚠ '+d.note:'')+'\\n\\n'+d.trace.join('\\n');
     $('#link').innerHTML='<a href="'+d.ancirUrl+'" target="_blank" rel="noopener">Open in AnCiR ↗</a> '
-      +'<small>(if this fails with ERR_CONNECTION_REFUSED, the AnCiR app isn\\'t running at '+${JSON.stringify(ANCIR_BASE)}+')</small>';
+      +'<small>(if this fails to open, the AnCiR app isn\\'t reachable at '+${JSON.stringify(ANCIR_BASE)}+')</small>';
     $('#s').textContent='built ✓'; window.open(d.ancirUrl,'_blank');
   }catch(e){$('#s').textContent='error: '+e.message;}
 };
@@ -112,8 +156,8 @@ app.listen(PORT, HOST, () => {
 	console.error(`AnCiR NL-app backend on http://${HOST}:${PORT}  (AnCiR base: ${ANCIR_BASE})`);
 	console.error(
 		process.env.OPENAI_API_KEY
-			? `Planner: LLM (${process.env.MODEL || 'gpt-4o-mini'} @ ${process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'})`
-			: `Planner: SCRIPTED (no OPENAI_API_KEY) — builds a fixed cosine demo, ignores prompt details. Set OPENAI_API_KEY for natural-language following.`
+			? `Model: server default ${process.env.MODEL || 'gpt-4o-mini'} @ ${process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'} (users can override via Model settings)`
+			: `Model: bring-your-own — users enter their endpoint/key/model in the page's "Model settings"; no server key set, so requests without one fall back to the scripted demo.`
 	);
 	console.error(`Open http://${HOST}:${PORT}/ to build a session from a prompt.`);
 	checkAncir();
