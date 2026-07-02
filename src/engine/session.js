@@ -400,6 +400,22 @@ export class AncirSession {
 			error: `${name} failed: ${e?.message || e}. Check the exact args with list_capabilities (each analysis lists its input fields + params).`,
 			outputs: []
 		});
+		// Remove a failed/invalid node and its columns from the session, so a broken
+		// process (e.g. SimulatedData with no startTime) never lands in the export and
+		// crashes the GUI on load.
+		const discardTp = (tpToDrop) => {
+			const outIds = Object.values(tpToDrop?.args?.out ?? {}).filter(
+				(id) => typeof id === 'number' && id >= 0
+			);
+			core.tableProcesses = core.tableProcesses.filter((t) => t.id !== tpToDrop.id);
+			for (const id of outIds) {
+				try {
+					removeColumn(id);
+				} catch {
+					/* already gone */
+				}
+			}
+		};
 		let tp;
 		try {
 			tp = new TableProcess({ name, args: a }, null);
@@ -426,6 +442,7 @@ export class AncirSession {
 		try {
 			res = entry.func ? await entry.func(tp.args) : undefined;
 		} catch (e) {
+			discardTp(tp);
 			return { ...badArgs(e), tableProcessId: tp.id };
 		}
 		let valid = true;
@@ -458,6 +475,19 @@ export class AncirSession {
 					stats = r0;
 				}
 			}
+		}
+
+		// A process that ran but produced no valid result leaves only broken/empty
+		// columns; drop the whole node so it can't pollute the export or crash the GUI.
+		if (!valid) {
+			discardTp(tp);
+			return {
+				name,
+				tableProcessId: tp.id,
+				valid: false,
+				error: `${name} did not produce a valid result (check inputs/parameters via list_capabilities).`,
+				outputs: []
+			};
 		}
 
 		// Prune output columns the process didn't write to. Dual-mode processes
