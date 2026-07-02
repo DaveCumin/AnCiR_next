@@ -1,6 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { visualizer } from 'rollup-plugin-visualizer';
-import { defineConfig } from 'vite';
+import { defineConfig, searchForWorkspaceRoot } from 'vite';
 
 export default defineConfig({
 	build: {
@@ -38,9 +38,14 @@ export default defineConfig({
 
 	// Honour a PORT injected by the environment (e.g. the preview harness) so the
 	// dev server listens where the proxy expects. Falls back to Vite's default.
-	server: process.env.PORT
-		? { port: Number(process.env.PORT), strictPort: true }
-		: undefined,
+	server: {
+		// Allow the dev server to serve tools/ancir_runtime.py (which lives outside
+		// src/) for the experimental "export session as Python" `?raw` import. This
+		// restores serving from the workspace root and only affects dev — the
+		// production build reads the file directly at build time.
+		fs: { allow: [searchForWorkspaceRoot(process.cwd())] },
+		...(process.env.PORT ? { port: Number(process.env.PORT), strictPort: true } : {})
+	},
 
 	plugins: [
 		sveltekit(),

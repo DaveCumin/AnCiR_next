@@ -8,6 +8,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { appConsts, appState } from '$lib/core/core.svelte';
 	import ColourPaletteSelect from '$lib/components/inputs/ColourPaletteSelect.svelte';
+	import { exportPython } from '$lib/components/iconActions/Setting.svelte';
 	let { showModal = $bindable(false) } = $props();
 
 	// Build the IANA zone list once on first render. `supportedValuesOf` is in
@@ -125,6 +126,22 @@
 				{/if}
 			</ControlInput>
 		</div>
+
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Experimental <span class="exp-badge">experimental</span></p>
+			</div>
+			<button class="export-py-btn" type="button" onclick={exportPython}>
+				Export session as Python
+			</button>
+			<p class="experimental-note">
+				Downloads a standalone Python script that reproduces this session's analyses. Requires
+				<code>numpy</code>, <code>pandas</code> and <code>scipy</code>. Some processes may not yet
+				be implemented in the Python runtime — the script prints a warning when run.
+			</p>
+		</div>
 	{/snippet}
 </Modal>
 
@@ -171,5 +188,44 @@
 		margin: var(--space-2) 0 0;
 		font-size: var(--font-sm);
 		color: var(--color-error, #c5221f);
+	}
+
+	.exp-badge {
+		margin-left: var(--space-2);
+		padding: 1px 6px;
+		font-size: var(--font-xs);
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--color-error, #c5221f);
+		border: 1px solid var(--color-error, #c5221f);
+		border-radius: 999px;
+		vertical-align: middle;
+	}
+
+	.export-py-btn {
+		align-self: flex-start;
+		height: var(--control-input-height);
+		padding: 0 var(--space-4);
+		font-size: var(--font-md);
+		white-space: nowrap;
+		color: var(--color-lightness-25, #333);
+		background: var(--color-lightness-97);
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 2px;
+		cursor: pointer;
+		transition: border-color 0.2s;
+	}
+	.export-py-btn:hover {
+		border-color: var(--color-lightness-35);
+	}
+
+	.experimental-note {
+		margin: var(--space-2) 0 0;
+		font-size: var(--font-sm);
+		color: var(--color-lightness-35);
+	}
+	.experimental-note code {
+		font-size: 0.95em;
 	}
 </style>

@@ -1,6 +1,7 @@
 <script module>
 	import { appConsts, outputCoreAsJson } from '$lib/core/core.svelte';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import { sessionToPython } from '$lib/utils/pythonExport.js';
 	export function exportJson() {
 		try {
 			// Get JSON string and validate
@@ -38,6 +39,33 @@
 		} catch (error) {
 			console.error('Failed to export JSON:', error.message);
 			addNotification('Error exporting JSON: ' + error.message);
+		}
+	}
+
+	// EXPERIMENTAL: export the current session as a self-contained Python script
+	// (ports tools/ancir_to_python.py). The ~3.5k-line Python runtime is pulled in
+	// lazily via a `?raw` import so it only loads when this is used.
+	export async function exportPython() {
+		try {
+			const session = JSON.parse(outputCoreAsJson());
+			const { default: runtimeSrc } = await import('$tools/ancir_runtime.py?raw');
+			const pySrc = sessionToPython(session, runtimeSrc);
+
+			const blob = new Blob([pySrc], { type: 'text/x-python' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = 'session.py';
+			document.body.appendChild(a);
+			a.click();
+			setTimeout(() => {
+				document.body.removeChild(a);
+				URL.revokeObjectURL(url);
+			}, 10);
+			addNotification('Exported session.py — run it with Python (needs numpy, pandas, scipy).');
+		} catch (error) {
+			console.error('Failed to export Python:', error?.message ?? error);
+			addNotification('Error exporting Python: ' + (error?.message ?? error));
 		}
 	}
 
