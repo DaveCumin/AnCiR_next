@@ -130,6 +130,19 @@ def run_table_process(fx, js):
     return outputs
 
 
+def run_plot_compute(fx, js):
+    """Call a plot-compute function (compute_fft / compute_autocorrelation) with
+    the SAME seeded inputs the JS emitter used, and return the arrays to compare.
+    Inputs come straight from js['inputs'] — no Column build needed."""
+    fn = getattr(rt, fx["pyFunc"], None)
+    if fn is None:
+        raise AssertionError(f"no Python {fx['pyFunc']} in ancir_runtime")
+    t = js["inputs"][fx["xRef"]]["values"]
+    y = js["inputs"][fx["yRef"]]["values"]
+    res = fn(t, y, *fx.get("extraArgs", []))
+    return {k: res.get(k) for k in fx.get("compareArrays", [])}
+
+
 def run_table_process_result(fx, js):
     raw_data, cols, id_map, _ = _build_cols(js)
     args = resolve_tokens(fx["args"], id_map)
@@ -152,6 +165,12 @@ def _check_fixture(fx, js_results):
         py = run_column_process(fx, js)
         ok, why = arrays_match(py["value"], js["outputs"]["value"], tol)
         assert ok, f"{fx['id']} output 'value' differs: {why}"
+
+    elif fx["kind"] == "plotCompute":
+        py = run_plot_compute(fx, js)
+        for key in fx.get("compareArrays", []):
+            ok, why = arrays_match(py.get(key), js["outputs"].get(key), tol)
+            assert ok, f"{fx['id']} array '{key}' differs: {why}"
 
     elif fx["kind"] == "tableProcessResult":
         py = run_table_process_result(fx, js)

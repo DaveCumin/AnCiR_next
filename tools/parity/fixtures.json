@@ -153,6 +153,48 @@
       },
       "args": { "xIN": "@grp", "yIN": ["@val"], "method": "auto", "alpha": 0.05, "postHocEnabled": true, "out": {} },
       "compareFields": ["test", "f", "ssBetween", "ssWithin", "dfBetween", "dfWithin", "etaSquared", "pValue"]
+    },
+    {
+      "id": "plot-fft-rhythm-noisy",
+      "kind": "plotCompute",
+      "jsFn": "computeFFT",
+      "pyFunc": "compute_fft",
+      "generate": {
+        "type": "rhythm",
+        "n": 168,
+        "period": 24,
+        "amp": 30,
+        "mesor": 40,
+        "phase": 5,
+        "noise": 4,
+        "seed": 31,
+        "refs": { "x": "t", "y": "y" }
+      },
+      "xRef": "t",
+      "yRef": "y",
+      "extraArgs": [null],
+      "compareArrays": ["frequencies", "magnitudes"]
+    },
+    {
+      "id": "plot-correlogram-rhythm-noisy",
+      "kind": "plotCompute",
+      "jsFn": "computeAutocorrelation",
+      "pyFunc": "compute_autocorrelation",
+      "generate": {
+        "type": "rhythm",
+        "n": 240,
+        "period": 24,
+        "amp": 35,
+        "mesor": 45,
+        "phase": 6,
+        "noise": 5,
+        "seed": 37,
+        "refs": { "x": "t", "y": "y" }
+      },
+      "xRef": "t",
+      "yRef": "y",
+      "extraArgs": [null, null, 0],
+      "compareArrays": ["lags", "correlations"]
     }
   ]
 }

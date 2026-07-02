@@ -28,8 +28,16 @@ import { loadProcesses } from '$lib/processes/processMap.js';
 import { loadPlots } from '$lib/plots/plotMap.js';
 import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
 import { setWorkerFactory } from '$lib/workers/workerPool.js';
+import { computeFFT } from '$lib/utils/fft.js';
+import { computeAutocorrelation } from '$lib/utils/correlogram.js';
 
 const PARITY_DIR = join(process.cwd(), 'tools', 'parity');
+
+// Pure calculating-plot compute functions, keyed by the fixture's `jsFn`.
+// These are the same functions the plot classes call for periodData/fftData/
+// acfData — testing them directly gives numeric parity without constructing a
+// reactive plot (see the `plotCompute` fixture kind).
+const PLOT_COMPUTE_FNS = { computeFFT, computeAutocorrelation };
 
 class ThrowOnPost {
 	postMessage() {
@@ -196,6 +204,20 @@ async function runTableProcessResult(fx) {
 	return { inputs, result: fields };
 }
 
+// Calls a pure plot-compute function (fft/autocorrelation) with seeded inputs
+// and captures the arrays the fixture wants compared. No plot/reactivity.
+function runPlotCompute(fx) {
+	const inputs = tpInputs(fx);
+	const fn = PLOT_COMPUTE_FNS[fx.jsFn];
+	if (!fn) throw new Error(`no JS plot-compute fn ${fx.jsFn}`);
+	const t = inputs[fx.xRef].values;
+	const y = inputs[fx.yRef].values;
+	const res = fn(t, y, ...(fx.extraArgs ?? []));
+	const outputs = {};
+	for (const k of fx.compareArrays ?? []) outputs[k] = safeArray(res[k]);
+	return { inputs, outputs };
+}
+
 describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 	it('runs every fixture through the JS engine', async () => {
 		appConsts.processMap = await loadProcesses();
@@ -209,6 +231,7 @@ describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 			resetCore();
 			if (fx.kind === 'columnProcess') results[fx.id] = runColumnProcess(fx);
 			else if (fx.kind === 'tableProcessResult') results[fx.id] = await runTableProcessResult(fx);
+			else if (fx.kind === 'plotCompute') results[fx.id] = runPlotCompute(fx);
 			else results[fx.id] = await runTableProcess(fx);
 		}
 
