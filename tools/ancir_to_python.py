@@ -112,9 +112,12 @@ def main():
     print(f"[ancir] wrote {out_path / 'columns_after_tables.csv'} "
           f"({len(df_final)} rows, {len(df_final.columns)} cols)")
 
-    # Render plots
+    # Render plots (PNG) and export their computed data (CSV). The CSVs mirror
+    # the app's "Show/Save data" for calculating plots (periodogram, FFT,
+    # correlogram, actogram) — the numbers the plot derives, not the raw input.
     if PLOTS:
         render_plots(PLOTS, columns_index, out_path)
+        export_plot_data(PLOTS, columns_index, out_path)
 
     # Loud summary of any unsupported processes (only reachable when
     # STRICT_PROCESSES was set to False; strict mode aborts earlier).

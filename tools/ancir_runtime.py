@@ -427,41 +427,50 @@ def _median_dt(t):
 # ----------------------------------------------------------------------
 
 def compute_fft(times, values, freq_step=None):
+    """Magnitude/phase spectrum. Mirrors src/lib/utils/fft.js computeFFT
+    header-for-header: mean-detrend only (no linear detrend), assume
+    approximately uniform sampling (no resampling), zero-pad the detrended
+    signal to the next power of two, and report the one-sided spectrum for
+    bins 1..N/2-1 (the DC bin is dropped) with magnitude = |X|*2/N."""
     t = _to_float_arr(times)
     y = _to_float_arr(values)
     mask = ~(np.isnan(t) | np.isnan(y))
     t, y = t[mask], y[mask]
-    if t.size < 4:
+    if t.size < 2:
         return {'frequencies': [], 'magnitudes': [], 'phases': [],
                 'samplingRate': 0.0, 'nyquistFreq': 0.0, 'minPeriod': 0.0}
-    # Detrend
-    reg = linear_regression(t.tolist(), y.tolist())
-    y = y - (reg['slope'] * t + reg['intercept'])
-    # Resample to uniform grid
-    dt = _median_dt(t.tolist())
-    t_uni = np.arange(t[0], t[-1] + dt, dt)
-    y_uni = np.interp(t_uni, t, y)
-    # zero-pad to next power of 2
-    n = 1
-    while n < y_uni.size:
-        n *= 2
-    y_pad = np.zeros(n)
-    y_pad[:y_uni.size] = y_uni
-    fft = np.fft.fft(y_pad)
-    freqs = np.fft.fftfreq(n, d=dt)
-    half = n // 2
-    freqs = freqs[:half]
-    fft = fft[:half]
-    mag = np.abs(fft) / max(y_uni.size, 1)
-    phase = np.angle(fft)
+    # Mean-detrend (the app does not linear-detrend or resample).
+    y = y - float(y.mean())
+    dt = (t[-1] - t[0]) / (t.size - 1) if t.size > 1 else 1.0
     sampling_rate = 1.0 / dt
+    nyquist = sampling_rate / 2.0
+    min_period = 2 * dt
+    if freq_step and freq_step > 0:
+        n = int(math.ceil(sampling_rate / freq_step))
+        n = 2 ** int(math.ceil(math.log2(max(n, 1))))
+    else:
+        n = 2 ** int(math.ceil(math.log2(y.size)))
+    if n < y.size:
+        n = 2 ** int(math.ceil(math.log2(y.size)))
+    y_pad = np.zeros(n)
+    y_pad[:y.size] = y
+    spec = np.fft.fft(y_pad)
+    half_n = n // 2
+    freqs, mags, phases = [], [], []
+    for i in range(1, half_n):
+        freq = i * sampling_rate / n
+        if freq > nyquist:
+            break
+        freqs.append(freq)
+        mags.append(float(abs(spec[i]) * 2.0 / n))
+        phases.append(float(np.angle(spec[i])))
     return {
-        'frequencies': freqs.tolist(),
-        'magnitudes': mag.tolist(),
-        'phases': phase.tolist(),
+        'frequencies': freqs,
+        'magnitudes': mags,
+        'phases': phases,
         'samplingRate': sampling_rate,
-        'nyquistFreq': sampling_rate / 2.0,
-        'minPeriod': 2 * dt,
+        'nyquistFreq': nyquist,
+        'minPeriod': min_period,
     }
 
 
@@ -3255,7 +3264,10 @@ def plot_fft(plot, columns_index, ax):
 
 def plot_periodogram(plot, columns_index, ax):
     p = plot.get('plot', {})
-    method = p.get('method', 'Lomb-Scargle')
+    # Coalesce an explicit null method (some sessions store method: null at the
+    # plot level; the per-series default is 'Lomb-Scargle') so we don't fall
+    # through to the Enright branch and render/export the wrong curve.
+    method = p.get('method') or 'Lomb-Scargle'
     p_min = float(p.get('periodMin', 1.0))
     p_max = float(p.get('periodMax', 48.0))
     step = float(p.get('periodStep', 0.1))
@@ -3465,4 +3477,247 @@ def render_plots(plots, columns_index, output_dir):
         plt.close(fig)
         written.append(path)
         print(f"[ancir-plot] wrote {path}")
+    return written
+
+
+# ----------------------------------------------------------------------
+# Computed plot-data export (CSV)
+#
+# Calculating plots (periodogram, FFT, correlogram, actogram) derive numbers
+# the raw columns don't contain. These builders mirror each plot's JS
+# `getDownloadData()` (src/lib/plots/*/*.svelte) header-for-header and
+# row-for-row so the CSVs match the app's "Show/Save data" output. They reuse
+# the same compute functions the PNG renderers use, so a plot's CSV and its
+# PNG always agree.
+# ----------------------------------------------------------------------
+
+def _series_time_and_y(series, columns_index):
+    """Resolve a plot series to (t, y) finite-paired lists, or (None, None)."""
+    x_col = _resolve_plot_col(series.get('x'), columns_index)
+    y_col = _resolve_plot_col(series.get('y'), columns_index)
+    if x_col is None or y_col is None:
+        return None, None
+    t = (x_col.hours_since_start if x_col.type == 'time' else x_col.get_data())
+    y = y_col.get_data()
+    t, y = _paired_finite(t, y)
+    return (t, y) if t else (None, None)
+
+
+def periodogram_download_data(plot, columns_index):
+    """Mirror Periodogramclass.getDownloadData (Periodogram.svelte).
+
+    Headers: ['DataSeries', 'Period (hours)', 'Power']; the JS adds
+    ['Threshold', 'P-value'] only when a series uses the Chi-squared method.
+    The Python port computes a scalar Chi-squared threshold (broadcast per
+    row) but does not compute the per-period P-value, so that column is
+    emitted empty to keep the header layout aligned with the app.
+    """
+    p = plot.get('plot', {})
+    method = p.get('method') or 'Lomb-Scargle'
+    p_min = float(p.get('periodMin', 1.0))
+    p_max = float(p.get('periodMax', 48.0))
+    step = float(p.get('periodStep', p.get('periodSteps', 0.1)))
+    has_threshold = (method == 'Chi-squared')
+    headers = ['DataSeries', 'Period (hours)', 'Power']
+    if has_threshold:
+        headers += ['Threshold', 'P-value']
+    rows = []
+    for d, series in enumerate(p.get('data', [])):
+        t, y = _series_time_and_y(series, columns_index)
+        if t is None:
+            continue
+        result = run_periodogram_calculation({
+            't': t, 'y': y, 'method': method,
+            'minPeriod': p_min, 'maxPeriod': p_max, 'stepSize': step,
+        })
+        thr = result.get('threshold')
+        for i, per in enumerate(result['x']):
+            row = [d, per, result['y'][i]]
+            if has_threshold:
+                row += [thr if thr is not None else '', '']
+            rows.append(row)
+    return headers, rows
+
+
+def fft_download_data(plot, columns_index):
+    """Mirror FFTclass.getDownloadData (FFT.svelte)."""
+    p = plot.get('plot', {})
+    series_list = p.get('data', [])
+    has_phase = any(s.get('showPhase') for s in series_list)
+    headers = ['DataSeries', 'Frequency (cycles/hr)', 'Period (hours)', 'Magnitude']
+    if has_phase:
+        headers.append('Phase (radians)')
+    rows = []
+    for d, series in enumerate(series_list):
+        t, y = _series_time_and_y(series, columns_index)
+        if t is None:
+            continue
+        fft = compute_fft(t, y, series.get('freqStep'))
+        freqs = fft['frequencies']
+        for i, freq in enumerate(freqs):
+            row = [d, freq, (1.0 / freq if freq else ''), fft['magnitudes'][i]]
+            if has_phase:
+                phases = fft.get('phases') or []
+                row.append(phases[i] if i < len(phases) else '')
+            rows.append(row)
+    return headers, rows
+
+
+def correlogram_download_data(plot, columns_index):
+    """Mirror Correlogramclass.getDownloadData (Correlogram.svelte)."""
+    p = plot.get('plot', {})
+    headers = ['DataSeries', 'Lag (hours)', 'Autocorrelation']
+    rows = []
+    for d, series in enumerate(p.get('data', [])):
+        t, y = _series_time_and_y(series, columns_index)
+        if t is None:
+            continue
+        ac = compute_autocorrelation(
+            t, y,
+            min_lag=float(p.get('corrMinLag', 0.0)),
+            max_lag=p.get('corrMaxLag') or None)
+        for i, lag in enumerate(ac['lags']):
+            rows.append([d, lag, ac['correlations'][i]])
+    return headers, rows
+
+
+def _actogram_bin_width(x_col):
+    """Bar width (hours). Only binned/awd columns carry a real bin width in JS;
+    plain number/time columns fall back to the scanned sampling step."""
+    if getattr(x_col, 'type', None) == 'bin' or \
+            getattr(x_col, 'compression', None) == 'awd':
+        bw = getattr(x_col, 'bin_width', None)
+        if bw:
+            return float(bw)
+    return None
+
+
+def _scan_step(values):
+    """(last - first) / (last_idx - first_idx) over the finite entries —
+    mirrors ActogramDataclass.binSize so a nulled endpoint can't collapse it."""
+    first = last = -1
+    for i, v in enumerate(values):
+        if v is not None and not (isinstance(v, float) and math.isnan(v)):
+            if first == -1:
+                first = i
+            last = i
+    if first == -1 or last == first:
+        return 0.0
+    return (values[last] - values[first]) / (last - first)
+
+
+def _actogram_bins_by_period(x_col, y_col, period_hrs):
+    """Port of ActogramDataclass.allBins + binsByPeriod (Actogram.svelte):
+    build left-edge bars in offset-corrected hours, then split them at period
+    boundaries. Returns {period_index: [{'xStart', 'xEnd', 'y'}, ...]}."""
+    raw_x = x_col.get_data()
+    raw_y = y_col.get_data()
+    if not raw_x or not raw_y:
+        return {}
+
+    def _finite(v):
+        return v is not None and not (isinstance(v, float) and math.isnan(v))
+
+    # Offset-corrected bar start (JS: hoursSinceStart - offset). For time this
+    # is hours since start-of-day of the earliest sample; for everything else
+    # the min-baseline of hoursSinceStart and the offset cancel, leaving the
+    # raw x value.
+    if x_col.type == 'time':
+        valid = [v for v in raw_x if _finite(v)]
+        if not valid:
+            return {}
+        # dayjs.utc(min).startOf('day') — the default display zone is UTC.
+        start_of_day_ms = math.floor(min(valid) / 86400000.0) * 86400000.0
+        starts = [(v - start_of_day_ms) / 3600000.0 if _finite(v) else None
+                  for v in raw_x]
+    else:
+        starts = [float(v) if _finite(v) else None for v in raw_x]
+
+    width = _actogram_bin_width(x_col)
+    if width is None:
+        width = _scan_step(x_col.hours_since_start)
+
+    period_bins = {}
+    n = min(len(starts), len(raw_y))
+    for i in range(n):
+        s, yv = starts[i], raw_y[i]
+        if s is None or not _finite(yv):
+            continue
+        bin_start, bin_end = s, s + width
+        start_period = math.floor(bin_start / period_hrs)
+        end_period = math.floor(bin_end / period_hrs)
+        if end_period < 0:
+            continue
+        if start_period == end_period and start_period >= 0:
+            period_bins.setdefault(start_period, []).append(
+                {'xStart': bin_start, 'xEnd': bin_end, 'y': yv})
+        else:
+            for pp in range(max(0, start_period), end_period + 1):
+                seg_start = max(bin_start, pp * period_hrs)
+                seg_end = min(bin_end, (pp + 1) * period_hrs)
+                if seg_end > seg_start:
+                    period_bins.setdefault(pp, []).append(
+                        {'xStart': seg_start, 'xEnd': seg_end, 'y': yv})
+    return period_bins
+
+
+def actogram_download_data(plot, columns_index):
+    """Mirror Actogramclass.getDownloadData (Actogram.svelte): one tidy row
+    per bin, periods numbered from 1."""
+    p = plot.get('plot', {})
+    period_hrs = float(p.get('periodHrs', 24) or 24)
+    headers = ['DataSeries', 'Period', 'BinStart (hrs)', 'BinEnd (hrs)', 'Value']
+    rows = []
+    for d, series in enumerate(p.get('data', [])):
+        x_col = _resolve_plot_col(series.get('x'), columns_index)
+        y_col = _resolve_plot_col(series.get('y'), columns_index)
+        if x_col is None or y_col is None:
+            continue
+        bins = _actogram_bins_by_period(x_col, y_col, period_hrs)
+        for per in sorted(bins.keys()):
+            for b in bins[per]:
+                rows.append([d, per + 1, b['xStart'], b['xEnd'], b['y']])
+    return headers, rows
+
+
+PLOT_DATA_BUILDERS = {
+    'periodogram': periodogram_download_data,
+    'fft': fft_download_data,
+    'correlogram': correlogram_download_data,
+    'actogram': actogram_download_data,
+}
+
+
+def export_plot_data(plots, columns_index, output_dir):
+    """Write `<plot>_data.csv` for every calculating plot (periodogram, FFT,
+    correlogram, actogram). Each CSV mirrors the plot's in-app "Show/Save data"
+    output. Returns the list of paths written; non-calculating plots
+    (scatter, boxplot, tableplot, dataview) are skipped."""
+    import csv
+    from pathlib import Path
+
+    out = Path(output_dir)
+    out.mkdir(exist_ok=True)
+    written = []
+    for plot in plots:
+        builder = PLOT_DATA_BUILDERS.get(plot.get('type', ''))
+        if builder is None:
+            continue
+        try:
+            headers, rows = builder(plot, columns_index)
+        except Exception as e:  # noqa: BLE001 — one bad plot shouldn't abort the rest
+            print(f"[ancir-plotdata] error building {plot.get('name')}: {e}")
+            continue
+        if not rows:
+            print(f"[ancir-plotdata] {plot.get('name')}: no computed data, skipped")
+            continue
+        safe_name = ''.join(c if c.isalnum() or c in '-_' else '_'
+                            for c in str(plot.get('name', f'plot_{plot.get("id", "?")}')))
+        path = out / f"plot_{plot.get('id', '?')}_{safe_name}_data.csv"
+        with open(path, 'w', newline='') as f:
+            w = csv.writer(f)
+            w.writerow(headers)
+            w.writerows(rows)
+        written.append(path)
+        print(f"[ancir-plotdata] wrote {path} ({len(rows)} rows)")
     return written
