@@ -457,15 +457,26 @@
 		     (never user input), so @html is safe and lets steps use <strong> etc. -->
 		<p class="tour-body">{@html bodyHtml}</p>
 		<div class="tour-actions">
-			<button class="tour-btn tour-skip" type="button" onclick={stopTour}>
+			<button
+				class="tour-btn tour-skip"
+				type="button"
+				data-testid="tour-skip"
+				onclick={stopTour}
+			>
 				{isLast ? 'Close' : 'Skip'}
 			</button>
 			<span class="tour-spacer"></span>
 			{#if tourState.index > 0}
-				<button class="tour-btn" type="button" onclick={prevStep}>Back</button>
+				<button class="tour-btn" type="button" data-testid="tour-back" onclick={prevStep}>Back</button
+				>
 			{/if}
 			{#if showNext}
-				<button class="tour-btn tour-primary" type="button" onclick={nextStep}>
+				<button
+					class="tour-btn tour-primary"
+					type="button"
+					data-testid="tour-next"
+					onclick={nextStep}
+				>
 					{isLast ? 'Done' : 'Next'}
 				</button>
 			{:else}

@@ -167,6 +167,7 @@
 					<button
 						type="button"
 						role="menuitem"
+						data-testid="help-take-tour"
 						onclick={() => {
 							showHelpMenu = false;
 							openPicker();
@@ -175,6 +176,7 @@
 					<button
 						type="button"
 						role="menuitem"
+						data-testid="help-about"
 						onclick={() => {
 							showHelpMenu = false;
 							showAbout = true;

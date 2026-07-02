@@ -63,7 +63,12 @@
 			{:else}
 				<div class="tp-list">
 					{#each visibleTours as t (t.id)}
-						<button class="tp-item" type="button" onclick={() => pick(t)}>
+						<button
+							class="tp-item"
+							type="button"
+							data-testid={`tour-item-${t.id}`}
+							onclick={() => pick(t)}
+						>
 							<div class="tp-item-main">
 								<span class="tp-item-name">
 									{t.name}
