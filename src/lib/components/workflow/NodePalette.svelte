@@ -354,6 +354,7 @@
 		type="button"
 		class="np-btn np-trigger"
 		class:open={showMenu}
+		data-testid="palette-trigger"
 		onclick={() => (showMenu = !showMenu)}
 		aria-label="Add node"
 		{@attach tooltip('Add to canvas')}
@@ -384,6 +385,7 @@
 								<button
 									type="button"
 									class="palette-tile np-item"
+									data-testid={`palette-item-${node.type}`}
 									aria-label={node.description || node.displayName}
 									onclick={() => handlePick(node)}
 									{@attach tooltip(node.description || node.displayName, { anchor: 'element' })}

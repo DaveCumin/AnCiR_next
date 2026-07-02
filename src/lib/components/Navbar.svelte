@@ -69,6 +69,7 @@
 		<!-- View switching: a Data-panel toggle + a Workflow/Workspace mode pair. -->
 		<button
 			class="rail-btn"
+			data-testid="nav-data-panel"
 			onclick={toggleDataPanel}
 			{@attach tooltip('Data — view and edit your columns, nodes and plots')}
 		>
@@ -78,6 +79,7 @@
 		<div class="view-pair" role="group" aria-label="Canvas view">
 			<button
 				class="rail-btn"
+				data-testid="nav-workflow-view"
 				onclick={showWorkflowView}
 				{@attach tooltip('Workflow — wire and inspect the analysis pipeline')}
 			>
@@ -85,6 +87,7 @@
 			</button>
 			<button
 				class="rail-btn"
+				data-testid="nav-workspace-view"
 				onclick={showWorkspaceView}
 				{@attach tooltip('Workspace — arrange and style your plots')}
 			>
@@ -97,12 +100,18 @@
 		<!-- Load/save session -->
 		<button
 			class="rail-btn"
+			data-testid="nav-load-session"
 			onclick={() => (showLoadModal = true)}
 			{@attach tooltip('Load a session')}
 		>
 			<Icon name="sessionload" width={22} height={22} />
 		</button>
-		<button class="rail-btn" onclick={exportJson} {@attach tooltip('Save this session')}>
+		<button
+			class="rail-btn"
+			data-testid="nav-save-session"
+			onclick={exportJson}
+			{@attach tooltip('Save this session')}
+		>
 			<Icon name="sessionsave" width={22} height={22} />
 		</button>
 
@@ -111,6 +120,7 @@
 		<!-- Undo redo history -->
 		<button
 			class="rail-btn"
+			data-testid="nav-undo"
 			onclick={() => history.undo()}
 			disabled={!history.canUndo}
 			{@attach tooltip(
@@ -121,6 +131,7 @@
 		</button>
 		<button
 			class="rail-btn"
+			data-testid="nav-redo"
 			onclick={() => history.redo()}
 			disabled={!history.canRedo}
 			{@attach tooltip(
@@ -132,12 +143,18 @@
 	</div>
 
 	<div class="icon-container bottom">
-		<button class="rail-btn" onclick={() => (showSettings = true)} {@attach tooltip('Settings')}>
+		<button
+			class="rail-btn"
+			data-testid="nav-settings"
+			onclick={() => (showSettings = true)}
+			{@attach tooltip('Settings')}
+		>
 			<Icon name="gear" />
 		</button>
 		<div class="help-anchor" bind:this={helpAnchor}>
 			<button
 				class="rail-btn"
+				data-testid="nav-help"
 				onclick={() => (showHelpMenu = !showHelpMenu)}
 				aria-haspopup="menu"
 				aria-expanded={showHelpMenu}
