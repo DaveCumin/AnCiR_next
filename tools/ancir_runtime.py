@@ -1619,7 +1619,10 @@ def tp_npcra(args, cols, raw_data, _sv):
 
 def tp_blankcolumn(args, cols, raw_data, sv):
     n = int(args.get('N', args.get('rows', args.get('length', 0))))
-    fill = args.get('fillValue', '')  # JS BlankColumn fills '' (empty), type category
+    # An empty blank cell reads back as None in the JS engine (a category
+    # column's get_data maps '' -> null), so default the fill to None to match.
+    # An explicit fillValue is still honoured.
+    fill = args.get('fillValue', None)
     out_id = _out_id(args, 'result')
     _set_col(raw_data, cols, out_id, [fill] * n, type_='category')
     return n > 0
