@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import sys
 from pathlib import Path
 
@@ -147,18 +148,31 @@ SESSION_TOLERANCE = {
     "demo-tp-doublelogistic": 1e-3,
 }
 
-# Specific columns whose JS BASELINE is itself degenerate (a JS-engine headless
-# limitation, NOT a Python-port bug) — excluded from comparison, reason noted:
-#  - filterbyothercol col 58: the FilterByOtherCol process is not applied during
-#    headless column reconstruction (the column stays unfiltered) even though
-#    getColumnById resolves the reference column. The Python port filters correctly.
-#  - widetolong col 196 (time_21): the output time column stores raw epoch ms but
-#    is typed 'time', and JS get_data returns all-None (cannot re-parse numeric
-#    ms). The Python port emits the correct ms values.
+# Columns whose JS BASELINE is itself degenerate (a JS-engine headless
+# limitation, NOT a Python-port bug) — excluded from comparison, reason noted.
+#
+# Keyed by CANONICAL column name (the trailing `_<id>` suffix stripped), NOT by
+# numeric column id: ids are reassigned every time the demos are regenerated
+# (`GEN_DEMOS=1 …`), which silently invalidated an id-keyed list. Names are
+# stable; the `_<id>` suffix on TP outputs is stripped so it can't drift either.
+#
+#  - widetolong `time` (the WideToLong time output): stores raw epoch ms but is
+#    typed 'time', and JS get_data returns all-None (cannot re-parse numeric ms
+#    headless). The Python port emits the correct ms values, so we skip the
+#    comparison rather than mark Python wrong.
+#
+# (The former filterbyothercol `y` skip was removed 2026-07-02: it no longer
+# diverges, so keeping it would mask a real regression.)
 SKIP_COLUMNS = {
-    "demo-process-filterbyothercol": {58},
-    "demo-tp-widetolong": {196},
+    "demo-tp-widetolong": {"time"},
 }
+
+
+def _canonical_name(name):
+    """Strip a trailing `_<digits>` suffix from a column name so skip keys
+    survive demo regeneration (which reassigns the id embedded in the suffix)."""
+    m = re.match(r"^(.*)_\d+$", name or "")
+    return m.group(1) if m else name
 
 
 def check_session(sid, path, js_results, verbose=False):
@@ -174,12 +188,12 @@ def check_session(sid, path, js_results, verbose=False):
         return {"status": "error", "reason": str(e), "diffs": []}
 
     tol = SESSION_TOLERANCE.get(sid, TOL)
-    skip_cols = SKIP_COLUMNS.get(sid, set())
+    skip_names = SKIP_COLUMNS.get(sid, set())
     diffs = []
     matched = 0
     for cid_str, js_col in js["columns"].items():
         cid = int(cid_str)
-        if cid in skip_cols:
+        if _canonical_name(js_col.get("name")) in skip_names:
             continue
         col = cols.get(cid)
         try:
