@@ -544,14 +544,10 @@
 			if (loadedAny) {
 				result = { y_results, outputKeys: currentOutputKeys, statKeys: currentStatKeys };
 				p.args.valid = true;
-				const inputsAreStale =
-					(p.args.xIN >= 0 && (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0) ||
-					(p.args.yIN ?? []).some((id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0);
-				if (!inputsAreStale) {
-					lastHash = getHash;
-				} else {
-					recompute();
-				}
+				// Always recompute after a load: the rehydrated y_results hold only the
+				// output columns, not the transient stats scalars (stats: {}), so the
+				// stats panel would otherwise stay blank until a param change forced it.
+				recompute();
 			} else {
 				recompute();
 			}

@@ -93,6 +93,15 @@
 		return /^https?:\/\//.test(url) ? url : `${base}/${url.replace(/^\//, '')}`;
 	}
 
+	// Focus the examples search box as soon as it mounts — i.e. when the Examples
+	// tab is chosen, or when the async example list finishes loading (or when the
+	// modal opens straight to the Examples tab). Deferred one frame so it wins over
+	// the native <dialog>'s open-focus.
+	function focusOnMount(node) {
+		const raf = requestAnimationFrame(() => node.focus());
+		return () => cancelAnimationFrame(raf);
+	}
+
 	$effect(() => {
 		if (showModal && sourceMode === 'example') ensureExampleIndex();
 	});
@@ -312,6 +321,7 @@
 							placeholder="Search examples by node or function (e.g. fourier, bin, cosinor)…"
 							disabled={loading}
 							aria-label="Search example sessions"
+							{@attach focusOnMount}
 						/>
 						{#if filteredSessions.length === 0}
 							<p class="tab-hint">No examples match “{exampleSearch}”.</p>

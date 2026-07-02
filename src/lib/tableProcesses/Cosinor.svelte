@@ -430,10 +430,13 @@
 		out += p.args.permutationStatistic;
 		return out;
 	});
-	// Persisted in p.args so reopening the control panel (which remounts this
-	// component) doesn't reset it to '' and force a recompute. Only re-runs when
-	// getHash actually differs (an input or arg changed).
-	let lastHash = p.args._fitHash ?? '';
+	// Starts empty every mount so the $effect below always recomputes once after
+	// mount. The derived stats (MESOR / amplitude / phase / CIs / F-stat / RMSE)
+	// live only in the transient `cosinorData` and are NOT persisted with the
+	// session, so a mount that skipped the fit (seeding lastHash from a persisted
+	// hash) would leave the stats panel blank until a param change forced a
+	// recompute. Mirrors RectangularWave / NonparametricRA.
+	let lastHash = '';
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
@@ -542,12 +545,11 @@
 						y_results
 					};
 					p.args.valid = true;
-					// The rehydrated output matches the current (non-stale) inputs, so
-					// mark this hash as handled — the $effect then won't recompute on
-					// open. (If inputs ARE stale, we leave lastHash at the persisted
-					// p.args._fitHash so a genuine change still triggers a recompute.)
-					lastHash = getHash;
-					p.args._fitHash = lastHash;
+					// NOTE: lastHash is deliberately NOT set here. The rehydrated
+					// cosinorData only holds the fitted curve (from the saved output
+					// column), not the derived stats, so we let the $effect fire once
+					// after mount to recompute them. The curve above is just an instant
+					// placeholder while that (worker-offloaded) recompute runs.
 				}
 			}
 		}

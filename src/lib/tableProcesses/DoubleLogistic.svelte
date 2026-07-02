@@ -373,11 +373,9 @@
 				}
 			}
 		}
-		const inputsAreStale =
-			!needsCompute &&
-			((p.args.xIN >= 0 && (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0) ||
-				(p.args.yIN ?? []).some((id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0));
-		if (!inputsAreStale) lastHash = getHash;
+		// NOTE: lastHash deliberately NOT set here — rehydrated dlData holds only the
+		// fitted curve (fitResult: null), not the derived stats, so let the $effect
+		// recompute them once after mount.
 		mounted = true;
 	});
 

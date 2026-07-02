@@ -342,10 +342,11 @@
 		out += p.args.permutationStatistic;
 		return out;
 	});
-	// Persisted in p.args so reopening the control panel (which remounts this
-	// component) doesn't reset it to '' and trigger a needless recompute. The
-	// fit only re-runs when getHash actually differs (an input or arg changed).
-	let lastHash = p.args._fitHash ?? '';
+	// Init '' every mount so the $effect recomputes once after mount. The derived
+	// fit stats live only in transient state and aren't persisted with the session,
+	// so a mount that skipped the fit would leave the stats panel blank until a
+	// param change. Mirrors RectangularWave / NonparametricRA.
+	let lastHash = '';
 
 	function onYSelectionChange() {
 		const fitColsChanged = syncYColumns();
@@ -644,13 +645,9 @@
 					originTime_ms: null
 				};
 				p.args.valid = true;
-				const inputsAreStale =
-					(p.args.xIN >= 0 && (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0) ||
-					(p.args.yIN ?? []).some((id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0);
-				if (!inputsAreStale) {
-						lastHash = getHash;
-						p.args._fitHash = lastHash;
-					}
+				// NOTE: lastHash deliberately NOT set here — the rehydrated fitData
+				// holds only the fitted curve, not the derived stats, so let the
+				// $effect recompute them once after mount (curve above is a placeholder).
 			}
 		}
 		mounted = true;
