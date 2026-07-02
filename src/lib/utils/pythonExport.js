@@ -54,6 +54,7 @@ def main():
             bin_width=meta.get("binWidth", 1.0),
             compression=meta.get("compression"),
             ref_id=meta.get("refId"),
+            group_label=meta.get("groupLabel"),
             columns_index=None,  # set after all are built
             processes=meta.get("processes", []),
         )
@@ -169,6 +170,7 @@ function colMetaForColumn(col) {
 		timeFormat: col.timeFormat ?? null,
 		binWidth: col.binWidth ?? 1.0,
 		refId: col.refId ?? null,
+		groupLabel: col.groupLabel ?? null,
 		processes: (col.processes ?? []).map((p) => ({
 			funcname: p.funcname ?? null,
 			name: p.name ?? null,

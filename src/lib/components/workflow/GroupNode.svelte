@@ -322,6 +322,11 @@
 								onInput={(v) => renameColumn(col, v)}
 								onCommit={(v) => renameColumn(col, v, true)}
 							/>
+							{#if col.groupLabel}
+								<span class="group-label-chip" title="Group label: {col.groupLabel}"
+									>{col.groupLabel}</span
+								>
+							{/if}
 						</div>
 						<button
 							type="button"
@@ -546,6 +551,19 @@
 		white-space: nowrap;
 		font-weight: 500;
 		color: rgba(0, 0, 0, 0.8);
+	}
+
+	.group-label-chip {
+		display: inline-block;
+		margin-left: 6px;
+		padding: 0 5px;
+		border-radius: 8px;
+		font-size: 10px;
+		font-weight: 600;
+		line-height: 1.4;
+		color: var(--color-accent, #2563eb);
+		background: var(--color-accent-soft, #dbeafe);
+		vertical-align: middle;
 	}
 
 	.row-body {

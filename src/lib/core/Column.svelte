@@ -266,6 +266,11 @@
 			return this.customName || 'Unnamed';
 		});
 		customName = $state(null);
+		// Per-column group / replicate label (BioDare2 trace label). Tags the
+		// biological group a data column belongs to so replicates sharing a label
+		// can be aggregated for grouped analysis. Orthogonal to which Group/table
+		// the column sits in. null / '' means unlabelled.
+		groupLabel = $state(null);
 		//Type of data - if it is referencial, then get the type from the reference
 		type = $derived.by(() => {
 			if (this.isReferencial()) return this.refColumn?.type;
@@ -548,6 +553,9 @@
 			jsonOut.producerPort = this.producerPort;
 			jsonOut.producerArtifactKind = this.producerArtifactKind;
 			jsonOut.provenance = this.provenance;
+			if (this.groupLabel != null && this.groupLabel !== '') {
+				jsonOut.groupLabel = this.groupLabel;
+			}
 			jsonOut.processes = this.processes;
 
 			return jsonOut;
@@ -571,7 +579,8 @@
 				producerArtifactKind,
 				processes,
 				compression,
-				provenance
+				provenance,
+				groupLabel
 			} = json;
 			// `binWidth`, `originTime_ms`, `provenance`, `name`, `type` are $derived
 			// getters that delegate to refColumn for referencial columns. Object.assign
@@ -592,6 +601,7 @@
 			};
 			if (name !== undefined) columnData.name = name;
 			if (type !== undefined) columnData.type = type;
+			if (groupLabel != null) columnData.groupLabel = groupLabel;
 			if (binWidth != null) columnData.binWidth = binWidth;
 			if (originTime_ms != null) columnData.originTime_ms = originTime_ms;
 			if (provenance != null) columnData.provenance = provenance;
@@ -753,6 +763,21 @@
 					{:else}
 						<span>{getColumnById(col.refId)?.timeFormat}</span>
 					{/if}
+				</div>
+			{/if}
+
+			{#if !canChange && col.type !== 'time' && col.type !== 'bin' && col.refId == null}
+				<div class="control-input display group-label-row">
+					<p>Label</p>
+					<input
+						placeholder="group / replicate"
+						title="Group or replicate label used to aggregate this trace with others sharing the label"
+						value={col.groupLabel ?? ''}
+						oninput={(e) => {
+							const v = e.currentTarget.value;
+							col.groupLabel = v.trim() === '' ? null : v;
+						}}
+					/>
 				</div>
 			{/if}
 

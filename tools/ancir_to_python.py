@@ -59,6 +59,7 @@ def main():
             bin_width=meta.get("binWidth", 1.0),
             compression=meta.get("compression"),
             ref_id=meta.get("refId"),
+            group_label=meta.get("groupLabel"),
             columns_index=None,  # set after all are built
             processes=meta.get("processes", []),
         )

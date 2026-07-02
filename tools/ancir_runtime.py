@@ -940,6 +940,7 @@ class Column:
     bin_width: float = 1.0
     compression: str | None = None
     ref_id: int | None = None  # if this column is referencial
+    group_label: str | None = None  # per-column group/replicate label (metadata; not used in compute)
     columns_index: dict = field(default_factory=dict)  # {id: Column}
     processes: list = field(default_factory=list)  # [(funcname, args)]
 

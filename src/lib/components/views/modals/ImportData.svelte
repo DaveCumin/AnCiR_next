@@ -38,6 +38,13 @@
 	}
 	import { stackOrderInsideOut } from 'd3-shape';
 	import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import {
+		deriveLabelsFromNames,
+		hasReplicatePattern,
+		detectLabelRow,
+		extractRowAsLabels,
+		stripRowFromColumns
+	} from '$lib/utils/importLabels.js';
 
 	const specialValues = ['NaN', 'NA', 'null'];
 
@@ -81,6 +88,19 @@
 	let buttonText = $derived(targetFile ? 'Change file' : 'Choose File');
 
 	let selectedColumns = $state(new Set());
+
+	// ─── Per-column group/replicate labels (BioDare2 trace labels) ─────────────
+	// columnLabels: header-col-name -> label string. labelRowIndex: the preview
+	// data-row index (relative to parsedData, 0 = first data row) the user picked
+	// as the label row; that row is excluded from imported data at load time.
+	let columnLabels = $state({});
+	let labelRowIndex = $state(null);
+	let pickingLabelRow = $state(false); // true while the user clicks a row to use as labels
+	let labelBulkText = $state(''); // text for "apply label to selected columns"
+	let labelRowSuggestion = $state(null); // { rowIndex } when a label row is auto-detected
+	// Offer the "derive from names" chip only when names show a replicate pattern.
+	let namesLookLabelled = $derived(headers.length > 1 && hasReplicatePattern(headers));
+	let anyLabelsSet = $derived(Object.values(columnLabels).some((v) => v && String(v).trim() !== ''));
 
 	// Date+Time column combination
 	let dateTimePairs = $state([]); // [{ dateCol, timeCol, dateFormat, timeFormat }]
@@ -362,6 +382,11 @@
 		binningEnabled = false;
 		binIntervalMin = 15;
 		selectedColumns.clear();
+		columnLabels = {};
+		labelRowIndex = null;
+		pickingLabelRow = false;
+		labelBulkText = '';
+		labelRowSuggestion = null;
 		dateTimePairs = [];
 		combinePairs = new Set();
 		replaceMode = false;
@@ -372,6 +397,51 @@
 		mismatchedColumns = [];
 		dataUrl = '';
 		isUrlMode = false;
+	}
+
+	// ─── Label capture helpers ─────────────────────────────────────────────────
+
+	/** Capture the given preview row as per-column labels and mark it for
+	 * exclusion from the imported data. rowIdx is relative to parsedData. */
+	function pickLabelRow(rowIdx) {
+		if (!parsedData) return;
+		columnLabels = extractRowAsLabels(parsedData, headers, rowIdx);
+		labelRowIndex = rowIdx;
+		pickingLabelRow = false;
+		labelRowSuggestion = null;
+	}
+
+	/** Fill labels by stripping trailing replicate tokens from column names. */
+	function applyDeriveLabelsFromNames() {
+		columnLabels = deriveLabelsFromNames(headers);
+		// Deriving from names does not consume a data row.
+		labelRowIndex = null;
+		labelRowSuggestion = null;
+	}
+
+	/** Apply one label to every currently-selected column. */
+	function applyLabelToSelected() {
+		const text = labelBulkText.trim();
+		const next = { ...columnLabels };
+		for (const col of selectedColumns) next[col] = text;
+		columnLabels = next;
+	}
+
+	/** Clear all captured labels and any picked label row. */
+	function clearLabels() {
+		columnLabels = {};
+		labelRowIndex = null;
+		pickingLabelRow = false;
+	}
+
+	/** After a fresh preview, offer a label-row suggestion when the first data
+	 * row looks like trace labels — but only if the user hasn't already set
+	 * labels or picked a row. Never applies silently. */
+	function maybeSuggestLabelRow() {
+		labelRowSuggestion = null;
+		if (labelRowIndex != null || anyLabelsSet) return;
+		const hit = detectLabelRow(parsedData, headers);
+		if (hit) labelRowSuggestion = { rowIndex: hit.rowIndex };
 	}
 
 	function stripCsvValue(v) {
@@ -789,6 +859,8 @@
 
 			// Detect date-only + time-only column pairs
 			detectDateTimePairs();
+			// Suggest a label row if the first data row looks like trace labels
+			maybeSuggestLabelRow();
 		}
 
 		loadProgress = { stage: '', detail: '' };
@@ -902,6 +974,8 @@
 
 		// Detect date-only + time-only column pairs
 		detectDateTimePairs();
+		// Suggest a label row if the first data row looks like trace labels
+		maybeSuggestLabelRow();
 
 		loadProgress = { stage: '', detail: '' };
 		awaitingPreview = false;
@@ -918,7 +992,11 @@
 				skipFirstNLines: skipLines,
 				delimiter: delimiter,
 				complete: async (results) => {
-					const allData = convertArrayToObject(results.data);
+					let allData = convertArrayToObject(results.data);
+					// Exclude a picked label row before filtering/combining/sorting.
+					if (labelRowIndex != null) {
+						allData = stripRowFromColumns(allData, labelRowIndex);
+					}
 					let filteredData =
 						selectedColumns.size < headers.length
 							? Object.fromEntries(
@@ -1457,6 +1535,12 @@
 			await parseFile();
 		}
 
+		// Exclude a picked label row from the data before any binning/sort so it
+		// is never imported as a data value. Labels were captured at pick time.
+		if (labelRowIndex != null && parsedData) {
+			parsedData = stripRowFromColumns(parsedData, labelRowIndex);
+		}
+
 		// Apply binning if enabled
 		if (binningEnabled && parsedData) {
 			loadProgress = {
@@ -1746,6 +1830,13 @@
 					df.name = f;
 					core.rawData.set(df.id, result[f]);
 					df.data = df.id;
+				}
+
+				// Attach the captured group/replicate label to data columns only
+				// (time / bin columns are the x-axis, not a measured trace).
+				const lbl = columnLabels[f];
+				if (lbl && String(lbl).trim() !== '' && df.type !== 'time' && df.type !== 'bin') {
+					df.groupLabel = String(lbl).trim();
 				}
 
 				pushObj(df);
@@ -2256,6 +2347,70 @@
 								</div>
 							</div>
 
+							{#if !enspireMultiplatePayload}
+								{#if labelRowSuggestion}
+									<div class="label-suggest">
+										<span
+											>Row {labelRowSuggestion.rowIndex + 1} looks like trace labels (text above
+											numeric data).</span
+										>
+										<button
+											class="dialog-button label-suggest-yes"
+											style="margin-top:0;"
+											onclick={() => pickLabelRow(labelRowSuggestion.rowIndex)}
+											>Use as labels</button
+										>
+										<button
+											class="link-button"
+											onclick={() => (labelRowSuggestion = null)}>Dismiss</button
+										>
+									</div>
+								{/if}
+
+								<div class="section-row label-actions">
+									<span class="label-actions-title">Group labels:</span>
+									<button
+										class="dialog-button"
+										class:active={pickingLabelRow}
+										style="margin-top:0;"
+										title="Then click a row below to use its cells as column labels"
+										onclick={() => (pickingLabelRow = !pickingLabelRow)}
+									>
+										{pickingLabelRow ? 'Click a row below…' : 'Use a row as labels'}
+									</button>
+									{#if namesLookLabelled}
+										<button
+											class="dialog-button"
+											style="margin-top:0;"
+											title="Strip trailing replicate numbers from column names"
+											onclick={applyDeriveLabelsFromNames}>Derive from names</button
+										>
+									{/if}
+									<input
+										class="label-bulk-input"
+										type="text"
+										placeholder="label…"
+										bind:value={labelBulkText}
+									/>
+									<button
+										class="dialog-button"
+										style="margin-top:0;"
+										disabled={selectedColumns.size === 0}
+										title="Apply the label to all selected columns"
+										onclick={applyLabelToSelected}>Apply to selected</button
+									>
+									{#if anyLabelsSet || labelRowIndex != null}
+										<button class="link-button" onclick={clearLabels}>Clear labels</button>
+									{/if}
+								</div>
+								{#if labelRowIndex != null}
+									<p class="label-note">
+										Row {labelRowIndex + 1} is used as labels and will be excluded from the imported
+										data.
+									</p>
+								{/if}
+							{/if}
+
 							<div class="preview-table-wrapper" style="overflow-x: auto; max-width: 100%;">
 								<table class="preview-table">
 									<thead>
@@ -2333,11 +2488,41 @@
 												{/if}
 											{/each}
 										</tr>
+										{#if !enspireMultiplatePayload}
+											<tr class="label-row">
+												{#each headers as col, i (`lbl-${i}-${combinedTimeCols.has(col)}`)}
+													{#if combinedTimeCols.has(col)}
+														<!-- skip: merged into date col -->
+													{:else if combinedDateCols.has(col)}
+														<th class="label-cell label-cell-muted" title="Time column"
+															>time</th
+														>
+													{:else}
+														<th class="label-cell">
+															<input
+																class="label-input"
+																type="text"
+																placeholder="label"
+																value={columnLabels[col] ?? ''}
+																oninput={(e) => {
+																	columnLabels = { ...columnLabels, [col]: e.currentTarget.value };
+																}}
+															/>
+														</th>
+													{/if}
+												{/each}
+											</tr>
+										{/if}
 									</thead>
 									<tbody>
 										{#each Array(Math.min(6, Math.max(0, previewRowCount - (previewDisplayStart - 1)))) as _, i}
 											{@const rowIdx = previewDisplayStart - 1 + i}
-											<tr>
+											<tr
+												class:pickable={pickingLabelRow}
+												class:is-label-row={rowIdx === labelRowIndex}
+												onclick={pickingLabelRow ? () => pickLabelRow(rowIdx) : null}
+												title={pickingLabelRow ? 'Use this row as column labels' : null}
+											>
 												{#each headers as col}
 													{#if combinedTimeCols.has(col)}
 														<!-- skip: merged -->
@@ -2499,6 +2684,59 @@
 		gap: var(--space-4);
 	}
 
+	/* ── Group-label capture UI ──────────────────────────────────────────────── */
+	.label-actions {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: var(--space-3);
+		margin-top: var(--space-3);
+	}
+	.label-actions-title {
+		font-size: var(--font-sm);
+		font-weight: 600;
+		color: var(--color-lightness-35);
+	}
+	.label-bulk-input {
+		font-size: var(--font-sm);
+		padding: 0.15rem var(--space-3);
+		border: 1px solid var(--color-lightness-80);
+		border-radius: var(--radius-1, 4px);
+		max-width: 10rem;
+	}
+	.dialog-button.active {
+		outline: 2px solid var(--color-accent, #3b82f6);
+		outline-offset: 1px;
+	}
+	.link-button {
+		background: none;
+		border: none;
+		color: var(--color-accent, #3b82f6);
+		cursor: pointer;
+		font-size: var(--font-sm);
+		text-decoration: underline;
+		padding: 0;
+	}
+	.label-suggest {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		flex-wrap: wrap;
+		margin-top: var(--space-3);
+		padding: var(--space-2) var(--space-3);
+		background: var(--color-lightness-97);
+		border: 1px solid var(--color-lightness-90);
+		border-radius: var(--radius-1, 4px);
+		font-size: var(--font-sm);
+	}
+	.label-note {
+		margin: var(--space-2) 0 0;
+		font-size: var(--font-sm);
+		color: var(--color-lightness-35);
+		font-style: italic;
+	}
+
 	/* ── Preview table ───────────────────────────────────────────────────────── */
 	.preview-table-wrapper {
 		margin-top: var(--space-4);
@@ -2534,6 +2772,36 @@
 		cursor: pointer;
 		font-size: var(--font-sm);
 		color: var(--color-lightness-35);
+	}
+
+	.preview-table th.label-cell {
+		background: var(--color-lightness-97);
+		padding: 0.1rem var(--space-3);
+	}
+	.preview-table th.label-cell-muted {
+		color: var(--color-lightness-65);
+		font-style: italic;
+		font-weight: 400;
+		text-align: center;
+	}
+	.label-input {
+		width: 100%;
+		min-width: 4rem;
+		font-size: var(--font-sm);
+		padding: 0.1rem 0.25rem;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 3px;
+		box-sizing: border-box;
+	}
+	.preview-table tr.pickable {
+		cursor: pointer;
+	}
+	.preview-table tr.pickable:hover td {
+		background: var(--color-lightness-90);
+	}
+	.preview-table tr.is-label-row td {
+		background: var(--color-accent-soft, #dbeafe);
+		font-style: italic;
 	}
 
 	/* ── Multi-file concatenation UI ─────────────────────────────────────────── */
