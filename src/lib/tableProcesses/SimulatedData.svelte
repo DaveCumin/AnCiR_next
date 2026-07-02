@@ -35,11 +35,21 @@
 		const timeOUT = argsIN.out.time;
 		const valuesOUT = argsIN.out.values;
 
+		// Defensive: a missing/invalid startTime would throw "Invalid time value" and a
+		// non-positive sampling period would loop forever — a bad node (e.g. from a
+		// session created without a startTime) must never hang or crash a load, so we
+		// fall back to a valid time and skip when the period is unusable.
+		const startMs = (() => {
+			const t = new Date(startTime ?? NaN).getTime();
+			return Number.isFinite(t) ? t : dayjs.utc().valueOf();
+		})();
+		const step = Number(samplingPeriod_hours) > 0 ? Number(samplingPeriod_hours) : null;
+
 		let simulatedTime = [];
 		let simulatedValues = [];
 		let currentTime = 0;
 
-		for (const section of sections) {
+		for (const section of step && Array.isArray(sections) ? sections : []) {
 			const duration = section.duration_hours;
 			const period = section.rhythmPeriod_hours;
 			const phase = section.rhythmPhase_hours || 0;
@@ -48,9 +58,9 @@
 			const noiseMode = section.noiseMode ?? 'multiply';
 			const noiseAmplitude = section.noiseAmplitude ?? 1;
 
-			for (let i = 0; i < duration; i += samplingPeriod_hours) {
+			for (let i = 0; i < duration; i += step) {
 				simulatedTime.push(
-					new Date(new Date(startTime).getTime() + (currentTime + i) * 3600000).toISOString()
+					new Date(startMs + (currentTime + i) * 3600000).toISOString()
 				);
 
 				// Apply phase shift to the rhythm calculation
@@ -135,7 +145,15 @@
 
 	function doSimulated() {
 		previewStart = 1;
-		[simulatedTime, simulatedValues, p.args.valid] = simulateddata(p.args);
+		try {
+			[simulatedTime, simulatedValues, p.args.valid] = simulateddata(p.args);
+		} catch (e) {
+			// Never let a bad node throw out of a reactive effect and freeze the load.
+			console.error('SimulatedData failed to compute:', e);
+			simulatedTime = [];
+			simulatedValues = [];
+			p.args.valid = false;
+		}
 	}
 
 	function addSection() {

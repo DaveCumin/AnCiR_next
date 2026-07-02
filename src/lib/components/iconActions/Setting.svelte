@@ -223,7 +223,13 @@
 		for (let i = 0; i < totalPlots; i++) {
 			if (onProgress) onProgress(`Rebuilding plot ${i + 1} of ${totalPlots}…`);
 			await yieldFrame();
-			pushObj(Plot.fromJSON(jsonData.plots[i]), false);
+			// Isolate each plot: a single malformed plot must not hang or abort the
+			// whole load — log and skip it so the rest of the session still opens.
+			try {
+				pushObj(Plot.fromJSON(jsonData.plots[i]), false);
+			} catch (e) {
+				console.error(`Failed to rebuild plot ${i + 1} of ${totalPlots}; skipping.`, e);
+			}
 		}
 
 		// Prewarm wrapper-column customName so reading `name` later (e.g. inside
