@@ -48,7 +48,6 @@ browser anyway.
 | `add_column_process` | Apply a **column transform** (Add, Multiply, normalize, Sort, OutlierRemoval, RemoveTrend, …) to a column and run its chain; embedded in the session |
 | `add_plot` | Create a plot wired to columns and add it to the session (opens rendered in the GUI) |
 | `render_plot` | **Rasterise** a plot to PNG (+ SVG) via a real headless browser — the actual AnCiR component with axes/gridlines/legend |
-| `run_cosinor` | Convenience cosinor fit → MESOR, amplitude, acrophase, period, R², RMSE (also reachable via `run_table_process` `Cosinor`) |
 | `export_session` | Export AnCiR‑compatible JSON (optionally write to a file) |
 
 ### `run_table_process`
@@ -170,7 +169,7 @@ const { json } = await mgr.call('user-42', 'export_session');
 
 The worker exposes the same operations as the MCP tools (`create_session`,
 `import_data`, `list_columns`, `run_table_process`, `add_column_process`, `add_plot`,
-`render_plot`, `run_cosinor`, `export_session`, `describe_capabilities`).
+`render_plot`, `export_session`, `describe_capabilities`).
 
 ## Test it with an LLM
 

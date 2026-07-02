@@ -174,20 +174,10 @@ function registerTools(server) {
 		}
 	);
 
-	server.tool(
-		'run_cosinor',
-		'Fit a cosinor (circadian rhythm) model to one or more columns using AnCiR’s engine. (Convenience wrapper; also reachable via run_table_process Cosinor.)',
-		{
-			x: z.number().describe('Column id for the time/x axis'),
-			y: z.union([z.number(), z.array(z.number())]).describe('Column id(s) to fit'),
-			useFixedPeriod: z.boolean().optional(),
-			fixedPeriod: z.number().optional(),
-			nHarmonics: z.number().int().optional(),
-			Ncurves: z.number().int().optional(),
-			alpha: z.number().optional()
-		},
-		async (args) => ok(await requireSession().runCosinor(args))
-	);
+	// NOTE: no `run_cosinor` tool. It computed a fit but did NOT add a node to the
+	// session, so a caller got the numbers with no Cosinor node in the export. Use
+	// `run_table_process` with name "Cosinor" instead — it persists the node AND
+	// returns the recovered parameters in `fit`.
 
 	server.tool(
 		'export_session',

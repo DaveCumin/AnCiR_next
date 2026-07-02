@@ -34,7 +34,6 @@ const methods = {
 	add_plot: ({ type, inputs }) => requireSession().addPlot(type, inputs),
 	render_plot: ({ type, inputs, outBase, width, height }) =>
 		requireSession().renderPlotToFiles(type, inputs, { outBase, width, height }),
-	run_cosinor: (args) => requireSession().runCosinor(args),
 	export_session: () => ({ json: requireSession().exportSession() })
 };
 
