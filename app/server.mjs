@@ -20,7 +20,16 @@ const PORT = Number(process.env.PORT || process.env.APP_PORT) || 5273;
 const HOST = process.env.APP_HOST || '127.0.0.1'; // set APP_HOST=0.0.0.0 to bind publicly
 // Strip any trailing slash so we never produce `…5173//?loadFromURL=`.
 const ANCIR_BASE = (process.env.ANCIR_BASE_URL || 'http://localhost:5173').replace(/\/+$/, '');
-const SELF_BASE = (process.env.APP_BASE_URL || `http://${HOST}:${PORT}`).replace(/\/+$/, '');
+
+// The public base for session URLs. Prefer APP_BASE_URL; otherwise derive it from the
+// incoming request (honouring a reverse proxy / Cloudflare tunnel's x-forwarded-*
+// headers), so an ephemeral quick-tunnel URL works with zero config.
+function selfBase(req) {
+	if (process.env.APP_BASE_URL) return process.env.APP_BASE_URL.replace(/\/+$/, '');
+	const proto = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim() || 'http';
+	const host = req.headers['x-forwarded-host'] || req.headers.host || `${HOST}:${PORT}`;
+	return `${proto}://${host}`;
+}
 const TTL_MS = Number(process.env.SESSION_TTL_MS) || 60 * 60 * 1000;
 
 /** @type {Map<string,{json:string, ts:number}>} */
@@ -53,7 +62,7 @@ app.post('/build', async (req, res) => {
 		});
 		const id = randomUUID();
 		store.set(id, { json, ts: Date.now() });
-		const sessionUrl = `${SELF_BASE}/sessions/${id}`;
+		const sessionUrl = `${selfBase(req)}/sessions/${id}`;
 		const note =
 			planner === 'scripted'
 				? 'SCRIPTED planner (no model configured) — ignores your prompt and always builds a cosine demo. Add your own model in Model settings for real natural-language following.'
