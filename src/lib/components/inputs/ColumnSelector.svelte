@@ -372,7 +372,10 @@
 			e.preventDefault();
 			commitRename(e, node);
 		} else if (e.key === 'Escape') {
+			// Keep Escape from reaching the window handler so it cancels the rename
+			// only, not the whole dropdown.
 			e.preventDefault();
+			e.stopPropagation();
 			cancelRename();
 		}
 	}
@@ -390,9 +393,18 @@
 		const inDropdown = dropdownEl && dropdownEl.contains(e.target);
 		if (!inTrigger && !inDropdown) open = false;
 	}
+
+	function handleWindowKeydown(e) {
+		if (!open || e.key !== 'Escape') return;
+		// While renaming a group, Escape cancels the rename (handled by the input);
+		// don't also close the whole dropdown.
+		if (editingKey != null) return;
+		e.preventDefault();
+		open = false;
+	}
 </script>
 
-<svelte:window onclick={handleDocClick} />
+<svelte:window onclick={handleDocClick} onkeydown={handleWindowKeydown} />
 
 {#snippet renderNode(node, depth)}
 	{#if node.options}
