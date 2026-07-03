@@ -53,28 +53,6 @@
 			}
 		}
 
-		// Helper: build a sub-group for a TP's outputs (when there are >=2 outputs).
-		function tpToGroup(proc) {
-			const outEntries = Object.entries(proc.args?.out ?? {})
-				.filter(([, colId]) => colId !== -1 && !excludeColIds.includes(colId))
-				.filter(([, colId]) => !seenIds.has(colId));
-			if (outEntries.length <= 1) return null;
-			const procChildren = [];
-			for (const [, colId] of outEntries) {
-				const col = getColumnById(colId);
-				if (!col) continue;
-				seenIds.add(colId);
-				procChildren.push({ key: `c:${colId}`, label: col.name, value: colId });
-			}
-			if (procChildren.length === 0) return null;
-			return {
-				key: `tp:${proc.id}`,
-				label: proc.displayName || proc.name,
-				options: procChildren,
-				proc
-			};
-		}
-
 		// Canvas Groups (the replacement for tables).
 		for (const group of core.groups) {
 			const children = [];
@@ -91,22 +69,42 @@
 			}
 		}
 
-		// Free TPs (each becomes its own group if it has >=2 outputs; single-output
-		// TPs contribute their lone output column directly to the orphan section below).
-		const freeTPOutputColIds = new Set();
+		// Free table-processes: one group per TP node (any number of outputs), so
+		// its outputs sit under the node's (renameable) name rather than a generic
+		// bucket.
 		for (const proc of core.tableProcesses) {
-			const g = tpToGroup(proc);
-			if (g) {
-				tree.push(g);
-				for (const child of g.options) freeTPOutputColIds.add(child.value);
-			} else {
-				for (const colId of Object.values(proc.args?.out ?? {})) {
-					if (typeof colId === 'number' && colId >= 0) freeTPOutputColIds.add(colId);
-				}
+			const children = [];
+			for (const colId of Object.values(proc.args?.out ?? {})) {
+				if (typeof colId !== 'number' || colId < 0) continue;
+				if (excludeColIds.includes(colId) || seenIds.has(colId)) continue;
+				const col = getColumnById(colId);
+				if (!col) continue;
+				seenIds.add(colId);
+				children.push({ key: `c:${colId}`, label: col.name, value: colId });
+			}
+			if (children.length > 0) {
+				tree.push({ key: `tp:${proc.id}`, label: proc.displayName || proc.name, options: children, proc });
 			}
 		}
 
-		// Orphan columns: in core.data, not absorbed by any group, not already seen.
+		// Free (orphan) process nodes: one group per node, holding the producer
+		// output columns it feeds (producerNodeId === `process_<id>`).
+		for (const proc of core.orphanProcesses ?? []) {
+			const procNodeId = `process_${proc.id}`;
+			const children = [];
+			for (const col of core.data ?? []) {
+				if (col.producerNodeId !== procNodeId || col.refId != null || col.data != null) continue;
+				if (excludeColIds.includes(col.id) || seenIds.has(col.id)) continue;
+				seenIds.add(col.id);
+				children.push({ key: `c:${col.id}`, label: col.name, value: col.id });
+			}
+			if (children.length > 0) {
+				tree.push({ key: `proc:${proc.id}`, label: proc.displayName || proc.name, options: children });
+			}
+		}
+
+		// Anything left is a standalone data column (its own data node); list these
+		// under a single "Data" heading rather than one group per single column.
 		const orphanCols = [];
 		for (const col of core.data ?? []) {
 			if (excludeColIds.includes(col.id)) continue;
@@ -115,7 +113,7 @@
 			orphanCols.push({ key: `c:${col.id}`, label: col.name, value: col.id });
 		}
 		if (orphanCols.length > 0) {
-			tree.push({ key: 'orphan', label: 'Columns', options: orphanCols });
+			tree.push({ key: 'orphan', label: 'Data', options: orphanCols });
 		}
 
 		return tree;
