@@ -375,9 +375,42 @@
 
 		let changed = false;
 
-		// Remove stale output keys (e.g., deselected Y, or stat-key change)
-		for (const key of Object.keys(p.args.out ?? {})) {
-			if (desired.has(key)) continue;
+		// Stale output keys (present, no longer wanted, excluding the shared movex).
+		// Reuse a stale column for a missing key with the SAME stat suffix so the
+		// output column id stays stable across an in-place Y swap (e.g. a node
+		// spliced upstream) — downstream consumers stay connected instead of orphaned.
+		const staleKeys = Object.keys(p.args.out ?? {}).filter(
+			(k) => k !== 'movex' && !desired.has(k) && Number(p.args.out[k]) >= 0
+		);
+		const staleBySuffix = new Map();
+		for (const k of staleKeys) {
+			const suffix = k.slice(k.indexOf('_') + 1);
+			if (!staleBySuffix.has(suffix)) staleBySuffix.set(suffix, []);
+			staleBySuffix.get(suffix).push(k);
+		}
+		const reusedStale = new Set();
+		for (const yId of activeIds) {
+			const srcName = getColumnById(yId)?.name ?? String(yId);
+			for (const k of wantedKeys) {
+				const key = `${yId}_${k}`;
+				if (Number(p.args.out[key]) >= 0) continue;
+				const pool = staleBySuffix.get(k);
+				if (pool && pool.length) {
+					const oldKey = pool.shift();
+					const colId = p.args.out[oldKey];
+					delete p.args.out[oldKey];
+					reusedStale.add(oldKey);
+					p.args.out[key] = colId;
+					const col = getColumnById(colId);
+					if (col) col.name = `${srcName}_${k}`;
+					changed = true;
+				}
+			}
+		}
+
+		// Delete any stale keys that weren't reused.
+		for (const key of staleKeys) {
+			if (reusedStale.has(key)) continue;
 			const colId = p.args.out[key];
 			if (colId != null && colId >= 0) {
 				core.rawData.delete(colId);

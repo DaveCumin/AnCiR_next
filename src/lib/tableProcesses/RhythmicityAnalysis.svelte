@@ -437,9 +437,56 @@
 
 		let changed = false;
 
-		// Remove stale output keys (including ones from the other mode)
-		for (const key of Object.keys(p.args.out ?? {})) {
-			if (desired.has(key)) continue;
+		// Map a per-Y output key to its reuse group + Y id. `rhythmicityx` and any
+		// non-per-Y key returns null (not reusable). This lets us transfer an output
+		// column from a removed Y to a newly-added Y of the SAME group, keeping the
+		// column id stable across an in-place Y swap (e.g. a node spliced upstream)
+		// so downstream consumers stay connected instead of orphaned.
+		const keyGroup = (key) => {
+			const ry = key.match(/^rhythmicityy_(\d+)$/);
+			if (ry) return { group: 'rhythmicityy', yId: Number(ry[1]) };
+			const m = key.match(/^(\d+)_(.+)$/);
+			if (m) return { group: m[2], yId: Number(m[1]) };
+			return null;
+		};
+
+		const staleKeys = Object.keys(p.args.out ?? {}).filter(
+			(k) => !desired.has(k) && Number(p.args.out[k]) >= 0
+		);
+		const staleByGroup = new Map();
+		for (const k of staleKeys) {
+			const g = keyGroup(k);
+			if (!g) continue;
+			if (!staleByGroup.has(g.group)) staleByGroup.set(g.group, []);
+			staleByGroup.get(g.group).push(k);
+		}
+
+		// Transfer stale columns to missing desired keys of the same group.
+		const reusedStale = new Set();
+		for (const key of desired) {
+			if (Number(p.args.out[key]) >= 0) continue;
+			const g = keyGroup(key);
+			if (!g) continue;
+			const pool = staleByGroup.get(g.group);
+			if (pool && pool.length) {
+				const oldKey = pool.shift();
+				const colId = p.args.out[oldKey];
+				delete p.args.out[oldKey];
+				reusedStale.add(oldKey);
+				p.args.out[key] = colId;
+				const srcName = getColumnById(g.yId)?.name ?? String(g.yId);
+				const col = getColumnById(colId);
+				if (col) {
+					col.name =
+						g.group === 'rhythmicityy' ? `rhythmicityy_${srcName}` : `${srcName}_${g.group}`;
+				}
+				changed = true;
+			}
+		}
+
+		// Remove stale output keys that weren't reused (incl. other-mode leftovers).
+		for (const key of staleKeys) {
+			if (reusedStale.has(key)) continue;
 			const colId = p.args.out[key];
 			if (colId != null && colId >= 0) {
 				core.rawData.delete(colId);

@@ -111,7 +111,13 @@
 	}
 
 	function ensureGroupOutputColumn(group) {
-		if (!group?.id || !p.parent) return;
+		if (!group?.id) return;
+		// Create the group's output column for a committed free-standing node (in
+		// core.tableProcesses) or a legacy parent table. The old `!p.parent` early
+		// return produced no outputs on the parentless dataflow node.
+		const canWrite =
+			!!p.parent || (p?.id != null && (core.tableProcesses ?? []).some((tp) => tp.id === p.id));
+		if (!canWrite) return;
 		const outKey = `group_${group.id}`;
 		if (Number(p.args.out?.[outKey]) >= 0) {
 			const existing = getColumnById(p.args.out[outKey]);
@@ -121,7 +127,7 @@
 		const col = new Column({});
 		col.name = `${group.name || 'group'}_${p.id}`;
 		pushObj(col);
-		p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
+		if (p.parent) p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
 		p.args.out[outKey] = col.id;
 	}
 

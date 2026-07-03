@@ -31,6 +31,7 @@
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import { importJson } from '$lib/components/iconActions/Setting.svelte';
 	import { tick } from 'svelte';
+	import { base } from '$app/paths';
 
 	/** Yield to the browser so it can repaint (keeps spinner alive). */
 	function yieldToUI() {
@@ -70,6 +71,59 @@
 	let enspireMultiplatePayload = $state(null);
 	let dataUrl = $state('');
 	let isUrlMode = $state(false);
+
+	// Tabbed source picker (mirrors LoadSessionModal): 'file' | 'url' | 'example'.
+	let sourceMode = $state('file');
+	// Example datasets are the `kind: 'dataset'` entries from the demo manifest
+	// (e.g. the bundled "Test data" CSV), lazily fetched the first time the
+	// Examples tab is opened.
+	let exampleDatasets = $state([]);
+	let examplesRequested = $state(false);
+	let examplesLoading = $state(false);
+	let examplesError = $state('');
+
+	function resolveDatasetUrl(url) {
+		return /^https?:\/\//.test(url) ? url : `${base}/${url.replace(/^\//, '')}`;
+	}
+
+	async function ensureExampleDatasets() {
+		if (examplesRequested) return;
+		examplesRequested = true;
+		examplesError = '';
+		examplesLoading = true;
+		try {
+			const res = await fetch(`${base}/sessions/demos/index.json`);
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			const idx = await res.json();
+			const all = Array.isArray(idx?.sessions) ? idx.sessions : [];
+			exampleDatasets = all.filter(
+				(s) => s.kind === 'dataset' || /\.(csv|tsv|txt)$/i.test(s.url || '')
+			);
+		} catch (err) {
+			examplesError = err.message;
+			examplesRequested = false; // allow retry on next tab visit
+		} finally {
+			examplesLoading = false;
+		}
+	}
+
+	// Load an example dataset straight away — no preview/confirm. Reuses the URL
+	// preview path to detect columns/time-format, then commits immediately.
+	async function loadExampleDataset(session) {
+		dataUrl = resolveDatasetUrl(session.url);
+		await doPreviewFromURL();
+		if (importReady && !errorInfile) {
+			await confirmImport();
+		}
+	}
+
+	// Switch to the Examples tab and (lazily) fetch the dataset list. This is a
+	// module-scoped component (<script module>), so we can't use $effect — the
+	// fetch is kicked off from the tab click instead.
+	function showExamplesTab() {
+		sourceMode = 'example';
+		ensureExampleDatasets();
+	}
 
 	// Binning for large files
 	const ROW_THRESHOLD = 15000;
@@ -362,6 +416,7 @@
 	let mismatchedColumns = $state([]); // [{ column, missingFrom: [filenames] }]
 
 	function resetValues() {
+		sourceMode = 'file';
 		parsedData = null;
 		importReady = false;
 		hasHeader = true;
@@ -780,12 +835,13 @@
 	export async function openImportModal() {
 		resetValues();
 		showImportModal = true;
-		await tick();
-		fileInput?.click();
+		// Don't auto-open the OS file picker — the "From file" tab's Choose File
+		// button starts it, so the user can pick a tab (file / URL / example) first.
 	}
 
 	export async function openImportModalWithUrl(url) {
 		resetValues();
+		sourceMode = 'url';
 		dataUrl = url;
 		showImportModal = true;
 		await tick();
@@ -2130,41 +2186,103 @@
 		{:else}
 			<div class="heading">
 				<h2>Import Data</h2>
-				<div
-					class="control-input-horizontal"
-					style="align-items: center; margin-top: var(--space-4);"
-				>
-					<button class="dialog-button" style="margin-top:0;" onclick={(e) => fileInput.click()}
-						>{buttonText}</button
-					>
-					<p class="filename-preview">
-						{#if targetFiles.length > 1}
-							{targetFiles.length} files selected
-						{:else if targetFile}
-							{targetFile.name}
-						{:else}
-							No file selected
-						{/if}
-					</p>
-				</div>
-				<!-- <div class="url-input-container">
-					<input
-						class="url-input"
-						type="text"
-						bind:value={dataUrl}
-						placeholder="…or enter a URL to a CSV/text file"
-						onkeydown={(e) => {
-							if (e.key === 'Enter') doPreviewFromURL();
-						}}
-					/>
+				<div class="source-tabs" role="tablist">
 					<button
-						class="choose-file-button"
-						onclick={doPreviewFromURL}
-						disabled={!dataUrl.trim() || awaitingPreview}
+						type="button"
+						class="tab-btn"
+						class:active={sourceMode === 'file'}
+						onclick={() => (sourceMode = 'file')}
+						role="tab"
+						aria-selected={sourceMode === 'file'}
 					>
-						Load from URL
+						From file
 					</button>
-				</div> -->
+					<button
+						type="button"
+						class="tab-btn"
+						class:active={sourceMode === 'url'}
+						onclick={() => (sourceMode = 'url')}
+						role="tab"
+						aria-selected={sourceMode === 'url'}
+					>
+						From URL
+					</button>
+					<button
+						type="button"
+						class="tab-btn"
+						class:active={sourceMode === 'example'}
+						onclick={showExamplesTab}
+						role="tab"
+						aria-selected={sourceMode === 'example'}
+					>
+						Examples
+					</button>
+				</div>
+
+				{#if sourceMode === 'file'}
+					<div
+						class="control-input-horizontal"
+						style="align-items: center; margin-top: var(--space-4);"
+					>
+						<button class="dialog-button" style="margin-top:0;" onclick={(e) => fileInput.click()}
+							>{buttonText}</button
+						>
+						<p class="filename-preview">
+							{#if targetFiles.length > 1}
+								{targetFiles.length} files selected
+							{:else if targetFile}
+								{targetFile.name}
+							{:else}
+								No file selected
+							{/if}
+						</p>
+					</div>
+				{:else if sourceMode === 'url'}
+					<div
+						class="control-input-horizontal url-input-row"
+						style="align-items: center; margin-top: var(--space-4);"
+					>
+						<input
+							class="url-input"
+							type="text"
+							bind:value={dataUrl}
+							placeholder="Paste a URL to a CSV / text file"
+							onkeydown={(e) => {
+								if (e.key === 'Enter') doPreviewFromURL();
+							}}
+						/>
+						<button
+							class="dialog-button"
+							style="margin-top:0;"
+							onclick={doPreviewFromURL}
+							disabled={!dataUrl.trim() || awaitingPreview}
+						>
+							Load from URL
+						</button>
+					</div>
+				{:else}
+					<div class="example-list" style="margin-top: var(--space-4);">
+						{#if examplesLoading}
+							<LoadingSpinner message="Loading examples…" />
+						{:else if examplesError || exampleDatasets.length === 0}
+							<p class="tab-hint">Can't find any example data.</p>
+						{:else}
+							{#each exampleDatasets as ds (ds.id ?? ds.url)}
+								<button
+									type="button"
+									class="example-item"
+									title={ds.description ?? ''}
+									onclick={() => loadExampleDataset(ds)}
+								>
+									<span class="example-name">{ds.name}</span>
+									{#if ds.description}
+										<span class="example-description">{ds.description}</span>
+									{/if}
+								</button>
+							{/each}
+						{/if}
+					</div>
+				{/if}
 			</div>
 			<input
 				bind:this={fileInput}
@@ -2646,6 +2764,76 @@
 		margin-bottom: var(--space-4);
 	}
 
+	/* Tabbed source picker — mirrors LoadSessionModal. */
+	.source-tabs {
+		display: flex;
+		gap: 4px;
+		margin-top: var(--space-4);
+		border-bottom: 1px solid var(--color-lightness-85);
+	}
+
+	.tab-btn {
+		background: transparent;
+		border: 0;
+		border-bottom: 2px solid transparent;
+		padding: 6px 10px;
+		cursor: pointer;
+		color: var(--color-lightness-35);
+		font-size: var(--font-lg);
+	}
+
+	.tab-btn:hover:not(:disabled) {
+		color: var(--color-lightness-10);
+	}
+
+	.tab-btn.active {
+		color: var(--color-lightness-10);
+		border-bottom-color: var(--color-hover);
+	}
+
+	.tab-hint {
+		color: var(--color-lightness-35);
+		font-size: var(--font-md);
+		margin: 0;
+	}
+
+	.example-list {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		max-height: 40vh;
+		overflow-y: auto;
+	}
+
+	.example-item {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		padding: 8px 10px;
+		text-align: left;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-sm, 4px);
+		background: var(--surface-card, #fff);
+		font: inherit;
+		cursor: pointer;
+		width: 100%;
+	}
+
+	.example-item:hover {
+		background-color: var(--color-lightness-95);
+		border-color: var(--color-hover);
+	}
+
+	.example-name {
+		font-weight: 600;
+		font-size: var(--font-lg);
+	}
+
+	.example-description {
+		font-size: var(--font-sm);
+		color: var(--color-lightness-35);
+	}
+
 	.filename-preview {
 		font-size: var(--font-sm);
 		color: var(--color-text-muted, #666);
@@ -2653,6 +2841,22 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	.url-input {
+		flex: 1 1 auto;
+		min-width: 0;
+		padding: 0.3rem 0.5rem;
+		font-size: var(--font-md);
+		border: 1px solid var(--color-lightness-85, #ccc);
+		border-radius: var(--radius-1, 4px);
+		background: var(--color-lightness-97);
+		color: inherit;
+		box-sizing: border-box;
+	}
+	.url-input:focus {
+		outline: none;
+		border-color: var(--color-accent, #3b82f6);
 	}
 
 	.enspire-summary-panel {

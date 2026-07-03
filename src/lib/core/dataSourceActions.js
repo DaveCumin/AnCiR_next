@@ -13,6 +13,8 @@ const actions = {
 	openImport: null,
 	/** @type {null | ((files: FileList | File[]) => void)} */
 	openImportFiles: null,
+	/** @type {null | ((url: string) => void)} */
+	openImportUrl: null,
 	/** @type {null | ((file: File) => void)} */
 	loadSessionFile: null
 };
@@ -34,6 +36,11 @@ export function openImportData() {
 /** Open the import modal pre-seeded with dropped/selected data files. */
 export function openImportDataFiles(files) {
 	actions.openImportFiles?.(files);
+}
+
+/** Open the import modal pre-seeded with a URL to a CSV/text file (previews it). */
+export function openImportDataUrl(url) {
+	actions.openImportUrl?.(url);
 }
 
 /** Load a dropped `.json` session file. */

@@ -13,7 +13,8 @@
 	import ImportData, {
 		loadFromURL,
 		openImportModal,
-		openImportModalWithFiles
+		openImportModalWithFiles,
+		openImportModalWithUrl
 	} from '$lib/components/views/modals/ImportData.svelte';
 	import Notifications from '$lib/components/reusables/Notifications.svelte';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
@@ -121,6 +122,7 @@
 	registerDataSourceActions({
 		openImport: openImportModal,
 		openImportFiles: openImportModalWithFiles,
+		openImportUrl: openImportModalWithUrl,
 		loadSessionFile: loadSessionFromFile
 	});
 

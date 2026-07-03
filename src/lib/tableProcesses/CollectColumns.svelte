@@ -244,7 +244,14 @@
 	}
 
 	function doCollect() {
-		if (p.parent && (p.args.colIds?.length ?? 0) > 0) {
+		// Materialise outputs when this TP is committed (a canvas node in
+		// core.tableProcesses) OR has a legacy parent table. Free-standing nodes
+		// have no parent, so the old `if (p.parent)` gate produced no outputs; a
+		// preview instance (MakeNewColumn modal, no id) must still be skipped so it
+		// doesn't leak orphan columns.
+		const canWrite =
+			!!p.parent || (p?.id != null && (core.tableProcesses ?? []).some((tp) => tp.id === p.id));
+		if (canWrite && (p.args.colIds?.length ?? 0) > 0) {
 			for (const colId of p.args.colIds) {
 				const outKey = 'col_' + colId;
 				if (p.args.out[outKey] === undefined || p.args.out[outKey] === -1) {
@@ -253,7 +260,7 @@
 					tempCol.name = (inCol?.name ?? 'col') + '_' + p.id;
 					p.args.out[outKey] = tempCol.id;
 					pushObj(tempCol);
-					p.parent.columnRefs = [tempCol.id, ...p.parent.columnRefs];
+					if (p.parent) p.parent.columnRefs = [tempCol.id, ...p.parent.columnRefs];
 				}
 			}
 			p.args.outColIds = p.args.colIds

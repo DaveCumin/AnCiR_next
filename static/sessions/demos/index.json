@@ -1,7 +1,16 @@
 {
   "version": 1,
-  "count": 39,
+  "count": 40,
   "sessions": [
+    {
+      "id": "dataset-testdata",
+      "name": "Test data",
+      "family": "Sources",
+      "description": "Data with two simulated rhythms and outliers",
+      "url": "sessions/demos/testData.csv",
+      "kind": "dataset",
+      "keywords": "test data data with two simulated rhythms and outliers sources csv url example"
+    },
     {
       "id": "tp-blankcolumn",
       "name": "Enter Data",

@@ -10,6 +10,7 @@
 	import { appState } from '$lib/core/core.svelte.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { importJson } from '$lib/components/iconActions/Setting.svelte';
+	import { openImportDataUrl } from '$lib/core/dataSourceActions.js';
 
 	let { showModal = $bindable(false), initialSourceMode = 'file' } = $props();
 
@@ -200,6 +201,13 @@
 
 	async function loadExample(session) {
 		const url = resolveExampleUrl(session.url);
+		// Dataset examples (raw CSV/text) are imported through the file-import
+		// preview flow, not importJson (which expects a full session JSON).
+		if (session.kind === 'dataset' || /\.(csv|tsv|txt)$/i.test(session.url || '')) {
+			showModal = false;
+			openImportDataUrl(url);
+			return;
+		}
 		activeExampleUrl = session.url;
 		loading = true;
 		loadError = '';

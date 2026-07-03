@@ -246,53 +246,93 @@
 		}
 	});
 
-	// Called when Y selection changes
-	function onYSelectionChange() {
-		const newIds = (p.args.yIN ?? []).map(Number).filter((id) => id >= 0);
-		const newSet = new Set(newIds);
-		const oldSet = new Set(prevYIds);
+	// Create one free-standing output column and return its id. Works for both
+	// free-standing TP nodes (no parent — the common case now) and legacy
+	// parent-table TPs. buildTPOutputs only needs a valid args.out id; we also
+	// tag the column so it's treated as a computed output rather than raw data.
+	function createOutputColumn(srcName, seg) {
+		const col = new Column({});
+		col.name = `${srcName}_split${seg}`;
+		col.tableProcessGUId = p.parent ? p.parent.id : `split_${p.id}`;
+		pushObj(col);
+		if (p.parent) p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
+		return col.id;
+	}
 
-		// Skip if no actual change
-		if (newIds.length === prevYIds.length && newIds.every((id) => oldSet.has(id))) return;
-
-		// Remove output columns for deselected Y inputs
-		for (const oldId of prevYIds) {
-			if (!newSet.has(oldId)) {
-				for (let seg = 0; seg < segmentCount; seg++) {
-					const outKey = `${oldId}_${seg + 1}`;
-					const outColId = p.args.out[outKey];
-					if (outColId != null && outColId >= 0) {
-						core.rawData.delete(outColId);
-						removeColumn(outColId);
-					}
-					delete p.args.out[outKey];
-				}
+	// Reconcile output columns to exactly one per (selected Y, segment): create
+	// missing ones, drop stale ones (deselected Y or segments beyond the current
+	// count). Returns true if anything changed. Does NOT require a parent table,
+	// which is why the old p.parent-gated creation produced no outputs on the
+	// free-standing node.
+	function reconcileOutputs() {
+		const yIds = (p.args.yIN ?? []).map(Number).filter((id) => id >= 0);
+		const desired = [];
+		const desiredKeys = new Set();
+		for (const yId of yIds) {
+			for (let seg = 1; seg <= segmentCount; seg++) {
+				const key = `${yId}_${seg}`;
+				desired.push({ key, yId, seg });
+				desiredKeys.add(key);
 			}
 		}
 
-		// Create output columns for newly selected Y inputs
-		for (const newId of newIds) {
-			const srcName = getColumnById(newId)?.name ?? String(newId);
-			for (let seg = 0; seg < segmentCount; seg++) {
-				const outKey = `${newId}_${seg + 1}`;
-				if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
-					if (p.parent) {
-						const yCol = new Column({});
-						yCol.name = `${srcName}_split${seg + 1}`;
-						yCol.tableProcessGUId = p.parent.id;
-						pushObj(yCol);
-						p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
-						p.args.out[outKey] = yCol.id;
-					}
-				}
+		let changed = false;
+
+		// Keys present but no longer wanted: candidates to REUSE (preferred) or drop.
+		// Reusing a stale column for a new key of the SAME segment keeps that
+		// column's id stable when a Y input is swapped (e.g. when a node is spliced
+		// upstream, changing yIN in place). That is what keeps a downstream consumer
+		// wired to this output — like a plot — connected instead of orphaned.
+		const staleKeys = Object.keys(p.args.out).filter(
+			(k) => !desiredKeys.has(k) && Number(p.args.out[k]) >= 0
+		);
+		const staleBySeg = new Map();
+		for (const k of staleKeys) {
+			const seg = Number(k.split('_')[1]);
+			if (!staleBySeg.has(seg)) staleBySeg.set(seg, []);
+			staleBySeg.get(seg).push(k);
+		}
+
+		// Transfer a stale column to each missing desired key of the same segment.
+		const reusedStale = new Set();
+		for (const d of desired) {
+			if (Number(p.args.out[d.key]) >= 0) continue; // already present
+			const pool = staleBySeg.get(d.seg);
+			if (pool && pool.length) {
+				const oldKey = pool.shift();
+				const colId = p.args.out[oldKey];
+				delete p.args.out[oldKey];
+				reusedStale.add(oldKey);
+				p.args.out[d.key] = colId;
+				const col = getColumnById(colId);
+				if (col) col.name = `${getColumnById(d.yId)?.name ?? d.yId}_split${d.seg}`;
+				changed = true;
 			}
 		}
 
-		// Update tracking
-		prevYIds = [...newIds];
+		// Drop any stale columns that weren't reused.
+		for (const k of staleKeys) {
+			if (reusedStale.has(k)) continue;
+			const colId = p.args.out[k];
+			if (colId != null && colId >= 0) {
+				core.rawData.delete(colId);
+				removeColumn(colId);
+				if (p.parent) p.parent.columnRefs = p.parent.columnRefs.filter((id) => id !== colId);
+			}
+			delete p.args.out[k];
+			changed = true;
+		}
 
-		// Recompute
-		recalculate();
+		// Create any outputs still missing.
+		for (const d of desired) {
+			if (Number(p.args.out[d.key]) >= 0) continue;
+			const srcName = getColumnById(d.yId)?.name ?? String(d.yId);
+			p.args.out[d.key] = createOutputColumn(srcName, d.seg);
+			changed = true;
+		}
+
+		prevYIds = [...yIds];
+		return changed;
 	}
 
 	function recalculate() {
@@ -325,35 +365,21 @@
 		return ids.filter((id) => id >= 0);
 	});
 
+	// Reconcile output columns whenever the Y selection OR the number of segments
+	// (driven by splitTimes) changes, then recompute.
 	$effect(() => {
 		const _yIN = p.args.yIN;
+		const _segs = segmentCount;
 		if (!mounted) return;
-		untrack(() => onYSelectionChange());
+		untrack(() => {
+			if (reconcileOutputs()) recalculate();
+		});
 	});
 
 	onMount(() => {
-		// Initialize output columns on mount
-		let needsCompute = false;
-
-		for (const yId of p.args.yIN ?? []) {
-			const srcName = getColumnById(yId)?.name ?? String(yId);
-			for (let seg = 0; seg < segmentCount; seg++) {
-				const outKey = `${yId}_${seg + 1}`;
-				if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
-					if (p.parent) {
-						const yCol = new Column({});
-						yCol.name = `${srcName}_split${seg + 1}`;
-						yCol.tableProcessGUId = p.parent.id;
-						pushObj(yCol);
-						p.parent.columnRefs = [yCol.id, ...p.parent.columnRefs];
-						p.args.out[outKey] = yCol.id;
-						needsCompute = true;
-					}
-				}
-			}
-		}
-
-		prevYIds = [...(p.args.yIN ?? [])].map(Number);
+		// Initialize / materialise output columns on mount (creates them for the
+		// free-standing node, which has no parent table).
+		const needsCompute = reconcileOutputs();
 
 		if (needsCompute) {
 			recalculate();
@@ -413,12 +439,7 @@
 			</div>
 			<div class="control-input">
 				<p>Y columns to split</p>
-				<ColumnSelector
-					bind:value={p.args.yIN}
-					excludeColIds={yExcludeIds}
-					multiple={true}
-					onChange={onYSelectionChange}
-				/>
+				<ColumnSelector bind:value={p.args.yIN} excludeColIds={yExcludeIds} multiple={true} />
 			</div>
 		</div>
 	</div>

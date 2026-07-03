@@ -387,8 +387,14 @@
 
 			p.args.categories = categories;
 
-			// Add output columns for new categories
-			const committed = p.args.out.time >= 0 && p.parent;
+			// Add output columns for new categories. Materialise them for a
+			// free-standing committed node (in core.tableProcesses) or a legacy
+			// parent table; the old `&& p.parent` gate produced no wide columns on
+			// the parentless dataflow node. `out.time >= 0` confirms the constructor
+			// already ran (skips the uncommitted MakeNewColumn preview instance).
+			const committed =
+				p.args.out.time >= 0 &&
+				(!!p.parent || (p?.id != null && (core.tableProcesses ?? []).some((tp) => tp.id === p.id)));
 			for (const cat of categories) {
 				const outKey = 'value_' + cat;
 				if (p.args.out[outKey] === undefined || p.args.out[outKey] === -1) {
@@ -397,7 +403,7 @@
 						tempCol.name = outKey + '_' + p.id;
 						p.args.out[outKey] = tempCol.id;
 						pushObj(tempCol);
-						p.parent.columnRefs = [tempCol.id, ...p.parent.columnRefs];
+						if (p.parent) p.parent.columnRefs = [tempCol.id, ...p.parent.columnRefs];
 					} else {
 						p.args.out[outKey] = p.args.out[outKey] ?? -1;
 					}

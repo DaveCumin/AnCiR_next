@@ -28,7 +28,7 @@
 			key: 'import',
 			icon: 'add-file',
 			title: 'Import a file',
-			subtitle: 'CSV, Excel or AWD from your computer',
+			subtitle: 'CSV, XLS, or AWD from your computer or a URL',
 			action: () => openImportData()
 		},
 		{

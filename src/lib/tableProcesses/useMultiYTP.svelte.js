@@ -81,20 +81,40 @@ export function useMultiYTP(p, yPrefix, yColNamePrefix) {
 		// creates the real outputs on commit). We still report the change so the
 		// preview recomputes.
 		if (isCommitted()) {
-			// Remove output columns for deselected Y inputs.
-			for (const oldId of prevYIds) {
-				if (!newSet.has(oldId)) {
-					const outKey = yPrefix + oldId;
-					const outColId = p.args.out[outKey];
-					if (outColId != null && outColId >= 0) {
-						core.rawData.delete(outColId);
-						removeColumn(outColId);
-					}
-					delete p.args.out[outKey];
+			const removed = prevYIds.filter((id) => !newSet.has(id));
+			const added = newIds.filter((id) => !oldSet.has(id));
+
+			// Reuse-on-replace: transfer a removed Y's output column to a newly
+			// added Y (rename it) instead of deleting one and minting another. This
+			// keeps the output column *id* stable across an in-place Y swap — e.g.
+			// when a node is spliced upstream, changing yIN from A to B — so any
+			// downstream consumer wired to this output (a plot, another node) stays
+			// connected instead of being orphaned.
+			const reuseCount = Math.min(removed.length, added.length);
+			for (let i = 0; i < reuseCount; i++) {
+				const oldKey = yPrefix + removed[i];
+				const colId = p.args.out[oldKey];
+				delete p.args.out[oldKey];
+				if (colId != null && colId >= 0) {
+					p.args.out[yPrefix + added[i]] = colId;
+					const col = getColumnById(colId);
+					if (col) col.name = yColNamePrefix + (getColumnById(added[i])?.name ?? added[i]);
 				}
 			}
 
-			// Create output columns for newly selected Y inputs.
+			// Delete leftover removed Ys that had no reuse target.
+			for (let i = reuseCount; i < removed.length; i++) {
+				const outKey = yPrefix + removed[i];
+				const outColId = p.args.out[outKey];
+				if (outColId != null && outColId >= 0) {
+					core.rawData.delete(outColId);
+					removeColumn(outColId);
+				}
+				delete p.args.out[outKey];
+			}
+
+			// Ensure every currently-selected Y has an output column (covers added
+			// Ys with no reuse source, and any pre-existing Y missing a column).
 			for (const newId of newIds) {
 				const outKey = yPrefix + newId;
 				if (p.args.out[outKey] == null || p.args.out[outKey] === -1) {
