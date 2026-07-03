@@ -9,7 +9,13 @@
 		excludeColIds = [],
 		value = $bindable(),
 		multiple = false,
-		placeholder = 'Select a column...'
+		placeholder = 'Select a column...',
+		// Controlled, trigger-less popover mode (used by the canvas port picker):
+		// `hideTrigger` drops the trigger button, `open` is externally bindable, and
+		// `anchor` ({ x, y } in viewport coords) positions the dropdown.
+		open = $bindable(false),
+		hideTrigger = false,
+		anchor = null
 	} = $props();
 
 	// Build a tree of nodes from core state. Each node carries a stable `key`
@@ -144,7 +150,6 @@
 		return acc;
 	}
 
-	let isOpen = $state(false);
 	let searchTerm = $state('');
 	let editingKey = $state(null);
 	let lastSelectedLeafValue = $state(null);
@@ -155,8 +160,19 @@
 	let dropdownPos = $state({ top: 0, left: 0, width: 0, openUp: false });
 
 	function updateDropdownPos() {
-		if (!triggerEl) return;
-		const r = triggerEl.getBoundingClientRect();
+		// Anchor mode (port picker): position at the given viewport point with a
+		// default width; clamp so the menu stays on-screen. Otherwise measure the
+		// trigger button.
+		let r;
+		if (hideTrigger && anchor) {
+			const w = 240;
+			const left = Math.max(4, Math.min(anchor.x, window.innerWidth - w - 8));
+			r = { top: anchor.y, bottom: anchor.y, left, width: w };
+		} else if (triggerEl) {
+			r = triggerEl.getBoundingClientRect();
+		} else {
+			return;
+		}
 		const dropdownMaxH = 360;
 		const spaceBelow = window.innerHeight - r.bottom;
 		const openUp = spaceBelow < Math.min(dropdownMaxH, 200) && r.top > spaceBelow;
@@ -183,7 +199,7 @@
 	}
 
 	$effect(() => {
-		if (!isOpen) return;
+		if (!open) return;
 		updateDropdownPos();
 		const onScrollOrResize = () => updateDropdownPos();
 		window.addEventListener('scroll', onScrollOrResize, true);
@@ -231,8 +247,8 @@
 		// its <details> on click) or other ancestor handlers.
 		e?.stopPropagation();
 		e?.preventDefault();
-		isOpen = !isOpen;
-		if (isOpen) searchTerm = '';
+		open = !open;
+		if (open) searchTerm = '';
 	}
 
 	function toggleGroup(key) {
@@ -303,7 +319,7 @@
 			value = optValue;
 			onChange(value);
 			lastSelectedLeafValue = optValue;
-			isOpen = false;
+			open = false;
 		}
 	}
 
@@ -371,10 +387,10 @@
 	/** @type {HTMLDivElement | null} */
 	let dropdownEl = $state(null);
 	function handleDocClick(e) {
-		if (!isOpen) return;
+		if (!open) return;
 		const inTrigger = containerEl && containerEl.contains(e.target);
 		const inDropdown = dropdownEl && dropdownEl.contains(e.target);
-		if (!inTrigger && !inDropdown) isOpen = false;
+		if (!inTrigger && !inDropdown) open = false;
 	}
 </script>
 
@@ -467,14 +483,16 @@
 	{/if}
 {/snippet}
 
-<div class="select-container" bind:this={containerEl}>
-	<button bind:this={triggerEl} class="trigger" onclick={toggleDropdown} type="button">
-		<span class="trigger-label">{selectedLabel}</span>
-		<span class="arrow">{isOpen ? '▲' : '▼'}</span>
-	</button>
-</div>
+{#if !hideTrigger}
+	<div class="select-container" bind:this={containerEl}>
+		<button bind:this={triggerEl} class="trigger" onclick={toggleDropdown} type="button">
+			<span class="trigger-label">{selectedLabel}</span>
+			<span class="arrow">{open ? '▲' : '▼'}</span>
+		</button>
+	</div>
+{/if}
 
-{#if isOpen}
+{#if open}
 	<div
 		bind:this={dropdownEl}
 		use:portalToBody
@@ -502,7 +520,7 @@
 			{#if multiple}
 				<span class="cs-count">{asArray(value).length} selected</span>
 			{/if}
-			<button type="button" class="cs-btn" onclick={() => (isOpen = false)}>Close</button>
+			<button type="button" class="cs-btn" onclick={() => (open = false)}>Close</button>
 		</div>
 	</div>
 {/if}

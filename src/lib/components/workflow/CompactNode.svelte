@@ -62,9 +62,19 @@
 	}
 	function disconnectInput(e, portName) {
 		e.stopPropagation();
-		if (!e.shiftKey && e.button !== 2) return;
+		// Shift+click disconnects. Right-click no longer disconnects (it opens the
+		// column picker via onContextMenu); a bare click starts nothing here.
+		if (!e.shiftKey) return;
 		e.preventDefault();
 		dispatch('portdisconnect', { nodeId: node.id, port: portName, direction: 'in' });
+	}
+	// Right-click an input port → ask the editor to open a column picker so the
+	// user can add a connection to this input (replaces destructive right-click
+	// disconnect).
+	function openInputPicker(e, portName) {
+		e.preventDefault();
+		e.stopPropagation();
+		dispatch('portpick', { nodeId: node.id, port: portName, x: e.clientX, y: e.clientY });
 	}
 </script>
 
@@ -89,7 +99,7 @@
 			{@attach tooltip(portTip(port))}
 			onmousedown={(e) => disconnectInput(e, port.name)}
 			onmouseup={(e) => endAtInput(e, port.name)}
-			oncontextmenu={(e) => disconnectInput(e, port.name)}
+			oncontextmenu={(e) => openInputPicker(e, port.name)}
 			role="button"
 			tabindex="-1"
 		></div>

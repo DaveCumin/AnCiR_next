@@ -46,6 +46,7 @@
 	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
 	import CompactNode from './CompactNode.svelte';
 	import NodeActions from './NodeActions.svelte';
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import { tourState } from '$lib/core/tourRunner.svelte.js';
 	import {
 		COMPACT_W,
@@ -776,6 +777,16 @@
 	// { nodeId, plotObj, startMouse:{x,y}, startW, startH, startPlotW, startPlotH }
 	let resizeInfo = $state(null);
 	let pendingConnection = $state(null); // { fromNodeId, fromPort }
+
+	// Right-click column picker for an input port: { nodeId, port, x, y } while
+	// open. `portPickerOpen` is bound to the ColumnSelector popover so an
+	// outside-click close clears the picker.
+	let portPicker = $state(null);
+	let portPickerOpen = $state(false);
+	$effect(() => {
+		// When the popover closes (outside click or selection), drop the picker.
+		if (!portPickerOpen && portPicker) portPicker = null;
+	});
 	let mouseCanvas = $state({ x: 0, y: 0 });
 
 	// Extract-a-source-from-group gesture state. Mirrors flowtest's
@@ -1528,6 +1539,41 @@
 			colId = resolveOutputColumnId(fromNodeId, fromPort);
 		}
 		if (colId < 0) return;
+		connectColumnToInput(colId, toNodeId, toPort);
+	}
+
+	// Wrap a direct, in-place edit to a plot's inner data object (plot.plot —
+	// series data, columnRefs, dp.x.refId, …) so it lands on the undo stack.
+	// Plot wiring mutates plot.plot directly (deliberately, to preserve the live
+	// ColumnClass instances and their reactive derivations). Those writes don't
+	// go through the op layer and the paramDiffWatcher only watches process /
+	// table-process args, so without this they were invisible to history. Here we
+	// snapshot before, run the mutation, snapshot after, revert, then replay the
+	// after-state through the setPlotInner op — one undoable step per wire.
+	function recordPlotEdit(plotObj, mutate) {
+		const entry = plotObj && appConsts.plotMap.get(plotObj.type);
+		const inner = plotObj?.plot;
+		if (typeof entry?.data?.fromJSON !== 'function' || !inner) {
+			mutate();
+			return;
+		}
+		const serialize = (o) =>
+			JSON.parse(JSON.stringify(o, (k, v) => (typeof v === 'function' ? undefined : v)));
+		const before = serialize(inner);
+		mutate();
+		const after = serialize(plotObj.plot);
+		if (JSON.stringify(before) === JSON.stringify(after)) return; // no-op wire
+		// Revert the direct mutation, then route the after-state through the op so
+		// it's recorded. fromJSON rebuilds plot.plot (now $state → reactive swap).
+		plotObj.plot = entry.data.fromJSON(plotObj, before);
+		mutationService.setPlotInner(plotObj.id, after);
+	}
+
+	// Target-side of a connection: wire an already-resolved source column (colId)
+	// into a node's input port. Shared by the drag-connect path (applyConnection)
+	// and the right-click column picker (handlePortPick).
+	function connectColumnToInput(colId, toNodeId, toPort) {
+		if (colId < 0) return;
 		const target = allNodes.find((n) => n.id === toNodeId);
 		if (!target) return;
 
@@ -1609,8 +1655,10 @@
 		}
 
 		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && toPort === 'series') {
-			const refs = target.plotObj.plot.columnRefs ?? [];
-			if (!refs.includes(colId)) target.plotObj.plot.columnRefs = [...refs, colId];
+			recordPlotEdit(target.plotObj, () => {
+				const refs = target.plotObj.plot.columnRefs ?? [];
+				if (!refs.includes(colId)) target.plotObj.plot.columnRefs = [...refs, colId];
+			});
 			return;
 		}
 
@@ -1622,13 +1670,15 @@
 			target.plotObj.type !== 'tableplot' &&
 			toPort === 'data'
 		) {
-			const plot = target.plotObj.plot;
-			const defaultInputs = appConsts.plotMap.get(target.plotObj.type)?.defaultInputs ?? [];
-			if (!plot || defaultInputs.length !== 1) return;
-			const field = defaultInputs[0];
-			const dataIn = { [field]: { refId: colId } };
-			if (typeof plot.addData === 'function') plot.addData(dataIn);
-			else plot.data = [...(plot.data ?? []), dataIn];
+			recordPlotEdit(target.plotObj, () => {
+				const plot = target.plotObj.plot;
+				const defaultInputs = appConsts.plotMap.get(target.plotObj.type)?.defaultInputs ?? [];
+				if (!plot || defaultInputs.length !== 1) return;
+				const field = defaultInputs[0];
+				const dataIn = { [field]: { refId: colId } };
+				if (typeof plot.addData === 'function') plot.addData(dataIn);
+				else plot.data = [...(plot.data ?? []), dataIn];
+			});
 			return;
 		}
 
@@ -1636,51 +1686,53 @@
 		// pair; the trailing empty pair (one past the last group) appends a new
 		// set when a wire drops on it.
 		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot') {
-			const plot = target.plotObj.plot;
-			if (!plot) return;
-			plot.data = plot.data ?? [];
+			recordPlotEdit(target.plotObj, () => {
+				const plot = target.plotObj.plot;
+				if (!plot) return;
+				plot.data = plot.data ?? [];
 
-			const xMatch = toPort?.match(/^x(\d+)$/);
-			const ysMatch = toPort?.match(/^ys(\d+)$/);
-			if (!xMatch && !ysMatch) return;
+				const xMatch = toPort?.match(/^x(\d+)$/);
+				const ysMatch = toPort?.match(/^ys(\d+)$/);
+				if (!xMatch && !ysMatch) return;
 
-			const groups = groupPlotData(plot.data);
-			const setIdx = Number((xMatch ?? ysMatch)[1]) - 1;
+				const groups = groupPlotData(plot.data);
+				const setIdx = Number((xMatch ?? ysMatch)[1]) - 1;
 
-			if (xMatch) {
-				if (setIdx < groups.length) {
-					// Update every data point in this set: new shared x.
-					// Mutate refId in place so the ColumnClass instance (and its
-					// getData() prototype) survives. Replacing dp.x with a plain
-					// object spread silently breaks the reactive plot derivations.
-					for (const dp of groups[setIdx].dataPoints) {
-						if (dp?.x) dp.x.refId = colId;
+				if (xMatch) {
+					if (setIdx < groups.length) {
+						// Update every data point in this set: new shared x.
+						// Mutate refId in place so the ColumnClass instance (and its
+						// getData() prototype) survives. Replacing dp.x with a plain
+						// object spread silently breaks the reactive plot derivations.
+						for (const dp of groups[setIdx].dataPoints) {
+							if (dp?.x) dp.x.refId = colId;
+						}
+					} else {
+						// Trailing empty pair — seed a new set with x but no y yet.
+						const dataIn = { x: { refId: colId }, y: { refId: -1 } };
+						if (typeof plot.addData === 'function') plot.addData(dataIn);
+						else plot.data = [...plot.data, dataIn];
 					}
+					return;
+				}
+
+				// ysMatch: re-use a freed/orphan y-slot in the set if one exists (so
+				// removing a y then adding a new one doesn't leave a duplicate orphan
+				// series); otherwise append a new series to (or seed) the chosen set.
+				const grp = setIdx < groups.length ? groups[setIdx] : null;
+				const setX = grp ? grp.xRefId : -1;
+				const orphanDp = grp?.dataPoints.find(
+					(dp) => (dp?.y?.refId ?? -1) < 0 || !getColumnById(dp?.y?.refId)
+				);
+				if (orphanDp) {
+					if (orphanDp.y) orphanDp.y.refId = colId;
+					else orphanDp.y = { refId: colId };
 				} else {
-					// Trailing empty pair — seed a new set with x but no y yet.
-					const dataIn = { x: { refId: colId }, y: { refId: -1 } };
+					const dataIn = { x: { refId: setX }, y: { refId: colId } };
 					if (typeof plot.addData === 'function') plot.addData(dataIn);
 					else plot.data = [...plot.data, dataIn];
 				}
-				return;
-			}
-
-			// ysMatch: re-use a freed/orphan y-slot in the set if one exists (so
-			// removing a y then adding a new one doesn't leave a duplicate orphan
-			// series); otherwise append a new series to (or seed) the chosen set.
-			const grp = setIdx < groups.length ? groups[setIdx] : null;
-			const setX = grp ? grp.xRefId : -1;
-			const orphanDp = grp?.dataPoints.find(
-				(dp) => (dp?.y?.refId ?? -1) < 0 || !getColumnById(dp?.y?.refId)
-			);
-			if (orphanDp) {
-				if (orphanDp.y) orphanDp.y.refId = colId;
-				else orphanDp.y = { refId: colId };
-			} else {
-				const dataIn = { x: { refId: setX }, y: { refId: colId } };
-				if (typeof plot.addData === 'function') plot.addData(dataIn);
-				else plot.data = [...plot.data, dataIn];
-			}
+			});
 		}
 	}
 
@@ -1702,7 +1754,9 @@
 		}
 
 		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && portName === 'series') {
-			target.plotObj.plot.columnRefs = [];
+			recordPlotEdit(target.plotObj, () => {
+				target.plotObj.plot.columnRefs = [];
+			});
 			return;
 		}
 
@@ -1713,43 +1767,47 @@
 			target.plotObj.type !== 'tableplot' &&
 			portName === 'data'
 		) {
-			const plot = target.plotObj.plot;
-			if (plot) plot.data = [];
+			recordPlotEdit(target.plotObj, () => {
+				const plot = target.plotObj.plot;
+				if (plot) plot.data = [];
+			});
 			return;
 		}
 
 		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot') {
-			const plot = target.plotObj.plot;
-			if (!plot?.data) return;
-			const xMatch = portName?.match(/^x(\d+)$/);
-			const ysMatch = portName?.match(/^ys(\d+)$/);
-			if (!xMatch && !ysMatch) return;
+			recordPlotEdit(target.plotObj, () => {
+				const plot = target.plotObj.plot;
+				if (!plot?.data) return;
+				const xMatch = portName?.match(/^x(\d+)$/);
+				const ysMatch = portName?.match(/^ys(\d+)$/);
+				if (!xMatch && !ysMatch) return;
 
-			const groups = groupPlotData(plot.data);
-			const setIdx = Number((xMatch ?? ysMatch)[1]) - 1;
-			if (setIdx >= groups.length) return; // trailing empty pair — nothing to disconnect
+				const groups = groupPlotData(plot.data);
+				const setIdx = Number((xMatch ?? ysMatch)[1]) - 1;
+				if (setIdx >= groups.length) return; // trailing empty pair — nothing to disconnect
 
-			const g = groups[setIdx];
-			if (xMatch) {
-				// Orphan the set: clear x.refId on every data point in this group.
-				// Mutate in place; see the note at the connect path above.
-				for (const dp of g.dataPoints) {
-					if (dp?.x) dp.x.refId = -1;
-				}
-			} else {
-				// Clear every series in the set. If the set's x is still wired, keep
-				// one data point as an x-seed (y = -1) so the x survives; otherwise
-				// drop them all.
-				if ((g.xRefId ?? -1) >= 0 && g.dataPoints[0]?.y) {
-					const [seed, ...rest] = g.dataPoints;
-					seed.y.refId = -1;
-					const drop = new Set(rest);
-					plot.data = plot.data.filter((dp) => !drop.has(dp));
+				const g = groups[setIdx];
+				if (xMatch) {
+					// Orphan the set: clear x.refId on every data point in this group.
+					// Mutate in place; see the note at the connect path above.
+					for (const dp of g.dataPoints) {
+						if (dp?.x) dp.x.refId = -1;
+					}
 				} else {
-					const toRemove = new Set(g.dataPoints);
-					plot.data = plot.data.filter((dp) => !toRemove.has(dp));
+					// Clear every series in the set. If the set's x is still wired, keep
+					// one data point as an x-seed (y = -1) so the x survives; otherwise
+					// drop them all.
+					if ((g.xRefId ?? -1) >= 0 && g.dataPoints[0]?.y) {
+						const [seed, ...rest] = g.dataPoints;
+						seed.y.refId = -1;
+						const drop = new Set(rest);
+						plot.data = plot.data.filter((dp) => !drop.has(dp));
+					} else {
+						const toRemove = new Set(g.dataPoints);
+						plot.data = plot.data.filter((dp) => !toRemove.has(dp));
+					}
 				}
-			}
+			});
 		}
 	}
 
@@ -1818,6 +1876,24 @@
 		e.stopPropagation();
 		disconnectInputPort(e.detail.nodeId, e.detail.port);
 		if (pendingConnection) pendingConnection = null;
+	}
+
+	// Right-click an input port: open a column picker anchored at the cursor so
+	// the user can add a connection to that input.
+	function handlePortPick(e) {
+		e.stopPropagation();
+		if (pendingConnection) pendingConnection = null;
+		portPicker = { nodeId: e.detail.nodeId, port: e.detail.port, x: e.detail.x, y: e.detail.y };
+		portPickerOpen = true;
+	}
+
+	// A column was chosen in the port picker → wire it into the target input.
+	function handlePortPickChoice(colId) {
+		if (portPicker && typeof colId === 'number' && colId >= 0) {
+			connectColumnToInput(colId, portPicker.nodeId, portPicker.port);
+		}
+		portPickerOpen = false;
+		portPicker = null;
 	}
 
 	function handleNodeWrapperMouseUp(e, node) {
@@ -1927,14 +2003,27 @@
 		if (!cur.includes(inputColId)) proc.args = { ...proc.args, inIN: [...cur, inputColId] };
 	}
 	// Remove input column c from a free process + delete its paired producer column.
+	// Mirrors the connect path (setOrphanProcessArg + addColumn), so the removal is
+	// recorded on history as ONE undoable step. Orphan-process arg writes aren't
+	// seen by the paramDiffWatcher (it only watches column / table-process args),
+	// so a bare `proc.args = …` here would be invisible to undo — route it through
+	// the op layer instead. Falls back to a direct write for a non-orphan process.
 	function _removeProcInput(proc, c) {
 		if (!proc) return;
-		proc.args = { ...proc.args, inIN: _procInputIds(proc).filter((id) => id !== c) };
+		const newInIN = _procInputIds(proc).filter((id) => id !== c);
 		const pc = core.data.find(
 			(col) =>
 				col.producerNodeId === `process_${proc.id}` && (col.producerPort || '') === `out_${c}`
 		);
-		if (pc) removeColumn(pc.id);
+		const isOrphan = (core.orphanProcesses ?? []).some((p) => p.id === proc.id);
+		if (isOrphan) {
+			const ops = [{ kind: 'setOrphanProcessArg', processId: proc.id, key: 'inIN', value: newInIN }];
+			if (pc) ops.push({ kind: 'removeColumn', id: pc.id });
+			mutationService.atomicBatch(ops);
+		} else {
+			proc.args = { ...proc.args, inIN: newInIN };
+			if (pc) removeColumn(pc.id);
+		}
 	}
 	function _ensureProducerColumn(proc, inputColId) {
 		const procNodeId = `process_${proc.id}`;
@@ -3063,6 +3152,7 @@
 								on:portstart={handlePortStart}
 								on:portend={handlePortEnd}
 								on:portdisconnect={handlePortDisconnect}
+								on:portpick={handlePortPick}
 							/>
 						{:else if isGroup}
 							<GroupNode
@@ -3075,6 +3165,7 @@
 								on:portstart={handlePortStart}
 								on:portend={handlePortEnd}
 								on:portdisconnect={handlePortDisconnect}
+								on:portpick={handlePortPick}
 								on:extractstart={handleExtractStart}
 								on:cardmousedown={(ev) => handleNodeWrapperMouseDown(ev.detail, node)}
 							/>
@@ -3090,6 +3181,7 @@
 								on:portstart={handlePortStart}
 								on:portend={handlePortEnd}
 								on:portdisconnect={handlePortDisconnect}
+								on:portpick={handlePortPick}
 								on:toggleexpand={() => handleNodeToggleExpand(node)}
 								on:cardmousedown={(ev) => handleNodeWrapperMouseDown(ev.detail, node)}
 							/>
@@ -3106,6 +3198,7 @@
 								on:portstart={handlePortStart}
 								on:portend={handlePortEnd}
 								on:portdisconnect={handlePortDisconnect}
+								on:portpick={handlePortPick}
 								on:toggleexpand={() => handleNodeToggleExpand(node)}
 								on:resizestart={(ev) => handleNoteResizeMouseDown(ev.detail, node)}
 							/>
@@ -3264,6 +3357,18 @@
 		</button>
 	</div>
 </div>
+
+{#if portPicker}
+	<!-- Right-click column picker for an input port. Renders nothing until open;
+	     the ColumnSelector portals its list to <body>, positioned at the cursor. -->
+	<ColumnSelector
+		hideTrigger
+		bind:open={portPickerOpen}
+		anchor={{ x: portPicker.x, y: portPicker.y }}
+		placeholder="Connect a column…"
+		onChange={handlePortPickChoice}
+	/>
+{/if}
 
 <style>
 	.workflow-editor {

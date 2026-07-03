@@ -75,9 +75,18 @@
 
 	function disconnectInput(e, portName) {
 		e.stopPropagation();
-		if (!e.shiftKey && e.button !== 2) return;
+		// Shift+click disconnects. Right-click opens the column picker instead of
+		// disconnecting (see openInputPicker).
+		if (!e.shiftKey) return;
 		e.preventDefault();
 		dispatch('portdisconnect', { nodeId: node.id, port: portName, direction: 'in' });
+	}
+	// Right-click an input port → ask the editor to open a column picker to add a
+	// connection to this input.
+	function openInputPicker(e, portName) {
+		e.preventDefault();
+		e.stopPropagation();
+		dispatch('portpick', { nodeId: node.id, port: portName, x: e.clientX, y: e.clientY });
 	}
 </script>
 
@@ -160,7 +169,7 @@
 							)}
 							onmousedown={(e) => disconnectInput(e, row.port.name)}
 							onmouseup={(e) => endAtInput(e, row.port.name)}
-							oncontextmenu={(e) => disconnectInput(e, row.port.name)}
+							oncontextmenu={(e) => openInputPicker(e, row.port.name)}
 							role="button"
 							tabindex="-1"
 						></div>
@@ -185,7 +194,7 @@
 						{@attach tooltip(`Input: ${port.name}${port.dynamic ? ' (many)' : ''}`)}
 						onmousedown={(e) => disconnectInput(e, port.name)}
 						onmouseup={(e) => endAtInput(e, port.name)}
-						oncontextmenu={(e) => disconnectInput(e, port.name)}
+						oncontextmenu={(e) => openInputPicker(e, port.name)}
 						role="button"
 						tabindex="-1"
 					></div>

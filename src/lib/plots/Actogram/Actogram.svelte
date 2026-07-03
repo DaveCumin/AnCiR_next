@@ -1003,4 +1003,24 @@
 {/if}
 
 <style>
+	/* The parent `.control-component` uses `align-items: flex-start`, so an
+	   unstretched child shrinks-to-fit its widest content. When a data series has
+	   wide content (long column names, previews), `.dataBlock` grew wider than the
+	   control panel and the right-aligned "add marker" (+) button was pushed past
+	   the panel's `overflow-x: hidden` clip edge — hidden until the panel was
+	   dragged wider. Bounding the block to the panel width keeps the +
+	   button in view at any panel width. */
+	.dataBlock,
+	.markerBlock {
+		width: 100%;
+		min-width: 0;
+		max-width: 100%;
+		box-sizing: border-box;
+	}
+
+	/* Title action icons (e.g. the add-marker +) must never be the element that
+	   shrinks/clips; let the label beside them absorb any squeeze instead. */
+	.control-component-title-icons {
+		flex-shrink: 0;
+	}
 </style>
