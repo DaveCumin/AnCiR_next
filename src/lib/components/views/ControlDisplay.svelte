@@ -134,9 +134,14 @@
 	const activeCanvasMultiIds = $derived(
 		appState.view === 'canvas' ? (appState.canvasMultiSelectedNodeIds ?? []) : []
 	);
+	// A single non-plot node selection surfaces CanvasNodeControls. Not gated to the
+	// canvas view: selecting a node from the Data-view list (NodeSourceItem) must
+	// show its controls in the panel from the worksheet too. This is safe because
+	// the plot branches above take priority — a selected plot still shows plot
+	// controls — and a non-plot node never contributes to the plot count. (The
+	// multi-select plot union in `activeCanvasMultiIds` stays canvas-only.)
 	const hasNonPlotCanvasSelection = $derived(
-		appState.view === 'canvas' &&
-			appState.canvasSelectedNodeId != null &&
+		appState.canvasSelectedNodeId != null &&
 			!String(appState.canvasSelectedNodeId).startsWith('plot_')
 	);
 	// A canvas multi-selection of 2+ nodes routes to CanvasNodeControls (which

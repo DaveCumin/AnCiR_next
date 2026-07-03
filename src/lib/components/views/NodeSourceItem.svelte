@@ -9,6 +9,7 @@
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { getNodeName, setNodeName } from '$lib/core/nodeNaming.js';
+	import { deselectAllPlots } from '$lib/core/Plot.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 
@@ -51,6 +52,21 @@
 		appState.showControlPanel = true;
 	}
 
+	// Clicking the header selects the node so its controls show in the control
+	// panel — WITHOUT leaving the Data view (unlike findSelect, which jumps to the
+	// canvas). Ignore clicks on the action buttons or an active inline name editor.
+	function selectNode(e) {
+		if (e?.target?.closest?.('button, input, textarea, [contenteditable="true"]')) return;
+		// Deselect any plots so this node wins in the control panel (the panel shows
+		// plot controls in preference to a node selection).
+		deselectAllPlots();
+		appState.canvasMultiSelectedNodeIds = [node.id];
+		appState.canvasMultiSelectedCount = 1;
+		appState.canvasSelectedNodeId = node.id;
+		appState.focusNodeRequest = { id: node.id, n: (appState.focusNodeRequest?.n ?? 0) + 1 };
+		appState.showControlPanel = true;
+	}
+
 	function deleteNode() {
 		appState.AYStext = `Are you sure you want to remove ${getNodeName(node)}?`;
 		appState.AYScallback = (option) => {
@@ -61,7 +77,19 @@
 </script>
 
 <div class="node-item">
-	<div class="node-head">
+	<div
+		class="node-head"
+		role="button"
+		tabindex="0"
+		title="Select — show controls in the panel"
+		onclick={selectNode}
+		onkeydown={(e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				selectNode(e);
+			}
+		}}
+	>
 		<p class="node-name"><Editable
 				value={getNodeName(node)}
 				onInput={(v) => setNodeName(node, v)}
@@ -123,6 +151,7 @@
 		border-bottom: 1px solid var(--color-lightness-92, #ededed);
 		background: var(--color-lightness-96, #f3f3f3);
 		border-radius: 5px 5px 0 0;
+		cursor: pointer;
 	}
 	.node-name {
 		margin: 0;
