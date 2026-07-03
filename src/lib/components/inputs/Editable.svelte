@@ -6,6 +6,10 @@
 		forceNumber = false,
 		number = { min: 0, step: 0.1 },
 		onInput = () => {},
+		// Fired once when an edit is committed (Enter / blur), with (finalValue,
+		// originalValue). Lets callers record the change as a single undoable step
+		// instead of on every keystroke. No-op by default.
+		onCommit = () => {},
 		editable = true
 	} = $props();
 
@@ -41,6 +45,7 @@
 		}
 
 		isEditing = false;
+		if (value !== originalValue) onCommit(value, originalValue);
 	}
 
 	function handleKeydown(e) {

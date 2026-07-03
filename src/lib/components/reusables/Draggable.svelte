@@ -2,6 +2,7 @@
 	// @ts-nocheck
 	import { onMount, tick } from 'svelte';
 	import { appState, core, snapToGrid } from '$lib/core/core.svelte';
+	import { mutationService } from '$lib/core/mutationService.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { deselectAllPlots } from '$lib/core/Plot.svelte';
 	import { removePlots, selectPlot } from '$lib/core/Plot.svelte';
@@ -270,6 +271,34 @@
 	}
 
 	function onPointerUp() {
+		// Record plot geometry changes on the history stack — one undoable step per
+		// gesture. The live drag/resize already mutated the plot model directly; we
+		// capture the end value, revert to the pre-gesture value, then replay through
+		// the op so the reverse (before) is captured correctly.
+		if (isDragging) {
+			const ops = [];
+			for (const pid of Object.keys(dragStartPositions)) {
+				const p = core.plots.find((pp) => String(pp.id) === pid);
+				if (!p) continue;
+				const start = dragStartPositions[pid];
+				if (p.x !== start.x || p.y !== start.y) {
+					ops.push({ kind: 'setPlotPosition', id: p.id, x: p.x, y: p.y });
+					p.x = start.x;
+					p.y = start.y;
+				}
+			}
+			if (ops.length) mutationService.atomicBatch(ops); // group move → one undo
+		} else if (resizing) {
+			const p = core.plots.find((pp) => pp.id === id);
+			if (p && (p.width !== initialWidth || p.height !== initialHeight)) {
+				const endW = p.width;
+				const endH = p.height;
+				p.width = initialWidth;
+				p.height = initialHeight;
+				mutationService.setPlotPosition(id, { width: endW, height: endH });
+			}
+		}
+
 		moving = false;
 		resizing = false;
 		isDragging = false;

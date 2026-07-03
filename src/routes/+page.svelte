@@ -45,6 +45,7 @@
 
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import { history } from '$lib/core/history.svelte';
+	import { mutationService } from '$lib/core/mutationService.js';
 	import { paramDiffWatcher } from '$lib/core/paramDiffWatcher.svelte.js';
 
 	import WorkflowEditor from '$lib/components/workflow/WorkflowEditor.svelte';
@@ -52,6 +53,21 @@
 	// Initialize history watching (must be in component context)
 	history.init();
 	paramDiffWatcher.init();
+
+	// Dev-only: expose the history manager (and the core + mutation service) on
+	// window so the undo/redo stacks and live graph can be inspected/driven from
+	// the browser console, e.g.
+	//   __history.undoStack.map((e) => e.forward.kind)   // list recorded ops
+	//   __history.redoStack.map((e) => e.forward.kind)
+	//   __history.undoCount / __history.redoCount
+	//   __mutationService.setPlotProperty(id, 'name', 'x')  // drive a real op
+	//   __core.plots / __core.data                          // inspect state
+	// Stripped from production builds by the import.meta.env.DEV guard.
+	if (import.meta.env.DEV && typeof window !== 'undefined') {
+		window.__history = history;
+		window.__core = core;
+		window.__mutationService = mutationService;
+	}
 
 	// Keep facet generators' child plots in sync with their wired series. We track
 	// only the generators' geometry + series refIds; reconciliation runs untracked

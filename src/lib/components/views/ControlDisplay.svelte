@@ -121,6 +121,7 @@
 		syncFacetChildren
 	} from '$lib/core/Plot.svelte';
 	import Editable from '../inputs/Editable.svelte';
+	import { mutationService } from '$lib/core/mutationService.js';
 	import CanvasNodeControls from './CanvasNodeControls.svelte';
 	import { getSharedSchema, getSharedDataSchema } from '$lib/plots/sharedControls.js';
 
@@ -782,7 +783,18 @@
 			{#if Plot}
 				<div class="control-banner">
 					<div class="control-banner-title">
-						<p><Editable bind:value={plot.name} /></p>
+						<p>
+						<Editable
+							bind:value={plot.name}
+							onCommit={(final, original) => {
+								// Live typing already mutated plot.name (bind). Revert to the
+								// pre-edit value, then apply through the op so the rename is a
+								// single undoable step (before → after captured correctly).
+								plot.name = original;
+								mutationService.setPlotProperty(plot.id, 'name', final);
+							}}
+						/>
+					</p>
 
 						<div class="control-banner-icons">
 							<button

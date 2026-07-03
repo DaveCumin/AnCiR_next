@@ -223,7 +223,10 @@
 		type;
 		typeDisplayName = $state('');
 		selected = $state(false);
-		plot;
+		// Reactive so wholesale reassignment (undo/redo of input wiring via the
+		// setPlotInner op) re-renders the plot. In-place edits to plot.plot.data /
+		// columnRefs were already reactive on their own $state; this covers the swap.
+		plot = $state();
 		// Faceting (small multiples): a generator plot has facet=true and produces
 		// one child plot per series. Children carry facetParent (the generator id)
 		// and facetKey (stable id for reconciliation); they aren't shown on the

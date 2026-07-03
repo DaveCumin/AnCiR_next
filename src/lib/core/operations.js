@@ -1,7 +1,7 @@
 // src/lib/core/operations.js
 // @ts-nocheck
 
-import { core, replaceColumnRefs, swapColumnRefs } from './core.svelte.js';
+import { core, appConsts, replaceColumnRefs, swapColumnRefs } from './core.svelte.js';
 import { Plot } from './Plot.svelte';
 import { Column } from './Column.svelte';
 import { Process } from './Process.svelte';
@@ -75,6 +75,11 @@ import { TableProcess } from './TableProcess.svelte';
  * @property {number} [y]
  * @property {number} [width]
  * @property {number} [height]
+ *
+ * @typedef {Object} OpSetPlotInner
+ * @property {'setPlotInner'} kind
+ * @property {string} id
+ * @property {Object} inner   serialized snapshot of plot.plot (the type's data object)
  *
  * @typedef {Object} OpSetOrphanProcessArg
  * @property {'setOrphanProcessArg'} kind
@@ -196,6 +201,8 @@ function applyForward(op) {
             return op_setPlotProperty(op);
         case 'setPlotPosition':
             return op_setPlotPosition(op);
+        case 'setPlotInner':
+            return op_setPlotInner(op);
         case 'addColumn':
             return op_addColumn(op);
         case 'removeColumn':
@@ -273,6 +280,33 @@ function op_setPlotPosition(op) {
         width: before.width,
         height: before.height
     });
+}
+
+// Serialize a plot's inner data object (plot.plot) to a plain, replay-safe
+// snapshot. Same drop-functions contract as snapshotPlot; the object's own
+// toJSON governs shape and the type's data.fromJSON reconstructs it.
+function snapshotPlotInner(inner) {
+    return JSON.parse(JSON.stringify(inner, (k, v) => (typeof v === 'function' ? undefined : v)));
+}
+
+// Replace a plot's inner data object wholesale from a serialized snapshot. Used
+// to make plot input wiring (series/columnRefs edits) undoable: the connect /
+// disconnect handlers mutate plot.plot in place, then route the resulting state
+// through this op so the change lands on the history stack. Reconstruction goes
+// through the type's data.fromJSON — the exact contract session save/load and
+// the addPlot/removePlot ops already rely on — so it round-trips every plot
+// type. plot.plot is a $state field, so the swap is reactive.
+function op_setPlotInner(op) {
+    const plot = core.plots.find((p) => p.id === op.id);
+    if (!plot) return null;
+    const entry = appConsts.plotMap.get(plot.type);
+    if (typeof entry?.data?.fromJSON !== 'function') return null;
+    const before = snapshotPlotInner(plot.plot);
+    plot.plot = entry.data.fromJSON(plot, op.inner);
+    return pair(
+        { kind: 'setPlotInner', id: op.id, inner: snapshotPlotInner(op.inner) },
+        { kind: 'setPlotInner', id: op.id, inner: before }
+    );
 }
 
 function snapshotColumn(col) {

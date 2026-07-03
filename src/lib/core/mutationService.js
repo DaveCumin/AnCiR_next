@@ -28,6 +28,11 @@ export const mutationService = {
     setPlotPosition(id, position) {
         applyOp({ kind: 'setPlotPosition', id, ...position });
     },
+    // Replace a plot's inner data object (plot.plot) from a serialized snapshot.
+    // Records a single undo entry; used to make plot input wiring undoable.
+    setPlotInner(id, inner) {
+        applyOp({ kind: 'setPlotInner', id, inner });
+    },
 
     // --- Column ops ---
     addColumn(columnData) {
@@ -90,7 +95,14 @@ export const mutationService = {
     },
 
     // --- Batch ---
+    // Applies each op as its OWN history entry (N ops → N undo steps).
     batch(ops) {
         applyOps(ops);
+    },
+    // Applies a group of ops as a SINGLE atomic history entry (one undo reverses
+    // the whole group). Use when several ops together form one user gesture,
+    // e.g. removing a wired input (clear inIN + drop its producer column).
+    atomicBatch(ops) {
+        return applyOp({ kind: 'batch', ops });
     }
 };
