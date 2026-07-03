@@ -783,6 +783,9 @@
 	// outside-click close clears the picker.
 	let portPicker = $state(null);
 	let portPickerOpen = $state(false);
+	// Bound to the picker's ColumnSelector: a colId array (multi ports) or a
+	// single colId (single ports). Seeded from the port's current wiring on open.
+	let portPickerValue = $state(-1);
 	$effect(() => {
 		// When the popover closes (outside click or selection), drop the picker.
 		if (!portPickerOpen && portPicker) portPicker = null;
@@ -1878,19 +1881,137 @@
 		if (pendingConnection) pendingConnection = null;
 	}
 
-	// Right-click an input port: open a column picker anchored at the cursor so
-	// the user can add a connection to that input.
+	// The column(s) currently wired into an input port, and whether the port
+	// accepts more than one (so the picker can pre-check them and allow
+	// multi-select). Mirrors the per-type shapes used by connect/disconnect.
+	function getInputPortSelection(nodeId, portName) {
+		const target = allNodes.find((n) => n.id === nodeId);
+		if (!target) return { many: false, ids: [] };
+
+		if (target.type === 'process' && target.processObj) {
+			return { many: true, ids: _procInputIds(target.processObj) };
+		}
+		if (target.type === 'tableprocess' && target.tpObj) {
+			const raw = target.tpObj.args?.[portName];
+			const ids = Array.isArray(raw)
+				? raw.filter((n) => typeof n === 'number' && n >= 0)
+				: typeof raw === 'number' && raw >= 0
+					? [raw]
+					: [];
+			return { many: isManyInputPort(target, portName), ids };
+		}
+		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && portName === 'series') {
+			return { many: true, ids: (target.plotObj.plot.columnRefs ?? []).filter((n) => n >= 0) };
+		}
+		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot') {
+			const plot = target.plotObj.plot;
+			if (portName === 'data') {
+				const field = (appConsts.plotMap.get(target.plotObj.type)?.defaultInputs ?? [])[0];
+				const ids = (plot?.data ?? [])
+					.map((dp) => dp?.[field]?.refId)
+					.filter((n) => typeof n === 'number' && n >= 0);
+				return { many: true, ids };
+			}
+			const setMatch = portName?.match(/^x(\d+)$/) ?? portName?.match(/^ys(\d+)$/);
+			if (setMatch) {
+				const groups = groupPlotData(plot?.data ?? []);
+				const g = groups[Number(setMatch[1]) - 1];
+				// x is a single shared column for the set; y* holds one-or-more series.
+				if (portName.startsWith('x')) {
+					return { many: false, ids: g && (g.xRefId ?? -1) >= 0 ? [g.xRefId] : [] };
+				}
+				const yids = g
+					? g.dataPoints.map((dp) => dp?.y?.refId).filter((n) => typeof n === 'number' && n >= 0)
+					: [];
+				return { many: true, ids: yids };
+			}
+		}
+		return { many: false, ids: [] };
+	}
+
+	// Remove a single source column from a multi-input port (per node type).
+	function removeInputColumn(target, portName, colId) {
+		if (!target) return;
+		if (target.type === 'process' && target.processObj) {
+			_removeProcInput(target.processObj, colId);
+			return;
+		}
+		if (target.type === 'tableprocess' && target.tpObj) {
+			const raw = target.tpObj.args?.[portName];
+			if (Array.isArray(raw)) target.tpObj.args[portName] = raw.filter((id) => id !== colId);
+			else if (raw === colId) target.tpObj.args[portName] = -1;
+			return;
+		}
+		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && portName === 'series') {
+			const refs = target.plotObj.plot.columnRefs ?? [];
+			target.plotObj.plot.columnRefs = refs.filter((id) => id !== colId);
+			return;
+		}
+		if (target.type === 'plot' && target.plotObj && portName === 'data') {
+			const plot = target.plotObj.plot;
+			const field = (appConsts.plotMap.get(target.plotObj.type)?.defaultInputs ?? [])[0];
+			if (plot?.data) plot.data = plot.data.filter((dp) => dp?.[field]?.refId !== colId);
+			return;
+		}
+		// Per-series removal from a plot set's y* port: drop the data point carrying
+		// this y column. If it is the set's last series and the x is still wired,
+		// keep it as an x-seed (y = -1) so the set/x survives (mirrors disconnect).
+		const ysMatch = portName?.match(/^ys(\d+)$/);
+		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot' && ysMatch) {
+			const plot = target.plotObj.plot;
+			const groups = groupPlotData(plot?.data ?? []);
+			const g = groups[Number(ysMatch[1]) - 1];
+			if (!g) return;
+			const dp = g.dataPoints.find((d) => d?.y?.refId === colId);
+			if (!dp) return;
+			const ysInSet = g.dataPoints.filter((d) => (d?.y?.refId ?? -1) >= 0);
+			if (ysInSet.length <= 1 && (g.xRefId ?? -1) >= 0) {
+				if (dp.y) dp.y.refId = -1;
+			} else {
+				plot.data = plot.data.filter((d) => d !== dp);
+			}
+		}
+	}
+
+	// Replace a multi-input port's columns with exactly `nextIds` (diff → add the
+	// new ones via the shared connect path, remove the dropped ones per-type).
+	function setInputPortColumns(target, portName, nextIds) {
+		const cur = getInputPortSelection(target.id, portName).ids;
+		const next = nextIds.filter((n) => typeof n === 'number' && n >= 0);
+		for (const id of next) if (!cur.includes(id)) connectColumnToInput(id, target.id, portName);
+		for (const id of cur) if (!next.includes(id)) removeInputColumn(target, portName, id);
+	}
+
+	// Right-click an input port: open a column picker anchored at the cursor,
+	// pre-selecting the currently-wired column(s). Multi-input ports get a
+	// multi-select list; single-input ports pick one and close.
 	function handlePortPick(e) {
 		e.stopPropagation();
 		if (pendingConnection) pendingConnection = null;
-		portPicker = { nodeId: e.detail.nodeId, port: e.detail.port, x: e.detail.x, y: e.detail.y };
+		const sel = getInputPortSelection(e.detail.nodeId, e.detail.port);
+		portPicker = {
+			nodeId: e.detail.nodeId,
+			port: e.detail.port,
+			x: e.detail.x,
+			y: e.detail.y,
+			many: sel.many
+		};
+		portPickerValue = sel.many ? [...sel.ids] : (sel.ids[0] ?? -1);
 		portPickerOpen = true;
 	}
 
-	// A column was chosen in the port picker → wire it into the target input.
-	function handlePortPickChoice(colId) {
-		if (portPicker && typeof colId === 'number' && colId >= 0) {
-			connectColumnToInput(colId, portPicker.nodeId, portPicker.port);
+	// The picker's selection changed. Multi ports stay open so several columns can
+	// be toggled; single ports wire the choice and close.
+	function handlePortPickChoice(val) {
+		if (!portPicker) return;
+		const target = allNodes.find((n) => n.id === portPicker.nodeId);
+		if (portPicker.many) {
+			const arr = Array.isArray(val) ? val : typeof val === 'number' && val >= 0 ? [val] : [];
+			if (target) setInputPortColumns(target, portPicker.port, arr);
+			return; // keep the popover open for more toggles
+		}
+		if (typeof val === 'number' && val >= 0) {
+			connectColumnToInput(val, portPicker.nodeId, portPicker.port);
 		}
 		portPickerOpen = false;
 		portPicker = null;
@@ -1973,6 +2094,20 @@
 		if (dragInfo?.moved && dragInfo.nodeId) {
 			reconcileGroupMembership(dragInfo.nodeId);
 			reconcileCompositeMembership(dragInfo.nodeId);
+		}
+		// Commit a plot preview resize (model width/height) as one undo step:
+		// capture the end size, revert to the start size, then replay through the op
+		// so the reverse is recorded. Notes resize their own model directly and are
+		// out of the plot history scope.
+		if (resizeInfo?.plotObj) {
+			const p = resizeInfo.plotObj;
+			if (p.width !== resizeInfo.startPlotW || p.height !== resizeInfo.startPlotH) {
+				const endW = p.width;
+				const endH = p.height;
+				p.width = resizeInfo.startPlotW;
+				p.height = resizeInfo.startPlotH;
+				mutationService.setPlotPosition(p.id, { width: endW, height: endH });
+			}
 		}
 		dropTargetEdgeKey = null;
 		dropTargetPortKey = null;
@@ -3363,7 +3498,9 @@
 	     the ColumnSelector portals its list to <body>, positioned at the cursor. -->
 	<ColumnSelector
 		hideTrigger
+		multiple={portPicker.many}
 		bind:open={portPickerOpen}
+		bind:value={portPickerValue}
 		anchor={{ x: portPicker.x, y: portPicker.y }}
 		placeholder="Connect a column…"
 		onChange={handlePortPickChoice}
