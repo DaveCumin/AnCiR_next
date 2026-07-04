@@ -110,6 +110,7 @@ export function permutationTest(x, y, fitFn, options = {}) {
 
 	// Generate permutations
 	const permutedStats = [];
+	let failedFits = 0;
 
 	for (let i = 0; i < nPermutations; i++) {
 		// Shuffle y-values while keeping x fixed
@@ -120,12 +121,19 @@ export function permutationTest(x, y, fitFn, options = {}) {
 			const permutedStat = getStatistic(permutedFit, statistic);
 			permutedStats.push(permutedStat);
 		} catch {
-			// Fitfailed for this permutation — skip it
+			// Fit failed for this permutation — skip it (counted + warned below,
+			// since skipped permutations shrink the p-value denominator)
+			failedFits++;
 		}
 
 		if (onProgress) {
 			onProgress(i + 1, nPermutations);
 		}
+	}
+	if (failedFits > 0) {
+		console.warn(
+			`Permutation test: ${failedFits}/${nPermutations} permutation fits failed and were skipped`
+		);
 	}
 
 	// Compute p-value
@@ -196,6 +204,7 @@ export async function permutationTestAsync(x, y, fitFn, options = {}) {
 
 	// Generate permutations in batches
 	const permutedStats = [];
+	let failedFits = 0;
 
 	for (let batch = 0; batch < nPermutations; batch += batchSize) {
 		const batchEnd = Math.min(batch + batchSize, nPermutations);
@@ -208,7 +217,8 @@ export async function permutationTestAsync(x, y, fitFn, options = {}) {
 				const permutedStat = getStatistic(permutedFit, statistic);
 				permutedStats.push(permutedStat);
 			} catch {
-				// Fit failed
+				// Fit failed for this permutation — skip it (counted + warned below)
+				failedFits++;
 			}
 
 			if (onProgress) {
@@ -218,6 +228,11 @@ export async function permutationTestAsync(x, y, fitFn, options = {}) {
 
 		// Yield to event loop to allow UI updates
 		await new Promise((resolve) => setTimeout(resolve, 0));
+	}
+	if (failedFits > 0) {
+		console.warn(
+			`Permutation test: ${failedFits}/${nPermutations} permutation fits failed and were skipped`
+		);
 	}
 
 	// Compute p-value

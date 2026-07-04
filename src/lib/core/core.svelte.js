@@ -566,44 +566,6 @@ function _getColIdFieldSets() {
 }
 
 /**
- * Recursively replace `oldColId` with `newColId` inside a TP's args object,
- * including nested tableProcesses.
- */
-function _replaceInTPArgs(args, oldColId, newColId) {
-	if (!args || typeof args !== 'object') return;
-
-	const { scalar, array } = _getColIdFieldSets();
-
-	// Scalar column-ID fields
-	for (const field of scalar) {
-		if (typeof args[field] === 'number' && args[field] === oldColId) {
-			args[field] = newColId;
-		}
-	}
-
-	// Array column-ID fields
-	for (const field of array) {
-		if (Array.isArray(args[field])) {
-			args[field] = args[field].map((id) => (id === oldColId ? newColId : id));
-		}
-	}
-
-	// Output map (object with column ID values)
-	if (args.out && typeof args.out === 'object') {
-		for (const key of Object.keys(args.out)) {
-			if (args.out[key] === oldColId) args.out[key] = newColId;
-		}
-	}
-
-	// Recurse into nested tableProcesses (e.g. bin/cosinor inside L2W)
-	if (Array.isArray(args.tableProcesses)) {
-		for (const nested of args.tableProcesses) {
-			if (nested?.args) _replaceInTPArgs(nested.args, oldColId, newColId);
-		}
-	}
-}
-
-/**
  * Replace all downstream references to `oldColId` with `newColId`.
  * Updates: column refIds, table-process input args and output args,
  * table columnRefs, and plot data refs.
@@ -615,8 +577,11 @@ export function replaceColumnRefs(newColId, oldColId) {
 		if (col.refId === oldColId) col.refId = newColId;
 	});
 
+	// A single-entry remap: same walker as the bulk swap path, so scalar/array/
+	// out/nested-TP handling can't drift between the two.
+	const map = new Map([[oldColId, newColId]]);
 	core.tableProcesses.forEach((tp) => {
-		_replaceInTPArgs(tp.args, oldColId, newColId);
+		_remapInTPArgs(tp.args, map);
 	});
 
 	core.plots.forEach((plot) => {

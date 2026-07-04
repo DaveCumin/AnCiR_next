@@ -159,6 +159,8 @@ function fitWithLM(t, x, params, freeIndices, maxIterations, tolerance) {
 		try {
 			delta = solveLinearSystem(JtJ_d, JtR.slice());
 		} catch {
+			// Singular/ill-conditioned JtJ — inflate the damping and retry
+			// (standard Levenberg–Marquardt fallback); give up past 1e12.
 			lambda = Math.min(lambda * 10, 1e12);
 			if (lambda >= 1e12) break;
 			continue;

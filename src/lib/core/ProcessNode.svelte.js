@@ -191,7 +191,11 @@ let _cachedNodeExecutionKeys = new Map();
 function _safeJson(value) {
 	try {
 		return JSON.stringify(value ?? {});
-	} catch {
+	} catch (e) {
+		// Non-serialisable state (circular ref?) degrades the execution key to a
+		// lossy String() — dirty-detection still works but can over/under-fire, so
+		// surface it in dev rather than hiding the malformed state.
+		if (import.meta.env?.DEV) console.warn('ProcessNode: failed to serialise node state', value, e);
 		return String(value);
 	}
 }
@@ -280,6 +284,12 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	const connections = [];
 	const seenConnections = new Set();
 
+	// ORDER MATTERS in this block: tpOutputColIds/tpOutputColToTP,
+	// absorbedColToGroup, tapColMeta and producerColMeta must ALL be fully
+	// populated before the node/edge construction below first calls
+	// columnSourceRef() — it silently falls back to the standalone data_<colId>
+	// node for any colId missing from these maps, which mis-routes wires rather
+	// than erroring. Add any new column-routing lookup here, not further down.
 	const tpOutputColIds = new Set();
 	// colId → { nodeId, port } pointing at the producing TP node's inline
 	// output-column row. TP output columns render as rows INSIDE the TP node
