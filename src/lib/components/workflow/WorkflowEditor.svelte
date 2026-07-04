@@ -589,7 +589,7 @@
 		const req = appState.focusNodeRequest;
 		if (!req?.id) return;
 		untrack(() => {
-			focusedNodeId = req.id;
+			appState.canvasSelectedNodeId = req.id;
 			multiSelectedNodeIds = new Set([req.id]);
 			tick().then(() => panToNode(req.id));
 		});
@@ -685,7 +685,7 @@
 		const queued = _spawnPositionQueue.shift();
 		const pos = queued ?? getSpawnPoint();
 		stablePositions[newId] = { x: pos.x, y: pos.y };
-		focusedNodeId = newId;
+		appState.canvasSelectedNodeId = newId;
 		multiSelectedNodeIds = new Set([newId]);
 		// New nodes are expanded by default (collapsedNodeIds tracks the exceptions),
 		// so no action needed to open it inline.
@@ -719,7 +719,7 @@
 		const tp = mutationService.addFreeTableProcess(tpType, buildTableProcessDefaults(entry));
 		if (!tp) return { ok: false };
 		const nodeId = `tableprocess_${tp.id}`;
-		focusedNodeId = nodeId;
+		appState.canvasSelectedNodeId = nodeId;
 		multiSelectedNodeIds = new Set([nodeId]);
 		// Expanded by default (collapsedNodeIds tracks exceptions).
 		return { ok: true };
@@ -731,7 +731,7 @@
 		const plot = mutationService.addPlot({ name: displayName, type: plotType });
 		if (!plot) return { ok: false };
 		const nodeId = `plot_${plot.id}`;
-		focusedNodeId = nodeId;
+		appState.canvasSelectedNodeId = nodeId;
 		multiSelectedNodeIds = new Set([nodeId]);
 		return { ok: true };
 	}
@@ -828,23 +828,26 @@
 	let collapsedNodeIds = $state(new Set());
 
 	// --- Focus / connected-node highlight ---
-	let focusedNodeId = $state(null);
+	// The focused ("primary" selected) node id is appState.canvasSelectedNodeId,
+	// used directly rather than kept in a mirrored local copy: the side panels
+	// (DataDisplay, NodeSourceItem, Navbar, CanvasNodeControls) also write it to
+	// drive selection from outside the canvas, and a local mirror would clobber
+	// those writes. The panel is NOT auto-opened on selection — single-click only
+	// selects. The panel opens explicitly via double-click (handleNodeDblClick)
+	// or the header arrow, and its open/closed state otherwise persists: an open
+	// panel just re-renders for the newly selected node; a closed one stays closed.
 
 	// Multi-select set. Holds every node id currently part of the marquee-style
 	// selection (built up via alt/meta/shift-click on additional nodes). The
 	// focused id is always inside the set when at least one node is selected;
-	// `focusedNodeId` is the "primary" one whose editor shows in the panel for
-	// size === 1. For size > 1 the panel shows a count message instead.
+	// it is the "primary" one whose editor shows in the panel for size === 1.
+	// For size > 1 the panel shows a count message instead.
 	let multiSelectedNodeIds = $state(new Set());
 
-	// Mirror selection to appState so the ControlPanel can render a node-
-	// specific editor for the selection. One-way (canvas → appState); nothing
-	// else writes these. The panel is NOT auto-opened on selection — single-click
-	// only selects. The panel opens explicitly via double-click (handleNodeDblClick)
-	// or the header arrow, and its open/closed state otherwise persists: an open
-	// panel just re-renders for the newly selected node; a closed one stays closed.
+	// Mirror the multi-selection to appState so the ControlPanel can render a
+	// count/editor for it. One-way (canvas → appState) — unlike the focused id,
+	// external writes to these fields are not adopted back into the local Set.
 	$effect(() => {
-		appState.canvasSelectedNodeId = focusedNodeId;
 		appState.canvasMultiSelectedCount = multiSelectedNodeIds.size;
 		appState.canvasMultiSelectedNodeIds = Array.from(multiSelectedNodeIds);
 	});
@@ -874,13 +877,20 @@
 	// Either a node id OR an edge key (see edgeKeyFor below). At most one is set.
 	let selectedEdgeKey = $state(null);
 
+	// Canvas code maintains the node-XOR-edge invariant at each write site, but
+	// external writers of appState.canvasSelectedNodeId (side panels) can't reach
+	// selectedEdgeKey — enforce it here for those writes.
+	$effect(() => {
+		if (appState.canvasSelectedNodeId != null) selectedEdgeKey = null;
+	});
+
 	function edgeKeyFor(edge) {
 		return `${edge.fromId}|${edge.fromPort}|${edge.toId}|${edge.toPort}|${edge.type}`;
 	}
 
 	function selectEdge(edge) {
 		selectedEdgeKey = edgeKeyFor(edge);
-		focusedNodeId = null;
+		appState.canvasSelectedNodeId = null;
 		// Expansion is a separate, explicit gesture (double-click) — leave it
 		// alone when the user selects an edge so already-expanded nodes stay open.
 	}
@@ -990,7 +1000,7 @@
 	// flowtest. Hovering a node previews its direct connections without selecting.
 	const connectedNodeIds = $derived.by(() => {
 		if (!pathFocusEnabled) return null;
-		const active = hoveredNodeId ?? focusedNodeId;
+		const active = hoveredNodeId ?? appState.canvasSelectedNodeId;
 		if (!active) return null;
 		const connected = new Set([active]);
 		for (const edge of edgeTopology) {
@@ -1046,12 +1056,12 @@
 	$effect(() => {
 		return history.registerUiHandlers(
 			() => ({
-				focusedNodeId,
+				focusedNodeId: appState.canvasSelectedNodeId,
 				multiSelectedNodeIds: Array.from(multiSelectedNodeIds),
 				selectedEdgeKey
 			}),
 			(snap) => {
-				focusedNodeId = snap.focusedNodeId ?? null;
+				appState.canvasSelectedNodeId = snap.focusedNodeId ?? null;
 				multiSelectedNodeIds = new Set(snap.multiSelectedNodeIds ?? []);
 				selectedEdgeKey = snap.selectedEdgeKey ?? null;
 			}
@@ -2398,14 +2408,14 @@
 			// touching focus on the others. The focused id moves to whichever
 			// node was just acted on so the ControlPanel reflects it.
 			toggleMultiSelect(node.id);
-			focusedNodeId = node.id;
+			appState.canvasSelectedNodeId = node.id;
 		} else {
 			// Plain click: replace selection with just this node. We do NOT
 			// toggle off on a second click on the same node — that interferes
 			// with double-click expansion (the second click would deselect
 			// before dblclick fires, leaving an expanded-but-unselected node).
 			// To deselect, click the background or press Escape.
-			focusedNodeId = node.id;
+			appState.canvasSelectedNodeId = node.id;
 			multiSelectedNodeIds = new Set([node.id]);
 		}
 
@@ -2425,7 +2435,7 @@
 	 *  worksheet's double-click behaviour). Single-click only selects; the in-node
 	 *  inline editor is toggled separately by the header arrow. */
 	function handleNodeDblClick(node) {
-		focusedNodeId = node.id;
+		appState.canvasSelectedNodeId = node.id;
 		multiSelectedNodeIds = new Set([node.id]);
 		appState.showControlPanel = true;
 	}
@@ -2460,7 +2470,7 @@
 
 	function handleBackgroundClick() {
 		deselectAllPlots();
-		focusedNodeId = null;
+		appState.canvasSelectedNodeId = null;
 		multiSelectedNodeIds = new Set();
 		selectedEdgeKey = null;
 		pendingConnection = null;
@@ -2470,7 +2480,7 @@
 		deselectAllPlots();
 		// Note: collapse state is intentionally NOT reset here — it's a persistent,
 		// per-node property now (saved with the session), not tied to selection.
-		focusedNodeId = null;
+		appState.canvasSelectedNodeId = null;
 		multiSelectedNodeIds = new Set();
 		selectedEdgeKey = null;
 		pendingConnection = null;
@@ -2623,7 +2633,7 @@
 		appState.AYScallback = (option) => {
 			if (option !== 'Yes') return;
 			removeNode(node);
-			if (focusedNodeId === node.id) focusedNodeId = null;
+			if (appState.canvasSelectedNodeId === node.id) appState.canvasSelectedNodeId = null;
 			if (multiSelectedNodeIds.has(node.id)) {
 				const next = new Set(multiSelectedNodeIds);
 				next.delete(node.id);
@@ -2643,15 +2653,15 @@
 		const targets =
 			multiSelectedNodeIds.size > 1
 				? Array.from(multiSelectedNodeIds)
-				: focusedNodeId
-					? [focusedNodeId]
+				: appState.canvasSelectedNodeId
+					? [appState.canvasSelectedNodeId]
 					: [];
 		if (targets.length === 0) return;
 		for (const id of targets) {
 			const node = allNodes.find((n) => n.id === id);
 			if (node) removeNode(node);
 		}
-		focusedNodeId = null;
+		appState.canvasSelectedNodeId = null;
 		multiSelectedNodeIds = new Set();
 		// Deleted nodes auto-prune from collapsedNodeIds via the effect above;
 		// surviving nodes keep their collapse state.
@@ -2805,8 +2815,8 @@
 		const ids =
 			multiSelectedNodeIds.size > 0
 				? Array.from(multiSelectedNodeIds)
-				: focusedNodeId
-					? [focusedNodeId]
+				: appState.canvasSelectedNodeId
+					? [appState.canvasSelectedNodeId]
 					: [];
 		_dbg('copy: selection ids =', ids);
 		if (ids.length === 0) {
@@ -2914,8 +2924,8 @@
 		}
 		// Focus the newly pasted set so the user sees what landed.
 		multiSelectedNodeIds = newIds;
-		focusedNodeId = newIds.values().next().value;
-		_dbg('paste: done. created', newIds.size, 'nodes, focused', focusedNodeId);
+		appState.canvasSelectedNodeId = newIds.values().next().value;
+		_dbg('paste: done. created', newIds.size, 'nodes, focused', appState.canvasSelectedNodeId);
 	}
 
 	// --- Composite (combine / uncombine) ---
@@ -2931,7 +2941,7 @@
 			// composite), 1 composite + ops (add to it), or >=2 composites
 			// (nest into a parent). A lone composite (1 comp, 0 ops) can't combine.
 			canCombine: ops.length + comps.length >= 2,
-			canUncombine: comps.length >= 1 || !!focusedNodeId?.startsWith('composite_')
+			canUncombine: comps.length >= 1 || !!appState.canvasSelectedNodeId?.startsWith('composite_')
 		};
 	});
 
@@ -2968,7 +2978,7 @@
 			name: 'Composite'
 		});
 		stablePositions[cid] = { x: cx, y: cy };
-		focusedNodeId = cid;
+		appState.canvasSelectedNodeId = cid;
 		multiSelectedNodeIds = new Set([cid]);
 	}
 
@@ -3004,7 +3014,7 @@
 			processGraph.rawConnections ?? []
 		);
 		if (select) {
-			focusedNodeId = compositeId;
+			appState.canvasSelectedNodeId = compositeId;
 			multiSelectedNodeIds = new Set([compositeId]);
 		}
 	}
@@ -3038,13 +3048,13 @@
 	function uncombineSelection() {
 		const composites = [...multiSelectedNodeIds].filter((id) => id?.startsWith('composite_'));
 		const target =
-			composites[0] ?? (focusedNodeId?.startsWith('composite_') ? focusedNodeId : null);
+			composites[0] ?? (appState.canvasSelectedNodeId?.startsWith('composite_') ? appState.canvasSelectedNodeId : null);
 		if (!target) {
 			addNotification('Select a composite to uncombine.');
 			return;
 		}
 		removeComposite(target);
-		focusedNodeId = null;
+		appState.canvasSelectedNodeId = null;
 		multiSelectedNodeIds = new Set();
 	}
 
@@ -3065,12 +3075,12 @@
 		if (mod && (e.key === 'c' || e.key === 'C')) {
 			_dbg('keydown: Cmd/Ctrl+C', {
 				editable: isEditableTarget(e.target),
-				focusedNodeId,
+				focusedNodeId: appState.canvasSelectedNodeId,
 				multiSize: multiSelectedNodeIds.size,
 				target: e.target?.tagName
 			});
 			if (isEditableTarget(e.target)) return;
-			if (focusedNodeId || multiSelectedNodeIds.size > 0) {
+			if (appState.canvasSelectedNodeId || multiSelectedNodeIds.size > 0) {
 				e.preventDefault();
 				copySelection();
 			} else {
@@ -3096,7 +3106,7 @@
 		if (e.key === 'Delete' || e.key === 'Backspace') {
 			// Ignore if focus is in an editable text control inside an expanded node panel.
 			if (isEditableTarget(e.target)) return;
-			if (selectedEdgeKey || focusedNodeId || multiSelectedNodeIds.size > 0) {
+			if (selectedEdgeKey || appState.canvasSelectedNodeId || multiSelectedNodeIds.size > 0) {
 				e.preventDefault();
 				deleteSelection();
 			}
@@ -3272,7 +3282,7 @@
 				{@const isRecentlyChanged = changedNodeIds.has(node.id)}
 				{@const isGroup = node.type === 'group'}
 				{@const isMultiSelected = multiSelectedNodeIds.has(node.id)}
-				{@const isSelected = focusedNodeId === node.id || isMultiSelected}
+				{@const isSelected = appState.canvasSelectedNodeId === node.id || isMultiSelected}
 				{@const nodeZIndex = isDragging ? 30 : isExpanded ? 20 : 1}
 				{@const actionsRevealed = isSelected || actionsHoverId === node.id}
 				{@const clusterNoteId = node.type !== 'group' && node.type !== 'composite' ? node.id : null}

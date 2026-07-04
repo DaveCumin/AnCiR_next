@@ -327,10 +327,12 @@ export const appState = $state({
 	invisiblePlotIds: [],
 
 	// id of the currently selected canvas node (process/tableprocess/data/
-	// group/note/plot). Lifted out of WorkflowEditor so the ControlPanel can
-	// render a node-specific editor for the selection. `null` when nothing
-	// is focused. Plot selection still flows through core.plots[].selected
-	// for backwards compat, but this is set in parallel.
+	// group/note/plot). `null` when nothing is focused. This is the SINGLE
+	// source of truth for the focused node: WorkflowEditor reads/writes it
+	// directly (no local mirror), and the side panels (DataDisplay,
+	// NodeSourceItem, Navbar, CanvasNodeControls) write it to drive selection
+	// from outside the canvas. Plot selection still flows through
+	// core.plots[].selected for backwards compat, but this is set in parallel.
 	canvasSelectedNodeId: null,
 	// Count of nodes in the multi-select set. >1 → ControlPanel shows a
 	// "X nodes selected" placeholder instead of a single-node editor.
