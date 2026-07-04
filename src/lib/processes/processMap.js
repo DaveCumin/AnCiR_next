@@ -1,23 +1,23 @@
 import { normalizeNodeDefinition } from '$lib/core/NodeDefinition.svelte.js';
 import { getNodeMeta } from '$lib/core/nodeMeta.js';
+import { loadNodeMap, formatDisplayName } from '$lib/core/nodeLoaders.js';
 
 export async function loadProcesses() {
+	// Keep the glob literal here — Vite analyses the pattern statically.
 	const sveltePaths = import.meta.glob('$lib/processes/*.svelte', { eager: false });
-	const processMap = new Map();
-	for (const sveltePath in sveltePaths) {
+	return loadNodeMap(sveltePaths, (sveltePath, svelteModule) => {
 		const fileName = sveltePath.split('/').pop().replace('.svelte', '');
+		const def = svelteModule.definition;
+		const nodeSpec = normalizeNodeDefinition('process', fileName, def);
+		if (!def) {
+			console.warn(`Process ${fileName} is missing a \`definition\` export`);
+			return null;
+		}
 
-		try {
-			const svelteModule = await sveltePaths[sveltePath]();
-			const def = svelteModule.definition;
-			const nodeSpec = normalizeNodeDefinition('process', fileName, def);
-			if (!def) {
-				console.warn(`Process ${fileName} is missing a \`definition\` export`);
-				continue;
-			}
-
-			const nodeMeta = getNodeMeta(fileName);
-			processMap.set(fileName, {
+		const nodeMeta = getNodeMeta(fileName);
+		return [
+			fileName,
+			{
 				component: svelteModule.default,
 				func: def.func,
 				defaults: def.defaults ?? new Map(),
@@ -28,17 +28,7 @@ export async function loadProcesses() {
 				nodeIcon: nodeMeta.nodeIcon,
 				description: nodeMeta.description,
 				kind: 'process'
-			});
-		} catch (error) {
-			console.error(`Error loading ${sveltePath}:`, error);
-		}
-	}
-	return processMap;
-}
-
-function formatDisplayName(name) {
-	return name
-		.replace(/([A-Z])/g, ' $1')
-		.replace(/^./, (str) => str.toUpperCase())
-		.trim();
+			}
+		];
+	});
 }

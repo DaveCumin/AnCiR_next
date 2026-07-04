@@ -1,30 +1,39 @@
 import { getNodeMeta } from '$lib/core/nodeMeta.js';
+import { loadNodeMap, formatDisplayName } from '$lib/core/nodeLoaders.js';
 
 export async function loadPlots() {
+	// Keep the glob literal here — Vite analyses the pattern statically.
 	const sveltePaths = import.meta.glob('$lib/plots/**/*.svelte', { eager: false });
-	const plotMap = new Map();
+
+	// Only the folder's main plot file (e.g. Boxplot/Boxplot.svelte); the other
+	// .svelte files in a plot folder are imported by it. Filter BEFORE resolving
+	// so sub-components are never dynamically imported here.
+	const mainPaths = {};
 	for (const sveltePath in sveltePaths) {
 		const fileName = sveltePath.split('/').pop();
 		const folderName = sveltePath.split('/').slice(-2)[0];
+		if (folderName.toLowerCase() === fileName?.toLowerCase().slice(0, -7)) {
+			mainPaths[sveltePath] = sveltePaths[sveltePath];
+		}
+	}
 
-		// Only load the folder's main plot file (other .svelte files are imported by it).
-		if (folderName.toLowerCase() !== fileName?.toLowerCase().slice(0, -7)) continue;
+	return loadNodeMap(mainPaths, (sveltePath, svelteModule) => {
+		const folderName = sveltePath.split('/').slice(-2)[0];
+		const def = svelteModule.definition;
+		if (!def) {
+			console.warn(`Plot ${sveltePath} is missing a \`definition\` export`);
+			return null;
+		}
+		if (!def.plotClass) {
+			console.warn(`Plot ${sveltePath} definition is missing \`plotClass\``);
+			return null;
+		}
 
-		try {
-			const svelteModule = await sveltePaths[sveltePath]();
-			const def = svelteModule.definition;
-			if (!def) {
-				console.warn(`Plot ${sveltePath} is missing a \`definition\` export`);
-				continue;
-			}
-			if (!def.plotClass) {
-				console.warn(`Plot ${sveltePath} definition is missing \`plotClass\``);
-				continue;
-			}
-
-			const plotKey = folderName.toLowerCase();
-			const nodeMeta = getNodeMeta(plotKey);
-			plotMap.set(plotKey, {
+		const plotKey = folderName.toLowerCase();
+		const nodeMeta = getNodeMeta(plotKey);
+		return [
+			plotKey,
+			{
 				plot: svelteModule.default,
 				data: def.plotClass,
 				defaultInputs: def.defaultDataInputs ?? [],
@@ -35,17 +44,7 @@ export async function loadPlots() {
 				nodeIcon: nodeMeta.nodeIcon,
 				description: nodeMeta.description,
 				kind: 'plot'
-			});
-		} catch (error) {
-			console.error(`Error loading ${sveltePath}:`, error);
-		}
-	}
-	return plotMap;
-}
-
-function formatDisplayName(name) {
-	return name
-		.replace(/([A-Z])/g, ' $1')
-		.replace(/^./, (str) => str.toUpperCase())
-		.trim();
+			}
+		];
+	});
 }

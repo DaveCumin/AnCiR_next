@@ -1095,11 +1095,15 @@
 		// node note popovers, plot resize handles, embedded plots' own scrollers.
 		// Without this, scrolling inside any of those moves the canvas instead.
 		// Exception: ctrl/meta + wheel is always a zoom gesture, so let it through.
+		//
+		// NEW overlays should just add the `.no-canvas-wheel` marker class rather
+		// than extending this list; the explicit selectors below are retained for
+		// the existing overlays that predate the marker.
 		if (
 			!e.ctrlKey &&
 			!e.metaKey &&
 			e.target?.closest?.(
-				'dialog, .backdrop, .np-menu, .palette-menu, .modal, .modal-content, ' +
+				'.no-canvas-wheel, dialog, .backdrop, .np-menu, .palette-menu, .modal, .modal-content, ' +
 					'.modal-overlay, .dropdown, .dropdown-menu, .submenu, .process-editor-panel, ' +
 					'.node-note-popover, .plot-preview-panel, .plot-preview-inner, textarea'
 			)
