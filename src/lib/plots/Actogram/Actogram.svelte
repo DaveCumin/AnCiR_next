@@ -374,9 +374,15 @@
 				const keys = Object.keys(d.dataByDays.xByPeriod);
 				for (const k of keys) {
 					const v = +k;
-					if (v > maxPeriod) maxPeriod = v;
+					if (Number.isFinite(v) && v > maxPeriod) maxPeriod = v;
 				}
 			}
+			if (maxPeriod < 0) return 0;
+			// A non-time X axis (plain data values wired into the time port) yields a
+			// huge day index and hence an absurd Ndays, which would blow up the
+			// per-day allocations/loops (e.g. the ylims array). No real actogram spans
+			// this many days, so treat it as invalid and render nothing.
+			if (maxPeriod + 1 > 20000) return 0;
 			return maxPeriod + 1;
 		});
 

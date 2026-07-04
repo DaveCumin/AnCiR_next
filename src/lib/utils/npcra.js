@@ -47,6 +47,11 @@ export function computeNPCRA(t, y, opts = {}) {
 	//    an empty bin is missing → NaN).
 	const e = epochHours;
 	const nEpochs = Math.max(1, Math.ceil((tEnd - t0) / e + 1e-9));
+	// A non-time X axis with a very large value range yields a huge span/epoch ratio
+	// (epochHours>0 is already guaranteed above), so nEpochs can be enormous and
+	// `new Float64Array(nEpochs)` throws / OOMs. Cap at a sane window count; beyond
+	// this the input isn't a real time series.
+	if (!Number.isFinite(nEpochs) || nEpochs > 1e7) return null;
 	const sum = new Float64Array(nEpochs);
 	const cnt = new Float64Array(nEpochs);
 	for (const [ti, yi] of pairs) {

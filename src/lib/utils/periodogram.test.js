@@ -254,6 +254,26 @@ describe('runPeriodogramCalculation — Chi-squared', () => {
 		expect(result.threshold.every((v) => Number.isFinite(v))).toBe(true);
 	});
 
+	it('does not throw (RangeError) for a tiny binSize that would demand a huge colNum', () => {
+		// A vanishingly small bin size makes colNum = round(period / binSize)
+		// astronomically large; without the guard, Array.from({ length: colNum })
+		// throws "RangeError: Invalid array length". Fixed binned result so the
+		// stub itself doesn't choke on the tiny binSize.
+		binData.mockReturnValue({ bins: [0, 1, 2, 3], y_out: [1, 2, 3, 4], droppedCount: 0 });
+		expect(() =>
+			runPeriodogramCalculation({
+				method: 'Chi-squared',
+				xData: [0, 1, 2, 3],
+				yData: [1, 2, 3, 4],
+				binSize: 1e-9,
+				periodMin: 20,
+				periodMax: 28,
+				periodSteps: 4,
+				chiSquaredAlpha: 0.05
+			})
+		).not.toThrow();
+	});
+
 	it('peaks at 24h for a 24h cosine and reports a low p-value there', () => {
 		const { t, y } = cosineTimeSeries(24, 24 * 10, 0.5);
 		const result = runPeriodogramCalculation({

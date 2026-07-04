@@ -48,6 +48,13 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 		dt = diffs[Math.floor(diffs.length / 2)];
 	}
 
+	// A non-time / non-monotonic X axis gives a non-positive or non-finite sample
+	// spacing (median diff <= 0, or binSize=0), which makes the lag counts below
+	// Infinite/negative/NaN. Autocorrelation is undefined there; bail cleanly.
+	if (!Number.isFinite(dt) || dt <= 0) {
+		return { lags: [], correlations: [], dt: 1 };
+	}
+
 	const maxLagTime = maxLag ? maxLag : (t[t.length - 1] - t[0]) / 2;
 	const minLagTime = Number.isFinite(minLag) && minLag > 0 ? minLag : 0;
 

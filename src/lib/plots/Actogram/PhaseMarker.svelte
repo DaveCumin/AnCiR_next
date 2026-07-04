@@ -309,8 +309,14 @@
 				this.markerSize = dataIN.markerSize || 5;
 				this.lineMinDay = dataIN.lineMinDay ?? null;
 				this.lineMaxDay = dataIN.lineMaxDay ?? null;
-				const periodKeys = Object.keys(parent.dataByDays.xByPeriod).map(Number);
-				const numPeriods = periodKeys.length > 0 ? Math.max(...periodKeys) + 1 : 0;
+				// Keep only finite day indices and cap the count: a non-time X axis can
+				// produce a huge/NaN period key, which would make Array.from({length})
+				// below throw (RangeError) or allocate absurdly.
+				const periodKeys = Object.keys(parent.dataByDays.xByPeriod)
+					.map(Number)
+					.filter(Number.isFinite);
+				let numPeriods = periodKeys.length > 0 ? Math.max(...periodKeys) + 1 : 0;
+				if (numPeriods > 20000) numPeriods = 0;
 				if (dataIN.selectedPeriods) {
 					this.selectedPeriods = dataIN.selectedPeriods;
 				} else if (dataIN.periodRangeMin != null && dataIN.periodRangeMax != null) {

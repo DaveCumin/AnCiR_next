@@ -366,7 +366,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.50.3',
+	version: 'β.50.4',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),

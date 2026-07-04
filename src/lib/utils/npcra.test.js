@@ -84,4 +84,15 @@ describe('computeNPCRA', () => {
 		expect(r.IS).toBeCloseTo(1, 6);
 		expect(r.RA).toBeCloseTo(1, 6);
 	});
+
+	// Non-time X axis (plain data values wired into the time port) with a large
+	// value range makes span/epoch enormous → new Float64Array(nEpochs) would OOM /
+	// throw. The cap bails to null instead of crashing.
+	it('does not throw / returns null for a huge span (non-time X axis)', () => {
+		const t = [0, 2e8, 4e8, 6e8, 8e8, 1e9];
+		const y = [1, 2, 3, 4, 5, 6];
+		let r;
+		expect(() => (r = computeNPCRA(t, y, { epochHours: 1, period: 24 }))).not.toThrow();
+		expect(r).toBeNull();
+	});
 });

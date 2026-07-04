@@ -127,3 +127,25 @@ describe('computeAutocorrelation — non-uniform sampling path', () => {
 		expect(r.correlations[i24]).toBeGreaterThan(0.3);
 	});
 });
+
+describe('computeAutocorrelation — degenerate / non-time X axis', () => {
+	// A non-time / non-monotonic X (plain data wired into the time port) gives a
+	// sample spacing dt <= 0 (or an explicit binSize of 0). Must return empty
+	// cleanly rather than looping / producing garbage.
+	it('does not throw and returns empty for all-equal times (dt = 0)', () => {
+		let r;
+		expect(() => (r = computeAutocorrelation([3, 3, 3, 3, 3], [1, 2, 3, 1, 2]))).not.toThrow();
+		expect(r.lags).toEqual([]);
+	});
+
+	it('does not throw for decreasing (non-monotonic) times', () => {
+		let r;
+		expect(() => (r = computeAutocorrelation([5, 4, 3, 2, 1], [1, 2, 3, 4, 5]))).not.toThrow();
+		expect(r.lags).toEqual([]);
+	});
+
+	it('returns empty for an explicit binSize of 0', () => {
+		const r = computeAutocorrelation([0, 1, 2, 3, 4], [1, 2, 3, 4, 5], 0);
+		expect(r.lags).toEqual([]);
+	});
+});

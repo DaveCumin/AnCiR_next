@@ -113,7 +113,9 @@ function calculateEnrightPower(times, values, periods, binSize, onProgress) {
 
 	const powers = periods.map((period, periodIndex) => {
 		const binsPerPeriod = Math.round(period / binSize);
-		if (binsPerPeriod < 1 || binsPerPeriod > n) return 0;
+		// A zero/non-finite binSize (or period) makes this Infinity/NaN; `> n` already
+		// rejects Infinity but NaN slips through, so test finiteness explicitly.
+		if (!Number.isFinite(binsPerPeriod) || binsPerPeriod < 1 || binsPerPeriod > n) return 0;
 
 		const qpAcc = new KahanSum();
 		let count = 0;
@@ -159,7 +161,11 @@ function calculateEnrightPower(times, values, periods, binSize, onProgress) {
 
 function calculateChiSquaredPower(data, binSize, period, avgAll, denominator) {
 	const colNum = Math.round(period / binSize);
-	if (colNum < 1) return NaN;
+	// A zero/non-finite binSize makes colNum Infinity/NaN, and a tiny binSize makes
+	// it huge-but-finite; either would blow up the `Array.from({length: colNum})`
+	// allocation below (RangeError: Invalid array length). Bins-per-period can't
+	// meaningfully exceed the sample count, so cap at data.length.
+	if (!Number.isFinite(colNum) || colNum < 1 || colNum > data.length) return NaN;
 
 	const rowNum = Math.ceil(data.length / colNum);
 
