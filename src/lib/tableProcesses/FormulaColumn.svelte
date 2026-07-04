@@ -789,8 +789,8 @@ return _r;`
 		min-width: 180px;
 		max-height: 180px;
 		overflow-y: auto;
-		background: var(--color-lightness-97, #f8f8f8);
-		border: 1px solid var(--color-lightness-85, #ccc);
+		background: var(--color-lightness-97);
+		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-sm);
 		box-shadow: var(--shadow-2);
 		z-index: 9999;
@@ -807,7 +807,7 @@ return _r;`
 
 	.ac-item:hover,
 	.ac-selected {
-		background-color: var(--color-lightness-85, #e0e0e0);
+		background-color: var(--color-lightness-85);
 	}
 
 	.ac-col-name {
@@ -816,26 +816,26 @@ return _r;`
 
 	.ac-table-name {
 		font-size: var(--font-xs);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 
 	.ac-empty {
 		padding: 0.4rem 0.6rem;
 		font-size: var(--font-md);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		font-style: italic;
 	}
 
 	/* ── Hints & errors ── */
 	.formula-hint {
 		font-size: var(--font-xs);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		margin: 0.2rem 0 0 0;
 	}
 
 	.formula-hint kbd {
-		background: var(--color-lightness-85, #ddd);
-		border-radius: 3px;
+		background: var(--color-lightness-85);
+		border-radius: var(--radius-xs);
 		padding: 0.05rem 0.3rem;
 		font-size: var(--font-xs);
 		font-family: monospace;

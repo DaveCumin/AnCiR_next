@@ -211,7 +211,7 @@
 	#network {
 		width: 100%;
 		height: 500px;
-		border: 1px solid #ccc;
+		border: 1px solid var(--color-lightness-80);
 		background: var(--surface-card);
 	}
 </style>

@@ -719,7 +719,7 @@
 							previewOpen = !previewOpen;
 						}}
 					>
-						<span class="chev" aria-hidden="true">{previewOpen ? '▾' : '▸'}</span>
+						<Icon name={previewOpen ? 'caret-down' : 'caret-right'} width={12} height={12} />
 					</button>
 				{/if}
 
@@ -813,13 +813,13 @@
 		padding: 0 1px;
 		margin: 0;
 		cursor: pointer;
-		color: var(--color-text-muted, #666);
-		font-size: 10px;
+		color: var(--color-text-muted);
+		font-size: var(--font-2xs);
 		line-height: 1;
 		flex-shrink: 0;
 	}
 	.col-chev:hover {
-		color: var(--color-lightness-25, #444);
+		color: var(--color-lightness-25);
 	}
 	.col-name {
 		margin: 0;
@@ -853,7 +853,7 @@
 	}
 	.time-format-row p {
 		margin: 0;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 	.time-format-row input {
 		flex: 1 1 auto;
@@ -1049,13 +1049,13 @@
 	}
 
 	.linked-process {
-		border-left: 2px solid var(--color-lightness-35, #555);
+		border-left: 2px solid var(--color-lightness-35);
 		padding-left: var(--space-3);
 	}
 
 	.linked-badge {
-		font-size: 10px;
-		color: var(--color-lightness-35, #555);
+		font-size: var(--font-2xs);
+		color: var(--color-lightness-35);
 		line-height: 1;
 		margin-bottom: var(--space-1);
 	}
@@ -1065,7 +1065,7 @@
 		user-select: none;
 		font-size: var(--font-sm);
 		line-height: 1;
-		color: var(--color-lightness-65, #aaa);
+		color: var(--color-lightness-65);
 		padding: 0 var(--space-1);
 		opacity: 0;
 		transition: opacity 0.15s ease;
@@ -1080,7 +1080,7 @@
 	}
 
 	.drag-over {
-		border-top: 2px solid var(--color-lightness-35, #555);
+		border-top: 2px solid var(--color-lightness-35);
 	}
 
 	/* Mirrors the canvas selection — applied when this process is the focused

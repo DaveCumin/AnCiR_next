@@ -1169,9 +1169,9 @@
 	.tp-output-panel {
 		margin-top: 0.6rem;
 		padding: 0.45rem 0.55rem;
-		border: 1px solid var(--stroke2, var(--color-lightness-85, #d7d7d7));
+		border: 1px solid var(--stroke2, var(--color-lightness-85));
 		border-radius: 0.375rem;
-		background: var(--color-lightness-99, #fcfcfc);
+		background: var(--color-lightness-99);
 		font-size: var(--font-xs);
 		line-height: 1.25;
 	}
@@ -1188,7 +1188,7 @@
 		position: sticky;
 		top: 0;
 		z-index: 1;
-		background: var(--color-lightness-99, #fcfcfc);
+		background: var(--color-lightness-99);
 		padding: 0.1rem 0;
 	}
 
@@ -1211,16 +1211,16 @@
 	.tp-stat-btn {
 		font-size: var(--font-xs);
 		padding: var(--space-2) var(--space-4);
-		border: 1px solid var(--color-lightness-75, #aaa);
-		border-radius: 3px;
+		border: 1px solid var(--color-lightness-75);
+		border-radius: var(--radius-xs);
 		background: none;
 		cursor: pointer;
-		color: var(--color-lightness-35, #555);
+		color: var(--color-lightness-35);
 	}
 
 	.tp-stat-btn:hover {
-		background: var(--color-lightness-95, #f2f2f2);
-		border-color: var(--color-lightness-55, #888);
+		background: var(--color-lightness-95);
+		border-color: var(--color-lightness-55);
 	}
 
 	.tp-stat-btn:disabled {

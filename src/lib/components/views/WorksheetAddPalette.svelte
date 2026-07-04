@@ -242,7 +242,7 @@
 		max-height: min(70vh, 32rem);
 		overflow-y: auto;
 		background: var(--surface-card);
-		border: 1px solid var(--color-lightness-80, #ccc);
+		border: 1px solid var(--color-lightness-80);
 		border-radius: var(--radius-lg);
 		box-shadow: var(--shadow-3);
 		padding: var(--space-5);
@@ -257,17 +257,17 @@
 		z-index: 1;
 		padding-bottom: var(--space-4);
 		background: var(--surface-card);
-		border-bottom: 1px solid var(--color-lightness-90, #eee);
+		border-bottom: 1px solid var(--color-lightness-90);
 		margin-bottom: var(--space-4);
 	}
 
 	.palette-search {
 		width: 100%;
 		padding: var(--space-4) var(--space-4);
-		border: 1px solid var(--color-lightness-80, #ccc);
+		border: 1px solid var(--color-lightness-80);
 		border-radius: 5px;
 		font-size: 0.85rem;
-		color: var(--color-lightness-25, #333);
+		color: var(--color-lightness-25);
 		background: var(--surface-card);
 		transition:
 			border-color 0.15s ease,
@@ -283,7 +283,7 @@
 	.palette-empty {
 		padding: var(--space-5) var(--space-2);
 		font-size: 0.82rem;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 
 	.palette-grid {
@@ -304,7 +304,7 @@
 		border: 1px solid transparent;
 		border-radius: var(--radius-md);
 		background: var(--surface-card);
-		color: var(--color-lightness-25, #333);
+		color: var(--color-lightness-25);
 		text-align: center;
 		cursor: pointer;
 		transition:
@@ -314,8 +314,8 @@
 	}
 
 	.palette-tile:hover {
-		background: var(--color-lightness-95, #f4f4f4);
-		border-color: var(--color-lightness-85, #ddd);
+		background: var(--color-lightness-95);
+		border-color: var(--color-lightness-85);
 		transform: translateY(-1px);
 	}
 
@@ -330,7 +330,7 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		color: var(--color-lightness-35, #555);
+		color: var(--color-lightness-35);
 	}
 
 	.palette-tile:hover .palette-tile-icon {

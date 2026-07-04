@@ -107,14 +107,25 @@
 		}
 	}
 
-	// Load an example dataset straight away — no preview/confirm. Reuses the URL
-	// preview path to detect columns/time-format, then commits immediately.
-	async function loadExampleDataset(session) {
-		dataUrl = resolveDatasetUrl(session.url);
+	// Import a raw CSV/text dataset URL straight away — no preview/confirm step.
+	// Reuses the URL preview path to detect columns/time-format, then commits
+	// immediately. If the data needs attention (parse error / nothing importable),
+	// falls back to opening the modal so the user can resolve it rather than the
+	// import silently doing nothing. Shared by the Examples tab here and by the
+	// Load-Session modal's dataset examples (via dataSourceActions).
+	export async function importDatasetUrl(url) {
+		dataUrl = url;
 		await doPreviewFromURL();
 		if (importReady && !errorInfile) {
 			await confirmImport();
+		} else {
+			sourceMode = 'url';
+			showImportModal = true;
 		}
+	}
+
+	function loadExampleDataset(session) {
+		return importDatasetUrl(resolveDatasetUrl(session.url));
 	}
 
 	// Switch to the Examples tab and (lazily) fetch the dataset list. This is a
@@ -2788,7 +2799,8 @@
 
 	.tab-btn.active {
 		color: var(--color-lightness-10);
-		border-bottom-color: var(--color-hover);
+		border-bottom-color: var(--color-accent);
+		font-weight: 600;
 	}
 
 	.tab-hint {
@@ -2813,7 +2825,7 @@
 		text-align: left;
 		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-sm, 4px);
-		background: var(--surface-card, #fff);
+		background: var(--surface-card);
 		font: inherit;
 		cursor: pointer;
 		width: 100%;
@@ -2836,7 +2848,7 @@
 
 	.filename-preview {
 		font-size: var(--font-sm);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		margin: 0;
 		white-space: nowrap;
 		overflow: hidden;
@@ -2848,7 +2860,7 @@
 		min-width: 0;
 		padding: 0.3rem 0.5rem;
 		font-size: var(--font-md);
-		border: 1px solid var(--color-lightness-85, #ccc);
+		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-1, 4px);
 		background: var(--color-lightness-97);
 		color: inherit;
@@ -2856,7 +2868,7 @@
 	}
 	.url-input:focus {
 		outline: none;
-		border-color: var(--color-accent, #3b82f6);
+		border-color: var(--color-accent);
 	}
 
 	.enspire-summary-panel {
@@ -2910,13 +2922,13 @@
 		max-width: 10rem;
 	}
 	.dialog-button.active {
-		outline: 2px solid var(--color-accent, #3b82f6);
+		outline: 2px solid var(--color-accent);
 		outline-offset: 1px;
 	}
 	.link-button {
 		background: none;
 		border: none;
-		color: var(--color-accent, #3b82f6);
+		color: var(--color-accent);
 		cursor: pointer;
 		font-size: var(--font-sm);
 		text-decoration: underline;
@@ -2994,7 +3006,7 @@
 		font-size: var(--font-sm);
 		padding: 0.1rem 0.25rem;
 		border: 1px solid var(--color-lightness-85);
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 		box-sizing: border-box;
 	}
 	.preview-table tr.pickable {
@@ -3012,7 +3024,7 @@
 	.multi-file-list {
 		margin-top: 0.75em;
 		padding: 0.5em 0.75em;
-		border: 1px solid var(--color-border, #ccc);
+		border: 1px solid var(--color-border, var(--color-lightness-80));
 		border-radius: var(--radius-sm);
 		background: var(--color-surface-alt, #f8f8f8);
 	}
@@ -3044,7 +3056,7 @@
 	.badge {
 		flex-shrink: 0;
 		padding: 0.1em 0.45em;
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 		font-size: 0.8em;
 		font-weight: 600;
 	}
@@ -3073,7 +3085,7 @@
 		margin-top: 0.5em;
 		padding: 0.4em 0.6em;
 		border: 1px solid var(--color-warning);
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 		background: var(--color-warning-bg);
 		color: var(--color-warning-text);
 		font-size: 0.82em;
@@ -3082,7 +3094,7 @@
 		margin-top: 0.5em;
 		padding: 0.4em 0.6em;
 		border: 1px solid var(--color-error-border);
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 		background: var(--color-error-bg);
 		color: var(--color-error);
 		font-size: 0.82em;
@@ -3129,7 +3141,7 @@
 	.combine-empty {
 		margin: 0.25em 0;
 		font-size: 0.85em;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		font-style: italic;
 	}
 	.combine-row {
@@ -3150,7 +3162,7 @@
 	}
 	.combine-plus {
 		font-weight: 700;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 	.combine-remove {
 		font: inherit;
@@ -3160,11 +3172,11 @@
 		border: 1px solid transparent;
 		border-radius: 2px;
 		background: transparent;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		cursor: pointer;
 	}
 	.combine-remove:hover {
-		color: var(--color-error, #c5221f);
+		color: var(--color-error);
 		border-color: currentColor;
 	}
 	.combine-add {
@@ -3175,7 +3187,7 @@
 		border: 1px dashed var(--color-info);
 		border-radius: 2px;
 		background: transparent;
-		color: var(--color-info-text, #1a73e8);
+		color: var(--color-info-text);
 		cursor: pointer;
 	}
 	.combine-add:hover {

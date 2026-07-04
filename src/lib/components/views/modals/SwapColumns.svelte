@@ -48,11 +48,11 @@
 				<ColumnSelector bind:value={pair.from} />
 				<span class="arrow" title="Swap direction">&#8644;</span>
 				<ColumnSelector bind:value={pair.to} />
-				<button class="remove-btn" onclick={() => removeRow(i)} title="Remove row">&times;</button>
+				<button class="btn-remove" onclick={() => removeRow(i)} title="Remove row">&times;</button>
 			</div>
 		{/each}
 		<div class="footer">
-			<button class="add-btn" onclick={addRow}>+ Add pair</button>
+			<button class="btn-add" onclick={addRow}>+ Add pair</button>
 			{#if canSwap}
 				<button class="swap-btn" onclick={doSwap}>Swap all</button>
 			{/if}
@@ -73,7 +73,7 @@
 	.swap-header p {
 		margin: 0;
 		font-size: var(--font-md);
-		color: #666;
+		color: var(--color-text-muted);
 	}
 
 	.swap-container {
@@ -94,7 +94,7 @@
 		flex: 1;
 		font-size: var(--font-sm);
 		font-weight: 600;
-		color: #666;
+		color: var(--color-text-muted);
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
 	}
@@ -116,25 +116,6 @@
 		cursor: default;
 	}
 
-	.remove-btn {
-		width: 24px;
-		height: 24px;
-		padding: 0;
-		border: none;
-		background: transparent;
-		color: #999;
-		font-size: 18px;
-		cursor: pointer;
-		border-radius: 3px;
-		line-height: 1;
-		flex-shrink: 0;
-	}
-
-	.remove-btn:hover {
-		background: var(--color-error-bg);
-		color: var(--color-error);
-	}
-
 	.footer {
 		display: flex;
 		justify-content: space-between;
@@ -142,24 +123,9 @@
 		margin-top: 8px;
 	}
 
-	.add-btn {
-		padding: 4px 12px;
-		background: transparent;
-		border: 1px dashed #aaa;
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-		font-size: var(--font-md);
-		color: #555;
-	}
-
-	.add-btn:hover {
-		border-color: #666;
-		color: #333;
-	}
-
 	.swap-btn {
 		padding: 6px 18px;
-		background: #0275ff;
+		background: var(--color-accent);
 		color: white;
 		border: none;
 		border-radius: var(--radius-sm);

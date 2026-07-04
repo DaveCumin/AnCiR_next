@@ -833,7 +833,7 @@
 							<div class="control-component-title-icons">
 								<button class="icon" onclick={() => datum.addMarker()}>
 									<Icon
-										name="plus"
+										name="add"
 										width={16}
 										height={16}
 										className="control-component-title-icon"

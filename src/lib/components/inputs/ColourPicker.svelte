@@ -326,14 +326,14 @@
 						<div>
 							<span>Old</span>
 							<div
-								style="background-color: {initialColor}; width: 24px; height: 24px; border: 1px solid #ccc; position: relative; cursor: pointer;"
+								style="background-color: {initialColor}; width: 24px; height: 24px; border: 1px solid var(--color-lightness-80); position: relative; cursor: pointer;"
 								onclick={(e) => {
 									value = initialColor;
 									hexInput = value;
 								}}
 							>
 								<div
-									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
+									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(-45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--color-lightness-80) 75%), linear-gradient(-45deg, transparent 75%, var(--color-lightness-80) 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
 								></div>
 								<div
 									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {initialColor};"
@@ -343,10 +343,10 @@
 						<div>
 							<span>New</span>
 							<div
-								style="width: 24px; height: 24px; border: 1px solid #ccc; position: relative; cursor:pointer"
+								style="width: 24px; height: 24px; border: 1px solid var(--color-lightness-80); position: relative; cursor:pointer"
 							>
 								<div
-									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
+									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(-45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--color-lightness-80) 75%), linear-gradient(-45deg, transparent 75%, var(--color-lightness-80) 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
 								></div>
 								<div
 									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {hexInput};"
@@ -362,14 +362,14 @@
 							{#each appState.appColours as color, index}
 								<div
 									id="palette-{index}"
-									style="background-color: {color}; width: 24px; height: 24px; border: 1px solid #ccc; position: relative;"
+									style="background-color: {color}; width: 24px; height: 24px; border: 1px solid var(--color-lightness-80); position: relative;"
 									onclick={() => {
 										hexInput = color;
 										updateFromHex(color);
 									}}
 								>
 									<div
-										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
+										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(-45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--color-lightness-80) 75%), linear-gradient(-45deg, transparent 75%, var(--color-lightness-80) 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
 									></div>
 									<div
 										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {color};"
@@ -384,7 +384,7 @@
 							style="position: relative; flex-grow: 1; height: 16px; border-radius: var(--radius-lg); overflow: hidden;"
 						>
 							<div
-								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
+								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(-45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--color-lightness-80) 75%), linear-gradient(-45deg, transparent 75%, var(--color-lightness-80) 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
 							></div>
 							<div
 								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgba({rgbInput.r}, {rgbInput.g}, {rgbInput.b}, 0), rgba({rgbInput.r}, {rgbInput.g}, {rgbInput.b}, 1));"
@@ -406,7 +406,7 @@
 							step="1"
 							bind:value={hsvInput.a}
 							onInput={updateFromHsv}
-							style="width: {numberInputWidth}px; height: 16px; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
+							style="width: {numberInputWidth}px; height: 16px; padding: 4px; border: 1px solid var(--color-lightness-80); border-radius: var(--radius-sm);"
 						/>
 					</div>
 					<button
@@ -480,7 +480,7 @@
 									step="1"
 									bind:value={hsvInput.h}
 									onInput={updateFromHsv}
-									style="width:  {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
+									style="width:  {numberInputWidth}px; padding: 4px; border: 1px solid var(--color-lightness-80); border-radius: var(--radius-sm);"
 								/>
 							</div>
 
@@ -509,7 +509,7 @@
 									step="1"
 									bind:value={hsvInput.s}
 									onInput={updateFromHsv}
-									style="width: {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
+									style="width: {numberInputWidth}px; padding: 4px; border: 1px solid var(--color-lightness-80); border-radius: var(--radius-sm);"
 								/>
 							</div>
 
@@ -538,7 +538,7 @@
 									step="1"
 									bind:value={hsvInput.v}
 									onInput={updateFromHsv}
-									style="width: {numberInputWidth}px; height: 16px; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
+									style="width: {numberInputWidth}px; height: 16px; padding: 4px; border: 1px solid var(--color-lightness-80); border-radius: var(--radius-sm);"
 								/>
 							</div>
 
@@ -565,7 +565,7 @@
 									max="255"
 									bind:value={rgbInput.r}
 									onInput={updateFromRgb}
-									style="width:  {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
+									style="width:  {numberInputWidth}px; padding: 4px; border: 1px solid var(--color-lightness-80); border-radius: var(--radius-sm);"
 								/>
 							</div>
 
@@ -592,7 +592,7 @@
 									max="255"
 									bind:value={rgbInput.g}
 									onInput={updateFromRgb}
-									style="width:  {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
+									style="width:  {numberInputWidth}px; padding: 4px; border: 1px solid var(--color-lightness-80); border-radius: var(--radius-sm);"
 								/>
 							</div>
 
@@ -619,7 +619,7 @@
 									max="255"
 									bind:value={rgbInput.b}
 									onInput={updateFromRgb}
-									style="width: {numberInputWidth}px; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
+									style="width: {numberInputWidth}px; padding: 4px; border: 1px solid var(--color-lightness-80); border-radius: var(--radius-sm);"
 								/>
 							</div>
 						</div>
@@ -634,7 +634,7 @@
 									type="text"
 									bind:value={hexInput}
 									oninput={() => updateFromHex(hexInput)}
-									style="width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: var(--radius-sm);"
+									style="width: 100%; padding: 4px; border: 1px solid var(--color-lightness-80); border-radius: var(--radius-sm);"
 								/>
 							</div>
 						</div>
@@ -645,7 +645,7 @@
 						<div style="display: flex; gap: 8px;">
 							<button
 								onclick={() => saveColor()}
-								style="padding: 4px 8px; background-color: #3b82f6; color: white; border-radius: var(--radius-sm); border: none; cursor: pointer;"
+								style="padding: 4px 8px; background-color: var(--color-accent); color: white; border-radius: var(--radius-sm); border: none; cursor: pointer;"
 							>
 								Save to Palette
 							</button>
@@ -661,7 +661,7 @@
 <!-- Indicator -->
 <div class="cp-preview" style="background-color: {value};" onclick={(e) => open(e)}>
 	<div
-		style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
+		style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(-45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--color-lightness-80) 75%), linear-gradient(-45deg, transparent 75%, var(--color-lightness-80) 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
 	></div>
 	<div
 		style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {value};"
@@ -698,7 +698,7 @@
 		display: block;
 		font-size: var(--font-lg);
 		margin-bottom: 4px;
-		color: #333;
+		color: var(--color-lightness-25);
 	}
 
 	button:hover {

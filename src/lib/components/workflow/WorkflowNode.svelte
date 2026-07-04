@@ -286,7 +286,7 @@
 		border-color: var(--color-accent);
 		box-shadow:
 			var(--shadow-1),
-			0 0 0 2px rgba(77, 159, 227, 0.28);
+			var(--shadow-focus-soft);
 	}
 
 	.workflow-node.expanded {
@@ -296,7 +296,7 @@
 	}
 
 	.workflow-node.drop-target {
-		border: 2px dashed #28a745;
+		border: 2px dashed var(--color-success);
 		box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.25);
 	}
 
@@ -307,11 +307,11 @@
 		gap: 4px;
 		padding: 0 10px;
 		height: 26px; /* HEADER_H */
-		background: var(--color-lightness-97, #f4f4f4);
-		border-bottom: 1px solid var(--color-lightness-90, #e7e7e7);
+		background: var(--color-lightness-97);
+		border-bottom: 1px solid var(--color-lightness-90);
 		border-radius: 6px 6px 0 0;
 		font-weight: 600;
-		color: var(--color-lightness-25, #333);
+		color: var(--color-lightness-25);
 	}
 
 	.node-label {
@@ -336,11 +336,11 @@
 
 	.expand-indicator {
 		font-size: 9px;
-		color: #666;
+		color: var(--color-text-muted);
 		flex-shrink: 0;
 		padding: 2px 4px;
 		border: none;
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 		background: transparent;
 		cursor: pointer;
 		line-height: 1;
@@ -353,7 +353,7 @@
 	.drop-badge {
 		font-size: 9px;
 		font-weight: 700;
-		color: #28a745;
+		color: var(--color-success);
 		flex-shrink: 0;
 		white-space: nowrap;
 	}
@@ -376,9 +376,9 @@
 		font-weight: 700;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		pointer-events: none;
-		border-top: 1px solid var(--color-lightness-90, #ededed);
+		border-top: 1px solid var(--color-lightness-90);
 	}
 	/* "*" marks a dynamic port that accepts one or more columns. Plain text colour
 	   (not accent) so it reads as a footnote marker, not a link. */
@@ -394,7 +394,7 @@
 		align-items: center;
 		height: 22px; /* PORT_H */
 		font-size: var(--font-xs);
-		color: var(--color-lightness-40, #5b5b5b);
+		color: var(--color-lightness-40);
 		pointer-events: none; /* let only the dot capture clicks */
 	}
 
@@ -415,8 +415,8 @@
 		width: 13px;
 		height: 13px;
 		border-radius: 50%;
-		background: var(--color-lightness-95, #ececec);
-		border: 1px solid var(--color-lightness-60, #8a8a8a);
+		background: var(--surface-card);
+		border: 1px solid var(--color-lightness-50);
 		cursor: crosshair;
 		flex-shrink: 0;
 		padding: 0;
@@ -453,7 +453,7 @@
 	.port-dot.splice-target {
 		background: var(--color-accent);
 		border-color: var(--color-accent);
-		box-shadow: 0 0 0 4px rgba(77, 159, 227, 0.35);
+		box-shadow: var(--shadow-focus);
 	}
 
 	.port-label {
@@ -466,10 +466,10 @@
 	}
 
 	.node-sublabel {
-		font-size: 10px;
+		font-size: var(--font-2xs);
 		color: #555;
 		background-color: rgba(0, 0, 0, 0.04);
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 		padding: 1px 4px;
 		display: inline-block;
 		margin: 6px 10px 2px;
@@ -495,7 +495,7 @@
 		/* Sized by the node (drag the corner handle); no native textarea grip. */
 		resize: none;
 		border: 1px solid rgba(0, 0, 0, 0.15);
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 		padding: 4px 6px;
 		font-family: inherit;
 		font-size: var(--font-xs);
@@ -520,9 +520,9 @@
 		background: linear-gradient(
 			135deg,
 			transparent 0 50%,
-			var(--color-lightness-60, #8a8a8a) 50% 60%,
+			var(--color-lightness-60) 50% 60%,
 			transparent 60% 70%,
-			var(--color-lightness-60, #8a8a8a) 70% 80%,
+			var(--color-lightness-60) 70% 80%,
 			transparent 80%
 		);
 		border-bottom-right-radius: 6px;

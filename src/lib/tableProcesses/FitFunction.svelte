@@ -1007,7 +1007,7 @@
 			</p>
 			{#if Array.isArray(yResult?.fitResult?.permutedStats) && yResult.fitResult.permutedStats.length > 0 && Number.isFinite(yResult?.fitResult?.pValue)}
 				<p
-					style="color: {yResult.fitResult.significant ? '#10b981' : '#f59e0b'}; font-weight: bold;"
+					style="color: {yResult.fitResult.significant ? 'var(--color-success)' : 'var(--color-warning)'}; font-weight: 600;"
 				>
 					Perm p-value: {yResult.fitResult.pValue.toFixed(4)}
 					{#if yResult.fitResult.significant}
@@ -1192,15 +1192,15 @@
 	.tp-stat-btn {
 		font-size: var(--font-xs);
 		padding: var(--space-2) var(--space-4);
-		border: 1px solid var(--color-lightness-75, #aaa);
-		border-radius: 3px;
+		border: 1px solid var(--color-lightness-75);
+		border-radius: var(--radius-xs);
 		background: none;
 		cursor: pointer;
-		color: var(--color-lightness-35, #555);
+		color: var(--color-lightness-35);
 	}
 
 	.tp-stat-btn:hover {
 		background: var(--color-lightness-95);
-		border-color: var(--color-lightness-55, #888);
+		border-color: var(--color-lightness-55);
 	}
 </style>

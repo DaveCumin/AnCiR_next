@@ -91,7 +91,7 @@
 	}
 
 	.edge-line {
-		stroke: var(--color-lightness-55, #888);
+		stroke: var(--color-lightness-55);
 		stroke-width: 2;
 		fill: none;
 		pointer-events: none;

@@ -897,7 +897,7 @@
 
 	.heading p {
 		margin-left: var(--space-4);
-		/* font-weight: bold; */
+		/* font-weight: 600; */
 	}
 
 	.control-display {
@@ -933,7 +933,7 @@
 		align-items: center;
 		gap: var(--space-2);
 		margin: var(--space-1) 0 var(--space-3) var(--space-3);
-		font-size: 0.75rem;
+		font-size: var(--font-sm);
 	}
 
 	.muted {
@@ -941,11 +941,11 @@
 	}
 
 	.value-pill {
-		font-size: 0.75rem;
+		font-size: var(--font-sm);
 		padding: var(--space-1) var(--space-3);
-		border: 1px solid #ccc;
+		border: 1px solid var(--color-lightness-80);
 		border-radius: 0.5rem;
-		background-color: #f7f7f7;
+		background-color: var(--color-lightness-97);
 		cursor: pointer;
 	}
 

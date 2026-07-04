@@ -38,7 +38,7 @@
 		position: relative;
 		display: flex;
 		align-items: center;
-		border: 1px solid #ccc;
+		border: 1px solid var(--color-lightness-80);
 		padding: var(--space-4);
 		overflow: hidden;
 		white-space: nowrap;

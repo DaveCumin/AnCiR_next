@@ -120,7 +120,7 @@
 		background: #fff9c4;
 		border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 		cursor: move;
-		font-weight: bold;
+		font-weight: 600;
 	}
 
 	.note-header p {

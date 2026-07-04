@@ -14,7 +14,8 @@
 		loadFromURL,
 		openImportModal,
 		openImportModalWithFiles,
-		openImportModalWithUrl
+		openImportModalWithUrl,
+		importDatasetUrl
 	} from '$lib/components/views/modals/ImportData.svelte';
 	import Notifications from '$lib/components/reusables/Notifications.svelte';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
@@ -123,6 +124,7 @@
 		openImport: openImportModal,
 		openImportFiles: openImportModalWithFiles,
 		openImportUrl: openImportModalWithUrl,
+		importDataUrlDirect: importDatasetUrl,
 		loadSessionFile: loadSessionFromFile
 	});
 
@@ -938,7 +940,7 @@
 		align-items: center;
 		justify-content: center;
 
-		font-weight: bold;
+		font-weight: 600;
 		background-color: var(--surface-card);
 		z-index: 99;
 	}
@@ -977,25 +979,31 @@
 		display: none;
 	}
 
+	/* Canonical tab treatment (see .tab-strip in app.css): active = accent underline,
+	   so the control panel reads as the same control as the modal source tabs. */
 	:global(.control-tab button) {
 		font-size: var(--font-lg);
 		margin: 0;
-		padding: var(--space-2) var(--space-4);
-		color: var(--color-lightness-35);
+		padding: var(--space-3) var(--space-4);
+		color: var(--color-text-muted);
 		background-color: transparent;
-		border-radius: var(--radius-sm);
 		border: none;
+		border-bottom: 2px solid transparent;
 		appearance: none;
 		white-space: nowrap; /* Prevent text wrapping within buttons */
+		transition:
+			color 0.15s ease,
+			border-color 0.15s ease;
 	}
 
 	:global(.control-tab button.active) {
-		color: black;
-		background-color: var(--color-lightness-95);
+		color: var(--color-lightness-25);
+		border-bottom-color: var(--color-accent);
+		font-weight: 600;
 	}
 
 	:global(.control-tab button:hover) {
-		background-color: var(--color-lightness-95);
+		color: var(--color-lightness-25);
 	}
 
 	:global(.control-data-add) {
@@ -1022,7 +1030,7 @@
 		align-items: center;
 		justify-content: space-between;
 
-		/* font-weight: bold; */
+		/* font-weight: 600; */
 	}
 
 	:global(.control-component-title button) {
@@ -1258,7 +1266,7 @@
 		margin: 0;
 		padding: 0;
 
-		font-weight: bold;
+		font-weight: 600;
 	}
 
 	:global(.process-title button) {
@@ -1283,7 +1291,7 @@
 
 	:global(.tp-output-label) {
 		font-size: var(--font-xs);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		font-style: italic;
 	}
 

@@ -457,7 +457,7 @@
 			{/each}
 		</div>
 
-		<button class="add-split-time-btn" onclick={addSplitTime}>+ Add split time</button>
+		<button class="btn-add" onclick={addSplitTime}>+ Add split time</button>
 
 		{#if timesWereReordered}
 			<div class="reorder-warning">
@@ -560,39 +560,23 @@
 		align-items: center;
 	}
 
-	.add-split-time-btn {
-		padding: 0.6rem var(--space-6);
-		font-size: var(--font-md);
-		border: 1px dashed var(--color-lightness-55, #888);
-		border-radius: 3px;
-		background: var(--color-lightness-97);
-		cursor: pointer;
-		color: var(--color-lightness-30, #333);
-		margin-bottom: 0.8rem;
-	}
-
-	.add-split-time-btn:hover {
-		background: var(--color-lightness-90);
-		border-color: var(--color-lightness-30, #333);
-	}
-
 	.reorder-warning {
 		background: var(--color-lightness-95);
-		border-left: 3px solid #f59e0b;
+		border-left: 3px solid var(--color-warning);
 		padding: 0.6rem;
 		margin-bottom: 0.8rem;
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 	}
 
 	.reorder-warning p {
 		margin: 0.2rem 0;
 		font-size: var(--font-sm);
-		color: var(--color-lightness-35, #555);
+		color: var(--color-lightness-35);
 	}
 
 	.split-info {
 		font-size: var(--font-sm);
-		color: var(--color-lightness-40, #666);
+		color: var(--color-lightness-40);
 		margin-top: var(--space-4);
 	}
 </style>

@@ -321,7 +321,7 @@
 <style>
 	.hint {
 		font-size: var(--font-sm);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		margin: var(--space-1) 0 0;
 	}
 	.interp-preview {
@@ -330,7 +330,7 @@
 	}
 	.interp-preview th,
 	.interp-preview td {
-		border: 1px solid var(--color-lightness-90, #e6e6e6);
+		border: 1px solid var(--color-lightness-90);
 		padding: 1px 6px;
 		text-align: right;
 		white-space: nowrap;

@@ -233,7 +233,7 @@
 								<span class="source-name">{col?.name ?? `col ${colId}`}</span>
 								<button
 									type="button"
-									class="remove-btn"
+									class="btn-remove"
 									title="Extract from group"
 									onclick={() => extractColumnFromAnyGroup(colId)}
 								>
@@ -259,7 +259,7 @@
 								<span class="source-name">{memberLabel(mid)}</span>
 								<button
 									type="button"
-									class="remove-btn"
+									class="btn-remove"
 									title="Remove from composite"
 									onclick={() => removeMember(comp, mid)}
 								>
@@ -303,7 +303,7 @@
 <style>
 	.control-banner {
 		padding: var(--space-3) 0 var(--space-2);
-		border-bottom: 1px solid var(--color-lightness-90, #e7e7e7);
+		border-bottom: 1px solid var(--color-lightness-90);
 		margin-bottom: var(--space-3);
 	}
 	.control-banner-title {
@@ -319,7 +319,7 @@
 	}
 	.control-component {
 		padding: var(--space-3) 0;
-		border-bottom: 1px solid var(--color-lightness-95, #f0f0f0);
+		border-bottom: 1px solid var(--color-lightness-95);
 	}
 	.control-component:last-child {
 		border-bottom: none;
@@ -379,18 +379,6 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		flex: 1;
-	}
-	.remove-btn {
-		background: transparent;
-		border: none;
-		font-size: 0.75rem;
-		color: rgba(176, 48, 48, 0.8);
-		cursor: pointer;
-		padding: 0 var(--space-2);
-		border-radius: 0.2rem;
-	}
-	.remove-btn:hover {
-		background: rgba(176, 48, 48, 0.08);
 	}
 	.note-textarea,
 	.node-note-textarea {

@@ -360,8 +360,12 @@
 
 {#snippet plot(boxPlotData)}
 	{#if groupedStats.length > 0 && boxPlotData?.draw}
+		<!-- Clip to the plot area. The <g> below is already translated by
+		     (xoffset, yoffset), so the clip rect lives in that translated local
+		     space and must start at 0,0 — using (xoffset, yoffset) here would
+		     double-count the offset and clip off the first category's box. -->
 		<clipPath id={clipKey}>
-			<rect x={xoffset} y={yoffset} {width} {height} />
+			<rect x="0" y="0" {width} {height} />
 		</clipPath>
 
 		<g clip-path="url(#{clipKey})" style="transform: translate({xoffset}px, {yoffset}px);">

@@ -212,7 +212,7 @@
 		top: 0;
 		left: 0;
 
-		border-right: 1px solid #d9d9d9;
+		border-right: 1px solid var(--color-lightness-85);
 
 		z-index: 1000;
 	}
@@ -247,7 +247,7 @@
 		transition: background-color 0.15s ease;
 	}
 	.rail-btn:hover:not(:disabled) {
-		background-color: var(--color-lightness-95, #f2f2f2);
+		background-color: var(--color-lightness-95);
 	}
 	.rail-btn:disabled {
 		opacity: 0.35;
@@ -263,13 +263,13 @@
 		gap: var(--space-1);
 		padding: var(--space-1);
 		border-radius: var(--radius-lg);
-		background-color: var(--color-lightness-97, #f7f7f7);
+		background-color: var(--color-lightness-97);
 	}
 
 	.rail-sep {
 		width: 22px;
 		height: 1px;
-		background-color: var(--color-lightness-85, #ddd);
+		background-color: var(--color-lightness-85);
 		margin: var(--space-2) 0;
 	}
 
@@ -286,7 +286,7 @@
 		bottom: 0;
 		min-width: 150px;
 		background: var(--surface-card);
-		border: 1px solid var(--color-lightness-85, #ddd);
+		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-lg);
 		box-shadow: var(--shadow-3);
 		padding: var(--space-2);
@@ -308,6 +308,6 @@
 	}
 
 	.help-menu button:hover {
-		background: var(--color-lightness-95, #f4f4f4);
+		background: var(--color-lightness-95);
 	}
 </style>

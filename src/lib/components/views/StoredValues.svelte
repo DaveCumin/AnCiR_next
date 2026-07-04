@@ -91,7 +91,7 @@
 
 	.heading p {
 		margin-left: var(--space-5);
-		font-weight: bold;
+		font-weight: 600;
 	}
 
 	.stored-list {
@@ -102,7 +102,7 @@
 
 	.empty-hint {
 		font-size: var(--font-sm);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		padding: var(--space-4);
 		line-height: 1.4;
 	}
@@ -112,12 +112,12 @@
 		align-items: center;
 		gap: 0.35rem;
 		padding: var(--space-2) var(--space-2);
-		border-bottom: 1px solid var(--color-lightness-95, #f2f2f2);
+		border-bottom: 1px solid var(--color-lightness-95);
 		font-size: var(--font-md);
 	}
 
 	.sv-row:hover {
-		background: var(--color-lightness-97, #f8f8f8);
+		background: var(--color-lightness-97);
 	}
 
 	.sv-name {
@@ -131,7 +131,7 @@
 	.sv-value {
 		font-family: monospace;
 		font-size: var(--font-sm);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		min-width: 60px;
 		text-align: right;
 	}
@@ -157,8 +157,8 @@
 	.sv-name-input {
 		font-size: var(--font-sm);
 		padding: 0.15rem 0.3rem;
-		border: 1px solid var(--color-lightness-85, #ccc);
-		border-radius: 3px;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-xs);
 		flex: 1;
 	}
 </style>

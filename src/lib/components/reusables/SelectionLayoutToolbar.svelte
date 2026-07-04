@@ -136,7 +136,7 @@
 		gap: 2px;
 		padding: 4px 6px;
 		background: var(--surface-card);
-		border: 1px solid var(--color-lightness-85, #ddd);
+		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-lg);
 		box-shadow: var(--shadow-card);
 		pointer-events: auto;
@@ -152,7 +152,7 @@
 		border: none;
 		border-radius: 5px;
 		background: transparent;
-		color: var(--color-lightness-35, #555);
+		color: var(--color-lightness-35);
 		cursor: pointer;
 		transition:
 			background 0.15s ease,
@@ -160,7 +160,7 @@
 	}
 
 	.lt-btn:hover:not(:disabled) {
-		background: var(--color-lightness-95, #f2f2f2);
+		background: var(--color-lightness-95);
 		color: var(--color-accent);
 	}
 
@@ -173,6 +173,6 @@
 		width: 1px;
 		align-self: stretch;
 		margin: 2px 3px;
-		background: var(--color-lightness-90, #e7e7e7);
+		background: var(--color-lightness-90);
 	}
 </style>

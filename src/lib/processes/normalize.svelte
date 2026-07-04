@@ -171,8 +171,8 @@
 	}
 
 	.info-text {
-		font-size: 0.75rem;
-		color: var(--text-secondary, #666);
+		font-size: var(--font-sm);
+		color: var(--text-secondary, var(--color-text-muted));
 		font-style: italic;
 		margin-top: var(--space-2);
 	}
@@ -180,7 +180,7 @@
 	select {
 		width: 100%;
 		padding: var(--space-2);
-		border: 1px solid var(--border-color, #ccc);
+		border: 1px solid var(--border-color, var(--color-lightness-80));
 		border-radius: 0.25rem;
 		font-size: 0.9rem;
 	}

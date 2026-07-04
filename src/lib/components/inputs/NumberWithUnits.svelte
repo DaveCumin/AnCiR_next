@@ -110,7 +110,7 @@
 	}
 
 	.number-input:hover {
-		border-color: #666;
+		border-color: var(--color-text-muted);
 	}
 
 	.number-input:focus {

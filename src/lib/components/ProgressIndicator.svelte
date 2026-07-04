@@ -53,7 +53,7 @@
 				<div class="step-content" class:expanded={step.isExpanded}>
 					<div
 						class="content-inner"
-						style="border-left: 2px solid {step.completed ? '#10b981' : '#e5e7eb'};"
+						style="border-left: 2px solid {step.completed ? 'var(--color-success)' : 'var(--color-lightness-90)'};"
 					>
 						{#if stepContent}
 							{@render stepContent(index, step)}
@@ -68,7 +68,7 @@
 					<div
 						class="progress-line"
 						class:completed={step.completed && steps[index + 1]?.completed}
-						style="background-color: {step.completed ? '#10b981' : '#e5e7eb'};"
+						style="background-color: {step.completed ? 'var(--color-success)' : 'var(--color-lightness-90)'};"
 					></div>
 				{/if}
 			</div>
@@ -107,7 +107,7 @@
 	}
 
 	.step-header:hover {
-		background-color: #f5f5f5;
+		background-color: var(--color-lightness-96);
 	}
 
 	.step-indicator {
@@ -124,34 +124,34 @@
 		width: 12px;
 		height: 12px;
 		border-radius: 50%;
-		background-color: #ccc;
+		background-color: var(--color-lightness-80);
 	}
 
 	.active-dot {
 		width: 12px;
 		height: 12px;
 		border-radius: 50%;
-		background-color: #3b82f6;
+		background-color: var(--color-accent);
 	}
 
 	.checkmark {
-		color: #10b981;
+		color: var(--color-success);
 		font-size: 16px;
-		font-weight: bold;
+		font-weight: 600;
 	}
 
 	.step-label {
 		font-size: 16px;
 		font-weight: 500;
-		color: #333;
+		color: var(--color-lightness-25);
 	}
 
 	.step.completed .step-label {
-		color: #10b981;
+		color: var(--color-success);
 	}
 
 	.step.active .step-label {
-		color: #3b82f6;
+		color: var(--color-accent);
 	}
 
 	.step-content {
@@ -177,7 +177,7 @@
 	}
 
 	.progress-line.completed {
-		background-color: #10b981;
+		background-color: var(--color-success);
 	}
 
 	.navigation {

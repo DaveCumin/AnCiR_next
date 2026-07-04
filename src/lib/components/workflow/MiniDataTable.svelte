@@ -103,8 +103,8 @@
 	.mini-table {
 		font-family: var(--font-mono, ui-monospace, SF Mono, monospace);
 		font-size: 0.7rem;
-		background: var(--color-lightness-95, #fafafa);
-		border: 1px solid var(--color-lightness-85, #e8e8e8);
+		background: var(--color-lightness-95);
+		border: 1px solid var(--color-lightness-85);
 		border-radius: 0.2rem;
 		padding: var(--space-2) var(--space-3);
 		min-width: 70px;
@@ -113,8 +113,8 @@
 		font-weight: 600;
 		padding-bottom: var(--space-2);
 		margin-bottom: var(--space-2);
-		border-bottom: 1px solid var(--color-lightness-85, #e8e8e8);
-		color: var(--color-lightness-25, #333);
+		border-bottom: 1px solid var(--color-lightness-85);
+		color: var(--color-lightness-25);
 	}
 	.mini-rows {
 		display: flex;
@@ -125,11 +125,11 @@
 		display: flex;
 		flex-direction: column;
 		padding: var(--space-1) 0;
-		color: var(--color-lightness-35, #555);
+		color: var(--color-lightness-35);
 	}
 	.mt-computed {
 		font-size: 0.85em;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		line-height: 1.1;
 	}
 	.mini-row.empty {
@@ -138,9 +138,9 @@
 	}
 	.mini-footer {
 		font-size: 0.65rem;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		margin-top: var(--space-2);
 		padding-top: var(--space-2);
-		border-top: 1px dashed var(--color-lightness-85, #eee);
+		border-top: 1px dashed var(--color-lightness-85);
 	}
 </style>

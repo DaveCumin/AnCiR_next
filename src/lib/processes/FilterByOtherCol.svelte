@@ -163,7 +163,7 @@
 			{/if}
 		</div>
 	{/each}
-	<button class="add-condition-button" onclick={addCondition}>Add Condition</button>
+	<button class="btn-add" onclick={addCondition}>+ Add condition</button>
 </ProcessShell>
 
 <style>
@@ -197,12 +197,5 @@
 	}
 	.operator-input {
 		width: 4rem;
-	}
-	.add-condition-button:hover {
-		opacity: 0.9;
-	}
-	.add-condition-button:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
 	}
 </style>

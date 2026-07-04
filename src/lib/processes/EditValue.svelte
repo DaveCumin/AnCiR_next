@@ -77,7 +77,7 @@
 <ProcessShell {p}>
 	<div class="edits-container">
 		<button class="icon" onclick={addEdit}>
-			<Icon name="plus" width={16} height={16} />
+			<Icon name="add" width={16} height={16} />
 		</button>
 		{#each p.args.edits || [] as edit (edit.id)}
 			<div class="control-input-horizontal">

@@ -591,7 +591,7 @@
 		padding: 0.85rem var(--space-6) var(--space-5);
 		pointer-events: auto;
 		font-size: var(--font-lg);
-		color: var(--color-lightness-20, #2a2a2a);
+		color: var(--color-lightness-20);
 		/* Positioned via translate3d (GPU-composited). Until the card has been
 		   shown once it stays invisible with NO transform transition, so the
 		   first placement snaps to the right spot instead of sliding in from 0,0. */
@@ -624,7 +624,7 @@
 		font-size: var(--font-xs);
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		margin-bottom: 0.35rem;
 	}
 
@@ -637,7 +637,7 @@
 		margin: 0 0 var(--space-5) 0;
 		font-size: var(--font-body);
 		line-height: 1.5;
-		color: var(--color-lightness-30, #444);
+		color: var(--color-lightness-30);
 	}
 
 	.tour-actions {
@@ -654,14 +654,14 @@
 		font: inherit;
 		font-size: var(--font-md);
 		padding: 0.35rem 0.7rem;
-		border: 1px solid var(--color-lightness-85, #ddd);
+		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-md);
 		background: var(--surface-card);
 		cursor: pointer;
 	}
 
 	.tour-btn:hover {
-		background: var(--color-lightness-95, #f4f4f4);
+		background: var(--color-lightness-95);
 	}
 
 	.tour-primary {
@@ -677,12 +677,12 @@
 
 	.tour-skip {
 		border-color: transparent;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		padding-left: 0;
 	}
 	.tour-skip:hover {
 		background: transparent;
-		color: var(--color-lightness-25, #333);
+		color: var(--color-lightness-25);
 	}
 
 	.tour-hint {
@@ -697,7 +697,7 @@
 		display: inline-block;
 		margin-top: 0.4rem;
 		font-size: var(--font-sm);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 
 	/* Honour users who prefer reduced motion: snap instead of glide/pulse. */

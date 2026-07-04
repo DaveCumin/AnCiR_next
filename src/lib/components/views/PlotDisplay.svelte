@@ -435,7 +435,7 @@
 		/* Snap grid: plots snap to it, so (unlike the workflow canvas) the workspace
 		   keeps a visible grid. Same base tint; pattern is cell-sized and shifted by
 		   the pan offset so it stays aligned with snap-to-grid plot positions. */
-		background-color: var(--surface-canvas, #f7f8fa);
+		background-color: var(--surface-canvas);
 		background-image:
 			linear-gradient(to right, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px),
 			linear-gradient(to bottom, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px);
@@ -472,7 +472,7 @@
 		align-items: center;
 		justify-content: center;
 
-		font-weight: bold;
+		font-weight: 600;
 		pointer-events: none;
 	}
 
@@ -497,7 +497,7 @@
 		z-index: 999;
 		transition: right 0.6s ease;
 		background: var(--surface-card);
-		border: 1px solid var(--color-lightness-85, #ddd);
+		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-lg);
 		box-shadow: var(--shadow-card);
 		padding: 4px;
@@ -514,17 +514,17 @@
 		cursor: pointer;
 	}
 	.zoom-controls button:hover {
-		background: var(--color-lightness-95, #f2f2f2);
+		background: var(--color-lightness-95);
 	}
 	.zc-sep {
 		width: 22px;
 		height: 1px;
-		background: var(--color-lightness-90, #e7e7e7);
+		background: var(--color-lightness-90);
 		margin: 2px 0;
 	}
 
 	.viewport-btn {
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		transition:
 			color 0.18s ease,
 			transform 0.32s ease;

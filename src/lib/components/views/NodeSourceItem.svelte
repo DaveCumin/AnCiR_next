@@ -137,10 +137,10 @@
 
 <style>
 	.node-item {
-		border: 1px solid var(--color-lightness-88, #e2e2e2);
+		border: 1px solid var(--color-lightness-88);
 		border-radius: 5px;
 		margin: 4px 0;
-		background: var(--color-lightness-99, #fcfcfc);
+		background: var(--color-lightness-99);
 	}
 	.node-head {
 		display: flex;
@@ -148,8 +148,8 @@
 		justify-content: space-between;
 		gap: var(--space-3);
 		padding: 3px 4px 3px 6px;
-		border-bottom: 1px solid var(--color-lightness-92, #ededed);
-		background: var(--color-lightness-96, #f3f3f3);
+		border-bottom: 1px solid var(--color-lightness-92);
+		background: var(--color-lightness-96);
 		border-radius: 5px 5px 0 0;
 		cursor: pointer;
 	}
@@ -178,7 +178,7 @@
 	}
 	.node-inputs {
 		font-size: 11.5px;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		padding: 3px 6px;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -194,7 +194,7 @@
 	}
 	.node-empty {
 		font-size: 11.5px;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		padding: 4px 6px;
 	}
 </style>

@@ -879,7 +879,7 @@
 				y2={scaleLinear()
 					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
 					.range([theData.plot.plotheight, 0])(0) + theData.plot.padding.top}
-				stroke="#666"
+				stroke="var(--color-text-muted)"
 				stroke-width="1"
 				stroke-dasharray="4 2"
 				opacity="0.5"

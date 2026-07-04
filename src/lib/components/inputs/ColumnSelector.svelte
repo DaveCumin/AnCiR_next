@@ -575,7 +575,7 @@
 
 	.arrow {
 		margin-left: 0.4rem;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		font-size: 0.75em;
 		flex-shrink: 0;
 	}
@@ -675,7 +675,7 @@
 		width: 14px;
 		display: inline-block;
 		text-align: center;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		flex-shrink: 0;
 	}
 
@@ -728,8 +728,8 @@
 		width: 15px;
 		height: 15px;
 		box-sizing: border-box;
-		border: 1.5px solid var(--color-lightness-55, #999);
-		border-radius: 3px;
+		border: 1.5px solid var(--color-lightness-55);
+		border-radius: var(--radius-xs);
 		background: var(--surface-card);
 		display: inline-flex;
 		align-items: center;
@@ -742,12 +742,12 @@
 
 	.cs-check.checked,
 	.cs-check.indeterminate {
-		background: var(--color-info-text, #1a73e8);
-		border-color: var(--color-info-text, #1a73e8);
+		background: var(--color-info-text);
+		border-color: var(--color-info-text);
 	}
 
 	.group-header .cs-check:hover {
-		border-color: var(--color-info-text, #1a73e8);
+		border-color: var(--color-info-text);
 	}
 
 	/* Bottom action bar with the Close button (mirrors .all-menu-actions). */
@@ -765,14 +765,14 @@
 	.cs-count {
 		margin-right: auto;
 		font-size: var(--font-sm, 0.8em);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 
 	.cs-btn {
 		padding: 3px 12px;
 		font-size: var(--font-md);
 		border: 1px solid var(--color-lightness-75);
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 		background: var(--surface-card);
 		cursor: pointer;
 		color: inherit;
@@ -785,7 +785,7 @@
 	.no-results {
 		padding: 24px 16px;
 		text-align: center;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		font-size: var(--font-md);
 	}
 </style>

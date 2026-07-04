@@ -934,12 +934,12 @@
 	}
 
 	.tp-tr:hover {
-		background: var(--color-lightness-98, #fafafa);
+		background: var(--color-lightness-98);
 	}
 
 	.tp-td {
 		padding: 4px 12px;
-		border-bottom: 1px solid var(--color-lightness-90, #eee);
+		border-bottom: 1px solid var(--color-lightness-90);
 		border-right: 1px solid var(--color-lightness-90);
 		overflow: hidden;
 		min-width: 0; /* let the fixed grid track clip overflow rather than expand */
@@ -949,7 +949,7 @@
 	}
 
 	.tp-num {
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		font-size: 0.8em;
 		text-align: center;
 		justify-content: center;
@@ -977,7 +977,7 @@
 
 	.computed-time {
 		font-size: 0.75em;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		line-height: 1.1;
 		padding-left: 4px;
 		white-space: nowrap;
@@ -987,14 +987,14 @@
 	}
 
 	.null-value {
-		color: var(--color-lightness-70, #aaa);
+		color: var(--color-lightness-70);
 	}
 
 	.tableplot-row-bar {
 		flex-shrink: 0;
 		margin: 0.4rem 0 0;
 		font-size: 0.8rem;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 
 	.display-list {
@@ -1053,7 +1053,7 @@
 		align-items: center;
 		gap: var(--space-4);
 		padding: var(--space-2) var(--space-4);
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 	}
 
 	.tree-item-child:hover {
@@ -1071,10 +1071,10 @@
 
 	.tree-badge {
 		font-size: 9.5px;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		background: var(--color-lightness-92);
 		padding: 1px 5px;
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 		margin-left: var(--space-4);
 	}
 

@@ -83,7 +83,7 @@
 	input {
 		width: 100%;
 		padding: 8px;
-		border: 1px solid #ccc;
+		border: 1px solid var(--color-lightness-80);
 		border-radius: var(--radius-sm);
 	}
 </style>

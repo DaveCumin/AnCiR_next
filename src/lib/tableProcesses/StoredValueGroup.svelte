@@ -291,7 +291,7 @@
 							oninput={(e) => renameGroup(group.id, e.target.value)}
 							placeholder="Group name"
 						/>
-						<button class="remove-btn" onclick={() => removeGroup(group.id)} title="Remove"
+						<button class="btn-remove" onclick={() => removeGroup(group.id)} title="Remove"
 							>×</button
 						>
 					</div>
@@ -381,11 +381,11 @@
 <style>
 	.hint {
 		font-size: var(--font-xs);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 
 	.group-card {
-		border: 1px solid var(--color-lightness-90, #e5e5e5);
+		border: 1px solid var(--color-lightness-90);
 		border-radius: var(--radius-sm);
 		padding: 0.45rem;
 		margin-bottom: 0.45rem;
@@ -402,25 +402,16 @@
 		flex: 1;
 	}
 
-	.remove-btn {
-		border: 1px solid var(--color-lightness-80, #ccc);
-		background: transparent;
-		border-radius: 3px;
-		cursor: pointer;
-		line-height: 1;
-		padding: 0.05rem 0.35rem;
-	}
-
 	.source-tree {
 		max-height: 260px;
 		overflow: auto;
-		border-top: 1px solid var(--color-lightness-95, #f0f0f0);
+		border-top: 1px solid var(--color-lightness-95);
 		padding-top: var(--space-2);
 	}
 
 	.source-block {
 		padding: var(--space-2) 0;
-		border-bottom: 1px solid var(--color-lightness-95, #f1f1f1);
+		border-bottom: 1px solid var(--color-lightness-95);
 	}
 
 	.source-title {
@@ -454,7 +445,7 @@
 	.sv-value {
 		font-family: monospace;
 		font-size: var(--font-xs);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 
 	.group-output {
@@ -464,15 +455,15 @@
 	.tp-stat-btn {
 		font-size: var(--font-xs);
 		padding: var(--space-2) var(--space-4);
-		border: 1px solid var(--color-lightness-75, #aaa);
-		border-radius: 3px;
+		border: 1px solid var(--color-lightness-75);
+		border-radius: var(--radius-xs);
 		background: none;
 		cursor: pointer;
-		color: var(--color-lightness-35, #555);
+		color: var(--color-lightness-35);
 	}
 
 	.tp-stat-btn:hover {
 		background: var(--color-lightness-95);
-		border-color: var(--color-lightness-55, #888);
+		border-color: var(--color-lightness-55);
 	}
 </style>

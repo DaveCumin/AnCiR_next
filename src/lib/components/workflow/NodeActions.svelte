@@ -134,7 +134,7 @@
 		border: none;
 		background: transparent;
 		border-radius: var(--radius-sm);
-		color: var(--color-lightness-35, #555);
+		color: var(--color-lightness-35);
 		cursor: pointer;
 		line-height: 1;
 		transition:
@@ -142,8 +142,8 @@
 			color 0.12s ease;
 	}
 	.na-btn:hover {
-		background: var(--color-lightness-88, #dcdcdc);
-		color: var(--color-lightness-20, #222);
+		background: var(--color-lightness-88);
+		color: var(--color-lightness-20);
 	}
 	.na-danger:hover {
 		background: rgba(210, 59, 59, 0.14);

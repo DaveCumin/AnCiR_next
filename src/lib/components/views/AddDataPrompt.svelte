@@ -130,7 +130,7 @@
 		background: transparent;
 		border: none;
 		cursor: pointer;
-		font-weight: bold;
+		font-weight: 600;
 		color: var(--color-lightness-75);
 		transition: color 0.18s ease;
 	}
@@ -154,7 +154,7 @@
 		min-width: 320px;
 		max-width: 360px;
 		background: var(--surface-card);
-		border: 1px solid var(--color-lightness-80, #ccc);
+		border: 1px solid var(--color-lightness-80);
 		border-radius: 10px;
 		box-shadow: var(--shadow-3);
 		padding: var(--space-3);
@@ -182,8 +182,8 @@
 	}
 
 	.add-data-choice:hover {
-		background: var(--color-lightness-95, #f4f4f4);
-		border-color: var(--color-lightness-85, #ddd);
+		background: var(--color-lightness-95);
+		border-color: var(--color-lightness-85);
 	}
 
 	.add-data-choice-icon {
@@ -194,8 +194,8 @@
 		width: 34px;
 		height: 34px;
 		border-radius: var(--radius-lg);
-		background: var(--color-lightness-97, #f7f7f7);
-		color: var(--color-lightness-35, #555);
+		background: var(--color-lightness-97);
+		color: var(--color-lightness-35);
 	}
 
 	.add-data-choice:hover .add-data-choice-icon {
@@ -212,11 +212,11 @@
 	.add-data-choice-title {
 		font-size: 0.92rem;
 		font-weight: 600;
-		color: var(--color-lightness-20, #2a2a2a);
+		color: var(--color-lightness-20);
 	}
 
 	.add-data-choice-subtitle {
 		font-size: 0.76rem;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 </style>

@@ -187,7 +187,7 @@
 		padding: 3px 8px;
 		border: 1px solid rgba(0, 0, 0, 0.2);
 		background: var(--surface-card);
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 		cursor: pointer;
 	}
 
@@ -196,7 +196,7 @@
 	}
 
 	.np-action.danger {
-		color: #b03030;
+		color: var(--color-error);
 		border-color: rgba(176, 48, 48, 0.4);
 	}
 

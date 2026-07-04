@@ -10,7 +10,7 @@
 		position = $state('topright'); // topright, topleft, bottomright, bottomleft
 		orientation = $state('vertical'); // vertical, horizontal
 		backgroundColor = $state('rgba(255, 255, 255, 0.9)');
-		borderColor = $state('#ccc');
+		borderColor = $state('var(--color-lightness-80)');
 		borderWidth = $state(1);
 		padding = $state(8);
 		itemSpacing = $state(4);
@@ -22,7 +22,7 @@
 				this.position = dataIN.position ?? 'topright';
 				this.orientation = dataIN.orientation ?? 'vertical';
 				this.backgroundColor = dataIN.backgroundColor ?? 'rgba(255, 255, 255, 0.9)';
-				this.borderColor = dataIN.borderColor ?? '#ccc';
+				this.borderColor = dataIN.borderColor ?? 'var(--color-lightness-80)';
 				this.borderWidth = dataIN.borderWidth ?? 1;
 				this.padding = dataIN.padding ?? 8;
 				this.itemSpacing = dataIN.itemSpacing ?? 4;

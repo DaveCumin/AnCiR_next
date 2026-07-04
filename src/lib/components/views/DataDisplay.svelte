@@ -715,7 +715,7 @@
 		border-bottom: 1px solid var(--divider-soft);
 	}
 	.search-row :global(.search-icon) {
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		flex-shrink: 0;
 	}
 	.search-input {
@@ -766,7 +766,7 @@
 		user-select: none;
 		font-size: var(--font-sm);
 		line-height: 1;
-		color: var(--color-lightness-65, #aaa);
+		color: var(--color-lightness-65);
 		padding: 0 var(--space-1);
 		opacity: 0;
 		transition: opacity 0.15s ease;
@@ -781,7 +781,7 @@
 		cursor: grab;
 	}
 	.plot-drag-over {
-		border-top: 2px solid var(--color-lightness-35, #555);
+		border-top: 2px solid var(--color-lightness-35);
 	}
 
 	/* Find-on-canvas buttons reveal on hover (groups + plots), matching nodes. The
@@ -851,7 +851,7 @@
 	.dropzone {
 		height: 6px;
 		margin: 0;
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 		transition: background-color 0.15s ease;
 	}
 	.dropzone.active {

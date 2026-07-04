@@ -273,7 +273,7 @@
 							onmousedown={stopPointer}
 							onclick={(e) => toggleRowExpanded(colId, e)}
 						>
-							<span class="chev" aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+							<Icon name={isOpen ? 'caret-down' : 'caret-right'} width={12} height={12} />
 						</button>
 						<span
 							class="row-type"
@@ -360,7 +360,7 @@
 		border-color: var(--color-accent);
 		box-shadow:
 			var(--shadow-1),
-			0 0 0 2px rgba(77, 159, 227, 0.28);
+			var(--shadow-focus-soft);
 	}
 	.tp-card.expanded {
 		border-bottom-left-radius: 0;
@@ -374,11 +374,11 @@
 		gap: 4px;
 		padding: 0 8px;
 		height: 26px; /* HEADER_H */
-		background: var(--color-lightness-97, #f4f4f4);
-		border-bottom: 1px solid var(--color-lightness-90, #e7e7e7);
+		background: var(--color-lightness-97);
+		border-bottom: 1px solid var(--color-lightness-90);
 		border-radius: 6px 6px 0 0;
 		font-weight: 600;
-		color: var(--color-lightness-25, #333);
+		color: var(--color-lightness-25);
 		box-sizing: border-box;
 		position: relative;
 	}
@@ -407,11 +407,11 @@
 	}
 	.expand-indicator {
 		font-size: 9px;
-		color: #666;
+		color: var(--color-text-muted);
 		flex-shrink: 0;
 		padding: 2px 4px;
 		border: none;
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 		background: transparent;
 		cursor: pointer;
 		line-height: 1;
@@ -423,10 +423,10 @@
 	}
 
 	.tp-sublabel {
-		font-size: 10px;
+		font-size: var(--font-2xs);
 		color: #555;
 		background-color: rgba(0, 0, 0, 0.04);
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 		padding: 1px 4px;
 		margin: 4px 8px 0;
 		white-space: nowrap;
@@ -456,7 +456,7 @@
 	}
 	.in-label {
 		font-size: var(--font-xs);
-		color: var(--color-lightness-40, #5b5b5b);
+		color: var(--color-lightness-40);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -502,11 +502,6 @@
 	.row-chev:hover {
 		color: rgba(0, 0, 0, 0.85);
 	}
-	.chev {
-		display: inline-block;
-		width: 0.7em;
-		text-align: center;
-	}
 	.row-type {
 		display: inline-flex;
 		align-items: center;
@@ -526,11 +521,11 @@
 		display: inline-block;
 		margin-left: 6px;
 		padding: 0 5px;
-		border-radius: 8px;
-		font-size: 10px;
+		border-radius: var(--radius-lg);
+		font-size: var(--font-2xs);
 		font-weight: 600;
 		line-height: 1.4;
-		color: var(--color-accent, #2563eb);
+		color: var(--color-accent);
 		background: var(--color-accent-soft, #dbeafe);
 		vertical-align: middle;
 	}
@@ -543,8 +538,8 @@
 		width: 13px;
 		height: 13px;
 		border-radius: 50%;
-		background: var(--color-lightness-95, #ececec);
-		border: 1px solid var(--color-lightness-60, #8a8a8a);
+		background: var(--surface-card);
+		border: 1px solid var(--color-lightness-50);
 		cursor: crosshair;
 		padding: 0;
 		overflow: visible;
@@ -564,7 +559,7 @@
 	.inline-port.splice-target {
 		background: var(--color-accent);
 		border-color: var(--color-accent);
-		box-shadow: 0 0 0 4px rgba(77, 159, 227, 0.35);
+		box-shadow: var(--shadow-focus);
 	}
 	.row-port {
 		position: absolute;

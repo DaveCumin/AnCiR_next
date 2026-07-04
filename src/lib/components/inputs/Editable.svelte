@@ -134,7 +134,7 @@
 	/* Placeholder styling for span */
 	.inline-edit-span:empty::before {
 		content: attr(data-placeholder);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		font-style: italic;
 	}
 </style>

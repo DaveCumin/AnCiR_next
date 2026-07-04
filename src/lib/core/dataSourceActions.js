@@ -15,6 +15,8 @@ const actions = {
 	openImportFiles: null,
 	/** @type {null | ((url: string) => void)} */
 	openImportUrl: null,
+	/** @type {null | ((url: string) => void)} */
+	importDataUrlDirect: null,
 	/** @type {null | ((file: File) => void)} */
 	loadSessionFile: null
 };
@@ -41,6 +43,15 @@ export function openImportDataFiles(files) {
 /** Open the import modal pre-seeded with a URL to a CSV/text file (previews it). */
 export function openImportDataUrl(url) {
 	actions.openImportUrl?.(url);
+}
+
+/**
+ * Import a CSV/text dataset URL directly — detect columns/time-format and commit
+ * without the preview/confirm step. Falls back to opening the modal if the data
+ * needs attention. Used for one-click dataset examples.
+ */
+export function importDataUrlDirect(url) {
+	actions.importDataUrlDirect?.(url);
 }
 
 /** Load a dropped `.json` session file. */

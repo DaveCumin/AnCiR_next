@@ -104,19 +104,19 @@ h2 {
 	font-weight: 500;
 	font-size: 0.85rem;
 	margin-bottom: 0.3rem;
-	color: var(--color-lightness-35, #555);
+	color: var(--color-lightness-35);
 }
 
 .hint {
 	font-weight: 400;
-	font-size: 0.75rem;
-	color: var(--color-text-muted, #666);
+	font-size: var(--font-sm);
+	color: var(--color-text-muted);
 }
 
 select {
 	width: 100%;
 	padding: 0.35rem var(--space-4);
-	border: 1px solid var(--color-lightness-85, #ccc);
+	border: 1px solid var(--color-lightness-85);
 	border-radius: var(--radius-sm);
 	font-size: 0.9rem;
 }
@@ -138,7 +138,7 @@ select {
 	border: none;
 	padding: 0;
 	font-size: 0.8rem;
-	color: var(--color-lightness-35, #555);
+	color: var(--color-lightness-35);
 	cursor: pointer;
 	text-decoration: underline;
 }
@@ -155,14 +155,14 @@ select {
 
 .dialog-button {
 	padding: 0.4rem var(--space-6);
-	border: 1px solid var(--color-lightness-85, #ccc);
+	border: 1px solid var(--color-lightness-85);
 	border-radius: var(--radius-sm);
-	background: var(--color-lightness-95, #f5f5f5);
+	background: var(--color-lightness-95);
 	cursor: pointer;
 	font-size: 0.85rem;
 }
 
 .dialog-button:hover {
-	background: var(--color-lightness-90, #eee);
+	background: var(--color-lightness-90);
 }
 </style>

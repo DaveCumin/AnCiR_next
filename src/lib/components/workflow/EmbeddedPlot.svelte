@@ -117,7 +117,7 @@
 	}
 
 	.plot-resize-handle:hover {
-		color: #333;
+		color: var(--color-lightness-25);
 		background: rgba(255, 255, 255, 1);
 	}
 </style>

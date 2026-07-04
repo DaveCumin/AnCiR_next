@@ -152,7 +152,7 @@
 		border-bottom: 1px solid var(--color-lightness-85);
 		font-size: 1.1rem;
 		font-weight: 600;
-		color: var(--color-lightness-25, #333);
+		color: var(--color-lightness-25);
 	}
 
 	/* Timezone input + "Detect" button on one row; the input inherits the global
@@ -187,7 +187,7 @@
 	.zone-error {
 		margin: var(--space-2) 0 0;
 		font-size: var(--font-sm);
-		color: var(--color-error, #c5221f);
+		color: var(--color-error);
 	}
 
 	.exp-badge {
@@ -197,8 +197,8 @@
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
-		color: var(--color-error, #c5221f);
-		border: 1px solid var(--color-error, #c5221f);
+		color: var(--color-error);
+		border: 1px solid var(--color-error);
 		border-radius: 999px;
 		vertical-align: middle;
 	}
@@ -209,7 +209,7 @@
 		padding: 0 var(--space-4);
 		font-size: var(--font-md);
 		white-space: nowrap;
-		color: var(--color-lightness-25, #333);
+		color: var(--color-lightness-25);
 		background: var(--color-lightness-97);
 		border: 1px solid var(--color-lightness-85);
 		border-radius: 2px;

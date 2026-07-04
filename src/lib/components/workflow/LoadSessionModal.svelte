@@ -10,7 +10,7 @@
 	import { appState } from '$lib/core/core.svelte.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { importJson } from '$lib/components/iconActions/Setting.svelte';
-	import { openImportDataUrl } from '$lib/core/dataSourceActions.js';
+	import { importDataUrlDirect } from '$lib/core/dataSourceActions.js';
 
 	let { showModal = $bindable(false), initialSourceMode = 'file' } = $props();
 
@@ -202,10 +202,13 @@
 	async function loadExample(session) {
 		const url = resolveExampleUrl(session.url);
 		// Dataset examples (raw CSV/text) are imported through the file-import
-		// preview flow, not importJson (which expects a full session JSON).
+		// path, not importJson (which expects a full session JSON). Import directly
+		// (detect columns/time-format then commit) so a one-click example doesn't
+		// stop at a preview/confirm step; ImportData falls back to its modal only if
+		// the data needs attention.
 		if (session.kind === 'dataset' || /\.(csv|tsv|txt)$/i.test(session.url || '')) {
 			showModal = false;
-			openImportDataUrl(url);
+			importDataUrlDirect(url);
 			return;
 		}
 		activeExampleUrl = session.url;
@@ -414,7 +417,8 @@
 
 	.tab-btn.active {
 		color: var(--color-lightness-10);
-		border-bottom-color: var(--color-hover);
+		border-bottom-color: var(--color-accent);
+		font-weight: 600;
 	}
 
 	.tab-btn:disabled {
@@ -440,7 +444,7 @@
 	}
 
 	.tab-hint.error {
-		color: var(--color-error, #b00020);
+		color: var(--color-error);
 	}
 
 	.primary-button {

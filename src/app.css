@@ -5,19 +5,35 @@
 
 	--color-icon-close-hover: #ecadac;
 
-	/* colour based on lightness */
+	/* colour based on lightness — full greyscale ramp. Values track the dominant
+	   inline fallbacks these stops previously relied on, so completing the scale
+	   introduces no visual change; the ramp is now the single source of truth and
+	   components must not carry hex fallbacks. */
+	--color-lightness-10: #1a1a1a;
+	--color-lightness-15: #262626;
+	--color-lightness-20: #2a2a2a;
+	--color-lightness-25: #333333;
+	--color-lightness-30: #444444;
 	--color-lightness-35: #5f5f5f;
+	--color-lightness-40: #5b5b5b;
 	--color-lightness-45: #737373;
 	--color-lightness-50: #808080;
 	--color-lightness-55: #8c8c8c;
 	--color-lightness-60: #999999;
+	--color-lightness-65: #aaaaaa;
+	--color-lightness-70: #b0b0b0;
 	--color-lightness-75: #b3b3b3;
+	--color-lightness-80: #cccccc;
 	--color-lightness-85: #d9d9d9;
+	--color-lightness-88: #e0e0e0;
 	--color-lightness-90: #e6e6e6;
+	--color-lightness-92: #ededed;
+	--color-lightness-93: #eeeeee;
 	--color-lightness-95: #f2f2f2;
 	--color-lightness-96: #f5f5f5;
 	--color-lightness-97: #f7f7f7;
 	--color-lightness-98: #fafafa;
+	--color-lightness-99: #fcfcfc;
 
 	--color-hover: #6a9fd4; /* Subtle change to align with the colour palette*/
 
@@ -79,6 +95,7 @@
 	--grid-line: rgba(0, 0, 0, 0.05); /* canvas grid line colour */
 
 	/* radii */
+	--radius-xs: 3px;
 	--radius-sm: 4px;
 	--radius-md: 6px;
 	--radius-lg: 8px;
@@ -95,6 +112,7 @@
 	/* font sizes — xs..lg are dense-UI sizes (nodes, controls, tables); --font-body
 	   is the readable floor (16px) for prose / reading surfaces (modals, tour,
 	   notifications, help). */
+	--font-2xs: 10px;
 	--font-xs: 11px;
 	--font-sm: 12px;
 	--font-md: 13px;
@@ -106,6 +124,14 @@
 	--shadow-2: 0 4px 12px rgba(0, 0, 0, 0.13); /* floating toolbars, menus, panels */
 	--shadow-3: 0 8px 24px rgba(0, 0, 0, 0.16); /* modals, large dropdowns */
 	--shadow-card: var(--shadow-2); /* alias kept for existing references */
+
+	/* accent selection glow — the ring drawn around a selected/focused node or
+	   control. Single source for the recipe that was copy-pasted as
+	   `0 0 0 4px rgba(77,159,227,0.35)` across the node components. */
+	--shadow-focus: 0 0 0 4px rgba(77, 159, 227, 0.35);
+	/* lighter variant for the canvas-node selected ring (paired with an accent
+	   border) so it reads in the same accent language as the list-row selection. */
+	--shadow-focus-soft: 0 0 0 2px rgba(77, 159, 227, 0.28);
 }
 
 /* Consistent keyboard-focus ring. Only triggers on :focus-visible (keyboard nav /
@@ -114,6 +140,143 @@
 :where(button, input, select, textarea, a[href], [tabindex]:not([tabindex='-1']), .port-dot):focus-visible {
 	outline: var(--focus-ring);
 	outline-offset: 2px;
+}
+
+/* ── Shared component primitives ─────────────────────────────────────────────
+   Canonical building blocks so recurring controls look identical everywhere.
+   Global (not scoped to a component) so any .svelte file can opt in by class.
+   Prefer these over re-rolling a button / input / tab strip locally. */
+
+/* Button reset — strips native chrome. Base for icon buttons and custom buttons
+   that draw their own affordance. Replaces the ad-hoc reset copy-pasted per file. */
+.btn-reset {
+	appearance: none;
+	background: transparent;
+	border: none;
+	padding: 0;
+	margin: 0;
+	font: inherit;
+	color: inherit;
+	cursor: pointer;
+}
+
+/* Canonical text input. One border / radius / focus treatment for every free-text
+   or number field. Focus deepens the border to the accent (the global
+   :focus-visible ring still handles keyboard nav on top). */
+.form-input {
+	font-size: var(--font-sm);
+	color: var(--color-lightness-25);
+	padding: var(--space-2) var(--space-4);
+	border: 1px solid var(--color-lightness-85);
+	border-radius: var(--radius-sm);
+	background: var(--surface-card);
+	transition: border-color 0.15s ease;
+}
+.form-input:focus {
+	outline: none;
+	border-color: var(--color-accent);
+}
+.form-input::placeholder {
+	color: var(--color-lightness-60);
+}
+
+/* Canonical tab strip. Active tab = accent underline (the modal pattern), applied
+   everywhere so modals and the control panel read as the same control. */
+.tab-strip {
+	display: flex;
+	gap: var(--space-2);
+	border-bottom: 1px solid var(--divider);
+}
+.tab-strip button {
+	appearance: none;
+	background: transparent;
+	border: none;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px; /* overlap the strip's own border */
+	padding: var(--space-3) var(--space-4);
+	font-size: var(--font-lg);
+	color: var(--color-text-muted);
+	cursor: pointer;
+	transition:
+		color 0.15s ease,
+		border-color 0.15s ease;
+}
+.tab-strip button:hover {
+	color: var(--color-lightness-25);
+}
+.tab-strip button.active {
+	color: var(--color-lightness-25);
+	border-bottom-color: var(--color-accent);
+	font-weight: 600;
+}
+
+/* Canonical "add a row/item" button — dashed accent-on-hover, always "+ Add …".
+   Replaces .add-condition-button / .add-tp-btn / .add-split-time-btn / .add-pair. */
+.btn-add {
+	appearance: none;
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	width: 100%;
+	justify-content: center;
+	padding: var(--space-3) var(--space-4);
+	font-size: var(--font-sm);
+	color: var(--color-text-muted);
+	background: transparent;
+	border: 1px dashed var(--color-lightness-80);
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+	transition:
+		color 0.15s ease,
+		border-color 0.15s ease,
+		background 0.15s ease;
+}
+.btn-add:hover {
+	color: var(--color-accent);
+	border-color: var(--color-accent);
+	background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+.btn-add:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+.btn-add:disabled:hover {
+	color: var(--color-text-muted);
+	border-color: var(--color-lightness-80);
+	background: transparent;
+}
+
+/* Canonical inline remove (× glyph) — a lightweight dismiss for a row / chip /
+   pair. Muted by default, error colour + subtle tint on hover. Reserve trash
+   icons for heavier "delete this object" actions and × for the close button. */
+.btn-remove {
+	appearance: none;
+	background: transparent;
+	border: none;
+	padding: 0 var(--space-2);
+	font-size: 16px;
+	line-height: 1;
+	color: var(--color-text-muted);
+	cursor: pointer;
+	border-radius: var(--radius-xs);
+	transition:
+		color 0.12s ease,
+		background 0.12s ease;
+}
+.btn-remove:hover {
+	color: var(--color-error);
+	background: var(--color-error-bg);
+}
+
+/* Canonical hover-reveal for inline action clusters (find / delete on a row). One
+   timing everywhere; parent sets .reveal-on-hover, the buttons fade in together. */
+.reveal-on-hover .reveal-target {
+	opacity: 0;
+	transition: opacity 0.12s ease;
+}
+.reveal-on-hover:hover .reveal-target,
+.reveal-on-hover:focus-within .reveal-target {
+	opacity: 1;
 }
 
 /* Collapsible output sections in table processes */
@@ -133,7 +296,7 @@ summary.section-details-summary {
 
 	font-size: 12px;
 	font-weight: 600;
-	color: var(--color-text-muted, #666);
+	color: var(--color-text-muted);
 
 	padding: 0.35rem 0.5rem;
 	border-radius: 4px;
@@ -186,8 +349,8 @@ summary.section-details-summary:hover::after {
 	align-items: center;
 	justify-content: center;
 	pointer-events: none;
-	background: color-mix(in srgb, var(--color-accent, #4d9fe3) 10%, transparent);
-	border: 3px dashed var(--color-accent, #4d9fe3);
+	background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+	border: 3px dashed var(--color-accent);
 	border-radius: 8px;
 }
 
@@ -197,5 +360,5 @@ summary.section-details-summary:hover::after {
 	border-radius: 8px;
 	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 	font-weight: 600;
-	color: var(--color-accent, #4d9fe3);
+	color: var(--color-accent);
 }

@@ -208,7 +208,7 @@
 
 	.heading p {
 		margin-left: var(--space-5);
-		font-weight: bold;
+		font-weight: 600;
 	}
 
 	.heading button {
@@ -256,7 +256,7 @@
 		user-select: none;
 		font-size: var(--font-sm);
 		line-height: 1;
-		color: var(--color-lightness-65, #aaa);
+		color: var(--color-lightness-65);
 		padding: 0 0.1rem;
 		opacity: 0;
 		transition: opacity 0.15s ease;
@@ -271,6 +271,6 @@
 	}
 
 	.drag-over {
-		border-top: 2px solid var(--color-lightness-35, #555);
+		border-top: 2px solid var(--color-lightness-35);
 	}
 </style>

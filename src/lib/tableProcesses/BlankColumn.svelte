@@ -776,7 +776,7 @@
 <style>
 	.hint {
 		font-size: var(--font-sm);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		margin: var(--space-2) 0;
 	}
 
@@ -789,8 +789,8 @@
 		font-family: var(--font-mono, ui-monospace, SF Mono, monospace);
 		font-size: var(--font-sm);
 		padding: 0.4rem;
-		border: 1px solid var(--color-lightness-85, #ddd);
-		border-radius: 3px;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-xs);
 		resize: vertical;
 	}
 	.paste-actions {
@@ -802,13 +802,13 @@
 	.paste-btn {
 		padding: var(--space-2) 0.6rem;
 		font-size: var(--font-sm);
-		border: 1px solid var(--color-lightness-70, #b0b0b0);
-		border-radius: 3px;
-		background: var(--color-lightness-97, #f8f8f8);
+		border: 1px solid var(--color-lightness-70);
+		border-radius: var(--radius-xs);
+		background: var(--color-lightness-97);
 		cursor: pointer;
 	}
 	.paste-btn:hover:not(:disabled) {
-		background: var(--color-lightness-90, #e8e8e8);
+		background: var(--color-lightness-90);
 	}
 	.paste-btn:disabled {
 		opacity: 0.5;
@@ -816,15 +816,15 @@
 	}
 	.paste-status {
 		font-size: var(--font-xs);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 	.paste-status.err {
-		color: #b03030;
+		color: var(--color-error);
 	}
 
 	.hint kbd {
-		background: var(--color-lightness-85, #ddd);
-		border-radius: 3px;
+		background: var(--color-lightness-85);
+		border-radius: var(--radius-xs);
 		padding: 0.05rem 0.3rem;
 		font-size: var(--font-xs);
 		font-family: monospace;
@@ -832,8 +832,8 @@
 
 	.editable-table {
 		margin: var(--space-2) 0;
-		border: 1px solid var(--color-lightness-85, #ddd);
-		border-radius: 3px;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-xs);
 		font-size: var(--font-md);
 		overflow-x: auto; /* scroll horizontally when columns exceed the width */
 	}
@@ -847,15 +847,15 @@
 	.vt-head {
 		display: grid;
 		align-items: center;
-		background: var(--color-lightness-95, #f5f5f5);
-		border-bottom: 1px solid var(--color-lightness-85, #ddd);
+		background: var(--color-lightness-95);
+		border-bottom: 1px solid var(--color-lightness-85);
 		font-weight: 600;
 		height: 24px;
 	}
 	.vt-h-row {
 		text-align: center;
 		font-size: var(--font-xs);
-		border-right: 1px solid var(--color-lightness-85, #ddd);
+		border-right: 1px solid var(--color-lightness-85);
 		align-self: stretch;
 		display: flex;
 		align-items: center;
@@ -866,20 +866,20 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		border-right: 1px solid var(--color-lightness-90, #eee);
+		border-right: 1px solid var(--color-lightness-90);
 	}
 
 	.vrow {
 		display: grid;
 		align-items: center;
 		height: 26px; /* must match ROW_H */
-		border-bottom: 1px solid var(--color-lightness-90, #eee);
+		border-bottom: 1px solid var(--color-lightness-90);
 	}
 	.vrow .row-num {
 		text-align: center;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		font-size: var(--font-xs);
-		border-right: 1px solid var(--color-lightness-85, #ddd);
+		border-right: 1px solid var(--color-lightness-85);
 		align-self: stretch;
 		display: flex;
 		align-items: center;
@@ -890,7 +890,7 @@
 		display: flex;
 		align-items: center;
 		padding: 0 4px;
-		border-right: 1px solid var(--color-lightness-90, #eee);
+		border-right: 1px solid var(--color-lightness-90);
 	}
 	.vcell:last-child {
 		border-right: none;
@@ -908,7 +908,7 @@
 	.editable-table input:focus {
 		outline: 2px solid var(--color-primary, #007bff);
 		outline-offset: -1px;
-		background: var(--color-lightness-97, #fafafa);
+		background: var(--color-lightness-97);
 	}
 
 	/* Bottom drag strip to resize the table viewport (see more rows). */
@@ -918,13 +918,13 @@
 		background: linear-gradient(
 			180deg,
 			transparent 0 40%,
-			var(--color-lightness-60, #8a8a8a) 40% 50%,
+			var(--color-lightness-60) 40% 50%,
 			transparent 50% 60%,
-			var(--color-lightness-60, #8a8a8a) 60% 70%,
+			var(--color-lightness-60) 60% 70%,
 			transparent 70%
 		);
 		background-size: 100% 100%;
-		border-top: 1px solid var(--color-lightness-85, #ddd);
+		border-top: 1px solid var(--color-lightness-85);
 		opacity: 0.5;
 	}
 	.vt-resize:hover {
@@ -987,8 +987,8 @@
 		width: 220px;
 		max-height: 180px;
 		overflow-y: auto;
-		background: var(--color-lightness-97, #f8f8f8);
-		border: 1px solid var(--color-lightness-85, #ccc);
+		background: var(--color-lightness-97);
+		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-sm);
 		box-shadow: var(--shadow-2);
 		z-index: 200;
@@ -1005,7 +1005,7 @@
 
 	.ac-item:hover,
 	.ac-selected {
-		background-color: var(--color-lightness-85, #e0e0e0);
+		background-color: var(--color-lightness-85);
 	}
 
 	.ac-sv-name {
@@ -1014,13 +1014,13 @@
 
 	.ac-sv-value {
 		font-size: var(--font-xs);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 
 	.ac-empty {
 		padding: 0.4rem 0.6rem;
 		font-size: var(--font-md);
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		font-style: italic;
 	}
 </style>

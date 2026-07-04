@@ -58,7 +58,7 @@
 
 	.progress-detail {
 		font-size: 0.9em;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		margin-top: var(--space-2) !important;
 	}
 </style>

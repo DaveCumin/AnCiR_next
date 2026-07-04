@@ -237,7 +237,7 @@
 {#each p.args.sections as section, index}
 	<div
 		class="section-row"
-		style="border-left: 3px solid #ccc; padding-left: 10px; margin-bottom: 10px;"
+		style="border-left: 3px solid var(--color-lightness-80); padding-left: 10px; margin-bottom: 10px;"
 	>
 		<div style="display: flex; justify-content: space-between; align-items: center;">
 			<strong>Section {index + 1}</strong>

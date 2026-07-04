@@ -144,7 +144,7 @@
 				onclick={() =>
 					bands.addBand({ col: bands.length % 2 === 0 ? '#000000' : '#ffffff', pc: 10 })}
 			>
-				<Icon name="plus" width={16} height={16} className="control-component-title-icon" />
+				<Icon name="add" width={16} height={16} className="control-component-title-icon" />
 			</button>
 		</div>
 	</div>

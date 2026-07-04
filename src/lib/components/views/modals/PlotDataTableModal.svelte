@@ -28,7 +28,7 @@
 
 	{#snippet children()}
 		{#if rows.length === 0}
-			<p style="color: var(--color-text-muted, #666); font-size: 0.9rem;">No data available.</p>
+			<p style="color: var(--color-text-muted); font-size: 0.9rem;">No data available.</p>
 		{:else}
 			{@const gridCols = `repeat(${Math.max(1, headers.length)}, minmax(110px, 1fr))`}
 			<div class="table-scroll">
@@ -86,7 +86,7 @@
 		position: sticky;
 		top: 0;
 		z-index: 1;
-		background: var(--color-lightness-95, #f5f5f5);
+		background: var(--color-lightness-95);
 		white-space: nowrap;
 	}
 
@@ -107,12 +107,12 @@
 	}
 
 	.vt-tr:hover {
-		background: var(--color-lightness-97, #fafafa);
+		background: var(--color-lightness-97);
 	}
 
 	.vt-td {
 		padding: 0.35rem var(--space-5);
-		border-bottom: 1px solid var(--color-lightness-93, #eee);
+		border-bottom: 1px solid var(--color-lightness-93);
 		border-right: 1px solid var(--color-lightness-90);
 		font-variant-numeric: tabular-nums;
 		overflow: hidden;
@@ -125,7 +125,7 @@
 
 	.row-count {
 		font-size: 0.8rem;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		margin: var(--space-4) 0 0 0;
 	}
 
@@ -147,9 +147,9 @@
 	}
 
 	.btn-primary {
-		background: var(--color-lightness-20, #333);
+		background: var(--color-lightness-20);
 		color: white;
-		border-color: var(--color-lightness-20, #333);
+		border-color: var(--color-lightness-20);
 	}
 
 	.btn-secondary {

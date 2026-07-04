@@ -142,7 +142,7 @@
 		border-color: var(--color-accent);
 		box-shadow:
 			var(--shadow-1),
-			0 0 0 2px rgba(77, 159, 227, 0.28);
+			var(--shadow-focus-soft);
 	}
 	/* Analysis has warnings (e.g. non-normal data under a parametric test). The
 	   yellow border survives selection so the caution stays visible. */
@@ -158,7 +158,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: var(--color-lightness-35, #555);
+		color: var(--color-lightness-35);
 		pointer-events: none;
 	}
 	/* Port dots — mirror WorkflowNode.svelte so wiring/handlers behave identically. */
@@ -167,8 +167,8 @@
 		width: 13px;
 		height: 13px;
 		border-radius: 50%;
-		background: var(--color-lightness-95, #ececec);
-		border: 1px solid var(--color-lightness-60, #8a8a8a);
+		background: var(--surface-card);
+		border: 1px solid var(--color-lightness-50);
 		cursor: crosshair;
 		padding: 0;
 		overflow: visible;
@@ -197,6 +197,6 @@
 	.port-dot.splice-target {
 		background: var(--color-accent);
 		border-color: var(--color-accent);
-		box-shadow: 0 0 0 4px rgba(77, 159, 227, 0.35);
+		box-shadow: var(--shadow-focus);
 	}
 </style>

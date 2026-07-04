@@ -749,15 +749,15 @@
 	.tp-stat-btn {
 		font-size: var(--font-xs);
 		padding: var(--space-2) var(--space-4);
-		border: 1px solid var(--color-lightness-75, #aaa);
-		border-radius: 3px;
+		border: 1px solid var(--color-lightness-75);
+		border-radius: var(--radius-xs);
 		background: none;
 		cursor: pointer;
-		color: var(--color-lightness-35, #555);
+		color: var(--color-lightness-35);
 	}
 
 	.tp-stat-btn:hover {
 		background: var(--color-lightness-95);
-		border-color: var(--color-lightness-55, #888);
+		border-color: var(--color-lightness-55);
 	}
 </style>

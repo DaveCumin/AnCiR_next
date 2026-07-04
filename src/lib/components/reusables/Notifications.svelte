@@ -88,7 +88,7 @@
 		padding: 0;
 		margin: 0;
 		cursor: pointer;
-		font-size: 0.75rem;
+		font-size: var(--font-sm);
 		opacity: 0.5;
 		flex-shrink: 0;
 		line-height: 1;

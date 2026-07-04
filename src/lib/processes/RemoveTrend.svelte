@@ -303,8 +303,8 @@
 
 <style>
 	.info-text {
-		font-size: 0.75rem;
-		color: var(--text-secondary, #666);
+		font-size: var(--font-sm);
+		color: var(--text-secondary, var(--color-text-muted));
 		font-style: italic;
 		margin-top: var(--space-2);
 		word-break: break-word;

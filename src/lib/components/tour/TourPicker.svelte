@@ -127,15 +127,15 @@
 		background: transparent;
 		font-size: 1rem;
 		cursor: pointer;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 	.tp-close:hover {
-		color: var(--color-lightness-20, #2a2a2a);
+		color: var(--color-lightness-20);
 	}
 
 	.tp-sub {
 		margin: var(--space-2) 0 0.9rem;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		font-size: 0.85rem;
 	}
 
@@ -152,7 +152,7 @@
 		width: 100%;
 		text-align: left;
 		padding: 0.7rem 0.8rem;
-		border: 1px solid var(--color-lightness-85, #ddd);
+		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-lg);
 		background: var(--surface-card);
 		cursor: pointer;
@@ -163,7 +163,7 @@
 	}
 
 	.tp-item:hover {
-		background: var(--color-lightness-97, #f7f7f7);
+		background: var(--color-lightness-97);
 		border-color: var(--color-accent);
 	}
 
@@ -177,7 +177,7 @@
 
 	.tp-item-name {
 		font-weight: 600;
-		color: var(--color-lightness-20, #2a2a2a);
+		color: var(--color-lightness-20);
 	}
 
 	.tp-done {
@@ -190,8 +190,8 @@
 		margin-left: 0.4rem;
 		padding: 0.05rem 0.35rem;
 		border-radius: 999px;
-		background: var(--color-lightness-90, #e8e8e8);
-		color: var(--color-text-muted, #666);
+		background: var(--color-lightness-90);
+		color: var(--color-text-muted);
 		font-size: 0.68rem;
 		font-weight: 600;
 		text-transform: uppercase;
@@ -201,25 +201,25 @@
 
 	.tp-admin-note {
 		margin: 0.9rem 0 0;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		font-size: 0.76rem;
 		font-style: italic;
 	}
 
 	.tp-item-desc {
 		font-size: 0.82rem;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 
 	.tp-item-time {
 		flex: 0 0 auto;
 		font-size: 0.78rem;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 
 	.tp-empty {
 		padding: var(--space-6) 0.3rem;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		font-size: 0.9rem;
 	}
 </style>

@@ -132,7 +132,7 @@
 
 	th,
 	td {
-		border: 1px solid #ccc;
+		border: 1px solid var(--color-lightness-80);
 		padding: var(--space-4);
 		text-align: left;
 		overflow: hidden;
@@ -154,14 +154,14 @@
 
 	.computed-time {
 		font-size: 0.75em;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		line-height: 1.2;
 		padding-left: 4px;
 		white-space: nowrap;
 	}
 
 	.null-value {
-		color: var(--color-lightness-70, #aaa);
+		color: var(--color-lightness-70);
 	}
 
 	.resizer {

@@ -571,7 +571,7 @@
 				<div class="tp-block">
 					<div class="tp-header">
 						<span class="tp-title">Step {idx + 1}</span>
-						<button class="remove-btn" onclick={() => removePreProcess(idx)} title="Remove"
+						<button class="btn-remove" onclick={() => removePreProcess(idx)} title="Remove"
 							>×</button
 						>
 					</div>
@@ -588,7 +588,7 @@
 					{/if}
 				</div>
 			{/each}
-			<button class="add-tp-btn" onclick={addPreProcess}>+ Add pre-process step</button>
+			<button class="btn-add" onclick={addPreProcess}>+ Add pre-process step</button>
 		</div>
 	</div>
 {/if}
@@ -621,35 +621,6 @@
 		font-weight: 600;
 	}
 
-	.remove-btn {
-		background: none;
-		border: none;
-		cursor: pointer;
-		font-size: 16px;
-		line-height: 1;
-		color: var(--color-text-muted, #666);
-		padding: 0 0.2rem;
-	}
 
-	.remove-btn:hover {
-		color: #c0392b;
-	}
-
-	.add-tp-btn {
-		background: none;
-		border: 1px dashed var(--color-lightness-75, #aaa);
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-		font-size: var(--font-sm);
-		padding: 0.3rem 0.6rem;
-		color: var(--color-text-muted, #666);
-		width: 100%;
-		text-align: center;
-	}
-
-	.add-tp-btn:hover {
-		border-color: var(--color-lightness-55, #888);
-		color: var(--color-lightness-25, #333);
-	}
 
 </style>

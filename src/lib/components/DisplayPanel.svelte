@@ -95,7 +95,7 @@
 		top: 0;
 		left: 56px;
 
-		border-right: 1px solid #d9d9d9;
+		border-right: 1px solid var(--color-lightness-85);
 		background: var(--surface-card);
 		box-sizing: border-box;
 

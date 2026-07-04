@@ -3396,8 +3396,11 @@
 						     easy to reach); the note button also stays visible whenever a note
 						     exists. Delete routes through the same removeNode() the Delete key
 						     uses (AYS modal for table-processes). Groups carry their own
-						     delete/note; composites use uncombine. -->
-						{#if canToggleCompact(node) || (node.type !== 'group' && node.type !== 'composite')}
+						     delete/note/collapse in their header, and composites use uncombine,
+						     so the floating overlay is only for the other node kinds — rendering
+						     it for a group would stack a (no-op) compact toggle on top of the
+						     group header's own close/note buttons. -->
+						{#if node.type !== 'group' && node.type !== 'composite'}
 							<div
 								class="node-actions-host"
 								class:compact
@@ -3597,7 +3600,7 @@
 	}
 
 	.close-btn:hover {
-		color: #333;
+		color: var(--color-lightness-25);
 	}
 
 	.canvas-viewport {
@@ -3606,7 +3609,7 @@
 		cursor: grab;
 		/* No grid here — the workflow canvas is a free layout (nodes don't snap),
 		   so a flat surface distinguishes it from the snap-grid workspace. */
-		background-color: var(--surface-canvas, #f7f8fa);
+		background-color: var(--surface-canvas);
 	}
 
 	.canvas-viewport.panning {
@@ -3640,7 +3643,7 @@
 		right: 0;
 		padding: 1px 2px;
 		background: var(--surface-card);
-		border: 1px solid var(--color-lightness-80, #ccc);
+		border: 1px solid var(--color-lightness-80);
 		border-radius: var(--radius-md);
 		box-shadow: var(--shadow-1);
 	}
@@ -3675,7 +3678,7 @@
 		border-radius: 10px;
 		font-size: var(--font-xs);
 		font-weight: 600;
-		color: var(--color-lightness-25, #333);
+		color: var(--color-lightness-25);
 		pointer-events: auto;
 		cursor: grab;
 		user-select: none;
@@ -3687,7 +3690,7 @@
 		font-size: var(--font-xs);
 		line-height: 1;
 		padding: 0;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 	}
 	.composite-frame-collapse:hover {
 		color: var(--color-accent);
@@ -3791,7 +3794,7 @@
 	}
 
 	.plot-resize-handle:hover {
-		color: #333;
+		color: var(--color-lightness-25);
 		background: rgba(255, 255, 255, 1);
 	}
 
@@ -3806,7 +3809,7 @@
 		z-index: 999;
 		transition: right 0.6s ease;
 		background: var(--surface-card);
-		border: 1px solid var(--color-lightness-85, #ddd);
+		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-lg);
 		box-shadow: var(--shadow-card);
 		padding: 4px;
@@ -3824,12 +3827,12 @@
 		transition: background 0.15s ease;
 	}
 	.zoom-controls button:hover {
-		background: var(--color-lightness-95, #f2f2f2);
+		background: var(--color-lightness-95);
 	}
 	.zc-sep {
 		width: 22px;
 		height: 1px;
-		background: var(--color-lightness-90, #e7e7e7);
+		background: var(--color-lightness-90);
 		margin: 2px 0;
 	}
 
@@ -3854,9 +3857,9 @@
 		padding: 0 10px;
 		font-size: var(--font-sm);
 		font-weight: 600;
-		color: var(--color-lightness-25, #333);
+		color: var(--color-lightness-25);
 		background: var(--surface-card);
-		border: 1px solid var(--color-lightness-80, #ccc);
+		border: 1px solid var(--color-lightness-80);
 		border-radius: var(--radius-md);
 		box-shadow: var(--shadow-1);
 		cursor: pointer;
@@ -3871,7 +3874,7 @@
 	   fill="currentColor", so it follows `color` instead — match the two palettes
 	   here so all the buttons render the same shade idle and on hover. */
 	.viewport-btn {
-		color: var(--color-icon-unselected, #d9d9d9);
+		color: var(--color-icon-unselected, var(--color-lightness-85));
 		transition:
 			color 0.18s ease,
 			transform 0.32s ease;
@@ -3879,7 +3882,7 @@
 
 	.viewport-btn:hover,
 	.viewport-btn[aria-pressed='true'] {
-		color: var(--color-hover, #6a9fd4);
+		color: var(--color-hover);
 	}
 
 	.viewport-btn:active {

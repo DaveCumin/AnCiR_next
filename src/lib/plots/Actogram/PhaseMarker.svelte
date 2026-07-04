@@ -668,9 +668,9 @@
 		font-size: var(--font-xs);
 		padding: 1px 6px;
 		cursor: pointer;
-		border: 1px solid #ccc;
-		border-radius: 3px;
-		background: #f5f5f5;
+		border: 1px solid var(--color-lightness-80);
+		border-radius: var(--radius-xs);
+		background: var(--color-lightness-96);
 	}
 
 	.period-select-btn:hover {

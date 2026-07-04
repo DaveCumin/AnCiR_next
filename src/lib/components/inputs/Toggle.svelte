@@ -3,11 +3,11 @@
 		value = $bindable(),
 		onChange = (v) => {},
 		Labels = ['On', 'Off'],
-		inactiveColor = '#b3b3b3',
+		inactiveColor = 'var(--color-lightness-75)',
 		activeColor = '#737373',
-		untoggleColour = '#b3b3b3',
+		untoggleColour = 'var(--color-lightness-75)',
 		toggleColour = '#737373',
-		buttonColour = '#fafafa'
+		buttonColour = 'var(--color-lightness-98)'
 	} = $props();
 	let checked = $state(false);
 	function change(v) {

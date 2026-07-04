@@ -103,7 +103,7 @@
 		width: 34px;
 		height: 26px;
 		padding: 0;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		background: transparent;
 		border: 0;
 		cursor: pointer;

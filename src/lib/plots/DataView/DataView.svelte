@@ -222,7 +222,7 @@
 
 	.row-indicator {
 		font-size: 0.8rem;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		margin: 4px 8px 2px;
 		display: flex;
 		align-items: center;
@@ -234,13 +234,13 @@
 		align-items: center;
 		justify-content: center;
 		height: 100%;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		font-size: 0.9rem;
 	}
 
 	.source-name {
 		font-style: italic;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		font-size: 0.85rem;
 	}
 </style>

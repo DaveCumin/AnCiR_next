@@ -529,7 +529,7 @@
 <style>
 	.cuts-summary {
 		font-size: 0.85em;
-		color: var(--color-text-muted, #666);
+		color: var(--color-text-muted);
 		margin: 0.2rem 0 0;
 	}
 	.data-warning {

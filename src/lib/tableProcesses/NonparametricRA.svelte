@@ -354,7 +354,7 @@
 	}
 	.npcra-results th,
 	.npcra-results td {
-		border: 1px solid var(--color-lightness-90, #e7e7e7);
+		border: 1px solid var(--color-lightness-90);
 		padding: 0.2rem 0.4rem;
 		text-align: right;
 		white-space: nowrap;
@@ -364,7 +364,7 @@
 		text-align: left;
 	}
 	.npcra-hint {
-		font-size: 0.75rem;
+		font-size: var(--font-sm);
 		opacity: 0.7;
 		margin-top: var(--space-2, 0.5rem);
 		line-height: 1.35;

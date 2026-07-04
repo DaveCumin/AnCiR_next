@@ -513,8 +513,8 @@
 	}
 
 	.selected {
-		border: 1px solid #0275ff;
-		box-shadow: 0 2px 5px rgba(2, 117, 255, 0.5);
+		border: 1px solid var(--color-accent);
+		box-shadow: var(--shadow-focus-soft);
 	}
 
 	/* Matches the workflow node header (WorkflowNode .node-header) so a plot looks
@@ -531,11 +531,11 @@
 
 		padding: 0 0.4rem 0 0.6rem;
 		min-height: 28px;
-		background-color: var(--color-lightness-97, #f4f4f4);
-		border-bottom: 1px solid var(--color-lightness-90, #e7e7e7);
+		background-color: var(--color-lightness-97);
+		border-bottom: 1px solid var(--color-lightness-90);
 
 		font-weight: 600;
-		color: var(--color-lightness-25, #333);
+		color: var(--color-lightness-25);
 	}
 
 	.plot-header p {

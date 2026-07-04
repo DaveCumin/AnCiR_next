@@ -253,7 +253,7 @@
 			onmousedown={stopPointer}
 			onclick={toggleCollapsed}
 		>
-			<span class="chev" aria-hidden="true">{collapsed ? '▸' : '▾'}</span>
+			<Icon name={collapsed ? 'caret-right' : 'caret-down'} width={12} height={12} />
 		</button>
 		<div class="group-title" onpointerdown={stopPointer} role="presentation">
 			<Editable
@@ -302,7 +302,7 @@
 							onmousedown={stopPointer}
 							onclick={(e) => toggleRowExpanded(id, e)}
 						>
-							<span class="chev" aria-hidden="true">{expanded ? '▾' : '▸'}</span>
+							<Icon name={expanded ? 'caret-down' : 'caret-right'} width={12} height={12} />
 						</button>
 						<span
 							class="row-type"
@@ -389,11 +389,11 @@
 		border-color: var(--color-accent);
 		box-shadow:
 			var(--shadow-1),
-			0 0 0 2px rgba(77, 159, 227, 0.28);
+			var(--shadow-focus-soft);
 	}
 
 	.group-card.drop-target {
-		border: 2px dashed #28a745;
+		border: 2px dashed var(--color-success);
 		box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.25);
 	}
 
@@ -403,11 +403,11 @@
 		gap: 4px;
 		padding: 0 8px;
 		height: 26px; /* HEADER_H */
-		background: var(--color-lightness-97, #f4f4f4);
-		border-bottom: 1px solid var(--color-lightness-90, #e7e7e7);
+		background: var(--color-lightness-97);
+		border-bottom: 1px solid var(--color-lightness-90);
 		border-radius: 6px 6px 0 0;
 		font-weight: 600;
-		color: var(--color-lightness-25, #333);
+		color: var(--color-lightness-25);
 		box-sizing: border-box;
 		position: relative;
 	}
@@ -424,12 +424,6 @@
 	.header-collapse:hover {
 		color: rgba(0, 0, 0, 0.9);
 	}
-	.chev {
-		display: inline-block;
-		width: 0.7em;
-		text-align: center;
-	}
-
 	.group-title {
 		flex: 1;
 		min-width: 0;
@@ -445,7 +439,7 @@
 		min-width: 18px;
 		padding: 0 5px;
 		height: 16px;
-		font-size: 10px;
+		font-size: var(--font-2xs);
 		font-weight: 600;
 		background: rgba(255, 255, 255, 0.6);
 		border-radius: var(--radius-lg);
@@ -557,11 +551,11 @@
 		display: inline-block;
 		margin-left: 6px;
 		padding: 0 5px;
-		border-radius: 8px;
-		font-size: 10px;
+		border-radius: var(--radius-lg);
+		font-size: var(--font-2xs);
 		font-weight: 600;
 		line-height: 1.4;
-		color: var(--color-accent, #2563eb);
+		color: var(--color-accent);
 		background: var(--color-accent-soft, #dbeafe);
 		vertical-align: middle;
 	}
@@ -575,8 +569,8 @@
 		width: 13px;
 		height: 13px;
 		border-radius: 50%;
-		background: var(--color-lightness-95, #ececec);
-		border: 1px solid var(--color-lightness-60, #8a8a8a);
+		background: var(--surface-card);
+		border: 1px solid var(--color-lightness-50);
 		cursor: crosshair;
 		padding: 0;
 		overflow: visible;
@@ -598,7 +592,7 @@
 	.inline-port.splice-target {
 		background: var(--color-accent);
 		border-color: var(--color-accent);
-		box-shadow: 0 0 0 4px rgba(77, 159, 227, 0.35);
+		box-shadow: var(--shadow-focus);
 	}
 	.row-port {
 		/* Anchored on the card's right edge so wire endpoints land on the dot

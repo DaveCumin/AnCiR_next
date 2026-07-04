@@ -126,13 +126,13 @@
 		line-height: 1;
 	}
 	.store-btn:hover {
-		background: var(--color-lightness-85, #e0e0e0);
+		background: var(--color-lightness-85);
 	}
 	:global(.store-icon) {
-		fill: var(--color-lightness-45, #555);
+		fill: var(--color-lightness-45);
 	}
 	:global(.store-btn:hover .store-icon) {
-		fill: var(--color-hover, #333);
+		fill: var(--color-hover);
 	}
 	.popover-backdrop {
 		position: fixed;
@@ -145,7 +145,7 @@
 		gap: 4px;
 		padding: 4px;
 		background: var(--surface-card);
-		border: 1px solid var(--color-lightness-85, #ccc);
+		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-sm);
 		box-shadow: var(--shadow-1);
 		z-index: 9999;
@@ -154,13 +154,13 @@
 	.rename-input {
 		font-size: var(--font-sm);
 		padding: 2px 6px;
-		border: 1px solid var(--color-lightness-85, #ccc);
-		border-radius: 3px;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-xs);
 		width: 140px;
 		outline: none;
 	}
 	.rename-input:focus {
-		border-color: var(--color-lightness-50, #888);
+		border-color: var(--color-lightness-50);
 	}
 	.rename-input:focus-visible {
 		outline: var(--focus-ring);
@@ -169,14 +169,14 @@
 	.rename-ok {
 		font-size: var(--font-sm);
 		padding: 2px 8px;
-		border: 1px solid var(--color-lightness-85, #ccc);
-		border-radius: 3px;
-		background: var(--color-lightness-97, #f8f8f8);
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-xs);
+		background: var(--color-lightness-97);
 		cursor: pointer;
 		color: #27ae60;
-		font-weight: bold;
+		font-weight: 600;
 	}
 	.rename-ok:hover {
-		background: var(--color-lightness-85, #e0e0e0);
+		background: var(--color-lightness-85);
 	}
 </style>

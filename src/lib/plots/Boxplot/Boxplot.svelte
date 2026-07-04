@@ -1232,9 +1232,9 @@
 	.tp-output-panel {
 		margin-top: 0.6rem;
 		padding: 0.45rem 0.55rem;
-		border: 1px solid var(--stroke2, var(--color-lightness-85, #d7d7d7));
+		border: 1px solid var(--stroke2, var(--color-lightness-85));
 		border-radius: 0.375rem;
-		background: var(--color-lightness-99, #fcfcfc);
+		background: var(--color-lightness-99);
 		font-size: var(--font-xs);
 		line-height: 1.25;
 	}
@@ -1251,7 +1251,7 @@
 		position: sticky;
 		top: 0;
 		z-index: 1;
-		background: var(--color-lightness-99, #fcfcfc);
+		background: var(--color-lightness-99);
 		padding: 0.1rem 0;
 	}
 </style>
