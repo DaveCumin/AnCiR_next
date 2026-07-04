@@ -1,6 +1,7 @@
 <script module>
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	// @ts-nocheck
+	import { mean, sampleVariance, sampleStd, median } from '$lib/utils/sampleStats.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import cdf_f from '@stdlib/stats-base-dists-f-cdf';
 	import cdf_chisq from '@stdlib/stats-base-dists-chisquare-cdf';
@@ -33,31 +34,6 @@
 			outputs: []
 		}
 	};
-
-	function mean(arr) {
-		if (!arr.length) return NaN;
-		return arr.reduce((a, b) => a + b, 0) / arr.length;
-	}
-
-	function sampleVariance(arr) {
-		if (arr.length < 2) return NaN;
-		const m = mean(arr);
-		let ss = 0;
-		for (const x of arr) ss += (x - m) ** 2;
-		return ss / (arr.length - 1);
-	}
-
-	function sampleStd(arr) {
-		const v = sampleVariance(arr);
-		return Number.isFinite(v) ? Math.sqrt(v) : NaN;
-	}
-
-	function median(arr) {
-		if (!arr.length) return NaN;
-		const sorted = [...arr].sort((a, b) => a - b);
-		const mid = Math.floor(sorted.length / 2);
-		return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
-	}
 
 	function safePUpperFromF(fValue, df1, df2) {
 		if (!Number.isFinite(fValue) || !Number.isFinite(df1) || !Number.isFinite(df2)) return NaN;
