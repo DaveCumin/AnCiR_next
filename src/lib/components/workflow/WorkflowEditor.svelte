@@ -770,6 +770,11 @@
 
 	// --- Node drag state ---
 	// { nodeId, startMouseCanvas: {x,y}, startPos: {x,y}, moved: boolean }
+	// Lifecycle: set on pointerdown on a node; `moved` flips true once the pointer
+	// travels past the click threshold (so a drop with moved===false is treated as
+	// a plain click/selection in handleNodeWrapperMouseUp). While dragging it feeds
+	// the drop-target detection below (edge splice / port insert / group absorb);
+	// stopAll() consumes the pending drop and clears this back to null.
 	let dragInfo = $state(null);
 
 	// --- Column drag-to-replace drop target ---

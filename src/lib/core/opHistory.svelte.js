@@ -62,10 +62,13 @@ class OpHistoryManager {
         }
     }
 
-    // Defer until end of current sync gesture so any selection updates the
-    // caller performs after applyOp (e.g. clearing after delete) land in
-    // `uiAfter`. Only updates `entry` if it's still the top of the stack;
-    // a newer op manages its own snapshot.
+    // Capture the post-op UI snapshot on a microtask, i.e. after the current
+    // synchronous gesture finishes. The caller typically mutates selection right
+    // AFTER applyOp returns (e.g. delete clears the focused node); if we snapped
+    // `uiAfter` synchronously here it would record the PRE-clear selection, and
+    // redoing the op would wrongly restore the just-deleted node as selected.
+    // Deferring lets those trailing updates land first. Only updates `entry` if
+    // it's still the top of the stack; a newer op manages its own snapshot.
     #scheduleAfterCapture(entry) {
         queueMicrotask(() => {
             if (this.isRestoring) return;

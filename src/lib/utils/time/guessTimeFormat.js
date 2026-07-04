@@ -1,3 +1,22 @@
+// Heuristic date/time FORMAT guesser. Given a date string (or, in guessFormat,
+// a hint format), it tokenises the string, refines the ambiguous tokens, and
+// emits one or more dayjs-style format strings that would parse it.
+//
+// Pipeline (see the Guesser statics below): parse → refine → assign → format.
+//   - parse:  split the string into Token(value, type) pieces (digits,
+//             separators, month/day words, meridiem, timezone).
+//   - refine: resolve ambiguous numeric tokens using neighbours + ranges
+//             (e.g. a value > 12 in a d/m pair must be the day).
+//   - assign: pin each token to a concrete format letter (YYYY, MM, DD, …).
+//   - format: join the tokens back into a format string.
+//
+// Returns a single format string when the input is unambiguous, otherwise an
+// ARRAY of candidate formats (e.g. "10/11/2020" → both D/M and M/D orderings).
+// Known limits: purely heuristic (no locale/calendar awareness); genuinely
+// ambiguous day/month pairs return multiple candidates for the caller to
+// disambiguate; two-digit years are handled by dayjs, not normalised here.
+// See guessTimeFormat.test.js for the supported-format matrix.
+
 class Token {
 	constructor(value, type) {
 		this._value = value;
