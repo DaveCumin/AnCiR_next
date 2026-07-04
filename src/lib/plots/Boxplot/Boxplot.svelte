@@ -439,16 +439,8 @@
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
 			this.legend = new LegendClass(dataIN?.legend);
-			this.xAxis = new AxisClass({
-				label: dataIN?.xAxis?.label ?? '',
-				gridlines: dataIN?.xAxis?.gridlines ?? false,
-				nticks: dataIN?.xAxis?.nticks ?? 5
-			});
-			this.yAxis = new AxisClass({
-				label: dataIN?.yAxis?.label ?? '',
-				gridlines: dataIN?.yAxis?.gridlines ?? true,
-				nticks: dataIN?.yAxis?.nticks ?? 5
-			});
+			this.xAxis = AxisClass.withDefaults(dataIN?.xAxis, { gridlines: false });
+			this.yAxis = AxisClass.withDefaults(dataIN?.yAxis);
 			if (dataIN) {
 				this.addData(dataIN);
 			}

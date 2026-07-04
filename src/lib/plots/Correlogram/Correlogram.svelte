@@ -246,16 +246,8 @@
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
-			this.xAxis = new AxisClass({
-				label: dataIN?.xAxis?.label ?? 'Lag (hours)',
-				gridlines: dataIN?.xAxis?.gridlines ?? true,
-				nticks: dataIN?.xAxis?.nticks ?? 5
-			});
-			this.yAxis = new AxisClass({
-				label: dataIN?.yAxis?.label ?? 'Autocorrelation',
-				gridlines: dataIN?.yAxis?.gridlines ?? true,
-				nticks: dataIN?.yAxis?.nticks ?? 5
-			});
+			this.xAxis = AxisClass.withDefaults(dataIN?.xAxis, { label: 'Lag (hours)' });
+			this.yAxis = AxisClass.withDefaults(dataIN?.yAxis, { label: 'Autocorrelation' });
 			if (dataIN) {
 				this.addData(dataIN);
 			}

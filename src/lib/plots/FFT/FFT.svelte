@@ -294,20 +294,11 @@
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
-			this.xAxis = new AxisClass({
-				label: dataIN?.xAxis?.label ?? 'Period (hours)',
-				gridlines: dataIN?.xAxis?.gridlines ?? true,
-				nticks: dataIN?.xAxis?.nticks ?? 5
-			});
-			this.yAxisMag = new AxisClass({
-				label: dataIN?.yAxisMag?.label ?? 'Magnitude',
-				gridlines: dataIN?.yAxisMag?.gridlines ?? true,
-				nticks: dataIN?.yAxisMag?.nticks ?? 5
-			});
-			this.yAxisPhase = new AxisClass({
-				label: dataIN?.yAxisPhase?.label ?? 'Phase (radians)',
-				gridlines: dataIN?.yAxisPhase?.gridlines ?? false,
-				nticks: dataIN?.yAxisPhase?.nticks ?? 5
+			this.xAxis = AxisClass.withDefaults(dataIN?.xAxis, { label: 'Period (hours)' });
+			this.yAxisMag = AxisClass.withDefaults(dataIN?.yAxisMag, { label: 'Magnitude' });
+			this.yAxisPhase = AxisClass.withDefaults(dataIN?.yAxisPhase, {
+				label: 'Phase (radians)',
+				gridlines: false
 			});
 			if (dataIN) {
 				this.addData(dataIN);

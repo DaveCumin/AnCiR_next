@@ -39,6 +39,23 @@
 				manualTicks: json?.manualTicks ?? null
 			});
 		}
+
+		/**
+		 * Build an axis from a saved axis object, falling back to per-plot defaults.
+		 * Every plot's constructor did this by hand for each of its axes:
+		 *   new AxisClass({ label: saved?.label ?? '<default>',
+		 *                   gridlines: saved?.gridlines ?? <default>,
+		 *                   nticks: saved?.nticks ?? 5 })
+		 * @param {any} saved - e.g. dataIN?.xAxis (may be undefined)
+		 * @param {{label?: string, gridlines?: boolean}} [defaults]
+		 */
+		static withDefaults(saved, { label = '', gridlines = true } = {}) {
+			return new AxisClass({
+				label: saved?.label ?? label,
+				gridlines: saved?.gridlines ?? gridlines,
+				nticks: saved?.nticks ?? 5
+			});
+		}
 	}
 </script>
 
