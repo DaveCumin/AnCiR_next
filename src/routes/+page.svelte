@@ -131,7 +131,6 @@
 	// console.log('d3 guess: ', guessFormatD3(timesToTest));
 	// console.log('guess: ', guessFormat(timesToTest[0]));
 	// import { timeParse, utcParse } from 'd3-time-format';
-	// import { faL } from '@fortawesome/free-solid-svg-icons';
 	// console.log(
 	// 	'parse: ',
 	// 	timeParse('%Y/%m/%d')(timesToTest[0]),

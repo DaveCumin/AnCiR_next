@@ -40,6 +40,7 @@
 		"happy-dom": "^20.8.9",
 		"prettier": "^3.7.4",
 		"prettier-plugin-svelte": "^3.4.1",
+		"rollup-plugin-visualizer": "^6.0.5",
 		"svelte": "^5.46.1",
 		"svelte-check": "^4.3.5",
 		"typescript": "^5.9.3",
@@ -52,8 +53,6 @@
 		]
 	},
 	"dependencies": {
-		"@fortawesome/free-solid-svg-icons": "^6.7.2",
-		"@fortawesome/svelte-fontawesome": "^0.2.4",
 		"@stdlib/random-base-exponential": "^0.2.2",
 		"@stdlib/random-base-minstd-shuffle": "^0.2.3",
 		"@stdlib/random-base-normal": "^0.2.2",
@@ -62,10 +61,7 @@
 		"@stdlib/stats-base-dists-chisquare-quantile": "^0.2.3",
 		"@stdlib/stats-base-dists-f-cdf": "^0.2.3",
 		"@stdlib/stats-base-dists-t-quantile": "^0.2.3",
-		"@stdlib/stdlib": "^0.3.2",
-		"d3-array": "^3.2.4",
 		"d3-axis": "^3.0.0",
-		"d3-ease": "^3.0.1",
 		"d3-quadtree": "^3.0.1",
 		"d3-scale": "^4.0.2",
 		"d3-selection": "^3.0.0",
@@ -74,7 +70,6 @@
 		"d3-transition": "^3.0.1",
 		"dayjs": "^1.11.20",
 		"fflate": "^0.8.2",
-		"papaparse": "^5.5.3",
-		"rollup-plugin-visualizer": "^6.0.5"
+		"papaparse": "^5.5.3"
 	}
 }
