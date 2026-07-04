@@ -10,6 +10,7 @@
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import { computeFFT } from '$lib/utils/fft.js';
+	import { argMax, argMaxAmong } from '$lib/components/plotbits/helpers/peakFinder.js';
 	import { minMax, minMaxAcross, max as arrMax } from '$lib/utils/stats.js';
 	import {
 		findNearestY,
@@ -38,20 +39,23 @@
 			return computeFFT(times, values, this.freqStep);
 		});
 
+		// Map a winning index (or -1) to the { frequency, period, magnitude } shape.
+		peakAt(idx) {
+			if (idx < 0) return null;
+			const { frequencies, magnitudes } = this.fftData;
+			const freq = frequencies[idx];
+			return {
+				frequency: freq,
+				period: freq !== 0 ? 1 / freq : null,
+				magnitude: magnitudes[idx]
+			};
+		}
+
 		// Peak detection - find the highest magnitude across ALL calculated data
 		peak = $derived.by(() => {
 			const { frequencies, magnitudes } = this.fftData;
 			if (!frequencies || !magnitudes || frequencies.length === 0) return null;
-			let maxIdx = 0;
-			for (let i = 1; i < magnitudes.length; i++) {
-				if (magnitudes[i] > magnitudes[maxIdx]) maxIdx = i;
-			}
-			const freq = frequencies[maxIdx];
-			return {
-				frequency: freq,
-				period: freq !== 0 ? 1 / freq : null,
-				magnitude: magnitudes[maxIdx]
-			};
+			return this.peakAt(argMax(magnitudes));
 		});
 
 		// Peak within the visible x-axis range
@@ -69,17 +73,7 @@
 					: frequencies[i];
 				if (xVal != null && xVal >= xMin && xVal <= xMax) visibleIndices.push(i);
 			}
-			if (visibleIndices.length === 0) return null;
-			let maxIdx = visibleIndices[0];
-			for (let i = 1; i < visibleIndices.length; i++) {
-				if (magnitudes[visibleIndices[i]] > magnitudes[maxIdx]) maxIdx = visibleIndices[i];
-			}
-			const freq = frequencies[maxIdx];
-			return {
-				frequency: freq,
-				period: freq !== 0 ? 1 / freq : null,
-				magnitude: magnitudes[maxIdx]
-			};
+			return this.peakAt(argMaxAmong(magnitudes, visibleIndices));
 		});
 
 		dataWarnings = $derived.by(() => {

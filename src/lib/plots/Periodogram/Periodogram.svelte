@@ -17,6 +17,7 @@
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
 	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
+	import { argMax, argMaxAmong } from '$lib/components/plotbits/helpers/peakFinder.js';
 	import { minMaxAcross } from '$lib/utils/stats.js';
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
@@ -90,11 +91,8 @@
 		peak = $derived.by(() => {
 			const { x, y } = this.periodData;
 			if (!x || !y || x.length === 0 || y.length === 0) return null;
-			let maxIdx = 0;
-			for (let i = 1; i < y.length; i++) {
-				if (y[i] > y[maxIdx]) maxIdx = i;
-			}
-			return { period: x[maxIdx], power: y[maxIdx] };
+			const idx = argMax(y);
+			return idx < 0 ? null : { period: x[idx], power: y[idx] };
 		});
 
 		// Peak within the visible x-axis range
@@ -106,12 +104,8 @@
 			for (let i = 0; i < x.length; i++) {
 				if (x[i] >= xMin && x[i] <= xMax) visibleIndices.push(i);
 			}
-			if (visibleIndices.length === 0) return null;
-			let maxIdx = visibleIndices[0];
-			for (let i = 1; i < visibleIndices.length; i++) {
-				if (y[visibleIndices[i]] > y[maxIdx]) maxIdx = visibleIndices[i];
-			}
-			return { period: x[maxIdx], power: y[maxIdx] };
+			const idx = argMaxAmong(y, visibleIndices);
+			return idx < 0 ? null : { period: x[idx], power: y[idx] };
 		});
 
 		// Cache for smart recalculation

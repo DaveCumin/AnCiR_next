@@ -15,6 +15,7 @@
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import { computeAutocorrelation } from '$lib/utils/correlogram.js';
+	import { argMax, argMaxAmong } from '$lib/components/plotbits/helpers/peakFinder.js';
 	import { minMaxAcross, max as arrMax } from '$lib/utils/stats.js';
 
 	export const Correlogram_defaultDataInputs = ['time', 'values'];
@@ -74,11 +75,8 @@
 			const { lags, correlations } = this.acfData;
 			if (!lags || !correlations || lags.length < 2) return null;
 			// Skip index 0 (lag=0 always has correlation=1.0)
-			let maxIdx = 1;
-			for (let i = 2; i < correlations.length; i++) {
-				if (correlations[i] > correlations[maxIdx]) maxIdx = i;
-			}
-			return { lag: lags[maxIdx], correlation: correlations[maxIdx] };
+			const idx = argMax(correlations, 1);
+			return idx < 0 ? null : { lag: lags[idx], correlation: correlations[idx] };
 		});
 
 		// Peak within the visible x-axis range
@@ -92,12 +90,8 @@
 				if (i === 0 && lags[i] === 0) continue;
 				if (lags[i] >= xMin && lags[i] <= xMax) visibleIndices.push(i);
 			}
-			if (visibleIndices.length === 0) return null;
-			let maxIdx = visibleIndices[0];
-			for (let i = 1; i < visibleIndices.length; i++) {
-				if (correlations[visibleIndices[i]] > correlations[maxIdx]) maxIdx = visibleIndices[i];
-			}
-			return { lag: lags[maxIdx], correlation: correlations[maxIdx] };
+			const idx = argMaxAmong(correlations, visibleIndices);
+			return idx < 0 ? null : { lag: lags[idx], correlation: correlations[idx] };
 		});
 
 		dataWarnings = $derived.by(() => {
