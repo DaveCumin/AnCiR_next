@@ -1,4 +1,5 @@
 <script module>
+	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	// @ts-nocheck
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import cdf_f from '@stdlib/stats-base-dists-f-cdf';
@@ -562,8 +563,7 @@
 
 	export function groupcomparison(argsIN) {
 		const xIN = argsIN.xIN;
-		let yINs = argsIN.yIN;
-		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
+		const yINs = normalizeYInputs(argsIN.yIN);
 
 		const result = {
 			comparisons: {},
@@ -716,9 +716,7 @@
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
-	if (typeof p.args.yIN === 'number') {
-		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
-	}
+	migrateLegacyYIN(p.args);
 	if (typeof p.args.out !== 'object' || p.args.out === null) {
 		p.args.out = {};
 	}

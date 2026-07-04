@@ -1,4 +1,5 @@
 <script module>
+	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { core } from '$lib/core/core.svelte';
 	import { sortPermutation, applyPermutation } from '$lib/utils/sortRows.js';
 
@@ -50,9 +51,7 @@
 	 * @returns {[{order:number[], y_results:Record<string, any[]>}, boolean]}
 	 */
 	export function sortdata(argsIN) {
-		let yINs = argsIN.yIN;
-		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
-		yINs = yINs.filter((id) => id != null && id !== -1);
+		const yINs = normalizeYInputs(argsIN.yIN).filter((id) => id != null && id !== -1);
 		const direction = argsIN.direction === 'desc' ? 'desc' : 'asc';
 
 		const empty = () => ({ order: [], y_results: {} });
@@ -111,9 +110,7 @@
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
-	if (typeof p.args.yIN === 'number') {
-		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
-	}
+	migrateLegacyYIN(p.args);
 	if (p.args.direction == null) p.args.direction = 'asc';
 	if (p.args.sortOnId == null) p.args.sortOnId = -1;
 	if (!p.args.out) p.args.out = {};

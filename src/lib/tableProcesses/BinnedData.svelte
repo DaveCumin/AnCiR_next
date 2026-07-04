@@ -1,4 +1,6 @@
 <script module>
+	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -54,8 +56,7 @@
 	export function binneddata(argsIN, differentstepsize) {
 		const xIN = argsIN.xIN;
 		// Backward compat: accept single number or array
-		let yINs = argsIN.yIN;
-		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
+		const yINs = normalizeYInputs(argsIN.yIN);
 		const binMode = argsIN.binMode === 'cuts' ? 'cuts' : 'uniform';
 		const binSize = argsIN.binSize;
 		const binStart = argsIN.binStart;
@@ -182,13 +183,9 @@
 			xOutCol.tableProcessGUId = processHash;
 
 			for (const yId of yINs) {
-				const outKey = 'binnedy_' + yId;
-				const yOUT = argsIN.out[outKey];
+				const yOUT = argsIN.out['binnedy_' + yId];
 				if (yOUT != null && yOUT !== -1 && result.y_results[yId]) {
-					core.rawData.set(yOUT, result.y_results[yId]);
-					getColumnById(yOUT).data = yOUT;
-					getColumnById(yOUT).type = 'number';
-					getColumnById(yOUT).tableProcessGUId = processHash;
+					writeOutputColumn(yOUT, result.y_results[yId], { processHash });
 				}
 			}
 		}
@@ -216,9 +213,7 @@
 
 	// --- Backward compat ---
 	// Convert legacy single yIN number to array
-	if (typeof p.args.yIN === 'number') {
-		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
-	}
+	migrateLegacyYIN(p.args);
 	// Migrate old 'binnedy' output key to per-Y format ('binnedy_{yId}')
 	if (p.args.out?.binnedy != null) {
 		if (p.args.out.binnedy >= 0 && p.args.yIN.length > 0) {

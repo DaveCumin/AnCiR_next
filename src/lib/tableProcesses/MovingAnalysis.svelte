@@ -1,4 +1,6 @@
 <script module>
+	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
+	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
@@ -82,8 +84,7 @@
 
 	export async function movinganalysis(argsIN) {
 		const xIN = argsIN.xIN;
-		let yINs = argsIN.yIN;
-		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
+		const yINs = normalizeYInputs(argsIN.yIN);
 		const windowSize = Number(argsIN.windowSize);
 		const stepSize = Number(argsIN.stepSize);
 		const xOUT = argsIN.out?.movex;
@@ -175,42 +176,21 @@
 
 		if (anyValid && xOUT != null && xOUT !== -1) {
 			const processHash = crypto.randomUUID();
-			const xColOut = getColumnById(xOUT);
-			if (xColOut) {
-				// For time inputs, store actual ms timestamps so the column reads as
-				// real time data. windowSize/stepSize stay on the column as metadata
-				// so plots can show window extent.
-				if (originTime_ms != null) {
-					core.rawData.set(
-						xOUT,
-						bins.map((h) => originTime_ms + h * 3600000)
-					);
-					xColOut.type = 'time';
-					xColOut.timeFormat = null;
-				} else {
-					core.rawData.set(xOUT, bins);
-					xColOut.type = 'number';
-				}
-				xColOut.data = xOUT;
+			// For time inputs writeXOutput stores actual ms timestamps so the column
+			// reads as real time data. windowSize/stepSize stay on the column as
+			// metadata so plots can show window extent.
+			if (writeXOutput(xOUT, bins, { originTime_ms, processHash })) {
+				const xColOut = getColumnById(xOUT);
 				xColOut.binWidth = windowSize;
 				xColOut.binStep = stepSize;
 				xColOut.originTime_ms = originTime_ms;
-				xColOut.tableProcessGUId = processHash;
 			}
 
 			for (const yId of yINs) {
 				const ys = y_results[yId];
 				if (!ys) continue;
 				for (const k of statKeys) {
-					const outKey = `${yId}_${k}`;
-					const outId = argsIN.out?.[outKey];
-					if (outId == null || outId === -1) continue;
-					const outCol = getColumnById(outId);
-					if (!outCol) continue;
-					core.rawData.set(outId, ys[k]);
-					outCol.data = outId;
-					outCol.type = 'number';
-					outCol.tableProcessGUId = processHash;
+					writeOutputColumn(argsIN.out?.[`${yId}_${k}`], ys[k], { processHash });
 				}
 			}
 		}
@@ -233,9 +213,7 @@
 	let { p = $bindable(), hideInputs = false } = $props();
 
 	// Backward compat: convert legacy single yIN to array
-	if (typeof p.args.yIN === 'number') {
-		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
-	}
+	migrateLegacyYIN(p.args);
 	if (typeof p.args.out !== 'object' || p.args.out === null) {
 		p.args.out = { movex: -1 };
 	}

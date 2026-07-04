@@ -1,4 +1,6 @@
 <script module>
+	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { core } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
@@ -15,8 +17,7 @@
 
 	export function evaluateSplit(argsIN) {
 		const xIN = argsIN.xIN;
-		const yINraw = argsIN.yIN;
-		const yINs = Array.isArray(yINraw) ? yINraw : yINraw != null && yINraw !== -1 ? [yINraw] : [];
+		const yINs = normalizeYInputs(argsIN.yIN);
 		let splitTimes = Array.isArray(argsIN.splitTimes) ? [...argsIN.splitTimes] : [];
 
 		// Validate inputs
@@ -91,18 +92,9 @@
 		const processHash = crypto.randomUUID();
 		for (const yId of Object.keys(splitData.y_results)) {
 			for (let seg = 0; seg < splitData.segmentCount; seg++) {
-				const outKey = `${yId}_${seg + 1}`;
-				const outId = argsIN.out[outKey];
+				const outId = argsIN.out[`${yId}_${seg + 1}`];
 				const segData = splitData.y_results[yId]?.segments?.[seg];
-				if (outId != null && Number(outId) >= 0 && segData) {
-					core.rawData.set(outId, segData);
-					const outCol = getColumnById(outId);
-					if (outCol) {
-						outCol.data = outId;
-						outCol.type = 'number';
-						outCol.tableProcessGUId = processHash;
-					}
-				}
+				if (segData) writeOutputColumn(outId, segData, { processHash });
 			}
 		}
 	}
@@ -145,9 +137,7 @@
 	let { p = $bindable(), hideInputs = false } = $props();
 
 	// Backwards compatibility
-	if (typeof p.args.yIN === 'number') {
-		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
-	}
+	migrateLegacyYIN(p.args);
 	if (!Array.isArray(p.args.splitTimes)) {
 		p.args.splitTimes = [];
 	}

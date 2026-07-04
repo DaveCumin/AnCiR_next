@@ -7,6 +7,8 @@
 	import { fitTrendSync, evaluateTrendAtPoints } from '$lib/utils/trendfit.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
+	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
+	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	import '$lib/utils/trendfit.worker-task.js';
 
 	const displayName = 'Fit Trend Curves';
@@ -46,8 +48,7 @@
 
 	export async function trendfit(argsIN) {
 		const xIN = argsIN.xIN;
-		let yINs = argsIN.yIN;
-		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
+		const yINs = normalizeYInputs(argsIN.yIN);
 		const model = argsIN.model;
 		const polyDegree = argsIN.polyDegree;
 		const outputXId = argsIN.outputX;
@@ -145,29 +146,13 @@
 			const firstYId = Object.keys(result.y_results)[0];
 			const firstYResult = result.y_results[firstYId];
 			const xOutData = firstYResult.xOutData ?? outputXData ?? firstYResult.t;
-			const xOutMs =
-				originTime_ms != null ? xOutData.map((h) => originTime_ms + h * 3600000) : xOutData;
-			const xColOut = getColumnById(xOUT);
-			if (xColOut) {
-				core.rawData.set(xOUT, xOutMs);
-				xColOut.data = xOUT;
-				xColOut.type = originTime_ms != null ? 'time' : 'number';
-				if (originTime_ms != null) xColOut.timeFormat = null;
-				xColOut.tableProcessGUId = processHash;
-			}
+			writeXOutput(xOUT, xOutData, { originTime_ms, processHash });
 
 			for (const yId of yINs) {
-				const outKey = 'trendy_' + yId;
-				const yOUT = argsIN.out[outKey];
+				const yOUT = argsIN.out['trendy_' + yId];
 				const yResult = result.y_results[yId];
 				if (yOUT != null && yOUT !== -1 && yResult) {
-					const yColOut = getColumnById(yOUT);
-					if (yColOut) {
-						core.rawData.set(yOUT, yResult.yOutData);
-						yColOut.data = yOUT;
-						yColOut.type = 'number';
-						yColOut.tableProcessGUId = processHash;
-					}
+					writeOutputColumn(yOUT, yResult.yOutData, { processHash });
 				}
 			}
 		}
@@ -198,9 +183,7 @@
 	let { p = $bindable(), hideInputs = false } = $props();
 
 	// Backward compat: convert legacy single yIN to array
-	if (typeof p.args.yIN === 'number') {
-		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
-	}
+	migrateLegacyYIN(p.args);
 
 	let trendData = $state();
 	let _calcToken = 0; // guards async fit results against stale overwrites
@@ -338,42 +321,22 @@
 				const firstYId = Object.keys(result.y_results)[0];
 				const firstYResult = result.y_results[firstYId];
 				const xOutData = firstYResult?.xOutData ?? result.outputXData ?? firstYResult?.t ?? [];
-				const xColOut = getColumnById(p.args.out.trendx);
-				if (xColOut) {
-					core.rawData.set(p.args.out.trendx, xOutData);
-					xColOut.data = p.args.out.trendx;
-					xColOut.type = 'number';
-					xColOut.tableProcessGUId = processHash;
-				}
+				writeOutputColumn(p.args.out.trendx, xOutData, { processHash });
 
 				for (const yId of yINs) {
 					const yResult = result.y_results[yId];
 					const yOutId = p.args.out['trendy_' + yId];
 					if (yOutId != null && yOutId !== -1 && yResult) {
-						const yColOut = getColumnById(yOutId);
-						if (yColOut) {
-							core.rawData.set(yOutId, yResult.yOutData ?? []);
-							yColOut.data = yOutId;
-							yColOut.type = 'number';
-							yColOut.tableProcessGUId = processHash;
-						}
+						writeOutputColumn(yOutId, yResult.yOutData ?? [], { processHash });
 					}
 
-					const permOutId = p.args.out['permstats_' + yId];
-					if (permOutId != null && permOutId !== -1) {
-						const permColOut = getColumnById(permOutId);
-						if (permColOut) {
-							core.rawData.set(
-								permOutId,
-								Array.isArray(yResult?.fittedData?.permutedStats)
-									? yResult.fittedData.permutedStats
-									: []
-							);
-							permColOut.data = permOutId;
-							permColOut.type = 'number';
-							permColOut.tableProcessGUId = processHash;
-						}
-					}
+					writeOutputColumn(
+						p.args.out['permstats_' + yId],
+						Array.isArray(yResult?.fittedData?.permutedStats)
+							? yResult.fittedData.permutedStats
+							: [],
+						{ processHash }
+					);
 				}
 			}
 
@@ -385,15 +348,8 @@
 		} else {
 			[trendData, p.args.valid] = await trendfit(p.args);
 			for (const yId of p.args.yIN ?? []) {
-				const permOutId = p.args.out['permstats_' + yId];
-				if (permOutId != null && permOutId !== -1) {
-					const permColOut = getColumnById(permOutId);
-					if (permColOut) {
-						core.rawData.set(permOutId, []);
-						permColOut.data = permOutId;
-						permColOut.type = 'number';
-					}
-				}
+				// Clear stale permutation stats (no processHash — GUId untouched).
+				writeOutputColumn(p.args.out['permstats_' + yId], []);
 			}
 			lastHash = getHash;
 			p.args._fitHash = lastHash;

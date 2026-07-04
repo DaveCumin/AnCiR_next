@@ -5,6 +5,12 @@
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import '$lib/utils/fitFunction.worker-task.js';
+	import {
+		normalizeYInputs,
+		migrateLegacyYIN,
+		fillDefaults
+	} from '$lib/tableProcesses/tpArgHelpers.js';
+	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 
 	const displayName = 'Fit Function';
 	const defaults = new Map([
@@ -137,8 +143,7 @@
 
 	async function buildFitResult(argsIN) {
 		const xIN = argsIN.xIN;
-		let yINs = argsIN.yIN;
-		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
+		const yINs = normalizeYInputs(argsIN.yIN);
 		const outputXId = argsIN.outputX;
 		const xOUT = argsIN.out?.fitx;
 
@@ -211,29 +216,13 @@
 			const firstYId = Object.keys(result.y_results)[0];
 			const firstYResult = result.y_results[firstYId];
 			const xOutData = firstYResult.xOutData ?? outputXData ?? firstYResult.t;
-			const xOutMs =
-				originTime_ms != null ? xOutData.map((h) => originTime_ms + h * 3600000) : xOutData;
-			const xColOut = getColumnById(xOUT);
-			if (xColOut) {
-				core.rawData.set(xOUT, xOutMs);
-				xColOut.data = xOUT;
-				xColOut.type = originTime_ms != null ? 'time' : 'number';
-				if (originTime_ms != null) xColOut.timeFormat = null;
-				xColOut.tableProcessGUId = processHash;
-			}
+			writeXOutput(xOUT, xOutData, { originTime_ms, processHash });
 
 			for (const yId of yINs) {
-				const outKey = 'fity_' + yId;
-				const yOUT = argsIN.out?.[outKey];
+				const yOUT = argsIN.out?.['fity_' + yId];
 				const yResult = result.y_results[yId];
 				if (yOUT != null && yOUT !== -1 && yResult) {
-					const yColOut = getColumnById(yOUT);
-					if (yColOut) {
-						core.rawData.set(yOUT, yResult.yOutData);
-						yColOut.data = yOUT;
-						yColOut.type = 'number';
-						yColOut.tableProcessGUId = processHash;
-					}
+					writeOutputColumn(yOUT, yResult.yOutData, { processHash });
 				}
 			}
 		}
@@ -270,33 +259,13 @@
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
-	if (typeof p.args.yIN === 'number') {
-		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
-	}
+	// Backwards compatibility: legacy scalar yIN → array, ensure the out map
+	// exists, and initialise fields absent in sessions saved before they existed.
+	migrateLegacyYIN(p.args);
 	if (typeof p.args.out !== 'object' || p.args.out === null) {
 		p.args.out = { fitx: -1 };
 	}
-	if (p.args.model === undefined) p.args.model = 'cosinor';
-	if (p.args.useFixedPeriod === undefined) p.args.useFixedPeriod = true;
-	if (p.args.fixedPeriod === undefined) p.args.fixedPeriod = 24;
-	if (p.args.Ncurves === undefined) p.args.Ncurves = 1;
-	if (p.args.nHarmonics === undefined) p.args.nHarmonics = 1;
-	if (p.args.alpha === undefined) p.args.alpha = 0.05;
-	if (p.args.fixKappa === undefined) p.args.fixKappa = false;
-	if (p.args.fixedKappa === undefined) p.args.fixedKappa = 5;
-	if (p.args.fixOmega === undefined) p.args.fixOmega = false;
-	if (p.args.fixDutyCycle === undefined) p.args.fixDutyCycle = false;
-	if (p.args.fixedDutyCycle === undefined) p.args.fixedDutyCycle = 0.5;
-	if (p.args.periodic === undefined) p.args.periodic = true;
-	if (p.args.fixK1 === undefined) p.args.fixK1 = false;
-	if (p.args.fixedK1 === undefined) p.args.fixedK1 = 0.5;
-	if (p.args.fixK2 === undefined) p.args.fixK2 = false;
-	if (p.args.fixedK2 === undefined) p.args.fixedK2 = 0.5;
-	if (p.args.permuteTest === undefined) p.args.permuteTest = false;
-	if (p.args.autoPermutations === undefined) p.args.autoPermutations = false;
-	if (p.args.nPermutations === undefined) p.args.nPermutations = 999;
-	if (p.args.permutationSeed === undefined) p.args.permutationSeed = 12345;
-	if (p.args.permutationStatistic === undefined) p.args.permutationStatistic = 'rSquared';
+	fillDefaults(p.args, defaults);
 
 	let fitData = $state();
 	let showOutputX = $state(p.args.outputX !== -1);
@@ -399,8 +368,7 @@
 		await tick();
 
 		const xIN = p.args.xIN;
-		let yINs = p.args.yIN;
-		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
+		const yINs = normalizeYInputs(p.args.yIN);
 		const xCol = xIN >= 0 ? getColumnById(xIN) : null;
 		if (!xCol || yINs.length === 0) {
 			if (token === _calcToken) calculating = false;
@@ -509,60 +477,29 @@
 			const firstYId = Object.keys(result.y_results)[0];
 			const firstYResult = result.y_results[firstYId];
 			const xOutData = firstYResult.xOutData ?? outputXData ?? firstYResult.t;
-			const xOutMs =
-				originTime_ms != null ? xOutData.map((h) => originTime_ms + h * 3600000) : xOutData;
-			const xColOut = getColumnById(p.args.out.fitx);
-			if (xColOut) {
-				core.rawData.set(p.args.out.fitx, xOutMs);
-				xColOut.data = p.args.out.fitx;
-				xColOut.type = originTime_ms != null ? 'time' : 'number';
-				if (originTime_ms != null) xColOut.timeFormat = null;
-				xColOut.tableProcessGUId = processHash;
-			}
+			writeXOutput(p.args.out.fitx, xOutData, { originTime_ms, processHash });
 
 			for (const yId of yINs) {
-				const outKey = 'fity_' + yId;
-				const yOUT = p.args.out[outKey];
+				const yOUT = p.args.out['fity_' + yId];
 				const yResult = result.y_results[yId];
 				if (yOUT != null && yOUT !== -1 && yResult) {
-					const yColOut = getColumnById(yOUT);
-					if (yColOut) {
-						core.rawData.set(yOUT, yResult.yOutData);
-						yColOut.data = yOUT;
-						yColOut.type = 'number';
-						yColOut.tableProcessGUId = processHash;
-					}
+					writeOutputColumn(yOUT, yResult.yOutData, { processHash });
 				}
 
-				const permOutId = p.args.out['permstats_' + yId];
-				if (permOutId != null && permOutId !== -1) {
-					const permColOut = getColumnById(permOutId);
-					if (permColOut) {
-						core.rawData.set(
-							permOutId,
-							Array.isArray(yResult?.fitResult?.permutedStats)
-								? yResult.fitResult.permutedStats
-								: []
-						);
-						permColOut.data = permOutId;
-						permColOut.type = 'number';
-						permColOut.tableProcessGUId = processHash;
-					}
-				}
+				writeOutputColumn(
+					p.args.out['permstats_' + yId],
+					Array.isArray(yResult?.fitResult?.permutedStats)
+						? yResult.fitResult.permutedStats
+						: [],
+					{ processHash }
+				);
 			}
 		}
 
 		if (!p.args.permuteTest) {
 			for (const yId of yINs) {
-				const permOutId = p.args.out['permstats_' + yId];
-				if (permOutId != null && permOutId !== -1) {
-					const permColOut = getColumnById(permOutId);
-					if (permColOut) {
-						core.rawData.set(permOutId, []);
-						permColOut.data = permOutId;
-						permColOut.type = 'number';
-					}
-				}
+				// Clear stale permutation stats (no processHash — GUId untouched).
+				writeOutputColumn(p.args.out['permstats_' + yId], []);
 			}
 		}
 

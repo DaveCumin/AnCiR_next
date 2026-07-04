@@ -1,4 +1,6 @@
 <script module>
+	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
+	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -50,8 +52,7 @@
 	export async function smootheddata(argsIN) {
 		const xIN = argsIN.xIN;
 		// Backward compat: accept single number or array
-		let yINs = argsIN.yIN;
-		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
+		const yINs = normalizeYInputs(argsIN.yIN);
 		const smootherType = argsIN.smootherType;
 		const xOUT = argsIN.out.smoothedx;
 
@@ -134,24 +135,15 @@
 
 		if (anyValid && xOUT != -1) {
 			const processHash = crypto.randomUUID();
-			const xOutValues = isTimeInput
-				? result.x_out.map((h) => originTime_ms + h * 3600000)
-				: result.x_out;
-
-			core.rawData.set(xOUT, xOutValues);
-			getColumnById(xOUT).data = xOUT;
-			getColumnById(xOUT).type = isTimeInput ? 'time' : 'number';
-			if (isTimeInput) getColumnById(xOUT).timeFormat = null;
-			getColumnById(xOUT).tableProcessGUId = processHash;
+			writeXOutput(xOUT, result.x_out, {
+				originTime_ms: isTimeInput ? originTime_ms : null,
+				processHash
+			});
 
 			for (const yId of yINs) {
-				const outKey = 'smoothedy_' + yId;
-				const yOUT = argsIN.out[outKey];
+				const yOUT = argsIN.out['smoothedy_' + yId];
 				if (yOUT != null && yOUT !== -1 && result.y_results[yId]) {
-					core.rawData.set(yOUT, result.y_results[yId]);
-					getColumnById(yOUT).data = yOUT;
-					getColumnById(yOUT).type = 'number';
-					getColumnById(yOUT).tableProcessGUId = processHash;
+					writeOutputColumn(yOUT, result.y_results[yId], { processHash });
 				}
 			}
 		}
@@ -174,9 +166,7 @@
 	let { p = $bindable(), hideInputs = false } = $props();
 
 	// Backward compat: convert legacy single yIN to array
-	if (typeof p.args.yIN === 'number') {
-		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
-	}
+	migrateLegacyYIN(p.args);
 
 	let smoothedResult = $state();
 	let mounted = $state(false);

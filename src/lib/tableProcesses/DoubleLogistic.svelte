@@ -1,4 +1,6 @@
 <script module>
+	import { migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
+	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -147,52 +149,22 @@
 			}
 		}
 
-		// Write shared X output
+		// Write shared X output (and, when it lands, the per-Y curves under the
+		// same hash).
 		const finalXData = outputXData ?? sharedT;
-		const xOUT = argsIN.out.dlogx;
-		if (xOUT != -1) {
-			const xColOut = getColumnById(xOUT);
-			if (xColOut) {
-				const xOutMs =
-					originTime_ms != null ? finalXData.map((h) => originTime_ms + h * 3600000) : finalXData;
-				core.rawData.set(xOUT, xOutMs);
-				xColOut.data = xOUT;
-				xColOut.type = originTime_ms != null ? 'time' : 'number';
-				if (originTime_ms != null) xColOut.timeFormat = null;
-				const processHash = crypto.randomUUID();
-				xColOut.tableProcessGUId = processHash;
-
-				// Write per-Y outputs
-				for (const yId of Object.keys(y_results)) {
-					const outKey = 'dlogy_' + yId;
-					const yOutId = argsIN.out[outKey];
-					if (yOutId >= 0) {
-						const yColOut = getColumnById(yOutId);
-						if (yColOut) {
-							core.rawData.set(yOutId, y_results[yId].yOutData);
-							yColOut.data = yOutId;
-							yColOut.type = 'number';
-							yColOut.tableProcessGUId = processHash;
-						}
-					}
-				}
+		const processHash = crypto.randomUUID();
+		if (writeXOutput(argsIN.out.dlogx, finalXData, { originTime_ms, processHash })) {
+			for (const yId of Object.keys(y_results)) {
+				writeOutputColumn(argsIN.out['dlogy_' + yId], y_results[yId].yOutData, { processHash });
 			}
 		}
 
 		// Scalar p-value output: one value per y input, in yIN order.
-		const pvalueOut = argsIN.out.pvalue;
-		if (pvalueOut != null && pvalueOut !== -1) {
-			const pCol = getColumnById(pvalueOut);
-			if (pCol) {
-				core.rawData.set(
-					pvalueOut,
-					yINs.map((yId) => y_results[yId]?.pValue ?? NaN)
-				);
-				pCol.data = pvalueOut;
-				pCol.type = 'number';
-				pCol.tableProcessGUId = crypto.randomUUID();
-			}
-		}
+		writeOutputColumn(
+			argsIN.out.pvalue,
+			yINs.map((yId) => y_results[yId]?.pValue ?? NaN),
+			{ processHash: crypto.randomUUID() }
+		);
 
 		return [{ t: sharedT, outputXData, y_results, originTime_ms }, true];
 	}
@@ -219,9 +191,7 @@
 	let { p = $bindable(), hideInputs = false } = $props();
 
 	// Backwards compatibility: convert single yIN to array
-	if (typeof p.args.yIN === 'number') {
-		p.args.yIN = p.args.yIN === -1 ? [] : [p.args.yIN];
-	}
+	migrateLegacyYIN(p.args);
 	// Migrate old single dlogy key to per-Y key
 	if (p.args.out.dlogy != null) {
 		const oldY = p.args.out.dlogy;

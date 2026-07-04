@@ -1,4 +1,6 @@
 <script module>
+	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
+	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -52,8 +54,7 @@
 
 	export function rectangularwave(argsIN) {
 		const xIN = argsIN.xIN;
-		let yINs = argsIN.yIN;
-		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
+		const yINs = normalizeYInputs(argsIN.yIN);
 		const outputXId = argsIN.outputX;
 		const xOUT = argsIN.out.rectwavex;
 		const fixKappa = argsIN.fixKappa ?? false;
@@ -181,46 +182,22 @@
 			const firstYId = Object.keys(result.y_results)[0];
 			const firstYResult = result.y_results[firstYId];
 			const xOutData = firstYResult.xOutData ?? outputXData ?? firstYResult.t;
-			const xOutMs =
-				originTime_ms != null ? xOutData.map((h) => originTime_ms + h * 3600000) : xOutData;
-			const xColOut = getColumnById(xOUT);
-			if (xColOut) {
-				core.rawData.set(xOUT, xOutMs);
-				xColOut.data = xOUT;
-				xColOut.type = originTime_ms != null ? 'time' : 'number';
-				if (originTime_ms != null) xColOut.timeFormat = null;
-				xColOut.tableProcessGUId = processHash;
-			}
+			writeXOutput(xOUT, xOutData, { originTime_ms, processHash });
 
 			for (const yId of yINs) {
-				const outKey = 'rectwavey_' + yId;
-				const yOUT = argsIN.out[outKey];
+				const yOUT = argsIN.out['rectwavey_' + yId];
 				const yResult = result.y_results[yId];
 				if (yOUT != null && yOUT !== -1 && yResult) {
-					const yColOut = getColumnById(yOUT);
-					if (yColOut) {
-						core.rawData.set(yOUT, yResult.yOutData);
-						yColOut.data = yOUT;
-						yColOut.type = 'number';
-						yColOut.tableProcessGUId = processHash;
-					}
+					writeOutputColumn(yOUT, yResult.yOutData, { processHash });
 				}
 			}
 
 			// Scalar p-value output: one value per y input, in yIN order.
-			const pvalueOut = argsIN.out.pvalue;
-			if (pvalueOut != null && pvalueOut !== -1) {
-				const pCol = getColumnById(pvalueOut);
-				if (pCol) {
-					core.rawData.set(
-						pvalueOut,
-						yINs.map((yId) => result.y_results[yId]?.pValue ?? NaN)
-					);
-					pCol.data = pvalueOut;
-					pCol.type = 'number';
-					pCol.tableProcessGUId = processHash;
-				}
-			}
+			writeOutputColumn(
+				argsIN.out.pvalue,
+				yINs.map((yId) => result.y_results[yId]?.pValue ?? NaN),
+				{ processHash }
+			);
 		}
 
 		return [result, anyValid];
@@ -248,9 +225,7 @@
 	let { p = $bindable(), hideInputs = false } = $props();
 
 	// Backward compat: convert legacy single yIN to array
-	if (typeof p.args.yIN === 'number') {
-		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
-	}
+	migrateLegacyYIN(p.args);
 
 	// Backwards compatibility — initialise any fields absent in older saved sessions
 	if (p.args.fixKappa === undefined) p.args.fixKappa = false;

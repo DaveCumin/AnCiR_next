@@ -8,6 +8,12 @@
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	// Side-effect: registers 'cosinor.fitMany' on the main thread so sync fallback works.
 	import { cosinorFitMany } from '$lib/utils/cosinor.worker-task.js';
+	import {
+		normalizeYInputs,
+		migrateLegacyYIN,
+		fillDefaults
+	} from '$lib/tableProcesses/tpArgHelpers.js';
+	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 
 	const displayName = 'Cosinor';
 	const defaults = new Map([
@@ -69,8 +75,7 @@
 
 	export async function evaluateCosinor(argsIN) {
 		const xIN = argsIN.xIN;
-		let yINs = argsIN.yIN;
-		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
+		const yINs = normalizeYInputs(argsIN.yIN);
 		const Ncurves = argsIN.Ncurves;
 		const outputXId = argsIN.outputX;
 		const useFixedPeriod = argsIN.useFixedPeriod ?? false;
@@ -244,11 +249,7 @@
 		const xOUT = argsIN.out.cosinorx;
 		if (xOUT == null || xOUT === -1) return;
 
-		const yINs = Array.isArray(argsIN.yIN)
-			? argsIN.yIN
-			: argsIN.yIN != null && argsIN.yIN !== -1
-				? [argsIN.yIN]
-				: [];
+		const yINs = normalizeYInputs(argsIN.yIN);
 		if (!Object.keys(result.y_results ?? {}).length) return;
 
 		const processHash = crypto.randomUUID();
@@ -256,32 +257,14 @@
 		const firstYId = Object.keys(result.y_results)[0];
 		const firstYResult = result.y_results[firstYId];
 		const xOutData = firstYResult.xOutData ?? result.outputXData ?? firstYResult.t;
-		const xOutMs =
-			result.originTime_ms != null
-				? xOutData.map((h) => result.originTime_ms + h * 3600000)
-				: xOutData;
-		const xColOut = getColumnById(xOUT);
-		if (xColOut) {
-			core.rawData.set(xOUT, xOutMs);
-			xColOut.data = xOUT;
-			xColOut.type = result.originTime_ms != null ? 'time' : 'number';
-			if (result.originTime_ms != null) xColOut.timeFormat = null;
-			xColOut.tableProcessGUId = processHash;
-		}
+		writeXOutput(xOUT, xOutData, { originTime_ms: result.originTime_ms, processHash });
 
 		for (const yId of yINs) {
-			const outKey = 'cosinory_' + yId;
-			const yOUT = argsIN.out[outKey];
+			const yOUT = argsIN.out['cosinory_' + yId];
 			const yResult = result.y_results[yId];
 			if (yOUT != null && yOUT !== -1 && yResult) {
 				const yOutData = yResult.yOutData ?? yResult.predicted ?? yResult.fittedData.fitted;
-				const yColOut = getColumnById(yOUT);
-				if (yColOut) {
-					core.rawData.set(yOUT, yOutData);
-					yColOut.data = yOUT;
-					yColOut.type = 'number';
-					yColOut.tableProcessGUId = processHash;
-				}
+				writeOutputColumn(yOUT, yOutData, { processHash });
 			}
 		}
 
@@ -341,16 +324,7 @@
 			}
 			pvalueArr.push(pValue);
 		}
-		const writeScalarOut = (key, arr) => {
-			const id = argsIN.out[key];
-			if (id == null || id === -1) return;
-			const col = getColumnById(id);
-			if (!col) return;
-			core.rawData.set(id, arr);
-			col.data = id;
-			col.type = 'number';
-			col.tableProcessGUId = processHash;
-		};
+		const writeScalarOut = (key, arr) => writeOutputColumn(argsIN.out[key], arr, { processHash });
 		writeScalarOut('period', periodArr);
 		writeScalarOut('amplitude', amplitudeArr);
 		writeScalarOut('rsquared', rsquaredArr);
@@ -385,22 +359,10 @@
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
-	// Backward compat: convert legacy single yIN to array
-	if (typeof p.args.yIN === 'number') {
-		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
-	}
-
-	// Backwards compatibility: initialise fields absent in sessions saved before this version
-	if (p.args.useFixedPeriod === undefined) p.args.useFixedPeriod = false;
-	if (p.args.fixedPeriod === undefined) p.args.fixedPeriod = 24;
-	if (p.args.nHarmonics === undefined) p.args.nHarmonics = 1;
-	if (p.args.alpha === undefined) p.args.alpha = 0.05;
-	if (p.args.permuteTest === undefined) p.args.permuteTest = PERMUTATION_DEFAULTS.permuteTest;
-	if (p.args.nPermutations === undefined) p.args.nPermutations = PERMUTATION_DEFAULTS.nPermutations;
-	if (p.args.permutationSeed === undefined)
-		p.args.permutationSeed = PERMUTATION_DEFAULTS.permutationSeed;
-	if (p.args.permutationStatistic === undefined)
-		p.args.permutationStatistic = PERMUTATION_DEFAULTS.permutationStatistic;
+	// Backwards compatibility: legacy scalar yIN → array, and initialise fields
+	// absent in sessions saved before they existed.
+	migrateLegacyYIN(p.args);
+	fillDefaults(p.args, defaults);
 
 	let cosinorData = $state();
 	let showOutputX = $state(p.args.outputX !== -1);

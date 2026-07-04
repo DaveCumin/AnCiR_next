@@ -1,4 +1,6 @@
 <script module>
+	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	// @ts-nocheck
 	// Nonparametric Circadian Rhythm Analysis (NPCRA): IS, IV, RA, M10, L5 and
 	// their onsets, computed on activity folded onto an average 24 h profile.
@@ -76,8 +78,7 @@
 	// this module block at runtime in the compiled output (same as Cosinor.svelte).
 	export function evaluateNPCRA(argsIN) {
 		const xCol = argsIN.xIN >= 0 ? getColumnById(argsIN.xIN) : null;
-		let yINs = argsIN.yIN;
-		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
+		const yINs = normalizeYInputs(argsIN.yIN);
 
 		const opts = {
 			epochHours: argsIN.epochHours ?? 1,
@@ -111,43 +112,22 @@
 		const processHash = crypto.randomUUID();
 		const { perY, binCentres, yINs } = result;
 
-		const xOUT = argsIN.out.npcrax;
-		if (xOUT != null && xOUT !== -1 && binCentres) {
-			const col = getColumnById(xOUT);
-			if (col) {
-				core.rawData.set(xOUT, binCentres);
-				col.data = xOUT;
-				col.type = 'number';
-				col.tableProcessGUId = processHash;
-			}
+		if (binCentres) {
+			writeOutputColumn(argsIN.out.npcrax, binCentres, { processHash });
 		}
 
 		for (const yId of yINs) {
-			const outKey = 'npcray_' + yId;
-			const yOUT = argsIN.out[outKey];
+			const yOUT = argsIN.out['npcray_' + yId];
 			const res = perY[yId];
 			if (yOUT != null && yOUT !== -1 && res) {
-				const col = getColumnById(yOUT);
-				if (col) {
-					core.rawData.set(yOUT, res.profile);
-					col.data = yOUT;
-					col.type = 'number';
-					col.tableProcessGUId = processHash;
-				}
+				writeOutputColumn(yOUT, res.profile, { processHash });
 			}
 		}
 
 		// Scalar ports: one value per y input, in yIN order.
 		for (const key of SCALAR_KEYS) {
-			const id = argsIN.out[key];
-			if (id == null || id === -1) continue;
-			const col = getColumnById(id);
-			if (!col) continue;
 			const arr = yINs.map((yId) => perY[yId]?.[key] ?? NaN);
-			core.rawData.set(id, arr);
-			col.data = id;
-			col.type = 'number';
-			col.tableProcessGUId = processHash;
+			writeOutputColumn(argsIN.out[key], arr, { processHash });
 		}
 	}
 
@@ -174,9 +154,7 @@
 	let { p = $bindable(), hideInputs = false } = $props();
 
 	// Backward compat: single yIN → array.
-	if (typeof p.args.yIN === 'number') {
-		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
-	}
+	migrateLegacyYIN(p.args);
 	// Defaults for fields absent in older sessions.
 	if (p.args.epochHours === undefined) p.args.epochHours = 1;
 	if (p.args.period === undefined) p.args.period = 24;

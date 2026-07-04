@@ -1,4 +1,6 @@
 <script module>
+	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
@@ -183,8 +185,7 @@
 
 	export async function rhythmicityanalysis(argsIN) {
 		const xIN = argsIN.xIN;
-		let yINs = argsIN.yIN;
-		if (!Array.isArray(yINs)) yINs = yINs != null && yINs !== -1 ? [yINs] : [];
+		const yINs = normalizeYInputs(argsIN.yIN);
 
 		const empty = { y_results: {}, outputKeys: [], statKeys: [] };
 
@@ -246,15 +247,7 @@
 				const ys = y_results[yId];
 				if (!ys) continue;
 				for (const k of outputKeys) {
-					const outKey = `${yId}_${k}`;
-					const outId = argsIN.out?.[outKey];
-					if (outId == null || outId === -1) continue;
-					const outCol = getColumnById(outId);
-					if (!outCol) continue;
-					core.rawData.set(outId, ys.outputs[k] ?? []);
-					outCol.data = outId;
-					outCol.type = 'number';
-					outCol.tableProcessGUId = processHash;
+					writeOutputColumn(argsIN.out?.[`${yId}_${k}`], ys.outputs[k] ?? [], { processHash });
 				}
 			}
 
@@ -273,29 +266,15 @@
 						break;
 					}
 				}
-				let xType = 'number';
-				let xOut = xData;
-				const xCol = getColumnById(sharedXId);
-				if (xCol) {
-					core.rawData.set(sharedXId, xOut);
-					xCol.data = sharedXId;
-					xCol.type = xType;
-					if (xType === 'time') xCol.timeFormat = null;
-					xCol.tableProcessGUId = processHash;
-				}
+				writeOutputColumn(sharedXId, xData, { processHash });
 			}
 			if (primary.y) {
 				for (const yId of yINs) {
 					const ys = y_results[yId];
 					if (!ys) continue;
-					const yOutId = argsIN.out?.[`rhythmicityy_${yId}`];
-					if (yOutId == null || yOutId === -1) continue;
-					const yCol = getColumnById(yOutId);
-					if (!yCol) continue;
-					core.rawData.set(yOutId, ys.outputs[primary.y] ?? []);
-					yCol.data = yOutId;
-					yCol.type = 'number';
-					yCol.tableProcessGUId = processHash;
+					writeOutputColumn(argsIN.out?.[`rhythmicityy_${yId}`], ys.outputs[primary.y] ?? [], {
+						processHash
+					});
 				}
 			}
 		}
@@ -321,9 +300,7 @@
 	let { p = $bindable(), hideInputs = false } = $props();
 
 	// Backward compat: ensure yIN is always an array
-	if (typeof p.args.yIN === 'number') {
-		p.args.yIN = p.args.yIN !== -1 ? [p.args.yIN] : [];
-	}
+	migrateLegacyYIN(p.args);
 	if (typeof p.args.out !== 'object' || p.args.out === null) {
 		p.args.out = {};
 	}
