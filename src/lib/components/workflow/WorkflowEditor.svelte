@@ -444,6 +444,30 @@
 		});
 	});
 
+	// The localStorage write is debounced: the persistence effect below re-runs on
+	// every position mutation (many times per frame during a drag), and JSON-encoding
+	// the whole layout plus a synchronous localStorage.setItem on each run is the
+	// single hottest path when dragging on a large canvas. core.nodeLayout stays
+	// updated immediately (session export and the adopt effect rely on it); only the
+	// localStorage cache trails by the debounce, and it is flushed on unmount.
+	const LAYOUT_SAVE_DEBOUNCE_MS = 400;
+	let _layoutSaveTimer = null;
+	let _pendingLayoutSnapshot = null;
+	function flushLayoutSave() {
+		clearTimeout(_layoutSaveTimer);
+		_layoutSaveTimer = null;
+		if (_pendingLayoutSnapshot == null) return;
+		try {
+			if (typeof localStorage !== 'undefined') {
+				localStorage.setItem(NODE_POSITIONS_STORAGE_KEY, JSON.stringify(_pendingLayoutSnapshot));
+			}
+		} catch {
+			/* private mode / quota — ignore */
+		}
+		_pendingLayoutSnapshot = null;
+	}
+	$effect(() => flushLayoutSave); // flush any pending save on unmount
+
 	// Mirror stablePositions + collapsed state to localStorage AND core.nodeLayout
 	// (the latter is serialised with the session). Reads every entry to register the
 	// $derived dep, so dragging a node (mutating one entry) or collapsing triggers a
@@ -462,13 +486,9 @@
 		// read untracked so this effect doesn't depend on core.nodeLayout. The adopt
 		// effect compares against this to ignore our own writes (avoids a feedback loop).
 		_mirroredLayout = untrack(() => core.nodeLayout);
-		try {
-			if (typeof localStorage !== 'undefined') {
-				localStorage.setItem(NODE_POSITIONS_STORAGE_KEY, JSON.stringify(snapshot));
-			}
-		} catch {
-			/* private mode / quota — ignore */
-		}
+		_pendingLayoutSnapshot = snapshot;
+		clearTimeout(_layoutSaveTimer);
+		_layoutSaveTimer = setTimeout(flushLayoutSave, LAYOUT_SAVE_DEBOUNCE_MS);
 	});
 
 	// Canvas dimensions
@@ -885,6 +905,8 @@
 			actionsHoverId = null;
 		}, 500);
 	}
+	// Don't let a pending hide-timer fire (and touch state) after unmount.
+	$effect(() => () => clearTimeout(actionsHoverTimer));
 
 	// True while an OS file is dragged over the canvas (drop-to-import).
 	let fileDragOver = $state(false);
@@ -1862,6 +1884,15 @@
 		window.addEventListener('pointermove', onExtractMove);
 		window.addEventListener('pointerup', onExtractUp, { once: true });
 	}
+
+	// If the editor unmounts mid-gesture (view switch, session load) the pointerup
+	// that normally detaches these window listeners never reaches us — detach here.
+	$effect(() => {
+		return () => {
+			window.removeEventListener('pointermove', onExtractMove);
+			window.removeEventListener('pointerup', onExtractUp);
+		};
+	});
 
 	function handlePortEnd(e) {
 		e.stopPropagation();
