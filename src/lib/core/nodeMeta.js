@@ -162,6 +162,15 @@ const meta = new Map([
 			description: 'Bin time-series values into regular intervals and aggregate per bin.'
 		}
 	],
+	[
+		'Interpolate',
+		{
+			family: 'Binning',
+			nodeIcon: 'node-interpolate',
+			description:
+				'Fill missing values or resample a series onto a regular grid by interpolation (linear, nearest, or cubic spline).'
+		}
+	],
 
 	// ---- Fitting ---------------------------------------------------------
 	[

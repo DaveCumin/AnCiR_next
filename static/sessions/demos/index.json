@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 40,
+  "count": 41,
   "sessions": [
     {
       "id": "dataset-testdata",
@@ -202,6 +202,18 @@
         "BinnedData"
       ],
       "keywords": "bin data bin time-series values into regular intervals and aggregate per bin. binning binneddata"
+    },
+    {
+      "id": "tp-interpolate",
+      "name": "Interpolate",
+      "family": "Binning",
+      "description": "Fill missing values or resample a series onto a regular grid by interpolation (linear, nearest, or cubic spline).",
+      "url": "sessions/demos/demo-tp-interpolate.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "Interpolate"
+      ],
+      "keywords": "interpolate fill missing values or resample a series onto a regular grid by interpolation (linear, nearest, or cubic spline). binning interpolate"
     },
     {
       "id": "tp-cosinor",

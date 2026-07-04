@@ -176,6 +176,20 @@ export const TP_SPECS = [
 		})
 	},
 	{
+		name: 'Interpolate',
+		inputs: [T('number', SAMPLE.index), T('number', SAMPLE.rhythm)],
+		args: ([x, y]) => ({
+			xIN: x,
+			yIN: [y],
+			mode: 'resample',
+			method: 'linear',
+			step: 2,
+			start: null,
+			end: null,
+			out: { interpx: -1 }
+		})
+	},
+	{
 		name: 'Sort',
 		// Two inputs (a reversed index + a rhythm); sort on the index so both columns
 		// visibly reorder together.

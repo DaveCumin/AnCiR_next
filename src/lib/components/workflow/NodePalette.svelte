@@ -59,6 +59,7 @@
 		'minus',
 		'node-add',
 		'node-bin-data',
+		'node-interpolate',
 		'node-cosinor',
 		'node-double-logistic',
 		'node-filter',
@@ -565,8 +566,18 @@
 		color: var(--color-lightness-35, #555);
 	}
 
-	.palette-tile:hover .palette-tile-icon {
+	/* Line icons colour via stroke=currentColor (the `color` above). Solid
+	   (Font Awesome) icons colour via `fill`, which the Icon component sets to a
+	   lighter var — so they looked washed-out next to the line icons. Pin their
+	   fill to the same grey so every tile matches. Line icons keep their own
+	   fill="none", so this only affects the solid glyphs. */
+	.palette-tile-icon :global(.icon) {
+		fill: var(--color-lightness-35, #555);
+	}
+	.palette-tile:hover .palette-tile-icon,
+	.palette-tile:hover .palette-tile-icon :global(.icon) {
 		color: var(--color-accent);
+		fill: var(--color-accent);
 	}
 
 	.palette-tile-name {
