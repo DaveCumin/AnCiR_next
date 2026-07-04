@@ -38,6 +38,20 @@ function fft(signal) {
  *   minPeriod: number
  * }}
  */
+const EMPTY_SPECTRUM = {
+	frequencies: [],
+	magnitudes: [],
+	phases: [],
+	samplingRate: 0,
+	nyquistFreq: 0,
+	minPeriod: 0
+};
+
+// Largest padded transform length we'll allocate. A radix-2 FFT over > ~16M
+// samples is neither useful here nor allocatable; anything demanding more is a
+// sign of a degenerate (non-time) input rather than a real request.
+const MAX_FFT_N = 1 << 24;
+
 export function computeFFT(times, values, freqStep = null) {
 	if (
 		!times ||
@@ -46,14 +60,7 @@ export function computeFFT(times, values, freqStep = null) {
 		values.length < 2 ||
 		times.length !== values.length
 	) {
-		return {
-			frequencies: [],
-			magnitudes: [],
-			phases: [],
-			samplingRate: 0,
-			nyquistFreq: 0,
-			minPeriod: 0
-		};
+		return { ...EMPTY_SPECTRUM };
 	}
 
 	const validIndices = times
@@ -61,14 +68,7 @@ export function computeFFT(times, values, freqStep = null) {
 		.filter((i) => i !== -1);
 
 	if (validIndices.length === 0) {
-		return {
-			frequencies: [],
-			magnitudes: [],
-			phases: [],
-			samplingRate: 0,
-			nyquistFreq: 0,
-			minPeriod: 0
-		};
+		return { ...EMPTY_SPECTRUM };
 	}
 
 	const t = validIndices.map((i) => times[i]);
@@ -78,6 +78,16 @@ export function computeFFT(times, values, freqStep = null) {
 	const yDetrended = y.map((val) => val - yMean);
 
 	const dt = t.length > 1 ? (t[t.length - 1] - t[0]) / (t.length - 1) : 1;
+	// The FFT assumes an increasing, uniformly-sampled time axis. A non-time /
+	// non-monotonic X input (e.g. plain data values accidentally wired into the
+	// time port) yields a zero, negative, or non-finite sample interval, which
+	// makes samplingRate (1/dt) Infinite/negative and downstream the transform
+	// length nonsensical. Bail with an empty spectrum instead of computing garbage
+	// (or throwing "Invalid array length" while allocating the padded buffer).
+	if (!Number.isFinite(dt) || dt <= 0) {
+		return { ...EMPTY_SPECTRUM };
+	}
+
 	const samplingRate = 1 / dt;
 	const nyquistFreq = samplingRate / 2;
 	const minPeriod = 2 * dt;
@@ -89,8 +99,13 @@ export function computeFFT(times, values, freqStep = null) {
 	} else {
 		n = Math.pow(2, Math.ceil(Math.log2(yDetrended.length)));
 	}
-	if (n < yDetrended.length) {
+	if (!(n >= yDetrended.length)) {
+		// Covers n < length as well as NaN (e.g. log2 of a bad value).
 		n = Math.pow(2, Math.ceil(Math.log2(yDetrended.length)));
+	}
+	// Defensive: never try to allocate a non-finite or absurd padded length.
+	if (!Number.isFinite(n) || n > MAX_FFT_N) {
+		return { ...EMPTY_SPECTRUM };
 	}
 	const padded = [...yDetrended, ...new Array(n - yDetrended.length).fill(0)];
 	const signal = padded.map((val) => ({ re: val, im: 0 }));

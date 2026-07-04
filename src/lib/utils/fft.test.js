@@ -46,6 +46,44 @@ describe('computeFFT — guard clauses', () => {
 	});
 });
 
+describe('computeFFT — degenerate / non-time X axis', () => {
+	// Wiring a non-time column into the time port gives a bad sample interval
+	// (dt <= 0 or non-finite), which used to make the padded transform length
+	// Infinite/negative and throw "RangeError: Invalid array length".
+
+	it('does not throw and returns empty for a zero-span time axis (all equal)', () => {
+		const times = [5, 5, 5, 5, 5, 5];
+		const values = [1, 2, 3, 4, 5, 6];
+		let r;
+		expect(() => (r = computeFFT(times, values))).not.toThrow();
+		expect(r.frequencies).toEqual([]);
+		expect(r.samplingRate).toBe(0);
+	});
+
+	it('does not throw for a decreasing (non-monotonic) time axis', () => {
+		const times = [10, 8, 6, 4, 2, 0];
+		const values = [1, -1, 1, -1, 1, -1];
+		let r;
+		expect(() => (r = computeFFT(times, values))).not.toThrow();
+		expect(r.frequencies).toEqual([]);
+	});
+
+	it('does not throw when an explicit freqStep would demand an absurd length', () => {
+		const times = [0, 0.5, 1, 1.5, 2, 2.5];
+		const values = [1, 2, 1, 2, 1, 2];
+		// A vanishingly small freqStep drives the transform length past the cap.
+		expect(() => computeFFT(times, values, 1e-12)).not.toThrow();
+	});
+
+	it('does not throw for arbitrary data values wired into both ports', () => {
+		// The reported case: "connected data (not time) to the FFT".
+		const noise = Array.from({ length: 32 }, (_, i) => ((i * 2654435761) % 97) - 48);
+		const dupes = new Array(32).fill(3.14);
+		expect(() => computeFFT(dupes, noise)).not.toThrow();
+		expect(() => computeFFT(noise, noise)).not.toThrow();
+	});
+});
+
 describe('computeFFT — sampling metadata', () => {
 	it('reports samplingRate, nyquistFreq and minPeriod consistent with dt', () => {
 		const { t, y } = makeSignal([{ amp: 1, periodH: 24 }], 96, 0.5);

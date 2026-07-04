@@ -77,13 +77,25 @@
 	.datetime-container {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: var(--space-2);
 	}
 
+	/* Pin the dense-UI sizing (rather than inheriting) so the date/time inputs
+	   render identically everywhere — e.g. the Split node's larger-font context
+	   was ballooning these vs. the same control in the plot panel. */
 	input {
 		width: 100%;
-		padding: 8px;
+		box-sizing: border-box;
+		padding: var(--space-2) var(--space-3);
+		font-size: var(--font-sm);
+		font-family: inherit;
+		color: var(--color-lightness-25);
 		border: 1px solid var(--color-lightness-80);
 		border-radius: var(--radius-sm);
+	}
+
+	input:focus {
+		outline: none;
+		border-color: var(--color-accent);
 	}
 </style>

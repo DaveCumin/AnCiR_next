@@ -229,8 +229,13 @@
 		});
 		//Where the data are from (references all the way to the primary source [importd (file) or simulated (params)])
 		provenance = $derived.by(() => {
+			// Describe one hop only. It intentionally does NOT read refColumn.provenance:
+			// that recursion made `provenance` reference itself through a cyclic ref chain
+			// (A→B→A), which Svelte rejects (derived_references_self in dev; an
+			// UNINITIALIZED symbol in prod that then throws "Cannot convert a Symbol to a
+			// string"). A single-level description is enough for this display-only field.
 			if (this.isReferencial()) {
-				return `refers to ${this.refColumn?.name} which is ${this.refColumn?.provenance}`;
+				return `refers to ${this.refColumn?.name ?? '?'}`;
 			}
 			return ''; // Define default provenance for non-referential columns
 		});
@@ -552,7 +557,12 @@
 			jsonOut.producerNodeId = this.producerNodeId;
 			jsonOut.producerPort = this.producerPort;
 			jsonOut.producerArtifactKind = this.producerArtifactKind;
-			jsonOut.provenance = this.provenance;
+			// `provenance` is a display-only $derived (a human-readable "refers to …"
+			// string) that nothing reads back on load. Serialising it walked the
+			// recursive refColumn chain during JSON.stringify; on a cyclic ref chain
+			// Svelte returns its UNINITIALIZED symbol for the in-flight derived, and
+			// interpolating a Symbol into a string throws. It carries no state, so we
+			// simply don't serialise it.
 			if (this.groupLabel != null && this.groupLabel !== '') {
 				jsonOut.groupLabel = this.groupLabel;
 			}
