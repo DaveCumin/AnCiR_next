@@ -45,7 +45,7 @@
 	import { TableProcess } from '$lib/core/TableProcess.svelte';
 
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import { history } from '$lib/core/history.svelte';
+	import { history } from '$lib/core/opHistory.svelte.js';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { paramDiffWatcher } from '$lib/core/paramDiffWatcher.svelte.js';
 

@@ -7,7 +7,7 @@
 	import About from './views/modals/About.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { openPicker } from '$lib/core/tourRunner.svelte.js';
-	import { history } from '$lib/core/history.svelte.js';
+	import { history } from '$lib/core/opHistory.svelte.js';
 	import { exportJson } from '$lib/components/iconActions/Setting.svelte';
 	import LoadSessionModal from './workflow/LoadSessionModal.svelte';
 

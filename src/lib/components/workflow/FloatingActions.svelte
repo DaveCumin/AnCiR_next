@@ -5,7 +5,7 @@
 	//   · Top-left:  load / save session
 	//   · Bottom-left: undo / redo
 	import Icon from '$lib/icons/Icon.svelte';
-	import { history } from '$lib/core/history.svelte.js';
+	import { history } from '$lib/core/opHistory.svelte.js';
 	import { exportJson } from '$lib/components/iconActions/Setting.svelte';
 	import LoadSessionModal from './LoadSessionModal.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
