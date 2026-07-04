@@ -37,23 +37,27 @@ vi.mock('$lib/core/core.svelte', () => ({
 	appConsts: fakeAppConsts,
 	appState: fakeAppState
 }));
-vi.mock('$lib/core/Process.svelte', () => ({
-	Process: class {
-		static fromJSON(json) {
-			return new this(json);
-		}
-		constructor(args) {
-			Object.assign(this, args);
-			this.id = Math.random();
-			this.args = {};
-		}
-		doProcess(out) {
-			return out;
-		}
-	},
-	nextLinkedGroupId: () => 1,
-	getLinkedProcesses: () => []
-}));
+vi.mock('$lib/core/Process.svelte', () => {
+	// Deterministic mock ids (was Math.random(), which risked cross-test collisions)
+	let _pid = 0;
+	return {
+		Process: class {
+			static fromJSON(json) {
+				return new this(json);
+			}
+			constructor(args) {
+				Object.assign(this, args);
+				this.id = ++_pid;
+				this.args = {};
+			}
+			doProcess(out) {
+				return out;
+			}
+		},
+		nextLinkedGroupId: () => 1,
+		getLinkedProcesses: () => []
+	};
+});
 
 import { Column as ColumnClass } from './Column.svelte';
 
