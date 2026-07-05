@@ -639,7 +639,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import Toggle from '$lib/components/inputs/Toggle.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import { appState } from '$lib/core/core.svelte';
+	import { appState, core } from '$lib/core/core.svelte';
 	import { formatTimeAxisTick } from '$lib/utils/time/displayTime.js';
 	import { onMount } from 'svelte';
 	import { flip } from 'svelte/animate';
@@ -648,8 +648,43 @@
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
+	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
+	import { limitsFromBrush } from '$lib/components/plotbits/helpers/brushHelpers.js';
+	import { applyLinkedZoom } from '$lib/plots/plotZoom.js';
 
-	let { theData, which } = $props();
+	let { theData, which, brushable = false } = $props();
+
+	// --- Brush-to-zoom (view only; writes the same *IN limit overrides the axis
+	// control inputs use, so it's fully reversible and serialises with the plot). ---
+	function applyBrushZoom(box) {
+		const p = theData.plot;
+		const limits = limitsFromBrush(box, {
+			xScale: p.XScale,
+			yScaleLeft: p.hasLeftAxisData ? p.YScaleLeft : null,
+			yScaleRight: p.hasRightAxisData ? p.YScaleRight : null
+		});
+		// Apply to this plot and, if it's part of a facet set, its siblings.
+		applyLinkedZoom(theData, limits, core.plots);
+	}
+	function resetBrushZoom() {
+		applyLinkedZoom(
+			theData,
+			{ xlims: [null, null], ylimsLeft: [null, null], ylimsRight: [null, null] },
+			core.plots
+		);
+	}
+	const isZoomed = $derived.by(() => {
+		const p = theData?.plot;
+		if (!p) return false;
+		return (
+			p.xlimsIN?.[0] != null ||
+			p.xlimsIN?.[1] != null ||
+			p.ylimsLeftIN?.[0] != null ||
+			p.ylimsLeftIN?.[1] != null ||
+			p.ylimsRightIN?.[0] != null ||
+			p.ylimsRightIN?.[1] != null
+		);
+	});
 
 	//Tooltip
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
@@ -1107,6 +1142,24 @@
 				{/if}
 			{/each}
 		</g>
+
+		<!-- Brush-zoom overlay sits BELOW the data layers so points/lines keep
+		     their hover tooltips; the hit rect grabs pointer capture on press so a
+		     drag still tracks over the data. Full-size interactive plots only. -->
+		{#if brushable}
+			<g
+				style="transform: translate({theData.plot.padding.left}px, {theData.plot.padding
+					.top}px);"
+			>
+				<PlotBrush
+					plotwidth={theData.plot.plotwidth}
+					plotheight={theData.plot.plotheight}
+					zoomed={isZoomed}
+					onZoom={applyBrushZoom}
+					onReset={resetBrushZoom}
+				/>
+			</g>
+		{/if}
 
 		{#each theData.plot.data as datum}
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}

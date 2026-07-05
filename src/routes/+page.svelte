@@ -69,6 +69,7 @@
 		window.__history = history;
 		window.__core = core;
 		window.__mutationService = mutationService;
+		window.__appState = appState;
 	}
 
 	// Keep facet generators' child plots in sync with their wired series. We track

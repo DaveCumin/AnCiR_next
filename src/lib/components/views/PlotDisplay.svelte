@@ -351,7 +351,7 @@
 							viewportEl={canvasViewportEl}
 						>
 							{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
-							<Plot theData={plot} which="plot" />
+							<Plot theData={plot} which="plot" brushable={true} />
 						</Draggable>
 					{/if}
 				{/each}
