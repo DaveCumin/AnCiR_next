@@ -1166,6 +1166,9 @@
 		// background — node wrappers stopPropagation, so an Alt-drag that begins on
 		// a node still moves the node rather than starting a marquee.
 		if (e.altKey) {
+			// Stop the browser starting a native text/element selection under the
+			// rubber-band (the .marquee-active class below is the belt-and-braces).
+			e.preventDefault();
 			const { x, y } = toCanvasCoords(e.clientX, e.clientY);
 			marquee = {
 				startX: x,
@@ -3304,6 +3307,7 @@
 <div
 	class="workflow-editor"
 	class:inline
+	class:marquee-active={!!marquee}
 	style="left: {leftPx}px; right: {rightPx}px;"
 	onwheel={handleWheel}
 	onmousedown={handleCanvasMouseDown}
@@ -3734,6 +3738,17 @@
 
 	.canvas-viewport.panning {
 		cursor: grabbing;
+	}
+
+	/* While an Alt-drag marquee is active, suppress text/element selection across
+	   the whole canvas and show the crosshair cursor. */
+	.workflow-editor.marquee-active,
+	.workflow-editor.marquee-active :global(*) {
+		user-select: none;
+		-webkit-user-select: none;
+	}
+	.workflow-editor.marquee-active {
+		cursor: crosshair;
 	}
 
 	/* Alt-drag marquee rubber-band. Lives inside the scaled .canvas-inner, so the
