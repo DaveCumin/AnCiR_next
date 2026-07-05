@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { scaleLinear, scaleUtc } from 'd3-scale';
-import { toLimitNumber, limitsFromBrush, brushIsSignificant } from './brushHelpers.js';
+import {
+	toLimitNumber,
+	limitsFromBrush,
+	brushIsSignificant,
+	zoomLimitsAroundPoint
+} from './brushHelpers.js';
 
 describe('toLimitNumber', () => {
 	it('passes numbers through', () => {
@@ -60,6 +65,29 @@ describe('limitsFromBrush', () => {
 		expect(out.xlims[0]).toBeCloseTo(t0, -3);
 		expect(out.xlims[1]).toBeCloseTo(Date.UTC(2020, 0, 6), -3);
 		expect(typeof out.xlims[0]).toBe('number');
+	});
+});
+
+describe('zoomLimitsAroundPoint', () => {
+	it('zooms in (factor<1) keeping the anchor fixed', () => {
+		// domain 0..100, anchor 50, factor 0.5 -> 25..75
+		expect(zoomLimitsAroundPoint([0, 100], 50, 0.5)).toEqual([25, 75]);
+	});
+	it('zooms out (factor>1) keeping the anchor fixed', () => {
+		// domain 0..100, anchor 50, factor 2 -> -50..150
+		expect(zoomLimitsAroundPoint([0, 100], 50, 2)).toEqual([-50, 150]);
+	});
+	it('anchors off-centre so the near edge moves less', () => {
+		// domain 0..100, anchor 20, factor 0.5 -> 10..60
+		expect(zoomLimitsAroundPoint([0, 100], 20, 0.5)).toEqual([10, 60]);
+	});
+	it('coerces Date domain/anchor to ms', () => {
+		const lo = Date.UTC(2020, 0, 1);
+		const hi = Date.UTC(2020, 0, 11);
+		const mid = Date.UTC(2020, 0, 6);
+		const out = zoomLimitsAroundPoint([new Date(lo), new Date(hi)], new Date(mid), 0.5);
+		expect(out[0]).toBe(Date.UTC(2020, 0, 3, 12));
+		expect(out[1]).toBe(Date.UTC(2020, 0, 8, 12));
 	});
 });
 

@@ -649,7 +649,11 @@
 	import Editable from '$lib/components/inputs/Editable.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
-	import { limitsFromBrush } from '$lib/components/plotbits/helpers/brushHelpers.js';
+	import {
+		limitsFromBrush,
+		toLimitNumber,
+		zoomLimitsAroundPoint
+	} from '$lib/components/plotbits/helpers/brushHelpers.js';
 	import { applyLinkedZoom } from '$lib/plots/plotZoom.js';
 
 	let { theData, which, brushable = false } = $props();
@@ -672,6 +676,45 @@
 			{ xlims: [null, null], ylimsLeft: [null, null], ylimsRight: [null, null] },
 			core.plots
 		);
+	}
+
+	// Wheel-zoom over the plot area, anchored on the cursor. Handled at the SVG
+	// level (not the brush hit-rect, which sits below the data) so the wheel is
+	// caught even over points/lines. Only intercepts inside the plot area; wheel
+	// on the margins/axes falls through to the workspace so the canvas still pans.
+	let svgEl = $state(null);
+	function handleWheelZoom(e) {
+		if (!brushable) return;
+		const p = theData.plot;
+		const rect = svgEl?.getBoundingClientRect();
+		if (!rect) return;
+		// Rendered px per user-unit (the SVG is CSS-scaled inside the workspace).
+		const sx = rect.width > 0 ? rect.width / p.parentBox.width : 1;
+		const sy = rect.height > 0 ? rect.height / p.parentBox.height : 1;
+		const localX = (e.clientX - rect.left) / sx - p.padding.left;
+		const localY = (e.clientY - rect.top) / sy - p.padding.top;
+		// Outside the plotting region → let the workspace handle the wheel.
+		if (localX < 0 || localX > p.plotwidth || localY < 0 || localY > p.plotheight) return;
+
+		e.preventDefault();
+		e.stopPropagation();
+		const factor = e.deltaY > 0 ? 1.1 : 0.9; // out : in
+		const xlims = zoomLimitsAroundPoint(
+			p.XScale.domain(),
+			toLimitNumber(p.XScale.invert(localX)),
+			factor
+		);
+		const ylimsLeft = p.hasLeftAxisData
+			? zoomLimitsAroundPoint(p.YScaleLeft.domain(), toLimitNumber(p.YScaleLeft.invert(localY)), factor)
+			: null;
+		const ylimsRight = p.hasRightAxisData
+			? zoomLimitsAroundPoint(
+					p.YScaleRight.domain(),
+					toLimitNumber(p.YScaleRight.invert(localY)),
+					factor
+				)
+			: null;
+		applyLinkedZoom(theData, { xlims, ylimsLeft, ylimsRight }, core.plots);
 	}
 	const isZoomed = $derived.by(() => {
 		const p = theData?.plot;
@@ -1067,12 +1110,14 @@
 
 {#snippet plot(theData)}
 	<svg
+		bind:this={svgEl}
 		id={'plot' + theData.plot.parentBox.id}
 		width={theData.plot.parentBox.width}
 		height={theData.plot.parentBox.height}
 		viewBox="0 0 {theData.plot.parentBox.width} {theData.plot.parentBox.height}"
 		style={`background: var(--surface-card); position: absolute;`}
 		ontooltip={handleTooltip}
+		onwheel={brushable ? handleWheelZoom : null}
 	>
 		<!-- The Left Y-axis -->
 		{#if theData.plot.hasLeftAxisData}

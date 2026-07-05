@@ -51,6 +51,25 @@ export function limitsFromBrush(px, scales) {
 }
 
 /**
+ * Zoom one axis's limits around a fixed anchor point (cursor-anchored wheel
+ * zoom): the anchor's data value stays put while the domain shrinks (factor < 1,
+ * zoom in) or grows (factor > 1, zoom out) around it. Domain/anchor may be Dates
+ * (time axis) and are coerced to numbers; the result is always ordered [lo, hi].
+ * @param {(number|Date)[]} domain  current [min, max]
+ * @param {number|Date} anchor      data value under the cursor
+ * @param {number} factor           <1 zooms in, >1 zooms out
+ * @returns {[number,number]}
+ */
+export function zoomLimitsAroundPoint(domain, anchor, factor) {
+	const lo = toLimitNumber(domain[0]);
+	const hi = toLimitNumber(domain[1]);
+	const a = toLimitNumber(anchor);
+	const newLo = a - (a - lo) * factor;
+	const newHi = a + (hi - a) * factor;
+	return [Math.min(newLo, newHi), Math.max(newLo, newHi)];
+}
+
+/**
  * Is the brushed box big enough to act on? Guards against a click or a hairline
  * drag zooming to a degenerate domain. Threshold is in plot user-units; either
  * dimension clearing it is enough (a thin tall box = an x-range zoom).
