@@ -442,8 +442,21 @@
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
+	import { createPlotZoom } from '$lib/plots/plotZoomController.js';
+	import { getZoomAdapter } from '$lib/plots/zoomAdapters.js';
 
-	let { theData, which } = $props();
+	let { theData, which, brushable = false, zoomMode = false } = $props();
+
+	// Brush + wheel zoom (shared controller + per-plot adapter). Mirrors Scatterplot.
+	let svgEl = $state(null);
+	const zoomCtl = createPlotZoom(() => ({
+		plot: theData,
+		brushable,
+		zoomMode,
+		svgEl,
+		adapter: getZoomAdapter(theData)
+	}));
 
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
 	const handleTooltip = bindAltTooltipToggle(
@@ -835,12 +848,16 @@
 
 {#snippet plot(theData)}
 	<svg
+		bind:this={svgEl}
 		id={'plot' + theData.plot.parentBox.id}
 		width={theData.plot.parentBox.width}
 		height={theData.plot.parentBox.height}
 		viewBox="0 0 {theData.plot.parentBox.width} {theData.plot.parentBox.height}"
-		style="background: var(--surface-card); position: absolute;"
+		style="background: var(--surface-card); position: absolute;{brushable && zoomMode
+			? ' cursor: crosshair;'
+			: ''}"
 		ontooltip={handleTooltip}
+		onwheel={brushable ? zoomCtl.handleWheelZoom : null}
 	>
 		<!-- Y Axis -->
 		<Axis
@@ -972,6 +989,24 @@
 				/>
 			{/if}
 		{/each}
+
+		<!-- Brush-zoom overlay (Zoom mode or Shift+drag); box renders above the data. -->
+		{#if brushable}
+			<g
+				style="transform: translate({theData.plot.padding.left}px, {theData.plot.padding
+					.top}px);"
+			>
+				<PlotBrush
+					{svgEl}
+					{zoomMode}
+					padding={theData.plot.padding}
+					plotwidth={theData.plot.plotwidth}
+					plotheight={theData.plot.plotheight}
+					onZoom={zoomCtl.applyBrushZoom}
+					onReset={zoomCtl.resetZoom}
+				/>
+			</g>
+		{/if}
 	</svg>
 
 	<PlotTooltip visible={tooltip.visible} x={tooltip.x} y={tooltip.y} content={tooltip.content} />

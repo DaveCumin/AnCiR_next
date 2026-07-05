@@ -8,34 +8,23 @@
 	// Presentational shell around shared helpers; positioned by the parent host.
 	import Icon from '$lib/icons/Icon.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
-	import { core } from '$lib/core/core.svelte';
 	import { isZoomMode, toggleZoomMode } from '$lib/plots/plotZoomMode.svelte.js';
-	import { applyLinkedZoom } from '$lib/plots/plotZoom.js';
+	import { getZoomAdapter, isZoomCapable } from '$lib/plots/zoomAdapters.js';
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 
 	let { plot } = $props();
 
-	// Only scatter-family plots currently support brush/wheel zoom.
-	const canZoom = $derived(plot?.type === 'scatterplot');
+	// Scatterplot + the point plots (periodogram / correlogram / fft) support zoom.
+	const canZoom = $derived(isZoomCapable(plot?.type));
 	const zoomOn = $derived(!!plot && isZoomMode(plot.id));
 
-	const inner = $derived(plot?.plot);
-	const isZoomed = $derived(
-		!!inner &&
-			(inner.xlimsIN?.[0] != null ||
-				inner.xlimsIN?.[1] != null ||
-				inner.ylimsLeftIN?.[0] != null ||
-				inner.ylimsLeftIN?.[1] != null ||
-				inner.ylimsRightIN?.[0] != null ||
-				inner.ylimsRightIN?.[1] != null)
-	);
+	// The adapter knows each plot type's limit fields; recompute it reactively so
+	// isZoomed tracks the live limits.
+	const adapter = $derived(getZoomAdapter(plot));
+	const isZoomed = $derived(!!adapter && adapter.isZoomed());
 
 	function resetZoom() {
-		applyLinkedZoom(
-			plot,
-			{ xlims: [null, null], ylimsLeft: [null, null], ylimsRight: [null, null] },
-			core.plots
-		);
+		adapter?.reset();
 	}
 
 	// Save menu (reuses the control panel's SavePlot dropdown).
