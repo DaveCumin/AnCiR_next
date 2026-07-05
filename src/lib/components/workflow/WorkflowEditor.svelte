@@ -770,10 +770,12 @@
 
 	// --- Alt-drag marquee selection ---
 	// null when idle; otherwise the live rubber-band in CANVAS coords:
-	//   { startX, startY, curX, curY, additive }
+	//   { startX, startY, curX, curY, additive, base }
 	// Plain background drag still pans (handleCanvasMouseDown); holding Alt starts
 	// a marquee instead, and Alt+Shift adds to the existing selection rather than
-	// replacing it. Finalised in stopAll().
+	// replacing it. `base` snapshots the selection at drag-start so the live
+	// intersect result is (base ∪ nodes-in-box) rather than compounding. Selection
+	// updates live on every move; stopAll() just finalises the focused node.
 	let marquee = $state(null);
 	// The marquee's mouseup also produces a background `click`; without this guard
 	// handleBackgroundClick would immediately wipe the selection we just made.
@@ -1165,7 +1167,18 @@
 		// a node still moves the node rather than starting a marquee.
 		if (e.altKey) {
 			const { x, y } = toCanvasCoords(e.clientX, e.clientY);
-			marquee = { startX: x, startY: y, curX: x, curY: y, additive: e.shiftKey };
+			marquee = {
+				startX: x,
+				startY: y,
+				curX: x,
+				curY: y,
+				additive: e.shiftKey,
+				base: e.shiftKey ? new Set(multiSelectedNodeIds) : new Set()
+			};
+			// Track on the window so the drag survives the cursor passing over nodes
+			// and releasing anywhere (over an expanded node panel, off-canvas, etc.).
+			window.addEventListener('mousemove', onMarqueeMove);
+			window.addEventListener('mouseup', onMarqueeUp);
 			return;
 		}
 		isPanning = true;
@@ -1266,13 +1279,6 @@
 
 	function handleMouseMove(e) {
 		mouseCanvas = toCanvasCoords(e.clientX, e.clientY);
-
-		// Live marquee: just grow the rubber-band. Selection is computed on release.
-		if (marquee) {
-			marquee.curX = mouseCanvas.x;
-			marquee.curY = mouseCanvas.y;
-			return;
-		}
 
 		// Feed the edge-pan engine so it nudges the canvas toward the cursor
 		// while a node drag is in progress.
@@ -2157,19 +2163,31 @@
 		}
 	}
 
-	// Finalise an in-progress Alt-drag marquee: select every node whose box
-	// intersects the rubber-band. A sub-threshold drag (a click that happened to
-	// hold Alt) selects nothing and lets the normal background-click deselect run.
-	function finishMarquee() {
-		const rect = marqueeRect;
-		const additive = marquee?.additive;
-		marquee = null;
-		if (!rect) return;
-		// Ignore trivial drags (compare in screen px so the threshold is zoom-stable).
-		if (rect.w * zoom < 4 && rect.h * zoom < 4) return;
+	// Window-level marquee tracking (added on drag-start in handleCanvasMouseDown).
+	function onMarqueeMove(e) {
+		if (!marquee) return;
+		const { x, y } = toCanvasCoords(e.clientX, e.clientY);
+		marquee.curX = x;
+		marquee.curY = y;
+		updateMarqueeSelection();
+	}
+	function onMarqueeUp() {
+		removeMarqueeListeners();
+		finishMarquee();
+	}
+	function removeMarqueeListeners() {
+		window.removeEventListener('mousemove', onMarqueeMove);
+		window.removeEventListener('mouseup', onMarqueeUp);
+	}
+	// Drop any dangling marquee listeners if the canvas unmounts mid-drag.
+	$effect(() => removeMarqueeListeners);
 
-		suppressBackgroundClick = true;
-		const next = additive ? new Set(multiSelectedNodeIds) : new Set();
+	// Recompute the marquee selection = base ∪ (every node whose box intersects the
+	// rubber-band). Called live on each move and once more on release.
+	function updateMarqueeSelection() {
+		const rect = marqueeRect;
+		if (!marquee || !rect) return;
+		const next = new Set(marquee.base);
 		for (const node of allNodes) {
 			const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id];
 			if (!pos) continue;
@@ -2182,17 +2200,27 @@
 			if (rectsIntersect(rect, nodeBox)) next.add(node.id);
 		}
 		multiSelectedNodeIds = next;
-		// Keep a focused/primary node so the control panel has something to show.
-		const primary = next.size ? Array.from(next)[next.size - 1] : null;
+	}
+
+	// Finalise an in-progress Alt-drag marquee. Selection is already live from the
+	// moves; here we just pick a focused/primary node and suppress the trailing
+	// background click so it doesn't wipe the selection. A zero-drag alt-click that
+	// selected nothing falls through to the normal deselect.
+	function finishMarquee() {
+		if (!marquee) return;
+		updateMarqueeSelection();
+		const selected = multiSelectedNodeIds;
+		marquee = null;
+		if (selected.size === 0) return;
+		suppressBackgroundClick = true;
+		const primary = Array.from(selected)[selected.size - 1];
 		appState.canvasSelectedNodeId = primary;
-		if (primary != null) selectedEdgeKey = null;
+		selectedEdgeKey = null;
 	}
 
 	function stopAll() {
-		if (marquee) {
-			finishMarquee();
-			return;
-		}
+		// Marquee is driven by its own window-level listeners (onMarqueeUp), not by
+		// this canvas mouseup — a release over a node/panel never reaches here.
 		// Splice-on-port takes priority over splice-on-edge — it expresses a
 		// more specific intent ("between this source and ALL its consumers").
 		if (dragInfo?.moved && dropTargetPortKey) {
@@ -3147,8 +3175,10 @@
 
 	function handleKeyDown(e) {
 		if (e.key === 'Escape') {
-			// Cancel an in-progress marquee without touching the existing selection.
+			// Cancel an in-progress marquee, restoring the selection it started from.
 			if (marquee) {
+				removeMarqueeListeners();
+				multiSelectedNodeIds = new Set(marquee.base);
 				marquee = null;
 				return;
 			}
@@ -3395,7 +3425,7 @@
 						class:dimmed={isDimmed}
 						class:changed={isRecentlyChanged}
 						class:group-wrapper={isGroup}
-						class:multi-selected={isMultiSelected && multiSelectedNodeIds.size > 1}
+						class:multi-selected={isMultiSelected && (multiSelectedNodeIds.size > 1 || !!marquee)}
 						data-node-id={node.id}
 						data-group-id={isGroup ? node.id : null}
 						style="position: absolute; left: {pos.x}px; top: {pos.y}px; z-index: {nodeZIndex};"
@@ -3712,8 +3742,8 @@
 		position: absolute;
 		z-index: 25;
 		pointer-events: none;
-		background: color-mix(in srgb, var(--accent) 12%, transparent);
-		border: 1px dashed var(--accent);
+		background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+		border: 1px dashed var(--color-accent);
 	}
 
 	.workflow-node-wrapper {
