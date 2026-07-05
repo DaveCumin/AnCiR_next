@@ -3,8 +3,8 @@
 	//
 	// Renders inside the plot's SVG, translated to the plot area origin. A drag
 	// draws a selection box; on release it calls `onZoom({ x0,y0,x1,y1 })` with the
-	// corners in plot user-units (top-left origin). A double-click calls `onReset`.
-	// When `zoomed` is true a small "reset" affordance shows in the bottom-right.
+	// corners in plot user-units (top-left origin). A double-click calls `onReset`
+	// (the selection toolbar's Reset button is the primary reset affordance).
 	//
 	// The hit rect sits BELOW the data layers so their hover-tooltips keep working.
 	// It only STARTS the drag (pointerdown); tracking then moves to WINDOW-level
@@ -14,13 +14,7 @@
 
 	import { brushIsSignificant } from './helpers/brushHelpers.js';
 
-	let {
-		plotwidth,
-		plotheight,
-		zoomed = false,
-		onZoom,
-		onReset
-	} = $props();
+	let { plotwidth, plotheight, onZoom, onReset } = $props();
 
 	let hitEl = $state(null);
 	// Live drag in plot user-units, or null when idle.
@@ -114,24 +108,6 @@
 			height={rect.h}
 		/>
 	{/if}
-
-	{#if zoomed && !drag}
-		<!-- Bottom-right corner: legends default to top-right, so this stays clear. -->
-		<g
-			class="brush-reset"
-			transform="translate({plotwidth - 52}, {plotheight - 24})"
-			onpointerdown={(e) => {
-				e.stopPropagation();
-				onReset?.();
-			}}
-			role="button"
-			tabindex="-1"
-			aria-label="Reset zoom"
-		>
-			<rect x="0" y="0" width="46" height="18" rx="4" />
-			<text x="23" y="13">reset</text>
-		</g>
-	{/if}
 </g>
 
 <style>
@@ -144,24 +120,5 @@
 		stroke-width: 1;
 		stroke-dasharray: 4 3;
 		pointer-events: none;
-	}
-	.brush-reset {
-		cursor: pointer;
-	}
-	.brush-reset rect {
-		fill: var(--surface-card, #fff);
-		stroke: var(--color-accent);
-		stroke-width: 1;
-		opacity: 0.92;
-	}
-	.brush-reset text {
-		fill: var(--color-accent);
-		font-size: 11px;
-		text-anchor: middle;
-		dominant-baseline: middle;
-		user-select: none;
-	}
-	.brush-reset:hover rect {
-		fill: color-mix(in srgb, var(--color-accent) 14%, var(--surface-card, #fff));
 	}
 </style>

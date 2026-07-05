@@ -724,18 +724,6 @@
 			: null;
 		applyLinkedZoom(theData, { xlims, ylimsLeft, ylimsRight }, core.plots);
 	}
-	const isZoomed = $derived.by(() => {
-		const p = theData?.plot;
-		if (!p) return false;
-		return (
-			p.xlimsIN?.[0] != null ||
-			p.xlimsIN?.[1] != null ||
-			p.ylimsLeftIN?.[0] != null ||
-			p.ylimsLeftIN?.[1] != null ||
-			p.ylimsRightIN?.[0] != null ||
-			p.ylimsRightIN?.[1] != null
-		);
-	});
 
 	//Tooltip
 	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
@@ -1207,7 +1195,6 @@
 				<PlotBrush
 					plotwidth={theData.plot.plotwidth}
 					plotheight={theData.plot.plotheight}
-					zoomed={isZoomed}
 					onZoom={applyBrushZoom}
 					onReset={resetBrushZoom}
 				/>
