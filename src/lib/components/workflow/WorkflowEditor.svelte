@@ -3560,11 +3560,13 @@
 									class="process-editor-panel"
 									style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;"
 								>
-									<!-- bind:p (rather than p=): the process/TP component declares `p`
-									     as $bindable and binds into `p.args.*` via ColumnSelector; without
-									     a declared binding here Svelte logs ownership_invalid_binding. `p`
-									     is a shared reactive instance so behaviour is unchanged. -->
-									<PComp bind:p={node.processObj} />
+									<!-- p= (not bind:p): node.processObj is a plain member of the
+									     allNodes $derived, so bind: warns binding_property_non_reactive.
+									     p is a shared reactive Process instance mutated in place, so its
+									     changes propagate without a binding. Svelte's dev-only
+									     ownership_invalid_binding note here is a benign false positive for
+									     this shared-object pattern. -->
+									<PComp p={node.processObj} />
 								</div>
 							{/if}
 						{:else if isExpanded && node.type === 'tableprocess' && node.tpObj}
@@ -3574,8 +3576,8 @@
 									class="process-editor-panel"
 									style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;"
 								>
-									<!-- bind:p — see the process-panel note above. -->
-									<TPComp bind:p={node.tpObj} />
+									<!-- p= (not bind:p) — see the process-panel note above. -->
+									<TPComp p={node.tpObj} />
 								</div>
 							{/if}
 						{/if}
