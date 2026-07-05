@@ -1111,7 +1111,9 @@
 		width={theData.plot.parentBox.width}
 		height={theData.plot.parentBox.height}
 		viewBox="0 0 {theData.plot.parentBox.width} {theData.plot.parentBox.height}"
-		style={`background: var(--surface-card); position: absolute;`}
+		style={`background: var(--surface-card); position: absolute;${
+			brushable && zoomMode ? ' cursor: crosshair;' : ''
+		}`}
 		ontooltip={handleTooltip}
 		onwheel={brushable ? handleWheelZoom : null}
 	>
@@ -1184,23 +1186,6 @@
 			{/each}
 		</g>
 
-		<!-- Brush-zoom overlay sits BELOW the data layers so points/lines keep
-		     their hover tooltips. Only when Zoom mode is on for this plot, so it
-		     doesn't otherwise swallow drags. Full-size interactive plots only. -->
-		{#if brushable && zoomMode}
-			<g
-				style="transform: translate({theData.plot.padding.left}px, {theData.plot.padding
-					.top}px);"
-			>
-				<PlotBrush
-					plotwidth={theData.plot.plotwidth}
-					plotheight={theData.plot.plotheight}
-					onZoom={applyBrushZoom}
-					onReset={resetBrushZoom}
-				/>
-			</g>
-		{/if}
-
 		{#each theData.plot.data as datum}
 			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
 				{@const _xOrigin = theData.plot.xOriginFor(datum.x)}
@@ -1254,6 +1239,25 @@
 				/>
 			{/if}
 		{/each}
+		<!-- Brush-zoom: listens for pointerdown on the whole <svg> (via svgEl) so a
+		     drag can START anywhere over the plot, including on top of a point, and
+		     hover-tooltips still work (no covering overlay). Only in Zoom mode. The
+		     selection box renders here, above the data, translated to the plot area. -->
+		{#if brushable && zoomMode}
+			<g
+				style="transform: translate({theData.plot.padding.left}px, {theData.plot.padding
+					.top}px);"
+			>
+				<PlotBrush
+					{svgEl}
+					padding={theData.plot.padding}
+					plotwidth={theData.plot.plotwidth}
+					plotheight={theData.plot.plotheight}
+					onZoom={applyBrushZoom}
+					onReset={resetBrushZoom}
+				/>
+			</g>
+		{/if}
 		<Legend
 			legendData={theData.plot.legend}
 			items={theData.plot.getLegendItems}
