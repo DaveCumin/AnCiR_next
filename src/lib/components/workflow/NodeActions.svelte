@@ -32,7 +32,11 @@
 		// Delete. `deleteTooltip` lets callers say "Delete plot" vs "Delete node".
 		showDelete = true,
 		onDelete,
-		deleteTooltip = 'Delete'
+		deleteTooltip = 'Delete',
+		// Uncombine (composites): break the composite apart, leaving its members on
+		// the canvas. Shown instead of delete for composite nodes.
+		showUncombine = false,
+		onUncombine
 	} = $props();
 
 	// Buttons must not start a node/plot drag or bubble to canvas selection.
@@ -79,6 +83,23 @@
 			{@attach tooltip(expanded ? 'Collapse' : 'Expand')}
 		>
 			<span class="na-glyph">{expanded ? '⤡' : '⤢'}</span>
+		</button>
+	{/if}
+
+	{#if showUncombine}
+		<button
+			type="button"
+			class="na-btn na-action"
+			aria-label="Uncombine"
+			onpointerdown={stop}
+			onmousedown={stop}
+			onclick={(e) => {
+				stop(e);
+				onUncombine?.(e);
+			}}
+			{@attach tooltip('Uncombine')}
+		>
+			<Icon name="split" width={14} height={14} />
 		</button>
 	{/if}
 
