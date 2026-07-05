@@ -9,12 +9,14 @@
 	// release calls `onZoom({x0,y0,x1,y1})` in plot user-units. Double-click on the
 	// plot calls `onReset` (the selection toolbar's Reset is the primary reset).
 	//
-	// This component is only mounted while Zoom mode is on, so its listeners exist
-	// only then — nothing to gate at the DOM level.
+	// Mounted for every interactive plot, so it ARMS conditionally: a drag starts
+	// only when Zoom mode is on OR Shift is held (Shift+drag zooms any plot, like
+	// Shift+wheel). Double-click resets only in Zoom mode, so it doesn't swallow
+	// the plot card's double-click (maximise) the rest of the time.
 
 	import { brushIsSignificant } from './helpers/brushHelpers.js';
 
-	let { svgEl, padding, plotwidth, plotheight, onZoom, onReset } = $props();
+	let { svgEl, zoomMode = false, padding, plotwidth, plotheight, onZoom, onReset } = $props();
 
 	// Live drag in plot user-units (0..plotwidth, 0..plotheight), or null when idle.
 	let drag = $state(null);
@@ -57,6 +59,9 @@
 
 	function onSvgPointerDown(e) {
 		if (e.button !== 0) return;
+		// Arm only in Zoom mode or while Shift is held; otherwise leave the press
+		// alone (tooltips, card selection, etc. behave normally).
+		if (!zoomMode && !e.shiftKey) return;
 		const l = toLocal(e.clientX, e.clientY);
 		if (!l) return;
 		// Only start inside the plotting region (ignore axes / margins / legend).
@@ -72,6 +77,9 @@
 		window.addEventListener('pointercancel', onWindowUp);
 	}
 	function onSvgDblClick(e) {
+		// Only claim the double-click in Zoom mode; otherwise let it reach the plot
+		// card (e.g. maximise).
+		if (!zoomMode) return;
 		e.stopPropagation();
 		onReset?.();
 	}

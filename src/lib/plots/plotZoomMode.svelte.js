@@ -26,6 +26,9 @@ export function toggleZoomMode(plotId) {
 
 /** @param {number|string} plotId @param {boolean} on */
 export function setZoomMode(plotId, on) {
+	// No-op when already in the target state, so callers (e.g. a deselect effect)
+	// can call this freely without churning the Set / triggering re-renders.
+	if (zoomMode.ids.has(plotId) === on) return;
 	const next = new Set(zoomMode.ids);
 	if (on) next.add(plotId);
 	else next.delete(plotId);

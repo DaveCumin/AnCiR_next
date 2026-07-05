@@ -1241,15 +1241,18 @@
 		{/each}
 		<!-- Brush-zoom: listens for pointerdown on the whole <svg> (via svgEl) so a
 		     drag can START anywhere over the plot, including on top of a point, and
-		     hover-tooltips still work (no covering overlay). Only in Zoom mode. The
-		     selection box renders here, above the data, translated to the plot area. -->
-		{#if brushable && zoomMode}
+		     hover-tooltips still work (no covering overlay). Mounted for every
+		     interactive plot; it only ARMS when Zoom mode is on OR Shift is held (so
+		     Shift+drag zooms any plot, like Shift+wheel). Selection box renders here,
+		     above the data, translated to the plot area. -->
+		{#if brushable}
 			<g
 				style="transform: translate({theData.plot.padding.left}px, {theData.plot.padding
 					.top}px);"
 			>
 				<PlotBrush
 					{svgEl}
+					{zoomMode}
 					padding={theData.plot.padding}
 					plotwidth={theData.plot.plotwidth}
 					plotheight={theData.plot.plotheight}

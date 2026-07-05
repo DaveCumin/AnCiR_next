@@ -20,7 +20,7 @@
 	import { tooltip } from '$lib/utils/tooltip.js';
 
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { fly, fade } from 'svelte/transition';
 
 	import { deselectAllPlots } from '$lib/core/Plot.svelte';
@@ -29,7 +29,7 @@
 	import { handleCanvasFileDrop } from '$lib/core/dataSourceActions.js';
 	import SelectionLayoutToolbar from '$lib/components/reusables/SelectionLayoutToolbar.svelte';
 	import PlotSelectionToolbar from '$lib/components/reusables/PlotSelectionToolbar.svelte';
-	import { isZoomMode } from '$lib/plots/plotZoomMode.svelte.js';
+	import { isZoomMode, setZoomMode } from '$lib/plots/plotZoomMode.svelte.js';
 	import { alignBoxes, distributeBoxes, arrangeGrid } from '$lib/core/layoutHelpers.js';
 	import { snapToGrid } from '$lib/core/core.svelte.js';
 
@@ -37,6 +37,17 @@
 
 	// --- Multi-plot align / distribute / grid (worksheet) ---
 	let selectedPlots = $derived(core.plots.filter((p) => p.selected));
+
+	// Zoom mode is a per-plot tool that only makes sense while the plot is selected
+	// (the toolbar that toggles it shows on selection). Clear it whenever a plot is
+	// deselected, so re-selecting always starts from zoom-off. Tracks each plot's
+	// `selected`; the clearing is untracked (setZoomMode is a no-op when unchanged).
+	$effect(() => {
+		core.plots.forEach((p) => p.selected); // establish selection dependency
+		untrack(() => {
+			for (const p of core.plots) if (!p.selected) setZoomMode(p.id, false);
+		});
+	});
 
 	// Box footprint mirrors Draggable's rendered size (width + 20, height + 50)
 	// so alignment uses what the user actually sees.
