@@ -42,7 +42,7 @@
 	import { canvasFileDrop } from '$lib/core/canvasFileDrop.js';
 	import { handleCanvasFileDrop } from '$lib/core/dataSourceActions.js';
 	import SelectionLayoutToolbar from '$lib/components/reusables/SelectionLayoutToolbar.svelte';
-	import { alignBoxes, distributeBoxes } from '$lib/core/layoutHelpers.js';
+	import { alignBoxes, distributeBoxes, rectsIntersect } from '$lib/core/layoutHelpers.js';
 	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
 	import CompactNode from './CompactNode.svelte';
 	import NodeActions from './NodeActions.svelte';
@@ -768,6 +768,27 @@
 	let panStartX = $state(0);
 	let panStartY = $state(0);
 
+	// --- Alt-drag marquee selection ---
+	// null when idle; otherwise the live rubber-band in CANVAS coords:
+	//   { startX, startY, curX, curY, additive }
+	// Plain background drag still pans (handleCanvasMouseDown); holding Alt starts
+	// a marquee instead, and Alt+Shift adds to the existing selection rather than
+	// replacing it. Finalised in stopAll().
+	let marquee = $state(null);
+	// The marquee's mouseup also produces a background `click`; without this guard
+	// handleBackgroundClick would immediately wipe the selection we just made.
+	let suppressBackgroundClick = false;
+	// Rendered rect (canvas coords), normalised so width/height are non-negative.
+	const marqueeRect = $derived.by(() => {
+		if (!marquee) return null;
+		return {
+			x: Math.min(marquee.startX, marquee.curX),
+			y: Math.min(marquee.startY, marquee.curY),
+			w: Math.abs(marquee.curX - marquee.startX),
+			h: Math.abs(marquee.curY - marquee.startY)
+		};
+	});
+
 	// --- Node drag state ---
 	// { nodeId, startMouseCanvas: {x,y}, startPos: {x,y}, moved: boolean }
 	// Lifecycle: set on pointerdown on a node; `moved` flips true once the pointer
@@ -1138,6 +1159,15 @@
 
 	function handleCanvasMouseDown(e) {
 		if (e.button !== 0) return;
+		// Alt+drag on empty canvas = marquee select (Alt+Shift adds to selection).
+		// Plain drag keeps panning. The marquee only starts here, on the canvas
+		// background — node wrappers stopPropagation, so an Alt-drag that begins on
+		// a node still moves the node rather than starting a marquee.
+		if (e.altKey) {
+			const { x, y } = toCanvasCoords(e.clientX, e.clientY);
+			marquee = { startX: x, startY: y, curX: x, curY: y, additive: e.shiftKey };
+			return;
+		}
 		isPanning = true;
 		panStartX = e.clientX - panX;
 		panStartY = e.clientY - panY;
@@ -1236,6 +1266,13 @@
 
 	function handleMouseMove(e) {
 		mouseCanvas = toCanvasCoords(e.clientX, e.clientY);
+
+		// Live marquee: just grow the rubber-band. Selection is computed on release.
+		if (marquee) {
+			marquee.curX = mouseCanvas.x;
+			marquee.curY = mouseCanvas.y;
+			return;
+		}
 
 		// Feed the edge-pan engine so it nudges the canvas toward the cursor
 		// while a node drag is in progress.
@@ -2120,7 +2157,42 @@
 		}
 	}
 
+	// Finalise an in-progress Alt-drag marquee: select every node whose box
+	// intersects the rubber-band. A sub-threshold drag (a click that happened to
+	// hold Alt) selects nothing and lets the normal background-click deselect run.
+	function finishMarquee() {
+		const rect = marqueeRect;
+		const additive = marquee?.additive;
+		marquee = null;
+		if (!rect) return;
+		// Ignore trivial drags (compare in screen px so the threshold is zoom-stable).
+		if (rect.w * zoom < 4 && rect.h * zoom < 4) return;
+
+		suppressBackgroundClick = true;
+		const next = additive ? new Set(multiSelectedNodeIds) : new Set();
+		for (const node of allNodes) {
+			const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id];
+			if (!pos) continue;
+			const nodeBox = {
+				x: pos.x,
+				y: pos.y,
+				w: getNodeWidth(node),
+				h: getNodeRenderHeight(node)
+			};
+			if (rectsIntersect(rect, nodeBox)) next.add(node.id);
+		}
+		multiSelectedNodeIds = next;
+		// Keep a focused/primary node so the control panel has something to show.
+		const primary = next.size ? Array.from(next)[next.size - 1] : null;
+		appState.canvasSelectedNodeId = primary;
+		if (primary != null) selectedEdgeKey = null;
+	}
+
 	function stopAll() {
+		if (marquee) {
+			finishMarquee();
+			return;
+		}
 		// Splice-on-port takes priority over splice-on-edge — it expresses a
 		// more specific intent ("between this source and ALL its consumers").
 		if (dragInfo?.moved && dropTargetPortKey) {
@@ -2478,6 +2550,12 @@
 	}
 
 	function handleBackgroundClick() {
+		// A marquee drag ends with a background click; don't let it wipe the
+		// selection the marquee just made.
+		if (suppressBackgroundClick) {
+			suppressBackgroundClick = false;
+			return;
+		}
 		deselectAllPlots();
 		appState.canvasSelectedNodeId = null;
 		multiSelectedNodeIds = new Set();
@@ -3069,6 +3147,11 @@
 
 	function handleKeyDown(e) {
 		if (e.key === 'Escape') {
+			// Cancel an in-progress marquee without touching the existing selection.
+			if (marquee) {
+				marquee = null;
+				return;
+			}
 			clearSelection();
 			return;
 		}
@@ -3239,6 +3322,13 @@
 			class="canvas-inner"
 			style="transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0; width: {canvasWidth}px; height: {canvasHeight}px; position: relative;"
 		>
+			{#if marqueeRect}
+				<div
+					class="marquee-rect"
+					style="left:{marqueeRect.x}px; top:{marqueeRect.y}px; width:{marqueeRect.w}px; height:{marqueeRect.h}px; border-width:{1 /
+						zoom}px;"
+				></div>
+			{/if}
 			{#each expandedComposites as cc (cc.id)}
 				<div
 					class="composite-frame"
@@ -3614,6 +3704,16 @@
 
 	.canvas-viewport.panning {
 		cursor: grabbing;
+	}
+
+	/* Alt-drag marquee rubber-band. Lives inside the scaled .canvas-inner, so the
+	   border-width is divided by the zoom inline to keep a crisp ~1px edge. */
+	.marquee-rect {
+		position: absolute;
+		z-index: 25;
+		pointer-events: none;
+		background: color-mix(in srgb, var(--accent) 12%, transparent);
+		border: 1px dashed var(--accent);
 	}
 
 	.workflow-node-wrapper {

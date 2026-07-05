@@ -8,6 +8,28 @@
 
 /** @typedef {{ id: any, x: number, y: number, w: number, h: number }} Box */
 
+/**
+ * Axis-aligned rectangle overlap test. Rectangles are given as top-left origin
+ * with width/height ({ x, y, w, h }); touching edges count as overlapping so a
+ * zero-area marquee flush against a box edge still selects it. Negative widths
+ * are tolerated by normalising first, so callers can pass a raw drag rect
+ * (start → current) without ordering the corners.
+ * @param {{x:number,y:number,w:number,h:number}} a
+ * @param {{x:number,y:number,w:number,h:number}} b
+ * @returns {boolean}
+ */
+export function rectsIntersect(a, b) {
+	const aL = Math.min(a.x, a.x + a.w);
+	const aR = Math.max(a.x, a.x + a.w);
+	const aT = Math.min(a.y, a.y + a.h);
+	const aB = Math.max(a.y, a.y + a.h);
+	const bL = Math.min(b.x, b.x + b.w);
+	const bR = Math.max(b.x, b.x + b.w);
+	const bT = Math.min(b.y, b.y + b.h);
+	const bB = Math.max(b.y, b.y + b.h);
+	return aL <= bR && aR >= bL && aT <= bB && aB >= bT;
+}
+
 function bounds(boxes) {
 	let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 	for (const b of boxes) {
