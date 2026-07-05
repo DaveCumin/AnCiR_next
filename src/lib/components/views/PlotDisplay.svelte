@@ -28,6 +28,8 @@
 	import { canvasFileDrop } from '$lib/core/canvasFileDrop.js';
 	import { handleCanvasFileDrop } from '$lib/core/dataSourceActions.js';
 	import SelectionLayoutToolbar from '$lib/components/reusables/SelectionLayoutToolbar.svelte';
+	import PlotSelectionToolbar from '$lib/components/reusables/PlotSelectionToolbar.svelte';
+	import { isZoomMode } from '$lib/plots/plotZoomMode.svelte.js';
 	import { alignBoxes, distributeBoxes, arrangeGrid } from '$lib/core/layoutHelpers.js';
 	import { snapToGrid } from '$lib/core/core.svelte.js';
 
@@ -318,6 +320,10 @@
 				canDistribute={selectedPlots.length >= 3}
 			/>
 		</div>
+	{:else if selectedPlots.length === 1}
+		<div class="selection-toolbar-host">
+			<PlotSelectionToolbar plot={selectedPlots[0]} />
+		</div>
 	{/if}
 	<div
 		class="canvas-viewport"
@@ -351,7 +357,7 @@
 							viewportEl={canvasViewportEl}
 						>
 							{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
-							<Plot theData={plot} which="plot" brushable={true} />
+							<Plot theData={plot} which="plot" brushable={true} zoomMode={isZoomMode(plot.id)} />
 						</Draggable>
 					{/if}
 				{/each}

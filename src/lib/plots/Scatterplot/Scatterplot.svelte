@@ -656,7 +656,11 @@
 	} from '$lib/components/plotbits/helpers/brushHelpers.js';
 	import { applyLinkedZoom } from '$lib/plots/plotZoom.js';
 
-	let { theData, which, brushable = false } = $props();
+	// `brushable` = this is a full-size interactive workspace plot (vs a tiny
+	// embedded preview). `zoomMode` = the user has turned Zoom on for THIS plot via
+	// the selection toolbar; only then do brush + plain-wheel zoom engage, so plain
+	// scroll keeps panning the canvas otherwise. Shift+wheel always zooms.
+	let { theData, which, brushable = false, zoomMode = false } = $props();
 
 	// --- Brush-to-zoom (view only; writes the same *IN limit overrides the axis
 	// control inputs use, so it's fully reversible and serialises with the plot). ---
@@ -685,6 +689,10 @@
 	let svgEl = $state(null);
 	function handleWheelZoom(e) {
 		if (!brushable) return;
+		// Plain wheel only zooms when Zoom mode is on for this plot; otherwise let
+		// it bubble to the workspace so scroll pans the canvas. Shift+wheel always
+		// zooms (the power-user shortcut, works even with Zoom mode off).
+		if (!zoomMode && !e.shiftKey) return;
 		const p = theData.plot;
 		const rect = svgEl?.getBoundingClientRect();
 		if (!rect) return;
@@ -1189,9 +1197,9 @@
 		</g>
 
 		<!-- Brush-zoom overlay sits BELOW the data layers so points/lines keep
-		     their hover tooltips; the hit rect grabs pointer capture on press so a
-		     drag still tracks over the data. Full-size interactive plots only. -->
-		{#if brushable}
+		     their hover tooltips. Only when Zoom mode is on for this plot, so it
+		     doesn't otherwise swallow drags. Full-size interactive plots only. -->
+		{#if brushable && zoomMode}
 			<g
 				style="transform: translate({theData.plot.padding.left}px, {theData.plot.padding
 					.top}px);"
