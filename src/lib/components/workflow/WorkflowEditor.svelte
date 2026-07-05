@@ -3560,7 +3560,11 @@
 									class="process-editor-panel"
 									style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;"
 								>
-									<PComp p={node.processObj} />
+									<!-- bind:p (rather than p=): the process/TP component declares `p`
+									     as $bindable and binds into `p.args.*` via ColumnSelector; without
+									     a declared binding here Svelte logs ownership_invalid_binding. `p`
+									     is a shared reactive instance so behaviour is unchanged. -->
+									<PComp bind:p={node.processObj} />
 								</div>
 							{/if}
 						{:else if isExpanded && node.type === 'tableprocess' && node.tpObj}
@@ -3570,7 +3574,8 @@
 									class="process-editor-panel"
 									style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;"
 								>
-									<TPComp p={node.tpObj} />
+									<!-- bind:p — see the process-panel note above. -->
+									<TPComp bind:p={node.tpObj} />
 								</div>
 							{/if}
 						{/if}
