@@ -361,7 +361,13 @@
 		const _yIN = p.args.yIN;
 		const _segs = segmentCount;
 		if (!mounted) return;
-		untrack(() => {
+		// Reconcile OUTSIDE this effect. reconcileOutputs() calls `new Column()`, and a
+		// $derived created while an effect is the active reaction becomes inert when
+		// that effect re-runs (Svelte's `derived_inert`) — so a *reused* segment column
+		// would be left owned by a now-destroyed effect and read stale/empty data (e.g.
+		// the pre-split-time segment failing to plot). Running in a microtask (no active
+		// effect) makes the new columns' deriveds root-owned, so they stay live.
+		queueMicrotask(() => {
 			if (reconcileOutputs()) recalculate();
 		});
 	});

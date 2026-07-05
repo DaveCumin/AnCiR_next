@@ -186,7 +186,10 @@
 		const h = getHash;
 		if (!mounted) return;
 		if (h !== lastHash) {
-			untrack(() => doGroup());
+			// Defer reconcile out of the effect: doGroup() creates per-group output columns
+			// via `new Column()`, whose $derived fields go inert if created while this effect
+			// is the active reaction (Svelte derived_inert). A microtask → root-owned.
+			queueMicrotask(() => untrack(() => doGroup()));
 			lastHash = h;
 		}
 	});

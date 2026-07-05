@@ -314,9 +314,14 @@
 		const _y = p.args.yIN;
 		const _keys = currentStatKeys;
 		if (!mounted) return;
-		untrack(() => {
-			if (syncStatColumns()) recompute();
-		});
+		// Defer reconcile out of the effect: syncStatColumns() calls `new Column()`,
+		// whose $derived fields go inert if created while this effect is the active
+		// reaction (Svelte derived_inert). A microtask has no active effect → root-owned.
+		queueMicrotask(() =>
+			untrack(() => {
+				if (syncStatColumns()) recompute();
+			})
+		);
 	});
 
 	function recompute() {

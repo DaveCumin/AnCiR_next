@@ -344,7 +344,7 @@
 	$effect(() => {
 		p.args.yIN; // read to track as reactive dependency
 		if (!mounted) return;
-		untrack(() => onYSelectionChange());
+		queueMicrotask(() => untrack(() => onYSelectionChange()));
 	});
 
 	onMount(() => {

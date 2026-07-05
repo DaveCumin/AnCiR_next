@@ -192,7 +192,7 @@
 	$effect(() => {
 		p.args.yIN; // track
 		if (!mounted) return;
-		untrack(() => onYSelectionChange());
+		queueMicrotask(() => untrack(() => onYSelectionChange()));
 	});
 
 	onMount(() => {

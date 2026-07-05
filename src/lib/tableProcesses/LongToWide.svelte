@@ -263,9 +263,16 @@
 		const dataHash = getHash;
 		if (!mounted) return;
 		if (dataHash !== lastHash) {
-			untrack(() => {
-				doLongToWide();
-			});
+			// Defer reconcile out of the effect: doLongToWide() creates per-category output
+			// columns via `new Column()`, whose $derived fields go inert if created while
+			// this effect is the active reaction (Svelte derived_inert). A microtask has no
+			// active effect → root-owned. lastHash is set synchronously so the guard still
+			// coalesces rapid re-runs.
+			queueMicrotask(() =>
+				untrack(() => {
+					doLongToWide();
+				})
+			);
 			lastHash = dataHash;
 		}
 	});

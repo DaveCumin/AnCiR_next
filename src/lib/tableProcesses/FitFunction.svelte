@@ -538,9 +538,14 @@
 	$effect(() => {
 		const _yIN = p.args.yIN;
 		if (!mounted) return;
-		untrack(() => {
-			if (syncYColumns()) getFit();
-		});
+		// Defer reconcile out of the effect: syncYColumns() calls `new Column()`, whose
+		// $derived fields go inert if created while this effect is the active reaction
+		// (Svelte derived_inert). A microtask runs with no active effect → root-owned.
+		queueMicrotask(() =>
+			untrack(() => {
+				if (syncYColumns()) getFit();
+			})
+		);
 	});
 
 	onMount(() => {
