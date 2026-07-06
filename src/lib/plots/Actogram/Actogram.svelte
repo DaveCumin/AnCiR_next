@@ -821,7 +821,9 @@
 									e.stopPropagation();
 									datum.draw = !datum.draw;
 								}}
-								{@attach attachTooltip(datum.draw ? 'Hide this data series' : 'Show this data series')}
+								{@attach attachTooltip(
+									datum.draw ? 'Hide this data series' : 'Show this data series'
+								)}
 							>
 								{#if !datum.draw}
 									<Icon name="eye-slash" width={16} height={16} />
@@ -834,15 +836,13 @@
 
 					<div class="control-data-container">
 						<div class="control-data">
-							<ControlInput label="x">
-							</ControlInput>
+							<ControlInput label="x"></ControlInput>
 
 							<Column col={datum.x} canChange={true} />
 						</div>
 
 						<div class="control-data">
-							<ControlInput label="y">
-							</ControlInput>
+							<ControlInput label="y"></ControlInput>
 
 							<Column col={datum.y} canChange={true} />
 						</div>
@@ -867,7 +867,7 @@
 									class="icon"
 									aria-label="Add fit line"
 									onclick={() => datum.addFitLine()}
-									{@attach attachTooltip('Add a fit line (drag to fit onsets; estimates τ and θ)')}
+									{@attach attachTooltip('Add a fit line that you can move')}
 								>
 									<Icon
 										name="linear-fit"
