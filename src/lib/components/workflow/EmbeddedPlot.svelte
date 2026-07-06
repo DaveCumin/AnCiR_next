@@ -5,7 +5,13 @@
 	let { plot, size, onResizeMouseDown } = $props();
 
 	const PlotComp = $derived(appConsts.plotMap.get(plot?.type)?.plot);
-	const previewScale = $derived(plot?.width ? size.w / plot.width : 1);
+	// Fit the real plot into the (independently-sized) preview box, preserving the
+	// plot's aspect ratio. The workflow box size is owned by the canvas
+	// (plotPreviewSizes); the plot's real width/height belong to the workspace and
+	// aren't touched by a workflow resize.
+	const previewScale = $derived(
+		plot?.width && plot?.height ? Math.min(size.w / plot.width, size.h / plot.height) : 1
+	);
 
 	// Facet generator: preview the per-series child plots as a small-multiples grid
 	// (matching the workspace), rather than the single all-series plot.

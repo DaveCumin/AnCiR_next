@@ -13,6 +13,32 @@
 		return thePlot;
 	}
 
+	// Worksheet position for a NEW plot: tile it to the right of the most recent
+	// plot (a small cascade on 500px-wide plots just looks stacked), wrapping to a
+	// new row when it runs past the visible worksheet width. Shared by every add
+	// path (worksheet palette AND workflow palette) so plots never spawn on top of
+	// each other regardless of where they were added. The workflow-canvas position
+	// is separate (stablePositions), so this only affects the worksheet layout.
+	export function nextPlotSpawnPosition() {
+		const plots = core.plots ?? [];
+		const gap = 24;
+		const startX = 40;
+		const startY = 40;
+		if (plots.length === 0) return { x: snapToGrid(startX), y: snapToGrid(startY) };
+		const last = plots[plots.length - 1];
+		const lw = last.width ?? 500;
+		const lh = last.height ?? 250;
+		const canvasEl = typeof document !== 'undefined' ? document.querySelector('.canvas') : null;
+		const bound = (canvasEl?.clientWidth ?? 1400) / (appState.canvasScale || 1) - 40;
+		let x = (last.x ?? startX) + lw + gap;
+		let y = last.y ?? startY;
+		if (x + lw > bound) {
+			x = startX;
+			y = (last.y ?? startY) + lh + gap;
+		}
+		return { x: snapToGrid(x), y: snapToGrid(y) };
+	}
+
 	function deletePlotIds(ids) {
 		const idSet = new Set(ids);
 		// Deleting a facet generator also removes its generated children.

@@ -26,7 +26,7 @@
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { deleteTableProcess } from '$lib/core/TableProcess.svelte';
-	import { selectPlot, deselectAllPlots } from '$lib/core/Plot.svelte';
+	import { selectPlot, deselectAllPlots, nextPlotSpawnPosition } from '$lib/core/Plot.svelte';
 	import { plotPortRows, plotPortSlotIndex } from '$lib/core/ProcessNode.svelte.js';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import GroupNode from './GroupNode.svelte';
@@ -362,6 +362,22 @@
 	// the current viewport instead of wherever the topo layout placed it.
 	let _spawnPositionQueue = [];
 
+	// Per-node stacking order so the most-recently added / selected node renders on
+	// top (new nodes otherwise inherit graph order and can appear behind existing
+	// ones). A monotonic counter; nodes never touched this session keep 0 and fall
+	// back to the expanded/collapsed base z. Not persisted — order is only about the
+	// live session; on reload nodes render in stable graph order.
+	let nodeZ = $state({});
+	let _nodeZCounter = 100;
+	function bringNodeToFront(id) {
+		if (id != null) nodeZ[id] = ++_nodeZCounter;
+	}
+	// Selecting a node (which every spawn does) brings it to the front.
+	$effect(() => {
+		const id = appState.canvasSelectedNodeId;
+		if (id != null) untrack(() => bringNodeToFront(id));
+	});
+
 	$effect(() => {
 		const currentNodes = allNodes;
 		const currentIds = new Set(currentNodes.map((n) => n.id));
@@ -687,6 +703,7 @@
 		stablePositions[newId] = { x: pos.x, y: pos.y };
 		appState.canvasSelectedNodeId = newId;
 		multiSelectedNodeIds = new Set([newId]);
+		bringNodeToFront(newId);
 		// New nodes are expanded by default (collapsedNodeIds tracks the exceptions),
 		// so no action needed to open it inline.
 		return { ok: true, orphanProcessId: proc.id };
@@ -721,6 +738,7 @@
 		const nodeId = `tableprocess_${tp.id}`;
 		appState.canvasSelectedNodeId = nodeId;
 		multiSelectedNodeIds = new Set([nodeId]);
+		bringNodeToFront(nodeId);
 		// Expanded by default (collapsedNodeIds tracks exceptions).
 		return { ok: true };
 	}
@@ -728,11 +746,15 @@
 	function spawnPlotFromPalette(plotType) {
 		queueSpawnPositionAtViewport();
 		const displayName = appConsts.plotMap.get(plotType)?.displayName ?? plotType;
-		const plot = mutationService.addPlot({ name: displayName, type: plotType });
+		// Give the plot a tiled WORKSHEET position (its canvas position comes from the
+		// spawn-position queue above) so plots added here don't stack in workspace view.
+		const pos = nextPlotSpawnPosition();
+		const plot = mutationService.addPlot({ name: displayName, type: plotType, x: pos.x, y: pos.y });
 		if (!plot) return { ok: false };
 		const nodeId = `plot_${plot.id}`;
 		appState.canvasSelectedNodeId = nodeId;
 		multiSelectedNodeIds = new Set([nodeId]);
+		bringNodeToFront(nodeId);
 		return { ok: true };
 	}
 
@@ -1298,16 +1320,10 @@
 			}
 			const nw = Math.max(MIN_PREVIEW_W, resizeInfo.startW + dx);
 			const nh = Math.max(MIN_PREVIEW_H, resizeInfo.startH + dy);
+			// Resize ONLY the workflow node's own preview box. The real plot
+			// (plotObj.width/height) is owned by the workspace view and is left
+			// untouched, so a workflow resize never changes the workspace layout.
 			plotPreviewSizes[resizeInfo.nodeId] = { w: nw, h: nh };
-			// Scale the actual plot proportionally so detail level is consistent
-			resizeInfo.plotObj.width = Math.max(
-				MIN_PLOT_W,
-				Math.round(resizeInfo.startPlotW * (nw / resizeInfo.startW))
-			);
-			resizeInfo.plotObj.height = Math.max(
-				MIN_PLOT_H,
-				Math.round(resizeInfo.startPlotH * (nh / resizeInfo.startH))
-			);
 			return;
 		}
 		if (dragInfo) {
@@ -2248,20 +2264,10 @@
 			reconcileGroupMembership(dragInfo.nodeId);
 			reconcileCompositeMembership(dragInfo.nodeId);
 		}
-		// Commit a plot preview resize (model width/height) as one undo step:
-		// capture the end size, revert to the start size, then replay through the op
-		// so the reverse is recorded. Notes resize their own model directly and are
-		// out of the plot history scope.
-		if (resizeInfo?.plotObj) {
-			const p = resizeInfo.plotObj;
-			if (p.width !== resizeInfo.startPlotW || p.height !== resizeInfo.startPlotH) {
-				const endW = p.width;
-				const endH = p.height;
-				p.width = resizeInfo.startPlotW;
-				p.height = resizeInfo.startPlotH;
-				mutationService.setPlotPosition(p.id, { width: endW, height: endH });
-			}
-		}
+		// A workflow plot resize now only changes the node's own preview box
+		// (plotPreviewSizes) — it deliberately does NOT touch the real plot
+		// width/height (owned by the workspace view), so there's nothing to commit to
+		// plot history here.
 		dropTargetEdgeKey = null;
 		dropTargetPortKey = null;
 		dropTargetPortDir = null;
@@ -3416,7 +3422,9 @@
 				{@const isGroup = node.type === 'group'}
 				{@const isMultiSelected = multiSelectedNodeIds.has(node.id)}
 				{@const isSelected = appState.canvasSelectedNodeId === node.id || isMultiSelected}
-				{@const nodeZIndex = isDragging ? 30 : isExpanded ? 20 : 1}
+				{@const nodeZIndex = isDragging
+					? 1000000
+					: Math.max(nodeZ[node.id] ?? 0, isExpanded ? 20 : 1)}
 				{@const actionsRevealed = isSelected || actionsHoverId === node.id}
 				{@const clusterNoteId = node.type !== 'group' ? node.id : null}
 				{@const clusterHasNote = !!(clusterNoteId && core.nodeNotes[clusterNoteId]?.trim())}

@@ -1,13 +1,14 @@
 <script>
 	// @ts-nocheck
 	// Floating palette anchored to the Worksheet "+" button. Lists every plot
-	// type from appConsts.plotMap plus a Note tile. Picking a plot opens
-	// MakeNewPlot pre-seeded with that type; picking Note spawns a standalone
-	// note into core.notes (visible in both the worksheet and the workflow
-	// canvas).
+	// type from appConsts.plotMap plus a Note tile. Picking a plot adds it to the
+	// worksheet straight away (workflow-style) and opens its control panel — no
+	// modal. Picking Note spawns a standalone note into core.notes (visible in both
+	// the worksheet and the workflow canvas).
 	import Icon from '$lib/icons/Icon.svelte';
-	import MakeNewPlot from '$lib/components/views/modals/MakeNewPlot.svelte';
 	import { appConsts, appState, createNote } from '$lib/core/core.svelte.js';
+	import { mutationService } from '$lib/core/mutationService.js';
+	import { deselectAllPlots, nextPlotSpawnPosition } from '$lib/core/Plot.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { tick } from 'svelte';
 
@@ -118,8 +119,6 @@
 	let { open = $bindable(false), top = 0, left = 0 } = $props();
 
 	let query = $state('');
-	let showPlotModal = $state(false);
-	let plotInitialType = $state('');
 
 	const allItems = $derived.by(() => {
 		const items = [];
@@ -178,9 +177,16 @@
 			closeMenu();
 			return;
 		}
-		plotInitialType = item.type;
-		showPlotModal = true;
+		// Add the plot straight away (no modal), offset from the last one, then
+		// select it and open the control panel so the user picks data/columns there.
+		const displayName = appConsts.plotMap.get(item.type)?.displayName ?? item.type;
+		const pos = nextPlotSpawnPosition();
+		const plot = mutationService.addPlot({ name: displayName, type: item.type, x: pos.x, y: pos.y });
 		closeMenu();
+		if (!plot) return;
+		deselectAllPlots();
+		plot.selected = true;
+		appState.showControlPanel = true;
 	}
 
 	function closeOnClickAway(node) {
@@ -230,8 +236,6 @@
 		{/if}
 	</div>
 {/if}
-
-<MakeNewPlot bind:showModal={showPlotModal} bind:initialType={plotInitialType} />
 
 <style>
 	.ws-palette {
