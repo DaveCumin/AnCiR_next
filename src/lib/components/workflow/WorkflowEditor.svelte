@@ -611,6 +611,20 @@
 		});
 	});
 
+	// Spawn-node request from OUTSIDE the canvas (e.g. the worksheet's "Simulate
+	// data" empty-state switches to this view and asks for a SimulatedData node).
+	// Consume-and-clear: null it out immediately so re-mounting the canvas — or
+	// switching views back and forth — never re-spawns a duplicate. tick() lets
+	// the viewport bind before we compute the spawn position.
+	$effect(() => {
+		const req = appState.spawnNodeRequest;
+		if (!req?.tpType) return;
+		untrack(() => {
+			appState.spawnNodeRequest = null;
+			tick().then(() => spawnTableProcessFromPalette(req.tpType));
+		});
+	});
+
 	// Tidy-layout request (e.g. after the demo seed on cmd-shift-s): re-run the
 	// layered layout once the freshly-spawned nodes have settled. The demo adds
 	// nodes asynchronously (plots finish rendering after their workers), so poll

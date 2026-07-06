@@ -305,6 +305,14 @@ export const appState = $state({
 	// WorkflowEditor watches this counter. Pre-declared so the effect subscribes.
 	tidyLayoutRequest: 0,
 
+	// One-shot request to spawn a table-process node on the workflow canvas from
+	// OUTSIDE it (e.g. the worksheet's "Simulate data" empty-state). Shape:
+	// { tpType: 'SimulatedData', n }. Set it together with view = 'canvas';
+	// WorkflowEditor consumes it once (spawns the node) then clears it back to
+	// null, so re-mounting the canvas never re-spawns. Pre-declared so the
+	// effect subscribes.
+	spawnNodeRequest: null,
+
 	windowWidth: window.innerWidth,
 	windowHeight: window.innerHeight,
 	widthNavBar: 56,
@@ -366,7 +374,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.51.4',
+	version: 'β.51.5',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),

@@ -6,22 +6,34 @@
 	// three real ways to get data into AnCiR:
 	//   · Import a file (CSV / Excel / AWD) — re-wires the ImportData modal
 	//     via the dataSourceActions registry (single instance lives in +page).
-	//   · Simulate data — owns a SimulateData modal instance.
+	//   · Simulate data — spawns a SimulatedData NODE on the workflow canvas
+	//     (in place when hosted there; the worksheet hops to the canvas first).
 	//   · Load an example or saved session — owns a LoadSessionModal instance
 	//     opened on the Examples tab.
 	import Icon from '$lib/icons/Icon.svelte';
-	import SimulateData from '$lib/components/views/modals/SimulateData.svelte';
 	import LoadSessionModal from '$lib/components/workflow/LoadSessionModal.svelte';
 	import { openImportData } from '$lib/core/dataSourceActions.js';
+	import { appState } from '$lib/core/core.svelte.js';
 
 	// `onSimulate`, when provided (workflow canvas), spawns a Simulate Data NODE
-	// directly (expanded, no modal) instead of opening the SimulateData modal. The
-	// worksheet leaves it unset so simulate still opens the modal there.
+	// directly in place. When unset (the worksheet), simulate switches to the
+	// workflow view and asks WorkflowEditor to spawn the node there — there is no
+	// modal anywhere anymore.
 	let { message = 'Click here to add data', onSimulate = null } = $props();
 
 	let open = $state(false);
-	let showSimulate = $state(false);
 	let showLoad = $state(false);
+
+	// Worksheet default: hop to the workflow canvas and request a SimulatedData
+	// node (WorkflowEditor consumes appState.spawnNodeRequest once, then clears it).
+	function requestSimulatedNode() {
+		appState.view = 'canvas';
+		appState.spawnNodeRequest = {
+			tpType: 'SimulatedData',
+			n: (appState.spawnNodeRequest?.n ?? 0) + 1
+		};
+		appState.showControlPanel = true;
+	}
 
 	const choices = [
 		{
@@ -36,7 +48,7 @@
 			icon: 'node-rectangular-wave',
 			title: 'Simulate data',
 			subtitle: 'Generate rhythmic test data to explore',
-			action: () => (onSimulate ? onSimulate() : (showSimulate = true))
+			action: () => (onSimulate ? onSimulate() : requestSimulatedNode())
 		},
 		{
 			key: 'example',
@@ -95,7 +107,6 @@
 	</div>
 </div>
 
-<SimulateData bind:showModal={showSimulate} />
 <LoadSessionModal bind:showModal={showLoad} initialSourceMode="example" />
 
 <style>
