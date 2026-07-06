@@ -564,6 +564,7 @@
 	import { tick } from 'svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
+	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
@@ -797,7 +798,7 @@
 		<div class="control-component">
 			<div class="control-component-title">
 				<p>Y-Axis</p>
-				<div class="control-component-title-icons">
+				<div class="control-component-title-icons" {@attach attachTooltip('Reset the power axis to auto range')}>
 					<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
 						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
 					</button>

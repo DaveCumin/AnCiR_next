@@ -1,6 +1,7 @@
 <script>
 	// @ts-nocheck
 	import Icon from '$lib/icons/Icon.svelte';
+	import { tooltip } from '$lib/utils/tooltip.js';
 
 	/**
 	 * Presentational chrome around a table-process's inner component:
@@ -20,6 +21,7 @@
 		<div
 			class="control-component-title-icons"
 			style="margin-bottom: -1.75rem; z-index: 9999; margin-top: var(--space-2);"
+			{@attach tooltip('Remove this analysis')}
 		>
 			<button class="icon" onclick={() => onDelete(p)}>
 				<Icon name="trash" width={16} height={16} className="menu-icon" />

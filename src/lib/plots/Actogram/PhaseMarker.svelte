@@ -2,6 +2,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
 	import {
@@ -65,8 +66,45 @@
 		// matching the period checkbox list). null = unbounded on that side.
 		lineMinDay = $state(null);
 		lineMaxDay = $state(null);
+		// Day (1-indexed) at which Est φ is reported / the fit line's θ is anchored.
+		// null → falls back to the line's start day (lineMinDay) or day 1.
+		phaseRefDay = $state(null);
 		selectedPeriods = $state([]);
 		manualMarkers = $state([]);
+		// type 'fitline' — a straight line the user positions directly (eye-fit).
+		// Stored as slope + intercept in the same absolute-time-vs-1-indexed-day frame
+		// as the regression (so the drawn line, τ, θ and the harmonic check all reuse
+		// linearRegression below). slope = τ (period, hrs); the day span is lineMin/MaxDay.
+		fitSlope = $state(null);
+		fitIntercept = $state(null);
+
+		// The day the phase (θ) is reported / anchored to (1-indexed, clamped into the
+		// plot). Shared by Est φ and the fit line's θ handling. User-set via phaseRefDay;
+		// defaults to the line's start day (lineMinDay) or day 1.
+		get fitRefDay() {
+			const Ndays = Math.max(1, this.parentData.parentPlot.Ndays);
+			const raw = this.phaseRefDay ?? this.lineMinDay ?? 1;
+			return Math.min(Math.max(1, raw), Ndays);
+		}
+		// Time-of-day the line crosses at day `d` (1-indexed): (slope - periodHrs)*d + intercept.
+		fitTimeOfDayAt(d) {
+			const P = this.parentData.parentPlot.periodHrs;
+			return (this.fitSlope - P) * d + this.fitIntercept;
+		}
+		// Rotate: set τ (slope) while keeping the time-of-day at the reference day fixed.
+		setTau(slope) {
+			const P = this.parentData.parentPlot.periodHrs;
+			const rd = this.fitRefDay;
+			const tod = this.fitTimeOfDayAt(rd);
+			this.fitSlope = slope;
+			this.fitIntercept = tod - (slope - P) * rd;
+		}
+		// Translate: set the time-of-day (θ) at the reference day, keeping τ fixed.
+		setTheta(tod) {
+			const P = this.parentData.parentPlot.periodHrs;
+			const rd = this.fitRefDay;
+			this.fitIntercept = tod - (this.fitSlope - P) * rd;
+		}
 
 		//Add a manual marker - the raw time clicked on
 		addTime(clickedDay, clickedHrs) {
@@ -79,6 +117,10 @@
 		//Calculate the markers for the actogram
 		markers = $derived.by(() => {
 			const periodHrs = this.parentData.parentPlot.periodHrs;
+			// A fit line has no per-day markers — it's a directly-positioned line. Returning
+			// [] keeps markerPoints empty (no stray dot) without touching the drawn line,
+			// which comes from linearRegression (fitSlope/fitIntercept) above.
+			if (this.type === 'fitline') return [];
 			if (this.type === 'manual') {
 				// Group manual markers by day based on current periodHrs
 				const markersByDay = {};
@@ -182,6 +224,13 @@
 		});
 
 		linearRegression = $derived.by(() => {
+			// Eye-fit line: slope/intercept come straight from the user-positioned line,
+			// so everything that keys off linearRegression (the drawn <line>, τ display,
+			// estimatedPhase, harmonicCheck) works unchanged. A perfect "fit" by construction.
+			if (this.type === 'fitline') {
+				if (this.fitSlope == null || this.fitIntercept == null) return NaN;
+				return { slope: this.fitSlope, intercept: this.fitIntercept, rSquared: 1, rmse: 0 };
+			}
 			//get the selected markers
 			let xs = [];
 			let ys = [];
@@ -206,9 +255,8 @@
 			const reg = this.linearRegression;
 			if (!reg || typeof reg !== 'object' || !reg.slope) return null;
 			const periodHrs = this.parentData.parentPlot.periodHrs;
-			const Ndays = this.parentData.parentPlot.Ndays;
-			const lo = Math.max(1, this.lineMinDay ?? 1);
-			const refDay = Math.min(lo, Math.max(1, Ndays));
+			// User-settable reference day (falls back to line start / day 1), clamped.
+			const refDay = this.fitRefDay;
 			const yPred = reg.slope * refDay + reg.intercept;
 			const markerHourPred = yPred - refDay * periodHrs;
 			const wrapped = ((markerHourPred % periodHrs) + periodHrs) % periodHrs;
@@ -302,13 +350,17 @@
 				this.centileThreshold = dataIN.centileThreshold || 50;
 				this.templateHrsBefore = dataIN.templateHrsBefore || 3;
 				this.templateHrsAfter = dataIN.templateHrsAfter || 3;
-				this.colour = dataIN.colour || 'black';
+				// Default markers/line to the parent data series' colour (falls back to black).
+				this.colour = dataIN.colour || parent?.colour || 'black';
+				this.fitSlope = dataIN.fitSlope ?? null;
+				this.fitIntercept = dataIN.fitIntercept ?? null;
 				this.showLine = dataIN.showLine || true;
 				this.showMarkers = dataIN.showMarkers || true;
 				this.lineWidth = dataIN.lineWidth || 1;
 				this.markerSize = dataIN.markerSize || 5;
 				this.lineMinDay = dataIN.lineMinDay ?? null;
 				this.lineMaxDay = dataIN.lineMaxDay ?? null;
+				this.phaseRefDay = dataIN.phaseRefDay ?? null;
 				// Keep only finite day indices and cap the count: a non-time X axis can
 				// produce a huge/NaN period key, which would make Array.from({length})
 				// below throw (RangeError) or allocate absurdly.
@@ -346,8 +398,11 @@
 				markerSize: this.markerSize,
 				lineMinDay: this.lineMinDay,
 				lineMaxDay: this.lineMaxDay,
+				phaseRefDay: this.phaseRefDay,
 				selectedPeriods: this.selectedPeriods,
-				manualMarkers: this.manualMarkers
+				manualMarkers: this.manualMarkers,
+				fitSlope: this.fitSlope,
+				fitIntercept: this.fitIntercept
 			};
 		}
 
@@ -365,10 +420,13 @@
 				markerSize: json.markerSize,
 				lineMinDay: json.lineMinDay,
 				lineMaxDay: json.lineMaxDay,
+				phaseRefDay: json.phaseRefDay,
 				selectedPeriods: json.selectedPeriods,
 				periodRangeMin: json.periodRangeMin,
 				periodRangeMax: json.periodRangeMax,
-				manualMarkers: json.manualMarkers
+				manualMarkers: json.manualMarkers,
+				fitSlope: json.fitSlope,
+				fitIntercept: json.fitIntercept
 			});
 		}
 	}
@@ -392,7 +450,7 @@
 			<div class="control-component-title-colour">
 				<p><Editable bind:value={marker.name} /></p>
 			</div>
-			<div class="control-component-title-icons">
+			<div class="control-component-title-icons" {@attach tooltip('Remove this phase marker')}>
 				<button
 					class="icon"
 					onclick={() => {
@@ -405,13 +463,19 @@
 				</button>
 			</div>
 		</div>
-		<ControlInput label="Type">
-			<select bind:value={marker.type}>
-				<option value="onset">Onset</option>
-				<option value="offset">Offset</option>
-				<option value="manual">Manual</option>
-			</select>
-		</ControlInput>
+		{#if marker.type === 'fitline'}
+			<ControlInput label="Type">
+				<span class="fitline-type-label">Fit line</span>
+			</ControlInput>
+		{:else}
+			<ControlInput label="Type">
+				<select bind:value={marker.type}>
+					<option value="onset">Onset</option>
+					<option value="offset">Offset</option>
+					<option value="manual">Manual</option>
+				</select>
+			</ControlInput>
+		{/if}
 
 		<div class="control-input-color">
 			<div class="control-color">
@@ -443,7 +507,7 @@
 					}}>{addMarkerButtonText}</button
 				>
 			</div>
-		{:else}
+		{:else if marker.type !== 'fitline'}
 			<div class="control-input-horizontal">
 				<ControlInput label="N">
 					<NumberWithUnits min="0" max="100" bind:value={marker.templateHrsBefore} />
@@ -458,6 +522,40 @@
 				</ControlInput>
 			</div>
 		{/if}
+		{#if marker.type === 'fitline'}
+			{@const P = marker.parentData.parentPlot.periodHrs}
+			<div class="control-input-horizontal">
+				<ControlInput label="τ (period, hrs)">
+					<input
+						type="number"
+						class="marker-value-input"
+						min="1"
+						step="0.05"
+						value={(marker.fitSlope ?? P).toFixed(3)}
+						onchange={(e) => {
+							const v = parseFloat(/** @type {HTMLInputElement} */ (e.currentTarget).value);
+							if (!isNaN(v)) marker.setTau(v);
+						}}
+					/>
+				</ControlInput>
+				<ControlInput label="θ @ start (hrs)">
+					<input
+						type="number"
+						class="marker-value-input"
+						step="0.05"
+						value={marker.fitTimeOfDayAt(marker.fitRefDay).toFixed(3)}
+						onchange={(e) => {
+							const v = parseFloat(/** @type {HTMLInputElement} */ (e.currentTarget).value);
+							if (!isNaN(v)) marker.setTheta(v);
+						}}
+					/>
+				</ControlInput>
+			</div>
+			<p class="fitline-hint">
+				Set the day range below, then drag the line on the plot to fit the activity
+				onsets (τ = slope, θ = start time).
+			</p>
+		{:else}
 		<div>
 			<div class="period-selection-header">
 				<p>Periods</p>
@@ -530,6 +628,7 @@
 				{/each}
 			</div>
 		</div>
+		{/if}
 
 		{#if marker.linearRegression?.slope}
 			<!-- <p>Drawn τ: {marker.linearRegression.slope.toFixed(2)} hrs</p> -->
@@ -557,24 +656,42 @@
 						source={'Actogram phase marker (' + marker.name + ')'}
 					/>
 				</p>
+				<ControlInput label="φ reference day">
+					<input
+						type="number"
+						min="1"
+						max={marker.parentData.parentPlot.Ndays}
+						step="1"
+						placeholder={String(marker.estimatedPhase.refDay)}
+						value={marker.phaseRefDay ?? ''}
+						onchange={(e) => {
+							const v = /** @type {HTMLInputElement} */ (e.currentTarget).value;
+							marker.phaseRefDay = v === '' ? null : parseInt(v, 10);
+						}}
+					/>
+				</ControlInput>
 			{/if}
 
-			<p>
-				R²: {marker.linearRegression.rSquared.toFixed(3)}
-				<StoreValueButton
-					label="R²"
-					getter={() => marker.linearRegression.rSquared}
-					defaultName={'marker_r_squared_' + marker.name}
-					source={'Actogram phase marker (' + marker.name + ')'}
-				/>
-				&ensp;Error: {marker.linearRegression.rmse.toFixed(3)}
-				<StoreValueButton
-					label="RMSE"
-					getter={() => marker.linearRegression.rmse}
-					defaultName={'marker_rmse_' + marker.name}
-					source={'Actogram phase marker (' + marker.name + ')'}
-				/>
-			</p>
+			<!-- R²/RMSE are meaningless for a directly-drawn fit line (perfect by
+			     construction), so only show them for fitted markers. -->
+			{#if marker.type !== 'fitline'}
+				<p>
+					R²: {marker.linearRegression.rSquared.toFixed(3)}
+					<StoreValueButton
+						label="R²"
+						getter={() => marker.linearRegression.rSquared}
+						defaultName={'marker_r_squared_' + marker.name}
+						source={'Actogram phase marker (' + marker.name + ')'}
+					/>
+					&ensp;Error: {marker.linearRegression.rmse.toFixed(3)}
+					<StoreValueButton
+						label="RMSE"
+						getter={() => marker.linearRegression.rmse}
+						defaultName={'marker_rmse_' + marker.name}
+						source={'Actogram phase marker (' + marker.name + ')'}
+					/>
+				</p>
+			{/if}
 
 			<div class="control-input-checkbox">
 				<input type="checkbox" bind:checked={marker.showLine} />

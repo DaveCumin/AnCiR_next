@@ -19,6 +19,7 @@
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
+	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import { core } from '$lib/core/core.svelte.js';
 	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
@@ -232,6 +233,26 @@
 
 		addMarker() {
 			this.phaseMarkers.push(new PhaseMarkerClass(this, { type: 'manual' }));
+		}
+
+		// Eye-fit line: starts as a vertical line (slope = periodHrs → no drift) down the
+		// middle of the plot, spanning all days, in this series' colour. The user then
+		// drags/rotates it (or edits τ/θ) to lie along the activity onsets.
+		addFitLine() {
+			const P = this.parentPlot;
+			this.phaseMarkers.push(
+				new PhaseMarkerClass(this, {
+					type: 'fitline',
+					name: 'fit_' + this.phaseMarkers.length,
+					colour: this.colour,
+					fitSlope: P.periodHrs,
+					fitIntercept: P.periodHrs / 2,
+					lineMinDay: 1,
+					lineMaxDay: Math.max(1, P.Ndays),
+					showLine: true,
+					lineWidth: 2
+				})
+			);
 		}
 
 		toJSON() {
@@ -782,7 +803,11 @@
 							<p><Editable bind:value={datum.label} /></p>
 						</div>
 						<div class="control-component-title-icons">
-							<button class="icon" onclick={() => theData.removeData(i)}>
+							<button
+								class="icon"
+								onclick={() => theData.removeData(i)}
+								{@attach attachTooltip('Remove this data series')}
+							>
 								<Icon
 									name="trash"
 									width={16}
@@ -796,6 +821,7 @@
 									e.stopPropagation();
 									datum.draw = !datum.draw;
 								}}
+								{@attach attachTooltip(datum.draw ? 'Hide this data series' : 'Show this data series')}
 							>
 								{#if !datum.draw}
 									<Icon name="eye-slash" width={16} height={16} />
@@ -837,7 +863,25 @@
 							</div>
 
 							<div class="control-component-title-icons">
-								<button class="icon" onclick={() => datum.addMarker()}>
+								<button
+									class="icon"
+									aria-label="Add fit line"
+									onclick={() => datum.addFitLine()}
+									{@attach attachTooltip('Add a fit line (drag to fit onsets; estimates τ and θ)')}
+								>
+									<Icon
+										name="linear-fit"
+										width={16}
+										height={16}
+										className="control-component-title-icon"
+									/>
+								</button>
+								<button
+									class="icon"
+									aria-label="Add marker"
+									onclick={() => datum.addMarker()}
+									{@attach attachTooltip('Add a marker to this series')}
+								>
 									<Icon
 										name="add"
 										width={16}

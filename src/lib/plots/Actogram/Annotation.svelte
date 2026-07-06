@@ -2,6 +2,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Hist from '$lib/components/plotbits/Hist.svelte';
 	import { scaleLinear } from 'd3-scale';
@@ -202,6 +203,7 @@
     z-index: 9999;
     margin-top: var(--space-2);
 "
+		{@attach tooltip('Remove this annotation')}
 	>
 		<button
 			class="icon"

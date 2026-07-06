@@ -118,6 +118,7 @@
 <script>
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import { tooltip } from '$lib/utils/tooltip.js';
 	let { bands = $bindable(), which } = $props();
 	let singleWidth = $derived.by(() => {
 		const plotwidth =
@@ -135,7 +136,11 @@
 		<p>Bands</p>
 		<div class="control-component-title-icons">
 			{#if bands.bands.length > 0}
-				<button class="icon" onclick={() => bands.swapBandCols()}>
+				<button
+					class="icon"
+					onclick={() => bands.swapBandCols()}
+					{@attach tooltip('Swap the band columns')}
+				>
 					<Icon name="swap" width={12} height={12} className="control-component-title-icon" />
 				</button>
 			{/if}
@@ -143,6 +148,7 @@
 				class="icon"
 				onclick={() =>
 					bands.addBand({ col: bands.length % 2 === 0 ? '#000000' : '#ffffff', pc: 10 })}
+				{@attach tooltip('Add a band')}
 			>
 				<Icon name="add" width={16} height={16} className="control-component-title-icon" />
 			</button>

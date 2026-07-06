@@ -2,6 +2,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import { tooltip } from '$lib/utils/tooltip.js';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import { scaleLinear, scaleTime } from 'd3-scale';
 	import { getPlotById } from '$lib/core/Plot.svelte';
@@ -228,6 +229,7 @@
 			onclick={() => deleteNightBand(plotId, nightBand.id)}
 			onmouseenter={handleMouseEnter}
 			onmouseleave={handleMouseLeave}
+			{@attach tooltip('Remove this night band')}
 		>
 			<Icon name="trash" width={16} height={16} className="menu-icon" />
 		</button>
@@ -338,6 +340,7 @@
 					onclick={() => nightBand.addCustomBand()}
 					onmouseenter={handleMouseEnter}
 					onmouseleave={handleMouseLeave}
+					{@attach tooltip('Add a custom band')}
 				>
 					<Icon name="add" width={16} height={16} className="control-component-title-icon" />
 				</button>
