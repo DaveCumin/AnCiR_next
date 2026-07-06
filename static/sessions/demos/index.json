@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 41,
+  "count": 42,
   "sessions": [
     {
       "id": "dataset-testdata",
@@ -346,6 +346,18 @@
         "CollectColumns"
       ],
       "keywords": "collect columns collect (concatenate) several columns into one. transform collectcolumns"
+    },
+    {
+      "id": "tp-columnset",
+      "name": "Column Set",
+      "family": "Transform",
+      "description": "Curate a live subset of columns by name/label and reuse it as one wire.",
+      "url": "sessions/demos/demo-tp-columnset.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "ColumnSet"
+      ],
+      "keywords": "column set curate a live subset of columns by name/label and reuse it as one wire. transform columnset filter subset bundle"
     },
     {
       "id": "tp-longtowide",

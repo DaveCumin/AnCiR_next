@@ -218,6 +218,13 @@ export const TP_SPECS = [
 		})
 	},
 	{
+		name: 'ColumnSet',
+		inputs: [T('number', SAMPLE.index), T('number', SAMPLE.linear)],
+		// Curate a subset of the two candidate columns by a name/label rule; empty
+		// pattern selects both. No output columns — the `set` port carries the ids.
+		args: ([c1, c2]) => ({ colsIN: [c1, c2], pattern: '', matchField: 'either', out: {} })
+	},
+	{
 		name: 'ColumnFunctions',
 		inputs: [T('number', SAMPLE.index), T('number', SAMPLE.linear)],
 		args: ([c1, c2]) => ({ func: 'add', xsIN: [c1, c2], out: { result: -1 } })

@@ -280,6 +280,14 @@ const meta = new Map([
 		}
 	],
 	[
+		'ColumnSet',
+		{
+			family: 'Transform',
+			nodeIcon: 'column-set',
+			description: 'Curate a live subset of columns by name/label and reuse it as one wire.'
+		}
+	],
+	[
 		'EditValue',
 		{
 			family: 'Transform',

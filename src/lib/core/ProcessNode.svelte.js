@@ -122,11 +122,14 @@ function collectTableProcessInputRefs(tpArgs, nodeSpec) {
 		if (Array.isArray(value)) {
 			for (const item of value) {
 				// FormulaColumn-style token arrays hold {type, id|value} objects; only
-				// `col` tokens reference a column. Plain-number arrays (yIN, colIds,
-				// valueColIds, …) fall through to the numeric branch unchanged.
+				// `col` tokens reference a column. Column Set references hold
+				// {setRef:<tpId>} and yield ONE bundle edge from that Column Set node's
+				// `set` output. Plain-number arrays (yIN, colIds, valueColIds, …) fall
+				// through to the numeric branch unchanged.
 				if (item && typeof item === 'object') {
 					if (item.type === 'col' && typeof item.id === 'number')
 						refs.push({ colId: item.id, port });
+					else if (typeof item.setRef === 'number') refs.push({ setNodeId: item.setRef, port });
 				} else {
 					refs.push({ colId: item, port });
 				}
@@ -529,13 +532,20 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		});
 		const { outputColumns, outputPorts } = buildTPOutputs(tp.args);
 
+		// Bundle outputs (a Column Set's `set` port) are declared statically on the
+		// nodeSpec with a non-`column` kind — they carry a set of columns down one
+		// wire rather than one column each, so they aren't per-column `col_*` ports.
+		const bundleOutputPorts = (nodeSpec?.outputs ?? [])
+			.filter((o) => o?.kind && o.kind !== 'column')
+			.map((o) => makeNodePort(o.name, 'output', o.kind, o.cardinality === 'many'));
+
 		nodes.push(
 			new ProcessNode({
 				id: `tableprocess_${tp.id}`,
 				kind: 'tableprocess',
 				label: tp.displayName || tp.name,
 				sublabel: parentLabel,
-				ports: { inputs, outputs: outputPorts },
+				ports: { inputs, outputs: [...outputPorts, ...bundleOutputPorts] },
 				refId: tp.id,
 				meta: {
 					type: 'tableprocess',
@@ -706,7 +716,14 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		const entry = appConsts.tableProcessMap.get(tp.name);
 		const tpInputs = collectTableProcessInputRefs(tp.args, entry?.nodeSpec);
 
-		for (const { colId, port } of tpInputs) {
+		for (const ref of tpInputs) {
+			// Column Set bundle: one wire from the Column Set node's `set` output to
+			// this input, regardless of how many columns the set currently holds.
+			if (ref.setNodeId != null) {
+				addConnection(`tableprocess_${ref.setNodeId}`, tpNodeId, 'data-tp', 'set', ref.port);
+				continue;
+			}
+			const { colId, port } = ref;
 			if (colId == null || colId < 0) continue;
 			const col = core.data.find((d) => d.id === colId);
 			if (!col) continue;

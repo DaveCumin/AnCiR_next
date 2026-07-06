@@ -68,9 +68,11 @@
 			});
 
 			// Step 2d: Break refId dependency chain
-			core.data.filter((col) => col.refId === colID).forEach((depCol) => {
-				depCol.refId = -1;
-			});
+			core.data
+				.filter((col) => col.refId === colID)
+				.forEach((depCol) => {
+					depCol.refId = -1;
+				});
 
 			// Step 2e+f: Remove from internal column system and core.data
 			removeColumn(colID);
@@ -83,6 +85,24 @@
 		// Step 4: Clear refTPId on any TP that chained from this one
 		core.tableProcesses.forEach((tp) => {
 			if (tp.refTPId === tableProcess.id) tp.refTPId = null;
+		});
+
+		// Step 4.5: Drop any Column Set reference tokens ({ setRef }) pointing at
+		// this node from every remaining TP's many-in arrays, so a deleted Column
+		// Set can't leave a dangling wire — or, after a save/reload, be re-bound to
+		// a different node that later reuses this (monotonic) id.
+		const deletedTpId = tableProcess.id;
+		core.tableProcesses.forEach((tp) => {
+			const args = tp.args ?? {};
+			for (const key of Object.keys(args)) {
+				const v = args[key];
+				if (
+					Array.isArray(v) &&
+					v.some((e) => e && typeof e === 'object' && e.setRef === deletedTpId)
+				) {
+					args[key] = v.filter((e) => !(e && typeof e === 'object' && e.setRef === deletedTpId));
+				}
+			}
 		});
 
 		// Drop any per-node note attached to this TP's canvas node.
@@ -126,8 +146,7 @@
 			// Honor a persisted/user-edited displayName when present; otherwise fall
 			// back to the default from tableProcessMap.
 			const tableProcessInfo = appConsts.tableProcessMap.get(this.name);
-			this.displayName =
-				dataIN.displayName || tableProcessInfo?.displayName || this.name;
+			this.displayName = dataIN.displayName || tableProcessInfo?.displayName || this.name;
 
 			//If there is a column out ref set (i.e. reading from JSON)
 			if (dataIN.args.out[Object.keys(dataIN.args.out)[0]] >= 0) {

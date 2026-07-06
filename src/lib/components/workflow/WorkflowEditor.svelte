@@ -28,6 +28,7 @@
 	import { deleteTableProcess } from '$lib/core/TableProcess.svelte';
 	import { selectPlot, deselectAllPlots, nextPlotSpawnPosition } from '$lib/core/Plot.svelte';
 	import { plotPortRows, plotPortSlotIndex } from '$lib/core/ProcessNode.svelte.js';
+	import { makeSetRef, isSetRef, setRefId } from '$lib/tableProcesses/columnSet.js';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import GroupNode from './GroupNode.svelte';
 	import TableProcessNode from './TableProcessNode.svelte';
@@ -1632,10 +1633,51 @@
 		);
 	}
 
+	// True when a node's output port carries a column SET (bundle) rather than a
+	// single column — currently only a Column Set node's `set` port.
+	function isColumnSetOutput(node, portName) {
+		return findPortDef(node, 'out', portName)?.artifactKind === 'columnset';
+	}
+
+	// Wire a Column Set's bundle output into a consumer's many-in port by storing a
+	// live reference token. Enforces the one connection rule the app has: a column
+	// set may only feed a many-in input (Split's yIN, a grouped analysis, …).
+	// A many-in table-process input accepts a column set unless it opts out with
+	// `acceptsColumnSet: false` on its nodeSpec input (e.g. CollectColumns, which
+	// manages its own column picker and reads colIds directly, not via
+	// normalizeYInputs).
+	function portAcceptsColumnSet(target, portName) {
+		if (!(target?.type === 'tableprocess' && target.tpObj)) return false;
+		if (!(portName?.endsWith('IN') && isManyInputPort(target, portName))) return false;
+		const entry = appConsts.tableProcessMap.get(target.tpObj.name);
+		const inDef = (entry?.nodeSpec?.inputs ?? []).find((i) => i.name === portName);
+		return inDef?.acceptsColumnSet !== false;
+	}
+
+	function connectColumnSetToInput(fromNode, toNodeId, toPort) {
+		const colsetId = fromNode?.tpObj?.id;
+		if (colsetId == null) return;
+		const target = allNodes.find((n) => n.id === toNodeId);
+		if (!portAcceptsColumnSet(target, toPort)) {
+			addNotification('A column set can only connect to a many-in input port.');
+			return;
+		}
+		const tp = target.tpObj;
+		const arr = Array.isArray(tp.args[toPort]) ? tp.args[toPort] : [];
+		if (arr.some((v) => isSetRef(v) && setRefId(v) === colsetId)) return; // already wired
+		tp.args[toPort] = [...arr, makeSetRef(colsetId)];
+	}
+
 	function applyConnection(fromNodeId, fromPort, toNodeId, toPort) {
 		// Process output → non-process target: this is a tap. Reuse or create a
 		// tap column for (parent, process) so consumers can ref it like any col.
 		const fromNode = allNodes.find((n) => n.id === fromNodeId);
+		// Column Set bundle output → many-in input: store a live reference token
+		// instead of resolving a single column.
+		if (fromNode && isColumnSetOutput(fromNode, fromPort)) {
+			connectColumnSetToInput(fromNode, toNodeId, toPort);
+			return;
+		}
 		let colId;
 		if (fromNode?.type === 'process') {
 			// Free process (dataflow): each output port maps to one producer column.
@@ -1721,7 +1763,9 @@
 				const newType = core.data.find((c) => c.id === colId)?.type;
 				const banned = disallowedInputTypes(proc);
 				if (newType != null && banned.includes(newType)) {
-					addNotification(`${proc.displayName || proc.name} doesn't support ${newType} columns yet.`);
+					addNotification(
+						`${proc.displayName || proc.name} doesn't support ${newType} columns yet.`
+					);
 					return;
 				}
 				const existingType = cur.length ? getColumnById(cur[0])?.type : null;
@@ -2083,7 +2127,12 @@
 		// this y column. If it is the set's last series and the x is still wired,
 		// keep it as an x-seed (y = -1) so the set/x survives (mirrors disconnect).
 		const ysMatch = portName?.match(/^ys(\d+)$/);
-		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot' && ysMatch) {
+		if (
+			target.type === 'plot' &&
+			target.plotObj &&
+			target.plotObj.type !== 'tableplot' &&
+			ysMatch
+		) {
 			const plot = target.plotObj.plot;
 			const groups = groupPlotData(plot?.data ?? []);
 			const g = groups[Number(ysMatch[1]) - 1];
@@ -2325,7 +2374,9 @@
 		);
 		const isOrphan = (core.orphanProcesses ?? []).some((p) => p.id === proc.id);
 		if (isOrphan) {
-			const ops = [{ kind: 'setOrphanProcessArg', processId: proc.id, key: 'inIN', value: newInIN }];
+			const ops = [
+				{ kind: 'setOrphanProcessArg', processId: proc.id, key: 'inIN', value: newInIN }
+			];
 			if (pc) ops.push({ kind: 'removeColumn', id: pc.id });
 			mutationService.atomicBatch(ops);
 		} else {
@@ -2638,6 +2689,20 @@
 		if (target.type === 'process' && target.processObj) {
 			const c = resolveOutputColumnId(edge.fromId, edge.fromPort);
 			if (c != null && c >= 0) _removeProcInput(target.processObj, c);
+			return;
+		}
+
+		// Column Set bundle edge: drop the setRef token that points at the source
+		// Column Set node from the target's many-in array (no colId is involved).
+		const fromNode = allNodes.find((n) => n.id === edge.fromId);
+		if (fromNode && isColumnSetOutput(fromNode, edge.fromPort)) {
+			if (target.type === 'tableprocess' && target.tpObj && edge.toPort?.endsWith('IN')) {
+				const cid = fromNode.tpObj?.id;
+				const arr = Array.isArray(target.tpObj.args[edge.toPort])
+					? target.tpObj.args[edge.toPort]
+					: [];
+				target.tpObj.args[edge.toPort] = arr.filter((v) => !(isSetRef(v) && setRefId(v) === cid));
+			}
 			return;
 		}
 
@@ -3186,7 +3251,10 @@
 	function uncombineSelection() {
 		const composites = [...multiSelectedNodeIds].filter((id) => id?.startsWith('composite_'));
 		const target =
-			composites[0] ?? (appState.canvasSelectedNodeId?.startsWith('composite_') ? appState.canvasSelectedNodeId : null);
+			composites[0] ??
+			(appState.canvasSelectedNodeId?.startsWith('composite_')
+				? appState.canvasSelectedNodeId
+				: null);
 		if (!target) {
 			addNotification('Select a composite to uncombine.');
 			return;

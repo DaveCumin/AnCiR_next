@@ -61,6 +61,14 @@
 			.filter((entry) => !!entry.col)
 	);
 
+	// Bundle output ports (e.g. a Column Set's `set` port): declared on the
+	// nodeSpec with a non-`column` artifact kind. They carry a set of columns down
+	// one wire, so they render as a single labelled output dot with no data column
+	// or preview.
+	const bundleOutputs = $derived(
+		(node.ports?.outputs ?? []).filter((p) => p.artifactKind && p.artifactKind !== 'column')
+	);
+
 	// Per-output-column row expansion (ephemeral UI state, keyed by colId).
 	let rowExpanded = $state({});
 
@@ -84,6 +92,7 @@
 	let cardEl = $state();
 	const inPortEls = $state({});
 	const rowPortEls = $state({});
+	const bundlePortEls = $state({});
 
 	function nodeLocalCenterY(el) {
 		if (!el || !cardEl) return 0;
@@ -109,12 +118,20 @@
 			if (el) setGroupPortY(node.id, port, nodeLocalCenterY(el));
 			else setGroupPortY(node.id, port, HEADER_H + i * PORT_H + PORT_H / 2);
 		}
+		for (let i = 0; i < bundleOutputs.length; i++) {
+			const name = bundleOutputs[i].name;
+			const el = bundlePortEls[name];
+			if (el) setGroupPortY(node.id, name, nodeLocalCenterY(el));
+			else
+				setGroupPortY(node.id, name, HEADER_H + (outputColumns.length + i) * PORT_H + PORT_H / 2);
+		}
 	}
 
 	$effect(() => {
 		// Re-publish on any layout-relevant change.
 		void inputPorts.length;
 		void outputColumns.length;
+		void bundleOutputs.length;
 		const _track = outputColumns.map((c) => `${c.colId}|${rowExpanded[c.colId] ? 'e' : 'c'}`);
 		void _track;
 		(async () => {
@@ -329,7 +346,31 @@
 					{/if}
 				</div>
 			{/each}
-			{#if outputColumns.length === 0}
+			{#each bundleOutputs as bport (bport.name)}
+				<div class="out-row bundle-row">
+					<div class="row-strip">
+						<span class="bundle-label" title="Column set output — connects to a many-in port">
+							<Icon name="column-set" width={13} height={13} />
+							<span>{bport.display ?? bport.name}</span>
+						</span>
+						<button
+							type="button"
+							class="port-dot dot-output inline-port row-port"
+							class:splice-target={spliceTargetPort === bport.name}
+							bind:this={bundlePortEls[bport.name]}
+							data-node-id={node.id}
+							data-port-name={bport.name}
+							data-port-dir="out"
+							onmousedown={(e) => startFromOutput(e, bport.name)}
+							oncontextmenu={onPortContextMenu}
+							onclick={(e) => e.stopPropagation()}
+							{@attach tooltip('column set (connects to a many-in port)')}
+							aria-label={`column set output port ${bport.name}`}
+						></button>
+					</div>
+				</div>
+			{/each}
+			{#if outputColumns.length === 0 && bundleOutputs.length === 0}
 				<div class="empty-hint">No output columns yet.</div>
 			{/if}
 		</div>
@@ -358,9 +399,7 @@
 	}
 	.tp-card.selected {
 		border-color: var(--color-accent);
-		box-shadow:
-			var(--shadow-1),
-			var(--shadow-focus-soft);
+		box-shadow: var(--shadow-1), var(--shadow-focus-soft);
 	}
 	.tp-card.expanded {
 		border-bottom-left-radius: 0;
@@ -574,4 +613,16 @@
 		text-align: center;
 	}
 
+	/* Bundle output row (Column Set `set` port): a labelled output dot, no data
+	   column / type / preview. */
+	.bundle-label {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-2);
+		flex: 1 1 auto;
+		padding-left: 4px;
+		font-size: var(--font-xs);
+		font-weight: 600;
+		color: var(--color-accent);
+	}
 </style>

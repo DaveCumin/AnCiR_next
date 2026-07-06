@@ -32,6 +32,7 @@
 		'clock',
 		'close',
 		'collect-columns',
+		'column-set',
 		'column-add',
 		'column-avg',
 		'column-max',
