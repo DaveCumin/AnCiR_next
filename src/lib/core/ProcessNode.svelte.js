@@ -713,17 +713,20 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		const entry = appConsts.tableProcessMap.get(tp.name);
 		const tpInputs = collectTableProcessInputRefs(tp.args, entry?.nodeSpec);
 
-		// Columns owned by a wired Column Set: their inputs are represented by the
-		// SINGLE bundle wire from the set, so suppress their individual data edges
-		// (otherwise the node shows both the set wire and N per-column wires).
+		// Columns owned by a wired Column Set are represented by the SINGLE bundle
+		// wire, so suppress their individual data edges — but only ON THE PORT the
+		// set feeds. The same column used on ANOTHER port (e.g. a set feeds yIN and
+		// that column is also the xIN) must still draw its own edge to that port.
 		const tpSetRefs = tp.args?.setRefs ?? {};
-		const setOwned = new Set();
+		const setOwnedByPort = new Map(); // port → Set of candidate colIds fed by a set there
 		for (const port of Object.keys(tpSetRefs)) {
+			const owned = new Set();
 			for (const csId of tpSetRefs[port] ?? []) {
 				const cs = core.tableProcesses.find((t) => t.id === csId);
 				for (const id of cs?.args?.colsIN ?? [])
-					if (typeof id === 'number' && id >= 0) setOwned.add(id);
+					if (typeof id === 'number' && id >= 0) owned.add(id);
 			}
+			setOwnedByPort.set(port, owned);
 		}
 
 		// One bundle wire per wired Column Set → the port it feeds.
@@ -737,7 +740,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		for (const ref of tpInputs) {
 			const { colId, port } = ref;
 			if (colId == null || colId < 0) continue;
-			if (setOwned.has(colId)) continue; // represented by the bundle wire
+			if (setOwnedByPort.get(port)?.has(colId)) continue; // represented by the bundle wire on THIS port
 			const col = core.data.find((d) => d.id === colId);
 			if (!col) continue;
 			let fromId, fromPort;
@@ -762,21 +765,29 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	for (const plot of core.plots ?? []) {
 		if (plot.facetParent != null) continue; // facet children have no canvas node
 		const plotNodeId = `plot_${plot.id}`;
-		// Columns owned by a wired Column Set: their series are represented by the
-		// SINGLE bundle wire from the set, so suppress their individual data edges
-		// (otherwise the plot shows both the set wire and N per-column wires).
-		const setOwned = new Set();
+		// Columns owned by a wired Column Set are represented by the SINGLE bundle
+		// wire, so suppress their individual data edges — but only on the CHANNEL
+		// the set feeds. A set feeds `y` (ysN ports), `series`, or `data`; the same
+		// column used as the plot's x (an xN port, not a set channel) must still
+		// draw its own edge.
 		const plotSetRefs = plot.setRefs ?? {};
+		const setOwnedByChannel = new Map(); // channel → Set of candidate colIds
 		for (const ch of Object.keys(plotSetRefs)) {
+			const owned = new Set();
 			for (const csId of plotSetRefs[ch] ?? []) {
 				const cs = core.tableProcesses.find((tp) => tp.id === csId);
 				for (const id of cs?.args?.colsIN ?? [])
-					if (typeof id === 'number' && id >= 0) setOwned.add(id);
+					if (typeof id === 'number' && id >= 0) owned.add(id);
 			}
+			setOwnedByChannel.set(ch, owned);
 		}
+		// Map a plot input port to the set channel it belongs to (or null).
+		const portChannel = (port) =>
+			port === 'series' ? 'series' : port === 'data' ? 'data' : /^ys\d+$/.test(port) ? 'y' : null;
 		function addPlotCol(colId, port) {
 			if (colId == null || colId < 0) return;
-			if (setOwned.has(colId)) return; // represented by the bundle wire
+			const ch = portChannel(port);
+			if (ch && setOwnedByChannel.get(ch)?.has(colId)) return; // represented by the bundle wire on THIS channel
 			const col = core.data.find((d) => d.id === colId);
 			if (!col) return;
 			let fromId, fromPort;
