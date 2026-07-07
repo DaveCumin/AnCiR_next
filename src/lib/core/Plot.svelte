@@ -3,6 +3,7 @@
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
+	import { selectedColumnIds } from '$lib/tableProcesses/columnSet.js';
 	let _counter = 0;
 	function getNextId() {
 		return _counter++;
@@ -163,6 +164,128 @@
 		}
 	}
 
+	// --- Live Column Set → plot inputs -----------------------------------------
+	// A Column Set wired to a plot's many-in port feeds its selected columns as
+	// plot series. The link lives on plot.setRefs (by channel); these helpers
+	// materialise it into the plot's series and keep it in sync — idempotently —
+	// as the set's rule / candidate columns change. Ownership is by candidate
+	// membership: a series is "set-owned" iff its column is a candidate of a wired
+	// set, so we never have to tag the per-type data classes.
+
+	/** Map a plot input port name to the setRefs channel it feeds (or null). */
+	export function plotSetChannel(portName) {
+		if (portName === 'series') return 'series';
+		if (portName === 'data') return 'data';
+		if (portName === 'ys' || portName === 'ys*' || /^ys\d+$/.test(portName ?? '')) return 'y';
+		return null;
+	}
+
+	/** The Column Set table-processes wired into a plot channel (skips deleted). */
+	function wiredColumnSets(plot, channel) {
+		return (plot?.setRefs?.[channel] ?? [])
+			.map((id) => (core.tableProcesses ?? []).find((tp) => tp.id === id))
+			.filter(Boolean);
+	}
+
+	/** Candidate (ownership) columns + ordered selected columns across wired sets. */
+	function channelColumns(sets) {
+		const candidates = new Set();
+		const selected = [];
+		const seen = new Set();
+		for (const s of sets) {
+			for (const id of s.args?.colsIN ?? [])
+				if (typeof id === 'number' && id >= 0) candidates.add(id);
+			for (const id of selectedColumnIds(s.args)) {
+				if (!seen.has(id)) {
+					seen.add(id);
+					selected.push(id);
+				}
+			}
+		}
+		return { candidates, selected };
+	}
+
+	/**
+	 * Ensure a plot's data holds exactly one series per `selected` column for the
+	 * set-owned domain (`candidates`), preserving user series. `field` is 'y' for
+	 * x/y plots (paired with `xRef`) or the single input field for single-input
+	 * plots (xRef null). Idempotent — rewrites only when the set-owned set differs.
+	 */
+	function reconcileSeriesByColumn(plot, field, xRef, candidates, selected) {
+		const data = plot.plot?.data ?? [];
+		const refOf = (dp) => dp?.[field]?.refId ?? -1;
+		const setOwned = (dp) => candidates.has(refOf(dp));
+		const curOwned = data.filter(setOwned).map(refOf);
+		const same =
+			curOwned.length === selected.length && curOwned.every((id, i) => id === selected[i]);
+		if (same) return;
+		const userSeries = data.filter((dp) => !setOwned(dp));
+		plot.plot.data = userSeries;
+		for (const id of selected) {
+			const dataIn = { [field]: { refId: id } };
+			if (xRef != null && xRef >= 0) dataIn.x = { refId: xRef };
+			if (typeof plot.plot.addData === 'function') plot.plot.addData(dataIn);
+			else plot.plot.data = [...plot.plot.data, dataIn];
+		}
+	}
+
+	/** Materialise every Column Set wired to a plot into its series (idempotent). */
+	export function syncPlotSets(plot) {
+		if (!plot || plot.facetParent != null) return;
+		if (plot.type === 'tableplot') {
+			const sets = wiredColumnSets(plot, 'series');
+			const { candidates, selected } = channelColumns(sets);
+			const cur = plot.plot?.columnRefs ?? [];
+			const next = cur.filter((id) => !candidates.has(id));
+			for (const id of selected) if (!next.includes(id)) next.push(id);
+			if (next.length !== cur.length || next.some((id, i) => id !== cur[i]))
+				plot.plot.columnRefs = next;
+			return;
+		}
+		const defaultInputs = appConsts?.plotMap?.get(plot.type)?.defaultInputs ?? [];
+		if (defaultInputs.length === 1) {
+			const { candidates, selected } = channelColumns(wiredColumnSets(plot, 'data'));
+			reconcileSeriesByColumn(plot, defaultInputs[0], null, candidates, selected);
+			return;
+		}
+		const { candidates, selected } = channelColumns(wiredColumnSets(plot, 'y'));
+		const primaryX =
+			(plot.plot?.data ?? []).map((dp) => dp?.x?.refId).find((r) => r != null && r >= 0) ?? -1;
+		reconcileSeriesByColumn(plot, 'y', primaryX, candidates, selected);
+	}
+
+	/** Reconcile every plot that has a Column Set wired in. Idempotent. */
+	export function reconcileAllPlotSets() {
+		for (const p of core.plots ?? []) {
+			if (p.facetParent != null) continue;
+			if (p.setRefs && Object.values(p.setRefs).some((a) => (a ?? []).length > 0)) syncPlotSets(p);
+		}
+	}
+
+	/**
+	 * Detach a Column Set from a plot: strip the series it materialised (using its
+	 * candidate columns as the ownership domain) and drop it from every channel.
+	 * Used on wire-delete and when the Column Set node itself is deleted. `colset`
+	 * may be the live node (preferred) or null when already gone — in which case a
+	 * fallback candidate list can be supplied.
+	 */
+	export function detachColumnSetFromPlot(plot, colsetId, fallbackCandidates = []) {
+		if (!plot) return;
+		const set = (core.tableProcesses ?? []).find((tp) => tp.id === colsetId);
+		const cands = new Set(
+			(set?.args?.colsIN ?? fallbackCandidates).filter((id) => typeof id === 'number' && id >= 0)
+		);
+		for (const ch of Object.keys(plot.setRefs ?? {}))
+			plot.setRefs[ch] = (plot.setRefs[ch] ?? []).filter((id) => id !== colsetId);
+		if (plot.type === 'tableplot') {
+			plot.plot.columnRefs = (plot.plot?.columnRefs ?? []).filter((id) => !cands.has(id));
+		} else {
+			const di = appConsts?.plotMap?.get(plot.type)?.defaultInputs ?? [];
+			const field = di.length === 1 ? di[0] : 'y';
+			plot.plot.data = (plot.plot?.data ?? []).filter((dp) => !cands.has(dp?.[field]?.refId ?? -1));
+		}
+	}
+
 	export function removePlots(ids) {
 		if (!Array.isArray(ids)) ids = [ids];
 
@@ -260,6 +383,13 @@
 		facet = $state(false);
 		facetParent = $state(null);
 		facetKey = $state(null);
+		// Live Column Set inputs, keyed by channel: `series` (tableplot), `data`
+		// (single-input plots like Histogram), or `y` (x/y plots — one y-series per
+		// selected column, sharing the plot's primary x). Each value is a list of
+		// Column Set table-process ids. reconcileAllPlotSets() materialises the
+		// selected columns into this plot's series and keeps them in sync as the
+		// set's rule / candidate columns change (see syncPlotSets).
+		setRefs = $state({});
 
 		constructor(plotData = {}, id = null) {
 			// console.log('new plot: ', plotData);
@@ -301,6 +431,8 @@
 			this.facet = plotData.facet ?? false;
 			this.facetParent = plotData.facetParent ?? null;
 			this.facetKey = plotData.facetKey ?? null;
+			this.setRefs =
+				plotData.setRefs && typeof plotData.setRefs === 'object' ? { ...plotData.setRefs } : {};
 		}
 
 		toJSON() {
@@ -316,6 +448,7 @@
 				facet: this.facet,
 				facetParent: this.facetParent,
 				facetKey: this.facetKey,
+				setRefs: this.setRefs,
 				plot: this.plot
 			};
 		}
@@ -323,9 +456,10 @@
 			const id = json.id ?? json.plotid;
 			const name = json.name ?? 'Untitled Plot';
 
-			const { x, y, width, height, type, selected, plot, facet, facetParent, facetKey } = json;
+			const { x, y, width, height, type, selected, plot, facet, facetParent, facetKey, setRefs } =
+				json;
 			return new Plot(
-				{ name, x, y, width, height, type, selected, plot, facet, facetParent, facetKey },
+				{ name, x, y, width, height, type, selected, plot, facet, facetParent, facetKey, setRefs },
 				id
 			);
 		}

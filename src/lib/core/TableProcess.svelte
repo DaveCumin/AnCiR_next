@@ -1,6 +1,6 @@
 <script module>
 	import { appState, appConsts, pushObj, core } from '$lib/core/core.svelte.js';
-	import { removeColumnFromPlots } from '$lib/core/Plot.svelte';
+	import { removeColumnFromPlots, detachColumnSetFromPlot } from '$lib/core/Plot.svelte';
 	import { Column, removeColumn, getColumnById } from '$lib/core/Column.svelte';
 	let _tableprocessidCounter = 0;
 
@@ -103,6 +103,19 @@
 					args[key] = v.filter((e) => !(e && typeof e === 'object' && e.setRef === deletedTpId));
 				}
 			}
+		});
+
+		// Step 4.6: Detach this Column Set from any plots it fed — strip its
+		// materialised series and clear it from plot.setRefs. The node is already
+		// gone from core.tableProcesses, so pass its candidate columns as the
+		// ownership fallback.
+		const deletedCandidates = Array.isArray(tableProcess.args?.colsIN)
+			? tableProcess.args.colsIN
+			: [];
+		core.plots.forEach((plot) => {
+			const refs = plot.setRefs ?? {};
+			if (Object.values(refs).some((a) => (a ?? []).includes(deletedTpId)))
+				detachColumnSetFromPlot(plot, deletedTpId, deletedCandidates);
 		});
 
 		// Drop any per-node note attached to this TP's canvas node.

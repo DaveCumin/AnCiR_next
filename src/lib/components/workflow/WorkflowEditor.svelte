@@ -26,7 +26,13 @@
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { deleteTableProcess } from '$lib/core/TableProcess.svelte';
-	import { selectPlot, deselectAllPlots, nextPlotSpawnPosition } from '$lib/core/Plot.svelte';
+	import {
+		selectPlot,
+		deselectAllPlots,
+		nextPlotSpawnPosition,
+		plotSetChannel,
+		detachColumnSetFromPlot
+	} from '$lib/core/Plot.svelte';
 	import { plotPortRows, plotPortSlotIndex } from '$lib/core/ProcessNode.svelte.js';
 	import { makeSetRef, isSetRef, setRefId } from '$lib/tableProcesses/columnSet.js';
 	import WorkflowNode from './WorkflowNode.svelte';
@@ -1642,16 +1648,21 @@
 	// Wire a Column Set's bundle output into a consumer's many-in port by storing a
 	// live reference token. Enforces the one connection rule the app has: a column
 	// set may only feed a many-in input (Split's yIN, a grouped analysis, …).
-	// A many-in table-process input accepts a column set unless it opts out with
-	// `acceptsColumnSet: false` on its nodeSpec input (e.g. CollectColumns, which
-	// manages its own column picker and reads colIds directly, not via
-	// normalizeYInputs).
+	// Which many-in ports accept a column set:
+	//  · table-process inputs (yIN, …) unless they opt out with
+	//    `acceptsColumnSet: false` (e.g. CollectColumns, which reads colIds
+	//    directly, not via normalizeYInputs);
+	//  · plot many-in ports — series (tableplot), data (single-input), ysN (x/y).
 	function portAcceptsColumnSet(target, portName) {
-		if (!(target?.type === 'tableprocess' && target.tpObj)) return false;
-		if (!(portName?.endsWith('IN') && isManyInputPort(target, portName))) return false;
-		const entry = appConsts.tableProcessMap.get(target.tpObj.name);
-		const inDef = (entry?.nodeSpec?.inputs ?? []).find((i) => i.name === portName);
-		return inDef?.acceptsColumnSet !== false;
+		if (!target) return false;
+		if (target.type === 'plot' && target.plotObj) return plotSetChannel(portName) != null;
+		if (target.type === 'tableprocess' && target.tpObj) {
+			if (!(portName?.endsWith('IN') && isManyInputPort(target, portName))) return false;
+			const entry = appConsts.tableProcessMap.get(target.tpObj.name);
+			const inDef = (entry?.nodeSpec?.inputs ?? []).find((i) => i.name === portName);
+			return inDef?.acceptsColumnSet !== false;
+		}
+		return false;
 	}
 
 	function connectColumnSetToInput(fromNode, toNodeId, toPort) {
@@ -1662,6 +1673,18 @@
 			addNotification('A column set can only connect to a many-in input port.');
 			return;
 		}
+		// Plot target: record the set on the plot's channel; reconcileAllPlotSets
+		// (a +page effect) materialises its selected columns into plot series and
+		// keeps them live.
+		if (target.type === 'plot' && target.plotObj) {
+			const channel = plotSetChannel(toPort);
+			const plot = target.plotObj;
+			const cur = Array.isArray(plot.setRefs?.[channel]) ? plot.setRefs[channel] : [];
+			if (!cur.includes(colsetId))
+				plot.setRefs = { ...(plot.setRefs ?? {}), [channel]: [...cur, colsetId] };
+			return;
+		}
+		// Table-process target: store the live reference token in the many-in array.
 		const tp = target.tpObj;
 		const arr = Array.isArray(tp.args[toPort]) ? tp.args[toPort] : [];
 		if (arr.some((v) => isSetRef(v) && setRefId(v) === colsetId)) return; // already wired
@@ -1903,6 +1926,15 @@
 	function disconnectInputPort(nodeId, portName) {
 		const target = allNodes.find((n) => n.id === nodeId);
 		if (!target) return;
+
+		// A plot port may carry Column Set links — detach them first (strips their
+		// materialised series and clears the channel) so the column clear below
+		// doesn't leave setRefs pointing at nothing for the reconcile to rebuild.
+		if (target.type === 'plot' && target.plotObj) {
+			const channel = plotSetChannel(portName);
+			for (const csId of [...(target.plotObj.setRefs?.[channel] ?? [])])
+				detachColumnSetFromPlot(target.plotObj, csId);
+		}
 
 		// Free process node: clear every input (and its paired producer column).
 		if (target.type === 'process' && target.processObj) {
@@ -2692,16 +2724,18 @@
 			return;
 		}
 
-		// Column Set bundle edge: drop the setRef token that points at the source
-		// Column Set node from the target's many-in array (no colId is involved).
+		// Column Set bundle edge: drop the link to the source Column Set node from
+		// the consumer (no colId is involved).
 		const fromNode = allNodes.find((n) => n.id === edge.fromId);
 		if (fromNode && isColumnSetOutput(fromNode, edge.fromPort)) {
+			const cid = fromNode.tpObj?.id;
 			if (target.type === 'tableprocess' && target.tpObj && edge.toPort?.endsWith('IN')) {
-				const cid = fromNode.tpObj?.id;
 				const arr = Array.isArray(target.tpObj.args[edge.toPort])
 					? target.tpObj.args[edge.toPort]
 					: [];
 				target.tpObj.args[edge.toPort] = arr.filter((v) => !(isSetRef(v) && setRefId(v) === cid));
+			} else if (target.type === 'plot' && target.plotObj) {
+				detachColumnSetFromPlot(target.plotObj, cid);
 			}
 			return;
 		}

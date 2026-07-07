@@ -42,7 +42,13 @@
 		createOrphanProcess
 	} from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
-	import { Plot, selectAllPlots, reconcileAllFacets } from '$lib/core/Plot.svelte';
+	import {
+		Plot,
+		selectAllPlots,
+		reconcileAllFacets,
+		reconcileAllPlotSets
+	} from '$lib/core/Plot.svelte';
+	import { selectedColumnIds } from '$lib/tableProcesses/columnSet.js';
 	import { TableProcess } from '$lib/core/TableProcess.svelte';
 
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
@@ -91,6 +97,27 @@
 		// Also react to children being added/removed (membership changes).
 		void core.plots.length;
 		untrack(() => reconcileAllFacets());
+	});
+
+	// Keep plots that have a Column Set wired in synced with the set's live
+	// selection. Track each wired plot's setRefs and, for every referenced Column
+	// Set, its selected column ids (which fold in the set's rule + candidate
+	// columns + those columns' names/labels). Reconciliation runs untracked and is
+	// idempotent, so it settles without re-triggering itself.
+	$effect(() => {
+		for (const p of core.plots) {
+			const refs = p.setRefs ?? {};
+			for (const ch of Object.keys(refs)) {
+				for (const id of refs[ch] ?? []) {
+					void id;
+					const set = core.tableProcesses.find((tp) => tp.id === id);
+					if (set) for (const c of selectedColumnIds(set.args)) void c;
+				}
+			}
+		}
+		void core.plots.length;
+		void core.tableProcesses.length;
+		untrack(() => reconcileAllPlotSets());
 	});
 
 	// Single ImportData modal instance for the whole app (mounted below). Its

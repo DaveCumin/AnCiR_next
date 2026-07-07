@@ -160,7 +160,7 @@ function makeProcessNodeHash(core) {
 		out += `tp:${tp.id}:${tp.name}:${tp.refTPId ?? ''}:${JSON.stringify(tp.args ?? {})}|`;
 	}
 	for (const plot of core.plots ?? []) {
-		out += `pl:${plot.id}:${plot.type}:${JSON.stringify(plot.plot ?? {})}|`;
+		out += `pl:${plot.id}:${plot.type}:${JSON.stringify(plot.plot ?? {})}:${JSON.stringify(plot.setRefs ?? {})}|`;
 	}
 	// Notes and groups don't drive data flow but their presence/identity must
 	// invalidate the graph cache so they appear / disappear as canvas nodes.
@@ -749,8 +749,21 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	for (const plot of core.plots ?? []) {
 		if (plot.facetParent != null) continue; // facet children have no canvas node
 		const plotNodeId = `plot_${plot.id}`;
+		// Columns owned by a wired Column Set: their series are represented by the
+		// SINGLE bundle wire from the set, so suppress their individual data edges
+		// (otherwise the plot shows both the set wire and N per-column wires).
+		const setOwned = new Set();
+		const plotSetRefs = plot.setRefs ?? {};
+		for (const ch of Object.keys(plotSetRefs)) {
+			for (const csId of plotSetRefs[ch] ?? []) {
+				const cs = core.tableProcesses.find((tp) => tp.id === csId);
+				for (const id of cs?.args?.colsIN ?? [])
+					if (typeof id === 'number' && id >= 0) setOwned.add(id);
+			}
+		}
 		function addPlotCol(colId, port) {
 			if (colId == null || colId < 0) return;
+			if (setOwned.has(colId)) return; // represented by the bundle wire
 			const col = core.data.find((d) => d.id === colId);
 			if (!col) return;
 			let fromId, fromPort;
@@ -763,6 +776,21 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				fromPort = src.port;
 			}
 			addConnection(fromId, plotNodeId, 'data-plot', fromPort, port);
+		}
+
+		// One bundle wire per wired Column Set → the channel's anchor port.
+		const anchorPort = { series: 'series', data: 'data', y: 'ys1' };
+		for (const ch of Object.keys(plotSetRefs)) {
+			for (const csId of plotSetRefs[ch] ?? []) {
+				if (!core.tableProcesses.some((tp) => tp.id === csId)) continue;
+				addConnection(
+					`tableprocess_${csId}`,
+					plotNodeId,
+					'data-plot',
+					'set',
+					anchorPort[ch] ?? 'ys1'
+				);
+			}
 		}
 
 		if (plot.type === 'tableplot') {
