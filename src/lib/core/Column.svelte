@@ -509,7 +509,13 @@
 
 			if (this.type === 'time' && !this.isReferencial() && this.compression !== 'awd') {
 				try {
-					out = out.map((x) => Number(getUNIXDate(x, this.timeFormat)));
+					// Preserve gaps: a null/empty cell stays null rather than being
+					// coerced to Number(getUNIXDate(null)) === 0 (the 1970 epoch), which
+					// would otherwise plot spurious points where a segment has no data
+					// (e.g. Split's per-segment time outputs).
+					out = out.map((x) =>
+						x == null || x === '' ? null : Number(getUNIXDate(x, this.timeFormat))
+					);
 				} catch {
 					console.warn('Error parsing time data for column ', this.id, this.name);
 				}

@@ -91,10 +91,17 @@
 
 		const processHash = crypto.randomUUID();
 		for (const yId of Object.keys(splitData.y_results)) {
+			// Preserve the input column's type on the segment outputs — a time column
+			// stays time rather than becoming numeric. The segment data is already the
+			// column's getData() output (UNIX ms for a time column), so clear
+			// timeFormat to stop getData re-parsing it.
+			const srcType = getColumnById(Number(yId))?.type ?? 'number';
+			const opts = { processHash, type: srcType };
+			if (srcType === 'time') opts.timeFormat = null;
 			for (let seg = 0; seg < splitData.segmentCount; seg++) {
 				const outId = argsIN.out[`${yId}_${seg + 1}`];
 				const segData = splitData.y_results[yId]?.segments?.[seg];
-				if (segData) writeOutputColumn(outId, segData, { processHash });
+				if (segData) writeOutputColumn(outId, segData, opts);
 			}
 		}
 	}
