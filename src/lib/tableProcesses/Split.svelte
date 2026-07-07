@@ -346,7 +346,9 @@
 
 	// Exclude own output column IDs from the Y selector
 	let yExcludeIds = $derived.by(() => {
-		const ids = [p.args.xIN];
+		// Exclude only this Split's own output columns (a node can't split its own
+		// output). The X column IS allowed as a Y — you can split it against itself.
+		const ids = [];
 		for (const key of Object.keys(p.args.out)) {
 			if (p.args.out[key] >= 0) {
 				ids.push(p.args.out[key]);
@@ -430,24 +432,20 @@
 		</div>
 		<div class="control-input-vertical">
 			<div class="control-input">
-				<p>X column (time)</p>
+				<p>X column (time or number)</p>
 				<ColumnSelector
 					bind:value={p.args.xIN}
-					optionDisabled={(id) =>
-						getColumnById(id)?.type === 'time' ? null : 'X must be a time column.'}
+					optionDisabled={(id) => {
+						const t = getColumnById(id)?.type;
+						return t === 'time' || t === 'number'
+							? null
+							: 'X must be a time or number column to split on.';
+					}}
 				/>
 			</div>
 			<div class="control-input">
 				<p>Y columns to split</p>
-				<ColumnSelector
-					bind:value={p.args.yIN}
-					excludeColIds={yExcludeIds}
-					multiple={true}
-					optionDisabled={(id) =>
-						getColumnById(id)?.type === 'time'
-							? 'This is the time column — pick value columns to split.'
-							: null}
-				/>
+				<ColumnSelector bind:value={p.args.yIN} excludeColIds={yExcludeIds} multiple={true} />
 			</div>
 		</div>
 	</div>
