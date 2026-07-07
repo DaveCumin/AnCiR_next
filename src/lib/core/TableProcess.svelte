@@ -2,7 +2,59 @@
 	import { appState, appConsts, pushObj, core } from '$lib/core/core.svelte.js';
 	import { removeColumnFromPlots, detachColumnSetFromPlot } from '$lib/core/Plot.svelte';
 	import { Column, removeColumn, getColumnById } from '$lib/core/Column.svelte';
+	import { setSelection } from '$lib/tableProcesses/columnSet.js';
 	let _tableprocessidCounter = 0;
+
+	// --- Live Column Set → table-process inputs --------------------------------
+	// A Column Set wired to a table-process many-in port (e.g. Split's yIN) is
+	// recorded in `tp.args.setRefs = { [port]: [columnSetId] }` (parallel to the
+	// port's id array). These helpers materialise the sets' selected columns INTO
+	// that id array and keep them in sync — so the node's compute, its column
+	// picker, AND its output-column reconcile all see real columns, while the
+	// canvas shows a single bundle wire. Ownership is by candidate membership, so
+	// user-added (non-candidate) ids on the same port are preserved.
+
+	/** Materialise every Column Set wired to a table-process into its ports. */
+	export function syncTPSets(tp) {
+		const setRefs = tp?.args?.setRefs;
+		if (!setRefs) return;
+		for (const port of Object.keys(setRefs)) {
+			const { candidates, selected } = setSelection(setRefs[port]);
+			const cur = Array.isArray(tp.args[port]) ? tp.args[port] : [];
+			// Keep user ids (not owned by any wired set), then append the selection.
+			const next = cur.filter((id) => typeof id === 'number' && id >= 0 && !candidates.has(id));
+			for (const id of selected) if (!next.includes(id)) next.push(id);
+			if (next.length !== cur.length || next.some((id, i) => id !== cur[i])) tp.args[port] = next;
+		}
+	}
+
+	/** Reconcile every table-process that has a Column Set wired in. Idempotent. */
+	export function reconcileAllTPSets() {
+		for (const tp of core.tableProcesses ?? []) {
+			const refs = tp.args?.setRefs;
+			if (refs && Object.values(refs).some((a) => (a ?? []).length > 0)) syncTPSets(tp);
+		}
+	}
+
+	/**
+	 * Detach a Column Set from a table-process: strip the columns it materialised
+	 * (its candidate columns as the ownership domain) from every many-in port and
+	 * drop it from setRefs. `fallbackCandidates` covers the already-deleted case.
+	 */
+	export function detachColumnSetFromTP(tp, colsetId, fallbackCandidates = []) {
+		const refs = tp?.args?.setRefs;
+		if (!refs) return;
+		const set = (core.tableProcesses ?? []).find((t) => t.id === colsetId);
+		const cands = new Set(
+			(set?.args?.colsIN ?? fallbackCandidates).filter((id) => typeof id === 'number' && id >= 0)
+		);
+		for (const port of Object.keys(refs)) {
+			if (!(refs[port] ?? []).includes(colsetId)) continue;
+			refs[port] = refs[port].filter((id) => id !== colsetId);
+			if (Array.isArray(tp.args[port]))
+				tp.args[port] = tp.args[port].filter((id) => !cands.has(id));
+		}
+	}
 
 	function doDeleteTableProcess(p) {
 		appState.AYStext = `Are you sure you want to delete process ${p.name}? This will also delete any output columns created by this process.`;
@@ -87,31 +139,21 @@
 			if (tp.refTPId === tableProcess.id) tp.refTPId = null;
 		});
 
-		// Step 4.5: Drop any Column Set reference tokens ({ setRef }) pointing at
-		// this node from every remaining TP's many-in arrays, so a deleted Column
-		// Set can't leave a dangling wire — or, after a save/reload, be re-bound to
-		// a different node that later reuses this (monotonic) id.
+		// Step 4.5: If this was a Column Set, detach it from every consumer it fed —
+		// strip its materialised columns/series and drop it from their setRefs — so
+		// nothing dangles (and, after a save/reload, it can't be re-bound to a
+		// different node reusing this monotonic id). The node is already gone from
+		// core.tableProcesses, so pass its candidate columns as the ownership
+		// fallback.
 		const deletedTpId = tableProcess.id;
-		core.tableProcesses.forEach((tp) => {
-			const args = tp.args ?? {};
-			for (const key of Object.keys(args)) {
-				const v = args[key];
-				if (
-					Array.isArray(v) &&
-					v.some((e) => e && typeof e === 'object' && e.setRef === deletedTpId)
-				) {
-					args[key] = v.filter((e) => !(e && typeof e === 'object' && e.setRef === deletedTpId));
-				}
-			}
-		});
-
-		// Step 4.6: Detach this Column Set from any plots it fed — strip its
-		// materialised series and clear it from plot.setRefs. The node is already
-		// gone from core.tableProcesses, so pass its candidate columns as the
-		// ownership fallback.
 		const deletedCandidates = Array.isArray(tableProcess.args?.colsIN)
 			? tableProcess.args.colsIN
 			: [];
+		core.tableProcesses.forEach((tp) => {
+			const refs = tp.args?.setRefs;
+			if (refs && Object.values(refs).some((a) => (a ?? []).includes(deletedTpId)))
+				detachColumnSetFromTP(tp, deletedTpId, deletedCandidates);
+		});
 		core.plots.forEach((plot) => {
 			const refs = plot.setRefs ?? {};
 			if (Object.values(refs).some((a) => (a ?? []).includes(deletedTpId)))

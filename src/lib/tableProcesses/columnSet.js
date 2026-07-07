@@ -1,41 +1,19 @@
 // @ts-nocheck
-// Shared helpers for the Column Set node and for anything that has to expand a
-// "column set" reference back into concrete column ids.
+// Shared helpers for the Column Set node.
 //
-// A Column Set node curates a live subset of its wired candidate columns
-// (`colsIN`) via a name/label predicate, and exposes that subset as ONE output
-// wire. Downstream, a consumer's many-in array (e.g. Split's `args.yIN`) stores
-// a lightweight token `{ setRef: <columnSetTpId> }` in place of the individual
-// column ids. These helpers are the single source of truth for:
-//   · testing a column against the predicate,
-//   · computing a Column Set's currently-selected column ids, and
-//   · expanding a many-in array's `setRef` tokens back to concrete ids at
-//     read/compute time.
+// A Column Set curates a live subset of its wired candidate columns (`colsIN`)
+// via a name/label predicate, and exposes that subset as ONE output wire. A
+// consumer (table-process or plot) records which Column Sets feed which of its
+// many-in ports in a parallel `setRefs` map, and a reconcile (syncTPSets /
+// syncPlotSets) materialises the selected columns into the consumer's real
+// inputs — so the consumer's compute, UI, and output-columns all see concrete
+// columns, while the canvas shows a single bundle wire. These helpers are the
+// single source of truth for the predicate, a set's selection, and the
+// combined candidate/selection across several sets wired to one channel.
 //
-// No import cycle: neither core.svelte nor Column.svelte import tpArgHelpers or
-// this module, so tpArgHelpers → columnSet → {core, Column} is one-directional.
+// No import cycle: neither core.svelte nor Column.svelte import this module.
 import { core } from '$lib/core/core.svelte';
 import { getColumnById } from '$lib/core/Column.svelte';
-
-// --- setRef token -----------------------------------------------------------
-// A bundle reference stored inline in a consumer's many-in id array. Kept as a
-// plain object so it serializes as JSON and is skipped by every existing path
-// that only rewrites/matches numeric ids (column remap, splice indexOf, …).
-
-/** Build the token stored in a consumer's many-in array for a wired column set. */
-export function makeSetRef(columnSetTpId) {
-	return { setRef: columnSetTpId };
-}
-
-/** True when `v` is a column-set reference token (not a plain column id). */
-export function isSetRef(v) {
-	return !!v && typeof v === 'object' && typeof v.setRef === 'number';
-}
-
-/** The Column Set table-process id a token points at (or -1). */
-export function setRefId(v) {
-	return isSetRef(v) ? v.setRef : -1;
-}
 
 // --- predicate --------------------------------------------------------------
 
@@ -57,7 +35,7 @@ export function matchesPredicate(col, pattern, matchField = 'either') {
 }
 
 /** Normalize a `colsIN` arg to a plain array of candidate column ids. */
-function candidateIds(args) {
+export function candidateIds(args) {
 	const raw = args?.colsIN;
 	if (Array.isArray(raw)) return raw.filter((id) => typeof id === 'number' && id >= 0);
 	return typeof raw === 'number' && raw >= 0 ? [raw] : [];
@@ -81,28 +59,29 @@ export function selectedColumnIds(args) {
 	});
 }
 
-// --- expansion --------------------------------------------------------------
-
 /**
- * Expand a many-in id array, replacing each `setRef` token with the referenced
- * Column Set's currently-selected column ids and passing plain ids through. A
- * token pointing at a missing/deleted Column Set node expands to nothing.
- * Order is preserved; a set expands in place.
- * @param {Array<number|{setRef:number}>} arr
- * @returns {number[]}
+ * Combined ownership domain + ordered selection across several Column Sets wired
+ * to one channel. `candidates` (the union of every wired set's colsIN) is the
+ * ownership domain: a consumer input is "set-owned" iff its column is a
+ * candidate, which is how the reconcile knows which inputs it manages without
+ * tagging. `selected` is the union of the sets' current selections, in order.
+ * @param {number[]} colsetIds - Column Set table-process ids.
+ * @returns {{candidates: Set<number>, selected: number[]}}
  */
-export function expandColumnRefs(arr) {
-	if (!Array.isArray(arr)) return [];
-	const out = [];
-	for (const item of arr) {
-		if (isSetRef(item)) {
-			const node = (core.tableProcesses ?? []).find((tp) => tp.id === item.setRef);
-			if (node) {
-				for (const id of selectedColumnIds(node.args)) out.push(id);
+export function setSelection(colsetIds) {
+	const candidates = new Set();
+	const selected = [];
+	const seen = new Set();
+	for (const csId of colsetIds ?? []) {
+		const node = (core.tableProcesses ?? []).find((tp) => tp.id === csId);
+		if (!node) continue;
+		for (const id of candidateIds(node.args)) candidates.add(id);
+		for (const id of selectedColumnIds(node.args)) {
+			if (!seen.has(id)) {
+				seen.add(id);
+				selected.push(id);
 			}
-		} else if (typeof item === 'number') {
-			out.push(item);
 		}
 	}
-	return out;
+	return { candidates, selected };
 }

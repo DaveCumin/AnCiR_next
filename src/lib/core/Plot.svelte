@@ -3,7 +3,7 @@
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
-	import { selectedColumnIds } from '$lib/tableProcesses/columnSet.js';
+	import { selectedColumnIds, setSelection } from '$lib/tableProcesses/columnSet.js';
 	let _counter = 0;
 	function getNextId() {
 		return _counter++;
@@ -180,31 +180,6 @@
 		return null;
 	}
 
-	/** The Column Set table-processes wired into a plot channel (skips deleted). */
-	function wiredColumnSets(plot, channel) {
-		return (plot?.setRefs?.[channel] ?? [])
-			.map((id) => (core.tableProcesses ?? []).find((tp) => tp.id === id))
-			.filter(Boolean);
-	}
-
-	/** Candidate (ownership) columns + ordered selected columns across wired sets. */
-	function channelColumns(sets) {
-		const candidates = new Set();
-		const selected = [];
-		const seen = new Set();
-		for (const s of sets) {
-			for (const id of s.args?.colsIN ?? [])
-				if (typeof id === 'number' && id >= 0) candidates.add(id);
-			for (const id of selectedColumnIds(s.args)) {
-				if (!seen.has(id)) {
-					seen.add(id);
-					selected.push(id);
-				}
-			}
-		}
-		return { candidates, selected };
-	}
-
 	/**
 	 * Ensure a plot's data holds exactly one series per `selected` column for the
 	 * set-owned domain (`candidates`), preserving user series. `field` is 'y' for
@@ -233,8 +208,7 @@
 	export function syncPlotSets(plot) {
 		if (!plot || plot.facetParent != null) return;
 		if (plot.type === 'tableplot') {
-			const sets = wiredColumnSets(plot, 'series');
-			const { candidates, selected } = channelColumns(sets);
+			const { candidates, selected } = setSelection(plot.setRefs?.series ?? []);
 			const cur = plot.plot?.columnRefs ?? [];
 			const next = cur.filter((id) => !candidates.has(id));
 			for (const id of selected) if (!next.includes(id)) next.push(id);
@@ -244,11 +218,11 @@
 		}
 		const defaultInputs = appConsts?.plotMap?.get(plot.type)?.defaultInputs ?? [];
 		if (defaultInputs.length === 1) {
-			const { candidates, selected } = channelColumns(wiredColumnSets(plot, 'data'));
+			const { candidates, selected } = setSelection(plot.setRefs?.data ?? []);
 			reconcileSeriesByColumn(plot, defaultInputs[0], null, candidates, selected);
 			return;
 		}
-		const { candidates, selected } = channelColumns(wiredColumnSets(plot, 'y'));
+		const { candidates, selected } = setSelection(plot.setRefs?.y ?? []);
 		const primaryX =
 			(plot.plot?.data ?? []).map((dp) => dp?.x?.refId).find((r) => r != null && r >= 0) ?? -1;
 		reconcileSeriesByColumn(plot, 'y', primaryX, candidates, selected);

@@ -25,7 +25,7 @@
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
-	import { deleteTableProcess } from '$lib/core/TableProcess.svelte';
+	import { deleteTableProcess, detachColumnSetFromTP } from '$lib/core/TableProcess.svelte';
 	import {
 		selectPlot,
 		deselectAllPlots,
@@ -34,7 +34,6 @@
 		detachColumnSetFromPlot
 	} from '$lib/core/Plot.svelte';
 	import { plotPortRows, plotPortSlotIndex } from '$lib/core/ProcessNode.svelte.js';
-	import { makeSetRef, isSetRef, setRefId } from '$lib/tableProcesses/columnSet.js';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import GroupNode from './GroupNode.svelte';
 	import TableProcessNode from './TableProcessNode.svelte';
@@ -1684,11 +1683,14 @@
 				plot.setRefs = { ...(plot.setRefs ?? {}), [channel]: [...cur, colsetId] };
 			return;
 		}
-		// Table-process target: store the live reference token in the many-in array.
+		// Table-process target: record the set on the port in a parallel setRefs
+		// map; reconcileAllTPSets (a +page effect) materialises its selected columns
+		// INTO tp.args[port] and keeps them live — so the node's picker, compute,
+		// and output columns all see real columns.
 		const tp = target.tpObj;
-		const arr = Array.isArray(tp.args[toPort]) ? tp.args[toPort] : [];
-		if (arr.some((v) => isSetRef(v) && setRefId(v) === colsetId)) return; // already wired
-		tp.args[toPort] = [...arr, makeSetRef(colsetId)];
+		const cur = Array.isArray(tp.args.setRefs?.[toPort]) ? tp.args.setRefs[toPort] : [];
+		if (!cur.includes(colsetId))
+			tp.args.setRefs = { ...(tp.args.setRefs ?? {}), [toPort]: [...cur, colsetId] };
 	}
 
 	function applyConnection(fromNodeId, fromPort, toNodeId, toPort) {
@@ -1945,6 +1947,9 @@
 		if (target.type === 'tableprocess' && target.tpObj) {
 			const tp = target.tpObj;
 			if (!portName?.endsWith('IN')) return;
+			// Detach any Column Sets on this port first (clears their setRefs +
+			// materialised ids) so the reconcile doesn't rebuild them after the clear.
+			for (const csId of [...(tp.args.setRefs?.[portName] ?? [])]) detachColumnSetFromTP(tp, csId);
 			tp.args[portName] = isManyInputPort(target, portName) ? [] : -1;
 			return;
 		}
@@ -2729,11 +2734,8 @@
 		const fromNode = allNodes.find((n) => n.id === edge.fromId);
 		if (fromNode && isColumnSetOutput(fromNode, edge.fromPort)) {
 			const cid = fromNode.tpObj?.id;
-			if (target.type === 'tableprocess' && target.tpObj && edge.toPort?.endsWith('IN')) {
-				const arr = Array.isArray(target.tpObj.args[edge.toPort])
-					? target.tpObj.args[edge.toPort]
-					: [];
-				target.tpObj.args[edge.toPort] = arr.filter((v) => !(isSetRef(v) && setRefId(v) === cid));
+			if (target.type === 'tableprocess' && target.tpObj) {
+				detachColumnSetFromTP(target.tpObj, cid);
 			} else if (target.type === 'plot' && target.plotObj) {
 				detachColumnSetFromPlot(target.plotObj, cid);
 			}

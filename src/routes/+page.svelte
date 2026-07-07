@@ -49,7 +49,7 @@
 		reconcileAllPlotSets
 	} from '$lib/core/Plot.svelte';
 	import { selectedColumnIds } from '$lib/tableProcesses/columnSet.js';
-	import { TableProcess } from '$lib/core/TableProcess.svelte';
+	import { TableProcess, reconcileAllTPSets } from '$lib/core/TableProcess.svelte';
 
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import { history } from '$lib/core/opHistory.svelte.js';
@@ -118,6 +118,25 @@
 		void core.plots.length;
 		void core.tableProcesses.length;
 		untrack(() => reconcileAllPlotSets());
+	});
+
+	// Same for table-processes: a Column Set wired into a TP many-in port (e.g.
+	// Split's yIN) is materialised into that port's real id array and kept in sync
+	// with the set's live selection. Track each consumer's setRefs and the wired
+	// sets' selections; reconcile untracked + idempotently.
+	$effect(() => {
+		for (const tp of core.tableProcesses) {
+			const refs = tp.args?.setRefs ?? {};
+			for (const port of Object.keys(refs)) {
+				for (const id of refs[port] ?? []) {
+					void id;
+					const set = core.tableProcesses.find((t) => t.id === id);
+					if (set) for (const c of selectedColumnIds(set.args)) void c;
+				}
+			}
+		}
+		void core.tableProcesses.length;
+		untrack(() => reconcileAllTPSets());
 	});
 
 	// Single ImportData modal instance for the whole app (mounted below). Its

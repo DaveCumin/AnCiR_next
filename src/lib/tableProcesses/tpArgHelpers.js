@@ -3,21 +3,17 @@
 // process needs the same three chores: migrate legacy scalar yIN args from old
 // sessions, normalize yIN for reading, and backfill args that didn't exist when
 // an old session was saved. Keeping them here stops the copies drifting apart.
-import { expandColumnRefs } from '$lib/tableProcesses/columnSet.js';
 
 /**
  * Normalize a `yIN` arg to an array of column ids for reading.
  * Handles the legacy scalar form (old sessions stored a single id, with -1
- * meaning "none") as well as the current array form, AND expands any Column Set
- * reference tokens (`{ setRef }`) to the referenced set's currently-selected
- * column ids — so every multi-Y `func` that reads through here transparently
- * receives real columns when a column set is wired in. Does not mutate.
- * @param {number|Array<number|{setRef:number}>|null|undefined} yIN
+ * meaning "none") as well as the current array form. Pure — does not mutate.
+ * @param {number|number[]|null|undefined} yIN
  * @returns {number[]}
  */
 export function normalizeYInputs(yIN) {
-	const arr = Array.isArray(yIN) ? yIN : yIN != null && yIN !== -1 ? [yIN] : [];
-	return expandColumnRefs(arr);
+	if (Array.isArray(yIN)) return yIN;
+	return yIN != null && yIN !== -1 ? [yIN] : [];
 }
 
 /**

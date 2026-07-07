@@ -6,14 +6,7 @@ vi.mock('$lib/core/Column.svelte', () => ({
 	getColumnById: (id) => mockColumns[id]
 }));
 
-import {
-	matchesPredicate,
-	selectedColumnIds,
-	expandColumnRefs,
-	makeSetRef,
-	isSetRef,
-	setRefId
-} from './columnSet.js';
+import { matchesPredicate, selectedColumnIds, setSelection } from './columnSet.js';
 import { core } from '$lib/core/core.svelte';
 
 beforeEach(() => {
@@ -77,20 +70,7 @@ describe('selectedColumnIds', () => {
 	});
 });
 
-describe('setRef token helpers', () => {
-	it('round-trips', () => {
-		const t = makeSetRef(7);
-		expect(isSetRef(t)).toBe(true);
-		expect(setRefId(t)).toBe(7);
-	});
-	it('rejects plain ids', () => {
-		expect(isSetRef(5)).toBe(false);
-		expect(isSetRef(null)).toBe(false);
-		expect(setRefId(5)).toBe(-1);
-	});
-});
-
-describe('expandColumnRefs', () => {
+describe('setSelection', () => {
 	beforeEach(() => {
 		mockColumns[1] = { name: 'liver 1', groupLabel: 'liver' };
 		mockColumns[2] = { name: 'kidney 1', groupLabel: 'kidney' };
@@ -100,30 +80,35 @@ describe('expandColumnRefs', () => {
 				id: 7,
 				name: 'ColumnSet',
 				args: { colsIN: [1, 2, 3], pattern: 'liver', matchField: 'label' }
+			},
+			{
+				id: 8,
+				name: 'ColumnSet',
+				args: { colsIN: [2], pattern: '', matchField: 'either' }
 			}
 		];
 	});
 
-	it('passes plain ids through unchanged', () => {
-		expect(expandColumnRefs([1, 2, 3])).toEqual([1, 2, 3]);
+	it('returns the candidate domain and the ordered selection for a set', () => {
+		const { candidates, selected } = setSelection([7]);
+		expect([...candidates].sort()).toEqual([1, 2, 3]); // ownership = all colsIN
+		expect(selected).toEqual([1, 3]); // rule = label:liver
 	});
 
-	it('expands a setRef token to the set’s currently-selected ids, in place', () => {
-		expect(expandColumnRefs([makeSetRef(7)])).toEqual([1, 3]);
-		expect(expandColumnRefs([9, makeSetRef(7), 5])).toEqual([9, 1, 3, 5]);
+	it('unions candidates and selection across several wired sets, de-duped', () => {
+		const { candidates, selected } = setSelection([7, 8]);
+		expect([...candidates].sort()).toEqual([1, 2, 3]);
+		expect(selected).toEqual([1, 3, 2]); // set 7 → [1,3], set 8 → [2]
 	});
 
-	it('a token pointing at a missing set expands to nothing', () => {
-		expect(expandColumnRefs([makeSetRef(999), 4])).toEqual([4]);
-	});
-
-	it('re-evaluates live when the set’s rule changes', () => {
+	it('re-evaluates live when a set’s rule changes', () => {
 		core.tableProcesses[0].args.pattern = '';
-		expect(expandColumnRefs([makeSetRef(7)])).toEqual([1, 2, 3]);
+		expect(setSelection([7]).selected).toEqual([1, 2, 3]);
 	});
 
-	it('non-array input yields an empty array', () => {
-		expect(expandColumnRefs(-1)).toEqual([]);
-		expect(expandColumnRefs(null)).toEqual([]);
+	it('ignores missing / empty set ids', () => {
+		expect(setSelection([999]).selected).toEqual([]);
+		expect(setSelection([]).selected).toEqual([]);
+		expect(setSelection(null).selected).toEqual([]);
 	});
 });

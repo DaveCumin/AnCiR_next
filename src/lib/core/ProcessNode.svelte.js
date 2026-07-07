@@ -122,14 +122,11 @@ function collectTableProcessInputRefs(tpArgs, nodeSpec) {
 		if (Array.isArray(value)) {
 			for (const item of value) {
 				// FormulaColumn-style token arrays hold {type, id|value} objects; only
-				// `col` tokens reference a column. Column Set references hold
-				// {setRef:<tpId>} and yield ONE bundle edge from that Column Set node's
-				// `set` output. Plain-number arrays (yIN, colIds, valueColIds, …) fall
-				// through to the numeric branch unchanged.
+				// `col` tokens reference a column. Plain-number arrays (yIN, colIds,
+				// valueColIds, …) fall through to the numeric branch unchanged.
 				if (item && typeof item === 'object') {
 					if (item.type === 'col' && typeof item.id === 'number')
 						refs.push({ colId: item.id, port });
-					else if (typeof item.setRef === 'number') refs.push({ setNodeId: item.setRef, port });
 				} else {
 					refs.push({ colId: item, port });
 				}
@@ -716,15 +713,31 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		const entry = appConsts.tableProcessMap.get(tp.name);
 		const tpInputs = collectTableProcessInputRefs(tp.args, entry?.nodeSpec);
 
-		for (const ref of tpInputs) {
-			// Column Set bundle: one wire from the Column Set node's `set` output to
-			// this input, regardless of how many columns the set currently holds.
-			if (ref.setNodeId != null) {
-				addConnection(`tableprocess_${ref.setNodeId}`, tpNodeId, 'data-tp', 'set', ref.port);
-				continue;
+		// Columns owned by a wired Column Set: their inputs are represented by the
+		// SINGLE bundle wire from the set, so suppress their individual data edges
+		// (otherwise the node shows both the set wire and N per-column wires).
+		const tpSetRefs = tp.args?.setRefs ?? {};
+		const setOwned = new Set();
+		for (const port of Object.keys(tpSetRefs)) {
+			for (const csId of tpSetRefs[port] ?? []) {
+				const cs = core.tableProcesses.find((t) => t.id === csId);
+				for (const id of cs?.args?.colsIN ?? [])
+					if (typeof id === 'number' && id >= 0) setOwned.add(id);
 			}
+		}
+
+		// One bundle wire per wired Column Set → the port it feeds.
+		for (const port of Object.keys(tpSetRefs)) {
+			for (const csId of tpSetRefs[port] ?? []) {
+				if (!core.tableProcesses.some((t) => t.id === csId)) continue;
+				addConnection(`tableprocess_${csId}`, tpNodeId, 'data-tp', 'set', port);
+			}
+		}
+
+		for (const ref of tpInputs) {
 			const { colId, port } = ref;
 			if (colId == null || colId < 0) continue;
+			if (setOwned.has(colId)) continue; // represented by the bundle wire
 			const col = core.data.find((d) => d.id === colId);
 			if (!col) continue;
 			let fromId, fromPort;

@@ -3,11 +3,9 @@ import { describe, it, expect } from 'vitest';
 import { normalizeYInputs, migrateLegacyYIN, fillDefaults } from './tpArgHelpers.js';
 
 describe('normalizeYInputs', () => {
-	it('passes plain-id arrays through by value (fresh array, tokens expanded)', () => {
+	it('passes arrays through untouched', () => {
 		const arr = [3, 4];
-		// Returns a fresh array (it may expand Column Set tokens), so content — not
-		// reference — is the contract. With no tokens the content is unchanged.
-		expect(normalizeYInputs(arr)).toEqual([3, 4]);
+		expect(normalizeYInputs(arr)).toBe(arr);
 	});
 	it('wraps a legacy scalar id', () => {
 		expect(normalizeYInputs(7)).toEqual([7]);
