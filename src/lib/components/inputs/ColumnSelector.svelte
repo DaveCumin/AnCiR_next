@@ -9,6 +9,12 @@
 		excludeColIds = [],
 		value = $bindable(),
 		multiple = false,
+		// Per-option gate: called with a column id, returns a non-empty REASON
+		// string to disable that option (shown as a tooltip, and surfaced in the
+		// dropdown when the user tries to pick it), or a falsy value to allow it.
+		// Use for type constraints, e.g. `(id) => getColumnById(id)?.type === 'time'
+		// ? null : 'X must be a time column'`. Default: everything selectable.
+		optionDisabled = () => null,
 		placeholder = 'Select a column...',
 		// Controlled, trigger-less popover mode (used by the canvas port picker):
 		// `hideTrigger` drops the trigger button, `open` is externally bindable, and
@@ -83,7 +89,12 @@
 				children.push({ key: `c:${colId}`, label: col.name, value: colId });
 			}
 			if (children.length > 0) {
-				tree.push({ key: `tp:${proc.id}`, label: proc.displayName || proc.name, options: children, proc });
+				tree.push({
+					key: `tp:${proc.id}`,
+					label: proc.displayName || proc.name,
+					options: children,
+					proc
+				});
 			}
 		}
 
@@ -99,7 +110,11 @@
 				children.push({ key: `c:${col.id}`, label: col.name, value: col.id });
 			}
 			if (children.length > 0) {
-				tree.push({ key: `proc:${proc.id}`, label: proc.displayName || proc.name, options: children });
+				tree.push({
+					key: `proc:${proc.id}`,
+					label: proc.displayName || proc.name,
+					options: children
+				});
 			}
 		}
 
@@ -149,6 +164,9 @@
 	}
 
 	let searchTerm = $state('');
+	// Transient message shown when the user clicks a disabled option; cleared on
+	// the next valid action / search / close.
+	let blockedReason = $state(null);
 	let editingKey = $state(null);
 	let lastSelectedLeafValue = $state(null);
 	let containerEl;
@@ -271,6 +289,14 @@
 		e.stopPropagation();
 		if (e.shiftKey) e.preventDefault();
 
+		// Disabled option: surface the reason instead of selecting.
+		const reason = optionDisabled(optValue);
+		if (reason) {
+			blockedReason = reason;
+			return;
+		}
+		blockedReason = null;
+
 		if (multiple && e.shiftKey) {
 			const leavesInView = flattenLeaves(filteredGroups).map((o) => o.value);
 			const current = asArray(value);
@@ -284,7 +310,7 @@
 				const a = leavesInView.indexOf(anchor);
 				const b = leavesInView.indexOf(optValue);
 				const [start, end] = a <= b ? [a, b] : [b, a];
-				const range = leavesInView.slice(start, end + 1);
+				const range = leavesInView.slice(start, end + 1).filter((v) => !optionDisabled(v));
 				value = e.altKey ? [...new Set([...current, ...range])] : range;
 				onChange(value);
 				lastSelectedLeafValue = optValue;
@@ -324,7 +350,10 @@
 	function selectAllInGroup(node, e) {
 		e.stopPropagation();
 		e.preventDefault?.();
-		const leafIds = flattenLeaves(node.options ?? []).map((o) => o.value);
+		// Only ever bulk-select the ENABLED leaves in the group.
+		const leafIds = flattenLeaves(node.options ?? [])
+			.map((o) => o.value)
+			.filter((v) => !optionDisabled(v));
 		if (!leafIds.length) return;
 
 		// Group checkbox toggle: if every leaf is already selected, clear them all;
@@ -345,7 +374,12 @@
 	// Tri-state for a group's checkbox: 'all' / 'some' / 'none' of its leaves
 	// (recursively) are currently selected.
 	function groupSelectionState(node) {
-		const ids = flattenLeaves(node.options ?? []).map((o) => o.value);
+		// Base the tri-state only on ENABLED leaves so a group of all-disabled
+		// options doesn't read as "some/all", and the header checkbox reflects what
+		// the user can actually toggle.
+		const ids = flattenLeaves(node.options ?? [])
+			.map((o) => o.value)
+			.filter((v) => !optionDisabled(v));
 		if (ids.length === 0) return 'none';
 		const sel = asArray(value);
 		const n = ids.reduce((acc, id) => acc + (sel.includes(id) ? 1 : 0), 0);
@@ -432,8 +466,8 @@
 						onclick={(e) => selectAllInGroup(node, e)}
 						onkeydown={(e) => {
 							if (e.key === 'Enter' || e.key === ' ') selectAllInGroup(node, e);
-						}}
-					>{gstate === 'all' ? '✓' : gstate === 'some' ? '–' : ''}</span>
+						}}>{gstate === 'all' ? '✓' : gstate === 'some' ? '–' : ''}</span
+					>
 				{/if}
 
 				{#if node.proc && editingKey === node.key}
@@ -470,12 +504,16 @@
 			{/if}
 		</div>
 	{:else}
+		{@const disabledReason = optionDisabled(node.value)}
 		<button
 			class="option"
 			class:selected={isSelected(node.value)}
 			class:has-check={multiple}
+			class:disabled={!!disabledReason}
 			role={multiple ? 'checkbox' : undefined}
 			aria-checked={multiple ? (isSelected(node.value) ? 'true' : 'false') : undefined}
+			aria-disabled={disabledReason ? 'true' : undefined}
+			title={disabledReason || undefined}
 			onmousedown={(e) => {
 				if (e.shiftKey) e.preventDefault();
 			}}
@@ -516,9 +554,13 @@
 			<input
 				type="text"
 				bind:value={searchTerm}
+				oninput={() => (blockedReason = null)}
 				placeholder="Search... (Alt+click to multi-select)"
 			/>
 		</div>
+		{#if blockedReason}
+			<div class="cs-blocked" role="alert">{blockedReason}</div>
+		{/if}
 		<div class="listbox">
 			{#each filteredGroups as node (node.key)}
 				{@render renderNode(node, 0)}
@@ -698,6 +740,28 @@
 
 	.option:hover {
 		background: var(--color-lightness-95);
+	}
+
+	/* Disabled option: greyed and non-selectable, but still hoverable so its
+	   title tooltip explains why, and a click surfaces the reason banner. */
+	.option.disabled {
+		color: var(--color-text-muted);
+		cursor: not-allowed;
+		opacity: 0.55;
+	}
+
+	.option.disabled .cs-check {
+		border-color: var(--color-lightness-80);
+		background: var(--color-lightness-95);
+	}
+
+	.cs-blocked {
+		padding: 5px 8px;
+		font-size: var(--font-sm);
+		color: var(--color-warning-text, #7a5b00);
+		background: var(--color-warning-bg, #fff7e0);
+		border-bottom: 1px solid var(--color-lightness-90);
+		flex-shrink: 0;
 	}
 
 	.option.selected {

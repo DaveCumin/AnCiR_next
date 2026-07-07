@@ -431,11 +431,23 @@
 		<div class="control-input-vertical">
 			<div class="control-input">
 				<p>X column (time)</p>
-				<ColumnSelector bind:value={p.args.xIN} />
+				<ColumnSelector
+					bind:value={p.args.xIN}
+					optionDisabled={(id) =>
+						getColumnById(id)?.type === 'time' ? null : 'X must be a time column.'}
+				/>
 			</div>
 			<div class="control-input">
 				<p>Y columns to split</p>
-				<ColumnSelector bind:value={p.args.yIN} excludeColIds={yExcludeIds} multiple={true} />
+				<ColumnSelector
+					bind:value={p.args.yIN}
+					excludeColIds={yExcludeIds}
+					multiple={true}
+					optionDisabled={(id) =>
+						getColumnById(id)?.type === 'time'
+							? 'This is the time column — pick value columns to split.'
+							: null}
+				/>
 			</div>
 		</div>
 	</div>
