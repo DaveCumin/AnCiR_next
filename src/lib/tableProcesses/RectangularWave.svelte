@@ -47,7 +47,7 @@
 			outputs: [
 				{ name: 'rectwavex', kind: 'column', cardinality: 'one' },
 				{ name: 'rectwavey_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'rectwavey_' },
-				{ name: 'pvalue', kind: 'column', cardinality: 'one' }
+				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true }
 			]
 		}
 	};

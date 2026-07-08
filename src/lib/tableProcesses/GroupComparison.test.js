@@ -30,8 +30,98 @@ import {
 	pairwiseMannWhitney
 } from './GroupComparison.svelte';
 
+import { core } from '$lib/core/core.svelte';
+
 beforeEach(() => {
 	Object.keys(mockColumns).forEach((k) => delete mockColumns[k]);
+	core.rawData.set.mockClear();
+});
+
+/** Data last written to a mocked out-column id via writeOutputColumn. */
+function writtenData(colId) {
+	const calls = core.rawData.set.mock.calls.filter((c) => c[0] === colId);
+	return calls.length ? calls[calls.length - 1][1] : undefined;
+}
+
+describe('groupcomparison metric outputs (statistic + pvalue ports)', () => {
+	function metricCol() {
+		return { type: 'number', data: -1 };
+	}
+
+	it('writes one value per y input, in yIN order', () => {
+		mockColumns[1] = {
+			name: 'group',
+			type: 'category',
+			getData: () => ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B']
+		};
+		mockColumns[2] = {
+			name: 'y1',
+			type: 'number',
+			getData: () => [1, 2, 1, 2, 9, 10, 9, 10]
+		};
+		mockColumns[3] = {
+			name: 'y2',
+			type: 'number',
+			getData: () => [5, 5, 5, 5, 5, 5, 5, 5]
+		};
+		mockColumns[100] = metricCol();
+		mockColumns[101] = metricCol();
+
+		const [result, valid] = groupcomparison({
+			xIN: 1,
+			yIN: [2, 3],
+			method: 'ttest',
+			alpha: 0.05,
+			out: { statistic: 100, pvalue: 101 }
+		});
+
+		expect(valid).toBe(true);
+		const stats = writtenData(100);
+		const ps = writtenData(101);
+		expect(stats).toHaveLength(2);
+		expect(ps).toHaveLength(2);
+		// y1 separates strongly; values match the editor panel's t / pValue.
+		expect(stats[0]).toBeCloseTo(result.comparisons[2].t, 10);
+		expect(ps[0]).toBeCloseTo(result.comparisons[2].pValue, 10);
+		expect(ps[0]).toBeLessThan(0.001);
+		// y2 has zero between-group difference → t = 0.
+		expect(stats[1]).toBe(0);
+	});
+
+	it('multi-Y fallback (no group column) writes a single value', () => {
+		mockColumns[2] = { name: 'y1', type: 'number', getData: () => [1, 2, 1, 2, 1] };
+		mockColumns[3] = { name: 'y2', type: 'number', getData: () => [9, 10, 9, 10, 11] };
+		mockColumns[100] = metricCol();
+		mockColumns[101] = metricCol();
+
+		const [result, valid] = groupcomparison({
+			xIN: -1,
+			yIN: [2, 3],
+			method: 'ttest',
+			alpha: 0.05,
+			out: { statistic: 100, pvalue: 101 }
+		});
+
+		expect(valid).toBe(true);
+		expect(writtenData(100)).toHaveLength(1);
+		expect(writtenData(101)).toEqual([result.comparisons.multiY.pValue]);
+	});
+
+	it('skips writes when metric ports are unwired', () => {
+		mockColumns[2] = { name: 'y1', type: 'number', getData: () => [1, 2, 1, 2, 1] };
+		mockColumns[3] = { name: 'y2', type: 'number', getData: () => [9, 10, 9, 10, 11] };
+
+		const [, valid] = groupcomparison({
+			xIN: -1,
+			yIN: [2, 3],
+			method: 'ttest',
+			alpha: 0.05,
+			out: {}
+		});
+
+		expect(valid).toBe(true);
+		expect(core.rawData.set).not.toHaveBeenCalled();
+	});
 });
 
 describe('welchTTest', () => {
@@ -344,21 +434,31 @@ describe('groupcomparison', () => {
 
 	it('ANOVA on identical groups yields a non-significant (or degenerate) result', () => {
 		// All groups equal → between-group variance ~0 → not significant
-		mockColumns[1] = { name: 'group', getData: () => ['A', 'A', 'A', 'B', 'B', 'B', 'C', 'C', 'C'] };
+		mockColumns[1] = {
+			name: 'group',
+			getData: () => ['A', 'A', 'A', 'B', 'B', 'B', 'C', 'C', 'C']
+		};
 		mockColumns[2] = { name: 'value', getData: () => [5, 5, 5, 5, 5, 5, 5, 5, 5] };
 		const [result, valid] = groupcomparison({ ...baseArgs, xIN: 1, yIN: [2], method: 'anova' });
 		// With zero within-group variance the test may be flagged invalid; either way it must not be "significant".
 		if (valid && Number.isFinite(result.comparisons[2].pValue)) {
 			expect(result.comparisons[2].pValue).toBeGreaterThanOrEqual(0.05);
 		} else {
-			expect(result.comparisons[2].valid === false || Number.isNaN(result.comparisons[2].pValue)).toBe(true);
+			expect(
+				result.comparisons[2].valid === false || Number.isNaN(result.comparisons[2].pValue)
+			).toBe(true);
 		}
 	});
 
 	it('forced mannwhitney on three groups returns invalid', () => {
 		mockColumns[1] = { name: 'group', getData: () => ['A', 'A', 'B', 'B', 'C', 'C'] };
 		mockColumns[2] = { name: 'value', getData: () => [1, 2, 5, 6, 9, 10] };
-		const [result, valid] = groupcomparison({ ...baseArgs, xIN: 1, yIN: [2], method: 'mannwhitney' });
+		const [result, valid] = groupcomparison({
+			...baseArgs,
+			xIN: 1,
+			yIN: [2],
+			method: 'mannwhitney'
+		});
 		expect(valid).toBe(false);
 		expect(result.comparisons[2].valid).toBe(false);
 	});

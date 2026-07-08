@@ -12,7 +12,8 @@
 		provisionalEdge = null,
 		selectedEdgeKey = null,
 		dropTargetEdgeKey = null,
-		onEdgeClick = null
+		onEdgeClick = null,
+		onEdgeHover = null
 	} = $props();
 
 	function edgeKey(edge) {
@@ -52,6 +53,8 @@
 						e.stopPropagation();
 						onEdgeClick?.(edge);
 					}}
+					onmouseenter={() => onEdgeHover?.(edge)}
+					onmouseleave={() => onEdgeHover?.(null)}
 				/>
 				<path
 					class="edge-line"

@@ -4,6 +4,7 @@
 
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import { selectedColumnIds, setSelection } from '$lib/tableProcesses/columnSet.js';
+	import { removePlotMetricColumns } from '$lib/plots/plotMetricOutputs.svelte.js';
 	let _counter = 0;
 	function getNextId() {
 		return _counter++;
@@ -42,10 +43,13 @@
 
 	function deletePlotIds(ids) {
 		const idSet = new Set(ids);
+		const isDeleted = (p) => idSet.has(p.id) || (p.facetParent != null && idSet.has(p.facetParent));
+		// Metric out-columns belong to the plot — delete them with it.
+		for (const p of core.plots) {
+			if (isDeleted(p)) removePlotMetricColumns(p);
+		}
 		// Deleting a facet generator also removes its generated children.
-		core.plots = core.plots.filter(
-			(p) => !idSet.has(p.id) && !(p.facetParent != null && idSet.has(p.facetParent))
-		);
+		core.plots = core.plots.filter((p) => !isDeleted(p));
 	}
 
 	// Plot types that support faceting (small multiples). These all use an x/y
@@ -364,6 +368,10 @@
 		// selected columns into this plot's series and keeps them in sync as the
 		// set's rule / candidate columns change (see syncPlotSets).
 		setRefs = $state({});
+		// Scalar-metric output columns ({ key → colId }, e.g. peak_period) for
+		// analysis plots — see plots/plotMetricOutputs.js. Persisted so wiring
+		// from a plot's metric ports survives reload.
+		metricOut = $state({});
 
 		constructor(plotData = {}, id = null) {
 			// console.log('new plot: ', plotData);
@@ -407,6 +415,10 @@
 			this.facetKey = plotData.facetKey ?? null;
 			this.setRefs =
 				plotData.setRefs && typeof plotData.setRefs === 'object' ? { ...plotData.setRefs } : {};
+			this.metricOut =
+				plotData.metricOut && typeof plotData.metricOut === 'object'
+					? { ...plotData.metricOut }
+					: {};
 		}
 
 		toJSON() {
@@ -423,6 +435,7 @@
 				facetParent: this.facetParent,
 				facetKey: this.facetKey,
 				setRefs: this.setRefs,
+				metricOut: this.metricOut,
 				plot: this.plot
 			};
 		}

@@ -18,7 +18,21 @@
 		['model', { val: 'linear' }],
 		['polyDegree', { val: 2 }],
 		['outputX', { val: -1 }],
-		['out', { trendx: { val: -1 } }],
+		// `trendx` + per-y `trendy_<id>` are the fitted-curve outputs. `r2`/`rmse`
+		// plus per-model `coef_*` keys are scalar metrics exposed as PORTS (one
+		// value per y input, in yIN order) — see metricOutputs.js. The coef keys
+		// here match the default model ('linear'); the component reconciles them
+		// when the model changes.
+		[
+			'out',
+			{
+				trendx: { val: -1 },
+				r2: { val: -1 },
+				rmse: { val: -1 },
+				coef_slope: { val: -1 },
+				coef_intercept: { val: -1 }
+			}
+		],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
 		['collectedType', { val: 'trend' }],
@@ -41,10 +55,74 @@
 			],
 			outputs: [
 				{ name: 'trendx', kind: 'column', cardinality: 'one' },
-				{ name: 'trendy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'trendy_' }
+				{ name: 'trendy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'trendy_' },
+				// Scalar-metric ports (one value per y input).
+				{ name: 'r2', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'rmse', kind: 'column', cardinality: 'one', metric: true },
+				{
+					name: 'coef_*',
+					kind: 'column',
+					cardinality: 'many',
+					dynamicPrefix: 'coef_',
+					metric: true
+				}
 			]
 		}
 	};
+
+	/**
+	 * The metric out-keys for the current model: the per-model fit coefficients.
+	 * `coeffs[i]` multiplies x^i for polynomial fits, so keys are c0..cN.
+	 */
+	export function getCoefKeys(args) {
+		const model = args?.model ?? 'linear';
+		if (model === 'linear') return ['coef_slope', 'coef_intercept'];
+		if (model === 'exponential' || model === 'logarithmic') return ['coef_a', 'coef_b'];
+		if (model === 'polynomial') {
+			const degree = Number.isFinite(args?.polyDegree) ? args.polyDegree : 2;
+			return Array.from({ length: degree + 1 }, (_, i) => `coef_c${i}`);
+		}
+		return [];
+	}
+
+	function coefValueForKey(key, model, parameters) {
+		if (!parameters) return NaN;
+		if (model === 'linear') {
+			return key === 'coef_slope' ? (parameters.slope ?? NaN) : (parameters.intercept ?? NaN);
+		}
+		if (model === 'exponential' || model === 'logarithmic') {
+			return key === 'coef_a' ? (parameters.a ?? NaN) : (parameters.b ?? NaN);
+		}
+		if (model === 'polynomial') {
+			const i = Number(key.slice('coef_c'.length));
+			return parameters.coeffs?.[i] ?? NaN;
+		}
+		return NaN;
+	}
+
+	/**
+	 * Scalar-metric ports: one value per y input, in yIN order. Reuses the exact
+	 * expressions behind the per-y StoreValueButtons so the wired values match
+	 * what users previously stored by name. Shared by the module func and the
+	 * component's permutation-test path.
+	 */
+	export function writeTrendMetricOutputs(argsIN, result, processHash) {
+		const yINs = normalizeYInputs(argsIN.yIN);
+		const model = argsIN.model ?? 'linear';
+		const coefKeys = getCoefKeys(argsIN);
+		const r2Arr = [];
+		const rmseArr = [];
+		const coefArrs = new Map(coefKeys.map((k) => [k, []]));
+		for (const yId of yINs) {
+			const fd = result.y_results?.[yId]?.fittedData;
+			r2Arr.push(fd?.rSquared ?? NaN);
+			rmseArr.push(fd?.rmse ?? NaN);
+			for (const k of coefKeys) coefArrs.get(k).push(coefValueForKey(k, model, fd?.parameters));
+		}
+		writeOutputColumn(argsIN.out?.r2, r2Arr, { processHash });
+		writeOutputColumn(argsIN.out?.rmse, rmseArr, { processHash });
+		for (const k of coefKeys) writeOutputColumn(argsIN.out?.[k], coefArrs.get(k), { processHash });
+	}
 
 	export async function trendfit(argsIN) {
 		const xIN = argsIN.xIN;
@@ -155,6 +233,8 @@
 					writeOutputColumn(yOUT, yResult.yOutData, { processHash });
 				}
 			}
+
+			writeTrendMetricOutputs(argsIN, result, processHash);
 		}
 
 		return [result, anyValid];
@@ -172,6 +252,7 @@
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
+	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
 	import { onMount, untrack } from 'svelte';
 	import {
 		showStaticDataAsTable,
@@ -338,6 +419,8 @@
 						{ processHash }
 					);
 				}
+
+				writeTrendMetricOutputs(p.args, result, processHash);
 			}
 
 			trendData = result;
@@ -376,6 +459,28 @@
 		queueMicrotask(() => untrack(() => onYSelectionChange()));
 	});
 
+	// The metric keys this node owns: r2/rmse always, plus per-model coef_*.
+	const METRIC_KEY_RE = /^(r2|rmse|coef_)/;
+	function syncTrendMetricColumns() {
+		return syncMetricOutColumns(p, ['r2', 'rmse', ...getCoefKeys(p.args)], (k) =>
+			METRIC_KEY_RE.test(k)
+		);
+	}
+
+	// Reconcile coef_* metric columns when the model (or poly degree) changes.
+	// Deferred out of the effect: syncMetricOutColumns constructs Columns, which
+	// must not happen under an active reaction (derived_inert).
+	$effect(() => {
+		void p.args.model;
+		void p.args.polyDegree;
+		if (!mounted) return;
+		queueMicrotask(() =>
+			untrack(() => {
+				if (syncTrendMetricColumns()) getTrend();
+			})
+		);
+	});
+
 	onMount(() => {
 		if (!p.args.out) p.args.out = {};
 		// Ensure X output column exists
@@ -386,7 +491,10 @@
 			p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
 			p.args.out.trendx = xCol.id;
 		}
-		const needsCompute = initYColumns() || initPermColumns();
+		// Backfill metric out-columns for sessions saved before they existed.
+		const needsCompute = [syncTrendMetricColumns(), initYColumns(), initPermColumns()].some(
+			Boolean
+		);
 
 		if (needsCompute) {
 			getTrend();

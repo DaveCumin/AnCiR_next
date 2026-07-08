@@ -34,30 +34,67 @@ function makeNodePort(name, direction, artifactKind = 'column', dynamic = false)
 }
 
 /**
- * Lay out a plot node's input ports as a flat list of rows for rendering AND for
- * edge anchoring — both must agree on each port's slot index. Ports tagged with
- * `axis === 'x'` start a new series, so a `header` row is emitted before them.
- * Every row (header or port) occupies one PORT_H slot. Ports without `axis`
- * (e.g. Histogram's single `data` port) produce no headers — just port rows, so
- * non-grouped plots and all other node types fall back to the plain layout.
+ * Unified slot layout for a GROUPED plot node (inputs carrying axis/series
+ * metadata): both the left (input) rows and right (output) rows are assigned
+ * absolute slot indices so each passthrough output sits BESIDE the series it
+ * belongs to — x-out on the x-input row, y-outs from the ys row downward — and
+ * metric outputs follow after all series instead of cutting across them.
+ *
+ * A series with more y outputs than input rows (multi-y sets have ONE dynamic
+ * ys input row) stretches its block; the next series starts below. Renderer
+ * (WorkflowNode) and edge anchoring (WorkflowEditor.getPortAnchorY) both use
+ * this, so dots and wires always agree.
+ *
+ * @returns {{ inputRows: Array<{slot, kind: 'header'|'port', label?, port?}>,
+ *             outputRows: Array<{slot, port}>, totalSlots: number }}
  */
-export function plotPortRows(inputs = []) {
-	const rows = [];
-	for (const p of inputs) {
-		// A "Series N" header before each pair's x port — including the trailing
-		// empty pair, so every {x, y} pair is clearly titled.
-		if (p?.axis === 'x') {
-			rows.push({ kind: 'header', series: p.series, label: `Series ${p.series}` });
-		}
-		rows.push({ kind: 'port', port: p });
-	}
-	return rows;
-}
+export function plotNodeSlots(inputs = [], outputs = []) {
+	const inputRows = [];
+	const outputRows = [];
 
-/** Slot index (row position) of a named input port in plotPortRows, or -1. */
-export function plotPortSlotIndex(inputs, portName) {
-	const rows = plotPortRows(inputs);
-	return rows.findIndex((r) => r.kind === 'port' && r.port?.name === portName);
+	// Series structure from the input ports (x starts a series, ys joins it).
+	const series = [];
+	for (const p of inputs) {
+		if (p?.axis === 'x') series.push({ n: p.series, x: p, ys: null });
+		else if (p?.axis === 'y' && series.length > 0) series[series.length - 1].ys = p;
+	}
+
+	// Outputs by series; metrics (and series-less passthroughs) go at the end.
+	// (Plain object keyed by series number — local, non-reactive builder state.)
+	const outBySeries = {};
+	const tailOutputs = [];
+	for (const o of outputs) {
+		if (!o?.metric && o?.series != null) {
+			const entry = (outBySeries[o.series] ??= { x: null, ys: [] });
+			if (o.axis === 'x' && !entry.x) entry.x = o;
+			else entry.ys.push(o);
+		} else {
+			tailOutputs.push(o);
+		}
+	}
+
+	let slot = 0;
+	for (const s of series) {
+		const outs = outBySeries[s.n] ?? { x: null, ys: [] };
+		inputRows.push({ slot: slot++, kind: 'header', label: `Series ${s.n}` });
+		inputRows.push({ slot, kind: 'port', port: s.x });
+		if (outs.x) outputRows.push({ slot, port: outs.x });
+		slot++;
+		if (s.ys) inputRows.push({ slot, kind: 'port', port: s.ys });
+		outs.ys.forEach((yPort, i) => outputRows.push({ slot: slot + i, port: yPort }));
+		slot += Math.max(s.ys ? 1 : 0, outs.ys.length);
+	}
+	// Orphan series-tagged outputs (series not among the input sets — shouldn't
+	// happen, but never drop a port silently) join the tail.
+	for (const [n, entry] of Object.entries(outBySeries)) {
+		if (series.some((s) => String(s.n) === n)) continue;
+		for (const o of [entry.x, ...entry.ys]) if (o) tailOutputs.push(o);
+	}
+	for (const o of tailOutputs) {
+		outputRows.push({ slot: slot++, port: o });
+	}
+
+	return { inputRows, outputRows, totalSlots: slot };
 }
 
 /**
@@ -70,7 +107,7 @@ export function plotPortSlotIndex(inputs, portName) {
  * (apply/disconnect/edge-delete routing). Re-declared locally there to avoid
  * an extra import cycle.
  */
-function groupPlotData(data) {
+export function groupPlotData(data) {
 	const groups = [];
 	for (const dp of data ?? []) {
 		const xRef = dp?.x?.refId ?? -1;
@@ -157,8 +194,10 @@ function makeProcessNodeHash(core) {
 		out += `tp:${tp.id}:${tp.name}:${tp.refTPId ?? ''}:${JSON.stringify(tp.args ?? {})}|`;
 	}
 	for (const plot of core.plots ?? []) {
-		out += `pl:${plot.id}:${plot.type}:${JSON.stringify(plot.plot ?? {})}:${JSON.stringify(plot.setRefs ?? {})}|`;
+		out += `pl:${plot.id}:${plot.type}:${JSON.stringify(plot.plot ?? {})}:${JSON.stringify(plot.setRefs ?? {})}:${JSON.stringify(plot.metricOut ?? {})}|`;
 	}
+	// Chained wires re-route consumer edges (plot passthrough → consumer).
+	out += `cr:${JSON.stringify(core.chainRefs ?? [])}|`;
 	// Notes and groups don't drive data flow but their presence/identity must
 	// invalidate the graph cache so they appear / disappear as canvas nodes.
 	for (const note of core.notes ?? []) {
@@ -307,17 +346,60 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	};
 	for (const tp of core.tableProcesses ?? []) collectTPOutputs(tp);
 
+	// Plot metric out-columns (peak stats — see plots/plotMetricOutputs.svelte.js)
+	// live as `col_<colId>` output ports on the OWNING PLOT node, exactly like TP
+	// output columns live on their TP node: no standalone data_<colId> node, and
+	// consumer wires route to the plot node's port via columnSourceRef.
+	// (Plain object keyed by colId — local, non-reactive builder state.)
+	const plotMetricColRefs = {};
+	for (const plot of core.plots ?? []) {
+		if (plot.facetParent != null) continue;
+		for (const colId of Object.values(plot.metricOut ?? {})) {
+			if (colId != null && colId >= 0) {
+				plotMetricColRefs[colId] = { nodeId: `plot_${plot.id}`, port: `col_${colId}` };
+			}
+		}
+	}
+
+	// Chained wires (core.chainRefs): a consumer input wired FROM a plot's
+	// passthrough port draws its edge from that plot node. Honoured only while
+	// the via-plot still shows the column (reconcileChainRefs prunes/follows;
+	// this is just the render-time validation so a half-stale entry can never
+	// draw a port that doesn't exist).
+	const chainRouteByTarget = {}; // `${toId}|${toPort}|${colId}` → { nodeId, port }
+	for (const entry of core.chainRefs ?? []) {
+		const viaPlot = (core.plots ?? []).find(
+			(p) => p.id === entry.viaPlotId && p.facetParent == null
+		);
+		if (!viaPlot) continue;
+		const usesCol =
+			(viaPlot.plot?.columnRefs ?? []).includes(entry.colId) ||
+			(viaPlot.plot?.data ?? []).some(
+				(dp) =>
+					dp?.x?.refId === entry.colId ||
+					dp?.y?.refId === entry.colId ||
+					dp?.z?.refId === entry.colId ||
+					dp?.column?.refId === entry.colId
+			);
+		if (!usesCol) continue;
+		chainRouteByTarget[`${entry.toId}|${entry.toPort}|${entry.colId}`] = {
+			nodeId: `plot_${viaPlot.id}`,
+			port: `col_${entry.colId}`
+		};
+	}
+
 	// Map colId → owning groupId for any column absorbed as a Source-group row.
 	// Standalone `data_${col.id}` nodes are suppressed for absorbed columns; edges
 	// that previously emitted from those data nodes get re-routed to a per-row
-	// output port on the owning group (`col_${colId}`). Table-process output
-	// columns are never absorbable here (they have no standalone data node to
-	// drag from), so we just ignore those entries.
+	// output port on the owning group (`col_${colId}`). Table-process / plot
+	// output columns are never absorbable here (they have no standalone data
+	// node to drag from), so we just ignore those entries.
 	const absorbedColToGroup = new Map();
 	for (const group of core.groups ?? []) {
 		for (const colId of group.sourceColumnIds ?? []) {
 			if (typeof colId !== 'number') continue;
 			if (tpOutputColIds.has(colId)) continue;
+			if (plotMetricColRefs[colId]) continue;
 			absorbedColToGroup.set(colId, group.id);
 		}
 	}
@@ -391,6 +473,9 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		// TP-output column: route to the producing TP node's inline row port.
 		const tpRef = tpOutputColToTP.get(colId);
 		if (tpRef) return { nodeId: tpRef.nodeId, port: tpRef.port };
+		// Plot metric column: route to the owning plot node's metric port.
+		const plotRef = plotMetricColRefs[colId];
+		if (plotRef) return { nodeId: plotRef.nodeId, port: plotRef.port };
 		// Producer column: route to the producing node's output port.
 		const prod = producerColMeta.get(colId);
 		if (prod) return { nodeId: prod.nodeId, port: prod.port };
@@ -399,6 +484,8 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 
 	for (const col of core.data ?? []) {
 		if (tpOutputColIds.has(col.id)) continue;
+		// Plot metric columns render as output ports on their plot node.
+		if (plotMetricColRefs[col.id]) continue;
 		// Columns absorbed by a group render as inline rows on that group, not
 		// as standalone canvas nodes.
 		if (absorbedColToGroup.has(col.id)) continue;
@@ -505,15 +592,25 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	// Ordered list of a TP's output columns ({ key, colId }) from args.out, and
 	// one `col_<colId>` output port per column. Output columns render as inline
 	// rows INSIDE the TP node, so there are no abstract xOut/yOut_* ports.
-	const buildTPOutputs = (args) => {
+	// Out-keys matching a nodeSpec output flagged `metric: true` (scalar-metric
+	// ports: one value per y input) are marked so the node UI can group them
+	// into its Metrics section and style their dots hollow.
+	const buildTPOutputs = (args, nodeSpec) => {
+		const metricOutputs = (nodeSpec?.outputs ?? []).filter((o) => o?.metric);
+		const isMetricKey = (key) =>
+			metricOutputs.some((o) =>
+				typeof o.dynamicPrefix === 'string' ? key.startsWith(o.dynamicPrefix) : key === o.name
+			);
 		const outputColumns = [];
 		for (const [key, colId] of Object.entries(args?.out ?? {})) {
 			if (typeof colId !== 'number' || colId < 0) continue;
-			outputColumns.push({ key, colId, port: `col_${colId}` });
+			outputColumns.push({ key, colId, port: `col_${colId}`, metric: isMetricKey(key) });
 		}
 		const outputPorts = [];
-		for (const { colId } of outputColumns) {
-			outputPorts.push(makeNodePort(`col_${colId}`, 'output', 'column'));
+		for (const { colId, metric } of outputColumns) {
+			const port = makeNodePort(`col_${colId}`, 'output', 'column');
+			port.metric = metric;
+			outputPorts.push(port);
 		}
 		return { outputColumns, outputPorts };
 	};
@@ -527,7 +624,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				{ name: 'yIN', kind: 'column', cardinality: 'many' }
 			]
 		});
-		const { outputColumns, outputPorts } = buildTPOutputs(tp.args);
+		const { outputColumns, outputPorts } = buildTPOutputs(tp.args, nodeSpec);
 
 		// Bundle outputs (a Column Set's `set` port) are declared statically on the
 		// nodeSpec with a non-`column` kind — they carry a set of columns down one
@@ -609,18 +706,76 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			}
 		}
 
+		// Output ports, two families sharing the `col_<colId>` scheme (so
+		// resolveOutputColumnId and wire-apply need no plot special-casing):
+		//  - PASSTHROUGH: each unique input column re-exposed as an output, so a
+		//    downstream plot/analysis can be chained straight off this plot
+		//    without hunting for the upstream source node. Drag-source only —
+		//    the resulting edge still draws from the column's true owner.
+		//  - METRIC: the plot's computed peak stats (plot.metricOut, one value
+		//    per series — see plots/plotMetricOutputs.js), styled like TP metric
+		//    ports.
+		const outputs = [];
+		const outputColumns = [];
+		const seenOutCols = {};
+		// `series`/`axis` tags let plotNodeSlots place each passthrough row beside
+		// the input series it came from (x-out next to the x row, y-outs from the
+		// ys row down) instead of stacking from the top across series boundaries.
+		const addPassthrough = (colId, display, series = null, axis = null) => {
+			if (typeof colId !== 'number' || colId < 0 || seenOutCols[colId]) return;
+			// A plot metric column shown in a plot (its own or another's) keeps its
+			// metric port on the OWNER; don't double-expose it here.
+			if (plotMetricColRefs[colId]) return;
+			seenOutCols[colId] = true;
+			const col = (core.data ?? []).find((c) => c.id === colId);
+			if (!col) return;
+			const port = { ...makeNodePort(`col_${colId}`, 'output', 'column'), passthrough: true };
+			port.display = display ? `${col.name} (${display})` : col.name;
+			if (series != null) port.series = series;
+			if (axis != null) port.axis = axis;
+			outputs.push(port);
+			outputColumns.push({ key: `col_${colId}`, colId, port: `col_${colId}`, metric: false });
+		};
+		if (plot.type === 'tableplot') {
+			for (const colId of plot.plot?.columnRefs ?? []) addPassthrough(colId, '');
+		} else {
+			// Iterate by series set (same grouping as the input ports) so each
+			// passthrough carries its series number. Channels are accessed
+			// explicitly — plot data-class fields are $state accessors, so they
+			// don't enumerate. z (bubble-style) and a single-input plot's `column`
+			// (Histogram) have no x/y grouping.
+			groupPlotData(plot.plot?.data).forEach((group, i) => {
+				const seriesN = i + 1;
+				for (const dp of group.dataPoints) {
+					addPassthrough(dp?.x?.refId, 'x', seriesN, 'x');
+					addPassthrough(dp?.y?.refId, 'y', seriesN, 'y');
+					addPassthrough(dp?.z?.refId, 'z', seriesN, 'y');
+					addPassthrough(dp?.column?.refId, '');
+				}
+			});
+		}
+		for (const [key, colId] of Object.entries(plot.metricOut ?? {})) {
+			if (typeof colId !== 'number' || colId < 0) continue;
+			if (!(core.data ?? []).some((c) => c.id === colId)) continue;
+			const port = { ...makeNodePort(`col_${colId}`, 'output', 'column'), metric: true };
+			port.display = key;
+			outputs.push(port);
+			outputColumns.push({ key, colId, port: `col_${colId}`, metric: true });
+		}
+
 		nodes.push(
 			new ProcessNode({
 				id: `plot_${plot.id}`,
 				kind: 'plot',
 				label: plot.name,
 				sublabel: plot.type,
-				ports: { inputs, outputs: [] },
+				ports: { inputs, outputs },
 				refId: plot.id,
 				meta: {
 					type: 'plot',
 					refId: plot.id,
-					plotObj: plot
+					plotObj: plot,
+					outputColumns
 				}
 			})
 		);
@@ -744,7 +899,12 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			const col = core.data.find((d) => d.id === colId);
 			if (!col) continue;
 			let fromId, fromPort;
-			if ((col.processes ?? []).length > 0) {
+			const chained = chainRouteByTarget[`${tpNodeId}|${port}|${colId}`];
+			if (chained) {
+				// Wired via a plot's passthrough port — draw from the plot.
+				fromId = chained.nodeId;
+				fromPort = chained.port;
+			} else if ((col.processes ?? []).length > 0) {
 				fromId = `process_${col.processes[col.processes.length - 1].id}`;
 				fromPort = 'output';
 			} else {
@@ -791,7 +951,12 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			const col = core.data.find((d) => d.id === colId);
 			if (!col) return;
 			let fromId, fromPort;
-			if ((col.processes ?? []).length > 0) {
+			const chained = chainRouteByTarget[`${plotNodeId}|${port}|${colId}`];
+			if (chained) {
+				// Wired via a plot's passthrough port — draw from the plot.
+				fromId = chained.nodeId;
+				fromPort = chained.port;
+			} else if ((col.processes ?? []).length > 0) {
 				fromId = `process_${col.processes[col.processes.length - 1].id}`;
 				fromPort = 'output';
 			} else {

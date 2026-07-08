@@ -1,6 +1,7 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
 	import {
+		core,
 		storeValue,
 		removeStoredValue,
 		renameStoredValue,
@@ -19,7 +20,27 @@
 	let popoverPos = $state({ left: 0, top: 0 });
 
 	onMount(() => {
-		storedName = uniqueStoredValueName(defaultName || label || 'stored_value');
+		const base = defaultName || label || 'stored_value';
+		// Take over a restored static snapshot of this button's default name (a
+		// session import keeps getter entries as staticValue-only) instead of
+		// suffixing _2 — formulas referencing the original name pick the live
+		// getter back up. Suffixed leftovers (`base_2`, …) are claimed too, so
+		// duplicate default names stay stable across save/load cycles. Never take
+		// over ref entries (metric-port refs stay live on their own) or names
+		// another live button already holds.
+		const isStaticLeftover = (e) => !!e && typeof e.getter !== 'function' && !e.ref;
+		let name = null;
+		if (isStaticLeftover(core.storedValues[base])) {
+			name = base;
+		} else if (base in core.storedValues) {
+			for (let n = 2; `${base}_${n}` in core.storedValues; n++) {
+				if (isStaticLeftover(core.storedValues[`${base}_${n}`])) {
+					name = `${base}_${n}`;
+					break;
+				}
+			}
+		}
+		storedName = name ?? uniqueStoredValueName(base);
 		storeValue(storedName, getter, source);
 	});
 
@@ -96,12 +117,7 @@
 {/if}
 
 <span class="store-wrapper">
-	<button
-		class="icon"
-		bind:this={buttonEl}
-		onclick={openPopover}
-		{@attach tooltip(storedName)}
-	>
+	<button class="icon" bind:this={buttonEl} onclick={openPopover} {@attach tooltip(storedName)}>
 		<Icon name="edit" width={14} height={14} />
 	</button>
 </span>

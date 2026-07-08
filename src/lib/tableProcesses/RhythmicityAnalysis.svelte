@@ -61,6 +61,15 @@
 					kind: 'column',
 					cardinality: 'many',
 					dynamicPrefix: 'rhythmicityy_'
+				},
+				// Scalar-metric ports (one value per y input): the current analysis's
+				// stat keys (getStatKeys) prefixed with `stat_`, e.g. stat_peak_period.
+				{
+					name: 'stat_*',
+					kind: 'column',
+					cardinality: 'many',
+					dynamicPrefix: 'stat_',
+					metric: true
 				}
 			]
 		}
@@ -94,8 +103,9 @@
 	}
 
 	/**
-	 * Scalar stats displayed in the UI (per Y). Not stored as columns; each one
-	 * gets a StoreValueButton so the user can save it to core.storedValues.
+	 * Scalar stats computed per Y by the current analysis. Each is shown in the
+	 * editor panel AND exposed as a `stat_<key>` metric output port (one value
+	 * per y input, in yIN order) in standalone mode.
 	 */
 	export function getStatKeys(args) {
 		if (args.analysis === 'periodogram') return ['peak_period', 'peak_power'];
@@ -251,6 +261,16 @@
 				}
 			}
 
+			// Scalar-metric ports: one value per y input, in yIN order. Values match
+			// the stats shown in the editor panel (peak period, peak power, …).
+			for (const k of statKeys) {
+				writeOutputColumn(
+					argsIN.out?.[`stat_${k}`],
+					yINs.map((yId) => y_results[yId]?.stats?.[k] ?? NaN),
+					{ processHash }
+				);
+			}
+
 			// Collected-mode shared X + per-Y primary Y (used inside CollectColumns / LongToWide)
 			const primary = getPrimaryKeys(argsIN);
 			const sharedXId = argsIN.out?.rhythmicityx;
@@ -366,10 +386,11 @@
 		}
 	});
 
-	// Reconcile output columns whenever yIN or output-key set changes
+	// Reconcile output columns whenever yIN or output/stat-key set changes
 	$effect(() => {
 		const _y = p.args.yIN;
 		const _keys = currentOutputKeys;
+		const _statKeys = currentStatKeys;
 		if (!mounted) return;
 		// Defer reconcile out of the effect: syncOutputColumns() calls `new Column()`,
 		// whose $derived fields go inert if created while this effect is the active
@@ -414,6 +435,11 @@
 		} else {
 			for (const yId of activeIds) {
 				for (const k of currentOutputKeys) desired.add(`${yId}_${k}`);
+			}
+			// Scalar-metric ports: one `stat_<key>` column per stat of the current
+			// analysis (one value per y input), standalone mode only.
+			if (activeIds.length > 0) {
+				for (const k of currentStatKeys) desired.add(`stat_${k}`);
 			}
 		}
 
@@ -514,6 +540,20 @@
 					if (p.args.out[key] == null || p.args.out[key] === -1) {
 						const col = new Column({});
 						col.name = `${srcName}_${k}`;
+						pushObj(col);
+						if (p.parent) p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
+						p.args.out[key] = col.id;
+						changed = true;
+					}
+				}
+			}
+			if (activeIds.length > 0) {
+				for (const k of currentStatKeys) {
+					const key = `stat_${k}`;
+					if (p.args.out[key] == null || p.args.out[key] === -1) {
+						const col = new Column({});
+						// Constructor naming convention for metric out-columns.
+						col.name = `${k}_${p.id}`;
 						pushObj(col);
 						if (p.parent) p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
 						p.args.out[key] = col.id;

@@ -91,6 +91,25 @@
 		// Orphan processes are session-only; clear on import so the next
 		// block can rehydrate them from the JSON if present.
 		core.orphanProcesses = [];
+		// Chained wires: cleared here; restored AFTER the plots are rebuilt below —
+		// reconcileChainRefs prunes entries whose via-plot is missing, so restoring
+		// while core.plots is still empty would wipe them mid-import.
+		core.chainRefs = [];
+		// Stored values: clear the previous session's registry, then restore from
+		// the JSON. Ref entries (metric-port refs) come back live; getter-based
+		// entries (StoreValueButton) resolve to their exported static snapshot —
+		// the live getter re-registers when its node's editor next mounts.
+		core.storedValues = {};
+		if (jsonData.storedValues && typeof jsonData.storedValues === 'object') {
+			for (const [name, entry] of Object.entries(jsonData.storedValues)) {
+				if (!entry || typeof entry !== 'object') continue;
+				core.storedValues[name] = {
+					source: entry.source ?? '',
+					...(entry.ref && typeof entry.ref === 'object' ? { ref: { ...entry.ref } } : {}),
+					staticValue: entry.staticValue
+				};
+			}
+		}
 
 		const dataEntries = Array.isArray(jsonData?.data) ? jsonData.data : [];
 		const columnCount = jsonData?.rawData
@@ -259,6 +278,12 @@
 				console.error(`Failed to rebuild plot ${i + 1} of ${totalPlots}; skipping.`, e);
 			}
 		}
+
+		// Chained wires (plot passthrough → consumer): restore now that both the
+		// plots and the table processes exist, so the reconcile keeps the entries.
+		core.chainRefs = Array.isArray(jsonData.chainRefs)
+			? jsonData.chainRefs.map((e) => ({ ...e }))
+			: [];
 
 		// Prewarm wrapper-column customName so reading `name` later (e.g. inside
 		// `_safeJson` while building the workflow graph cache key) doesn't enter

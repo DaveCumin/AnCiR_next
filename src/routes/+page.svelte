@@ -50,6 +50,7 @@
 	} from '$lib/core/Plot.svelte';
 	import { selectedColumnIds } from '$lib/tableProcesses/columnSet.js';
 	import { TableProcess, reconcileAllTPSets } from '$lib/core/TableProcess.svelte';
+	import { reconcileChainRefs } from '$lib/core/chainRefs.js';
 
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import { history } from '$lib/core/opHistory.svelte.js';
@@ -136,6 +137,43 @@
 		void core.plots.length;
 		void core.tableProcesses.length;
 		untrack(() => reconcileAllPlotSets());
+	});
+
+	// NOTE: plot metric OUTPUT columns (Periodogram/FFT/Correlogram peak stats →
+	// col_<id> ports) are written by each plot COMPONENT's own metric effect
+	// (see usePlotMetricOutputs in plots/plotMetricOutputs.js), NOT reconciled
+	// globally here. A global effect would have to READ the stats to track them,
+	// and Correlogram/FFT stats sit behind synchronous full-series $deriveds —
+	// eagerly evaluating those outside the component (e.g. mid-way through
+	// seeding a session) froze the main thread on the slow autocorrelation path.
+	// The components already compute these values to render, so writing there
+	// costs nothing extra and runs on complete data.
+
+	// Chained wires (plot passthrough → consumer): keep core.chainRefs and the
+	// chained consumers consistent — follow the via-plot's input rewires, drop
+	// entries broken on the consumer side or whose endpoints are gone. Tracks
+	// only refIds (cheap), never plot stats (see the note above).
+	$effect(() => {
+		for (const entry of core.chainRefs) {
+			const via = core.plots.find((p) => p.id === entry.viaPlotId);
+			for (const dp of via?.plot?.data ?? []) {
+				void dp?.x?.refId;
+				void dp?.y?.refId;
+			}
+			void (via?.plot?.columnRefs ?? []).length;
+			const consumerTP = core.tableProcesses.find((t) => `tableprocess_${t.id}` === entry.toId);
+			void JSON.stringify(consumerTP?.args?.[entry.toPort] ?? null);
+			const consumerPlot = core.plots.find((p) => `plot_${p.id}` === entry.toId);
+			for (const dp of consumerPlot?.plot?.data ?? []) {
+				void dp?.x?.refId;
+				void dp?.y?.refId;
+			}
+			void (consumerPlot?.plot?.columnRefs ?? []).length;
+		}
+		void core.chainRefs.length;
+		void core.plots.length;
+		void core.tableProcesses.length;
+		queueMicrotask(() => untrack(() => reconcileChainRefs()));
 	});
 
 	// Same for table-processes: a Column Set wired into a TP many-in port (e.g.
@@ -577,23 +615,29 @@
 
 		appState.loadingState.loadingMsg = 'Putting binned data...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
-		core.tableProcesses.push(
-			new TableProcess(
-				{
-					name: 'BinnedData',
-					args: {
-						xIN: d0id,
-						yIN: [d1id],
-						binSize: 2,
-						binStart: 0,
-						stepSize: 2,
-						aggFunction: 'mean',
-						out: { binnedx: -1 }
-					}
-				},
-				null
-			)
+		const binTP = new TableProcess(
+			{
+				name: 'BinnedData',
+				args: {
+					xIN: d0id,
+					yIN: [d1id],
+					binSize: 2,
+					binStart: 0,
+					stepSize: 2,
+					aggFunction: 'mean',
+					out: { binnedx: -1 }
+				}
+			},
+			null
 		);
+		core.tableProcesses.push(binTP);
+
+		// Series-2 columns for the plots below = BinnedData's outputs. Capture the
+		// ids explicitly: analysis plots append metric output columns
+		// (peak_period, …) to core.data between steps, so `core.data[length-1/-2]`
+		// would drift onto those metrics instead of the binned pair.
+		const secondX = binTP.args.out.binnedx;
+		const secondY = binTP.args.out['binnedy_' + d1id];
 
 		appState.loadingState.loadingMsg = 'Making scatterplot...';
 		await new Promise((resolve) => setTimeout(resolve, 10));
@@ -606,8 +650,8 @@
 			y: { refId: core.data[1].id }
 		});
 		core.plots[0].plot.addData({
-			x: { refId: core.data[core.data.length - 2].id },
-			y: { refId: core.data[core.data.length - 1].id }
+			x: { refId: secondX },
+			y: { refId: secondY }
 		});
 		core.plots[core.plots.length - 1].x = 15;
 		core.plots[core.plots.length - 1].y = 15;
@@ -623,8 +667,8 @@
 			y: { refId: core.data[1].id }
 		});
 		core.plots[core.plots.length - 1].plot.addData({
-			x: { refId: core.data[core.data.length - 2].id },
-			y: { refId: core.data[core.data.length - 1].id }
+			x: { refId: secondX },
+			y: { refId: secondY }
 		});
 		core.plots[core.plots.length - 1].plot.data[1].colour = '#bf796b91';
 		core.plots[core.plots.length - 1].x = snapToGrid(15);
@@ -640,8 +684,8 @@
 			y: { refId: core.data[1].id }
 		});
 		core.plots[core.plots.length - 1].plot.addData({
-			x: { refId: core.data[core.data.length - 2].id },
-			y: { refId: core.data[core.data.length - 1].id }
+			x: { refId: secondX },
+			y: { refId: secondY }
 		});
 		core.plots[core.plots.length - 1].x = snapToGrid(555);
 		core.plots[core.plots.length - 1].y = snapToGrid(15);
@@ -657,8 +701,8 @@
 		core.plots[core.plots.length - 1].plot.columnRefs = [
 			core.data[0].id,
 			core.data[1].id,
-			core.data[core.data.length - 2].id,
-			core.data[core.data.length - 1].id
+			secondX,
+			secondY
 		];
 		core.plots[core.plots.length - 1].plot.showCol = [true, true, true, true];
 
@@ -672,8 +716,8 @@
 			y: { refId: core.data[1].id }
 		});
 		core.plots[core.plots.length - 1].plot.addData({
-			x: { refId: core.data[core.data.length - 2].id },
-			y: { refId: core.data[core.data.length - 1].id }
+			x: { refId: secondX },
+			y: { refId: secondY }
 		});
 		core.plots[core.plots.length - 1].x = snapToGrid(555);
 		core.plots[core.plots.length - 1].y = snapToGrid(645);
@@ -689,14 +733,14 @@
 			y: { refId: core.data[1].id }
 		});
 		core.plots[core.plots.length - 1].plot.addData({
-			x: { refId: core.data[core.data.length - 2].id },
-			y: { refId: core.data[core.data.length - 1].id }
+			x: { refId: secondX },
+			y: { refId: secondY }
 		});
 		core.plots[core.plots.length - 1].x = snapToGrid(555);
 		core.plots[core.plots.length - 1].y = snapToGrid(960);
 		core.plots[core.plots.length - 1].width = snapToGrid(510);
 
-		core.plots[0].plot.data[1].y.refId = core.data[core.data.length - 1].id;
+		core.plots[0].plot.data[1].y.refId = secondY;
 
 		appState.loadingState.isLoading = false;
 

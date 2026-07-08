@@ -10,7 +10,7 @@
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { guessDateofArray } from '$lib/utils/time/TimeUtils.js';
 	import { core } from '$lib/core/core.svelte.js';
-	import { plotPortRows } from '$lib/core/ProcessNode.svelte.js';
+	import { plotNodeSlots } from '$lib/core/ProcessNode.svelte.js';
 	let {
 		node,
 		selected = false,
@@ -55,11 +55,16 @@
 	let portRows = $derived(Math.max(inputPorts.length, outputPorts.length));
 
 	// Plot nodes whose inputs carry series metadata (axis/series) render grouped
-	// under "Series N" headers with friendly x/y labels. plotPortRows() is the
-	// single source of truth for slot order — WorkflowEditor's edge anchor uses
-	// the same helper so wires stay attached.
+	// under "Series N" headers with friendly x/y labels. plotNodeSlots() is the
+	// single source of truth for slot order on BOTH sides (inputs + outputs, so
+	// each passthrough output sits beside its own series) — WorkflowEditor's
+	// edge anchor uses the same helper so wires stay attached.
 	let isPlotGrouped = $derived(node.type === 'plot' && inputPorts.some((p) => p?.axis));
-	let groupedRows = $derived(isPlotGrouped ? plotPortRows(inputPorts) : []);
+	let groupedSlots = $derived(
+		isPlotGrouped
+			? plotNodeSlots(inputPorts, outputPorts)
+			: { inputRows: [], outputRows: [], totalSlots: 0 }
+	);
 
 	function startFromOutput(e, portName) {
 		e.stopPropagation();
@@ -76,10 +81,24 @@
 	function disconnectInput(e, portName) {
 		e.stopPropagation();
 		// Shift+click disconnects. Right-click opens the column picker instead of
-		// disconnecting (see openInputPicker).
-		if (!e.shiftKey) return;
+		// disconnecting (see openInputPicker). A plain left-press starts a REVERSE
+		// wire drag (input → output).
+		if (!e.shiftKey) {
+			if (e.button === 0) {
+				e.preventDefault();
+				dispatch('portstart', { nodeId: node.id, port: portName, direction: 'in' });
+			}
+			return;
+		}
 		e.preventDefault();
 		dispatch('portdisconnect', { nodeId: node.id, port: portName, direction: 'in' });
+	}
+
+	// Complete a reverse drag on an output dot (mirror of endAtInput).
+	function endAtOutput(e, portName) {
+		e.stopPropagation();
+		e.preventDefault();
+		dispatch('portend', { nodeId: node.id, port: portName, direction: 'out' });
 	}
 	// Right-click an input port → ask the editor to open a column picker to add a
 	// connection to this input.
@@ -151,14 +170,14 @@
 	</div>
 
 	{#if isPlotGrouped}
-		<div class="node-ports grouped" style="height:{groupedRows.length * PORT_H}px;">
-			{#each groupedRows as row, i (`r_${i}`)}
+		<div class="node-ports grouped" style="height:{groupedSlots.totalSlots * PORT_H}px;">
+			{#each groupedSlots.inputRows as row, i (`r_${i}`)}
 				{#if row.kind === 'header'}
-					<div class="series-header" style="top:{i * PORT_H}px;">
+					<div class="series-header" style="top:{row.slot * PORT_H}px;">
 						{row.label}
 					</div>
 				{:else}
-					<div class="port-row input" style="top:{i * PORT_H}px;">
+					<div class="port-row input" style="top:{row.slot * PORT_H}px;">
 						<div
 							class="port-dot dot-input"
 							data-node-id={node.id}
@@ -180,6 +199,32 @@
 						>
 					</div>
 				{/if}
+			{/each}
+			<!-- Output ports (passthrough columns + plot metrics) on the right, slot-
+			     aligned with their series (metrics after all series). -->
+			{#each groupedSlots.outputRows as { slot, port } (`out_${port.name}`)}
+				<div class="port-row output" style="top:{slot * PORT_H}px;">
+					<div
+						class="port-dot dot-output"
+						class:metric-port={port.metric === true}
+						class:splice-target={spliceTargetPort === port.name}
+						data-node-id={node.id}
+						data-port-name={port.name}
+						data-port-dir="out"
+						{@attach tooltip(
+							port.metric
+								? `Metric output: ${port.display ?? port.name} (one value per series)`
+								: `Output: ${port.display ?? port.name}`
+						)}
+						onmousedown={(e) => startFromOutput(e, port.name)}
+						onmouseup={(e) => endAtOutput(e, port.name)}
+						role="button"
+						tabindex="-1"
+					></div>
+					<span class="port-label out-label" class:metric-label={port.metric === true}
+						>{port.metric ? '# ' : ''}{port.display ?? port.name}</span
+					>
+				</div>
 			{/each}
 		</div>
 	{:else if portRows > 0}
@@ -205,16 +250,24 @@
 				<div class="port-row output" style="top:{i * PORT_H}px;">
 					<div
 						class="port-dot dot-output"
+						class:metric-port={port.metric === true}
 						class:splice-target={spliceTargetPort === port.name}
 						data-node-id={node.id}
 						data-port-name={port.name}
 						data-port-dir="out"
-						{@attach tooltip(`Output: ${port.display ?? port.name}${port.dynamic ? ' (many)' : ''}`)}
+						{@attach tooltip(
+							port.metric
+								? `Metric output: ${port.display ?? port.name} (one value per series)`
+								: `Output: ${port.display ?? port.name}${port.dynamic ? ' (many)' : ''}`
+						)}
 						onmousedown={(e) => startFromOutput(e, port.name)}
+						onmouseup={(e) => endAtOutput(e, port.name)}
 						role="button"
 						tabindex="-1"
 					></div>
-					<span class="port-label">{port.display ?? port.name}{port.dynamic ? '*' : ''}</span>
+					<span class="port-label" class:metric-label={port.metric === true}
+						>{port.metric ? '# ' : ''}{port.display ?? port.name}{port.dynamic ? '*' : ''}</span
+					>
 				</div>
 			{/each}
 		</div>
@@ -284,9 +337,7 @@
 
 	.workflow-node.selected {
 		border-color: var(--color-accent);
-		box-shadow:
-			var(--shadow-1),
-			var(--shadow-focus-soft);
+		box-shadow: var(--shadow-1), var(--shadow-focus-soft);
 	}
 
 	.workflow-node.expanded {
@@ -454,6 +505,26 @@
 		background: var(--color-accent);
 		border-color: var(--color-accent);
 		box-shadow: var(--shadow-focus);
+	}
+	/* Metric port dot: "target" ring + centre point (mirrors TableProcessNode). */
+	.metric-port::after {
+		content: '';
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: 5px;
+		height: 5px;
+		border-radius: 50%;
+		background: var(--color-lightness-50);
+		transform: translate(-50%, -50%);
+		pointer-events: none;
+	}
+	.metric-port:hover::after,
+	.metric-port.splice-target::after {
+		background: var(--surface-card);
+	}
+	.metric-label {
+		color: var(--color-lightness-40);
 	}
 
 	.port-label {

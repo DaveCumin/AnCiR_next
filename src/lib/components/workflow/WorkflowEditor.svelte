@@ -33,7 +33,8 @@
 		plotSetChannel,
 		detachColumnSetFromPlot
 	} from '$lib/core/Plot.svelte';
-	import { plotPortRows, plotPortSlotIndex } from '$lib/core/ProcessNode.svelte.js';
+	import { plotNodeSlots } from '$lib/core/ProcessNode.svelte.js';
+	import { recordChainRef } from '$lib/core/chainRefs.js';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import GroupNode from './GroupNode.svelte';
 	import TableProcessNode from './TableProcessNode.svelte';
@@ -147,14 +148,19 @@
 			const published = getGroupPortY(node.id, portName);
 			if (typeof published === 'number') return published;
 		}
-		// Grouped plot inputs include "Series N" header rows, so a port's slot index
-		// differs from its array index. plotPortRows() is shared with WorkflowNode's
+		// Grouped plot nodes: both sides use plotNodeSlots() — inputs include
+		// "Series N" header rows, and output rows (passthrough + metric ports)
+		// are slot-aligned with their series — shared with WorkflowNode's
 		// renderer so the anchor lines up exactly with the rendered dot.
-		if (node?.type === 'plot' && direction !== 'out') {
+		if (node?.type === 'plot') {
 			const ins = node.ports?.inputs ?? [];
 			if (ins.some((p) => p?.axis)) {
-				const slot = plotPortSlotIndex(ins, portName);
-				if (slot >= 0) return HEADER_H + slot * PORT_H + PORT_H / 2;
+				const { inputRows, outputRows } = plotNodeSlots(ins, node.ports?.outputs ?? []);
+				const row =
+					direction === 'out'
+						? outputRows.find((r) => r.port?.name === portName)
+						: inputRows.find((r) => r.kind === 'port' && r.port?.name === portName);
+				if (row) return HEADER_H + row.slot * PORT_H + PORT_H / 2;
 			}
 		}
 		const ports = direction === 'out' ? (node.ports?.outputs ?? []) : (node.ports?.inputs ?? []);
@@ -207,12 +213,17 @@
 			const rows = Math.max(1, ins, outs);
 			return HEADER_H + rows * PORT_H;
 		}
-		// Grouped plot inputs add a "Series N" header row per series, so count the
-		// rendered rows (headers + ports) rather than just the port count.
+		// Grouped plot nodes use the unified plotNodeSlots layout (series headers +
+		// series-aligned output rows + trailing metric rows); non-grouped plots
+		// fall back to plain row counts.
 		if (node?.type === 'plot') {
 			const ins = node?.ports?.inputs ?? [];
-			const rows = ins.some((p) => p?.axis) ? plotPortRows(ins).length : ins.length;
-			return HEADER_H + Math.max(1, rows) * PORT_H;
+			const outs = node?.ports?.outputs ?? [];
+			if (ins.some((p) => p?.axis)) {
+				const { totalSlots } = plotNodeSlots(ins, outs);
+				return HEADER_H + Math.max(1, totalSlots) * PORT_H;
+			}
+			return HEADER_H + Math.max(1, ins.length, outs.length) * PORT_H;
 		}
 		const ins = node?.ports?.inputs?.length ?? 0;
 		const outs = node?.ports?.outputs?.length ?? 0;
@@ -229,6 +240,18 @@
 			fromPort: e.fromPort,
 			toPort: e.toPort
 		}));
+	});
+
+	// nodeId → { [outputPortName]: true } for ports with an edge. TableProcessNode
+	// uses this to keep wired metric rows rendered while its Metrics section is
+	// collapsed, so their edges never point at an unmounted port element.
+	// (Plain objects rebuilt wholesale by the derived — never mutated afterwards.)
+	const wiredOutPortsByNode = $derived.by(() => {
+		const map = {};
+		for (const e of edgeTopology) {
+			(map[e.fromId] ??= {})[e.fromPort] = true;
+		}
+		return map;
 	});
 
 	/**
@@ -958,6 +981,35 @@
 		return `${edge.fromId}|${edge.fromPort}|${edge.toId}|${edge.toPort}|${edge.type}`;
 	}
 
+	// Highlight the two port dots of the hovered/selected edge so it's clear
+	// what the wire connects. Done imperatively against the dots' data-*
+	// attributes (they live across four node components — TableProcessNode,
+	// WorkflowNode, GroupNode, CompactNode — so a prop would have to thread
+	// through all of them); the effect's cleanup removes the class on change.
+	let hoveredEdgeKey = $state(null);
+	// Only highlight while the edge still exists: deleting a hovered edge removes
+	// its DOM node without firing mouseleave, so hoveredEdgeKey (and a stale
+	// selectedEdgeKey) would otherwise keep the ports lit after the wire is gone.
+	const activePortHighlightKey = $derived.by(() => {
+		const key = hoveredEdgeKey ?? selectedEdgeKey;
+		if (!key) return null;
+		return edgeTopology.some((edge) => edgeKeyFor(edge) === key) ? key : null;
+	});
+	$effect(() => {
+		const key = activePortHighlightKey;
+		if (!key) return;
+		const [fromId, fromPort, toId, toPort] = key.split('|');
+		const dots = (nodeId, portName, dir) =>
+			document.querySelectorAll(
+				`[data-node-id="${CSS.escape(nodeId)}"][data-port-name="${CSS.escape(portName)}"][data-port-dir="${dir}"]`
+			);
+		const els = [...dots(fromId, fromPort, 'out'), ...dots(toId, toPort, 'in')];
+		for (const el of els) el.classList.add('port-edge-highlight');
+		return () => {
+			for (const el of els) el.classList.remove('port-edge-highlight');
+		};
+	});
+
 	function selectEdge(edge) {
 		selectedEdgeKey = edgeKeyFor(edge);
 		appState.canvasSelectedNodeId = null;
@@ -1436,13 +1488,18 @@
 								bestPortDir = dir;
 							}
 						};
-						for (const port of node.ports?.outputs ?? []) {
-							consider(
-								port.name,
-								pos.x + nw,
-								pos.y + getPortAnchorY(node, port.name, 'out'),
-								'out'
-							);
+						// Plot output ports are ECHOES (passthrough columns / metric
+						// stats) — a process can't meaningfully sit "on" them, so they
+						// aren't splice targets (they remain drag-sources for chaining).
+						if (node.type !== 'plot') {
+							for (const port of node.ports?.outputs ?? []) {
+								consider(
+									port.name,
+									pos.x + nw,
+									pos.y + getPortAnchorY(node, port.name, 'out'),
+									'out'
+								);
+							}
 						}
 						for (const port of node.ports?.inputs ?? []) {
 							consider(port.name, pos.x, pos.y + getPortAnchorY(node, port.name, 'in'), 'in');
@@ -1583,6 +1640,15 @@
 			// edges (which the existing branch-less consumers harmlessly ignore).
 			const tap = findExistingTap(parent.id, node.refId);
 			return tap ? tap.id : parent.id;
+		}
+		if (node.type === 'plot') {
+			// Plot output ports (passthrough inputs + metric columns) are all
+			// `col_<colId>`.
+			if (typeof portName === 'string' && portName.startsWith('col_')) {
+				const id = Number(portName.slice(4));
+				return Number.isFinite(id) ? id : -1;
+			}
+			return -1;
 		}
 		if (node.type === 'tableprocess' && node.tpObj) {
 			// Inline output-column rows expose `col_<colId>` ports directly.
@@ -1727,6 +1793,23 @@
 		}
 		if (colId < 0) return;
 		connectColumnToInput(colId, toNodeId, toPort);
+
+		// Wired from a plot's PASSTHROUGH port: record the chain so the edge
+		// draws plot → consumer and follows the plot's own input rewires
+		// (reconcileChainRefs prunes the entry if the wire didn't stick).
+		if (fromNode?.type === 'plot') {
+			const portMeta = (fromNode.ports?.outputs ?? []).find((p) => p.name === fromPort);
+			if (portMeta?.passthrough) {
+				recordChainRef({
+					toId: toNodeId,
+					toPort,
+					viaPlotId: fromNode.refId,
+					colId,
+					channel: portMeta.axis ?? null,
+					series: portMeta.series ?? null
+				});
+			}
+		}
 	}
 
 	// Wrap a direct, in-place edit to a plot's inner data object (plot.plot —
@@ -2014,7 +2097,34 @@
 
 	function handlePortStart(e) {
 		e.stopPropagation();
-		pendingConnection = { fromNodeId: e.detail.nodeId, fromPort: e.detail.port };
+		const { nodeId, port } = e.detail;
+		const dir = e.detail.direction === 'in' ? 'in' : 'out';
+		// Two gestures share these handlers:
+		//  - press-drag-release: mousedown starts, mouseup on the far end applies.
+		//  - click-to-start / click-to-drop: a click sets a pending wire that
+		//    follows the cursor; a second click on a valid opposite-end port
+		//    applies it. That second click arrives here as this port's mousedown,
+		//    so complete the connection instead of restarting.
+		if (pendingConnection) {
+			if (pendingConnection.reverse && dir === 'out') {
+				applyConnection(nodeId, port, pendingConnection.toNodeId, pendingConnection.toPort);
+				pendingConnection = null;
+				return;
+			}
+			if (!pendingConnection.reverse && dir === 'in') {
+				applyConnection(pendingConnection.fromNodeId, pendingConnection.fromPort, nodeId, port);
+				pendingConnection = null;
+				return;
+			}
+			// Same-end click → re-pick the source/target from this port (fall through).
+		}
+		// A wire can start from either end: output → drag to an input (forward),
+		// or input → drag to an output (reverse).
+		if (dir === 'in') {
+			pendingConnection = { toNodeId: nodeId, toPort: port, reverse: true };
+		} else {
+			pendingConnection = { fromNodeId: nodeId, fromPort: port };
+		}
 	}
 
 	function pointerOutsideGroupRect(groupId, clientX, clientY) {
@@ -2073,12 +2183,28 @@
 	function handlePortEnd(e) {
 		e.stopPropagation();
 		if (!pendingConnection) return;
-		applyConnection(
-			pendingConnection.fromNodeId,
-			pendingConnection.fromPort,
-			e.detail.nodeId,
-			e.detail.port
-		);
+		const { nodeId, port } = e.detail;
+		const endDir = e.detail.direction ?? 'in';
+		// Releasing on the ORIGINating port is a click-to-start (press+release
+		// without a drag): keep the pending wire alive so the user can move and
+		// click a target. Don't cancel.
+		const isOrigin = pendingConnection.reverse
+			? endDir === 'in' &&
+				nodeId === pendingConnection.toNodeId &&
+				port === pendingConnection.toPort
+			: endDir === 'out' &&
+				nodeId === pendingConnection.fromNodeId &&
+				port === pendingConnection.fromPort;
+		if (isOrigin) return;
+		if (pendingConnection.reverse) {
+			// Reverse drag completes on an OUTPUT dot; releasing on another input
+			// just cancels.
+			if (endDir === 'out') {
+				applyConnection(nodeId, port, pendingConnection.toNodeId, pendingConnection.toPort);
+			}
+		} else if (endDir === 'in') {
+			applyConnection(pendingConnection.fromNodeId, pendingConnection.fromPort, nodeId, port);
+		}
 		pendingConnection = null;
 	}
 
@@ -2688,13 +2814,17 @@
 		multiSelectedNodeIds = next;
 	}
 
-	function handleBackgroundClick() {
+	function handleBackgroundClick(e) {
 		// A marquee drag ends with a background click; don't let it wipe the
 		// selection the marquee just made.
 		if (suppressBackgroundClick) {
 			suppressBackgroundClick = false;
 			return;
 		}
+		// A click that lands on a port dot bubbles here too. It's a wire gesture
+		// (click-to-start / click-to-drop), not a background click — ignore it so
+		// the pending wire survives and the selection isn't cleared.
+		if (e?.target?.closest?.('.port-dot')) return;
 		deselectAllPlots();
 		appState.canvasSelectedNodeId = null;
 		multiSelectedNodeIds = new Set();
@@ -2758,14 +2888,19 @@
 			return;
 		}
 
+		// Plot wires mutate plot.plot directly; route every branch through
+		// recordPlotEdit so the removal lands on the undo stack as one step,
+		// mirroring the connect path (connectColumnToInput).
 		if (
 			target.type === 'plot' &&
 			target.plotObj?.type === 'tableplot' &&
 			edge.toPort === 'series'
 		) {
-			target.plotObj.plot.columnRefs = (target.plotObj.plot.columnRefs ?? []).filter(
-				(id) => id !== colId
-			);
+			recordPlotEdit(target.plotObj, () => {
+				target.plotObj.plot.columnRefs = (target.plotObj.plot.columnRefs ?? []).filter(
+					(id) => id !== colId
+				);
+			});
 			return;
 		}
 
@@ -2777,54 +2912,60 @@
 			target.plotObj.type !== 'tableplot' &&
 			edge.toPort === 'data'
 		) {
-			const plot = target.plotObj.plot;
-			const defaultInputs = appConsts.plotMap.get(target.plotObj.type)?.defaultInputs ?? [];
-			if (!plot?.data || defaultInputs.length !== 1) return;
-			const field = defaultInputs[0];
-			const idx = plot.data.findIndex((dp) => dp?.[field]?.refId === colId);
-			if (idx < 0) return;
-			plot.data = plot.data.filter((_, i) => i !== idx);
+			recordPlotEdit(target.plotObj, () => {
+				const plot = target.plotObj.plot;
+				const defaultInputs = appConsts.plotMap.get(target.plotObj.type)?.defaultInputs ?? [];
+				if (!plot?.data || defaultInputs.length !== 1) return;
+				const field = defaultInputs[0];
+				const idx = plot.data.findIndex((dp) => dp?.[field]?.refId === colId);
+				if (idx < 0) return;
+				plot.data = plot.data.filter((_, i) => i !== idx);
+			});
 			return;
 		}
 
 		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot') {
-			const plot = target.plotObj.plot;
-			if (!plot?.data) return;
-			const xMatch = edge.toPort?.match(/^x(\d+)$/);
-			const ysMatch = edge.toPort?.match(/^ys(\d+)$/);
-			if (!xMatch && !ysMatch) return;
+			recordPlotEdit(target.plotObj, () => {
+				const plot = target.plotObj.plot;
+				if (!plot?.data) return;
+				const xMatch = edge.toPort?.match(/^x(\d+)$/);
+				const ysMatch = edge.toPort?.match(/^ys(\d+)$/);
+				if (!xMatch && !ysMatch) return;
 
-			const groups = groupPlotData(plot.data);
-			const setIdx = Number((xMatch ?? ysMatch)[1]) - 1;
-			if (setIdx >= groups.length) return;
-			const g = groups[setIdx];
+				const groups = groupPlotData(plot.data);
+				const setIdx = Number((xMatch ?? ysMatch)[1]) - 1;
+				if (setIdx >= groups.length) return;
+				const g = groups[setIdx];
 
-			if (xMatch) {
-				// Edge for the set's shared x: clear x.refId on every data point
-				// in this group so the set becomes "orphaned" (next derive groups
-				// them under xRefId = -1). Mutate in place to preserve the
-				// ColumnClass prototype (see connect path).
-				if (g.xRefId === colId) {
-					for (const dp of g.dataPoints) {
-						if (dp?.x) dp.x.refId = -1;
+				if (xMatch) {
+					// Edge for the set's shared x: clear x.refId on every data point
+					// in this group so the set becomes "orphaned" (next derive groups
+					// them under xRefId = -1). Mutate in place to preserve the
+					// ColumnClass prototype (see connect path).
+					if (g.xRefId === colId) {
+						for (const dp of g.dataPoints) {
+							if (dp?.x) dp.x.refId = -1;
+						}
 					}
+					return;
 				}
-				return;
-			}
 
-			// ysMatch: drop the data point whose y matches. If it's the last y
-			// sharing this set's x, keep the data point as an x-seed (y = -1) so the
-			// set's x wire survives and a re-added y re-uses the slot; otherwise
-			// remove the data point outright.
-			const idx = g.dataPoints.findIndex((dp) => dp?.y?.refId === colId);
-			if (idx < 0) return;
-			const removedDp = g.dataPoints[idx];
-			const otherValidY = g.dataPoints.some((dp) => dp !== removedDp && (dp?.y?.refId ?? -1) >= 0);
-			if (!otherValidY && (g.xRefId ?? -1) >= 0 && removedDp.y) {
-				removedDp.y.refId = -1;
-			} else {
-				plot.data = plot.data.filter((dp) => dp !== removedDp);
-			}
+				// ysMatch: drop the data point whose y matches. If it's the last y
+				// sharing this set's x, keep the data point as an x-seed (y = -1) so the
+				// set's x wire survives and a re-added y re-uses the slot; otherwise
+				// remove the data point outright.
+				const idx = g.dataPoints.findIndex((dp) => dp?.y?.refId === colId);
+				if (idx < 0) return;
+				const removedDp = g.dataPoints[idx];
+				const otherValidY = g.dataPoints.some(
+					(dp) => dp !== removedDp && (dp?.y?.refId ?? -1) >= 0
+				);
+				if (!otherValidY && (g.xRefId ?? -1) >= 0 && removedDp.y) {
+					removedDp.y.refId = -1;
+				} else {
+					plot.data = plot.data.filter((dp) => dp !== removedDp);
+				}
+			});
 		}
 	}
 
@@ -3408,6 +3549,22 @@
 
 	const provisionalEdge = $derived.by(() => {
 		if (!pendingConnection) return null;
+		// Reverse drag (started from an INPUT port): the wire hangs off the
+		// input dot on the node's left edge and follows the mouse.
+		if (pendingConnection.reverse) {
+			const toNode = allNodes.find((n) => n.id === pendingConnection.toNodeId);
+			const toPos =
+				stablePositions[pendingConnection.toNodeId] ??
+				defaultPositions.positions[pendingConnection.toNodeId];
+			if (!toNode || !toPos) return null;
+			return {
+				from: { x: mouseCanvas.x, y: mouseCanvas.y },
+				to: {
+					x: toPos.x,
+					y: toPos.y + getPortAnchorY(toNode, pendingConnection.toPort, 'in')
+				}
+			};
+		}
 		const fromNode = allNodes.find((n) => n.id === pendingConnection.fromNodeId);
 		const fromPos =
 			stablePositions[pendingConnection.fromNodeId] ??
@@ -3528,6 +3685,7 @@
 				{selectedEdgeKey}
 				{dropTargetEdgeKey}
 				onEdgeClick={selectEdge}
+				onEdgeHover={(edge) => (hoveredEdgeKey = edge ? edgeKeyFor(edge) : null)}
 			/>
 
 			{#each allNodes as node (node.id)}
@@ -3610,6 +3768,7 @@
 								selected={isSelected}
 								expanded={isExpanded}
 								width={getNodeWidth(node)}
+								wiredOutPorts={wiredOutPortsByNode[node.id]}
 								spliceTargetPort={dropTargetPortKey?.startsWith(`${node.id}|`)
 									? dropTargetPortKey.slice(node.id.length + 1)
 									: null}
@@ -3821,6 +3980,14 @@
 {/if}
 
 <style>
+	/* Port dots of the hovered/selected edge (class toggled imperatively — see
+	   the port-highlight effect). Global: the dots live in child components. */
+	:global(.port-dot.port-edge-highlight) {
+		background: var(--color-accent) !important;
+		border-color: var(--color-accent) !important;
+		box-shadow: var(--shadow-focus);
+	}
+
 	.workflow-editor {
 		position: fixed;
 		top: 0;

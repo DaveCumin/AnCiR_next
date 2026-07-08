@@ -5,7 +5,12 @@
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { appConsts } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { COMPACT_W, compactNodeHeight, compactPortAnchorY, columnTypeIcon } from './nodeGeometry.js';
+	import {
+		COMPACT_W,
+		compactNodeHeight,
+		compactPortAnchorY,
+		columnTypeIcon
+	} from './nodeGeometry.js';
 
 	let { node, selected = false, spliceTargetPort = null } = $props();
 	const dispatch = createEventDispatcher();
@@ -62,11 +67,23 @@
 	}
 	function disconnectInput(e, portName) {
 		e.stopPropagation();
-		// Shift+click disconnects. Right-click no longer disconnects (it opens the
-		// column picker via onContextMenu); a bare click starts nothing here.
-		if (!e.shiftKey) return;
+		// Shift+click disconnects. Right-click opens the column picker via
+		// onContextMenu. A plain left-press starts a REVERSE wire drag.
+		if (!e.shiftKey) {
+			if (e.button === 0) {
+				e.preventDefault();
+				dispatch('portstart', { nodeId: node.id, port: portName, direction: 'in' });
+			}
+			return;
+		}
 		e.preventDefault();
 		dispatch('portdisconnect', { nodeId: node.id, port: portName, direction: 'in' });
+	}
+	// Complete a reverse drag on an output dot (mirror of endAtInput).
+	function endAtOutput(e, portName) {
+		e.stopPropagation();
+		e.preventDefault();
+		dispatch('portend', { nodeId: node.id, port: portName, direction: 'out' });
 	}
 	// Right-click an input port → ask the editor to open a column picker so the
 	// user can add a connection to this input (replaces destructive right-click
@@ -85,7 +102,9 @@
 	style="width:{COMPACT_W}px; height:{height}px;"
 	role="button"
 	tabindex="0"
-	{@attach tooltip(hasWarning ? `${node.label ?? ''}\n⚠ ${warnings.join('\n')}` : (node.label ?? ''))}
+	{@attach tooltip(
+		hasWarning ? `${node.label ?? ''}\n⚠ ${warnings.join('\n')}` : (node.label ?? '')
+	)}
 >
 	<span class="compact-icon"><Icon name={iconName} width={22} height={22} /></span>
 
@@ -107,6 +126,7 @@
 	{#each outputs as port, i (`out_${port.name}_${i}`)}
 		<div
 			class="port-dot dot-output"
+			class:metric-port={port.metric === true}
 			class:splice-target={spliceTargetPort === port.name}
 			style="top:{dotTop(i, outputs.length)}px;"
 			data-node-id={node.id}
@@ -114,6 +134,7 @@
 			data-port-dir="out"
 			{@attach tooltip(portTip(port))}
 			onmousedown={(e) => startFromOutput(e, port.name)}
+			onmouseup={(e) => endAtOutput(e, port.name)}
 			role="button"
 			tabindex="-1"
 		></div>
@@ -140,9 +161,7 @@
 	}
 	.compact-node.selected {
 		border-color: var(--color-accent);
-		box-shadow:
-			var(--shadow-1),
-			var(--shadow-focus-soft);
+		box-shadow: var(--shadow-1), var(--shadow-focus-soft);
 	}
 	/* Analysis has warnings (e.g. non-normal data under a parametric test). The
 	   yellow border survives selection so the caution stays visible. */
@@ -198,5 +217,22 @@
 		background: var(--color-accent);
 		border-color: var(--color-accent);
 		box-shadow: var(--shadow-focus);
+	}
+	/* Metric port dot: "target" ring + centre point (mirrors TableProcessNode). */
+	.metric-port::after {
+		content: '';
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: 5px;
+		height: 5px;
+		border-radius: 50%;
+		background: var(--color-lightness-50);
+		transform: translate(-50%, -50%);
+		pointer-events: none;
+	}
+	.metric-port:hover::after,
+	.metric-port.splice-target::after {
+		background: var(--surface-card);
 	}
 </style>

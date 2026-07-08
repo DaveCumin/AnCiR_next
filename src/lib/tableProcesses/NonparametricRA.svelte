@@ -59,13 +59,13 @@
 			outputs: [
 				{ name: 'npcrax', kind: 'column', cardinality: 'one' },
 				{ name: 'npcray_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'npcray_' },
-				{ name: 'IS', kind: 'column', cardinality: 'one' },
-				{ name: 'IV', kind: 'column', cardinality: 'one' },
-				{ name: 'RA', kind: 'column', cardinality: 'one' },
-				{ name: 'M10', kind: 'column', cardinality: 'one' },
-				{ name: 'L5', kind: 'column', cardinality: 'one' },
-				{ name: 'M10onset', kind: 'column', cardinality: 'one' },
-				{ name: 'L5onset', kind: 'column', cardinality: 'one' }
+				{ name: 'IS', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'IV', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'RA', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'M10', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'L5', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'M10onset', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'L5onset', kind: 'column', cardinality: 'one', metric: true }
 			]
 		}
 	};
@@ -261,7 +261,11 @@
 		if (!npcraData?.perY) return [];
 		return (p.args.yIN ?? [])
 			.filter((yId) => npcraData.perY[yId])
-			.map((yId) => ({ yId, name: getColumnById(Number(yId))?.name ?? String(yId), ...npcraData.perY[yId] }));
+			.map((yId) => ({
+				yId,
+				name: getColumnById(Number(yId))?.name ?? String(yId),
+				...npcraData.perY[yId]
+			}));
 	});
 	const fmt = (v, dp = 3) => (Number.isFinite(v) ? v.toFixed(dp) : '—');
 </script>
@@ -319,15 +323,30 @@
 						<td>{r.name}</td>
 						<td>
 							{fmt(r.IS)}
-							<StoreValueButton label="IS" getter={() => r.IS} defaultName={`IS_${r.name}`} source="NPCRA" />
+							<StoreValueButton
+								label="IS"
+								getter={() => r.IS}
+								defaultName={`IS_${r.name}`}
+								source="NPCRA"
+							/>
 						</td>
 						<td>
 							{fmt(r.IV)}
-							<StoreValueButton label="IV" getter={() => r.IV} defaultName={`IV_${r.name}`} source="NPCRA" />
+							<StoreValueButton
+								label="IV"
+								getter={() => r.IV}
+								defaultName={`IV_${r.name}`}
+								source="NPCRA"
+							/>
 						</td>
 						<td>
 							{fmt(r.RA)}
-							<StoreValueButton label="RA" getter={() => r.RA} defaultName={`RA_${r.name}`} source="NPCRA" />
+							<StoreValueButton
+								label="RA"
+								getter={() => r.RA}
+								defaultName={`RA_${r.name}`}
+								source="NPCRA"
+							/>
 						</td>
 						<td>{fmt(r.M10, 2)}</td>
 						<td>{fmt(r.L5, 2)}</td>
@@ -339,8 +358,7 @@
 		</table>
 		<p class="npcra-hint">
 			IS = coupling to the day (0–1), IV = fragmentation (~0 rhythmic, ~2 noise), RA = relative
-			amplitude. Wire any output port into <em>Compare groups</em> or a boxplot to test across
-			conditions.
+			amplitude. Wire any output port into <em>Compare groups</em> or a boxplot to test across conditions.
 		</p>
 	</div>
 {:else if mounted}

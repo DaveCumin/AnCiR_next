@@ -114,7 +114,6 @@ describe('getOutputKeys', () => {
 	it('returns correlogram outputs', () => {
 		expect(getOutputKeys({ analysis: 'correlogram' })).toEqual(['lag', 'correlation']);
 	});
-
 });
 
 describe('getStatKeys', () => {
@@ -133,7 +132,6 @@ describe('getStatKeys', () => {
 	it('returns correlogram peak stats', () => {
 		expect(getStatKeys({ analysis: 'correlogram' })).toEqual(['peak_lag', 'peak_correlation']);
 	});
-
 });
 
 describe('rhythmicityanalysis', () => {
@@ -297,7 +295,10 @@ describe('rhythmicityanalysis', () => {
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
 		const [result, valid] = await rhythmicityanalysis({
-			...baseArgs, xIN: 1, yIN: 2, analysis: 'periodogram'
+			...baseArgs,
+			xIN: 1,
+			yIN: 2,
+			analysis: 'periodogram'
 		});
 		expect(valid).toBe(true);
 		expect(result.y_results[2]).toBeDefined();
@@ -309,7 +310,11 @@ describe('rhythmicityanalysis', () => {
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
 		const [result, valid] = await rhythmicityanalysis({
-			...baseArgs, xIN: 1, yIN: [2], analysis: 'periodogram', pgMethod: 'Chi-squared'
+			...baseArgs,
+			xIN: 1,
+			yIN: [2],
+			analysis: 'periodogram',
+			pgMethod: 'Chi-squared'
 		});
 		expect(valid).toBe(true);
 		expect(result.outputKeys).toContain('threshold');
@@ -476,5 +481,36 @@ describe('rhythmicityanalysis — collected mode (shared X + per-Y primary Y)', 
 		expect(rawDataStore.has(51)).toBe(true);
 		expect(rawDataStore.has(100)).toBe(true);
 		expect(rawDataStore.has(101)).toBe(true);
+	});
+
+	it('writes stat_* metric ports with one value per y, in yIN order', async () => {
+		const n = 100;
+		const t = Array.from({ length: n }, (_, i) => i);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => t.map((ti) => Math.cos((2 * Math.PI * ti) / 24)) };
+		mockColumns[3] = { getData: () => t.map((ti) => Math.cos((2 * Math.PI * ti) / 20)) };
+		mockColumns[60] = { data: 60, type: 'number' };
+		mockColumns[61] = { data: 61, type: 'number' };
+
+		const [result, valid] = await rhythmicityanalysis({
+			...baseArgs,
+			xIN: 1,
+			yIN: [2, 3],
+			analysis: 'periodogram',
+			out: { stat_peak_period: 60, stat_peak_power: 61 }
+		});
+
+		expect(valid).toBe(true);
+		const periods = rawDataStore.get(60);
+		const powers = rawDataStore.get(61);
+		expect(periods).toHaveLength(2);
+		expect(powers).toHaveLength(2);
+		// The mocked periodogram always peaks at 24 with power 10.
+		expect(periods[0]).toBeCloseTo(24, 6);
+		expect(powers[0]).toBeCloseTo(10, 6);
+		// Values match the per-y stats shown in the editor panel, in yIN order.
+		expect(periods[0]).toBe(result.y_results[2].stats.peak_period);
+		expect(periods[1]).toBe(result.y_results[3].stats.peak_period);
+		expect(powers[1]).toBe(result.y_results[3].stats.peak_power);
 	});
 });

@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import { getCachedProcessNodeGraph, clearProcessNodeGraphCache } from './ProcessNode.svelte.js';
+import {
+	getCachedProcessNodeGraph,
+	clearProcessNodeGraphCache,
+	plotNodeSlots
+} from './ProcessNode.svelte.js';
 
 // Build a fake appConsts with one multi-Y table process ("fakeTP") whose
 // nodeSpec declares xIN (one) + yIN (many) inputs and an x + per-y output.
@@ -96,9 +100,195 @@ describe('TableProcess inline output columns', () => {
 		const graph = getCachedProcessNodeGraph(makeCore(), makeAppConsts());
 		const tp = graph.nodes.find((n) => n.id === 'tableprocess_5');
 		expect(tp.outputColumns).toEqual([
-			{ key: 'xOut', colId: 100, port: 'col_100' },
-			{ key: 'yOut_101', colId: 101, port: 'col_101' }
+			{ key: 'xOut', colId: 100, port: 'col_100', metric: false },
+			{ key: 'yOut_101', colId: 101, port: 'col_101', metric: false }
 		]);
+	});
+
+	it('marks out-keys matching metric nodeSpec outputs (exact and dynamic-prefix)', () => {
+		const core = makeCore();
+		core.data.push(
+			{ id: 102, name: 'r2', refId: null, processes: [] },
+			{ id: 103, name: 'stat_peak', refId: null, processes: [] }
+		);
+		core.tableProcesses[0].args.out.r2 = 102;
+		core.tableProcesses[0].args.out.stat_peak = 103;
+		const appConsts = makeAppConsts();
+		appConsts.tableProcessMap
+			.get('fakeTP')
+			.nodeSpec.outputs.push(
+				{ name: 'r2', metric: true },
+				{ name: 'stat_*', dynamicPrefix: 'stat_', metric: true }
+			);
+
+		const graph = getCachedProcessNodeGraph(core, appConsts);
+		const tp = graph.nodes.find((n) => n.id === 'tableprocess_5');
+		const byKey = Object.fromEntries(tp.outputColumns.map((c) => [c.key, c.metric]));
+		expect(byKey).toEqual({ xOut: false, yOut_101: false, r2: true, stat_peak: true });
+		// The metric flag also rides on the emitted ports (CompactNode styling).
+		const metricPorts = tp.ports.outputs.filter((p) => p.metric).map((p) => p.name);
+		expect(metricPorts).toEqual(['col_102', 'col_103']);
+	});
+
+	it('plot metric out-columns become metric ports on the plot node (no data_ node)', () => {
+		const core = makeCore();
+		core.data.push({ id: 200, name: 'peak_period_9', refId: null, processes: [] });
+		core.plots.push({
+			id: 9,
+			name: 'P',
+			type: 'periodogram',
+			metricOut: { peak_period: 200 },
+			plot: { data: [{ x: { refId: 1 }, y: { refId: 100 } }] }
+		});
+		// A downstream scatter consumes the metric column.
+		core.plots.push({
+			id: 10,
+			name: 'S',
+			type: 'scatter',
+			plot: { data: [{ x: { refId: 1 }, y: { refId: 200 } }] }
+		});
+
+		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
+		expect(graph.nodes.map((n) => n.id)).not.toContain('data_200');
+		const plotNode = graph.nodes.find((n) => n.id === 'plot_9');
+		const metricPort = plotNode.ports.outputs.find((p) => p.name === 'col_200');
+		expect(metricPort).toMatchObject({ metric: true, display: 'peak_period' });
+		// The consumer's y wire routes from the owning plot's metric port.
+		const yEdge = graph.connections.find((c) => c.toId === 'plot_10' && c.toPort === 'ys1');
+		expect(yEdge).toMatchObject({ fromId: 'plot_9', fromPort: 'col_200' });
+	});
+
+	it('chainRefs route a chained consumer edge from the via-plot passthrough', () => {
+		const core = makeCore();
+		core.plots.push(
+			{
+				id: 9,
+				name: 'P',
+				type: 'periodogram',
+				plot: { data: [{ x: { refId: 1 }, y: { refId: 100 } }] }
+			},
+			{
+				id: 10,
+				name: 'S',
+				type: 'scatter',
+				plot: { data: [{ x: { refId: 1 }, y: { refId: 100 } }] }
+			}
+		);
+		core.chainRefs = [
+			{ toId: 'plot_10', toPort: 'x1', viaPlotId: 9, colId: 1, channel: 'x', series: 1 }
+		];
+
+		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
+		const xEdge = graph.connections.find((c) => c.toId === 'plot_10' && c.toPort === 'x1');
+		expect(xEdge).toMatchObject({ fromId: 'plot_9', fromPort: 'col_1' });
+		// The un-chained y wire still draws from its true owner (the TP node).
+		const yEdge = graph.connections.find((c) => c.toId === 'plot_10' && c.toPort === 'ys1');
+		expect(yEdge).toMatchObject({ fromId: 'tableprocess_5', fromPort: 'col_100' });
+		// The periodogram itself still draws from the true sources.
+		const viaX = graph.connections.find((c) => c.toId === 'plot_9' && c.toPort === 'x1');
+		expect(viaX).toMatchObject({ fromId: 'data_1' });
+	});
+
+	it('a stale chainRef (via-plot no longer shows the column) falls back to the owner', () => {
+		const core = makeCore();
+		core.plots.push(
+			{
+				id: 9,
+				name: 'P',
+				type: 'periodogram',
+				plot: { data: [{ x: { refId: 100 }, y: { refId: 101 } }] } // does NOT show col 1
+			},
+			{
+				id: 10,
+				name: 'S',
+				type: 'scatter',
+				plot: { data: [{ x: { refId: 1 }, y: { refId: 100 } }] }
+			}
+		);
+		core.chainRefs = [
+			{ toId: 'plot_10', toPort: 'x1', viaPlotId: 9, colId: 1, channel: 'x', series: 1 }
+		];
+
+		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
+		const xEdge = graph.connections.find((c) => c.toId === 'plot_10' && c.toPort === 'x1');
+		expect(xEdge).toMatchObject({ fromId: 'data_1' });
+	});
+
+	it('plotNodeSlots aligns passthrough outputs with their series; metrics trail', () => {
+		const inputs = [
+			{ name: 'x1', axis: 'x', series: 1 },
+			{ name: 'ys1', axis: 'y', series: 1 },
+			{ name: 'x2', axis: 'x', series: 2, newSeries: true },
+			{ name: 'ys2', axis: 'y', series: 2, newSeries: true }
+		];
+		const outputs = [
+			{ name: 'col_1', series: 1, axis: 'x' },
+			{ name: 'col_2', series: 1, axis: 'y' },
+			{ name: 'col_18', metric: true }
+		];
+		const { inputRows, outputRows, totalSlots } = plotNodeSlots(inputs, outputs);
+
+		// Inputs: header(0) x1(1) ys1(2) header(3) x2(4) ys2(5)
+		const inSlot = (name) => inputRows.find((r) => r.kind === 'port' && r.port.name === name)?.slot;
+		expect(inSlot('x1')).toBe(1);
+		expect(inSlot('ys1')).toBe(2);
+		expect(inSlot('x2')).toBe(4);
+		expect(inSlot('ys2')).toBe(5);
+
+		// Outputs: x passthrough BESIDE the x row, y beside the ys row, metric
+		// after all series.
+		const outSlot = (name) => outputRows.find((r) => r.port.name === name)?.slot;
+		expect(outSlot('col_1')).toBe(1);
+		expect(outSlot('col_2')).toBe(2);
+		expect(outSlot('col_18')).toBe(6);
+		expect(totalSlots).toBe(7);
+	});
+
+	it('plotNodeSlots stretches a series block when it has multiple y outputs', () => {
+		const inputs = [
+			{ name: 'x1', axis: 'x', series: 1 },
+			{ name: 'ys1', axis: 'y', series: 1 },
+			{ name: 'x2', axis: 'x', series: 2, newSeries: true },
+			{ name: 'ys2', axis: 'y', series: 2, newSeries: true }
+		];
+		const outputs = [
+			{ name: 'col_1', series: 1, axis: 'x' },
+			{ name: 'col_2', series: 1, axis: 'y' },
+			{ name: 'col_3', series: 1, axis: 'y' },
+			{ name: 'col_18', metric: true }
+		];
+		const { inputRows, outputRows, totalSlots } = plotNodeSlots(inputs, outputs);
+
+		const outSlot = (name) => outputRows.find((r) => r.port.name === name)?.slot;
+		// y outputs run downward from the ys row; series 2 starts below them.
+		expect(outSlot('col_2')).toBe(2);
+		expect(outSlot('col_3')).toBe(3);
+		const inSlot = (name) => inputRows.find((r) => r.kind === 'port' && r.port.name === name)?.slot;
+		expect(inSlot('x2')).toBe(5); // header at 4
+		expect(inSlot('ys2')).toBe(6);
+		expect(outSlot('col_18')).toBe(7);
+		expect(totalSlots).toBe(8);
+	});
+
+	it('plot input columns are re-exposed as passthrough output ports', () => {
+		const core = makeCore();
+		core.plots.push({
+			id: 9,
+			name: 'P',
+			type: 'scatter',
+			plot: { data: [{ x: { refId: 1 }, y: { refId: 100 } }] }
+		});
+		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
+		const plotNode = graph.nodes.find((n) => n.id === 'plot_9');
+		const outNames = plotNode.ports.outputs.map((p) => p.name);
+		expect(outNames).toContain('col_1');
+		expect(outNames).toContain('col_100');
+		const xPass = plotNode.ports.outputs.find((p) => p.name === 'col_1');
+		expect(xPass.passthrough).toBe(true);
+		expect(xPass.display).toBe('A (x)');
+		// Passthrough is a drag-source convenience only: the source column keeps
+		// its own data node (it is not owned by the plot).
+		expect(graph.nodes.map((n) => n.id)).toContain('data_1');
 	});
 
 	it('keeps the input ports on the TP node', () => {
@@ -169,7 +359,6 @@ describe('TableProcess inline output columns', () => {
 		expect(inNames).toContain('x2');
 		expect(inNames).toContain('ys2');
 	});
-
 });
 
 describe('plot wiring edge cases', () => {
@@ -263,10 +452,29 @@ describe('plot wiring edge cases', () => {
 
 	it('a multi-output free process exposes per-column ports and no `all` port or bundle', () => {
 		const core = makeCore();
-		core.orphanProcesses.push({ id: 9, name: 'Add', displayName: 'Add', args: { inIN: [1, 100], value: 0 } });
+		core.orphanProcesses.push({
+			id: 9,
+			name: 'Add',
+			displayName: 'Add',
+			args: { inIN: [1, 100], value: 0 }
+		});
 		core.data.push(
-			{ id: 200, name: 'A → Add', producerNodeId: 'process_9', producerPort: 'out_1', refId: null, processes: [] },
-			{ id: 201, name: 'X → Add', producerNodeId: 'process_9', producerPort: 'out_100', refId: null, processes: [] }
+			{
+				id: 200,
+				name: 'A → Add',
+				producerNodeId: 'process_9',
+				producerPort: 'out_1',
+				refId: null,
+				processes: []
+			},
+			{
+				id: 201,
+				name: 'X → Add',
+				producerNodeId: 'process_9',
+				producerPort: 'out_100',
+				refId: null,
+				processes: []
+			}
 		);
 		core.plots.push({ id: 60, type: 'tableplot', plot: { columnRefs: [200, 201] } });
 		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
@@ -280,8 +488,20 @@ describe('plot wiring edge cases', () => {
 
 	it('a single-output free process has no `all` port', () => {
 		const core = makeCore();
-		core.orphanProcesses.push({ id: 8, name: 'Add', displayName: 'Add', args: { inIN: [1], value: 0 } });
-		core.data.push({ id: 210, name: 'A → Add', producerNodeId: 'process_8', producerPort: 'out_1', refId: null, processes: [] });
+		core.orphanProcesses.push({
+			id: 8,
+			name: 'Add',
+			displayName: 'Add',
+			args: { inIN: [1], value: 0 }
+		});
+		core.data.push({
+			id: 210,
+			name: 'A → Add',
+			producerNodeId: 'process_8',
+			producerPort: 'out_1',
+			refId: null,
+			processes: []
+		});
 		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
 		const proc = graph.nodes.find((n) => n.id === 'process_8');
 		expect(proc.ports.outputs.map((p) => p.name)).not.toContain('all');

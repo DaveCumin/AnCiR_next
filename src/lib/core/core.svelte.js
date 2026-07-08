@@ -15,6 +15,11 @@ export const core = $state({
 	// input refs and runs its func() reactively.
 	tableProcesses: [],
 	storedValues: {},
+	// chainRefs — consumer inputs wired via a plot's passthrough output port,
+	// so the edge draws plot → consumer and follows the plot's own rewires.
+	// Shape: { toId, toPort, viaPlotId, colId, channel, series } (see
+	// core/chainRefs.js, the single consistency authority).
+	chainRefs: [],
 	// nodeNotes — per-node text annotations keyed by canvas node id (e.g.
 	// `data_5`, `process_3`, `plot_2`, `note_1`). Plain string values.
 	nodeNotes: {},
@@ -374,7 +379,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.51.6',
+	version: 'β.51.7',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
@@ -496,13 +501,57 @@ export function storeValue(name, getter, source = '') {
 }
 
 /**
+ * Store a named REFERENCE to a metric output port cell: `{ tpId, outKey, yId,
+ * index }` picks one value out of a table process's metric out-column (one
+ * value per y input, in yIN order). Unlike getter entries, refs live in core —
+ * they are not tied to any component's lifetime, they serialize, and they
+ * restore on session import.
+ * @param {string} name
+ * @param {{tpId: number, outKey: string, yId?: number|null, index?: number}} ref
+ * @param {string} [source]
+ */
+export function storeValueRef(name, ref, source = '') {
+	core.storedValues[name] = { ref: { ...ref }, source };
+}
+
+/**
+ * Resolve a metric-port ref to its current value. Prefers yId (robust to yIN
+ * reorder); falls back to a fixed index (e.g. GroupComparison's single-value
+ * multi-Y mode). Returns NaN when the node/column/series is gone.
+ */
+export function resolveStoredValueRef(ref) {
+	if (!ref) return NaN;
+	const tp = (core.tableProcesses ?? []).find((t) => t.id === ref.tpId);
+	const colId = tp?.args?.out?.[ref.outKey];
+	if (colId == null || colId === -1) return NaN;
+	const data = core.rawData.get(colId);
+	if (!Array.isArray(data)) return NaN;
+	let idx = 0;
+	if (ref.yId != null) {
+		const yIN = tp.args.yIN;
+		const yINs = Array.isArray(yIN) ? yIN : yIN != null && yIN !== -1 ? [yIN] : [];
+		idx = yINs.indexOf(ref.yId);
+		if (idx === -1) return NaN;
+	} else if (Number.isFinite(ref.index)) {
+		idx = ref.index;
+	}
+	const v = data[idx];
+	return typeof v === 'number' ? v : NaN;
+}
+
+/**
  * Resolve the current numeric value of a stored value entry.
- * Calls the live getter when available; falls back to a static snapshot
- * (used after deserialisation when no getter exists).
+ * Ref entries resolve live from their metric output column; getter entries
+ * call the live getter; both fall back to a static snapshot (used after
+ * deserialisation when neither resolves).
  */
 export function getStoredValue(name) {
 	const entry = core.storedValues[name];
 	if (!entry) return NaN;
+	if (entry.ref) {
+		const v = resolveStoredValueRef(entry.ref);
+		return Number.isFinite(v) ? v : (entry.staticValue ?? v);
+	}
 	if (typeof entry.getter === 'function') {
 		try {
 			return entry.getter();
@@ -519,12 +568,46 @@ export function removeStoredValue(name) {
 	delete core.storedValues[name];
 }
 
-/** Rename a stored value, returning the new name. */
+/**
+ * Rewrite every consumer reference to a renamed stored value so formulas keep
+ * working: FormulaColumn `{type:'stored', key}` tokens, BlankColumn
+ * `storedValueRefs` (row → key), and StoredValueGroup `groups[].keys`.
+ * Shared by renameStoredValue below and the undo/redo op (operations.js), so
+ * both directions of an undo propagate symmetrically.
+ */
+export function propagateStoredValueRename(oldName, newName) {
+	if (oldName === newName) return;
+	for (const tp of core.tableProcesses ?? []) {
+		const args = tp?.args;
+		if (!args) continue;
+		if (Array.isArray(args.tokens)) {
+			for (const t of args.tokens) {
+				if (t?.type === 'stored' && t.key === oldName) t.key = newName;
+			}
+		}
+		if (args.storedValueRefs && typeof args.storedValueRefs === 'object') {
+			for (const [idx, key] of Object.entries(args.storedValueRefs)) {
+				if (key === oldName) args.storedValueRefs[idx] = newName;
+			}
+		}
+		if (Array.isArray(args.groups)) {
+			for (const g of args.groups) {
+				if (!Array.isArray(g?.keys)) continue;
+				for (let i = 0; i < g.keys.length; i++) {
+					if (g.keys[i] === oldName) g.keys[i] = newName;
+				}
+			}
+		}
+	}
+}
+
+/** Rename a stored value (updating formula references), returning the new name. */
 export function renameStoredValue(oldName, newName) {
 	if (oldName === newName || !(oldName in core.storedValues)) return oldName;
 	const finalName = uniqueStoredValueName(newName);
 	core.storedValues[finalName] = core.storedValues[oldName];
 	delete core.storedValues[oldName];
+	propagateStoredValueRename(oldName, finalName);
 	return finalName;
 }
 
@@ -705,11 +788,15 @@ export function outputCoreAsJson() {
 		JSON.stringify(core, (key, val) => (typeof val === 'function' ? undefined : val))
 	);
 	coreOut.rawData = Object.fromEntries(core.rawData);
-	// Resolve live getters into static snapshots for serialisation
+	// Resolve live getters into static snapshots for serialisation. Ref entries
+	// (metric-port refs) additionally keep the ref itself so they re-resolve
+	// live after import; the snapshot doubles as a fallback (and feeds the
+	// Python export, which reads staticValue).
 	const resolvedSV = {};
 	for (const [name, entry] of Object.entries(core.storedValues)) {
 		resolvedSV[name] = {
 			source: entry.source,
+			...(entry.ref ? { ref: { ...entry.ref } } : {}),
 			staticValue: getStoredValue(name)
 		};
 	}

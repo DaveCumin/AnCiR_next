@@ -50,7 +50,7 @@
 			outputs: [
 				{ name: 'dlogx', kind: 'column', cardinality: 'one' },
 				{ name: 'dlogy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'dlogy_' },
-				{ name: 'pvalue', kind: 'column', cardinality: 'one' }
+				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true }
 			]
 		}
 	};

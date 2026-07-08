@@ -26,7 +26,16 @@
 		// PORTS (the "stored values as output ports" pilot): each is an array with
 		// one value per y input, so wiring e.g. `period` straight into a boxplot
 		// compares the metric across series/animals without the global registry.
-		['out', { cosinorx: { val: -1 }, period: { val: -1 }, amplitude: { val: -1 }, rsquared: { val: -1 }, pvalue: { val: -1 } }],
+		[
+			'out',
+			{
+				cosinorx: { val: -1 },
+				period: { val: -1 },
+				amplitude: { val: -1 },
+				rsquared: { val: -1 },
+				pvalue: { val: -1 }
+			}
+		],
 		['valid', { val: false }],
 		['useFixedPeriod', { val: false }],
 		['fixedPeriod', { val: 24 }],
@@ -65,10 +74,10 @@
 					dynamicPrefix: 'cosinory_'
 				},
 				// Scalar-metric ports (one value per y input).
-				{ name: 'period', kind: 'column', cardinality: 'one' },
-				{ name: 'amplitude', kind: 'column', cardinality: 'one' },
-				{ name: 'rsquared', kind: 'column', cardinality: 'one' },
-				{ name: 'pvalue', kind: 'column', cardinality: 'one' }
+				{ name: 'period', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'amplitude', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'rsquared', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true }
 			]
 		}
 	};

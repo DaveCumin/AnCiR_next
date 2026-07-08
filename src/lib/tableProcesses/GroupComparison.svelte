@@ -1,5 +1,6 @@
 <script module>
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	// @ts-nocheck
 	import { mean, sampleVariance, sampleStd, median } from '$lib/utils/sampleStats.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
@@ -14,7 +15,10 @@
 		['method', { val: 'auto' }], // auto | ttest | anova | mannwhitney | kruskal
 		['alpha', { val: 0.05 }],
 		['postHocEnabled', { val: true }],
-		['out', {}],
+		// Scalar-metric output ports (one value per y input, in yIN order; a
+		// single value in the no-group multi-Y fallback mode). `statistic` is the
+		// chosen test's statistic (t / F / U / H), `pvalue` its p-value.
+		['out', { statistic: { val: -1 }, pvalue: { val: -1 } }],
 		['valid', { val: false }],
 		['forcollected', { val: false }],
 		['collectedType', { val: 'groupcomparison' }]
@@ -31,7 +35,11 @@
 				{ name: 'xIN', kind: 'column', cardinality: 'one' },
 				{ name: 'yIN', kind: 'column', cardinality: 'many' }
 			],
-			outputs: []
+			outputs: [
+				// Scalar-metric ports (one value per y input).
+				{ name: 'statistic', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true }
+			]
 		}
 	};
 
@@ -537,6 +545,41 @@
 		};
 	}
 
+	/** The chosen test's statistic, whichever field it used (t / F / U / H). */
+	function statisticOf(comp) {
+		return comp?.t ?? comp?.f ?? comp?.u ?? comp?.h ?? NaN;
+	}
+
+	/**
+	 * Scalar-metric ports: one value per y input, in yIN order (a single value
+	 * in the no-group multi-Y fallback mode, where all selected Y columns form
+	 * one comparison). Values match the stats shown in the editor panel.
+	 */
+	function writeGroupComparisonMetrics(argsIN, result) {
+		const outStat = argsIN.out?.statistic;
+		const outP = argsIN.out?.pvalue;
+		const statWired = outStat != null && outStat !== -1;
+		const pWired = outP != null && outP !== -1;
+		if (!statWired && !pWired) return;
+
+		const statArr = [];
+		const pArr = [];
+		if (result.comparisons.multiY) {
+			statArr.push(statisticOf(result.comparisons.multiY));
+			pArr.push(result.comparisons.multiY?.pValue ?? NaN);
+		} else {
+			for (const yId of normalizeYInputs(argsIN.yIN)) {
+				const comp = result.comparisons[yId];
+				statArr.push(statisticOf(comp));
+				pArr.push(comp?.pValue ?? NaN);
+			}
+		}
+
+		const processHash = crypto.randomUUID();
+		writeOutputColumn(outStat, statArr, { processHash });
+		writeOutputColumn(outP, pArr, { processHash });
+	}
+
 	export function groupcomparison(argsIN) {
 		const xIN = argsIN.xIN;
 		const yINs = normalizeYInputs(argsIN.yIN);
@@ -563,6 +606,7 @@
 				columnName: 'Selected Y columns',
 				...comp
 			};
+			writeGroupComparisonMetrics(argsIN, result);
 			return [result, !!comp.valid];
 		}
 
@@ -673,6 +717,7 @@
 			if (kRes.valid) anyValid = true;
 		}
 
+		writeGroupComparisonMetrics(argsIN, result);
 		return [result, anyValid];
 	}
 </script>
@@ -684,6 +729,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import { getColumnById as getColumnByIdLocal } from '$lib/core/Column.svelte';
+	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
 	import { onMount, untrack } from 'svelte';
 	import {
 		showStaticDataAsTable,
@@ -747,6 +793,8 @@
 
 	onMount(() => {
 		if (!p.args.out) p.args.out = {};
+		// Backfill metric out-columns for sessions saved before they existed.
+		syncMetricOutColumns(p, ['statistic', 'pvalue'], (k) => k === 'statistic' || k === 'pvalue');
 		doComparison();
 		mounted = true;
 	});

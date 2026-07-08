@@ -16,10 +16,12 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
 	import MiniDataTable from './MiniDataTable.svelte';
+	import MetricTagButton from './MetricTagButton.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
 	import { core } from '$lib/core/core.svelte.js';
 	import { getNodeName, setNodeName } from '$lib/core/nodeNaming.js';
+	import { normalizeYInputs } from '$lib/tableProcesses/tpArgHelpers.js';
 	import NodeNoteButton from './NodeNoteButton.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { setGroupPortY, clearGroupPortPositions } from './groupPortPositions.svelte.js';
@@ -29,7 +31,11 @@
 		selected = false,
 		expanded = false,
 		spliceTargetPort = null,
-		width = null
+		width = null,
+		// { [outputPortName]: true } for ports (col_<id>) that currently have an
+		// edge. Wired metric rows stay rendered when the Metrics section is
+		// collapsed so their edges keep a real port anchor.
+		wiredOutPorts = null
 	} = $props();
 
 	const dispatch = createEventDispatcher();
@@ -52,14 +58,59 @@
 	// back to col_<colId> for older callers.
 	const outputColumns = $derived(
 		(node.outputColumns ?? [])
-			.map(({ key, colId, port }) => ({
+			.map(({ key, colId, port, metric }) => ({
 				key,
 				colId,
 				port: port ?? `col_${colId}`,
+				metric: metric === true,
 				col: getColumnById(colId)
 			}))
 			.filter((entry) => !!entry.col)
 	);
+
+	// Scalar-metric outputs (one value per y input) render in their own Metrics
+	// section below the series rows; everything else is an ordinary series row.
+	const seriesColumns = $derived(outputColumns.filter((c) => !c.metric));
+	const metricColumns = $derived(outputColumns.filter((c) => c.metric));
+
+	// Metrics section collapse (ephemeral UI state, like rowExpanded). Wired
+	// metric rows stay rendered when collapsed so edges keep a real anchor.
+	let metricsOpen = $state(true);
+	const visibleMetricColumns = $derived(
+		metricsOpen ? metricColumns : metricColumns.filter((c) => wiredOutPorts?.[c.port] === true)
+	);
+
+	// Per-series labels for the metric breakdown. Metric columns carry one value
+	// per y input, in yIN order (the engine contract), so labels follow yIN.
+	const yInputIds = $derived(normalizeYInputs(tp?.args?.yIN));
+	const seriesLabels = $derived(yInputIds.map((id, i) => getColumnById(id)?.name ?? `y${i + 1}`));
+
+	function formatMetricValue(v) {
+		if (typeof v !== 'number' || !Number.isFinite(v)) return '–';
+		const a = Math.abs(v);
+		if (a !== 0 && (a >= 1e6 || a < 1e-4)) return v.toExponential(2);
+		return Number(v.toPrecision(4)).toString();
+	}
+
+	/** Inline summary next to the metric name: value, `a · b`, or `×N`. */
+	function metricSummary(values) {
+		if (!values.length) return '–';
+		if (values.length === 1) return formatMetricValue(values[0]);
+		if (values.length === 2) return values.map(formatMetricValue).join(' · ');
+		return `×${values.length}`;
+	}
+
+	/** Breakdown row label: the series name when counts line up, else an index. */
+	function breakdownLabel(values, i) {
+		return values.length === seriesLabels.length ? seriesLabels[i] : `#${i + 1}`;
+	}
+
+	/** Default stored-value name for one metric cell, e.g. "peak_period_temp". */
+	function tagDefaultName(key, values, i) {
+		const base = key.replace(/^stat_/, '');
+		const label = values.length === seriesLabels.length ? seriesLabels[i] : '';
+		return label ? `${base}_${label}` : base;
+	}
 
 	// Bundle output ports (e.g. a Column Set's `set` port): declared on the
 	// nodeSpec with a non-`column` artifact kind. They carry a set of columns down
@@ -132,6 +183,8 @@
 		void inputPorts.length;
 		void outputColumns.length;
 		void bundleOutputs.length;
+		void metricsOpen;
+		void visibleMetricColumns.length;
 		const _track = outputColumns.map((c) => `${c.colId}|${rowExpanded[c.colId] ? 'e' : 'c'}`);
 		void _track;
 		(async () => {
@@ -169,10 +222,24 @@
 	function disconnectInput(e, portName) {
 		e.stopPropagation();
 		// Shift+click disconnects. Right-click opens the column picker instead of
-		// disconnecting (see openInputPicker).
-		if (!e.shiftKey) return;
+		// disconnecting (see openInputPicker). A plain left-press starts a REVERSE
+		// wire drag (input → output).
+		if (!e.shiftKey) {
+			if (e.button === 0) {
+				e.preventDefault();
+				dispatch('portstart', { nodeId: node.id, port: portName, direction: 'in' });
+			}
+			return;
+		}
 		e.preventDefault();
 		dispatch('portdisconnect', { nodeId: node.id, port: portName, direction: 'in' });
+	}
+
+	// Complete a reverse drag on an output dot (mirror of endAtInput).
+	function endAtOutput(e, portName) {
+		e.stopPropagation();
+		e.preventDefault();
+		dispatch('portend', { nodeId: node.id, port: portName, direction: 'out' });
 	}
 	// Right-click an input port → ask the editor to open a column picker to add a
 	// connection to this input.
@@ -277,7 +344,7 @@
 			}}
 			role="presentation"
 		>
-			{#each outputColumns as { colId, col, port } (colId)}
+			{#each seriesColumns as { colId, col, port } (colId)}
 				{@const meta = typeMeta(col)}
 				{@const isOpen = rowExpanded[colId] === true}
 				<div class="out-row" class:expanded={isOpen}>
@@ -333,6 +400,7 @@
 							data-port-name={port}
 							data-port-dir="out"
 							onmousedown={(e) => startFromOutput(e, port)}
+							onmouseup={(e) => endAtOutput(e, port)}
 							oncontextmenu={onPortContextMenu}
 							onclick={(e) => e.stopPropagation()}
 							{@attach tooltip(`output: ${col.name}`)}
@@ -346,6 +414,108 @@
 					{/if}
 				</div>
 			{/each}
+			{#if metricColumns.length > 0}
+				<div class="metrics-section">
+					<button
+						type="button"
+						class="metrics-header"
+						aria-expanded={metricsOpen}
+						title={metricsOpen ? 'Collapse metrics' : 'Expand metrics'}
+						onmousedown={stopPointer}
+						onclick={(e) => {
+							e.stopPropagation();
+							metricsOpen = !metricsOpen;
+						}}
+					>
+						<Icon name={metricsOpen ? 'caret-down' : 'caret-right'} width={11} height={11} />
+						<span class="metrics-title">Metrics ({metricColumns.length})</span>
+						<span class="metrics-rule"></span>
+					</button>
+					{#each visibleMetricColumns as { key, colId, col, port } (colId)}
+						{@const values = typeof col?.getData === 'function' ? (col.getData() ?? []) : []}
+						{@const isOpen = rowExpanded[colId] === true}
+						<div class="out-row metric-row" class:expanded={isOpen}>
+							<div class="row-strip metric-strip">
+								<button
+									type="button"
+									class="row-chev"
+									aria-expanded={isOpen}
+									title={isOpen ? 'Hide per-series values' : 'Show per-series values'}
+									onmousedown={stopPointer}
+									onclick={(e) => toggleRowExpanded(colId, e)}
+								>
+									<Icon name={isOpen ? 'caret-down' : 'caret-right'} width={12} height={12} />
+								</button>
+								<span class="metric-glyph" title="Metric: one value per y input">#</span>
+								<div
+									class="row-name"
+									onpointerdown={stopPointer}
+									onmousedown={stopPointer}
+									role="presentation"
+								>
+									<Editable
+										value={col.name}
+										placeholder="metric"
+										ariaLabel="Rename metric column"
+										title="Double-click to rename"
+										onInput={(v) => renameColumn(col, v)}
+										onCommit={(v) => renameColumn(col, v, true)}
+									/>
+								</div>
+								<span class="metric-value" title={values.map(formatMetricValue).join(', ')}>
+									{metricSummary(values)}
+								</span>
+								<button
+									type="button"
+									class="port-dot dot-output inline-port row-port metric-port"
+									class:splice-target={spliceTargetPort === port}
+									bind:this={rowPortEls[colId]}
+									data-node-id={node.id}
+									data-port-name={port}
+									data-port-dir="out"
+									onmousedown={(e) => startFromOutput(e, port)}
+									onmouseup={(e) => endAtOutput(e, port)}
+									oncontextmenu={onPortContextMenu}
+									onclick={(e) => e.stopPropagation()}
+									{@attach tooltip(`metric output: ${col.name} (one value per y)`)}
+									aria-label={`metric output port ${col.name}`}
+								></button>
+							</div>
+							{#if isOpen}
+								<div
+									class="row-body metric-breakdown"
+									onmousedown={stopPointer}
+									role="presentation"
+								>
+									{#each values as v, i (i)}
+										{@const byY = values.length === seriesLabels.length}
+										<div class="metric-bd-row">
+											<span class="bd-label">{breakdownLabel(values, i)}</span>
+											<span class="bd-value">{formatMetricValue(v)}</span>
+											<MetricTagButton
+												{tp}
+												outKey={key}
+												defaultName={tagDefaultName(key, values, i)}
+												yId={byY ? yInputIds[i] : null}
+												index={byY ? null : i}
+												source={node.label}
+											/>
+										</div>
+									{/each}
+									{#if values.length === 0}
+										<div class="metric-bd-row bd-empty">no values yet</div>
+									{/if}
+								</div>
+							{/if}
+						</div>
+					{/each}
+					{#if !metricsOpen && visibleMetricColumns.length < metricColumns.length}
+						<div class="metrics-collapsed-hint">
+							{metricColumns.length - visibleMetricColumns.length} hidden
+						</div>
+					{/if}
+				</div>
+			{/if}
 			{#each bundleOutputs as bport (bport.name)}
 				<div class="out-row bundle-row">
 					<div class="row-strip">
@@ -362,6 +532,7 @@
 							data-port-name={bport.name}
 							data-port-dir="out"
 							onmousedown={(e) => startFromOutput(e, bport.name)}
+							onmouseup={(e) => endAtOutput(e, bport.name)}
 							oncontextmenu={onPortContextMenu}
 							onclick={(e) => e.stopPropagation()}
 							{@attach tooltip('column set (connects to a many-in port)')}
@@ -475,7 +646,11 @@
 
 	.tp-body {
 		display: grid;
-		grid-template-columns: minmax(54px, auto) 1fr;
+		/* minmax(0, 1fr): without the 0, the outputs column's implicit
+		   min-width:auto lets wide row content (e.g. a long tag chip in a metric
+		   breakdown) blow the column out past the fixed-width card instead of
+		   shrinking/ellipsizing. */
+		grid-template-columns: minmax(54px, auto) minmax(0, 1fr);
 		align-items: start;
 		padding: 2px 0;
 	}
@@ -611,6 +786,116 @@
 		font-size: var(--font-xs);
 		color: rgba(0, 0, 0, 0.45);
 		text-align: center;
+	}
+
+	/* --- Metrics section (scalar-metric output ports) --- */
+	.metrics-section {
+		display: flex;
+		flex-direction: column;
+		border-top: 1px solid rgba(0, 0, 0, 0.06);
+	}
+	.metrics-header {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		height: 18px;
+		padding: 0 8px 0 4px;
+		border: 0;
+		background: transparent;
+		cursor: pointer;
+		color: var(--color-text-muted);
+	}
+	.metrics-header:hover {
+		color: var(--color-lightness-25);
+	}
+	.metrics-title {
+		font-size: var(--font-2xs);
+		font-weight: 600;
+		letter-spacing: 0.02em;
+		white-space: nowrap;
+	}
+	.metrics-rule {
+		flex: 1;
+		border-top: 1px solid rgba(0, 0, 0, 0.06);
+	}
+	/* Metric rows are denser: no TypeSelector (metrics are always numbers), a
+	   right-aligned live value instead. */
+	.metric-strip {
+		grid-template-columns: 14px 12px minmax(0, 1fr) auto;
+		padding-right: 12px;
+	}
+	.metric-glyph {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-size: var(--font-2xs);
+		font-weight: 700;
+		color: rgba(0, 0, 0, 0.45);
+		user-select: none;
+	}
+	.metric-value {
+		font-family: var(--font-mono, ui-monospace, SF Mono, monospace);
+		font-size: var(--font-2xs);
+		color: var(--color-lightness-35);
+		white-space: nowrap;
+		text-align: right;
+	}
+	/* Metric port dot: a "target" (ring + centre point) so wireable metrics read
+	   differently from series dots while acting identically. */
+	.metric-port::after {
+		content: '';
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: 5px;
+		height: 5px;
+		border-radius: 50%;
+		background: var(--color-lightness-50);
+		transform: translate(-50%, -50%);
+		pointer-events: none;
+	}
+	.metric-port:hover::after,
+	.metric-port.splice-target::after {
+		background: var(--surface-card);
+	}
+	.metric-breakdown {
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+		font-size: var(--font-2xs);
+	}
+	/* Shrink priority when the row is tight: label ellipsizes first, then the
+	   tag chip (down to a clickable stub); the VALUE never shrinks. overflow:
+	   hidden is the last-resort clip so nothing escapes the card. */
+	.metric-bd-row {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		min-height: 16px;
+		overflow: hidden;
+	}
+	.bd-label {
+		flex: 1 1 auto;
+		min-width: 20px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		color: var(--color-lightness-40);
+	}
+	.bd-value {
+		flex-shrink: 0;
+		font-family: var(--font-mono, ui-monospace, SF Mono, monospace);
+		color: var(--color-lightness-25);
+		white-space: nowrap;
+	}
+	.bd-empty {
+		font-style: italic;
+		color: var(--color-text-muted);
+	}
+	.metrics-collapsed-hint {
+		padding: 0 8px 4px 22px;
+		font-size: var(--font-2xs);
+		color: var(--color-text-muted);
 	}
 
 	/* Bundle output row (Column Set `set` port): a labelled output dot, no data

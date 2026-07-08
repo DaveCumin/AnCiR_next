@@ -18,17 +18,9 @@
 	import { core, removeGroup } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
-	import {
-		setGroupPortY,
-		clearGroupPortPositions
-	} from './groupPortPositions.svelte.js';
+	import { setGroupPortY, clearGroupPortPositions } from './groupPortPositions.svelte.js';
 
-	let {
-		node,
-		selected = false,
-		isDropTarget = false,
-		spliceTargetPort = null
-	} = $props();
+	let { node, selected = false, isDropTarget = false, spliceTargetPort = null } = $props();
 
 	const dispatch = createEventDispatcher();
 
@@ -39,9 +31,7 @@
 	const sourceColumnIds = $derived(group?.sourceColumnIds ?? []);
 	const collapsed = $derived(group?.collapsed === true);
 	const sourceColumns = $derived(
-		sourceColumnIds
-			.map((id) => ({ id, col: getColumnById(id) }))
-			.filter((entry) => !!entry.col)
+		sourceColumnIds.map((id) => ({ id, col: getColumnById(id) })).filter((entry) => !!entry.col)
 	);
 
 	// Live on input, normalise (empty → "Group") on commit.
@@ -155,7 +145,9 @@
 		void group?.rowState;
 		void group?.width;
 		void group?.height;
-		const _track = sourceColumns.map((s) => `${s.id}|${group?.rowState?.[s.id]?.expanded ? 'e' : 'c'}`);
+		const _track = sourceColumns.map(
+			(s) => `${s.id}|${group?.rowState?.[s.id]?.expanded ? 'e' : 'c'}`
+		);
 		void _track;
 		(async () => {
 			await tick();
@@ -201,6 +193,13 @@
 		e.stopPropagation();
 		e.preventDefault();
 		dispatch('portstart', { nodeId: node.id, port: portName, direction: 'out' });
+	}
+
+	// Complete a REVERSE wire drag (started from a consumer's input port).
+	function onPortMouseUp(e, portName) {
+		e.stopPropagation();
+		e.preventDefault();
+		dispatch('portend', { nodeId: node.id, port: portName, direction: 'out' });
 	}
 
 	function onPortContextMenu(e) {
@@ -273,12 +272,18 @@
 			onmousedown={stopPointer}
 			onclick={deleteGroup}
 			title="Delete group"
-			aria-label="Delete group"
-		>✕</button>
+			aria-label="Delete group">✕</button
+		>
 	</div>
 
 	{#if !collapsed}
-		<div class="group-rows" onwheel={(e) => { if (!e.ctrlKey && !e.metaKey) e.stopPropagation(); }} role="presentation">
+		<div
+			class="group-rows"
+			onwheel={(e) => {
+				if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
+			}}
+			role="presentation"
+		>
 			{#each sourceColumns as { id, col } (id)}
 				{@const meta = typeMeta(col)}
 				{@const expanded = group?.rowState?.[id]?.expanded === true}
@@ -311,9 +316,17 @@
 							onmousedown={stopPointer}
 							role="presentation"
 						>
-							<TypeSelector bind:value={col.type} onChange={(t) => sniffTimeFormatOnTypeChange(col, t)} />
+							<TypeSelector
+								bind:value={col.type}
+								onChange={(t) => sniffTimeFormatOnTypeChange(col, t)}
+							/>
 						</span>
-						<div class="row-name" onpointerdown={stopPointer} onmousedown={stopPointer} role="presentation">
+						<div
+							class="row-name"
+							onpointerdown={stopPointer}
+							onmousedown={stopPointer}
+							role="presentation"
+						>
 							<Editable
 								value={col.name}
 								placeholder="column"
@@ -337,6 +350,7 @@
 							data-port-name={`col_${id}`}
 							data-port-dir="out"
 							onmousedown={(e) => onPortMouseDown(e, `col_${id}`)}
+							onmouseup={(e) => onPortMouseUp(e, `col_${id}`)}
 							oncontextmenu={onPortContextMenu}
 							{@attach tooltip(`output: ${col.name}`)}
 							aria-label={`output port ${col.name}`}
@@ -387,9 +401,7 @@
 
 	.group-card.selected {
 		border-color: var(--color-accent);
-		box-shadow:
-			var(--shadow-1),
-			var(--shadow-focus-soft);
+		box-shadow: var(--shadow-1), var(--shadow-focus-soft);
 	}
 
 	.group-card.drop-target {

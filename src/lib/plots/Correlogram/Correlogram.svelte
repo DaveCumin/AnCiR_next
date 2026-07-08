@@ -446,8 +446,17 @@
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
 	import { createPlotZoom } from '$lib/plots/plotZoomController.js';
 	import { getZoomAdapter } from '$lib/plots/zoomAdapters.js';
+	import { usePlotMetricOutputs } from '$lib/plots/plotMetricOutputs.svelte.js';
 
 	let { theData, which, brushable = false, zoomMode = false } = $props();
+
+	// Keep the plot's metric output columns (peak_lag / peak_correlation ports)
+	// reconciled + written from the stats this component already computes. The
+	// heavy acfData derived is memoised — the template computes it anyway.
+	usePlotMetricOutputs(
+		() => theData,
+		() => which === 'plot'
+	);
 
 	// Brush + wheel zoom (shared controller + per-plot adapter). Mirrors Scatterplot.
 	let svgEl = $state(null);
@@ -624,7 +633,10 @@
 		<div class="control-component">
 			<div class="control-component-title">
 				<p>Y-Axis (Correlation)</p>
-				<div class="control-component-title-icons" {@attach attachTooltip('Reset the correlation axis to auto range')}>
+				<div
+					class="control-component-title-icons"
+					{@attach attachTooltip('Reset the correlation axis to auto range')}
+				>
 					<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
 						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
 					</button>
@@ -663,7 +675,10 @@
 		<div class="control-component">
 			<div class="control-component-title">
 				<p>X-Axis (Lag)</p>
-				<div class="control-component-title-icons" {@attach attachTooltip('Reset the lag axis to auto range')}>
+				<div
+					class="control-component-title-icons"
+					{@attach attachTooltip('Reset the lag axis to auto range')}
+				>
 					<button class="icon" onclick={() => (theData.laglimsIN = [null, null])}>
 						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
 					</button>
@@ -734,14 +749,12 @@
 						</div>
 
 						<div class="control-data">
-							<ControlInput label="x (time)">
-							</ControlInput>
+							<ControlInput label="x (time)"></ControlInput>
 							<Column col={datum.x} canChange={true} />
 						</div>
 
 						<div class="control-data">
-							<ControlInput label="y (values)">
-							</ControlInput>
+							<ControlInput label="y (values)"></ControlInput>
 							<Column col={datum.y} canChange={true} />
 						</div>
 
@@ -993,10 +1006,7 @@
 
 		<!-- Brush-zoom overlay (Zoom mode or Shift+drag); box renders above the data. -->
 		{#if brushable}
-			<g
-				style="transform: translate({theData.plot.padding.left}px, {theData.plot.padding
-					.top}px);"
-			>
+			<g style="transform: translate({theData.plot.padding.left}px, {theData.plot.padding.top}px);">
 				<PlotBrush
 					{svgEl}
 					{zoomMode}
