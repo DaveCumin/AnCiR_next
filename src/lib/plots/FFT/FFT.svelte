@@ -140,7 +140,7 @@
 			this.points = new PointsClass(dataIN?.points, this);
 			this.phasePoints = new PointsClass(dataIN?.phasePoints, this);
 			this.showPhase = dataIN?.showPhase ?? false;
-			this.freqStep = dataIN?.freqStep ?? 0.001;
+			this.freqStep = dataIN?.freqStep ?? 0.0001;
 		}
 
 		toJSON() {
