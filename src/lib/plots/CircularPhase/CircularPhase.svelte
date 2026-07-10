@@ -206,6 +206,8 @@
 
 	const fmt = (v, dp = 3) => (Number.isFinite(v) ? v.toFixed(dp) : '—');
 	const fmtP = (p) => (Number.isFinite(p) ? (p < 1e-4 ? '< 0.0001' : p.toFixed(4)) : '—');
+	const escapeHtml = (s) =>
+		String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 	// Value-unit suffix for the placement bin-width control.
 	const unitSuffix = (u) => (u === 'hours' ? 'h' : u === 'degrees' ? '°' : 'rad');
@@ -264,7 +266,7 @@
 		}
 
 		const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${d.colour};margin-right:4px;vertical-align:middle;"></span>`;
-		const content = `${dot}<strong>${d.label}</strong><br/><span style="opacity:0.7">phase:</span> ${fmtPhase(d.rawValues[bestIdx], plot.unit, plot.period)}`;
+		const content = `${dot}<strong>${escapeHtml(d.label)}</strong><br/><span style="opacity:0.7">phase:</span> ${fmtPhase(d.rawValues[bestIdx], plot.unit, plot.period)}`;
 
 		const { x: xPos, y: yPos } = computeTooltipPosition(evt.clientX, evt.clientY);
 		dispatchTooltip(evt.currentTarget, { visible: true, x: xPos, y: yPos, content });
