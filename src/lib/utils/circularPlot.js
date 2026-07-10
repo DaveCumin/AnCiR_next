@@ -3,7 +3,7 @@
 // the Circular phase plot, and expose per-series Rayleigh stats plus the
 // across-group Watson-Williams test. Pure; no Svelte, no @stdlib (the F p-value
 // arrives as a callback so this stays dependency-light and testable).
-import { rayleighTest, circularMean, toRadiansColumn, watsonWilliams } from '$lib/utils/circular.js';
+import { rayleighTest, toRadiansColumn, watsonWilliams } from '$lib/utils/circular.js';
 
 const TAU = Math.PI * 2;
 

@@ -9,6 +9,11 @@ describe('displayPeriodFor', () => {
 		expect(displayPeriodFor('degrees', 24)).toBe(360);
 		expect(displayPeriodFor('radians', 24)).toBeCloseTo(Math.PI * 2, 9);
 	});
+	it('guards a non-finite or non-positive hours period (defaults to 24)', () => {
+		expect(displayPeriodFor('hours', NaN)).toBe(24);
+		expect(displayPeriodFor('hours', 0)).toBe(24);
+		expect(displayPeriodFor('hours', -5)).toBe(24);
+	});
 });
 
 describe('seriesStats', () => {
