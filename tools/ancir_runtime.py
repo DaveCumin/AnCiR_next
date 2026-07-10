@@ -3551,9 +3551,10 @@ def _angles_col_to_radians(data, unit, period):
 
 
 def tp_rayleightest(args, cols, raw_data, _sv):
-    # Merged circular-stats node: `testType` picks the Rayleigh uniformity test
-    # (default, per-Y R/z/pvalue) or the Watson-Williams equal-mean-direction
-    # test (single F/pvalue across the Y columns). Mirrors RayleighTest.svelte.
+    # Circular-stats node: the Rayleigh uniformity test ALWAYS runs (per-Y
+    # R/z/pvalue). The optional Watson-Williams equal-mean-direction test
+    # (showWatsonWilliams) adds a single F/ww_pvalue across the Y columns.
+    # Mirrors RayleighTest.svelte.
     y_ins = _id_list(args.get('yIN'))
     if not y_ins:
         return False
@@ -3561,23 +3562,6 @@ def tp_rayleightest(args, cols, raw_data, _sv):
     period = args.get('period', 24)
     if not (isinstance(period, (int, float)) and math.isfinite(period)):
         period = 24
-    test_type = args.get('testType', 'rayleigh')
-
-    if test_type == 'watsonwilliams':
-        groups = []
-        for y_id in y_ins:
-            if y_id is None or y_id == -1 or y_id not in cols:
-                continue
-            groups.append(_angles_col_to_radians(cols[y_id].get_data(), unit, period))
-        result = watson_williams(groups, _p_upper_from_f)
-        if not result['valid']:
-            return False
-        _set_col(raw_data, cols, _out_id(args, 'F'), [result['F']], type_='number')
-        _set_col(raw_data, cols, _out_id(args, 'pvalue'), [result['pValue']], type_='number')
-        # R/z are Rayleigh-only metrics; keep the ports numeric.
-        _set_col(raw_data, cols, _out_id(args, 'R'), [_NAN], type_='number')
-        _set_col(raw_data, cols, _out_id(args, 'z'), [_NAN], type_='number')
-        return True
 
     per_y = {}
     any_valid = False
@@ -3595,8 +3579,21 @@ def tp_rayleightest(args, cols, raw_data, _sv):
         field = 'pValue' if key == 'pvalue' else key
         arr = [per_y[y].get(field, _NAN) if y in per_y else _NAN for y in y_ins]
         _set_col(raw_data, cols, _out_id(args, key), arr, type_='number')
-    # F is a Watson-Williams-only metric in the merged node; keep it numeric.
-    _set_col(raw_data, cols, _out_id(args, 'F'), [_NAN for _ in y_ins], type_='number')
+
+    # Optional Watson-Williams: a single F/ww_pvalue across the groups (NaN when
+    # the test is off or degenerate), so the ports stay numeric + present.
+    ww_F, ww_p = _NAN, _NAN
+    if args.get('showWatsonWilliams'):
+        groups = [
+            _angles_col_to_radians(cols[y_id].get_data(), unit, period)
+            for y_id in y_ins
+            if y_id is not None and y_id != -1 and y_id in cols
+        ]
+        result = watson_williams(groups, _p_upper_from_f)
+        if result['valid']:
+            ww_F, ww_p = result['F'], result['pValue']
+    _set_col(raw_data, cols, _out_id(args, 'F'), [ww_F], type_='number')
+    _set_col(raw_data, cols, _out_id(args, 'ww_pvalue'), [ww_p], type_='number')
     return True
 
 

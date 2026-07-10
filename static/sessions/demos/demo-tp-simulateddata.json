@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "212": [
+    "214": [
       "2024-01-01T00:00:00.000Z",
       "2024-01-01T01:00:00.000Z",
       "2024-01-01T02:00:00.000Z",
@@ -50,7 +50,7 @@
       "2024-01-02T22:00:00.000Z",
       "2024-01-02T23:00:00.000Z"
     ],
-    "213": [
+    "215": [
       100,
       100,
       100,
@@ -103,23 +103,23 @@
   },
   "data": [
     {
-      "id": 212,
+      "id": 214,
       "name": "time_35",
-      "data": 212,
+      "data": 214,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "c540ff2e-662c-4598-ba5e-522df2521a40",
+      "tableProcessGUId": "bd361d0c-ea77-4829-be06-5c3da831d435",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 213,
+      "id": 215,
       "name": "values_35",
-      "data": 213,
+      "data": 215,
       "type": "number",
-      "tableProcessGUId": "c540ff2e-662c-4598-ba5e-522df2521a40",
+      "tableProcessGUId": "bd361d0c-ea77-4829-be06-5c3da831d435",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -143,8 +143,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          212,
-          213
+          214,
+          215
         ],
         "showCol": [
           true,
@@ -177,8 +177,8 @@
         ],
         "samplingPeriod_hours": 1,
         "out": {
-          "time": 212,
-          "values": 213
+          "time": 214,
+          "values": 215
         }
       },
       "refTPId": null
@@ -191,7 +191,7 @@
     {
       "id": "note_38",
       "text": "Generates a synthetic time-series from one or more cosine sections (each with its own period, phase, amplitude, and optional additive or multiplicative noise) at a chosen sampling interval. Use it to create test data with a known ground truth for learning, demonstrating, or validating the analysis nodes.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -203,11 +203,15 @@
   "nodeLayout": {
     "tableprocess_35": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "plot_54": {
       "x": 820,
-      "y": 60
+      "y": 314
+    },
+    "note_38": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -260,5 +264,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

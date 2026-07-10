@@ -528,7 +528,7 @@
     {
       "id": "note_8",
       "text": "Fourier analysis decomposes an evenly sampled series into sinusoidal components and plots amplitude (spectral power) against frequency; a peak at a given frequency corresponds to a rhythm of period 1/frequency. Use it to identify dominant frequencies and harmonics. See the Fourier Analysis chapter.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -537,7 +537,24 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
-  "nodeLayout": {},
+  "nodeLayout": {
+    "data_26": {
+      "x": 60,
+      "y": 314
+    },
+    "data_27": {
+      "x": 60,
+      "y": 814
+    },
+    "note_8": {
+      "x": 40,
+      "y": 24
+    },
+    "plot_7": {
+      "x": 820,
+      "y": 314
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -588,5 +605,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

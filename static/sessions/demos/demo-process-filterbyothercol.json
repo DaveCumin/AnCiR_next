@@ -163,7 +163,7 @@
       "name": "x",
       "data": 61,
       "type": "number",
-      "tableProcessGUId": "0766b885-a173-45ff-83c2-7ff130c594a9",
+      "tableProcessGUId": "b0c2c34c-04f6-4a87-b220-b0c26794c556",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -407,7 +407,7 @@
     {
       "id": "note_14",
       "text": "Keeps or drops rows according to conditions tested on another column (==, !=, >, <, includes, etc.), so you can subset one column using a grouping or flag column. Combine several conditions to narrow the selection. The demo shows the output retaining only the rows that satisfy the condition.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -437,27 +437,31 @@
   "nodeLayout": {
     "data_62": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "data_63": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
     "tableprocess_4": {
       "x": 60,
-      "y": 1060
+      "y": 1314
     },
     "process_4": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_17": {
       "x": 820,
-      "y": 60
+      "y": 314
     },
     "plot_18": {
       "x": 820,
-      "y": 560
+      "y": 814
+    },
+    "note_14": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -510,5 +514,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

@@ -482,7 +482,7 @@
     {
       "id": "note_3",
       "text": "Summarises the distribution of a y-column within each group defined by an x-column: the box spans the interquartile range, the line is the median, and whiskers reach the data extent (points beyond are outliers). Use it to compare spread and central tendency across days, conditions, or subjects. The demo shows one box per group.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -491,7 +491,24 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
-  "nodeLayout": {},
+  "nodeLayout": {
+    "data_6": {
+      "x": 60,
+      "y": 314
+    },
+    "data_7": {
+      "x": 60,
+      "y": 814
+    },
+    "note_3": {
+      "x": 40,
+      "y": 24
+    },
+    "plot_2": {
+      "x": 820,
+      "y": 314
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -542,5 +559,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

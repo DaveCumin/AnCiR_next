@@ -184,7 +184,7 @@
     {
       "id": "note_24",
       "text": "Curates a live, named subset of columns by matching their name and/or label against a pattern, and exposes it as a single wire you can plug into any many-input port. The set updates automatically as matching columns are added or removed, so downstream analyses and plots stay in sync without rewiring.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -196,19 +196,23 @@
   "nodeLayout": {
     "data_118": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "data_119": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
     "tableprocess_15": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_33": {
       "x": 820,
-      "y": 60
+      "y": 314
+    },
+    "note_24": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -261,5 +265,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

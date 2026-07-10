@@ -111,7 +111,7 @@
       "name": "x",
       "data": 76,
       "type": "number",
-      "tableProcessGUId": "85119e6b-8825-4ec8-a852-732d9dd5b26f",
+      "tableProcessGUId": "f1a50f0a-5794-47fe-b860-0de6a19a813e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -344,7 +344,7 @@
     {
       "id": "note_16",
       "text": "Fits a trend (linear, polynomial, exponential, or logarithmic) against a chosen x-column and subtracts it, leaving the residual (detrended) signal. Use it to remove baseline drift or sensor decay before rhythm analysis so a slow trend doesn't masquerade as a long period. An optional sliding window detrends locally. The demo shows the drifting input flattened around zero.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -371,23 +371,27 @@
   "nodeLayout": {
     "data_77": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "tableprocess_6": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
     "process_6": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_21": {
       "x": 820,
-      "y": 60
+      "y": 314
     },
     "plot_22": {
       "x": 820,
-      "y": 560
+      "y": 814
+    },
+    "note_16": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -440,5 +444,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

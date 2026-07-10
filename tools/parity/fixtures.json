@@ -857,13 +857,13 @@
         "period": 24,
         "out": {
           "F": -1,
-          "pvalue": -1
+          "ww_pvalue": -1
         },
-        "testType": "watsonwilliams"
+        "showWatsonWilliams": true
       },
       "compareOutputs": [
         "F",
-        "pvalue"
+        "ww_pvalue"
       ]
     },
     {

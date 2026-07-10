@@ -111,7 +111,7 @@
       "name": "x",
       "data": 33,
       "type": "number",
-      "tableProcessGUId": "ce8105ed-4a58-4842-a751-a45748f50ebd",
+      "tableProcessGUId": "f23df45b-0efd-49d9-8b04-22722a18956d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -344,7 +344,7 @@
     {
       "id": "note_10",
       "text": "Adds a constant (or another column) to every value in the input column, element-by-element. Use it to apply an offset, shift a baseline, or combine two columns. The demo shows the output column sitting above the input with each value raised by the set amount.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -367,23 +367,27 @@
   "nodeLayout": {
     "data_34": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "tableprocess_0": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
     "process_0": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_9": {
       "x": 820,
-      "y": 60
+      "y": 314
     },
     "plot_10": {
       "x": 820,
-      "y": 560
+      "y": 814
+    },
+    "note_10": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -436,5 +440,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

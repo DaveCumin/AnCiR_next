@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "246": [
+    "248": [
       0,
       1,
       2,
@@ -98,7 +98,7 @@
       94,
       95
     ],
-    "247": [
+    "249": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -196,7 +196,7 @@
       15.358983848622422,
       11.362966948437233
     ],
-    "248": [
+    "250": [
       0.5,
       1.5,
       2.5,
@@ -222,7 +222,7 @@
       22.5,
       23.5
     ],
-    "249": [
+    "251": [
       10,
       11.362966948437267,
       15.358983848622461,
@@ -251,33 +251,11 @@
   },
   "data": [
     {
-      "id": 246,
-      "name": "Average Profile input 1",
-      "data": 246,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 247,
-      "name": "Average Profile input 2",
-      "data": 247,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 248,
-      "name": "avgprofx_43",
+      "name": "Average Profile input 1",
       "data": 248,
       "type": "number",
-      "tableProcessGUId": "5d6c02d0-0807-4334-91c7-1f8f528d16c8",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -285,10 +263,32 @@
     },
     {
       "id": 249,
-      "name": "avgprof_247_43",
+      "name": "Average Profile input 2",
       "data": 249,
       "type": "number",
-      "tableProcessGUId": "5d6c02d0-0807-4334-91c7-1f8f528d16c8",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 250,
+      "name": "avgprofx_43",
+      "data": 250,
+      "type": "number",
+      "tableProcessGUId": "5e1dd00d-f6d7-411a-bb6b-d46b0229175c",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 251,
+      "name": "avgprof_249_43",
+      "data": 251,
+      "type": "number",
+      "tableProcessGUId": "5e1dd00d-f6d7-411a-bb6b-d46b0229175c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -312,10 +312,10 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          246,
-          247,
           248,
-          249
+          249,
+          250,
+          251
         ],
         "showCol": [
           true,
@@ -336,16 +336,16 @@
       "name": "AverageProfile",
       "displayName": "Average Profile",
       "args": {
-        "xIN": 246,
+        "xIN": 248,
         "yIN": [
-          247
+          249
         ],
         "period": 24,
         "nBins": 24,
         "preProcesses": [],
         "out": {
-          "avgprofx": 248,
-          "avgprof_247": 249
+          "avgprofx": 250,
+          "avgprof_249": 251
         }
       },
       "refTPId": null
@@ -358,7 +358,7 @@
     {
       "id": "note_44",
       "text": "Folds a series onto one period (default 24 h) and reports the mean value in each phase bin with its standard error, giving the 'average day' or mean waveform of the record. Use it to visualise the typical shape and timing of a rhythm across many cycles and to smooth out day-to-day noise before or alongside a parametric fit. In the demo, read each point as the across-days mean at that time-of-day and the error bars as the SEM: a clear peak-and-trough shape marks a robust rhythm, while flat bins with wide bars indicate weak or noisy rhythmicity. Mean-waveform folding (Refinetti et al. 2007).",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -368,21 +368,25 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_246": {
+    "data_248": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
-    "data_247": {
+    "data_249": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
     "tableprocess_43": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_62": {
       "x": 820,
-      "y": 60
+      "y": 314
+    },
+    "note_44": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -435,5 +439,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

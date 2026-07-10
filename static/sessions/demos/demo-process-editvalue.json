@@ -111,7 +111,7 @@
       "name": "x",
       "data": 54,
       "type": "number",
-      "tableProcessGUId": "e84a72c4-44dd-4031-a5f3-40a1e32eb4cb",
+      "tableProcessGUId": "b2aee9b5-395a-4118-90e0-8b99c365991c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -344,7 +344,7 @@
     {
       "id": "note_13",
       "text": "Overwrites individual cells at specific row positions with values you type in, leaving the rest of the column unchanged. Use it for hand-correcting a few known-bad points without touching the source data. The demo shows the edited positions differing from the input.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -372,23 +372,27 @@
   "nodeLayout": {
     "data_55": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "tableprocess_3": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
     "process_3": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_15": {
       "x": 820,
-      "y": 60
+      "y": 314
     },
     "plot_16": {
       "x": 820,
-      "y": 560
+      "y": 814
+    },
+    "note_13": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -441,5 +445,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

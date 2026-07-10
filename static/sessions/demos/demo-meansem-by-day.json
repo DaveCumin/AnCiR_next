@@ -473,7 +473,7 @@
     {
       "id": "note_4",
       "text": "Overlays each group's mean as a marker with whiskers showing ± one standard error of the mean (SEM = s/√n), grouped by the x-column. Use it to compare average levels across conditions or time bins while showing the precision of each mean. The demo shows per-group means with error bars.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -482,7 +482,24 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
-  "nodeLayout": {},
+  "nodeLayout": {
+    "data_10": {
+      "x": 60,
+      "y": 314
+    },
+    "data_11": {
+      "x": 60,
+      "y": 814
+    },
+    "note_4": {
+      "x": 40,
+      "y": 24
+    },
+    "plot_3": {
+      "x": 820,
+      "y": 314
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -533,5 +550,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

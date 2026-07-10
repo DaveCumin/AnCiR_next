@@ -587,8 +587,20 @@ export const TP_SPECS = [
 	},
 	{
 		name: 'RayleighTest',
-		inputs: [T('number', () => seq(24, (i) => 1.2 + Math.cos(i * 1.3) * 0.4))],
-		args: ([y]) => ({ yIN: [y], unit: 'radians', period: 24, out: {} }),
+		// Two clustered angle samples with DIFFERENT mean directions so the demo
+		// showcases both the always-on Rayleigh test (each column is non-uniform)
+		// and the optional Watson-Williams test (the two means differ).
+		inputs: [
+			T('number', () => seq(20, (i) => 0.4 + Math.cos(i * 1.3) * 0.35)),
+			T('number', () => seq(20, (i) => 2.2 + Math.cos(i * 1.3) * 0.35))
+		],
+		args: ([a, b]) => ({
+			yIN: [a, b],
+			unit: 'radians',
+			period: 24,
+			showWatsonWilliams: true,
+			out: {}
+		}),
 		noOutputs: true
 	},
 	{

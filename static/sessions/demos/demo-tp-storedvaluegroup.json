@@ -1,17 +1,17 @@
 {
   "rawData": {
-    "227": [
+    "229": [
       12,
       34
     ]
   },
   "data": [
     {
-      "id": 227,
+      "id": 229,
       "name": "group_g1_39",
-      "data": 227,
+      "data": 229,
       "type": "number",
-      "tableProcessGUId": "00a47d48-e5a3-4c54-8bd0-e998212e4518",
+      "tableProcessGUId": "900235c6-0b0f-4682-bdea-b60b1acfe319",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -35,7 +35,7 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          227
+          229
         ],
         "showCol": [
           true
@@ -64,7 +64,7 @@
           }
         ],
         "out": {
-          "group_g1": 227
+          "group_g1": 229
         }
       },
       "refTPId": null
@@ -86,7 +86,7 @@
     {
       "id": "note_41",
       "text": "Gathers scalar results you have stored from various analyses (e.g. periods, amplitudes, CFI values) and organises them into labelled groups, emitting a category column and a value column. Use it to assemble stored metrics into a tidy table for group comparison or plotting.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -98,11 +98,15 @@
   "nodeLayout": {
     "tableprocess_39": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "plot_58": {
       "x": 820,
-      "y": 60
+      "y": 314
+    },
+    "note_41": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -155,5 +159,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

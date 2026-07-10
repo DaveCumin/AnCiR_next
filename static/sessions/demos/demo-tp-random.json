@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "179": [
+    "181": [
       9.23,
       3.33,
       1.98,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 179,
+      "id": 181,
       "name": "result_28",
-      "data": 179,
+      "data": 181,
       "type": "number",
-      "tableProcessGUId": "53097428-6214-41b2-9a65-8b91e0458093",
+      "tableProcessGUId": "9a6f3657-bad7-4f45-b003-2379a175ffc6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -83,7 +83,7 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          179
+          181
         ],
         "showCol": [
           true
@@ -107,7 +107,7 @@
         "seed": 12345,
         "distribution": "uniform",
         "out": {
-          "result": 179
+          "result": 181
         }
       },
       "refTPId": null
@@ -120,7 +120,7 @@
     {
       "id": "note_33",
       "text": "Generates a column of pseudo-random values from a uniform, Gaussian, or exponential distribution, scaled by an offset and multiplier, with a fixed seed for reproducibility. Use it to add controlled noise or to create random test data.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -132,11 +132,15 @@
   "nodeLayout": {
     "tableprocess_28": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "plot_46": {
       "x": 820,
-      "y": 60
+      "y": 314
+    },
+    "note_33": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -189,5 +193,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

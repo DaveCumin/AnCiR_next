@@ -1,109 +1,5 @@
 {
   "rawData": {
-    "228": [
-      0,
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16,
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23,
-      24,
-      25,
-      26,
-      27,
-      28,
-      29,
-      30,
-      31,
-      32,
-      33,
-      34,
-      35,
-      36,
-      37,
-      38,
-      39,
-      40,
-      41,
-      42,
-      43,
-      44,
-      45,
-      46,
-      47,
-      48,
-      49
-    ],
-    "229": [
-      7.673945782302198,
-      -1.879285133127806,
-      10.089269516954142,
-      10.596485195471297,
-      8.161029635859103,
-      13.681226110102159,
-      26.735480623873976,
-      0.4755050282271327,
-      17.350924954782943,
-      24.84017756091917,
-      30.567006178574996,
-      27.052189113743175,
-      20.37860310297848,
-      18.769807240914062,
-      27.027468169597224,
-      33.280600736274955,
-      41.823579918545946,
-      29.35896700715772,
-      38.31398622956262,
-      45.932943288001894,
-      39.728749497898214,
-      42.63655213515867,
-      43.79654864881627,
-      50.07995543153807,
-      48.8861828183495,
-      44.88794712215628,
-      48.4064970797384,
-      59.19718600511181,
-      64.14389216232922,
-      53.64464595979867,
-      64.20266126167189,
-      63.48432800846688,
-      62.820338210278415,
-      63.494324944748556,
-      56.7495123288619,
-      63.62972343529573,
-      72.35424943306231,
-      64.1682907027743,
-      68.14174429272566,
-      83.9678528466312,
-      77.42728838665597,
-      74.76472744133697,
-      76.82877283733843,
-      78.18585478576706,
-      91.65775531494548,
-      83.89659972832575,
-      87.60652690660054,
-      89.70800702051064,
-      95.32890446343086,
-      89.84737077710555
-    ],
     "230": [
       0,
       1,
@@ -157,18 +53,122 @@
       49
     ],
     "231": [
-      0.9579555770898015
+      7.673945782302198,
+      -1.879285133127806,
+      10.089269516954142,
+      10.596485195471297,
+      8.161029635859103,
+      13.681226110102159,
+      26.735480623873976,
+      0.4755050282271327,
+      17.350924954782943,
+      24.84017756091917,
+      30.567006178574996,
+      27.052189113743175,
+      20.37860310297848,
+      18.769807240914062,
+      27.027468169597224,
+      33.280600736274955,
+      41.823579918545946,
+      29.35896700715772,
+      38.31398622956262,
+      45.932943288001894,
+      39.728749497898214,
+      42.63655213515867,
+      43.79654864881627,
+      50.07995543153807,
+      48.8861828183495,
+      44.88794712215628,
+      48.4064970797384,
+      59.19718600511181,
+      64.14389216232922,
+      53.64464595979867,
+      64.20266126167189,
+      63.48432800846688,
+      62.820338210278415,
+      63.494324944748556,
+      56.7495123288619,
+      63.62972343529573,
+      72.35424943306231,
+      64.1682907027743,
+      68.14174429272566,
+      83.9678528466312,
+      77.42728838665597,
+      74.76472744133697,
+      76.82877283733843,
+      78.18585478576706,
+      91.65775531494548,
+      83.89659972832575,
+      87.60652690660054,
+      89.70800702051064,
+      95.32890446343086,
+      89.84737077710555
     ],
     "232": [
-      5.469977223339452
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49
     ],
     "233": [
-      1.809303819828578
+      0.9579555770898015
     ],
     "234": [
-      4.350114419162737
+      5.469977223339452
     ],
     "235": [
+      1.809303819828578
+    ],
+    "236": [
+      4.350114419162737
+    ],
+    "237": [
       4.350114419162737,
       6.159418238991315,
       7.968722058819893,
@@ -223,20 +223,20 @@
   },
   "data": [
     {
-      "id": 228,
+      "id": 230,
       "name": "x",
-      "data": 228,
+      "data": 230,
       "type": "number",
-      "tableProcessGUId": "55b8fe3b-42d8-4a66-80b8-8bc98cfca6d7",
+      "tableProcessGUId": "d92113ab-3bc1-42e9-9c29-3eeca8d29900",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 229,
+      "id": 231,
       "name": "y",
-      "data": 229,
+      "data": 231,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -245,33 +245,11 @@
       "processes": []
     },
     {
-      "id": 230,
-      "name": "trendx_41",
-      "data": 230,
-      "type": "number",
-      "tableProcessGUId": "81745f59-1930-4841-afb4-c0c5fbeffef5",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 231,
-      "name": "r2_41",
-      "data": 231,
-      "type": "number",
-      "tableProcessGUId": "81745f59-1930-4841-afb4-c0c5fbeffef5",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 232,
-      "name": "rmse_41",
+      "name": "trendx_41",
       "data": 232,
       "type": "number",
-      "tableProcessGUId": "81745f59-1930-4841-afb4-c0c5fbeffef5",
+      "tableProcessGUId": "83a8cc32-5064-4cf8-bc98-e0858849489a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -279,10 +257,10 @@
     },
     {
       "id": 233,
-      "name": "coef_slope_41",
+      "name": "r2_41",
       "data": 233,
       "type": "number",
-      "tableProcessGUId": "81745f59-1930-4841-afb4-c0c5fbeffef5",
+      "tableProcessGUId": "83a8cc32-5064-4cf8-bc98-e0858849489a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -290,10 +268,10 @@
     },
     {
       "id": 234,
-      "name": "coef_intercept_41",
+      "name": "rmse_41",
       "data": 234,
       "type": "number",
-      "tableProcessGUId": "81745f59-1930-4841-afb4-c0c5fbeffef5",
+      "tableProcessGUId": "83a8cc32-5064-4cf8-bc98-e0858849489a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -301,10 +279,32 @@
     },
     {
       "id": 235,
-      "name": "trendy_229_41",
+      "name": "coef_slope_41",
       "data": 235,
       "type": "number",
-      "tableProcessGUId": "81745f59-1930-4841-afb4-c0c5fbeffef5",
+      "tableProcessGUId": "83a8cc32-5064-4cf8-bc98-e0858849489a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 236,
+      "name": "coef_intercept_41",
+      "data": 236,
+      "type": "number",
+      "tableProcessGUId": "83a8cc32-5064-4cf8-bc98-e0858849489a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 237,
+      "name": "trendy_231_41",
+      "data": 237,
+      "type": "number",
+      "tableProcessGUId": "83a8cc32-5064-4cf8-bc98-e0858849489a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -369,9 +369,9 @@
         "data": [
           {
             "x": {
-              "id": 236,
+              "id": 238,
               "name": "x",
-              "refId": 228,
+              "refId": 230,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -380,9 +380,9 @@
               "processes": []
             },
             "y": {
-              "id": 237,
+              "id": 239,
               "name": "y",
-              "refId": 229,
+              "refId": 231,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -408,9 +408,9 @@
           },
           {
             "x": {
-              "id": 238,
+              "id": 240,
               "name": "trendx_41",
-              "refId": 230,
+              "refId": 232,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -419,9 +419,9 @@
               "processes": []
             },
             "y": {
-              "id": 239,
-              "name": "trendy_229_41",
-              "refId": 235,
+              "id": 241,
+              "name": "trendy_231_41",
+              "refId": 237,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -476,8 +476,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          229,
-          235
+          231,
+          237
         ],
         "showCol": [
           true,
@@ -502,7 +502,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 228
+          "result": 230
         }
       },
       "refTPId": null
@@ -512,21 +512,21 @@
       "name": "TrendFit",
       "displayName": "Fit Trend Curves",
       "args": {
-        "xIN": 228,
+        "xIN": 230,
         "yIN": [
-          229
+          231
         ],
         "model": "linear",
         "polyDegree": 2,
         "outputX": -1,
         "preProcesses": [],
         "out": {
-          "trendx": 230,
-          "r2": 231,
-          "rmse": 232,
-          "coef_slope": 233,
-          "coef_intercept": 234,
-          "trendy_229": 235
+          "trendx": 232,
+          "r2": 233,
+          "rmse": 234,
+          "coef_slope": 235,
+          "coef_intercept": 236,
+          "trendy_231": 237
         }
       },
       "refTPId": null
@@ -539,7 +539,7 @@
     {
       "id": "note_42",
       "text": "Fits and stores a simple trend, linear, polynomial, exponential or logarithmic, to the series by least squares, reporting the fitted curve, R² and RMSE plus the coefficients. Use it to describe or remove a slow trend (baseline drift, growth or decay) before rhythm analysis, since detrending prevents low-frequency drift from contaminating periodograms and cosinor fits. In the demo, read the smooth fitted line through the data: how closely it hugs the points is summarised by R² (near 1 = tight fit) and RMSE (residual scatter). Detrending for rhythm analysis (Refinetti et al. 2007).",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -549,25 +549,29 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_229": {
+    "data_231": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "tableprocess_40": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
     "tableprocess_41": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_59": {
       "x": 820,
-      "y": 60
+      "y": 314
     },
     "plot_60": {
       "x": 820,
-      "y": 560
+      "y": 814
+    },
+    "note_42": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -620,5 +624,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

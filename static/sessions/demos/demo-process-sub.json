@@ -111,7 +111,7 @@
       "name": "x",
       "data": 40,
       "type": "number",
-      "tableProcessGUId": "a89a9d08-499a-4ee5-a48c-f406ee3e9993",
+      "tableProcessGUId": "6c581e76-a937-4443-b8ab-e1e25346c936",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -344,7 +344,7 @@
     {
       "id": "note_11",
       "text": "Finds every occurrence of one specific value and replaces it with another, leaving all other values untouched. Its main use is recoding sentinel/missing-data codes (e.g. swapping -999 for a blank) before analysis. The demo shows the target value replaced throughout the column.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -368,23 +368,27 @@
   "nodeLayout": {
     "data_41": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "tableprocess_1": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
     "process_1": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_11": {
       "x": 820,
-      "y": 60
+      "y": 314
     },
     "plot_12": {
       "x": 820,
-      "y": 560
+      "y": 814
+    },
+    "note_11": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -437,5 +441,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

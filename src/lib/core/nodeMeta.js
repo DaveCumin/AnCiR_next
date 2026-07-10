@@ -406,7 +406,7 @@ const meta = new Map([
 			family: 'Analysis',
 			nodeIcon: 'circular-stats',
 			description:
-				'Circular statistics on phase/angle columns: Rayleigh uniformity (R, z, p) or, via its test selector, the Watson-Williams equal-mean-direction test (F, p).'
+				'Circular statistics on phase/angle columns: the Rayleigh uniformity test (R, z, p) per column, with an optional Watson-Williams equal-mean-direction test (F, p) across columns.'
 		}
 	],
 	[

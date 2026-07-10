@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "170": [
+    "172": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "171": [
+    "173": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "172": [
+    "174": [
       84,
       108,
       132,
@@ -685,7 +685,7 @@
       204,
       228
     ],
-    "173": [
+    "175": [
       24,
       24,
       24,
@@ -694,7 +694,7 @@
       24,
       24
     ],
-    "174": [
+    "176": [
       83.49999999999999,
       83.49999999999999,
       83.50000000000003,
@@ -706,20 +706,20 @@
   },
   "data": [
     {
-      "id": 170,
+      "id": 172,
       "name": "x",
-      "data": 170,
+      "data": 172,
       "type": "number",
-      "tableProcessGUId": "5486482f-c7f3-464c-a4d7-6e041aecc4d2",
+      "tableProcessGUId": "52bc77ba-f7f6-48c2-8d82-40165bf94170",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 171,
+      "id": 173,
       "name": "y",
-      "data": 171,
+      "data": 173,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -728,33 +728,33 @@
       "processes": []
     },
     {
-      "id": 172,
-      "name": "movex_27",
-      "data": 172,
-      "type": "number",
-      "tableProcessGUId": "e99fd13f-7ce8-4c71-95a8-62c68704335d",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 173,
-      "name": "171_peak_period_27",
-      "data": 173,
-      "type": "number",
-      "tableProcessGUId": "e99fd13f-7ce8-4c71-95a8-62c68704335d",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 174,
-      "name": "171_peak_power_27",
+      "name": "movex_27",
       "data": 174,
       "type": "number",
-      "tableProcessGUId": "e99fd13f-7ce8-4c71-95a8-62c68704335d",
+      "tableProcessGUId": "f7af8c4c-7b10-478b-939d-920fa68ca251",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 175,
+      "name": "173_peak_period_27",
+      "data": 175,
+      "type": "number",
+      "tableProcessGUId": "f7af8c4c-7b10-478b-939d-920fa68ca251",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 176,
+      "name": "173_peak_power_27",
+      "data": 176,
+      "type": "number",
+      "tableProcessGUId": "f7af8c4c-7b10-478b-939d-920fa68ca251",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -819,9 +819,9 @@
         "data": [
           {
             "x": {
-              "id": 175,
+              "id": 177,
               "name": "x",
-              "refId": 170,
+              "refId": 172,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -830,9 +830,9 @@
               "processes": []
             },
             "y": {
-              "id": 176,
+              "id": 178,
               "name": "y",
-              "refId": 171,
+              "refId": 173,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -858,9 +858,9 @@
           },
           {
             "x": {
-              "id": 177,
+              "id": 179,
               "name": "movex_27",
-              "refId": 172,
+              "refId": 174,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -869,9 +869,9 @@
               "processes": []
             },
             "y": {
-              "id": 178,
-              "name": "171_peak_period_27",
-              "refId": 173,
+              "id": 180,
+              "name": "173_peak_period_27",
+              "refId": 175,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -926,9 +926,9 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          172,
-          173,
-          174
+          174,
+          175,
+          176
         ],
         "showCol": [
           true,
@@ -954,7 +954,7 @@
         "count": 336,
         "end": 335,
         "out": {
-          "result": 170
+          "result": 172
         }
       },
       "refTPId": null
@@ -964,9 +964,9 @@
       "name": "MovingAnalysis",
       "displayName": "Moving Analysis",
       "args": {
-        "xIN": 170,
+        "xIN": 172,
         "yIN": [
-          171
+          173
         ],
         "windowSize": 168,
         "stepSize": 24,
@@ -985,9 +985,9 @@
         "alpha": 0.05,
         "preProcesses": [],
         "out": {
-          "movex": 172,
-          "171_peak_period": 173,
-          "171_peak_power": 174
+          "movex": 174,
+          "173_peak_period": 175,
+          "173_peak_power": 176
         }
       },
       "refTPId": null
@@ -1000,7 +1000,7 @@
     {
       "id": "note_32",
       "text": "Slides a window along the record and runs a chosen analysis (periodogram, cosinor, FFT, correlogram, or a waveform fit) in each window, producing a time-course of the result. Use it to track how a rhythm parameter changes over the recording, for example period drift during a free run or amplitude decay after a lesion. In the demo, read the output as a trajectory: each point is one window's estimate (period, amplitude, or power) plotted against the window's centre time, so a rising or falling line shows the rhythm evolving. Sliding-window periodogram/cosinor analysis (Refinetti et al. 2007).",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -1010,25 +1010,29 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_171": {
+    "data_173": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "tableprocess_26": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
     "tableprocess_27": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_44": {
       "x": 820,
-      "y": 60
+      "y": 314
     },
     "plot_45": {
       "x": 820,
-      "y": 560
+      "y": 814
+    },
+    "note_32": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -1081,5 +1085,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

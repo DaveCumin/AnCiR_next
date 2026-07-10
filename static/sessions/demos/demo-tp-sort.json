@@ -237,7 +237,7 @@
       "name": "sortedy_109_12",
       "data": 111,
       "type": "number",
-      "tableProcessGUId": "f96103ce-7ef2-40b9-adf0-3ab12516129c",
+      "tableProcessGUId": "19d0481f-5e8c-4bd0-b409-9549a95b3d83",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "sortedy_110_12",
       "data": 112,
       "type": "number",
-      "tableProcessGUId": "f96103ce-7ef2-40b9-adf0-3ab12516129c",
+      "tableProcessGUId": "19d0481f-5e8c-4bd0-b409-9549a95b3d83",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -318,7 +318,7 @@
     {
       "id": "note_21",
       "text": "Reorders rows by a chosen key column, ascending or descending, keeping the selected columns aligned. Use it to order data by time or magnitude before plotting or before methods that assume monotonic time.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -330,19 +330,23 @@
   "nodeLayout": {
     "data_109": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "data_110": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
     "tableprocess_12": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_30": {
       "x": 820,
-      "y": 60
+      "y": 314
+    },
+    "note_21": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -395,5 +399,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

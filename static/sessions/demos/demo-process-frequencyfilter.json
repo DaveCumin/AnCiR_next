@@ -111,7 +111,7 @@
       "name": "x",
       "data": 90,
       "type": "number",
-      "tableProcessGUId": "eebe06cc-79bc-4644-b577-48397faab549",
+      "tableProcessGUId": "09c4d5aa-982f-4de0-92f2-3e71a3d7d5cf",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -344,7 +344,7 @@
     {
       "id": "note_18",
       "text": "An FFT-based low-, high-, or band-pass filter for evenly sampled series: it transforms to the frequency domain, zeroes the frequencies outside the chosen band, and transforms back. Cutoffs are given as a fraction of the Nyquist frequency (0 = DC, 1 = fastest resolvable). Use low-pass to smooth, high-pass to remove drift, band-pass to isolate a rhythm. The demo shows the filtered series with the unwanted frequency content removed.\n\nOppenheim & Schafer, Discrete-Time Signal Processing.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -369,23 +369,27 @@
   "nodeLayout": {
     "data_91": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "tableprocess_8": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
     "process_8": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_25": {
       "x": 820,
-      "y": 60
+      "y": 314
     },
     "plot_26": {
       "x": 820,
-      "y": 560
+      "y": 814
+    },
+    "note_18": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -438,5 +442,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

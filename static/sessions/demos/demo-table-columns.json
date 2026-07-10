@@ -227,7 +227,7 @@
     {
       "id": "note_9",
       "text": "Renders selected columns (or their summary statistics) as a plain data table for inspection and export. Use it to read exact values, sanity-check a transform's output, or present computed metrics. The demo shows the chosen columns laid out in rows and columns.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -236,7 +236,28 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
-  "nodeLayout": {},
+  "nodeLayout": {
+    "data_30": {
+      "x": 60,
+      "y": 314
+    },
+    "data_31": {
+      "x": 60,
+      "y": 814
+    },
+    "data_32": {
+      "x": 60,
+      "y": 1314
+    },
+    "note_9": {
+      "x": 40,
+      "y": 24
+    },
+    "plot_8": {
+      "x": 820,
+      "y": 314
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -287,5 +308,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

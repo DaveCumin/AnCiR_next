@@ -609,7 +609,7 @@
     {
       "id": "note_2",
       "text": "Bins a single column's values and draws the count in each bin, showing the shape of its distribution (centre, spread, skew, modes, outliers). Use it to check whether data are roughly normal before choosing a statistical test. The demo shows an approximately bell-shaped distribution.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -618,7 +618,20 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
-  "nodeLayout": {},
+  "nodeLayout": {
+    "data_4": {
+      "x": 60,
+      "y": 314
+    },
+    "note_2": {
+      "x": 40,
+      "y": 24
+    },
+    "plot_1": {
+      "x": 820,
+      "y": 314
+    }
+  },
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -669,5 +682,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

@@ -1,105 +1,5 @@
 {
   "rawData": {
-    "180": [
-      0,
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16,
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23,
-      24,
-      25,
-      26,
-      27,
-      28,
-      29,
-      30,
-      31,
-      32,
-      33,
-      34,
-      35,
-      36,
-      37,
-      38,
-      39,
-      40,
-      41,
-      42,
-      43,
-      44,
-      45,
-      46,
-      47
-    ],
-    "181": [
-      80.74815343291546,
-      74.1026647241765,
-      67.34975964373878,
-      83.99551730320745,
-      70.26968802671647,
-      76.40919045989413,
-      74.71184636881401,
-      76.44963357212467,
-      75.20093210068795,
-      75.04652156582142,
-      64.60525021539745,
-      69.8231639277063,
-      25.181022137371556,
-      21.14822131182754,
-      19.634147140003652,
-      24.226973570093808,
-      17.932082227917583,
-      33.449967668777475,
-      26.46871655185021,
-      17.172639267751283,
-      23.27800097486563,
-      26.236908658458578,
-      20.748964065386087,
-      12.408209158988871,
-      75.56218438984645,
-      71.43640091766031,
-      80.93534149200735,
-      70.0779356663376,
-      74.87139210318246,
-      72.81170291238344,
-      81.21959854542415,
-      74.82519414486733,
-      84.03805792517005,
-      71.10818773287635,
-      78.65879343516997,
-      77.82274438291613,
-      18.776229206560398,
-      21.601604928306237,
-      29.42737286088412,
-      24.014153849644266,
-      31.907106883185588,
-      24.5475648672021,
-      39.48353409562165,
-      19.069478550325325,
-      16.985808677723227,
-      15.284567203885567,
-      25.36953942083682,
-      31.225353920755683
-    ],
     "182": [
       0,
       1,
@@ -151,9 +51,109 @@
       47
     ],
     "183": [
-      null
+      80.74815343291546,
+      74.1026647241765,
+      67.34975964373878,
+      83.99551730320745,
+      70.26968802671647,
+      76.40919045989413,
+      74.71184636881401,
+      76.44963357212467,
+      75.20093210068795,
+      75.04652156582142,
+      64.60525021539745,
+      69.8231639277063,
+      25.181022137371556,
+      21.14822131182754,
+      19.634147140003652,
+      24.226973570093808,
+      17.932082227917583,
+      33.449967668777475,
+      26.46871655185021,
+      17.172639267751283,
+      23.27800097486563,
+      26.236908658458578,
+      20.748964065386087,
+      12.408209158988871,
+      75.56218438984645,
+      71.43640091766031,
+      80.93534149200735,
+      70.0779356663376,
+      74.87139210318246,
+      72.81170291238344,
+      81.21959854542415,
+      74.82519414486733,
+      84.03805792517005,
+      71.10818773287635,
+      78.65879343516997,
+      77.82274438291613,
+      18.776229206560398,
+      21.601604928306237,
+      29.42737286088412,
+      24.014153849644266,
+      31.907106883185588,
+      24.5475648672021,
+      39.48353409562165,
+      19.069478550325325,
+      16.985808677723227,
+      15.284567203885567,
+      25.36953942083682,
+      31.225353920755683
     ],
     "184": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47
+    ],
+    "185": [
+      null
+    ],
+    "186": [
       75.31550624457671,
       75.31550624457671,
       75.31550624457671,
@@ -206,20 +206,20 @@
   },
   "data": [
     {
-      "id": 180,
+      "id": 182,
       "name": "x",
-      "data": 180,
+      "data": 182,
       "type": "number",
-      "tableProcessGUId": "5fc3eca3-43f2-4e22-8600-fb184797c1b8",
+      "tableProcessGUId": "671eb706-3cb7-4409-8223-06c0fc040833",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 181,
+      "id": 183,
       "name": "y",
-      "data": 181,
+      "data": 183,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -228,33 +228,33 @@
       "processes": []
     },
     {
-      "id": 182,
-      "name": "rectwavex_30",
-      "data": 182,
-      "type": "number",
-      "tableProcessGUId": "4c0ffb5c-3595-4aa8-be6c-de7f12182468",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 183,
-      "name": "pvalue_30",
-      "data": 183,
-      "type": "number",
-      "tableProcessGUId": "4c0ffb5c-3595-4aa8-be6c-de7f12182468",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 184,
-      "name": "rectwavey_181_30",
+      "name": "rectwavex_30",
       "data": 184,
       "type": "number",
-      "tableProcessGUId": "4c0ffb5c-3595-4aa8-be6c-de7f12182468",
+      "tableProcessGUId": "677bad48-55ae-42c0-aaf8-de1c09fce663",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 185,
+      "name": "pvalue_30",
+      "data": 185,
+      "type": "number",
+      "tableProcessGUId": "677bad48-55ae-42c0-aaf8-de1c09fce663",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 186,
+      "name": "rectwavey_183_30",
+      "data": 186,
+      "type": "number",
+      "tableProcessGUId": "677bad48-55ae-42c0-aaf8-de1c09fce663",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -319,9 +319,9 @@
         "data": [
           {
             "x": {
-              "id": 185,
+              "id": 187,
               "name": "x",
-              "refId": 180,
+              "refId": 182,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -330,9 +330,9 @@
               "processes": []
             },
             "y": {
-              "id": 186,
+              "id": 188,
               "name": "y",
-              "refId": 181,
+              "refId": 183,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -358,9 +358,9 @@
           },
           {
             "x": {
-              "id": 187,
+              "id": 189,
               "name": "rectwavex_30",
-              "refId": 182,
+              "refId": 184,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -369,9 +369,9 @@
               "processes": []
             },
             "y": {
-              "id": 188,
-              "name": "rectwavey_181_30",
-              "refId": 184,
+              "id": 190,
+              "name": "rectwavey_183_30",
+              "refId": 186,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -426,8 +426,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          181,
-          184
+          183,
+          186
         ],
         "showCol": [
           true,
@@ -452,7 +452,7 @@
         "count": 48,
         "end": 47,
         "out": {
-          "result": 180
+          "result": 182
         }
       },
       "refTPId": null
@@ -462,9 +462,9 @@
       "name": "RectangularWave",
       "displayName": "Rectangular Wave",
       "args": {
-        "xIN": 180,
+        "xIN": 182,
         "yIN": [
-          181
+          183
         ],
         "outputX": -1,
         "fixKappa": false,
@@ -475,9 +475,9 @@
         "fixedDutyCycle": 0.5,
         "preProcesses": [],
         "out": {
-          "rectwavex": 182,
-          "pvalue": 183,
-          "rectwavey_181": 184
+          "rectwavex": 184,
+          "pvalue": 185,
+          "rectwavey_183": 186
         }
       },
       "refTPId": null
@@ -490,7 +490,7 @@
     {
       "id": "note_34",
       "text": "Fits a smooth rectangular (square) wave with an adjustable duty cycle to the series, capturing on/off activity rhythms that a sinusoid fits poorly. The model is a tanh-approximated square wave whose duty cycle sets the fraction of each cycle spent 'on'; period, phase, sharpness (kappa) and duty cycle can be fixed or fitted. Use it for clearly bimodal activity (e.g. nocturnal animals switching between rest and activity) where you want an explicit active-phase width. In the demo, read the flat high plateau as the active phase, the flat low level as rest, and the plateau width as the duty cycle. Nonlinear least-squares waveform fitting (Marquardt 1963).",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -500,25 +500,29 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_181": {
+    "data_183": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "tableprocess_29": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
     "tableprocess_30": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_47": {
       "x": 820,
-      "y": 60
+      "y": 314
     },
     "plot_48": {
       "x": 820,
-      "y": 560
+      "y": 814
+    },
+    "note_34": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -571,5 +575,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

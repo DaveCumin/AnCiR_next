@@ -36,12 +36,51 @@ import { SAMPLE } from './nodeCatalog.js';
 export function addDemoNote(nodeId) {
 	const text = NODE_NOTES[nodeId];
 	if (!text) return;
-	createNote({ x: 24, y: 24, text });
+	const NOTE_W = 360;
+	const NOTE_H = 190;
+	const NOTE_X = 40;
+	const NOTE_Y = 24;
+	const LANE = NOTE_Y + NOTE_H + 40; // vertical space to reserve above the graph
+
+	createNote({ x: NOTE_X, y: NOTE_Y, text });
 	const n = core.notes[core.notes.length - 1];
-	if (n) {
-		n.width = 360;
-		n.height = 190;
+	if (!n) return;
+	n.width = NOTE_W;
+	n.height = NOTE_H;
+
+	// Position the note in a clear lane ABOVE the node graph so it reads as a
+	// caption and never sits under a node. The note is driven by nodeLayout (the
+	// WorkflowEditor honours saved positions), so pin it there and push the nodes
+	// down by one note-lane. Two cases:
+	//   • baked layout already present (TP / process demos) → shift it down.
+	//   • empty layout (plot demos, which rely on the topo auto-layout) → bake a
+	//     tidy columnar layout, already shifted below the lane.
+	const existing = core.nodeLayout ?? {};
+	const layout = {};
+	if (Object.keys(existing).length > 0) {
+		for (const [id, pos] of Object.entries(existing)) {
+			layout[id] = { x: pos.x, y: (pos.y ?? 0) + LANE };
+		}
+	} else {
+		const { nodes } = getProcessNodeGraph();
+		const sources = [];
+		const ops = [];
+		const plots = [];
+		for (const nd of nodes) {
+			if (nd.type === 'plot') plots.push(nd.id);
+			else if (nd.type === 'data') sources.push(nd.id);
+			else if (nd.type === 'tableprocess' && (nd.ports?.inputs?.length ?? 0) === 0)
+				sources.push(nd.id);
+			else ops.push(nd.id);
+		}
+		const COL = [60, 440, 820];
+		const ROW = 500;
+		sources.forEach((id, i) => (layout[id] = { x: COL[0], y: LANE + 60 + i * ROW }));
+		ops.forEach((id, i) => (layout[id] = { x: COL[1], y: LANE + 60 + i * ROW }));
+		plots.forEach((id, i) => (layout[id] = { x: COL[2], y: LANE + 60 + i * ROW }));
 	}
+	layout[n.id] = { x: NOTE_X, y: NOTE_Y };
+	core.nodeLayout = layout;
 }
 
 // Deterministic RNG (seeded) so the fit demos' noisy data is stable across runs.

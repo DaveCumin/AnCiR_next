@@ -268,6 +268,9 @@ function resetCore() {
 	core.orphanProcesses = [];
 	core.storedValues = {};
 	core.rawData = new Map();
+	// Clear the baked workflow layout too, so a note's reserve-a-lane placement
+	// (addDemoNote) never carries a previous demo's node/note positions forward.
+	core.nodeLayout = {};
 }
 
 const resolve = (d) => (typeof d === 'function' ? d() : d);

@@ -1,46 +1,73 @@
 {
   "rawData": {
+    "252": [
+      0.75,
+      0.4936245900186056,
+      0.10008893632086846,
+      0.1459236935299511,
+      0.563980834955132,
+      0.7418056690048083,
+      0.4188843971969271,
+      0.06829743925411086,
+      0.20365550990046996,
+      0.626658718528857,
+      0.7176063735075686,
+      0.3432599472250986,
+      0.052037831185664685,
+      0.27058110764789056,
+      0.6787233646021731,
+      0.6785352394348805,
+      0.27029233595682556,
+      0.05207146417475844,
+      0.34356671248653514,
+      0.7177368592146683
+    ],
+    "253": [
+      2.5500000000000003,
+      2.293624590018606,
+      1.9000889363208686,
+      1.9459236935299513,
+      2.3639808349551323,
+      2.5418056690048085,
+      2.2188843971969274,
+      1.868297439254111,
+      2.00365550990047,
+      2.426658718528857,
+      2.5176063735075687,
+      2.143259947225099,
+      1.852037831185665,
+      2.070581107647891,
+      2.4787233646021734,
+      2.4785352394348807,
+      2.0702923359568257,
+      1.8520714641747587,
+      2.1435667124865354,
+      2.5177368592146685
+    ],
+    "254": [
+      0.9685941696997769,
+      0.9685941696997767
+    ],
     "255": [
-      1.6,
-      1.3069995314498348,
-      0.857244498652421,
-      0.909627078319944,
-      1.3874066685201507,
-      1.5906350502912094,
-      1.2215821682250596,
-      0.8209113591475552,
-      0.9756062970291084,
-      1.459038535461551,
-      1.5629787125800785,
-      1.1351542254001126,
-      0.8023289499264739,
-      1.052092694454732,
-      1.5185409881167693,
-      1.5183259879255777,
-      1.0517626696649434,
-      0.8023673876282953,
-      1.135504814270326,
-      1.563127839102478,
-      1.458767728931456,
-      0.97531228964754,
-      0.8210248724172968,
-      1.221936904940007
+      18.763493311528006,
+      18.763493311528
     ],
     "256": [
-      0.9604251086933535
+      1.9826460939624246e-8,
+      1.982646093962434e-8
     ],
     "257": [
-      22.137993345807356
+      453.7366669407144
     ],
     "258": [
-      1.1671623826276414e-9
+      0
     ]
   },
   "data": [
     {
-      "id": 255,
-      "name": "Rayleigh test input",
-      "data": 255,
+      "id": 252,
+      "name": "Rayleigh test input 1",
+      "data": 252,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -49,11 +76,44 @@
       "processes": []
     },
     {
+      "id": 253,
+      "name": "Rayleigh test input 2",
+      "data": 253,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 254,
+      "name": "R_44",
+      "data": 254,
+      "type": "number",
+      "tableProcessGUId": "17eab434-5d3b-49a5-9091-1265678b3508",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 255,
+      "name": "z_44",
+      "data": 255,
+      "type": "number",
+      "tableProcessGUId": "17eab434-5d3b-49a5-9091-1265678b3508",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
       "id": 256,
-      "name": "R_45",
+      "name": "pvalue_44",
       "data": 256,
       "type": "number",
-      "tableProcessGUId": "894c6830-d237-44d8-872d-2233d3d491f5",
+      "tableProcessGUId": "17eab434-5d3b-49a5-9091-1265678b3508",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -61,10 +121,10 @@
     },
     {
       "id": 257,
-      "name": "z_45",
+      "name": "F_44",
       "data": 257,
       "type": "number",
-      "tableProcessGUId": "894c6830-d237-44d8-872d-2233d3d491f5",
+      "tableProcessGUId": "17eab434-5d3b-49a5-9091-1265678b3508",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -72,10 +132,10 @@
     },
     {
       "id": 258,
-      "name": "pvalue_45",
+      "name": "ww_pvalue_44",
       "data": 258,
       "type": "number",
-      "tableProcessGUId": "894c6830-d237-44d8-872d-2233d3d491f5",
+      "tableProcessGUId": "17eab434-5d3b-49a5-9091-1265678b3508",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -84,7 +144,7 @@
   ],
   "plots": [
     {
-      "id": 64,
+      "id": 63,
       "name": "Rayleigh test result",
       "x": 350,
       "y": 150,
@@ -99,12 +159,18 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
+          252,
+          253,
+          254,
           255,
           256,
           257,
           258
         ],
         "showCol": [
+          true,
+          true,
+          true,
           true,
           true,
           true,
@@ -119,19 +185,23 @@
   ],
   "tableProcesses": [
     {
-      "id": 45,
+      "id": 44,
       "name": "RayleighTest",
       "displayName": "Rayleigh test",
       "args": {
         "yIN": [
-          255
+          252,
+          253
         ],
         "unit": "radians",
         "period": 24,
+        "showWatsonWilliams": true,
         "out": {
-          "R": 256,
-          "z": 257,
-          "pvalue": 258
+          "R": 254,
+          "z": 255,
+          "pvalue": 256,
+          "F": 257,
+          "ww_pvalue": 258
         }
       },
       "refTPId": null
@@ -142,9 +212,9 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_46",
-      "text": "Tests a set of phases/angles (e.g. acrophases, activity-onset times) for a preferred direction against the null of uniformity around the circle. Reports the mean resultant length R (0 = dispersed, 1 = tightly clustered), Rayleigh's z = nR², and a p-value; angles may be given in radians, degrees, or clock-hours on a chosen period. Use it to decide whether phases cluster rather than scatter (Batschelet 1981).",
-      "x": 24,
+      "id": "note_45",
+      "text": "Circular-statistics tests for phase/angle columns (radians, degrees, or clock-hours on a chosen period). The Rayleigh test always runs: for each column it asks whether the phases (e.g. acrophases, activity-onset times) point in a preferred direction rather than scattering uniformly, reporting the mean resultant length R (0 = dispersed, 1 = tightly clustered), Rayleigh's z = nR², and a p-value (Batschelet 1981). An optional Watson-Williams test (toggle it on, like the boxplot's pairwise comparisons) adds the circular analogue of one-way ANOVA across the columns (each a group of angles), reporting an F statistic and p-value for whether the groups share a common mean direction; it assumes reasonably concentrated, similarly-dispersed samples and applies a von Mises concentration correction (Watson & Williams 1956). In the demo the two angle columns each cluster tightly (small Rayleigh p) but around different mean directions, so the Watson-Williams test is significant.",
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -154,17 +224,25 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_255": {
+    "data_252": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
-    "tableprocess_45": {
+    "data_253": {
+      "x": 60,
+      "y": 814
+    },
+    "tableprocess_44": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
-    "plot_64": {
+    "plot_63": {
       "x": 820,
-      "y": 60
+      "y": 314
+    },
+    "note_45": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -217,5 +295,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

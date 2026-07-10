@@ -167,7 +167,7 @@
       "name": "x",
       "data": 97,
       "type": "number",
-      "tableProcessGUId": "1f52fdf2-f0b8-44af-948f-095d5569785f",
+      "tableProcessGUId": "ec3228e0-ca39-4a08-9791-5b2d9bd00fc8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -190,7 +190,7 @@
       "data": 99,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "932aa298-56ef-4191-a3b1-e2f9b5193acc",
+      "tableProcessGUId": "9ebd8a99-fb88-47c9-98d5-02ae718fa68c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -201,7 +201,7 @@
       "name": "binnedy_98_10",
       "data": 100,
       "type": "number",
-      "tableProcessGUId": "932aa298-56ef-4191-a3b1-e2f9b5193acc",
+      "tableProcessGUId": "9ebd8a99-fb88-47c9-98d5-02ae718fa68c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -437,7 +437,7 @@
     {
       "id": "note_19",
       "text": "Aggregates time-series values into regular time bins (e.g. 15 min counts into hourly means or sums), choosing the aggregation function per bin. Use it to downsample high-resolution activity or to put irregular samples onto a regular grid before analysis.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -449,23 +449,27 @@
   "nodeLayout": {
     "data_98": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "tableprocess_9": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
     "tableprocess_10": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_27": {
       "x": 820,
-      "y": 60
+      "y": 314
     },
     "plot_28": {
       "x": 820,
-      "y": 560
+      "y": 814
+    },
+    "note_19": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -518,5 +522,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

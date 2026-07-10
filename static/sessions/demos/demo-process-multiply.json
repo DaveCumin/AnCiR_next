@@ -111,7 +111,7 @@
       "name": "x",
       "data": 47,
       "type": "number",
-      "tableProcessGUId": "778b82ff-9d06-4b77-bfcb-6aaa886cfbaf",
+      "tableProcessGUId": "b3aef40f-ca99-4da6-a46f-5e45930d8762",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -344,7 +344,7 @@
     {
       "id": "note_12",
       "text": "Multiplies every value in the input column by a constant (or another column), element-by-element. Use it for unit conversions, scaling, or rescaling a signal. The demo shows the output column scaled relative to the input.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -367,23 +367,27 @@
   "nodeLayout": {
     "data_48": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "tableprocess_2": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
     "process_2": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_13": {
       "x": 820,
-      "y": 60
+      "y": 314
     },
     "plot_14": {
       "x": 820,
-      "y": 560
+      "y": 814
+    },
+    "note_12": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -436,5 +440,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

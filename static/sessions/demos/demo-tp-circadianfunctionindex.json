@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "263": [
+    "259": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "264": [
+    "260": [
       0,
       0,
       0,
@@ -676,26 +676,70 @@
       0,
       0
     ],
-    "265": [
+    "261": [
       0.9426865671641792
     ],
-    "266": [
+    "262": [
       1.0000000000000004
     ],
-    "267": [
+    "263": [
       0.34388059701492557
     ],
-    "268": [
+    "264": [
       1
     ]
   },
   "data": [
     {
-      "id": 263,
+      "id": 259,
       "name": "Circadian Function Index input 1",
-      "data": 263,
+      "data": 259,
       "type": "number",
       "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 260,
+      "name": "Circadian Function Index input 2",
+      "data": 260,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 261,
+      "name": "CFI_45",
+      "data": 261,
+      "type": "number",
+      "tableProcessGUId": "a0332e2a-8741-4aa6-8366-147fe7c08071",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 262,
+      "name": "IS_45",
+      "data": 262,
+      "type": "number",
+      "tableProcessGUId": "a0332e2a-8741-4aa6-8366-147fe7c08071",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 263,
+      "name": "IV_45",
+      "data": 263,
+      "type": "number",
+      "tableProcessGUId": "a0332e2a-8741-4aa6-8366-147fe7c08071",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -703,54 +747,10 @@
     },
     {
       "id": 264,
-      "name": "Circadian Function Index input 2",
+      "name": "RA_45",
       "data": 264,
       "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 265,
-      "name": "CFI_47",
-      "data": 265,
-      "type": "number",
-      "tableProcessGUId": "e821c7c2-1f06-485f-8492-30700d5bbae0",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 266,
-      "name": "IS_47",
-      "data": 266,
-      "type": "number",
-      "tableProcessGUId": "e821c7c2-1f06-485f-8492-30700d5bbae0",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 267,
-      "name": "IV_47",
-      "data": 267,
-      "type": "number",
-      "tableProcessGUId": "e821c7c2-1f06-485f-8492-30700d5bbae0",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 268,
-      "name": "RA_47",
-      "data": 268,
-      "type": "number",
-      "tableProcessGUId": "e821c7c2-1f06-485f-8492-30700d5bbae0",
+      "tableProcessGUId": "a0332e2a-8741-4aa6-8366-147fe7c08071",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -759,7 +759,7 @@
   ],
   "plots": [
     {
-      "id": 66,
+      "id": 64,
       "name": "Circadian Function Index result",
       "x": 350,
       "y": 150,
@@ -774,12 +774,12 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
+          259,
+          260,
+          261,
+          262,
           263,
-          264,
-          265,
-          266,
-          267,
-          268
+          264
         ],
         "showCol": [
           true,
@@ -798,13 +798,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 47,
+      "id": 45,
       "name": "CircadianFunctionIndex",
       "displayName": "Circadian Function Index",
       "args": {
-        "xIN": 263,
+        "xIN": 259,
         "yIN": [
-          264
+          260
         ],
         "epochHours": 1,
         "period": 24,
@@ -812,10 +812,10 @@
         "lWindow": 5,
         "preProcesses": [],
         "out": {
-          "CFI": 265,
-          "IS": 266,
-          "IV": 267,
-          "RA": 268
+          "CFI": 261,
+          "IS": 262,
+          "IV": 263,
+          "RA": 264
         }
       },
       "refTPId": null
@@ -826,9 +826,9 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_48",
+      "id": "note_46",
       "text": "Summarises rest-activity rhythm robustness as a single 0-1 index by combining three nonparametric variables: interdaily stability (IS), intradaily variability (IV) and relative amplitude (RA). Give it a time column and one or more activity columns; it reports CFI plus the raw IS/IV/RA per series. Higher CFI means a more stable, well-consolidated rhythm; useful for comparing individuals or conditions without assuming a sinusoidal shape (Ortiz-Tudela et al. 2010).",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -838,21 +838,25 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_263": {
+    "data_259": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
-    "data_264": {
+    "data_260": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
-    "tableprocess_47": {
+    "tableprocess_45": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
-    "plot_66": {
+    "plot_64": {
       "x": 820,
-      "y": 60
+      "y": 314
+    },
+    "note_46": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -905,5 +909,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

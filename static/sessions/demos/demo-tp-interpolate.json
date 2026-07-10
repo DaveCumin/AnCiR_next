@@ -187,7 +187,7 @@
       "name": "interpx_11",
       "data": 107,
       "type": "number",
-      "tableProcessGUId": "056a4007-73cc-48e3-891e-2170b8b88cf4",
+      "tableProcessGUId": "0245369a-28a7-4b7f-84d8-9a9e532e709b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -198,7 +198,7 @@
       "name": "interpy_106_11",
       "data": 108,
       "type": "number",
-      "tableProcessGUId": "056a4007-73cc-48e3-891e-2170b8b88cf4",
+      "tableProcessGUId": "0245369a-28a7-4b7f-84d8-9a9e532e709b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -270,7 +270,7 @@
     {
       "id": "note_20",
       "text": "Fills gaps or resamples a series onto a regular time grid using linear, nearest-neighbour, or natural cubic-spline interpolation. Use it to repair missing values or to make unevenly sampled data evenly spaced before methods that assume regular sampling (e.g. FFT).",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -282,19 +282,23 @@
   "nodeLayout": {
     "data_105": {
       "x": 60,
-      "y": 60
+      "y": 314
     },
     "data_106": {
       "x": 60,
-      "y": 560
+      "y": 814
     },
     "tableprocess_11": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_29": {
       "x": 820,
-      "y": 60
+      "y": 314
+    },
+    "note_20": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -347,5 +351,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }

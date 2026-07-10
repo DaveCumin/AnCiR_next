@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "163": [
+    "165": [
       "A",
       "B",
       "C",
@@ -62,7 +62,7 @@
       "B",
       "C"
     ],
-    "164": [
+    "166": [
       0,
       0,
       0,
@@ -124,7 +124,7 @@
       19,
       19
     ],
-    "165": [
+    "167": [
       0,
       100,
       200,
@@ -186,51 +186,51 @@
       119,
       219
     ],
-    "166": [
-      0,
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16,
-      17,
-      18,
-      19
-    ],
-    "167": [
-      0,
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16,
-      17,
-      18,
-      19
-    ],
     "168": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "169": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "170": [
       100,
       101,
       102,
@@ -252,7 +252,7 @@
       118,
       119
     ],
-    "169": [
+    "171": [
       200,
       201,
       202,
@@ -277,9 +277,9 @@
   },
   "data": [
     {
-      "id": 163,
+      "id": 165,
       "name": "Long To Wide input 1",
-      "data": 163,
+      "data": 165,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -288,33 +288,11 @@
       "processes": []
     },
     {
-      "id": 164,
-      "name": "Long To Wide input 2",
-      "data": 164,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 165,
-      "name": "Long To Wide input 3",
-      "data": 165,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 166,
-      "name": "time_25",
+      "name": "Long To Wide input 2",
       "data": 166,
       "type": "number",
-      "tableProcessGUId": "55696c56-e8cc-4957-9a16-a435eb622230",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -322,10 +300,10 @@
     },
     {
       "id": 167,
-      "name": "value_A_25",
+      "name": "Long To Wide input 3",
       "data": 167,
       "type": "number",
-      "tableProcessGUId": "55696c56-e8cc-4957-9a16-a435eb622230",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -333,10 +311,10 @@
     },
     {
       "id": 168,
-      "name": "value_B_25",
+      "name": "time_25",
       "data": 168,
       "type": "number",
-      "tableProcessGUId": "55696c56-e8cc-4957-9a16-a435eb622230",
+      "tableProcessGUId": "626fc0da-cf4b-42ea-bd2c-3532e2930545",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -344,10 +322,32 @@
     },
     {
       "id": 169,
-      "name": "value_C_25",
+      "name": "value_A_25",
       "data": 169,
       "type": "number",
-      "tableProcessGUId": "55696c56-e8cc-4957-9a16-a435eb622230",
+      "tableProcessGUId": "626fc0da-cf4b-42ea-bd2c-3532e2930545",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 170,
+      "name": "value_B_25",
+      "data": 170,
+      "type": "number",
+      "tableProcessGUId": "626fc0da-cf4b-42ea-bd2c-3532e2930545",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 171,
+      "name": "value_C_25",
+      "data": 171,
+      "type": "number",
+      "tableProcessGUId": "626fc0da-cf4b-42ea-bd2c-3532e2930545",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -371,13 +371,13 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          163,
-          164,
           165,
           166,
           167,
           168,
-          169
+          169,
+          170,
+          171
         ],
         "showCol": [
           true,
@@ -401,15 +401,15 @@
       "name": "LongToWide",
       "displayName": "Long To Wide",
       "args": {
-        "categoryIN": 163,
-        "timeIN": 164,
-        "valueIN": 165,
+        "categoryIN": 165,
+        "timeIN": 166,
+        "valueIN": 167,
         "preProcesses": [],
         "out": {
-          "time": 166,
-          "value_A": 167,
-          "value_B": 168,
-          "value_C": 169
+          "time": 168,
+          "value_A": 169,
+          "value_B": 170,
+          "value_C": 171
         }
       },
       "refTPId": null
@@ -422,7 +422,7 @@
     {
       "id": "note_31",
       "text": "Pivots a long/tidy table (a category column, a time column and a value column) into wide format, producing one value-column per category sharing a common time column. Use it to turn a stacked per-subject table into side-by-side series ready for plotting or per-series analysis.",
-      "x": 24,
+      "x": 40,
       "y": 24,
       "width": 360,
       "height": 190
@@ -432,25 +432,29 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_163": {
-      "x": 60,
-      "y": 60
-    },
-    "data_164": {
-      "x": 60,
-      "y": 560
-    },
     "data_165": {
       "x": 60,
-      "y": 1060
+      "y": 314
+    },
+    "data_166": {
+      "x": 60,
+      "y": 814
+    },
+    "data_167": {
+      "x": 60,
+      "y": 1314
     },
     "tableprocess_25": {
       "x": 440,
-      "y": 60
+      "y": 314
     },
     "plot_43": {
       "x": 820,
-      "y": 60
+      "y": 314
+    },
+    "note_31": {
+      "x": 40,
+      "y": 24
     }
   },
   "appState": {
@@ -503,5 +507,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.2"
+  "version": "β.53.1"
 }
