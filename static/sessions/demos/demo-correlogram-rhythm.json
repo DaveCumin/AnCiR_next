@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "18": [
+    "22": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "19": [
+    "23": [
       96.80303970146284,
       90.24703944100128,
       90.63500417308552,
@@ -343,33 +343,31 @@
   },
   "data": [
     {
-      "id": 18,
+      "id": 22,
       "name": "hour",
-      "data": 18,
+      "data": 22,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 19,
+      "id": 23,
       "name": "activity",
-      "data": 19,
+      "data": 23,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 5,
+      "id": 6,
       "name": "Activity correlogram",
       "x": 350,
       "y": 150,
@@ -380,6 +378,8 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "laglimsIN": [
           null,
@@ -410,27 +410,25 @@
         "data": [
           {
             "x": {
-              "id": 20,
+              "id": 24,
               "name": "hour",
-              "refId": 18,
+              "refId": 22,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to hour which is ",
               "processes": []
             },
             "y": {
-              "id": 21,
+              "id": 25,
               "name": "activity",
-              "refId": 19,
+              "refId": 23,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to activity which is ",
               "processes": []
             },
             "line": {
@@ -464,6 +462,7 @@
   ],
   "tableProcesses": [],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [],
   "groups": [],
@@ -481,6 +480,7 @@
     "showDisplayPanel": false,
     "showControlPanel": false,
     "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -519,5 +519,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.9"
+  "version": "β.52.0"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "65": [
+    "69": [
       0,
       1,
       2,
@@ -53,7 +53,7 @@
       49,
       50
     ],
-    "66": [
+    "70": [
       0,
       1,
       2,
@@ -109,45 +109,42 @@
   },
   "data": [
     {
-      "id": 65,
+      "id": 69,
       "name": "x",
-      "data": 65,
+      "data": 69,
       "type": "number",
-      "tableProcessGUId": "fc0e9ed5-bf1a-41f3-99fe-96249f33115f",
+      "tableProcessGUId": "00ad9447-adfc-4882-8d41-925183325166",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 66,
+      "id": 70,
       "name": "y",
-      "data": 66,
+      "data": 70,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 67,
+      "id": 71,
       "name": "Remove Outliers result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_5",
-      "producerPort": "out_66",
+      "producerPort": "out_70",
       "producerArtifactKind": "column",
-      "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 18,
+      "id": 19,
       "name": "Remove Outliers: before vs after",
       "x": 350,
       "y": 150,
@@ -158,6 +155,8 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "xlimsIN": [
           null,
@@ -201,27 +200,25 @@
         "data": [
           {
             "x": {
-              "id": 68,
+              "id": 72,
               "name": "x",
-              "refId": 65,
+              "refId": 69,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 69,
+              "id": 73,
               "name": "y",
-              "refId": 66,
+              "refId": 70,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to y which is ",
               "processes": []
             },
             "label": "Before",
@@ -242,27 +239,25 @@
           },
           {
             "x": {
-              "id": 70,
+              "id": 74,
               "name": "x",
-              "refId": 65,
+              "refId": 69,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 71,
+              "id": 75,
               "name": "Remove Outliers result",
-              "refId": 67,
+              "refId": 71,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to Remove Outliers result which is ",
               "processes": []
             },
             "label": "After",
@@ -287,7 +282,7 @@
           "position": "topright",
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "#ccc",
+          "borderColor": "var(--color-lightness-80)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
@@ -297,7 +292,7 @@
       }
     },
     {
-      "id": 19,
+      "id": 20,
       "name": "Remove Outliers: values",
       "x": 350,
       "y": 150,
@@ -308,10 +303,12 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "columnRefs": [
-          66,
-          67
+          70,
+          71
         ],
         "showCol": [
           true,
@@ -336,13 +333,14 @@
         "count": 51,
         "end": 50,
         "out": {
-          "result": 65
+          "result": 69
         }
       },
       "refTPId": null
     }
   ],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [],
   "groups": [],
@@ -356,13 +354,13 @@
         "iqrMultiplier": 1.5,
         "zThreshold": 3,
         "inIN": [
-          66
+          70
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_66": {
+    "data_70": {
       "x": 60,
       "y": 60
     },
@@ -374,11 +372,11 @@
       "x": 440,
       "y": 60
     },
-    "plot_18": {
+    "plot_19": {
       "x": 820,
       "y": 60
     },
-    "plot_19": {
+    "plot_20": {
       "x": 820,
       "y": 560
     }
@@ -394,6 +392,7 @@
     "showDisplayPanel": false,
     "showControlPanel": false,
     "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -432,5 +431,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.9"
+  "version": "β.52.0"
 }

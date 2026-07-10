@@ -148,6 +148,31 @@ const DEMOS = [
 		}
 	},
 	{
+		id: 'meansem-by-day',
+		name: 'Mean ± SEM — activity by day',
+		family: 'Plots',
+		description: 'Per-day mean activity with standard-error whiskers (7 days × 24 hourly points).',
+		build(mk) {
+			const rng = mulberry32(3);
+			const day = [];
+			const value = [];
+			for (let d = 1; d <= 7; d++) {
+				for (let h = 0; h < 24; h++) {
+					day.push(d);
+					value.push(50 + 40 * Math.sin((2 * Math.PI * h) / 24 - Math.PI / 2) + normal(rng, 0, 8));
+				}
+			}
+			const xId = mk.col('day', 'number', day);
+			const yId = mk.col('activity', 'number', value);
+			mk.plot(
+				'meansem',
+				'Activity by day (mean ± SEM)',
+				{ x: xId, y: yId },
+				{ x: 'Day', y: 'Activity' }
+			);
+		}
+	},
+	{
 		id: 'actogram-rhythm',
 		name: 'Actogram — multi-day activity',
 		family: 'Plots',

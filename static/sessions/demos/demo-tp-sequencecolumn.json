@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "190": [
+    "211": [
       0,
       1,
       2,
@@ -55,21 +55,20 @@
   },
   "data": [
     {
-      "id": 190,
-      "name": "result_31",
-      "data": 190,
+      "id": 211,
+      "name": "result_34",
+      "data": 211,
       "type": "number",
-      "tableProcessGUId": "c3840287-b160-4ecd-8ccd-b76277df1c20",
+      "tableProcessGUId": "5be92a08-3f7a-4243-96cc-cecdb0f0ac89",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 48,
+      "id": 53,
       "name": "Sequence Column result",
       "x": 350,
       "y": 150,
@@ -80,9 +79,11 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "columnRefs": [
-          190
+          211
         ],
         "showCol": [
           true
@@ -96,7 +97,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 31,
+      "id": 34,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -106,24 +107,25 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 190
+          "result": 211
         }
       },
       "refTPId": null
     }
   ],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_31": {
+    "tableprocess_34": {
       "x": 60,
       "y": 60
     },
-    "plot_48": {
+    "plot_53": {
       "x": 820,
       "y": 60
     }
@@ -139,6 +141,7 @@
     "showDisplayPanel": false,
     "showControlPanel": false,
     "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -177,5 +180,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.9"
+  "version": "β.52.0"
 }

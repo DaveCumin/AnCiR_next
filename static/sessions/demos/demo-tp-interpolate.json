@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "0": [
+    "105": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "1": [
+    "106": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -104,7 +104,7 @@
       10,
       11.362966948437261
     ],
-    "2": [
+    "107": [
       0,
       2,
       4,
@@ -131,7 +131,7 @@
       46,
       48
     ],
-    "3": [
+    "108": [
       10,
       15.35898384862245,
       30,
@@ -161,57 +161,53 @@
   },
   "data": [
     {
-      "id": 0,
+      "id": 105,
       "name": "Interpolate input 1",
-      "data": 0,
+      "data": 105,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 1,
+      "id": 106,
       "name": "Interpolate input 2",
-      "data": 1,
+      "data": 106,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 2,
-      "name": "interpx_0",
-      "data": 2,
+      "id": 107,
+      "name": "interpx_11",
+      "data": 107,
       "type": "number",
-      "tableProcessGUId": "a0b89e26-3f51-4295-8df8-aa05659d204c",
+      "tableProcessGUId": "4bd10b16-1bd0-40c6-81d5-edeea51327a5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 3,
-      "name": "interpy_1_0",
-      "data": 3,
+      "id": 108,
+      "name": "interpy_106_11",
+      "data": 108,
       "type": "number",
-      "tableProcessGUId": "a0b89e26-3f51-4295-8df8-aa05659d204c",
+      "tableProcessGUId": "4bd10b16-1bd0-40c6-81d5-edeea51327a5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 0,
+      "id": 29,
       "name": "Interpolate result",
       "x": 350,
       "y": 150,
@@ -222,12 +218,14 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "columnRefs": [
-          0,
-          1,
-          2,
-          3
+          105,
+          106,
+          107,
+          108
         ],
         "showCol": [
           true,
@@ -244,13 +242,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 0,
+      "id": 11,
       "name": "Interpolate",
       "displayName": "Interpolate",
       "args": {
-        "xIN": 0,
+        "xIN": 105,
         "yIN": [
-          1
+          106
         ],
         "mode": "resample",
         "method": "linear",
@@ -258,33 +256,34 @@
         "start": null,
         "end": null,
         "out": {
-          "interpx": 2,
-          "interpy_1": 3
+          "interpx": 107,
+          "interpy_106": 108
         }
       },
       "refTPId": null
     }
   ],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_0": {
+    "data_105": {
       "x": 60,
       "y": 60
     },
-    "data_1": {
+    "data_106": {
       "x": 60,
       "y": 560
     },
-    "tableprocess_0": {
+    "tableprocess_11": {
       "x": 440,
       "y": 60
     },
-    "plot_0": {
+    "plot_29": {
       "x": 820,
       "y": 60
     }
@@ -300,6 +299,7 @@
     "showDisplayPanel": false,
     "showControlPanel": false,
     "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -338,5 +338,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.49.2"
+  "version": "β.52.0"
 }

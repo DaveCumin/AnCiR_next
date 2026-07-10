@@ -107,6 +107,14 @@ export const PLOT_SPECS = [
 		inputs: [],
 		wire: () => {},
 		noInputEdges: true
+	},
+	{
+		type: 'meansem',
+		inputs: [
+			{ type: 'category', data: SAMPLE.category3 },
+			{ type: 'number', data: SAMPLE.rhythm }
+		],
+		wire: (p, [x, y]) => p.plot.addData({ x: { refId: x }, y: { refId: y } })
 	}
 ];
 
@@ -148,7 +156,8 @@ export const PROCESS_SPECS = [
 		setup: () => {}
 	},
 	{ name: 'RemoveTrend', colType: 'number', data: SAMPLE.linear, setup: () => {} },
-	{ name: 'normalize', colType: 'number', data: SAMPLE.index, setup: () => {} }
+	{ name: 'normalize', colType: 'number', data: SAMPLE.index, setup: () => {} },
+	{ name: 'FrequencyFilter', colType: 'number', data: SAMPLE.rhythm, setup: () => {} }
 ];
 
 // --- TABLE PROCESSES ---------------------------------------------------------
@@ -559,6 +568,73 @@ export const TP_SPECS = [
 			timeIN: t,
 			valueColIds: [v1, v2],
 			out: { time: -1, category: -1, value: -1 }
+		})
+	},
+	{
+		name: 'AverageProfile',
+		inputs: [
+			T('number', () => seq(96, (i) => i)),
+			T('number', () => seq(96, (i) => 50 + 40 * Math.sin((2 * Math.PI * i) / 24 - Math.PI / 2)))
+		],
+		args: ([x, y]) => ({
+			xIN: x,
+			yIN: [y],
+			period: 24,
+			nBins: 24,
+			preProcesses: [],
+			out: { avgprofx: -1, [`avgprof_${y}`]: -1 }
+		})
+	},
+	{
+		name: 'FreeRunningPeriod',
+		inputs: [
+			T('number', () => seq(336, (i) => i)),
+			T('number', () => seq(336, (i) => Math.cos((2 * Math.PI * i) / 24)))
+		],
+		args: ([x, y]) => ({
+			xIN: x,
+			yIN: [y],
+			pMin: 20,
+			pMax: 28,
+			step: 0.5,
+			method: 'Chi-squared',
+			binSize: 1,
+			alpha: 0.05,
+			preProcesses: [],
+			out: { period: -1, power: -1, pvalue: -1 }
+		})
+	},
+	{
+		name: 'RayleighTest',
+		inputs: [T('number', () => seq(24, (i) => 1.2 + Math.cos(i * 1.3) * 0.4))],
+		args: ([y]) => ({ yIN: [y], unit: 'radians', period: 24, out: {} }),
+		noOutputs: true
+	},
+	{
+		name: 'WatsonWilliams',
+		inputs: [
+			T('number', () => seq(15, (i) => 0.5 + Math.cos(i * 1.3) * 0.35)),
+			T('number', () => seq(15, (i) => 2.6 + Math.cos(i * 1.3) * 0.35))
+		],
+		args: ([a, b]) => ({ yIN: [a, b], unit: 'radians', period: 24, out: {} }),
+		noOutputs: true
+	},
+	{
+		name: 'CircadianFunctionIndex',
+		isAsync: true,
+		inputs: [
+			T('number', () => seq(336, (i) => i)),
+			T('number', () => seq(336, (i) => (i % 24 >= 8 && i % 24 < 18 ? 100 : 0)))
+		],
+		args: ([x, y]) => ({
+			xIN: x,
+			yIN: [y],
+			epochHours: 1,
+			period: 24,
+			mWindow: 10,
+			lWindow: 5,
+			preProcesses: [],
+			out: { CFI: -1, IS: -1, IV: -1, RA: -1 }
 		})
 	}
 ];

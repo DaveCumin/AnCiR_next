@@ -14,6 +14,7 @@
 		fillDefaults
 	} from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
+	import { bathyphase, phaseAngleOfEntrainment, wrapToPeriod } from '$lib/utils/cosinorAddons.js';
 
 	const displayName = 'Cosinor';
 	const defaults = new Map([
@@ -33,7 +34,13 @@
 				period: { val: -1 },
 				amplitude: { val: -1 },
 				rsquared: { val: -1 },
-				pvalue: { val: -1 }
+				pvalue: { val: -1 },
+				// Cheap add-on metrics derived from the fitted acrophase (one value
+				// per y input, like the other scalar ports). `bathyphase` is the
+				// trough time (acrophase + half-period); `phase_angle` is the phase
+				// angle of entrainment (acrophase relative to `referenceHrs`).
+				bathyphase: { val: -1 },
+				phase_angle: { val: -1 }
 			}
 		],
 		['valid', { val: false }],
@@ -41,6 +48,8 @@
 		['fixedPeriod', { val: 24 }],
 		['nHarmonics', { val: 1 }],
 		['alpha', { val: 0.05 }],
+		// Reference zeitgeber time (h) for the phase-angle-of-entrainment metric.
+		['referenceHrs', { val: 0 }],
 		// Permutation test: a model-vs-chance significance test for each y fit.
 		['permuteTest', { val: PERMUTATION_DEFAULTS.permuteTest }],
 		['nPermutations', { val: PERMUTATION_DEFAULTS.nPermutations }],
@@ -77,7 +86,9 @@
 				{ name: 'period', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'amplitude', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'rsquared', kind: 'column', cardinality: 'one', metric: true },
-				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true }
+				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'bathyphase', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'phase_angle', kind: 'column', cardinality: 'one', metric: true }
 			]
 		}
 	};
@@ -297,29 +308,45 @@
 				? xColForPerm.hoursSinceStart
 				: xColForPerm.getData()
 			: [];
+		const referenceHrs = argsIN.referenceHrs ?? 0;
 		const periodArr = [];
 		const amplitudeArr = [];
 		const rsquaredArr = [];
 		const pvalueArr = [];
+		const bathyphaseArr = [];
+		const phaseAngleArr = [];
 		for (const yId of yINs) {
 			const yr = result.y_results[yId];
 			let period = NaN;
 			let amplitude = NaN;
 			let rsq = NaN;
+			let acrophase = NaN;
 			if (yr) {
 				rsq = yr.fittedData?.rSquared ?? NaN;
 				if (useFixed && yr.fixedStats) {
 					period = fixedPeriod;
 					amplitude = yr.fixedStats.harmonics?.[0]?.amplitude ?? NaN;
+					// fixedStats gives the CLASSICAL acrophase (acrophase_hrs = wrap(-t_peak));
+					// the free branch below feeds bathyphase/phaseAngle the true PEAK time,
+					// so convert here to the same peak-time convention (t_peak = wrap(-acrophase_hrs)).
+					// Without this, bathyphase/phase_angle were sign-inverted in fixed-period mode.
+					const classicalAcro = yr.fixedStats.harmonics?.[0]?.acrophase_hrs ?? NaN;
+					acrophase = wrapToPeriod(-classicalAcro, period);
 				} else {
 					const c = yr.fittedData?.parameters?.cosines?.[0];
 					period = c?.frequency ? (2 * Math.PI) / c.frequency : NaN;
 					amplitude = c?.amplitude ?? NaN;
+					// Free cosine model: A·cos(ω·t + φ) peaks when ω·t + φ = 0, i.e.
+					// t_peak = −φ/ω, wrapped into [0, period). bathyphase/phaseAngle
+					// wrap internally so an unwrapped value here is fine.
+					if (c?.frequency) acrophase = -c.phase / c.frequency;
 				}
 			}
 			periodArr.push(period);
 			amplitudeArr.push(amplitude);
 			rsquaredArr.push(rsq);
+			bathyphaseArr.push(bathyphase(acrophase, period));
+			phaseAngleArr.push(phaseAngleOfEntrainment(acrophase, referenceHrs, period));
 
 			let pValue = NaN;
 			if (argsIN.permuteTest && yr) {
@@ -338,6 +365,8 @@
 		writeScalarOut('amplitude', amplitudeArr);
 		writeScalarOut('rsquared', rsquaredArr);
 		writeScalarOut('pvalue', pvalueArr);
+		writeScalarOut('bathyphase', bathyphaseArr);
+		writeScalarOut('phase_angle', phaseAngleArr);
 	}
 
 	export async function cosinor(argsIN) {
@@ -358,6 +387,7 @@
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
+	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
 	import {
@@ -395,6 +425,7 @@
 		}
 		out += outputX_col?.getDataHash;
 		out += p.args.useFixedPeriod;
+		out += p.args.referenceHrs;
 		out += p.args.permuteTest;
 		out += p.args.nPermutations;
 		out += p.args.permutationSeed;
@@ -473,9 +504,18 @@
 		return ids;
 	});
 
+	// Scalar-metric out-keys (one value per y input). bathyphase/phase_angle were
+	// added after the original period/amplitude/rsquared/pvalue ports, so old
+	// sessions lack their columns; syncMetricOutColumns backfills any missing ones.
+	const METRIC_KEYS = ['period', 'amplitude', 'rsquared', 'pvalue', 'bathyphase', 'phase_angle'];
+
 	onMount(() => {
 		// Create X output column if not present (needed in collected mode)
 		let needsCompute = false;
+		// Backfill scalar-metric out-columns for sessions saved before they existed.
+		if (syncMetricOutColumns(p, METRIC_KEYS, (k) => METRIC_KEYS.includes(k))) {
+			needsCompute = true;
+		}
 		if (p.args.out.cosinorx == null || p.args.out.cosinorx < 0) {
 			if (p.parent) {
 				const xCol = new Column({});
@@ -697,6 +737,12 @@
 			</ControlInput>
 		</div>
 	{/if}
+
+	<div class="control-input-horizontal">
+		<ControlInput label="Reference time (h)">
+			<NumberWithUnits bind:value={p.args.referenceHrs} onInput={() => getCosinor()} step="1" />
+		</ControlInput>
+	</div>
 
 	<div class="tableProcess-label">
 		<span>Permutation test</span>

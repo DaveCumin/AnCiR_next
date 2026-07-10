@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "43": [
+    "47": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "44": [
+    "48": [
       0,
       1,
       2,
@@ -107,45 +107,42 @@
   },
   "data": [
     {
-      "id": 43,
+      "id": 47,
       "name": "x",
-      "data": 43,
+      "data": 47,
       "type": "number",
-      "tableProcessGUId": "7e13a8c1-dbb0-4197-bf08-d42b8c94f215",
+      "tableProcessGUId": "c93a59fa-dbcb-48af-8efe-0d108a5fb8d8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 44,
+      "id": 48,
       "name": "y",
-      "data": 44,
+      "data": 48,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 45,
+      "id": 49,
       "name": "Multiply result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_2",
-      "producerPort": "out_44",
+      "producerPort": "out_48",
       "producerArtifactKind": "column",
-      "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 12,
+      "id": 13,
       "name": "Multiply: before vs after",
       "x": 350,
       "y": 150,
@@ -156,6 +153,8 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "xlimsIN": [
           null,
@@ -199,27 +198,25 @@
         "data": [
           {
             "x": {
-              "id": 46,
+              "id": 50,
               "name": "x",
-              "refId": 43,
+              "refId": 47,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 47,
+              "id": 51,
               "name": "y",
-              "refId": 44,
+              "refId": 48,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to y which is ",
               "processes": []
             },
             "label": "Before",
@@ -240,27 +237,25 @@
           },
           {
             "x": {
-              "id": 48,
+              "id": 52,
               "name": "x",
-              "refId": 43,
+              "refId": 47,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 49,
+              "id": 53,
               "name": "Multiply result",
-              "refId": 45,
+              "refId": 49,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to Multiply result which is ",
               "processes": []
             },
             "label": "After",
@@ -285,7 +280,7 @@
           "position": "topright",
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "#ccc",
+          "borderColor": "var(--color-lightness-80)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
@@ -295,7 +290,7 @@
       }
     },
     {
-      "id": 13,
+      "id": 14,
       "name": "Multiply: values",
       "x": 350,
       "y": 150,
@@ -306,10 +301,12 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "columnRefs": [
-          44,
-          45
+          48,
+          49
         ],
         "showCol": [
           true,
@@ -334,13 +331,14 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 43
+          "result": 47
         }
       },
       "refTPId": null
     }
   ],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [],
   "groups": [],
@@ -352,13 +350,13 @@
       "args": {
         "value": 2,
         "inIN": [
-          44
+          48
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_44": {
+    "data_48": {
       "x": 60,
       "y": 60
     },
@@ -370,11 +368,11 @@
       "x": 440,
       "y": 60
     },
-    "plot_12": {
+    "plot_13": {
       "x": 820,
       "y": 60
     },
-    "plot_13": {
+    "plot_14": {
       "x": 820,
       "y": 560
     }
@@ -390,6 +388,7 @@
     "showDisplayPanel": false,
     "showControlPanel": false,
     "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -428,5 +427,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.9"
+  "version": "β.52.0"
 }

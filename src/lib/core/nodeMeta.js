@@ -384,6 +384,67 @@ const meta = new Map([
 			nodeIcon: 'table',
 			description: 'Tabular display of a table or its summary statistics.'
 		}
+	],
+	[
+		'AverageProfile',
+		{
+			family: 'Analysis',
+			nodeIcon: 'average-profile',
+			description:
+				'Average daily profile — fold a series onto one period and show the per-bin mean (± SEM).'
+		}
+	],
+	[
+		'FreeRunningPeriod',
+		{
+			family: 'Analysis',
+			nodeIcon: 'free-running-period',
+			description:
+				'Auto-estimate each series’ free-running period (τ) from the chi-squared periodogram peak.'
+		}
+	],
+	[
+		'RayleighTest',
+		{
+			family: 'Analysis',
+			nodeIcon: 'circular-stats',
+			description:
+				'Rayleigh test of circular uniformity on phase/angle columns — mean resultant length R, z, and p.'
+		}
+	],
+	[
+		'WatsonWilliams',
+		{
+			family: 'Analysis',
+			nodeIcon: 'circular-stats',
+			description:
+				'Watson–Williams test: do two or more groups of angles share a common mean direction? (F, p).'
+		}
+	],
+	[
+		'CircadianFunctionIndex',
+		{
+			family: 'Analysis',
+			nodeIcon: 'cfi',
+			description:
+				'Circadian Function Index (0–1) summarising rest-activity rhythm robustness from nonparametric IS, IV and RA (Ortiz-Tudela et al. 2010).'
+		}
+	],
+	[
+		'FrequencyFilter',
+		{
+			family: 'Filtering',
+			nodeIcon: 'node-frequency-filter',
+			description: 'FFT-based low-, high-, or band-pass filter over an evenly sampled series.'
+		}
+	],
+	[
+		'meansem',
+		{
+			family: 'Plots',
+			nodeIcon: 'mean-sem',
+			description: 'Mean ± SEM overlay: per-group mean marker with standard-error whiskers.'
+		}
 	]
 ]);
 

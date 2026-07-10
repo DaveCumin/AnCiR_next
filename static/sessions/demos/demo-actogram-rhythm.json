@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "10": [
+    "14": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "11": [
+    "15": [
       0,
       0,
       0,
@@ -343,33 +343,31 @@
   },
   "data": [
     {
-      "id": 10,
+      "id": 14,
       "name": "hour",
-      "data": 10,
+      "data": 14,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 11,
+      "id": 15,
       "name": "activity",
-      "data": 11,
+      "data": 15,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 3,
+      "id": 4,
       "name": "Activity actogram",
       "x": 350,
       "y": 150,
@@ -380,6 +378,8 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "ylimsOption": "overall",
         "ylimsIN": [
@@ -398,6 +398,7 @@
         "lightBands": {
           "bands": []
         },
+        "annotations": [],
         "xAxis": {
           "label": "",
           "gridlines": false,
@@ -407,27 +408,25 @@
         "data": [
           {
             "x": {
-              "id": 12,
+              "id": 16,
               "name": "hour",
-              "refId": 10,
+              "refId": 14,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to hour which is ",
               "processes": []
             },
             "y": {
-              "id": 13,
+              "id": 17,
               "name": "activity",
-              "refId": 11,
+              "refId": 15,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to activity which is ",
               "processes": []
             },
             "colour": "#234154",
@@ -440,6 +439,7 @@
   ],
   "tableProcesses": [],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [],
   "groups": [],
@@ -457,6 +457,7 @@
     "showDisplayPanel": false,
     "showControlPanel": false,
     "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -495,5 +496,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.9"
+  "version": "β.52.0"
 }

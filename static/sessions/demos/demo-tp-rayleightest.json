@@ -1,0 +1,212 @@
+{
+  "rawData": {
+    "255": [
+      1.6,
+      1.3069995314498348,
+      0.857244498652421,
+      0.909627078319944,
+      1.3874066685201507,
+      1.5906350502912094,
+      1.2215821682250596,
+      0.8209113591475552,
+      0.9756062970291084,
+      1.459038535461551,
+      1.5629787125800785,
+      1.1351542254001126,
+      0.8023289499264739,
+      1.052092694454732,
+      1.5185409881167693,
+      1.5183259879255777,
+      1.0517626696649434,
+      0.8023673876282953,
+      1.135504814270326,
+      1.563127839102478,
+      1.458767728931456,
+      0.97531228964754,
+      0.8210248724172968,
+      1.221936904940007
+    ],
+    "256": [
+      0.9604251086933535
+    ],
+    "257": [
+      22.137993345807356
+    ],
+    "258": [
+      1.1671623826276414e-9
+    ]
+  },
+  "data": [
+    {
+      "id": 255,
+      "name": "Rayleigh test input",
+      "data": 255,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 256,
+      "name": "R_45",
+      "data": 256,
+      "type": "number",
+      "tableProcessGUId": "7fef270d-9fc5-4758-bff3-d0b1c888a535",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 257,
+      "name": "z_45",
+      "data": 257,
+      "type": "number",
+      "tableProcessGUId": "7fef270d-9fc5-4758-bff3-d0b1c888a535",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 258,
+      "name": "pvalue_45",
+      "data": 258,
+      "type": "number",
+      "tableProcessGUId": "7fef270d-9fc5-4758-bff3-d0b1c888a535",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    }
+  ],
+  "plots": [
+    {
+      "id": 64,
+      "name": "Rayleigh test result",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "plot": {
+        "columnRefs": [
+          255,
+          256,
+          257,
+          258
+        ],
+        "showCol": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
+    }
+  ],
+  "tableProcesses": [
+    {
+      "id": 45,
+      "name": "RayleighTest",
+      "displayName": "Rayleigh test",
+      "args": {
+        "yIN": [
+          255
+        ],
+        "unit": "radians",
+        "period": 24,
+        "out": {
+          "R": 256,
+          "z": 257,
+          "pvalue": 258
+        }
+      },
+      "refTPId": null
+    }
+  ],
+  "storedValues": {},
+  "chainRefs": [],
+  "nodeNotes": {},
+  "notes": [],
+  "groups": [],
+  "composites": [],
+  "orphanProcesses": [],
+  "nodeLayout": {
+    "data_255": {
+      "x": 60,
+      "y": 60
+    },
+    "tableprocess_45": {
+      "x": 440,
+      "y": 60
+    },
+    "plot_64": {
+      "x": 820,
+      "y": 60
+    }
+  },
+  "appState": {
+    "currentTab": "null",
+    "currentControlTab": "properties",
+    "loadingState": {
+      "isLoading": true,
+      "loadingMsg": "Warming up..."
+    },
+    "showNavbar": true,
+    "showDisplayPanel": false,
+    "showControlPanel": false,
+    "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
+    "windowWidth": 1024,
+    "windowHeight": 768,
+    "widthNavBar": 56,
+    "widthDisplayPanel": 250,
+    "widthControlPanel": 250,
+    "gridSize": 15,
+    "canvasOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "canvasScale": 1,
+    "view": "canvas",
+    "displayTimezone": "utc",
+    "invisiblePlotIds": [],
+    "canvasSelectedNodeId": null,
+    "canvasMultiSelectedCount": 0,
+    "canvasMultiSelectedNodeIds": [],
+    "appColours": [
+      "#234154",
+      "#BE796B",
+      "#3E7295",
+      "#EDADAD",
+      "#A6ACD5",
+      "#83422A",
+      "#6B9FD5",
+      "#4A1E0E",
+      "#fbe67280"
+    ],
+    "showColourPicker": false,
+    "showAYSModal": false,
+    "AYStext": "",
+    "AYScallback": null,
+    "AYSoptions": [
+      "Yes",
+      "No"
+    ],
+    "showWorkflow": false
+  },
+  "version": "β.52.0"
+}

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "138": [
+    "157": [
       "A",
       "B",
       "C",
@@ -52,7 +52,7 @@
       "A",
       "B"
     ],
-    "139": [
+    "158": [
       0,
       6,
       12,
@@ -103,37 +103,63 @@
       15,
       6,
       5
+    ],
+    "159": [
+      96.15862706579921
+    ],
+    "160": [
+      0
     ]
   },
   "data": [
     {
-      "id": 138,
+      "id": 157,
       "name": "Compare groups (stats) input 1",
-      "data": 138,
+      "data": 157,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 139,
+      "id": 158,
       "name": "Compare groups (stats) input 2",
-      "data": 139,
+      "data": 158,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
+      "processes": []
+    },
+    {
+      "id": 159,
+      "name": "statistic_24",
+      "data": 159,
+      "type": "number",
+      "tableProcessGUId": "21dbf392-9f16-4013-83c3-2faa05c317c1",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 160,
+      "name": "pvalue_24",
+      "data": 160,
+      "type": "number",
+      "tableProcessGUId": "21dbf392-9f16-4013-83c3-2faa05c317c1",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 37,
+      "id": 42,
       "name": "Compare groups (stats): groups",
       "x": 350,
       "y": 150,
@@ -144,6 +170,8 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "xlimsIN": [
           null,
@@ -174,27 +202,25 @@
         "data": [
           {
             "x": {
-              "id": 140,
+              "id": 161,
               "name": "Compare groups (stats) input 1",
-              "refId": 138,
+              "refId": 157,
               "type": "category",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to Compare groups (stats) input 1 which is ",
               "processes": []
             },
             "y": {
-              "id": 141,
+              "id": 162,
               "name": "Compare groups (stats) input 2",
-              "refId": 139,
+              "refId": 158,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to Compare groups (stats) input 2 which is ",
               "processes": []
             },
             "label": "Box Plot 1",
@@ -222,7 +248,7 @@
           "position": "topright",
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "#ccc",
+          "borderColor": "var(--color-lightness-80)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
@@ -242,42 +268,46 @@
   ],
   "tableProcesses": [
     {
-      "id": 21,
+      "id": 24,
       "name": "GroupComparison",
       "displayName": "Compare groups (stats)",
       "args": {
-        "xIN": 138,
+        "xIN": 157,
         "yIN": [
-          139
+          158
         ],
         "method": "auto",
         "alpha": 0.05,
         "postHocEnabled": true,
-        "out": {}
+        "out": {
+          "statistic": 159,
+          "pvalue": 160
+        }
       },
       "refTPId": null
     }
   ],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_138": {
+    "data_157": {
       "x": 60,
       "y": 60
     },
-    "data_139": {
+    "data_158": {
       "x": 60,
       "y": 560
     },
-    "tableprocess_21": {
+    "tableprocess_24": {
       "x": 440,
       "y": 60
     },
-    "plot_37": {
+    "plot_42": {
       "x": 820,
       "y": 60
     }
@@ -293,6 +323,7 @@
     "showDisplayPanel": false,
     "showControlPanel": false,
     "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -331,5 +362,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.9"
+  "version": "β.52.0"
 }

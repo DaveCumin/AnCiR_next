@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "57": [
+    "61": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "58": [
+    "62": [
       0,
       1,
       2,
@@ -104,7 +104,7 @@
       48,
       49
     ],
-    "59": [
+    "63": [
       0,
       1,
       2,
@@ -159,57 +159,53 @@
   },
   "data": [
     {
-      "id": 57,
+      "id": 61,
       "name": "x",
-      "data": 57,
+      "data": 61,
       "type": "number",
-      "tableProcessGUId": "da62a084-7d96-430a-84e5-485063b31cba",
+      "tableProcessGUId": "e3858aab-3b72-43f1-a772-b0322578a936",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 58,
+      "id": 62,
       "name": "y",
-      "data": 58,
+      "data": 62,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 59,
+      "id": 63,
       "name": "reference",
-      "data": 59,
+      "data": 63,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 60,
+      "id": 64,
       "name": "Filter result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_4",
-      "producerPort": "out_58",
+      "producerPort": "out_62",
       "producerArtifactKind": "column",
-      "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 16,
+      "id": 17,
       "name": "Filter: before vs after",
       "x": 350,
       "y": 150,
@@ -220,6 +216,8 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "xlimsIN": [
           null,
@@ -263,27 +261,25 @@
         "data": [
           {
             "x": {
-              "id": 61,
+              "id": 65,
               "name": "x",
-              "refId": 57,
+              "refId": 61,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 62,
+              "id": 66,
               "name": "y",
-              "refId": 58,
+              "refId": 62,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to y which is ",
               "processes": []
             },
             "label": "Before",
@@ -304,27 +300,25 @@
           },
           {
             "x": {
-              "id": 63,
+              "id": 67,
               "name": "x",
-              "refId": 57,
+              "refId": 61,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 64,
+              "id": 68,
               "name": "Filter result",
-              "refId": 60,
+              "refId": 64,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to Filter result which is ",
               "processes": []
             },
             "label": "After",
@@ -349,7 +343,7 @@
           "position": "topright",
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "#ccc",
+          "borderColor": "var(--color-lightness-80)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
@@ -359,7 +353,7 @@
       }
     },
     {
-      "id": 17,
+      "id": 18,
       "name": "Filter: values",
       "x": 350,
       "y": 150,
@@ -370,10 +364,12 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "columnRefs": [
-          58,
-          60
+          62,
+          64
         ],
         "showCol": [
           true,
@@ -398,13 +394,14 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 57
+          "result": 61
         }
       },
       "refTPId": null
     }
   ],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [],
   "groups": [],
@@ -416,24 +413,24 @@
       "args": {
         "conditions": [
           {
-            "byColId": 59,
+            "byColId": 63,
             "isOperator": ">",
             "byColValue": 2
           }
         ],
         "inIN": [
-          58
+          62
         ],
-        "parentColId": 58
+        "parentColId": 62
       }
     }
   ],
   "nodeLayout": {
-    "data_58": {
+    "data_62": {
       "x": 60,
       "y": 60
     },
-    "data_59": {
+    "data_63": {
       "x": 60,
       "y": 560
     },
@@ -445,11 +442,11 @@
       "x": 440,
       "y": 60
     },
-    "plot_16": {
+    "plot_17": {
       "x": 820,
       "y": 60
     },
-    "plot_17": {
+    "plot_18": {
       "x": 820,
       "y": 560
     }
@@ -465,6 +462,7 @@
     "showDisplayPanel": false,
     "showControlPanel": false,
     "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -503,5 +501,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.9"
+  "version": "β.52.0"
 }

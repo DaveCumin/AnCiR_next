@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "26": [
+    "30": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "27": [
+    "31": [
       50,
       60,
       70,
@@ -100,7 +100,7 @@
       30,
       40
     ],
-    "28": [
+    "32": [
       30,
       30,
       29,
@@ -153,45 +153,42 @@
   },
   "data": [
     {
-      "id": 26,
+      "id": 30,
       "name": "hour",
-      "data": 26,
+      "data": 30,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 27,
+      "id": 31,
       "name": "signalA",
-      "data": 27,
+      "data": 31,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 28,
+      "id": 32,
       "name": "signalB",
-      "data": 28,
+      "data": 32,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 7,
+      "id": 8,
       "name": "Signal table",
       "x": 350,
       "y": 150,
@@ -202,11 +199,13 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "columnRefs": [
-          26,
-          27,
-          28
+          30,
+          31,
+          32
         ],
         "showCol": [
           true,
@@ -222,6 +221,7 @@
   ],
   "tableProcesses": [],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [],
   "groups": [],
@@ -239,6 +239,7 @@
     "showDisplayPanel": false,
     "showControlPanel": false,
     "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -277,5 +278,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.9"
+  "version": "β.52.0"
 }

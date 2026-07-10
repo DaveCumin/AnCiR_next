@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "50": [
+    "54": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "51": [
+    "55": [
       0,
       1,
       2,
@@ -107,45 +107,42 @@
   },
   "data": [
     {
-      "id": 50,
+      "id": 54,
       "name": "x",
-      "data": 50,
+      "data": 54,
       "type": "number",
-      "tableProcessGUId": "33e3b9f1-73b2-43ca-b332-c156533bd98d",
+      "tableProcessGUId": "7c4182e0-c623-4df6-bc9c-479d76791012",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 51,
+      "id": 55,
       "name": "y",
-      "data": 51,
+      "data": 55,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 52,
+      "id": 56,
       "name": "Edit value result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_3",
-      "producerPort": "out_51",
+      "producerPort": "out_55",
       "producerArtifactKind": "column",
-      "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 14,
+      "id": 15,
       "name": "Edit value: before vs after",
       "x": 350,
       "y": 150,
@@ -156,6 +153,8 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "xlimsIN": [
           null,
@@ -199,27 +198,25 @@
         "data": [
           {
             "x": {
-              "id": 53,
+              "id": 57,
               "name": "x",
-              "refId": 50,
+              "refId": 54,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 54,
+              "id": 58,
               "name": "y",
-              "refId": 51,
+              "refId": 55,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to y which is ",
               "processes": []
             },
             "label": "Before",
@@ -240,27 +237,25 @@
           },
           {
             "x": {
-              "id": 55,
+              "id": 59,
               "name": "x",
-              "refId": 50,
+              "refId": 54,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 56,
+              "id": 60,
               "name": "Edit value result",
-              "refId": 52,
+              "refId": 56,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to Edit value result which is ",
               "processes": []
             },
             "label": "After",
@@ -285,7 +280,7 @@
           "position": "topright",
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "#ccc",
+          "borderColor": "var(--color-lightness-80)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
@@ -295,7 +290,7 @@
       }
     },
     {
-      "id": 15,
+      "id": 16,
       "name": "Edit value: values",
       "x": 350,
       "y": 150,
@@ -306,10 +301,12 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "columnRefs": [
-          51,
-          52
+          55,
+          56
         ],
         "showCol": [
           true,
@@ -334,13 +331,14 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 50
+          "result": 54
         }
       },
       "refTPId": null
     }
   ],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [],
   "groups": [],
@@ -357,13 +355,13 @@
           }
         ],
         "inIN": [
-          51
+          55
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_51": {
+    "data_55": {
       "x": 60,
       "y": 60
     },
@@ -375,11 +373,11 @@
       "x": 440,
       "y": 60
     },
-    "plot_14": {
+    "plot_15": {
       "x": 820,
       "y": 60
     },
-    "plot_15": {
+    "plot_16": {
       "x": 820,
       "y": 560
     }
@@ -395,6 +393,7 @@
     "showDisplayPanel": false,
     "showControlPanel": false,
     "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -433,5 +432,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.9"
+  "version": "β.52.0"
 }

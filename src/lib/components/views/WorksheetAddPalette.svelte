@@ -108,7 +108,8 @@
 		'wide-to-long',
 		'actogram',
 		'boxplot',
-		'histogram'
+		'histogram',
+		'mean-sem'
 	]);
 
 	function resolveIcon(name) {
@@ -181,7 +182,12 @@
 		// select it and open the control panel so the user picks data/columns there.
 		const displayName = appConsts.plotMap.get(item.type)?.displayName ?? item.type;
 		const pos = nextPlotSpawnPosition();
-		const plot = mutationService.addPlot({ name: displayName, type: item.type, x: pos.x, y: pos.y });
+		const plot = mutationService.addPlot({
+			name: displayName,
+			type: item.type,
+			x: pos.x,
+			y: pos.y
+		});
 		closeMenu();
 		if (!plot) return;
 		deselectAllPlots();

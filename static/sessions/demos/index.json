@@ -1,16 +1,7 @@
 {
   "version": 1,
-  "count": 42,
+  "count": 48,
   "sessions": [
-    {
-      "id": "dataset-testdata",
-      "name": "Test data",
-      "family": "Sources",
-      "description": "Data with two simulated rhythms and outliers",
-      "url": "sessions/demos/testData.csv",
-      "kind": "dataset",
-      "keywords": "test data data with two simulated rhythms and outliers sources csv url example"
-    },
     {
       "id": "tp-blankcolumn",
       "name": "Enter Data",
@@ -166,6 +157,18 @@
         "RemoveTrend"
       ],
       "keywords": "remove trend remove a fitted trend (linear, polynomial, etc.) from the column. filtering removetrend"
+    },
+    {
+      "id": "process-frequencyfilter",
+      "name": "Frequency Filter",
+      "family": "Filtering",
+      "description": "FFT-based low-, high-, or band-pass filter over an evenly sampled series.",
+      "url": "sessions/demos/demo-process-frequencyfilter.json",
+      "kind": "process",
+      "showcases": [
+        "FrequencyFilter"
+      ],
+      "keywords": "frequency filter fft-based low-, high-, or band-pass filter over an evenly sampled series. filtering frequencyfilter"
     },
     {
       "id": "tp-sort",
@@ -324,6 +327,66 @@
       "keywords": "nonparametric ra nonparametric rest-activity variables (is, iv, ra, m10/l5) — robust to non-sinusoidal rhythms. analysis nonparametricra"
     },
     {
+      "id": "tp-averageprofile",
+      "name": "Average Profile",
+      "family": "Analysis",
+      "description": "Average daily profile — fold a series onto one period and show the per-bin mean (± SEM).",
+      "url": "sessions/demos/demo-tp-averageprofile.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "AverageProfile"
+      ],
+      "keywords": "average profile average daily profile — fold a series onto one period and show the per-bin mean (± sem). analysis averageprofile"
+    },
+    {
+      "id": "tp-freerunningperiod",
+      "name": "Free-Running Period",
+      "family": "Analysis",
+      "description": "Auto-estimate each series’ free-running period (τ) from the chi-squared periodogram peak.",
+      "url": "sessions/demos/demo-tp-freerunningperiod.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "FreeRunningPeriod"
+      ],
+      "keywords": "free-running period auto-estimate each series’ free-running period (τ) from the chi-squared periodogram peak. analysis freerunningperiod"
+    },
+    {
+      "id": "tp-rayleightest",
+      "name": "Rayleigh test",
+      "family": "Analysis",
+      "description": "Rayleigh test of circular uniformity on phase/angle columns — mean resultant length R, z, and p.",
+      "url": "sessions/demos/demo-tp-rayleightest.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "RayleighTest"
+      ],
+      "keywords": "rayleigh test rayleigh test of circular uniformity on phase/angle columns — mean resultant length r, z, and p. analysis rayleightest"
+    },
+    {
+      "id": "tp-watsonwilliams",
+      "name": "Watson-Williams test",
+      "family": "Analysis",
+      "description": "Watson–Williams test: do two or more groups of angles share a common mean direction? (F, p).",
+      "url": "sessions/demos/demo-tp-watsonwilliams.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "WatsonWilliams"
+      ],
+      "keywords": "watson-williams test watson–williams test: do two or more groups of angles share a common mean direction? (f, p). analysis watsonwilliams"
+    },
+    {
+      "id": "tp-circadianfunctionindex",
+      "name": "Circadian Function Index",
+      "family": "Analysis",
+      "description": "Circadian Function Index (0–1) summarising rest-activity rhythm robustness from nonparametric IS, IV and RA (Ortiz-Tudela et al. 2010).",
+      "url": "sessions/demos/demo-tp-circadianfunctionindex.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "CircadianFunctionIndex"
+      ],
+      "keywords": "circadian function index circadian function index (0–1) summarising rest-activity rhythm robustness from nonparametric is, iv and ra (ortiz-tudela et al. 2010). analysis circadianfunctionindex"
+    },
+    {
       "id": "process-editvalue",
       "name": "Edit value",
       "family": "Transform",
@@ -357,7 +420,7 @@
       "showcases": [
         "ColumnSet"
       ],
-      "keywords": "column set curate a live subset of columns by name/label and reuse it as one wire. transform columnset filter subset bundle"
+      "keywords": "column set curate a live subset of columns by name/label and reuse it as one wire. transform columnset"
     },
     {
       "id": "tp-longtowide",
@@ -442,6 +505,18 @@
         "boxplot"
       ],
       "keywords": "boxplot — activity by day boxplot of daily activity values grouped by day index (7 days × 24 hourly points). plots boxplot"
+    },
+    {
+      "id": "meansem-by-day",
+      "name": "Mean ± SEM — activity by day",
+      "family": "Plots",
+      "description": "Per-day mean activity with standard-error whiskers (7 days × 24 hourly points).",
+      "url": "sessions/demos/demo-meansem-by-day.json",
+      "kind": "plot",
+      "showcases": [
+        "meansem"
+      ],
+      "keywords": "mean ± sem — activity by day per-day mean activity with standard-error whiskers (7 days × 24 hourly points). plots meansem"
     },
     {
       "id": "actogram-rhythm",

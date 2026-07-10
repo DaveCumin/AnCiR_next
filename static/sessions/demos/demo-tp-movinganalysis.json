@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "149": [
+    "170": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "150": [
+    "171": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "151": [
+    "172": [
       84,
       108,
       132,
@@ -685,7 +685,7 @@
       204,
       228
     ],
-    "152": [
+    "173": [
       24,
       24,
       24,
@@ -694,7 +694,7 @@
       24,
       24
     ],
-    "153": [
+    "174": [
       83.49999999999999,
       83.49999999999999,
       83.50000000000003,
@@ -706,69 +706,64 @@
   },
   "data": [
     {
-      "id": 149,
+      "id": 170,
       "name": "x",
-      "data": 149,
+      "data": 170,
       "type": "number",
-      "tableProcessGUId": "e68fbdd8-7ca3-48dc-886b-80a516c57e87",
+      "tableProcessGUId": "7698c5f5-8183-427b-b000-72e67683d9db",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 150,
+      "id": 171,
       "name": "y",
-      "data": 150,
+      "data": 171,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 151,
-      "name": "movex_24",
-      "data": 151,
+      "id": 172,
+      "name": "movex_27",
+      "data": 172,
       "type": "number",
-      "tableProcessGUId": "5f983c5e-44df-41d0-ad0c-1bafcd028791",
+      "tableProcessGUId": "356e4c55-1c64-4bb4-a2ee-b8f987a8ff52",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 152,
-      "name": "150_peak_period_24",
-      "data": 152,
+      "id": 173,
+      "name": "171_peak_period_27",
+      "data": 173,
       "type": "number",
-      "tableProcessGUId": "5f983c5e-44df-41d0-ad0c-1bafcd028791",
+      "tableProcessGUId": "356e4c55-1c64-4bb4-a2ee-b8f987a8ff52",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 153,
-      "name": "150_peak_power_24",
-      "data": 153,
+      "id": 174,
+      "name": "171_peak_power_27",
+      "data": 174,
       "type": "number",
-      "tableProcessGUId": "5f983c5e-44df-41d0-ad0c-1bafcd028791",
+      "tableProcessGUId": "356e4c55-1c64-4bb4-a2ee-b8f987a8ff52",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 39,
+      "id": 44,
       "name": "Moving Analysis: signal + moving period",
       "x": 350,
       "y": 150,
@@ -779,6 +774,8 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "xlimsIN": [
           null,
@@ -822,27 +819,25 @@
         "data": [
           {
             "x": {
-              "id": 154,
+              "id": 175,
               "name": "x",
-              "refId": 149,
+              "refId": 170,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to x which is ",
               "processes": []
             },
             "y": {
-              "id": 155,
+              "id": 176,
               "name": "y",
-              "refId": 150,
+              "refId": 171,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to y which is ",
               "processes": []
             },
             "label": "Signal",
@@ -863,27 +858,25 @@
           },
           {
             "x": {
-              "id": 156,
-              "name": "movex_24",
-              "refId": 151,
+              "id": 177,
+              "name": "movex_27",
+              "refId": 172,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to movex_24 which is ",
               "processes": []
             },
             "y": {
-              "id": 157,
-              "name": "150_peak_period_24",
-              "refId": 152,
+              "id": 178,
+              "name": "171_peak_period_27",
+              "refId": 173,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to 150_peak_period_24 which is ",
               "processes": []
             },
             "label": "Moving period",
@@ -908,7 +901,7 @@
           "position": "topright",
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "#ccc",
+          "borderColor": "var(--color-lightness-80)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
@@ -918,7 +911,7 @@
       }
     },
     {
-      "id": 40,
+      "id": 45,
       "name": "Moving Analysis: result",
       "x": 350,
       "y": 150,
@@ -929,11 +922,13 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "columnRefs": [
-          151,
-          152,
-          153
+          172,
+          173,
+          174
         ],
         "showCol": [
           true,
@@ -949,7 +944,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 23,
+      "id": 26,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -959,19 +954,19 @@
         "count": 336,
         "end": 335,
         "out": {
-          "result": 149
+          "result": 170
         }
       },
       "refTPId": null
     },
     {
-      "id": 24,
+      "id": 27,
       "name": "MovingAnalysis",
       "displayName": "Moving Analysis",
       "args": {
-        "xIN": 149,
+        "xIN": 170,
         "yIN": [
-          150
+          171
         ],
         "windowSize": 168,
         "stepSize": 24,
@@ -990,38 +985,39 @@
         "alpha": 0.05,
         "preProcesses": [],
         "out": {
-          "movex": 151,
-          "150_peak_period": 152,
-          "150_peak_power": 153
+          "movex": 172,
+          "171_peak_period": 173,
+          "171_peak_power": 174
         }
       },
       "refTPId": null
     }
   ],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_150": {
+    "data_171": {
       "x": 60,
       "y": 60
     },
-    "tableprocess_23": {
+    "tableprocess_26": {
       "x": 60,
       "y": 560
     },
-    "tableprocess_24": {
+    "tableprocess_27": {
       "x": 440,
       "y": 60
     },
-    "plot_39": {
+    "plot_44": {
       "x": 820,
       "y": 60
     },
-    "plot_40": {
+    "plot_45": {
       "x": 820,
       "y": 560
     }
@@ -1037,6 +1033,7 @@
     "showDisplayPanel": false,
     "showControlPanel": false,
     "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -1075,5 +1072,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.9"
+  "version": "β.52.0"
 }

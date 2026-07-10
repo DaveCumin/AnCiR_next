@@ -4,9 +4,11 @@
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import Hist from '$lib/components/plotbits/Hist.svelte';
+	import Line from '$lib/components/plotbits/Line.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { binData, max } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import { gaussianKDE } from '$lib/utils/kde.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import { niceAxisLimit } from '$lib/plots/Boxplot/Boxplot.svelte';
 
@@ -30,6 +32,9 @@
 		fillOpacity = $state(0.5);
 		strokeWidth = $state(1);
 		stroke = $state('#000000');
+		showDensity = $state(false);
+		bandwidth = $state(/** @type {number|null} */ (null)); // null = Silverman auto
+		showCounts = $state(false);
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
@@ -49,6 +54,10 @@
 			this.fillOpacity = dataIN?.fillOpacity ?? 0.5;
 			this.strokeWidth = dataIN?.strokeWidth ?? 1;
 			this.stroke = dataIN?.stroke ?? '#000000';
+			// New fields; tolerate old sessions (undefined → defaults).
+			this.showDensity = dataIN?.showDensity ?? false;
+			this.bandwidth = dataIN?.bandwidth ?? null;
+			this.showCounts = dataIN?.showCounts ?? false;
 		}
 
 		autoBinStart = $derived.by(() => {
@@ -84,6 +93,39 @@
 			);
 		});
 
+		// Derived: Gaussian KDE curve, scaled to the COUNT axis so it overlays the
+		// bars. A density f(x) predicts ≈ N·binWidth·f(x) counts in a bin of that
+		// width, so the overlay height is density × N × binWidth. Returns
+		// { x:number[], y:number[] } in data coords (empty when off / not enough data).
+		density = $derived.by(() => {
+			if (!this.showDensity) return { x: [], y: [] };
+			const values = this.column?.getData?.() ?? [];
+			if (this.column?.type === 'time' || values.length === 0) return { x: [], y: [] };
+			const valid = values.filter((v) => v != null && !isNaN(v));
+			if (valid.length < 2) return { x: [], y: [] };
+			const kde = gaussianKDE(valid, {
+				bandwidth: this.bandwidth != null && this.bandwidth > 0 ? this.bandwidth : null,
+				gridSize: 128
+			});
+			if (kde.x.length === 0) return { x: [], y: [] };
+			const b = this.binned;
+			let binWidth;
+			if (this.binMode === 'cuts') {
+				// Custom edges: variable widths → use the mean bin width for scaling.
+				let sum = 0;
+				let count = 0;
+				for (let i = 0; i < b.bins.length; i++) {
+					sum += b.binEnds[i] - b.bins[i];
+					count++;
+				}
+				binWidth = count > 0 ? sum / count : 1;
+			} else {
+				binWidth = this.binSize;
+			}
+			const scale = valid.length * binWidth;
+			return { x: kde.x, y: kde.density.map((d) => d * scale) };
+		});
+
 		getLegendItem() {
 			return {
 				label: this.label,
@@ -111,7 +153,10 @@
 				fillColour: this.fillColour,
 				fillOpacity: this.fillOpacity,
 				strokeWidth: this.strokeWidth,
-				stroke: this.stroke
+				stroke: this.stroke,
+				showDensity: this.showDensity,
+				bandwidth: this.bandwidth,
+				showCounts: this.showCounts
 			};
 		}
 
@@ -194,7 +239,9 @@
 			this.data.forEach((d) => {
 				const b = d.binned;
 				for (let i = 0; i < b.bins.length; i++) {
-					const row = multiSeries ? [d.label, b.bins[i], b.binEnds[i], b.y_out[i]] : [b.bins[i], b.binEnds[i], b.y_out[i]];
+					const row = multiSeries
+						? [d.label, b.bins[i], b.binEnds[i], b.y_out[i]]
+						: [b.bins[i], b.binEnds[i], b.y_out[i]];
 					rows.push(row);
 				}
 			});
@@ -422,7 +469,11 @@
 				</ControlInput>
 				{#if theData.xlimsIN[0] != null || theData.xlimsIN[1] != null}
 					<div class="control-component-input-icons">
-						<button class="icon" onclick={() => (theData.xlimsIN = [null, null])} title="Revert to automatic range">
+						<button
+							class="icon"
+							onclick={() => (theData.xlimsIN = [null, null])}
+							title="Revert to automatic range"
+						>
 							<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
 						</button>
 					</div>
@@ -462,22 +513,21 @@
 
 					<div class="data-wrapper">
 						<div class="y-select">
-							<ControlInput label="Column">
-							</ControlInput>
+							<ControlInput label="Column"></ControlInput>
 							<Column col={datum.column} canChange={true} />
 						</div>
 
 						{#if datum.column?.type === 'time'}
 							<div class="data-warning">
-								<p>⚠ Histograms of time-typed columns are not supported in this version. Pick a numeric column.</p>
+								<p>
+									⚠ Histograms of time-typed columns are not supported in this version. Pick a
+									numeric column.
+								</p>
 							</div>
 						{/if}
 
 						<ControlInput label="Bin mode">
-							<select
-								bind:value={datum.binMode}
-								disabled={datum.column?.type === 'time'}
-							>
+							<select bind:value={datum.binMode} disabled={datum.column?.type === 'time'}>
 								<option value="uniform">Uniform</option>
 								<option value="cuts">Custom edges</option>
 							</select>
@@ -515,8 +565,17 @@
 								</ControlInput>
 								{#if datum.binStart != null}
 									<div class="control-component-input-icons">
-										<button class="icon" onclick={() => (datum.binStart = null)} title="Revert to automatic bin start">
-											<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
+										<button
+											class="icon"
+											onclick={() => (datum.binStart = null)}
+											title="Revert to automatic bin start"
+										>
+											<Icon
+												name="reset"
+												width={14}
+												height={14}
+												className="control-component-input-icon"
+											/>
 										</button>
 									</div>
 								{/if}
@@ -525,7 +584,10 @@
 
 						{#if datum.binned.droppedCount > 0}
 							<div class="data-warning">
-								<p>⚠ {datum.binned.droppedCount} value{datum.binned.droppedCount === 1 ? '' : 's'} dropped (outside bin range)</p>
+								<p>
+									⚠ {datum.binned.droppedCount} value{datum.binned.droppedCount === 1 ? '' : 's'} dropped
+									(outside bin range)
+								</p>
 							</div>
 						{/if}
 
@@ -545,6 +607,59 @@
 								<NumberWithUnits bind:value={datum.strokeWidth} min="0" step="0.5" />
 							</ControlInput>
 						</div>
+
+						<div class="control-input-checkbox" style="margin-top: var(--space-3);">
+							<input
+								type="checkbox"
+								bind:checked={datum.showCounts}
+								disabled={datum.column?.type === 'time'}
+							/>
+							<p>Show count labels</p>
+						</div>
+
+						<div class="control-input-checkbox" style="margin-top: var(--space-2);">
+							<input
+								type="checkbox"
+								bind:checked={datum.showDensity}
+								disabled={datum.column?.type === 'time'}
+							/>
+							<p>Show density curve (KDE)</p>
+						</div>
+
+						{#if datum.showDensity}
+							<div class="control-input-horizontal">
+								<ControlInput label="Bandwidth (blank = auto)">
+									<input
+										type="number"
+										min="0"
+										step="0.1"
+										value={datum.bandwidth ?? ''}
+										placeholder="auto"
+										oninput={(e) => {
+											const target = /** @type {HTMLInputElement} */ (e.currentTarget);
+											const n = parseFloat(target.value);
+											datum.bandwidth = isNaN(n) || n <= 0 ? null : n;
+										}}
+									/>
+								</ControlInput>
+								{#if datum.bandwidth != null}
+									<div class="control-component-input-icons">
+										<button
+											class="icon"
+											onclick={() => (datum.bandwidth = null)}
+											title="Revert to automatic bandwidth (Silverman)"
+										>
+											<Icon
+												name="reset"
+												width={14}
+												height={14}
+												className="control-component-input-icon"
+											/>
+										</button>
+									</div>
+								{/if}
+							</div>
+						{/if}
 					</div>
 					<div class="div-line"></div>
 				</div>
@@ -589,7 +704,11 @@
 		{#each theData.plot.data as datum}
 			{@const b = datum.binned}
 			{#if b.bins.length > 0}
-				<g style:fill-opacity={datum.fillOpacity} style:stroke={datum.stroke} style:stroke-width={datum.strokeWidth}>
+				<g
+					style:fill-opacity={datum.fillOpacity}
+					style:stroke={datum.stroke}
+					style:stroke-width={datum.strokeWidth}
+				>
 					<Hist
 						xStart={b.bins}
 						xEnd={b.binEnds}
@@ -601,6 +720,40 @@
 						yoffset={theData.plot.padding.top}
 					/>
 				</g>
+
+				{#if datum.showDensity && datum.density.x.length > 1}
+					<Line
+						lineData={{
+							draw: true,
+							colour: datum.stroke,
+							strokeWidth: Math.max(1.5, datum.strokeWidth),
+							stroke: 'solid',
+							joinGaps: true
+						}}
+						x={datum.density.x}
+						y={datum.density.y}
+						xscale={xScale}
+						yscale={yScale}
+						xoffset={theData.plot.padding.left}
+						yoffset={theData.plot.padding.top}
+						which="plot"
+					/>
+				{/if}
+
+				{#if datum.showCounts}
+					{#each b.bins as _binStart, i}
+						{#if b.y_out[i] > 0}
+							<text
+								x={xScale((b.bins[i] + b.binEnds[i]) / 2) + theData.plot.padding.left}
+								y={yScale(b.y_out[i]) + theData.plot.padding.top - 3}
+								text-anchor="middle"
+								font-size="10"
+								fill="var(--color-text)"
+								style="pointer-events: none;">{b.y_out[i]}</text
+							>
+						{/if}
+					{/each}
+				{/if}
 			{/if}
 		{/each}
 

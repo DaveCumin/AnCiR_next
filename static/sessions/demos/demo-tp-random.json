@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "158": [
+    "179": [
       9.23,
       3.33,
       1.98,
@@ -55,21 +55,20 @@
   },
   "data": [
     {
-      "id": 158,
-      "name": "result_25",
-      "data": 158,
+      "id": 179,
+      "name": "result_28",
+      "data": 179,
       "type": "number",
-      "tableProcessGUId": "6f1f89a3-cbc5-480a-834b-73b1d3d75be1",
+      "tableProcessGUId": "67213e0a-9cab-4a3e-9a03-5e85eb956d46",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 41,
+      "id": 46,
       "name": "Random result",
       "x": 350,
       "y": 150,
@@ -80,9 +79,11 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "columnRefs": [
-          158
+          179
         ],
         "showCol": [
           true
@@ -96,7 +97,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 25,
+      "id": 28,
       "name": "Random",
       "displayName": "Random",
       "args": {
@@ -106,24 +107,25 @@
         "seed": 12345,
         "distribution": "uniform",
         "out": {
-          "result": 158
+          "result": 179
         }
       },
       "refTPId": null
     }
   ],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_25": {
+    "tableprocess_28": {
       "x": 60,
       "y": 60
     },
-    "plot_41": {
+    "plot_46": {
       "x": 820,
       "y": 60
     }
@@ -139,6 +141,7 @@
     "showDisplayPanel": false,
     "showControlPanel": false,
     "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -177,5 +180,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.9"
+  "version": "β.52.0"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "191": [
+    "212": [
       "2024-01-01T00:00:00.000Z",
       "2024-01-01T01:00:00.000Z",
       "2024-01-01T02:00:00.000Z",
@@ -50,7 +50,7 @@
       "2024-01-02T22:00:00.000Z",
       "2024-01-02T23:00:00.000Z"
     ],
-    "192": [
+    "213": [
       100,
       100,
       100,
@@ -103,34 +103,32 @@
   },
   "data": [
     {
-      "id": 191,
-      "name": "time_32",
-      "data": 191,
+      "id": 212,
+      "name": "time_35",
+      "data": 212,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "e1980e0d-b407-416f-ac0d-0b7d0a8b417a",
+      "tableProcessGUId": "d62bb812-e689-476f-8db1-87c4ba787c82",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
-      "id": 192,
-      "name": "values_32",
-      "data": 192,
+      "id": 213,
+      "name": "values_35",
+      "data": 213,
       "type": "number",
-      "tableProcessGUId": "e1980e0d-b407-416f-ac0d-0b7d0a8b417a",
+      "tableProcessGUId": "d62bb812-e689-476f-8db1-87c4ba787c82",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 49,
+      "id": 54,
       "name": "Simulate Data result",
       "x": 350,
       "y": 150,
@@ -141,10 +139,12 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "columnRefs": [
-          191,
-          192
+          212,
+          213
         ],
         "showCol": [
           true,
@@ -159,7 +159,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 32,
+      "id": 35,
       "name": "SimulatedData",
       "displayName": "Simulate Data",
       "args": {
@@ -177,25 +177,26 @@
         ],
         "samplingPeriod_hours": 1,
         "out": {
-          "time": 191,
-          "values": 192
+          "time": 212,
+          "values": 213
         }
       },
       "refTPId": null
     }
   ],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_32": {
+    "tableprocess_35": {
       "x": 60,
       "y": 60
     },
-    "plot_49": {
+    "plot_54": {
       "x": 820,
       "y": 60
     }
@@ -211,6 +212,7 @@
     "showDisplayPanel": false,
     "showControlPanel": false,
     "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -249,5 +251,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.9"
+  "version": "β.52.0"
 }

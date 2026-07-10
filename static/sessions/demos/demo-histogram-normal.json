@@ -513,7 +513,6 @@
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     }
   ],
@@ -530,6 +529,8 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
       "plot": {
         "xlimsIN": [
           null,
@@ -568,7 +569,6 @@
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to measurement which is ",
               "processes": []
             },
             "label": "Histogram 1",
@@ -581,7 +581,10 @@
             "fillColour": "#234154",
             "fillOpacity": 0.5,
             "strokeWidth": 1,
-            "stroke": "#000000"
+            "stroke": "#000000",
+            "showDensity": false,
+            "bandwidth": null,
+            "showCounts": false
           }
         ],
         "legend": {
@@ -589,7 +592,7 @@
           "position": "topright",
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "#ccc",
+          "borderColor": "var(--color-lightness-80)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
@@ -600,6 +603,7 @@
   ],
   "tableProcesses": [],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [],
   "groups": [],
@@ -617,6 +621,7 @@
     "showDisplayPanel": false,
     "showControlPanel": false,
     "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -655,5 +660,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.45.9"
+  "version": "β.52.0"
 }
