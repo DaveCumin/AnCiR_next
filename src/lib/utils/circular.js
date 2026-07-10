@@ -31,6 +31,24 @@ export function toRadians(v, unit = 'radians', period = 24) {
 	return v;
 }
 
+/**
+ * Convert a raw data column to radians per the chosen unit. Empty / null /
+ * whitespace / non-numeric cells become NaN (dropped downstream by
+ * cleanAngles) rather than a real 0-rad angle that would bias the mean.
+ * @param {any[]} data
+ * @param {'radians'|'degrees'|'hours'} [unit='radians']
+ * @param {number} [period=24]
+ * @returns {number[]}
+ */
+export function toRadiansColumn(data, unit = 'radians', period = 24) {
+	return (data ?? []).map((v) => {
+		if (v == null) return NaN;
+		if (typeof v === 'string' && v.trim() === '') return NaN;
+		const num = Number(v);
+		return Number.isFinite(num) ? toRadians(num, unit, period) : NaN;
+	});
+}
+
 /** Keep only finite entries; convert to Number. */
 function cleanAngles(anglesRad) {
 	const out = [];

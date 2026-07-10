@@ -15,7 +15,12 @@
 	// ww_pvalue are the optional Watson-Williams metrics (a single value; NaN when
 	// the test is off), like Cosinor's mode-specific ports.
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { rayleighTest, circularMean, watsonWilliams, toRadians } from '$lib/utils/circular.js';
+	import {
+		rayleighTest,
+		circularMean,
+		watsonWilliams,
+		toRadiansColumn
+	} from '$lib/utils/circular.js';
 	// A bare `export { x } from './y.js'` re-export does NOT bind `x` in this
 	// module's own scope, and pUpperFromF is used internally below (in
 	// watsonWilliams's callback) — so import it normally and re-export it.
@@ -62,15 +67,7 @@
 
 	/** Convert a raw column of angles to radians per the chosen unit. */
 	function anglesToRadians(data, unit, period) {
-		// Empty / null / whitespace / non-numeric cells become NaN (dropped downstream
-		// by cleanAngles), matching the Python port. Using Number(v) directly would
-		// coerce null/'' to a real 0-rad angle and bias the circular mean toward 0.
-		return (data ?? []).map((v) => {
-			if (v == null) return NaN;
-			if (typeof v === 'string' && v.trim() === '') return NaN;
-			const num = Number(v);
-			return Number.isFinite(num) ? toRadians(num, unit, period) : NaN;
-		});
+		return toRadiansColumn(data, unit, period);
 	}
 
 	// Rayleigh uniformity: returns { perY: { [yId]: {n,R,z,pValue,meanAngle} }, anyValid, yINs }.

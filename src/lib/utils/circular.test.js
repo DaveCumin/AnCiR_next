@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
 	toRadians,
+	toRadiansColumn,
 	circularMean,
 	rayleighTest,
 	kappaFromRbar,
@@ -193,5 +194,19 @@ describe('watsonWilliams', () => {
 		expect(res.df1).toBe(2);
 		expect(res.df2).toBe(6);
 		expect(res.F).toBeGreaterThan(50);
+	});
+});
+
+describe('toRadiansColumn', () => {
+	it('converts clock hours on a 24h period to radians', () => {
+		const out = toRadiansColumn([0, 6, 12, 18], 'hours', 24);
+		expect(out[0]).toBeCloseTo(0, 9);
+		expect(out[1]).toBeCloseTo(Math.PI / 2, 9);
+		expect(out[2]).toBeCloseTo(Math.PI, 9);
+	});
+	it('maps null / blank / non-numeric to NaN (not 0)', () => {
+		const out = toRadiansColumn([null, '', ' ', 'abc', 6], 'hours', 24);
+		expect(out.slice(0, 4).every(Number.isNaN)).toBe(true);
+		expect(out[4]).toBeCloseTo(Math.PI / 2, 9);
 	});
 });
