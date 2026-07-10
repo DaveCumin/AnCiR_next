@@ -16,7 +16,11 @@
 	// the test is off), like Cosinor's mode-specific ports.
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { rayleighTest, circularMean, watsonWilliams, toRadians } from '$lib/utils/circular.js';
-	import cdf_f from '@stdlib/stats-base-dists-f-cdf';
+	// A bare `export { x } from './y.js'` re-export does NOT bind `x` in this
+	// module's own scope, and pUpperFromF is used internally below (in
+	// watsonWilliams's callback) — so import it normally and re-export it.
+	import { pUpperFromF } from '$lib/utils/fdist.js';
+	export { pUpperFromF };
 
 	const displayName = 'Rayleigh test';
 
@@ -55,13 +59,6 @@
 	};
 
 	const METRIC_KEYS = ['R', 'z', 'pvalue', 'F', 'ww_pvalue'];
-
-	/** Upper-tail p from the F distribution (guards degenerate df / F). */
-	export function pUpperFromF(fValue, df1, df2) {
-		if (!Number.isFinite(fValue) || !Number.isFinite(df1) || !Number.isFinite(df2)) return NaN;
-		if (df1 <= 0 || df2 <= 0 || fValue < 0) return NaN;
-		return 1 - cdf_f(fValue, df1, df2);
-	}
 
 	/** Convert a raw column of angles to radians per the chosen unit. */
 	function anglesToRadians(data, unit, period) {
