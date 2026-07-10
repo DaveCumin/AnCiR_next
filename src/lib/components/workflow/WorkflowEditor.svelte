@@ -242,6 +242,31 @@
 		}));
 	});
 
+	// Synthetic "reference" edges linking each Data View node to the plot whose
+	// computed data it mirrors. A Data View has no wired inputs — the association
+	// is its `sourcePlotId` — so we derive the edge from that. It drives BOTH the
+	// topological layout (a Data View lands just downstream of its source plot) and
+	// the rendered link, without the Data View becoming a real dataflow sink. The
+	// `null` ports anchor at each node's header (getPortAnchorY handles them).
+	const dataViewEdges = $derived.by(() => {
+		const ids = new Set(allNodes.map((n) => n.id));
+		const out = [];
+		for (const node of allNodes) {
+			if (node.type !== 'plot' || node.plotObj?.type !== 'dataview') continue;
+			const srcId = node.plotObj?.plot?.sourcePlotId;
+			if (srcId == null) continue;
+			const fromId = `plot_${srcId}`;
+			if (!ids.has(fromId)) continue;
+			out.push({ fromId, toId: node.id, type: 'dataview', fromPort: null, toPort: null });
+		}
+		return out;
+	});
+
+	// edgeTopology + the synthetic Data View links, for layout + edge rendering.
+	// Kept separate from edgeTopology so wiredOutPortsByNode (real ports only)
+	// ignores these port-less reference edges.
+	const layoutEdges = $derived([...edgeTopology, ...dataViewEdges]);
+
 	// nodeId → { [outputPortName]: true } for ports with an edge. TableProcessNode
 	// uses this to keep wired metric rows rendered while its Metrics section is
 	// collapsed, so their edges never point at an unmounted port element.
@@ -319,7 +344,7 @@
 
 	// Compute default positions based on topological layers (all edges flow left → right)
 	const defaultPositions = $derived.by(() => {
-		const layers = computeNodeLayers(allNodes, edgeTopology);
+		const layers = computeNodeLayers(allNodes, layoutEdges);
 		const layerOffsets = {};
 		const positions = {};
 		let maxLayer = 0;
@@ -546,7 +571,7 @@
 	// Step 2: attach positions (re-derives when topology OR any position changes)
 	const allEdges = $derived.by(() => {
 		const nodeById = new Map(allNodes.map((n) => [n.id, n]));
-		return edgeTopology.flatMap((edge) => {
+		return layoutEdges.flatMap((edge) => {
 			const fromPos = stablePositions[edge.fromId] ?? defaultPositions.positions[edge.fromId];
 			const toPos = stablePositions[edge.toId] ?? defaultPositions.positions[edge.toId];
 			const fromNode = nodeById.get(edge.fromId);
@@ -1099,7 +1124,7 @@
 	// engine, but each column is re-stacked using measured node heights so expanded
 	// nodes no longer overlap the node below them.
 	function tidyLayout() {
-		const layers = computeNodeLayers(allNodes, edgeTopology);
+		const layers = computeNodeLayers(allNodes, layoutEdges);
 		const layerOffsets = {};
 		const GAP = 24;
 		for (const node of allNodes) {

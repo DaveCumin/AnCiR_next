@@ -44,30 +44,38 @@
 			{@const k = edgeKey(edge)}
 			{@const isSelected = selectedEdgeKey === k}
 			{@const isSpliceTarget = dropTargetEdgeKey === k}
+			{@const isReference = edge.type === 'dataview'}
 			<g style="opacity:{edgeOpacity(edge)};">
-				<path
-					class="edge-hit"
-					data-edge-key={k}
-					{d}
-					onclick={(e) => {
-						e.stopPropagation();
-						onEdgeClick?.(edge);
-					}}
-					onmouseenter={() => onEdgeHover?.(edge)}
-					onmouseleave={() => onEdgeHover?.(null)}
-				/>
+				<!-- Reference edges (Data View → its source plot) are derived, not wired,
+				     so they aren't selectable/deletable and carry no data-flow dot. -->
+				{#if !isReference}
+					<path
+						class="edge-hit"
+						data-edge-key={k}
+						{d}
+						onclick={(e) => {
+							e.stopPropagation();
+							onEdgeClick?.(edge);
+						}}
+						onmouseenter={() => onEdgeHover?.(edge)}
+						onmouseleave={() => onEdgeHover?.(null)}
+					/>
+				{/if}
 				<path
 					class="edge-line"
 					class:selected={isSelected}
 					class:splice-target={isSpliceTarget}
+					class:reference={isReference}
 					{d}
 				/>
-				<circle
-					class="edge-flow-dot"
-					r="4"
-					style:offset-path={`path('${d}')`}
-					style:animation-delay={`${i * Math.abs(Math.random() * 10) * 0.01}s`}
-				/>
+				{#if !isReference}
+					<circle
+						class="edge-flow-dot"
+						r="4"
+						style:offset-path={`path('${d}')`}
+						style:animation-delay={`${i * Math.abs(Math.random() * 10) * 0.01}s`}
+					/>
+				{/if}
 			</g>
 		{/if}
 	{/each}
@@ -101,6 +109,14 @@
 		transition:
 			stroke 0.12s ease,
 			stroke-width 0.12s ease;
+	}
+
+	/* Data View reference link: dashed + muted, to read as an association rather
+	   than a data wire. */
+	.edge-line.reference {
+		stroke: var(--color-lightness-70);
+		stroke-width: 1.5;
+		stroke-dasharray: 5 4;
 	}
 
 	.edge-line.selected {
