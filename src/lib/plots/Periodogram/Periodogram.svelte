@@ -87,17 +87,19 @@
 		// Period data - now $state instead of $derived
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
 
-		// Peak detection - find the highest power value across ALL calculated data
+		// Peak detection - find the highest power value across ALL calculated data.
+		// pvalue is the chi-squared significance of that peak (NaN for
+		// Lomb-Scargle/Enright, which have no analytic p here).
 		peak = $derived.by(() => {
-			const { x, y } = this.periodData;
+			const { x, y, pvalue } = this.periodData;
 			if (!x || !y || x.length === 0 || y.length === 0) return null;
 			const idx = argMax(y);
-			return idx < 0 ? null : { period: x[idx], power: y[idx] };
+			return idx < 0 ? null : { period: x[idx], power: y[idx], pvalue: pvalue?.[idx] ?? NaN };
 		});
 
 		// Peak within the visible x-axis range
 		visiblePeak = $derived.by(() => {
-			const { x, y } = this.periodData;
+			const { x, y, pvalue } = this.periodData;
 			if (!x || !y || x.length === 0 || y.length === 0) return null;
 			const [xMin, xMax] = this.parentPlot?.periodlimsIN ?? [0, Infinity];
 			const visibleIndices = [];
@@ -105,7 +107,7 @@
 				if (x[i] >= xMin && x[i] <= xMax) visibleIndices.push(i);
 			}
 			const idx = argMaxAmong(y, visibleIndices);
-			return idx < 0 ? null : { period: x[idx], power: y[idx] };
+			return idx < 0 ? null : { period: x[idx], power: y[idx], pvalue: pvalue?.[idx] ?? NaN };
 		});
 
 		// Cache for smart recalculation

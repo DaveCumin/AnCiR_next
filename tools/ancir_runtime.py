@@ -1463,6 +1463,10 @@ def tp_cosinor(args, cols, raw_data, _sv):
     # phase_angle = acrophase relative to referenceHrs. NaN for skipped y.
     bathy_by_y = {}
     phase_by_y = {}
+    # Classical cosinor parameters exposed as scalar metric ports: MESOR
+    # (rhythm-adjusted mean) and acrophase (peak time, wrapped into [0, period)).
+    mesor_by_y = {}
+    acro_by_y = {}
 
     any_valid = False
     first_x_out = None
@@ -1492,6 +1496,7 @@ def tp_cosinor(args, cols, raw_data, _sv):
             phi = res['harmonics'][0]['phi_rad'] if res.get('harmonics') else float('nan')
             acrophase = wrap_to_period(-phi / omega, fixed_period)
             period_used = fixed_period
+            mesor = res.get('M', float('nan'))
         else:
             res = fit_cosine_curves(tt, yy, n_curves)
             if res is None:
@@ -1507,8 +1512,11 @@ def tp_cosinor(args, cols, raw_data, _sv):
             w = c['frequency'] if c else 0
             period_used = (1.0 / w) if w else float('nan')
             acrophase = (-c['phase'] / (2 * math.pi * w)) if (c and w) else float('nan')
+            mesor = res['parameters'].get('O', float('nan'))
         bathy_by_y[y_id] = bathyphase(acrophase, period_used)
         phase_by_y[y_id] = phase_angle_of_entrainment(acrophase, reference_hrs, period_used)
+        mesor_by_y[y_id] = mesor
+        acro_by_y[y_id] = wrap_to_period(acrophase, period_used)
         if first_x_out is None:
             first_x_out = xs
             x_out_id = _out_id(args, 'cosinorx')
@@ -1527,6 +1535,10 @@ def tp_cosinor(args, cols, raw_data, _sv):
         nan = float('nan')
         bathy_arr = [bathy_by_y.get(y, nan) for y in y_ins]
         phase_arr = [phase_by_y.get(y, nan) for y in y_ins]
+        mesor_arr = [mesor_by_y.get(y, nan) for y in y_ins]
+        acro_arr = [acro_by_y.get(y, nan) for y in y_ins]
+        _set_col(raw_data, cols, _out_id(args, 'mesor'), mesor_arr, type_='number')
+        _set_col(raw_data, cols, _out_id(args, 'acrophase'), acro_arr, type_='number')
         _set_col(raw_data, cols, _out_id(args, 'bathyphase'), bathy_arr, type_='number')
         _set_col(raw_data, cols, _out_id(args, 'phase_angle'), phase_arr, type_='number')
     return any_valid
@@ -3177,10 +3189,9 @@ DISPLAY_TO_TP = {
 # Roadmap-node pure utils + table processes (JS↔Python parity)
 #
 # Direct ports of the src/lib/utils/*.js utilities added for the solo-roadmap
-# nodes. The pure utils (kde, meansem, circular stats, free-running period,
-# cosinor add-ons) are dispatched by name via getattr in the parity harness;
+# nodes. The pure utils (kde, meansem, circular stats, cosinor add-ons) are dispatched by name via getattr in the parity harness;
 # the table-process wrappers (tp_averageprofile / tp_rayleightest /
-# tp_watsonwilliams / tp_freerunningperiod / tp_circadianfunctionindex) run via
+# tp_circadianfunctionindex) run via
 # TABLE_PROCESS_MAP, exactly mirroring the matching .svelte node funcs.
 # ----------------------------------------------------------------------
 
@@ -3540,6 +3551,9 @@ def _angles_col_to_radians(data, unit, period):
 
 
 def tp_rayleightest(args, cols, raw_data, _sv):
+    # Merged circular-stats node: `testType` picks the Rayleigh uniformity test
+    # (default, per-Y R/z/pvalue) or the Watson-Williams equal-mean-direction
+    # test (single F/pvalue across the Y columns). Mirrors RayleighTest.svelte.
     y_ins = _id_list(args.get('yIN'))
     if not y_ins:
         return False
@@ -3547,6 +3561,24 @@ def tp_rayleightest(args, cols, raw_data, _sv):
     period = args.get('period', 24)
     if not (isinstance(period, (int, float)) and math.isfinite(period)):
         period = 24
+    test_type = args.get('testType', 'rayleigh')
+
+    if test_type == 'watsonwilliams':
+        groups = []
+        for y_id in y_ins:
+            if y_id is None or y_id == -1 or y_id not in cols:
+                continue
+            groups.append(_angles_col_to_radians(cols[y_id].get_data(), unit, period))
+        result = watson_williams(groups, _p_upper_from_f)
+        if not result['valid']:
+            return False
+        _set_col(raw_data, cols, _out_id(args, 'F'), [result['F']], type_='number')
+        _set_col(raw_data, cols, _out_id(args, 'pvalue'), [result['pValue']], type_='number')
+        # R/z are Rayleigh-only metrics; keep the ports numeric.
+        _set_col(raw_data, cols, _out_id(args, 'R'), [_NAN], type_='number')
+        _set_col(raw_data, cols, _out_id(args, 'z'), [_NAN], type_='number')
+        return True
+
     per_y = {}
     any_valid = False
     for y_id in y_ins:
@@ -3563,285 +3595,8 @@ def tp_rayleightest(args, cols, raw_data, _sv):
         field = 'pValue' if key == 'pvalue' else key
         arr = [per_y[y].get(field, _NAN) if y in per_y else _NAN for y in y_ins]
         _set_col(raw_data, cols, _out_id(args, key), arr, type_='number')
-    return True
-
-
-def tp_watsonwilliams(args, cols, raw_data, _sv):
-    y_ins = _id_list(args.get('yIN'))
-    unit = args.get('unit', 'radians')
-    period = args.get('period', 24)
-    if not (isinstance(period, (int, float)) and math.isfinite(period)):
-        period = 24
-    groups = []
-    for y_id in y_ins:
-        if y_id is None or y_id == -1 or y_id not in cols:
-            continue
-        groups.append(_angles_col_to_radians(cols[y_id].get_data(), unit, period))
-    result = watson_williams(groups, _p_upper_from_f)
-    if not result['valid']:
-        return False
-    _set_col(raw_data, cols, _out_id(args, 'F'), [result['F']], type_='number')
-    _set_col(raw_data, cols, _out_id(args, 'pvalue'), [result['pValue']], type_='number')
-    return True
-
-
-# --- K: Free-running period (src/lib/utils/freeRunningPeriod.js +
-#        the chi-squared path of src/lib/utils/periodogram.js) ---
-
-def _chi_sq_power_js(data, bin_size, period, avg_all, denominator):
-    """Port of periodogram.js calculateChiSquaredPower."""
-    col_num = _js_round(period / bin_size)
-    if not math.isfinite(col_num) or col_num < 1 or col_num > len(data):
-        return _NAN
-    col_num = int(col_num)
-    row_num = math.ceil(len(data) / col_num)
-    col_sums = [0.0] * col_num
-    col_counts = [0] * col_num
-    for i, v in enumerate(data):
-        col = i % col_num
-        if not _is_nanf(v):
-            col_sums[col] += v
-            col_counts[col] += 1
-    avg_p = [(col_sums[i] / col_counts[i]) if col_counts[i] > 0 else avg_all
-             for i in range(col_num)]
-    num = 0.0
-    for i in range(col_num):
-        d = avg_p[i] - avg_all
-        num += d * d
-    if denominator == 0:
-        return _NAN
-    result = (num * len(data) * row_num) / denominator
-    return result if math.isfinite(result) else _NAN
-
-
-def _lomb_scargle_js(times, values, frequencies):
-    """Port of periodogram.js calculateLombScarglePower (sample variance)."""
-    if (not times or not values or len(times) < 2 or len(values) < 2
-            or len(times) != len(values)):
-        return [_NAN] * len(frequencies)
-    idx = [i for i in range(len(times))
-           if not _is_nanf(times[i]) and not _is_nanf(values[i])]
-    t = [times[i] for i in idx]
-    y = [values[i] for i in idx]
-    if not t:
-        return [0.0] * len(frequencies)
-    y_mean = kahan_mean(y)
-    var = sum((v - y_mean) ** 2 for v in y) / (len(y) - 1) if len(y) > 1 else 0.0
-    if not (var > 0):
-        return [0.0] * len(frequencies)
-    powers = []
-    for f in frequencies:
-        omega = 2 * math.pi * f
-        cos_sum = sum(math.cos(omega * ti) for ti in t)
-        sin_sum = sum(math.sin(omega * ti) for ti in t)
-        tau = math.atan2(sin_sum, cos_sum) / (2 * omega)
-        cos_term = sum((y[i] - y_mean) * math.cos(omega * (t[i] - tau)) for i in range(len(y)))
-        sin_term = sum((y[i] - y_mean) * math.sin(omega * (t[i] - tau)) for i in range(len(y)))
-        cos_denom = sum(math.cos(omega * (ti - tau)) ** 2 for ti in t)
-        sin_denom = sum(math.sin(omega * (ti - tau)) ** 2 for ti in t)
-        power = ((cos_term * cos_term / cos_denom) if cos_denom > 0 else 0) + \
-                ((sin_term * sin_term / sin_denom) if sin_denom > 0 else 0)
-        normalised = power / (2 * var)
-        powers.append(normalised if math.isfinite(normalised) else 0)
-    return powers
-
-
-def _enright_js(times, values, periods, bin_size):
-    """Port of periodogram.js calculateEnrightPower."""
-    if not times or not values or len(times) < 2 or len(values) < 2:
-        return [_NAN] * len(periods)
-    binned = bin_data(times, values, bin_size, 0.0)
-    if not binned['bins']:
-        return [0.0] * len(periods)
-    data = binned['y_out']
-    n = len(data)
-    data_mean = kahan_mean([v for v in data if not _is_nanf(v)])
-    centered = [0 if _is_nanf(v) else (v - data_mean) for v in data]
-    powers = []
-    for period in periods:
-        bpp = _js_round(period / bin_size)
-        if not math.isfinite(bpp) or bpp < 1 or bpp > n:
-            powers.append(0.0)
-            continue
-        bpp = int(bpp)
-        qp_sum = 0.0
-        count = 0
-        k = 1
-        while k * bpp < n:
-            lag = k * bpp
-            corr = 0.0
-            valid_pairs = 0
-            for i in range(n - lag):
-                corr += centered[i] * centered[i + lag]
-                valid_pairs += 1
-            if valid_pairs > 0:
-                qp_sum += corr / valid_pairs
-                count += 1
-            k += 1
-        qp = qp_sum / count if count > 0 else 0
-        variance = sum(v * v for v in centered) / n
-        powers.append(qp / variance if variance > 0 else 0)
-    return powers
-
-
-def _run_periodogram_js(method, x_data, y_data, period_min, period_max,
-                        period_steps, bin_size, chi_alpha):
-    """Faithful port of periodogram.js runPeriodogramCalculation (the exact
-    spectral core estimateFreeRunningPeriod wraps)."""
-    binned = {'bins': [], 'y_out': []}
-    empty = {'x': [], 'y': [], 'threshold': [], 'pvalue': []}
-    if method == 'Chi-squared':
-        if not y_data:
-            return empty
-        valid_pairs = [(x_data[i], y_data[i]) for i in range(len(x_data))
-                       if x_data[i] is not None and not _is_nanf(x_data[i])]
-        binned = bin_data([p[0] for p in valid_pairs],
-                          [p[1] for p in valid_pairs], bin_size, 0.0)
-        if not binned['bins']:
-            return empty
-    periods = make_seq_array(period_min, period_max, period_steps)
-    if not periods:
-        return empty
-    corrected_alpha = (1 - chi_alpha) ** (1.0 / len(periods))
-    power = [_NAN] * len(periods)
-    threshold = [_NAN] * len(periods)
-    pvalue = [_NAN] * len(periods)
-    if method == 'Chi-squared':
-        data = binned['y_out']
-        avg_all = kahan_mean(data)
-        denom = 0.0
-        for v in data:
-            if not _is_nanf(v):
-                denom += (v - avg_all) ** 2
-        for pi, P in enumerate(periods):
-            df = _js_round(P / bin_size) - 1
-            if df < 1:
-                continue
-            power[pi] = _chi_sq_power_js(data, bin_size, P, avg_all, denom)
-            threshold[pi] = float(sp_stats.chi2.ppf(1 - corrected_alpha, df))
-            pvalue[pi] = (float(1 - sp_stats.chi2.cdf(power[pi], df))
-                          if not _is_nanf(power[pi]) else _NAN)
-    elif method == 'Lomb-Scargle':
-        freqs = [1.0 / p for p in periods]
-        powers = _lomb_scargle_js(x_data, y_data, freqs)
-        for pi in range(len(periods)):
-            power[pi] = powers[pi]
-    else:  # Enright
-        powers = _enright_js(x_data, y_data, periods, bin_size)
-        for pi in range(len(periods)):
-            power[pi] = powers[pi]
-    keep = [i for i in range(len(power))
-            if not _is_nanf(power[i]) and not _is_nanf(periods[i])]
-    return {
-        'x': [periods[i] for i in keep],
-        'y': [power[i] for i in keep],
-        'threshold': [threshold[i] for i in keep],
-        'pvalue': [pvalue[i] for i in keep],
-    }
-
-
-def estimate_free_running_period(t, y, p_min=20, p_max=28, step=0.1,
-                                 method='Chi-squared', bin_size=1, alpha=0.05):
-    """Peak of a chi-squared (Sokolove-Bushell) periodogram over [p_min, p_max].
-    Mirrors src/lib/utils/freeRunningPeriod.js estimateFreeRunningPeriod."""
-    empty = {'period': _NAN, 'power': _NAN, 'pValue': _NAN}
-    if not isinstance(t, list) or not isinstance(y, list):
-        try:
-            t = list(t)
-            y = list(y)
-        except TypeError:
-            return dict(empty)
-    if not (p_max > p_min) or not (step > 0):
-        return dict(empty)
-    tt = []
-    yy = []
-    n = min(len(t), len(y))
-    for i in range(n):
-        ti = t[i]
-        yi = y[i]
-        if ti is None or yi is None:
-            continue
-        try:
-            tf = float(ti)
-            yf = float(yi)
-        except (TypeError, ValueError):
-            continue
-        if math.isnan(tf) or math.isnan(yf):
-            continue
-        tt.append(tf)
-        yy.append(yf)
-    if len(tt) < 3:
-        return dict(empty)
-    res = _run_periodogram_js(method, tt, yy, p_min, p_max, step, bin_size, alpha)
-    xs = res['x']
-    powers = res['y']
-    pvals = res['pvalue']
-    if not powers:
-        return dict(empty)
-    best_idx = -1
-    best_pow = float('-inf')
-    for i, v in enumerate(powers):
-        if isinstance(v, (int, float)) and math.isfinite(v) and v > best_pow:
-            best_pow = v
-            best_idx = i
-    if best_idx < 0:
-        return dict(empty)
-    pv = pvals[best_idx]
-    return {
-        'period': xs[best_idx],
-        'power': powers[best_idx],
-        'pValue': pv if (isinstance(pv, (int, float)) and math.isfinite(pv)) else _NAN,
-    }
-
-
-def tp_freerunningperiod(args, cols, raw_data, _sv):
-    x_in = args.get('xIN', -1)
-    y_ins = _id_list(args.get('yIN'))
-    if x_in == -1 or x_in not in cols or not y_ins:
-        return False
-    opts = dict(
-        p_min=args.get('pMin', 20),
-        p_max=args.get('pMax', 28),
-        step=args.get('step', 0.1),
-        method=args.get('method', 'Chi-squared'),
-        bin_size=args.get('binSize', 1),
-        alpha=args.get('alpha', 0.05),
-    )
-    t_all = _t_for_col(cols[x_in])
-    per_y = {}
-    any_valid = False
-    for y_id in y_ins:
-        if y_id is None or y_id == -1 or y_id not in cols:
-            continue
-        y_data = cols[y_id].get_data()
-        tt = []
-        yy = []
-        m = min(len(t_all), len(y_data))
-        for i in range(m):
-            ti = t_all[i]
-            yi = y_data[i]
-            if ti is None or yi is None:
-                continue
-            try:
-                tf = float(ti)
-                yf = float(yi)
-            except (TypeError, ValueError):
-                continue
-            if math.isnan(tf) or math.isnan(yf):
-                continue
-            tt.append(tf)
-            yy.append(yf)
-        if len(tt) < 3:
-            continue
-        res = estimate_free_running_period(tt, yy, **opts)
-        per_y[y_id] = res
-        if math.isfinite(res['period']):
-            any_valid = True
-    if not any_valid:
-        return False
-    for key, field in (('period', 'period'), ('power', 'power'), ('pvalue', 'pValue')):
-        arr = [per_y[y].get(field, _NAN) if y in per_y else _NAN for y in y_ins]
-        _set_col(raw_data, cols, _out_id(args, key), arr, type_='number')
+    # F is a Watson-Williams-only metric in the merged node; keep it numeric.
+    _set_col(raw_data, cols, _out_id(args, 'F'), [_NAN for _ in y_ins], type_='number')
     return True
 
 
@@ -3925,9 +3680,7 @@ def tp_circadianfunctionindex(args, cols, raw_data, _sv):
 TABLE_PROCESS_MAP = {
     'averageprofile': tp_averageprofile,
     'circadianfunctionindex': tp_circadianfunctionindex,
-    'freerunningperiod': tp_freerunningperiod,
     'rayleightest': tp_rayleightest,
-    'watsonwilliams': tp_watsonwilliams,
     'binneddata': tp_binneddata,
     'blankcolumn': tp_blankcolumn,
     'collectcolumns': tp_collectcolumns,

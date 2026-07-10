@@ -374,14 +374,20 @@ const meta = new Map([
 		{
 			family: 'Plots',
 			nodeIcon: 'dataview',
-			description: 'Raw data view of selected columns.'
+			// Spawned only from a plot's "View data" action (it mirrors that plot's
+			// computed download data); it has no meaning added blank from the palette,
+			// so keep it out of the palette. The Table node covers manual tables.
+			hideFromPalette: true,
+			description: "Inspector for a plot's computed data (bins, spectra, fitted values); opened from a plot's View data action."
 		}
 	],
 	[
 		'tableplot',
 		{
 			family: 'Plots',
-			nodeIcon: 'table',
+			// Uses the (nicer) Data View glyph; the Table node supersedes the old
+			// Data View plot as the single tabular-display node.
+			nodeIcon: 'dataview',
 			description: 'Tabular display of a table or its summary statistics.'
 		}
 	],
@@ -395,30 +401,12 @@ const meta = new Map([
 		}
 	],
 	[
-		'FreeRunningPeriod',
-		{
-			family: 'Analysis',
-			nodeIcon: 'free-running-period',
-			description:
-				'Auto-estimate each series’ free-running period (τ) from the chi-squared periodogram peak.'
-		}
-	],
-	[
 		'RayleighTest',
 		{
 			family: 'Analysis',
 			nodeIcon: 'circular-stats',
 			description:
-				'Rayleigh test of circular uniformity on phase/angle columns — mean resultant length R, z, and p.'
-		}
-	],
-	[
-		'WatsonWilliams',
-		{
-			family: 'Analysis',
-			nodeIcon: 'circular-stats',
-			description:
-				'Watson–Williams test: do two or more groups of angles share a common mean direction? (F, p).'
+				'Circular statistics on phase/angle columns: Rayleigh uniformity (R, z, p) or, via its test selector, the Watson-Williams equal-mean-direction test (F, p).'
 		}
 	],
 	[

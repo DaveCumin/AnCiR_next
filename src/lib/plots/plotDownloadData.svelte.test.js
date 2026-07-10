@@ -17,6 +17,7 @@ import { Column } from '$lib/core/Column.svelte';
 import { Actogramclass } from './Actogram/Actogram.svelte';
 import { Correlogramclass } from './Correlogram/Correlogram.svelte';
 import { FFTclass } from './FFT/FFT.svelte';
+import { Histogramclass } from './Histogram/Histogram.svelte';
 
 const seq = (n, f) => Array.from({ length: n }, (_, i) => f(i));
 
@@ -83,5 +84,31 @@ describe('calculating-plot getDownloadData contract', () => {
 		const withPeriod = rows.filter((r) => typeof r[2] === 'number');
 		const peak = withPeriod.reduce((a, b) => (b[3] > a[3] ? b : a));
 		expect(Math.abs(peak[2] - 24)).toBeLessThan(3);
+	});
+
+	it('Histogram: tidy long export carries bin, density, and raw rows', () => {
+		// A spread of values so bins have counts and the KDE has ≥2 points.
+		const vals = seq(120, (i) => (i % 20) + Math.sin(i));
+		const vId = mkCol('number', vals);
+		const parentBox = { id: 1, width: 400, height: 300, data: [] };
+		// showDensity is OFF: the density curve data must still export (the export
+		// uses kdeCurve() directly, the display toggle only gates what's DRAWN).
+		const h = new Histogramclass(parentBox, {
+			data: [{ column: { refId: vId }, label: 'S1', binSize: 2, showDensity: false }]
+		});
+		const { headers, rows } = h.getDownloadData();
+		expect(headers).toEqual(['series', 'kind', 'x_start', 'x_end', 'value']);
+		for (const r of rows) expect(r).toHaveLength(5);
+		expect(rows.every((r) => r[0] === 'S1')).toBe(true);
+		const kinds = new Set(rows.map((r) => r[1]));
+		expect(kinds.has('bin')).toBe(true);
+		expect(kinds.has('density')).toBe(true);
+		expect(kinds.has('raw')).toBe(true);
+		// One raw row per valid input value.
+		expect(rows.filter((r) => r[1] === 'raw').length).toBe(vals.length);
+		// Bin rows have a real [start, end) range; counts sum to the number of values.
+		const binRows = rows.filter((r) => r[1] === 'bin');
+		for (const r of binRows) expect(r[3]).toBeGreaterThan(r[2]);
+		expect(binRows.reduce((s, r) => s + r[4], 0)).toBe(vals.length);
 	});
 });

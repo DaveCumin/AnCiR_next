@@ -27,10 +27,17 @@ import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
  */
 export const PLOT_METRIC_DEFS = {
 	periodogram: {
-		keys: ['peak_period', 'peak_power'],
+		keys: ['peak_period', 'peak_power', 'peak_pvalue'],
 		statsFor(datum) {
 			const p = datum?.visiblePeak ?? datum?.peak;
-			return { peak_period: p?.period ?? NaN, peak_power: p?.power ?? NaN };
+			// peak_pvalue is the chi-squared significance of the peak; NaN for
+			// Lomb-Scargle/Enright (no analytic p). This supersedes the standalone
+			// Free-Running Period node, which was a thin chi-squared periodogram wrapper.
+			return {
+				peak_period: p?.period ?? NaN,
+				peak_power: p?.power ?? NaN,
+				peak_pvalue: p?.pvalue ?? NaN
+			};
 		}
 	},
 	fft: {

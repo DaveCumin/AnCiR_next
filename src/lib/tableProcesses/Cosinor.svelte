@@ -32,7 +32,11 @@
 			{
 				cosinorx: { val: -1 },
 				period: { val: -1 },
+				// MESOR (rhythm-adjusted mean), amplitude and acrophase (peak time, h)
+				// are the three classical cosinor parameters — each a scalar metric port.
+				mesor: { val: -1 },
 				amplitude: { val: -1 },
+				acrophase: { val: -1 },
 				rsquared: { val: -1 },
 				pvalue: { val: -1 },
 				// Cheap add-on metrics derived from the fitted acrophase (one value
@@ -84,7 +88,9 @@
 				},
 				// Scalar-metric ports (one value per y input).
 				{ name: 'period', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'mesor', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'amplitude', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'acrophase', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'rsquared', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'bathyphase', kind: 'column', cardinality: 'one', metric: true },
@@ -310,7 +316,9 @@
 			: [];
 		const referenceHrs = argsIN.referenceHrs ?? 0;
 		const periodArr = [];
+		const mesorArr = [];
 		const amplitudeArr = [];
+		const acrophaseArr = [];
 		const rsquaredArr = [];
 		const pvalueArr = [];
 		const bathyphaseArr = [];
@@ -318,6 +326,7 @@
 		for (const yId of yINs) {
 			const yr = result.y_results[yId];
 			let period = NaN;
+			let mesor = NaN;
 			let amplitude = NaN;
 			let rsq = NaN;
 			let acrophase = NaN;
@@ -325,6 +334,8 @@
 				rsq = yr.fittedData?.rSquared ?? NaN;
 				if (useFixed && yr.fixedStats) {
 					period = fixedPeriod;
+					// MESOR is the rhythm-adjusted mean (fixed-period fit's offset M).
+					mesor = yr.fixedStats.M ?? NaN;
 					amplitude = yr.fixedStats.harmonics?.[0]?.amplitude ?? NaN;
 					// fixedStats gives the CLASSICAL acrophase (acrophase_hrs = wrap(-t_peak));
 					// the free branch below feeds bathyphase/phaseAngle the true PEAK time,
@@ -335,6 +346,8 @@
 				} else {
 					const c = yr.fittedData?.parameters?.cosines?.[0];
 					period = c?.frequency ? (2 * Math.PI) / c.frequency : NaN;
+					// Free-fit offset O is the MESOR (rhythm-adjusted mean).
+					mesor = yr.fittedData?.parameters?.O ?? NaN;
 					amplitude = c?.amplitude ?? NaN;
 					// Free cosine model: A·cos(ω·t + φ) peaks when ω·t + φ = 0, i.e.
 					// t_peak = −φ/ω, wrapped into [0, period). bathyphase/phaseAngle
@@ -343,7 +356,11 @@
 				}
 			}
 			periodArr.push(period);
+			mesorArr.push(mesor);
 			amplitudeArr.push(amplitude);
+			// Report acrophase as the peak time wrapped into [0, period), matching the
+			// convention bathyphase/phase_angle already use.
+			acrophaseArr.push(wrapToPeriod(acrophase, period));
 			rsquaredArr.push(rsq);
 			bathyphaseArr.push(bathyphase(acrophase, period));
 			phaseAngleArr.push(phaseAngleOfEntrainment(acrophase, referenceHrs, period));
@@ -362,7 +379,9 @@
 		}
 		const writeScalarOut = (key, arr) => writeOutputColumn(argsIN.out[key], arr, { processHash });
 		writeScalarOut('period', periodArr);
+		writeScalarOut('mesor', mesorArr);
 		writeScalarOut('amplitude', amplitudeArr);
+		writeScalarOut('acrophase', acrophaseArr);
 		writeScalarOut('rsquared', rsquaredArr);
 		writeScalarOut('pvalue', pvalueArr);
 		writeScalarOut('bathyphase', bathyphaseArr);
@@ -507,7 +526,16 @@
 	// Scalar-metric out-keys (one value per y input). bathyphase/phase_angle were
 	// added after the original period/amplitude/rsquared/pvalue ports, so old
 	// sessions lack their columns; syncMetricOutColumns backfills any missing ones.
-	const METRIC_KEYS = ['period', 'amplitude', 'rsquared', 'pvalue', 'bathyphase', 'phase_angle'];
+	const METRIC_KEYS = [
+		'period',
+		'mesor',
+		'amplitude',
+		'acrophase',
+		'rsquared',
+		'pvalue',
+		'bathyphase',
+		'phase_angle'
+	];
 
 	onMount(() => {
 		// Create X output column if not present (needed in collected mode)

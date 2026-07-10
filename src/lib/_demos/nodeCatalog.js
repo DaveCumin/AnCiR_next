@@ -586,37 +586,9 @@ export const TP_SPECS = [
 		})
 	},
 	{
-		name: 'FreeRunningPeriod',
-		inputs: [
-			T('number', () => seq(336, (i) => i)),
-			T('number', () => seq(336, (i) => Math.cos((2 * Math.PI * i) / 24)))
-		],
-		args: ([x, y]) => ({
-			xIN: x,
-			yIN: [y],
-			pMin: 20,
-			pMax: 28,
-			step: 0.5,
-			method: 'Chi-squared',
-			binSize: 1,
-			alpha: 0.05,
-			preProcesses: [],
-			out: { period: -1, power: -1, pvalue: -1 }
-		})
-	},
-	{
 		name: 'RayleighTest',
 		inputs: [T('number', () => seq(24, (i) => 1.2 + Math.cos(i * 1.3) * 0.4))],
 		args: ([y]) => ({ yIN: [y], unit: 'radians', period: 24, out: {} }),
-		noOutputs: true
-	},
-	{
-		name: 'WatsonWilliams',
-		inputs: [
-			T('number', () => seq(15, (i) => 0.5 + Math.cos(i * 1.3) * 0.35)),
-			T('number', () => seq(15, (i) => 2.6 + Math.cos(i * 1.3) * 0.35))
-		],
-		args: ([a, b]) => ({ yIN: [a, b], unit: 'radians', period: 24, out: {} }),
 		noOutputs: true
 	},
 	{

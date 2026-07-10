@@ -3,7 +3,6 @@
 	import { core } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
-	import Table from '$lib/components/plotbits/Table.svelte';
 
 	export const DataView_defaultDataInputs = [];
 	export const DataView_controlHeaders = ['Properties'];
@@ -12,7 +11,6 @@
 	export class DataViewclass {
 		static descriptors = {
 			decimalPlaces: { group: 'Display', label: 'Decimal places' },
-			colCurrent: { group: 'Display', label: 'Starting row' },
 			// Don't surface in the shared-properties panel.
 			sourcePlotId: { skip: true },
 			sourceType: { skip: true },
@@ -26,15 +24,7 @@
 		staticHeaders = $state([]);
 		staticRows = $state([]);
 		statsGetter = null; // live getter for reactive stats (not serialised)
-		colCurrent = $state(1);
 		decimalPlaces = $state(2);
-
-		Ncolumns = $derived.by(() => {
-			const rowHeight = 33;
-			const usable = (this.parentBox?.height ?? 250) - 3;
-			const fixedOverhead = 75;
-			return Math.max(1, Math.floor((usable - fixedOverhead) / rowHeight));
-		});
 
 		sourcePlot = $derived.by(() => {
 			if (this.sourcePlotId == null) return null;
@@ -56,23 +46,6 @@
 		rows = $derived(this.downloadData.rows ?? []);
 		totalRows = $derived(this.rows.length);
 
-		// Column-major data for the current page (matches what Table.svelte expects)
-		tableData = $derived.by(() => {
-			if (this.headers.length === 0) return [];
-			const start = this.colCurrent - 1;
-			const pageRows = this.rows.slice(start, start + this.Ncolumns);
-			return this.headers.map((_, colIdx) =>
-				pageRows.map((row) => {
-					const cell = row[colIdx];
-					if (cell == null) return '';
-					if (typeof cell === 'number' && Number.isFinite(cell)) {
-						return cell.toFixed(this.decimalPlaces);
-					}
-					return cell;
-				})
-			);
-		});
-
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
 			if (dataIN) {
@@ -80,7 +53,6 @@
 				this.sourceType = dataIN.sourceType ?? 'reactive';
 				this.staticHeaders = dataIN.staticHeaders ?? [];
 				this.staticRows = dataIN.staticRows ?? [];
-				this.colCurrent = dataIN.colCurrent ?? 1;
 				this.decimalPlaces = dataIN.decimalPlaces ?? 2;
 			}
 		}
@@ -95,7 +67,6 @@
 				sourceType: this.sourceType,
 				staticHeaders: this.headers,
 				staticRows: this.rows,
-				colCurrent: this.colCurrent,
 				decimalPlaces: this.decimalPlaces
 			};
 		}
@@ -107,7 +78,6 @@
 				dv.sourceType = json.sourceType ?? 'reactive';
 				dv.staticHeaders = json.staticHeaders ?? [];
 				dv.staticRows = json.staticRows ?? [];
-				dv.colCurrent = json.colCurrent ?? 1;
 				dv.decimalPlaces = json.decimalPlaces ?? 2;
 			}
 			return dv;
@@ -125,6 +95,7 @@
 <script>
 	// @ts-nocheck
 	import { untrack } from 'svelte';
+	import VirtualList from '$lib/components/reusables/VirtualList.svelte';
 	let { theData, which } = $props();
 
 	// Bridge reactive stats: the getter reads $state from the source component,
@@ -146,6 +117,23 @@
 			}
 		}
 	});
+
+	// ── Virtualised body (same look as the Table node): the full table renders
+	// through a windowed list (only on-screen rows in the DOM), replacing the old
+	// "Starting row + Ncolumns" pager. Read-only — it mirrors a plot's computed data.
+	const DEFAULT_COL_W = 130;
+	let headers = $derived(theData?.plot?.headers ?? []);
+	let rows = $derived(theData?.plot?.rows ?? []);
+	let rowCount = $derived(rows.length);
+	let rowItems = $derived(Array.from({ length: rowCount }, (_, i) => i));
+	let gridCols = $derived(headers.map(() => `${DEFAULT_COL_W}px`).join(' '));
+	let tableMinWidth = $derived(headers.length * DEFAULT_COL_W);
+
+	function formatCell(value) {
+		if (value == null || value === '') return '';
+		if (typeof value === 'number') return Number.isFinite(value) ? value.toFixed(theData.plot.decimalPlaces) : String(value);
+		return value;
+	}
 </script>
 
 {#snippet controls(theData)}
@@ -166,9 +154,6 @@
 			<ControlInput label="Decimal places">
 				<NumberWithUnits min="0" step="1" bind:value={theData.decimalPlaces} />
 			</ControlInput>
-			<ControlInput label="Starting row">
-				<NumberWithUnits min="1" max={theData.totalRows} bind:value={theData.colCurrent} />
-			</ControlInput>
 		</div>
 	</div>
 {/snippet}
@@ -178,25 +163,38 @@
 		<div class="no-source">
 			<p>Source plot not found.</p>
 		</div>
-	{:else if theData.plot.headers.length === 0}
+	{:else if headers.length === 0}
 		<div class="no-source">
 			<p>No data available.</p>
 		</div>
 	{:else}
 		<div class="tableplot-layout">
-			<div class="tableplot-body">
-				<Table headers={theData.plot.headers} data={theData.plot.tableData} editable={false} />
+			<div
+				class="tp-scroll"
+				role="presentation"
+				onwheel={(e) => {
+					if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
+				}}
+			>
+				<div class="tp-inner" style="min-width:{tableMinWidth}px;">
+					<div class="tp-head" style="grid-template-columns:{gridCols};">
+						{#each headers as h (h)}
+							<div class="tp-th">{h}</div>
+						{/each}
+					</div>
+
+					<VirtualList items={rowItems} fill itemHeight={44}>
+						{#snippet row(_, i)}
+							<div class="tp-tr" style="grid-template-columns:{gridCols};">
+								{#each headers as _h, c (c)}
+									<div class="tp-td">{formatCell(rows[i]?.[c])}</div>
+								{/each}
+							</div>
+						{/snippet}
+					</VirtualList>
+				</div>
 			</div>
-			<p class="row-indicator">
-				Row <NumberWithUnits
-					min="1"
-					max={theData.plot.totalRows}
-					step="1"
-					bind:value={theData.plot.colCurrent}
-				/>
-				to {Math.min(theData.plot.colCurrent + theData.plot.Ncolumns - 1, theData.plot.totalRows)} of
-				{theData.plot.totalRows}
-			</p>
+			<p class="tableplot-row-bar">{rowCount} row{rowCount === 1 ? '' : 's'}</p>
 		</div>
 	{/if}
 {/snippet}
@@ -212,21 +210,83 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
-		overflow: hidden;
+		min-height: 0;
 	}
 
-	.tableplot-body {
+	.tp-scroll {
 		flex: 1;
-		overflow: hidden;
+		min-height: 0;
+		overflow-x: auto;
+		overflow-y: hidden;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-sm);
+		background: var(--surface-card);
+		font-size: 0.85rem;
+		/* On the workflow canvas the plot preview wrapper sets pointer-events:none;
+		   re-enable so the table can be scrolled. The node stays draggable via its header. */
+		pointer-events: auto;
 	}
 
-	.row-indicator {
-		font-size: 0.8rem;
-		color: var(--color-text-muted);
-		margin: 4px 8px 2px;
+	.tp-inner {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+	}
+
+	.tp-head {
+		display: grid;
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		background: var(--color-lightness-97);
+		flex-shrink: 0;
+	}
+
+	.tp-th {
+		padding: 6px 12px;
+		font-weight: 600;
+		border-bottom: 1px solid var(--color-lightness-85);
+		border-right: 1px solid var(--color-lightness-85);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tp-tr {
+		display: grid;
+	}
+
+	.tp-tr:hover {
+		background: var(--color-lightness-98);
+	}
+
+	.tp-td {
+		padding: 4px 12px;
+		border-bottom: 1px solid var(--color-lightness-90);
+		border-right: 1px solid var(--color-lightness-90);
+		overflow: hidden;
+		min-width: 0;
+		white-space: nowrap;
+		text-overflow: ellipsis;
 		display: flex;
 		align-items: center;
-		gap: 4px;
+	}
+
+	.tp-th:last-child,
+	.tp-td:last-child {
+		border-right: none;
+	}
+
+	/* Workflow node preview scales the whole plot down, so keep a larger font there. */
+	:global(.plot-preview-inner) .tp-scroll {
+		font-size: 1.5rem;
+	}
+
+	.tableplot-row-bar {
+		flex-shrink: 0;
+		margin: 0.4rem 0 0;
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
 	}
 
 	.no-source {

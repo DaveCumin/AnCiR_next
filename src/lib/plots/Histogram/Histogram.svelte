@@ -97,8 +97,9 @@
 		// bars. A density f(x) predicts ≈ N·binWidth·f(x) counts in a bin of that
 		// width, so the overlay height is density × N × binWidth. Returns
 		// { x:number[], y:number[] } in data coords (empty when off / not enough data).
-		density = $derived.by(() => {
-			if (!this.showDensity) return { x: [], y: [] };
+		// Computed regardless of showDensity so the curve's data is always available
+		// for export (getDownloadData); the `density` derived below gates DISPLAY.
+		kdeCurve() {
 			const values = this.column?.getData?.() ?? [];
 			if (this.column?.type === 'time' || values.length === 0) return { x: [], y: [] };
 			const valid = values.filter((v) => v != null && !isNaN(v));
@@ -124,7 +125,9 @@
 			}
 			const scale = valid.length * binWidth;
 			return { x: kde.x, y: kde.density.map((d) => d * scale) };
-		});
+		}
+
+		density = $derived.by(() => (this.showDensity ? this.kdeCurve() : { x: [], y: [] }));
 
 		getLegendItem() {
 			return {
@@ -230,19 +233,29 @@
 		});
 
 		// CSV export: one row per (series × bin) with start/end/count
+		// Tidy long export so the three computed datasets travel in one table
+		// (Data View / CSV): the binned counts, the KDE density curve (count-scaled,
+		// as drawn), and the raw values that went into the histogram. `kind`
+		// distinguishes them; `series` labels which histogram series each row is from.
+		//   kind='bin'     → x_start=bin start, x_end=bin end, value=count
+		//   kind='density' → x_start=grid x,    x_end='',      value=density height
+		//   kind='raw'     → x_start=value,     x_end='',      value=value
 		getDownloadData() {
-			const multiSeries = this.data.length > 1;
-			const headers = multiSeries
-				? ['series', 'bin_start', 'bin_end', 'count']
-				: ['bin_start', 'bin_end', 'count'];
+			const headers = ['series', 'kind', 'x_start', 'x_end', 'value'];
 			const rows = [];
 			this.data.forEach((d) => {
+				const label = d.label;
 				const b = d.binned;
 				for (let i = 0; i < b.bins.length; i++) {
-					const row = multiSeries
-						? [d.label, b.bins[i], b.binEnds[i], b.y_out[i]]
-						: [b.bins[i], b.binEnds[i], b.y_out[i]];
-					rows.push(row);
+					rows.push([label, 'bin', b.bins[i], b.binEnds[i], b.y_out[i]]);
+				}
+				const curve = d.kdeCurve();
+				for (let i = 0; i < curve.x.length; i++) {
+					rows.push([label, 'density', curve.x[i], '', curve.y[i]]);
+				}
+				const raw = (d.column?.getData?.() ?? []).filter((v) => v != null && !isNaN(v));
+				for (const v of raw) {
+					rows.push([label, 'raw', v, '', v]);
 				}
 			});
 			return { headers, rows };

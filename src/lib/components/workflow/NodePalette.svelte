@@ -35,7 +35,6 @@
 		'column-set',
 		'average-profile',
 		'circular-stats',
-		'free-running-period',
 		'cfi',
 		'node-frequency-filter',
 		'column-add',

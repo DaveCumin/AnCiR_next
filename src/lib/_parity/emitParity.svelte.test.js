@@ -33,7 +33,6 @@ import { computeAutocorrelation } from '$lib/utils/correlogram.js';
 import { gaussianKDE } from '$lib/utils/kde.js';
 import { meanSemByGroup } from '$lib/utils/meanSem.js';
 import { rayleighTest, circularMean } from '$lib/utils/circular.js';
-import { estimateFreeRunningPeriod } from '$lib/utils/freeRunningPeriod.js';
 import { bathyphase, phaseAngleOfEntrainment, circadianFunctionIndex } from '$lib/utils/cosinorAddons.js';
 
 const PARITY_DIR = join(process.cwd(), 'tools', 'parity');
@@ -54,7 +53,6 @@ const PURE_UTIL_FNS = {
 	meanSemByGroup,
 	rayleighTest,
 	circularMean,
-	estimateFreeRunningPeriod,
 	bathyphase,
 	phaseAngleOfEntrainment,
 	circadianFunctionIndex

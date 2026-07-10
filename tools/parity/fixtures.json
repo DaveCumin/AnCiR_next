@@ -792,8 +792,8 @@
     {
       "id": "tp-watsonwilliams-2groups",
       "kind": "tableProcess",
-      "jsName": "WatsonWilliams",
-      "pyFunc": "watsonwilliams",
+      "jsName": "RayleighTest",
+      "pyFunc": "rayleightest",
       "inputs": [
         {
           "ref": "g1",
@@ -858,52 +858,11 @@
         "out": {
           "F": -1,
           "pvalue": -1
-        }
+        },
+        "testType": "watsonwilliams"
       },
       "compareOutputs": [
         "F",
-        "pvalue"
-      ]
-    },
-    {
-      "id": "tp-freerunningperiod-chisq",
-      "kind": "tableProcess",
-      "jsName": "FreeRunningPeriod",
-      "pyFunc": "freerunningperiod",
-      "generate": {
-        "type": "rhythm",
-        "n": 168,
-        "period": 24,
-        "amp": 40,
-        "mesor": 50,
-        "phase": 8,
-        "noise": 2,
-        "seed": 19,
-        "refs": {
-          "x": "t",
-          "y": "y"
-        }
-      },
-      "args": {
-        "xIN": "@t",
-        "yIN": [
-          "@y"
-        ],
-        "pMin": 20,
-        "pMax": 28,
-        "step": 0.1,
-        "method": "Chi-squared",
-        "binSize": 1,
-        "alpha": 0.05,
-        "out": {
-          "period": -1,
-          "power": -1,
-          "pvalue": -1
-        }
-      },
-      "compareOutputs": [
-        "period",
-        "power",
         "pvalue"
       ]
     },
@@ -941,11 +900,15 @@
         "preProcesses": [],
         "out": {
           "cosinorx": -1,
+          "mesor": -1,
+          "acrophase": -1,
           "bathyphase": -1,
           "phase_angle": -1
         }
       },
       "compareOutputs": [
+        "mesor",
+        "acrophase",
         "bathyphase",
         "phase_angle"
       ]
