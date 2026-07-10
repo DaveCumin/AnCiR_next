@@ -194,6 +194,13 @@
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
+	import {
+		bindAltTooltipToggle,
+		computeTooltipPosition,
+		dispatchTooltip,
+		hideTooltip
+	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 
 	let { theData, which } = $props();
 
@@ -202,6 +209,70 @@
 
 	// Value-unit suffix for the placement bin-width control.
 	const unitSuffix = (u) => (u === 'hours' ? 'h' : u === 'degrees' ? '°' : 'rad');
+
+	// Format one observation's phase for the tooltip: HH:MM clock time when the
+	// plot unit is 'hours' (the value is already expressed on the display period),
+	// otherwise a plain number with the unit suffix.
+	function fmtPhase(value, unit, period) {
+		if (!Number.isFinite(value)) return '—';
+		if (unit === 'hours') {
+			const p = Number.isFinite(period) && period > 0 ? period : 24;
+			const v = ((value % p) + p) % p;
+			const periodMinutes = Math.round(p * 60);
+			let totalMinutes = Math.round(v * 60);
+			if (totalMinutes >= periodMinutes) totalMinutes -= periodMinutes;
+			const hh = Math.floor(totalMinutes / 60);
+			const mm = totalMinutes % 60;
+			return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+		}
+		return `${fmt(value, unit === 'degrees' ? 1 : 3)}${unitSuffix(unit)}`;
+	}
+
+	let tooltip = $state({ visible: false, x: 0, y: 0, content: '' });
+	const handleTooltip = bindAltTooltipToggle(
+		() => tooltip,
+		(v) => {
+			tooltip = v;
+		}
+	);
+
+	// Hover on a series' merged points <path>: map the pointer to the polar
+	// projection's data space, then snap to the nearest observation in that
+	// series by circular (wrap-around) distance on the display period.
+	function handleSeriesHover(evt, plot, P, d) {
+		const svg = evt.currentTarget.ownerSVGElement;
+		const ctm = svg?.getScreenCTM();
+		if (!ctm) return;
+		const pt = new DOMPoint(evt.clientX, evt.clientY).matrixTransform(ctm.inverse());
+		const { value } = P.fromXY(pt.x, pt.y);
+		const period = P.period;
+
+		let bestIdx = -1;
+		let bestDist = Infinity;
+		d.rawValues.forEach((v, i) => {
+			if (!Number.isFinite(v)) return;
+			const diff = Math.abs(v - value) % period;
+			const dist = Math.min(diff, period - diff);
+			if (dist < bestDist) {
+				bestDist = dist;
+				bestIdx = i;
+			}
+		});
+		if (bestIdx < 0) {
+			hideTooltip(evt.currentTarget);
+			return;
+		}
+
+		const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${d.colour};margin-right:4px;vertical-align:middle;"></span>`;
+		const content = `${dot}<strong>${d.label}</strong><br/><span style="opacity:0.7">phase:</span> ${fmtPhase(d.rawValues[bestIdx], plot.unit, plot.period)}`;
+
+		const { x: xPos, y: yPos } = computeTooltipPosition(evt.clientX, evt.clientY);
+		dispatchTooltip(evt.currentTarget, { visible: true, x: xPos, y: yPos, content });
+	}
+
+	function handleSeriesLeave(evt) {
+		hideTooltip(evt.currentTarget);
+	}
 </script>
 
 {#snippet plot(theData)}
@@ -216,6 +287,7 @@
 		height={plot.parentBox.height}
 		viewBox="0 0 {plot.parentBox.width} {plot.parentBox.height}"
 		style="background: var(--surface-card); position: absolute;"
+		ontooltip={handleTooltip}
 	>
 		<PolarGrid projection={P} hint={`phase · period ${plot.displayPeriod} ${unitSuffix(plot.unit)}`} />
 
@@ -240,6 +312,9 @@
 						.join(' ')}
 					fill={d.colour}
 					fill-opacity="0.9"
+					role="presentation"
+					onpointermove={(evt) => handleSeriesHover(evt, plot, P, d)}
+					onpointerleave={handleSeriesLeave}
 				/>
 			{/if}
 			{#if plot.showMeanVectors}
@@ -256,6 +331,7 @@
 			which="plot"
 		/>
 	</svg>
+	<PlotTooltip visible={tooltip.visible} x={tooltip.x} y={tooltip.y} content={tooltip.content} />
 {/snippet}
 
 {#snippet controls(theData)}
