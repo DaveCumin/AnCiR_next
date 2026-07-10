@@ -47,3 +47,18 @@ export function groupsWatsonWilliams(valueArrays, unit, period, pFromF) {
 	const groups = (valueArrays ?? []).map((v) => toRadiansColumn(v, unit, period));
 	return watsonWilliams(groups, pFromF);
 }
+
+/**
+ * Clean a raw data column to numbers for polar plotting: finite numbers (and
+ * numeric strings) are kept; null/undefined/blank/non-numeric cells become NaN
+ * (which every consumer drops), so a gap never becomes a spurious 0 observation.
+ * @param {any[]} data
+ * @returns {number[]}
+ */
+export function cleanNumericColumn(data) {
+	return (data ?? []).map((v) => {
+		if (v == null || (typeof v === 'string' && v.trim() === '')) return NaN;
+		const n = Number(v);
+		return Number.isFinite(n) ? n : NaN;
+	});
+}

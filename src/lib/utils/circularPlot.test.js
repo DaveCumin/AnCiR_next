@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { displayPeriodFor, seriesStats, groupsWatsonWilliams } from './circularPlot.js';
+import {
+	displayPeriodFor,
+	seriesStats,
+	groupsWatsonWilliams,
+	cleanNumericColumn
+} from './circularPlot.js';
 import { pUpperFromF } from './fdist.js';
 
 describe('displayPeriodFor', () => {
@@ -42,5 +47,21 @@ describe('groupsWatsonWilliams', () => {
 		expect(ww.valid).toBe(true);
 		expect(ww.k).toBe(2);
 		expect(ww.pValue).toBeLessThan(0.05);
+	});
+});
+
+describe('cleanNumericColumn', () => {
+	it('keeps finite numbers (incl. numeric strings) and maps gaps/non-numeric to NaN', () => {
+		const out = cleanNumericColumn([7.1, null, '', ' ', 'abc', '6.9', 8, undefined]);
+		expect(out[0]).toBe(7.1);
+		expect(out[5]).toBe(6.9); // numeric string preserved
+		expect(out[6]).toBe(8);
+		expect([1, 2, 3, 4, 7].every((i) => Number.isNaN(out[i]))).toBe(true);
+	});
+	it('does NOT turn null/blank into 0', () => {
+		const out = cleanNumericColumn([null, '', 0]);
+		expect(Number.isNaN(out[0])).toBe(true);
+		expect(Number.isNaN(out[1])).toBe(true);
+		expect(out[2]).toBe(0); // a real 0 stays 0
 	});
 });

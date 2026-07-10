@@ -13,7 +13,12 @@
 	import PolarGrid from '$lib/components/plotbits/PolarGrid.svelte';
 	import MeanVector from '$lib/components/plotbits/MeanVector.svelte';
 	import RoseWedges from '$lib/components/plotbits/RoseWedges.svelte';
-	import { seriesStats, groupsWatsonWilliams, displayPeriodFor } from '$lib/utils/circularPlot.js';
+	import {
+		seriesStats,
+		groupsWatsonWilliams,
+		displayPeriodFor,
+		cleanNumericColumn
+	} from '$lib/utils/circularPlot.js';
 	import { pUpperFromF } from '$lib/utils/fdist.js';
 
 	class CircularPhaseSeries {
@@ -38,7 +43,7 @@
 			this.draw = dataIN?.draw ?? true;
 		}
 
-		rawValues = $derived.by(() => (this.column?.getData?.() ?? []).map(Number));
+		rawValues = $derived.by(() => cleanNumericColumn(this.column?.getData?.() ?? []));
 		stats = $derived.by(() =>
 			seriesStats(this.rawValues, this.parentPlot.unit, this.parentPlot.period)
 		);
