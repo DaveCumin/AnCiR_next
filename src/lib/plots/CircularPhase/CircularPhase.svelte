@@ -1,0 +1,404 @@
+<script module>
+	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import Column from '$lib/core/Column.svelte';
+	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import Editable from '$lib/components/inputs/Editable.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
+	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
+	import { POINT_SHAPES, POINT_SHAPE_LABELS, getPointPath } from '$lib/components/plotbits/pointShapes.js';
+	import { createPolar } from '$lib/components/plotbits/polar.js';
+	import { placeCircularPoints } from '$lib/components/plotbits/circularStack.js';
+	import PolarGrid from '$lib/components/plotbits/PolarGrid.svelte';
+	import MeanVector from '$lib/components/plotbits/MeanVector.svelte';
+	import RoseWedges from '$lib/components/plotbits/RoseWedges.svelte';
+	import { seriesStats, groupsWatsonWilliams, displayPeriodFor } from '$lib/utils/circularPlot.js';
+	import { pUpperFromF } from '$lib/utils/fdist.js';
+
+	class CircularPhaseSeries {
+		static descriptors = {};
+		parentPlot = $state();
+		column = $state();
+		label = $state('Phase 1');
+		colour = $state(getPaletteColor(0));
+		shape = $state('circle');
+		radius = $state(3.4);
+		draw = $state(true); // show this series' points
+
+		constructor(parent, dataIN) {
+			this.parentPlot = parent;
+			this.column = dataIN?.column
+				? ColumnClass.fromJSON(dataIN.column)
+				: new ColumnClass({ refId: -1 });
+			this.label = dataIN?.label ?? 'Phase ' + (parent.data.length + 1);
+			this.colour = dataIN?.colour ?? getPaletteColor(parent.data.length) ?? getPaletteColor(0);
+			this.shape = POINT_SHAPES.includes(dataIN?.shape) ? dataIN.shape : 'circle';
+			this.radius = dataIN?.radius ?? 3.4;
+			this.draw = dataIN?.draw ?? true;
+		}
+
+		rawValues = $derived.by(() => (this.column?.getData?.() ?? []).map(Number));
+		stats = $derived.by(() =>
+			seriesStats(this.rawValues, this.parentPlot.unit, this.parentPlot.period)
+		);
+
+		getLegendItem() {
+			const s = this.stats;
+			const rTxt = Number.isFinite(s.R) ? ` (R=${s.R.toFixed(2)})` : '';
+			return {
+				label: this.label + rTxt,
+				elements: [{ type: 'points', color: this.colour, size: this.radius, shape: this.shape }]
+			};
+		}
+
+		toJSON() {
+			return {
+				column: this.column,
+				label: this.label,
+				colour: this.colour,
+				shape: this.shape,
+				radius: this.radius,
+				draw: this.draw
+			};
+		}
+		static fromJSON(json, parent) {
+			return new CircularPhaseSeries(parent, json);
+		}
+	}
+
+	export class CircularPhaseClass {
+		static descriptors = { padding: { group: 'Padding' } };
+
+		parentBox = $state();
+		data = $state([]);
+		legend = $state();
+
+		unit = $state('hours'); // 'radians' | 'degrees' | 'hours'
+		period = $state(24);
+		placement = $state('stack'); // 'stack' | 'bin' | 'rim'
+		binWidth = $state(1);
+		showMeanVectors = $state(true);
+		showWedges = $state(false);
+		wedgeBinWidth = $state(2);
+		showWatsonWilliams = $state(false);
+		padding = $state({ top: 24, right: 20, bottom: 30, left: 20 });
+
+		displayPeriod = $derived(displayPeriodFor(this.unit, this.period));
+		plotSize = $derived(
+			Math.max(
+				40,
+				Math.min(
+					this.parentBox.width - this.padding.left - this.padding.right,
+					this.parentBox.height - this.padding.top - this.padding.bottom
+				)
+			)
+		);
+		perSeriesStats = $derived.by(() =>
+			this.data.map((d) => ({ label: d.label, colour: d.colour, ...d.stats }))
+		);
+		ww = $derived.by(() =>
+			this.showWatsonWilliams
+				? groupsWatsonWilliams(this.data.map((d) => d.rawValues), this.unit, this.period, pUpperFromF)
+				: null
+		);
+
+		constructor(parent, dataIN) {
+			this.parentBox = parent;
+			this.legend = new LegendClass(dataIN?.legend);
+			if (dataIN && dataIN.column) this.addData(dataIN); // single-input create path
+		}
+
+		addData(dataIN) {
+			this.data.push(new CircularPhaseSeries(this, dataIN));
+		}
+		removeData(idx) {
+			this.data.splice(idx, 1);
+		}
+
+		getLegendItems = $derived.by(() => {
+			const items = [];
+			this.data.forEach((d) => {
+				const li = d.getLegendItem();
+				if (li) items.push(li);
+			});
+			return items;
+		});
+
+		// No Cartesian axes; padding is fixed/symmetric. Present as a no-op so the
+		// generic plot lifecycle (which may call autoScalePadding) is satisfied.
+		autoScalePadding() {}
+
+		getDownloadData() {
+			const headers = ['Series', 'n', 'mean_phase', 'R', 'z', 'p'];
+			const rows = this.perSeriesStats.map((s) => [
+				s.label,
+				s.n,
+				Number.isFinite(s.meanValue) ? s.meanValue : '',
+				Number.isFinite(s.R) ? s.R : '',
+				Number.isFinite(s.z) ? s.z : '',
+				Number.isFinite(s.pValue) ? s.pValue : ''
+			]);
+			const w = this.ww;
+			if (w && w.valid) {
+				rows.push([`Watson-Williams F(${w.df1},${w.df2})`, w.N, '', '', w.F, w.pValue]);
+			}
+			return { headers, rows };
+		}
+
+		toJSON() {
+			return {
+				unit: this.unit,
+				period: this.period,
+				placement: this.placement,
+				binWidth: this.binWidth,
+				showMeanVectors: this.showMeanVectors,
+				showWedges: this.showWedges,
+				wedgeBinWidth: this.wedgeBinWidth,
+				showWatsonWilliams: this.showWatsonWilliams,
+				padding: this.padding,
+				data: this.data,
+				legend: this.legend.toJSON()
+			};
+		}
+		static fromJSON(parent, json) {
+			const c = new CircularPhaseClass(parent, null);
+			if (!json) return c;
+			c.unit = json.unit ?? 'hours';
+			c.period = json.period ?? 24;
+			c.placement = json.placement ?? 'stack';
+			c.binWidth = json.binWidth ?? 1;
+			c.showMeanVectors = json.showMeanVectors ?? true;
+			c.showWedges = json.showWedges ?? false;
+			c.wedgeBinWidth = json.wedgeBinWidth ?? 2;
+			c.showWatsonWilliams = json.showWatsonWilliams ?? false;
+			c.padding = json.padding ?? c.padding;
+			c.legend = LegendClass.fromJSON(json.legend);
+			if (json.data) c.data = json.data.map((d) => CircularPhaseSeries.fromJSON(d, c));
+			else if (json.column) c.addData({ column: json.column });
+			return c;
+		}
+	}
+
+	export const definition = {
+		defaultDataInputs: ['column'],
+		controlHeaders: ['Properties', 'Data'],
+		displayName: 'Circular phase plot',
+		plotClass: CircularPhaseClass
+	};
+</script>
+
+<script>
+	import { appState } from '$lib/core/core.svelte';
+	import { tick } from 'svelte';
+	import { flip } from 'svelte/animate';
+	import { slide } from 'svelte/transition';
+	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+
+	let { theData, which } = $props();
+
+	const fmt = (v, dp = 3) => (Number.isFinite(v) ? v.toFixed(dp) : '—');
+	const fmtP = (p) => (Number.isFinite(p) ? (p < 1e-4 ? '< 0.0001' : p.toFixed(4)) : '—');
+
+	// Value-unit suffix for the placement bin-width control.
+	const unitSuffix = (u) => (u === 'hours' ? 'h' : u === 'degrees' ? '°' : 'rad');
+</script>
+
+{#snippet plot(theData)}
+	{@const plot = theData.plot}
+	{@const size = plot.plotSize}
+	{@const cx = plot.padding.left + size / 2}
+	{@const cy = plot.padding.top + size / 2}
+	{@const P = createPolar({ cx, cy, radius: (size / 2) * 0.82, period: plot.displayPeriod })}
+	<svg
+		id={'plot' + plot.parentBox.id}
+		width={plot.parentBox.width}
+		height={plot.parentBox.height}
+		viewBox="0 0 {plot.parentBox.width} {plot.parentBox.height}"
+		style="background: var(--surface-card); position: absolute;"
+	>
+		<PolarGrid projection={P} hint={`phase · period ${plot.displayPeriod} ${unitSuffix(plot.unit)}`} />
+
+		{#each plot.data as d, i (d.column.id)}
+			{#if plot.showWedges}
+				<RoseWedges projection={P} values={d.rawValues} binWidth={plot.wedgeBinWidth} colour={d.colour} />
+			{/if}
+			{#if d.draw}
+				{@const placed = placeCircularPoints(d.rawValues, {
+					placement: plot.placement,
+					period: plot.displayPeriod,
+					binWidth: plot.binWidth,
+					dotRadius: d.radius,
+					plotRadius: P.radius
+				})}
+				<path
+					d={placed
+						.map((p) => {
+							const [x, y] = P.toXY(p.value, p.r01);
+							return getPointPath(d.shape, x, y, d.radius);
+						})
+						.join(' ')}
+					fill={d.colour}
+					fill-opacity="0.9"
+				/>
+			{/if}
+			{#if plot.showMeanVectors}
+				<MeanVector projection={P} value={d.stats.meanValue} length={d.stats.R} colour={d.colour} />
+			{/if}
+		{/each}
+
+		<Legend
+			legendData={plot.legend}
+			items={plot.getLegendItems}
+			plotWidth={size}
+			plotHeight={size}
+			padding={plot.padding}
+			which="plot"
+		/>
+	</svg>
+{/snippet}
+
+{#snippet controls(theData)}
+	{#if appState.currentControlTab === 'properties'}
+		<div class="control-component">
+			<div class="control-component-title"><p>Dimension</p></div>
+			<div class="control-input-horizontal">
+				<ControlInput label="Width"><NumberWithUnits bind:value={theData.parentBox.width} /></ControlInput>
+				<ControlInput label="Height"><NumberWithUnits bind:value={theData.parentBox.height} /></ControlInput>
+			</div>
+		</div>
+		<div class="div-line"></div>
+
+		<Legend legendData={theData.legend} which="controls" />
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<div class="control-component-title"><p>Angle</p></div>
+			<div class="control-input-horizontal">
+				<ControlInput label="Unit">
+					<select bind:value={theData.unit}>
+						<option value="radians">Radians</option>
+						<option value="degrees">Degrees</option>
+						<option value="hours">Clock hours</option>
+					</select>
+				</ControlInput>
+				{#if theData.unit === 'hours'}
+					<ControlInput label="Period (h)">
+						<NumberWithUnits bind:value={theData.period} min="0.1" step="1" />
+					</ControlInput>
+				{/if}
+			</div>
+		</div>
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<div class="control-component-title"><p>Points</p></div>
+			<div class="control-input-horizontal">
+				<ControlInput label="Placement">
+					<select bind:value={theData.placement}>
+						<option value="stack">Stacked</option>
+						<option value="bin">Binned</option>
+						<option value="rim">On circumference</option>
+					</select>
+				</ControlInput>
+				{#if theData.placement === 'bin'}
+					<ControlInput label={`Bin (${unitSuffix(theData.unit)})`}>
+						<NumberWithUnits bind:value={theData.binWidth} min="0.05" step="0.5" />
+					</ControlInput>
+				{/if}
+			</div>
+		</div>
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<label class="cp-toggle"><input type="checkbox" bind:checked={theData.showMeanVectors} /> Mean resultant vectors</label>
+			<label class="cp-toggle"><input type="checkbox" bind:checked={theData.showWedges} /> Rose wedges (circular histogram)</label>
+			{#if theData.showWedges}
+				<ControlInput label={`Wedge bin (${unitSuffix(theData.unit)})`}>
+					<NumberWithUnits bind:value={theData.wedgeBinWidth} min="0.05" step="0.5" />
+				</ControlInput>
+			{/if}
+			<label class="cp-toggle"><input type="checkbox" bind:checked={theData.showWatsonWilliams} /> Watson-Williams test (equal mean direction)</label>
+		</div>
+
+		{#if theData.showWatsonWilliams && theData.ww}
+			<div class="cp-ww">
+				{#if theData.ww.valid}
+					<p>F({theData.ww.df1}, {theData.ww.df2}) = {fmt(theData.ww.F, 3)}, p = {fmtP(theData.ww.pValue)}</p>
+				{:else}
+					<p class="cp-hint">Wire two or more phase columns to compare mean directions.</p>
+				{/if}
+			</div>
+		{/if}
+	{:else if appState.currentControlTab === 'data'}
+		<div id="dataSettings">
+			<div class="control-data-add">
+				<div class="add">
+					<button class="icon" onclick={async () => { theData.addData({}); await tick(); dataSettingsScrollTo('bottom'); }}>
+						<Icon name="add" width={16} height={16} />
+					</button>
+				</div>
+			</div>
+
+			{#each theData.data as datum, i (datum.column.id)}
+				<div class="dataBlock" animate:flip={{ duration: 500 }} in:slide={{ duration: 500, axis: 'y' }} out:slide={{ duration: 500, axis: 'y' }}>
+					<div class="control-component-title">
+						<p><Editable bind:value={datum.label} /></p>
+						<button class="icon" onclick={() => theData.removeData(i)}>
+							<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
+						</button>
+					</div>
+					<div class="data-wrapper">
+						<div class="y-select">
+							<ControlInput label="phase column"></ControlInput>
+							<Column col={datum.column} canChange={true} />
+						</div>
+						<div class="control-input-horizontal">
+							<div class="control-input" style="max-width: 1.5rem;">
+								<p>Col</p><ColourPicker bind:value={datum.colour} />
+							</div>
+							<ControlInput label="Shape">
+								<select bind:value={datum.shape}>
+									{#each POINT_SHAPES as s, si (s)}
+										<option value={s}>{POINT_SHAPE_LABELS[si]}</option>
+									{/each}
+								</select>
+							</ControlInput>
+							<ControlInput label="Size">
+								<NumberWithUnits bind:value={datum.radius} min="0.5" step="0.5" />
+							</ControlInput>
+						</div>
+					</div>
+
+					{#if datum.stats}
+						<p class="cp-stat">n {datum.stats.n} · R {fmt(datum.stats.R, 3)} · z {fmt(datum.stats.z, 2)} · p {fmtP(datum.stats.pValue)}</p>
+					{/if}
+					<div class="div-line"></div>
+				</div>
+			{/each}
+		</div>
+	{/if}
+{/snippet}
+
+{#if which === 'plot'}
+	{@render plot(theData)}
+{:else if which === 'controls'}
+	{@render controls(theData)}
+{/if}
+
+<style>
+	.cp-toggle {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2, 0.4rem);
+		font-size: var(--font-sm);
+		margin: 0.2rem 0;
+	}
+	.cp-ww,
+	.cp-stat,
+	.cp-hint {
+		font-size: var(--font-sm);
+		opacity: 0.85;
+		margin: 0.2rem 0;
+	}
+</style>
