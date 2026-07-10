@@ -143,6 +143,18 @@ def run_plot_compute(fx, js):
     return {k: res.get(k) for k in fx.get("compareArrays", [])}
 
 
+def run_pure_util(fx, js):
+    """Call a pure numeric util (dispatched by name via getattr) with the SAME
+    input arrays the JS emitter used, plus any extra positional pyArgs. Returns
+    the raw result (dict of arrays, list of dicts, or dict of scalars)."""
+    fn = getattr(rt, fx["pyFunc"], None)
+    if fn is None:
+        raise AssertionError(f"no Python {fx['pyFunc']} in ancir_runtime")
+    arg_refs = fx.get("argRefs") or [fx.get("valuesRef")]
+    pos = [js["inputs"][r]["values"] for r in arg_refs]
+    return fn(*pos, *fx.get("pyArgs", []))
+
+
 def run_table_process_result(fx, js):
     raw_data, cols, id_map, _ = _build_cols(js)
     args = resolve_tokens(fx["args"], id_map)
@@ -171,6 +183,34 @@ def _check_fixture(fx, js_results):
         for key in fx.get("compareArrays", []):
             ok, why = arrays_match(py.get(key), js["outputs"].get(key), tol)
             assert ok, f"{fx['id']} array '{key}' differs: {why}"
+
+    elif fx["kind"] == "pureUtil":
+        res = run_pure_util(fx, js)
+        if "compareArrays" in fx:
+            for key in fx["compareArrays"]:
+                ok, why = arrays_match(res.get(key), js["outputs"].get(key), tol)
+                assert ok, f"{fx['id']} array '{key}' differs: {why}"
+        elif "compareFields" in fx:
+            for f in fx["compareFields"]:
+                py_arr = [row.get(f) if isinstance(row, dict) else None for row in res]
+                js_arr = js["outputs"].get(f)
+                assert js_arr is not None and len(py_arr) == len(js_arr), (
+                    f"{fx['id']} field '{f}' length {len(py_arr)} vs "
+                    f"{None if js_arr is None else len(js_arr)}")
+                for i, (pv, jv) in enumerate(zip(py_arr, js_arr)):
+                    if isinstance(jv, str) or isinstance(pv, str):
+                        assert pv == jv, f"{fx['id']} field '{f}' index {i}: {pv!r} vs {jv!r}"
+                    else:
+                        assert nums_match(pv, jv, tol), \
+                            f"{fx['id']} field '{f}' index {i}: {pv!r} vs {jv!r}"
+        elif "compareScalars" in fx:
+            for key in fx["compareScalars"]:
+                pv, jv = res.get(key), js["outputs"].get(key)
+                if isinstance(jv, str) or isinstance(pv, str):
+                    assert pv == jv, f"{fx['id']} scalar '{key}' differs: {pv!r} vs {jv!r}"
+                else:
+                    assert nums_match(pv, jv, tol), \
+                        f"{fx['id']} scalar '{key}' differs: {pv!r} vs {jv!r}"
 
     elif fx["kind"] == "tableProcessResult":
         py = run_table_process_result(fx, js)

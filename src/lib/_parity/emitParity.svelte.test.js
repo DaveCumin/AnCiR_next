@@ -30,6 +30,11 @@ import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
 import { setWorkerFactory } from '$lib/workers/workerPool.js';
 import { computeFFT } from '$lib/utils/fft.js';
 import { computeAutocorrelation } from '$lib/utils/correlogram.js';
+import { gaussianKDE } from '$lib/utils/kde.js';
+import { meanSemByGroup } from '$lib/utils/meanSem.js';
+import { rayleighTest, circularMean } from '$lib/utils/circular.js';
+import { estimateFreeRunningPeriod } from '$lib/utils/freeRunningPeriod.js';
+import { bathyphase, phaseAngleOfEntrainment, circadianFunctionIndex } from '$lib/utils/cosinorAddons.js';
 
 const PARITY_DIR = join(process.cwd(), 'tools', 'parity');
 
@@ -38,6 +43,22 @@ const PARITY_DIR = join(process.cwd(), 'tools', 'parity');
 // acfData — testing them directly gives numeric parity without constructing a
 // reactive plot (see the `plotCompute` fixture kind).
 const PLOT_COMPUTE_FNS = { computeFFT, computeAutocorrelation };
+
+// Pure numeric utils exercised directly (no engine, no reactivity) via the
+// `pureUtil` fixture kind. Keyed by the fixture's `jsFn`. Each takes one or
+// more input arrays (named by `argRefs`, or the single `valuesRef`) followed by
+// the fixture's `jsArgs`, and returns either a dict of arrays (compareArrays),
+// an array of objects (compareFields), or a dict of scalars (compareScalars).
+const PURE_UTIL_FNS = {
+	gaussianKDE,
+	meanSemByGroup,
+	rayleighTest,
+	circularMean,
+	estimateFreeRunningPeriod,
+	bathyphase,
+	phaseAngleOfEntrainment,
+	circadianFunctionIndex
+};
 
 class ThrowOnPost {
 	postMessage() {
@@ -218,6 +239,43 @@ function runPlotCompute(fx) {
 	return { inputs, outputs };
 }
 
+// Resolve the input arrays for a pure-util fixture into a {ref:{type,values}}
+// dict (written to js_results so Python reads the identical numbers). Supports
+// a seeded `generate` spec, an `inputs[]` list, or a plain `input` dict of
+// named arrays.
+function pureUtilInputs(fx) {
+	if (fx.generate) return generateInputs(fx.generate);
+	if (fx.inputs) {
+		const out = {};
+		for (const inp of fx.inputs) out[inp.ref] = { type: inp.type ?? 'number', values: inp.values };
+		return out;
+	}
+	const out = {};
+	for (const [ref, values] of Object.entries(fx.input ?? {})) out[ref] = { type: 'raw', values };
+	return out;
+}
+
+// Calls a pure numeric util with the fixture's input arrays + jsArgs, capturing
+// the arrays/fields/scalars the fixture wants compared. No engine, no reactivity.
+function runPureUtil(fx) {
+	const inputs = pureUtilInputs(fx);
+	const fn = PURE_UTIL_FNS[fx.jsFn];
+	if (!fn) throw new Error(`no JS pure-util fn ${fx.jsFn}`);
+	const argRefs = fx.argRefs ?? [fx.valuesRef];
+	const posArgs = argRefs.map((r) => inputs[r].values);
+	const res = fn(...posArgs, ...(fx.jsArgs ?? []));
+	const outputs = {};
+	if (fx.compareArrays) {
+		for (const k of fx.compareArrays) outputs[k] = safeArray(res[k]);
+	} else if (fx.compareFields) {
+		for (const f of fx.compareFields)
+			outputs[f] = res.map((o) => (typeof o[f] === 'number' ? safeNum(o[f]) : o[f]));
+	} else if (fx.compareScalars) {
+		for (const k of fx.compareScalars) outputs[k] = typeof res[k] === 'number' ? safeNum(res[k]) : res[k];
+	}
+	return { inputs, outputs };
+}
+
 describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 	it('runs every fixture through the JS engine', async () => {
 		appConsts.processMap = await loadProcesses();
@@ -232,6 +290,7 @@ describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 			if (fx.kind === 'columnProcess') results[fx.id] = runColumnProcess(fx);
 			else if (fx.kind === 'tableProcessResult') results[fx.id] = await runTableProcessResult(fx);
 			else if (fx.kind === 'plotCompute') results[fx.id] = runPlotCompute(fx);
+			else if (fx.kind === 'pureUtil') results[fx.id] = runPureUtil(fx);
 			else results[fx.id] = await runTableProcess(fx);
 		}
 
