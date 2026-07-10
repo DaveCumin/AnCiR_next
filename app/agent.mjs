@@ -13,6 +13,8 @@
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { buildSystemPrompt, promptVersion } from './promptBuilder.js';
+import { chatCompletion } from './llmClient.js';
 
 const MCP_DIR = fileURLToPath(new URL('..', import.meta.url));
 const VITE_NODE = fileURLToPath(new URL('../node_modules/.bin/vite-node', import.meta.url));
@@ -29,13 +31,32 @@ const ENV = {
 // Merge a per-request BYO model config over the server defaults, so users can bring
 // their OWN endpoint/key/model and the deployer never pays for inference. The key is
 // used only for this request and is never logged or stored.
-function resolveLlm(llm = {}) {
+export function resolveLlm(llm = {}) {
 	const explicitBase = llm.baseUrl || ENV.baseUrl;
 	return {
 		baseUrl: llm.baseUrl || ENV.baseUrl || 'https://api.openai.com/v1',
 		model: llm.model || ENV.model || 'gpt-4o-mini',
 		// Local servers (Ollama/LM Studio) don't need a key; a base URL alone is enough.
 		apiKey: llm.apiKey || ENV.apiKey || (explicitBase ? 'local' : '')
+	};
+}
+
+// Runtime knobs (maxTurns/timeout/temperature/…), clamped to safe ranges. The HTTP layer
+// also validates+clamps these; this keeps direct callers (tests) safe too.
+export function resolveOptions(o = {}) {
+	const num = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Number(v))) : d);
+	const int = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Math.round(Number(v)))) : d);
+	return {
+		maxTurns: int(o.maxTurns, 1, 24, 16),
+		timeoutMs: int(o.timeoutMs, 5000, 120000, 90000),
+		retries: int(o.retries, 0, 5, 3),
+		temperature: o.temperature == null ? undefined : num(o.temperature, 0, 2, undefined),
+		topP: o.topP == null ? undefined : num(o.topP, 0, 1, undefined),
+		maxTokens: o.maxTokens == null ? undefined : int(o.maxTokens, 1, 8192, undefined),
+		toolChoice: o.toolChoice || 'auto',
+		// Default: omit. Our loop executes tool calls SERIALLY (in array order), so
+		// ordering is already guaranteed; only send the flag if a caller sets it.
+		parallelToolCalls: typeof o.parallelToolCalls === 'boolean' ? o.parallelToolCalls : undefined
 	};
 }
 
@@ -59,101 +80,72 @@ async function withMcp(fn) {
 	}
 }
 
-/** LLM tool-calling loop against an OpenAI-compatible endpoint (`cfg`). */
-async function runLlm({ prompt, call, tools, trace, cfg }) {
+/** LLM tool-calling loop against an OpenAI-compatible endpoint (`cfg`, `options`). */
+export async function runLlm({ prompt, call, tools, trace, cfg, options = {} }) {
 	const oaiTools = tools
 		// The model builds the session; we export it ourselves afterwards.
 		.filter((t) => t.name !== 'export_session' && t.name !== 'render_plot')
 		.map((t) => ({
 			type: 'function',
-			function: { name: t.name, description: t.description, parameters: t.inputSchema || { type: 'object', properties: {} } }
+			function: {
+				name: t.name,
+				description: t.description,
+				parameters: t.inputSchema || { type: 'object', properties: {} }
+			}
 		}));
 
-	// Embed the real analysis/plot parameter shapes so the model uses exact arg
-	// names instead of guessing (run_table_process `args` is a free-form object).
-	let analysisRef = '';
-	let plotRef = '';
+	// Live capability catalogue → embedded in the system prompt so the model uses exact
+	// arg shapes instead of guessing. Prompt rules live in prompts/system.md.
+	let caps = null;
 	try {
-		const caps = JSON.parse(await call('list_capabilities', {}));
-		// One flat `args` object per analysis (input fields + params together), so the
-		// model doesn't nest under "inputs"/"params".
-		const argsTemplate = (a) => {
-			const t = {};
-			for (const f of a.inputs?.scalar ?? []) t[f] = '<col>';
-			for (const f of a.inputs?.array ?? []) t[f] = ['<col>'];
-			Object.assign(t, a.params);
-			// Free-period fitting is unreliable on a time axis; a known-period rhythm
-			// should use a fixed period — surface that as the working default.
-			if ('useFixedPeriod' in t) t.useFixedPeriod = true;
-			return t;
-		};
-		analysisRef = caps.analyses.map((a) => `  ${a.id}: args=${JSON.stringify(argsTemplate(a))}`).join('\n');
-		plotRef = caps.plots.map((p) => `${p.id}[${(p.inputs || []).join(',')}]`).join(', ');
+		caps = JSON.parse(await call('list_capabilities', {}));
 	} catch {
-		/* fall back to the model calling list_capabilities itself */
+		/* buildSystemPrompt falls back to "call list_capabilities yourself" */
 	}
-
 	const messages = [
-		{
-			role: 'system',
-			content:
-				'You are a chronobiology analyst building an AnCiR session from the user request.\n' +
-				'Order: create_session first, then build data, then analyses (run_table_process), transforms ' +
-				'(add_column_process) and plots (add_plot). When done, stop (do not narrate).\n' +
-				'RULES for tool arguments (critical):\n' +
-				'- Arguments must be LITERAL JSON only — never code, functions, lambdas, ranges, or expressions. ' +
-				'`values` must be a real array of numbers like [0,1,2], not {"function":...}.\n' +
-				'- run_table_process takes {name, args}. `args` is a FLAT object: input-column fields (xIN, yIN, ' +
-				'…) AND parameters together at the TOP LEVEL. Do NOT nest under "inputs" or "params". Copy the ' +
-				'`args=` template for the analysis below verbatim, replacing "<col>" with a column name; keep ' +
-				'nested values like SimulatedData.sections. Do NOT invent parameter names.\n' +
-				'- Do NOT hand-type long numeric arrays. To create synthetic data, use run_table_process with ' +
-				'"SimulatedData" (a rhythm+noise generator) or "SequenceColumn"/"Random". Use import_data only ' +
-				'for small data the user gives explicitly, as literal number arrays.\n' +
-				'- For period fits (Cosinor/FitFunction) set useFixedPeriod:true and fixedPeriod to the rhythm ' +
-				'period in hours (e.g. 24); free-period mode is unreliable on time-axis data.\n' +
-				'- For column references (xIN, yIN, plot inputs, columnId) pass the column NAME (e.g. "time_0", ' +
-				'"values_0") instead of a numeric id — STRONGLY PREFERRED, it avoids id mistakes. Read exact names ' +
-				'from the tool result that created them (each output lists {columnId, name}) or from list_columns.\n' +
-				(analysisRef
-					? '\nANALYSES (run_table_process name + args) — exact shapes:\n' + analysisRef + '\nPLOTS (add_plot type + inputs): ' + plotRef
-					: '- Call list_capabilities if unsure of names/params.')
-		},
+		{ role: 'system', content: buildSystemPrompt(caps) },
 		{ role: 'user', content: prompt }
 	];
 
-	for (let turn = 0; turn < 20; turn++) {
-		const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.apiKey}` },
-			body: JSON.stringify({ model: cfg.model, messages, tools: oaiTools, tool_choice: 'auto' })
-		});
-		if (!res.ok) {
-			// Providers like Groq validate tool args server-side and 400 with
-			// `tool_use_failed` on malformed calls — recover instead of crashing.
-			const body = await res.text();
-			let parsed;
-			try {
-				parsed = JSON.parse(body);
-			} catch {
-				/* not JSON */
+	// Static request params (messages are added per turn).
+	const params = { tools: oaiTools, tool_choice: options.toolChoice ?? 'auto' };
+	if (options.temperature != null) params.temperature = options.temperature;
+	if (options.topP != null) params.top_p = options.topP;
+	if (options.maxTokens != null) params.max_tokens = options.maxTokens;
+	if (options.parallelToolCalls != null) params.parallel_tool_calls = options.parallelToolCalls;
+
+	const maxTurns = options.maxTurns ?? 16;
+	for (let turn = 0; turn < maxTurns; turn++) {
+		const r = await chatCompletion(
+			cfg,
+			{ ...params, messages },
+			{
+				retries: options.retries ?? 3,
+				timeoutMs: options.timeoutMs ?? 90000,
+				onRetry: ({ attempt, reason }) => trace.push(`retry ${attempt} (${reason})`)
 			}
-			if (res.status === 400 && parsed?.error?.code === 'tool_use_failed') {
+		);
+		if (!r.ok) {
+			// Groq validates tool args server-side and 400s with `tool_use_failed` on a
+			// malformed call — recover with a nudge instead of failing the build.
+			if (r.status === 400 && r.json?.error?.code === 'tool_use_failed') {
 				trace.push('tool_use_failed → retry');
 				messages.push({
 					role: 'user',
 					content:
-						`Your last tool call was rejected: ${parsed.error.message || 'invalid tool call'}. ` +
+						`Your last tool call was rejected: ${r.json.error.message || 'invalid tool call'}. ` +
 						'Tool arguments must be literal JSON (no functions, lambdas, ranges, or code). Do not ' +
 						'hand-type numeric arrays — use run_table_process with "SimulatedData" to generate data.'
 				});
 				continue;
 			}
-			throw new Error(`LLM HTTP ${res.status}: ${body}`);
+			throw new Error(`LLM HTTP ${r.status}: ${r.body}`);
 		}
-		const msg = (await res.json()).choices[0].message;
+		const msg = r.message;
 		messages.push(msg);
 		if (!msg.tool_calls?.length) break;
+		// Execute SERIALLY, in the order the model returned them — the AnCiR engine is
+		// stateful (create → import → analyse → plot), so parallelism would race `core`.
 		for (const tc of msg.tool_calls) {
 			const args = JSON.parse(tc.function.arguments || '{}');
 			trace.push(`${tc.function.name}(${JSON.stringify(args).slice(0, 100)})`);
@@ -169,7 +161,7 @@ async function runLlm({ prompt, call, tools, trace, cfg }) {
 }
 
 /** Deterministic fallback planner (no LLM key) — enough to prove the round-trip. */
-async function runScripted({ prompt, call, trace }) {
+export async function runScripted({ prompt, call, trace }) {
 	const p = String(prompt || '').toLowerCase();
 	const periodMatch =
 		p.match(/period\s*(?:of\s*)?(\d+(?:\.\d+)?)/) || p.match(/(\d+(?:\.\d+)?)\s*[- ]?h(?:our|r)?s?\b/);
@@ -203,21 +195,31 @@ async function runScripted({ prompt, call, trace }) {
 
 /**
  * Build an AnCiR session from a natural-language prompt.
- * @param {{prompt:string, sessionId?:string, llm?:{baseUrl?:string, apiKey?:string, model?:string}}} opts
+ * @param {{prompt:string, sessionId?:string,
+ *   llm?:{baseUrl?:string, apiKey?:string, model?:string},
+ *   options?:{maxTurns?:number, timeoutMs?:number, retries?:number, temperature?:number,
+ *     topP?:number, maxTokens?:number, toolChoice?:string, parallelToolCalls?:boolean}}} opts
  *   `llm` is the caller's own model config (BYO); falls back to server env, then the
- *   no-key scripted planner.
- * @returns {Promise<{json:string, trace:string[], planner:'llm'|'scripted', model?:string}>}
+ *   no-key scripted planner. `options` are clamped runtime knobs.
+ * @returns {Promise<{json:string, trace:string[], planner:'llm'|'scripted', model?:string, promptVersion?:string}>}
  */
-export async function buildSession({ prompt, sessionId, llm }) {
+export async function buildSession({ prompt, sessionId, llm, options }) {
 	const cfg = resolveLlm(llm);
+	const opts = resolveOptions(options);
 	return withMcp(async ({ call, tools }) => {
 		const trace = [];
 		const planner = cfg.apiKey ? 'llm' : 'scripted';
 		await call('create_session', { id: sessionId ?? 'app' });
 		trace.push('create_session');
-		if (planner === 'llm') await runLlm({ prompt, call, tools, trace, cfg });
+		if (planner === 'llm') await runLlm({ prompt, call, tools, trace, cfg, options: opts });
 		else await runScripted({ prompt, call, trace });
 		const json = await call('export_session', {}); // canonical AnCiR session JSON
-		return { json, trace, planner, model: planner === 'llm' ? cfg.model : undefined };
+		return {
+			json,
+			trace,
+			planner,
+			model: planner === 'llm' ? cfg.model : undefined,
+			promptVersion: planner === 'llm' ? promptVersion() : undefined
+		};
 	});
 }

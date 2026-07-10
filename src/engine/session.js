@@ -534,8 +534,10 @@ export class AncirSession {
 		const result = { name, tableProcessId: tp.id, valid, outputs };
 		// Recovered fit parameters (Cosinor/FitFunction) — the numbers a caller wants.
 		if (fit) result.fit = fit;
-		// Scalar statistics when the process produced no output columns (GroupComparison).
-		if (outputs.length === 0 && stats) result.stats = stats;
+		// Statistics: GroupComparison exposes them as `comparisons` (now alongside its
+		// statistic/pvalue output columns), so surface them regardless of columns; other
+		// column-less processes only when they produced no columns.
+		if (stats && (stats.comparisons || outputs.length === 0)) result.stats = stats;
 		return result;
 	}
 

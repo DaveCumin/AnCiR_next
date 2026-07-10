@@ -89,7 +89,10 @@ describe('GroupComparison surfaces statistics (no output columns)', () => {
 			method: 'auto',
 			alpha: 0.05
 		});
-		expect(res.outputs.length).toBe(0);
+		// GroupComparison now emits statistic/pvalue output columns AND returns the rich
+		// comparison stats — both are surfaced.
+		expect(res.valid).toBe(true);
+		expect(res.outputs.map((o) => o.key)).toEqual(expect.arrayContaining(['statistic', 'pvalue']));
 		expect(res.stats).toBeTruthy();
 		expect(res.stats.comparisons).toBeTruthy();
 		const first = Object.values(res.stats.comparisons)[0];

@@ -15,12 +15,16 @@
     "agnostic": "node --env-file-if-exists=app/.env test/agnostic-client.mjs",
     "app": "node --env-file-if-exists=app/.env app/server.mjs",
     "app:test": "node --env-file-if-exists=app/.env app/test-roundtrip.mjs",
-    "app:e2e": "node --env-file-if-exists=app/.env app/e2e-ancir.mjs"
+    "app:e2e": "node --env-file-if-exists=app/.env app/e2e-ancir.mjs",
+    "app:units": "node --test app/test-units.mjs",
+    "app:byo": "node app/test-byo.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "zod": "^3.24.1",
-    "express": "^5.0.0"
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
+    "pino": "^10.3.1",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "vite-node": "^3.2.4",

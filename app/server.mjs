@@ -1,36 +1,29 @@
-// MVP backend for the "natural language → AnCiR session" app.
+// Backend for the "natural language → AnCiR session" app.
 //
-// Round-trip:
-//   POST /build {prompt}  → LLM/scripted agent builds a session via the AnCiR MCP,
-//                           exports session JSON, stores it, returns { sessionUrl,
-//                           ancirUrl, trace }.
-//   GET  /sessions/:id    → serves that session JSON (CORS-open) so the AnCiR GUI can
-//                           fetch it via ?loadFromURL=.
-//   GET  /                → a minimal chat page that POSTs /build and opens ancirUrl.
+//   POST /build {prompt, llm?, options?} → agent builds a session via the AnCiR MCP,
+//                 exports the JSON, stores it, returns { sessionUrl, ancirUrl, trace }.
+//   GET  /sessions/:id → serves that session JSON (CORS-open) for AnCiR ?loadFromURL=.
+//   GET  /config       → { ancirBase } for the static UI.
+//   GET  /             → the static chat page (app/public/index.html).
 //
-// This is a prototype (kept inside mcp/app/ for now); it would graduate to its own
-// repo for the monetised product. Per-request isolation comes from spawning a fresh
-// MCP server per build (one process = one session).
+// Bring-your-own-model: the caller supplies their own endpoint/key/model per request
+// (never logged/stored). Per-request isolation: a fresh MCP server per build.
 import { randomUUID } from 'node:crypto';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
+import { z } from 'zod';
 import { buildSession } from './agent.mjs';
+import { validateBuild } from './validation.js';
+import { log } from './log.js';
 
 // PORT is what most hosts inject (Render/Railway/Fly/…); APP_PORT is the local name.
 const PORT = Number(process.env.PORT || process.env.APP_PORT) || 5273;
 const HOST = process.env.APP_HOST || '127.0.0.1'; // set APP_HOST=0.0.0.0 to bind publicly
-// Strip any trailing slash so we never produce `…5173//?loadFromURL=`.
+const isPublicBind = HOST === '0.0.0.0' || HOST === '::';
 const ANCIR_BASE = (process.env.ANCIR_BASE_URL || 'http://localhost:5173').replace(/\/+$/, '');
-
-// The public base for session URLs. Prefer APP_BASE_URL; otherwise derive it from the
-// incoming request (honouring a reverse proxy / Cloudflare tunnel's x-forwarded-*
-// headers), so an ephemeral quick-tunnel URL works with zero config.
-function selfBase(req) {
-	if (process.env.APP_BASE_URL) return process.env.APP_BASE_URL.replace(/\/+$/, '');
-	const proto = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim() || 'http';
-	const host = req.headers['x-forwarded-host'] || req.headers.host || `${HOST}:${PORT}`;
-	return `${proto}://${host}`;
-}
 const TTL_MS = Number(process.env.SESSION_TTL_MS) || 60 * 60 * 1000;
+const PUBLIC_DIR = fileURLToPath(new URL('./public', import.meta.url));
 
 /** @type {Map<string,{json:string, ts:number}>} */
 const store = new Map();
@@ -39,142 +32,130 @@ const prune = () => {
 	for (const [id, e] of store) if (now - e.ts > TTL_MS) store.delete(id);
 };
 
-const ancirUrlFor = (sessionUrl) =>
-	`${ANCIR_BASE}/?loadFromURL=${encodeURIComponent(sessionUrl)}`;
+// Public base for session URLs — APP_BASE_URL, else derived from the request (so an
+// ephemeral Cloudflare quick-tunnel URL works with zero config).
+function selfBase(req) {
+	if (process.env.APP_BASE_URL) return process.env.APP_BASE_URL.replace(/\/+$/, '');
+	const proto = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim() || 'http';
+	const host = req.headers['x-forwarded-host'] || req.headers.host || `${HOST}:${PORT}`;
+	return `${proto}://${host}`;
+}
+const ancirUrlFor = (sessionUrl) => `${ANCIR_BASE}/?loadFromURL=${encodeURIComponent(sessionUrl)}`;
 
-const app = express();
-app.use(express.json({ limit: '4mb' }));
+/** Build the Express app (no listen) — importable for tests. */
+export function createApp() {
+	const app = express();
+	// One proxy hop in front (Cloudflare tunnel / reverse proxy) so req.ip = the real
+	// client for rate limiting. Configurable; a number avoids express-rate-limit's
+	// permissive-trust-proxy warning.
+	app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
+	app.use(express.json({ limit: '1mb' }));
 
-app.get('/health', (_req, res) => res.json({ ok: true, sessions: store.size }));
-
-app.post('/build', async (req, res) => {
-	const prompt = (req.body?.prompt ?? '').toString().trim();
-	if (!prompt) return res.status(400).json({ error: 'prompt is required' });
-	// Bring-your-own-model: the caller may supply their own endpoint/key/model. It is
-	// used only for this request and is NEVER logged or stored server-side.
-	const llm = req.body?.llm && typeof req.body.llm === 'object' ? req.body.llm : undefined;
-	try {
-		prune();
-		const { json, trace, planner, model } = await buildSession({
-			prompt,
-			sessionId: 'app-' + randomUUID().slice(0, 8),
-			llm
+	// Lightweight request log (skip health/static noise); secrets are never in the path.
+	app.use((req, res, next) => {
+		const start = Date.now();
+		res.on('finish', () => {
+			if (req.path === '/health' || req.method === 'GET') return;
+			log.info({ method: req.method, path: req.path, status: res.statusCode, ms: Date.now() - start }, 'req');
 		});
-		const id = randomUUID();
-		store.set(id, { json, ts: Date.now() });
-		const sessionUrl = `${selfBase(req)}/sessions/${id}`;
-		const note =
-			planner === 'scripted'
-				? 'SCRIPTED planner (no model configured) — ignores your prompt and always builds a cosine demo. Add your own model in Model settings for real natural-language following.'
-				: undefined;
-		res.json({ id, planner, model, note, trace, sessionUrl, ancirUrl: ancirUrlFor(sessionUrl) });
-	} catch (err) {
-		// Never include the request body (it may carry the user's key) in logs.
-		console.error('build failed:', err?.message || err);
-		res.status(500).json({ error: err?.message || String(err) });
-	}
-});
+		next();
+	});
 
-app.get('/sessions/:id', (req, res) => {
-	const e = store.get(req.params.id);
-	if (!e) return res.status(404).json({ error: 'not found or expired' });
-	// CORS-open so the AnCiR GUI (a different origin) can fetch the session.
-	res.set('Access-Control-Allow-Origin', '*');
-	res.type('application/json').send(e.json);
-});
+	app.get('/health', (_req, res) => res.json({ ok: true, sessions: store.size }));
+	app.get('/config', (_req, res) => res.json({ ancirBase: ANCIR_BASE }));
 
-app.get('/', (_req, res) => {
-	res.type('html').send(`<!doctype html><meta charset=utf8>
-<title>AnCiR — describe an analysis</title>
-<style>body{font:16px system-ui;max-width:680px;margin:3rem auto;padding:0 1rem}
-textarea{width:100%;height:6rem;font:inherit;padding:.6rem}button{font:inherit;padding:.6rem 1.2rem;margin-top:.6rem;cursor:pointer}
-input,select{font:inherit;padding:.35rem;width:100%;box-sizing:border-box}label{display:block;margin:.5rem 0}
-details{margin:.8rem 0;border:1px solid #ddd;border-radius:6px;padding:.4rem .8rem}summary{cursor:pointer;font-weight:600}
-pre{background:#f4f4f5;padding:.8rem;border-radius:6px;white-space:pre-wrap}small{color:#666}</style>
-<h1>Describe an analysis → open it in AnCiR</h1>
-<textarea id=p placeholder="e.g. 48 hours of a 24-hour cosine, fit a cosinor and plot it"></textarea>
-<details id=cfg>
-  <summary>Model settings (bring your own)</summary>
-  <p><small>Your own model does the work. The key is sent to this server only to call your
-  model for this request — it is <b>never stored</b>. Local options (Ollama / LM Studio)
-  keep everything on your machine.</small></p>
-  <label>Preset
-    <select id=preset>
-      <option value="">— choose a provider —</option>
-      <option value="openai">OpenAI</option>
-      <option value="anthropic">Anthropic (Claude)</option>
-      <option value="xai">xAI (Grok)</option>
-      <option value="groq">Groq</option>
-      <option value="nvidia">NVIDIA</option>
-      <option value="openrouter">OpenRouter (any model)</option>
-      <option value="ollama">Ollama (local)</option>
-      <option value="lmstudio">LM Studio (local)</option>
-    </select>
-  </label>
-  <label>Base URL <input id=base placeholder="https://api.openai.com/v1"></label>
-  <label>API key <input id=key type=password autocomplete=off placeholder="sk-… (leave blank for local)"></label>
-  <label>Model <input id=model placeholder="gpt-4o-mini"></label>
-</details>
-<div><button id=go>Build &amp; open in AnCiR</button> <small id=s></small></div>
-<p><small>Opens the built session in the AnCiR app at <code>${ANCIR_BASE}</code>.</small></p>
-<pre id=out hidden></pre>
-<p id=link></p>
-<script>
-const $=s=>document.querySelector(s);
-const LS={base:'ancir.base',key:'ancir.key',model:'ancir.model'};
-const PRESETS={
-  openai:['https://api.openai.com/v1','gpt-4o-mini'],
-  anthropic:['https://api.anthropic.com/v1','claude-sonnet-5'],
-  xai:['https://api.x.ai/v1','grok-3'],
-  groq:['https://api.groq.com/openai/v1','llama-3.3-70b-versatile'],
-  nvidia:['https://integrate.api.nvidia.com/v1','meta/llama-3.3-70b-instruct'],
-  openrouter:['https://openrouter.ai/api/v1','anthropic/claude-sonnet-5'],
-  ollama:['http://localhost:11434/v1','llama3.1'],
-  lmstudio:['http://localhost:1234/v1','']
-};
-$('#base').value=localStorage.getItem(LS.base)||'';
-$('#key').value=localStorage.getItem(LS.key)||'';
-$('#model').value=localStorage.getItem(LS.model)||'';
-if($('#base').value||$('#key').value)$('#cfg').open=true;
-$('#preset').onchange=()=>{const pr=PRESETS[$('#preset').value];if(pr){$('#base').value=pr[0];if(pr[1])$('#model').value=pr[1];}};
-$('#go').onclick=async()=>{
-  const prompt=$('#p').value.trim(); if(!prompt)return;
-  const baseUrl=$('#base').value.trim(),apiKey=$('#key').value.trim(),model=$('#model').value.trim();
-  localStorage.setItem(LS.base,baseUrl);localStorage.setItem(LS.key,apiKey);localStorage.setItem(LS.model,model);
-  const llm={}; if(baseUrl)llm.baseUrl=baseUrl; if(apiKey)llm.apiKey=apiKey; if(model)llm.model=model;
-  $('#s').textContent='building…'; $('#out').hidden=true; $('#link').textContent='';
-  try{
-    const r=await fetch('/build',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt,llm})});
-    const d=await r.json(); if(!r.ok)throw new Error(d.error||r.status);
-    $('#out').hidden=false; $('#out').textContent='planner: '+d.planner+(d.model?' ('+d.model+')':'')+(d.note?'\\n⚠ '+d.note:'')+'\\n\\n'+d.trace.join('\\n');
-    $('#link').innerHTML='<a href="'+d.ancirUrl+'" target="_blank" rel="noopener">Open in AnCiR ↗</a> '
-      +'<small>(if this fails to open, the AnCiR app isn\\'t reachable at '+${JSON.stringify(ANCIR_BASE)}+')</small>';
-    $('#s').textContent='built ✓'; window.open(d.ancirUrl,'_blank');
-  }catch(e){$('#s').textContent='error: '+e.message;}
-};
-</script>`);
-});
+	const buildLimiter = rateLimit({
+		windowMs: Number(process.env.BUILD_RATE_WINDOW_MS) || 60_000,
+		limit: Number(process.env.BUILD_RATE_MAX) || 10,
+		standardHeaders: true,
+		legacyHeaders: false,
+		message: { error: 'Too many builds — please wait a moment and try again.' }
+	});
 
-// Probe the AnCiR GUI so a missing dev server is reported up-front (the #1 gotcha:
-// the ancirUrl points at ANCIR_BASE, which must be running for ?loadFromURL= to open).
-async function checkAncir() {
-	try {
-		const r = await fetch(`${ANCIR_BASE}/`, { signal: AbortSignal.timeout(2500) });
-		console.error(r.ok ? `✓ AnCiR reachable at ${ANCIR_BASE}` : `⚠ AnCiR at ${ANCIR_BASE} returned HTTP ${r.status}`);
-	} catch {
-		console.error(`⚠ AnCiR is NOT reachable at ${ANCIR_BASE}.`);
-		console.error(`  Start it first (in the AnCiR repo root, not mcp/):  npm run dev`);
-		console.error(`  …or point this backend elsewhere:  ANCIR_BASE_URL=<url> npm run app`);
+	app.post('/build', buildLimiter, async (req, res) => {
+		const reqId = randomUUID().slice(0, 8);
+		// Validate + SSRF-guard (never logs the body / key).
+		const v = validateBuild(req.body, { isPublic: isPublicBind });
+		if (!v.ok) return res.status(400).json({ error: v.error });
+		const { prompt, llm, options } = v.value;
+		try {
+			prune();
+			const t0 = Date.now();
+			const { json, trace, planner, model, promptVersion } = await buildSession({
+				prompt,
+				sessionId: 'app-' + reqId,
+				llm,
+				options
+			});
+			const id = randomUUID();
+			store.set(id, { json, ts: Date.now() });
+			const sessionUrl = `${selfBase(req)}/sessions/${id}`;
+			const note =
+				planner === 'scripted'
+					? 'SCRIPTED planner (no model configured) — ignores your prompt and always builds a cosine demo. Add your own model in Model settings for real natural-language following.'
+					: undefined;
+			log.info({ reqId, planner, model, promptVersion, turns: trace.length, ms: Date.now() - t0, bytes: json.length }, 'build');
+			res.json({ id, planner, model, note, trace, sessionUrl, ancirUrl: ancirUrlFor(sessionUrl) });
+		} catch (err) {
+			log.error({ reqId, err: err?.message || String(err) }, 'build failed'); // never the body
+			res.status(500).json({ error: err?.message || String(err) });
+		}
+	});
+
+	app.get('/sessions/:id', (req, res) => {
+		const e = store.get(req.params.id);
+		if (!e) return res.status(404).json({ error: 'not found or expired' });
+		// CORS-open so the AnCiR GUI (a different origin) can fetch the session.
+		res.set('Access-Control-Allow-Origin', '*');
+		res.type('application/json').send(e.json);
+	});
+
+	// Static chat UI (decoupled from server code; the page reads /config at runtime).
+	app.use(express.static(PUBLIC_DIR));
+	return app;
+}
+
+// --- startup ---------------------------------------------------------------------
+
+function validateEnv() {
+	const r = z
+		.object({
+			ANCIR_BASE_URL: z.string().url().optional(),
+			APP_BASE_URL: z.string().url().optional(),
+			PORT: z.coerce.number().int().positive().optional(),
+			APP_PORT: z.coerce.number().int().positive().optional()
+		})
+		.safeParse(process.env);
+	if (!r.success) for (const i of r.error.issues) log.warn({ var: i.path.join('.'), issue: i.message }, 'env');
+	// Mixed-content trap: an https AnCiR can't fetch an http session URL.
+	if (isPublicBind && !ANCIR_BASE.startsWith('https://')) {
+		log.warn(`ANCIR_BASE_URL is not https (${ANCIR_BASE}); an HTTPS AnCiR app will block loading the session (mixed content).`);
 	}
 }
 
-app.listen(PORT, HOST, () => {
-	console.error(`AnCiR NL-app backend on http://${HOST}:${PORT}  (AnCiR base: ${ANCIR_BASE})`);
-	console.error(
-		process.env.OPENAI_API_KEY
-			? `Model: server default ${process.env.MODEL || 'gpt-4o-mini'} @ ${process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'} (users can override via Model settings)`
-			: `Model: bring-your-own — users enter their endpoint/key/model in the page's "Model settings"; no server key set, so requests without one fall back to the scripted demo.`
-	);
-	console.error(`Open http://${HOST}:${PORT}/ to build a session from a prompt.`);
-	checkAncir();
-});
+async function checkAncir() {
+	try {
+		const r = await fetch(`${ANCIR_BASE}/`, { signal: AbortSignal.timeout(2500) });
+		if (r.ok) log.info(`AnCiR reachable at ${ANCIR_BASE}`);
+		else log.warn(`AnCiR at ${ANCIR_BASE} returned HTTP ${r.status}`);
+	} catch {
+		log.warn(`AnCiR NOT reachable at ${ANCIR_BASE} — start it (npm run dev) or set ANCIR_BASE_URL.`);
+	}
+}
+
+export function startServer() {
+	validateEnv();
+	const app = createApp();
+	app.listen(PORT, HOST, () => {
+		log.info(`AnCiR NL-app backend on http://${HOST}:${PORT}  (AnCiR base: ${ANCIR_BASE})`);
+		log.info(
+			process.env.OPENAI_API_KEY
+				? `Model: server default ${process.env.MODEL || 'gpt-4o-mini'} @ ${process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'} (users can override via Model settings)`
+				: 'Model: bring-your-own — users enter their endpoint/key/model in "Model settings"; requests without one use the scripted demo.'
+		);
+		checkAncir();
+	});
+}
+
+// Run only when invoked directly (not when imported by tests).
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) startServer();

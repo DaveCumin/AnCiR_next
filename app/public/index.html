@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AnCiR — describe an analysis</title>
+<style>
+  body { font: 16px system-ui; max-width: 680px; margin: 3rem auto; padding: 0 1rem; }
+  textarea { width: 100%; height: 6rem; font: inherit; padding: .6rem; }
+  button { font: inherit; padding: .6rem 1.2rem; margin-top: .6rem; cursor: pointer; }
+  input, select { font: inherit; padding: .35rem; width: 100%; box-sizing: border-box; }
+  label { display: block; margin: .5rem 0; }
+  details { margin: .8rem 0; border: 1px solid #ddd; border-radius: 6px; padding: .4rem .8rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  pre { background: #f4f4f5; padding: .8rem; border-radius: 6px; white-space: pre-wrap; }
+  small { color: #666; }
+</style>
+</head>
+<body>
+<h1>Describe an analysis → open it in AnCiR</h1>
+<textarea id="p" placeholder="e.g. 48 hours of a 24-hour cosine, fit a cosinor and plot it"></textarea>
+<details id="cfg">
+  <summary>Model settings (bring your own)</summary>
+  <p><small>Your own model does the work. The key is sent to this server only to call your
+  model for this request — it is <b>never stored</b>. Local options (Ollama / LM Studio)
+  keep everything on your machine.</small></p>
+  <label>Preset
+    <select id="preset">
+      <option value="">— choose a provider —</option>
+      <option value="openai">OpenAI</option>
+      <option value="anthropic">Anthropic (Claude)</option>
+      <option value="xai">xAI (Grok)</option>
+      <option value="groq">Groq</option>
+      <option value="nvidia">NVIDIA</option>
+      <option value="openrouter">OpenRouter (any model)</option>
+      <option value="ollama">Ollama (local)</option>
+      <option value="lmstudio">LM Studio (local)</option>
+    </select>
+  </label>
+  <label>Base URL <input id="base" placeholder="https://api.openai.com/v1" /></label>
+  <label>API key <input id="key" type="password" autocomplete="off" placeholder="sk-… (leave blank for local)" /></label>
+  <label>Model <input id="model" placeholder="gpt-4o-mini" /></label>
+</details>
+<div><button id="go">Build &amp; open in AnCiR</button> <small id="s"></small></div>
+<p><small>Opens the built session in the AnCiR app at <code id="ancirbase">…</code>.</small></p>
+<pre id="out" hidden></pre>
+<p id="link"></p>
+<script>
+  const $ = (s) => document.querySelector(s);
+  const LS = { base: 'ancir.base', key: 'ancir.key', model: 'ancir.model' };
+  const PRESETS = {
+    openai: ['https://api.openai.com/v1', 'gpt-4o-mini'],
+    anthropic: ['https://api.anthropic.com/v1', 'claude-sonnet-5'],
+    xai: ['https://api.x.ai/v1', 'grok-3'],
+    groq: ['https://api.groq.com/openai/v1', 'llama-3.3-70b-versatile'],
+    nvidia: ['https://integrate.api.nvidia.com/v1', 'meta/llama-3.3-70b-instruct'],
+    openrouter: ['https://openrouter.ai/api/v1', 'anthropic/claude-sonnet-5'],
+    ollama: ['http://localhost:11434/v1', 'llama3.1'],
+    lmstudio: ['http://localhost:1234/v1', '']
+  };
+
+  let ANCIR_BASE = '';
+  fetch('/config').then((r) => r.json()).then((c) => {
+    ANCIR_BASE = c.ancirBase || '';
+    $('#ancirbase').textContent = ANCIR_BASE || '(not configured)';
+  }).catch(() => {});
+
+  $('#base').value = localStorage.getItem(LS.base) || '';
+  $('#key').value = localStorage.getItem(LS.key) || '';
+  $('#model').value = localStorage.getItem(LS.model) || '';
+  if ($('#base').value || $('#key').value) $('#cfg').open = true;
+  $('#preset').onchange = () => {
+    const pr = PRESETS[$('#preset').value];
+    if (pr) { $('#base').value = pr[0]; if (pr[1]) $('#model').value = pr[1]; }
+  };
+
+  $('#go').onclick = async () => {
+    const prompt = $('#p').value.trim();
+    if (!prompt) return;
+    const baseUrl = $('#base').value.trim(), apiKey = $('#key').value.trim(), model = $('#model').value.trim();
+    localStorage.setItem(LS.base, baseUrl);
+    localStorage.setItem(LS.key, apiKey);
+    localStorage.setItem(LS.model, model);
+    const llm = {};
+    if (baseUrl) llm.baseUrl = baseUrl;
+    if (apiKey) llm.apiKey = apiKey;
+    if (model) llm.model = model;
+    $('#s').textContent = 'building…';
+    $('#out').hidden = true;
+    $('#link').textContent = '';
+    try {
+      const r = await fetch('/build', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ prompt, llm })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || r.status);
+      $('#out').hidden = false;
+      $('#out').textContent = 'planner: ' + d.planner + (d.model ? ' (' + d.model + ')' : '') +
+        (d.note ? '\n⚠ ' + d.note : '') + '\n\n' + d.trace.join('\n');
+      $('#link').innerHTML = '<a href="' + d.ancirUrl + '" target="_blank" rel="noopener">Open in AnCiR ↗</a> ' +
+        '<small>(if this fails to open, the AnCiR app isn\'t reachable at ' + ANCIR_BASE + ')</small>';
+      $('#s').textContent = 'built ✓';
+      window.open(d.ancirUrl, '_blank');
+    } catch (e) {
+      $('#s').textContent = 'error: ' + e.message;
+    }
+  };
+</script>
+</body>
+</html>

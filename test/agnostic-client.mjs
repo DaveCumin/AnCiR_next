@@ -22,6 +22,7 @@
 //     node test/agnostic-client.mjs                                             # Gemini
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { buildSystemPrompt } from '../app/promptBuilder.js';
 
 const BASE_URL = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
 // Local servers (Ollama/LM Studio) don't need a key; setting OPENAI_BASE_URL is
@@ -92,52 +93,11 @@ if (!API_KEY) {
 // --- live mode: tool-calling loop against the configured model ---------------
 console.log(`Driving ${MODEL} at ${BASE_URL} with ${oaiTools.length} AnCiR tools.\n`);
 
-// Fetch the real analysis/plot parameter shapes and embed them, so the model uses
-// exact arg names instead of guessing (run_table_process's `args` is a free-form
-// object with no per-analysis schema the model could otherwise see).
+// Same system prompt as the app backend (single source in app/promptBuilder.js +
+// prompts/system.md) so the two clients never drift.
 const caps = JSON.parse(await callMcp('list_capabilities', {}));
-// Show ONE flat `args` object per analysis (input-column fields + params together),
-// so the model doesn't nest them under "inputs"/"params".
-const argsTemplate = (a) => {
-	const t = {};
-	for (const f of a.inputs?.scalar ?? []) t[f] = '<col>';
-	for (const f of a.inputs?.array ?? []) t[f] = ['<col>'];
-	Object.assign(t, a.params);
-	// Free-period fitting is unreliable on a time axis; a known-period rhythm should
-	// use a fixed period, so surface that as the working default in the template.
-	if ('useFixedPeriod' in t) t.useFixedPeriod = true;
-	return t;
-};
-const analysisRef = caps.analyses
-	.map((a) => `  ${a.id}: args=${JSON.stringify(argsTemplate(a))}`)
-	.join('\n');
-const plotRef = caps.plots.map((p) => `${p.id}[${(p.inputs || []).join(',')}]`).join(', ');
-
 const messages = [
-	{
-		role: 'system',
-		content:
-			'You are a chronobiology analyst. Use the provided AnCiR tools to complete the task, then stop.\n' +
-			'RULES for tool arguments (critical):\n' +
-			'- Arguments must be LITERAL JSON only. Never put code, functions, lambdas, ranges, or expressions ' +
-			'in an argument. `values` must be a real array of numbers like [0,1,2], not {"function":...}.\n' +
-			'- run_table_process takes {name, args}. `args` is a FLAT object: the input-column fields ' +
-			'(xIN, yIN, …) AND the parameters together at the TOP LEVEL. Do NOT nest them under "inputs" or ' +
-			'"params". Copy the `args=` template for the analysis below verbatim, replacing "<col>" with a ' +
-			'column name; keep nested values like SimulatedData.sections. Do NOT invent parameter names.\n' +
-			'- Do NOT hand-type long numeric arrays. To create synthetic data, use run_table_process with ' +
-			'"SimulatedData" (a rhythm+noise generator) or "SequenceColumn"/"Random". Use import_data only ' +
-			'for small data the user gives explicitly, as literal number arrays.\n' +
-			'- For period fits (Cosinor/FitFunction) set useFixedPeriod:true and fixedPeriod to the rhythm ' +
-			'period in hours (e.g. 24); free-period mode is unreliable on time-axis data.\n' +
-			'- For column references (xIN, yIN, plot inputs, columnId) pass the column NAME (e.g. "time_0", ' +
-			'"values_0") instead of a numeric id — STRONGLY PREFERRED, it avoids id mistakes. Read exact names ' +
-			'from the tool result that created them (each output lists {columnId, name}) or from list_columns.\n' +
-			'\nANALYSES (run_table_process name + args) — exact shapes:\n' +
-			analysisRef +
-			'\nPLOTS (add_plot type + inputs): ' +
-			plotRef
-	},
+	{ role: 'system', content: buildSystemPrompt(caps) },
 	{ role: 'user', content: TASK }
 ];
 
