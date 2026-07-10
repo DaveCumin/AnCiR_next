@@ -515,6 +515,7 @@
 				periodHrs: this.periodHrs,
 				showDayNumbers: this.showDayNumbers,
 				lightBands: this.lightBands,
+				annotations: this.annotations,
 				xAxis: this.xAxis.toJSON(),
 				data: this.data
 			};
@@ -535,6 +536,10 @@
 				json.lightBands ?? { lightBands: [] },
 				actogram
 			);
+
+			if (Array.isArray(json.annotations)) {
+				actogram.annotations = json.annotations.map((a) => AnnotationClass.fromJSON(a, actogram));
+			}
 
 			// Support both new AxisClass format and old format (no x axis previously)
 			if (json.xAxis) {
