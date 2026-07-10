@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "120": [
+    "124": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "121": [
+    "125": [
       1,
       3,
       5,
@@ -104,7 +104,7 @@
       97,
       99
     ],
-    "122": [
+    "126": [
       1,
       4,
       7,
@@ -159,9 +159,9 @@
   },
   "data": [
     {
-      "id": 120,
+      "id": 124,
       "name": "Column Function input 1",
-      "data": 120,
+      "data": 124,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -170,9 +170,9 @@
       "processes": []
     },
     {
-      "id": 121,
+      "id": 125,
       "name": "Column Function input 2",
-      "data": 121,
+      "data": 125,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,11 +181,11 @@
       "processes": []
     },
     {
-      "id": 122,
+      "id": 126,
       "name": "result_16",
-      "data": 122,
+      "data": 126,
       "type": "category",
-      "tableProcessGUId": "1a6904a2-eee9-4a54-8722-9acf5335be36",
+      "tableProcessGUId": "cf2c3cdf-5b34-4105-8b7f-5130596dd834",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -194,7 +194,7 @@
   ],
   "plots": [
     {
-      "id": 34,
+      "id": 35,
       "name": "Column Function result",
       "x": 350,
       "y": 150,
@@ -209,9 +209,9 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          120,
-          121,
-          122
+          124,
+          125,
+          126
         ],
         "showCol": [
           true,
@@ -233,11 +233,11 @@
       "args": {
         "func": "add",
         "xsIN": [
-          120,
-          121
+          124,
+          125
         ],
         "out": {
-          "result": 122
+          "result": 126
         }
       },
       "refTPId": null
@@ -248,7 +248,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_25",
+      "id": "note_26",
       "text": "Combines several input columns into one result by applying a per-row function across them: element-wise Add, or the row-wise Mean, Min, Max, or Std Dev over the selected columns. Use it to compute, e.g., the average of replicate series or a per-timepoint spread.",
       "x": 40,
       "y": 24,
@@ -260,11 +260,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_120": {
+    "data_124": {
       "x": 60,
       "y": 314
     },
-    "data_121": {
+    "data_125": {
       "x": 60,
       "y": 814
     },
@@ -272,11 +272,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_34": {
+    "plot_35": {
       "x": 820,
       "y": 314
     },
-    "note_25": {
+    "note_26": {
       "x": 40,
       "y": 24
     }
@@ -331,5 +331,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

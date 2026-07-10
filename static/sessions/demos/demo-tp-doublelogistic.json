@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "139": [
+    "143": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "140": [
+    "144": [
       24.784209286216505,
       27.918238427560844,
       26.60093560817605,
@@ -104,7 +104,7 @@
       24.95424537696588,
       27.973731986697846
     ],
-    "141": [
+    "145": [
       0,
       1,
       2,
@@ -156,10 +156,10 @@
       48,
       49
     ],
-    "142": [
+    "146": [
       null
     ],
-    "143": [
+    "147": [
       25.756894538862465,
       24.742714374366138,
       24.385024124035308,
@@ -214,20 +214,20 @@
   },
   "data": [
     {
-      "id": 139,
+      "id": 143,
       "name": "x",
-      "data": 139,
+      "data": 143,
       "type": "number",
-      "tableProcessGUId": "d3daf78b-af07-4ed3-8d83-d78ac46fa239",
+      "tableProcessGUId": "8cd599c3-9c99-49bf-a667-53bf72669450",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 140,
+      "id": 144,
       "name": "y",
-      "data": 140,
+      "data": 144,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -236,33 +236,33 @@
       "processes": []
     },
     {
-      "id": 141,
+      "id": 145,
       "name": "dlogx_20",
-      "data": 141,
+      "data": 145,
       "type": "number",
-      "tableProcessGUId": "2ff33d35-6e8d-4a55-a978-91725804c352",
+      "tableProcessGUId": "7ab87ac4-abe5-460e-9768-477ff046b07c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 142,
+      "id": 146,
       "name": "pvalue_20",
-      "data": 142,
+      "data": 146,
       "type": "number",
-      "tableProcessGUId": "370ccdb3-940b-4bf7-909b-473aacf5f431",
+      "tableProcessGUId": "5fcd08f7-f410-4a67-a5a3-40ef21561fcc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 143,
-      "name": "dlogy_140_20",
-      "data": 143,
+      "id": 147,
+      "name": "dlogy_144_20",
+      "data": 147,
       "type": "number",
-      "tableProcessGUId": "2ff33d35-6e8d-4a55-a978-91725804c352",
+      "tableProcessGUId": "7ab87ac4-abe5-460e-9768-477ff046b07c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -271,7 +271,7 @@
   ],
   "plots": [
     {
-      "id": 37,
+      "id": 38,
       "name": "Double Logistic: data + fit",
       "x": 350,
       "y": 150,
@@ -327,9 +327,9 @@
         "data": [
           {
             "x": {
-              "id": 144,
+              "id": 148,
               "name": "x",
-              "refId": 139,
+              "refId": 143,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -338,9 +338,9 @@
               "processes": []
             },
             "y": {
-              "id": 145,
+              "id": 149,
               "name": "y",
-              "refId": 140,
+              "refId": 144,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -366,9 +366,9 @@
           },
           {
             "x": {
-              "id": 146,
+              "id": 150,
               "name": "dlogx_20",
-              "refId": 141,
+              "refId": 145,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -377,9 +377,9 @@
               "processes": []
             },
             "y": {
-              "id": 147,
-              "name": "dlogy_140_20",
-              "refId": 143,
+              "id": 151,
+              "name": "dlogy_144_20",
+              "refId": 147,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -419,7 +419,7 @@
       }
     },
     {
-      "id": 38,
+      "id": 39,
       "name": "Double Logistic: values",
       "x": 350,
       "y": 150,
@@ -434,8 +434,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          140,
-          143
+          144,
+          147
         ],
         "showCol": [
           true,
@@ -460,7 +460,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 139
+          "result": 143
         }
       },
       "refTPId": null
@@ -470,9 +470,9 @@
       "name": "DoubleLogistic",
       "displayName": "Double Logistic",
       "args": {
-        "xIN": 139,
+        "xIN": 143,
         "yIN": [
-          140
+          144
         ],
         "outputX": -1,
         "fixK1": false,
@@ -482,9 +482,9 @@
         "fixPeriod": false,
         "fixedPeriod": 24,
         "out": {
-          "dlogx": 141,
-          "pvalue": 142,
-          "dlogy_140": 143
+          "dlogx": 145,
+          "pvalue": 146,
+          "dlogy_144": 147
         }
       },
       "refTPId": null
@@ -495,7 +495,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_27",
+      "id": "note_28",
       "text": "Fits a double-logistic curve, a rising sigmoid followed by a falling sigmoid, describing a single on-then-off transition (or, in periodic mode, a repeating pulse train). Use it for phenology-style data and activity onsets/offsets where you want to locate and characterise the rise and fall separately (their timing t1, t2 and steepness k1, k2). In the demo, read the ascending limb as the onset transition and the descending limb as the offset; the plateau between them is the active window. Double-logistic phenology model (Zhang et al. 2003).",
       "x": 40,
       "y": 24,
@@ -507,7 +507,7 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_140": {
+    "data_144": {
       "x": 60,
       "y": 314
     },
@@ -519,15 +519,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_37": {
+    "plot_38": {
       "x": 820,
       "y": 314
     },
-    "plot_38": {
+    "plot_39": {
       "x": 820,
       "y": 814
     },
-    "note_27": {
+    "note_28": {
       "x": 40,
       "y": 24
     }
@@ -582,5 +582,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

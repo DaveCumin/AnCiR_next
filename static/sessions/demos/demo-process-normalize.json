@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "83": [
+    "87": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "84": [
+    "88": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 83,
+      "id": 87,
       "name": "x",
-      "data": 83,
+      "data": 87,
       "type": "number",
-      "tableProcessGUId": "0666a956-d980-40fe-bffb-90fe464e6fd7",
+      "tableProcessGUId": "a9d98f1b-33ad-4d5c-a933-87825dbfdb4b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 84,
+      "id": 88,
       "name": "y",
-      "data": 84,
+      "data": 88,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 85,
+      "id": 89,
       "name": "Normalize result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_7",
-      "producerPort": "out_84",
+      "producerPort": "out_88",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 23,
+      "id": 24,
       "name": "Normalize: before vs after",
       "x": 350,
       "y": 150,
@@ -198,9 +198,9 @@
         "data": [
           {
             "x": {
-              "id": 86,
+              "id": 90,
               "name": "x",
-              "refId": 83,
+              "refId": 87,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -209,9 +209,9 @@
               "processes": []
             },
             "y": {
-              "id": 87,
+              "id": 91,
               "name": "y",
-              "refId": 84,
+              "refId": 88,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -237,9 +237,9 @@
           },
           {
             "x": {
-              "id": 88,
+              "id": 92,
               "name": "x",
-              "refId": 83,
+              "refId": 87,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -248,9 +248,9 @@
               "processes": []
             },
             "y": {
-              "id": 89,
+              "id": 93,
               "name": "Normalize result",
-              "refId": 85,
+              "refId": 89,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -290,7 +290,7 @@
       }
     },
     {
-      "id": 24,
+      "id": 25,
       "name": "Normalize: values",
       "x": 350,
       "y": 150,
@@ -305,8 +305,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          84,
-          85
+          88,
+          89
         ],
         "showCol": [
           true,
@@ -331,7 +331,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 83
+          "result": 87
         }
       },
       "refTPId": null
@@ -342,7 +342,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_17",
+      "id": "note_18",
       "text": "Rescales a column so different series are comparable. Z-score centres to mean 0 / SD 1; Min-Max rescales into a chosen range; Robust uses median and MAD (outlier-resistant); Unit-vector scales by the column's magnitude. The demo shows the input rescaled onto the new scale with its shape preserved. Choose z-score/robust when comparing rhythms of different amplitudes.",
       "x": 40,
       "y": 24,
@@ -361,13 +361,13 @@
         "customMin": 0,
         "customMax": 1,
         "inIN": [
-          84
+          88
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_84": {
+    "data_88": {
       "x": 60,
       "y": 314
     },
@@ -379,15 +379,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_23": {
+    "plot_24": {
       "x": 820,
       "y": 314
     },
-    "plot_24": {
+    "plot_25": {
       "x": 820,
       "y": 814
     },
-    "note_17": {
+    "note_18": {
       "x": 40,
       "y": 24
     }
@@ -442,5 +442,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

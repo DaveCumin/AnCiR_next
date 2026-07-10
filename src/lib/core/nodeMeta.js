@@ -433,6 +433,15 @@ const meta = new Map([
 			nodeIcon: 'mean-sem',
 			description: 'Mean ± SEM overlay: per-group mean marker with standard-error whiskers.'
 		}
+	],
+	[
+		'circularphase',
+		{
+			family: 'Plots',
+			nodeIcon: 'circular-stats',
+			description:
+				'Circular phase plot: one or more phase columns on an adjustable-period clock, each a coloured group with its Rayleigh mean-resultant vector; optional rose wedges and a Watson-Williams equal-mean-direction test.'
+		}
 	]
 ]);
 

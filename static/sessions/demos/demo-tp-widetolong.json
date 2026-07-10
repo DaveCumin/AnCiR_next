@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "242": [
+    "246": [
       "2024-01-01T00:00:00.000Z",
       "2024-01-01T01:00:00.000Z",
       "2024-01-01T02:00:00.000Z",
@@ -52,7 +52,7 @@
       "2024-01-03T00:00:00.000Z",
       "2024-01-03T01:00:00.000Z"
     ],
-    "243": [
+    "247": [
       10,
       11,
       12,
@@ -104,7 +104,7 @@
       58,
       59
     ],
-    "244": [
+    "248": [
       100,
       99,
       98,
@@ -156,7 +156,7 @@
       52,
       51
     ],
-    "245": [
+    "249": [
       1704067200000,
       1704070800000,
       1704074400000,
@@ -258,7 +258,7 @@
       1704240000000,
       1704243600000
     ],
-    "246": [
+    "250": [
       "Wide To Long input 2",
       "Wide To Long input 2",
       "Wide To Long input 2",
@@ -360,7 +360,7 @@
       "Wide To Long input 3",
       "Wide To Long input 3"
     ],
-    "247": [
+    "251": [
       10,
       11,
       12,
@@ -465,57 +465,12 @@
   },
   "data": [
     {
-      "id": 242,
-      "name": "Wide To Long input 1",
-      "data": 242,
-      "type": "time",
-      "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 243,
-      "name": "Wide To Long input 2",
-      "data": 243,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 244,
-      "name": "Wide To Long input 3",
-      "data": 244,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 245,
-      "name": "time_42",
-      "data": 245,
-      "type": "time",
-      "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "9ab57fd0-5bdd-4f58-b84b-ab94af850683",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 246,
-      "name": "category_42",
+      "name": "Wide To Long input 1",
       "data": 246,
-      "type": "category",
-      "tableProcessGUId": "9ab57fd0-5bdd-4f58-b84b-ab94af850683",
+      "type": "time",
+      "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -523,10 +478,55 @@
     },
     {
       "id": 247,
-      "name": "value_42",
+      "name": "Wide To Long input 2",
       "data": 247,
       "type": "number",
-      "tableProcessGUId": "9ab57fd0-5bdd-4f58-b84b-ab94af850683",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 248,
+      "name": "Wide To Long input 3",
+      "data": 248,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 249,
+      "name": "time_42",
+      "data": 249,
+      "type": "time",
+      "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
+      "tableProcessGUId": "119a8f72-a456-473f-85f2-516cab73bf73",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 250,
+      "name": "category_42",
+      "data": 250,
+      "type": "category",
+      "tableProcessGUId": "119a8f72-a456-473f-85f2-516cab73bf73",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 251,
+      "name": "value_42",
+      "data": 251,
+      "type": "number",
+      "tableProcessGUId": "119a8f72-a456-473f-85f2-516cab73bf73",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -535,7 +535,7 @@
   ],
   "plots": [
     {
-      "id": 61,
+      "id": 62,
       "name": "Wide To Long result",
       "x": 350,
       "y": 150,
@@ -550,12 +550,12 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          242,
-          243,
-          244,
-          245,
           246,
-          247
+          247,
+          248,
+          249,
+          250,
+          251
         ],
         "showCol": [
           true,
@@ -578,15 +578,15 @@
       "name": "WideToLong",
       "displayName": "Wide To Long",
       "args": {
-        "timeIN": 242,
+        "timeIN": 246,
         "valueColIds": [
-          243,
-          244
+          247,
+          248
         ],
         "out": {
-          "time": 245,
-          "category": 246,
-          "value": 247
+          "time": 249,
+          "category": 250,
+          "value": 251
         }
       },
       "refTPId": null
@@ -597,7 +597,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_43",
+      "id": "note_44",
       "text": "Pivots several side-by-side value columns into long/tidy format: a single time, category, and value column. Use it to stack multiple series into one table for grouped statistics or long-format export.",
       "x": 40,
       "y": 24,
@@ -609,15 +609,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_242": {
+    "data_246": {
       "x": 60,
       "y": 314
     },
-    "data_243": {
+    "data_247": {
       "x": 60,
       "y": 814
     },
-    "data_244": {
+    "data_248": {
       "x": 60,
       "y": 1314
     },
@@ -625,11 +625,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_61": {
+    "plot_62": {
       "x": 820,
       "y": 314
     },
-    "note_43": {
+    "note_44": {
       "x": 40,
       "y": 24
     }
@@ -684,5 +684,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

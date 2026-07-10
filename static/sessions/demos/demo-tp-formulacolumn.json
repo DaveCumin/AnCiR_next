@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "156": [
+    "160": [
       1,
       2,
       3,
@@ -52,7 +52,7 @@
       49,
       50
     ],
-    "157": [
+    "161": [
       10,
       20,
       30,
@@ -104,7 +104,7 @@
       490,
       500
     ],
-    "158": [
+    "162": [
       11,
       22,
       33,
@@ -159,9 +159,9 @@
   },
   "data": [
     {
-      "id": 156,
+      "id": 160,
       "name": "Formula Column input 1",
-      "data": 156,
+      "data": 160,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -170,9 +170,9 @@
       "processes": []
     },
     {
-      "id": 157,
+      "id": 161,
       "name": "Formula Column input 2",
-      "data": 157,
+      "data": 161,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,11 +181,11 @@
       "processes": []
     },
     {
-      "id": 158,
+      "id": 162,
       "name": "result_23",
-      "data": 158,
+      "data": 162,
       "type": "number",
-      "tableProcessGUId": "9a92b1a6-6b78-45fa-86b9-b6c6d68d7c65",
+      "tableProcessGUId": "b3eb9537-35c9-4802-8de8-e55f50174ba3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -194,7 +194,7 @@
   ],
   "plots": [
     {
-      "id": 41,
+      "id": 42,
       "name": "Formula Column result",
       "x": 350,
       "y": 150,
@@ -209,9 +209,9 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          156,
-          157,
-          158
+          160,
+          161,
+          162
         ],
         "showCol": [
           true,
@@ -234,7 +234,7 @@
         "tokens": [
           {
             "type": "col",
-            "id": 156
+            "id": 160
           },
           {
             "type": "text",
@@ -242,11 +242,11 @@
           },
           {
             "type": "col",
-            "id": 157
+            "id": 161
           }
         ],
         "out": {
-          "result": 158
+          "result": 162
         }
       },
       "refTPId": null
@@ -257,7 +257,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_29",
+      "id": "note_30",
       "text": "Builds a new column from a formula you write over existing columns and constants (for example (A+B)/2 or log(x)), evaluated row by row. Use it for custom per-row calculations the fixed transforms don't cover — ratios, unit conversions, or combined indices.",
       "x": 40,
       "y": 24,
@@ -269,11 +269,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_156": {
+    "data_160": {
       "x": 60,
       "y": 314
     },
-    "data_157": {
+    "data_161": {
       "x": 60,
       "y": 814
     },
@@ -281,11 +281,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_41": {
+    "plot_42": {
       "x": 820,
       "y": 314
     },
-    "note_29": {
+    "note_30": {
       "x": 40,
       "y": 24
     }
@@ -340,5 +340,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

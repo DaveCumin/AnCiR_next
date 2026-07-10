@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "30": [
+    "34": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "31": [
+    "35": [
       50,
       60,
       70,
@@ -100,7 +100,7 @@
       30,
       40
     ],
-    "32": [
+    "36": [
       30,
       30,
       29,
@@ -153,9 +153,9 @@
   },
   "data": [
     {
-      "id": 30,
+      "id": 34,
       "name": "hour",
-      "data": 30,
+      "data": 34,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -164,9 +164,9 @@
       "processes": []
     },
     {
-      "id": 31,
+      "id": 35,
       "name": "signalA",
-      "data": 31,
+      "data": 35,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -175,9 +175,9 @@
       "processes": []
     },
     {
-      "id": 32,
+      "id": 36,
       "name": "signalB",
-      "data": 32,
+      "data": 36,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -188,7 +188,7 @@
   ],
   "plots": [
     {
-      "id": 8,
+      "id": 9,
       "name": "Signal table",
       "x": 350,
       "y": 150,
@@ -203,9 +203,9 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          30,
-          31,
-          32
+          34,
+          35,
+          36
         ],
         "showCol": [
           true,
@@ -225,7 +225,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_9",
+      "id": "note_10",
       "text": "Renders selected columns (or their summary statistics) as a plain data table for inspection and export. Use it to read exact values, sanity-check a transform's output, or present computed metrics. The demo shows the chosen columns laid out in rows and columns.",
       "x": 40,
       "y": 24,
@@ -237,23 +237,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_30": {
+    "data_34": {
       "x": 60,
       "y": 314
     },
-    "data_31": {
+    "data_35": {
       "x": 60,
       "y": 814
     },
-    "data_32": {
+    "data_36": {
       "x": 60,
       "y": 1314
     },
-    "note_9": {
+    "note_10": {
       "x": 40,
       "y": 24
     },
-    "plot_8": {
+    "plot_9": {
       "x": 820,
       "y": 314
     }
@@ -308,5 +308,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

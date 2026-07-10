@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "213": [
+    "217": [
       0,
       1,
       2,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 213,
+      "id": 217,
       "name": "result_34",
-      "data": 213,
+      "data": 217,
       "type": "number",
-      "tableProcessGUId": "86836509-27e3-40cb-8d36-06fd3e49a41c",
+      "tableProcessGUId": "154b7459-2261-42e3-970b-5690e803c953",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -68,7 +68,7 @@
   ],
   "plots": [
     {
-      "id": 53,
+      "id": 54,
       "name": "Sequence Column result",
       "x": 350,
       "y": 150,
@@ -83,7 +83,7 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          213
+          217
         ],
         "showCol": [
           true
@@ -107,7 +107,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 213
+          "result": 217
         }
       },
       "refTPId": null
@@ -118,7 +118,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_37",
+      "id": "note_38",
       "text": "Creates a regular numeric or time sequence from a start, step, and count (or end). Use it to build an index or an evenly spaced time axis to pair with generated or pasted values.",
       "x": 40,
       "y": 24,
@@ -134,11 +134,11 @@
       "x": 60,
       "y": 314
     },
-    "plot_53": {
+    "plot_54": {
       "x": 820,
       "y": 314
     },
-    "note_37": {
+    "note_38": {
       "x": 40,
       "y": 24
     }
@@ -193,5 +193,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

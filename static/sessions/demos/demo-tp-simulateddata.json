@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "214": [
+    "218": [
       "2024-01-01T00:00:00.000Z",
       "2024-01-01T01:00:00.000Z",
       "2024-01-01T02:00:00.000Z",
@@ -50,7 +50,7 @@
       "2024-01-02T22:00:00.000Z",
       "2024-01-02T23:00:00.000Z"
     ],
-    "215": [
+    "219": [
       100,
       100,
       100,
@@ -103,23 +103,23 @@
   },
   "data": [
     {
-      "id": 214,
+      "id": 218,
       "name": "time_35",
-      "data": 214,
+      "data": 218,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "bd361d0c-ea77-4829-be06-5c3da831d435",
+      "tableProcessGUId": "60cc8dcf-acd0-4aa6-bda4-5ef672bc61c5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 215,
+      "id": 219,
       "name": "values_35",
-      "data": 215,
+      "data": 219,
       "type": "number",
-      "tableProcessGUId": "bd361d0c-ea77-4829-be06-5c3da831d435",
+      "tableProcessGUId": "60cc8dcf-acd0-4aa6-bda4-5ef672bc61c5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -128,7 +128,7 @@
   ],
   "plots": [
     {
-      "id": 54,
+      "id": 55,
       "name": "Simulate Data result",
       "x": 350,
       "y": 150,
@@ -143,8 +143,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          214,
-          215
+          218,
+          219
         ],
         "showCol": [
           true,
@@ -177,8 +177,8 @@
         ],
         "samplingPeriod_hours": 1,
         "out": {
-          "time": 214,
-          "values": 215
+          "time": 218,
+          "values": 219
         }
       },
       "refTPId": null
@@ -189,7 +189,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_38",
+      "id": "note_39",
       "text": "Generates a synthetic time-series from one or more cosine sections (each with its own period, phase, amplitude, and optional additive or multiplicative noise) at a chosen sampling interval. Use it to create test data with a known ground truth for learning, demonstrating, or validating the analysis nodes.",
       "x": 40,
       "y": 24,
@@ -205,11 +205,11 @@
       "x": 60,
       "y": 314
     },
-    "plot_54": {
+    "plot_55": {
       "x": 820,
       "y": 314
     },
-    "note_38": {
+    "note_39": {
       "x": 40,
       "y": 24
     }
@@ -264,5 +264,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

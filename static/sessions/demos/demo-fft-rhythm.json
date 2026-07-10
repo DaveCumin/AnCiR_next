@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "26": [
+    "30": [
       0,
       1,
       2,
@@ -194,7 +194,7 @@
       190,
       191
     ],
-    "27": [
+    "31": [
       61.037491948115374,
       64.99236592704621,
       74.20658521498542,
@@ -391,9 +391,9 @@
   },
   "data": [
     {
-      "id": 26,
+      "id": 30,
       "name": "hour",
-      "data": 26,
+      "data": 30,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -402,9 +402,9 @@
       "processes": []
     },
     {
-      "id": 27,
+      "id": 31,
       "name": "signal",
-      "data": 27,
+      "data": 31,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -415,7 +415,7 @@
   ],
   "plots": [
     {
-      "id": 7,
+      "id": 8,
       "name": "Signal FFT",
       "x": 350,
       "y": 150,
@@ -466,9 +466,9 @@
         "data": [
           {
             "x": {
-              "id": 28,
+              "id": 32,
               "name": "hour",
-              "refId": 26,
+              "refId": 30,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -477,9 +477,9 @@
               "processes": []
             },
             "y": {
-              "id": 29,
+              "id": 33,
               "name": "signal",
-              "refId": 27,
+              "refId": 31,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -526,7 +526,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_8",
+      "id": "note_9",
       "text": "Fourier analysis decomposes an evenly sampled series into sinusoidal components and plots amplitude (spectral power) against frequency; a peak at a given frequency corresponds to a rhythm of period 1/frequency. Use it to identify dominant frequencies and harmonics. See the Fourier Analysis chapter.",
       "x": 40,
       "y": 24,
@@ -538,19 +538,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_26": {
+    "data_30": {
       "x": 60,
       "y": 314
     },
-    "data_27": {
+    "data_31": {
       "x": 60,
       "y": 814
     },
-    "note_8": {
+    "note_9": {
       "x": 40,
       "y": 24
     },
-    "plot_7": {
+    "plot_8": {
       "x": 820,
       "y": 314
     }
@@ -605,5 +605,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

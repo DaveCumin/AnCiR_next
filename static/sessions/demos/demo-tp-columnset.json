@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "118": [
+    "122": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "119": [
+    "123": [
       1,
       3,
       5,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 118,
+      "id": 122,
       "name": "Column Set input 1",
-      "data": 118,
+      "data": 122,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -118,9 +118,9 @@
       "processes": []
     },
     {
-      "id": 119,
+      "id": 123,
       "name": "Column Set input 2",
-      "data": 119,
+      "data": 123,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -131,7 +131,7 @@
   ],
   "plots": [
     {
-      "id": 33,
+      "id": 34,
       "name": "Column Set result",
       "x": 350,
       "y": 150,
@@ -146,8 +146,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          118,
-          119
+          122,
+          123
         ],
         "showCol": [
           true,
@@ -167,8 +167,8 @@
       "displayName": "Column Set",
       "args": {
         "colsIN": [
-          118,
-          119
+          122,
+          123
         ],
         "pattern": "",
         "matchField": "either",
@@ -182,7 +182,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_24",
+      "id": "note_25",
       "text": "Curates a live, named subset of columns by matching their name and/or label against a pattern, and exposes it as a single wire you can plug into any many-input port. The set updates automatically as matching columns are added or removed, so downstream analyses and plots stay in sync without rewiring.",
       "x": 40,
       "y": 24,
@@ -194,11 +194,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_118": {
+    "data_122": {
       "x": 60,
       "y": 314
     },
-    "data_119": {
+    "data_123": {
       "x": 60,
       "y": 814
     },
@@ -206,11 +206,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_33": {
+    "plot_34": {
       "x": 820,
       "y": 314
     },
-    "note_24": {
+    "note_25": {
       "x": 40,
       "y": 24
     }
@@ -265,5 +265,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

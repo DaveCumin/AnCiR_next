@@ -173,6 +173,25 @@ const DEMOS = [
 		}
 	},
 	{
+		id: 'circular-phase-two-groups',
+		name: 'Circular phase plot — two groups',
+		family: 'Plots',
+		description:
+			'Peak-activity phase (clock hours) for two groups on a 24 h clock, each a coloured group with its Rayleigh mean-resultant vector and a Watson-Williams test comparing mean directions.',
+		build(mk) {
+			const rng = mulberry32(8);
+			const groupA = seq(18, () => 7 + normal(rng, 0, 0.6));
+			const groupB = seq(18, () => 19 + normal(rng, 0, 0.6));
+			const aId = mk.col('Group A phase', 'number', groupA);
+			const bId = mk.col('Group B phase', 'number', groupB);
+			const p = new Plot({ name: 'Circular phase plot', type: 'circularphase' });
+			p.plot.addData({ column: { refId: aId }, label: 'Group A' });
+			p.plot.addData({ column: { refId: bId }, label: 'Group B' });
+			p.plot.showWatsonWilliams = true;
+			pushObj(p);
+		}
+	},
+	{
 		id: 'actogram-rhythm',
 		name: 'Actogram — multi-day activity',
 		family: 'Plots',

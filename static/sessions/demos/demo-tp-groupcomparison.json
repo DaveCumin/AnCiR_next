@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "159": [
+    "163": [
       "A",
       "B",
       "C",
@@ -52,7 +52,7 @@
       "A",
       "B"
     ],
-    "160": [
+    "164": [
       0,
       6,
       12,
@@ -104,18 +104,18 @@
       6,
       5
     ],
-    "161": [
+    "165": [
       96.15862706579921
     ],
-    "162": [
+    "166": [
       0
     ]
   },
   "data": [
     {
-      "id": 159,
+      "id": 163,
       "name": "Compare groups (stats) input 1",
-      "data": 159,
+      "data": 163,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -124,9 +124,9 @@
       "processes": []
     },
     {
-      "id": 160,
+      "id": 164,
       "name": "Compare groups (stats) input 2",
-      "data": 160,
+      "data": 164,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -135,22 +135,22 @@
       "processes": []
     },
     {
-      "id": 161,
+      "id": 165,
       "name": "statistic_24",
-      "data": 161,
+      "data": 165,
       "type": "number",
-      "tableProcessGUId": "094820eb-dcfb-4b3b-a2af-760e591725f5",
+      "tableProcessGUId": "18ed40a2-92b4-4375-bc0c-76a7b6ac7ae1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 162,
+      "id": 166,
       "name": "pvalue_24",
-      "data": 162,
+      "data": 166,
       "type": "number",
-      "tableProcessGUId": "094820eb-dcfb-4b3b-a2af-760e591725f5",
+      "tableProcessGUId": "18ed40a2-92b4-4375-bc0c-76a7b6ac7ae1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -159,7 +159,7 @@
   ],
   "plots": [
     {
-      "id": 42,
+      "id": 43,
       "name": "Compare groups (stats): groups",
       "x": 350,
       "y": 150,
@@ -202,9 +202,9 @@
         "data": [
           {
             "x": {
-              "id": 163,
+              "id": 167,
               "name": "Compare groups (stats) input 1",
-              "refId": 159,
+              "refId": 163,
               "type": "category",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -213,9 +213,9 @@
               "processes": []
             },
             "y": {
-              "id": 164,
+              "id": 168,
               "name": "Compare groups (stats) input 2",
-              "refId": 160,
+              "refId": 164,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -272,16 +272,16 @@
       "name": "GroupComparison",
       "displayName": "Compare groups (stats)",
       "args": {
-        "xIN": 159,
+        "xIN": 163,
         "yIN": [
-          160
+          164
         ],
         "method": "auto",
         "alpha": 0.05,
         "postHocEnabled": true,
         "out": {
-          "statistic": 161,
-          "pvalue": 162
+          "statistic": 165,
+          "pvalue": 166
         }
       },
       "refTPId": null
@@ -292,7 +292,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_30",
+      "id": "note_31",
       "text": "Compares a numeric measure across groups defined by a grouping column (or across several y-columns). Auto mode picks a Welch t-test for two groups and a one-way ANOVA for three or more; nonparametric Mann-Whitney U and Kruskal-Wallis are also available, with Tukey-Kramer / Holm-adjusted pairwise post-hoc tests and Jarque-Bera normality and variance-ratio warnings. Outputs the test statistic and p-value as metric ports you can wire onward. Reporting a significant group difference (Kruskal & Wallis 1952).",
       "x": 40,
       "y": 24,
@@ -304,11 +304,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_159": {
+    "data_163": {
       "x": 60,
       "y": 314
     },
-    "data_160": {
+    "data_164": {
       "x": 60,
       "y": 814
     },
@@ -316,11 +316,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_42": {
+    "plot_43": {
       "x": 820,
       "y": 314
     },
-    "note_30": {
+    "note_31": {
       "x": 40,
       "y": 24
     }
@@ -375,5 +375,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

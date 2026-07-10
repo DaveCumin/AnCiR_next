@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "33": [
+    "37": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "34": [
+    "38": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 33,
+      "id": 37,
       "name": "x",
-      "data": 33,
+      "data": 37,
       "type": "number",
-      "tableProcessGUId": "f23df45b-0efd-49d9-8b04-22722a18956d",
+      "tableProcessGUId": "72e2bef6-2f72-4157-95e0-67d65249520b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 34,
+      "id": 38,
       "name": "y",
-      "data": 34,
+      "data": 38,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 35,
+      "id": 39,
       "name": "Add result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_0",
-      "producerPort": "out_34",
+      "producerPort": "out_38",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 9,
+      "id": 10,
       "name": "Add: before vs after",
       "x": 350,
       "y": 150,
@@ -198,9 +198,9 @@
         "data": [
           {
             "x": {
-              "id": 36,
+              "id": 40,
               "name": "x",
-              "refId": 33,
+              "refId": 37,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -209,9 +209,9 @@
               "processes": []
             },
             "y": {
-              "id": 37,
+              "id": 41,
               "name": "y",
-              "refId": 34,
+              "refId": 38,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -237,9 +237,9 @@
           },
           {
             "x": {
-              "id": 38,
+              "id": 42,
               "name": "x",
-              "refId": 33,
+              "refId": 37,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -248,9 +248,9 @@
               "processes": []
             },
             "y": {
-              "id": 39,
+              "id": 43,
               "name": "Add result",
-              "refId": 35,
+              "refId": 39,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -290,7 +290,7 @@
       }
     },
     {
-      "id": 10,
+      "id": 11,
       "name": "Add: values",
       "x": 350,
       "y": 150,
@@ -305,8 +305,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          34,
-          35
+          38,
+          39
         ],
         "showCol": [
           true,
@@ -331,7 +331,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 33
+          "result": 37
         }
       },
       "refTPId": null
@@ -342,7 +342,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_10",
+      "id": "note_11",
       "text": "Adds a constant (or another column) to every value in the input column, element-by-element. Use it to apply an offset, shift a baseline, or combine two columns. The demo shows the output column sitting above the input with each value raised by the set amount.",
       "x": 40,
       "y": 24,
@@ -359,13 +359,13 @@
       "args": {
         "value": 5,
         "inIN": [
-          34
+          38
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_34": {
+    "data_38": {
       "x": 60,
       "y": 314
     },
@@ -377,15 +377,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_9": {
+    "plot_10": {
       "x": 820,
       "y": 314
     },
-    "plot_10": {
+    "plot_11": {
       "x": 820,
       "y": 814
     },
-    "note_10": {
+    "note_11": {
       "x": 40,
       "y": 24
     }
@@ -440,5 +440,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

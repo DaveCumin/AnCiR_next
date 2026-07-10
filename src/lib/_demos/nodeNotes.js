@@ -81,6 +81,8 @@ export const NODE_NOTES = {
 		'The classic chronobiology display: activity plotted against time of day, one row per day and double-plotted (each day shown twice, side by side) so rhythms crossing midnight stay visible and drift reads as a diagonal band. Use it to eyeball period, phase, and entrainment. The demo shows a clear daily activity band.\n\nRefinetti, Cornélissen & Halberg (2007), Biol. Rhythm Res.',
 	boxplot:
 		'Summarises the distribution of a y-column within each group defined by an x-column: the box spans the interquartile range, the line is the median, and whiskers reach the data extent (points beyond are outliers). Use it to compare spread and central tendency across days, conditions, or subjects. The demo shows one box per group.',
+	circularphase:
+		"Plots one or more phase/angle columns (e.g. acrophases, activity onsets) as points around a clock face on an adjustable period, each column a coloured group with its Rayleigh mean-resultant vector — the arrow's length is R (0 = dispersed, 1 = tightly clustered) (Batschelet 1981). Toggle rose wedges for a circular histogram of each group, or the Watson-Williams test (the circular analogue of one-way ANOVA) to ask whether groups share a common mean direction (Watson & Williams 1956). The demo plots two tightly clustered phase groups with clearly different mean directions, so the Watson-Williams test is significant.",
 	correlogram:
 		'Plots the autocorrelation of a series against lag (or the cross-correlation between two series). A rhythmic signal produces a decaying wave whose first strong positive peak away from zero lag estimates the period. Use it as a robust complement to the periodogram. See the Correlograms chapter.',
 	dataview:

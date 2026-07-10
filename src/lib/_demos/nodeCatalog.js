@@ -115,6 +115,11 @@ export const PLOT_SPECS = [
 			{ type: 'number', data: SAMPLE.rhythm }
 		],
 		wire: (p, [x, y]) => p.plot.addData({ x: { refId: x }, y: { refId: y } })
+	},
+	{
+		type: 'circularphase',
+		inputs: [{ type: 'number', data: [6.9, 7.4, 7.1, 8.0, 7.6, 6.6, 7.9, 7.2] }],
+		wire: (p, [c]) => p.plot.addData({ column: { refId: c } })
 	}
 ];
 

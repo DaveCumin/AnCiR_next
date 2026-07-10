@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "182": [
+    "186": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "183": [
+    "187": [
       80.74815343291546,
       74.1026647241765,
       67.34975964373878,
@@ -100,7 +100,7 @@
       25.36953942083682,
       31.225353920755683
     ],
-    "184": [
+    "188": [
       0,
       1,
       2,
@@ -150,10 +150,10 @@
       46,
       47
     ],
-    "185": [
+    "189": [
       null
     ],
-    "186": [
+    "190": [
       75.31550624457671,
       75.31550624457671,
       75.31550624457671,
@@ -206,20 +206,20 @@
   },
   "data": [
     {
-      "id": 182,
+      "id": 186,
       "name": "x",
-      "data": 182,
+      "data": 186,
       "type": "number",
-      "tableProcessGUId": "671eb706-3cb7-4409-8223-06c0fc040833",
+      "tableProcessGUId": "e56479d1-7e64-43eb-b141-c52cc784f8e1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 183,
+      "id": 187,
       "name": "y",
-      "data": 183,
+      "data": 187,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -228,33 +228,33 @@
       "processes": []
     },
     {
-      "id": 184,
+      "id": 188,
       "name": "rectwavex_30",
-      "data": 184,
+      "data": 188,
       "type": "number",
-      "tableProcessGUId": "677bad48-55ae-42c0-aaf8-de1c09fce663",
+      "tableProcessGUId": "ed74a078-388b-4587-86f0-c3b1e0d5e376",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 185,
+      "id": 189,
       "name": "pvalue_30",
-      "data": 185,
+      "data": 189,
       "type": "number",
-      "tableProcessGUId": "677bad48-55ae-42c0-aaf8-de1c09fce663",
+      "tableProcessGUId": "ed74a078-388b-4587-86f0-c3b1e0d5e376",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 186,
-      "name": "rectwavey_183_30",
-      "data": 186,
+      "id": 190,
+      "name": "rectwavey_187_30",
+      "data": 190,
       "type": "number",
-      "tableProcessGUId": "677bad48-55ae-42c0-aaf8-de1c09fce663",
+      "tableProcessGUId": "ed74a078-388b-4587-86f0-c3b1e0d5e376",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -263,7 +263,7 @@
   ],
   "plots": [
     {
-      "id": 47,
+      "id": 48,
       "name": "Rectangular Wave: data + fit",
       "x": 350,
       "y": 150,
@@ -319,9 +319,9 @@
         "data": [
           {
             "x": {
-              "id": 187,
+              "id": 191,
               "name": "x",
-              "refId": 182,
+              "refId": 186,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -330,9 +330,9 @@
               "processes": []
             },
             "y": {
-              "id": 188,
+              "id": 192,
               "name": "y",
-              "refId": 183,
+              "refId": 187,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -358,9 +358,9 @@
           },
           {
             "x": {
-              "id": 189,
+              "id": 193,
               "name": "rectwavex_30",
-              "refId": 184,
+              "refId": 188,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -369,9 +369,9 @@
               "processes": []
             },
             "y": {
-              "id": 190,
-              "name": "rectwavey_183_30",
-              "refId": 186,
+              "id": 194,
+              "name": "rectwavey_187_30",
+              "refId": 190,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -411,7 +411,7 @@
       }
     },
     {
-      "id": 48,
+      "id": 49,
       "name": "Rectangular Wave: values",
       "x": 350,
       "y": 150,
@@ -426,8 +426,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          183,
-          186
+          187,
+          190
         ],
         "showCol": [
           true,
@@ -452,7 +452,7 @@
         "count": 48,
         "end": 47,
         "out": {
-          "result": 182
+          "result": 186
         }
       },
       "refTPId": null
@@ -462,9 +462,9 @@
       "name": "RectangularWave",
       "displayName": "Rectangular Wave",
       "args": {
-        "xIN": 182,
+        "xIN": 186,
         "yIN": [
-          183
+          187
         ],
         "outputX": -1,
         "fixKappa": false,
@@ -475,9 +475,9 @@
         "fixedDutyCycle": 0.5,
         "preProcesses": [],
         "out": {
-          "rectwavex": 184,
-          "pvalue": 185,
-          "rectwavey_183": 186
+          "rectwavex": 188,
+          "pvalue": 189,
+          "rectwavey_187": 190
         }
       },
       "refTPId": null
@@ -488,7 +488,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_34",
+      "id": "note_35",
       "text": "Fits a smooth rectangular (square) wave with an adjustable duty cycle to the series, capturing on/off activity rhythms that a sinusoid fits poorly. The model is a tanh-approximated square wave whose duty cycle sets the fraction of each cycle spent 'on'; period, phase, sharpness (kappa) and duty cycle can be fixed or fitted. Use it for clearly bimodal activity (e.g. nocturnal animals switching between rest and activity) where you want an explicit active-phase width. In the demo, read the flat high plateau as the active phase, the flat low level as rest, and the plateau width as the duty cycle. Nonlinear least-squares waveform fitting (Marquardt 1963).",
       "x": 40,
       "y": 24,
@@ -500,7 +500,7 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_183": {
+    "data_187": {
       "x": 60,
       "y": 314
     },
@@ -512,15 +512,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_47": {
+    "plot_48": {
       "x": 820,
       "y": 314
     },
-    "plot_48": {
+    "plot_49": {
       "x": 820,
       "y": 814
     },
-    "note_34": {
+    "note_35": {
       "x": 40,
       "y": 24
     }
@@ -575,5 +575,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

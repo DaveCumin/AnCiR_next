@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "47": [
+    "51": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "48": [
+    "52": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 47,
+      "id": 51,
       "name": "x",
-      "data": 47,
+      "data": 51,
       "type": "number",
-      "tableProcessGUId": "b3aef40f-ca99-4da6-a46f-5e45930d8762",
+      "tableProcessGUId": "19947f8f-a59e-486e-ba64-1d98499153cc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 48,
+      "id": 52,
       "name": "y",
-      "data": 48,
+      "data": 52,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 49,
+      "id": 53,
       "name": "Multiply result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_2",
-      "producerPort": "out_48",
+      "producerPort": "out_52",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 13,
+      "id": 14,
       "name": "Multiply: before vs after",
       "x": 350,
       "y": 150,
@@ -198,9 +198,9 @@
         "data": [
           {
             "x": {
-              "id": 50,
+              "id": 54,
               "name": "x",
-              "refId": 47,
+              "refId": 51,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -209,9 +209,9 @@
               "processes": []
             },
             "y": {
-              "id": 51,
+              "id": 55,
               "name": "y",
-              "refId": 48,
+              "refId": 52,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -237,9 +237,9 @@
           },
           {
             "x": {
-              "id": 52,
+              "id": 56,
               "name": "x",
-              "refId": 47,
+              "refId": 51,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -248,9 +248,9 @@
               "processes": []
             },
             "y": {
-              "id": 53,
+              "id": 57,
               "name": "Multiply result",
-              "refId": 49,
+              "refId": 53,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -290,7 +290,7 @@
       }
     },
     {
-      "id": 14,
+      "id": 15,
       "name": "Multiply: values",
       "x": 350,
       "y": 150,
@@ -305,8 +305,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          48,
-          49
+          52,
+          53
         ],
         "showCol": [
           true,
@@ -331,7 +331,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 47
+          "result": 51
         }
       },
       "refTPId": null
@@ -342,7 +342,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_12",
+      "id": "note_13",
       "text": "Multiplies every value in the input column by a constant (or another column), element-by-element. Use it for unit conversions, scaling, or rescaling a signal. The demo shows the output column scaled relative to the input.",
       "x": 40,
       "y": 24,
@@ -359,13 +359,13 @@
       "args": {
         "value": 2,
         "inIN": [
-          48
+          52
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_48": {
+    "data_52": {
       "x": 60,
       "y": 314
     },
@@ -377,15 +377,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_13": {
+    "plot_14": {
       "x": 820,
       "y": 314
     },
-    "plot_14": {
+    "plot_15": {
       "x": 820,
       "y": 814
     },
-    "note_12": {
+    "note_13": {
       "x": 40,
       "y": 24
     }
@@ -440,5 +440,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

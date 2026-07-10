@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "181": [
+    "185": [
       9.23,
       3.33,
       1.98,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 181,
+      "id": 185,
       "name": "result_28",
-      "data": 181,
+      "data": 185,
       "type": "number",
-      "tableProcessGUId": "9a6f3657-bad7-4f45-b003-2379a175ffc6",
+      "tableProcessGUId": "76780c47-21a8-4dbe-86c9-d05eb2ff9e65",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -68,7 +68,7 @@
   ],
   "plots": [
     {
-      "id": 46,
+      "id": 47,
       "name": "Random result",
       "x": 350,
       "y": 150,
@@ -83,7 +83,7 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          181
+          185
         ],
         "showCol": [
           true
@@ -107,7 +107,7 @@
         "seed": 12345,
         "distribution": "uniform",
         "out": {
-          "result": 181
+          "result": 185
         }
       },
       "refTPId": null
@@ -118,7 +118,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_33",
+      "id": "note_34",
       "text": "Generates a column of pseudo-random values from a uniform, Gaussian, or exponential distribution, scaled by an offset and multiplier, with a fixed seed for reproducibility. Use it to add controlled noise or to create random test data.",
       "x": 40,
       "y": 24,
@@ -134,11 +134,11 @@
       "x": 60,
       "y": 314
     },
-    "plot_46": {
+    "plot_47": {
       "x": 820,
       "y": 314
     },
-    "note_33": {
+    "note_34": {
       "x": 40,
       "y": 24
     }
@@ -193,5 +193,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

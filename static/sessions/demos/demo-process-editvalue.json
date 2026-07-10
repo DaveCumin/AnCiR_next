@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "54": [
+    "58": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "55": [
+    "59": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 54,
+      "id": 58,
       "name": "x",
-      "data": 54,
+      "data": 58,
       "type": "number",
-      "tableProcessGUId": "b2aee9b5-395a-4118-90e0-8b99c365991c",
+      "tableProcessGUId": "7f4b7807-6915-4b84-9d22-ed659e3c35b8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 55,
+      "id": 59,
       "name": "y",
-      "data": 55,
+      "data": 59,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 56,
+      "id": 60,
       "name": "Edit value result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_3",
-      "producerPort": "out_55",
+      "producerPort": "out_59",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 15,
+      "id": 16,
       "name": "Edit value: before vs after",
       "x": 350,
       "y": 150,
@@ -198,9 +198,9 @@
         "data": [
           {
             "x": {
-              "id": 57,
+              "id": 61,
               "name": "x",
-              "refId": 54,
+              "refId": 58,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -209,9 +209,9 @@
               "processes": []
             },
             "y": {
-              "id": 58,
+              "id": 62,
               "name": "y",
-              "refId": 55,
+              "refId": 59,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -237,9 +237,9 @@
           },
           {
             "x": {
-              "id": 59,
+              "id": 63,
               "name": "x",
-              "refId": 54,
+              "refId": 58,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -248,9 +248,9 @@
               "processes": []
             },
             "y": {
-              "id": 60,
+              "id": 64,
               "name": "Edit value result",
-              "refId": 56,
+              "refId": 60,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -290,7 +290,7 @@
       }
     },
     {
-      "id": 16,
+      "id": 17,
       "name": "Edit value: values",
       "x": 350,
       "y": 150,
@@ -305,8 +305,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          55,
-          56
+          59,
+          60
         ],
         "showCol": [
           true,
@@ -331,7 +331,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 54
+          "result": 58
         }
       },
       "refTPId": null
@@ -342,7 +342,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_13",
+      "id": "note_14",
       "text": "Overwrites individual cells at specific row positions with values you type in, leaving the rest of the column unchanged. Use it for hand-correcting a few known-bad points without touching the source data. The demo shows the edited positions differing from the input.",
       "x": 40,
       "y": 24,
@@ -364,13 +364,13 @@
           }
         ],
         "inIN": [
-          55
+          59
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_55": {
+    "data_59": {
       "x": 60,
       "y": 314
     },
@@ -382,15 +382,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_15": {
+    "plot_16": {
       "x": 820,
       "y": 314
     },
-    "plot_16": {
+    "plot_17": {
       "x": 820,
       "y": 814
     },
-    "note_13": {
+    "note_14": {
       "x": 40,
       "y": 24
     }
@@ -445,5 +445,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

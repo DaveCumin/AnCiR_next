@@ -1,0 +1,236 @@
+{
+  "rawData": {
+    "14": [
+      6.18357552489177,
+      6.690160198983765,
+      6.40983903409247,
+      7.026645171128066,
+      7.6503535061150485,
+      7.619823793198933,
+      7.1178956280660834,
+      8.101498993718184,
+      7.431761122942481,
+      8.179975809297577,
+      6.389581177362223,
+      7.0684596525195245,
+      5.539052387405409,
+      6.140721079762585,
+      6.1016487112756534,
+      7.7858821794646484,
+      6.904606497153116,
+      6.724803937778721
+    ],
+    "15": [
+      19.014500468166084,
+      18.801938822626926,
+      19.76336577355189,
+      19.91810121495275,
+      18.475931840462277,
+      17.61684291586794,
+      19.41280973708004,
+      19.63926145321298,
+      17.687226038314215,
+      19.291547186911203,
+      19.604244231445428,
+      20.26730115427718,
+      19.129447031408308,
+      20.596864842239537,
+      19.164788903177595,
+      18.235709165589252,
+      17.62649422349815,
+      18.725213322863656
+    ]
+  },
+  "data": [
+    {
+      "id": 14,
+      "name": "Group A phase",
+      "data": 14,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 15,
+      "name": "Group B phase",
+      "data": 15,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    }
+  ],
+  "plots": [
+    {
+      "id": 4,
+      "name": "Circular phase plot",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "circularphase",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "plot": {
+        "unit": "hours",
+        "period": 24,
+        "placement": "stack",
+        "binWidth": 1,
+        "showMeanVectors": true,
+        "showWedges": false,
+        "wedgeBinWidth": 2,
+        "showWatsonWilliams": true,
+        "padding": {
+          "top": 24,
+          "right": 20,
+          "bottom": 30,
+          "left": 20
+        },
+        "data": [
+          {
+            "column": {
+              "id": 16,
+              "name": "Group A phase",
+              "refId": 14,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "Group A",
+            "colour": "#234154",
+            "shape": "circle",
+            "radius": 3.4,
+            "draw": true
+          },
+          {
+            "column": {
+              "id": 17,
+              "name": "Group B phase",
+              "refId": 15,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "Group B",
+            "colour": "#BE796B",
+            "shape": "circle",
+            "radius": 3.4,
+            "draw": true
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "topright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-80)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        }
+      }
+    }
+  ],
+  "tableProcesses": [],
+  "storedValues": {},
+  "chainRefs": [],
+  "nodeNotes": {},
+  "notes": [
+    {
+      "id": "note_5",
+      "text": "Plots one or more phase/angle columns (e.g. acrophases, activity onsets) as points around a clock face on an adjustable period, each column a coloured group with its Rayleigh mean-resultant vector — the arrow's length is R (0 = dispersed, 1 = tightly clustered) (Batschelet 1981). Toggle rose wedges for a circular histogram of each group, or the Watson-Williams test (the circular analogue of one-way ANOVA) to ask whether groups share a common mean direction (Watson & Williams 1956). The demo plots two tightly clustered phase groups with clearly different mean directions, so the Watson-Williams test is significant.",
+      "x": 40,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
+  "groups": [],
+  "composites": [],
+  "orphanProcesses": [],
+  "nodeLayout": {
+    "data_14": {
+      "x": 60,
+      "y": 314
+    },
+    "data_15": {
+      "x": 60,
+      "y": 814
+    },
+    "note_5": {
+      "x": 40,
+      "y": 24
+    },
+    "plot_4": {
+      "x": 820,
+      "y": 314
+    }
+  },
+  "appState": {
+    "currentTab": "null",
+    "currentControlTab": "properties",
+    "loadingState": {
+      "isLoading": true,
+      "loadingMsg": "Warming up..."
+    },
+    "showNavbar": true,
+    "showDisplayPanel": false,
+    "showControlPanel": false,
+    "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
+    "windowWidth": 1024,
+    "windowHeight": 768,
+    "widthNavBar": 56,
+    "widthDisplayPanel": 250,
+    "widthControlPanel": 250,
+    "gridSize": 15,
+    "canvasOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "canvasScale": 1,
+    "view": "canvas",
+    "displayTimezone": "utc",
+    "invisiblePlotIds": [],
+    "canvasSelectedNodeId": null,
+    "canvasMultiSelectedCount": 0,
+    "canvasMultiSelectedNodeIds": [],
+    "appColours": [
+      "#234154",
+      "#BE796B",
+      "#3E7295",
+      "#EDADAD",
+      "#A6ACD5",
+      "#83422A",
+      "#6B9FD5",
+      "#4A1E0E",
+      "#fbe67280"
+    ],
+    "showColourPicker": false,
+    "showAYSModal": false,
+    "AYStext": "",
+    "AYScallback": null,
+    "AYSoptions": [
+      "Yes",
+      "No"
+    ],
+    "showWorkflow": false
+  },
+  "version": "β.53.2"
+}

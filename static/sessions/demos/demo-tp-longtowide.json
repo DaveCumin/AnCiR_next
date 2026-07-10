@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "165": [
+    "169": [
       "A",
       "B",
       "C",
@@ -62,7 +62,7 @@
       "B",
       "C"
     ],
-    "166": [
+    "170": [
       0,
       0,
       0,
@@ -124,7 +124,7 @@
       19,
       19
     ],
-    "167": [
+    "171": [
       0,
       100,
       200,
@@ -186,7 +186,7 @@
       119,
       219
     ],
-    "168": [
+    "172": [
       0,
       1,
       2,
@@ -208,7 +208,7 @@
       18,
       19
     ],
-    "169": [
+    "173": [
       0,
       1,
       2,
@@ -230,7 +230,7 @@
       18,
       19
     ],
-    "170": [
+    "174": [
       100,
       101,
       102,
@@ -252,7 +252,7 @@
       118,
       119
     ],
-    "171": [
+    "175": [
       200,
       201,
       202,
@@ -277,9 +277,9 @@
   },
   "data": [
     {
-      "id": 165,
+      "id": 169,
       "name": "Long To Wide input 1",
-      "data": 165,
+      "data": 169,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -288,55 +288,11 @@
       "processes": []
     },
     {
-      "id": 166,
-      "name": "Long To Wide input 2",
-      "data": 166,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 167,
-      "name": "Long To Wide input 3",
-      "data": 167,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 168,
-      "name": "time_25",
-      "data": 168,
-      "type": "number",
-      "tableProcessGUId": "626fc0da-cf4b-42ea-bd2c-3532e2930545",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 169,
-      "name": "value_A_25",
-      "data": 169,
-      "type": "number",
-      "tableProcessGUId": "626fc0da-cf4b-42ea-bd2c-3532e2930545",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 170,
-      "name": "value_B_25",
+      "name": "Long To Wide input 2",
       "data": 170,
       "type": "number",
-      "tableProcessGUId": "626fc0da-cf4b-42ea-bd2c-3532e2930545",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -344,10 +300,54 @@
     },
     {
       "id": 171,
-      "name": "value_C_25",
+      "name": "Long To Wide input 3",
       "data": 171,
       "type": "number",
-      "tableProcessGUId": "626fc0da-cf4b-42ea-bd2c-3532e2930545",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 172,
+      "name": "time_25",
+      "data": 172,
+      "type": "number",
+      "tableProcessGUId": "8d1cad7d-eaf5-4ffc-9266-ac529f1816a2",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 173,
+      "name": "value_A_25",
+      "data": 173,
+      "type": "number",
+      "tableProcessGUId": "8d1cad7d-eaf5-4ffc-9266-ac529f1816a2",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 174,
+      "name": "value_B_25",
+      "data": 174,
+      "type": "number",
+      "tableProcessGUId": "8d1cad7d-eaf5-4ffc-9266-ac529f1816a2",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 175,
+      "name": "value_C_25",
+      "data": 175,
+      "type": "number",
+      "tableProcessGUId": "8d1cad7d-eaf5-4ffc-9266-ac529f1816a2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -356,7 +356,7 @@
   ],
   "plots": [
     {
-      "id": 43,
+      "id": 44,
       "name": "Long To Wide result",
       "x": 350,
       "y": 150,
@@ -371,13 +371,13 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          165,
-          166,
-          167,
-          168,
           169,
           170,
-          171
+          171,
+          172,
+          173,
+          174,
+          175
         ],
         "showCol": [
           true,
@@ -401,15 +401,15 @@
       "name": "LongToWide",
       "displayName": "Long To Wide",
       "args": {
-        "categoryIN": 165,
-        "timeIN": 166,
-        "valueIN": 167,
+        "categoryIN": 169,
+        "timeIN": 170,
+        "valueIN": 171,
         "preProcesses": [],
         "out": {
-          "time": 168,
-          "value_A": 169,
-          "value_B": 170,
-          "value_C": 171
+          "time": 172,
+          "value_A": 173,
+          "value_B": 174,
+          "value_C": 175
         }
       },
       "refTPId": null
@@ -420,7 +420,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_31",
+      "id": "note_32",
       "text": "Pivots a long/tidy table (a category column, a time column and a value column) into wide format, producing one value-column per category sharing a common time column. Use it to turn a stacked per-subject table into side-by-side series ready for plotting or per-series analysis.",
       "x": 40,
       "y": 24,
@@ -432,15 +432,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_165": {
+    "data_169": {
       "x": 60,
       "y": 314
     },
-    "data_166": {
+    "data_170": {
       "x": 60,
       "y": 814
     },
-    "data_167": {
+    "data_171": {
       "x": 60,
       "y": 1314
     },
@@ -448,11 +448,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_43": {
+    "plot_44": {
       "x": 820,
       "y": 314
     },
-    "note_31": {
+    "note_32": {
       "x": 40,
       "y": 24
     }
@@ -507,5 +507,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

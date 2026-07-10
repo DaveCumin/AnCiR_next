@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "69": [
+    "73": [
       0,
       1,
       2,
@@ -53,7 +53,7 @@
       49,
       50
     ],
-    "70": [
+    "74": [
       0,
       1,
       2,
@@ -109,20 +109,20 @@
   },
   "data": [
     {
-      "id": 69,
+      "id": 73,
       "name": "x",
-      "data": 69,
+      "data": 73,
       "type": "number",
-      "tableProcessGUId": "47d46b2d-3e89-4bcd-a6ae-647c09b70e07",
+      "tableProcessGUId": "32d7b0c8-b4d0-489e-8a44-bc870dd2af76",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 70,
+      "id": 74,
       "name": "y",
-      "data": 70,
+      "data": 74,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -131,20 +131,20 @@
       "processes": []
     },
     {
-      "id": 71,
+      "id": 75,
       "name": "Remove Outliers result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_5",
-      "producerPort": "out_70",
+      "producerPort": "out_74",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 19,
+      "id": 20,
       "name": "Remove Outliers: before vs after",
       "x": 350,
       "y": 150,
@@ -200,9 +200,9 @@
         "data": [
           {
             "x": {
-              "id": 72,
+              "id": 76,
               "name": "x",
-              "refId": 69,
+              "refId": 73,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -211,9 +211,9 @@
               "processes": []
             },
             "y": {
-              "id": 73,
+              "id": 77,
               "name": "y",
-              "refId": 70,
+              "refId": 74,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -239,9 +239,9 @@
           },
           {
             "x": {
-              "id": 74,
+              "id": 78,
               "name": "x",
-              "refId": 69,
+              "refId": 73,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -250,9 +250,9 @@
               "processes": []
             },
             "y": {
-              "id": 75,
+              "id": 79,
               "name": "Remove Outliers result",
-              "refId": 71,
+              "refId": 75,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -292,7 +292,7 @@
       }
     },
     {
-      "id": 20,
+      "id": 21,
       "name": "Remove Outliers: values",
       "x": 350,
       "y": 150,
@@ -307,8 +307,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          70,
-          71
+          74,
+          75
         ],
         "showCol": [
           true,
@@ -333,7 +333,7 @@
         "count": 51,
         "end": 50,
         "out": {
-          "result": 69
+          "result": 73
         }
       },
       "refTPId": null
@@ -344,7 +344,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_15",
+      "id": "note_16",
       "text": "Flags extreme values and replaces them with blanks, using either a z-score threshold (default |z| > 3) or Tukey's IQR fence (Q1 - k·IQR, Q3 + k·IQR, default k = 1.5). Use it to stop a handful of spikes dominating fits and spectra. The demo shows the flagged points removed while the rest of the series is preserved.\n\nTukey, J.W. (1977) Exploratory Data Analysis.",
       "x": 40,
       "y": 24,
@@ -363,13 +363,13 @@
         "iqrMultiplier": 1.5,
         "zThreshold": 3,
         "inIN": [
-          70
+          74
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_70": {
+    "data_74": {
       "x": 60,
       "y": 314
     },
@@ -381,15 +381,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_19": {
+    "plot_20": {
       "x": 820,
       "y": 314
     },
-    "plot_20": {
+    "plot_21": {
       "x": 820,
       "y": 814
     },
-    "note_15": {
+    "note_16": {
       "x": 40,
       "y": 24
     }
@@ -444,5 +444,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

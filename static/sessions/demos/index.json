@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 46,
+  "count": 47,
   "sessions": [
     {
       "id": "tp-blankcolumn",
@@ -493,6 +493,18 @@
         "meansem"
       ],
       "keywords": "mean ± sem — activity by day per-day mean activity with standard-error whiskers (7 days × 24 hourly points). plots meansem"
+    },
+    {
+      "id": "circular-phase-two-groups",
+      "name": "Circular phase plot — two groups",
+      "family": "Plots",
+      "description": "Peak-activity phase (clock hours) for two groups on a 24 h clock, each a coloured group with its Rayleigh mean-resultant vector and a Watson-Williams test comparing mean directions.",
+      "url": "sessions/demos/demo-circular-phase-two-groups.json",
+      "kind": "plot",
+      "showcases": [
+        "circularphase"
+      ],
+      "keywords": "circular phase plot — two groups peak-activity phase (clock hours) for two groups on a 24 h clock, each a coloured group with its rayleigh mean-resultant vector and a watson-williams test comparing mean directions. plots circularphase"
     },
     {
       "id": "actogram-rhythm",

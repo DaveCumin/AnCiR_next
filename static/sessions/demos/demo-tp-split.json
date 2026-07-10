@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "224": [
+    "228": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "225": [
+    "229": [
       0,
       10,
       20,
@@ -104,7 +104,7 @@
       480,
       490
     ],
-    "226": [
+    "230": [
       0,
       10,
       20,
@@ -156,7 +156,7 @@
       null,
       null
     ],
-    "227": [
+    "231": [
       null,
       null,
       null,
@@ -208,7 +208,7 @@
       null,
       null
     ],
-    "228": [
+    "232": [
       null,
       null,
       null,
@@ -263,55 +263,55 @@
   },
   "data": [
     {
-      "id": 224,
-      "name": "Split data input 1",
-      "data": 224,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 225,
-      "name": "Split data input 2",
-      "data": 225,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 226,
-      "name": "225_1_38",
-      "data": 226,
-      "type": "number",
-      "tableProcessGUId": "892651bd-c4e4-4e0f-866c-ac41fea45f71",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 227,
-      "name": "225_2_38",
-      "data": 227,
-      "type": "number",
-      "tableProcessGUId": "892651bd-c4e4-4e0f-866c-ac41fea45f71",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 228,
-      "name": "225_3_38",
+      "name": "Split data input 1",
       "data": 228,
       "type": "number",
-      "tableProcessGUId": "892651bd-c4e4-4e0f-866c-ac41fea45f71",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 229,
+      "name": "Split data input 2",
+      "data": 229,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 230,
+      "name": "229_1_38",
+      "data": 230,
+      "type": "number",
+      "tableProcessGUId": "1314196a-bc56-4cd0-8d0d-f9b92d1fe4c2",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 231,
+      "name": "229_2_38",
+      "data": 231,
+      "type": "number",
+      "tableProcessGUId": "1314196a-bc56-4cd0-8d0d-f9b92d1fe4c2",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 232,
+      "name": "229_3_38",
+      "data": 232,
+      "type": "number",
+      "tableProcessGUId": "1314196a-bc56-4cd0-8d0d-f9b92d1fe4c2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -320,7 +320,7 @@
   ],
   "plots": [
     {
-      "id": 57,
+      "id": 58,
       "name": "Split data result",
       "x": 350,
       "y": 150,
@@ -335,11 +335,11 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          224,
-          225,
-          226,
-          227,
-          228
+          228,
+          229,
+          230,
+          231,
+          232
         ],
         "showCol": [
           true,
@@ -361,18 +361,18 @@
       "name": "Split",
       "displayName": "Split data",
       "args": {
-        "xIN": 224,
+        "xIN": 228,
         "yIN": [
-          225
+          229
         ],
         "splitTimes": [
           15,
           30
         ],
         "out": {
-          "225_1": 226,
-          "225_2": 227,
-          "225_3": 228
+          "229_1": 230,
+          "229_2": 231,
+          "229_3": 232
         }
       },
       "refTPId": null
@@ -383,7 +383,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_40",
+      "id": "note_41",
       "text": "Cuts a time-series into consecutive segments at the split times you specify, keeping the chosen columns aligned. Use it to separate, e.g., an entrainment stage from a free-run stage, or successive days, before analysing each part on its own.",
       "x": 40,
       "y": 24,
@@ -395,11 +395,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_224": {
+    "data_228": {
       "x": 60,
       "y": 314
     },
-    "data_225": {
+    "data_229": {
       "x": 60,
       "y": 814
     },
@@ -407,11 +407,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_57": {
+    "plot_58": {
       "x": 820,
       "y": 314
     },
-    "note_40": {
+    "note_41": {
       "x": 40,
       "y": 24
     }
@@ -466,5 +466,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }

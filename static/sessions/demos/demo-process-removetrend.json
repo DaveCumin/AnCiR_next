@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "76": [
+    "80": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "77": [
+    "81": [
       1,
       3,
       5,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 76,
+      "id": 80,
       "name": "x",
-      "data": 76,
+      "data": 80,
       "type": "number",
-      "tableProcessGUId": "f1a50f0a-5794-47fe-b860-0de6a19a813e",
+      "tableProcessGUId": "b41c648a-e10a-4946-856e-c08d37499ea3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 77,
+      "id": 81,
       "name": "y",
-      "data": 77,
+      "data": 81,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 78,
+      "id": 82,
       "name": "Remove Trend result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_6",
-      "producerPort": "out_77",
+      "producerPort": "out_81",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 21,
+      "id": 22,
       "name": "Remove Trend: before vs after",
       "x": 350,
       "y": 150,
@@ -198,9 +198,9 @@
         "data": [
           {
             "x": {
-              "id": 79,
+              "id": 83,
               "name": "x",
-              "refId": 76,
+              "refId": 80,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -209,9 +209,9 @@
               "processes": []
             },
             "y": {
-              "id": 80,
+              "id": 84,
               "name": "y",
-              "refId": 77,
+              "refId": 81,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -237,9 +237,9 @@
           },
           {
             "x": {
-              "id": 81,
+              "id": 85,
               "name": "x",
-              "refId": 76,
+              "refId": 80,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -248,9 +248,9 @@
               "processes": []
             },
             "y": {
-              "id": 82,
+              "id": 86,
               "name": "Remove Trend result",
-              "refId": 78,
+              "refId": 82,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -290,7 +290,7 @@
       }
     },
     {
-      "id": 22,
+      "id": 23,
       "name": "Remove Trend: values",
       "x": 350,
       "y": 150,
@@ -305,8 +305,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          77,
-          78
+          81,
+          82
         ],
         "showCol": [
           true,
@@ -331,7 +331,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 76
+          "result": 80
         }
       },
       "refTPId": null
@@ -342,7 +342,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_16",
+      "id": "note_17",
       "text": "Fits a trend (linear, polynomial, exponential, or logarithmic) against a chosen x-column and subtracts it, leaving the residual (detrended) signal. Use it to remove baseline drift or sensor decay before rhythm analysis so a slow trend doesn't masquerade as a long period. An optional sliding window detrends locally. The demo shows the drifting input flattened around zero.",
       "x": 40,
       "y": 24,
@@ -363,13 +363,13 @@
         "slidingWindow": false,
         "windowSize": 10,
         "inIN": [
-          77
+          81
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_77": {
+    "data_81": {
       "x": 60,
       "y": 314
     },
@@ -381,15 +381,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_21": {
+    "plot_22": {
       "x": 820,
       "y": 314
     },
-    "plot_22": {
+    "plot_23": {
       "x": 820,
       "y": 814
     },
-    "note_16": {
+    "note_17": {
       "x": 40,
       "y": 24
     }
@@ -444,5 +444,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.1"
+  "version": "β.53.2"
 }
