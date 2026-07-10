@@ -59,7 +59,7 @@
       "name": "result_28",
       "data": 179,
       "type": "number",
-      "tableProcessGUId": "67213e0a-9cab-4a3e-9a03-5e85eb956d46",
+      "tableProcessGUId": "53097428-6214-41b2-9a65-8b91e0458093",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -116,7 +116,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_33",
+      "text": "Generates a column of pseudo-random values from a uniform, Gaussian, or exponential distribution, scaled by an offset and multiplier, with a fixed seed for reproducibility. Use it to add controlled noise or to create random test data.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -180,5 +189,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

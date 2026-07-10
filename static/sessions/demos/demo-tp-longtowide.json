@@ -314,7 +314,7 @@
       "name": "time_25",
       "data": 166,
       "type": "number",
-      "tableProcessGUId": "26b8fc96-147c-4740-81db-c6ccdd10676e",
+      "tableProcessGUId": "55696c56-e8cc-4957-9a16-a435eb622230",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -325,7 +325,7 @@
       "name": "value_A_25",
       "data": 167,
       "type": "number",
-      "tableProcessGUId": "26b8fc96-147c-4740-81db-c6ccdd10676e",
+      "tableProcessGUId": "55696c56-e8cc-4957-9a16-a435eb622230",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -336,7 +336,7 @@
       "name": "value_B_25",
       "data": 168,
       "type": "number",
-      "tableProcessGUId": "26b8fc96-147c-4740-81db-c6ccdd10676e",
+      "tableProcessGUId": "55696c56-e8cc-4957-9a16-a435eb622230",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -347,7 +347,7 @@
       "name": "value_C_25",
       "data": 169,
       "type": "number",
-      "tableProcessGUId": "26b8fc96-147c-4740-81db-c6ccdd10676e",
+      "tableProcessGUId": "55696c56-e8cc-4957-9a16-a435eb622230",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -418,7 +418,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_31",
+      "text": "Pivots a long/tidy table (a category column, a time column and a value column) into wide format, producing one value-column per category sharing a common time column. Use it to turn a stacked per-subject table into side-by-side series ready for plotting or per-series analysis.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -494,5 +503,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

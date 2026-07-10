@@ -185,7 +185,7 @@
       "name": "result_16",
       "data": 122,
       "type": "category",
-      "tableProcessGUId": "b3462edf-6fe2-4882-b3fb-a4912cab343c",
+      "tableProcessGUId": "16edc0f2-bd2c-46b8-838d-7a51718c96fd",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -246,7 +246,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_25",
+      "text": "Combines several input columns into one result by applying a per-row function across them: element-wise Add, or the row-wise Mean, Min, Max, or Std Dev over the selected columns. Use it to compute, e.g., the average of replicate series or a per-timepoint spread.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -318,5 +327,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

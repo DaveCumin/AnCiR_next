@@ -139,7 +139,7 @@
       "name": "statistic_24",
       "data": 159,
       "type": "number",
-      "tableProcessGUId": "21dbf392-9f16-4013-83c3-2faa05c317c1",
+      "tableProcessGUId": "fc65f937-a6ed-4be8-a988-e5641aea3fdd",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -150,7 +150,7 @@
       "name": "pvalue_24",
       "data": 160,
       "type": "number",
-      "tableProcessGUId": "21dbf392-9f16-4013-83c3-2faa05c317c1",
+      "tableProcessGUId": "fc65f937-a6ed-4be8-a988-e5641aea3fdd",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -290,7 +290,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_30",
+      "text": "Compares a numeric measure across groups defined by a grouping column (or across several y-columns). Auto mode picks a Welch t-test for two groups and a one-way ANOVA for three or more; nonparametric Mann-Whitney U and Kruskal-Wallis are also available, with Tukey-Kramer / Holm-adjusted pairwise post-hoc tests and Jarque-Bera normality and variance-ratio warnings. Outputs the test statistic and p-value as metric ports you can wire onward. Reporting a significant group difference (Kruskal & Wallis 1952).",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -362,5 +371,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

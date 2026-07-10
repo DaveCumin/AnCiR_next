@@ -441,7 +441,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_5",
+      "text": "The classic chronobiology display: activity plotted against time of day, one row per day and double-plotted (each day shown twice, side by side) so rhythms crossing midnight stay visible and drift reads as a diagonal band. Use it to eyeball period, phase, and entrainment. The demo shows a clear daily activity band.\n\nRefinetti, Cornélissen & Halberg (2007), Biol. Rhythm Res.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -496,5 +505,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

@@ -480,7 +480,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_1",
+      "text": "Plots one column against another as points, most often a value against time to view a raw time-series. Wire x (e.g. time) and y (values); multiple y-columns overlay as separate series. Supports zoom/pan and an optional facet mode (one small plot per series). Use it as your first look at the data before any analysis.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -535,5 +544,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

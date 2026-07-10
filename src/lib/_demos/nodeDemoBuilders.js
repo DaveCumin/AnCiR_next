@@ -15,11 +15,34 @@
 // the process node's OUTPUT (a producer column), not a third source. All nodes
 // load EXPANDED, and positions are baked with generous rows because the canvas
 // auto-layout underestimates an expanded node's height.
-import { core, pushObj, createOrphanProcess, getProcessNodeGraph } from '$lib/core/core.svelte.js';
+import {
+	core,
+	pushObj,
+	createOrphanProcess,
+	getProcessNodeGraph,
+	createNote
+} from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
+import { NODE_NOTES } from '$lib/_demos/nodeNotes.js';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
 import { SAMPLE } from './nodeCatalog.js';
+
+/**
+ * Add the node's explanatory Note (from NODE_NOTES) to the demo canvas, sized
+ * for a few sentences. No-op when the node has no note. Placed top-left so it
+ * reads as the caption; the baked node layout starts below/right of it.
+ */
+export function addDemoNote(nodeId) {
+	const text = NODE_NOTES[nodeId];
+	if (!text) return;
+	createNote({ x: 24, y: 24, text });
+	const n = core.notes[core.notes.length - 1];
+	if (n) {
+		n.width = 360;
+		n.height = 190;
+	}
+}
 
 // Deterministic RNG (seeded) so the fit demos' noisy data is stable across runs.
 function mulberry32(seed) {
@@ -72,7 +95,8 @@ const FIT_DEMO = {
 		y: (rng) =>
 			seq(
 				50,
-				(i) => 25 + 50 / (1 + Math.exp(-(i - 12))) - 50 / (1 + Math.exp(-(i - 36))) + normal(rng, 0, 3)
+				(i) =>
+					25 + 50 / (1 + Math.exp(-(i - 12))) - 50 / (1 + Math.exp(-(i - 36))) + normal(rng, 0, 3)
 			),
 		axes: { x: 'Time', y: 'Level' }
 	},
@@ -267,6 +291,7 @@ export async function buildProcessDemo(spec, display) {
 
 	prewarmWrapperNames();
 	bakeLayoutFromGraph();
+	addDemoNote(spec.name);
 	return { proc, xId: x.colId, yId, resultId: result.id, scatter, table };
 }
 
@@ -421,5 +446,6 @@ export async function buildTPDemo(spec, entry, display) {
 
 	prewarmWrapperNames();
 	bakeLayoutFromGraph();
+	addDemoNote(spec.name);
 	return { tp };
 }

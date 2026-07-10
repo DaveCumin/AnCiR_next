@@ -19,7 +19,7 @@
       "name": "result_13",
       "data": 113,
       "type": "category",
-      "tableProcessGUId": "35a7c502-8595-44a6-86ba-a6c815ea3240",
+      "tableProcessGUId": "bb6050f1-7721-44c9-9389-26be873f85e7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -73,7 +73,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_22",
+      "text": "Lets you enter data by hand or paste CSV/JSON to create a column (or table) directly on the canvas. Use it for small manual datasets, quick tests, or pasting values from another program.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -137,5 +146,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

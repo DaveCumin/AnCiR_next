@@ -717,7 +717,7 @@
       "name": "CFI_47",
       "data": 265,
       "type": "number",
-      "tableProcessGUId": "25c8c905-ff72-4c1c-94b8-929fac7ba248",
+      "tableProcessGUId": "e821c7c2-1f06-485f-8492-30700d5bbae0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -728,7 +728,7 @@
       "name": "IS_47",
       "data": 266,
       "type": "number",
-      "tableProcessGUId": "25c8c905-ff72-4c1c-94b8-929fac7ba248",
+      "tableProcessGUId": "e821c7c2-1f06-485f-8492-30700d5bbae0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -739,7 +739,7 @@
       "name": "IV_47",
       "data": 267,
       "type": "number",
-      "tableProcessGUId": "25c8c905-ff72-4c1c-94b8-929fac7ba248",
+      "tableProcessGUId": "e821c7c2-1f06-485f-8492-30700d5bbae0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -750,7 +750,7 @@
       "name": "RA_47",
       "data": 268,
       "type": "number",
-      "tableProcessGUId": "25c8c905-ff72-4c1c-94b8-929fac7ba248",
+      "tableProcessGUId": "e821c7c2-1f06-485f-8492-30700d5bbae0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -824,7 +824,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_48",
+      "text": "Summarises rest-activity rhythm robustness as a single 0-1 index by combining three nonparametric variables: interdaily stability (IS), intradaily variability (IV) and relative amplitude (RA). Give it a time column and one or more activity columns; it reports CFI plus the raw IS/IV/RA per series. Higher CFI means a more stable, well-consolidated rhythm; useful for comparing individuals or conditions without assuming a sinusoidal shape (Ortiz-Tudela et al. 2010).",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -896,5 +905,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

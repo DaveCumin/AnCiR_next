@@ -187,7 +187,7 @@
       "name": "interpx_11",
       "data": 107,
       "type": "number",
-      "tableProcessGUId": "4bd10b16-1bd0-40c6-81d5-edeea51327a5",
+      "tableProcessGUId": "056a4007-73cc-48e3-891e-2170b8b88cf4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -198,7 +198,7 @@
       "name": "interpy_106_11",
       "data": 108,
       "type": "number",
-      "tableProcessGUId": "4bd10b16-1bd0-40c6-81d5-edeea51327a5",
+      "tableProcessGUId": "056a4007-73cc-48e3-891e-2170b8b88cf4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -266,7 +266,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_20",
+      "text": "Fills gaps or resamples a series onto a regular time grid using linear, nearest-neighbour, or natural cubic-spline interpolation. Use it to repair missing values or to make unevenly sampled data evenly spaced before methods that assume regular sampling (e.g. FFT).",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -338,5 +347,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

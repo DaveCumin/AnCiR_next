@@ -464,7 +464,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_7",
+      "text": "Plots the autocorrelation of a series against lag (or the cross-correlation between two series). A rhythmic signal produces a decaying wave whose first strong positive peak away from zero lag estimates the period. Use it as a robust complement to the periodogram. See the Correlograms chapter.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -519,5 +528,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

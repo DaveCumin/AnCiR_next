@@ -237,7 +237,7 @@
       "name": "col_114_14",
       "data": 116,
       "type": "number",
-      "tableProcessGUId": "5ffbee4a-a28c-4573-8d18-99d4dd4d4d3b",
+      "tableProcessGUId": "cc8d95f9-4e28-469f-862e-830f62644904",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "col_115_14",
       "data": 117,
       "type": "number",
-      "tableProcessGUId": "5ffbee4a-a28c-4573-8d18-99d4dd4d4d3b",
+      "tableProcessGUId": "cc8d95f9-4e28-469f-862e-830f62644904",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -313,7 +313,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_23",
+      "text": "Concatenates several columns end-to-end into a single combined column. Use it to pool values from multiple series or segments into one column for a combined summary or plot.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -385,5 +394,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

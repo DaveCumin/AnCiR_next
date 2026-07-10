@@ -167,7 +167,7 @@
       "name": "x",
       "data": 97,
       "type": "number",
-      "tableProcessGUId": "c1882634-7514-45d5-8b58-1adf54f3aea7",
+      "tableProcessGUId": "1f52fdf2-f0b8-44af-948f-095d5569785f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -190,7 +190,7 @@
       "data": 99,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "6e03fb90-5f44-4f4d-b007-788f7e4af1c9",
+      "tableProcessGUId": "932aa298-56ef-4191-a3b1-e2f9b5193acc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -201,7 +201,7 @@
       "name": "binnedy_98_10",
       "data": 100,
       "type": "number",
-      "tableProcessGUId": "6e03fb90-5f44-4f4d-b007-788f7e4af1c9",
+      "tableProcessGUId": "932aa298-56ef-4191-a3b1-e2f9b5193acc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -433,7 +433,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_19",
+      "text": "Aggregates time-series values into regular time bins (e.g. 15 min counts into hourly means or sums), choosing the aggregation function per bin. Use it to downsample high-resolution activity or to put irregular samples onto a regular grid before analysis.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -509,5 +518,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

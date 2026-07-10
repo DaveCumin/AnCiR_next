@@ -111,7 +111,7 @@
       "name": "x",
       "data": 33,
       "type": "number",
-      "tableProcessGUId": "2b8eac61-4edb-4cf2-8062-f2b1683a0d70",
+      "tableProcessGUId": "ce8105ed-4a58-4842-a751-a45748f50ebd",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -340,7 +340,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_10",
+      "text": "Adds a constant (or another column) to every value in the input column, element-by-element. Use it to apply an offset, shift a baseline, or combine two columns. The demo shows the output column sitting above the input with each value raised by the set amount.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [
@@ -427,5 +436,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

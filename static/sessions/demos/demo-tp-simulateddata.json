@@ -108,7 +108,7 @@
       "data": 212,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "d62bb812-e689-476f-8db1-87c4ba787c82",
+      "tableProcessGUId": "c540ff2e-662c-4598-ba5e-522df2521a40",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -119,7 +119,7 @@
       "name": "values_35",
       "data": 213,
       "type": "number",
-      "tableProcessGUId": "d62bb812-e689-476f-8db1-87c4ba787c82",
+      "tableProcessGUId": "c540ff2e-662c-4598-ba5e-522df2521a40",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -187,7 +187,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_38",
+      "text": "Generates a synthetic time-series from one or more cosine sections (each with its own period, phase, amplitude, and optional additive or multiplicative noise) at a chosen sampling interval. Use it to create test data with a known ground truth for learning, demonstrating, or validating the analysis nodes.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -251,5 +260,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

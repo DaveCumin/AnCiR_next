@@ -53,7 +53,7 @@
       "name": "R_45",
       "data": 256,
       "type": "number",
-      "tableProcessGUId": "7fef270d-9fc5-4758-bff3-d0b1c888a535",
+      "tableProcessGUId": "894c6830-d237-44d8-872d-2233d3d491f5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -64,7 +64,7 @@
       "name": "z_45",
       "data": 257,
       "type": "number",
-      "tableProcessGUId": "7fef270d-9fc5-4758-bff3-d0b1c888a535",
+      "tableProcessGUId": "894c6830-d237-44d8-872d-2233d3d491f5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -75,7 +75,7 @@
       "name": "pvalue_45",
       "data": 258,
       "type": "number",
-      "tableProcessGUId": "7fef270d-9fc5-4758-bff3-d0b1c888a535",
+      "tableProcessGUId": "894c6830-d237-44d8-872d-2233d3d491f5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -140,7 +140,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_46",
+      "text": "Tests a set of phases/angles (e.g. acrophases, activity-onset times) for a preferred direction against the null of uniformity around the circle. Reports the mean resultant length R (0 = dispersed, 1 = tightly clustered), Rayleigh's z = nR², and a p-value; angles may be given in radians, degrees, or clock-hours on a chosen period. Use it to decide whether phases cluster rather than scatter (Batschelet 1981).",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -208,5 +217,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

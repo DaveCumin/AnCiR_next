@@ -210,7 +210,7 @@
       "name": "x",
       "data": 180,
       "type": "number",
-      "tableProcessGUId": "c12a8ae8-4241-4fc2-8769-c68a4c36e806",
+      "tableProcessGUId": "5fc3eca3-43f2-4e22-8600-fb184797c1b8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -232,7 +232,7 @@
       "name": "rectwavex_30",
       "data": 182,
       "type": "number",
-      "tableProcessGUId": "c16deac8-3cf0-4d97-ac9c-87fc129b7c9c",
+      "tableProcessGUId": "4c0ffb5c-3595-4aa8-be6c-de7f12182468",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -243,7 +243,7 @@
       "name": "pvalue_30",
       "data": 183,
       "type": "number",
-      "tableProcessGUId": "c16deac8-3cf0-4d97-ac9c-87fc129b7c9c",
+      "tableProcessGUId": "4c0ffb5c-3595-4aa8-be6c-de7f12182468",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -254,7 +254,7 @@
       "name": "rectwavey_181_30",
       "data": 184,
       "type": "number",
-      "tableProcessGUId": "c16deac8-3cf0-4d97-ac9c-87fc129b7c9c",
+      "tableProcessGUId": "4c0ffb5c-3595-4aa8-be6c-de7f12182468",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -486,7 +486,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_34",
+      "text": "Fits a smooth rectangular (square) wave with an adjustable duty cycle to the series, capturing on/off activity rhythms that a sinusoid fits poorly. The model is a tanh-approximated square wave whose duty cycle sets the fraction of each cycle spent 'on'; period, phase, sharpness (kappa) and duty cycle can be fixed or fitted. Use it for clearly bimodal activity (e.g. nocturnal animals switching between rest and activity) where you want an explicit active-phase width. In the demo, read the flat high plateau as the active phase, the flat low level as rest, and the plateau width as the duty cycle. Nonlinear least-squares waveform fitting (Marquardt 1963).",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -562,5 +571,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

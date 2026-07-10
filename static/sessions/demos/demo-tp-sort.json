@@ -237,7 +237,7 @@
       "name": "sortedy_109_12",
       "data": 111,
       "type": "number",
-      "tableProcessGUId": "053477d1-c000-434a-bf0e-a6f898994cdd",
+      "tableProcessGUId": "f96103ce-7ef2-40b9-adf0-3ab12516129c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "sortedy_110_12",
       "data": 112,
       "type": "number",
-      "tableProcessGUId": "053477d1-c000-434a-bf0e-a6f898994cdd",
+      "tableProcessGUId": "f96103ce-7ef2-40b9-adf0-3ab12516129c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -314,7 +314,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_21",
+      "text": "Reorders rows by a chosen key column, ascending or descending, keeping the selected columns aligned. Use it to order data by time or magnitude before plotting or before methods that assume monotonic time.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -386,5 +395,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

@@ -223,7 +223,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_9",
+      "text": "Renders selected columns (or their summary statistics) as a plain data table for inspection and export. Use it to read exact values, sanity-check a transform's output, or present computed metrics. The demo shows the chosen columns laid out in rows and columns.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -278,5 +287,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

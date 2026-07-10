@@ -215,7 +215,7 @@
       "name": "x",
       "data": 214,
       "type": "number",
-      "tableProcessGUId": "bf71e609-9e7a-4ecc-a9af-06d8c9168afb",
+      "tableProcessGUId": "4f22383e-2e21-40ab-9087-8e47e88d37d3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -237,7 +237,7 @@
       "name": "smoothedx_37",
       "data": 216,
       "type": "number",
-      "tableProcessGUId": "788530eb-1cc3-4fba-be7e-267973a7cab2",
+      "tableProcessGUId": "13bd1a2d-7184-4d04-95d8-1e269aa44697",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "smoothedy_215_37",
       "data": 217,
       "type": "number",
-      "tableProcessGUId": "788530eb-1cc3-4fba-be7e-267973a7cab2",
+      "tableProcessGUId": "13bd1a2d-7184-4d04-95d8-1e269aa44697",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -480,7 +480,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_39",
+      "text": "Smooths a series to suppress noise while keeping the underlying shape. Choose Whittaker-Eilers (penalised least squares; λ sets stiffness), Savitzky-Golay (local polynomial, preserves peak height/width), LOESS (locally weighted regression; bandwidth sets span), or a moving average. Use a light hand: over-smoothing flattens real amplitude. The demo overlays the smoothed curve on the noisy input.\n\nSavitzky & Golay (1964); Cleveland (1979, LOESS); Eilers (2003, Whittaker).",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -556,5 +565,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

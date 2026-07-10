@@ -163,7 +163,7 @@
       "name": "x",
       "data": 61,
       "type": "number",
-      "tableProcessGUId": "e3858aab-3b72-43f1-a772-b0322578a936",
+      "tableProcessGUId": "0766b885-a173-45ff-83c2-7ff130c594a9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -403,7 +403,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_14",
+      "text": "Keeps or drops rows according to conditions tested on another column (==, !=, >, <, includes, etc.), so you can subset one column using a grouping or flag column. Combine several conditions to narrow the selection. The demo shows the output retaining only the rows that satisfy the condition.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [
@@ -501,5 +510,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

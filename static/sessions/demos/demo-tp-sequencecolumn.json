@@ -59,7 +59,7 @@
       "name": "result_34",
       "data": 211,
       "type": "number",
-      "tableProcessGUId": "5be92a08-3f7a-4243-96cc-cecdb0f0ac89",
+      "tableProcessGUId": "6888ab13-6adc-4b1f-b841-3e9710c71b1e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -116,7 +116,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_37",
+      "text": "Creates a regular numeric or time sequence from a start, step, and count (or end). Use it to build an index or an evenly spaced time axis to pair with generated or pasted values.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -180,5 +189,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

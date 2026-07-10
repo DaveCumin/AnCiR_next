@@ -111,7 +111,7 @@
       "name": "x",
       "data": 54,
       "type": "number",
-      "tableProcessGUId": "7c4182e0-c623-4df6-bc9c-479d76791012",
+      "tableProcessGUId": "e84a72c4-44dd-4031-a5f3-40a1e32eb4cb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -340,7 +340,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_13",
+      "text": "Overwrites individual cells at specific row positions with values you type in, leaving the rest of the column unchanged. Use it for hand-correcting a few known-bad points without touching the source data. The demo shows the edited positions differing from the input.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [
@@ -432,5 +441,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

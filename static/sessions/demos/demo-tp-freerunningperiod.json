@@ -714,7 +714,7 @@
       "name": "period_44",
       "data": 252,
       "type": "number",
-      "tableProcessGUId": "859c4b78-7861-40a9-b0b5-d34b1aafb6e2",
+      "tableProcessGUId": "91e262f1-d051-4cae-9c2b-7bb789d3a23f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -725,7 +725,7 @@
       "name": "power_44",
       "data": 253,
       "type": "number",
-      "tableProcessGUId": "859c4b78-7861-40a9-b0b5-d34b1aafb6e2",
+      "tableProcessGUId": "91e262f1-d051-4cae-9c2b-7bb789d3a23f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -736,7 +736,7 @@
       "name": "pvalue_44",
       "data": 254,
       "type": "number",
-      "tableProcessGUId": "859c4b78-7861-40a9-b0b5-d34b1aafb6e2",
+      "tableProcessGUId": "91e262f1-d051-4cae-9c2b-7bb789d3a23f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -809,7 +809,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_45",
+      "text": "Automatically estimates each series' free-running period (tau) as the peak of a chi-squared (Sokolove-Bushell) periodogram searched over a candidate window (default 20-28 h). Use it on constant-condition (free-running) records to quantify the endogenous clock period per animal or subject in one step, returning tau, its periodogram power, and a significance p-value. In the demo, tau is the period at the tallest periodogram peak; the power is its height and the p-value tells you whether it clears the chi-squared significance threshold. Chi-squared periodogram (Sokolove & Bushell 1978).",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -881,5 +890,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

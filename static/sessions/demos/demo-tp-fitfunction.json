@@ -215,7 +215,7 @@
       "name": "x",
       "data": 146,
       "type": "number",
-      "tableProcessGUId": "ebbf27dd-af87-40c9-8e26-1cde00e4737c",
+      "tableProcessGUId": "8709df18-715d-47f9-a1b2-a5a06e137038",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -237,7 +237,7 @@
       "name": "fitx_22",
       "data": 148,
       "type": "number",
-      "tableProcessGUId": "891fbc8f-8d73-4ce1-b6b9-e03058e91b3f",
+      "tableProcessGUId": "6983c5c9-4094-4cae-8638-dee5a3bf3cf9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "fity_147_22",
       "data": 149,
       "type": "number",
-      "tableProcessGUId": "891fbc8f-8d73-4ce1-b6b9-e03058e91b3f",
+      "tableProcessGUId": "6983c5c9-4094-4cae-8638-dee5a3bf3cf9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -494,7 +494,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_28",
+      "text": "A general curve-fitting node that fits a chosen model, cosinor, rectangular wave, or double logistic, to the series by nonlinear least squares, giving one interface for all three parametric shapes plus a shared permutation test. Use it when you want to try and compare different waveform models on the same data, or need the permutation-based significance option in one place. In the demo, read the fitted curve over the raw points and compare fit quality (and the permutation p-value) across models to see which shape the data prefer. Nonlinear least-squares model fitting (Marquardt 1963).",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -570,5 +579,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

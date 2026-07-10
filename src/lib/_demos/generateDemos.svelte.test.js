@@ -42,7 +42,7 @@ import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
 import { PROCESS_SPECS, TP_SPECS, SAMPLE } from './nodeCatalog.js';
 // Column-process and table-process demos share builders (Sequence x + y → node,
 // with a scatter + table, tidy baked layout) — same as the focused generators.
-import { buildProcessDemo, buildTPDemo } from './nodeDemoBuilders.js';
+import { buildProcessDemo, buildTPDemo, addDemoNote } from './nodeDemoBuilders.js';
 
 const OUT_DIR = join(process.cwd(), 'static', 'sessions', 'demos');
 
@@ -385,6 +385,9 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 				}
 			};
 			demo.build(mk);
+			// Explanatory note for the showcased plot type (first non-facet plot).
+			const showcasedType = core.plots.find((p) => p.facetParent == null)?.type;
+			if (showcasedType) addDemoNote(showcasedType);
 			prewarmWrapperNames();
 			write(
 				`demo-${demo.id}.json`,

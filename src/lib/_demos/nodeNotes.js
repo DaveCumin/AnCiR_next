@@ -1,0 +1,105 @@
+// Per-node explanatory notes embedded into each gallery demo session as an
+// on-canvas Note. Keyed by node id (registry key = .svelte file name for
+// processes/table-processes, lowercase folder name for plots). Graded: rich
+// (method + when-to-use + reference) for analysis/stats nodes; concise +
+// practical for basic transforms, sources, and plots.
+//
+// Consumed by nodeDemoBuilders.addDemoNote() and the curated plot demos in
+// generateDemos.svelte.test.js. Regenerate demos after editing:
+//   GEN_DEMOS=1 npx vitest run src/lib/_demos/generateDemos.svelte.test.js
+export const NODE_NOTES = {
+	Add: 'Adds a constant (or another column) to every value in the input column, element-by-element. Use it to apply an offset, shift a baseline, or combine two columns. The demo shows the output column sitting above the input with each value raised by the set amount.',
+	AverageProfile:
+		"Folds a series onto one period (default 24 h) and reports the mean value in each phase bin with its standard error, giving the 'average day' or mean waveform of the record. Use it to visualise the typical shape and timing of a rhythm across many cycles and to smooth out day-to-day noise before or alongside a parametric fit. In the demo, read each point as the across-days mean at that time-of-day and the error bars as the SEM: a clear peak-and-trough shape marks a robust rhythm, while flat bins with wide bars indicate weak or noisy rhythmicity. Mean-waveform folding (Refinetti et al. 2007).",
+	BinnedData:
+		'Aggregates time-series values into regular time bins (e.g. 15 min counts into hourly means or sums), choosing the aggregation function per bin. Use it to downsample high-resolution activity or to put irregular samples onto a regular grid before analysis.',
+	BlankColumn:
+		'Lets you enter data by hand or paste CSV/JSON to create a column (or table) directly on the canvas. Use it for small manual datasets, quick tests, or pasting values from another program.',
+	CircadianFunctionIndex:
+		'Summarises rest-activity rhythm robustness as a single 0-1 index by combining three nonparametric variables: interdaily stability (IS), intradaily variability (IV) and relative amplitude (RA). Give it a time column and one or more activity columns; it reports CFI plus the raw IS/IV/RA per series. Higher CFI means a more stable, well-consolidated rhythm; useful for comparing individuals or conditions without assuming a sinusoidal shape (Ortiz-Tudela et al. 2010).',
+	CollectColumns:
+		'Concatenates several columns end-to-end into a single combined column. Use it to pool values from multiple series or segments into one column for a combined summary or plot.',
+	ColumnFunctions:
+		'Combines several input columns into one result by applying a per-row function across them: element-wise Add, or the row-wise Mean, Min, Max, or Std Dev over the selected columns. Use it to compute, e.g., the average of replicate series or a per-timepoint spread.',
+	ColumnSet:
+		'Curates a live, named subset of columns by matching their name and/or label against a pattern, and exposes it as a single wire you can plug into any many-input port. The set updates automatically as matching columns are added or removed, so downstream analyses and plots stay in sync without rewiring.',
+	Cosinor:
+		"Fits a cosine model to a rhythmic series by least squares, returning MESOR (rhythm-adjusted mean), amplitude, acrophase and period, with an F-test / R² and optional permutation p-value. Use it for approximately sinusoidal rhythms when you want interpretable rhythm parameters and a significance test; a fixed period (e.g. 24 h) turns it into linear single/multi-harmonic cosinor, while leaving the period free fits it. In the demo, read the fitted smooth cosine overlaid on the raw points: peak height is the amplitude, the peak's time-of-day is the acrophase, and the horizontal midline is the MESOR. Method: cosinor rhythmometry (Cornélissen 2014).",
+	DoubleLogistic:
+		'Fits a double-logistic curve, a rising sigmoid followed by a falling sigmoid, describing a single on-then-off transition (or, in periodic mode, a repeating pulse train). Use it for phenology-style data and activity onsets/offsets where you want to locate and characterise the rise and fall separately (their timing t1, t2 and steepness k1, k2). In the demo, read the ascending limb as the onset transition and the descending limb as the offset; the plateau between them is the active window. Double-logistic phenology model (Zhang et al. 2003).',
+	EditValue:
+		'Overwrites individual cells at specific row positions with values you type in, leaving the rest of the column unchanged. Use it for hand-correcting a few known-bad points without touching the source data. The demo shows the edited positions differing from the input.',
+	FilterByOtherCol:
+		'Keeps or drops rows according to conditions tested on another column (==, !=, >, <, includes, etc.), so you can subset one column using a grouping or flag column. Combine several conditions to narrow the selection. The demo shows the output retaining only the rows that satisfy the condition.',
+	FitFunction:
+		'A general curve-fitting node that fits a chosen model, cosinor, rectangular wave, or double logistic, to the series by nonlinear least squares, giving one interface for all three parametric shapes plus a shared permutation test. Use it when you want to try and compare different waveform models on the same data, or need the permutation-based significance option in one place. In the demo, read the fitted curve over the raw points and compare fit quality (and the permutation p-value) across models to see which shape the data prefer. Nonlinear least-squares model fitting (Marquardt 1963).',
+	FormulaColumn:
+		"Builds a new column from a formula you write over existing columns and constants (for example (A+B)/2 or log(x)), evaluated row by row. Use it for custom per-row calculations the fixed transforms don't cover — ratios, unit conversions, or combined indices.",
+	FreeRunningPeriod:
+		"Automatically estimates each series' free-running period (tau) as the peak of a chi-squared (Sokolove-Bushell) periodogram searched over a candidate window (default 20-28 h). Use it on constant-condition (free-running) records to quantify the endogenous clock period per animal or subject in one step, returning tau, its periodogram power, and a significance p-value. In the demo, tau is the period at the tallest periodogram peak; the power is its height and the p-value tells you whether it clears the chi-squared significance threshold. Chi-squared periodogram (Sokolove & Bushell 1978).",
+	FrequencyFilter:
+		'An FFT-based low-, high-, or band-pass filter for evenly sampled series: it transforms to the frequency domain, zeroes the frequencies outside the chosen band, and transforms back. Cutoffs are given as a fraction of the Nyquist frequency (0 = DC, 1 = fastest resolvable). Use low-pass to smooth, high-pass to remove drift, band-pass to isolate a rhythm. The demo shows the filtered series with the unwanted frequency content removed.\n\nOppenheim & Schafer, Discrete-Time Signal Processing.',
+	GroupComparison:
+		'Compares a numeric measure across groups defined by a grouping column (or across several y-columns). Auto mode picks a Welch t-test for two groups and a one-way ANOVA for three or more; nonparametric Mann-Whitney U and Kruskal-Wallis are also available, with Tukey-Kramer / Holm-adjusted pairwise post-hoc tests and Jarque-Bera normality and variance-ratio warnings. Outputs the test statistic and p-value as metric ports you can wire onward. Reporting a significant group difference (Kruskal & Wallis 1952).',
+	Interpolate:
+		'Fills gaps or resamples a series onto a regular time grid using linear, nearest-neighbour, or natural cubic-spline interpolation. Use it to repair missing values or to make unevenly sampled data evenly spaced before methods that assume regular sampling (e.g. FFT).',
+	LongToWide:
+		'Pivots a long/tidy table (a category column, a time column and a value column) into wide format, producing one value-column per category sharing a common time column. Use it to turn a stacked per-subject table into side-by-side series ready for plotting or per-series analysis.',
+	MovingAnalysis:
+		"Slides a window along the record and runs a chosen analysis (periodogram, cosinor, FFT, correlogram, or a waveform fit) in each window, producing a time-course of the result. Use it to track how a rhythm parameter changes over the recording, for example period drift during a free run or amplitude decay after a lesion. In the demo, read the output as a trajectory: each point is one window's estimate (period, amplitude, or power) plotted against the window's centre time, so a rising or falling line shows the rhythm evolving. Sliding-window periodogram/cosinor analysis (Refinetti et al. 2007).",
+	Multiply:
+		'Multiplies every value in the input column by a constant (or another column), element-by-element. Use it for unit conversions, scaling, or rescaling a signal. The demo shows the output column scaled relative to the input.',
+	NonparametricRA:
+		'Computes the standard nonparametric rest-activity variables without assuming any waveform: interdaily stability (IS, day-to-day reproducibility of the 24 h pattern), intradaily variability (IV, fragmentation), relative amplitude (RA), and the most-active 10 h and least-active 5 h windows (M10, L5) with their onset times. Use it for actigraphy or other activity records that are non-sinusoidal, where cosinor amplitude/phase are ill-defined. The demo shows the folded average-day profile: the flat high plateau is M10, the deep trough is L5, and RA near 1 means a strong, consolidated rhythm while low IS or high IV signals a weak or fragmented one. Nonparametric methods after Van Someren et al. (1999); IS/IV originate in Witting et al. (1990).',
+	OutlierRemoval:
+		"Flags extreme values and replaces them with blanks, using either a z-score threshold (default |z| > 3) or Tukey's IQR fence (Q1 - k·IQR, Q3 + k·IQR, default k = 1.5). Use it to stop a handful of spikes dominating fits and spectra. The demo shows the flagged points removed while the rest of the series is preserved.\n\nTukey, J.W. (1977) Exploratory Data Analysis.",
+	Random:
+		'Generates a column of pseudo-random values from a uniform, Gaussian, or exponential distribution, scaled by an offset and multiplier, with a fixed seed for reproducibility. Use it to add controlled noise or to create random test data.',
+	RayleighTest:
+		"Tests a set of phases/angles (e.g. acrophases, activity-onset times) for a preferred direction against the null of uniformity around the circle. Reports the mean resultant length R (0 = dispersed, 1 = tightly clustered), Rayleigh's z = nR², and a p-value; angles may be given in radians, degrees, or clock-hours on a chosen period. Use it to decide whether phases cluster rather than scatter (Batschelet 1981).",
+	RectangularWave:
+		"Fits a smooth rectangular (square) wave with an adjustable duty cycle to the series, capturing on/off activity rhythms that a sinusoid fits poorly. The model is a tanh-approximated square wave whose duty cycle sets the fraction of each cycle spent 'on'; period, phase, sharpness (kappa) and duty cycle can be fixed or fitted. Use it for clearly bimodal activity (e.g. nocturnal animals switching between rest and activity) where you want an explicit active-phase width. In the demo, read the flat high plateau as the active phase, the flat low level as rest, and the plateau width as the duty cycle. Nonlinear least-squares waveform fitting (Marquardt 1963).",
+	RemoveTrend:
+		"Fits a trend (linear, polynomial, exponential, or logarithmic) against a chosen x-column and subtracts it, leaving the residual (detrended) signal. Use it to remove baseline drift or sensor decay before rhythm analysis so a slow trend doesn't masquerade as a long period. An optional sliding window detrends locally. The demo shows the drifting input flattened around zero.",
+	RhythmicityAnalysis:
+		'Runs a spectral / periodicity analysis over the series and reports the dominant period and its strength. Choose the method: a periodogram (Lomb-Scargle by default, which tolerates uneven sampling and gaps; chi-squared or Enright also available), a Fourier transform (FFT), or an autocorrelogram. Use it to detect whether a rhythm is present and to estimate its period without assuming a waveform. In the demo, read the output spectrum: a clear peak marks the dominant period, its height is the power/magnitude, and (for chi-squared) the significance line shows whether it exceeds chance. Lomb-Scargle periodogram (Lomb 1976; Scargle 1982).',
+	SequenceColumn:
+		'Creates a regular numeric or time sequence from a start, step, and count (or end). Use it to build an index or an evenly spaced time axis to pair with generated or pasted values.',
+	SimulatedData:
+		'Generates a synthetic time-series from one or more cosine sections (each with its own period, phase, amplitude, and optional additive or multiplicative noise) at a chosen sampling interval. Use it to create test data with a known ground truth for learning, demonstrating, or validating the analysis nodes.',
+	SmoothedData:
+		'Smooths a series to suppress noise while keeping the underlying shape. Choose Whittaker-Eilers (penalised least squares; λ sets stiffness), Savitzky-Golay (local polynomial, preserves peak height/width), LOESS (locally weighted regression; bandwidth sets span), or a moving average. Use a light hand: over-smoothing flattens real amplitude. The demo overlays the smoothed curve on the noisy input.\n\nSavitzky & Golay (1964); Cleveland (1979, LOESS); Eilers (2003, Whittaker).',
+	Sort: 'Reorders rows by a chosen key column, ascending or descending, keeping the selected columns aligned. Use it to order data by time or magnitude before plotting or before methods that assume monotonic time.',
+	Split:
+		'Cuts a time-series into consecutive segments at the split times you specify, keeping the chosen columns aligned. Use it to separate, e.g., an entrainment stage from a free-run stage, or successive days, before analysing each part on its own.',
+	StoredValueGroup:
+		'Gathers scalar results you have stored from various analyses (e.g. periods, amplitudes, CFI values) and organises them into labelled groups, emitting a category column and a value column. Use it to assemble stored metrics into a tidy table for group comparison or plotting.',
+	Sub: 'Finds every occurrence of one specific value and replaces it with another, leaving all other values untouched. Its main use is recoding sentinel/missing-data codes (e.g. swapping -999 for a blank) before analysis. The demo shows the target value replaced throughout the column.',
+	TrendFit:
+		'Fits and stores a simple trend, linear, polynomial, exponential or logarithmic, to the series by least squares, reporting the fitted curve, R² and RMSE plus the coefficients. Use it to describe or remove a slow trend (baseline drift, growth or decay) before rhythm analysis, since detrending prevents low-frequency drift from contaminating periodograms and cosinor fits. In the demo, read the smooth fitted line through the data: how closely it hugs the points is summarised by R² (near 1 = tight fit) and RMSE (residual scatter). Detrending for rhythm analysis (Refinetti et al. 2007).',
+	WatsonWilliams:
+		'Circular analogue of one-way ANOVA: tests whether two or more groups of angles (e.g. acrophases under different conditions) share a common mean direction. Reports an F statistic and p-value; angles may be radians, degrees, or clock-hours on a set period. Best when each group is reasonably concentrated (large mean resultant length); a von Mises concentration correction is applied (Watson & Williams 1956).',
+	WideToLong:
+		'Pivots several side-by-side value columns into long/tidy format: a single time, category, and value column. Use it to stack multiple series into one table for grouped statistics or long-format export.',
+	actogram:
+		'The classic chronobiology display: activity plotted against time of day, one row per day and double-plotted (each day shown twice, side by side) so rhythms crossing midnight stay visible and drift reads as a diagonal band. Use it to eyeball period, phase, and entrainment. The demo shows a clear daily activity band.\n\nRefinetti, Cornélissen & Halberg (2007), Biol. Rhythm Res.',
+	boxplot:
+		'Summarises the distribution of a y-column within each group defined by an x-column: the box spans the interquartile range, the line is the median, and whiskers reach the data extent (points beyond are outliers). Use it to compare spread and central tendency across days, conditions, or subjects. The demo shows one box per group.',
+	correlogram:
+		'Plots the autocorrelation of a series against lag (or the cross-correlation between two series). A rhythmic signal produces a decaying wave whose first strong positive peak away from zero lag estimates the period. Use it as a robust complement to the periodogram. See the Correlograms chapter.',
+	dataview:
+		'A lightweight raw-data viewer for the columns you select, letting you scroll through the actual values behind the graphs. Use it to inspect imported data, spot gaps or coding issues, and confirm columns are wired correctly. It shows the underlying rows rather than any computed summary.',
+	fft: 'Fourier analysis decomposes an evenly sampled series into sinusoidal components and plots amplitude (spectral power) against frequency; a peak at a given frequency corresponds to a rhythm of period 1/frequency. Use it to identify dominant frequencies and harmonics. See the Fourier Analysis chapter.',
+	histogram:
+		"Bins a single column's values and draws the count in each bin, showing the shape of its distribution (centre, spread, skew, modes, outliers). Use it to check whether data are roughly normal before choosing a statistical test. The demo shows an approximately bell-shaped distribution.",
+	meansem:
+		"Overlays each group's mean as a marker with whiskers showing ± one standard error of the mean (SEM = s/√n), grouped by the x-column. Use it to compare average levels across conditions or time bins while showing the precision of each mean. The demo shows per-group means with error bars.",
+	normalize:
+		"Rescales a column so different series are comparable. Z-score centres to mean 0 / SD 1; Min-Max rescales into a chosen range; Robust uses median and MAD (outlier-resistant); Unit-vector scales by the column's magnitude. The demo shows the input rescaled onto the new scale with its shape preserved. Choose z-score/robust when comparing rhythms of different amplitudes.",
+	periodogram:
+		"Scans a range of candidate periods and plots spectral power against period, with a significance threshold; the tallest peak crossing the line estimates the dominant rhythm's period. Methods include Lomb-Scargle (handles uneven sampling/gaps) and the chi-squared (Sokolove-Bushell) periodogram. Use it to quantify period from a time-series. See the Periodograms chapter for details.",
+	scatterplot:
+		'Plots one column against another as points, most often a value against time to view a raw time-series. Wire x (e.g. time) and y (values); multiple y-columns overlay as separate series. Supports zoom/pan and an optional facet mode (one small plot per series). Use it as your first look at the data before any analysis.',
+	tableplot:
+		"Renders selected columns (or their summary statistics) as a plain data table for inspection and export. Use it to read exact values, sanity-check a transform's output, or present computed metrics. The demo shows the chosen columns laid out in rows and columns."
+};

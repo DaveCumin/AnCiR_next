@@ -69,7 +69,7 @@
       "name": "F_46",
       "data": 261,
       "type": "number",
-      "tableProcessGUId": "669a40f4-8346-4eac-a4b8-545d3507d637",
+      "tableProcessGUId": "f21cb9ff-d81d-4918-af44-f995af4e0613",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -80,7 +80,7 @@
       "name": "pvalue_46",
       "data": 262,
       "type": "number",
-      "tableProcessGUId": "669a40f4-8346-4eac-a4b8-545d3507d637",
+      "tableProcessGUId": "f21cb9ff-d81d-4918-af44-f995af4e0613",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -145,7 +145,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_47",
+      "text": "Circular analogue of one-way ANOVA: tests whether two or more groups of angles (e.g. acrophases under different conditions) share a common mean direction. Reports an F statistic and p-value; angles may be radians, degrees, or clock-hours on a set period. Best when each group is reasonably concentrated (large mean resultant length); a von Mises concentration correction is applied (Watson & Williams 1956).",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -217,5 +226,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

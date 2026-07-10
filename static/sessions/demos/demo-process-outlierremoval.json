@@ -113,7 +113,7 @@
       "name": "x",
       "data": 69,
       "type": "number",
-      "tableProcessGUId": "00ad9447-adfc-4882-8d41-925183325166",
+      "tableProcessGUId": "a0ac1184-7ed6-404a-96bc-a251f28ae01b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -342,7 +342,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_15",
+      "text": "Flags extreme values and replaces them with blanks, using either a z-score threshold (default |z| > 3) or Tukey's IQR fence (Q1 - k·IQR, Q3 + k·IQR, default k = 1.5). Use it to stop a handful of spikes dominating fits and spectra. The demo shows the flagged points removed while the rest of the series is preserved.\n\nTukey, J.W. (1977) Exploratory Data Analysis.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [
@@ -431,5 +440,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

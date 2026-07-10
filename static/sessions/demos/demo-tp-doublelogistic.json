@@ -218,7 +218,7 @@
       "name": "x",
       "data": 137,
       "type": "number",
-      "tableProcessGUId": "21c6f6c6-1ed0-4c41-bacd-be03b3fd0472",
+      "tableProcessGUId": "fea4d88f-bc38-41ea-9c7a-2cf869419f25",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -240,7 +240,7 @@
       "name": "dlogx_20",
       "data": 139,
       "type": "number",
-      "tableProcessGUId": "8b04da07-50d6-4616-9547-edb5128630ec",
+      "tableProcessGUId": "fa005b82-6165-4972-8701-76eaadf5862e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -251,7 +251,7 @@
       "name": "pvalue_20",
       "data": 140,
       "type": "number",
-      "tableProcessGUId": "6f5850a0-9374-44aa-bbc4-8576f3f53ce9",
+      "tableProcessGUId": "dc501ed5-e336-428a-9349-774def6e2019",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -262,7 +262,7 @@
       "name": "dlogy_138_20",
       "data": 141,
       "type": "number",
-      "tableProcessGUId": "8b04da07-50d6-4616-9547-edb5128630ec",
+      "tableProcessGUId": "fa005b82-6165-4972-8701-76eaadf5862e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -493,7 +493,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_27",
+      "text": "Fits a double-logistic curve, a rising sigmoid followed by a falling sigmoid, describing a single on-then-off transition (or, in periodic mode, a repeating pulse train). Use it for phenology-style data and activity onsets/offsets where you want to locate and characterise the rise and fall separately (their timing t1, t2 and steepness k1, k2). In the demo, read the ascending limb as the onset transition and the descending limb as the offset; the plateau between them is the active window. Double-logistic phenology model (Zhang et al. 2003).",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -569,5 +578,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

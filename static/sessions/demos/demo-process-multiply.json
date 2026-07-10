@@ -111,7 +111,7 @@
       "name": "x",
       "data": 47,
       "type": "number",
-      "tableProcessGUId": "c93a59fa-dbcb-48af-8efe-0d108a5fb8d8",
+      "tableProcessGUId": "778b82ff-9d06-4b77-bfcb-6aaa886cfbaf",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -340,7 +340,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_12",
+      "text": "Multiplies every value in the input column by a constant (or another column), element-by-element. Use it for unit conversions, scaling, or rescaling a signal. The demo shows the output column scaled relative to the input.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [
@@ -427,5 +436,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

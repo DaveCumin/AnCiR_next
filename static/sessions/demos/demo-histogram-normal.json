@@ -605,7 +605,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_2",
+      "text": "Bins a single column's values and draws the count in each bin, showing the shape of its distribution (centre, spread, skew, modes, outliers). Use it to check whether data are roughly normal before choosing a statistical test. The demo shows an approximately bell-shaped distribution.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -660,5 +669,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

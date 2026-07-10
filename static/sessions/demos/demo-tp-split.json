@@ -289,7 +289,7 @@
       "name": "223_1_38",
       "data": 224,
       "type": "number",
-      "tableProcessGUId": "f7c59258-c979-4955-9d98-dc50504ff027",
+      "tableProcessGUId": "c4f55540-900e-4d1b-b446-0fd7f0b897c0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -300,7 +300,7 @@
       "name": "223_2_38",
       "data": 225,
       "type": "number",
-      "tableProcessGUId": "f7c59258-c979-4955-9d98-dc50504ff027",
+      "tableProcessGUId": "c4f55540-900e-4d1b-b446-0fd7f0b897c0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -311,7 +311,7 @@
       "name": "223_3_38",
       "data": 226,
       "type": "number",
-      "tableProcessGUId": "f7c59258-c979-4955-9d98-dc50504ff027",
+      "tableProcessGUId": "c4f55540-900e-4d1b-b446-0fd7f0b897c0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -381,7 +381,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_40",
+      "text": "Cuts a time-series into consecutive segments at the split times you specify, keeping the chosen columns aligned. Use it to separate, e.g., an entrainment stage from a free-run stage, or successive days, before analysing each part on its own.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -453,5 +462,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

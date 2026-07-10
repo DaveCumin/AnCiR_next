@@ -504,7 +504,7 @@
       "data": 243,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "377992d0-9526-41a3-836b-dd109f541799",
+      "tableProcessGUId": "14ca07d6-c485-407d-a5d5-528d0877ac78",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -515,7 +515,7 @@
       "name": "category_42",
       "data": 244,
       "type": "category",
-      "tableProcessGUId": "377992d0-9526-41a3-836b-dd109f541799",
+      "tableProcessGUId": "14ca07d6-c485-407d-a5d5-528d0877ac78",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -526,7 +526,7 @@
       "name": "value_42",
       "data": 245,
       "type": "number",
-      "tableProcessGUId": "377992d0-9526-41a3-836b-dd109f541799",
+      "tableProcessGUId": "14ca07d6-c485-407d-a5d5-528d0877ac78",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -595,7 +595,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_43",
+      "text": "Pivots several side-by-side value columns into long/tidy format: a single time, category, and value column. Use it to stack multiple series into one table for grouped statistics or long-format export.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -671,5 +680,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

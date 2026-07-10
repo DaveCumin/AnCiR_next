@@ -710,7 +710,7 @@
       "name": "x",
       "data": 170,
       "type": "number",
-      "tableProcessGUId": "7698c5f5-8183-427b-b000-72e67683d9db",
+      "tableProcessGUId": "5486482f-c7f3-464c-a4d7-6e041aecc4d2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -732,7 +732,7 @@
       "name": "movex_27",
       "data": 172,
       "type": "number",
-      "tableProcessGUId": "356e4c55-1c64-4bb4-a2ee-b8f987a8ff52",
+      "tableProcessGUId": "e99fd13f-7ce8-4c71-95a8-62c68704335d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -743,7 +743,7 @@
       "name": "171_peak_period_27",
       "data": 173,
       "type": "number",
-      "tableProcessGUId": "356e4c55-1c64-4bb4-a2ee-b8f987a8ff52",
+      "tableProcessGUId": "e99fd13f-7ce8-4c71-95a8-62c68704335d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -754,7 +754,7 @@
       "name": "171_peak_power_27",
       "data": 174,
       "type": "number",
-      "tableProcessGUId": "356e4c55-1c64-4bb4-a2ee-b8f987a8ff52",
+      "tableProcessGUId": "e99fd13f-7ce8-4c71-95a8-62c68704335d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -996,7 +996,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_32",
+      "text": "Slides a window along the record and runs a chosen analysis (periodogram, cosinor, FFT, correlogram, or a waveform fit) in each window, producing a time-course of the result. Use it to track how a rhythm parameter changes over the recording, for example period drift during a free run or amplitude decay after a lesion. In the demo, read the output as a trajectory: each point is one window's estimate (period, amplitude, or power) plotted against the window's centre time, so a rising or falling line shows the rhythm evolving. Sliding-window periodogram/cosinor analysis (Refinetti et al. 2007).",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -1072,5 +1081,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

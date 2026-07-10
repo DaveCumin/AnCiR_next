@@ -277,7 +277,7 @@
       "name": "avgprofx_43",
       "data": 248,
       "type": "number",
-      "tableProcessGUId": "02cb114c-67f3-490f-8f7a-0213a5a21853",
+      "tableProcessGUId": "5d6c02d0-0807-4334-91c7-1f8f528d16c8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -288,7 +288,7 @@
       "name": "avgprof_247_43",
       "data": 249,
       "type": "number",
-      "tableProcessGUId": "02cb114c-67f3-490f-8f7a-0213a5a21853",
+      "tableProcessGUId": "5d6c02d0-0807-4334-91c7-1f8f528d16c8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -354,7 +354,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_44",
+      "text": "Folds a series onto one period (default 24 h) and reports the mean value in each phase bin with its standard error, giving the 'average day' or mean waveform of the record. Use it to visualise the typical shape and timing of a rhythm across many cycles and to smooth out day-to-day noise before or alongside a parametric fit. In the demo, read each point as the across-days mean at that time-of-day and the error bars as the SEM: a clear peak-and-trough shape marks a robust rhythm, while flat bins with wide bars indicate weak or noisy rhythmicity. Mean-waveform folding (Refinetti et al. 2007).",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -426,5 +435,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

@@ -185,7 +185,7 @@
       "name": "result_23",
       "data": 156,
       "type": "number",
-      "tableProcessGUId": "e998870e-8476-40d5-bc9d-10cd6f8c3117",
+      "tableProcessGUId": "5d59eea4-ea53-45e6-a854-42b2d7621dad",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -255,7 +255,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_29",
+      "text": "Builds a new column from a formula you write over existing columns and constants (for example (A+B)/2 or log(x)), evaluated row by row. Use it for custom per-row calculations the fixed transforms don't cover — ratios, unit conversions, or combined indices.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -327,5 +336,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

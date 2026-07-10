@@ -11,7 +11,7 @@
       "name": "group_g1_39",
       "data": 227,
       "type": "number",
-      "tableProcessGUId": "2dc7883e-96f3-4342-ad8e-d918135fadd8",
+      "tableProcessGUId": "00a47d48-e5a3-4c54-8bd0-e998212e4518",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -82,7 +82,16 @@
   },
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_41",
+      "text": "Gathers scalar results you have stored from various analyses (e.g. periods, amplitudes, CFI values) and organises them into labelled groups, emitting a category column and a value column. Use it to assemble stored metrics into a tidy table for group comparison or plotting.",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -146,5 +155,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

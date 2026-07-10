@@ -227,7 +227,7 @@
       "name": "x",
       "data": 228,
       "type": "number",
-      "tableProcessGUId": "04e001cc-7c90-4cd9-a607-e84b7ec27050",
+      "tableProcessGUId": "55b8fe3b-42d8-4a66-80b8-8bc98cfca6d7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -249,7 +249,7 @@
       "name": "trendx_41",
       "data": 230,
       "type": "number",
-      "tableProcessGUId": "62300fd2-e7cb-4829-95c4-322b04131563",
+      "tableProcessGUId": "81745f59-1930-4841-afb4-c0c5fbeffef5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -260,7 +260,7 @@
       "name": "r2_41",
       "data": 231,
       "type": "number",
-      "tableProcessGUId": "62300fd2-e7cb-4829-95c4-322b04131563",
+      "tableProcessGUId": "81745f59-1930-4841-afb4-c0c5fbeffef5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -271,7 +271,7 @@
       "name": "rmse_41",
       "data": 232,
       "type": "number",
-      "tableProcessGUId": "62300fd2-e7cb-4829-95c4-322b04131563",
+      "tableProcessGUId": "81745f59-1930-4841-afb4-c0c5fbeffef5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -282,7 +282,7 @@
       "name": "coef_slope_41",
       "data": 233,
       "type": "number",
-      "tableProcessGUId": "62300fd2-e7cb-4829-95c4-322b04131563",
+      "tableProcessGUId": "81745f59-1930-4841-afb4-c0c5fbeffef5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -293,7 +293,7 @@
       "name": "coef_intercept_41",
       "data": 234,
       "type": "number",
-      "tableProcessGUId": "62300fd2-e7cb-4829-95c4-322b04131563",
+      "tableProcessGUId": "81745f59-1930-4841-afb4-c0c5fbeffef5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -304,7 +304,7 @@
       "name": "trendy_229_41",
       "data": 235,
       "type": "number",
-      "tableProcessGUId": "62300fd2-e7cb-4829-95c4-322b04131563",
+      "tableProcessGUId": "81745f59-1930-4841-afb4-c0c5fbeffef5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -535,7 +535,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_42",
+      "text": "Fits and stores a simple trend, linear, polynomial, exponential or logarithmic, to the series by least squares, reporting the fitted curve, R² and RMSE plus the coefficients. Use it to describe or remove a slow trend (baseline drift, growth or decay) before rhythm analysis, since detrending prevents low-frequency drift from contaminating periodograms and cosinor fits. In the demo, read the smooth fitted line through the data: how closely it hugs the points is summarised by R² (near 1 = tight fit) and RMSE (residual scatter). Detrending for rhythm analysis (Refinetti et al. 2007).",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -611,5 +620,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }

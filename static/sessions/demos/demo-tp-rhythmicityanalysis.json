@@ -740,7 +740,7 @@
       "name": "x",
       "data": 189,
       "type": "number",
-      "tableProcessGUId": "4b437497-0bbc-49ac-8f0f-60ca0b1329c4",
+      "tableProcessGUId": "a6144eb3-2381-4575-87e1-ca50fdc07b29",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -762,7 +762,7 @@
       "name": "190_period_32",
       "data": 191,
       "type": "number",
-      "tableProcessGUId": "b0f02176-fcc0-4691-91a9-bcb08bdcb957",
+      "tableProcessGUId": "a9743873-e55c-4f0c-b50b-6770117952d9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -773,7 +773,7 @@
       "name": "190_power_32",
       "data": 192,
       "type": "number",
-      "tableProcessGUId": "b0f02176-fcc0-4691-91a9-bcb08bdcb957",
+      "tableProcessGUId": "a9743873-e55c-4f0c-b50b-6770117952d9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -784,7 +784,7 @@
       "name": "rhythmicityy_190_32",
       "data": 193,
       "type": "number",
-      "tableProcessGUId": "b0f02176-fcc0-4691-91a9-bcb08bdcb957",
+      "tableProcessGUId": "a9743873-e55c-4f0c-b50b-6770117952d9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1060,7 +1060,16 @@
   "storedValues": {},
   "chainRefs": [],
   "nodeNotes": {},
-  "notes": [],
+  "notes": [
+    {
+      "id": "note_35",
+      "text": "Runs a spectral / periodicity analysis over the series and reports the dominant period and its strength. Choose the method: a periodogram (Lomb-Scargle by default, which tolerates uneven sampling and gaps; chi-squared or Enright also available), a Fourier transform (FFT), or an autocorrelogram. Use it to detect whether a rhythm is present and to estimate its period without assuming a waveform. In the demo, read the output spectrum: a clear peak marks the dominant period, its height is the power/magnitude, and (for chi-squared) the significance line shows whether it exceeds chance. Lomb-Scargle periodogram (Lomb 1976; Scargle 1982).",
+      "x": 24,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
@@ -1136,5 +1145,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.52.0"
+  "version": "β.52.2"
 }
