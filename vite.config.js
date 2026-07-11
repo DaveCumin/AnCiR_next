@@ -7,6 +7,15 @@ export default defineConfig({
 		assetsInlineLimit: Infinity
 	},
 
+	// Vitest's vite-node always transforms modules in SSR mode, so without this,
+	// Svelte components compile to their server (SSR) output and
+	// @testing-library/svelte's `render()`/`mount()` fails with
+	// "mount(...) is not available on the server". Forcing the `browser`
+	// resolve condition under Vitest makes component-render tests use the
+	// client-compiled component instead. Scoped to VITEST so it never affects
+	// the production build.
+	resolve: process.env.VITEST ? { conditions: ['browser'] } : undefined,
+
 	// Node components (plots / table-processes) are loaded LAZILY via
 	// import.meta.glob(..., { eager: false }), so Vite's dep scanner never sees
 	// THEIR dependencies at startup. The first time a node is loaded at runtime,
