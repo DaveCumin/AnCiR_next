@@ -117,9 +117,11 @@ export const PLOT_SPECS = [
 		wire: (p, [x, y]) => p.plot.addData({ x: { refId: x }, y: { refId: y } })
 	},
 	{
+		// Time is optional (['time','values']); this spec wires only `values`,
+		// leaving time unwired — the plot's legacy/untimed render mode.
 		type: 'circularphase',
 		inputs: [{ type: 'number', data: [6.9, 7.4, 7.1, 8.0, 7.6, 6.6, 7.9, 7.2] }],
-		wire: (p, [c]) => p.plot.addData({ column: { refId: c } })
+		wire: (p, [v]) => p.plot.addData({ values: { refId: v } })
 	}
 ];
 

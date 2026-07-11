@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "58": [
+    "64": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "59": [
+    "65": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 58,
+      "id": 64,
       "name": "x",
-      "data": 58,
+      "data": 64,
       "type": "number",
-      "tableProcessGUId": "7f4b7807-6915-4b84-9d22-ed659e3c35b8",
+      "tableProcessGUId": "2d7227b6-91d8-4315-adf2-f51d3b99b845",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 59,
+      "id": 65,
       "name": "y",
-      "data": 59,
+      "data": 65,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,13 +129,13 @@
       "processes": []
     },
     {
-      "id": 60,
+      "id": 66,
       "name": "Edit value result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_3",
-      "producerPort": "out_59",
+      "producerPort": "out_65",
       "producerArtifactKind": "column",
       "processes": []
     }
@@ -198,9 +198,9 @@
         "data": [
           {
             "x": {
-              "id": 61,
+              "id": 67,
               "name": "x",
-              "refId": 58,
+              "refId": 64,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -209,9 +209,9 @@
               "processes": []
             },
             "y": {
-              "id": 62,
+              "id": 68,
               "name": "y",
-              "refId": 59,
+              "refId": 65,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -237,9 +237,9 @@
           },
           {
             "x": {
-              "id": 63,
+              "id": 69,
               "name": "x",
-              "refId": 58,
+              "refId": 64,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -248,9 +248,9 @@
               "processes": []
             },
             "y": {
-              "id": 64,
+              "id": 70,
               "name": "Edit value result",
-              "refId": 60,
+              "refId": 66,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -305,8 +305,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          59,
-          60
+          65,
+          66
         ],
         "showCol": [
           true,
@@ -331,7 +331,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 58
+          "result": 64
         }
       },
       "refTPId": null
@@ -364,13 +364,13 @@
           }
         ],
         "inIN": [
-          59
+          65
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_59": {
+    "data_65": {
       "x": 60,
       "y": 314
     },

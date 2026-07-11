@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "73": [
+    "79": [
       0,
       1,
       2,
@@ -53,7 +53,7 @@
       49,
       50
     ],
-    "74": [
+    "80": [
       0,
       1,
       2,
@@ -109,20 +109,20 @@
   },
   "data": [
     {
-      "id": 73,
+      "id": 79,
       "name": "x",
-      "data": 73,
+      "data": 79,
       "type": "number",
-      "tableProcessGUId": "32d7b0c8-b4d0-489e-8a44-bc870dd2af76",
+      "tableProcessGUId": "5c58e13a-51a9-43d0-895d-f83e0b5d60eb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 74,
+      "id": 80,
       "name": "y",
-      "data": 74,
+      "data": 80,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -131,13 +131,13 @@
       "processes": []
     },
     {
-      "id": 75,
+      "id": 81,
       "name": "Remove Outliers result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_5",
-      "producerPort": "out_74",
+      "producerPort": "out_80",
       "producerArtifactKind": "column",
       "processes": []
     }
@@ -200,9 +200,9 @@
         "data": [
           {
             "x": {
-              "id": 76,
+              "id": 82,
               "name": "x",
-              "refId": 73,
+              "refId": 79,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -211,9 +211,9 @@
               "processes": []
             },
             "y": {
-              "id": 77,
+              "id": 83,
               "name": "y",
-              "refId": 74,
+              "refId": 80,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -239,9 +239,9 @@
           },
           {
             "x": {
-              "id": 78,
+              "id": 84,
               "name": "x",
-              "refId": 73,
+              "refId": 79,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -250,9 +250,9 @@
               "processes": []
             },
             "y": {
-              "id": 79,
+              "id": 85,
               "name": "Remove Outliers result",
-              "refId": 75,
+              "refId": 81,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -307,8 +307,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          74,
-          75
+          80,
+          81
         ],
         "showCol": [
           true,
@@ -333,7 +333,7 @@
         "count": 51,
         "end": 50,
         "out": {
-          "result": 73
+          "result": 79
         }
       },
       "refTPId": null
@@ -363,13 +363,13 @@
         "iqrMultiplier": 1.5,
         "zThreshold": 3,
         "inIN": [
-          74
+          80
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_74": {
+    "data_80": {
       "x": 60,
       "y": 314
     },

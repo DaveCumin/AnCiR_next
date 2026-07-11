@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "51": [
+    "57": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "52": [
+    "58": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 51,
+      "id": 57,
       "name": "x",
-      "data": 51,
+      "data": 57,
       "type": "number",
-      "tableProcessGUId": "19947f8f-a59e-486e-ba64-1d98499153cc",
+      "tableProcessGUId": "10e5b659-0d3d-40a0-8a09-48baa5f3057a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 52,
+      "id": 58,
       "name": "y",
-      "data": 52,
+      "data": 58,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,13 +129,13 @@
       "processes": []
     },
     {
-      "id": 53,
+      "id": 59,
       "name": "Multiply result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_2",
-      "producerPort": "out_52",
+      "producerPort": "out_58",
       "producerArtifactKind": "column",
       "processes": []
     }
@@ -198,9 +198,9 @@
         "data": [
           {
             "x": {
-              "id": 54,
+              "id": 60,
               "name": "x",
-              "refId": 51,
+              "refId": 57,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -209,9 +209,9 @@
               "processes": []
             },
             "y": {
-              "id": 55,
+              "id": 61,
               "name": "y",
-              "refId": 52,
+              "refId": 58,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -237,9 +237,9 @@
           },
           {
             "x": {
-              "id": 56,
+              "id": 62,
               "name": "x",
-              "refId": 51,
+              "refId": 57,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -248,9 +248,9 @@
               "processes": []
             },
             "y": {
-              "id": 57,
+              "id": 63,
               "name": "Multiply result",
-              "refId": 53,
+              "refId": 59,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -305,8 +305,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          52,
-          53
+          58,
+          59
         ],
         "showCol": [
           true,
@@ -331,7 +331,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 51
+          "result": 57
         }
       },
       "refTPId": null
@@ -359,13 +359,13 @@
       "args": {
         "value": 2,
         "inIN": [
-          52
+          58
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_52": {
+    "data_58": {
       "x": 60,
       "y": 314
     },

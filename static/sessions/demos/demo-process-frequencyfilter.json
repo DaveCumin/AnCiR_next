@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "94": [
+    "100": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "95": [
+    "101": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 94,
+      "id": 100,
       "name": "x",
-      "data": 94,
+      "data": 100,
       "type": "number",
-      "tableProcessGUId": "32262692-54fc-4a5a-a203-b0c8225fec6a",
+      "tableProcessGUId": "933810fd-c76f-488c-9cbc-be47fc8a1129",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 95,
+      "id": 101,
       "name": "y",
-      "data": 95,
+      "data": 101,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,13 +129,13 @@
       "processes": []
     },
     {
-      "id": 96,
+      "id": 102,
       "name": "Frequency Filter result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_8",
-      "producerPort": "out_95",
+      "producerPort": "out_101",
       "producerArtifactKind": "column",
       "processes": []
     }
@@ -198,9 +198,9 @@
         "data": [
           {
             "x": {
-              "id": 97,
+              "id": 103,
               "name": "x",
-              "refId": 94,
+              "refId": 100,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -209,9 +209,9 @@
               "processes": []
             },
             "y": {
-              "id": 98,
+              "id": 104,
               "name": "y",
-              "refId": 95,
+              "refId": 101,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -237,9 +237,9 @@
           },
           {
             "x": {
-              "id": 99,
+              "id": 105,
               "name": "x",
-              "refId": 94,
+              "refId": 100,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -248,9 +248,9 @@
               "processes": []
             },
             "y": {
-              "id": 100,
+              "id": 106,
               "name": "Frequency Filter result",
-              "refId": 96,
+              "refId": 102,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -305,8 +305,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          95,
-          96
+          101,
+          102
         ],
         "showCol": [
           true,
@@ -331,7 +331,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 94
+          "result": 100
         }
       },
       "refTPId": null
@@ -361,13 +361,13 @@
         "low": 0.1,
         "high": 0.4,
         "inIN": [
-          95
+          101
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_95": {
+    "data_101": {
       "x": 60,
       "y": 314
     },

@@ -177,16 +177,28 @@ const DEMOS = [
 		name: 'Circular phase plot — two groups',
 		family: 'Plots',
 		description:
-			'Peak-activity phase (clock hours) for two groups on a 24 h clock, each a coloured group with its Rayleigh mean-resultant vector and a Watson-Williams test comparing mean directions.',
+			'Two untimed phase groups on a 24 h clock (raw onset phases near 7 h and 19 h), each with its Rayleigh mean-resultant vector and a significant Watson-Williams test comparing mean directions — plus a third, timed activity series wired as a value-radius clock (point radius = value) with its amplitude-weighted acrophase vector.',
 		build(mk) {
 			const rng = mulberry32(8);
+			// Untimed groups: raw onset phases, tightly clustered ~12 h apart → significant WW.
 			const groupA = seq(18, () => 7 + normal(rng, 0, 0.6));
 			const groupB = seq(18, () => 19 + normal(rng, 0, 0.6));
 			const aId = mk.col('Group A phase', 'number', groupA);
 			const bId = mk.col('Group B phase', 'number', groupB);
+			// Timed series: 3 days hourly activity peaking near hour 7 → value-radius clock,
+			// weighted acrophase ≈ 7 h. Not part of the Watson-Williams comparison (that test
+			// is for untimed, unweighted event angles — see the plot's `ww` derived).
+			const hours = Array.from({ length: 24 * 3 }, (_, i) => i);
+			const activity = hours.map((h) =>
+				Math.max(0, 20 + 40 * Math.cos((2 * Math.PI * (h - 7)) / 24) + normal(rng, 0, 6))
+			);
+			const t = mk.col('hour', 'number', hours);
+			const v = mk.col('activity', 'number', activity);
+
 			const p = new Plot({ name: 'Circular phase plot', type: 'circularphase' });
-			p.plot.addData({ column: { refId: aId }, label: 'Group A' });
-			p.plot.addData({ column: { refId: bId }, label: 'Group B' });
+			p.plot.addData({ values: { refId: aId }, label: 'Group A (untimed, ~7h)' });
+			p.plot.addData({ values: { refId: bId }, label: 'Group B (untimed, ~19h)' });
+			p.plot.addData({ time: { refId: t }, values: { refId: v }, label: 'Activity (timed)' });
 			p.plot.showWatsonWilliams = true;
 			pushObj(p);
 		}

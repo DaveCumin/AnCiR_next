@@ -9,22 +9,38 @@
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 	import { POINT_SHAPES, POINT_SHAPE_LABELS, getPointPath } from '$lib/components/plotbits/pointShapes.js';
 	import { createPolar } from '$lib/components/plotbits/polar.js';
-	import { placeCircularPoints } from '$lib/components/plotbits/circularStack.js';
+	import { placeCircularPoints, maxStackHeight } from '$lib/components/plotbits/circularStack.js';
 	import PolarGrid from '$lib/components/plotbits/PolarGrid.svelte';
 	import MeanVector from '$lib/components/plotbits/MeanVector.svelte';
 	import RoseWedges from '$lib/components/plotbits/RoseWedges.svelte';
+	import { scaleLinear } from 'd3-scale';
+	import { niceAxisLimit } from '$lib/plots/Boxplot/Boxplot.svelte';
 	import {
 		seriesStats,
-		groupsWatsonWilliams,
 		displayPeriodFor,
-		cleanNumericColumn
+		cleanNumericColumn,
+		columnToPhaseHours,
+		weightedSeriesStats
 	} from '$lib/utils/circularPlot.js';
+	import { watsonWilliams, toRadiansColumn } from '$lib/utils/circular.js';
 	import { pUpperFromF } from '$lib/utils/fdist.js';
 
+	// Radial placement constants for the timed (value-radius clock) render mode.
+	const TIMED_INNER_RIM = 0.12;
+
+	// NOTE on field naming: sibling time-optional plots (Periodogram, Actogram,
+	// Correlogram, FFT) all expose 'time'/'values' as the PUBLIC wiring port
+	// names (definition.defaultDataInputs) but store the series columns
+	// internally as generic `x`/`y` — the workflow graph's edge/passthrough
+	// detection (ProcessNode.svelte.js) hardcodes `dp?.x?.refId` / `dp?.y?.refId`
+	// / `dp?.column?.refId` checks and doesn't know about arbitrary field names.
+	// CircularPhaseSeries follows the same convention: `x` is the optional time
+	// column, `y` is the phase/measurement column.
 	class CircularPhaseSeries {
 		static descriptors = {};
 		parentPlot = $state();
-		column = $state();
+		x = $state(); // optional time column: wiring this turns the series into a value-radius clock plot
+		y = $state(); // phase column (untimed) or measurement column (timed)
 		label = $state('Phase 1');
 		colour = $state(getPaletteColor(0));
 		shape = $state('circle');
@@ -33,9 +49,12 @@
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
-			this.column = dataIN?.column
-				? ColumnClass.fromJSON(dataIN.column)
-				: new ColumnClass({ refId: -1 });
+			const xJSON = dataIN?.x ?? dataIN?.time;
+			this.x = xJSON ? ColumnClass.fromJSON(xJSON) : new ColumnClass({ refId: -1 });
+			// Migration: legacy sessions stored the single value column as `column`;
+			// `values` is also accepted directly (the untimed-only public wire shape).
+			const yJSON = dataIN?.y ?? dataIN?.values ?? dataIN?.column;
+			this.y = yJSON ? ColumnClass.fromJSON(yJSON) : new ColumnClass({ refId: -1 });
 			this.label = dataIN?.label ?? 'Phase ' + (parent.data.length + 1);
 			this.colour = dataIN?.colour ?? getPaletteColor(parent.data.length) ?? getPaletteColor(0);
 			this.shape = POINT_SHAPES.includes(dataIN?.shape) ? dataIN.shape : 'circle';
@@ -43,9 +62,28 @@
 			this.draw = dataIN?.draw ?? true;
 		}
 
-		rawValues = $derived.by(() => cleanNumericColumn(this.column?.getData?.() ?? []));
+		timeWired = $derived(this.x?.refId >= 0);
+		rawValues = $derived.by(() => cleanNumericColumn(this.y?.getData?.() ?? []));
+
+		// Per-row phase, timed series only. Deliberately period-space (the same
+		// convention as rawValues / stats.meanValue below), NOT the TAU-radian
+		// output of timeToAngleRad — P.toXY / MeanVector expect a value in
+		// [0, period) that they convert to radians themselves (see polar.js).
+		// The TAU-radian conversion is only needed inside the Rayleigh-stats
+		// machinery (weightedSeriesStats), which does its own conversion.
+		angles = $derived.by(() =>
+			this.timeWired ? columnToPhaseHours(this.x.getData(), this.x.type) : []
+		);
+
 		stats = $derived.by(() =>
-			seriesStats(this.rawValues, this.parentPlot.unit, this.parentPlot.period)
+			this.timeWired
+				? weightedSeriesStats(
+						this.x.getData(),
+						this.x.type,
+						this.y.getData(),
+						this.parentPlot.period
+					)
+				: seriesStats(this.rawValues, this.parentPlot.unit, this.parentPlot.period)
 		);
 
 		getLegendItem() {
@@ -59,7 +97,8 @@
 
 		toJSON() {
 			return {
-				column: this.column,
+				x: this.x,
+				y: this.y,
 				label: this.label,
 				colour: this.colour,
 				shape: this.shape,
@@ -81,7 +120,7 @@
 
 		unit = $state('hours'); // 'radians' | 'degrees' | 'hours'
 		period = $state(24);
-		placement = $state('stack'); // 'stack' | 'bin' | 'rim'
+		placement = $state('stack'); // 'stack' | 'bin' | 'rim' — applies to untimed series
 		binWidth = $state(1);
 		showMeanVectors = $state(true);
 		showWedges = $state(false);
@@ -102,20 +141,69 @@
 		perSeriesStats = $derived.by(() =>
 			this.data.map((d) => ({ label: d.label, colour: d.colour, ...d.stats }))
 		);
-		ww = $derived.by(() =>
-			this.showWatsonWilliams
-				? groupsWatsonWilliams(this.data.map((d) => d.rawValues), this.unit, this.period, pUpperFromF)
-				: null
+
+		// Shared radial value axis (timed series only): [floor(min(0,dataMin)), ceil(dataMax)].
+		valueAxis = $derived.by(() => {
+			let dataMin = Infinity;
+			let dataMax = -Infinity;
+			for (const d of this.data) {
+				if (!d.timeWired) continue;
+				for (const v of d.rawValues) {
+					if (!Number.isFinite(v)) continue;
+					if (v < dataMin) dataMin = v;
+					if (v > dataMax) dataMax = v;
+				}
+			}
+			if (!Number.isFinite(dataMin) || !Number.isFinite(dataMax)) return [0, 1];
+			return [niceAxisLimit(Math.min(0, dataMin), 'floor'), niceAxisLimit(dataMax, 'ceil')];
+		});
+
+		// Largest stack/bin column height across untimed series, so `placeCircularPoints`
+		// can fit-scale the dodge step instead of overflowing the plot radius.
+		untimedMaxStack = $derived.by(() =>
+			maxStackHeight(
+				this.data.filter((d) => !d.timeWired).map((d) => d.rawValues),
+				{ placement: this.placement, period: this.displayPeriod, binWidth: this.binWidth, quant: 0.5 }
+			)
 		);
+
+		// Watson-Williams across UNTIMED series' mean directions only. WW is an
+		// unweighted-event circular ANOVA (Fisher/Batschelet): it compares samples
+		// of discrete angle observations. A timed series is a continuous,
+		// amplitude-weighted rhythm (its concentration comes from the *values*,
+		// not from event density — evenly-sampled time points fold to a uniform,
+		// near-zero-R angle distribution regardless of the underlying rhythm), so
+		// it has no valid unweighted-event representation to feed WW and is
+		// excluded rather than silently misrepresented.
+		ww = $derived.by(() => {
+			if (!this.showWatsonWilliams) return null;
+			const groups = this.data
+				.filter((d) => !d.timeWired)
+				.map((d) => toRadiansColumn(d.rawValues, this.unit, this.period));
+			return watsonWilliams(groups, pUpperFromF);
+		});
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
 			this.legend = new LegendClass(dataIN?.legend);
-			if (dataIN && dataIN.column) this.addData(dataIN); // single-input create path
+			// single-input create path (drag-wire onto an empty node, or a flat legacy payload)
+			if (dataIN && (dataIN.time || dataIN.values || dataIN.column || dataIN.x || dataIN.y))
+				this.addData(dataIN);
 		}
 
 		addData(dataIN) {
-			this.data.push(new CircularPhaseSeries(this, dataIN));
+			// Public wiring shape is {time, values}; remap to the internal {x, y}
+			// convention shared with Periodogram/Actogram/Correlogram/FFT (preserving
+			// any other keys, e.g. label/colour, unlike the sibling plots' remap).
+			let payload = dataIN;
+			if (dataIN && Object.keys(dataIN).includes('time')) {
+				payload = {
+					...dataIN,
+					x: { refId: dataIN.time.refId },
+					y: { refId: dataIN.values.refId }
+				};
+			}
+			this.data.push(new CircularPhaseSeries(this, payload));
 		}
 		removeData(idx) {
 			this.data.splice(idx, 1);
@@ -135,7 +223,7 @@
 		autoScalePadding() {}
 
 		getDownloadData() {
-			const headers = ['Series', 'n', 'mean_phase', 'R', 'z', 'p'];
+			const headers = ['Series', 'n', 'mean_or_acrophase', 'R', 'z', 'p'];
 			const rows = this.perSeriesStats.map((s) => [
 				s.label,
 				s.n,
@@ -180,13 +268,14 @@
 			c.padding = json.padding ?? c.padding;
 			c.legend = LegendClass.fromJSON(json.legend);
 			if (json.data) c.data = json.data.map((d) => CircularPhaseSeries.fromJSON(d, c));
-			else if (json.column) c.addData({ column: json.column });
+			else if (json.column) c.addData({ column: json.column }); // very old flat single-series sessions
+			else if (json.dataIn) c.addData(json.dataIn); // creation-time hint (mirrors sibling plots)
 			return c;
 		}
 	}
 
 	export const definition = {
-		defaultDataInputs: ['column'],
+		defaultDataInputs: ['time', 'values'],
 		controlHeaders: ['Properties', 'Data'],
 		displayName: 'Circular phase plot',
 		plotClass: CircularPhaseClass
@@ -245,7 +334,9 @@
 
 	// Hover on a series' merged points <path>: map the pointer to the polar
 	// projection's data space, then snap to the nearest observation in that
-	// series by circular (wrap-around) distance on the display period.
+	// series by circular (wrap-around) distance on the display period. Untimed
+	// series search by phase (rawValues); timed series search by time-of-day
+	// (angles, period-space hours).
 	function handleSeriesHover(evt, plot, P, d) {
 		const svg = evt.currentTarget.ownerSVGElement;
 		const ctm = svg?.getScreenCTM();
@@ -253,10 +344,11 @@
 		const pt = new DOMPoint(evt.clientX, evt.clientY).matrixTransform(ctm.inverse());
 		const { value } = P.fromXY(pt.x, pt.y);
 		const period = P.period;
+		const positions = d.timeWired ? d.angles : d.rawValues;
 
 		let bestIdx = -1;
 		let bestDist = Infinity;
-		d.rawValues.forEach((v, i) => {
+		positions.forEach((v, i) => {
 			if (!Number.isFinite(v)) return;
 			const diff = Math.abs(v - value) % period;
 			const dist = Math.min(diff, period - diff);
@@ -271,7 +363,9 @@
 		}
 
 		const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${d.colour};margin-right:4px;vertical-align:middle;"></span>`;
-		const content = `${dot}<strong>${escapeHtml(d.label)}</strong><br/><span style="opacity:0.7">phase:</span> ${fmtPhase(d.rawValues[bestIdx], plot.unit, plot.period)}`;
+		const content = d.timeWired
+			? `${dot}<strong>${escapeHtml(d.label)}</strong><br/><span style="opacity:0.7">time:</span> ${fmtPhase(d.angles[bestIdx], 'hours', plot.period)}<br/><span style="opacity:0.7">value:</span> ${fmt(d.rawValues[bestIdx])}`
+			: `${dot}<strong>${escapeHtml(d.label)}</strong><br/><span style="opacity:0.7">phase:</span> ${fmtPhase(d.rawValues[bestIdx], plot.unit, plot.period)}`;
 
 		const { x: xPos, y: yPos } = computeTooltipPosition(evt.clientX, evt.clientY);
 		dispatchTooltip(evt.currentTarget, { visible: true, x: xPos, y: yPos, content });
@@ -288,6 +382,8 @@
 	{@const cx = plot.padding.left + size / 2}
 	{@const cy = plot.padding.top + size / 2}
 	{@const P = createPolar({ cx, cy, radius: (size / 2) * 0.82, period: plot.displayPeriod })}
+	{@const hasTimed = plot.data.some((d) => d.timeWired)}
+	{@const valueScale = scaleLinear().domain(plot.valueAxis).range([TIMED_INNER_RIM, 1])}
 	<svg
 		id={'plot' + plot.parentBox.id}
 		width={plot.parentBox.width}
@@ -296,38 +392,82 @@
 		style="background: var(--surface-card); position: absolute;"
 		ontooltip={handleTooltip}
 	>
-		<PolarGrid projection={P} hint={`phase · period ${plot.displayPeriod} ${unitSuffix(plot.unit)}`} />
+		<PolarGrid
+			projection={P}
+			showRLabels={!hasTimed}
+			hint={hasTimed
+				? `value ${plot.valueAxis[0]}–${plot.valueAxis[1]} · period ${plot.displayPeriod} ${unitSuffix(plot.unit)}`
+				: `phase · period ${plot.displayPeriod} ${unitSuffix(plot.unit)}`}
+		/>
 
-		{#each plot.data as d, i (d.column.id)}
-			{#if plot.showWedges}
+		{#each plot.data as d, i (d.x.id + '-' + d.y.id)}
+			{#if !d.timeWired && plot.showWedges}
 				<RoseWedges projection={P} values={d.rawValues} binWidth={plot.wedgeBinWidth} colour={d.colour} />
 			{/if}
 			{#if d.draw}
-				{@const placed = placeCircularPoints(d.rawValues, {
-					placement: plot.placement,
-					period: plot.displayPeriod,
-					binWidth: plot.binWidth,
-					dotRadius: d.radius,
-					plotRadius: P.radius
-				})}
-				<path
-					d={placed
-						.map((p) => {
-							const [x, y] = P.toXY(p.value, p.r01);
-							return getPointPath(d.shape, x, y, d.radius);
-						})
-						.join(' ')}
-					fill={d.colour}
-					fill-opacity="0.9"
-					role="presentation"
-					onpointermove={(evt) => handleSeriesHover(evt, plot, P, d)}
-					onpointerleave={handleSeriesLeave}
-				/>
+				{#if d.timeWired}
+					<path
+						d={d.angles
+							.map((ph, idx) => {
+								const v = d.rawValues[idx];
+								if (!Number.isFinite(ph) || !Number.isFinite(v)) return '';
+								const [x, y] = P.toXY(ph, valueScale(v));
+								return getPointPath(d.shape, x, y, d.radius);
+							})
+							.filter(Boolean)
+							.join(' ')}
+						fill={d.colour}
+						fill-opacity="0.9"
+						role="presentation"
+						onpointermove={(evt) => handleSeriesHover(evt, plot, P, d)}
+						onpointerleave={handleSeriesLeave}
+					/>
+				{:else}
+					{@const placed = placeCircularPoints(d.rawValues, {
+						placement: plot.placement,
+						period: plot.displayPeriod,
+						binWidth: plot.binWidth,
+						dotRadius: d.radius,
+						plotRadius: P.radius,
+						maxStack: plot.untimedMaxStack,
+						innerRim: 0.12,
+						outerRim: 0.98
+					})}
+					<path
+						d={placed
+							.map((p) => {
+								const [x, y] = P.toXY(p.value, p.r01);
+								return getPointPath(d.shape, x, y, d.radius);
+							})
+							.join(' ')}
+						fill={d.colour}
+						fill-opacity="0.9"
+						role="presentation"
+						onpointermove={(evt) => handleSeriesHover(evt, plot, P, d)}
+						onpointerleave={handleSeriesLeave}
+					/>
+				{/if}
 			{/if}
 			{#if plot.showMeanVectors}
 				<MeanVector projection={P} value={d.stats.meanValue} length={d.stats.R} colour={d.colour} />
 			{/if}
 		{/each}
+
+		{#if hasTimed}
+			<g class="value-axis-ticks">
+				{#each valueScale.ticks(3) as t (t)}
+					{@const r01 = valueScale(t)}
+					{#if r01 >= 0 && r01 <= 1}
+						<text
+							x={P.cx + 3}
+							y={P.cy - P.radius * r01 + 4}
+							font-size="9"
+							fill="var(--color-lightness-50)">{t}</text
+						>
+					{/if}
+				{/each}
+			</g>
+		{/if}
 
 		<Legend
 			legendData={plot.legend}
@@ -376,6 +516,7 @@
 
 		<div class="control-component">
 			<div class="control-component-title"><p>Points</p></div>
+			<p class="cp-hint">Placement applies to series without a wired time column.</p>
 			<div class="control-input-horizontal">
 				<ControlInput label="Placement">
 					<select bind:value={theData.placement}>
@@ -409,7 +550,10 @@
 				{#if theData.ww.valid}
 					<p>F({theData.ww.df1}, {theData.ww.df2}) = {fmt(theData.ww.F, 3)}, p = {fmtP(theData.ww.pValue)}</p>
 				{:else}
-					<p class="cp-hint">Wire two or more phase columns to compare mean directions.</p>
+					<p class="cp-hint">
+						Wire two or more phase columns without a time (Watson-Williams compares untimed
+						groups' unweighted event angles) to compare mean directions.
+					</p>
 				{/if}
 			</div>
 		{/if}
@@ -423,7 +567,7 @@
 				</div>
 			</div>
 
-			{#each theData.data as datum, i (datum.column.id)}
+			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
 				<div class="dataBlock" animate:flip={{ duration: 500 }} in:slide={{ duration: 500, axis: 'y' }} out:slide={{ duration: 500, axis: 'y' }}>
 					<div class="control-component-title">
 						<p><Editable bind:value={datum.label} /></p>
@@ -433,9 +577,30 @@
 					</div>
 					<div class="data-wrapper">
 						<div class="y-select">
-							<ControlInput label="phase column"></ControlInput>
-							<Column col={datum.column} canChange={true} />
+							<ControlInput label="time (optional)"></ControlInput>
+							<Column col={datum.x} canChange={true} />
+							{#if datum.x.refId >= 0}
+								<button
+									type="button"
+									class="icon"
+									onclick={() => {
+										datum.x.refId = -1;
+									}}
+								>
+									<Icon name="reset" width={14} height={14} />
+								</button>
+							{/if}
 						</div>
+						<div class="y-select">
+							<ControlInput label="values (phase column)"></ControlInput>
+							<Column col={datum.y} canChange={true} />
+						</div>
+						{#if datum.timeWired}
+							<p class="cp-hint">
+								Time wired: this series plots as a value-radius clock (point radius = value; angle
+								= time-of-day).
+							</p>
+						{/if}
 						<div class="control-input-horizontal">
 							<div class="control-input" style="max-width: 1.5rem;">
 								<p>Col</p><ColourPicker bind:value={datum.colour} />
@@ -454,7 +619,11 @@
 					</div>
 
 					{#if datum.stats}
-						<p class="cp-stat">n {datum.stats.n} · R {fmt(datum.stats.R, 3)} · z {fmt(datum.stats.z, 2)} · p {fmtP(datum.stats.pValue)}</p>
+						<p class="cp-stat">
+							n {datum.stats.n} ·
+							{#if datum.timeWired}acrophase {fmtPhase(datum.stats.meanValue, 'hours', theData.period)} ·{/if}
+							R {fmt(datum.stats.R, 3)} · z {fmt(datum.stats.z, 2)} · p {fmtP(datum.stats.pValue)}
+						</p>
 					{/if}
 					<div class="div-line"></div>
 				</div>

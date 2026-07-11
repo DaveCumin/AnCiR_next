@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "152": [
+    "158": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "153": [
+    "159": [
       12.642866859481796,
       18.907413440058953,
       8.02083029948017,
@@ -104,7 +104,7 @@
       23.83732580196522,
       -2.4027680620561576
     ],
-    "154": [
+    "160": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "155": [
+    "161": [
       9.094870359876616,
       10.003419446394657,
       13.579734705384766,
@@ -211,20 +211,20 @@
   },
   "data": [
     {
-      "id": 152,
+      "id": 158,
       "name": "x",
-      "data": 152,
+      "data": 158,
       "type": "number",
-      "tableProcessGUId": "a95a8975-4118-4f84-b0f6-6b16c64d94c6",
+      "tableProcessGUId": "20c20d55-f1e3-4e18-b826-f6f2c2b1ca87",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 153,
+      "id": 159,
       "name": "y",
-      "data": 153,
+      "data": 159,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 154,
+      "id": 160,
       "name": "fitx_22",
-      "data": 154,
+      "data": 160,
       "type": "number",
-      "tableProcessGUId": "125525f8-18f5-4e85-9c7a-c0e723f022db",
+      "tableProcessGUId": "6956f537-5085-410e-9682-0b62c7da00da",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 155,
-      "name": "fity_153_22",
-      "data": 155,
+      "id": 161,
+      "name": "fity_159_22",
+      "data": 161,
       "type": "number",
-      "tableProcessGUId": "125525f8-18f5-4e85-9c7a-c0e723f022db",
+      "tableProcessGUId": "6956f537-5085-410e-9682-0b62c7da00da",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -313,9 +313,9 @@
         "data": [
           {
             "x": {
-              "id": 156,
+              "id": 162,
               "name": "x",
-              "refId": 152,
+              "refId": 158,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -324,9 +324,9 @@
               "processes": []
             },
             "y": {
-              "id": 157,
+              "id": 163,
               "name": "y",
-              "refId": 153,
+              "refId": 159,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -352,9 +352,9 @@
           },
           {
             "x": {
-              "id": 158,
+              "id": 164,
               "name": "fitx_22",
-              "refId": 154,
+              "refId": 160,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -363,9 +363,9 @@
               "processes": []
             },
             "y": {
-              "id": 159,
-              "name": "fity_153_22",
-              "refId": 155,
+              "id": 165,
+              "name": "fity_159_22",
+              "refId": 161,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -420,8 +420,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          153,
-          155
+          159,
+          161
         ],
         "showCol": [
           true,
@@ -446,7 +446,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 152
+          "result": 158
         }
       },
       "refTPId": null
@@ -456,9 +456,9 @@
       "name": "FitFunction",
       "displayName": "Fit Function",
       "args": {
-        "xIN": 152,
+        "xIN": 158,
         "yIN": [
-          153
+          159
         ],
         "model": "cosinor",
         "outputX": -1,
@@ -484,8 +484,8 @@
         "permutationStatistic": "rSquared",
         "preProcesses": [],
         "out": {
-          "fitx": 154,
-          "fity_153": 155
+          "fitx": 160,
+          "fity_159": 161
         }
       },
       "refTPId": null
@@ -508,7 +508,7 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_153": {
+    "data_159": {
       "x": 60,
       "y": 314
     },

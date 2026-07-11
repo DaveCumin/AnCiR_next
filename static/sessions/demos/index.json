@@ -498,13 +498,13 @@
       "id": "circular-phase-two-groups",
       "name": "Circular phase plot — two groups",
       "family": "Plots",
-      "description": "Peak-activity phase (clock hours) for two groups on a 24 h clock, each a coloured group with its Rayleigh mean-resultant vector and a Watson-Williams test comparing mean directions.",
+      "description": "Two untimed phase groups on a 24 h clock (raw onset phases near 7 h and 19 h), each with its Rayleigh mean-resultant vector and a significant Watson-Williams test comparing mean directions — plus a third, timed activity series wired as a value-radius clock (point radius = value) with its amplitude-weighted acrophase vector.",
       "url": "sessions/demos/demo-circular-phase-two-groups.json",
       "kind": "plot",
       "showcases": [
         "circularphase"
       ],
-      "keywords": "circular phase plot — two groups peak-activity phase (clock hours) for two groups on a 24 h clock, each a coloured group with its rayleigh mean-resultant vector and a watson-williams test comparing mean directions. plots circularphase"
+      "keywords": "circular phase plot — two groups two untimed phase groups on a 24 h clock (raw onset phases near 7 h and 19 h), each with its rayleigh mean-resultant vector and a significant watson-williams test comparing mean directions — plus a third, timed activity series wired as a value-radius clock (point radius = value) with its amplitude-weighted acrophase vector. plots circularphase"
     },
     {
       "id": "actogram-rhythm",

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "65": [
+    "71": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "66": [
+    "72": [
       0,
       1,
       2,
@@ -104,7 +104,7 @@
       48,
       49
     ],
-    "67": [
+    "73": [
       0,
       1,
       2,
@@ -159,20 +159,20 @@
   },
   "data": [
     {
-      "id": 65,
+      "id": 71,
       "name": "x",
-      "data": 65,
+      "data": 71,
       "type": "number",
-      "tableProcessGUId": "bf5cf885-aef8-480d-b5ec-186d93d4bad4",
+      "tableProcessGUId": "a797b607-0794-4ea0-8411-63fbca3b5d3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 66,
+      "id": 72,
       "name": "y",
-      "data": 66,
+      "data": 72,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,9 +181,9 @@
       "processes": []
     },
     {
-      "id": 67,
+      "id": 73,
       "name": "reference",
-      "data": 67,
+      "data": 73,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -192,13 +192,13 @@
       "processes": []
     },
     {
-      "id": 68,
+      "id": 74,
       "name": "Filter result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_4",
-      "producerPort": "out_66",
+      "producerPort": "out_72",
       "producerArtifactKind": "column",
       "processes": []
     }
@@ -261,9 +261,9 @@
         "data": [
           {
             "x": {
-              "id": 69,
+              "id": 75,
               "name": "x",
-              "refId": 65,
+              "refId": 71,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -272,9 +272,9 @@
               "processes": []
             },
             "y": {
-              "id": 70,
+              "id": 76,
               "name": "y",
-              "refId": 66,
+              "refId": 72,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -300,9 +300,9 @@
           },
           {
             "x": {
-              "id": 71,
+              "id": 77,
               "name": "x",
-              "refId": 65,
+              "refId": 71,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -311,9 +311,9 @@
               "processes": []
             },
             "y": {
-              "id": 72,
+              "id": 78,
               "name": "Filter result",
-              "refId": 68,
+              "refId": 74,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -368,8 +368,8 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          66,
-          68
+          72,
+          74
         ],
         "showCol": [
           true,
@@ -394,7 +394,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 65
+          "result": 71
         }
       },
       "refTPId": null
@@ -422,24 +422,24 @@
       "args": {
         "conditions": [
           {
-            "byColId": 67,
+            "byColId": 73,
             "isOperator": ">",
             "byColValue": 2
           }
         ],
         "inIN": [
-          66
+          72
         ],
-        "parentColId": 66
+        "parentColId": 72
       }
     }
   ],
   "nodeLayout": {
-    "data_66": {
+    "data_72": {
       "x": 60,
       "y": 314
     },
-    "data_67": {
+    "data_73": {
       "x": 60,
       "y": 814
     },

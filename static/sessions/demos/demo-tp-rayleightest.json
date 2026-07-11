@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "256": [
+    "262": [
       0.75,
       0.4936245900186056,
       0.10008893632086846,
@@ -22,7 +22,7 @@
       0.34356671248653514,
       0.7177368592146683
     ],
-    "257": [
+    "263": [
       2.5500000000000003,
       2.293624590018606,
       1.9000889363208686,
@@ -44,98 +44,113 @@
       2.1435667124865354,
       2.5177368592146685
     ],
-    "258": [
+    "264": [
       0.9685941696997769,
       0.9685941696997767
     ],
-    "259": [
+    "265": [
       18.763493311528006,
       18.763493311528
     ],
-    "260": [
+    "266": [
       1.9826460939624246e-8,
       1.982646093962434e-8
     ],
-    "261": [
+    "267": [
       453.7366669407144
     ],
-    "262": [
+    "268": [
       0
+    ],
+    "269": [
+      1.5736813608355367,
+      8.449174902405415
     ]
   },
   "data": [
     {
-      "id": 256,
-      "name": "Rayleigh test input 1",
-      "data": 256,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 257,
-      "name": "Rayleigh test input 2",
-      "data": 257,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 258,
-      "name": "R_44",
-      "data": 258,
-      "type": "number",
-      "tableProcessGUId": "0b1f7498-2358-44ac-ad41-3a9f5af3da06",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 259,
-      "name": "z_44",
-      "data": 259,
-      "type": "number",
-      "tableProcessGUId": "0b1f7498-2358-44ac-ad41-3a9f5af3da06",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 260,
-      "name": "pvalue_44",
-      "data": 260,
-      "type": "number",
-      "tableProcessGUId": "0b1f7498-2358-44ac-ad41-3a9f5af3da06",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 261,
-      "name": "F_44",
-      "data": 261,
-      "type": "number",
-      "tableProcessGUId": "0b1f7498-2358-44ac-ad41-3a9f5af3da06",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 262,
-      "name": "ww_pvalue_44",
+      "name": "Rayleigh test input 1",
       "data": 262,
       "type": "number",
-      "tableProcessGUId": "0b1f7498-2358-44ac-ad41-3a9f5af3da06",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 263,
+      "name": "Rayleigh test input 2",
+      "data": 263,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 264,
+      "name": "R_44",
+      "data": 264,
+      "type": "number",
+      "tableProcessGUId": "cd4c0d17-84f2-4d62-af22-6c498547ddc7",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 265,
+      "name": "z_44",
+      "data": 265,
+      "type": "number",
+      "tableProcessGUId": "cd4c0d17-84f2-4d62-af22-6c498547ddc7",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 266,
+      "name": "pvalue_44",
+      "data": 266,
+      "type": "number",
+      "tableProcessGUId": "cd4c0d17-84f2-4d62-af22-6c498547ddc7",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 267,
+      "name": "F_44",
+      "data": 267,
+      "type": "number",
+      "tableProcessGUId": "cd4c0d17-84f2-4d62-af22-6c498547ddc7",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 268,
+      "name": "ww_pvalue_44",
+      "data": 268,
+      "type": "number",
+      "tableProcessGUId": "cd4c0d17-84f2-4d62-af22-6c498547ddc7",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 269,
+      "name": "acrophase_44",
+      "data": 269,
+      "type": "number",
+      "tableProcessGUId": "cd4c0d17-84f2-4d62-af22-6c498547ddc7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -159,15 +174,17 @@
       "metricOut": {},
       "plot": {
         "columnRefs": [
-          256,
-          257,
-          258,
-          259,
-          260,
-          261,
-          262
+          262,
+          263,
+          264,
+          265,
+          266,
+          267,
+          268,
+          269
         ],
         "showCol": [
+          true,
           true,
           true,
           true,
@@ -190,18 +207,19 @@
       "displayName": "Rayleigh test",
       "args": {
         "yIN": [
-          256,
-          257
+          262,
+          263
         ],
         "unit": "radians",
         "period": 24,
         "showWatsonWilliams": true,
         "out": {
-          "R": 258,
-          "z": 259,
-          "pvalue": 260,
-          "F": 261,
-          "ww_pvalue": 262
+          "R": 264,
+          "z": 265,
+          "pvalue": 266,
+          "F": 267,
+          "ww_pvalue": 268,
+          "acrophase": 269
         }
       },
       "refTPId": null
@@ -224,11 +242,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_256": {
+    "data_262": {
       "x": 60,
       "y": 314
     },
-    "data_257": {
+    "data_263": {
       "x": 60,
       "y": 814
     },
