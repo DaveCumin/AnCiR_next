@@ -3881,6 +3881,8 @@
 									deleteTooltip="Delete node"
 									showUncombine={node.type === 'composite'}
 									onUncombine={() => removeComposite(node.id)}
+									showQuickPlot={node.type === 'tableprocess' || node.type === 'process'}
+									onQuickPlot={() => handleQuickPlot(node)}
 								/>
 							</div>
 						{/if}
