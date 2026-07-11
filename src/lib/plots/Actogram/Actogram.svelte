@@ -20,6 +20,12 @@
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
+	import {
+		colormapRGB,
+		normaliseTo01,
+		COLORMAP_LABELS,
+		DEFAULT_COLORMAP
+	} from './colormaps.js';
 	import { core } from '$lib/core/core.svelte.js';
 	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
@@ -384,6 +390,11 @@
 		doublePlot = $state(2);
 		periodHrs = $state(24);
 		showDayNumbers = $state(false);
+		// Render style: 'bars' (traditional line/bar actogram) or 'heatmap'
+		// (each bin drawn as an intensity-coloured cell). Heatmap uses a global
+		// (across-days) intensity domain per series so days are comparable.
+		renderMode = $state('bars');
+		colormap = $state(DEFAULT_COLORMAP);
 		lightBands = $state(new LightBandClass(this, { lightBands: [] }));
 		xAxis = $state();
 		Ndays = $derived.by(() => {
@@ -452,6 +463,17 @@
 			return ylims_out;
 		});
 
+		// Per-series [min, max] activity range, taken globally across all days, for
+		// scaling heatmap cell colours. Global (not per-day) so a dense day reads
+		// darker than a quiet one — the point of a heatmap actogram.
+		intensityDomain = $derived.by(() =>
+			this.data.map((d) => {
+				const y = d.y?.getData();
+				if (!y || y.length === 0) return [0, 1];
+				return [min(y), max(y)];
+			})
+		);
+
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
 			this.xAxis = new AxisClass({
@@ -514,6 +536,8 @@
 				doublePlot: this.doublePlot,
 				periodHrs: this.periodHrs,
 				showDayNumbers: this.showDayNumbers,
+				renderMode: this.renderMode,
+				colormap: this.colormap,
 				lightBands: this.lightBands,
 				annotations: this.annotations,
 				xAxis: this.xAxis.toJSON(),
@@ -531,6 +555,10 @@
 			actogram.doublePlot = json.doublePlot;
 			actogram.periodHrs = json.periodHrs;
 			if (json.showDayNumbers != null) actogram.showDayNumbers = json.showDayNumbers;
+			// ?? default: older sessions predate these fields, so keep the class default
+			// rather than clobbering it with undefined.
+			actogram.renderMode = json.renderMode ?? actogram.renderMode;
+			actogram.colormap = json.colormap ?? actogram.colormap;
 
 			actogram.lightBands = LightBandClass.fromJSON(
 				json.lightBands ?? { lightBands: [] },
@@ -710,6 +738,31 @@
 			<div class="control-input-checkbox">
 				<input type="checkbox" bind:checked={theData.showDayNumbers} />
 				<p>Show period numbers</p>
+			</div>
+		</div>
+
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Display</p>
+			</div>
+			<div class="control-input-vertical">
+				<ControlInput label="Render as:">
+					<select bind:value={theData.renderMode}>
+						<option value="bars">Bars</option>
+						<option value="heatmap">Heatmap</option>
+					</select>
+				</ControlInput>
+				{#if theData.renderMode === 'heatmap'}
+					<ControlInput label="Colormap:">
+						<select bind:value={theData.colormap}>
+							{#each Object.entries(COLORMAP_LABELS) as [key, label] (key)}
+								<option value={key}>{label}</option>
+							{/each}
+						</select>
+					</ControlInput>
+				{/if}
 			</div>
 		</div>
 
@@ -987,29 +1040,51 @@
 						day + theData.plot.doublePlot,
 						theData.plot.periodHrs
 					)}
+					{@const rowXscale = scaleLinear()
+						.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
+						.range([0, theData.plot.plotwidth])}
+					{@const rowYoffset =
+						theData.plot.padding.top +
+						day * (theData.plot.spaceBetween + theData.plot.eachplotheight) +
+						theData.plot.spaceBetween}
 
 					{#if bins.xStart.length > 0}
-						<Hist
-							xStart={bins.xStart}
-							xEnd={bins.xEnd}
-							y={bins.y}
-							xscale={scaleLinear()
-								.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
-								.range([0, theData.plot.plotwidth])}
-							yscale={thisScale}
-							colour={datum.colour}
-							xoffset={theData.plot.padding.left}
-							yoffset={theData.plot.padding.top +
-								day * (theData.plot.spaceBetween + theData.plot.eachplotheight) +
-								theData.plot.spaceBetween}
-							tooltip={true}
-							hitboxHeight={theData.plot.eachplotheight}
-							xDataOffset={day * theData.plot.periodHrs}
-							xLabel="Time"
-							xtype="string"
-							xFormatter={actogramXFormatter}
-							siblings={actogramSiblings}
-						/>
+						{#if theData.plot.renderMode === 'heatmap'}
+							{@const dom = theData.plot.intensityDomain[d] ?? [0, 1]}
+							{#each bins.xStart as xs, bi (bi)}
+								{@const x0 = rowXscale(xs) + theData.plot.padding.left}
+								{@const x1 = rowXscale(bins.xEnd[bi]) + theData.plot.padding.left}
+								<rect
+									x={x0}
+									y={rowYoffset}
+									width={Math.max(0.5, x1 - x0)}
+									height={theData.plot.eachplotheight}
+									fill={colormapRGB(
+										theData.plot.colormap,
+										normaliseTo01(bins.y[bi], dom[0], dom[1])
+									)}
+									shape-rendering="crispEdges"
+								/>
+							{/each}
+						{:else}
+							<Hist
+								xStart={bins.xStart}
+								xEnd={bins.xEnd}
+								y={bins.y}
+								xscale={rowXscale}
+								yscale={thisScale}
+								colour={datum.colour}
+								xoffset={theData.plot.padding.left}
+								yoffset={rowYoffset}
+								tooltip={true}
+								hitboxHeight={theData.plot.eachplotheight}
+								xDataOffset={day * theData.plot.periodHrs}
+								xLabel="Time"
+								xtype="string"
+								xFormatter={actogramXFormatter}
+								siblings={actogramSiblings}
+							/>
+						{/if}
 					{/if}
 				{/each}
 			{/if}
@@ -1045,6 +1120,46 @@
 					>
 				{/if}
 			{/each}
+		{/if}
+
+		<!-- Heatmap colour-scale legend (top-right, over the plot with a backdrop so
+		     the actogram stays self-describing when exported). Uses the first drawn
+		     series' global intensity domain. -->
+		{#if theData.plot.renderMode === 'heatmap'}
+			{@const fdi = theData.plot.data.findIndex((d) => d.draw)}
+			{#if fdi >= 0}
+				{@const dom = theData.plot.intensityDomain[fdi] ?? [0, 1]}
+				{@const legW = 96}
+				{@const legX = theData.plot.padding.left + theData.plot.plotwidth - legW - 10}
+				{@const legY = theData.plot.padding.top + 6}
+				{@const gradId = 'actogram-heat-legend-' + theData.plot.parentBox.id}
+				<defs>
+					<linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
+						{#each [0, 0.2, 0.4, 0.6, 0.8, 1] as t (t)}
+							<stop offset={t * 100 + '%'} stop-color={colormapRGB(theData.plot.colormap, t)} />
+						{/each}
+					</linearGradient>
+				</defs>
+				<g>
+					<rect
+						x={legX - 5}
+						y={legY - 4}
+						width={legW + 10}
+						height={26}
+						rx="3"
+						fill="rgba(255, 255, 255, 0.82)"
+						stroke="var(--color-lightness-80)"
+						stroke-width="0.5"
+					/>
+					<rect x={legX} y={legY} width={legW} height={8} fill={'url(#' + gradId + ')'} />
+					<text x={legX} y={legY + 20} font-size="9" fill="#555" text-anchor="start"
+						>{Number(dom[0]).toPrecision(3)}</text
+					>
+					<text x={legX + legW} y={legY + 20} font-size="9" fill="#555" text-anchor="end"
+						>{Number(dom[1]).toPrecision(3)}</text
+					>
+				</g>
+			{/if}
 		{/if}
 	</svg>
 
