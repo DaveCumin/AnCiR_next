@@ -419,6 +419,9 @@
 				plotData.metricOut && typeof plotData.metricOut === 'object'
 					? { ...plotData.metricOut }
 					: {};
+			// Quick-Plot: the canvas node this plot was spawned from (for the reference
+			// edge + re-click focus). null for normal user-created plots.
+			this.sourceNodeId = plotData.sourceNodeId ?? null;
 		}
 
 		toJSON() {
@@ -436,6 +439,7 @@
 				facetKey: this.facetKey,
 				setRefs: this.setRefs,
 				metricOut: this.metricOut,
+				sourceNodeId: this.sourceNodeId,
 				plot: this.plot
 			};
 		}
@@ -443,10 +447,36 @@
 			const id = json.id ?? json.plotid;
 			const name = json.name ?? 'Untitled Plot';
 
-			const { x, y, width, height, type, selected, plot, facet, facetParent, facetKey, setRefs } =
-				json;
+			const {
+				x,
+				y,
+				width,
+				height,
+				type,
+				selected,
+				plot,
+				facet,
+				facetParent,
+				facetKey,
+				setRefs,
+				sourceNodeId
+			} = json;
 			return new Plot(
-				{ name, x, y, width, height, type, selected, plot, facet, facetParent, facetKey, setRefs },
+				{
+					name,
+					x,
+					y,
+					width,
+					height,
+					type,
+					selected,
+					plot,
+					facet,
+					facetParent,
+					facetKey,
+					setRefs,
+					sourceNodeId
+				},
 				id
 			);
 		}
