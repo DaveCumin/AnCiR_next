@@ -76,3 +76,27 @@ function processViz(proc) {
 	if (!refs.length) return null;
 	return { type: 'tableplot', title: `${proc.name}: values`, columnRefs: refs };
 }
+
+function scatterInner(series) {
+	return {
+		data: series.map((s) => ({
+			x: { refId: s.x },
+			y: { refId: s.y },
+			label: s.label,
+			yAxis: s.yAxis || 'left',
+			line: { colour: s.colour, draw: s.kind === 'line', strokeWidth: s.kind === 'line' ? 2.5 : 2, stroke: 'solid' },
+			points: { colour: s.colour, draw: s.kind !== 'line', radius: 3, shape: 'circle' }
+		}))
+	};
+}
+
+export function plotDataFromSpec(spec, { x, y, width = 420, height = 300, sourceNodeId = null }) {
+	if (!spec) return null;
+	let inner;
+	if (spec.type === 'scatterplot') inner = scatterInner(spec.series);
+	else if (spec.type === 'boxplot') inner = { data: [{ x: { refId: spec.box.x }, y: { refId: spec.box.y } }], showSigBars: !!spec.showSigBars };
+	else if (spec.type === 'circularphase') inner = { data: spec.series.map((s) => ({ x: { refId: s.x }, y: { refId: s.y }, label: s.label })) };
+	else if (spec.type === 'tableplot') inner = { columnRefs: [...spec.columnRefs], showCol: spec.columnRefs.map(() => true) };
+	else return null;
+	return { name: spec.title, type: spec.type, x, y, width, height, sourceNodeId, plot: inner };
+}

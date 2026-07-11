@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { core, appConsts } from '$lib/core/core.svelte.js';
 import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
-import { canonicalNodeViz } from './canonicalNodeViz.js';
+import { canonicalNodeViz, plotDataFromSpec } from './canonicalNodeViz.js';
 
 beforeEach(async () => {
 	core.data = [];
@@ -67,5 +67,42 @@ describe('canonicalNodeViz', () => {
 		const node = { id: 'tableprocess_9', type: 'tableprocess', tpObj: { id: 9, name: 'Cosinor', args: { xIN: -1, yIN: [20], out: { cosinory_20: 40, period: 50 } } } };
 		const spec = canonicalNodeViz(node);
 		expect(spec.type).toBe('tableplot');
+	});
+});
+
+describe('plotDataFromSpec', () => {
+	it('scatterplot spec → addPlot payload with refId-wired series + sourceNodeId', () => {
+		const spec = {
+			type: 'scatterplot',
+			title: 'Cosinor: data + fit',
+			series: [
+				{ x: 10, y: 20, label: 'y', kind: 'points', colour: '#234154' },
+				{ x: 30, y: 40, label: 'y fit', kind: 'line', colour: '#BE796B' }
+			]
+		};
+		const pd = plotDataFromSpec(spec, { x: 800, y: 60, sourceNodeId: 'tableprocess_1' });
+		expect(pd).toMatchObject({ name: 'Cosinor: data + fit', type: 'scatterplot', x: 800, y: 60, sourceNodeId: 'tableprocess_1' });
+		expect(pd.plot.data[0]).toMatchObject({ x: { refId: 10 }, y: { refId: 20 } });
+		expect(pd.plot.data[1].line.draw).toBe(true);   // fit series is a line
+		expect(pd.plot.data[0].points.draw).toBe(true); // raw series is points
+	});
+
+	it('boxplot + tableplot specs → correct inner shapes', () => {
+		const box = plotDataFromSpec({ type: 'boxplot', title: 't', box: { x: 1, y: 2 }, showSigBars: true }, { x: 0, y: 0 });
+		expect(box.plot).toMatchObject({ data: [{ x: { refId: 1 }, y: { refId: 2 } }], showSigBars: true });
+		const tbl = plotDataFromSpec({ type: 'tableplot', title: 't', columnRefs: [1, 2, 3] }, { x: 0, y: 0 });
+		expect(tbl.plot).toMatchObject({ columnRefs: [1, 2, 3], showCol: [true, true, true] });
+	});
+
+	it('circularphase spec → data series wired {x:time, y:phase}', () => {
+		const cp = plotDataFromSpec(
+			{ type: 'circularphase', title: 'c', series: [{ x: 7, y: 21, label: 'a' }, { x: -1, y: 22, label: 'b' }] },
+			{ x: 0, y: 0 }
+		);
+		expect(cp.type).toBe('circularphase');
+		expect(cp.plot.data).toEqual([
+			{ x: { refId: 7 }, y: { refId: 21 }, label: 'a' },
+			{ x: { refId: -1 }, y: { refId: 22 }, label: 'b' }
+		]);
 	});
 });
