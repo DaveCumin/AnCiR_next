@@ -24,10 +24,10 @@ function tpViz(tp) {
 	const entry = appConsts.tableProcessMap?.get?.(tp.name);
 	const out = tp.args?.out ?? {};
 	const yINs = toArray(tp.args?.yIN);
+	const xRaw = tp.args?.xIN;
 
 	// FIT: the node declares a fitted-curve output (xOutKey + yOutKeyPrefix).
-	if (entry?.xOutKey && entry?.yOutKeyPrefix) {
-		const xRaw = tp.args?.xIN;
+	if (entry?.xOutKey && entry?.yOutKeyPrefix && isRef(xRaw)) {
 		const xOut = out[entry.xOutKey];
 		const series = [];
 		for (const yId of yINs) {

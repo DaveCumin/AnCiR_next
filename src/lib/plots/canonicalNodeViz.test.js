@@ -62,4 +62,10 @@ describe('canonicalNodeViz', () => {
 	it('returns null for a plot node', () => {
 		expect(canonicalNodeViz({ id: 'plot_1', type: 'plot', plotObj: {} })).toBeNull();
 	});
+
+	it('fit TP with no x wired → falls back to tableplot (no broken scatter)', () => {
+		const node = { id: 'tableprocess_9', type: 'tableprocess', tpObj: { id: 9, name: 'Cosinor', args: { xIN: -1, yIN: [20], out: { cosinory_20: 40, period: 50 } } } };
+		const spec = canonicalNodeViz(node);
+		expect(spec.type).toBe('tableplot');
+	});
 });
