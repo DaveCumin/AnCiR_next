@@ -3594,6 +3594,41 @@ def _angles_col_to_radians(data, unit, period):
     return out
 
 
+def _column_to_phase_hours(data, col_type):
+    """Time-hours for the Rayleigh weighted-mode time input: a 'time'-type
+    column is raw epoch-ms -> ABSOLUTE hours (n/3.6e6, no baseline
+    subtraction); any other type is raw hours already. Gaps/blank/non-numeric
+    -> NaN. Mirrors circularPlot.js columnToPhaseHours exactly (this is
+    deliberately NOT Column.hours_since_start, which subtracts a baseline)."""
+    out = []
+    for v in data or []:
+        if v is None:
+            out.append(_NAN)
+            continue
+        if isinstance(v, str) and v.strip() == '':
+            out.append(_NAN)
+            continue
+        try:
+            n = float(v)
+        except (TypeError, ValueError):
+            out.append(_NAN)
+            continue
+        if not math.isfinite(n):
+            out.append(_NAN)
+            continue
+        out.append(n / 3_600_000.0 if col_type == 'time' else n)
+    return out
+
+
+def _time_to_angle_rad(hours, period):
+    """Fold hours modulo period and map to radians (0 at phase 0). Mirrors
+    circularPlot.js timeToAngleRad exactly."""
+    if not (isinstance(hours, (int, float)) and math.isfinite(hours)):
+        return _NAN
+    p = period if (isinstance(period, (int, float)) and period > 0) else 24
+    return ((hours % p + p) % p) / p * (2 * math.pi)
+
+
 def tp_rayleightest(args, cols, raw_data, _sv):
     # Circular-stats node: the Rayleigh uniformity test ALWAYS runs (per-Y
     # R/z/pvalue). The optional Watson-Williams equal-mean-direction test
@@ -3607,20 +3642,42 @@ def tp_rayleightest(args, cols, raw_data, _sv):
     if not (isinstance(period, (int, float)) and math.isfinite(period)):
         period = 24
 
+    # Optional: when the Y values were measured. When wired, the test switches
+    # to an amplitude-weighted mode (weighted_rayleigh): the time column
+    # supplies the angle, the Y value is the weight, and `unit` is ignored.
+    time_in = args.get('timeIN', -1)
+    time_col = cols.get(time_in) if time_in is not None and time_in != -1 else None
+
     per_y = {}
     any_valid = False
     for y_id in y_ins:
         if y_id is None or y_id == -1 or y_id not in cols:
             continue
-        angles = _angles_col_to_radians(cols[y_id].get_data(), unit, period)
+        y_col = cols[y_id]
+
+        if time_col is not None:
+            angles = [_time_to_angle_rad(h, period)
+                      for h in _column_to_phase_hours(time_col.get_data(), time_col.type)]
+            s = weighted_rayleigh(angles, y_col.get_data())
+            if s['n'] > 0:
+                mean_value = ((s['meanAngle'] / (2 * math.pi)) * period
+                              if math.isfinite(s['meanAngle']) else _NAN)
+                per_y[y_id] = {'R': s['R'], 'z': s['z'], 'pValue': s['pValue'],
+                               'meanAngle': s['meanAngle'], 'meanValue': mean_value}
+                any_valid = True
+            continue
+
+        angles = _angles_col_to_radians(y_col.get_data(), unit, period)
         res = rayleigh_test(angles)
         if res['n'] > 0:
-            per_y[y_id] = res
+            mean_value = ((res['meanAngle'] / (2 * math.pi)) * period
+                          if math.isfinite(res['meanAngle']) else _NAN)
+            per_y[y_id] = {**res, 'meanValue': mean_value}
             any_valid = True
     if not any_valid:
         return False
-    for key in ('R', 'z', 'pvalue'):
-        field = 'pValue' if key == 'pvalue' else key
+    for key in ('R', 'z', 'pvalue', 'acrophase'):
+        field = {'pvalue': 'pValue', 'acrophase': 'meanValue'}.get(key, key)
         arr = [per_y[y].get(field, _NAN) if y in per_y else _NAN for y in y_ins]
         _set_col(raw_data, cols, _out_id(args, key), arr, type_='number')
 
