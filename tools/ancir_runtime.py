@@ -3688,9 +3688,11 @@ def tp_rayleightest(args, cols, raw_data, _sv):
         _set_col(raw_data, cols, _out_id(args, key), arr, type_='number')
 
     # Optional Watson-Williams: a single F/ww_pvalue across the groups (NaN when
-    # the test is off or degenerate), so the ports stay numeric + present.
+    # the test is off, timed, or degenerate), so the ports stay numeric +
+    # present. WW is meaningless in timed mode (yIN holds amplitude values, not
+    # event angles) — mirrors RayleighTest.svelte's isTimeWired guard.
     ww_F, ww_p = _NAN, _NAN
-    if args.get('showWatsonWilliams'):
+    if args.get('showWatsonWilliams') and time_col is None:
         groups = [
             _angles_col_to_radians(cols[y_id].get_data(), unit, period)
             for y_id in y_ins

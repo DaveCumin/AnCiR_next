@@ -89,6 +89,16 @@
 		return toRadiansColumn(data, unit, period);
 	}
 
+	// True when `timeIN` is wired and resolves to a real column — i.e. the node
+	// is in amplitude-weighted (timed) mode. In that mode `yIN` holds VALUES
+	// (weights), not event angles, so Watson-Williams (which compares mean
+	// DIRECTIONS across groups of angles) is meaningless and must be skipped —
+	// mirrors the sibling CircularPhase plot's `hasTimed` WW exclusion.
+	function isTimeWired(argsIN) {
+		const timeIN = argsIN.timeIN;
+		return timeIN != null && timeIN !== -1 && !!getColumnById(timeIN);
+	}
+
 	// Rayleigh uniformity: returns { perY: { [yId]: {n,R,z,pValue,meanAngle,meanValue} }, anyValid, yINs }.
 	// When `timeIN` resolves to a column, switches to an amplitude-weighted mode:
 	// the time column supplies the angle (via weightedSeriesStats), the Y value is
@@ -98,8 +108,7 @@
 		const yINs = normalizeYInputs(argsIN.yIN);
 		const unit = argsIN.unit ?? 'radians';
 		const period = Number.isFinite(argsIN.period) ? argsIN.period : 24;
-		const timeIN = argsIN.timeIN;
-		const timeCol = timeIN != null && timeIN !== -1 ? getColumnById(timeIN) : null;
+		const timeCol = isTimeWired(argsIN) ? getColumnById(argsIN.timeIN) : null;
 
 		const perY = {};
 		let anyValid = false;
@@ -175,7 +184,10 @@
 
 	export function rayleigh(argsIN) {
 		const rayleighRes = evaluateRayleigh(argsIN);
-		const ww = argsIN.showWatsonWilliams ? evaluateWatsonWilliams(argsIN) : null;
+		// Watson-Williams only makes sense on groups of raw event angles — skip it
+		// in timed mode, where yIN holds amplitude values, not angles.
+		const timed = isTimeWired(argsIN);
+		const ww = argsIN.showWatsonWilliams && !timed ? evaluateWatsonWilliams(argsIN) : null;
 		const result = { ...rayleighRes, ww };
 		if (rayleighRes.anyValid) writeMetrics(argsIN, result);
 		return [result, rayleighRes.anyValid];
@@ -275,12 +287,16 @@
 				...rayleighData.perY[yId]
 			}));
 	});
-	let ww = $derived.by(() =>
-		p.args.showWatsonWilliams && rayleighData?.ww?.valid ? rayleighData.ww : null
-	);
 	// Weighted (time-wired) mode ignores `unit` — the time column supplies the
 	// angle directly — but always needs `period` to convert clock time to phase.
 	let isWeighted = $derived(!!timeCol);
+	// Watson-Williams is meaningless in timed mode (yIN holds values, not
+	// angles) — rayleigh() already returns ww: null when timed, but guard here
+	// too so the panel can distinguish "timed, unavailable" from "not enough
+	// columns yet".
+	let ww = $derived.by(() =>
+		!isWeighted && p.args.showWatsonWilliams && rayleighData?.ww?.valid ? rayleighData.ww : null
+	);
 	const fmt = (v, dp = 3) => (Number.isFinite(v) ? v.toFixed(dp) : '—');
 </script>
 
@@ -395,7 +411,11 @@
 {#if p.args.showWatsonWilliams}
 	<details class="ww-panel" open>
 		<summary class="ww-summary">Watson-Williams test</summary>
-		{#if ww}
+		{#if isWeighted}
+			<p class="rayleigh-hint">
+				Watson-Williams compares raw-angle columns; it is unavailable when a time is wired.
+			</p>
+		{:else if ww}
 			<p>
 				F({ww.df1}, {ww.df2}) = {fmt(ww.F, 4)}, p = {Number.isFinite(ww.pValue)
 					? ww.pValue.toPrecision(4)

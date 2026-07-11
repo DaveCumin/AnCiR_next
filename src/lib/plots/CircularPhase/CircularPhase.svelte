@@ -25,8 +25,11 @@
 	import { watsonWilliams, toRadiansColumn } from '$lib/utils/circular.js';
 	import { pUpperFromF } from '$lib/utils/fdist.js';
 
-	// Radial placement constants for the timed (value-radius clock) render mode.
-	const TIMED_INNER_RIM = 0.12;
+	// Shared radial placement constants: the inner/outer rim fractions of the
+	// plot radius, used by both the timed (value-radius clock) valueScale range
+	// and the untimed placeCircularPoints stack/bin/rim placement.
+	const INNER_RIM = 0.12;
+	const OUTER_RIM = 0.98;
 
 	// NOTE on field naming: sibling time-optional plots (Periodogram, Actogram,
 	// Correlogram, FFT) all expose 'time'/'values' as the PUBLIC wiring port
@@ -128,7 +131,16 @@
 		showWatsonWilliams = $state(false);
 		padding = $state({ top: 24, right: 20, bottom: 30, left: 20 });
 
-		displayPeriod = $derived(displayPeriodFor(this.unit, this.period));
+		// True when any series has a wired time column (value-radius clock mode).
+		// A timed series' angles are always expressed in period-space HOURS
+		// (columnToPhaseHours / weightedSeriesStats) regardless of `unit`, so
+		// displayPeriod must stay in hours whenever a timed series is present —
+		// otherwise the polar projection's period (radians/degrees) mismatches
+		// the timed data's hours, mis-scaling the clock.
+		hasTimed = $derived(this.data.some((d) => d.timeWired));
+		displayPeriod = $derived(
+			this.hasTimed ? displayPeriodFor('hours', this.period) : displayPeriodFor(this.unit, this.period)
+		);
 		plotSize = $derived(
 			Math.max(
 				40,
@@ -199,8 +211,8 @@
 			if (dataIN && Object.keys(dataIN).includes('time')) {
 				payload = {
 					...dataIN,
-					x: { refId: dataIN.time.refId },
-					y: { refId: dataIN.values.refId }
+					x: { refId: dataIN.time?.refId ?? -1 },
+					y: { refId: dataIN.values?.refId ?? -1 }
 				};
 			}
 			this.data.push(new CircularPhaseSeries(this, payload));
@@ -382,8 +394,8 @@
 	{@const cx = plot.padding.left + size / 2}
 	{@const cy = plot.padding.top + size / 2}
 	{@const P = createPolar({ cx, cy, radius: (size / 2) * 0.82, period: plot.displayPeriod })}
-	{@const hasTimed = plot.data.some((d) => d.timeWired)}
-	{@const valueScale = scaleLinear().domain(plot.valueAxis).range([TIMED_INNER_RIM, 1])}
+	{@const hasTimed = plot.hasTimed}
+	{@const valueScale = scaleLinear().domain(plot.valueAxis).range([INNER_RIM, OUTER_RIM])}
 	<svg
 		id={'plot' + plot.parentBox.id}
 		width={plot.parentBox.width}
@@ -430,8 +442,8 @@
 						dotRadius: d.radius,
 						plotRadius: P.radius,
 						maxStack: plot.untimedMaxStack,
-						innerRim: 0.12,
-						outerRim: 0.98
+						innerRim: INNER_RIM,
+						outerRim: OUTER_RIM
 					})}
 					<path
 						d={placed
@@ -497,15 +509,20 @@
 
 		<div class="control-component">
 			<div class="control-component-title"><p>Angle</p></div>
+			{#if theData.hasTimed}
+				<p class="cp-hint">A time is wired: angle is always clock hours.</p>
+			{/if}
 			<div class="control-input-horizontal">
-				<ControlInput label="Unit">
-					<select bind:value={theData.unit}>
-						<option value="radians">Radians</option>
-						<option value="degrees">Degrees</option>
-						<option value="hours">Clock hours</option>
-					</select>
-				</ControlInput>
-				{#if theData.unit === 'hours'}
+				{#if !theData.hasTimed}
+					<ControlInput label="Unit">
+						<select bind:value={theData.unit}>
+							<option value="radians">Radians</option>
+							<option value="degrees">Degrees</option>
+							<option value="hours">Clock hours</option>
+						</select>
+					</ControlInput>
+				{/if}
+				{#if theData.hasTimed || theData.unit === 'hours'}
 					<ControlInput label="Period (h)">
 						<NumberWithUnits bind:value={theData.period} min="0.1" step="1" />
 					</ControlInput>
