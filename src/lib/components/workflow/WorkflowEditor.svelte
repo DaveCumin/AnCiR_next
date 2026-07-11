@@ -24,6 +24,7 @@
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
+	import { canonicalNodeViz, plotDataFromSpec } from '$lib/plots/canonicalNodeViz.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { deleteTableProcess, detachColumnSetFromTP } from '$lib/core/TableProcess.svelte';
 	import {
@@ -651,6 +652,30 @@
 		const h = getNodeRenderHeight(node);
 		panX = rect.width / 2 - (pos.x + w / 2) * zoom;
 		panY = rect.height / 2 - (pos.y + h / 2) * zoom;
+	}
+
+	// Quick-Plot: spawn the node's canonical plot (undoable), or focus the existing
+	// one if this node already has a quick plot on the canvas.
+	function handleQuickPlot(node) {
+		const existing = core.plots.find((p) => p.sourceNodeId === node.id);
+		if (existing) {
+			appState.canvasSelectedNodeId = `plot_${existing.id}`;
+			tick().then(() => panToNode(`plot_${existing.id}`));
+			return;
+		}
+		const spec = canonicalNodeViz(node);
+		if (!spec) return;
+		const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id] ?? { x: 0, y: 0 };
+		const plotData = plotDataFromSpec(spec, {
+			x: pos.x + getNodeWidth(node) + 40,
+			y: pos.y,
+			sourceNodeId: node.id
+		});
+		const p = mutationService.addPlot(plotData);
+		if (p) {
+			appState.canvasSelectedNodeId = `plot_${p.id}`;
+			tick().then(() => panToNode(`plot_${p.id}`));
+		}
 	}
 
 	// Find/select from the Data Sources panel: when a focus request comes in,
