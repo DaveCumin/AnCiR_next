@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { placeCircularPoints } from './circularStack.js';
+import { placeCircularPoints, maxStackHeight } from './circularStack.js';
 
 const base = { period: 24, dotRadius: 3, plotRadius: 100, baseRim: 0.9 };
 
@@ -31,5 +31,29 @@ describe('placeCircularPoints', () => {
 		const r = out.map((p) => p.r01).sort((a, b) => a - b);
 		expect(r[0]).toBeCloseTo(0.9, 9);
 		expect(r[2]).toBeCloseTo(0.9 + 2 * step, 9);
+	});
+});
+
+describe('maxStackHeight', () => {
+	it('bin mode counts the fullest bin across series', () => {
+		const a = [1.1, 1.2, 1.3]; // all in bin [1,2)
+		const b = [1.4, 5.0];
+		expect(maxStackHeight([a, b], { placement: 'bin', period: 24, binWidth: 1 })).toBe(3);
+	});
+	it('rim mode is 1', () => {
+		expect(maxStackHeight([[1, 2, 3]], { placement: 'rim', period: 24 })).toBe(1);
+	});
+});
+
+describe('placeCircularPoints fit-scaling', () => {
+	it('keeps the tallest bin inside the rim via maxStack', () => {
+		const vals = Array.from({ length: 50 }, () => 7); // one huge column
+		const out = placeCircularPoints(vals, {
+			placement: 'bin', period: 24, binWidth: 1, dotRadius: 3, plotRadius: 100,
+			maxStack: 50, innerRim: 0.12, outerRim: 0.98
+		});
+		expect(out.length).toBe(50);
+		expect(Math.max(...out.map((p) => p.r01))).toBeLessThanOrEqual(0.98 + 1e-9);
+		expect(Math.min(...out.map((p) => p.r01))).toBeGreaterThanOrEqual(0.12 - 1e-9);
 	});
 });
