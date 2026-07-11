@@ -692,9 +692,12 @@
 			}
 
 			const chart = new Boxplotclass(parent, null);
-			chart.padding = json.padding;
-			chart.xlimsIN = json.xlimsIN;
-			chart.ylimsIN = json.ylimsIN;
+			// Keep the constructor defaults when a field is absent — a partial inner
+			// (e.g. a Quick-Plot spawn passing just `{ data }`) must still yield valid
+			// layout, or plotheight reads `undefined.top`. Mirrors CircularPhase.
+			chart.padding = json.padding ?? chart.padding;
+			chart.xlimsIN = json.xlimsIN ?? chart.xlimsIN;
+			chart.ylimsIN = json.ylimsIN ?? chart.ylimsIN;
 
 			// Support both new AxisClass format and old individual properties
 			if (json.xAxis) {

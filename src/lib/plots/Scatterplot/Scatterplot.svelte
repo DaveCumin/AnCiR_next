@@ -573,8 +573,11 @@
 			}
 
 			const scatter = new Scatterplotclass(parent, null);
-			scatter.padding = json.padding;
-			scatter.xlimsIN = json.xlimsIN;
+			// Keep the constructor defaults when a field is absent — a partial inner
+			// (e.g. a Quick-Plot spawn passing just `{ data }`) must still yield valid
+			// layout, or plotheight reads `undefined.top`. Mirrors CircularPhase.
+			scatter.padding = json.padding ?? scatter.padding;
+			scatter.xlimsIN = json.xlimsIN ?? scatter.xlimsIN;
 			scatter.xLogScale = json.xLogScale ?? false;
 			scatter.ylimsLeftIN = json.ylimsLeftIN || [null, null];
 			scatter.ylimsRightIN = json.ylimsRightIN || [null, null];
@@ -608,8 +611,6 @@
 			}
 
 			if (json.data) {
-				console.log('json.data', $state.snapshot(json.data));
-
 				scatter.data = json.data.map((d) => ScatterDataclass.fromJSON(d, scatter));
 			} else if (json.dataIn) {
 				// Creation-time hint: wire raw column refs via the live addData path so
