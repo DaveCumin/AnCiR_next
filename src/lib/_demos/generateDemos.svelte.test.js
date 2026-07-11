@@ -50,6 +50,15 @@ const OUT_DIR = join(process.cwd(), 'static', 'sessions', 'demos');
 const RAW_COLOUR = '#234154';
 const FIT_COLOUR = '#BE796B';
 
+
+// make sure datasets are not lost
+const DATASETS = [
+  { id: 'dataset-testdata', name: 'Test data', family: 'Sources',
+    description: 'Data with two simulated rhythms and outliers',
+    url: 'sessions/demos/testData.csv', kind: 'dataset',
+    keywords: 'test data data with two simulated rhythms and outliers sources csv url example' }
+];
+
 // Order the gallery the way the node palette is ordered (NodePalette.svelte).
 const FAMILY_ORDER = [
 	'Sources',
@@ -392,7 +401,7 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 		appConsts.plotMap = await loadPlots();
 		appConsts.tableProcessMap = await loadTableProcesses();
 
-		const manifest = [];
+		const manifest = [...DATASETS]; //make sure not to lose datasets
 		const write = (file, entry) => {
 			writeFileSync(join(OUT_DIR, file), outputCoreAsJson(), 'utf8');
 			manifest.push(entry);
