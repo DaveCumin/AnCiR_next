@@ -1019,6 +1019,38 @@
         "pValue",
         "meanAngle"
       ]
+    },
+    {
+      "id": "util-weighted-circmean-gaps",
+      "kind": "pureUtil",
+      "jsFn": "weightedCircularMean",
+      "pyFunc": "weighted_circular_mean",
+      "input": {
+        "angles": [
+          0.0,
+          null,
+          "",
+          "x",
+          1.2
+        ],
+        "weights": [
+          1,
+          5,
+          2,
+          3,
+          4
+        ]
+      },
+      "argRefs": [
+        "angles",
+        "weights"
+      ],
+      "compareScalars": [
+        "n",
+        "R",
+        "meanAngle",
+        "W"
+      ]
     }
   ]
 }

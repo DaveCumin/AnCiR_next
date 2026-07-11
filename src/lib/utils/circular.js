@@ -49,6 +49,13 @@ export function toRadiansColumn(data, unit = 'radians', period = 24) {
 	});
 }
 
+/** Coerce a cell to a number, mapping null/undefined/blank/non-numeric to NaN. */
+function cleanNum(v) {
+	if (v == null || (typeof v === 'string' && v.trim() === '')) return NaN;
+	const n = Number(v);
+	return Number.isFinite(n) ? n : NaN;
+}
+
 /** Keep only finite entries; convert to Number. */
 function cleanAngles(anglesRad) {
 	const out = [];
@@ -127,8 +134,8 @@ export function weightedCircularMean(anglesRad, weights) {
 	let C = 0, S = 0, W = 0, n = 0;
 	const len = Math.min(anglesRad?.length ?? 0, weights?.length ?? 0);
 	for (let i = 0; i < len; i++) {
-		const a = Number(anglesRad[i]);
-		const w = Number(weights[i]);
+		const a = cleanNum(anglesRad[i]);
+		const w = cleanNum(weights[i]);
 		if (!Number.isFinite(a) || !Number.isFinite(w)) continue;
 		C += w * Math.cos(a);
 		S += w * Math.sin(a);
@@ -155,8 +162,8 @@ export function weightedRayleigh(anglesRad, weights) {
 	let sumSq = 0;
 	const len = Math.min(anglesRad?.length ?? 0, weights?.length ?? 0);
 	for (let i = 0; i < len; i++) {
-		const a = Number(anglesRad[i]);
-		const w = Number(weights[i]);
+		const a = cleanNum(anglesRad[i]);
+		const w = cleanNum(weights[i]);
 		if (!Number.isFinite(a) || !Number.isFinite(w)) continue;
 		sumSq += w * w;
 	}

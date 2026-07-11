@@ -231,6 +231,13 @@ describe('weightedCircularMean', () => {
 		const bad = weightedCircularMean([0, 1], [0, 0]);
 		expect(Number.isNaN(bad.R)).toBe(true);
 	});
+	it('drops null/blank/non-numeric cells (does not treat them as phase 0)', () => {
+		const r = weightedCircularMean([0, null, '', 'x', 1.2], [1, 5, 2, 3, 4]);
+		expect(r.n).toBe(2); // only the 0 and 1.2 entries survive
+		// mean sits between 0 and 1.2 (weighted 1 vs 4), NOT dragged toward a spurious 0-weighted null
+		expect(r.meanAngle).toBeGreaterThan(0.5);
+		expect(r.meanAngle).toBeLessThan(1.2);
+	});
 });
 
 describe('weightedRayleigh', () => {
