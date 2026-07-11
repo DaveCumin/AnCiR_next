@@ -780,13 +780,15 @@
         "out": {
           "R": -1,
           "z": -1,
-          "pvalue": -1
+          "pvalue": -1,
+          "acrophase": -1
         }
       },
       "compareOutputs": [
         "R",
         "z",
-        "pvalue"
+        "pvalue",
+        "acrophase"
       ]
     },
     {

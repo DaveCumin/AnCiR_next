@@ -3660,7 +3660,13 @@ def tp_rayleightest(args, cols, raw_data, _sv):
                       for h in _column_to_phase_hours(time_col.get_data(), time_col.type)]
             s = weighted_rayleigh(angles, y_col.get_data())
             if s['n'] > 0:
-                mean_value = ((s['meanAngle'] / (2 * math.pi)) * period
+                # Mirrors circularPlot.js weightedSeriesStats, which scales by
+                # displayPeriodFor('hours', period): falls back to 24 when
+                # period <= 0 (same fallback timeToAngleRad already applies).
+                display_period = (period if (isinstance(period, (int, float))
+                                              and math.isfinite(period) and period > 0)
+                                   else 24)
+                mean_value = ((s['meanAngle'] / (2 * math.pi)) * display_period
                               if math.isfinite(s['meanAngle']) else _NAN)
                 per_y[y_id] = {'R': s['R'], 'z': s['z'], 'pValue': s['pValue'],
                                'meanAngle': s['meanAngle'], 'meanValue': mean_value}
