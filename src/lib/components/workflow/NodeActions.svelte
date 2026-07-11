@@ -21,6 +21,9 @@
 		// visible (as a flag) even when not revealed.
 		noteNodeId = null,
 		hasNote = false,
+		// Quick-plot: spawn the node's canonical plot. Shown for analysis/transform nodes.
+		showQuickPlot = false,
+		onQuickPlot,
 		// Collapse/expand toggle (workflow nodes). `expanded` picks the glyph.
 		showCollapse = false,
 		expanded = true,
@@ -50,6 +53,23 @@
 		<div class="na-note" onpointerdown={stop} onmousedown={stop} role="presentation">
 			<NodeNoteButton nodeId={noteNodeId} />
 		</div>
+	{/if}
+
+	{#if showQuickPlot}
+		<button
+			type="button"
+			class="na-btn na-action"
+			aria-label="Quick plot"
+			onpointerdown={stop}
+			onmousedown={stop}
+			onclick={(e) => {
+				stop(e);
+				onQuickPlot?.(e);
+			}}
+			{@attach tooltip('Quick plot')}
+		>
+			<Icon name="scatterplot" width={14} height={14} />
+		</button>
 	{/if}
 
 	{#if showMaximise}

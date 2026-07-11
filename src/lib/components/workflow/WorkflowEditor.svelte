@@ -24,6 +24,7 @@
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
+	import { canonicalNodeViz, plotDataFromSpec } from '$lib/plots/canonicalNodeViz.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { deleteTableProcess, detachColumnSetFromTP } from '$lib/core/TableProcess.svelte';
 	import {
@@ -252,12 +253,21 @@
 		const ids = new Set(allNodes.map((n) => n.id));
 		const out = [];
 		for (const node of allNodes) {
-			if (node.type !== 'plot' || node.plotObj?.type !== 'dataview') continue;
-			const srcId = node.plotObj?.plot?.sourcePlotId;
-			if (srcId == null) continue;
-			const fromId = `plot_${srcId}`;
-			if (!ids.has(fromId)) continue;
-			out.push({ fromId, toId: node.id, type: 'dataview', fromPort: null, toPort: null });
+			if (node.type !== 'plot') continue;
+			// Data View → its source plot.
+			if (node.plotObj?.type === 'dataview') {
+				const srcId = node.plotObj?.plot?.sourcePlotId;
+				const fromId = srcId != null ? `plot_${srcId}` : null;
+				if (fromId && ids.has(fromId)) out.push({ fromId, toId: node.id, type: 'reference', fromPort: null, toPort: null });
+			}
+			// Quick plot → its source node.
+			// A plot is either a Data View (sourcePlotId) or a quick plot (sourceNodeId), never both.
+			else if (node.plotObj?.sourceNodeId) {
+				const srcNode = node.plotObj.sourceNodeId;
+				if (ids.has(srcNode)) {
+					out.push({ fromId: srcNode, toId: node.id, type: 'reference', fromPort: null, toPort: null });
+				}
+			}
 		}
 		return out;
 	});
@@ -651,6 +661,33 @@
 		const h = getNodeRenderHeight(node);
 		panX = rect.width / 2 - (pos.x + w / 2) * zoom;
 		panY = rect.height / 2 - (pos.y + h / 2) * zoom;
+	}
+
+	// Quick-Plot: spawn the node's canonical plot (undoable), or focus the existing
+	// one if this node already has a quick plot on the canvas.
+	function handleQuickPlot(node) {
+		const existing = core.plots.find((p) => p.sourceNodeId === node.id);
+		if (existing) {
+			appState.canvasSelectedNodeId = `plot_${existing.id}`;
+			tick().then(() => panToNode(`plot_${existing.id}`));
+			return;
+		}
+		const spec = canonicalNodeViz(node);
+		if (!spec) {
+			addNotification('Wire an input into this node first to quick-plot it.');
+			return;
+		}
+		const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id] ?? { x: 0, y: 0 };
+		const plotData = plotDataFromSpec(spec, {
+			x: pos.x + getNodeWidth(node) + 40,
+			y: pos.y,
+			sourceNodeId: node.id
+		});
+		const p = mutationService.addPlot(plotData);
+		if (p) {
+			appState.canvasSelectedNodeId = `plot_${p.id}`;
+			tick().then(() => panToNode(`plot_${p.id}`));
+		}
 	}
 
 	// Find/select from the Data Sources panel: when a focus request comes in,
@@ -3856,6 +3893,8 @@
 									deleteTooltip="Delete node"
 									showUncombine={node.type === 'composite'}
 									onUncombine={() => removeComposite(node.id)}
+									showQuickPlot={node.type === 'tableprocess' || node.type === 'process'}
+									onQuickPlot={() => handleQuickPlot(node)}
 								/>
 							</div>
 						{/if}

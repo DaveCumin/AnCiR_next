@@ -44,7 +44,7 @@
 			{@const k = edgeKey(edge)}
 			{@const isSelected = selectedEdgeKey === k}
 			{@const isSpliceTarget = dropTargetEdgeKey === k}
-			{@const isReference = edge.type === 'dataview'}
+			{@const isReference = edge.type === 'reference'}
 			<g style="opacity:{edgeOpacity(edge)};">
 				<!-- Reference edges (Data View → its source plot) are derived, not wired,
 				     so they aren't selectable/deletable and carry no data-flow dot. -->
