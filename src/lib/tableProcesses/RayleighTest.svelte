@@ -21,6 +21,7 @@
 		watsonWilliams,
 		toRadiansColumn
 	} from '$lib/utils/circular.js';
+	import { weightedSeriesStats } from '$lib/utils/circularPlot.js';
 	// A bare `export { x } from './y.js'` re-export does NOT bind `x` in this
 	// module's own scope, and pUpperFromF is used internally below (in
 	// watsonWilliams's callback) — so import it normally and re-export it.
@@ -31,15 +32,29 @@
 
 	const defaults = new Map([
 		['yIN', { val: [] }],
+		// Optional: when the Y values were measured. When wired, the test switches
+		// to an amplitude-weighted mode (weightedSeriesStats): the time column
+		// supplies the angle, the Y value is the weight, and `unit` is ignored.
+		['timeIN', { val: -1 }],
 		['unit', { val: 'radians' }], // radians | degrees | hours
 		['period', { val: 24 }], // full cycle when unit === 'hours'
 		// Optional add-on: also run the Watson-Williams equal-mean-direction test
 		// across the Y columns (off by default), like the boxplot's pairwise panel.
 		['showWatsonWilliams', { val: false }],
-		// Scalar-metric output ports. R/z/pvalue are the always-on Rayleigh metrics
-		// (one value per Y). F/ww_pvalue are the optional Watson-Williams metrics
-		// (a single value; NaN when the test is off).
-		['out', { R: { val: -1 }, z: { val: -1 }, pvalue: { val: -1 }, F: { val: -1 }, ww_pvalue: { val: -1 } }],
+		// Scalar-metric output ports. R/z/pvalue/acrophase are the always-on
+		// Rayleigh metrics (one value per Y). F/ww_pvalue are the optional
+		// Watson-Williams metrics (a single value; NaN when the test is off).
+		[
+			'out',
+			{
+				R: { val: -1 },
+				z: { val: -1 },
+				pvalue: { val: -1 },
+				F: { val: -1 },
+				ww_pvalue: { val: -1 },
+				acrophase: { val: -1 }
+			}
+		],
 		['valid', { val: false }],
 		['forcollected', { val: false }],
 		['collectedType', { val: 'rayleightest' }]
@@ -49,32 +64,42 @@
 		displayName,
 		defaults,
 		func: rayleigh,
-		columnIdFields: { scalar: [], array: ['yIN'] },
+		columnIdFields: { scalar: ['timeIN'], array: ['yIN'] },
 		nodeSpec: {
 			id: 'tableprocess.rayleightest',
-			inputs: [{ name: 'yIN', kind: 'column', cardinality: 'many' }],
+			inputs: [
+				{ name: 'timeIN', kind: 'column', cardinality: 'one' },
+				{ name: 'yIN', kind: 'column', cardinality: 'many' }
+			],
 			outputs: [
 				{ name: 'R', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'z', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'F', kind: 'column', cardinality: 'one', metric: true },
-				{ name: 'ww_pvalue', kind: 'column', cardinality: 'one', metric: true }
+				{ name: 'ww_pvalue', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'acrophase', kind: 'column', cardinality: 'one', metric: true }
 			]
 		}
 	};
 
-	const METRIC_KEYS = ['R', 'z', 'pvalue', 'F', 'ww_pvalue'];
+	const METRIC_KEYS = ['R', 'z', 'pvalue', 'F', 'ww_pvalue', 'acrophase'];
 
 	/** Convert a raw column of angles to radians per the chosen unit. */
 	function anglesToRadians(data, unit, period) {
 		return toRadiansColumn(data, unit, period);
 	}
 
-	// Rayleigh uniformity: returns { perY: { [yId]: {n,R,z,pValue,meanAngle} }, anyValid, yINs }.
+	// Rayleigh uniformity: returns { perY: { [yId]: {n,R,z,pValue,meanAngle,meanValue} }, anyValid, yINs }.
+	// When `timeIN` resolves to a column, switches to an amplitude-weighted mode:
+	// the time column supplies the angle (via weightedSeriesStats), the Y value is
+	// the weight, and `unit` is ignored (time is always converted via its own
+	// column type). Otherwise falls back to the original unweighted path.
 	export function evaluateRayleigh(argsIN) {
 		const yINs = normalizeYInputs(argsIN.yIN);
 		const unit = argsIN.unit ?? 'radians';
 		const period = Number.isFinite(argsIN.period) ? argsIN.period : 24;
+		const timeIN = argsIN.timeIN;
+		const timeCol = timeIN != null && timeIN !== -1 ? getColumnById(timeIN) : null;
 
 		const perY = {};
 		let anyValid = false;
@@ -82,11 +107,31 @@
 			if (yId == null || yId === -1) continue;
 			const yCol = getColumnById(yId);
 			if (!yCol) continue;
+
+			if (timeCol) {
+				const s = weightedSeriesStats(timeCol.getData(), timeCol.type, yCol.getData(), period);
+				if (s.n > 0) {
+					perY[yId] = {
+						n: s.n,
+						R: s.R,
+						z: s.z,
+						pValue: s.pValue,
+						meanAngle: s.meanAngle,
+						meanValue: s.meanValue
+					};
+					anyValid = true;
+				}
+				continue;
+			}
+
 			const angles = anglesToRadians(yCol.getData(), unit, period);
 			const res = rayleighTest(angles);
 			if (res.n > 0) {
 				const mean = circularMean(angles);
-				perY[yId] = { ...res, meanAngle: mean.meanAngle };
+				const meanValue = Number.isFinite(res.meanAngle)
+					? (res.meanAngle / (2 * Math.PI)) * period
+					: NaN;
+				perY[yId] = { ...res, meanAngle: mean.meanAngle, meanValue };
 				anyValid = true;
 			}
 		}
@@ -120,6 +165,7 @@
 		writeOutputColumn(argsIN.out?.R, perYArr('R'), { processHash });
 		writeOutputColumn(argsIN.out?.z, perYArr('z'), { processHash });
 		writeOutputColumn(argsIN.out?.pvalue, perYArr('pValue'), { processHash });
+		writeOutputColumn(argsIN.out?.acrophase, perYArr('meanValue'), { processHash });
 		// Watson-Williams (optional): a single value across all groups; NaN when the
 		// test is off or degenerate, so the ports stay numeric + present.
 		const wwValid = ww && ww.valid;
@@ -150,6 +196,7 @@
 
 	migrateLegacyYIN(p.args);
 	if (typeof p.args.out !== 'object' || p.args.out === null) p.args.out = {};
+	if (p.args.timeIN === undefined) p.args.timeIN = -1;
 	if (p.args.showWatsonWilliams === undefined) {
 		// Migrate the old testType selector: 'watsonwilliams' → optional test ON.
 		p.args.showWatsonWilliams = p.args.testType === 'watsonwilliams';
@@ -164,6 +211,9 @@
 	let yCols = $derived.by(() =>
 		(p.args.yIN ?? []).map((id) => getColumnByIdLocal(id)).filter(Boolean)
 	);
+	let timeCol = $derived.by(() =>
+		p.args.timeIN != null && p.args.timeIN !== -1 ? getColumnByIdLocal(p.args.timeIN) : null
+	);
 	let outIds = $derived.by(() => {
 		const ids = [];
 		for (const key of Object.keys(p.args.out ?? {})) {
@@ -175,6 +225,8 @@
 	let getHash = $derived.by(() => {
 		let out = '';
 		for (const col of yCols) out += col?.getDataHash ?? '';
+		out += p.args.timeIN ?? -1;
+		out += timeCol?.getDataHash ?? '';
 		out += p.args.showWatsonWilliams ? 'ww' : '';
 		out += p.args.unit ?? 'radians';
 		out += p.args.period ?? 24;
@@ -226,11 +278,18 @@
 	let ww = $derived.by(() =>
 		p.args.showWatsonWilliams && rayleighData?.ww?.valid ? rayleighData.ww : null
 	);
+	// Weighted (time-wired) mode ignores `unit` — the time column supplies the
+	// angle directly — but always needs `period` to convert clock time to phase.
+	let isWeighted = $derived(!!timeCol);
 	const fmt = (v, dp = 3) => (Number.isFinite(v) ? v.toFixed(dp) : '—');
 </script>
 
 <div class="control-input-vertical">
 	{#if !hideInputs}
+		<div class="control-input">
+			<p>Time (optional — when the values were measured)</p>
+			<ColumnSelector bind:value={p.args.timeIN} excludeColIds={yExcludeIds} />
+		</div>
 		<div class="control-input">
 			<p>Angle columns (y)</p>
 			<ColumnSelector multiple bind:value={p.args.yIN} excludeColIds={yExcludeIds} />
@@ -238,14 +297,16 @@
 	{/if}
 
 	<div class="control-input-horizontal">
-		<ControlInput label="Unit">
-			<select bind:value={p.args.unit}>
-				<option value="radians">Radians</option>
-				<option value="degrees">Degrees</option>
-				<option value="hours">Clock hours</option>
-			</select>
-		</ControlInput>
-		{#if p.args.unit === 'hours'}
+		{#if !isWeighted}
+			<ControlInput label="Unit">
+				<select bind:value={p.args.unit}>
+					<option value="radians">Radians</option>
+					<option value="degrees">Degrees</option>
+					<option value="hours">Clock hours</option>
+				</select>
+			</ControlInput>
+		{/if}
+		{#if isWeighted || p.args.unit === 'hours'}
 			<ControlInput label="Period (h)">
 				<NumberWithUnits bind:value={p.args.period} min="0.1" step="1" />
 			</ControlInput>
@@ -271,6 +332,9 @@
 					<th>z</th>
 					<th>p</th>
 					<th>Mean angle</th>
+					{#if isWeighted}
+						<th>Acrophase</th>
+					{/if}
 				</tr>
 			</thead>
 			<tbody>
@@ -298,6 +362,17 @@
 							/>
 						</td>
 						<td>{fmt(r.meanAngle, 3)}</td>
+						{#if isWeighted}
+							<td>
+								{fmt(r.meanValue, 2)}
+								<StoreValueButton
+									label="Acrophase"
+									getter={() => r.meanValue}
+									defaultName={`rayleigh_acrophase_${r.name}`}
+									source="RayleighTest"
+								/>
+							</td>
+						{/if}
 					</tr>
 				{/each}
 			</tbody>
@@ -306,6 +381,11 @@
 			R is the mean resultant length (0 = uniform, 1 = perfectly clustered). A small p rejects
 			uniformity: the angles have a preferred direction. Wire any port into <em>Compare groups</em>
 			or a boxplot.
+			{#if isWeighted}
+				With a time column wired, each Y value weights its timestamp's angle (amplitude-weighted
+				mean direction) — <em>Unit</em> is ignored, and <em>Acrophase</em> reports the weighted mean
+				time-of-peak in period units.
+			{/if}
 		</p>
 	</div>
 {:else if mounted}
