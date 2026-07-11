@@ -3,7 +3,7 @@
 // the Circular phase plot, and expose per-series Rayleigh stats plus the
 // across-group Watson-Williams test. Pure; no Svelte, no @stdlib (the F p-value
 // arrives as a callback so this stays dependency-light and testable).
-import { rayleighTest, toRadiansColumn, watsonWilliams } from '$lib/utils/circular.js';
+import { rayleighTest, toRadiansColumn, watsonWilliams, weightedRayleigh } from '$lib/utils/circular.js';
 
 const TAU = Math.PI * 2;
 
@@ -61,4 +61,48 @@ export function cleanNumericColumn(data) {
 		const n = Number(v);
 		return Number.isFinite(n) ? n : NaN;
 	});
+}
+
+const TAU_P = Math.PI * 2;
+
+/**
+ * Convert a column to phase hours for polar plotting. A `time`-type column's
+ * getData() returns epoch-ms → absolute hours (÷3.6e6); a numeric column's
+ * values are raw hours. Gaps/blank/non-numeric → NaN.
+ * @param {any[]} data
+ * @param {string} columnType
+ * @returns {number[]}
+ */
+export function columnToPhaseHours(data, columnType) {
+	return (data ?? []).map((v) => {
+		if (v == null || (typeof v === 'string' && v.trim() === '')) return NaN;
+		const n = Number(v);
+		if (!Number.isFinite(n)) return NaN;
+		return columnType === 'time' ? n / 3_600_000 : n;
+	});
+}
+
+/**
+ * Fold hours modulo the period and map to radians (0 at phase 0).
+ * @param {number} hours @param {number} period @returns {number}
+ */
+export function timeToAngleRad(hours, period) {
+	if (!Number.isFinite(hours)) return NaN;
+	const p = period > 0 ? period : 24;
+	return ((((hours % p) + p) % p) / p) * TAU_P;
+}
+
+/**
+ * Amplitude-weighted circular stats for a (time, value) series. Angle from
+ * time (folded by period), weight from value. meanValue is the acrophase in
+ * the period's hours.
+ * @returns {{n,nEff,R,meanAngle,z,pValue,W,meanValue:number}}
+ */
+export function weightedSeriesStats(timeData, timeType, valueData, period) {
+	const angles = columnToPhaseHours(timeData, timeType).map((h) => timeToAngleRad(h, period));
+	const weights = cleanNumericColumn(valueData);
+	const r = weightedRayleigh(angles, weights);
+	const dp = displayPeriodFor('hours', period);
+	const meanValue = Number.isFinite(r.meanAngle) ? (r.meanAngle / TAU_P) * dp : NaN;
+	return { ...r, meanValue };
 }

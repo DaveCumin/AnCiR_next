@@ -3,7 +3,10 @@ import {
 	displayPeriodFor,
 	seriesStats,
 	groupsWatsonWilliams,
-	cleanNumericColumn
+	cleanNumericColumn,
+	columnToPhaseHours,
+	timeToAngleRad,
+	weightedSeriesStats
 } from './circularPlot.js';
 import { pUpperFromF } from './fdist.js';
 
@@ -63,5 +66,34 @@ describe('cleanNumericColumn', () => {
 		expect(Number.isNaN(out[0])).toBe(true);
 		expect(Number.isNaN(out[1])).toBe(true);
 		expect(out[2]).toBe(0); // a real 0 stays 0
+	});
+});
+
+describe('columnToPhaseHours', () => {
+	it('numeric column keeps raw hours; gaps -> NaN', () => {
+		expect(columnToPhaseHours([7.5, null, '', 'x', 19], 'number')).toEqual([7.5, NaN, NaN, NaN, 19]);
+	});
+	it('time column converts epoch-ms -> absolute hours', () => {
+		// 1 hour = 3_600_000 ms
+		expect(columnToPhaseHours([3_600_000, 7_200_000], 'time')).toEqual([1, 2]);
+	});
+});
+
+describe('timeToAngleRad', () => {
+	it('folds mod period and maps to radians', () => {
+		expect(timeToAngleRad(0, 24)).toBeCloseTo(0, 9);
+		expect(timeToAngleRad(6, 24)).toBeCloseTo(Math.PI / 2, 9);
+		expect(timeToAngleRad(30, 24)).toBeCloseTo(timeToAngleRad(6, 24), 9); // wraps
+	});
+});
+
+describe('weightedSeriesStats', () => {
+	it('heavy activity near hour 6 gives acrophase ~6 and high R', () => {
+		const time = [5, 6, 7, 18];
+		const value = [10, 20, 10, 1]; // concentrated ~6h
+		const s = weightedSeriesStats(time, 'number', value, 24);
+		expect(s.meanValue).toBeGreaterThan(5);
+		expect(s.meanValue).toBeLessThan(7);
+		expect(s.R).toBeGreaterThan(0.5);
 	});
 });
