@@ -406,7 +406,7 @@ const meta = new Map([
 			family: 'Analysis',
 			nodeIcon: 'circular-stats',
 			description:
-				'Circular statistics on phase/angle columns: the Rayleigh uniformity test (R, z, p) per column, with an optional Watson-Williams equal-mean-direction test (F, p) across columns.'
+				'Circular statistics on phase/angle columns: the Rayleigh uniformity test (R, z, p, acrophase) per column, with an optional Watson-Williams equal-mean-direction test (F, p) across columns. Wiring an optional time column (hours or timestamp, folded by period) switches to an amplitude-weighted mean vector/acrophase; without it, values are treated as raw angles.'
 		}
 	],
 	[
@@ -440,7 +440,7 @@ const meta = new Map([
 			family: 'Plots',
 			nodeIcon: 'circular-stats',
 			description:
-				'Circular phase plot: one or more phase columns on an adjustable-period clock, each a coloured group with its Rayleigh mean-resultant vector; optional rose wedges and a Watson-Williams equal-mean-direction test.'
+				'Circular phase plot: one or more phase columns on an adjustable-period clock, each a coloured group with its Rayleigh mean-resultant vector; optional rose wedges and a Watson-Williams equal-mean-direction test. Wiring an optional time column (hours or timestamp, folded by period) to a series plots it at its measurement time with radius = value instead, and the vector becomes an amplitude-weighted acrophase.'
 		}
 	]
 ]);

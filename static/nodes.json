@@ -54,11 +54,16 @@
       "displayName": "Circular phase plot",
       "kind": "plot",
       "family": "Plots",
-      "description": "Circular phase plot: one or more phase columns on an adjustable-period clock, each a coloured group with its Rayleigh mean-resultant vector; optional rose wedges and a Watson-Williams equal-mean-direction test.",
+      "description": "Circular phase plot: one or more phase columns on an adjustable-period clock, each a coloured group with its Rayleigh mean-resultant vector; optional rose wedges and a Watson-Williams equal-mean-direction test. Wiring an optional time column (hours or timestamp, folded by period) to a series plots it at its measurement time with radius = value instead, and the vector becomes an amplitude-weighted acrophase.",
       "hideFromPalette": false,
       "inputs": [
         {
-          "name": "column",
+          "name": "time",
+          "kind": "column",
+          "cardinality": "many"
+        },
+        {
+          "name": "values",
           "kind": "column",
           "cardinality": "many"
         }
@@ -1613,7 +1618,7 @@
         },
         {
           "name": "seed",
-          "default": 39370
+          "default": 99656
         },
         {
           "name": "distribution",
@@ -1634,9 +1639,14 @@
       "displayName": "Rayleigh test",
       "kind": "tableProcess",
       "family": "Analysis",
-      "description": "Circular statistics on phase/angle columns: the Rayleigh uniformity test (R, z, p) per column, with an optional Watson-Williams equal-mean-direction test (F, p) across columns.",
+      "description": "Circular statistics on phase/angle columns: the Rayleigh uniformity test (R, z, p, acrophase) per column, with an optional Watson-Williams equal-mean-direction test (F, p) across columns. Wiring an optional time column (hours or timestamp, folded by period) switches to an amplitude-weighted mean vector/acrophase; without it, values are treated as raw angles.",
       "hideFromPalette": false,
       "inputs": [
+        {
+          "name": "timeIN",
+          "kind": "column",
+          "cardinality": "one"
+        },
         {
           "name": "yIN",
           "kind": "column",
@@ -1684,6 +1694,12 @@
         },
         {
           "name": "ww_pvalue",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "acrophase",
           "kind": "column",
           "cardinality": "one",
           "metric": true
@@ -1891,7 +1907,7 @@
         },
         {
           "name": "startTime",
-          "default": 1783720316775
+          "default": 1783738727234
         },
         {
           "name": "stepHours",
@@ -1899,7 +1915,7 @@
         },
         {
           "name": "endTime",
-          "default": 1783806716775
+          "default": 1783825127234
         }
       ],
       "outputs": [
@@ -1922,7 +1938,7 @@
       "params": [
         {
           "name": "startTime",
-          "default": 1783720316790
+          "default": 1783738727249
         },
         {
           "name": "sections",

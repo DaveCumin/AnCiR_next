@@ -342,13 +342,13 @@
       "id": "tp-rayleightest",
       "name": "Rayleigh test",
       "family": "Analysis",
-      "description": "Circular statistics on phase/angle columns: the Rayleigh uniformity test (R, z, p) per column, with an optional Watson-Williams equal-mean-direction test (F, p) across columns.",
+      "description": "Circular statistics on phase/angle columns: the Rayleigh uniformity test (R, z, p, acrophase) per column, with an optional Watson-Williams equal-mean-direction test (F, p) across columns. Wiring an optional time column (hours or timestamp, folded by period) switches to an amplitude-weighted mean vector/acrophase; without it, values are treated as raw angles.",
       "url": "sessions/demos/demo-tp-rayleightest.json",
       "kind": "tableProcess",
       "showcases": [
         "RayleighTest"
       ],
-      "keywords": "rayleigh test circular statistics on phase/angle columns: the rayleigh uniformity test (r, z, p) per column, with an optional watson-williams equal-mean-direction test (f, p) across columns. analysis rayleightest"
+      "keywords": "rayleigh test circular statistics on phase/angle columns: the rayleigh uniformity test (r, z, p, acrophase) per column, with an optional watson-williams equal-mean-direction test (f, p) across columns. wiring an optional time column (hours or timestamp, folded by period) switches to an amplitude-weighted mean vector/acrophase; without it, values are treated as raw angles. analysis rayleightest"
     },
     {
       "id": "tp-circadianfunctionindex",
