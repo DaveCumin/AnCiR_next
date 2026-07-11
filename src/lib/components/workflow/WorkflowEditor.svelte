@@ -253,12 +253,18 @@
 		const ids = new Set(allNodes.map((n) => n.id));
 		const out = [];
 		for (const node of allNodes) {
-			if (node.type !== 'plot' || node.plotObj?.type !== 'dataview') continue;
-			const srcId = node.plotObj?.plot?.sourcePlotId;
-			if (srcId == null) continue;
-			const fromId = `plot_${srcId}`;
-			if (!ids.has(fromId)) continue;
-			out.push({ fromId, toId: node.id, type: 'dataview', fromPort: null, toPort: null });
+			if (node.type !== 'plot') continue;
+			// Data View → its source plot.
+			if (node.plotObj?.type === 'dataview') {
+				const srcId = node.plotObj?.plot?.sourcePlotId;
+				const fromId = srcId != null ? `plot_${srcId}` : null;
+				if (fromId && ids.has(fromId)) out.push({ fromId, toId: node.id, type: 'reference', fromPort: null, toPort: null });
+			}
+			// Quick plot → its source node.
+			const srcNode = node.plotObj?.sourceNodeId;
+			if (srcNode && ids.has(srcNode)) {
+				out.push({ fromId: srcNode, toId: node.id, type: 'reference', fromPort: null, toPort: null });
+			}
 		}
 		return out;
 	});
