@@ -32,7 +32,7 @@ import { computeFFT } from '$lib/utils/fft.js';
 import { computeAutocorrelation } from '$lib/utils/correlogram.js';
 import { gaussianKDE } from '$lib/utils/kde.js';
 import { meanSemByGroup } from '$lib/utils/meanSem.js';
-import { rayleighTest, circularMean } from '$lib/utils/circular.js';
+import { rayleighTest, circularMean, weightedCircularMean, weightedRayleigh } from '$lib/utils/circular.js';
 import { bathyphase, phaseAngleOfEntrainment, circadianFunctionIndex } from '$lib/utils/cosinorAddons.js';
 
 const PARITY_DIR = join(process.cwd(), 'tools', 'parity');
@@ -53,6 +53,8 @@ const PURE_UTIL_FNS = {
 	meanSemByGroup,
 	rayleighTest,
 	circularMean,
+	weightedCircularMean,
+	weightedRayleigh,
 	bathyphase,
 	phaseAngleOfEntrainment,
 	circadianFunctionIndex

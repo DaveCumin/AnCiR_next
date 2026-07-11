@@ -954,6 +954,71 @@
         "IV",
         "RA"
       ]
+    },
+    {
+      "id": "util-weighted-circmean",
+      "kind": "pureUtil",
+      "jsFn": "weightedCircularMean",
+      "pyFunc": "weighted_circular_mean",
+      "input": {
+        "angles": [
+          0.0,
+          0.4,
+          1.2,
+          2.7,
+          5.9
+        ],
+        "weights": [
+          3,
+          1,
+          4,
+          2,
+          0.5
+        ]
+      },
+      "argRefs": [
+        "angles",
+        "weights"
+      ],
+      "compareScalars": [
+        "meanAngle",
+        "R",
+        "n",
+        "W"
+      ]
+    },
+    {
+      "id": "util-weighted-rayleigh",
+      "kind": "pureUtil",
+      "jsFn": "weightedRayleigh",
+      "pyFunc": "weighted_rayleigh",
+      "input": {
+        "angles": [
+          0.0,
+          0.1,
+          -0.1,
+          0.2,
+          3.1
+        ],
+        "weights": [
+          5,
+          6,
+          5,
+          4,
+          0.3
+        ]
+      },
+      "argRefs": [
+        "angles",
+        "weights"
+      ],
+      "compareScalars": [
+        "nEff",
+        "R",
+        "z",
+        "pValue",
+        "meanAngle"
+      ]
     }
   ]
 }

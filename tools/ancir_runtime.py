@@ -3468,6 +3468,50 @@ def rayleigh_test(angles_rad):
     return {'n': n, 'R': R, 'meanAngle': cm['meanAngle'], 'z': z, 'pValue': p}
 
 
+def weighted_circular_mean(angles_rad, weights):
+    C = 0.0; S = 0.0; W = 0.0; n = 0
+    for a, w in zip(angles_rad, weights):
+        if a is None or w is None: continue
+        try:
+            a = float(a); w = float(w)
+        except (TypeError, ValueError):
+            continue
+        if not (math.isfinite(a) and math.isfinite(w)): continue
+        C += w * math.cos(a); S += w * math.sin(a); W += w; n += 1
+    if n == 0 or W <= 0:
+        return {'meanAngle': _NAN, 'R': _NAN, 'n': n,
+                'W': (_NAN if n == 0 else W), 'C': _NAN, 'S': _NAN}
+    R = math.sqrt(C * C + S * S) / W
+    mean = math.atan2(S, C)
+    if mean < 0: mean += 2 * math.pi
+    return {'meanAngle': mean, 'R': R, 'n': n, 'W': W, 'C': C, 'S': S}
+
+
+def weighted_rayleigh(angles_rad, weights):
+    cm = weighted_circular_mean(angles_rad, weights)
+    n = cm['n']; R = cm['R']; W = cm['W']
+    sum_sq = 0.0
+    for a, w in zip(angles_rad, weights):
+        if a is None or w is None: continue
+        try:
+            a = float(a); w = float(w)
+        except (TypeError, ValueError):
+            continue
+        if not (math.isfinite(a) and math.isfinite(w)): continue
+        sum_sq += w * w
+    if n == 0 or not (isinstance(W, float) and W > 0) or sum_sq <= 0 or not math.isfinite(R):
+        return {'n': n, 'nEff': _NAN, 'R': _NAN, 'meanAngle': _NAN, 'z': _NAN, 'pValue': _NAN,
+                'W': (W if isinstance(W, float) and math.isfinite(W) else _NAN)}
+    n_eff = (W * W) / sum_sq
+    z = n_eff * R * R
+    inner = (1 + (2 * z - z * z) / (4 * n_eff)
+             - (24 * z - 132 * z * z + 76 * z ** 3 - 9 * z ** 4) / (288 * n_eff * n_eff))
+    p = math.exp(-z) * inner
+    if not math.isfinite(p): p = math.exp(-z)
+    p = min(1.0, max(0.0, p))
+    return {'n': n, 'nEff': n_eff, 'R': R, 'meanAngle': cm['meanAngle'], 'z': z, 'pValue': p, 'W': W}
+
+
 def kappa_from_rbar(r_bar):
     if not (isinstance(r_bar, (int, float)) and math.isfinite(r_bar)) or r_bar <= 0:
         return 0.0
