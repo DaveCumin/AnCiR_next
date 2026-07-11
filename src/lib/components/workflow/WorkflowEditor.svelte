@@ -261,9 +261,12 @@
 				if (fromId && ids.has(fromId)) out.push({ fromId, toId: node.id, type: 'reference', fromPort: null, toPort: null });
 			}
 			// Quick plot → its source node.
-			const srcNode = node.plotObj?.sourceNodeId;
-			if (srcNode && ids.has(srcNode)) {
-				out.push({ fromId: srcNode, toId: node.id, type: 'reference', fromPort: null, toPort: null });
+			// A plot is either a Data View (sourcePlotId) or a quick plot (sourceNodeId), never both.
+			else if (node.plotObj?.sourceNodeId) {
+				const srcNode = node.plotObj.sourceNodeId;
+				if (ids.has(srcNode)) {
+					out.push({ fromId: srcNode, toId: node.id, type: 'reference', fromPort: null, toPort: null });
+				}
 			}
 		}
 		return out;
@@ -670,7 +673,10 @@
 			return;
 		}
 		const spec = canonicalNodeViz(node);
-		if (!spec) return;
+		if (!spec) {
+			addNotification('Wire an input into this node first to quick-plot it.');
+			return;
+		}
 		const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id] ?? { x: 0, y: 0 };
 		const plotData = plotDataFromSpec(spec, {
 			x: pos.x + getNodeWidth(node) + 40,
