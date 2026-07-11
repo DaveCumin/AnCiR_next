@@ -115,6 +115,66 @@ export function rayleighTest(anglesRad) {
 }
 
 /**
+ * Amplitude-weighted mean direction and mean resultant length.
+ * C = Σ w·cosθ, S = Σ w·sinθ, W = Σ w; R = |(C,S)| / W ∈ [0,1] for w ≥ 0.
+ * Pairs with a non-finite angle OR weight are dropped. Intended for
+ * non-negative weights (activity / intensity); W ≤ 0 → NaN.
+ * @param {number[]} anglesRad
+ * @param {number[]} weights
+ * @returns {{ meanAngle:number, R:number, n:number, W:number, C:number, S:number }}
+ */
+export function weightedCircularMean(anglesRad, weights) {
+	let C = 0, S = 0, W = 0, n = 0;
+	const len = Math.min(anglesRad?.length ?? 0, weights?.length ?? 0);
+	for (let i = 0; i < len; i++) {
+		const a = Number(anglesRad[i]);
+		const w = Number(weights[i]);
+		if (!Number.isFinite(a) || !Number.isFinite(w)) continue;
+		C += w * Math.cos(a);
+		S += w * Math.sin(a);
+		W += w;
+		n++;
+	}
+	if (n === 0 || W <= 0) return { meanAngle: NaN, R: NaN, n, W: n === 0 ? NaN : W, C: NaN, S: NaN };
+	const R = Math.sqrt(C * C + S * S) / W;
+	let meanAngle = Math.atan2(S, C);
+	if (meanAngle < 0) meanAngle += TWO_PI;
+	return { meanAngle, R, n, W, C, S };
+}
+
+/**
+ * Amplitude-weighted Rayleigh test. Uses the Kish effective sample size
+ * nEff = (Σw)² / Σw² so the significance reflects the weighting, then the
+ * same tail approximation as rayleighTest with nEff in place of n.
+ * @param {number[]} anglesRad
+ * @param {number[]} weights
+ * @returns {{ n:number, nEff:number, R:number, meanAngle:number, z:number, pValue:number, W:number }}
+ */
+export function weightedRayleigh(anglesRad, weights) {
+	const { meanAngle, R, n, W } = weightedCircularMean(anglesRad, weights);
+	let sumSq = 0;
+	const len = Math.min(anglesRad?.length ?? 0, weights?.length ?? 0);
+	for (let i = 0; i < len; i++) {
+		const a = Number(anglesRad[i]);
+		const w = Number(weights[i]);
+		if (!Number.isFinite(a) || !Number.isFinite(w)) continue;
+		sumSq += w * w;
+	}
+	if (n === 0 || !(W > 0) || !(sumSq > 0) || !Number.isFinite(R)) {
+		return { n, nEff: NaN, R: NaN, meanAngle: NaN, z: NaN, pValue: NaN, W: Number.isFinite(W) ? W : NaN };
+	}
+	const nEff = (W * W) / sumSq;
+	const z = nEff * R * R;
+	const inner =
+		1 + (2 * z - z * z) / (4 * nEff) -
+		(24 * z - 132 * z * z + 76 * z ** 3 - 9 * z ** 4) / (288 * nEff * nEff);
+	let pValue = Math.exp(-z) * inner;
+	if (!Number.isFinite(pValue)) pValue = Math.exp(-z);
+	pValue = Math.min(1, Math.max(0, pValue));
+	return { n, nEff, R, meanAngle, z, pValue, W };
+}
+
+/**
  * Vector sum (resultant) of a group of angles.
  * @returns {{ n: number, C: number, S: number, r: number, rBar: number }}
  *   r = |Σ (cosθ, sinθ)|  (resultant LENGTH, not mean); rBar = r / n.

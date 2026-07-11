@@ -5,7 +5,9 @@ import {
 	circularMean,
 	rayleighTest,
 	kappaFromRbar,
-	watsonWilliams
+	watsonWilliams,
+	weightedCircularMean,
+	weightedRayleigh
 } from './circular.js';
 
 const TWO_PI = 2 * Math.PI;
@@ -208,5 +210,42 @@ describe('toRadiansColumn', () => {
 		const out = toRadiansColumn([null, '', ' ', 'abc', 6], 'hours', 24);
 		expect(out.slice(0, 4).every(Number.isNaN)).toBe(true);
 		expect(out[4]).toBeCloseTo(Math.PI / 2, 9);
+	});
+});
+
+describe('weightedCircularMean', () => {
+	it('equal weights match the unweighted mean/R', () => {
+		const a = [0.1, 0.3, 0.2, 0.15];
+		const w = weightedCircularMean(a, [1, 1, 1, 1]);
+		expect(w.R).toBeGreaterThan(0.98);
+		expect(w.meanAngle).toBeGreaterThan(0.1);
+		expect(w.meanAngle).toBeLessThan(0.3);
+	});
+	it('weights pull the mean toward the heavier angle', () => {
+		const near0 = weightedCircularMean([0, Math.PI / 2], [10, 1]).meanAngle;
+		expect(near0).toBeLessThan(0.3); // close to 0, not 45deg
+	});
+	it('drops non-finite angle/weight pairs and guards W<=0', () => {
+		const ok = weightedCircularMean([0, 1, NaN, 2], [1, 2, 5, NaN]);
+		expect(ok.n).toBe(2);
+		const bad = weightedCircularMean([0, 1], [0, 0]);
+		expect(Number.isNaN(bad.R)).toBe(true);
+	});
+});
+
+describe('weightedRayleigh', () => {
+	it('concentrated heavy cluster is significant', () => {
+		const angles = [0.0, 0.05, -0.05, 0.1, 3.14];
+		const weights = [5, 6, 5, 4, 0.2];
+		const r = weightedRayleigh(angles, weights);
+		expect(r.R).toBeGreaterThan(0.8);
+		expect(r.pValue).toBeLessThan(0.05);
+		expect(r.nEff).toBeLessThanOrEqual(r.n);
+	});
+	it('uniform heavy spread is not significant', () => {
+		const angles = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2];
+		const r = weightedRayleigh(angles, [1, 1, 1, 1]);
+		expect(r.R).toBeLessThan(0.01);
+		expect(r.pValue).toBeGreaterThan(0.5);
 	});
 });
