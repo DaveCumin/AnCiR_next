@@ -23,13 +23,18 @@
 	// is separate (stablePositions), so this only affects the worksheet layout.
 	export function nextPlotSpawnPosition() {
 		const plots = core.plots ?? [];
-		const gap = 24;
+		const gap = appState.gridSize; // one grid unit between plots
 		const startX = 40;
 		const startY = 40;
 		if (plots.length === 0) return { x: snapToGrid(startX), y: snapToGrid(startY) };
 		const last = plots[plots.length - 1];
-		const lw = last.width ?? 500;
-		const lh = last.height ?? 250;
+		// Tile off the plot's real on-canvas footprint, not its bare canvas size.
+		// Draggable.svelte renders each wrapper at snapToGrid(width + 20) ×
+		// snapToGrid(height + 50) — the +20 side chrome and +50 header bar. Using
+		// the bare width/height here left rows overlapping (by the ~50px header)
+		// and columns nearly touching, i.e. no visible gap.
+		const lw = snapToGrid((last.width ?? 500) + 20);
+		const lh = snapToGrid((last.height ?? 250) + 50);
 		const canvasEl = typeof document !== 'undefined' ? document.querySelector('.canvas') : null;
 		const bound = (canvasEl?.clientWidth ?? 1400) / (appState.canvasScale || 1) - 40;
 		let x = (last.x ?? startX) + lw + gap;

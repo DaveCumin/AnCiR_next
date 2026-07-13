@@ -65,7 +65,7 @@
 				href="./handbook.html"
 				target="_blank">here</a
 			>. There is also a video introduction available
-			<a href="https://youtu.be/R7TW3fxsGBM" target="_blank">here</a>.
+			<a href="https://youtu.be/3FZSJZrKF_M" target="_blank">here</a>.
 		</p>
 
 		<p>
