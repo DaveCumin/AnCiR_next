@@ -325,8 +325,17 @@ export const appState = $state({
 	widthControlPanel: 250,
 
 	gridSize: 15,
+	// Workspace (plot) view viewport — pan offset + zoom.
 	canvasOffset: { x: 0, y: 0 },
 	canvasScale: 1.0,
+	// Workflow-canvas viewport — pan (x, y) + zoom (z). Both viewports live in
+	// appState so they persist across view switches (module state) AND ride the
+	// session save/load (appState is serialised whole in outputCoreAsJson).
+	workflowViewport: { x: 0, y: 0, z: 1 },
+	// Bumped by importJson after a session's appState is restored, so an already
+	// mounted WorkflowEditor re-adopts the loaded viewport. Never restored FROM a
+	// session (see LOAD_APP_STATE_SKIP_KEYS) — it's a live signal, not saved data.
+	viewportEpoch: 0,
 
 	// 'canvas' (default): WorkflowEditor renders inline as the centre pane.
 	// 'plots': legacy free-positioned PlotDisplay grid.
@@ -379,7 +388,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.55.1',
+	version: 'β.56.0',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
@@ -432,7 +441,10 @@ const LOAD_APP_STATE_SKIP_KEYS = new Set([
 	'loadingState',
 	'windowWidth',
 	'windowHeight',
-	'showColourPicker'
+	'showColourPicker',
+	// A live adoption signal, not persisted state — importJson bumps the live
+	// counter itself; restoring a saved value would desync it.
+	'viewportEpoch'
 ]);
 
 export function loadAppState(newAppState) {

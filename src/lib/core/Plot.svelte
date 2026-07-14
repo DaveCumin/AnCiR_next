@@ -464,6 +464,7 @@
 				facetParent,
 				facetKey,
 				setRefs,
+				metricOut,
 				sourceNodeId
 			} = json;
 			return new Plot(
@@ -480,6 +481,7 @@
 					facetParent,
 					facetKey,
 					setRefs,
+					metricOut,
 					sourceNodeId
 				},
 				id

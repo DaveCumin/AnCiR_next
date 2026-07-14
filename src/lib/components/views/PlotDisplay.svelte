@@ -85,39 +85,10 @@
 
 	let selectedPlotIds = $derived.by(() => core.plots.filter((p) => p.selected).map((p) => p.id));
 
-	// --- Plot-view viewport persistence ---
-	// Separate from the workflow-canvas viewport (which lives under
-	// `ancir.canvas.viewport`) so each view remembers its own zoom + pan.
-	const PLOT_VIEWPORT_STORAGE_KEY = 'ancir.plotview.viewport';
-
-	onMount(() => {
-		try {
-			const raw = localStorage.getItem(PLOT_VIEWPORT_STORAGE_KEY);
-			if (!raw) return;
-			const parsed = JSON.parse(raw);
-			const x = Number(parsed?.x);
-			const y = Number(parsed?.y);
-			const z = Number(parsed?.z);
-			if (Number.isFinite(x) && Number.isFinite(y)) appState.canvasOffset = { x, y };
-			if (Number.isFinite(z) && z > 0)
-				appState.canvasScale = Math.min(Math.max(z, MIN_ZOOM), MAX_ZOOM);
-		} catch {
-			/* parse / quota errors — keep defaults */
-		}
-	});
-
-	$effect(() => {
-		const payload = JSON.stringify({
-			x: appState.canvasOffset?.x ?? 0,
-			y: appState.canvasOffset?.y ?? 0,
-			z: appState.canvasScale ?? 1
-		});
-		try {
-			localStorage.setItem(PLOT_VIEWPORT_STORAGE_KEY, payload);
-		} catch {
-			/* quota / private-mode — ignore */
-		}
-	});
+	// The workspace viewport is appState.canvasOffset + appState.canvasScale, which
+	// persist across view switches (module state), reset on a fresh page load (see
+	// +page.svelte), and are restored from a loaded session by loadAppState — so no
+	// separate per-view persistence is needed here.
 
 	let showNewPlotModal = $state(false);
 	let canvasViewportEl = $state(null);

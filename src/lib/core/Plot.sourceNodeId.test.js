@@ -17,3 +17,22 @@ describe('Plot sourceNodeId', () => {
 		expect(p.sourceNodeId).toBeNull();
 	});
 });
+
+describe('Plot metricOut', () => {
+	// Regression: fromJSON dropped metricOut, so on session load a plot's metric
+	// columns (peak_period etc) lost their owner and re-appeared as standalone
+	// data nodes instead of the plot's output ports.
+	it('round-trips the metric-column map through toJSON/fromJSON', () => {
+		const p = new Plot({
+			type: 'periodogram',
+			metricOut: { peak_period: 45, peak_power: 46, peak_pvalue: 47 },
+			plot: { data: [] }
+		});
+		const back = Plot.fromJSON(p.toJSON());
+		expect(back.metricOut).toEqual({ peak_period: 45, peak_power: 46, peak_pvalue: 47 });
+	});
+	it('defaults to an empty object when absent', () => {
+		const back = Plot.fromJSON(new Plot({ type: 'periodogram', plot: { data: [] } }).toJSON());
+		expect(back.metricOut).toEqual({});
+	});
+});

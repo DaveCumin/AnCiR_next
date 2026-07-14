@@ -1,5 +1,5 @@
 <script module>
-	import { appConsts, outputCoreAsJson } from '$lib/core/core.svelte';
+	import { appConsts, appState, outputCoreAsJson } from '$lib/core/core.svelte';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { sessionToPython } from '$lib/utils/pythonExport.js';
 	export function exportJson() {
@@ -340,6 +340,11 @@
 			await yieldFrame();
 			loadAppState(jsonData.appState);
 		}
+		// Signal both canvases to adopt the session's restored viewport, even if a
+		// component is already mounted (e.g. loading while on the workflow view).
+		// Bumped unconditionally: a legacy session with no saved viewport restores
+		// the appState defaults, which is the correct "reset" behaviour.
+		appState.viewportEpoch = (appState.viewportEpoch ?? 0) + 1;
 
 		// hoursSinceStart is already pre-computed in pushObj; no second pass.
 		if (onProgress) onProgress('Finalising…');

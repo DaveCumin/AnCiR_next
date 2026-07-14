@@ -1,11 +1,25 @@
 <script module>
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
+	import minstd from '@stdlib/random-base-minstd-shuffle';
 
 	import { core } from '$lib/core/core.svelte';
 
 	const displayName = 'Simulate Data';
+
+	// Coerce any user seed into minstd's valid range [1, 2147483646] so the noise
+	// is reproducible. Mirrors Random.svelte's normalizeSeed. 0/NaN → a fixed seed.
+	const MINSTD_MAX = 2147483646;
+	function normalizeSeed(seed) {
+		const n = Math.trunc(Number(seed));
+		if (!Number.isFinite(n) || n === 0) return 12345;
+		return ((((n - 1) % MINSTD_MAX) + MINSTD_MAX) % MINSTD_MAX) + 1;
+	}
+
 	const defaults = new Map([
 		['startTime', { val: dayjs.utc().valueOf() }],
+		// Seed for the reproducible noise PRNG. Random default so a fresh node still
+		// looks stochastic; exposed + persisted so a simulation can be reproduced.
+		['seed', { val: Math.floor(Math.random() * 100000) }],
 		[
 			'sections',
 			{
@@ -45,6 +59,11 @@
 		})();
 		const step = Number(samplingPeriod_hours) > 0 ? Number(samplingPeriod_hours) : null;
 
+		// Seeded noise PRNG (one stream for the whole simulation, drawn in section →
+		// sample order) so the same seed always reproduces the same series.
+		const prng = minstd.factory({ seed: normalizeSeed(argsIN.seed) });
+		const nextNoise = () => prng.normalized(); // uniform in [0, 1)
+
 		let simulatedTime = [];
 		let simulatedValues = [];
 		let currentTime = 0;
@@ -69,7 +88,7 @@
 
 				let value;
 				if (noiseEnabled) {
-					const noise = Math.random() * noiseAmplitude;
+					const noise = nextNoise() * noiseAmplitude;
 					if (noiseMode === 'multiply') {
 						value = noise * currentAmplitude;
 					} else {
@@ -178,6 +197,10 @@
 	}
 
 	onMount(() => {
+		// Backfill the noise seed for old saved sessions (pre-seed nodes). A node
+		// with baked output data keeps it (see below) so this only affects the
+		// displayed value + any future regeneration.
+		if (p.args.seed === undefined) p.args.seed = 12345;
 		// Backfill noise fields for old saved sessions
 		for (const section of p.args.sections) {
 			if (section.noiseEnabled === undefined) section.noiseEnabled = true;
@@ -231,6 +254,10 @@
 				selectedUnitStart="mins"
 			/>
 		</div>
+	</ControlInput>
+
+	<ControlInput label="Noise seed">
+		<NumberWithUnits bind:value={p.args.seed} min="0" step={1} onInput={doSimulated} />
 	</ControlInput>
 </div>
 

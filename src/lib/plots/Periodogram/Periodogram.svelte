@@ -251,32 +251,38 @@
 			const calcMin = Math.max(0.01, displayMin - buffer);
 			const calcMax = displayMax + buffer;
 
-			// Update cache
-			this._cache.calcMin = calcMin;
-			this._cache.calcMax = calcMax;
-			this._cache.dataFingerprint = fp;
-
 			// Clear any pending debounced calculation
 			if (this._debounceTimer) {
 				clearTimeout(this._debounceTimer);
 			}
 
-			// Debounce the actual worker call
+			// Debounce the actual worker call. The cache (fingerprint + covered range)
+			// is committed only AFTER the calc completes (in startCalculation), never
+			// here. If we marked the cache "done" at schedule time and the debounced
+			// calc were then cancelled — e.g. the component unmounts mid-load and
+			// cleanup() clears this timer — periodData would stay empty while the cache
+			// claimed it was computed, so every later effect run would hit the
+			// early-return above and the plot would render blank forever (empty
+			// spectrum → [0,0] y-axis). Committing post-calc means a cancelled calc
+			// leaves the cache stale, so the next run recomputes.
 			this._debounceTimer = setTimeout(() => {
-				this.startCalculation({
-					xData,
-					yData,
-					binSize,
-					method,
-					chiSquaredAlpha,
-					periodMin: calcMin,
-					periodMax: calcMax,
-					periodSteps
-				});
+				this.startCalculation(
+					{
+						xData,
+						yData,
+						binSize,
+						method,
+						chiSquaredAlpha,
+						periodMin: calcMin,
+						periodMax: calcMax,
+						periodSteps
+					},
+					{ dataFingerprint: fp, calcMin, calcMax }
+				);
 			}, this._debounceDelay);
 		}
 
-		startCalculation(params) {
+		startCalculation(params, cacheOnSuccess = null) {
 			this.calculating = true;
 			this.progress = { current: 0, total: 0 };
 
@@ -285,6 +291,12 @@
 					this.periodData = runPeriodogramCalculation(params, (current, total) => {
 						this.progress = { current, total };
 					});
+					// Commit the cache only now that the result actually landed.
+					if (cacheOnSuccess) {
+						this._cache.dataFingerprint = cacheOnSuccess.dataFingerprint;
+						this._cache.calcMin = cacheOnSuccess.calcMin;
+						this._cache.calcMax = cacheOnSuccess.calcMax;
+					}
 				} catch (e) {
 					console.error('Periodogram calculation error:', e);
 				} finally {

@@ -604,42 +604,34 @@
 	});
 
 	// --- Pan / zoom ---
-	// Restore the user's last viewport position so reopening the canvas keeps the
-	// same in-flight layout instead of snapping back to the origin every time.
-	const VIEWPORT_STORAGE_KEY = 'ancir.canvas.viewport';
+	// The viewport lives in appState.workflowViewport: it persists across view
+	// switches (module state), rides the session save/load, and resets on a fresh
+	// page load (see +page.svelte). Local panX/panY/zoom mirror it for cheap
+	// per-gesture updates; the effects below keep the two in sync both ways.
+	let panX = $state(appState.workflowViewport?.x ?? 0);
+	let panY = $state(appState.workflowViewport?.y ?? 0);
+	let zoom = $state(appState.workflowViewport?.z ?? 1);
 
-	function loadViewport() {
-		try {
-			const raw = typeof localStorage !== 'undefined' && localStorage.getItem(VIEWPORT_STORAGE_KEY);
-			if (!raw) return { x: 0, y: 0, z: 1 };
-			const parsed = JSON.parse(raw);
-			const x = Number(parsed?.x);
-			const y = Number(parsed?.y);
-			const z = Number(parsed?.z);
-			return {
-				x: Number.isFinite(x) ? x : 0,
-				y: Number.isFinite(y) ? y : 0,
-				z: Number.isFinite(z) && z > 0 ? z : 1
-			};
-		} catch {
-			return { x: 0, y: 0, z: 1 };
-		}
-	}
-
-	const initialViewport = loadViewport();
-	let panX = $state(initialViewport.x);
-	let panY = $state(initialViewport.y);
-	let zoom = $state(initialViewport.z);
-
-	// Persist viewport whenever the user pans or zooms. Cheap: a small object every
-	// state change. No throttling needed — these only fire during user gestures.
+	// Write-through: reflect the user's pan/zoom into appState so it persists and is
+	// saved with the session. Guarded so it only writes on an actual change.
 	$effect(() => {
-		const payload = JSON.stringify({ x: panX, y: panY, z: zoom });
-		try {
-			if (typeof localStorage !== 'undefined') localStorage.setItem(VIEWPORT_STORAGE_KEY, payload);
-		} catch {
-			/* ignore quota / private-mode errors */
+		const vp = appState.workflowViewport;
+		if (!vp || vp.x !== panX || vp.y !== panY || vp.z !== zoom) {
+			appState.workflowViewport = { x: panX, y: panY, z: zoom };
 		}
+	});
+
+	// Adopt a freshly-loaded session's viewport even while this component stays
+	// mounted (importJson bumps viewportEpoch after restoring appState). The
+	// untracked read of workflowViewport avoids a loop with the write-through above.
+	$effect(() => {
+		appState.viewportEpoch; // dependency: fires once per session load
+		untrack(() => {
+			const vp = appState.workflowViewport ?? { x: 0, y: 0, z: 1 };
+			panX = vp.x ?? 0;
+			panY = vp.y ?? 0;
+			zoom = vp.z ?? 1;
+		});
 	});
 
 	/** Reset pan + zoom so the user can always recover when the persisted viewport

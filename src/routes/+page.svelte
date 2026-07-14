@@ -60,22 +60,15 @@
 	import WorkflowEditor from '$lib/components/workflow/WorkflowEditor.svelte';
 
 	// On a fresh page load, start both canvases at their default zoom + position
-	// rather than restoring the last session's viewport. We clear the two viewport
-	// caches HERE (before WorkflowEditor / PlotDisplay mount and read them) and
-	// reset the workspace viewport state. This runs once per page load, so within a
-	// session switching between the workflow and workspace views still restores the
-	// in-session viewport — only a reload resets. Node-layout positions live under a
-	// separate key and are intentionally left untouched.
-	if (typeof localStorage !== 'undefined') {
-		try {
-			localStorage.removeItem('ancir.canvas.viewport'); // workflow pan/zoom
-			localStorage.removeItem('ancir.plotview.viewport'); // workspace pan/zoom
-		} catch {
-			/* private mode / quota — nothing to clear */
-		}
-	}
+	// rather than restoring the last session's viewport. Both viewports live in
+	// appState (module state), so they persist while switching between the workflow
+	// and workspace views within a session, ride the session save/load, and reset
+	// here once per page load. A loaded session overrides these via loadAppState +
+	// the viewportEpoch bump. Node-layout positions are stored separately and left
+	// untouched.
 	appState.canvasOffset = { x: 0, y: 0 };
 	appState.canvasScale = 1;
+	appState.workflowViewport = { x: 0, y: 0, z: 1 };
 
 	// Initialize history watching (must be in component context)
 	history.init();
