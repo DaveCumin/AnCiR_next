@@ -1,0 +1,24 @@
+# ancir-mcp
+
+> Exposes AnCiR's real headless chronobiology engine to LLMs/agents as MCP tools, so an
+> agent can build an analysis session (data + analyses + plots) and export
+> AnCiR-compatible session.json that opens in the GUI. Also ships a natural-language →
+> session backend (bring-your-own model). Three layers: engine (src/engine), MCP
+> transport (src/server.js, stdio + HTTP), app backend (app/).
+
+## Start here
+
+- [AGENTS.md](AGENTS.md): orientation, the 3 layers, the 9 tools, the must-know rules, and a routing table.
+- [app/prompts/tool-rules.md](app/prompts/tool-rules.md): SINGLE SOURCE of the tool-argument rules (flat args, name refs, generate-don't-type, fixed-period). Loaded into the model prompt.
+
+## Docs
+
+- [docs/tool-contract.md](docs/tool-contract.md): how to generate valid session-building tool calls — tool signatures, return shapes, plot inputs, a worked example, dynamic-output and failure behaviour.
+- [docs/architecture.md](docs/architecture.md): file map, data flow, engine invariants/gotchas (core singleton, registry-at-startup, discardTp), and how to add a node.
+- [docs/app-backend.md](docs/app-backend.md): the NL→session Express API, bring-your-own-model resolution, security (validation + SSRF + rate limit), modules, and tests.
+- [docs/deploy.md](docs/deploy.md): run locally and deploy (Cloudflare Pages + a Node host/tunnel), the free-host RAM comparison, and the engine-bundle unlock.
+
+## Reference
+
+- [README.md](README.md): human overview, full CLI, tool table, transports.
+- Live capability catalogue: call the `list_capabilities` tool (22 analyses, 9 transforms, 9 plots with exact params) — not duplicated statically because it drifts.

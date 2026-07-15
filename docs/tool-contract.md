@@ -22,28 +22,25 @@ JSON in AnCiR (the app does this via `?loadFromURL=`).
 | `render_plot` | `{type, inputs, path, width?, height?}` | `{png, svg, pngBytes, svgBytes}` (needs headless Chromium; not needed to build a session) |
 | `export_session` | `{path?}` | JSON string, or `{written, bytes}` when `path` given |
 
-## RULES (follow these to generate valid calls)
+## Rules — single source: [`../app/prompts/tool-rules.md`](../app/prompts/tool-rules.md)
 
-1. **`run_table_process.args` is a FLAT object.** Put input-column fields (`xIN`, `yIN`,
-   …) AND parameters at the top level. Do **not** nest under `inputs` or `params`.
-   `values` and other arrays must be literal JSON (no code/lambdas/ranges).
-2. **Column references accept a NAME or an id; prefer the NAME.** After a tool creates
-   columns, its `outputs[]` list gives `{columnId, name}` — use the `name`
-   (e.g. `"time_0"`, `"values_0"`) for the next call's `xIN`/`yIN`/plot inputs/`columnId`.
-   `list_columns` also gives names. Ids are 0-based and easy to get wrong.
-3. **`yIN` (and other array inputs) take an array**, e.g. `yIN:["values_0"]`. (A bare
-   scalar is coerced, but pass an array.)
-4. **Don't pass `out`.** Fixed and dynamic output keys are auto-seeded by the engine.
-5. **Generate data; don't type big arrays.** Use `run_table_process` `SimulatedData`
-   (rhythm+noise), `SequenceColumn`, or `Random`. Use `import_data` only for small data
-   the user gave explicitly, as literal number arrays.
-6. **Cosinor/FitFunction:** set `useFixedPeriod:true` and `fixedPeriod` (hours) for a
-   known-period rhythm. Free-period fitting is unreliable on a time axis and often
-   returns invalid.
-7. **Analyses persist as nodes only via `run_table_process`.** It also returns the
-   recovered numbers (`fit` for Cosinor/FitFunction; `stats` for GroupComparison), so you
-   never need a separate "just compute" tool.
-8. **Get exact shapes at runtime** from `list_capabilities` — 22 analyses; params drift.
+The tool-argument rules are canonical in **`app/prompts/tool-rules.md`** — the exact text
+injected into the model's system prompt (`app/promptBuilder.js`). **Read that file; don't
+rely on a copy.** In one line each:
+
+- **`run_table_process.args` is FLAT** — input fields (`xIN`, `yIN`, …) + params at the
+  top level; never nest under `inputs`/`params`; literal JSON only.
+- **Reference columns by NAME** (`"time_0"`), not id — from a result's `outputs[].name` or
+  `list_columns`; array inputs like `yIN` take an array.
+- **Never pass `out`** — auto-seeded (fixed + dynamic keys).
+- **Generate data** with `SimulatedData`/`SequenceColumn`/`Random`; don't type big arrays.
+- **Cosinor/FitFunction:** `useFixedPeriod:true` + `fixedPeriod` (hours) for known rhythms.
+
+Doc-only facts (not in the prompt, but agents should know):
+- **Analyses persist as nodes only via `run_table_process`** (no separate "just compute"
+  tool) — it also returns `fit` (Cosinor/FitFunction) and `stats` (GroupComparison).
+- **Get exact per-analysis shapes at runtime** from `list_capabilities` (22 analyses;
+  params drift, so no static list here).
 
 ## Column reference / input fields per plot
 `add_plot.inputs` field names come from `list_capabilities().plots[].inputs`:

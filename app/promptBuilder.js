@@ -6,16 +6,25 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 
 const TEMPLATE_PATH = fileURLToPath(new URL('./prompts/system.md', import.meta.url));
+const RULES_PATH = fileURLToPath(new URL('./prompts/tool-rules.md', import.meta.url));
+
+// Strip HTML comments (maintainer notes) so they never reach the model.
+const load = (p) => readFileSync(p, 'utf8').replace(/<!--[\s\S]*?-->\s*/g, '');
 
 let _template = null;
+let _rules = null;
 function template() {
-	if (_template == null) _template = readFileSync(TEMPLATE_PATH, 'utf8');
+	if (_template == null) _template = load(TEMPLATE_PATH);
 	return _template;
+}
+function rules() {
+	if (_rules == null) _rules = load(RULES_PATH).trim();
+	return _rules;
 }
 
 /** A short version tag so logs can attribute build quality to a prompt revision. */
 export function promptVersion() {
-	return createHash('sha256').update(template()).digest('hex').slice(0, 8);
+	return createHash('sha256').update(template() + rules()).digest('hex').slice(0, 8);
 }
 
 /**
@@ -50,7 +59,7 @@ export function buildCatalogue(caps) {
 	);
 }
 
-/** The full system prompt string: static rules + live catalogue. */
+/** The full system prompt string: frame + canonical rules + live catalogue. */
 export function buildSystemPrompt(caps) {
-	return template().replace('{{CATALOGUE}}', buildCatalogue(caps));
+	return template().replace('{{RULES}}', rules()).replace('{{CATALOGUE}}', buildCatalogue(caps));
 }

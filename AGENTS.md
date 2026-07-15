@@ -32,7 +32,8 @@ analyses + plots) and export AnCiR-compatible `session.json` that opens in the G
 (There is intentionally **no** `run_cosinor` — use `run_table_process` with name
 `Cosinor`, which persists the node **and** returns the fit.)
 
-## Non-negotiable rules (the ones that took a lot of iteration to learn)
+## Non-negotiable rules (single source: [`app/prompts/tool-rules.md`](app/prompts/tool-rules.md))
+Canonical, LLM-loaded. At a glance:
 - **`run_table_process.args` is FLAT** — input-column fields (`xIN`, `yIN`, …) AND
   params together at the top level. Never nest under `inputs`/`params`.
 - **Reference columns by NAME** (e.g. `"time_0"`), not numeric id. Read names from a
