@@ -129,6 +129,9 @@ for (const [name, g] of Object.entries(generated.nodes)) {
 		inputs: g.inputs,
 		params: { ...g.params, ...(PARAM_OVERRIDES[name] ?? {}) },
 		dynamicKind: g.dynamicKind,
+		// {x, yPrefix} when this node produces a fitted curve, else null. The fit's x pairs
+		// only with the fit's y — the prompt teaches that pairing from here.
+		fitOut: g.fitOut ?? null,
 		out: buildOut(name, g),
 		/**
 		 * Why this node's computed outputs couldn't be worked out for these args (string), or

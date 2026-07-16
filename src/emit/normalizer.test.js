@@ -318,6 +318,79 @@ test('plot emits refId series in the inner `plot.data`, not flat column ids', ()
 	assert.ok(p.width > 0 && p.height > 0, 'carries a renderable box');
 });
 
+test('a plot carries MULTIPLE series, so raw data + fitted curve share one plot', () => {
+	// The canonical Cosinor viz (matches AnCiR's own Quick-Plot): raw points + fit line.
+	const { session, errors } = normalizeSession({
+		columns: [{ name: 'hour', values: [0, 1] }, { name: 'signal', values: [5, 6] }],
+		analyses: [{ name: 'Cosinor', args: { xIN: 'hour', yIN: ['signal'], fixedPeriod: 24 } }],
+		plots: [
+			{
+				type: 'scatterplot',
+				name: 'Cosinor: data + fit',
+				series: [
+					{ x: 'hour', y: 'signal', label: 'signal', kind: 'points' },
+					{ x: 'cosinorx', y: 'cosinory_signal', label: 'signal fit', kind: 'line' }
+				]
+			}
+		]
+	});
+	assert.equal(errors.length, 0, errors.join('; '));
+	const data = session.plots[0].plot.data;
+	assert.equal(data.length, 2, 'both series are emitted');
+
+	const cos = findTP(session, 'Cosinor');
+	// raw series: the analysis's OWN inputs, drawn as points
+	assert.deepEqual(data[0].x, { refId: 0 });
+	assert.deepEqual(data[0].y, { refId: 1 });
+	assert.equal(data[0].points.draw, true);
+	assert.equal(data[0].line.draw, false);
+	assert.equal(data[0].label, 'signal');
+	// fit series: the fit's x paired with the fit's y — NOT the fitted x against the raw y.
+	// NB the out KEY is keyed by the y column's ID (`cosinory_1`) while the output COLUMN is
+	// named after it (`cosinory_signal`) — the draft refers to the friendly name.
+	assert.deepEqual(data[1].x, { refId: cos.args.out.cosinorx });
+	assert.deepEqual(data[1].y, { refId: cos.args.out.cosinory_1 });
+	assert.equal(colById(session, cos.args.out.cosinory_1).name, 'cosinory_signal');
+	assert.equal(data[1].line.draw, true);
+	assert.equal(data[1].points.draw, false);
+	// and they're visually distinguishable
+	assert.notEqual(data[0].points.colour, data[1].line.colour);
+});
+
+test('single-series `inputs` shorthand still works', () => {
+	const { session, errors } = normalizeSession({
+		columns: [{ name: 'hour', values: [0, 1] }, { name: 'signal', values: [5, 6] }],
+		plots: [{ type: 'scatterplot', inputs: { x: 'hour', y: 'signal' } }]
+	});
+	assert.equal(errors.length, 0, errors.join('; '));
+	assert.equal(session.plots[0].plot.data.length, 1);
+	assert.deepEqual(session.plots[0].plot.data[0].x, { refId: 0 });
+});
+
+test('an unresolved ref in ANY series drops the plot rather than emitting half of it', () => {
+	const { session, errors } = normalizeSession({
+		columns: [{ name: 'hour', values: [0, 1] }, { name: 'signal', values: [5, 6] }],
+		plots: [
+			{
+				type: 'scatterplot',
+				series: [
+					{ x: 'hour', y: 'signal' },
+					{ x: 'hour', y: 'not_a_column' }
+				]
+			}
+		]
+	});
+	assert.equal(session.plots.length, 0);
+	assert.match(errors.join(' '), /not_a_column/);
+});
+
+test('schema exposes each fit node’s x/y pairing (registry-derived)', () => {
+	// This is what the prompt teaches the model, so it must come from the registry.
+	assert.deepEqual(SCHEMA.Cosinor.fitOut, { x: 'cosinorx', yPrefix: 'cosinory_' });
+	assert.deepEqual(SCHEMA.FitFunction.fitOut, { x: 'fitx', yPrefix: 'fity_' });
+	assert.equal(SCHEMA.GroupComparison.fitOut, null, 'non-fit nodes have none');
+});
+
 test('plot input fields are registry-derived per type (time/values, column)', () => {
 	const { session, errors } = normalizeSession({
 		columns: [{ name: 't', values: [0, 1] }, { name: 'v', values: [5, 6] }],

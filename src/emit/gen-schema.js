@@ -141,6 +141,14 @@ for (const [name, entry] of appConsts.tableProcessMap ?? new Map()) {
 		dynamicKind,
 		// Per-Y prefix for dynamicKind==='prefix' (e.g. cosinory_, binnedy_); null otherwise.
 		perYPrefix: dynamicKind === 'prefix' ? entry.yOutKeyPrefix : null,
+		// A node that declares BOTH of these produces a fitted curve: `${xOutKey}` is its X
+		// grid and `${yOutKeyPrefix}${yid}` the fitted Y. They must be plotted as a PAIR —
+		// pairing the fit's X against the raw Y (or vice versa) is a silent mistake. Used to
+		// teach the model the canonical "raw points + fit line" plot (worker/draftPrompt.js);
+		// it's the same wiring AnCiR's own Quick-Plot uses (plots/canonicalNodeViz.js tpViz).
+		fitOut: entry.xOutKey && entry.yOutKeyPrefix
+			? { x: entry.xOutKey, yPrefix: entry.yOutKeyPrefix }
+			: null,
 		// For dynamicKind==='suffix': which args select the suffix set, and the baked table.
 		...(discriminators ? { discriminators, suffixesBy } : {})
 	};

@@ -33,8 +33,29 @@ const SESSION_VERSION = 'β.56.1'; // tracks the AnCiR app; importJson tolerates
 // plot. That is FIXED upstream now (both default safely). We keep emitting explicit styles
 // anyway: it costs nothing, and a session may well be opened by an older deployed AnCiR that
 // still has the crash.
-const SERIES_COLOUR = '#234154';
 const STYLE_SLOTS = ['line', 'points', 'thresholdline', 'confidenceLine'];
+
+// Series colours mirror Quick-Plot (plots/canonicalNodeViz.js): navy for raw/input data,
+// terracotta for a fitted/derived curve.
+const RAW_COLOUR = '#234154';
+const FIT_COLOUR = '#BE796B';
+
+/**
+ * Style slots for one series. `kind:'line'` draws a connected curve (a fit); anything else
+ * draws points (raw data). Mirrors Quick-Plot's scatterInner, so an emitted "data + fit" plot
+ * looks like the one AnCiR's own Quick-Plot button produces.
+ */
+function seriesStyle(kind, colour) {
+	const isLine = kind === 'line';
+	const c = colour ?? (isLine ? FIT_COLOUR : RAW_COLOUR);
+	const style = {
+		line: { colour: c, draw: isLine, strokeWidth: isLine ? 2.5 : 2, stroke: 'solid' },
+		points: { colour: c, draw: !isLine, radius: 3, shape: 'circle' }
+	};
+	// Slots only some plot types read; harmless elsewhere, and they must carry a colour.
+	for (const slot of STYLE_SLOTS) style[slot] ??= { colour: c };
+	return style;
+}
 
 const numeric = (v) => typeof v === 'number' || (typeof v === 'string' && /^-?\d+$/.test(v));
 
@@ -231,29 +252,38 @@ export function normalizeSession(draft, schema = SCHEMA) {
 			}
 			inner = { columnRefs: ids, showCol: ids.map(() => true) };
 		} else {
-			// One series, one `{refId}` wrapper per registry input field (x/y, time/values, …).
-			const series = {};
+			// A plot holds N series (plot.data[]), which is how "raw data + fitted curve" is
+			// drawn. Accept either `series: [{x,y,label?,kind?}, …]` or the single-series
+			// shorthand `inputs: {x,y}` — the latter is just one series.
+			const specs = Array.isArray(p.series) && p.series.length ? p.series : [p.inputs ?? {}];
+			const data = [];
 			let bad = null;
-			for (const field of pSchema.inputs) {
-				const ref = Array.isArray(p.inputs) ? p.inputs[pSchema.inputs.indexOf(field)] : p.inputs?.[field];
-				if (ref == null) continue;
-				const id = resolveRef(ref);
-				if (id == null) bad = `${p.type}.${field}: no column named "${ref}"`;
-				else series[field] = { refId: id };
+
+			for (const spec of specs) {
+				const series = {};
+				for (const field of pSchema.inputs) {
+					const ref = Array.isArray(spec) ? spec[pSchema.inputs.indexOf(field)] : spec?.[field];
+					if (ref == null) continue;
+					const id = resolveRef(ref);
+					if (id == null) bad ??= `${p.type}.${field}: no column named "${ref}"`;
+					else series[field] = { refId: id };
+				}
+				if (bad) break;
+				if (Object.keys(series).length === 0) {
+					bad ??= `${p.type}: a series wired nothing (expected ${pSchema.inputs.join(', ')})`;
+					break;
+				}
+				if (spec?.label != null) series.label = String(spec.label);
+				series.yAxis = 'left';
+				Object.assign(series, seriesStyle(spec?.kind, spec?.colour));
+				data.push(series);
 			}
+
 			if (bad) {
 				errors.push(`Plot ${bad}. Available: ${[...byName.keys()].join(', ') || '(none)'}. Skipped.`);
 				continue;
 			}
-			if (Object.keys(series).length === 0) {
-				errors.push(`Plot "${p.type}": no inputs wired (expected ${pSchema.inputs.join(', ')}). Skipped.`);
-				continue;
-			}
-			// Every series needs its style slots, each with an explicit colour (see
-			// SERIES_COLOUR/STYLE_SLOTS above) — otherwise Plot.fromJSON throws and
-			// importJson silently drops the plot.
-			for (const slot of STYLE_SLOTS) series[slot] = { colour: SERIES_COLOUR };
-			inner = { data: [series] };
+			inner = { data };
 		}
 
 		plots.push({

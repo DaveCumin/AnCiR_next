@@ -31,7 +31,11 @@ export function buildCatalogue(schema = generated) {
 	const nodes = Object.entries(schema.nodes)
 		.map(([name, n]) => {
 			const outs = n.fixedOut.length ? ` -> produces: ${n.fixedOut.join(', ')}` : '';
-			return `  ${name}: args=${JSON.stringify(argsTemplate(n))}${outs}`;
+			// A fitted-curve node's X grid and Y curve must be plotted as a PAIR.
+			const fit = n.fitOut
+				? ` -> fitted curve: x=${n.fitOut.x}, y=${n.fitOut.yPrefix}<your Y column>`
+				: '';
+			return `  ${name}: args=${JSON.stringify(argsTemplate(n))}${outs}${fit}`;
 		})
 		.join('\n');
 	const plots = Object.entries(schema.plots)
@@ -48,8 +52,15 @@ SHAPE:
 {
   "columns":  [ { "name": "hour", "values": [0,1,2] } ],          // optional: literal input data
   "analyses": [ { "name": "Cosinor", "args": { "xIN": "hour", "yIN": ["signal"] } } ],
-  "plots":    [ { "type": "scatterplot", "name": "Signal", "inputs": { "x": "hour", "y": "signal" } } ]
+  "plots":    [ { "type": "scatterplot", "name": "Cosinor: data + fit", "series": [
+                  { "x": "hour",     "y": "signal",          "label": "signal",     "kind": "points" },
+                  { "x": "cosinorx", "y": "cosinory_signal", "label": "signal fit", "kind": "line"   }
+              ] } ]
 }
+
+A plot holds a LIST of series, so raw data and a fitted curve go on the SAME plot. Use
+"kind":"points" for measured data and "kind":"line" for a fit. (A one-series plot may instead
+use the shorthand "inputs": {"x":"hour","y":"signal"}.)
 
 RULES:
 - Literal JSON only — never code, functions, ranges or expressions.
@@ -65,7 +76,11 @@ RULES:
 - \`analyses\` run in order: put a generator before the analysis that reads it.
 - For period fits (Cosinor/FitFunction) keep useFixedPeriod:true and set fixedPeriod to the
   rhythm period in hours (e.g. 24); free-period mode is unreliable on time-axis data.
-- Include at least one plot so the user can see the result, unless asked otherwise.`;
+- Include at least one plot so the user can see the result, unless asked otherwise.
+- When an analysis lists a "fitted curve" below, PLOT BOTH: the raw data (x = the analysis's
+  own xIN, y = its yIN) as points, AND the fit (x = its fitted-curve x, y = its fitted-curve y
+  for that same Y column) as a line. The fit's x pairs ONLY with the fit's y — never plot the
+  fitted x against the raw y, or the curve will be meaningless.`;
 
 /** Full system prompt: contract + registry-derived catalogue. */
 export function buildDraftPrompt(schema = generated) {

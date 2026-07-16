@@ -21,13 +21,13 @@ BUILD_RATE_MAX = "20"
 #   npx wrangler kv namespace create SESSIONS
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "4a5db128db3c49cdb10b10769727a60a"
 
 # Bring-your-own model is the default: the caller sends llm.{baseUrl,apiKey,model} per request
 # and the deployer pays nothing. To offer a fallback model instead, set these as SECRETS
 # (never vars):  npx wrangler secret put OPENAI_API_KEY
-#   OPENAI_BASE_URL = "https://api.openai.com/v1"
-#   OPENAI_MODEL    = "gpt-4o-mini"
+OPENAI_BASE_URL = "https://api.openai.com/v1"
+OPENAI_MODEL    = "openai/gpt-oss-120b"
 
 # Local dev only — relaxes the SSRF guard so you can point at a local Ollama:
 #   npx wrangler dev --var ALLOW_LOCAL_LLM:1
