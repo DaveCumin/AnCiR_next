@@ -22,19 +22,17 @@ import { SCHEMA, PLOTS as plots_, columnIdFields } from './schema.js';
 
 const SESSION_VERSION = 'β.56.1'; // tracks the AnCiR app; importJson tolerates minor drift.
 
-// Per-series style slots the plot classes deserialise with an UNGUARDED read
-// (`LineClass.fromJSON(json.line)` → `json.colour`), so a MISSING slot throws and importJson
-// silently skips the whole plot. Union across the types that use them:
+// Per-series style slots, each with an explicit colour. Union across the types that read them:
 //   Scatterplot: line, points · Periodogram: line, thresholdline, points
 //   Correlogram: line, confidenceLine, points · MeanSEM: line, points
-// A type ignores slots it doesn't read, so emitting the union is safe.
+// A type ignores slots it doesn't read, so emitting the union is safe. The colour mirrors
+// Quick-Plot's raw-series colour (plots/canonicalNodeViz.js RAW_COLOUR).
 //
-// Each slot MUST carry an explicit `colour`. An empty `{}` is NOT enough: fromJSON calls
-// `new LineClass({...})` with no parent, and the constructor's palette fallback
-// (`dataIN?.colour ?? getPaletteColor(parent.parentPlot.data.length)`) then dereferences
-// undefined. A defined colour short-circuits before the parent is touched. Every other field
-// (strokeWidth ?? 3, draw ?? true, radius ?? 4 …) defaults safely, so colour is all we set.
-// Value mirrors Quick-Plot's raw-series colour (plots/canonicalNodeViz.js RAW_COLOUR).
+// AnCiR's Line/Points fromJSON used to read `json.colour` unguarded and drop the parent, so a
+// missing slot — or a slot with no colour — threw, and importJson silently discarded the whole
+// plot. That is FIXED upstream now (both default safely). We keep emitting explicit styles
+// anyway: it costs nothing, and a session may well be opened by an older deployed AnCiR that
+// still has the crash.
 const SERIES_COLOUR = '#234154';
 const STYLE_SLOTS = ['line', 'points', 'thresholdline', 'confidenceLine'];
 
@@ -171,17 +169,13 @@ export function normalizeSession(draft, schema = SCHEMA) {
 			continue;
 		}
 
-		// Some nodes' per-Y output keys can't be pre-allocated from a static schema:
-		//  - 'runtime': keys depend on live data or unbounded params (Split's segments,
-		//    LongToWide's categories, MovingAnalysis' nHarmonics-derived keys).
-		//  - 'suffix' with an un-baked discriminator combo (e.g. a new analysis method).
-		// We still emit the node with its fixed outputs; flag that the dynamic ones won't
-		// auto-compute on load.
-		if (nodeSchema.dynamicKind === 'runtime') {
-			warnings.push(`${name}: data-dependent dynamic outputs are not pre-allocated; those outputs may not compute on load.`);
-		} else if (nodeSchema.dynamicUnresolved?.(args)) {
-			warnings.push(`${name}: no baked output keys for this parameter combination; its per-Y outputs may not compute on load. Re-run gen-schema.js if a new method was added.`);
-		}
+		// Computed-output nodes (Split, LongToWide, MovingAnalysis, …) derive their keys from
+		// the args — and, for LongToWide, from the baked data — so give the schema a way to
+		// read column values. Anything it still can't work out is a warning, not a guess: a
+		// wrong key yields an analysis that silently never fills in.
+		const outCtx = { getValues: (id) => rawData[id] };
+		const issue = nodeSchema.dynamicIssue?.(args, outCtx);
+		if (issue) warnings.push(`${name}: ${issue}; those outputs may not compute on load.`);
 
 		// Generators: BAKE outputs so a downstream analysis sees populated inputs at load
 		// (GUI regeneration is timing-fragile for generator→analysis chains — see ADR).
@@ -192,7 +186,7 @@ export function normalizeSession(draft, schema = SCHEMA) {
 
 		// PRE-ALLOCATE output columns + `out` wiring (required — see ADR Test C).
 		const out = {};
-		for (const { key, type, timeFormat } of nodeSchema.out(args)) {
+		for (const { key, type, timeFormat } of nodeSchema.out(args, outCtx)) {
 			const values = baked && Array.isArray(baked[key]) ? baked[key] : undefined;
 			const colName = outputColumnName(name, key, args, byName);
 			// Analyses: empty rawData → GUI recomputes. Generators: baked values.

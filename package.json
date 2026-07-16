@@ -24,7 +24,10 @@
 	},
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.29.0",
+		"@stdlib/random-base-exponential": "^0.2.2",
 		"@stdlib/random-base-minstd-shuffle": "^0.2.3",
+		"@stdlib/random-base-normal": "^0.2.2",
+		"@stdlib/random-base-uniform": "^0.2.3",
 		"express": "^5.2.1",
 		"express-rate-limit": "^8.5.2",
 		"pino": "^10.3.1",

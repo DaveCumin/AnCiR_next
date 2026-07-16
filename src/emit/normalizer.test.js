@@ -242,13 +242,60 @@ test('un-baked discriminator combo warns instead of emitting wrong keys', () => 
 	assert.match(warnings.join(' '), /no baked output keys/);
 });
 
-test('runtime-dynamic node (Split) emits fixed outputs only + a warning', () => {
-	const { session, warnings } = normalizeSession({
+test('computed-output node (Split) pre-allocates one column per y × segment', () => {
+	const { session, warnings, errors } = normalizeSession({
 		columns: [{ name: 't', values: [0, 1, 2] }, { name: 'y', values: [1, 2, 3] }],
-		analyses: [{ name: 'Split', args: { xIN: 't', yIN: ['y'] } }]
+		analyses: [{ name: 'Split', args: { xIN: 't', yIN: ['y'], splitTimes: [1] } }]
 	});
-	assert.ok(session.tableProcesses.find((t) => t.name === 'Split'), 'node is still emitted');
-	assert.match(warnings.join(' '), /dynamic outputs are not pre-allocated/);
+	assert.equal(errors.length, 0, errors.join('; '));
+	assert.equal(warnings.length, 0, 'args-derived keys need no warning');
+	const split = findTP(session, 'Split');
+	// 1 split point → 2 segments for y (column id 1)
+	assert.deepEqual(Object.keys(split.args.out).sort(), ['1_1', '1_2']);
+	for (const id of Object.values(split.args.out)) assert.ok(colById(session, id));
+});
+
+test('MovingAnalysis pre-allocates movex + per-(y,stat) columns', () => {
+	const { session, warnings } = normalizeSession({
+		columns: [{ name: 't', values: [0, 1] }, { name: 'y', values: [1, 2] }],
+		analyses: [{ name: 'MovingAnalysis', args: { xIN: 't', yIN: ['y'], analysis: 'periodogram' } }]
+	});
+	const ma = findTP(session, 'MovingAnalysis');
+	// movex is the node's own fixed output; the stats are computed per y (column id 1)
+	assert.deepEqual(Object.keys(ma.args.out).sort(), ['1_peak_period', '1_peak_power', 'movex']);
+	assert.equal(warnings.length, 0);
+});
+
+test('LongToWide reads its categories from the baked category column', () => {
+	const { session, warnings } = normalizeSession({
+		columns: [
+			{ name: 'time', values: [0, 1, 2, 3] },
+			{ name: 'group', type: 'category', values: ['ctrl', 'ko', 'ctrl', 'wt'] },
+			{ name: 'val', values: [1, 2, 3, 4] }
+		],
+		analyses: [
+			{ name: 'LongToWide', args: { timeIN: 'time', categoryIN: 'group', valueIN: 'val' } }
+		]
+	});
+	const l2w = findTP(session, 'LongToWide');
+	// `time` is its fixed output; one value_<category> per distinct group, de-duplicated
+	assert.deepEqual(Object.keys(l2w.args.out).sort(), [
+		'time', 'value_ctrl', 'value_ko', 'value_wt'
+	]);
+	assert.equal(warnings.length, 0);
+});
+
+test('LongToWide warns (rather than guesses) when categories are not yet knowable', () => {
+	// categoryIN wired to an ANALYSIS output → empty at emit time, so the categories in it
+	// cannot be enumerated. Warn instead of inventing keys.
+	const { warnings } = normalizeSession({
+		columns: [{ name: 't', values: [0, 1] }, { name: 'y', values: [1, 2] }],
+		analyses: [
+			{ name: 'Cosinor', args: { xIN: 't', yIN: ['y'] } },
+			{ name: 'LongToWide', args: { timeIN: 't', categoryIN: 'period', valueIN: 'y' } }
+		]
+	});
+	assert.match(warnings.join(' '), /no data at emit time/);
 });
 
 test('plot emits refId series in the inner `plot.data`, not flat column ids', () => {

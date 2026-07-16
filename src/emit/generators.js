@@ -13,13 +13,26 @@
 // the upstream algorithm changes, the parity test fails and this file must follow it.
 
 import minstd from '@stdlib/random-base-minstd-shuffle';
+import uniform from '@stdlib/random-base-uniform';
+import normal from '@stdlib/random-base-normal';
+import exponential from '@stdlib/random-base-exponential';
 
-// Coerce any user seed into minstd's valid range [1, 2147483646] so the noise is
-// reproducible. Mirrors SimulatedData.svelte / Random.svelte normalizeSeed. 0/NaN → 12345.
 const MINSTD_MAX = 2147483646;
+
+// NB SimulatedData and Random normalise their seed DIFFERENTLY, so they get one helper each.
+// Do not "unify" them — the parity tests will fail, and the numbers would silently change.
+
+/** SimulatedData.svelte's normalizeSeed: 0/NaN → 12345. */
 export function normalizeSeed(seed) {
 	const n = Math.trunc(Number(seed));
 	if (!Number.isFinite(n) || n === 0) return 12345;
+	return ((((n - 1) % MINSTD_MAX) + MINSTD_MAX) % MINSTD_MAX) + 1;
+}
+
+/** Random.svelte's normalizeSeed: NaN → 1, and 0 is NOT special-cased (0 → MINSTD_MAX). */
+function normalizeSeedRandom(seed) {
+	const n = Math.trunc(Number(seed));
+	if (!Number.isFinite(n)) return 1;
 	return ((((n - 1) % MINSTD_MAX) + MINSTD_MAX) % MINSTD_MAX) + 1;
 }
 
@@ -75,6 +88,54 @@ export function simulatedData(args) {
 	}
 
 	return { time, values };
+}
+
+/**
+ * Port of Random's `makeDistributionGenerator(args)`. One minstd stream feeds whichever
+ * distribution is selected; a zero/non-finite scale collapses to a constant (upstream guards
+ * against a degenerate sigma/mean). Keep the branch order and the guards exactly as upstream.
+ */
+function randomGenerator(args) {
+	const prng = minstd.factory({ seed: normalizeSeedRandom(args.seed) });
+	const distribution = args.distribution ?? 'uniform';
+
+	if (distribution === 'gaussian') {
+		const sigma = Math.abs(Number(args.multiply));
+		if (!Number.isFinite(sigma) || sigma === 0) {
+			const fixed = Number(args.offset);
+			return () => fixed;
+		}
+		return normal.factory(Number(args.offset), sigma, { prng: prng.normalized });
+	}
+
+	if (distribution === 'exponential') {
+		const mean = Math.abs(Number(args.multiply));
+		if (!Number.isFinite(mean) || mean === 0) {
+			const fixed = Number(args.offset);
+			return () => fixed;
+		}
+		const randExp = exponential.factory(1 / mean, { prng: prng.normalized });
+		const base = Number(args.offset);
+		return () => base + randExp();
+	}
+
+	const randUnit = uniform.factory(0, 1, { prng: prng.normalized });
+	const base = Number(args.offset);
+	const scale = Number(args.multiply);
+	return () => base + randUnit() * scale;
+}
+
+/**
+ * Port of Random's `random(args)` — N draws from uniform/gaussian/exponential, each rounded
+ * to 2 dp exactly as upstream does (`Number(x.toFixed(2))`).
+ * @returns {{result: number[]}}
+ */
+export function randomColumn(args) {
+	const n = Math.max(0, Math.trunc(Number(args.N) || 0));
+	const gen = randomGenerator(args);
+	const result = [];
+	for (let i = 0; i < n; i++) result.push(Number(gen().toFixed(2)));
+	return { result };
 }
 
 /**

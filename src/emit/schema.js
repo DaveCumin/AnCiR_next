@@ -18,7 +18,8 @@
 // pre-allocation and warns; a code-side rule for these is a follow-up).
 
 import generated from './session-schema.generated.json' with { type: 'json' };
-import { simulatedData, sequenceColumn } from './generators.js';
+import { simulatedData, sequenceColumn, randomColumn } from './generators.js';
+import { dynamicOutKeys } from './dynamicOut.js';
 
 // The ISO format the generators stamp on a time column (SimulatedData / SequenceColumn).
 const TIME_FMT = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';
@@ -35,7 +36,10 @@ const VALIDATORS = {
 			return 'sections must be a non-empty array';
 		return null;
 	},
-	SequenceColumn: (a) => (Number(a.count) > 0 ? null : 'count must be > 0')
+	SequenceColumn: (a) => (Number(a.count) > 0 ? null : 'count must be > 0'),
+	// N<=0 yields an empty column that upstream types 'category' (result[0] is undefined) —
+	// a degenerate node. Reject it rather than emit one.
+	Random: (a) => (Number(a.N) > 0 ? null : 'N must be > 0')
 };
 
 /**
@@ -46,7 +50,8 @@ const VALIDATORS = {
  */
 const GENERATORS = {
 	SimulatedData: simulatedData,
-	SequenceColumn: sequenceColumn
+	SequenceColumn: sequenceColumn,
+	Random: randomColumn
 };
 
 /**
@@ -89,7 +94,7 @@ function suffixesFor(g, args) {
 }
 
 function buildOut(name, g) {
-	return (args) => {
+	return (args, ctx = {}) => {
 		const meta = OUT_META[name]?.(args) ?? {};
 		const metaOf = (key) => ({ type: 'number', ...(meta[key] ?? {}) });
 		const fixed = g.fixedOut.map((key) => ({ key, ...metaOf(key) }));
@@ -106,7 +111,13 @@ function buildOut(name, g) {
 				...yIds.flatMap((yid) => suffixes.map((s) => ({ key: `${yid}_${s}`, type: 'number' })))
 			];
 		}
-		// 'fixed' → fixed only; 'runtime' → fixed only (dynamic keys skipped, normalizer warns).
+		// Computed keys (Split segments, LongToWide categories, MovingAnalysis stats …) —
+		// derived from args, and from baked data for LongToWide. See dynamicOut.js.
+		if (g.dynamicKind === 'runtime') {
+			const d = dynamicOutKeys(name, args, ctx);
+			if (!d) return fixed;
+			return [...fixed, ...d.keys.map((key) => ({ key, ...metaOf(key) }))];
+		}
 		return fixed;
 	};
 }
@@ -119,9 +130,18 @@ for (const [name, g] of Object.entries(generated.nodes)) {
 		params: { ...g.params, ...(PARAM_OVERRIDES[name] ?? {}) },
 		dynamicKind: g.dynamicKind,
 		out: buildOut(name, g),
-		// True when this node's per-Y keys couldn't be resolved for these args (a 'suffix'
-		// node whose discriminator combination wasn't baked) — the normalizer warns.
-		dynamicUnresolved: (args) => g.dynamicKind === 'suffix' && !suffixesFor(g, args),
+		/**
+		 * Why this node's computed outputs couldn't be worked out for these args (string), or
+		 * null when they're fine. Two cases: a 'suffix' node whose discriminator combination
+		 * wasn't baked, and LongToWide when its category column has no data at emit time.
+		 * The normalizer turns this into a warning.
+		 */
+		dynamicIssue: (args, ctx = {}) => {
+			if (g.dynamicKind === 'suffix' && !suffixesFor(g, args))
+				return 'no baked output keys for this parameter combination; re-run gen-schema.js if a new method was added';
+			if (g.dynamicKind === 'runtime') return dynamicOutKeys(name, args, ctx)?.issue ?? null;
+			return null;
+		},
 		validate: VALIDATORS[name],
 		generate: GENERATORS[name]
 	};
