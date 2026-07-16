@@ -20,7 +20,23 @@
 
 import { SCHEMA, PLOTS as plots_, columnIdFields } from './schema.js';
 
-const SESSION_VERSION = 'β.56.0'; // tracks the AnCiR app; importJson tolerates minor drift.
+const SESSION_VERSION = 'β.56.1'; // tracks the AnCiR app; importJson tolerates minor drift.
+
+// Per-series style slots the plot classes deserialise with an UNGUARDED read
+// (`LineClass.fromJSON(json.line)` → `json.colour`), so a MISSING slot throws and importJson
+// silently skips the whole plot. Union across the types that use them:
+//   Scatterplot: line, points · Periodogram: line, thresholdline, points
+//   Correlogram: line, confidenceLine, points · MeanSEM: line, points
+// A type ignores slots it doesn't read, so emitting the union is safe.
+//
+// Each slot MUST carry an explicit `colour`. An empty `{}` is NOT enough: fromJSON calls
+// `new LineClass({...})` with no parent, and the constructor's palette fallback
+// (`dataIN?.colour ?? getPaletteColor(parent.parentPlot.data.length)`) then dereferences
+// undefined. A defined colour short-circuits before the parent is touched. Every other field
+// (strokeWidth ?? 3, draw ?? true, radius ?? 4 …) defaults safely, so colour is all we set.
+// Value mirrors Quick-Plot's raw-series colour (plots/canonicalNodeViz.js RAW_COLOUR).
+const SERIES_COLOUR = '#234154';
+const STYLE_SLOTS = ['line', 'points', 'thresholdline', 'confidenceLine'];
 
 const numeric = (v) => typeof v === 'number' || (typeof v === 'string' && /^-?\d+$/.test(v));
 
@@ -239,6 +255,10 @@ export function normalizeSession(draft, schema = SCHEMA) {
 				errors.push(`Plot "${p.type}": no inputs wired (expected ${pSchema.inputs.join(', ')}). Skipped.`);
 				continue;
 			}
+			// Every series needs its style slots, each with an explicit colour (see
+			// SERIES_COLOUR/STYLE_SLOTS above) — otherwise Plot.fromJSON throws and
+			// importJson silently drops the plot.
+			for (const slot of STYLE_SLOTS) series[slot] = { colour: SERIES_COLOUR };
 			inner = { data: [series] };
 		}
 
@@ -246,9 +266,12 @@ export function normalizeSession(draft, schema = SCHEMA) {
 			id: plotId++,
 			name: p.name ?? pSchema.displayName ?? p.type,
 			type: p.type,
-			// stagger so multiple plots don't land on top of each other
-			x: 350 + (plotSlot % 2) * 520,
-			y: 150 + Math.floor(plotSlot / 2) * 300,
+			// Park plots clear of the auto-laid-out data/analysis chain (which starts near
+			// x≈350) and stagger them so they don't stack. Cosmetic only — the user can hit
+			// "Tidy layout"; the Plot constructor would otherwise default these to 350/150,
+			// landing on top of the analysis nodes.
+			x: 1200 + (plotSlot % 2) * 560,
+			y: 80 + Math.floor(plotSlot / 2) * 320,
 			width: 500,
 			height: 250,
 			plot: inner

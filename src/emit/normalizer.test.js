@@ -260,7 +260,14 @@ test('plot emits refId series in the inner `plot.data`, not flat column ids', ()
 	const p = session.plots[0];
 	assert.equal(p.type, 'scatterplot');
 	// the shape the GUI actually reads: plot.data[] with {refId} wrappers
-	assert.deepEqual(p.plot.data, [{ x: { refId: 0 }, y: { refId: 1 } }]);
+	const s = p.plot.data[0];
+	assert.deepEqual(s.x, { refId: 0 });
+	assert.deepEqual(s.y, { refId: 1 });
+	// …and the style slots MUST be present: the plot classes do an unguarded
+	// LineClass.fromJSON(json.line) → json.colour, so an absent slot throws and
+	// importJson silently skips the whole plot. Empty objects → class defaults.
+	assert.ok(s.line.colour, 'line slot carries an explicit colour (palette fallback would crash)');
+	assert.ok(s.points.colour, 'points slot carries an explicit colour');
 	assert.ok(p.width > 0 && p.height > 0, 'carries a renderable box');
 });
 
@@ -273,8 +280,12 @@ test('plot input fields are registry-derived per type (time/values, column)', ()
 		]
 	});
 	assert.equal(errors.length, 0, errors.join('; '));
-	assert.deepEqual(session.plots[0].plot.data, [{ time: { refId: 0 }, values: { refId: 1 } }]);
-	assert.deepEqual(session.plots[1].plot.data, [{ column: { refId: 1 } }]);
+	const pg = session.plots[0].plot.data[0];
+	assert.deepEqual(pg.time, { refId: 0 });
+	assert.deepEqual(pg.values, { refId: 1 });
+	// Periodogram reads line + thresholdline + points unguarded — all must be present
+	for (const slot of ['line', 'thresholdline', 'points']) assert.ok(pg[slot]?.colour, slot);
+	assert.deepEqual(session.plots[1].plot.data[0].column, { refId: 1 });
 	// staggered so they don't stack
 	assert.notDeepEqual(
 		[session.plots[0].x, session.plots[0].y],
