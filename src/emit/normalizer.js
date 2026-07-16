@@ -25,11 +25,14 @@ const SESSION_VERSION = 'β.56.0'; // tracks the AnCiR app; importJson tolerates
 const numeric = (v) => typeof v === 'number' || (typeof v === 'string' && /^-?\d+$/.test(v));
 
 /** A blank AnCiR column descriptor owning its own rawData slot `id`. */
-function columnDescriptor(id, name, type) {
+function columnDescriptor(id, name, type, timeFormat) {
 	return {
 		id,
 		name,
 		type: type ?? 'number',
+		// A time column needs its format, or it renders as a raw epoch number. Generators
+		// normally stamp this when they compute; we bake their data, so we must emit it.
+		...(timeFormat ? { timeFormat } : {}),
 		data: id,
 		// The GUI expects this field present (empty string) — omitting it HANGS the workflow
 		// load for free/source columns. NB: `tableProcessGUId` is a process-generated version
@@ -64,9 +67,9 @@ export function normalizeSession(draft, schema = SCHEMA) {
 	let nextId = 0;
 	const byName = new Map(); // column name -> id
 
-	const addColumn = (name, type, values) => {
+	const addColumn = (name, type, values, timeFormat) => {
 		const id = nextId++;
-		data.push(columnDescriptor(id, name, type));
+		data.push(columnDescriptor(id, name, type, timeFormat));
 		// Inputs carry their values; outputs stay empty ([]) so the GUI recomputes them.
 		rawData[id] = Array.isArray(values) ? values.slice() : [];
 		if (name != null && !byName.has(name)) byName.set(name, id);
@@ -173,11 +176,11 @@ export function normalizeSession(draft, schema = SCHEMA) {
 
 		// PRE-ALLOCATE output columns + `out` wiring (required — see ADR Test C).
 		const out = {};
-		for (const { key, type } of nodeSchema.out(args)) {
+		for (const { key, type, timeFormat } of nodeSchema.out(args)) {
 			const values = baked && Array.isArray(baked[key]) ? baked[key] : undefined;
 			const colName = outputColumnName(name, key, args, byName);
 			// Analyses: empty rawData → GUI recomputes. Generators: baked values.
-			out[key] = addColumn(colName, type, values);
+			out[key] = addColumn(colName, type, values, timeFormat);
 		}
 
 		tableProcesses.push({

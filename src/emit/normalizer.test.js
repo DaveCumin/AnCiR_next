@@ -86,15 +86,66 @@ test('per-Y output allocates one curve column per Y', () => {
 	assert.ok('binnedx' in bin.args.out);
 });
 
-test('generator emits empty outputs (GUI regenerates on load)', () => {
+test('SimulatedData BAKES its outputs so a downstream analysis has populated inputs', () => {
 	const { session, errors } = normalizeSession({
-		analyses: [{ name: 'SimulatedData', args: {} }]
+		analyses: [
+			{
+				name: 'SimulatedData',
+				args: {
+					samplingPeriod_hours: 1,
+					sections: [
+						{
+							duration_hours: 48,
+							rhythmPeriod_hours: 24,
+							rhythmPhase_hours: 0,
+							rhythmAmplitude: 100,
+							noiseEnabled: false,
+							noiseMode: 'multiply',
+							noiseAmplitude: 1
+						}
+					]
+				}
+			}
+		]
 	});
 	assert.equal(errors.length, 0, errors.join('; '));
 	const sim = findTP(session, 'SimulatedData');
-	assert.ok('time' in sim.args.out && 'values' in sim.args.out);
-	assert.equal(colById(session, sim.args.out.time).type, 'time');
-	assert.deepEqual(session.rawData[sim.args.out.values], []);
+	// 48h at 1h steps → 48 samples in BOTH outputs (not empty)
+	assert.equal(session.rawData[sim.args.out.time].length, 48);
+	assert.equal(session.rawData[sim.args.out.values].length, 48);
+	// the time column carries type + format, or it renders as a raw number
+	const timeCol = colById(session, sim.args.out.time);
+	assert.equal(timeCol.type, 'time');
+	assert.equal(timeCol.timeFormat, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]');
+	assert.match(session.rawData[sim.args.out.time][0], /^\d{4}-\d{2}-\d{2}T/);
+});
+
+test('SimulatedData is deterministic: same seed → same values', () => {
+	const draft = (seed) => ({
+		analyses: [{ name: 'SimulatedData', args: { seed, samplingPeriod_hours: 1 } }]
+	});
+	const a = normalizeSession(draft(7));
+	const b = normalizeSession(draft(7));
+	const c = normalizeSession(draft(8));
+	const valsOf = (r) => r.session.rawData[findTP(r.session, 'SimulatedData').args.out.values];
+	assert.deepEqual(valsOf(a), valsOf(b), 'same seed reproduces');
+	assert.notDeepEqual(valsOf(a), valsOf(c), 'different seed diverges');
+});
+
+test('SequenceColumn time mode emits a time-typed, formatted column', () => {
+	const { session } = normalizeSession({
+		analyses: [
+			{
+				name: 'SequenceColumn',
+				args: { seqType: 'time', startTime: Date.parse('2024-01-01T00:00:00.000Z'), stepHours: 1, count: 5 }
+			}
+		]
+	});
+	const seq = findTP(session, 'SequenceColumn');
+	const col = colById(session, seq.args.out.result);
+	assert.equal(col.type, 'time');
+	assert.equal(col.timeFormat, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]');
+	assert.equal(session.rawData[seq.args.out.result].length, 5);
 });
 
 test('generator with a generate() bakes its outputs (SequenceColumn)', () => {

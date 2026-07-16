@@ -18,6 +18,10 @@
 // pre-allocation and warns; a code-side rule for these is a follow-up).
 
 import generated from './session-schema.generated.json' with { type: 'json' };
+import { simulatedData, sequenceColumn } from './generators.js';
+
+// The ISO format the generators stamp on a time column (SimulatedData / SequenceColumn).
+const TIME_FMT = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';
 
 // ---- code-side overrides (logic, keyed by node name) ----
 
@@ -34,16 +38,15 @@ const VALIDATORS = {
 	SequenceColumn: (a) => (Number(a.count) > 0 ? null : 'count must be > 0')
 };
 
-/** Pure output-baking for generators: { outKey: number[] }, or null. */
+/**
+ * Pure output-baking for generators: `{ outKey: values[] }`. Baking matters because an
+ * analysis only recomputes on load when its INPUTS already hold data — see ADR.
+ * These are faithful ports of AnCiR's real generators, held honest by a parity test
+ * (test/emit.generators.parity.test.js) that diffs them against the originals.
+ */
 const GENERATORS = {
-	// SequenceColumn is trivially pure — port it directly so a downstream analysis reading
-	// it sees populated data at load. SimulatedData/Random need a faithful port (see ADR).
-	SequenceColumn: (a) => {
-		const start = Number(a.start ?? 0);
-		const step = Number(a.step ?? 1);
-		const count = Math.max(0, Math.floor(Number(a.count ?? 0)));
-		return { result: Array.from({ length: count }, (_, i) => start + i * step) };
-	}
+	SimulatedData: simulatedData,
+	SequenceColumn: sequenceColumn
 };
 
 /**
@@ -59,9 +62,21 @@ const PARAM_OVERRIDES = {
 	FitFunction: { useFixedPeriod: true }
 };
 
-/** Output columns that are time-typed (default is 'number'). */
-const OUT_TYPES = {
-	SimulatedData: { time: 'time' }
+/**
+ * Column metadata for outputs, as a function of args (default: plain 'number').
+ * A generator normally stamps type/timeFormat on its output column when it computes — but we
+ * BAKE its data, so it never runs in the GUI and never stamps them. We must emit them here or
+ * a time column renders as a raw number. Mirrors SimulatedData.svelte / SequenceColumn.svelte.
+ */
+const OUT_META = {
+	SimulatedData: () => ({
+		time: { type: 'time', timeFormat: TIME_FMT },
+		values: { type: 'number' }
+	}),
+	SequenceColumn: (args) => ({
+		result:
+			args.seqType === 'time' ? { type: 'time', timeFormat: TIME_FMT } : { type: 'number' }
+	})
 };
 
 // ---- assemble the runtime schema from generated data + overrides ----
@@ -74,9 +89,10 @@ function suffixesFor(g, args) {
 }
 
 function buildOut(name, g) {
-	const typeOf = (key) => OUT_TYPES[name]?.[key] ?? 'number';
 	return (args) => {
-		const fixed = g.fixedOut.map((key) => ({ key, type: typeOf(key) }));
+		const meta = OUT_META[name]?.(args) ?? {};
+		const metaOf = (key) => ({ type: 'number', ...(meta[key] ?? {}) });
+		const fixed = g.fixedOut.map((key) => ({ key, ...metaOf(key) }));
 		const yIds = args.yIN ?? [];
 		// per-Y `${prefix}${yid}` (Cosinor's cosinory_7, BinnedData's binnedy_7, …)
 		if (g.dynamicKind === 'prefix')
