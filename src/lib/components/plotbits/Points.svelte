@@ -21,8 +21,14 @@
 
 		constructor(dataIN, parent) {
 			this.parentData = parent;
+			// The palette fallback must not assume a parent: fromJSON constructs styles before
+			// the series exists, so `parent` can legitimately be undefined. Guard it, or a
+			// series with no explicit colour throws "Cannot read properties of undefined
+			// (reading 'parentPlot')" — and importJson then silently drops the whole plot.
 			this.colour =
-				dataIN?.colour ?? getPaletteColor(parent.parentPlot.data.length) ?? getPaletteColor(0);
+				dataIN?.colour ??
+				getPaletteColor(parent?.parentPlot?.data?.length ?? 0) ??
+				getPaletteColor(0);
 			this.radius = dataIN?.radius ?? 4;
 			this.shape = POINT_SHAPES.includes(dataIN?.shape) ? dataIN.shape : 'circle';
 			this.draw = dataIN?.draw ?? true;
@@ -37,13 +43,19 @@
 			};
 		}
 
-		static fromJSON(json) {
-			return new PointsClass({
-				colour: json.colour,
-				radius: json.radius,
-				shape: json.shape,
-				draw: json.draw
-			});
+		// `json` may be absent entirely: a partial series (e.g. a Quick-Plot spawn, or a
+		// session written by hand/by a tool) carries no `points`. Default rather than throw —
+		// each plot's fromJSON calls this unguarded, and importJson drops a plot that throws.
+		static fromJSON(json, parent) {
+			return new PointsClass(
+				{
+					colour: json?.colour,
+					radius: json?.radius,
+					shape: json?.shape,
+					draw: json?.draw
+				},
+				parent
+			);
 		}
 	}
 </script>
