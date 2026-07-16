@@ -426,7 +426,7 @@
 				"offset": 0,
 				"multiply": 10,
 				"N": 10,
-				"seed": 74806,
+				"seed": 64,
 				"distribution": "uniform"
 			},
 			"fixedOut": [
@@ -582,9 +582,9 @@
 				"step": 1,
 				"count": 10,
 				"end": 9,
-				"startTime": 1784190492183,
+				"startTime": 1784191194889,
 				"stepHours": 1,
-				"endTime": 1784276892183
+				"endTime": 1784277594889
 			},
 			"fixedOut": [
 				"result"
@@ -600,8 +600,8 @@
 				"array": []
 			},
 			"params": {
-				"startTime": 1784190492210,
-				"seed": 24978,
+				"startTime": 1784191194910,
+				"seed": 52093,
 				"sections": [
 					{
 						"duration_hours": 96,
@@ -743,6 +743,78 @@
 			],
 			"dynamicKind": "fixed",
 			"perYPrefix": null
+		}
+	},
+	"plots": {
+		"actogram": {
+			"displayName": "Actogram",
+			"inputs": [
+				"time",
+				"values"
+			]
+		},
+		"boxplot": {
+			"displayName": "Boxplot",
+			"inputs": [
+				"x",
+				"y"
+			]
+		},
+		"circularphase": {
+			"displayName": "Circular phase plot",
+			"inputs": [
+				"time",
+				"values"
+			]
+		},
+		"correlogram": {
+			"displayName": "Correlogram",
+			"inputs": [
+				"time",
+				"values"
+			]
+		},
+		"dataview": {
+			"displayName": "Data View",
+			"inputs": []
+		},
+		"fft": {
+			"displayName": "Fourier analysis",
+			"inputs": [
+				"time",
+				"values"
+			]
+		},
+		"histogram": {
+			"displayName": "Histogram",
+			"inputs": [
+				"column"
+			]
+		},
+		"meansem": {
+			"displayName": "Mean ± SEM",
+			"inputs": [
+				"x",
+				"y"
+			]
+		},
+		"periodogram": {
+			"displayName": "Periodogram",
+			"inputs": [
+				"time",
+				"values"
+			]
+		},
+		"scatterplot": {
+			"displayName": "Scatterplot",
+			"inputs": [
+				"x",
+				"y"
+			]
+		},
+		"tableplot": {
+			"displayName": "Table",
+			"inputs": []
 		}
 	}
 }

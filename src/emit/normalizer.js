@@ -18,7 +18,7 @@
 // Returns { session, warnings, errors } — a broken analysis is dropped with an error
 // (mirroring the engine's discardTp) rather than poisoning the whole session.
 
-import { SCHEMA, columnIdFields } from './schema.js';
+import { SCHEMA, PLOTS as plots_, columnIdFields } from './schema.js';
 
 const SESSION_VERSION = 'β.56.0'; // tracks the AnCiR app; importJson tolerates minor drift.
 
@@ -189,26 +189,68 @@ export function normalizeSession(draft, schema = SCHEMA) {
 		});
 	}
 
-	// ---- 3. plots (minimal emit) ----
-	// NOTE: a Plot carries a large default `plot` sub-object (axes/padding/limits). Rather
-	// than reproduce it here (and risk drift), we emit a minimal plot and let the GUI's
-	// Plot.fromJSON fill defaults. This path is not yet E2E-verified — see ADR Phase 3.
+	// ---- 3. plots ----
+	// A plot's series are NOT flat column ids: each is a wrapper `{ refId: <columnId> }`
+	// inside the plot's inner `{ data: [...] }`. We emit that minimal inner shape — the same
+	// one Quick-Plot uses (plots/canonicalNodeViz.js plotDataFromSpec), which every plot
+	// class's fromJSON is explicitly tested to accept while keeping its own default
+	// padding/axes (plots/plotFromJSONRobustness.test.js). The Plot constructor defaults
+	// name/x/y/width/height, so we only position them so they don't stack.
 	let plotId = 5000;
+	let plotSlot = 0;
 	for (const p of draft.plots ?? []) {
-		const inputs = {};
-		let bad = false;
-		for (const [k, v] of Object.entries(p.inputs ?? {})) {
-			if (Array.isArray(v)) inputs[k] = v.map(resolveRef);
-			else inputs[k] = resolveRef(v);
-			const flat = Array.isArray(inputs[k]) ? inputs[k] : [inputs[k]];
-			if (flat.some((id) => id == null)) bad = true;
-		}
-		if (bad) {
-			errors.push(`Plot "${p.type}": unresolved input column ref — skipped.`);
+		const pSchema = plots_[p.type];
+		if (!pSchema) {
+			errors.push(`Unknown plot type "${p.type}". Available: ${Object.keys(plots_).join(', ')}. Skipped.`);
 			continue;
 		}
-		warnings.push(`Plot "${p.type}" emitted minimally; GUI fills defaults (unverified path).`);
-		plots.push({ id: plotId++, type: p.type, ...inputs });
+
+		const refsOf = (v) => (Array.isArray(v) ? v : [v]).map(resolveRef);
+		let inner = null;
+
+		if (p.type === 'tableplot') {
+			// tableplot takes a bare list of columns, not x/y series.
+			const raw = Array.isArray(p.inputs) ? p.inputs : Object.values(p.inputs ?? {});
+			const ids = refsOf(raw.flat());
+			if (ids.some((id) => id == null)) {
+				errors.push(`Plot "tableplot": unresolved column ref — skipped.`);
+				continue;
+			}
+			inner = { columnRefs: ids, showCol: ids.map(() => true) };
+		} else {
+			// One series, one `{refId}` wrapper per registry input field (x/y, time/values, …).
+			const series = {};
+			let bad = null;
+			for (const field of pSchema.inputs) {
+				const ref = Array.isArray(p.inputs) ? p.inputs[pSchema.inputs.indexOf(field)] : p.inputs?.[field];
+				if (ref == null) continue;
+				const id = resolveRef(ref);
+				if (id == null) bad = `${p.type}.${field}: no column named "${ref}"`;
+				else series[field] = { refId: id };
+			}
+			if (bad) {
+				errors.push(`Plot ${bad}. Available: ${[...byName.keys()].join(', ') || '(none)'}. Skipped.`);
+				continue;
+			}
+			if (Object.keys(series).length === 0) {
+				errors.push(`Plot "${p.type}": no inputs wired (expected ${pSchema.inputs.join(', ')}). Skipped.`);
+				continue;
+			}
+			inner = { data: [series] };
+		}
+
+		plots.push({
+			id: plotId++,
+			name: p.name ?? pSchema.displayName ?? p.type,
+			type: p.type,
+			// stagger so multiple plots don't land on top of each other
+			x: 350 + (plotSlot % 2) * 520,
+			y: 150 + Math.floor(plotSlot / 2) * 300,
+			width: 500,
+			height: 250,
+			plot: inner
+		});
+		plotSlot++;
 	}
 
 	const session = {

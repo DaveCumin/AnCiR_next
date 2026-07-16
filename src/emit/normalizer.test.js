@@ -200,6 +200,58 @@ test('runtime-dynamic node (Split) emits fixed outputs only + a warning', () => 
 	assert.match(warnings.join(' '), /dynamic outputs are not pre-allocated/);
 });
 
+test('plot emits refId series in the inner `plot.data`, not flat column ids', () => {
+	const { session, errors } = normalizeSession({
+		columns: [{ name: 'hour', values: [0, 1] }, { name: 'signal', values: [5, 6] }],
+		plots: [{ type: 'scatterplot', inputs: { x: 'hour', y: 'signal' } }]
+	});
+	assert.equal(errors.length, 0, errors.join('; '));
+	const p = session.plots[0];
+	assert.equal(p.type, 'scatterplot');
+	// the shape the GUI actually reads: plot.data[] with {refId} wrappers
+	assert.deepEqual(p.plot.data, [{ x: { refId: 0 }, y: { refId: 1 } }]);
+	assert.ok(p.width > 0 && p.height > 0, 'carries a renderable box');
+});
+
+test('plot input fields are registry-derived per type (time/values, column)', () => {
+	const { session, errors } = normalizeSession({
+		columns: [{ name: 't', values: [0, 1] }, { name: 'v', values: [5, 6] }],
+		plots: [
+			{ type: 'periodogram', inputs: { time: 't', values: 'v' } },
+			{ type: 'histogram', inputs: { column: 'v' } }
+		]
+	});
+	assert.equal(errors.length, 0, errors.join('; '));
+	assert.deepEqual(session.plots[0].plot.data, [{ time: { refId: 0 }, values: { refId: 1 } }]);
+	assert.deepEqual(session.plots[1].plot.data, [{ column: { refId: 1 } }]);
+	// staggered so they don't stack
+	assert.notDeepEqual(
+		[session.plots[0].x, session.plots[0].y],
+		[session.plots[1].x, session.plots[1].y]
+	);
+});
+
+test('tableplot uses columnRefs/showCol, not x/y series', () => {
+	const { session } = normalizeSession({
+		columns: [{ name: 'a', values: [1] }, { name: 'b', values: [2] }],
+		plots: [{ type: 'tableplot', inputs: ['a', 'b'] }]
+	});
+	assert.deepEqual(session.plots[0].plot, { columnRefs: [0, 1], showCol: [true, true] });
+});
+
+test('unknown plot type and unresolved plot refs are reported, not emitted', () => {
+	const bogusType = normalizeSession({ plots: [{ type: 'nope', inputs: {} }] });
+	assert.equal(bogusType.session.plots.length, 0);
+	assert.match(bogusType.errors.join(' '), /Unknown plot type/);
+
+	const badRef = normalizeSession({
+		columns: [{ name: 'a', values: [1] }],
+		plots: [{ type: 'scatterplot', inputs: { x: 'a', y: 'missing' } }]
+	});
+	assert.equal(badRef.session.plots.length, 0);
+	assert.match(badRef.errors.join(' '), /missing/);
+});
+
 test('session skeleton has every slice the GUI importJson expects', () => {
 	const { session } = normalizeSession({ columns: [{ name: 'x', values: [1] }] });
 	for (const k of [

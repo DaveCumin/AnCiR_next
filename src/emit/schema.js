@@ -111,6 +111,13 @@ for (const [name, g] of Object.entries(generated.nodes)) {
 	};
 }
 
+/**
+ * Plot types → their series field names (registry `defaultInputs`):
+ * scatterplot/boxplot/meansem → [x,y]; actogram/periodogram/fft/correlogram/circularphase
+ * → [time,values]; histogram → [column]; tableplot/dataview → [] (tableplot uses columnRefs).
+ */
+export const PLOTS = generated.plots ?? {};
+
 /** Column-id arg fields for a node (scalar + array), for name-resolution/coercion. */
 export function columnIdFields(name) {
 	const s = SCHEMA[name];
