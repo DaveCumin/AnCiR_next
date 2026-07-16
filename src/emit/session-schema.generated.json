@@ -426,7 +426,7 @@
 				"offset": 0,
 				"multiply": 10,
 				"N": 10,
-				"seed": 43937,
+				"seed": 74806,
 				"distribution": "uniform"
 			},
 			"fixedOut": [
@@ -517,8 +517,57 @@
 				"corrMaxLag": 0
 			},
 			"fixedOut": [],
-			"dynamicKind": "runtime",
-			"perYPrefix": null
+			"dynamicKind": "suffix",
+			"perYPrefix": null,
+			"discriminators": [
+				"analysis",
+				"pgMethod"
+			],
+			"suffixesBy": {
+				"periodogram|Lomb-Scargle": [
+					"period",
+					"power"
+				],
+				"periodogram|Chi-squared": [
+					"period",
+					"power",
+					"threshold"
+				],
+				"periodogram|Enright": [
+					"period",
+					"power"
+				],
+				"fft|Lomb-Scargle": [
+					"frequency",
+					"period",
+					"magnitude",
+					"phase"
+				],
+				"fft|Chi-squared": [
+					"frequency",
+					"period",
+					"magnitude",
+					"phase"
+				],
+				"fft|Enright": [
+					"frequency",
+					"period",
+					"magnitude",
+					"phase"
+				],
+				"correlogram|Lomb-Scargle": [
+					"lag",
+					"correlation"
+				],
+				"correlogram|Chi-squared": [
+					"lag",
+					"correlation"
+				],
+				"correlogram|Enright": [
+					"lag",
+					"correlation"
+				]
+			}
 		},
 		"SequenceColumn": {
 			"displayName": "Sequence Column",
@@ -533,9 +582,9 @@
 				"step": 1,
 				"count": 10,
 				"end": 9,
-				"startTime": 1784180793746,
+				"startTime": 1784190492183,
 				"stepHours": 1,
-				"endTime": 1784267193746
+				"endTime": 1784276892183
 			},
 			"fixedOut": [
 				"result"
@@ -551,8 +600,8 @@
 				"array": []
 			},
 			"params": {
-				"startTime": 1784180793763,
-				"seed": 25195,
+				"startTime": 1784190492210,
+				"seed": 24978,
 				"sections": [
 					{
 						"duration_hours": 96,

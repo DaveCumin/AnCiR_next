@@ -66,16 +66,29 @@ const OUT_TYPES = {
 
 // ---- assemble the runtime schema from generated data + overrides ----
 
+/** Suffix set for a 'suffix' node given its args, or null when the combo wasn't baked. */
+function suffixesFor(g, args) {
+	if (g.dynamicKind !== 'suffix') return null;
+	const key = g.discriminators.map((d) => String(args[d])).join('|');
+	return g.suffixesBy[key] ?? null;
+}
+
 function buildOut(name, g) {
 	const typeOf = (key) => OUT_TYPES[name]?.[key] ?? 'number';
 	return (args) => {
 		const fixed = g.fixedOut.map((key) => ({ key, type: typeOf(key) }));
-		if (g.dynamicKind === 'prefix') {
-			const perY = (args.yIN ?? []).map((yid) => ({
-				key: `${g.perYPrefix}${yid}`,
-				type: 'number'
-			}));
-			return [...fixed, ...perY];
+		const yIds = args.yIN ?? [];
+		// per-Y `${prefix}${yid}` (Cosinor's cosinory_7, BinnedData's binnedy_7, …)
+		if (g.dynamicKind === 'prefix')
+			return [...fixed, ...yIds.map((yid) => ({ key: `${g.perYPrefix}${yid}`, type: 'number' }))];
+		// per-Y `${yid}_${suffix}` (RhythmicityAnalysis: 7_period, 7_power, …)
+		if (g.dynamicKind === 'suffix') {
+			const suffixes = suffixesFor(g, args);
+			if (!suffixes) return fixed; // unbaked combo → fixed only; normalizer warns
+			return [
+				...fixed,
+				...yIds.flatMap((yid) => suffixes.map((s) => ({ key: `${yid}_${s}`, type: 'number' })))
+			];
 		}
 		// 'fixed' → fixed only; 'runtime' → fixed only (dynamic keys skipped, normalizer warns).
 		return fixed;
@@ -90,6 +103,9 @@ for (const [name, g] of Object.entries(generated.nodes)) {
 		params: { ...g.params, ...(PARAM_OVERRIDES[name] ?? {}) },
 		dynamicKind: g.dynamicKind,
 		out: buildOut(name, g),
+		// True when this node's per-Y keys couldn't be resolved for these args (a 'suffix'
+		// node whose discriminator combination wasn't baked) — the normalizer warns.
+		dynamicUnresolved: (args) => g.dynamicKind === 'suffix' && !suffixesFor(g, args),
 		validate: VALIDATORS[name],
 		generate: GENERATORS[name]
 	};

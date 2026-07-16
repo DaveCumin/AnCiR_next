@@ -156,15 +156,47 @@ test('schema is registry-derived: broad node coverage + Cosinor keeps its fixed 
 	assert.ok('binMode' in SCHEMA.BinnedData.params, 'registry params, not guessed names');
 });
 
-test('runtime-dynamic node (RhythmicityAnalysis) emits fixed outputs only + a warning', () => {
+test('suffix node (RhythmicityAnalysis) pre-allocates `${yid}_${suffix}` keys per method', () => {
+	const draft = (args) => ({
+		columns: [{ name: 't', values: [0, 1, 2] }, { name: 'y', values: [1, 2, 3] }],
+		analyses: [{ name: 'RhythmicityAnalysis', args: { xIN: 't', yIN: ['y'], ...args } }]
+	});
+	// default periodogram (Lomb-Scargle) → period + power for y (column id 1)
+	const pg = normalizeSession(draft({}));
+	const pgKeys = Object.keys(pg.session.tableProcesses[0].args.out);
+	assert.deepEqual(pgKeys.sort(), ['1_period', '1_power']);
+	assert.equal(pg.warnings.length, 0, 'a baked combo must not warn');
+	// NOT the collected-mode prefix — that would be the wrong key and silently break compute
+	assert.ok(!pgKeys.some((k) => k.startsWith('rhythmicityy_')));
+
+	// Chi-squared adds a `threshold` output — baked from the node's own helper
+	const chi = normalizeSession(draft({ pgMethod: 'Chi-squared' }));
+	assert.ok(Object.keys(chi.session.tableProcesses[0].args.out).includes('1_threshold'));
+
+	// fft has an entirely different key set
+	const fft = normalizeSession(draft({ analysis: 'fft' }));
+	assert.deepEqual(
+		Object.keys(fft.session.tableProcesses[0].args.out).sort(),
+		['1_frequency', '1_magnitude', '1_period', '1_phase']
+	);
+});
+
+test('un-baked discriminator combo warns instead of emitting wrong keys', () => {
+	const { warnings } = normalizeSession({
+		columns: [{ name: 't', values: [0, 1] }, { name: 'y', values: [1, 2] }],
+		analyses: [
+			{ name: 'RhythmicityAnalysis', args: { xIN: 't', yIN: ['y'], analysis: 'not-a-method' } }
+		]
+	});
+	assert.match(warnings.join(' '), /no baked output keys/);
+});
+
+test('runtime-dynamic node (Split) emits fixed outputs only + a warning', () => {
 	const { session, warnings } = normalizeSession({
 		columns: [{ name: 't', values: [0, 1, 2] }, { name: 'y', values: [1, 2, 3] }],
-		analyses: [{ name: 'RhythmicityAnalysis', args: { xIN: 't', yIN: ['y'] } }]
+		analyses: [{ name: 'Split', args: { xIN: 't', yIN: ['y'] } }]
 	});
-	const tp = session.tableProcesses.find((t) => t.name === 'RhythmicityAnalysis');
-	assert.ok(tp, 'node is still emitted');
-	// No wrongly-guessed per-Y keys (its real keys are `${yid}_period` etc., data-dependent).
-	assert.ok(!Object.keys(tp.args.out).some((k) => k.startsWith('rhythmicityy_')));
+	assert.ok(session.tableProcesses.find((t) => t.name === 'Split'), 'node is still emitted');
 	assert.match(warnings.join(' '), /dynamic outputs are not pre-allocated/);
 });
 

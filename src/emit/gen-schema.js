@@ -24,6 +24,40 @@ await ensureDom();
 const { ensureRegistry } = await import('../engine/session.js');
 await ensureRegistry();
 const { appConsts } = await import('$lib/core/core.svelte.js');
+const { getOutputKeys: rhythmicityOutputKeys } = await import(
+	'$lib/tableProcesses/RhythmicityAnalysis.svelte'
+);
+
+/**
+ * Nodes whose per-Y keys are `${yid}_${suffix}` with a suffix set that is a pure function
+ * of a few DISCRETE params. We don't re-implement the rule — we call the node's own
+ * exported key helper for every combination of the discriminators and bake the result, so
+ * the suffixes can't drift. An arg combination we didn't enumerate simply isn't in the
+ * table, and the normalizer degrades to a warning rather than emitting wrong keys.
+ *
+ * Only DISCRETE discriminators can be baked. MovingAnalysis is deliberately absent: its
+ * getStatKeys() is parametric (analysis:'cosinor' derives keys from nHarmonics/Ncurves,
+ * e.g. H1_amplitude / C2_period), so no finite table can express it — it stays 'runtime'.
+ */
+const SUFFIX_RULES = {
+	RhythmicityAnalysis: {
+		helper: rhythmicityOutputKeys,
+		// domains per the component's own select options + defaults comments
+		domains: {
+			analysis: ['periodogram', 'fft', 'correlogram'],
+			pgMethod: ['Lomb-Scargle', 'Chi-squared', 'Enright']
+		}
+	}
+};
+
+/** Cartesian product of the discriminator domains → [{analysis, pgMethod}, …]. */
+function combos(domains) {
+	const keys = Object.keys(domains);
+	return keys.reduce(
+		(acc, k) => acc.flatMap((base) => domains[k].map((v) => ({ ...base, [k]: v }))),
+		[{}]
+	);
+}
 
 // Arg keys that are wiring/bookkeeping, never user-facing params (mirrors the engine's
 // describeCapabilities()). Input-column fields are also excluded from params below.
@@ -75,10 +109,28 @@ for (const [name, entry] of appConsts.tableProcessMap ?? new Map()) {
 	const outTemplate = entry.defaults?.get?.('out');
 	const fixedOut = outTemplate ? Object.keys(outTemplate) : [];
 
-	const complex = RUNTIME_DYNAMIC.has(name);
-	// dynamicKind: 'fixed' (no per-Y outputs), 'prefix' (per-Y ${prefix}${yid} — safe to
-	// pre-allocate), or 'runtime' (keys depend on data/method — not statically knowable).
-	const dynamicKind = complex ? 'runtime' : entry.yOutKeyPrefix ? 'prefix' : 'fixed';
+	// dynamicKind:
+	//   'fixed'   — no per-Y outputs
+	//   'prefix'  — per-Y `${prefix}${yid}`
+	//   'suffix'  — per-Y `${yid}_${suffix}`, suffixes looked up by discrete discriminators
+	//   'runtime' — keys depend on data or unbounded params; not statically knowable
+	const rule = SUFFIX_RULES[name];
+	let dynamicKind, suffixesBy = null, discriminators = null;
+	if (rule) {
+		dynamicKind = 'suffix';
+		discriminators = Object.keys(rule.domains);
+		suffixesBy = {};
+		for (const combo of combos(rule.domains)) {
+			// Call the node's OWN exported helper — never a re-implementation.
+			const keys = rule.helper({ ...params, ...combo });
+			if (Array.isArray(keys) && keys.length)
+				suffixesBy[discriminators.map((d) => combo[d]).join('|')] = keys;
+		}
+	} else if (RUNTIME_DYNAMIC.has(name)) {
+		dynamicKind = 'runtime';
+	} else {
+		dynamicKind = entry.yOutKeyPrefix ? 'prefix' : 'fixed';
+	}
 
 	schema[name] = {
 		displayName: entry.displayName ?? name,
@@ -88,7 +140,9 @@ for (const [name, entry] of appConsts.tableProcessMap ?? new Map()) {
 		fixedOut,
 		dynamicKind,
 		// Per-Y prefix for dynamicKind==='prefix' (e.g. cosinory_, binnedy_); null otherwise.
-		perYPrefix: dynamicKind === 'prefix' ? entry.yOutKeyPrefix : null
+		perYPrefix: dynamicKind === 'prefix' ? entry.yOutKeyPrefix : null,
+		// For dynamicKind==='suffix': which args select the suffix set, and the baked table.
+		...(discriminators ? { discriminators, suffixesBy } : {})
 	};
 }
 

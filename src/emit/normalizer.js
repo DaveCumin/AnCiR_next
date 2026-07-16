@@ -152,13 +152,16 @@ export function normalizeSession(draft, schema = SCHEMA) {
 			continue;
 		}
 
-		// Runtime-dynamic nodes (RhythmicityAnalysis, MovingAnalysis, Split, …) have per-Y
-		// output keys that depend on data/method (`${yid}_period`, per-segment, per-category),
-		// which the static schema can't pre-allocate. We still emit the node (fixed outputs
-		// only); flag that its dynamic outputs won't auto-compute on load until a code-side
-		// rule is ported.
+		// Some nodes' per-Y output keys can't be pre-allocated from a static schema:
+		//  - 'runtime': keys depend on live data or unbounded params (Split's segments,
+		//    LongToWide's categories, MovingAnalysis' nHarmonics-derived keys).
+		//  - 'suffix' with an un-baked discriminator combo (e.g. a new analysis method).
+		// We still emit the node with its fixed outputs; flag that the dynamic ones won't
+		// auto-compute on load.
 		if (nodeSchema.dynamicKind === 'runtime') {
 			warnings.push(`${name}: data-dependent dynamic outputs are not pre-allocated; those outputs may not compute on load.`);
+		} else if (nodeSchema.dynamicUnresolved?.(args)) {
+			warnings.push(`${name}: no baked output keys for this parameter combination; its per-Y outputs may not compute on load. Re-run gen-schema.js if a new method was added.`);
 		}
 
 		// Generators: BAKE outputs so a downstream analysis sees populated inputs at load
