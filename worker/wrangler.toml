@@ -1,0 +1,33 @@
+name = "ancir-nl"
+main = "index.js"
+# Must not be newer than the workerd binary bundled with your wrangler, or `wrangler dev`
+# refuses to start ("newest date supported by this server binary is ..."). Bump alongside
+# wrangler upgrades.
+compatibility_date = "2026-07-02"
+# The normalizer bundles @stdlib (SimulatedData's seeded PRNG), which expects a few Node
+# globals. nodejs_compat satisfies them without pulling in a runtime.
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Where the built session is opened. The Worker returns `${ANCIR_BASE_URL}/?loadFromURL=...`.
+ANCIR_BASE_URL = "https://ancir.pages.dev"
+# Sessions are transient hand-offs, not storage: expire them (seconds).
+SESSION_TTL_S = "86400"
+# Best-effort per-IP /build throttle per minute (0/unset = off). Cloudflare's native rate
+# limiting is the real defence — this is a cheap backstop.
+BUILD_RATE_MAX = "20"
+
+# Transient session store. Create once, then paste the id here:
+#   npx wrangler kv namespace create SESSIONS
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Bring-your-own model is the default: the caller sends llm.{baseUrl,apiKey,model} per request
+# and the deployer pays nothing. To offer a fallback model instead, set these as SECRETS
+# (never vars):  npx wrangler secret put OPENAI_API_KEY
+#   OPENAI_BASE_URL = "https://api.openai.com/v1"
+#   OPENAI_MODEL    = "gpt-4o-mini"
+
+# Local dev only — relaxes the SSRF guard so you can point at a local Ollama:
+#   npx wrangler dev --var ALLOW_LOCAL_LLM:1
