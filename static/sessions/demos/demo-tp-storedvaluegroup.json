@@ -1,17 +1,17 @@
 {
   "rawData": {
-    "239": [
+    "351": [
       12,
       34
     ]
   },
   "data": [
     {
-      "id": 239,
-      "name": "group_g1_39",
-      "data": 239,
+      "id": 351,
+      "name": "group_g1_47",
+      "data": 351,
       "type": "number",
-      "tableProcessGUId": "978ad6f3-7a8a-4a6b-9688-ade2e9894db9",
+      "tableProcessGUId": "5e78d2a3-b602-4bfc-a35a-41af9e371000",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -20,7 +20,7 @@
   ],
   "plots": [
     {
-      "id": 59,
+      "id": 66,
       "name": "Stored Value Group result",
       "x": 350,
       "y": 150,
@@ -33,9 +33,10 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          239
+          351
         ],
         "showCol": [
           true
@@ -49,7 +50,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 39,
+      "id": 47,
       "name": "StoredValueGroup",
       "displayName": "Stored Value Group",
       "args": {
@@ -64,7 +65,7 @@
           }
         ],
         "out": {
-          "group_g1": 239
+          "group_g1": 351
         }
       },
       "refTPId": null
@@ -84,7 +85,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_42",
+      "id": "note_45",
       "text": "Gathers scalar results you have stored from various analyses (e.g. periods, amplitudes, CFI values) and organises them into labelled groups, emitting a category column and a value column. Use it to assemble stored metrics into a tidy table for group comparison or plotting.",
       "x": 40,
       "y": 24,
@@ -96,15 +97,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_39": {
+    "tableprocess_47": {
       "x": 60,
       "y": 314
     },
-    "plot_59": {
+    "plot_66": {
       "x": 820,
       "y": 314
     },
-    "note_42": {
+    "note_45": {
       "x": 40,
       "y": 24
     }
@@ -132,6 +133,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -159,5 +166,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

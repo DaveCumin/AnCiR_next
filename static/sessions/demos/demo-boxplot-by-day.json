@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "6": [
+    "118": [
       1,
       1,
       1,
@@ -170,7 +170,7 @@
       7,
       7
     ],
-    "7": [
+    "119": [
       16.291076892469444,
       20.29554398487714,
       9.51596332468565,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 6,
+      "id": 118,
       "name": "day",
-      "data": 6,
+      "data": 118,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 7,
+      "id": 119,
       "name": "activity",
-      "data": 7,
+      "data": 119,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 2,
+      "id": 9,
       "name": "Activity by day",
       "x": 350,
       "y": 150,
@@ -380,6 +380,7 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -410,9 +411,9 @@
         "data": [
           {
             "x": {
-              "id": 8,
+              "id": 120,
               "name": "day",
-              "refId": 6,
+              "refId": 118,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -421,9 +422,9 @@
               "processes": []
             },
             "y": {
-              "id": 9,
+              "id": 121,
               "name": "activity",
-              "refId": 7,
+              "refId": 119,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -480,7 +481,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_3",
+      "id": "note_6",
       "text": "Summarises the distribution of a y-column within each group defined by an x-column: the box spans the interquartile range, the line is the median, and whiskers reach the data extent (points beyond are outliers). Use it to compare spread and central tendency across days, conditions, or subjects. The demo shows one box per group.",
       "x": 40,
       "y": 24,
@@ -492,19 +493,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_6": {
+    "data_118": {
       "x": 60,
       "y": 314
     },
-    "data_7": {
+    "data_119": {
       "x": 60,
       "y": 814
     },
-    "note_3": {
+    "note_6": {
       "x": 40,
       "y": 24
     },
-    "plot_2": {
+    "plot_9": {
       "x": 820,
       "y": 314
     }
@@ -532,6 +533,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -559,5 +566,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

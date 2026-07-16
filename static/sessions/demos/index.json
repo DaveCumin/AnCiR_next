@@ -1,7 +1,50 @@
 {
   "version": 1,
-  "count": 48,
+  "count": 51,
   "sessions": [
+    {
+      "id": "workflow-rest-activity",
+      "name": "Workflow — actigraphy rest-activity profile",
+      "family": "Workflows",
+      "description": "Characterise a rest-activity record without assuming a sine shape. Nonparametric RA reports IS / IV / RA / M10 / L5 per subject (one value per y-input, so each port is that group’s distribution), a Cosinor adds the model-based amplitude and acrophase, an actogram shows a consolidated vs a fragmented subject, and Compare groups tests whether rhythm robustness (RA) differs.",
+      "url": "sessions/demos/demo-workflow-rest-activity.json",
+      "kind": "workflow",
+      "showcases": [
+        "NonparametricRA",
+        "Cosinor",
+        "GroupComparison",
+        "actogram"
+      ],
+      "keywords": "workflow — actigraphy rest-activity profile characterise a rest-activity record without assuming a sine shape. nonparametric ra reports is / iv / ra / m10 / l5 per subject (one value per y-input, so each port is that group’s distribution), a cosinor adds the model-based amplitude and acrophase, an actogram shows a consolidated vs a fragmented subject, and compare groups tests whether rhythm robustness (ra) differs. workflows nonparametricra cosinor groupcomparison actogram"
+    },
+    {
+      "id": "workflow-free-running",
+      "name": "Workflow — free-running period",
+      "family": "Workflows",
+      "description": "Measure the endogenous period (tau) of a rhythm running without a zeitgeber. A double-plotted actogram shows the rhythm drifting against the 24 h grid, a Lomb-Scargle periodogram estimates tau, and the Rhythmicity Analysis node reports the peak period as a wireable number. Includes the literature caveat to avoid the chi-square periodogram.",
+      "url": "sessions/demos/demo-workflow-free-running.json",
+      "kind": "workflow",
+      "showcases": [
+        "RhythmicityAnalysis",
+        "actogram",
+        "periodogram"
+      ],
+      "keywords": "workflow — free-running period measure the endogenous period (tau) of a rhythm running without a zeitgeber. a double-plotted actogram shows the rhythm drifting against the 24 h grid, a lomb-scargle periodogram estimates tau, and the rhythmicity analysis node reports the peak period as a wireable number. includes the literature caveat to avoid the chi-square periodogram. workflows rhythmicityanalysis actogram periodogram"
+    },
+    {
+      "id": "workflow-phase-groups",
+      "name": "Workflow — group phase comparison",
+      "family": "Workflows",
+      "description": "Do two groups peak at different times of day? Per-subject phase is extracted by Cosinor (its acrophase port emits one peak time per subject, i.e. the group’s phase distribution), shown on a 24 h circular plot with each group’s Rayleigh vector, and tested with Rayleigh (is each group clustered?) plus Watson-Williams (do the groups differ in mean phase?).",
+      "url": "sessions/demos/demo-workflow-phase-groups.json",
+      "kind": "workflow",
+      "showcases": [
+        "Cosinor",
+        "RayleighTest",
+        "circularphase"
+      ],
+      "keywords": "workflow — group phase comparison do two groups peak at different times of day? per-subject phase is extracted by cosinor (its acrophase port emits one peak time per subject, i.e. the group’s phase distribution), shown on a 24 h circular plot with each group’s rayleigh vector, and tested with rayleigh (is each group clustered?) plus watson-williams (do the groups differ in mean phase?). workflows cosinor rayleightest circularphase"
+    },
     {
       "id": "dataset-testdata",
       "name": "Test data",

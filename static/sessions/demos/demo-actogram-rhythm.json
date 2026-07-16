@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "24": [
+    "136": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "25": [
+    "137": [
       0,
       0,
       0,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 24,
+      "id": 136,
       "name": "hour",
-      "data": 24,
+      "data": 136,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 25,
+      "id": 137,
       "name": "activity",
-      "data": 25,
+      "data": 137,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 5,
+      "id": 12,
       "name": "Activity actogram",
       "x": 350,
       "y": 150,
@@ -380,6 +380,7 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "ylimsOption": "overall",
         "ylimsIN": [
@@ -395,6 +396,8 @@
         "doublePlot": 2,
         "periodHrs": 24,
         "showDayNumbers": false,
+        "renderMode": "bars",
+        "colormap": "viridis",
         "lightBands": {
           "bands": []
         },
@@ -408,9 +411,9 @@
         "data": [
           {
             "x": {
-              "id": 26,
+              "id": 138,
               "name": "hour",
-              "refId": 24,
+              "refId": 136,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -419,9 +422,9 @@
               "processes": []
             },
             "y": {
-              "id": 27,
+              "id": 139,
               "name": "activity",
-              "refId": 25,
+              "refId": 137,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -443,7 +446,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_6",
+      "id": "note_9",
       "text": "The classic chronobiology display: activity plotted against time of day, one row per day and double-plotted (each day shown twice, side by side) so rhythms crossing midnight stay visible and drift reads as a diagonal band. Use it to eyeball period, phase, and entrainment. The demo shows a clear daily activity band.\n\nRefinetti, Cornélissen & Halberg (2007), Biol. Rhythm Res.",
       "x": 40,
       "y": 24,
@@ -455,19 +458,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_24": {
+    "data_136": {
       "x": 60,
       "y": 314
     },
-    "data_25": {
+    "data_137": {
       "x": 60,
       "y": 814
     },
-    "note_6": {
+    "note_9": {
       "x": 40,
       "y": 24
     },
-    "plot_5": {
+    "plot_12": {
       "x": 820,
       "y": 314
     }
@@ -495,6 +498,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -522,5 +531,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

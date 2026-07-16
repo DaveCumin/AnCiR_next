@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "119": [
+    "231": [
       49,
       48,
       47,
@@ -52,7 +52,7 @@
       1,
       0
     ],
-    "120": [
+    "232": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -104,7 +104,7 @@
       10,
       11.362966948437261
     ],
-    "121": [
+    "233": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "122": [
+    "234": [
       11.362966948437261,
       10,
       11.362966948437276,
@@ -211,9 +211,9 @@
   },
   "data": [
     {
-      "id": 119,
+      "id": 231,
       "name": "Sort input 1",
-      "data": 119,
+      "data": 231,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -222,9 +222,9 @@
       "processes": []
     },
     {
-      "id": 120,
+      "id": 232,
       "name": "Sort input 2",
-      "data": 120,
+      "data": 232,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 121,
-      "name": "sortedy_119_12",
-      "data": 121,
+      "id": 233,
+      "name": "sortedy_231_20",
+      "data": 233,
       "type": "number",
-      "tableProcessGUId": "5c339c56-0908-4be0-9a96-ea8f83f76740",
+      "tableProcessGUId": "9a7df2d6-b920-4ac9-9424-ececae4b6b7b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 122,
-      "name": "sortedy_120_12",
-      "data": 122,
+      "id": 234,
+      "name": "sortedy_232_20",
+      "data": 234,
       "type": "number",
-      "tableProcessGUId": "5c339c56-0908-4be0-9a96-ea8f83f76740",
+      "tableProcessGUId": "9a7df2d6-b920-4ac9-9424-ececae4b6b7b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -257,7 +257,7 @@
   ],
   "plots": [
     {
-      "id": 31,
+      "id": 38,
       "name": "Sort result",
       "x": 350,
       "y": 150,
@@ -270,12 +270,13 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          119,
-          120,
-          121,
-          122
+          231,
+          232,
+          233,
+          234
         ],
         "showCol": [
           true,
@@ -292,20 +293,20 @@
   ],
   "tableProcesses": [
     {
-      "id": 12,
+      "id": 20,
       "name": "Sort",
       "displayName": "Sort",
       "args": {
         "yIN": [
-          119,
-          120
+          231,
+          232
         ],
-        "sortOnId": 119,
+        "sortOnId": 231,
         "direction": "asc",
         "preProcesses": [],
         "out": {
-          "sortedy_119": 121,
-          "sortedy_120": 122
+          "sortedy_231": 233,
+          "sortedy_232": 234
         }
       },
       "refTPId": null
@@ -316,7 +317,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_22",
+      "id": "note_25",
       "text": "Reorders rows by a chosen key column, ascending or descending, keeping the selected columns aligned. Use it to order data by time or magnitude before plotting or before methods that assume monotonic time.",
       "x": 40,
       "y": 24,
@@ -328,23 +329,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_119": {
+    "data_231": {
       "x": 60,
       "y": 314
     },
-    "data_120": {
+    "data_232": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_12": {
+    "tableprocess_20": {
       "x": 440,
       "y": 314
     },
-    "plot_31": {
+    "plot_38": {
       "x": 820,
       "y": 314
     },
-    "note_22": {
+    "note_25": {
       "x": 40,
       "y": 24
     }
@@ -372,6 +373,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -399,5 +406,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "4": [
+    "116": [
       94.6474998383402,
       76.91520978067693,
       94.72974943407392,
@@ -505,9 +505,9 @@
   },
   "data": [
     {
-      "id": 4,
+      "id": 116,
       "name": "measurement",
-      "data": 4,
+      "data": 116,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -518,7 +518,7 @@
   ],
   "plots": [
     {
-      "id": 1,
+      "id": 8,
       "name": "Measurement distribution",
       "x": 350,
       "y": 150,
@@ -531,6 +531,7 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -561,9 +562,9 @@
         "data": [
           {
             "column": {
-              "id": 5,
+              "id": 117,
               "name": "measurement",
-              "refId": 4,
+              "refId": 116,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -607,7 +608,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_2",
+      "id": "note_5",
       "text": "Bins a single column's values and draws the count in each bin, showing the shape of its distribution (centre, spread, skew, modes, outliers). Use it to check whether data are roughly normal before choosing a statistical test. The demo shows an approximately bell-shaped distribution.",
       "x": 40,
       "y": 24,
@@ -619,15 +620,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_4": {
+    "data_116": {
       "x": 60,
       "y": 314
     },
-    "note_2": {
+    "note_5": {
       "x": 40,
       "y": 24
     },
-    "plot_1": {
+    "plot_8": {
       "x": 820,
       "y": 314
     }
@@ -655,6 +656,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -682,5 +689,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

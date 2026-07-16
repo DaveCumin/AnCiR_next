@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "32": [
+    "144": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "33": [
+    "145": [
       96.80303970146284,
       90.24703944100128,
       90.63500417308552,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 32,
+      "id": 144,
       "name": "hour",
-      "data": 32,
+      "data": 144,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 33,
+      "id": 145,
       "name": "activity",
-      "data": 33,
+      "data": 145,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 7,
+      "id": 14,
       "name": "Activity correlogram",
       "x": 350,
       "y": 150,
@@ -380,6 +380,7 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "laglimsIN": [
           null,
@@ -410,9 +411,9 @@
         "data": [
           {
             "x": {
-              "id": 34,
+              "id": 146,
               "name": "hour",
-              "refId": 32,
+              "refId": 144,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -421,9 +422,9 @@
               "processes": []
             },
             "y": {
-              "id": 35,
+              "id": 147,
               "name": "activity",
-              "refId": 33,
+              "refId": 145,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -466,7 +467,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_8",
+      "id": "note_11",
       "text": "Plots the autocorrelation of a series against lag (or the cross-correlation between two series). A rhythmic signal produces a decaying wave whose first strong positive peak away from zero lag estimates the period. Use it as a robust complement to the periodogram. See the Correlograms chapter.",
       "x": 40,
       "y": 24,
@@ -478,19 +479,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_32": {
+    "data_144": {
       "x": 60,
       "y": 314
     },
-    "data_33": {
+    "data_145": {
       "x": 60,
       "y": 814
     },
-    "note_8": {
+    "note_11": {
       "x": 40,
       "y": 24
     },
-    "plot_7": {
+    "plot_14": {
       "x": 820,
       "y": 314
     }
@@ -518,6 +519,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -545,5 +552,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

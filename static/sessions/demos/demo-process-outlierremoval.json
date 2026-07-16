@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "79": [
+    "191": [
       0,
       1,
       2,
@@ -53,7 +53,7 @@
       49,
       50
     ],
-    "80": [
+    "192": [
       0,
       1,
       2,
@@ -109,20 +109,20 @@
   },
   "data": [
     {
-      "id": 79,
+      "id": 191,
       "name": "x",
-      "data": 79,
+      "data": 191,
       "type": "number",
-      "tableProcessGUId": "5c58e13a-51a9-43d0-895d-f83e0b5d60eb",
+      "tableProcessGUId": "892a86e6-c90c-4e27-afc2-1f2f9c6eb06d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 80,
+      "id": 192,
       "name": "y",
-      "data": 80,
+      "data": 192,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -131,20 +131,20 @@
       "processes": []
     },
     {
-      "id": 81,
+      "id": 193,
       "name": "Remove Outliers result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_5",
-      "producerPort": "out_80",
+      "producerPort": "out_192",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 20,
+      "id": 27,
       "name": "Remove Outliers: before vs after",
       "x": 350,
       "y": 150,
@@ -157,6 +157,7 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -200,9 +201,9 @@
         "data": [
           {
             "x": {
-              "id": 82,
+              "id": 194,
               "name": "x",
-              "refId": 79,
+              "refId": 191,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -211,9 +212,9 @@
               "processes": []
             },
             "y": {
-              "id": 83,
+              "id": 195,
               "name": "y",
-              "refId": 80,
+              "refId": 192,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -239,9 +240,9 @@
           },
           {
             "x": {
-              "id": 84,
+              "id": 196,
               "name": "x",
-              "refId": 79,
+              "refId": 191,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -250,9 +251,9 @@
               "processes": []
             },
             "y": {
-              "id": 85,
+              "id": 197,
               "name": "Remove Outliers result",
-              "refId": 81,
+              "refId": 193,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -292,7 +293,7 @@
       }
     },
     {
-      "id": 21,
+      "id": 28,
       "name": "Remove Outliers: values",
       "x": 350,
       "y": 150,
@@ -305,10 +306,11 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          80,
-          81
+          192,
+          193
         ],
         "showCol": [
           true,
@@ -323,7 +325,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 5,
+      "id": 13,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -333,7 +335,7 @@
         "count": 51,
         "end": 50,
         "out": {
-          "result": 79
+          "result": 191
         }
       },
       "refTPId": null
@@ -344,7 +346,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_16",
+      "id": "note_19",
       "text": "Flags extreme values and replaces them with blanks, using either a z-score threshold (default |z| > 3) or Tukey's IQR fence (Q1 - k·IQR, Q3 + k·IQR, default k = 1.5). Use it to stop a handful of spikes dominating fits and spectra. The demo shows the flagged points removed while the rest of the series is preserved.\n\nTukey, J.W. (1977) Exploratory Data Analysis.",
       "x": 40,
       "y": 24,
@@ -363,17 +365,17 @@
         "iqrMultiplier": 1.5,
         "zThreshold": 3,
         "inIN": [
-          80
+          192
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_80": {
+    "data_192": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_5": {
+    "tableprocess_13": {
       "x": 60,
       "y": 814
     },
@@ -381,15 +383,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_20": {
+    "plot_27": {
       "x": 820,
       "y": 314
     },
-    "plot_21": {
+    "plot_28": {
       "x": 820,
       "y": 814
     },
-    "note_16": {
+    "note_19": {
       "x": 40,
       "y": 24
     }
@@ -417,6 +419,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -444,5 +452,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

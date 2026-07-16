@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "43": [
+    "155": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "44": [
+    "156": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 43,
+      "id": 155,
       "name": "x",
-      "data": 43,
+      "data": 155,
       "type": "number",
-      "tableProcessGUId": "2b22258e-83ab-41e3-92c8-1bfd4e4efef0",
+      "tableProcessGUId": "0d4d61d1-68a6-4ff9-afcf-1d86d0765f7d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 44,
+      "id": 156,
       "name": "y",
-      "data": 44,
+      "data": 156,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 45,
+      "id": 157,
       "name": "Add result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_0",
-      "producerPort": "out_44",
+      "producerPort": "out_156",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 10,
+      "id": 17,
       "name": "Add: before vs after",
       "x": 350,
       "y": 150,
@@ -155,6 +155,7 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -198,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 46,
+              "id": 158,
               "name": "x",
-              "refId": 43,
+              "refId": 155,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -209,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 47,
+              "id": 159,
               "name": "y",
-              "refId": 44,
+              "refId": 156,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -237,9 +238,9 @@
           },
           {
             "x": {
-              "id": 48,
+              "id": 160,
               "name": "x",
-              "refId": 43,
+              "refId": 155,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -248,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 49,
+              "id": 161,
               "name": "Add result",
-              "refId": 45,
+              "refId": 157,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -290,7 +291,7 @@
       }
     },
     {
-      "id": 11,
+      "id": 18,
       "name": "Add: values",
       "x": 350,
       "y": 150,
@@ -303,10 +304,11 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          44,
-          45
+          156,
+          157
         ],
         "showCol": [
           true,
@@ -321,7 +323,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 0,
+      "id": 8,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -331,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 43
+          "result": 155
         }
       },
       "refTPId": null
@@ -342,7 +344,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_11",
+      "id": "note_14",
       "text": "Adds a constant (or another column) to every value in the input column, element-by-element. Use it to apply an offset, shift a baseline, or combine two columns. The demo shows the output column sitting above the input with each value raised by the set amount.",
       "x": 40,
       "y": 24,
@@ -359,17 +361,17 @@
       "args": {
         "value": 5,
         "inIN": [
-          44
+          156
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_44": {
+    "data_156": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_0": {
+    "tableprocess_8": {
       "x": 60,
       "y": 814
     },
@@ -377,15 +379,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_10": {
+    "plot_17": {
       "x": 820,
       "y": 314
     },
-    "plot_11": {
+    "plot_18": {
       "x": 820,
       "y": 814
     },
-    "note_11": {
+    "note_14": {
       "x": 40,
       "y": 24
     }
@@ -413,6 +415,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -440,5 +448,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

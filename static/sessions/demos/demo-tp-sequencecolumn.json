@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "223": [
+    "335": [
       0,
       1,
       2,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 223,
-      "name": "result_34",
-      "data": 223,
+      "id": 335,
+      "name": "result_42",
+      "data": 335,
       "type": "number",
-      "tableProcessGUId": "731d6496-d6e2-4e78-be7f-e75ac2cd4174",
+      "tableProcessGUId": "43f6f845-38fa-44a2-9009-b741014c3f84",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -68,7 +68,7 @@
   ],
   "plots": [
     {
-      "id": 54,
+      "id": 61,
       "name": "Sequence Column result",
       "x": 350,
       "y": 150,
@@ -81,9 +81,10 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          223
+          335
         ],
         "showCol": [
           true
@@ -97,7 +98,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 34,
+      "id": 42,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -107,7 +108,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 223
+          "result": 335
         }
       },
       "refTPId": null
@@ -118,7 +119,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_38",
+      "id": "note_41",
       "text": "Creates a regular numeric or time sequence from a start, step, and count (or end). Use it to build an index or an evenly spaced time axis to pair with generated or pasted values.",
       "x": 40,
       "y": 24,
@@ -130,15 +131,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_34": {
+    "tableprocess_42": {
       "x": 60,
       "y": 314
     },
-    "plot_54": {
+    "plot_61": {
       "x": 820,
       "y": 314
     },
-    "note_38": {
+    "note_41": {
       "x": 40,
       "y": 24
     }
@@ -166,6 +167,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -193,5 +200,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

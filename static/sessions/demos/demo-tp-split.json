@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "234": [
+    "346": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "235": [
+    "347": [
       0,
       10,
       20,
@@ -104,7 +104,7 @@
       480,
       490
     ],
-    "236": [
+    "348": [
       0,
       10,
       20,
@@ -156,7 +156,7 @@
       null,
       null
     ],
-    "237": [
+    "349": [
       null,
       null,
       null,
@@ -208,7 +208,7 @@
       null,
       null
     ],
-    "238": [
+    "350": [
       null,
       null,
       null,
@@ -263,9 +263,9 @@
   },
   "data": [
     {
-      "id": 234,
+      "id": 346,
       "name": "Split data input 1",
-      "data": 234,
+      "data": 346,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -274,9 +274,9 @@
       "processes": []
     },
     {
-      "id": 235,
+      "id": 347,
       "name": "Split data input 2",
-      "data": 235,
+      "data": 347,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -285,33 +285,33 @@
       "processes": []
     },
     {
-      "id": 236,
-      "name": "235_1_38",
-      "data": 236,
+      "id": 348,
+      "name": "347_1_46",
+      "data": 348,
       "type": "number",
-      "tableProcessGUId": "46600eca-7866-476e-9088-0331f9b2f7db",
+      "tableProcessGUId": "6641e11d-a8a3-4a57-8d41-eebf4546cc3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 237,
-      "name": "235_2_38",
-      "data": 237,
+      "id": 349,
+      "name": "347_2_46",
+      "data": 349,
       "type": "number",
-      "tableProcessGUId": "46600eca-7866-476e-9088-0331f9b2f7db",
+      "tableProcessGUId": "6641e11d-a8a3-4a57-8d41-eebf4546cc3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 238,
-      "name": "235_3_38",
-      "data": 238,
+      "id": 350,
+      "name": "347_3_46",
+      "data": 350,
       "type": "number",
-      "tableProcessGUId": "46600eca-7866-476e-9088-0331f9b2f7db",
+      "tableProcessGUId": "6641e11d-a8a3-4a57-8d41-eebf4546cc3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -320,7 +320,7 @@
   ],
   "plots": [
     {
-      "id": 58,
+      "id": 65,
       "name": "Split data result",
       "x": 350,
       "y": 150,
@@ -333,13 +333,14 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          234,
-          235,
-          236,
-          237,
-          238
+          346,
+          347,
+          348,
+          349,
+          350
         ],
         "showCol": [
           true,
@@ -357,22 +358,22 @@
   ],
   "tableProcesses": [
     {
-      "id": 38,
+      "id": 46,
       "name": "Split",
       "displayName": "Split data",
       "args": {
-        "xIN": 234,
+        "xIN": 346,
         "yIN": [
-          235
+          347
         ],
         "splitTimes": [
           15,
           30
         ],
         "out": {
-          "235_1": 236,
-          "235_2": 237,
-          "235_3": 238
+          "347_1": 348,
+          "347_2": 349,
+          "347_3": 350
         }
       },
       "refTPId": null
@@ -383,7 +384,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_41",
+      "id": "note_44",
       "text": "Cuts a time-series into consecutive segments at the split times you specify, keeping the chosen columns aligned. Use it to separate, e.g., an entrainment stage from a free-run stage, or successive days, before analysing each part on its own.",
       "x": 40,
       "y": 24,
@@ -395,23 +396,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_234": {
+    "data_346": {
       "x": 60,
       "y": 314
     },
-    "data_235": {
+    "data_347": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_38": {
+    "tableprocess_46": {
       "x": 440,
       "y": 314
     },
-    "plot_58": {
+    "plot_65": {
       "x": 820,
       "y": 314
     },
-    "note_41": {
+    "note_44": {
       "x": 40,
       "y": 24
     }
@@ -439,6 +440,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -466,5 +473,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

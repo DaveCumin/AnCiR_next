@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "0": [
+    "112": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "1": [
+    "113": [
       15.795844354091358,
       18.101592110952595,
       15.063616671903457,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 0,
+      "id": 112,
       "name": "hour",
-      "data": 0,
+      "data": 112,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 1,
+      "id": 113,
       "name": "activity",
-      "data": 1,
+      "data": 113,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 0,
+      "id": 7,
       "name": "Activity vs hour",
       "x": 350,
       "y": 150,
@@ -380,6 +380,7 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -423,9 +424,9 @@
         "data": [
           {
             "x": {
-              "id": 2,
+              "id": 114,
               "name": "hour",
-              "refId": 0,
+              "refId": 112,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -434,9 +435,9 @@
               "processes": []
             },
             "y": {
-              "id": 3,
+              "id": 115,
               "name": "activity",
-              "refId": 1,
+              "refId": 113,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -482,7 +483,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_1",
+      "id": "note_4",
       "text": "Plots one column against another as points, most often a value against time to view a raw time-series. Wire x (e.g. time) and y (values); multiple y-columns overlay as separate series. Supports zoom/pan and an optional facet mode (one small plot per series). Use it as your first look at the data before any analysis.",
       "x": 40,
       "y": 24,
@@ -494,19 +495,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_0": {
+    "data_112": {
       "x": 60,
       "y": 314
     },
-    "data_1": {
+    "data_113": {
       "x": 60,
       "y": 814
     },
-    "note_1": {
+    "note_4": {
       "x": 40,
       "y": 24
     },
-    "plot_0": {
+    "plot_7": {
       "x": 820,
       "y": 314
     }
@@ -534,6 +535,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -561,5 +568,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

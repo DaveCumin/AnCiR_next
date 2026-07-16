@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "100": [
+    "212": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "101": [
+    "213": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 100,
+      "id": 212,
       "name": "x",
-      "data": 100,
+      "data": 212,
       "type": "number",
-      "tableProcessGUId": "933810fd-c76f-488c-9cbc-be47fc8a1129",
+      "tableProcessGUId": "ae3fc203-54ff-44ef-8b3c-5f0c59c12f25",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 101,
+      "id": 213,
       "name": "y",
-      "data": 101,
+      "data": 213,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 102,
+      "id": 214,
       "name": "Frequency Filter result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_8",
-      "producerPort": "out_101",
+      "producerPort": "out_213",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 26,
+      "id": 33,
       "name": "Frequency Filter: before vs after",
       "x": 350,
       "y": 150,
@@ -155,6 +155,7 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -198,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 103,
+              "id": 215,
               "name": "x",
-              "refId": 100,
+              "refId": 212,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -209,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 104,
+              "id": 216,
               "name": "y",
-              "refId": 101,
+              "refId": 213,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -237,9 +238,9 @@
           },
           {
             "x": {
-              "id": 105,
+              "id": 217,
               "name": "x",
-              "refId": 100,
+              "refId": 212,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -248,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 106,
+              "id": 218,
               "name": "Frequency Filter result",
-              "refId": 102,
+              "refId": 214,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -290,7 +291,7 @@
       }
     },
     {
-      "id": 27,
+      "id": 34,
       "name": "Frequency Filter: values",
       "x": 350,
       "y": 150,
@@ -303,10 +304,11 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          101,
-          102
+          213,
+          214
         ],
         "showCol": [
           true,
@@ -321,7 +323,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 8,
+      "id": 16,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -331,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 100
+          "result": 212
         }
       },
       "refTPId": null
@@ -342,7 +344,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_19",
+      "id": "note_22",
       "text": "An FFT-based low-, high-, or band-pass filter for evenly sampled series: it transforms to the frequency domain, zeroes the frequencies outside the chosen band, and transforms back. Cutoffs are given as a fraction of the Nyquist frequency (0 = DC, 1 = fastest resolvable). Use low-pass to smooth, high-pass to remove drift, band-pass to isolate a rhythm. The demo shows the filtered series with the unwanted frequency content removed.\n\nOppenheim & Schafer, Discrete-Time Signal Processing.",
       "x": 40,
       "y": 24,
@@ -361,17 +363,17 @@
         "low": 0.1,
         "high": 0.4,
         "inIN": [
-          101
+          213
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_101": {
+    "data_213": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_8": {
+    "tableprocess_16": {
       "x": 60,
       "y": 814
     },
@@ -379,15 +381,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_26": {
+    "plot_33": {
       "x": 820,
       "y": 314
     },
-    "plot_27": {
+    "plot_34": {
       "x": 820,
       "y": 814
     },
-    "note_19": {
+    "note_22": {
       "x": 40,
       "y": 24
     }
@@ -415,6 +417,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -442,5 +450,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

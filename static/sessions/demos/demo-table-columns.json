@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "40": [
+    "152": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "41": [
+    "153": [
       50,
       60,
       70,
@@ -100,7 +100,7 @@
       30,
       40
     ],
-    "42": [
+    "154": [
       30,
       30,
       29,
@@ -153,9 +153,9 @@
   },
   "data": [
     {
-      "id": 40,
+      "id": 152,
       "name": "hour",
-      "data": 40,
+      "data": 152,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -164,9 +164,9 @@
       "processes": []
     },
     {
-      "id": 41,
+      "id": 153,
       "name": "signalA",
-      "data": 41,
+      "data": 153,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -175,9 +175,9 @@
       "processes": []
     },
     {
-      "id": 42,
+      "id": 154,
       "name": "signalB",
-      "data": 42,
+      "data": 154,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -188,7 +188,7 @@
   ],
   "plots": [
     {
-      "id": 9,
+      "id": 16,
       "name": "Signal table",
       "x": 350,
       "y": 150,
@@ -201,11 +201,12 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          40,
-          41,
-          42
+          152,
+          153,
+          154
         ],
         "showCol": [
           true,
@@ -225,7 +226,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_10",
+      "id": "note_13",
       "text": "Renders selected columns (or their summary statistics) as a plain data table for inspection and export. Use it to read exact values, sanity-check a transform's output, or present computed metrics. The demo shows the chosen columns laid out in rows and columns.",
       "x": 40,
       "y": 24,
@@ -237,23 +238,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_40": {
+    "data_152": {
       "x": 60,
       "y": 314
     },
-    "data_41": {
+    "data_153": {
       "x": 60,
       "y": 814
     },
-    "data_42": {
+    "data_154": {
       "x": 60,
       "y": 1314
     },
-    "note_10": {
+    "note_13": {
       "x": 40,
       "y": 24
     },
-    "plot_9": {
+    "plot_16": {
       "x": 820,
       "y": 314
     }
@@ -281,6 +282,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -308,5 +315,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

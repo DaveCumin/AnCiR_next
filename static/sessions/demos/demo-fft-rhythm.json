@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "36": [
+    "148": [
       0,
       1,
       2,
@@ -194,7 +194,7 @@
       190,
       191
     ],
-    "37": [
+    "149": [
       61.037491948115374,
       64.99236592704621,
       74.20658521498542,
@@ -391,9 +391,9 @@
   },
   "data": [
     {
-      "id": 36,
+      "id": 148,
       "name": "hour",
-      "data": 36,
+      "data": 148,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -402,9 +402,9 @@
       "processes": []
     },
     {
-      "id": 37,
+      "id": 149,
       "name": "signal",
-      "data": 37,
+      "data": 149,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -415,7 +415,7 @@
   ],
   "plots": [
     {
-      "id": 8,
+      "id": 15,
       "name": "Signal FFT",
       "x": 350,
       "y": 150,
@@ -428,6 +428,7 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "xlimsIN": [
           4,
@@ -466,9 +467,9 @@
         "data": [
           {
             "x": {
-              "id": 38,
+              "id": 150,
               "name": "hour",
-              "refId": 36,
+              "refId": 148,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -477,9 +478,9 @@
               "processes": []
             },
             "y": {
-              "id": 39,
+              "id": 151,
               "name": "signal",
-              "refId": 37,
+              "refId": 149,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -526,7 +527,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_9",
+      "id": "note_12",
       "text": "Fourier analysis decomposes an evenly sampled series into sinusoidal components and plots amplitude (spectral power) against frequency; a peak at a given frequency corresponds to a rhythm of period 1/frequency. Use it to identify dominant frequencies and harmonics. See the Fourier Analysis chapter.",
       "x": 40,
       "y": 24,
@@ -538,19 +539,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_36": {
+    "data_148": {
       "x": 60,
       "y": 314
     },
-    "data_37": {
+    "data_149": {
       "x": 60,
       "y": 814
     },
-    "note_9": {
+    "note_12": {
       "x": 40,
       "y": 24
     },
-    "plot_8": {
+    "plot_15": {
       "x": 820,
       "y": 314
     }
@@ -578,6 +579,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -605,5 +612,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

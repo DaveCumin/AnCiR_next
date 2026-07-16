@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "107": [
+    "219": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "108": [
+    "220": [
       52.522025082939734,
       68.09116741301771,
       73.44958693280898,
@@ -104,7 +104,7 @@
       47.59352161612626,
       59.5535187385039
     ],
-    "109": [
+    "221": [
       0,
       2,
       4,
@@ -132,7 +132,7 @@
       48,
       50
     ],
-    "110": [
+    "222": [
       60.306596247978725,
       80.40261868508753,
       84.47432056148014,
@@ -163,20 +163,20 @@
   },
   "data": [
     {
-      "id": 107,
+      "id": 219,
       "name": "x",
-      "data": 107,
+      "data": 219,
       "type": "number",
-      "tableProcessGUId": "64ebdde0-7c2f-4e2e-a254-4f6cc4c34354",
+      "tableProcessGUId": "ea177fee-71b5-49bb-b9e4-7174c17a8cb2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 108,
+      "id": 220,
       "name": "y",
-      "data": 108,
+      "data": 220,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -185,23 +185,23 @@
       "processes": []
     },
     {
-      "id": 109,
-      "name": "binnedx_10",
-      "data": 109,
+      "id": 221,
+      "name": "binnedx_18",
+      "data": 221,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "6a11daeb-4dbf-4042-b881-3899bb2e0b06",
+      "tableProcessGUId": "36433823-c67f-415a-8225-9ffaa7b30a62",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 110,
-      "name": "binnedy_108_10",
-      "data": 110,
+      "id": 222,
+      "name": "binnedy_220_18",
+      "data": 222,
       "type": "number",
-      "tableProcessGUId": "6a11daeb-4dbf-4042-b881-3899bb2e0b06",
+      "tableProcessGUId": "36433823-c67f-415a-8225-9ffaa7b30a62",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -210,7 +210,7 @@
   ],
   "plots": [
     {
-      "id": 28,
+      "id": 35,
       "name": "Bin Data: data + fit",
       "x": 350,
       "y": 150,
@@ -223,6 +223,7 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -266,9 +267,9 @@
         "data": [
           {
             "x": {
-              "id": 111,
+              "id": 223,
               "name": "x",
-              "refId": 107,
+              "refId": 219,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -277,9 +278,9 @@
               "processes": []
             },
             "y": {
-              "id": 112,
+              "id": 224,
               "name": "y",
-              "refId": 108,
+              "refId": 220,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -305,9 +306,9 @@
           },
           {
             "x": {
-              "id": 113,
-              "name": "binnedx_10",
-              "refId": 109,
+              "id": 225,
+              "name": "binnedx_18",
+              "refId": 221,
               "type": "bin",
               "binWidth": 2,
               "tableProcessGUId": "",
@@ -317,9 +318,9 @@
               "processes": []
             },
             "y": {
-              "id": 114,
-              "name": "binnedy_108_10",
-              "refId": 110,
+              "id": 226,
+              "name": "binnedy_220_18",
+              "refId": 222,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -359,7 +360,7 @@
       }
     },
     {
-      "id": 29,
+      "id": 36,
       "name": "Bin Data: values",
       "x": 350,
       "y": 150,
@@ -372,10 +373,11 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          108,
-          110
+          220,
+          222
         ],
         "showCol": [
           true,
@@ -390,7 +392,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 9,
+      "id": 17,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -400,19 +402,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 107
+          "result": 219
         }
       },
       "refTPId": null
     },
     {
-      "id": 10,
+      "id": 18,
       "name": "BinnedData",
       "displayName": "Bin Data",
       "args": {
-        "xIN": 107,
+        "xIN": 219,
         "yIN": [
-          108
+          220
         ],
         "binMode": "uniform",
         "binSize": 2,
@@ -423,8 +425,8 @@
         "aggFunction": "mean",
         "preProcesses": [],
         "out": {
-          "binnedx": 109,
-          "binnedy_108": 110
+          "binnedx": 221,
+          "binnedy_220": 222
         }
       },
       "refTPId": null
@@ -435,7 +437,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_20",
+      "id": "note_23",
       "text": "Aggregates time-series values into regular time bins (e.g. 15 min counts into hourly means or sums), choosing the aggregation function per bin. Use it to downsample high-resolution activity or to put irregular samples onto a regular grid before analysis.",
       "x": 40,
       "y": 24,
@@ -447,27 +449,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_108": {
+    "data_220": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_9": {
+    "tableprocess_17": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_10": {
+    "tableprocess_18": {
       "x": 440,
       "y": 314
     },
-    "plot_28": {
+    "plot_35": {
       "x": 820,
       "y": 314
     },
-    "plot_29": {
+    "plot_36": {
       "x": 820,
       "y": 814
     },
-    "note_20": {
+    "note_23": {
       "x": 40,
       "y": 24
     }
@@ -495,6 +497,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -522,5 +530,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

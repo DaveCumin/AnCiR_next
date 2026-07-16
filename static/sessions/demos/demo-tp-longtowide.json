@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "175": [
+    "287": [
       "A",
       "B",
       "C",
@@ -62,7 +62,7 @@
       "B",
       "C"
     ],
-    "176": [
+    "288": [
       0,
       0,
       0,
@@ -124,7 +124,7 @@
       19,
       19
     ],
-    "177": [
+    "289": [
       0,
       100,
       200,
@@ -186,7 +186,7 @@
       119,
       219
     ],
-    "178": [
+    "290": [
       0,
       1,
       2,
@@ -208,7 +208,7 @@
       18,
       19
     ],
-    "179": [
+    "291": [
       0,
       1,
       2,
@@ -230,7 +230,7 @@
       18,
       19
     ],
-    "180": [
+    "292": [
       100,
       101,
       102,
@@ -252,7 +252,7 @@
       118,
       119
     ],
-    "181": [
+    "293": [
       200,
       201,
       202,
@@ -277,9 +277,9 @@
   },
   "data": [
     {
-      "id": 175,
+      "id": 287,
       "name": "Long To Wide input 1",
-      "data": 175,
+      "data": 287,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -288,9 +288,9 @@
       "processes": []
     },
     {
-      "id": 176,
+      "id": 288,
       "name": "Long To Wide input 2",
-      "data": 176,
+      "data": 288,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -299,9 +299,9 @@
       "processes": []
     },
     {
-      "id": 177,
+      "id": 289,
       "name": "Long To Wide input 3",
-      "data": 177,
+      "data": 289,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -310,44 +310,44 @@
       "processes": []
     },
     {
-      "id": 178,
-      "name": "time_25",
-      "data": 178,
+      "id": 290,
+      "name": "time_33",
+      "data": 290,
       "type": "number",
-      "tableProcessGUId": "adcd1d8e-a3dc-49f1-a768-cf81625bcf7d",
+      "tableProcessGUId": "8585be4e-95dd-46d6-83d6-047a10d1c37b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 179,
-      "name": "value_A_25",
-      "data": 179,
+      "id": 291,
+      "name": "value_A_33",
+      "data": 291,
       "type": "number",
-      "tableProcessGUId": "adcd1d8e-a3dc-49f1-a768-cf81625bcf7d",
+      "tableProcessGUId": "8585be4e-95dd-46d6-83d6-047a10d1c37b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 180,
-      "name": "value_B_25",
-      "data": 180,
+      "id": 292,
+      "name": "value_B_33",
+      "data": 292,
       "type": "number",
-      "tableProcessGUId": "adcd1d8e-a3dc-49f1-a768-cf81625bcf7d",
+      "tableProcessGUId": "8585be4e-95dd-46d6-83d6-047a10d1c37b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 181,
-      "name": "value_C_25",
-      "data": 181,
+      "id": 293,
+      "name": "value_C_33",
+      "data": 293,
       "type": "number",
-      "tableProcessGUId": "adcd1d8e-a3dc-49f1-a768-cf81625bcf7d",
+      "tableProcessGUId": "8585be4e-95dd-46d6-83d6-047a10d1c37b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -356,7 +356,7 @@
   ],
   "plots": [
     {
-      "id": 44,
+      "id": 51,
       "name": "Long To Wide result",
       "x": 350,
       "y": 150,
@@ -369,15 +369,16 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          175,
-          176,
-          177,
-          178,
-          179,
-          180,
-          181
+          287,
+          288,
+          289,
+          290,
+          291,
+          292,
+          293
         ],
         "showCol": [
           true,
@@ -397,19 +398,19 @@
   ],
   "tableProcesses": [
     {
-      "id": 25,
+      "id": 33,
       "name": "LongToWide",
       "displayName": "Long To Wide",
       "args": {
-        "categoryIN": 175,
-        "timeIN": 176,
-        "valueIN": 177,
+        "categoryIN": 287,
+        "timeIN": 288,
+        "valueIN": 289,
         "preProcesses": [],
         "out": {
-          "time": 178,
-          "value_A": 179,
-          "value_B": 180,
-          "value_C": 181
+          "time": 290,
+          "value_A": 291,
+          "value_B": 292,
+          "value_C": 293
         }
       },
       "refTPId": null
@@ -420,7 +421,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_32",
+      "id": "note_35",
       "text": "Pivots a long/tidy table (a category column, a time column and a value column) into wide format, producing one value-column per category sharing a common time column. Use it to turn a stacked per-subject table into side-by-side series ready for plotting or per-series analysis.",
       "x": 40,
       "y": 24,
@@ -432,27 +433,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_175": {
+    "data_287": {
       "x": 60,
       "y": 314
     },
-    "data_176": {
+    "data_288": {
       "x": 60,
       "y": 814
     },
-    "data_177": {
+    "data_289": {
       "x": 60,
       "y": 1314
     },
-    "tableprocess_25": {
+    "tableprocess_33": {
       "x": 440,
       "y": 314
     },
-    "plot_44": {
+    "plot_51": {
       "x": 820,
       "y": 314
     },
-    "note_32": {
+    "note_35": {
       "x": 40,
       "y": 24
     }
@@ -480,6 +481,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -507,5 +514,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

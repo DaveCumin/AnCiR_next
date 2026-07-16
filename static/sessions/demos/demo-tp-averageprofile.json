@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "258": [
+    "370": [
       0,
       1,
       2,
@@ -98,7 +98,7 @@
       94,
       95
     ],
-    "259": [
+    "371": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -196,7 +196,7 @@
       15.358983848622422,
       11.362966948437233
     ],
-    "260": [
+    "372": [
       0.5,
       1.5,
       2.5,
@@ -222,7 +222,7 @@
       22.5,
       23.5
     ],
-    "261": [
+    "373": [
       10,
       11.362966948437267,
       15.358983848622461,
@@ -251,9 +251,9 @@
   },
   "data": [
     {
-      "id": 258,
+      "id": 370,
       "name": "Average Profile input 1",
-      "data": 258,
+      "data": 370,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -262,9 +262,9 @@
       "processes": []
     },
     {
-      "id": 259,
+      "id": 371,
       "name": "Average Profile input 2",
-      "data": 259,
+      "data": 371,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -273,22 +273,22 @@
       "processes": []
     },
     {
-      "id": 260,
-      "name": "avgprofx_43",
-      "data": 260,
+      "id": 372,
+      "name": "avgprofx_51",
+      "data": 372,
       "type": "number",
-      "tableProcessGUId": "c01f3f9e-04a7-496a-92fa-e22ccc2ecc46",
+      "tableProcessGUId": "434742ee-36a5-495b-9805-079c5f08b714",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 261,
-      "name": "avgprof_259_43",
-      "data": 261,
+      "id": 373,
+      "name": "avgprof_371_51",
+      "data": 373,
       "type": "number",
-      "tableProcessGUId": "c01f3f9e-04a7-496a-92fa-e22ccc2ecc46",
+      "tableProcessGUId": "434742ee-36a5-495b-9805-079c5f08b714",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -297,7 +297,7 @@
   ],
   "plots": [
     {
-      "id": 63,
+      "id": 70,
       "name": "Average Profile result",
       "x": 350,
       "y": 150,
@@ -310,12 +310,13 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          258,
-          259,
-          260,
-          261
+          370,
+          371,
+          372,
+          373
         ],
         "showCol": [
           true,
@@ -332,20 +333,20 @@
   ],
   "tableProcesses": [
     {
-      "id": 43,
+      "id": 51,
       "name": "AverageProfile",
       "displayName": "Average Profile",
       "args": {
-        "xIN": 258,
+        "xIN": 370,
         "yIN": [
-          259
+          371
         ],
         "period": 24,
         "nBins": 24,
         "preProcesses": [],
         "out": {
-          "avgprofx": 260,
-          "avgprof_259": 261
+          "avgprofx": 372,
+          "avgprof_371": 373
         }
       },
       "refTPId": null
@@ -356,7 +357,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_45",
+      "id": "note_48",
       "text": "Folds a series onto one period (default 24 h) and reports the mean value in each phase bin with its standard error, giving the 'average day' or mean waveform of the record. Use it to visualise the typical shape and timing of a rhythm across many cycles and to smooth out day-to-day noise before or alongside a parametric fit. In the demo, read each point as the across-days mean at that time-of-day and the error bars as the SEM: a clear peak-and-trough shape marks a robust rhythm, while flat bins with wide bars indicate weak or noisy rhythmicity. Mean-waveform folding (Refinetti et al. 2007).",
       "x": 40,
       "y": 24,
@@ -368,23 +369,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_258": {
+    "data_370": {
       "x": 60,
       "y": 314
     },
-    "data_259": {
+    "data_371": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_43": {
+    "tableprocess_51": {
       "x": 440,
       "y": 314
     },
-    "plot_63": {
+    "plot_70": {
       "x": 820,
       "y": 314
     },
-    "note_45": {
+    "note_48": {
       "x": 40,
       "y": 24
     }
@@ -412,6 +413,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -439,5 +446,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

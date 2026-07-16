@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "64": [
+    "176": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "65": [
+    "177": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 64,
+      "id": 176,
       "name": "x",
-      "data": 64,
+      "data": 176,
       "type": "number",
-      "tableProcessGUId": "2d7227b6-91d8-4315-adf2-f51d3b99b845",
+      "tableProcessGUId": "fa9ed3b4-157d-457d-9fb2-5685651d9e23",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 65,
+      "id": 177,
       "name": "y",
-      "data": 65,
+      "data": 177,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 66,
+      "id": 178,
       "name": "Edit value result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_3",
-      "producerPort": "out_65",
+      "producerPort": "out_177",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 16,
+      "id": 23,
       "name": "Edit value: before vs after",
       "x": 350,
       "y": 150,
@@ -155,6 +155,7 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -198,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 67,
+              "id": 179,
               "name": "x",
-              "refId": 64,
+              "refId": 176,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -209,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 68,
+              "id": 180,
               "name": "y",
-              "refId": 65,
+              "refId": 177,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -237,9 +238,9 @@
           },
           {
             "x": {
-              "id": 69,
+              "id": 181,
               "name": "x",
-              "refId": 64,
+              "refId": 176,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -248,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 70,
+              "id": 182,
               "name": "Edit value result",
-              "refId": 66,
+              "refId": 178,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -290,7 +291,7 @@
       }
     },
     {
-      "id": 17,
+      "id": 24,
       "name": "Edit value: values",
       "x": 350,
       "y": 150,
@@ -303,10 +304,11 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          65,
-          66
+          177,
+          178
         ],
         "showCol": [
           true,
@@ -321,7 +323,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 3,
+      "id": 11,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -331,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 64
+          "result": 176
         }
       },
       "refTPId": null
@@ -342,7 +344,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_14",
+      "id": "note_17",
       "text": "Overwrites individual cells at specific row positions with values you type in, leaving the rest of the column unchanged. Use it for hand-correcting a few known-bad points without touching the source data. The demo shows the edited positions differing from the input.",
       "x": 40,
       "y": 24,
@@ -364,17 +366,17 @@
           }
         ],
         "inIN": [
-          65
+          177
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_65": {
+    "data_177": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_3": {
+    "tableprocess_11": {
       "x": 60,
       "y": 814
     },
@@ -382,15 +384,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_16": {
+    "plot_23": {
       "x": 820,
       "y": 314
     },
-    "plot_17": {
+    "plot_24": {
       "x": 820,
       "y": 814
     },
-    "note_14": {
+    "note_17": {
       "x": 40,
       "y": 24
     }
@@ -418,6 +420,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -445,5 +453,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

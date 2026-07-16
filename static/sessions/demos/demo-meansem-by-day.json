@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "10": [
+    "122": [
       1,
       1,
       1,
@@ -170,7 +170,7 @@
       7,
       7
     ],
-    "11": [
+    "123": [
       16.291076892469444,
       20.29554398487714,
       9.51596332468565,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 10,
+      "id": 122,
       "name": "day",
-      "data": 10,
+      "data": 122,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 11,
+      "id": 123,
       "name": "activity",
-      "data": 11,
+      "data": 123,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 3,
+      "id": 10,
       "name": "Activity by day (mean ± SEM)",
       "x": 350,
       "y": 150,
@@ -380,6 +380,7 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -410,9 +411,9 @@
         "data": [
           {
             "x": {
-              "id": 12,
+              "id": 124,
               "name": "day",
-              "refId": 10,
+              "refId": 122,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -421,9 +422,9 @@
               "processes": []
             },
             "y": {
-              "id": 13,
+              "id": 125,
               "name": "activity",
-              "refId": 11,
+              "refId": 123,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -471,7 +472,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_4",
+      "id": "note_7",
       "text": "Overlays each group's mean as a marker with whiskers showing ± one standard error of the mean (SEM = s/√n), grouped by the x-column. Use it to compare average levels across conditions or time bins while showing the precision of each mean. The demo shows per-group means with error bars.",
       "x": 40,
       "y": 24,
@@ -483,19 +484,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_10": {
+    "data_122": {
       "x": 60,
       "y": 314
     },
-    "data_11": {
+    "data_123": {
       "x": 60,
       "y": 814
     },
-    "note_4": {
+    "note_7": {
       "x": 40,
       "y": 24
     },
-    "plot_3": {
+    "plot_10": {
       "x": 820,
       "y": 314
     }
@@ -523,6 +524,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -550,5 +557,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

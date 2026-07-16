@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "240": [
+    "352": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "241": [
+    "353": [
       7.673945782302198,
       -1.879285133127806,
       10.089269516954142,
@@ -104,7 +104,7 @@
       95.32890446343086,
       89.84737077710555
     ],
-    "242": [
+    "354": [
       0,
       1,
       2,
@@ -156,19 +156,19 @@
       48,
       49
     ],
-    "243": [
+    "355": [
       0.9579555770898015
     ],
-    "244": [
+    "356": [
       5.469977223339452
     ],
-    "245": [
+    "357": [
       1.809303819828578
     ],
-    "246": [
+    "358": [
       4.350114419162737
     ],
-    "247": [
+    "359": [
       4.350114419162737,
       6.159418238991315,
       7.968722058819893,
@@ -223,20 +223,20 @@
   },
   "data": [
     {
-      "id": 240,
+      "id": 352,
       "name": "x",
-      "data": 240,
+      "data": 352,
       "type": "number",
-      "tableProcessGUId": "9b21e89a-9268-4bce-a5b6-b87417ad5dc5",
+      "tableProcessGUId": "8c81f827-84d5-4c74-961f-88d6019e0f7d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 241,
+      "id": 353,
       "name": "y",
-      "data": 241,
+      "data": 353,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -245,66 +245,66 @@
       "processes": []
     },
     {
-      "id": 242,
-      "name": "trendx_41",
-      "data": 242,
+      "id": 354,
+      "name": "trendx_49",
+      "data": 354,
       "type": "number",
-      "tableProcessGUId": "18d74c58-a41e-4195-8cfa-7c8903006200",
+      "tableProcessGUId": "99517bad-c2b6-4612-b23a-dd413c2b5756",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 243,
-      "name": "r2_41",
-      "data": 243,
+      "id": 355,
+      "name": "r2_49",
+      "data": 355,
       "type": "number",
-      "tableProcessGUId": "18d74c58-a41e-4195-8cfa-7c8903006200",
+      "tableProcessGUId": "99517bad-c2b6-4612-b23a-dd413c2b5756",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 244,
-      "name": "rmse_41",
-      "data": 244,
+      "id": 356,
+      "name": "rmse_49",
+      "data": 356,
       "type": "number",
-      "tableProcessGUId": "18d74c58-a41e-4195-8cfa-7c8903006200",
+      "tableProcessGUId": "99517bad-c2b6-4612-b23a-dd413c2b5756",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 245,
-      "name": "coef_slope_41",
-      "data": 245,
+      "id": 357,
+      "name": "coef_slope_49",
+      "data": 357,
       "type": "number",
-      "tableProcessGUId": "18d74c58-a41e-4195-8cfa-7c8903006200",
+      "tableProcessGUId": "99517bad-c2b6-4612-b23a-dd413c2b5756",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 246,
-      "name": "coef_intercept_41",
-      "data": 246,
+      "id": 358,
+      "name": "coef_intercept_49",
+      "data": 358,
       "type": "number",
-      "tableProcessGUId": "18d74c58-a41e-4195-8cfa-7c8903006200",
+      "tableProcessGUId": "99517bad-c2b6-4612-b23a-dd413c2b5756",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 247,
-      "name": "trendy_241_41",
-      "data": 247,
+      "id": 359,
+      "name": "trendy_353_49",
+      "data": 359,
       "type": "number",
-      "tableProcessGUId": "18d74c58-a41e-4195-8cfa-7c8903006200",
+      "tableProcessGUId": "99517bad-c2b6-4612-b23a-dd413c2b5756",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -313,7 +313,7 @@
   ],
   "plots": [
     {
-      "id": 60,
+      "id": 67,
       "name": "Fit Trend Curves: data + fit",
       "x": 350,
       "y": 150,
@@ -326,6 +326,7 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "xlimsIN": [
           null,
@@ -369,9 +370,9 @@
         "data": [
           {
             "x": {
-              "id": 248,
+              "id": 360,
               "name": "x",
-              "refId": 240,
+              "refId": 352,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -380,9 +381,9 @@
               "processes": []
             },
             "y": {
-              "id": 249,
+              "id": 361,
               "name": "y",
-              "refId": 241,
+              "refId": 353,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -408,9 +409,9 @@
           },
           {
             "x": {
-              "id": 250,
-              "name": "trendx_41",
-              "refId": 242,
+              "id": 362,
+              "name": "trendx_49",
+              "refId": 354,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -419,9 +420,9 @@
               "processes": []
             },
             "y": {
-              "id": 251,
-              "name": "trendy_241_41",
-              "refId": 247,
+              "id": 363,
+              "name": "trendy_353_49",
+              "refId": 359,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -461,7 +462,7 @@
       }
     },
     {
-      "id": 61,
+      "id": 68,
       "name": "Fit Trend Curves: values",
       "x": 350,
       "y": 150,
@@ -474,10 +475,11 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          241,
-          247
+          353,
+          359
         ],
         "showCol": [
           true,
@@ -492,7 +494,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 40,
+      "id": 48,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -502,31 +504,31 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 240
+          "result": 352
         }
       },
       "refTPId": null
     },
     {
-      "id": 41,
+      "id": 49,
       "name": "TrendFit",
       "displayName": "Fit Trend Curves",
       "args": {
-        "xIN": 240,
+        "xIN": 352,
         "yIN": [
-          241
+          353
         ],
         "model": "linear",
         "polyDegree": 2,
         "outputX": -1,
         "preProcesses": [],
         "out": {
-          "trendx": 242,
-          "r2": 243,
-          "rmse": 244,
-          "coef_slope": 245,
-          "coef_intercept": 246,
-          "trendy_241": 247
+          "trendx": 354,
+          "r2": 355,
+          "rmse": 356,
+          "coef_slope": 357,
+          "coef_intercept": 358,
+          "trendy_353": 359
         }
       },
       "refTPId": null
@@ -537,7 +539,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_43",
+      "id": "note_46",
       "text": "Fits and stores a simple trend, linear, polynomial, exponential or logarithmic, to the series by least squares, reporting the fitted curve, R² and RMSE plus the coefficients. Use it to describe or remove a slow trend (baseline drift, growth or decay) before rhythm analysis, since detrending prevents low-frequency drift from contaminating periodograms and cosinor fits. In the demo, read the smooth fitted line through the data: how closely it hugs the points is summarised by R² (near 1 = tight fit) and RMSE (residual scatter). Detrending for rhythm analysis (Refinetti et al. 2007).",
       "x": 40,
       "y": 24,
@@ -549,27 +551,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_241": {
+    "data_353": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_40": {
+    "tableprocess_48": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_41": {
+    "tableprocess_49": {
       "x": 440,
       "y": 314
     },
-    "plot_60": {
+    "plot_67": {
       "x": 820,
       "y": 314
     },
-    "plot_61": {
+    "plot_68": {
       "x": 820,
       "y": 814
     },
-    "note_43": {
+    "note_46": {
       "x": 40,
       "y": 24
     }
@@ -597,6 +599,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -624,5 +632,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

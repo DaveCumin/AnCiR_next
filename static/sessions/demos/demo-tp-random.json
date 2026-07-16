@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "191": [
+    "303": [
       9.23,
       3.33,
       1.98,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 191,
-      "name": "result_28",
-      "data": 191,
+      "id": 303,
+      "name": "result_36",
+      "data": 303,
       "type": "number",
-      "tableProcessGUId": "6b26e341-5d90-407a-b164-8ba37c181343",
+      "tableProcessGUId": "647f811a-4b91-4ae1-840f-b655bfdad3c4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -68,7 +68,7 @@
   ],
   "plots": [
     {
-      "id": 47,
+      "id": 54,
       "name": "Random result",
       "x": 350,
       "y": 150,
@@ -81,9 +81,10 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          191
+          303
         ],
         "showCol": [
           true
@@ -97,7 +98,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 28,
+      "id": 36,
       "name": "Random",
       "displayName": "Random",
       "args": {
@@ -107,7 +108,7 @@
         "seed": 12345,
         "distribution": "uniform",
         "out": {
-          "result": 191
+          "result": 303
         }
       },
       "refTPId": null
@@ -118,7 +119,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_34",
+      "id": "note_37",
       "text": "Generates a column of pseudo-random values from a uniform, Gaussian, or exponential distribution, scaled by an offset and multiplier, with a fixed seed for reproducibility. Use it to add controlled noise or to create random test data.",
       "x": 40,
       "y": 24,
@@ -130,15 +131,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_28": {
+    "tableprocess_36": {
       "x": 60,
       "y": 314
     },
-    "plot_47": {
+    "plot_54": {
       "x": 820,
       "y": 314
     },
-    "note_34": {
+    "note_37": {
       "x": 40,
       "y": 24
     }
@@ -166,6 +167,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -193,5 +200,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "123": [
+    "235": [
       null,
       null,
       null,
@@ -15,11 +15,11 @@
   },
   "data": [
     {
-      "id": 123,
-      "name": "result_13",
-      "data": 123,
+      "id": 235,
+      "name": "result_21",
+      "data": 235,
       "type": "category",
-      "tableProcessGUId": "d5dea994-55f9-4c52-8fe1-3c8775472ac1",
+      "tableProcessGUId": "dec1ce45-dc29-4729-a3f5-8abd380996ba",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -28,7 +28,7 @@
   ],
   "plots": [
     {
-      "id": 32,
+      "id": 39,
       "name": "Enter Data result",
       "x": 350,
       "y": 150,
@@ -41,9 +41,10 @@
       "facetKey": null,
       "setRefs": {},
       "metricOut": {},
+      "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          123
+          235
         ],
         "showCol": [
           true
@@ -57,14 +58,14 @@
   ],
   "tableProcesses": [
     {
-      "id": 13,
+      "id": 21,
       "name": "BlankColumn",
       "displayName": "Enter Data",
       "args": {
         "N": 10,
         "storedValueRefs": {},
         "out": {
-          "result": 123
+          "result": 235
         }
       },
       "refTPId": null
@@ -75,7 +76,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_23",
+      "id": "note_26",
       "text": "Lets you enter data by hand or paste CSV/JSON to create a column (or table) directly on the canvas. Use it for small manual datasets, quick tests, or pasting values from another program.",
       "x": 40,
       "y": 24,
@@ -87,15 +88,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_13": {
+    "tableprocess_21": {
       "x": 60,
       "y": 314
     },
-    "plot_32": {
+    "plot_39": {
       "x": 820,
       "y": 314
     },
-    "note_23": {
+    "note_26": {
       "x": 40,
       "y": 24
     }
@@ -123,6 +124,12 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
@@ -150,5 +157,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.53.2"
+  "version": "β.56.1"
 }
