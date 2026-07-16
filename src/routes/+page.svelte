@@ -58,6 +58,7 @@
 	import { paramDiffWatcher } from '$lib/core/paramDiffWatcher.svelte.js';
 
 	import WorkflowEditor from '$lib/components/workflow/WorkflowEditor.svelte';
+	import NodeComputeHost from '$lib/components/views/NodeComputeHost.svelte';
 
 	// On a fresh page load, start both canvases at their default zoom + position
 	// rather than restoring the last session's viewport. Both viewports live in
@@ -765,6 +766,11 @@
 		<WorkflowEditor inline={true} />
 	{:else}
 		<PlotDisplay />
+		<!-- Keep every analysis / transform node's compute effect alive in the
+		     plots view. WorkflowEditor does this in the canvas view; without it here
+		     only the selected node recomputes, leaving downstream nodes (and the
+		     plots reading them) stale. See NodeComputeHost for the full rationale. -->
+		<NodeComputeHost />
 	{/if}
 
 	<ControlPanel />
