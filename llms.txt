@@ -1,22 +1,24 @@
 # ancir-mcp
 
-> Exposes AnCiR's real headless chronobiology engine to LLMs/agents as MCP tools, so an
-> agent can build an analysis session (data + analyses + plots) and export
-> AnCiR-compatible session.json that opens in the GUI. Also ships a natural-language →
-> session backend (bring-your-own model). Three layers: engine (src/engine), MCP
-> transport (src/server.js, stdio + HTTP), app backend (app/).
+> Lets LLMs/agents build an AnCiR chronobiology session (data + analyses + plots) as a
+> session.json that opens in the GUI. Two paths: (A) STATIC EMISSION — the model emits one
+> JSON draft, a pure normalizer (src/emit) turns it into a session, and the AnCiR SPA computes
+> it in the browser; needs no engine, so it ships as a Cloudflare Worker (worker/). (B) MCP —
+> AnCiR's real headless engine exposed as tools (src/engine + src/server.js, stdio + HTTP),
+> for agents that need live results; needs vite-node/RAM. Path A is the product; B is optional.
 
 ## Start here
 
-- [AGENTS.md](AGENTS.md): orientation, the 3 layers, the 9 tools, the must-know rules, and a routing table.
-- [app/prompts/tool-rules.md](app/prompts/tool-rules.md): SINGLE SOURCE of the tool-argument rules (flat args, name refs, generate-don't-type, fixed-period). Loaded into the model prompt.
+- [AGENTS.md](AGENTS.md): orientation, the two paths (static emission vs MCP engine), the 9 tools, the must-know rules, and a routing table.
+- [app/prompts/tool-rules.md](app/prompts/tool-rules.md): SINGLE SOURCE of the tool-argument rules (flat args, name refs, generate-don't-type, fixed-period). Loaded into the MCP model prompt; the Worker restates the same rules against its JSON-draft contract in worker/draftPrompt.js.
 
 ## Docs
 
-- [docs/tool-contract.md](docs/tool-contract.md): how to generate valid session-building tool calls — tool signatures, return shapes, plot inputs, a worked example, dynamic-output and failure behaviour.
+- [worker/README.md](worker/README.md): the NL→session Cloudflare Worker (path A, the product) — routes, bring-your-own-model, deploy steps, gotchas.
+- [docs/tool-contract.md](docs/tool-contract.md): how to generate valid session-building MCP tool calls (path B) — tool signatures, return shapes, plot inputs, a worked example, dynamic-output and failure behaviour.
 - [docs/architecture.md](docs/architecture.md): file map, data flow, engine invariants/gotchas (core singleton, registry-at-startup, discardTp), and how to add a node.
-- [docs/app-backend.md](docs/app-backend.md): the NL→session Express API, bring-your-own-model resolution, security (validation + SSRF + rate limit), modules, and tests.
-- [docs/deploy.md](docs/deploy.md): run locally and deploy (Cloudflare Pages + a Node host/tunnel), the free-host RAM comparison, and the engine-bundle unlock.
+- [docs/app-backend.md](docs/app-backend.md): the LEGACY engine-driven Express NL→session API (superseded by worker/, kept for reference) — BYO-model resolution, validation + SSRF + rate limit, modules, tests.
+- [docs/deploy.md](docs/deploy.md): deploy the product (Pages + Worker, free tier, no VM); the MCP server's VM/RAM requirements only if you host it remotely.
 
 ## Reference
 
