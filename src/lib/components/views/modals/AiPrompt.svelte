@@ -8,7 +8,7 @@
 	// readable from the browser bundle). A user may supply their own under Advanced — it's
 	// passed through for that one request and never stored.
 	import Modal from '$lib/components/reusables/Modal.svelte';
-	import { buildNlSession } from '$lib/utils/nlSession.js';
+	import { buildNlSession, NL_URL } from '$lib/utils/nlSession.js';
 
 	let { showModal = $bindable(false) } = $props();
 
@@ -16,6 +16,14 @@
 	let prompt = $state('');
 	let busy = $state(false);
 	let error = $state('');
+
+	// A partially-built session: the Worker answered 200, but dropped something on the way (an
+	// unknown analysis, a plot whose series wired nothing). It reports that in `errors`, and we
+	// used to redirect straight past it — so "…and plot it in an actogram" could return a
+	// session with no plot and no explanation, leaving the user to guess whether they'd asked
+	// wrongly or hit a bug. Hold the result and let them decide instead. Told BEFORE landing in
+	// the session beats discovering the gap afterwards.
+	let pending = $state(null);
 
 	// Bring-your-own model (optional). Blank ⇒ the Worker uses its configured default.
 	let baseUrl = $state('');
@@ -32,8 +40,20 @@
 	function reset() {
 		error = '';
 		busy = false;
+		pending = null;
 		// Don't leave a key sitting in memory once the dialog is closed.
 		apiKey = '';
+	}
+
+	/**
+	 * Load the built session into THIS deployment rather than following the Worker's `url`
+	 * (which points at the configured production AnCiR — following it from a dev or self-hosted
+	 * build would bounce the user somewhere else). Reloading with ?loadFromURL= is the same path
+	 * a shared link takes, so the session gets tidied and the AI warning shown.
+	 */
+	function load(sessionUrl) {
+		const here = `${window.location.origin}${window.location.pathname}`;
+		window.location.href = `${here}?loadFromURL=${encodeURIComponent(sessionUrl)}`;
 	}
 
 	async function submit() {
@@ -52,6 +72,7 @@
 
 		busy = true;
 		error = '';
+		pending = null;
 		try {
 			// Send llm{} only if the user actually filled it in.
 			const llm = {};
@@ -64,13 +85,16 @@
 				llm: Object.keys(llm).length ? llm : undefined
 			});
 
-			// Load the session into THIS deployment rather than following the Worker's `url`
-			// (which points at the configured production AnCiR — following it from a dev or
-			// self-hosted build would bounce the user somewhere else). Reloading with
-			// ?loadFromURL= is the same path a shared link takes, so the session gets tidied
-			// and the AI warning shown.
-			const here = `${window.location.origin}${window.location.pathname}`;
-			window.location.href = `${here}?loadFromURL=${encodeURIComponent(res.sessionUrl)}`;
+			// Something was dropped: stop and show it rather than loading a session that quietly
+			// isn't what was asked for. `warnings` alone don't gate — they flag results that may
+			// not compute until opened, which is what opening it will show anyway.
+			if (res.errors?.length) {
+				pending = res;
+				busy = false;
+				tab = 'prompt';
+				return;
+			}
+			load(res.sessionUrl);
 		} catch (e) {
 			// Never fail silently — the message from the Worker is the useful part.
 			error = e?.message ?? String(e);
@@ -113,7 +137,7 @@
 		></textarea>
 
 		<div class="suggestions">
-			{#each SUGGESTIONS as s}
+			{#each SUGGESTIONS as s (s)}
 				<button class="chip" disabled={busy} onclick={() => (prompt = s)}>{s}</button>
 			{/each}
 		</div>
@@ -184,15 +208,16 @@
 
 		<h3>Use it from your own tools</h3>
 		<p class="hint">
-			The same engine is available as an MCP server, so an agent (Claude Desktop/Code, or any MCP
-			client) can build sessions directly — with live results, which this button can't give you. Run
-			it from the repo:
+			AnCiR is also an MCP server, so an agent (Claude, ChatGPT, or any MCP client) can build
+			sessions for you. Nothing to clone or install — it's a URL:
 		</p>
-		<pre class="code">cd mcp &amp;&amp; npm start        # stdio
-npm run start:http           # HTTP transport</pre>
+		<pre class="code">claude mcp add --transport http ancir {NL_URL}/mcp</pre>
 		<p class="hint">
-			See <code>mcp/AGENTS.md</code> for the tool contract, or <code>mcp/worker/README.md</code>
-			to call this same <code>/build</code> endpoint yourself.
+			Your agent then gets two tools: <code>list_capabilities</code> (every analysis and plot, with
+			exact arguments) and <code>build_session</code> (returns a link that opens the session here).
+			No API key needed — your agent is the model. Analyses are computed in your browser when you
+			open the link, so the agent won't see the numbers; for live results, run the full engine from
+			the repo (<code>cd mcp &amp;&amp; npm start</code>) — see <code>mcp/AGENTS.md</code>.
 		</p>
 	{/if}
 
@@ -205,10 +230,31 @@ npm run start:http           # HTTP transport</pre>
 		</div>
 	{/if}
 
+	{#if pending}
+		<div class="gate" role="alert">
+			<strong>Some of that request was left out.</strong>
+			<p>The session was built, but these parts were dropped:</p>
+			<!-- Keyed by index: these are plain strings from the Worker and two could repeat,
+			     which a value-keyed each would throw on. -->
+			<ul>
+				{#each pending.errors as e, i (i)}
+					<li>{e}</li>
+				{/each}
+				{#each pending.warnings ?? [] as w, i (i)}
+					<li>{w}</li>
+				{/each}
+			</ul>
+			<p>Rewording your prompt and building again may fix it, or you can load what was built.</p>
+		</div>
+	{/if}
+
 	<div class="actions">
 		<span class="note">Prompts are logged so the analyses can be reviewed and improved.</span>
+		{#if pending}
+			<button class="secondary" onclick={() => load(pending.sessionUrl)}>Load anyway</button>
+		{/if}
 		<button class="primary" disabled={busy || !prompt.trim()} onclick={submit}>
-			{busy ? 'Building…' : 'Build session'}
+			{busy ? 'Building…' : pending ? 'Build again' : 'Build session'}
 		</button>
 	</div>
 </Modal>
@@ -302,12 +348,49 @@ npm run start:http           # HTTP transport</pre>
 		white-space: pre-wrap;
 		font-size: var(--font-xs);
 	}
+	/* Amber, not red: the session exists and is loadable, it's just incomplete. Text uses
+	   --color-warning-text — the bright --color-warning is only 2:1 on its own tint. */
+	.gate {
+		background: var(--color-warning-bg);
+		border: 1px solid var(--color-warning);
+		border-radius: var(--radius-sm);
+		padding: var(--space-2);
+		margin: var(--space-3) 0;
+		font-size: var(--font-sm);
+		color: var(--color-warning-text);
+	}
+	.gate p {
+		margin: var(--space-1) 0 0;
+	}
+	.gate ul {
+		margin: var(--space-1) 0 0;
+		padding-left: var(--space-4);
+		font-size: var(--font-xs);
+	}
 	.actions {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: var(--space-3);
 		margin-top: var(--space-3);
+	}
+	/* Pushes the pair right, keeping "Load anyway" next to Build rather than at the far edge. */
+	.actions .secondary {
+		margin-left: auto;
+	}
+	.secondary {
+		font: inherit;
+		font-size: var(--font-sm);
+		padding: var(--space-2) var(--space-4);
+		border-radius: var(--radius-sm);
+		border: 1px solid var(--color-lightness-85);
+		background: var(--color-lightness-99);
+		color: var(--color-lightness-25);
+		cursor: pointer;
+	}
+	.secondary:hover {
+		border-color: var(--color-accent);
+		background: var(--color-hover);
 	}
 	.note {
 		font-size: var(--font-2xs);
@@ -332,7 +415,12 @@ npm run start:http           # HTTP transport</pre>
 		border-radius: var(--radius-sm);
 		padding: var(--space-2);
 		font-size: var(--font-xs);
-		overflow-x: auto;
+		/* Wrap rather than scroll: this is a command to copy, and a line long enough to need a
+		   scrollbar is exactly one you can't read. min-width:0 stops the <pre> from pushing the
+		   modal wider than its own column instead of wrapping. */
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		min-width: 0;
 	}
 	h3 {
 		margin: var(--space-4) 0 var(--space-2);
