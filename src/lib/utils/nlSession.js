@@ -54,22 +54,20 @@ export async function checkNlHealth({ timeoutMs = 4000 } = {}) {
 }
 
 /**
- * Build a session from a prompt. Sends `llm` only when the user supplied their own; otherwise
- * the Worker uses its configured default.
+ * POST to the Worker and turn every failure into a message a person can act on. Shared by the
+ * build and edit paths — same service, same ways of going wrong.
  *
- * @param {{prompt:string, llm?:{baseUrl?:string, apiKey?:string, model?:string}}} req
- * @returns {Promise<{url:string, sessionUrl:string, sessionId:string, warnings:string[], errors:string[]}>}
  * @throws {Error} with a human-readable message — callers must surface it, never swallow it.
  */
-export async function buildNlSession({ prompt, llm } = {}, { timeoutMs = 90000 } = {}) {
+async function postNl(path, payload, { timeoutMs = 90000 } = {}) {
 	if (!NL_CONFIGURED) throw new Error('The AI service is not configured for this build.');
 
 	let res;
 	try {
-		res = await fetch(`${NL_URL}/build`, {
+		res = await fetch(`${NL_URL}${path}`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ prompt, ...(llm ? { llm } : {}) }),
+			body: JSON.stringify(payload),
 			signal: AbortSignal.timeout(timeoutMs)
 		});
 	} catch (e) {
@@ -116,4 +114,29 @@ export async function buildNlSession({ prompt, llm } = {}, { timeoutMs = 90000 }
 	}
 	if (!body) throw new Error('The AI service returned an unreadable response.');
 	return body;
+}
+
+/**
+ * Build a NEW session from a prompt. Sends `llm` only when the user supplied their own;
+ * otherwise the Worker uses its configured default.
+ *
+ * @param {{prompt:string, llm?:{baseUrl?:string, apiKey?:string, model?:string}}} req
+ * @returns {Promise<{url:string, sessionUrl:string, sessionId:string, warnings:string[], errors:string[]}>}
+ */
+export function buildNlSession({ prompt, llm } = {}, opts = {}) {
+	return postNl('/build', { prompt, ...(llm ? { llm } : {}) }, opts);
+}
+
+/**
+ * Ask for changes to the session the user already has open.
+ *
+ * Returns a SPEC, not a session: the Worker has never seen this session and can't mutate it.
+ * `session` is the structure summary (see utils/aiEdit.js summariseSession) — never the data.
+ * The caller compiles and validates the spec locally before anything is applied.
+ *
+ * @param {{prompt:string, session:object, llm?:object}} req
+ * @returns {Promise<{analyses:any[], plots:any[], changes:any[]}>}
+ */
+export function editNlSession({ prompt, session, llm } = {}, opts = {}) {
+	return postNl('/edit', { prompt, session, ...(llm ? { llm } : {}) }, opts);
 }

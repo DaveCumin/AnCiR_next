@@ -8,7 +8,10 @@
 	// readable from the browser bundle). A user may supply their own under Advanced — it's
 	// passed through for that one request and never stored.
 	import Modal from '$lib/components/reusables/Modal.svelte';
-	import { buildNlSession, NL_URL } from '$lib/utils/nlSession.js';
+	import { buildNlSession, editNlSession, NL_URL } from '$lib/utils/nlSession.js';
+	import { core, appState } from '$lib/core/core.svelte.js';
+	import { summariseSession, registryFacts, planEdit, applyEdit } from '$lib/utils/aiEdit.js';
+	import { addNotification } from '$lib/core/notifications.svelte.js';
 
 	let { showModal = $bindable(false) } = $props();
 
@@ -16,6 +19,20 @@
 	let prompt = $state('');
 	let busy = $state(false);
 	let error = $state('');
+
+	// Is there anything to edit? An empty canvas can only be built on.
+	const hasSession = $derived((core.data?.length ?? 0) > 0 || (core.tableProcesses?.length ?? 0) > 0);
+
+	// 'edit' changes the open session in place; 'create' replaces it with a new one. Default to
+	// edit whenever there's something there: someone with a session open who asks for "a
+	// periodogram too" means ADD one, and silently discarding their work to build a fresh
+	// session is the single most destructive thing this dialog could do.
+	let mode = $state('edit');
+	const effectiveMode = $derived(hasSession ? mode : 'create');
+
+	// A planned edit, held for approval. The AI never mutates the user's session unasked — they
+	// see exactly what will happen and press Apply.
+	let plan = $state(null);
 
 	// A partially-built session: the Worker answered 200, but dropped something on the way (an
 	// unknown analysis, a plot whose series wired nothing). It reports that in `errors`, and we
@@ -30,17 +47,27 @@
 	let apiKey = $state('');
 	let model = $state('');
 
-	const SUGGESTIONS = [
+	const CREATE_SUGGESTIONS = [
 		'Simulate 4 days of a 24 h rhythm with noise, fit a cosinor, and plot the data with the fit.',
 		'Simulate 7 days of activity and show a Lomb-Scargle periodogram to find the period.',
 		'Simulate a rhythm and show its actogram.',
 		'Simulate two days of data, bin it into 1 h bins, and plot the binned profile.'
 	];
 
+	const EDIT_SUGGESTIONS = [
+		'Add a Lomb-Scargle periodogram of my data.',
+		'Fit a cosinor and plot the fit over the data.',
+		'Show an actogram of my data.',
+		'Bin my data into 1 h bins and plot the profile.'
+	];
+
+	const suggestions = $derived(effectiveMode === 'edit' ? EDIT_SUGGESTIONS : CREATE_SUGGESTIONS);
+
 	function reset() {
 		error = '';
 		busy = false;
 		pending = null;
+		plan = null;
 		// Don't leave a key sitting in memory once the dialog is closed.
 		apiKey = '';
 	}
@@ -73,17 +100,36 @@
 		busy = true;
 		error = '';
 		pending = null;
+		plan = null;
 		try {
 			// Send llm{} only if the user actually filled it in.
-			const llm = {};
-			if (url) llm.baseUrl = url;
-			if (apiKey.trim()) llm.apiKey = apiKey.trim();
-			if (model.trim()) llm.model = model.trim();
+			const llmIn = {};
+			if (url) llmIn.baseUrl = url;
+			if (apiKey.trim()) llmIn.apiKey = apiKey.trim();
+			if (model.trim()) llmIn.model = model.trim();
+			const llm = Object.keys(llmIn).length ? llmIn : undefined;
 
-			const res = await buildNlSession({
-				prompt: text,
-				llm: Object.keys(llm).length ? llm : undefined
-			});
+			if (effectiveMode === 'edit') {
+				const spec = await editNlSession({ prompt: text, session: summariseSession(), llm });
+				// Compile against the REAL session and check every reference before anything is
+				// applied. The op engine can't roll a half-applied batch back, so this is the
+				// only thing standing between a model's guess and the user's work.
+				const p = planEdit(spec, { summary: summariseSession(), facts: registryFacts() });
+				if (!p.analyses.length && !p.plots.length && !p.changes.length) {
+					error =
+						p.errors.length
+							? `Nothing in that suggestion could be applied:\n${p.errors.join('\n')}`
+							: "The AI didn't suggest any changes that could be applied.";
+					busy = false;
+					return;
+				}
+				plan = p;
+				busy = false;
+				tab = 'prompt';
+				return;
+			}
+
+			const res = await buildNlSession({ prompt: text, llm });
 
 			// Something was dropped: stop and show it rather than loading a session that quietly
 			// isn't what was asked for. `warnings` alone don't gate — they flag results that may
@@ -100,6 +146,45 @@
 			error = e?.message ?? String(e);
 			busy = false;
 		}
+	}
+
+	/** Apply the approved plan to the open session. */
+	function apply() {
+		if (!plan) return;
+		let res;
+		try {
+			res = applyEdit(plan);
+		} catch (e) {
+			error = `Couldn't apply those changes: ${e?.message ?? e}`;
+			plan = null;
+			return;
+		}
+		const { analyses, plots, changes } = res.added;
+		const bits = [
+			analyses && `${analyses} ${analyses === 1 ? 'analysis' : 'analyses'}`,
+			plots && `${plots} ${plots === 1 ? 'plot' : 'plots'}`,
+			changes && `${changes} ${changes === 1 ? 'change' : 'changes'}`
+		].filter(Boolean);
+
+		// Say it's AI-made and reversible in the same breath as saying it worked — the same
+		// warning a ?loadFromURL= AI session gets, for the same reason.
+		addNotification(
+			`Added ${bits.join(', ')}. Check the result — it's AI-generated. Undo to reverse it.`,
+			'warning',
+			10000
+		);
+		// Anything the planner had to drop is worth saying out loud rather than leaving the user
+		// to notice the gap themselves.
+		if (res.errors.length) {
+			addNotification(`Some parts were left out:\n${res.errors.join('\n')}`, 'info', 12000);
+		}
+		// New nodes land at the origin until the canvas places them; same request the shared-link
+		// path makes.
+		appState.tidyLayoutRequest = (appState.tidyLayoutRequest ?? 0) + 1;
+
+		plan = null;
+		prompt = '';
+		showModal = false;
 	}
 
 	function onKeydown(e) {
@@ -123,21 +208,50 @@
 	</div>
 
 	{#if tab === 'prompt'}
+		{#if hasSession}
+			<!-- Only offered when there's something to edit. The choice is destructive in one
+			     direction (Create replaces the open session), so it's explicit rather than
+			     inferred from the wording of the prompt. -->
+			<div class="modes" role="radiogroup" aria-label="What should the AI do?">
+				<label class:sel={mode === 'edit'}>
+					<input type="radio" bind:group={mode} value="edit" disabled={busy} />
+					Add to this session
+				</label>
+				<label class:sel={mode === 'create'}>
+					<input type="radio" bind:group={mode} value="create" disabled={busy} />
+					Start a new one
+				</label>
+			</div>
+		{/if}
+
 		<p class="hint">
-			Describe the analysis you want. A session is built for you to check and edit — it is a
-			starting point, not an answer.
+			{#if effectiveMode === 'edit'}
+				Describe what to add. You'll see exactly what will change before anything happens, and
+				undo reverses it.
+			{:else}
+				Describe the analysis you want. A session is built for you to check and edit — it is a
+				starting point, not an answer.
+			{/if}
 		</p>
+
+		{#if effectiveMode === 'create' && hasSession}
+			<p class="warn-inline" role="alert">
+				This replaces the session you have open.
+			</p>
+		{/if}
 
 		<textarea
 			bind:value={prompt}
 			onkeydown={onKeydown}
 			rows="4"
 			disabled={busy}
-			placeholder="e.g. Simulate 4 days of a 24 h rhythm, fit a cosinor, and plot the fit over the data."
+			placeholder={effectiveMode === 'edit'
+				? 'e.g. Add a Lomb-Scargle periodogram of the activity column.'
+				: 'e.g. Simulate 4 days of a 24 h rhythm, fit a cosinor, and plot the fit over the data.'}
 		></textarea>
 
 		<div class="suggestions">
-			{#each SUGGESTIONS as s (s)}
+			{#each suggestions as s (s)}
 				<button class="chip" disabled={busy} onclick={() => (prompt = s)}>{s}</button>
 			{/each}
 		</div>
@@ -230,6 +344,27 @@
 		</div>
 	{/if}
 
+	{#if plan}
+		<!-- The approval step. Nothing has touched the session yet: this is what WOULD happen,
+		     in the user's words, so they can say no. -->
+		<div class="plan">
+			<strong>These changes are ready to apply:</strong>
+			<ul>
+				{#each plan.preview as line, i (i)}
+					<li>{line}</li>
+				{/each}
+			</ul>
+			{#if plan.errors.length}
+				<p class="plan-dropped">Not included:</p>
+				<ul class="plan-dropped-list">
+					{#each plan.errors as e, i (i)}
+						<li>{e}</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
+	{/if}
+
 	{#if pending}
 		<div class="gate" role="alert">
 			<strong>Some of that request was left out.</strong>
@@ -253,9 +388,22 @@
 		{#if pending}
 			<button class="secondary" onclick={() => load(pending.sessionUrl)}>Load anyway</button>
 		{/if}
-		<button class="primary" disabled={busy || !prompt.trim()} onclick={submit}>
-			{busy ? 'Building…' : pending ? 'Build again' : 'Build session'}
-		</button>
+		{#if plan}
+			<button class="secondary" onclick={() => (plan = null)}>Discard</button>
+			<button class="primary" onclick={apply}>Apply changes</button>
+		{:else}
+			<button class="primary" disabled={busy || !prompt.trim()} onclick={submit}>
+				{#if busy}
+					{effectiveMode === 'edit' ? 'Thinking…' : 'Building…'}
+				{:else if effectiveMode === 'edit'}
+					Suggest changes
+				{:else if pending}
+					Build again
+				{:else}
+					Build session
+				{/if}
+			</button>
+		{/if}
 	</div>
 </Modal>
 
@@ -288,6 +436,61 @@
 		color: var(--color-text-muted);
 		font-size: var(--font-sm);
 		margin: 0 0 var(--space-3);
+	}
+	.modes {
+		display: flex;
+		gap: var(--space-2);
+		margin-bottom: var(--space-3);
+	}
+	.modes label {
+		display: flex;
+		align-items: center;
+		gap: var(--space-1);
+		margin: 0;
+		padding: var(--space-1) var(--space-3);
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-sm);
+		background: var(--color-lightness-99);
+		cursor: pointer;
+	}
+	.modes label.sel {
+		border-color: var(--color-accent);
+		background: var(--color-hover);
+		color: var(--color-lightness-25);
+		font-weight: 600;
+	}
+	/* Replacing an open session is the one irreversible thing here, so it gets said plainly
+	   rather than left to the mode label. */
+	.warn-inline {
+		margin: 0 0 var(--space-3);
+		font-size: var(--font-sm);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border: 1px solid var(--color-warning);
+		border-radius: var(--radius-sm);
+		padding: var(--space-1) var(--space-2);
+	}
+	.plan {
+		background: var(--color-lightness-97);
+		border: 1px solid var(--color-accent);
+		border-radius: var(--radius-sm);
+		padding: var(--space-2);
+		margin: var(--space-3) 0;
+		font-size: var(--font-sm);
+		color: var(--color-lightness-25);
+	}
+	.plan ul {
+		margin: var(--space-1) 0 0;
+		padding-left: var(--space-4);
+	}
+	.plan-dropped {
+		margin: var(--space-2) 0 0;
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
+	}
+	.plan-dropped-list {
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
 	}
 	textarea,
 	input {

@@ -24,6 +24,7 @@
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
+	import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
 	import { canonicalNodeViz, plotDataFromSpec } from '$lib/plots/canonicalNodeViz.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { deleteTableProcess, detachColumnSetFromTP } from '$lib/core/TableProcess.svelte';
@@ -804,23 +805,6 @@
 		// New nodes are expanded by default (collapsedNodeIds tracks the exceptions),
 		// so no action needed to open it inline.
 		return { ok: true, orphanProcessId: proc.id };
-	}
-
-	// Build a table process's default args from its registry `defaults` map (same
-	// shape MakeNewColumn used). `out` is a nested {key:{val}} structure.
-	function buildTableProcessDefaults(entry) {
-		const fromNested = (obj) => {
-			const r = {};
-			for (const [k, v] of Object.entries(obj)) {
-				r[k] = v && v.val !== undefined ? v.val : fromNested(v ?? {});
-			}
-			return r;
-		};
-		return Object.fromEntries(
-			Array.from(entry.defaults?.entries() ?? []).map(([key, value]) =>
-				key === 'out' ? ['out', fromNested(value)] : [key, value?.val]
-			)
-		);
 	}
 
 	// Workflow-canvas adds skip the modal: spawn the node with defaults at the
