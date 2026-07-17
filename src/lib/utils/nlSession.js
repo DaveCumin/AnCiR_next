@@ -91,10 +91,15 @@ export async function buildNlSession({ prompt, llm } = {}, { timeoutMs = 90000 }
 
 	if (!res.ok) {
 		if (res.status === 429) {
+			// Two different limits arrive as 429: our own per-IP throttle, and the model's
+			// rate/usage cap. The Worker names which one, so prefer its message (with the
+			// provider's detail, e.g. "Limit 14400, Used 14400, try again in 2m") over a
+			// generic one; only invent text if it sent none.
 			const retry = Number(body?.retryAfterS ?? res.headers.get('Retry-After')) || 60;
-			throw new Error(
-				`Too many requests. The AI service limits how often sessions can be built — wait about ${retry}s and try again.`
-			);
+			const msg =
+				body?.error ??
+				`Too many requests. Wait about ${retry}s and try again.`;
+			throw new Error([msg, body?.detail].filter(Boolean).join('\n'));
 		}
 		if (!body) {
 			throw new Error(
