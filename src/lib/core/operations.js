@@ -410,15 +410,32 @@ function op_setProcessArg(op) {
 function op_addFreeTableProcess(op) {
 	const tp = new TableProcess({ name: op.tpType, args: op.args ?? {} }, null, op.tpId ?? null);
 	core.tableProcesses.push(tp);
-	return pair(
-		{
-			kind: 'addFreeTableProcess',
-			tpType: op.tpType,
-			tpId: tp.id,
-			args: JSON.parse(JSON.stringify(op.args ?? {}))
-		},
-		{ kind: 'removeFreeTableProcess', tpId: tp.id }
-	);
+
+	// Describe what ACTUALLY happened, not what was asked for. When `out` arrives without ids
+	// the constructor mints an output column per key, so this op really created a node AND its
+	// columns — and redo has to recreate both, with the SAME ids, or anything wired to them
+	// (a plot's `refId`) is left pointing at a column that no longer exists.
+	//
+	// Hence a batch: columns first, then the node whose `out` already names their ids (which
+	// makes the constructor adopt them instead of minting a second set). The snapshots are of
+	// empty columns — the node recomputes their data on redo, exactly as it did on the first
+	// add. Symmetrical with op_removeFreeTableProcess's inverse.
+	const args = JSON.parse(JSON.stringify(tp.args ?? {}));
+	const minted = Object.values(args.out ?? {})
+		.filter((id) => typeof id === 'number' && id >= 0)
+		.map((id) => core.data.find((c) => c.id === id))
+		.filter(Boolean)
+		.map(snapshotColumn);
+
+	const addNode = { kind: 'addFreeTableProcess', tpType: op.tpType, tpId: tp.id, args };
+	const canonical = minted.length
+		? {
+				kind: 'batch',
+				ops: [...minted.map((columnData) => ({ kind: 'addColumn', columnData })), addNode]
+			}
+		: addNode;
+
+	return pair(canonical, { kind: 'removeFreeTableProcess', tpId: tp.id });
 }
 
 function op_removeFreeTableProcess(op) {
@@ -430,13 +447,44 @@ function op_removeFreeTableProcess(op) {
 		tpId: before.id,
 		args: JSON.parse(JSON.stringify(before.args ?? {}))
 	};
+
+	// Take the node's output columns with it. A table process MINTS these columns (its
+	// constructor does, when `out` has no ids yet), so they are part of the node, not
+	// independent data — leaving them behind turns one undo into a canvas full of orphaned
+	// `rsquared_1001` / `cosinory_1_1001` nodes that nothing produces and nothing reads.
+	//
+	// Cheap to reverse: rawData is keyed by column id and is left alone, so restoring the
+	// descriptor restores the data with it — the same trick op_removeColumn relies on.
+	const outIds = Object.values(snap.args.out ?? {}).filter((id) => typeof id === 'number' && id >= 0);
+	const removedColumns = [];
+	for (const id of outIds) {
+		const i = core.data.findIndex((c) => c.id === id);
+		if (i < 0) continue;
+		removedColumns.push(snapshotColumn(core.data[i]));
+		core.data.splice(i, 1);
+	}
+
 	core.tableProcesses.splice(idx, 1);
-	return pair(op, {
+
+	const addNode = {
 		kind: 'addFreeTableProcess',
 		tpType: snap.tpType,
 		tpId: snap.tpId,
 		args: snap.args
-	});
+	};
+	// A node with no output columns needs nothing more than itself put back. Only reach for a
+	// batch when there are columns to restore — and then columns FIRST: re-adding a table
+	// process whose `out` already holds ids makes the constructor adopt them as-is rather than
+	// mint new ones, so they have to be back before it looks for them.
+	return pair(
+		op,
+		removedColumns.length
+			? {
+					kind: 'batch',
+					ops: [...removedColumns.map((columnData) => ({ kind: 'addColumn', columnData })), addNode]
+				}
+			: addNode
+	);
 }
 
 function op_setFreeTableProcessArg(op) {
@@ -512,9 +560,18 @@ function op_swapColumnRefs(op) {
 
 function op_batch(op) {
 	const inverses = [];
+	const canonicals = [];
 	for (const child of op.ops) {
 		const result = applyForward(child);
-		if (result) inverses.unshift(result.inverse);
+		if (!result) continue; // a no-op child contributes nothing to either direction
+		canonicals.push(result.canonical);
+		inverses.unshift(result.inverse);
 	}
-	return pair(op, { kind: 'batch', ops: inverses });
+	// Record what the children ACTUALLY did, not what the caller asked for. Every entity-creating
+	// op canonicalises the id it minted (addColumn → the column's id, addFreeTableProcess → its
+	// tpId) precisely so redo restores that same entity. Replaying the caller's original children
+	// instead would mint a NEW one each redo — for a table process, a second node and a second
+	// set of output columns. Harmless while batches only carried wiring ops, whose canonical form
+	// equals what was passed in; not harmless once a batch creates things.
+	return pair({ kind: 'batch', ops: canonicals }, { kind: 'batch', ops: inverses });
 }

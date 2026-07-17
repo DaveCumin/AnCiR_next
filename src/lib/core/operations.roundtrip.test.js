@@ -210,6 +210,99 @@ describe('round-trip: apply op then its inverse restores prior state', () => {
         expect(core.data).toHaveLength(0);
         expect(core.storedValues.k).toBeUndefined();
     });
+
+    // A batch must record what its children ACTUALLY did, not what they were asked to do.
+    // The single-op path already does: op_addFreeTableProcess canonicalises the id it minted, so
+    // redo restores the same node. A batch that replays the caller's original children instead
+    // mints a SECOND node (and, for a real TP, a second set of output columns) on every redo —
+    // undo/redo stops being a round trip and starts duplicating the session. Latent until a
+    // batch carried an entity-creating op.
+    it('batch redo restores the same entities rather than creating new ones', () => {
+        // Capture the forward op the way HistoryManager does — redo replays the canonical op
+        // the engine reports, not the object the caller happened to pass in.
+        let recorded = null;
+        const off = addOpListener((forward) => (recorded = forward));
+        const inv = applyOp({
+            kind: 'batch',
+            ops: [{ kind: 'addColumn', columnData: { name: 'A', type: 'number' } }]
+        });
+        off();
+        const originalId = core.data[0].id;
+
+        applyOp(inv); // undo
+        expect(core.data).toHaveLength(0);
+
+        applyOp(recorded); // redo
+        expect(core.data).toHaveLength(1);
+        expect(core.data[0].id).toBe(originalId);
+    });
+
+    // A table process mints its own output columns, so they belong to it. Removing the node and
+    // leaving them behind (what undoing an add used to do) strands one canvas node per output —
+    // for a Cosinor, ten — that nothing produces and nothing reads.
+    it('removing a free table process takes its output columns with it, reversibly', () => {
+        applyOp({ kind: 'addColumn', columnData: { name: 'binnedx_1', type: 'number' } });
+        const outCol = core.data[core.data.length - 1];
+        // Stand in for the column the constructor mints (the registry stub doesn't compute).
+        applyOp({
+            kind: 'addFreeTableProcess',
+            tpType: 'BinnedData',
+            args: { binSize: 60, out: { binnedx: outCol.id } }
+        });
+        const tp = core.tableProcesses[0];
+        const colsBefore = core.data.length;
+
+        const inv = applyOp({ kind: 'removeFreeTableProcess', tpId: tp.id });
+        expect(core.tableProcesses).toHaveLength(0);
+        expect(core.data.find((c) => c.id === outCol.id)).toBeUndefined();
+
+        applyOp(inv); // undo
+        expect(core.tableProcesses).toHaveLength(1);
+        expect(core.data).toHaveLength(colsBefore);
+        // Same column id, so the node's `out` wiring still points at real data.
+        expect(core.data.find((c) => c.id === outCol.id)).toBeTruthy();
+        expect(core.tableProcesses[0].args.out.binnedx).toBe(outCol.id);
+    });
+
+    // The full cycle a user drives with Ctrl+Z / Ctrl+Shift+Z. Redo must restore the SAME output
+    // column ids the node minted, because plots wire to those ids by number — redo that mints a
+    // fresh set leaves every plot pointing at columns that no longer exist.
+    it('add → undo → redo restores a table process with its original output column ids', () => {
+        let recorded = null;
+        const off = addOpListener((forward) => (recorded = forward));
+        const inv = applyOp({
+            kind: 'addFreeTableProcess',
+            tpType: 'BinnedData',
+            args: { binSize: 60, out: { binnedx: -1 } }
+        });
+        off();
+        const tpId = core.tableProcesses[0].id;
+        const outId = core.tableProcesses[0].args.out.binnedx;
+        expect(outId).toBeGreaterThanOrEqual(0); // the constructor minted it
+        expect(core.data.find((c) => c.id === outId)).toBeTruthy();
+
+        applyOp(inv); // undo: node and its column both go
+        expect(core.tableProcesses).toHaveLength(0);
+        expect(core.data.find((c) => c.id === outId)).toBeUndefined();
+
+        applyOp(recorded); // redo
+        expect(core.tableProcesses).toHaveLength(1);
+        expect(core.tableProcesses[0].id).toBe(tpId);
+        expect(core.tableProcesses[0].args.out.binnedx).toBe(outId);
+        expect(core.data.find((c) => c.id === outId)).toBeTruthy();
+        // Exactly one set of outputs — not a second one alongside the first.
+        expect(core.data.filter((c) => c.id === outId)).toHaveLength(1);
+    });
+
+    it('a batch reports the canonical form of each child it applied', () => {
+        const inv = applyOp({
+            kind: 'batch',
+            ops: [{ kind: 'addColumn', columnData: { name: 'A', type: 'number' } }]
+        });
+        // The inverse names the concrete id it created — the forward must be equally concrete,
+        // or redo can't target it.
+        expect(inv.ops[0]).toMatchObject({ kind: 'removeColumn', id: core.data[0].id });
+    });
 });
 
 describe('no-op / nonexistent-target branches return null', () => {

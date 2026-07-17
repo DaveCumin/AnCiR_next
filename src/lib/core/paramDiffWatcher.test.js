@@ -24,6 +24,41 @@ beforeEach(() => {
 });
 
 describe('paramDiffWatcher', () => {
+    // A node writing its own derived state is not a user edit. Recording it puts entries on the
+    // undo stack that reverse nothing visible — press Ctrl+Z, watch `valid: true` be restored,
+    // see nothing happen, press it again. Observed after loading any session, and after the AI
+    // adds a node (Cosinor writes `valid` and `_fitHash` once it computes).
+    it('does not record a node\'s own bookkeeping args as undo steps', async () => {
+        const col = M.addColumn({ name: 'X', type: 'number' });
+        const proc = M.addProcess(col.id, 'Normalize', { normalizationType: 'z-score' });
+        paramDiffWatcher.rebaseSnapshot();
+        const before = history.undoCount;
+
+        proc.args.valid = true; // compute bookkeeping
+        proc.args._fitHash = 'abc123'; // internal cache
+        await paramDiffWatcher.flush();
+
+        expect(history.undoCount).toBe(before);
+        // The writes still land — they're just not steps in the user's history.
+        expect(proc.args.valid).toBe(true);
+        expect(proc.args._fitHash).toBe('abc123');
+    });
+
+    it('still records a real edit made alongside bookkeeping', async () => {
+        const col = M.addColumn({ name: 'X', type: 'number' });
+        const proc = M.addProcess(col.id, 'Normalize', { normalizationType: 'z-score' });
+        paramDiffWatcher.rebaseSnapshot();
+        const before = history.undoCount;
+
+        proc.args.valid = true;
+        proc.args.normalizationType = 'min-max';
+        await paramDiffWatcher.flush();
+
+        expect(history.undoCount).toBe(before + 1);
+        history.undo();
+        expect(proc.args.normalizationType).toBe('z-score');
+    });
+
     it('emits a setProcessArg op when a direct args mutation is detected', async () => {
         const col = M.addColumn({ name: 'X', type: 'number' });
         const proc = M.addProcess(col.id, 'Normalize', { normalizationType: 'z-score' });

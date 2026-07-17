@@ -16,6 +16,21 @@ import { addStateChangeHook } from './operations.js';
  * `rebaseSnapshot()` + `flush()`.
  */
 
+/**
+ * Args a node writes to ITSELF while computing, rather than edits a user made.
+ *
+ * Recording these puts entries on the undo stack that reverse nothing the user can see: after
+ * loading a session or adding a node, the first Ctrl+Z would restore `valid: true` — invisible,
+ * and immediately overwritten again by the node's next compute. The user presses undo, watches
+ * nothing happen, and presses it again.
+ *
+ * Safe to skip because they are DERIVED: the node recomputes them from its inputs, so nothing
+ * needs to restore them. `valid` is bookkeeping the schema generator already classifies as
+ * "never user-facing"; `_`-prefixed keys are internal caches by convention (e.g. `_fitHash`).
+ * The write itself still lands — it just isn't a step in the user's history.
+ */
+const isInternalArg = (key) => key === 'valid' || key.startsWith('_');
+
 let prev = {};
 let suppress = false;
 let _rootCleanup = null;
@@ -54,6 +69,7 @@ function diffAndEmit() {
             const a = prevProcs[procId];
             const b = nextProcs[procId];
             for (const key of Object.keys(b)) {
+                if (isInternalArg(key)) continue;
                 if (JSON.stringify(a[key]) !== JSON.stringify(b[key])) {
                     const isFreeTP = colKey === 'freetp:';
                     let owner;
