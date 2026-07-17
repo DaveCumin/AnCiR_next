@@ -55,7 +55,13 @@ export const core = $state({
 	// WorkflowEditor and serialised so a saved session restores node positions and
 	// collapsed state on any machine (not just via per-browser localStorage).
 	// `collapsed` is omitted for expanded nodes — absence means expanded (default).
-	nodeLayout: {}
+	nodeLayout: {},
+	// generatedBy — provenance for a session built by the AI service, shaped
+	// `{ source, route, sessionId, model?, generatedAt }`. Held here (rather than being read
+	// off the imported JSON and dropped) so it survives a re-export: a bug report arrives as a
+	// saved session, and `sessionId` is what ties it back to the request that built it.
+	// null ⇒ nobody claims to have generated this; a human did. Never set locally.
+	generatedBy: null
 });
 
 let _nextNoteId = 1;
@@ -813,7 +819,16 @@ export function outputCoreAsJson() {
 		};
 	}
 	coreOut.storedValues = resolvedSV;
-	const output = { ...coreOut, appState, version: appConsts.version };
+	// generatedBy sits beside the version and is omitted entirely when absent — a session nobody
+	// generated shouldn't carry `"generatedBy": null`, and re-exporting an AI-built session must
+	// keep the fingerprint (that's the whole point: the copy a user sends back stays traceable).
+	const { generatedBy, ...rest } = coreOut;
+	const output = {
+		...rest,
+		appState,
+		version: appConsts.version,
+		...(generatedBy ? { generatedBy } : {})
+	};
 	return JSON.stringify(output, null, 2);
 }
 

@@ -521,6 +521,10 @@
 		core.notes = [];
 		core.plots = [];
 		core.rawData = new Map();
+		// This builds a brand-new session from scratch, so drop any AI provenance the previous
+		// one carried — leaving it would stamp hand-made data as AI-built, and a wrong
+		// fingerprint is worse than none.
+		core.generatedBy = null;
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		//Show the loading message

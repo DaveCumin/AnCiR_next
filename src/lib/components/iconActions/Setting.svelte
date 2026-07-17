@@ -91,6 +91,14 @@
 		// Orphan processes are session-only; clear on import so the next
 		// block can rehydrate them from the JSON if present.
 		core.orphanProcesses = [];
+		// Provenance travels with the session: carried onto core so a re-export keeps it, which
+		// is what makes an AI-built session a user sends back traceable to the request that
+		// built it. Reset first — otherwise importing a human session over an AI one would
+		// leave the previous session's fingerprint attached to it.
+		core.generatedBy =
+			jsonData.generatedBy && typeof jsonData.generatedBy === 'object'
+				? { ...jsonData.generatedBy }
+				: null;
 		// Chained wires: cleared here; restored AFTER the plots are rebuilt below —
 		// reconcileChainRefs prunes entries whose via-plot is missing, so restoring
 		// while core.plots is still empty would wipe them mid-import.
