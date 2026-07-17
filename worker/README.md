@@ -104,13 +104,26 @@ dynamic outputs not pre-allocated).
 | | |
 | --- | --- |
 | **Live tail** (debugging now) | `npx wrangler tail --config worker/wrangler.toml --format pretty` |
-| **Stored + queryable** (reviewing later) | Cloudflare dashboard → **Workers & Pages** → *ancir-nl* → **Logs** |
+| **Stored + queryable** (reviewing later) | Cloudflare dashboard → **Workers & Pages** → *ancir-nl* → **Observability** |
 
 The dashboard view is on because `wrangler.toml` sets `[observability] enabled = true`; without
-it, logs only stream to `tail` and vanish. You can filter there, e.g. `outcome != "ok"` to see
-only the ones that failed. **Retention is ~7 days on the free plan** — if you want to keep them
-longer, or run real analysis over them, write to KV/D1/R2 or an external sink instead. Say the
-word and I'll add that.
+it, logs only stream to `tail` and vanish.
+
+**Where to actually look.** The Events list shows one row per *invocation*, and its Message
+column is the HTTP line (`POST …/build`) — the prompt is **not** in that column. Expand the
+`/build` row to see the log the Worker emitted. Because it's logged as an **object** (not a
+JSON string), Workers Logs indexes its fields, so you can query them directly, e.g.
+`outcome != "ok"` or search `prompt`. Logging a stringified object would land as one opaque
+message that only text-search can reach — hence `console.log({...})`, not
+`console.log(JSON.stringify({...}))`.
+
+**Nothing appears?** Almost always one of: (a) the Worker hasn't been redeployed since the
+logging was added — `npm run worker:deploy`; or (b) you're looking at events from before that
+deploy. Confirm quickly with `wrangler tail` and one `curl` to `/build`.
+
+**Retention is ~7 days on the free plan** — if you want to keep them longer, or run real
+analysis over them, write to KV/D1/R2 or an external sink instead. Say the word and I'll add
+that.
 
 **What is and isn't recorded** — deliberately:
 - **Yes:** the prompt (the point), which model answered, outcome, timing, what got built.

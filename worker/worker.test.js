@@ -70,7 +70,15 @@ test('draft prompt is registry-derived and states the contract', () => {
 	assert.match(p, /ONLY the JSON object/);
 	assert.match(p, /Cosinor: args=/, 'catalogue comes from the generated schema');
 	assert.match(p, /produces: cosinorx/, 'lists output names so the model can wire plots');
-	assert.match(p, /scatterplot\[x,y\]/, 'plot inputs are registry-derived');
+	// Plot series fields are registry-derived AND spelled out per type. A one-line `type[a,b]`
+	// list sat next to an x/y worked example was too easy to skim: models emitted {x,y} for
+	// actogram (fields time/values), and the normalizer dropped the plot with nothing to show
+	// for it. Only 3 of the 11 plot types take x/y.
+	assert.match(p, /scatterplot: series=\[\{"x":"<col>","y":"<col>"\}\]/);
+	assert.match(p, /actogram: series=\[\{"time":"<col>","values":"<col>"\}\]/);
+	assert.match(p, /histogram: series=\[\{"column":"<col>"\}\]/);
+	assert.match(p, /tableplot: inputs=/, 'input-less plots take a column list, not series');
+	assert.match(p, /KEYS ARE NOT ALWAYS x\/y/, 'and the rule says so in prose too');
 });
 
 // ---- routes ----
@@ -160,16 +168,16 @@ test('POST /build: draft → session → loadFromURL link, and the session is fe
 	assert.ok(session.plots[0].plot.data[0].line.colour, 'plot series carries its style slot');
 });
 
-/** Capture the Worker's structured console.log lines (what lands in Workers Logs). */
+/**
+ * Capture the Worker's structured console.log lines (what lands in Workers Logs).
+ * We log OBJECTS (so Cloudflare indexes their fields and the dashboard can filter on them),
+ * so capture objects — a string would mean the structured logging had regressed.
+ */
 function captureLogs() {
 	const lines = [];
 	const real = console.log;
-	console.log = (s) => {
-		try {
-			lines.push(JSON.parse(s));
-		} catch {
-			/* not ours */
-		}
+	console.log = (o) => {
+		if (o && typeof o === 'object') lines.push(o);
 	};
 	return { lines, restore: () => (console.log = real) };
 }
@@ -184,6 +192,8 @@ test('logs the prompt + outcome, and NEVER the api key', async () => {
 	}
 	const b = cap.lines.find((l) => l.event === 'build');
 	assert.ok(b, 'a build line was logged');
+	// An OBJECT, not a string: Workers Logs only indexes/queries object fields.
+	assert.equal(typeof b, 'object');
 	assert.equal(b.prompt, 'simulate a 24h rhythm', 'the prompt is the point of the log');
 	assert.equal(b.outcome, 'ok');
 	assert.equal(b.model, 'gpt-4o-mini');

@@ -7,7 +7,7 @@
 	"scripts": {
 		"start": "vite-node src/server.js",
 		"start:http": "vite-node src/server.js -- --http",
-		"test": "vitest run",
+		"test": "vitest run && npm run emit:test && npm run worker:test",
 		"test:watch": "vitest",
 		"smoke": "node test/smoke-client.mjs",
 		"smoke:http": "node test/smoke-http.mjs",
@@ -18,6 +18,7 @@
 		"app:e2e": "node --env-file-if-exists=app/.env app/e2e-ancir.mjs",
 		"app:units": "node --test app/test-units.mjs",
 		"app:byo": "node app/test-byo.mjs",
+		"emit:test": "node --test src/emit/*.test.js",
 		"worker:test": "node --test worker/worker.test.js",
 		"worker:dev": "wrangler dev --config worker/wrangler.toml --var ALLOW_LOCAL_LLM:1 --local",
 		"worker:deploy": "wrangler deploy --config worker/wrangler.toml"

@@ -38,10 +38,23 @@ export function buildCatalogue(schema = generated) {
 			return `  ${name}: args=${JSON.stringify(argsTemplate(n))}${outs}${fit}`;
 		})
 		.join('\n');
+	// Render plots the way analyses are rendered: one per line, with a CONCRETE series template.
+	// The old one-line `type[a,b]` list technically carried the same field names, but next to a
+	// worked x/y example it was too easy to skim past — models emitted {x,y} for actogram (whose
+	// fields are time/values), which wired nothing and dropped the plot. Only scatterplot,
+	// boxplot and meansem take x/y; most take time/values, and histogram takes `column`.
 	const plots = Object.entries(schema.plots)
-		.map(([type, p]) => `${type}[${(p.inputs ?? []).join(',')}]`)
-		.join(', ');
-	return `ANALYSES (exact args):\n${nodes}\n\nPLOTS (type + inputs): ${plots}`;
+		.map(([type, p]) => {
+			const fields = p.inputs ?? [];
+			if (!fields.length) {
+				// tableplot/dataview take a bare column list rather than series.
+				return `  ${type}: inputs=["<col>", …]  (a plain list of columns, not series)`;
+			}
+			const t = Object.fromEntries(fields.map((f) => [f, '<col>']));
+			return `  ${type}: series=[${JSON.stringify(t)}]`;
+		})
+		.join('\n');
+	return `ANALYSES (exact args):\n${nodes}\n\nPLOTS (exact series fields):\n${plots}`;
 }
 
 const FRAME = `You turn a chronobiology request into ONE JSON object describing an AnCiR session.
@@ -60,7 +73,15 @@ SHAPE:
 
 A plot holds a LIST of series, so raw data and a fitted curve go on the SAME plot. Use
 "kind":"points" for measured data and "kind":"line" for a fit. (A one-series plot may instead
-use the shorthand "inputs": {"x":"hour","y":"signal"}.)
+use the shorthand "inputs": {...} with the same fields as one series.)
+
+A series' KEYS ARE NOT ALWAYS x/y — they are exactly the fields listed for that plot type under
+PLOTS below. The example above is a scatterplot, which happens to use x/y. An actogram does NOT:
+
+  { "type": "actogram", "name": "Binned profile",
+    "series": [ { "time": "binnedx", "values": "binnedy_activity" } ] }
+
+Copy the \`series=\` template for the plot type you chose and replace "<col>" with a column NAME.
 
 RULES:
 - Literal JSON only — never code, functions, ranges or expressions.

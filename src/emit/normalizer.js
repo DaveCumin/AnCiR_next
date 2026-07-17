@@ -57,6 +57,30 @@ function seriesStyle(kind, colour) {
 	return style;
 }
 
+/**
+ * Map an `{x, y}` series spec onto a plot whose fields are `time`/`values`.
+ *
+ * Only three plot types actually take x/y (scatterplot, boxplot, meansem); actogram,
+ * periodogram, fft, correlogram and circularphase take time/values, and histogram takes
+ * `column`. The draft prompt now spells each type's fields out, but a prompt is a request:
+ * models pattern-match its worked example and reach for x/y anyway, and the field loop below
+ * would then wire nothing and drop the plot entirely (silently, from the user's side). The
+ * intent is unambiguous when a spec carries x/y and the plot wants exactly time/values, so
+ * translate rather than discard. This is the enforcement point — it holds when the model or
+ * the prompt changes.
+ *
+ * Deliberately narrow: an explicit `time`/`values` always wins, and nothing is inferred for
+ * plots with other field sets (mapping x onto histogram's `column` would be a guess, not a
+ * translation). Positional array specs are already field-ordered, so they're left alone.
+ */
+function aliasXY(spec, fields) {
+	if (spec == null || Array.isArray(spec)) return spec;
+	if (fields.length !== 2 || fields[0] !== 'time' || fields[1] !== 'values') return spec;
+	if (spec.time != null || spec.values != null) return spec; // author was explicit — respect it
+	if (spec.x == null && spec.y == null) return spec;
+	return { ...spec, time: spec.x, values: spec.y };
+}
+
 const numeric = (v) => typeof v === 'number' || (typeof v === 'string' && /^-?\d+$/.test(v));
 
 /** A blank AnCiR column descriptor owning its own rawData slot `id`. */
@@ -259,7 +283,8 @@ export function normalizeSession(draft, schema = SCHEMA) {
 			const data = [];
 			let bad = null;
 
-			for (const spec of specs) {
+			for (const rawSpec of specs) {
+				const spec = aliasXY(rawSpec, pSchema.inputs);
 				const series = {};
 				for (const field of pSchema.inputs) {
 					const ref = Array.isArray(spec) ? spec[pSchema.inputs.indexOf(field)] : spec?.[field];

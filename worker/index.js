@@ -70,7 +70,10 @@ export function extractDraft(text) {
  * personal data.
  */
 function logBuild(fields) {
-	console.log(JSON.stringify({ event: 'build', ts: new Date().toISOString(), ...fields }));
+	// Log the OBJECT, not a JSON string. Workers Logs indexes an object's fields, so the
+	// dashboard can filter on them (outcome = "llm_rate_limited", search `prompt`, …). A
+	// JSON.stringify'd string arrives as one opaque message you can only text-search.
+	console.log({ event: 'build', ts: new Date().toISOString(), ...fields });
 }
 
 /**

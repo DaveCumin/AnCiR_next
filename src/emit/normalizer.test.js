@@ -421,6 +421,70 @@ test('tableplot uses columnRefs/showCol, not x/y series', () => {
 	assert.deepEqual(session.plots[0].plot, { columnRefs: [0, 1], showCol: [true, true] });
 });
 
+test('a time/values plot accepts the x/y series shape the prompt drills into models', () => {
+	// The draft prompt's worked example is a scatterplot, so a model reaches for {x,y} even on
+	// plots whose fields are time/values (actogram, periodogram, fft, correlogram,
+	// circularphase). That used to wire nothing and drop the plot — the reported symptom was a
+	// binned-actogram prompt returning the two analyses and no plot at all. The prompt now
+	// teaches the right shape; this alias is the enforcement point that survives a model swap.
+	const { session, errors } = normalizeSession({
+		columns: [{ name: 'hour', values: [0, 1] }, { name: 'act', values: [5, 6] }],
+		plots: [{ type: 'actogram', inputs: { x: 'hour', y: 'act' } }]
+	});
+	assert.equal(errors.length, 0, errors.join('; '));
+	assert.equal(session.plots.length, 1, 'the plot survives instead of being silently dropped');
+	const s = session.plots[0].plot.data[0];
+	assert.deepEqual(s.time, { refId: 0 }, 'x mapped onto the actogram field it meant');
+	assert.deepEqual(s.values, { refId: 1 });
+	assert.equal(s.x, undefined, 'the x/y keys do not leak into the emitted series');
+	assert.equal(s.y, undefined);
+});
+
+test('a time/values plot still takes its own field names, and they win over x/y', () => {
+	const { session, errors } = normalizeSession({
+		columns: [{ name: 'hour', values: [0, 1] }, { name: 'act', values: [5, 6] }],
+		plots: [
+			{ type: 'periodogram', series: [{ time: 'hour', values: 'act', label: 'act' }] },
+			// A spec carrying BOTH must not have its correct fields overwritten by the alias.
+			{ type: 'actogram', series: [{ time: 'hour', values: 'act', x: 'act', y: 'hour' }] }
+		]
+	});
+	assert.equal(errors.length, 0, errors.join('; '));
+	assert.deepEqual(session.plots[0].plot.data[0].time, { refId: 0 });
+	assert.equal(session.plots[0].plot.data[0].label, 'act');
+	assert.deepEqual(session.plots[1].plot.data[0].time, { refId: 0 }, 'explicit fields win');
+	assert.deepEqual(session.plots[1].plot.data[0].values, { refId: 1 });
+});
+
+test('the x/y alias does not fire on plots whose fields really are x/y, or on histogram', () => {
+	// Guard against the alias becoming a blanket "any two fields" rule: a scatterplot must keep
+	// wiring x/y as x/y, and histogram's single `column` field is left to the prompt (mapping x
+	// onto it would be a guess, not a translation).
+	const scatter = normalizeSession({
+		columns: [{ name: 'a', values: [1] }, { name: 'b', values: [2] }],
+		plots: [{ type: 'scatterplot', inputs: { x: 'a', y: 'b' } }]
+	});
+	assert.equal(scatter.errors.length, 0, scatter.errors.join('; '));
+	assert.deepEqual(scatter.session.plots[0].plot.data[0].x, { refId: 0 });
+
+	const hist = normalizeSession({
+		columns: [{ name: 'a', values: [1] }],
+		plots: [{ type: 'histogram', inputs: { column: 'a' } }]
+	});
+	assert.equal(hist.errors.length, 0, hist.errors.join('; '));
+	assert.deepEqual(hist.session.plots[0].plot.data[0].column, { refId: 0 });
+});
+
+test('an unresolvable ref on a time/values plot still reports the real field name', () => {
+	// The alias must not turn a bad column name into a confusing "expected time, values".
+	const { session, errors } = normalizeSession({
+		columns: [{ name: 'hour', values: [0, 1] }],
+		plots: [{ type: 'actogram', inputs: { x: 'hour', y: 'nope' } }]
+	});
+	assert.equal(session.plots.length, 0);
+	assert.match(errors.join(' '), /actogram\.values: no column named "nope"/);
+});
+
 test('unknown plot type and unresolved plot refs are reported, not emitted', () => {
 	const bogusType = normalizeSession({ plots: [{ type: 'nope', inputs: {} }] });
 	assert.equal(bogusType.session.plots.length, 0);
