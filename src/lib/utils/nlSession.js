@@ -80,14 +80,28 @@ export async function buildNlSession({ prompt, llm } = {}, { timeoutMs = 90000 }
 		);
 	}
 
-	let body;
+	// Not every failure is JSON: a rate-limit or block can be handled at Cloudflare's edge and
+	// come back as HTML, so parse defensively rather than turning it into "unreadable".
+	let body = null;
 	try {
 		body = await res.json();
 	} catch {
-		throw new Error(`The AI service returned an unreadable response (HTTP ${res.status}).`);
+		/* fall through to the status-based messages below */
 	}
+
 	if (!res.ok) {
-		// The Worker's own message is the useful one (bad key, rate limit, unusable draft…).
+		if (res.status === 429) {
+			const retry = Number(body?.retryAfterS ?? res.headers.get('Retry-After')) || 60;
+			throw new Error(
+				`Too many requests. The AI service limits how often sessions can be built — wait about ${retry}s and try again.`
+			);
+		}
+		if (!body) {
+			throw new Error(
+				`The AI service returned an error (HTTP ${res.status}) that couldn't be read.`
+			);
+		}
+		// The Worker's own message is the useful one (bad key, unusable draft…).
 		const detail = body?.detail?.error?.message ?? body?.detail?.message;
 		throw new Error(
 			[body?.error ?? `HTTP ${res.status}`, detail, ...(body?.errors ?? [])]
@@ -95,5 +109,6 @@ export async function buildNlSession({ prompt, llm } = {}, { timeoutMs = 90000 }
 				.join('\n')
 		);
 	}
+	if (!body) throw new Error('The AI service returned an unreadable response.');
 	return body;
 }

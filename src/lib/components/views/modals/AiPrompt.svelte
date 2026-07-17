@@ -32,17 +32,30 @@
 	function reset() {
 		error = '';
 		busy = false;
+		// Don't leave a key sitting in memory once the dialog is closed.
+		apiKey = '';
 	}
 
 	async function submit() {
 		const text = prompt.trim();
 		if (!text || busy) return;
+
+		// Catch a bad endpoint here rather than letting the server answer with
+		// "llm.baseUrl: Invalid url", which means nothing to the person reading it. This also
+		// traps the classic case: a browser autofilling an email into the endpoint box.
+		const url = baseUrl.trim();
+		if (url && !/^https?:\/\/.+/i.test(url)) {
+			tab = 'advanced';
+			error = `"${url}" isn't a valid endpoint URL. It should look like https://api.groq.com/openai/v1 — or leave it blank to use the default model.`;
+			return;
+		}
+
 		busy = true;
 		error = '';
 		try {
 			// Send llm{} only if the user actually filled it in.
 			const llm = {};
-			if (baseUrl.trim()) llm.baseUrl = baseUrl.trim();
+			if (url) llm.baseUrl = url;
 			if (apiKey.trim()) llm.apiKey = apiKey.trim();
 			if (model.trim()) llm.model = model.trim();
 
@@ -104,44 +117,70 @@
 				<button class="chip" disabled={busy} onclick={() => (prompt = s)}>{s}</button>
 			{/each}
 		</div>
-
-		{#if error}
-			<div class="error" role="alert">
-				<strong>Couldn't build that session.</strong>
-				<pre>{error}</pre>
-			</div>
-		{/if}
-
-		<div class="actions">
-			<span class="note">Prompts are logged so the analyses can be reviewed and improved.</span>
-			<button class="primary" disabled={busy || !prompt.trim()} onclick={submit}>
-				{busy ? 'Building…' : 'Build session'}
-			</button>
-		</div>
 	{:else}
 		<p class="hint">
 			By default your prompt is answered by the model this site is configured with. To use your own
 			instead, fill these in — they're sent with this one request and never stored.
 		</p>
 
+		<!--
+			These are credentials-shaped, so browsers and password managers try to treat them as
+			a login form and autofill a saved email/username into the first text box — which then
+			gets sent as `baseUrl` and rejected ("Invalid url"). `autocomplete="off"` is not
+			enough (Chrome ignores it on password fields), hence `new-password` on the key,
+			non-guessable names, and the password-manager opt-outs.
+		-->
 		<label>
 			Endpoint (OpenAI-compatible)
-			<input bind:value={baseUrl} placeholder="https://api.groq.com/openai/v1" disabled={busy} />
+			<input
+				bind:value={baseUrl}
+				name="ancir-llm-endpoint"
+				placeholder="https://api.groq.com/openai/v1"
+				disabled={busy}
+				autocomplete="off"
+				autocapitalize="off"
+				autocorrect="off"
+				spellcheck="false"
+				data-1p-ignore
+				data-lpignore="true"
+				data-bwignore
+			/>
 		</label>
 		<label>
 			API key
 			<input
 				bind:value={apiKey}
+				name="ancir-llm-key"
 				type="password"
 				placeholder="leave blank to use the default"
 				disabled={busy}
-				autocomplete="off"
+				autocomplete="new-password"
+				spellcheck="false"
+				data-1p-ignore
+				data-lpignore="true"
+				data-bwignore
 			/>
 		</label>
 		<label>
 			Model
-			<input bind:value={model} placeholder="openai/gpt-oss-120b" disabled={busy} />
+			<input
+				bind:value={model}
+				name="ancir-llm-model"
+				placeholder="openai/gpt-oss-120b"
+				disabled={busy}
+				autocomplete="off"
+				autocapitalize="off"
+				autocorrect="off"
+				spellcheck="false"
+				data-1p-ignore
+				data-lpignore="true"
+				data-bwignore
+			/>
 		</label>
+		<p class="note">
+			The key is sent once to build your session and is never stored, logged, or saved by this site.
+			It is cleared when you close this dialog.
+		</p>
 
 		<h3>Use it from your own tools</h3>
 		<p class="hint">
@@ -156,6 +195,22 @@ npm run start:http           # HTTP transport</pre>
 			to call this same <code>/build</code> endpoint yourself.
 		</p>
 	{/if}
+
+	<!-- Error + actions sit OUTSIDE the tabs: a bad endpoint is reported on the Advanced tab,
+	     and you shouldn't have to switch back to Prompt to find the Build button. -->
+	{#if error}
+		<div class="error" role="alert">
+			<strong>Couldn't build that session.</strong>
+			<pre>{error}</pre>
+		</div>
+	{/if}
+
+	<div class="actions">
+		<span class="note">Prompts are logged so the analyses can be reviewed and improved.</span>
+		<button class="primary" disabled={busy || !prompt.trim()} onclick={submit}>
+			{busy ? 'Building…' : 'Build session'}
+		</button>
+	</div>
 </Modal>
 
 <style>

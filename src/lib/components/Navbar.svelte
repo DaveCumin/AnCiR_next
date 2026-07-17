@@ -168,12 +168,21 @@
 		>
 			<Icon name="gear" />
 		</button>
-		{#if aiAvailable}
+		{#if NL_CONFIGURED}
+			<!--
+				Disabled-looking, but NOT the `disabled` attribute: a disabled button emits no
+				pointer events, so the tooltip explaining WHY it's unavailable would never appear.
+				aria-disabled keeps it hoverable and announced, and the click is ignored below.
+			-->
 			<button
 				class="rail-btn"
+				class:is-disabled={!aiAvailable}
 				data-testid="nav-ai"
-				onclick={() => (showAi = true)}
-				{@attach tooltip('Build a session from a description (AI)')}
+				aria-disabled={!aiAvailable}
+				onclick={() => aiAvailable && (showAi = true)}
+				{@attach tooltip(
+					aiAvailable ? 'Build a session from a description (AI)' : 'AI unavailable'
+				)}
 			>
 				<Icon name="sparkles" />
 			</button>
@@ -224,7 +233,7 @@
 <Settings bind:showModal={showSettings} />
 <About bind:showModal={showAbout} />
 <LoadSessionModal bind:showModal={showLoadModal} />
-{#if aiAvailable}
+{#if NL_CONFIGURED}
 	<AiPrompt bind:showModal={showAi} />
 {/if}
 
@@ -276,10 +285,16 @@
 		justify-content: center;
 		transition: background-color 0.15s ease;
 	}
-	.rail-btn:hover:not(:disabled) {
+	.rail-btn:hover:not(:disabled):not(.is-disabled) {
 		background-color: var(--color-lightness-95);
 	}
 	.rail-btn:disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
+	}
+	/* Same look as :disabled, but still hoverable so the tooltip can explain why (a real
+	   `disabled` button emits no pointer events, so its tooltip never fires). */
+	.rail-btn.is-disabled {
 		opacity: 0.35;
 		cursor: not-allowed;
 	}
