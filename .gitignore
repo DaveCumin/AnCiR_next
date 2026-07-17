@@ -33,6 +33,12 @@ node_modules/
 .claude/
 docs/
 .planning/
+.vscode/
+
+# Local run artefacts (not for the repo)
+add_output/
+sine_output/
+test-results/
 
 # Local MCP workspace (not for the repo)
 /mcp/
