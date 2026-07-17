@@ -58,6 +58,21 @@ export function extractDraft(text) {
 	throw new Error('model did not return a JSON object');
 }
 
+/**
+ * Structured log of one /build, for reviewing what people ask for (Workers Logs; see
+ * worker/README.md for how to read them).
+ *
+ * Deliberately recorded: the prompt (that's the point), which model answered, the outcome and
+ * how long it took, and a session id to tie a log line to a built session.
+ * Deliberately NOT recorded: any apiKey (a caller's key is theirs, and ours is a secret), and
+ * the session body/data. `llmKeySource` says whose key was used without revealing it.
+ * There is no IP here — add one only if you actually need it, since it makes these logs
+ * personal data.
+ */
+function logBuild(fields) {
+	console.log(JSON.stringify({ event: 'build', ts: new Date().toISOString(), ...fields }));
+}
+
 /** Best-effort per-IP throttle. Cloudflare's native rate limiting is the real defence. */
 async function rateLimited(env, request) {
 	const max = Number(env.BUILD_RATE_MAX ?? 0);
@@ -94,6 +109,18 @@ async function handleBuild(request, env) {
 		return json({ error: 'no model configured: supply llm.{baseUrl,apiKey,model}' }, 400);
 	}
 
+	// Everything logged for this request. `prompt` is the point of the exercise; the key never
+	// appears — only whose it was.
+	const started = Date.now();
+	const log = {
+		prompt: v.value.prompt,
+		model: llm.model,
+		baseUrl: llm.baseUrl,
+		llmKeySource: v.value.llm?.apiKey ? 'caller' : 'worker-default'
+	};
+	const done = (outcome, extra = {}) =>
+		logBuild({ ...log, outcome, ms: Date.now() - started, ...extra });
+
 	const o = v.value.options ?? {};
 	let reply;
 	try {
@@ -112,10 +139,12 @@ async function handleBuild(request, env) {
 			{ retries: o.retries ?? 2, timeoutMs: o.timeoutMs ?? 60000 }
 		);
 	} catch (e) {
+		done('llm_unreachable', { error: String(e?.message ?? e) });
 		return json({ error: `LLM request failed: ${e?.message ?? e}` }, 502);
 	}
 	if (!reply.ok) {
 		// Surface the provider's own error (bad key, unknown model, …) without the key.
+		done('llm_error', { status: reply.status });
 		return json({ error: `LLM error ${reply.status}`, detail: reply.json ?? reply.body }, 502);
 	}
 
@@ -123,12 +152,14 @@ async function handleBuild(request, env) {
 	try {
 		draft = extractDraft(reply.message?.content);
 	} catch (e) {
+		done('unparseable_draft', { error: e.message });
 		return json({ error: `could not parse a session draft: ${e.message}` }, 502);
 	}
 
 	const { session, warnings, errors } = normalizeSession(draft);
 	// A draft that produced nothing usable is a failure, not an empty session.
 	if (!session.tableProcesses.length && !session.data.length) {
+		done('empty_session', { errors, warnings });
 		return json({ error: 'the draft produced an empty session', errors, warnings }, 422);
 	}
 
@@ -136,6 +167,16 @@ async function handleBuild(request, env) {
 	if (!env.SESSIONS) return json({ error: 'SESSIONS KV binding is not configured' }, 500);
 	await env.SESSIONS.put(`s:${sessionId}`, JSON.stringify(session), {
 		expirationTtl: Number(env.SESSION_TTL_S ?? 86400)
+	});
+
+	// Success. `errors`/`warnings` can be non-empty even here (a node was dropped or its
+	// dynamic outputs weren't pre-allocated) — exactly what's worth reviewing later.
+	done('ok', {
+		sessionId,
+		nodes: session.tableProcesses.map((t) => t.name),
+		plots: session.plots.map((p) => p.type),
+		errors,
+		warnings
 	});
 
 	const sessionUrl = `${selfBase(request)}/sessions/${sessionId}`;

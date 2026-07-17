@@ -4,9 +4,15 @@ main = "index.js"
 # refuses to start ("newest date supported by this server binary is ..."). Bump alongside
 # wrangler upgrades.
 compatibility_date = "2026-07-02"
-# The normalizer bundles @stdlib (SimulatedData's seeded PRNG), which expects a few Node
-# globals. nodejs_compat satisfies them without pulling in a runtime.
+# The normalizer bundles @stdlib (the SimulatedData/Random seeded PRNGs), which expect a few
+# Node globals. nodejs_compat satisfies them without pulling in a runtime.
 compatibility_flags = ["nodejs_compat"]
+
+# Workers Logs — keeps /build's structured logs (prompt, model, outcome) queryable in the
+# dashboard, instead of only streaming to `wrangler tail`. See worker/README.md.
+[observability]
+enabled = true
+head_sampling_rate = 1
 
 [vars]
 # Where the built session is opened. The Worker returns `${ANCIR_BASE_URL}/?loadFromURL=...`.
@@ -14,20 +20,27 @@ ANCIR_BASE_URL = "https://ancir.pages.dev"
 # Sessions are transient hand-offs, not storage: expire them (seconds).
 SESSION_TTL_S = "86400"
 # Best-effort per-IP /build throttle per minute (0/unset = off). Cloudflare's native rate
-# limiting is the real defence — this is a cheap backstop.
+# limiting is the real defence — this is a cheap backstop. Now that the default model below is
+# funded by YOU rather than the caller, this stops being optional.
 BUILD_RATE_MAX = "20"
+
+# Default model, used when a caller sends no llm{} of their own (i.e. AnCiR's "AI" button).
+# The endpoint and model NAME aren't secret, so they live here.
+#
+# The KEY MUST NOT. This file is committed, and anything the frontend could hold would be
+# readable straight out of the browser bundle. Set it once, as a secret:
+#     npx wrangler secret put OPENAI_API_KEY        # paste the Groq key
+#
+# Callers may still override all three per request (bring-your-own model); their key is used
+# for that one call and never stored or logged.
+OPENAI_BASE_URL = "https://api.groq.com/openai/v1"
+OPENAI_MODEL = "openai/gpt-oss-120b"
 
 # Transient session store. Create once, then paste the id here:
 #   npx wrangler kv namespace create SESSIONS
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "4a5db128db3c49cdb10b10769727a60a"
-
-# Bring-your-own model is the default: the caller sends llm.{baseUrl,apiKey,model} per request
-# and the deployer pays nothing. To offer a fallback model instead, set these as SECRETS
-# (never vars):  npx wrangler secret put OPENAI_API_KEY
-OPENAI_BASE_URL = "https://api.openai.com/v1"
-OPENAI_MODEL    = "openai/gpt-oss-120b"
 
 # Local dev only — relaxes the SSRF guard so you can point at a local Ollama:
 #   npx wrangler dev --var ALLOW_LOCAL_LLM:1

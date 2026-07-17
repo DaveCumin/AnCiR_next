@@ -160,6 +160,70 @@ test('POST /build: draft → session → loadFromURL link, and the session is fe
 	assert.ok(session.plots[0].plot.data[0].line.colour, 'plot series carries its style slot');
 });
 
+/** Capture the Worker's structured console.log lines (what lands in Workers Logs). */
+function captureLogs() {
+	const lines = [];
+	const real = console.log;
+	console.log = (s) => {
+		try {
+			lines.push(JSON.parse(s));
+		} catch {
+			/* not ours */
+		}
+	};
+	return { lines, restore: () => (console.log = real) };
+}
+
+test('logs the prompt + outcome, and NEVER the api key', async () => {
+	stubLLM(JSON.stringify({ analyses: [{ name: 'SimulatedData', args: {} }] }));
+	const cap = captureLogs();
+	try {
+		await worker.fetch(post({ prompt: 'simulate a 24h rhythm', llm: LLM }), ENV());
+	} finally {
+		cap.restore();
+	}
+	const b = cap.lines.find((l) => l.event === 'build');
+	assert.ok(b, 'a build line was logged');
+	assert.equal(b.prompt, 'simulate a 24h rhythm', 'the prompt is the point of the log');
+	assert.equal(b.outcome, 'ok');
+	assert.equal(b.model, 'gpt-4o-mini');
+	assert.equal(b.llmKeySource, 'caller', "whose key, not the key");
+	assert.deepEqual(b.nodes, ['SimulatedData']);
+	assert.ok(typeof b.ms === 'number' && b.ts);
+	// the one thing that must never appear
+	assert.ok(!JSON.stringify(b).includes('sk-test'), 'must not log the key');
+});
+
+test('logs failures too — a rejected prompt is the interesting case', async () => {
+	stubLLM('this is not json at all');
+	const cap = captureLogs();
+	try {
+		await worker.fetch(post({ prompt: 'do something impossible', llm: LLM }), ENV());
+	} finally {
+		cap.restore();
+	}
+	const b = cap.lines.find((l) => l.event === 'build');
+	assert.equal(b.outcome, 'unparseable_draft');
+	assert.equal(b.prompt, 'do something impossible');
+});
+
+test('a request with no llm{} uses the worker default and says so', async () => {
+	stubLLM(JSON.stringify({ analyses: [{ name: 'SimulatedData', args: {} }] }));
+	const env = { ...ENV(), OPENAI_BASE_URL: 'https://api.groq.com/openai/v1', OPENAI_API_KEY: 'gsk_secret', OPENAI_MODEL: 'openai/gpt-oss-120b' };
+	const cap = captureLogs();
+	let res;
+	try {
+		res = await worker.fetch(post({ prompt: 'hello' }), env); // no llm{} — the AI button
+	} finally {
+		cap.restore();
+	}
+	assert.equal(res.status, 200);
+	const b = cap.lines.find((l) => l.event === 'build');
+	assert.equal(b.llmKeySource, 'worker-default');
+	assert.equal(b.model, 'openai/gpt-oss-120b');
+	assert.ok(!JSON.stringify(b).includes('gsk_secret'), 'must not log the worker secret either');
+});
+
 test('POST /build surfaces an upstream LLM error without leaking the key', async () => {
 	globalThis.fetch = async () =>
 		new Response(JSON.stringify({ error: { message: 'invalid api key' } }), { status: 401 });
