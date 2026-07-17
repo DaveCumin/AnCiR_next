@@ -171,6 +171,31 @@ test('suffix-node outputs are named after the Y column, so the model can plot th
 	assert.equal(series.y.refId, tp.args.out['1_power']);
 });
 
+// The catalogue is GENERATED and TRACKED, and `npm run build` regenerates it — so it has to be
+// a pure function of the registry. It wasn't: SimulatedData/Random seed from entropy and
+// SimulatedData/SequenceColumn default to the current clock, so every build rewrote the file
+// with a new seed and timestamp. Tracked churn hides real changes and makes two developers
+// conflict over noise.
+test('the generated catalogue holds no entropy or wall-clock values', async () => {
+	const generated = (await import('./session-schema.generated.json', { with: { type: 'json' } })).default;
+
+	const volatile = [];
+	const walk = (value, path) => {
+		if (Array.isArray(value)) return value.forEach((v, i) => walk(v, `${path}[${i}]`));
+		if (value && typeof value === 'object') {
+			return Object.entries(value).forEach(([k, v]) => walk(v, `${path}.${k}`));
+		}
+		// A real timestamp is ~1.7e12; a real seed is a big random int. The placeholders are 0.
+		const key = path.split('.').pop();
+		if (/^(seed|startTime|endTime)/.test(key) && typeof value === 'number' && value !== 0) {
+			volatile.push(`${path} = ${value}`);
+		}
+	};
+	for (const [name, node] of Object.entries(generated.nodes)) walk(node.params ?? {}, name);
+
+	assert.deepEqual(volatile, [], 'regenerating would churn these fields on every build');
+});
+
 test('the session version is registry-derived, not a hand-kept literal', async () => {
 	const { session } = normalizeSession({ analyses: [{ name: 'SimulatedData', args: { seed: 1 } }] });
 	const generated = (await import('./session-schema.generated.json', { with: { type: 'json' } })).default;

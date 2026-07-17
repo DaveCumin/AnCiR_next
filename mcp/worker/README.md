@@ -228,9 +228,14 @@ that.
   `npx vite-node src/emit/gen-schema.js` — the prompt and the normalizer both read it. **The
   app's `npm run build` now does this for you** (`mcp:schema`), then deploys this Worker
   (`mcp:deploy`) before the FTP upload — Worker first, because a new AnCiR calling a route the
-  old Worker doesn't have is the one ordering that breaks. It leaves
-  `session-schema.generated.json` modified in your tree; that's the point, and it wants
-  committing.
+  old Worker doesn't have is the one ordering that breaks.
+  - Both steps are **skipped when `CI` is set** (`scripts/mcpRelease.mjs`). They're local
+    release steps: Cloudflare Pages runs the same `npm run build` to publish the app, has no
+    `mcp/node_modules` for vite-node, and has no business deploying a Worker.
+  - The catalogue is a pure function of the registry, so a build only dirties
+    `session-schema.generated.json` when something REAL changed — commit it when it does. (Seed
+    and start/end-time defaults are stabilised to `0` for exactly this reason; they'd otherwise
+    churn every run.)
 - `SESSION_VERSION` (the version an emitted session declares) is **not** a literal any more — it
   is `generatedFromVersion` from that same generated file, so it can't drift from the nodes it
   describes. It hand-drifted two versions behind the app before this. It's only as fresh as the

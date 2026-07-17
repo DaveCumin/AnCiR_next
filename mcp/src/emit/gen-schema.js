@@ -75,6 +75,37 @@ const STRUCTURAL = new Set([
 
 const unwrap = (v) => (v && typeof v === 'object' && 'val' in v ? v.val : v);
 
+/**
+ * Registry defaults that are "now" or "random" by nature: SimulatedData/Random seed a PRNG from
+ * entropy, and SimulatedData/SequenceColumn default their start/end to the current clock.
+ *
+ * Their VALUE tells the model nothing — it supplies its own, and the normalizer overrides
+ * startTime anyway (PARAM_OVERRIDES in schema.js) so an emitted session is reproducible. But a
+ * fresh value on every run makes this GENERATED, TRACKED file churn on every `npm run build`,
+ * and two people regenerating would conflict over noise. A generated artifact has to be a pure
+ * function of its inputs, or nobody can tell a real change from a timestamp.
+ *
+ * Stabilised to fixed placeholders: the key and its type survive (which is all the catalogue
+ * teaches), the entropy doesn't.
+ */
+const VOLATILE_DEFAULTS = {
+	seed: 0, // normalizeSeed maps 0 → a fixed seed; never entropy
+	startTime: 0,
+	endTime: 0
+};
+
+/** Deep-copy a default, replacing volatile leaves with their placeholder. */
+function stabilise(value, key) {
+	if (key in VOLATILE_DEFAULTS && (typeof value === 'number' || value == null)) {
+		return VOLATILE_DEFAULTS[key];
+	}
+	if (Array.isArray(value)) return value.map((v) => stabilise(v));
+	if (value && typeof value === 'object') {
+		return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, stabilise(v, k)]));
+	}
+	return value;
+}
+
 // Nodes whose per-Y output keys are NOT a simple `${prefix}${yid}` — they come from the
 // engine's synthesizeDynamicOut() (method/segment/category-dependent, e.g. `${yid}_period`
 // for RhythmicityAnalysis, per-segment for Split, per-category for LongToWide). Their
@@ -102,7 +133,7 @@ for (const [name, entry] of appConsts.tableProcessMap ?? new Map()) {
 	const params = {};
 	for (const [k, v] of entry.defaults ?? new Map()) {
 		if (STRUCTURAL.has(k) || inputFields.has(k)) continue;
-		params[k] = unwrap(v);
+		params[k] = stabilise(unwrap(v), k);
 	}
 
 	// Fixed output keys come straight from the `out` template — the authoritative list.
