@@ -30,6 +30,22 @@
 	let mode = $state('edit');
 	const effectiveMode = $derived(hasSession ? mode : 'create');
 
+	/**
+	 * The two modes are tabs in the SAME bar as Advanced rather than a second row of their own:
+	 * they select which panel you're filling in, which is what the bar already means. Switching
+	 * drops any planned edit — a plan is built against one mode's rules and reads as approved
+	 * work; carrying it across would offer to apply changes the user is no longer asking for.
+	 */
+	function pickMode(next) {
+		if (mode !== next) {
+			plan = null;
+			pending = null;
+			error = '';
+		}
+		mode = next;
+		tab = 'prompt';
+	}
+
 	// A planned edit, held for approval. The AI never mutates the user's session unasked — they
 	// see exactly what will happen and press Apply.
 	let plan = $state(null);
@@ -199,31 +215,51 @@
 	{/snippet}
 
 	<div class="tabs" role="tablist">
-		<button role="tab" class:active={tab === 'prompt'} onclick={() => (tab = 'prompt')}>
-			Prompt
-		</button>
-		<button role="tab" class:active={tab === 'advanced'} onclick={() => (tab = 'advanced')}>
+		{#if hasSession}
+			<!-- The two modes only exist when there IS a session to add to. They're tabs in this
+			     bar rather than a row of their own: they choose which panel you're filling in,
+			     which is what these tabs already mean. The choice is destructive in one direction
+			     (a new session replaces the open one), so it stays explicit rather than inferred
+			     from the wording of the prompt. -->
+			<button
+				role="tab"
+				aria-selected={tab === 'prompt' && mode === 'edit'}
+				class:active={tab === 'prompt' && mode === 'edit'}
+				disabled={busy}
+				onclick={() => pickMode('edit')}
+			>
+				Add to this session
+			</button>
+			<button
+				role="tab"
+				aria-selected={tab === 'prompt' && mode === 'create'}
+				class:active={tab === 'prompt' && mode === 'create'}
+				disabled={busy}
+				onclick={() => pickMode('create')}
+			>
+				Start a new one
+			</button>
+		{:else}
+			<button
+				role="tab"
+				aria-selected={tab === 'prompt'}
+				class:active={tab === 'prompt'}
+				onclick={() => (tab = 'prompt')}
+			>
+				Prompt
+			</button>
+		{/if}
+		<button
+			role="tab"
+			aria-selected={tab === 'advanced'}
+			class:active={tab === 'advanced'}
+			onclick={() => (tab = 'advanced')}
+		>
 			Advanced
 		</button>
 	</div>
 
 	{#if tab === 'prompt'}
-		{#if hasSession}
-			<!-- Only offered when there's something to edit. The choice is destructive in one
-			     direction (Create replaces the open session), so it's explicit rather than
-			     inferred from the wording of the prompt. -->
-			<div class="modes" role="radiogroup" aria-label="What should the AI do?">
-				<label class:sel={mode === 'edit'}>
-					<input type="radio" bind:group={mode} value="edit" disabled={busy} />
-					Add to this session
-				</label>
-				<label class:sel={mode === 'create'}>
-					<input type="radio" bind:group={mode} value="create" disabled={busy} />
-					Start a new one
-				</label>
-			</div>
-		{/if}
-
 		<p class="hint">
 			{#if effectiveMode === 'edit'}
 				Describe what to add. You'll see exactly what will change before anything happens, and
@@ -432,32 +468,15 @@
 		color: var(--color-lightness-25);
 		font-weight: 600;
 	}
+	/* Mode tabs are disabled mid-request: switching would strand the reply we're waiting for. */
+	.tabs button:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
 	.hint {
 		color: var(--color-text-muted);
 		font-size: var(--font-sm);
 		margin: 0 0 var(--space-3);
-	}
-	.modes {
-		display: flex;
-		gap: var(--space-2);
-		margin-bottom: var(--space-3);
-	}
-	.modes label {
-		display: flex;
-		align-items: center;
-		gap: var(--space-1);
-		margin: 0;
-		padding: var(--space-1) var(--space-3);
-		border: 1px solid var(--color-lightness-85);
-		border-radius: var(--radius-sm);
-		background: var(--color-lightness-99);
-		cursor: pointer;
-	}
-	.modes label.sel {
-		border-color: var(--color-accent);
-		background: var(--color-hover);
-		color: var(--color-lightness-25);
-		font-weight: 600;
 	}
 	/* Replacing an open session is the one irreversible thing here, so it gets said plainly
 	   rather than left to the mode label. */
