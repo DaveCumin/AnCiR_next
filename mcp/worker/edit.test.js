@@ -211,6 +211,39 @@ test('an empty proposal is reported, not returned as a silent no-op', async () =
 	assert.match(out.error, /can't delete/i);
 });
 
+test('the empty-edit message never disclaims a verb the prompt offers', async () => {
+	// Regression: this message told users the AI "can't ... restyle an existing plot" long
+	// after restyling shipped. Talking a user out of a feature they have is worse than saying
+	// nothing, and no reviewer catches it, because the message and the prompt are 400 lines
+	// apart and both look right alone.
+	//
+	// So cross-check them. The prompt's own MAY DO / MAY NOT DO sections are the authority on
+	// what's possible; the message is only a paraphrase, and a paraphrase can go stale.
+	stubLLM('{}');
+	const res = await worker.fetch(post({ prompt: 'delete the cosinor', llm: LLM, session: SESSION }), ENV());
+	const { error } = await res.json();
+
+	const prompt = buildEditPrompt(SESSION);
+	const mayDo = prompt.slice(prompt.indexOf('WHAT YOU MAY DO'), prompt.indexOf('WHAT YOU MAY NOT DO'));
+	const mayNot = prompt.slice(prompt.indexOf('WHAT YOU MAY NOT DO'), prompt.indexOf('NAMING A COLUMN'));
+
+	// Everything after "but it can't" is a claim about what the product cannot do.
+	const disclaimed = /but it can't ([^.]*)\./.exec(error)?.[1];
+	assert.ok(disclaimed, `expected a "but it can't ..." clause in: ${error}`);
+
+	for (const verb of ['restyle', 'shade', 'add', 'change']) {
+		if (new RegExp(verb, 'i').test(mayDo) && !new RegExp(verb, 'i').test(mayNot)) {
+			assert.ok(
+				!new RegExp(verb, 'i').test(disclaimed),
+				`the prompt offers "${verb}" but the empty-edit message disclaims it: "${disclaimed}"`
+			);
+		}
+	}
+	// And the converse: what it does disclaim must really be impossible.
+	assert.match(mayNot, /cannot delete/i);
+	assert.match(disclaimed, /delete/i);
+});
+
 test('junk from the model is rejected rather than passed to the client', async () => {
 	stubLLM('I think you should add a periodogram!');
 	const res = await worker.fetch(post({ prompt: 'add one', llm: LLM, session: SESSION }), ENV());

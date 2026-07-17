@@ -436,11 +436,15 @@ async function handleEdit(request, env) {
 		// The message says what the vocabulary IS rather than "no changes", because a rejection
 		// here usually means the user asked for something real that we have no verb for — and
 		// "the AI didn't propose any changes" sends them to reword a prompt that was fine.
+		//
+		// Keep this list honest against the verbs buildEditPrompt actually offers. It once
+		// disclaimed restyling months after restyling shipped, which is the worst way to be
+		// wrong: it talks users out of a feature they have. If you add a verb, add it here.
 		done('empty_edit');
 		return json(
 			{
 				error:
-					"The AI didn't propose any changes it could make. It can add analyses and plots, change an analysis's parameters, and shade a time-of-day window on a plot — but it can't delete or rearrange things, or restyle an existing plot. Try asking for something to be added.",
+					"The AI didn't propose any changes it could make. It can add analyses and plots, change an analysis's parameters, restyle a plot, and shade a time-of-day window on one — but it can't delete or rearrange things. Try asking for something to be added or changed.",
 				analyses: [],
 				plots: [],
 				changes: [],
