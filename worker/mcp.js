@@ -15,6 +15,7 @@
 // Spec: https://modelcontextprotocol.io/specification — Streamable HTTP transport.
 
 import { normalizeSession } from '../src/emit/normalizer.js';
+import { fingerprint } from './fingerprint.js';
 import generated from '../src/emit/session-schema.generated.json' with { type: 'json' };
 
 // Matches the SUPPORTED_PROTOCOL_VERSIONS list in @modelcontextprotocol/sdk 1.29. We echo the
@@ -144,7 +145,12 @@ async function callTool(name, args, env, request, ctx) {
 	}
 
 	if (name === 'build_session') {
-		const { session, warnings, errors } = normalizeSession(args ?? {});
+		// Minted up front so the SAME id is stamped into the session, stored under, and logged —
+		// that shared id is what makes a session someone sends back traceable.
+		const sessionId = crypto.randomUUID();
+		const { session, warnings, errors } = normalizeSession(args ?? {}, {
+			provenance: fingerprint('mcp', sessionId)
+		});
 		if (!session.tableProcesses.length && !session.data.length) {
 			// Report rather than store an empty session — the agent can fix and retry.
 			return {
@@ -176,7 +182,6 @@ async function callTool(name, args, env, request, ctx) {
 			};
 		}
 
-		const sessionId = crypto.randomUUID();
 		await env.SESSIONS.put(`s:${sessionId}`, JSON.stringify(session), {
 			expirationTtl: Number(env.SESSION_TTL_S ?? 86400)
 		});

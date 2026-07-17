@@ -132,6 +132,35 @@ Every `/build` writes one structured line, so you can review what people actuall
 model let the user down). `errors`/`warnings` can be non-empty even on `ok` (a node dropped, or
 dynamic outputs not pre-allocated).
 
+### Tracing a session back to its log line
+
+Every session this Worker builds is stamped, beside its `version`:
+
+```json
+  "version": "β.56.1",
+  "generatedBy": {
+    "source": "ancir-nl", "route": "build",
+    "sessionId": "75e8c0de-…",
+    "model": "openai/gpt-oss-120b",
+    "generatedAt": "2026-07-17T00:12:49.650Z"
+  }
+```
+
+`sessionId` is the **join key**: it's the id the session is stored under, the id in the log
+line, and the id inside the session itself. So when someone reports "the AI built me a broken
+session" and sends the JSON, search Workers Logs for that id and you get the prompt, the model
+and the outcome that produced it. Without the stamp a session is anonymous the moment it leaves.
+
+- **`route`** — `build` (someone typed a prompt) or `mcp` (an agent called us).
+- **`model`** is absent on the `mcp` route: the calling agent *is* the model and never tells us
+  which. That's an honest gap, not an oversight — a wrong fingerprint is worse than none.
+- **No key, no IP, no prompt** goes in it. The prompt stays in the log, which is ours; the
+  session travels and may be shared on. Tests assert this.
+- **Absent ⇒ a human built it.** We never invent one, and AnCiR never sets it locally.
+
+AnCiR keeps the stamp on `core.generatedBy` and re-exports it, so it survives a user saving the
+session and sending it on — which is exactly how a bug report arrives.
+
 **Two ways to read them:**
 
 | | |

@@ -132,6 +132,27 @@ test('SimulatedData is deterministic: same seed → same values', () => {
 	assert.notDeepEqual(valsOf(a), valsOf(c), 'different seed diverges');
 });
 
+test('provenance is opt-in, injected, and keeps the normalizer pure', () => {
+	const draft = { analyses: [{ name: 'SimulatedData', args: { seed: 1 } }] };
+
+	// A human-built session must not be labelled as AI-built, so no caller ⇒ no key at all
+	// (`'generatedBy' in session` is false, not `generatedBy: null`).
+	const plain = normalizeSession(draft);
+	assert.equal('generatedBy' in plain.session, false);
+
+	// Stamped verbatim when given — the normalizer never mints an id or reads the clock, which
+	// is what keeps "same draft ⇒ same session" true.
+	const fp = { source: 'ancir-nl', route: 'mcp', sessionId: 'abc', generatedAt: 'T' };
+	const a = normalizeSession(draft, { provenance: fp });
+	const b = normalizeSession(draft, { provenance: fp });
+	assert.deepEqual(a.session.generatedBy, fp);
+	assert.deepEqual(a.session, b.session, 'still deterministic with provenance');
+
+	// Provenance is the ONLY difference it makes: strip it and the sessions are identical.
+	delete a.session.generatedBy;
+	assert.deepEqual(a.session, plain.session);
+});
+
 test('SequenceColumn time mode emits a time-typed, formatted column', () => {
 	const { session } = normalizeSession({
 		analyses: [
@@ -391,7 +412,12 @@ test('schema exposes each fit node’s x/y pairing (registry-derived)', () => {
 	assert.equal(SCHEMA.GroupComparison.fitOut, null, 'non-fit nodes have none');
 });
 
-test('plot input fields are registry-derived per type (time/values, column)', () => {
+test('a time/values plot is READ by port name but STORED as x/y', () => {
+	// The two vocabularies that broke the actogram. `time`/`values` are the PORT names the
+	// registry advertises and the prompt teaches; the plot classes persist every series as
+	// generic x/y and their fromJSON reads nothing else. This test previously asserted
+	// `pg.time`, which locked the bug in: AnCiR loaded such a plot with refId -1 on every
+	// input and then threw "undefined (reading 'left')" from the actogram's LightBand.
 	const { session, errors } = normalizeSession({
 		columns: [{ name: 't', values: [0, 1] }, { name: 'v', values: [5, 6] }],
 		plots: [
@@ -401,10 +427,13 @@ test('plot input fields are registry-derived per type (time/values, column)', ()
 	});
 	assert.equal(errors.length, 0, errors.join('; '));
 	const pg = session.plots[0].plot.data[0];
-	assert.deepEqual(pg.time, { refId: 0 });
-	assert.deepEqual(pg.values, { refId: 1 });
+	assert.deepEqual(pg.x, { refId: 0 }, 'the `time` port is stored as x');
+	assert.deepEqual(pg.y, { refId: 1 }, 'the `values` port is stored as y');
+	assert.equal(pg.time, undefined, 'port names must not be persisted — fromJSON ignores them');
+	assert.equal(pg.values, undefined);
 	// Periodogram reads line + thresholdline + points unguarded — all must be present
 	for (const slot of ['line', 'thresholdline', 'points']) assert.ok(pg[slot]?.colour, slot);
+	// histogram's single input keeps its own name: the class reads json.column.
 	assert.deepEqual(session.plots[1].plot.data[0].column, { refId: 1 });
 	// staggered so they don't stack
 	assert.notDeepEqual(
@@ -421,12 +450,28 @@ test('tableplot uses columnRefs/showCol, not x/y series', () => {
 	assert.deepEqual(session.plots[0].plot, { columnRefs: [0, 1], showCol: [true, true] });
 });
 
-test('a time/values plot accepts the x/y series shape the prompt drills into models', () => {
-	// The draft prompt's worked example is a scatterplot, so a model reaches for {x,y} even on
-	// plots whose fields are time/values (actogram, periodogram, fft, correlogram,
-	// circularphase). That used to wire nothing and drop the plot — the reported symptom was a
-	// binned-actogram prompt returning the two analyses and no plot at all. The prompt now
-	// teaches the right shape; this alias is the enforcement point that survives a model swap.
+test('an actogram wired by port name loads WIRED (the reported bug)', () => {
+	// The exact prompt: "bin it into 1 h bins and plot the binned profile in an actogram".
+	// The model got it right (time/values are the actogram's real port names), but the emitted
+	// series used those names as storage keys, ActogramDataclass.fromJSON read json.x/json.y,
+	// found nothing, and defaulted both to refId -1. The user got an unwired actogram that
+	// crashed the canvas. Every input must resolve to a REAL column id.
+	const { session, errors } = normalizeSession({
+		columns: [{ name: 'binnedx', values: [0, 1] }, { name: 'binnedy_values', values: [5, 6] }],
+		plots: [
+			{ type: 'actogram', name: 'Binned profile', series: [{ time: 'binnedx', values: 'binnedy_values' }] }
+		]
+	});
+	assert.equal(errors.length, 0, errors.join('; '));
+	const s = session.plots[0].plot.data[0];
+	assert.deepEqual(s.x, { refId: 0 });
+	assert.deepEqual(s.y, { refId: 1 });
+	assert.ok(s.x.refId >= 0 && s.y.refId >= 0, 'never the -1 that made the plot unwired');
+});
+
+test('a time/values plot also accepts the generic x/y vocabulary', () => {
+	// The prompt's worked example is a scatterplot, so a model may reach for x/y on an actogram.
+	// It means the same thing; refusing it would cost the user a plot for no reason.
 	const { session, errors } = normalizeSession({
 		columns: [{ name: 'hour', values: [0, 1] }, { name: 'act', values: [5, 6] }],
 		plots: [{ type: 'actogram', inputs: { x: 'hour', y: 'act' } }]
@@ -434,52 +479,48 @@ test('a time/values plot accepts the x/y series shape the prompt drills into mod
 	assert.equal(errors.length, 0, errors.join('; '));
 	assert.equal(session.plots.length, 1, 'the plot survives instead of being silently dropped');
 	const s = session.plots[0].plot.data[0];
-	assert.deepEqual(s.time, { refId: 0 }, 'x mapped onto the actogram field it meant');
-	assert.deepEqual(s.values, { refId: 1 });
-	assert.equal(s.x, undefined, 'the x/y keys do not leak into the emitted series');
-	assert.equal(s.y, undefined);
+	assert.deepEqual(s.x, { refId: 0 });
+	assert.deepEqual(s.y, { refId: 1 });
 });
 
-test('a time/values plot still takes its own field names, and they win over x/y', () => {
+test('the port name wins when a spec carries both vocabularies', () => {
 	const { session, errors } = normalizeSession({
 		columns: [{ name: 'hour', values: [0, 1] }, { name: 'act', values: [5, 6] }],
 		plots: [
 			{ type: 'periodogram', series: [{ time: 'hour', values: 'act', label: 'act' }] },
-			// A spec carrying BOTH must not have its correct fields overwritten by the alias.
 			{ type: 'actogram', series: [{ time: 'hour', values: 'act', x: 'act', y: 'hour' }] }
 		]
 	});
 	assert.equal(errors.length, 0, errors.join('; '));
-	assert.deepEqual(session.plots[0].plot.data[0].time, { refId: 0 });
+	assert.deepEqual(session.plots[0].plot.data[0].x, { refId: 0 });
 	assert.equal(session.plots[0].plot.data[0].label, 'act');
-	assert.deepEqual(session.plots[1].plot.data[0].time, { refId: 0 }, 'explicit fields win');
-	assert.deepEqual(session.plots[1].plot.data[0].values, { refId: 1 });
+	assert.deepEqual(session.plots[1].plot.data[0].x, { refId: 0 }, 'time won over x');
+	assert.deepEqual(session.plots[1].plot.data[0].y, { refId: 1 });
 });
 
-test('the x/y alias does not fire on plots whose fields really are x/y, or on histogram', () => {
-	// Guard against the alias becoming a blanket "any two fields" rule: a scatterplot must keep
-	// wiring x/y as x/y, and histogram's single `column` field is left to the prompt (mapping x
-	// onto it would be a guess, not a translation).
+test('plots whose ports really are x/y, and histogram, are unaffected', () => {
 	const scatter = normalizeSession({
 		columns: [{ name: 'a', values: [1] }, { name: 'b', values: [2] }],
 		plots: [{ type: 'scatterplot', inputs: { x: 'a', y: 'b' } }]
 	});
 	assert.equal(scatter.errors.length, 0, scatter.errors.join('; '));
 	assert.deepEqual(scatter.session.plots[0].plot.data[0].x, { refId: 0 });
+	assert.deepEqual(scatter.session.plots[0].plot.data[0].y, { refId: 1 });
 
+	// histogram has ONE input, stored under its own name — it must not become `x`.
 	const hist = normalizeSession({
 		columns: [{ name: 'a', values: [1] }],
 		plots: [{ type: 'histogram', inputs: { column: 'a' } }]
 	});
 	assert.equal(hist.errors.length, 0, hist.errors.join('; '));
 	assert.deepEqual(hist.session.plots[0].plot.data[0].column, { refId: 0 });
+	assert.equal(hist.session.plots[0].plot.data[0].x, undefined);
 });
 
-test('an unresolvable ref on a time/values plot still reports the real field name', () => {
-	// The alias must not turn a bad column name into a confusing "expected time, values".
+test('an unresolvable ref reports the PORT name the author used, not the storage name', () => {
 	const { session, errors } = normalizeSession({
 		columns: [{ name: 'hour', values: [0, 1] }],
-		plots: [{ type: 'actogram', inputs: { x: 'hour', y: 'nope' } }]
+		plots: [{ type: 'actogram', inputs: { time: 'hour', values: 'nope' } }]
 	});
 	assert.equal(session.plots.length, 0);
 	assert.match(errors.join(' '), /actogram\.values: no column named "nope"/);

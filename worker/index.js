@@ -23,6 +23,7 @@ import { buildDraftPrompt } from './draftPrompt.js';
 import { validateBuild } from '../app/validation.js';
 import { chatCompletion } from '../app/llmClient.js';
 import { handleMcp } from './mcp.js';
+import { fingerprint } from './fingerprint.js';
 
 const CORS = {
 	'Access-Control-Allow-Origin': '*',
@@ -39,6 +40,7 @@ const json = (data, status = 200, extra = {}) =>
 
 /** The public origin of THIS worker, derived from the request — no config needed. */
 const selfBase = (request) => new URL(request.url).origin;
+
 
 /**
  * Pull the JSON object out of a model reply. Models wrap JSON in prose or a ```json fence
@@ -220,14 +222,18 @@ async function handleBuild(request, env) {
 		return json({ error: `could not parse a session draft: ${e.message}` }, 502);
 	}
 
-	const { session, warnings, errors } = normalizeSession(draft);
+	// The id is minted BEFORE normalising so it can be stamped into the session itself — the
+	// session and the log line have to agree on it for the join to work.
+	const sessionId = crypto.randomUUID();
+	const { session, warnings, errors } = normalizeSession(draft, {
+		provenance: fingerprint('build', sessionId, { model: llm.model })
+	});
 	// A draft that produced nothing usable is a failure, not an empty session.
 	if (!session.tableProcesses.length && !session.data.length) {
 		done('empty_session', { errors, warnings });
 		return json({ error: 'the draft produced an empty session', errors, warnings }, 422);
 	}
 
-	const sessionId = crypto.randomUUID();
 	if (!env.SESSIONS) return json({ error: 'SESSIONS KV binding is not configured' }, 500);
 	await env.SESSIONS.put(`s:${sessionId}`, JSON.stringify(session), {
 		expirationTtl: Number(env.SESSION_TTL_S ?? 86400)

@@ -58,27 +58,28 @@ function seriesStyle(kind, colour) {
 }
 
 /**
- * Map an `{x, y}` series spec onto a plot whose fields are `time`/`values`.
+ * The field name a plot class actually STORES a series input under, given its i-th public
+ * PORT name.
  *
- * Only three plot types actually take x/y (scatterplot, boxplot, meansem); actogram,
- * periodogram, fft, correlogram and circularphase take time/values, and histogram takes
- * `column`. The draft prompt now spells each type's fields out, but a prompt is a request:
- * models pattern-match its worked example and reach for x/y anyway, and the field loop below
- * would then wire nothing and drop the plot entirely (silently, from the user's side). The
- * intent is unambiguous when a spec carries x/y and the plot wants exactly time/values, so
- * translate rather than discard. This is the enforcement point — it holds when the model or
- * the prompt changes.
+ * These are two different vocabularies, and conflating them is what broke the actogram.
+ * `defaultDataInputs` (which schema.plots[type].inputs mirrors) are the PORT names shown in
+ * the UI: Actogram/Periodogram/FFT/Correlogram/CircularPhase advertise `time`/`values`. But
+ * every one of those classes persists the series as generic `x`/`y` — their `fromJSON` reads
+ * `json.x` / `json.y` and nothing else. AnCiR documents the convention in
+ * plots/CircularPhase/CircularPhase.svelte: the workflow graph's edge detection
+ * (ProcessNode.svelte.js) hardcodes `dp?.x?.refId` / `dp?.y?.refId` / `dp?.column?.refId`, so
+ * series fields can't be arbitrary.
  *
- * Deliberately narrow: an explicit `time`/`values` always wins, and nothing is inferred for
- * plots with other field sets (mapping x onto histogram's `column` would be a guess, not a
- * translation). Positional array specs are already field-ordered, so they're left alone.
+ * Writing the PORT name instead produced a plot the class silently ignored: every input came
+ * back `refId: -1`, so the actogram loaded unwired and then threw
+ * "Cannot read properties of undefined (reading 'left')" out of LightBand at render.
+ *
+ * Two-input plots store x/y positionally; histogram's single input is stored under its own
+ * name (`column`).
  */
-function aliasXY(spec, fields) {
-	if (spec == null || Array.isArray(spec)) return spec;
-	if (fields.length !== 2 || fields[0] !== 'time' || fields[1] !== 'values') return spec;
-	if (spec.time != null || spec.values != null) return spec; // author was explicit — respect it
-	if (spec.x == null && spec.y == null) return spec;
-	return { ...spec, time: spec.x, values: spec.y };
+function storageField(fields, i) {
+	if (fields.length === 2) return i === 0 ? 'x' : 'y';
+	return fields[i];
 }
 
 const numeric = (v) => typeof v === 'number' || (typeof v === 'string' && /^-?\d+$/.test(v));
@@ -110,11 +111,16 @@ function columnDescriptor(id, name, type, timeFormat) {
 
 /**
  * @param {object} draft
- * @param {object} [schema=SCHEMA] injected node schema (see schema.js) — swap for a
+ * @param {object} [opts]
+ * @param {object} [opts.schema=SCHEMA] injected node schema (see schema.js) — swap for a
  *        registry-generated one without touching this logic.
+ * @param {object} [opts.provenance] stamped into `session.generatedBy` — who built this
+ *        session, so a user's copy can be traced back to the log line that made it. Injected
+ *        rather than generated here on purpose: this function is PURE (same draft ⇒ byte-identical
+ *        session), and a uuid/clock inside would destroy that. The caller owns both.
  * @returns {{session:object, warnings:string[], errors:string[]}}
  */
-export function normalizeSession(draft, schema = SCHEMA) {
+export function normalizeSession(draft, { schema = SCHEMA, provenance = null } = {}) {
 	const warnings = [];
 	const errors = [];
 
@@ -283,15 +289,21 @@ export function normalizeSession(draft, schema = SCHEMA) {
 			const data = [];
 			let bad = null;
 
-			for (const rawSpec of specs) {
-				const spec = aliasXY(rawSpec, pSchema.inputs);
+			for (const spec of specs) {
 				const series = {};
-				for (const field of pSchema.inputs) {
-					const ref = Array.isArray(spec) ? spec[pSchema.inputs.indexOf(field)] : spec?.[field];
+				for (let i = 0; i < pSchema.inputs.length; i++) {
+					const field = pSchema.inputs[i]; // PORT name (what the draft/user says)
+					const store = storageField(pSchema.inputs, i); // what the plot class READS
+					// Accept either vocabulary from the draft. The prompt teaches the port names,
+					// but a model that reaches for the generic x/y (its worked example is a
+					// scatterplot) means the same thing, and refusing that costs the user a plot.
+					const ref = Array.isArray(spec)
+						? spec[i]
+						: (spec?.[field] ?? (field === store ? undefined : spec?.[store]));
 					if (ref == null) continue;
 					const id = resolveRef(ref);
 					if (id == null) bad ??= `${p.type}.${field}: no column named "${ref}"`;
-					else series[field] = { refId: id };
+					else series[store] = { refId: id };
 				}
 				if (bad) break;
 				if (Object.keys(series).length === 0) {
@@ -342,7 +354,11 @@ export function normalizeSession(draft, schema = SCHEMA) {
 		orphanProcesses: [],
 		nodeLayout: {}, // omitted → GUI auto-lays-out
 		// appState omitted → GUI keeps its defaults (no "Restoring settings" needed)
-		version: SESSION_VERSION
+		version: SESSION_VERSION,
+		// Provenance, next to the version: it says where this session CAME FROM, which is the
+		// only way to tie a session someone sends us to the request that built it (join on
+		// sessionId against the Worker's logs). Absent ⇒ a human built it; we never invent one.
+		...(provenance ? { generatedBy: provenance } : {})
 	};
 
 	return { session, warnings, errors };

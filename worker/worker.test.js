@@ -166,6 +166,25 @@ test('POST /build: draft → session → loadFromURL link, and the session is fe
 	assert.ok(session.rawData[sim.args.out.values].length > 0, 'generator output is baked');
 	assert.ok('cosinorx' in cos.args.out, 'analysis out is pre-allocated');
 	assert.ok(session.plots[0].plot.data[0].line.colour, 'plot series carries its style slot');
+
+	// Traceability: the id inside the session must be the one it's stored under and logged with,
+	// or a session a user sends back can't be joined to the request that built it.
+	assert.equal(session.generatedBy.sessionId, out.sessionId);
+	assert.equal(session.generatedBy.route, 'build');
+	assert.equal(session.generatedBy.model, LLM.model);
+});
+
+test('the fingerprint never carries the api key or the prompt — the session travels', async () => {
+	stubLLM(JSON.stringify({ analyses: [{ name: 'SimulatedData', args: { seed: 1 } }] }));
+	const env = ENV();
+	const res = await worker.fetch(post({ prompt: 'secret-prompt-text', llm: LLM }), env);
+	const { sessionUrl } = await res.json();
+	const session = await (await worker.fetch(new Request(sessionUrl), env)).json();
+
+	// The prompt and key stay in OUR logs; the session is handed to a user and may be shared on.
+	const blob = JSON.stringify(session.generatedBy);
+	assert.equal(blob.includes(LLM.apiKey), false, 'no api key in the session');
+	assert.equal(blob.includes('secret-prompt-text'), false, 'no prompt in the session');
 });
 
 /**

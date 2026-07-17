@@ -158,6 +158,16 @@ test('build_session → stores a session and returns a loadFromURL link that res
 	assert.equal(session.plots.length, 1);
 	assert.ok(env.SESSIONS._m.has(`s:${sessionId}`));
 
+	// The fingerprint is what makes a session someone sends back traceable, so the id in it must
+	// be the SAME one it's stored under — a mismatch would silently break the join to the logs.
+	assert.equal(session.generatedBy.sessionId, sessionId);
+	assert.equal(session.generatedBy.route, 'mcp');
+	assert.equal(session.generatedBy.source, 'ancir-nl');
+	assert.ok(!Number.isNaN(Date.parse(session.generatedBy.generatedAt)));
+	// No model on this route: the calling agent is the model and never says which. Guessing
+	// would be worse than the honest omission.
+	assert.equal('model' in session.generatedBy, false);
+
 	// The text content leads with the link — it's what the agent hands to the user.
 	assert.match(body.result.content[0].text, /Open it in AnCiR:\nhttps:\/\/ancir\.pages\.dev/);
 });
