@@ -170,7 +170,7 @@ async function askModel({ llm, system, user, options: o, callerKey, done }) {
 		// A rejected key isn't something the user can fix by retrying. Whose key it was decides
 		// whose problem it is.
 		if (reply.status === 401 || reply.status === 403) {
-			done('llm_key_rejected', { status: reply.status });
+			done('llm_key_rejected', { status: reply.status, detail: providerMsg });
 			return {
 				response: json(
 					{
@@ -184,7 +184,11 @@ async function askModel({ llm, system, user, options: o, callerKey, done }) {
 			};
 		}
 
-		done('llm_error', { status: reply.status });
+		// Log the provider's message, not just the status. Without it an unmapped failure is
+		// unexplainable after the fact: `llm_error 400` in the logs and "LLM error 400" on the
+		// user's screen say the same nothing, and the one string that would have named the
+		// cause was already in hand. Never contains the key (it's the provider's own text).
+		done('llm_error', { status: reply.status, detail: providerMsg });
 		return {
 			response: json({ error: `LLM error ${reply.status}`, detail: providerMsg ?? reply.body }, 502)
 		};

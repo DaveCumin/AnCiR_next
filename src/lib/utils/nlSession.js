@@ -151,8 +151,19 @@ async function postNl(path, payload, { timeoutMs = 90000 } = {}) {
 				`The AI service returned an error (HTTP ${res.status}) that couldn't be read.`
 			);
 		}
-		// The Worker's own message is the useful one (bad key, unusable draft…).
-		const detail = body?.detail?.error?.message ?? body?.detail?.message;
+		// The Worker's own message is the useful one (bad key, unusable draft…), and `detail`
+		// carries the PROVIDER's, which is the only thing that explains a bare "LLM error 400".
+		//
+		// `detail` is a STRING: the Worker already dug `error.message` out of the provider's
+		// JSON before sending it. This used to read it as an object (`detail?.error?.message`),
+		// which silently evaluated to undefined every time — so the provider's explanation was
+		// fetched, forwarded, and then dropped on the floor one line before being shown. The
+		// user got "LLM error 400" and no way to find out why. Accepts an object too, in case a
+		// future route forwards the raw error.
+		const detail =
+			typeof body?.detail === 'string'
+				? body.detail
+				: (body?.detail?.error?.message ?? body?.detail?.message);
 		throw new Error(
 			[body?.error ?? `HTTP ${res.status}`, detail, ...(body?.errors ?? [])]
 				.filter(Boolean)

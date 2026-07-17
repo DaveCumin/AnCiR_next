@@ -610,6 +610,28 @@ test('an unmapped upstream error still surfaces, without leaking the key', async
 	assert.ok(!JSON.stringify(out).includes('sk-test'), 'must never echo the key');
 });
 
+test('an unmapped upstream error LOGS why, not just the status', async () => {
+	// "llm_error 400" in the logs and "LLM error 400" on the user's screen say the same
+	// nothing. The provider's message is already in hand at that point; not recording it makes
+	// the failure unexplainable after the fact — which is exactly what happened.
+	const lines = [];
+	const realLog = console.log;
+	console.log = (o) => lines.push(o);
+	try {
+		globalThis.fetch = async () =>
+			new Response(JSON.stringify({ error: { message: 'response_format is not supported' } }), {
+				status: 400
+			});
+		await worker.fetch(post({ prompt: 'hi', llm: LLM, options: { retries: 0 } }), ENV());
+	} finally {
+		console.log = realLog;
+	}
+	const line = lines.find((l) => l?.event === 'build' && l.outcome === 'llm_error');
+	assert.equal(line.status, 400);
+	assert.match(line.detail, /response_format is not supported/);
+	assert.ok(!JSON.stringify(line).includes('sk-test'), 'the key never reaches a log line');
+});
+
 test('POST /build reports an unusable draft rather than storing an empty session', async () => {
 	stubLLM(JSON.stringify({ analyses: [{ name: 'NoSuchNode', args: {} }] }));
 	const res = await worker.fetch(post({ prompt: 'nonsense', llm: LLM }), ENV());

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { isTrustedSessionUrl, NL_URL, resolveNlUrl } from './nlSession.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { buildNlSession, isTrustedSessionUrl, NL_URL, resolveNlUrl } from './nlSession.js';
 
 // The AI button is gated on NL_CONFIGURED, which came from VITE_ANCIR_NL_URL in .env — and
 // .env is gitignored. So Cloudflare built with it undefined, NL_CONFIGURED came out false, and
@@ -63,5 +63,44 @@ describe('isTrustedSessionUrl', () => {
 
 	it('is case-insensitive about the host', () => {
 		expect(isTrustedSessionUrl('https://ANCIR-NL.David-Cumin.Workers.Dev/sessions/a')).toBe(true);
+	});
+});
+
+// The Worker forwards the PROVIDER's message as `detail` — the only thing that turns a bare
+// "LLM error 400" into something actionable. It was being read as an object when it is a
+// string, so it evaluated to undefined every time: fetched, forwarded, then dropped one line
+// before the user saw it. A whole class of failures was undiagnosable, by us and by them.
+describe('postNl error reporting (via buildNlSession)', () => {
+	const respond = (status, body) => {
+		vi.stubGlobal('fetch', async () => new Response(JSON.stringify(body), { status }));
+	};
+	afterEach(() => vi.unstubAllGlobals());
+
+	it("surfaces the provider's explanation behind a bare status code", async () => {
+		respond(502, {
+			error: 'LLM error 400',
+			detail: 'Please reduce the length of the messages or completion.'
+		});
+		await expect(buildNlSession({ prompt: 'x', llm: {} })).rejects.toThrow(
+			/reduce the length of the messages/
+		);
+	});
+
+	it('keeps the Worker message too — both halves matter', async () => {
+		respond(502, { error: 'LLM error 400', detail: 'model_decommissioned' });
+		const err = await buildNlSession({ prompt: 'x', llm: {} }).catch((e) => e);
+		expect(err.message).toContain('LLM error 400'); // what happened
+		expect(err.message).toContain('model_decommissioned'); // why
+	});
+
+	it('still handles an object detail, in case a route forwards the raw provider error', async () => {
+		respond(502, { error: 'LLM error 400', detail: { error: { message: 'context_length_exceeded' } } });
+		await expect(buildNlSession({ prompt: 'x', llm: {} })).rejects.toThrow(/context_length_exceeded/);
+	});
+
+	it('a detail-less error still reports the status rather than "undefined"', async () => {
+		respond(502, { error: 'LLM error 400' });
+		const err = await buildNlSession({ prompt: 'x', llm: {} }).catch((e) => e);
+		expect(err.message).toBe('LLM error 400');
 	});
 });
