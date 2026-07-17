@@ -28,7 +28,7 @@
 import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 import { applyOp } from '$lib/core/operations.js';
 import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
-import { getSharedSchema } from '$lib/plots/sharedControls.js';
+import { getSharedSchema, getSharedDataSchema } from '$lib/plots/sharedControls.js';
 import { getByPath, setByPath } from '$lib/utils/objectPath.js';
 import dayjs from '$lib/utils/time/dayjsSetup.js';
 
@@ -177,18 +177,59 @@ export function summariseSession(c = core) {
 /**
  * The restyle-able properties of one plot: path, what it is, and its value right now.
  *
- * Straight from `getSharedSchema` — the same reflection that builds the shared-options panel, so
- * the AI is offered exactly what a user can change by hand, and a plot that gains a property is
- * covered without anyone editing a list here. This is also the ALLOW-LIST the planner checks
+ * Straight from the app's own reflection — the same schemas that build the shared-options panel,
+ * so the AI is offered exactly what a user can change by hand, and a plot that gains a property
+ * is covered without anyone editing a list here. This is also the ALLOW-LIST the planner checks
  * against, which is why it must come from the app rather than from anything the model says.
  *
- * Only the plots in the open session are described, so the cost is bounded by what's on screen
- * (~10–19 fields each) rather than by all 11 plot types.
+ * TWO schemas, because the panel has two tabs and the interesting things live in the second:
+ *   - getSharedSchema     → the plot: axis limits, log scales, padding. It SKIPS `data`.
+ *   - getSharedDataSchema → one SERIES: colour, marker shape, line width.
+ * Using only the first is why "change the colour of the actogram" did nothing — a colour isn't
+ * a property of the plot, it's a property of a series, and none were on offer.
+ *
+ * Only the plots in the open session are described, so the cost stays bounded by what's on
+ * screen rather than by all 11 plot types.
  */
+/**
+ * The per-series fields, expanded across EVERY series and addressed from the wrapper.
+ *
+ * getSharedDataSchema describes one row (the panel applies an edit to whichever rows are
+ * selected) with paths relative to it — `line.colour`. A model has no selection, so each series
+ * gets its own absolute path, `plot.data[0].line.colour`, and a label naming the series so
+ * "make the fit red" can pick the right one out of a data+fit plot.
+ *
+ * `refId`/`id` are dropped: those are the plot's WIRING, and rewiring a plot by writing a raw
+ * column id is not something the model should be invited to do.
+ */
+function seriesFields(plotWrapper) {
+	const rows = plotWrapper?.plot?.data;
+	if (!Array.isArray(rows) || !rows.length) return [];
+
+	let rowSchema;
+	try {
+		rowSchema = getSharedDataSchema(plotWrapper);
+	} catch {
+		return [];
+	}
+
+	return rows.flatMap((row, i) => {
+		const seriesName = row?.label || `series ${i + 1}`;
+		return rowSchema
+			.filter((f) => !/(^|\.)(refId|id)$/.test(f.path))
+			.map((f) => ({
+				...f,
+				path: `plot.data[${i}].${f.path}`,
+				label: `${seriesName}: ${f.label}`,
+				group: `Series ${i + 1}`
+			}));
+	});
+}
+
 export function plotProps(plotWrapper) {
 	let schema;
 	try {
-		schema = getSharedSchema(plotWrapper);
+		schema = [...getSharedSchema(plotWrapper), ...seriesFields(plotWrapper)];
 	} catch {
 		return []; // a plot that can't describe itself simply isn't restyle-able
 	}

@@ -55,7 +55,10 @@ const SUMMARY = {
 					input: 'select',
 					options: ['auto', 'tukey'],
 					value: 'auto'
-				}
+				},
+				// Per-series, from getSharedDataSchema — where colours actually live.
+				{ path: 'plot.data[0].line.colour', label: 'signal: Line Colour', input: 'text', value: '#234154' },
+				{ path: 'plot.data[1].line.colour', label: 'signal fit: Line Colour', input: 'text', value: '#BE796B' }
 			]
 		},
 		{ id: 5, type: 'actogram', name: 'Acto', props: [] }
@@ -309,6 +312,20 @@ describe('planEdit — restyling a plot', () => {
 		]);
 	});
 
+	// "change the colour of the actogram" did nothing: a colour isn't a property of the PLOT,
+	// it's a property of a SERIES, and only the plot-level schema was on offer.
+	it('changes a series colour, and can tell one series from another', () => {
+		const p = plan({
+			changes: [{ plot: 2, set: { 'plot.data[1].line.colour': '#ff0000' } }]
+		});
+		expect(p.errors).toEqual([]);
+		expect(p.changes).toEqual([
+			{ plotId: 2, path: 'plot.data[1].line.colour', value: '#ff0000' }
+		]);
+		// The label names the series, so a user reading the preview knows WHICH one moved.
+		expect(p.preview).toEqual(['Restyle scatterplot "Raw": signal fit: Line Colour = "#ff0000"']);
+	});
+
 	it('refuses an invented path rather than writing it somewhere', () => {
 		const p = plan({ changes: [{ plot: 2, set: { 'plot.makeItPretty': true } }] });
 		expect(p.changes).toEqual([]);
@@ -412,6 +429,31 @@ describe('plotProps (against a live plot class)', () => {
 		for (const p of props) {
 			expect(p.value === null || typeof p.value !== 'object', `${p.path} is settable`).toBe(true);
 		}
+	});
+
+	it('offers each series its own colour path, named so they can be told apart', async () => {
+		const { loadPlots } = await import('$lib/plots/plotMap.js');
+		const entry = (await loadPlots()).get('scatterplot');
+		const inner = entry.data.fromJSON(null, {
+			data: [
+				{ x: { refId: 0 }, y: { refId: 1 }, label: 'signal', line: { colour: '#234154' } },
+				{ x: { refId: 2 }, y: { refId: 3 }, label: 'signal fit', line: { colour: '#BE796B' } }
+			]
+		});
+		const props = plotProps({ id: 1, type: 'scatterplot', plot: inner, width: 420, height: 300 });
+
+		const colours = props.filter((p) => /\.colour$/.test(p.path));
+		expect(colours.length, 'colours are offered at all').toBeGreaterThan(0);
+		// Absolute, per-series paths — the panel's own paths are relative to a selected row.
+		expect(colours.map((c) => c.path)).toContain('plot.data[0].line.colour');
+		expect(colours.map((c) => c.path)).toContain('plot.data[1].line.colour');
+		// Current values, so the model can see what it's changing.
+		expect(props.find((p) => p.path === 'plot.data[1].line.colour').value).toBe('#BE796B');
+		// Labelled by series, or "make the fit red" can't pick one.
+		expect(props.find((p) => p.path === 'plot.data[1].line.colour').label).toMatch(/signal fit/);
+
+		// Wiring is NOT on offer: rewiring a plot by writing a raw column id isn't a restyle.
+		expect(props.some((p) => /refId/.test(p.path))).toBe(false);
 	});
 
 	it('offers only the wrapper fields when there is no inner, and never throws', () => {
