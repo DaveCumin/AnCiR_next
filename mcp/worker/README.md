@@ -132,6 +132,30 @@ Every `/build` writes one structured line, so you can review what people actuall
 model let the user down). `errors`/`warnings` can be non-empty even on `ok` (a node dropped, or
 dynamic outputs not pre-allocated).
 
+### Crashes the app caught (`event: "client_error"`)
+
+AnCiR reports its own crashes here, so a bug nobody mentions still shows up:
+
+```json
+{ "event":"client_error", "ts":"…",
+  "message":"Cannot read properties of undefined (reading '0')",
+  "stack":"at get scale (Periodogram.svelte:1104)",
+  "source":"render", "context":"rendering the periodogram plot",
+  "version":"β.58.0", "sessionShape":{"columns":12,"analyses":2,"plots":1},
+  "generatedBy":{"sessionId":"75e8…","route":"build"} }
+```
+
+`generatedBy.sessionId` is the good bit: it joins the crash to the `build` line that made
+that session, so you can read the prompt that produced the thing that broke. Filter with
+`event = "client_error"`.
+
+The route is unauthenticated (anyone can POST), so it stores nothing, echoes nothing, caps
+every field, and is rate-limited — a crash *loop* is dropped with a 200 rather than a 429, since
+the app has already told the user and retrying helps nobody. **The session is never sent**: it's
+the bulk of a report and the part most likely to hold unpublished data. The app parks a copy in
+the user's own `localStorage` (`ancir:last-crash-session`) instead, for them to send if they
+choose.
+
 ### Tracing a session back to its log line
 
 Every session this Worker builds is stamped, beside its `version`:

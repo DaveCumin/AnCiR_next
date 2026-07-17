@@ -1,6 +1,7 @@
 <script>
 	// @ts-nocheck
 	import { appConsts, core } from '$lib/core/core.svelte.js';
+	import { reportError } from '$lib/core/errorReporter.js';
 
 	let { plot, size, onResizeMouseDown } = $props();
 
@@ -54,12 +55,30 @@
 				{/each}
 			</div>
 		{:else}
-			<div
-				class="plot-preview-inner"
-				style="transform:scale({previewScale}); transform-origin:top left; width:{plot.width}px; height:{plot.height}px;"
-			>
-				<PlotComp theData={plot} which="plot" />
-			</div>
+			<!-- A plot renders whatever columns it was wired to, and a wrong pairing is a normal
+			     mistake to make (the AI, a shared session, a hand-rewire). Without a boundary one
+			     such plot throws during render and takes the ENTIRE canvas with it — every other
+			     node vanishes and the app looks like it lost the session. Contain it here: the
+			     broken plot shows why, everything else keeps working, and undo still exists. -->
+			<svelte:boundary onerror={(e) => reportError(e, { source: 'render', context: `rendering the ${plot.type} plot` })}>
+				<div
+					class="plot-preview-inner"
+					style="transform:scale({previewScale}); transform-origin:top left; width:{plot.width}px; height:{plot.height}px;"
+				>
+					<PlotComp theData={plot} which="plot" />
+				</div>
+
+				{#snippet failed(error, reset)}
+					<div class="plot-failed" role="alert">
+						<strong>This plot couldn't be drawn.</strong>
+						<p>{error?.message ?? 'Unknown error'}</p>
+						<p class="plot-failed-hint">
+							Check the columns it's wired to — undo reverses the change that added it.
+						</p>
+						<button onclick={reset}>Try again</button>
+					</div>
+				{/snippet}
+			</svelte:boundary>
 		{/if}
 		{#if onResizeMouseDown}
 			<div
@@ -90,6 +109,33 @@
 
 	.plot-preview-inner {
 		pointer-events: none;
+	}
+
+	.plot-failed {
+		height: 100%;
+		box-sizing: border-box;
+		overflow: auto;
+		padding: var(--space-2);
+		font-size: var(--font-xs);
+		color: var(--color-error);
+		background: var(--color-error-bg);
+	}
+	.plot-failed p {
+		margin: var(--space-1) 0 0;
+		overflow-wrap: anywhere;
+	}
+	.plot-failed-hint {
+		color: var(--color-text-muted);
+	}
+	.plot-failed button {
+		margin-top: var(--space-2);
+		font: inherit;
+		font-size: var(--font-xs);
+		padding: var(--space-1) var(--space-2);
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-sm);
+		background: var(--color-lightness-99);
+		cursor: pointer;
 	}
 
 	.facet-grid {

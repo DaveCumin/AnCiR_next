@@ -1,6 +1,7 @@
 <script>
 	// @ts-nocheck
 	import '../app.css';
+	import { installErrorReporter } from '$lib/core/errorReporter.js';
 	import Navbar from '$lib/components/Navbar.svelte';
 	import DisplayPanel from '$lib/components/DisplayPanel.svelte';
 	import ControlPanel from '$lib/components/ControlPanel.svelte';
@@ -270,6 +271,9 @@
 	//------------------------------------
 
 	onMount(async () => {
+		// First thing, before any of the loading below can throw: a crash during startup is
+		// exactly the one a user can't report, because the app never appears.
+		installErrorReporter();
 		if (dev) {
 			console.log('moutning app in dev mode');
 			performance.mark('load-start');

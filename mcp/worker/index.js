@@ -7,7 +7,9 @@
 //
 // Routes
 //   POST /build        {prompt, llm:{baseUrl,apiKey,model}, options?} → {url, sessionId, …}
+//   POST /edit         {prompt, session, llm?} → {analyses, plots, changes} (a spec, not a session)
 //   POST /mcp          remote MCP server (JSON-RPC) — an agent builds sessions with no clone
+//   POST /report       a crash the app caught, for the logs
 //   GET  /sessions/:id → the session JSON (CORS *, so AnCiR can fetch it cross-origin)
 //   GET  /health       → {ok:true}
 //
@@ -381,6 +383,58 @@ async function handleEdit(request, env) {
 	return json({ analyses, plots, changes });
 }
 
+/**
+ * POST /report — a crash AnCiR caught, so it lands beside the prompt that may have caused it.
+ *
+ * Everything here is untrusted and unauthenticated: anyone can POST anything. So it stores
+ * nothing, echoes nothing, and hard-caps every field before it reaches the logs. The worst a
+ * caller can do is write a bounded, rate-limited line.
+ *
+ * Deliberately NOT taken: the session itself. It's the bulk of a crash report and the part most
+ * likely to hold someone's unpublished data — the app keeps its own local copy instead, which
+ * the user can send if they choose. What lands here is enough to find the bug: the message, a
+ * stack, where it happened, and the app version.
+ */
+async function handleReport(request, env) {
+	let body;
+	try {
+		body = await request.json();
+	} catch {
+		return json({ error: 'body must be JSON' }, 400);
+	}
+
+	if (await rateLimited(env, request)) {
+		// A crash LOOP would otherwise report forever. Drop quietly: the client is already
+		// telling the user, and a 429 here helps nobody.
+		return json({ ok: true, throttled: true });
+	}
+
+	const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : undefined);
+	logEvent('client_error', {
+		ts: new Date().toISOString(),
+		message: str(body?.message, 500) ?? '(no message)',
+		stack: str(body?.stack, 4000),
+		// Where in the app it blew up: 'render' (a boundary caught it), 'window', 'promise'.
+		source: str(body?.source, 50),
+		// What the user was doing, when the app knows (e.g. 'ai-edit').
+		context: str(body?.context, 200),
+		version: str(body?.version, 50),
+		url: str(body?.url, 300),
+		userAgent: str(request.headers.get('User-Agent'), 300),
+		// The session's SHAPE, not its contents — enough to see "the actogram plot did this".
+		sessionShape: {
+			columns: Number(body?.sessionShape?.columns) || 0,
+			analyses: Number(body?.sessionShape?.analyses) || 0,
+			plots: Number(body?.sessionShape?.plots) || 0
+		},
+		generatedBy: body?.generatedBy?.sessionId
+			? { sessionId: str(body.generatedBy.sessionId, 100), route: str(body.generatedBy.route, 20) }
+			: undefined
+	});
+
+	return json({ ok: true });
+}
+
 async function handleSession(id, env) {
 	if (!env.SESSIONS) return json({ error: 'SESSIONS KV binding is not configured' }, 500);
 	const s = await env.SESSIONS.get(`s:${id}`);
@@ -413,6 +467,7 @@ export default {
 		if (url.pathname === '/health') return json({ ok: true });
 		if (url.pathname === '/build' && request.method === 'POST') return handleBuild(request, env);
 		if (url.pathname === '/edit' && request.method === 'POST') return handleEdit(request, env);
+		if (url.pathname === '/report' && request.method === 'POST') return handleReport(request, env);
 		if (url.pathname === '/mcp') {
 			if (request.method === 'POST') return handleMcpRoute(request, env);
 			// The Streamable HTTP spec has GET open a server→client SSE stream. We're stateless
