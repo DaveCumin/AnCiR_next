@@ -3,7 +3,7 @@
 Turns a prompt into an AnCiR session and returns a link that opens it. **No engine, no VM**:
 the model emits one JSON draft, the pure normalizer (`src/emit/`) turns it into a session, and
 the AnCiR SPA computes the analyses in the user's browser when it loads. That's what makes this
-a ~70 KB Worker instead of a 1 GB box.
+a ~95 KB Worker instead of a 1 GB box.
 
 See the ADR: `2026-07-15-static-session-emission` (in the vault).
 
@@ -11,7 +11,7 @@ See the ADR: `2026-07-15-static-session-emission` (in the vault).
 
 | | |
 | --- | --- |
-| `POST /build` | `{prompt, llm:{baseUrl,apiKey,model}, options?}` → `{url, sessionUrl, sessionId, manifest, warnings, errors}` |
+| `POST /build` | `{prompt, llm:{baseUrl,apiKey,model}, options?}` → `{url, sessionUrl, sessionId, manifest, fitness, warnings, errors}` |
 | `POST /mcp` | remote **MCP server** (JSON-RPC) — an agent builds sessions with no clone, no key |
 | `GET /sessions/:id` | the session JSON (CORS `*`, so AnCiR can fetch it cross-origin) |
 | `GET /health` | `{ok:true}` |
@@ -75,7 +75,7 @@ npm run worker:deploy
 ```
 
 Free tier is ample: sessions are transient (TTL `SESSION_TTL_S`, default 24 h), and the bundle
-is ~70 KB gzipped.
+is ~95 KB gzipped.
 
 ## Local
 
@@ -209,6 +209,42 @@ built".
 `assumptions` is the interesting field: it's everything the model decided *for* the user without
 being told. `missing` is the headline — before this, a user who asked for five things and got
 four had to reverse-engineer the node graph to find out.
+
+## Fitness: is this a sensible thing to do to this data?
+
+The normalizer checks wiring. The intent contract checks we built what was asked for. Neither
+asks the question a chronobiologist asks first — whether the number will *mean* anything.
+
+A Cosinor fitted to 1.5 cycles returns a confident amplitude and acrophase. A periodogram over
+data sampled every 13 h reports a period, and it's an alias. Both sessions are perfectly wired,
+raise zero errors, and are wrong in a way that looks exactly like being right. `fitness` in the
+reply (`src/emit/fitness.js`) is the only thing that sees it:
+
+```json
+"fitness": [ { "node": "Cosinor", "severity": "high",
+  "message": "Cosinor is fitting a 24 h period to 36 h of data — only 1.5 cycles. A period fit needs at least 2 cycles…" } ]
+```
+
+Checks: cycles covered vs the period being fitted, Nyquist and samples-per-cycle, monotonic
+time, duplicate timestamps, paired columns of unequal length, mostly-blank columns, and FFT (or
+a non-Lomb-Scargle periodogram) on unevenly sampled data. Messages name the fix, because a
+warning you can't act on is just noise.
+
+Three deliberate limits:
+
+- **Advice, never a blocker, and never a repair trigger.** Every threshold here is a convention,
+  not a law, and the user may have reasons we can't see. Being wrong costs them a sentence.
+- **Only data that exists at emit time** — imported columns and baked generator outputs. An
+  analysis's outputs are empty until the GUI computes them, so anything downstream of another
+  analysis is skipped rather than guessed at. Fit diagnostics (R², residuals, convergence) need
+  results, so they're out of reach from a Worker; they belong to the app, if anywhere.
+- **`PERIOD_OF` is hand-written**, because the registry knows Cosinor has a `fixedPeriod` but not
+  that it only means anything when `useFixedPeriod` is set. Hand-written is how catalogues start
+  lying, so a drift-guard test fails if any node with a period-ish param isn't either judged or
+  listed in `EXCLUDED` **with a reason**.
+
+`fitnessHigh` lands in the log: the count of error-free sessions we built that will mislead
+someone.
 
 ## Prompt injection
 

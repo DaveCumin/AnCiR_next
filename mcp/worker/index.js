@@ -22,6 +22,7 @@
 
 import { normalizeSession } from '../src/emit/normalizer.js';
 import { scoreIntent, repairIsBetter, buildManifest } from '../src/emit/intent.js';
+import { checkFitness } from '../src/emit/fitness.js';
 import { buildDraftPrompt } from './draftPrompt.js';
 import { buildEditPrompt } from './editPrompt.js';
 import { validateBuild, validateEdit } from '../app/validation.js';
@@ -360,11 +361,20 @@ async function handleBuild(request, env) {
 	// and a rise in it points at a catalogue that's misleading models rather than at one bad
 	// prompt. Repairs that were still not good enough show up as `ok` with a non-empty `errors`.
 	const manifest = buildManifest(score, session);
+
+	// Is this analysis a sensible thing to do to this data? Deliberately AFTER any repair (it
+	// judges what the user will actually open) and deliberately not part of one: every finding
+	// here is a judgement call on a spectrum, so it advises and never blocks. See fitness.js.
+	const fitness = checkFitness(session);
+
 	done('ok', {
 		sessionId,
 		nodes: session.tableProcesses.map((t) => t.name),
 		plots: session.plots.map((p) => p.type),
 		repaired,
+		// The count worth alerting on: a high finding means we built something error-free that
+		// will mislead a scientist — 1.5 cycles, or a period under Nyquist.
+		fitnessHigh: fitness.filter((f) => f.severity === 'high').length,
 		// Intent coverage: the metric that says whether we built what was ASKED FOR, as opposed
 		// to something that merely wires up. A session can be error-free and still be 3/5.
 		// Watch `intentMissing` — it names the deliverables we keep failing to build.
@@ -385,6 +395,9 @@ async function handleBuild(request, env) {
 		// null when the model stated no intent; we never synthesise one by describing the graph
 		// back at the user, which would only ever say "I built what I built".
 		manifest,
+		// Advice, not errors: the session is valid and will open. These say whether the numbers
+		// it produces are worth believing.
+		fitness,
 		warnings,
 		errors
 	});

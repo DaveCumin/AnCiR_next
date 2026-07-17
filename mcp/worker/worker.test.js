@@ -422,6 +422,42 @@ test('logs intent coverage — the metric that says we built the wrong thing cor
 	assert.deepEqual(ok.intentMissing, ['analysis: RhythmicityAnalysis']);
 });
 
+test('/build warns when a valid session will produce a misleading number', async () => {
+	// 36 h of data, fitting a 24 h period. Wires perfectly, zero errors, and returns a
+	// confident amplitude built from 1.5 cycles. errors/warnings/manifest are all silent on
+	// this — being wired right and being right are different questions.
+	const lines = [];
+	const realLog = console.log;
+	console.log = (o) => lines.push(o);
+	let out;
+	try {
+		stubLLM(
+			JSON.stringify({
+				analyses: [
+					{
+						name: 'SimulatedData',
+						args: { seed: 1, samplingPeriod_hours: 1, sections: [{ duration_hours: 36, rhythmPeriod_hours: 24 }] }
+					},
+					{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 } }
+				]
+			})
+		);
+		const res = await worker.fetch(post({ prompt: 'fit a daily rhythm to a day and a half', llm: LLM }), ENV());
+		assert.equal(res.status, 200, 'advice, never a blocker');
+		out = await res.json();
+	} finally {
+		console.log = realLog;
+	}
+
+	assert.deepEqual(out.errors, [], 'nothing is WRONG with it, which is the point');
+	const f = out.fitness.find((x) => x.severity === 'high');
+	assert.ok(f, `expected a fitness warning, got: ${JSON.stringify(out.fitness)}`);
+	assert.equal(f.node, 'Cosinor');
+	assert.match(f.message, /1\.5 cycles/);
+
+	assert.equal(lines.find((l) => l?.event === 'build' && l.outcome === 'ok').fitnessHigh, 1);
+});
+
 test('a draft with no intent still builds — the field is new, sessions are not', async () => {
 	stubLLM(JSON.stringify({ analyses: [{ name: 'SimulatedData', args: { seed: 1 } }] }));
 	const res = await worker.fetch(post({ prompt: 'simulate something', llm: LLM }), ENV());
