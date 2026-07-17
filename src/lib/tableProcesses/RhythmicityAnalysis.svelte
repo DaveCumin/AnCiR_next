@@ -46,8 +46,16 @@
 		defaults,
 		func: rhythmicityanalysis,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
+		// NB: these two keys exist ONLY in collected / L2W mode (see syncOutputColumns). A
+		// standalone node emits per-Y `<yId>_<key>` columns instead, so anything resolving an
+		// output by these names must handle their absence — the Quick-Plot used to assume they
+		// were always there, find nothing, and silently plot the raw input instead.
 		xOutKey: 'rhythmicityx',
 		yOutKeyPrefix: 'rhythmicityy_',
+		// The output X is a period / lag axis, not the input's time axis, so raw data must never
+		// share a plot with it. Exposed here (rather than re-derived by consumers) so the
+		// mode → axis-pair mapping has exactly one home; Quick-Plot reads it off the registry.
+		getPrimaryKeys,
 		nodeSpec: {
 			id: 'tableprocess.rhythmicityanalysis',
 			inputs: [

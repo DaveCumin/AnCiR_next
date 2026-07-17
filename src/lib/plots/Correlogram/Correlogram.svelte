@@ -393,9 +393,13 @@
 			}
 
 			const correlogram = new Correlogramclass(parent, null);
-			correlogram.padding = json.padding ?? json.paddingIN;
+			// The final `?? correlogram.padding` matters: the first two are both JSON fields
+			// (paddingIN is the legacy name), so an inner carrying NEITHER — which is what
+			// Quick-Plot and the NL emitter write — still landed `undefined` on the default and
+			// threw at render.
+			correlogram.padding = json.padding ?? json.paddingIN ?? correlogram.padding;
 			correlogram.laglimsIN = json.laglimsIN || [null, null];
-			correlogram.ylimsIN = json.ylimsIN;
+			correlogram.ylimsIN = json.ylimsIN ?? correlogram.ylimsIN;
 
 			// Support both new AxisClass format and old individual properties
 			if (json.xAxis) {

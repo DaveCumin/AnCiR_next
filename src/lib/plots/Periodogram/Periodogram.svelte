@@ -532,7 +532,9 @@
 			}
 
 			const periodogram = new Periodogramclass(parent, null);
-			periodogram.padding = json.padding ?? json.paddingIN;
+			// `?? periodogram.padding` last: the first two are both JSON fields (paddingIN is the
+			// legacy name), so an inner carrying neither left the default undefined and threw.
+			periodogram.padding = json.padding ?? json.paddingIN ?? periodogram.padding;
 			periodogram.periodlimsIN = json.periodlimsIN;
 			periodogram.periodSteps = json.periodSteps;
 			periodogram.ylimsIN = json.ylimsIN;

@@ -455,7 +455,9 @@
 			}
 
 			const fft = new FFTclass(parent, null);
-			fft.padding = json.padding ?? json.paddingIN;
+			// `?? fft.padding` last: the first two are both JSON fields (paddingIN is the legacy
+			// name), so an inner carrying neither left the default undefined and threw at render.
+			fft.padding = json.padding ?? json.paddingIN ?? fft.padding;
 			fft.freqlimsIN = json.freqlimsIN;
 			fft.xlimsIN = json.xlimsIN || [null, null];
 			fft.ylimsIN = json.ylimsIN;

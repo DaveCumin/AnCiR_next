@@ -341,9 +341,12 @@
 		static fromJSON(parent, json) {
 			if (!json) return new Histogramclass(parent, null);
 			const chart = new Histogramclass(parent, null);
-			chart.padding = json.padding;
-			chart.xlimsIN = json.xlimsIN;
-			chart.ylimsIN = json.ylimsIN;
+			// `?? default`: a tool-written inner carries only `data`, and a bare `=` put
+			// `undefined` over the class default, throwing at render (see Boxplot, and
+			// plotFromJSONRobustness.test.js which now drives every registered plot).
+			chart.padding = json.padding ?? chart.padding;
+			chart.xlimsIN = json.xlimsIN ?? chart.xlimsIN;
+			chart.ylimsIN = json.ylimsIN ?? chart.ylimsIN;
 			if (json.xAxis) chart.xAxis = AxisClass.fromJSON(json.xAxis);
 			if (json.yAxis) chart.yAxis = AxisClass.fromJSON(json.yAxis);
 			chart.legend = LegendClass.fromJSON(json.legend);

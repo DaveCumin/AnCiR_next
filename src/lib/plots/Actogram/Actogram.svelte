@@ -549,11 +549,17 @@
 				return new Actogramclass(parent, null);
 			}
 			const actogram = new Actogramclass(parent, null);
-			actogram.paddingIN = json.paddingIN;
-			actogram.ylimsOption = json.ylimsOption;
-			actogram.ylimsIN = json.ylimsIN;
-			actogram.doublePlot = json.doublePlot;
-			actogram.periodHrs = json.periodHrs;
+			// `?? default` on every field: an inner written by a tool (Quick-Plot, the NL session
+			// emitter) carries only `data`, and a bare `=` put `undefined` over the class default.
+			// paddingIN is the one that bites — `padding` derives `paddingIN.top`, so the plot threw
+			// "Cannot read properties of undefined (reading 'top'/'left')" from LightBand at render
+			// and took the whole canvas down. periodHrs/doublePlot are just as load-bearing: they
+			// feed the fold maths, so undefined would silently turn every position into NaN.
+			actogram.paddingIN = json.paddingIN ?? actogram.paddingIN;
+			actogram.ylimsOption = json.ylimsOption ?? actogram.ylimsOption;
+			actogram.ylimsIN = json.ylimsIN ?? actogram.ylimsIN;
+			actogram.doublePlot = json.doublePlot ?? actogram.doublePlot;
+			actogram.periodHrs = json.periodHrs ?? actogram.periodHrs;
 			if (json.showDayNumbers != null) actogram.showDayNumbers = json.showDayNumbers;
 			// ?? default: older sessions predate these fields, so keep the class default
 			// rather than clobbering it with undefined.

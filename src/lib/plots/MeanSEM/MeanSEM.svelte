@@ -325,9 +325,12 @@
 			if (!json) return new MeanSEMclass(parent, null);
 
 			const chart = new MeanSEMclass(parent, null);
-			chart.padding = json.padding;
-			chart.xlimsIN = json.xlimsIN;
-			chart.ylimsIN = json.ylimsIN;
+			// `?? default`: a tool-written inner carries only `data`, and a bare `=` put
+			// `undefined` over the class default, throwing at render (see Boxplot, and
+			// plotFromJSONRobustness.test.js which now drives every registered plot).
+			chart.padding = json.padding ?? chart.padding;
+			chart.xlimsIN = json.xlimsIN ?? chart.xlimsIN;
+			chart.ylimsIN = json.ylimsIN ?? chart.ylimsIN;
 
 			if (json.xAxis) {
 				chart.xAxis = AxisClass.fromJSON(json.xAxis);

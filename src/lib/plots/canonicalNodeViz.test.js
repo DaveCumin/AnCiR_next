@@ -9,9 +9,11 @@ beforeEach(async () => {
 	appConsts.tableProcessMap = await loadTableProcesses();
 });
 
-// Minimal fake nodes (the shape WorkflowEditor's allNodes exposes).
-function fitNode(name, { xIN, yIN, out }) {
-	return { id: `tableprocess_1`, type: 'tableprocess', tpObj: { id: 1, name, args: { xIN, yIN, out } } };
+// Minimal fake nodes (the shape WorkflowEditor's allNodes exposes). `args` is passed through
+// whole rather than picked apart, so node-specific params (e.g. RhythmicityAnalysis's
+// `analysis` mode, which selects its output pair) actually reach the code under test.
+function fitNode(name, args) {
+	return { id: `tableprocess_1`, type: 'tableprocess', tpObj: { id: 1, name, args } };
 }
 
 describe('canonicalNodeViz', () => {
@@ -61,6 +63,135 @@ describe('canonicalNodeViz', () => {
 
 	it('returns null for a plot node', () => {
 		expect(canonicalNodeViz({ id: 'plot_1', type: 'plot', plotObj: {} })).toBeNull();
+	});
+
+	// ---- nodes whose output X is NOT the input's axis ----
+	// These used to take the generic fit branch, which overlays the raw series on the output.
+	// That only makes sense when the output X is the same quantity as the input X. For these
+	// three it isn't, so the raw series has to go. Domains observed in the shipped demos:
+	//   AverageProfile   raw x [0..95]  vs avgprofx [0.5..23.5]   (folded onto one day)
+	//   NonparametricRA  raw x [0..335] vs npcrax   [0.5..23.5]   (folded onto one day)
+	//   Rhythmicity      raw x = time   vs period / lag           (a different quantity entirely)
+
+	it('RhythmicityAnalysis → its own period/power outputs, NOT the raw input series', () => {
+		// Standalone nodes emit per-Y `<yId>_<key>` columns (see syncOutputColumns); the
+		// registry's rhythmicityx/rhythmicityy_ pair exists ONLY in collected/L2W mode. The fit
+		// branch looked for the collected keys, missed, dropped the fit line, and emitted the
+		// raw data alone under a "data + fit" title — the reported bug.
+		const node = fitNode('RhythmicityAnalysis', {
+			analysis: 'periodogram', // the node's default; a real node always carries it
+			xIN: 313,
+			yIN: [314],
+			out: { '314_period': 315, '314_power': 316, stat_peak_period: 318, stat_peak_power: 319 }
+		});
+		const spec = canonicalNodeViz(node);
+		expect(spec.type).toBe('scatterplot');
+		expect(spec.series).toHaveLength(1);
+		expect(spec.series[0]).toMatchObject({ x: 315, y: 316, kind: 'line' }); // period vs power
+		// The raw input series must not appear: its x is time, not period.
+		expect(spec.series.some((s) => s.x === 313 || s.y === 314)).toBe(false);
+		expect(spec.title).toContain('power');
+		expect(spec.title).toContain('period');
+	});
+
+	it('RhythmicityAnalysis follows the analysis mode (correlogram → lag vs correlation)', () => {
+		const node = {
+			id: 'tableprocess_4',
+			type: 'tableprocess',
+			tpObj: {
+				id: 4,
+				name: 'RhythmicityAnalysis',
+				args: {
+					analysis: 'correlogram',
+					xIN: 1,
+					yIN: [2],
+					out: { '2_lag': 5, '2_correlation': 6 }
+				}
+			}
+		};
+		const spec = canonicalNodeViz(node);
+		expect(spec.series[0]).toMatchObject({ x: 5, y: 6, kind: 'line' });
+		expect(spec.title).toContain('lag');
+	});
+
+	it('RhythmicityAnalysis with one output column per Y, for several Ys', () => {
+		const node = fitNode('RhythmicityAnalysis', {
+			analysis: 'periodogram',
+			xIN: 1,
+			yIN: [2, 3],
+			out: { '2_period': 10, '2_power': 11, '3_period': 12, '3_power': 13 }
+		});
+		const spec = canonicalNodeViz(node);
+		expect(spec.series).toHaveLength(2);
+		expect(spec.series[0]).toMatchObject({ x: 10, y: 11 });
+		expect(spec.series[1]).toMatchObject({ x: 12, y: 13 });
+	});
+
+	it('RhythmicityAnalysis with no computed outputs → tableplot, not an empty scatter', () => {
+		const node = fitNode('RhythmicityAnalysis', { analysis: 'periodogram', xIN: 1, yIN: [2], out: {} });
+		expect(canonicalNodeViz(node).type).toBe('tableplot');
+	});
+
+	it('RhythmicityAnalysis in an unknown mode → tableplot, never the raw input series', () => {
+		// No primary key pair for the mode means we cannot know which output is the X. Show the
+		// columns rather than guess — and crucially, never fall back to plotting raw time data,
+		// which is what made the original bug look like a working plot.
+		const node = fitNode('RhythmicityAnalysis', {
+			analysis: 'somethingNew',
+			xIN: 1,
+			yIN: [2],
+			out: { '2_period': 10, '2_power': 11 }
+		});
+		expect(canonicalNodeViz(node).type).toBe('tableplot');
+	});
+
+	it('AverageProfile → the profile alone, without the unfolded raw series over it', () => {
+		const node = fitNode('AverageProfile', {
+			xIN: 370,
+			yIN: [371],
+			out: { avgprofx: 372, avgprof_371: 373, avgprofsem_371: 374 }
+		});
+		const spec = canonicalNodeViz(node);
+		expect(spec.type).toBe('scatterplot');
+		expect(spec.series).toHaveLength(1);
+		expect(spec.series[0]).toMatchObject({ x: 372, y: 373, kind: 'line' });
+		expect(spec.series.some((s) => s.x === 370)).toBe(false); // raw x [0..95] must not join
+		expect(spec.title).not.toContain('fit'); // a folded profile is not a fit of the data
+	});
+
+	it('NonparametricRA → the average-day profile alone', () => {
+		const node = fitNode('NonparametricRA', {
+			xIN: 322,
+			yIN: [323],
+			out: { npcrax: 324, npcray_323: 325, IS: 326, IV: 327 }
+		});
+		const spec = canonicalNodeViz(node);
+		expect(spec.series).toHaveLength(1);
+		expect(spec.series[0]).toMatchObject({ x: 324, y: 325, kind: 'line' });
+		expect(spec.series.some((s) => s.x === 322)).toBe(false);
+	});
+
+	it('AverageProfile with no computed profile → tableplot, not an empty scatter', () => {
+		const node = fitNode('AverageProfile', { xIN: 1, yIN: [2], out: {} });
+		expect(canonicalNodeViz(node).type).toBe('tableplot');
+	});
+
+	it('the same-axis fit nodes still overlay raw + fit', () => {
+		// Guard the 8 nodes whose output X genuinely IS the input axis — the fix must not
+		// strip their raw series (verified against the demos: BinnedData, Cosinor,
+		// DoubleLogistic, FitFunction, Interpolate, RectangularWave, SmoothedData, TrendFit).
+		for (const [name, xKey, yKey] of [
+			['BinnedData', 'binnedx', 'binnedy_20'],
+			['SmoothedData', 'smoothedx', 'smoothedy_20'],
+			['TrendFit', 'trendx', 'trendy_20'],
+			['Interpolate', 'interpx', 'interpy_20']
+		]) {
+			const node = fitNode(name, { xIN: 10, yIN: [20], out: { [xKey]: 30, [yKey]: 40 } });
+			const spec = canonicalNodeViz(node);
+			expect(spec.series, name).toHaveLength(2);
+			expect(spec.series[0], name).toMatchObject({ x: 10, y: 20, kind: 'points' });
+			expect(spec.series[1], name).toMatchObject({ x: 30, y: 40, kind: 'line' });
+		}
 	});
 
 	it('fit TP with no x wired → falls back to tableplot (no broken scatter)', () => {

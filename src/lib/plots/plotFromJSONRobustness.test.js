@@ -3,9 +3,10 @@
 // plot class's fromJSON must keep its default padding rather than clobber it with
 // `undefined`, or the plotheight derived throws
 // "Cannot read properties of undefined (reading 'top')" at render.
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { Scatterplotclass } from './Scatterplot/Scatterplot.svelte';
 import { Boxplotclass } from './Boxplot/Boxplot.svelte';
+import { loadPlots } from './plotMap.js';
 
 describe('plot fromJSON is robust to a partial (quick-plot) inner', () => {
 	it('Scatterplot.fromJSON({data:[]}) keeps a valid padding + computable plotheight', () => {
@@ -62,5 +63,52 @@ describe('plot fromJSON is robust to a series with no style slots', () => {
 		});
 		expect(s.data[0].line.colour).toBe('#234154');
 		expect(s.data[0].points.colour).toBe('#BE796B');
+	});
+});
+
+// The two suites above hand-pick Scatterplot and Boxplot — the only plots Quick-Plot could
+// spawn when they were written. That left the other nine untested, and three of them
+// (Actogram, Histogram, MeanSEM) assigned `json.padding` straight over their default. A
+// session written by a tool omits padding, so the default became `undefined` and rendering
+// threw "Cannot read properties of undefined (reading 'left')" out of the actogram's
+// LightBand. Drive every plot in the registry instead of a hand-kept list, so a new plot
+// class is covered the day it is added.
+describe('EVERY registered plot survives a partial inner', () => {
+	let plotMap;
+	beforeAll(async () => {
+		plotMap = await loadPlots();
+	});
+
+	it('covers the whole registry (guards against the list silently shrinking)', () => {
+		expect(plotMap.size).toBeGreaterThanOrEqual(10);
+	});
+
+	it('keeps a usable padding for a minimal `{data:[]}` inner', async () => {
+		for (const [key, entry] of await loadPlots()) {
+			const cls = entry.data;
+			// Compare against the class's OWN defaults rather than a hardcoded expectation: plots
+			// name the box `padding` or `paddingIN`, and the table-like plots (tableplot,
+			// dataview) have no padding at all. Deriving the field from a fresh instance keeps
+			// this honest — it asserts only where a default actually exists, and adapts to a new
+			// plot without anyone remembering to update a list.
+			const fresh = cls.fromJSON(null, null);
+			const field =
+				fresh?.paddingIN !== undefined ? 'paddingIN' : fresh?.padding !== undefined ? 'padding' : null;
+			if (!field) continue; // no padding concept (tableplot / dataview)
+
+			const partial = cls.fromJSON(null, { data: [] });
+			const box = partial[field];
+			expect(box, `${key}: ${field} is undefined — fromJSON clobbered the class default`).toBeDefined();
+			for (const side of ['top', 'right', 'bottom', 'left']) {
+				expect(box?.[side], `${key}.${field}.${side}`).toEqual(expect.any(Number));
+			}
+		}
+	});
+
+	it('survives a completely empty inner `{}` and a null inner', async () => {
+		for (const [key, entry] of await loadPlots()) {
+			expect(() => entry.data.fromJSON(null, {}), `${key} with {}`).not.toThrow();
+			expect(() => entry.data.fromJSON(null, null), `${key} with null`).not.toThrow();
+		}
 	});
 });

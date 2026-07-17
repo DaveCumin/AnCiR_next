@@ -13,6 +13,23 @@ const toArray = (v) => (Array.isArray(v) ? v : v == null ? [] : [v]);
 const colName = (id) => getColumnById(id)?.name ?? String(id);
 const isRef = (id) => typeof id === 'number' && id >= 0;
 
+/**
+ * Nodes that fold their input onto a single period: the output X is a phase-within-one-day
+ * axis, while the input X is elapsed time across the whole record. Same unit (hours),
+ * different quantity — so the raw series must NOT be overlaid on the profile. In the shipped
+ * demos the raw x spans [0..95] (AverageProfile) and [0..335] (NPCRA) against a profile on
+ * [0.5..23.5], which drew the profile squashed into a corner of the raw record's axis and read
+ * as though it described only the first day.
+ *
+ * Keyed by node name because this is a statement about what the plot MEANS, which is this
+ * module's job (as with the GroupComparison / RayleighTest cases below); the registry's
+ * xOutKey / yOutKeyPrefix stay generic wiring facts.
+ */
+const FOLDED_PROFILE = new Map([
+	['AverageProfile', 'average profile'],
+	['NonparametricRA', 'average profile']
+]);
+
 export function canonicalNodeViz(node) {
 	if (!node) return null;
 	if (node.type === 'tableprocess' && node.tpObj) return tpViz(node.tpObj);
@@ -26,7 +43,21 @@ function tpViz(tp) {
 	const yINs = toArray(tp.args?.yIN);
 	const xRaw = tp.args?.xIN;
 
-	// FIT: the node declares a fitted-curve output (xOutKey + yOutKeyPrefix).
+	// Nodes whose output X is a different quantity from the input X. These return early even
+	// when they can't build a spec (falling back to the table): dropping through to the fit
+	// branch below would overlay the raw input on a foreign axis, which is the bug this
+	// guards against — a Rhythmicity node with no outputs yet would plot the raw time series
+	// under a "data + fit" title.
+	if (tp.name === 'RhythmicityAnalysis') {
+		// period vs power / magnitude, or lag vs correlation, per the analysis mode.
+		return rhythmicityViz(tp, entry, out, yINs) ?? tableFallback(tp, yINs);
+	}
+	if (FOLDED_PROFILE.has(tp.name)) {
+		return foldedProfileViz(tp, entry, out, yINs) ?? tableFallback(tp, yINs);
+	}
+
+	// FIT: the node declares a fitted-curve output (xOutKey + yOutKeyPrefix) on the INPUT's own
+	// x axis, so raw points and the fitted line belong on one plot.
 	if (entry?.xOutKey && entry?.yOutKeyPrefix && isRef(xRaw)) {
 		const xOut = out[entry.xOutKey];
 		const series = [];
@@ -60,6 +91,50 @@ function tpViz(tp) {
 
 	// Fallback: a table of the inputs + every numeric output column.
 	return tableFallback(tp, yINs);
+}
+
+/** The folded curve alone, on its phase-within-one-period axis. Null when not yet computed. */
+function foldedProfileViz(tp, entry, out, yINs) {
+	if (!entry?.xOutKey || !entry?.yOutKeyPrefix) return null;
+	const xOut = out[entry.xOutKey];
+	if (!isRef(xOut)) return null;
+	const series = [];
+	for (const yId of yINs) {
+		const yOut = out[entry.yOutKeyPrefix + yId];
+		if (isRef(yOut)) {
+			series.push({ x: xOut, y: yOut, label: colName(yId), kind: 'line', colour: OUT_COLOUR });
+		}
+	}
+	if (!series.length) return null;
+	return { type: 'scatterplot', title: `${tp.name}: ${FOLDED_PROFILE.get(tp.name)}`, series };
+}
+
+/**
+ * RhythmicityAnalysis: the spectrum/correlogram the node actually computed.
+ *
+ * A standalone node emits one pair of array columns PER Y, named `<yId>_<key>` — the keys
+ * depending on the analysis mode (periodogram → period/power, fft → period/magnitude,
+ * correlogram → lag/correlation). `getPrimaryKeys` on the registry definition is the single
+ * source of that mapping; without it we can't know which output is the X, so fall through to
+ * the table rather than guess.
+ *
+ * Returns null when nothing has been computed yet, letting the caller use the table fallback
+ * instead of emitting an empty scatter.
+ */
+function rhythmicityViz(tp, entry, out, yINs) {
+	const primary = entry?.definition?.getPrimaryKeys?.(tp.args ?? {});
+	if (!primary?.x || !primary?.y) return null;
+
+	const series = [];
+	for (const yId of yINs) {
+		const xOut = out[`${yId}_${primary.x}`];
+		const yOut = out[`${yId}_${primary.y}`];
+		if (isRef(xOut) && isRef(yOut)) {
+			series.push({ x: xOut, y: yOut, label: colName(yId), kind: 'line', colour: OUT_COLOUR });
+		}
+	}
+	if (!series.length) return null;
+	return { type: 'scatterplot', title: `${tp.name}: ${primary.y} vs ${primary.x}`, series };
 }
 
 function tableFallback(tp, yINs) {
