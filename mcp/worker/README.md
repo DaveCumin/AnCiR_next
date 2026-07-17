@@ -132,6 +132,30 @@ Every `/build` writes one structured line, so you can review what people actuall
 model let the user down). `errors`/`warnings` can be non-empty even on `ok` (a node dropped, or
 dynamic outputs not pre-allocated).
 
+## The repair round
+
+`/build` gives the model its own mistakes back, **once**, when the normalizer reports errors.
+
+This matters more than any prompt wording. The normalizer already knows exactly what went wrong
+and says so — *"no column named `time_1`. Available: time, values, values_1, values_2"* — and
+that message was going to the USER, who can only reword and hope. The model can act on it: it's
+a precise, mechanical correction, and it's the same class of error every time (a plausible
+column name that doesn't exist). A catalogue note can only fix the mistakes someone predicted;
+this fixes any the normalizer can diagnose.
+
+Rules, all of them deliberate:
+
+- **Once.** A second failure is a real dead end, and looping would burn a token budget the free
+  tier doesn't have (8K/min — a build is ~2.5K, so a repair round roughly doubles a failing
+  request).
+- **Only if it helps.** The retry is kept only when it has *fewer* errors AND hasn't quietly
+  dropped analyses that worked. Otherwise the first answer stands and the user still sees the
+  errors.
+- **Never on a clean draft** — no wasted call.
+- **`repaired: true`** lands in the log. Watch it: a rise means the catalogue is misleading
+  models, not that one prompt was unlucky. Repairs that still weren't enough show up as
+  `outcome: "ok"` with a non-empty `errors`.
+
 ## Prompt injection
 
 `/edit` puts the user's session into the system prompt — and **a session is not the user's

@@ -196,6 +196,32 @@ async function askModel({ llm, system, user, options: o, callerKey, done }) {
 	}
 }
 
+/**
+ * The follow-up message for a repair round: the model's own answer, and precisely what was
+ * unusable about it.
+ *
+ * Quotes the errors verbatim because they're already the most useful thing in the system — they
+ * name the bad reference AND list what was actually available, which is exactly what the model
+ * needed and didn't have. Insists on the WHOLE object back: a patch would have to be applied,
+ * and applying a model's patch to a model's JSON is a second thing to get wrong.
+ */
+export function repairPrompt(userPrompt, draft, errors) {
+	return [
+		userPrompt,
+		'',
+		'You already answered this, and most of it was fine. This was your answer:',
+		JSON.stringify(draft),
+		'',
+		'These parts could NOT be used and were dropped:',
+		...errors.map((e) => `- ${e}`),
+		'',
+		'Each message above names what was wrong and lists the columns that actually exist.',
+		'Reply with the WHOLE corrected JSON object — same shape, same rules. Fix only those',
+		'problems and keep everything that worked. If a column you wanted does not exist, use',
+		'one that does, or drop that part rather than inventing a name.'
+	].join('\n');
+}
+
 async function handleBuild(request, env) {
 	let body;
 	try {
@@ -254,9 +280,47 @@ async function handleBuild(request, env) {
 	// The id is minted BEFORE normalising so it can be stamped into the session itself — the
 	// session and the log line have to agree on it for the join to work.
 	const sessionId = crypto.randomUUID();
-	const { session, warnings, errors } = normalizeSession(draft, {
-		provenance: fingerprint('build', sessionId, { model: llm.model })
-	});
+	const provenance = fingerprint('build', sessionId, { model: llm.model });
+
+	let { session, warnings, errors } = normalizeSession(draft, { provenance });
+	let repaired = false;
+
+	// Give the model its own mistakes back, ONCE.
+	//
+	// The normalizer already knows exactly what went wrong and says so — "no column named
+	// time_1. Available: time, values, values_1, values_2" — and we were showing that to the
+	// USER, who can't do anything with it but reword and hope. The model can: it's a precise,
+	// mechanical correction, and it's the same class of error every time (a plausible column
+	// name that doesn't exist).
+	//
+	// This is the durable half of the fix. No prompt can anticipate every wrong guess a model
+	// will make; a repair round fixes any of them the normalizer can diagnose, including the
+	// ones nobody has thought of yet.
+	//
+	// Strictly once, and only if it actually helps: a second failure is a real dead end, and
+	// looping would burn the token budget an 8K/min free tier doesn't have.
+	if (errors.length) {
+		const retry = await askModel({
+			llm,
+			system: buildDraftPrompt(),
+			user: repairPrompt(v.value.prompt, draft, errors),
+			options: v.value.options ?? {},
+			callerKey: !!v.value.llm?.apiKey,
+			done: (outcome, extra) => done(`repair_${outcome}`, extra)
+		});
+		if (retry.draft) {
+			const second = normalizeSession(retry.draft, { provenance });
+			// Keep it only if it's genuinely better. A repair that trades one broken plot for
+			// another, or that quietly drops what DID work, is worse than the first answer.
+			const better =
+				second.errors.length < errors.length &&
+				second.session.tableProcesses.length >= session.tableProcesses.length;
+			if (better) {
+				({ session, warnings, errors } = second);
+				repaired = true;
+			}
+		}
+	}
 	// A draft that produced nothing usable is a failure, not an empty session.
 	if (!session.tableProcesses.length && !session.data.length) {
 		done('empty_session', { errors, warnings });
@@ -270,10 +334,15 @@ async function handleBuild(request, env) {
 
 	// Success. `errors`/`warnings` can be non-empty even here (a node was dropped or its
 	// dynamic outputs weren't pre-allocated) — exactly what's worth reviewing later.
+	//
+	// `repaired` is the number to watch: it says how often the model gets it wrong first time,
+	// and a rise in it points at a catalogue that's misleading models rather than at one bad
+	// prompt. Repairs that were still not good enough show up as `ok` with a non-empty `errors`.
 	done('ok', {
 		sessionId,
 		nodes: session.tableProcesses.map((t) => t.name),
 		plots: session.plots.map((p) => p.type),
+		repaired,
 		errors,
 		warnings
 	});

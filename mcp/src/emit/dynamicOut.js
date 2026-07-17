@@ -77,7 +77,13 @@ export function movingStatKeys(args) {
  * gen-schema bakes them into the catalogue (worker/draftPrompt.js renders them).
  */
 export const OUTPUT_NOTES = {
-	Split: 'per Y column, one per segment: <your Y column>_1, <your Y column>_2, … (splitTimes has N entries ⇒ N+1 segments)',
+	// The alignment sentence is the load-bearing one. Split's segments are FULL-LENGTH and
+	// null-padded outside their window (`t.map(...)` in Split.svelte), so every segment still
+	// lines up row-for-row with the ORIGINAL x column — there is no per-segment x, and none is
+	// needed. Left unsaid, a model reaches for the symmetry it expects, asks for `time_1`, and
+	// the whole chain after the Split is dropped as unresolvable.
+	Split:
+		'per Y column, one per segment: <your Y column>_1, <your Y column>_2, … (splitTimes has N entries ⇒ N+1 segments). Each segment is the SAME LENGTH as the input with the other segments blanked out, so keep using the ORIGINAL x column with it — there is no <your x column>_1, and asking for one will fail. Only pass a column in yIN if you want it split',
 	MovingAnalysis:
 		'per Y column, one per statistic the chosen `analysis` computes: <your Y column>_<stat> (e.g. <your Y column>_period)',
 	CollectColumns: 'one per collected column: col_<the column>',

@@ -42,6 +42,25 @@ function stubLLM(content, { status = 200 } = {}) {
 			headers: { 'Content-Type': 'application/json' }
 		});
 }
+
+/**
+ * Stub a CONVERSATION: one canned reply per call, so a repair round can answer differently from
+ * the first attempt. Returns the captured request bodies — the repair message is itself worth
+ * asserting on, since it's what carries the errors back to the model.
+ */
+function stubLLMSequence(...contents) {
+	const sent = [];
+	let i = 0;
+	globalThis.fetch = async (_url, init) => {
+		sent.push(JSON.parse(init.body));
+		const content = contents[Math.min(i++, contents.length - 1)];
+		return new Response(JSON.stringify({ choices: [{ message: { content } }] }), {
+			status: 200,
+			headers: { 'Content-Type': 'application/json' }
+		});
+	};
+	return sent;
+}
 beforeEach(() => {
 	realFetch = globalThis.fetch;
 });
@@ -227,6 +246,89 @@ test('POST /build: draft → session → loadFromURL link, and the session is fe
 	assert.equal(session.generatedBy.sessionId, out.sessionId);
 	assert.equal(session.generatedBy.route, 'build');
 	assert.equal(session.generatedBy.model, LLM.model);
+});
+
+// The real failure, verbatim: asked to split a recording and analyse each half, the model
+// referenced `time_1` — a per-segment x column that doesn't exist, because Split's segments are
+// full-length and null-padded and keep using the ORIGINAL x. Everything downstream was dropped
+// and the user got a wall of errors they could do nothing with.
+//
+// The catalogue now says so, but no prompt can anticipate every wrong guess. The normalizer
+// already knows precisely what's wrong AND what was available — so give the model its own
+// mistake back, once. That fixes this class of error whether or not anyone predicted it.
+const SPLIT_DRAFT = (xForAnalysis) => ({
+	analyses: [
+		{ name: 'SimulatedData', args: { seed: 1, samplingPeriod_hours: 1 } },
+		{ name: 'Split', args: { xIN: 'time', yIN: ['values'], splitTimes: [100] } },
+		{
+			name: 'RhythmicityAnalysis',
+			args: { xIN: xForAnalysis, yIN: ['values_1'], analysis: 'periodogram', pgMethod: 'Lomb-Scargle' }
+		}
+	]
+});
+
+test('a model that invents a column is told, once, and fixes it', async () => {
+	const sent = stubLLMSequence(
+		JSON.stringify(SPLIT_DRAFT('time_1')), // the mistake that actually happened
+		JSON.stringify(SPLIT_DRAFT('time')) // what it produces once told
+	);
+	const env = ENV();
+	const res = await worker.fetch(post({ prompt: 'split it and analyse each half', llm: LLM }), env);
+	assert.equal(res.status, 200);
+	const out = await res.json();
+
+	// The repair landed: no errors, and the analysis that was dropped is in the session.
+	assert.deepEqual(out.errors, []);
+	const session = await (await worker.fetch(new Request(out.sessionUrl), env)).json();
+	assert.ok(
+		session.tableProcesses.some((t) => t.name === 'RhythmicityAnalysis'),
+		'the analysis survived, rather than being dropped'
+	);
+
+	// Exactly two calls — a repair round, not a loop.
+	assert.equal(sent.length, 2);
+
+	// The follow-up carries the model's own answer and the normalizer's diagnosis, which names
+	// both the bad reference and what actually existed. That pairing is the whole mechanism.
+	const followUp = sent[1].messages[1].content;
+	assert.match(followUp, /no column named "time_1"/);
+	assert.match(followUp, /Available: .*values_1/);
+	assert.match(followUp, /WHOLE corrected JSON object/);
+});
+
+test('a repair that does not help is discarded, and never retried again', async () => {
+	// Same broken answer twice: the second attempt is no better, so the first stands and the
+	// user still gets the errors — better than a loop that burns an 8K/min budget.
+	const sent = stubLLMSequence(JSON.stringify(SPLIT_DRAFT('time_1')));
+	const res = await worker.fetch(post({ prompt: 'split it', llm: LLM }), ENV());
+	assert.equal(res.status, 200);
+	const out = await res.json();
+
+	assert.equal(sent.length, 2, 'tried once more, then stopped');
+	assert.ok(out.errors.length, 'the errors are still reported honestly');
+	assert.match(out.errors[0], /time_1/);
+});
+
+test('a clean draft is never repaired — no wasted call', async () => {
+	const sent = stubLLMSequence(JSON.stringify(SPLIT_DRAFT('time')));
+	const res = await worker.fetch(post({ prompt: 'split it', llm: LLM }), ENV());
+	assert.equal(res.status, 200);
+	assert.deepEqual((await res.json()).errors, []);
+	assert.equal(sent.length, 1, 'one call when the first answer is good');
+});
+
+test('logs whether a repair was needed — the number that says the catalogue is misleading', async () => {
+	const lines = [];
+	const realLog = console.log;
+	console.log = (o) => lines.push(o);
+	try {
+		stubLLMSequence(JSON.stringify(SPLIT_DRAFT('time_1')), JSON.stringify(SPLIT_DRAFT('time')));
+		await worker.fetch(post({ prompt: 'split it', llm: LLM }), ENV());
+	} finally {
+		console.log = realLog;
+	}
+	const ok = lines.find((l) => l?.event === 'build' && l.outcome === 'ok');
+	assert.equal(ok.repaired, true);
 });
 
 test('the fingerprint never carries the api key or the prompt — the session travels', async () => {
