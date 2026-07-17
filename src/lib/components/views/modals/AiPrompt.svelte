@@ -33,22 +33,16 @@
 	/**
 	 * The two modes are tabs in the SAME bar as Advanced rather than a second row of their own:
 	 * they select which panel you're filling in, which is what the bar already means. Switching
-	 * drops any planned edit — a plan is built against one mode's rules and reads as approved
-	 * work; carrying it across would offer to apply changes the user is no longer asking for.
+	 * clears anything held over from the other mode, which no longer applies.
 	 */
 	function pickMode(next) {
 		if (mode !== next) {
-			plan = null;
 			pending = null;
 			error = '';
 		}
 		mode = next;
 		tab = 'prompt';
 	}
-
-	// A planned edit, held for approval. The AI never mutates the user's session unasked — they
-	// see exactly what will happen and press Apply.
-	let plan = $state(null);
 
 	// A partially-built session: the Worker answered 200, but dropped something on the way (an
 	// unknown analysis, a plot whose series wired nothing). It reports that in `errors`, and we
@@ -83,7 +77,6 @@
 		error = '';
 		busy = false;
 		pending = null;
-		plan = null;
 		// Don't leave a key sitting in memory once the dialog is closed.
 		apiKey = '';
 	}
@@ -116,7 +109,6 @@
 		busy = true;
 		error = '';
 		pending = null;
-		plan = null;
 		try {
 			// Send llm{} only if the user actually filled it in.
 			const llmIn = {};
@@ -127,9 +119,11 @@
 
 			if (effectiveMode === 'edit') {
 				const spec = await editNlSession({ prompt: text, session: summariseSession(), llm });
-				// Compile against the REAL session and check every reference before anything is
-				// applied. The op engine can't roll a half-applied batch back, so this is the
-				// only thing standing between a model's guess and the user's work.
+				// Compile against the REAL session and check every reference. This still runs even
+				// though nobody approves the result any more — the op engine can't roll a
+				// half-applied batch back, so it's the only thing standing between a model's guess
+				// and the user's work. What changed is who reviews it: the user, afterwards, with
+				// undo in hand.
 				const p = planEdit(spec, { summary: summariseSession(), facts: registryFacts() });
 				if (!p.analyses.length && !p.plots.length && !p.changes.length) {
 					error =
@@ -139,9 +133,7 @@
 					busy = false;
 					return;
 				}
-				plan = p;
-				busy = false;
-				tab = 'prompt';
+				apply(p);
 				return;
 			}
 
@@ -164,15 +156,21 @@
 		}
 	}
 
-	/** Apply the approved plan to the open session. */
-	function apply() {
-		if (!plan) return;
+	/**
+	 * Apply a plan to the open session, straight away.
+	 *
+	 * There's no approve-this-first step: the AI makes the change and the user judges the result,
+	 * which is a real thing on the canvas rather than a description of one. A preview can only
+	 * ever say "Add analysis: Cosinor" — the actual question is whether the fit looks right, and
+	 * no summary answers that. Undo is the safety net, so the toast below names it.
+	 */
+	function apply(p) {
 		let res;
 		try {
-			res = applyEdit(plan);
+			res = applyEdit(p);
 		} catch (e) {
 			error = `Couldn't apply those changes: ${e?.message ?? e}`;
-			plan = null;
+			busy = false;
 			return;
 		}
 		const { analyses, plots, changes } = res.added;
@@ -182,12 +180,13 @@
 			changes && `${changes} ${changes === 1 ? 'change' : 'changes'}`
 		].filter(Boolean);
 
-		// Say it's AI-made and reversible in the same breath as saying it worked — the same
-		// warning a ?loadFromURL= AI session gets, for the same reason.
+		// The warning IS the review step now, so it leads with the caveat rather than the success:
+		// nothing asked the user to approve this, and they should look at it. Same warning a
+		// ?loadFromURL= AI session gets, for the same reason.
 		addNotification(
-			`Added ${bits.join(', ')}. Check the result — it's AI-generated. Undo to reverse it.`,
+			`Edits made with AI, please check. Added ${bits.join(', ')} — undo reverses it.`,
 			'warning',
-			10000
+			12000
 		);
 		// Anything the planner had to drop is worth saying out loud rather than leaving the user
 		// to notice the gap themselves.
@@ -198,7 +197,7 @@
 		// path makes.
 		appState.tidyLayoutRequest = (appState.tidyLayoutRequest ?? 0) + 1;
 
-		plan = null;
+		busy = false;
 		prompt = '';
 		showModal = false;
 	}
@@ -215,40 +214,31 @@
 	{/snippet}
 
 	<div class="tabs" role="tablist">
-		{#if hasSession}
-			<!-- The two modes only exist when there IS a session to add to. They're tabs in this
-			     bar rather than a row of their own: they choose which panel you're filling in,
-			     which is what these tabs already mean. The choice is destructive in one direction
-			     (a new session replaces the open one), so it stays explicit rather than inferred
-			     from the wording of the prompt. -->
-			<button
-				role="tab"
-				aria-selected={tab === 'prompt' && mode === 'edit'}
-				class:active={tab === 'prompt' && mode === 'edit'}
-				disabled={busy}
-				onclick={() => pickMode('edit')}
-			>
-				Add to this session
-			</button>
-			<button
-				role="tab"
-				aria-selected={tab === 'prompt' && mode === 'create'}
-				class:active={tab === 'prompt' && mode === 'create'}
-				disabled={busy}
-				onclick={() => pickMode('create')}
-			>
-				Start a new one
-			</button>
-		{:else}
-			<button
-				role="tab"
-				aria-selected={tab === 'prompt'}
-				class:active={tab === 'prompt'}
-				onclick={() => (tab = 'prompt')}
-			>
-				Prompt
-			</button>
-		{/if}
+		<!-- The modes are tabs in this bar rather than a row of their own: they choose which panel
+		     you're filling in, which is what these tabs already mean. Both are ALWAYS shown, even
+		     with an empty canvas where "add" is impossible — hiding it there meant nobody with an
+		     empty session could discover that the AI edits at all. Disabled-with-a-reason teaches;
+		     absent hides. The choice is destructive in one direction (a new session replaces the
+		     open one), so it stays explicit rather than inferred from the wording of the prompt. -->
+		<button
+			role="tab"
+			aria-selected={tab === 'prompt' && effectiveMode === 'edit'}
+			class:active={tab === 'prompt' && effectiveMode === 'edit'}
+			disabled={busy || !hasSession}
+			title={hasSession ? '' : 'Nothing to add to yet — build or open a session first'}
+			onclick={() => pickMode('edit')}
+		>
+			Add to this session
+		</button>
+		<button
+			role="tab"
+			aria-selected={tab === 'prompt' && effectiveMode === 'create'}
+			class:active={tab === 'prompt' && effectiveMode === 'create'}
+			disabled={busy}
+			onclick={() => pickMode('create')}
+		>
+			Start a new one
+		</button>
 		<button
 			role="tab"
 			aria-selected={tab === 'advanced'}
@@ -262,8 +252,8 @@
 	{#if tab === 'prompt'}
 		<p class="hint">
 			{#if effectiveMode === 'edit'}
-				Describe what to add. You'll see exactly what will change before anything happens, and
-				undo reverses it.
+				Describe what to add. It's applied straight to this session for you to check — undo
+				reverses it.
 			{:else}
 				Describe the analysis you want. A session is built for you to check and edit — it is a
 				starting point, not an answer.
@@ -380,27 +370,6 @@
 		</div>
 	{/if}
 
-	{#if plan}
-		<!-- The approval step. Nothing has touched the session yet: this is what WOULD happen,
-		     in the user's words, so they can say no. -->
-		<div class="plan">
-			<strong>These changes are ready to apply:</strong>
-			<ul>
-				{#each plan.preview as line, i (i)}
-					<li>{line}</li>
-				{/each}
-			</ul>
-			{#if plan.errors.length}
-				<p class="plan-dropped">Not included:</p>
-				<ul class="plan-dropped-list">
-					{#each plan.errors as e, i (i)}
-						<li>{e}</li>
-					{/each}
-				</ul>
-			{/if}
-		</div>
-	{/if}
-
 	{#if pending}
 		<div class="gate" role="alert">
 			<strong>Some of that request was left out.</strong>
@@ -424,22 +393,17 @@
 		{#if pending}
 			<button class="secondary" onclick={() => load(pending.sessionUrl)}>Load anyway</button>
 		{/if}
-		{#if plan}
-			<button class="secondary" onclick={() => (plan = null)}>Discard</button>
-			<button class="primary" onclick={apply}>Apply changes</button>
-		{:else}
-			<button class="primary" disabled={busy || !prompt.trim()} onclick={submit}>
-				{#if busy}
-					{effectiveMode === 'edit' ? 'Thinking…' : 'Building…'}
-				{:else if effectiveMode === 'edit'}
-					Suggest changes
-				{:else if pending}
-					Build again
-				{:else}
-					Build session
-				{/if}
-			</button>
-		{/if}
+		<button class="primary" disabled={busy || !prompt.trim()} onclick={submit}>
+			{#if busy}
+				{effectiveMode === 'edit' ? 'Making changes…' : 'Building…'}
+			{:else if effectiveMode === 'edit'}
+				Make changes
+			{:else if pending}
+				Build again
+			{:else}
+				Build session
+			{/if}
+		</button>
 	</div>
 </Modal>
 
@@ -488,28 +452,6 @@
 		border: 1px solid var(--color-warning);
 		border-radius: var(--radius-sm);
 		padding: var(--space-1) var(--space-2);
-	}
-	.plan {
-		background: var(--color-lightness-97);
-		border: 1px solid var(--color-accent);
-		border-radius: var(--radius-sm);
-		padding: var(--space-2);
-		margin: var(--space-3) 0;
-		font-size: var(--font-sm);
-		color: var(--color-lightness-25);
-	}
-	.plan ul {
-		margin: var(--space-1) 0 0;
-		padding-left: var(--space-4);
-	}
-	.plan-dropped {
-		margin: var(--space-2) 0 0;
-		font-size: var(--font-xs);
-		color: var(--color-text-muted);
-	}
-	.plan-dropped-list {
-		font-size: var(--font-xs);
-		color: var(--color-text-muted);
 	}
 	textarea,
 	input {
