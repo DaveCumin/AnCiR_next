@@ -20,7 +20,7 @@
 
 import { SCHEMA, PLOTS as plots_, columnIdFields } from './schema.js';
 
-const SESSION_VERSION = 'β.56.1'; // tracks the AnCiR app; importJson tolerates minor drift.
+const SESSION_VERSION = 'β.57.1'; // tracks the AnCiR app; importJson tolerates minor drift.
 
 // Per-series style slots, each with an explicit colour. Union across the types that read them:
 //   Scatterplot: line, points · Periodogram: line, thresholdline, points

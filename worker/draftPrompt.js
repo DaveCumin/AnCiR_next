@@ -39,10 +39,15 @@ export function buildCatalogue(schema = generated) {
 		})
 		.join('\n');
 	// Render plots the way analyses are rendered: one per line, with a CONCRETE series template.
-	// The old one-line `type[a,b]` list technically carried the same field names, but next to a
-	// worked x/y example it was too easy to skim past — models emitted {x,y} for actogram (whose
-	// fields are time/values), which wired nothing and dropped the plot. Only scatterplot,
-	// boxplot and meansem take x/y; most take time/values, and histogram takes `column`.
+	// The old one-line `type[a,b]` list carried the same names, but next to a worked x/y example
+	// it was too easy to skim past, and a model that emitted {x,y} for an actogram (ports
+	// time/values) got its plot dropped. Only scatterplot, boxplot and meansem take x/y; most
+	// take time/values, and histogram takes `column`.
+	//
+	// These are the PUBLIC PORT names — what the UI calls each input. They are NOT what the plot
+	// classes store (two-input plots persist x/y; see normalizer.js storageField). The prompt
+	// deliberately speaks the port vocabulary and lets the normalizer translate, so this stays
+	// the language a person reading the session would recognise.
 	const plots = Object.entries(schema.plots)
 		.map(([type, p]) => {
 			const fields = p.inputs ?? [];
