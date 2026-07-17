@@ -73,11 +73,24 @@ function logBuild(fields) {
 	console.log(JSON.stringify({ event: 'build', ts: new Date().toISOString(), ...fields }));
 }
 
-/** Best-effort per-IP throttle. Cloudflare's native rate limiting is the real defence. */
+/**
+ * Per-IP throttle for /build. Matters because the default model runs on OUR key, so an
+ * unthrottled endpoint is an open, funded proxy.
+ *
+ * Prefers Cloudflare's own rate limiter ([[ratelimits]] binding) — enforced at the edge and
+ * accurate. Falls back to a KV counter when the binding isn't present (tests, or a stripped
+ * config), which is only best-effort: KV is eventually consistent, so a burst can slip past.
+ */
 async function rateLimited(env, request) {
+	const ip = request.headers.get('CF-Connecting-IP') ?? 'anon';
+
+	if (env.RATE_LIMITER?.limit) {
+		const { success } = await env.RATE_LIMITER.limit({ key: ip });
+		return !success;
+	}
+
 	const max = Number(env.BUILD_RATE_MAX ?? 0);
 	if (!max || !env.SESSIONS) return false;
-	const ip = request.headers.get('CF-Connecting-IP') ?? 'anon';
 	const key = `rl:${ip}:${Math.floor(Date.now() / 60000)}`; // per-minute bucket
 	const n = Number((await env.SESSIONS.get(key)) ?? 0) + 1;
 	await env.SESSIONS.put(key, String(n), { expirationTtl: 120 });
@@ -98,7 +111,14 @@ async function handleBuild(request, env) {
 	const v = validateBuild(body, { isPublic });
 	if (!v.ok) return json({ error: v.error }, 400);
 
-	if (await rateLimited(env, request)) return json({ error: 'rate limit exceeded' }, 429);
+	if (await rateLimited(env, request)) {
+		// A human hitting this is rare, so say something they can act on rather than "429".
+		return json(
+			{ error: 'Too many requests. Please wait a minute and try again.', retryAfterS: 60 },
+			429,
+			{ 'Retry-After': '60' }
+		);
+	}
 
 	const llm = {
 		baseUrl: v.value.llm?.baseUrl ?? env.OPENAI_BASE_URL,

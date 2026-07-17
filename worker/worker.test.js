@@ -241,6 +241,46 @@ test('POST /build reports an unusable draft rather than storing an empty session
 	assert.match((await res.json()).errors.join(' '), /Unknown analysis/);
 });
 
+test('rate limiting: uses the Cloudflare limiter binding and returns an actionable 429', async () => {
+	stubLLM(JSON.stringify({ analyses: [{ name: 'SimulatedData', args: {} }] }));
+	const seen = [];
+	const env = {
+		...ENV(),
+		// Cloudflare's [[ratelimits]] binding shape.
+		RATE_LIMITER: {
+			async limit({ key }) {
+				seen.push(key);
+				return { success: false }; // pretend the limit is blown
+			}
+		}
+	};
+	const req = new Request('https://nl.example.com/build', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': '203.0.113.7' },
+		body: JSON.stringify({ prompt: 'hi', llm: LLM })
+	});
+	const res = await worker.fetch(req, env);
+	assert.equal(res.status, 429);
+	assert.equal(res.headers.get('Retry-After'), '60');
+	const out = await res.json();
+	assert.match(out.error, /Too many requests.*wait a minute/i, 'a human-readable message');
+	assert.deepEqual(seen, ['203.0.113.7'], 'limits per client IP');
+});
+
+test('rate limiting: the binding wins over the KV fallback', async () => {
+	stubLLM(JSON.stringify({ analyses: [{ name: 'SimulatedData', args: {} }] }));
+	const env = {
+		...ENV(),
+		BUILD_RATE_MAX: '1',
+		RATE_LIMITER: { async limit() { return { success: true }; } } // allowed
+	};
+	// Several requests would trip the KV counter (max 1); the binding says fine, so they pass.
+	for (let i = 0; i < 3; i++) {
+		const res = await worker.fetch(post({ prompt: `p${i}`, llm: LLM }), env);
+		assert.equal(res.status, 200, `request ${i} allowed by the binding`);
+	}
+});
+
 test('GET /sessions/:id → 404 for unknown id; OPTIONS preflight is allowed', async () => {
 	const env = ENV();
 	const missing = await worker.fetch(new Request('https://nl.example.com/sessions/nope'), env);

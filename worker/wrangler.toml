@@ -42,5 +42,17 @@ OPENAI_MODEL = "openai/gpt-oss-120b"
 binding = "SESSIONS"
 id = "4a5db128db3c49cdb10b10769727a60a"
 
+# Cloudflare's own rate limiter, enforced at the edge — the real defence for /build now that
+# the default model is on OUR key. No dashboard step and no custom domain needed: it works on
+# workers.dev (WAF "rate limiting rules" do NOT — those are zone-level).
+#
+# `namespace_id` is just a number YOU pick to identify this limiter within the Worker; it
+# doesn't refer to anything you have to create. `period` accepts ONLY 10 or 60 (seconds).
+# Tune `limit` to taste: 10 builds/minute per IP is generous for humans, mean to a script.
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 10, period = 60 }
+
 # Local dev only — relaxes the SSRF guard so you can point at a local Ollama:
 #   npx wrangler dev --var ALLOW_LOCAL_LLM:1

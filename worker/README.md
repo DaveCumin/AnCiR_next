@@ -54,6 +54,33 @@ npm run worker:test    # node:test — fake KV + stubbed LLM, no network
 `worker:dev` relaxes the SSRF guard so you can point `llm.baseUrl` at a local Ollama
 (`http://localhost:11434/v1`). A **deployed** Worker can't reach a user's localhost anyway.
 
+## Rate limiting
+
+**Already on** — `wrangler.toml` declares Cloudflare's own rate limiter, so it's enforced at
+the edge, per client IP:
+
+```toml
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"                        # just an id YOU pick for this limiter
+simple = { limit = 10, period = 60 }         # period accepts ONLY 10 or 60 (seconds)
+```
+
+`wrangler deploy` prints `env.RATE_LIMITER (10 requests/60s)` to confirm. Change `limit`, and
+redeploy — there's no dashboard step. **This matters now that the default model runs on your
+key**: without it, `/build` is an open, funded proxy.
+
+> **Why not WAF "rate limiting rules"?** Those are the dashboard feature people usually mean,
+> but they're **zone-level and need a custom domain** — they don't apply to a `workers.dev`
+> URL. The binding above works on `workers.dev`.
+
+The KV counter (`BUILD_RATE_MAX`) remains only as a fallback for when the binding is absent
+(tests, stripped config); it's best-effort, since KV is eventually consistent.
+
+**What the user sees:** a blocked request returns 429 + `Retry-After`, and AnCiR's AI dialog
+shows *"Too many requests. The AI service limits how often sessions can be built — wait about
+60s and try again."* rather than a raw status code.
+
 ## Reading the prompt logs
 
 Every `/build` writes one structured line, so you can review what people actually ask for:
