@@ -12,11 +12,44 @@ See the ADR: `2026-07-15-static-session-emission` (in the vault).
 | | |
 | --- | --- |
 | `POST /build` | `{prompt, llm:{baseUrl,apiKey,model}, options?}` → `{url, sessionUrl, sessionId, warnings, errors}` |
+| `POST /mcp` | remote **MCP server** (JSON-RPC) — an agent builds sessions with no clone, no key |
 | `GET /sessions/:id` | the session JSON (CORS `*`, so AnCiR can fetch it cross-origin) |
 | `GET /health` | `{ok:true}` |
 
 `url` is the payoff: `https://<ancir>/?loadFromURL=<sessionUrl>` — open it and the session
 builds itself in the browser.
+
+## `/mcp` — the remote MCP server
+
+```bash
+claude mcp add --transport http ancir https://ancir-nl.david-cumin.workers.dev/mcp
+```
+
+That's the whole setup: no clone, no `npm install`, no VM. Two tools:
+
+| | |
+| --- | --- |
+| `list_capabilities` | every analysis and plot, with exact flat args, the columns each produces, and the fitted-curve pairing — straight from `session-schema.generated.json` |
+| `build_session` | a draft → normalizer → KV → the `?loadFromURL=` link, plus `structuredContent.{url,sessionUrl,sessionId,errors,warnings}` |
+
+**No LLM call and no API key** — the calling agent *is* the model, so `/mcp` never touches
+`OPENAI_*` and never spends the default key's quota. It's the same normalizer `/build` uses,
+minus the inference step.
+
+**It cannot return computed results.** The browser computes when the link is opened, so the
+agent gets a session to look at, not numbers to reason over. An agent that needs live values
+still wants the engine MCP (`mcp/src/server.js`, `npm start`) — that's the whole point of
+keeping both.
+
+Hand-written JSON-RPC rather than `@modelcontextprotocol/sdk`: the SDK's Streamable HTTP
+transport is built on Node's `req`/`res` and won't run on Workers. A tools-only server needs
+only `initialize` + `tools/list` + `tools/call`, so the SDK would be cost without benefit. The
+server is stateless — `GET /mcp` returns 405 (the spec's own way of saying "no SSE stream"),
+and there's no session id to track. `worker/mcp.test.js` drives it through the Worker's `fetch`,
+and it's verified against `wrangler dev` with the real SDK client.
+
+Rate limiting applies to `build_session` only, not the handshake — a client spends two requests
+on `initialize`/`tools/list` before doing anything, and those shouldn't eat the budget.
 
 ## Bring-your-own model
 

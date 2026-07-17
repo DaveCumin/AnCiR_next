@@ -7,6 +7,7 @@
 //
 // Routes
 //   POST /build        {prompt, llm:{baseUrl,apiKey,model}, options?} → {url, sessionId, …}
+//   POST /mcp          remote MCP server (JSON-RPC) — an agent builds sessions with no clone
 //   GET  /sessions/:id → the session JSON (CORS *, so AnCiR can fetch it cross-origin)
 //   GET  /health       → {ok:true}
 //
@@ -21,11 +22,14 @@ import { normalizeSession } from '../src/emit/normalizer.js';
 import { buildDraftPrompt } from './draftPrompt.js';
 import { validateBuild } from '../app/validation.js';
 import { chatCompletion } from '../app/llmClient.js';
+import { handleMcp } from './mcp.js';
 
 const CORS = {
 	'Access-Control-Allow-Origin': '*',
 	'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-	'Access-Control-Allow-Headers': 'Content-Type'
+	// Mcp-* headers are sent by MCP clients; browser-based ones are blocked without these.
+	'Access-Control-Allow-Headers': 'Content-Type, Accept, Mcp-Protocol-Version, Mcp-Session-Id',
+	'Access-Control-Expose-Headers': 'Mcp-Session-Id'
 };
 const json = (data, status = 200, extra = {}) =>
 	new Response(JSON.stringify(data), {
@@ -259,12 +263,35 @@ async function handleSession(id, env) {
 	return new Response(s, { headers: { 'Content-Type': 'application/json', ...CORS } });
 }
 
+/**
+ * POST /mcp — the remote MCP server (see mcp.js).
+ *
+ * Unlike /build there's no LLM call here (the calling agent IS the model), so this costs us no
+ * inference and needs no key. The only cost is a KV write, so the throttle is applied per
+ * build_session rather than per request — an MCP client spends 2 requests on handshake before
+ * it does anything, and those shouldn't eat the budget.
+ */
+async function handleMcpRoute(request, env) {
+	const { status, body } = await handleMcp(request, env, {
+		log: (fields) => console.log(fields),
+		rateLimited: () => rateLimited(env, request)
+	});
+	if (!body) return new Response(null, { status, headers: CORS });
+	return json(body, status);
+}
+
 export default {
 	async fetch(request, env) {
 		const url = new URL(request.url);
 		if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 		if (url.pathname === '/health') return json({ ok: true });
 		if (url.pathname === '/build' && request.method === 'POST') return handleBuild(request, env);
+		if (url.pathname === '/mcp') {
+			if (request.method === 'POST') return handleMcpRoute(request, env);
+			// The Streamable HTTP spec has GET open a server→client SSE stream. We're stateless
+			// and never push, and 405 is the spec's own way to say so — clients then just POST.
+			return json({ error: 'method not allowed' }, 405);
+		}
 		const m = url.pathname.match(/^\/sessions\/([\w-]+)$/);
 		if (m && request.method === 'GET') return handleSession(m[1], env);
 		return json({ error: 'not found' }, 404);

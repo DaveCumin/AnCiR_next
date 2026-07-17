@@ -19,7 +19,7 @@
 		"app:units": "node --test app/test-units.mjs",
 		"app:byo": "node app/test-byo.mjs",
 		"emit:test": "node --test src/emit/*.test.js",
-		"worker:test": "node --test worker/worker.test.js",
+		"worker:test": "node --test worker/worker.test.js worker/mcp.test.js",
 		"worker:dev": "wrangler dev --config worker/wrangler.toml --var ALLOW_LOCAL_LLM:1 --local",
 		"worker:deploy": "wrangler deploy --config worker/wrangler.toml"
 	},

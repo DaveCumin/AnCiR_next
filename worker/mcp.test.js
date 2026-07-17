@@ -1,0 +1,200 @@
+// node --test worker/mcp.test.js
+//
+// Drives POST /mcp through the Worker's fetch handler the way a real MCP client does, with a
+// fake KV. No LLM is stubbed anywhere here — and that's the point: the /mcp path must never
+// call a model (the calling agent IS the model), so any upstream fetch would be a bug.
+import { test, beforeEach, afterEach } from 'node:test';
+import assert from 'node:assert/strict';
+import worker from './index.js';
+
+const fakeKV = () => {
+	const m = new Map();
+	return {
+		_m: m,
+		async get(k) {
+			return m.has(k) ? m.get(k) : null;
+		},
+		async put(k, v) {
+			m.set(k, v);
+		}
+	};
+};
+const ENV = () => ({ SESSIONS: fakeKV(), ANCIR_BASE_URL: 'https://ancir.pages.dev' });
+
+/** POST one JSON-RPC message (or batch) to /mcp and return {status, body}. */
+async function rpc(msg, env = ENV()) {
+	const res = await worker.fetch(
+		new Request('https://nl.example.com/mcp', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			body: JSON.stringify(msg)
+		}),
+		env
+	);
+	const text = await res.text();
+	return { status: res.status, body: text ? JSON.parse(text) : null, res };
+}
+
+const call = (name, args, env) =>
+	rpc({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }, env);
+
+// Any outbound fetch from the /mcp path is a bug — make it loud rather than silent.
+let realFetch;
+beforeEach(() => {
+	realFetch = globalThis.fetch;
+	globalThis.fetch = async () => {
+		throw new Error('the /mcp path must not make network calls');
+	};
+});
+afterEach(() => {
+	globalThis.fetch = realFetch;
+});
+
+test('initialize → protocol version echoed, tools capability advertised', async () => {
+	const { status, body } = await rpc({
+		jsonrpc: '2.0',
+		id: 1,
+		method: 'initialize',
+		params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'x', version: '1' } }
+	});
+	assert.equal(status, 200);
+	assert.equal(body.jsonrpc, '2.0');
+	assert.equal(body.id, 1);
+	assert.equal(body.result.protocolVersion, '2025-06-18'); // echoed, since we support it
+	assert.ok(body.result.capabilities.tools);
+	assert.equal(body.result.serverInfo.name, 'ancir');
+});
+
+test('initialize with an unknown protocol version → we offer one we do support', async () => {
+	const { body } = await rpc({
+		jsonrpc: '2.0',
+		id: 1,
+		method: 'initialize',
+		params: { protocolVersion: '1999-01-01' }
+	});
+	assert.equal(body.result.protocolVersion, '2025-03-26');
+});
+
+test('notifications get no body (202), not a null-id response', async () => {
+	const { status, body } = await rpc({ jsonrpc: '2.0', method: 'notifications/initialized' });
+	assert.equal(status, 202);
+	assert.equal(body, null);
+});
+
+test('tools/list → both tools, each with an inputSchema', async () => {
+	const { body } = await rpc({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
+	const names = body.result.tools.map((t) => t.name).sort();
+	assert.deepEqual(names, ['build_session', 'list_capabilities']);
+	for (const t of body.result.tools) assert.equal(t.inputSchema.type, 'object');
+});
+
+test('unknown method → JSON-RPC "method not found", not a crash', async () => {
+	const { status, body } = await rpc({ jsonrpc: '2.0', id: 3, method: 'resources/list' });
+	assert.equal(status, 200); // transport succeeded; the ERROR is in the envelope
+	assert.equal(body.error.code, -32601);
+});
+
+test('malformed body → parse error', async () => {
+	const res = await worker.fetch(
+		new Request('https://nl.example.com/mcp', { method: 'POST', body: 'not json' }),
+		ENV()
+	);
+	assert.equal(res.status, 400);
+	assert.equal((await res.json()).error.code, -32700);
+});
+
+test('GET /mcp → 405 (we are stateless; there is no SSE stream to open)', async () => {
+	const res = await worker.fetch(new Request('https://nl.example.com/mcp'), ENV());
+	assert.equal(res.status, 405);
+});
+
+test('list_capabilities names real registry nodes, args and output columns', async () => {
+	const { body } = await call('list_capabilities', {});
+	const text = body.result.content[0].text;
+	assert.match(text, /SimulatedData/);
+	assert.match(text, /Cosinor/);
+	// The cosinorx class of bug: the fitted-curve pairing must be stated, not inferred.
+	assert.match(text, /fitted curve: x=cosinorx, y=cosinory_/);
+	assert.match(text, /scatterplot: series=/);
+	// Plot fields must be the plot's OWN — actogram is time/values, not x/y.
+	assert.match(text, /actogram: series=\[\{"time":/);
+});
+
+test('build_session → stores a session and returns a loadFromURL link that resolves', async () => {
+	const env = ENV();
+	const { body } = await call(
+		'build_session',
+		{
+			analyses: [
+				{ name: 'SimulatedData', args: { period: 24, days: 4 } },
+				{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 } }
+			],
+			plots: [
+				{
+					type: 'scatterplot',
+					name: 'Cosinor: data + fit',
+					series: [
+						{ x: 'time', y: 'values', kind: 'points' },
+						{ x: 'cosinorx', y: 'cosinory_values', kind: 'line' }
+					]
+				}
+			]
+		},
+		env
+	);
+
+	assert.notEqual(body.result.isError, true);
+	const { url, sessionUrl, sessionId } = body.result.structuredContent;
+	assert.ok(url.startsWith('https://ancir.pages.dev/?loadFromURL='));
+	assert.equal(url, `https://ancir.pages.dev/?loadFromURL=${encodeURIComponent(sessionUrl)}`);
+	// The link must lead somewhere: fetch the session back off the Worker's own route.
+	const got = await worker.fetch(new Request(sessionUrl), env);
+	assert.equal(got.status, 200);
+	const session = await got.json();
+	assert.deepEqual(
+		session.tableProcesses.map((t) => t.name),
+		['SimulatedData', 'Cosinor']
+	);
+	assert.equal(session.plots.length, 1);
+	assert.ok(env.SESSIONS._m.has(`s:${sessionId}`));
+
+	// The text content leads with the link — it's what the agent hands to the user.
+	assert.match(body.result.content[0].text, /Open it in AnCiR:\nhttps:\/\/ancir\.pages\.dev/);
+});
+
+test('build_session reports an unusable draft instead of storing an empty session', async () => {
+	const env = ENV();
+	const { body } = await call('build_session', { analyses: [{ name: 'NoSuchAnalysis' }] }, env);
+	assert.equal(body.result.isError, true);
+	assert.match(body.result.content[0].text, /empty session/i);
+	assert.equal(env.SESSIONS._m.size, 0);
+});
+
+test('build_session honours the rate limiter, and does not write when limited', async () => {
+	const env = { ...ENV(), RATE_LIMITER: { limit: async () => ({ success: false }) } };
+	const { body } = await call('build_session', { analyses: [{ name: 'SimulatedData', args: {} }] }, env);
+	assert.equal(body.result.isError, true);
+	assert.match(body.result.content[0].text, /rate limited/i);
+	assert.equal(env.SESSIONS._m.size, 0);
+});
+
+test('a throwing tool is reported to the model, not as a transport error', async () => {
+	const { status, body } = await call('no_such_tool', {});
+	assert.equal(status, 200);
+	assert.equal(body.result.isError, true);
+	assert.match(body.result.content[0].text, /Unknown tool/);
+});
+
+test('batch: responses come back for requests, notifications are dropped', async () => {
+	const { status, body } = await rpc([
+		{ jsonrpc: '2.0', id: 1, method: 'ping' },
+		{ jsonrpc: '2.0', method: 'notifications/initialized' },
+		{ jsonrpc: '2.0', id: 2, method: 'tools/list' }
+	]);
+	assert.equal(status, 200);
+	assert.equal(body.length, 2);
+	assert.deepEqual(
+		body.map((r) => r.id),
+		[1, 2]
+	);
+});
