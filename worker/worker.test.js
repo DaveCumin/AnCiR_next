@@ -224,13 +224,67 @@ test('a request with no llm{} uses the worker default and says so', async () => 
 	assert.ok(!JSON.stringify(b).includes('gsk_secret'), 'must not log the worker secret either');
 });
 
-test('POST /build surfaces an upstream LLM error without leaking the key', async () => {
+test('model rate/usage limit → 429 with the provider detail, not a blanket 502', async () => {
+	// What Groq actually returns when the free-tier limit is hit.
 	globalThis.fetch = async () =>
-		new Response(JSON.stringify({ error: { message: 'invalid api key' } }), { status: 401 });
-	const res = await worker.fetch(post({ prompt: 'hi', llm: LLM }), ENV());
+		new Response(
+			JSON.stringify({
+				error: {
+					message: 'Rate limit reached for model `openai/gpt-oss-120b`: Limit 14400, Used 14400. Please try again in 2m30s.',
+					code: 'rate_limit_exceeded'
+				}
+			}),
+			{ status: 429, headers: { 'Content-Type': 'application/json' } }
+		);
+	const cap = captureLogs();
+	let res;
+	try {
+		// retries:0 so the client doesn't sit there backing off through the test
+		res = await worker.fetch(post({ prompt: 'hi', llm: LLM, options: { retries: 0 } }), ENV());
+	} finally {
+		cap.restore();
+	}
+	assert.equal(res.status, 429, 'passed through as 429, not 502');
+	assert.equal(res.headers.get('Retry-After'), '60');
+	const out = await res.json();
+	assert.match(out.error, /rate or usage limit/i);
+	assert.match(out.error, /your own API key under Advanced/i, 'offers the way out');
+	assert.match(out.detail, /Limit 14400, Used 14400/, "keeps the provider's specifics");
+	assert.equal(cap.lines.find((l) => l.event === 'build')?.outcome, 'llm_rate_limited');
+});
+
+test('rejected key → says whose key it was', async () => {
+	globalThis.fetch = async () =>
+		new Response(JSON.stringify({ error: { message: 'Invalid API Key' } }), { status: 401 });
+
+	// caller's key ⇒ tell them to fix it
+	const theirs = await worker.fetch(post({ prompt: 'hi', llm: LLM, options: { retries: 0 } }), ENV());
+	assert.equal(theirs.status, 502);
+	assert.match((await theirs.json()).error, /That API key was rejected/i);
+
+	// our default key ⇒ our misconfiguration, not theirs
+	const ours = await worker.fetch(post({ prompt: 'hi', options: { retries: 0 } }), {
+		...ENV(),
+		OPENAI_BASE_URL: 'https://api.groq.com/openai/v1',
+		OPENAI_API_KEY: 'gsk_bad',
+		OPENAI_MODEL: 'openai/gpt-oss-120b'
+	});
+	assert.equal(ours.status, 502);
+	const body = await ours.json();
+	assert.match(body.error, /service is misconfigured/i);
+	assert.ok(!JSON.stringify(body).includes('gsk_bad'), 'never echoes the key');
+});
+
+test('an unmapped upstream error still surfaces, without leaking the key', async () => {
+	// 401/403/429 have their own messages (tested above); anything else falls through to the
+	// generic path, which must still say something and never echo the key.
+	globalThis.fetch = async () =>
+		new Response(JSON.stringify({ error: { message: 'model is overloaded' } }), { status: 503 });
+	const res = await worker.fetch(post({ prompt: 'hi', llm: LLM, options: { retries: 0 } }), ENV());
 	assert.equal(res.status, 502);
 	const out = await res.json();
-	assert.match(out.error, /LLM error 401/);
+	assert.match(out.error, /LLM error 503/);
+	assert.match(out.detail, /model is overloaded/, "keeps the provider's message");
 	assert.ok(!JSON.stringify(out).includes('sk-test'), 'must never echo the key');
 });
 

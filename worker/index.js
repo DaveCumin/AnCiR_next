@@ -163,9 +163,46 @@ async function handleBuild(request, env) {
 		return json({ error: `LLM request failed: ${e?.message ?? e}` }, 502);
 	}
 	if (!reply.ok) {
-		// Surface the provider's own error (bad key, unknown model, …) without the key.
+		// The provider's own message is the informative part ("Limit 14400, Used 14400, please
+		// try again in 2m"). It never contains the key.
+		const providerMsg =
+			reply.json?.error?.message ??
+			(typeof reply.body === 'string' ? reply.body.slice(0, 300) : undefined);
+
+		// Rate / usage limits are the EXPECTED failure when everyone shares the default key, so
+		// name it plainly and pass the 429 through rather than a blanket 502 — the UI can then
+		// tell the user to wait or bring their own. chatCompletion already retried with backoff
+		// (honouring Retry-After), so getting here means it's still limited.
+		if (reply.status === 429) {
+			done('llm_rate_limited', { status: 429, detail: providerMsg });
+			return json(
+				{
+					error:
+						'The AI model has reached its rate or usage limit. Wait a little and try again, or use your own API key under Advanced.',
+					detail: providerMsg
+				},
+				429,
+				{ 'Retry-After': '60' }
+			);
+		}
+
+		// A rejected key isn't something the user can fix by retrying. Whose key it was decides
+		// whose problem it is.
+		if (reply.status === 401 || reply.status === 403) {
+			done('llm_key_rejected', { status: reply.status });
+			return json(
+				{
+					error: v.value.llm?.apiKey
+						? 'That API key was rejected by the provider. Check the key, model and endpoint under Advanced.'
+						: 'The AI service is misconfigured — its API key was rejected. Please report this.',
+					detail: providerMsg
+				},
+				502
+			);
+		}
+
 		done('llm_error', { status: reply.status });
-		return json({ error: `LLM error ${reply.status}`, detail: reply.json ?? reply.body }, 502);
+		return json({ error: `LLM error ${reply.status}`, detail: providerMsg ?? reply.body }, 502);
 	}
 
 	let draft;
