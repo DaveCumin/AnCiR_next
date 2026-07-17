@@ -181,10 +181,10 @@
 				aria-disabled={!aiAvailable}
 				onclick={() => aiAvailable && (showAi = true)}
 				{@attach tooltip(
-					aiAvailable ? 'Build a session from a description (AI)' : 'AI unavailable'
+					aiAvailable ? 'Build/edit a session using AI' : 'AI unavailable'
 				)}
 			>
-				<Icon name="sparkles" />
+				<Icon name="aibot" />
 			</button>
 		{/if}
 		<div class="help-anchor" bind:this={helpAnchor}>
