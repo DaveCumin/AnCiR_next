@@ -18,9 +18,10 @@
 // Returns { session, warnings, errors } — a broken analysis is dropped with an error
 // (mirroring the engine's discardTp) rather than poisoning the whole session.
 
-import { SCHEMA, PLOTS as plots_, columnIdFields } from './schema.js';
-
-const SESSION_VERSION = 'β.57.1'; // tracks the AnCiR app; importJson tolerates minor drift.
+// SESSION_VERSION is registry-derived (see schema.js): it's the app version gen-schema.js read
+// when it built the catalogue, not a literal maintained by hand here — which is how it fell two
+// versions behind the app before.
+import { SCHEMA, PLOTS as plots_, columnIdFields, SESSION_VERSION } from './schema.js';
 
 // Per-series style slots, each with an explicit colour. Union across the types that read them:
 //   Scatterplot: line, points · Periodogram: line, thresholdline, points

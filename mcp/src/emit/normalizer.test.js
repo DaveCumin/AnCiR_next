@@ -132,6 +132,20 @@ test('SimulatedData is deterministic: same seed → same values', () => {
 	assert.notDeepEqual(valsOf(a), valsOf(c), 'different seed diverges');
 });
 
+test('the session version is registry-derived, not a hand-kept literal', async () => {
+	const { session } = normalizeSession({ analyses: [{ name: 'SimulatedData', args: { seed: 1 } }] });
+	const generated = (await import('./session-schema.generated.json', { with: { type: 'json' } })).default;
+
+	// It must be the version the CATALOGUE was generated from — the same read, carried across
+	// the boundary in a plain file rather than by importing core.svelte.js (which would drag the
+	// app into a Worker bundle). Hand-maintaining it let it fall two versions behind the app.
+	assert.equal(session.version, generated.generatedFromVersion);
+	// A real version, not the 'unknown' fallback: shipping sessions stamped "unknown" would make
+	// them untraceable, and it means someone committed a catalogue generated without a registry.
+	assert.notEqual(session.version, 'unknown');
+	assert.match(session.version, /^β\./);
+});
+
 test('provenance is opt-in, injected, and keeps the normalizer pure', () => {
 	const draft = { analyses: [{ name: 'SimulatedData', args: { seed: 1 } }] };
 

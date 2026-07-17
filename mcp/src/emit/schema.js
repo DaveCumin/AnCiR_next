@@ -157,6 +157,21 @@ for (const [name, g] of Object.entries(generated.nodes)) {
  */
 export const PLOTS = generated.plots ?? {};
 
+/**
+ * The AnCiR version an emitted session declares — the version the catalogue was generated FROM,
+ * so it can't drift from the nodes it describes.
+ *
+ * It comes via the generated JSON rather than by importing core.svelte.js, deliberately: the
+ * normalizer must stay dependency-free to run in a Worker, and mcp/ must stay self-contained as
+ * a subtree. gen-schema.js already stamps `generatedFromVersion` when it reads the live
+ * registry, so this is that same read, just carried across the boundary in a plain file.
+ *
+ * The catch is that it's only as fresh as the last `vite-node src/emit/gen-schema.js` — a stale
+ * checkout would emit a stale version. `npm run build` regenerates it, which is what stops this
+ * being a hand-maintained literal in a different disguise.
+ */
+export const SESSION_VERSION = generated.generatedFromVersion ?? 'unknown';
+
 /** Column-id arg fields for a node (scalar + array), for name-resolution/coercion. */
 export function columnIdFields(name) {
 	const s = SCHEMA[name];
