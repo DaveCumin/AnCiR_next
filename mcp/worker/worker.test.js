@@ -6,6 +6,7 @@ import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import worker, { extractDraft } from './index.js';
 import { buildDraftPrompt } from './draftPrompt.js';
+import generated from '../src/emit/session-schema.generated.json' with { type: 'json' };
 
 /** Minimal KV stand-in (get/put with the bits the worker uses). */
 const fakeKV = () => {
@@ -79,6 +80,38 @@ test('draft prompt is registry-derived and states the contract', () => {
 	assert.match(p, /histogram: series=\[\{"column":"<col>"\}\]/);
 	assert.match(p, /tableplot: inputs=/, 'input-less plots take a column list, not series');
 	assert.match(p, /KEYS ARE NOT ALWAYS x\/y/, 'and the rule says so in prose too');
+});
+
+// The catalogue is the model's only source of column names, so a wrong line there isn't a
+// cosmetic bug — it's an instruction to reference a column that will never exist. This one told
+// every model that RhythmicityAnalysis had a `rhythmicityx` / `rhythmicityy_<Y>` fitted curve.
+// It has neither: its outputs are per-Y `<Y>_period` / `<Y>_power`. Asking for "a periodogram"
+// therefore produced a plot wired to nothing, every time.
+test('the catalogue only claims outputs a node can actually produce', () => {
+	const p = buildDraftPrompt();
+
+	// The lie, and its cause: yOutKeyPrefix is a COLLECTED-mode prefix for this node.
+	assert.doesNotMatch(p, /rhythmicityx/, 'RhythmicityAnalysis has no such X grid');
+	assert.doesNotMatch(p, /rhythmicityy_/, 'nor such a per-Y curve');
+
+	// What it really makes, for the args the catalogue shows.
+	assert.match(
+		p,
+		/RhythmicityAnalysis:.*produces per Y column: <your Y column>_period, <your Y column>_power/,
+		'says what the node actually produces'
+	);
+	// And that those names depend on the discriminating params, so a model changing `analysis`
+	// doesn't keep using the periodogram names.
+	assert.match(p, /for analysis=periodogram, pgMethod=Lomb-Scargle; other values give other columns/);
+
+	// The genuine fitted curves are untouched — this must not over-correct.
+	assert.match(p, /Cosinor:.*fitted curve: x=cosinorx, y=cosinory_<your Y column>/);
+
+	// The general rule, checked against the schema rather than a list of names: a node may only
+	// advertise a fitted curve when its per-Y keys really are `${prefix}${yid}`.
+	for (const [name, n] of Object.entries(generated.nodes)) {
+		if (n.fitOut) assert.equal(n.dynamicKind, 'prefix', `${name} claims a fit it cannot make`);
+	}
 });
 
 // ---- routes ----

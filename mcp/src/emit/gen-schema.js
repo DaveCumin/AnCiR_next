@@ -146,7 +146,13 @@ for (const [name, entry] of appConsts.tableProcessMap ?? new Map()) {
 		// pairing the fit's X against the raw Y (or vice versa) is a silent mistake. Used to
 		// teach the model the canonical "raw points + fit line" plot (worker/draftPrompt.js);
 		// it's the same wiring AnCiR's own Quick-Plot uses (plots/canonicalNodeViz.js tpViz).
-		fitOut: entry.xOutKey && entry.yOutKeyPrefix
+		//
+		// Gated on dynamicKind for the SAME reason perYPrefix is, three lines up: a suffix/
+		// runtime node's `yOutKeyPrefix` is its COLLECTED-mode prefix and names nothing that
+		// exists standalone. Ungated, this told the model RhythmicityAnalysis had a
+		// `rhythmicityx` / `rhythmicityy_<Y>` curve; it has neither, so every plot built on
+		// that advice referenced columns that were never created.
+		fitOut: dynamicKind === 'prefix' && entry.xOutKey && entry.yOutKeyPrefix
 			? { x: entry.xOutKey, yPrefix: entry.yOutKeyPrefix }
 			: null,
 		// For dynamicKind==='suffix': which args select the suffix set, and the baked table.

@@ -132,6 +132,45 @@ test('SimulatedData is deterministic: same seed → same values', () => {
 	assert.notDeepEqual(valsOf(a), valsOf(c), 'different seed diverges');
 });
 
+// A 'suffix' node (RhythmicityAnalysis) keys its per-Y outputs `${yid}_${suffix}` — the id
+// LEADS, where every other node's trails. The name-mapping rule only knew about trailing ids,
+// so these columns kept their id-keyed names and nothing could refer to them: the model writes
+// NAMES and cannot know an id. It's also what the live app calls the column, so a built session
+// and a hand-made one now agree.
+test('suffix-node outputs are named after the Y column, so the model can plot them', () => {
+	const { session, errors, warnings } = normalizeSession({
+		columns: [
+			{ name: 'time', type: 'time', values: [0, 1, 2, 3] },
+			{ name: 'activity', values: [1, 2, 3, 4] }
+		],
+		analyses: [
+			{
+				name: 'RhythmicityAnalysis',
+				args: { xIN: 'time', yIN: ['activity'], analysis: 'periodogram', pgMethod: 'Lomb-Scargle' }
+			}
+		],
+		// Exactly what the catalogue now tells a model to write.
+		plots: [
+			{ type: 'periodogram', series: [{ time: 'activity_period', values: 'activity_power' }] }
+		]
+	});
+	assert.deepEqual(errors, []);
+	assert.deepEqual(warnings, []);
+
+	const tp = findTP(session, 'RhythmicityAnalysis');
+	// The KEYS stay id-based — that's the node's own contract, and not the model's business.
+	assert.deepEqual(Object.keys(tp.args.out), ['1_period', '1_power']);
+	// The NAMES are what the model was told to use.
+	const named = session.data.map((c) => c.name);
+	assert.ok(named.includes('activity_period'), `expected activity_period in ${named}`);
+	assert.ok(named.includes('activity_power'), `expected activity_power in ${named}`);
+
+	// And the plot actually wired to them, rather than being dropped as unresolvable.
+	const [series] = session.plots[0].plot.data;
+	assert.equal(series.x.refId, tp.args.out['1_period']);
+	assert.equal(series.y.refId, tp.args.out['1_power']);
+});
+
 test('the session version is registry-derived, not a hand-kept literal', async () => {
 	const { session } = normalizeSession({ analyses: [{ name: 'SimulatedData', args: { seed: 1 } }] });
 	const generated = (await import('./session-schema.generated.json', { with: { type: 'json' } })).default;

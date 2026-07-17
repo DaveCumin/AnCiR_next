@@ -368,10 +368,20 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 /** Human-ish name for a pre-allocated output column. Per-Y keys borrow the source name. */
 function outputColumnName(nodeName, key, args, byName) {
 	const idToName = new Map([...byName.entries()].map(([n, i]) => [i, n]));
-	const m = /^(.*?)(\d+)$/.exec(key);
-	if (m && (args.yIN ?? []).map(Number).includes(Number(m[2]))) {
-		const src = idToName.get(Number(m[2])) ?? m[2];
-		return `${m[1]}${src}`;
-	}
+	const yIds = (args.yIN ?? []).map(Number);
+	const nameOf = (id) => idToName.get(Number(id)) ?? String(id);
+
+	// `${prefix}${yid}` — the 'prefix' nodes: cosinory_1 → cosinory_values.
+	const trailing = /^(.*?)(\d+)$/.exec(key);
+	if (trailing && yIds.includes(Number(trailing[2]))) return `${trailing[1]}${nameOf(trailing[2])}`;
+
+	// `${yid}_${suffix}` — the 'suffix' nodes (RhythmicityAnalysis): 1_period → values_period.
+	// The id leads here rather than trails, so the rule above skipped it and the column kept its
+	// id-keyed name. Nothing could then refer to it: the model writes NAMES and can't know an
+	// id. `values_period` is also what the live app calls this column, so a built session and a
+	// hand-made one now agree.
+	const leading = /^(\d+)_(.+)$/.exec(key);
+	if (leading && yIds.includes(Number(leading[1]))) return `${nameOf(leading[1])}_${leading[2]}`;
+
 	return key;
 }

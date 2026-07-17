@@ -27,6 +27,26 @@ function argsTemplate(node) {
  * The node + plot catalogue. Each node lists its flat args template and the NAMES of the
  * columns it produces — the model needs those to wire later analyses and plots.
  */
+/**
+ * The per-Y columns a node makes, named the way the MODEL must write them.
+ *
+ * 'prefix' nodes are covered by the fitted-curve line. 'suffix' nodes (RhythmicityAnalysis) key
+ * their outputs `${yid}_${suffix}` with a suffix set chosen by a couple of discrete params, and
+ * used to advertise nothing at all — which is how a model asked for a periodogram had no column
+ * it could legitimately name. The suffix table is baked from the node's own key helper, so this
+ * says what the node will really produce for the args shown.
+ */
+function perYOutputs(node) {
+	if (node.dynamicKind !== 'suffix' || !node.suffixesBy) return '';
+	const params = node.params ?? {};
+	const key = (node.discriminators ?? []).map((d) => params[d]).join('|');
+	const suffixes = node.suffixesBy[key];
+	if (!suffixes?.length) return '';
+	const shown = suffixes.map((s) => `<your Y column>_${s}`).join(', ');
+	const by = (node.discriminators ?? []).map((d) => `${d}=${params[d]}`).join(', ');
+	return ` -> produces per Y column: ${shown}  (for ${by}; other values give other columns)`;
+}
+
 export function buildCatalogue(schema = generated) {
 	const nodes = Object.entries(schema.nodes)
 		.map(([name, n]) => {
@@ -35,7 +55,7 @@ export function buildCatalogue(schema = generated) {
 			const fit = n.fitOut
 				? ` -> fitted curve: x=${n.fitOut.x}, y=${n.fitOut.yPrefix}<your Y column>`
 				: '';
-			return `  ${name}: args=${JSON.stringify(argsTemplate(n))}${outs}${fit}`;
+			return `  ${name}: args=${JSON.stringify(argsTemplate(n))}${outs}${fit}${perYOutputs(n)}`;
 		})
 		.join('\n');
 	// Render plots the way analyses are rendered: one per line, with a CONCRETE series template.
