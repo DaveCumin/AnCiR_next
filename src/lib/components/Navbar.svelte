@@ -10,12 +10,29 @@
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { exportJson } from '$lib/components/iconActions/Setting.svelte';
 	import LoadSessionModal from './workflow/LoadSessionModal.svelte';
+	import AiPrompt from './views/modals/AiPrompt.svelte';
+	import { NL_CONFIGURED, checkNlHealth } from '$lib/utils/nlSession.js';
 
 	let showSettings = $state(false);
 	let showAbout = $state(false);
 	let showHelpMenu = $state(false);
 	let showLoadModal = $state(false);
+	let showAi = $state(false);
 	let helpAnchor;
+
+	// The AI button needs a reachable Worker, so ask it rather than trusting
+	// `navigator.onLine` (which only reports a link, not that our service is up — it would
+	// happily show the button while the Worker is down or blocked). Offline/unconfigured ⇒ the
+	// button simply isn't there, and the rest of AnCiR works exactly as before.
+	let aiAvailable = $state(false);
+	$effect(() => {
+		if (!NL_CONFIGURED) return;
+		let cancelled = false;
+		checkNlHealth().then((ok) => {
+			if (!cancelled) aiAvailable = ok;
+		});
+		return () => (cancelled = true);
+	});
 
 	// The Data panel is independent of the canvas mode — it overlays either the
 	// workflow or the workspace canvas. So it's a plain toggle.
@@ -151,6 +168,16 @@
 		>
 			<Icon name="gear" />
 		</button>
+		{#if aiAvailable}
+			<button
+				class="rail-btn"
+				data-testid="nav-ai"
+				onclick={() => (showAi = true)}
+				{@attach tooltip('Build a session from a description (AI)')}
+			>
+				<Icon name="sparkles" />
+			</button>
+		{/if}
 		<div class="help-anchor" bind:this={helpAnchor}>
 			<button
 				class="rail-btn"
@@ -197,6 +224,9 @@
 <Settings bind:showModal={showSettings} />
 <About bind:showModal={showAbout} />
 <LoadSessionModal bind:showModal={showLoadModal} />
+{#if aiAvailable}
+	<AiPrompt bind:showModal={showAi} />
+{/if}
 
 <style>
 	.container {
