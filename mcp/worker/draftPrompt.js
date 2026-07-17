@@ -60,7 +60,11 @@ export function buildCatalogue(schema = generated) {
 			const fit = n.fitOut
 				? ` -> fitted curve: x=${n.fitOut.x}, y=${n.fitOut.yPrefix}<your Y column>`
 				: '';
-			return `  ${name}: args=${JSON.stringify(argsTemplate(n))}${outs}${fit}${perYOutputs(n)}`;
+			// How to drive it, where the params don't speak for themselves (USAGE_NOTES). On its
+			// own line: these are the generators, and a model that can't see how to generate
+			// data types it by hand instead — badly.
+			const usage = n.usageNote ? `\n      use: ${n.usageNote}` : '';
+			return `  ${name}: args=${JSON.stringify(argsTemplate(n))}${outs}${fit}${perYOutputs(n)}${usage}`;
 		})
 		.join('\n');
 	// Render plots the way analyses are rendered: one per line, with a CONCRETE series template.
@@ -136,6 +140,10 @@ RULES:
 - Reference every column by NAME (never a number). Names come from your own "columns", or from
   an earlier analysis's outputs — each node lists what it "produces" (e.g. SimulatedData
   produces "time" and "values"; SequenceColumn produces "result").
+- TWO ANALYSES OF THE SAME KIND produce columns with the SAME name, so the 2nd and later get
+  "_1", "_2", … in the order you list them. Three Random nodes produce "result", "result_1" and
+  "result_2"; two SimulatedData nodes produce "time"/"values" then "time_1"/"values_1". Use
+  those names to keep them apart — this is how you build several datasets and compare them.
 - Do NOT pass "out" — output columns are allocated automatically.
 - Do NOT hand-type long numeric arrays. To make synthetic data use the SimulatedData analysis
   (rhythm + noise) or SequenceColumn. Use "columns" only for small data the user gives you.

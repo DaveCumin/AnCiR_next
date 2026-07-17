@@ -20,6 +20,7 @@ import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { ensureDom } from '../engine/bootstrapDom.js';
 import { OUTPUT_NOTES } from './dynamicOut.js';
+import { USAGE_NOTES } from './generators.js';
 
 await ensureDom();
 const { ensureRegistry } = await import('../engine/session.js');
@@ -192,7 +193,11 @@ for (const [name, entry] of appConsts.tableProcessMap ?? new Map()) {
 		// For dynamicKind==='runtime': the RULE for its output names, since no static list can
 		// express them. Stated in the model's vocabulary (see OUTPUT_NOTES); without it these
 		// nodes advertise nothing and anything downstream of them is unpromptable.
-		...(OUTPUT_NOTES[name] ? { outputNote: OUTPUT_NOTES[name] } : {})
+		...(OUTPUT_NOTES[name] ? { outputNote: OUTPUT_NOTES[name] } : {}),
+		// How to DRIVE the node, where its params don't speak for themselves (see USAGE_NOTES).
+		// A default value is not a description: printing `distribution:"uniform"` never told a
+		// model that "gaussian" exists, so a request needing it was unreachable by prompt.
+		...(USAGE_NOTES[name] ? { usageNote: USAGE_NOTES[name] } : {})
 	};
 }
 

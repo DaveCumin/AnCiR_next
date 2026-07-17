@@ -673,3 +673,94 @@ test('session skeleton has every slice the GUI importJson expects', () => {
 	}
 	assert.ok(!('appState' in session)); // omitted on purpose → GUI keeps defaults
 });
+
+// A model asked for 100 phases emitted them as ONE run-together blob:
+// values: ["00.20.40.60000000000000010.8…"]. That IS an array, which was the only thing checked,
+// so a 400-character string landed in a column typed "number" and got plotted. Valid wiring,
+// zero errors, total nonsense — the worst shape a failure can take.
+test('a column of run-together numbers is rejected, not plotted', () => {
+	// The real blob: 50 values from 0 to 9.8, run together, float artefacts and all.
+	const blob = Array.from({ length: 50 }, (_, i) => i * 0.2).join('');
+	const { session, errors } = normalizeSession({
+		columns: [{ name: 'phase', type: 'number', values: [blob] }]
+	});
+	assert.equal(session.data.length, 0, 'garbage must not become a column');
+	// Summarised, not echoed: a 400-character blob in an error message helps nobody.
+	assert.match(errors[0], new RegExp(`values\\[0\\] is a ${blob.length}-character string`));
+	assert.ok(errors[0].length < 500, 'the error must not BE the blob');
+	// The message has to teach the fix: hand-typing is the cause, generators are the cure. It
+	// reaches the MODEL via the repair round, which is what makes this self-correcting.
+	assert.match(errors[0], /Random, SequenceColumn or SimulatedData/);
+});
+
+test('legitimate literal data still passes, blanks and all', () => {
+	// The rejection must not cost a user who pasted real readings. Blanks are missing data.
+	const { session, errors } = normalizeSession({
+		columns: [
+			{ name: 't', type: 'number', values: [0, 6, 12, null, 24] },
+			{ name: 'iso', type: 'time', values: ['2026-07-17T00:00:00.000Z', '2026-07-17T01:00:00.000Z'] },
+			{ name: 'label', type: 'category', values: ['wt', 'ko'] }
+		]
+	});
+	assert.deepEqual(errors, []);
+	assert.deepEqual(session.data.map((c) => c.name), ['t', 'iso', 'label']);
+	assert.deepEqual(session.rawData[0], [0, 6, 12, null, 24]);
+});
+
+test('a non-number in a number column names the offending index', () => {
+	const { errors } = normalizeSession({
+		columns: [{ name: 'v', type: 'number', values: [1, 2, 'about three', 4] }]
+	});
+	assert.match(errors[0], /values\[2\] is "about three", not a number/);
+});
+
+// Names are the ONLY way a draft refers to a column, so a duplicate name doesn't just look
+// untidy — it makes a column unreachable. Two Random nodes both produce `result`, the name index
+// kept the first, and the second's column sat in the session with nothing able to point at it.
+// Every "50 here, 50 there" request was unbuildable however good the draft.
+test('same-named outputs are uniquified so every column stays referenceable', () => {
+	const { session, errors } = normalizeSession({
+		analyses: [
+			{ name: 'Random', args: { N: 5, distribution: 'gaussian', offset: 0, multiply: 0.5, seed: 1 } },
+			{ name: 'Random', args: { N: 5, distribution: 'gaussian', offset: 5, multiply: 0.5, seed: 2 } },
+			{ name: 'Random', args: { N: 5, distribution: 'gaussian', offset: 1, multiply: 0, seed: 3 } }
+		],
+		plots: [
+			{
+				type: 'circularphase',
+				series: [
+					{ time: 'result', values: 'result_2' },
+					{ time: 'result_1', values: 'result_2' }
+				]
+			}
+		]
+	});
+	assert.deepEqual(errors, [], 'the second and third Random must be nameable');
+	assert.deepEqual(session.data.map((c) => c.name), ['result', 'result_1', 'result_2']);
+	// Each series points at a DIFFERENT phase column, sharing the constant one.
+	const series = session.plots[0].plot.data;
+	assert.deepEqual(series.map((s) => s.x.refId), [0, 1]);
+	assert.deepEqual(series.map((s) => s.y.refId), [2, 2]);
+});
+
+test('uniquified generator columns still carry their own baked data', () => {
+	// The names being distinct is worthless if they share values.
+	const { session } = normalizeSession({
+		analyses: [
+			{ name: 'Random', args: { N: 40, distribution: 'gaussian', offset: 0, multiply: 0.5, seed: 1 } },
+			{ name: 'Random', args: { N: 40, distribution: 'gaussian', offset: 5, multiply: 0.5, seed: 2 } }
+		]
+	});
+	const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+	assert.ok(Math.abs(mean(session.rawData[0]) - 0) < 0.3, 'first is centred on 0');
+	assert.ok(Math.abs(mean(session.rawData[1]) - 5) < 0.3, 'second is centred on 5');
+});
+
+test('a gaussian with multiply:0 is the way to make a constant column', () => {
+	// The only route to a column of 1s: SequenceColumn's step:0 yields nothing. USAGE_NOTES
+	// promises this, so it has to be true.
+	const { session } = normalizeSession({
+		analyses: [{ name: 'Random', args: { N: 6, distribution: 'gaussian', offset: 1, multiply: 0, seed: 1 } }]
+	});
+	assert.deepEqual(session.rawData[0], [1, 1, 1, 1, 1, 1]);
+});

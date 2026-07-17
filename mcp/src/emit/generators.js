@@ -126,6 +126,33 @@ function randomGenerator(args) {
 }
 
 /**
+ * How to DRIVE a generator, in the model's own terms — as opposed to OUTPUT_NOTES, which says
+ * what a node produces. Baked into the catalogue by gen-schema.js and rendered by draftPrompt.
+ *
+ * Params alone are not a usable description. The catalogue printed Random as
+ * `args={"offset":0,"multiply":10,"N":10,"seed":0,"distribution":"uniform"}` and stopped there,
+ * which tells a model nothing: not that "gaussian" is a legal `distribution` (the only value it
+ * ever saw was the default, "uniform"), nor that `offset`/`multiply` change MEANING per
+ * distribution — mean/SD for gaussian, base/scale for uniform.
+ *
+ * That gap made a whole class of request unreachable. Asked for "50 phases around 0 h and 50
+ * around 5 h on a Rayleigh plot" — which is Random twice, and nothing else — the model had no
+ * tool it could see, so it hand-typed 100 values into `columns` and ran them together into one
+ * unusable string. It didn't reach for the wrong node; it couldn't see the right one.
+ *
+ * Kept next to randomGenerator/sequenceColumn because these notes state what THAT code does.
+ * A note that drifts from the rule is worse than no note (same reasoning as OUTPUT_NOTES).
+ */
+export const USAGE_NOTES = {
+	Random:
+		'N random values. `distribution` is "uniform" (each value = offset + multiply×[0,1)), "gaussian" (offset = the MEAN, multiply = the SD), or "exponential" (offset + an exponential with mean=multiply). So 50 values scattered around 5 with a little jitter = {N:50, distribution:"gaussian", offset:5, multiply:0.5}. A gaussian with multiply:0 gives a CONSTANT column of `offset` — that is how to make a column of 1s. Values are rounded to 2 dp. Give each Random node a DIFFERENT `seed`, or they return identical columns',
+	SequenceColumn:
+		'a plain arithmetic sequence: `count` values from `start`, adding `step` each time (seqType:"number"), or a run of timestamps from `startTime` every `stepHours` (seqType:"time"). `step` (or `stepHours`) of 0 yields NOTHING — for a constant column use Random with distribution:"gaussian" and multiply:0',
+	SimulatedData:
+		'one rhythmic time series, sampled every `samplingPeriod_hours`. `sections` run BACK-TO-BACK IN TIME, each for its own `duration_hours` — so 2 sections give one recording whose period changes part-way through, NOT two separate datasets. For N independent datasets use N SimulatedData nodes, each with its own `seed`'
+};
+
+/**
  * Port of Random's `random(args)` — N draws from uniform/gaussian/exponential, each rounded
  * to 2 dp exactly as upstream does (`Number(x.toFixed(2))`).
  * @returns {{result: number[]}}

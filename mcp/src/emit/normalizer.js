@@ -83,8 +83,6 @@ function storageField(fields, i) {
 	return fields[i];
 }
 
-const numeric = (v) => typeof v === 'number' || (typeof v === 'string' && /^-?\d+$/.test(v));
-
 /** A blank AnCiR column descriptor owning its own rawData slot `id`. */
 function columnDescriptor(id, name, type, timeFormat) {
 	return {
@@ -133,12 +131,30 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 	let nextId = 0;
 	const byName = new Map(); // column name -> id
 
+	/**
+	 * A name no other column has yet: `result`, then `result_1`, `result_2`, …
+	 *
+	 * Names are the ONLY way a draft refers to a column, so a duplicate name is not a cosmetic
+	 * problem — it makes a column unreachable. Two Random nodes both produce `result`, and the
+	 * name index kept only the first, so the second's column existed in the session with nothing
+	 * able to point at it. Any request needing two generators of the same kind ("50 phases here,
+	 * 50 there") was therefore unbuildable, however good the draft.
+	 *
+	 * `_N` rather than some new syntax because it's already the house convention the model is
+	 * taught for Split's segments (`values_1`, `values_2`), so it costs no new vocabulary.
+	 */
+	const uniqueName = (name) => {
+		if (name == null || !byName.has(name)) return name;
+		for (let i = 1; ; i++) if (!byName.has(`${name}_${i}`)) return `${name}_${i}`;
+	};
+
 	const addColumn = (name, type, values, timeFormat) => {
 		const id = nextId++;
-		data.push(columnDescriptor(id, name, type, timeFormat));
+		const unique = uniqueName(name);
+		data.push(columnDescriptor(id, unique, type, timeFormat));
 		// Inputs carry their values; outputs stay empty ([]) so the GUI recomputes them.
 		rawData[id] = Array.isArray(values) ? values.slice() : [];
-		if (name != null && !byName.has(name)) byName.set(name, id);
+		if (unique != null) byName.set(unique, id);
 		return id;
 	};
 
@@ -162,6 +178,11 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 		}
 		if (!Array.isArray(c.values)) {
 			errors.push(`Column "${c.name}" has no numeric values[] — skipped.`);
+			continue;
+		}
+		const issue = columnValuesIssue(c.name, c.type ?? 'number', c.values);
+		if (issue) {
+			errors.push(issue);
 			continue;
 		}
 		addColumn(c.name, c.type ?? 'number', c.values);
@@ -363,6 +384,50 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 	};
 
 	return { session, warnings, errors };
+}
+
+/**
+ * Is a literal `columns[]` entry's data actually usable? Returns an error message, or null.
+ *
+ * Until this existed, the only check was `Array.isArray(values)`, so the CONTENTS were never
+ * looked at. A model asked for 100 phases emitted them as ONE run-together token blob —
+ * `values: ["00.20.40.60000000000000010.8…"]` — which is an array, passed, and became a
+ * 400-character string sitting in a column typed "number". Every downstream stage was blameless:
+ * the wiring was valid, the plot resolved, and the user got a Rayleigh plot of one non-number.
+ * Silent, confident, and completely wrong.
+ *
+ * Hand-typing long numeric arrays is the failure mode here (models are bad at it, and the prompt
+ * already tells them not to), so the message names the generators instead of just complaining.
+ * It reaches the model through the repair round, which is what makes this self-correcting rather
+ * than merely honest.
+ *
+ * Deliberately does NOT try to rescue the blob by splitting it. There is no way to know where
+ * `0.60000000000000001` ends and `0.8` begins without guessing, and a plausible reconstruction
+ * of fabricated data is the worst outcome available: it would look right.
+ */
+function columnValuesIssue(name, type, values) {
+	if (!values.length) return `Column "${name}" has an empty values[] — skipped.`;
+
+	// A blank is legitimate missing data in any column; only non-blanks must parse.
+	const blank = (v) => v == null || v === '';
+	const describe = (v) =>
+		typeof v === 'string' && v.length > 40
+			? `a ${v.length}-character string ("${v.slice(0, 30)}…")`
+			: JSON.stringify(v);
+
+	if (type === 'number') {
+		const i = values.findIndex((v) => !blank(v) && !Number.isFinite(Number(v)));
+		if (i !== -1)
+			return `Column "${name}" is type "number" but values[${i}] is ${describe(values[i])}, not a number. Every value must be a plain JSON number, one per element — do NOT run them together into a single string. To GENERATE data use the Random, SequenceColumn or SimulatedData analyses rather than typing values; only use "columns" for data the user actually gave you. Skipped.`;
+	}
+
+	if (type === 'time') {
+		const i = values.findIndex((v) => !blank(v) && !Number.isFinite(Number.isFinite(Number(v)) ? Number(v) : Date.parse(v)));
+		if (i !== -1)
+			return `Column "${name}" is type "time" but values[${i}] is ${describe(values[i])}, which is neither an ISO timestamp nor an epoch number. Skipped.`;
+	}
+
+	return null;
 }
 
 /** Human-ish name for a pre-allocated output column. Per-Y keys borrow the source name. */

@@ -136,6 +136,29 @@ test('the catalogue only claims outputs a node can actually produce', () => {
 // A node whose outputs can't be listed statically still has to say SOMETHING, or everything
 // downstream of it is unreachable by prompt: asked to "split the data and plot each part", a
 // model invented `values_0` and every analysis after the Split was dropped.
+test('the catalogue says how to DRIVE a generator, not just what its params are called', () => {
+	// A default is not a description. Random printed as
+	// args={"offset":0,"multiply":10,"N":10,"seed":0,"distribution":"uniform"} and stopped, so a
+	// model never learned "gaussian" was legal, nor that offset/multiply mean mean/SD for it.
+	// Asked for "50 phases around 0 and 50 around 5 on a Rayleigh plot" — which is Random twice
+	// and nothing else — it couldn't see the tool and hand-typed 100 values into one broken
+	// string instead. It didn't pick the wrong node; the right one was invisible.
+	const p = buildDraftPrompt();
+	assert.match(p, /Random:.*\n\s+use: N random values/);
+	assert.match(p, /"gaussian" \(offset = the MEAN, multiply = the SD\)/);
+	assert.match(p, /multiply:0 gives a CONSTANT column/);
+	// SimulatedData's sections run back-to-back in TIME — they are not N datasets.
+	assert.match(p, /sections` run BACK-TO-BACK IN TIME/);
+	assert.match(p, /For N independent datasets use N SimulatedData nodes/);
+});
+
+test('the catalogue explains how to tell two same-kind analyses apart', () => {
+	// Without this the _1 suffix is invisible, and the second generator is unreferenceable in
+	// practice even though the normalizer names it.
+	const p = buildDraftPrompt();
+	assert.match(p, /Three Random nodes produce "result", "result_1" and\n\s+"result_2"/);
+});
+
 test('every node tells the model how to name its outputs', () => {
 	const p = buildDraftPrompt();
 
