@@ -1,0 +1,41 @@
+{
+	"name": "ancir-mcp",
+	"version": "0.0.3",
+	"private": true,
+	"type": "module",
+	"description": "Model Context Protocol server for AnCiR — lets agents create sessions to analyze and visualise chronobiological data using AnCiR's own engine.",
+	"scripts": {
+		"start": "vite-node src/server.js",
+		"start:http": "vite-node src/server.js -- --http",
+		"test": "vitest run && npm run emit:test && npm run worker:test",
+		"test:watch": "vitest",
+		"smoke": "node test/smoke-client.mjs",
+		"smoke:http": "node test/smoke-http.mjs",
+		"smoke:render": "node test/smoke-render.mjs",
+		"agnostic": "node --env-file-if-exists=app/.env test/agnostic-client.mjs",
+		"app": "node --env-file-if-exists=app/.env app/server.mjs",
+		"app:test": "node --env-file-if-exists=app/.env app/test-roundtrip.mjs",
+		"app:e2e": "node --env-file-if-exists=app/.env app/e2e-ancir.mjs",
+		"app:units": "node --test app/test-units.mjs",
+		"app:byo": "node app/test-byo.mjs",
+		"emit:test": "node --test src/emit/*.test.js",
+		"worker:test": "node --test worker/worker.test.js worker/mcp.test.js worker/edit.test.js",
+		"worker:dev": "wrangler dev --config worker/wrangler.toml --var ALLOW_LOCAL_LLM:1 --local",
+		"worker:deploy": "wrangler deploy --config worker/wrangler.toml"
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.29.0",
+		"@stdlib/random-base-exponential": "^0.2.2",
+		"@stdlib/random-base-minstd-shuffle": "^0.2.3",
+		"@stdlib/random-base-normal": "^0.2.2",
+		"@stdlib/random-base-uniform": "^0.2.3",
+		"express": "^5.2.1",
+		"express-rate-limit": "^8.5.2",
+		"pino": "^10.3.1",
+		"zod": "^3.24.1"
+	},
+	"devDependencies": {
+		"vite-node": "^3.2.4",
+		"vitest": "^4.1.2"
+	}
+}

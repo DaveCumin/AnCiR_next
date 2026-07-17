@@ -1,0 +1,10 @@
+node_modules/
+# Secrets — never commit. Keep .env.example (tracked).
+.env
+*.env
+!.env.example
+.DS_Store
+*.log
+
+# wrangler/miniflare local dev state (KV, cache) — never commit
+.wrangler/
