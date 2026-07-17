@@ -331,6 +331,106 @@ test('logs whether a repair was needed — the number that says the catalogue is
 	assert.equal(ok.repaired, true);
 });
 
+const INTENT = {
+	goal: 'split the recording and check each half for rhythmicity',
+	deliverables: [
+		{ kind: 'analysis', what: 'Split' },
+		{ kind: 'analysis', what: 'RhythmicityAnalysis' }
+	],
+	assumptions: ['no sampling rate given; assumed hourly']
+};
+
+test('the reply carries a manifest: the goal, the guesses, and what is missing', async () => {
+	// Only the Split is built — the RhythmicityAnalysis the user asked for is absent, and the
+	// session is error-free regardless. Without the manifest nothing in the reply says so.
+	stubLLM(
+		JSON.stringify({
+			intent: INTENT,
+			analyses: [
+				{ name: 'SimulatedData', args: { seed: 1, samplingPeriod_hours: 1 } },
+				{ name: 'Split', args: { xIN: 'time', yIN: ['values'], splitTimes: [100] } }
+			]
+		})
+	);
+	const res = await worker.fetch(post({ prompt: 'split it and analyse each half', llm: LLM }), ENV());
+	const { manifest, errors } = await res.json();
+
+	assert.deepEqual(errors, [], 'a perfectly-wired session that is still not what was asked for');
+	assert.equal(manifest.complete, false);
+	assert.deepEqual(manifest.missing, ['analysis: RhythmicityAnalysis']);
+	assert.match(manifest.goal, /rhythmicity/);
+	// The assumptions are how a user learns what was decided for them.
+	assert.deepEqual(manifest.assumptions, ['no sampling rate given; assumed hourly']);
+});
+
+test('a repair cannot declare itself complete by restating its own intent', async () => {
+	// The escape route a self-reported contract has to close. The model can't wire the
+	// RhythmicityAnalysis, so on the retry it drops the analysis AND quietly deletes it from
+	// its own deliverables. That reply is error-free and claims 100%.
+	//
+	// Dropping it is allowed here (the repair prompt itself offers "drop that part rather than
+	// inventing a name", and an error-free session beats a broken one). Hiding it is not. The
+	// manifest is scored against the FIRST draft's intent — the reading closest to what the
+	// user actually asked for, made before the model hit any trouble — so the deliverable is
+	// still reported missing no matter what the repair says about itself.
+	const sent = stubLLMSequence(
+		JSON.stringify({ intent: INTENT, ...SPLIT_DRAFT('time_1') }),
+		JSON.stringify({
+			intent: { ...INTENT, deliverables: [{ kind: 'analysis', what: 'Split' }] },
+			analyses: [
+				{ name: 'SimulatedData', args: { seed: 1, samplingPeriod_hours: 1 } },
+				{ name: 'Split', args: { xIN: 'time', yIN: ['values'], splitTimes: [100] } }
+			]
+		})
+	);
+	const res = await worker.fetch(post({ prompt: 'split it and analyse each half', llm: LLM }), ENV());
+	const out = await res.json();
+
+	assert.equal(sent.length, 2);
+	assert.deepEqual(out.errors, [], 'the repair was taken: it is error-free');
+	// ...but the user is still told what it quietly gave up on.
+	assert.equal(out.manifest.complete, false, 'the model claimed complete; we do not take its word');
+	assert.deepEqual(out.manifest.missing, ['analysis: RhythmicityAnalysis']);
+});
+
+test('the repair prompt tells the model its intent is binding', async () => {
+	const sent = stubLLMSequence(JSON.stringify({ intent: INTENT, ...SPLIT_DRAFT('time_1') }));
+	await worker.fetch(post({ prompt: 'split it', llm: LLM }), ENV());
+	assert.match(sent[1].messages[1].content, /do not drop a[\s\S]*deliverable/i);
+});
+
+test('logs intent coverage — the metric that says we built the wrong thing correctly', async () => {
+	const lines = [];
+	const realLog = console.log;
+	console.log = (o) => lines.push(o);
+	try {
+		stubLLM(
+			JSON.stringify({
+				intent: INTENT,
+				analyses: [
+					{ name: 'SimulatedData', args: { seed: 1, samplingPeriod_hours: 1 } },
+					{ name: 'Split', args: { xIN: 'time', yIN: ['values'], splitTimes: [100] } }
+				]
+			})
+		);
+		await worker.fetch(post({ prompt: 'split it', llm: LLM }), ENV());
+	} finally {
+		console.log = realLog;
+	}
+	const ok = lines.find((l) => l?.event === 'build' && l.outcome === 'ok');
+	assert.equal(ok.intentMet, '1/2');
+	assert.deepEqual(ok.intentMissing, ['analysis: RhythmicityAnalysis']);
+});
+
+test('a draft with no intent still builds — the field is new, sessions are not', async () => {
+	stubLLM(JSON.stringify({ analyses: [{ name: 'SimulatedData', args: { seed: 1 } }] }));
+	const res = await worker.fetch(post({ prompt: 'simulate something', llm: LLM }), ENV());
+	assert.equal(res.status, 200);
+	const out = await res.json();
+	// null, not a manifest we invented by describing the graph back at the user.
+	assert.equal(out.manifest, null);
+});
+
 test('the fingerprint never carries the api key or the prompt — the session travels', async () => {
 	stubLLM(JSON.stringify({ analyses: [{ name: 'SimulatedData', args: { seed: 1 } }] }));
 	const env = ENV();

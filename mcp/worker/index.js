@@ -21,6 +21,7 @@
 // BUILD_RATE_MAX, ALLOW_LOCAL_LLM.
 
 import { normalizeSession } from '../src/emit/normalizer.js';
+import { scoreIntent, repairIsBetter, buildManifest } from '../src/emit/intent.js';
 import { buildDraftPrompt } from './draftPrompt.js';
 import { buildEditPrompt } from './editPrompt.js';
 import { validateBuild, validateEdit } from '../app/validation.js';
@@ -218,7 +219,13 @@ export function repairPrompt(userPrompt, draft, errors) {
 		'Each message above names what was wrong and lists the columns that actually exist.',
 		'Reply with the WHOLE corrected JSON object — same shape, same rules. Fix only those',
 		'problems and keep everything that worked. If a column you wanted does not exist, use',
-		'one that does, or drop that part rather than inventing a name.'
+		'one that does, or drop that part rather than inventing a name.',
+		'',
+		// The draft above carries its own `intent`, so the model is reading its own checklist
+		// back. Saying it's binding costs one line and closes the cheapest way out of a repair:
+		// delete the hard part, delete the promise, declare success.
+		'Your "intent" is the checklist you are held to. Keep it as it is — do not drop a',
+		'deliverable to make an error go away. Every deliverable must still be built.'
 	].join('\n');
 }
 
@@ -285,6 +292,11 @@ async function handleBuild(request, env) {
 	let { session, warnings, errors } = normalizeSession(draft, { provenance });
 	let repaired = false;
 
+	// What the model SAID it was building, checked against what it did build. The draft states
+	// it in the same reply, so this costs no extra call — see src/emit/intent.js for why a
+	// self-reported contract is still worth having.
+	let score = scoreIntent(draft.intent, session);
+
 	// Give the model its own mistakes back, ONCE.
 	//
 	// The normalizer already knows exactly what went wrong and says so — "no column named
@@ -312,11 +324,20 @@ async function handleBuild(request, env) {
 			const second = normalizeSession(retry.draft, { provenance });
 			// Keep it only if it's genuinely better. A repair that trades one broken plot for
 			// another, or that quietly drops what DID work, is worse than the first answer.
-			const better =
-				second.errors.length < errors.length &&
-				second.session.tableProcesses.length >= session.tableProcesses.length;
+			//
+			// Scored against the FIRST draft's intent, deliberately — never the repair's own.
+			// The contract is whatever the model understood the USER to want, and that reading
+			// is at its most honest before it hits any trouble. Let the repair restate its
+			// intent and it can simply promise less, which is the one escape route that makes
+			// a checklist worthless.
+			const secondScore = scoreIntent(draft.intent, second.session);
+			const better = repairIsBetter(
+				{ errors, session, score },
+				{ errors: second.errors, session: second.session, score: secondScore }
+			);
 			if (better) {
 				({ session, warnings, errors } = second);
+				score = secondScore;
 				repaired = true;
 			}
 		}
@@ -338,11 +359,17 @@ async function handleBuild(request, env) {
 	// `repaired` is the number to watch: it says how often the model gets it wrong first time,
 	// and a rise in it points at a catalogue that's misleading models rather than at one bad
 	// prompt. Repairs that were still not good enough show up as `ok` with a non-empty `errors`.
+	const manifest = buildManifest(score, session);
 	done('ok', {
 		sessionId,
 		nodes: session.tableProcesses.map((t) => t.name),
 		plots: session.plots.map((p) => p.type),
 		repaired,
+		// Intent coverage: the metric that says whether we built what was ASKED FOR, as opposed
+		// to something that merely wires up. A session can be error-free and still be 3/5.
+		// Watch `intentMissing` — it names the deliverables we keep failing to build.
+		intentMet: score ? `${score.met}/${score.verifiable}` : null,
+		intentMissing: manifest?.missing ?? [],
 		errors,
 		warnings
 	});
@@ -354,6 +381,10 @@ async function handleBuild(request, env) {
 		sessionUrl,
 		// Open this in a browser: AnCiR fetches the session and computes it client-side.
 		url: `${ancir}/?loadFromURL=${encodeURIComponent(sessionUrl)}`,
+		// What was built, what was assumed, what's missing — auditable without reading the graph.
+		// null when the model stated no intent; we never synthesise one by describing the graph
+		// back at the user, which would only ever say "I built what I built".
+		manifest,
 		warnings,
 		errors
 	});

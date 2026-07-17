@@ -93,6 +93,11 @@ Reply with ONLY the JSON object — no prose, no markdown fence.
 
 SHAPE:
 {
+  "intent":   { "goal": "one sentence, in the user's terms",
+                "deliverables": [ { "kind": "data",     "what": "14 days of simulated activity" },
+                                  { "kind": "analysis", "what": "Cosinor" },
+                                  { "kind": "plot",     "what": "actogram" } ],
+                "assumptions": [ "period not given; assumed 24 h" ] },
   "columns":  [ { "name": "hour", "values": [0,1,2] } ],          // optional: literal input data
   "analyses": [ { "name": "Cosinor", "args": { "xIN": "hour", "yIN": ["signal"] } } ],
   "plots":    [ { "type": "scatterplot", "name": "Cosinor: data + fit", "series": [
@@ -100,6 +105,16 @@ SHAPE:
                   { "x": "cosinorx", "y": "cosinory_signal", "label": "signal fit", "kind": "line"   }
               ] } ]
 }
+
+"intent" IS REQUIRED. Fill it in FIRST, from the REQUEST — not from the session you go on to
+build. It is a checklist you are held to, so listing something you don't build is caught:
+- "deliverables": one entry per THING THE USER ASKED FOR. "kind" is "data", "analysis" or
+  "plot". For "analysis"/"plot", "what" MUST be the exact catalogue name ("Cosinor",
+  "actogram") — that is how it gets checked. One entry per item: "a periodogram for each of
+  the two parts" is TWO plot deliverables.
+- "assumptions": anything you decided that the user did not say — an assumed period, a sampling
+  rate, a choice between two readings of the request. This is shown to them, so it is how they
+  find out you guessed 24 h. Say nothing here only if you truly guessed nothing.
 
 A plot holds a LIST of series, so raw data and a fitted curve go on the SAME plot. Use
 "kind":"points" for measured data and "kind":"line" for a fit. (A one-series plot may instead

@@ -11,7 +11,7 @@ See the ADR: `2026-07-15-static-session-emission` (in the vault).
 
 | | |
 | --- | --- |
-| `POST /build` | `{prompt, llm:{baseUrl,apiKey,model}, options?}` → `{url, sessionUrl, sessionId, warnings, errors}` |
+| `POST /build` | `{prompt, llm:{baseUrl,apiKey,model}, options?}` → `{url, sessionUrl, sessionId, manifest, warnings, errors}` |
 | `POST /mcp` | remote **MCP server** (JSON-RPC) — an agent builds sessions with no clone, no key |
 | `GET /sessions/:id` | the session JSON (CORS `*`, so AnCiR can fetch it cross-origin) |
 | `GET /health` | `{ok:true}` |
@@ -148,13 +148,67 @@ Rules, all of them deliberate:
 - **Once.** A second failure is a real dead end, and looping would burn a token budget the free
   tier doesn't have (8K/min — a build is ~2.5K, so a repair round roughly doubles a failing
   request).
-- **Only if it helps.** The retry is kept only when it has *fewer* errors AND hasn't quietly
-  dropped analyses that worked. Otherwise the first answer stands and the user still sees the
+- **Only if it helps.** The retry is kept only when it has *fewer* errors AND hasn't lost
+  intent coverage (see below). Otherwise the first answer stands and the user still sees the
   errors.
 - **Never on a clean draft** — no wasted call.
 - **`repaired: true`** lands in the log. Watch it: a rise means the catalogue is misleading
   models, not that one prompt was unlucky. Repairs that still weren't enough show up as
   `outcome: "ok"` with a non-empty `errors`.
+
+## The intent contract
+
+The normalizer answers *"is this session wired correctly?"*. It cannot answer *"is this the
+session the user asked for?"* — by the time a draft reaches it the prompt is gone. So a draft
+that builds four of the five things asked for normalises perfectly, reports zero errors, and
+nobody notices.
+
+So the model states its goal in the **same reply** as the draft (no extra call, a handful of
+tokens), and states it *checkably*:
+
+```json
+"intent": {
+  "goal": "fit a 24 h rhythm and show it",
+  "deliverables": [ { "kind": "analysis", "what": "Cosinor" },
+                    { "kind": "plot",     "what": "actogram" } ],
+  "assumptions": [ "period not given; assumed 24 h" ]
+}
+```
+
+`deliverables` are scored by mechanical lookup against the normalised session
+(`src/emit/intent.js`); `goal` and `assumptions` are prose, shown to the user, never scored.
+This buys three things:
+
+- **The manifest** (below): the reply finally says what was *asked for*, not just what was built.
+- **A real repair test.** The old rule was "fewer errors, no fewer analyses" — node COUNT, which
+  cannot tell a Cosinor from a Periodogram. Coverage can.
+- **`intentMet: "4/5"` in the logs**, with `intentMissing` naming the deliverables. A session can
+  be error-free and still be 3/5; this is the only number that sees that.
+
+Two things it deliberately does **not** do. It never scores a repair against the repair's *own*
+restated intent — always the first draft's, made before the model hit trouble, or a model can
+simply promise less and declare victory. And an unverifiable deliverable (a `kind` we have no
+check for) is excluded from the score rather than counted against the draft; guessing would make
+the number lie in both directions.
+
+A draft with no `intent` still builds. `manifest` comes back `null` rather than something we
+synthesised by describing the graph back at the user, which would only ever say "I built what I
+built".
+
+## The manifest
+
+`/build` returns a `manifest` alongside the URL:
+
+```json
+{ "goal": "…", "assumptions": ["period not given; assumed 24 h"],
+  "built": { "analyses": ["SimulatedData", "Cosinor"], "plots": [] },
+  "deliverables": [ { "kind": "plot", "what": "actogram", "met": false } ],
+  "missing": ["plot: actogram"], "complete": false }
+```
+
+`assumptions` is the interesting field: it's everything the model decided *for* the user without
+being told. `missing` is the headline — before this, a user who asked for five things and got
+four had to reverse-engineer the node graph to find out.
 
 ## Prompt injection
 
