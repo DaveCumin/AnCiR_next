@@ -95,6 +95,30 @@ test('a parameter change round-trips', async () => {
 	assert.deepEqual((await res.json()).changes, [{ analysis: 3, set: { fixedPeriod: 12 } }]);
 });
 
+test('the prompt teaches shading, and only for the plots that support it', () => {
+	const p = buildEditPrompt(SESSION);
+	assert.match(p, /"bands":\s+\[ \{ "plot": 2, "fromHour": 18, "toHour": 6/);
+	assert.match(p, /CLOCK HOURS/);
+	// Registry-derived, so a plot that gains bands is advertised without editing a list.
+	assert.match(p, /PLOTS THAT SUPPORT "bands" \(shading\): scatterplot/);
+	// The model must not be invited to give an absolute time — on a time axis the stored field
+	// is an epoch-ms, and 18 would put the band 18 ms after 1970. The client converts.
+	assert.match(p, /Do not try to give a date, a timestamp, or a duration/);
+});
+
+test('a shading request round-trips', async () => {
+	stubLLM(JSON.stringify({ bands: [{ plot: 2, fromHour: 18, toHour: 6, label: 'Night' }] }));
+	const res = await worker.fetch(
+		post({ prompt: 'shade 6pm to 6am on the scatterplot', llm: LLM, session: SESSION }),
+		ENV()
+	);
+	assert.equal(res.status, 200);
+	const out = await res.json();
+	assert.deepEqual(out.bands, [{ plot: 2, fromHour: 18, toHour: 6, label: 'Night' }]);
+	// A bands-only reply is a real edit, not an empty one.
+	assert.deepEqual(out.analyses, []);
+});
+
 test('an empty proposal is reported, not returned as a silent no-op', async () => {
 	// What a model correctly returns when asked to delete something.
 	stubLLM('{}');

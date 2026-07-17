@@ -25,9 +25,10 @@
 // Additions and parameter changes only: no deletes. A model deleting a user's work on a
 // misread instruction is a much worse failure than one that declines to.
 
-import { core, appConsts } from '$lib/core/core.svelte.js';
+import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 import { applyOp } from '$lib/core/operations.js';
 import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
+import dayjs from '$lib/utils/time/dayjsSetup.js';
 
 // Mirrors the emitted-session series colours (plots/canonicalNodeViz.js), so an AI-added plot
 // looks like one Quick-Plot would produce: navy for measured data, terracotta for a fit.
@@ -104,9 +105,23 @@ export function registryFacts(consts = appConsts) {
 	}
 	const plots = {};
 	for (const [type, entry] of consts.plotMap ?? new Map()) {
-		plots[type] = { inputs: entry.defaultInputs ?? [] };
+		plots[type] = {
+			inputs: entry.defaultInputs ?? [],
+			// Shading (light/dark bands) is a scatterplot feature today. Asked of the class
+			// rather than hardcoded, so a plot that gains bands is covered for free.
+			supportsBands: typeof entry.data?.prototype?.addNightBand === 'function'
+		};
 	}
 	return { tps, plots };
+}
+
+/**
+ * Hours between two clock hours, wrapping midnight: 18:00→06:00 is 12 h, not -12.
+ * @returns {number|null} null when the two are the same hour (a zero-width band)
+ */
+export function bandDuration(fromHour, toHour) {
+	const d = (((toHour - fromHour) % 24) + 24) % 24;
+	return d === 0 ? null : d;
 }
 
 /**
@@ -175,9 +190,9 @@ function resolveRef(ref, { index, pending }) {
  * summary and facts and it tells you exactly what would happen, which is what makes both the
  * preview and the tests possible.
  *
- * @param {{analyses?: any[], plots?: any[], changes?: any[]}} spec
+ * @param {{analyses?: any[], plots?: any[], changes?: any[], bands?: any[]}} spec
  * @param {{summary: object, facts: object}} ctx
- * @returns {{analyses: any[], plots: any[], changes: any[], errors: string[], preview: string[]}}
+ * @returns {{analyses, plots, changes, bands, errors: string[], preview: string[]}}
  */
 export function planEdit(spec, { summary, facts }) {
 	const errors = [];
@@ -185,6 +200,7 @@ export function planEdit(spec, { summary, facts }) {
 	const analyses = [];
 	const plots = [];
 	const changes = [];
+	const bands = [];
 
 	const index = {
 		names: nameIndex(summary.columns ?? []),
@@ -344,7 +360,78 @@ export function planEdit(spec, { summary, facts }) {
 		}
 	}
 
-	return { analyses, plots, changes, errors, preview };
+	// ---- shading (light/dark bands) on an existing plot ----
+	//
+	// Expressed in CLOCK HOURS ("shade 18:00 → 06:00"), which is what a chronobiologist means
+	// and all a model can sensibly know. It is NOT the field the plot stores: on a time axis
+	// `startTimeHours` holds an absolute epoch-ms, so 18 would put the first band 18 ms after
+	// 1970 and shade nothing. applyEdit converts to the axis's own units, because only it can
+	// see the axis and the session's timezone.
+	const plotById = new Map((summary.plots ?? []).map((p) => [p.id, p]));
+	for (const b of spec?.bands ?? []) {
+		const target = plotById.get(b?.plot);
+		if (!target) {
+			errors.push(`Can't shade plot ${b?.plot} — no such plot.`);
+			continue;
+		}
+		if (!facts.plots[target.type]?.supportsBands) {
+			errors.push(`A ${target.type} doesn't support shading — only some plot types do.`);
+			continue;
+		}
+		const from = Number(b?.fromHour);
+		const to = Number(b?.toHour);
+		if (!Number.isFinite(from) || !Number.isFinite(to) || from < 0 || from >= 24 || to < 0 || to >= 24) {
+			errors.push(`Shading needs fromHour and toHour as clock hours 0–24 (got ${b?.fromHour}–${b?.toHour}).`);
+			continue;
+		}
+		const durationHours = bandDuration(from, to);
+		if (durationHours == null) {
+			errors.push(`Shading from ${from}:00 to ${to}:00 covers nothing — skipped.`);
+			continue;
+		}
+		const label = typeof b?.label === 'string' && b.label.trim() ? b.label.trim() : 'Night';
+		bands.push({ plotId: target.id, fromHour: from, durationHours, label });
+		const hh = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
+		preview.push(
+			`Shade ${target.type}${target.name ? ` "${target.name}"` : ''}: ${hh(from)}–${hh(to)} each day`
+		);
+	}
+
+	return { analyses, plots, changes, bands, errors, preview };
+}
+
+/**
+ * Where the FIRST shaded band starts, in the units the plot's x axis actually uses.
+ *
+ * This is the whole reason shading isn't just "set a property". `NightBandClass.startTimeHours`
+ * means two different things depending on the axis, and the plot's own UI swaps between a
+ * date-time picker and a number box to match:
+ *
+ *   - numeric x (hours since start): it IS the clock hour → 18.
+ *   - time x (epoch ms): it's an absolute x VALUE, so 18 means 18 ms after 1970 — the band would
+ *     land nowhere near the data and the renderer would step 24 h at a time across half a
+ *     century to reach it.
+ *
+ * So for a time axis, find the first `fromHour` o'clock at or after the data starts, in the
+ * session's own display timezone (18:00 is a LOCAL hour; using UTC would silently shift the
+ * shading by the offset — the kind of error that looks plausible on screen).
+ *
+ * @param {object} inner the plot's data object (plot.plot)
+ * @param {number} fromHour clock hour 0–24
+ * @param {string} tz IANA zone, e.g. 'Pacific/Auckland'
+ */
+export function firstBandStart(inner, fromHour, tz) {
+	const minX = inner?.xlims?.[0];
+	if (!inner?.anyXdataTime) return fromHour; // numeric axis: the hour is the value
+	if (!Number.isFinite(minX)) return fromHour; // no data yet — harmless; bands render off none
+
+	const zone = tz && tz !== 'utc' ? tz : 'UTC';
+	const h = Math.floor(fromHour);
+	const m = Math.round((fromHour % 1) * 60);
+	// The same clock hour on the data's own first day, then step forward if that's already past.
+	let start = dayjs(minX).tz(zone).hour(h).minute(m).second(0).millisecond(0);
+	if (start.valueOf() < minX) start = start.add(1, 'day');
+	return start.valueOf();
 }
 
 /** Plot JSON for `addPlot`, with every ref already a real column id. */
@@ -428,6 +515,37 @@ export function applyEdit(plan) {
 	for (const c of plan.changes) {
 		ops.push({ kind: 'setFreeTableProcessArg', tpId: c.tpId, key: c.key, value: c.value });
 	}
+
+	// Shading: rewrite the plot's inner with the band appended. `setPlotInner` takes a
+	// serialised snapshot and is the established way to make a plot edit undoable — the same op
+	// the canvas uses for wiring. Clock hours become axis units here, where the axis is visible.
+	let skippedBands = 0;
+	for (const b of plan.bands ?? []) {
+		const plot = core.plots.find((p) => p.id === b.plotId);
+		if (!plot?.plot?.toJSON) {
+			errors.push(`Couldn't shade plot ${b.plotId} — it's no longer there.`);
+			skippedBands++;
+			continue;
+		}
+		const inner = plot.plot.toJSON();
+		inner.nightBands = [
+			...(inner.nightBands ?? []),
+			{
+				name: b.label,
+				mode: 'repeating',
+				enabled: true,
+				repeatEveryHours: 24,
+				nightDurationHours: b.durationHours,
+				startTimeHours: firstBandStart(plot.plot, b.fromHour, appState?.displayTimezone),
+				// The band starts at a clock time we computed, NOT at whenever the data happens
+				// to begin — which is what useDataMin would mean.
+				useDataMin: false,
+				customBands: []
+			}
+		];
+		ops.push({ kind: 'setPlotInner', id: plot.id, inner });
+	}
+
 	if (ops.length) applyOp({ kind: 'batch', ops });
 
 	return {
@@ -436,7 +554,8 @@ export function applyEdit(plan) {
 		added: {
 			analyses: tps.length,
 			plots: plan.plots.length - skippedPlots,
-			changes: plan.changes.length
+			changes: plan.changes.length,
+			bands: (plan.bands?.length ?? 0) - skippedBands
 		}
 	};
 }

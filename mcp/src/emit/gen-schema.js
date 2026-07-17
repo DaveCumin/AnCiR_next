@@ -170,7 +170,10 @@ const plots = {};
 for (const [id, entry] of appConsts.plotMap ?? new Map()) {
 	plots[id] = {
 		displayName: entry.displayName ?? id,
-		inputs: entry.defaultInputs ?? []
+		inputs: entry.defaultInputs ?? [],
+		// Can this plot shade a repeating time-of-day window (a light/dark cycle)? Asked of the
+		// class, so a plot that gains bands is advertised without anyone editing a list.
+		supportsBands: typeof entry.data?.prototype?.addNightBand === 'function'
 	};
 }
 

@@ -4,7 +4,7 @@
 // lets through gets applied to the user's open session by an op engine with no rollback. So
 // these tests are mostly about what it REFUSES.
 import { describe, it, expect } from 'vitest';
-import { planEdit, summariseSession } from './aiEdit.js';
+import { planEdit, summariseSession, bandDuration, firstBandStart } from './aiEdit.js';
 
 // Registry facts as the live registry reports them (see registryFacts).
 const FACTS = {
@@ -25,10 +25,10 @@ const FACTS = {
 		}
 	},
 	plots: {
-		scatterplot: { inputs: ['x', 'y'] },
-		actogram: { inputs: ['time', 'values'] },
-		histogram: { inputs: ['column'] },
-		tableplot: { inputs: [] }
+		scatterplot: { inputs: ['x', 'y'], supportsBands: true },
+		actogram: { inputs: ['time', 'values'], supportsBands: false },
+		histogram: { inputs: ['column'], supportsBands: false },
+		tableplot: { inputs: [], supportsBands: false }
 	}
 };
 
@@ -38,7 +38,10 @@ const SUMMARY = {
 		{ id: 1, name: 'values', type: 'number' }
 	],
 	analyses: [{ id: 3, name: 'Cosinor', args: { xIN: 0, yIN: [1], fixedPeriod: 24 } }],
-	plots: []
+	plots: [
+		{ id: 2, type: 'scatterplot', name: 'Raw' },
+		{ id: 5, type: 'actogram', name: 'Acto' }
+	]
 };
 
 const plan = (spec, summary = SUMMARY) => planEdit(spec, { summary, facts: FACTS });
@@ -209,6 +212,86 @@ describe('planEdit — what it refuses', () => {
 		expect(() => plan({ analyses: null, plots: 'nope' })).not.toThrow();
 		expect(() => plan({ analyses: [null, 42] })).not.toThrow();
 		expect(() => plan({ plots: [{ type: 'scatterplot' }] })).not.toThrow();
+	});
+});
+
+// "add shading to the scatterplot to indicate times between 6pm and 6am each day" — a plain
+// chronobiology request (the dark phase of a light/dark cycle) that AnCiR has always supported
+// via the plot's Bands tab, but which the AI had no verb for and simply refused.
+describe('planEdit — shading a time-of-day window', () => {
+	it('turns clock hours into a band, wrapping midnight', () => {
+		const p = plan({ bands: [{ plot: 2, fromHour: 18, toHour: 6 }] });
+		expect(p.errors).toEqual([]);
+		// 18:00 → 06:00 is 12 h, not -12.
+		expect(p.bands).toEqual([{ plotId: 2, fromHour: 18, durationHours: 12, label: 'Night' }]);
+		expect(p.preview).toEqual(['Shade scatterplot "Raw": 18:00–06:00 each day']);
+	});
+
+	it('handles a window inside one day, and a half hour', () => {
+		expect(plan({ bands: [{ plot: 2, fromHour: 8, toHour: 20 }] }).bands[0].durationHours).toBe(12);
+		expect(plan({ bands: [{ plot: 2, fromHour: 22.5, toHour: 6 }] }).bands[0]).toMatchObject({
+			fromHour: 22.5,
+			durationHours: 7.5
+		});
+	});
+
+	it('refuses a plot type that cannot shade, rather than pretending', () => {
+		const p = plan({ bands: [{ plot: 5, fromHour: 18, toHour: 6 }] });
+		expect(p.bands).toEqual([]);
+		expect(p.errors[0]).toMatch(/actogram doesn't support shading/);
+	});
+
+	it('refuses nonsense hours and zero-width windows', () => {
+		expect(plan({ bands: [{ plot: 2, fromHour: 18, toHour: 18 }] }).errors[0]).toMatch(/covers nothing/);
+		expect(plan({ bands: [{ plot: 2, fromHour: 25, toHour: 6 }] }).errors[0]).toMatch(/clock hours 0–24/);
+		expect(plan({ bands: [{ plot: 2, fromHour: '6pm', toHour: 6 }] }).errors[0]).toMatch(/clock hours 0–24/);
+		expect(plan({ bands: [{ plot: 99, fromHour: 18, toHour: 6 }] }).errors[0]).toMatch(/no such plot/);
+	});
+});
+
+describe('bandDuration', () => {
+	it('wraps midnight and rejects a zero-width window', () => {
+		expect(bandDuration(18, 6)).toBe(12);
+		expect(bandDuration(6, 18)).toBe(12);
+		expect(bandDuration(23, 1)).toBe(2);
+		expect(bandDuration(0, 12)).toBe(12);
+		expect(bandDuration(12, 12)).toBeNull();
+	});
+});
+
+// The trap that makes shading more than "set a property": NightBandClass.startTimeHours means
+// the clock hour on a numeric axis, but an absolute epoch-ms on a TIME axis (the plot's own UI
+// swaps a number box for a date-time picker on the same field). Passing 18 to a time axis would
+// put the first band 18 ms after 1970.
+describe('firstBandStart', () => {
+	const numericAxis = { anyXdataTime: false, xlims: [0, 96] };
+	// 2026-07-17T02:00:00Z — data starting at 2am UTC.
+	const t0 = Date.UTC(2026, 6, 17, 2, 0, 0);
+	const timeAxis = { anyXdataTime: true, xlims: [t0, t0 + 4 * 24 * 3600_000] };
+
+	it('is the clock hour itself on a numeric axis', () => {
+		expect(firstBandStart(numericAxis, 18, 'utc')).toBe(18);
+	});
+
+	it('is the first 18:00 at or after the data starts, on a time axis', () => {
+		const got = firstBandStart(timeAxis, 18, 'utc');
+		expect(got).toBe(Date.UTC(2026, 6, 17, 18, 0, 0)); // same day, 18:00 — not 18 ms
+		expect(got).toBeGreaterThan(timeAxis.xlims[0]);
+	});
+
+	it('rolls to the next day when the hour has already passed', () => {
+		// Data starts at 20:00; the first 18:00 at-or-after is TOMORROW's.
+		const late = Date.UTC(2026, 6, 17, 20, 0, 0);
+		const axis = { anyXdataTime: true, xlims: [late, late + 4 * 24 * 3600_000] };
+		expect(firstBandStart(axis, 18, 'utc')).toBe(Date.UTC(2026, 6, 18, 18, 0, 0));
+	});
+
+	it('reads 18:00 in the session timezone, not UTC', () => {
+		// 18:00 in Auckland (UTC+12 in July) is 06:00 UTC — using UTC would silently shift the
+		// shading by the offset, which looks perfectly plausible on screen.
+		const got = firstBandStart(timeAxis, 18, 'Pacific/Auckland');
+		expect(got).toBe(Date.UTC(2026, 6, 17, 6, 0, 0));
+		expect(got).not.toBe(firstBandStart(timeAxis, 18, 'utc'));
 	});
 });
 

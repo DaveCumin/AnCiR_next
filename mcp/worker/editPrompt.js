@@ -11,6 +11,17 @@
 // (src/lib/utils/aiEdit.js). Nothing here is trusted.
 
 import { buildCatalogue } from './draftPrompt.js';
+import generated from '../src/emit/session-schema.generated.json' with { type: 'json' };
+
+/** Which plot types can shade a time-of-day window — registry-derived, so it can't go stale. */
+function bandCapablePlots(schema) {
+	const types = Object.entries(schema.plots ?? {})
+		.filter(([, p]) => p.supportsBands)
+		.map(([type]) => type);
+	return types.length
+		? `PLOTS THAT SUPPORT "bands" (shading): ${types.join(', ')}`
+		: 'No plot type supports "bands" — do not use it.';
+}
 
 /** Render the open session so the model can refer to it: names, ids, nothing else. */
 export function renderSummary(summary) {
@@ -46,7 +57,8 @@ SHAPE:
                   { "x": "time",     "y": "values",          "label": "signal",     "kind": "points" },
                   { "x": "cosinorx", "y": "cosinory_values", "label": "signal fit", "kind": "line"   }
               ] } ],
-  "changes":  [ { "analysis": 3, "set": { "fixedPeriod": 12 } } ]
+  "changes":  [ { "analysis": 3, "set": { "fixedPeriod": 12 } } ],
+  "bands":    [ { "plot": 2, "fromHour": 18, "toHour": 6, "label": "Night" } ]
 }
 
 Every key is optional — emit only what the request needs. To add nothing, reply {}.
@@ -55,6 +67,11 @@ WHAT YOU MAY DO:
 - "analyses": ADD a new analysis, reading columns that ALREADY EXIST (listed below).
 - "plots":    ADD a new plot.
 - "changes":  change PARAMETERS of an existing analysis, by its #id.
+- "bands":    SHADE a repeating time-of-day window on an existing plot, by its #id — the
+              dark phase of a light/dark cycle. "fromHour"/"toHour" are CLOCK HOURS (0–23.99,
+              local): 18 → 6 shades 6pm to 6am every day. It wraps midnight; a duration is
+              worked out for you. Do not try to give a date, a timestamp, or a duration.
+              Only some plot types support this — the PLOTS list below marks which.
 
 WHAT YOU MAY NOT DO:
 - You cannot delete or replace anything. There is no vocabulary for it. If the user asks you to
@@ -89,6 +106,6 @@ RULES:
  * @param {object} summary the open session (see summariseSession in src/lib/utils/aiEdit.js)
  * @param {object} [schema] registry-derived catalogue; defaults to the generated one
  */
-export function buildEditPrompt(summary, schema) {
-	return `${FRAME}\n\n${buildCatalogue(schema)}\n\n${renderSummary(summary)}`;
+export function buildEditPrompt(summary, schema = generated) {
+	return `${FRAME}\n\n${buildCatalogue(schema)}\n\n${bandCapablePlots(schema)}\n\n${renderSummary(summary)}`;
 }

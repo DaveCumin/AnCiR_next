@@ -359,17 +359,23 @@ async function handleEdit(request, env) {
 	const analyses = Array.isArray(spec.analyses) ? spec.analyses : [];
 	const plots = Array.isArray(spec.plots) ? spec.plots : [];
 	const changes = Array.isArray(spec.changes) ? spec.changes : [];
-	if (!analyses.length && !plots.length && !changes.length) {
+	const bands = Array.isArray(spec.bands) ? spec.bands : [];
+	if (!analyses.length && !plots.length && !changes.length && !bands.length) {
 		// A model that understood the request but can't express it (a deletion, say) correctly
 		// returns {}. Saying so beats the client rendering an empty preview.
+		//
+		// The message says what the vocabulary IS rather than "no changes", because a rejection
+		// here usually means the user asked for something real that we have no verb for — and
+		// "the AI didn't propose any changes" sends them to reword a prompt that was fine.
 		done('empty_edit');
 		return json(
 			{
 				error:
-					"The AI didn't propose any changes. It can add analyses and plots or change a parameter, but it can't delete or rearrange things — try asking for something to be added.",
+					"The AI didn't propose any changes it could make. It can add analyses and plots, change an analysis's parameters, and shade a time-of-day window on a plot — but it can't delete or rearrange things, or restyle an existing plot. Try asking for something to be added.",
 				analyses: [],
 				plots: [],
-				changes: []
+				changes: [],
+				bands: []
 			},
 			422
 		);
@@ -378,9 +384,10 @@ async function handleEdit(request, env) {
 	done('ok', {
 		nodes: analyses.map((a) => a?.name),
 		plots: plots.map((p) => p?.type),
-		changes: changes.length
+		changes: changes.length,
+		bands: bands.length
 	});
-	return json({ analyses, plots, changes });
+	return json({ analyses, plots, changes, bands });
 }
 
 /**

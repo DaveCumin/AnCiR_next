@@ -125,7 +125,7 @@
 				// and the user's work. What changed is who reviews it: the user, afterwards, with
 				// undo in hand.
 				const p = planEdit(spec, { summary: summariseSession(), facts: registryFacts() });
-				if (!p.analyses.length && !p.plots.length && !p.changes.length) {
+				if (!p.analyses.length && !p.plots.length && !p.changes.length && !p.bands.length) {
 					error =
 						p.errors.length
 							? `Nothing in that suggestion could be applied:\n${p.errors.join('\n')}`
@@ -173,11 +173,12 @@
 			busy = false;
 			return;
 		}
-		const { analyses, plots, changes } = res.added;
+		const { analyses, plots, changes, bands } = res.added;
 		const bits = [
 			analyses && `${analyses} ${analyses === 1 ? 'analysis' : 'analyses'}`,
 			plots && `${plots} ${plots === 1 ? 'plot' : 'plots'}`,
-			changes && `${changes} ${changes === 1 ? 'change' : 'changes'}`
+			changes && `${changes} ${changes === 1 ? 'change' : 'changes'}`,
+			bands && `${bands} ${bands === 1 ? 'shaded band' : 'shaded bands'}`
 		].filter(Boolean);
 
 		// The warning IS the review step now, so it leads with the caveat rather than the success:
