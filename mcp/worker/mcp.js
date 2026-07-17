@@ -15,6 +15,7 @@
 // Spec: https://modelcontextprotocol.io/specification — Streamable HTTP transport.
 
 import { normalizeSession } from '../src/emit/normalizer.js';
+import { checkFitness } from '../src/emit/fitness.js';
 import { fingerprint } from './fingerprint.js';
 import generated from '../src/emit/session-schema.generated.json' with { type: 'json' };
 
@@ -104,8 +105,51 @@ function toolList() {
 			description:
 				'Turn a session draft into a real AnCiR session and return a link that opens it. The analyses are computed in the user\'s browser when the link is opened, so this does NOT return computed results — it returns a session to look at. Anything unusable is reported in `errors` rather than silently dropped.',
 			inputSchema: DRAFT_SCHEMA
+		},
+		{
+			name: 'check_draft',
+			title: 'Check a draft without building it',
+			description:
+				'Dry-run a draft: same validation as build_session, but nothing is stored and no link is minted. Returns the errors and warnings it WOULD produce, the columns each analysis would create, and any scientific-fitness advice. Use this to iterate on a draft — especially to find out what an analysis names its outputs before wiring a plot to them.',
+			inputSchema: DRAFT_SCHEMA
+		},
+		{
+			name: 'describe_session',
+			title: 'Describe an existing AnCiR session',
+			description:
+				'Read back a session this server built: its columns, analyses (with args) and plots, plus scientific-fitness advice. Use it to look before you leap — to inspect a session you built earlier, or one a user gives you a link to, instead of replacing it blind. It reports STRUCTURE, not results: the numbers only exist once the link is opened in a browser.',
+			inputSchema: {
+				type: 'object',
+				properties: {
+					session: {
+						type: 'string',
+						description:
+							'The session id, or a link to it (a /sessions/<id> URL, or an AnCiR ?loadFromURL=… link). Only sessions built by this server can be read.'
+					}
+				},
+				required: ['session']
+			}
 		}
 	];
+}
+
+/**
+ * The session id inside whatever the agent pasted: a bare id, a /sessions/<id> URL, or a full
+ * AnCiR ?loadFromURL=… link.
+ *
+ * This deliberately PARSES rather than FETCHES. The obvious reading of "describe the session at
+ * this URL" is to go and get it, which would hand any caller an SSRF primitive running inside
+ * our Worker: `?loadFromURL=http://internal/…` and we fetch it for them. We only ever read our
+ * own KV, so the sole thing we want from the input is an id, and anything that isn't a plain
+ * UUID isn't one.
+ */
+function sessionIdFrom(input) {
+	const s = String(input ?? '').trim();
+	const uuid = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+	if (/^[0-9a-f-]+$/i.test(s) && uuid.test(s)) return s.match(uuid)[0];
+	// A URL: take the LAST uuid in it — `?loadFromURL=<sessionUrl>` nests one inside another.
+	const all = s.match(new RegExp(uuid, 'gi'));
+	return all?.length ? all[all.length - 1] : null;
 }
 
 /** Render the catalogue as compact text — cheaper for the agent to read than raw schema JSON. */
@@ -139,9 +183,146 @@ function capabilitiesText() {
 	return `ANALYSES (exact args):\n${nodes}\n\nPLOTS (exact series fields):\n${plots}`;
 }
 
+/** Fitness advice as text the agent can act on, or '' when there's nothing to say. */
+function fitnessText(session) {
+	const findings = checkFitness(session);
+	if (!findings.length) return '';
+	return `Scientific fitness (advice — the session is valid either way):\n${findings
+		.map((f) => `- [${f.severity}] ${f.message}`)
+		.join('\n')}`;
+}
+
+/** What a draft WOULD build: the output columns are the half an agent can't predict. */
+function structureText(session) {
+	const byId = new Map((session.data ?? []).map((c) => [c.id, c]));
+	const analyses = (session.tableProcesses ?? []).map((t) => {
+		const outs = Object.values(t.args?.out ?? {})
+			.map((id) => byId.get(id)?.name)
+			.filter(Boolean);
+		return `  ${t.name}${outs.length ? ` -> creates: ${outs.join(', ')}` : ''}`;
+	});
+	const plots = (session.plots ?? []).map((p) => `  ${p.type}${p.name ? ` "${p.name}"` : ''}`);
+	return [
+		`ANALYSES:\n${analyses.join('\n') || '  (none)'}`,
+		`PLOTS:\n${plots.join('\n') || '  (none)'}`
+	].join('\n\n');
+}
+
 async function callTool(name, args, env, request, ctx) {
 	if (name === 'list_capabilities') {
 		return { content: [{ type: 'text', text: capabilitiesText() }] };
+	}
+
+	if (name === 'check_draft') {
+		// The same normalizer build_session runs, minus the KV write. Deliberately the same call
+		// and not a cheaper approximation: a dry run that disagrees with the real thing is worse
+		// than no dry run, because it teaches the agent to trust a fiction.
+		const { session, warnings, errors } = normalizeSession(args ?? {}, {});
+		const empty = !session.tableProcesses.length && !session.data.length;
+		const notes = [
+			structureText(session),
+			errors.length ? `ERRORS (these parts would be SKIPPED):\n- ${errors.join('\n- ')}` : '',
+			warnings.length ? `WARNINGS:\n- ${warnings.join('\n- ')}` : '',
+			fitnessText(session)
+		]
+			.filter(Boolean)
+			.join('\n\n');
+		return {
+			content: [
+				{
+					type: 'text',
+					text:
+						(empty
+							? 'This draft would produce an EMPTY session — nothing usable survived.'
+							: errors.length
+								? 'This draft would build, but some parts would be dropped.'
+								: 'This draft looks good. Nothing was stored; call build_session to make the link.') +
+						`\n\n${notes}`
+				}
+			],
+			structuredContent: {
+				ok: !empty && !errors.length,
+				errors,
+				warnings,
+				fitness: checkFitness(session),
+				analyses: session.tableProcesses.map((t) => t.name),
+				plots: session.plots.map((p) => p.type),
+				columns: session.data.map((c) => c.name)
+			}
+		};
+	}
+
+	if (name === 'describe_session') {
+		const id = sessionIdFrom(args?.session);
+		if (!id) {
+			return {
+				isError: true,
+				content: [
+					{
+						type: 'text',
+						text: 'That doesn\'t contain a session id. Pass the id, or a link this server produced (…/sessions/<id>, or an AnCiR ?loadFromURL=… link).'
+					}
+				]
+			};
+		}
+		if (!env.SESSIONS) {
+			return { isError: true, content: [{ type: 'text', text: 'Session storage is not configured on this server.' }] };
+		}
+		const stored = await env.SESSIONS.get(`s:${id}`);
+		if (!stored) {
+			// Sessions are transient by design (SESSION_TTL_S, 24 h by default) — say so, rather
+			// than let the agent conclude it typed the id wrong and retry forever.
+			return {
+				isError: true,
+				content: [
+					{
+						type: 'text',
+						text: `No session "${id}". Sessions are transient (they expire, by default after 24 h), and only sessions built by this server can be read.`
+					}
+				]
+			};
+		}
+		const session = JSON.parse(stored);
+		const columns = (session.data ?? []).map((c) => {
+			// Which columns hold DATA is the thing an agent can't otherwise know, and it decides
+			// what's safe to reason about: an analysis's outputs are empty until a browser opens
+			// the link and computes them.
+			const filled = (session.rawData?.[c.id] ?? []).length;
+			return `  ${c.name} (${c.type}${filled ? `, ${filled} values` : ', computed on open — empty here'})`;
+		});
+		const detail = (session.tableProcesses ?? [])
+			.map((t) => `  #${t.id} ${t.name} args=${JSON.stringify(t.args ?? {})}`)
+			.join('\n');
+		return {
+			content: [
+				{
+					type: 'text',
+					text: [
+						`Session ${id} (AnCiR ${session.version ?? 'unknown'}${session.generatedBy ? `, built by ${session.generatedBy.source} via ${session.generatedBy.route}` : ''}).`,
+						`COLUMNS:\n${columns.join('\n') || '  (none)'}`,
+						`ANALYSES:\n${detail || '  (none)'}`,
+						`PLOTS:\n${(session.plots ?? []).map((p) => `  ${p.type}${p.name ? ` "${p.name}"` : ''}`).join('\n') || '  (none)'}`,
+						fitnessText(session),
+						'This is the session\'s STRUCTURE. Results exist only once the link is opened in a browser.'
+					]
+						.filter(Boolean)
+						.join('\n\n')
+				}
+			],
+			structuredContent: {
+				sessionId: id,
+				version: session.version,
+				generatedBy: session.generatedBy ?? null,
+				columns: (session.data ?? []).map((c) => ({
+					name: c.name,
+					type: c.type,
+					hasData: (session.rawData?.[c.id] ?? []).length > 0
+				})),
+				analyses: (session.tableProcesses ?? []).map((t) => ({ id: t.id, name: t.name, args: t.args })),
+				plots: (session.plots ?? []).map((p) => ({ type: p.type, name: p.name })),
+				fitness: checkFitness(session)
+			}
+		};
 	}
 
 	if (name === 'build_session') {
@@ -204,7 +385,10 @@ async function callTool(name, args, env, request, ctx) {
 		// rather than pretending the session is complete.
 		const notes = [
 			errors.length ? `Errors (these parts were skipped):\n- ${errors.join('\n- ')}` : '',
-			warnings.length ? `Warnings:\n- ${warnings.join('\n- ')}` : ''
+			warnings.length ? `Warnings:\n- ${warnings.join('\n- ')}` : '',
+			// The agent IS the model here, so it can act on this directly — rewire the analysis,
+			// or tell the user why 1.5 cycles won't answer their question.
+			fitnessText(session)
 		]
 			.filter(Boolean)
 			.join('\n\n');
@@ -252,7 +436,7 @@ async function handleMessage(msg, env, request, ctx) {
 				capabilities: { tools: { listChanged: false } },
 				serverInfo: SERVER_INFO,
 				instructions:
-					'Build AnCiR chronobiology sessions. Call list_capabilities first for exact analysis names, args and output column names, then build_session with a draft. The link it returns opens the session in AnCiR, which computes it in the browser — results are not returned here.'
+					'Build AnCiR chronobiology sessions. Call list_capabilities first for exact analysis names, args and output column names. check_draft dry-runs a draft (nothing stored) and is the cheap way to learn what an analysis names its outputs before you wire a plot to them; build_session then returns a link. describe_session reads back a session you built earlier, or one a user links you to — look before you replace it. The link opens in AnCiR, which computes in the browser, so only structure is returned here, never results.'
 			});
 		}
 		case 'notifications/initialized':

@@ -25,12 +25,27 @@ builds itself in the browser.
 claude mcp add --transport http ancir https://ancir-nl.david-cumin.workers.dev/mcp
 ```
 
-That's the whole setup: no clone, no `npm install`, no VM. Two tools:
+That's the whole setup: no clone, no `npm install`, no VM. Four tools:
 
 | | |
 | --- | --- |
 | `list_capabilities` | every analysis and plot, with exact flat args, the columns each produces, and the fitted-curve pairing — straight from `session-schema.generated.json` |
-| `build_session` | a draft → normalizer → KV → the `?loadFromURL=` link, plus `structuredContent.{url,sessionUrl,sessionId,errors,warnings}` |
+| `check_draft` | **dry run**: the same normalizer, nothing stored, no link. Returns the errors it *would* raise, the columns each analysis *would* create, and fitness advice |
+| `build_session` | a draft → normalizer → KV → the `?loadFromURL=` link, plus `structuredContent.{url,sessionUrl,sessionId,errors,warnings,fitness}` |
+| `describe_session` | read a session back: columns (and **which hold data**), analyses with args, plots, fitness |
+
+`check_draft` and `describe_session` exist because the server was otherwise **write-only**: an
+agent could build but never look — not at what it had just made, not at a session a user linked
+it to. `check_draft` in particular is the cheap way to learn what an analysis *names* its
+outputs (the thing agents most reliably get wrong) before wiring a plot to them, and it runs the
+*same* normalizer rather than a cheaper approximation — a dry run that disagrees with the real
+thing just teaches the agent to trust a fiction.
+
+`describe_session` **parses** its argument for a session id; it never *fetches* it. "Describe the
+session at this URL" reads as an invitation to go and get it, which would hand any caller an
+SSRF primitive running inside the Worker. It only ever reads our own KV, so anything that isn't
+a plain UUID isn't a session id. (This exposes nothing new: `GET /sessions/:id` is already
+public and CORS-`*`, because AnCiR fetches it cross-origin.)
 
 **No LLM call and no API key** — the calling agent *is* the model, so `/mcp` never touches
 `OPENAI_*` and never spends the default key's quota. It's the same normalizer `/build` uses,
