@@ -116,7 +116,8 @@
 			"fixedOut": [],
 			"dynamicKind": "runtime",
 			"perYPrefix": null,
-			"fitOut": null
+			"fitOut": null,
+			"outputNote": "one per collected column: col_<the column>"
 		},
 		"ColumnFunctions": {
 			"displayName": "Column Function",
@@ -367,7 +368,8 @@
 			],
 			"dynamicKind": "runtime",
 			"perYPrefix": null,
-			"fitOut": null
+			"fitOut": null,
+			"outputNote": "one per DISTINCT VALUE in categoryIN: <that value>. Only usable when categoryIN is data you supplied or generated — not another analysis’s output, which is still empty."
 		},
 		"MovingAnalysis": {
 			"displayName": "Moving Analysis",
@@ -416,7 +418,8 @@
 			],
 			"dynamicKind": "runtime",
 			"perYPrefix": null,
-			"fitOut": null
+			"fitOut": null,
+			"outputNote": "per Y column, one per statistic the chosen `analysis` computes: <your Y column>_<stat> (e.g. <your Y column>_period)"
 		},
 		"NonparametricRA": {
 			"displayName": "Nonparametric RA",
@@ -734,7 +737,8 @@
 			"fixedOut": [],
 			"dynamicKind": "runtime",
 			"perYPrefix": null,
-			"fitOut": null
+			"fitOut": null,
+			"outputNote": "per Y column, one per segment: <your Y column>_1, <your Y column>_2, … (splitTimes has N entries ⇒ N+1 segments)"
 		},
 		"StoredValueGroup": {
 			"displayName": "Stored Value Group",
@@ -749,7 +753,8 @@
 			"fixedOut": [],
 			"dynamicKind": "runtime",
 			"perYPrefix": null,
-			"fitOut": null
+			"fitOut": null,
+			"outputNote": "one per group: group_<the group id>"
 		},
 		"TrendFit": {
 			"displayName": "Fit Trend Curves",

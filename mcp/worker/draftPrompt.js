@@ -37,6 +37,11 @@ function argsTemplate(node) {
  * says what the node will really produce for the args shown.
  */
 function perYOutputs(node) {
+	// 'runtime' nodes (Split, MovingAnalysis, …) can't have their outputs baked into a list —
+	// the names depend on the args. State the RULE instead; that's all a model needs, and
+	// without it everything downstream of a Split is unpromptable.
+	if (node.outputNote) return ` -> produces ${node.outputNote}`;
+
 	if (node.dynamicKind !== 'suffix' || !node.suffixesBy) return '';
 	const params = node.params ?? {};
 	const key = (node.discriminators ?? []).map((d) => params[d]).join('|');

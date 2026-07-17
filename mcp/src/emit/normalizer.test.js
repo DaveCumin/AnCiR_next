@@ -176,6 +176,52 @@ test('suffix-node outputs are named after the Y column, so the model can plot th
 // SimulatedData/SequenceColumn default to the current clock, so every build rewrote the file
 // with a new seed and timestamp. Tracked churn hides real changes and makes two developers
 // conflict over noise.
+// Split keys its per-Y outputs `${yid}_${segment}` — so with yIN [1] and two segments the keys
+// are `1_1` and `1_2`. BOTH naming rules match `1_1`: read as `${prefix}${yid}` it becomes
+// `1_values`, read as `${yid}_${suffix}` it becomes `values_1`. The trailing rule used to win,
+// so one Split produced `1_values` AND `values_2` — two conventions from one node, neither of
+// them guessable. A model asked to "split the data and plot each part" invented `values_0` /
+// `values_1` and every downstream analysis was dropped.
+test('Split names every segment the same way, and the way a model would guess', () => {
+	const { session, errors } = normalizeSession({
+		columns: [
+			{ name: 'time', type: 'time', values: [0, 1, 2, 3] },
+			{ name: 'values', values: [1, 2, 3, 4] }
+		],
+		analyses: [{ name: 'Split', args: { xIN: 'time', yIN: ['values'], splitTimes: [2] } }]
+	});
+	assert.deepEqual(errors, []);
+
+	const tp = findTP(session, 'Split');
+	// One segment per split point, plus the tail — keyed by id, as the node does internally.
+	assert.deepEqual(Object.keys(tp.args.out), ['1_1', '1_2']);
+
+	// ...but NAMED consistently after the Y column, so `values_1` and `values_2` are referable.
+	const named = Object.values(tp.args.out).map((id) => colById(session, id).name);
+	assert.deepEqual(named, ['values_1', 'values_2']);
+});
+
+test('a Split segment can be fed straight into another analysis, by name', () => {
+	// The whole point: "split the data, then run a periodogram on each part".
+	const { session, errors, warnings } = normalizeSession({
+		columns: [
+			{ name: 'time', type: 'time', values: [0, 1, 2, 3] },
+			{ name: 'values', values: [1, 2, 3, 4] }
+		],
+		analyses: [
+			{ name: 'Split', args: { xIN: 'time', yIN: ['values'], splitTimes: [2] } },
+			{
+				name: 'RhythmicityAnalysis',
+				args: { xIN: 'time', yIN: ['values_2'], analysis: 'periodogram', pgMethod: 'Lomb-Scargle' }
+			}
+		],
+		plots: [{ type: 'periodogram', series: [{ time: 'values_2_period', values: 'values_2_power' }] }]
+	});
+	assert.deepEqual(errors, []);
+	assert.deepEqual(warnings, []);
+	assert.ok(session.plots[0].plot.data[0].x.refId >= 0, 'the periodogram is wired, not dropped');
+});
+
 test('the generated catalogue holds no entropy or wall-clock values', async () => {
 	const generated = (await import('./session-schema.generated.json', { with: { type: 'json' } })).default;
 

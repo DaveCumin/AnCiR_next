@@ -64,6 +64,29 @@ export function movingStatKeys(args) {
 }
 
 /**
+ * What each computed-output node produces, in the model's own vocabulary — column NAMES it can
+ * write, not the id-keyed keys below.
+ *
+ * These nodes advertised NOTHING, because their keys depend on args and so can't be baked into
+ * a static list. But the RULE can be stated, and a rule is all a model needs. Without it, "split
+ * the data and plot a periodogram of each part" made a model invent `values_0` / `values_1`,
+ * and every analysis downstream of the Split was dropped as unresolvable — the feature was
+ * unreachable by prompt.
+ *
+ * Kept beside the keys they describe: a note that drifts from the rule is worse than no note.
+ * gen-schema bakes them into the catalogue (worker/draftPrompt.js renders them).
+ */
+export const OUTPUT_NOTES = {
+	Split: 'per Y column, one per segment: <your Y column>_1, <your Y column>_2, … (splitTimes has N entries ⇒ N+1 segments)',
+	MovingAnalysis:
+		'per Y column, one per statistic the chosen `analysis` computes: <your Y column>_<stat> (e.g. <your Y column>_period)',
+	CollectColumns: 'one per collected column: col_<the column>',
+	StoredValueGroup: 'one per group: group_<the group id>',
+	LongToWide:
+		'one per DISTINCT VALUE in categoryIN: <that value>. Only usable when categoryIN is data you supplied or generated — not another analysis’s output, which is still empty.'
+};
+
+/**
  * Output keys for a computed-output node, EXCLUDING the ones already in its `out` template
  * (MovingAnalysis' `movex` and LongToWide's `time` are fixed; the schema adds those).
  *

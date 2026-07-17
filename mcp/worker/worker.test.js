@@ -114,6 +114,28 @@ test('the catalogue only claims outputs a node can actually produce', () => {
 	}
 });
 
+// A node whose outputs can't be listed statically still has to say SOMETHING, or everything
+// downstream of it is unreachable by prompt: asked to "split the data and plot each part", a
+// model invented `values_0` and every analysis after the Split was dropped.
+test('every node tells the model how to name its outputs', () => {
+	const p = buildDraftPrompt();
+
+	// Split's rule, in the vocabulary the model writes in.
+	assert.match(p, /Split:.*produces per Y column, one per segment: <your Y column>_1/);
+	// MovingAnalysis keeps its fixed output AND gains the per-stat rule.
+	assert.match(p, /MovingAnalysis:.*produces: movex -> produces per Y column, one per statistic/);
+
+	// The rule, not a list of names: a runtime node advertises nothing unless it has a note or a
+	// fixed output, and "nothing" is what made Split unpromptable.
+	for (const [name, n] of Object.entries(generated.nodes)) {
+		if (n.dynamicKind !== 'runtime') continue;
+		assert.ok(
+			n.outputNote || n.fixedOut.length,
+			`${name} computes its outputs but tells the model nothing about their names`
+		);
+	}
+});
+
 // ---- routes ----
 
 test('GET /health', async () => {

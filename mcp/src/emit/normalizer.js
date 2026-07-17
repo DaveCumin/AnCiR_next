@@ -371,17 +371,19 @@ function outputColumnName(nodeName, key, args, byName) {
 	const yIds = (args.yIN ?? []).map(Number);
 	const nameOf = (id) => idToName.get(Number(id)) ?? String(id);
 
+	// `${yid}_${suffix}` — the id LEADS: RhythmicityAnalysis's `1_period`, Split's `1_2`.
+	//
+	// Checked FIRST because Split's keys are `${yid}_${segment}` and both rules match one:
+	// `1_1` read as trailing gives prefix "1_" + name → `1_values`, while its sibling `1_2`
+	// falls through to this rule and becomes `values_2`. One Split, two naming conventions, and
+	// the model can't guess either. The id-leads reading is the right one whenever it applies —
+	// `cosinory_1` doesn't start with digits, so the prefix nodes are unaffected.
+	const leading = /^(\d+)_(.+)$/.exec(key);
+	if (leading && yIds.includes(Number(leading[1]))) return `${nameOf(leading[1])}_${leading[2]}`;
+
 	// `${prefix}${yid}` — the 'prefix' nodes: cosinory_1 → cosinory_values.
 	const trailing = /^(.*?)(\d+)$/.exec(key);
 	if (trailing && yIds.includes(Number(trailing[2]))) return `${trailing[1]}${nameOf(trailing[2])}`;
-
-	// `${yid}_${suffix}` — the 'suffix' nodes (RhythmicityAnalysis): 1_period → values_period.
-	// The id leads here rather than trails, so the rule above skipped it and the column kept its
-	// id-keyed name. Nothing could then refer to it: the model writes NAMES and can't know an
-	// id. `values_period` is also what the live app calls this column, so a built session and a
-	// hand-made one now agree.
-	const leading = /^(\d+)_(.+)$/.exec(key);
-	if (leading && yIds.includes(Number(leading[1]))) return `${nameOf(leading[1])}_${leading[2]}`;
 
 	return key;
 }

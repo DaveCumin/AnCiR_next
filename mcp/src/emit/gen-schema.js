@@ -19,6 +19,7 @@
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { ensureDom } from '../engine/bootstrapDom.js';
+import { OUTPUT_NOTES } from './dynamicOut.js';
 
 await ensureDom();
 const { ensureRegistry } = await import('../engine/session.js');
@@ -187,7 +188,11 @@ for (const [name, entry] of appConsts.tableProcessMap ?? new Map()) {
 			? { x: entry.xOutKey, yPrefix: entry.yOutKeyPrefix }
 			: null,
 		// For dynamicKind==='suffix': which args select the suffix set, and the baked table.
-		...(discriminators ? { discriminators, suffixesBy } : {})
+		...(discriminators ? { discriminators, suffixesBy } : {}),
+		// For dynamicKind==='runtime': the RULE for its output names, since no static list can
+		// express them. Stated in the model's vocabulary (see OUTPUT_NOTES); without it these
+		// nodes advertise nothing and anything downstream of them is unpromptable.
+		...(OUTPUT_NOTES[name] ? { outputNote: OUTPUT_NOTES[name] } : {})
 	};
 }
 
