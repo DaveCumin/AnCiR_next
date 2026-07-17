@@ -20,7 +20,8 @@
 
 import { normalizeSession } from '../src/emit/normalizer.js';
 import { buildDraftPrompt } from './draftPrompt.js';
-import { validateBuild } from '../app/validation.js';
+import { buildEditPrompt } from './editPrompt.js';
+import { validateBuild, validateEdit } from '../app/validation.js';
 import { chatCompletion } from '../app/llmClient.js';
 import { handleMcp } from './mcp.js';
 import { fingerprint } from './fingerprint.js';
@@ -75,11 +76,11 @@ export function extractDraft(text) {
  * There is no IP here — add one only if you actually need it, since it makes these logs
  * personal data.
  */
-function logBuild(fields) {
+function logEvent(event, fields) {
 	// Log the OBJECT, not a JSON string. Workers Logs indexes an object's fields, so the
 	// dashboard can filter on them (outcome = "llm_rate_limited", search `prompt`, …). A
 	// JSON.stringify'd string arrives as one opaque message you can only text-search.
-	console.log({ event: 'build', ts: new Date().toISOString(), ...fields });
+	console.log({ event, ts: new Date().toISOString(), ...fields });
 }
 
 /**
@@ -104,6 +105,93 @@ async function rateLimited(env, request) {
 	const n = Number((await env.SESSIONS.get(key)) ?? 0) + 1;
 	await env.SESSIONS.put(key, String(n), { expirationTtl: 120 });
 	return n > max;
+}
+
+/**
+ * Ask the model for one JSON object, and turn every way that can fail into the response the
+ * user should see. Shared by /build and /edit — the failure modes are identical, and the
+ * mapping below is the part worth getting right once (a raw "502" tells a user nothing they
+ * can act on).
+ *
+ * @returns {Promise<{draft: object} | {response: Response}>}
+ */
+async function askModel({ llm, system, user, options: o, callerKey, done }) {
+	let reply;
+	try {
+		reply = await chatCompletion(
+			llm,
+			{
+				messages: [
+					{ role: 'system', content: system },
+					{ role: 'user', content: user }
+				],
+				temperature: o.temperature ?? 0,
+				...(o.maxTokens ? { max_tokens: o.maxTokens } : {}),
+				// Ask for JSON where supported; extractDraft copes when it's ignored.
+				response_format: { type: 'json_object' }
+			},
+			{ retries: o.retries ?? 2, timeoutMs: o.timeoutMs ?? 60000 }
+		);
+	} catch (e) {
+		done('llm_unreachable', { error: String(e?.message ?? e) });
+		return { response: json({ error: `LLM request failed: ${e?.message ?? e}` }, 502) };
+	}
+
+	if (!reply.ok) {
+		// The provider's own message is the informative part ("Limit 14400, Used 14400, please
+		// try again in 2m"). It never contains the key.
+		const providerMsg =
+			reply.json?.error?.message ??
+			(typeof reply.body === 'string' ? reply.body.slice(0, 300) : undefined);
+
+		// Rate / usage limits are the EXPECTED failure when everyone shares the default key, so
+		// name it plainly and pass the 429 through rather than a blanket 502 — the UI can then
+		// tell the user to wait or bring their own. chatCompletion already retried with backoff
+		// (honouring Retry-After), so getting here means it's still limited.
+		if (reply.status === 429) {
+			done('llm_rate_limited', { status: 429, detail: providerMsg });
+			return {
+				response: json(
+					{
+						error:
+							'The AI model has reached its rate or usage limit. Wait a little and try again, or use your own API key under Advanced.',
+						detail: providerMsg
+					},
+					429,
+					{ 'Retry-After': '60' }
+				)
+			};
+		}
+
+		// A rejected key isn't something the user can fix by retrying. Whose key it was decides
+		// whose problem it is.
+		if (reply.status === 401 || reply.status === 403) {
+			done('llm_key_rejected', { status: reply.status });
+			return {
+				response: json(
+					{
+						error: callerKey
+							? 'That API key was rejected by the provider. Check the key, model and endpoint under Advanced.'
+							: 'The AI service is misconfigured — its API key was rejected. Please report this.',
+						detail: providerMsg
+					},
+					502
+				)
+			};
+		}
+
+		done('llm_error', { status: reply.status });
+		return {
+			response: json({ error: `LLM error ${reply.status}`, detail: providerMsg ?? reply.body }, 502)
+		};
+	}
+
+	try {
+		return { draft: extractDraft(reply.message?.content) };
+	} catch (e) {
+		done('unparseable_draft', { error: e.message });
+		return { response: json({ error: `could not parse a session draft: ${e.message}` }, 502) };
+	}
 }
 
 async function handleBuild(request, env) {
@@ -148,79 +236,18 @@ async function handleBuild(request, env) {
 		llmKeySource: v.value.llm?.apiKey ? 'caller' : 'worker-default'
 	};
 	const done = (outcome, extra = {}) =>
-		logBuild({ ...log, outcome, ms: Date.now() - started, ...extra });
+		logEvent('build', { ...log, outcome, ms: Date.now() - started, ...extra });
 
-	const o = v.value.options ?? {};
-	let reply;
-	try {
-		reply = await chatCompletion(
-			llm,
-			{
-				messages: [
-					{ role: 'system', content: buildDraftPrompt() },
-					{ role: 'user', content: v.value.prompt }
-				],
-				temperature: o.temperature ?? 0,
-				...(o.maxTokens ? { max_tokens: o.maxTokens } : {}),
-				// Ask for JSON where supported; extractDraft copes when it's ignored.
-				response_format: { type: 'json_object' }
-			},
-			{ retries: o.retries ?? 2, timeoutMs: o.timeoutMs ?? 60000 }
-		);
-	} catch (e) {
-		done('llm_unreachable', { error: String(e?.message ?? e) });
-		return json({ error: `LLM request failed: ${e?.message ?? e}` }, 502);
-	}
-	if (!reply.ok) {
-		// The provider's own message is the informative part ("Limit 14400, Used 14400, please
-		// try again in 2m"). It never contains the key.
-		const providerMsg =
-			reply.json?.error?.message ??
-			(typeof reply.body === 'string' ? reply.body.slice(0, 300) : undefined);
-
-		// Rate / usage limits are the EXPECTED failure when everyone shares the default key, so
-		// name it plainly and pass the 429 through rather than a blanket 502 — the UI can then
-		// tell the user to wait or bring their own. chatCompletion already retried with backoff
-		// (honouring Retry-After), so getting here means it's still limited.
-		if (reply.status === 429) {
-			done('llm_rate_limited', { status: 429, detail: providerMsg });
-			return json(
-				{
-					error:
-						'The AI model has reached its rate or usage limit. Wait a little and try again, or use your own API key under Advanced.',
-					detail: providerMsg
-				},
-				429,
-				{ 'Retry-After': '60' }
-			);
-		}
-
-		// A rejected key isn't something the user can fix by retrying. Whose key it was decides
-		// whose problem it is.
-		if (reply.status === 401 || reply.status === 403) {
-			done('llm_key_rejected', { status: reply.status });
-			return json(
-				{
-					error: v.value.llm?.apiKey
-						? 'That API key was rejected by the provider. Check the key, model and endpoint under Advanced.'
-						: 'The AI service is misconfigured — its API key was rejected. Please report this.',
-					detail: providerMsg
-				},
-				502
-			);
-		}
-
-		done('llm_error', { status: reply.status });
-		return json({ error: `LLM error ${reply.status}`, detail: providerMsg ?? reply.body }, 502);
-	}
-
-	let draft;
-	try {
-		draft = extractDraft(reply.message?.content);
-	} catch (e) {
-		done('unparseable_draft', { error: e.message });
-		return json({ error: `could not parse a session draft: ${e.message}` }, 502);
-	}
+	const draftOrError = await askModel({
+		llm,
+		system: buildDraftPrompt(),
+		user: v.value.prompt,
+		options: v.value.options ?? {},
+		callerKey: !!v.value.llm?.apiKey,
+		done
+	});
+	if (draftOrError.response) return draftOrError.response;
+	const draft = draftOrError.draft;
 
 	// The id is minted BEFORE normalising so it can be stamped into the session itself — the
 	// session and the log line have to agree on it for the join to work.
@@ -261,6 +288,99 @@ async function handleBuild(request, env) {
 	});
 }
 
+/**
+ * POST /edit — propose changes to the session the user already has open.
+ *
+ * Returns a SPEC ({analyses, plots, changes}), not a session: the session lives in the browser
+ * and this Worker has never seen it. The client compiles the spec into ops against the real
+ * session and validates every reference before applying (src/lib/utils/aiEdit.js) — nothing
+ * here is trusted, which is also why we don't bother storing anything.
+ */
+async function handleEdit(request, env) {
+	let body;
+	try {
+		body = await request.json();
+	} catch {
+		return json({ error: 'body must be JSON' }, 400);
+	}
+
+	const isPublic = env.ALLOW_LOCAL_LLM !== '1';
+	const v = validateEdit(body, { isPublic });
+	if (!v.ok) return json({ error: v.error }, 400);
+
+	if (await rateLimited(env, request)) {
+		return json(
+			{ error: 'Too many requests. Please wait a minute and try again.', retryAfterS: 60 },
+			429,
+			{ 'Retry-After': '60' }
+		);
+	}
+
+	const llm = {
+		baseUrl: v.value.llm?.baseUrl ?? env.OPENAI_BASE_URL,
+		apiKey: v.value.llm?.apiKey ?? env.OPENAI_API_KEY,
+		model: v.value.llm?.model ?? env.OPENAI_MODEL
+	};
+	if (!llm.baseUrl || !llm.apiKey || !llm.model) {
+		return json({ error: 'no model configured: supply llm.{baseUrl,apiKey,model}' }, 400);
+	}
+
+	const summary = v.value.session ?? {};
+	const started = Date.now();
+	const log = {
+		prompt: v.value.prompt,
+		model: llm.model,
+		baseUrl: llm.baseUrl,
+		llmKeySource: v.value.llm?.apiKey ? 'caller' : 'worker-default',
+		// The shape of what they were editing, not its contents — enough to read a log line and
+		// understand what the model was looking at.
+		sessionSize: {
+			columns: summary.columns?.length ?? 0,
+			analyses: summary.analyses?.length ?? 0,
+			plots: summary.plots?.length ?? 0
+		}
+	};
+	const done = (outcome, extra = {}) =>
+		logEvent('edit', { ...log, outcome, ms: Date.now() - started, ...extra });
+
+	const specOrError = await askModel({
+		llm,
+		system: buildEditPrompt(summary),
+		user: v.value.prompt,
+		options: v.value.options ?? {},
+		callerKey: !!v.value.llm?.apiKey,
+		done
+	});
+	if (specOrError.response) return specOrError.response;
+	const spec = specOrError.draft;
+
+	const analyses = Array.isArray(spec.analyses) ? spec.analyses : [];
+	const plots = Array.isArray(spec.plots) ? spec.plots : [];
+	const changes = Array.isArray(spec.changes) ? spec.changes : [];
+	if (!analyses.length && !plots.length && !changes.length) {
+		// A model that understood the request but can't express it (a deletion, say) correctly
+		// returns {}. Saying so beats the client rendering an empty preview.
+		done('empty_edit');
+		return json(
+			{
+				error:
+					"The AI didn't propose any changes. It can add analyses and plots or change a parameter, but it can't delete or rearrange things — try asking for something to be added.",
+				analyses: [],
+				plots: [],
+				changes: []
+			},
+			422
+		);
+	}
+
+	done('ok', {
+		nodes: analyses.map((a) => a?.name),
+		plots: plots.map((p) => p?.type),
+		changes: changes.length
+	});
+	return json({ analyses, plots, changes });
+}
+
 async function handleSession(id, env) {
 	if (!env.SESSIONS) return json({ error: 'SESSIONS KV binding is not configured' }, 500);
 	const s = await env.SESSIONS.get(`s:${id}`);
@@ -292,6 +412,7 @@ export default {
 		if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 		if (url.pathname === '/health') return json({ ok: true });
 		if (url.pathname === '/build' && request.method === 'POST') return handleBuild(request, env);
+		if (url.pathname === '/edit' && request.method === 'POST') return handleEdit(request, env);
 		if (url.pathname === '/mcp') {
 			if (request.method === 'POST') return handleMcpRoute(request, env);
 			// The Streamable HTTP spec has GET open a server→client SSE stream. We're stateless

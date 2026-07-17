@@ -108,11 +108,55 @@ export const buildSchema = z
 	.strict();
 
 /**
- * Validate + SSRF-check a /build body.
- * @returns {{ok:true, value:object}|{ok:false, error:string}}
+ * The open session, as /edit receives it: STRUCTURE ONLY (see summariseSession). The caps are
+ * the point — this is untrusted input that goes straight into a prompt, so a pathological
+ * session can't be used to inflate someone else's token bill.
  */
-export function validateBuild(body, { isPublic }) {
-	const parsed = buildSchema.safeParse(body ?? {});
+const sessionSummarySchema = z
+	.object({
+		columns: z
+			.array(
+				z
+					.object({
+						id: z.number(),
+						name: z.string().max(200),
+						type: z.string().max(50).optional()
+					})
+					.strict()
+			)
+			.max(500)
+			.optional(),
+		analyses: z
+			.array(
+				z
+					.object({
+						id: z.number(),
+						name: z.string().max(200),
+						args: z.record(z.any()).optional()
+					})
+					.strict()
+			)
+			.max(200)
+			.optional(),
+		plots: z
+			.array(
+				z
+					.object({
+						id: z.number(),
+						type: z.string().max(50),
+						name: z.string().max(200).optional()
+					})
+					.strict()
+			)
+			.max(200)
+			.optional()
+	})
+	.strict();
+
+/** /edit is /build plus the session being edited. */
+export const editSchema = buildSchema.extend({ session: sessionSummarySchema });
+
+function finish(parsed, { isPublic }) {
 	if (!parsed.success) {
 		return { ok: false, error: parsed.error.issues.map((i) => `${i.path.join('.') || 'body'}: ${i.message}`).join('; ') };
 	}
@@ -122,4 +166,20 @@ export function validateBuild(body, { isPublic }) {
 		if (!u.ok) return { ok: false, error: u.error };
 	}
 	return { ok: true, value: parsed.data };
+}
+
+/**
+ * Validate + SSRF-check a /build body.
+ * @returns {{ok:true, value:object}|{ok:false, error:string}}
+ */
+export function validateBuild(body, { isPublic }) {
+	return finish(buildSchema.safeParse(body ?? {}), { isPublic });
+}
+
+/**
+ * Validate + SSRF-check an /edit body.
+ * @returns {{ok:true, value:object}|{ok:false, error:string}}
+ */
+export function validateEdit(body, { isPublic }) {
+	return finish(editSchema.safeParse(body ?? {}), { isPublic });
 }
