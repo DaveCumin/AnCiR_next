@@ -15,6 +15,7 @@
 	} from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	import { bathyphase, phaseAngleOfEntrainment, wrapToPeriod } from '$lib/utils/cosinorAddons.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
 
 	const displayName = 'Cosinor';
 	const defaults = new Map([
@@ -152,7 +153,10 @@
 		if (outputXId != -1 && getColumnById(outputXId)) {
 			const outputXCol = getColumnById(outputXId);
 			outputXData = outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
-			outputXData = outputXData.filter((v) => !isNaN(v));
+			// Same null trap as the pair filter below: a null here survived `!isNaN` and the
+			// curve was then evaluated at Number(null) === 0, drawing a spurious point back at
+			// the time origin. A Split segment wired as the output grid is exactly that case.
+			outputXData = outputXData.filter((v) => !isInvalidValue(v));
 		}
 
 		// Determine origin time for converting hours → ms on the x output
@@ -176,8 +180,13 @@
 			if (!yCol) continue;
 
 			const y = yCol.getData();
+			// `isNaN(null)` is FALSE and `Number(null)` is 0, so an isNaN-only filter let every
+			// null row through to be fitted as a zero. That matters because Split/Filter emit
+			// full-length segments padded with null outside the window: a post-pulse segment
+			// halved its mesor/amplitude and dragged a free-period fit to ~220 h (see
+			// Cosinor.nulls.test.js). Same guard as RhythmicityAnalysis / MovingAnalysis.
 			const validIndices = t
-				.map((v, i) => (isNaN(v) || isNaN(y[i]) ? -1 : i))
+				.map((v, i) => (isInvalidValue(v) || isInvalidValue(y[i]) ? -1 : i))
 				.filter((i) => i !== -1);
 			const tt = validIndices.map((i) => t[i]);
 			const yy = validIndices.map((i) => y[i]);
@@ -368,8 +377,10 @@
 			let pValue = NaN;
 			if (argsIN.permuteTest && yr) {
 				const yAll = getColumnById(yId)?.getData() ?? [];
+				// Null-aware, like the fit's own pair filter: otherwise the permutation test ran
+				// against a series padded with zeros and reported a p-value for a fit nobody made.
 				const valid = tAll
-					.map((v, i) => (isNaN(v) || isNaN(yAll[i]) ? -1 : i))
+					.map((v, i) => (isInvalidValue(v) || isInvalidValue(yAll[i]) ? -1 : i))
 					.filter((i) => i !== -1);
 				const tt = valid.map((i) => tAll[i]);
 				const yy = valid.map((i) => yAll[i]);

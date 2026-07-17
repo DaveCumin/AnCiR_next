@@ -13,6 +13,18 @@
 
 import { KahanSum, kahanMean } from './numerics.js';
 
+/**
+ * Is a cell unusable as a number? True for null, undefined and NaN.
+ *
+ * Reach for this instead of a bare `isNaN(v)`: `isNaN(null)` is FALSE and `Number(null)` is 0,
+ * so an isNaN-only filter keeps null rows and then fits/averages them as ZEROS. That is not
+ * hypothetical — Split and Filter emit full-length segments padded with null outside the
+ * window, and Cosinor's isNaN-only pair filter halved their mesor/amplitude and dragged a
+ * free-period fit to ~220 h (Cosinor.nulls.test.js). The predicate is the same one min/max/mean
+ * apply inline above; several nodes had hand-rolled their own copy.
+ */
+export const isInvalidValue = (v) => v == null || isNaN(v);
+
 export function min(data) {
 	let out = Infinity;
 	for (let i = 0; i < data.length; i++) {
