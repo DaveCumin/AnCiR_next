@@ -8,6 +8,9 @@
 	import { isValidStroke } from '$lib/components/plotbits/helpers/misc.js';
 
 	export class LineClass {
+		// A style object reused by every line/points plot, so it opts ITSELF into the shared-
+		// options panel and the AI editor (sharedControls.js) — no per-plot `descend` needed.
+		static sharedStyle = true;
 		// UI metadata for the multi-select shared-options panel (sharedControls.js).
 		static descriptors = {
 			colour: { input: 'color', label: 'Colour', group: 'Line' },

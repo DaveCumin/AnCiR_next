@@ -7,6 +7,8 @@
 	import { POINT_SHAPES, POINT_SHAPE_LABELS, getPointPath } from './pointShapes.js';
 
 	export class PointsClass {
+		// Opts itself into the shared-options panel + AI editor across every plot that uses it.
+		static sharedStyle = true;
 		// UI metadata for the multi-select shared-options panel (sharedControls.js).
 		static descriptors = {
 			colour: { input: 'color', label: 'Colour', group: 'Points' },

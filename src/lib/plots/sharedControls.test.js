@@ -238,4 +238,34 @@ describe('descend descriptor', () => {
 		expect(schema.some((f) => f.path.startsWith('plain'))).toBe(false);
 		expect(schema.some((f) => f.path.startsWith('style.nested'))).toBe(false);
 	});
+
+	// A style class shared across many plots opts ITSELF in with `static sharedStyle = true`, so
+	// no parent descriptor is needed. This is what LineClass/PointsClass use, and why a
+	// periodogram series now exposes a colour even though its data class never said `descend`.
+	it('descends into a class that declares static sharedStyle, with no parent descriptor', () => {
+		class SelfDescribingStyle {
+			static sharedStyle = true;
+			static descriptors = { colour: { input: 'color', label: 'Colour', group: 'Marker' } };
+			colour = '#00ff00';
+			toJSON() {
+				return { colour: this.colour };
+			}
+		}
+		class Row {
+			static descriptors = {}; // deliberately says NOTHING about `marker`
+			marker = new SelfDescribingStyle();
+			toJSON() {
+				return { marker: this.marker.toJSON() };
+			}
+		}
+		const inner = new FakePlotClass();
+		inner.data = [new Row()];
+		const schema = getSharedDataSchema({ width: 1, height: 1, name: 'p', plot: inner });
+		expect(schema.find((f) => f.path === 'marker.colour')).toEqual({
+			path: 'marker.colour',
+			label: 'Marker Colour',
+			input: 'color',
+			group: 'Marker'
+		});
+	});
 });

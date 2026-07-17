@@ -63,11 +63,18 @@ function fieldsForKey(key, value, descriptors, pathPrefix) {
 	const parentGroup = desc.group;
 
 	if (isClassInstance(value)) {
-		// By default a sub-class instance (an Axis, a Column, …) is opaque. But a
-		// descriptor can opt a *style* sub-object in with `descend: true` (e.g. a
-		// data point's line/points, or a plot's axes), so its scalar leaves —
-		// colour, marker shape, gridlines, … — surface in the shared-options UI.
-		if (!desc.descend) return [];
+		// By default a sub-class instance (an Axis, a Column, …) is opaque. Two ways to opt a
+		// *style* sub-object in, so its scalar leaves — colour, marker shape, gridlines — surface
+		// in the shared-options UI (and to the AI editor, which reads the same schema):
+		//   1. the PARENT descriptor says `descend: true` (e.g. a plot's axes, addressed once);
+		//   2. the CLASS itself declares `static sharedStyle = true`.
+		// (2) is for style objects reused across many plots — LineClass, PointsClass. Marking the
+		// class once means EVERY plot that uses it (and every future one) exposes its colour,
+		// instead of each plot's data descriptor having to remember `line: {descend:true}`. Only
+		// Scatterplot ever remembered, so a periodogram/FFT/correlogram/meansem series offered NO
+		// colour at all — the panel couldn't change it and the AI, shown nothing settable, guessed
+		// `plot.data[0].colour` and was rejected. Column (x/y wiring) sets no flag and stays opaque.
+		if (!desc.descend && !value.constructor?.sharedStyle) return [];
 		const snapshot = typeof value.toJSON === 'function' ? value.toJSON() : {};
 		const childDescriptors = desc._children ?? value.constructor?.descriptors ?? {};
 		const groupForChildren = parentGroup ?? parentLabel;

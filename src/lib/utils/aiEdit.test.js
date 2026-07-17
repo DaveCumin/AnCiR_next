@@ -456,6 +456,26 @@ describe('plotProps (against a live plot class)', () => {
 		expect(props.some((p) => /refId/.test(p.path))).toBe(false);
 	});
 
+	it('offers a series colour for NON-scatter plots too — not just scatterplot', async () => {
+		// "Make the periodograms green" was rejected with `"plot.data[0].colour" isn't a property
+		// of this plot`, because the periodogram series exposed NO colour path: its line/points
+		// are shared style classes, and only Scatterplot's data descriptor said `descend:true`.
+		// The AI, shown nothing settable, invented a path and was refused. Now the style CLASSES
+		// opt themselves in, so every plot that uses them exposes colour. Guards against a new
+		// line/points plot silently regressing — the exact way the bug hid for months.
+		const { loadPlots } = await import('$lib/plots/plotMap.js');
+		const plots = await loadPlots();
+		for (const type of ['periodogram', 'fft', 'correlogram']) {
+			const entry = plots.get(type);
+			if (!entry) continue; // registry-driven; don't assert a plot that isn't built
+			const inner = entry.data.fromJSON(null, { data: [{ x: { refId: 0 }, y: { refId: 1 }, label: 's' }] });
+			const paths = plotProps({ id: 1, type, plot: inner, width: 420, height: 300 })
+				.filter((p) => /\.colour$/.test(p.path))
+				.map((p) => p.path);
+			expect(paths, `${type} must offer a series colour`).toContain('plot.data[0].line.colour');
+		}
+	});
+
 	it('offers only the wrapper fields when there is no inner, and never throws', () => {
 		// getSharedSchema falls back to WRAPPER_FIELDS — width/height belong to the wrapper, so
 		// they're still legitimately settable.
