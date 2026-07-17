@@ -111,4 +111,45 @@ describe('EVERY registered plot survives a partial inner', () => {
 			expect(() => entry.data.fromJSON(null, null), `${key} with null`).not.toThrow();
 		}
 	});
+
+	// `padding` was only the first field to be clobbered this way, and fixing it one field at a
+	// time is how Periodogram kept `periodlimsIN = json.periodlimsIN` three lines below the
+	// comment explaining the bug. That undefined reached the renderer as
+	// `theData.plot.periodlimsIN[0]` → "Cannot read properties of undefined (reading '0')", and
+	// took the whole plot node down with it.
+	//
+	// So assert the general rule instead of a list: a class's own toJSON says what it considers
+	// state; anything it can WRITE it must be able to READ BACK from an inner that omits it.
+	// Derived from each class at runtime, so a new plot (or a new field) is covered without
+	// anyone remembering this file exists.
+	it('never clobbers a serialisable default with undefined', async () => {
+		for (const [key, entry] of await loadPlots()) {
+			const cls = entry.data;
+			const fresh = cls.fromJSON(null, null);
+			if (typeof fresh?.toJSON !== 'function') continue;
+
+			let defaults;
+			try {
+				defaults = fresh.toJSON();
+			} catch {
+				continue; // toJSON needs a live parent/box — not this test's business
+			}
+
+			const partial = cls.fromJSON(null, { data: [] });
+			let got;
+			try {
+				got = partial.toJSON();
+			} catch (e) {
+				throw new Error(`${key}: toJSON threw after a partial inner — ${e.message}`);
+			}
+
+			for (const [field, value] of Object.entries(defaults)) {
+				if (value === undefined) continue; // never had a default to lose
+				expect(
+					got[field],
+					`${key}.${field}: the class defaults it, but fromJSON({data:[]}) left it undefined`
+				).toBeDefined();
+			}
+		}
+	});
 });

@@ -535,9 +535,14 @@
 			// `?? periodogram.padding` last: the first two are both JSON fields (paddingIN is the
 			// legacy name), so an inner carrying neither left the default undefined and threw.
 			periodogram.padding = json.padding ?? json.paddingIN ?? periodogram.padding;
-			periodogram.periodlimsIN = json.periodlimsIN;
-			periodogram.periodSteps = json.periodSteps;
-			periodogram.ylimsIN = json.ylimsIN;
+			// Same rule as padding above, for the same reason: an inner that omits these (a
+			// Quick-Plot or AI-built plot carries only `{data}`) must keep the class defaults.
+			// Without the guard, `periodlimsIN` became undefined and the renderer read
+			// `theData.plot.periodlimsIN[0]` → "Cannot read properties of undefined (reading
+			// '0')", killing the whole plot node.
+			periodogram.periodlimsIN = json.periodlimsIN ?? periodogram.periodlimsIN;
+			periodogram.periodSteps = json.periodSteps ?? periodogram.periodSteps;
+			periodogram.ylimsIN = json.ylimsIN ?? periodogram.ylimsIN;
 
 			// Support both new AxisClass format and old individual properties
 			if (json.xAxis) {

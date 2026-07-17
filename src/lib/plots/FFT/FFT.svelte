@@ -458,9 +458,12 @@
 			// `?? fft.padding` last: the first two are both JSON fields (paddingIN is the legacy
 			// name), so an inner carrying neither left the default undefined and threw at render.
 			fft.padding = json.padding ?? json.paddingIN ?? fft.padding;
-			fft.freqlimsIN = json.freqlimsIN;
+			// Same rule as padding above: an inner that omits these (a Quick-Plot or AI-built plot
+			// carries only `{data}`) must keep the class defaults rather than have them replaced
+			// with undefined, which then reaches the renderer as `freqlimsIN[0]`.
+			fft.freqlimsIN = json.freqlimsIN ?? fft.freqlimsIN;
 			fft.xlimsIN = json.xlimsIN || [null, null];
-			fft.ylimsIN = json.ylimsIN;
+			fft.ylimsIN = json.ylimsIN ?? fft.ylimsIN;
 			fft.logScale = json.logScale ?? false;
 			fft.showPeriod = json.showPeriod ?? false;
 
