@@ -1,5 +1,7 @@
 <!-- Handle click plot (plot id core state) -->
 <script module>
+	import { getByPath, setByPath } from '$lib/utils/objectPath.js';
+
 	export function dataSettingsScrollTo(position = 'bottom') {
 		const dataSettings = document.getElementsByClassName('control-display')[0].parentElement;
 		const topPos =
@@ -19,32 +21,11 @@
 	// Accept dot or bracket notation:
 	//   'plot.paddingIN.top'   → plot.plot.paddingIN.top
 	//   'plot.xlimsIN[0]'      → plot.plot.xlimsIN[0]
-	function splitPath(path) {
-		// Match any run of chars that isn't `.`, `[`, or `]`.
-		return path.match(/[^.[\]]+/g) ?? [];
-	}
-
-	export function getByPath(obj, path) {
-		if (!obj || !path) return undefined;
-		const segments = splitPath(path);
-		let cur = obj;
-		for (const seg of segments) {
-			if (cur == null) return undefined;
-			cur = cur[seg];
-		}
-		return cur;
-	}
-
-	export function setByPath(obj, path, val) {
-		if (!obj || !path) return;
-		const segments = splitPath(path);
-		let cur = obj;
-		for (let i = 0; i < segments.length - 1; i++) {
-			if (cur == null) return;
-			cur = cur[segments[i]];
-		}
-		if (cur != null) cur[segments[segments.length - 1]] = val;
-	}
+	//
+	// The helpers themselves now live in utils/objectPath.js so the AI edit path can write the
+	// same paths this panel writes, through the same code. Re-exported here: existing callers
+	// (and this file) still import them from ControlDisplay.
+	export { getByPath, setByPath };
 
 	// Intersect a per-plot list of schema fields by `path`, preserving the
 	// order from the first plot's schema. Mixed-type selections drop fields

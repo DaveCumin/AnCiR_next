@@ -28,6 +28,8 @@
 import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 import { applyOp } from '$lib/core/operations.js';
 import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
+import { getSharedSchema } from '$lib/plots/sharedControls.js';
+import { getByPath, setByPath } from '$lib/utils/objectPath.js';
 import dayjs from '$lib/utils/time/dayjsSetup.js';
 
 // Mirrors the emitted-session series colours (plots/canonicalNodeViz.js), so an AI-added plot
@@ -116,6 +118,26 @@ export function registryFacts(consts = appConsts) {
 }
 
 /**
+ * Why a value can't go in this property, or null if it can.
+ *
+ * Lenient on purpose. `input` is INFERRED from the current value, so a field that happens to be
+ * null right now reports 'text' even though it wants a number — every axis limit defaults to
+ * null (meaning "auto"). Rejecting a number there because reflection guessed 'text' would refuse
+ * the most ordinary request there is ("set the y axis to 0–100"). So this checks the things that
+ * are genuinely wrong — an object, a made-up select option, a string where only true/false makes
+ * sense — and lets the rest through to the plot, which defaults anything it dislikes.
+ */
+function propertyIssue(prop, value) {
+	if (value !== null && typeof value === 'object') return 'must be a single value, not an object';
+	if (prop.options?.length && !prop.options.includes(value))
+		return `must be one of ${prop.options.join(', ')}`;
+	if (prop.input === 'boolean' && typeof value !== 'boolean') return 'must be true or false';
+	if (prop.input === 'number' && value !== null && !Number.isFinite(Number(value)))
+		return 'must be a number';
+	return null;
+}
+
+/**
  * Hours between two clock hours, wrapping midnight: 18:00→06:00 is 12 h, not -12.
  * @returns {number|null} null when the two are the same hour (a zero-width band)
  */
@@ -143,8 +165,47 @@ export function summariseSession(c = core) {
 			// invites the model to try to set it.
 			args: Object.fromEntries(Object.entries(tp.args ?? {}).filter(([k]) => k !== 'out'))
 		})),
-		plots: (c.plots ?? []).map((p) => ({ id: p.id, type: p.type, name: p.name }))
+		plots: (c.plots ?? []).map((p) => ({
+			id: p.id,
+			type: p.type,
+			name: p.name,
+			props: plotProps(p)
+		}))
 	};
+}
+
+/**
+ * The restyle-able properties of one plot: path, what it is, and its value right now.
+ *
+ * Straight from `getSharedSchema` — the same reflection that builds the shared-options panel, so
+ * the AI is offered exactly what a user can change by hand, and a plot that gains a property is
+ * covered without anyone editing a list here. This is also the ALLOW-LIST the planner checks
+ * against, which is why it must come from the app rather than from anything the model says.
+ *
+ * Only the plots in the open session are described, so the cost is bounded by what's on screen
+ * (~10–19 fields each) rather than by all 11 plot types.
+ */
+export function plotProps(plotWrapper) {
+	let schema;
+	try {
+		schema = getSharedSchema(plotWrapper);
+	} catch {
+		return []; // a plot that can't describe itself simply isn't restyle-able
+	}
+	return schema
+		.map((f) => {
+			const value = getByPath(plotWrapper, f.path);
+			// Objects/arrays aren't settable in one go, and a model shouldn't try.
+			if (value != null && typeof value === 'object') return null;
+			return {
+				path: f.path,
+				label: f.label,
+				input: f.input,
+				...(f.options ? { options: f.options } : {}),
+				value: value ?? null
+			};
+		})
+		.filter(Boolean);
 }
 
 /** Case-insensitive name → id, so "Time" resolves to the column called "time". */
@@ -341,9 +402,42 @@ export function planEdit(spec, { summary, facts }) {
 		preview.push(`Add plot: ${type} — "${name}" (${series.length} series)`);
 	}
 
-	// ---- parameter changes to existing analyses ----
+	// ---- changes to an existing analysis or plot ----
+	//
+	// One verb, two targets: `{analysis: 3, set: {...}}` tunes a node's params, `{plot: 2,
+	// set: {...}}` restyles a plot by descriptor path. Both are checked against an allow-list
+	// the APP produced (registry params / getSharedSchema paths) — never against anything the
+	// model asserted.
 	const byId = new Map((summary.analyses ?? []).map((a) => [a.id, a]));
+	const plotById = new Map((summary.plots ?? []).map((p) => [p.id, p]));
+
 	for (const ch of spec?.changes ?? []) {
+		if (ch?.plot != null) {
+			const target = plotById.get(ch.plot);
+			if (!target) {
+				errors.push(`Can't restyle plot ${ch.plot} — no such plot.`);
+				continue;
+			}
+			const propByPath = new Map((target.props ?? []).map((p) => [p.path, p]));
+			for (const [path, v] of Object.entries(ch?.set ?? {})) {
+				const prop = propByPath.get(path);
+				if (!prop) {
+					errors.push(`${target.type}: "${path}" isn't a property of this plot.`);
+					continue;
+				}
+				const bad = propertyIssue(prop, v);
+				if (bad) {
+					errors.push(`${target.type} ${path}: ${bad}`);
+					continue;
+				}
+				changes.push({ plotId: target.id, path, value: v });
+				preview.push(
+					`Restyle ${target.type}${target.name ? ` "${target.name}"` : ''}: ${prop.label} = ${JSON.stringify(v)}`
+				);
+			}
+			continue;
+		}
+
 		const target = byId.get(ch?.analysis);
 		if (!target) {
 			errors.push(`Can't change analysis ${ch?.analysis} — no such node.`);
@@ -367,7 +461,6 @@ export function planEdit(spec, { summary, facts }) {
 	// `startTimeHours` holds an absolute epoch-ms, so 18 would put the first band 18 ms after
 	// 1970 and shade nothing. applyEdit converts to the axis's own units, because only it can
 	// see the axis and the session's timezone.
-	const plotById = new Map((summary.plots ?? []).map((p) => [p.id, p]));
 	for (const b of spec?.bands ?? []) {
 		const target = plotById.get(b?.plot);
 		if (!target) {
@@ -512,13 +605,46 @@ export function applyEdit(plan) {
 		}
 		ops.push({ kind: 'addPlot', plotData: plotData(p, resolve) });
 	}
+	// Both restyles and shading rewrite a plot's inner, so they share ONE snapshot per plot,
+	// taken once and emitted once at the end. Snapshotting per edit would read the same
+	// unmutated live plot each time (the ops don't run until the batch below), and the last
+	// setPlotInner would silently discard the others — shading a plot and setting its axis in
+	// one breath would lose whichever came first.
+	const inners = new Map(); // plotId -> the inner snapshot being built up
+	const innerFor = (plot) => {
+		if (!inners.has(plot.id)) {
+			// DEEP copy, not just toJSON(). A plot's toJSON hands out its live $state arrays by
+			// reference (`ylimsLeftIN: this.ylimsLeftIN`), so writing into the "snapshot" would
+			// write straight through into the plot — before the op ran. setPlotInner would then
+			// capture the ALREADY-mutated state as its undo point, and the restyle became
+			// permanent: undo took the band away and left the axis limits behind.
+			inners.set(plot.id, JSON.parse(JSON.stringify(plot.plot.toJSON())));
+		}
+		return inners.get(plot.id);
+	};
+
+	// Analysis params, and plot restyles. A restyle addresses the plot WRAPPER by path
+	// ('width', 'plot.ylimsIN[0]'), so it splits two ways: a wrapper-level key is a plain
+	// property op, anything under `plot.` goes into the inner snapshot.
 	for (const c of plan.changes) {
-		ops.push({ kind: 'setFreeTableProcessArg', tpId: c.tpId, key: c.key, value: c.value });
+		if (c.tpId != null) {
+			ops.push({ kind: 'setFreeTableProcessArg', tpId: c.tpId, key: c.key, value: c.value });
+			continue;
+		}
+		const plot = core.plots.find((p) => p.id === c.plotId);
+		if (!plot?.plot?.toJSON) {
+			errors.push(`Couldn't restyle plot ${c.plotId} — it's no longer there.`);
+			continue;
+		}
+		if (!c.path.startsWith('plot.')) {
+			ops.push({ kind: 'setPlotProperty', id: plot.id, key: c.path, value: c.value });
+			continue;
+		}
+		// The path addresses the wrapper; the snapshot IS the inner, so drop the `plot.` head.
+		setByPath(innerFor(plot), c.path.slice('plot.'.length), c.value);
 	}
 
-	// Shading: rewrite the plot's inner with the band appended. `setPlotInner` takes a
-	// serialised snapshot and is the established way to make a plot edit undoable — the same op
-	// the canvas uses for wiring. Clock hours become axis units here, where the axis is visible.
+	// Shading. Clock hours become axis units here, where the axis and timezone are visible.
 	let skippedBands = 0;
 	for (const b of plan.bands ?? []) {
 		const plot = core.plots.find((p) => p.id === b.plotId);
@@ -527,7 +653,7 @@ export function applyEdit(plan) {
 			skippedBands++;
 			continue;
 		}
-		const inner = plot.plot.toJSON();
+		const inner = innerFor(plot);
 		inner.nightBands = [
 			...(inner.nightBands ?? []),
 			{
@@ -543,8 +669,9 @@ export function applyEdit(plan) {
 				customBands: []
 			}
 		];
-		ops.push({ kind: 'setPlotInner', id: plot.id, inner });
 	}
+
+	for (const [id, inner] of inners) ops.push({ kind: 'setPlotInner', id, inner });
 
 	if (ops.length) applyOp({ kind: 'batch', ops });
 

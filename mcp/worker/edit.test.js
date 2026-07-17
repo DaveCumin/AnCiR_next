@@ -95,6 +95,40 @@ test('a parameter change round-trips', async () => {
 	assert.deepEqual((await res.json()).changes, [{ analysis: 3, set: { fixedPeriod: 12 } }]);
 });
 
+test('the prompt lists each plot\'s restyle paths, with their current values', () => {
+	const p = buildEditPrompt({
+		columns: [],
+		analyses: [],
+		plots: [
+			{
+				id: 2,
+				type: 'scatterplot',
+				name: 'Raw',
+				props: [
+					{ path: 'width', label: 'Width', input: 'number', value: 420 },
+					{ path: 'plot.ylimsLeftIN[0]', label: 'Y min', input: 'text', value: null },
+					{ path: 'plot.sigMethod', label: 'Method', input: 'select', options: ['auto', 'tukey'], value: 'auto' }
+				]
+			}
+		]
+	});
+	// The paths, verbatim — the model copies rather than invents.
+	assert.match(p, /restyle: width=420, plot\.ylimsLeftIN\[0\]=null, plot\.sigMethod="auto" \[auto\|tukey\]/);
+	// And the rule that makes copying the right instinct.
+	assert.match(p, /copy one, don't invent one/);
+	assert.match(p, /usually means "automatic"/);
+});
+
+test('a restyle round-trips', async () => {
+	stubLLM(JSON.stringify({ changes: [{ plot: 2, set: { 'plot.xLogScale': true } }] }));
+	const res = await worker.fetch(
+		post({ prompt: 'use a log x axis', llm: LLM, session: SESSION }),
+		ENV()
+	);
+	assert.equal(res.status, 200);
+	assert.deepEqual((await res.json()).changes, [{ plot: 2, set: { 'plot.xLogScale': true } }]);
+});
+
 test('the prompt teaches shading, and only for the plots that support it', () => {
 	const p = buildEditPrompt(SESSION);
 	assert.match(p, /"bands":\s+\[ \{ "plot": 2, "fromHour": 18, "toHour": 6/);
@@ -140,6 +174,39 @@ test('a non-array analyses field cannot crash the route', async () => {
 	const res = await worker.fetch(post({ prompt: 'x', llm: LLM, session: SESSION }), ENV());
 	// Nothing usable ⇒ the empty-edit path, not a 500.
 	assert.equal(res.status, 422);
+});
+
+test('a real summary — plots carrying their restyle props — is accepted', async () => {
+	// The client sends `props` on every plot. A strict schema that only knew {id,type,name}
+	// rejected the whole request with a 400, and the feature was dead on arrival.
+	stubLLM(JSON.stringify({ changes: [{ plot: 2, set: { 'plot.xLogScale': true } }] }));
+	const res = await worker.fetch(
+		post({
+			prompt: 'log x axis',
+			llm: LLM,
+			session: {
+				columns: [],
+				analyses: [],
+				plots: [
+					{
+						id: 2,
+						type: 'scatterplot',
+						name: 'Raw',
+						props: [
+							{ path: 'width', label: 'Width', input: 'number', value: 420 },
+							{ path: 'plot.ylimsLeftIN[0]', label: 'Y min', input: 'text', value: null },
+							{ path: 'plot.xLogScale', label: 'X Log', input: 'boolean', value: false },
+							{ path: 'plot.sigMethod', input: 'select', options: ['auto', 'tukey'], value: 'auto' }
+						]
+					}
+				]
+			}
+		}),
+		ENV()
+	);
+	const body = await res.json();
+	assert.equal(res.status, 200, JSON.stringify(body));
+	assert.equal(body.changes.length, 1);
 });
 
 test('the session summary is validated: structure only, and capped', async () => {

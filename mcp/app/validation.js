@@ -144,7 +144,26 @@ const sessionSummarySchema = z
 					.object({
 						id: z.number(),
 						type: z.string().max(50),
-						name: z.string().max(200).optional()
+						name: z.string().max(200).optional(),
+						// The plot's restyle-able properties (see plotProps): path, what it is, and
+						// its value now. Capped like everything else here — it's untrusted input
+						// that goes straight into a prompt, and a plot claiming 10k properties
+						// would just be a way to inflate someone's token bill.
+						props: z
+							.array(
+								z
+									.object({
+										path: z.string().max(200),
+										label: z.string().max(200).optional(),
+										input: z.string().max(30).optional(),
+										options: z.array(z.string().max(100)).max(50).optional(),
+										// Whatever the property currently holds — a scalar or null.
+										value: z.union([z.string().max(500), z.number(), z.boolean(), z.null()]).optional()
+									})
+									.strict()
+							)
+							.max(100)
+							.optional()
 					})
 					.strict()
 			)

@@ -23,6 +23,23 @@ function bandCapablePlots(schema) {
 		: 'No plot type supports "bands" — do not use it.';
 }
 
+/**
+ * One plot's restyle-able properties, as `path=currentValue`, with the choices for a select.
+ *
+ * The paths are the app's own (getSharedSchema — the same reflection behind the shared-options
+ * panel), passed through verbatim. Showing the CURRENT value costs a few characters and buys a
+ * lot: it's how the model knows `plot.ylimsIN[0]=null` means the axis is on auto, and it types
+ * the field without a schema.
+ */
+function renderProps(props) {
+	if (!props?.length) return '';
+	const bits = props.map((p) => {
+		const v = JSON.stringify(p.value);
+		return p.options?.length ? `${p.path}=${v} [${p.options.join('|')}]` : `${p.path}=${v}`;
+	});
+	return `\n      restyle: ${bits.join(', ')}`;
+}
+
 /** Render the open session so the model can refer to it: names, ids, nothing else. */
 export function renderSummary(summary) {
 	const cols = (summary?.columns ?? [])
@@ -32,7 +49,7 @@ export function renderSummary(summary) {
 		.map((a) => `  #${a.id} ${a.name}  args=${JSON.stringify(a.args ?? {})}`)
 		.join('\n');
 	const plots = (summary?.plots ?? [])
-		.map((p) => `  #${p.id} ${p.type}${p.name ? ` "${p.name}"` : ''}`)
+		.map((p) => `  #${p.id} ${p.type}${p.name ? ` "${p.name}"` : ''}${renderProps(p.props)}`)
 		.join('\n');
 	return `CURRENT SESSION
 
@@ -57,7 +74,8 @@ SHAPE:
                   { "x": "time",     "y": "values",          "label": "signal",     "kind": "points" },
                   { "x": "cosinorx", "y": "cosinory_values", "label": "signal fit", "kind": "line"   }
               ] } ],
-  "changes":  [ { "analysis": 3, "set": { "fixedPeriod": 12 } } ],
+  "changes":  [ { "analysis": 3, "set": { "fixedPeriod": 12 } },
+                { "plot": 2, "set": { "plot.ylimsLeftIN[0]": 0, "plot.xLogScale": true } } ],
   "bands":    [ { "plot": 2, "fromHour": 18, "toHour": 6, "label": "Night" } ]
 }
 
@@ -66,7 +84,11 @@ Every key is optional — emit only what the request needs. To add nothing, repl
 WHAT YOU MAY DO:
 - "analyses": ADD a new analysis, reading columns that ALREADY EXIST (listed below).
 - "plots":    ADD a new plot.
-- "changes":  change PARAMETERS of an existing analysis, by its #id.
+- "changes":  with "analysis": change an existing analysis's PARAMETERS, by its #id.
+              with "plot": RESTYLE an existing plot, by its #id. The keys are the exact paths
+              listed under "restyle:" for that plot below — copy one, don't invent one. Their
+              current values are shown, so you can see the type and what's already set; null
+              usually means "automatic" (an axis limit of null is auto-scaled).
 - "bands":    SHADE a repeating time-of-day window on an existing plot, by its #id — the
               dark phase of a light/dark cycle. "fromHour"/"toHour" are CLOCK HOURS (0–23.99,
               local): 18 → 6 shades 6pm to 6am every day. It wraps midnight; a duration is

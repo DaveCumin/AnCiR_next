@@ -4,7 +4,7 @@
 // lets through gets applied to the user's open session by an op engine with no rollback. So
 // these tests are mostly about what it REFUSES.
 import { describe, it, expect } from 'vitest';
-import { planEdit, summariseSession, bandDuration, firstBandStart } from './aiEdit.js';
+import { planEdit, summariseSession, bandDuration, firstBandStart, plotProps } from './aiEdit.js';
 
 // Registry facts as the live registry reports them (see registryFacts).
 const FACTS = {
@@ -39,8 +39,26 @@ const SUMMARY = {
 	],
 	analyses: [{ id: 3, name: 'Cosinor', args: { xIN: 0, yIN: [1], fixedPeriod: 24 } }],
 	plots: [
-		{ id: 2, type: 'scatterplot', name: 'Raw' },
-		{ id: 5, type: 'actogram', name: 'Acto' }
+		{
+			id: 2,
+			type: 'scatterplot',
+			name: 'Raw',
+			// As getSharedSchema reports them: `input` is INFERRED from the current value, so a
+			// null-defaulted axis limit says 'text' even though it wants a number.
+			props: [
+				{ path: 'width', label: 'Width', input: 'number', value: 420 },
+				{ path: 'plot.ylimsLeftIN[0]', label: 'Y min', input: 'text', value: null },
+				{ path: 'plot.xLogScale', label: 'X Log Scale', input: 'boolean', value: false },
+				{
+					path: 'plot.sigMethod',
+					label: 'Method',
+					input: 'select',
+					options: ['auto', 'tukey'],
+					value: 'auto'
+				}
+			]
+		},
+		{ id: 5, type: 'actogram', name: 'Acto', props: [] }
 	]
 };
 
@@ -249,6 +267,73 @@ describe('planEdit — shading a time-of-day window', () => {
 	});
 });
 
+// Restyling an existing plot — "set the y axis to 0", "use a log x axis". The paths and the
+// allow-list are the app's own (getSharedSchema, the same reflection behind the shared-options
+// panel), so the AI is offered exactly what a user can change by hand.
+describe('planEdit — restyling a plot', () => {
+	it('sets a property by its descriptor path', () => {
+		const p = plan({ changes: [{ plot: 2, set: { 'plot.xLogScale': true } }] });
+		expect(p.errors).toEqual([]);
+		expect(p.changes).toEqual([{ plotId: 2, path: 'plot.xLogScale', value: true }]);
+		// The preview speaks the UI's own label, not the path.
+		expect(p.preview).toEqual(['Restyle scatterplot "Raw": X Log Scale = true']);
+	});
+
+	it('accepts a number for a limit that is currently null', () => {
+		// The crux of the leniency: `input` is inferred from the value, and every axis limit
+		// defaults to null → 'text'. Refusing a number here would reject the most ordinary
+		// request there is.
+		const p = plan({ changes: [{ plot: 2, set: { 'plot.ylimsLeftIN[0]': 0 } }] });
+		expect(p.errors).toEqual([]);
+		expect(p.changes[0]).toEqual({ plotId: 2, path: 'plot.ylimsLeftIN[0]', value: 0 });
+	});
+
+	it('allows null to hand an axis back to auto-scaling', () => {
+		const p = plan({ changes: [{ plot: 2, set: { 'plot.ylimsLeftIN[0]': null } }] });
+		expect(p.errors).toEqual([]);
+		expect(p.changes[0].value).toBeNull();
+	});
+
+	it('sets several properties on one plot, and mixes with an analysis change', () => {
+		const p = plan({
+			changes: [
+				{ plot: 2, set: { 'plot.xLogScale': true, width: 800 } },
+				{ analysis: 3, set: { fixedPeriod: 12 } }
+			]
+		});
+		expect(p.errors).toEqual([]);
+		expect(p.changes).toEqual([
+			{ plotId: 2, path: 'plot.xLogScale', value: true },
+			{ plotId: 2, path: 'width', value: 800 },
+			{ tpId: 3, key: 'fixedPeriod', value: 12 }
+		]);
+	});
+
+	it('refuses an invented path rather than writing it somewhere', () => {
+		const p = plan({ changes: [{ plot: 2, set: { 'plot.makeItPretty': true } }] });
+		expect(p.changes).toEqual([]);
+		expect(p.errors[0]).toMatch(/"plot.makeItPretty" isn't a property of this plot/);
+	});
+
+	it('refuses a plot that does not exist, and one with no properties', () => {
+		expect(plan({ changes: [{ plot: 99, set: { width: 10 } }] }).errors[0]).toMatch(/no such plot/);
+		expect(plan({ changes: [{ plot: 5, set: { width: 10 } }] }).errors[0]).toMatch(/isn't a property/);
+	});
+
+	it('type-checks what is genuinely checkable', () => {
+		expect(plan({ changes: [{ plot: 2, set: { 'plot.xLogScale': 'yes' } }] }).errors[0]).toMatch(
+			/must be true or false/
+		);
+		expect(plan({ changes: [{ plot: 2, set: { 'plot.sigMethod': 'magic' } }] }).errors[0]).toMatch(
+			/must be one of auto, tukey/
+		);
+		expect(plan({ changes: [{ plot: 2, set: { width: 'wide' } }] }).errors[0]).toMatch(/must be a number/);
+		expect(plan({ changes: [{ plot: 2, set: { width: { a: 1 } } }] }).errors[0]).toMatch(
+			/must be a single value/
+		);
+	});
+});
+
 describe('bandDuration', () => {
 	it('wraps midnight and rejects a zero-width window', () => {
 		expect(bandDuration(18, 6)).toBe(12);
@@ -292,6 +377,51 @@ describe('firstBandStart', () => {
 		const got = firstBandStart(timeAxis, 18, 'Pacific/Auckland');
 		expect(got).toBe(Date.UTC(2026, 6, 17, 6, 0, 0));
 		expect(got).not.toBe(firstBandStart(timeAxis, 18, 'utc'));
+	});
+});
+
+// The tests above use a hand-written props list, so this pins that list against a REAL plot:
+// the allow-list the planner trusts has to be the app's own reflection, or the whole scheme is
+// just a second source of truth waiting to drift.
+describe('plotProps (against a live plot class)', () => {
+	it('reports the same paths the shared-options panel offers, with current values', async () => {
+		const { loadPlots } = await import('$lib/plots/plotMap.js');
+		const { getSharedSchema } = await import('$lib/plots/sharedControls.js');
+		const entry = (await loadPlots()).get('scatterplot');
+		const wrapper = {
+			id: 1,
+			type: 'scatterplot',
+			plot: entry.data.fromJSON(null, { data: [] }),
+			width: 420,
+			height: 300
+		};
+
+		const props = plotProps(wrapper);
+		const schemaPaths = getSharedSchema(wrapper).map((f) => f.path);
+
+		// Same source, so every prop is a real field; only object-valued ones are dropped.
+		expect(props.length).toBeGreaterThan(5);
+		for (const p of props) expect(schemaPaths).toContain(p.path);
+
+		// The values are the plot's actual state, which is how the model reads types off it.
+		expect(props.find((p) => p.path === 'width').value).toBe(420);
+		const yMin = props.find((p) => p.path.startsWith('plot.ylims'));
+		expect(yMin, 'a scatterplot has an axis limit').toBeTruthy();
+		// Nothing object-valued survives — a model can't set one in a single assignment. null is
+		// fine and meaningful (an axis limit of null is auto-scaled), despite typeof null.
+		for (const p of props) {
+			expect(p.value === null || typeof p.value !== 'object', `${p.path} is settable`).toBe(true);
+		}
+	});
+
+	it('offers only the wrapper fields when there is no inner, and never throws', () => {
+		// getSharedSchema falls back to WRAPPER_FIELDS — width/height belong to the wrapper, so
+		// they're still legitimately settable.
+		expect(plotProps({ id: 1, type: 'x', plot: null }).map((p) => p.path)).toEqual([
+			'width',
+			'height'
+		]);
+		expect(() => plotProps(null)).not.toThrow();
 	});
 });
 
