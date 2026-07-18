@@ -8,6 +8,7 @@
 	// readable from the browser bundle). A user may supply their own under Advanced — it's
 	// passed through for that one request and never stored.
 	import Modal from '$lib/components/reusables/Modal.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import { buildNlSession, editNlSession, NL_URL } from '$lib/utils/nlSession.js';
 	import { core, appState } from '$lib/core/core.svelte.js';
 	import { summariseSession, registryFacts, planEdit, applyEdit } from '$lib/utils/aiEdit.js';
@@ -390,7 +391,16 @@
 	{/if}
 
 	<div class="actions">
-		<span class="note">Prompts are logged so the analyses can be reviewed and improved.</span>
+		<!-- While the model is being queried, a labelled spinner replaces the note: an LLM round
+		     trip is several seconds of nothing, and the disabled button alone doesn't read as
+		     "working". Same LoadingSpinner the rest of the app uses, so it looks native. -->
+		{#if busy}
+			<LoadingSpinner
+				message={effectiveMode === 'edit' ? 'Asking the AI to make changes…' : 'Building your session…'}
+			/>
+		{:else}
+			<span class="note">Prompts are logged so the analyses can be reviewed and improved.</span>
+		{/if}
 		{#if pending}
 			<button class="secondary" onclick={() => load(pending.sessionUrl)}>Load anyway</button>
 		{/if}
