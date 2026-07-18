@@ -204,7 +204,7 @@
 		{#if pointsData.draw}
 			<div class="control-input-horizontal">
 				<div class="control-input" style="max-width: 1.5rem;">
-					<p style="color:{'white'};">Col</p>
+					<p style="color:white;">Col</p>
 
 					<ColourPicker bind:value={pointsData.colour} />
 				</div>

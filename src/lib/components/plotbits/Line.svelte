@@ -1,5 +1,5 @@
 <script module>
-	import { line, curveBundle } from 'd3-shape';
+	import { line } from 'd3-shape';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
@@ -123,7 +123,7 @@
 			.y((d) => yscale(d.y));
 
 		//Can add more line options (curves) here later
-		// eg:
+		// eg (also import the curve from 'd3-shape'):
 		// lineGenerator = lineGenerator.curve(curveBundle.beta(0.5));
 
 		//Set up the quadtree for hovering
@@ -214,7 +214,7 @@
 		{#if lineData.draw}
 			<div class="control-input-horizontal">
 				<div class="control-input" style="max-width: 1.5rem;">
-					<p style="color:{'white'};">Col</p>
+					<p style="color:white;">Col</p>
 					<ColourPicker bind:value={lineData.colour} />
 				</div>
 				<ControlInput label="Width">
@@ -234,7 +234,7 @@
 							options={['solid', '5, 5', '2, 2', '5, 2']}
 							optionsDisplay={['Solid', 'Dashed', 'Dotted', 'Dashed & Dotted']}
 							other={true}
-							placeholder={'eg 5, 5'}
+							placeholder="eg 5, 5"
 						/>
 					</div>
 					{#if lineData.stroke === -1}

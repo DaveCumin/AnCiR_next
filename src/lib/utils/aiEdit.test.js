@@ -3,7 +3,7 @@
 // planEdit is the trust boundary: it turns a model's proposal into a plan, and everything it
 // lets through gets applied to the user's open session by an op engine with no rollback. So
 // these tests are mostly about what it REFUSES.
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { planEdit, summariseSession, bandDuration, firstBandStart, plotProps } from './aiEdit.js';
 
 // Registry facts as the live registry reports them (see registryFacts).
@@ -401,10 +401,19 @@ describe('firstBandStart', () => {
 // the allow-list the planner trusts has to be the app's own reflection, or the whole scheme is
 // just a second source of truth waiting to drift.
 describe('plotProps (against a live plot class)', () => {
-	it('reports the same paths the shared-options panel offers, with current values', async () => {
-		const { loadPlots } = await import('$lib/plots/plotMap.js');
-		const { getSharedSchema } = await import('$lib/plots/sharedControls.js');
-		const entry = (await loadPlots()).get('scatterplot');
+	// loadPlots() dynamically imports and compiles EVERY plot component — slow, and under
+	// parallel load with a cold transform cache it blew past the 5s default and timed out
+	// intermittently. Do it ONCE for the block, with headroom, so the flake can't recur and the
+	// per-test cost is a cheap map lookup rather than a recompile.
+	let plots;
+	let getSharedSchema;
+	beforeAll(async () => {
+		plots = await (await import('$lib/plots/plotMap.js')).loadPlots();
+		({ getSharedSchema } = await import('$lib/plots/sharedControls.js'));
+	}, 30000);
+
+	it('reports the same paths the shared-options panel offers, with current values', () => {
+		const entry = plots.get('scatterplot');
 		const wrapper = {
 			id: 1,
 			type: 'scatterplot',
@@ -431,9 +440,8 @@ describe('plotProps (against a live plot class)', () => {
 		}
 	});
 
-	it('offers each series its own colour path, named so they can be told apart', async () => {
-		const { loadPlots } = await import('$lib/plots/plotMap.js');
-		const entry = (await loadPlots()).get('scatterplot');
+	it('offers each series its own colour path, named so they can be told apart', () => {
+		const entry = plots.get('scatterplot');
 		const inner = entry.data.fromJSON(null, {
 			data: [
 				{ x: { refId: 0 }, y: { refId: 1 }, label: 'signal', line: { colour: '#234154' } },
@@ -456,15 +464,13 @@ describe('plotProps (against a live plot class)', () => {
 		expect(props.some((p) => /refId/.test(p.path))).toBe(false);
 	});
 
-	it('offers a series colour for NON-scatter plots too — not just scatterplot', async () => {
+	it('offers a series colour for NON-scatter plots too — not just scatterplot', () => {
 		// "Make the periodograms green" was rejected with `"plot.data[0].colour" isn't a property
 		// of this plot`, because the periodogram series exposed NO colour path: its line/points
 		// are shared style classes, and only Scatterplot's data descriptor said `descend:true`.
 		// The AI, shown nothing settable, invented a path and was refused. Now the style CLASSES
 		// opt themselves in, so every plot that uses them exposes colour. Guards against a new
 		// line/points plot silently regressing — the exact way the bug hid for months.
-		const { loadPlots } = await import('$lib/plots/plotMap.js');
-		const plots = await loadPlots();
 		for (const type of ['periodogram', 'fft', 'correlogram']) {
 			const entry = plots.get(type);
 			if (!entry) continue; // registry-driven; don't assert a plot that isn't built
