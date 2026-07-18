@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { ensureDom } from '../engine/bootstrapDom.js';
 import { OUTPUT_NOTES } from './dynamicOut.js';
 import { USAGE_NOTES } from './generators.js';
+import { PARAM_NOTES } from './paramNotes.js';
 
 await ensureDom();
 const { ensureRegistry } = await import('../engine/session.js');
@@ -197,7 +198,11 @@ for (const [name, entry] of appConsts.tableProcessMap ?? new Map()) {
 		// How to DRIVE the node, where its params don't speak for themselves (see USAGE_NOTES).
 		// A default value is not a description: printing `distribution:"uniform"` never told a
 		// model that "gaussian" exists, so a request needing it was unreachable by prompt.
-		...(USAGE_NOTES[name] ? { usageNote: USAGE_NOTES[name] } : {})
+		...(USAGE_NOTES[name] ? { usageNote: USAGE_NOTES[name] } : {}),
+		// Meaning/enums/units/gating for the params (see PARAM_NOTES). The same gap for analysis
+		// params that USAGE_NOTES fills for generators: a select param shows only its default, so
+		// the model can't see the alternatives.
+		...(PARAM_NOTES[name] ? { paramNote: PARAM_NOTES[name] } : {})
 	};
 }
 

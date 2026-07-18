@@ -64,7 +64,10 @@ export function buildCatalogue(schema = generated) {
 			// own line: these are the generators, and a model that can't see how to generate
 			// data types it by hand instead — badly.
 			const usage = n.usageNote ? `\n      use: ${n.usageNote}` : '';
-			return `  ${name}: args=${JSON.stringify(argsTemplate(n))}${outs}${fit}${perYOutputs(n)}${usage}`;
+			// Meaning/enums/units/gating for the params (PARAM_NOTES) — a select param otherwise
+			// shows only its default, hiding the alternatives.
+			const params = n.paramNote ? `\n      params: ${n.paramNote}` : '';
+			return `  ${name}: args=${JSON.stringify(argsTemplate(n))}${outs}${fit}${perYOutputs(n)}${usage}${params}`;
 		})
 		.join('\n');
 	// Render plots the way analyses are rendered: one per line, with a CONCRETE series template.

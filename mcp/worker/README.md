@@ -147,6 +147,31 @@ Every `/build` writes one structured line, so you can review what people actuall
 model let the user down). `errors`/`warnings` can be non-empty even on `ok` (a node dropped, or
 dynamic outputs not pre-allocated).
 
+## The catalogue: what the model is taught
+
+The system prompt is a catalogue of every node, generated from the registry
+(`session-schema.generated.json`) so names, params and output keys can't drift from the app. But
+the registry only carries a param's **name and default**, and a default is not a description:
+printing `distribution:"uniform"` never told a model that `"gaussian"` exists, and printing
+`pgMethod:"Lomb-Scargle"` hides `"Chi-squared"`/`"Enright"` the same way. A model that can't see an
+option can't use it — it reaches for the wrong tool, or fabricates data by hand.
+
+So three hand-written note maps fill what the registry can't express. Each lives beside the code
+it describes and is baked into the catalogue by `gen-schema.js`:
+
+| map | file | teaches |
+| --- | --- | --- |
+| `OUTPUT_NOTES` | `dynamicOut.js` | how a computed-output node names its columns (Split's segments, MovingAnalysis' stats) |
+| `USAGE_NOTES` | `generators.js` | how to *drive* a generator — Random's distributions, that `sections` run back-to-back in time |
+| `PARAM_NOTES` | `paramNotes.js` | an analysis param's **enums, units and gating** — `pgMethod`'s methods, which numbers are HOURS, that `fixedPeriod` only bites when `useFixedPeriod:true` |
+
+Hand-written is how catalogues start lying, so the enum half of `PARAM_NOTES` is held honest by a
+**drift guard** (`src/lib/tableProcesses/paramNotesCoverage.test.js`, app-side because it needs the
+component markup): it scans every `<AttributeSelect>` bound to a real arg and fails if any option
+value is undocumented. Add `"MESA"` to a method dropdown and the test goes red until the note
+mentions it. (`fitness.js`'s `PERIOD_OF` and `gen-schema`'s determinism check are the same idea for
+their hand-written pieces.)
+
 ## The repair round
 
 `/build` gives the model its own mistakes back, **once**, when the normalizer reports errors.

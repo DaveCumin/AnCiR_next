@@ -152,6 +152,20 @@ test('the catalogue says how to DRIVE a generator, not just what its params are 
 	assert.match(p, /For N independent datasets use N SimulatedData nodes/);
 });
 
+test('the catalogue says what an analysis PARAMETER means and accepts, not just its default', () => {
+	// The same gap, one layer over: an analysis param showed only its default value, so a select
+	// like pgMethod hid its alternatives exactly as Random hid "gaussian". The param note carries
+	// the enums, the units and the gating. (Full enum coverage is enforced app-side by
+	// paramNotesCoverage.test.js against the live <select> markup; here we just prove it renders.)
+	const p = buildDraftPrompt();
+	assert.match(p, /RhythmicityAnalysis:[\s\S]*?\n\s+params: /);
+	// The alternatives the model couldn't previously see.
+	assert.match(p, /"Lomb-Scargle".*"Chi-squared".*"Enright"/);
+	// Units and gating are the other two things a bare default can't convey.
+	assert.match(p, /in HOURS/);
+	assert.match(p, /`permuteTest:true`/);
+});
+
 test('the catalogue explains how to tell two same-kind analyses apart', () => {
 	// Without this the _1 suffix is invisible, and the second generator is unreferenceable in
 	// practice even though the normalizer names it.
