@@ -386,6 +386,11 @@
 		// free-standing node, which has no parent table).
 		const needsCompute = reconcileOutputs();
 
+		// Did we end up with real segment data? Stays false unless the load branch below finds
+		// populated output columns. Gates whether we pin `lastHash` — the difference between a
+		// session that computes on load and one that stays blank forever.
+		let loaded = false;
+
 		if (needsCompute) {
 			recalculate();
 		} else {
@@ -418,6 +423,7 @@
 						segmentCount
 					};
 					p.args.valid = true;
+					loaded = true;
 				}
 			}
 		}
@@ -426,7 +432,13 @@
 			!needsCompute &&
 			((p.args.xIN >= 0 && (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0) ||
 				(p.args.yIN ?? []).some((id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0));
-		if (!inputsAreStale) lastHash = getHash;
+		// Pin the hash ONLY when we actually loaded current data — that legitimately suppresses a
+		// redundant recompute. When the output columns exist but are EMPTY (a freshly-normalized
+		// AI session pre-allocates them without values), we must NOT pin it: leaving lastHash
+		// unset lets the post-mount $effect fire and compute, exactly as BinnedData does. Pinning
+		// here regardless was why a Split loaded from such a session — and every analysis
+		// downstream of it — stayed permanently blank.
+		if (loaded && !inputsAreStale) lastHash = getHash;
 		mounted = true;
 	});
 </script>
