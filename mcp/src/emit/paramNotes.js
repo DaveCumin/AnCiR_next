@@ -33,6 +33,8 @@
 // that ENUM VALUES are covered; prose for units/gating is a judgement call.
 
 export const PARAM_NOTES = {
+	Split:
+		'`splitTimes` is the list of points to cut the series at (N points ⇒ N+1 segments). On a TIME x-axis give each as HOURS FROM THE START of the recording — 336 splits after 14 days, 576 after 24 — NOT an absolute date or an epoch value; the conversion to the actual timestamp is done for you. On a numeric x-axis give it in that column’s own units.',
 	RhythmicityAnalysis:
 		'`analysis` picks the method: "periodogram", "fft" or "correlogram". For "periodogram", `pgMethod` is "Lomb-Scargle" (handles uneven/gapped sampling — the safe default), "Chi-squared" (Sokolove-Bushell; needs even sampling) or "Enright". `periodMin`/`periodMax`/`periodStep` bound the period SEARCH, in HOURS. `corrMinLag`/`corrMaxLag` apply only to "correlogram" (lag units = your x units); `fftFreqStep` only to "fft" (0 = auto).',
 	MovingAnalysis:

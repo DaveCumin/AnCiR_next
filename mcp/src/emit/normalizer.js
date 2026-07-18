@@ -235,6 +235,35 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 			if (args[k] == null) args[k] = structuredClone(v);
 		}
 
+		// Units bridge for Split on a TIME axis — the same trap as the periodogram/cosinor units.
+		// The model gives split points as HOURS from the start of the recording (it reads "14
+		// days" and emits 336), but the Split node compares them against the x column's stored
+		// values, which for a time column are absolute epoch-ms. Left as-is, 336 lands 336 ms
+		// after the epoch — the very first sample — so one segment is empty and every analysis
+		// downstream of it plots nothing (the exact bug a user hit). Convert here from the baked
+		// time column's start, the same bridge the night-band feature does for clock hours.
+		if (name === 'Split' && Array.isArray(args.splitTimes) && args.splitTimes.length) {
+			const xCol = data.find((c) => c.id === args.xIN);
+			const raw = rawData[args.xIN];
+			if (xCol?.type === 'time' && Array.isArray(raw) && raw.length) {
+				const asMs = (v) => (typeof v === 'number' ? v : Date.parse(v));
+				const startMs = asMs(raw[0]);
+				const endMs = asMs(raw[raw.length - 1]);
+				if (Number.isFinite(startMs)) {
+					args.splitTimes = args.splitTimes.map((h) => startMs + Number(h) * 3600000);
+					// A split that lands outside the recording means the model's number wasn't
+					// hours-from-start after all — surface it rather than emit a silent no-op split.
+					if (Number.isFinite(endMs) && args.splitTimes.some((t) => t <= startMs || t >= endMs)) {
+						warnings.push(
+							`Split: a split point falls outside the recording — check it is given as HOURS from the start.`
+						);
+					}
+				} else {
+					warnings.push(`Split: couldn't read the start time, so split points may be misplaced.`);
+				}
+			}
+		}
+
 		// semantic validation (the guards the engine gets for free by executing the node).
 		const vErr = nodeSchema.validate ? nodeSchema.validate(args) : null;
 		if (vErr) {

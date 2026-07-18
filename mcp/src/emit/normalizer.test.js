@@ -201,11 +201,68 @@ test('Split names every segment the same way, and the way a model would guess', 
 	assert.deepEqual(named, ['values_1', 'values_2']);
 });
 
+// The units trap that made a user's periodograms blank: on a time axis the model gives split
+// points as HOURS from the start (it reads "14 days" and emits 336), but the Split node compares
+// against absolute epoch-ms. 336 ms lands on the first sample, so one segment is empty and every
+// analysis downstream plots nothing. The normalizer bridges it using the baked time column.
+test('Split on a TIME axis converts hours-from-start to absolute time', () => {
+	const times = Array.from({ length: 49 }, (_, i) => i * 3600000); // epoch-ms, 0..48h hourly
+	const { session, errors } = normalizeSession({
+		columns: [
+			{ name: 'time', type: 'time', values: times },
+			{ name: 'values', values: times.map((_, i) => i) }
+		],
+		analyses: [{ name: 'Split', args: { xIN: 'time', yIN: ['values'], splitTimes: [24] } }]
+	});
+	assert.deepEqual(errors, []);
+	// 24 HOURS from start (0) → the real 24 h boundary in ms, not the literal 24.
+	assert.deepEqual(findTP(session, 'Split').args.splitTimes, [24 * 3600000]);
+});
+
+test('Split conversion honours a non-zero start time', () => {
+	const start = Date.parse('2020-06-01T00:00:00.000Z');
+	const times = Array.from({ length: 49 }, (_, i) => new Date(start + i * 3600000).toISOString());
+	const { session } = normalizeSession({
+		columns: [
+			{ name: 'time', type: 'time', values: times },
+			{ name: 'values', values: times.map((_, i) => i) }
+		],
+		analyses: [{ name: 'Split', args: { xIN: 'time', yIN: ['values'], splitTimes: [12] } }]
+	});
+	assert.deepEqual(findTP(session, 'Split').args.splitTimes, [start + 12 * 3600000]);
+});
+
+test('Split on a NUMERIC axis leaves splitTimes in the column’s own units', () => {
+	const { session } = normalizeSession({
+		columns: [
+			{ name: 'x', values: [0, 1, 2, 3, 4] },
+			{ name: 'y', values: [0, 1, 2, 3, 4] }
+		],
+		analyses: [{ name: 'Split', args: { xIN: 'x', yIN: ['y'], splitTimes: [2] } }]
+	});
+	assert.deepEqual(findTP(session, 'Split').args.splitTimes, [2]);
+});
+
+test('Split warns when a converted split falls outside the recording', () => {
+	const times = Array.from({ length: 25 }, (_, i) => i * 3600000); // only 24 h of data
+	const { warnings } = normalizeSession({
+		columns: [
+			{ name: 'time', type: 'time', values: times },
+			{ name: 'v', values: times }
+		],
+		analyses: [{ name: 'Split', args: { xIN: 'time', yIN: ['v'], splitTimes: [999] } }] // 999 h ≫ 24 h
+	});
+	assert.ok(warnings.some((w) => /outside the recording/.test(w)), warnings.join('; '));
+});
+
 test('a Split segment can be fed straight into another analysis, by name', () => {
-	// The whole point: "split the data, then run a periodogram on each part".
+	// The whole point: "split the data, then run a periodogram on each part". Time is epoch-ms
+	// (hourly), and the split is 2 HOURS in — a real point inside the recording, so it converts
+	// cleanly and raises no warning.
+	const hourly = [0, 3600000, 7200000, 10800000];
 	const { session, errors, warnings } = normalizeSession({
 		columns: [
-			{ name: 'time', type: 'time', values: [0, 1, 2, 3] },
+			{ name: 'time', type: 'time', values: hourly },
 			{ name: 'values', values: [1, 2, 3, 4] }
 		],
 		analyses: [

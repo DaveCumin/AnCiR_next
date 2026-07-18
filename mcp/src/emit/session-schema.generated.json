@@ -752,7 +752,8 @@
 			"dynamicKind": "runtime",
 			"perYPrefix": null,
 			"fitOut": null,
-			"outputNote": "per Y column, one per segment: <your Y column>_1, <your Y column>_2, … (splitTimes has N entries ⇒ N+1 segments). Each segment is the SAME LENGTH as the input with the other segments blanked out, so keep using the ORIGINAL x column with it — there is no <your x column>_1, and asking for one will fail. Only pass a column in yIN if you want it split"
+			"outputNote": "per Y column, one per segment: <your Y column>_1, <your Y column>_2, … (splitTimes has N entries ⇒ N+1 segments). Each segment is the SAME LENGTH as the input with the other segments blanked out, so keep using the ORIGINAL x column with it — there is no <your x column>_1, and asking for one will fail. Only pass a column in yIN if you want it split",
+			"paramNote": "`splitTimes` is the list of points to cut the series at (N points ⇒ N+1 segments). On a TIME x-axis give each as HOURS FROM THE START of the recording — 336 splits after 14 days, 576 after 24 — NOT an absolute date or an epoch value; the conversion to the actual timestamp is done for you. On a numeric x-axis give it in that column’s own units."
 		},
 		"StoredValueGroup": {
 			"displayName": "Stored Value Group",
