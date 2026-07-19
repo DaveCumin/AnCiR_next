@@ -258,7 +258,13 @@
 				x: json.x,
 				y: json.y,
 				label: json.label,
-				boxPlot: BoxClass.fromJSON(json.boxPlot)
+				// Pass the RAW boxPlot data and let the constructor build the BoxClass. It already
+				// handles a missing slot (defaulting the colour from the palette, with a parent to
+				// index it) — whereas BoxClass.fromJSON reads json.colour unguarded and has no
+				// parent, so a series without a boxPlot (every AI/tool-emitted boxplot) threw and
+				// importJson silently dropped the whole plot. For a normally-saved boxplot this is
+				// identical: the constructor reads the same fields off the object either way.
+				boxPlot: json.boxPlot
 			});
 		}
 	}

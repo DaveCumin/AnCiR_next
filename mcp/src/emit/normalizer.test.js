@@ -535,6 +535,19 @@ test('a requested series colour reaches a plot that reads a TOP-LEVEL colour (ac
 	assert.equal(s.line.colour, 'pink');
 });
 
+test('a requested colour also reaches a plot that reads its OWN slot (boxplot)', () => {
+	// The boxplot reads `series.boxPlot.{colour,fillColour}`, not the top-level colour, so the
+	// style union has to carry a boxPlot slot or an AI "red boxplot" comes out palette-coloured.
+	const { session, errors } = normalizeSession({
+		columns: [{ name: 'g', values: [1, 1, 2, 2] }, { name: 'v', values: [3, 4, 5, 6] }],
+		plots: [{ type: 'boxplot', series: [{ x: 'g', y: 'v', colour: 'red' }] }]
+	});
+	assert.deepEqual(errors, []);
+	const s = session.plots[0].plot.data[0];
+	assert.equal(s.boxPlot.colour, 'red', 'the box outline carries the requested colour');
+	assert.equal(s.boxPlot.fillColour, 'red', 'and so does the fill');
+});
+
 test('an omitted colour still defaults, and only the asked-for series is coloured', () => {
 	const { session } = normalizeSession({
 		columns: [{ name: 't', type: 'time', values: [0, 3600000] }, { name: 'a', values: [1, 2] }],

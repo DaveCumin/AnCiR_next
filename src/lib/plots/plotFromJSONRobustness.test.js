@@ -154,28 +154,48 @@ describe('EVERY registered plot survives a partial inner', () => {
 	});
 });
 
-// The normalizer emits a series colour into BOTH a top-level `colour` and the line/points slots,
-// because plots disagree on where colour lives: line/points plots read their slot, the actogram/
-// boxplot/mean±SEM read `series.colour` directly. Emitting it only into the slots (as before)
-// meant "a pink actogram" put pink in a field the actogram never reads, so it silently fell back
-// to the palette. These pin the contract from the plot side: the top-level colour must reach the
-// plots that read it, and must not disturb the plots that don't.
-describe('a top-level series colour reaches the plots that read it', () => {
+// Every plot keeps a series colour in a DIFFERENT place: line/points plots in their `line`/
+// `points` slots, the actogram in a top-level `colour`, the boxplot in its own `boxPlot` slot.
+// So the normalizer emits all of them (the union) and each type reads the one it knows. These
+// pin that contract from the plot side: the colour must reach the plots that read it, and must
+// not disturb the plots that don't.
+describe('a normalizer-emitted series colour reaches the plots that read it', () => {
 	// Exactly the shape the normalizer's seriesStyle() produces for `colour: 'pink'`.
 	const emitted = (colour) => ({
 		x: { refId: 1 },
 		y: { refId: 2 },
 		colour,
 		line: { colour, draw: false, strokeWidth: 2, stroke: 'solid' },
-		points: { colour, draw: true, radius: 3, shape: 'circle' }
+		points: { colour, draw: true, radius: 3, shape: 'circle' },
+		boxPlot: { colour, fillColour: colour }
 	});
 
-	it('the actogram honours the top-level colour (the reported bug)', async () => {
+	it('the actogram honours the top-level colour (its reported bug)', async () => {
 		const acto = (await loadPlots()).get('actogram').data.fromJSON(null, { data: [emitted('pink')] });
 		expect(acto.data[0].colour).toBe('pink');
 	});
 
-	it('a line/points plot ignores the extra top-level colour and keeps reading its slot', async () => {
+	it('the boxplot honours the boxPlot-slot colour', async () => {
+		const box = (await loadPlots()).get('boxplot').data.fromJSON(null, { data: [emitted('pink')] });
+		expect(box.data[0].boxPlot.colour).toBe('pink');
+		expect(box.data[0].boxPlot.fillColour).toBe('pink');
+	});
+
+	it('a boxplot series with NO boxPlot slot survives instead of dropping the whole plot', async () => {
+		// The original bug: BoxPlotDataClass.fromJSON eagerly called BoxClass.fromJSON(undefined),
+		// which read `undefined.colour` and threw, so importJson dropped the plot silently. Now the
+		// raw slot goes through the constructor, which defaults it.
+		const boxCls = (await loadPlots()).get('boxplot').data;
+		const bare = { x: { refId: 1 }, y: { refId: 2 } };
+		let box;
+		expect(() => {
+			box = boxCls.fromJSON(null, { data: [bare] });
+		}, 'a boxplot with no boxPlot slot must not throw').not.toThrow();
+		expect(box.data[0].boxPlot, 'a box style is present, defaulted').toBeTruthy();
+		expect(box.data[0].boxPlot.colour, 'colour defaulted from the palette').toEqual(expect.any(String));
+	});
+
+	it('a line/points plot ignores the extra slots and keeps reading its own', async () => {
 		const s = Scatterplotclass.fromJSON(null, {
 			data: [{ ...emitted('pink'), line: { colour: '#234154' }, points: { colour: '#BE796B' } }]
 		});
