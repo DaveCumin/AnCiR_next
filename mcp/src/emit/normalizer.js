@@ -395,6 +395,13 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 				continue;
 			}
 			inner = { data };
+
+			// A boxplot exists to COMPARE groups, so its significance bars ("show the differences")
+			// are on by default — the same default Quick-Plot's GroupComparison boxplot uses. The
+			// class itself defaults them OFF, and the minimal inner we emit never turned them on,
+			// so an AI "boxplot showing the differences" came out with no sig bars. The model can
+			// still say showSigBars:false to suppress them.
+			if (p.type === 'boxplot') inner.showSigBars = p.showSigBars ?? true;
 		}
 
 		// Safety net for the "spectrum of a spectrum" mis-wire: a periodogram/fft/correlogram

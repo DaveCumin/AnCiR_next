@@ -588,6 +588,58 @@ test('a requested colour also reaches a plot that reads its OWN slot (boxplot)',
 	assert.equal(s.boxPlot.fillColour, 'red', 'and so does the fill');
 });
 
+test('a boxplot shows significance bars by default ("show the differences")', () => {
+	// A boxplot exists to compare groups. The class defaults sig bars OFF and the minimal inner
+	// never set them, so an AI "boxplot showing the differences" came out with none — the user
+	// had to tick it by hand. Now it's on by default (matching Quick-Plot's GroupComparison).
+	const { session } = normalizeSession({
+		columns: [{ name: 'a', values: [1, 2, 3] }, { name: 'b', values: [4, 5, 6] }],
+		plots: [{ type: 'boxplot', series: [{ y: 'a', label: 'A' }, { y: 'b', label: 'B' }] }]
+	});
+	assert.equal(session.plots[0].plot.showSigBars, true);
+});
+
+test('a boxplot can opt OUT of significance bars', () => {
+	const { session } = normalizeSession({
+		columns: [{ name: 'a', values: [1, 2, 3] }],
+		plots: [{ type: 'boxplot', showSigBars: false, series: [{ y: 'a', label: 'A' }] }]
+	});
+	assert.equal(session.plots[0].plot.showSigBars, false);
+});
+
+test('a boxplot group is ONE y-only series per column — no fabricated x/category', () => {
+	// The reported mess: asked for three groups, the model built SIX Random nodes — three real
+	// ones and three constant columns (Random multiply:0) to fake an x category per box, wired
+	// into the boxplot's x. A group that is its own column needs only `y`; a series with no x is
+	// drawn as one box, so three columns → three boxes, and no extra nodes.
+	const { session, errors } = normalizeSession({
+		analyses: [
+			{ name: 'Random', args: { N: 20, distribution: 'gaussian', offset: 0, multiply: 1, seed: 1 } },
+			{ name: 'Random', args: { N: 20, distribution: 'gaussian', offset: 0, multiply: 1, seed: 2 } },
+			{ name: 'Random', args: { N: 20, distribution: 'gaussian', offset: 3, multiply: 1, seed: 3 } }
+		],
+		plots: [
+			{
+				type: 'boxplot',
+				series: [
+					{ y: 'result', label: 'A' },
+					{ y: 'result_1', label: 'B' },
+					{ y: 'result_2', label: 'C' }
+				]
+			}
+		]
+	});
+	assert.deepEqual(errors, []);
+	assert.equal(session.tableProcesses.length, 3, 'exactly three groups, none fabricated');
+	const boxes = session.plots[0].plot.data;
+	assert.equal(boxes.length, 3, 'one box per group');
+	// Each series has a y and NO x — that is what draws one box per column.
+	for (const b of boxes) {
+		assert.ok(b.y?.refId >= 0, 'the group values are on y');
+		assert.equal(b.x, undefined, 'no x/category column was invented');
+	}
+});
+
 test('an omitted colour still defaults, and only the asked-for series is coloured', () => {
 	const { session } = normalizeSession({
 		columns: [{ name: 't', type: 'time', values: [0, 3600000] }, { name: 'a', values: [1, 2] }],

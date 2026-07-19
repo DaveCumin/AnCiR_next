@@ -104,6 +104,11 @@ test('draft prompt is registry-derived and states the contract', () => {
 	// periodogram plot and it drew a periodogram OF the spectrum.
 	assert.match(p, /periodogram \/ fft \/ correlogram PLOT types take RAW time-series/);
 	assert.match(p, /use a SCATTERPLOT: x = the <Y>_period column/);
+	// A boxplot of separate group columns: one y-only series per group, no fabricated x. Without
+	// this a model built extra constant columns (Random multiply:0) as fake x categories.
+	assert.match(p, /BOXPLOT compares groups and shows significance bars/);
+	assert.match(p, /ONE series PER GROUP with just its\s+value column as "y" and NO "x"/);
+	assert.match(p, /never a Random with\s+multiply:0 to fake one/);
 	// A series may carry an optional colour — without this the model had no way to honour
 	// "a pink actogram", so the request was built but the colour silently dropped.
 	assert.match(p, /optional "colour"/i);

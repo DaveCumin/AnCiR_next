@@ -140,6 +140,18 @@ PLOTS below. The example above is a scatterplot, which happens to use x/y. An ac
 
 Copy the \`series=\` template for the plot type you chose and replace "<col>" with a column NAME.
 
+A BOXPLOT compares groups and shows significance bars ("the differences") by default. When each
+group is its OWN column (e.g. three Random columns), give ONE series PER GROUP with just its
+value column as "y" and NO "x" — each y-only series is drawn as one box, labelled by "label":
+
+  { "type": "boxplot", "name": "Group comparison", "series": [
+      { "y": "groupA", "label": "A" }, { "y": "groupB", "label": "B" }, { "y": "groupC", "label": "C" } ] }
+
+Do NOT invent an x / category / "label" column for the boxes (and never a Random with
+multiply:0 to fake one) — the boxplot positions them for you; making extra columns just adds
+groups that shouldn't be there. Only use "x" when ONE column holds the category label for a
+matching value column (long format, e.g. a GroupComparison output).
+
 RULES:
 - Literal JSON only — never code, functions, ranges or expressions.
 - \`args\` is FLAT: input-column fields (xIN, yIN, ...) AND parameters together at the top level.
