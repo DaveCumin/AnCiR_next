@@ -147,6 +147,31 @@ Every `/build` writes one structured line, so you can review what people actuall
 model let the user down). `errors`/`warnings` can be non-empty even on `ok` (a node dropped, or
 dynamic outputs not pre-allocated).
 
+### Durable copy in D1 (beyond 7 days)
+
+Workers Logs only retains ~7 days, so every hit is ALSO written to a D1 table (`hits`, binding
+`LOGS_DB`) that lasts indefinitely and is SQL-queryable. Same fields, same privacy: no API key,
+no IP. Stable fields are columns (`ts, event, outcome, model, prompt, ms, session_id`); anything
+event-specific rides in a JSON `detail` column, so new log fields never need a migration.
+
+```bash
+# the last 20 prompts
+npx wrangler d1 execute ancir-nl-logs --remote \
+  --command "SELECT ts, event, model, prompt FROM hits ORDER BY ts DESC LIMIT 20"
+
+# failures only, last 30 days
+npx wrangler d1 execute ancir-nl-logs --remote \
+  --command "SELECT ts, outcome, prompt FROM hits WHERE outcome != 'ok' AND ts > date('now','-30 day')"
+```
+
+The write is fire-and-forget (`ctx.waitUntil`) and swallows every error — logging never breaks a
+build or delays a response — and it no-ops if `LOGS_DB` isn't bound. First-time setup:
+
+```bash
+npx wrangler d1 create ancir-nl-logs                                    # paste the id into wrangler.toml
+npx wrangler d1 execute ancir-nl-logs --remote --file worker/schema.sql # create the table
+```
+
 ## The catalogue: what the model is taught
 
 The system prompt is a catalogue of every node, generated from the registry
