@@ -162,7 +162,14 @@ RULES:
 - When an analysis lists a "fitted curve" below, PLOT BOTH: the raw data (x = the analysis's
   own xIN, y = its yIN) as points, AND the fit (x = its fitted-curve x, y = its fitted-curve y
   for that same Y column) as a line. The fit's x pairs ONLY with the fit's y — never plot the
-  fitted x against the raw y, or the curve will be meaningless.`;
+  fitted x against the raw y, or the curve will be meaningless.
+- The periodogram / fft / correlogram PLOT types take RAW time-series (a time column + a values
+  column) and COMPUTE the spectrum themselves. RhythmicityAnalysis and MovingAnalysis have
+  ALREADY computed the spectrum — their outputs ARE the period/power (or lag/correlation,
+  frequency/magnitude). To show those, use a SCATTERPLOT: x = the <Y>_period column, y = the
+  <Y>_power column. NEVER feed a computed <Y>_period / <Y>_power into a periodogram plot — it
+  runs a periodogram OF the spectrum and the result is meaningless. So EITHER: periodogram plot
+  from raw (time, values); OR RhythmicityAnalysis → scatterplot of its period vs power. Not both.`;
 
 /** Full system prompt: contract + registry-derived catalogue. */
 export function buildDraftPrompt(schema = generated) {

@@ -99,6 +99,11 @@ test('draft prompt is registry-derived and states the contract', () => {
 	assert.match(p, /histogram: series=\[\{"column":"<col>"\}\]/);
 	assert.match(p, /tableplot: inputs=/, 'input-less plots take a column list, not series');
 	assert.match(p, /KEYS ARE NOT ALWAYS x\/y/, 'and the rule says so in prose too');
+	// Already-computed period/power go on a SCATTERPLOT, not a periodogram plot (which would
+	// recompute the spectrum). Without this, a model wired RhythmicityAnalysis outputs into a
+	// periodogram plot and it drew a periodogram OF the spectrum.
+	assert.match(p, /periodogram \/ fft \/ correlogram PLOT types take RAW time-series/);
+	assert.match(p, /use a SCATTERPLOT: x = the <Y>_period column/);
 	// A series may carry an optional colour — without this the model had no way to honour
 	// "a pink actogram", so the request was built but the colour silently dropped.
 	assert.match(p, /optional "colour"/i);

@@ -149,9 +149,11 @@ test('suffix-node outputs are named after the Y column, so the model can plot th
 				args: { xIN: 'time', yIN: ['activity'], analysis: 'periodogram', pgMethod: 'Lomb-Scargle' }
 			}
 		],
-		// Exactly what the catalogue now tells a model to write.
+		// Exactly what the catalogue now tells a model to write: the already-computed period/power
+		// go on a SCATTERPLOT (a periodogram plot would recompute the spectrum — see the retype
+		// tests). This test is about the OUTPUT NAMES resolving, so it uses the correct plot.
 		plots: [
-			{ type: 'periodogram', series: [{ time: 'activity_period', values: 'activity_power' }] }
+			{ type: 'scatterplot', series: [{ x: 'activity_period', y: 'activity_power' }] }
 		]
 	});
 	assert.deepEqual(errors, []);
@@ -275,8 +277,46 @@ test('a Split segment can be fed straight into another analysis, by name', () =>
 		plots: [{ type: 'periodogram', series: [{ time: 'values_2_period', values: 'values_2_power' }] }]
 	});
 	assert.deepEqual(errors, []);
-	assert.deepEqual(warnings, []);
-	assert.ok(session.plots[0].plot.data[0].x.refId >= 0, 'the periodogram is wired, not dropped');
+	// The Split segment resolved as a named input and the analysis wired up.
+	assert.ok(
+		session.tableProcesses.some((t) => t.name === 'RhythmicityAnalysis'),
+		'the analysis reading values_2 is present'
+	);
+	assert.ok(session.plots[0].plot.data[0].x.refId >= 0, 'the plot is wired, not dropped');
+	// …and because those are already-computed period/power, the periodogram plot is corrected to
+	// a scatterplot (see the dedicated retype tests below).
+	assert.equal(session.plots[0].type, 'scatterplot');
+	assert.ok(warnings.some((w) => /scatterplot/.test(w)));
+});
+
+test('a periodogram plot fed RhythmicityAnalysis period/power becomes a scatterplot', () => {
+	// The reported bug: the computed period+power were wired into a periodogram PLOT, which
+	// then ran a periodogram OF the spectrum — a curve peaking at ~6 h for a 20–28 h analysis.
+	// Those outputs are already the spectrum; showing them is a scatterplot of period vs power.
+	const { session, errors, warnings } = normalizeSession({
+		analyses: [
+			{ name: 'SimulatedData', args: { seed: 1, samplingPeriod_hours: 0.5, sections: [{ duration_hours: 480 }] } },
+			{ name: 'RhythmicityAnalysis', args: { xIN: 'time', yIN: ['values'], analysis: 'periodogram' } }
+		],
+		plots: [{ type: 'periodogram', name: 'PG', series: [{ time: 'values_period', values: 'values_power' }] }]
+	});
+	assert.deepEqual(errors, []);
+	const plot = session.plots[0];
+	assert.equal(plot.type, 'scatterplot', 'retyped from periodogram');
+	// The series survives intact — period on x, power on y.
+	assert.ok(plot.plot.data[0].x.refId >= 0 && plot.plot.data[0].y.refId >= 0);
+	assert.ok(warnings.some((w) => /scatterplot of period vs power/.test(w)), warnings.join('; '));
+});
+
+test('a periodogram plot fed RAW time-series is left alone', () => {
+	// The legitimate use: a periodogram plot computes the spectrum from raw (time, values). Its
+	// inputs are NOT RhythmicityAnalysis outputs, so it must stay a periodogram.
+	const { session, warnings } = normalizeSession({
+		analyses: [{ name: 'SimulatedData', args: { seed: 1, samplingPeriod_hours: 0.5, sections: [{ duration_hours: 240 }] } }],
+		plots: [{ type: 'periodogram', series: [{ time: 'time', values: 'values' }] }]
+	});
+	assert.equal(session.plots[0].type, 'periodogram', 'a raw-data periodogram is untouched');
+	assert.equal(warnings.filter((w) => /scatterplot/.test(w)).length, 0);
 });
 
 test('the generated catalogue holds no entropy or wall-clock values', async () => {

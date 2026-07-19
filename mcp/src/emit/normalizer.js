@@ -138,6 +138,15 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 	const tableProcesses = [];
 	const plots = [];
 
+	// Column ids that are a RhythmicityAnalysis's OUTPUT — i.e. an already-computed spectrum
+	// (period+power, lag+correlation, …). A periodogram/fft/correlogram PLOT computes a spectrum
+	// FROM raw time-series, so feeding it these recomputes a spectrum of the spectrum and shows
+	// nonsense (a user hit exactly this: a periodogram plot of values_1_period/values_1_power
+	// peaked at ~6 h for a 20–28 h analysis). We retype such a plot to a scatterplot below. Only
+	// RhythmicityAnalysis is tracked: its outputs are unambiguously a finished spectrum, so there
+	// is no legitimate case where one feeds a spectrum plot.
+	const rhythmicityOutputCols = new Set();
+
 	let nextId = 0;
 	const byName = new Map(); // column name -> id
 
@@ -305,6 +314,10 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 			out[key] = addColumn(colName, type, values, timeFormat);
 		}
 
+		// Remember a RhythmicityAnalysis's outputs so a spectrum plot fed by them can be caught
+		// and retyped to a scatterplot (see rhythmicityOutputCols).
+		if (name === 'RhythmicityAnalysis') for (const id of Object.values(out)) rhythmicityOutputCols.add(id);
+
 		tableProcesses.push({
 			id: tpId++,
 			name,
@@ -384,10 +397,28 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 			inner = { data };
 		}
 
+		// Safety net for the "spectrum of a spectrum" mis-wire: a periodogram/fft/correlogram
+		// plot computes its spectrum FROM raw time-series, so one fed a RhythmicityAnalysis output
+		// (already a computed spectrum) is wrong. Retype it to a scatterplot — the stored series
+		// is `{x, y}` either way (storageField maps both), so nothing else has to change. Only
+		// triggers on RhythmicityAnalysis outputs, where there is no legitimate reading.
+		let finalType = p.type;
+		if (
+			(p.type === 'periodogram' || p.type === 'fft' || p.type === 'correlogram') &&
+			inner?.data?.some(
+				(s) => rhythmicityOutputCols.has(s?.x?.refId) || rhythmicityOutputCols.has(s?.y?.refId)
+			)
+		) {
+			finalType = 'scatterplot';
+			warnings.push(
+				`Plot "${p.name ?? p.type}": a ${p.type} plot computes a spectrum from raw data, but this one was given already-computed RhythmicityAnalysis outputs — shown as a scatterplot of period vs power instead.`
+			);
+		}
+
 		plots.push({
 			id: plotId++,
 			name: p.name ?? pSchema.displayName ?? p.type,
-			type: p.type,
+			type: finalType,
 			// Park plots clear of the auto-laid-out data/analysis chain (which starts near
 			// x≈350) and stagger them so they don't stack. Cosmetic only — the user can hit
 			// "Tidy layout"; the Plot constructor would otherwise default these to 350/150,
