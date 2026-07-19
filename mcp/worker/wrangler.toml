@@ -42,6 +42,18 @@ OPENAI_MODEL = "openai/gpt-oss-120b"
 binding = "SESSIONS"
 id = "4a5db128db3c49cdb10b10769727a60a"
 
+# Durable hit log. Workers Logs (above) only keeps ~7 days; every /build, /edit and /mcp hit is
+# ALSO written here (time, model, prompt, outcome — never the key or an IP) so the record lasts
+# and is SQL-queryable. Create once, apply the schema, then paste the id here:
+#   npx wrangler d1 create ancir-nl-logs
+#   npx wrangler d1 execute ancir-nl-logs --remote --file worker/schema.sql
+# Read it back, e.g.:
+#   npx wrangler d1 execute ancir-nl-logs --remote --command "SELECT ts, event, model, prompt FROM hits ORDER BY ts DESC LIMIT 20"
+[[d1_databases]]
+binding = "LOGS_DB"
+database_name = "ancir-nl-logs"
+database_id = "0224637a-ebd3-4e1f-a6e2-f380ad91505b"
+
 # Cloudflare's own rate limiter, enforced at the edge — the real defence for /build now that
 # the default model is on OUR key. No dashboard step and no custom domain needed: it works on
 # workers.dev (WAF "rate limiting rules" do NOT — those are zone-level).

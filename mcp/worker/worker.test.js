@@ -24,6 +24,32 @@ const fakeKV = () => {
 
 const ENV = () => ({ SESSIONS: fakeKV(), ANCIR_BASE_URL: 'https://ancir.pages.dev' });
 
+/** Minimal D1 stand-in: captures every prepared INSERT's bound args. */
+const fakeD1 = () => {
+	const rows = [];
+	return {
+		_rows: rows,
+		prepare(sql) {
+			return {
+				bind(...args) {
+					return {
+						async run() {
+							rows.push({ sql, args });
+							return { success: true };
+						}
+					};
+				}
+			};
+		}
+	};
+};
+// Bind a D1 log store and capture the fire-and-forget writes so a test can await them.
+const withLogs = () => {
+	const db = fakeD1();
+	const pending = [];
+	return { env: { ...ENV(), LOGS_DB: db }, ctx: { waitUntil: (p) => pending.push(p) }, db, pending };
+};
+
 const post = (body) =>
 	new Request('https://nl.example.com/build', {
 		method: 'POST',
@@ -565,6 +591,38 @@ test('logs the prompt + outcome, and NEVER the api key', async () => {
 	assert.ok(typeof b.ms === 'number' && b.ts);
 	// the one thing that must never appear
 	assert.ok(!JSON.stringify(b).includes('sk-test'), 'must not log the key');
+});
+
+test('a hit is ALSO persisted to D1, so the record outlives Workers Logs', async () => {
+	// Workers Logs keeps ~7 days; the durable copy is a row in D1. Same fields — never the key.
+	stubLLM(JSON.stringify({ analyses: [{ name: 'SimulatedData', args: {} }] }));
+	const { env, ctx, db, pending } = withLogs();
+	await worker.fetch(post({ prompt: 'remember me for longer than a week', llm: LLM }), env, ctx);
+	await Promise.all(pending); // drain the fire-and-forget writes
+
+	const row = db._rows.find((r) => r.args[1] === 'build'); // args: ts,event,outcome,model,prompt,ms,session_id,detail
+	assert.ok(row, 'a build row was inserted');
+	assert.match(row.sql, /INSERT INTO hits/);
+	const [ts, event, outcome, model, prompt, ms, sessionId, detail] = row.args;
+	assert.ok(ts && !Number.isNaN(Date.parse(ts)), 'ISO timestamp');
+	assert.equal(event, 'build');
+	assert.equal(outcome, 'ok');
+	assert.equal(model, 'gpt-4o-mini');
+	assert.equal(prompt, 'remember me for longer than a week', 'the prompt is stored whole');
+	assert.ok(typeof ms === 'number');
+	assert.equal(typeof sessionId, 'string');
+	// Everything event-specific rides in the JSON detail column.
+	assert.match(detail, /"nodes":\["SimulatedData"\]/);
+	// The key must never reach the durable store either.
+	assert.ok(!JSON.stringify(row.args).includes('sk-test'), 'no api key in D1');
+});
+
+test('a build still works when no D1 is bound (logging is additive)', async () => {
+	// The ENV() used by every other test has no LOGS_DB, so this is really an explicit statement
+	// of that contract: the durable write is a no-op without the binding, never an error.
+	stubLLM(JSON.stringify({ analyses: [{ name: 'SimulatedData', args: {} }] }));
+	const res = await worker.fetch(post({ prompt: 'no d1 here', llm: LLM }), ENV());
+	assert.equal(res.status, 200);
 });
 
 test('logs failures too — a rejected prompt is the interesting case', async () => {

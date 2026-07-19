@@ -70,21 +70,52 @@ export function extractDraft(text) {
 }
 
 /**
- * Structured log of one /build, for reviewing what people ask for (Workers Logs; see
- * worker/README.md for how to read them).
+ * Record one hit to BOTH places:
+ *   1. Workers Logs (console.log of the OBJECT — indexed, filterable in the dashboard, but only
+ *      retained ~7 days).
+ *   2. D1 (`env.LOGS_DB`), so the record LASTS and is SQL-queryable. This is the durable half.
  *
- * Deliberately recorded: the prompt (that's the point), which model answered, the outcome and
- * how long it took, and a session id to tie a log line to a built session.
- * Deliberately NOT recorded: any apiKey (a caller's key is theirs, and ours is a secret), and
- * the session body/data. `llmKeySource` says whose key was used without revealing it.
- * There is no IP here — add one only if you actually need it, since it makes these logs
- * personal data.
+ * The D1 write is fire-and-forget through ctx.waitUntil and every failure is swallowed: logging
+ * must never break a request, delay the response, or throw. It no-ops when LOGS_DB is unbound
+ * (local dev, tests), so behaviour is identical without the database.
+ *
+ * Same fields as before — never the API key or an IP. `llmKeySource` records only WHOSE key was
+ * used, not the key; there is no IP anywhere in `fields`.
  */
-function logEvent(event, fields) {
-	// Log the OBJECT, not a JSON string. Workers Logs indexes an object's fields, so the
-	// dashboard can filter on them (outcome = "llm_rate_limited", search `prompt`, …). A
-	// JSON.stringify'd string arrives as one opaque message you can only text-search.
-	console.log({ event, ts: new Date().toISOString(), ...fields });
+function logEvent(env, ctx, event, fields = {}) {
+	const ts = fields.ts ?? new Date().toISOString();
+	const rest = { ...fields };
+	delete rest.ts; // stamped explicitly below; don't duplicate it in the spread
+	delete rest.event; // passed as its own argument
+	// (1) Workers Logs — the object, not a JSON string, so the dashboard can filter on its fields.
+	console.log({ event, ts, ...rest });
+
+	// (2) Durable D1.
+	const db = env?.LOGS_DB;
+	if (!db) return;
+	const { outcome, model, prompt, ms, sessionId, ...detail } = rest;
+	try {
+		const write = db
+			.prepare(
+				'INSERT INTO hits (ts, event, outcome, model, prompt, ms, session_id, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+			)
+			.bind(
+				ts,
+				event ?? null,
+				outcome ?? null,
+				model ?? null,
+				// Prompts are the point of the log; store them whole, but cap a pathological one.
+				typeof prompt === 'string' ? prompt.slice(0, 50000) : null,
+				Number.isFinite(ms) ? ms : null,
+				sessionId ?? null,
+				Object.keys(detail).length ? JSON.stringify(detail) : null
+			)
+			.run()
+			.catch(() => {}); // a logging failure is never the request's problem
+		if (ctx?.waitUntil) ctx.waitUntil(write);
+	} catch {
+		// binding present but misbehaving (e.g. prepare threw) — swallow, never break the hit.
+	}
 }
 
 /**
@@ -234,7 +265,7 @@ export function repairPrompt(userPrompt, draft, errors) {
 	].join('\n');
 }
 
-async function handleBuild(request, env) {
+async function handleBuild(request, env, ctx) {
 	let body;
 	try {
 		body = await request.json();
@@ -276,7 +307,7 @@ async function handleBuild(request, env) {
 		llmKeySource: v.value.llm?.apiKey ? 'caller' : 'worker-default'
 	};
 	const done = (outcome, extra = {}) =>
-		logEvent('build', { ...log, outcome, ms: Date.now() - started, ...extra });
+		logEvent(env, ctx, 'build', { ...log, outcome, ms: Date.now() - started, ...extra });
 
 	const draftOrError = await askModel({
 		llm,
@@ -415,7 +446,7 @@ async function handleBuild(request, env) {
  * session and validates every reference before applying (src/lib/utils/aiEdit.js) — nothing
  * here is trusted, which is also why we don't bother storing anything.
  */
-async function handleEdit(request, env) {
+async function handleEdit(request, env, ctx) {
 	let body;
 	try {
 		body = await request.json();
@@ -460,7 +491,7 @@ async function handleEdit(request, env) {
 		}
 	};
 	const done = (outcome, extra = {}) =>
-		logEvent('edit', { ...log, outcome, ms: Date.now() - started, ...extra });
+		logEvent(env, ctx, 'edit', { ...log, outcome, ms: Date.now() - started, ...extra });
 
 	const specOrError = await askModel({
 		llm,
@@ -523,7 +554,7 @@ async function handleEdit(request, env) {
  * the user can send if they choose. What lands here is enough to find the bug: the message, a
  * stack, where it happened, and the app version.
  */
-async function handleReport(request, env) {
+async function handleReport(request, env, ctx) {
 	let body;
 	try {
 		body = await request.json();
@@ -538,7 +569,7 @@ async function handleReport(request, env) {
 	}
 
 	const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : undefined);
-	logEvent('client_error', {
+	logEvent(env, ctx, 'client_error', {
 		ts: new Date().toISOString(),
 		message: str(body?.message, 500) ?? '(no message)',
 		stack: str(body?.stack, 4000),
@@ -579,9 +610,11 @@ async function handleSession(id, env) {
  * build_session rather than per request — an MCP client spends 2 requests on handshake before
  * it does anything, and those shouldn't eat the budget.
  */
-async function handleMcpRoute(request, env) {
+async function handleMcpRoute(request, env, ctx) {
 	const { status, body } = await handleMcp(request, env, {
-		log: (fields) => console.log(fields),
+		// mcp.js logs objects that already carry their own `event` (e.g. 'mcp_build'); route them
+		// through the same durable logger so /mcp hits land in D1 too.
+		log: (fields) => logEvent(env, ctx, fields?.event ?? 'mcp', fields),
 		rateLimited: () => rateLimited(env, request)
 	});
 	if (!body) return new Response(null, { status, headers: CORS });
@@ -589,15 +622,15 @@ async function handleMcpRoute(request, env) {
 }
 
 export default {
-	async fetch(request, env) {
+	async fetch(request, env, ctx) {
 		const url = new URL(request.url);
 		if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 		if (url.pathname === '/health') return json({ ok: true });
-		if (url.pathname === '/build' && request.method === 'POST') return handleBuild(request, env);
-		if (url.pathname === '/edit' && request.method === 'POST') return handleEdit(request, env);
-		if (url.pathname === '/report' && request.method === 'POST') return handleReport(request, env);
+		if (url.pathname === '/build' && request.method === 'POST') return handleBuild(request, env, ctx);
+		if (url.pathname === '/edit' && request.method === 'POST') return handleEdit(request, env, ctx);
+		if (url.pathname === '/report' && request.method === 'POST') return handleReport(request, env, ctx);
 		if (url.pathname === '/mcp') {
-			if (request.method === 'POST') return handleMcpRoute(request, env);
+			if (request.method === 'POST') return handleMcpRoute(request, env, ctx);
 			// The Streamable HTTP spec has GET open a server→client SSE stream. We're stateless
 			// and never push, and 405 is the spec's own way to say so — clients then just POST.
 			return json({ error: 'method not allowed' }, 405);
