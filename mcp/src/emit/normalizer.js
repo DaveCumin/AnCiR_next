@@ -50,6 +50,13 @@ function seriesStyle(kind, colour) {
 	const isLine = kind === 'line';
 	const c = colour ?? (isLine ? FIT_COLOUR : RAW_COLOUR);
 	const style = {
+		// A TOP-LEVEL colour, because not every plot keeps colour in the line/points slots:
+		// the actogram, boxplot and mean±SEM classes read `series.colour` directly. Emitting
+		// it into `line`/`points` only (as before) meant "a pink actogram" put pink in a slot
+		// the actogram never reads, so it silently fell back to the palette. Line/points plots
+		// ignore this top-level field and read their own slot, so setting both is safe — the
+		// same "emit the union, each type takes what it reads" rule as the slots below.
+		colour: c,
 		line: { colour: c, draw: isLine, strokeWidth: isLine ? 2.5 : 2, stroke: 'solid' },
 		points: { colour: c, draw: !isLine, radius: 3, shape: 'circle' }
 	};

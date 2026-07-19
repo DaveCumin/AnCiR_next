@@ -153,3 +153,33 @@ describe('EVERY registered plot survives a partial inner', () => {
 		}
 	});
 });
+
+// The normalizer emits a series colour into BOTH a top-level `colour` and the line/points slots,
+// because plots disagree on where colour lives: line/points plots read their slot, the actogram/
+// boxplot/mean±SEM read `series.colour` directly. Emitting it only into the slots (as before)
+// meant "a pink actogram" put pink in a field the actogram never reads, so it silently fell back
+// to the palette. These pin the contract from the plot side: the top-level colour must reach the
+// plots that read it, and must not disturb the plots that don't.
+describe('a top-level series colour reaches the plots that read it', () => {
+	// Exactly the shape the normalizer's seriesStyle() produces for `colour: 'pink'`.
+	const emitted = (colour) => ({
+		x: { refId: 1 },
+		y: { refId: 2 },
+		colour,
+		line: { colour, draw: false, strokeWidth: 2, stroke: 'solid' },
+		points: { colour, draw: true, radius: 3, shape: 'circle' }
+	});
+
+	it('the actogram honours the top-level colour (the reported bug)', async () => {
+		const acto = (await loadPlots()).get('actogram').data.fromJSON(null, { data: [emitted('pink')] });
+		expect(acto.data[0].colour).toBe('pink');
+	});
+
+	it('a line/points plot ignores the extra top-level colour and keeps reading its slot', async () => {
+		const s = Scatterplotclass.fromJSON(null, {
+			data: [{ ...emitted('pink'), line: { colour: '#234154' }, points: { colour: '#BE796B' } }]
+		});
+		expect(s.data[0].line.colour).toBe('#234154');
+		expect(s.data[0].points.colour).toBe('#BE796B');
+	});
+});

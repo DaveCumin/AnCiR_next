@@ -99,6 +99,10 @@ test('draft prompt is registry-derived and states the contract', () => {
 	assert.match(p, /histogram: series=\[\{"column":"<col>"\}\]/);
 	assert.match(p, /tableplot: inputs=/, 'input-less plots take a column list, not series');
 	assert.match(p, /KEYS ARE NOT ALWAYS x\/y/, 'and the rule says so in prose too');
+	// A series may carry an optional colour — without this the model had no way to honour
+	// "a pink actogram", so the request was built but the colour silently dropped.
+	assert.match(p, /optional "colour"/i);
+	assert.match(p, /only when the user asks/i, 'not applied unless requested');
 });
 
 // The catalogue is the model's only source of column names, so a wrong line there isn't a

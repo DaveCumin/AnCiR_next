@@ -520,6 +520,30 @@ test('plot emits refId series in the inner `plot.data`, not flat column ids', ()
 	assert.ok(p.width > 0 && p.height > 0, 'carries a renderable box');
 });
 
+test('a requested series colour reaches a plot that reads a TOP-LEVEL colour (actogram)', () => {
+	// "plot the binned profile in a pink actogram" produced a NAVY actogram: the colour was
+	// written into the line/points slots, but the actogram reads `series.colour` directly, so it
+	// never saw it and fell back to the palette. The colour must be emitted at the top level too.
+	const { session, errors } = normalizeSession({
+		columns: [{ name: 'binnedx', type: 'time', values: [0, 3600000] }, { name: 'act', values: [1, 2] }],
+		plots: [{ type: 'actogram', series: [{ time: 'binnedx', values: 'act', colour: 'pink' }] }]
+	});
+	assert.deepEqual(errors, []);
+	const s = session.plots[0].plot.data[0];
+	assert.equal(s.colour, 'pink', 'the actogram reads this; it must carry the requested colour');
+	// Still in the slots too, so line/points plots are unaffected.
+	assert.equal(s.line.colour, 'pink');
+});
+
+test('an omitted colour still defaults, and only the asked-for series is coloured', () => {
+	const { session } = normalizeSession({
+		columns: [{ name: 't', type: 'time', values: [0, 3600000] }, { name: 'a', values: [1, 2] }],
+		plots: [{ type: 'actogram', series: [{ time: 't', values: 'a' }] }]
+	});
+	// No colour asked ⇒ a real default, never undefined (the actogram would palette-fallback).
+	assert.ok(session.plots[0].plot.data[0].colour, 'a default colour is always present');
+});
+
 test('a plot carries MULTIPLE series, so raw data + fitted curve share one plot', () => {
 	// The canonical Cosinor viz (matches AnCiR's own Quick-Plot): raw points + fit line.
 	const { session, errors } = normalizeSession({

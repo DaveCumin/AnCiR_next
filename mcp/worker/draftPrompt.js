@@ -127,6 +127,11 @@ A plot holds a LIST of series, so raw data and a fitted curve go on the SAME plo
 "kind":"points" for measured data and "kind":"line" for a fit. (A one-series plot may instead
 use the shorthand "inputs": {...} with the same fields as one series.)
 
+A series may also carry an OPTIONAL "colour" — only when the user asks for one ("a pink
+actogram", "plot the fit in red"). Give a hex like "#ff69b4" or a plain CSS colour name like
+"pink"/"red"/"steelblue". It applies to that whole series (the bars of an actogram, the line or
+points of a scatter). Omit it otherwise and a sensible default is chosen.
+
 A series' KEYS ARE NOT ALWAYS x/y — they are exactly the fields listed for that plot type under
 PLOTS below. The example above is a scatterplot, which happens to use x/y. An actogram does NOT:
 
