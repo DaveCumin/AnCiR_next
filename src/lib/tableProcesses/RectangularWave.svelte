@@ -6,6 +6,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { fitRectangularWave, evaluateRectWaveAtPoints } from '$lib/utils/rectwave.js';
 	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
 
 	const displayName = 'Rectangular Wave';
 	const defaults = new Map([
@@ -83,7 +84,7 @@
 		if (outputXId != -1 && getColumnById(outputXId)) {
 			const outputXCol = getColumnById(outputXId);
 			outputXData = outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
-			outputXData = outputXData.filter((v) => !isNaN(v));
+			outputXData = outputXData.filter((v) => !isInvalidValue(v));
 		}
 
 		// Determine origin time for time columns
@@ -120,7 +121,7 @@
 
 			const y = yCol.getData();
 			const validIndices = t
-				.map((v, i) => (isNaN(v) || isNaN(y[i]) ? -1 : i))
+				.map((v, i) => (isInvalidValue(v) || isInvalidValue(y[i]) ? -1 : i))
 				.filter((i) => i !== -1);
 			const tt = validIndices.map((i) => t[i]);
 			const yy = validIndices.map((i) => y[i]);

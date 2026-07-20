@@ -9,6 +9,7 @@
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import '$lib/utils/doublelogistic.worker-task.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
 
 	const displayName = 'Double Logistic';
 	const defaults = new Map([
@@ -77,7 +78,7 @@
 		if (outputXId != -1 && getColumnById(outputXId)) {
 			const outputXCol = getColumnById(outputXId);
 			outputXData = outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
-			outputXData = outputXData.filter((v) => !isNaN(v));
+			outputXData = outputXData.filter((v) => !isInvalidValue(v));
 		}
 
 		// Origin time for datetime display
@@ -99,7 +100,7 @@
 
 			const y = yCol.getData();
 			const validIndices = t
-				.map((v, i) => (isNaN(v) || isNaN(y[i]) ? -1 : i))
+				.map((v, i) => (isInvalidValue(v) || isInvalidValue(y[i]) ? -1 : i))
 				.filter((i) => i !== -1);
 			const tt = validIndices.map((i) => t[i]);
 			const yy = validIndices.map((i) => y[i]);

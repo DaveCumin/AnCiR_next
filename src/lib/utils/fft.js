@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { mean } from '$lib/components/plotbits/helpers/wrangleData.js';
+import { validPairs } from './validPairs.js';
 
 // Cooley-Tukey radix-2 FFT (recursive). Input: array of {re, im}.
 function fft(signal) {
@@ -63,9 +64,9 @@ export function computeFFT(times, values, freqStep = null) {
 		return { ...EMPTY_SPECTRUM };
 	}
 
-	const validIndices = times
-		.map((t, i) => (isNaN(t) || isNaN(values[i]) ? -1 : i))
-		.filter((i) => i !== -1);
+	// validPairs, not a bare isNaN — nulls fitted as zeros put the FFT peak at 260 h instead
+	// of 24 h on a null-padded (Split) segment. See utils/validPairs.js.
+	const { indices: validIndices } = validPairs(times, values);
 
 	if (validIndices.length === 0) {
 		return { ...EMPTY_SPECTRUM };

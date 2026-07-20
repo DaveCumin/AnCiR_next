@@ -11,6 +11,7 @@
 		fillDefaults
 	} from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
 
 	const displayName = 'Fit Function';
 	const defaults = new Map([
@@ -107,7 +108,7 @@
 
 	function getValidPairs(t, y) {
 		const validIndices = t
-			.map((v, i) => (isNaN(v) || isNaN(y[i]) ? -1 : i))
+			.map((v, i) => (isInvalidValue(v) || isInvalidValue(y[i]) ? -1 : i))
 			.filter((i) => i !== -1);
 		return {
 			tt: validIndices.map((i) => t[i]),
@@ -163,7 +164,7 @@
 		let outputXData = null;
 		if (outputXId != -1 && getColumnById(outputXId)) {
 			const outputXCol = getColumnById(outputXId);
-			outputXData = getXDataForColumn(outputXCol).filter((v) => !isNaN(v));
+			outputXData = getXDataForColumn(outputXCol).filter((v) => !isInvalidValue(v));
 		}
 		result.outputXData = outputXData;
 
@@ -351,7 +352,7 @@
 
 	function getValidPairs(t, y) {
 		const validIndices = t
-			.map((v, i) => (isNaN(v) || isNaN(y[i]) ? -1 : i))
+			.map((v, i) => (isInvalidValue(v) || isInvalidValue(y[i]) ? -1 : i))
 			.filter((i) => i !== -1);
 		return {
 			tt: validIndices.map((i) => t[i]),
@@ -380,7 +381,7 @@
 		let outputXData = null;
 		if (outputXId != -1 && getColumnById(outputXId)) {
 			const outputXCol = getColumnById(outputXId);
-			outputXData = getXData(outputXCol).filter((v) => !isNaN(v));
+			outputXData = getXData(outputXCol).filter((v) => !isInvalidValue(v));
 		}
 
 		let originTime_ms = null;

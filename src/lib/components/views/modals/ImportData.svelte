@@ -252,7 +252,7 @@
 				timeFormat: timeCols[i].fmt
 			});
 			// Enable combination by default
-			combinePairs.add(i);
+			combinePairs = new Set([...combinePairs, i]); // reassign: not proxied inside $state
 		}
 	}
 
@@ -448,7 +448,9 @@
 		totalRowCount = 0;
 		binningEnabled = false;
 		binIntervalMin = 15;
-		selectedColumns.clear();
+		// Reassign, don't mutate: $state() does NOT deep-proxy a built-in Set, so `.clear()`
+		// never notifies the template reads below (the column list + the disabled Import button).
+		selectedColumns = new Set();
 		columnLabels = {};
 		labelRowIndex = null;
 		pickingLabelRow = false;
@@ -900,8 +902,7 @@
 		if (headers.length > 0 && selectedColumns.size === 0) {
 			// Pre-select everything **only if nothing is selected yet**
 			// (protects against re-preview with changed skip/delimiter)
-			selectedColumns.clear();
-			headers.forEach((col) => selectedColumns.add(col));
+			selectedColumns = new Set(headers); // reassign: a Set inside $state is not proxied
 		}
 
 		if (enspireMultiplatePayload) {
@@ -1004,7 +1005,7 @@
 		errorInfile = false;
 		error = {};
 		specialRecognised = false;
-		selectedColumns.clear();
+		selectedColumns = new Set(); // reassign: a Set inside $state is not proxied
 
 		awaitingPreview = true;
 		previewDisplayStart = 1;
@@ -1036,7 +1037,7 @@
 		});
 
 		if (headers.length > 0 && selectedColumns.size === 0) {
-			headers.forEach((col) => selectedColumns.add(col));
+			selectedColumns = new Set(headers); // reassign: a Set inside $state is not proxied
 		}
 		totalRowCount = parsedData ? (parsedData[headers[0]]?.length ?? 0) : 0;
 

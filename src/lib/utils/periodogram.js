@@ -5,6 +5,7 @@ import { KahanSum, kahanMean, makeSeqArray } from '$lib/utils/numerics.js';
 import cdf_chisq from '@stdlib/stats-base-dists-chisquare-cdf';
 import quantile_chisq from '@stdlib/stats-base-dists-chisquare-quantile';
 import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
+import { validPairs } from './validPairs.js';
 
 // ========== Periodogram Calculation Functions ==========
 
@@ -19,11 +20,10 @@ function calculateLombScarglePower(times, values, frequencies, onProgress) {
 		return new Array(frequencies.length).fill(NaN);
 	}
 
-	const validIndices = times
-		.map((t, i) => (isNaN(t) || isNaN(values[i]) ? -1 : i))
-		.filter((i) => i !== -1);
-	const t = validIndices.map((i) => times[i]);
-	const y = validIndices.map((i) => values[i]);
+	// validPairs, not a bare isNaN: isNaN(null) is false, so nulls used to reach the fit as
+	// zeros. A Split segment (full length, null outside the window) made this periodogram
+	// report a spurious long period. See utils/validPairs.js.
+	const { tt: t, yy: y } = validPairs(times, values);
 
 	if (t.length === 0) return new Array(frequencies.length).fill(0);
 
@@ -108,6 +108,8 @@ function calculateEnrightPower(times, values, periods, binSize, onProgress) {
 
 	const data = binnedData.y_out;
 	const n = data.length;
+	// isNaN-ok: `data` is binData output — bin means are numbers, and an EMPTY bin is NaN by
+	// design (never null). Inputs are null-filtered by validPairs before binning.
 	const dataMean = kahanMean(data.filter((v) => !isNaN(v)));
 	const centeredData = data.map((v) => (isNaN(v) ? 0 : v - dataMean));
 
@@ -123,17 +125,19 @@ function calculateEnrightPower(times, values, periods, binSize, onProgress) {
 		for (let k = 1; k * binsPerPeriod < n; k++) {
 			const lag = k * binsPerPeriod;
 			const corrAcc = new KahanSum();
-			let validPairs = 0;
+			let nPairs = 0;
 
 			for (let i = 0; i < n - lag; i++) {
-				if (!isNaN(centeredData[i]) && !isNaN(centeredData[i + lag])) {
+				// isNaN-ok: centeredData is derived from binData output (number, or NaN for an empty
+			// bin) — never null.
+			if (!isNaN(centeredData[i]) && !isNaN(centeredData[i + lag])) {
 					corrAcc.add(centeredData[i] * centeredData[i + lag]);
-					validPairs++;
+					nPairs++;
 				}
 			}
 
-			if (validPairs > 0) {
-				qpAcc.add(corrAcc.value / validPairs);
+			if (nPairs > 0) {
+				qpAcc.add(corrAcc.value / nPairs);
 				count++;
 			}
 		}
@@ -143,6 +147,7 @@ function calculateEnrightPower(times, values, periods, binSize, onProgress) {
 		// Calculate variance using Kahan summation
 		const varAcc = new KahanSum();
 		for (let i = 0; i < centeredData.length; i++) {
+			// isNaN-ok: see above — binData output, never null.
 			if (!isNaN(centeredData[i])) {
 				varAcc.add(centeredData[i] * centeredData[i]);
 			}
@@ -175,6 +180,7 @@ function calculateChiSquaredPower(data, binSize, period, avgAll, denominator) {
 
 	for (let i = 0; i < data.length; i++) {
 		const col = i % colNum;
+		// isNaN-ok: binData output (number, or NaN for an empty bin) — never null.
 		if (!isNaN(data[i])) {
 			colSums[col].add(data[i]);
 			colCounts[col]++;
@@ -204,17 +210,12 @@ export function runPeriodogramCalculation(params, onProgress) {
 		if (!params.yData) {
 			return { x: [], y: [], threshold: [], pvalue: [] };
 		}
-		// Strip NaN/null x values before binning — a NaN last x causes binData's
-		// while(true) loop to never break (currentStart >= NaN is always false).
-		const validPairs = params.xData
-			.map((x, i) => ({ x, y: params.yData[i] }))
-			.filter((p) => p.x !== null && p.x !== undefined && !isNaN(p.x));
-		binnedData = binData(
-			validPairs.map((p) => p.x),
-			validPairs.map((p) => p.y),
-			params.binSize,
-			0
-		);
+		// Strip unusable rows before binning. Two reasons: a NaN last x makes binData's
+		// while(true) loop never break (currentStart >= NaN is always false), AND a null y
+		// would otherwise be aggregated into its bin as a zero (isNaN(null) is false), pulling
+		// the bin mean toward 0. This used to filter on x only.
+		const { tt: binX, yy: binY } = validPairs(params.xData, params.yData);
+		binnedData = binData(binX, binY, params.binSize, 0);
 		if (binnedData.bins.length === 0) {
 			return { x: [], y: [], threshold: [], pvalue: [] };
 		}
@@ -235,7 +236,8 @@ export function runPeriodogramCalculation(params, onProgress) {
 		// Calculate denominator using Kahan summation
 		const denomAcc = new KahanSum();
 		for (let i = 0; i < data.length; i++) {
-			if (!isNaN(data[i])) {
+			// isNaN-ok: binData output (number, or NaN for an empty bin) — never null.
+		if (!isNaN(data[i])) {
 				const diff = data[i] - avgAll;
 				denomAcc.add(diff * diff);
 			}
@@ -292,6 +294,7 @@ export function runPeriodogramCalculation(params, onProgress) {
 	// Remove NaN values
 	const idxsToRemove = [];
 	for (let i = 0; i < power.length; i++) {
+		// isNaN-ok: power/periods are computed numbers, never null.
 		if (isNaN(power[i]) || isNaN(periods[i])) {
 			idxsToRemove.push(i);
 		}

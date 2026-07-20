@@ -13,6 +13,8 @@
 	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
 
 	function findCentileValue(data, centile) {
+		// isNaN-ok: callers pass yByPeriod slices, which Actogram builds with an explicit
+		// `tempy[i] != null` guard, so nulls never reach here.
 		const filteredData = data.filter((value) => !isNaN(value) && value !== 0);
 		// Sort the filtered data in ascending order
 		const sortedData = filteredData.slice().sort((a, b) => a - b);

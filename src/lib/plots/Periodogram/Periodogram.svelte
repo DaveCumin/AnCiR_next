@@ -124,8 +124,13 @@
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
 
-			if (dataIN?.x) {
-				this.x = ColumnClass.fromJSON(dataIN.x);
+			// Accept the PUBLIC PORT name (`time`/`values`) as well as the stored `x`/`y`.
+			// The two vocabularies are easy to conflate — a tool that wrote the port names got a
+			// silently unwired plot (every refId -1) that then crashed at render. CircularPhase
+			// already tolerated both; this makes the whole family consistent.
+			const xJSON = dataIN?.x ?? dataIN?.time;
+			if (xJSON) {
+				this.x = ColumnClass.fromJSON(xJSON);
 			} else {
 				if (parent.data.length > 0) {
 					this.x = new ColumnClass({ refId: parent.data[parent.data.length - 1].x.refId });
@@ -133,8 +138,9 @@
 					this.x = new ColumnClass({ refId: -1 });
 				}
 			}
-			if (dataIN && dataIN.y) {
-				this.y = ColumnClass.fromJSON(dataIN.y);
+			const yJSON = dataIN?.y ?? dataIN?.values;
+			if (yJSON) {
+				this.y = ColumnClass.fromJSON(yJSON);
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
@@ -321,8 +327,10 @@
 
 		static fromJSON(json, parent) {
 			return new PeriodogramDataclass(parent, {
-				x: json.x,
-				y: json.y,
+			// `?? json.time` / `?? json.values`: this re-map runs BEFORE the constructor, so
+			// without it the constructor's port-name fallback would never see them.
+				x: json.x ?? json.time,
+				y: json.y ?? json.values,
 				line: LineClass.fromJSON(json.line),
 				thresholdline: LineClass.fromJSON(json.thresholdline),
 				points: PointsClass.fromJSON(json.points),

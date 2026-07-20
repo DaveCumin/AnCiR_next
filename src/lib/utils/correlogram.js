@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { mean } from '$lib/components/plotbits/helpers/wrangleData.js';
+import { validPairs } from './validPairs.js';
 
 /**
  * Compute the autocorrelation function of a 1-D signal sampled at `times`.
@@ -25,9 +26,8 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 		return { lags: [], correlations: [], dt: 1 };
 	}
 
-	const validIndices = times
-		.map((t, i) => (isNaN(t) || isNaN(values[i]) ? -1 : i))
-		.filter((i) => i !== -1);
+	// validPairs, not a bare isNaN: nulls would be correlated as zeros. See utils/validPairs.js.
+	const { indices: validIndices } = validPairs(times, values);
 
 	if (validIndices.length < 2) {
 		return { lags: [], correlations: [], dt: 1 };
@@ -91,7 +91,8 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 			let sum = 0;
 			let count = 0;
 			for (let i = 0; i < n - lag; i++) {
-				if (!isNaN(y[i]) && !isNaN(y[i + lag])) {
+				// isNaN-ok: y is built from validPairs + an explicit != null filter above.
+			if (!isNaN(y[i]) && !isNaN(y[i + lag])) {
 					sum += (y[i] - yMean) * (y[i + lag] - yMean);
 					count++;
 				}
@@ -111,7 +112,8 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 				for (let j = i + 1; j < n; j++) {
 					const timeDiff = t[j] - t[i];
 					if (Math.abs(timeDiff - targetLag) <= tolerance) {
-						if (!isNaN(y[i]) && !isNaN(y[j])) {
+						// isNaN-ok: y is built from validPairs + an explicit != null filter above.
+		if (!isNaN(y[i]) && !isNaN(y[j])) {
 							sum += (y[i] - yMean) * (y[j] - yMean);
 							count++;
 						}
