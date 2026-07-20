@@ -18,6 +18,14 @@ describe('colormapRGB', () => {
 		expect(rgb(colormapRGB('viridis', 5))).toEqual(stops[stops.length - 1]);
 	});
 
+	it('the diverging rdbu map is neutral (white) at its centre t=0.5', () => {
+		// A correlation of 0 normalises to t=0.5 and must read as neutral, not blue or red.
+		expect(rgb(colormapRGB('rdbu', 0.5))).toEqual([247, 247, 247]);
+		// ...and the ends are blue (low) / red (high).
+		expect(rgb(colormapRGB('rdbu', 0))[2]).toBeGreaterThan(rgb(colormapRGB('rdbu', 0))[0]); // blue-ish
+		expect(rgb(colormapRGB('rdbu', 1))[0]).toBeGreaterThan(rgb(colormapRGB('rdbu', 1))[2]); // red-ish
+	});
+
 	it('non-finite t maps to the low end', () => {
 		expect(rgb(colormapRGB('viridis', NaN))).toEqual(COLORMAPS.viridis[0]);
 		expect(rgb(colormapRGB('viridis', undefined))).toEqual(COLORMAPS.viridis[0]);

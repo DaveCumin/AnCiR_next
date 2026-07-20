@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "261": [
+    "277": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "262": [
+    "278": [
       24.784209286216505,
       27.918238427560844,
       26.60093560817605,
@@ -104,7 +104,7 @@
       24.95424537696588,
       27.973731986697846
     ],
-    "263": [
+    "279": [
       0,
       1,
       2,
@@ -156,10 +156,10 @@
       48,
       49
     ],
-    "264": [
+    "280": [
       null
     ],
-    "265": [
+    "281": [
       25.756894538862465,
       24.742714374366138,
       24.385024124035308,
@@ -214,20 +214,20 @@
   },
   "data": [
     {
-      "id": 261,
+      "id": 277,
       "name": "x",
-      "data": 261,
+      "data": 277,
       "type": "number",
-      "tableProcessGUId": "e7b555ee-9e5e-4289-9add-9e3e15b3e769",
+      "tableProcessGUId": "9ccabb25-689c-4f98-950a-9d5891e6f0b7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 262,
+      "id": 278,
       "name": "y",
-      "data": 262,
+      "data": 278,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -236,33 +236,33 @@
       "processes": []
     },
     {
-      "id": 263,
+      "id": 279,
       "name": "dlogx_28",
-      "data": 263,
+      "data": 279,
       "type": "number",
-      "tableProcessGUId": "12abbfdd-e681-4dcd-80e1-62de94d43c8a",
+      "tableProcessGUId": "74e84533-14ee-43b7-89e7-d9498eb1d09d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 264,
+      "id": 280,
       "name": "pvalue_28",
-      "data": 264,
+      "data": 280,
       "type": "number",
-      "tableProcessGUId": "1b4f495b-4dfa-415b-a36e-1cd418ae7403",
+      "tableProcessGUId": "4615d179-f010-4c8b-8ed5-cb8d35b1f2ab",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 265,
-      "name": "dlogy_262_28",
-      "data": 265,
+      "id": 281,
+      "name": "dlogy_278_28",
+      "data": 281,
       "type": "number",
-      "tableProcessGUId": "12abbfdd-e681-4dcd-80e1-62de94d43c8a",
+      "tableProcessGUId": "74e84533-14ee-43b7-89e7-d9498eb1d09d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -271,7 +271,7 @@
   ],
   "plots": [
     {
-      "id": 45,
+      "id": 47,
       "name": "Double Logistic: data + fit",
       "x": 350,
       "y": 150,
@@ -328,9 +328,9 @@
         "data": [
           {
             "x": {
-              "id": 266,
+              "id": 282,
               "name": "x",
-              "refId": 261,
+              "refId": 277,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -339,9 +339,9 @@
               "processes": []
             },
             "y": {
-              "id": 267,
+              "id": 283,
               "name": "y",
-              "refId": 262,
+              "refId": 278,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -367,9 +367,9 @@
           },
           {
             "x": {
-              "id": 268,
+              "id": 284,
               "name": "dlogx_28",
-              "refId": 263,
+              "refId": 279,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -378,9 +378,9 @@
               "processes": []
             },
             "y": {
-              "id": 269,
-              "name": "dlogy_262_28",
-              "refId": 265,
+              "id": 285,
+              "name": "dlogy_278_28",
+              "refId": 281,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -420,7 +420,7 @@
       }
     },
     {
-      "id": 46,
+      "id": 48,
       "name": "Double Logistic: values",
       "x": 350,
       "y": 150,
@@ -436,8 +436,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          262,
-          265
+          278,
+          281
         ],
         "showCol": [
           true,
@@ -462,7 +462,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 261
+          "result": 277
         }
       },
       "refTPId": null
@@ -472,9 +472,9 @@
       "name": "DoubleLogistic",
       "displayName": "Double Logistic",
       "args": {
-        "xIN": 261,
+        "xIN": 277,
         "yIN": [
-          262
+          278
         ],
         "outputX": -1,
         "fixK1": false,
@@ -484,9 +484,9 @@
         "fixPeriod": false,
         "fixedPeriod": 24,
         "out": {
-          "dlogx": 263,
-          "pvalue": 264,
-          "dlogy_262": 265
+          "dlogx": 279,
+          "pvalue": 280,
+          "dlogy_278": 281
         }
       },
       "refTPId": null
@@ -509,7 +509,7 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_262": {
+    "data_278": {
       "x": 60,
       "y": 314
     },
@@ -521,11 +521,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_45": {
+    "plot_47": {
       "x": 820,
       "y": 314
     },
-    "plot_46": {
+    "plot_48": {
       "x": 820,
       "y": 814
     },
@@ -590,5 +590,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.56.1"
+  "version": "β.60.0"
 }

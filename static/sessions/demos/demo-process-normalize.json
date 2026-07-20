@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "205": [
+    "221": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "206": [
+    "222": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 205,
+      "id": 221,
       "name": "x",
-      "data": 205,
+      "data": 221,
       "type": "number",
-      "tableProcessGUId": "a8ee696c-39db-4093-ba57-85e44768df36",
+      "tableProcessGUId": "adc00107-cb8b-48ce-8eaf-0a6867c0bd06",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 206,
+      "id": 222,
       "name": "y",
-      "data": 206,
+      "data": 222,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 207,
+      "id": 223,
       "name": "Normalize result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_7",
-      "producerPort": "out_206",
+      "producerPort": "out_222",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 31,
+      "id": 33,
       "name": "Normalize: before vs after",
       "x": 350,
       "y": 150,
@@ -199,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 208,
+              "id": 224,
               "name": "x",
-              "refId": 205,
+              "refId": 221,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 209,
+              "id": 225,
               "name": "y",
-              "refId": 206,
+              "refId": 222,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -238,9 +238,9 @@
           },
           {
             "x": {
-              "id": 210,
+              "id": 226,
               "name": "x",
-              "refId": 205,
+              "refId": 221,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 211,
+              "id": 227,
               "name": "Normalize result",
-              "refId": 207,
+              "refId": 223,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,7 +291,7 @@
       }
     },
     {
-      "id": 32,
+      "id": 34,
       "name": "Normalize: values",
       "x": 350,
       "y": 150,
@@ -307,8 +307,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          206,
-          207
+          222,
+          223
         ],
         "showCol": [
           true,
@@ -333,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 205
+          "result": 221
         }
       },
       "refTPId": null
@@ -363,13 +363,13 @@
         "customMin": 0,
         "customMax": 1,
         "inIN": [
-          206
+          222
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_206": {
+    "data_222": {
       "x": 60,
       "y": 314
     },
@@ -381,11 +381,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_31": {
+    "plot_33": {
       "x": 820,
       "y": 314
     },
-    "plot_32": {
+    "plot_34": {
       "x": 820,
       "y": 814
     },
@@ -450,5 +450,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.56.1"
+  "version": "β.60.0"
 }

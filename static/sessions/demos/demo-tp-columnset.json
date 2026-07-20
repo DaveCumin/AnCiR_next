@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "240": [
+    "256": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "241": [
+    "257": [
       1,
       3,
       5,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 240,
+      "id": 256,
       "name": "Column Set input 1",
-      "data": 240,
+      "data": 256,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -118,9 +118,9 @@
       "processes": []
     },
     {
-      "id": 241,
+      "id": 257,
       "name": "Column Set input 2",
-      "data": 241,
+      "data": 257,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -131,7 +131,7 @@
   ],
   "plots": [
     {
-      "id": 41,
+      "id": 43,
       "name": "Column Set result",
       "x": 350,
       "y": 150,
@@ -147,8 +147,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          240,
-          241
+          256,
+          257
         ],
         "showCol": [
           true,
@@ -168,8 +168,8 @@
       "displayName": "Column Set",
       "args": {
         "colsIN": [
-          240,
-          241
+          256,
+          257
         ],
         "pattern": "",
         "matchField": "either",
@@ -195,11 +195,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_240": {
+    "data_256": {
       "x": 60,
       "y": 314
     },
-    "data_241": {
+    "data_257": {
       "x": 60,
       "y": 814
     },
@@ -207,7 +207,7 @@
       "x": 440,
       "y": 314
     },
-    "plot_41": {
+    "plot_43": {
       "x": 820,
       "y": 314
     },
@@ -272,5 +272,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.56.1"
+  "version": "β.60.0"
 }

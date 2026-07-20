@@ -111,6 +111,7 @@
 		'moving-analysis',
 		'random',
 		'scatterplot',
+		'heatmap',
 		'sequence-col',
 		'simulated-data',
 		'split',

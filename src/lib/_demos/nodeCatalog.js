@@ -122,6 +122,26 @@ export const PLOT_SPECS = [
 		type: 'circularphase',
 		inputs: [{ type: 'number', data: [6.9, 7.4, 7.1, 8.0, 7.6, 6.6, 7.9, 7.2] }],
 		wire: (p, [v]) => p.plot.addData({ values: { refId: v } })
+	},
+	{
+		// Self-contained: takes the raw columns and computes the matrix itself.
+		type: 'correlationheatmap',
+		inputs: [
+			{ type: 'number', data: () => SAMPLE.rhythm(24, 40, 50) },
+			{ type: 'number', data: () => SAMPLE.rhythm(24, 35, 60) },
+			{ type: 'number', data: () => SAMPLE.linear(-2, 100) }
+		],
+		wire: (p, ids) => ids.forEach((id) => p.plot.addData({ column: { refId: id } }))
+	},
+	{
+		// Scatterplot matrix — same self-contained many-column input.
+		type: 'pairsplot',
+		inputs: [
+			{ type: 'number', data: () => SAMPLE.rhythm(24, 40, 50) },
+			{ type: 'number', data: () => SAMPLE.rhythm(24, 35, 60) },
+			{ type: 'number', data: () => SAMPLE.linear(-2, 100) }
+		],
+		wire: (p, ids) => ids.forEach((id) => p.plot.addData({ column: { refId: id } }))
 	}
 ];
 
@@ -344,6 +364,23 @@ export const TP_SPECS = [
 			method: 'auto',
 			alpha: 0.05,
 			postHocEnabled: true,
+			out: {}
+		}),
+		noOutputs: true
+	},
+	{
+		name: 'Correlation',
+		// Three columns with a real correlation structure so the demo shows a range of r:
+		// b tracks a (positive), c opposes a (negative).
+		inputs: [
+			T('number', () => SAMPLE.rhythm(24, 40, 50)),
+			T('number', () => SAMPLE.rhythm(24, 35, 60)),
+			T('number', () => SAMPLE.linear(-2, 100))
+		],
+		args: ([a, b, c]) => ({
+			yIN: [a, b, c],
+			method: 'auto',
+			alpha: 0.05,
 			out: {}
 		}),
 		noOutputs: true

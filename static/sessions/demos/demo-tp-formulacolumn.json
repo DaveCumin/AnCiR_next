@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "278": [
+    "294": [
       1,
       2,
       3,
@@ -52,7 +52,7 @@
       49,
       50
     ],
-    "279": [
+    "295": [
       10,
       20,
       30,
@@ -104,7 +104,7 @@
       490,
       500
     ],
-    "280": [
+    "296": [
       11,
       22,
       33,
@@ -159,9 +159,9 @@
   },
   "data": [
     {
-      "id": 278,
+      "id": 294,
       "name": "Formula Column input 1",
-      "data": 278,
+      "data": 294,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -170,9 +170,9 @@
       "processes": []
     },
     {
-      "id": 279,
+      "id": 295,
       "name": "Formula Column input 2",
-      "data": 279,
+      "data": 295,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,11 +181,11 @@
       "processes": []
     },
     {
-      "id": 280,
+      "id": 296,
       "name": "result_31",
-      "data": 280,
+      "data": 296,
       "type": "number",
-      "tableProcessGUId": "2c068ed7-301a-4291-b3b3-4d213826e422",
+      "tableProcessGUId": "a42dafb8-7cd6-4d45-884d-5f10ddff01f8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -194,7 +194,7 @@
   ],
   "plots": [
     {
-      "id": 49,
+      "id": 51,
       "name": "Formula Column result",
       "x": 350,
       "y": 150,
@@ -210,9 +210,9 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          278,
-          279,
-          280
+          294,
+          295,
+          296
         ],
         "showCol": [
           true,
@@ -235,7 +235,7 @@
         "tokens": [
           {
             "type": "col",
-            "id": 278
+            "id": 294
           },
           {
             "type": "text",
@@ -243,11 +243,11 @@
           },
           {
             "type": "col",
-            "id": 279
+            "id": 295
           }
         ],
         "out": {
-          "result": 280
+          "result": 296
         }
       },
       "refTPId": null
@@ -270,11 +270,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_278": {
+    "data_294": {
       "x": 60,
       "y": 314
     },
-    "data_279": {
+    "data_295": {
       "x": 60,
       "y": 814
     },
@@ -282,7 +282,7 @@
       "x": 440,
       "y": 314
     },
-    "plot_49": {
+    "plot_51": {
       "x": 820,
       "y": 314
     },
@@ -347,5 +347,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.56.1"
+  "version": "β.60.0"
 }

@@ -1,1157 +1,1459 @@
 {
-  "_comment": "Language-neutral parity fixtures: each runs in BOTH the JS engine and ancir_runtime.py; outputs/results are compared within tolerance. The JS emitter is the single source of input DATA: 'generate' specs (seeded rhythm/groups/linear) are realised in JS and written into js_results.json so Python analyses identical arrays. Column refs in args use '@ref' tokens. tableProcess outputs compare by CANONICAL key (trailing _<id> stripped: cosinory_13 -> cosinory). tableProcessResult compares named fields of the single comparison. Add a fixture = add an entry. See tools/README-parity.md.",
-  "tolerance": 1e-06,
-  "fixtures": [
-    {
-      "id": "col-add-5",
-      "kind": "columnProcess",
-      "jsName": "Add",
-      "pyFunc": "add",
-      "input": [
-        1,
-        2,
-        3,
-        4,
-        5,
-        -2.5,
-        0
-      ],
-      "args": {
-        "value": 5
-      }
-    },
-    {
-      "id": "col-multiply-3",
-      "kind": "columnProcess",
-      "jsName": "Multiply",
-      "pyFunc": "multiply",
-      "input": [
-        1,
-        2,
-        3,
-        4,
-        5,
-        -2.5,
-        0
-      ],
-      "args": {
-        "value": 3
-      }
-    },
-    {
-      "id": "col-sub-2",
-      "kind": "columnProcess",
-      "jsName": "Sub",
-      "pyFunc": "sub",
-      "input": [
-        1,
-        2,
-        3,
-        4,
-        5,
-        -2.5,
-        0
-      ],
-      "args": {
-        "value": 2
-      }
-    },
-    {
-      "id": "col-normalize",
-      "kind": "columnProcess",
-      "jsName": "normalize",
-      "pyFunc": "normalize",
-      "input": [
-        10,
-        20,
-        30,
-        40,
-        50
-      ],
-      "args": {}
-    },
-    {
-      "id": "tp-cosinor-fixed24-noisy",
-      "kind": "tableProcess",
-      "jsName": "Cosinor",
-      "pyFunc": "cosinor",
-      "generate": {
-        "type": "rhythm",
-        "n": 168,
-        "period": 24,
-        "amp": 40,
-        "mesor": 50,
-        "phase": 8,
-        "noise": 6,
-        "seed": 11,
-        "refs": {
-          "x": "t",
-          "y": "y"
-        }
-      },
-      "args": {
-        "xIN": "@t",
-        "yIN": [
-          "@y"
-        ],
-        "Ncurves": 1,
-        "outputX": -1,
-        "useFixedPeriod": true,
-        "fixedPeriod": 24,
-        "nHarmonics": 1,
-        "alpha": 0.05,
-        "preProcesses": [],
-        "out": {
-          "cosinorx": -1
-        }
-      },
-      "compareOutputs": [
-        "cosinorx",
-        "cosinory"
-      ]
-    },
-    {
-      "id": "tp-fitfunction-cosinor-noisy",
-      "kind": "tableProcess",
-      "jsName": "FitFunction",
-      "pyFunc": "fitfunction",
-      "generate": {
-        "type": "rhythm",
-        "n": 168,
-        "period": 24,
-        "amp": 30,
-        "mesor": 40,
-        "phase": 5,
-        "noise": 5,
-        "seed": 23,
-        "refs": {
-          "x": "t",
-          "y": "y"
-        }
-      },
-      "args": {
-        "xIN": "@t",
-        "yIN": [
-          "@y"
-        ],
-        "model": "cosinor",
-        "useFixedPeriod": true,
-        "fixedPeriod": 24,
-        "nHarmonics": 1,
-        "alpha": 0.05,
-        "out": {
-          "fitx": -1
-        }
-      },
-      "compareOutputs": [
-        "fitx",
-        "fity"
-      ]
-    },
-    {
-      "id": "tp-npcra-rhythm-noisy",
-      "kind": "tableProcess",
-      "jsName": "NonparametricRA",
-      "pyFunc": "npcra",
-      "generate": {
-        "type": "rhythm",
-        "n": 168,
-        "period": 24,
-        "amp": 40,
-        "mesor": 50,
-        "phase": 8,
-        "noise": 6,
-        "seed": 23,
-        "refs": {
-          "x": "t",
-          "y": "y"
-        }
-      },
-      "args": {
-        "xIN": "@t",
-        "yIN": [
-          "@y"
-        ],
-        "epochHours": 1,
-        "period": 24,
-        "mWindow": 10,
-        "lWindow": 5,
-        "out": {
-          "npcrax": -1,
-          "IS": -1,
-          "IV": -1,
-          "RA": -1,
-          "M10": -1,
-          "L5": -1,
-          "M10onset": -1,
-          "L5onset": -1
-        }
-      },
-      "compareOutputs": [
-        "npcrax",
-        "npcray",
-        "IS",
-        "IV",
-        "RA",
-        "M10",
-        "L5",
-        "M10onset",
-        "L5onset"
-      ]
-    },
-    {
-      "id": "tp-groupcomparison-ttest",
-      "kind": "tableProcessResult",
-      "jsName": "GroupComparison",
-      "pyFunc": "groupcomparison",
-      "generate": {
-        "type": "groups",
-        "seed": 7,
-        "groups": [
-          {
-            "label": "Weekday",
-            "mean": 50,
-            "sd": 12,
-            "n": 40
-          },
-          {
-            "label": "Weekend",
-            "mean": 62,
-            "sd": 12,
-            "n": 40
-          }
-        ],
-        "refs": {
-          "g": "grp",
-          "v": "val"
-        }
-      },
-      "args": {
-        "xIN": "@grp",
-        "yIN": [
-          "@val"
-        ],
-        "method": "ttest",
-        "alpha": 0.05,
-        "postHocEnabled": true,
-        "out": {}
-      },
-      "compareFields": [
-        "test",
-        "difference",
-        "t",
-        "df",
-        "pValue"
-      ]
-    },
-    {
-      "id": "tp-groupcomparison-anova",
-      "kind": "tableProcessResult",
-      "jsName": "GroupComparison",
-      "pyFunc": "groupcomparison",
-      "generate": {
-        "type": "groups",
-        "seed": 9,
-        "groups": [
-          {
-            "label": "A",
-            "mean": 50,
-            "sd": 12,
-            "n": 30
-          },
-          {
-            "label": "B",
-            "mean": 56,
-            "sd": 12,
-            "n": 30
-          },
-          {
-            "label": "C",
-            "mean": 62,
-            "sd": 12,
-            "n": 30
-          }
-        ],
-        "refs": {
-          "g": "grp",
-          "v": "val"
-        }
-      },
-      "args": {
-        "xIN": "@grp",
-        "yIN": [
-          "@val"
-        ],
-        "method": "auto",
-        "alpha": 0.05,
-        "postHocEnabled": true,
-        "out": {}
-      },
-      "compareFields": [
-        "test",
-        "f",
-        "ssBetween",
-        "ssWithin",
-        "dfBetween",
-        "dfWithin",
-        "etaSquared",
-        "pValue"
-      ]
-    },
-    {
-      "id": "plot-fft-rhythm-noisy",
-      "kind": "plotCompute",
-      "jsFn": "computeFFT",
-      "pyFunc": "compute_fft",
-      "generate": {
-        "type": "rhythm",
-        "n": 168,
-        "period": 24,
-        "amp": 30,
-        "mesor": 40,
-        "phase": 5,
-        "noise": 4,
-        "seed": 31,
-        "refs": {
-          "x": "t",
-          "y": "y"
-        }
-      },
-      "xRef": "t",
-      "yRef": "y",
-      "extraArgs": [
-        null
-      ],
-      "compareArrays": [
-        "frequencies",
-        "magnitudes"
-      ]
-    },
-    {
-      "id": "plot-correlogram-rhythm-noisy",
-      "kind": "plotCompute",
-      "jsFn": "computeAutocorrelation",
-      "pyFunc": "compute_autocorrelation",
-      "generate": {
-        "type": "rhythm",
-        "n": 240,
-        "period": 24,
-        "amp": 35,
-        "mesor": 45,
-        "phase": 6,
-        "noise": 5,
-        "seed": 37,
-        "refs": {
-          "x": "t",
-          "y": "y"
-        }
-      },
-      "xRef": "t",
-      "yRef": "y",
-      "extraArgs": [
-        null,
-        null,
-        0
-      ],
-      "compareArrays": [
-        "lags",
-        "correlations"
-      ]
-    },
-    {
-      "id": "util-kde-gaussian-fixed-bw",
-      "kind": "pureUtil",
-      "jsFn": "gaussianKDE",
-      "pyFunc": "kde",
-      "generate": {
-        "type": "rhythm",
-        "n": 200,
-        "period": 24,
-        "amp": 30,
-        "mesor": 50,
-        "phase": 6,
-        "noise": 8,
-        "seed": 41,
-        "refs": {
-          "x": "t",
-          "y": "y"
-        }
-      },
-      "valuesRef": "y",
-      "jsArgs": [
-        {
-          "bandwidth": 3,
-          "gridSize": 64
-        }
-      ],
-      "pyArgs": [
-        3,
-        64
-      ],
-      "compareArrays": [
-        "x",
-        "density"
-      ]
-    },
-    {
-      "id": "util-kde-gaussian-auto-bw",
-      "kind": "pureUtil",
-      "jsFn": "gaussianKDE",
-      "pyFunc": "kde",
-      "generate": {
-        "type": "rhythm",
-        "n": 200,
-        "period": 24,
-        "amp": 30,
-        "mesor": 50,
-        "phase": 6,
-        "noise": 8,
-        "seed": 42,
-        "refs": {
-          "x": "t",
-          "y": "y"
-        }
-      },
-      "valuesRef": "y",
-      "jsArgs": [
-        {
-          "gridSize": 100
-        }
-      ],
-      "pyArgs": [
-        null,
-        100
-      ],
-      "compareArrays": [
-        "x",
-        "density"
-      ]
-    },
-    {
-      "id": "util-meansem-groups",
-      "kind": "pureUtil",
-      "jsFn": "meanSemByGroup",
-      "pyFunc": "meansem",
-      "input": {
-        "xs": [
-          "A",
-          "A",
-          "B",
-          "A",
-          "B",
-          null,
-          "A"
-        ],
-        "ys": [
-          1,
-          3,
-          10,
-          5,
-          20,
-          7,
-          null
-        ]
-      },
-      "argRefs": [
-        "xs",
-        "ys"
-      ],
-      "compareFields": [
-        "x",
-        "mean",
-        "sem",
-        "sd",
-        "n"
-      ]
-    },
-    {
-      "id": "tp-averageprofile-rhythm",
-      "kind": "tableProcess",
-      "jsName": "AverageProfile",
-      "pyFunc": "averageprofile",
-      "generate": {
-        "type": "rhythm",
-        "n": 168,
-        "period": 24,
-        "amp": 40,
-        "mesor": 50,
-        "phase": 8,
-        "noise": 6,
-        "seed": 41,
-        "refs": {
-          "x": "t",
-          "y": "y"
-        }
-      },
-      "args": {
-        "xIN": "@t",
-        "yIN": [
-          "@y"
-        ],
-        "period": 24,
-        "nBins": 24,
-        "out": {
-          "avgprofx": -1
-        }
-      },
-      "compareOutputs": [
-        "avgprofx",
-        "avgprof"
-      ]
-    },
-    {
-      "id": "col-frequencyfilter-low",
-      "kind": "columnProcess",
-      "jsName": "FrequencyFilter",
-      "pyFunc": "frequencyfilter",
-      "input": [
-        0.0,
-        0.864612,
-        1.019834,
-        0.6034,
-        0.40388,
-        0.865575,
-        1.525049,
-        1.576249,
-        0.867107,
-        0.097069,
-        -0.029174,
-        0.351593,
-        0.457317,
-        -0.144783,
-        -0.975734,
-        -1.211268,
-        -0.68,
-        -0.062613,
-        -0.047206,
-        -0.484003,
-        -0.582683,
-        0.092373,
-        1.059354,
-        1.485724,
-        1.187107,
-        0.827594,
-        1.076521,
-        1.764795,
-        2.08388,
-        1.582621,
-        0.731306,
-        0.355957,
-        0.64,
-        0.924043,
-        0.548694,
-        -0.302621,
-        -0.80388,
-        -0.484795,
-        0.203479,
-        0.452406,
-        0.092893,
-        -0.205724,
-        0.220646,
-        1.187627,
-        1.862683,
-        1.764003,
-        1.327206,
-        1.342613,
-        1.96,
-        2.491268,
-        2.255734,
-        1.424783,
-        0.822683,
-        0.928407,
-        1.309174,
-        1.182931,
-        0.412893,
-        -0.296249,
-        -0.245049,
-        0.414425,
-        0.87612,
-        0.6766,
-        0.260166,
-        0.415388
-      ],
-      "args": {
-        "type": "low",
-        "high": 0.2
-      }
-    },
-    {
-      "id": "col-frequencyfilter-high",
-      "kind": "columnProcess",
-      "jsName": "FrequencyFilter",
-      "pyFunc": "frequencyfilter",
-      "input": [
-        0.0,
-        0.864612,
-        1.019834,
-        0.6034,
-        0.40388,
-        0.865575,
-        1.525049,
-        1.576249,
-        0.867107,
-        0.097069,
-        -0.029174,
-        0.351593,
-        0.457317,
-        -0.144783,
-        -0.975734,
-        -1.211268,
-        -0.68,
-        -0.062613,
-        -0.047206,
-        -0.484003,
-        -0.582683,
-        0.092373,
-        1.059354,
-        1.485724,
-        1.187107,
-        0.827594,
-        1.076521,
-        1.764795,
-        2.08388,
-        1.582621,
-        0.731306,
-        0.355957,
-        0.64,
-        0.924043,
-        0.548694,
-        -0.302621,
-        -0.80388,
-        -0.484795,
-        0.203479,
-        0.452406,
-        0.092893,
-        -0.205724,
-        0.220646,
-        1.187627,
-        1.862683,
-        1.764003,
-        1.327206,
-        1.342613,
-        1.96,
-        2.491268,
-        2.255734,
-        1.424783,
-        0.822683,
-        0.928407,
-        1.309174,
-        1.182931,
-        0.412893,
-        -0.296249,
-        -0.245049,
-        0.414425,
-        0.87612,
-        0.6766,
-        0.260166,
-        0.415388
-      ],
-      "args": {
-        "type": "high",
-        "low": 0.3
-      }
-    },
-    {
-      "id": "col-frequencyfilter-band",
-      "kind": "columnProcess",
-      "jsName": "FrequencyFilter",
-      "pyFunc": "frequencyfilter",
-      "input": [
-        0.0,
-        0.864612,
-        1.019834,
-        0.6034,
-        0.40388,
-        0.865575,
-        1.525049,
-        1.576249,
-        0.867107,
-        0.097069,
-        -0.029174,
-        0.351593,
-        0.457317,
-        -0.144783,
-        -0.975734,
-        -1.211268,
-        -0.68,
-        -0.062613,
-        -0.047206,
-        -0.484003,
-        -0.582683,
-        0.092373,
-        1.059354,
-        1.485724,
-        1.187107,
-        0.827594,
-        1.076521,
-        1.764795,
-        2.08388,
-        1.582621,
-        0.731306,
-        0.355957,
-        0.64,
-        0.924043,
-        0.548694,
-        -0.302621,
-        -0.80388,
-        -0.484795,
-        0.203479,
-        0.452406,
-        0.092893,
-        -0.205724,
-        0.220646,
-        1.187627,
-        1.862683,
-        1.764003,
-        1.327206,
-        1.342613,
-        1.96,
-        2.491268,
-        2.255734,
-        1.424783,
-        0.822683,
-        0.928407,
-        1.309174,
-        1.182931,
-        0.412893,
-        -0.296249,
-        -0.245049,
-        0.414425,
-        0.87612,
-        0.6766,
-        0.260166,
-        0.415388
-      ],
-      "args": {
-        "type": "band",
-        "low": 0.15,
-        "high": 0.5
-      }
-    },
-    {
-      "id": "tp-rayleigh-clustered",
-      "kind": "tableProcess",
-      "jsName": "RayleighTest",
-      "pyFunc": "rayleightest",
-      "inputs": [
-        {
-          "ref": "a",
-          "type": "number",
-          "values": [
-            0.87206,
-            1.255716,
-            0.886952,
-            0.842466,
-            0.534991,
-            0.893349,
-            1.555959,
-            1.212073,
-            1.51844,
-            1.124451,
-            1.197385,
-            1.092663,
-            0.166969,
-            1.427625,
-            1.253192,
-            1.249409,
-            0.154318,
-            0.128056,
-            0.555192,
-            0.765905,
-            1.152723,
-            0.977044,
-            1.260487,
-            0.678883,
-            1.154352,
-            1.197077,
-            0.669431,
-            1.858765,
-            1.278305,
-            1.598503
-          ]
-        }
-      ],
-      "args": {
-        "yIN": [
-          "@a"
-        ],
-        "unit": "radians",
-        "period": 24,
-        "out": {
-          "R": -1,
-          "z": -1,
-          "pvalue": -1,
-          "acrophase": -1
-        }
-      },
-      "compareOutputs": [
-        "R",
-        "z",
-        "pvalue",
-        "acrophase"
-      ]
-    },
-    {
-      "id": "tp-rayleigh-timed",
-      "kind": "tableProcess",
-      "jsName": "RayleighTest",
-      "pyFunc": "rayleightest",
-      "inputs": [
-        {
-          "ref": "t",
-          "type": "time",
-          "values": [
-            0, 3600000, 7200000, 10800000, 14400000, 18000000, 21600000, 25200000,
-            28800000, 32400000, 36000000, 39600000, 43200000, 46800000, 50400000, 54000000,
-            57600000, 61200000, 64800000, 68400000, 72000000, 75600000, 79200000, 82800000,
-            86400000, 90000000, 93600000, 97200000, 100800000, 104400000, 108000000, 111600000,
-            115200000, 118800000, 122400000, 126000000, 129600000, 133200000, 136800000, 140400000,
-            144000000, 147600000, 151200000, 154800000, 158400000, 162000000, 165600000, 169200000
-          ]
-        },
-        {
-          "ref": "w",
-          "type": "number",
-          "values": [
-            2.464466, 1.669873, 1.170371, 1.0, 1.170371, 1.669873, 2.464466, 3.5,
-            4.705905, 6.0, 7.294095, 8.5, 9.535534, 10.330127, 10.829629, 11.0,
-            10.829629, 10.330127, 9.535534, 8.5, 7.294095, 6.0, 4.705905, 3.5,
-            2.464466, 1.669873, 1.170371, 1.0, 1.170371, 1.669873, 2.464466, 3.5,
-            4.705905, 6.0, 7.294095, 8.5, 9.535534, 10.330127, 10.829629, 11.0,
-            10.829629, 10.330127, 9.535534, 8.5, 7.294095, 6.0, 4.705905, 3.5
-          ]
-        }
-      ],
-      "args": {
-        "timeIN": "@t",
-        "yIN": [
-          "@w"
-        ],
-        "unit": "radians",
-        "period": 24,
-        "out": {
-          "R": -1,
-          "pvalue": -1,
-          "acrophase": -1
-        }
-      },
-      "compareOutputs": [
-        "R",
-        "pvalue",
-        "acrophase"
-      ]
-    },
-    {
-      "id": "tp-rayleigh-timed-ww-off",
-      "kind": "tableProcess",
-      "jsName": "RayleighTest",
-      "pyFunc": "rayleightest",
-      "inputs": [
-        {
-          "ref": "t",
-          "type": "time",
-          "values": [
-            0, 3600000, 7200000, 10800000, 14400000, 18000000, 21600000, 25200000,
-            28800000, 32400000, 36000000, 39600000, 43200000, 46800000, 50400000, 54000000,
-            57600000, 61200000, 64800000, 68400000, 72000000, 75600000, 79200000, 82800000,
-            86400000, 90000000, 93600000, 97200000, 100800000, 104400000, 108000000, 111600000,
-            115200000, 118800000, 122400000, 126000000, 129600000, 133200000, 136800000, 140400000,
-            144000000, 147600000, 151200000, 154800000, 158400000, 162000000, 165600000, 169200000
-          ]
-        },
-        {
-          "ref": "w",
-          "type": "number",
-          "values": [
-            2.464466, 1.669873, 1.170371, 1.0, 1.170371, 1.669873, 2.464466, 3.5,
-            4.705905, 6.0, 7.294095, 8.5, 9.535534, 10.330127, 10.829629, 11.0,
-            10.829629, 10.330127, 9.535534, 8.5, 7.294095, 6.0, 4.705905, 3.5,
-            2.464466, 1.669873, 1.170371, 1.0, 1.170371, 1.669873, 2.464466, 3.5,
-            4.705905, 6.0, 7.294095, 8.5, 9.535534, 10.330127, 10.829629, 11.0,
-            10.829629, 10.330127, 9.535534, 8.5, 7.294095, 6.0, 4.705905, 3.5
-          ]
-        }
-      ],
-      "args": {
-        "timeIN": "@t",
-        "yIN": [
-          "@w"
-        ],
-        "unit": "radians",
-        "period": 24,
-        "showWatsonWilliams": true,
-        "out": {
-          "F": -1,
-          "ww_pvalue": -1
-        }
-      },
-      "compareOutputs": [
-        "F",
-        "ww_pvalue"
-      ]
-    },
-    {
-      "id": "tp-watsonwilliams-2groups",
-      "kind": "tableProcess",
-      "jsName": "RayleighTest",
-      "pyFunc": "rayleightest",
-      "inputs": [
-        {
-          "ref": "g1",
-          "type": "number",
-          "values": [
-            0.251867,
-            0.204194,
-            0.362381,
-            0.457431,
-            0.752831,
-            0.599371,
-            0.321058,
-            0.117235,
-            0.291764,
-            0.988369,
-            0.176821,
-            0.597903,
-            0.670608,
-            -0.095897,
-            0.51939,
-            1.022497,
-            -0.305746,
-            0.371362,
-            0.457544,
-            0.173096
-          ]
-        },
-        {
-          "ref": "g2",
-          "type": "number",
-          "values": [
-            2.198956,
-            1.975088,
-            1.414137,
-            2.331138,
-            2.267734,
-            2.378337,
-            2.576239,
-            2.144897,
-            2.04771,
-            1.480333,
-            2.246177,
-            1.755296,
-            1.818919,
-            1.494085,
-            1.612954,
-            1.787552,
-            2.515535,
-            1.187283,
-            1.416918,
-            2.09574
-          ]
-        }
-      ],
-      "args": {
-        "yIN": [
-          "@g1",
-          "@g2"
-        ],
-        "unit": "radians",
-        "period": 24,
-        "out": {
-          "F": -1,
-          "ww_pvalue": -1
-        },
-        "showWatsonWilliams": true
-      },
-      "compareOutputs": [
-        "F",
-        "ww_pvalue"
-      ]
-    },
-    {
-      "id": "tp-cosinor-addons-fixed24",
-      "kind": "tableProcess",
-      "jsName": "Cosinor",
-      "pyFunc": "cosinor",
-      "generate": {
-        "type": "rhythm",
-        "n": 168,
-        "period": 24,
-        "amp": 40,
-        "mesor": 50,
-        "phase": 8,
-        "noise": 6,
-        "seed": 11,
-        "refs": {
-          "x": "t",
-          "y": "y"
-        }
-      },
-      "args": {
-        "xIN": "@t",
-        "yIN": [
-          "@y"
-        ],
-        "Ncurves": 1,
-        "outputX": -1,
-        "useFixedPeriod": true,
-        "fixedPeriod": 24,
-        "nHarmonics": 1,
-        "alpha": 0.05,
-        "referenceHrs": 6,
-        "preProcesses": [],
-        "out": {
-          "cosinorx": -1,
-          "mesor": -1,
-          "acrophase": -1,
-          "bathyphase": -1,
-          "phase_angle": -1
-        }
-      },
-      "compareOutputs": [
-        "mesor",
-        "acrophase",
-        "bathyphase",
-        "phase_angle"
-      ]
-    },
-    {
-      "id": "tp-cfi-rhythm",
-      "kind": "tableProcess",
-      "jsName": "CircadianFunctionIndex",
-      "pyFunc": "circadianfunctionindex",
-      "generate": {
-        "type": "rhythm",
-        "n": 336,
-        "period": 24,
-        "amp": 40,
-        "mesor": 50,
-        "phase": 8,
-        "noise": 5,
-        "seed": 23,
-        "refs": {
-          "x": "t",
-          "y": "y"
-        }
-      },
-      "args": {
-        "xIN": "@t",
-        "yIN": [
-          "@y"
-        ],
-        "epochHours": 1,
-        "period": 24,
-        "mWindow": 10,
-        "lWindow": 5,
-        "out": {
-          "CFI": -1,
-          "IS": -1,
-          "IV": -1,
-          "RA": -1
-        }
-      },
-      "compareOutputs": [
-        "CFI",
-        "IS",
-        "IV",
-        "RA"
-      ]
-    },
-    {
-      "id": "util-weighted-circmean",
-      "kind": "pureUtil",
-      "jsFn": "weightedCircularMean",
-      "pyFunc": "weighted_circular_mean",
-      "input": {
-        "angles": [
-          0.0,
-          0.4,
-          1.2,
-          2.7,
-          5.9
-        ],
-        "weights": [
-          3,
-          1,
-          4,
-          2,
-          0.5
-        ]
-      },
-      "argRefs": [
-        "angles",
-        "weights"
-      ],
-      "compareScalars": [
-        "meanAngle",
-        "R",
-        "n",
-        "W"
-      ]
-    },
-    {
-      "id": "util-weighted-rayleigh",
-      "kind": "pureUtil",
-      "jsFn": "weightedRayleigh",
-      "pyFunc": "weighted_rayleigh",
-      "input": {
-        "angles": [
-          0.0,
-          0.1,
-          -0.1,
-          0.2,
-          3.1
-        ],
-        "weights": [
-          5,
-          6,
-          5,
-          4,
-          0.3
-        ]
-      },
-      "argRefs": [
-        "angles",
-        "weights"
-      ],
-      "compareScalars": [
-        "nEff",
-        "R",
-        "z",
-        "pValue",
-        "meanAngle"
-      ]
-    },
-    {
-      "id": "util-weighted-circmean-gaps",
-      "kind": "pureUtil",
-      "jsFn": "weightedCircularMean",
-      "pyFunc": "weighted_circular_mean",
-      "input": {
-        "angles": [
-          0.0,
-          null,
-          "",
-          "x",
-          1.2
-        ],
-        "weights": [
-          1,
-          5,
-          2,
-          3,
-          4
-        ]
-      },
-      "argRefs": [
-        "angles",
-        "weights"
-      ],
-      "compareScalars": [
-        "n",
-        "R",
-        "meanAngle",
-        "W"
-      ]
-    }
-  ]
+	"_comment": "Language-neutral parity fixtures: each runs in BOTH the JS engine and ancir_runtime.py; outputs/results are compared within tolerance. The JS emitter is the single source of input DATA: 'generate' specs (seeded rhythm/groups/linear) are realised in JS and written into js_results.json so Python analyses identical arrays. Column refs in args use '@ref' tokens. tableProcess outputs compare by CANONICAL key (trailing _<id> stripped: cosinory_13 -> cosinory). tableProcessResult compares named fields of the single comparison. Add a fixture = add an entry. See tools/README-parity.md.",
+	"tolerance": 1e-06,
+	"fixtures": [
+		{
+			"id": "col-add-5",
+			"kind": "columnProcess",
+			"jsName": "Add",
+			"pyFunc": "add",
+			"input": [
+				1,
+				2,
+				3,
+				4,
+				5,
+				-2.5,
+				0
+			],
+			"args": {
+				"value": 5
+			}
+		},
+		{
+			"id": "col-multiply-3",
+			"kind": "columnProcess",
+			"jsName": "Multiply",
+			"pyFunc": "multiply",
+			"input": [
+				1,
+				2,
+				3,
+				4,
+				5,
+				-2.5,
+				0
+			],
+			"args": {
+				"value": 3
+			}
+		},
+		{
+			"id": "col-sub-2",
+			"kind": "columnProcess",
+			"jsName": "Sub",
+			"pyFunc": "sub",
+			"input": [
+				1,
+				2,
+				3,
+				4,
+				5,
+				-2.5,
+				0
+			],
+			"args": {
+				"value": 2
+			}
+		},
+		{
+			"id": "col-normalize",
+			"kind": "columnProcess",
+			"jsName": "normalize",
+			"pyFunc": "normalize",
+			"input": [
+				10,
+				20,
+				30,
+				40,
+				50
+			],
+			"args": {}
+		},
+		{
+			"id": "tp-cosinor-fixed24-noisy",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 11,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": [
+					"@y"
+				],
+				"Ncurves": 1,
+				"outputX": -1,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"alpha": 0.05,
+				"preProcesses": [],
+				"out": {
+					"cosinorx": -1
+				}
+			},
+			"compareOutputs": [
+				"cosinorx",
+				"cosinory"
+			]
+		},
+		{
+			"id": "tp-fitfunction-cosinor-noisy",
+			"kind": "tableProcess",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 30,
+				"mesor": 40,
+				"phase": 5,
+				"noise": 5,
+				"seed": 23,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": [
+					"@y"
+				],
+				"model": "cosinor",
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"alpha": 0.05,
+				"out": {
+					"fitx": -1
+				}
+			},
+			"compareOutputs": [
+				"fitx",
+				"fity"
+			]
+		},
+		{
+			"id": "tp-npcra-rhythm-noisy",
+			"kind": "tableProcess",
+			"jsName": "NonparametricRA",
+			"pyFunc": "npcra",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 23,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": [
+					"@y"
+				],
+				"epochHours": 1,
+				"period": 24,
+				"mWindow": 10,
+				"lWindow": 5,
+				"out": {
+					"npcrax": -1,
+					"IS": -1,
+					"IV": -1,
+					"RA": -1,
+					"M10": -1,
+					"L5": -1,
+					"M10onset": -1,
+					"L5onset": -1
+				}
+			},
+			"compareOutputs": [
+				"npcrax",
+				"npcray",
+				"IS",
+				"IV",
+				"RA",
+				"M10",
+				"L5",
+				"M10onset",
+				"L5onset"
+			]
+		},
+		{
+			"id": "tp-groupcomparison-ttest",
+			"kind": "tableProcessResult",
+			"jsName": "GroupComparison",
+			"pyFunc": "groupcomparison",
+			"generate": {
+				"type": "groups",
+				"seed": 7,
+				"groups": [
+					{
+						"label": "Weekday",
+						"mean": 50,
+						"sd": 12,
+						"n": 40
+					},
+					{
+						"label": "Weekend",
+						"mean": 62,
+						"sd": 12,
+						"n": 40
+					}
+				],
+				"refs": {
+					"g": "grp",
+					"v": "val"
+				}
+			},
+			"args": {
+				"xIN": "@grp",
+				"yIN": [
+					"@val"
+				],
+				"method": "ttest",
+				"alpha": 0.05,
+				"postHocEnabled": true,
+				"out": {}
+			},
+			"compareFields": [
+				"test",
+				"difference",
+				"t",
+				"df",
+				"pValue"
+			]
+		},
+		{
+			"id": "tp-groupcomparison-anova",
+			"kind": "tableProcessResult",
+			"jsName": "GroupComparison",
+			"pyFunc": "groupcomparison",
+			"generate": {
+				"type": "groups",
+				"seed": 9,
+				"groups": [
+					{
+						"label": "A",
+						"mean": 50,
+						"sd": 12,
+						"n": 30
+					},
+					{
+						"label": "B",
+						"mean": 56,
+						"sd": 12,
+						"n": 30
+					},
+					{
+						"label": "C",
+						"mean": 62,
+						"sd": 12,
+						"n": 30
+					}
+				],
+				"refs": {
+					"g": "grp",
+					"v": "val"
+				}
+			},
+			"args": {
+				"xIN": "@grp",
+				"yIN": [
+					"@val"
+				],
+				"method": "auto",
+				"alpha": 0.05,
+				"postHocEnabled": true,
+				"out": {}
+			},
+			"compareFields": [
+				"test",
+				"f",
+				"ssBetween",
+				"ssWithin",
+				"dfBetween",
+				"dfWithin",
+				"etaSquared",
+				"pValue"
+			]
+		},
+		{
+			"id": "plot-fft-rhythm-noisy",
+			"kind": "plotCompute",
+			"jsFn": "computeFFT",
+			"pyFunc": "compute_fft",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 30,
+				"mesor": 40,
+				"phase": 5,
+				"noise": 4,
+				"seed": 31,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"xRef": "t",
+			"yRef": "y",
+			"extraArgs": [
+				null
+			],
+			"compareArrays": [
+				"frequencies",
+				"magnitudes"
+			]
+		},
+		{
+			"id": "plot-correlogram-rhythm-noisy",
+			"kind": "plotCompute",
+			"jsFn": "computeAutocorrelation",
+			"pyFunc": "compute_autocorrelation",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24,
+				"amp": 35,
+				"mesor": 45,
+				"phase": 6,
+				"noise": 5,
+				"seed": 37,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"xRef": "t",
+			"yRef": "y",
+			"extraArgs": [
+				null,
+				null,
+				0
+			],
+			"compareArrays": [
+				"lags",
+				"correlations"
+			]
+		},
+		{
+			"id": "util-kde-gaussian-fixed-bw",
+			"kind": "pureUtil",
+			"jsFn": "gaussianKDE",
+			"pyFunc": "kde",
+			"generate": {
+				"type": "rhythm",
+				"n": 200,
+				"period": 24,
+				"amp": 30,
+				"mesor": 50,
+				"phase": 6,
+				"noise": 8,
+				"seed": 41,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"valuesRef": "y",
+			"jsArgs": [
+				{
+					"bandwidth": 3,
+					"gridSize": 64
+				}
+			],
+			"pyArgs": [
+				3,
+				64
+			],
+			"compareArrays": [
+				"x",
+				"density"
+			]
+		},
+		{
+			"id": "util-kde-gaussian-auto-bw",
+			"kind": "pureUtil",
+			"jsFn": "gaussianKDE",
+			"pyFunc": "kde",
+			"generate": {
+				"type": "rhythm",
+				"n": 200,
+				"period": 24,
+				"amp": 30,
+				"mesor": 50,
+				"phase": 6,
+				"noise": 8,
+				"seed": 42,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"valuesRef": "y",
+			"jsArgs": [
+				{
+					"gridSize": 100
+				}
+			],
+			"pyArgs": [
+				null,
+				100
+			],
+			"compareArrays": [
+				"x",
+				"density"
+			]
+		},
+		{
+			"id": "util-meansem-groups",
+			"kind": "pureUtil",
+			"jsFn": "meanSemByGroup",
+			"pyFunc": "meansem",
+			"input": {
+				"xs": [
+					"A",
+					"A",
+					"B",
+					"A",
+					"B",
+					null,
+					"A"
+				],
+				"ys": [
+					1,
+					3,
+					10,
+					5,
+					20,
+					7,
+					null
+				]
+			},
+			"argRefs": [
+				"xs",
+				"ys"
+			],
+			"compareFields": [
+				"x",
+				"mean",
+				"sem",
+				"sd",
+				"n"
+			]
+		},
+		{
+			"id": "tp-averageprofile-rhythm",
+			"kind": "tableProcess",
+			"jsName": "AverageProfile",
+			"pyFunc": "averageprofile",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 41,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": [
+					"@y"
+				],
+				"period": 24,
+				"nBins": 24,
+				"out": {
+					"avgprofx": -1
+				}
+			},
+			"compareOutputs": [
+				"avgprofx",
+				"avgprof"
+			]
+		},
+		{
+			"id": "col-frequencyfilter-low",
+			"kind": "columnProcess",
+			"jsName": "FrequencyFilter",
+			"pyFunc": "frequencyfilter",
+			"input": [
+				0.0,
+				0.864612,
+				1.019834,
+				0.6034,
+				0.40388,
+				0.865575,
+				1.525049,
+				1.576249,
+				0.867107,
+				0.097069,
+				-0.029174,
+				0.351593,
+				0.457317,
+				-0.144783,
+				-0.975734,
+				-1.211268,
+				-0.68,
+				-0.062613,
+				-0.047206,
+				-0.484003,
+				-0.582683,
+				0.092373,
+				1.059354,
+				1.485724,
+				1.187107,
+				0.827594,
+				1.076521,
+				1.764795,
+				2.08388,
+				1.582621,
+				0.731306,
+				0.355957,
+				0.64,
+				0.924043,
+				0.548694,
+				-0.302621,
+				-0.80388,
+				-0.484795,
+				0.203479,
+				0.452406,
+				0.092893,
+				-0.205724,
+				0.220646,
+				1.187627,
+				1.862683,
+				1.764003,
+				1.327206,
+				1.342613,
+				1.96,
+				2.491268,
+				2.255734,
+				1.424783,
+				0.822683,
+				0.928407,
+				1.309174,
+				1.182931,
+				0.412893,
+				-0.296249,
+				-0.245049,
+				0.414425,
+				0.87612,
+				0.6766,
+				0.260166,
+				0.415388
+			],
+			"args": {
+				"type": "low",
+				"high": 0.2
+			}
+		},
+		{
+			"id": "col-frequencyfilter-high",
+			"kind": "columnProcess",
+			"jsName": "FrequencyFilter",
+			"pyFunc": "frequencyfilter",
+			"input": [
+				0.0,
+				0.864612,
+				1.019834,
+				0.6034,
+				0.40388,
+				0.865575,
+				1.525049,
+				1.576249,
+				0.867107,
+				0.097069,
+				-0.029174,
+				0.351593,
+				0.457317,
+				-0.144783,
+				-0.975734,
+				-1.211268,
+				-0.68,
+				-0.062613,
+				-0.047206,
+				-0.484003,
+				-0.582683,
+				0.092373,
+				1.059354,
+				1.485724,
+				1.187107,
+				0.827594,
+				1.076521,
+				1.764795,
+				2.08388,
+				1.582621,
+				0.731306,
+				0.355957,
+				0.64,
+				0.924043,
+				0.548694,
+				-0.302621,
+				-0.80388,
+				-0.484795,
+				0.203479,
+				0.452406,
+				0.092893,
+				-0.205724,
+				0.220646,
+				1.187627,
+				1.862683,
+				1.764003,
+				1.327206,
+				1.342613,
+				1.96,
+				2.491268,
+				2.255734,
+				1.424783,
+				0.822683,
+				0.928407,
+				1.309174,
+				1.182931,
+				0.412893,
+				-0.296249,
+				-0.245049,
+				0.414425,
+				0.87612,
+				0.6766,
+				0.260166,
+				0.415388
+			],
+			"args": {
+				"type": "high",
+				"low": 0.3
+			}
+		},
+		{
+			"id": "col-frequencyfilter-band",
+			"kind": "columnProcess",
+			"jsName": "FrequencyFilter",
+			"pyFunc": "frequencyfilter",
+			"input": [
+				0.0,
+				0.864612,
+				1.019834,
+				0.6034,
+				0.40388,
+				0.865575,
+				1.525049,
+				1.576249,
+				0.867107,
+				0.097069,
+				-0.029174,
+				0.351593,
+				0.457317,
+				-0.144783,
+				-0.975734,
+				-1.211268,
+				-0.68,
+				-0.062613,
+				-0.047206,
+				-0.484003,
+				-0.582683,
+				0.092373,
+				1.059354,
+				1.485724,
+				1.187107,
+				0.827594,
+				1.076521,
+				1.764795,
+				2.08388,
+				1.582621,
+				0.731306,
+				0.355957,
+				0.64,
+				0.924043,
+				0.548694,
+				-0.302621,
+				-0.80388,
+				-0.484795,
+				0.203479,
+				0.452406,
+				0.092893,
+				-0.205724,
+				0.220646,
+				1.187627,
+				1.862683,
+				1.764003,
+				1.327206,
+				1.342613,
+				1.96,
+				2.491268,
+				2.255734,
+				1.424783,
+				0.822683,
+				0.928407,
+				1.309174,
+				1.182931,
+				0.412893,
+				-0.296249,
+				-0.245049,
+				0.414425,
+				0.87612,
+				0.6766,
+				0.260166,
+				0.415388
+			],
+			"args": {
+				"type": "band",
+				"low": 0.15,
+				"high": 0.5
+			}
+		},
+		{
+			"id": "tp-rayleigh-clustered",
+			"kind": "tableProcess",
+			"jsName": "RayleighTest",
+			"pyFunc": "rayleightest",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "number",
+					"values": [
+						0.87206,
+						1.255716,
+						0.886952,
+						0.842466,
+						0.534991,
+						0.893349,
+						1.555959,
+						1.212073,
+						1.51844,
+						1.124451,
+						1.197385,
+						1.092663,
+						0.166969,
+						1.427625,
+						1.253192,
+						1.249409,
+						0.154318,
+						0.128056,
+						0.555192,
+						0.765905,
+						1.152723,
+						0.977044,
+						1.260487,
+						0.678883,
+						1.154352,
+						1.197077,
+						0.669431,
+						1.858765,
+						1.278305,
+						1.598503
+					]
+				}
+			],
+			"args": {
+				"yIN": [
+					"@a"
+				],
+				"unit": "radians",
+				"period": 24,
+				"out": {
+					"R": -1,
+					"z": -1,
+					"pvalue": -1,
+					"acrophase": -1
+				}
+			},
+			"compareOutputs": [
+				"R",
+				"z",
+				"pvalue",
+				"acrophase"
+			]
+		},
+		{
+			"id": "tp-rayleigh-timed",
+			"kind": "tableProcess",
+			"jsName": "RayleighTest",
+			"pyFunc": "rayleightest",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "time",
+					"values": [
+						0,
+						3600000,
+						7200000,
+						10800000,
+						14400000,
+						18000000,
+						21600000,
+						25200000,
+						28800000,
+						32400000,
+						36000000,
+						39600000,
+						43200000,
+						46800000,
+						50400000,
+						54000000,
+						57600000,
+						61200000,
+						64800000,
+						68400000,
+						72000000,
+						75600000,
+						79200000,
+						82800000,
+						86400000,
+						90000000,
+						93600000,
+						97200000,
+						100800000,
+						104400000,
+						108000000,
+						111600000,
+						115200000,
+						118800000,
+						122400000,
+						126000000,
+						129600000,
+						133200000,
+						136800000,
+						140400000,
+						144000000,
+						147600000,
+						151200000,
+						154800000,
+						158400000,
+						162000000,
+						165600000,
+						169200000
+					]
+				},
+				{
+					"ref": "w",
+					"type": "number",
+					"values": [
+						2.464466,
+						1.669873,
+						1.170371,
+						1.0,
+						1.170371,
+						1.669873,
+						2.464466,
+						3.5,
+						4.705905,
+						6.0,
+						7.294095,
+						8.5,
+						9.535534,
+						10.330127,
+						10.829629,
+						11.0,
+						10.829629,
+						10.330127,
+						9.535534,
+						8.5,
+						7.294095,
+						6.0,
+						4.705905,
+						3.5,
+						2.464466,
+						1.669873,
+						1.170371,
+						1.0,
+						1.170371,
+						1.669873,
+						2.464466,
+						3.5,
+						4.705905,
+						6.0,
+						7.294095,
+						8.5,
+						9.535534,
+						10.330127,
+						10.829629,
+						11.0,
+						10.829629,
+						10.330127,
+						9.535534,
+						8.5,
+						7.294095,
+						6.0,
+						4.705905,
+						3.5
+					]
+				}
+			],
+			"args": {
+				"timeIN": "@t",
+				"yIN": [
+					"@w"
+				],
+				"unit": "radians",
+				"period": 24,
+				"out": {
+					"R": -1,
+					"pvalue": -1,
+					"acrophase": -1
+				}
+			},
+			"compareOutputs": [
+				"R",
+				"pvalue",
+				"acrophase"
+			]
+		},
+		{
+			"id": "tp-rayleigh-timed-ww-off",
+			"kind": "tableProcess",
+			"jsName": "RayleighTest",
+			"pyFunc": "rayleightest",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "time",
+					"values": [
+						0,
+						3600000,
+						7200000,
+						10800000,
+						14400000,
+						18000000,
+						21600000,
+						25200000,
+						28800000,
+						32400000,
+						36000000,
+						39600000,
+						43200000,
+						46800000,
+						50400000,
+						54000000,
+						57600000,
+						61200000,
+						64800000,
+						68400000,
+						72000000,
+						75600000,
+						79200000,
+						82800000,
+						86400000,
+						90000000,
+						93600000,
+						97200000,
+						100800000,
+						104400000,
+						108000000,
+						111600000,
+						115200000,
+						118800000,
+						122400000,
+						126000000,
+						129600000,
+						133200000,
+						136800000,
+						140400000,
+						144000000,
+						147600000,
+						151200000,
+						154800000,
+						158400000,
+						162000000,
+						165600000,
+						169200000
+					]
+				},
+				{
+					"ref": "w",
+					"type": "number",
+					"values": [
+						2.464466,
+						1.669873,
+						1.170371,
+						1.0,
+						1.170371,
+						1.669873,
+						2.464466,
+						3.5,
+						4.705905,
+						6.0,
+						7.294095,
+						8.5,
+						9.535534,
+						10.330127,
+						10.829629,
+						11.0,
+						10.829629,
+						10.330127,
+						9.535534,
+						8.5,
+						7.294095,
+						6.0,
+						4.705905,
+						3.5,
+						2.464466,
+						1.669873,
+						1.170371,
+						1.0,
+						1.170371,
+						1.669873,
+						2.464466,
+						3.5,
+						4.705905,
+						6.0,
+						7.294095,
+						8.5,
+						9.535534,
+						10.330127,
+						10.829629,
+						11.0,
+						10.829629,
+						10.330127,
+						9.535534,
+						8.5,
+						7.294095,
+						6.0,
+						4.705905,
+						3.5
+					]
+				}
+			],
+			"args": {
+				"timeIN": "@t",
+				"yIN": [
+					"@w"
+				],
+				"unit": "radians",
+				"period": 24,
+				"showWatsonWilliams": true,
+				"out": {
+					"F": -1,
+					"ww_pvalue": -1
+				}
+			},
+			"compareOutputs": [
+				"F",
+				"ww_pvalue"
+			]
+		},
+		{
+			"id": "tp-watsonwilliams-2groups",
+			"kind": "tableProcess",
+			"jsName": "RayleighTest",
+			"pyFunc": "rayleightest",
+			"inputs": [
+				{
+					"ref": "g1",
+					"type": "number",
+					"values": [
+						0.251867,
+						0.204194,
+						0.362381,
+						0.457431,
+						0.752831,
+						0.599371,
+						0.321058,
+						0.117235,
+						0.291764,
+						0.988369,
+						0.176821,
+						0.597903,
+						0.670608,
+						-0.095897,
+						0.51939,
+						1.022497,
+						-0.305746,
+						0.371362,
+						0.457544,
+						0.173096
+					]
+				},
+				{
+					"ref": "g2",
+					"type": "number",
+					"values": [
+						2.198956,
+						1.975088,
+						1.414137,
+						2.331138,
+						2.267734,
+						2.378337,
+						2.576239,
+						2.144897,
+						2.04771,
+						1.480333,
+						2.246177,
+						1.755296,
+						1.818919,
+						1.494085,
+						1.612954,
+						1.787552,
+						2.515535,
+						1.187283,
+						1.416918,
+						2.09574
+					]
+				}
+			],
+			"args": {
+				"yIN": [
+					"@g1",
+					"@g2"
+				],
+				"unit": "radians",
+				"period": 24,
+				"out": {
+					"F": -1,
+					"ww_pvalue": -1
+				},
+				"showWatsonWilliams": true
+			},
+			"compareOutputs": [
+				"F",
+				"ww_pvalue"
+			]
+		},
+		{
+			"id": "tp-cosinor-addons-fixed24",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 11,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": [
+					"@y"
+				],
+				"Ncurves": 1,
+				"outputX": -1,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"alpha": 0.05,
+				"referenceHrs": 6,
+				"preProcesses": [],
+				"out": {
+					"cosinorx": -1,
+					"mesor": -1,
+					"acrophase": -1,
+					"bathyphase": -1,
+					"phase_angle": -1
+				}
+			},
+			"compareOutputs": [
+				"mesor",
+				"acrophase",
+				"bathyphase",
+				"phase_angle"
+			]
+		},
+		{
+			"id": "tp-cfi-rhythm",
+			"kind": "tableProcess",
+			"jsName": "CircadianFunctionIndex",
+			"pyFunc": "circadianfunctionindex",
+			"generate": {
+				"type": "rhythm",
+				"n": 336,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 5,
+				"seed": 23,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": [
+					"@y"
+				],
+				"epochHours": 1,
+				"period": 24,
+				"mWindow": 10,
+				"lWindow": 5,
+				"out": {
+					"CFI": -1,
+					"IS": -1,
+					"IV": -1,
+					"RA": -1
+				}
+			},
+			"compareOutputs": [
+				"CFI",
+				"IS",
+				"IV",
+				"RA"
+			]
+		},
+		{
+			"id": "util-weighted-circmean",
+			"kind": "pureUtil",
+			"jsFn": "weightedCircularMean",
+			"pyFunc": "weighted_circular_mean",
+			"input": {
+				"angles": [
+					0.0,
+					0.4,
+					1.2,
+					2.7,
+					5.9
+				],
+				"weights": [
+					3,
+					1,
+					4,
+					2,
+					0.5
+				]
+			},
+			"argRefs": [
+				"angles",
+				"weights"
+			],
+			"compareScalars": [
+				"meanAngle",
+				"R",
+				"n",
+				"W"
+			]
+		},
+		{
+			"id": "util-weighted-rayleigh",
+			"kind": "pureUtil",
+			"jsFn": "weightedRayleigh",
+			"pyFunc": "weighted_rayleigh",
+			"input": {
+				"angles": [
+					0.0,
+					0.1,
+					-0.1,
+					0.2,
+					3.1
+				],
+				"weights": [
+					5,
+					6,
+					5,
+					4,
+					0.3
+				]
+			},
+			"argRefs": [
+				"angles",
+				"weights"
+			],
+			"compareScalars": [
+				"nEff",
+				"R",
+				"z",
+				"pValue",
+				"meanAngle"
+			]
+		},
+		{
+			"id": "util-weighted-circmean-gaps",
+			"kind": "pureUtil",
+			"jsFn": "weightedCircularMean",
+			"pyFunc": "weighted_circular_mean",
+			"input": {
+				"angles": [
+					0.0,
+					null,
+					"",
+					"x",
+					1.2
+				],
+				"weights": [
+					1,
+					5,
+					2,
+					3,
+					4
+				]
+			},
+			"argRefs": [
+				"angles",
+				"weights"
+			],
+			"compareScalars": [
+				"n",
+				"R",
+				"meanAngle",
+				"W"
+			]
+		},
+		{
+			"id": "util-correlate-pearson",
+			"kind": "pureUtil",
+			"jsFn": "correlate",
+			"pyFunc": "correlate",
+			"input": {
+				"x": [
+					3,
+					1,
+					4,
+					1,
+					5,
+					9,
+					2,
+					6,
+					5,
+					3,
+					5,
+					8,
+					9,
+					7,
+					9,
+					3,
+					2,
+					3,
+					8,
+					4
+				],
+				"y": [
+					1,
+					3,
+					2,
+					5,
+					4,
+					8,
+					3,
+					7,
+					6,
+					4,
+					6,
+					7,
+					9,
+					6,
+					8,
+					4,
+					3,
+					5,
+					7,
+					5
+				]
+			},
+			"argRefs": [
+				"x",
+				"y"
+			],
+			"jsArgs": [
+				"pearson"
+			],
+			"pyArgs": [
+				"pearson"
+			],
+			"compareScalars": [
+				"r",
+				"pvalue",
+				"n"
+			]
+		},
+		{
+			"id": "util-correlate-spearman",
+			"kind": "pureUtil",
+			"jsFn": "correlate",
+			"pyFunc": "correlate",
+			"input": {
+				"x": [
+					3,
+					1,
+					4,
+					1,
+					5,
+					9,
+					2,
+					6,
+					5,
+					3,
+					5,
+					8,
+					9,
+					7,
+					9,
+					3,
+					2,
+					3,
+					8,
+					4
+				],
+				"y": [
+					1,
+					3,
+					2,
+					5,
+					4,
+					8,
+					3,
+					7,
+					6,
+					4,
+					6,
+					7,
+					9,
+					6,
+					8,
+					4,
+					3,
+					5,
+					7,
+					5
+				]
+			},
+			"argRefs": [
+				"x",
+				"y"
+			],
+			"jsArgs": [
+				"spearman"
+			],
+			"pyArgs": [
+				"spearman"
+			],
+			"compareScalars": [
+				"r",
+				"pvalue",
+				"n"
+			]
+		}
+	]
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "162": [
+    "178": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "163": [
+    "179": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 162,
+      "id": 178,
       "name": "x",
-      "data": 162,
+      "data": 178,
       "type": "number",
-      "tableProcessGUId": "d38e5a27-1042-42cb-937d-570d7aa45e47",
+      "tableProcessGUId": "109c9225-fab4-421c-81b8-ac0d418434be",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 163,
+      "id": 179,
       "name": "y",
-      "data": 163,
+      "data": 179,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 164,
+      "id": 180,
       "name": "Substitute result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_1",
-      "producerPort": "out_163",
+      "producerPort": "out_179",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 19,
+      "id": 21,
       "name": "Substitute: before vs after",
       "x": 350,
       "y": 150,
@@ -199,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 165,
+              "id": 181,
               "name": "x",
-              "refId": 162,
+              "refId": 178,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 166,
+              "id": 182,
               "name": "y",
-              "refId": 163,
+              "refId": 179,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -238,9 +238,9 @@
           },
           {
             "x": {
-              "id": 167,
+              "id": 183,
               "name": "x",
-              "refId": 162,
+              "refId": 178,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 168,
+              "id": 184,
               "name": "Substitute result",
-              "refId": 164,
+              "refId": 180,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,7 +291,7 @@
       }
     },
     {
-      "id": 20,
+      "id": 22,
       "name": "Substitute: values",
       "x": 350,
       "y": 150,
@@ -307,8 +307,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          163,
-          164
+          179,
+          180
         ],
         "showCol": [
           true,
@@ -333,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 162
+          "result": 178
         }
       },
       "refTPId": null
@@ -362,13 +362,13 @@
         "find": 5,
         "replace": 10,
         "inIN": [
-          163
+          179
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_163": {
+    "data_179": {
       "x": 60,
       "y": 314
     },
@@ -380,11 +380,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_19": {
+    "plot_21": {
       "x": 820,
       "y": 314
     },
-    "plot_20": {
+    "plot_22": {
       "x": 820,
       "y": 814
     },
@@ -449,5 +449,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.56.1"
+  "version": "β.60.0"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "219": [
+    "235": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "220": [
+    "236": [
       52.522025082939734,
       68.09116741301771,
       73.44958693280898,
@@ -104,7 +104,7 @@
       47.59352161612626,
       59.5535187385039
     ],
-    "221": [
+    "237": [
       0,
       2,
       4,
@@ -132,7 +132,7 @@
       48,
       50
     ],
-    "222": [
+    "238": [
       60.306596247978725,
       80.40261868508753,
       84.47432056148014,
@@ -163,20 +163,20 @@
   },
   "data": [
     {
-      "id": 219,
+      "id": 235,
       "name": "x",
-      "data": 219,
+      "data": 235,
       "type": "number",
-      "tableProcessGUId": "ea177fee-71b5-49bb-b9e4-7174c17a8cb2",
+      "tableProcessGUId": "2d6f5402-80ae-4be6-9740-0dabaa8350c6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 220,
+      "id": 236,
       "name": "y",
-      "data": 220,
+      "data": 236,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -185,23 +185,23 @@
       "processes": []
     },
     {
-      "id": 221,
+      "id": 237,
       "name": "binnedx_18",
-      "data": 221,
+      "data": 237,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "36433823-c67f-415a-8225-9ffaa7b30a62",
+      "tableProcessGUId": "0db4aff5-b1de-4db4-b529-0068393a7b9e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 222,
-      "name": "binnedy_220_18",
-      "data": 222,
+      "id": 238,
+      "name": "binnedy_236_18",
+      "data": 238,
       "type": "number",
-      "tableProcessGUId": "36433823-c67f-415a-8225-9ffaa7b30a62",
+      "tableProcessGUId": "0db4aff5-b1de-4db4-b529-0068393a7b9e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -210,7 +210,7 @@
   ],
   "plots": [
     {
-      "id": 35,
+      "id": 37,
       "name": "Bin Data: data + fit",
       "x": 350,
       "y": 150,
@@ -267,9 +267,9 @@
         "data": [
           {
             "x": {
-              "id": 223,
+              "id": 239,
               "name": "x",
-              "refId": 219,
+              "refId": 235,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -278,9 +278,9 @@
               "processes": []
             },
             "y": {
-              "id": 224,
+              "id": 240,
               "name": "y",
-              "refId": 220,
+              "refId": 236,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -306,9 +306,9 @@
           },
           {
             "x": {
-              "id": 225,
+              "id": 241,
               "name": "binnedx_18",
-              "refId": 221,
+              "refId": 237,
               "type": "bin",
               "binWidth": 2,
               "tableProcessGUId": "",
@@ -318,9 +318,9 @@
               "processes": []
             },
             "y": {
-              "id": 226,
-              "name": "binnedy_220_18",
-              "refId": 222,
+              "id": 242,
+              "name": "binnedy_236_18",
+              "refId": 238,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -360,7 +360,7 @@
       }
     },
     {
-      "id": 36,
+      "id": 38,
       "name": "Bin Data: values",
       "x": 350,
       "y": 150,
@@ -376,8 +376,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          220,
-          222
+          236,
+          238
         ],
         "showCol": [
           true,
@@ -402,7 +402,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 219
+          "result": 235
         }
       },
       "refTPId": null
@@ -412,9 +412,9 @@
       "name": "BinnedData",
       "displayName": "Bin Data",
       "args": {
-        "xIN": 219,
+        "xIN": 235,
         "yIN": [
-          220
+          236
         ],
         "binMode": "uniform",
         "binSize": 2,
@@ -425,8 +425,8 @@
         "aggFunction": "mean",
         "preProcesses": [],
         "out": {
-          "binnedx": 221,
-          "binnedy_220": 222
+          "binnedx": 237,
+          "binnedy_236": 238
         }
       },
       "refTPId": null
@@ -449,7 +449,7 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_220": {
+    "data_236": {
       "x": 60,
       "y": 314
     },
@@ -461,11 +461,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_35": {
+    "plot_37": {
       "x": 820,
       "y": 314
     },
-    "plot_36": {
+    "plot_38": {
       "x": 820,
       "y": 814
     },
@@ -530,5 +530,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.56.1"
+  "version": "β.60.0"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "176": [
+    "192": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "177": [
+    "193": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 176,
+      "id": 192,
       "name": "x",
-      "data": 176,
+      "data": 192,
       "type": "number",
-      "tableProcessGUId": "fa9ed3b4-157d-457d-9fb2-5685651d9e23",
+      "tableProcessGUId": "f40937d9-8bf8-4c4b-9c43-7edb14d67690",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 177,
+      "id": 193,
       "name": "y",
-      "data": 177,
+      "data": 193,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 178,
+      "id": 194,
       "name": "Edit value result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_3",
-      "producerPort": "out_177",
+      "producerPort": "out_193",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 23,
+      "id": 25,
       "name": "Edit value: before vs after",
       "x": 350,
       "y": 150,
@@ -199,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 179,
+              "id": 195,
               "name": "x",
-              "refId": 176,
+              "refId": 192,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 180,
+              "id": 196,
               "name": "y",
-              "refId": 177,
+              "refId": 193,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -238,9 +238,9 @@
           },
           {
             "x": {
-              "id": 181,
+              "id": 197,
               "name": "x",
-              "refId": 176,
+              "refId": 192,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 182,
+              "id": 198,
               "name": "Edit value result",
-              "refId": 178,
+              "refId": 194,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,7 +291,7 @@
       }
     },
     {
-      "id": 24,
+      "id": 26,
       "name": "Edit value: values",
       "x": 350,
       "y": 150,
@@ -307,8 +307,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          177,
-          178
+          193,
+          194
         ],
         "showCol": [
           true,
@@ -333,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 176
+          "result": 192
         }
       },
       "refTPId": null
@@ -366,13 +366,13 @@
           }
         ],
         "inIN": [
-          177
+          193
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_177": {
+    "data_193": {
       "x": 60,
       "y": 314
     },
@@ -384,11 +384,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_23": {
+    "plot_25": {
       "x": 820,
       "y": 314
     },
-    "plot_24": {
+    "plot_26": {
       "x": 820,
       "y": 814
     },
@@ -453,5 +453,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.56.1"
+  "version": "β.60.0"
 }

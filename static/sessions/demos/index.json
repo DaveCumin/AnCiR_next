@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 51,
+  "count": 54,
   "sessions": [
     {
       "id": "workflow-rest-activity",
@@ -343,6 +343,18 @@
       "keywords": "compare groups (stats) compare statistics between groups defined by another column. analysis groupcomparison"
     },
     {
+      "id": "tp-correlation",
+      "name": "Correlation",
+      "family": "Analysis",
+      "description": "Pairwise correlation matrix (Pearson or Spearman) across the wired columns, with normality-based auto method choice.",
+      "url": "sessions/demos/demo-tp-correlation.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "Correlation"
+      ],
+      "keywords": "correlation pairwise correlation matrix (pearson or spearman) across the wired columns, with normality-based auto method choice. analysis correlation"
+    },
+    {
       "id": "tp-movinganalysis",
       "name": "Moving Analysis",
       "family": "Analysis",
@@ -605,6 +617,30 @@
         "fft"
       ],
       "keywords": "fft — frequency spectrum fourier spectrum of a 12 h + 24 h composite rhythm (8 days, hourly). plots fft"
+    },
+    {
+      "id": "correlationheatmap-matrix",
+      "name": "Correlation heatmap",
+      "family": "Plots",
+      "description": "Self-contained correlation matrix of four variables — wire the raw columns and it computes and colours the pairwise correlations itself.",
+      "url": "sessions/demos/demo-correlationheatmap-matrix.json",
+      "kind": "plot",
+      "showcases": [
+        "correlationheatmap"
+      ],
+      "keywords": "correlation heatmap self-contained correlation matrix of four variables — wire the raw columns and it computes and colours the pairwise correlations itself. plots correlationheatmap"
+    },
+    {
+      "id": "pairsplot-matrix",
+      "name": "Pairs plot",
+      "family": "Plots",
+      "description": "Scatterplot matrix of four variables: histograms on the diagonal, scatter + linear fit above, correlation colour below.",
+      "url": "sessions/demos/demo-pairsplot-matrix.json",
+      "kind": "plot",
+      "showcases": [
+        "pairsplot"
+      ],
+      "keywords": "pairs plot scatterplot matrix of four variables: histograms on the diagonal, scatter + linear fit above, correlation colour below. plots pairsplot"
     },
     {
       "id": "table-columns",

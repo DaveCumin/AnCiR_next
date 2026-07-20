@@ -242,6 +242,15 @@ const meta = new Map([
 		}
 	],
 	[
+		'Correlation',
+		{
+			family: 'Analysis',
+			nodeIcon: 'scatterplot',
+			description:
+				'Pairwise correlation matrix (Pearson or Spearman) across the wired columns, with normality-based auto method choice.'
+		}
+	],
+	[
 		'NonparametricRA',
 		{
 			family: 'Analysis',
@@ -367,6 +376,23 @@ const meta = new Map([
 			family: 'Plots',
 			nodeIcon: 'histogram',
 			description: 'Histogram of a column.'
+		}
+	],
+	[
+		'correlationheatmap',
+		{
+			family: 'Plots',
+			nodeIcon: 'heatmap',
+			description: 'Coloured correlation matrix computed from the wired columns.'
+		}
+	],
+	[
+		'pairsplot',
+		{
+			family: 'Plots',
+			nodeIcon: 'heatmap',
+			description:
+				'Scatterplot matrix (pairs.panels): histograms on the diagonal, scatter + fit above, correlation below.'
 		}
 	],
 	[

@@ -81,6 +81,16 @@ function tpViz(tp) {
 		}
 	}
 
+	// Correlation → the correlation heatmap. The heatmap is self-contained (it takes the raw
+	// columns and computes the matrix itself), so wire it to this node's OWN input columns —
+	// "show the heatmap of the columns being correlated".
+	if (tp.name === 'Correlation') {
+		const cols = yINs.filter(isRef);
+		if (cols.length >= 2) {
+			return { type: 'correlationheatmap', title: `${tp.name}: heatmap`, columns: cols };
+		}
+	}
+
 	// Circular stats (Rayleigh) → the circular phase plot: each Y is a phase/angle
 	// series on the clock; `x` is the node's optional time column (-1 when unwired).
 	if (tp.name === 'RayleighTest') {
@@ -172,6 +182,8 @@ export function plotDataFromSpec(spec, { x, y, width = 420, height = 300, source
 	else if (spec.type === 'boxplot') inner = { data: [{ x: { refId: spec.box.x }, y: { refId: spec.box.y } }], showSigBars: !!spec.showSigBars };
 	else if (spec.type === 'circularphase') inner = { data: spec.series.map((s) => ({ x: { refId: s.x }, y: { refId: s.y }, label: s.label })) };
 	else if (spec.type === 'tableplot') inner = { columnRefs: [...spec.columnRefs], showCol: spec.columnRefs.map(() => true) };
+	else if (spec.type === 'correlationheatmap')
+		inner = { data: spec.columns.map((id) => ({ column: { refId: id } })) };
 	else return null;
 	return { name: spec.title, type: spec.type, x, y, width, height, sourceNodeId, plot: inner };
 }

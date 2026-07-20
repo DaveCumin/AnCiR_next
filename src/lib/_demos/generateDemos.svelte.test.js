@@ -288,6 +288,55 @@ const DEMOS = [
 		}
 	},
 	{
+		id: 'correlationheatmap-matrix',
+		name: 'Correlation heatmap',
+		family: 'Plots',
+		description:
+			'Self-contained correlation matrix of four variables — wire the raw columns and it computes and colours the pairwise correlations itself.',
+		build(mk) {
+			// Four correlated series (24 hourly points) so the matrix shows a range of r.
+			const rng = mulberry32(11);
+			const n = 24;
+			const base = Array.from({ length: n }, (_, h) => Math.sin((2 * Math.PI * h) / 24));
+			const sleep = base.map((b) => 50 - 30 * b + normal(rng, 0, 5));
+			const activity = base.map((b) => 50 + 30 * b + normal(rng, 0, 5));
+			const light = base.map((b) => 40 + 20 * b + normal(rng, 0, 8));
+			const temp = Array.from({ length: n }, (_, h) => 36 + 0.5 * h + normal(rng, 0, 0.3));
+			const ids = [
+				mk.col('sleep', 'number', sleep),
+				mk.col('activity', 'number', activity),
+				mk.col('light', 'number', light),
+				mk.col('temp', 'number', temp)
+			];
+			const p = mk.plot('correlationheatmap', 'Correlation matrix', { column: ids[0] });
+			ids.slice(1).forEach((id) => p.plot.addData({ column: { refId: id } }));
+		}
+	},
+	{
+		id: 'pairsplot-matrix',
+		name: 'Pairs plot',
+		family: 'Plots',
+		description:
+			'Scatterplot matrix of four variables: histograms on the diagonal, scatter + linear fit above, correlation colour below.',
+		build(mk) {
+			const rng = mulberry32(12);
+			const n = 40;
+			const base = Array.from({ length: n }, (_, h) => Math.sin((2 * Math.PI * h) / 24));
+			const sleep = base.map((b) => 50 - 30 * b + normal(rng, 0, 6));
+			const activity = base.map((b) => 50 + 30 * b + normal(rng, 0, 6));
+			const light = base.map((b) => 40 + 20 * b + normal(rng, 0, 9));
+			const temp = Array.from({ length: n }, (_, h) => 36 + 0.4 * h + normal(rng, 0, 0.4));
+			const ids = [
+				mk.col('sleep', 'number', sleep),
+				mk.col('activity', 'number', activity),
+				mk.col('light', 'number', light),
+				mk.col('temp', 'number', temp)
+			];
+			const p = mk.plot('pairsplot', 'Pairs matrix', { column: ids[0] });
+			ids.slice(1).forEach((id) => p.plot.addData({ column: { refId: id } }));
+		}
+	},
+	{
 		id: 'table-columns',
 		name: 'Table — raw columns',
 		family: 'Plots',

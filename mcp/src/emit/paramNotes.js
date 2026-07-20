@@ -33,6 +33,8 @@
 // that ENUM VALUES are covered; prose for units/gating is a judgement call.
 
 export const PARAM_NOTES = {
+	Correlation:
+		'`method` is "pearson" (linear), "spearman" (rank / monotonic) or "auto" — "auto" uses Spearman if any wired column fails a Jarque-Bera normality check, else Pearson, so the whole matrix stays on one comparable method. `alpha` is the significance level (0.05). Every unique pair of the wired columns is reported (var_i, var_j, r, pvalue, n), using pairwise-complete rows.',
 	Split:
 		'`splitTimes` is the list of points to cut the series at (N points ⇒ N+1 segments). On a TIME x-axis give each as HOURS FROM THE START of the recording — 336 splits after 14 days, 576 after 24 — NOT an absolute date or an epoch value; the conversion to the actual timestamp is done for you. On a numeric x-axis give it in that column’s own units.',
 	RhythmicityAnalysis:

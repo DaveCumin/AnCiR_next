@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "335": [
+    "359": [
       0,
       1,
       2,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 335,
-      "name": "result_42",
-      "data": 335,
+      "id": 359,
+      "name": "result_43",
+      "data": 359,
       "type": "number",
-      "tableProcessGUId": "43f6f845-38fa-44a2-9009-b741014c3f84",
+      "tableProcessGUId": "f3878e23-990d-4c49-820e-11723e30c313",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -68,7 +68,7 @@
   ],
   "plots": [
     {
-      "id": 61,
+      "id": 64,
       "name": "Sequence Column result",
       "x": 350,
       "y": 150,
@@ -84,7 +84,7 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          335
+          359
         ],
         "showCol": [
           true
@@ -98,7 +98,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 42,
+      "id": 43,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -108,7 +108,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 335
+          "result": 359
         }
       },
       "refTPId": null
@@ -119,7 +119,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_41",
+      "id": "note_42",
       "text": "Creates a regular numeric or time sequence from a start, step, and count (or end). Use it to build an index or an evenly spaced time axis to pair with generated or pasted values.",
       "x": 40,
       "y": 24,
@@ -131,15 +131,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_42": {
+    "tableprocess_43": {
       "x": 60,
       "y": 314
     },
-    "plot_61": {
+    "plot_64": {
       "x": 820,
       "y": 314
     },
-    "note_41": {
+    "note_42": {
       "x": 40,
       "y": 24
     }
@@ -200,5 +200,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.56.1"
+  "version": "β.60.0"
 }

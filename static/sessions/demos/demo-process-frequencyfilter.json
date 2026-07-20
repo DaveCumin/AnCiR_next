@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "212": [
+    "228": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "213": [
+    "229": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 212,
+      "id": 228,
       "name": "x",
-      "data": 212,
+      "data": 228,
       "type": "number",
-      "tableProcessGUId": "ae3fc203-54ff-44ef-8b3c-5f0c59c12f25",
+      "tableProcessGUId": "3f88d248-4841-4d50-9574-2d44c433c605",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 213,
+      "id": 229,
       "name": "y",
-      "data": 213,
+      "data": 229,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 214,
+      "id": 230,
       "name": "Frequency Filter result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_8",
-      "producerPort": "out_213",
+      "producerPort": "out_229",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 33,
+      "id": 35,
       "name": "Frequency Filter: before vs after",
       "x": 350,
       "y": 150,
@@ -199,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 215,
+              "id": 231,
               "name": "x",
-              "refId": 212,
+              "refId": 228,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 216,
+              "id": 232,
               "name": "y",
-              "refId": 213,
+              "refId": 229,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -238,9 +238,9 @@
           },
           {
             "x": {
-              "id": 217,
+              "id": 233,
               "name": "x",
-              "refId": 212,
+              "refId": 228,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 218,
+              "id": 234,
               "name": "Frequency Filter result",
-              "refId": 214,
+              "refId": 230,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,7 +291,7 @@
       }
     },
     {
-      "id": 34,
+      "id": 36,
       "name": "Frequency Filter: values",
       "x": 350,
       "y": 150,
@@ -307,8 +307,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          213,
-          214
+          229,
+          230
         ],
         "showCol": [
           true,
@@ -333,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 212
+          "result": 228
         }
       },
       "refTPId": null
@@ -363,13 +363,13 @@
         "low": 0.1,
         "high": 0.4,
         "inIN": [
-          213
+          229
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_213": {
+    "data_229": {
       "x": 60,
       "y": 314
     },
@@ -381,11 +381,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_33": {
+    "plot_35": {
       "x": 820,
       "y": 314
     },
-    "plot_34": {
+    "plot_36": {
       "x": 820,
       "y": 814
     },
@@ -450,5 +450,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.56.1"
+  "version": "β.60.0"
 }

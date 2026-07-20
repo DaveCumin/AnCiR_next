@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "183": [
+    "199": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "184": [
+    "200": [
       0,
       1,
       2,
@@ -104,7 +104,7 @@
       48,
       49
     ],
-    "185": [
+    "201": [
       0,
       1,
       2,
@@ -159,20 +159,20 @@
   },
   "data": [
     {
-      "id": 183,
+      "id": 199,
       "name": "x",
-      "data": 183,
+      "data": 199,
       "type": "number",
-      "tableProcessGUId": "2fd0a64b-9f6a-4c7e-bfce-84b9260e0b2c",
+      "tableProcessGUId": "7fb76b8c-7d29-43a2-98d7-ac90f7e231ed",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 184,
+      "id": 200,
       "name": "y",
-      "data": 184,
+      "data": 200,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,9 +181,9 @@
       "processes": []
     },
     {
-      "id": 185,
+      "id": 201,
       "name": "reference",
-      "data": 185,
+      "data": 201,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -192,20 +192,20 @@
       "processes": []
     },
     {
-      "id": 186,
+      "id": 202,
       "name": "Filter result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_4",
-      "producerPort": "out_184",
+      "producerPort": "out_200",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 25,
+      "id": 27,
       "name": "Filter: before vs after",
       "x": 350,
       "y": 150,
@@ -262,9 +262,9 @@
         "data": [
           {
             "x": {
-              "id": 187,
+              "id": 203,
               "name": "x",
-              "refId": 183,
+              "refId": 199,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -273,9 +273,9 @@
               "processes": []
             },
             "y": {
-              "id": 188,
+              "id": 204,
               "name": "y",
-              "refId": 184,
+              "refId": 200,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -301,9 +301,9 @@
           },
           {
             "x": {
-              "id": 189,
+              "id": 205,
               "name": "x",
-              "refId": 183,
+              "refId": 199,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -312,9 +312,9 @@
               "processes": []
             },
             "y": {
-              "id": 190,
+              "id": 206,
               "name": "Filter result",
-              "refId": 186,
+              "refId": 202,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -354,7 +354,7 @@
       }
     },
     {
-      "id": 26,
+      "id": 28,
       "name": "Filter: values",
       "x": 350,
       "y": 150,
@@ -370,8 +370,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          184,
-          186
+          200,
+          202
         ],
         "showCol": [
           true,
@@ -396,7 +396,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 183
+          "result": 199
         }
       },
       "refTPId": null
@@ -424,24 +424,24 @@
       "args": {
         "conditions": [
           {
-            "byColId": 185,
+            "byColId": 201,
             "isOperator": ">",
             "byColValue": 2
           }
         ],
         "inIN": [
-          184
+          200
         ],
-        "parentColId": 184
+        "parentColId": 200
       }
     }
   ],
   "nodeLayout": {
-    "data_184": {
+    "data_200": {
       "x": 60,
       "y": 314
     },
-    "data_185": {
+    "data_201": {
       "x": 60,
       "y": 814
     },
@@ -453,11 +453,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_25": {
+    "plot_27": {
       "x": 820,
       "y": 314
     },
-    "plot_26": {
+    "plot_28": {
       "x": 820,
       "y": 814
     },
@@ -522,5 +522,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.56.1"
+  "version": "β.60.0"
 }

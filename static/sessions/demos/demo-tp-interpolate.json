@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "227": [
+    "243": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "228": [
+    "244": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -104,7 +104,7 @@
       10,
       11.362966948437261
     ],
-    "229": [
+    "245": [
       0,
       2,
       4,
@@ -131,7 +131,7 @@
       46,
       48
     ],
-    "230": [
+    "246": [
       10,
       15.35898384862245,
       30,
@@ -161,9 +161,9 @@
   },
   "data": [
     {
-      "id": 227,
+      "id": 243,
       "name": "Interpolate input 1",
-      "data": 227,
+      "data": 243,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -172,9 +172,9 @@
       "processes": []
     },
     {
-      "id": 228,
+      "id": 244,
       "name": "Interpolate input 2",
-      "data": 228,
+      "data": 244,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -183,22 +183,22 @@
       "processes": []
     },
     {
-      "id": 229,
+      "id": 245,
       "name": "interpx_19",
-      "data": 229,
+      "data": 245,
       "type": "number",
-      "tableProcessGUId": "0329b7c4-3839-46db-97e8-54aa092384a9",
+      "tableProcessGUId": "8c79ae31-7256-4095-88a2-6c8f5fd5b45c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 230,
-      "name": "interpy_228_19",
-      "data": 230,
+      "id": 246,
+      "name": "interpy_244_19",
+      "data": 246,
       "type": "number",
-      "tableProcessGUId": "0329b7c4-3839-46db-97e8-54aa092384a9",
+      "tableProcessGUId": "8c79ae31-7256-4095-88a2-6c8f5fd5b45c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -207,7 +207,7 @@
   ],
   "plots": [
     {
-      "id": 37,
+      "id": 39,
       "name": "Interpolate result",
       "x": 350,
       "y": 150,
@@ -223,10 +223,10 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          227,
-          228,
-          229,
-          230
+          243,
+          244,
+          245,
+          246
         ],
         "showCol": [
           true,
@@ -247,9 +247,9 @@
       "name": "Interpolate",
       "displayName": "Interpolate",
       "args": {
-        "xIN": 227,
+        "xIN": 243,
         "yIN": [
-          228
+          244
         ],
         "mode": "resample",
         "method": "linear",
@@ -257,8 +257,8 @@
         "start": null,
         "end": null,
         "out": {
-          "interpx": 229,
-          "interpy_228": 230
+          "interpx": 245,
+          "interpy_244": 246
         }
       },
       "refTPId": null
@@ -281,11 +281,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_227": {
+    "data_243": {
       "x": 60,
       "y": 314
     },
-    "data_228": {
+    "data_244": {
       "x": 60,
       "y": 814
     },
@@ -293,7 +293,7 @@
       "x": 440,
       "y": 314
     },
-    "plot_37": {
+    "plot_39": {
       "x": 820,
       "y": 314
     },
@@ -358,5 +358,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.56.1"
+  "version": "β.60.0"
 }

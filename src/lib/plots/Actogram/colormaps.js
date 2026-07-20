@@ -48,6 +48,22 @@ export const COLORMAPS = {
 		[55, 55, 55],
 		[28, 28, 28],
 		[0, 0, 0]
+	],
+	// DIVERGING blue → white → red (a coolwarm ramp). The MIDDLE stop (index 4) is
+	// white, so a value mapped to t = 0.5 renders neutral. Intended for signed
+	// quantities plotted symmetrically about 0 — e.g. a correlation in [-1, +1]
+	// normalised so 0 → 0.5. Sequential maps (viridis/magma) hide the sign of the
+	// centre; this one shows negative-blue / positive-red at a glance.
+	rdbu: [
+		[5, 48, 97],
+		[42, 104, 172],
+		[110, 160, 205],
+		[185, 210, 230],
+		[247, 247, 247],
+		[244, 197, 173],
+		[214, 118, 94],
+		[178, 47, 46],
+		[103, 0, 31]
 	]
 };
 
@@ -55,7 +71,8 @@ export const COLORMAPS = {
 export const COLORMAP_LABELS = {
 	viridis: 'Viridis',
 	magma: 'Magma',
-	greys: 'Greys'
+	greys: 'Greys',
+	rdbu: 'Blue–White–Red (diverging)'
 };
 
 export const DEFAULT_COLORMAP = 'viridis';

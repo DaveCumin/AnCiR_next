@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "236": [
+    "252": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "237": [
+    "253": [
       1,
       3,
       5,
@@ -104,7 +104,7 @@
       97,
       99
     ],
-    "238": [
+    "254": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "239": [
+    "255": [
       1,
       3,
       5,
@@ -211,9 +211,9 @@
   },
   "data": [
     {
-      "id": 236,
+      "id": 252,
       "name": "Collect Columns input 1",
-      "data": 236,
+      "data": 252,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -222,9 +222,9 @@
       "processes": []
     },
     {
-      "id": 237,
+      "id": 253,
       "name": "Collect Columns input 2",
-      "data": 237,
+      "data": 253,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 238,
-      "name": "col_236_22",
-      "data": 238,
+      "id": 254,
+      "name": "col_252_22",
+      "data": 254,
       "type": "number",
-      "tableProcessGUId": "42619a8f-d13c-41d4-8df1-9c22cd57f8ec",
+      "tableProcessGUId": "64689203-8bac-460a-a652-d7506aba9bc9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 239,
-      "name": "col_237_22",
-      "data": 239,
+      "id": 255,
+      "name": "col_253_22",
+      "data": 255,
       "type": "number",
-      "tableProcessGUId": "42619a8f-d13c-41d4-8df1-9c22cd57f8ec",
+      "tableProcessGUId": "64689203-8bac-460a-a652-d7506aba9bc9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -257,7 +257,7 @@
   ],
   "plots": [
     {
-      "id": 40,
+      "id": 42,
       "name": "Collect Columns result",
       "x": 350,
       "y": 150,
@@ -273,10 +273,10 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          236,
-          237,
-          238,
-          239
+          252,
+          253,
+          254,
+          255
         ],
         "showCol": [
           true,
@@ -298,14 +298,14 @@
       "displayName": "Collect Columns",
       "args": {
         "colIds": [
-          236,
-          237
+          252,
+          253
         ],
         "preProcesses": [],
         "aggregates": [],
         "out": {
-          "col_236": 238,
-          "col_237": 239
+          "col_252": 254,
+          "col_253": 255
         }
       },
       "refTPId": null
@@ -328,11 +328,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_236": {
+    "data_252": {
       "x": 60,
       "y": 314
     },
-    "data_237": {
+    "data_253": {
       "x": 60,
       "y": 814
     },
@@ -340,7 +340,7 @@
       "x": 440,
       "y": 314
     },
-    "plot_40": {
+    "plot_42": {
       "x": 820,
       "y": 314
     },
@@ -405,5 +405,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.56.1"
+  "version": "β.60.0"
 }

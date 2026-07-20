@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "155": [
+    "171": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "156": [
+    "172": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 155,
+      "id": 171,
       "name": "x",
-      "data": 155,
+      "data": 171,
       "type": "number",
-      "tableProcessGUId": "0d4d61d1-68a6-4ff9-afcf-1d86d0765f7d",
+      "tableProcessGUId": "26060397-a697-4730-b5e5-d09c1448e617",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 156,
+      "id": 172,
       "name": "y",
-      "data": 156,
+      "data": 172,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 157,
+      "id": 173,
       "name": "Add result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_0",
-      "producerPort": "out_156",
+      "producerPort": "out_172",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 17,
+      "id": 19,
       "name": "Add: before vs after",
       "x": 350,
       "y": 150,
@@ -199,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 158,
+              "id": 174,
               "name": "x",
-              "refId": 155,
+              "refId": 171,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 159,
+              "id": 175,
               "name": "y",
-              "refId": 156,
+              "refId": 172,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -238,9 +238,9 @@
           },
           {
             "x": {
-              "id": 160,
+              "id": 176,
               "name": "x",
-              "refId": 155,
+              "refId": 171,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 161,
+              "id": 177,
               "name": "Add result",
-              "refId": 157,
+              "refId": 173,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,7 +291,7 @@
       }
     },
     {
-      "id": 18,
+      "id": 20,
       "name": "Add: values",
       "x": 350,
       "y": 150,
@@ -307,8 +307,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          156,
-          157
+          172,
+          173
         ],
         "showCol": [
           true,
@@ -333,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 155
+          "result": 171
         }
       },
       "refTPId": null
@@ -361,13 +361,13 @@
       "args": {
         "value": 5,
         "inIN": [
-          156
+          172
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_156": {
+    "data_172": {
       "x": 60,
       "y": 314
     },
@@ -379,11 +379,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_17": {
+    "plot_19": {
       "x": 820,
       "y": 314
     },
-    "plot_18": {
+    "plot_20": {
       "x": 820,
       "y": 814
     },
@@ -448,5 +448,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.56.1"
+  "version": "β.60.0"
 }

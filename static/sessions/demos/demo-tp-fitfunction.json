@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "270": [
+    "286": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "271": [
+    "287": [
       12.642866859481796,
       18.907413440058953,
       8.02083029948017,
@@ -104,7 +104,7 @@
       23.83732580196522,
       -2.4027680620561576
     ],
-    "272": [
+    "288": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "273": [
+    "289": [
       9.094870359876616,
       10.003419446394657,
       13.579734705384766,
@@ -211,20 +211,20 @@
   },
   "data": [
     {
-      "id": 270,
+      "id": 286,
       "name": "x",
-      "data": 270,
+      "data": 286,
       "type": "number",
-      "tableProcessGUId": "078ebd2b-9428-41f0-813d-e3a1440200fb",
+      "tableProcessGUId": "6f28128c-25a4-4e40-9160-4f26c808a34b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 271,
+      "id": 287,
       "name": "y",
-      "data": 271,
+      "data": 287,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 272,
+      "id": 288,
       "name": "fitx_30",
-      "data": 272,
+      "data": 288,
       "type": "number",
-      "tableProcessGUId": "aa2fa0bf-8f8f-45c9-8b4a-21009fdc7c67",
+      "tableProcessGUId": "c260981d-d264-4125-92f6-d44d6ac1fb79",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 273,
-      "name": "fity_271_30",
-      "data": 273,
+      "id": 289,
+      "name": "fity_287_30",
+      "data": 289,
       "type": "number",
-      "tableProcessGUId": "aa2fa0bf-8f8f-45c9-8b4a-21009fdc7c67",
+      "tableProcessGUId": "c260981d-d264-4125-92f6-d44d6ac1fb79",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -257,7 +257,7 @@
   ],
   "plots": [
     {
-      "id": 47,
+      "id": 49,
       "name": "Fit Function: data + fit",
       "x": 350,
       "y": 150,
@@ -314,9 +314,9 @@
         "data": [
           {
             "x": {
-              "id": 274,
+              "id": 290,
               "name": "x",
-              "refId": 270,
+              "refId": 286,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -325,9 +325,9 @@
               "processes": []
             },
             "y": {
-              "id": 275,
+              "id": 291,
               "name": "y",
-              "refId": 271,
+              "refId": 287,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -353,9 +353,9 @@
           },
           {
             "x": {
-              "id": 276,
+              "id": 292,
               "name": "fitx_30",
-              "refId": 272,
+              "refId": 288,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -364,9 +364,9 @@
               "processes": []
             },
             "y": {
-              "id": 277,
-              "name": "fity_271_30",
-              "refId": 273,
+              "id": 293,
+              "name": "fity_287_30",
+              "refId": 289,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -406,7 +406,7 @@
       }
     },
     {
-      "id": 48,
+      "id": 50,
       "name": "Fit Function: values",
       "x": 350,
       "y": 150,
@@ -422,8 +422,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          271,
-          273
+          287,
+          289
         ],
         "showCol": [
           true,
@@ -448,7 +448,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 270
+          "result": 286
         }
       },
       "refTPId": null
@@ -458,9 +458,9 @@
       "name": "FitFunction",
       "displayName": "Fit Function",
       "args": {
-        "xIN": 270,
+        "xIN": 286,
         "yIN": [
-          271
+          287
         ],
         "model": "cosinor",
         "outputX": -1,
@@ -486,8 +486,8 @@
         "permutationStatistic": "rSquared",
         "preProcesses": [],
         "out": {
-          "fitx": 272,
-          "fity_271": 273
+          "fitx": 288,
+          "fity_287": 289
         }
       },
       "refTPId": null
@@ -510,7 +510,7 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_271": {
+    "data_287": {
       "x": 60,
       "y": 314
     },
@@ -522,11 +522,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_47": {
+    "plot_49": {
       "x": 820,
       "y": 314
     },
-    "plot_48": {
+    "plot_50": {
       "x": 820,
       "y": 814
     },
@@ -591,5 +591,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.56.1"
+  "version": "β.60.0"
 }

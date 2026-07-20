@@ -1,0 +1,303 @@
+{
+  "rawData": {
+    "152": [
+      44.3132288681365,
+      38.02749002917909,
+      32.23815015678512,
+      17.75558197486374,
+      19.270272030560008,
+      24.38036442733952,
+      16.834608780802622,
+      23.349377000091135,
+      22.503530760519205,
+      23.91492311681369,
+      38.61787827233692,
+      37.73348822031234,
+      53.684159938385775,
+      58.15234637905762,
+      59.5819707962166,
+      79.00557393397223,
+      79.8148918809771,
+      83.69452588957026,
+      77.79238588999308,
+      74.15805305454194,
+      77.78169837507463,
+      72.43287277603707,
+      71.82317245605728,
+      63.91433345733487
+    ],
+    "153": [
+      44.16901032234467,
+      49.67899523857719,
+      68.33293316979652,
+      75.71604811215414,
+      71.7641126286915,
+      78.17916316213046,
+      76.2781808078084,
+      77.69660219637736,
+      76.37235807005808,
+      63.91362268413264,
+      68.985725631405,
+      64.79873430666815,
+      46.57365196291019,
+      35.300271619756586,
+      41.44360500297873,
+      26.854712097349775,
+      29.838361790411486,
+      16.288653441733587,
+      12.35683731249528,
+      32.31124457816579,
+      17.531619250461755,
+      37.75562007344828,
+      31.313470249919096,
+      46.829055850071825
+    ],
+    "154": [
+      33.79302678973565,
+      49.025375163032415,
+      43.55278442510142,
+      45.72991154728493,
+      47.259239238829046,
+      66.7303427639198,
+      64.37141682532211,
+      49.70437180994104,
+      56.26562983240846,
+      51.895188578776306,
+      46.63817867045693,
+      40.979097953106354,
+      32.76880071241072,
+      36.020747209720064,
+      27.41756965440031,
+      9.376273251364399,
+      27.34435520922325,
+      25.35620346876565,
+      26.056660131730258,
+      26.785994102109143,
+      20.068723783585128,
+      33.56567667701694,
+      20.54160241457355,
+      40.19452287317554
+    ],
+    "155": [
+      36.606484373713165,
+      36.484052656931645,
+      37.12766938356504,
+      37.62283368829617,
+      38.35936992797279,
+      38.25895700983697,
+      38.61185496671167,
+      40.17994065648876,
+      39.952218127344054,
+      40.440596426779585,
+      40.79037379261771,
+      41.285029176941755,
+      41.98053114353816,
+      42.511509900174865,
+      42.89282860120708,
+      43.30035164132838,
+      44.700667759985976,
+      44.74905534159923,
+      45.24454965121291,
+      45.13292128838676,
+      45.987100883551626,
+      46.65657456140774,
+      46.9754698096398,
+      47.89867200754325
+    ]
+  },
+  "data": [
+    {
+      "id": 152,
+      "name": "sleep",
+      "data": 152,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 153,
+      "name": "activity",
+      "data": 153,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 154,
+      "name": "light",
+      "data": 154,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 155,
+      "name": "temp",
+      "data": 155,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    }
+  ],
+  "plots": [
+    {
+      "id": 16,
+      "name": "Correlation matrix",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "correlationheatmap",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "padding": {
+          "top": 20,
+          "right": 20,
+          "bottom": 70,
+          "left": 70
+        },
+        "colormap": "rdbu",
+        "showValues": true,
+        "method": "pearson",
+        "data": [
+          {
+            "column": {
+              "id": 156,
+              "name": "sleep",
+              "refId": 152,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            }
+          },
+          {
+            "column": {
+              "id": 157,
+              "name": "activity",
+              "refId": 153,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            }
+          },
+          {
+            "column": {
+              "id": 158,
+              "name": "light",
+              "refId": 154,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            }
+          },
+          {
+            "column": {
+              "id": 159,
+              "name": "temp",
+              "refId": 155,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tableProcesses": [],
+  "storedValues": {},
+  "chainRefs": [],
+  "nodeNotes": {},
+  "notes": [],
+  "groups": [],
+  "composites": [],
+  "orphanProcesses": [],
+  "nodeLayout": {},
+  "appState": {
+    "currentTab": "null",
+    "currentControlTab": "properties",
+    "loadingState": {
+      "isLoading": true,
+      "loadingMsg": "Warming up..."
+    },
+    "showNavbar": true,
+    "showDisplayPanel": false,
+    "showControlPanel": false,
+    "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
+    "windowWidth": 1024,
+    "windowHeight": 768,
+    "widthNavBar": 56,
+    "widthDisplayPanel": 250,
+    "widthControlPanel": 250,
+    "gridSize": 15,
+    "canvasOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
+    "view": "canvas",
+    "displayTimezone": "utc",
+    "invisiblePlotIds": [],
+    "canvasSelectedNodeId": null,
+    "canvasMultiSelectedCount": 0,
+    "canvasMultiSelectedNodeIds": [],
+    "appColours": [
+      "#234154",
+      "#BE796B",
+      "#3E7295",
+      "#EDADAD",
+      "#A6ACD5",
+      "#83422A",
+      "#6B9FD5",
+      "#4A1E0E",
+      "#fbe67280"
+    ],
+    "showColourPicker": false,
+    "showAYSModal": false,
+    "AYStext": "",
+    "AYScallback": null,
+    "AYSoptions": [
+      "Yes",
+      "No"
+    ],
+    "showWorkflow": false
+  },
+  "version": "β.60.0"
+}

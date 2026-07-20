@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "169": [
+    "185": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "170": [
+    "186": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 169,
+      "id": 185,
       "name": "x",
-      "data": 169,
+      "data": 185,
       "type": "number",
-      "tableProcessGUId": "ba6fba32-4a64-4389-ab6b-6205b234adb6",
+      "tableProcessGUId": "ae6e2009-6e3f-4614-8fb0-39af2def559c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 170,
+      "id": 186,
       "name": "y",
-      "data": 170,
+      "data": 186,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 171,
+      "id": 187,
       "name": "Multiply result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_2",
-      "producerPort": "out_170",
+      "producerPort": "out_186",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 21,
+      "id": 23,
       "name": "Multiply: before vs after",
       "x": 350,
       "y": 150,
@@ -199,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 172,
+              "id": 188,
               "name": "x",
-              "refId": 169,
+              "refId": 185,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 173,
+              "id": 189,
               "name": "y",
-              "refId": 170,
+              "refId": 186,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -238,9 +238,9 @@
           },
           {
             "x": {
-              "id": 174,
+              "id": 190,
               "name": "x",
-              "refId": 169,
+              "refId": 185,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 175,
+              "id": 191,
               "name": "Multiply result",
-              "refId": 171,
+              "refId": 187,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,7 +291,7 @@
       }
     },
     {
-      "id": 22,
+      "id": 24,
       "name": "Multiply: values",
       "x": 350,
       "y": 150,
@@ -307,8 +307,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          170,
-          171
+          186,
+          187
         ],
         "showCol": [
           true,
@@ -333,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 169
+          "result": 185
         }
       },
       "refTPId": null
@@ -361,13 +361,13 @@
       "args": {
         "value": 2,
         "inIN": [
-          170
+          186
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_170": {
+    "data_186": {
       "x": 60,
       "y": 314
     },
@@ -379,11 +379,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_21": {
+    "plot_23": {
       "x": 820,
       "y": 314
     },
-    "plot_22": {
+    "plot_24": {
       "x": 820,
       "y": 814
     },
@@ -448,5 +448,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.56.1"
+  "version": "β.60.0"
 }

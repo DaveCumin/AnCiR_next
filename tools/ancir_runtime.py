@@ -4444,3 +4444,92 @@ def export_plot_data(plots, columns_index, output_dir):
         written.append(path)
         print(f"[ancir-plotdata] wrote {path} ({len(rows)} rows)")
     return written
+
+
+# ---------------------------------------------------------------------------
+# Correlation (mirrors src/lib/utils/correlation.js). Pearson / Spearman with a
+# two-sided p-value from t = r*sqrt((n-2)/(1-r^2)), whose square is F(1, n-2) —
+# the same route @stdlib's F-CDF gives on the JS side, so the ports agree.
+# ---------------------------------------------------------------------------
+def _corr_valid_pairs(x, y):
+    xs, ys = [], []
+    n = min(len(x or []), len(y or []))
+    for i in range(n):
+        xv, yv = x[i], y[i]
+        if xv is None or yv is None:
+            continue
+        try:
+            xf, yf = float(xv), float(yv)
+        except (TypeError, ValueError):
+            continue
+        if math.isnan(xf) or math.isnan(yf):
+            continue
+        xs.append(xf)
+        ys.append(yf)
+    return xs, ys
+
+
+def rank_average(arr):
+    order = sorted(range(len(arr)), key=lambda i: arr[i])
+    ranks = [0.0] * len(arr)
+    i = 0
+    while i < len(order):
+        j = i
+        while j + 1 < len(order) and arr[order[j + 1]] == arr[order[i]]:
+            j += 1
+        avg = (i + j + 2) / 2.0
+        for k in range(i, j + 1):
+            ranks[order[k]] = avg
+        i = j + 1
+    return ranks
+
+
+def _pearson_rn(xs, ys):
+    n = len(xs)
+    if n < 2:
+        return float("nan"), n
+    mx = sum(xs) / n
+    my = sum(ys) / n
+    sxy = sxx = syy = 0.0
+    for a, b in zip(xs, ys):
+        dx, dy = a - mx, b - my
+        sxy += dx * dy
+        sxx += dx * dx
+        syy += dy * dy
+    if sxx == 0 or syy == 0:
+        return float("nan"), n
+    return sxy / math.sqrt(sxx * syy), n
+
+
+def correlation_pvalue(r, n):
+    if r is None or (isinstance(r, float) and math.isnan(r)) or n < 3:
+        return float("nan")
+    if abs(r) >= 1:
+        return 0.0
+    t2 = (r * r * (n - 2)) / (1 - r * r)
+    return float(sp_stats.f.sf(t2, 1, n - 2))
+
+
+def correlate(x, y, method="pearson"):
+    """Reference implementation for parity: scipy's pearsonr / spearmanr on the
+    pairwise-complete rows. The JS side (src/lib/utils/correlation.js) is bespoke and
+    lean (single-file bundle); pinning it to scipy here validates its CORRECTNESS, not
+    merely that a second hand-written port agrees with it.
+
+    The edge cases are guarded to match the JS contract (NaN, never an exception): fewer
+    than 3 usable pairs, or a constant column, yield NaN r and p."""
+    xs, ys = _corr_valid_pairs(x, y)
+    n = len(xs)
+    nan = float("nan")
+    if n < 3 or len(set(xs)) < 2 or len(set(ys)) < 2:
+        # scipy warns/raises here; the JS returns NaN, so mirror the JS.
+        r_short, _ = _pearson_rn(rank_average(xs) if method == "spearman" else xs,
+                                 rank_average(ys) if method == "spearman" else ys)
+        return {"r": r_short, "pvalue": nan, "n": n}
+    if method == "spearman":
+        res = sp_stats.spearmanr(xs, ys)
+        r, p = float(res.statistic), float(res.pvalue)
+    else:
+        res = sp_stats.pearsonr(xs, ys)
+        r, p = float(res.statistic), float(res.pvalue)
+    return {"r": r, "pvalue": p, "n": n}

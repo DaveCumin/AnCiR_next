@@ -34,6 +34,7 @@ import { gaussianKDE } from '$lib/utils/kde.js';
 import { meanSemByGroup } from '$lib/utils/meanSem.js';
 import { rayleighTest, circularMean, weightedCircularMean, weightedRayleigh } from '$lib/utils/circular.js';
 import { bathyphase, phaseAngleOfEntrainment, circadianFunctionIndex } from '$lib/utils/cosinorAddons.js';
+import { correlate } from '$lib/utils/correlation.js';
 
 const PARITY_DIR = join(process.cwd(), 'tools', 'parity');
 
@@ -57,7 +58,8 @@ const PURE_UTIL_FNS = {
 	weightedRayleigh,
 	bathyphase,
 	phaseAngleOfEntrainment,
-	circadianFunctionIndex
+	circadianFunctionIndex,
+	correlate
 };
 
 class ThrowOnPost {

@@ -61,6 +61,13 @@ describe('canonicalNodeViz', () => {
 		expect(spec.columnRefs).toEqual(expect.arrayContaining([1, 2, 3, 4]));
 	});
 
+	it('Correlation → correlationheatmap wired to its INPUT columns (the heatmap is self-contained)', () => {
+		const node = fitNode('Correlation', { yIN: [1, 2, 3], out: { var_i: 30, var_j: 31, r: 32, pvalue: 33, n: 34 } });
+		const spec = canonicalNodeViz(node);
+		expect(spec.type).toBe('correlationheatmap');
+		expect(spec.columns).toEqual([1, 2, 3]);
+	});
+
 	it('returns null for a plot node', () => {
 		expect(canonicalNodeViz({ id: 'plot_1', type: 'plot', plotObj: {} })).toBeNull();
 	});
