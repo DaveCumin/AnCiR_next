@@ -4582,6 +4582,17 @@ def describe_stats(values):
     }
 
 
+def shapiro_wilk(values):
+    """scipy.stats.shapiro reference for utils/normality.js shapiroWilk (Royston AS R94)."""
+    x = _clean_numeric(values)
+    n = len(x)
+    nan = float("nan")
+    if n < 3 or len(set(x)) < 2:
+        return {"statistic": nan, "pvalue": nan, "n": n}
+    res = sp_stats.shapiro(np.asarray(x, dtype=float))
+    return {"statistic": float(res.statistic), "pvalue": float(res.pvalue), "n": n}
+
+
 def d_agostino(values):
     """scipy.stats.normaltest reference for utils/normality.js dAgostino."""
     x = _clean_numeric(values)

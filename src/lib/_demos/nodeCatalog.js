@@ -424,7 +424,7 @@ export const TP_SPECS = [
 			T('number', () => SAMPLE.rhythm(24, 40, 50)),
 			T('number', () => seq(50, (i) => Math.exp(((i * 37) % 50) / 12)))
 		],
-		args: ([a, b]) => ({ yIN: [a, b], method: 'dagostino', alpha: 0.05, out: {} }),
+		args: ([a, b]) => ({ yIN: [a, b], method: 'shapiro', alpha: 0.05, out: {} }),
 		noOutputs: true
 	},
 	{

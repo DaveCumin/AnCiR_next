@@ -3,9 +3,10 @@
 	// Normality test — is each wired column drawn from a normal distribution?
 	//
 	// Many-column yIN → one row per variable: statistic, p-value, n, and a `normal` verdict at
-	// the chosen alpha. Two omnibus, moment-based tests (utils/normality.js, scipy-parity-checked):
-	//   • D'Agostino-Pearson K² (scipy normaltest) — skew + kurtosis, needs n ≥ 8.
-	//   • Jarque-Bera — the same idea, valid down to n ≥ 3 but weaker in small samples.
+	// the chosen alpha. Three tests (utils/normality.js, scipy-parity-checked):
+	//   • Shapiro-Wilk (Royston) — the default and most powerful; valid for 3 ≤ n ≤ 5000.
+	//   • D'Agostino-Pearson K² (scipy normaltest) — omnibus skew + kurtosis, needs n ≥ 8.
+	//   • Jarque-Bera — the same moment idea, valid down to n ≥ 3 but weaker in small samples.
 	// Output is fixed long-form columns so it composes (filter non-normal, feed a table, etc.).
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -19,7 +20,7 @@
 
 	const defaults = new Map([
 		['yIN', { val: [] }],
-		['method', { val: 'dagostino' }], // dagostino | jarquebera
+		['method', { val: 'shapiro' }], // shapiro | dagostino | jarquebera
 		['alpha', { val: 0.05 }],
 		['out', { ...Object.fromEntries(OUT_KEYS.map((k) => [k, { val: -1 }])) }],
 		['valid', { val: false }]
@@ -30,7 +31,7 @@
 		const yIds = normalizeYInputs(argsIN.yIN).filter((id) => id != null && id !== -1 && getColumnById(id));
 		if (yIds.length === 0) return [null, false];
 
-		const method = argsIN.method === 'jarquebera' ? 'jarquebera' : 'dagostino';
+		const method = argsIN.method === 'jarquebera' ? 'jarquebera' : argsIN.method === 'dagostino' ? 'dagostino' : 'shapiro';
 		const alpha = Number(argsIN.alpha) || 0.05;
 
 		const warnings = [];
@@ -43,8 +44,12 @@
 		});
 
 		const minN = Math.min(...rows.map((r) => r.n).filter(Number.isFinite));
+		const maxN = Math.max(...rows.map((r) => r.n).filter(Number.isFinite));
 		if (method === 'dagostino' && Number.isFinite(minN) && minN < 20) {
-			warnings.push(`Small sample: D'Agostino's kurtosis term is unreliable below n ≈ 20 (smallest here is ${minN}). Consider Jarque-Bera or treat the p-value cautiously.`);
+			warnings.push(`Small sample: D'Agostino's kurtosis term is unreliable below n ≈ 20 (smallest here is ${minN}). Consider Shapiro-Wilk or treat the p-value cautiously.`);
+		}
+		if (method === 'shapiro' && Number.isFinite(maxN) && maxN > 5000) {
+			warnings.push(`Large sample: Shapiro-Wilk is only defined up to n = 5000 (largest here is ${maxN}) and becomes over-sensitive to trivial departures. Use D'Agostino for large n.`);
 		}
 		if (rows.some((r) => Number.isNaN(r.pvalue))) {
 			warnings.push('Some columns could not be tested (too few points, or no variance) and are reported as NaN.');
@@ -80,7 +85,7 @@
 		}
 	};
 
-	const METHOD_LABEL = { dagostino: "D'Agostino-Pearson", jarquebera: 'Jarque-Bera' };
+	const METHOD_LABEL = { shapiro: 'Shapiro-Wilk', dagostino: "D'Agostino-Pearson", jarquebera: 'Jarque-Bera' };
 	const fmt = (v) => (v == null || Number.isNaN(v) ? '—' : Math.abs(v) >= 1000 || (Math.abs(v) < 0.001 && v !== 0) ? Number(v).toExponential(2) : Number(v).toPrecision(4).replace(/\.?0+$/, ''));
 </script>
 
@@ -145,8 +150,8 @@
 	<ControlInput label="Test">
 		<AttributeSelect
 			bind:value={p.args.method}
-			options={['dagostino', 'jarquebera']}
-			optionsDisplay={["D'Agostino-Pearson (n ≥ 8)", 'Jarque-Bera (n ≥ 3)']}
+			options={['shapiro', 'dagostino', 'jarquebera']}
+			optionsDisplay={['Shapiro-Wilk (3 ≤ n ≤ 5000)', "D'Agostino-Pearson (n ≥ 8)", 'Jarque-Bera (n ≥ 3)']}
 		/>
 	</ControlInput>
 	{#if result.rows.length}

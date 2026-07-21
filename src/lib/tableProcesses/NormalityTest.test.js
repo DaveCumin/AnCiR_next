@@ -7,7 +7,7 @@ vi.mock('$lib/core/Column.svelte', () => ({ getColumnById: (id) => mockColumns[i
 import { normalitytest } from './NormalityTest.svelte';
 
 const OUT = { variable: -1, statistic: -1, pvalue: -1, n: -1, normal: -1 };
-const args = (over) => ({ yIN: [1, 2], out: { ...OUT }, method: 'dagostino', alpha: 0.05, ...over });
+const args = (over) => ({ yIN: [1, 2], out: { ...OUT }, method: 'shapiro', alpha: 0.05, ...over });
 
 const NORMALISH = [2.1, -0.3, 1.4, 0.2, -1.1, 0.8, 0.05, 1.9, -0.7, 0.4, 1.2, -0.9, 0.6, -0.2, 0.9, 1.5, -1.3, 0.3, 0.7, -0.5, 0.1, -0.4, 1.1, -0.8, 0.5];
 const SKEWED = [1, 1, 1, 1, 2, 2, 3, 10, 4, 5, 6, 7, 3, 2, 8, 1, 1, 9, 2, 1, 1, 2, 3, 1, 15];
@@ -36,6 +36,13 @@ describe('normalitytest', () => {
 		expect(r.rows[1].normal).toBe(0); // skewed, p < 0.05
 		expect(r.rows[1].pvalue).toBeLessThan(0.05);
 		expect(r.warnings.some((w) => w.includes('Non-normal'))).toBe(true);
+	});
+
+	it('defaults to Shapiro-Wilk with scipy-matching statistics', () => {
+		const [r] = normalitytest(args());
+		expect(r.methodUsed).toBe('shapiro');
+		expect(r.rows[0].statistic).toBeCloseTo(0.981784, 4); // scipy.stats.shapiro(NORMALISH).W
+		expect(r.rows[1].statistic).toBeCloseTo(0.765046, 4); // scipy.stats.shapiro(SKEWED).W
 	});
 
 	it('honours the jarquebera method choice', () => {

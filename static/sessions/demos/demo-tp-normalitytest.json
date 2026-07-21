@@ -231,7 +231,7 @@
           339,
           340
         ],
-        "method": "dagostino",
+        "method": "shapiro",
         "alpha": 0.05,
         "out": {
           "variable": 341,
@@ -251,7 +251,7 @@
   "notes": [
     {
       "id": "note_39",
-      "text": "Tests whether each wired column is drawn from a normal distribution, one row per variable: the test statistic, its p-value, n, and a yes/no verdict at your chosen alpha. D'Agostino-Pearson (an omnibus skewness + kurtosis K² test, valid for n ≥ 8) is the default; Jarque-Bera is available for smaller samples. A small p-value means the data depart from normality, so a rank / non-parametric method is safer downstream. Both tests match scipy (normaltest / jarque_bera). D'Agostino & Pearson 1973.",
+      "text": "Tests whether each wired column is drawn from a normal distribution, one row per variable: the test statistic, its p-value, n, and a yes/no verdict at your chosen alpha. Shapiro-Wilk (the default, and the most powerful test; valid for 3 ≤ n ≤ 5000) is recommended; D'Agostino-Pearson (an omnibus skewness + kurtosis K² test, n ≥ 8, better for very large samples) and Jarque-Bera are also available. A small p-value means the data depart from normality, so a rank / non-parametric method is safer downstream. All three match scipy (shapiro / normaltest / jarque_bera). Shapiro & Wilk 1965; Royston 1995.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -339,5 +339,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.60.1"
 }

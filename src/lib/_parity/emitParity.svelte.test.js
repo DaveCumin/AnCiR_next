@@ -36,7 +36,7 @@ import { rayleighTest, circularMean, weightedCircularMean, weightedRayleigh } fr
 import { bathyphase, phaseAngleOfEntrainment, circadianFunctionIndex } from '$lib/utils/cosinorAddons.js';
 import { correlate } from '$lib/utils/correlation.js';
 import { describeStats } from '$lib/utils/describeStats.js';
-import { dAgostino, jarqueBera } from '$lib/utils/normality.js';
+import { shapiroWilk, dAgostino, jarqueBera } from '$lib/utils/normality.js';
 import { crossCorrelation } from '$lib/utils/crossCorrelation.js';
 import { chiSquareGoodnessOfFit, chiSquareIndependence } from '$lib/utils/chisquare.js';
 import { logisticRegression } from '$lib/utils/logistic.js';
@@ -90,6 +90,7 @@ const PURE_UTIL_FNS = {
 	circadianFunctionIndex,
 	correlate,
 	describeStats: describeStatsAdapter,
+	shapiroWilk,
 	dAgostino,
 	jarqueBera,
 	crossCorrelation: crossCorrelationAdapter,
