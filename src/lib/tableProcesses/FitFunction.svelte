@@ -629,7 +629,12 @@
 			p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
 			p.args.out.fitx = xCol.id;
 		}
-		const needsCompute = initYColumns() || initPermColumns() || initResidColumns();
+		// Evaluate all three separately — `||` would short-circuit and skip creating the resid /
+		// perm columns whenever an earlier init already reported a change.
+		const fitInit = initYColumns();
+		const permInit = initPermColumns();
+		const residInit = initResidColumns();
+		const needsCompute = fitInit || permInit || residInit;
 		if (needsCompute) {
 			getFit();
 		} else {
