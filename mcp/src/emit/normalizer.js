@@ -510,7 +510,13 @@ function columnValuesIssue(name, type, values) {
 /** Human-ish name for a pre-allocated output column. Per-Y keys borrow the source name. */
 function outputColumnName(nodeName, key, args, byName) {
 	const idToName = new Map([...byName.entries()].map(([n, i]) => [i, n]));
-	const yIds = (args.yIN ?? []).map(Number);
+	// yIN is normally coerced to an id array upstream — but ONLY for nodes that declare it as an
+	// input. A model that hallucinates a `yIN` onto a node without one (a generator, say) leaves
+	// a raw scalar here, and `.map` on it threw an uncaught TypeError that took the whole request
+	// down (surfacing in the browser as "Failed to fetch"). Coerce defensively: scalar → [scalar],
+	// absent → []. A stray id simply matches no output-key suffix, so naming is unaffected.
+	const yInRaw = args.yIN;
+	const yIds = (Array.isArray(yInRaw) ? yInRaw : yInRaw == null ? [] : [yInRaw]).map(Number);
 	const nameOf = (id) => idToName.get(Number(id)) ?? String(id);
 
 	// `${yid}_${suffix}` — the id LEADS: RhythmicityAnalysis's `1_period`, Split's `1_2`.

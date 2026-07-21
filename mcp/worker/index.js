@@ -623,20 +623,39 @@ async function handleMcpRoute(request, env, ctx) {
 
 export default {
 	async fetch(request, env, ctx) {
-		const url = new URL(request.url);
-		if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-		if (url.pathname === '/health') return json({ ok: true });
-		if (url.pathname === '/build' && request.method === 'POST') return handleBuild(request, env, ctx);
-		if (url.pathname === '/edit' && request.method === 'POST') return handleEdit(request, env, ctx);
-		if (url.pathname === '/report' && request.method === 'POST') return handleReport(request, env, ctx);
-		if (url.pathname === '/mcp') {
-			if (request.method === 'POST') return handleMcpRoute(request, env, ctx);
-			// The Streamable HTTP spec has GET open a server→client SSE stream. We're stateless
-			// and never push, and 405 is the spec's own way to say so — clients then just POST.
-			return json({ error: 'method not allowed' }, 405);
+		try {
+			return await route(request, env, ctx);
+		} catch (e) {
+			// A handler that THROWS would otherwise become Cloudflare's default 500 — which has NO
+			// CORS headers, so the browser can't read it and reports the opaque "Failed to fetch".
+			// Catch everything here and answer with a CORS'd JSON error the app can actually show,
+			// and log it so the bug is visible. (A malformed draft crashing the normalizer did
+			// exactly this — see outputColumnName's yIN coercion.)
+			logEvent(env, ctx, 'worker_error', {
+				message: String(e?.message ?? e),
+				stack: typeof e?.stack === 'string' ? e.stack.slice(0, 2000) : undefined,
+				path: new URL(request.url).pathname
+			});
+			return json({ error: 'The AI service hit an internal error.', detail: String(e?.message ?? e) }, 500);
 		}
-		const m = url.pathname.match(/^\/sessions\/([\w-]+)$/);
-		if (m && request.method === 'GET') return handleSession(m[1], env);
-		return json({ error: 'not found' }, 404);
 	}
 };
+
+/** The actual route table; wrapped by fetch() so any throw becomes a CORS'd 500, not a raw one. */
+async function route(request, env, ctx) {
+	const url = new URL(request.url);
+	if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+	if (url.pathname === '/health') return json({ ok: true });
+	if (url.pathname === '/build' && request.method === 'POST') return handleBuild(request, env, ctx);
+	if (url.pathname === '/edit' && request.method === 'POST') return handleEdit(request, env, ctx);
+	if (url.pathname === '/report' && request.method === 'POST') return handleReport(request, env, ctx);
+	if (url.pathname === '/mcp') {
+		if (request.method === 'POST') return handleMcpRoute(request, env, ctx);
+		// The Streamable HTTP spec has GET open a server→client SSE stream. We're stateless
+		// and never push, and 405 is the spec's own way to say so — clients then just POST.
+		return json({ error: 'method not allowed' }, 405);
+	}
+	const m = url.pathname.match(/^\/sessions\/([\w-]+)$/);
+	if (m && request.method === 'GET') return handleSession(m[1], env);
+	return json({ error: 'not found' }, 404);
+}

@@ -719,6 +719,19 @@ test('an unmapped upstream error still surfaces, without leaking the key', async
 	assert.ok(!JSON.stringify(out).includes('sk-test'), 'must never echo the key');
 });
 
+test('a handler that THROWS answers with a CORS 500, not an opaque crash', async () => {
+	// The bug behind a "Failed to fetch": an uncaught throw becomes Cloudflare's default 500,
+	// which carries NO CORS headers, so the browser can't read it and reports a network failure.
+	// The fetch wrapper must catch anything and return a CORS'd JSON error instead. Force a throw
+	// from deep in a handler via a misbehaving rate limiter.
+	const env = { ...ENV(), RATE_LIMITER: { limit: () => { throw new Error('boom'); } } };
+	const res = await worker.fetch(post({ prompt: 'x', llm: LLM }), env);
+	assert.equal(res.status, 500);
+	assert.equal(res.headers.get('Access-Control-Allow-Origin'), '*', 'CORS present so the app can read it');
+	const out = await res.json();
+	assert.match(out.error, /internal error/i);
+});
+
 test('an unmapped upstream error LOGS why, not just the status', async () => {
 	// "llm_error 400" in the logs and "LLM error 400" on the user's screen say the same
 	// nothing. The provider's message is already in hand at that point; not recording it makes

@@ -438,6 +438,17 @@ test('unknown analysis is reported, not emitted', () => {
 	assert.match(errors.join(' '), /Unknown analysis/);
 });
 
+test('a scalar yIN hallucinated onto a node does not crash the normalizer', () => {
+	// A node that does not DECLARE yIN never coerces it, so a model that adds a bare `yIN` to a
+	// generator left a raw string where output-column naming did `.map`. That TypeError was
+	// uncaught and took the whole /build down — the browser only saw "Failed to fetch".
+	for (const args of [{ N: 10, yIN: 'foo' }, { N: 10, yIN: 3 }]) {
+		assert.doesNotThrow(() => normalizeSession({ analyses: [{ name: 'Random', args }] }));
+		const { session } = normalizeSession({ analyses: [{ name: 'Random', args }] });
+		assert.equal(session.tableProcesses.length, 1, 'the node still builds');
+	}
+});
+
 test('schema is registry-derived: broad node coverage + Cosinor keeps its fixed cosinorx', () => {
 	// Regression guard for the bug this whole exercise found: a hand-authored schema
 	// missed Cosinor's fixed `cosinorx` output; the registry-derived one must carry it.
