@@ -1,1 +1,1 @@
-export const buildInfo = { buildNumber: "966752af" };
+export const buildInfo = { buildNumber: "6b7987d1" };
