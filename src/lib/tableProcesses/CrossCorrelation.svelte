@@ -47,21 +47,21 @@
 			warnings.push(`The most-shifted lags overlap in only ${minN} points; their correlations are noisy. Reduce the max lag for steadier tails.`);
 		}
 
-		return [
-			{
-				lag: res.lags,
-				correlation: res.r,
-				pvalue: res.pvalue,
-				n: res.n,
-				peakLag: res.peakLag,
-				peakR: res.peakR,
-				aName: a.name ?? String(argsIN.xIN),
-				bName: b.name ?? String(argsIN.yIN),
-				methodUsed: method,
-				warnings
-			},
-			true
-		];
+		const result = {
+			lag: res.lags,
+			correlation: res.r,
+			pvalue: res.pvalue,
+			n: res.n,
+			peakLag: res.peakLag,
+			peakR: res.peakR,
+			aName: a.name ?? String(argsIN.xIN),
+			bName: b.name ?? String(argsIN.yIN),
+			methodUsed: method,
+			warnings
+		};
+		// Write from the func so doProcess() (MCP engine + demo generator) bakes real columns.
+		writeCrossOutputs(argsIN, result);
+		return [result, true];
 	}
 
 	function writeCrossOutputs(argsIN, result) {
@@ -112,7 +112,6 @@
 		p.args.valid = valid;
 		result = res ?? { lag: [], correlation: [], pvalue: [], warnings: [] };
 		p.warnings = result.warnings ?? [];
-		if (valid) writeCrossOutputs(p.args, result);
 	}
 
 	// Recompute when either input's DATA changes, not just the refs.

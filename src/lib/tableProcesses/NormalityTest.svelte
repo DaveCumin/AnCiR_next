@@ -60,7 +60,11 @@
 			warnings.push(`Non-normal at α=${alpha}: ${nonNormal.join(', ')}. Prefer rank / non-parametric methods for ${nonNormal.length === 1 ? 'this variable' : 'these variables'}.`);
 		}
 
-		return [{ rows, methodUsed: method, warnings }, true];
+		// Write outputs from the func so doProcess() (MCP engine + demo generator) bakes real
+		// columns; writeOutputColumn no-ops on unwired (-1) keys, so pure-result callers are safe.
+		const result = { rows, methodUsed: method, warnings };
+		writeNormalityOutputs(argsIN, result);
+		return [result, true];
 	}
 
 	function writeNormalityOutputs(argsIN, result) {
@@ -110,7 +114,6 @@
 		p.args.valid = valid;
 		result = res ?? { rows: [], methodUsed: p.args.method, warnings: [] };
 		p.warnings = result.warnings ?? [];
-		if (valid) writeNormalityOutputs(p.args, result);
 	}
 
 	// Recompute when input DATA changes (getDataHash), not just when the ref list changes.

@@ -84,7 +84,11 @@
 			warnings.push('Some pairs could not be computed (a column with no variance, or too few overlapping points) and are reported as NaN.');
 		}
 
-		return [{ rows, methodUsed: method, warnings }, true];
+		// Write outputs from the func so doProcess() (MCP engine + demo generator) bakes real
+		// columns; writeOutputColumn no-ops on unwired (-1) keys, so pure-result callers are safe.
+		const result = { rows, methodUsed: method, warnings };
+		writeCorrelationOutputs(argsIN, result);
+		return [result, true];
 	}
 
 	function writeCorrelationOutputs(argsIN, result) {
@@ -163,7 +167,6 @@
 		p.args.valid = valid;
 		result = res ?? { rows: [], methodUsed: p.args.method, warnings: [] };
 		p.warnings = result.warnings ?? [];
-		if (valid) writeCorrelationOutputs(p.args, result);
 	}
 
 	// Track the DATA of every wired column, not just its id. Editing an upstream value changes

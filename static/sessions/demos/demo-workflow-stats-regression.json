@@ -1,0 +1,946 @@
+{
+  "rawData": {
+    "190": [
+      0,
+      0.5,
+      1,
+      1.5,
+      2,
+      2.5,
+      3,
+      3.5,
+      4,
+      4.5,
+      5,
+      5.5,
+      6,
+      6.5,
+      7,
+      7.5,
+      8,
+      8.5,
+      9,
+      9.5,
+      10,
+      10.5,
+      11,
+      11.5,
+      12,
+      12.5,
+      13,
+      13.5,
+      14,
+      14.5,
+      15,
+      15.5,
+      16,
+      16.5,
+      17,
+      17.5,
+      18,
+      18.5,
+      19,
+      19.5,
+      20,
+      20.5,
+      21,
+      21.5,
+      22,
+      22.5,
+      23,
+      23.5,
+      24,
+      24.5,
+      25,
+      25.5,
+      26,
+      26.5,
+      27,
+      27.5,
+      28,
+      28.5,
+      29,
+      29.5
+    ],
+    "191": [
+      -1.4757336475094274,
+      3.7710768191641106,
+      2.1679805457229886,
+      8.089659767811693,
+      4.986124601660677,
+      3.767606671226349,
+      4.049141260709684,
+      10.660763175795427,
+      11.277584735950036,
+      11.739333716760987,
+      9.608354090473313,
+      -1.778723133107924,
+      13.118486072294312,
+      3.047631881188794,
+      14.490485764925136,
+      7.468263010310834,
+      25.683778830896195,
+      16.208798256206958,
+      19.84654171941657,
+      16.974464423366793,
+      26.966740935146948,
+      22.627306828908125,
+      15.287970837140298,
+      21.948010536960247,
+      15.36854032160703,
+      14.28370665159635,
+      27.504189587783667,
+      21.062794938107587,
+      14.810131309300587,
+      22.075549919629175,
+      17.401890997217837,
+      26.125407027137683,
+      25.119384401431027,
+      22.487158256099704,
+      26.3939235173708,
+      29.219981542141507,
+      39.97720788951978,
+      19.81372635149151,
+      29.890568250805934,
+      34.28889438726792,
+      39.014012471631254,
+      48.488735794740805,
+      32.180939820092924,
+      30.775149347613706,
+      39.78490761670667,
+      32.31182954128645,
+      47.40043530355028,
+      43.16272639071767,
+      33.86253120606221,
+      33.090973345972465,
+      41.89202219210919,
+      36.8042074821823,
+      28.08136386347571,
+      28.960547791956632,
+      44.003282432707174,
+      35.907365786000696,
+      40.660619730393755,
+      47.97627390863211,
+      53.22623414272415,
+      49.94991622546435
+    ],
+    "192": [
+      0,
+      0.5,
+      1,
+      1.5,
+      2,
+      2.5,
+      3,
+      3.5,
+      4,
+      4.5,
+      5,
+      5.5,
+      6,
+      6.5,
+      7,
+      7.5,
+      8,
+      8.5,
+      9,
+      9.5,
+      10,
+      10.5,
+      11,
+      11.5,
+      12,
+      12.5,
+      13,
+      13.5,
+      14,
+      14.5,
+      15,
+      15.5,
+      16,
+      16.5,
+      17,
+      17.5,
+      18,
+      18.5,
+      19,
+      19.5,
+      20,
+      20.5,
+      21,
+      21.5,
+      22,
+      22.5,
+      23,
+      23.5,
+      24,
+      24.5,
+      25,
+      25.5,
+      26,
+      26.5,
+      27,
+      27.5,
+      28,
+      28.5,
+      29,
+      29.5
+    ],
+    "193": [
+      2.20056280110468,
+      2.9417238233519494,
+      3.6828848455992187,
+      4.4240458678464885,
+      5.165206890093758,
+      5.906367912341027,
+      6.647528934588297,
+      7.388689956835566,
+      8.129850979082835,
+      8.871012001330104,
+      9.612173023577373,
+      10.353334045824642,
+      11.094495068071915,
+      11.835656090319183,
+      12.576817112566452,
+      13.317978134813721,
+      14.05913915706099,
+      14.800300179308259,
+      15.541461201555531,
+      16.2826222238028,
+      17.02378324605007,
+      17.764944268297338,
+      18.506105290544607,
+      19.24726631279188,
+      19.988427335039148,
+      20.729588357286417,
+      21.470749379533686,
+      22.211910401780955,
+      22.953071424028224,
+      23.694232446275496,
+      24.435393468522765,
+      25.176554490770034,
+      25.917715513017303,
+      26.65887653526457,
+      27.40003755751184,
+      28.14119857975911,
+      28.88235960200638,
+      29.62352062425365,
+      30.36468164650092,
+      31.10584266874819,
+      31.847003690995457,
+      32.588164713242726,
+      33.329325735489995,
+      34.070486757737264,
+      34.81164777998453,
+      35.55280880223181,
+      36.29396982447908,
+      37.03513084672635,
+      37.776291868973615,
+      38.517452891220884,
+      39.25861391346815,
+      39.99977493571542,
+      40.74093595796269,
+      41.48209698020996,
+      42.22325800245723,
+      42.9644190247045,
+      43.705580046951766,
+      44.446741069199035,
+      45.18790209144631,
+      45.92906311369358
+    ],
+    "194": [
+      -3.6762964486141074,
+      0.8293529958121613,
+      -1.51490429987623,
+      3.665613899965204,
+      -0.17908228843308116,
+      -2.138761241114678,
+      -2.598387673878613,
+      3.2720732189598616,
+      3.1477337568672006,
+      2.8683217154308824,
+      -0.0038189331040605623,
+      -12.132057178932566,
+      2.023991004222397,
+      -8.78802420913039,
+      1.9136686523586839,
+      -5.849715124502887,
+      11.624639673835205,
+      1.4084980768986988,
+      4.30508051786104,
+      0.6918421995639932,
+      9.942957689096879,
+      4.862362560610787,
+      -3.218134453404309,
+      2.7007442241683677,
+      -4.619887013432118,
+      -6.445881705690066,
+      6.033440208249981,
+      -1.1491154636733683,
+      -8.142940114727637,
+      -1.618682526646321,
+      -7.033502471304928,
+      0.9488525363676494,
+      -0.7983311115862755,
+      -4.1717182791648675,
+      -1.0061140401410391,
+      1.0787829623823981,
+      11.0948482875134,
+      -9.80979427276214,
+      -0.47411339569498523,
+      3.183051718519735,
+      7.167008780635797,
+      15.900571081498079,
+      -1.1483859153970712,
+      -3.295337410123558,
+      4.973259836722136,
+      -3.240979260945359,
+      11.106465479071204,
+      6.127595543991326,
+      -3.9137606629114075,
+      -5.426479545248419,
+      2.633408278641035,
+      -3.1955674535331227,
+      -12.659572094486983,
+      -12.521549188253328,
+      1.780024430249945,
+      -7.057053238703801,
+      -3.0449603165580115,
+      3.529532839433074,
+      8.038332051277841,
+      4.020853111770769
+    ],
+    "195": [
+      0.8213828724296275
+    ],
+    "196": [
+      5.985516069625881
+    ],
+    "197": [
+      1.4823220444945389
+    ],
+    "198": [
+      2.20056280110468
+    ],
+    "199": [
+      "resid_191_15"
+    ],
+    "200": [
+      0.9882521667366339
+    ],
+    "201": [
+      0.8331633262088315
+    ],
+    "202": [
+      60
+    ],
+    "203": [
+      1
+    ]
+  },
+  "data": [
+    {
+      "id": 190,
+      "name": "x",
+      "data": 190,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 191,
+      "name": "y",
+      "data": 191,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 192,
+      "name": "trendx_15",
+      "data": 192,
+      "type": "number",
+      "tableProcessGUId": "9f943548-83b4-4ada-afcd-8ab52d48b9f3",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 193,
+      "name": "trendy_191_15",
+      "data": 193,
+      "type": "number",
+      "tableProcessGUId": "9f943548-83b4-4ada-afcd-8ab52d48b9f3",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 194,
+      "name": "resid_191_15",
+      "data": 194,
+      "type": "number",
+      "tableProcessGUId": "9f943548-83b4-4ada-afcd-8ab52d48b9f3",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 195,
+      "name": "r2_15",
+      "data": 195,
+      "type": "number",
+      "tableProcessGUId": "9f943548-83b4-4ada-afcd-8ab52d48b9f3",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 196,
+      "name": "rmse_15",
+      "data": 196,
+      "type": "number",
+      "tableProcessGUId": "9f943548-83b4-4ada-afcd-8ab52d48b9f3",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 197,
+      "name": "coef_slope_15",
+      "data": 197,
+      "type": "number",
+      "tableProcessGUId": "9f943548-83b4-4ada-afcd-8ab52d48b9f3",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 198,
+      "name": "coef_intercept_15",
+      "data": 198,
+      "type": "number",
+      "tableProcessGUId": "9f943548-83b4-4ada-afcd-8ab52d48b9f3",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 199,
+      "name": "variable_16",
+      "data": 199,
+      "type": "category",
+      "tableProcessGUId": "87182bba-888c-4902-9f76-6b0a80661c64",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 200,
+      "name": "statistic_16",
+      "data": 200,
+      "type": "number",
+      "tableProcessGUId": "87182bba-888c-4902-9f76-6b0a80661c64",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 201,
+      "name": "pvalue_16",
+      "data": 201,
+      "type": "number",
+      "tableProcessGUId": "87182bba-888c-4902-9f76-6b0a80661c64",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 202,
+      "name": "n_16",
+      "data": 202,
+      "type": "number",
+      "tableProcessGUId": "87182bba-888c-4902-9f76-6b0a80661c64",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 203,
+      "name": "normal_16",
+      "data": 203,
+      "type": "number",
+      "tableProcessGUId": "87182bba-888c-4902-9f76-6b0a80661c64",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    }
+  ],
+  "plots": [
+    {
+      "id": 20,
+      "name": "Linear fit",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "scatterplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "xlimsIN": [
+          null,
+          null
+        ],
+        "xLogScale": false,
+        "ylimsLeftIN": [
+          null,
+          null
+        ],
+        "ylimsRightIN": [
+          null,
+          null
+        ],
+        "yLogScaleLeft": false,
+        "yLogScaleRight": false,
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 30
+        },
+        "xAxis": {
+          "label": "x",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisLeft": {
+          "label": "y",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisRight": {
+          "label": "",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 204,
+              "name": "x",
+              "refId": 190,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "y": {
+              "id": 205,
+              "name": "y",
+              "refId": 191,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "data",
+            "yAxis": "left",
+            "line": {
+              "colour": "#234154",
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": false,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#234154",
+              "radius": 3,
+              "shape": "circle",
+              "draw": true
+            }
+          },
+          {
+            "x": {
+              "id": 206,
+              "name": "trendx_15",
+              "refId": 192,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "y": {
+              "id": 207,
+              "name": "trendy_191_15",
+              "refId": 193,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "fit",
+            "yAxis": "left",
+            "line": {
+              "colour": "#BE796B",
+              "strokeWidth": 2.5,
+              "stroke": "solid",
+              "draw": true,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#BE796B",
+              "radius": 3,
+              "shape": "circle",
+              "draw": false
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "topright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-80)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "nightBands": []
+      }
+    },
+    {
+      "id": 21,
+      "name": "Residuals vs x",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "scatterplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "xlimsIN": [
+          null,
+          null
+        ],
+        "xLogScale": false,
+        "ylimsLeftIN": [
+          null,
+          null
+        ],
+        "ylimsRightIN": [
+          null,
+          null
+        ],
+        "yLogScaleLeft": false,
+        "yLogScaleRight": false,
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 30
+        },
+        "xAxis": {
+          "label": "x",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisLeft": {
+          "label": "residual",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisRight": {
+          "label": "",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 208,
+              "name": "x",
+              "refId": 190,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "y": {
+              "id": 209,
+              "name": "resid_191_15",
+              "refId": 194,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "residuals",
+            "yAxis": "left",
+            "line": {
+              "colour": "#BE796B",
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": false,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#BE796B",
+              "radius": 3,
+              "shape": "circle",
+              "draw": true
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "topright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-80)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "nightBands": []
+      }
+    },
+    {
+      "id": 22,
+      "name": "Fit statistics",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "columnRefs": [
+          195,
+          196,
+          197,
+          198
+        ],
+        "showCol": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
+    }
+  ],
+  "tableProcesses": [
+    {
+      "id": 15,
+      "name": "TrendFit",
+      "displayName": "Fit linear trend",
+      "args": {
+        "xIN": 190,
+        "yIN": [
+          191
+        ],
+        "model": "linear",
+        "polyDegree": 2,
+        "outputX": -1,
+        "out": {
+          "trendx": 192,
+          "trendy_191": 193,
+          "resid_191": 194,
+          "r2": 195,
+          "rmse": 196,
+          "coef_slope": 197,
+          "coef_intercept": 198
+        }
+      },
+      "refTPId": null
+    },
+    {
+      "id": 16,
+      "name": "NormalityTest",
+      "displayName": "Residual normality",
+      "args": {
+        "yIN": [
+          194
+        ],
+        "method": "shapiro",
+        "alpha": 0.05,
+        "out": {
+          "variable": 199,
+          "statistic": 200,
+          "pvalue": 201,
+          "n": 202,
+          "normal": 203
+        },
+        "valid": false
+      },
+      "refTPId": null
+    }
+  ],
+  "storedValues": {},
+  "chainRefs": [],
+  "nodeNotes": {},
+  "notes": [
+    {
+      "id": "note_8",
+      "text": "WORKFLOW: linear regression + residual diagnostics. Predict a continuous Y from X, then check the model is trustworthy — the second half is the part people skip. Step 1 — Fit Trend Curves (linear) reports the slope, intercept and R² (fraction of variance explained) and overlays the fitted line on the data. Step 2 — the DIAGNOSTIC: the residuals (observed − fitted) are plotted against X. A good fit leaves them scattered structurelessly around zero; a funnel shape means non-constant variance (heteroscedasticity), and a curve means the straight-line model is wrong — BOTH can hide behind a high R². Step 3 — a normality test on the residuals checks the assumption behind the p-values and confidence intervals. The lesson: never report R² without looking at the residuals. To model a curved relationship, switch the Fit Trend model to polynomial/exponential and re-check the residuals. Galton (1886); Anscombe (1973).",
+      "x": 40,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
+  "groups": [],
+  "composites": [],
+  "orphanProcesses": [],
+  "nodeLayout": {
+    "data_190": {
+      "x": 60,
+      "y": 314
+    },
+    "data_191": {
+      "x": 60,
+      "y": 814
+    },
+    "tableprocess_15": {
+      "x": 440,
+      "y": 314
+    },
+    "tableprocess_16": {
+      "x": 440,
+      "y": 814
+    },
+    "note_8": {
+      "x": 40,
+      "y": 24
+    },
+    "plot_20": {
+      "x": 820,
+      "y": 314
+    },
+    "plot_21": {
+      "x": 820,
+      "y": 814
+    },
+    "plot_22": {
+      "x": 820,
+      "y": 1314
+    }
+  },
+  "appState": {
+    "currentTab": "null",
+    "currentControlTab": "properties",
+    "loadingState": {
+      "isLoading": true,
+      "loadingMsg": "Warming up..."
+    },
+    "showNavbar": true,
+    "showDisplayPanel": false,
+    "showControlPanel": false,
+    "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
+    "windowWidth": 1024,
+    "windowHeight": 768,
+    "widthNavBar": 56,
+    "widthDisplayPanel": 250,
+    "widthControlPanel": 250,
+    "gridSize": 15,
+    "canvasOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
+    "view": "canvas",
+    "displayTimezone": "utc",
+    "invisiblePlotIds": [],
+    "canvasSelectedNodeId": null,
+    "canvasMultiSelectedCount": 0,
+    "canvasMultiSelectedNodeIds": [],
+    "appColours": [
+      "#234154",
+      "#BE796B",
+      "#3E7295",
+      "#EDADAD",
+      "#A6ACD5",
+      "#83422A",
+      "#6B9FD5",
+      "#4A1E0E",
+      "#fbe67280"
+    ],
+    "showColourPicker": false,
+    "showAYSModal": false,
+    "AYStext": "",
+    "AYScallback": null,
+    "AYSoptions": [
+      "Yes",
+      "No"
+    ],
+    "showWorkflow": false
+  },
+  "version": "β.61.1"
+}

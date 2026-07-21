@@ -1,0 +1,1385 @@
+{
+  "rawData": {
+    "112": [
+      171.48505281383814,
+      164.47480475736373,
+      166.14381245292108,
+      178.0327967401142,
+      182.13997047276877,
+      173.01896741141667,
+      177.76349974224343,
+      177.51257723138184,
+      153.5510122918727,
+      177.12692111385428,
+      169.21218683839064,
+      158.46223769725614,
+      153.03268470552686,
+      152.14808605191033,
+      165.9673890357465,
+      175.37372861435182,
+      177.0252970839216,
+      179.3576245255133,
+      179.2043723693914,
+      175.39960828415644,
+      184.47907121847197,
+      167.8647969152594,
+      171.94884703960898,
+      170.1954956731295,
+      156.15751608479442,
+      171.8842126567428,
+      159.87546086836335,
+      167.63516674804208,
+      170.87045766872262,
+      178.12739892647014,
+      163.09748727642634,
+      177.21785817561488,
+      172.14907032880512,
+      162.06753918116144,
+      165.35977975630513,
+      183.48830006843232,
+      174.0443435681697,
+      166.5173346498289,
+      170.03833180077802,
+      167.1460187476569,
+      173.3872078558421,
+      180.9294575228728,
+      166.6986159747065,
+      162.6637992941151,
+      161.50816442906364,
+      174.6141814457709,
+      178.53128511626878,
+      165.10678742294755,
+      177.3332721282694,
+      177.18425607291263,
+      156.43588539565772,
+      162.4879723762942,
+      180.62118258771943,
+      183.6933112484095,
+      173.31390111139555,
+      162.0025775818046,
+      167.28597724245492,
+      177.9318538681195,
+      167.70656310978217,
+      161.6006817263933,
+      161.16106594133555,
+      168.46781488843385,
+      179.40287774488496,
+      177.97116992561507,
+      172.25018074957453,
+      170.49933995906636,
+      168.8338299900418,
+      165.76936189372262,
+      182.4078498494029,
+      170.43928576035844,
+      171.9220692083272,
+      177.15137384640897,
+      166.29470267479147,
+      160.54117912652774,
+      175.40111022878006,
+      163.59618355295243,
+      167.30045542195586,
+      188.3958601360381,
+      159.52122785170388,
+      178.1425446205179
+    ],
+    "113": [
+      65.14020650777881,
+      58.54637945243786,
+      57.62181357484116,
+      76.57932322798094,
+      69.76598312924341,
+      58.299899849560234,
+      67.74701628554944,
+      74.80335493661677,
+      45.916286412868246,
+      68.97922536679336,
+      68.9881253458226,
+      52.86478265722163,
+      65.90416815285766,
+      48.694859565301165,
+      59.13311524069813,
+      72.7152472884151,
+      75.07536539907525,
+      77.46397787530566,
+      69.68456688879529,
+      58.00663168987051,
+      71.27578397299763,
+      65.14299275468312,
+      60.7618305116403,
+      70.54044877221898,
+      56.96301471525261,
+      64.11351381161059,
+      58.84623533851964,
+      57.466172497798404,
+      65.24388490328293,
+      64.75462238393044,
+      51.093654180239405,
+      64.15615582669462,
+      61.37361159446909,
+      62.53735248514803,
+      53.01965038457562,
+      72.75533526083655,
+      66.31663195564003,
+      64.92226208452391,
+      60.327447122158816,
+      59.981964180633845,
+      69.0563506707943,
+      72.83950292094758,
+      64.1884490878819,
+      53.62992766407053,
+      59.325285929998856,
+      67.98160751482601,
+      70.9246289248638,
+      61.398435052867924,
+      65.8676405302374,
+      70.34070717384836,
+      48.94149481711044,
+      56.00524390700837,
+      68.23443565403004,
+      79.85282432953116,
+      70.67634593783045,
+      61.47479401549512,
+      67.1292759685489,
+      71.62344501596478,
+      56.00115965040548,
+      51.63277620816611,
+      65.83639310508843,
+      73.02168861981288,
+      76.06247841436833,
+      71.71419849545552,
+      67.75287262887933,
+      71.96485901093615,
+      67.43174809109115,
+      54.270430971738946,
+      75.46439863769466,
+      58.04992891005607,
+      71.82194467684381,
+      67.40090742858469,
+      56.81907668021017,
+      58.36303525761362,
+      75.12249462951966,
+      61.5180639062978,
+      61.088354035797735,
+      72.7610012108446,
+      56.327445059024484,
+      65.31421369886759
+    ],
+    "114": [
+      24,
+      17,
+      61,
+      72,
+      14,
+      29,
+      37,
+      35,
+      16,
+      25,
+      55,
+      47,
+      27,
+      49,
+      25,
+      21,
+      29,
+      47,
+      42,
+      34,
+      70,
+      49,
+      23,
+      59,
+      39,
+      24,
+      32,
+      29,
+      52,
+      22,
+      49,
+      61,
+      40,
+      41,
+      14,
+      11,
+      40,
+      20,
+      32,
+      50,
+      28,
+      11,
+      16,
+      90,
+      24,
+      7,
+      34,
+      32,
+      77,
+      16,
+      68,
+      42,
+      60,
+      61,
+      13,
+      25,
+      20,
+      36,
+      30,
+      33,
+      50,
+      24,
+      37,
+      24,
+      49,
+      10,
+      24,
+      54,
+      46,
+      19,
+      48,
+      35,
+      66,
+      27,
+      9,
+      23,
+      63,
+      31,
+      31,
+      24
+    ],
+    "115": [
+      0.542692685794591,
+      -1.0095506519793767,
+      0.009395455969171447,
+      0.4306527400050889,
+      0.6854754959986068,
+      -0.8891714034470701,
+      0.43194953384884005,
+      0.47056731325393497,
+      -1.8929419103297294,
+      1.7447606979729298,
+      -0.24232588561568058,
+      0.4949595950789765,
+      -1.6084390547046215,
+      -0.12436410982362772,
+      -0.8380128951502749,
+      -0.9497908088958373,
+      -0.9846983765685396,
+      -1.4428897008754018,
+      0.921106798094665,
+      0.7617780147723449,
+      0.6137193284631342,
+      1.772892871945753,
+      -0.8631705603071631,
+      1.5415177361560937,
+      0.8054115460197487,
+      -0.15317657463773146,
+      1.7416817863206648,
+      -0.2765872159035395,
+      -0.6144954892270338,
+      1.5774119091002359,
+      -1.693896967669919,
+      -1.2988176300692893,
+      -0.6407459499319168,
+      0.6758549463857718,
+      0.26306802310804833,
+      -1.2027693874045433,
+      -1.8344602718539458,
+      -0.22605270225003565,
+      -0.11622030981652842,
+      0.7312118596594128,
+      -0.6066838596985706,
+      -0.33879778529695265,
+      1.6086058205984528,
+      0.13657822865768907,
+      -1.9539713152246405,
+      -0.21631846976580846,
+      1.4475618514138284,
+      0.32430345183209963,
+      -0.8863679371209346,
+      0.04635495738845891,
+      -1.2847585467151288,
+      1.2727293326651763,
+      -0.4391942937110864,
+      0.40690468802450913,
+      -1.5215279002696627,
+      0.8596904422382142,
+      -2.4478635861497784,
+      -1.0812578898315908,
+      -1.7404469516702634,
+      0.4253782681341298,
+      0.7088551654734341,
+      0.006318814164999675,
+      -1.5732641454152523,
+      -1.4615322792927887,
+      -0.5755799232734761,
+      0.7686867737326388,
+      0.03985367819640766,
+      -0.8314331187236716,
+      1.2914859032273998,
+      -0.2106910020384133,
+      -0.9453605764665328,
+      0.07105463176846125,
+      -1.1122495803182846,
+      -0.7222454972664423,
+      0.30623943836056544,
+      0.17124180424496985,
+      0.40833514329484766,
+      -0.2580575153019241,
+      0.7584364694140476,
+      -1.055396557402041
+    ],
+    "116": [
+      "height",
+      "weight",
+      "income",
+      "noise"
+    ],
+    "117": [
+      80,
+      80,
+      80,
+      80
+    ],
+    "118": [
+      170.53879418084958,
+      64.48440947533803,
+      36,
+      -0.1611356673329588
+    ],
+    "119": [
+      170.6848988138945,
+      65.19343882898303,
+      32,
+      -0.13877034223067958
+    ],
+    "120": [
+      8.057792481276465,
+      7.60632864671443,
+      17.905518560955134,
+      1.0128458889723544
+    ],
+    "121": [
+      152.14808605191033,
+      45.916286412868246,
+      7,
+      -2.4478635861497784
+    ],
+    "122": [
+      188.3958601360381,
+      79.85282432953116,
+      90,
+      1.772892871945753
+    ],
+    "123": [
+      36.24777408412777,
+      33.936537916662914,
+      83,
+      4.220756458095531
+    ],
+    "124": [
+      165.29653167296573,
+      58.5005434037318,
+      24,
+      -0.9464681345738589
+    ],
+    "125": [
+      177.2467116637785,
+      70.57442306362185,
+      49,
+      0.5604493464617267
+    ],
+    "126": [
+      11.950179990812785,
+      12.073879659890054,
+      25,
+      1.5069174810355856
+    ],
+    "127": [
+      -0.2022696771032797,
+      -0.2638181903372702,
+      0.6811810398371355,
+      -0.009652159839050269
+    ],
+    "128": [
+      -0.5340294375649933,
+      -0.5943613566644981,
+      0.0032916445039044818,
+      -0.7050634852902183
+    ],
+    "129": [
+      "height",
+      "weight",
+      "income",
+      "noise"
+    ],
+    "130": [
+      0.9839309959603402,
+      0.9823554121744219,
+      0.9572167067694011,
+      0.9812746431173519
+    ],
+    "131": [
+      0.41498094818602693,
+      0.33735275896888206,
+      0.009127759517022271,
+      0.2911739072597386
+    ],
+    "132": [
+      80,
+      80,
+      80,
+      80
+    ],
+    "133": [
+      1,
+      1,
+      0,
+      1
+    ],
+    "134": [
+      "height",
+      "height",
+      "height",
+      "weight",
+      "weight",
+      "income"
+    ],
+    "135": [
+      "weight",
+      "income",
+      "noise",
+      "income",
+      "noise",
+      "noise"
+    ],
+    "136": [
+      0.7748880272144102,
+      -0.03668089805291761,
+      0.033088713709872264,
+      -0.10512298001484123,
+      0.07102228144409044,
+      0.06594220495130995
+    ],
+    "137": [
+      0,
+      0.7466732004033496,
+      0.770763494342244,
+      0.3533945501956185,
+      0.5312912444993352,
+      0.5611356853737088
+    ],
+    "138": [
+      80,
+      80,
+      80,
+      80,
+      80,
+      80
+    ]
+  },
+  "data": [
+    {
+      "id": 112,
+      "name": "height",
+      "data": 112,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 113,
+      "name": "weight",
+      "data": 113,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 114,
+      "name": "income",
+      "data": 114,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 115,
+      "name": "noise",
+      "data": 115,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 116,
+      "name": "variable_8",
+      "data": 116,
+      "type": "category",
+      "tableProcessGUId": "bb68a88d-0a77-4133-bbc0-c5771eaf8c6f",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 117,
+      "name": "n_8",
+      "data": 117,
+      "type": "number",
+      "tableProcessGUId": "bb68a88d-0a77-4133-bbc0-c5771eaf8c6f",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 118,
+      "name": "mean_8",
+      "data": 118,
+      "type": "number",
+      "tableProcessGUId": "bb68a88d-0a77-4133-bbc0-c5771eaf8c6f",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 119,
+      "name": "median_8",
+      "data": 119,
+      "type": "number",
+      "tableProcessGUId": "bb68a88d-0a77-4133-bbc0-c5771eaf8c6f",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 120,
+      "name": "sd_8",
+      "data": 120,
+      "type": "number",
+      "tableProcessGUId": "bb68a88d-0a77-4133-bbc0-c5771eaf8c6f",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 121,
+      "name": "min_8",
+      "data": 121,
+      "type": "number",
+      "tableProcessGUId": "bb68a88d-0a77-4133-bbc0-c5771eaf8c6f",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 122,
+      "name": "max_8",
+      "data": 122,
+      "type": "number",
+      "tableProcessGUId": "bb68a88d-0a77-4133-bbc0-c5771eaf8c6f",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 123,
+      "name": "range_8",
+      "data": 123,
+      "type": "number",
+      "tableProcessGUId": "bb68a88d-0a77-4133-bbc0-c5771eaf8c6f",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 124,
+      "name": "q1_8",
+      "data": 124,
+      "type": "number",
+      "tableProcessGUId": "bb68a88d-0a77-4133-bbc0-c5771eaf8c6f",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 125,
+      "name": "q3_8",
+      "data": 125,
+      "type": "number",
+      "tableProcessGUId": "bb68a88d-0a77-4133-bbc0-c5771eaf8c6f",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 126,
+      "name": "iqr_8",
+      "data": 126,
+      "type": "number",
+      "tableProcessGUId": "bb68a88d-0a77-4133-bbc0-c5771eaf8c6f",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 127,
+      "name": "skewness_8",
+      "data": 127,
+      "type": "number",
+      "tableProcessGUId": "bb68a88d-0a77-4133-bbc0-c5771eaf8c6f",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 128,
+      "name": "kurtosis_8",
+      "data": 128,
+      "type": "number",
+      "tableProcessGUId": "bb68a88d-0a77-4133-bbc0-c5771eaf8c6f",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 129,
+      "name": "variable_9",
+      "data": 129,
+      "type": "category",
+      "tableProcessGUId": "1f8213d1-53ca-4fa8-8ec1-5f282c4b3d8d",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 130,
+      "name": "statistic_9",
+      "data": 130,
+      "type": "number",
+      "tableProcessGUId": "1f8213d1-53ca-4fa8-8ec1-5f282c4b3d8d",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 131,
+      "name": "pvalue_9",
+      "data": 131,
+      "type": "number",
+      "tableProcessGUId": "1f8213d1-53ca-4fa8-8ec1-5f282c4b3d8d",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 132,
+      "name": "n_9",
+      "data": 132,
+      "type": "number",
+      "tableProcessGUId": "1f8213d1-53ca-4fa8-8ec1-5f282c4b3d8d",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 133,
+      "name": "normal_9",
+      "data": 133,
+      "type": "number",
+      "tableProcessGUId": "1f8213d1-53ca-4fa8-8ec1-5f282c4b3d8d",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 134,
+      "name": "var_i_10",
+      "data": 134,
+      "type": "category",
+      "tableProcessGUId": "5dd138dd-59cb-4c86-9d4a-c05621300c11",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 135,
+      "name": "var_j_10",
+      "data": 135,
+      "type": "category",
+      "tableProcessGUId": "5dd138dd-59cb-4c86-9d4a-c05621300c11",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 136,
+      "name": "r_10",
+      "data": 136,
+      "type": "number",
+      "tableProcessGUId": "5dd138dd-59cb-4c86-9d4a-c05621300c11",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 137,
+      "name": "pvalue_10",
+      "data": 137,
+      "type": "number",
+      "tableProcessGUId": "5dd138dd-59cb-4c86-9d4a-c05621300c11",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 138,
+      "name": "n_10",
+      "data": 138,
+      "type": "number",
+      "tableProcessGUId": "5dd138dd-59cb-4c86-9d4a-c05621300c11",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    }
+  ],
+  "plots": [
+    {
+      "id": 7,
+      "name": "Distributions",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "histogram",
+      "selected": false,
+      "facet": true,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "xlimsIN": [
+          null,
+          null
+        ],
+        "ylimsIN": [
+          null,
+          null
+        ],
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 50
+        },
+        "xAxis": {
+          "label": "",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxis": {
+          "label": "Count",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "column": {
+              "id": 139,
+              "name": "height",
+              "refId": 112,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "Histogram 1",
+            "binMode": "uniform",
+            "binSize": 1,
+            "binStart": null,
+            "stepSize": null,
+            "diffStep": false,
+            "cuts": [],
+            "fillColour": "#234154",
+            "fillOpacity": 0.5,
+            "strokeWidth": 1,
+            "stroke": "#000000",
+            "showDensity": false,
+            "bandwidth": null,
+            "showCounts": false
+          },
+          {
+            "column": {
+              "id": 140,
+              "name": "weight",
+              "refId": 113,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "Histogram 2",
+            "binMode": "uniform",
+            "binSize": 1,
+            "binStart": null,
+            "stepSize": null,
+            "diffStep": false,
+            "cuts": [],
+            "fillColour": "#BE796B",
+            "fillOpacity": 0.5,
+            "strokeWidth": 1,
+            "stroke": "#000000",
+            "showDensity": false,
+            "bandwidth": null,
+            "showCounts": false
+          },
+          {
+            "column": {
+              "id": 141,
+              "name": "income",
+              "refId": 114,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "Histogram 3",
+            "binMode": "uniform",
+            "binSize": 1,
+            "binStart": null,
+            "stepSize": null,
+            "diffStep": false,
+            "cuts": [],
+            "fillColour": "#3E7295",
+            "fillOpacity": 0.5,
+            "strokeWidth": 1,
+            "stroke": "#000000",
+            "showDensity": false,
+            "bandwidth": null,
+            "showCounts": false
+          },
+          {
+            "column": {
+              "id": 142,
+              "name": "noise",
+              "refId": 115,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "Histogram 4",
+            "binMode": "uniform",
+            "binSize": 1,
+            "binStart": null,
+            "stepSize": null,
+            "diffStep": false,
+            "cuts": [],
+            "fillColour": "#EDADAD",
+            "fillOpacity": 0.5,
+            "strokeWidth": 1,
+            "stroke": "#000000",
+            "showDensity": false,
+            "bandwidth": null,
+            "showCounts": false
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "topright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-80)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        }
+      }
+    },
+    {
+      "id": 8,
+      "name": "Correlation heatmap",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "correlationheatmap",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "padding": {
+          "top": 20,
+          "right": 20,
+          "bottom": 70,
+          "left": 70
+        },
+        "colormap": "rdbu",
+        "showValues": true,
+        "method": "pearson",
+        "data": [
+          {
+            "column": {
+              "id": 143,
+              "name": "height",
+              "refId": 112,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            }
+          },
+          {
+            "column": {
+              "id": 144,
+              "name": "weight",
+              "refId": 113,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            }
+          },
+          {
+            "column": {
+              "id": 145,
+              "name": "income",
+              "refId": 114,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            }
+          },
+          {
+            "column": {
+              "id": 146,
+              "name": "noise",
+              "refId": 115,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "name": "Pairs plot",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "pairsplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "padding": {
+          "top": 24,
+          "right": 16,
+          "bottom": 16,
+          "left": 60
+        },
+        "colormap": "rdbu",
+        "method": "pearson",
+        "pointColour": "#234154",
+        "data": [
+          {
+            "column": {
+              "id": 147,
+              "name": "height",
+              "refId": 112,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            }
+          },
+          {
+            "column": {
+              "id": 148,
+              "name": "weight",
+              "refId": 113,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            }
+          },
+          {
+            "column": {
+              "id": 149,
+              "name": "income",
+              "refId": 114,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            }
+          },
+          {
+            "column": {
+              "id": 150,
+              "name": "noise",
+              "refId": 115,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "name": "Summary statistics",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "columnRefs": [
+          116,
+          118,
+          120,
+          127,
+          128
+        ],
+        "showCol": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
+    },
+    {
+      "id": 11,
+      "name": "Normality",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "columnRefs": [
+          129,
+          130,
+          131,
+          133
+        ],
+        "showCol": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
+    }
+  ],
+  "tableProcesses": [
+    {
+      "id": 8,
+      "name": "DescribeData",
+      "displayName": "Describe data",
+      "args": {
+        "yIN": [
+          112,
+          113,
+          114,
+          115
+        ],
+        "out": {
+          "variable": 116,
+          "n": 117,
+          "mean": 118,
+          "median": 119,
+          "sd": 120,
+          "min": 121,
+          "max": 122,
+          "range": 123,
+          "q1": 124,
+          "q3": 125,
+          "iqr": 126,
+          "skewness": 127,
+          "kurtosis": 128
+        },
+        "valid": false
+      },
+      "refTPId": null
+    },
+    {
+      "id": 9,
+      "name": "NormalityTest",
+      "displayName": "Normality test",
+      "args": {
+        "yIN": [
+          112,
+          113,
+          114,
+          115
+        ],
+        "method": "shapiro",
+        "alpha": 0.05,
+        "out": {
+          "variable": 129,
+          "statistic": 130,
+          "pvalue": 131,
+          "n": 132,
+          "normal": 133
+        },
+        "valid": false
+      },
+      "refTPId": null
+    },
+    {
+      "id": 10,
+      "name": "Correlation",
+      "displayName": "Correlation matrix",
+      "args": {
+        "yIN": [
+          112,
+          113,
+          114,
+          115
+        ],
+        "method": "auto",
+        "alpha": 0.05,
+        "out": {
+          "var_i": 134,
+          "var_j": 135,
+          "r": 136,
+          "pvalue": 137,
+          "n": 138
+        },
+        "valid": false
+      },
+      "refTPId": null
+    }
+  ],
+  "storedValues": {},
+  "chainRefs": [],
+  "nodeNotes": {},
+  "notes": [
+    {
+      "id": "note_4",
+      "text": "WORKFLOW: exploratory data analysis (the first look). Before any test, get to know the data. Step 1 — Describe Data reports n, centre (mean/median), spread (sd, IQR) and shape (skewness, (excess) kurtosis) for every variable; a median far from the mean, or a large skew, flags an asymmetric distribution. Step 2 — the faceted histograms show each distribution directly (one small-multiple per variable): look for skew, bimodality, gaps and outliers. Step 3 — a normality test screens each variable (Shapiro-Wilk by default); a small p-value means non-normal, which steers you toward rank / non-parametric methods later. Step 4 — the correlation heatmap and pairs plot map the pairwise relationships (scatter + linear fit above the diagonal, distributions on it) so you can see which variables move together BEFORE modelling. Read it as reconnaissance, not inference: this pass tells you which tests are appropriate and where the data-quality problems are. Tukey, Exploratory Data Analysis (1977).",
+      "x": 40,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
+  "groups": [],
+  "composites": [],
+  "orphanProcesses": [],
+  "nodeLayout": {
+    "data_112": {
+      "x": 60,
+      "y": 314
+    },
+    "data_113": {
+      "x": 60,
+      "y": 814
+    },
+    "data_114": {
+      "x": 60,
+      "y": 1314
+    },
+    "data_115": {
+      "x": 60,
+      "y": 1814
+    },
+    "tableprocess_8": {
+      "x": 440,
+      "y": 314
+    },
+    "tableprocess_9": {
+      "x": 440,
+      "y": 814
+    },
+    "tableprocess_10": {
+      "x": 440,
+      "y": 1314
+    },
+    "note_4": {
+      "x": 40,
+      "y": 24
+    },
+    "plot_7": {
+      "x": 820,
+      "y": 314
+    },
+    "plot_8": {
+      "x": 820,
+      "y": 814
+    },
+    "plot_9": {
+      "x": 820,
+      "y": 1314
+    },
+    "plot_10": {
+      "x": 820,
+      "y": 1814
+    },
+    "plot_11": {
+      "x": 820,
+      "y": 2314
+    }
+  },
+  "appState": {
+    "currentTab": "null",
+    "currentControlTab": "properties",
+    "loadingState": {
+      "isLoading": true,
+      "loadingMsg": "Warming up..."
+    },
+    "showNavbar": true,
+    "showDisplayPanel": false,
+    "showControlPanel": false,
+    "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
+    "windowWidth": 1024,
+    "windowHeight": 768,
+    "widthNavBar": 56,
+    "widthDisplayPanel": 250,
+    "widthControlPanel": 250,
+    "gridSize": 15,
+    "canvasOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
+    "view": "canvas",
+    "displayTimezone": "utc",
+    "invisiblePlotIds": [],
+    "canvasSelectedNodeId": null,
+    "canvasMultiSelectedCount": 0,
+    "canvasMultiSelectedNodeIds": [],
+    "appColours": [
+      "#234154",
+      "#BE796B",
+      "#3E7295",
+      "#EDADAD",
+      "#A6ACD5",
+      "#83422A",
+      "#6B9FD5",
+      "#4A1E0E",
+      "#fbe67280"
+    ],
+    "showColourPicker": false,
+    "showAYSModal": false,
+    "AYStext": "",
+    "AYScallback": null,
+    "AYSoptions": [
+      "Yes",
+      "No"
+    ],
+    "showWorkflow": false
+  },
+  "version": "β.61.1"
+}

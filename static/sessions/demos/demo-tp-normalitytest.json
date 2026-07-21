@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "339": [
+    "467": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "340": [
+    "468": [
       1,
       21.831051418620845,
       7.38905609893065,
@@ -103,13 +103,33 @@
       25.790339917193062,
       8.729138363720132,
       2.9545115270921065
+    ],
+    "469": [
+      "Normality Test input 1",
+      "Normality Test input 2"
+    ],
+    "470": [
+      0.8884940768269717,
+      0.8065802789114069
+    ],
+    "471": [
+      0.00020472387230596745,
+      0.000001248621988914067
+    ],
+    "472": [
+      50,
+      50
+    ],
+    "473": [
+      0,
+      0
     ]
   },
   "data": [
     {
-      "id": 339,
+      "id": 467,
       "name": "Normality Test input 1",
-      "data": 339,
+      "data": 467,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -118,9 +138,9 @@
       "processes": []
     },
     {
-      "id": 340,
+      "id": 468,
       "name": "Normality Test input 2",
-      "data": 340,
+      "data": 468,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,50 +149,55 @@
       "processes": []
     },
     {
-      "id": 341,
-      "name": "variable_37",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 469,
+      "name": "variable_48",
+      "data": 469,
+      "type": "category",
+      "tableProcessGUId": "2f05cd35-89cf-4e8c-bbcd-dc64519f0e78",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 342,
-      "name": "statistic_37",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 470,
+      "name": "statistic_48",
+      "data": 470,
+      "type": "number",
+      "tableProcessGUId": "2f05cd35-89cf-4e8c-bbcd-dc64519f0e78",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 343,
-      "name": "pvalue_37",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 471,
+      "name": "pvalue_48",
+      "data": 471,
+      "type": "number",
+      "tableProcessGUId": "2f05cd35-89cf-4e8c-bbcd-dc64519f0e78",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 344,
-      "name": "n_37",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 472,
+      "name": "n_48",
+      "data": 472,
+      "type": "number",
+      "tableProcessGUId": "2f05cd35-89cf-4e8c-bbcd-dc64519f0e78",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 345,
-      "name": "normal_37",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 473,
+      "name": "normal_48",
+      "data": 473,
+      "type": "number",
+      "tableProcessGUId": "2f05cd35-89cf-4e8c-bbcd-dc64519f0e78",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -181,7 +206,7 @@
   ],
   "plots": [
     {
-      "id": 57,
+      "id": 77,
       "name": "Normality Test result",
       "x": 350,
       "y": 150,
@@ -197,13 +222,13 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          339,
-          340,
-          341,
-          342,
-          343,
-          344,
-          345
+          467,
+          468,
+          469,
+          470,
+          471,
+          472,
+          473
         ],
         "showCol": [
           true,
@@ -223,22 +248,22 @@
   ],
   "tableProcesses": [
     {
-      "id": 37,
+      "id": 48,
       "name": "NormalityTest",
       "displayName": "Normality Test",
       "args": {
         "yIN": [
-          339,
-          340
+          467,
+          468
         ],
         "method": "shapiro",
         "alpha": 0.05,
         "out": {
-          "variable": 341,
-          "statistic": 342,
-          "pvalue": 343,
-          "n": 344,
-          "normal": 345
+          "variable": 469,
+          "statistic": 470,
+          "pvalue": 471,
+          "n": 472,
+          "normal": 473
         },
         "valid": false
       },
@@ -250,7 +275,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_39",
+      "id": "note_46",
       "text": "Tests whether each wired column is drawn from a normal distribution, one row per variable: the test statistic, its p-value, n, and a yes/no verdict at your chosen alpha. Shapiro-Wilk (the default, and the most powerful test; valid for 3 ≤ n ≤ 5000) is recommended; D'Agostino-Pearson (an omnibus skewness + kurtosis K² test, n ≥ 8, better for very large samples) and Jarque-Bera are also available. A small p-value means the data depart from normality, so a rank / non-parametric method is safer downstream. All three match scipy (shapiro / normaltest / jarque_bera). Shapiro & Wilk 1965; Royston 1995.",
       "x": 40,
       "y": 24,
@@ -262,23 +287,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_339": {
+    "data_467": {
       "x": 60,
       "y": 314
     },
-    "data_340": {
+    "data_468": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_37": {
+    "tableprocess_48": {
       "x": 440,
       "y": 314
     },
-    "plot_57": {
+    "plot_77": {
       "x": 820,
       "y": 314
     },
-    "note_39": {
+    "note_46": {
       "x": 40,
       "y": 24
     }
@@ -339,5 +364,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.1"
+  "version": "β.61.1"
 }

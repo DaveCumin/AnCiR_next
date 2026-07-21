@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 59,
+  "count": 66,
   "sessions": [
     {
       "id": "workflow-rest-activity",
@@ -44,6 +44,101 @@
         "circularphase"
       ],
       "keywords": "workflow — group phase comparison do two groups peak at different times of day? per-subject phase is extracted by cosinor (its acrophase port emits one peak time per subject, i.e. the group’s phase distribution), shown on a 24 h circular plot with each group’s rayleigh vector, and tested with rayleigh (is each group clustered?) plus watson-williams (do the groups differ in mean phase?). workflows cosinor rayleightest circularphase"
+    },
+    {
+      "id": "workflow-stats-eda",
+      "name": "Workflow — exploratory data analysis (first look)",
+      "family": "Workflows",
+      "description": "The universal first pass over a new dataset. Describe Data reports centre / spread / skew, a normality test screens each variable, and a correlation matrix maps the relationships — visualised as faceted histograms, a correlation heatmap and a pairs plot. Read the distributions and the relationship map BEFORE running any inferential test.",
+      "url": "sessions/demos/demo-workflow-stats-eda.json",
+      "kind": "workflow",
+      "showcases": [
+        "DescribeData",
+        "NormalityTest",
+        "Correlation",
+        "histogram"
+      ],
+      "keywords": "workflow — exploratory data analysis (first look) the universal first pass over a new dataset. describe data reports centre / spread / skew, a normality test screens each variable, and a correlation matrix maps the relationships — visualised as faceted histograms, a correlation heatmap and a pairs plot. read the distributions and the relationship map before running any inferential test. workflows describedata normalitytest correlation histogram"
+    },
+    {
+      "id": "workflow-stats-two-group",
+      "name": "Workflow — compare two groups",
+      "family": "Workflows",
+      "description": "The classic two-group question: is the treatment different from control? Compare groups auto-selects the test (Welch t when both groups look normal, Mann-Whitney when they do not) and surfaces the assumption check, and a boxplot with a significance bar shows the difference. Read: which test fired and why, the p-value, and the direction/size of the shift.",
+      "url": "sessions/demos/demo-workflow-stats-two-group.json",
+      "kind": "workflow",
+      "showcases": [
+        "GroupComparison",
+        "boxplot"
+      ],
+      "keywords": "workflow — compare two groups the classic two-group question: is the treatment different from control? compare groups auto-selects the test (welch t when both groups look normal, mann-whitney when they do not) and surfaces the assumption check, and a boxplot with a significance bar shows the difference. read: which test fired and why, the p-value, and the direction/size of the shift. workflows groupcomparison boxplot"
+    },
+    {
+      "id": "workflow-stats-anova",
+      "name": "Workflow — compare several groups (ANOVA)",
+      "family": "Workflows",
+      "description": "Three or more conditions: do they differ, and which pairs? Compare groups auto-runs a one-way ANOVA (or Kruskal-Wallis if non-normal) with Tukey/Holm post-hoc, a mean ± SEM plot shows the group means, and a boxplot with significance bars shows the pairwise differences. Read the omnibus test FIRST; only interpret the pairwise grid if it is significant.",
+      "url": "sessions/demos/demo-workflow-stats-anova.json",
+      "kind": "workflow",
+      "showcases": [
+        "GroupComparison",
+        "meansem",
+        "boxplot"
+      ],
+      "keywords": "workflow — compare several groups (anova) three or more conditions: do they differ, and which pairs? compare groups auto-runs a one-way anova (or kruskal-wallis if non-normal) with tukey/holm post-hoc, a mean ± sem plot shows the group means, and a boxplot with significance bars shows the pairwise differences. read the omnibus test first; only interpret the pairwise grid if it is significant. workflows groupcomparison meansem boxplot"
+    },
+    {
+      "id": "workflow-stats-correlation",
+      "name": "Workflow — correlation & relationships",
+      "family": "Workflows",
+      "description": "What moves with what? Correlation computes every pairwise coefficient (auto-choosing Pearson vs Spearman by normality), shown as a heatmap and a pairs plot (scatter + linear fit above the diagonal, distributions on it). Read strength and direction, linear vs monotonic, and watch for multicollinearity — several strongly inter-correlated predictors.",
+      "url": "sessions/demos/demo-workflow-stats-correlation.json",
+      "kind": "workflow",
+      "showcases": [
+        "Correlation",
+        "correlationheatmap",
+        "pairsplot"
+      ],
+      "keywords": "workflow — correlation & relationships what moves with what? correlation computes every pairwise coefficient (auto-choosing pearson vs spearman by normality), shown as a heatmap and a pairs plot (scatter + linear fit above the diagonal, distributions on it). read strength and direction, linear vs monotonic, and watch for multicollinearity — several strongly inter-correlated predictors. workflows correlation correlationheatmap pairsplot"
+    },
+    {
+      "id": "workflow-stats-regression",
+      "name": "Workflow — linear regression + residual diagnostics",
+      "family": "Workflows",
+      "description": "Predict Y from X, then check the model is honest. Fit Trend Curves fits the line (slope, intercept, R²), the fitted line is overlaid on the data, and the residuals are plotted against X and screened for normality. The lesson: R² alone is not enough — structure in the residuals (a funnel or a curve) means the model is mis-specified even when R² looks high.",
+      "url": "sessions/demos/demo-workflow-stats-regression.json",
+      "kind": "workflow",
+      "showcases": [
+        "TrendFit",
+        "NormalityTest",
+        "scatterplot"
+      ],
+      "keywords": "workflow — linear regression + residual diagnostics predict y from x, then check the model is honest. fit trend curves fits the line (slope, intercept, r²), the fitted line is overlaid on the data, and the residuals are plotted against x and screened for normality. the lesson: r² alone is not enough — structure in the residuals (a funnel or a curve) means the model is mis-specified even when r² looks high. workflows trendfit normalitytest scatterplot"
+    },
+    {
+      "id": "workflow-stats-logistic",
+      "name": "Workflow — logistic regression (binary outcome)",
+      "family": "Workflows",
+      "description": "Model a yes/no outcome from predictors. Logistic regression reports each predictor’s odds ratio with a 95% CI and a Wald p-value, plus McFadden pseudo-R² and a likelihood-ratio test. The fit plot shows the predicted probability against the linear predictor (the S-curve, for any number of predictors) with the observed outcomes overlaid. Watch for a non-convergence warning — it usually means separation.",
+      "url": "sessions/demos/demo-workflow-stats-logistic.json",
+      "kind": "workflow",
+      "showcases": [
+        "LogisticRegression",
+        "scatterplot"
+      ],
+      "keywords": "workflow — logistic regression (binary outcome) model a yes/no outcome from predictors. logistic regression reports each predictor’s odds ratio with a 95% ci and a wald p-value, plus mcfadden pseudo-r² and a likelihood-ratio test. the fit plot shows the predicted probability against the linear predictor (the s-curve, for any number of predictors) with the observed outcomes overlaid. watch for a non-convergence warning — it usually means separation. workflows logisticregression scatterplot"
+    },
+    {
+      "id": "workflow-stats-chi-square",
+      "name": "Workflow — categorical association (chi-square)",
+      "family": "Workflows",
+      "description": "Are two categorical variables related? The chi-squared test of independence cross-tabulates them into a contingency table and tests whether the row and column variables are associated (Yates’ correction on 2×2 tables). Read the statistic / df / p and the table; the node warns when any expected count falls below 5, where the χ² approximation breaks down and Fisher’s exact test is preferable.",
+      "url": "sessions/demos/demo-workflow-stats-chi-square.json",
+      "kind": "workflow",
+      "showcases": [
+        "ChiSquared"
+      ],
+      "keywords": "workflow — categorical association (chi-square) are two categorical variables related? the chi-squared test of independence cross-tabulates them into a contingency table and tests whether the row and column variables are associated (yates’ correction on 2×2 tables). read the statistic / df / p and the table; the node warns when any expected count falls below 5, where the χ² approximation breaks down and fisher’s exact test is preferable. workflows chisquared"
     },
     {
       "id": "dataset-testdata",

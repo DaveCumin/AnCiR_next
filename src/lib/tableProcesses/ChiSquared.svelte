@@ -49,7 +49,11 @@
 			// Expected-count assumption check (Cochran's rule).
 			const small = res.expected.flat().filter((e) => e < 5).length;
 			if (small) warnings.push(`${small} of ${res.expected.flat().length} expected counts are below 5; the χ² approximation is unreliable (consider Fisher's exact test).`);
-			return [{ testType, rowLabels, colLabels, table, expected: res.expected, statistic: res.statistic, pvalue: res.pvalue, df: res.df, warnings }, true];
+			{
+				const result = { testType, rowLabels, colLabels, table, expected: res.expected, statistic: res.statistic, pvalue: res.pvalue, df: res.df, warnings };
+				writeChiOutputs(argsIN, result); // write from the func so doProcess() bakes real columns
+				return [result, true];
+			}
 		}
 
 		// goodness-of-fit
@@ -78,7 +82,9 @@
 		const res = chiSquareGoodnessOfFit(observed, null);
 		const expected = observed.map(() => observed.reduce((s, v) => s + v, 0) / observed.length);
 		if (expected.some((e) => e < 5)) warnings.push('Some expected counts are below 5; the χ² approximation is unreliable at these counts.');
-		return [{ testType, labels, observed, expected, statistic: res.statistic, pvalue: res.pvalue, df: res.df, warnings }, true];
+		const result = { testType, labels, observed, expected, statistic: res.statistic, pvalue: res.pvalue, df: res.df, warnings };
+		writeChiOutputs(argsIN, result); // write from the func so doProcess() bakes real columns
+		return [result, true];
 	}
 
 	function writeChiOutputs(argsIN, result) {
@@ -123,7 +129,6 @@
 		p.args.valid = valid;
 		result = res ?? { statistic: NaN, pvalue: NaN, df: NaN, warnings: [] };
 		p.warnings = result.warnings ?? [];
-		if (valid) writeChiOutputs(p.args, result);
 	}
 
 	let getHash = $derived.by(() => {

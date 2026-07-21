@@ -1,0 +1,500 @@
+{
+  "rawData": {
+    "151": [
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment",
+      "Treatment"
+    ],
+    "152": [
+      88.35409917229877,
+      110.43391404946388,
+      98.58364196425984,
+      103.91507280805419,
+      109.05617829887909,
+      114.0669840780494,
+      103.350539995663,
+      104.258782354025,
+      82.54903144096876,
+      71.38165928601977,
+      109.1969865677252,
+      81.43654160925614,
+      100.35730645275812,
+      111.21035932667141,
+      97.44189267649244,
+      120.79478217238284,
+      111.45338405772141,
+      100.87399730922665,
+      114.89516685557615,
+      70.72729811776948,
+      84.46024018551464,
+      96.95829469149466,
+      98.11303841147635,
+      102.36627278997128,
+      92.78147339270062,
+      103.70236887793821,
+      117.696806255881,
+      99.5191646386902,
+      95.13757987996719,
+      110.7907145534499,
+      91.20141228435503,
+      83.24054927694172,
+      88.49786348597313,
+      99.35421117313963,
+      94.89765278039323,
+      111.39605506920576,
+      88.61795067388164,
+      113.37287994972387,
+      96.78200962106635,
+      119.23595873039221,
+      80.52012782322407,
+      94.33924513947063,
+      92.96893575232882,
+      106.86956805974022,
+      137.76545256753985,
+      128.0307869824795,
+      96.27423998191108,
+      99.69058915195845,
+      102.90392702051255,
+      127.39335622715552,
+      119.13797937739659,
+      112.47142790623965,
+      116.48859508903183,
+      84.38228710242444,
+      113.39666537133768,
+      89.47675778523217,
+      127.33619802876365,
+      121.12679975751524,
+      113.24024086563746,
+      112.26078302399917,
+      129.88313388203676,
+      134.3919114810978,
+      103.92231902026221,
+      118.08281885594705,
+      113.0424187185552,
+      113.29739138368411,
+      112.93162799689782,
+      80.14861889432882,
+      100.80453242125601,
+      118.12066482415075,
+      111.09416423213518,
+      88.71970960242427,
+      101.67976650383522,
+      116.0299492284764,
+      85.46140073434674,
+      102.56860896400569,
+      128.71270483911383,
+      94.15883751901438,
+      121.82927148063601,
+      95.67633861937259,
+      115.35632208597063,
+      129.17037421980964,
+      112.17064217430361,
+      93.10168796945565,
+      124.41896237028934,
+      122.99118395730108,
+      85.60819595522338,
+      127.12913847635588,
+      116.43773936095903,
+      107.47621179001308
+    ],
+    "153": [
+      -3.522579853054469
+    ],
+    "154": [
+      0.0006810340956445726
+    ]
+  },
+  "data": [
+    {
+      "id": 151,
+      "name": "group",
+      "data": 151,
+      "type": "category",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 152,
+      "name": "response",
+      "data": 152,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 153,
+      "name": "statistic_11",
+      "data": 153,
+      "type": "number",
+      "tableProcessGUId": "d9510fe5-f800-4ac5-a1a5-199b2d051850",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 154,
+      "name": "pvalue_11",
+      "data": 154,
+      "type": "number",
+      "tableProcessGUId": "d9510fe5-f800-4ac5-a1a5-199b2d051850",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    }
+  ],
+  "plots": [
+    {
+      "id": 12,
+      "name": "Response by group",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "boxplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "xlimsIN": [
+          null,
+          null
+        ],
+        "ylimsIN": [
+          null,
+          null
+        ],
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 50
+        },
+        "xAxis": {
+          "label": "Group",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxis": {
+          "label": "Response",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 155,
+              "name": "group",
+              "refId": 151,
+              "type": "category",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "y": {
+              "id": 156,
+              "name": "response",
+              "refId": 152,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "Box Plot 1",
+            "boxPlot": {
+              "colour": "#234154",
+              "fillColour": "#234154",
+              "fillOpacity": 0.3,
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": true,
+              "showOutliers": true,
+              "outlierSize": 3,
+              "outlierMethod": "iqr",
+              "iqrMultiplier": 1.5,
+              "zThreshold": 3,
+              "whiskerWidth": 0.5,
+              "boxWidth": 0.8,
+              "medianWidth": 2,
+              "medianColour": "#000000"
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "topright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-80)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "showSigBars": true,
+        "sigMethod": "auto",
+        "sigAlpha": 0.05,
+        "showNs": false,
+        "sigBarThickness": 1,
+        "sigBarColor": "#000000",
+        "sigBarFontSize": 11,
+        "sigBarYOffset": 0,
+        "sigBarSpacing": 1
+      }
+    },
+    {
+      "id": 13,
+      "name": "Test result",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "columnRefs": [
+          153,
+          154
+        ],
+        "showCol": [
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
+    }
+  ],
+  "tableProcesses": [
+    {
+      "id": 11,
+      "name": "GroupComparison",
+      "displayName": "Compare groups",
+      "args": {
+        "xIN": 151,
+        "yIN": [
+          152
+        ],
+        "method": "auto",
+        "alpha": 0.05,
+        "postHocEnabled": true,
+        "out": {
+          "statistic": 153,
+          "pvalue": 154
+        }
+      },
+      "refTPId": null
+    }
+  ],
+  "storedValues": {},
+  "chainRefs": [],
+  "nodeNotes": {},
+  "notes": [
+    {
+      "id": "note_5",
+      "text": "WORKFLOW: compare two groups. The most common inferential question — is group A different from group B? Compare groups on 'auto' inspects each group for normality (Jarque-Bera) and equal variance and PICKS the test for you: a Welch t-test when both groups look roughly normal, a Mann-Whitney U (rank) test when they do not; it surfaces the choice and any assumption warnings so the decision is visible, not hidden. Read the output in order: (1) which test fired and why, (2) the p-value against your α, (3) the DIRECTION and size of the difference — the boxplot shows the medians, spread and any outliers, and the significance bar marks a detected difference. A significant p tells you the groups differ; the boxplot tells you by how much and whether it matters. Student (1908); Mann & Whitney (1947); Welch (1947).",
+      "x": 40,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
+  "groups": [],
+  "composites": [],
+  "orphanProcesses": [],
+  "nodeLayout": {
+    "data_151": {
+      "x": 60,
+      "y": 314
+    },
+    "data_152": {
+      "x": 60,
+      "y": 814
+    },
+    "tableprocess_11": {
+      "x": 440,
+      "y": 314
+    },
+    "note_5": {
+      "x": 40,
+      "y": 24
+    },
+    "plot_12": {
+      "x": 820,
+      "y": 314
+    },
+    "plot_13": {
+      "x": 820,
+      "y": 814
+    }
+  },
+  "appState": {
+    "currentTab": "null",
+    "currentControlTab": "properties",
+    "loadingState": {
+      "isLoading": true,
+      "loadingMsg": "Warming up..."
+    },
+    "showNavbar": true,
+    "showDisplayPanel": false,
+    "showControlPanel": false,
+    "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
+    "windowWidth": 1024,
+    "windowHeight": 768,
+    "widthNavBar": 56,
+    "widthDisplayPanel": 250,
+    "widthControlPanel": 250,
+    "gridSize": 15,
+    "canvasOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
+    "view": "canvas",
+    "displayTimezone": "utc",
+    "invisiblePlotIds": [],
+    "canvasSelectedNodeId": null,
+    "canvasMultiSelectedCount": 0,
+    "canvasMultiSelectedNodeIds": [],
+    "appColours": [
+      "#234154",
+      "#BE796B",
+      "#3E7295",
+      "#EDADAD",
+      "#A6ACD5",
+      "#83422A",
+      "#6B9FD5",
+      "#4A1E0E",
+      "#fbe67280"
+    ],
+    "showColourPicker": false,
+    "showAYSModal": false,
+    "AYStext": "",
+    "AYScallback": null,
+    "AYSoptions": [
+      "Yes",
+      "No"
+    ],
+    "showWorkflow": false
+  },
+  "version": "β.61.1"
+}

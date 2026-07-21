@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "334": [
+    "462": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "335": [
+    "463": [
       49.99999999999999,
       39.64723819589918,
       29.999999999999986,
@@ -103,13 +103,94 @@
       60.3527618041009,
       50.000000000000014,
       39.64723819589919
+    ],
+    "464": [
+      -12,
+      -11,
+      -10,
+      -9,
+      -8,
+      -7,
+      -6,
+      -5,
+      -4,
+      -3,
+      -2,
+      -1,
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "465": [
+      -0.02397460631115133,
+      -0.28574860140576386,
+      -0.5241981547253294,
+      -0.7239144446568048,
+      -0.8741860486983215,
+      -0.9678992485077611,
+      -1,
+      -0.9671632070386956,
+      -0.869032461216743,
+      -0.7099865325949399,
+      -0.5,
+      -0.2540272862256762,
+      0.009614238622093192,
+      0.26368800237651463,
+      0.5,
+      0.7043605630671294,
+      0.8633525053024479,
+      0.9649086919365584,
+      1,
+      0.9644678929377009,
+      0.8599839728705243,
+      0.6940909508978618,
+      0.4797425861589327,
+      0.23409193418983582,
+      -0.023974606311150955
+    ],
+    "466": [
+      0.8863905887044223,
+      0.07783048901336764,
+      0.0005169344530367992,
+      8.854908928324079e-8,
+      4.0190073491430667e-14,
+      0,
+      0,
+      0,
+      4.9960036108132044e-15,
+      2.2894928397576564e-8,
+      0.0002962797255043892,
+      0.07818675286233101,
+      0.9471668988917942,
+      0.06714293621910683,
+      0.0002962797255043892,
+      3.299656126110051e-8,
+      1.1657341758564144e-14,
+      0,
+      0,
+      0,
+      2.97761815204467e-13,
+      4.839094400743704e-7,
+      0.001733441754964371,
+      0.15147024626696948,
+      0.8863905887044223
     ]
   },
   "data": [
     {
-      "id": 334,
+      "id": 462,
       "name": "Cross-correlation input 1",
-      "data": 334,
+      "data": 462,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -118,9 +199,9 @@
       "processes": []
     },
     {
-      "id": 335,
+      "id": 463,
       "name": "Cross-correlation input 2",
-      "data": 335,
+      "data": 463,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,30 +210,33 @@
       "processes": []
     },
     {
-      "id": 336,
-      "name": "lag_36",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 464,
+      "name": "lag_47",
+      "data": 464,
+      "type": "number",
+      "tableProcessGUId": "c3776359-487d-4378-8ccb-1e89a00077a4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 337,
-      "name": "correlation_36",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 465,
+      "name": "correlation_47",
+      "data": 465,
+      "type": "number",
+      "tableProcessGUId": "c3776359-487d-4378-8ccb-1e89a00077a4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 338,
-      "name": "pvalue_36",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 466,
+      "name": "pvalue_47",
+      "data": 466,
+      "type": "number",
+      "tableProcessGUId": "c3776359-487d-4378-8ccb-1e89a00077a4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -161,7 +245,7 @@
   ],
   "plots": [
     {
-      "id": 56,
+      "id": 76,
       "name": "Cross-correlation result",
       "x": 350,
       "y": 150,
@@ -177,11 +261,11 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          334,
-          335,
-          336,
-          337,
-          338
+          462,
+          463,
+          464,
+          465,
+          466
         ],
         "showCol": [
           true,
@@ -199,18 +283,18 @@
   ],
   "tableProcesses": [
     {
-      "id": 36,
+      "id": 47,
       "name": "CrossCorrelation",
       "displayName": "Cross-correlation",
       "args": {
-        "xIN": 334,
-        "yIN": 335,
+        "xIN": 462,
+        "yIN": 463,
         "maxLag": 12,
         "method": "pearson",
         "out": {
-          "lag": 336,
-          "correlation": 337,
-          "pvalue": 338
+          "lag": 464,
+          "correlation": 465,
+          "pvalue": 466
         },
         "valid": false
       },
@@ -222,7 +306,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_38",
+      "id": "note_45",
       "text": "Computes the cross-correlogram of two series (A = the first input, B = the second): the correlation between A and B at each lag from -maxLag to +maxLag, using the overlapping segment only. The peak lag is the delay between the signals — a peak at a positive lag means B leads A by that many samples. Use it to find the phase relationship between two rhythms, or the response delay between a driver and a follower. Choose Pearson (linear) or Spearman (rank); leave max lag at 0 to auto-pick a quarter of the shorter series. Quick-plot draws the correlogram (lag vs r). Chatfield, The Analysis of Time Series.",
       "x": 40,
       "y": 24,
@@ -234,23 +318,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_334": {
+    "data_462": {
       "x": 60,
       "y": 314
     },
-    "data_335": {
+    "data_463": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_36": {
+    "tableprocess_47": {
       "x": 440,
       "y": 314
     },
-    "plot_56": {
+    "plot_76": {
       "x": 820,
       "y": 314
     },
-    "note_38": {
+    "note_45": {
       "x": 40,
       "y": 24
     }
@@ -311,5 +395,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.61.1"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "346": [
+    "474": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "347": [
+    "475": [
       25,
       26.192596079882613,
       29.689110867544645,
@@ -104,7 +104,7 @@
       25,
       26.192596079882605
     ],
-    "348": [
+    "476": [
       100,
       98,
       96,
@@ -155,13 +155,38 @@
       6,
       4,
       2
+    ],
+    "477": [
+      "Correlation input 1",
+      "Correlation input 1",
+      "Correlation input 2"
+    ],
+    "478": [
+      "Correlation input 2",
+      "Correlation input 3",
+      "Correlation input 3"
+    ],
+    "479": [
+      1,
+      0.044645731583387575,
+      0.04464573158338759
+    ],
+    "480": [
+      0,
+      0.7581875239105604,
+      0.7581875239105604
+    ],
+    "481": [
+      50,
+      50,
+      50
     ]
   },
   "data": [
     {
-      "id": 346,
+      "id": 474,
       "name": "Correlation input 1",
-      "data": 346,
+      "data": 474,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -170,9 +195,9 @@
       "processes": []
     },
     {
-      "id": 347,
+      "id": 475,
       "name": "Correlation input 2",
-      "data": 347,
+      "data": 475,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,9 +206,9 @@
       "processes": []
     },
     {
-      "id": 348,
+      "id": 476,
       "name": "Correlation input 3",
-      "data": 348,
+      "data": 476,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -192,50 +217,55 @@
       "processes": []
     },
     {
-      "id": 349,
-      "name": "var_i_38",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 477,
+      "name": "var_i_49",
+      "data": 477,
+      "type": "category",
+      "tableProcessGUId": "78da9eaa-e343-41a4-b3ed-4828020b73d6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 350,
-      "name": "var_j_38",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 478,
+      "name": "var_j_49",
+      "data": 478,
+      "type": "category",
+      "tableProcessGUId": "78da9eaa-e343-41a4-b3ed-4828020b73d6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 351,
-      "name": "r_38",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 479,
+      "name": "r_49",
+      "data": 479,
+      "type": "number",
+      "tableProcessGUId": "78da9eaa-e343-41a4-b3ed-4828020b73d6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 352,
-      "name": "pvalue_38",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 480,
+      "name": "pvalue_49",
+      "data": 480,
+      "type": "number",
+      "tableProcessGUId": "78da9eaa-e343-41a4-b3ed-4828020b73d6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 353,
-      "name": "n_38",
-      "data": null,
-      "tableProcessGUId": "",
+      "id": 481,
+      "name": "n_49",
+      "data": 481,
+      "type": "number",
+      "tableProcessGUId": "78da9eaa-e343-41a4-b3ed-4828020b73d6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -244,7 +274,7 @@
   ],
   "plots": [
     {
-      "id": 58,
+      "id": 78,
       "name": "Correlation result",
       "x": 350,
       "y": 150,
@@ -260,14 +290,14 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          346,
-          347,
-          348,
-          349,
-          350,
-          351,
-          352,
-          353
+          474,
+          475,
+          476,
+          477,
+          478,
+          479,
+          480,
+          481
         ],
         "showCol": [
           true,
@@ -288,23 +318,23 @@
   ],
   "tableProcesses": [
     {
-      "id": 38,
+      "id": 49,
       "name": "Correlation",
       "displayName": "Correlation",
       "args": {
         "yIN": [
-          346,
-          347,
-          348
+          474,
+          475,
+          476
         ],
         "method": "auto",
         "alpha": 0.05,
         "out": {
-          "var_i": 349,
-          "var_j": 350,
-          "r": 351,
-          "pvalue": 352,
-          "n": 353
+          "var_i": 477,
+          "var_j": 478,
+          "r": 479,
+          "pvalue": 480,
+          "n": 481
         },
         "valid": false
       },
@@ -316,7 +346,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_40",
+      "id": "note_47",
       "text": "Computes every pairwise correlation among the wired columns and reports them one row per pair: var_i, var_j, r, p-value and n. Choose Pearson (linear) or Spearman (rank / monotonic), or leave it on Auto — which uses Spearman if any column fails a Jarque-Bera normality check, so the whole matrix stays on one comparable method. Uses pairwise-complete rows (a missing value drops only that pair-row), and warns on small samples and, for Spearman, on ties. Quick-plot draws the correlation heatmap.",
       "x": 40,
       "y": 24,
@@ -328,27 +358,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_346": {
+    "data_474": {
       "x": 60,
       "y": 314
     },
-    "data_347": {
+    "data_475": {
       "x": 60,
       "y": 814
     },
-    "data_348": {
+    "data_476": {
       "x": 60,
       "y": 1314
     },
-    "tableprocess_38": {
+    "tableprocess_49": {
       "x": 440,
       "y": 314
     },
-    "plot_58": {
+    "plot_78": {
       "x": 820,
       "y": 314
     },
-    "note_40": {
+    "note_47": {
       "x": 40,
       "y": 24
     }
@@ -409,5 +439,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.61.1"
 }

@@ -677,6 +677,327 @@ const WORKFLOWS = [
 				rt.args.out.ww_pvalue
 			]);
 		}
+	},
+
+	// ==========================================================================
+	// General-statistics workflow templates (discipline-neutral). Each follows the
+	// same arc — explore → check assumptions → test/model → visualise → interpret.
+	// Analysis nodes that return a result table (DescribeData, NormalityTest,
+	// Correlation, ChiSquared, LogisticRegression) write their output columns when
+	// the component mounts on LOAD; the demo bakes the wiring and those columns fill
+	// when the session opens (same as the single-node demos). Metric/fit ports
+	// (GroupComparison statistic/pvalue, TrendFit r2/coef/resid) are written by the
+	// func at build time. `RAW`/`FIT` are the app's raw/fitted series colours.
+	// ==========================================================================
+	{
+		id: 'stats-eda',
+		name: 'Workflow — exploratory data analysis (first look)',
+		family: 'Workflows',
+		description:
+			'The universal first pass over a new dataset. Describe Data reports centre / spread / skew, a normality test screens each variable, and a correlation matrix maps the relationships — visualised as faceted histograms, a correlation heatmap and a pairs plot. Read the distributions and the relationship map BEFORE running any inferential test.',
+		showcases: ['DescribeData', 'NormalityTest', 'Correlation', 'histogram'],
+		async build() {
+			const rng = mulberry32(101);
+			const N = 80;
+			const height = seq(N, () => 170 + normal(rng, 0, 8)); // roughly normal
+			const weight = height.map((h) => 0.9 * (h - 170) + 65 + normal(rng, 0, 5)); // correlated with height
+			const income = seq(N, () => Math.round(Math.exp(normal(rng, 3.4, 0.5)))); // right-skewed
+			const noise = seq(N, () => normal(rng, 0, 1)); // independent
+			const ids = [
+				mkCol('number', height, 'height'),
+				mkCol('number', weight, 'weight'),
+				mkCol('number', income, 'income'),
+				mkCol('number', noise, 'noise')
+			];
+
+			const describeKeys = ['variable', 'n', 'mean', 'median', 'sd', 'min', 'max', 'range', 'q1', 'q3', 'iqr', 'skewness', 'kurtosis'];
+			const describe = new TableProcess({ name: 'DescribeData', args: { yIN: [...ids], out: Object.fromEntries(describeKeys.map((k) => [k, -1])) } }, null);
+			describe.displayName = 'Describe data';
+			pushObj(describe);
+			await describe.doProcess();
+
+			const norm = new TableProcess({ name: 'NormalityTest', args: { yIN: [...ids], method: 'shapiro', alpha: 0.05, out: { variable: -1, statistic: -1, pvalue: -1, n: -1, normal: -1 } } }, null);
+			norm.displayName = 'Normality test';
+			pushObj(norm);
+			await norm.doProcess();
+
+			const corr = new TableProcess({ name: 'Correlation', args: { yIN: [...ids], method: 'auto', alpha: 0.05, out: { var_i: -1, var_j: -1, r: -1, pvalue: -1, n: -1 } } }, null);
+			corr.displayName = 'Correlation matrix';
+			pushObj(corr);
+			await corr.doProcess();
+
+			const hist = new Plot({ name: 'Distributions', type: 'histogram' });
+			for (const id of ids) hist.plot.addData({ column: { refId: id } });
+			hist.facet = true; // one small-multiple histogram per variable
+			pushObj(hist);
+
+			const heat = new Plot({ name: 'Correlation heatmap', type: 'correlationheatmap' });
+			for (const id of ids) heat.plot.addData({ column: { refId: id } });
+			pushObj(heat);
+
+			const pairs = new Plot({ name: 'Pairs plot', type: 'pairsplot' });
+			for (const id of ids) pairs.plot.addData({ column: { refId: id } });
+			pushObj(pairs);
+
+			tablePlot('Summary statistics', ['variable', 'mean', 'sd', 'skewness', 'kurtosis'].map((k) => describe.args.out[k]));
+			tablePlot('Normality', ['variable', 'statistic', 'pvalue', 'normal'].map((k) => norm.args.out[k]));
+		}
+	},
+	{
+		id: 'stats-two-group',
+		name: 'Workflow — compare two groups',
+		family: 'Workflows',
+		description:
+			'The classic two-group question: is the treatment different from control? Compare groups auto-selects the test (Welch t when both groups look normal, Mann-Whitney when they do not) and surfaces the assumption check, and a boxplot with a significance bar shows the difference. Read: which test fired and why, the p-value, and the direction/size of the shift.',
+		showcases: ['GroupComparison', 'boxplot'],
+		async build() {
+			const rng = mulberry32(102);
+			const n = 45;
+			const groups = [];
+			const values = [];
+			for (let i = 0; i < n; i++) {
+				groups.push('Control');
+				values.push(100 + normal(rng, 0, 14));
+			}
+			for (let i = 0; i < n; i++) {
+				groups.push('Treatment');
+				values.push(111 + normal(rng, 0, 14));
+			}
+			const groupId = mkCol('category', groups, 'group');
+			const valueId = mkCol('number', values, 'response');
+
+			const gc = new TableProcess({ name: 'GroupComparison', args: { xIN: groupId, yIN: [valueId], method: 'auto', alpha: 0.05, postHocEnabled: true, out: { statistic: -1, pvalue: -1 } } }, null);
+			gc.displayName = 'Compare groups';
+			pushObj(gc);
+			await gc.doProcess();
+
+			const box = new Plot({ name: 'Response by group', type: 'boxplot' });
+			box.plot.addData({ x: { refId: groupId }, y: { refId: valueId } });
+			box.plot.showSigBars = true;
+			setAxisLabels(box, { x: 'Group', y: 'Response' });
+			pushObj(box);
+
+			tablePlot('Test result', [gc.args.out.statistic, gc.args.out.pvalue]);
+		}
+	},
+	{
+		id: 'stats-anova',
+		name: 'Workflow — compare several groups (ANOVA)',
+		family: 'Workflows',
+		description:
+			'Three or more conditions: do they differ, and which pairs? Compare groups auto-runs a one-way ANOVA (or Kruskal-Wallis if non-normal) with Tukey/Holm post-hoc, a mean ± SEM plot shows the group means, and a boxplot with significance bars shows the pairwise differences. Read the omnibus test FIRST; only interpret the pairwise grid if it is significant.',
+		showcases: ['GroupComparison', 'meansem', 'boxplot'],
+		async build() {
+			const rng = mulberry32(103);
+			const n = 30;
+			const groups = [];
+			const values = [];
+			const means = { A: 50, B: 55, C: 62, D: 61 };
+			for (const [label, m] of Object.entries(means)) {
+				for (let i = 0; i < n; i++) {
+					groups.push(label);
+					values.push(m + normal(rng, 0, 7));
+				}
+			}
+			const groupId = mkCol('category', groups, 'condition');
+			const valueId = mkCol('number', values, 'measure');
+
+			const gc = new TableProcess({ name: 'GroupComparison', args: { xIN: groupId, yIN: [valueId], method: 'auto', alpha: 0.05, postHocEnabled: true, out: { statistic: -1, pvalue: -1 } } }, null);
+			gc.displayName = 'One-way ANOVA + post-hoc';
+			pushObj(gc);
+			await gc.doProcess();
+
+			const mean = new Plot({ name: 'Group means (± SEM)', type: 'meansem' });
+			mean.plot.addData({ x: { refId: groupId }, y: { refId: valueId } });
+			setAxisLabels(mean, { x: 'Condition', y: 'Measure' });
+			pushObj(mean);
+
+			const box = new Plot({ name: 'Measure by condition', type: 'boxplot' });
+			box.plot.addData({ x: { refId: groupId }, y: { refId: valueId } });
+			box.plot.showSigBars = true;
+			setAxisLabels(box, { x: 'Condition', y: 'Measure' });
+			pushObj(box);
+
+			tablePlot('Omnibus test', [gc.args.out.statistic, gc.args.out.pvalue]);
+		}
+	},
+	{
+		id: 'stats-correlation',
+		name: 'Workflow — correlation & relationships',
+		family: 'Workflows',
+		description:
+			'What moves with what? Correlation computes every pairwise coefficient (auto-choosing Pearson vs Spearman by normality), shown as a heatmap and a pairs plot (scatter + linear fit above the diagonal, distributions on it). Read strength and direction, linear vs monotonic, and watch for multicollinearity — several strongly inter-correlated predictors.',
+		showcases: ['Correlation', 'correlationheatmap', 'pairsplot'],
+		async build() {
+			const rng = mulberry32(104);
+			const N = 70;
+			const x1 = seq(N, () => normal(rng, 0, 1));
+			const x2 = x1.map((v) => 0.85 * v + normal(rng, 0, 0.4)); // strong positive
+			const x3 = x1.map((v) => -0.6 * v + normal(rng, 0, 0.7)); // moderate negative
+			const x4 = seq(N, () => normal(rng, 0, 1)); // independent
+			const x5 = x1.map((v) => Math.sign(v) * v * v + normal(rng, 0, 0.3)); // monotonic-ish (Spearman > Pearson)
+			const ids = [
+				mkCol('number', x1, 'x1'),
+				mkCol('number', x2, 'x2'),
+				mkCol('number', x3, 'x3'),
+				mkCol('number', x4, 'x4'),
+				mkCol('number', x5, 'x5')
+			];
+
+			const describe = new TableProcess({ name: 'DescribeData', args: { yIN: [...ids], out: { variable: -1, n: -1, mean: -1, sd: -1, skewness: -1 } } }, null);
+			describe.displayName = 'Describe data';
+			pushObj(describe);
+			await describe.doProcess();
+
+			const corr = new TableProcess({ name: 'Correlation', args: { yIN: [...ids], method: 'auto', alpha: 0.05, out: { var_i: -1, var_j: -1, r: -1, pvalue: -1, n: -1 } } }, null);
+			corr.displayName = 'Correlation matrix';
+			pushObj(corr);
+			await corr.doProcess();
+
+			const heat = new Plot({ name: 'Correlation heatmap', type: 'correlationheatmap' });
+			for (const id of ids) heat.plot.addData({ column: { refId: id } });
+			pushObj(heat);
+
+			const pairs = new Plot({ name: 'Pairs plot', type: 'pairsplot' });
+			for (const id of ids) pairs.plot.addData({ column: { refId: id } });
+			pushObj(pairs);
+
+			tablePlot('Correlations', ['var_i', 'var_j', 'r', 'pvalue'].map((k) => corr.args.out[k]));
+		}
+	},
+	{
+		id: 'stats-regression',
+		name: 'Workflow — linear regression + residual diagnostics',
+		family: 'Workflows',
+		description:
+			'Predict Y from X, then check the model is honest. Fit Trend Curves fits the line (slope, intercept, R²), the fitted line is overlaid on the data, and the residuals are plotted against X and screened for normality. The lesson: R² alone is not enough — structure in the residuals (a funnel or a curve) means the model is mis-specified even when R² looks high.',
+		showcases: ['TrendFit', 'NormalityTest', 'scatterplot'],
+		async build() {
+			const rng = mulberry32(105);
+			const RAW = '#234154';
+			const FIT = '#BE796B';
+			const N = 60;
+			const x = seq(N, (i) => i * 0.5);
+			const y = x.map((v) => 3 + 1.4 * v + normal(rng, 0, 6)); // linear + noise
+			const xId = mkCol('number', x, 'x');
+			const yId = mkCol('number', y, 'y');
+
+			const tf = new TableProcess(
+				{
+					name: 'TrendFit',
+					args: {
+						xIN: xId,
+						yIN: [yId],
+						model: 'linear',
+						polyDegree: 2,
+						outputX: -1,
+						// Seed the per-Y curve + residual keys so the constructor allocates them and the
+						// func writes them at build time (fitted line + residuals are baked, not on-load).
+						out: { trendx: -1, [`trendy_${yId}`]: -1, [`resid_${yId}`]: -1, r2: -1, rmse: -1, coef_slope: -1, coef_intercept: -1 }
+					}
+				},
+				null
+			);
+			tf.displayName = 'Fit linear trend';
+			pushObj(tf);
+			await tf.doProcess();
+			const residId = tf.args.out[`resid_${yId}`];
+			const trendyId = tf.args.out[`trendy_${yId}`];
+			const trendxId = tf.args.out.trendx;
+
+			const norm = new TableProcess({ name: 'NormalityTest', args: { yIN: [residId], method: 'shapiro', alpha: 0.05, out: { variable: -1, statistic: -1, pvalue: -1, n: -1, normal: -1 } } }, null);
+			norm.displayName = 'Residual normality';
+			pushObj(norm);
+			await norm.doProcess();
+
+			scatterPlot(
+				'Linear fit',
+				[
+					{ x: xId, y: yId, label: 'data', kind: 'points', colour: RAW },
+					{ x: trendxId, y: trendyId, label: 'fit', kind: 'line', colour: FIT }
+				],
+				{ x: 'x', y: 'y' }
+			);
+			scatterPlot('Residuals vs x', [{ x: xId, y: residId, label: 'residuals', kind: 'points', colour: FIT }], { x: 'x', y: 'residual' });
+			tablePlot('Fit statistics', [tf.args.out.r2, tf.args.out.rmse, tf.args.out.coef_slope, tf.args.out.coef_intercept]);
+		}
+	},
+	{
+		id: 'stats-logistic',
+		name: 'Workflow — logistic regression (binary outcome)',
+		family: 'Workflows',
+		description:
+			'Model a yes/no outcome from predictors. Logistic regression reports each predictor’s odds ratio with a 95% CI and a Wald p-value, plus McFadden pseudo-R² and a likelihood-ratio test. The fit plot shows the predicted probability against the linear predictor (the S-curve, for any number of predictors) with the observed outcomes overlaid. Watch for a non-convergence warning — it usually means separation.',
+		showcases: ['LogisticRegression', 'scatterplot'],
+		async build() {
+			const RAW = '#234154';
+			const FIT = '#BE796B';
+			const N = 60;
+			const x1 = seq(N, (i) => ((i * 7) % 11) + 1);
+			const x2 = seq(N, (i) => ((i * 5) % 9) + 1);
+			const y = seq(N, (i) => {
+				const base = 0.6 * x1[i] - 0.5 * x2[i] - 1 > 0 ? 1 : 0;
+				return i % 7 === 0 ? 1 - base : base; // inject noise → non-separable, converges
+			});
+			const x1Id = mkCol('number', x1, 'dose');
+			const x2Id = mkCol('number', x2, 'age_group');
+			const yId = mkCol('number', y, 'responded');
+
+			const lr = new TableProcess(
+				{
+					name: 'LogisticRegression',
+					args: {
+						yIN: yId,
+						xIN: [x1Id, x2Id],
+						out: Object.fromEntries(['term', 'coef', 'se', 'z', 'pvalue', 'oddsRatio', 'ciLow', 'ciHigh', 'outcome', 'eta', 'fitted'].map((k) => [k, -1]))
+					}
+				},
+				null
+			);
+			lr.displayName = 'Logistic regression';
+			pushObj(lr);
+			await lr.doProcess();
+
+			// fitted vs the linear predictor η, observed outcomes overlaid (fills on load).
+			scatterPlot(
+				'Logistic fit',
+				[
+					{ x: lr.args.out.eta, y: lr.args.out.outcome, label: 'observed outcome', kind: 'points', colour: RAW },
+					{ x: lr.args.out.eta, y: lr.args.out.fitted, label: 'fitted P(y=1)', kind: 'points', colour: FIT }
+				],
+				{ x: 'linear predictor (η)', y: 'P(y=1)' }
+			);
+			tablePlot('Coefficients', ['term', 'coef', 'oddsRatio', 'pvalue'].map((k) => lr.args.out[k]));
+		}
+	},
+	{
+		id: 'stats-chi-square',
+		name: 'Workflow — categorical association (chi-square)',
+		family: 'Workflows',
+		description:
+			'Are two categorical variables related? The chi-squared test of independence cross-tabulates them into a contingency table and tests whether the row and column variables are associated (Yates’ correction on 2×2 tables). Read the statistic / df / p and the table; the node warns when any expected count falls below 5, where the χ² approximation breaks down and Fisher’s exact test is preferable.',
+		showcases: ['ChiSquared'],
+		async build() {
+			const rng = mulberry32(106);
+			const treatment = [];
+			const outcome = [];
+			// Drug improves the odds of "Improved" relative to Placebo → a real association.
+			for (let i = 0; i < 120; i++) {
+				const drug = i % 2 === 0;
+				treatment.push(drug ? 'Drug' : 'Placebo');
+				const pImproved = drug ? 0.65 : 0.4;
+				outcome.push(rng() < pImproved ? 'Improved' : 'No change');
+			}
+			const tId = mkCol('category', treatment, 'treatment');
+			const oId = mkCol('category', outcome, 'outcome');
+
+			const chi = new TableProcess({ name: 'ChiSquared', args: { testType: 'independence', xIN: tId, yIN: oId, correction: true, out: { statistic: -1, pvalue: -1, df: -1 } } }, null);
+			chi.displayName = 'Chi-squared (independence)';
+			pushObj(chi);
+			await chi.doProcess();
+
+			tablePlot('Chi-squared result', [chi.args.out.statistic, chi.args.out.pvalue, chi.args.out.df]);
+		}
 	}
 ];
 

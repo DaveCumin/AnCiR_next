@@ -29,7 +29,13 @@
 			const col = getColumnById(id);
 			return { variable: col.name ?? String(id), ...describeStats(col.getData() ?? []) };
 		});
-		return [{ rows }, true];
+		// Write the output columns from the func itself (not just the component's recompute), so
+		// doProcess() — used by the MCP engine and the demo generator — bakes real output columns
+		// rather than empty ones. writeOutputColumn no-ops on unwired (-1) keys, so the pure-result
+		// callers (tests) are unaffected. Function declaration is hoisted, so calling it here is fine.
+		const result = { rows };
+		writeDescribeOutputs(argsIN, result);
+		return [result, true];
 	}
 
 	function writeDescribeOutputs(argsIN, result) {
@@ -77,10 +83,10 @@
 	});
 
 	function recompute() {
+		// describedata() writes its own output columns; recompute only mirrors the result to state.
 		const [res, valid] = describedata(p.args);
 		p.args.valid = valid;
 		result = res ?? { rows: [] };
-		if (valid) writeDescribeOutputs(p.args, result);
 	}
 
 	// Recompute when input DATA changes, not just when the ref list changes.

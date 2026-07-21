@@ -69,23 +69,23 @@
 		}
 		const rows = fit.coefficients.map((c) => ({ term: c.name, coef: c.coef, se: c.se, z: c.z, pvalue: c.pvalue, oddsRatio: c.oddsRatio, ciLow: c.ciLow, ciHigh: c.ciHigh }));
 
-		return [
-			{
-				rows,
-				perObs: fit.perObs,
-				positiveClass,
-				outcomeName: outCol.name ?? String(argsIN.yIN),
-				n: fit.n,
-				logLik: fit.logLik,
-				lrChiSq: fit.lrChiSq,
-				lrDf: fit.lrDf,
-				lrPvalue: fit.lrPvalue,
-				pseudoR2: fit.pseudoR2,
-				converged: fit.converged,
-				warnings
-			},
-			true
-		];
+		const result = {
+			rows,
+			perObs: fit.perObs,
+			positiveClass,
+			outcomeName: outCol.name ?? String(argsIN.yIN),
+			n: fit.n,
+			logLik: fit.logLik,
+			lrChiSq: fit.lrChiSq,
+			lrDf: fit.lrDf,
+			lrPvalue: fit.lrPvalue,
+			pseudoR2: fit.pseudoR2,
+			converged: fit.converged,
+			warnings
+		};
+		// Write from the func so doProcess() (MCP engine + demo generator) bakes real columns.
+		writeLogisticOutputs(argsIN, result);
+		return [result, true];
 	}
 
 	function writeLogisticOutputs(argsIN, result) {
@@ -145,7 +145,6 @@
 		p.args.valid = valid;
 		result = res ?? { rows: [], warnings: [], converged: false };
 		p.warnings = result.warnings ?? [];
-		if (valid) writeLogisticOutputs(p.args, result);
 	}
 
 	let getHash = $derived.by(() => {
