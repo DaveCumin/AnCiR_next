@@ -242,6 +242,50 @@ const meta = new Map([
 		}
 	],
 	[
+		'DescribeData',
+		{
+			family: 'Analysis',
+			nodeIcon: 'table',
+			description: 'Per-column summary statistics (mean, median, sd, min/max, quartiles, skewness, kurtosis).'
+		}
+	],
+	[
+		'LogisticRegression',
+		{
+			family: 'Analysis',
+			nodeIcon: 'scatterplot',
+			description:
+				'Model a binary outcome from one or more predictors: coefficients, odds ratios with 95% CIs, Wald p-values, and model fit (pseudo-R², LR test).'
+		}
+	],
+	[
+		'ChiSquared',
+		{
+			family: 'Analysis',
+			nodeIcon: 'group-comp',
+			description:
+				'Chi-squared test: independence of two categorical variables (contingency table), or goodness-of-fit of counts against a uniform expectation.'
+		}
+	],
+	[
+		'CrossCorrelation',
+		{
+			family: 'Analysis',
+			nodeIcon: 'correlogram',
+			description:
+				'Cross-correlogram of two series: the correlation at each lag, with the peak lag revealing the delay between them.'
+		}
+	],
+	[
+		'NormalityTest',
+		{
+			family: 'Analysis',
+			nodeIcon: 'histogram',
+			description:
+				'Test each wired column for normality (D’Agostino-Pearson or Jarque-Bera), reporting the statistic, p-value and a verdict.'
+		}
+	],
+	[
 		'Correlation',
 		{
 			family: 'Analysis',

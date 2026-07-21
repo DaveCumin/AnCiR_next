@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "303": [
+    "346": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "304": [
+    "347": [
       25,
       26.192596079882613,
       29.689110867544645,
@@ -104,7 +104,7 @@
       25,
       26.192596079882605
     ],
-    "305": [
+    "348": [
       100,
       98,
       96,
@@ -159,9 +159,9 @@
   },
   "data": [
     {
-      "id": 303,
+      "id": 346,
       "name": "Correlation input 1",
-      "data": 303,
+      "data": 346,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -170,9 +170,9 @@
       "processes": []
     },
     {
-      "id": 304,
+      "id": 347,
       "name": "Correlation input 2",
-      "data": 304,
+      "data": 347,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,9 +181,9 @@
       "processes": []
     },
     {
-      "id": 305,
+      "id": 348,
       "name": "Correlation input 3",
-      "data": 305,
+      "data": 348,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -192,8 +192,8 @@
       "processes": []
     },
     {
-      "id": 306,
-      "name": "var_i_33",
+      "id": 349,
+      "name": "var_i_38",
       "data": null,
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -202,8 +202,8 @@
       "processes": []
     },
     {
-      "id": 307,
-      "name": "var_j_33",
+      "id": 350,
+      "name": "var_j_38",
       "data": null,
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -212,8 +212,8 @@
       "processes": []
     },
     {
-      "id": 308,
-      "name": "r_33",
+      "id": 351,
+      "name": "r_38",
       "data": null,
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -222,8 +222,8 @@
       "processes": []
     },
     {
-      "id": 309,
-      "name": "pvalue_33",
+      "id": 352,
+      "name": "pvalue_38",
       "data": null,
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -232,8 +232,8 @@
       "processes": []
     },
     {
-      "id": 310,
-      "name": "n_33",
+      "id": 353,
+      "name": "n_38",
       "data": null,
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -244,7 +244,7 @@
   ],
   "plots": [
     {
-      "id": 53,
+      "id": 58,
       "name": "Correlation result",
       "x": 350,
       "y": 150,
@@ -260,14 +260,14 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          303,
-          304,
-          305,
-          306,
-          307,
-          308,
-          309,
-          310
+          346,
+          347,
+          348,
+          349,
+          350,
+          351,
+          352,
+          353
         ],
         "showCol": [
           true,
@@ -288,23 +288,23 @@
   ],
   "tableProcesses": [
     {
-      "id": 33,
+      "id": 38,
       "name": "Correlation",
       "displayName": "Correlation",
       "args": {
         "yIN": [
-          303,
-          304,
-          305
+          346,
+          347,
+          348
         ],
         "method": "auto",
         "alpha": 0.05,
         "out": {
-          "var_i": 306,
-          "var_j": 307,
-          "r": 308,
-          "pvalue": 309,
-          "n": 310
+          "var_i": 349,
+          "var_j": 350,
+          "r": 351,
+          "pvalue": 352,
+          "n": 353
         },
         "valid": false
       },
@@ -316,7 +316,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_35",
+      "id": "note_40",
       "text": "Computes every pairwise correlation among the wired columns and reports them one row per pair: var_i, var_j, r, p-value and n. Choose Pearson (linear) or Spearman (rank / monotonic), or leave it on Auto — which uses Spearman if any column fails a Jarque-Bera normality check, so the whole matrix stays on one comparable method. Uses pairwise-complete rows (a missing value drops only that pair-row), and warns on small samples and, for Spearman, on ties. Quick-plot draws the correlation heatmap.",
       "x": 40,
       "y": 24,
@@ -328,27 +328,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_303": {
+    "data_346": {
       "x": 60,
       "y": 314
     },
-    "data_304": {
+    "data_347": {
       "x": 60,
       "y": 814
     },
-    "data_305": {
+    "data_348": {
       "x": 60,
       "y": 1314
     },
-    "tableprocess_33": {
+    "tableprocess_38": {
       "x": 440,
       "y": 314
     },
-    "plot_53": {
+    "plot_58": {
       "x": 820,
       "y": 314
     },
-    "note_35": {
+    "note_40": {
       "x": 40,
       "y": 24
     }

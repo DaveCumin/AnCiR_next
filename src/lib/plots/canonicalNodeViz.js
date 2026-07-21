@@ -91,6 +91,25 @@ function tpViz(tp) {
 		}
 	}
 
+	// CrossCorrelation → the correlogram: lag (x) vs correlation (y) as a line.
+	if (tp.name === 'CrossCorrelation') {
+		const xOut = out.lag;
+		const yOut = out.correlation;
+		if (isRef(xOut) && isRef(yOut)) {
+			return {
+				type: 'scatterplot',
+				title: `${tp.name}: correlogram`,
+				series: [{ x: xOut, y: yOut, label: 'cross-correlation', kind: 'line', colour: OUT_COLOUR }]
+			};
+		}
+	}
+
+	// DescribeData → a histogram of each described column.
+	if (tp.name === 'DescribeData') {
+		const cols = yINs.filter(isRef);
+		if (cols.length) return { type: 'histogram', title: `${tp.name}: histograms`, columns: cols };
+	}
+
 	// Circular stats (Rayleigh) → the circular phase plot: each Y is a phase/angle
 	// series on the clock; `x` is the node's optional time column (-1 when unwired).
 	if (tp.name === 'RayleighTest') {
@@ -184,6 +203,7 @@ export function plotDataFromSpec(spec, { x, y, width = 420, height = 300, source
 	else if (spec.type === 'tableplot') inner = { columnRefs: [...spec.columnRefs], showCol: spec.columnRefs.map(() => true) };
 	else if (spec.type === 'correlationheatmap')
 		inner = { data: spec.columns.map((id) => ({ column: { refId: id } })) };
+	else if (spec.type === 'histogram') inner = { data: spec.columns.map((id) => ({ column: { refId: id } })) };
 	else return null;
 	return { name: spec.title, type: spec.type, x, y, width, height, sourceNodeId, plot: inner };
 }

@@ -63,6 +63,7 @@
 			outputs: [
 				{ name: 'fitx', kind: 'column', cardinality: 'one' },
 				{ name: 'fity_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'fity_' },
+				{ name: 'resid_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'resid_' },
 				{ name: 'permstats_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'permstats_' }
 			]
 		}
@@ -137,9 +138,24 @@
 			fitResult,
 			predicted,
 			t: tt,
+			yy,
 			xOutData: outputXData ?? tt,
 			yOutData: predicted ?? fitResult.fitted
 		};
+	}
+
+	/**
+	 * Residuals (observed − fitted) aligned to the FULL input length, so they pair 1:1 with the
+	 * input x column (NaN wherever the input pair was invalid). Evaluating the model at every input
+	 * x — rather than reusing fitResult.fitted, which covers only the valid points — is what keeps
+	 * the residual column the same length as xIN, so the residual quick-plot lines up.
+	 */
+	function residualColumn(yResult, model, tFull, yFull) {
+		if (!yResult?.fitResult || !Array.isArray(tFull)) return null;
+		const predicted = evaluateCurveModelAtPoints(yResult.fitResult, model ?? 'cosinor', tFull);
+		return yFull.map((v, i) =>
+			isInvalidValue(v) || isInvalidValue(tFull[i]) || !Number.isFinite(predicted[i]) ? NaN : v - predicted[i]
+		);
 	}
 
 	async function buildFitResult(argsIN) {
@@ -225,6 +241,13 @@
 				if (yOUT != null && yOUT !== -1 && yResult) {
 					writeOutputColumn(yOUT, yResult.yOutData, { processHash });
 				}
+
+				const residOUT = argsIN.out?.['resid_' + yId];
+				if (residOUT != null && residOUT !== -1 && yResult) {
+					const yCol = getColumnById(yId);
+					const resid = residualColumn(yResult, argsIN.model ?? 'cosinor', t, yCol?.getData() ?? []);
+					if (resid) writeOutputColumn(residOUT, resid, { processHash });
+				}
 			}
 		}
 
@@ -244,6 +267,7 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { mutationService } from '$lib/core/mutationService.js';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
@@ -283,6 +307,11 @@
 		'permstats_',
 		'permstats_'
 	);
+	const { syncYColumns: syncResidColumns, initYColumns: initResidColumns } = useMultiYTP(
+		p,
+		'resid_',
+		'resid_'
+	);
 
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
@@ -321,7 +350,39 @@
 	function onYSelectionChange() {
 		const fitColsChanged = syncYColumns();
 		const permColsChanged = syncPermColumns();
-		if (fitColsChanged || permColsChanged) getFit();
+		const residColsChanged = syncResidColumns();
+		if (fitColsChanged || permColsChanged || residColsChanged) getFit();
+	}
+
+	// Residual diagnostic: spawn a scatterplot of the input x against the residual column for this
+	// Y. Residuals are aligned to the full input length, so they pair 1:1 with xIN. A good fit
+	// shows residuals scattered structurelessly around zero; a pattern (trend, fanning, curvature)
+	// flags a mis-specified model. Wired to the real output columns, so it stays live.
+	function plotResiduals(yId, yName) {
+		const residId = p.args.out?.['resid_' + yId];
+		const xId = p.args.xIN;
+		if (residId == null || residId < 0 || xId == null || xId < 0) return;
+		const pos = core.nodeLayout?.[`tableprocess_${p.id}`] ?? { x: 200, y: 200 };
+		mutationService.addPlot({
+			name: `Residuals: ${yName}`,
+			type: 'scatterplot',
+			sourceNodeId: `tableprocess_${p.id}`,
+			x: (pos.x ?? 0) + 360,
+			y: pos.y ?? 0,
+			width: 420,
+			height: 300,
+			plot: {
+				data: [
+					{
+						x: { refId: xId },
+						y: { refId: residId },
+						label: `${yName} residuals`,
+						line: { colour: '#BE796B', draw: false },
+						points: { colour: '#BE796B', draw: true, radius: 3, shape: 'circle' }
+					}
+				]
+			}
+		});
 	}
 
 	function getModelArgs() {
@@ -487,6 +548,13 @@
 					writeOutputColumn(yOUT, yResult.yOutData, { processHash });
 				}
 
+				const residOUT = p.args.out['resid_' + yId];
+				if (residOUT != null && residOUT !== -1 && yResult) {
+					const yCol = getColumnById(yId);
+					const resid = residualColumn(yResult, p.args.model ?? 'cosinor', t, yCol?.getData() ?? []);
+					if (resid) writeOutputColumn(residOUT, resid, { processHash });
+				}
+
 				writeOutputColumn(
 					p.args.out['permstats_' + yId],
 					Array.isArray(yResult?.fitResult?.permutedStats)
@@ -514,7 +582,7 @@
 		const ids = [p.args.xIN];
 		if (p.args.out.fitx >= 0) ids.push(p.args.out.fitx);
 		for (const key of Object.keys(p.args.out)) {
-			if ((key.startsWith('fity_') || key.startsWith('permstats_')) && p.args.out[key] >= 0)
+			if ((key.startsWith('fity_') || key.startsWith('resid_') || key.startsWith('permstats_')) && p.args.out[key] >= 0)
 				ids.push(p.args.out[key]);
 		}
 		return ids;
@@ -544,7 +612,10 @@
 		// (Svelte derived_inert). A microtask runs with no active effect → root-owned.
 		queueMicrotask(() =>
 			untrack(() => {
-				if (syncYColumns()) getFit();
+				// Reconcile all three per-Y output families; recompute if any changed. `|` (not `||`)
+				// so every sync runs — short-circuiting would skip resid/perm reconcile.
+				const changed = syncYColumns() | syncResidColumns() | syncPermColumns();
+				if (changed) getFit();
 			})
 		);
 	});
@@ -558,7 +629,7 @@
 			p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
 			p.args.out.fitx = xCol.id;
 		}
-		const needsCompute = initYColumns() || initPermColumns();
+		const needsCompute = initYColumns() || initPermColumns() || initResidColumns();
 		if (needsCompute) {
 			getFit();
 		} else {
@@ -992,7 +1063,7 @@
 	{/if}
 </div>
 
-{#snippet fitStats(yResult, yName)}
+{#snippet fitStats(yResult, yName, yId)}
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>
@@ -1011,6 +1082,11 @@
 					source={'Fit Function (' + p.args.model + ')'}
 				/>
 			</p>
+			{#if yId != null && p.args.out?.['resid_' + yId] >= 0}
+				<button class="resid-btn" onclick={() => plotResiduals(yId, yName)} title="Scatter the residuals (observed − fitted) against the input x to check the fit">
+					Plot residuals
+				</button>
+			{/if}
 			{#if Array.isArray(yResult?.fitResult?.permutedStats) && yResult.fitResult.permutedStats.length > 0 && Number.isFinite(yResult?.fitResult?.pValue)}
 				<p
 					style="color: {yResult.fitResult.significant ? 'var(--color-success)' : 'var(--color-warning)'}; font-weight: 600;"
@@ -1112,7 +1188,7 @@
 									<span class="tp-output-label">{srcName}</span>
 									<ColumnComponent col={yout} />
 									{#if yResult}
-										{@render fitStats(yResult, srcName)}
+										{@render fitStats(yResult, srcName, yId)}
 									{/if}
 								</div>
 								{#if permOut}
@@ -1131,7 +1207,7 @@
 					{@const srcName = getColumnById(Number(yId))?.name ?? yId}
 					<div class="div-line"></div>
 					<p><strong>{srcName}</strong></p>
-					{@render fitStats(yResult, srcName)}
+					{@render fitStats(yResult, srcName, yId)}
 				{/each}
 				{@const xData = fitData.outputXData ?? fitData.t}
 				{@const yIds = Object.keys(fitData?.y_results ?? {})}
@@ -1208,5 +1284,22 @@
 	.tp-stat-btn:hover {
 		background: var(--color-lightness-95);
 		border-color: var(--color-lightness-55);
+	}
+
+	.resid-btn {
+		font: inherit;
+		font-size: var(--font-2xs);
+		padding: var(--space-1) var(--space-2);
+		margin-top: var(--space-1);
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-sm);
+		background: var(--color-lightness-99);
+		color: var(--color-lightness-25);
+		cursor: pointer;
+	}
+
+	.resid-btn:hover {
+		border-color: var(--color-accent);
+		background: var(--color-hover);
 	}
 </style>

@@ -4533,3 +4533,167 @@ def correlate(x, y, method="pearson"):
         res = sp_stats.pearsonr(xs, ys)
         r, p = float(res.statistic), float(res.pvalue)
     return {"r": r, "pvalue": p, "n": n}
+
+# --- reference implementations for the newer stats utils (parity harness) ------
+# These mirror the JS in src/lib/utils/{describeStats,normality,crossCorrelation,
+# chisquare,logistic}.js. As with `correlate`, the Python side deliberately calls
+# scipy / statsmodels so the parity test validates the bespoke JS against a trusted
+# reference, not against a second hand-written port. Edge cases return NaN to match
+# the JS contract (never raise).
+
+
+def _clean_numeric(values):
+    out = []
+    for v in values or []:
+        if v is None:
+            continue
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            continue
+        if not math.isnan(f):
+            out.append(f)
+    return out
+
+
+def describe_stats(values):
+    """scipy/numpy reference for utils/describeStats.js. Skewness/kurtosis are the
+    bias-corrected sample forms (scipy skew/kurtosis with bias=False)."""
+    x = np.asarray(_clean_numeric(values), dtype=float)
+    n = x.size
+    nan = float("nan")
+    if n == 0:
+        return {k: nan for k in ("n", "mean", "median", "sd", "min", "max", "range", "q1", "q3", "iqr", "skewness", "kurtosis")}
+    q1 = float(np.percentile(x, 25, method="linear"))
+    q3 = float(np.percentile(x, 75, method="linear"))
+    return {
+        "n": int(n),
+        "mean": float(np.mean(x)),
+        "median": float(np.median(x)),
+        "sd": float(np.std(x, ddof=1)) if n > 1 else nan,
+        "min": float(np.min(x)),
+        "max": float(np.max(x)),
+        "range": float(np.max(x) - np.min(x)),
+        "q1": q1,
+        "q3": q3,
+        "iqr": q3 - q1,
+        "skewness": float(sp_stats.skew(x, bias=False)) if n > 2 else nan,
+        "kurtosis": float(sp_stats.kurtosis(x, bias=False, fisher=True)) if n > 3 else nan,
+    }
+
+
+def d_agostino(values):
+    """scipy.stats.normaltest reference for utils/normality.js dAgostino."""
+    x = _clean_numeric(values)
+    n = len(x)
+    nan = float("nan")
+    if n < 8 or len(set(x)) < 2:
+        return {"statistic": nan, "pvalue": nan, "n": n}
+    res = sp_stats.normaltest(np.asarray(x, dtype=float))
+    return {"statistic": float(res.statistic), "pvalue": float(res.pvalue), "n": n}
+
+
+def jarque_bera(values):
+    """scipy.stats.jarque_bera reference for utils/normality.js jarqueBera."""
+    x = _clean_numeric(values)
+    n = len(x)
+    nan = float("nan")
+    if n < 3 or len(set(x)) < 2:
+        return {"statistic": nan, "pvalue": nan, "n": n}
+    res = sp_stats.jarque_bera(np.asarray(x, dtype=float))
+    return {"statistic": float(res.statistic), "pvalue": float(res.pvalue), "n": n}
+
+
+def cross_correlation(x, y, max_lag=0, method="pearson"):
+    """numpy per-lag Pearson/Spearman reference for utils/crossCorrelation.js."""
+    xa = [float(v) for v in x]
+    ya = [float(v) for v in y]
+    nx, ny = len(xa), len(ya)
+    if not max_lag or max_lag <= 0:
+        max_lag = max(1, min(nx, ny) // 4)
+    max_lag = min(int(max_lag), min(nx, ny) - 1)
+    lags, rs, ps, ns = [], [], [], []
+    for k in range(-max_lag, max_lag + 1):
+        i0 = max(0, -k)
+        i1 = min(nx - 1, ny - 1 - k)
+        xs = [xa[i] for i in range(i0, i1 + 1)]
+        ys = [ya[i + k] for i in range(i0, i1 + 1)]
+        c = correlate(xs, ys, method)
+        lags.append(k)
+        rs.append(c["r"])
+        ps.append(c["pvalue"])
+        ns.append(c["n"])
+    return {"lags": lags, "r": rs, "pvalue": ps, "n": ns}
+
+
+def chi_square_goodness_of_fit(observed, expected=None, ddof=0):
+    """scipy.stats.chisquare reference for utils/chisquare.js chiSquareGoodnessOfFit."""
+    o = [float(v) for v in observed]
+    k = len(o)
+    nan = float("nan")
+    if k < 2:
+        return {"statistic": nan, "pvalue": nan, "df": nan, "k": k}
+    f_exp = None if expected is None else [float(v) for v in expected]
+    res = sp_stats.chisquare(o, f_exp=f_exp, ddof=ddof)
+    return {"statistic": float(res.statistic), "pvalue": float(res.pvalue), "df": k - 1 - ddof, "k": k}
+
+
+def chi_square_independence(table, correction=True):
+    """scipy.stats.chi2_contingency reference for utils/chisquare.js chiSquareIndependence."""
+    arr = np.asarray(table, dtype=float)
+    nan = float("nan")
+    if arr.ndim != 2 or arr.shape[0] < 2 or arr.shape[1] < 2:
+        return {"statistic": nan, "pvalue": nan, "df": nan}
+    res = sp_stats.chi2_contingency(arr, correction=bool(correction))
+    return {"statistic": float(res.statistic), "pvalue": float(res.pvalue), "df": int(res.dof)}
+
+
+def logistic_regression(y, predictor_cols, names=None):
+    """statsmodels Logit reference for utils/logistic.js. Returns per-term fields as
+    parallel arrays (term/coef/se/z/pvalue/oddsRatio) plus model scalars."""
+    import statsmodels.api as sm
+
+    p = len(predictor_cols)
+    rows, ys = [], []
+    for i in range(len(y)):
+        try:
+            yi = float(y[i])
+        except (TypeError, ValueError):
+            continue
+        if yi not in (0.0, 1.0):
+            continue
+        xr, ok = [1.0], True
+        for j in range(p):
+            try:
+                xr.append(float(predictor_cols[j][i]))
+            except (TypeError, ValueError):
+                ok = False
+                break
+        if not ok:
+            continue
+        rows.append(xr)
+        ys.append(yi)
+    n, k = len(rows), p + 1
+    labels = ["(intercept)"] + list(names or [f"x{j+1}" for j in range(p)])
+    nan = float("nan")
+    if n < k + 1:
+        return {"term": [], "coef": [], "se": [], "z": [], "pvalue": [], "oddsRatio": [],
+                "n": n, "logLik": nan, "lrChiSq": nan, "lrPvalue": nan, "pseudoR2": nan}
+    X = np.asarray(rows, dtype=float)
+    Y = np.asarray(ys, dtype=float)
+    m = sm.Logit(Y, X).fit(disp=0)
+    coef = [float(v) for v in m.params]
+    se = [float(v) for v in m.bse]
+    return {
+        "term": labels,
+        "coef": coef,
+        "se": se,
+        "z": [float(v) for v in m.tvalues],
+        "pvalue": [float(v) for v in m.pvalues],
+        "oddsRatio": [float(np.exp(v)) for v in coef],
+        "n": n,
+        "logLik": float(m.llf),
+        "lrChiSq": float(m.llr),
+        "lrPvalue": float(m.llr_pvalue),
+        "pseudoR2": float(m.prsquared),
+    }

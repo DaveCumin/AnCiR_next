@@ -1,0 +1,343 @@
+{
+  "rawData": {
+    "339": [
+      10,
+      11.362966948437268,
+      15.35898384862245,
+      21.7157287525381,
+      30,
+      39.64723819589917,
+      50,
+      60.35276180410083,
+      70,
+      78.2842712474619,
+      84.64101615137756,
+      88.63703305156272,
+      90,
+      88.63703305156272,
+      84.64101615137756,
+      78.28427124746192,
+      70.00000000000001,
+      60.35276180410082,
+      50.00000000000001,
+      39.647238195899185,
+      29.999999999999996,
+      21.7157287525381,
+      15.358983848622458,
+      11.362966948437276,
+      10,
+      11.362966948437276,
+      15.358983848622458,
+      21.71572875253809,
+      29.999999999999982,
+      39.64723819589917,
+      49.99999999999996,
+      60.35276180410081,
+      69.99999999999997,
+      78.28427124746192,
+      84.64101615137756,
+      88.63703305156272,
+      90,
+      88.63703305156274,
+      84.64101615137756,
+      78.28427124746193,
+      70,
+      60.3527618041009,
+      50.000000000000014,
+      39.64723819589919,
+      30.000000000000032,
+      21.715728752538084,
+      15.358983848622486,
+      11.362966948437276,
+      10,
+      11.362966948437261
+    ],
+    "340": [
+      1,
+      21.831051418620845,
+      7.38905609893065,
+      2.5009400136621287,
+      54.598150033144236,
+      18.479586061009854,
+      6.254700951936329,
+      2.117000016612675,
+      46.21633621589248,
+      15.642631884188171,
+      5.29449005047003,
+      1.7920018256557555,
+      39.12128399815321,
+      13.241202019156521,
+      4.4816890703380645,
+      1.5168967963882134,
+      33.11545195869231,
+      11.208435524800691,
+      3.7936678946831774,
+      1.2840254166877414,
+      28.03162489452614,
+      9.487735836358526,
+      3.211270543153561,
+      1.086904049521229,
+      23.728258192205157,
+      8.031194996067258,
+      2.718281828459045,
+      59.34295036739207,
+      20.085536923187668,
+      6.798259793203881,
+      2.300975890892825,
+      50.23272298708815,
+      17.00203994009402,
+      5.75460267600573,
+      1.9477340410546757,
+      42.52108200006278,
+      14.391916095149892,
+      4.871165999245473,
+      1.6487212707001282,
+      35.99331883562839,
+      12.182493960703473,
+      4.123352997269821,
+      1.3956124250860895,
+      30.46768661252054,
+      10.312258501325767,
+      3.4903429574618414,
+      1.1813604128656459,
+      25.790339917193062,
+      8.729138363720132,
+      2.9545115270921065
+    ]
+  },
+  "data": [
+    {
+      "id": 339,
+      "name": "Normality Test input 1",
+      "data": 339,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 340,
+      "name": "Normality Test input 2",
+      "data": 340,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 341,
+      "name": "variable_37",
+      "data": null,
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 342,
+      "name": "statistic_37",
+      "data": null,
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 343,
+      "name": "pvalue_37",
+      "data": null,
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 344,
+      "name": "n_37",
+      "data": null,
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 345,
+      "name": "normal_37",
+      "data": null,
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    }
+  ],
+  "plots": [
+    {
+      "id": 57,
+      "name": "Normality Test result",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "columnRefs": [
+          339,
+          340,
+          341,
+          342,
+          343,
+          344,
+          345
+        ],
+        "showCol": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
+    }
+  ],
+  "tableProcesses": [
+    {
+      "id": 37,
+      "name": "NormalityTest",
+      "displayName": "Normality Test",
+      "args": {
+        "yIN": [
+          339,
+          340
+        ],
+        "method": "dagostino",
+        "alpha": 0.05,
+        "out": {
+          "variable": 341,
+          "statistic": 342,
+          "pvalue": 343,
+          "n": 344,
+          "normal": 345
+        },
+        "valid": false
+      },
+      "refTPId": null
+    }
+  ],
+  "storedValues": {},
+  "chainRefs": [],
+  "nodeNotes": {},
+  "notes": [
+    {
+      "id": "note_39",
+      "text": "Tests whether each wired column is drawn from a normal distribution, one row per variable: the test statistic, its p-value, n, and a yes/no verdict at your chosen alpha. D'Agostino-Pearson (an omnibus skewness + kurtosis K² test, valid for n ≥ 8) is the default; Jarque-Bera is available for smaller samples. A small p-value means the data depart from normality, so a rank / non-parametric method is safer downstream. Both tests match scipy (normaltest / jarque_bera). D'Agostino & Pearson 1973.",
+      "x": 40,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
+  "groups": [],
+  "composites": [],
+  "orphanProcesses": [],
+  "nodeLayout": {
+    "data_339": {
+      "x": 60,
+      "y": 314
+    },
+    "data_340": {
+      "x": 60,
+      "y": 814
+    },
+    "tableprocess_37": {
+      "x": 440,
+      "y": 314
+    },
+    "plot_57": {
+      "x": 820,
+      "y": 314
+    },
+    "note_39": {
+      "x": 40,
+      "y": 24
+    }
+  },
+  "appState": {
+    "currentTab": "null",
+    "currentControlTab": "properties",
+    "loadingState": {
+      "isLoading": true,
+      "loadingMsg": "Warming up..."
+    },
+    "showNavbar": true,
+    "showDisplayPanel": false,
+    "showControlPanel": false,
+    "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
+    "windowWidth": 1024,
+    "windowHeight": 768,
+    "widthNavBar": 56,
+    "widthDisplayPanel": 250,
+    "widthControlPanel": 250,
+    "gridSize": 15,
+    "canvasOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
+    "view": "canvas",
+    "displayTimezone": "utc",
+    "invisiblePlotIds": [],
+    "canvasSelectedNodeId": null,
+    "canvasMultiSelectedCount": 0,
+    "canvasMultiSelectedNodeIds": [],
+    "appColours": [
+      "#234154",
+      "#BE796B",
+      "#3E7295",
+      "#EDADAD",
+      "#A6ACD5",
+      "#83422A",
+      "#6B9FD5",
+      "#4A1E0E",
+      "#fbe67280"
+    ],
+    "showColourPicker": false,
+    "showAYSModal": false,
+    "AYStext": "",
+    "AYScallback": null,
+    "AYSoptions": [
+      "Yes",
+      "No"
+    ],
+    "showWorkflow": false
+  },
+  "version": "β.60.0"
+}

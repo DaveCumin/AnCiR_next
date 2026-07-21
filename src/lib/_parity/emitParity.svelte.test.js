@@ -35,8 +35,37 @@ import { meanSemByGroup } from '$lib/utils/meanSem.js';
 import { rayleighTest, circularMean, weightedCircularMean, weightedRayleigh } from '$lib/utils/circular.js';
 import { bathyphase, phaseAngleOfEntrainment, circadianFunctionIndex } from '$lib/utils/cosinorAddons.js';
 import { correlate } from '$lib/utils/correlation.js';
+import { describeStats } from '$lib/utils/describeStats.js';
+import { dAgostino, jarqueBera } from '$lib/utils/normality.js';
+import { crossCorrelation } from '$lib/utils/crossCorrelation.js';
+import { chiSquareGoodnessOfFit, chiSquareIndependence } from '$lib/utils/chisquare.js';
+import { logisticRegression } from '$lib/utils/logistic.js';
 
 const PARITY_DIR = join(process.cwd(), 'tools', 'parity');
+
+// Adapters so the harness's positional (arrays, ...jsArgs) call convention reaches the
+// utils that take an options object or a slightly different signature.
+const crossCorrelationAdapter = (x, y, opts = {}) => crossCorrelation(x, y, opts);
+const describeStatsAdapter = (values) => describeStats(values);
+// Flatten the array-of-objects `coefficients` into parallel arrays so the fixture can compare
+// them the same way as the statsmodels reference (which returns parallel arrays).
+const logisticRegressionAdapter = (y, predictorCols, names) => {
+	const r = logisticRegression(y, predictorCols, names);
+	const pick = (k) => r.coefficients.map((c) => c[k]);
+	return {
+		term: pick('name'),
+		coef: pick('coef'),
+		se: pick('se'),
+		z: pick('z'),
+		pvalue: pick('pvalue'),
+		oddsRatio: pick('oddsRatio'),
+		n: r.n,
+		logLik: r.logLik,
+		lrChiSq: r.lrChiSq,
+		lrPvalue: r.lrPvalue,
+		pseudoR2: r.pseudoR2
+	};
+};
 
 // Pure calculating-plot compute functions, keyed by the fixture's `jsFn`.
 // These are the same functions the plot classes call for periodData/fftData/
@@ -59,7 +88,14 @@ const PURE_UTIL_FNS = {
 	bathyphase,
 	phaseAngleOfEntrainment,
 	circadianFunctionIndex,
-	correlate
+	correlate,
+	describeStats: describeStatsAdapter,
+	dAgostino,
+	jarqueBera,
+	crossCorrelation: crossCorrelationAdapter,
+	chiSquareGoodnessOfFit,
+	chiSquareIndependence,
+	logisticRegression: logisticRegressionAdapter
 };
 
 class ThrowOnPost {

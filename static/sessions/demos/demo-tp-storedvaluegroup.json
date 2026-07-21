@@ -1,17 +1,17 @@
 {
   "rawData": {
-    "375": [
+    "418": [
       12,
       34
     ]
   },
   "data": [
     {
-      "id": 375,
-      "name": "group_g1_48",
-      "data": 375,
+      "id": 418,
+      "name": "group_g1_53",
+      "data": 418,
       "type": "number",
-      "tableProcessGUId": "16619162-572c-4a6d-a882-47d086a54ed3",
+      "tableProcessGUId": "142fff49-ae9d-4942-b0c2-87fd668f68e1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -20,7 +20,7 @@
   ],
   "plots": [
     {
-      "id": 69,
+      "id": 74,
       "name": "Stored Value Group result",
       "x": 350,
       "y": 150,
@@ -36,7 +36,7 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          375
+          418
         ],
         "showCol": [
           true
@@ -50,7 +50,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 48,
+      "id": 53,
       "name": "StoredValueGroup",
       "displayName": "Stored Value Group",
       "args": {
@@ -65,7 +65,7 @@
           }
         ],
         "out": {
-          "group_g1": 375
+          "group_g1": 418
         }
       },
       "refTPId": null
@@ -85,7 +85,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_46",
+      "id": "note_51",
       "text": "Gathers scalar results you have stored from various analyses (e.g. periods, amplitudes, CFI values) and organises them into labelled groups, emitting a category column and a value column. Use it to assemble stored metrics into a tidy table for group comparison or plotting.",
       "x": 40,
       "y": 24,
@@ -97,15 +97,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_48": {
+    "tableprocess_53": {
       "x": 60,
       "y": 314
     },
-    "plot_69": {
+    "plot_74": {
       "x": 820,
       "y": 314
     },
-    "note_46": {
+    "note_51": {
       "x": 40,
       "y": 24
     }

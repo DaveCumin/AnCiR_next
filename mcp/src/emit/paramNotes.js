@@ -33,6 +33,12 @@
 // that ENUM VALUES are covered; prose for units/gating is a judgement call.
 
 export const PARAM_NOTES = {
+	ChiSquared:
+		'`testType` is "independence" (two categorical columns: `xIN` = rows, `yIN` = columns → contingency table → test of association) or "goodness" (one column `xIN`: a categorical column is tabulated into category counts, a numeric column is read as observed counts, tested against a uniform expectation). `correction` toggles Yates\' continuity correction, applied only to 2×2 independence tables. Outputs statistic, pvalue and df. Expected counts below 5 make the χ² approximation unreliable.',
+	CrossCorrelation:
+		'Two single-column inputs: `xIN` is series A, `yIN` is series B. `method` is "pearson" (linear) or "spearman" (rank / monotonic). `maxLag` bounds the lag window in SAMPLES (not hours); 0 ⇒ auto (a quarter of the shorter series). Outputs three equal-length columns (lag, correlation, pvalue); the peak lag is the estimated delay — a positive peak means B leads A by that many samples.',
+	NormalityTest:
+		'`method` is "dagostino" (D’Agostino-Pearson omnibus K², skewness + kurtosis, valid for n ≥ 8 — the default) or "jarquebera" (Jarque-Bera, valid down to n ≥ 3 but weaker in small samples). `alpha` is the significance level for the yes/no verdict (0.05). Each wired column is tested independently and reported one row per variable (variable, statistic, pvalue, n, normal). A small p-value ⇒ non-normal ⇒ prefer rank / non-parametric methods.',
 	Correlation:
 		'`method` is "pearson" (linear), "spearman" (rank / monotonic) or "auto" — "auto" uses Spearman if any wired column fails a Jarque-Bera normality check, else Pearson, so the whole matrix stays on one comparable method. `alpha` is the significance level (0.05). Every unique pair of the wired columns is reported (var_i, var_j, r, pvalue, n), using pairwise-complete rows.',
 	Split:

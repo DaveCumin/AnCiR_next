@@ -24,8 +24,8 @@ const N = 50;
 export const SAMPLE = {
 	index: () => seq(N, (i) => i),
 	hours: () => seq(N, (i) => i),
-	rhythm: (period = 24, amp = 40, base = 50) =>
-		seq(N, (i) => base + amp * Math.sin((2 * Math.PI * i) / period - Math.PI / 2)),
+	rhythm: (period = 24, amp = 40, base = 50, phaseHrs = 0) =>
+		seq(N, (i) => base + amp * Math.sin((2 * Math.PI * (i - phaseHrs)) / period - Math.PI / 2)),
 	linear: (m = 2, c = 1) => seq(N, (i) => m * i + c),
 	category3: () => seq(N, (i) => ['A', 'B', 'C'][i % 3]),
 	// ISO timestamps, hourly — becomes a 'time' column.
@@ -366,6 +366,65 @@ export const TP_SPECS = [
 			postHocEnabled: true,
 			out: {}
 		}),
+		noOutputs: true
+	},
+	{
+		name: 'DescribeData',
+		inputs: [
+			T('number', () => SAMPLE.rhythm(24, 40, 50)),
+			T('number', () => SAMPLE.linear(2, 1))
+		],
+		args: ([a, b]) => ({ yIN: [a, b], out: {} }),
+		noOutputs: true
+	},
+	{
+		name: 'LogisticRegression',
+		// Two numeric predictors and a binary outcome driven by them with injected noise (every
+		// 7th label flipped) so the fit is non-separable and converges.
+		inputs: [
+			T('number', () => seq(60, (i) => ((i * 7) % 11) + 1)),
+			T('number', () => seq(60, (i) => ((i * 5) % 9) + 1)),
+			T('number', () =>
+				seq(60, (i) => {
+					const x1 = ((i * 7) % 11) + 1;
+					const x2 = ((i * 5) % 9) + 1;
+					const base = 0.6 * x1 - 0.5 * x2 - 1 > 0 ? 1 : 0;
+					return i % 7 === 0 ? 1 - base : base;
+				})
+			)
+		],
+		args: ([x1, x2, y]) => ({ yIN: y, xIN: [x1, x2], out: {} }),
+		noOutputs: true
+	},
+	{
+		name: 'ChiSquared',
+		// Two categorical columns with a mild association, for a test of independence.
+		inputs: [
+			T('category', () => seq(90, (i) => ['ctrl', 'drug'][i % 2])),
+			T('category', () => seq(90, (i) => (i % 5 === 0 ? 'responder' : 'non-responder')))
+		],
+		args: ([g, o]) => ({ testType: 'independence', xIN: g, yIN: o, correction: true, out: {} }),
+		noOutputs: true
+	},
+	{
+		name: 'CrossCorrelation',
+		// Series B is series A shifted, so the demo shows a clear off-zero peak.
+		inputs: [
+			T('number', () => SAMPLE.rhythm(24, 40, 50)),
+			T('number', () => SAMPLE.rhythm(24, 40, 50, 6)) // 6 h phase shift
+		],
+		args: ([a, b]) => ({ xIN: a, yIN: b, maxLag: 12, method: 'pearson', out: {} }),
+		noOutputs: true
+	},
+	{
+		name: 'NormalityTest',
+		// One roughly-normal column and one strongly right-skewed column, so the demo shows both a
+		// pass and a fail.
+		inputs: [
+			T('number', () => SAMPLE.rhythm(24, 40, 50)),
+			T('number', () => seq(50, (i) => Math.exp(((i * 37) % 50) / 12)))
+		],
+		args: ([a, b]) => ({ yIN: [a, b], method: 'dagostino', alpha: 0.05, out: {} }),
 		noOutputs: true
 	},
 	{

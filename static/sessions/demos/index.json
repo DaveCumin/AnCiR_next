@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 54,
+  "count": 59,
   "sessions": [
     {
       "id": "workflow-rest-activity",
@@ -341,6 +341,66 @@
         "GroupComparison"
       ],
       "keywords": "compare groups (stats) compare statistics between groups defined by another column. analysis groupcomparison"
+    },
+    {
+      "id": "tp-describedata",
+      "name": "Describe Data",
+      "family": "Analysis",
+      "description": "Per-column summary statistics (mean, median, sd, min/max, quartiles, skewness, kurtosis).",
+      "url": "sessions/demos/demo-tp-describedata.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "DescribeData"
+      ],
+      "keywords": "describe data per-column summary statistics (mean, median, sd, min/max, quartiles, skewness, kurtosis). analysis describedata"
+    },
+    {
+      "id": "tp-logisticregression",
+      "name": "Logistic regression",
+      "family": "Analysis",
+      "description": "Model a binary outcome from one or more predictors: coefficients, odds ratios with 95% CIs, Wald p-values, and model fit (pseudo-R², LR test).",
+      "url": "sessions/demos/demo-tp-logisticregression.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "LogisticRegression"
+      ],
+      "keywords": "logistic regression model a binary outcome from one or more predictors: coefficients, odds ratios with 95% cis, wald p-values, and model fit (pseudo-r², lr test). analysis logisticregression"
+    },
+    {
+      "id": "tp-chisquared",
+      "name": "Chi-squared test",
+      "family": "Analysis",
+      "description": "Chi-squared test: independence of two categorical variables (contingency table), or goodness-of-fit of counts against a uniform expectation.",
+      "url": "sessions/demos/demo-tp-chisquared.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "ChiSquared"
+      ],
+      "keywords": "chi-squared test chi-squared test: independence of two categorical variables (contingency table), or goodness-of-fit of counts against a uniform expectation. analysis chisquared"
+    },
+    {
+      "id": "tp-crosscorrelation",
+      "name": "Cross-correlation",
+      "family": "Analysis",
+      "description": "Cross-correlogram of two series: the correlation at each lag, with the peak lag revealing the delay between them.",
+      "url": "sessions/demos/demo-tp-crosscorrelation.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "CrossCorrelation"
+      ],
+      "keywords": "cross-correlation cross-correlogram of two series: the correlation at each lag, with the peak lag revealing the delay between them. analysis crosscorrelation"
+    },
+    {
+      "id": "tp-normalitytest",
+      "name": "Normality Test",
+      "family": "Analysis",
+      "description": "Test each wired column for normality (D’Agostino-Pearson or Jarque-Bera), reporting the statistic, p-value and a verdict.",
+      "url": "sessions/demos/demo-tp-normalitytest.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "NormalityTest"
+      ],
+      "keywords": "normality test test each wired column for normality (d’agostino-pearson or jarque-bera), reporting the statistic, p-value and a verdict. analysis normalitytest"
     },
     {
       "id": "tp-correlation",

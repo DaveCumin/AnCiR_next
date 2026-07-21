@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "394": [
+    "437": [
       0,
       1,
       2,
@@ -98,7 +98,7 @@
       94,
       95
     ],
-    "395": [
+    "438": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -196,7 +196,7 @@
       15.358983848622422,
       11.362966948437233
     ],
-    "396": [
+    "439": [
       0.5,
       1.5,
       2.5,
@@ -222,7 +222,7 @@
       22.5,
       23.5
     ],
-    "397": [
+    "440": [
       10,
       11.362966948437267,
       15.358983848622461,
@@ -251,9 +251,9 @@
   },
   "data": [
     {
-      "id": 394,
+      "id": 437,
       "name": "Average Profile input 1",
-      "data": 394,
+      "data": 437,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -262,9 +262,9 @@
       "processes": []
     },
     {
-      "id": 395,
+      "id": 438,
       "name": "Average Profile input 2",
-      "data": 395,
+      "data": 438,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -273,22 +273,22 @@
       "processes": []
     },
     {
-      "id": 396,
-      "name": "avgprofx_52",
-      "data": 396,
+      "id": 439,
+      "name": "avgprofx_57",
+      "data": 439,
       "type": "number",
-      "tableProcessGUId": "74e4d8ad-e938-4f7a-841c-a8cdddc2f527",
+      "tableProcessGUId": "998b1a38-51f9-40ca-8ffe-f7e90fd37bd3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 397,
-      "name": "avgprof_395_52",
-      "data": 397,
+      "id": 440,
+      "name": "avgprof_438_57",
+      "data": 440,
       "type": "number",
-      "tableProcessGUId": "74e4d8ad-e938-4f7a-841c-a8cdddc2f527",
+      "tableProcessGUId": "998b1a38-51f9-40ca-8ffe-f7e90fd37bd3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -297,7 +297,7 @@
   ],
   "plots": [
     {
-      "id": 73,
+      "id": 78,
       "name": "Average Profile result",
       "x": 350,
       "y": 150,
@@ -313,10 +313,10 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          394,
-          395,
-          396,
-          397
+          437,
+          438,
+          439,
+          440
         ],
         "showCol": [
           true,
@@ -333,20 +333,20 @@
   ],
   "tableProcesses": [
     {
-      "id": 52,
+      "id": 57,
       "name": "AverageProfile",
       "displayName": "Average Profile",
       "args": {
-        "xIN": 394,
+        "xIN": 437,
         "yIN": [
-          395
+          438
         ],
         "period": 24,
         "nBins": 24,
         "preProcesses": [],
         "out": {
-          "avgprofx": 396,
-          "avgprof_395": 397
+          "avgprofx": 439,
+          "avgprof_438": 440
         }
       },
       "refTPId": null
@@ -357,7 +357,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_49",
+      "id": "note_54",
       "text": "Folds a series onto one period (default 24 h) and reports the mean value in each phase bin with its standard error, giving the 'average day' or mean waveform of the record. Use it to visualise the typical shape and timing of a rhythm across many cycles and to smooth out day-to-day noise before or alongside a parametric fit. In the demo, read each point as the across-days mean at that time-of-day and the error bars as the SEM: a clear peak-and-trough shape marks a robust rhythm, while flat bins with wide bars indicate weak or noisy rhythmicity. Mean-waveform folding (Refinetti et al. 2007).",
       "x": 40,
       "y": 24,
@@ -369,23 +369,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_394": {
+    "data_437": {
       "x": 60,
       "y": 314
     },
-    "data_395": {
+    "data_438": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_52": {
+    "tableprocess_57": {
       "x": 440,
       "y": 314
     },
-    "plot_73": {
+    "plot_78": {
       "x": 820,
       "y": 314
     },
-    "note_49": {
+    "note_54": {
       "x": 40,
       "y": 24
     }

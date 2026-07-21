@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "370": [
+    "413": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "371": [
+    "414": [
       0,
       10,
       20,
@@ -104,7 +104,7 @@
       480,
       490
     ],
-    "372": [
+    "415": [
       0,
       10,
       20,
@@ -156,7 +156,7 @@
       null,
       null
     ],
-    "373": [
+    "416": [
       null,
       null,
       null,
@@ -208,7 +208,7 @@
       null,
       null
     ],
-    "374": [
+    "417": [
       null,
       null,
       null,
@@ -263,9 +263,9 @@
   },
   "data": [
     {
-      "id": 370,
+      "id": 413,
       "name": "Split data input 1",
-      "data": 370,
+      "data": 413,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -274,9 +274,9 @@
       "processes": []
     },
     {
-      "id": 371,
+      "id": 414,
       "name": "Split data input 2",
-      "data": 371,
+      "data": 414,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -285,33 +285,33 @@
       "processes": []
     },
     {
-      "id": 372,
-      "name": "371_1_47",
-      "data": 372,
+      "id": 415,
+      "name": "414_1_52",
+      "data": 415,
       "type": "number",
-      "tableProcessGUId": "b327a7ec-1710-48ee-b0c4-41e9358dff3e",
+      "tableProcessGUId": "1cccd8fc-8695-48ea-80e4-74165cc62602",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 373,
-      "name": "371_2_47",
-      "data": 373,
+      "id": 416,
+      "name": "414_2_52",
+      "data": 416,
       "type": "number",
-      "tableProcessGUId": "b327a7ec-1710-48ee-b0c4-41e9358dff3e",
+      "tableProcessGUId": "1cccd8fc-8695-48ea-80e4-74165cc62602",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 374,
-      "name": "371_3_47",
-      "data": 374,
+      "id": 417,
+      "name": "414_3_52",
+      "data": 417,
       "type": "number",
-      "tableProcessGUId": "b327a7ec-1710-48ee-b0c4-41e9358dff3e",
+      "tableProcessGUId": "1cccd8fc-8695-48ea-80e4-74165cc62602",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -320,7 +320,7 @@
   ],
   "plots": [
     {
-      "id": 68,
+      "id": 73,
       "name": "Split data result",
       "x": 350,
       "y": 150,
@@ -336,11 +336,11 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          370,
-          371,
-          372,
-          373,
-          374
+          413,
+          414,
+          415,
+          416,
+          417
         ],
         "showCol": [
           true,
@@ -358,22 +358,22 @@
   ],
   "tableProcesses": [
     {
-      "id": 47,
+      "id": 52,
       "name": "Split",
       "displayName": "Split data",
       "args": {
-        "xIN": 370,
+        "xIN": 413,
         "yIN": [
-          371
+          414
         ],
         "splitTimes": [
           15,
           30
         ],
         "out": {
-          "371_1": 372,
-          "371_2": 373,
-          "371_3": 374
+          "414_1": 415,
+          "414_2": 416,
+          "414_3": 417
         }
       },
       "refTPId": null
@@ -384,7 +384,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_45",
+      "id": "note_50",
       "text": "Cuts a time-series into consecutive segments at the split times you specify, keeping the chosen columns aligned. Use it to separate, e.g., an entrainment stage from a free-run stage, or successive days, before analysing each part on its own.",
       "x": 40,
       "y": 24,
@@ -396,23 +396,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_370": {
+    "data_413": {
       "x": 60,
       "y": 314
     },
-    "data_371": {
+    "data_414": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_47": {
+    "tableprocess_52": {
       "x": 440,
       "y": 314
     },
-    "plot_68": {
+    "plot_73": {
       "x": 820,
       "y": 314
     },
-    "note_45": {
+    "note_50": {
       "x": 40,
       "y": 24
     }
