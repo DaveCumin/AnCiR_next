@@ -479,6 +479,24 @@ export async function buildTPDemo(spec, entry, display) {
 		// Show the pairwise significance bars — the whole point of a group comparison.
 		p.plot.showSigBars = true;
 		pushObj(p);
+	} else if (spec.name === 'LogisticRegression') {
+		// Fitted probability vs the linear predictor η, with the observed 0/1 outcomes overlaid.
+		// fitted = sigmoid(η), so the fitted points trace the S-curve while the observed points
+		// show the separation; this generalises to any number of predictors. The per-observation
+		// columns fill when the demo loads (the component writes them on recompute).
+		const etaId = tp.args.out.eta;
+		const fittedId = tp.args.out.fitted;
+		const outcomeId = tp.args.out.outcome;
+		const series = [];
+		if (etaId >= 0 && outcomeId >= 0)
+			series.push({ x: etaId, y: outcomeId, label: 'observed outcome', kind: 'points', colour: RAW_COLOUR });
+		if (etaId >= 0 && fittedId >= 0)
+			series.push({ x: etaId, y: fittedId, label: 'fitted P(y=1)', kind: 'points', colour: OUT_COLOUR });
+		if (series.length) scatterPlot(`${display}: fit`, series, { x: 'linear predictor (η)', y: 'P(y=1)' });
+		const termIds = ['term', 'coef', 'oddsRatio', 'pvalue']
+			.map((k) => tp.args.out[k])
+			.filter((v) => typeof v === 'number' && v >= 0);
+		if (termIds.length) tablePlot(`${display}: coefficients`, termIds);
 	} else {
 		tablePlot(`${display} result`, [...ids, ...outIds]);
 	}

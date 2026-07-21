@@ -335,7 +335,152 @@
   "plots": [
     {
       "id": 54,
-      "name": "Logistic regression result",
+      "name": "Logistic regression: fit",
+      "x": 350,
+      "y": 150,
+      "width": 500,
+      "height": 250,
+      "type": "scatterplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "xlimsIN": [
+          null,
+          null
+        ],
+        "xLogScale": false,
+        "ylimsLeftIN": [
+          null,
+          null
+        ],
+        "ylimsRightIN": [
+          null,
+          null
+        ],
+        "yLogScaleLeft": false,
+        "yLogScaleRight": false,
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 30
+        },
+        "xAxis": {
+          "label": "linear predictor (η)",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisLeft": {
+          "label": "P(y=1)",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisRight": {
+          "label": "",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 332,
+              "name": "eta_34",
+              "refId": 330,
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "y": {
+              "id": 333,
+              "name": "outcome_34",
+              "refId": 329,
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "observed outcome",
+            "yAxis": "left",
+            "line": {
+              "colour": "#234154",
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": false,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#234154",
+              "radius": 3,
+              "shape": "circle",
+              "draw": true
+            }
+          },
+          {
+            "x": {
+              "id": 334,
+              "name": "eta_34",
+              "refId": 330,
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "y": {
+              "id": 335,
+              "name": "fitted_34",
+              "refId": 331,
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "fitted P(y=1)",
+            "yAxis": "left",
+            "line": {
+              "colour": "#BE796B",
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": false,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#BE796B",
+              "radius": 3,
+              "shape": "circle",
+              "draw": true
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "topright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-80)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "nightBands": []
+      }
+    },
+    {
+      "id": 55,
+      "name": "Logistic regression: coefficients",
       "x": 350,
       "y": 150,
       "width": 500,
@@ -350,32 +495,12 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          318,
-          319,
-          320,
           321,
           322,
-          323,
-          324,
-          325,
           326,
-          327,
-          328,
-          329,
-          330,
-          331
+          325
         ],
         "showCol": [
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
           true,
           true,
           true,
@@ -454,6 +579,10 @@
       "x": 820,
       "y": 314
     },
+    "plot_55": {
+      "x": 820,
+      "y": 814
+    },
     "note_36": {
       "x": 40,
       "y": 24
@@ -515,5 +644,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.2"
+  "version": "β.60.3"
 }
