@@ -724,7 +724,7 @@
 			class="tp-stat-btn"
 			onclick={() => {
 				const { headers, rows } = getDlogStatsData();
-				showStaticDataAsTable('Double logistic stats', headers, rows, getDlogStatsData);
+				showStaticDataAsTable('Double logistic stats', headers, rows, getDlogStatsData, `tableprocess_${p.id}`);
 			}}>View stats</button
 		>
 		<button

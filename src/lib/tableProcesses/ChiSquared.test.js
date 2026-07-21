@@ -22,6 +22,8 @@ beforeEach(() => {
 	mockColumns[2] = { name: 'outcome', getData: () => ['win', 'lose', 'win', 'lose', 'win', 'win', 'lose', 'lose', 'win', 'lose'] };
 	mockColumns[3] = { name: 'counts', getData: () => [10, 10, 10, 10] };
 	mockColumns[4] = { name: 'category', getData: () => ['red', 'red', 'blue', 'green', 'red', 'blue', 'green', 'red'] };
+	// A count vector with trailing missing cells (null / blank) — must NOT become zero-count bins.
+	mockColumns[5] = { name: 'gappy', getData: () => [10, 10, 10, 10, null, ''] };
 });
 
 describe('chisquared — independence', () => {
@@ -60,5 +62,14 @@ describe('chisquared — goodness-of-fit', () => {
 		expect(r.labels).toEqual(['red', 'blue', 'green']);
 		expect(r.observed).toEqual([4, 2, 2]);
 		expect(Number.isFinite(r.statistic)).toBe(true);
+	});
+
+	it('ignores missing (null / blank) count cells instead of treating them as zero bins', () => {
+		// Regression: Number(null) and Number('') are 0, which used to survive as extra zero-count
+		// categories — inflating k/df and shifting the expected counts and p-value.
+		const [r] = chisquared(args({ testType: 'goodness', xIN: 5, yIN: -1 }));
+		expect(r.observed).toEqual([10, 10, 10, 10]); // the two missing cells dropped, not kept as 0
+		expect(r.df).toBe(3); // k=4 → df=3, not k=6 → df=5
+		expect(r.statistic).toBeCloseTo(0, 9); // still perfectly uniform
 	});
 });

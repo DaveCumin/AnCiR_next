@@ -207,6 +207,147 @@ function resetCore() {
 	for (const k of Object.keys(core.storedValues)) delete core.storedValues[k];
 }
 
+// Plot input fields that are genuinely optional; every OTHER field in a plot's defaultInputs is
+// required to produce a usable plot. Only the circular-phase plot's time axis is optional today
+// (the phase/angle `values` are still required). Keyed by the plot registry type (folder name,
+// lowercased). New plots therefore have ALL their inputs required by default — the safe direction.
+const OPTIONAL_PLOT_INPUTS = { circularphase: ['time'] };
+
+/** Short, safe description of a rejected value for error messages. */
+function badValueDesc(v) {
+	if (typeof v === 'number') return String(v); // NaN, Infinity, -Infinity
+	if (typeof v === 'string') return JSON.stringify(v.length > 20 ? v.slice(0, 20) + '…' : v);
+	if (Array.isArray(v)) return `array(${v.length})`;
+	if (typeof v === 'object') return 'object';
+	return typeof v;
+}
+
+/**
+ * Reject values that can't legitimately belong to a column of `type` before they enter
+ * core.rawData. The engine is otherwise trusting — a bare Array.isArray check let Infinity, NaN,
+ * '' and arbitrary objects into an alleged numeric column, surfacing later as opaque analysis or
+ * plotting failures. Missing values are represented as `null` (isInvalidValue's canonical token;
+ * `undefined` is accepted as missing too). Shared by every importColumns caller, including the
+ * worker's import_data handler, which delegates here.
+ *
+ * @param {string} name
+ * @param {string} type  'number' | 'category' | 'time'
+ * @param {any[]} values
+ */
+export function validateColumnValues(name, type, values) {
+	const t = type ?? 'number';
+	for (let i = 0; i < values.length; i++) {
+		const v = values[i];
+		if (v === null || v === undefined) continue; // missing — always allowed
+		if (t === 'number') {
+			if (typeof v !== 'number' || !Number.isFinite(v)) {
+				throw new Error(
+					`Column "${name}" (number) has an invalid value at index ${i}: ${badValueDesc(v)}. ` +
+						`Numeric columns accept finite numbers or null (missing); NaN, Infinity, strings and objects are rejected.`
+				);
+			}
+		} else if (typeof v === 'object' || typeof v === 'function' || typeof v === 'symbol') {
+			throw new Error(
+				`Column "${name}" (${t}) has a non-primitive value at index ${i}: ${badValueDesc(v)}. ` +
+					`${t} columns accept strings/numbers or null (missing).`
+			);
+		}
+	}
+}
+
+/** Remove a table process and its output columns from the engine state. */
+export function discardTableProcess(tp) {
+	const outIds = Object.values(tp?.args?.out ?? {}).filter((id) => typeof id === 'number' && id >= 0);
+	core.tableProcesses = core.tableProcesses.filter((t) => t.id !== tp.id);
+	for (const id of outIds) {
+		try {
+			removeColumn(id);
+		} catch {
+			/* already gone */
+		}
+	}
+}
+
+/**
+ * Read a (valid) table process's output columns into the report shape. Prunes columns the process
+ * left empty — dual-mode processes (RhythmicityAnalysis, MovingAnalysis) pre-allocate a
+ * collected-mode column that stays empty in the standalone path the MCP uses — but a column whose
+ * getData() THROWS is a genuine failure, not an empty output: surfacing it as `valid: false` with
+ * the failed key + original error keeps a broken process chain from reporting success with
+ * silently-missing outputs.
+ *
+ * @param {import('$lib/core/TableProcess.svelte').TableProcess} tp
+ * @param {string} name
+ * @param {{fit?:any, stats?:any}} [extra]
+ */
+export function finalizeTableProcessOutputs(tp, name, { fit = null, stats = null } = {}) {
+	const failed = [];
+	const failure = () => {
+		discardTableProcess(tp);
+		return {
+			name,
+			tableProcessId: tp.id,
+			valid: false,
+			error: `${name}: reading output column${failed.length > 1 ? 's' : ''} ${failed
+				.map((f) => `"${f.key}"`)
+				.join(', ')} threw — the process chain is broken: ${failed[0].error}`,
+			failedOutputs: failed,
+			outputs: []
+		};
+	};
+
+	// Prune empty output columns; a THROW here is a hard failure, not an empty column.
+	for (const [key, colId] of Object.entries(tp.args.out ?? {})) {
+		if (typeof colId !== 'number' || colId < 0) continue;
+		const col = getColumnById(colId);
+		let len;
+		try {
+			len = (col?.getData() ?? []).length;
+		} catch (err) {
+			failed.push({ key, columnId: colId, error: err?.message ?? String(err) });
+			continue;
+		}
+		if (len === 0) {
+			delete tp.args.out[key];
+			if (col) removeColumn(colId);
+		}
+	}
+	if (failed.length) return failure();
+
+	const outputs = [];
+	for (const [key, colId] of Object.entries(tp.args.out ?? {})) {
+		if (typeof colId !== 'number' || colId < 0) continue;
+		const col = getColumnById(colId);
+		if (!col) continue;
+		let data;
+		try {
+			data = col.getData() ?? [];
+		} catch (err) {
+			// The prune pass already read every column, so a throw here means the column changed
+			// under us — still surface it rather than reporting an empty output.
+			failed.push({ key, columnId: colId, error: err?.message ?? String(err) });
+			continue;
+		}
+		outputs.push({
+			key,
+			columnId: colId,
+			name: col.name,
+			type: col.type,
+			length: data.length,
+			preview: data.slice(0, 8)
+		});
+	}
+	if (failed.length) return failure();
+
+	const result = { name, tableProcessId: tp.id, valid: true, outputs };
+	if (fit) result.fit = fit;
+	// Statistics: GroupComparison exposes them as `comparisons` (alongside its statistic/pvalue
+	// output columns), so surface them regardless of columns; other column-less processes only
+	// when they produced no columns.
+	if (stats && (stats.comparisons || outputs.length === 0)) result.stats = stats;
+	return result;
+}
+
 export class AncirSession {
 	constructor(id = 'default') {
 		this.id = id;
@@ -220,11 +361,19 @@ export class AncirSession {
 	 * @returns {Array<{id:number,name:string,type:string}>}
 	 */
 	importColumns(cols) {
-		const added = [];
+		// Validate EVERY column up-front so a bad value in a later column doesn't leave the earlier
+		// ones half-imported. Bad data (Infinity, NaN, strings in a numeric column, arbitrary
+		// objects) is rejected at the door rather than causing opaque failures downstream. This is
+		// the single validation point for every caller — direct engine, the stdio Zod tool, and the
+		// worker's import_data handler (worker.js), which all delegate here.
 		for (const c of cols) {
 			if (!Array.isArray(c.values)) {
 				throw new Error(`Column "${c.name}" must provide a numeric "values" array.`);
 			}
+			validateColumnValues(c.name ?? 'unnamed', c.type, c.values);
+		}
+		const added = [];
+		for (const c of cols) {
 			const id = this._nextId++;
 			core.rawData.set(id, c.values.slice());
 			const col = Column.fromJSON({
@@ -403,19 +552,7 @@ export class AncirSession {
 		// Remove a failed/invalid node and its columns from the session, so a broken
 		// process (e.g. SimulatedData with no startTime) never lands in the export and
 		// crashes the GUI on load.
-		const discardTp = (tpToDrop) => {
-			const outIds = Object.values(tpToDrop?.args?.out ?? {}).filter(
-				(id) => typeof id === 'number' && id >= 0
-			);
-			core.tableProcesses = core.tableProcesses.filter((t) => t.id !== tpToDrop.id);
-			for (const id of outIds) {
-				try {
-					removeColumn(id);
-				} catch {
-					/* already gone */
-				}
-			}
-		};
+		const discardTp = discardTableProcess;
 		let tp;
 		try {
 			tp = new TableProcess({ name, args: a }, null);
@@ -490,55 +627,10 @@ export class AncirSession {
 			};
 		}
 
-		// Prune output columns the process didn't write to. Dual-mode processes
-		// (RhythmicityAnalysis, MovingAnalysis) carry a `yOutKeyPrefix`, so the
-		// TableProcess constructor pre-allocates a "collected-mode" column that stays
-		// empty in the standalone path the MCP uses; drop those so the report and the
-		// exported session stay clean.
-		for (const [key, colId] of Object.entries(tp.args.out ?? {})) {
-			if (typeof colId !== 'number' || colId < 0) continue;
-			const col = getColumnById(colId);
-			let len = 0;
-			try {
-				len = (col?.getData() ?? []).length;
-			} catch {
-				len = 0;
-			}
-			if (len === 0) {
-				delete tp.args.out[key];
-				if (col) removeColumn(colId);
-			}
-		}
-
-		const outputs = [];
-		for (const [key, colId] of Object.entries(tp.args.out ?? {})) {
-			if (typeof colId !== 'number' || colId < 0) continue;
-			const col = getColumnById(colId);
-			if (!col) continue;
-			let data = [];
-			try {
-				data = col.getData() ?? [];
-			} catch {
-				data = [];
-			}
-			outputs.push({
-				key,
-				columnId: colId,
-				name: col.name,
-				type: col.type,
-				length: data.length,
-				preview: data.slice(0, 8)
-			});
-		}
-
-		const result = { name, tableProcessId: tp.id, valid, outputs };
-		// Recovered fit parameters (Cosinor/FitFunction) — the numbers a caller wants.
-		if (fit) result.fit = fit;
-		// Statistics: GroupComparison exposes them as `comparisons` (now alongside its
-		// statistic/pvalue output columns), so surface them regardless of columns; other
-		// column-less processes only when they produced no columns.
-		if (stats && (stats.comparisons || outputs.length === 0)) result.stats = stats;
-		return result;
+		// Prune empty (pre-allocated collected-mode) output columns and serialise the rest. A
+		// column whose getData() THROWS is surfaced as valid:false with the failed key + error,
+		// rather than being silently treated as empty (which hid broken chains from the agent).
+		return finalizeTableProcessOutputs(tp, name, { fit, stats });
 	}
 
 	/**
@@ -616,9 +708,23 @@ export class AncirSession {
 			p.plot.showCol = ids.map(() => true);
 		} else {
 			const fields = entry.defaultInputs ?? [];
+			const optional = new Set(OPTIONAL_PLOT_INPUTS[type] ?? []);
+			const refOf = (field) => (Array.isArray(inputs) ? inputs[fields.indexOf(field)] : inputs[field]);
+			// Reject incomplete wiring BEFORE committing the plot. Previously a missing field was
+			// silently skipped and the plot inserted anyway (e.g. a scatterplot with x but no y),
+			// so add_plot reported success but the plot rendered blank / unusable.
+			const missing = fields.filter((f) => !optional.has(f) && refOf(f) == null);
+			if (missing.length) {
+				const required = fields.filter((f) => !optional.has(f));
+				throw new Error(
+					`Plot "${type}" is missing required input${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}. ` +
+						`It needs ${required.join(' + ')}${optional.size ? ` (optional: ${[...optional].join(', ')})` : ''}. ` +
+						`Call list_capabilities for this plot's inputs.`
+				);
+			}
 			const dataIn = {};
 			for (const field of fields) {
-				const ref = Array.isArray(inputs) ? inputs[fields.indexOf(field)] : inputs[field];
+				const ref = refOf(field);
 				if (ref == null) continue;
 				dataIn[field] = { refId: assertCol(ref) };
 			}

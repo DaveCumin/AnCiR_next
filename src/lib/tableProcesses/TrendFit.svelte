@@ -1008,7 +1008,7 @@
 			class="tp-stat-btn"
 			onclick={() => {
 				const { headers, rows } = getTrendStatsData();
-				showStaticDataAsTable('Trend fit stats', headers, rows, getTrendStatsData);
+				showStaticDataAsTable('Trend fit stats', headers, rows, getTrendStatsData, `tableprocess_${p.id}`);
 			}}>View stats</button
 		>
 		<button

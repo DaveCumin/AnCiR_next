@@ -76,4 +76,27 @@ describe('add_plot (wired into the session)', () => {
 		const s = new AncirSession('plot-bad');
 		expect(() => s.addPlot('piechart', {})).toThrow(/Unknown plot type/);
 	});
+
+	it('rejects a scatterplot with x but no y (incomplete wiring), and adds no plot', () => {
+		const s = new AncirSession('plot-partial');
+		s.importColumns([{ name: 'x', values: seq(10, (i) => i) }]);
+		expect(() => s.addPlot('scatterplot', { x: 0 })).toThrow(/missing required input.*y/i);
+		// The half-wired plot must NOT have been committed.
+		expect(s.exportSessionObject().plots.length).toBe(0);
+	});
+
+	it('rejects an actogram missing its values field', () => {
+		const s = new AncirSession('plot-acto-partial');
+		s.importColumns([{ name: 't', type: 'time', values: seq(10, (i) => i) }]);
+		expect(() => s.addPlot('actogram', { time: 0 })).toThrow(/missing required input.*values/i);
+	});
+
+	it('allows the circular-phase plot without its optional time axis', () => {
+		const s = new AncirSession('plot-circ');
+		s.importColumns([{ name: 'phase', values: seq(20, (i) => (i % 24) * (Math.PI / 12)) }]);
+		// `values` provided, `time` omitted — must succeed (time is optional).
+		const res = s.addPlot('circularphase', { values: 0 });
+		expect(res.type).toBe('circularphase');
+		expect(s.exportSessionObject().plots.length).toBe(1);
+	});
 });

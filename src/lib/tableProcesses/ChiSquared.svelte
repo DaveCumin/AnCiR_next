@@ -59,7 +59,10 @@
 		let labels;
 		let observed;
 		if (isNumericCol(raw)) {
-			observed = raw.map(Number).filter(Number.isFinite);
+			// Drop missing cells BEFORE coercion: Number(null) and Number('') are both 0, which
+			// Number.isFinite keeps — so a partially-missing count vector would gain phantom
+			// zero-count bins, inflating k/df and shifting the expected counts and p-value.
+			observed = raw.filter((v) => v != null && v !== '').map(Number).filter(Number.isFinite);
 			labels = observed.map((_, i) => `bin ${i + 1}`);
 		} else {
 			const counts = new Map();

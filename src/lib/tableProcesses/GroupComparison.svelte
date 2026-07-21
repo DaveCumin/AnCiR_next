@@ -1024,7 +1024,7 @@
 					class="tp-stat-btn"
 					onclick={() => {
 						const { headers, rows } = getStatsData();
-						showStaticDataAsTable('Group comparison stats', headers, rows, getStatsData);
+						showStaticDataAsTable('Group comparison stats', headers, rows, getStatsData, `tableprocess_${p.id}`);
 					}}
 				>
 					Open full table
@@ -1065,7 +1065,7 @@
 					class="tp-stat-btn"
 					onclick={() => {
 						const { headers, rows } = getGroupSummaryData();
-						showStaticDataAsTable('Group summary', headers, rows, getGroupSummaryData);
+						showStaticDataAsTable('Group summary', headers, rows, getGroupSummaryData, `tableprocess_${p.id}`);
 					}}
 				>
 					Open full table
@@ -1099,7 +1099,7 @@
 						class="tp-stat-btn"
 						onclick={() => {
 							const { headers, rows } = getPostHocData();
-							showStaticDataAsTable('Group post-hoc', headers, rows, getPostHocData);
+							showStaticDataAsTable('Group post-hoc', headers, rows, getPostHocData, `tableprocess_${p.id}`);
 						}}
 					>
 						Open full table

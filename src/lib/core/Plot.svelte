@@ -57,18 +57,21 @@
 		core.plots = core.plots.filter((p) => !isDeleted(p));
 	}
 
-	// Plot types that support faceting (small multiples). These all use an x/y
-	// series model the facet engine understands. Histogram is intentionally absent:
-	// its series are column-based (not x/y), so faceting it needs the engine
-	// generalised — tracked as a follow-up.
+	// Plot types that support faceting (small multiples). Most use an x/y series model;
+	// the histogram is column-based (one `column` ref per series), which the engine also
+	// handles (see facetUnits below) — one child histogram per wired column.
 	export const FACETABLE_PLOT_TYPES = new Set([
 		'scatterplot',
 		'boxplot',
 		'actogram',
 		'correlogram',
 		'periodogram',
-		'fft'
+		'fft',
+		'histogram'
 	]);
+
+	// Plot types whose series are a flat list of single columns (no x/y pairing).
+	const COLUMN_BASED_FACET_TYPES = new Set(['histogram']);
 
 	// Group a plot's flat data points into series-sets by shared x (mirrors the
 	// per-set (xN, ysN) ports). Each set keeps only valid ys, in wired order.
@@ -87,43 +90,79 @@
 		return sets;
 	}
 
-	// Reconcile a facet generator's child plots. Set 1 (the first wired x-group)
-	// drives the facets: one child plot per y in set 1. Any further sets (2, 3, …)
-	// are paired by position — the i-th y of set 2/3 is overlaid onto child i — so
-	// e.g. raw points in set 1 and their fitted curves in set 2 land on the same
-	// small multiple. Children are keyed for stable reuse and arranged in a grid.
-	// Idempotent: only writes core.plots / child fields when something changed.
+	// Normalise a generator's wired series into the facet UNITS that drive the small
+	// multiples — one child plot per unit. Two data models:
+	//   • column-based (histogram): one unit per wired `column`; the child gets that single
+	//     column. desired = [{ column }].
+	//   • x/y (scatter, boxplot, …): set 1 (the first wired x-group) drives the facets, one
+	//     unit per y in set 1; any further sets (2, 3, …) are paired by position — the i-th y of
+	//     set 2/3 is overlaid onto unit i — so raw points and their fitted curve land together.
+	//     desired = [{ xRef, yRef }, …].
+	// Each unit carries a stable `key` for reuse, a `name`, and a `sig` for idempotent syncing.
+	function facetUnits(gen) {
+		const data = gen.plot?.data ?? [];
+		if (COLUMN_BASED_FACET_TYPES.has(gen.type)) {
+			const units = [];
+			data.forEach((dp) => {
+				const ref = dp?.column?.refId ?? -1;
+				if (ref < 0 || !getColumnById(ref)) return;
+				const i = units.length;
+				units.push({
+					key: `${gen.id}:${i}:${ref}`,
+					name: getColumnById(ref)?.name ?? `series ${i + 1}`,
+					desired: [{ column: ref }],
+					sig: `c${ref}`
+				});
+			});
+			return units;
+		}
+		const sets = facetSets(data);
+		const primary = sets[0] ?? { xRefId: -1, ys: [] };
+		return primary.ys.map((yRef, i) => {
+			const desired = [{ xRef: primary.xRefId, yRef }];
+			for (let k = 1; k < sets.length; k++) {
+				if (i < sets[k].ys.length) desired.push({ xRef: sets[k].xRefId, yRef: sets[k].ys[i] });
+			}
+			return {
+				key: `${gen.id}:${i}:${yRef}`,
+				name: getColumnById(yRef)?.name ?? `series ${i + 1}`,
+				desired,
+				sig: desired.map((d) => `${d.xRef}:${d.yRef}`).join(',')
+			};
+		});
+	}
+
+	// Signature of a child's current series, in the same shape facetUnits emits, so syncing
+	// only rewrites the series when they actually differ.
+	function childSeriesSig(child) {
+		return (child.plot?.data ?? [])
+			.map((dp) => (dp?.column?.refId != null ? `c${dp.column.refId}` : `${dp?.x?.refId ?? -1}:${dp?.y?.refId ?? -1}`))
+			.join(',');
+	}
+
+	// Reconcile a facet generator's child plots. Children are keyed for stable reuse and arranged
+	// in a grid. Idempotent: only writes core.plots / child fields when something changed.
 	export function syncFacetChildren(gen) {
 		if (!gen) return;
-		const sets = gen.facet ? facetSets(gen.plot?.data) : [];
-		const primary = sets[0] ?? { xRefId: -1, ys: [] };
+		const units = gen.facet ? facetUnits(gen) : [];
 		const padding = appState.gridSize ?? 15;
 		const width = snapToGrid(gen.width ?? 360);
 		const height = snapToGrid(gen.height ?? 220);
-		const nCols = Math.max(1, Math.ceil(Math.sqrt(primary.ys.length || 1)));
+		const nCols = Math.max(1, Math.ceil(Math.sqrt(units.length || 1)));
 		const keep = new Set();
 
-		primary.ys.forEach((yRef, i) => {
-			const key = `${gen.id}:${i}:${yRef}`;
+		units.forEach((unit, i) => {
+			const key = unit.key;
 			keep.add(key);
 			const col = i % nCols;
 			const row = Math.floor(i / nCols);
 			// Lay children out below the generator's position.
 			const x = snapToGrid((gen.x ?? 0) + col * (width + padding));
 			const y = snapToGrid((gen.y ?? 0) + height + 2 * padding + row * (height + padding));
-			const yName = getColumnById(yRef)?.name ?? `series ${i + 1}`;
-
-			// Desired series for this facet: the primary y plus the i-th y of each
-			// later set (paired by position).
-			const desired = [{ xRef: primary.xRefId, yRef }];
-			for (let k = 1; k < sets.length; k++) {
-				if (i < sets[k].ys.length) desired.push({ xRef: sets[k].xRefId, yRef: sets[k].ys[i] });
-			}
-			const desiredSig = desired.map((d) => `${d.xRef}:${d.yRef}`).join(',');
 
 			let child = core.plots.find((p) => p.facetParent === gen.id && p.facetKey === key);
 			if (!child) {
-				child = new Plot({ type: gen.type, name: yName, x, y, width, height });
+				child = new Plot({ type: gen.type, name: unit.name, x, y, width, height });
 				child.facetParent = gen.id;
 				child.facetKey = key;
 				core.plots.push(child);
@@ -132,20 +171,21 @@
 				child.y = y;
 				child.width = width;
 				child.height = height;
-				child.name = yName;
+				child.name = unit.name;
 			}
 
-			// Sync the child's series to `desired` only when they differ (keeps the
+			// Sync the child's series to `unit.desired` only when they differ (keeps the
 			// reconciliation idempotent and avoids needless column churn).
-			const currentSig = (child.plot?.data ?? [])
-				.map((dp) => `${dp?.x?.refId ?? -1}:${dp?.y?.refId ?? -1}`)
-				.join(',');
-			if (currentSig !== desiredSig) {
+			if (childSeriesSig(child) !== unit.sig) {
 				child.plot.data = [];
-				for (const d of desired) {
-					const dataIn = { y: { refId: d.yRef } };
-					if (d.xRef != null && d.xRef >= 0) dataIn.x = { refId: d.xRef };
-					child.plot.addData(dataIn);
+				for (const d of unit.desired) {
+					if (d.column != null) {
+						child.plot.addData({ column: { refId: d.column } });
+					} else {
+						const dataIn = { y: { refId: d.yRef } };
+						if (d.xRef != null && d.xRef >= 0) dataIn.x = { refId: d.xRef };
+						child.plot.addData(dataIn);
+					}
 				}
 			}
 		});

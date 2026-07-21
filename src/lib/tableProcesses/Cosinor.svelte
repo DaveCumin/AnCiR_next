@@ -1085,7 +1085,7 @@
 			class="tp-stat-btn"
 			onclick={() => {
 				const { headers, rows } = getCosinorStatsData();
-				showStaticDataAsTable('Cosinor stats', headers, rows, getCosinorStatsData);
+				showStaticDataAsTable('Cosinor stats', headers, rows, getCosinorStatsData, `tableprocess_${p.id}`);
 			}}>View stats</button
 		>
 		<button

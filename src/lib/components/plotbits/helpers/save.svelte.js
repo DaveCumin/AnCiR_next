@@ -60,13 +60,24 @@ export function showDataAsTable(plotId) {
  * @param {any[][]} rows
  * @param {(() => {headers: string[], rows: any[][]}) | null} [statsGetter] - optional live getter for reactive updates
  */
-export function showStaticDataAsTable(name, headers, rows, statsGetter = null) {
+export function showStaticDataAsTable(name, headers, rows, statsGetter = null, sourceNodeId = null) {
 	if (!headers?.length || !rows?.length) return;
+	// Place the table next to its source node so it appears where the user clicked. Previously it
+	// spawned at a hard-coded (80,80) — usually off-screen or behind the canvas/notes — so the
+	// button looked like it did nothing. Falls back to (80,80) only when the node has no layout yet.
+	let x = 80;
+	let y = 80;
+	const layout = sourceNodeId ? core.nodeLayout?.[sourceNodeId] : null;
+	if (layout) {
+		x = (layout.x ?? 0) + 360;
+		y = (layout.y ?? 0) + 40;
+	}
 	const newPlot = mutationService.addPlot({
 		name,
 		type: 'dataview',
-		x: 80,
-		y: 80,
+		x,
+		y,
+		sourceNodeId,
 		width: Math.max(400, headers.length * 90),
 		height: Math.min(500, 100 + rows.length * 33),
 		plot: { sourceType: 'static', staticHeaders: headers, staticRows: rows }
@@ -74,6 +85,7 @@ export function showStaticDataAsTable(name, headers, rows, statsGetter = null) {
 	// statsGetter is intentionally non-serialised (functions don't survive snapshots);
 	// attach post-creation so the live reactive stats path still works.
 	if (newPlot && statsGetter) newPlot.plot.statsGetter = statsGetter;
+	return newPlot;
 }
 
 /**

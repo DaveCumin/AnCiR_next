@@ -755,7 +755,7 @@
 			class="tp-stat-btn"
 			onclick={() => {
 				const { headers, rows } = getRwaveStatsData();
-				showStaticDataAsTable('Rectangular wave stats', headers, rows, getRwaveStatsData);
+				showStaticDataAsTable('Rectangular wave stats', headers, rows, getRwaveStatsData, `tableprocess_${p.id}`);
 			}}>View stats</button
 		>
 		<button

@@ -11,6 +11,7 @@
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { fillDefaults, normalizeYInputs } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { normalityTest } from '$lib/utils/normality.js';
@@ -153,6 +154,9 @@
 			options={['shapiro', 'dagostino', 'jarquebera']}
 			optionsDisplay={['Shapiro-Wilk (3 ≤ n ≤ 5000)', "D'Agostino-Pearson (n ≥ 8)", 'Jarque-Bera (n ≥ 3)']}
 		/>
+	</ControlInput>
+	<ControlInput label="Significance (α)">
+		<NumberWithUnits bind:value={p.args.alpha} min="0.0001" max="0.9999" step="0.01" />
 	</ControlInput>
 	{#if result.rows.length}
 		<p class="hint">{result.rows.length} variable{result.rows.length === 1 ? '' : 's'}, test: <strong>{METHOD_LABEL[result.methodUsed]}</strong>.</p>

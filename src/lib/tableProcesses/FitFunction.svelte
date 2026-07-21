@@ -1228,7 +1228,7 @@
 			class="tp-stat-btn"
 			onclick={() => {
 				const { headers, rows } = getFitStatsData();
-				showStaticDataAsTable('Fit function stats', headers, rows, getFitStatsData);
+				showStaticDataAsTable('Fit function stats', headers, rows, getFitStatsData, `tableprocess_${p.id}`);
 			}}>View stats</button
 		>
 		<button

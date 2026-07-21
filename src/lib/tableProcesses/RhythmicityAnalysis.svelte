@@ -823,7 +823,7 @@
 			class="tp-stat-btn"
 			onclick={() => {
 				const { headers, rows } = getStatsData();
-				showStaticDataAsTable('Rhythmicity stats', headers, rows, getStatsData);
+				showStaticDataAsTable('Rhythmicity stats', headers, rows, getStatsData, `tableprocess_${p.id}`);
 			}}>View stats</button
 		>
 		<button
