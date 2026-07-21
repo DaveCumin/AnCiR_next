@@ -98,7 +98,10 @@ function buildOut(name, g) {
 		const meta = OUT_META[name]?.(args) ?? {};
 		const metaOf = (key) => ({ type: 'number', ...(meta[key] ?? {}) });
 		const fixed = g.fixedOut.map((key) => ({ key, ...metaOf(key) }));
-		const yIds = args.yIN ?? [];
+		// Coerce defensively: a per-Y node's yIN is normally an id array by here, but a malformed
+		// draft (a scalar yIN, or yIN on a node that doesn't declare it) must not `.map`-crash the
+		// whole request — the same guard outputColumnName needs. scalar → [scalar], absent → [].
+		const yIds = Array.isArray(args.yIN) ? args.yIN : args.yIN == null ? [] : [args.yIN];
 		// per-Y `${prefix}${yid}` (Cosinor's cosinory_7, BinnedData's binnedy_7, …)
 		if (g.dynamicKind === 'prefix')
 			return [...fixed, ...yIds.map((yid) => ({ key: `${g.perYPrefix}${yid}`, type: 'number' }))];
