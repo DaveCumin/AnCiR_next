@@ -2057,12 +2057,17 @@ def tp_random(args, cols, raw_data, _sv):
     n = int(args.get('N', args.get('rows', 100)))
     offset = float(args.get('offset', 0.0))
     mult = float(args.get('multiply', 1.0))
+    dist = args.get('distribution', 'uniform')
     # NOTE: JS Random uses a seeded @stdlib minstd PRNG; this port uses an
     # unseeded RNG, so output is NOT bit-identical. demo-tp-random is excluded
     # from session parity as non-deterministic (see test_session_parity.py).
     rng = np.random.default_rng()
-    _set_col(raw_data, cols, _out_id(args, 'result'),
-             (offset + rng.random(n) * mult).tolist(), type_='number')
+    if dist == 'bernoulli':
+        p = min(1.0, max(0.0, float(args.get('probability', 0.5))))
+        vals = (rng.random(n) < p).astype(float).tolist()
+    else:
+        vals = (offset + rng.random(n) * mult).tolist()
+    _set_col(raw_data, cols, _out_id(args, 'result'), vals, type_='number')
     return n > 0
 
 

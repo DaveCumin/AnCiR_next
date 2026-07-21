@@ -25,6 +25,7 @@
 		['N', { val: 10 }],
 		['seed', { val: Math.floor(Math.random() * 100000) }],
 		['distribution', { val: 'uniform' }],
+		['probability', { val: 0.5 }], // bernoulli only: P(outcome = 1)
 		['out', { result: { val: -1 } }], //needed to set upu the output columns
 		['valid', { val: false }] //needed for the progress step logic
 	]);
@@ -64,6 +65,15 @@
 			const randExp = exponential.factory(1 / mean, { prng: prng.normalized });
 			const base = Number(argsIN.offset);
 			return () => base + randExp();
+		}
+
+		if (distribution === 'bernoulli') {
+			// A 0/1 outcome — one draw < p is a success. Built on the same uniform draw the other
+			// branches use (no separate @stdlib bernoulli), so the mcp port stays bit-identical.
+			const rawP = Number(argsIN.probability);
+			const p = Number.isFinite(rawP) ? Math.min(1, Math.max(0, rawP)) : 0.5;
+			const draw = uniform.factory(0, 1, { prng: prng.normalized });
+			return () => (draw() < p ? 1 : 0);
 		}
 
 		const randUnit = uniform.factory(0, 1, { prng: prng.normalized });
@@ -156,6 +166,7 @@
 				<option value="uniform">Uniform</option>
 				<option value="gaussian">Gaussian</option>
 				<option value="exponential">Exponential</option>
+				<option value="bernoulli">Bernoulli (0/1)</option>
 			</select>
 		</ControlInput>
 		<ControlInput label="Seed">
@@ -164,12 +175,19 @@
 		<ControlInput label="N">
 			<NumberWithUnits bind:value={p.args.N} onInput={doRandom} />
 		</ControlInput>
-		<ControlInput label={offsetLabel}>
-			<NumberWithUnits bind:value={p.args.offset} onInput={doRandom} />
-		</ControlInput>
-		<ControlInput label={multiplyLabel}>
-			<NumberWithUnits bind:value={p.args.multiply} onInput={doRandom} />
-		</ControlInput>
+		{#if p.args.distribution === 'bernoulli'}
+			<!-- Bernoulli is a single-parameter draw: P(1). offset/multiply don't apply. -->
+			<ControlInput label="Probability (P of 1)">
+				<NumberWithUnits bind:value={p.args.probability} onInput={doRandom} step={0.05} min={0} max={1} />
+			</ControlInput>
+		{:else}
+			<ControlInput label={offsetLabel}>
+				<NumberWithUnits bind:value={p.args.offset} onInput={doRandom} />
+			</ControlInput>
+			<ControlInput label={multiplyLabel}>
+				<NumberWithUnits bind:value={p.args.multiply} onInput={doRandom} />
+			</ControlInput>
+		{/if}
 	</div>
 </div>
 

@@ -166,6 +166,10 @@ describe('Random port is identical to the real generator', () => {
 		},
 		gaussian: { distribution: 'gaussian', N: 40, offset: 100, multiply: 15, seed: 99 },
 		exponential: { distribution: 'exponential', N: 40, offset: 2, multiply: 5, seed: 3 },
+		bernoulli: { distribution: 'bernoulli', N: 40, probability: 0.5, seed: 11 },
+		'bernoulli skewed': { distribution: 'bernoulli', N: 40, probability: 0.2, seed: 12 },
+		// p out of range clamps identically on both sides; default p when absent.
+		'bernoulli p clamped + default': { distribution: 'bernoulli', N: 20, probability: 5, seed: 13 },
 		// degenerate scale collapses to a constant upstream — mirror it exactly
 		'gaussian with zero sigma': { distribution: 'gaussian', N: 5, offset: 42, multiply: 0, seed: 1 },
 		'exponential with zero mean': { distribution: 'exponential', N: 5, offset: 7, multiply: 0, seed: 1 },

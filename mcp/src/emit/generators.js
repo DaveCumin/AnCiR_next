@@ -119,6 +119,15 @@ function randomGenerator(args) {
 		return () => base + randExp();
 	}
 
+	if (distribution === 'bernoulli') {
+		// A 0/1 outcome — one uniform draw < p is a success. Must match Random.svelte exactly
+		// (same draw, same clamp) so generators.parity keeps this port bit-identical to the app.
+		const rawP = Number(args.probability);
+		const p = Number.isFinite(rawP) ? Math.min(1, Math.max(0, rawP)) : 0.5;
+		const draw = uniform.factory(0, 1, { prng: prng.normalized });
+		return () => (draw() < p ? 1 : 0);
+	}
+
 	const randUnit = uniform.factory(0, 1, { prng: prng.normalized });
 	const base = Number(args.offset);
 	const scale = Number(args.multiply);
@@ -145,7 +154,7 @@ function randomGenerator(args) {
  */
 export const USAGE_NOTES = {
 	Random:
-		'N random values. `distribution` is "uniform" (each value = offset + multiply×[0,1)), "gaussian" (offset = the MEAN, multiply = the SD), or "exponential" (offset + an exponential with mean=multiply). So 50 values scattered around 5 with a little jitter = {N:50, distribution:"gaussian", offset:5, multiply:0.5}. A gaussian with multiply:0 gives a CONSTANT column of `offset` — that is how to make a column of 1s. Values are rounded to 2 dp. Give each Random node a DIFFERENT `seed`, or they return identical columns',
+		'N random values. `distribution` is "uniform" (each value = offset + multiply×[0,1)), "gaussian" (offset = the MEAN, multiply = the SD), "exponential" (offset + an exponential with mean=multiply), or "bernoulli" (a 0/1 outcome; `probability` is P(1), default 0.5 — offset/multiply are ignored). Use "bernoulli" for a binary outcome, e.g. the yIN of a LogisticRegression. So 50 values scattered around 5 with a little jitter = {N:50, distribution:"gaussian", offset:5, multiply:0.5}; a coin-flip column = {N:50, distribution:"bernoulli", probability:0.5}. A gaussian with multiply:0 gives a CONSTANT column of `offset` — that is how to make a column of 1s. Values are rounded to 2 dp. Give each Random node a DIFFERENT `seed`, or they return identical columns',
 	SequenceColumn:
 		'a plain arithmetic sequence: `count` values from `start`, adding `step` each time (seqType:"number"), or a run of timestamps from `startTime` every `stepHours` (seqType:"time"). `step` (or `stepHours`) of 0 yields NOTHING — for a constant column use Random with distribution:"gaussian" and multiply:0',
 	SimulatedData:
