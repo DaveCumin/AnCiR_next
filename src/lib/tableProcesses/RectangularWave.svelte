@@ -6,6 +6,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { fitRectangularWave, evaluateRectWaveAtPoints } from '$lib/utils/rectwave.js';
 	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
+	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 
 	const displayName = 'Rectangular Wave';
@@ -48,6 +49,7 @@
 			outputs: [
 				{ name: 'rectwavex', kind: 'column', cardinality: 'one' },
 				{ name: 'rectwavey_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'rectwavey_' },
+				{ name: 'resid_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'resid_' },
 				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true }
 			]
 		}
@@ -191,6 +193,13 @@
 				if (yOUT != null && yOUT !== -1 && yResult) {
 					writeOutputColumn(yOUT, yResult.yOutData, { processHash });
 				}
+
+				// Residual = observed − model evaluated at every input x (full length).
+				const residId = argsIN.out['resid_' + yId];
+				if (residId != null && residId !== -1 && yResult) {
+					const predicted = evaluateRectWaveAtPoints(yResult.fitResult.parameters, t);
+					writeResidual(residId, predicted, getColumnById(yId)?.getData() ?? [], t, processHash);
+				}
 			}
 
 			// Scalar p-value output: one value per y input, in yIN order.
@@ -250,6 +259,16 @@
 	let _calcToken = 0;
 
 	const { syncYColumns, initYColumns } = useMultiYTP(p, 'rectwavey_', 'rectwave_');
+	const { syncYColumns: syncResidColumns, initYColumns: initResidColumns } = useMultiYTP(
+		p,
+		'resid_',
+		'resid_'
+	);
+
+	// Residual diagnostic: spawn a scatterplot of the input x against this Y's residual column.
+	function plotResiduals(yId, yName) {
+		spawnResidualPlot(p, { xId: p.args.xIN, residId: p.args.out?.['resid_' + yId], label: yName });
+	}
 
 	// Reactivity: re-run when input data or fixed-parameter settings change
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -294,7 +313,8 @@
 	});
 
 	function onYSelectionChange() {
-		if (syncYColumns()) getRwave();
+		const changed = syncYColumns() | syncResidColumns();
+		if (changed) getRwave();
 	}
 
 	function getRwave() {
@@ -314,7 +334,7 @@
 		const ids = [p.args.xIN];
 		if (p.args.out.rectwavex >= 0) ids.push(p.args.out.rectwavex);
 		for (const key of Object.keys(p.args.out)) {
-			if (key.startsWith('rectwavey_') && p.args.out[key] >= 0) {
+			if ((key.startsWith('rectwavey_') || key.startsWith('resid_')) && p.args.out[key] >= 0) {
 				ids.push(p.args.out[key]);
 			}
 		}
@@ -342,6 +362,7 @@
 		}
 		// Create output columns for any Y inputs that don't have them yet
 		if (initYColumns()) needsCompute = true;
+		if (initResidColumns()) needsCompute = true;
 
 		if (needsCompute) {
 			getRwave();
@@ -556,7 +577,7 @@
 	{/if}
 </div>
 
-{#snippet rwaveStats(yResult, yName)}
+{#snippet rwaveStats(yResult, yName, yId)}
 	{#if yResult?.fitResult}
 		{@const fr = yResult.fitResult}
 		<div class="control-input-horizontal">
@@ -633,6 +654,13 @@
 						source="Rectangular Wave"
 					/>
 				</p>
+				{#if yId != null && p.args.out?.['resid_' + yId] >= 0}
+					<button
+						class="tp-stat-btn"
+						onclick={() => plotResiduals(yId, yName)}
+						title="Scatter the residuals (observed − fitted) against the input x to check the fit">Plot residuals</button
+					>
+				{/if}
 			</div>
 		</div>
 	{/if}
@@ -664,7 +692,7 @@
 									<span class="tp-output-label">{srcName}</span>
 									<ColumnComponent col={yout} />
 									{#if yResult}
-										{@render rwaveStats(yResult, srcName)}
+										{@render rwaveStats(yResult, srcName, yId)}
 									{/if}
 								</div>
 							{/if}
@@ -677,7 +705,7 @@
 					{@const srcName = getColumnById(Number(yId))?.name ?? yId}
 					<div class="div-line"></div>
 					<p><strong>{srcName}</strong></p>
-					{@render rwaveStats(yResult, srcName)}
+					{@render rwaveStats(yResult, srcName, yId)}
 				{/each}
 				{@const xData = rwave.outputXData ?? rwave.t}
 				{@const yIds = Object.keys(rwave?.y_results ?? {})}

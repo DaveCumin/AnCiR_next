@@ -4665,8 +4665,9 @@ def logistic_regression(y, predictor_cols, names=None):
     import statsmodels.api as sm
 
     p = len(predictor_cols)
-    rows, ys = [], []
-    for i in range(len(y)):
+    total = len(y)
+    rows, ys, kept = [], [], []
+    for i in range(total):
         try:
             yi = float(y[i])
         except (TypeError, ValueError):
@@ -4684,17 +4685,30 @@ def logistic_regression(y, predictor_cols, names=None):
             continue
         rows.append(xr)
         ys.append(yi)
+        kept.append(i)
     n, k = len(rows), p + 1
     labels = ["(intercept)"] + list(names or [f"x{j+1}" for j in range(p)])
     nan = float("nan")
+    empty = {"eta": [nan] * total, "fitted": [nan] * total, "outcome": [nan] * total}
     if n < k + 1:
         return {"term": [], "coef": [], "se": [], "z": [], "pvalue": [], "oddsRatio": [],
-                "n": n, "logLik": nan, "lrChiSq": nan, "lrPvalue": nan, "pseudoR2": nan}
+                "n": n, "logLik": nan, "lrChiSq": nan, "lrPvalue": nan, "pseudoR2": nan, **empty}
     X = np.asarray(rows, dtype=float)
     Y = np.asarray(ys, dtype=float)
     m = sm.Logit(Y, X).fit(disp=0)
     coef = [float(v) for v in m.params]
     se = [float(v) for v in m.bse]
+    # Per-observation linear predictor (m.fittedvalues = Xβ) and probability, scattered back to
+    # the full input length (NaN for dropped rows), matching utils/logistic.js perObs.
+    eta_arr = [nan] * total
+    fit_arr = [nan] * total
+    out_arr = [nan] * total
+    lin = np.asarray(m.fittedvalues, dtype=float)
+    prob = np.asarray(m.predict(X), dtype=float)
+    for r, idx in enumerate(kept):
+        eta_arr[idx] = float(lin[r])
+        fit_arr[idx] = float(prob[r])
+        out_arr[idx] = float(ys[r])
     return {
         "term": labels,
         "coef": coef,
@@ -4707,4 +4721,7 @@ def logistic_regression(y, predictor_cols, names=None):
         "lrChiSq": float(m.llr),
         "lrPvalue": float(m.llr_pvalue),
         "pseudoR2": float(m.prsquared),
+        "eta": eta_arr,
+        "fitted": fit_arr,
+        "outcome": out_arr,
     }

@@ -11,6 +11,7 @@
 		fillDefaults
 	} from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
+	import { residualColumn as computeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 
 	const displayName = 'Fit Function';
@@ -153,9 +154,7 @@
 	function residualColumn(yResult, model, tFull, yFull) {
 		if (!yResult?.fitResult || !Array.isArray(tFull)) return null;
 		const predicted = evaluateCurveModelAtPoints(yResult.fitResult, model ?? 'cosinor', tFull);
-		return yFull.map((v, i) =>
-			isInvalidValue(v) || isInvalidValue(tFull[i]) || !Number.isFinite(predicted[i]) ? NaN : v - predicted[i]
-		);
+		return computeResidual(predicted, yFull, tFull);
 	}
 
 	async function buildFitResult(argsIN) {
@@ -267,7 +266,6 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
-	import { mutationService } from '$lib/core/mutationService.js';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
@@ -354,35 +352,9 @@
 		if (fitColsChanged || permColsChanged || residColsChanged) getFit();
 	}
 
-	// Residual diagnostic: spawn a scatterplot of the input x against the residual column for this
-	// Y. Residuals are aligned to the full input length, so they pair 1:1 with xIN. A good fit
-	// shows residuals scattered structurelessly around zero; a pattern (trend, fanning, curvature)
-	// flags a mis-specified model. Wired to the real output columns, so it stays live.
+	// Residual diagnostic: spawn a scatterplot of the input x against the residual column for this Y.
 	function plotResiduals(yId, yName) {
-		const residId = p.args.out?.['resid_' + yId];
-		const xId = p.args.xIN;
-		if (residId == null || residId < 0 || xId == null || xId < 0) return;
-		const pos = core.nodeLayout?.[`tableprocess_${p.id}`] ?? { x: 200, y: 200 };
-		mutationService.addPlot({
-			name: `Residuals: ${yName}`,
-			type: 'scatterplot',
-			sourceNodeId: `tableprocess_${p.id}`,
-			x: (pos.x ?? 0) + 360,
-			y: pos.y ?? 0,
-			width: 420,
-			height: 300,
-			plot: {
-				data: [
-					{
-						x: { refId: xId },
-						y: { refId: residId },
-						label: `${yName} residuals`,
-						line: { colour: '#BE796B', draw: false },
-						points: { colour: '#BE796B', draw: true, radius: 3, shape: 'circle' }
-					}
-				]
-			}
-		});
+		spawnResidualPlot(p, { xId: p.args.xIN, residId: p.args.out?.['resid_' + yId], label: yName });
 	}
 
 	function getModelArgs() {

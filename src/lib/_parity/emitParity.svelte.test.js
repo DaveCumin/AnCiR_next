@@ -63,7 +63,10 @@ const logisticRegressionAdapter = (y, predictorCols, names) => {
 		logLik: r.logLik,
 		lrChiSq: r.lrChiSq,
 		lrPvalue: r.lrPvalue,
-		pseudoR2: r.pseudoR2
+		pseudoR2: r.pseudoR2,
+		eta: r.perObs?.eta ?? [],
+		fitted: r.perObs?.fitted ?? [],
+		outcome: r.perObs?.outcome ?? []
 	};
 };
 

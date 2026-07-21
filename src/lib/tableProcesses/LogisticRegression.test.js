@@ -10,7 +10,7 @@ const X1 = [2, 4, 1, 3, 5, 2, 6, 3, 7, 1, 5, 4, 8, 2, 6, 3, 7, 5, 4, 9, 1, 6, 3,
 const X2 = [1, 3, 2, 5, 1, 4, 2, 6, 3, 5, 2, 7, 1, 4, 6, 3, 2, 8, 5, 1, 7, 3, 6, 2, 4, 8, 1, 5, 3, 7, 2, 6, 4, 1, 8, 3, 5, 2, 6, 4];
 const Y = [1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1];
 
-const OUT = { term: -1, coef: -1, se: -1, z: -1, pvalue: -1, oddsRatio: -1, ciLow: -1, ciHigh: -1 };
+const OUT = { term: -1, coef: -1, se: -1, z: -1, pvalue: -1, oddsRatio: -1, ciLow: -1, ciHigh: -1, outcome: -1, eta: -1, fitted: -1 };
 const args = (over) => ({ yIN: 10, xIN: [1, 2], out: { ...OUT }, ...over });
 
 beforeEach(() => {
@@ -35,6 +35,15 @@ describe('logisticregression', () => {
 		expect(r.rows[1].coef).toBeCloseTo(0.641579, 4);
 		expect(r.rows[1].oddsRatio).toBeCloseTo(1.899478, 4);
 		expect(r.pseudoR2).toBeCloseTo(0.498456, 4);
+	});
+
+	it('passes through per-observation outputs for the quick-plot', () => {
+		const [r] = logisticregression(args());
+		expect(r.perObs.eta).toHaveLength(40);
+		expect(r.perObs.fitted).toHaveLength(40);
+		expect(r.perObs.outcome).toHaveLength(40);
+		// fitted lies exactly on the sigmoid of eta
+		expect(r.perObs.fitted[0]).toBeCloseTo(1 / (1 + Math.exp(-r.perObs.eta[0])), 9);
 	});
 
 	it('coerces a two-level category outcome to 0/1 (positive = second sorted level)', () => {

@@ -13,7 +13,12 @@
 	import { logisticRegression } from '$lib/utils/logistic.js';
 
 	const displayName = 'Logistic regression';
-	const OUT_KEYS = ['term', 'coef', 'se', 'z', 'pvalue', 'oddsRatio', 'ciLow', 'ciHigh'];
+	// Two families of outputs: one row PER TERM (the coefficient table), and one row PER OBSERVATION
+	// (outcome / linear-predictor / fitted-probability), which drive the quick-plot and let the plot
+	// be rebuilt by hand (fitted-vs-eta is the sigmoid; outcome-vs-eta are the observed points).
+	const TERM_KEYS = ['term', 'coef', 'se', 'z', 'pvalue', 'oddsRatio', 'ciLow', 'ciHigh'];
+	const OBS_KEYS = ['outcome', 'eta', 'fitted'];
+	const OUT_KEYS = [...TERM_KEYS, ...OBS_KEYS];
 
 	const defaults = new Map([
 		['yIN', { val: -1 }], // binary outcome
@@ -67,6 +72,7 @@
 		return [
 			{
 				rows,
+				perObs: fit.perObs,
 				positiveClass,
 				outcomeName: outCol.name ?? String(argsIN.yIN),
 				n: fit.n,
@@ -87,8 +93,16 @@
 		const processHash = crypto.randomUUID();
 		const col = (key) => result.rows.map((r) => r[key]);
 		writeOutputColumn(argsIN.out?.term, col('term'), { processHash, type: 'category' });
-		for (const key of ['coef', 'se', 'z', 'pvalue', 'oddsRatio', 'ciLow', 'ciHigh']) {
+		for (const key of TERM_KEYS.slice(1)) {
 			writeOutputColumn(argsIN.out?.[key], col(key), { processHash });
+		}
+		// Per-observation outputs (full input length): drive the quick-plot and let it be rebuilt
+		// by hand — fitted-vs-eta is the sigmoid, outcome-vs-eta the observed points.
+		const perObs = result.perObs;
+		if (perObs) {
+			writeOutputColumn(argsIN.out?.outcome, perObs.outcome ?? [], { processHash });
+			writeOutputColumn(argsIN.out?.eta, perObs.eta ?? [], { processHash });
+			writeOutputColumn(argsIN.out?.fitted, perObs.fitted ?? [], { processHash });
 		}
 	}
 
@@ -115,7 +129,8 @@
 	import { onMount, untrack } from 'svelte';
 	import { saveStaticDataAsCSV } from '$lib/components/plotbits/helpers/save.svelte.js';
 	import { mutationService } from '$lib/core/mutationService.js';
-	import { core } from '$lib/core/core.svelte.js';
+	import { core, pushObj } from '$lib/core/core.svelte.js';
+	import { Column } from '$lib/core/Column.svelte';
 	let { p = $bindable() } = $props();
 	let mounted = $state(false);
 	let result = $state({ rows: [], warnings: [], converged: false });
@@ -139,6 +154,24 @@
 		return h;
 	});
 	onMount(() => {
+		// Backfill any output column missing from an older saved session — the per-observation
+		// outcome/eta/fitted outputs were added after this node first shipped, so old sessions lack
+		// them and the quick-plot would have nothing to wire. Only for a COMMITTED node (guarding
+		// against the MakeNewColumn preview, where creating columns would leak orphans). Free nodes
+		// have no parent, so the column lives directly in core.data via pushObj.
+		const committed = p?.id != null && (core.tableProcesses ?? []).some((tp) => tp.id === p.id);
+		if (committed) {
+			if (!p.args.out) p.args.out = {};
+			for (const key of OUT_KEYS) {
+				if (p.args.out[key] == null || p.args.out[key] < 0) {
+					const col = new Column({});
+					col.name = key + '_' + p.id;
+					pushObj(col);
+					if (p.parent && Array.isArray(p.parent.columnRefs)) p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
+					p.args.out[key] = col.id;
+				}
+			}
+		}
 		mounted = true;
 		recompute();
 	});

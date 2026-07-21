@@ -1,6 +1,7 @@
 <script module>
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
+	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -45,7 +46,8 @@
 			],
 			outputs: [
 				{ name: 'smoothedx', kind: 'column', cardinality: 'one' },
-				{ name: 'smoothedy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'smoothedy_' }
+				{ name: 'smoothedy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'smoothedy_' },
+				{ name: 'resid_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'resid_' }
 			]
 		}
 	};
@@ -68,6 +70,8 @@
 		const originTime_ms = isTimeInput ? xInCol.getData()[0] : null;
 
 		const result = { x_out: [], y_results: {}, originTime_ms };
+		// Retained raw y per column (sorted, valid), aligned to x_out — needed for residuals.
+		const rawByY = {};
 		let anyValid = false;
 
 		for (const yId of yINs) {
@@ -117,6 +121,7 @@
 			// Use first valid Y's x values as the shared x output
 			if (result.x_out.length === 0) result.x_out = xVals;
 			result.y_results[yId] = smoothedY;
+			rawByY[yId] = yVals;
 			anyValid = true;
 		}
 
@@ -144,6 +149,13 @@
 				const yOUT = argsIN.out['smoothedy_' + yId];
 				if (yOUT != null && yOUT !== -1 && result.y_results[yId]) {
 					writeOutputColumn(yOUT, result.y_results[yId], { processHash });
+				}
+
+				// Residual = raw − smoothed at each retained point (the high-frequency component
+				// smoothing removed). Aligned to x_out (the smoothed x output), not the raw input.
+				const residId = argsIN.out['resid_' + yId];
+				if (residId != null && residId !== -1 && result.y_results[yId] && rawByY[yId]) {
+					writeResidual(residId, result.y_results[yId], rawByY[yId], result.x_out, processHash);
 				}
 			}
 		}
@@ -173,6 +185,16 @@
 	let previewStart = $state(1);
 
 	const { syncYColumns, initYColumns } = useMultiYTP(p, 'smoothedy_', 'smooth_');
+	const { syncYColumns: syncResidColumns, initYColumns: initResidColumns } = useMultiYTP(
+		p,
+		'resid_',
+		'resid_'
+	);
+
+	// Residual diagnostic: scatter raw − smoothed against the smoothed x output for this Y.
+	function plotResiduals(yId, yName) {
+		spawnResidualPlot(p, { xId: p.args.out?.smoothedx, residId: p.args.out?.['resid_' + yId], label: yName });
+	}
 
 	// Reactivity
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -218,7 +240,7 @@
 	});
 
 	function onYSelectionChange() {
-		if (syncYColumns()) getSmoothedData();
+		if (syncYColumns() | syncResidColumns()) getSmoothedData();
 	}
 
 	function getSmoothedData() {
@@ -241,7 +263,7 @@
 		const ids = [p.args.xIN];
 		if (p.args.out.smoothedx >= 0) ids.push(p.args.out.smoothedx);
 		for (const key of Object.keys(p.args.out)) {
-			if (key.startsWith('smoothedy_') && p.args.out[key] >= 0) {
+			if ((key.startsWith('smoothedy_') || key.startsWith('resid_')) && p.args.out[key] >= 0) {
 				ids.push(p.args.out[key]);
 			}
 		}
@@ -265,7 +287,7 @@
 			p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
 			p.args.out.smoothedx = xCol.id;
 		}
-		const needsCompute = initYColumns();
+		const needsCompute = [initYColumns(), initResidColumns()].some(Boolean);
 
 		if (needsCompute) {
 			getSmoothedData();
@@ -432,6 +454,13 @@
 								<div class="tp-output-row">
 									<span class="tp-output-label">{getColumnById(Number(yId))?.name ?? yId}</span>
 									<ColumnComponent col={yout} />
+									{#if p.args.out?.['resid_' + yId] >= 0}
+										<button
+											class="resid-btn"
+											onclick={() => plotResiduals(yId, getColumnById(Number(yId))?.name ?? yId)}
+											title="Scatter the residuals (raw − smoothed) against x to see what smoothing removed">Plot residuals</button
+										>
+									{/if}
 								</div>
 							{/if}
 						{/if}
@@ -476,3 +505,21 @@
 		<p>Need to have valid inputs to create columns.</p>
 	{/if}
 {/key}
+
+<style>
+	.resid-btn {
+		font: inherit;
+		font-size: var(--font-2xs);
+		padding: var(--space-1) var(--space-2);
+		margin-left: var(--space-2);
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-sm);
+		background: var(--color-lightness-99);
+		color: var(--color-lightness-25);
+		cursor: pointer;
+	}
+	.resid-btn:hover {
+		border-color: var(--color-accent);
+		background: var(--color-hover);
+	}
+</style>

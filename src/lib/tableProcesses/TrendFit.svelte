@@ -9,6 +9,7 @@
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
+	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import '$lib/utils/trendfit.worker-task.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 
@@ -57,6 +58,7 @@
 			outputs: [
 				{ name: 'trendx', kind: 'column', cardinality: 'one' },
 				{ name: 'trendy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'trendy_' },
+				{ name: 'resid_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'resid_' },
 				// Scalar-metric ports (one value per y input).
 				{ name: 'r2', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'rmse', kind: 'column', cardinality: 'one', metric: true },
@@ -233,6 +235,13 @@
 				if (yOUT != null && yOUT !== -1 && yResult) {
 					writeOutputColumn(yOUT, yResult.yOutData, { processHash });
 				}
+
+				// Residual = observed − model evaluated at every input x (full length).
+				const residId = argsIN.out['resid_' + yId];
+				if (residId != null && residId !== -1 && yResult) {
+					const predicted = evaluateTrendAtPoints(yResult.fittedData.parameters, model, t);
+					writeResidual(residId, predicted, getColumnById(yId)?.getData() ?? [], t, processHash);
+				}
 			}
 
 			writeTrendMetricOutputs(argsIN, result, processHash);
@@ -288,6 +297,16 @@
 		'permstats_',
 		'permstats_'
 	);
+	const { syncYColumns: syncResidColumns, initYColumns: initResidColumns } = useMultiYTP(
+		p,
+		'resid_',
+		'resid_'
+	);
+
+	// Residual diagnostic: spawn a scatterplot of the input x against this Y's residual column.
+	function plotResiduals(yId, yName) {
+		spawnResidualPlot(p, { xId: p.args.xIN, residId: p.args.out?.['resid_' + yId], label: yName });
+	}
 
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -329,7 +348,8 @@
 	function onYSelectionChange() {
 		const fitColsChanged = syncYColumns();
 		const permColsChanged = syncPermColumns();
-		if (fitColsChanged || permColsChanged) getTrend();
+		const residColsChanged = syncResidColumns();
+		if (fitColsChanged || permColsChanged || residColsChanged) getTrend();
 	}
 
 	//------------
@@ -419,6 +439,12 @@
 							: [],
 						{ processHash }
 					);
+
+					const residId = p.args.out['resid_' + yId];
+					if (residId != null && residId !== -1 && yResult) {
+						const predicted = evaluateTrendAtPoints(yResult.fittedData.parameters, model, t);
+						writeResidual(residId, predicted, getColumnById(yId)?.getData() ?? [], t, processHash);
+					}
 				}
 
 				writeTrendMetricOutputs(p.args, result, processHash);
@@ -446,7 +472,10 @@
 		const ids = [p.args.xIN];
 		if (p.args.out.trendx >= 0) ids.push(p.args.out.trendx);
 		for (const key of Object.keys(p.args.out)) {
-			if ((key.startsWith('trendy_') || key.startsWith('permstats_')) && p.args.out[key] >= 0) {
+			if (
+				(key.startsWith('trendy_') || key.startsWith('resid_') || key.startsWith('permstats_')) &&
+				p.args.out[key] >= 0
+			) {
 				ids.push(p.args.out[key]);
 			}
 		}
@@ -493,9 +522,12 @@
 			p.args.out.trendx = xCol.id;
 		}
 		// Backfill metric out-columns for sessions saved before they existed.
-		const needsCompute = [syncTrendMetricColumns(), initYColumns(), initPermColumns()].some(
-			Boolean
-		);
+		const needsCompute = [
+			syncTrendMetricColumns(),
+			initYColumns(),
+			initPermColumns(),
+			initResidColumns()
+		].some(Boolean);
 
 		if (needsCompute) {
 			getTrend();
@@ -748,7 +780,7 @@
 	{/if}
 </div>
 
-{#snippet trendStats(yResult, yName)}
+{#snippet trendStats(yResult, yName, yId)}
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>
@@ -767,6 +799,13 @@
 					source={'Trend Fit (' + p.args.model + ')'}
 				/>
 			</p>
+			{#if yId != null && p.args.out?.['resid_' + yId] >= 0}
+				<button
+					class="tp-stat-btn"
+					onclick={() => plotResiduals(yId, yName)}
+					title="Scatter the residuals (observed − fitted) against the input x to check the fit">Plot residuals</button
+				>
+			{/if}
 			{#if Array.isArray(yResult?.fittedData?.permutedStats) && yResult.fittedData.permutedStats.length > 0 && Number.isFinite(yResult?.fittedData?.pValue)}
 				<p
 					style="color: {yResult.fittedData.significant
@@ -912,7 +951,7 @@
 											<ColumnComponent col={permOut} />
 										{/if}
 										{#if yResult}
-											{@render trendStats(yResult, srcName)}
+											{@render trendStats(yResult, srcName, yId)}
 										{/if}
 									</div>
 								{/if}
@@ -925,7 +964,7 @@
 						{@const srcName = getColumnById(Number(yId))?.name ?? yId}
 						<div class="div-line"></div>
 						<p><strong>{srcName}</strong></p>
-						{@render trendStats(yResult, srcName)}
+						{@render trendStats(yResult, srcName, yId)}
 					{/each}
 					{@const xData = trendData.outputXData ?? trendData.t}
 					{@const yIds = Object.keys(trendData?.y_results ?? {})}

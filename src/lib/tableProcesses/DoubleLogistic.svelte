@@ -6,6 +6,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { fitDoubleLogistic, evaluateDoubleLogisticAtPoints } from '$lib/utils/doublelogistic.js';
 	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
+	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import '$lib/utils/doublelogistic.worker-task.js';
@@ -51,6 +52,7 @@
 			outputs: [
 				{ name: 'dlogx', kind: 'column', cardinality: 'one' },
 				{ name: 'dlogy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'dlogy_' },
+				{ name: 'resid_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'resid_' },
 				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true }
 			]
 		}
@@ -157,6 +159,13 @@
 		if (writeXOutput(argsIN.out.dlogx, finalXData, { originTime_ms, processHash })) {
 			for (const yId of Object.keys(y_results)) {
 				writeOutputColumn(argsIN.out['dlogy_' + yId], y_results[yId].yOutData, { processHash });
+
+				// Residual = observed − model evaluated at every input x (full length).
+				const residId = argsIN.out['resid_' + yId];
+				if (residId != null && residId !== -1) {
+					const predicted = evaluateDoubleLogisticAtPoints(y_results[yId].fitResult.parameters, true, t);
+					writeResidual(residId, predicted, getColumnById(yId)?.getData() ?? [], t, processHash);
+				}
 			}
 		}
 
@@ -223,17 +232,27 @@
 	let _calcToken = 0;
 
 	const { syncYColumns, initYColumns } = useMultiYTP(p, 'dlogy_', 'dlog_');
+	const { syncYColumns: syncResidColumns, initYColumns: initResidColumns } = useMultiYTP(
+		p,
+		'resid_',
+		'resid_'
+	);
+
+	// Residual diagnostic: spawn a scatterplot of the input x against this Y's residual column.
+	function plotResiduals(yId, yName) {
+		spawnResidualPlot(p, { xId: p.args.xIN, residId: p.args.out?.['resid_' + yId], label: yName });
+	}
 
 	// Called when Y selection changes in the multi-select.
 	function onYSelectionChange() {
-		if (syncYColumns()) getFit();
+		if (syncYColumns() | syncResidColumns()) getFit();
 	}
 
 	let yExcludeIds = $derived.by(() => {
 		const ids = [p.args.xIN, p.args.out.dlogx];
 		for (const yId of p.args.yIN ?? []) {
-			const outKey = 'dlogy_' + yId;
-			if (p.args.out[outKey] >= 0) ids.push(p.args.out[outKey]);
+			if (p.args.out['dlogy_' + yId] >= 0) ids.push(p.args.out['dlogy_' + yId]);
+			if (p.args.out['resid_' + yId] >= 0) ids.push(p.args.out['resid_' + yId]);
 		}
 		return ids.filter((id) => id >= 0);
 	});
@@ -318,6 +337,7 @@
 		}
 		// Create output columns for any Y inputs that don't have them yet
 		if (initYColumns()) needsCompute = true;
+		if (initResidColumns()) needsCompute = true;
 
 		if (needsCompute) {
 			getFit();
@@ -507,7 +527,7 @@
 	{/if}
 </div>
 
-{#snippet dlogStats(yResult, yName)}
+{#snippet dlogStats(yResult, yName, yId)}
 	{#if yResult?.fitResult}
 		{@const fr = yResult.fitResult}
 		{@const p_ = fr.parameters}
@@ -603,6 +623,13 @@
 						source="Double Logistic"
 					/>
 				</p>
+				{#if yId != null && p.args.out?.['resid_' + yId] >= 0}
+					<button
+						class="tp-stat-btn"
+						onclick={() => plotResiduals(yId, yName)}
+						title="Scatter the residuals (observed − fitted) against the input x to check the fit">Plot residuals</button
+					>
+				{/if}
 			</div>
 		</div>
 	{/if}
@@ -634,7 +661,7 @@
 									<span class="tp-output-label">{srcName}</span>
 									<ColumnComponent col={yout} />
 									{#if yResult}
-										{@render dlogStats(yResult, srcName)}
+										{@render dlogStats(yResult, srcName, yId)}
 									{/if}
 								</div>
 							{/if}
@@ -647,7 +674,7 @@
 					{@const srcName = getColumnById(Number(yId))?.name ?? yId}
 					<div class="div-line"></div>
 					<p><strong>{srcName}</strong></p>
-					{@render dlogStats(yResult, srcName)}
+					{@render dlogStats(yResult, srcName, yId)}
 				{/each}
 				{@const xData = dlData.outputXData ?? dlData.t}
 				{@const yIds = Object.keys(dlData?.y_results ?? {})}

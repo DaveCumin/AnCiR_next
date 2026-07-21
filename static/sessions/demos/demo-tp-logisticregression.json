@@ -300,6 +300,36 @@
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
+    },
+    {
+      "id": 329,
+      "name": "outcome_34",
+      "data": null,
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 330,
+      "name": "eta_34",
+      "data": null,
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 331,
+      "name": "fitted_34",
+      "data": null,
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
     }
   ],
   "plots": [
@@ -330,9 +360,15 @@
           325,
           326,
           327,
-          328
+          328,
+          329,
+          330,
+          331
         ],
         "showCol": [
+          true,
+          true,
+          true,
           true,
           true,
           true,
@@ -371,7 +407,10 @@
           "pvalue": 325,
           "oddsRatio": 326,
           "ciLow": 327,
-          "ciHigh": 328
+          "ciHigh": 328,
+          "outcome": 329,
+          "eta": 330,
+          "fitted": 331
         },
         "valid": false
       },
@@ -384,7 +423,7 @@
   "notes": [
     {
       "id": "note_36",
-      "text": "Models a binary outcome (yIN) from one or more predictors (xIN) by iteratively-reweighted least squares. The outcome may be numeric 0/1 or a two-level category (the second level, alphabetically, is taken as the positive class = 1). Reports one row per term: the coefficient (log-odds), standard error, Wald z and p-value, odds ratio and its 95% confidence interval, plus the model log-likelihood, likelihood-ratio test against the null and McFadden pseudo-R². It warns on non-convergence, which usually signals separation (a predictor splits the outcome cleanly). Estimates match statsmodels. Cox 1958.",
+      "text": "Models a binary outcome (yIN) from one or more predictors (xIN) by iteratively-reweighted least squares. The outcome may be numeric 0/1 or a two-level category (the second level, alphabetically, is taken as the positive class = 1). Reports one row per term: the coefficient (log-odds), standard error, Wald z and p-value, odds ratio and its 95% confidence interval, plus the model log-likelihood, likelihood-ratio test against the null and McFadden pseudo-R². It warns on non-convergence, which usually signals separation (a predictor splits the outcome cleanly). Estimates match statsmodels. Alongside the coefficient table it emits three per-observation columns, outcome, eta (the linear predictor Xβ) and fitted (the predicted probability), so the quick-plot draws fitted probability against the linear predictor (the S-curve, for any number of predictors) with the observed 0/1 outcomes overlaid, and you can rebuild that plot by hand from the columns. Cox 1958.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -476,5 +515,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.60.2"
 }

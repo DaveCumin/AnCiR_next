@@ -110,6 +110,21 @@ function tpViz(tp) {
 		if (cols.length) return { type: 'histogram', title: `${tp.name}: histograms`, columns: cols };
 	}
 
+	// LogisticRegression → fitted probability vs the linear predictor η (the general logistic
+	// visualisation for any number of predictors). fitted = sigmoid(η) exactly, so the fitted
+	// points trace the S-curve; the observed 0/1 outcomes overlay to show the separation.
+	if (tp.name === 'LogisticRegression') {
+		const etaId = out.eta;
+		const fittedId = out.fitted;
+		const outcomeId = out.outcome;
+		if (isRef(etaId) && isRef(fittedId)) {
+			const series = [];
+			if (isRef(outcomeId)) series.push({ x: etaId, y: outcomeId, label: 'observed outcome', kind: 'points', colour: RAW_COLOUR });
+			series.push({ x: etaId, y: fittedId, label: 'fitted P(y=1)', kind: 'points', colour: OUT_COLOUR });
+			return { type: 'scatterplot', title: `${tp.name}: fit`, series };
+		}
+	}
+
 	// Circular stats (Rayleigh) → the circular phase plot: each Y is a phase/angle
 	// series on the clock; `x` is the node's optional time column (-1 when unwired).
 	if (tp.name === 'RayleighTest') {

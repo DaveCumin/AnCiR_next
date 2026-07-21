@@ -58,6 +58,26 @@ describe('logisticRegression (statsmodels Logit parity)', () => {
 		expect(r2.n).toBe(38);
 	});
 
+	it('returns per-observation eta / fitted / outcome aligned to the full input length', () => {
+		expect(r.perObs.eta).toHaveLength(40);
+		expect(r.perObs.fitted).toHaveLength(40);
+		expect(r.perObs.outcome).toHaveLength(40);
+		// fitted = sigmoid(eta) exactly, and outcome mirrors the input Y (all rows complete here).
+		for (let i = 0; i < 40; i++) {
+			expect(r.perObs.fitted[i]).toBeCloseTo(1 / (1 + Math.exp(-r.perObs.eta[i])), 9);
+			expect(r.perObs.outcome[i]).toBe(Y[i]);
+		}
+	});
+
+	it('NaN-pads per-observation outputs for dropped rows', () => {
+		const x1 = [...X1];
+		x1[0] = NaN; // row 0 dropped
+		const r2 = logisticRegression(Y, [x1, X2], ['x1', 'x2']);
+		expect(Number.isNaN(r2.perObs.eta[0])).toBe(true);
+		expect(Number.isNaN(r2.perObs.fitted[0])).toBe(true);
+		expect(Number.isFinite(r2.perObs.eta[1])).toBe(true);
+	});
+
 	it('flags non-convergence on perfectly separable data', () => {
 		const x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 		const ySep = [0, 0, 0, 0, 0, 1, 1, 1, 1, 1];

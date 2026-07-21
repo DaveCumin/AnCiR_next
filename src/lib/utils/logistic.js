@@ -64,10 +64,14 @@ export function logisticRegression(y, predictorCols, names, opts = {}) {
 	const tol = opts.tol ?? 1e-8;
 	const p = predictorCols.length;
 
-	// Assemble complete rows (drop any with a missing outcome or predictor).
+	// Assemble complete rows (drop any with a missing outcome or predictor). keptIndex records the
+	// original row each complete case came from, so the per-observation outputs (eta/fitted/outcome)
+	// can be scattered back to the FULL input length (NaN for dropped rows).
+	const total = y.length;
 	const rows = [];
 	const ys = [];
-	for (let i = 0; i < y.length; i++) {
+	const keptIndex = [];
+	for (let i = 0; i < total; i++) {
 		const yi = Number(y[i]);
 		if (yi !== 0 && yi !== 1) continue;
 		const xr = [1];
@@ -83,12 +87,15 @@ export function logisticRegression(y, predictorCols, names, opts = {}) {
 		if (!ok) continue;
 		rows.push(xr);
 		ys.push(yi);
+		keptIndex.push(i);
 	}
 	const n = rows.length;
 	const k = p + 1;
 	const labels = ['(intercept)', ...names];
+	// Per-observation outputs, full input length, NaN where the row was dropped.
+	const emptyPerObs = () => ({ eta: new Array(total).fill(NaN), fitted: new Array(total).fill(NaN), outcome: new Array(total).fill(NaN) });
 	if (n < k + 1) {
-		return { converged: false, iterations: 0, n, coefficients: [], logLik: NaN, nullLogLik: NaN, lrChiSq: NaN, lrDf: p, lrPvalue: NaN, pseudoR2: NaN };
+		return { converged: false, iterations: 0, n, coefficients: [], logLik: NaN, nullLogLik: NaN, lrChiSq: NaN, lrDf: p, lrPvalue: NaN, pseudoR2: NaN, perObs: emptyPerObs() };
 	}
 
 	let beta = new Array(k).fill(0);
@@ -123,8 +130,10 @@ export function logisticRegression(y, predictorCols, names, opts = {}) {
 		}
 	}
 
-	// Covariance = (XtWX)⁻¹ at the solution.
+	// Covariance = (XtWX)⁻¹ at the solution, plus the per-observation linear predictor / fitted
+	// probability scattered back to the full input length.
 	const XtWX = Array.from({ length: k }, () => new Array(k).fill(0));
+	const perObs = emptyPerObs();
 	let logLik = 0;
 	for (let i = 0; i < n; i++) {
 		let eta = 0;
@@ -133,6 +142,10 @@ export function logisticRegression(y, predictorCols, names, opts = {}) {
 		const w = Math.max(mu * (1 - mu), 1e-10);
 		logLik += ys[i] === 1 ? Math.log(Math.max(mu, 1e-300)) : Math.log(Math.max(1 - mu, 1e-300));
 		for (let a = 0; a < k; a++) for (let b = 0; b < k; b++) XtWX[a][b] += rows[i][a] * rows[i][b] * w;
+		const idx = keptIndex[i];
+		perObs.eta[idx] = eta;
+		perObs.fitted[idx] = mu;
+		perObs.outcome[idx] = ys[i];
 	}
 	const cov = inverse(XtWX);
 
@@ -161,5 +174,5 @@ export function logisticRegression(y, predictorCols, names, opts = {}) {
 	const lrPvalue = pUpperFromChiSq(lrChiSq, p);
 	const pseudoR2 = nullLogLik !== 0 ? 1 - logLik / nullLogLik : NaN; // McFadden's
 
-	return { converged, iterations: iter, n, coefficients, logLik, nullLogLik, lrChiSq, lrDf: p, lrPvalue, pseudoR2 };
+	return { converged, iterations: iter, n, coefficients, logLik, nullLogLik, lrChiSq, lrDf: p, lrPvalue, pseudoR2, perObs };
 }

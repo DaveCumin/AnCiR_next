@@ -14,6 +14,7 @@
 		fillDefaults
 	} from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
+	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import { bathyphase, phaseAngleOfEntrainment, wrapToPeriod } from '$lib/utils/cosinorAddons.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 
@@ -87,6 +88,7 @@
 					cardinality: 'many',
 					dynamicPrefix: 'cosinory_'
 				},
+				{ name: 'resid_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'resid_' },
 				// Scalar-metric ports (one value per y input).
 				{ name: 'period', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'mesor', kind: 'column', cardinality: 'one', metric: true },
@@ -294,12 +296,23 @@
 		const xOutData = firstYResult.xOutData ?? result.outputXData ?? firstYResult.t;
 		writeXOutput(xOUT, xOutData, { originTime_ms: result.originTime_ms, processHash });
 
+		// Full input x (in the fit's hour space), for residuals evaluated at every input row.
+		const residTCol = getColumnById(argsIN.xIN);
+		const tFull = residTCol ? (residTCol.type === 'time' ? residTCol.hoursSinceStart : residTCol.getData()) : [];
+
 		for (const yId of yINs) {
 			const yOUT = argsIN.out['cosinory_' + yId];
 			const yResult = result.y_results[yId];
 			if (yOUT != null && yOUT !== -1 && yResult) {
 				const yOutData = yResult.yOutData ?? yResult.predicted ?? yResult.fittedData.fitted;
 				writeOutputColumn(yOUT, yOutData, { processHash });
+			}
+
+			// Residual = observed − cosinor evaluated at every input x (full length).
+			const residId = argsIN.out['resid_' + yId];
+			if (residId != null && residId !== -1 && yResult) {
+				const predicted = evaluateCosinorAtPoints(yResult.fittedData.parameters, tFull);
+				writeResidual(residId, predicted, getColumnById(yId)?.getData() ?? [], tFull, processHash);
 			}
 		}
 
@@ -441,6 +454,16 @@
 	let _calcToken = 0;
 
 	const { syncYColumns, initYColumns } = useMultiYTP(p, 'cosinory_', 'cosinor_');
+	const { syncYColumns: syncResidColumns, initYColumns: initResidColumns } = useMultiYTP(
+		p,
+		'resid_',
+		'resid_'
+	);
+
+	// Residual diagnostic: spawn a scatterplot of the input x against this Y's residual column.
+	function plotResiduals(yId, yName) {
+		spawnResidualPlot(p, { xId: p.args.xIN, residId: p.args.out?.['resid_' + yId], label: yName });
+	}
 
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -499,7 +522,8 @@
 		// (Svelte derived_inert). A microtask runs with no active effect → root-owned.
 		queueMicrotask(() =>
 			untrack(() => {
-				if (syncYColumns()) getCosinor();
+				// `|` (not `||`) so both reconcile every time — short-circuit would skip resid columns.
+				if (syncYColumns() | syncResidColumns()) getCosinor();
 			})
 		);
 	});
@@ -527,7 +551,7 @@
 		const ids = [p.args.xIN];
 		if (p.args.out.cosinorx >= 0) ids.push(p.args.out.cosinorx);
 		for (const key of Object.keys(p.args.out)) {
-			if (key.startsWith('cosinory_') && p.args.out[key] >= 0) {
+			if ((key.startsWith('cosinory_') || key.startsWith('resid_')) && p.args.out[key] >= 0) {
 				ids.push(p.args.out[key]);
 			}
 		}
@@ -566,6 +590,7 @@
 			}
 		}
 		if (initYColumns()) needsCompute = true;
+		if (initResidColumns()) needsCompute = true;
 
 		if (needsCompute) {
 			getCosinor();
@@ -838,7 +863,7 @@
 	{/if}
 </div>
 
-{#snippet cosinorStats(yResult, yName)}
+{#snippet cosinorStats(yResult, yName, yId)}
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>
@@ -850,6 +875,13 @@
 					source="Cosinor"
 				/>
 			</p>
+			{#if yId != null && p.args.out?.['resid_' + yId] >= 0}
+				<button
+					class="tp-stat-btn"
+					onclick={() => plotResiduals(yId, yName)}
+					title="Scatter the residuals (observed − fitted) against the input x to check the fit">Plot residuals</button
+				>
+			{/if}
 			{#if yResult?.fittedData?.rSquared != null}
 				<p>
 					R²: {yResult.fittedData.rSquared.toFixed(3)}
@@ -989,7 +1021,7 @@
 									<span class="tp-output-label">{srcName}</span>
 									<ColumnComponent col={yout} />
 									{#if yResult}
-										{@render cosinorStats(yResult, yout.name)}
+										{@render cosinorStats(yResult, yout.name, yId)}
 									{/if}
 								</div>
 							{/if}
@@ -1002,7 +1034,7 @@
 					{@const srcName = getColumnById(Number(yId))?.name ?? yId}
 					<div class="div-line"></div>
 					<p><strong>{srcName}</strong></p>
-					{@render cosinorStats(yResult, srcName)}
+					{@render cosinorStats(yResult, srcName, yId)}
 				{/each}
 				{@const xData = cosinorData.outputXData ?? cosinorData.t}
 				{@const yIds = Object.keys(cosinorData?.y_results ?? {})}
