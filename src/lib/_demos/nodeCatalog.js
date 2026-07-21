@@ -266,6 +266,11 @@ export const TP_SPECS = [
 		args: ([c1, c2]) => ({ func: 'add', xsIN: [c1, c2], out: { result: -1 } })
 	},
 	{
+		name: 'Threshold',
+		inputs: [T('number', () => SAMPLE.rhythm(24))],
+		args: ([x]) => ({ xIN: x, threshold: 0, comparison: '>=', out: { binary: -1 } })
+	},
+	{
 		name: 'Cosinor',
 		isAsync: true,
 		inputs: [T('number', SAMPLE.hours), T('number', () => SAMPLE.rhythm(24))],

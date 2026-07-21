@@ -1796,6 +1796,40 @@ def tp_columnfunctions(args, cols, raw_data, _sv):
     return True
 
 
+# --- Threshold ---
+
+def tp_threshold(args, cols, raw_data, _sv):
+    # Binarise xIN at `threshold` by `comparison`; missing/non-numeric stay None.
+    # Mirrors Threshold.svelte thresholddata exactly.
+    x_in = args.get('xIN', -1)
+    if x_in == -1 or x_in not in cols:
+        return False
+    data = cols[x_in].get_data() or []
+    t = float(args.get('threshold', 0))
+    comp = args.get('comparison', '>=')
+
+    def _cmp(v):
+        if comp == '>':
+            return v > t
+        if comp == '<':
+            return v < t
+        if comp == '<=':
+            return v <= t
+        return v >= t  # '>=' and any unknown value fall back to >=
+
+    out = []
+    for v in data:
+        if v is None or v == '' or (isinstance(v, float) and math.isnan(v)):
+            out.append(None)
+            continue
+        try:
+            out.append(1 if _cmp(float(v)) else 0)
+        except (TypeError, ValueError):
+            out.append(None)
+    _set_col(raw_data, cols, _out_id(args, 'binary'), out, type_='number')
+    return len(out) > 0
+
+
 # --- DoubleLogistic ---
 
 def tp_doublelogistic(args, cols, raw_data, _sv):
@@ -3177,6 +3211,7 @@ DISPLAY_TO_TP = {
     'Smoothed Data': 'smootheddata',
     'SmoothedData': 'smootheddata',
     'Sort': 'sort',
+    'Threshold': 'threshold',
     'Split': 'split',
     'Split data': 'split',
     'Stored Value Group': 'storedvaluegroup',
@@ -3811,6 +3846,7 @@ TABLE_PROCESS_MAP = {
     'simulateddata': tp_simulateddata,
     'smootheddata': tp_smootheddata,
     'sort': tp_sort,
+    'threshold': tp_threshold,
     'split': tp_split,
     'trendfit': tp_trendfit,
     'storedvaluegroup': tp_storedvaluegroup,

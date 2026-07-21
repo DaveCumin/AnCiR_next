@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- a step: low, jump at the cutoff, high — the binarise/threshold operation -->
+  <path d="M3 17h7v-10h11" />
+  <!-- the cutoff line -->
+  <path d="M10 3v18" stroke-dasharray="2 2" opacity="0.6" />
+</svg>

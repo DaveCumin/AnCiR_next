@@ -106,6 +106,15 @@ const meta = new Map([
 			description: 'Apply a per-column aggregate function (mean, sum, etc.) across rows or groups.'
 		}
 	],
+	[
+		'Threshold',
+		{
+			family: 'Arithmetic',
+			nodeIcon: 'node-threshold',
+			description:
+				'Turn a column into a 0/1 (binary) column at a user-set cutoff — e.g. to make a binary outcome for logistic regression.'
+		}
+	],
 
 	// ---- Filtering -------------------------------------------------------
 	[

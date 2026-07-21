@@ -33,6 +33,10 @@
 // that ENUM VALUES are covered; prose for units/gating is a judgement call.
 
 export const PARAM_NOTES = {
+	Threshold:
+		'Turns the input column `xIN` into a 0/1 column at a cutoff. `threshold` is the cutoff value; `comparison` is which side counts as 1: ">" (value > threshold), ">=" (value ≥ threshold), "<" (value < threshold) or "<=" (value ≤ threshold). Missing/non-numeric values stay missing. Use it to make a binary outcome for LogisticRegression from a continuous column.',
+	LogisticRegression:
+		'`yIN` is the BINARY outcome — a single column of 0/1 (or a two-level category). It is NOT continuous: plain gaussian/uniform random values will not work (the node warns "not binary" and the fit is meaningless). To make a random outcome use Random with distribution:"bernoulli"; to turn a continuous column into 0/1 use a Threshold node. `xIN` is one OR MORE continuous predictor columns (several → multivariable logistic regression, giving a coefficient/odds-ratio per predictor). A demo on random data is therefore: Random gaussian → xIN, Random bernoulli → yIN.',
 	ChiSquared:
 		'`testType` is "independence" (two categorical columns: `xIN` = rows, `yIN` = columns → contingency table → test of association) or "goodness" (one column `xIN`: a categorical column is tabulated into category counts, a numeric column is read as observed counts, tested against a uniform expectation). `correction` toggles Yates\' continuity correction, applied only to 2×2 independence tables. Outputs statistic, pvalue and df. Expected counts below 5 make the χ² approximation unreliable.',
 	CrossCorrelation:

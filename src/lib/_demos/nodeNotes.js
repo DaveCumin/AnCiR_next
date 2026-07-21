@@ -80,6 +80,8 @@ export const NODE_NOTES = {
 	SmoothedData:
 		'Smooths a series to suppress noise while keeping the underlying shape. Choose Whittaker-Eilers (penalised least squares; λ sets stiffness), Savitzky-Golay (local polynomial, preserves peak height/width), LOESS (locally weighted regression; bandwidth sets span), or a moving average. Use a light hand: over-smoothing flattens real amplitude. It also emits a residual column per series (raw − smoothed) with a "Plot residuals" button, so you can see exactly what was removed and check you have not smoothed away real signal. The demo overlays the smoothed curve on the noisy input.\n\nSavitzky & Golay (1964); Cleveland (1979, LOESS); Eilers (2003, Whittaker).',
 	Sort: 'Reorders rows by a chosen key column, ascending or descending, keeping the selected columns aligned. Use it to order data by time or magnitude before plotting or before methods that assume monotonic time.',
+	Threshold:
+		'Turns a continuous column into a 0/1 (binary) column at a cutoff you set, choosing which side of the threshold counts as 1 (>, ≥, <, ≤). Missing values stay missing. The usual use is making a binary outcome for logistic regression, but it also flags events (e.g. "activity above baseline").',
 	Split:
 		'Cuts a time-series into consecutive segments at the split times you specify, keeping the chosen columns aligned. Use it to separate, e.g., an entrainment stage from a free-run stage, or successive days, before analysing each part on its own.',
 	StoredValueGroup:

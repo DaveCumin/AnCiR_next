@@ -65,6 +65,7 @@
 		'node-add',
 		'node-bin-data',
 		'node-interpolate',
+		'node-threshold',
 		'node-cosinor',
 		'node-double-logistic',
 		'node-filter',
