@@ -364,6 +364,7 @@ const DEMOS = [
 const WORKFLOWS = [
 	{
 		id: 'rest-activity',
+		summary: 'Characterise a rest-activity record without assuming a sine shape.',
 		name: 'Workflow — actigraphy rest-activity profile',
 		family: 'Workflows',
 		description:
@@ -496,6 +497,7 @@ const WORKFLOWS = [
 	},
 	{
 		id: 'free-running',
+		summary: 'Measure the endogenous period (tau) of a rhythm with no zeitgeber.',
 		name: 'Workflow — free-running period',
 		family: 'Workflows',
 		description:
@@ -568,6 +570,7 @@ const WORKFLOWS = [
 	},
 	{
 		id: 'phase-groups',
+		summary: 'Test whether two groups peak at different times of day.',
 		name: 'Workflow — group phase comparison',
 		family: 'Workflows',
 		description:
@@ -691,6 +694,7 @@ const WORKFLOWS = [
 	// ==========================================================================
 	{
 		id: 'stats-eda',
+		summary: 'Get to know a new dataset before running any test.',
 		name: 'Workflow — exploratory data analysis (first look)',
 		family: 'Workflows',
 		description:
@@ -745,6 +749,7 @@ const WORKFLOWS = [
 	},
 	{
 		id: 'stats-two-group',
+		summary: 'Is group A different from group B?',
 		name: 'Workflow — compare two groups',
 		family: 'Workflows',
 		description:
@@ -782,6 +787,7 @@ const WORKFLOWS = [
 	},
 	{
 		id: 'stats-anova',
+		summary: 'Do three or more groups differ, and which pairs?',
 		name: 'Workflow — compare several groups (ANOVA)',
 		family: 'Workflows',
 		description:
@@ -823,6 +829,7 @@ const WORKFLOWS = [
 	},
 	{
 		id: 'stats-correlation',
+		summary: 'Which variables move together, and how?',
 		name: 'Workflow — correlation & relationships',
 		family: 'Workflows',
 		description:
@@ -867,6 +874,7 @@ const WORKFLOWS = [
 	},
 	{
 		id: 'stats-regression',
+		summary: 'Predict Y from X, then check the model is honest.',
 		name: 'Workflow — linear regression + residual diagnostics',
 		family: 'Workflows',
 		description:
@@ -924,6 +932,7 @@ const WORKFLOWS = [
 	},
 	{
 		id: 'stats-logistic',
+		summary: 'Model a yes/no outcome and read the odds ratios.',
 		name: 'Workflow — logistic regression (binary outcome)',
 		family: 'Workflows',
 		description:
@@ -972,6 +981,7 @@ const WORKFLOWS = [
 	},
 	{
 		id: 'stats-chi-square',
+		summary: 'Are two categorical variables related?',
 		name: 'Workflow — categorical association (chi-square)',
 		family: 'Workflows',
 		description:
@@ -998,7 +1008,580 @@ const WORKFLOWS = [
 
 			tablePlot('Chi-squared result', [chi.args.out.statistic, chi.args.out.pvalue, chi.args.out.df]);
 		}
-	}
+	},
+	{
+		id: 'non24-blind',
+		summary: 'A human rhythm free-running through the day over weeks.',
+		name: 'Workflow — non-24 sleep-wake (blind participant)',
+		family: 'Workflows',
+		description:
+			'The human counterpart to the free-running mouse. With no light reaching the clock, the rhythm runs at its own tau (here 24.5 h) and drifts steadily later, so the sleep window migrates all the way around the clock over about seven weeks. A double-plotted actogram shows the drift and a Lomb-Scargle periodogram recovers tau. The point is that free-running is not a rodent-only phenomenon: this is a recognised clinical presentation.',
+		showcases: ['RhythmicityAnalysis', 'actogram', 'periodogram'],
+		async build() {
+			const rng = mulberry32(41);
+			const TAU = 24.5; // drifts 0.5 h/day → a full lap of the clock in 48 days
+			const DAYS = 48;
+			const hours = seq(24 * DAYS, (i) => i);
+			// Rest-activity keyed to the participant's OWN tau, not to clock time.
+			const activity = hours.map((h) => {
+				const phase = (h % TAU) / TAU; // 0..1 within the endogenous cycle
+				const asleep = phase >= 0.0 && phase < 0.33; // ~8 h sleep window
+				return Math.max(0, (asleep ? 3 : 58) + normal(rng, 0, asleep ? 4 : 14));
+			});
+			const hoursId = mkCol('number', hours, 'hour');
+			const actId = mkCol('number', activity, 'activity');
+
+			const acto = new Plot({ name: 'Actogram (double-plotted)', type: 'actogram' });
+			acto.plot.addData({ time: { refId: hoursId }, values: { refId: actId } });
+			acto.plot.periodHrs = 24;
+			acto.plot.doublePlot = 2;
+			pushObj(acto);
+
+			const pg = new Plot({ name: 'Lomb-Scargle periodogram', type: 'periodogram' });
+			pg.plot.addData({ time: { refId: hoursId }, values: { refId: actId } });
+			pg.plot.periodlimsIN = [22, 27];
+			pg.plot.periodSteps = 0.02;
+			pushObj(pg);
+
+			const ra = new TableProcess(
+				{
+					name: 'RhythmicityAnalysis',
+					args: {
+						xIN: hoursId,
+						yIN: [actId],
+						analysis: 'periodogram',
+						pgMethod: 'Lomb-Scargle',
+						periodMin: 22,
+						periodMax: 27,
+						periodStep: 0.02,
+						pgBinSize: 0.25,
+						pgAlpha: 0.05,
+						preProcesses: [],
+						out: { stat_peak_period: -1, stat_peak_power: -1 }
+					}
+				},
+				null
+			);
+			ra.displayName = 'Rhythmicity Analysis — tau';
+			pushObj(ra);
+			await ra.doProcess();
+			tablePlot('Estimated tau', [ra.args.out.stat_peak_period, ra.args.out.stat_peak_power]);
+		}
+	},
+	{
+		id: 'arrhythmic',
+		group: 'Reading the output',
+		summary: 'The negative control: what no rhythm actually looks like.',
+		name: 'Workflow — arrhythmic record (negative control)',
+		family: 'Workflows',
+		description:
+			'The single most useful thing to see before over-interpreting your own data. An intact record and an arrhythmic one (as after SCN ablation) are analysed side by side with identical settings. The intact periodogram has an unmistakable peak at 24 h; the arrhythmic one still reports a "peak period", because a periodogram always returns its largest value, but the power is a fraction of the intact case and the actogram shows no band at all. Read the power and the picture, not just the number.',
+		showcases: ['RhythmicityAnalysis', 'actogram', 'periodogram'],
+		async build() {
+			const rng = mulberry32(43);
+			const DAYS = 14;
+			const hours = seq(24 * DAYS, (i) => i);
+			// Intact: a clean nocturnal band. Arrhythmic: the SAME mean activity,
+			// redistributed at random — total counts match, structure does not.
+			const intact = hours.map((h) => {
+				const tod = h % 24;
+				const active = tod >= 18 || tod < 6;
+				return Math.max(0, (active ? 70 : 5) + normal(rng, 0, active ? 12 : 3));
+			});
+			const arrhythmic = hours.map(() => Math.max(0, 37 + normal(rng, 0, 26)));
+
+			const hoursId = mkCol('number', hours, 'hour');
+			const intactId = mkCol('number', intact, 'intact');
+			const lesionId = mkCol('number', arrhythmic, 'arrhythmic');
+
+			const acto = new Plot({ name: 'Actogram — intact vs arrhythmic', type: 'actogram' });
+			acto.plot.addData({ time: { refId: hoursId }, values: { refId: intactId } });
+			acto.plot.addData({ time: { refId: hoursId }, values: { refId: lesionId } });
+			acto.plot.periodHrs = 24;
+			acto.plot.doublePlot = 2;
+			pushObj(acto);
+
+			const pg = new Plot({ name: 'Periodogram — both records', type: 'periodogram' });
+			pg.plot.addData({ time: { refId: hoursId }, values: { refId: intactId } });
+			pg.plot.addData({ time: { refId: hoursId }, values: { refId: lesionId } });
+			pg.plot.periodlimsIN = [18, 30];
+			pg.plot.periodSteps = 0.05;
+			pushObj(pg);
+
+			const ra = new TableProcess(
+				{
+					name: 'RhythmicityAnalysis',
+					args: {
+						xIN: hoursId,
+						yIN: [intactId, lesionId],
+						analysis: 'periodogram',
+						pgMethod: 'Lomb-Scargle',
+						periodMin: 18,
+						periodMax: 30,
+						periodStep: 0.05,
+						pgBinSize: 0.25,
+						pgAlpha: 0.05,
+						preProcesses: [],
+						out: { stat_peak_period: -1, stat_peak_power: -1 }
+					}
+				},
+				null
+			);
+			ra.displayName = 'Rhythmicity Analysis — peak vs power';
+			pushObj(ra);
+			await ra.doProcess();
+			tablePlot('Peak period and power', [
+				ra.args.out.stat_peak_period,
+				ra.args.out.stat_peak_power
+			]);
+		}
+	},
+	{
+		id: 'circatidal',
+		summary: 'A 12.4 h tidal rhythm, not a circadian one.',
+		name: 'Workflow — circatidal rhythm (12.4 h)',
+		family: 'Workflows',
+		description:
+			'Rhythm analysis is not circadian-only. A coastal invertebrate timed to the tides runs at 12.4 h, with a weaker 24.8 h component as successive tides differ. The periodogram search window is the thing to notice: the default 20-28 h window would find the 24.8 h component and miss the dominant tidal peak entirely. Widen the window and both appear.',
+		showcases: ['RhythmicityAnalysis', 'actogram', 'periodogram'],
+		async build() {
+			const rng = mulberry32(47);
+			const TIDAL = 12.42; // lunar semi-diurnal period, h
+			const DAYS = 12;
+			const hours = seq(24 * DAYS, (i) => i * 0.5); // 30-min epochs
+			// Successive tides are unequal, so alternate cycles differ in amplitude.
+			// That inequality is what puts power at 24.8 h as well as 12.4 h.
+			const activity = hours.map((h) => {
+				const cycle = Math.floor(h / TIDAL);
+				const phase = (h % TIDAL) / TIDAL;
+				const active = phase < 0.4;
+				const amp = cycle % 2 === 0 ? 80 : 48; // diurnal inequality
+				return Math.max(0, (active ? amp : 4) + normal(rng, 0, active ? 10 : 3));
+			});
+			const hoursId = mkCol('number', hours, 'hour');
+			const actId = mkCol('number', activity, 'activity');
+
+			const acto = new Plot({ name: 'Actogram (24 h grid)', type: 'actogram' });
+			acto.plot.addData({ time: { refId: hoursId }, values: { refId: actId } });
+			acto.plot.periodHrs = 24;
+			acto.plot.doublePlot = 2;
+			pushObj(acto);
+
+			const pg = new Plot({ name: 'Periodogram — 6 to 30 h', type: 'periodogram' });
+			pg.plot.addData({ time: { refId: hoursId }, values: { refId: actId } });
+			pg.plot.periodlimsIN = [6, 30];
+			pg.plot.periodSteps = 0.02;
+			pushObj(pg);
+
+			const ra = new TableProcess(
+				{
+					name: 'RhythmicityAnalysis',
+					args: {
+						xIN: hoursId,
+						yIN: [actId],
+						analysis: 'periodogram',
+						pgMethod: 'Lomb-Scargle',
+						periodMin: 6,
+						periodMax: 30,
+						periodStep: 0.02,
+						pgBinSize: 0.25,
+						pgAlpha: 0.05,
+						preProcesses: [],
+						out: { stat_peak_period: -1, stat_peak_power: -1 }
+					}
+				},
+				null
+			);
+			ra.displayName = 'Rhythmicity Analysis — tidal peak';
+			pushObj(ra);
+			await ra.doProcess();
+			tablePlot('Dominant period', [ra.args.out.stat_peak_period, ra.args.out.stat_peak_power]);
+		}
+	},
+	{
+		id: 'reentrainment',
+		summary: 'The slow diagonal crawl back into alignment after a time-zone shift.',
+		name: 'Workflow — re-entrainment after a time-zone shift',
+		family: 'Workflows',
+		description:
+			'The contrast with an abrupt shift is the lesson. The zeitgeber moves 8 h in one step, but the rhythm does not: it runs at a transient period near 25.3 h for about a week, crawling diagonally across the actogram, before locking on at the new phase. Compare this with a schedule change where the record simply jumps, and the transients are what tell you a real clock is involved rather than direct driving.',
+		showcases: ['actogram', 'periodogram'],
+		async build() {
+			const rng = mulberry32(53);
+			const BASELINE = 8; // days on the original schedule
+			const TRANSIENT = 7; // days of drifting re-entrainment
+			const AFTER = 10; // days settled at the new phase
+			const DAYS = BASELINE + TRANSIENT + AFTER;
+			const hours = seq(24 * DAYS, (i) => i);
+
+			// Phase of the rhythm's own onset, in hours after midnight. Entrained at
+			// 18:00, then an 8 h DELAY imposed at day 8. The rhythm cannot jump: it
+			// runs slow (tau ~25.3 h) through the transient, gaining 1.3 h a day
+			// until it has covered the 8 h and re-locks.
+			const onsetAt = (day) => {
+				if (day < BASELINE) return 18;
+				if (day < BASELINE + TRANSIENT) return 18 + Math.min(8, 1.3 * (day - BASELINE + 1));
+				return 26; // 18 + 8, i.e. 02:00 the next day
+			};
+			const activity = hours.map((h) => {
+				const day = Math.floor(h / 24);
+				const onset = onsetAt(day);
+				// Active for 11 h from onset, wrapping past midnight.
+				const since = (h - day * 24 - onset + 48) % 24;
+				const active = since < 11;
+				return Math.max(0, (active ? 72 : 4) + normal(rng, 0, active ? 12 : 3));
+			});
+			const hoursId = mkCol('number', hours, 'hour');
+			const actId = mkCol('number', activity, 'activity');
+
+			const acto = new Plot({ name: 'Actogram — transients visible', type: 'actogram' });
+			acto.plot.addData({ time: { refId: hoursId }, values: { refId: actId } });
+			acto.plot.periodHrs = 24;
+			acto.plot.doublePlot = 2;
+			pushObj(acto);
+
+			const pg = new Plot({ name: 'Periodogram (whole record)', type: 'periodogram' });
+			pg.plot.addData({ time: { refId: hoursId }, values: { refId: actId } });
+			pg.plot.periodlimsIN = [20, 28];
+			pg.plot.periodSteps = 0.05;
+			pushObj(pg);
+		}
+	},
+	{
+		id: 'split-rhythm',
+		summary: 'Constant light splits the activity band into two components.',
+		name: 'Workflow — split rhythm under constant light',
+		family: 'Workflows',
+		description:
+			'Under constant light the rhythm can bifurcate: two oscillator components decouple, run at slightly different periods, and re-stabilise roughly 12 h apart. Here the two components are supplied separately (24.8 h and 23.4 h) and their sum is what an actograph would record, so the split is emergent rather than drawn. The periodogram of the sum shows both components, which is the numeric signature of splitting.',
+		showcases: ['actogram', 'periodogram', 'RhythmicityAnalysis'],
+		async build() {
+			const rng = mulberry32(59);
+			const TAU_A = 24.8;
+			const TAU_B = 23.4; // 1.4 h/day apart → ~12 h separation after ~9 days
+			const DAYS = 26;
+			const hours = seq(24 * DAYS, (i) => i);
+			const component = (h, tau) => {
+				const phase = (h % tau) / tau;
+				return phase < 0.3 ? 40 : 2;
+			};
+			const compA = hours.map((h) => Math.max(0, component(h, TAU_A) + normal(rng, 0, 4)));
+			const compB = hours.map((h) => Math.max(0, component(h, TAU_B) + normal(rng, 0, 4)));
+			const total = hours.map((_, i) => compA[i] + compB[i]);
+
+			const hoursId = mkCol('number', hours, 'hour');
+			const aId = mkCol('number', compA, 'component A (24.8 h)');
+			const bId = mkCol('number', compB, 'component B (23.4 h)');
+			const totalId = mkCol('number', total, 'recorded activity');
+
+			const acto = new Plot({ name: 'Actogram — the recorded sum', type: 'actogram' });
+			acto.plot.addData({ time: { refId: hoursId }, values: { refId: totalId } });
+			acto.plot.periodHrs = 24;
+			acto.plot.doublePlot = 2;
+			pushObj(acto);
+
+			const parts = new Plot({ name: 'Actogram — the two components', type: 'actogram' });
+			parts.plot.addData({ time: { refId: hoursId }, values: { refId: aId } });
+			parts.plot.addData({ time: { refId: hoursId }, values: { refId: bId } });
+			parts.plot.periodHrs = 24;
+			parts.plot.doublePlot = 2;
+			pushObj(parts);
+
+			const pg = new Plot({ name: 'Periodogram — two peaks', type: 'periodogram' });
+			pg.plot.addData({ time: { refId: hoursId }, values: { refId: totalId } });
+			pg.plot.periodlimsIN = [21, 27];
+			pg.plot.periodSteps = 0.02;
+			pushObj(pg);
+
+			const ra = new TableProcess(
+				{
+					name: 'RhythmicityAnalysis',
+					args: {
+						xIN: hoursId,
+						yIN: [totalId],
+						analysis: 'periodogram',
+						pgMethod: 'Lomb-Scargle',
+						periodMin: 21,
+						periodMax: 27,
+						periodStep: 0.02,
+						pgBinSize: 0.25,
+						pgAlpha: 0.05,
+						preProcesses: [],
+						out: { stat_peak_period: -1, stat_peak_power: -1 }
+					}
+				},
+				null
+			);
+			ra.displayName = 'Rhythmicity Analysis — dominant component';
+			pushObj(ra);
+			await ra.doProcess();
+			tablePlot('Dominant component', [
+				ra.args.out.stat_peak_period,
+				ra.args.out.stat_peak_power
+			]);
+		}
+	},
+	{
+		id: 'noise-peak',
+		group: 'Reading the output',
+		summary: 'Twelve pure-noise records, and the peak that means nothing.',
+		name: 'Workflow — the multiple-comparison trap',
+		family: 'Workflows',
+		description:
+			'A periodogram always returns a largest value, whether or not there is a rhythm. Here twelve records of pure noise are analysed with identical settings. Every one reports a "peak period", scattered arbitrarily across the search window, and the most impressive of the twelve looks convincing on its own. Test enough series, or enough windows, and something will always look significant. Read this next to the arrhythmic negative control.',
+		showcases: ['RhythmicityAnalysis', 'periodogram', 'DescribeData'],
+		async build() {
+			const rng = mulberry32(61);
+			const N_SERIES = 12;
+			const DAYS = 10;
+			const hours = seq(24 * DAYS, (i) => i);
+			const hoursId = mkCol('number', hours, 'hour');
+			// Pure noise. No rhythm of any kind is present in any of these.
+			const noiseIds = seq(N_SERIES, (s) =>
+				mkCol(
+					'number',
+					hours.map(() => Math.max(0, 40 + normal(rng, 0, 20))),
+					`noise ${s + 1}`
+				)
+			);
+
+			const pg = new Plot({ name: 'Periodograms of pure noise', type: 'periodogram' });
+			for (const id of noiseIds.slice(0, 4)) {
+				pg.plot.addData({ time: { refId: hoursId }, values: { refId: id } });
+			}
+			pg.plot.periodlimsIN = [20, 28];
+			pg.plot.periodSteps = 0.05;
+			pushObj(pg);
+
+			const ra = new TableProcess(
+				{
+					name: 'RhythmicityAnalysis',
+					args: {
+						xIN: hoursId,
+						yIN: [...noiseIds],
+						analysis: 'periodogram',
+						pgMethod: 'Lomb-Scargle',
+						periodMin: 20,
+						periodMax: 28,
+						periodStep: 0.05,
+						pgBinSize: 0.25,
+						pgAlpha: 0.05,
+						preProcesses: [],
+						out: { stat_peak_period: -1, stat_peak_power: -1 }
+					}
+				},
+				null
+			);
+			ra.displayName = 'Rhythmicity Analysis — 12 noise records';
+			pushObj(ra);
+			await ra.doProcess();
+
+			// The spread of "peak periods" IS the point: they scatter across the
+			// whole window, which is what a null result looks like in aggregate.
+			const desc = new TableProcess(
+				{
+					name: 'DescribeData',
+					args: {
+						yIN: [ra.args.out.stat_peak_period, ra.args.out.stat_peak_power],
+						out: {}
+					}
+				},
+				null
+			);
+			desc.displayName = 'Describe — spread of the "peaks"';
+			pushObj(desc);
+			await desc.doProcess();
+
+			tablePlot('Peak period per noise record', [
+				ra.args.out.stat_peak_period,
+				ra.args.out.stat_peak_power
+			]);
+		}
+	},
+	{
+		id: 'aliasing',
+		group: 'Reading the output',
+		summary: 'Sample too slowly and a 24 h rhythm disappears.',
+		name: 'Workflow — sampling rate and aliasing',
+		family: 'Workflows',
+		description:
+			'A data-literacy card. The same 24 h rhythm is recorded at 30-minute epochs and then re-sampled every 13 hours. Because 13 h is longer than half the period, the rhythm is below the Nyquist limit for that sampling rate and cannot be recovered: the periodogram of the slow record peaks in the wrong place entirely. Check your epoch length against the period you are hoping to find before you conclude anything is absent.',
+		showcases: ['periodogram', 'RhythmicityAnalysis'],
+		async build() {
+			const rng = mulberry32(67);
+			const DAYS = 20;
+			const fine = seq(DAYS * 48, (i) => i * 0.5); // 30-min epochs
+			const signal = (h) => 50 + 40 * Math.sin((2 * Math.PI * h) / 24);
+			const fineVals = fine.map((h) => Math.max(0, signal(h) + normal(rng, 0, 6)));
+			// Undersampled: one reading every 13 h. Above the Nyquist limit of
+			// 26 h for a 13 h interval, so 24 h cannot be resolved.
+			const slow = seq(Math.floor((DAYS * 24) / 13), (i) => i * 13);
+			const slowVals = slow.map((h) => Math.max(0, signal(h) + normal(rng, 0, 6)));
+
+			const fineTimeId = mkCol('number', fine, 'hour (30 min epochs)');
+			const fineId = mkCol('number', fineVals, 'activity (30 min)');
+			const slowTimeId = mkCol('number', slow, 'hour (13 h epochs)');
+			const slowId = mkCol('number', slowVals, 'activity (13 h)');
+
+			const pgFine = new Plot({ name: 'Periodogram — 30 min epochs', type: 'periodogram' });
+			pgFine.plot.addData({ time: { refId: fineTimeId }, values: { refId: fineId } });
+			pgFine.plot.periodlimsIN = [10, 40];
+			pgFine.plot.periodSteps = 0.05;
+			pushObj(pgFine);
+
+			const pgSlow = new Plot({ name: 'Periodogram — 13 h epochs', type: 'periodogram' });
+			pgSlow.plot.addData({ time: { refId: slowTimeId }, values: { refId: slowId } });
+			pgSlow.plot.periodlimsIN = [10, 40];
+			pgSlow.plot.periodSteps = 0.05;
+			pushObj(pgSlow);
+
+			const ra = new TableProcess(
+				{
+					name: 'RhythmicityAnalysis',
+					args: {
+						xIN: slowTimeId,
+						yIN: [slowId],
+						analysis: 'periodogram',
+						pgMethod: 'Lomb-Scargle',
+						periodMin: 10,
+						periodMax: 40,
+						periodStep: 0.05,
+						pgBinSize: 0.25,
+						pgAlpha: 0.05,
+						preProcesses: [],
+						out: { stat_peak_period: -1, stat_peak_power: -1 }
+					}
+				},
+				null
+			);
+			ra.displayName = 'Rhythmicity Analysis — the undersampled record';
+			pushObj(ra);
+			await ra.doProcess();
+			tablePlot('What the slow record reports', [
+				ra.args.out.stat_peak_period,
+				ra.args.out.stat_peak_power
+			]);
+		}
+	},
+	{
+		id: 'crepuscular',
+		summary: 'Two activity peaks a day, and why one mean phase misleads.',
+		name: 'Workflow — crepuscular (bimodal) activity',
+		family: 'Workflows',
+		description:
+			'Many species are crepuscular, with peaks near dawn and dusk rather than one consolidated bout. The periodogram shows this directly: power at 12 h as well as 24 h. It also breaks a common assumption, because a single circular mean phase for a bimodal distribution lands between the two peaks, at the time of day the animal is least active. Look at the distribution before you summarise it with one number.',
+		showcases: ['periodogram', 'actogram', 'RayleighTest'],
+		async build() {
+			const rng = mulberry32(71);
+			const DAYS = 14;
+			const hours = seq(24 * DAYS, (i) => i);
+			// Peaks centred on 06:00 and 18:00, quiet at midday and midnight.
+			const activity = hours.map((h) => {
+				const tod = h % 24;
+				const dawn = Math.exp(-((tod - 6) ** 2) / 4);
+				const dusk = Math.exp(-((tod - 18) ** 2) / 4);
+				return Math.max(0, 6 + 70 * (dawn + dusk) + normal(rng, 0, 5));
+			});
+			const hoursId = mkCol('number', hours, 'hour');
+			const actId = mkCol('number', activity, 'activity');
+
+			const acto = new Plot({ name: 'Actogram — two bouts a day', type: 'actogram' });
+			acto.plot.addData({ time: { refId: hoursId }, values: { refId: actId } });
+			acto.plot.periodHrs = 24;
+			acto.plot.doublePlot = 2;
+			pushObj(acto);
+
+			const pg = new Plot({ name: 'Periodogram — 24 h and 12 h', type: 'periodogram' });
+			pg.plot.addData({ time: { refId: hoursId }, values: { refId: actId } });
+			pg.plot.periodlimsIN = [6, 30];
+			pg.plot.periodSteps = 0.02;
+			pushObj(pg);
+
+			// Time of day, weighted by activity: the circular summary of a bimodal
+			// distribution. The resultant is short because the two peaks oppose.
+			const todId = mkCol(
+				'number',
+				hours.map((h) => h % 24),
+				'time of day'
+			);
+			const rayleigh = new TableProcess(
+				{
+					name: 'RayleighTest',
+					args: {
+						xIN: todId,
+						yIN: [actId],
+						period: 24,
+						unit: 'hours',
+						testType: 'rayleigh',
+						out: { R: -1, z: -1, pvalue: -1 }
+					}
+				},
+				null
+			);
+			rayleigh.displayName = 'Rayleigh — one mean phase for two peaks';
+			pushObj(rayleigh);
+			await rayleigh.doProcess();
+			tablePlot('Circular summary', [
+				rayleigh.args.out.R,
+				rayleigh.args.out.z,
+				rayleigh.args.out.pvalue
+			]);
+		}
+	},
+	{
+		id: 'masking',
+		summary: 'Light driving behaviour directly, versus a clock that has shifted.',
+		name: 'Workflow — masking versus true entrainment',
+		family: 'Workflows',
+		description:
+			'Two records that look identical while the light is on, and diverge the moment it goes off. Both animals appear to follow a 6 h shift of the light cycle. Released into constant darkness, the entrained animal keeps the new phase because its clock actually moved, while the masked animal reverts immediately to its original phase because light was only suppressing its behaviour. This is why a shift under a light cycle is not by itself evidence of entrainment: the release is the test.',
+		showcases: ['actogram'],
+		async build() {
+			const rng = mulberry32(73);
+			const BASE = 8; // days on the original light cycle
+			const SHIFTED = 10; // days after the light cycle advances 6 h
+			const RELEASE = 10; // days in constant darkness
+			const DAYS = BASE + SHIFTED + RELEASE;
+			const hours = seq(24 * DAYS, (i) => i);
+
+			// Nocturnal animals, active for 11 h from onset.
+			const band = (h, onset) => {
+				const since = (h - onset + 48) % 24;
+				return since < 11;
+			};
+			const ONSET_BASE = 18; // active 18:00 → 05:00
+			const ONSET_NEW = 12; // light cycle advanced 6 h → active 12:00 → 23:00
+
+			const make = (trulyEntrained) =>
+				hours.map((h) => {
+					const day = Math.floor(h / 24);
+					let onset;
+					if (day < BASE) onset = ONSET_BASE;
+					else if (day < BASE + SHIFTED) onset = ONSET_NEW; // both follow the light
+					// In DD the difference appears: a shifted clock stays shifted;
+					// a masked animal was never shifted at all.
+					else onset = trulyEntrained ? ONSET_NEW : ONSET_BASE;
+					const active = band(h % 24, onset);
+					return Math.max(0, (active ? 68 : 4) + normal(rng, 0, active ? 11 : 3));
+				});
+
+			const hoursId = mkCol('number', hours, 'hour');
+			const entrainedId = mkCol('number', make(true), 'entrained');
+			const maskedId = mkCol('number', make(false), 'masked');
+
+			const a1 = new Plot({ name: 'Actogram — truly entrained', type: 'actogram' });
+			a1.plot.addData({ time: { refId: hoursId }, values: { refId: entrainedId } });
+			a1.plot.periodHrs = 24;
+			a1.plot.doublePlot = 2;
+			pushObj(a1);
+
+			const a2 = new Plot({ name: 'Actogram — masked only', type: 'actogram' });
+			a2.plot.addData({ time: { refId: hoursId }, values: { refId: maskedId } });
+			a2.plot.periodHrs = 24;
+			a2.plot.doublePlot = 2;
+			pushObj(a2);
+		}
+	},
 ];
 
 // Reset core to a clean slate between demos.
@@ -1086,17 +1669,31 @@ function prewarmWrapperNames() {
 // Build one searchable manifest entry. `keywords` collapses everything a user
 // might type (display name, family, description, showcased node) so the modal
 // search behaves like the node palette.
-function manifestEntry({ id, name, family, description, file, kind, showcases }) {
+function manifestEntry({ id, name, family, description, summary, group, file, kind, showcases }) {
 	return {
 		id,
 		name,
 		family,
 		description,
+		// One-line card summary. The full `description` is written for the gallery's detail view
+		// and is far too long for a card at start-screen density; `summary` is the short form.
+		// Falls back to the description's first sentence so non-workflow entries still render.
+		summary: summary ?? firstSentence(description),
+		// Sub-grouping within a family (the start screen splits Workflows into
+		// "Rhythm & circadian" / "General statistics"). Absent for other kinds.
+		...(group ? { group } : {}),
 		url: `sessions/demos/${file}`,
 		kind,
 		showcases,
 		keywords: [name, description, family, ...showcases].filter(Boolean).join(' ').toLowerCase()
 	};
+}
+
+/** First sentence of a description, for entries with no explicit `summary`. */
+function firstSentence(text) {
+	if (!text) return '';
+	const m = String(text).match(/^.*?[.!?](?=\s|$)/);
+	return (m ? m[0] : String(text)).trim();
 }
 
 describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
@@ -1130,6 +1727,10 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 					name: wf.name,
 					family: wf.family,
 					description: wf.description,
+					summary: wf.summary,
+					// Sub-heading for the start screen. Explicit when a workflow declares one,
+					// otherwise derived from the id convention.
+					group: wf.group ?? (wf.id.startsWith('stats-') ? 'General statistics' : 'Rhythm & circadian'),
 					file,
 					kind: 'workflow',
 					showcases: wf.showcases

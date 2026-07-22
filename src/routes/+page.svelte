@@ -60,6 +60,24 @@
 
 	import WorkflowEditor from '$lib/components/workflow/WorkflowEditor.svelte';
 	import NodeComputeHost from '$lib/components/views/NodeComputeHost.svelte';
+	import StartScreen from '$lib/components/views/StartScreen.svelte';
+
+	// --- start screen -------------------------------------------------------
+	// Shown only when there is nothing to resume: an empty session, no deep-linked load in
+	// flight, and the user hasn't dismissed it. A user with a session open goes straight to
+	// their work (the brief's "consider skipping it entirely"); Navbar's "New session" clears
+	// core, which brings this back on its own.
+	let deepLinkPending = $state(false);
+	let startDismissed = $state(false);
+	const sessionIsEmpty = $derived(
+		core.data.length === 0 && core.plots.length === 0 && core.tableProcesses.length === 0
+	);
+	const showStartScreen = $derived(sessionIsEmpty && !startDismissed && !deepLinkPending);
+	// Re-arm the start screen whenever the session goes back to empty (e.g. "New session"), so
+	// dismissing it once doesn't hide it forever.
+	$effect(() => {
+		if (!sessionIsEmpty) startDismissed = false;
+	});
 
 	// On a fresh page load, start both canvases at their default zoom + position
 	// rather than restoring the last session's viewport. Both viewports live in
@@ -429,7 +447,12 @@
 		const query = urlParams.get('loadFromURL') || 'No query parameter found';
 
 		if (query != 'No query parameter found') {
-			loadFromURL(query);
+			// A deep-linked session is on its way: suppress the start screen so it can't flash
+			// before the session lands.
+			deepLinkPending = true;
+			// Clear once the load settles either way — a FAILED deep link must fall back to the
+			// start screen rather than leaving the user on a blank canvas.
+			Promise.resolve(loadFromURL(query)).finally(() => (deepLinkPending = false));
 			window.history.replaceState({}, document.title, window.location.pathname);
 		}
 
@@ -770,6 +793,9 @@
 
 	<DisplayPanel />
 
+	<!-- The workspace always renders; the start screen floats over it as an overlay. On an empty
+	     session that means the backdrop is a blank canvas, so dismissing the overlay leaves the
+	     user somewhere coherent rather than swapping one whole view for another. -->
 	{#if appState.view === 'canvas'}
 		<WorkflowEditor inline={true} />
 	{:else}
@@ -779,6 +805,10 @@
 		     only the selected node recomputes, leaving downstream nodes (and the
 		     plots reading them) stale. See NodeComputeHost for the full rationale. -->
 		<NodeComputeHost />
+	{/if}
+
+	{#if showStartScreen}
+		<StartScreen onDismiss={() => (startDismissed = true)} />
 	{/if}
 
 	<ControlPanel />
