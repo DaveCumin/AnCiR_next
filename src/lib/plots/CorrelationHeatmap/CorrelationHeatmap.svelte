@@ -126,6 +126,10 @@
 <script>
 	// @ts-nocheck
 	import { appState } from '$lib/core/core.svelte';
+	import Column from '$lib/core/Column.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
+	import { flip } from 'svelte/animate';
+	import { slide } from 'svelte/transition';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
@@ -224,6 +228,38 @@
 			<ControlInput label="Show values">
 				<input type="checkbox" bind:checked={theData.showValues} />
 			</ControlInput>
+		</div>
+	{:else if appState.currentControlTab === 'data'}
+		<div id="dataSettings">
+			<div class="control-data-add">
+				<div class="add">
+					<button class="icon" title="Add a variable" onclick={() => theData.addData({})}>
+						<Icon name="add" width={16} height={16} />
+					</button>
+				</div>
+			</div>
+
+			{#each theData.data as datum, i (datum.column.id)}
+				<div
+					class="dataBlock"
+					animate:flip={{ duration: 500 }}
+					in:slide={{ duration: 500, axis: 'y' }}
+					out:slide={{ duration: 500, axis: 'y' }}
+				>
+					<div class="control-component-title">
+						<p>Variable {i + 1}</p>
+						<button class="icon" title="Remove this variable" onclick={() => theData.removeData(i)}>
+							<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
+						</button>
+					</div>
+					<div class="data-wrapper">
+						<div class="y-select">
+							<ControlInput label="Column"></ControlInput>
+							<Column col={datum.column} canChange={true} />
+						</div>
+					</div>
+				</div>
+			{/each}
 		</div>
 	{/if}
 {/snippet}

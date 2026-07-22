@@ -16,7 +16,6 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import NoteCard from '$lib/components/views/NoteCard.svelte';
 	import WorksheetAddPalette from '$lib/components/views/WorksheetAddPalette.svelte';
-	import AddDataPrompt from '$lib/components/views/AddDataPrompt.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
@@ -346,23 +345,22 @@
 			{/if}
 		</div>
 
-		{#if core.plots.length === 0 && core.notes.length === 0}
-			{#if core.data.length > 0}
-				<div class="no-plot-prompt" out:fade={{ duration: 600 }}>
-					<button class="icon" onclick={() => (showNewPlotModal = true)}>
-						<Icon name="add" width={24} height={24} />
-					</button>
-					<p style="margin-left: 10px">Click here to add a plot</p>
-				</div>
+		<!-- The empty-session case is covered by the start screen; this prompt only ever offered
+		     the same three routes again (and import also lives in the node palette and the data
+		     panel), so the worksheet's own empty state is now just "add a plot". -->
+		{#if core.plots.length === 0 && core.notes.length === 0 && core.data.length > 0}
+			<div class="no-plot-prompt" out:fade={{ duration: 600 }}>
+				<button class="icon" onclick={() => (showNewPlotModal = true)}>
+					<Icon name="add" width={24} height={24} />
+				</button>
+				<p style="margin-left: 10px">Click here to add a plot</p>
+			</div>
 
-				<WorksheetAddPalette
-					bind:open={showNewPlotModal}
-					top={window.innerHeight / 2 - 25}
-					left={window.innerWidth / 2 - 40}
-				/>
-			{:else}
-				<AddDataPrompt />
-			{/if}
+			<WorksheetAddPalette
+				bind:open={showNewPlotModal}
+				top={window.innerHeight / 2 - 25}
+				left={window.innerWidth / 2 - 40}
+			/>
 		{/if}
 	</div>
 </div>

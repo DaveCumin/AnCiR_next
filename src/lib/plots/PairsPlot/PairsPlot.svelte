@@ -14,6 +14,7 @@
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import { pairsLayout } from '$lib/utils/pairsLayout.js';
 	import { colormapRGB, normaliseTo01, COLORMAP_LABELS } from '$lib/plots/Actogram/colormaps.js';
+	import { gaussianKDE } from '$lib/utils/kde.js';
 
 	export const PairsPlot_defaultDataInputs = ['column'];
 	export const PairsPlot_controlHeaders = ['Properties', 'Data'];
@@ -43,6 +44,9 @@
 		colormap = $state('rdbu');
 		method = $state('pearson'); // 'pearson' | 'spearman'
 		pointColour = $state('#234154');
+		// Density curve over the diagonal histograms, as in psych::pairs.panels. On by default:
+		// the curve is what shows skew and bimodality that binning can hide.
+		showDensity = $state(true);
 
 		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
@@ -76,6 +80,7 @@
 				colormap: this.colormap,
 				method: this.method,
 				pointColour: this.pointColour,
+				showDensity: this.showDensity,
 				data: this.data.map((d) => d.toJSON())
 			};
 		}
@@ -86,6 +91,7 @@
 			c.colormap = json.colormap ?? c.colormap;
 			c.method = json.method ?? c.method;
 			c.pointColour = json.pointColour ?? c.pointColour;
+			c.showDensity = json.showDensity ?? c.showDensity;
 			if (Array.isArray(json.data)) c.data = json.data.map((d) => PairsColumn.fromJSON(d, c));
 			else if (json.dataIn) c.addData(json.dataIn);
 			return c;
@@ -105,6 +111,43 @@
 	// Correlation value text scaled by strength — bigger for stronger, like pairs.panels.
 	const corrFontSize = (r, cell) => Math.max(9, Math.min(cell * 0.34, 11 + Math.abs(r ?? 0) * (cell * 0.22)));
 	const scaleTo = (v, min, max, lo, hi) => (max <= min ? (lo + hi) / 2 : lo + ((v - min) / (max - min)) * (hi - lo));
+
+	/**
+	 * SVG path for a kernel-density curve across a diagonal cell, scaled so its peak reaches the
+	 * same height as the tallest histogram bar. That shared scaling is the point: the curve is a
+	 * smoothed reading of the SAME distribution, so it must sit on the bars, not float above them.
+	 *
+	 * Returns null when there is nothing meaningful to draw (fewer than 3 finite values, or a
+	 * degenerate spread where Silverman's bandwidth is undefined).
+	 *
+	 * @param {number[]} values raw column values
+	 * @param {{min:number,max:number}} range the cell's x range (shared with the histogram)
+	 * @param {number} pad inner cell padding, px
+	 * @param {number} cell cell size, px
+	 * @returns {string|null}
+	 */
+	export function densityPath(values, range, pad, cell) {
+		const clean = (values ?? []).filter((v) => Number.isFinite(v));
+		if (clean.length < 3) return null;
+		if (!(range?.max > range?.min)) return null;
+		const { x, density } = gaussianKDE(clean, { gridSize: 64 });
+		if (!x.length) return null;
+
+		const peak = Math.max(...density);
+		if (!(peak > 0)) return null;
+		const inner = cell - 2 * pad;
+		const pts = [];
+		for (let k = 0; k < x.length; k++) {
+			// The KDE grid overruns the data range by 3 bandwidths; clip to the cell so the curve
+			// stays inside its box rather than bleeding into neighbouring cells.
+			if (x[k] < range.min || x[k] > range.max) continue;
+			const px = pad + ((x[k] - range.min) / (range.max - range.min)) * inner;
+			const py = cell - pad - (density[k] / peak) * inner;
+			pts.push(`${px.toFixed(2)},${py.toFixed(2)}`);
+		}
+		if (pts.length < 2) return null;
+		return `M${pts.join('L')}`;
+	}
 
 	// Least-squares fit clipped to the cell rectangle; null when undefined (< 2 points).
 	function fitFor(xs, ys, rx, ry, pad, cell) {
@@ -138,6 +181,10 @@
 <script>
 	// @ts-nocheck
 	import { appState } from '$lib/core/core.svelte';
+	import Column from '$lib/core/Column.svelte';
+	import Icon from '$lib/icons/Icon.svelte';
+	import { flip } from 'svelte/animate';
+	import { slide } from 'svelte/transition';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
@@ -183,6 +230,12 @@
 										{@const bh = h.maxCount ? (ct / h.maxCount) * (cell - 2 * pad) : 0}
 										<rect x={pad + b * bw} y={cell - pad - bh} width={Math.max(0, bw - 1)} height={bh} fill={plot.pointColour} opacity="0.55" />
 									{/each}
+								{/if}
+								{#if plot.showDensity}
+									{@const dPath = densityPath(L.cols[i], L.ranges[i], pad, cell)}
+									{#if dPath}
+										<path d={dPath} fill="none" stroke="#BE796B" stroke-width="1.25" stroke-linejoin="round" />
+									{/if}
 								{/if}
 								<text x={pad} y={pad + 9} font-size="10" font-weight="600" fill="var(--color-lightness-25)">{rowLab}</text>
 							{:else if i < j}
@@ -239,6 +292,41 @@
 				<AttributeSelect bind:value={theData.colormap} options={colormapOptions} optionsDisplay={colormapLabelList} />
 			</ControlInput>
 			<ControlInput label="Point colour"><ColourPicker bind:value={theData.pointColour} /></ControlInput>
+			<ControlInput label="Density curve">
+				<input type="checkbox" bind:checked={theData.showDensity} />
+			</ControlInput>
+		</div>
+	{:else if appState.currentControlTab === 'data'}
+		<div id="dataSettings">
+			<div class="control-data-add">
+				<div class="add">
+					<button class="icon" title="Add a variable" onclick={() => theData.addData({})}>
+						<Icon name="add" width={16} height={16} />
+					</button>
+				</div>
+			</div>
+
+			{#each theData.data as datum, i (datum.column.id)}
+				<div
+					class="dataBlock"
+					animate:flip={{ duration: 500 }}
+					in:slide={{ duration: 500, axis: 'y' }}
+					out:slide={{ duration: 500, axis: 'y' }}
+				>
+					<div class="control-component-title">
+						<p>Variable {i + 1}</p>
+						<button class="icon" title="Remove this variable" onclick={() => theData.removeData(i)}>
+							<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
+						</button>
+					</div>
+					<div class="data-wrapper">
+						<div class="y-select">
+							<ControlInput label="Column"></ControlInput>
+							<Column col={datum.column} canChange={true} />
+						</div>
+					</div>
+				</div>
+			{/each}
 		</div>
 	{/if}
 {/snippet}

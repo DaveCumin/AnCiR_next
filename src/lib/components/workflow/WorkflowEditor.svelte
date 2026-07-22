@@ -46,7 +46,6 @@
 	import MiniDataTable from './MiniDataTable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import NodePalette from './NodePalette.svelte';
-	import AddDataPrompt from '$lib/components/views/AddDataPrompt.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { canvasFileDrop } from '$lib/core/canvasFileDrop.js';
 	import { handleCanvasFileDrop } from '$lib/core/dataSourceActions.js';
@@ -3934,12 +3933,6 @@
 				{/if}
 			{/each}
 		</div>
-
-		{#if core.data.length === 0}
-			<!-- On the canvas, "Simulate data" spawns the node directly (expanded,
-			     no modal) like every other workflow add. -->
-			<AddDataPrompt onSimulate={() => spawnTableProcessFromPalette('SimulatedData')} />
-		{/if}
 
 		{#if fileDragOver}
 			<div class="canvas-file-drop-overlay"><span>Drop a data file to import</span></div>

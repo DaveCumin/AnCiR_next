@@ -291,7 +291,7 @@ const meta = new Map([
 			family: 'Analysis',
 			nodeIcon: 'histogram',
 			description:
-				'Test each wired column for normality (D’Agostino-Pearson or Jarque-Bera), reporting the statistic, p-value and a verdict.'
+				'Test each wired column for normality (Shapiro-Wilk by default, or D’Agostino-Pearson / Jarque-Bera), reporting the statistic, p-value and a verdict.'
 		}
 	],
 	[

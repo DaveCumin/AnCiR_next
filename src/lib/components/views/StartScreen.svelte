@@ -204,17 +204,20 @@
 
 		<!-- 2. Secondary actions ----------------------------------------------- -->
 		<div class="secondary-row">
-			<button type="button" class="secondary-chip" onclick={() => { simulateData(); onDismiss?.(); }}>
-				<Icon name="node-rectangular-wave" width={16} height={16} />
-				<span>Simulate data</span>
+			<button type="button" class="secondary-card" onclick={() => { simulateData(); onDismiss?.(); }}>
+				<span class="secondary-icon"><Icon name="node-rectangular-wave" width={20} height={20} /></span>
+				<span class="secondary-title">Simulate data</span>
+				<span class="secondary-sub">Generate a rhythm to explore</span>
 			</button>
-			<button type="button" class="secondary-chip" onclick={() => (showAi = true)}>
-				<Icon name="aibot" width={16} height={16} />
-				<span>Build a workload with AI</span>
+			<button type="button" class="secondary-card" onclick={() => (showAi = true)}>
+				<span class="secondary-icon"><Icon name="aibot" width={20} height={20} /></span>
+				<span class="secondary-title">Build a workload with AI</span>
+				<span class="secondary-sub">Describe what you want to find out</span>
 			</button>
-			<button type="button" class="secondary-chip" onclick={() => onDismiss?.()}>
-				<Icon name="workflow" width={16} height={16} />
-				<span>Start with a blank canvas</span>
+			<button type="button" class="secondary-card" onclick={() => onDismiss?.()}>
+				<span class="secondary-icon"><Icon name="workflow" width={20} height={20} /></span>
+				<span class="secondary-title">Start with a blank canvas</span>
+				<span class="secondary-sub">Build it yourself, node by node</span>
 			</button>
 		</div>
 
@@ -416,33 +419,52 @@
 	}
 
 	/* --- secondary (deliberately low weight) ------------------------------- */
+	/* Three across, on the same grid width as the two primary cards above. */
 	.secondary-row {
-		display: flex;
-		flex-wrap: wrap;
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
 		gap: var(--space-6);
 		margin-top: calc(-1 * var(--space-5));
 	}
 	/* Chips, not text links: they read as pressable without competing with the two primary cards.
 	   Still visibly tertiary — outline only, no fill, smaller type. */
-	.secondary-chip {
-		display: inline-flex;
-		align-items: center;
-		gap: var(--space-2);
-		padding: var(--space-2) var(--space-4);
+	/* Cards, not chips: same shape as the primaries so they sit on one grid, but flatter (no
+	   shadow, smaller type, muted title) so the hierarchy still reads at a glance. */
+	.secondary-card {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--space-1);
+		padding: var(--space-5);
 		background: none;
 		border: 1px solid var(--color-lightness-85);
-		border-radius: var(--radius-md);
-		font-size: var(--font-sm);
-		color: var(--color-lightness-35);
+		border-radius: var(--radius-lg);
+		text-align: left;
 		cursor: pointer;
 		transition:
 			border-color 0.15s ease,
 			background 0.15s ease;
 	}
-	.secondary-chip:hover,
-	.secondary-chip:focus-visible {
-		border-color: var(--color-lightness-55);
-		background: var(--color-lightness-98);
+	.secondary-card:hover,
+	.secondary-card:focus-visible {
+		border-color: var(--color-accent);
+		background: var(--surface-card);
+	}
+	.secondary-icon {
+		color: var(--color-lightness-45);
+		transition: color 0.15s ease;
+	}
+	.secondary-card:hover .secondary-icon {
+		color: var(--color-accent);
+	}
+	.secondary-title {
+		font-size: var(--font-md);
+		font-weight: 600;
+		color: var(--color-lightness-30);
+	}
+	.secondary-sub {
+		font-size: var(--font-sm);
+		color: var(--color-text-muted);
 	}
 	/* --- section scaffolding ----------------------------------------------- */
 	.start-section {
@@ -489,6 +511,10 @@
 	}
 	.recent-row:hover {
 		background: var(--color-lightness-96);
+	}
+	.recent-row:hover .recent-name,
+	.recent-open:focus-visible .recent-name {
+		color: var(--color-accent);
 	}
 	.recent-open {
 		flex: 1 1 auto;
@@ -572,8 +598,9 @@
 		border-radius: var(--radius-lg);
 		transition: border-color 0.15s ease;
 	}
-	.example-card:hover {
-		border-color: var(--color-lightness-55);
+	.example-card:hover,
+	.example-card:focus-within {
+		border-color: var(--color-accent);
 	}
 	.example-card.busy {
 		opacity: 0.6;
@@ -667,7 +694,8 @@
 	}
 	.tour-cta:hover,
 	.tour-cta:focus-visible {
-		background: var(--surface-card);
+		background: var(--color-accent);
+		color: var(--surface-card);
 	}
 
 	/* --- confirm ------------------------------------------------------------ */
