@@ -38,7 +38,6 @@
 		displayName,
 		openSessionFile,
 		pickSessionFile,
-		simulateData,
 		loadExampleManifest,
 		notifyFailure
 	} from '$lib/start/startActions.js';
@@ -53,6 +52,47 @@
 	let exampleGroups = $state([]);
 	let manifestError = $state('');
 	let busyId = $state(null);
+	let query = $state('');
+	// The load-session modal is reused for two jobs: opening a file, and browsing the full library.
+	let loadMode = $state('file');
+
+	// Group names are row headings no longer; they ride on each card, so they need to be short
+	// enough to sit above a 9.5rem card without wrapping.
+	const SHORT_GROUP = {
+		'Rhythm & circadian': 'Rhythm',
+		'General statistics': 'Statistics',
+		'Reading the output': 'Reading output'
+	};
+	const FEATURED_PER_GROUP = 2;
+
+	const allExamples = $derived(
+		exampleGroups.flatMap(([group, sessions]) => sessions.map((s) => ({ ...s, group })))
+	);
+
+	/**
+	 * The default view: two from each group on ONE row. Interleaved rather than three adjacent
+	 * pairs, so the row reads as a mix of what the app does. This also fills the grid exactly —
+	 * six cards in six columns — which grouped rows cannot, because the groups are 9, 7 and 3.
+	 */
+	const featured = $derived.by(() => {
+		const out = [];
+		for (let i = 0; i < FEATURED_PER_GROUP; i++) {
+			for (const [group, sessions] of exampleGroups) {
+				if (sessions[i]) out.push({ ...sessions[i], group });
+			}
+		}
+		return out;
+	});
+
+	/** null when not searching, so an empty result is distinguishable from "no query". */
+	const filtered = $derived.by(() => {
+		const q = query.trim().toLowerCase();
+		if (!q) return null;
+		return allExamples.filter((s) =>
+			`${s.name} ${s.summary} ${s.group}`.toLowerCase().includes(q)
+		);
+	});
+	const shownExamples = $derived(filtered ?? featured);
 
 	const canReopen = supportsFileHandles();
 
@@ -88,6 +128,7 @@
 		const res = await pickSessionFile();
 		if (res.status === 'cancelled') return;
 		if (res.status === 'unsupported') {
+			loadMode = 'file';
 			showLoadSession = true;
 			return;
 		}
@@ -124,6 +165,7 @@
 					await openSessionFile(picked.file, picked.handle);
 					onDismiss?.();
 				} else if (picked.status === 'unsupported') {
+					loadMode = 'file';
 					showLoadSession = true;
 				}
 			}
@@ -146,6 +188,11 @@
 	function handleKeydown(e) {
 		if (e.key !== 'Escape') return;
 		if (showLoadSession || showAi || confirmClear) return;
+		// A search in progress owns Escape: clearing the query must not also close the screen.
+		if (query) {
+			query = '';
+			return;
+		}
 		onDismiss?.();
 	}
 </script>
@@ -183,7 +230,7 @@
 			<p>Bring in a recording, pick up where you left off, or open a worked example.</p>
 		</header>
 
-		<!-- 1. Primary actions ------------------------------------------------ -->
+		<!-- 1. Actions: four cards of equal weight ------------------------------ -->
 		<div class="primary-row">
 			<button type="button" class="primary-card" class:armed={dragActive} onclick={() => openImportData()}>
 				<span class="primary-icon"><Icon name="add-file" width={26} height={26} /></span>
@@ -198,33 +245,23 @@
 				<span class="primary-icon"><Icon name="sessionload" width={26} height={26} /></span>
 				<span class="primary-title">Load session</span>
 				<span class="primary-sub">Reopen a saved session with its data, pipeline and figures intact</span>
-				<span class="primary-hint">from a .json session file</span>
+			</button>
+
+			<button type="button" class="primary-card" onclick={() => (showAi = true)}>
+				<span class="primary-icon"><Icon name="aibot" width={26} height={26} /></span>
+				<span class="primary-title">Build a workload with AI</span>
+				<span class="primary-sub">Describe what you want to find out and let AI assemble the analysis</span>
+			</button>
+
+			<button type="button" class="primary-card" onclick={() => onDismiss?.()}>
+				<span class="primary-icon"><Icon name="workflow" width={26} height={26} /></span>
+				<span class="primary-title">Start with a blank canvas</span>
+				<span class="primary-sub">Build it yourself, node by node</span>
 			</button>
 		</div>
 
-		<!-- 2. Secondary actions ----------------------------------------------- -->
-		<div class="secondary-row">
-			<button type="button" class="secondary-card" onclick={() => { simulateData(); onDismiss?.(); }}>
-				<span class="secondary-icon"><Icon name="node-rectangular-wave" width={20} height={20} /></span>
-				<span class="secondary-title">Simulate data</span>
-				<span class="secondary-sub">Generate a rhythm to explore</span>
-			</button>
-			<button type="button" class="secondary-card" onclick={() => (showAi = true)}>
-				<span class="secondary-icon"><Icon name="aibot" width={20} height={20} /></span>
-				<span class="secondary-title">Build a workload with AI</span>
-				<span class="secondary-sub">Describe what you want to find out</span>
-			</button>
-			<button type="button" class="secondary-card" onclick={() => onDismiss?.()}>
-				<span class="secondary-icon"><Icon name="workflow" width={20} height={20} /></span>
-				<span class="secondary-title">Start with a blank canvas</span>
-				<span class="secondary-sub">Build it yourself, node by node</span>
-			</button>
-		</div>
-
-		<!-- 3. Recent ----------------------------------------------------------- -->
-		{#if recents.items.length === 0}
-			{@render tourSection()}
-		{:else}
+		<!-- 2. Recent ----------------------------------------------------------- -->
+		{#if recents.items.length > 0}
 		<section class="start-section">
 			<h2 class="section-label">Recent</h2>
 				<ul class="recent-list">
@@ -261,17 +298,48 @@
 		</section>
 		{/if}
 
-		<!-- 4. Example sessions -------------------------------------------------- -->
+		<!-- 3. Tour: always above the gallery, so the call to action stays above the fold. -->
+		{@render tourSection()}
+
+		<!-- 4. Example sessions ------------------------------------------------- -->
 		<section class="start-section">
-			<h2 class="section-label">Example sessions</h2>
+			<div class="section-head">
+				<h2 class="section-label">Example sessions</h2>
+				<div class="search-box">
+					<Icon name="search" width={14} height={14} />
+					<input
+						type="search"
+						bind:value={query}
+						placeholder="Search examples"
+						aria-label="Search example sessions"
+					/>
+				</div>
+				{#if filtered}
+					<span class="search-count">{filtered.length} of {allExamples.length}</span>
+				{/if}
+				<button
+					type="button"
+					class="browse-link"
+					onclick={() => { loadMode = 'example'; showLoadSession = true; }}
+				>
+					Browse all {allExamples.length} →
+				</button>
+			</div>
+
 			{#if manifestError}
 				<p class="empty-note">Could not load the example library ({manifestError}).</p>
-			{/if}
-			{#each exampleGroups as [group, sessions] (group)}
-				<h3 class="group-label">{group}</h3>
+			{:else if filtered && filtered.length === 0}
+				<p class="empty-note">
+					Nothing matches “{query}”. Try a rhythm term (tau, split, tidal), a test name (ANOVA,
+					chi-square), or browse the full library.
+				</p>
+			{:else}
+				<!-- ONE mixed row: two from each group, so the grid fills exactly. The group rides on
+				     each card as a caption, since there are no group headings to carry it. -->
 				<div class="example-grid">
-					{#each sessions as s (s.id)}
+					{#each shownExamples as s (s.id)}
 						<div class="example-card" class:busy={busyId === s.id}>
+							<span class="example-group">{SHORT_GROUP[s.group] ?? s.group}</span>
 							<span class="thumb">{@html thumbnailForWorkflow(s.id)}</span>
 							<span class="example-title">{displayName(s.name)}</span>
 							<span class="example-sub">{s.summary}</span>
@@ -286,29 +354,14 @@
 							</button>
 						</div>
 					{/each}
-					{#if group === 'General statistics'}
-						<!-- Trailing card: catches the user who has scanned the library and not found theirs. -->
-						<div class="example-card example-card--ghost">
-							<span class="ghost-mark"><Icon name="aibot" width={22} height={22} /></span>
-							<span class="example-title">Something else?</span>
-							<span class="example-sub">Describe what you want to find out.</span>
-							<button type="button" class="card-overlay" onclick={() => (showAi = true)}>
-								<span class="sr-only">Describe what you want to find out and build it with AI</span>
-							</button>
-						</div>
-					{/if}
 				</div>
-			{/each}
+			{/if}
 		</section>
 
-		<!-- 5. Tour: only here when there IS history; otherwise it was promoted above. -->
-		{#if recents.items.length > 0}
-			{@render tourSection()}
-		{/if}
 	</div>
 </div>
 
-<LoadSessionModal bind:showModal={showLoadSession} initialSourceMode="file" />
+<LoadSessionModal bind:showModal={showLoadSession} initialSourceMode={loadMode} />
 <AiPrompt bind:showModal={showAi} />
 
 <Modal bind:showModal={confirmClear} width="24rem">
@@ -367,15 +420,15 @@
 	/* --- primary ---------------------------------------------------------- */
 	.primary-row {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--space-6);
+		grid-template-columns: repeat(4, 1fr);
+		gap: var(--space-5);
 	}
 	.primary-card {
 		display: flex;
 		flex-direction: column;
 		align-items: flex-start;
 		gap: var(--space-2);
-		padding: var(--space-7) var(--space-6);
+		padding: var(--space-5);
 		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-lg);
@@ -405,13 +458,14 @@
 		color: var(--color-accent);
 	}
 	.primary-title {
-		font-size: 1.05rem;
+		font-size: var(--font-lg);
 		font-weight: 600;
 		color: var(--color-lightness-20);
 	}
 	.primary-sub {
-		font-size: var(--font-md);
+		font-size: var(--font-sm);
 		color: var(--color-text-muted);
+		line-height: 1.4;
 	}
 	.primary-hint {
 		font-size: var(--font-xs);
@@ -419,53 +473,8 @@
 	}
 
 	/* --- secondary (deliberately low weight) ------------------------------- */
-	/* Three across, on the same grid width as the two primary cards above. */
-	.secondary-row {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: var(--space-6);
-		margin-top: calc(-1 * var(--space-5));
-	}
 	/* Chips, not text links: they read as pressable without competing with the two primary cards.
 	   Still visibly tertiary — outline only, no fill, smaller type. */
-	/* Cards, not chips: same shape as the primaries so they sit on one grid, but flatter (no
-	   shadow, smaller type, muted title) so the hierarchy still reads at a glance. */
-	.secondary-card {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		gap: var(--space-1);
-		padding: var(--space-5);
-		background: none;
-		border: 1px solid var(--color-lightness-85);
-		border-radius: var(--radius-lg);
-		text-align: left;
-		cursor: pointer;
-		transition:
-			border-color 0.15s ease,
-			background 0.15s ease;
-	}
-	.secondary-card:hover,
-	.secondary-card:focus-visible {
-		border-color: var(--color-accent);
-		background: var(--surface-card);
-	}
-	.secondary-icon {
-		color: var(--color-lightness-45);
-		transition: color 0.15s ease;
-	}
-	.secondary-card:hover .secondary-icon {
-		color: var(--color-accent);
-	}
-	.secondary-title {
-		font-size: var(--font-md);
-		font-weight: 600;
-		color: var(--color-lightness-30);
-	}
-	.secondary-sub {
-		font-size: var(--font-sm);
-		color: var(--color-text-muted);
-	}
 	/* --- section scaffolding ----------------------------------------------- */
 	.start-section {
 		display: flex;
@@ -480,12 +489,6 @@
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		color: var(--color-lightness-60);
-	}
-	.group-label {
-		margin: var(--space-3) 0 0;
-		font-size: var(--font-md);
-		font-weight: 600;
-		color: var(--color-lightness-35);
 	}
 	.empty-note {
 		margin: 0;
@@ -582,17 +585,78 @@
 	}
 
 	/* --- examples ----------------------------------------------------------- */
+	/* 9.5rem tracks give six across at the panel's 64rem, which is exactly the six cards the
+	   mixed row shows — so the grid fills with no ragged tail. */
 	.example-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
 		gap: var(--space-5);
+	}
+	.section-head {
+		display: flex;
+		align-items: center;
+		gap: var(--space-5);
+		flex-wrap: wrap;
+	}
+	.section-head .section-label {
+		margin-right: auto;
+	}
+	.search-box {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		padding: var(--space-2) var(--space-4);
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-md);
+		background: var(--surface-card);
+		color: var(--color-lightness-55);
+		min-width: 13rem;
+	}
+	.search-box:focus-within {
+		border-color: var(--color-accent);
+	}
+	.search-box input {
+		border: none;
+		outline: none;
+		background: none;
+		font: inherit;
+		font-size: var(--font-md);
+		color: var(--color-lightness-20);
+		width: 100%;
+	}
+	.search-count {
+		font-size: var(--font-sm);
+		color: var(--color-text-muted);
+		font-variant-numeric: tabular-nums;
+	}
+	.browse-link {
+		background: none;
+		border: none;
+		padding: 0;
+		font: inherit;
+		font-size: var(--font-sm);
+		color: var(--color-accent);
+		text-decoration: underline;
+		cursor: pointer;
+	}
+	.browse-link:hover,
+	.browse-link:focus-visible {
+		color: var(--color-lightness-20);
+	}
+	/* The group label rides on the card now that there are no group rows to head. */
+	.example-group {
+		font-size: var(--font-2xs);
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--color-lightness-55);
 	}
 	.example-card {
 		position: relative;
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-2);
-		padding: var(--space-5);
+		gap: var(--space-1);
+		padding: var(--space-4);
 		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-lg);
@@ -604,16 +668,6 @@
 	}
 	.example-card.busy {
 		opacity: 0.6;
-	}
-	.example-card--ghost {
-		border-style: dashed;
-		background: none;
-		/* No thumbnail to anchor it, so centre the copy rather than leave it floating at the top of
-		   a card sized by its neighbours. */
-		justify-content: center;
-	}
-	.ghost-mark {
-		color: var(--color-lightness-55);
 	}
 	.thumb {
 		display: block;
@@ -635,13 +689,14 @@
 		aspect-ratio: 3 / 2;
 	}
 	.example-title {
-		font-size: var(--font-lg);
+		font-size: var(--font-md);
 		font-weight: 600;
 		color: var(--color-lightness-20);
 	}
 	.example-sub {
-		font-size: var(--font-sm);
+		font-size: var(--font-xs);
 		color: var(--color-text-muted);
+		line-height: 1.35;
 	}
 	/* Overlay carries the primary action; the secondary link stacks above it. */
 	.card-overlay {
@@ -744,6 +799,14 @@
 	@media (max-width: 40rem) {
 		.primary-row {
 			grid-template-columns: 1fr;
+		}
+		.section-head {
+			gap: var(--space-4);
+		}
+		.search-box {
+			min-width: 0;
+			flex: 1 1 100%;
+			order: 3;
 		}
 		.tour-band {
 			flex-direction: column;

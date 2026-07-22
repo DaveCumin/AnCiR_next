@@ -6,10 +6,23 @@ import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/sv
 const openExample = vi.fn(async () => {});
 const openSessionFile = vi.fn(async () => {});
 const pickSessionFile = vi.fn(async () => ({ status: 'unsupported' }));
-const simulateData = vi.fn();
 const loadExampleManifest = vi.fn(async () => [
-	['Rhythm & circadian', [{ id: 'rest-activity', name: 'Rest–activity', summary: 'A rhythm run.' }]],
-	['General statistics', [{ id: 'stats-anova', name: 'One-way ANOVA', summary: 'Three groups.' }]]
+	[
+		'Rhythm & circadian',
+		[
+			{ id: 'rest-activity', name: 'Rest–activity', summary: 'A rhythm run.' },
+			{ id: 'free-running', name: 'Free-running period', summary: 'Measure tau with no zeitgeber.' },
+			{ id: 'circatidal', name: 'Circatidal rhythm', summary: 'A tidal rhythm, not circadian.' }
+		]
+	],
+	[
+		'General statistics',
+		[
+			{ id: 'stats-anova', name: 'One-way ANOVA', summary: 'Three groups.' },
+			{ id: 'stats-chi', name: 'Chi-square', summary: 'Categorical association.' }
+		]
+	],
+	['Reading the output', [{ id: 'arrhythmic', name: 'Arrhythmic record', summary: 'The negative control.' }]]
 ]);
 vi.mock('$lib/start/startActions.js', () => ({
 	openExample: (...a) => openExample(...a),
@@ -17,7 +30,6 @@ vi.mock('$lib/start/startActions.js', () => ({
 	displayName: (n) => (n ?? '').replace(/^Workflow\s*—\s*/, ''),
 	openSessionFile: (...a) => openSessionFile(...a),
 	pickSessionFile: (...a) => pickSessionFile(...a),
-	simulateData: (...a) => simulateData(...a),
 	loadExampleManifest: (...a) => loadExampleManifest(...a),
 	notifyFailure: vi.fn()
 }));
@@ -50,18 +62,29 @@ describe('hierarchy', () => {
 		expect(screen.getByRole('button', { name: /load session/i })).toBeTruthy();
 	});
 
-	it('keeps simulate and AI as quieter secondary actions, not primary cards', () => {
+	it('gives all four actions equal weight and keeps no leftover chip row', () => {
 		const { container } = render(StartScreen);
-		const primaries = container.querySelectorAll('.primary-card');
-		expect(primaries).toHaveLength(2); // exactly two things carry primary weight
-		expect(container.querySelector('.secondary-row')).toBeTruthy();
+		expect(container.querySelectorAll('.primary-card')).toHaveLength(4);
+		// Simulate was removed to buy back vertical space; it stays reachable from the node palette.
+		expect(screen.queryByRole('button', { name: /simulate/i })).toBeNull();
 	});
 
-	it('groups the examples, rhythm before statistics', async () => {
+	it('shows one mixed row: two examples from each group, each labelled with its group', async () => {
 		const { container } = render(StartScreen);
-		await waitFor(() => expect(container.querySelectorAll('.group-label').length).toBe(2));
-		const titles = [...container.querySelectorAll('.group-label')].map((h) => h.textContent);
-		expect(titles).toEqual(['Rhythm & circadian', 'General statistics']);
+		await waitFor(() => expect(container.querySelectorAll('.example-card').length).toBeGreaterThan(0));
+		// Interleaved (one from each group, then the second from each) rather than three adjacent
+		// pairs — and a group holding only one example contributes only one card, so the row is
+		// built from the groups rather than sliced off a flat list.
+		const caps = [...container.querySelectorAll('.example-group')].map((n) => n.textContent);
+		expect(caps).toEqual(['Rhythm', 'Statistics', 'Reading output', 'Rhythm', 'Statistics']);
+		expect(container.querySelectorAll('.example-card')).toHaveLength(5);
+		expect(container.querySelector('.group-label')).toBeNull(); // no group heading rows any more
+	});
+
+	it('has no ghost card', async () => {
+		const { container } = render(StartScreen);
+		await waitFor(() => expect(container.querySelector('.example-card')).toBeTruthy());
+		expect(screen.queryByText(/Something else\?/)).toBeNull();
 	});
 
 	it('gives each example exactly one action, with no nested buttons', async () => {
@@ -76,24 +99,22 @@ describe('hierarchy', () => {
 });
 
 describe('recents', () => {
-	it('promotes the tour into the Recent slot when there is no history', async () => {
+	it('hides the Recent section entirely when there is no history', async () => {
 		const { container } = render(StartScreen);
-		// A first-time visitor should not be shown a section about a list they haven't got yet.
 		expect(screen.queryByText(/^Recent$/)).toBeNull();
 		expect(screen.queryByRole('button', { name: /clear list/i })).toBeNull();
-		// ...and the tour sits high, above the example library, rather than at the bottom.
+		// The tour takes that space and stays above the gallery, so the CTA is above the fold.
 		const labels = [...container.querySelectorAll('.section-label')].map((n) => n.textContent);
 		expect(labels[0]).toBe('New here?');
 		expect(labels.indexOf('New here?')).toBeLessThan(labels.indexOf('Example sessions'));
 	});
 
-	it('demotes the tour below the examples once there is history', async () => {
+	it('keeps the tour above the gallery even once there is history', async () => {
 		await recordRecent({ id: 'file::a.json', name: 'Cohort A' });
 		const { container } = render(StartScreen);
 		await waitFor(() => expect(screen.getByText('Cohort A')).toBeTruthy());
 		const labels = [...container.querySelectorAll('.section-label')].map((n) => n.textContent);
-		expect(labels[0]).toBe('Recent');
-		expect(labels.indexOf('New here?')).toBeGreaterThan(labels.indexOf('Example sessions'));
+		expect(labels).toEqual(['Recent', 'New here?', 'Example sessions']);
 	});
 
 	it('lists a recorded session', async () => {
@@ -119,6 +140,64 @@ describe('recents', () => {
 		await fireEvent.click(screen.getByRole('button', { name: /clear list/i }));
 		expect(loadRecents()).toHaveLength(1); // nothing destroyed on the first click
 		expect(screen.getByText(/Clear recent sessions\?/i)).toBeTruthy();
+	});
+});
+
+describe('search', () => {
+	const type = async (value) => {
+		const box = screen.getByRole('searchbox', { name: /search example/i });
+		await fireEvent.input(box, { target: { value } });
+		return box;
+	};
+
+	it('filters across ALL examples, not just the six on show', async () => {
+		const { container } = render(StartScreen);
+		await waitFor(() => expect(container.querySelectorAll('.example-card').length).toBe(5));
+		// "Chi-square" is not in the featured row (it is the 2nd of its group, so it is — use the
+		// 3rd rhythm example instead, which the mixed row never shows).
+		expect(screen.queryByText('Circatidal rhythm')).toBeNull();
+		await type('tidal');
+		await waitFor(() => expect(screen.getByText('Circatidal rhythm')).toBeTruthy());
+		expect(container.querySelectorAll('.example-card')).toHaveLength(1);
+	});
+
+	it('matches on the summary and on the group name, not just the title', async () => {
+		render(StartScreen);
+		await waitFor(() => expect(screen.getByText('Rest–activity')).toBeTruthy());
+		await type('zeitgeber'); // summary only
+		await waitFor(() => expect(screen.getByText('Free-running period')).toBeTruthy());
+		await type('reading'); // group only
+		await waitFor(() => expect(screen.getByText('Arrhythmic record')).toBeTruthy());
+	});
+
+	it('reports how many of the full library matched', async () => {
+		const { container } = render(StartScreen);
+		await waitFor(() => expect(container.querySelector('.example-card')).toBeTruthy());
+		expect(container.querySelector('.search-count')).toBeNull(); // silent until searching
+		await type('rhythm');
+		await waitFor(() => expect(container.querySelector('.search-count')).toBeTruthy());
+		expect(container.querySelector('.search-count').textContent).toMatch(/of 6$/);
+	});
+
+	it('explains an empty result instead of showing a blank area', async () => {
+		const { container } = render(StartScreen);
+		await waitFor(() => expect(container.querySelector('.example-card')).toBeTruthy());
+		await type('zzzznothing');
+		await waitFor(() => expect(container.querySelectorAll('.example-card')).toHaveLength(0));
+		expect(screen.getByText(/Nothing matches/)).toBeTruthy();
+	});
+
+	it('lets Escape clear the query before it closes the screen', async () => {
+		const onDismiss = vi.fn();
+		const { container } = render(StartScreen, { props: { onDismiss } });
+		await waitFor(() => expect(container.querySelector('.example-card')).toBeTruthy());
+		await type('tidal');
+		await fireEvent.keyDown(window, { key: 'Escape' });
+		// First Escape clears the search; the screen stays open.
+		expect(onDismiss).not.toHaveBeenCalled();
+		await waitFor(() => expect(container.querySelectorAll('.example-card').length).toBe(5));
+		await fireEvent.keyDown(window, { key: 'Escape' });
+		expect(onDismiss).toHaveBeenCalled(); // second one dismisses
 	});
 });
 

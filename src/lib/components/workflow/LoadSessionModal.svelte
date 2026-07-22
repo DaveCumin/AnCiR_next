@@ -16,9 +16,15 @@
 
 	// Tabbed source picker. 'file' is the default since it's the most common
 	// path; switching tabs is one click and the demo index is fetched lazily.
-	// Callers can open straight to a given tab (e.g. 'example') via
-	// `initialSourceMode`; the close-reset below restores that choice.
+	// Callers can open straight to a given tab (e.g. 'example') via `initialSourceMode`.
 	let sourceMode = $state(initialSourceMode);
+
+	// Resolve the opening tab when the modal OPENS, not when it closes. A caller that shares one
+	// instance for two jobs sets the mode and opens in the same tick; resolving on close meant the
+	// new mode only took effect the NEXT time it was opened, so "Browse examples" opened on Files.
+	$effect(() => {
+		if (showModal) sourceMode = initialSourceMode;
+	});
 
 	let fileInput;
 	let sessionUrl = $state('');
@@ -110,7 +116,6 @@
 	// Reset transient state when the modal closes so reopening starts clean.
 	$effect(() => {
 		if (!showModal) {
-			sourceMode = initialSourceMode;
 			sessionUrl = '';
 			loading = false;
 			progressDetail = '';
