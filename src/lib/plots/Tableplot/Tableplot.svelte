@@ -196,11 +196,16 @@
 					} else {
 						out.push(Array(this.Ncolumns).fill('—'));
 					}
-				} else if (col.type === 'time' && !col.isReferencial() && col.compression !== 'awd') {
+				} else if (col.type === 'time' && !col.isReferencial()) {
+					// Source columns carry a raw series; AWD columns store a compressed
+					// {start, step} descriptor and producer/derived columns carry
+					// nothing, so fall back to getData() (UNIX ms) and format that —
+					// otherwise those columns render as bare epoch numbers.
 					const rawArr = core.rawData.get(col.data);
-					if (Array.isArray(rawArr)) {
-						const start = this.colCurrent - 1;
-						const rawSlice = rawArr.slice(start, start + this.Ncolumns);
+					const start = this.colCurrent - 1;
+					const source = Array.isArray(rawArr) ? rawArr : col.getData();
+					if (Array.isArray(source)) {
+						const rawSlice = source.slice(start, start + this.Ncolumns);
 						const hours = (col.hoursSinceStart ?? [])
 							.slice(start, start + this.Ncolumns)
 							.map((x) => (Number.isFinite(x) ? x.toFixed(this.decimalPlaces) : String(x)));
@@ -209,12 +214,7 @@
 						const displayStrings = isUnixMs ? rawSlice.map(formatTimeFromUNIX) : rawSlice;
 						out.push(displayStrings.map((t, j) => ({ raw: t, computed: hours[j], isTime: true })));
 					} else {
-						// AWD or missing rawData — fall back to numeric display
-						const data = col
-							.getData()
-							.slice(this.colCurrent - 1, this.colCurrent + this.Ncolumns)
-							.map((x) => (Number.isFinite(x) ? x.toFixed(this.decimalPlaces) : x));
-						out.push(data);
+						out.push(Array(this.Ncolumns).fill('—'));
 					}
 				} else {
 					const data = col
@@ -324,7 +324,7 @@
 			(c) =>
 				c.col &&
 				(c.col.type === 'bin' ||
-					(c.col.type === 'time' && !c.col.isReferencial() && c.col.compression !== 'awd'))
+					(c.col.type === 'time' && !c.col.isReferencial()))
 		)
 	);
 	// Row height tracks the 1.5rem (~24px) cell font: ~44px for one line, more for
@@ -385,10 +385,11 @@
 			}
 			return { raw: (x + binStep / 2).toFixed(dp), computed: rangeStr, isTime: true };
 		}
-		if (col.type === 'time' && !col.isReferencial() && col.compression !== 'awd') {
+		if (col.type === 'time' && !col.isReferencial()) {
 			const rawArr = core.rawData.get(col.data);
-			// Source columns carry a raw series; producer/derived time columns don't,
-			// so fall back to getData() (UNIX ms) to still render dates.
+			// Source columns carry a raw series; AWD (compressed {start, step}) and
+			// producer/derived time columns don't, so fall back to getData()
+			// (UNIX ms) to still render dates rather than bare epoch numbers.
 			const timeArr = Array.isArray(rawArr) ? rawArr : col.getData();
 			if (Array.isArray(timeArr)) {
 				const v = timeArr[i];

@@ -38,6 +38,100 @@
 	function yieldToUI() {
 		return new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
 	}
+
+	/** Rows shown in the preview table when a parse ran without a row limit. */
+	export const AWD_PREVIEW_ROWS = 50;
+
+	/**
+	 * Cap the rows shown in the preview table.
+	 *
+	 * A cap of 0 means "no cap". PapaParse uses `preview: 0` for "read every
+	 * row", and the AWD path reuses that same variable; treating the sentinel as
+	 * a slice length silently emptied the preview (slice(0, 0) === []).
+	 */
+	export function limitPreviewRows(rows, cap) {
+		if (!Array.isArray(rows)) return rows;
+		if (!Number.isFinite(cap) || cap <= 0) return rows;
+		return rows.length > cap ? rows.slice(0, cap) : rows;
+	}
+
+	/**
+	 * Split an AWD data field into its numeric value and event-marker flag.
+	 *
+	 * AWD rows carry a trailing "M" when the participant pressed the event
+	 * button, e.g. "300 , 4.94 M". Left in place the field stays a string, so
+	 * the reading is lost from an otherwise numeric column.
+	 */
+	/**
+	 * Label for a bin whose start sits `hours` after `first`.
+	 *
+	 * `first` is always a dayjs instance (dayjs.utc), so this must use dayjs's
+	 * API — an earlier version called Luxon's .plus()/.toFormat() here and threw
+	 * on every binned import that had a time column.
+	 *
+	 * Emits the app's wire format ("DD MMM YYYY HH:mm:ss" — the same string
+	 * formatTimeFromISO produces and the table editor parses back), so a binned
+	 * time column reads the same as every other time column instead of showing a
+	 * bare ISO-ish string. It round-trips through guessDateofArray.
+	 */
+	export function binTimeLabel(first, hours) {
+		return first.add(hours, 'hour').format('DD MMM YYYY HH:mm:ss');
+	}
+
+	/**
+	 * Column names for an AWD file's generated columns.
+	 *
+	 * AWD data rows are "activity , light": the second channel is the light (lux)
+	 * sensor on the Actiwatch / MotionWatch devices that write this format. It
+	 * was previously called "Marker", which named it after the trailing "M"
+	 * event-button flag carried by individual rows (see splitAwdMarker) rather
+	 * than after its own contents — the flag is a per-row marker, not a channel.
+	 */
+	export function awdColumnNames(sampleCols) {
+		const names = ['DateTime', 'Activity'];
+		const n = Number(sampleCols);
+		if (!Number.isFinite(n)) return names;
+		if (n >= 2) names.push('Light');
+		for (let c = 2; c < n; c++) names.push(`Extra${c}`);
+		return names;
+	}
+
+	/**
+	 * Start instant of an AWD recording, from its header date + time lines.
+	 *
+	 * The header time is 24-hour wall clock as written by the device, so "12:00"
+	 * is midday. It is anchored in UTC — the app's default display zone — rather
+	 * than the machine's local zone; building it locally stored a midday start as
+	 * the previous midnight in UTC, so the column read 00:00 for anyone east of
+	 * Greenwich.
+	 *
+	 * Returns a dayjs (UTC) instance, or null if the date line is unusable.
+	 * An unusable TIME line degrades to midnight of that date.
+	 */
+	export function awdStartInstant(dateStr, timeStr) {
+		const date = String(dateStr ?? '').trim();
+		let day = dayjs.utc(date, 'DD-MMM-YYYY', 'en', true);
+		if (!day.isValid()) day = dayjs.utc(date, 'DD-MMM-YY', 'en', true);
+		if (!day.isValid()) return null;
+
+		const m = String(timeStr ?? '')
+			.trim()
+			.match(/^(\d{1,2}):(\d{2})$/);
+		if (!m) return day.startOf('day');
+		const hh = Number(m[1]);
+		const mm = Number(m[2]);
+		if (hh > 23 || mm > 59) return day.startOf('day');
+		return day.hour(hh).minute(mm).second(0).millisecond(0);
+	}
+
+	export function splitAwdMarker(field) {
+		if (typeof field !== 'string') return { value: field, marked: false };
+		const marked = /^\s*-?[\d.]*\d\s*M\s*$/i.test(field);
+		const numeric = marked ? field.replace(/\s*M\s*$/i, '') : field;
+		const n = Number(numeric);
+		if (numeric.trim() !== '' && Number.isFinite(n)) return { value: n, marked };
+		return { value: field, marked: false };
+	}
 	import { stackOrderInsideOut } from 'd3-shape';
 	import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import {
@@ -56,6 +150,9 @@
 	let delimiter = $state('');
 	let targetFile = $state();
 	let previewIN = $state(50);
+	// Preview cap remembered across the AWD double-pass, because `previewIN`
+	// itself becomes PapaParse's "unlimited" (0) sentinel for the second pass.
+	let awdPreviewCap = AWD_PREVIEW_ROWS;
 	let previewDisplayStart = $state(1);
 	let previewRowCount = $derived(parsedData ? parsedData[headers[0]]?.length || 0 : 0);
 	let enspirePlateInfoRows = $derived(enspireMultiplatePayload?.plateInfoRows ?? 0);
@@ -69,6 +166,7 @@
 	let awaitingPreview = $state(false);
 	let awaitingLoad = $state(false);
 	let awdMeta = $state(null); // { startMs, stepMs, count } for AWD time compression
+	let awdMarkerCount = 0; // event-marker ("M") epochs seen in the last AWD parse
 	let enspireMultiplatePayload = $state(null);
 	let dataUrl = $state('');
 	let isUrlMode = $state(false);
@@ -1239,7 +1337,11 @@
 							results.errors = [];
 							if (parseAttempts === 0) {
 								// Re-parse: no header (AWD has its own 7-line header),
-								// no row limit, no skip
+								// no row limit, no skip. Remember the wanted preview size
+								// FIRST: `previewIN` is about to become PapaParse's
+								// "read everything" sentinel (0) and must not be reused
+								// as a slice length further down.
+								awdPreviewCap = previewIN > 0 ? previewIN : AWD_PREVIEW_ROWS;
 								hasHeader = false;
 								previewIN = 0;
 								skipLines = 0;
@@ -1250,8 +1352,8 @@
 								results.data = awdTocsv(results.data);
 								results.meta.fields = headers;
 								// Limit preview rows (like CSV)
-								if (awaitingPreview && results.data.length > previewIN) {
-									results.data = results.data.slice(0, previewIN);
+								if (awaitingPreview) {
+									results.data = limitPreviewRows(results.data, awdPreviewCap);
 								}
 							}
 						}
@@ -1946,8 +2048,11 @@
 		// Line 4: AGE (ignored)
 		// Line 5: ID (ignored)
 		// Line 6: SEX (ignored)
-		// Line 7+: Activity , Marker  (comma-separated data)
+		// Line 7+: Activity , Light  (comma-separated data), optionally with a
+		//          trailing "M" marking a participant event-button press.
 		if (data.length < 8) return data;
+
+		awdMarkerCount = 0;
 
 		// --- Header parsing ---
 		const dateStr = String(data[1]?.[0] ?? '').trim();
@@ -1957,27 +2062,13 @@
 		// intervalRaw × 15 = seconds per epoch
 		const epochSeconds = intervalRaw * 15;
 
-		// Parse start date — try full year first, then 2-digit. AWD files emit
-		// dates like "12-Mar-2024" or "12-Mar-24", always English month names.
-		let startDate = dayjs(dateStr, 'DD-MMM-YYYY', 'en', true);
-		if (!startDate.isValid()) {
-			startDate = dayjs(dateStr, 'DD-MMM-YY', 'en', true);
-		}
-		if (!startDate.isValid()) {
+		// Start instant from the header date + 24-hour time, anchored in UTC (the
+		// app's display zone) so "12:00" reads as midday everywhere.
+		let startDT = awdStartInstant(dateStr, timeStr);
+		if (!startDT) {
 			console.warn('Invalid AWD start date:', dateStr);
-			startDate = dayjs().startOf('day');
-		}
-
-		// Add start time
-		let startDT = startDate;
-		const timeMatch = timeStr.match(/^(\d{1,2}):(\d{2})$/);
-		if (timeMatch) {
-			startDT = startDate
-				.hour(Number(timeMatch[1]))
-				.minute(Number(timeMatch[2]))
-				.second(0)
-				.millisecond(0);
-		} else {
+			startDT = dayjs.utc().startOf('day');
+		} else if (!/^(\d{1,2}):(\d{2})$/.test(timeStr)) {
 			console.warn('Invalid AWD start time:', timeStr);
 		}
 
@@ -1986,11 +2077,7 @@
 
 		// Detect number of data columns
 		const sampleCols = dataRows[0]?.length ?? 1;
-		const colNames = ['DateTime', 'Activity'];
-		if (sampleCols >= 2) colNames.push('Marker');
-		for (let c = 2; c < sampleCols; c++) {
-			colNames.push(`Extra${c}`);
-		}
+		const colNames = awdColumnNames(sampleCols);
 
 		// Metadata for time compression (used only for non-DateTime columns if you want later)
 		awdMeta = {
@@ -2007,11 +2094,14 @@
 			const dt = startDT.add(i * epochSeconds, 'second');
 			obj.DateTime = dt.format('YYYY-MM-DD HH:mm:ss');
 
-			// Other columns: numbers
+			// Other columns: numbers. A trailing "M" flags a participant event
+			// marker on that epoch ("300 , 4.94 M"); strip it so the reading
+			// stays numeric instead of becoming a string and dropping out.
 			obj.Activity = row[0] != null ? Number(row[0]) : 0;
 			for (let c = 1; c < row.length; c++) {
-				const val = row[c];
-				obj[colNames[c + 1]] = val != null && !isNaN(val) ? Number(val) : val;
+				const { value, marked } = splitAwdMarker(row[c]);
+				if (marked) awdMarkerCount++;
+				obj[colNames[c + 1]] = value != null && !isNaN(value) ? Number(value) : value;
 			}
 
 			return obj;
@@ -2019,6 +2109,18 @@
 
 		headers = colNames;
 		hasHeader = true;
+
+		// Don't discard the event markers silently — the reading is preserved,
+		// but the flag itself has nowhere to go yet. Report once, on the real
+		// import rather than on every preview re-parse.
+		if (awdMarkerCount > 0 && !awaitingPreview) {
+			addNotification(
+				`${awdMarkerCount} event marker${awdMarkerCount === 1 ? '' : 's'} ("M") found in this ` +
+					`AWD file. The Light reading on those epochs was kept; the marker flag itself is ` +
+					`not imported as a column.`,
+				'info'
+			);
+		}
 
 		return output;
 	}
@@ -2086,9 +2188,14 @@
 		let firstDt;
 
 		if (awdMeta && timeKey === 'DateTime') {
-			// AWD: compute hours directly from metadata — no string parsing needed
+			// AWD: compute hours directly from metadata — no string parsing needed.
+			// Use UTC mode so the labels we emit below sit in the same frame as
+			// the CSV branch (parseUTCStrict returns a dayjs.utc instance). A
+			// local-mode dayjs here formatted local wall-clock that was then
+			// re-read as UTC, shifting every binned timestamp by the machine's
+			// UTC offset.
 			const stepHours = awdMeta.stepMs / 3_600_000;
-			firstDt = dayjs(awdMeta.startMs);
+			firstDt = dayjs.utc(awdMeta.startMs);
 			timeHours = new Array(rowCount);
 			for (let i = 0; i < rowCount; i++) {
 				timeHours[i] = i * stepHours;
@@ -2148,10 +2255,7 @@
 
 		// Build result: for time column, reconstruct datetime strings from bin positions
 		const result = {};
-		result[timeKey] = binPositions.map((h) => {
-			const dt = firstDt.plus({ hours: h });
-			return dt.toFormat('yyyy-MM-dd HH:mm:ss');
-		});
+		result[timeKey] = binPositions.map((h) => binTimeLabel(firstDt, h));
 
 		// For each other column, bin using binData or map category by index
 		for (const k of keys) {

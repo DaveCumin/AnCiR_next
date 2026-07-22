@@ -240,7 +240,7 @@
 		<div style="display:flex;">
 			<NumberWithUnits
 				bind:value={p.args.samplingPeriod_hours}
-				min="0.01"
+				min="0.00000000001"
 				step="0.01"
 				max={50}
 				units={{

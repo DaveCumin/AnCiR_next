@@ -63,6 +63,7 @@
 		compactNodeHeight,
 		compactPortAnchorY
 	} from './nodeGeometry.js';
+	import { buildNodeLayout, parseNodeLayout } from './nodeLayoutIO.js';
 
 	let { inline = false } = $props();
 
@@ -389,27 +390,24 @@
 	// core too.
 	const NODE_POSITIONS_STORAGE_KEY = 'ancir.workflow.nodePositions';
 
-	function loadNodePositions() {
+	/** Parse the localStorage layout cache into {positions, collapsedIds, sizes}. */
+	function loadStoredLayout() {
 		try {
 			const raw =
 				typeof localStorage !== 'undefined' && localStorage.getItem(NODE_POSITIONS_STORAGE_KEY);
-			if (!raw) return {};
-			const parsed = JSON.parse(raw);
-			if (!parsed || typeof parsed !== 'object') return {};
-			// Strip non-{x,y} entries defensively.
-			const out = {};
-			for (const [id, pos] of Object.entries(parsed)) {
-				const x = Number(pos?.x);
-				const y = Number(pos?.y);
-				if (Number.isFinite(x) && Number.isFinite(y)) out[id] = { x, y };
-			}
-			return out;
+			if (!raw) return parseNodeLayout(null);
+			return parseNodeLayout(JSON.parse(raw));
 		} catch {
-			return {};
+			return parseNodeLayout(null);
 		}
 	}
 
-	let stablePositions = $state(loadNodePositions());
+	const _storedLayout = loadStoredLayout();
+	let stablePositions = $state(_storedLayout.positions);
+	// Seed resized plot preview boxes from the same cache, so a reload keeps a
+	// node the size the user dragged it to (a session import overrides this via
+	// the adopt effect below).
+	Object.assign(plotPreviewSizes, _storedLayout.sizes);
 	let _knownNodeIds = new Set(Object.keys(stablePositions));
 	// Last layout object WorkflowEditor itself wrote into core.nodeLayout, so the
 	// adopt-on-import effect can tell its own writes apart from an external (import)
@@ -476,12 +474,20 @@
 			} else if (defaults[node.id]) {
 				stablePositions[node.id] = { ...defaults[node.id] };
 			}
+
+			// Same story for a saved preview size: plot nodes load AFTER the
+			// adopt-layout effect has run, so without this a resized plot would
+			// snap back to the default box on session load.
+			if (!plotPreviewSizes[node.id] && Number(saved?.w) > 0 && Number(saved?.h) > 0) {
+				plotPreviewSizes[node.id] = { w: Number(saved.w), h: Number(saved.h) };
+			}
 		}
 
-		// Clean up positions for removed nodes
+		// Clean up positions (and any saved preview size) for removed nodes
 		for (const id of prev) {
 			if (!currentIds.has(id)) {
 				delete stablePositions[id];
+				delete plotPreviewSizes[id];
 			}
 		}
 
@@ -510,14 +516,14 @@
 		if (cl === _mirroredLayout) return; // our own write
 		if (!cl || Object.keys(cl).length === 0) return; // nothing to adopt
 		untrack(() => {
-			const pos = {};
-			const collapsed = new Set();
-			for (const [id, v] of Object.entries(cl)) {
-				if (Number.isFinite(v?.x) && Number.isFinite(v?.y)) pos[id] = { x: +v.x, y: +v.y };
-				if (v?.collapsed === true) collapsed.add(id);
-			}
+			const { positions: pos, collapsedIds: collapsed, sizes } = parseNodeLayout(cl);
 			stablePositions = pos;
 			collapsedNodeIds = collapsed;
+			// Restore resized plot preview boxes. Clear first so a node the
+			// incoming session never resized falls back to its default rather
+			// than inheriting the size from whatever was on the canvas before.
+			for (const id of Object.keys(plotPreviewSizes)) delete plotPreviewSizes[id];
+			Object.assign(plotPreviewSizes, sizes);
 			_knownNodeIds = new Set(Object.keys(pos));
 			// Retain the full imported layout (incl. nodes not yet on the canvas) so
 			// a late-arriving node can still adopt its saved position.
@@ -554,20 +560,26 @@
 	// $derived dep, so dragging a node (mutating one entry) or collapsing triggers a
 	// save.
 	$effect(() => {
-		const snapshot = {};
+		// Read every entry so this effect re-runs on any position OR size change
+		// (dragging mutates one position entry; resizing mutates one size entry).
+		const positions = {};
 		for (const [id, pos] of Object.entries(stablePositions)) {
-			snapshot[id] = { x: pos.x, y: pos.y };
+			positions[id] = { x: pos.x, y: pos.y };
 		}
-		// Layout snapshot for the session = positions + collapsed flags.
-		const layout = {};
-		for (const id in snapshot) layout[id] = { x: snapshot[id].x, y: snapshot[id].y };
-		for (const id of collapsedNodeIds) layout[id] = { ...(layout[id] ?? {}), collapsed: true };
+		const sizes = {};
+		for (const [id, s] of Object.entries(plotPreviewSizes)) {
+			sizes[id] = { w: s.w, h: s.h };
+		}
+		// Layout snapshot = positions + collapsed flags + resized preview boxes.
+		// The same object is cached in localStorage, so a resize survives both a
+		// session save/load and a plain page reload.
+		const layout = buildNodeLayout({ positions, collapsedIds: collapsedNodeIds, sizes });
 		core.nodeLayout = layout;
 		// Capture the PROXY identity Svelte wrapped `layout` in (not the raw object),
 		// read untracked so this effect doesn't depend on core.nodeLayout. The adopt
 		// effect compares against this to ignore our own writes (avoids a feedback loop).
 		_mirroredLayout = untrack(() => core.nodeLayout);
-		_pendingLayoutSnapshot = snapshot;
+		_pendingLayoutSnapshot = layout;
 		clearTimeout(_layoutSaveTimer);
 		_layoutSaveTimer = setTimeout(flushLayoutSave, LAYOUT_SAVE_DEBOUNCE_MS);
 	});

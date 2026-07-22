@@ -11,9 +11,10 @@
 
 	// Time / bin columns get the same two-part formatting as the tableplot:
 	//   time → readable time + hours-since-start; bin → midpoint ± half-width.
-	const isTime = $derived(
-		column?.type === 'time' && !column?.isReferencial?.() && column?.compression !== 'awd'
-	);
+	// AWD columns are included: they store a compressed {start, step} descriptor
+	// rather than a raw array, so `timeArr` below falls back to getData() (UNIX
+	// ms). Excluding them made an imported AWD DateTime render as epoch numbers.
+	const isTime = $derived(column?.type === 'time' && !column?.isReferencial?.());
 	const isBin = $derived(column?.type === 'bin');
 
 	// Raw stored series (used for the time/bin formatting, mirroring the tableplot).
