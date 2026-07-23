@@ -41,6 +41,61 @@ const FIT_COLOUR = '#BE796B';
 // slot with no colour throws in some fromJSON paths. Same list the normalizer emits.
 const STYLE_SLOTS = ['line', 'points', 'thresholdline', 'confidenceLine'];
 
+// One series can draw with several colour-bearing slots at once — a scatter series has a `line`
+// AND a `points`, a boxplot series a `boxPlot` outline AND fill. "Change the plot's colour" means
+// all of them; the model, offered the slots separately, could only pick one (it set the line and
+// left the points). The fix is a single combined handle, `plot.data[i].colour`, that fans out to
+// every slot the series has — while the scoped `line.colour`/`points.colour` paths stay for the
+// "make ONLY the line red" case. This is the union of colour-carrying slots we mirror across.
+const COLOUR_SLOTS = ['line', 'points', 'boxPlot', 'thresholdline', 'confidenceLine'];
+
+// A restyle path addressing a whole series' colour (as opposed to `…line.colour`). The capture is
+// the series index. applyEdit matches on this to fan the one value out across COLOUR_SLOTS.
+const SERIES_COLOUR_PATH = /^plot\.data\[(\d+)\]\.colour$/;
+
+/** The colour a series currently reads as: points win (they're the legend swatch), then line, then box. */
+function seriesColour(row) {
+	if (!row || typeof row !== 'object') return undefined;
+	const fromSlot = (slot) =>
+		row[slot] && typeof row[slot] === 'object' ? row[slot].colour : undefined;
+	return (
+		fromSlot('points') ??
+		fromSlot('line') ??
+		fromSlot('boxPlot') ??
+		(typeof row.colour === 'string' ? row.colour : undefined) ??
+		fromSlot('thresholdline') ??
+		fromSlot('confidenceLine')
+	);
+}
+
+/**
+ * Write `value` into every colour leaf a series row HAS — line, points, a box's outline and fill —
+ * without inventing a colour on a slot that carries none. Operates on a plain toJSON snapshot (the
+ * shape applyEdit builds), so slots are plain objects with own `colour`/`fillColour` keys.
+ * @returns {boolean} whether anything was actually recoloured.
+ */
+export function fanOutSeriesColour(row, value) {
+	if (!row || typeof row !== 'object') return false;
+	let touched = false;
+	if (typeof row.colour === 'string') {
+		row.colour = value; // a row that carries its own top-level colour (fromJSON fallback)
+		touched = true;
+	}
+	for (const slot of COLOUR_SLOTS) {
+		const s = row[slot];
+		if (!s || typeof s !== 'object') continue;
+		if ('colour' in s) {
+			s.colour = value;
+			touched = true;
+		}
+		if ('fillColour' in s) {
+			s.fillColour = value;
+			touched = true;
+		}
+	}
+	return touched;
+}
+
 // Arg keys that are wiring/bookkeeping rather than user-facing params (mirrors the engine's
 // describeCapabilities() and gen-schema.js). A model must never set these.
 const STRUCTURAL = new Set([
@@ -215,7 +270,7 @@ function seriesFields(plotWrapper) {
 
 	return rows.flatMap((row, i) => {
 		const seriesName = row?.label || `series ${i + 1}`;
-		return rowSchema
+		const fields = rowSchema
 			.filter((f) => !/(^|\.)(refId|id)$/.test(f.path))
 			.map((f) => ({
 				...f,
@@ -223,6 +278,21 @@ function seriesFields(plotWrapper) {
 				label: `${seriesName}: ${f.label}`,
 				group: `Series ${i + 1}`
 			}));
+		// One combined-colour handle for the whole series. The model is steered to THIS for a plain
+		// "recolour" (it fans out to line + points at apply time), keeping the scoped line.colour /
+		// points.colour above for "only the line" / "only the markers". Its value is precomputed —
+		// there is no live `row.colour` to read, so plotProps honours an explicit `value`.
+		const colour = seriesColour(row);
+		if (colour !== undefined) {
+			fields.push({
+				path: `plot.data[${i}].colour`,
+				label: `${seriesName}: Colour (line + points)`,
+				input: 'color',
+				group: `Series ${i + 1}`,
+				value: colour
+			});
+		}
+		return fields;
 	});
 }
 
@@ -235,7 +305,11 @@ export function plotProps(plotWrapper) {
 	}
 	return schema
 		.map((f) => {
-			const value = getByPath(plotWrapper, f.path);
+			// A synthetic field (the combined series colour) carries its own precomputed value —
+			// there's no real property at `plot.data[i].colour` for getByPath to read.
+			const value = Object.prototype.hasOwnProperty.call(f, 'value')
+				? f.value
+				: getByPath(plotWrapper, f.path);
 			// Objects/arrays aren't settable in one go, and a model shouldn't try.
 			if (value != null && typeof value === 'object') return null;
 			return {
@@ -679,6 +753,17 @@ export function applyEdit(plan) {
 		}
 		if (!c.path.startsWith('plot.')) {
 			ops.push({ kind: 'setPlotProperty', id: plot.id, key: c.path, value: c.value });
+			continue;
+		}
+		// A whole-series colour change fans out to every slot the series draws with (line + points,
+		// or a box's outline + fill), so "change the plot's colour" moves all of it — not just the
+		// one slot a scoped `…line.colour` path would touch.
+		const seriesMatch = SERIES_COLOUR_PATH.exec(c.path);
+		if (seriesMatch) {
+			const row = innerFor(plot).data?.[Number(seriesMatch[1])];
+			if (!fanOutSeriesColour(row, c.value)) {
+				errors.push(`Couldn't recolour a series of plot ${plot.id} — it has no colour to set.`);
+			}
 			continue;
 		}
 		// The path addresses the wrapper; the snapshot IS the inner, so drop the `plot.` head.

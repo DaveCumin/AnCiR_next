@@ -4,7 +4,14 @@
 // lets through gets applied to the user's open session by an op engine with no rollback. So
 // these tests are mostly about what it REFUSES.
 import { describe, it, expect, beforeAll } from 'vitest';
-import { planEdit, summariseSession, bandDuration, firstBandStart, plotProps } from './aiEdit.js';
+import {
+	planEdit,
+	summariseSession,
+	bandDuration,
+	firstBandStart,
+	plotProps,
+	fanOutSeriesColour
+} from './aiEdit.js';
 
 // Registry facts as the live registry reports them (see registryFacts).
 const FACTS = {
@@ -58,7 +65,10 @@ const SUMMARY = {
 				},
 				// Per-series, from getSharedDataSchema — where colours actually live.
 				{ path: 'plot.data[0].line.colour', label: 'signal: Line Colour', input: 'text', value: '#234154' },
-				{ path: 'plot.data[1].line.colour', label: 'signal fit: Line Colour', input: 'text', value: '#BE796B' }
+				{ path: 'plot.data[1].line.colour', label: 'signal fit: Line Colour', input: 'text', value: '#BE796B' },
+				// The combined per-series colour — recolours line AND points together.
+				{ path: 'plot.data[0].colour', label: 'signal: Colour (line + points)', input: 'color', value: '#234154' },
+				{ path: 'plot.data[1].colour', label: 'signal fit: Colour (line + points)', input: 'color', value: '#BE796B' }
 			]
 		},
 		{ id: 5, type: 'actogram', name: 'Acto', props: [] }
@@ -326,6 +336,15 @@ describe('planEdit — restyling a plot', () => {
 		expect(p.preview).toEqual(['Restyle scatterplot "Raw": signal fit: Line Colour = "#ff0000"']);
 	});
 
+	// "change the plot's colour" should recolour the WHOLE series (line + points), not whichever
+	// slot the model happened to name. The combined `plot.data[i].colour` path carries that intent;
+	// the fan-out to both slots happens in applyEdit (see fanOutSeriesColour).
+	it('accepts the combined whole-series colour path', () => {
+		const p = plan({ changes: [{ plot: 2, set: { 'plot.data[0].colour': '#00ff00' } }] });
+		expect(p.errors).toEqual([]);
+		expect(p.changes).toEqual([{ plotId: 2, path: 'plot.data[0].colour', value: '#00ff00' }]);
+	});
+
 	it('refuses an invented path rather than writing it somewhere', () => {
 		const p = plan({ changes: [{ plot: 2, set: { 'plot.makeItPretty': true } }] });
 		expect(p.changes).toEqual([]);
@@ -464,6 +483,34 @@ describe('plotProps (against a live plot class)', () => {
 		expect(props.some((p) => /refId/.test(p.path))).toBe(false);
 	});
 
+	it('offers ONE combined colour per series, alongside the scoped line/points ones', () => {
+		// "change the plot colour" changed the line but not the points, because the model could
+		// only pick ONE of the two scoped paths. The combined `plot.data[i].colour` is the handle
+		// for "the whole series"; the scoped paths stay for "only the line" / "only the points".
+		const entry = plots.get('scatterplot');
+		const inner = entry.data.fromJSON(null, {
+			data: [
+				{
+					x: { refId: 0 },
+					y: { refId: 1 },
+					label: 'signal',
+					line: { colour: '#234154' },
+					points: { colour: '#234154' }
+				}
+			]
+		});
+		const props = plotProps({ id: 1, type: 'scatterplot', plot: inner, width: 420, height: 300 });
+
+		const combined = props.find((p) => p.path === 'plot.data[0].colour');
+		expect(combined, 'a combined series colour is offered').toBeTruthy();
+		expect(combined.input).toBe('color');
+		expect(combined.value, 'shows the current colour').toBe('#234154');
+		expect(combined.label).toMatch(/signal/);
+		// The scoped handles remain, so "make only the line red" is still expressible.
+		expect(props.some((p) => p.path === 'plot.data[0].line.colour')).toBe(true);
+		expect(props.some((p) => p.path === 'plot.data[0].points.colour')).toBe(true);
+	});
+
 	it('offers a series colour for NON-scatter plots too — not just scatterplot', () => {
 		// "Make the periodograms green" was rejected with `"plot.data[0].colour" isn't a property
 		// of this plot`, because the periodogram series exposed NO colour path: its line/points
@@ -505,5 +552,48 @@ describe('summariseSession', () => {
 		// `out` is ours to manage — exposing it invites the model to try to set it.
 		expect(s.analyses[0].args).toEqual({ xIN: 0 });
 		expect(JSON.stringify(s)).not.toMatch(/rawData/);
+	});
+});
+
+describe('fanOutSeriesColour — one colour reaches every slot the series draws with', () => {
+	it('recolours a line-and-points series in one go (the reported bug)', () => {
+		const row = {
+			line: { colour: '#111', draw: true },
+			points: { colour: '#111', draw: true }
+		};
+		expect(fanOutSeriesColour(row, '#ff0000')).toBe(true);
+		expect(row.line.colour).toBe('#ff0000');
+		expect(row.points.colour).toBe('#ff0000');
+	});
+
+	it('recolours a hidden slot too, so enabling it later still matches', () => {
+		// A data+fit series has its line OFF and its points ON (or vice-versa). Recolouring the
+		// whole series must move both, or turning the line on afterwards shows the stale colour.
+		const row = { line: { colour: '#111', draw: false }, points: { colour: '#111', draw: true } };
+		fanOutSeriesColour(row, '#00ff00');
+		expect(row.line.colour).toBe('#00ff00');
+		expect(row.points.colour).toBe('#00ff00');
+	});
+
+	it('recolours a box outline and its fill together', () => {
+		const row = { boxPlot: { colour: '#111', fillColour: '#111' } };
+		expect(fanOutSeriesColour(row, '#0000ff')).toBe(true);
+		expect(row.boxPlot.colour).toBe('#0000ff');
+		expect(row.boxPlot.fillColour).toBe('#0000ff');
+	});
+
+	it('mirrors a top-level series colour when the row carries one', () => {
+		const row = { colour: '#111', points: { colour: '#111' } };
+		fanOutSeriesColour(row, '#abcdef');
+		expect(row.colour).toBe('#abcdef');
+		expect(row.points.colour).toBe('#abcdef');
+	});
+
+	it('never invents a colour on a slot that has none, and reports nothing changed', () => {
+		const row = { line: { draw: true } }; // a line with no colour key
+		expect(fanOutSeriesColour(row, '#ff0000')).toBe(false);
+		expect('colour' in row.line).toBe(false);
+		expect(fanOutSeriesColour({}, '#ff0000')).toBe(false);
+		expect(fanOutSeriesColour(null, '#ff0000')).toBe(false);
 	});
 });

@@ -138,6 +138,10 @@ RULES:
 - A series' KEYS are exactly the fields listed for that plot type under PLOTS — scatterplot,
   boxplot and meansem use x/y; actogram, periodogram, fft, correlogram and circularphase use
   time/values; histogram uses column. Copy the \`series=\` template for the type you chose.
+- COLOUR: to recolour a WHOLE series, set its "plot.data[i].colour" path — it changes the line
+  and the points together (or a box's outline and fill together). Use "plot.data[i].line.colour"
+  or "plot.data[i].points.colour" ONLY when the user asks for the line, or the points/markers, on
+  its own. "make the plot red" → the combined path; "make the line red" → the line path.
 - For period fits (Cosinor/FitFunction) keep useFixedPeriod:true and set fixedPeriod to the
   rhythm period in hours (e.g. 24).
 - When an analysis lists a "fitted curve", PLOT BOTH: the raw data (x = its own xIN, y = its
