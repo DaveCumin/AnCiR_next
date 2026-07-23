@@ -66,10 +66,26 @@ export const tour = {
 			advance: { on: 'next' }
 		},
 		{
-			target: '.add-data-cta',
-			placement: 'top',
+			// The start screen sits above the canvas, so clear it before pointing at anything there.
+			// Launching from the start screen's tour band already dismisses it, in which case this
+			// predicate is true on show and the overlay advances straight past.
+			target: () =>
+				[...document.querySelectorAll('.start-inner .primary-card')].find((b) =>
+					/blank canvas/i.test(b.textContent || '')
+				) ?? null,
+			placement: 'bottom',
+			title: 'Start with a blank canvas',
+			body: 'Click <strong>“Start with a blank canvas”</strong> so we can build the workflow up from nothing.',
+			// Omitted from the step count when the start screen is already dismissed (see
+			// TourOverlay's `visibleNumber`), so the numbering never jumps.
+			ghost: () => !document.querySelector('.start-inner'),
+			advance: { when: () => !document.querySelector('.start-inner') }
+		},
+		{
+			target: paletteTarget,
+			placement: 'left',
 			title: 'Get a time + activity series',
-			body: 'Add data with this prompt — <strong>Import a file</strong> (a time column + an activity column) or <strong>Simulate data</strong> to try it out.',
+			body: 'Open <strong>+</strong> and choose <strong>“Import file”</strong>, then the <strong>Examples</strong> tab. Any of the rhythm datasets will do — they all carry a time column and an activity column. <strong>“Actigraphy rest-activity profile”</strong> is a good one.',
 			beforeShow: ensureCanvas,
 			advance: { when: () => core.data.length > 0 }
 		},

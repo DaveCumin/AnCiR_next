@@ -57,6 +57,7 @@ const DATASETS = [
 		name: 'Test data',
 		family: 'Sources',
 		description: 'Data with two simulated rhythms and outliers',
+		group: 'Sample data',
 		url: 'sessions/demos/testData.csv',
 		kind: 'dataset',
 		keywords: 'test data data with two simulated rhythms and outliers sources csv url example'
@@ -1666,6 +1667,50 @@ function prewarmWrapperNames() {
 	}
 }
 
+
+/** RFC4180-ish quoting: only quote when the value actually needs it. */
+function csvCell(v) {
+	if (v == null) return '';
+	const str = String(v);
+	return /[",\n]/.test(str) ? `"${str.replaceAll('"', '""')}"` : str;
+}
+
+/**
+ * The DATA behind a workflow with the analysis stripped out: every column the demo created as a
+ * SOURCE, and none of the table-process outputs (those carry a `tableProcessGUId`). This is what
+ * feeds Import data → Examples, so someone can practise on a real record without inheriting a
+ * pipeline they did not build.
+ *
+ * Columns are padded to the longest, because a couple of demos deliberately carry two series at
+ * different sampling rates (the aliasing example is 30-minute and 13-hour epochs side by side).
+ */
+function sourceColumnsCsv() {
+	const cols = core.data.filter((c) => !c.tableProcessGUId && !c.producerNodeId);
+	const data = cols.map((c) => c.getData?.() ?? []);
+	const rows = Math.max(0, ...data.map((d) => d.length));
+	const lines = [cols.map((c) => csvCell(c.customName ?? c.name)).join(',')];
+	for (let r = 0; r < rows; r++) lines.push(data.map((d) => csvCell(d[r])).join(','));
+	return { csv: `${lines.join('\n')}\n`, cols: cols.length, rows };
+}
+
+/** "Workflow — compare two groups" → "Compare two groups". */
+function datasetName(name) {
+	const t = (name ?? '').replace(/^Workflow\s*—\s*/, '');
+	return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/**
+ * The CSV's FILE name becomes the name of the imported data group, because the import pipeline
+ * derives it from the url. So it is named for a human ("compare-two-groups.csv"), not for the
+ * generator ("data-workflow-stats-two-group.csv") — provenance lives in the manifest instead.
+ */
+function datasetSlug(name) {
+	return datasetName(name)
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-|-$/g, '');
+}
+
 // Build one searchable manifest entry. `keywords` collapses everything a user
 // might type (display name, family, description, showcased node) so the modal
 // search behaves like the node palette.
@@ -1720,6 +1765,27 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 			addDemoNote(`workflow-${wf.id}`);
 			prewarmWrapperNames();
 			const file = `demo-workflow-${wf.id}.json`;
+
+			// The same demo, minus the analysis: a plain CSV of its source columns, listed under
+			// Import data → Examples. Written BEFORE the session write, while core still holds the
+			// built graph.
+			const { csv, cols, rows } = sourceColumnsCsv();
+			const csvFile = `${datasetSlug(wf.name)}.csv`;
+			writeFileSync(join(OUT_DIR, csvFile), csv, 'utf8');
+			manifest.push(
+				manifestEntry({
+					id: `dataset-workflow-${wf.id}`,
+					name: datasetName(wf.name),
+					family: 'Sources',
+					description: `${wf.summary} Data only — ${cols} columns × ${rows} rows, no analysis.`,
+					summary: wf.summary,
+					group: wf.group ?? (wf.id.startsWith('stats-') ? 'General statistics' : 'Rhythm & circadian'),
+					file: csvFile,
+					kind: 'dataset',
+					showcases: []
+				})
+			);
+
 			write(
 				file,
 				manifestEntry({

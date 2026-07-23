@@ -13,12 +13,32 @@
 	const total = $derived(tourState.activeTour?.steps?.length ?? 0);
 	const isLast = $derived(total > 0 && tourState.index === total - 1);
 
+	// A step may declare `ghost()` to mean "not really part of the sequence right now" — e.g. the
+	// "start with a blank canvas" step, which is a no-op (and auto-advances) whenever the tour was
+	// launched from the start screen's own tour band, since that already dismissed it. Ghost steps
+	// are left out of the "Step N of M" count so the visible numbering never jumps (1 → 3). The
+	// condition is stable for the duration of a tour (the start screen does not reappear mid-tour),
+	// so the count doesn't shift underfoot.
+	const steps = $derived(tourState.activeTour?.steps ?? []);
+	const isGhost = (s) => {
+		try {
+			return !!s?.ghost?.();
+		} catch {
+			return false;
+		}
+	};
+	const visibleTotal = $derived(steps.filter((s) => !isGhost(s)).length);
+	const visibleNumber = $derived(
+		steps.slice(0, tourState.index + 1).filter((s) => !isGhost(s)).length
+	);
+
 	// title/body may be plain strings OR functions of live app state, so the
 	// tooltip updates as the user changes things (e.g. switching views).
 	const titleText = $derived(typeof step?.title === 'function' ? step.title() : (step?.title ?? ''));
 	const bodyHtml = $derived(typeof step?.body === 'function' ? step.body() : (step?.body ?? ''));
 
 	let targetRect = $state(null); // {top,left,width,height} or null → centered
+	let targetInDialog = $state(false); // target lives inside a modal <dialog> → suppress the ring
 	let tooltipPos = $state({ left: 0, top: 0 });
 	let tooltipEl = $state(null);
 	let trackCleanup = [];
@@ -55,9 +75,12 @@
 	const MARGIN = 8;
 
 	// Menus/popovers a hands-on step may ask the user to click into — the tooltip
-	// must never cover these. (Native <dialog>s render in the top layer ABOVE the
-	// tooltip, so they don't need avoiding.)
-	const OBSTACLE_SELECTORS = '.add-data-menu, .np-menu, .palette-menu, .ws-palette, .help-menu';
+	// must never cover these. Open <dialog>s (the import modal) are included too:
+	// they render in the top layer ABOVE the tooltip, so a tooltip placed over one
+	// vanishes behind it. Treating them as obstacles keeps the tooltip in a clear,
+	// visible area beside the modal instead.
+	const OBSTACLE_SELECTORS =
+		'.add-data-menu, .np-menu, .palette-menu, .ws-palette, .help-menu, dialog[open]';
 
 	function rectBox(r) {
 		return { left: r.left, top: r.top, right: r.left + r.width, bottom: r.top + r.height };
@@ -198,6 +221,13 @@
 			next = { top: r.top, left: r.left, width: r.width, height: r.height };
 		}
 		if (!sameRect(next, targetRect)) targetRect = next;
+		// A target inside a modal <dialog> (the import modal) can't be ringed usefully: the dialog
+		// is in the top layer ABOVE the ring, so an in-view target's ring is hidden behind the
+		// opaque dialog, and a target scrolled out of the dialog's list drags the ring OUTSIDE the
+		// dialog, where it shows as a disembodied box floating over the page. Suppress the ring for
+		// these (the tooltip still points to the modal); the rect is kept for tooltip placement.
+		const inDialog = !!el?.closest?.('dialog[open]');
+		if (inDialog !== targetInDialog) targetInDialog = inDialog;
 		const ttW = tooltipEl?.offsetWidth || 320;
 		const ttH = tooltipEl?.offsetHeight || 160;
 		tooltipPos = pickTooltipPos(next, s, ttW, ttH);
@@ -393,7 +423,11 @@
 <svelte:window onkeydown={onKey} />
 
 {#if step}
-	{#if targetRect}
+	{#if targetInDialog}
+		<!-- Ring + dim suppressed: the target is inside the modal dialog, whose own backdrop dims
+		     the page. A ring here would sit behind the dialog (invisible) or, once the target
+		     scrolls out of the dialog's list, float outside it as a stray box. -->
+	{:else if targetRect}
 		<!-- The ring element persists across steps so it glides to each new target.
 		     Only the pulse overlay is keyed, so the attention pulse replays per step
 		     without recreating (and re-popping) the ring itself. -->
@@ -450,7 +484,7 @@
 	>
 		<div class="tour-progress">
 			<span>{tourState.activeTour?.name}</span>
-			<span>Step {tourState.index + 1} of {total}</span>
+			<span>Step {visibleNumber} of {visibleTotal}</span>
 		</div>
 		<h3 class="tour-title">{titleText}</h3>
 		<!-- title/body are static, developer-authored copy from src/lib/tours/*.js

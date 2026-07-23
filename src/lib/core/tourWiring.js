@@ -6,6 +6,7 @@
 // Reads of core.* happen at call time; callers invoke these inside $derived /
 // $effect (TourOverlay), so the reads are reactively tracked.
 import { core } from '$lib/core/core.svelte.js';
+import { getColumnById } from '$lib/core/Column.svelte';
 
 export const findTP = (name) => (core.tableProcesses ?? []).find((tp) => tp.name === name);
 
@@ -72,27 +73,52 @@ export const anyPlotInPortEl = (portName) => {
 	return dots[dots.length - 1] || null;
 };
 
-// Candidate SOURCE output dots to animate the demo edge from: all output dots
-// that aren't on the target node and aren't the bundled `all` port, in DOM order.
+// Candidate SOURCE output dots to animate the demo edge from: output dots on a
+// raw DATA node only.
+//
+// Restricting to data nodes matters: once a plot is wired it sprouts its OWN
+// output dot (a wired actogram gains a `col_0` out port on `plot_*`), and that
+// dot lands FIRST in document order — which used to shift the positional y-source
+// pick off the data column and onto the time column at the "connect y" step.
+// Sources are groups (`group_*`) or bare data nodes (`data_*`); plots
+// (`plot_*`) and analyses (`tableprocess_*`) are not.
+const isSourceNodeId = (nodeId) =>
+	!!nodeId && (nodeId.startsWith('group_') || nodeId.startsWith('data_'));
+
 const sourceOutDots = (excludeNodeId) => {
 	if (typeof document === 'undefined') return [];
-	const all = [...document.querySelectorAll('[data-port-dir="out"]')].filter(
-		(d) => d.getAttribute('data-node-id') !== excludeNodeId
-	);
+	const all = [...document.querySelectorAll('[data-port-dir="out"]')].filter((d) => {
+		const nodeId = d.getAttribute('data-node-id');
+		return nodeId !== excludeNodeId && isSourceNodeId(nodeId);
+	});
 	const named = all.filter((d) => d.getAttribute('data-port-name') !== 'all');
 	return named.length ? named : all;
 };
 
+// The column a source dot points at. Its DOM port name is `col_<columnId>`
+// (see GroupNode), so the id resolves straight to the column and its type.
+const columnForDot = (dot) => {
+	const m = /^col_(\d+)$/.exec(dot?.getAttribute('data-port-name') ?? '');
+	return m ? (getColumnById(Number(m[1])) ?? null) : null;
+};
+const isTimeDot = (dot) => columnForDot(dot)?.type === 'time';
+
 // A representative source output dot for the demo edge. First non-`all` output.
 export const firstSourceOutEl = (excludeNodeId) => sourceOutDots(excludeNodeId)[0] ?? null;
 
-// Axis-aware source: the x edge comes from the FIRST output (the time/x column),
-// the y edge from the SECOND (the values/y column) — so the demo doesn't draw the
-// y wire from the time output. Falls back to the first when there's only one.
+// Axis-aware source: pick the dot by the COLUMN'S TYPE, not by position. The x
+// edge comes from the time column, the y edge from the first non-time (value)
+// column — so the demo never draws the y wire from the time output regardless of
+// how many dots exist or what order the DOM puts them in. Falls back to
+// positional order when the types don't disambiguate (e.g. no time column).
 export const sourceOutElForAxis = (axis, excludeNodeId) => {
 	const dots = sourceOutDots(excludeNodeId);
 	if (!dots.length) return null;
-	return axis === 'y' ? (dots[1] ?? dots[0]) : dots[0];
+	const xDot = dots.find(isTimeDot) ?? dots[0];
+	if (axis !== 'y') return xDot;
+	// y is the first VALUE column — a non-time dot that isn't already the x pick. When nothing
+	// disambiguates (no time column), fall back to the second dot, then the first.
+	return dots.find((d) => d !== xDot && !isTimeDot(d)) ?? dots.find((d) => d !== xDot) ?? dots[0];
 };
 
 // Wiring state for a multi-Y table process: needs an x input and ≥1 y input.

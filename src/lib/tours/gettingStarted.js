@@ -10,6 +10,31 @@ import { iconHtml } from '$lib/icons/iconRegistry.js';
 // artwork from the shared icon registry as a string (single source of icons).
 const processIconHtml = iconHtml('process');
 
+
+// --- start screen + import-modal targets -------------------------------------
+// The start screen is an overlay above everything (z-index 1100), so while it is up nothing on
+// the canvas can be reached or rung. These let the tour walk the user through it and then follow
+// the import route, which is where "add some data" lives now that the old canvas prompt is gone.
+const startScreenUp = () => !!document.querySelector('.start-inner');
+const startCard = (re) =>
+	[...document.querySelectorAll('.start-inner .primary-card')].find((b) =>
+		re.test(b.textContent || '')
+	) ?? null;
+
+// NOTE on advance predicates: TourOverlay evaluates them inside a Svelte `$effect`, so they only
+// re-run when a REACTIVE dependency changes. A predicate that merely queries the DOM is evaluated
+// once and then never again, which silently strands the step. Hence `appState.importModalOpen`
+// (a reactive mirror) and `core.data.length` below, and a click event for the tab.
+const importModal = () => document.querySelector('[data-tour="import-data"]');
+const importTab = (label) =>
+	[...(importModal()?.querySelectorAll('.tab-btn') ?? [])].find(
+		(b) => (b.textContent || '').trim() === label
+	) ?? null;
+const exampleItem = (re) =>
+	[...(importModal()?.querySelectorAll('.example-item') ?? [])].find((b) =>
+		re.test(b.textContent || '')
+	) ?? null;
+
 // The actogram the user just made (the tour creates one). Falls back to the most
 // recent plot so the resize step still works if the type lookup ever changes.
 function actogramPlot() {
@@ -41,7 +66,7 @@ let resizeBaseline = null;
 export const tour = {
 	id: 'getting-started',
 	name: 'Getting started',
-	description: 'A short hands-on tour: simulate data, plot an actogram, and style it.',
+	description: 'A short hands-on tour: load example data, plot an actogram, and style it.',
 	estMinutes: 2,
 	order: 1,
 	steps: [
@@ -52,16 +77,46 @@ export const tour = {
 			advance: { on: 'next' }
 		},
 		{
-			// Highlight the "add data" prompt, then follow the menu it opens so the
-			// ring lands on the choices once they appear (resolveTarget re-runs after
-			// each click — see TourOverlay onPointerUp).
-			target: () => document.querySelector('.add-data-menu') ?? document.querySelector('.add-data-cta'),
-			placement: 'right',
+			// Only meaningful when the tour is launched with the start screen still up (e.g. from
+			// the Help menu). Launching from the start screen's own tour band dismisses it, so the
+			// predicate is already true and the overlay advances past this immediately.
+			target: () => startCard(/blank canvas/i),
+			placement: 'bottom',
+			title: 'Start with a blank canvas',
+			body: 'This is the start screen. Click <strong>“Start with a blank canvas”</strong> and we’ll build a session from scratch.',
+			// Not part of the visible count when the start screen is already gone (the usual case:
+			// launching from its tour band dismisses it). See TourOverlay's `visibleNumber`.
+			ghost: () => !startScreenUp(),
+			advance: { when: () => !startScreenUp() }
+		},
+		{
+			// Highlight the + button, then follow the menu it opens so the ring lands on the
+			// choices once they appear (resolveTarget re-runs after each click — see
+			// TourOverlay onPointerUp).
+			target: () =>
+				document.querySelector('.palette-menu') ?? document.querySelector('.np-trigger'),
+			placement: 'left',
 			title: 'Add some data',
-			body: 'Click here, then choose <strong>“Simulate data”</strong> to create an example rhythmic signal to play with.',
+			body: 'Every session starts with data. Open the <strong>+</strong> menu and choose <strong>“Import file”</strong> — we’ll grab a ready-made example rather than hunting for a file.',
 			beforeShow: () => {
 				appState.view = 'canvas';
 			},
+			advance: { when: () => appState.importModalOpen }
+		},
+		{
+			target: () => importTab('Examples'),
+			placement: 'bottom',
+			title: 'Use a built-in example',
+			body: 'You can import your own CSV here, or paste a URL. For now click <strong>Examples</strong> — AnCiR ships with a dataset from every worked example.',
+			// The tab exists as soon as the modal is open, which the previous step guaranteed, so the
+			// listener binds successfully when this step is shown.
+			advance: { event: 'click', target: () => importTab('Examples') }
+		},
+		{
+			target: () => exampleItem(/Free-running period/i),
+			placement: 'bottom',
+			title: 'Pick a rhythm to plot',
+			body: 'Choose <strong>“Free-running period”</strong> under <em>Rhythm &amp; circadian</em> — one clean activity rhythm that drifts a little each day. It makes a clear first actogram.',
 			advance: { when: () => core.data.length > 0 }
 		},
 		{

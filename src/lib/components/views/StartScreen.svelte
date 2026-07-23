@@ -207,7 +207,7 @@
 		<div class="tour-band">
 			<div class="tour-copy">
 				<strong>Take the tour</strong>
-				<span>A short guided pass: import a record, build a workload, read the output.</span>
+				<span>A short guided pass: import a record, build a session, read the output.</span>
 			</div>
 			<button type="button" class="tour-cta" onclick={() => { openTourPicker(); onDismiss?.(); }}>
 				Take the tour
@@ -249,7 +249,7 @@
 
 			<button type="button" class="primary-card" onclick={() => (showAi = true)}>
 				<span class="primary-icon"><Icon name="aibot" width={26} height={26} /></span>
-				<span class="primary-title">Build a workload with AI</span>
+				<span class="primary-title">Build a session with AI</span>
 				<span class="primary-sub">Describe what you want to find out and let AI assemble the analysis</span>
 			</button>
 

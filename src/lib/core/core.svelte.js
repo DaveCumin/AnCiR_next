@@ -311,6 +311,9 @@ export const appState = $state({
 	showNavbar: true,
 	showDisplayPanel: false,
 	showControlPanel: false,
+	// Mirrors the ImportData modal's local open state so anything reactive (the guided tours)
+	// can tell whether it is showing. See the comment on the Modal in ImportData.svelte.
+	importModalOpen: false,
 
 	// Bumped to request a one-shot workflow auto-tidy (e.g. after the demo seed);
 	// WorkflowEditor watches this counter. Pre-declared so the effect subscribes.
@@ -394,7 +397,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.62.2',
+	version: 'β.62.3',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),

@@ -219,7 +219,7 @@ describe('dismissing', () => {
 	it('does not dismiss on Escape while a child dialog is open', async () => {
 		const onDismiss = vi.fn();
 		render(StartScreen, { props: { onDismiss } });
-		await fireEvent.click(screen.getByRole('button', { name: /build a workload with ai/i }));
+		await fireEvent.click(screen.getByRole('button', { name: /build a session with ai/i }));
 		await fireEvent.keyDown(window, { key: 'Escape' });
 		// The AI dialog owns that Escape; closing it must not also close the start screen.
 		expect(onDismiss).not.toHaveBeenCalled();

@@ -177,6 +177,28 @@
 	// (e.g. the bundled "Test data" CSV), lazily fetched the first time the
 	// Examples tab is opened.
 	let exampleDatasets = $state([]);
+
+	// Nineteen workflow datasets plus the sample one is a long flat list, so group them the way the
+	// start screen groups its examples. Unknown groups sort last rather than disappearing.
+	const EXAMPLE_GROUP_ORDER = [
+		'Sample data',
+		'Rhythm & circadian',
+		'General statistics',
+		'Reading the output'
+	];
+	const groupedExampleDatasets = $derived.by(() => {
+		const groups = new Map();
+		for (const ds of exampleDatasets) {
+			const g = ds.group ?? 'Other data';
+			if (!groups.has(g)) groups.set(g, []);
+			groups.get(g).push(ds);
+		}
+		const rank = (g) => {
+			const i = EXAMPLE_GROUP_ORDER.indexOf(g);
+			return i === -1 ? EXAMPLE_GROUP_ORDER.length : i;
+		};
+		return [...groups.entries()].sort((a, b) => rank(a[0]) - rank(b[0]));
+	});
 	let examplesRequested = $state(false);
 	let examplesLoading = $state(false);
 	let examplesError = $state('');
@@ -247,6 +269,7 @@
 	let loadProgress = $state({ stage: '', detail: '' });
 
 	let showImportModal = $state(false);
+
 	let fileInput = $state();
 
 	let buttonText = $derived(targetFile ? 'Change file' : 'Choose File');
@@ -2295,7 +2318,16 @@
 	}
 </script>
 
-<Modal bind:showModal={showImportModal}>
+<!-- `importModalOpen` mirrors this modal's local state onto the global appState. The component is
+     a module singleton with no instance script, so nothing outside can see `showImportModal` — and
+     the guided tours need a REACTIVE signal to advance on. A tour predicate that only queries the
+     DOM never re-runs, because the overlay evaluates predicates inside a Svelte `$effect` and
+     `document.querySelector` is not a reactive dependency. -->
+<Modal
+	bind:showModal={showImportModal}
+	onopen={() => (appState.importModalOpen = true)}
+	onclose={() => (appState.importModalOpen = false)}
+>
 	{#snippet header()}
 		{#if awaitingPreview}
 			<LoadingSpinner
@@ -2316,7 +2348,11 @@
 				detail={loadProgress.detail}
 			/>
 		{:else}
-			<div class="heading">
+			<!-- Stable hook for the guided tours. It goes here, not on .import-container, because
+			     the source tabs and the example list both live inside this heading block, and
+			     .import-container (further down, and shared with LoadSessionModal) contains
+			     neither. -->
+			<div class="heading" data-tour="import-data">
 				<h2>Import Data</h2>
 				<div class="source-tabs" role="tablist">
 					<button
@@ -2399,18 +2435,21 @@
 						{:else if examplesError || exampleDatasets.length === 0}
 							<p class="tab-hint">Can't find any example data.</p>
 						{:else}
-							{#each exampleDatasets as ds (ds.id ?? ds.url)}
-								<button
-									type="button"
-									class="example-item"
-									title={ds.description ?? ''}
-									onclick={() => loadExampleDataset(ds)}
-								>
-									<span class="example-name">{ds.name}</span>
-									{#if ds.description}
-										<span class="example-description">{ds.description}</span>
-									{/if}
-								</button>
+							{#each groupedExampleDatasets as [group, datasets] (group)}
+								<p class="example-group-label">{group}</p>
+								{#each datasets as ds (ds.id ?? ds.url)}
+									<button
+										type="button"
+										class="example-item"
+										title={ds.description ?? ''}
+										onclick={() => loadExampleDataset(ds)}
+									>
+										<span class="example-name">{ds.name}</span>
+										{#if ds.description}
+											<span class="example-description">{ds.description}</span>
+										{/if}
+									</button>
+								{/each}
 							{/each}
 						{/if}
 					</div>
@@ -2894,6 +2933,18 @@
 <style>
 	.heading {
 		margin-bottom: var(--space-4);
+	}
+
+	.example-group-label {
+		margin: var(--space-5) 0 var(--space-2);
+		font-size: var(--font-xs);
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--color-lightness-55);
+	}
+	.example-group-label:first-child {
+		margin-top: 0;
 	}
 
 	/* Tabbed source picker — mirrors LoadSessionModal. */

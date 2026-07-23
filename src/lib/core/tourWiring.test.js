@@ -8,7 +8,9 @@ import {
 	cosinorFitStatus,
 	wiringHint,
 	binnedOutElForAxis,
-	cosinorOutElForAxis
+	cosinorOutElForAxis,
+	sourceOutElForAxis,
+	firstSourceOutEl
 } from './tourWiring.js';
 
 const series = (x, y) => ({ x: { refId: x }, y: { refId: y } });
@@ -178,5 +180,72 @@ describe('wiringHint — live nudge for what is still missing', () => {
 		const h = wiringHint('intro', 'a', 'x', 'b', 'y', st(false, false), 'extra tip');
 		expect(h).toContain('class="tour-tip"');
 		expect(h).toContain('extra tip');
+	});
+});
+
+
+describe('sourceOutElForAxis — pick the demo-edge source by column TYPE, not DOM order', () => {
+	// Reproduces the bug behind the wrong y-axis highlight: once a plot is wired it sprouts its
+	// OWN output dot (on a plot_* node) that lands FIRST in document order, shifting a positional
+	// pick off the data column and onto the time column. The fix restricts to data-source nodes
+	// and picks by the column's type.
+	const dot = (nodeId, colId, dir = 'out') => {
+		const el = document.createElement('button');
+		el.setAttribute('data-port-dir', dir);
+		el.setAttribute('data-node-id', nodeId);
+		el.setAttribute('data-port-name', `col_${colId}`);
+		el.dataset.testTag = `${nodeId}:${colId}`;
+		document.body.appendChild(el);
+		return el;
+	};
+
+	beforeEach(() => {
+		document.body.innerHTML = '';
+		// id 0 = time column, id 1 = value column — the shape of the imported Test data.
+		core.data = [
+			{ id: 0, type: 'time', name: 'Time' },
+			{ id: 1, type: 'number', name: 'Activity' }
+		];
+	});
+
+	it('picks the time column for x and the value column for y', () => {
+		dot('group_1', 0); // Time
+		dot('group_1', 1); // Activity
+		expect(sourceOutElForAxis('x').dataset.testTag).toBe('group_1:0');
+		expect(sourceOutElForAxis('y').dataset.testTag).toBe('group_1:1');
+	});
+
+	it('ignores a plot\'s own output dot, even when it sorts first in the DOM', () => {
+		// The phantom: a wired actogram exposes col_0 on plot_0, added to the DOM BEFORE the group.
+		dot('plot_0', 0);
+		dot('group_1', 0); // Time
+		dot('group_1', 1); // Activity
+		// Positional code returned dots[1] = the phantom-shifted TIME port; type-aware returns value.
+		expect(sourceOutElForAxis('y').dataset.testTag).toBe('group_1:1');
+		expect(sourceOutElForAxis('x').dataset.testTag).toBe('group_1:0');
+		expect(firstSourceOutEl().getAttribute('data-node-id')).toBe('group_1');
+	});
+
+	it('picks by type regardless of the source columns\' order', () => {
+		// Value first, time second — the type check must still route each axis correctly.
+		core.data = [
+			{ id: 5, type: 'number', name: 'Activity' },
+			{ id: 6, type: 'time', name: 'Time' }
+		];
+		dot('group_2', 5); // Activity
+		dot('group_2', 6); // Time
+		expect(sourceOutElForAxis('x').dataset.testTag).toBe('group_2:6');
+		expect(sourceOutElForAxis('y').dataset.testTag).toBe('group_2:5');
+	});
+
+	it('falls back to positional order when no column is typed time', () => {
+		core.data = [
+			{ id: 0, type: 'number', name: 'a' },
+			{ id: 1, type: 'number', name: 'b' }
+		];
+		dot('group_1', 0);
+		dot('group_1', 1);
+		expect(sourceOutElForAxis('x').dataset.testTag).toBe('group_1:0');
+		expect(sourceOutElForAxis('y').dataset.testTag).toBe('group_1:1');
 	});
 });
