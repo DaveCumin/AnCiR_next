@@ -95,6 +95,71 @@
 	let panStartX = $state(0);
 	let panStartY = $state(0);
 
+	// --- Pointer input (mouse + touch + pen), mirroring WorkflowEditor ----------
+	// The workspace pans via pointer events so a finger drives it like a mouse;
+	// plots themselves are moved by Draggable (which keeps its own touch handling).
+	/** The .canvas element — owns move/up and takes pointer capture. */
+	let canvasEl = $state(null);
+	let activePointerId = $state(null);
+	function capturePointer(e) {
+		activePointerId = e.pointerId;
+		try {
+			canvasEl?.setPointerCapture?.(e.pointerId);
+		} catch {
+			/* ignore */
+		}
+	}
+	function releasePointer() {
+		try {
+			if (activePointerId != null) canvasEl?.releasePointerCapture?.(activePointerId);
+		} catch {
+			/* ignore */
+		}
+		activePointerId = null;
+	}
+
+	// Two-finger pinch-zoom + pan (Tier 2). Only background pointers land here —
+	// Draggable and the interactive chrome stop pointerdown before it bubbles.
+	const activePointers = new Map();
+	let pinchPrev = null;
+	const pinchActive = () => activePointers.size >= 2;
+	function pinchMetrics() {
+		const pts = [...activePointers.values()];
+		if (pts.length < 2) return null;
+		const [a, b] = pts;
+		return {
+			cx: (a.x + b.x) / 2,
+			cy: (a.y + b.y) / 2,
+			dist: Math.hypot(b.x - a.x, b.y - a.y) || 1
+		};
+	}
+	/** Zoom to `target` (clamped) keeping the canvas point under (clientX,clientY) fixed. */
+	function zoomAtClientPoint(target, clientX, clientY) {
+		const oldZoom = appState.canvasScale ?? 1;
+		const newZoom = Math.min(Math.max(target, MIN_ZOOM), MAX_ZOOM);
+		const rect = canvasViewportEl?.getBoundingClientRect() ?? { left: 0, top: 0 };
+		const relX = clientX - rect.left;
+		const relY = clientY - rect.top;
+		const offX = appState.canvasOffset?.x ?? 0;
+		const offY = appState.canvasOffset?.y ?? 0;
+		const canvasX = (relX - offX) / oldZoom;
+		const canvasY = (relY - offY) / oldZoom;
+		appState.canvasOffset = { x: relX - canvasX * newZoom, y: relY - canvasY * newZoom };
+		appState.canvasScale = newZoom;
+	}
+	function updatePinch() {
+		const cur = pinchMetrics();
+		if (!cur) return;
+		if (pinchPrev) {
+			zoomAtClientPoint(((appState.canvasScale ?? 1) * cur.dist) / pinchPrev.dist, cur.cx, cur.cy);
+			appState.canvasOffset = {
+				x: (appState.canvasOffset?.x ?? 0) + (cur.cx - pinchPrev.cx),
+				y: (appState.canvasOffset?.y ?? 0) + (cur.cy - pinchPrev.cy)
+			};
+		}
+		pinchPrev = cur;
+	}
+
 	function handleClick(e) {
 		// Suppress the deselect-all if we just panned: mouseup synthesises a click
 		// at the same coords, and we don't want a pan-end to also clear selection.
@@ -142,22 +207,9 @@
 		}
 		e.preventDefault();
 		if (e.ctrlKey || e.metaKey) {
+			// Trackpad pinch — same anchored zoom as a touch pinch.
 			const factor = e.deltaY > 0 ? 0.9 : 1.1;
-			const oldZoom = appState.canvasScale ?? 1;
-			const newZoom = Math.min(Math.max(oldZoom * factor, MIN_ZOOM), MAX_ZOOM);
-			// Keep the canvas point under the cursor fixed while zooming.
-			const rect = canvasViewportEl?.getBoundingClientRect() ?? { left: 0, top: 0 };
-			const relX = e.clientX - rect.left;
-			const relY = e.clientY - rect.top;
-			const offX = appState.canvasOffset?.x ?? 0;
-			const offY = appState.canvasOffset?.y ?? 0;
-			const canvasX = (relX - offX) / oldZoom;
-			const canvasY = (relY - offY) / oldZoom;
-			appState.canvasOffset = {
-				x: relX - canvasX * newZoom,
-				y: relY - canvasY * newZoom
-			};
-			appState.canvasScale = newZoom;
+			zoomAtClientPoint((appState.canvasScale ?? 1) * factor, e.clientX, e.clientY);
 		} else {
 			appState.canvasOffset = {
 				x: (appState.canvasOffset?.x ?? 0) - e.deltaX,
@@ -168,20 +220,40 @@
 
 	let panMoved = false;
 
-	function handleCanvasMouseDown(e) {
+	function handleCanvasPointerDown(e) {
 		if (e.button !== 0) return;
-		// Only pan when the click lands on the canvas surface itself, not on a
-		// plot, note, palette, or zoom-control button. Draggable.svelte's own
-		// mousedown stops propagation before we see it, so any event that reaches
-		// here started on the empty canvas.
+		// Track background fingers; a SECOND one switches into a pinch (see handlePointerMove).
+		// Only pan when the press lands on the canvas surface itself — Draggable and the chrome
+		// stop pointerdown before we see it, so any event reaching here started on empty canvas.
+		activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+		if (activePointers.size >= 2) {
+			isPanning = false;
+			pinchPrev = null;
+			try {
+				canvasEl?.setPointerCapture?.(e.pointerId);
+			} catch {
+				/* ignore */
+			}
+			return;
+		}
 		isPanning = true;
 		panMoved = false;
 		panStartX = e.clientX - (appState.canvasOffset?.x ?? 0);
 		panStartY = e.clientY - (appState.canvasOffset?.y ?? 0);
+		capturePointer(e);
 	}
 
-	function handleMouseMove(e) {
+	function handlePointerMove(e) {
+		// Pinch takes priority while two fingers are down.
+		if (activePointers.has(e.pointerId)) {
+			activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+			if (pinchActive()) {
+				updatePinch();
+				return;
+			}
+		}
 		if (!isPanning) return;
+		if (activePointerId != null && e.pointerId !== activePointerId) return;
 		const nx = e.clientX - panStartX;
 		const ny = e.clientY - panStartY;
 		if (
@@ -194,8 +266,29 @@
 		appState.canvasOffset = { x: nx, y: ny };
 	}
 
-	function stopPan() {
+	function handlePointerUp(e) {
+		const wasBackground = activePointers.delete(e.pointerId);
+		if (wasBackground) {
+			try {
+				canvasEl?.releasePointerCapture?.(e.pointerId);
+			} catch {
+				/* ignore */
+			}
+			if (activePointers.size === 1) {
+				// Pinch → one finger: hand the survivor to a fresh pan so the gesture continues.
+				pinchPrev = null;
+				const [remaining] = activePointers.values();
+				isPanning = true;
+				panStartX = remaining.x - (appState.canvasOffset?.x ?? 0);
+				panStartY = remaining.y - (appState.canvasOffset?.y ?? 0);
+				return;
+			}
+			if (activePointers.size >= 2) return;
+		}
+		releasePointer();
 		isPanning = false;
+		pinchPrev = null;
+		activePointers.clear();
 	}
 
 	// Viewport sanity check: on first content render, if nothing is visible in the
@@ -279,11 +372,12 @@
 			width: {canvasWidthPx}px;
 			height: 100vh;
 			"
+	bind:this={canvasEl}
 	onwheel={handleWheel}
-	onmousedown={handleCanvasMouseDown}
-	onmousemove={handleMouseMove}
-	onmouseup={stopPan}
-	onmouseleave={stopPan}
+	onpointerdown={handleCanvasPointerDown}
+	onpointermove={handlePointerMove}
+	onpointerup={handlePointerUp}
+	onpointercancel={handlePointerUp}
 	use:canvasFileDrop={{ onActive: (v) => (fileDragOver = v), onDrop: handleCanvasFileDrop }}
 	role="presentation"
 >
@@ -410,6 +504,9 @@
 		transition:
 			width 0.6s ease,
 			left 0.6s ease;
+		/* Own every touch gesture ourselves (see WorkflowEditor) — otherwise the
+		   browser claims one-finger drags for scroll and two-finger for zoom. */
+		touch-action: none;
 	}
 
 	.canvas-viewport {

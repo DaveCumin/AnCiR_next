@@ -456,6 +456,7 @@
 			e.stopPropagation();
 			onTouchStart(e);
 		}}
+		onpointerdown={(e) => e.stopPropagation()}
 	>
 		<!-- Note button on the LEFT (status side), so it doesn't shift when the
 		     maximise/delete buttons reveal on the right. Shown when a note exists,
@@ -465,6 +466,7 @@
 			class:has-note={plotHasNote}
 			class:sel={hovered || selected}
 			onmousedown={(e) => e.stopPropagation()}
+			onpointerdown={(e) => e.stopPropagation()}
 			role="presentation"
 		>
 			<NodeNoteButton nodeId={`plot_${id}`} />
@@ -472,7 +474,12 @@
 		<p class="plot-title"><Editable bind:value={title} /></p>
 
 		<!-- Shared action cluster (maximise · delete), revealed on hover/selection. -->
-		<div class="plot-actions-host" onmousedown={(e) => e.stopPropagation()} role="presentation">
+		<div
+			class="plot-actions-host"
+			onmousedown={(e) => e.stopPropagation()}
+			onpointerdown={(e) => e.stopPropagation()}
+			role="presentation"
+		>
 			<NodeActions
 				revealed={hovered || selected}
 				showMaximise={true}
@@ -486,7 +493,12 @@
 	<div class="plot-content">
 		<slot></slot>
 	</div>
-	<div class="resize-handle" onmousedown={(e) => startResize(e)}></div>
+	<div
+		class="resize-handle"
+		onmousedown={(e) => startResize(e)}
+		ontouchstart={(e) => startResize(e)}
+		onpointerdown={(e) => e.stopPropagation()}
+	></div>
 </section>
 
 {#if showDropdown}
