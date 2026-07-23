@@ -83,7 +83,7 @@
 		{#if onResizeMouseDown}
 			<div
 				class="plot-resize-handle"
-				onmousedown={(e) => onResizeMouseDown(e)}
+				onpointerdown={(e) => onResizeMouseDown(e)}
 				title="Drag to resize"
 				role="button"
 				tabindex="-1"

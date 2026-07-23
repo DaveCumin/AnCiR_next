@@ -231,6 +231,9 @@
 	function onCardMouseDown(e) {
 		if (e.button !== 0) return;
 		if (e.target?.closest?.(NO_DRAG_SELECTOR)) return;
+		// Stop the pointerdown reaching the canvas root (which would start a pan) or double-firing
+		// the wrapper's own handler; the explicit dispatch below is the single drag-start path.
+		e.stopPropagation();
 		dispatch('cardmousedown', e);
 	}
 </script>
@@ -241,7 +244,7 @@
 	class:selected
 	class:drop-target={isDropTarget}
 	style="width:{group?.width ?? 240}px; min-height:{group?.height ?? 180}px;"
-	onmousedown={onCardMouseDown}
+	onpointerdown={onCardMouseDown}
 >
 	<div class="group-header" role="presentation">
 		<button
@@ -349,6 +352,7 @@
 							data-node-id={node.id}
 							data-port-name={`col_${id}`}
 							data-port-dir="out"
+							onpointerdown={(e) => e.stopPropagation()}
 							onmousedown={(e) => onPortMouseDown(e, `col_${id}`)}
 							onmouseup={(e) => onPortMouseUp(e, `col_${id}`)}
 							oncontextmenu={onPortContextMenu}

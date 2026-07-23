@@ -116,6 +116,7 @@
 			data-port-name={port.name}
 			data-port-dir="in"
 			{@attach tooltip(portTip(port))}
+			onpointerdown={(e) => e.stopPropagation()}
 			onmousedown={(e) => disconnectInput(e, port.name)}
 			onmouseup={(e) => endAtInput(e, port.name)}
 			oncontextmenu={(e) => openInputPicker(e, port.name)}
@@ -133,6 +134,7 @@
 			data-port-name={port.name}
 			data-port-dir="out"
 			{@attach tooltip(portTip(port))}
+			onpointerdown={(e) => e.stopPropagation()}
 			onmousedown={(e) => startFromOutput(e, port.name)}
 			onmouseup={(e) => endAtOutput(e, port.name)}
 			role="button"

@@ -186,6 +186,7 @@
 							{@attach tooltip(
 								`Input: ${row.port.display ?? row.port.name}${row.port.dynamic ? ' — accepts one or more columns' : ''}`
 							)}
+							onpointerdown={(e) => e.stopPropagation()}
 							onmousedown={(e) => disconnectInput(e, row.port.name)}
 							onmouseup={(e) => endAtInput(e, row.port.name)}
 							oncontextmenu={(e) => openInputPicker(e, row.port.name)}
@@ -216,6 +217,7 @@
 								? `Metric output: ${port.display ?? port.name} (one value per series)`
 								: `Output: ${port.display ?? port.name}`
 						)}
+						onpointerdown={(e) => e.stopPropagation()}
 						onmousedown={(e) => startFromOutput(e, port.name)}
 						onmouseup={(e) => endAtOutput(e, port.name)}
 						role="button"
@@ -237,6 +239,7 @@
 						data-port-name={port.name}
 						data-port-dir="in"
 						{@attach tooltip(`Input: ${port.name}${port.dynamic ? ' (many)' : ''}`)}
+						onpointerdown={(e) => e.stopPropagation()}
 						onmousedown={(e) => disconnectInput(e, port.name)}
 						onmouseup={(e) => endAtInput(e, port.name)}
 						oncontextmenu={(e) => openInputPicker(e, port.name)}
@@ -260,6 +263,7 @@
 								? `Metric output: ${port.display ?? port.name} (one value per series)`
 								: `Output: ${port.display ?? port.name}${port.dynamic ? ' (many)' : ''}`
 						)}
+						onpointerdown={(e) => e.stopPropagation()}
 						onmousedown={(e) => startFromOutput(e, port.name)}
 						onmouseup={(e) => endAtOutput(e, port.name)}
 						role="button"
@@ -304,7 +308,7 @@
 			class="note-resize-handle"
 			role="presentation"
 			title="Drag to resize"
-			onmousedown={(e) => {
+			onpointerdown={(e) => {
 				e.stopPropagation();
 				dispatch('resizestart', e);
 			}}

@@ -262,6 +262,9 @@
 	function onCardMouseDown(e) {
 		if (e.button !== 0) return;
 		if (e.target?.closest?.(NO_DRAG_SELECTOR)) return;
+		// Stop the pointerdown reaching the canvas root (pan) or double-firing the wrapper; the
+		// explicit dispatch is the single drag-start path.
+		e.stopPropagation();
 		dispatch('cardmousedown', e);
 	}
 </script>
@@ -272,7 +275,7 @@
 	class:selected
 	class:expanded
 	style={width != null ? `width:${width}px;` : ''}
-	onmousedown={onCardMouseDown}
+	onpointerdown={onCardMouseDown}
 	role="button"
 	tabindex="0"
 >
@@ -327,6 +330,7 @@
 						data-port-name={port.name}
 						data-port-dir="in"
 						{@attach tooltip(`Input: ${port.name}${port.dynamic ? ' (many)' : ''}`)}
+						onpointerdown={(e) => e.stopPropagation()}
 						onmousedown={(e) => disconnectInput(e, port.name)}
 						onmouseup={(e) => endAtInput(e, port.name)}
 						oncontextmenu={(e) => openInputPicker(e, port.name)}
@@ -399,6 +403,7 @@
 							data-node-id={node.id}
 							data-port-name={port}
 							data-port-dir="out"
+							onpointerdown={(e) => e.stopPropagation()}
 							onmousedown={(e) => startFromOutput(e, port)}
 							onmouseup={(e) => endAtOutput(e, port)}
 							oncontextmenu={onPortContextMenu}
@@ -473,6 +478,7 @@
 									data-node-id={node.id}
 									data-port-name={port}
 									data-port-dir="out"
+									onpointerdown={(e) => e.stopPropagation()}
 									onmousedown={(e) => startFromOutput(e, port)}
 									onmouseup={(e) => endAtOutput(e, port)}
 									oncontextmenu={onPortContextMenu}
@@ -531,6 +537,7 @@
 							data-node-id={node.id}
 							data-port-name={bport.name}
 							data-port-dir="out"
+							onpointerdown={(e) => e.stopPropagation()}
 							onmousedown={(e) => startFromOutput(e, bport.name)}
 							onmouseup={(e) => endAtOutput(e, bport.name)}
 							oncontextmenu={onPortContextMenu}

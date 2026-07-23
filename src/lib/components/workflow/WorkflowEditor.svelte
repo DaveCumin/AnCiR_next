@@ -877,6 +877,71 @@
 		_viewportSanityChecked = true;
 	});
 	let isPanning = $state(false);
+
+	// --- Pointer input (mouse + touch + pen via the Pointer Events API) --------
+	// The whole canvas interaction layer runs on pointer events so a finger drives
+	// pan / node-move / wiring the same way a mouse does. `PointerEvent` extends
+	// `MouseEvent`, so clientX/clientY/button/altKey/stopPropagation all behave
+	// identically — the handler bodies are unchanged from their mouse originals.
+	/** The .workflow-editor root — the element that owns move/up and takes pointer capture. */
+	let editorEl = $state(null);
+	/** The pointer currently driving a pan/drag/resize; others are ignored (until Tier 2 pinch). */
+	let activePointerId = $state(null);
+	/**
+	 * Capture the pointer to the editor root so a drag keeps tracking even when the finger leaves
+	 * the element (over a node panel, off-canvas). Without capture a touch-drag would simply stop
+	 * emitting move/up the moment it left the start element — the classic "lost drag" bug.
+	 */
+	function capturePointer(e) {
+		activePointerId = e.pointerId;
+		try {
+			editorEl?.setPointerCapture?.(e.pointerId);
+		} catch {
+			/* pointer already gone / capture unsupported — degrade to uncaptured tracking */
+		}
+	}
+	function releasePointer(e) {
+		try {
+			if (activePointerId != null) editorEl?.releasePointerCapture?.(activePointerId);
+		} catch {
+			/* already released */
+		}
+		activePointerId = null;
+	}
+
+	// --- Two-finger pinch-zoom + pan (Tier 2) ----------------------------------
+	// Canvas-background pointers are tracked here (node/port pointerdowns stop
+	// propagation, so they never enter this map — a pinch is a background gesture).
+	// When a SECOND background finger lands, we switch from single-finger pan to
+	// pinch mode: the finger-distance drives zoom (anchored at the centroid) and
+	// the centroid's movement drives pan.
+	const activePointers = new Map(); // pointerId -> { x, y } in client coords
+	let pinchPrev = null; // { cx, cy, dist } from the previous move, or null
+	const pinchActive = () => activePointers.size >= 2;
+
+	function pinchMetrics() {
+		const pts = [...activePointers.values()];
+		if (pts.length < 2) return null;
+		const [a, b] = pts;
+		return {
+			cx: (a.x + b.x) / 2,
+			cy: (a.y + b.y) / 2,
+			dist: Math.hypot(b.x - a.x, b.y - a.y) || 1
+		};
+	}
+
+	function updatePinch() {
+		const cur = pinchMetrics();
+		if (!cur) return;
+		if (pinchPrev) {
+			zoomAtClientPoint((zoom * cur.dist) / pinchPrev.dist, cur.cx, cur.cy);
+			// Two-finger pan: translate by how far the centroid moved this frame.
+			panX += cur.cx - pinchPrev.cx;
+			panY += cur.cy - pinchPrev.cy;
+		}
+		pinchPrev = cur;
+	}
+
 	/** Bound to the .canvas-viewport element for precise coordinate conversion. */
 	let canvasViewportEl = $state(null);
 	let panStartX = $state(0);
@@ -1283,18 +1348,9 @@
 		}
 		e.preventDefault();
 		if (e.ctrlKey || e.metaKey) {
-			// Pinch-to-zoom: ctrl/meta + wheel zooms
+			// Trackpad pinch (ctrl/meta + wheel). Same anchored zoom as a touch pinch.
 			const factor = e.deltaY > 0 ? 0.9 : 1.1;
-			const newZoom = Math.min(Math.max(zoom * factor, MIN_ZOOM), MAX_ZOOM);
-			// Keep the canvas point under the cursor fixed while zooming
-			const rect = canvasViewportEl?.getBoundingClientRect() ?? { left: 0, top: 0 };
-			const relX = e.clientX - rect.left;
-			const relY = e.clientY - rect.top;
-			const canvasX = (relX - panX) / zoom;
-			const canvasY = (relY - panY) / zoom;
-			panX = relX - canvasX * newZoom;
-			panY = relY - canvasY * newZoom;
-			zoom = newZoom;
+			zoomAtClientPoint(zoom * factor, e.clientX, e.clientY);
 		} else {
 			// Regular scroll: pan the canvas
 			panX -= e.deltaX;
@@ -1302,8 +1358,41 @@
 		}
 	}
 
-	function handleCanvasMouseDown(e) {
+	/**
+	 * Set the zoom to `targetZoom` (clamped) while keeping the canvas point currently under the
+	 * given viewport point fixed — the "zoom about the cursor / pinch centroid" behaviour. Shared
+	 * by the wheel, the trackpad pinch and the two-finger touch pinch so they can never drift apart.
+	 */
+	function zoomAtClientPoint(targetZoom, clientX, clientY) {
+		const newZoom = Math.min(Math.max(targetZoom, MIN_ZOOM), MAX_ZOOM);
+		const rect = canvasViewportEl?.getBoundingClientRect() ?? { left: 0, top: 0 };
+		const relX = clientX - rect.left;
+		const relY = clientY - rect.top;
+		const canvasX = (relX - panX) / zoom;
+		const canvasY = (relY - panY) / zoom;
+		panX = relX - canvasX * newZoom;
+		panY = relY - canvasY * newZoom;
+		zoom = newZoom;
+	}
+
+	function handleCanvasPointerDown(e) {
 		if (e.button !== 0) return;
+		// Track background fingers for pinch. A SECOND finger switches from single-finger pan into
+		// a pinch/zoom gesture: abandon the pan, capture the new finger, and let handlePointerMove
+		// drive zoom + pan from the pair.
+		activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+		if (activePointers.size >= 2) {
+			isPanning = false;
+			marquee = null;
+			removeMarqueeListeners();
+			pinchPrev = null;
+			try {
+				editorEl?.setPointerCapture?.(e.pointerId);
+			} catch {
+				/* ignore */
+			}
+			return;
+		}
 		// Alt+drag on empty canvas = marquee select (Alt+Shift adds to selection).
 		// Plain drag keeps panning. The marquee only starts here, on the canvas
 		// background — node wrappers stopPropagation, so an Alt-drag that begins on
@@ -1323,23 +1412,31 @@
 			};
 			// Track on the window so the drag survives the cursor passing over nodes
 			// and releasing anywhere (over an expanded node panel, off-canvas, etc.).
-			window.addEventListener('mousemove', onMarqueeMove);
-			window.addEventListener('mouseup', onMarqueeUp);
+			window.addEventListener('pointermove', onMarqueeMove);
+			window.addEventListener('pointerup', onMarqueeUp);
 			return;
 		}
 		isPanning = true;
 		panStartX = e.clientX - panX;
 		panStartY = e.clientY - panY;
+		capturePointer(e);
 	}
 
 	function handleNodeWrapperMouseDown(e, node) {
 		// Always prevent the canvas pan handler from firing
 		e.stopPropagation();
 		if (e.button !== 0) return;
+		// Capture to the editor root (which owns pointermove/up) so the node keeps following the
+		// finger even when it strays off the node. pointerdown here stopped propagation, so the
+		// editor never saw it — capture is set explicitly rather than via the bubbled event.
+		capturePointer(e);
 		// Skip if the click is inside panels or action buttons that handle their own events
 		if (e.target.closest('.process-editor-panel')) return;
 		if (e.target.closest('.plot-resize-handle')) return;
 		if (e.target.closest('.note-resize-handle')) return;
+		// A port starts a WIRE, never a node drag. Ports stopPropagation on pointerdown so this is
+		// belt-and-braces, but it also covers any node type whose ports lack that guard.
+		if (e.target.closest('.port-dot')) return;
 		// Group header/body has its own resize-handle and delete-X which stop
 		// propagation themselves. We only need to swallow events landing on the
 		// resize handle so a drag from there doesn't start a node-move.
@@ -1396,6 +1493,7 @@
 		e.stopPropagation();
 		const n = node.noteObj;
 		if (!n) return;
+		capturePointer(e);
 		resizeInfo = {
 			nodeId: node.id,
 			noteObj: n,
@@ -1407,6 +1505,7 @@
 
 	function handleResizeMouseDown(e, node) {
 		e.stopPropagation();
+		capturePointer(e);
 		const id = node.id;
 		const cur = plotPreviewSizes[id] ?? {
 			w: PLOT_PREVIEW_DEFAULT_W,
@@ -1423,7 +1522,19 @@
 		};
 	}
 
-	function handleMouseMove(e) {
+	function handlePointerMove(e) {
+		// Pinch takes priority: while two background fingers are down, drive zoom + pan from the
+		// pair and do nothing else.
+		if (activePointers.has(e.pointerId)) {
+			activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+			if (pinchActive()) {
+				updatePinch();
+				return;
+			}
+		}
+		// Ignore stray pointers that aren't the one driving the current single-finger gesture.
+		if (activePointerId != null && e.pointerId !== activePointerId && !activePointers.has(e.pointerId))
+			return;
 		mouseCanvas = toCanvasCoords(e.clientX, e.clientY);
 
 		// Feed the edge-pan engine so it nudges the canvas toward the cursor
@@ -2470,8 +2581,8 @@
 		finishMarquee();
 	}
 	function removeMarqueeListeners() {
-		window.removeEventListener('mousemove', onMarqueeMove);
-		window.removeEventListener('mouseup', onMarqueeUp);
+		window.removeEventListener('pointermove', onMarqueeMove);
+		window.removeEventListener('pointerup', onMarqueeUp);
 	}
 	// Drop any dangling marquee listeners if the canvas unmounts mid-drag.
 	$effect(() => removeMarqueeListeners);
@@ -2512,9 +2623,35 @@
 		selectedEdgeKey = null;
 	}
 
+	// pointerup / pointercancel on the editor root.
+	function handlePointerUp(e) {
+		const wasBackground = activePointers.delete(e.pointerId);
+		if (wasBackground) {
+			try {
+				editorEl?.releasePointerCapture?.(e.pointerId);
+			} catch {
+				/* ignore */
+			}
+			if (activePointers.size === 1) {
+				// Dropped from a pinch back to one finger: end the pinch and hand the survivor to a
+				// fresh single-finger pan so the gesture continues smoothly instead of jumping.
+				pinchPrev = null;
+				const [remaining] = activePointers.values();
+				isPanning = true;
+				panStartX = remaining.x - panX;
+				panStartY = remaining.y - panY;
+				return;
+			}
+			if (activePointers.size >= 2) return; // still pinching with the other fingers
+		}
+		// A single-finger gesture (or the last finger of a pinch) ended.
+		releasePointer(e);
+		stopAll();
+	}
+
 	function stopAll() {
 		// Marquee is driven by its own window-level listeners (onMarqueeUp), not by
-		// this canvas mouseup — a release over a node/panel never reaches here.
+		// this canvas pointerup — a release over a node/panel never reaches here.
 		// Splice-on-port takes priority over splice-on-edge — it expresses a
 		// more specific intent ("between this source and ALL its consumers").
 		if (dragInfo?.moved && dropTargetPortKey) {
@@ -2550,6 +2687,9 @@
 		dragInfo = null;
 		resizeInfo = null;
 		isPanning = false;
+		// Belt-and-braces: clear any lingering pinch bookkeeping (e.g. after a pointercancel).
+		activePointers.clear();
+		pinchPrev = null;
 		stopEdgePan();
 	}
 
@@ -3639,11 +3779,12 @@
 	class:inline
 	class:marquee-active={!!marquee}
 	style="left: {leftPx}px; right: {rightPx}px;"
+	bind:this={editorEl}
 	onwheel={handleWheel}
-	onmousedown={handleCanvasMouseDown}
-	onmousemove={handleMouseMove}
-	onmouseup={stopAll}
-	onmouseleave={stopAll}
+	onpointerdown={handleCanvasPointerDown}
+	onpointermove={handlePointerMove}
+	onpointerup={handlePointerUp}
+	onpointercancel={handlePointerUp}
 	onclick={handleBackgroundClick}
 	use:canvasFileDrop={{ onActive: (v) => (fileDragOver = v), onDrop: handleCanvasFileDrop }}
 	role="presentation"
@@ -3701,8 +3842,8 @@
 					<div
 						class="composite-frame-title"
 						role="presentation"
-						onmousedown={(e) => handleNodeWrapperMouseDown(e, { id: cc.id, type: 'composite' })}
-						onmouseup={(e) => handleNodeWrapperMouseUp(e, { id: cc.id, type: 'composite' })}
+						onpointerdown={(e) => handleNodeWrapperMouseDown(e, { id: cc.id, type: 'composite' })}
+						onpointerup={(e) => handleNodeWrapperMouseUp(e, { id: cc.id, type: 'composite' })}
 						ondblclick={(e) => {
 							e.stopPropagation();
 							handleNodeDblClick({ id: cc.id, type: 'composite', compositeObj: cc.comp });
@@ -3767,8 +3908,8 @@
 						data-group-id={isGroup ? node.id : null}
 						style="position: absolute; left: {pos.x}px; top: {pos.y}px; z-index: {nodeZIndex};"
 						aria-label={node.label}
-						onmousedown={(e) => handleNodeWrapperMouseDown(e, node)}
-						onmouseup={(e) => handleNodeWrapperMouseUp(e, node)}
+						onpointerdown={(e) => handleNodeWrapperMouseDown(e, node)}
+						onpointerup={(e) => handleNodeWrapperMouseUp(e, node)}
 						onmouseenter={() => {
 							hoveredNodeId = node.id;
 							showNodeActions(node.id);
@@ -4044,6 +4185,11 @@
 		flex-direction: column;
 		overflow: hidden;
 		border-left: 1px solid var(--color-lightness-85);
+		/* Own every touch gesture on the canvas ourselves — otherwise the browser
+		   claims one-finger drags for page-scroll and two-finger for page-zoom, and
+		   the pointer handlers never see them. Scrollable node internals (mini
+		   tables) re-enable panning locally where they need it. */
+		touch-action: none;
 	}
 
 	.workflow-editor.inline {
