@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "292": [
+    "289": [
       0,
       1,
       2,
@@ -626,7 +626,7 @@
       622,
       623
     ],
-    "293": [
+    "290": [
       35.88509115111157,
       43.54983939945321,
       34.789867007719174,
@@ -1252,7 +1252,7 @@
       40.2212022597924,
       44.47959791995979
     ],
-    "294": [
+    "291": [
       33.90302889086043,
       44.18635658690842,
       37.01813711983115,
@@ -1878,7 +1878,7 @@
       0.599029339603051,
       0
     ],
-    "295": [
+    "292": [
       69.78812004197201,
       87.73619598636162,
       71.80800412755033,
@@ -2504,13 +2504,13 @@
       40.82023159939545,
       44.47959791995979
     ],
-    "304": [
+    "301": [
       23.42
     ],
-    "305": [
+    "302": [
       102.4627357897153
     ],
-    "306": [
+    "303": [
       0.6885974683549608,
       0.5820058241815844,
       0.4847372528355866,
@@ -2816,8 +2816,41 @@
   },
   "data": [
     {
-      "id": 292,
+      "id": 289,
       "name": "hour",
+      "data": 289,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 290,
+      "name": "component A (24.8 h)",
+      "data": 290,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 291,
+      "name": "component B (23.4 h)",
+      "data": 291,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 292,
+      "name": "recorded activity",
       "data": 292,
       "type": "number",
       "tableProcessGUId": "",
@@ -2827,66 +2860,33 @@
       "processes": []
     },
     {
-      "id": 293,
-      "name": "component A (24.8 h)",
-      "data": 293,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 294,
-      "name": "component B (23.4 h)",
-      "data": 294,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 295,
-      "name": "recorded activity",
-      "data": 295,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 304,
+      "id": 301,
       "name": "stat_peak_period_22",
-      "data": 304,
+      "data": 301,
       "type": "number",
-      "tableProcessGUId": "cb2a95c0-3d47-443c-84c0-fbe8a62dcb8a",
+      "tableProcessGUId": "54b6faa9-1e15-4506-8733-6573c60129e5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 305,
+      "id": 302,
       "name": "stat_peak_power_22",
-      "data": 305,
+      "data": 302,
       "type": "number",
-      "tableProcessGUId": "cb2a95c0-3d47-443c-84c0-fbe8a62dcb8a",
+      "tableProcessGUId": "54b6faa9-1e15-4506-8733-6573c60129e5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 306,
-      "name": "rhythmicityy_295_22",
-      "data": 306,
+      "id": 303,
+      "name": "rhythmicityy_292_22",
+      "data": 303,
       "type": "number",
-      "tableProcessGUId": "cb2a95c0-3d47-443c-84c0-fbe8a62dcb8a",
+      "tableProcessGUId": "54b6faa9-1e15-4506-8733-6573c60129e5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2939,9 +2939,9 @@
         "data": [
           {
             "x": {
-              "id": 296,
+              "id": 293,
               "name": "hour",
-              "refId": 292,
+              "refId": 289,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2950,9 +2950,9 @@
               "processes": []
             },
             "y": {
-              "id": 297,
+              "id": 294,
               "name": "recorded activity",
-              "refId": 295,
+              "refId": 292,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3012,9 +3012,9 @@
         "data": [
           {
             "x": {
-              "id": 298,
+              "id": 295,
               "name": "hour",
-              "refId": 292,
+              "refId": 289,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3023,9 +3023,9 @@
               "processes": []
             },
             "y": {
-              "id": 299,
+              "id": 296,
               "name": "component A (24.8 h)",
-              "refId": 293,
+              "refId": 290,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3039,9 +3039,9 @@
           },
           {
             "x": {
-              "id": 300,
+              "id": 297,
               "name": "hour",
-              "refId": 292,
+              "refId": 289,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3050,9 +3050,9 @@
               "processes": []
             },
             "y": {
-              "id": 301,
+              "id": 298,
               "name": "component B (23.4 h)",
-              "refId": 294,
+              "refId": 291,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3113,9 +3113,9 @@
         "data": [
           {
             "x": {
-              "id": 302,
+              "id": 299,
               "name": "hour",
-              "refId": 292,
+              "refId": 289,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3124,9 +3124,9 @@
               "processes": []
             },
             "y": {
-              "id": 303,
+              "id": 300,
               "name": "recorded activity",
-              "refId": 295,
+              "refId": 292,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3178,8 +3178,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          304,
-          305
+          301,
+          302
         ],
         "showCol": [
           true,
@@ -3198,9 +3198,9 @@
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis — dominant component",
       "args": {
-        "xIN": 292,
+        "xIN": 289,
         "yIN": [
-          295
+          292
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -3211,9 +3211,9 @@
         "pgAlpha": 0.05,
         "preProcesses": [],
         "out": {
-          "stat_peak_period": 304,
-          "stat_peak_power": 305,
-          "rhythmicityy_295": 306
+          "stat_peak_period": 301,
+          "stat_peak_power": 302,
+          "rhythmicityy_292": 303
         }
       },
       "refTPId": null
@@ -3236,19 +3236,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_292": {
+    "data_289": {
       "x": 60,
       "y": 314
     },
-    "data_293": {
+    "data_290": {
       "x": 60,
       "y": 814
     },
-    "data_294": {
+    "data_291": {
       "x": 60,
       "y": 1314
     },
-    "data_295": {
+    "data_292": {
       "x": 60,
       "y": 1814
     },
@@ -3334,5 +3334,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

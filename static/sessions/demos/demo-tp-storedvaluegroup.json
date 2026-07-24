@@ -1,17 +1,17 @@
 {
   "rawData": {
-    "685": [
+    "682": [
       12,
       34
     ]
   },
   "data": [
     {
-      "id": 685,
+      "id": 682,
       "name": "group_g1_73",
-      "data": 685,
+      "data": 682,
       "type": "number",
-      "tableProcessGUId": "15acdfd1-03ce-45a8-988b-eeab3605e978",
+      "tableProcessGUId": "9570eab5-e386-497d-89e7-37edac7545f7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -36,7 +36,7 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          685
+          682
         ],
         "showCol": [
           true
@@ -65,7 +65,7 @@
           }
         ],
         "out": {
-          "group_g1": 685
+          "group_g1": 682
         }
       },
       "refTPId": null
@@ -167,5 +167,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

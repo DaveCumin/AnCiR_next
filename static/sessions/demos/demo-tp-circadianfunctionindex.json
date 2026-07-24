@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "716": [
+    "713": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "717": [
+    "714": [
       0,
       0,
       0,
@@ -676,26 +676,59 @@
       0,
       0
     ],
-    "718": [
+    "715": [
       0.9426865671641792
     ],
-    "719": [
+    "716": [
       1.0000000000000004
     ],
-    "720": [
+    "717": [
       0.34388059701492557
     ],
-    "721": [
+    "718": [
       1
     ]
   },
   "data": [
     {
-      "id": 716,
+      "id": 713,
       "name": "Circadian Function Index input 1",
-      "data": 716,
+      "data": 713,
       "type": "number",
       "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 714,
+      "name": "Circadian Function Index input 2",
+      "data": 714,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 715,
+      "name": "CFI_79",
+      "data": 715,
+      "type": "number",
+      "tableProcessGUId": "81ea3d36-f39c-47f0-b9f9-5b8a6e7953ee",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 716,
+      "name": "IS_79",
+      "data": 716,
+      "type": "number",
+      "tableProcessGUId": "81ea3d36-f39c-47f0-b9f9-5b8a6e7953ee",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -703,10 +736,10 @@
     },
     {
       "id": 717,
-      "name": "Circadian Function Index input 2",
+      "name": "IV_79",
       "data": 717,
       "type": "number",
-      "tableProcessGUId": "",
+      "tableProcessGUId": "81ea3d36-f39c-47f0-b9f9-5b8a6e7953ee",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -714,43 +747,10 @@
     },
     {
       "id": 718,
-      "name": "CFI_79",
+      "name": "RA_79",
       "data": 718,
       "type": "number",
-      "tableProcessGUId": "471ef839-0d28-4228-bcd7-56a9fdd689da",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 719,
-      "name": "IS_79",
-      "data": 719,
-      "type": "number",
-      "tableProcessGUId": "471ef839-0d28-4228-bcd7-56a9fdd689da",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 720,
-      "name": "IV_79",
-      "data": 720,
-      "type": "number",
-      "tableProcessGUId": "471ef839-0d28-4228-bcd7-56a9fdd689da",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 721,
-      "name": "RA_79",
-      "data": 721,
-      "type": "number",
-      "tableProcessGUId": "471ef839-0d28-4228-bcd7-56a9fdd689da",
+      "tableProcessGUId": "81ea3d36-f39c-47f0-b9f9-5b8a6e7953ee",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -775,12 +775,12 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
+          713,
+          714,
+          715,
           716,
           717,
-          718,
-          719,
-          720,
-          721
+          718
         ],
         "showCol": [
           true,
@@ -803,9 +803,9 @@
       "name": "CircadianFunctionIndex",
       "displayName": "Circadian Function Index",
       "args": {
-        "xIN": 716,
+        "xIN": 713,
         "yIN": [
-          717
+          714
         ],
         "epochHours": 1,
         "period": 24,
@@ -813,10 +813,10 @@
         "lWindow": 5,
         "preProcesses": [],
         "out": {
-          "CFI": 718,
-          "IS": 719,
-          "IV": 720,
-          "RA": 721
+          "CFI": 715,
+          "IS": 716,
+          "IV": 717,
+          "RA": 718
         }
       },
       "refTPId": null
@@ -839,11 +839,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_716": {
+    "data_713": {
       "x": 60,
       "y": 314
     },
-    "data_717": {
+    "data_714": {
       "x": 60,
       "y": 814
     },
@@ -917,5 +917,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

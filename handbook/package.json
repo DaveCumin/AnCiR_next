@@ -1,0 +1,24 @@
+{
+  "name": "chronobiology-handbook",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check:manifest": "node scripts/sync-manifests.mjs",
+    "dev": "vite dev",
+    "build": "vite build && mv build/index.html build/handbook.html",
+    "deploy:ftp": "node --env-file=.env -e \"const {execSync}=require('child_process'); const cmd=process.env.DEPLOY_COMMAND; if(cmd){console.log('🚀 Uploading to FTP...'); execSync(cmd,{stdio:'inherit',cwd:process.cwd()}); console.log('✅ FTP upload completed!');} else {console.warn('⚠️ No DEPLOY_COMMAND in .env');}\" || echo '⚠️ FTP upload skipped.'",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@ancir/design": "workspace:*",
+    "@sveltejs/adapter-static": "^3.0.0",
+    "@sveltejs/kit": "^2.16.0",
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "svelte": "^5.0.0",
+    "vite": "^6.0.0"
+  },
+  "dependencies": {
+    "katex": "^0.16.9"
+  }
+}

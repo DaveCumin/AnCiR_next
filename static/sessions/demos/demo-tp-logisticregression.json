@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "578": [
+    "575": [
       1,
       8,
       4,
@@ -62,7 +62,7 @@
       11,
       7
     ],
-    "579": [
+    "576": [
       1,
       6,
       2,
@@ -124,7 +124,7 @@
       3,
       8
     ],
-    "580": [
+    "577": [
       1,
       1,
       1,
@@ -186,47 +186,47 @@
       1,
       0
     ],
-    "581": [
+    "578": [
       "(intercept)",
       "Logistic regression input 1",
       "Logistic regression input 2"
     ],
-    "582": [
+    "579": [
       -0.09738779753723972,
       0.4617193426262954,
       -0.4947573937381111
     ],
-    "583": [
+    "580": [
       0.8551995934204939,
       0.12905177127721507,
       0.15685044885923716
     ],
-    "584": [
+    "581": [
       -0.11387727296235398,
       3.577783846410599,
       -3.154325648007058
     ],
-    "585": [
+    "582": [
       0.9093350818990842,
       0.0003465198254309909,
       0.0016086946927440504
     ],
-    "586": [
+    "583": [
       0.9072041263826472,
       1.5867998936340344,
       0.6097188109559362
     ],
-    "587": [
+    "584": [
       0.16972968423018736,
       1.232176994034704,
       0.4483511106194381
     ],
-    "588": [
+    "585": [
       4.849000519022492,
       2.043483943156681,
       0.8291649549387852
     ],
-    "589": [
+    "586": [
       1,
       1,
       1,
@@ -288,7 +288,7 @@
       1,
       0
     ],
-    "590": [
+    "587": [
       -0.1304258486490555,
       0.6278225810444567,
       0.7599747854917196,
@@ -350,7 +350,7 @@
       3.4972527901376758,
       -0.8234115490580609
     ],
-    "591": [
+    "588": [
       0.46743968145589154,
       0.6519955752635468,
       0.6813482594213426,
@@ -415,11 +415,44 @@
   },
   "data": [
     {
-      "id": 578,
+      "id": 575,
       "name": "Logistic regression input 1",
-      "data": 578,
+      "data": 575,
       "type": "number",
       "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 576,
+      "name": "Logistic regression input 2",
+      "data": 576,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 577,
+      "name": "Logistic regression input 3",
+      "data": 577,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 578,
+      "name": "term_54",
+      "data": 578,
+      "type": "category",
+      "tableProcessGUId": "20f36d23-14cd-44da-8032-0aa45cce092a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -427,10 +460,10 @@
     },
     {
       "id": 579,
-      "name": "Logistic regression input 2",
+      "name": "coef_54",
       "data": 579,
       "type": "number",
-      "tableProcessGUId": "",
+      "tableProcessGUId": "20f36d23-14cd-44da-8032-0aa45cce092a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -438,10 +471,10 @@
     },
     {
       "id": 580,
-      "name": "Logistic regression input 3",
+      "name": "se_54",
       "data": 580,
       "type": "number",
-      "tableProcessGUId": "",
+      "tableProcessGUId": "20f36d23-14cd-44da-8032-0aa45cce092a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -449,10 +482,10 @@
     },
     {
       "id": 581,
-      "name": "term_54",
+      "name": "z_54",
       "data": 581,
-      "type": "category",
-      "tableProcessGUId": "997ecfc2-6359-4586-8ba6-fc4f74dd90e2",
+      "type": "number",
+      "tableProcessGUId": "20f36d23-14cd-44da-8032-0aa45cce092a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -460,10 +493,10 @@
     },
     {
       "id": 582,
-      "name": "coef_54",
+      "name": "pvalue_54",
       "data": 582,
       "type": "number",
-      "tableProcessGUId": "997ecfc2-6359-4586-8ba6-fc4f74dd90e2",
+      "tableProcessGUId": "20f36d23-14cd-44da-8032-0aa45cce092a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -471,10 +504,10 @@
     },
     {
       "id": 583,
-      "name": "se_54",
+      "name": "oddsRatio_54",
       "data": 583,
       "type": "number",
-      "tableProcessGUId": "997ecfc2-6359-4586-8ba6-fc4f74dd90e2",
+      "tableProcessGUId": "20f36d23-14cd-44da-8032-0aa45cce092a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -482,10 +515,10 @@
     },
     {
       "id": 584,
-      "name": "z_54",
+      "name": "ciLow_54",
       "data": 584,
       "type": "number",
-      "tableProcessGUId": "997ecfc2-6359-4586-8ba6-fc4f74dd90e2",
+      "tableProcessGUId": "20f36d23-14cd-44da-8032-0aa45cce092a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -493,10 +526,10 @@
     },
     {
       "id": 585,
-      "name": "pvalue_54",
+      "name": "ciHigh_54",
       "data": 585,
       "type": "number",
-      "tableProcessGUId": "997ecfc2-6359-4586-8ba6-fc4f74dd90e2",
+      "tableProcessGUId": "20f36d23-14cd-44da-8032-0aa45cce092a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -504,10 +537,10 @@
     },
     {
       "id": 586,
-      "name": "oddsRatio_54",
+      "name": "outcome_54",
       "data": 586,
       "type": "number",
-      "tableProcessGUId": "997ecfc2-6359-4586-8ba6-fc4f74dd90e2",
+      "tableProcessGUId": "20f36d23-14cd-44da-8032-0aa45cce092a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -515,10 +548,10 @@
     },
     {
       "id": 587,
-      "name": "ciLow_54",
+      "name": "eta_54",
       "data": 587,
       "type": "number",
-      "tableProcessGUId": "997ecfc2-6359-4586-8ba6-fc4f74dd90e2",
+      "tableProcessGUId": "20f36d23-14cd-44da-8032-0aa45cce092a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -526,43 +559,10 @@
     },
     {
       "id": 588,
-      "name": "ciHigh_54",
+      "name": "fitted_54",
       "data": 588,
       "type": "number",
-      "tableProcessGUId": "997ecfc2-6359-4586-8ba6-fc4f74dd90e2",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 589,
-      "name": "outcome_54",
-      "data": 589,
-      "type": "number",
-      "tableProcessGUId": "997ecfc2-6359-4586-8ba6-fc4f74dd90e2",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 590,
-      "name": "eta_54",
-      "data": 590,
-      "type": "number",
-      "tableProcessGUId": "997ecfc2-6359-4586-8ba6-fc4f74dd90e2",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 591,
-      "name": "fitted_54",
-      "data": 591,
-      "type": "number",
-      "tableProcessGUId": "997ecfc2-6359-4586-8ba6-fc4f74dd90e2",
+      "tableProcessGUId": "20f36d23-14cd-44da-8032-0aa45cce092a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -628,9 +628,9 @@
         "data": [
           {
             "x": {
-              "id": 592,
+              "id": 589,
               "name": "eta_54",
-              "refId": 590,
+              "refId": 587,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -639,9 +639,9 @@
               "processes": []
             },
             "y": {
-              "id": 593,
+              "id": 590,
               "name": "outcome_54",
-              "refId": 589,
+              "refId": 586,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -667,9 +667,9 @@
           },
           {
             "x": {
-              "id": 594,
+              "id": 591,
               "name": "eta_54",
-              "refId": 590,
+              "refId": 587,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -678,9 +678,9 @@
               "processes": []
             },
             "y": {
-              "id": 595,
+              "id": 592,
               "name": "fitted_54",
-              "refId": 591,
+              "refId": 588,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -736,10 +736,10 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          581,
-          582,
-          586,
-          585
+          578,
+          579,
+          583,
+          582
         ],
         "showCol": [
           true,
@@ -760,23 +760,23 @@
       "name": "LogisticRegression",
       "displayName": "Logistic regression",
       "args": {
-        "yIN": 580,
+        "yIN": 577,
         "xIN": [
-          578,
-          579
+          575,
+          576
         ],
         "out": {
-          "term": 581,
-          "coef": 582,
-          "se": 583,
-          "z": 584,
-          "pvalue": 585,
-          "oddsRatio": 586,
-          "ciLow": 587,
-          "ciHigh": 588,
-          "outcome": 589,
-          "eta": 590,
-          "fitted": 591
+          "term": 578,
+          "coef": 579,
+          "se": 580,
+          "z": 581,
+          "pvalue": 582,
+          "oddsRatio": 583,
+          "ciLow": 584,
+          "ciHigh": 585,
+          "outcome": 586,
+          "eta": 587,
+          "fitted": 588
         },
         "valid": false
       },
@@ -800,15 +800,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_578": {
+    "data_575": {
       "x": 60,
       "y": 314
     },
-    "data_579": {
+    "data_576": {
       "x": 60,
       "y": 814
     },
-    "data_580": {
+    "data_577": {
       "x": 60,
       "y": 1314
     },
@@ -886,5 +886,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

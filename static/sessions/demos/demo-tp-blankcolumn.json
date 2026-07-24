@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "509": [
+    "506": [
       null,
       null,
       null,
@@ -15,11 +15,11 @@
   },
   "data": [
     {
-      "id": 509,
+      "id": 506,
       "name": "result_40",
-      "data": 509,
+      "data": 506,
       "type": "category",
-      "tableProcessGUId": "4b135cdf-8d9c-4407-9896-a53788af93c2",
+      "tableProcessGUId": "0032d256-4e8b-4689-8942-85211cb71218",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -44,7 +44,7 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          509
+          506
         ],
         "showCol": [
           true
@@ -65,7 +65,7 @@
         "N": 10,
         "storedValueRefs": {},
         "out": {
-          "result": 509
+          "result": 506
         }
       },
       "refTPId": null
@@ -158,5 +158,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

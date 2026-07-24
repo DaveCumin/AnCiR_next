@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "472": [
+    "469": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "473": [
+    "470": [
       1,
       3,
       5,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 472,
+      "id": 469,
       "name": "x",
-      "data": 472,
+      "data": 469,
       "type": "number",
-      "tableProcessGUId": "f2850b82-a0f9-4eec-9d19-a25fcf29f4a8",
+      "tableProcessGUId": "9a77e9d5-0f50-4a10-a25a-d6c0c0fdb4b2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 473,
+      "id": 470,
       "name": "y",
-      "data": 473,
+      "data": 470,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,13 +129,13 @@
       "processes": []
     },
     {
-      "id": 474,
+      "id": 471,
       "name": "Remove Trend result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_6",
-      "producerPort": "out_473",
+      "producerPort": "out_470",
       "producerArtifactKind": "column",
       "processes": []
     }
@@ -199,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 475,
+              "id": 472,
               "name": "x",
-              "refId": 472,
+              "refId": 469,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 476,
+              "id": 473,
               "name": "y",
-              "refId": 473,
+              "refId": 470,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -238,9 +238,9 @@
           },
           {
             "x": {
-              "id": 477,
+              "id": 474,
               "name": "x",
-              "refId": 472,
+              "refId": 469,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 478,
+              "id": 475,
               "name": "Remove Trend result",
-              "refId": 474,
+              "refId": 471,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -307,8 +307,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          473,
-          474
+          470,
+          471
         ],
         "showCol": [
           true,
@@ -333,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 472
+          "result": 469
         }
       },
       "refTPId": null
@@ -365,13 +365,13 @@
         "slidingWindow": false,
         "windowSize": 10,
         "inIN": [
-          473
+          470
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_473": {
+    "data_470": {
       "x": 60,
       "y": 314
     },
@@ -453,5 +453,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

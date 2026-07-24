@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "669": [
+    "666": [
       0,
       1,
       2,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 669,
+      "id": 666,
       "name": "result_68",
-      "data": 669,
+      "data": 666,
       "type": "number",
-      "tableProcessGUId": "963f8460-c7ce-4c4b-8dfa-8a1a7c99a2c0",
+      "tableProcessGUId": "f2f9dcb4-e585-4548-b109-a10edd9a7d7e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -84,7 +84,7 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          669
+          666
         ],
         "showCol": [
           true
@@ -108,7 +108,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 669
+          "result": 666
         }
       },
       "refTPId": null
@@ -201,5 +201,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

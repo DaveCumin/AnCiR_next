@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "628": [
+    "625": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "629": [
+    "626": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "630": [
+    "627": [
       84,
       108,
       132,
@@ -685,7 +685,7 @@
       204,
       228
     ],
-    "631": [
+    "628": [
       24,
       24,
       24,
@@ -694,7 +694,7 @@
       24,
       24
     ],
-    "632": [
+    "629": [
       83.49999999999999,
       83.49999999999999,
       83.50000000000003,
@@ -706,20 +706,20 @@
   },
   "data": [
     {
-      "id": 628,
+      "id": 625,
       "name": "x",
-      "data": 628,
+      "data": 625,
       "type": "number",
-      "tableProcessGUId": "f8561c22-a35d-4c65-b600-0a989041e2f2",
+      "tableProcessGUId": "e75a6553-930e-4dd0-9074-d3a5b3282914",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 629,
+      "id": 626,
       "name": "y",
-      "data": 629,
+      "data": 626,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -728,33 +728,33 @@
       "processes": []
     },
     {
-      "id": 630,
+      "id": 627,
       "name": "movex_61",
-      "data": 630,
+      "data": 627,
       "type": "number",
-      "tableProcessGUId": "ae74c07c-3329-4146-8157-f1813208668e",
+      "tableProcessGUId": "b151a81a-0c3e-4d6a-afeb-d231f4bc7f47",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 631,
-      "name": "629_peak_period_61",
-      "data": 631,
+      "id": 628,
+      "name": "626_peak_period_61",
+      "data": 628,
       "type": "number",
-      "tableProcessGUId": "ae74c07c-3329-4146-8157-f1813208668e",
+      "tableProcessGUId": "b151a81a-0c3e-4d6a-afeb-d231f4bc7f47",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 632,
-      "name": "629_peak_power_61",
-      "data": 632,
+      "id": 629,
+      "name": "626_peak_power_61",
+      "data": 629,
       "type": "number",
-      "tableProcessGUId": "ae74c07c-3329-4146-8157-f1813208668e",
+      "tableProcessGUId": "b151a81a-0c3e-4d6a-afeb-d231f4bc7f47",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -820,9 +820,9 @@
         "data": [
           {
             "x": {
-              "id": 633,
+              "id": 630,
               "name": "x",
-              "refId": 628,
+              "refId": 625,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -831,9 +831,9 @@
               "processes": []
             },
             "y": {
-              "id": 634,
+              "id": 631,
               "name": "y",
-              "refId": 629,
+              "refId": 626,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -859,9 +859,9 @@
           },
           {
             "x": {
-              "id": 635,
+              "id": 632,
               "name": "movex_61",
-              "refId": 630,
+              "refId": 627,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -870,9 +870,9 @@
               "processes": []
             },
             "y": {
-              "id": 636,
-              "name": "629_peak_period_61",
-              "refId": 631,
+              "id": 633,
+              "name": "626_peak_period_61",
+              "refId": 628,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -928,9 +928,9 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          630,
-          631,
-          632
+          627,
+          628,
+          629
         ],
         "showCol": [
           true,
@@ -956,7 +956,7 @@
         "count": 336,
         "end": 335,
         "out": {
-          "result": 628
+          "result": 625
         }
       },
       "refTPId": null
@@ -966,9 +966,9 @@
       "name": "MovingAnalysis",
       "displayName": "Moving Analysis",
       "args": {
-        "xIN": 628,
+        "xIN": 625,
         "yIN": [
-          629
+          626
         ],
         "windowSize": 168,
         "stepSize": 24,
@@ -987,9 +987,9 @@
         "alpha": 0.05,
         "preProcesses": [],
         "out": {
-          "movex": 630,
-          "629_peak_period": 631,
-          "629_peak_power": 632
+          "movex": 627,
+          "626_peak_period": 628,
+          "626_peak_power": 629
         }
       },
       "refTPId": null
@@ -1012,7 +1012,7 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_629": {
+    "data_626": {
       "x": 60,
       "y": 314
     },
@@ -1094,5 +1094,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

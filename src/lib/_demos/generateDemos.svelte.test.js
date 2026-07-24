@@ -1250,92 +1250,95 @@ const WORKFLOWS = [
 	},
 	{
 		id: 'transients',
-		summary: 'Why an 8 h advance costs more cycles than an 8 h delay.',
+		summary: 'An immediate delay beside an advance that crawls through transients.',
 		name: 'Workflow — transients (phase advance vs delay)',
 		family: 'Workflows',
 		description:
-			'Transients are the intermediate cycles a rhythm passes through between the moment the zeitgeber shifts and the moment a new steady-state phase is re-attained. Two records receive an 8 h shift on the same day, one an ADVANCE and one a DELAY. The zeitgeber moves in a single step in both cases; neither rhythm does. The advance re-entrains at roughly 1 h per cycle and needs about 8 transient cycles, while the delay covers the same 8 h at roughly 1.5 h per cycle in about 6. The onset plot states the same thing numerically: the zeitgeber is a step, the rhythms are ramps of different slope. Only the phase measured AFTER the transients have subsided is the steady-state phase shift, which is why a PRC must be scored from post-transient cycles.',
+			'Two free-running records, each given a single phase-shifting stimulus on the same day, showing the two ways a rhythm can take up a new phase. Both free-run at 24.3 h throughout, so the activity band drifts slowly RIGHTWARD (later) even before anything is done to it — the diagonal that marks a clock running on its own period rather than being held by a zeitgeber. The DELAY is immediate: the band steps right in a single cycle and simply resumes its drift from the new phase, which is what strong (Type 0) resetting looks like. The ADVANCE goes through TRANSIENTS: intermediate cycles between the stimulus and the re-attainment of a steady-state phase, crawling LEFTWARD over about eight cycles. Those cycles do not move at a constant rate — each closes a fraction of whatever phase difference is left, so the increment is largest right after the stimulus and shrinks as the rhythm nears its new phase, giving a curved, decelerating approach rather than a straight ramp. Transients being commoner after advances than delays is the classical generalisation. Only the phase reached AFTER they subside is the steady-state shift, which is why a PRC must be scored from post-transient cycles.',
 		showcases: ['actogram', 'scatterplot'],
 		async build() {
-			const BASELINE = 8; // days on the original schedule
+			const STIM = 8; // day the phase-shifting stimulus is given
 			const DAYS = 28;
-			const SHIFT = 8; // hours the zeitgeber moves
-			const BASE_ONSET = 18; // 18:00 onset while entrained
-			// Re-entrainment rates: advances are the slower direction. ~1 h/cycle
-			// vs ~1.5 h/cycle is the standard human figure and the reason eastward
-			// travel costs more days than westward.
-			const ADV_RATE = 1.0;
-			const DEL_RATE = 1.5;
+			const SHIFT = 8; // hours of phase shift the stimulus evokes
+			const BASE_ONSET = 18; // onset on day 0, hours after midnight
+			const TAU = 24.3; // free-running period — just off 24 h
 			const hours = seq(24 * DAYS, (i) => i);
 
-			// Onset of the OVERT rhythm, in hours after midnight. Before the shift
-			// both records sit at BASE_ONSET; afterwards each closes on its new
-			// phase at a fixed number of hours per cycle, then holds. Those
-			// intermediate cycles are the transients.
-			const closed = (day, rate) =>
-				day < BASELINE ? 0 : Math.min(SHIFT, rate * (day - BASELINE + 1));
-			const onsetAdvance = (day) => BASE_ONSET - closed(day, ADV_RATE);
-			const onsetDelay = (day) => BASE_ONSET + closed(day, DEL_RATE);
+			// Free-running baseline: with tau > 24 the onset slides later by
+			// (tau - 24) h every cycle, drawing the steady rightward diagonal seen
+			// in a record that is not held by a zeitgeber.
+			const DRIFT = TAU - 24;
+			const freeRun = (day) => BASE_ONSET + DRIFT * day;
 
-			// 11 h of activity from onset, wrapping past midnight.
+			// DELAY — expressed IMMEDIATELY, and to the RIGHT (later). The rhythm is
+			// at its new phase on the first cycle after the stimulus: strong (Type 0)
+			// resetting, where the pacemaker is thrown straight onto a new isochron
+			// and the overt rhythm shows no intermediate cycles at all.
+			const onsetDelay = (day) => freeRun(day) + (day < STIM ? 0 : SHIFT);
+
+			// ADVANCE — expressed through TRANSIENTS, to the LEFT (earlier), and
+			// asymptotically rather than linearly. Each cycle the stimulus strikes
+			// the PRC nearer the phase whose evoked shift equals FRP - T, so the
+			// increment it wins shrinks and the approach decelerates. K is set from
+			// how many cycles it takes to come within SETTLE hours of the new phase.
+			const SETTLE = 0.5; // h — residual small enough to read as "settled"
+			const K_ADV = 8 / Math.log(SHIFT / SETTLE); // ~8 transient cycles
+			const closed = (day) =>
+				day < STIM ? 0 : SHIFT * (1 - Math.exp(-(day - STIM + 1) / K_ADV));
+			const onsetAdvance = (day) => freeRun(day) - closed(day);
+
+			// 11 h of activity from onset. mod24 rather than a fixed offset because
+			// the drifting onset leaves the 0-24 range over a long record.
+			const mod24 = (v) => ((v % 24) + 24) % 24;
 			const record = (onsetAt, seed) => {
 				const rng = mulberry32(seed);
 				return hours.map((h) => {
 					const day = Math.floor(h / 24);
-					const since = (h - day * 24 - onsetAt(day) + 48) % 24;
+					const since = mod24(h - day * 24 - onsetAt(day));
 					const active = since < 11;
 					return Math.max(0, (active ? 72 : 4) + normal(rng, 0, active ? 12 : 3));
 				});
 			};
 
 			const hoursId = mkCol('number', hours, 'hour');
-			const advId = mkCol('number', record(onsetAdvance, 71), 'activity_advance');
 			const delId = mkCol('number', record(onsetDelay, 73), 'activity_delay');
+			const advId = mkCol('number', record(onsetAdvance, 71), 'activity_advance');
 
-			const actoA = new Plot({ name: 'Advance 8 h — about 8 transient cycles', type: 'actogram' });
-			actoA.plot.addData({ time: { refId: hoursId }, values: { refId: advId } });
-			actoA.plot.periodHrs = 24;
-			actoA.plot.doublePlot = 2;
-			pushObj(actoA);
-
-			const actoD = new Plot({ name: 'Delay 8 h — about 6 transient cycles', type: 'actogram' });
+			const actoD = new Plot({
+				name: 'Delay 8 h — immediate, no transients',
+				type: 'actogram'
+			});
 			actoD.plot.addData({ time: { refId: hoursId }, values: { refId: delId } });
 			actoD.plot.periodHrs = 24;
 			actoD.plot.doublePlot = 2;
 			pushObj(actoD);
 
-			// The same story as numbers: grey = the imposed schedule (a step),
-			// coloured = the biological rhythm (a ramp). The horizontal gap between
-			// a step and its ramp is the transient.
-			const ZEIT = '#8A9BA8';
+			const actoA = new Plot({
+				name: 'Advance 8 h — about 8 transient cycles',
+				type: 'actogram'
+			});
+			actoA.plot.addData({ time: { refId: hoursId }, values: { refId: advId } });
+			actoA.plot.periodHrs = 24;
+			actoA.plot.doublePlot = 2;
+			pushObj(actoA);
+
+			// The same story as numbers. Grey is where the rhythm would have gone
+			// had nothing been done to it (the unperturbed free-run); the gap
+			// between it and each coloured trace is the phase shift, closed in one
+			// cycle by the delay and over several by the advance.
+			const REF = '#8A9BA8';
 			const days = seq(DAYS, (d) => d);
 			const dayId = mkCol('number', days, 'day');
-			const zAdvId = mkCol(
-				'number',
-				days.map((d) => (d < BASELINE ? BASE_ONSET : BASE_ONSET - SHIFT)),
-				'zeitgeber_advance'
-			);
-			const zDelId = mkCol(
-				'number',
-				days.map((d) => (d < BASELINE ? BASE_ONSET : BASE_ONSET + SHIFT)),
-				'zeitgeber_delay'
-			);
-			const rAdvId = mkCol('number', days.map(onsetAdvance), 'onset_advance');
+			const refId = mkCol('number', days.map(freeRun), 'onset_freerun');
 			const rDelId = mkCol('number', days.map(onsetDelay), 'onset_delay');
+			const rAdvId = mkCol('number', days.map(onsetAdvance), 'onset_advance');
 
 			scatterPlot(
-				'Onset vs day — the zeitgeber steps, the rhythm ramps',
+				'Onset vs day — immediate delay versus advance transients',
 				[
-					{ x: dayId, y: zAdvId, label: 'Zeitgeber — advance', kind: 'line', colour: ZEIT },
-					{ x: dayId, y: zDelId, label: 'Zeitgeber — delay', kind: 'line', colour: ZEIT },
-					{
-						x: dayId,
-						y: rAdvId,
-						label: 'Rhythm onset — advance',
-						kind: 'line',
-						colour: FIT_COLOUR
-					},
-					{ x: dayId, y: rDelId, label: 'Rhythm onset — delay', kind: 'line', colour: RAW_COLOUR }
+					{ x: dayId, y: refId, label: 'Unperturbed free-run', kind: 'line', colour: REF },
+					{ x: dayId, y: rDelId, label: 'Delay — immediate', kind: 'line', colour: RAW_COLOUR },
+					{ x: dayId, y: rAdvId, label: 'Advance — transients', kind: 'line', colour: FIT_COLOUR }
 				],
 				{ x: 'Day', y: 'Activity onset (h after midnight)' }
 			);

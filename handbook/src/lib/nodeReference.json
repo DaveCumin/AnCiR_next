@@ -1,0 +1,849 @@
+{
+ "GroupComparison": {
+  "description": "Compare groups (stats) tests whether a numeric outcome differs between two or more groups. Groups can be defined either by a categorical grouping column (long format) or by supplying several y-columns (one per group). The node chooses a test automatically: a Welch (unequal-variance) t-test for exactly two groups and a one-way ANOVA for three or more, with nonparametric alternatives (Mann-Whitney U for two groups, Kruskal-Wallis H for three or more) selectable when the normality assumption is doubtful.\n\nWhen a test is significant, post-hoc comparisons localise which pairs of groups differ: Tukey-Kramer after ANOVA and Holm-adjusted pairwise Mann-Whitney after Kruskal-Wallis. The node also runs assumption checks (Jarque-Bera for within-group normality, a variance-ratio check for heteroscedasticity) and surfaces warnings so the parametric/nonparametric choice can be reconsidered. The reported statistic (t, F, U or H) and its p-value are exposed as metric output ports for downstream summary tables or plots.",
+  "maths": [
+   "H = \\frac{12}{N(N+1)}\\sum_{i=1}^{k}\\frac{R_i^2}{n_i} - 3(N+1)",
+   "F = \\frac{\\text{MS}_{\\text{between}}}{\\text{MS}_{\\text{within}}}",
+   "t = \\frac{\\bar{x}_1-\\bar{x}_2}{\\sqrt{s_1^2/n_1 + s_2^2/n_2}}"
+  ],
+  "references": [
+   {
+    "cite": "Kruskal, W.H. & Wallis, W.A. (1952). Use of ranks in one-criterion variance analysis. Journal of the American Statistical Association, 47(260), 583-621."
+   },
+   {
+    "cite": "Mann, H.B. & Whitney, D.R. (1947). On a test of whether one of two random variables is stochastically larger than the other. Annals of Mathematical Statistics, 18(1), 50-60."
+   },
+   {
+    "cite": "Welch, B.L. (1947). The generalization of \"Student's\" problem when several different population variances are involved. Biometrika, 34(1-2), 28-35."
+   }
+  ],
+  "crosslinks": [
+   "ch13",
+   "ch11",
+   "glossary"
+  ]
+ },
+ "RayleighTest": {
+  "description": "The Rayleigh test asks whether a sample of angles (phases) is uniformly distributed around the circle, or whether it clusters toward a preferred direction. In chronobiology the angles are typically acrophases, activity-onset times, or peak phases converted to a position on the 24 h (or other-period) cycle. Each angle is treated as a unit vector; the length of their average vector, the mean resultant length R, measures clustering: R near 0 means the phases point every which way, R near 1 means they nearly coincide.\n\nUnder the null hypothesis of uniformity, Rayleigh's statistic z = nR² is large when clustering is strong. AnCiR converts z to a p-value using the standard large-sample series approximation (accurate for n greater than about 10). Inputs may be radians, degrees, or clock-hours folded onto a user-set period. A small p-value indicates a statistically significant mean direction; note the test assumes a single unimodal concentration and is not designed for bimodal or axial data.\n\nThe node runs the Rayleigh test on every selected column. An optional Watson-Williams test (toggle it on, like the boxplot's pairwise comparisons) additionally treats the columns as groups of angles and tests whether they share a common mean direction (the circular analogue of one-way ANOVA), reporting an F statistic and its p-value. It assumes reasonably concentrated, similarly-dispersed samples and applies a von Mises concentration correction (Watson & Williams 1956).\n\nEach phase column also accepts an optional time input (numeric hours or a timestamp), folded onto the chosen period before use. Without a time input, every angle counts equally toward the mean vector. With one, angles are weighted by the paired measurement's amplitude, so larger-amplitude cycles pull the mean direction toward their phase, giving an amplitude-weighted mean resultant vector. The node reports an acrophase output — the mean angle converted back to clock time — alongside R, z, and p for every column, in addition to the Watson-Williams F and p-value when that test is enabled.",
+  "maths": [
+   "\\bar{C} = \\tfrac{1}{n}\\sum\\cos\\theta_i,\\quad \\bar{S} = \\tfrac{1}{n}\\sum\\sin\\theta_i",
+   "R = \\sqrt{\\bar{C}^2 + \\bar{S}^2}",
+   "z = nR^2",
+   "p \\approx e^{-z}\\left[1 + \\frac{2z - z^2}{4n} - \\frac{24z - 132z^2 + 76z^3 - 9z^4}{288n^2}\\right]"
+  ],
+  "references": [
+   {
+    "cite": "Batschelet, E. (1981). Circular Statistics in Biology. Academic Press, London."
+   },
+   {
+    "cite": "Zar, J.H. (1999). Biostatistical Analysis, 4th ed. Prentice Hall, ch. 27."
+   },
+   {
+    "cite": "Fisher, N.I. (1993). Statistical Analysis of Circular Data. Cambridge University Press."
+   },
+   {
+    "cite": "Watson GS, Williams EJ (1956) On the construction of significance tests on the circle and the sphere. Biometrika 43:344-352.",
+    "doi": "10.1093/biomet/43.3-4.344"
+   }
+  ],
+  "crosslinks": [
+   "ch12",
+   "ch7",
+   "glossary"
+  ]
+ },
+ "CircadianFunctionIndex": {
+  "description": "The Circadian Function Index (CFI) condenses the robustness of a rest-activity rhythm into one number between 0 and 1. It is built from three nonparametric variables computed on activity resampled into equal epochs and folded onto an average day: interdaily stability (IS, how reproducible the daily pattern is from day to day), intradaily variability (IV, how fragmented activity is within a day), and relative amplitude (RA, the normalised contrast between the most active 10 h and least active 5 h). Because it is nonparametric, the CFI makes no assumption that the rhythm is sinusoidal, which suits fragmented or masked human and animal activity records.\n\nAnCiR computes IS, IV and RA with the same routine as the Nonparametric RA node, then combines them: IS and RA already lie in [0,1] and increase with rhythm quality, while IV is inverted as (2 - IV)/2 so that all three point the same way, and the three are averaged (each clamped to [0,1]). A CFI near 1 indicates a stable, high-amplitude, well-consolidated rhythm; a CFI near 0 indicates a weak or fragmented one. Reporting the component IS/IV/RA alongside the CFI is recommended so the driver of any difference is visible.",
+  "maths": [
+   "\\text{IS} = \\frac{n\\sum_{h}(\\bar{x}_h - \\bar{x})^2}{p\\sum_{i}(x_i - \\bar{x})^2}",
+   "\\text{IV} = \\frac{n\\sum_{i=2}^{n}(x_i - x_{i-1})^2}{(n-1)\\sum_{i}(x_i - \\bar{x})^2}",
+   "\\text{RA} = \\frac{M10 - L5}{M10 + L5}",
+   "\\text{CFI} = \\frac{1}{3}\\left[\\text{IS} + \\frac{2 - \\text{IV}}{2} + \\text{RA}\\right]"
+  ],
+  "references": [
+   {
+    "cite": "Ortiz-Tudela, E., Martinez-Nicolas, A., Campos, M., Rol, M.A. & Madrid, J.A. (2010). A new integrated variable based on thermometry, actimetry and body position (TAP) to evaluate circadian system status in humans. PLoS Computational Biology, 6(11), e1000996.",
+    "doi": "10.1371/journal.pcbi.1000996"
+   },
+   {
+    "cite": "Van Someren, E.J.W., Swaab, D.F., Colenda, C.C., Cohen, W., McCall, W.V. & Rosenquist, P.B. (1999). Bright light therapy: improved sensitivity to its effects on rest-activity rhythms in Alzheimer patients by application of nonparametric methods. Chronobiology International, 16(4), 505-518."
+   },
+   {
+    "cite": "Witting, W., Kwa, I.H., Eikelenboom, P., Mirmiran, M. & Swaab, D.F. (1990). Alterations in the circadian rhythm of activity in Alzheimer's disease. Biological Psychiatry, 27(6), 563-572."
+   }
+  ],
+  "crosslinks": [
+   "ch13",
+   "ch5",
+   "glossary"
+  ]
+ },
+ "Split": {
+  "description": "Split data divides a series into consecutive segments at user-chosen boundary times, emitting one bundle of columns per segment (rows outside a segment are set to null so column lengths stay aligned, as with a filter). It is the restructuring step for isolating experimental phases, for example splitting a record at a lights-off transition or at day boundaries so that each stretch can be periodogram- or cosinor-analysed separately.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4",
+   "ch5"
+  ]
+ },
+ "BinnedData": {
+  "description": "Bin Data groups a series into regular intervals along the time axis and reduces the values in each bin to a single number using a chosen aggregation (mean, sum, etc.). Binning is a standard preprocessing step for actimetry and similar high-resolution data: it reduces noise, produces the evenly spaced epochs many rhythm methods expect, and lets you convert, for example, per-minute activity into hourly totals. Bin size, start, and step are configurable, including non-uniform cut points.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "Interpolate": {
+  "description": "Interpolate estimates values at new time points from the existing samples, in one of two modes: fill (replace missing values in place) or resample (evaluate on a fresh regular grid at a chosen step). Three schemes are offered: piecewise linear, nearest-neighbour (hold), and natural cubic spline. Endpoints are clamped rather than extrapolated wildly. This is the standard fix for records with gaps or irregular sampling before applying analyses such as the FFT that assume evenly spaced data.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4",
+   "ch8"
+  ]
+ },
+ "LongToWide": {
+  "description": "Long To Wide reshapes a long-format table, where each row is one (category, time, value) triple, into wide format with a single shared time column and one value column per category. This is the inverse of Wide To Long and is used to bring stacked, database-style exports into the side-by-side column layout that AnCiR's plots and per-series analyses expect.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "WideToLong": {
+  "description": "Wide To Long reshapes a wide table (a time column plus several value columns, one per series) into long format with three columns: time, category (which series the value came from), and value. It is the inverse of Long To Wide and prepares data for grouped comparisons, long-format tools, or exchange with software that expects tidy data.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "Sort": {
+  "description": "Sort reorders the rows of the selected columns according to the values of one key column, ascending or descending, moving all chosen columns together so rows stay aligned. It is useful to restore monotonic time ordering after merges or edits, or to arrange data by magnitude prior to display.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "CollectColumns": {
+  "description": "Collect Columns concatenates several input columns into one longer column, stacking their values end to end. It is a plumbing step for pooling data, for example combining per-segment or per-subject columns into a single column so that one downstream summary, histogram, or statistic covers them all.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "ColumnSet": {
+  "description": "Column Set builds a live subset of columns selected by a name/label pattern (matching the column name, its group label, or either) and bundles them into one reusable connection. Instead of wiring many individual columns into an analysis or plot, you wire the single set port; as columns matching the pattern appear or disappear, the set and everything downstream of it update automatically. It is a convenience for keeping multi-series analyses and figures in sync with an evolving dataset.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "ColumnFunctions": {
+  "description": "Column Function takes several columns and produces one output by applying an aggregate across them at each row: Add (element-wise sum), Mean, Min, Max, or Std Dev over the selected columns. A common use is averaging replicate recordings into a single mean series, or computing the per-timepoint standard deviation as a spread measure to accompany a mean profile.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "StoredValueGroup": {
+  "description": "Stored Value Group collects individual scalar results that have been saved from analyses (for example fitted periods, amplitudes, or index values) and arranges them into named groups, outputting a category column and an aligned value column. This turns scattered per-analysis metrics into a single tidy table that can feed a boxplot, a group comparison, or an export.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4",
+   "ch13"
+  ]
+ },
+ "SimulatedData": {
+  "description": "Simulate Data produces a synthetic time-series table from a cosine-plus-noise model. It supports multiple consecutive sections, each with its own duration, rhythm period, phase, and amplitude, and optional noise added either additively or multiplicatively, sampled at a chosen interval. Because the underlying rhythm is known exactly, simulated data is ideal for teaching, for building demos, and for checking that a chosen analysis recovers the parameters it should.",
+  "maths": [
+   "y(t) = A\\cos\\!\\left(\\frac{2\\pi (t - \\phi)}{\\tau}\\right) + \\varepsilon(t)"
+  ],
+  "references": [],
+  "crosslinks": [
+   "ch3",
+   "ch1"
+  ]
+ },
+ "BlankColumn": {
+  "description": "Enter Data creates a column (or small table) from values you type in or paste as CSV or JSON, without needing a file import. It is the quickest way to get a small hand-entered dataset, a worked example, or values copied from a spreadsheet into the workflow.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch3",
+   "ch2"
+  ]
+ },
+ "SequenceColumn": {
+  "description": "Sequence Column generates an evenly spaced sequence, either numeric (start, step, count/end) or a time sequence (start time, step in hours, end time). It is typically used to construct a regular time axis to accompany hand-entered or simulated values, or a simple index column for restructuring operations.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch3"
+  ]
+ },
+ "Random": {
+  "description": "Random produces a column of pseudo-random numbers drawn from a chosen distribution (uniform, Gaussian, or exponential), transformed by an offset and multiplier to set location and scale. The generator is seeded, so a given seed reproduces the same values exactly, which matters for reproducible demonstrations and tests. Use it to inject controlled noise into a series or to generate random inputs for exploring the analysis tools.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch3"
+  ]
+ },
+ "Add": {
+  "description": "A basic arithmetic transform: it takes an input column and returns a new column where a constant (or a second column, matched row-for-row) has been added to each value. Nulls/blanks pass through unchanged.\n\nUse it for simple offsets and baseline shifts, or as a building block in longer preprocessing chains.",
+  "maths": [
+   "y_i = x_i + c"
+  ],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "Multiply": {
+  "description": "A basic arithmetic transform that returns a new column with each input value multiplied by a constant (or by a second column, matched row-for-row). Nulls/blanks pass through unchanged.\n\nHandy for unit conversion (e.g. minutes to hours), gain adjustment, or sign flips (multiply by -1).",
+  "maths": [
+   "y_i = c \\cdot x_i"
+  ],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "Sub": {
+  "description": "Substitute performs an exact find-and-replace over a column: any value equal to the 'find' value is swapped for the 'replace' value; everything else is left as-is. It is most useful for recoding missing-data sentinels (such as -999 or 0) that would otherwise distort statistics and plots.\n\nIt operates on the raw stored value, so it is blocked for time columns (where the underlying UNIX-ms value is not meaningful to match on).",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "EditValue": {
+  "description": "Edit value lets you patch individual entries in a column by row position, producing a new column with those cells replaced and everything else copied through. It is a non-destructive manual correction: the original column is untouched and the edits live in the node.\n\nUse it for the occasional obviously wrong reading; for rule-based cleaning prefer Substitute, Filter, or Remove Outliers.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "FilterByOtherCol": {
+  "description": "Filter selects rows based on comparisons against another column: you choose a column, an operator (equality, inequality, ordering, or string-contains), and a target value; rows that pass are kept and the input column is returned filtered to those rows. Multiple conditions can be combined.\n\nTypical uses are restricting an analysis to one day, one subject, or one experimental condition, or dropping flagged/invalid samples before downstream steps.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "OutlierRemoval": {
+  "description": "Remove Outliers detects anomalous points and sets them to null (preserving row positions and column length). Two rules are offered. The z-score rule flags points more than a chosen number of standard deviations from the mean. The IQR rule (Tukey's fence) flags points beyond a multiple of the interquartile range below Q1 or above Q3; being quantile-based it is more robust to the very outliers it is looking for.\n\nUse it cautiously: genuine biological events (a burst of activity) can look like outliers. Removing points leaves gaps, so pair it with Interpolate if a downstream step needs an even series.",
+  "maths": [
+   "\\text{z-score: flag } \\left| \\frac{x_i - \\bar{x}}{s} \\right| > \\tau",
+   "\\text{IQR: flag } x_i < Q_1 - k\\,\\mathrm{IQR} \\ \\text{ or } \\ x_i > Q_3 + k\\,\\mathrm{IQR}, \\quad \\mathrm{IQR} = Q_3 - Q_1"
+  ],
+  "references": [
+   {
+    "cite": "Tukey, J.W. (1977). Exploratory Data Analysis. Addison-Wesley."
+   }
+  ],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "RemoveTrend": {
+  "description": "Remove Trend estimates a slow underlying trend and subtracts it, returning the residuals. The trend can be a straight line, a polynomial of chosen degree, or an exponential/logarithmic curve fitted by least squares; a sliding-window option lets the trend adapt over a local window rather than fitting a single curve to the whole series.\n\nDetrending matters before spectral and periodogram analysis, where uncorrected drift adds low-frequency power that can mimic or mask a long-period rhythm. Choose the simplest model that captures the drift to avoid distorting the rhythm itself.",
+  "maths": [
+   "y^{\\text{detrended}}_i = y_i - \\hat{y}_i, \\quad \\hat{y} = \\text{fitted trend}(x)"
+  ],
+  "references": [],
+  "crosslinks": [
+   "ch4",
+   "ch6"
+  ]
+ },
+ "normalize": {
+  "description": "Normalize puts a column onto a common scale so series with different baselines or amplitudes can be overlaid and compared. Four methods are provided: z-score (standardise to zero mean and unit standard deviation), min-max (linearly rescale into a target range, default [0,1]), robust (centre on the median and scale by the median absolute deviation, resisting outliers), and unit-vector (divide by the Euclidean norm).\n\nNormalization changes scale but not the shape of a rhythm, so period and phase are unaffected while amplitude becomes relative. Robust or z-score scaling is usually preferred when comparing rhythmic strength across noisy or differently-scaled recordings.",
+  "maths": [
+   "\\text{z-score: } z_i = \\frac{x_i - \\bar{x}}{s}",
+   "\\text{min-max: } x'_i = \\frac{x_i - x_{\\min}}{x_{\\max} - x_{\\min}}(b - a) + a",
+   "\\text{robust: } x'_i = \\frac{x_i - \\tilde{x}}{\\mathrm{MAD}}",
+   "\\text{unit-vector: } x'_i = \\frac{x_i}{\\lVert x \\rVert}"
+  ],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "FrequencyFilter": {
+  "description": "Frequency Filter works in the Fourier domain. The uniformly-sampled series is transformed with an FFT (zero-padded to a power of two), the spectrum is multiplied by an ideal pass mask that keeps only the selected band of normalized frequencies, and the inverse transform reconstructs the filtered signal. Low-pass keeps slow components (smoothing), high-pass keeps fast components (removing baseline drift), and band-pass keeps an intermediate band (isolating a rhythm of interest).\n\nCutoffs are expressed as a fraction of the Nyquist frequency in the range 0–1, so they do not depend on the absolute sampling rate. Because the mask is a sharp brick-wall in frequency, very narrow bands can introduce ringing; the method assumes even sampling in time.",
+  "maths": [
+   "y = \\mathcal{F}^{-1}\\{ H(f)\\, \\mathcal{F}\\{x\\} \\}",
+   "H(f) = \\begin{cases} 1 & f \\in \\text{passband} \\\\ 0 & \\text{otherwise} \\end{cases}",
+   "f_{\\text{norm}}(k) = \\frac{2\\,\\min(k,\\, M-k)}{M}"
+  ],
+  "references": [
+   {
+    "cite": "Oppenheim, A.V. & Schafer, R.W. (2010). Discrete-Time Signal Processing (3rd ed.). Pearson."
+   }
+  ],
+  "crosslinks": [
+   "ch4",
+   "ch8"
+  ]
+ },
+ "SmoothedData": {
+  "description": "Smooth Data replaces a noisy series with a smoother estimate of its underlying trend. Four smoothers are offered. The moving average replaces each point with the mean of a surrounding window. Savitzky-Golay fits a low-order polynomial by least squares in a sliding window, which preserves peak height and width better than a plain average. LOESS performs locally weighted regression with a tricube kernel over a bandwidth-controlled span. Whittaker-Eilers finds the smooth curve that balances fidelity to the data against a roughness penalty scaled by λ.\n\nSmoothing trades noise for bias: too little leaves the signal noisy, too much attenuates genuine amplitude and can shift phase. Pick the mildest setting that reveals the structure you need, and remember that a smoothed curve is an estimate, not raw data.",
+  "maths": [
+   "\\text{moving average: } \\hat{y}_i = \\frac{1}{2m+1}\\sum_{j=-m}^{m} y_{i+j}",
+   "\\text{Whittaker: } \\min_{z} \\ \\sum_i (y_i - z_i)^2 + \\lambda \\sum_i (\\Delta^d z_i)^2"
+  ],
+  "references": [
+   {
+    "cite": "Savitzky, A. & Golay, M.J.E. (1964). Smoothing and Differentiation of Data by Simplified Least Squares Procedures. Analytical Chemistry 36(8):1627-1639.",
+    "doi": "10.1021/ac60214a047"
+   },
+   {
+    "cite": "Cleveland, W.S. (1979). Robust Locally Weighted Regression and Smoothing Scatterplots. Journal of the American Statistical Association 74(368):829-836.",
+    "doi": "10.1080/01621459.1979.10481038"
+   },
+   {
+    "cite": "Eilers, P.H.C. (2003). A Perfect Smoother. Analytical Chemistry 75(14):3631-3636.",
+    "doi": "10.1021/ac034173t"
+   }
+  ],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "scatterplot": {
+  "description": "The scatterplot draws points at (x, y) for each row, with several y-columns overlaid as distinct series. In chronobiology it is the workhorse raw-data view: plotting activity or expression against time shows the overall pattern, gaps, drift, and obvious rhythmicity at a glance.\n\nRead it as position over time (or one variable against another): rising and falling cycles suggest a rhythm, a sloping cloud suggests drift, and isolated far-off points suggest outliers. Brush-zoom and facet (small-multiples) options help when many series overlap.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "boxplot": {
+  "description": "A boxplot condenses each group's distribution into five summaries: the median (centre line), the first and third quartiles (box edges spanning the interquartile range), and whiskers extending to the data range, with far points drawn individually as candidate outliers. Grouping is set by the x-column.\n\nUse it to compare groups side by side: the box position shows typical level, the box height shows spread, and asymmetry hints at skew. It is a compact companion to Compare groups (stats) and to Mean ± SEM when you want the full spread rather than just central tendency.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4",
+   "ch13"
+  ]
+ },
+ "histogram": {
+  "description": "A histogram divides the range of one column into equal-width bins and draws a bar for the number of values falling in each. It reveals the distribution's shape: where values cluster, how spread out they are, whether the distribution is skewed or has multiple peaks, and whether there are stragglers in the tails.\n\nIt is a standard preprocessing check: many parametric tests assume approximate normality, and a histogram is the quickest way to judge that assumption (alongside considering a transform or a nonparametric test if the shape is far from bell-like).",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "meansem": {
+  "description": "Mean ± SEM plots the average of a y-column within each group as a marker, with whiskers of one standard error above and below. The standard error, s/√n, shrinks with sample size, so the whiskers convey how precisely each group mean is estimated rather than the raw spread of the data.\n\nUse it to compare group or time-bin averages compactly. Note that SEM bars are narrower than standard-deviation bars and are not confidence intervals; when the goal is to show variability of individuals rather than precision of the mean, a boxplot is often clearer.",
+  "maths": [
+   "\\mathrm{SEM} = \\frac{s}{\\sqrt{n}}"
+  ],
+  "references": [],
+  "crosslinks": [
+   "ch13",
+   "ch4"
+  ]
+ },
+ "actogram": {
+  "description": "An actogram stacks successive days of a time-series vertically, with time-of-day on the horizontal axis, so activity or another variable is shown as intensity/height within each day-row. It is conventionally double-plotted: each day is drawn twice (day n beside day n+1), which keeps events that straddle midnight intact and makes drifting rhythms appear as a continuous diagonal band.\n\nRead the vertical alignment of the active band: a straight vertical band indicates a stable ~24 h rhythm (entrained), while a band that marches steadily left or right indicates a free-running period shorter or longer than 24 h. It is the standard first-look tool for period, phase, and entrainment.",
+  "maths": [],
+  "references": [
+   {
+    "cite": "Refinetti, R., Cornélissen, G. & Halberg, F. (2007). Procedures for numerical analysis of circadian rhythms. Biological Rhythm Research 38(4):275-325."
+   }
+  ],
+  "crosslinks": [
+   "ch5"
+  ]
+ },
+ "periodogram": {
+  "description": "A periodogram evaluates how strongly a time-series oscillates at each of many trial periods and plots that power (or a test statistic) against period, together with a significance line. A peak rising above the threshold identifies a candidate rhythm and its period. The Lomb-Scargle method is well suited to unevenly sampled data and gaps, while the chi-squared (Sokolove-Bushell) periodogram is a classic choice for activity records.\n\nRead the position of the highest significant peak as the estimated period and its height as rhythmic strength; multiple peaks can indicate harmonics or several rhythms. Detrend and, if needed, evenly sample the input first, as drift and sampling artefacts add spurious low-frequency power. The Periodograms chapter covers method choice and interpretation in full.",
+  "maths": [],
+  "references": [
+   {
+    "cite": "Sokolove, P.G. & Bushell, W.N. (1978). The chi-square periodogram: its utility for analysis of circadian rhythms. Journal of Theoretical Biology 72(1):131-160."
+   },
+   {
+    "cite": "Scargle, J.D. (1982). Studies in astronomical time series analysis. II. Statistical aspects of spectral analysis of unevenly spaced data. The Astrophysical Journal 263:835-853."
+   }
+  ],
+  "crosslinks": [
+   "ch6"
+  ]
+ },
+ "correlogram": {
+  "description": "A correlogram plots the correlation of a series with a time-shifted copy of itself as a function of the lag (autocorrelation), or the correlation between two series across lags (cross-correlation). For a rhythmic signal the autocorrelation oscillates and decays, with peaks recurring at multiples of the period.\n\nRead the lag of the first prominent positive peak away from zero as an estimate of the period, and the height of successive peaks as an indication of how persistent (regular) the rhythm is. Because it works in the time domain, it complements frequency-domain tools like the periodogram and Fourier analysis. See the Correlograms chapter for detail.",
+  "maths": [
+   "r_k = \\frac{\\sum_{t} (x_t - \\bar{x})(x_{t+k} - \\bar{x})}{\\sum_{t} (x_t - \\bar{x})^2}"
+  ],
+  "references": [],
+  "crosslinks": [
+   "ch9"
+  ]
+ },
+ "fft": {
+  "description": "Fourier analysis expresses a time-series as a sum of sinusoids of different frequencies and shows the amplitude (or power) contributed by each. The plot of magnitude against frequency, the spectrum, has peaks at the frequencies present in the signal; a peak at frequency f corresponds to a rhythm of period 1/f, and integer-multiple peaks indicate harmonics of a non-sinusoidal waveform.\n\nThe FFT assumes uniformly sampled data, so interpolate onto a regular grid if there are gaps, and detrend beforehand to avoid low-frequency leakage. Frequency resolution is limited by record length. The Fourier Analysis chapter develops the method and its relationship to the periodogram.",
+  "maths": [
+   "X_k = \\sum_{n=0}^{N-1} x_n\\, e^{-i 2\\pi k n / N}"
+  ],
+  "references": [],
+  "crosslinks": [
+   "ch8"
+  ]
+ },
+ "tableplot": {
+  "description": "The Table plot displays chosen columns as a conventional spreadsheet-style grid, or shows per-column summary statistics instead of raw rows. It is a display node, not an analysis: it simply presents the numbers that other nodes produce.\n\nUse it to verify exact values, confirm that a transform or analysis produced what you expected, or lay out computed metrics for reporting and export alongside the graphical plots.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch4",
+   "ch13"
+  ]
+ },
+ "dataview": {
+  "description": "Data View shows the raw contents of selected columns so you can read and scroll the actual recorded values. It is the quickest way to check what was imported, find missing entries or sentinel codes, and confirm that columns line up before building an analysis.\n\nUnlike the Table plot's optional summary mode, Data View is purely a window onto the raw rows, making it a natural first stop after importing or generating data.",
+  "maths": [],
+  "references": [],
+  "crosslinks": [
+   "ch2",
+   "ch4"
+  ]
+ },
+ "Cosinor": {
+  "description": "Cosinor analysis models a time series as a cosine wave riding on a constant baseline. From a single fit you recover four biologically meaningful numbers: the MESOR (the rhythm-adjusted mean level about which the wave oscillates), the amplitude (half the peak-to-trough swing), the acrophase (the clock time of the peak), and the period (the length of one cycle). The node takes a time column (xIN) and one or more value columns (yIN); each value column is fitted independently. When 'useFixedPeriod' is set the period is pinned (classic linear least-squares cosinor, optionally with extra harmonics for non-sinusoidal shapes); otherwise the period is estimated as a free nonlinear parameter, and 'Ncurves' can superpose several cosines.\n\nOutputs include a fitted-curve column pair (cosinorx / cosinory_*) you can plot over the data, plus scalar metric ports for period, amplitude, R², the model p-value, and phase descriptors (bathyphase, phase angle). Significance comes from an F-test on the fitted model (R²), and an optional label-shuffling permutation test gives an empirical p-value that does not assume Gaussian, independent residuals. Cosinor is the right tool when the rhythm is roughly sinusoidal and you need comparable, reportable parameters; it is less appropriate for sharply pulsatile or square-wave activity, where a rectangular-wave or nonparametric analysis fits better.",
+  "maths": [
+   "y(t) = M + A\\cos\\!\\left(\\frac{2\\pi t}{T} + \\phi\\right) + \\varepsilon",
+   "y(t) = M + \\sum_{k=1}^{H} A_k\\cos\\!\\left(\\frac{2\\pi k\\,t}{T} + \\phi_k\\right)",
+   "R^2 = 1 - \\frac{\\sum_i (y_i-\\hat y_i)^2}{\\sum_i (y_i-\\bar y)^2}"
+  ],
+  "references": [
+   {
+    "cite": "Cornélissen G (2014) Cosinor-based rhythmometry. Theoretical Biology and Medical Modelling 11:16.",
+    "doi": "10.1186/1742-4682-11-16"
+   },
+   {
+    "cite": "Refinetti R, Cornélissen G, Halberg F (2007) Procedures for numerical analysis of circadian rhythms. Biological Rhythm Research 38(4):275-325.",
+    "doi": "10.1080/09291010600903692"
+   }
+  ],
+  "crosslinks": [
+   "ch7",
+   "ch11",
+   "ch13"
+  ]
+ },
+ "NonparametricRA": {
+  "description": "This node reports the nonparametric circadian rhythm variables widely used in human actigraphy and animal activity studies. Interdaily stability (IS) measures how faithfully the 24 h pattern repeats from day to day (0 = none, 1 = perfectly stable). Intradaily variability (IV) quantifies fragmentation, roughly the frequency of transitions between rest and activity within a day. Relative amplitude (RA) contrasts the average activity of the most active 10 hours (M10) with the least active 5 hours (L5), and M10onset / L5onset give the clock times those windows begin, useful phase markers that need no sinusoid.\n\nThe inputs are a time column (xIN) and one or more activity columns (yIN). Internally the record is resampled into equal epochs (epochHours) and folded onto the chosen period (default 24 h); M10/L5 are found by sliding windows of the requested length over the profile. Outputs are the scalar metric ports IS, IV, RA, M10, L5, M10onset and L5onset, plus a profile column pair (npcrax / npcray_*) for plotting the average day. Because nothing about the shape of the rhythm is assumed, these variables stay meaningful for pulsatile, masked, or clearly non-cosine data where parametric amplitude and acrophase would mislead.",
+  "maths": [
+   "IS = \\frac{n\\sum_{h=1}^{p}(\\bar x_h - \\bar x)^2}{p\\sum_{i=1}^{n}(x_i - \\bar x)^2}",
+   "IV = \\frac{n\\sum_{i=2}^{n}(x_i - x_{i-1})^2}{(n-1)\\sum_{i=1}^{n}(x_i - \\bar x)^2}",
+   "RA = \\frac{M10 - L5}{M10 + L5}"
+  ],
+  "references": [
+   {
+    "cite": "Van Someren EJW, Swaab DF, Colenda CC, Cohen W, McCall WV, Rosenquist PB (1999) Bright light therapy: improved sensitivity to its effects on rest-activity rhythms in Alzheimer patients by application of nonparametric methods. Chronobiology International 16(4):505-518.",
+    "doi": "10.3109/07420529908998724"
+   },
+   {
+    "cite": "Witting W, Kwa IH, Eikelenboom P, Mirmiran M, Swaab DF (1990) Alterations in the circadian rest-activity rhythm in aging and Alzheimer's disease. Biological Psychiatry 27(6):563-572."
+   }
+  ],
+  "crosslinks": [
+   "ch4",
+   "ch5",
+   "ch13"
+  ]
+ },
+ "RhythmicityAnalysis": {
+  "description": "Rhythmicity Analysis answers 'is there a rhythm, and what is its period?' by transforming the raw series into the period (or frequency, or lag) domain. It offers three complementary views selected by the 'analysis' parameter. A periodogram scans a grid of candidate periods and reports spectral power at each; the Lomb-Scargle variant is the default because it is designed for unevenly sampled data and missing values, while the chi-squared (Sokolove-Bushell) and Enright methods fold the data at each trial period. The FFT gives classic Fourier magnitude and phase for regularly sampled records, and the correlogram (autocorrelation) reveals periodicity as recurring peaks at multiples of the cycle length.\n\nThe node takes a time column (xIN) and value columns (yIN) and, for each method, emits an x/y curve pair (rhythmicityx / rhythmicityy_*) for plotting the spectrum, correlogram, or magnitude curve, plus scalar stat ports (stat_*) such as the peak period and its power. Periodograms optionally draw a significance threshold at the chosen alpha. Reach for this node early in an analysis to establish the period before running a parametric fit such as cosinor, and prefer Lomb-Scargle whenever sampling is irregular.",
+  "maths": [
+   "P_N(\\omega) = \\frac{1}{2\\sigma^2}\\left\\{\\frac{\\left[\\sum_i (x_i-\\bar x)\\cos\\omega(t_i-\\tau)\\right]^2}{\\sum_i \\cos^2\\omega(t_i-\\tau)} + \\frac{\\left[\\sum_i (x_i-\\bar x)\\sin\\omega(t_i-\\tau)\\right]^2}{\\sum_i \\sin^2\\omega(t_i-\\tau)}\\right\\}",
+   "\\tan(2\\omega\\tau) = \\frac{\\sum_i \\sin 2\\omega t_i}{\\sum_i \\cos 2\\omega t_i}",
+   "Q_p = \\frac{N\\sum_{h=1}^{p}(\\bar x_h-\\bar x)^2}{\\sum_{i=1}^{N}(x_i-\\bar x)^2}, \\quad Q_p \\sim \\chi^2_{p-1}"
+  ],
+  "references": [
+   {
+    "cite": "Lomb NR (1976) Least-squares frequency analysis of unequally spaced data. Astrophysics and Space Science 39(2):447-462.",
+    "doi": "10.1007/BF00648343"
+   },
+   {
+    "cite": "Scargle JD (1982) Studies in astronomical time series analysis. II. Statistical aspects of spectral analysis of unevenly spaced data. The Astrophysical Journal 263:835-853.",
+    "doi": "10.1086/160554"
+   },
+   {
+    "cite": "Sokolove PG, Bushell WN (1978) The chi square periodogram: its utility for analysis of circadian rhythms. Journal of Theoretical Biology 72(1):131-160.",
+    "doi": "10.1016/0022-5193(78)90022-X"
+   },
+   {
+    "cite": "Enright JT (1965) The search for rhythmicity in biological time-series. Journal of Theoretical Biology 8(3):426-468."
+   }
+  ],
+  "crosslinks": [
+   "ch6",
+   "ch8",
+   "ch9"
+  ]
+ },
+ "MovingAnalysis": {
+  "description": "Most rhythm analyses assume the rhythm is stationary, one period and amplitude for the whole record. Moving Analysis relaxes that by re-running an analysis inside a window that slides along the series, so you can see how a parameter evolves. You choose the window length (windowSize) and how far it advances each step (stepSize), where each window's result is time-stamped (start, centre, or end via binLabel). Inside each window it can run any of the same analyses as the static nodes: a periodogram (Lomb-Scargle / chi-squared / Enright), cosinor, FFT, correlogram, rectangular-wave or double-logistic fit, controlled by the 'analysis' parameter and the matching method-specific settings.\n\nInputs are a time column (xIN) and value columns (yIN); the output is a family of stats_* columns giving the per-window result (such as the dominant period or fitted amplitude) that you plot against window time to reveal trends, transitions, or instability. This is the tool for non-stationary questions: entrainment transients, gradual period change under constant conditions, or amplitude changes across a treatment. Window length trades resolution against reliability, a longer window gives a steadier estimate but blurs fast change.",
+  "maths": [],
+  "references": [
+   {
+    "cite": "Refinetti R, Cornélissen G, Halberg F (2007) Procedures for numerical analysis of circadian rhythms. Biological Rhythm Research 38(4):275-325.",
+    "doi": "10.1080/09291010600903692"
+   },
+   {
+    "cite": "Sokolove PG, Bushell WN (1978) The chi square periodogram: its utility for analysis of circadian rhythms. Journal of Theoretical Biology 72(1):131-160.",
+    "doi": "10.1016/0022-5193(78)90022-X"
+   }
+  ],
+  "crosslinks": [
+   "ch6",
+   "ch5",
+   "ch13"
+  ]
+ },
+ "RectangularWave": {
+  "description": "Many activity rhythms are not sinusoidal but nearly binary: an animal is active for part of the cycle and at rest for the remainder. The Rectangular Wave node fits such an on/off pattern using a smooth square wave built from a hyperbolic-tangent (tanh) approximation, which stays differentiable so it can be fitted by nonlinear least squares. Its key extra parameter is the duty cycle d, the fraction of each period spent in the active state; a sharpness parameter kappa controls how square the corners are (large kappa approaches a true step). Period (omega), duty cycle and sharpness can each be pinned to a fixed value or left free, while the baseline, amplitude and phase are always fitted.\n\nInputs are a time column (xIN) and value columns (yIN); outputs are a fitted-curve column pair (rectwavex / rectwavey_*) to overlay on the data and a pvalue metric port from an optional permutation test. Choose this node over cosinor when the raw trace shows sharp transitions and a flat active plateau rather than a smooth sinusoid, and when the width of the active phase (the duty cycle) is itself a quantity of interest.",
+  "maths": [
+   "f(t) = M + A\\,\\tanh\\!\\big(\\kappa\\,(\\sin(\\omega t + \\phi) - \\cos(\\pi d))\\big)",
+   "\\omega = \\frac{2\\pi}{T}"
+  ],
+  "references": [
+   {
+    "cite": "Marquardt DW (1963) An algorithm for least-squares estimation of nonlinear parameters. Journal of the Society for Industrial and Applied Mathematics 11(2):431-441.",
+    "doi": "10.1137/0111030"
+   }
+  ],
+  "crosslinks": [
+   "ch7",
+   "ch13"
+  ]
+ },
+ "DoubleLogistic": {
+  "description": "A double-logistic curve is two sigmoids back to back: one that rises and one that falls, so together they trace a single pulse, a baseline, a smooth climb to a plateau, and a smooth return. This shape is the standard model in land-surface phenology (green-up and senescence) and transfers naturally to circadian on/off transitions. The fit gives interpretable transition parameters: t1 and t2 are the inflection times of the rise and fall, and k1 and k2 their steepness, alongside a baseline (M) and amplitude (A). In periodic mode the pulse is tiled at the chosen period T to model a repeating active-phase/rest-phase train without DC drift.\n\nInputs are a time column (xIN) and value columns (yIN); k1, k2 and the period can each be fixed or fitted. Outputs are a fitted-curve column pair (dlogx / dlogy_*) for plotting over the data and a pvalue metric port from an optional permutation test. Prefer this node when the feature of interest is the timing and abruptness of a transition (onset/offset) rather than a symmetric oscillation, or when the data are a one-shot ramp-up-then-down rather than a sustained rhythm.",
+  "maths": [
+   "f(t) = M + A\\left[\\sigma\\!\\big(k_1(t - t_1)\\big) - \\sigma\\!\\big(k_2(t - t_2)\\big)\\right]",
+   "\\sigma(z) = \\frac{1}{1 + e^{-z}}"
+  ],
+  "references": [
+   {
+    "cite": "Zhang X, Friedl MA, Schaaf CB, Strahler AH, Hodges JCF, Gao F, Reed BC, Huete A (2003) Monitoring vegetation phenology using MODIS. Remote Sensing of Environment 84(3):471-475.",
+    "doi": "10.1016/S0034-4257(02)00135-9"
+   },
+   {
+    "cite": "Marquardt DW (1963) An algorithm for least-squares estimation of nonlinear parameters. Journal of the Society for Industrial and Applied Mathematics 11(2):431-441.",
+    "doi": "10.1137/0111030"
+   }
+  ],
+  "crosslinks": [
+   "ch7",
+   "ch13"
+  ]
+ },
+ "TrendFit": {
+  "description": "TrendFit captures the slow, non-oscillatory part of a series, the baseline drift, growth, or decay that sits underneath any rhythm. You pick a model (linear, polynomial of a chosen degree, exponential, or logarithmic) and the node fits it by ordinary least squares, returning the fitted curve together with goodness-of-fit statistics and the fitted coefficients. Beyond simply describing a trend, its main use in chronobiology is detrending: subtracting a fitted baseline before spectral or cosinor analysis removes low-frequency power that would otherwise masquerade as, or obscure, a genuine rhythm.\n\nInputs are a time column (xIN) and value columns (yIN). Outputs are a fitted-curve column pair (trendx / trendy_*) to overlay or subtract, and scalar metric ports r2 (coefficient of determination), rmse (root-mean-square residual), and coef_* (the model coefficients, e.g. intercept and slope for a line). Choose the simplest model that captures the drift: a straight line for steady baseline change, a low-degree polynomial for gentle curvature, and exponential or logarithmic forms for saturating growth or decay. Over-fitting with a high polynomial degree risks absorbing part of the rhythm itself.",
+  "maths": [
+   "y = \\sum_{j=0}^{d}\\beta_j\\,x^{j}",
+   "R^2 = 1 - \\frac{\\sum_i (y_i - \\hat y_i)^2}{\\sum_i (y_i - \\bar y)^2}, \\quad \\mathrm{RMSE} = \\sqrt{\\tfrac{1}{n}\\sum_i (y_i - \\hat y_i)^2}"
+  ],
+  "references": [
+   {
+    "cite": "Refinetti R, Cornélissen G, Halberg F (2007) Procedures for numerical analysis of circadian rhythms. Biological Rhythm Research 38(4):275-325.",
+    "doi": "10.1080/09291010600903692"
+   }
+  ],
+  "crosslinks": [
+   "ch4",
+   "ch11"
+  ]
+ },
+ "FitFunction": {
+  "description": "FitFunction is the umbrella fitting node: it exposes the cosinor, rectangular-wave and double-logistic models through a single component and a common set of controls, so you can switch models on the same series without rewiring. Under the hood it dispatches to the same fitting routines as the dedicated nodes, minimising a least-squares objective (with a Levenberg-Marquardt style nonlinear optimiser for the non-linear models), and it standardises the significance testing with a shared label-permutation test whose statistic (default R²) and seed you control for reproducibility.\n\nInputs are a time column (xIN) and value columns (yIN); the 'model' parameter selects the waveform and the relevant model parameters (fixed period, harmonics, duty cycle, kappa, k1/k2, etc.) become active. Outputs are a fitted-curve column pair (fitx / fity_*) for plotting and permstats_* columns holding the permutation-test null distribution and result. Use this node for model comparison, when you want to fit an arbitrary supported shape, or when you specifically want the permutation-based p-value; for a single dedicated model with its own tailored output ports, the specific node (Cosinor, RectangularWave, DoubleLogistic) is more direct.",
+  "maths": [
+   "\\hat\\theta = \\arg\\min_{\\theta} \\sum_i \\big(y_i - f(t_i;\\theta)\\big)^2"
+  ],
+  "references": [
+   {
+    "cite": "Marquardt DW (1963) An algorithm for least-squares estimation of nonlinear parameters. Journal of the Society for Industrial and Applied Mathematics 11(2):431-441.",
+    "doi": "10.1137/0111030"
+   },
+   {
+    "cite": "Refinetti R, Cornélissen G, Halberg F (2007) Procedures for numerical analysis of circadian rhythms. Biological Rhythm Research 38(4):275-325.",
+    "doi": "10.1080/09291010600903692"
+   }
+  ],
+  "crosslinks": [
+   "ch7",
+   "ch11"
+  ]
+ },
+ "AverageProfile": {
+  "description": "The average daily profile is the folded 'mean day' of a recording: every sample's timestamp is reduced to its position within one period, samples are grouped into equally spaced phase bins over [0, period), and the mean of each bin is reported with its standard error. This collapses many cycles into a single representative waveform, revealing the characteristic shape (unimodal, bimodal, plateaued) and the timing of peaks and troughs while averaging away day-to-day noise. It is the same fold that the nonparametric rest-activity analysis performs internally, exposed here as a standalone primitive.\n\nInputs are a time column (xIN) and one or more value columns (yIN); the period sets the fold length and nBins the phase resolution. Outputs are a shared bin-centre column (avgprofx), one mean column per input series (avgprof_*), and a matching SEM column per series (avgprofsem_*), so you can plot the mean waveform with error bars. Use it for a quick, assumption-free look at rhythm shape and phase, as a companion to cosinor (which summarises that shape with parameters), or to prepare an averaged trace for further analysis. Bins with no samples return NaN, and bins with a single sample have no defined SEM.",
+  "maths": [
+   "\\varphi_i = (t_i - t_0)\\bmod T",
+   "\\bar y_b = \\frac{1}{n_b}\\sum_{i\\in b} y_i, \\qquad \\mathrm{SEM}_b = \\frac{s_b}{\\sqrt{n_b}}"
+  ],
+  "references": [
+   {
+    "cite": "Refinetti R, Cornélissen G, Halberg F (2007) Procedures for numerical analysis of circadian rhythms. Biological Rhythm Research 38(4):275-325.",
+    "doi": "10.1080/09291010600903692"
+   }
+  ],
+  "crosslinks": [
+   "ch4",
+   "ch5"
+  ]
+ },
+ "FormulaColumn": {
+  "description": "Formula Column creates a new column by evaluating a user-written expression once per row. The formula references other columns by token and combines them with arithmetic operators and common mathematical functions; each row substitutes that row's values and the result becomes the output column. It is the general-purpose escape hatch for per-row maths that the dedicated arithmetic nodes (Add, Multiply, Column Function) do not cover, such as ratios, normalised indices, or nonlinear transforms.\n\nBecause the expression is authored at runtime, no new node type has to be compiled; the trade-off is that it computes strictly element-wise (one output value per input row) rather than performing whole-series analyses.",
+  "maths": [
+   "y_i = f(a_i, b_i, \\ldots)"
+  ],
+  "references": [],
+  "crosslinks": [
+   "ch4"
+  ]
+ },
+ "DescribeData": {
+  "description": "Describe Data produces an exploratory summary of every numeric column wired into it — the sensible first look at a dataset before any test is chosen. For each column it reports the sample size, two measures of centre (mean and median), three of spread (standard deviation, total range, and the interquartile range between the first and third quartiles), the extremes (minimum and maximum), and two shape statistics (skewness and kurtosis). Quartiles use linear interpolation between order statistics (the type-7 / “inclusive” convention).\n\nSkewness is the adjusted Fisher–Pearson standardised moment g₁ (sample-corrected, matching scipy.stats.skew(bias=False)): positive values mean a longer right tail, negative a longer left tail. Kurtosis is reported as bias-corrected excess kurtosis g₂ (scipy.stats.kurtosis(bias=False)), so a perfectly normal distribution scores 0; positive excess means heavier tails and a sharper peak than a normal, negative means lighter tails and a flatter peak.\n\nThe practical purpose is diagnostic. A large skewness or excess kurtosis is an early warning that mean-based, normality-assuming methods (t-tests, Pearson correlation, cosinor confidence intervals) may mislead, and that a transformation or a rank-based alternative may be wiser. Because the output is one tidy row per variable, it composes directly with a table for side-by-side comparison of many columns.",
+  "maths": [
+   "\\bar{x} = \\tfrac{1}{n}\\sum_{i} x_i,\\qquad s = \\sqrt{\\tfrac{1}{n-1}\\sum_i (x_i-\\bar{x})^2}",
+   "\\text{IQR} = Q_3 - Q_1",
+   "g_1 = \\frac{\\sqrt{n(n-1)}}{n-2}\\;\\frac{m_3}{m_2^{3/2}},\\qquad m_k = \\tfrac1n\\sum_i (x_i-\\bar{x})^k",
+   "g_2 = \\frac{n-1}{(n-2)(n-3)}\\Big[(n+1)\\big(\\tfrac{m_4}{m_2^{2}}-3\\big) + 6\\Big]"
+  ],
+  "references": [
+   {
+    "cite": "Tukey, J.W. (1977). Exploratory Data Analysis. Addison-Wesley, Reading MA."
+   },
+   {
+    "cite": "Joanes DN, Gill CA (1998) Comparing measures of sample skewness and kurtosis. The Statistician 47:183-189.",
+    "doi": "10.1111/1467-9884.00122"
+   },
+   {
+    "cite": "Hyndman RJ, Fan Y (1996) Sample quantiles in statistical packages. The American Statistician 50:361-365.",
+    "doi": "10.1080/00031305.1996.10473566"
+   }
+  ],
+  "crosslinks": [
+   "ch4",
+   "ch13",
+   "glossary"
+  ]
+ },
+ "NormalityTest": {
+  "description": "Normality Test checks, for each wired column, whether the data are consistent with being drawn from a normal (Gaussian) distribution. This is the assumption behind t-tests, ANOVA, Pearson correlation and the confidence intervals of cosinor analysis, so it is worth checking before relying on those methods. The node reports the test statistic, a p-value, and a plain verdict (a small p-value — below the chosen α, default 0.05 — means the data depart significantly from normal).\n\nThree tests are offered. Shapiro–Wilk (the default) is the most powerful general test; AnCiR uses Royston's approximation (AS R94) and it is valid for 3 ≤ n ≤ 5000. D'Agostino–Pearson K² is an omnibus test that combines sample skewness and kurtosis (matching scipy's normaltest); it needs n ≥ 8 and its kurtosis term is unreliable below about n ≥ 20. Jarque–Bera uses the same skewness/kurtosis idea with a simpler large-sample form; it is defined down to small n but is weaker there.\n\nA caution on interpretation: with large samples these tests become sensitive to departures too small to matter in practice, while with tiny samples they have little power to detect real non-normality. Read the verdict alongside the shape statistics from Describe Data and, ideally, a histogram or Q–Q plot rather than treating the p-value as a hard gate.",
+  "maths": [
+   "\\text{Shapiro–Wilk: } W = \\frac{\\left(\\sum_i a_i x_{(i)}\\right)^2}{\\sum_i (x_i-\\bar{x})^2}",
+   "\\text{D'Agostino–Pearson: } K^2 = Z(\\sqrt{b_1})^2 + Z(b_2)^2 \\;\\sim\\; \\chi^2_2",
+   "\\text{Jarque–Bera: } JB = \\frac{n}{6}\\left(S^2 + \\tfrac{1}{4}(K-3)^2\\right) \\;\\sim\\; \\chi^2_2"
+  ],
+  "references": [
+   {
+    "cite": "Shapiro SS, Wilk MB (1965) An analysis of variance test for normality (complete samples). Biometrika 52:591-611.",
+    "doi": "10.1093/biomet/52.3-4.591"
+   },
+   {
+    "cite": "Royston P (1992) Approximating the Shapiro-Wilk W-test for non-normality. Statistics and Computing 2:117-119.",
+    "doi": "10.1007/BF01891203"
+   },
+   {
+    "cite": "D'Agostino R, Pearson ES (1973) Tests for departure from normality. Empirical results for the distributions of b2 and sqrt(b1). Biometrika 60:613-622.",
+    "doi": "10.1093/biomet/60.3.613"
+   },
+   {
+    "cite": "Jarque CM, Bera AK (1987) A test for normality of observations and regression residuals. International Statistical Review 55:163-172.",
+    "doi": "10.2307/1403192"
+   }
+  ],
+  "crosslinks": [
+   "ch13",
+   "ch4",
+   "glossary"
+  ]
+ },
+ "ChiSquared": {
+  "description": "The Chi-squared test works with counts of categories rather than measured values. It has two modes. In the independence mode (the default) you supply two categorical columns; the node builds their contingency table and tests whether the two variables are associated, comparing the observed cell counts with the counts expected if the row and column variables were independent. In the goodness-of-fit mode you supply one column of counts and test whether they depart from a uniform expectation (every category equally likely) — useful, for example, for asking whether events are spread evenly across the phases of a cycle.\n\nThe statistic sums the squared, expectation-scaled discrepancies over all cells and is compared with a χ² distribution whose degrees of freedom depend on the table shape. For a 2×2 independence table AnCiR applies Yates' continuity correction by default (matching scipy), which shrinks each discrepancy by ½ to compensate for approximating discrete counts with a continuous distribution; the correction can be switched off.\n\nThe test assumes independent observations and adequate expected counts — a common rule of thumb is that expected counts should be at least 5 in most cells. When counts are sparse an exact test (for example Fisher's) is preferable; the node surfaces a warning in that situation.",
+  "maths": [
+   "\\chi^2 = \\sum_{\\text{cells}} \\frac{(O_{ij}-E_{ij})^2}{E_{ij}},\\qquad E_{ij} = \\frac{R_i\\,C_j}{N}",
+   "\\text{Yates } (2{\\times}2)\\text{: } \\chi^2 = \\sum \\frac{(|O_{ij}-E_{ij}|-\\tfrac12)^2}{E_{ij}}",
+   "\\text{df} = (r-1)(c-1)\\ \\text{(independence)},\\quad k-1\\ \\text{(goodness-of-fit)}"
+  ],
+  "references": [
+   {
+    "cite": "Pearson K (1900) On the criterion that a given system of deviations from the probable... Philosophical Magazine 50:157-175.",
+    "doi": "10.1080/14786440009463897"
+   },
+   {
+    "cite": "Yates F (1934) Contingency tables involving small numbers and the chi-square test. Supplement to the JRSS 1:217-235.",
+    "doi": "10.2307/2983604"
+   },
+   {
+    "cite": "Agresti, A. (2013). Categorical Data Analysis, 3rd ed. Wiley, Hoboken NJ."
+   }
+  ],
+  "crosslinks": [
+   "ch12",
+   "ch13",
+   "glossary"
+  ]
+ },
+ "Correlation": {
+  "description": "Correlation measures how strongly pairs of columns move together. Wire in two or more numeric columns and the node returns a tidy pairwise table: for every pair it reports the correlation coefficient r (from −1 for a perfect inverse relationship, through 0 for none, to +1 for a perfect direct one), a p-value testing whether that correlation could plausibly be zero, and the sample size n each pair was computed on.\n\nTwo coefficients are available. Pearson's r captures linear association and assumes roughly normal, outlier-free data. Spearman's ρ is Pearson's r applied to the ranks; it captures any monotonic relationship and is robust to outliers and non-normal shapes. The default method is “auto”: the node checks each column for normality and chooses Pearson when the data look normal, Spearman otherwise, so the coefficient is matched to the data without a manual decision.\n\nTwo cautions apply as always: correlation is not causation, and a coefficient near zero only rules out a monotonic trend — a strong but non-monotonic (for example cyclic) relationship can still hide behind r ≈ 0, which is exactly why rhythmic data often need the periodogram and cosinor tools rather than a plain correlation.",
+  "maths": [
+   "r = \\frac{\\sum_i (x_i-\\bar{x})(y_i-\\bar{y})}{\\sqrt{\\sum_i (x_i-\\bar{x})^2}\\,\\sqrt{\\sum_i (y_i-\\bar{y})^2}}",
+   "\\rho = 1 - \\frac{6\\sum_i d_i^2}{n(n^2-1)},\\qquad d_i = \\operatorname{rank}(x_i)-\\operatorname{rank}(y_i)",
+   "t = r\\sqrt{\\frac{n-2}{1-r^2}} \\;\\sim\\; t_{n-2}"
+  ],
+  "references": [
+   {
+    "cite": "Pearson K (1896) Mathematical contributions to the theory of evolution. III. Regression, heredity and panmixia. Phil. Trans. R. Soc. A 187:253-318.",
+    "doi": "10.1098/rsta.1896.0007"
+   },
+   {
+    "cite": "Spearman C (1904) The proof and measurement of association between two things. American Journal of Psychology 15:72-101.",
+    "doi": "10.2307/1412159"
+   }
+  ],
+  "crosslinks": [
+   "ch9",
+   "ch11",
+   "glossary"
+  ]
+ },
+ "CrossCorrelation": {
+  "description": "Cross-correlation asks how two time series line up in time. It takes two series and, at each lag k, correlates one against the other shifted by k steps; the result is a cross-correlogram — correlation plotted against lag. The lag at which correlation peaks estimates the delay between the two signals: if series Y tracks series X but a few samples later, the peak sits at that offset, quantifying the lead–lag relationship (for example, how far behind a light cue an activity rhythm follows).\n\nEach lag's correlation can be computed with Pearson's r (linear coupling) or Spearman's ρ (monotonic, rank-based and outlier-robust). The maximum lag scanned is set by the maxLag parameter, and every lag's correlation comes with a p-value.\n\nThe technique assumes the series are sampled on the same, regularly spaced time grid, since a “lag” must correspond to a fixed time step. Interpret peaks with care: strong autocorrelation within each series (as circadian data invariably have) inflates apparent cross-correlations and widens the range of lags that look significant, so pre-whitening or comparison against a suitable null is advisable before reading a delay as real.",
+  "maths": [
+   "r_{xy}(k) = \\frac{\\sum_t (x_t-\\bar{x})(y_{t+k}-\\bar{y})}{\\sqrt{\\sum_t (x_t-\\bar{x})^2}\\,\\sqrt{\\sum_t (y_{t+k}-\\bar{y})^2}}",
+   "\\hat{k} = \\arg\\max_k\\, |r_{xy}(k)|"
+  ],
+  "references": [
+   {
+    "cite": "Box, G.E.P., Jenkins, G.M., Reinsel, G.C. (2008). Time Series Analysis: Forecasting and Control, 4th ed. Wiley, Hoboken NJ."
+   },
+   {
+    "cite": "Chatfield, C. (2003). The Analysis of Time Series: An Introduction, 6th ed. Chapman & Hall/CRC, Boca Raton FL."
+   }
+  ],
+  "crosslinks": [
+   "ch9",
+   "glossary"
+  ]
+ },
+ "LogisticRegression": {
+  "description": "Logistic regression models a yes/no (binary) outcome from one or more predictor columns. Instead of fitting a straight line (which could stray below 0 or above 1), it models the log-odds of the outcome as a linear function of the predictors, so the fitted probability is always squeezed into the 0–1 range by the logistic (sigmoid) curve. One level of the outcome is taken as the “positive” class (= 1).\n\nAnCiR fits the model by iteratively-reweighted least squares (IRLS / Fisher scoring, the maximum-likelihood method). The output is one tidy row per term: the coefficient and its standard error, a Wald z-statistic and p-value, and the odds ratio exp(β) with a 95% confidence interval — the odds ratio being the more interpretable summary (how the odds of the outcome multiply per one-unit rise in that predictor). Alongside the coefficients it reports overall model fit: the log-likelihood, a likelihood-ratio test of the whole model against an intercept-only null, and McFadden's pseudo-R². Per-observation fitted probabilities and the linear predictor are also emitted so the fit can be plotted.\n\nInterpretation notes: an odds ratio of 1 means no effect, above 1 raises the odds and below 1 lowers them. Wald intervals can behave poorly when a predictor perfectly separates the classes or when events are very rare, so treat huge coefficients with correspondingly huge standard errors with suspicion.",
+  "maths": [
+   "\\operatorname{logit} p_i = \\ln\\frac{p_i}{1-p_i} = \\beta_0 + \\beta_1 x_{i1} + \\dots + \\beta_p x_{ip}",
+   "p_i = \\frac{1}{1+e^{-\\eta_i}},\\qquad \\eta_i = \\beta_0 + \\sum_j \\beta_j x_{ij}",
+   "\\text{OR}_j = e^{\\beta_j},\\qquad R^2_{\\text{McF}} = 1 - \\frac{\\ell(\\hat\\beta)}{\\ell_0}"
+  ],
+  "references": [
+   {
+    "cite": "Cox DR (1958) The regression analysis of binary sequences. JRSS Series B 20:215-242.",
+    "doi": "10.1111/j.2517-6161.1958.tb00292.x"
+   },
+   {
+    "cite": "McFadden, D. (1974). Conditional logit analysis of qualitative choice behavior. In: Frontiers in Econometrics (P. Zarembka, ed.), 105-142. Academic Press, New York."
+   },
+   {
+    "cite": "McCullagh, P., Nelder, J.A. (1989). Generalized Linear Models, 2nd ed. Chapman & Hall, London."
+   },
+   {
+    "cite": "Hosmer, D.W., Lemeshow, S., Sturdivant, R.X. (2013). Applied Logistic Regression, 3rd ed. Wiley, Hoboken NJ."
+   }
+  ],
+  "crosslinks": [
+   "ch11",
+   "glossary"
+  ]
+ },
+ "Threshold": {
+  "description": "Threshold turns a continuous column into a binary 0/1 (indicator) column by comparing every value against a cutoff you choose. Values satisfying the comparison become 1 and the rest become 0. Missing or non-numeric values stay missing rather than silently becoming 0, so an absent reading is never counted as a negative.\n\nFour comparisons are available: greater than, greater than or equal to, less than, and less than or equal to the threshold. Strict versus inclusive matters only for values sitting exactly on the cutoff, but that is common with rounded or integer-valued data, so it is worth choosing deliberately.\n\nThe most common use is to construct a binary outcome for Logistic Regression, which requires a 0/1 response: threshold a continuous measure (activity counts above a rest/activity cutoff, say, or a score above a clinical criterion) and wire the resulting column in as the outcome. Thresholding is also useful on its own for flagging events, marking active periods, or reducing a graded measure to a yes/no for counting and cross-tabulation (for example as input to a Chi-squared test).\n\nA caution: dichotomising a continuous variable discards information and costs statistical power, and the result can be sensitive to exactly where the cutoff falls. Choose the threshold on substantive grounds, such as a physiological criterion or an established convention, rather than tuning it against the data to maximise an effect.",
+  "maths": [
+   "b_i = \\begin{cases} 1 & x_i \\;\\square\\; t \\\\ 0 & \\text{otherwise} \\end{cases} \\quad \\square \\in \\{>,\\ge,<,\\le\\}"
+  ],
+  "references": [
+   {
+    "cite": "Altman DG, Royston P (2006) The cost of dichotomising continuous variables. BMJ 332:1080.",
+    "doi": "10.1136/bmj.332.7549.1080"
+   }
+  ],
+  "crosslinks": [
+   "ch4",
+   "ch11",
+   "glossary"
+  ]
+ },
+ "circularphase": {
+  "description": "The Circular phase plot places phases on a clock face rather than a straight axis, so that late-night and early-morning times sit next to each other as they should. Wire in one or more phase columns — acrophases, activity-onset times, or peak phases — and each becomes a coloured group of points arranged around a circle whose full turn equals the chosen period (24 h by default, but adjustable, and readable in hours, degrees or radians).\n\nFor every group the plot draws its mean resultant vector: the direction points to the preferred phase (the circular mean) and the length, the mean resultant length R, measures how tightly the phases cluster (R near 1 = coincident, near 0 = scattered). This is the visual companion to the Rayleigh test. Optional rose wedges bin the circle into a polar histogram (with or without the individual points overlaid), and an optional Watson–Williams test compares the groups' mean directions (the circular analogue of one-way ANOVA).\n\nWiring an optional time column (hours or a timestamp, folded onto the period) to a series changes what it shows: each point is then placed at its measurement time, with radius equal to its measured value, turning the plot into a value-versus-clock-time display, and the group's vector becomes an amplitude-weighted acrophase in which larger-amplitude cycles pull the mean direction toward their phase. The underlying circular statistics are shared with the Rayleigh test node.",
+  "maths": [
+   "\\theta_i = 2\\pi\\,\\frac{t_i \\bmod \\tau}{\\tau}",
+   "\\bar{C} = \\tfrac1n\\sum_i \\cos\\theta_i,\\quad \\bar{S} = \\tfrac1n\\sum_i \\sin\\theta_i,\\quad R = \\sqrt{\\bar{C}^2+\\bar{S}^2}",
+   "\\text{(weighted) }\\ \\bar{C} = \\tfrac{1}{\\sum_i w_i}\\sum_i w_i\\cos\\theta_i,\\quad \\bar{S} = \\tfrac{1}{\\sum_i w_i}\\sum_i w_i\\sin\\theta_i"
+  ],
+  "references": [
+   {
+    "cite": "Batschelet, E. (1981). Circular Statistics in Biology. Academic Press, London."
+   },
+   {
+    "cite": "Fisher, N.I. (1993). Statistical Analysis of Circular Data. Cambridge University Press, Cambridge."
+   },
+   {
+    "cite": "Zar, J.H. (1999). Biostatistical Analysis, 4th ed., ch. 26-27. Prentice Hall, Upper Saddle River NJ."
+   }
+  ],
+  "crosslinks": [
+   "ch12",
+   "ch7",
+   "glossary"
+  ]
+ },
+ "correlationheatmap": {
+  "description": "The Correlation heatmap turns a table of numeric columns into a coloured correlation matrix, so the pattern of relationships across many variables can be read at a glance. Each cell shows the correlation between the pair of columns for its row and column, encoded as colour: a diverging scale runs from strong negative (one hue), through zero (neutral), to strong positive (the opposite hue), with the diagonal always +1 (each variable with itself).\n\nIt is the visual counterpart of the Correlation node: same coefficients, but arranged as a grid rather than a list, which makes clusters of co-varying variables and lone outliers jump out. It is most useful as an exploratory overview before choosing which pairs deserve a formal test or a scatter plot.\n\nRead it with the same caveats as any correlation: the colour shows the strength of a (by default linear) association, not causation, and a near-neutral cell only means no monotonic trend — a cyclic or otherwise non-monotonic relationship can still be present. For rhythmic variables, confirm suggestive cells with the appropriate rhythm-aware analysis.",
+  "maths": [
+   "r_{jk} = \\frac{\\sum_i (x_{ij}-\\bar{x}_j)(x_{ik}-\\bar{x}_k)}{\\sqrt{\\sum_i (x_{ij}-\\bar{x}_j)^2}\\,\\sqrt{\\sum_i (x_{ik}-\\bar{x}_k)^2}}"
+  ],
+  "references": [
+   {
+    "cite": "Friendly M (2002) Corrgrams: Exploratory displays for correlation matrices. The American Statistician 56:316-324.",
+    "doi": "10.1198/000313002533"
+   }
+  ],
+  "crosslinks": [
+   "ch9",
+   "glossary"
+  ]
+ },
+ "pairsplot": {
+  "description": "The Pairs plot (a scatterplot matrix, or SPLOM) shows every column plotted against every other in one grid, so all the pairwise relationships in a dataset can be inspected together. Following the familiar pairs.panels layout, the diagonal carries each variable's own histogram (its distribution), the panels above the diagonal show the scatter of each pair with a fitted trend line, and the panels below report the corresponding correlation coefficient.\n\nThis single figure combines three of the exploratory tools — distribution shape, pairwise scatter, and correlation — into one view, making it an efficient first pass over a fresh dataset: skewed variables, nonlinear relationships, clusters and outliers all become visible at once, and the upper/lower symmetry lets the eye cross-check a strong correlation number against the shape of its scatter.\n\nUse it to decide where to look more closely rather than as a final analysis. A curved or looping scatter with a near-zero correlation is a classic sign that a linear summary is the wrong tool — exactly the situation where cyclic data call for the periodogram, cosinor and circular-statistics nodes instead.",
+  "maths": [],
+  "references": [
+   {
+    "cite": "Cleveland, W.S. (1993). Visualizing Data. Hobart Press, Summit NJ."
+   },
+   {
+    "cite": "Emerson JW, Green WA, Schloerke B, et al. (2013) The generalized pairs plot. Journal of Computational and Graphical Statistics 22:79-91.",
+    "doi": "10.1080/10618600.2012.694762"
+   }
+  ],
+  "crosslinks": [
+   "ch4",
+   "ch9",
+   "glossary"
+  ]
+ }
+}

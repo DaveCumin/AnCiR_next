@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "457": [
+    "454": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "458": [
+    "455": [
       0,
       1,
       2,
@@ -104,7 +104,7 @@
       48,
       49
     ],
-    "459": [
+    "456": [
       0,
       1,
       2,
@@ -159,20 +159,20 @@
   },
   "data": [
     {
-      "id": 457,
+      "id": 454,
       "name": "x",
-      "data": 457,
+      "data": 454,
       "type": "number",
-      "tableProcessGUId": "94bcc3f2-8e42-4ace-aa69-c717ac49b47d",
+      "tableProcessGUId": "0bfb31bc-c5d7-4443-a258-0406507561d6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 458,
+      "id": 455,
       "name": "y",
-      "data": 458,
+      "data": 455,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,9 +181,9 @@
       "processes": []
     },
     {
-      "id": 459,
+      "id": 456,
       "name": "reference",
-      "data": 459,
+      "data": 456,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -192,13 +192,13 @@
       "processes": []
     },
     {
-      "id": 460,
+      "id": 457,
       "name": "Filter result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_4",
-      "producerPort": "out_458",
+      "producerPort": "out_455",
       "producerArtifactKind": "column",
       "processes": []
     }
@@ -262,9 +262,9 @@
         "data": [
           {
             "x": {
-              "id": 461,
+              "id": 458,
               "name": "x",
-              "refId": 457,
+              "refId": 454,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -273,9 +273,9 @@
               "processes": []
             },
             "y": {
-              "id": 462,
+              "id": 459,
               "name": "y",
-              "refId": 458,
+              "refId": 455,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -301,9 +301,9 @@
           },
           {
             "x": {
-              "id": 463,
+              "id": 460,
               "name": "x",
-              "refId": 457,
+              "refId": 454,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -312,9 +312,9 @@
               "processes": []
             },
             "y": {
-              "id": 464,
+              "id": 461,
               "name": "Filter result",
-              "refId": 460,
+              "refId": 457,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -370,8 +370,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          458,
-          460
+          455,
+          457
         ],
         "showCol": [
           true,
@@ -396,7 +396,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 457
+          "result": 454
         }
       },
       "refTPId": null
@@ -424,24 +424,24 @@
       "args": {
         "conditions": [
           {
-            "byColId": 459,
+            "byColId": 456,
             "isOperator": ">",
             "byColValue": 2
           }
         ],
         "inIN": [
-          458
+          455
         ],
-        "parentColId": 458
+        "parentColId": 455
       }
     }
   ],
   "nodeLayout": {
-    "data_458": {
+    "data_455": {
       "x": 60,
       "y": 314
     },
-    "data_459": {
+    "data_456": {
       "x": 60,
       "y": 814
     },
@@ -523,5 +523,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

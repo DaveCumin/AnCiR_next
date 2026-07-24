@@ -1,0 +1,12 @@
+{
+  "name": "@ancir/design",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared design tokens for the AnCiR app and the handbook.",
+  "exports": {
+    "./tokens.css": "./tokens.css"
+  },
+  "files": [
+    "tokens.css"
+  ]
+}

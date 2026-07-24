@@ -227,8 +227,8 @@
       "id": "workflow-transients",
       "name": "Workflow — transients (phase advance vs delay)",
       "family": "Workflows",
-      "description": "Transients are the intermediate cycles a rhythm passes through between the moment the zeitgeber shifts and the moment a new steady-state phase is re-attained. Two records receive an 8 h shift on the same day, one an ADVANCE and one a DELAY. The zeitgeber moves in a single step in both cases; neither rhythm does. The advance re-entrains at roughly 1 h per cycle and needs about 8 transient cycles, while the delay covers the same 8 h at roughly 1.5 h per cycle in about 6. The onset plot states the same thing numerically: the zeitgeber is a step, the rhythms are ramps of different slope. Only the phase measured AFTER the transients have subsided is the steady-state phase shift, which is why a PRC must be scored from post-transient cycles.",
-      "summary": "Why an 8 h advance costs more cycles than an 8 h delay.",
+      "description": "Two free-running records, each given a single phase-shifting stimulus on the same day, showing the two ways a rhythm can take up a new phase. Both free-run at 24.3 h throughout, so the activity band drifts slowly RIGHTWARD (later) even before anything is done to it — the diagonal that marks a clock running on its own period rather than being held by a zeitgeber. The DELAY is immediate: the band steps right in a single cycle and simply resumes its drift from the new phase, which is what strong (Type 0) resetting looks like. The ADVANCE goes through TRANSIENTS: intermediate cycles between the stimulus and the re-attainment of a steady-state phase, crawling LEFTWARD over about eight cycles. Those cycles do not move at a constant rate — each closes a fraction of whatever phase difference is left, so the increment is largest right after the stimulus and shrinks as the rhythm nears its new phase, giving a curved, decelerating approach rather than a straight ramp. Transients being commoner after advances than delays is the classical generalisation. Only the phase reached AFTER they subside is the steady-state shift, which is why a PRC must be scored from post-transient cycles.",
+      "summary": "An immediate delay beside an advance that crawls through transients.",
       "group": "Rhythm & circadian",
       "url": "sessions/demos/demo-workflow-transients.json",
       "kind": "workflow",
@@ -236,7 +236,7 @@
         "actogram",
         "scatterplot"
       ],
-      "keywords": "workflow — transients (phase advance vs delay) transients are the intermediate cycles a rhythm passes through between the moment the zeitgeber shifts and the moment a new steady-state phase is re-attained. two records receive an 8 h shift on the same day, one an advance and one a delay. the zeitgeber moves in a single step in both cases; neither rhythm does. the advance re-entrains at roughly 1 h per cycle and needs about 8 transient cycles, while the delay covers the same 8 h at roughly 1.5 h per cycle in about 6. the onset plot states the same thing numerically: the zeitgeber is a step, the rhythms are ramps of different slope. only the phase measured after the transients have subsided is the steady-state phase shift, which is why a prc must be scored from post-transient cycles. workflows actogram scatterplot"
+      "keywords": "workflow — transients (phase advance vs delay) two free-running records, each given a single phase-shifting stimulus on the same day, showing the two ways a rhythm can take up a new phase. both free-run at 24.3 h throughout, so the activity band drifts slowly rightward (later) even before anything is done to it — the diagonal that marks a clock running on its own period rather than being held by a zeitgeber. the delay is immediate: the band steps right in a single cycle and simply resumes its drift from the new phase, which is what strong (type 0) resetting looks like. the advance goes through transients: intermediate cycles between the stimulus and the re-attainment of a steady-state phase, crawling leftward over about eight cycles. those cycles do not move at a constant rate — each closes a fraction of whatever phase difference is left, so the increment is largest right after the stimulus and shrinks as the rhythm nears its new phase, giving a curved, decelerating approach rather than a straight ramp. transients being commoner after advances than delays is the classical generalisation. only the phase reached after they subside is the steady-state shift, which is why a prc must be scored from post-transient cycles. workflows actogram scatterplot"
     },
     {
       "id": "workflow-split-rhythm",
@@ -497,13 +497,13 @@
       "id": "dataset-workflow-transients",
       "name": "Transients (phase advance vs delay)",
       "family": "Sources",
-      "description": "Why an 8 h advance costs more cycles than an 8 h delay. Data only — 8 columns × 672 rows, no analysis.",
-      "summary": "Why an 8 h advance costs more cycles than an 8 h delay.",
+      "description": "An immediate delay beside an advance that crawls through transients. Data only — 7 columns × 672 rows, no analysis.",
+      "summary": "An immediate delay beside an advance that crawls through transients.",
       "group": "Rhythm & circadian",
       "url": "sessions/demos/transients-phase-advance-vs-delay.csv",
       "kind": "dataset",
       "showcases": [],
-      "keywords": "transients (phase advance vs delay) why an 8 h advance costs more cycles than an 8 h delay. data only — 8 columns × 672 rows, no analysis. sources"
+      "keywords": "transients (phase advance vs delay) an immediate delay beside an advance that crawls through transients. data only — 7 columns × 672 rows, no analysis. sources"
     },
     {
       "id": "dataset-workflow-split-rhythm",

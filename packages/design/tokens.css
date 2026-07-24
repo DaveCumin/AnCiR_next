@@ -1,0 +1,139 @@
+/* Canonical AnCiR design tokens — single source of truth shared by the
+   AnCiR app and the handbook (packages/design). Do not fork values here. */
+:root {
+	/* icon related */
+	--color-icon-selected: #5f5f5f;
+	--color-icon-unselected: #d9d9d9;
+
+	--color-icon-close-hover: #ecadac;
+
+	/* colour based on lightness — full greyscale ramp. Values track the dominant
+	   inline fallbacks these stops previously relied on, so completing the scale
+	   introduces no visual change; the ramp is now the single source of truth and
+	   components must not carry hex fallbacks. */
+	--color-lightness-10: #1a1a1a;
+	--color-lightness-15: #262626;
+	--color-lightness-20: #2a2a2a;
+	--color-lightness-25: #333333;
+	--color-lightness-30: #444444;
+	--color-lightness-35: #5f5f5f;
+	--color-lightness-40: #5b5b5b;
+	--color-lightness-45: #737373;
+	--color-lightness-50: #808080;
+	--color-lightness-55: #8c8c8c;
+	--color-lightness-60: #999999;
+	--color-lightness-65: #aaaaaa;
+	--color-lightness-70: #b0b0b0;
+	--color-lightness-75: #b3b3b3;
+	--color-lightness-80: #cccccc;
+	--color-lightness-85: #d9d9d9;
+	--color-lightness-88: #e0e0e0;
+	--color-lightness-90: #e6e6e6;
+	--color-lightness-92: #ededed;
+	--color-lightness-93: #eeeeee;
+	--color-lightness-95: #f2f2f2;
+	--color-lightness-96: #f5f5f5;
+	--color-lightness-97: #f7f7f7;
+	--color-lightness-98: #fafafa;
+	--color-lightness-99: #fcfcfc;
+
+	--color-hover: #6a9fd4; /* Subtle change to align with the colour palette*/
+
+	/* semantic status colours */
+	--color-warning: #e6a817; /* accent / border / icon (non-text) */
+	--color-warning-bg: #fef9e7;
+	--color-warning-text: #8a6500; /* dark amber for TEXT on -bg: 5.05:1 (AA); the
+	   bright --color-warning is only 2:1 on its own tint and must not be used as text */
+	--color-info: #4a90d9;
+	--color-info-bg: #eaf2fb;
+	--color-info-text: #1a73e8;
+	--color-success: #137333;
+	--color-success-bg: #e6f4ea;
+	--color-error: #c5221f;
+	--color-error-bg: #fce8e6;
+	--color-error-border: #f5c6cb;
+
+	/* font */
+	--font-sans:
+		system-ui,
+		-apple-system,
+		BlinkMacSystemFont,
+		'Segoe UI',
+		Roboto,
+		Oxygen,
+		Ubuntu,
+		Cantarell,
+		'Open Sans',
+		'Helvetica Neue',
+		sans-serif;
+
+	font-family: var(--font-sans);
+
+	/* control */
+	--control-input-height: calc(16px + 0.4rem + 2px);
+
+	/* ── Design tokens ───────────────────────────────────────────────────────
+	   Central knobs for surfaces, spacing, radii, fonts and dividers so the look
+	   can be retuned in one place. Components should prefer these over literals. */
+	--color-accent: #4d9fe3;
+
+	/* secondary / muted text — accessible replacement for the mid lightness greys
+	   (45..60) when used as TEXT. #666 is ~5.7:1 on white / ~5.3:1 on surface-muted,
+	   so it clears WCAG AA (4.5:1) while still reading as de-emphasised. The
+	   lightness-* greys remain for borders / icons (non-text, 3:1). */
+	--color-text-muted: #666666;
+
+	/* keyboard focus ring — shared by all interactive controls via the global
+	   :focus-visible rule below. Brand accent, matching the rings already used in
+	   Editable / NodePalette / WorksheetAddPalette. */
+	--focus-ring: 2px solid var(--color-accent);
+
+	/* surfaces */
+	--surface-canvas: #f7f8fa; /* canvas background (workflow + workspace base) */
+	--surface-card: #ffffff; /* floating cards / toolbars / panels */
+	--surface-muted: var(--color-lightness-97); /* subtle inset / section header */
+
+	/* dividers */
+	--divider: var(--color-lightness-85);
+	--divider-soft: var(--color-lightness-90);
+	--grid-line: rgba(0, 0, 0, 0.05); /* canvas grid line colour */
+
+	/* radii */
+	--radius-xs: 3px;
+	--radius-sm: 4px;
+	--radius-md: 6px;
+	--radius-lg: 8px;
+
+	/* spacing scale (canonical step values; prefer these for padding / gap / margin) */
+	--space-1: 2px;
+	--space-2: 4px;
+	--space-3: 6px;
+	--space-4: 8px;
+	--space-5: 12px;
+	--space-6: 16px;
+	--space-7: 24px;
+
+	/* font sizes — xs..lg are dense-UI sizes (nodes, controls, tables); --font-body
+	   is the readable floor (16px) for prose / reading surfaces (modals, tour,
+	   notifications, help). */
+	--font-2xs: 10px;
+	--font-xs: 11px;
+	--font-sm: 12px;
+	--font-md: 13px;
+	--font-lg: 14px;
+	--font-body: 16px;
+
+	/* elevation — three levels for resting / floating / overlay surfaces */
+	--shadow-1: 0 1px 3px rgba(0, 0, 0, 0.1); /* resting cards, small popovers */
+	--shadow-2: 0 4px 12px rgba(0, 0, 0, 0.13); /* floating toolbars, menus, panels */
+	--shadow-3: 0 8px 24px rgba(0, 0, 0, 0.16); /* modals, large dropdowns */
+	--shadow-card: var(--shadow-2); /* alias kept for existing references */
+
+	/* accent selection glow — the ring drawn around a selected/focused node or
+	   control. Single source for the recipe that was copy-pasted as
+	   `0 0 0 4px rgba(77,159,227,0.35)` across the node components. */
+	--shadow-focus: 0 0 0 4px rgba(77, 159, 227, 0.35);
+	/* lighter variant for the canvas-node selected ring (paired with an accent
+	   border) so it reads in the same accent language as the list-row selection. */
+	--shadow-focus-soft: 0 0 0 2px rgba(77, 159, 227, 0.28);
+}

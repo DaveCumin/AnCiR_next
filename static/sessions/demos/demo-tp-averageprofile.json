@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "704": [
+    "701": [
       0,
       1,
       2,
@@ -98,7 +98,7 @@
       94,
       95
     ],
-    "705": [
+    "702": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -196,7 +196,7 @@
       15.358983848622422,
       11.362966948437233
     ],
-    "706": [
+    "703": [
       0.5,
       1.5,
       2.5,
@@ -222,7 +222,7 @@
       22.5,
       23.5
     ],
-    "707": [
+    "704": [
       10,
       11.362966948437267,
       15.358983848622461,
@@ -251,44 +251,44 @@
   },
   "data": [
     {
-      "id": 704,
+      "id": 701,
       "name": "Average Profile input 1",
+      "data": 701,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 702,
+      "name": "Average Profile input 2",
+      "data": 702,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 703,
+      "name": "avgprofx_77",
+      "data": 703,
+      "type": "number",
+      "tableProcessGUId": "0c37c383-f190-4b91-8798-6cba0a8c25c6",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 704,
+      "name": "avgprof_702_77",
       "data": 704,
       "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 705,
-      "name": "Average Profile input 2",
-      "data": 705,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 706,
-      "name": "avgprofx_77",
-      "data": 706,
-      "type": "number",
-      "tableProcessGUId": "6e79219a-39c1-4966-9b34-54ea6750ccd3",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 707,
-      "name": "avgprof_705_77",
-      "data": 707,
-      "type": "number",
-      "tableProcessGUId": "6e79219a-39c1-4966-9b34-54ea6750ccd3",
+      "tableProcessGUId": "0c37c383-f190-4b91-8798-6cba0a8c25c6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -313,10 +313,10 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          704,
-          705,
-          706,
-          707
+          701,
+          702,
+          703,
+          704
         ],
         "showCol": [
           true,
@@ -337,16 +337,16 @@
       "name": "AverageProfile",
       "displayName": "Average Profile",
       "args": {
-        "xIN": 704,
+        "xIN": 701,
         "yIN": [
-          705
+          702
         ],
         "period": 24,
         "nBins": 24,
         "preProcesses": [],
         "out": {
-          "avgprofx": 706,
-          "avgprof_705": 707
+          "avgprofx": 703,
+          "avgprof_702": 704
         }
       },
       "refTPId": null
@@ -369,11 +369,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_704": {
+    "data_701": {
       "x": 60,
       "y": 314
     },
-    "data_705": {
+    "data_702": {
       "x": 60,
       "y": 814
     },
@@ -447,5 +447,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

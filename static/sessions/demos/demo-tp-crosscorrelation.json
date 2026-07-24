@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "601": [
+    "598": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "602": [
+    "599": [
       49.99999999999999,
       39.64723819589918,
       29.999999999999986,
@@ -104,7 +104,7 @@
       50.000000000000014,
       39.64723819589919
     ],
-    "603": [
+    "600": [
       -12,
       -11,
       -10,
@@ -131,7 +131,7 @@
       11,
       12
     ],
-    "604": [
+    "601": [
       -0.02397460631115133,
       -0.28574860140576386,
       -0.5241981547253294,
@@ -158,7 +158,7 @@
       0.23409193418983582,
       -0.023974606311150955
     ],
-    "605": [
+    "602": [
       0.8863905887044223,
       0.07783048901336764,
       0.0005169344530367992,
@@ -188,11 +188,44 @@
   },
   "data": [
     {
-      "id": 601,
+      "id": 598,
       "name": "Cross-correlation input 1",
-      "data": 601,
+      "data": 598,
       "type": "number",
       "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 599,
+      "name": "Cross-correlation input 2",
+      "data": 599,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 600,
+      "name": "lag_56",
+      "data": 600,
+      "type": "number",
+      "tableProcessGUId": "2b4a8572-c061-4f33-9781-dc1b593bf121",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 601,
+      "name": "correlation_56",
+      "data": 601,
+      "type": "number",
+      "tableProcessGUId": "2b4a8572-c061-4f33-9781-dc1b593bf121",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -200,43 +233,10 @@
     },
     {
       "id": 602,
-      "name": "Cross-correlation input 2",
+      "name": "pvalue_56",
       "data": 602,
       "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 603,
-      "name": "lag_56",
-      "data": 603,
-      "type": "number",
-      "tableProcessGUId": "004c7c66-ef57-4c41-bbcf-8ec54ecb8bce",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 604,
-      "name": "correlation_56",
-      "data": 604,
-      "type": "number",
-      "tableProcessGUId": "004c7c66-ef57-4c41-bbcf-8ec54ecb8bce",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 605,
-      "name": "pvalue_56",
-      "data": 605,
-      "type": "number",
-      "tableProcessGUId": "004c7c66-ef57-4c41-bbcf-8ec54ecb8bce",
+      "tableProcessGUId": "2b4a8572-c061-4f33-9781-dc1b593bf121",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -261,11 +261,11 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
+          598,
+          599,
+          600,
           601,
-          602,
-          603,
-          604,
-          605
+          602
         ],
         "showCol": [
           true,
@@ -287,14 +287,14 @@
       "name": "CrossCorrelation",
       "displayName": "Cross-correlation",
       "args": {
-        "xIN": 601,
-        "yIN": 602,
+        "xIN": 598,
+        "yIN": 599,
         "maxLag": 12,
         "method": "pearson",
         "out": {
-          "lag": 603,
-          "correlation": 604,
-          "pvalue": 605
+          "lag": 600,
+          "correlation": 601,
+          "pvalue": 602
         },
         "valid": false
       },
@@ -318,11 +318,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_601": {
+    "data_598": {
       "x": 60,
       "y": 314
     },
-    "data_602": {
+    "data_599": {
       "x": 60,
       "y": 814
     },
@@ -396,5 +396,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

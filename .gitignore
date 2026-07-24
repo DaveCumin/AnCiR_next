@@ -10,6 +10,10 @@ node_modules
 .vercel
 .netlify
 .wrangler
+
+# Handbook (workspace member) build output
+/handbook/build/
+/handbook/.svelte-kit/
 /.svelte-kit
 tools/.svelte-kit/
 

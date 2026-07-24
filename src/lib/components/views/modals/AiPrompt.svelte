@@ -283,6 +283,15 @@
 				<button class="chip" disabled={busy} onclick={() => (prompt = s)}>{s}</button>
 			{/each}
 		</div>
+
+		<!-- Privacy disclosure. The reassurance leads because it's the true and useful part: the
+		     summary sent for an edit deliberately omits rawData (see summariseSession), so the
+		     values never leave the browser. The caveat covers what DOES go — the prompt text and
+		     the structure (column/plot names) — and the one real footgun, pasting values in. -->
+		<p class="privacy-note">
+			Your data values stay in your browser. Only the text you type and your column and plot names
+			are sent to the AI to build the response. Avoid pasting sensitive values into the prompt.
+		</p>
 	{:else}
 		<p class="hint">
 			By default your prompt is answered by the model this site is configured with. To use your own
@@ -452,6 +461,14 @@
 		color: var(--color-text-muted);
 		font-size: var(--font-sm);
 		margin: 0 0 var(--space-3);
+	}
+	/* A calm privacy disclosure, not a warning: same muted, small treatment as .hint, sitting
+	   under the prompt as a footnote rather than an alarm. */
+	.privacy-note {
+		color: var(--color-text-muted);
+		font-size: var(--font-sm);
+		line-height: 1.4;
+		margin: var(--space-3) 0 0;
 	}
 	/* Replacing an open session is the one irreversible thing here, so it gets said plainly
 	   rather than left to the mode label. */

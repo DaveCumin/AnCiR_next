@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "376": [
+    "373": [
       1,
       1,
       1,
@@ -170,7 +170,7 @@
       7,
       7
     ],
-    "377": [
+    "374": [
       16.291076892469444,
       20.29554398487714,
       9.51596332468565,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 376,
+      "id": 373,
       "name": "day",
-      "data": 376,
+      "data": 373,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 377,
+      "id": 374,
       "name": "activity",
-      "data": 377,
+      "data": 374,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -411,9 +411,9 @@
         "data": [
           {
             "x": {
-              "id": 378,
+              "id": 375,
               "name": "day",
-              "refId": 376,
+              "refId": 373,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -422,9 +422,9 @@
               "processes": []
             },
             "y": {
-              "id": 379,
+              "id": 376,
               "name": "activity",
-              "refId": 377,
+              "refId": 374,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -493,11 +493,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_376": {
+    "data_373": {
       "x": 60,
       "y": 314
     },
-    "data_377": {
+    "data_374": {
       "x": 60,
       "y": 814
     },
@@ -567,5 +567,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

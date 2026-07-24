@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "680": [
+    "677": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "681": [
+    "678": [
       0,
       10,
       20,
@@ -104,7 +104,7 @@
       480,
       490
     ],
-    "682": [
+    "679": [
       0,
       10,
       20,
@@ -156,7 +156,7 @@
       null,
       null
     ],
-    "683": [
+    "680": [
       null,
       null,
       null,
@@ -208,7 +208,7 @@
       null,
       null
     ],
-    "684": [
+    "681": [
       null,
       null,
       null,
@@ -263,11 +263,44 @@
   },
   "data": [
     {
-      "id": 680,
+      "id": 677,
       "name": "Split data input 1",
-      "data": 680,
+      "data": 677,
       "type": "number",
       "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 678,
+      "name": "Split data input 2",
+      "data": 678,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 679,
+      "name": "678_1_72",
+      "data": 679,
+      "type": "number",
+      "tableProcessGUId": "b786b161-2db3-4037-88f4-b0eb8962f91d",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 680,
+      "name": "678_2_72",
+      "data": 680,
+      "type": "number",
+      "tableProcessGUId": "b786b161-2db3-4037-88f4-b0eb8962f91d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -275,43 +308,10 @@
     },
     {
       "id": 681,
-      "name": "Split data input 2",
+      "name": "678_3_72",
       "data": 681,
       "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 682,
-      "name": "681_1_72",
-      "data": 682,
-      "type": "number",
-      "tableProcessGUId": "81795189-3d04-4e98-8506-5b2541674543",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 683,
-      "name": "681_2_72",
-      "data": 683,
-      "type": "number",
-      "tableProcessGUId": "81795189-3d04-4e98-8506-5b2541674543",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 684,
-      "name": "681_3_72",
-      "data": 684,
-      "type": "number",
-      "tableProcessGUId": "81795189-3d04-4e98-8506-5b2541674543",
+      "tableProcessGUId": "b786b161-2db3-4037-88f4-b0eb8962f91d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -336,11 +336,11 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
+          677,
+          678,
+          679,
           680,
-          681,
-          682,
-          683,
-          684
+          681
         ],
         "showCol": [
           true,
@@ -362,18 +362,18 @@
       "name": "Split",
       "displayName": "Split data",
       "args": {
-        "xIN": 680,
+        "xIN": 677,
         "yIN": [
-          681
+          678
         ],
         "splitTimes": [
           15,
           30
         ],
         "out": {
-          "681_1": 682,
-          "681_2": 683,
-          "681_3": 684
+          "678_1": 679,
+          "678_2": 680,
+          "678_3": 681
         }
       },
       "refTPId": null
@@ -396,11 +396,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_680": {
+    "data_677": {
       "x": 60,
       "y": 314
     },
-    "data_681": {
+    "data_678": {
       "x": 60,
       "y": 814
     },
@@ -474,5 +474,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

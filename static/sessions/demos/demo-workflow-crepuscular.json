@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "353": [
+    "350": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "354": [
+    "351": [
       7.988350769954515,
       3.9557465407114356,
       10.518974525817601,
@@ -676,7 +676,7 @@
       1.5568078434602022,
       4.681703639741219
     ],
-    "359": [
+    "356": [
       0,
       1,
       2,
@@ -1014,21 +1014,21 @@
       22,
       23
     ],
-    "360": [
+    "357": [
       0.3456209212423379
     ],
-    "361": [
+    "358": [
       40.136483923335184
     ],
-    "362": [
+    "359": [
       1.611623930052013e-18
     ]
   },
   "data": [
     {
-      "id": 353,
+      "id": 350,
       "name": "hour",
-      "data": 353,
+      "data": 350,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -1037,11 +1037,44 @@
       "processes": []
     },
     {
-      "id": 354,
+      "id": 351,
       "name": "activity",
-      "data": 354,
+      "data": 351,
       "type": "number",
       "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 356,
+      "name": "time of day",
+      "data": 356,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 357,
+      "name": "R_26",
+      "data": 357,
+      "type": "number",
+      "tableProcessGUId": "8b67f02c-e427-4cb2-8b9d-c1329367b613",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 358,
+      "name": "z_26",
+      "data": 358,
+      "type": "number",
+      "tableProcessGUId": "8b67f02c-e427-4cb2-8b9d-c1329367b613",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1049,43 +1082,10 @@
     },
     {
       "id": 359,
-      "name": "time of day",
+      "name": "pvalue_26",
       "data": 359,
       "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 360,
-      "name": "R_26",
-      "data": 360,
-      "type": "number",
-      "tableProcessGUId": "0f719985-6551-4acc-959b-232bdf1f40db",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 361,
-      "name": "z_26",
-      "data": 361,
-      "type": "number",
-      "tableProcessGUId": "0f719985-6551-4acc-959b-232bdf1f40db",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 362,
-      "name": "pvalue_26",
-      "data": 362,
-      "type": "number",
-      "tableProcessGUId": "0f719985-6551-4acc-959b-232bdf1f40db",
+      "tableProcessGUId": "8b67f02c-e427-4cb2-8b9d-c1329367b613",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1138,9 +1138,9 @@
         "data": [
           {
             "x": {
-              "id": 355,
+              "id": 352,
               "name": "hour",
-              "refId": 353,
+              "refId": 350,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1149,9 +1149,9 @@
               "processes": []
             },
             "y": {
-              "id": 356,
+              "id": 353,
               "name": "activity",
-              "refId": 354,
+              "refId": 351,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1212,9 +1212,9 @@
         "data": [
           {
             "x": {
-              "id": 357,
+              "id": 354,
               "name": "hour",
-              "refId": 353,
+              "refId": 350,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1223,9 +1223,9 @@
               "processes": []
             },
             "y": {
-              "id": 358,
+              "id": 355,
               "name": "activity",
-              "refId": 354,
+              "refId": 351,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1277,9 +1277,9 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          360,
-          361,
-          362
+          357,
+          358,
+          359
         ],
         "showCol": [
           true,
@@ -1299,17 +1299,17 @@
       "name": "RayleighTest",
       "displayName": "Rayleigh — one mean phase for two peaks",
       "args": {
-        "xIN": 359,
+        "xIN": 356,
         "yIN": [
-          354
+          351
         ],
         "period": 24,
         "unit": "hours",
         "testType": "rayleigh",
         "out": {
-          "R": 360,
-          "z": 361,
-          "pvalue": 362
+          "R": 357,
+          "z": 358,
+          "pvalue": 359
         }
       },
       "refTPId": null
@@ -1332,15 +1332,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_353": {
+    "data_350": {
       "x": 60,
       "y": 314
     },
-    "data_354": {
+    "data_351": {
       "x": 60,
       "y": 814
     },
-    "data_359": {
+    "data_356": {
       "x": 60,
       "y": 1314
     },
@@ -1422,5 +1422,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

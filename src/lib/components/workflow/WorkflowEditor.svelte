@@ -3894,7 +3894,7 @@
 					? 1000000
 					: Math.max(nodeZ[node.id] ?? 0, isExpanded ? 20 : 1)}
 				{@const actionsRevealed = isSelected || actionsHoverId === node.id}
-				{@const clusterNoteId = node.type !== 'group' ? node.id : null}
+				{@const clusterNoteId = node.type !== 'group' || compact ? node.id : null}
 				{@const clusterHasNote = !!(clusterNoteId && core.nodeNotes[clusterNoteId]?.trim())}
 				<!-- Expanded composites render as the bordered frame backdrop above,
 				     not as a node wrapper, so skip them here. -->
@@ -3996,13 +3996,16 @@
 						     reveal on hover OR selection (with a grace period so the overlay is
 						     easy to reach); the note button also stays visible whenever a note
 						     exists. Delete routes through the same removeNode() the Delete key
-						     uses (AYS modal for table-processes). Groups carry their own
-						     delete/note/collapse in their header, so only groups are excluded —
-						     rendering it for a group would stack a (no-op) compact toggle on top
-						     of the group header's own close/note buttons. Composites keep the
-						     overlay: it carries their expand/collapse toggle, note, and uncombine
-						     (composites don't delete; their members resurface on uncombine). -->
-						{#if node.type !== 'group'}
+						     uses (AYS modal for table-processes). An EXPANDED group renders its
+						     own header caret/note/delete, so the overlay would just stack a
+						     duplicate (no-op) compact toggle on it — hence expanded groups are
+						     excluded. A COLLAPSED group, though, renders as a bare CompactNode
+						     square with NO header at all, so without this overlay it has no
+						     visible way to expand, note, or delete — it needs the cluster.
+						     Composites keep the overlay: it carries their expand/collapse toggle,
+						     note, and uncombine (composites don't delete; members resurface on
+						     uncombine). -->
+						{#if node.type !== 'group' || compact}
 							<div
 								class="node-actions-host"
 								class:compact
@@ -4018,9 +4021,9 @@
 									showCollapse={canToggleCompact(node)}
 									expanded={!compact}
 									onToggleCollapse={() => handleNodeToggleExpand(node)}
-									showDelete={node.type !== 'group' && node.type !== 'composite'}
+									showDelete={node.type !== 'composite' && (node.type !== 'group' || compact)}
 									onDelete={() => confirmDeleteNode(node)}
-									deleteTooltip="Delete node"
+									deleteTooltip={node.type === 'group' ? 'Delete group' : 'Delete node'}
 									showUncombine={node.type === 'composite'}
 									onUncombine={() => removeComposite(node.id)}
 									showQuickPlot={node.type === 'tableprocess' || node.type === 'process'}

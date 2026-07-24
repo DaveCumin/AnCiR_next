@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "606": [
+    "603": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "607": [
+    "604": [
       1,
       21.831051418620845,
       7.38905609893065,
@@ -104,34 +104,67 @@
       8.729138363720132,
       2.9545115270921065
     ],
-    "608": [
+    "605": [
       "Normality Test input 1",
       "Normality Test input 2"
     ],
-    "609": [
+    "606": [
       0.8884940768269717,
       0.8065802789114069
     ],
-    "610": [
+    "607": [
       0.00020472387230596745,
       0.000001248621988914067
     ],
-    "611": [
+    "608": [
       50,
       50
     ],
-    "612": [
+    "609": [
       0,
       0
     ]
   },
   "data": [
     {
-      "id": 606,
+      "id": 603,
       "name": "Normality Test input 1",
-      "data": 606,
+      "data": 603,
       "type": "number",
       "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 604,
+      "name": "Normality Test input 2",
+      "data": 604,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 605,
+      "name": "variable_57",
+      "data": 605,
+      "type": "category",
+      "tableProcessGUId": "dbbb5cd4-ced0-448f-b112-21359f8a3fca",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 606,
+      "name": "statistic_57",
+      "data": 606,
+      "type": "number",
+      "tableProcessGUId": "dbbb5cd4-ced0-448f-b112-21359f8a3fca",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -139,10 +172,10 @@
     },
     {
       "id": 607,
-      "name": "Normality Test input 2",
+      "name": "pvalue_57",
       "data": 607,
       "type": "number",
-      "tableProcessGUId": "",
+      "tableProcessGUId": "dbbb5cd4-ced0-448f-b112-21359f8a3fca",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -150,10 +183,10 @@
     },
     {
       "id": 608,
-      "name": "variable_57",
+      "name": "n_57",
       "data": 608,
-      "type": "category",
-      "tableProcessGUId": "d248d9da-7a1f-4a51-8752-c291bb4c68ef",
+      "type": "number",
+      "tableProcessGUId": "dbbb5cd4-ced0-448f-b112-21359f8a3fca",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -161,43 +194,10 @@
     },
     {
       "id": 609,
-      "name": "statistic_57",
+      "name": "normal_57",
       "data": 609,
       "type": "number",
-      "tableProcessGUId": "d248d9da-7a1f-4a51-8752-c291bb4c68ef",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 610,
-      "name": "pvalue_57",
-      "data": 610,
-      "type": "number",
-      "tableProcessGUId": "d248d9da-7a1f-4a51-8752-c291bb4c68ef",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 611,
-      "name": "n_57",
-      "data": 611,
-      "type": "number",
-      "tableProcessGUId": "d248d9da-7a1f-4a51-8752-c291bb4c68ef",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 612,
-      "name": "normal_57",
-      "data": 612,
-      "type": "number",
-      "tableProcessGUId": "d248d9da-7a1f-4a51-8752-c291bb4c68ef",
+      "tableProcessGUId": "dbbb5cd4-ced0-448f-b112-21359f8a3fca",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -222,13 +222,13 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
+          603,
+          604,
+          605,
           606,
           607,
           608,
-          609,
-          610,
-          611,
-          612
+          609
         ],
         "showCol": [
           true,
@@ -253,17 +253,17 @@
       "displayName": "Normality Test",
       "args": {
         "yIN": [
-          606,
-          607
+          603,
+          604
         ],
         "method": "shapiro",
         "alpha": 0.05,
         "out": {
-          "variable": 608,
-          "statistic": 609,
-          "pvalue": 610,
-          "n": 611,
-          "normal": 612
+          "variable": 605,
+          "statistic": 606,
+          "pvalue": 607,
+          "n": 608,
+          "normal": 609
         },
         "valid": false
       },
@@ -287,11 +287,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_606": {
+    "data_603": {
       "x": 60,
       "y": 314
     },
-    "data_607": {
+    "data_604": {
       "x": 60,
       "y": 814
     },
@@ -365,5 +365,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

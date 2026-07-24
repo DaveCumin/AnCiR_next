@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "638": [
+    "635": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "639": [
+    "636": [
       80.74815343291546,
       74.1026647241765,
       67.34975964373878,
@@ -100,7 +100,7 @@
       25.36953942083682,
       31.225353920755683
     ],
-    "640": [
+    "637": [
       0,
       1,
       2,
@@ -150,10 +150,10 @@
       46,
       47
     ],
-    "641": [
+    "638": [
       null
     ],
-    "642": [
+    "639": [
       75.31550624457671,
       75.31550624457671,
       75.31550624457671,
@@ -206,20 +206,20 @@
   },
   "data": [
     {
-      "id": 638,
+      "id": 635,
       "name": "x",
-      "data": 638,
+      "data": 635,
       "type": "number",
-      "tableProcessGUId": "10743c7d-1f32-4078-8ad4-1027809490d1",
+      "tableProcessGUId": "74820755-d2f4-4cc8-99bb-ffac935a4339",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 639,
+      "id": 636,
       "name": "y",
-      "data": 639,
+      "data": 636,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -228,33 +228,33 @@
       "processes": []
     },
     {
-      "id": 640,
+      "id": 637,
       "name": "rectwavex_64",
-      "data": 640,
+      "data": 637,
       "type": "number",
-      "tableProcessGUId": "5f9e80bd-8c9c-4311-af37-1fecc18162e3",
+      "tableProcessGUId": "4e130605-d799-40ea-b76b-250b5cc174c3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 641,
+      "id": 638,
       "name": "pvalue_64",
-      "data": 641,
+      "data": 638,
       "type": "number",
-      "tableProcessGUId": "5f9e80bd-8c9c-4311-af37-1fecc18162e3",
+      "tableProcessGUId": "4e130605-d799-40ea-b76b-250b5cc174c3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 642,
-      "name": "rectwavey_639_64",
-      "data": 642,
+      "id": 639,
+      "name": "rectwavey_636_64",
+      "data": 639,
       "type": "number",
-      "tableProcessGUId": "5f9e80bd-8c9c-4311-af37-1fecc18162e3",
+      "tableProcessGUId": "4e130605-d799-40ea-b76b-250b5cc174c3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -320,9 +320,9 @@
         "data": [
           {
             "x": {
-              "id": 643,
+              "id": 640,
               "name": "x",
-              "refId": 638,
+              "refId": 635,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -331,9 +331,9 @@
               "processes": []
             },
             "y": {
-              "id": 644,
+              "id": 641,
               "name": "y",
-              "refId": 639,
+              "refId": 636,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -359,9 +359,9 @@
           },
           {
             "x": {
-              "id": 645,
+              "id": 642,
               "name": "rectwavex_64",
-              "refId": 640,
+              "refId": 637,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -370,9 +370,9 @@
               "processes": []
             },
             "y": {
-              "id": 646,
-              "name": "rectwavey_639_64",
-              "refId": 642,
+              "id": 643,
+              "name": "rectwavey_636_64",
+              "refId": 639,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -428,8 +428,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          639,
-          642
+          636,
+          639
         ],
         "showCol": [
           true,
@@ -454,7 +454,7 @@
         "count": 48,
         "end": 47,
         "out": {
-          "result": 638
+          "result": 635
         }
       },
       "refTPId": null
@@ -464,9 +464,9 @@
       "name": "RectangularWave",
       "displayName": "Rectangular Wave",
       "args": {
-        "xIN": 638,
+        "xIN": 635,
         "yIN": [
-          639
+          636
         ],
         "outputX": -1,
         "fixKappa": false,
@@ -477,9 +477,9 @@
         "fixedDutyCycle": 0.5,
         "preProcesses": [],
         "out": {
-          "rectwavex": 640,
-          "pvalue": 641,
-          "rectwavey_639": 642
+          "rectwavex": 637,
+          "pvalue": 638,
+          "rectwavey_636": 639
         }
       },
       "refTPId": null
@@ -502,7 +502,7 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_639": {
+    "data_636": {
       "x": 60,
       "y": 314
     },
@@ -584,5 +584,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "505": [
+    "502": [
       49,
       48,
       47,
@@ -52,7 +52,7 @@
       1,
       0
     ],
-    "506": [
+    "503": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -104,7 +104,7 @@
       10,
       11.362966948437261
     ],
-    "507": [
+    "504": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "508": [
+    "505": [
       11.362966948437261,
       10,
       11.362966948437276,
@@ -211,44 +211,44 @@
   },
   "data": [
     {
-      "id": 505,
+      "id": 502,
       "name": "Sort input 1",
+      "data": 502,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 503,
+      "name": "Sort input 2",
+      "data": 503,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 504,
+      "name": "sortedy_502_39",
+      "data": 504,
+      "type": "number",
+      "tableProcessGUId": "ace79a23-5e9a-4a25-85d9-c7744de520a5",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 505,
+      "name": "sortedy_503_39",
       "data": 505,
       "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 506,
-      "name": "Sort input 2",
-      "data": 506,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 507,
-      "name": "sortedy_505_39",
-      "data": 507,
-      "type": "number",
-      "tableProcessGUId": "b06d09e4-d7a4-40bf-a41b-04882e8f0ff8",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 508,
-      "name": "sortedy_506_39",
-      "data": 508,
-      "type": "number",
-      "tableProcessGUId": "b06d09e4-d7a4-40bf-a41b-04882e8f0ff8",
+      "tableProcessGUId": "ace79a23-5e9a-4a25-85d9-c7744de520a5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -273,10 +273,10 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          505,
-          506,
-          507,
-          508
+          502,
+          503,
+          504,
+          505
         ],
         "showCol": [
           true,
@@ -298,15 +298,15 @@
       "displayName": "Sort",
       "args": {
         "yIN": [
-          505,
-          506
+          502,
+          503
         ],
-        "sortOnId": 505,
+        "sortOnId": 502,
         "direction": "asc",
         "preProcesses": [],
         "out": {
-          "sortedy_505": 507,
-          "sortedy_506": 508
+          "sortedy_502": 504,
+          "sortedy_503": 505
         }
       },
       "refTPId": null
@@ -329,11 +329,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_505": {
+    "data_502": {
       "x": 60,
       "y": 314
     },
-    "data_506": {
+    "data_503": {
       "x": 60,
       "y": 814
     },
@@ -407,5 +407,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.4"
+  "version": "β.62.5"
 }
