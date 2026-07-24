@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Circadian Rhythm Visualisations</title>
+    <link rel="stylesheet" href="shared.css" />
+    <style>
+      body {
+        padding-bottom: 40px;
+      }
+      .index-intro {
+        max-width: 700px;
+        margin: 32px auto 0;
+        padding: 0 24px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.8;
+      }
+      .index-intro strong {
+        color: var(--navy);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="anim-header">
+      <h1>Circadian Rhythm Visualisations</h1>
+      <p>Interactive animations · Handbook supplement</p>
+    </header>
+
+    <p class="index-intro">
+      Seven interactive animations covering the core concepts of circadian biology
+      — from the <strong>mathematics of rhythmic signals</strong> to the
+      <strong>molecular feedback loops</strong> that drive the ~24-hour clock.
+      Each animation can be played, paused, reset, and scrubbed.
+    </p>
+
+    <div class="anim-grid">
+      <a class="anim-card" href="sine.html">
+        <div class="card-icon">〜</div>
+        <div class="card-title">Sine Curve Components</div>
+        <div class="card-desc">
+          Step-by-step reveal of a sinusoidal rhythm showing
+          <strong>mesor</strong> (midline), <strong>amplitude</strong> (half the
+          peak–trough range), and <strong>period</strong>
+          (~24 h for circadian rhythms).
+        </div>
+        <div class="card-link">Open animation →</div>
+      </a>
+
+      <a class="anim-card" href="actogram.html">
+        <div class="card-icon">▦</div>
+        <div class="card-title">Actogram</div>
+        <div class="card-desc">
+          Watch continuous activity data fold into a
+          <strong>double-plotted actogram</strong>, the standard tool for
+          visualising rest–activity rhythms and detecting drift or phase shifts
+          across days.
+        </div>
+        <div class="card-link">Open animation →</div>
+      </a>
+
+      <a class="anim-card" href="periodogram.html">
+        <div class="card-icon">📊</div>
+        <div class="card-title">Periodogram</div>
+        <div class="card-desc">
+          See how a <strong>χ²/Lomb–Scargle periodogram</strong> sweeps
+          candidate sine waves across a range of periods and accumulates
+          goodness-of-fit (R²) scores to identify the dominant period.
+        </div>
+        <div class="card-link">Open animation →</div>
+      </a>
+
+      <a class="anim-card" href="fft.html">
+        <div class="card-icon">⟨f⟩</div>
+        <div class="card-title">FFT Power Spectrum</div>
+        <div class="card-desc">
+          The <strong>Fast Fourier Transform</strong> decomposes a composite
+          circadian + harmonic signal into its frequency components, revealing
+          the 24 h fundamental and 12 h harmonic peaks in the power spectrum.
+        </div>
+        <div class="card-link">Open animation →</div>
+      </a>
+
+      <a class="anim-card" href="correlogram.html">
+        <div class="card-icon">↔</div>
+        <div class="card-title">Correlogram (ACF)</div>
+        <div class="card-desc">
+          The <strong>autocorrelation function</strong> slides a copy of the
+          signal across itself at increasing lags. Recurring peaks at 24 h and
+          48 h confirm the presence of a circadian rhythm.
+        </div>
+        <div class="card-link">Open animation →</div>
+      </a>
+
+            <a class="anim-card" href="sound.html">
+        <div class="card-icon">&#127925;</div>
+        <div class="card-title">Sound Spectrum &amp; Spectrogram</div>
+        <div class="card-desc">
+          Watch a synthetic sound signal (three pure sine waves with varying
+          amplitudes) decomposed into a <strong>real-time FFT bar spectrum</strong>
+          (hi-fi equaliser style) and a scrolling <strong>spectrogram</strong> — or
+          switch to <strong>Live mode</strong> to visualise your microphone input.
+        </div>
+        <div class="card-link">Open animation &rarr;</div>
+      </a>
+
+      <a class="anim-card" href="molecular.html">
+        <div class="card-icon">🔄</div>
+        <div class="card-title">Molecular Clock</div>
+        <div class="card-desc">
+          Step through the mammalian
+          <strong
+            >CLOCK:BMAL1 / PER:CRY transcription–translation feedback
+            loop</strong
+          >, including TIM, CKI, and the secondary ROR / REV-ERBα stabilising
+          loop.
+        </div>
+        <div class="card-link">Open animation →</div>
+      </a>
+    </div>
+  </body>
+</html>

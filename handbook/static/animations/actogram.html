@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Actogram — Circadian Animations</title>
+    <link rel="stylesheet" href="shared.css" />
+  </head>
+  <body>
+    <header class="anim-header">
+      <h1>Circadian Rhythm Visualisations</h1>
+      <p>Interactive animations · Handbook supplement</p>
+    </header>
+
+    <nav class="anim-nav">
+      <a href="index.html">← All animations</a>
+      <span class="anim-title">Actogram</span>
+    </nav>
+
+    <div class="anim-body">
+      <div class="explanation">
+        An <strong>actogram</strong> is the standard tool in chronobiology for
+        visualising rhythmic activity over time. Raw activity data (left) is
+        recorded continuously over multiple days. Each day is extracted and
+        <strong>double-plotted</strong> side-by-side — so each day appears in
+        the second half of one row <em>and</em> the first half of the next —
+        then stacked vertically. This format reveals whether the rest–activity
+        rhythm drifts, advances, or remains locked to a 24-hour cycle.
+        <br /><br />
+        <strong style="color: var(--gold)">Gold bars</strong> = high activity;
+        <strong style="color: var(--blue)">blue bars</strong> = rest/low
+        activity.
+      </div>
+
+      <div class="viz-row two-col">
+        <div class="chart-panel">
+          <h3>Continuous Time Series (7 days)</h3>
+          <canvas id="c-ts" height="210"></canvas>
+        </div>
+        <div class="chart-panel">
+          <h3>Actogram (Double-plotted)</h3>
+          <canvas id="c-acto" height="210"></canvas>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="btn-play" onclick="actoToggle()">▶ Play</button>
+        <button class="btn secondary" onclick="actoReset()">↺ Reset</button>
+        <div class="progress-wrap" id="prog-wrap" onclick="actoSeek(event)">
+          <div class="progress-fill" id="prog-fill"></div>
+        </div>
+        <div class="speed-wrap">
+          <span>Speed</span>
+          <input
+            type="range"
+            min="0.005"
+            max="2"
+            step="0.005"
+            value="0.03"
+            id="speed-input"
+            oninput="actoSpeed = +this.value"
+          />
+        </div>
+        <div class="step-indicator" id="step-ind">Day 0 / 7</div>
+      </div>
+    </div>
+
+    <script src="shared.js"></script>
+    <script>
+      /* ── constants ── */
+      const DAYS = 7,
+        BINS = 48; // 48 × 30-min bins per day
+      const TOTAL = DAYS * BINS;
+
+      /* ── generate activity data (seed=42) ── */
+      function generateData() {
+        const rng = seededRNG(42);
+        const data = [];
+        for (let d = 0; d < DAYS; d++) {
+          const row = [];
+          for (let b = 0; b < BINS; b++) {
+            const hr = b * 0.5;
+            const offset = d * 0.18; // slight drift each day
+            const active = hr >= 8 && hr < 22;
+            const phase = ((hr - 8 - offset + 24) % 24) / 14;
+            const base = active ? 0.6 + 0.4 * Math.sin(Math.PI * phase) : 0.07;
+            row.push(Math.max(0, base + (rng() - 0.5) * 0.35));
+          }
+          data.push(row);
+        }
+        return data;
+      }
+      const actoData = generateData();
+
+      /* ── state ── */
+      let frame = 0,
+        playing = false,
+        raf = null,
+        lastTime = null,
+        accum = 0;
+      let actoSpeed = 0.03;
+
+      const cTS = document.getElementById("c-ts");
+      const cActo = document.getElementById("c-acto");
+
+      /* ── resize ── */
+      function resize() {
+        setupCanvas(cTS);
+        setupCanvas(cActo);
+        drawAll(frame);
+      }
+
+      /* ── draw TIME SERIES ── */
+      function drawTS(f) {
+        const ctx = cTS.getContext("2d");
+        const W = cTS.offsetWidth,
+          H = cTS.offsetHeight;
+        if (!W || !H) return;
+        ctx.clearRect(0, 0, W, H);
+
+        const padL = 42,
+          padR = 10,
+          padT = 14,
+          padB = 38;
+        const pW = W - padL - padR,
+          pH = H - padT - padB;
+
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(padL, padT, pW, pH);
+
+        /* day dividers */
+        for (let d = 0; d < DAYS; d++) {
+          const x = padL + (d / DAYS) * pW;
+          ctx.strokeStyle = C.grid;
+          ctx.lineWidth = 0.8;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(x, padT);
+          ctx.lineTo(x, padT + pH);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = C.muted;
+          ctx.font = "9px Inter,sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(`Day ${d + 1}`, x + pW / DAYS / 2, padT + pH + 16);
+        }
+
+        drawAxes(ctx, padL, padT, pW, pH, "", "Activity");
+
+        const curDay = Math.floor(f / BINS),
+          curBin = f % BINS;
+        for (let d = 0; d < DAYS; d++) {
+          for (let b = 0; b < BINS; b++) {
+            const val = actoData[d][b];
+            const xPos = padL + ((d * BINS + b) / TOTAL) * pW;
+            const yPos = padT + pH - val * pH * 0.88;
+            const isCur = d === curDay && b === curBin;
+            const isPast = d * BINS + b <= f;
+            ctx.globalAlpha = isCur ? 1 : isPast ? 0.85 : 0.22;
+            ctx.fillStyle = val > 0.3 ? C.data1 : C.data2;
+            const r = isCur ? 5 : 2.5;
+            ctx.beginPath();
+            ctx.arc(xPos, yPos, r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.globalAlpha = 1;
+
+        /* sweep cursor */
+        if (f < TOTAL) {
+          const sx = padL + (f / TOTAL) * pW;
+          ctx.strokeStyle = "rgba(200,150,46,0.65)";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath();
+          ctx.moveTo(sx, padT);
+          ctx.lineTo(sx, padT + pH);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+
+      /* ── draw ACTOGRAM ── */
+      function drawActogram(f) {
+        const ctx = cActo.getContext("2d");
+        const W = cActo.offsetWidth,
+          H = cActo.offsetHeight;
+        if (!W || !H) return;
+        ctx.clearRect(0, 0, W, H);
+
+        const padL = 42,
+          padR = 10,
+          padT = 14,
+          padB = 38;
+        const pW = W - padL - padR,
+          pH = H - padT - padB;
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(padL, padT, pW, pH);
+
+        const rowH = pH / DAYS;
+        const binW =
+          pW / (BINS * 2); /* double-plot: each row = 2×48 bins wide */
+        const curDay = Math.floor(f / BINS),
+          curBin = f % BINS;
+
+        for (let d = 0; d < DAYS; d++) {
+          const y = padT + d * rowH;
+          if (d > 0) {
+            ctx.strokeStyle = C.grid;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(padL, y);
+            ctx.lineTo(padL + pW, y);
+            ctx.stroke();
+          }
+          const show = d < curDay ? BINS : d === curDay ? curBin + 1 : 0;
+          for (let b = 0; b < show; b++) {
+            const val = actoData[d][b];
+            const barH = val * rowH * 0.88;
+            /* first copy (left half of row) */
+            ctx.fillStyle = val > 0.3 ? C.data1 : C.data2;
+            ctx.globalAlpha = 0.9;
+            ctx.fillRect(padL + b * binW, y + rowH - barH, binW - 0.4, barH);
+            /* second copy (right half of row = same day shifted) */
+            if (d > 0) {
+              const pv = actoData[d][b];
+              const pb = pv * rowH * 0.88;
+              ctx.fillStyle = pv > 0.3 ? C.data1 : C.data2;
+              ctx.fillRect(
+                padL + (b + BINS) * binW,
+                y - rowH * 0.12 - pb,
+                binW - 0.4,
+                pb,
+              );
+            }
+          }
+        }
+        ctx.globalAlpha = 1;
+
+        /* midnight line at double-plot midpoint */
+        const midX = padL + BINS * binW;
+        ctx.strokeStyle = "rgba(0,59,113,0.25)";
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(midX, padT);
+        ctx.lineTo(midX, padT + pH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        /* x-axis ticks */
+        const hrs = [0, 6, 12, 18, 24, 30, 36, 42, 48];
+        const lbls = ["0", "6", "12", "18", "0", "6", "12", "18", "0"];
+        ctx.fillStyle = C.muted;
+        ctx.font = "8.5px Inter,sans-serif";
+        ctx.textAlign = "center";
+        hrs.forEach((h, i) =>
+          ctx.fillText(lbls[i], padL + (h / 48) * pW, padT + pH + 14),
+        );
+
+        drawAxes(ctx, padL, padT, pW, pH, "Hour of Day", "Days");
+      }
+
+      function drawAll(f) {
+        drawTS(f);
+        drawActogram(f);
+        document.getElementById("prog-fill").style.width =
+          (f / TOTAL) * 100 + "%";
+        const day = Math.min(Math.floor(f / BINS) + 1, DAYS);
+        document.getElementById("step-ind").textContent =
+          `Day ${day} / ${DAYS}`;
+      }
+
+      /* ── animation loop ── */
+      function loop(ts) {
+        if (!playing) return;
+        if (lastTime === null) lastTime = ts;
+        const dt = ts - lastTime;
+        lastTime = ts;
+        accum += dt * actoSpeed * 0.006 * BINS;
+        const steps = Math.floor(accum);
+        accum -= steps;
+        frame = Math.min(frame + steps, TOTAL);
+        drawAll(frame);
+        if (frame >= TOTAL) {
+          playing = false;
+          document.getElementById("btn-play").textContent = "▶ Play";
+          return;
+        }
+        raf = requestAnimationFrame(loop);
+      }
+
+      function actoToggle() {
+        if (frame >= TOTAL) actoReset();
+        playing = !playing;
+        document.getElementById("btn-play").textContent = playing
+          ? "⏸ Pause"
+          : "▶ Play";
+        if (playing) {
+          lastTime = null;
+          raf = requestAnimationFrame(loop);
+        } else cancelAnimationFrame(raf);
+      }
+
+      function actoReset() {
+        playing = false;
+        cancelAnimationFrame(raf);
+        frame = 0;
+        lastTime = null;
+        accum = 0;
+        document.getElementById("btn-play").textContent = "▶ Play";
+        drawAll(0);
+      }
+
+      function actoSeek(e) {
+        const rect = document
+          .getElementById("prog-wrap")
+          .getBoundingClientRect();
+        frame = Math.round(
+          Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) *
+            TOTAL,
+        );
+        drawAll(frame);
+      }
+
+      /* ── init ── */
+      resize();
+      window.addEventListener("resize", resize);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Periodogram — Circadian Animations</title>
+    <link rel="stylesheet" href="shared.css" />
+  </head>
+  <body>
+    <header class="anim-header">
+      <h1>Circadian Rhythm Visualisations</h1>
+      <p>Interactive animations · Handbook supplement</p>
+    </header>
+
+    <nav class="anim-nav">
+      <a href="index.html">← All animations</a>
+      <span class="anim-title">Periodogram</span>
+    </nav>
+
+    <div class="anim-body">
+      <div class="explanation">
+        A <strong>periodogram</strong> (χ²/Lomb–Scargle style) identifies the
+        dominant period in a time series. A
+        <strong>test sine wave</strong> (top-left) is swept systematically from
+        short to long periods. At each candidate period the wave is overlaid on
+        the original data (top-right) and the
+        <strong>goodness-of-fit (R²)</strong> is recorded. The bottom panel
+        accumulates these values into the periodogram; the tallest bar reveals
+        the <strong>dominant period</strong> — here near
+        <strong>23.5 h</strong>, consistent with a circadian rhythm.
+      </div>
+
+      <div class="viz-row two-col">
+        <div class="chart-panel">
+          <h3>Test Sine Wave</h3>
+          <canvas id="c-test" height="175"></canvas>
+          <div class="period-label" id="period-label">Period: — h</div>
+        </div>
+        <div class="chart-panel">
+          <h3>Data vs Test Wave</h3>
+          <canvas id="c-overlay" height="175"></canvas>
+        </div>
+      </div>
+
+      <div class="viz-row one-col">
+        <div class="chart-panel">
+          <h3>Periodogram (R² vs Period)</h3>
+          <canvas id="c-pgram" height="210"></canvas>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="btn-play" onclick="periodToggle()">
+          ▶ Play
+        </button>
+        <button class="btn secondary" onclick="periodReset()">↺ Reset</button>
+        <div class="progress-wrap" id="prog-wrap" onclick="periodSeek(event)">
+          <div class="progress-fill" id="prog-fill"></div>
+        </div>
+        <div class="speed-wrap">
+          <span>Speed</span>
+          <input
+            type="range"
+            min="0.01"
+            max="4"
+            step="0.01"
+            value="0.04"
+            id="speed-input"
+            oninput="periodSpeed = +this.value"
+          />
+        </div>
+        <div class="step-indicator" id="step-ind">Period: —</div>
+      </div>
+    </div>
+
+    <script src="shared.js"></script>
+    <script>
+      /* ── signal: 7 days × 1-h bins, period ~23.5 h ── */
+      const N_HR = 168;
+      const TRUE_PERIOD = 23.5;
+
+      const signal = (() => {
+        const rng = seededRNG(99);
+        return Array.from({ length: N_HR }, (_, i) => {
+          const phase = ((i % TRUE_PERIOD) / TRUE_PERIOD) * 2 * Math.PI;
+          const active = Math.sin(phase - Math.PI * 0.3) > 0.1;
+          const base = active
+            ? 0.6 + 0.35 * Math.sin(phase - Math.PI * 0.3)
+            : 0.05;
+          return Math.max(0, base + (rng() - 0.5) * 0.3);
+        });
+      })();
+
+      /* ── test periods 8 h to 48 h in 0.5-h steps ── */
+      const TEST_PERIODS = [];
+      for (let p = 8; p <= 48; p += 0.5) TEST_PERIODS.push(p);
+
+      function computeR2(period) {
+        const omega = (2 * Math.PI) / period;
+        const meanY = signal.reduce((a, b) => a + b, 0) / N_HR;
+        let sss = 0,
+          ssc = 0,
+          scc = 0,
+          sy = 0,
+          cy = 0;
+        for (let i = 0; i < N_HR; i++) {
+          const s = Math.sin(omega * i),
+            c = Math.cos(omega * i);
+          sss += s * s;
+          ssc += s * c;
+          scc += c * c;
+          sy += (signal[i] - meanY) * s;
+          cy += (signal[i] - meanY) * c;
+        }
+        const det = sss * scc - ssc * ssc;
+        if (Math.abs(det) < 1e-10) return 0;
+        const A = (scc * sy - ssc * cy) / det,
+          B = (sss * cy - ssc * sy) / det;
+        let ss_res = 0,
+          ss_tot = 0;
+        for (let i = 0; i < N_HR; i++) {
+          const pred =
+            meanY + A * Math.sin(omega * i) + B * Math.cos(omega * i);
+          ss_res += (signal[i] - pred) ** 2;
+          ss_tot += (signal[i] - meanY) ** 2;
+        }
+        return Math.max(0, 1 - ss_res / ss_tot);
+      }
+
+      /* pre-compute R² for all test periods */
+      const allR2 = TEST_PERIODS.map(computeR2);
+      const maxR2 = Math.max(...allR2);
+      const dominantIdx = allR2.indexOf(maxR2);
+
+      /* ── state ── */
+      let frame = 0,
+        playing = false,
+        raf = null,
+        lastTime = null,
+        accum = 0;
+      let periodSpeed = 0.04;
+      const TOTAL = TEST_PERIODS.length;
+
+      const cTest = document.getElementById("c-test");
+      const cOverlay = document.getElementById("c-overlay");
+      const cPgram = document.getElementById("c-pgram");
+
+      /* ── resize ── */
+      function resize() {
+        [cTest, cOverlay, cPgram].forEach((c) => setupCanvas(c));
+        drawAll(frame);
+      }
+
+      /* ── draw TEST SINE ── */
+      function drawTest(period) {
+        const ctx = cTest.getContext("2d");
+        const W = cTest.offsetWidth,
+          H = cTest.offsetHeight;
+        if (!W || !H) return;
+        ctx.clearRect(0, 0, W, H);
+        const padL = 12,
+          padR = 12,
+          padT = 10,
+          padB = 28,
+          pW = W - 24,
+          pH = H - 38;
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(padL, padT, pW, pH);
+        ctx.strokeStyle = C.axis;
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(padL, padT, pW, pH);
+        /* baseline */
+        ctx.strokeStyle = C.grid;
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(padL, padT + pH / 2);
+        ctx.lineTo(padL + pW, padT + pH / 2);
+        ctx.stroke();
+        // Draw the fitted test curve: meanY + A*sin(omega*t) + B*cos(omega*t)
+        const omega = (2 * Math.PI) / period;
+        // Recompute meanY, A, B for this period (duplicate logic from computeR2)
+        const meanY = signal.reduce((a, b) => a + b, 0) / N_HR;
+        let sss = 0,
+          ssc = 0,
+          scc = 0,
+          sy = 0,
+          cy = 0;
+        for (let i = 0; i < N_HR; i++) {
+          const s = Math.sin(omega * i),
+            c = Math.cos(omega * i);
+          sss += s * s;
+          ssc += s * c;
+          scc += c * c;
+          sy += (signal[i] - meanY) * s;
+          cy += (signal[i] - meanY) * c;
+        }
+        const det = sss * scc - ssc * ssc;
+        let A = 0,
+          B = 0;
+        if (Math.abs(det) > 1e-10) {
+          A = (scc * sy - ssc * cy) / det;
+          B = (sss * cy - ssc * sy) / det;
+        }
+        ctx.strokeStyle = C.data2;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        for (let x = 0; x <= pW; x++) {
+          const t = (x / pW) * N_HR;
+          const y =
+            padT +
+            pH / 2 -
+            (A * Math.sin(omega * t) + B * Math.cos(omega * t)) * pH * 0.42;
+          x === 0 ? ctx.moveTo(padL + x, y) : ctx.lineTo(padL + x, y);
+        }
+        ctx.stroke();
+        ctx.fillStyle = C.muted;
+        ctx.font = "9px Inter,sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Time (hours)", padL + pW / 2, padT + pH + 18);
+      }
+
+      /* ── draw OVERLAY ── */
+      function drawOverlay(period) {
+        const ctx = cOverlay.getContext("2d");
+        const W = cOverlay.offsetWidth,
+          H = cOverlay.offsetHeight;
+        if (!W || !H) return;
+        ctx.clearRect(0, 0, W, H);
+        const padL = 32,
+          padR = 10,
+          padT = 10,
+          padB = 28,
+          pW = W - 42,
+          pH = H - 38;
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(padL, padT, pW, pH);
+        ctx.strokeStyle = C.axis;
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(padL, padT, pW, pH);
+        /* data signal */
+        ctx.strokeStyle = C.data1;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let i = 0; i < N_HR; i++) {
+          const x = padL + (i / N_HR) * pW,
+            y = padT + pH - signal[i] * pH * 0.9;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        /* test sine with best-fit phase */
+        const omega = (2 * Math.PI) / period;
+        // Compute best-fit phase phi for this period
+        const meanY = signal.reduce((a, b) => a + b, 0) / N_HR;
+        let sss = 0,
+          ssc = 0,
+          scc = 0,
+          sy = 0,
+          cy = 0;
+        for (let i = 0; i < N_HR; i++) {
+          const s = Math.sin(omega * i),
+            c = Math.cos(omega * i);
+          sss += s * s;
+          ssc += s * c;
+          scc += c * c;
+          sy += (signal[i] - meanY) * s;
+          cy += (signal[i] - meanY) * c;
+        }
+        const det = sss * scc - ssc * ssc;
+        let phi = 0;
+        if (Math.abs(det) > 1e-10) {
+          const A = (scc * sy - ssc * cy) / det;
+          const B = (sss * cy - ssc * sy) / det;
+          phi = Math.atan2(B, A);
+        }
+        ctx.strokeStyle = C.data2;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        for (let x = 0; x <= pW; x++) {
+          const t = (x / pW) * N_HR;
+          const y = padT + pH / 2 - Math.sin(omega * t + phi) * pH * 0.42;
+          x === 0 ? ctx.moveTo(padL + x, y) : ctx.lineTo(padL + x, y);
+        }
+        ctx.stroke();
+        /* legend */
+        ctx.fillStyle = C.data1;
+        ctx.font = "8px Inter,sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("data", padL + 4, padT + 10);
+        ctx.fillStyle = C.data2;
+        ctx.fillText("test wave", padL + 4, padT + 22);
+        drawAxes(ctx, padL, padT, pW, pH, "Time", "Activity");
+      }
+
+      /* ── draw PERIODOGRAM ── */
+      function drawPeriodogram(upTo) {
+        const ctx = cPgram.getContext("2d");
+        const W = cPgram.offsetWidth,
+          H = cPgram.offsetHeight;
+        if (!W || !H) return;
+        ctx.clearRect(0, 0, W, H);
+        const padL = 48,
+          padR = 16,
+          padT = 18,
+          padB = 40,
+          pW = W - 64,
+          pH = H - 58;
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(padL, padT, pW, pH);
+        drawHGrid(ctx, padL, padT, pW, pH, 4);
+
+        /* y-axis value labels */
+        for (let r = 0; r <= 4; r++) {
+          const y = padT + (r / 4) * pH;
+          ctx.fillStyle = C.muted;
+          ctx.font = "8px Inter,sans-serif";
+          ctx.textAlign = "right";
+          ctx.fillText(((1 - r / 4) * maxR2).toFixed(2), padL - 5, y + 3);
+        }
+        /* x-axis ticks */
+        [12, 16, 20, 24, 28, 32, 36, 40, 44, 48].forEach((tp) => {
+          const x = padL + ((tp - 8) / (48 - 8)) * pW;
+          ctx.fillStyle = C.muted;
+          ctx.font = "8.5px Inter,sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(tp + "h", x, padT + pH + 16);
+          ctx.strokeStyle = C.grid;
+          ctx.lineWidth = 0.4;
+          ctx.beginPath();
+          ctx.moveTo(x, padT + pH);
+          ctx.lineTo(x, padT + pH + 4);
+          ctx.stroke();
+        });
+        drawAxes(ctx, padL, padT, pW, pH, "Period (Hours)", "Power (R²)");
+
+        const barW = pW / TOTAL - 0.5;
+        for (let i = 0; i <= Math.min(upTo, TOTAL - 1); i++) {
+          const x = padL + (i / TOTAL) * pW;
+          const bh = (allR2[i] / maxR2) * pH;
+          const isDom = i === dominantIdx && upTo >= TOTAL - 1;
+          const isLast = i === upTo;
+          ctx.fillStyle = isDom ? C.gold : isLast ? C.navy : C.blue;
+          ctx.globalAlpha = isDom || isLast ? 1 : 0.72;
+          ctx.fillRect(x, padT + pH - bh, barW, bh);
+        }
+        ctx.globalAlpha = 1;
+
+        /* dominant period label when done */
+        if (upTo >= TOTAL - 1) {
+          const dx = padL + (dominantIdx / TOTAL) * pW;
+          ctx.fillStyle = C.gold;
+          ctx.font = "bold 10px Inter,sans-serif";
+          ctx.textAlign = "left";
+          ctx.fillText(
+            `${TEST_PERIODS[dominantIdx].toFixed(1)} h`,
+            dx + 3,
+            padT + 16,
+          );
+        }
+
+        /* sweep cursor */
+        if (upTo < TOTAL) {
+          const cx = padL + (upTo / TOTAL) * pW;
+          ctx.strokeStyle = "rgba(200,150,46,0.65)";
+          ctx.lineWidth = 1.2;
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath();
+          ctx.moveTo(cx, padT);
+          ctx.lineTo(cx, padT + pH);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+
+      function drawAll(f) {
+        const i = Math.min(f, TOTAL - 1);
+        const p = TEST_PERIODS[i];
+        const done = f >= TOTAL;
+        drawTest(p);
+        drawOverlay(p);
+        drawPeriodogram(f);
+        document.getElementById("period-label").textContent = done
+          ? `Dominant Period: ${TEST_PERIODS[dominantIdx].toFixed(1)} h`
+          : `Period: ${p.toFixed(1)} h`;
+        document.getElementById("step-ind").textContent = done
+          ? `Done — ${TEST_PERIODS[dominantIdx].toFixed(1)} h`
+          : `${p.toFixed(1)} h`;
+        document.getElementById("prog-fill").style.width =
+          (f / TOTAL) * 100 + "%";
+      }
+
+      /* ── animation loop ── */
+      function loop(ts) {
+        if (!playing) return;
+        if (lastTime === null) lastTime = ts;
+        const dt = ts - lastTime;
+        lastTime = ts;
+        accum += (dt * periodSpeed * 0.005 * TOTAL) / 10;
+        const steps = Math.floor(accum);
+        accum -= steps;
+        frame = Math.min(frame + steps, TOTAL);
+        drawAll(frame);
+        if (frame >= TOTAL) {
+          playing = false;
+          document.getElementById("btn-play").textContent = "▶ Play";
+          return;
+        }
+        raf = requestAnimationFrame(loop);
+      }
+
+      function periodToggle() {
+        if (frame >= TOTAL) periodReset();
+        playing = !playing;
+        document.getElementById("btn-play").textContent = playing
+          ? "⏸ Pause"
+          : "▶ Play";
+        if (playing) {
+          lastTime = null;
+          raf = requestAnimationFrame(loop);
+        } else cancelAnimationFrame(raf);
+      }
+
+      function periodReset() {
+        playing = false;
+        cancelAnimationFrame(raf);
+        frame = 0;
+        lastTime = null;
+        accum = 0;
+        document.getElementById("btn-play").textContent = "▶ Play";
+        drawAll(0);
+      }
+
+      function periodSeek(e) {
+        const rect = document
+          .getElementById("prog-wrap")
+          .getBoundingClientRect();
+        frame = Math.round(
+          Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) *
+            TOTAL,
+        );
+        drawAll(frame);
+      }
+
+      /* ── init ── */
+      resize();
+      window.addEventListener("resize", resize);
+    </script>
+  </body>
+</html>

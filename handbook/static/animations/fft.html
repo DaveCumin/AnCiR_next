@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FFT Power Spectrum — Circadian Animations</title>
+    <link rel="stylesheet" href="shared.css" />
+  </head>
+  <body>
+    <header class="anim-header">
+      <h1>Circadian Rhythm Visualisations</h1>
+      <p>Interactive animations · Handbook supplement</p>
+    </header>
+
+    <nav class="anim-nav">
+      <a href="index.html">← All animations</a>
+      <span class="anim-title">FFT Power Spectrum</span>
+    </nav>
+
+    <div class="anim-body">
+      <div class="explanation">
+        The <strong>Fast Fourier Transform (FFT)</strong> decomposes any complex
+        time series into a sum of sinusoidal components, each characterised by a
+        frequency, amplitude, and phase. The animation uses a
+        <strong>Discrete Fourier Transform (DFT)</strong> to show this process
+        step by step. The composite signal (top) is built from a dominant
+        <strong>24 h</strong> component and a <strong>12 h harmonic</strong>. As
+        the DFT sweeps through candidate frequencies, the accumulating
+        <strong>power spectrum</strong> (right) reveals peaks at exactly those
+        periods — demonstrating how spectral analysis identifies circadian and
+        ultradian components.
+      </div>
+
+      <div class="viz-row one-col">
+        <div class="chart-panel">
+          <h3>Composite Signal (24 h + 12 h components, 7 days)</h3>
+          <canvas id="c-signal" height="145"></canvas>
+        </div>
+      </div>
+
+      <div class="viz-row two-col">
+        <div class="chart-panel">
+          <h3>Current Test Frequency</h3>
+          <canvas id="c-test" height="155"></canvas>
+          <div class="period-label" id="fft-label">Frequency: —</div>
+        </div>
+        <div class="chart-panel">
+          <h3>DFT Power Spectrum</h3>
+          <canvas id="c-spec" height="155"></canvas>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-swatch" style="background: #04050a"></div>
+          Composite signal
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background: #be796b"></div>
+          Test sinusoid
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background: var(--gold)"></div>
+          24 h peak
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background: var(--green)"></div>
+          12 h peak
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="btn-play" onclick="fftToggle()">▶ Play</button>
+        <button class="btn secondary" onclick="fftReset()">↺ Reset</button>
+        <div class="progress-wrap" id="prog-wrap" onclick="fftSeek(event)">
+          <div class="progress-fill" id="prog-fill"></div>
+        </div>
+        <div class="speed-wrap">
+          <span>Speed</span>
+          <input
+            type="range"
+            min="0.01"
+            max="6"
+            step="0.01"
+            value="0.08"
+            id="speed-input"
+            oninput="fftSpeed = +this.value"
+          />
+        </div>
+        <div class="step-indicator" id="step-ind">Freq: —</div>
+      </div>
+    </div>
+
+    <script src="shared.js"></script>
+    <script>
+      /* ── signal: 168 h, 24 h dominant + 12 h harmonic ── */
+      const N = 168; // 7 days × 24 h bins
+      const sig = (() => {
+        const rng = seededRNG(77);
+        return Array.from({ length: N }, (_, i) => {
+          const v =
+            0.5 +
+            0.4 * Math.sin(((2 * Math.PI) / 24) * i - Math.PI / 2) + // 24h
+            0.18 * Math.sin(((2 * Math.PI) / 12) * i + 0.4) + // 12h harmonic
+            (rng() - 0.5) * 0.1;
+          return Math.max(0.05, Math.min(1, v));
+        });
+      })();
+
+      /* ── pre-compute DFT power for k = 1..N/2 ── */
+      const KMAX = Math.floor(N / 2); // 84
+      const power = new Float64Array(KMAX + 1);
+      for (let k = 1; k <= KMAX; k++) {
+        let re = 0,
+          im = 0;
+        for (let n = 0; n < N; n++) {
+          const angle = (2 * Math.PI * k * n) / N;
+          re += sig[n] * Math.cos(angle);
+          im -= sig[n] * Math.sin(angle);
+        }
+        power[k] = (Math.sqrt(re * re + im * im) / N) * 2;
+      }
+      const maxPow = Math.max(...power.slice(1));
+      /* frequencies of interest */
+      const K24 = Math.round(N / 24); // k=7  → 24 h period
+      const K12 = Math.round(N / 12); // k=14 → 12 h period
+
+      /* ── display: only show k=1..42 (period ≥ 4 h) for clarity ── */
+      const K_SHOW = Math.min(KMAX, 42);
+      const TOTAL = K_SHOW; // animation sweeps k = 1..K_SHOW
+
+      /* ── state ── */
+      let frame = 1,
+        playing = false,
+        raf = null,
+        lastTime = null,
+        accum = 0;
+      let fftSpeed = 0.08;
+
+      const cSig = document.getElementById("c-signal");
+      const cTest = document.getElementById("c-test");
+      const cSpec = document.getElementById("c-spec");
+
+      /* ── resize ── */
+      function resize() {
+        [cSig, cTest, cSpec].forEach((c) => setupCanvas(c));
+        drawSignal();
+        drawAll(frame);
+      }
+
+      /* ── DRAW COMPOSITE SIGNAL (static) ── */
+      function drawSignal() {
+        const ctx = cSig.getContext("2d");
+        const W = cSig.offsetWidth,
+          H = cSig.offsetHeight;
+        if (!W || !H) return;
+        ctx.clearRect(0, 0, W, H);
+        const padL = 40,
+          padR = 12,
+          padT = 12,
+          padB = 30,
+          pW = W - 52,
+          pH = H - 42;
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(padL, padT, pW, pH);
+        drawHGrid(ctx, padL, padT, pW, pH, 4);
+
+        /* day dividers */
+        for (let d = 0; d <= 7; d++) {
+          const x = padL + (d / 7) * pW;
+          ctx.strokeStyle = C.grid;
+          ctx.lineWidth = 0.7;
+          ctx.setLineDash([3, 2]);
+          ctx.beginPath();
+          ctx.moveTo(x, padT);
+          ctx.lineTo(x, padT + pH);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          if (d > 0 && d < 7) {
+            ctx.fillStyle = C.muted;
+            ctx.font = "8.5px Inter,sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(`Day ${d}`, x + pW / (7 * 2), padT + pH + 16);
+          }
+        }
+        /* signal line */
+        ctx.strokeStyle = C.data1;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < N; i++) {
+          const x = padL + (i / N) * pW,
+            y = padT + pH - (sig[i] - 0.05) * pH * 0.9;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        drawAxes(ctx, padL, padT, pW, pH, "", "Activity");
+      }
+
+      /* ── DRAW TEST SINUSOID ── */
+      function drawTest(k) {
+        const ctx = cTest.getContext("2d");
+        const W = cTest.offsetWidth,
+          H = cTest.offsetHeight;
+        if (!W || !H) return;
+        ctx.clearRect(0, 0, W, H);
+        const padL = 12,
+          padR = 12,
+          padT = 10,
+          padB = 28,
+          pW = W - 24,
+          pH = H - 38;
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(padL, padT, pW, pH);
+        ctx.strokeStyle = C.axis;
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(padL, padT, pW, pH);
+        /* baseline */
+        ctx.strokeStyle = C.grid;
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(padL, padT + pH / 2);
+        ctx.lineTo(padL + pW, padT + pH / 2);
+        ctx.stroke();
+        /* signal dim */
+        ctx.strokeStyle = C.data1;
+        ctx.lineWidth = 1.2;
+        ctx.globalAlpha = 0.22;
+        ctx.beginPath();
+        for (let i = 0; i < N; i++) {
+          const x = padL + (i / N) * pW,
+            y = padT + pH - (sig[i] - 0.05) * pH * 0.9;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        /* test sinusoid */
+        ctx.strokeStyle = C.data2;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        for (let x = 0; x <= pW; x++) {
+          const t = (x / pW) * N;
+          const y =
+            padT + pH / 2 - Math.sin((2 * Math.PI * k * t) / N) * pH * 0.42;
+          x === 0 ? ctx.moveTo(padL + x, y) : ctx.lineTo(padL + x, y);
+        }
+        ctx.stroke();
+
+        const periodH = (N / k).toFixed(1);
+        const label =
+          +periodH >= 2 ? `Period: ${periodH} h  (k = ${k})` : `k = ${k}`;
+        document.getElementById("fft-label").textContent = label;
+        document.getElementById("step-ind").textContent = label;
+      }
+
+      /* ── DRAW SPECTRUM ── */
+      function drawSpec(upTo) {
+        const ctx = cSpec.getContext("2d");
+        const W = cSpec.offsetWidth,
+          H = cSpec.offsetHeight;
+        if (!W || !H) return;
+        ctx.clearRect(0, 0, W, H);
+        const padL = 42,
+          padR = 12,
+          padT = 14,
+          padB = 32,
+          pW = W - 54,
+          pH = H - 46;
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(padL, padT, pW, pH);
+        drawHGrid(ctx, padL, padT, pW, pH, 4);
+
+        const barW = pW / K_SHOW - 0.3;
+        for (let k = 1; k <= Math.min(upTo, K_SHOW); k++) {
+          const x = padL + ((k - 1) / K_SHOW) * pW;
+          const bh = (power[k] / maxPow) * pH;
+          const is24 = k === K24,
+            is12 = k === K12,
+            isLast = k === upTo;
+          ctx.fillStyle = is24
+            ? C.gold
+            : is12
+              ? C.green
+              : isLast
+                ? C.navy
+                : C.blue;
+          ctx.globalAlpha = is24 || is12 || isLast ? 1 : 0.65;
+          ctx.fillRect(x, padT + pH - bh, barW, bh);
+        }
+        ctx.globalAlpha = 1;
+
+        /* peak labels once visible */
+        if (upTo >= K24) {
+          const x = padL + ((K24 - 1) / K_SHOW) * pW + barW / 2;
+          ctx.fillStyle = C.gold;
+          ctx.font = "bold 9px Inter,sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("24h", x, padT + pH - (power[K24] / maxPow) * pH - 5);
+        }
+        if (upTo >= K12) {
+          const x = padL + ((K12 - 1) / K_SHOW) * pW + barW / 2;
+          ctx.fillStyle = C.green;
+          ctx.font = "bold 9px Inter,sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("12h", x, padT + pH - (power[K12] / maxPow) * pH - 5);
+        }
+
+        /* x-axis period labels at key frequencies */
+        [
+          { k: K24, label: "24h" },
+          { k: K12, label: "12h" },
+          { k: Math.round(N / 8), label: "8h" },
+        ].forEach(({ k, label }) => {
+          if (k <= K_SHOW) {
+            const x = padL + ((k - 1) / K_SHOW) * pW + barW / 2;
+            ctx.fillStyle = C.muted;
+            ctx.font = "8.5px Inter,sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(label, x, padT + pH + 16);
+          }
+        });
+
+        /* sweep cursor */
+        if (upTo < K_SHOW) {
+          const cx = padL + (upTo / K_SHOW) * pW;
+          ctx.strokeStyle = "rgba(200,150,46,0.65)";
+          ctx.lineWidth = 1.2;
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath();
+          ctx.moveTo(cx, padT);
+          ctx.lineTo(cx, padT + pH);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        drawAxes(ctx, padL, padT, pW, pH, "Period", "Power");
+        document.getElementById("prog-fill").style.width =
+          (upTo / TOTAL) * 100 + "%";
+      }
+
+      function drawAll(k) {
+        drawTest(Math.max(1, Math.min(k, TOTAL)));
+        drawSpec(k);
+      }
+
+      /* ── animation loop ── */
+      function loop(ts) {
+        if (!playing) return;
+        if (lastTime === null) lastTime = ts;
+        const dt = ts - lastTime;
+        lastTime = ts;
+        accum += dt * fftSpeed * 0.004 * TOTAL;
+        const steps = Math.floor(accum);
+        accum -= steps;
+        frame = Math.min(frame + steps, TOTAL);
+        drawAll(frame);
+        if (frame >= TOTAL) {
+          playing = false;
+          document.getElementById("btn-play").textContent = "▶ Play";
+          return;
+        }
+        raf = requestAnimationFrame(loop);
+      }
+
+      function fftToggle() {
+        if (frame >= TOTAL) fftReset();
+        playing = !playing;
+        document.getElementById("btn-play").textContent = playing
+          ? "⏸ Pause"
+          : "▶ Play";
+        if (playing) {
+          lastTime = null;
+          raf = requestAnimationFrame(loop);
+        } else cancelAnimationFrame(raf);
+      }
+
+      function fftReset() {
+        playing = false;
+        cancelAnimationFrame(raf);
+        frame = 1;
+        lastTime = null;
+        accum = 0;
+        document.getElementById("btn-play").textContent = "▶ Play";
+        document.getElementById("fft-label").textContent = "Frequency: —";
+        drawAll(1);
+      }
+
+      function fftSeek(e) {
+        const rect = document
+          .getElementById("prog-wrap")
+          .getBoundingClientRect();
+        frame = Math.max(
+          1,
+          Math.round(
+            Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) *
+              TOTAL,
+          ),
+        );
+        drawAll(frame);
+      }
+
+      /* ── init ── */
+      resize();
+      window.addEventListener("resize", resize);
+    </script>
+  </body>
+</html>

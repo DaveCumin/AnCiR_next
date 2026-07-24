@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sound Spectrum &amp; Spectrogram — Circadian Animations</title>
+    <link rel="stylesheet" href="shared.css" />
+    <style>
+      .mode-tabs {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        margin: 10px 0 6px;
+      }
+      .mode-tab {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        border-radius: 5px;
+        padding: 6px 18px;
+        font-family: "Inter", sans-serif;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          color 0.15s,
+          border-color 0.15s;
+      }
+      .mode-tab.active {
+        background: var(--navy);
+        color: #fff;
+        border-color: var(--navy);
+      }
+      .mode-tab:hover:not(.active) {
+        border-color: var(--navy);
+        color: var(--navy);
+      }
+      #c-spectrogram {
+        max-height: 160px;
+        min-height: 100px;
+        image-rendering: pixelated;
+        border-radius: 4px;
+      }
+      #c-fft {
+        max-height: 160px;
+        min-height: 80px;
+      }
+      #c-wave {
+        max-height: 120px;
+        min-height: 60px;
+      }
+      .live-badge {
+        display: inline-block;
+        background: var(--red);
+        color: #fff;
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        border-radius: 4px;
+        padding: 2px 7px;
+        vertical-align: middle;
+        margin-left: 6px;
+        animation: livepulse 1.2s ease-in-out infinite;
+      }
+      @keyframes livepulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+      .live-badge.hidden {
+        display: none;
+      }
+      #mic-warn {
+        display: none;
+        background: var(--gold-lt);
+        border: 1px solid var(--gold);
+        border-left: 4px solid var(--gold);
+        border-radius: 6px;
+        padding: 10px 16px;
+        font-size: 0.82rem;
+        color: #78350f;
+        margin: 8px 0;
+      }
+      .freq-labels {
+        display: flex;
+        justify-content: space-between;
+        padding: 2px 0 0 36px;
+        font-size: 0.65rem;
+        color: var(--muted);
+        font-weight: 500;
+        letter-spacing: 0.03em;
+      }
+      .note-info {
+        text-align: center;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--navy);
+        margin-top: 5px;
+        min-height: 1.3em;
+        letter-spacing: 0.02em;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="anim-header">
+      <h1>Circadian Rhythm Visualisations</h1>
+      <p>Interactive animations &middot; Handbook supplement</p>
+    </header>
+    <nav class="anim-nav">
+      <a href="index.html">&larr; All animations</a>
+      <span class="anim-title">
+        Sound Spectrum &amp; Spectrogram
+        <span class="live-badge hidden" id="live-badge">&#9679; LIVE</span>
+      </span>
+    </nav>
+
+    <div class="anim-body">
+      <div class="explanation">
+        The demo signal is a mix of <strong>three pure sine waves</strong>
+        (250 Hz, 700 Hz, 1300 Hz) whose amplitudes vary slowly and independently
+        &mdash; making each spectral peak easy to follow in the
+        <strong>FFT bar graph</strong> (just like a hi-fi equaliser display) and
+        as distinct horizontal bands in the <strong>spectrogram</strong>, which
+        stacks successive FFT snapshots into a frequency &times; time map.
+        Switch to <strong>Live mode</strong> to analyse your microphone input in
+        real time.
+      </div>
+
+      <div class="mode-tabs">
+        <button
+          class="mode-tab active"
+          id="tab-demo"
+          onclick="switchMode('demo')"
+        >
+          Demo signal
+        </button>
+        <button class="mode-tab" id="tab-live" onclick="switchMode('live')">
+          &#127897; Live microphone
+        </button>
+      </div>
+
+      <div id="mic-warn">
+        Microphone access was denied or is not available. Please allow
+        microphone permission and click <strong>Live microphone</strong> again.
+      </div>
+
+      <div class="viz-row one-col">
+        <div class="chart-panel">
+          <h3 id="wave-title">Waveform (synthetic signal)</h3>
+          <canvas id="c-wave" height="100"></canvas>
+        </div>
+      </div>
+
+      <div class="viz-row one-col">
+        <div class="chart-panel">
+          <h3>Frequency Spectrum (FFT bar graph)</h3>
+          <canvas id="c-fft" height="130"></canvas>
+          <div class="freq-labels" id="freq-labels"></div>
+          <div class="note-info" id="note-info">&mdash;</div>
+        </div>
+      </div>
+
+      <div class="viz-row one-col">
+        <div class="chart-panel">
+          <h3>Spectrogram (frequency &times; time)</h3>
+          <canvas id="c-spectrogram" height="130"></canvas>
+        </div>
+      </div>
+
+      <div class="controls" id="demo-controls">
+        <button class="btn" id="btn-play" onclick="demoToggle()">
+          &#9654; Play
+        </button>
+        <button class="btn secondary" onclick="demoReset()">
+          &#8635; Reset
+        </button>
+        <div class="progress-wrap" id="prog-wrap" onclick="demoSeek(event)">
+          <div class="progress-fill" id="prog-fill"></div>
+        </div>
+        <div class="speed-wrap">
+          <span>Speed</span>
+          <input
+            type="range"
+            min="0.1"
+            max="5"
+            step="0.05"
+            value="1"
+            id="speed-input"
+            oninput="demoSpeed = +this.value"
+          />
+        </div>
+        <div class="step-indicator" id="step-ind">t = 0 s</div>
+      </div>
+
+      <div class="controls" id="live-controls" style="display: none">
+        <button class="btn secondary" onclick="clearSpectrogram()">
+          &#9003; Clear spectrogram
+        </button>
+        <div class="step-indicator" id="live-freq-info">Peak: &mdash;</div>
+      </div>
+    </div>
+
+    <script src="shared.js"></script>
+    <script>
+      /* ================================================================
+       sound.html  Waveform, FFT bar graph, Spectrogram, Live mic
+    ================================================================ */
+
+      /* ------------------------------------------------------------------
+       Spectrogram colour ramp  (dark background, "thermal" palette)
+       black -> purple -> blue -> cyan -> green -> yellow -> red
+    ------------------------------------------------------------------ */
+      var SPECTRO_BG = "rgb(8,8,16)";
+
+      function spectroColor(v) {
+        var stops = [
+          [0.0, [8, 8, 16]],
+          [0.18, [60, 0, 130]],
+          [0.38, [0, 60, 200]],
+          [0.55, [0, 190, 200]],
+          [0.72, [50, 210, 50]],
+          [0.87, [230, 200, 0]],
+          [1.0, [220, 40, 20]],
+        ];
+        v = Math.max(0, Math.min(1, v));
+        for (var i = 1; i < stops.length; i++) {
+          var t0 = stops[i - 1][0],
+            c0 = stops[i - 1][1];
+          var t1 = stops[i][0],
+            c1 = stops[i][1];
+          if (v <= t1) {
+            var f = (v - t0) / (t1 - t0);
+            return (
+              "rgb(" +
+              Math.round(c0[0] + f * (c1[0] - c0[0])) +
+              "," +
+              Math.round(c0[1] + f * (c1[1] - c0[1])) +
+              "," +
+              Math.round(c0[2] + f * (c1[2] - c0[2])) +
+              ")"
+            );
+          }
+        }
+        return "rgb(220,40,20)";
+      }
+
+      /* ------------------------------------------------------------------
+       DEMO SIGNAL
+       Three pure sine waves: 250 Hz, 700 Hz, 1300 Hz.
+       Each has a slowly-varying amplitude envelope so the spectrogram
+       shows three distinct horizontal bands.
+       Virtual sample rate FS = 4000 Hz, FFT size NFFT = 512 (7.8 Hz/bin)
+         250 Hz  bin 32
+         700 Hz  bin ~90
+        1300 Hz  bin ~166
+    ------------------------------------------------------------------ */
+      var FS = 4000;
+      var NFFT = 512;
+      var HOP = 64;
+      var TOTAL_SECS = 12;
+      var TOTAL_SAMPLES = TOTAL_SECS * FS;
+
+      /* Amplitude envelopes (t in 0..1) */
+      var COMPONENTS = [
+        {
+          freq: 250,
+          amp: function (t) {
+            return 0.15 + 0.85 * Math.pow(Math.sin(Math.PI * t * 0.9 + 0.1), 2);
+          },
+        },
+        {
+          freq: 700,
+          amp: function (t) {
+            return 0.9 - 0.7 * Math.pow(Math.sin(Math.PI * t * 1.1), 2);
+          },
+        },
+        {
+          freq: 1300,
+          amp: function (t) {
+            return 0.1 + 0.85 * Math.abs(Math.sin(Math.PI * t * 2.0 - 0.5));
+          },
+        },
+      ];
+
+      /* Pre-synthesise full buffer */
+      var demoSig = new Float32Array(TOTAL_SAMPLES);
+      (function () {
+        for (var n = 0; n < TOTAL_SAMPLES; n++) {
+          var t = n / TOTAL_SAMPLES;
+          var v = 0;
+          for (var c = 0; c < COMPONENTS.length; c++) {
+            v +=
+              COMPONENTS[c].amp(t) *
+              Math.sin((2 * Math.PI * COMPONENTS[c].freq * n) / FS);
+          }
+          demoSig[n] = v;
+        }
+      })();
+
+      /* ------------------------------------------------------------------
+       Hann-windowed DFT -> one-sided magnitude
+    ------------------------------------------------------------------ */
+      function computeFFT(buf) {
+        var N = buf.length;
+        var half = N >> 1;
+        var mag = new Float32Array(half + 1);
+        for (var k = 0; k <= half; k++) {
+          var re = 0,
+            im = 0;
+          for (var n = 0; n < N; n++) {
+            var w = 0.5 - 0.5 * Math.cos((2 * Math.PI * n) / (N - 1));
+            var a = (2 * Math.PI * k * n) / N;
+            re += w * buf[n] * Math.cos(a);
+            im -= w * buf[n] * Math.sin(a);
+          }
+          mag[k] = (2 / N) * Math.sqrt(re * re + im * im);
+        }
+        return mag;
+      }
+
+      /* ------------------------------------------------------------------
+       SPECTROGRAM
+       Uses a dark canvas. Each call scrolls left 1 CSS px and paints
+       a new column on the right.
+
+       IMPORTANT: drawImage must receive explicit destination w/h.
+       Without them the canvas's physical pixel dimensions (w*DPR) are
+       used as the CSS-space destination, which is 2x too large on
+       Retina (DPR=2) and breaks the scroll.
+    ------------------------------------------------------------------ */
+      var sgCanvas = null;
+      var sgCtx = null;
+      var sgW = 0;
+      var sgH = 0;
+
+      function initSpectrogram() {
+        if (!sgCanvas) {
+          sgCanvas = document.getElementById("c-spectrogram");
+        }
+        var d = dpr();
+        sgW = sgCanvas.offsetWidth || 600;
+        sgH = sgCanvas.offsetHeight || 130;
+        sgCanvas.width = sgW * d;
+        sgCanvas.height = sgH * d;
+        sgCtx = sgCanvas.getContext("2d");
+        sgCtx.setTransform(d, 0, 0, d, 0, 0);
+        sgCtx.fillStyle = SPECTRO_BG;
+        sgCtx.fillRect(0, 0, sgW, sgH);
+      }
+
+      function paintSpectrogramColumn(mag, maxFreqBin, hzPerBin) {
+        if (!sgCtx) {
+          return;
+        }
+        if (!hzPerBin) {
+          hzPerBin = FS / NFFT;
+        }
+        var nBins = maxFreqBin;
+        var pH = sgH - 18;
+
+        /* Scroll left 1 CSS px with explicit destination size */
+        sgCtx.drawImage(sgCanvas, -1, 0, sgW, sgH);
+
+        /* Paint new rightmost column
+         Gain x2.5: Hann peak for amplitude-1 pure tone ≈ 0.5 -> ~1.25 clamped */
+        for (var k = 1; k < nBins; k++) {
+          var v = Math.min(1, mag[k] * 2.5);
+          var y = Math.round(pH * (1 - (k + 0.5) / nBins));
+          var h = Math.max(1, Math.round(pH / nBins) + 1);
+          sgCtx.fillStyle = spectroColor(v);
+          sgCtx.fillRect(sgW - 1, y, 1, h);
+        }
+
+        /* Freq-axis labels */
+        sgCtx.fillStyle = SPECTRO_BG;
+        sgCtx.fillRect(0, pH, sgW, sgH - pH);
+        var maxFreq = nBins * hzPerBin;
+        var tickFreqs =
+          maxFreq <= 2000
+            ? [200, 400, 600, 800, 1000, 1200, 1600]
+            : [500, 1000, 2000, 4000, 8000];
+        sgCtx.fillStyle = "#9ca3af";
+        sgCtx.font = "9px Inter,sans-serif";
+        sgCtx.textAlign = "center";
+        for (var i = 0; i < tickFreqs.length; i++) {
+          var f = tickFreqs[i];
+          if (f >= maxFreq) {
+            continue;
+          }
+          var x = (f / maxFreq) * sgW;
+          sgCtx.fillText(
+            f >= 1000 ? (f / 1000).toFixed(0) + "k" : f + " Hz",
+            x,
+            sgH - 4,
+          );
+        }
+      }
+
+      function clearSpectrogram() {
+        if (!sgCtx) {
+          return;
+        }
+        sgCtx.fillStyle = SPECTRO_BG;
+        sgCtx.fillRect(0, 0, sgW, sgH);
+      }
+
+      /* ------------------------------------------------------------------
+       FFT BAR GRAPH
+    ------------------------------------------------------------------ */
+      var fftCanvas = null;
+
+      function drawFFTBars(mag, maxFreqBin, peakLabel) {
+        if (!fftCanvas) {
+          fftCanvas = document.getElementById("c-fft");
+        }
+        var wh = setupCanvas(fftCanvas);
+        var ctx = wh.ctx;
+        var W = wh.W;
+        var H = wh.H;
+        ctx.clearRect(0, 0, W, H);
+
+        var padL = 36,
+          padR = 8,
+          padT = 8,
+          padB = 22;
+        var pW = W - padL - padR;
+        var pH = H - padT - padB;
+
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(padL, padT, pW, pH);
+
+        var nBins = maxFreqBin;
+        var barW = Math.max(1, pW / nBins - 0.5);
+
+        var grad = ctx.createLinearGradient(0, padT + pH, 0, padT);
+        grad.addColorStop(0.0, "#003b71");
+        grad.addColorStop(0.5, "#0073cf");
+        grad.addColorStop(0.8, "#c8962e");
+        grad.addColorStop(1.0, "#dc2626");
+
+        for (var k = 0; k < nBins; k++) {
+          var v = Math.min(1, mag[k] * 1.8);
+          var bH = v * pH;
+          if (bH < 1) {
+            continue;
+          }
+          ctx.fillStyle = grad;
+          ctx.fillRect(padL + (k / nBins) * pW, padT + pH - bH, barW, bH);
+        }
+
+        drawHGrid(ctx, padL, padT, pW, pH, 4);
+        drawAxes(ctx, padL, padT, pW, pH, "", "Amplitude");
+
+        ctx.fillStyle = C.muted;
+        ctx.font = "9px Inter,sans-serif";
+        ctx.textAlign = "right";
+        for (var i = 0; i <= 4; i++) {
+          var y = padT + pH - (i / 4) * pH;
+          ctx.fillText((i * 0.25).toFixed(2), padL - 3, y + 3);
+        }
+
+        if (peakLabel) {
+          document.getElementById("note-info").textContent = peakLabel;
+        }
+      }
+
+      /* ------------------------------------------------------------------
+       WAVEFORM
+    ------------------------------------------------------------------ */
+      var waveCanvas = null;
+
+      function drawWaveform(buf, title) {
+        if (!waveCanvas) {
+          waveCanvas = document.getElementById("c-wave");
+        }
+        var wh = setupCanvas(waveCanvas);
+        var ctx = wh.ctx;
+        var W = wh.W;
+        var H = wh.H;
+        ctx.clearRect(0, 0, W, H);
+
+        var padL = 36,
+          padR = 8,
+          padT = 8,
+          padB = 18;
+        var pW = W - padL - padR;
+        var pH = H - padT - padB;
+
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(padL, padT, pW, pH);
+        drawHGrid(ctx, padL, padT, pW, pH, 3);
+        drawAxes(ctx, padL, padT, pW, pH, "", "Pressure");
+
+        ctx.strokeStyle = C.border;
+        ctx.lineWidth = 0.8;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(padL, padT + pH / 2);
+        ctx.lineTo(padL + pW, padT + pH / 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.strokeStyle = C.data1;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        var N = buf.length;
+        for (var i = 0; i < N; i++) {
+          var x = padL + (i / N) * pW;
+          var y = padT + pH / 2 - (buf[i] / 2.5) * (pH / 2);
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+
+        if (title) {
+          document.getElementById("wave-title").textContent = title;
+        }
+      }
+
+      /* ------------------------------------------------------------------
+       HELPERS
+    ------------------------------------------------------------------ */
+      function peakFreqLabel(mag, maxBin, hzPerBin) {
+        if (!hzPerBin) {
+          hzPerBin = FS / NFFT;
+        }
+        var peak = 0,
+          pk = 1;
+        for (var k = 1; k < maxBin; k++) {
+          if (mag[k] > peak) {
+            peak = mag[k];
+            pk = k;
+          }
+        }
+        return "Peak: " + Math.round(pk * hzPerBin) + " Hz";
+      }
+
+      function buildFreqLabels(maxFreqBin, hzPerBin) {
+        if (!hzPerBin) {
+          hzPerBin = FS / NFFT;
+        }
+        var maxFreq = maxFreqBin * hzPerBin;
+        var el = document.getElementById("freq-labels");
+        el.innerHTML = "";
+        for (var i = 0; i <= 6; i++) {
+          var f = Math.round((i / 6) * maxFreq);
+          var div = document.createElement("span");
+          div.textContent =
+            f >= 1000 ? (f / 1000).toFixed(1) + " kHz" : f + " Hz";
+          el.appendChild(div);
+        }
+      }
+
+      /* ------------------------------------------------------------------
+       DEMO MODE
+    ------------------------------------------------------------------ */
+      var MAX_FREQ_DEMO = 1600;
+      var MAX_BIN_DEMO = Math.round(MAX_FREQ_DEMO / (FS / NFFT));
+
+      var demoCursor = 0;
+      var demoPlaying = false;
+      var demoRaf = null;
+      var demoSpeed = 1;
+      var lastTs = null;
+      var accumSamples = 0;
+
+      function demoFrame(ts) {
+        if (!demoPlaying) {
+          return;
+        }
+        demoRaf = requestAnimationFrame(demoFrame);
+        var dt = ts - (lastTs || ts);
+        lastTs = ts;
+        accumSamples += (dt / 1000) * FS * demoSpeed;
+        var steps = Math.floor(accumSamples / HOP);
+        if (steps < 1) {
+          return;
+        }
+        accumSamples -= steps * HOP;
+        for (var s = 0; s < steps; s++) {
+          demoCursor = Math.min(demoCursor + HOP, TOTAL_SAMPLES - NFFT);
+        }
+        updateDemo();
+        if (demoCursor >= TOTAL_SAMPLES - NFFT) {
+          demoPlaying = false;
+          document.getElementById("btn-play").textContent = "\u25b6 Play";
+          document.getElementById("prog-fill").style.width = "100%";
+        }
+      }
+
+      function updateDemo() {
+        var slice = demoSig.slice(demoCursor, demoCursor + NFFT);
+        var mag = computeFFT(slice);
+        drawWaveform(slice, "Waveform (250 Hz + 700 Hz + 1300 Hz)");
+        drawFFTBars(mag, MAX_BIN_DEMO, peakFreqLabel(mag, MAX_BIN_DEMO));
+        paintSpectrogramColumn(mag, MAX_BIN_DEMO);
+        var p = demoCursor / (TOTAL_SAMPLES - NFFT);
+        document.getElementById("prog-fill").style.width =
+          (p * 100).toFixed(1) + "%";
+        document.getElementById("step-ind").textContent =
+          "t = " + (demoCursor / FS).toFixed(2) + " s";
+      }
+
+      function demoToggle() {
+        if (demoCursor >= TOTAL_SAMPLES - NFFT) {
+          demoReset();
+        }
+        demoPlaying = !demoPlaying;
+        document.getElementById("btn-play").textContent = demoPlaying
+          ? "\u23f8 Pause"
+          : "\u25b6 Play";
+        if (demoPlaying) {
+          lastTs = null;
+          requestAnimationFrame(demoFrame);
+        }
+      }
+
+      function demoReset() {
+        demoPlaying = false;
+        if (demoRaf) {
+          cancelAnimationFrame(demoRaf);
+          demoRaf = null;
+        }
+        demoCursor = 0;
+        accumSamples = 0;
+        document.getElementById("btn-play").textContent = "\u25b6 Play";
+        document.getElementById("prog-fill").style.width = "0%";
+        document.getElementById("step-ind").textContent = "t = 0 s";
+        clearSpectrogram();
+        var slice = demoSig.slice(0, NFFT);
+        var mag = computeFFT(slice);
+        drawWaveform(slice, "Waveform (250 Hz + 700 Hz + 1300 Hz)");
+        drawFFTBars(mag, MAX_BIN_DEMO, "\u2014");
+      }
+
+      function demoSeek(e) {
+        var rect = document.getElementById("prog-wrap").getBoundingClientRect();
+        var t = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        demoCursor = Math.floor(t * (TOTAL_SAMPLES - NFFT));
+        accumSamples = 0;
+        updateDemo();
+      }
+
+      /* ------------------------------------------------------------------
+       LIVE MODE  Web Audio API
+    ------------------------------------------------------------------ */
+      var MAX_FREQ_LIVE = 4000;
+      var liveAudioCtx = null;
+      var liveAnalyser = null;
+      var liveStream = null;
+      var liveRaf = null;
+      var liveRunning = false;
+      var liveDataBuf = null;
+      var liveTimeBuf = null;
+
+      async function startLive() {
+        demoPlaying = false;
+        if (demoRaf) {
+          cancelAnimationFrame(demoRaf);
+          demoRaf = null;
+        }
+        document.getElementById("btn-play").textContent = "\u25b6 Play";
+
+        try {
+          liveStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: false,
+          });
+        } catch (err) {
+          document.getElementById("mic-warn").style.display = "block";
+          return;
+        }
+        document.getElementById("mic-warn").style.display = "none";
+
+        liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        var source = liveAudioCtx.createMediaStreamSource(liveStream);
+        liveAnalyser = liveAudioCtx.createAnalyser();
+        liveAnalyser.fftSize = 2048;
+        liveAnalyser.smoothingTimeConstant = 0.75;
+        source.connect(liveAnalyser);
+
+        liveDataBuf = new Float32Array(liveAnalyser.frequencyBinCount);
+        liveTimeBuf = new Float32Array(liveAnalyser.fftSize);
+
+        liveRunning = true;
+        document.getElementById("live-badge").classList.remove("hidden");
+        clearSpectrogram();
+
+        var liveHz = liveAudioCtx.sampleRate / liveAnalyser.fftSize;
+        buildFreqLabels(Math.round(MAX_FREQ_LIVE / liveHz), liveHz);
+        liveFrame();
+      }
+
+      function stopLive() {
+        liveRunning = false;
+        if (liveRaf) {
+          cancelAnimationFrame(liveRaf);
+          liveRaf = null;
+        }
+        if (liveStream) {
+          liveStream.getTracks().forEach(function (t) {
+            t.stop();
+          });
+          liveStream = null;
+        }
+        if (liveAudioCtx) {
+          liveAudioCtx.close();
+          liveAudioCtx = null;
+        }
+        liveAnalyser = null;
+        document.getElementById("live-badge").classList.add("hidden");
+      }
+
+      function liveFrame() {
+        if (!liveRunning || !liveAnalyser) {
+          return;
+        }
+        liveRaf = requestAnimationFrame(liveFrame);
+
+        liveAnalyser.getFloatFrequencyData(liveDataBuf);
+        liveAnalyser.getFloatTimeDomainData(liveTimeBuf);
+
+        var FLOOR = -80;
+        var liveHz = liveAudioCtx.sampleRate / liveAnalyser.fftSize;
+        var maxBin = Math.round(MAX_FREQ_LIVE / liveHz);
+        var mag = new Float32Array(maxBin + 1);
+        for (var k = 0; k <= maxBin; k++) {
+          mag[k] = Math.max(0, (liveDataBuf[k] - FLOOR) / -FLOOR);
+        }
+
+        var waveSlice = liveTimeBuf.slice(liveTimeBuf.length - NFFT);
+        drawWaveform(waveSlice, "Waveform (microphone input)");
+        drawFFTBars(mag, maxBin, peakFreqLabel(mag, maxBin, liveHz));
+        paintSpectrogramColumn(mag, maxBin, liveHz);
+        document.getElementById("live-freq-info").textContent = peakFreqLabel(
+          mag,
+          maxBin,
+          liveHz,
+        );
+      }
+
+      /* ------------------------------------------------------------------
+       MODE SWITCHING
+    ------------------------------------------------------------------ */
+      var currentMode = "demo";
+
+      function switchMode(mode) {
+        currentMode = mode;
+        document
+          .getElementById("tab-demo")
+          .classList.toggle("active", mode === "demo");
+        document
+          .getElementById("tab-live")
+          .classList.toggle("active", mode === "live");
+        document.getElementById("demo-controls").style.display =
+          mode === "demo" ? "" : "none";
+        document.getElementById("live-controls").style.display =
+          mode === "live" ? "flex" : "none";
+        if (mode === "live") {
+          startLive();
+        } else {
+          stopLive();
+          buildFreqLabels(MAX_BIN_DEMO);
+          demoReset();
+        }
+      }
+
+      /* ------------------------------------------------------------------
+       INIT
+    ------------------------------------------------------------------ */
+      window.addEventListener("DOMContentLoaded", function () {
+        initSpectrogram();
+        buildFreqLabels(MAX_BIN_DEMO);
+        demoReset();
+        window.addEventListener("resize", function () {
+          initSpectrogram();
+          if (currentMode === "demo") {
+            var slice = demoSig.slice(demoCursor, demoCursor + NFFT);
+            var mag = computeFFT(slice);
+            drawWaveform(slice);
+            drawFFTBars(mag, MAX_BIN_DEMO, peakFreqLabel(mag, MAX_BIN_DEMO));
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Correlogram / ACF — Circadian Animations</title>
+    <link rel="stylesheet" href="shared.css" />
+  </head>
+  <body>
+    <header class="anim-header">
+      <h1>Circadian Rhythm Visualisations</h1>
+      <p>Interactive animations · Handbook supplement</p>
+    </header>
+
+    <nav class="anim-nav">
+      <a href="index.html">← All animations</a>
+      <span class="anim-title">Correlogram (ACF)</span>
+    </nav>
+
+    <div class="anim-body">
+      <div class="explanation">
+        The <strong>autocorrelation function (ACF)</strong> quantifies how
+        similar a time series is to a lagged version of itself. At a lag equal
+        to the circadian period (~24 h), the signal lines up with itself,
+        producing a <strong>peak in the correlogram</strong>. Successive
+        harmonics appear at 48 h, 72 h, etc. Dashed confidence-interval lines
+        (±1.96/√n) separate statisticallysignificant correlations from noise.
+      </div>
+
+      <div class="viz-row two-col">
+        <div class="chart-panel">
+          <h3>Original Signal (7 days)</h3>
+          <canvas id="c-sig" height="155"></canvas>
+          <div class="period-label" id="lag-label">Lag: 0 h</div>
+        </div>
+        <div class="chart-panel">
+          <h3>Lagged Signal Overlay</h3>
+          <canvas id="c-lag" height="155"></canvas>
+        </div>
+      </div>
+
+      <div class="viz-row one-col">
+        <div class="chart-panel">
+          <h3>Autocorrelation Function</h3>
+          <canvas id="c-acf" height="190"></canvas>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-swatch" style="background: #04050a"></div>
+          Original signal
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background: #be796b"></div>
+          Lagged copy
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background: var(--gold)"></div>
+          Significant autocorrelation
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background: var(--blue)"></div>
+          Non-significant
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="btn-play" onclick="acfToggle()">▶ Play</button>
+        <button class="btn secondary" onclick="acfReset()">↺ Reset</button>
+        <div class="progress-wrap" id="prog-wrap" onclick="acfSeek(event)">
+          <div class="progress-fill" id="prog-fill"></div>
+        </div>
+        <div class="speed-wrap">
+          <span>Speed</span>
+          <input
+            type="range"
+            min="0.01"
+            max="6"
+            step="0.01"
+            value="0.10"
+            id="speed-input"
+            oninput="acfSpeed = +this.value"
+          />
+        </div>
+        <div class="step-indicator" id="step-ind">Lag: 0 h</div>
+      </div>
+    </div>
+
+    <script src="shared.js"></script>
+    <script>
+      /* ── signal (same seed as periodogram) ── */
+      const N = 168;
+      const sig = (() => {
+        const rng = seededRNG(99);
+        return Array.from({ length: N }, (_, i) => {
+          const v =
+            0.5 +
+            0.4 * Math.sin(((2 * Math.PI) / 23.5) * i - Math.PI / 2) +
+            (rng() - 0.5) * 0.12;
+          return Math.max(0.05, Math.min(1, v));
+        });
+      })();
+
+      const mean = sig.reduce((a, v) => a + v, 0) / N;
+      const variance = sig.reduce((a, v) => a + (v - mean) ** 2, 0) / N;
+      const LAG_MAX = 72;
+
+      /* pre-compute ACF */
+      const acf = new Float64Array(LAG_MAX + 1);
+      for (let lag = 0; lag <= LAG_MAX; lag++) {
+        let sum = 0;
+        for (let i = 0; i < N - lag; i++)
+          sum += (sig[i] - mean) * (sig[i + lag] - mean);
+        acf[lag] = sum / ((N - lag) * variance);
+      }
+
+      const CI = 1.96 / Math.sqrt(N);
+      const TOTAL = LAG_MAX;
+
+      let frame = 0,
+        playing = false,
+        raf = null,
+        lastTime = null,
+        accum = 0;
+      let acfSpeed = 0.1;
+
+      const cSig = document.getElementById("c-sig");
+      const cLag = document.getElementById("c-lag");
+      const cAcf = document.getElementById("c-acf");
+
+      /* ── resize ── */
+      function resize() {
+        [cSig, cLag, cAcf].forEach((c) => setupCanvas(c));
+        drawSig();
+        drawAll(frame);
+      }
+
+      /* ── DRAW ORIGINAL SIGNAL (static) ── */
+      function drawSig() {
+        const ctx = cSig.getContext("2d");
+        const W = cSig.offsetWidth,
+          H = cSig.offsetHeight;
+        if (!W || !H) return;
+        ctx.clearRect(0, 0, W, H);
+        const padL = 38,
+          padT = 10,
+          pW = W - 50,
+          pH = H - 38;
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(padL, padT, pW, pH);
+        drawHGrid(ctx, padL, padT, pW, pH, 4);
+        ctx.strokeStyle = C.data1;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        for (let i = 0; i < N; i++) {
+          const x = padL + (i / N) * pW,
+            y = padT + pH - (sig[i] - 0.05) * pH * 0.9;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        /* day markers */
+        for (let d = 1; d < 7; d++) {
+          const x = padL + ((d * 24) / N) * pW;
+          ctx.strokeStyle = C.grid;
+          ctx.lineWidth = 0.7;
+          ctx.setLineDash([3, 2]);
+          ctx.beginPath();
+          ctx.moveTo(x, padT);
+          ctx.lineTo(x, padT + pH);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        drawAxes(ctx, padL, padT, pW, pH, "Hour", "Activity");
+      }
+
+      /* ── DRAW LAGGED OVERLAY ── */
+      function drawLag(lag) {
+        const ctx = cLag.getContext("2d");
+        const W = cLag.offsetWidth,
+          H = cLag.offsetHeight;
+        if (!W || !H) return;
+        ctx.clearRect(0, 0, W, H);
+        const padL = 38,
+          padT = 10,
+          pW = W - 50,
+          pH = H - 38;
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(padL, padT, pW, pH);
+        drawHGrid(ctx, padL, padT, pW, pH, 4);
+        /* original dim */
+        ctx.strokeStyle = C.data1;
+        ctx.lineWidth = 1.4;
+        ctx.globalAlpha = 0.22;
+        ctx.beginPath();
+        for (let i = 0; i < N; i++) {
+          const x = padL + (i / N) * pW,
+            y = padT + pH - (sig[i] - 0.05) * pH * 0.9;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        /* lagged copy */
+        ctx.strokeStyle = C.data2;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        let started = false;
+        for (let i = lag; i < N; i++) {
+          const x = padL + (i / N) * pW,
+            y = padT + pH - (sig[i - lag] - 0.05) * pH * 0.9;
+          if (!started) {
+            ctx.moveTo(x, y);
+            started = true;
+          } else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        drawAxes(ctx, padL, padT, pW, pH, "Hour", "Activity");
+      }
+
+      /* ── DRAW ACF BARS ── */
+      function drawAcf(upTo) {
+        const ctx = cAcf.getContext("2d");
+        const W = cAcf.offsetWidth,
+          H = cAcf.offsetHeight;
+        if (!W || !H) return;
+        ctx.clearRect(0, 0, W, H);
+        const padL = 44,
+          padT = 14,
+          pW = W - 58,
+          pH = H - 46;
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(padL, padT, pW, pH);
+
+        /* y-axis = -1..1 → zero line at midY */
+        const midY = padT + pH * 0.5;
+        drawHGrid(ctx, padL, padT, pW, pH, 4);
+
+        /* CI dashed lines */
+        const ciY_pos = padT + pH * (0.5 - CI * 0.5);
+        const ciY_neg = padT + pH * (0.5 + CI * 0.5);
+        ctx.strokeStyle = C.gold;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 3]);
+        ctx.beginPath();
+        ctx.moveTo(padL, ciY_pos);
+        ctx.lineTo(padL + pW, ciY_pos);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(padL, ciY_neg);
+        ctx.lineTo(padL + pW, ciY_neg);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = C.gold + "99";
+        ctx.font = "8px Inter,sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText("+CI", padL - 2, ciY_pos + 3);
+        ctx.fillText("-CI", padL - 2, ciY_neg + 3);
+
+        /* zero line */
+        ctx.strokeStyle = C.axis;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(padL, midY);
+        ctx.lineTo(padL + pW, midY);
+        ctx.stroke();
+
+        const barW = pW / LAG_MAX - 0.4;
+        for (let lag = 0; lag <= Math.min(upTo, LAG_MAX); lag++) {
+          const x = padL + (lag / LAG_MAX) * pW;
+          const r = acf[lag];
+          const barH = Math.abs(r) * pH * 0.5;
+          const y = r >= 0 ? midY - barH : midY;
+          const is24 = lag === 24 || lag === 48,
+            isCur = lag === upTo;
+          ctx.fillStyle = is24
+            ? C.gold
+            : isCur
+              ? C.navy
+              : Math.abs(r) > CI
+                ? C.gold
+                : C.blue;
+          ctx.globalAlpha = is24 || isCur ? 1 : 0.65;
+          ctx.fillRect(x, y, barW, barH);
+        }
+        ctx.globalAlpha = 1;
+
+        /* x-axis labels */
+        [0, 12, 24, 36, 48, 60, 72].forEach((lag) => {
+          const x = padL + (lag / LAG_MAX) * pW;
+          ctx.fillStyle = C.muted;
+          ctx.font = "8.5px Inter,sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(lag + "h", x, padT + pH + 18);
+        });
+        /* y-axis labels */
+        [-1, -0.5, 0, 0.5, 1].forEach((v) => {
+          const y = padT + pH * (0.5 - v * 0.5);
+          ctx.fillStyle = C.muted;
+          ctx.font = "8px Inter,sans-serif";
+          ctx.textAlign = "right";
+          ctx.fillText(v.toFixed(1), padL - 4, y + 3);
+        });
+        /* axes outline */
+        ctx.strokeStyle = C.axis;
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(padL, padT, pW, pH);
+
+        document.getElementById("prog-fill").style.width =
+          (upTo / TOTAL) * 100 + "%";
+      }
+
+      function drawAll(lag) {
+        drawLag(lag);
+        drawAcf(lag);
+        const lbl = `Lag: ${lag} h  |  r = ${acf[lag] >= 0 ? "+" : ""}${acf[lag].toFixed(3)}`;
+        document.getElementById("lag-label").textContent = lbl;
+        document.getElementById("step-ind").textContent = lbl;
+      }
+
+      /* ── animation loop ── */
+      function loop(ts) {
+        if (!playing) return;
+        if (lastTime === null) lastTime = ts;
+        const dt = ts - lastTime;
+        lastTime = ts;
+        accum += dt * acfSpeed * 0.004 * TOTAL;
+        const steps = Math.floor(accum);
+        accum -= steps;
+        frame = Math.min(frame + steps, TOTAL);
+        drawAll(frame);
+        if (frame >= TOTAL) {
+          playing = false;
+          document.getElementById("btn-play").textContent = "▶ Play";
+          return;
+        }
+        raf = requestAnimationFrame(loop);
+      }
+
+      function acfToggle() {
+        if (frame >= TOTAL) acfReset();
+        playing = !playing;
+        document.getElementById("btn-play").textContent = playing
+          ? "⏸ Pause"
+          : "▶ Play";
+        if (playing) {
+          lastTime = null;
+          raf = requestAnimationFrame(loop);
+        } else cancelAnimationFrame(raf);
+      }
+
+      function acfReset() {
+        playing = false;
+        cancelAnimationFrame(raf);
+        frame = 0;
+        lastTime = null;
+        accum = 0;
+        document.getElementById("btn-play").textContent = "▶ Play";
+        drawAll(0);
+      }
+
+      function acfSeek(e) {
+        const rect = document
+          .getElementById("prog-wrap")
+          .getBoundingClientRect();
+        frame = Math.max(
+          0,
+          Math.round(
+            Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) *
+              TOTAL,
+          ),
+        );
+        drawAll(frame);
+      }
+
+      resize();
+      window.addEventListener("resize", resize);
+    </script>
+  </body>
+</html>

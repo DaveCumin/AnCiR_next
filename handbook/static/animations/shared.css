@@ -1,0 +1,448 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Circadian Handbook — Shared Animation Styles
+   Palette and typography match the main Svelte handbook (app.css).
+   ═══════════════════════════════════════════════════════════════════ */
+
+
+:root {
+  --navy: #003b71;
+  --navy-dk: #04050a;
+  --blue: #0073cf;
+  --blue-lt: #e8f2fb;
+  --gold: #c8962e;
+  --gold-lt: #fef3c7;
+  --green: #137333;
+  --green-lt: #e6f4ea;
+  --red: #c5221f;
+  --red-lt: #fce8e6;
+  --purple: #7c3aed;
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --text: #04050a;
+  --muted: #6b7280;
+  --border: #dde3ee;
+  --panel-bg: #f0f4fa;
+  --color-warning: #e6a817;
+  --color-warning-bg: #fef9e7;
+  --color-info: #4a90d9;
+  --color-info-bg: #eaf2fb;
+  --color-info-text: #1a73e8;
+  --color-success: #137333;
+  --color-success-bg: #e6f4ea;
+  --color-error: #c5221f;
+  --color-error-bg: #fce8e6;
+  --color-error-border: #f5c6cb;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  line-height: 1.6;
+}
+
+/* ── HEADER ── */
+.anim-header {
+  background: var(--navy);
+  padding: 10px 24px 8px;
+  border-bottom: 3px solid var(--gold);
+  text-align: center;
+}
+
+.anim-header h1 {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-size: clamp(1rem, 2vw, 1.4rem);
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+  margin-bottom: 2px;
+}
+
+.anim-header p {
+  display: none;
+}
+
+/* ── BACK NAVIGATION ── */
+.anim-nav {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.anim-nav a {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--navy);
+  text-decoration: none;
+  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.anim-nav a:hover {
+  text-decoration: underline;
+}
+
+.anim-nav .anim-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* ── MAIN CONTENT WRAPPER ── */
+.anim-body {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px 16px 16px;
+}
+
+/* ── EXPLANATION BOX ── */
+.explanation {
+  background: var(--color-info-bg);
+  border: 1px solid #c3d9f0;
+  border-left: 4px solid var(--color-info);
+  border-radius: 5px;
+  padding: 16px 20px;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
+  line-height: 1.85;
+  color: #374151;
+}
+
+.explanation strong {
+  color: var(--navy);
+  font-weight: 600;
+}
+.explanation em {
+  font-style: italic;
+}
+
+/* ── VIZ GRID ── */
+.viz-row {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.viz-row.one-col {
+  grid-template-columns: 1fr;
+}
+.viz-row.two-col {
+  grid-template-columns: 1fr 1fr;
+}
+.viz-row.three-col {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* ── CHART PANEL ── */
+.chart-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 14px 14px 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.chart-panel h3 {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--navy-dk);
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  max-height: 15vh;
+  min-height: 70px;
+  background: var(--panel-bg);
+  border-radius: 3px;
+}
+
+/* ── PERIOD LABEL (below canvas) ── */
+.period-label {
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--navy);
+  margin-top: 7px;
+  min-height: 1.3em;
+  letter-spacing: 0.02em;
+}
+
+/* ── CONTROLS BAR ── */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 18px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.18s,
+    transform 0.1s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn:hover {
+  background: var(--navy-dk);
+}
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn.secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.btn.secondary:hover {
+  border-color: var(--navy);
+  color: var(--navy);
+  background: transparent;
+}
+
+/* ── PROGRESS BAR ── */
+.progress-wrap {
+  flex: 1;
+  min-width: 60px;
+  height: 5px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--navy);
+  border-radius: 3px;
+  width: 0%;
+  transition: width 0.05s linear;
+}
+
+/* ── SPEED CONTROL ── */
+.speed-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.speed-wrap input[type="range"] {
+  -webkit-appearance: none;
+  width: 75px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+}
+
+.speed-wrap input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--navy);
+  cursor: pointer;
+}
+
+/* ── STEP INDICATOR ── */
+.step-indicator {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+/* ── LEGEND ── */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  margin: 10px 0 4px;
+  font-size: 0.77rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-swatch {
+  width: 20px;
+  height: 4px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ── MOLECULAR CLOCK STEP BUTTONS ── */
+.mol-step-text {
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning);
+  border-left: 4px solid var(--color-warning);
+  border-radius: 5px;
+  padding: 14px 18px;
+  font-size: 0.85rem;
+  line-height: 1.75;
+  color: #374151;
+  margin: 14px 0;
+  min-height: 3.5em;
+}
+
+.mol-step-text strong {
+  color: var(--navy);
+}
+.mol-step-text em {
+  font-style: italic;
+}
+
+.mol-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 4px;
+}
+
+.mol-step-btn {
+  padding: 6px 13px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.18s;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.mol-step-btn:hover,
+.mol-step-btn.active {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+
+/* ── INDEX PAGE CARDS ── */
+.anim-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 32px 24px 56px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.anim-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 22px 22px 18px;
+  text-decoration: none;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition:
+    box-shadow 0.2s,
+    transform 0.15s,
+    border-color 0.2s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.anim-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 59, 113, 0.12);
+  border-color: var(--blue);
+  transform: translateY(-2px);
+}
+
+.anim-card .card-icon {
+  font-size: 2rem;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.anim-card .card-title {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.anim-card .card-desc {
+  font-size: 0.84rem;
+  color: var(--muted);
+  line-height: 1.6;
+  flex: 1;
+}
+
+.anim-card .card-link {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--blue);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 720px) {
+  .viz-row.two-col,
+  .viz-row.three-col {
+    grid-template-columns: 1fr;
+  }
+  .anim-body {
+    padding: 20px 16px 40px;
+  }
+}
