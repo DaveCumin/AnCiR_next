@@ -14,6 +14,12 @@ node_modules
 # Handbook (workspace member) build output
 /handbook/build/
 /handbook/.svelte-kit/
+
+# The handbook is built into static/ by `pnpm build` (so AnCiR's dev server serves
+# /handbook.html and vite build copies it into build/). It's a generated artifact,
+# not source — regenerated every build — so it must not be tracked (it's a 780 KB
+# binary that would churn on every build).
+/static/handbook.html
 /.svelte-kit
 tools/.svelte-kit/
 
