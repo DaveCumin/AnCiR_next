@@ -25,6 +25,7 @@
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
+	import { createLazyPointerCapture } from '$lib/core/lazyPointerCapture.js';
 	import { canonicalNodeViz, plotDataFromSpec } from '$lib/plots/canonicalNodeViz.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { deleteTableProcess, detachColumnSetFromTP } from '$lib/core/TableProcess.svelte';
@@ -889,23 +890,23 @@
 	let activePointerId = $state(null);
 	/**
 	 * Capture the pointer to the editor root so a drag keeps tracking even when the finger leaves
-	 * the element (over a node panel, off-canvas). Without capture a touch-drag would simply stop
-	 * emitting move/up the moment it left the start element — the classic "lost drag" bug.
+	 * the element (over a node panel, off-canvas) — without it a drag stops emitting move/up the
+	 * moment it leaves the start element (the classic "lost drag").
+	 *
+	 * Capture is taken LAZILY, on the first move past a few pixels, NOT on pointerdown. Capturing at
+	 * press time retargets the pointerup to the editor, so a button inside the canvas never receives
+	 * its own pointerup and the browser never synthesises a click on it — that silently broke the
+	 * "+" node palette and every other in-canvas button. Deferring until the gesture is genuinely a
+	 * drag keeps click semantics intact and still makes drags robust.
 	 */
+	const lazyCapture = createLazyPointerCapture(() => editorEl);
 	function capturePointer(e) {
 		activePointerId = e.pointerId;
-		try {
-			editorEl?.setPointerCapture?.(e.pointerId);
-		} catch {
-			/* pointer already gone / capture unsupported — degrade to uncaptured tracking */
-		}
+		lazyCapture.arm(e);
 	}
-	function releasePointer(e) {
-		try {
-			if (activePointerId != null) editorEl?.releasePointerCapture?.(activePointerId);
-		} catch {
-			/* already released */
-		}
+	const takeCaptureIfMoved = (e) => lazyCapture.maybeTake(e);
+	function releasePointer() {
+		lazyCapture.release();
 		activePointerId = null;
 	}
 
@@ -1535,6 +1536,7 @@
 		// Ignore stray pointers that aren't the one driving the current single-finger gesture.
 		if (activePointerId != null && e.pointerId !== activePointerId && !activePointers.has(e.pointerId))
 			return;
+		takeCaptureIfMoved(e);
 		mouseCanvas = toCanvasCoords(e.clientX, e.clientY);
 
 		// Feed the edge-pan engine so it nudges the canvas toward the cursor
@@ -2645,7 +2647,7 @@
 			if (activePointers.size >= 2) return; // still pinching with the other fingers
 		}
 		// A single-finger gesture (or the last finger of a pinch) ended.
-		releasePointer(e);
+		releasePointer();
 		stopAll();
 	}
 

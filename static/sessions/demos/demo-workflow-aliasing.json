@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "322": [
+    "342": [
       0,
       0.5,
       1,
@@ -962,7 +962,7 @@
       479,
       479.5
     ],
-    "323": [
+    "343": [
       48.966306363653274,
       49.096711872280295,
       60.90169077251696,
@@ -1924,7 +1924,7 @@
       32.46872874992678,
       47.55083612219273
     ],
-    "324": [
+    "344": [
       0,
       13,
       26,
@@ -1962,7 +1962,7 @@
       442,
       455
     ],
-    "325": [
+    "345": [
       62.35529502422068,
       36.88470052103294,
       74.36922993287054,
@@ -2000,13 +2000,13 @@
       72.28578404746555,
       44.616560416462306
     ],
-    "330": [
+    "350": [
       28.35
     ],
-    "331": [
+    "351": [
       16.618955412638837
     ],
-    "332": [
+    "352": [
       0.00012256825458495239,
       0.009421858738587847,
       0.03499125130618224,
@@ -2612,9 +2612,9 @@
   },
   "data": [
     {
-      "id": 322,
+      "id": 342,
       "name": "hour (30 min epochs)",
-      "data": 322,
+      "data": 342,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2623,9 +2623,9 @@
       "processes": []
     },
     {
-      "id": 323,
+      "id": 343,
       "name": "activity (30 min)",
-      "data": 323,
+      "data": 343,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2634,9 +2634,9 @@
       "processes": []
     },
     {
-      "id": 324,
+      "id": 344,
       "name": "hour (13 h epochs)",
-      "data": 324,
+      "data": 344,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2645,9 +2645,9 @@
       "processes": []
     },
     {
-      "id": 325,
+      "id": 345,
       "name": "activity (13 h)",
-      "data": 325,
+      "data": 345,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2656,33 +2656,33 @@
       "processes": []
     },
     {
-      "id": 330,
+      "id": 350,
       "name": "stat_peak_period_25",
-      "data": 330,
+      "data": 350,
       "type": "number",
-      "tableProcessGUId": "9c119425-13f4-42d9-af24-bf781a71d3ea",
+      "tableProcessGUId": "a598647e-4316-471e-a59b-302ad3e14a69",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 331,
+      "id": 351,
       "name": "stat_peak_power_25",
-      "data": 331,
+      "data": 351,
       "type": "number",
-      "tableProcessGUId": "9c119425-13f4-42d9-af24-bf781a71d3ea",
+      "tableProcessGUId": "a598647e-4316-471e-a59b-302ad3e14a69",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 332,
-      "name": "rhythmicityy_325_25",
-      "data": 332,
+      "id": 352,
+      "name": "rhythmicityy_345_25",
+      "data": 352,
       "type": "number",
-      "tableProcessGUId": "9c119425-13f4-42d9-af24-bf781a71d3ea",
+      "tableProcessGUId": "a598647e-4316-471e-a59b-302ad3e14a69",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2691,7 +2691,7 @@
   ],
   "plots": [
     {
-      "id": 43,
+      "id": 46,
       "name": "Periodogram — 30 min epochs",
       "x": 350,
       "y": 150,
@@ -2736,9 +2736,9 @@
         "data": [
           {
             "x": {
-              "id": 326,
+              "id": 346,
               "name": "hour (30 min epochs)",
-              "refId": 322,
+              "refId": 342,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2747,9 +2747,9 @@
               "processes": []
             },
             "y": {
-              "id": 327,
+              "id": 347,
               "name": "activity (30 min)",
-              "refId": 323,
+              "refId": 343,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2785,7 +2785,7 @@
       }
     },
     {
-      "id": 44,
+      "id": 47,
       "name": "Periodogram — 13 h epochs",
       "x": 350,
       "y": 150,
@@ -2830,9 +2830,9 @@
         "data": [
           {
             "x": {
-              "id": 328,
+              "id": 348,
               "name": "hour (13 h epochs)",
-              "refId": 324,
+              "refId": 344,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2841,9 +2841,9 @@
               "processes": []
             },
             "y": {
-              "id": 329,
+              "id": 349,
               "name": "activity (13 h)",
-              "refId": 325,
+              "refId": 345,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2879,7 +2879,7 @@
       }
     },
     {
-      "id": 45,
+      "id": 48,
       "name": "What the slow record reports",
       "x": 350,
       "y": 150,
@@ -2895,8 +2895,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          330,
-          331
+          350,
+          351
         ],
         "showCol": [
           true,
@@ -2915,9 +2915,9 @@
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis — the undersampled record",
       "args": {
-        "xIN": 324,
+        "xIN": 344,
         "yIN": [
-          325
+          345
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -2928,9 +2928,9 @@
         "pgAlpha": 0.05,
         "preProcesses": [],
         "out": {
-          "stat_peak_period": 330,
-          "stat_peak_power": 331,
-          "rhythmicityy_325": 332
+          "stat_peak_period": 350,
+          "stat_peak_power": 351,
+          "rhythmicityy_345": 352
         }
       },
       "refTPId": null
@@ -2941,7 +2941,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_17",
+      "id": "note_18",
       "text": "WORKFLOW: sampling rate and aliasing. The same 24 h rhythm, recorded at 30-minute epochs and then re-sampled once every 13 hours. The fine record recovers 24 h cleanly. The slow one cannot: to resolve a period you need samples at intervals shorter than HALF that period (the Nyquist limit), and 13 h intervals can only resolve periods longer than 26 h. So the rhythm is not merely noisy in the slow record, it is unrecoverable, and the periodogram peaks somewhere else entirely with no warning that anything is wrong. Before concluding a rhythm is absent, check your epoch length against the period you were hoping to find.",
       "x": 40,
       "y": 24,
@@ -2953,19 +2953,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_322": {
+    "data_342": {
       "x": 60,
       "y": 314
     },
-    "data_323": {
+    "data_343": {
       "x": 60,
       "y": 814
     },
-    "data_324": {
+    "data_344": {
       "x": 60,
       "y": 1314
     },
-    "data_325": {
+    "data_345": {
       "x": 60,
       "y": 1814
     },
@@ -2973,19 +2973,19 @@
       "x": 440,
       "y": 314
     },
-    "note_17": {
+    "note_18": {
       "x": 40,
       "y": 24
     },
-    "plot_43": {
+    "plot_46": {
       "x": 820,
       "y": 314
     },
-    "plot_44": {
+    "plot_47": {
       "x": 820,
       "y": 814
     },
-    "plot_45": {
+    "plot_48": {
       "x": 820,
       "y": 1314
     }
@@ -3000,6 +3000,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -3046,5 +3047,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.61.4"
+  "version": "β.62.4"
 }

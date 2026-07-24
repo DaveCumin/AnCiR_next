@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "277": [
+    "537": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "278": [
+    "538": [
       24.784209286216505,
       27.918238427560844,
       26.60093560817605,
@@ -104,7 +104,7 @@
       24.95424537696588,
       27.973731986697846
     ],
-    "279": [
+    "539": [
       0,
       1,
       2,
@@ -156,10 +156,10 @@
       48,
       49
     ],
-    "280": [
+    "540": [
       null
     ],
-    "281": [
+    "541": [
       25.756894538862465,
       24.742714374366138,
       24.385024124035308,
@@ -214,20 +214,20 @@
   },
   "data": [
     {
-      "id": 277,
+      "id": 537,
       "name": "x",
-      "data": 277,
+      "data": 537,
       "type": "number",
-      "tableProcessGUId": "6aa71f5a-c9d0-4aa0-b2ae-8c0c35f498e2",
+      "tableProcessGUId": "ac383e39-5371-4494-8c2c-368f19442a57",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 278,
+      "id": 538,
       "name": "y",
-      "data": 278,
+      "data": 538,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -236,33 +236,33 @@
       "processes": []
     },
     {
-      "id": 279,
-      "name": "dlogx_28",
-      "data": 279,
+      "id": 539,
+      "name": "dlogx_48",
+      "data": 539,
       "type": "number",
-      "tableProcessGUId": "2861a644-2ffd-4920-8cd8-88cb96785e19",
+      "tableProcessGUId": "c6641551-e956-44df-b255-f68aad8aa3ea",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 280,
-      "name": "pvalue_28",
-      "data": 280,
+      "id": 540,
+      "name": "pvalue_48",
+      "data": 540,
       "type": "number",
-      "tableProcessGUId": "f98022f8-080e-41c8-af3b-227fc19188d0",
+      "tableProcessGUId": "c8cad624-0c56-4c81-9f77-b6774813a4c5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 281,
-      "name": "dlogy_278_28",
-      "data": 281,
+      "id": 541,
+      "name": "dlogy_538_48",
+      "data": 541,
       "type": "number",
-      "tableProcessGUId": "2861a644-2ffd-4920-8cd8-88cb96785e19",
+      "tableProcessGUId": "c6641551-e956-44df-b255-f68aad8aa3ea",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -271,7 +271,7 @@
   ],
   "plots": [
     {
-      "id": 47,
+      "id": 95,
       "name": "Double Logistic: data + fit",
       "x": 350,
       "y": 150,
@@ -328,9 +328,9 @@
         "data": [
           {
             "x": {
-              "id": 282,
+              "id": 542,
               "name": "x",
-              "refId": 277,
+              "refId": 537,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -339,9 +339,9 @@
               "processes": []
             },
             "y": {
-              "id": 283,
+              "id": 543,
               "name": "y",
-              "refId": 278,
+              "refId": 538,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -367,9 +367,9 @@
           },
           {
             "x": {
-              "id": 284,
-              "name": "dlogx_28",
-              "refId": 279,
+              "id": 544,
+              "name": "dlogx_48",
+              "refId": 539,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -378,9 +378,9 @@
               "processes": []
             },
             "y": {
-              "id": 285,
-              "name": "dlogy_278_28",
-              "refId": 281,
+              "id": 545,
+              "name": "dlogy_538_48",
+              "refId": 541,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -420,7 +420,7 @@
       }
     },
     {
-      "id": 48,
+      "id": 96,
       "name": "Double Logistic: values",
       "x": 350,
       "y": 150,
@@ -436,8 +436,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          278,
-          281
+          538,
+          541
         ],
         "showCol": [
           true,
@@ -452,7 +452,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 27,
+      "id": 47,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -462,19 +462,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 277
+          "result": 537
         }
       },
       "refTPId": null
     },
     {
-      "id": 28,
+      "id": 48,
       "name": "DoubleLogistic",
       "displayName": "Double Logistic",
       "args": {
-        "xIN": 277,
+        "xIN": 537,
         "yIN": [
-          278
+          538
         ],
         "outputX": -1,
         "fixK1": false,
@@ -484,9 +484,9 @@
         "fixPeriod": false,
         "fixedPeriod": 24,
         "out": {
-          "dlogx": 279,
-          "pvalue": 280,
-          "dlogy_278": 281
+          "dlogx": 539,
+          "pvalue": 540,
+          "dlogy_538": 541
         }
       },
       "refTPId": null
@@ -497,8 +497,8 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_31",
-      "text": "Fits a double-logistic curve, a rising sigmoid followed by a falling sigmoid, describing a single on-then-off transition (or, in periodic mode, a repeating pulse train). Use it for phenology-style data and activity onsets/offsets where you want to locate and characterise the rise and fall separately (their timing t1, t2 and steepness k1, k2). In the demo, read the ascending limb as the onset transition and the descending limb as the offset; the plateau between them is the active window. Double-logistic phenology model (Zhang et al. 2003).",
+      "id": "note_49",
+      "text": "Fits a double-logistic curve, a rising sigmoid followed by a falling sigmoid, describing a single on-then-off transition (or, in periodic mode, a repeating pulse train). Use it for phenology-style data and activity onsets/offsets where you want to locate and characterise the rise and fall separately (their timing t1, t2 and steepness k1, k2). In the demo, read the ascending limb as the onset transition and the descending limb as the offset; the plateau between them is the active window. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. Double-logistic phenology model (Zhang et al. 2003).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -509,27 +509,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_278": {
+    "data_538": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_27": {
+    "tableprocess_47": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_28": {
+    "tableprocess_48": {
       "x": 440,
       "y": 314
     },
-    "plot_47": {
+    "plot_95": {
       "x": 820,
       "y": 314
     },
-    "plot_48": {
+    "plot_96": {
       "x": 820,
       "y": 814
     },
-    "note_31": {
+    "note_49": {
       "x": 40,
       "y": 24
     }
@@ -544,6 +544,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -590,5 +591,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }

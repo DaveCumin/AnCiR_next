@@ -219,7 +219,7 @@
       "name": "statistic_11",
       "data": 153,
       "type": "number",
-      "tableProcessGUId": "d9510fe5-f800-4ac5-a1a5-199b2d051850",
+      "tableProcessGUId": "909412ed-c10f-489c-88d5-f07e2a141ec2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -230,7 +230,7 @@
       "name": "pvalue_11",
       "data": 154,
       "type": "number",
-      "tableProcessGUId": "d9510fe5-f800-4ac5-a1a5-199b2d051850",
+      "tableProcessGUId": "909412ed-c10f-489c-88d5-f07e2a141ec2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -450,6 +450,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -496,5 +497,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.61.1"
+  "version": "β.62.4"
 }

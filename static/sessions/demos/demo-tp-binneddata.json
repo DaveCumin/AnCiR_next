@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "235": [
+    "493": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "236": [
+    "494": [
       52.522025082939734,
       68.09116741301771,
       73.44958693280898,
@@ -104,7 +104,7 @@
       47.59352161612626,
       59.5535187385039
     ],
-    "237": [
+    "495": [
       0,
       2,
       4,
@@ -132,7 +132,7 @@
       48,
       50
     ],
-    "238": [
+    "496": [
       60.306596247978725,
       80.40261868508753,
       84.47432056148014,
@@ -163,20 +163,20 @@
   },
   "data": [
     {
-      "id": 235,
+      "id": 493,
       "name": "x",
-      "data": 235,
+      "data": 493,
       "type": "number",
-      "tableProcessGUId": "6f3865d7-cf46-4761-924d-cc24dd3c96fb",
+      "tableProcessGUId": "8b8ac881-9d35-46ca-b8d9-24ff630e7a1f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 236,
+      "id": 494,
       "name": "y",
-      "data": 236,
+      "data": 494,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -185,23 +185,23 @@
       "processes": []
     },
     {
-      "id": 237,
-      "name": "binnedx_18",
-      "data": 237,
+      "id": 495,
+      "name": "binnedx_37",
+      "data": 495,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "44bc018f-67c0-41ba-b612-3b86f3461853",
+      "tableProcessGUId": "375fdb34-5367-4d5c-b367-76e195dd5596",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 238,
-      "name": "binnedy_236_18",
-      "data": 238,
+      "id": 496,
+      "name": "binnedy_494_37",
+      "data": 496,
       "type": "number",
-      "tableProcessGUId": "44bc018f-67c0-41ba-b612-3b86f3461853",
+      "tableProcessGUId": "375fdb34-5367-4d5c-b367-76e195dd5596",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -210,7 +210,7 @@
   ],
   "plots": [
     {
-      "id": 37,
+      "id": 84,
       "name": "Bin Data: data + fit",
       "x": 350,
       "y": 150,
@@ -267,9 +267,9 @@
         "data": [
           {
             "x": {
-              "id": 239,
+              "id": 497,
               "name": "x",
-              "refId": 235,
+              "refId": 493,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -278,9 +278,9 @@
               "processes": []
             },
             "y": {
-              "id": 240,
+              "id": 498,
               "name": "y",
-              "refId": 236,
+              "refId": 494,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -306,9 +306,9 @@
           },
           {
             "x": {
-              "id": 241,
-              "name": "binnedx_18",
-              "refId": 237,
+              "id": 499,
+              "name": "binnedx_37",
+              "refId": 495,
               "type": "bin",
               "binWidth": 2,
               "tableProcessGUId": "",
@@ -318,9 +318,9 @@
               "processes": []
             },
             "y": {
-              "id": 242,
-              "name": "binnedy_236_18",
-              "refId": 238,
+              "id": 500,
+              "name": "binnedy_494_37",
+              "refId": 496,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -360,7 +360,7 @@
       }
     },
     {
-      "id": 38,
+      "id": 85,
       "name": "Bin Data: values",
       "x": 350,
       "y": 150,
@@ -376,8 +376,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          236,
-          238
+          494,
+          496
         ],
         "showCol": [
           true,
@@ -392,7 +392,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 17,
+      "id": 36,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -402,19 +402,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 235
+          "result": 493
         }
       },
       "refTPId": null
     },
     {
-      "id": 18,
+      "id": 37,
       "name": "BinnedData",
       "displayName": "Bin Data",
       "args": {
-        "xIN": 235,
+        "xIN": 493,
         "yIN": [
-          236
+          494
         ],
         "binMode": "uniform",
         "binSize": 2,
@@ -425,8 +425,8 @@
         "aggFunction": "mean",
         "preProcesses": [],
         "out": {
-          "binnedx": 237,
-          "binnedy_236": 238
+          "binnedx": 495,
+          "binnedy_494": 496
         }
       },
       "refTPId": null
@@ -437,7 +437,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_23",
+      "id": "note_40",
       "text": "Aggregates time-series values into regular time bins (e.g. 15 min counts into hourly means or sums), choosing the aggregation function per bin. Use it to downsample high-resolution activity or to put irregular samples onto a regular grid before analysis.",
       "x": 40,
       "y": 24,
@@ -449,27 +449,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_236": {
+    "data_494": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_17": {
+    "tableprocess_36": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_18": {
+    "tableprocess_37": {
       "x": 440,
       "y": 314
     },
-    "plot_37": {
+    "plot_84": {
       "x": 820,
       "y": 314
     },
-    "plot_38": {
+    "plot_85": {
       "x": 820,
       "y": 814
     },
-    "note_23": {
+    "note_40": {
       "x": 40,
       "y": 24
     }
@@ -484,6 +484,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -530,5 +531,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }

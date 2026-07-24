@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "0": [
+    "519": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "1": [
+    "520": [
       1,
       1,
       1,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 0,
+      "id": 519,
       "name": "Threshold input",
-      "data": 0,
+      "data": 519,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -118,11 +118,11 @@
       "processes": []
     },
     {
-      "id": 1,
-      "name": "binary_0",
-      "data": 1,
+      "id": 520,
+      "name": "binary_44",
+      "data": 520,
       "type": "number",
-      "tableProcessGUId": "23d25830-b9e8-47da-a25c-b91c532e881c",
+      "tableProcessGUId": "3efbfbc1-fcb1-4329-8772-1cf666f0003e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -131,7 +131,7 @@
   ],
   "plots": [
     {
-      "id": 0,
+      "id": 92,
       "name": "Threshold result",
       "x": 350,
       "y": 150,
@@ -147,8 +147,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          0,
-          1
+          519,
+          520
         ],
         "showCol": [
           true,
@@ -163,15 +163,15 @@
   ],
   "tableProcesses": [
     {
-      "id": 0,
+      "id": 44,
       "name": "Threshold",
       "displayName": "Threshold",
       "args": {
-        "xIN": 0,
+        "xIN": 519,
         "threshold": 0,
         "comparison": ">=",
         "out": {
-          "binary": 1
+          "binary": 520
         }
       },
       "refTPId": null
@@ -182,7 +182,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_1",
+      "id": "note_47",
       "text": "Turns a continuous column into a 0/1 (binary) column at a cutoff you set, choosing which side of the threshold counts as 1 (>, ≥, <, ≤). Missing values stay missing. The usual use is making a binary outcome for logistic regression, but it also flags events (e.g. \"activity above baseline\").",
       "x": 40,
       "y": 24,
@@ -194,19 +194,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_0": {
+    "data_519": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_0": {
+    "tableprocess_44": {
       "x": 440,
       "y": 314
     },
-    "plot_0": {
+    "plot_92": {
       "x": 820,
       "y": 314
     },
-    "note_1": {
+    "note_47": {
       "x": 40,
       "y": 24
     }
@@ -221,6 +221,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -267,5 +268,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.61.2"
+  "version": "β.62.4"
 }

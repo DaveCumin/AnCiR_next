@@ -1447,6 +1447,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -1493,5 +1494,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.61.4"
+  "version": "β.62.4"
 }

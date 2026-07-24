@@ -1249,6 +1249,99 @@ const WORKFLOWS = [
 		}
 	},
 	{
+		id: 'transients',
+		summary: 'Why an 8 h advance costs more cycles than an 8 h delay.',
+		name: 'Workflow — transients (phase advance vs delay)',
+		family: 'Workflows',
+		description:
+			'Transients are the intermediate cycles a rhythm passes through between the moment the zeitgeber shifts and the moment a new steady-state phase is re-attained. Two records receive an 8 h shift on the same day, one an ADVANCE and one a DELAY. The zeitgeber moves in a single step in both cases; neither rhythm does. The advance re-entrains at roughly 1 h per cycle and needs about 8 transient cycles, while the delay covers the same 8 h at roughly 1.5 h per cycle in about 6. The onset plot states the same thing numerically: the zeitgeber is a step, the rhythms are ramps of different slope. Only the phase measured AFTER the transients have subsided is the steady-state phase shift, which is why a PRC must be scored from post-transient cycles.',
+		showcases: ['actogram', 'scatterplot'],
+		async build() {
+			const BASELINE = 8; // days on the original schedule
+			const DAYS = 28;
+			const SHIFT = 8; // hours the zeitgeber moves
+			const BASE_ONSET = 18; // 18:00 onset while entrained
+			// Re-entrainment rates: advances are the slower direction. ~1 h/cycle
+			// vs ~1.5 h/cycle is the standard human figure and the reason eastward
+			// travel costs more days than westward.
+			const ADV_RATE = 1.0;
+			const DEL_RATE = 1.5;
+			const hours = seq(24 * DAYS, (i) => i);
+
+			// Onset of the OVERT rhythm, in hours after midnight. Before the shift
+			// both records sit at BASE_ONSET; afterwards each closes on its new
+			// phase at a fixed number of hours per cycle, then holds. Those
+			// intermediate cycles are the transients.
+			const closed = (day, rate) =>
+				day < BASELINE ? 0 : Math.min(SHIFT, rate * (day - BASELINE + 1));
+			const onsetAdvance = (day) => BASE_ONSET - closed(day, ADV_RATE);
+			const onsetDelay = (day) => BASE_ONSET + closed(day, DEL_RATE);
+
+			// 11 h of activity from onset, wrapping past midnight.
+			const record = (onsetAt, seed) => {
+				const rng = mulberry32(seed);
+				return hours.map((h) => {
+					const day = Math.floor(h / 24);
+					const since = (h - day * 24 - onsetAt(day) + 48) % 24;
+					const active = since < 11;
+					return Math.max(0, (active ? 72 : 4) + normal(rng, 0, active ? 12 : 3));
+				});
+			};
+
+			const hoursId = mkCol('number', hours, 'hour');
+			const advId = mkCol('number', record(onsetAdvance, 71), 'activity_advance');
+			const delId = mkCol('number', record(onsetDelay, 73), 'activity_delay');
+
+			const actoA = new Plot({ name: 'Advance 8 h — about 8 transient cycles', type: 'actogram' });
+			actoA.plot.addData({ time: { refId: hoursId }, values: { refId: advId } });
+			actoA.plot.periodHrs = 24;
+			actoA.plot.doublePlot = 2;
+			pushObj(actoA);
+
+			const actoD = new Plot({ name: 'Delay 8 h — about 6 transient cycles', type: 'actogram' });
+			actoD.plot.addData({ time: { refId: hoursId }, values: { refId: delId } });
+			actoD.plot.periodHrs = 24;
+			actoD.plot.doublePlot = 2;
+			pushObj(actoD);
+
+			// The same story as numbers: grey = the imposed schedule (a step),
+			// coloured = the biological rhythm (a ramp). The horizontal gap between
+			// a step and its ramp is the transient.
+			const ZEIT = '#8A9BA8';
+			const days = seq(DAYS, (d) => d);
+			const dayId = mkCol('number', days, 'day');
+			const zAdvId = mkCol(
+				'number',
+				days.map((d) => (d < BASELINE ? BASE_ONSET : BASE_ONSET - SHIFT)),
+				'zeitgeber_advance'
+			);
+			const zDelId = mkCol(
+				'number',
+				days.map((d) => (d < BASELINE ? BASE_ONSET : BASE_ONSET + SHIFT)),
+				'zeitgeber_delay'
+			);
+			const rAdvId = mkCol('number', days.map(onsetAdvance), 'onset_advance');
+			const rDelId = mkCol('number', days.map(onsetDelay), 'onset_delay');
+
+			scatterPlot(
+				'Onset vs day — the zeitgeber steps, the rhythm ramps',
+				[
+					{ x: dayId, y: zAdvId, label: 'Zeitgeber — advance', kind: 'line', colour: ZEIT },
+					{ x: dayId, y: zDelId, label: 'Zeitgeber — delay', kind: 'line', colour: ZEIT },
+					{
+						x: dayId,
+						y: rAdvId,
+						label: 'Rhythm onset — advance',
+						kind: 'line',
+						colour: FIT_COLOUR
+					},
+					{ x: dayId, y: rDelId, label: 'Rhythm onset — delay', kind: 'line', colour: RAW_COLOUR }
+				],
+				{ x: 'Day', y: 'Activity onset (h after midnight)' }
+			);
+		}
+	},
+	{
 		id: 'split-rhythm',
 		summary: 'Constant light splits the activity band into two components.',
 		name: 'Workflow — split rhythm under constant light',

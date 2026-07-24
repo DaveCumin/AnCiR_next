@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "192": [
+    "450": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "193": [
+    "451": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 192,
+      "id": 450,
       "name": "x",
-      "data": 192,
+      "data": 450,
       "type": "number",
-      "tableProcessGUId": "11cdd8f4-74e5-4ba9-bb6b-f61650ffe994",
+      "tableProcessGUId": "99777568-caad-4718-b56b-c3a673222668",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 193,
+      "id": 451,
       "name": "y",
-      "data": 193,
+      "data": 451,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 194,
+      "id": 452,
       "name": "Edit value result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_3",
-      "producerPort": "out_193",
+      "producerPort": "out_451",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 25,
+      "id": 72,
       "name": "Edit value: before vs after",
       "x": 350,
       "y": 150,
@@ -199,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 195,
+              "id": 453,
               "name": "x",
-              "refId": 192,
+              "refId": 450,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 196,
+              "id": 454,
               "name": "y",
-              "refId": 193,
+              "refId": 451,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -238,9 +238,9 @@
           },
           {
             "x": {
-              "id": 197,
+              "id": 455,
               "name": "x",
-              "refId": 192,
+              "refId": 450,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 198,
+              "id": 456,
               "name": "Edit value result",
-              "refId": 194,
+              "refId": 452,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,7 +291,7 @@
       }
     },
     {
-      "id": 26,
+      "id": 73,
       "name": "Edit value: values",
       "x": 350,
       "y": 150,
@@ -307,8 +307,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          193,
-          194
+          451,
+          452
         ],
         "showCol": [
           true,
@@ -323,7 +323,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 11,
+      "id": 30,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -333,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 192
+          "result": 450
         }
       },
       "refTPId": null
@@ -344,7 +344,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_17",
+      "id": "note_34",
       "text": "Overwrites individual cells at specific row positions with values you type in, leaving the rest of the column unchanged. Use it for hand-correcting a few known-bad points without touching the source data. The demo shows the edited positions differing from the input.",
       "x": 40,
       "y": 24,
@@ -366,17 +366,17 @@
           }
         ],
         "inIN": [
-          193
+          451
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_193": {
+    "data_451": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_11": {
+    "tableprocess_30": {
       "x": 60,
       "y": 814
     },
@@ -384,15 +384,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_25": {
+    "plot_72": {
       "x": 820,
       "y": 314
     },
-    "plot_26": {
+    "plot_73": {
       "x": 820,
       "y": 814
     },
-    "note_17": {
+    "note_34": {
       "x": 40,
       "y": 24
     }
@@ -407,6 +407,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -453,5 +454,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "140": [
+    "398": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "141": [
+    "399": [
       50.73643610198167,
       52.88311387843814,
       58.853278502861286,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 140,
+      "id": 398,
       "name": "hour",
-      "data": 140,
+      "data": 398,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 141,
+      "id": 399,
       "name": "activity",
-      "data": 141,
+      "data": 399,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 13,
+      "id": 60,
       "name": "Activity periodogram",
       "x": 350,
       "y": 150,
@@ -412,9 +412,9 @@
         "data": [
           {
             "x": {
-              "id": 142,
+              "id": 400,
               "name": "hour",
-              "refId": 140,
+              "refId": 398,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -423,9 +423,9 @@
               "processes": []
             },
             "y": {
-              "id": 143,
+              "id": 401,
               "name": "activity",
-              "refId": 141,
+              "refId": 399,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -467,7 +467,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_10",
+      "id": "note_27",
       "text": "Scans a range of candidate periods and plots spectral power against period, with a significance threshold; the tallest peak crossing the line estimates the dominant rhythm's period. Methods include Lomb-Scargle (handles uneven sampling/gaps) and the chi-squared (Sokolove-Bushell) periodogram. Use it to quantify period from a time-series. See the Periodograms chapter for details.",
       "x": 40,
       "y": 24,
@@ -479,19 +479,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_140": {
+    "data_398": {
       "x": 60,
       "y": 314
     },
-    "data_141": {
+    "data_399": {
       "x": 60,
       "y": 814
     },
-    "note_10": {
+    "note_27": {
       "x": 40,
       "y": 24
     },
-    "plot_13": {
+    "plot_60": {
       "x": 820,
       "y": 314
     }
@@ -506,6 +506,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -552,5 +553,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }

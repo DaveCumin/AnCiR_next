@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "405": [
+    "672": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "406": [
+    "673": [
       11.229882793897886,
       37.29138111399729,
       35.47426005079059,
@@ -104,7 +104,7 @@
       20.999584523229,
       30.339018292668595
     ],
-    "407": [
+    "674": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "408": [
+    "675": [
       27.99850798622859,
       30.99958480957332,
       33.48990964443412,
@@ -211,20 +211,20 @@
   },
   "data": [
     {
-      "id": 405,
+      "id": 672,
       "name": "x",
-      "data": 405,
+      "data": 672,
       "type": "number",
-      "tableProcessGUId": "852a4e2f-f262-4e33-8645-508b34b145e1",
+      "tableProcessGUId": "d75a335b-955d-40d5-ba3e-65a7c26cb4f4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 406,
+      "id": 673,
       "name": "y",
-      "data": 406,
+      "data": 673,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 407,
-      "name": "smoothedx_51",
-      "data": 407,
+      "id": 674,
+      "name": "smoothedx_71",
+      "data": 674,
       "type": "number",
-      "tableProcessGUId": "4a25f733-013d-4e11-804f-580cd31af999",
+      "tableProcessGUId": "ece34265-c77b-4fe1-8946-e3b87a2b71b7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 408,
-      "name": "smoothedy_406_51",
-      "data": 408,
+      "id": 675,
+      "name": "smoothedy_673_71",
+      "data": 675,
       "type": "number",
-      "tableProcessGUId": "4a25f733-013d-4e11-804f-580cd31af999",
+      "tableProcessGUId": "ece34265-c77b-4fe1-8946-e3b87a2b71b7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -257,7 +257,7 @@
   ],
   "plots": [
     {
-      "id": 71,
+      "id": 120,
       "name": "Smooth Data: data + fit",
       "x": 350,
       "y": 150,
@@ -314,9 +314,9 @@
         "data": [
           {
             "x": {
-              "id": 409,
+              "id": 676,
               "name": "x",
-              "refId": 405,
+              "refId": 672,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -325,9 +325,9 @@
               "processes": []
             },
             "y": {
-              "id": 410,
+              "id": 677,
               "name": "y",
-              "refId": 406,
+              "refId": 673,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -353,9 +353,9 @@
           },
           {
             "x": {
-              "id": 411,
-              "name": "smoothedx_51",
-              "refId": 407,
+              "id": 678,
+              "name": "smoothedx_71",
+              "refId": 674,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -364,9 +364,9 @@
               "processes": []
             },
             "y": {
-              "id": 412,
-              "name": "smoothedy_406_51",
-              "refId": 408,
+              "id": 679,
+              "name": "smoothedy_673_71",
+              "refId": 675,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -406,7 +406,7 @@
       }
     },
     {
-      "id": 72,
+      "id": 121,
       "name": "Smooth Data: values",
       "x": 350,
       "y": 150,
@@ -422,8 +422,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          406,
-          408
+          673,
+          675
         ],
         "showCol": [
           true,
@@ -438,7 +438,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 50,
+      "id": 70,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -448,19 +448,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 405
+          "result": 672
         }
       },
       "refTPId": null
     },
     {
-      "id": 51,
+      "id": 71,
       "name": "SmoothedData",
       "displayName": "Smooth Data",
       "args": {
-        "xIN": 405,
+        "xIN": 672,
         "yIN": [
-          406
+          673
         ],
         "smootherType": "moving",
         "whittakerLambda": 100,
@@ -472,8 +472,8 @@
         "movingAvgType": "simple",
         "preProcesses": [],
         "out": {
-          "smoothedx": 407,
-          "smoothedy_406": 408
+          "smoothedx": 674,
+          "smoothedy_673": 675
         }
       },
       "refTPId": null
@@ -484,8 +484,8 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_49",
-      "text": "Smooths a series to suppress noise while keeping the underlying shape. Choose Whittaker-Eilers (penalised least squares; λ sets stiffness), Savitzky-Golay (local polynomial, preserves peak height/width), LOESS (locally weighted regression; bandwidth sets span), or a moving average. Use a light hand: over-smoothing flattens real amplitude. The demo overlays the smoothed curve on the noisy input.\n\nSavitzky & Golay (1964); Cleveland (1979, LOESS); Eilers (2003, Whittaker).",
+      "id": "note_67",
+      "text": "Smooths a series to suppress noise while keeping the underlying shape. Choose Whittaker-Eilers (penalised least squares; λ sets stiffness), Savitzky-Golay (local polynomial, preserves peak height/width), LOESS (locally weighted regression; bandwidth sets span), or a moving average. Use a light hand: over-smoothing flattens real amplitude. It also emits a residual column per series (raw − smoothed) with a \"Plot residuals\" button, so you can see exactly what was removed and check you have not smoothed away real signal. The demo overlays the smoothed curve on the noisy input.\n\nSavitzky & Golay (1964); Cleveland (1979, LOESS); Eilers (2003, Whittaker).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -496,27 +496,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_406": {
+    "data_673": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_50": {
+    "tableprocess_70": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_51": {
+    "tableprocess_71": {
       "x": 440,
       "y": 314
     },
-    "plot_71": {
+    "plot_120": {
       "x": 820,
       "y": 314
     },
-    "plot_72": {
+    "plot_121": {
       "x": 820,
       "y": 814
     },
-    "note_49": {
+    "note_67": {
       "x": 40,
       "y": 24
     }
@@ -531,6 +531,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -577,5 +578,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }

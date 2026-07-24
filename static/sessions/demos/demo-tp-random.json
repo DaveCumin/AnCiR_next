@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "370": [
+    "637": [
       9.23,
       3.33,
       1.98,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 370,
-      "name": "result_42",
-      "data": 370,
+      "id": 637,
+      "name": "result_62",
+      "data": 637,
       "type": "number",
-      "tableProcessGUId": "73c1a01b-c39a-4e6f-acea-d9957ef4f058",
+      "tableProcessGUId": "bd037dd2-ec45-47ae-981d-9c858539f64e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -68,7 +68,7 @@
   ],
   "plots": [
     {
-      "id": 62,
+      "id": 111,
       "name": "Random result",
       "x": 350,
       "y": 150,
@@ -84,7 +84,7 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          370
+          637
         ],
         "showCol": [
           true
@@ -98,7 +98,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 42,
+      "id": 62,
       "name": "Random",
       "displayName": "Random",
       "args": {
@@ -108,7 +108,7 @@
         "seed": 12345,
         "distribution": "uniform",
         "out": {
-          "result": 370
+          "result": 637
         }
       },
       "refTPId": null
@@ -119,7 +119,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_43",
+      "id": "note_61",
       "text": "Generates a column of pseudo-random values from a uniform, Gaussian, or exponential distribution, scaled by an offset and multiplier, with a fixed seed for reproducibility. Use it to add controlled noise or to create random test data.",
       "x": 40,
       "y": 24,
@@ -131,15 +131,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_42": {
+    "tableprocess_62": {
       "x": 60,
       "y": 314
     },
-    "plot_62": {
+    "plot_111": {
       "x": 820,
       "y": 314
     },
-    "note_43": {
+    "note_61": {
       "x": 40,
       "y": 24
     }
@@ -154,6 +154,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -200,5 +201,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }

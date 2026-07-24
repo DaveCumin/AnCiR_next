@@ -1,17 +1,17 @@
 {
   "rawData": {
-    "418": [
+    "685": [
       12,
       34
     ]
   },
   "data": [
     {
-      "id": 418,
-      "name": "group_g1_53",
-      "data": 418,
+      "id": 685,
+      "name": "group_g1_73",
+      "data": 685,
       "type": "number",
-      "tableProcessGUId": "142fff49-ae9d-4942-b0c2-87fd668f68e1",
+      "tableProcessGUId": "15acdfd1-03ce-45a8-988b-eeab3605e978",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -20,7 +20,7 @@
   ],
   "plots": [
     {
-      "id": 74,
+      "id": 123,
       "name": "Stored Value Group result",
       "x": 350,
       "y": 150,
@@ -36,7 +36,7 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          418
+          685
         ],
         "showCol": [
           true
@@ -50,7 +50,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 53,
+      "id": 73,
       "name": "StoredValueGroup",
       "displayName": "Stored Value Group",
       "args": {
@@ -65,7 +65,7 @@
           }
         ],
         "out": {
-          "group_g1": 418
+          "group_g1": 685
         }
       },
       "refTPId": null
@@ -85,7 +85,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_51",
+      "id": "note_69",
       "text": "Gathers scalar results you have stored from various analyses (e.g. periods, amplitudes, CFI values) and organises them into labelled groups, emitting a category column and a value column. Use it to assemble stored metrics into a tidy table for group comparison or plotting.",
       "x": 40,
       "y": 24,
@@ -97,15 +97,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_53": {
+    "tableprocess_73": {
       "x": 60,
       "y": 314
     },
-    "plot_74": {
+    "plot_123": {
       "x": 820,
       "y": 314
     },
-    "note_51": {
+    "note_69": {
       "x": 40,
       "y": 24
     }
@@ -120,6 +120,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -166,5 +167,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }

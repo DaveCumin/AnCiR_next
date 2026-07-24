@@ -874,7 +874,7 @@
       "name": "Peak period (h)",
       "data": 62,
       "type": "number",
-      "tableProcessGUId": "4f12e574-f33c-48f3-bd1f-1b3030b9c3bf",
+      "tableProcessGUId": "93a5ef2a-2ff3-43c8-9eea-988344b840f2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -885,7 +885,7 @@
       "name": "Peak power",
       "data": 63,
       "type": "number",
-      "tableProcessGUId": "4f12e574-f33c-48f3-bd1f-1b3030b9c3bf",
+      "tableProcessGUId": "93a5ef2a-2ff3-43c8-9eea-988344b840f2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -896,7 +896,7 @@
       "name": "rhythmicityy_57_4",
       "data": 64,
       "type": "number",
-      "tableProcessGUId": "4f12e574-f33c-48f3-bd1f-1b3030b9c3bf",
+      "tableProcessGUId": "93a5ef2a-2ff3-43c8-9eea-988344b840f2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1185,6 +1185,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -1231,5 +1232,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }

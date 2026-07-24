@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "185": [
+    "443": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "186": [
+    "444": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 185,
+      "id": 443,
       "name": "x",
-      "data": 185,
+      "data": 443,
       "type": "number",
-      "tableProcessGUId": "f2370e33-6f6f-428f-a0d2-e42f27ea7eb6",
+      "tableProcessGUId": "5d13ed65-96c8-4ed2-8a38-ecc514b7a5de",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 186,
+      "id": 444,
       "name": "y",
-      "data": 186,
+      "data": 444,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 187,
+      "id": 445,
       "name": "Multiply result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_2",
-      "producerPort": "out_186",
+      "producerPort": "out_444",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 23,
+      "id": 70,
       "name": "Multiply: before vs after",
       "x": 350,
       "y": 150,
@@ -199,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 188,
+              "id": 446,
               "name": "x",
-              "refId": 185,
+              "refId": 443,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 189,
+              "id": 447,
               "name": "y",
-              "refId": 186,
+              "refId": 444,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -238,9 +238,9 @@
           },
           {
             "x": {
-              "id": 190,
+              "id": 448,
               "name": "x",
-              "refId": 185,
+              "refId": 443,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 191,
+              "id": 449,
               "name": "Multiply result",
-              "refId": 187,
+              "refId": 445,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,7 +291,7 @@
       }
     },
     {
-      "id": 24,
+      "id": 71,
       "name": "Multiply: values",
       "x": 350,
       "y": 150,
@@ -307,8 +307,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          186,
-          187
+          444,
+          445
         ],
         "showCol": [
           true,
@@ -323,7 +323,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 10,
+      "id": 29,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -333,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 185
+          "result": 443
         }
       },
       "refTPId": null
@@ -344,7 +344,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_16",
+      "id": "note_33",
       "text": "Multiplies every value in the input column by a constant (or another column), element-by-element. Use it for unit conversions, scaling, or rescaling a signal. The demo shows the output column scaled relative to the input.",
       "x": 40,
       "y": 24,
@@ -361,17 +361,17 @@
       "args": {
         "value": 2,
         "inIN": [
-          186
+          444
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_186": {
+    "data_444": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_10": {
+    "tableprocess_29": {
       "x": 60,
       "y": 814
     },
@@ -379,15 +379,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_23": {
+    "plot_70": {
       "x": 820,
       "y": 314
     },
-    "plot_24": {
+    "plot_71": {
       "x": 820,
       "y": 814
     },
-    "note_16": {
+    "note_33": {
       "x": 40,
       "y": 24
     }
@@ -402,6 +402,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -448,5 +449,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }

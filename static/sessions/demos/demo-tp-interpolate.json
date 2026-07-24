@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "243": [
+    "501": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "244": [
+    "502": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -104,7 +104,7 @@
       10,
       11.362966948437261
     ],
-    "245": [
+    "503": [
       0,
       2,
       4,
@@ -131,7 +131,7 @@
       46,
       48
     ],
-    "246": [
+    "504": [
       10,
       15.35898384862245,
       30,
@@ -161,9 +161,9 @@
   },
   "data": [
     {
-      "id": 243,
+      "id": 501,
       "name": "Interpolate input 1",
-      "data": 243,
+      "data": 501,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -172,9 +172,9 @@
       "processes": []
     },
     {
-      "id": 244,
+      "id": 502,
       "name": "Interpolate input 2",
-      "data": 244,
+      "data": 502,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -183,22 +183,22 @@
       "processes": []
     },
     {
-      "id": 245,
-      "name": "interpx_19",
-      "data": 245,
+      "id": 503,
+      "name": "interpx_38",
+      "data": 503,
       "type": "number",
-      "tableProcessGUId": "ada4063b-2156-4a9a-8f74-57f50c8e4e8d",
+      "tableProcessGUId": "d9a77b6f-4613-4a38-889d-8ae228e387da",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 246,
-      "name": "interpy_244_19",
-      "data": 246,
+      "id": 504,
+      "name": "interpy_502_38",
+      "data": 504,
       "type": "number",
-      "tableProcessGUId": "ada4063b-2156-4a9a-8f74-57f50c8e4e8d",
+      "tableProcessGUId": "d9a77b6f-4613-4a38-889d-8ae228e387da",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -207,7 +207,7 @@
   ],
   "plots": [
     {
-      "id": 39,
+      "id": 86,
       "name": "Interpolate result",
       "x": 350,
       "y": 150,
@@ -223,10 +223,10 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          243,
-          244,
-          245,
-          246
+          501,
+          502,
+          503,
+          504
         ],
         "showCol": [
           true,
@@ -243,13 +243,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 19,
+      "id": 38,
       "name": "Interpolate",
       "displayName": "Interpolate",
       "args": {
-        "xIN": 243,
+        "xIN": 501,
         "yIN": [
-          244
+          502
         ],
         "mode": "resample",
         "method": "linear",
@@ -257,8 +257,8 @@
         "start": null,
         "end": null,
         "out": {
-          "interpx": 245,
-          "interpy_244": 246
+          "interpx": 503,
+          "interpy_502": 504
         }
       },
       "refTPId": null
@@ -269,7 +269,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_24",
+      "id": "note_41",
       "text": "Fills gaps or resamples a series onto a regular time grid using linear, nearest-neighbour, or natural cubic-spline interpolation. Use it to repair missing values or to make unevenly sampled data evenly spaced before methods that assume regular sampling (e.g. FFT).",
       "x": 40,
       "y": 24,
@@ -281,23 +281,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_243": {
+    "data_501": {
       "x": 60,
       "y": 314
     },
-    "data_244": {
+    "data_502": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_19": {
+    "tableprocess_38": {
       "x": 440,
       "y": 314
     },
-    "plot_39": {
+    "plot_86": {
       "x": 820,
       "y": 314
     },
-    "note_24": {
+    "note_41": {
       "x": 40,
       "y": 24
     }
@@ -312,6 +312,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -358,5 +359,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "228": [
+    "486": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "229": [
+    "487": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 228,
+      "id": 486,
       "name": "x",
-      "data": 228,
+      "data": 486,
       "type": "number",
-      "tableProcessGUId": "c736d09d-2e0b-48b3-a3d4-36bfea385218",
+      "tableProcessGUId": "94599b8c-93ce-4591-97c7-dc59743449cc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 229,
+      "id": 487,
       "name": "y",
-      "data": 229,
+      "data": 487,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 230,
+      "id": 488,
       "name": "Frequency Filter result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_8",
-      "producerPort": "out_229",
+      "producerPort": "out_487",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 35,
+      "id": 82,
       "name": "Frequency Filter: before vs after",
       "x": 350,
       "y": 150,
@@ -199,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 231,
+              "id": 489,
               "name": "x",
-              "refId": 228,
+              "refId": 486,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 232,
+              "id": 490,
               "name": "y",
-              "refId": 229,
+              "refId": 487,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -238,9 +238,9 @@
           },
           {
             "x": {
-              "id": 233,
+              "id": 491,
               "name": "x",
-              "refId": 228,
+              "refId": 486,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 234,
+              "id": 492,
               "name": "Frequency Filter result",
-              "refId": 230,
+              "refId": 488,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,7 +291,7 @@
       }
     },
     {
-      "id": 36,
+      "id": 83,
       "name": "Frequency Filter: values",
       "x": 350,
       "y": 150,
@@ -307,8 +307,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          229,
-          230
+          487,
+          488
         ],
         "showCol": [
           true,
@@ -323,7 +323,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 16,
+      "id": 35,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -333,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 228
+          "result": 486
         }
       },
       "refTPId": null
@@ -344,7 +344,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_22",
+      "id": "note_39",
       "text": "An FFT-based low-, high-, or band-pass filter for evenly sampled series: it transforms to the frequency domain, zeroes the frequencies outside the chosen band, and transforms back. Cutoffs are given as a fraction of the Nyquist frequency (0 = DC, 1 = fastest resolvable). Use low-pass to smooth, high-pass to remove drift, band-pass to isolate a rhythm. The demo shows the filtered series with the unwanted frequency content removed.\n\nOppenheim & Schafer, Discrete-Time Signal Processing.",
       "x": 40,
       "y": 24,
@@ -363,17 +363,17 @@
         "low": 0.1,
         "high": 0.4,
         "inIN": [
-          229
+          487
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_229": {
+    "data_487": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_16": {
+    "tableprocess_35": {
       "x": 60,
       "y": 814
     },
@@ -381,15 +381,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_35": {
+    "plot_82": {
       "x": 820,
       "y": 314
     },
-    "plot_36": {
+    "plot_83": {
       "x": 820,
       "y": 814
     },
-    "note_22": {
+    "note_39": {
       "x": 40,
       "y": 24
     }
@@ -404,6 +404,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -450,5 +451,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }

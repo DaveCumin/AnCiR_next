@@ -2596,7 +2596,7 @@
       "name": "stat_peak_period_19",
       "data": 239,
       "type": "number",
-      "tableProcessGUId": "74b5359e-2499-4669-bf68-91b98ead94e3",
+      "tableProcessGUId": "d5cf5206-0cca-4f79-a186-b78011ca34d3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2607,7 +2607,7 @@
       "name": "stat_peak_power_19",
       "data": 240,
       "type": "number",
-      "tableProcessGUId": "74b5359e-2499-4669-bf68-91b98ead94e3",
+      "tableProcessGUId": "d5cf5206-0cca-4f79-a186-b78011ca34d3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2618,7 +2618,7 @@
       "name": "rhythmicityy_234_19",
       "data": 241,
       "type": "number",
-      "tableProcessGUId": "74b5359e-2499-4669-bf68-91b98ead94e3",
+      "tableProcessGUId": "d5cf5206-0cca-4f79-a186-b78011ca34d3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2907,6 +2907,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -2953,5 +2954,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.61.4"
+  "version": "β.62.4"
 }

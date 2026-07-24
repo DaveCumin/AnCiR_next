@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "221": [
+    "479": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "222": [
+    "480": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 221,
+      "id": 479,
       "name": "x",
-      "data": 221,
+      "data": 479,
       "type": "number",
-      "tableProcessGUId": "bc94b32c-57e4-4726-834e-d24e5fcefc79",
+      "tableProcessGUId": "9b47279a-a979-49ed-92ae-aee182ee74b7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 222,
+      "id": 480,
       "name": "y",
-      "data": 222,
+      "data": 480,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 223,
+      "id": 481,
       "name": "Normalize result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_7",
-      "producerPort": "out_222",
+      "producerPort": "out_480",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 33,
+      "id": 80,
       "name": "Normalize: before vs after",
       "x": 350,
       "y": 150,
@@ -199,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 224,
+              "id": 482,
               "name": "x",
-              "refId": 221,
+              "refId": 479,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 225,
+              "id": 483,
               "name": "y",
-              "refId": 222,
+              "refId": 480,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -238,9 +238,9 @@
           },
           {
             "x": {
-              "id": 226,
+              "id": 484,
               "name": "x",
-              "refId": 221,
+              "refId": 479,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 227,
+              "id": 485,
               "name": "Normalize result",
-              "refId": 223,
+              "refId": 481,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,7 +291,7 @@
       }
     },
     {
-      "id": 34,
+      "id": 81,
       "name": "Normalize: values",
       "x": 350,
       "y": 150,
@@ -307,8 +307,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          222,
-          223
+          480,
+          481
         ],
         "showCol": [
           true,
@@ -323,7 +323,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 15,
+      "id": 34,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -333,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 221
+          "result": 479
         }
       },
       "refTPId": null
@@ -344,7 +344,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_21",
+      "id": "note_38",
       "text": "Rescales a column so different series are comparable. Z-score centres to mean 0 / SD 1; Min-Max rescales into a chosen range; Robust uses median and MAD (outlier-resistant); Unit-vector scales by the column's magnitude. The demo shows the input rescaled onto the new scale with its shape preserved. Choose z-score/robust when comparing rhythms of different amplitudes.",
       "x": 40,
       "y": 24,
@@ -363,17 +363,17 @@
         "customMin": 0,
         "customMax": 1,
         "inIN": [
-          222
+          480
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_222": {
+    "data_480": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_15": {
+    "tableprocess_34": {
       "x": 60,
       "y": 814
     },
@@ -381,15 +381,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_33": {
+    "plot_80": {
       "x": 820,
       "y": 314
     },
-    "plot_34": {
+    "plot_81": {
       "x": 820,
       "y": 814
     },
-    "note_21": {
+    "note_38": {
       "x": 40,
       "y": 24
     }
@@ -404,6 +404,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -450,5 +451,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }

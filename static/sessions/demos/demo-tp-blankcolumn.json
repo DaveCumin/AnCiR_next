@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "251": [
+    "509": [
       null,
       null,
       null,
@@ -15,11 +15,11 @@
   },
   "data": [
     {
-      "id": 251,
-      "name": "result_21",
-      "data": 251,
+      "id": 509,
+      "name": "result_40",
+      "data": 509,
       "type": "category",
-      "tableProcessGUId": "d1496ff3-c1e9-423f-8f1d-73a2da67946c",
+      "tableProcessGUId": "4b135cdf-8d9c-4407-9896-a53788af93c2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -28,7 +28,7 @@
   ],
   "plots": [
     {
-      "id": 41,
+      "id": 88,
       "name": "Enter Data result",
       "x": 350,
       "y": 150,
@@ -44,7 +44,7 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          251
+          509
         ],
         "showCol": [
           true
@@ -58,14 +58,14 @@
   ],
   "tableProcesses": [
     {
-      "id": 21,
+      "id": 40,
       "name": "BlankColumn",
       "displayName": "Enter Data",
       "args": {
         "N": 10,
         "storedValueRefs": {},
         "out": {
-          "result": 251
+          "result": 509
         }
       },
       "refTPId": null
@@ -76,7 +76,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_26",
+      "id": "note_43",
       "text": "Lets you enter data by hand or paste CSV/JSON to create a column (or table) directly on the canvas. Use it for small manual datasets, quick tests, or pasting values from another program.",
       "x": 40,
       "y": 24,
@@ -88,15 +88,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_21": {
+    "tableprocess_40": {
       "x": 60,
       "y": 314
     },
-    "plot_41": {
+    "plot_88": {
       "x": 820,
       "y": 314
     },
-    "note_26": {
+    "note_43": {
       "x": 40,
       "y": 24
     }
@@ -111,6 +111,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -157,5 +158,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }

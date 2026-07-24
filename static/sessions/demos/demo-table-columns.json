@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "168": [
+    "426": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "169": [
+    "427": [
       50,
       60,
       70,
@@ -100,7 +100,7 @@
       30,
       40
     ],
-    "170": [
+    "428": [
       30,
       30,
       29,
@@ -153,9 +153,9 @@
   },
   "data": [
     {
-      "id": 168,
+      "id": 426,
       "name": "hour",
-      "data": 168,
+      "data": 426,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -164,9 +164,9 @@
       "processes": []
     },
     {
-      "id": 169,
+      "id": 427,
       "name": "signalA",
-      "data": 169,
+      "data": 427,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -175,9 +175,9 @@
       "processes": []
     },
     {
-      "id": 170,
+      "id": 428,
       "name": "signalB",
-      "data": 170,
+      "data": 428,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -188,7 +188,7 @@
   ],
   "plots": [
     {
-      "id": 18,
+      "id": 65,
       "name": "Signal table",
       "x": 350,
       "y": 150,
@@ -204,9 +204,9 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          168,
-          169,
-          170
+          426,
+          427,
+          428
         ],
         "showCol": [
           true,
@@ -226,7 +226,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_13",
+      "id": "note_30",
       "text": "Renders selected columns (or their summary statistics) as a plain data table for inspection and export. Use it to read exact values, sanity-check a transform's output, or present computed metrics. The demo shows the chosen columns laid out in rows and columns.",
       "x": 40,
       "y": 24,
@@ -238,23 +238,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_168": {
+    "data_426": {
       "x": 60,
       "y": 314
     },
-    "data_169": {
+    "data_427": {
       "x": 60,
       "y": 814
     },
-    "data_170": {
+    "data_428": {
       "x": 60,
       "y": 1314
     },
-    "note_13": {
+    "note_30": {
       "x": 40,
       "y": 24
     },
-    "plot_18": {
+    "plot_65": {
       "x": 820,
       "y": 314
     }
@@ -269,6 +269,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -315,5 +316,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }

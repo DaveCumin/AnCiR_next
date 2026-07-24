@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 95,
+  "count": 97,
   "sessions": [
     {
       "id": "workflow-rest-activity",
@@ -222,6 +222,21 @@
         "periodogram"
       ],
       "keywords": "workflow — re-entrainment after a time-zone shift the contrast with an abrupt shift is the lesson. the zeitgeber moves 8 h in one step, but the rhythm does not: it runs at a transient period near 25.3 h for about a week, crawling diagonally across the actogram, before locking on at the new phase. compare this with a schedule change where the record simply jumps, and the transients are what tell you a real clock is involved rather than direct driving. workflows actogram periodogram"
+    },
+    {
+      "id": "workflow-transients",
+      "name": "Workflow — transients (phase advance vs delay)",
+      "family": "Workflows",
+      "description": "Transients are the intermediate cycles a rhythm passes through between the moment the zeitgeber shifts and the moment a new steady-state phase is re-attained. Two records receive an 8 h shift on the same day, one an ADVANCE and one a DELAY. The zeitgeber moves in a single step in both cases; neither rhythm does. The advance re-entrains at roughly 1 h per cycle and needs about 8 transient cycles, while the delay covers the same 8 h at roughly 1.5 h per cycle in about 6. The onset plot states the same thing numerically: the zeitgeber is a step, the rhythms are ramps of different slope. Only the phase measured AFTER the transients have subsided is the steady-state phase shift, which is why a PRC must be scored from post-transient cycles.",
+      "summary": "Why an 8 h advance costs more cycles than an 8 h delay.",
+      "group": "Rhythm & circadian",
+      "url": "sessions/demos/demo-workflow-transients.json",
+      "kind": "workflow",
+      "showcases": [
+        "actogram",
+        "scatterplot"
+      ],
+      "keywords": "workflow — transients (phase advance vs delay) transients are the intermediate cycles a rhythm passes through between the moment the zeitgeber shifts and the moment a new steady-state phase is re-attained. two records receive an 8 h shift on the same day, one an advance and one a delay. the zeitgeber moves in a single step in both cases; neither rhythm does. the advance re-entrains at roughly 1 h per cycle and needs about 8 transient cycles, while the delay covers the same 8 h at roughly 1.5 h per cycle in about 6. the onset plot states the same thing numerically: the zeitgeber is a step, the rhythms are ramps of different slope. only the phase measured after the transients have subsided is the steady-state phase shift, which is why a prc must be scored from post-transient cycles. workflows actogram scatterplot"
     },
     {
       "id": "workflow-split-rhythm",
@@ -477,6 +492,18 @@
       "kind": "dataset",
       "showcases": [],
       "keywords": "re-entrainment after a time-zone shift the slow diagonal crawl back into alignment after a time-zone shift. data only — 2 columns × 600 rows, no analysis. sources"
+    },
+    {
+      "id": "dataset-workflow-transients",
+      "name": "Transients (phase advance vs delay)",
+      "family": "Sources",
+      "description": "Why an 8 h advance costs more cycles than an 8 h delay. Data only — 8 columns × 672 rows, no analysis.",
+      "summary": "Why an 8 h advance costs more cycles than an 8 h delay.",
+      "group": "Rhythm & circadian",
+      "url": "sessions/demos/transients-phase-advance-vs-delay.csv",
+      "kind": "dataset",
+      "showcases": [],
+      "keywords": "transients (phase advance vs delay) why an 8 h advance costs more cycles than an 8 h delay. data only — 8 columns × 672 rows, no analysis. sources"
     },
     {
       "id": "dataset-workflow-split-rhythm",

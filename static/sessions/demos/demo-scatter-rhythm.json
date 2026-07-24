@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "112": [
+    "370": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "113": [
+    "371": [
       15.795844354091358,
       18.101592110952595,
       15.063616671903457,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 112,
+      "id": 370,
       "name": "hour",
-      "data": 112,
+      "data": 370,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 113,
+      "id": 371,
       "name": "activity",
-      "data": 113,
+      "data": 371,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 7,
+      "id": 54,
       "name": "Activity vs hour",
       "x": 350,
       "y": 150,
@@ -424,9 +424,9 @@
         "data": [
           {
             "x": {
-              "id": 114,
+              "id": 372,
               "name": "hour",
-              "refId": 112,
+              "refId": 370,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -435,9 +435,9 @@
               "processes": []
             },
             "y": {
-              "id": 115,
+              "id": 373,
               "name": "activity",
-              "refId": 113,
+              "refId": 371,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -483,7 +483,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_4",
+      "id": "note_21",
       "text": "Plots one column against another as points, most often a value against time to view a raw time-series. Wire x (e.g. time) and y (values); multiple y-columns overlay as separate series. Supports zoom/pan and an optional facet mode (one small plot per series). Use it as your first look at the data before any analysis.",
       "x": 40,
       "y": 24,
@@ -495,19 +495,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_112": {
+    "data_370": {
       "x": 60,
       "y": 314
     },
-    "data_113": {
+    "data_371": {
       "x": 60,
       "y": 814
     },
-    "note_4": {
+    "note_21": {
       "x": 40,
       "y": 24
     },
-    "plot_7": {
+    "plot_54": {
       "x": 820,
       "y": 314
     }
@@ -522,6 +522,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -568,5 +569,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }

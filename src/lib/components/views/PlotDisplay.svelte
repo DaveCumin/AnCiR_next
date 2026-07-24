@@ -19,6 +19,7 @@
 	import { tooltip } from '$lib/utils/tooltip.js';
 
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
+	import { createLazyPointerCapture } from '$lib/core/lazyPointerCapture.js';
 	import { onMount, tick, untrack } from 'svelte';
 	import { fly, fade } from 'svelte/transition';
 
@@ -101,20 +102,16 @@
 	/** The .canvas element — owns move/up and takes pointer capture. */
 	let canvasEl = $state(null);
 	let activePointerId = $state(null);
+	// Capture is taken LAZILY (see lazyPointerCapture.js): capturing at press time would retarget the
+	// pointerup to the canvas root, so buttons inside the canvas would never get a click.
+	const lazyCapture = createLazyPointerCapture(() => canvasEl);
 	function capturePointer(e) {
 		activePointerId = e.pointerId;
-		try {
-			canvasEl?.setPointerCapture?.(e.pointerId);
-		} catch {
-			/* ignore */
-		}
+		lazyCapture.arm(e);
 	}
+	const takeCaptureIfMoved = (e) => lazyCapture.maybeTake(e);
 	function releasePointer() {
-		try {
-			if (activePointerId != null) canvasEl?.releasePointerCapture?.(activePointerId);
-		} catch {
-			/* ignore */
-		}
+		lazyCapture.release();
 		activePointerId = null;
 	}
 
@@ -254,6 +251,7 @@
 		}
 		if (!isPanning) return;
 		if (activePointerId != null && e.pointerId !== activePointerId) return;
+		takeCaptureIfMoved(e);
 		const nx = e.clientX - panStartX;
 		const ny = e.clientY - panStartY;
 		if (

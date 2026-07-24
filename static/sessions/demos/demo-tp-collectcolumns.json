@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "252": [
+    "510": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "253": [
+    "511": [
       1,
       3,
       5,
@@ -104,7 +104,7 @@
       97,
       99
     ],
-    "254": [
+    "512": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "255": [
+    "513": [
       1,
       3,
       5,
@@ -211,9 +211,9 @@
   },
   "data": [
     {
-      "id": 252,
+      "id": 510,
       "name": "Collect Columns input 1",
-      "data": 252,
+      "data": 510,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -222,9 +222,9 @@
       "processes": []
     },
     {
-      "id": 253,
+      "id": 511,
       "name": "Collect Columns input 2",
-      "data": 253,
+      "data": 511,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 254,
-      "name": "col_252_22",
-      "data": 254,
+      "id": 512,
+      "name": "col_510_41",
+      "data": 512,
       "type": "number",
-      "tableProcessGUId": "adb7ac44-8ddd-4ad2-bf23-d42660e9f53a",
+      "tableProcessGUId": "1f2e9158-e5fb-42d7-94b3-2b0f7d03d615",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 255,
-      "name": "col_253_22",
-      "data": 255,
+      "id": 513,
+      "name": "col_511_41",
+      "data": 513,
       "type": "number",
-      "tableProcessGUId": "adb7ac44-8ddd-4ad2-bf23-d42660e9f53a",
+      "tableProcessGUId": "1f2e9158-e5fb-42d7-94b3-2b0f7d03d615",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -257,7 +257,7 @@
   ],
   "plots": [
     {
-      "id": 42,
+      "id": 89,
       "name": "Collect Columns result",
       "x": 350,
       "y": 150,
@@ -273,10 +273,10 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          252,
-          253,
-          254,
-          255
+          510,
+          511,
+          512,
+          513
         ],
         "showCol": [
           true,
@@ -293,19 +293,19 @@
   ],
   "tableProcesses": [
     {
-      "id": 22,
+      "id": 41,
       "name": "CollectColumns",
       "displayName": "Collect Columns",
       "args": {
         "colIds": [
-          252,
-          253
+          510,
+          511
         ],
         "preProcesses": [],
         "aggregates": [],
         "out": {
-          "col_252": 254,
-          "col_253": 255
+          "col_510": 512,
+          "col_511": 513
         }
       },
       "refTPId": null
@@ -316,7 +316,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_27",
+      "id": "note_44",
       "text": "Concatenates several columns end-to-end into a single combined column. Use it to pool values from multiple series or segments into one column for a combined summary or plot.",
       "x": 40,
       "y": 24,
@@ -328,23 +328,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_252": {
+    "data_510": {
       "x": 60,
       "y": 314
     },
-    "data_253": {
+    "data_511": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_22": {
+    "tableprocess_41": {
       "x": 440,
       "y": 314
     },
-    "plot_42": {
+    "plot_89": {
       "x": 820,
       "y": 314
     },
-    "note_27": {
+    "note_44": {
       "x": 40,
       "y": 24
     }
@@ -359,6 +359,7 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
     "tidyLayoutRequest": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
@@ -405,5 +406,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.60.0"
+  "version": "β.62.4"
 }
