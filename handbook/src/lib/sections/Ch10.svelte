@@ -5,6 +5,7 @@
   import NoteBox from '$lib/components/NoteBox.svelte';
   import AnCiRBox from '$lib/components/AnCiRBox.svelte';
   import DemoLink from '$lib/components/DemoLink.svelte';
+  import PRCAnim from "$lib/animations/PRCAnim.svelte";
 </script>
 
 <ChapterSection id="ch10" num="Chapter 10" title="Phase Response Curves">
@@ -53,6 +54,15 @@
     <strong>Worked example.</strong> An animal in constant darkness normally begins running at CT12. A bright-light pulse given at CT16 (early subjective night) delays the next onset to CT13, i.e. one hour later, so ΔΦ = &minus;1 h. The same pulse given at CT22 (late subjective night) instead advances onset to CT11, so ΔΦ = +1 h. A pulse at CT6 (mid subjective day) leaves onset essentially unchanged, ΔΦ ≈ 0.
   </p>
 
+  <h3 class="section-head">Watch a PRC being built</h3>
+  <p>
+    The animation puts the whole process in one picture. A brief <strong>light pulse</strong> (gold) is given to several animals at one circadian time; each animal's phase shift is measured and dropped onto the graph as a <strong>point</strong>. The top strip shows what that pulse does to the next activity onset: it moves <strong>earlier</strong> (a phase advance) or <strong>later</strong> (a delay). Repeat at circadian times across the whole cycle, summarise the points at each time as a <strong>mean ± standard error</strong>, and draw a smooth curve through those means: that curve is the PRC.
+  </p>
+  <p>
+    Watch for the three regions the curve reveals: shifts stay near <strong>zero during the subjective day</strong> (the dead zone), turn <strong>negative (delays) in the early night</strong>, and swing <strong>positive (advances) in the late night and early morning</strong>.
+  </p>
+  <PRCAnim height="520px" />
+
   <NoteBox title="Human Clinical Relevance">
     Human light and melatonin PRCs have direct clinical relevance — they underpin timing protocols for jet lag recovery, shift-work adaptation, delayed sleep-wake phase disorder, and seasonal affective disorder treatment.
   </NoteBox>
@@ -61,8 +71,9 @@
     <p>PRC analysis is not yet implemented as a dedicated module in AnCiR. To construct a PRC manually:</p>
     <ol>
       <li>Import your data with columns: <strong>Stimulus CT</strong> (circadian time of stimulus, in hours) and <strong>Phase Shift</strong> (Δhours, positive = advance, negative = delay).</li>
-      <li>From the <strong>node palette</strong> (the <strong>+</strong> button, top-right), under <strong>Plots</strong>, add a <strong>scatterplot</strong> and wire Stimulus CT into <strong>x</strong> and Phase Shift into <strong>y</strong>.</li>
-      <li>Add a <strong>Smooth Data</strong> node (<strong>Smoothing</strong> family; <a class="gloss" href="#gloss-loess">LOESS</a> or <a class="gloss" href="#gloss-whittaker-eilers">Whittaker-Eilers</a>) and wire its output back into the scatterplot as a second series to draw a smooth PRC curve.</li>
+      <li>From the <strong>node palette</strong> (the <strong>+</strong> button, top-right), under <strong>Plots</strong>, add a <strong>scatterplot</strong> and wire Stimulus CT into its <strong>x</strong> port and Phase Shift into its <strong>y</strong> port. This draws the raw phase shifts.</li>
+      <li>Add a <strong>Smooth Data</strong> node (<strong>Smoothing</strong> family) and wire <strong>Stimulus CT into <code>xIN</code></strong> and <strong>Phase Shift into <code>yIN</code></strong>; set the smoother to <a class="gloss" href="#gloss-loess">LOESS</a> or <a class="gloss" href="#gloss-whittaker-eilers">Whittaker-Eilers</a>. <strong>Sort the rows by CT first</strong> — the smoother works <em>along x</em>, so out-of-order points produce a zig-zag rather than a smooth curve.</li>
+      <li>Wire the Smooth Data node's <strong>smoothed output column</strong> into the scatterplot as a <strong>second <code>y</code> series</strong>. It draws as a line (just like the cosinor-fit overlay in <a href="#ch7">Chapter 7</a>), giving the smooth PRC curve through your points.</li>
       <li>To overlay multiple PRCs (e.g., different stimulus intensities), wire each as a separate data series into the same scatterplot.</li>
     </ol>
     <DemoLink session="sessions/demos/demo-scatter-rhythm.json" label="Open a scatterplot example in AnCiR" />
