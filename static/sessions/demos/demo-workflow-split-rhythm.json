@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "289": [
+    "364": [
       0,
       1,
       2,
@@ -626,7 +626,7 @@
       622,
       623
     ],
-    "290": [
+    "365": [
       35.88509115111157,
       43.54983939945321,
       34.789867007719174,
@@ -1252,7 +1252,7 @@
       40.2212022597924,
       44.47959791995979
     ],
-    "291": [
+    "366": [
       33.90302889086043,
       44.18635658690842,
       37.01813711983115,
@@ -1878,7 +1878,7 @@
       0.599029339603051,
       0
     ],
-    "292": [
+    "367": [
       69.78812004197201,
       87.73619598636162,
       71.80800412755033,
@@ -2504,13 +2504,13 @@
       40.82023159939545,
       44.47959791995979
     ],
-    "301": [
+    "376": [
       23.42
     ],
-    "302": [
+    "377": [
       102.4627357897153
     ],
-    "303": [
+    "378": [
       0.6885974683549608,
       0.5820058241815844,
       0.4847372528355866,
@@ -2816,9 +2816,9 @@
   },
   "data": [
     {
-      "id": 289,
+      "id": 364,
       "name": "hour",
-      "data": 289,
+      "data": 364,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2827,9 +2827,9 @@
       "processes": []
     },
     {
-      "id": 290,
+      "id": 365,
       "name": "component A (24.8 h)",
-      "data": 290,
+      "data": 365,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2838,9 +2838,9 @@
       "processes": []
     },
     {
-      "id": 291,
+      "id": 366,
       "name": "component B (23.4 h)",
-      "data": 291,
+      "data": 366,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2849,9 +2849,9 @@
       "processes": []
     },
     {
-      "id": 292,
+      "id": 367,
       "name": "recorded activity",
-      "data": 292,
+      "data": 367,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2860,33 +2860,33 @@
       "processes": []
     },
     {
-      "id": 301,
-      "name": "stat_peak_period_22",
-      "data": 301,
+      "id": 376,
+      "name": "stat_peak_period_26",
+      "data": 376,
       "type": "number",
-      "tableProcessGUId": "54b6faa9-1e15-4506-8733-6573c60129e5",
+      "tableProcessGUId": "337967ff-1760-4beb-b6ee-6b1be8dbc498",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 302,
-      "name": "stat_peak_power_22",
-      "data": 302,
+      "id": 377,
+      "name": "stat_peak_power_26",
+      "data": 377,
       "type": "number",
-      "tableProcessGUId": "54b6faa9-1e15-4506-8733-6573c60129e5",
+      "tableProcessGUId": "337967ff-1760-4beb-b6ee-6b1be8dbc498",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 303,
-      "name": "rhythmicityy_292_22",
-      "data": 303,
+      "id": 378,
+      "name": "rhythmicityy_367_26",
+      "data": 378,
       "type": "number",
-      "tableProcessGUId": "54b6faa9-1e15-4506-8733-6573c60129e5",
+      "tableProcessGUId": "337967ff-1760-4beb-b6ee-6b1be8dbc498",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2895,7 +2895,7 @@
   ],
   "plots": [
     {
-      "id": 40,
+      "id": 48,
       "name": "Actogram — the recorded sum",
       "x": 350,
       "y": 150,
@@ -2939,9 +2939,9 @@
         "data": [
           {
             "x": {
-              "id": 293,
+              "id": 368,
               "name": "hour",
-              "refId": 289,
+              "refId": 364,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2950,9 +2950,9 @@
               "processes": []
             },
             "y": {
-              "id": 294,
+              "id": 369,
               "name": "recorded activity",
-              "refId": 292,
+              "refId": 367,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2968,7 +2968,7 @@
       }
     },
     {
-      "id": 41,
+      "id": 49,
       "name": "Actogram — the two components",
       "x": 350,
       "y": 150,
@@ -3012,9 +3012,9 @@
         "data": [
           {
             "x": {
-              "id": 295,
+              "id": 370,
               "name": "hour",
-              "refId": 289,
+              "refId": 364,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3023,9 +3023,9 @@
               "processes": []
             },
             "y": {
-              "id": 296,
+              "id": 371,
               "name": "component A (24.8 h)",
-              "refId": 290,
+              "refId": 365,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3039,9 +3039,9 @@
           },
           {
             "x": {
-              "id": 297,
+              "id": 372,
               "name": "hour",
-              "refId": 289,
+              "refId": 364,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3050,9 +3050,9 @@
               "processes": []
             },
             "y": {
-              "id": 298,
+              "id": 373,
               "name": "component B (23.4 h)",
-              "refId": 291,
+              "refId": 366,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3068,7 +3068,7 @@
       }
     },
     {
-      "id": 42,
+      "id": 50,
       "name": "Periodogram — two peaks",
       "x": 350,
       "y": 150,
@@ -3113,9 +3113,9 @@
         "data": [
           {
             "x": {
-              "id": 299,
+              "id": 374,
               "name": "hour",
-              "refId": 289,
+              "refId": 364,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3124,9 +3124,9 @@
               "processes": []
             },
             "y": {
-              "id": 300,
+              "id": 375,
               "name": "recorded activity",
-              "refId": 292,
+              "refId": 367,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3162,7 +3162,7 @@
       }
     },
     {
-      "id": 43,
+      "id": 51,
       "name": "Dominant component",
       "x": 350,
       "y": 150,
@@ -3178,8 +3178,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          301,
-          302
+          376,
+          377
         ],
         "showCol": [
           true,
@@ -3194,13 +3194,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 22,
+      "id": 26,
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis — dominant component",
       "args": {
-        "xIN": 289,
+        "xIN": 364,
         "yIN": [
-          292
+          367
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -3211,9 +3211,9 @@
         "pgAlpha": 0.05,
         "preProcesses": [],
         "out": {
-          "stat_peak_period": 301,
-          "stat_peak_power": 302,
-          "rhythmicityy_292": 303
+          "stat_peak_period": 376,
+          "stat_peak_power": 377,
+          "rhythmicityy_367": 378
         }
       },
       "refTPId": null
@@ -3224,7 +3224,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_16",
+      "id": "note_18",
       "text": "WORKFLOW: split rhythm under constant light. Under constant light the circadian system can bifurcate: two oscillator components decouple, run at slightly different periods, and re-stabilise roughly 12 h apart. Here the two components are supplied separately (24.8 h and 23.4 h) and the actograph record is their SUM, so the split you see emerges from the two oscillators drifting apart rather than being drawn in. Read the component actogram alongside the recorded one to see where the second band comes from. The periodogram gives the numeric signature: two peaks rather than one, which is what should make you suspect splitting in a real record even before it is obvious by eye.",
       "x": 40,
       "y": 24,
@@ -3236,43 +3236,43 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_289": {
+    "data_364": {
       "x": 60,
       "y": 314
     },
-    "data_290": {
+    "data_365": {
       "x": 60,
       "y": 814
     },
-    "data_291": {
+    "data_366": {
       "x": 60,
       "y": 1314
     },
-    "data_292": {
+    "data_367": {
       "x": 60,
       "y": 1814
     },
-    "tableprocess_22": {
+    "tableprocess_26": {
       "x": 440,
       "y": 314
     },
-    "note_16": {
+    "note_18": {
       "x": 40,
       "y": 24
     },
-    "plot_40": {
+    "plot_48": {
       "x": 820,
       "y": 314
     },
-    "plot_41": {
+    "plot_49": {
       "x": 820,
       "y": 814
     },
-    "plot_42": {
+    "plot_50": {
       "x": 820,
       "y": 1314
     },
-    "plot_43": {
+    "plot_51": {
       "x": 820,
       "y": 1814
     }
@@ -3334,5 +3334,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

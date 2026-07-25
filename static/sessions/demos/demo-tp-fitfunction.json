@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "543": [
+    "618": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "544": [
+    "619": [
       12.642866859481796,
       18.907413440058953,
       8.02083029948017,
@@ -104,7 +104,7 @@
       23.83732580196522,
       -2.4027680620561576
     ],
-    "545": [
+    "620": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "546": [
+    "621": [
       9.094870359876616,
       10.003419446394657,
       13.579734705384766,
@@ -211,20 +211,20 @@
   },
   "data": [
     {
-      "id": 543,
+      "id": 618,
       "name": "x",
-      "data": 543,
+      "data": 618,
       "type": "number",
-      "tableProcessGUId": "2f69ad28-1520-4b43-b864-50492c000537",
+      "tableProcessGUId": "3e335c35-6538-4395-9111-935a03fde357",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 544,
+      "id": 619,
       "name": "y",
-      "data": 544,
+      "data": 619,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 545,
-      "name": "fitx_50",
-      "data": 545,
+      "id": 620,
+      "name": "fitx_54",
+      "data": 620,
       "type": "number",
-      "tableProcessGUId": "43069706-f6ac-4bf3-936e-ae50a8402774",
+      "tableProcessGUId": "dd5b9f32-237a-40c8-abb8-fe9e656f70be",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 546,
-      "name": "fity_544_50",
-      "data": 546,
+      "id": 621,
+      "name": "fity_619_54",
+      "data": 621,
       "type": "number",
-      "tableProcessGUId": "43069706-f6ac-4bf3-936e-ae50a8402774",
+      "tableProcessGUId": "dd5b9f32-237a-40c8-abb8-fe9e656f70be",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -257,7 +257,7 @@
   ],
   "plots": [
     {
-      "id": 97,
+      "id": 105,
       "name": "Fit Function: data + fit",
       "x": 350,
       "y": 150,
@@ -314,9 +314,9 @@
         "data": [
           {
             "x": {
-              "id": 547,
+              "id": 622,
               "name": "x",
-              "refId": 543,
+              "refId": 618,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -325,9 +325,9 @@
               "processes": []
             },
             "y": {
-              "id": 548,
+              "id": 623,
               "name": "y",
-              "refId": 544,
+              "refId": 619,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -353,9 +353,9 @@
           },
           {
             "x": {
-              "id": 549,
-              "name": "fitx_50",
-              "refId": 545,
+              "id": 624,
+              "name": "fitx_54",
+              "refId": 620,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -364,9 +364,9 @@
               "processes": []
             },
             "y": {
-              "id": 550,
-              "name": "fity_544_50",
-              "refId": 546,
+              "id": 625,
+              "name": "fity_619_54",
+              "refId": 621,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -406,7 +406,7 @@
       }
     },
     {
-      "id": 98,
+      "id": 106,
       "name": "Fit Function: values",
       "x": 350,
       "y": 150,
@@ -422,8 +422,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          544,
-          546
+          619,
+          621
         ],
         "showCol": [
           true,
@@ -438,7 +438,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 49,
+      "id": 53,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -448,19 +448,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 543
+          "result": 618
         }
       },
       "refTPId": null
     },
     {
-      "id": 50,
+      "id": 54,
       "name": "FitFunction",
       "displayName": "Fit Function",
       "args": {
-        "xIN": 543,
+        "xIN": 618,
         "yIN": [
-          544
+          619
         ],
         "model": "cosinor",
         "outputX": -1,
@@ -486,8 +486,8 @@
         "permutationStatistic": "rSquared",
         "preProcesses": [],
         "out": {
-          "fitx": 545,
-          "fity_544": 546
+          "fitx": 620,
+          "fity_619": 621
         }
       },
       "refTPId": null
@@ -498,7 +498,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_50",
+      "id": "note_52",
       "text": "A general curve-fitting node that fits a chosen model, cosinor, rectangular wave, or double logistic, to the series by nonlinear least squares, giving one interface for all three parametric shapes plus a shared permutation test. It reports R² and RMSE, the model coefficients, and a residual column per series (observed − fitted, aligned to the input), with a \"Plot residuals\" button to scatter them against the input for a fit-diagnostic check (a good fit leaves residuals patternless around zero). Use it when you want to try and compare different waveform models on the same data, or need the permutation-based significance option in one place. In the demo, read the fitted curve over the raw points and compare fit quality (and the permutation p-value) across models to see which shape the data prefer. Nonlinear least-squares model fitting (Marquardt 1963).",
       "x": 40,
       "y": 24,
@@ -510,27 +510,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_544": {
+    "data_619": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_49": {
+    "tableprocess_53": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_50": {
+    "tableprocess_54": {
       "x": 440,
       "y": 314
     },
-    "plot_97": {
+    "plot_105": {
       "x": 820,
       "y": 314
     },
-    "plot_98": {
+    "plot_106": {
       "x": 820,
       "y": 814
     },
-    "note_50": {
+    "note_52": {
       "x": 40,
       "y": 24
     }
@@ -592,5 +592,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

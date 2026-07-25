@@ -1,0 +1,1359 @@
+{
+  "rawData": {
+    "233": [
+      10,
+      8,
+      13,
+      9,
+      11,
+      14,
+      6,
+      4,
+      12,
+      7,
+      5
+    ],
+    "234": [
+      8.04,
+      6.95,
+      7.58,
+      8.81,
+      8.33,
+      9.96,
+      7.24,
+      4.26,
+      10.84,
+      4.82,
+      5.68
+    ],
+    "235": [
+      9.14,
+      8.14,
+      8.74,
+      8.77,
+      9.26,
+      8.1,
+      6.13,
+      3.1,
+      9.13,
+      7.26,
+      4.74
+    ],
+    "236": [
+      7.46,
+      6.77,
+      12.74,
+      7.11,
+      7.81,
+      8.84,
+      6.08,
+      5.39,
+      8.15,
+      6.42,
+      5.73
+    ],
+    "237": [
+      8,
+      8,
+      8,
+      8,
+      8,
+      8,
+      8,
+      19,
+      8,
+      8,
+      8
+    ],
+    "238": [
+      6.58,
+      5.76,
+      7.71,
+      8.84,
+      8.47,
+      7.04,
+      5.25,
+      12.5,
+      5.56,
+      7.91,
+      6.89
+    ],
+    "239": [
+      "Set I",
+      "Set II",
+      "Set III",
+      "Set IV"
+    ],
+    "240": [
+      11,
+      11,
+      11,
+      11
+    ],
+    "241": [
+      7.500909090909093,
+      7.500909090909091,
+      7.500000000000001,
+      7.50090909090909
+    ],
+    "242": [
+      2.031568135925815,
+      2.0316567355016177,
+      2.030423601123667,
+      2.0305785113876023
+    ],
+    "243": [
+      4.26,
+      3.1,
+      5.39,
+      5.25
+    ],
+    "244": [
+      10.84,
+      9.26,
+      12.74,
+      12.5
+    ],
+    "245": [
+      10,
+      8,
+      13,
+      9,
+      11,
+      14,
+      6,
+      4,
+      12,
+      7,
+      5
+    ],
+    "246": [
+      8.001,
+      7.000818181818184,
+      9.50127272727272,
+      7.500909090909092,
+      8.501090909090905,
+      10.001363636363628,
+      6.000636363636369,
+      5.000454545454554,
+      9.001181818181813,
+      6.500727272727277,
+      5.5005454545454615
+    ],
+    "247": [
+      8.00090909090909,
+      7.000909090909092,
+      9.500909090909088,
+      7.500909090909092,
+      8.50090909090909,
+      10.000909090909088,
+      6.000909090909094,
+      5.000909090909095,
+      9.00090909090909,
+      6.500909090909094,
+      5.5009090909090945
+    ],
+    "248": [
+      7.999727272727273,
+      7.000272727272727,
+      9.498909090909091,
+      7.5,
+      8.499454545454546,
+      9.998636363636365,
+      6.000818181818182,
+      5.001363636363636,
+      8.999181818181818,
+      6.500545454545454,
+      5.501090909090909
+    ],
+    "249": [
+      0.666542459508775,
+      0.6662420337274841,
+      0.6663240410665592
+    ],
+    "250": [
+      0.5000909090909074,
+      0.4999999999999992,
+      0.4997272727272728
+    ],
+    "251": [
+      3.000090909090925,
+      3.0009090909090985,
+      3.002454545454545
+    ],
+    "252": [
+      8,
+      8,
+      8,
+      8,
+      8,
+      8,
+      8,
+      19,
+      8,
+      8,
+      8
+    ],
+    "253": [
+      7.001,
+      7.001,
+      7.001,
+      7.001,
+      7.001,
+      7.001,
+      7.001,
+      12.500000000000004,
+      7.001,
+      7.001,
+      7.001
+    ],
+    "254": [
+      0.6667072568984653
+    ],
+    "255": [
+      0.4999090909090912
+    ],
+    "256": [
+      3.001727272727271
+    ]
+  },
+  "data": [
+    {
+      "id": 233,
+      "name": "x (sets I–III)",
+      "data": 233,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 234,
+      "name": "Set I",
+      "data": 234,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 235,
+      "name": "Set II",
+      "data": 235,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 236,
+      "name": "Set III",
+      "data": 236,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 237,
+      "name": "x (set IV)",
+      "data": 237,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 238,
+      "name": "Set IV",
+      "data": 238,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 239,
+      "name": "variable_19",
+      "data": 239,
+      "type": "category",
+      "tableProcessGUId": "81825186-c7b2-4c71-a8a9-454986b06908",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 240,
+      "name": "n_19",
+      "data": 240,
+      "type": "number",
+      "tableProcessGUId": "81825186-c7b2-4c71-a8a9-454986b06908",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 241,
+      "name": "mean_19",
+      "data": 241,
+      "type": "number",
+      "tableProcessGUId": "81825186-c7b2-4c71-a8a9-454986b06908",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 242,
+      "name": "sd_19",
+      "data": 242,
+      "type": "number",
+      "tableProcessGUId": "81825186-c7b2-4c71-a8a9-454986b06908",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 243,
+      "name": "min_19",
+      "data": 243,
+      "type": "number",
+      "tableProcessGUId": "81825186-c7b2-4c71-a8a9-454986b06908",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 244,
+      "name": "max_19",
+      "data": 244,
+      "type": "number",
+      "tableProcessGUId": "81825186-c7b2-4c71-a8a9-454986b06908",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 245,
+      "name": "trendx_20",
+      "data": 245,
+      "type": "number",
+      "tableProcessGUId": "e114e062-a07f-44b4-b3bd-d2fe22e36c83",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 246,
+      "name": "trendy_234_20",
+      "data": 246,
+      "type": "number",
+      "tableProcessGUId": "e114e062-a07f-44b4-b3bd-d2fe22e36c83",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 247,
+      "name": "trendy_235_20",
+      "data": 247,
+      "type": "number",
+      "tableProcessGUId": "e114e062-a07f-44b4-b3bd-d2fe22e36c83",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 248,
+      "name": "trendy_236_20",
+      "data": 248,
+      "type": "number",
+      "tableProcessGUId": "e114e062-a07f-44b4-b3bd-d2fe22e36c83",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 249,
+      "name": "r2_20",
+      "data": 249,
+      "type": "number",
+      "tableProcessGUId": "e114e062-a07f-44b4-b3bd-d2fe22e36c83",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 250,
+      "name": "coef_slope_20",
+      "data": 250,
+      "type": "number",
+      "tableProcessGUId": "e114e062-a07f-44b4-b3bd-d2fe22e36c83",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 251,
+      "name": "coef_intercept_20",
+      "data": 251,
+      "type": "number",
+      "tableProcessGUId": "e114e062-a07f-44b4-b3bd-d2fe22e36c83",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 252,
+      "name": "trendx_21",
+      "data": 252,
+      "type": "number",
+      "tableProcessGUId": "2413ea38-4278-4fdb-a127-19df42254acc",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 253,
+      "name": "trendy_238_21",
+      "data": 253,
+      "type": "number",
+      "tableProcessGUId": "2413ea38-4278-4fdb-a127-19df42254acc",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 254,
+      "name": "r2_21",
+      "data": 254,
+      "type": "number",
+      "tableProcessGUId": "2413ea38-4278-4fdb-a127-19df42254acc",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 255,
+      "name": "coef_slope_21",
+      "data": 255,
+      "type": "number",
+      "tableProcessGUId": "2413ea38-4278-4fdb-a127-19df42254acc",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 256,
+      "name": "coef_intercept_21",
+      "data": 256,
+      "type": "number",
+      "tableProcessGUId": "2413ea38-4278-4fdb-a127-19df42254acc",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    }
+  ],
+  "plots": [
+    {
+      "id": 26,
+      "name": "Set I — a real linear relationship",
+      "x": 60,
+      "y": 255,
+      "width": 480,
+      "height": 300,
+      "type": "scatterplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "xlimsIN": [
+          2,
+          20
+        ],
+        "xLogScale": false,
+        "ylimsLeftIN": [
+          2,
+          14
+        ],
+        "ylimsRightIN": [
+          null,
+          null
+        ],
+        "yLogScaleLeft": false,
+        "yLogScaleRight": false,
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 30
+        },
+        "xAxis": {
+          "label": "x",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisLeft": {
+          "label": "y",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisRight": {
+          "label": "",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 257,
+              "name": "x (sets I–III)",
+              "refId": 233,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "y": {
+              "id": 258,
+              "name": "Set I",
+              "refId": 234,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "Set I",
+            "yAxis": "left",
+            "line": {
+              "colour": "#234154",
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": false,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#234154",
+              "radius": 3,
+              "shape": "circle",
+              "draw": true
+            }
+          },
+          {
+            "x": {
+              "id": 259,
+              "name": "trendx_20",
+              "refId": 245,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "y": {
+              "id": 260,
+              "name": "trendy_234_20",
+              "refId": 246,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "fit",
+            "yAxis": "left",
+            "line": {
+              "colour": "#BE796B",
+              "strokeWidth": 2.5,
+              "stroke": "solid",
+              "draw": true,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#BE796B",
+              "radius": 3,
+              "shape": "circle",
+              "draw": false
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "bottomright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-80)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "nightBands": []
+      }
+    },
+    {
+      "id": 27,
+      "name": "Set II — actually a curve",
+      "x": 570,
+      "y": 255,
+      "width": 480,
+      "height": 300,
+      "type": "scatterplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "xlimsIN": [
+          2,
+          20
+        ],
+        "xLogScale": false,
+        "ylimsLeftIN": [
+          2,
+          14
+        ],
+        "ylimsRightIN": [
+          null,
+          null
+        ],
+        "yLogScaleLeft": false,
+        "yLogScaleRight": false,
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 30
+        },
+        "xAxis": {
+          "label": "x",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisLeft": {
+          "label": "y",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisRight": {
+          "label": "",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 261,
+              "name": "x (sets I–III)",
+              "refId": 233,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "y": {
+              "id": 262,
+              "name": "Set II",
+              "refId": 235,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "Set II",
+            "yAxis": "left",
+            "line": {
+              "colour": "#234154",
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": false,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#234154",
+              "radius": 3,
+              "shape": "circle",
+              "draw": true
+            }
+          },
+          {
+            "x": {
+              "id": 263,
+              "name": "trendx_20",
+              "refId": 245,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "y": {
+              "id": 264,
+              "name": "trendy_235_20",
+              "refId": 247,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "fit",
+            "yAxis": "left",
+            "line": {
+              "colour": "#BE796B",
+              "strokeWidth": 2.5,
+              "stroke": "solid",
+              "draw": true,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#BE796B",
+              "radius": 3,
+              "shape": "circle",
+              "draw": false
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "bottomright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-80)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "nightBands": []
+      }
+    },
+    {
+      "id": 28,
+      "name": "Set III — a line, plus one outlier",
+      "x": 60,
+      "y": 630,
+      "width": 480,
+      "height": 300,
+      "type": "scatterplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "xlimsIN": [
+          2,
+          20
+        ],
+        "xLogScale": false,
+        "ylimsLeftIN": [
+          2,
+          14
+        ],
+        "ylimsRightIN": [
+          null,
+          null
+        ],
+        "yLogScaleLeft": false,
+        "yLogScaleRight": false,
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 30
+        },
+        "xAxis": {
+          "label": "x",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisLeft": {
+          "label": "y",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisRight": {
+          "label": "",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 265,
+              "name": "x (sets I–III)",
+              "refId": 233,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "y": {
+              "id": 266,
+              "name": "Set III",
+              "refId": 236,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "Set III",
+            "yAxis": "left",
+            "line": {
+              "colour": "#234154",
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": false,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#234154",
+              "radius": 3,
+              "shape": "circle",
+              "draw": true
+            }
+          },
+          {
+            "x": {
+              "id": 267,
+              "name": "trendx_20",
+              "refId": 245,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "y": {
+              "id": 268,
+              "name": "trendy_236_20",
+              "refId": 248,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "fit",
+            "yAxis": "left",
+            "line": {
+              "colour": "#BE796B",
+              "strokeWidth": 2.5,
+              "stroke": "solid",
+              "draw": true,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#BE796B",
+              "radius": 3,
+              "shape": "circle",
+              "draw": false
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "bottomright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-80)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "nightBands": []
+      }
+    },
+    {
+      "id": 29,
+      "name": "Set IV — one high-leverage point",
+      "x": 570,
+      "y": 630,
+      "width": 480,
+      "height": 300,
+      "type": "scatterplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "xlimsIN": [
+          2,
+          20
+        ],
+        "xLogScale": false,
+        "ylimsLeftIN": [
+          2,
+          14
+        ],
+        "ylimsRightIN": [
+          null,
+          null
+        ],
+        "yLogScaleLeft": false,
+        "yLogScaleRight": false,
+        "padding": {
+          "top": 15,
+          "right": 30,
+          "bottom": 30,
+          "left": 30
+        },
+        "xAxis": {
+          "label": "x",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisLeft": {
+          "label": "y",
+          "gridlines": true,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "yAxisRight": {
+          "label": "",
+          "gridlines": false,
+          "nticks": 5,
+          "manualTicks": null
+        },
+        "data": [
+          {
+            "x": {
+              "id": 269,
+              "name": "x (set IV)",
+              "refId": 237,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "y": {
+              "id": 270,
+              "name": "Set IV",
+              "refId": 238,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "Set IV",
+            "yAxis": "left",
+            "line": {
+              "colour": "#234154",
+              "strokeWidth": 2,
+              "stroke": "solid",
+              "draw": false,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#234154",
+              "radius": 3,
+              "shape": "circle",
+              "draw": true
+            }
+          },
+          {
+            "x": {
+              "id": 271,
+              "name": "trendx_21",
+              "refId": 252,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "y": {
+              "id": 272,
+              "name": "trendy_238_21",
+              "refId": 253,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "fit",
+            "yAxis": "left",
+            "line": {
+              "colour": "#BE796B",
+              "strokeWidth": 2.5,
+              "stroke": "solid",
+              "draw": true,
+              "joinGaps": false
+            },
+            "points": {
+              "colour": "#BE796B",
+              "radius": 3,
+              "shape": "circle",
+              "draw": false
+            }
+          }
+        ],
+        "legend": {
+          "show": true,
+          "position": "bottomright",
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-80)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": 12
+        },
+        "nightBands": []
+      }
+    },
+    {
+      "id": 30,
+      "name": "Identical summaries",
+      "x": 60,
+      "y": 1005,
+      "width": 480,
+      "height": 240,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "columnRefs": [
+          239,
+          241,
+          242
+        ],
+        "showCol": [
+          true,
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
+    },
+    {
+      "id": 31,
+      "name": "Identical fits (sets I–III)",
+      "x": 570,
+      "y": 1005,
+      "width": 480,
+      "height": 240,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "columnRefs": [
+          250,
+          251,
+          249
+        ],
+        "showCol": [
+          true,
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
+    }
+  ],
+  "tableProcesses": [
+    {
+      "id": 19,
+      "name": "DescribeData",
+      "displayName": "Describe the four y-columns",
+      "args": {
+        "yIN": [
+          234,
+          235,
+          236,
+          238
+        ],
+        "out": {
+          "variable": 239,
+          "n": 240,
+          "mean": 241,
+          "sd": 242,
+          "min": 243,
+          "max": 244
+        },
+        "valid": false
+      },
+      "refTPId": null
+    },
+    {
+      "id": 20,
+      "name": "TrendFit",
+      "displayName": "Linear fit (sets I–III)",
+      "args": {
+        "xIN": 233,
+        "yIN": [
+          234,
+          235,
+          236
+        ],
+        "model": "linear",
+        "outputX": -1,
+        "out": {
+          "trendx": 245,
+          "trendy_234": 246,
+          "trendy_235": 247,
+          "trendy_236": 248,
+          "r2": 249,
+          "coef_slope": 250,
+          "coef_intercept": 251
+        }
+      },
+      "refTPId": null
+    },
+    {
+      "id": 21,
+      "name": "TrendFit",
+      "displayName": "Linear fit (set IV)",
+      "args": {
+        "xIN": 237,
+        "yIN": [
+          238
+        ],
+        "model": "linear",
+        "outputX": -1,
+        "out": {
+          "trendx": 252,
+          "trendy_238": 253,
+          "r2": 254,
+          "coef_slope": 255,
+          "coef_intercept": 256
+        }
+      },
+      "refTPId": null
+    }
+  ],
+  "storedValues": {},
+  "chainRefs": [],
+  "nodeNotes": {},
+  "notes": [
+    {
+      "id": "note_11",
+      "text": "WORKFLOW: Anscombe's quartet. Four datasets, built by Frank Anscombe in 1973, that are statistically almost indistinguishable and visually nothing alike. To two decimals all four share the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares regression line: y = 3.00 + 0.50x, R² = 0.67. Describe Data shows the summaries lining up; Fit Trend Curves draws the SAME line through every one. Now look at the four scatterplots. Set I is a genuine straight-line relationship — the one you'd assume from the numbers. Set II is a clean curve, so a straight line is simply the wrong model. Set III is a perfect line with a single outlier that drags the fit off it. Set IV is a vertical stack of points at one x-value, the entire slope determined by a single far-away leverage point — pull that point and the line has nothing to stand on. The moral is the oldest in the trade: plot the data before you trust the statistic. Identical summaries are consistent with completely different structure, so a graph is not decoration, it is part of the analysis. Reference: Anscombe, F.J. (1973), Graphs in Statistical Analysis, The American Statistician 27(1):17-21.",
+      "x": 40,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
+  "groups": [],
+  "composites": [],
+  "orphanProcesses": [],
+  "nodeLayout": {
+    "data_233": {
+      "x": 60,
+      "y": 314
+    },
+    "data_234": {
+      "x": 60,
+      "y": 814
+    },
+    "data_235": {
+      "x": 60,
+      "y": 1314
+    },
+    "data_236": {
+      "x": 60,
+      "y": 1814
+    },
+    "data_237": {
+      "x": 60,
+      "y": 2314
+    },
+    "data_238": {
+      "x": 60,
+      "y": 2814
+    },
+    "tableprocess_19": {
+      "x": 440,
+      "y": 314
+    },
+    "tableprocess_20": {
+      "x": 440,
+      "y": 814
+    },
+    "tableprocess_21": {
+      "x": 440,
+      "y": 1314
+    },
+    "note_11": {
+      "x": 40,
+      "y": 24
+    },
+    "plot_26": {
+      "x": 820,
+      "y": 314
+    },
+    "plot_27": {
+      "x": 820,
+      "y": 814
+    },
+    "plot_28": {
+      "x": 820,
+      "y": 1314
+    },
+    "plot_29": {
+      "x": 820,
+      "y": 1814
+    },
+    "plot_30": {
+      "x": 820,
+      "y": 2314
+    },
+    "plot_31": {
+      "x": 820,
+      "y": 2814
+    }
+  },
+  "appState": {
+    "currentTab": "null",
+    "currentControlTab": "properties",
+    "loadingState": {
+      "isLoading": true,
+      "loadingMsg": "Warming up..."
+    },
+    "showNavbar": true,
+    "showDisplayPanel": false,
+    "showControlPanel": false,
+    "importModalOpen": false,
+    "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
+    "windowWidth": 1024,
+    "windowHeight": 768,
+    "widthNavBar": 56,
+    "widthDisplayPanel": 250,
+    "widthControlPanel": 250,
+    "gridSize": 15,
+    "canvasOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
+    "view": "canvas",
+    "displayTimezone": "utc",
+    "invisiblePlotIds": [],
+    "canvasSelectedNodeId": null,
+    "canvasMultiSelectedCount": 0,
+    "canvasMultiSelectedNodeIds": [],
+    "appColours": [
+      "#234154",
+      "#BE796B",
+      "#3E7295",
+      "#EDADAD",
+      "#A6ACD5",
+      "#83422A",
+      "#6B9FD5",
+      "#4A1E0E",
+      "#fbe67280"
+    ],
+    "showColourPicker": false,
+    "showAYSModal": false,
+    "AYStext": "",
+    "AYScallback": null,
+    "AYSoptions": [
+      "Yes",
+      "No"
+    ],
+    "showWorkflow": false
+  },
+  "version": "β.63.3"
+}

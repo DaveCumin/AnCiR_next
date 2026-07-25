@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "653": [
+    "728": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "654": [
+    "729": [
       0,
       0,
       0,
@@ -676,7 +676,7 @@
       0,
       0
     ],
-    "655": [
+    "730": [
       0.5,
       1.5,
       2.5,
@@ -702,7 +702,7 @@
       22.5,
       23.5
     ],
-    "656": [
+    "731": [
       0,
       0,
       0,
@@ -728,33 +728,33 @@
       0,
       0
     ],
-    "657": [
+    "732": [
       1.0000000000000004
     ],
-    "658": [
+    "733": [
       0.34388059701492557
     ],
-    "659": [
+    "734": [
       1
     ],
-    "660": [
+    "735": [
       100
     ],
-    "661": [
+    "736": [
       0
     ],
-    "662": [
+    "737": [
       8
     ],
-    "663": [
+    "738": [
       0
     ]
   },
   "data": [
     {
-      "id": 653,
+      "id": 728,
       "name": "Nonparametric RA input 1",
-      "data": 653,
+      "data": 728,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -763,9 +763,9 @@
       "processes": []
     },
     {
-      "id": 654,
+      "id": 729,
       "name": "Nonparametric RA input 2",
-      "data": 654,
+      "data": 729,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -774,99 +774,99 @@
       "processes": []
     },
     {
-      "id": 655,
-      "name": "npcrax_67",
-      "data": 655,
+      "id": 730,
+      "name": "npcrax_71",
+      "data": 730,
       "type": "number",
-      "tableProcessGUId": "511a3389-39b7-42b4-9999-8d573d8cb52c",
+      "tableProcessGUId": "f05e3e08-9507-4dcd-a152-957dab316780",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 656,
-      "name": "npcray_654_67",
-      "data": 656,
+      "id": 731,
+      "name": "npcray_729_71",
+      "data": 731,
       "type": "number",
-      "tableProcessGUId": "511a3389-39b7-42b4-9999-8d573d8cb52c",
+      "tableProcessGUId": "f05e3e08-9507-4dcd-a152-957dab316780",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 657,
-      "name": "IS_67",
-      "data": 657,
+      "id": 732,
+      "name": "IS_71",
+      "data": 732,
       "type": "number",
-      "tableProcessGUId": "511a3389-39b7-42b4-9999-8d573d8cb52c",
+      "tableProcessGUId": "f05e3e08-9507-4dcd-a152-957dab316780",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 658,
-      "name": "IV_67",
-      "data": 658,
+      "id": 733,
+      "name": "IV_71",
+      "data": 733,
       "type": "number",
-      "tableProcessGUId": "511a3389-39b7-42b4-9999-8d573d8cb52c",
+      "tableProcessGUId": "f05e3e08-9507-4dcd-a152-957dab316780",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 659,
-      "name": "RA_67",
-      "data": 659,
+      "id": 734,
+      "name": "RA_71",
+      "data": 734,
       "type": "number",
-      "tableProcessGUId": "511a3389-39b7-42b4-9999-8d573d8cb52c",
+      "tableProcessGUId": "f05e3e08-9507-4dcd-a152-957dab316780",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 660,
-      "name": "M10_67",
-      "data": 660,
+      "id": 735,
+      "name": "M10_71",
+      "data": 735,
       "type": "number",
-      "tableProcessGUId": "511a3389-39b7-42b4-9999-8d573d8cb52c",
+      "tableProcessGUId": "f05e3e08-9507-4dcd-a152-957dab316780",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 661,
-      "name": "L5_67",
-      "data": 661,
+      "id": 736,
+      "name": "L5_71",
+      "data": 736,
       "type": "number",
-      "tableProcessGUId": "511a3389-39b7-42b4-9999-8d573d8cb52c",
+      "tableProcessGUId": "f05e3e08-9507-4dcd-a152-957dab316780",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 662,
-      "name": "M10onset_67",
-      "data": 662,
+      "id": 737,
+      "name": "M10onset_71",
+      "data": 737,
       "type": "number",
-      "tableProcessGUId": "511a3389-39b7-42b4-9999-8d573d8cb52c",
+      "tableProcessGUId": "f05e3e08-9507-4dcd-a152-957dab316780",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 663,
-      "name": "L5onset_67",
-      "data": 663,
+      "id": 738,
+      "name": "L5onset_71",
+      "data": 738,
       "type": "number",
-      "tableProcessGUId": "511a3389-39b7-42b4-9999-8d573d8cb52c",
+      "tableProcessGUId": "f05e3e08-9507-4dcd-a152-957dab316780",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -875,7 +875,7 @@
   ],
   "plots": [
     {
-      "id": 116,
+      "id": 124,
       "name": "Nonparametric RA: average day",
       "x": 350,
       "y": 150,
@@ -932,9 +932,9 @@
         "data": [
           {
             "x": {
-              "id": 664,
-              "name": "npcrax_67",
-              "refId": 655,
+              "id": 739,
+              "name": "npcrax_71",
+              "refId": 730,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -943,9 +943,9 @@
               "processes": []
             },
             "y": {
-              "id": 665,
-              "name": "npcray_654_67",
-              "refId": 656,
+              "id": 740,
+              "name": "npcray_729_71",
+              "refId": 731,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -985,7 +985,7 @@
       }
     },
     {
-      "id": 117,
+      "id": 125,
       "name": "Nonparametric RA: metrics",
       "x": 350,
       "y": 150,
@@ -1001,11 +1001,11 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          657,
-          658,
-          659,
-          660,
-          661
+          732,
+          733,
+          734,
+          735,
+          736
         ],
         "showCol": [
           true,
@@ -1023,13 +1023,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 67,
+      "id": 71,
       "name": "NonparametricRA",
       "displayName": "Nonparametric RA",
       "args": {
-        "xIN": 653,
+        "xIN": 728,
         "yIN": [
-          654
+          729
         ],
         "epochHours": 1,
         "period": 24,
@@ -1037,15 +1037,15 @@
         "lWindow": 5,
         "preProcesses": [],
         "out": {
-          "npcrax": 655,
-          "npcray_654": 656,
-          "IS": 657,
-          "IV": 658,
-          "RA": 659,
-          "M10": 660,
-          "L5": 661,
-          "M10onset": 662,
-          "L5onset": 663
+          "npcrax": 730,
+          "npcray_729": 731,
+          "IS": 732,
+          "IV": 733,
+          "RA": 734,
+          "M10": 735,
+          "L5": 736,
+          "M10onset": 737,
+          "L5onset": 738
         }
       },
       "refTPId": null
@@ -1056,7 +1056,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_64",
+      "id": "note_66",
       "text": "Computes the standard nonparametric rest-activity variables without assuming any waveform: interdaily stability (IS, day-to-day reproducibility of the 24 h pattern), intradaily variability (IV, fragmentation), relative amplitude (RA), and the most-active 10 h and least-active 5 h windows (M10, L5) with their onset times. Use it for actigraphy or other activity records that are non-sinusoidal, where cosinor amplitude/phase are ill-defined. The demo shows the folded average-day profile: the flat high plateau is M10, the deep trough is L5, and RA near 1 means a strong, consolidated rhythm while low IS or high IV signals a weak or fragmented one. Nonparametric methods after Van Someren et al. (1999); IS/IV originate in Witting et al. (1990).",
       "x": 40,
       "y": 24,
@@ -1068,27 +1068,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_653": {
+    "data_728": {
       "x": 60,
       "y": 314
     },
-    "data_654": {
+    "data_729": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_67": {
+    "tableprocess_71": {
       "x": 440,
       "y": 314
     },
-    "plot_116": {
+    "plot_124": {
       "x": 820,
       "y": 314
     },
-    "plot_117": {
+    "plot_125": {
       "x": 820,
       "y": 814
     },
-    "note_64": {
+    "note_66": {
       "x": 40,
       "y": 24
     }
@@ -1150,5 +1150,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

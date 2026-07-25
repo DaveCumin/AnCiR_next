@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 97,
+  "count": 101,
   "sessions": [
     {
       "id": "workflow-rest-activity",
@@ -159,6 +159,37 @@
         "ChiSquared"
       ],
       "keywords": "workflow — categorical association (chi-square) are two categorical variables related? the chi-squared test of independence cross-tabulates them into a contingency table and tests whether the row and column variables are associated (yates’ correction on 2×2 tables). read the statistic / df / p and the table; the node warns when any expected count falls below 5, where the χ² approximation breaks down and fisher’s exact test is preferable. workflows chisquared"
+    },
+    {
+      "id": "workflow-stats-anscombe",
+      "name": "Workflow — Anscombe’s quartet (always plot your data)",
+      "family": "Workflows",
+      "description": "Four small datasets constructed by Anscombe (1973) that share, to two decimals, the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares line (y = 3.00 + 0.50x, R² = 0.67). Describe Data confirms the summaries are identical and Fit Trend Curves confirms the regression line is the same for every set — yet the four scatterplots could hardly be more different: a genuine linear relationship, a smooth curve, a perfect line dragged off by a single outlier, and a vertical stack rescued only by one high-leverage point. The lesson is the oldest one in data analysis: look at the picture before you trust the number. The same summary statistics are consistent with wildly different data, so a plot is not decoration, it is part of the analysis.",
+      "summary": "Four datasets, identical statistics, four different stories.",
+      "group": "Reading the output",
+      "url": "sessions/demos/demo-workflow-stats-anscombe.json",
+      "kind": "workflow",
+      "showcases": [
+        "DescribeData",
+        "TrendFit",
+        "scatterplot"
+      ],
+      "keywords": "workflow — anscombe’s quartet (always plot your data) four small datasets constructed by anscombe (1973) that share, to two decimals, the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares line (y = 3.00 + 0.50x, r² = 0.67). describe data confirms the summaries are identical and fit trend curves confirms the regression line is the same for every set — yet the four scatterplots could hardly be more different: a genuine linear relationship, a smooth curve, a perfect line dragged off by a single outlier, and a vertical stack rescued only by one high-leverage point. the lesson is the oldest one in data analysis: look at the picture before you trust the number. the same summary statistics are consistent with wildly different data, so a plot is not decoration, it is part of the analysis. workflows describedata trendfit scatterplot"
+    },
+    {
+      "id": "workflow-stats-simpson",
+      "name": "Workflow — Simpson’s paradox (the trend that flips)",
+      "family": "Workflows",
+      "description": "Within every group the relationship is positive; pool the groups and it turns negative. Here three hospital wards each show activity rising with dose (a clear within-ward positive trend), but the wards are offset — the ward that runs at the highest dose also has the lowest baseline — so the pooled cloud slopes the other way. The Correlation node run on the pooled data reports a negative coefficient, while the coloured per-ward trend lines all climb. The reversal is real, not a mistake: it means a lurking grouping variable is driving the aggregate, and which answer is correct depends on the question. Pool only when the groups are genuinely exchangeable; otherwise the honest analysis is per-group. This is why \"controlling for\" a variable can flip a headline result.",
+      "summary": "A trend that reverses direction when you pool the groups.",
+      "group": "Reading the output",
+      "url": "sessions/demos/demo-workflow-stats-simpson.json",
+      "kind": "workflow",
+      "showcases": [
+        "Correlation",
+        "scatterplot"
+      ],
+      "keywords": "workflow — simpson’s paradox (the trend that flips) within every group the relationship is positive; pool the groups and it turns negative. here three hospital wards each show activity rising with dose (a clear within-ward positive trend), but the wards are offset — the ward that runs at the highest dose also has the lowest baseline — so the pooled cloud slopes the other way. the correlation node run on the pooled data reports a negative coefficient, while the coloured per-ward trend lines all climb. the reversal is real, not a mistake: it means a lurking grouping variable is driving the aggregate, and which answer is correct depends on the question. pool only when the groups are genuinely exchangeable; otherwise the honest analysis is per-group. this is why \"controlling for\" a variable can flip a headline result. workflows correlation scatterplot"
     },
     {
       "id": "workflow-non24-blind",
@@ -444,6 +475,30 @@
       "kind": "dataset",
       "showcases": [],
       "keywords": "categorical association (chi-square) are two categorical variables related? data only — 2 columns × 120 rows, no analysis. sources"
+    },
+    {
+      "id": "dataset-workflow-stats-anscombe",
+      "name": "Anscombe’s quartet (always plot your data)",
+      "family": "Sources",
+      "description": "Four datasets, identical statistics, four different stories. Data only — 6 columns × 11 rows, no analysis.",
+      "summary": "Four datasets, identical statistics, four different stories.",
+      "group": "Reading the output",
+      "url": "sessions/demos/anscombe-s-quartet-always-plot-your-data.csv",
+      "kind": "dataset",
+      "showcases": [],
+      "keywords": "anscombe’s quartet (always plot your data) four datasets, identical statistics, four different stories. data only — 6 columns × 11 rows, no analysis. sources"
+    },
+    {
+      "id": "dataset-workflow-stats-simpson",
+      "name": "Simpson’s paradox (the trend that flips)",
+      "family": "Sources",
+      "description": "A trend that reverses direction when you pool the groups. Data only — 16 columns × 75 rows, no analysis.",
+      "summary": "A trend that reverses direction when you pool the groups.",
+      "group": "Reading the output",
+      "url": "sessions/demos/simpson-s-paradox-the-trend-that-flips.csv",
+      "kind": "dataset",
+      "showcases": [],
+      "keywords": "simpson’s paradox (the trend that flips) a trend that reverses direction when you pool the groups. data only — 16 columns × 75 rows, no analysis. sources"
     },
     {
       "id": "dataset-workflow-non24-blind",

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "399": [
+    "474": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "400": [
+    "475": [
       96.80303970146284,
       90.24703944100128,
       90.63500417308552,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 399,
+      "id": 474,
       "name": "hour",
-      "data": 399,
+      "data": 474,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 400,
+      "id": 475,
       "name": "activity",
-      "data": 400,
+      "data": 475,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 61,
+      "id": 69,
       "name": "Activity correlogram",
       "x": 350,
       "y": 150,
@@ -411,9 +411,9 @@
         "data": [
           {
             "x": {
-              "id": 401,
+              "id": 476,
               "name": "hour",
-              "refId": 399,
+              "refId": 474,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -422,9 +422,9 @@
               "processes": []
             },
             "y": {
-              "id": 402,
+              "id": 477,
               "name": "activity",
-              "refId": 400,
+              "refId": 475,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -467,7 +467,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_28",
+      "id": "note_30",
       "text": "Plots the autocorrelation of a series against lag (or the cross-correlation between two series). A rhythmic signal produces a decaying wave whose first strong positive peak away from zero lag estimates the period. Use it as a robust complement to the periodogram. See the Correlograms chapter.",
       "x": 40,
       "y": 24,
@@ -479,19 +479,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_399": {
+    "data_474": {
       "x": 60,
       "y": 314
     },
-    "data_400": {
+    "data_475": {
       "x": 60,
       "y": 814
     },
-    "note_28": {
+    "note_30": {
       "x": 40,
       "y": 24
     },
-    "plot_61": {
+    "plot_69": {
       "x": 820,
       "y": 314
     }
@@ -553,5 +553,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

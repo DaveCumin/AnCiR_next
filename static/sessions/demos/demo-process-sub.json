@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "433": [
+    "508": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "434": [
+    "509": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 433,
+      "id": 508,
       "name": "x",
-      "data": 433,
+      "data": 508,
       "type": "number",
-      "tableProcessGUId": "cd587703-82f9-4b94-a8d0-c8c580707231",
+      "tableProcessGUId": "c89c1d6d-9aa2-41a6-9cb5-010256009ea8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 434,
+      "id": 509,
       "name": "y",
-      "data": 434,
+      "data": 509,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 435,
+      "id": 510,
       "name": "Substitute result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_1",
-      "producerPort": "out_434",
+      "producerPort": "out_509",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 68,
+      "id": 76,
       "name": "Substitute: before vs after",
       "x": 350,
       "y": 150,
@@ -199,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 436,
+              "id": 511,
               "name": "x",
-              "refId": 433,
+              "refId": 508,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 437,
+              "id": 512,
               "name": "y",
-              "refId": 434,
+              "refId": 509,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -238,9 +238,9 @@
           },
           {
             "x": {
-              "id": 438,
+              "id": 513,
               "name": "x",
-              "refId": 433,
+              "refId": 508,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 439,
+              "id": 514,
               "name": "Substitute result",
-              "refId": 435,
+              "refId": 510,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,7 +291,7 @@
       }
     },
     {
-      "id": 69,
+      "id": 77,
       "name": "Substitute: values",
       "x": 350,
       "y": 150,
@@ -307,8 +307,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          434,
-          435
+          509,
+          510
         ],
         "showCol": [
           true,
@@ -323,7 +323,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 28,
+      "id": 32,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -333,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 433
+          "result": 508
         }
       },
       "refTPId": null
@@ -344,7 +344,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_32",
+      "id": "note_34",
       "text": "Finds every occurrence of one specific value and replaces it with another, leaving all other values untouched. Its main use is recoding sentinel/missing-data codes (e.g. swapping -999 for a blank) before analysis. The demo shows the target value replaced throughout the column.",
       "x": 40,
       "y": 24,
@@ -362,17 +362,17 @@
         "find": 5,
         "replace": 10,
         "inIN": [
-          434
+          509
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_434": {
+    "data_509": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_28": {
+    "tableprocess_32": {
       "x": 60,
       "y": 814
     },
@@ -380,15 +380,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_68": {
+    "plot_76": {
       "x": 820,
       "y": 314
     },
-    "plot_69": {
+    "plot_77": {
       "x": 820,
       "y": 814
     },
-    "note_32": {
+    "note_34": {
       "x": 40,
       "y": 24
     }
@@ -450,5 +450,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

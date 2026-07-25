@@ -9,6 +9,7 @@
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
+	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
 	import Annotation, { AnnotationClass } from './Annotation.svelte';
@@ -224,11 +225,9 @@
 					this.x = new ColumnClass({ refId: -1 });
 				}
 			}
-			if (dataIN?.label) {
-				this.label = dataIN.label;
-			} else {
-				this.label = 'Data ' + (parent.data.length + 1);
-			}
+			// Blank by default; `displayLabel` falls back to the wired y column's
+			// name (see seriesLabel.js) so a fresh series reads as e.g. "activity".
+			this.label = dataIN?.label ?? '';
 			const yJSON = dataIN?.y ?? dataIN?.values;
 			if (yJSON) {
 				this.y = ColumnClass.fromJSON(yJSON);
@@ -241,6 +240,12 @@
 				this.draw = true;
 			}
 			this.colour = dataIN?.colour ?? getPaletteColor(this.parentPlot.data.length);
+		}
+
+		// Label shown in the legend/Data tab: the user's explicit label, or the
+		// wired y column's name, or a positional "Data N". Reactive to renames.
+		get displayLabel() {
+			return seriesDisplayLabel(this);
 		}
 
 		addMarker() {
@@ -643,7 +648,7 @@
 		return theData.plot.data
 			.filter((d) => d.draw && d.allBins?.length > 0)
 			.map((d) => ({
-				label: d.label || d.y?.name || 'Data',
+				label: d.displayLabel,
 				colour: d.colour,
 				findYAt: (absHrs) => findBinY(d.allBins, absHrs)
 			}));
@@ -872,7 +877,7 @@
 					<div class="control-component-title">
 						<div class="control-component-title-colour">
 							<ColourPicker bind:value={datum.colour} />
-							<p><Editable bind:value={datum.label} /></p>
+							<p><Editable bind:value={datum.label} placeholder={datum.displayLabel} /></p>
 						</div>
 						<div class="control-component-title-icons">
 							<button

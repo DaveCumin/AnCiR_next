@@ -11,6 +11,7 @@
 		findNearestY,
 		bindAltTooltipToggle
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
+	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import NightBand, { NightBandClass } from './NightBand.svelte';
@@ -64,11 +65,10 @@
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
-			if (dataIN?.label) {
-				this.label = dataIN.label;
-			} else {
-				this.label = 'Data ' + (parent.data.length + 1);
-			}
+			// Leave the label BLANK by default — an unset label means "auto", and the
+			// displayLabel getter fills it from the wired y column's name. Only a label
+			// the user (or a saved session) supplied is stored verbatim.
+			this.label = dataIN?.label ?? '';
 			this.yAxis = dataIN?.yAxis || 'left';
 			this.line = new LineClass(dataIN?.line, this);
 			if (!dataIN?.line) {
@@ -77,10 +77,16 @@
 			this.points = new PointsClass(dataIN?.points, this);
 		}
 
+		// Effective label for display: the user's label if set, else the y column
+		// name, else a positional "Data N". See seriesLabel.js.
+		get displayLabel() {
+			return seriesDisplayLabel(this);
+		}
+
 		getLegendItem() {
 			// Return a single legend item that represents this data series
 			const item = {
-				label: this.label,
+				label: this.displayLabel,
 				elements: []
 			};
 
@@ -523,7 +529,7 @@
 			const headers = [];
 			const columns = [];
 			this.data.forEach((datum, d) => {
-				const label = datum.label || `Data ${d}`;
+				const label = datum.displayLabel;
 				let xData = datum.x.getData() ?? [];
 				// Convert datetime x values to ISO strings for readability
 				if (this.anyXdataTime) {
@@ -746,7 +752,7 @@
 			const origin = theData.plot.xOriginFor(d.x);
 			const xD = origin != null ? xArr.map(/** @param {number} v */ (v) => origin + v * 3600000) : xArr;
 			out.push({
-				label: d.label || d.y?.name || '',
+				label: d.displayLabel,
 				colour: d.points?.colour || d.line?.colour || 'black',
 				findYAt: /** @param {number} x */ (x) => findNearestY(xD, yArr, x)
 			});
@@ -1033,7 +1039,7 @@
 					out:slide={{ duration: 500, axis: 'y' }}
 				>
 					<div class="control-component-title">
-						<p><Editable bind:value={datum.label} /></p>
+						<p><Editable bind:value={datum.label} placeholder={datum.displayLabel} /></p>
 
 						<button class="icon" onclick={() => theData.removeData(i)}
 							><Icon
@@ -1206,7 +1212,7 @@
 					yoffset={theData.plot.padding.top}
 					tooltip={true}
 					xtype={theData.plot.anyXdataTime ? 'time' : datum.x.type}
-					dataLabel={datum.label || ''}
+					dataLabel={datum.displayLabel}
 					dataColour={datum.line.colour}
 					xLabel={theData.plot.xAxis.label || 'x'}
 					yLabel={datum.yAxis === 'left'
@@ -1228,7 +1234,7 @@
 					yoffset={theData.plot.padding.top}
 					xoffset={theData.plot.padding.left}
 					tooltip={true}
-					dataLabel={datum.label || ''}
+					dataLabel={datum.displayLabel}
 					dataColour={datum.points.colour}
 					xLabel={theData.plot.xAxis.label || 'x'}
 					yLabel={datum.yAxis === 'left'

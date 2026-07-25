@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "403": [
+    "478": [
       0,
       1,
       2,
@@ -194,7 +194,7 @@
       190,
       191
     ],
-    "404": [
+    "479": [
       61.037491948115374,
       64.99236592704621,
       74.20658521498542,
@@ -391,9 +391,9 @@
   },
   "data": [
     {
-      "id": 403,
+      "id": 478,
       "name": "hour",
-      "data": 403,
+      "data": 478,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -402,9 +402,9 @@
       "processes": []
     },
     {
-      "id": 404,
+      "id": 479,
       "name": "signal",
-      "data": 404,
+      "data": 479,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -415,7 +415,7 @@
   ],
   "plots": [
     {
-      "id": 62,
+      "id": 70,
       "name": "Signal FFT",
       "x": 350,
       "y": 150,
@@ -467,9 +467,9 @@
         "data": [
           {
             "x": {
-              "id": 405,
+              "id": 480,
               "name": "hour",
-              "refId": 403,
+              "refId": 478,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -478,9 +478,9 @@
               "processes": []
             },
             "y": {
-              "id": 406,
+              "id": 481,
               "name": "signal",
-              "refId": 404,
+              "refId": 479,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -527,7 +527,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_29",
+      "id": "note_31",
       "text": "Fourier analysis decomposes an evenly sampled series into sinusoidal components and plots amplitude (spectral power) against frequency; a peak at a given frequency corresponds to a rhythm of period 1/frequency. Use it to identify dominant frequencies and harmonics. See the Fourier Analysis chapter.",
       "x": 40,
       "y": 24,
@@ -539,19 +539,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_403": {
+    "data_478": {
       "x": 60,
       "y": 314
     },
-    "data_404": {
+    "data_479": {
       "x": 60,
       "y": 814
     },
-    "note_29": {
+    "note_31": {
       "x": 40,
       "y": 24
     },
-    "plot_62": {
+    "plot_70": {
       "x": 820,
       "y": 314
     }
@@ -613,5 +613,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

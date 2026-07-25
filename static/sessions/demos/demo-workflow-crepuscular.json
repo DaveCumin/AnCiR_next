@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "350": [
+    "425": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "351": [
+    "426": [
       7.988350769954515,
       3.9557465407114356,
       10.518974525817601,
@@ -676,7 +676,7 @@
       1.5568078434602022,
       4.681703639741219
     ],
-    "356": [
+    "431": [
       0,
       1,
       2,
@@ -1014,21 +1014,21 @@
       22,
       23
     ],
-    "357": [
+    "432": [
       0.3456209212423379
     ],
-    "358": [
+    "433": [
       40.136483923335184
     ],
-    "359": [
+    "434": [
       1.611623930052013e-18
     ]
   },
   "data": [
     {
-      "id": 350,
+      "id": 425,
       "name": "hour",
-      "data": 350,
+      "data": 425,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -1037,9 +1037,9 @@
       "processes": []
     },
     {
-      "id": 351,
+      "id": 426,
       "name": "activity",
-      "data": 351,
+      "data": 426,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -1048,9 +1048,9 @@
       "processes": []
     },
     {
-      "id": 356,
+      "id": 431,
       "name": "time of day",
-      "data": 356,
+      "data": 431,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -1059,33 +1059,33 @@
       "processes": []
     },
     {
-      "id": 357,
-      "name": "R_26",
-      "data": 357,
+      "id": 432,
+      "name": "R_30",
+      "data": 432,
       "type": "number",
-      "tableProcessGUId": "8b67f02c-e427-4cb2-8b9d-c1329367b613",
+      "tableProcessGUId": "9d94aefa-886a-41d3-b321-978ebb1a8653",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 358,
-      "name": "z_26",
-      "data": 358,
+      "id": 433,
+      "name": "z_30",
+      "data": 433,
       "type": "number",
-      "tableProcessGUId": "8b67f02c-e427-4cb2-8b9d-c1329367b613",
+      "tableProcessGUId": "9d94aefa-886a-41d3-b321-978ebb1a8653",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 359,
-      "name": "pvalue_26",
-      "data": 359,
+      "id": 434,
+      "name": "pvalue_30",
+      "data": 434,
       "type": "number",
-      "tableProcessGUId": "8b67f02c-e427-4cb2-8b9d-c1329367b613",
+      "tableProcessGUId": "9d94aefa-886a-41d3-b321-978ebb1a8653",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1094,7 +1094,7 @@
   ],
   "plots": [
     {
-      "id": 49,
+      "id": 57,
       "name": "Actogram — two bouts a day",
       "x": 350,
       "y": 150,
@@ -1138,9 +1138,9 @@
         "data": [
           {
             "x": {
-              "id": 352,
+              "id": 427,
               "name": "hour",
-              "refId": 350,
+              "refId": 425,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1149,9 +1149,9 @@
               "processes": []
             },
             "y": {
-              "id": 353,
+              "id": 428,
               "name": "activity",
-              "refId": 351,
+              "refId": 426,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1167,7 +1167,7 @@
       }
     },
     {
-      "id": 50,
+      "id": 58,
       "name": "Periodogram — 24 h and 12 h",
       "x": 350,
       "y": 150,
@@ -1212,9 +1212,9 @@
         "data": [
           {
             "x": {
-              "id": 354,
+              "id": 429,
               "name": "hour",
-              "refId": 350,
+              "refId": 425,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1223,9 +1223,9 @@
               "processes": []
             },
             "y": {
-              "id": 355,
+              "id": 430,
               "name": "activity",
-              "refId": 351,
+              "refId": 426,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1261,7 +1261,7 @@
       }
     },
     {
-      "id": 51,
+      "id": 59,
       "name": "Circular summary",
       "x": 350,
       "y": 150,
@@ -1277,9 +1277,9 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          357,
-          358,
-          359
+          432,
+          433,
+          434
         ],
         "showCol": [
           true,
@@ -1295,21 +1295,21 @@
   ],
   "tableProcesses": [
     {
-      "id": 26,
+      "id": 30,
       "name": "RayleighTest",
       "displayName": "Rayleigh — one mean phase for two peaks",
       "args": {
-        "xIN": 356,
+        "xIN": 431,
         "yIN": [
-          351
+          426
         ],
         "period": 24,
         "unit": "hours",
         "testType": "rayleigh",
         "out": {
-          "R": 357,
-          "z": 358,
-          "pvalue": 359
+          "R": 432,
+          "z": 433,
+          "pvalue": 434
         }
       },
       "refTPId": null
@@ -1320,7 +1320,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_19",
+      "id": "note_21",
       "text": "WORKFLOW: crepuscular (bimodal) activity. Many species are crepuscular, active around dawn and dusk rather than in one consolidated bout. Two things follow. First, the periodogram shows power at 12 h as well as 24 h; a 12 h component is often bimodality rather than a separate rhythm. Second, and more dangerous, a single circular mean phase is actively misleading here: with two peaks roughly 12 h apart the resultant vector is short and its direction lands BETWEEN them, at the time of day the animal is least active. The Rayleigh output shows this, with a low R. Always look at the distribution before you summarise it with one number.",
       "x": 40,
       "y": 24,
@@ -1332,35 +1332,35 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_350": {
+    "data_425": {
       "x": 60,
       "y": 314
     },
-    "data_351": {
+    "data_426": {
       "x": 60,
       "y": 814
     },
-    "data_356": {
+    "data_431": {
       "x": 60,
       "y": 1314
     },
-    "tableprocess_26": {
+    "tableprocess_30": {
       "x": 440,
       "y": 314
     },
-    "note_19": {
+    "note_21": {
       "x": 40,
       "y": 24
     },
-    "plot_49": {
+    "plot_57": {
       "x": 820,
       "y": 314
     },
-    "plot_50": {
+    "plot_58": {
       "x": 820,
       "y": 814
     },
-    "plot_51": {
+    "plot_59": {
       "x": 820,
       "y": 1314
     }
@@ -1422,5 +1422,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "242": [
+    "317": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "243": [
+    "318": [
       69.96148127291373,
       82.61095927387993,
       69.01133397204303,
@@ -676,7 +676,7 @@
       48.45152450370557,
       55.989315316091265
     ],
-    "244": [
+    "319": [
       10.317315611693676,
       0,
       29.937442597920494,
@@ -1014,15 +1014,15 @@
       107.1923052944403,
       8.988010199612809
     ],
-    "253": [
+    "328": [
       24,
       20.25
     ],
-    "254": [
+    "329": [
       125.4319579243213,
       2.4608375542351024
     ],
-    "255": [
+    "330": [
       0.8344238151635444,
       0.9896052524929159,
       1.116235650346426,
@@ -1265,7 +1265,7 @@
       0.8485653548338233,
       0.7524221586327122
     ],
-    "256": [
+    "331": [
       1.3257589238072545,
       1.1685361580854687,
       1.0204542006250024,
@@ -1511,9 +1511,9 @@
   },
   "data": [
     {
-      "id": 242,
+      "id": 317,
       "name": "hour",
-      "data": 242,
+      "data": 317,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -1522,9 +1522,9 @@
       "processes": []
     },
     {
-      "id": 243,
+      "id": 318,
       "name": "intact",
-      "data": 243,
+      "data": 318,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -1533,9 +1533,9 @@
       "processes": []
     },
     {
-      "id": 244,
+      "id": 319,
       "name": "arrhythmic",
-      "data": 244,
+      "data": 319,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -1544,44 +1544,44 @@
       "processes": []
     },
     {
-      "id": 253,
-      "name": "stat_peak_period_20",
-      "data": 253,
+      "id": 328,
+      "name": "stat_peak_period_24",
+      "data": 328,
       "type": "number",
-      "tableProcessGUId": "2b6bcc6b-931d-4b3c-beb8-8d990786fb7d",
+      "tableProcessGUId": "166fa0b4-484e-4847-984f-88a721f007e3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 254,
-      "name": "stat_peak_power_20",
-      "data": 254,
+      "id": 329,
+      "name": "stat_peak_power_24",
+      "data": 329,
       "type": "number",
-      "tableProcessGUId": "2b6bcc6b-931d-4b3c-beb8-8d990786fb7d",
+      "tableProcessGUId": "166fa0b4-484e-4847-984f-88a721f007e3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 255,
-      "name": "rhythmicityy_243_20",
-      "data": 255,
+      "id": 330,
+      "name": "rhythmicityy_318_24",
+      "data": 330,
       "type": "number",
-      "tableProcessGUId": "2b6bcc6b-931d-4b3c-beb8-8d990786fb7d",
+      "tableProcessGUId": "166fa0b4-484e-4847-984f-88a721f007e3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 256,
-      "name": "rhythmicityy_244_20",
-      "data": 256,
+      "id": 331,
+      "name": "rhythmicityy_319_24",
+      "data": 331,
       "type": "number",
-      "tableProcessGUId": "2b6bcc6b-931d-4b3c-beb8-8d990786fb7d",
+      "tableProcessGUId": "166fa0b4-484e-4847-984f-88a721f007e3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1590,7 +1590,7 @@
   ],
   "plots": [
     {
-      "id": 29,
+      "id": 37,
       "name": "Actogram — intact vs arrhythmic",
       "x": 350,
       "y": 150,
@@ -1634,9 +1634,9 @@
         "data": [
           {
             "x": {
-              "id": 245,
+              "id": 320,
               "name": "hour",
-              "refId": 242,
+              "refId": 317,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1645,9 +1645,9 @@
               "processes": []
             },
             "y": {
-              "id": 246,
+              "id": 321,
               "name": "intact",
-              "refId": 243,
+              "refId": 318,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1661,9 +1661,9 @@
           },
           {
             "x": {
-              "id": 247,
+              "id": 322,
               "name": "hour",
-              "refId": 242,
+              "refId": 317,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1672,9 +1672,9 @@
               "processes": []
             },
             "y": {
-              "id": 248,
+              "id": 323,
               "name": "arrhythmic",
-              "refId": 244,
+              "refId": 319,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1690,7 +1690,7 @@
       }
     },
     {
-      "id": 30,
+      "id": 38,
       "name": "Periodogram — both records",
       "x": 350,
       "y": 150,
@@ -1735,9 +1735,9 @@
         "data": [
           {
             "x": {
-              "id": 249,
+              "id": 324,
               "name": "hour",
-              "refId": 242,
+              "refId": 317,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1746,9 +1746,9 @@
               "processes": []
             },
             "y": {
-              "id": 250,
+              "id": 325,
               "name": "intact",
-              "refId": 243,
+              "refId": 318,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1782,9 +1782,9 @@
           },
           {
             "x": {
-              "id": 251,
+              "id": 326,
               "name": "hour",
-              "refId": 242,
+              "refId": 317,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1793,9 +1793,9 @@
               "processes": []
             },
             "y": {
-              "id": 252,
+              "id": 327,
               "name": "arrhythmic",
-              "refId": 244,
+              "refId": 319,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1831,7 +1831,7 @@
       }
     },
     {
-      "id": 31,
+      "id": 39,
       "name": "Peak period and power",
       "x": 350,
       "y": 150,
@@ -1847,8 +1847,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          253,
-          254
+          328,
+          329
         ],
         "showCol": [
           true,
@@ -1863,14 +1863,14 @@
   ],
   "tableProcesses": [
     {
-      "id": 20,
+      "id": 24,
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis — peak vs power",
       "args": {
-        "xIN": 242,
+        "xIN": 317,
         "yIN": [
-          243,
-          244
+          318,
+          319
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -1881,10 +1881,10 @@
         "pgAlpha": 0.05,
         "preProcesses": [],
         "out": {
-          "stat_peak_period": 253,
-          "stat_peak_power": 254,
-          "rhythmicityy_243": 255,
-          "rhythmicityy_244": 256
+          "stat_peak_period": 328,
+          "stat_peak_power": 329,
+          "rhythmicityy_318": 330,
+          "rhythmicityy_319": 331
         }
       },
       "refTPId": null
@@ -1895,7 +1895,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_12",
+      "id": "note_14",
       "text": "WORKFLOW: arrhythmic record (negative control). This is the most useful thing to look at BEFORE interpreting your own data. Two records with the same average activity are analysed identically: one intact, one arrhythmic (as after SCN ablation). Notice what does NOT happen: the arrhythmic periodogram does not go blank. A periodogram always returns its largest value, so it still reports a 'peak period', and read alone that number is meaningless. What separates the two is the POWER at that peak and the actogram, where the intact record shows an obvious band and the arrhythmic one shows nothing. If you take one habit from this library, take this: never report a peak period without its power and a look at the raw record.",
       "x": 40,
       "y": 24,
@@ -1907,35 +1907,35 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_242": {
+    "data_317": {
       "x": 60,
       "y": 314
     },
-    "data_243": {
+    "data_318": {
       "x": 60,
       "y": 814
     },
-    "data_244": {
+    "data_319": {
       "x": 60,
       "y": 1314
     },
-    "tableprocess_20": {
+    "tableprocess_24": {
       "x": 440,
       "y": 314
     },
-    "note_12": {
+    "note_14": {
       "x": 40,
       "y": 24
     },
-    "plot_29": {
+    "plot_37": {
       "x": 820,
       "y": 314
     },
-    "plot_30": {
+    "plot_38": {
       "x": 820,
       "y": 814
     },
-    "plot_31": {
+    "plot_39": {
       "x": 820,
       "y": 1314
     }
@@ -1997,5 +1997,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

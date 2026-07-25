@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "304": [
+    "379": [
       0,
       1,
       2,
@@ -242,7 +242,7 @@
       238,
       239
     ],
-    "305": [
+    "380": [
       34.31833561872442,
       38.82333421264924,
       55.26971326663762,
@@ -484,7 +484,7 @@
       44.08025638515872,
       61.047591359531175
     ],
-    "306": [
+    "381": [
       44.76696422878439,
       74.63932022735928,
       84.48217701920649,
@@ -726,7 +726,7 @@
       72.42089607311853,
       37.65571068395931
     ],
-    "307": [
+    "382": [
       34.95505433295568,
       57.88305081595735,
       75.64467872262237,
@@ -968,7 +968,7 @@
       66.42859256222002,
       60.93574136225284
     ],
-    "308": [
+    "383": [
       30.44304847667348,
       29.623562385909942,
       26.072098788878332,
@@ -1210,7 +1210,7 @@
       31.608308321169396,
       52.79732713806005
     ],
-    "309": [
+    "384": [
       35.937214285859056,
       28.57374711101702,
       19.72619609463126,
@@ -1452,7 +1452,7 @@
       57.657403581787946,
       25.746879240098536
     ],
-    "310": [
+    "385": [
       31.87324114008213,
       84.51300480450891,
       20.823821825518174,
@@ -1694,7 +1694,7 @@
       76.04725591095234,
       35.403713051961795
     ],
-    "311": [
+    "386": [
       28.816654957039788,
       39.210979709319794,
       66.49392643209714,
@@ -1936,7 +1936,7 @@
       26.370613700259646,
       48.566552040904625
     ],
-    "312": [
+    "387": [
       64.99887088817482,
       29.45077580399308,
       48.399604814115406,
@@ -2178,7 +2178,7 @@
       53.56841108643066,
       57.31965357168578
     ],
-    "313": [
+    "388": [
       35.32512349228666,
       39.96885677979437,
       49.29781983370777,
@@ -2420,7 +2420,7 @@
       12.8750711425367,
       59.18267607859194
     ],
-    "314": [
+    "389": [
       72.59987753705308,
       35.14173996421552,
       60.50949816035998,
@@ -2662,7 +2662,7 @@
       13.210679713593706,
       20.712546773966135
     ],
-    "315": [
+    "390": [
       77.15936951993848,
       45.56852999141077,
       72.60404142394032,
@@ -2904,7 +2904,7 @@
       42.4987670916246,
       52.2670791990158
     ],
-    "316": [
+    "391": [
       46.20623790623784,
       56.52332425424413,
       80.90471772414872,
@@ -3146,7 +3146,7 @@
       64.6476158148893,
       31.44707447155956
     ],
-    "325": [
+    "400": [
       20.7,
       27.7,
       21.35,
@@ -3160,7 +3160,7 @@
       25.55,
       26
     ],
-    "326": [
+    "401": [
       1.4819491149054478,
       0.9833644022735523,
       7.17110676990974,
@@ -3174,7 +3174,7 @@
       0.9039505807691228,
       1.208643486517471
     ],
-    "327": [
+    "402": [
       1.0207327837708835,
       1.08004615153911,
       1.137180978504138,
@@ -3337,7 +3337,7 @@
       0.4952975407668906,
       0.5347995821253672
     ],
-    "328": [
+    "403": [
       0.028084725701706423,
       0.028044122803278473,
       0.02960839457501858,
@@ -3500,7 +3500,7 @@
       0.9439186731647237,
       0.9268812815875157
     ],
-    "329": [
+    "404": [
       0.7414640775254521,
       0.9055909210197327,
       1.0907100062052153,
@@ -3663,7 +3663,7 @@
       3.262519739792539,
       3.1517244000866063
     ],
-    "330": [
+    "405": [
       2.823357314072293,
       2.867495792447155,
       2.900388338490942,
@@ -3826,7 +3826,7 @@
       0.9962755873829006,
       0.9506572309807191
     ],
-    "331": [
+    "406": [
       1.6510153243717998,
       1.5763496244657362,
       1.4979749706027452,
@@ -3989,7 +3989,7 @@
       0.7320260052813682,
       0.7123678789271839
     ],
-    "332": [
+    "407": [
       3.160254368847389,
       3.1385300648786463,
       3.102581449899237,
@@ -4152,7 +4152,7 @@
       0.8084083640021122,
       0.7646099449081878
     ],
-    "333": [
+    "408": [
       3.03951711279022,
       3.15542193712492,
       3.258023584045645,
@@ -4315,7 +4315,7 @@
       0.48465905610995275,
       0.4874586932735104
     ],
-    "334": [
+    "409": [
       0.2395941831291716,
       0.2613060337734345,
       0.28100613846050027,
@@ -4478,7 +4478,7 @@
       0.2038943040818194,
       0.22372036174454116
     ],
-    "335": [
+    "410": [
       0.74338848693613,
       0.7162371510331745,
       0.6883977713067926,
@@ -4641,7 +4641,7 @@
       2.6671217478880305,
       2.677096876286983
     ],
-    "336": [
+    "411": [
       0.20469044976730238,
       0.17674011320067085,
       0.15177406900983098,
@@ -4804,7 +4804,7 @@
       1.4224779761196373,
       1.4857218115499335
     ],
-    "337": [
+    "412": [
       0.565904373161529,
       0.5641674180279675,
       0.559742105392781,
@@ -4967,7 +4967,7 @@
       0.667895692219902,
       0.6677291331872094
     ],
-    "338": [
+    "413": [
       0.9103537514829635,
       0.933694248772796,
       0.9548636083873508,
@@ -5133,9 +5133,9 @@
   },
   "data": [
     {
-      "id": 304,
+      "id": 379,
       "name": "hour",
-      "data": 304,
+      "data": 379,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -5144,9 +5144,9 @@
       "processes": []
     },
     {
-      "id": 305,
+      "id": 380,
       "name": "noise 1",
-      "data": 305,
+      "data": 380,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -5155,9 +5155,9 @@
       "processes": []
     },
     {
-      "id": 306,
+      "id": 381,
       "name": "noise 2",
-      "data": 306,
+      "data": 381,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -5166,9 +5166,9 @@
       "processes": []
     },
     {
-      "id": 307,
+      "id": 382,
       "name": "noise 3",
-      "data": 307,
+      "data": 382,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -5177,9 +5177,9 @@
       "processes": []
     },
     {
-      "id": 308,
+      "id": 383,
       "name": "noise 4",
-      "data": 308,
+      "data": 383,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -5188,9 +5188,9 @@
       "processes": []
     },
     {
-      "id": 309,
+      "id": 384,
       "name": "noise 5",
-      "data": 309,
+      "data": 384,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -5199,9 +5199,9 @@
       "processes": []
     },
     {
-      "id": 310,
+      "id": 385,
       "name": "noise 6",
-      "data": 310,
+      "data": 385,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -5210,9 +5210,9 @@
       "processes": []
     },
     {
-      "id": 311,
+      "id": 386,
       "name": "noise 7",
-      "data": 311,
+      "data": 386,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -5221,9 +5221,9 @@
       "processes": []
     },
     {
-      "id": 312,
+      "id": 387,
       "name": "noise 8",
-      "data": 312,
+      "data": 387,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -5232,9 +5232,9 @@
       "processes": []
     },
     {
-      "id": 313,
+      "id": 388,
       "name": "noise 9",
-      "data": 313,
+      "data": 388,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -5243,9 +5243,9 @@
       "processes": []
     },
     {
-      "id": 314,
+      "id": 389,
       "name": "noise 10",
-      "data": 314,
+      "data": 389,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -5254,9 +5254,9 @@
       "processes": []
     },
     {
-      "id": 315,
+      "id": 390,
       "name": "noise 11",
-      "data": 315,
+      "data": 390,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -5265,9 +5265,9 @@
       "processes": []
     },
     {
-      "id": 316,
+      "id": 391,
       "name": "noise 12",
-      "data": 316,
+      "data": 391,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -5276,154 +5276,154 @@
       "processes": []
     },
     {
-      "id": 325,
-      "name": "stat_peak_period_23",
-      "data": 325,
+      "id": 400,
+      "name": "stat_peak_period_27",
+      "data": 400,
       "type": "number",
-      "tableProcessGUId": "40848e78-2184-4288-b7b5-7c8c8346da9a",
+      "tableProcessGUId": "4b97354a-862a-4b29-899e-17901275b002",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 326,
-      "name": "stat_peak_power_23",
-      "data": 326,
+      "id": 401,
+      "name": "stat_peak_power_27",
+      "data": 401,
       "type": "number",
-      "tableProcessGUId": "40848e78-2184-4288-b7b5-7c8c8346da9a",
+      "tableProcessGUId": "4b97354a-862a-4b29-899e-17901275b002",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 327,
-      "name": "rhythmicityy_305_23",
-      "data": 327,
+      "id": 402,
+      "name": "rhythmicityy_380_27",
+      "data": 402,
       "type": "number",
-      "tableProcessGUId": "40848e78-2184-4288-b7b5-7c8c8346da9a",
+      "tableProcessGUId": "4b97354a-862a-4b29-899e-17901275b002",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 328,
-      "name": "rhythmicityy_306_23",
-      "data": 328,
+      "id": 403,
+      "name": "rhythmicityy_381_27",
+      "data": 403,
       "type": "number",
-      "tableProcessGUId": "40848e78-2184-4288-b7b5-7c8c8346da9a",
+      "tableProcessGUId": "4b97354a-862a-4b29-899e-17901275b002",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 329,
-      "name": "rhythmicityy_307_23",
-      "data": 329,
+      "id": 404,
+      "name": "rhythmicityy_382_27",
+      "data": 404,
       "type": "number",
-      "tableProcessGUId": "40848e78-2184-4288-b7b5-7c8c8346da9a",
+      "tableProcessGUId": "4b97354a-862a-4b29-899e-17901275b002",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 330,
-      "name": "rhythmicityy_308_23",
-      "data": 330,
+      "id": 405,
+      "name": "rhythmicityy_383_27",
+      "data": 405,
       "type": "number",
-      "tableProcessGUId": "40848e78-2184-4288-b7b5-7c8c8346da9a",
+      "tableProcessGUId": "4b97354a-862a-4b29-899e-17901275b002",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 331,
-      "name": "rhythmicityy_309_23",
-      "data": 331,
+      "id": 406,
+      "name": "rhythmicityy_384_27",
+      "data": 406,
       "type": "number",
-      "tableProcessGUId": "40848e78-2184-4288-b7b5-7c8c8346da9a",
+      "tableProcessGUId": "4b97354a-862a-4b29-899e-17901275b002",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 332,
-      "name": "rhythmicityy_310_23",
-      "data": 332,
+      "id": 407,
+      "name": "rhythmicityy_385_27",
+      "data": 407,
       "type": "number",
-      "tableProcessGUId": "40848e78-2184-4288-b7b5-7c8c8346da9a",
+      "tableProcessGUId": "4b97354a-862a-4b29-899e-17901275b002",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 333,
-      "name": "rhythmicityy_311_23",
-      "data": 333,
+      "id": 408,
+      "name": "rhythmicityy_386_27",
+      "data": 408,
       "type": "number",
-      "tableProcessGUId": "40848e78-2184-4288-b7b5-7c8c8346da9a",
+      "tableProcessGUId": "4b97354a-862a-4b29-899e-17901275b002",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 334,
-      "name": "rhythmicityy_312_23",
-      "data": 334,
+      "id": 409,
+      "name": "rhythmicityy_387_27",
+      "data": 409,
       "type": "number",
-      "tableProcessGUId": "40848e78-2184-4288-b7b5-7c8c8346da9a",
+      "tableProcessGUId": "4b97354a-862a-4b29-899e-17901275b002",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 335,
-      "name": "rhythmicityy_313_23",
-      "data": 335,
+      "id": 410,
+      "name": "rhythmicityy_388_27",
+      "data": 410,
       "type": "number",
-      "tableProcessGUId": "40848e78-2184-4288-b7b5-7c8c8346da9a",
+      "tableProcessGUId": "4b97354a-862a-4b29-899e-17901275b002",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 336,
-      "name": "rhythmicityy_314_23",
-      "data": 336,
+      "id": 411,
+      "name": "rhythmicityy_389_27",
+      "data": 411,
       "type": "number",
-      "tableProcessGUId": "40848e78-2184-4288-b7b5-7c8c8346da9a",
+      "tableProcessGUId": "4b97354a-862a-4b29-899e-17901275b002",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 337,
-      "name": "rhythmicityy_315_23",
-      "data": 337,
+      "id": 412,
+      "name": "rhythmicityy_390_27",
+      "data": 412,
       "type": "number",
-      "tableProcessGUId": "40848e78-2184-4288-b7b5-7c8c8346da9a",
+      "tableProcessGUId": "4b97354a-862a-4b29-899e-17901275b002",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 338,
-      "name": "rhythmicityy_316_23",
-      "data": 338,
+      "id": 413,
+      "name": "rhythmicityy_391_27",
+      "data": 413,
       "type": "number",
-      "tableProcessGUId": "40848e78-2184-4288-b7b5-7c8c8346da9a",
+      "tableProcessGUId": "4b97354a-862a-4b29-899e-17901275b002",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -5432,7 +5432,7 @@
   ],
   "plots": [
     {
-      "id": 44,
+      "id": 52,
       "name": "Periodograms of pure noise",
       "x": 350,
       "y": 150,
@@ -5477,9 +5477,9 @@
         "data": [
           {
             "x": {
-              "id": 317,
+              "id": 392,
               "name": "hour",
-              "refId": 304,
+              "refId": 379,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -5488,9 +5488,9 @@
               "processes": []
             },
             "y": {
-              "id": 318,
+              "id": 393,
               "name": "noise 1",
-              "refId": 305,
+              "refId": 380,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -5524,9 +5524,9 @@
           },
           {
             "x": {
-              "id": 319,
+              "id": 394,
               "name": "hour",
-              "refId": 304,
+              "refId": 379,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -5535,9 +5535,9 @@
               "processes": []
             },
             "y": {
-              "id": 320,
+              "id": 395,
               "name": "noise 2",
-              "refId": 306,
+              "refId": 381,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -5571,9 +5571,9 @@
           },
           {
             "x": {
-              "id": 321,
+              "id": 396,
               "name": "hour",
-              "refId": 304,
+              "refId": 379,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -5582,9 +5582,9 @@
               "processes": []
             },
             "y": {
-              "id": 322,
+              "id": 397,
               "name": "noise 3",
-              "refId": 307,
+              "refId": 382,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -5618,9 +5618,9 @@
           },
           {
             "x": {
-              "id": 323,
+              "id": 398,
               "name": "hour",
-              "refId": 304,
+              "refId": 379,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -5629,9 +5629,9 @@
               "processes": []
             },
             "y": {
-              "id": 324,
+              "id": 399,
               "name": "noise 4",
-              "refId": 308,
+              "refId": 383,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -5667,7 +5667,7 @@
       }
     },
     {
-      "id": 45,
+      "id": 53,
       "name": "Peak period per noise record",
       "x": 350,
       "y": 150,
@@ -5683,8 +5683,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          325,
-          326
+          400,
+          401
         ],
         "showCol": [
           true,
@@ -5699,24 +5699,24 @@
   ],
   "tableProcesses": [
     {
-      "id": 23,
+      "id": 27,
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis — 12 noise records",
       "args": {
-        "xIN": 304,
+        "xIN": 379,
         "yIN": [
-          305,
-          306,
-          307,
-          308,
-          309,
-          310,
-          311,
-          312,
-          313,
-          314,
-          315,
-          316
+          380,
+          381,
+          382,
+          383,
+          384,
+          385,
+          386,
+          387,
+          388,
+          389,
+          390,
+          391
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -5727,32 +5727,32 @@
         "pgAlpha": 0.05,
         "preProcesses": [],
         "out": {
-          "stat_peak_period": 325,
-          "stat_peak_power": 326,
-          "rhythmicityy_305": 327,
-          "rhythmicityy_306": 328,
-          "rhythmicityy_307": 329,
-          "rhythmicityy_308": 330,
-          "rhythmicityy_309": 331,
-          "rhythmicityy_310": 332,
-          "rhythmicityy_311": 333,
-          "rhythmicityy_312": 334,
-          "rhythmicityy_313": 335,
-          "rhythmicityy_314": 336,
-          "rhythmicityy_315": 337,
-          "rhythmicityy_316": 338
+          "stat_peak_period": 400,
+          "stat_peak_power": 401,
+          "rhythmicityy_380": 402,
+          "rhythmicityy_381": 403,
+          "rhythmicityy_382": 404,
+          "rhythmicityy_383": 405,
+          "rhythmicityy_384": 406,
+          "rhythmicityy_385": 407,
+          "rhythmicityy_386": 408,
+          "rhythmicityy_387": 409,
+          "rhythmicityy_388": 410,
+          "rhythmicityy_389": 411,
+          "rhythmicityy_390": 412,
+          "rhythmicityy_391": 413
         }
       },
       "refTPId": null
     },
     {
-      "id": 24,
+      "id": 28,
       "name": "DescribeData",
       "displayName": "Describe — spread of the \"peaks\"",
       "args": {
         "yIN": [
-          325,
-          326
+          400,
+          401
         ],
         "out": {},
         "valid": false
@@ -5765,7 +5765,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_17",
+      "id": "note_19",
       "text": "WORKFLOW: the multiple-comparison trap. Twelve records of PURE NOISE, with no rhythm of any kind, analysed with identical settings. Every one of them reports a peak period, because a periodogram always returns its largest value. Look at where those twelve peaks land: scattered arbitrarily across the search window, which is what a null result looks like in aggregate. Now imagine you had run only one of these records, picked the most impressive-looking spectrum, and reported it. That is the trap. The more series, windows, or preprocessing choices you try, the more certain it becomes that something will look significant. Decide what you are testing before you test it, and read this next to the arrhythmic negative control.",
       "x": 40,
       "y": 24,
@@ -5777,75 +5777,75 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_304": {
+    "data_379": {
       "x": 60,
       "y": 314
     },
-    "data_305": {
+    "data_380": {
       "x": 60,
       "y": 814
     },
-    "data_306": {
+    "data_381": {
       "x": 60,
       "y": 1314
     },
-    "data_307": {
+    "data_382": {
       "x": 60,
       "y": 1814
     },
-    "data_308": {
+    "data_383": {
       "x": 60,
       "y": 2314
     },
-    "data_309": {
+    "data_384": {
       "x": 60,
       "y": 2814
     },
-    "data_310": {
+    "data_385": {
       "x": 60,
       "y": 3314
     },
-    "data_311": {
+    "data_386": {
       "x": 60,
       "y": 3814
     },
-    "data_312": {
+    "data_387": {
       "x": 60,
       "y": 4314
     },
-    "data_313": {
+    "data_388": {
       "x": 60,
       "y": 4814
     },
-    "data_314": {
+    "data_389": {
       "x": 60,
       "y": 5314
     },
-    "data_315": {
+    "data_390": {
       "x": 60,
       "y": 5814
     },
-    "data_316": {
+    "data_391": {
       "x": 60,
       "y": 6314
     },
-    "tableprocess_23": {
+    "tableprocess_27": {
       "x": 440,
       "y": 314
     },
-    "tableprocess_24": {
+    "tableprocess_28": {
       "x": 440,
       "y": 814
     },
-    "note_17": {
+    "note_19": {
       "x": 40,
       "y": 24
     },
-    "plot_44": {
+    "plot_52": {
       "x": 820,
       "y": 314
     },
-    "plot_45": {
+    "plot_53": {
       "x": 820,
       "y": 814
     }
@@ -5907,5 +5907,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

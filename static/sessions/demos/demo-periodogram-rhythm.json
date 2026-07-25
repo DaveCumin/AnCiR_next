@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "395": [
+    "470": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "396": [
+    "471": [
       50.73643610198167,
       52.88311387843814,
       58.853278502861286,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 395,
+      "id": 470,
       "name": "hour",
-      "data": 395,
+      "data": 470,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 396,
+      "id": 471,
       "name": "activity",
-      "data": 396,
+      "data": 471,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 60,
+      "id": 68,
       "name": "Activity periodogram",
       "x": 350,
       "y": 150,
@@ -412,9 +412,9 @@
         "data": [
           {
             "x": {
-              "id": 397,
+              "id": 472,
               "name": "hour",
-              "refId": 395,
+              "refId": 470,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -423,9 +423,9 @@
               "processes": []
             },
             "y": {
-              "id": 398,
+              "id": 473,
               "name": "activity",
-              "refId": 396,
+              "refId": 471,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -467,7 +467,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_27",
+      "id": "note_29",
       "text": "Scans a range of candidate periods and plots spectral power against period, with a significance threshold; the tallest peak crossing the line estimates the dominant rhythm's period. Methods include Lomb-Scargle (handles uneven sampling/gaps) and the chi-squared (Sokolove-Bushell) periodogram. Use it to quantify period from a time-series. See the Periodograms chapter for details.",
       "x": 40,
       "y": 24,
@@ -479,19 +479,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_395": {
+    "data_470": {
       "x": 60,
       "y": 314
     },
-    "data_396": {
+    "data_471": {
       "x": 60,
       "y": 814
     },
-    "note_27": {
+    "note_29": {
       "x": 40,
       "y": 24
     },
-    "plot_60": {
+    "plot_68": {
       "x": 820,
       "y": 314
     }
@@ -553,5 +553,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "677": [
+    "752": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "678": [
+    "753": [
       0,
       10,
       20,
@@ -104,7 +104,7 @@
       480,
       490
     ],
-    "679": [
+    "754": [
       0,
       10,
       20,
@@ -156,7 +156,7 @@
       null,
       null
     ],
-    "680": [
+    "755": [
       null,
       null,
       null,
@@ -208,7 +208,7 @@
       null,
       null
     ],
-    "681": [
+    "756": [
       null,
       null,
       null,
@@ -263,9 +263,9 @@
   },
   "data": [
     {
-      "id": 677,
+      "id": 752,
       "name": "Split data input 1",
-      "data": 677,
+      "data": 752,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -274,9 +274,9 @@
       "processes": []
     },
     {
-      "id": 678,
+      "id": 753,
       "name": "Split data input 2",
-      "data": 678,
+      "data": 753,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -285,33 +285,33 @@
       "processes": []
     },
     {
-      "id": 679,
-      "name": "678_1_72",
-      "data": 679,
+      "id": 754,
+      "name": "753_1_76",
+      "data": 754,
       "type": "number",
-      "tableProcessGUId": "b786b161-2db3-4037-88f4-b0eb8962f91d",
+      "tableProcessGUId": "7d521e90-515a-4593-803d-52cba698a0bb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 680,
-      "name": "678_2_72",
-      "data": 680,
+      "id": 755,
+      "name": "753_2_76",
+      "data": 755,
       "type": "number",
-      "tableProcessGUId": "b786b161-2db3-4037-88f4-b0eb8962f91d",
+      "tableProcessGUId": "7d521e90-515a-4593-803d-52cba698a0bb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 681,
-      "name": "678_3_72",
-      "data": 681,
+      "id": 756,
+      "name": "753_3_76",
+      "data": 756,
       "type": "number",
-      "tableProcessGUId": "b786b161-2db3-4037-88f4-b0eb8962f91d",
+      "tableProcessGUId": "7d521e90-515a-4593-803d-52cba698a0bb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -320,7 +320,7 @@
   ],
   "plots": [
     {
-      "id": 122,
+      "id": 130,
       "name": "Split data result",
       "x": 350,
       "y": 150,
@@ -336,11 +336,11 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          677,
-          678,
-          679,
-          680,
-          681
+          752,
+          753,
+          754,
+          755,
+          756
         ],
         "showCol": [
           true,
@@ -358,22 +358,22 @@
   ],
   "tableProcesses": [
     {
-      "id": 72,
+      "id": 76,
       "name": "Split",
       "displayName": "Split data",
       "args": {
-        "xIN": 677,
+        "xIN": 752,
         "yIN": [
-          678
+          753
         ],
         "splitTimes": [
           15,
           30
         ],
         "out": {
-          "678_1": 679,
-          "678_2": 680,
-          "678_3": 681
+          "753_1": 754,
+          "753_2": 755,
+          "753_3": 756
         }
       },
       "refTPId": null
@@ -384,7 +384,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_68",
+      "id": "note_70",
       "text": "Cuts a time-series into consecutive segments at the split times you specify, keeping the chosen columns aligned. Use it to separate, e.g., an entrainment stage from a free-run stage, or successive days, before analysing each part on its own.",
       "x": 40,
       "y": 24,
@@ -396,23 +396,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_677": {
+    "data_752": {
       "x": 60,
       "y": 314
     },
-    "data_678": {
+    "data_753": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_72": {
+    "tableprocess_76": {
       "x": 440,
       "y": 314
     },
-    "plot_122": {
+    "plot_130": {
       "x": 820,
       "y": 314
     },
-    "note_68": {
+    "note_70": {
       "x": 40,
       "y": 24
     }
@@ -474,5 +474,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

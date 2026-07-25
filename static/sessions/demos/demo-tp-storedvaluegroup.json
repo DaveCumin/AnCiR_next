@@ -1,17 +1,17 @@
 {
   "rawData": {
-    "682": [
+    "757": [
       12,
       34
     ]
   },
   "data": [
     {
-      "id": 682,
-      "name": "group_g1_73",
-      "data": 682,
+      "id": 757,
+      "name": "group_g1_77",
+      "data": 757,
       "type": "number",
-      "tableProcessGUId": "9570eab5-e386-497d-89e7-37edac7545f7",
+      "tableProcessGUId": "bf864241-5dc2-49a4-bf3f-cdc3c7aadb19",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -20,7 +20,7 @@
   ],
   "plots": [
     {
-      "id": 123,
+      "id": 131,
       "name": "Stored Value Group result",
       "x": 350,
       "y": 150,
@@ -36,7 +36,7 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          682
+          757
         ],
         "showCol": [
           true
@@ -50,7 +50,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 73,
+      "id": 77,
       "name": "StoredValueGroup",
       "displayName": "Stored Value Group",
       "args": {
@@ -65,7 +65,7 @@
           }
         ],
         "out": {
-          "group_g1": 682
+          "group_g1": 757
         }
       },
       "refTPId": null
@@ -85,7 +85,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_69",
+      "id": "note_71",
       "text": "Gathers scalar results you have stored from various analyses (e.g. periods, amplitudes, CFI values) and organises them into labelled groups, emitting a category column and a value column. Use it to assemble stored metrics into a tidy table for group comparison or plotting.",
       "x": 40,
       "y": 24,
@@ -97,15 +97,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_73": {
+    "tableprocess_77": {
       "x": 60,
       "y": 314
     },
-    "plot_123": {
+    "plot_131": {
       "x": 820,
       "y": 314
     },
-    "note_69": {
+    "note_71": {
       "x": 40,
       "y": 24
     }
@@ -167,5 +167,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "490": [
+    "565": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "491": [
+    "566": [
       52.522025082939734,
       68.09116741301771,
       73.44958693280898,
@@ -104,7 +104,7 @@
       47.59352161612626,
       59.5535187385039
     ],
-    "492": [
+    "567": [
       0,
       2,
       4,
@@ -132,7 +132,7 @@
       48,
       50
     ],
-    "493": [
+    "568": [
       60.306596247978725,
       80.40261868508753,
       84.47432056148014,
@@ -163,20 +163,20 @@
   },
   "data": [
     {
-      "id": 490,
+      "id": 565,
       "name": "x",
-      "data": 490,
+      "data": 565,
       "type": "number",
-      "tableProcessGUId": "4cae3a17-a5fe-4f28-a337-d03109c29c54",
+      "tableProcessGUId": "0e13a21e-62a9-4f23-8130-443b52fce697",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 491,
+      "id": 566,
       "name": "y",
-      "data": 491,
+      "data": 566,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -185,23 +185,23 @@
       "processes": []
     },
     {
-      "id": 492,
-      "name": "binnedx_37",
-      "data": 492,
+      "id": 567,
+      "name": "binnedx_41",
+      "data": 567,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "3f48f989-ce4e-438f-a27c-3d4d7ddc20ca",
+      "tableProcessGUId": "53554510-a2f7-4114-a495-4ffb62c9e425",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 493,
-      "name": "binnedy_491_37",
-      "data": 493,
+      "id": 568,
+      "name": "binnedy_566_41",
+      "data": 568,
       "type": "number",
-      "tableProcessGUId": "3f48f989-ce4e-438f-a27c-3d4d7ddc20ca",
+      "tableProcessGUId": "53554510-a2f7-4114-a495-4ffb62c9e425",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -210,7 +210,7 @@
   ],
   "plots": [
     {
-      "id": 84,
+      "id": 92,
       "name": "Bin Data: data + fit",
       "x": 350,
       "y": 150,
@@ -267,9 +267,9 @@
         "data": [
           {
             "x": {
-              "id": 494,
+              "id": 569,
               "name": "x",
-              "refId": 490,
+              "refId": 565,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -278,9 +278,9 @@
               "processes": []
             },
             "y": {
-              "id": 495,
+              "id": 570,
               "name": "y",
-              "refId": 491,
+              "refId": 566,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -306,9 +306,9 @@
           },
           {
             "x": {
-              "id": 496,
-              "name": "binnedx_37",
-              "refId": 492,
+              "id": 571,
+              "name": "binnedx_41",
+              "refId": 567,
               "type": "bin",
               "binWidth": 2,
               "tableProcessGUId": "",
@@ -318,9 +318,9 @@
               "processes": []
             },
             "y": {
-              "id": 497,
-              "name": "binnedy_491_37",
-              "refId": 493,
+              "id": 572,
+              "name": "binnedy_566_41",
+              "refId": 568,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -360,7 +360,7 @@
       }
     },
     {
-      "id": 85,
+      "id": 93,
       "name": "Bin Data: values",
       "x": 350,
       "y": 150,
@@ -376,8 +376,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          491,
-          493
+          566,
+          568
         ],
         "showCol": [
           true,
@@ -392,7 +392,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 36,
+      "id": 40,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -402,19 +402,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 490
+          "result": 565
         }
       },
       "refTPId": null
     },
     {
-      "id": 37,
+      "id": 41,
       "name": "BinnedData",
       "displayName": "Bin Data",
       "args": {
-        "xIN": 490,
+        "xIN": 565,
         "yIN": [
-          491
+          566
         ],
         "binMode": "uniform",
         "binSize": 2,
@@ -425,8 +425,8 @@
         "aggFunction": "mean",
         "preProcesses": [],
         "out": {
-          "binnedx": 492,
-          "binnedy_491": 493
+          "binnedx": 567,
+          "binnedy_566": 568
         }
       },
       "refTPId": null
@@ -437,7 +437,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_40",
+      "id": "note_42",
       "text": "Aggregates time-series values into regular time bins (e.g. 15 min counts into hourly means or sums), choosing the aggregation function per bin. Use it to downsample high-resolution activity or to put irregular samples onto a regular grid before analysis.",
       "x": 40,
       "y": 24,
@@ -449,27 +449,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_491": {
+    "data_566": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_36": {
+    "tableprocess_40": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_37": {
+    "tableprocess_41": {
       "x": 440,
       "y": 314
     },
-    "plot_84": {
+    "plot_92": {
       "x": 820,
       "y": 314
     },
-    "plot_85": {
+    "plot_93": {
       "x": 820,
       "y": 814
     },
-    "note_40": {
+    "note_42": {
       "x": 40,
       "y": 24
     }
@@ -531,5 +531,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

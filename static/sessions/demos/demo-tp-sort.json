@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "502": [
+    "577": [
       49,
       48,
       47,
@@ -52,7 +52,7 @@
       1,
       0
     ],
-    "503": [
+    "578": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -104,7 +104,7 @@
       10,
       11.362966948437261
     ],
-    "504": [
+    "579": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "505": [
+    "580": [
       11.362966948437261,
       10,
       11.362966948437276,
@@ -211,9 +211,9 @@
   },
   "data": [
     {
-      "id": 502,
+      "id": 577,
       "name": "Sort input 1",
-      "data": 502,
+      "data": 577,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -222,9 +222,9 @@
       "processes": []
     },
     {
-      "id": 503,
+      "id": 578,
       "name": "Sort input 2",
-      "data": 503,
+      "data": 578,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 504,
-      "name": "sortedy_502_39",
-      "data": 504,
+      "id": 579,
+      "name": "sortedy_577_43",
+      "data": 579,
       "type": "number",
-      "tableProcessGUId": "ace79a23-5e9a-4a25-85d9-c7744de520a5",
+      "tableProcessGUId": "41c091db-bec4-4b02-bbe9-423bad2cadfd",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 505,
-      "name": "sortedy_503_39",
-      "data": 505,
+      "id": 580,
+      "name": "sortedy_578_43",
+      "data": 580,
       "type": "number",
-      "tableProcessGUId": "ace79a23-5e9a-4a25-85d9-c7744de520a5",
+      "tableProcessGUId": "41c091db-bec4-4b02-bbe9-423bad2cadfd",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -257,7 +257,7 @@
   ],
   "plots": [
     {
-      "id": 87,
+      "id": 95,
       "name": "Sort result",
       "x": 350,
       "y": 150,
@@ -273,10 +273,10 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          502,
-          503,
-          504,
-          505
+          577,
+          578,
+          579,
+          580
         ],
         "showCol": [
           true,
@@ -293,20 +293,20 @@
   ],
   "tableProcesses": [
     {
-      "id": 39,
+      "id": 43,
       "name": "Sort",
       "displayName": "Sort",
       "args": {
         "yIN": [
-          502,
-          503
+          577,
+          578
         ],
-        "sortOnId": 502,
+        "sortOnId": 577,
         "direction": "asc",
         "preProcesses": [],
         "out": {
-          "sortedy_502": 504,
-          "sortedy_503": 505
+          "sortedy_577": 579,
+          "sortedy_578": 580
         }
       },
       "refTPId": null
@@ -317,7 +317,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_42",
+      "id": "note_44",
       "text": "Reorders rows by a chosen key column, ascending or descending, keeping the selected columns aligned. Use it to order data by time or magnitude before plotting or before methods that assume monotonic time.",
       "x": 40,
       "y": 24,
@@ -329,23 +329,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_502": {
+    "data_577": {
       "x": 60,
       "y": 314
     },
-    "data_503": {
+    "data_578": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_39": {
+    "tableprocess_43": {
       "x": 440,
       "y": 314
     },
-    "plot_87": {
+    "plot_95": {
       "x": 820,
       "y": 314
     },
-    "note_42": {
+    "note_44": {
       "x": 40,
       "y": 24
     }
@@ -407,5 +407,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

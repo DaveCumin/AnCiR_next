@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "635": [
+    "710": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "636": [
+    "711": [
       80.74815343291546,
       74.1026647241765,
       67.34975964373878,
@@ -100,7 +100,7 @@
       25.36953942083682,
       31.225353920755683
     ],
-    "637": [
+    "712": [
       0,
       1,
       2,
@@ -150,10 +150,10 @@
       46,
       47
     ],
-    "638": [
+    "713": [
       null
     ],
-    "639": [
+    "714": [
       75.31550624457671,
       75.31550624457671,
       75.31550624457671,
@@ -206,20 +206,20 @@
   },
   "data": [
     {
-      "id": 635,
+      "id": 710,
       "name": "x",
-      "data": 635,
+      "data": 710,
       "type": "number",
-      "tableProcessGUId": "74820755-d2f4-4cc8-99bb-ffac935a4339",
+      "tableProcessGUId": "894750db-dc07-4e9e-b5d2-63642eead981",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 636,
+      "id": 711,
       "name": "y",
-      "data": 636,
+      "data": 711,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -228,33 +228,33 @@
       "processes": []
     },
     {
-      "id": 637,
-      "name": "rectwavex_64",
-      "data": 637,
+      "id": 712,
+      "name": "rectwavex_68",
+      "data": 712,
       "type": "number",
-      "tableProcessGUId": "4e130605-d799-40ea-b76b-250b5cc174c3",
+      "tableProcessGUId": "489ac789-0e4d-477d-9e02-59f6874abf6c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 638,
-      "name": "pvalue_64",
-      "data": 638,
+      "id": 713,
+      "name": "pvalue_68",
+      "data": 713,
       "type": "number",
-      "tableProcessGUId": "4e130605-d799-40ea-b76b-250b5cc174c3",
+      "tableProcessGUId": "489ac789-0e4d-477d-9e02-59f6874abf6c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 639,
-      "name": "rectwavey_636_64",
-      "data": 639,
+      "id": 714,
+      "name": "rectwavey_711_68",
+      "data": 714,
       "type": "number",
-      "tableProcessGUId": "4e130605-d799-40ea-b76b-250b5cc174c3",
+      "tableProcessGUId": "489ac789-0e4d-477d-9e02-59f6874abf6c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -263,7 +263,7 @@
   ],
   "plots": [
     {
-      "id": 112,
+      "id": 120,
       "name": "Rectangular Wave: data + fit",
       "x": 350,
       "y": 150,
@@ -320,9 +320,9 @@
         "data": [
           {
             "x": {
-              "id": 640,
+              "id": 715,
               "name": "x",
-              "refId": 635,
+              "refId": 710,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -331,9 +331,9 @@
               "processes": []
             },
             "y": {
-              "id": 641,
+              "id": 716,
               "name": "y",
-              "refId": 636,
+              "refId": 711,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -359,9 +359,9 @@
           },
           {
             "x": {
-              "id": 642,
-              "name": "rectwavex_64",
-              "refId": 637,
+              "id": 717,
+              "name": "rectwavex_68",
+              "refId": 712,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -370,9 +370,9 @@
               "processes": []
             },
             "y": {
-              "id": 643,
-              "name": "rectwavey_636_64",
-              "refId": 639,
+              "id": 718,
+              "name": "rectwavey_711_68",
+              "refId": 714,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -412,7 +412,7 @@
       }
     },
     {
-      "id": 113,
+      "id": 121,
       "name": "Rectangular Wave: values",
       "x": 350,
       "y": 150,
@@ -428,8 +428,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          636,
-          639
+          711,
+          714
         ],
         "showCol": [
           true,
@@ -444,7 +444,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 63,
+      "id": 67,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -454,19 +454,19 @@
         "count": 48,
         "end": 47,
         "out": {
-          "result": 635
+          "result": 710
         }
       },
       "refTPId": null
     },
     {
-      "id": 64,
+      "id": 68,
       "name": "RectangularWave",
       "displayName": "Rectangular Wave",
       "args": {
-        "xIN": 635,
+        "xIN": 710,
         "yIN": [
-          636
+          711
         ],
         "outputX": -1,
         "fixKappa": false,
@@ -477,9 +477,9 @@
         "fixedDutyCycle": 0.5,
         "preProcesses": [],
         "out": {
-          "rectwavex": 637,
-          "pvalue": 638,
-          "rectwavey_636": 639
+          "rectwavex": 712,
+          "pvalue": 713,
+          "rectwavey_711": 714
         }
       },
       "refTPId": null
@@ -490,7 +490,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_62",
+      "id": "note_64",
       "text": "Fits a smooth rectangular (square) wave with an adjustable duty cycle to the series, capturing on/off activity rhythms that a sinusoid fits poorly. The model is a tanh-approximated square wave whose duty cycle sets the fraction of each cycle spent 'on'; period, phase, sharpness (kappa) and duty cycle can be fixed or fitted. Use it for clearly bimodal activity (e.g. nocturnal animals switching between rest and activity) where you want an explicit active-phase width. In the demo, read the flat high plateau as the active phase, the flat low level as rest, and the plateau width as the duty cycle. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. Nonlinear least-squares waveform fitting (Marquardt 1963).",
       "x": 40,
       "y": 24,
@@ -502,27 +502,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_636": {
+    "data_711": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_63": {
+    "tableprocess_67": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_64": {
+    "tableprocess_68": {
       "x": 440,
       "y": 314
     },
-    "plot_112": {
+    "plot_120": {
       "x": 820,
       "y": 314
     },
-    "plot_113": {
+    "plot_121": {
       "x": 820,
       "y": 814
     },
-    "note_62": {
+    "note_64": {
       "x": 40,
       "y": 24
     }
@@ -584,5 +584,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "695": [
+    "770": [
       "2024-01-01T00:00:00.000Z",
       "2024-01-01T01:00:00.000Z",
       "2024-01-01T02:00:00.000Z",
@@ -52,7 +52,7 @@
       "2024-01-03T00:00:00.000Z",
       "2024-01-03T01:00:00.000Z"
     ],
-    "696": [
+    "771": [
       10,
       11,
       12,
@@ -104,7 +104,7 @@
       58,
       59
     ],
-    "697": [
+    "772": [
       100,
       99,
       98,
@@ -156,7 +156,7 @@
       52,
       51
     ],
-    "698": [
+    "773": [
       1704067200000,
       1704070800000,
       1704074400000,
@@ -258,7 +258,7 @@
       1704240000000,
       1704243600000
     ],
-    "699": [
+    "774": [
       "Wide To Long input 2",
       "Wide To Long input 2",
       "Wide To Long input 2",
@@ -360,7 +360,7 @@
       "Wide To Long input 3",
       "Wide To Long input 3"
     ],
-    "700": [
+    "775": [
       10,
       11,
       12,
@@ -465,9 +465,9 @@
   },
   "data": [
     {
-      "id": 695,
+      "id": 770,
       "name": "Wide To Long input 1",
-      "data": 695,
+      "data": 770,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
       "tableProcessGUId": "",
@@ -477,9 +477,9 @@
       "processes": []
     },
     {
-      "id": 696,
+      "id": 771,
       "name": "Wide To Long input 2",
-      "data": 696,
+      "data": 771,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -488,9 +488,9 @@
       "processes": []
     },
     {
-      "id": 697,
+      "id": 772,
       "name": "Wide To Long input 3",
-      "data": 697,
+      "data": 772,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -499,34 +499,34 @@
       "processes": []
     },
     {
-      "id": 698,
-      "name": "time_76",
-      "data": 698,
+      "id": 773,
+      "name": "time_80",
+      "data": 773,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "1bb5df16-0ea6-4aff-bb8b-1f48945693b1",
+      "tableProcessGUId": "b47fd01f-bdd6-42b7-8c19-ac6da2a720b8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 699,
-      "name": "category_76",
-      "data": 699,
+      "id": 774,
+      "name": "category_80",
+      "data": 774,
       "type": "category",
-      "tableProcessGUId": "1bb5df16-0ea6-4aff-bb8b-1f48945693b1",
+      "tableProcessGUId": "b47fd01f-bdd6-42b7-8c19-ac6da2a720b8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 700,
-      "name": "value_76",
-      "data": 700,
+      "id": 775,
+      "name": "value_80",
+      "data": 775,
       "type": "number",
-      "tableProcessGUId": "1bb5df16-0ea6-4aff-bb8b-1f48945693b1",
+      "tableProcessGUId": "b47fd01f-bdd6-42b7-8c19-ac6da2a720b8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -535,7 +535,7 @@
   ],
   "plots": [
     {
-      "id": 126,
+      "id": 134,
       "name": "Wide To Long result",
       "x": 350,
       "y": 150,
@@ -551,12 +551,12 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          695,
-          696,
-          697,
-          698,
-          699,
-          700
+          770,
+          771,
+          772,
+          773,
+          774,
+          775
         ],
         "showCol": [
           true,
@@ -575,19 +575,19 @@
   ],
   "tableProcesses": [
     {
-      "id": 76,
+      "id": 80,
       "name": "WideToLong",
       "displayName": "Wide To Long",
       "args": {
-        "timeIN": 695,
+        "timeIN": 770,
         "valueColIds": [
-          696,
-          697
+          771,
+          772
         ],
         "out": {
-          "time": 698,
-          "category": 699,
-          "value": 700
+          "time": 773,
+          "category": 774,
+          "value": 775
         }
       },
       "refTPId": null
@@ -598,7 +598,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_71",
+      "id": "note_73",
       "text": "Pivots several side-by-side value columns into long/tidy format: a single time, category, and value column. Use it to stack multiple series into one table for grouped statistics or long-format export.",
       "x": 40,
       "y": 24,
@@ -610,27 +610,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_695": {
+    "data_770": {
       "x": 60,
       "y": 314
     },
-    "data_696": {
+    "data_771": {
       "x": 60,
       "y": 814
     },
-    "data_697": {
+    "data_772": {
       "x": 60,
       "y": 1314
     },
-    "tableprocess_76": {
+    "tableprocess_80": {
       "x": 440,
       "y": 314
     },
-    "plot_126": {
+    "plot_134": {
       "x": 820,
       "y": 314
     },
-    "note_71": {
+    "note_73": {
       "x": 40,
       "y": 24
     }
@@ -692,5 +692,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

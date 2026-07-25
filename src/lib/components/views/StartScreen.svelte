@@ -8,31 +8,19 @@
 	//   1. Two primary cards (import / load) carry the weight — they're what a returning user wants.
 	//   2. A row of outlined chips (simulate / AI / blank canvas) reads as pressable but stays
 	//      visibly tertiary, so it can't compete with the two primaries.
-	//   3. Recent, Examples and Tour each sit under a quiet section label.
-	//   4. The tour band is the only high-contrast element. It is PROMOTED into the Recent slot when
-	//      there is no history: a first-time visitor gets the tour where a returning one gets their
-	//      sessions, and nobody sees a section explaining a list they haven't got yet.
+	//   3. Tour and Examples each sit under a quiet section label.
+	//   4. The tour band is the only high-contrast element.
 	//
 	// The whole overlay is a drop target for import — dropping anywhere starts an import — using the
 	// existing canvasFileDrop action, which already does the drag-depth counting AND ignores
 	// internal app drags (dragging a data column must not light up the import card).
 	import Icon from '$lib/icons/Icon.svelte';
-	import Modal from '$lib/components/reusables/Modal.svelte';
 	import LoadSessionModal from '$lib/components/workflow/LoadSessionModal.svelte';
 	import AiPrompt from '$lib/components/views/modals/AiPrompt.svelte';
 	import { canvasFileDrop } from '$lib/core/canvasFileDrop.js';
 	import { openImportData, openImportDataFiles } from '$lib/core/dataSourceActions.js';
 	import { openPicker as openTourPicker } from '$lib/core/tourRunner.svelte.js';
 	import { thumbnailForWorkflow } from '$lib/start/thumbnails.js';
-	import {
-		recents,
-		loadRecents,
-		removeRecent,
-		clearRecents,
-		openRecent,
-		relativeTime,
-		supportsFileHandles
-	} from '$lib/start/recentSessions.svelte.js';
 	import {
 		openExample,
 		displayName,
@@ -48,41 +36,30 @@
 	let dragActive = $state(false);
 	let showLoadSession = $state(false);
 	let showAi = $state(false);
-	let confirmClear = $state(false);
 	let exampleGroups = $state([]);
 	let manifestError = $state('');
 	let busyId = $state(null);
 	let query = $state('');
 	// The load-session modal is reused for two jobs: opening a file, and browsing the full library.
 	let loadMode = $state('file');
+	/**
+	 * One flag for all three columns, not one per column. The columns read as a single block, so
+	 * expanding just one leaves the other two truncated at a ragged, arbitrary-looking boundary;
+	 * and "4 shown of 10" is a property of the view, not of the group.
+	 */
+	let showAll = $state(false);
 
-	// Group names are row headings no longer; they ride on each card, so they need to be short
-	// enough to sit above a 9.5rem card without wrapping.
+	// One column per group, so the heading is the column head rather than a caption on every row.
 	const SHORT_GROUP = {
-		'Rhythm & circadian': 'Rhythm',
-		'General statistics': 'Statistics',
-		'Reading the output': 'Reading output'
+		'Rhythm & circadian': 'Rhythm and circadian',
+		'General statistics': 'General statistics',
+		'Reading the output': 'Reading the output'
 	};
-	const FEATURED_PER_GROUP = 2;
+	const PER_COLUMN = 4;
 
 	const allExamples = $derived(
 		exampleGroups.flatMap(([group, sessions]) => sessions.map((s) => ({ ...s, group })))
 	);
-
-	/**
-	 * The default view: two from each group on ONE row. Interleaved rather than three adjacent
-	 * pairs, so the row reads as a mix of what the app does. This also fills the grid exactly —
-	 * six cards in six columns — which grouped rows cannot, because the groups are 9, 7 and 3.
-	 */
-	const featured = $derived.by(() => {
-		const out = [];
-		for (let i = 0; i < FEATURED_PER_GROUP; i++) {
-			for (const [group, sessions] of exampleGroups) {
-				if (sessions[i]) out.push({ ...sessions[i], group });
-			}
-		}
-		return out;
-	});
 
 	/** null when not searching, so an empty result is distinguishable from "no query". */
 	const filtered = $derived.by(() => {
@@ -92,13 +69,37 @@
 			`${s.name} ${s.summary} ${s.group}`.toLowerCase().includes(q)
 		);
 	});
-	const shownExamples = $derived(filtered ?? featured);
 
-	const canReopen = supportsFileHandles();
-
-	$effect(() => {
-		loadRecents();
+	/**
+	 * The columns the grid renders. Searching narrows each column IN PLACE rather than collapsing
+	 * to one flat list: the group a hit belongs to is itself information ("chi-square is a
+	 * statistics example"), and holding the columns still means the layout doesn't jump per
+	 * keystroke. A column with no hits keeps its heading and says so, for the same reason.
+	 *
+	 * Only the unsearched view is capped at PER_COLUMN; a search is an explicit request to see
+	 * everything that matches, so it ignores both the cap and the expand toggle.
+	 */
+	const columns = $derived.by(() => {
+		const hits = filtered;
+		const capped = !hits && !showAll;
+		return exampleGroups.map(([group, sessions]) => {
+			const items = hits ? hits.filter((s) => s.group === group) : sessions;
+			const shown = capped ? items.slice(0, PER_COLUMN) : items;
+			return {
+				group,
+				label: SHORT_GROUP[group] ?? group,
+				items: shown.map((s) => ({ ...s, group })),
+				hidden: items.length - shown.length
+			};
+		});
 	});
+
+	/**
+	 * Whether the cap bites at all. Derived from the FULL groups rather than from what is on show,
+	 * so it stays true once expanded — otherwise the toggle would vanish at the moment it became
+	 * "Show fewer" and there would be no way back.
+	 */
+	const overflows = $derived(exampleGroups.some(([, sessions]) => sessions.length > PER_COLUMN));
 
 	$effect(() => {
 		loadExampleManifest()
@@ -143,51 +144,13 @@
 		}
 	}
 
-	async function reopenRecent(entry) {
-		busyId = entry.id;
-		try {
-			// An example row is re-fetchable by url, so it reopens with no handle and no picker.
-			if (entry.url) {
-				await openExample({ id: entry.workflow || entry.id, name: entry.name, url: entry.url });
-				onDismiss?.();
-				return;
-			}
-			const res = await openRecent(entry.id);
-			if (res.status === 'ok') {
-				// A session file, not a data file: it must go through the session loader.
-				await openSessionFile(res.file, res.handle);
-				onDismiss?.();
-			} else {
-				// No handle, or permission has lapsed. Re-select, then re-record under the SAME id so
-				// the row is rehydrated (with a fresh handle) rather than duplicated.
-				const picked = await pickSessionFile();
-				if (picked.status === 'ok') {
-					await openSessionFile(picked.file, picked.handle);
-					onDismiss?.();
-				} else if (picked.status === 'unsupported') {
-					loadMode = 'file';
-					showLoadSession = true;
-				}
-			}
-		} catch (e) {
-			notifyFailure('Could not reopen that session.', e);
-		} finally {
-			busyId = null;
-		}
-	}
-
-	async function doClear() {
-		await clearRecents();
-		confirmClear = false;
-	}
-
 	/**
 	 * Escape dismisses to the blank canvas behind, but only when nothing of ours is stacked on top:
 	 * a child dialog handles its own Escape, and closing it must not also close the start screen.
 	 */
 	function handleKeydown(e) {
 		if (e.key !== 'Escape') return;
-		if (showLoadSession || showAi || confirmClear) return;
+		if (showLoadSession || showAi) return;
 		// A search in progress owns Escape: clearing the query must not also close the screen.
 		if (query) {
 			query = '';
@@ -198,23 +161,6 @@
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
-
-<!-- The tour band appears in one of two places depending on whether there is any history, so it
-     lives in a snippet rather than being written twice. -->
-{#snippet tourSection()}
-	<section class="start-section">
-		<h2 class="section-label">New here?</h2>
-		<div class="tour-band">
-			<div class="tour-copy">
-				<strong>Take the tour</strong>
-				<span>A short guided pass: import a record, build a session, read the output.</span>
-			</div>
-			<button type="button" class="tour-cta" onclick={() => { openTourPicker(); onDismiss?.(); }}>
-				Take the tour
-			</button>
-		</div>
-	</section>
-{/snippet}
 
 <div
 	class="start"
@@ -254,54 +200,29 @@
 			</button>
 
 			<button type="button" class="primary-card" onclick={() => onDismiss?.()}>
-				<span class="primary-icon"><Icon name="workflow" width={26} height={26} /></span>
+				<!-- "workflow" was never a registered icon name, so this card rendered a blank box.
+				     "process" is the app's own icon for the workflow canvas, which is where this lands. -->
+				<span class="primary-icon"><Icon name="process" width={26} height={26} /></span>
 				<span class="primary-title">Start with a blank canvas</span>
 				<span class="primary-sub">Build it yourself, node by node</span>
 			</button>
 		</div>
 
-		<!-- 2. Recent ----------------------------------------------------------- -->
-		{#if recents.items.length > 0}
+		<!-- 2. Tour: above the gallery, so the call to action stays above the fold. -->
 		<section class="start-section">
-			<h2 class="section-label">Recent</h2>
-				<ul class="recent-list">
-					{#each recents.items as entry (entry.id)}
-						<li class="recent-row">
-							<button type="button" class="recent-open" onclick={() => reopenRecent(entry)}>
-								<span class="thumb thumb-sm">
-									{#if entry.thumb}{@html entry.thumb}{:else}{@html thumbnailForWorkflow(entry.workflow)}{/if}
-								</span>
-								<span class="recent-text">
-									<span class="recent-name">{entry.name}</span>
-									<span class="recent-meta">
-										{entry.meta}{entry.meta ? ' · ' : ''}{relativeTime(entry.ts)}
-										<!-- Only file-backed rows can need re-selecting; example rows reopen by url. -->
-										{#if !canReopen && !entry.url}<span class="reselect"> · re-select file</span>{/if}
-									</span>
-								</span>
-							</button>
-							<button
-								type="button"
-								class="recent-dismiss"
-								aria-label={`Remove ${entry.name} from recents`}
-								onclick={() => removeRecent(entry.id)}
-							>
-								<Icon name="close" width={13} height={13} />
-							</button>
-						</li>
-					{/each}
-				</ul>
-				<p class="empty-note">
-					Stored on this device only. The session data itself never leaves your machine.
-				</p>
-				<button type="button" class="clear-link" onclick={() => (confirmClear = true)}>Clear list</button>
+			<h2 class="section-label">New here?</h2>
+			<div class="tour-band">
+				<div class="tour-copy">
+					<strong>Take the tour</strong>
+					<span>A short guided pass: import a record, build a session, read the output.</span>
+				</div>
+				<button type="button" class="tour-cta" onclick={() => { openTourPicker(); onDismiss?.(); }}>
+					Take the tour
+				</button>
+			</div>
 		</section>
-		{/if}
 
-		<!-- 3. Tour: always above the gallery, so the call to action stays above the fold. -->
-		{@render tourSection()}
-
-		<!-- 4. Example sessions ------------------------------------------------- -->
+		<!-- 3. Example sessions -------------------------------------------------- -->
 		<section class="start-section">
 			<div class="section-head">
 				<h2 class="section-label">Example sessions</h2>
@@ -316,14 +237,15 @@
 				</div>
 				{#if filtered}
 					<span class="search-count">{filtered.length} of {allExamples.length}</span>
+				{:else if overflows}
+					<!-- Expands in place rather than opening the library modal: these examples are the
+					     ones already on the page, so sending the reader to a dialog to see four more
+					     of them is a detour. The modal stays for the WHOLE library, which is a
+					     genuinely different (and much longer) list. -->
+					<button type="button" class="browse-link" onclick={() => (showAll = !showAll)}>
+						{showAll ? 'Show fewer' : `Show all ${allExamples.length}`}
+					</button>
 				{/if}
-				<button
-					type="button"
-					class="browse-link"
-					onclick={() => { loadMode = 'example'; showLoadSession = true; }}
-				>
-					Browse all {allExamples.length} →
-				</button>
 			</div>
 
 			{#if manifestError}
@@ -334,28 +256,66 @@
 					chi-square), or browse the full library.
 				</p>
 			{:else}
-				<!-- ONE mixed row: two from each group, so the grid fills exactly. The group rides on
-				     each card as a caption, since there are no group headings to carry it. -->
-				<div class="example-grid">
-					{#each shownExamples as s (s.id)}
-						<div class="example-card" class:busy={busyId === s.id}>
-							<span class="example-group">{SHORT_GROUP[s.group] ?? s.group}</span>
-							<span class="thumb">{@html thumbnailForWorkflow(s.id)}</span>
-							<span class="example-title">{displayName(s.name)}</span>
-							<span class="example-sub">{s.summary}</span>
-							<!-- One action per card: an overlay button covering the whole card. -->
-							<button
-								type="button"
-								class="card-overlay"
-								onclick={() => launchExample(s)}
-								disabled={busyId === s.id}
-							>
-								<span class="sr-only">Open {s.name} with its example data</span>
-							</button>
+				<!-- One column per group, each a list of compact rows. The heading is the column head,
+				     so no row has to carry its own group caption. -->
+				<div class="example-columns">
+					{#each columns as col (col.group)}
+						<div class="example-column">
+							<h3 class="example-group">{col.label}</h3>
+							{#if col.items.length === 0}
+								<p class="column-empty">No matches</p>
+							{:else}
+								<ul class="example-list">
+									{#each col.items as s (s.id)}
+										<li class="example-row" class:busy={busyId === s.id}>
+											<button
+												type="button"
+												class="example-open"
+												onclick={() => launchExample(s)}
+												disabled={busyId === s.id}
+											>
+												<span class="thumb thumb-sm">{@html thumbnailForWorkflow(s.id)}</span>
+												<span class="example-text">
+													<span class="example-name">{displayName(s.name)}</span>
+													<span class="example-sub">{s.summary}</span>
+												</span>
+											</button>
+										</li>
+									{/each}
+								</ul>
+							{/if}
+							<!-- Expands every column, not just this one: see `showAll`. Shown only in the
+							     capped (unsearched) view; a search always lists every hit. -->
+							<!-- "3 more" alone is meaningless read out of its column, so the button carries a
+							     label that names what it reveals. -->
+							{#if col.hidden > 0}
+								<button
+									type="button"
+									class="more-link"
+									onclick={() => (showAll = true)}
+									aria-label={`Show ${col.hidden} more example${col.hidden === 1 ? '' : 's'} in ${col.label}`}
+								>
+									{col.hidden} more
+								</button>
+							{/if}
 						</div>
 					{/each}
 				</div>
 			{/if}
+
+			<!-- A separate destination, not a bigger version of the columns above: the library also
+			     holds the per-node demos, the plot demos and the raw datasets. -->
+			<p class="library-note">
+				These are the worked workflows.
+				<button
+					type="button"
+					class="browse-link"
+					onclick={() => { loadMode = 'example'; showLoadSession = true; }}
+				>
+					Browse the full library →
+				</button>
+				for single-node demos, plot examples and raw datasets.
+			</p>
 		</section>
 
 	</div>
@@ -363,18 +323,6 @@
 
 <LoadSessionModal bind:showModal={showLoadSession} initialSourceMode={loadMode} />
 <AiPrompt bind:showModal={showAi} />
-
-<Modal bind:showModal={confirmClear} width="24rem">
-	{#snippet header()}<h2>Clear recent sessions?</h2>{/snippet}
-	<p class="confirm-copy">
-		This removes the list and any cached file references stored in this browser. Your session files
-		on disk are not touched.
-	</p>
-	<div class="confirm-actions">
-		<button type="button" class="btn-quiet" onclick={() => (confirmClear = false)}>Cancel</button>
-		<button type="button" class="btn-danger" onclick={doClear}>Clear list</button>
-	</div>
-</Modal>
 
 <style>
 	/* Scrim over the whole viewport. Fixed, and above BOTH pieces of app chrome (the navbar and
@@ -497,100 +445,20 @@
 		max-width: 44rem;
 	}
 
-	/* --- recents ------------------------------------------------------------ */
-	.recent-list {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-1);
-	}
-	.recent-row {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-		border-radius: var(--radius-md);
-	}
-	.recent-row:hover {
-		background: var(--color-lightness-96);
-	}
-	.recent-row:hover .recent-name,
-	.recent-open:focus-visible .recent-name {
-		color: var(--color-accent);
-	}
-	.recent-open {
-		flex: 1 1 auto;
-		display: flex;
-		align-items: center;
-		gap: var(--space-5);
-		min-width: 0;
-		padding: var(--space-3) var(--space-4);
-		background: none;
-		border: none;
-		text-align: left;
-		cursor: pointer;
-	}
-	.recent-text {
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-	}
-	.recent-name {
-		font-size: var(--font-lg);
-		color: var(--color-lightness-20);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.recent-meta {
-		font-size: var(--font-xs);
-		color: var(--color-text-muted);
-	}
-	.reselect {
-		color: var(--color-lightness-55);
-		font-style: italic;
-	}
-	/* Dismiss appears on hover/focus but stays reachable by keyboard at all times. */
-	.recent-dismiss {
-		flex: 0 0 auto;
-		opacity: 0;
-		padding: var(--space-2);
-		background: none;
-		border: none;
-		border-radius: var(--radius-sm);
-		color: var(--color-lightness-55);
-		cursor: pointer;
-	}
-	.recent-row:hover .recent-dismiss,
-	.recent-dismiss:focus-visible {
-		opacity: 1;
-	}
-	.recent-dismiss:hover {
-		color: var(--color-icon-close-hover);
-	}
-	.clear-link {
-		align-self: flex-start;
-		padding: 0;
-		background: none;
-		border: none;
-		font-size: var(--font-xs);
-		color: var(--color-lightness-55);
-		text-decoration: underline;
-		cursor: pointer;
-	}
-	.clear-link:hover,
-	.clear-link:focus-visible {
-		color: var(--color-accent);
-	}
-
 	/* --- examples ----------------------------------------------------------- */
-	/* 9.5rem tracks give six across at the panel's 64rem, which is exactly the six cards the
-	   mixed row shows — so the grid fills with no ragged tail. */
-	.example-grid {
+	/* One column per group. Three fixed tracks rather than auto-fill: the columns ARE the three
+	   groups, so a wider panel must widen them, never reflow them into a different count. */
+	.example-columns {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
-		gap: var(--space-5);
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: var(--space-6);
+		align-items: start;
+	}
+	.example-column {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+		min-width: 0;
 	}
 	.section-head {
 		display: flex;
@@ -643,31 +511,59 @@
 	.browse-link:focus-visible {
 		color: var(--color-lightness-20);
 	}
-	/* The group label rides on the card now that there are no group rows to head. */
+	/* The group name heads its column now, rather than riding on every card as a caption. */
 	.example-group {
+		margin: 0;
 		font-size: var(--font-2xs);
 		font-weight: 700;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
 		color: var(--color-lightness-55);
 	}
-	.example-card {
-		position: relative;
+	.example-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-1);
-		padding: var(--space-4);
-		background: var(--surface-card);
-		border: 1px solid var(--color-lightness-85);
-		border-radius: var(--radius-lg);
-		transition: border-color 0.15s ease;
 	}
-	.example-card:hover,
-	.example-card:focus-within {
-		border-color: var(--color-accent);
+	.example-row {
+		display: flex;
+		border-radius: var(--radius-md);
 	}
-	.example-card.busy {
+	.example-row:hover {
+		background: var(--color-lightness-96);
+	}
+	.example-row:hover .example-name,
+	.example-open:focus-visible .example-name {
+		color: var(--color-accent);
+	}
+	.example-row.busy {
 		opacity: 0.6;
+	}
+	/* One action per row, covering the whole row: no nested buttons to trap the keyboard. */
+	.example-open {
+		flex: 1 1 auto;
+		display: flex;
+		align-items: center;
+		gap: var(--space-4);
+		min-width: 0;
+		padding: var(--space-3);
+		background: none;
+		border: none;
+		border-radius: var(--radius-md);
+		text-align: left;
+		cursor: pointer;
+	}
+	.example-open:focus-visible {
+		outline: var(--focus-ring);
+		outline-offset: -2px;
+	}
+	.example-text {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
 	}
 	.thumb {
 		display: block;
@@ -684,33 +580,52 @@
 		display: block;
 	}
 	.thumb-sm {
-		width: 46px;
-		flex: 0 0 46px;
+		width: 40px;
+		flex: 0 0 40px;
 		aspect-ratio: 3 / 2;
 	}
-	.example-title {
+	/* Both lines clip to one line: a column is narrow, and a wrapping title would make the rows
+	   different heights, which is exactly what this layout exists to avoid. */
+	.example-name,
+	.example-sub {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.example-name {
 		font-size: var(--font-md);
-		font-weight: 600;
 		color: var(--color-lightness-20);
 	}
 	.example-sub {
 		font-size: var(--font-xs);
 		color: var(--color-text-muted);
-		line-height: 1.35;
 	}
-	/* Overlay carries the primary action; the secondary link stacks above it. */
-	.card-overlay {
-		position: absolute;
-		inset: 0;
+	.column-empty {
+		margin: 0;
+		padding: var(--space-3);
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
+		font-style: italic;
+	}
+	.more-link {
+		align-self: flex-start;
+		padding: 0 var(--space-3);
 		background: none;
 		border: none;
-		border-radius: var(--radius-lg);
+		font: inherit;
+		font-size: var(--font-xs);
+		color: var(--color-accent);
+		text-decoration: underline;
 		cursor: pointer;
-		z-index: 1;
 	}
-	.card-overlay:focus-visible {
-		outline: var(--focus-ring);
-		outline-offset: 2px;
+	.more-link:hover,
+	.more-link:focus-visible {
+		color: var(--color-lightness-20);
+	}
+	.library-note {
+		margin: var(--space-2) 0 0;
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
 	}
 
 	/* --- tour band (the only high-contrast element on the page) -------------- */
@@ -753,49 +668,15 @@
 		color: var(--surface-card);
 	}
 
-	/* --- confirm ------------------------------------------------------------ */
-	.confirm-copy {
-		margin: 0 0 var(--space-6);
-		font-size: var(--font-md);
-		color: var(--color-text-muted);
-	}
-	.confirm-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: var(--space-4);
-	}
-	.btn-quiet,
-	.btn-danger {
-		padding: var(--space-3) var(--space-6);
-		border-radius: var(--radius-sm);
-		font-size: var(--font-md);
-		cursor: pointer;
-	}
-	.btn-quiet {
-		background: none;
-		border: 1px solid var(--color-lightness-80);
-		color: var(--color-lightness-30);
-	}
-	.btn-danger {
-		background: var(--color-icon-close-hover);
-		border: 1px solid transparent;
-		color: var(--color-lightness-15);
-		font-weight: 600;
-	}
-
-	.sr-only {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		padding: 0;
-		margin: -1px;
-		overflow: hidden;
-		clip: rect(0, 0, 0, 0);
-		white-space: nowrap;
-		border: 0;
-	}
-
 	/* --- responsive --------------------------------------------------------- */
+	/* Three narrow columns are worse than one readable one, so they stack rather than squeeze. */
+	@media (max-width: 60rem) {
+		.example-columns {
+			grid-template-columns: minmax(0, 1fr);
+			gap: var(--space-5);
+		}
+	}
+
 	@media (max-width: 40rem) {
 		.primary-row {
 			grid-template-columns: 1fr;
@@ -812,15 +693,14 @@
 			flex-direction: column;
 			align-items: stretch;
 		}
-		/* Recents drop the metadata line before the name. */
-		.recent-meta {
+		/* The summary is the first thing to go when a row runs out of width. */
+		.example-sub {
 			display: none;
 		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.primary-card,
-		.example-card {
+		.primary-card {
 			transition: none;
 		}
 	}

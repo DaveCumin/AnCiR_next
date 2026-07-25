@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "701": [
+    "776": [
       0,
       1,
       2,
@@ -98,7 +98,7 @@
       94,
       95
     ],
-    "702": [
+    "777": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -196,7 +196,7 @@
       15.358983848622422,
       11.362966948437233
     ],
-    "703": [
+    "778": [
       0.5,
       1.5,
       2.5,
@@ -222,7 +222,7 @@
       22.5,
       23.5
     ],
-    "704": [
+    "779": [
       10,
       11.362966948437267,
       15.358983848622461,
@@ -251,9 +251,9 @@
   },
   "data": [
     {
-      "id": 701,
+      "id": 776,
       "name": "Average Profile input 1",
-      "data": 701,
+      "data": 776,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -262,9 +262,9 @@
       "processes": []
     },
     {
-      "id": 702,
+      "id": 777,
       "name": "Average Profile input 2",
-      "data": 702,
+      "data": 777,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -273,22 +273,22 @@
       "processes": []
     },
     {
-      "id": 703,
-      "name": "avgprofx_77",
-      "data": 703,
+      "id": 778,
+      "name": "avgprofx_81",
+      "data": 778,
       "type": "number",
-      "tableProcessGUId": "0c37c383-f190-4b91-8798-6cba0a8c25c6",
+      "tableProcessGUId": "939ddb6e-e2a6-45cd-b519-1e14061fac34",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 704,
-      "name": "avgprof_702_77",
-      "data": 704,
+      "id": 779,
+      "name": "avgprof_777_81",
+      "data": 779,
       "type": "number",
-      "tableProcessGUId": "0c37c383-f190-4b91-8798-6cba0a8c25c6",
+      "tableProcessGUId": "939ddb6e-e2a6-45cd-b519-1e14061fac34",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -297,7 +297,7 @@
   ],
   "plots": [
     {
-      "id": 127,
+      "id": 135,
       "name": "Average Profile result",
       "x": 350,
       "y": 150,
@@ -313,10 +313,10 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          701,
-          702,
-          703,
-          704
+          776,
+          777,
+          778,
+          779
         ],
         "showCol": [
           true,
@@ -333,20 +333,20 @@
   ],
   "tableProcesses": [
     {
-      "id": 77,
+      "id": 81,
       "name": "AverageProfile",
       "displayName": "Average Profile",
       "args": {
-        "xIN": 701,
+        "xIN": 776,
         "yIN": [
-          702
+          777
         ],
         "period": 24,
         "nBins": 24,
         "preProcesses": [],
         "out": {
-          "avgprofx": 703,
-          "avgprof_702": 704
+          "avgprofx": 778,
+          "avgprof_777": 779
         }
       },
       "refTPId": null
@@ -357,7 +357,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_72",
+      "id": "note_74",
       "text": "Folds a series onto one period (default 24 h) and reports the mean value in each phase bin with its standard error, giving the 'average day' or mean waveform of the record. Use it to visualise the typical shape and timing of a rhythm across many cycles and to smooth out day-to-day noise before or alongside a parametric fit. In the demo, read each point as the across-days mean at that time-of-day and the error bars as the SEM: a clear peak-and-trough shape marks a robust rhythm, while flat bins with wide bars indicate weak or noisy rhythmicity. Mean-waveform folding (Refinetti et al. 2007).",
       "x": 40,
       "y": 24,
@@ -369,23 +369,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_701": {
+    "data_776": {
       "x": 60,
       "y": 314
     },
-    "data_702": {
+    "data_777": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_77": {
+    "tableprocess_81": {
       "x": 440,
       "y": 314
     },
-    "plot_127": {
+    "plot_135": {
       "x": 820,
       "y": 314
     },
-    "note_72": {
+    "note_74": {
       "x": 40,
       "y": 24
     }
@@ -447,5 +447,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

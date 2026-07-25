@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "257": [
+    "332": [
       0,
       0.5,
       1,
@@ -290,7 +290,7 @@
       143,
       143.5
     ],
-    "258": [
+    "333": [
       87.91045655730272,
       68.2207254416709,
       73.45755721165827,
@@ -580,13 +580,13 @@
       4.334845526603337,
       7.706329588134112
     ],
-    "263": [
+    "338": [
       12.440000000000001
     ],
-    "264": [
+    "339": [
       92.68853479700368
     ],
-    "265": [
+    "340": [
       0.4036352035405945,
       0.8157127086980744,
       1.439257280085533,
@@ -1792,9 +1792,9 @@
   },
   "data": [
     {
-      "id": 257,
+      "id": 332,
       "name": "hour",
-      "data": 257,
+      "data": 332,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -1803,9 +1803,9 @@
       "processes": []
     },
     {
-      "id": 258,
+      "id": 333,
       "name": "activity",
-      "data": 258,
+      "data": 333,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -1814,33 +1814,33 @@
       "processes": []
     },
     {
-      "id": 263,
-      "name": "stat_peak_period_21",
-      "data": 263,
+      "id": 338,
+      "name": "stat_peak_period_25",
+      "data": 338,
       "type": "number",
-      "tableProcessGUId": "46dbe909-d05e-4b45-89cf-d522923bee70",
+      "tableProcessGUId": "dae216e0-bf5d-4fc8-a2d6-c00de70a5c55",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 264,
-      "name": "stat_peak_power_21",
-      "data": 264,
+      "id": 339,
+      "name": "stat_peak_power_25",
+      "data": 339,
       "type": "number",
-      "tableProcessGUId": "46dbe909-d05e-4b45-89cf-d522923bee70",
+      "tableProcessGUId": "dae216e0-bf5d-4fc8-a2d6-c00de70a5c55",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 265,
-      "name": "rhythmicityy_258_21",
-      "data": 265,
+      "id": 340,
+      "name": "rhythmicityy_333_25",
+      "data": 340,
       "type": "number",
-      "tableProcessGUId": "46dbe909-d05e-4b45-89cf-d522923bee70",
+      "tableProcessGUId": "dae216e0-bf5d-4fc8-a2d6-c00de70a5c55",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1849,7 +1849,7 @@
   ],
   "plots": [
     {
-      "id": 32,
+      "id": 40,
       "name": "Actogram (24 h grid)",
       "x": 350,
       "y": 150,
@@ -1893,9 +1893,9 @@
         "data": [
           {
             "x": {
-              "id": 259,
+              "id": 334,
               "name": "hour",
-              "refId": 257,
+              "refId": 332,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1904,9 +1904,9 @@
               "processes": []
             },
             "y": {
-              "id": 260,
+              "id": 335,
               "name": "activity",
-              "refId": 258,
+              "refId": 333,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1922,7 +1922,7 @@
       }
     },
     {
-      "id": 33,
+      "id": 41,
       "name": "Periodogram — 6 to 30 h",
       "x": 350,
       "y": 150,
@@ -1967,9 +1967,9 @@
         "data": [
           {
             "x": {
-              "id": 261,
+              "id": 336,
               "name": "hour",
-              "refId": 257,
+              "refId": 332,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1978,9 +1978,9 @@
               "processes": []
             },
             "y": {
-              "id": 262,
+              "id": 337,
               "name": "activity",
-              "refId": 258,
+              "refId": 333,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2016,7 +2016,7 @@
       }
     },
     {
-      "id": 34,
+      "id": 42,
       "name": "Dominant period",
       "x": 350,
       "y": 150,
@@ -2032,8 +2032,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          263,
-          264
+          338,
+          339
         ],
         "showCol": [
           true,
@@ -2048,13 +2048,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 21,
+      "id": 25,
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis — tidal peak",
       "args": {
-        "xIN": 257,
+        "xIN": 332,
         "yIN": [
-          258
+          333
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -2065,9 +2065,9 @@
         "pgAlpha": 0.05,
         "preProcesses": [],
         "out": {
-          "stat_peak_period": 263,
-          "stat_peak_power": 264,
-          "rhythmicityy_258": 265
+          "stat_peak_period": 338,
+          "stat_peak_power": 339,
+          "rhythmicityy_333": 340
         }
       },
       "refTPId": null
@@ -2078,7 +2078,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_13",
+      "id": "note_15",
       "text": "WORKFLOW: circatidal rhythm (12.4 h). Rhythm analysis is not circadian-only. A coastal invertebrate timed to the tides runs at the lunar semi-diurnal period, 12.42 h, and because successive tides are unequal there is a weaker component near 24.8 h as well. The thing to notice is the SEARCH WINDOW. AnCiR's periodogram defaults to 20-28 h, which is right for circadian work and wrong here: it would find the 24.8 h component, report it confidently, and miss the dominant tidal peak entirely. Widening the window to 6-30 h shows both. Whenever you analyse a system you have not analysed before, set the window from the biology, not from the default.",
       "x": 40,
       "y": 24,
@@ -2090,31 +2090,31 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_257": {
+    "data_332": {
       "x": 60,
       "y": 314
     },
-    "data_258": {
+    "data_333": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_21": {
+    "tableprocess_25": {
       "x": 440,
       "y": 314
     },
-    "note_13": {
+    "note_15": {
       "x": 40,
       "y": 24
     },
-    "plot_32": {
+    "plot_40": {
       "x": 820,
       "y": 314
     },
-    "plot_33": {
+    "plot_41": {
       "x": 820,
       "y": 814
     },
-    "plot_34": {
+    "plot_42": {
       "x": 820,
       "y": 1314
     }
@@ -2176,5 +2176,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.62.5"
+  "version": "β.63.3"
 }

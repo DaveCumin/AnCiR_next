@@ -1011,6 +1011,267 @@ const WORKFLOWS = [
 		}
 	},
 	{
+		id: 'stats-anscombe',
+		summary: 'Four datasets, identical statistics, four different stories.',
+		name: 'Workflow — Anscombe’s quartet (always plot your data)',
+		// Grouped with the interpretation demos, not the statistics ones: the statistics here are
+		// beside the point, and the whole lesson is about how the output gets misread.
+		group: 'Reading the output',
+		family: 'Workflows',
+		description:
+			'Four small datasets constructed by Anscombe (1973) that share, to two decimals, the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares line (y = 3.00 + 0.50x, R² = 0.67). Describe Data confirms the summaries are identical and Fit Trend Curves confirms the regression line is the same for every set — yet the four scatterplots could hardly be more different: a genuine linear relationship, a smooth curve, a perfect line dragged off by a single outlier, and a vertical stack rescued only by one high-leverage point. The lesson is the oldest one in data analysis: look at the picture before you trust the number. The same summary statistics are consistent with wildly different data, so a plot is not decoration, it is part of the analysis.',
+		showcases: ['DescribeData', 'TrendFit', 'scatterplot'],
+		async build() {
+			const RAW = RAW_COLOUR;
+			const FIT = FIT_COLOUR;
+			// Anscombe, F.J. (1973). Graphs in Statistical Analysis. The American
+			// Statistician 27(1):17-21. Sets I–III share the same x; set IV differs.
+			const x123 = [10, 8, 13, 9, 11, 14, 6, 4, 12, 7, 5];
+			const y1 = [8.04, 6.95, 7.58, 8.81, 8.33, 9.96, 7.24, 4.26, 10.84, 4.82, 5.68];
+			const y2 = [9.14, 8.14, 8.74, 8.77, 9.26, 8.1, 6.13, 3.1, 9.13, 7.26, 4.74];
+			const y3 = [7.46, 6.77, 12.74, 7.11, 7.81, 8.84, 6.08, 5.39, 8.15, 6.42, 5.73];
+			const x4 = [8, 8, 8, 8, 8, 8, 8, 19, 8, 8, 8];
+			const y4 = [6.58, 5.76, 7.71, 8.84, 8.47, 7.04, 5.25, 12.5, 5.56, 7.91, 6.89];
+
+			const x123Id = mkCol('number', x123, 'x (sets I–III)');
+			const y1Id = mkCol('number', y1, 'Set I');
+			const y2Id = mkCol('number', y2, 'Set II');
+			const y3Id = mkCol('number', y3, 'Set III');
+			const x4Id = mkCol('number', x4, 'x (set IV)');
+			const y4Id = mkCol('number', y4, 'Set IV');
+
+			// Identical summary statistics across the four y-columns.
+			const describe = new TableProcess(
+				{ name: 'DescribeData', args: { yIN: [y1Id, y2Id, y3Id, y4Id], out: { variable: -1, n: -1, mean: -1, sd: -1, min: -1, max: -1 } } },
+				null
+			);
+			describe.displayName = 'Describe the four y-columns';
+			pushObj(describe);
+			await describe.doProcess();
+
+			// Identical least-squares lines. Sets I–III share x, so one fit covers
+			// all three; set IV has its own x and needs its own fit.
+			const tf123 = new TableProcess(
+				{
+					name: 'TrendFit',
+					args: {
+						xIN: x123Id,
+						yIN: [y1Id, y2Id, y3Id],
+						model: 'linear',
+						outputX: -1,
+						out: {
+							trendx: -1,
+							[`trendy_${y1Id}`]: -1,
+							[`trendy_${y2Id}`]: -1,
+							[`trendy_${y3Id}`]: -1,
+							r2: -1,
+							coef_slope: -1,
+							coef_intercept: -1
+						}
+					}
+				},
+				null
+			);
+			tf123.displayName = 'Linear fit (sets I–III)';
+			pushObj(tf123);
+			await tf123.doProcess();
+
+			const tf4 = new TableProcess(
+				{
+					name: 'TrendFit',
+					args: {
+						xIN: x4Id,
+						yIN: [y4Id],
+						model: 'linear',
+						outputX: -1,
+						out: { trendx: -1, [`trendy_${y4Id}`]: -1, r2: -1, coef_slope: -1, coef_intercept: -1 }
+					}
+				},
+				null
+			);
+			tf4.displayName = 'Linear fit (set IV)';
+			pushObj(tf4);
+			await tf4.doProcess();
+
+			const tx123 = tf123.args.out.trendx;
+			const tx4 = tf4.args.out.trendx;
+
+			// Small-multiple 2x2 grid. The whole point of the quartet is that the four
+			// pictures differ while the numbers do not, so the panels are laid out at
+			// identical size and pinned to ONE shared domain — x [2, 20], y [2, 14],
+			// which frames every set (x spans 4-19 once set IV's leverage point at
+			// x = 19 is included; y spans 3.10-12.74). Auto-scaled panels would each
+			// choose their own limits and the shapes would no longer be comparable.
+			const PANEL_W = 480;
+			const PANEL_H = 300;
+			const COL_X = [60, 570]; // 480 wide + 30 gutter
+			// The demo note sits at (40, 24) and is 360x190, so the grid starts below it.
+			const ROW_Y = [255, 630]; // 300 tall + 75 for the title bar
+			const XLIMS = [2, 20];
+			const YLIMS = [2, 14];
+			// Every set's fit line rises left-to-right and no set has data beyond x = 14
+			// except set IV's leverage point at (19, 12.5), so the bottom-right corner is
+			// empty in all four panels — the one legend position that never covers a mark.
+			const panel = (name, series, col, row) => {
+				const p = scatterPlot(name, series, { x: 'x', y: 'y' }, {
+					x: COL_X[col],
+					y: ROW_Y[row],
+					width: PANEL_W,
+					height: PANEL_H,
+					xlims: XLIMS,
+					ylims: YLIMS
+				});
+				p.plot.legend.position = 'bottomright';
+				return p;
+			};
+
+			panel(
+				'Set I — a real linear relationship',
+				[
+					{ x: x123Id, y: y1Id, label: 'Set I', kind: 'points', colour: RAW },
+					{ x: tx123, y: tf123.args.out[`trendy_${y1Id}`], label: 'fit', kind: 'line', colour: FIT }
+				],
+				0,
+				0
+			);
+			panel(
+				'Set II — actually a curve',
+				[
+					{ x: x123Id, y: y2Id, label: 'Set II', kind: 'points', colour: RAW },
+					{ x: tx123, y: tf123.args.out[`trendy_${y2Id}`], label: 'fit', kind: 'line', colour: FIT }
+				],
+				1,
+				0
+			);
+			panel(
+				'Set III — a line, plus one outlier',
+				[
+					{ x: x123Id, y: y3Id, label: 'Set III', kind: 'points', colour: RAW },
+					{ x: tx123, y: tf123.args.out[`trendy_${y3Id}`], label: 'fit', kind: 'line', colour: FIT }
+				],
+				0,
+				1
+			);
+			panel(
+				'Set IV — one high-leverage point',
+				[
+					{ x: x4Id, y: y4Id, label: 'Set IV', kind: 'points', colour: RAW },
+					{ x: tx4, y: tf4.args.out[`trendy_${y4Id}`], label: 'fit', kind: 'line', colour: FIT }
+				],
+				1,
+				1
+			);
+
+			// The two summary tables sit below the grid, so the four panels read as one figure.
+			tablePlot('Identical summaries', [describe.args.out.variable, describe.args.out.mean, describe.args.out.sd], {
+				x: COL_X[0],
+				y: 1005,
+				width: PANEL_W,
+				height: 240
+			});
+			tablePlot(
+				'Identical fits (sets I–III)',
+				[tf123.args.out.coef_slope, tf123.args.out.coef_intercept, tf123.args.out.r2],
+				{ x: COL_X[1], y: 1005, width: PANEL_W, height: 240 }
+			);
+		}
+	},
+	{
+		id: 'stats-simpson',
+		summary: 'A trend that reverses direction when you pool the groups.',
+		name: 'Workflow — Simpson’s paradox (the trend that flips)',
+		// See stats-anscombe: an interpretation demo, not a statistics one.
+		group: 'Reading the output',
+		family: 'Workflows',
+		description:
+			'Within every group the relationship is positive; pool the groups and it turns negative. Here three hospital wards each show activity rising with dose (a clear within-ward positive trend), but the wards are offset — the ward that runs at the highest dose also has the lowest baseline — so the pooled cloud slopes the other way. The Correlation node run on the pooled data reports a negative coefficient, while the coloured per-ward trend lines all climb. The reversal is real, not a mistake: it means a lurking grouping variable is driving the aggregate, and which answer is correct depends on the question. Pool only when the groups are genuinely exchangeable; otherwise the honest analysis is per-group. This is why "controlling for" a variable can flip a headline result.',
+		showcases: ['Correlation', 'scatterplot'],
+		async build() {
+			const rng = mulberry32(202);
+			// (x-centre, intercept). Slope is +1 within every ward, but the intercept
+			// FALLS as the ward's dose RISES, so the pooled trend runs the other way.
+			const WARDS = [
+				{ name: 'Ward A', xc: 2, intc: 8, colour: '#234154' },
+				{ name: 'Ward B', xc: 5, intc: 4, colour: '#BE796B' },
+				{ name: 'Ward C', xc: 8, intc: 0, colour: '#5B8A72' }
+			];
+			const SLOPE = 1.0;
+			const PER = 25;
+
+			// Two-point least-squares segment spanning a column's x-range.
+			const fitLine = (xs, ys) => {
+				const n = xs.length;
+				const mx = xs.reduce((a, b) => a + b, 0) / n;
+				const my = ys.reduce((a, b) => a + b, 0) / n;
+				let sxx = 0;
+				let sxy = 0;
+				for (let i = 0; i < n; i++) {
+					sxx += (xs[i] - mx) ** 2;
+					sxy += (xs[i] - mx) * (ys[i] - my);
+				}
+				const slope = sxy / sxx;
+				const intercept = my - slope * mx;
+				const lo = Math.min(...xs);
+				const hi = Math.max(...xs);
+				return { x: [lo, hi], y: [intercept + slope * lo, intercept + slope * hi] };
+			};
+
+			const xAll = [];
+			const yAll = [];
+			const pointSeries = [];
+			const lineSeries = [];
+
+			for (const w of WARDS) {
+				const gx = [];
+				const gy = [];
+				for (let i = 0; i < PER; i++) {
+					const xi = w.xc + normal(rng, 0, 0.7);
+					const yi = w.intc + SLOPE * xi + normal(rng, 0, 0.7);
+					gx.push(xi);
+					gy.push(yi);
+					xAll.push(xi);
+					yAll.push(yi);
+				}
+				const gxId = mkCol('number', gx, `${w.name} dose`);
+				const gyId = mkCol('number', gy, `${w.name} activity`);
+				pointSeries.push({ x: gxId, y: gyId, label: w.name, kind: 'points', colour: w.colour });
+
+				const ln = fitLine(gx, gy);
+				const lxId = mkCol('number', ln.x, `${w.name} fit x`);
+				const lyId = mkCol('number', ln.y, `${w.name} fit y`);
+				lineSeries.push({ x: lxId, y: lyId, label: `${w.name} trend`, kind: 'line', colour: w.colour });
+			}
+
+			const xAllId = mkCol('number', xAll, 'dose (pooled)');
+			const yAllId = mkCol('number', yAll, 'activity (pooled)');
+
+			// Pooled least-squares line — the one that runs the "wrong" way.
+			const agg = fitLine(xAll, yAll);
+			const aggLine = {
+				x: mkCol('number', agg.x, 'pooled fit x'),
+				y: mkCol('number', agg.y, 'pooled fit y'),
+				label: 'Pooled trend (all wards)',
+				kind: 'line',
+				colour: '#111111'
+			};
+
+			const corr = new TableProcess(
+				{ name: 'Correlation', args: { yIN: [xAllId, yAllId], method: 'pearson', alpha: 0.05, out: { var_i: -1, var_j: -1, r: -1, pvalue: -1, n: -1 } } },
+				null
+			);
+			corr.displayName = 'Correlation (pooled)';
+			pushObj(corr);
+			await corr.doProcess();
+
+			scatterPlot(
+				'Within wards (climbing) vs pooled (falling)',
+				[...pointSeries, ...lineSeries, aggLine],
+				{ x: 'Dose', y: 'Activity' }
+			);
+			tablePlot('Pooled correlation (negative)', [corr.args.out.var_i, corr.args.out.var_j, corr.args.out.r, corr.args.out.pvalue]);
+		}
+	},
+	{
 		id: 'non24-blind',
 		summary: 'A human rhythm free-running through the day over weeks.',
 		name: 'Workflow — non-24 sleep-wake (blind participant)',
@@ -1721,8 +1982,14 @@ function setAxisLabels(p, axes) {
 
 // Build a scatterplot from explicit series. Each series:
 //   { x, y, label, kind: 'points'|'line', colour }
-function scatterPlot(name, series, axes) {
-	const p = new Plot({ name, type: 'scatterplot' });
+// `opts` optionally places and locks the plot, for small-multiple grids where every
+// panel must sit on the same scale:
+//   { x, y, width, height, xlims: [min, max], ylims: [min, max] }
+// xlims/ylims write the axis OVERRIDES (xlimsIN / ylimsLeftIN), so the panels share
+// one domain instead of each auto-scaling to its own data.
+function scatterPlot(name, series, axes, opts = {}) {
+	const { x, y, width, height, xlims, ylims } = opts;
+	const p = new Plot({ name, type: 'scatterplot', x, y, width, height });
 	for (const s of series) {
 		const isLine = s.kind === 'line';
 		p.plot.addData({
@@ -1734,12 +2001,16 @@ function scatterPlot(name, series, axes) {
 		});
 	}
 	setAxisLabels(p, axes);
+	if (xlims) p.plot.xlimsIN = [...xlims];
+	if (ylims) p.plot.ylimsLeftIN = [...ylims];
 	pushObj(p);
 	return p;
 }
 
-function tablePlot(name, columnRefs) {
-	const p = new Plot({ name, type: 'tableplot' });
+// `opts` optionally places/sizes the table: { x, y, width, height }.
+function tablePlot(name, columnRefs, opts = {}) {
+	const { x, y, width, height } = opts;
+	const p = new Plot({ name, type: 'tableplot', x, y, width, height });
 	p.plot.columnRefs = [...columnRefs];
 	p.plot.showCol = columnRefs.map(() => true);
 	pushObj(p);
