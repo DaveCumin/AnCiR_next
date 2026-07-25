@@ -215,7 +215,7 @@
       "name": "x",
       "data": 618,
       "type": "number",
-      "tableProcessGUId": "3e335c35-6538-4395-9111-935a03fde357",
+      "tableProcessGUId": "1ee7f79e-d706-403d-a8d3-1c5dd6018884",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -237,7 +237,7 @@
       "name": "fitx_54",
       "data": 620,
       "type": "number",
-      "tableProcessGUId": "dd5b9f32-237a-40c8-abb8-fe9e656f70be",
+      "tableProcessGUId": "8cb21284-e820-4e59-8b15-f1b43d44ca48",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "fity_619_54",
       "data": 621,
       "type": "number",
-      "tableProcessGUId": "dd5b9f32-237a-40c8-abb8-fe9e656f70be",
+      "tableProcessGUId": "8cb21284-e820-4e59-8b15-f1b43d44ca48",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -259,10 +259,10 @@
     {
       "id": 105,
       "name": "Fit Function: data + fit",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 300,
       "type": "scatterplot",
       "selected": false,
       "facet": false,
@@ -408,10 +408,10 @@
     {
       "id": 106,
       "name": "Fit Function: values",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 630,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -592,5 +592,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

@@ -11,7 +11,7 @@
       "name": "group_g1_77",
       "data": 757,
       "type": "number",
-      "tableProcessGUId": "bf864241-5dc2-49a4-bf3f-cdc3c7aadb19",
+      "tableProcessGUId": "cbe1fe02-c30d-4fc8-8935-0e740ca58423",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -22,10 +22,10 @@
     {
       "id": 131,
       "name": "Stored Value Group result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -167,5 +167,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

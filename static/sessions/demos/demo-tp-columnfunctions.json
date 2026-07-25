@@ -185,7 +185,7 @@
       "name": "result_47",
       "data": 590,
       "type": "category",
-      "tableProcessGUId": "e3b32f03-dabe-4c97-b4eb-f5adeb36e13e",
+      "tableProcessGUId": "cc4eb2ef-738d-4431-9bb8-daf39907e870",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -196,10 +196,10 @@
     {
       "id": 99,
       "name": "Column Function result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -339,5 +339,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

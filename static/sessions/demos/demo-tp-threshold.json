@@ -122,7 +122,7 @@
       "name": "binary_48",
       "data": 592,
       "type": "number",
-      "tableProcessGUId": "62c010cf-20c8-49ff-815a-426c4f94f82c",
+      "tableProcessGUId": "23594b46-46fd-4580-9278-ad08f0f25482",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -133,10 +133,10 @@
     {
       "id": 100,
       "name": "Threshold result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -268,5 +268,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

@@ -282,7 +282,7 @@
       "name": "statistic_18",
       "data": 230,
       "type": "number",
-      "tableProcessGUId": "ce7f4ec5-9d8f-4684-bc2a-99ff79b8f947",
+      "tableProcessGUId": "da560159-d870-43c5-8b8e-5343d4723f16",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -293,7 +293,7 @@
       "name": "pvalue_18",
       "data": 231,
       "type": "number",
-      "tableProcessGUId": "ce7f4ec5-9d8f-4684-bc2a-99ff79b8f947",
+      "tableProcessGUId": "da560159-d870-43c5-8b8e-5343d4723f16",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -304,7 +304,7 @@
       "name": "df_18",
       "data": 232,
       "type": "number",
-      "tableProcessGUId": "ce7f4ec5-9d8f-4684-bc2a-99ff79b8f947",
+      "tableProcessGUId": "da560159-d870-43c5-8b8e-5343d4723f16",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -315,10 +315,10 @@
     {
       "id": 25,
       "name": "Chi-squared result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -460,5 +460,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

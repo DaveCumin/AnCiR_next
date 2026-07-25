@@ -111,7 +111,7 @@
       "name": "x",
       "data": 551,
       "type": "number",
-      "tableProcessGUId": "1a83f05e-6701-4ae7-8b1a-11a674394289",
+      "tableProcessGUId": "15b6ee98-55b2-4aaf-8153-21286699753d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -144,10 +144,10 @@
     {
       "id": 88,
       "name": "Normalize: before vs after",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 300,
       "type": "scatterplot",
       "selected": false,
       "facet": false,
@@ -293,10 +293,10 @@
     {
       "id": 89,
       "name": "Normalize: values",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 630,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -451,5 +451,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

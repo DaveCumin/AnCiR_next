@@ -163,7 +163,7 @@
       "name": "x",
       "data": 529,
       "type": "number",
-      "tableProcessGUId": "4c0f445f-a991-41d3-9beb-9d1b2626b004",
+      "tableProcessGUId": "3a0d0544-ffdf-4409-a8c4-a81296928ab2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -207,10 +207,10 @@
     {
       "id": 82,
       "name": "Filter: before vs after",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 300,
       "type": "scatterplot",
       "selected": false,
       "facet": false,
@@ -356,10 +356,10 @@
     {
       "id": 83,
       "name": "Filter: values",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 630,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -523,5 +523,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

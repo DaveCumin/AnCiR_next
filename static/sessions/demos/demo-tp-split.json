@@ -289,7 +289,7 @@
       "name": "753_1_76",
       "data": 754,
       "type": "number",
-      "tableProcessGUId": "7d521e90-515a-4593-803d-52cba698a0bb",
+      "tableProcessGUId": "bff60db6-a19a-4330-8239-367ed0c30a5e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -300,7 +300,7 @@
       "name": "753_2_76",
       "data": 755,
       "type": "number",
-      "tableProcessGUId": "7d521e90-515a-4593-803d-52cba698a0bb",
+      "tableProcessGUId": "bff60db6-a19a-4330-8239-367ed0c30a5e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -311,7 +311,7 @@
       "name": "753_3_76",
       "data": 756,
       "type": "number",
-      "tableProcessGUId": "7d521e90-515a-4593-803d-52cba698a0bb",
+      "tableProcessGUId": "bff60db6-a19a-4330-8239-367ed0c30a5e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -322,10 +322,10 @@
     {
       "id": 130,
       "name": "Split data result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -474,5 +474,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

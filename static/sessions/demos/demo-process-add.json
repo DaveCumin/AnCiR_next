@@ -111,7 +111,7 @@
       "name": "x",
       "data": 501,
       "type": "number",
-      "tableProcessGUId": "ac610268-39f9-4946-8221-47a69bce5be7",
+      "tableProcessGUId": "794f6fc0-2e2f-45a4-8eaf-5ca9bb0b6e54",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -144,10 +144,10 @@
     {
       "id": 74,
       "name": "Add: before vs after",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 300,
       "type": "scatterplot",
       "selected": false,
       "facet": false,
@@ -293,10 +293,10 @@
     {
       "id": 75,
       "name": "Add: values",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 630,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -449,5 +449,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

@@ -717,7 +717,7 @@
       "name": "CFI_83",
       "data": 790,
       "type": "number",
-      "tableProcessGUId": "1e5cf7a1-6f81-495f-a0f3-da317b0b9516",
+      "tableProcessGUId": "2a115d43-2379-4060-97e7-f39ab6f310bc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -728,7 +728,7 @@
       "name": "IS_83",
       "data": 791,
       "type": "number",
-      "tableProcessGUId": "1e5cf7a1-6f81-495f-a0f3-da317b0b9516",
+      "tableProcessGUId": "2a115d43-2379-4060-97e7-f39ab6f310bc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -739,7 +739,7 @@
       "name": "IV_83",
       "data": 792,
       "type": "number",
-      "tableProcessGUId": "1e5cf7a1-6f81-495f-a0f3-da317b0b9516",
+      "tableProcessGUId": "2a115d43-2379-4060-97e7-f39ab6f310bc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -750,7 +750,7 @@
       "name": "RA_83",
       "data": 793,
       "type": "number",
-      "tableProcessGUId": "1e5cf7a1-6f81-495f-a0f3-da317b0b9516",
+      "tableProcessGUId": "2a115d43-2379-4060-97e7-f39ab6f310bc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -761,10 +761,10 @@
     {
       "id": 137,
       "name": "Circadian Function Index result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -917,5 +917,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

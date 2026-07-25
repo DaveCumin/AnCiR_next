@@ -4,10 +4,30 @@
 
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import { selectedColumnIds, setSelection } from '$lib/tableProcesses/columnSet.js';
+	import { PLOT_CHROME } from '$lib/core/workspaceLayout.js';
 	import { removePlotMetricColumns } from '$lib/plots/plotMetricOutputs.svelte.js';
 	let _counter = 0;
 	function getNextId() {
-		return _counter++;
+		let id = _counter++;
+		// Never hand out an id a live plot already holds. Reservation below covers the plots a
+		// session is ABOUT to rebuild; this covers the ones already standing.
+		while (core.plots.some((p) => p.id === id)) id = _counter++;
+		return id;
+	}
+
+	/**
+	 * Claim every id an incoming session owns, BEFORE any of its plots are rebuilt.
+	 *
+	 * The load loop yields a frame between plots so the compositor stays responsive, which lets
+	 * Svelte effects run mid-import. A faceted plot's reconcile spawns children through this same
+	 * allocator, so without reserving up front a child can be minted with an id that a plot later
+	 * in the file already owns — and the workspace then keys an `{#each}` on two plots with the
+	 * same id. Monotonic, so opening a smaller session afterwards cannot rewind the counter.
+	 */
+	export function reservePlotIds(ids) {
+		for (const id of ids ?? []) {
+			if (Number.isFinite(id)) _counter = Math.max(_counter, id + 1);
+		}
 	}
 
 	export function getPlotById(id) {
@@ -151,14 +171,21 @@
 		const nCols = Math.max(1, Math.ceil(Math.sqrt(units.length || 1)));
 		const keep = new Set();
 
+		// Step by the size of the WRAPPER, not the plot: Draggable adds side chrome and a header
+		// bar, so spacing on the bare width/height overlapped every row by the header's height.
+		const stepX = width + PLOT_CHROME.x + padding;
+		const stepY = height + PLOT_CHROME.y + padding;
+
 		units.forEach((unit, i) => {
 			const key = unit.key;
 			keep.add(key);
 			const col = i % nCols;
 			const row = Math.floor(i / nCols);
 			// Lay children out below the generator's position.
-			const x = snapToGrid((gen.x ?? 0) + col * (width + padding));
-			const y = snapToGrid((gen.y ?? 0) + height + 2 * padding + row * (height + padding));
+			const x = snapToGrid((gen.x ?? 0) + col * stepX);
+			const y = snapToGrid(
+				(gen.y ?? 0) + height + PLOT_CHROME.y + 2 * padding + row * stepY
+			);
 
 			let child = core.plots.find((p) => p.facetParent === gen.id && p.facetKey === key);
 			if (!child) {

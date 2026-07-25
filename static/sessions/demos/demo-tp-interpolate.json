@@ -187,7 +187,7 @@
       "name": "interpx_42",
       "data": 575,
       "type": "number",
-      "tableProcessGUId": "9cf02765-d556-42e1-b548-a0d942c264e9",
+      "tableProcessGUId": "5be0e78d-5c8d-4011-8eff-b908180571e6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -198,7 +198,7 @@
       "name": "interpy_574_42",
       "data": 576,
       "type": "number",
-      "tableProcessGUId": "9cf02765-d556-42e1-b548-a0d942c264e9",
+      "tableProcessGUId": "5be0e78d-5c8d-4011-8eff-b908180571e6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -209,10 +209,10 @@
     {
       "id": 94,
       "name": "Interpolate result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -359,5 +359,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

@@ -504,7 +504,7 @@
       "data": 773,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "b47fd01f-bdd6-42b7-8c19-ac6da2a720b8",
+      "tableProcessGUId": "054acce5-e57f-4da4-82e7-64dc299bec84",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -515,7 +515,7 @@
       "name": "category_80",
       "data": 774,
       "type": "category",
-      "tableProcessGUId": "b47fd01f-bdd6-42b7-8c19-ac6da2a720b8",
+      "tableProcessGUId": "054acce5-e57f-4da4-82e7-64dc299bec84",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -526,7 +526,7 @@
       "name": "value_80",
       "data": 775,
       "type": "number",
-      "tableProcessGUId": "b47fd01f-bdd6-42b7-8c19-ac6da2a720b8",
+      "tableProcessGUId": "054acce5-e57f-4da4-82e7-64dc299bec84",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -537,10 +537,10 @@
     {
       "id": 134,
       "name": "Wide To Long result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -692,5 +692,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

@@ -59,7 +59,7 @@
       "name": "result_72",
       "data": 741,
       "type": "number",
-      "tableProcessGUId": "2ba2c27d-dab0-49e0-be09-02e068de3672",
+      "tableProcessGUId": "50870a78-c5d1-45f1-918e-cf2327abd865",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -70,10 +70,10 @@
     {
       "id": 126,
       "name": "Sequence Column result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -201,5 +201,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

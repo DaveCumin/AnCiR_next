@@ -113,7 +113,7 @@
       "name": "x",
       "data": 537,
       "type": "number",
-      "tableProcessGUId": "55da952a-e6d9-4c80-ac45-34e2f1feb58f",
+      "tableProcessGUId": "5f3950aa-3ddf-4e94-b1f7-a9d17feddd10",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -146,10 +146,10 @@
     {
       "id": 84,
       "name": "Remove Outliers: before vs after",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 300,
       "type": "scatterplot",
       "selected": false,
       "facet": false,
@@ -295,10 +295,10 @@
     {
       "id": 85,
       "name": "Remove Outliers: values",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 630,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -453,5 +453,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

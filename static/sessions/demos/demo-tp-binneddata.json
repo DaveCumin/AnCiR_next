@@ -167,7 +167,7 @@
       "name": "x",
       "data": 565,
       "type": "number",
-      "tableProcessGUId": "0e13a21e-62a9-4f23-8130-443b52fce697",
+      "tableProcessGUId": "97b551a9-2898-4c04-8fea-bd25f25b335f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -190,7 +190,7 @@
       "data": 567,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "53554510-a2f7-4114-a495-4ffb62c9e425",
+      "tableProcessGUId": "1635ecea-7861-4f93-8f0c-49acf1dd2b8f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -201,7 +201,7 @@
       "name": "binnedy_566_41",
       "data": 568,
       "type": "number",
-      "tableProcessGUId": "53554510-a2f7-4114-a495-4ffb62c9e425",
+      "tableProcessGUId": "1635ecea-7861-4f93-8f0c-49acf1dd2b8f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -212,10 +212,10 @@
     {
       "id": 92,
       "name": "Bin Data: data + fit",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 300,
       "type": "scatterplot",
       "selected": false,
       "facet": false,
@@ -362,10 +362,10 @@
     {
       "id": 93,
       "name": "Bin Data: values",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 630,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -531,5 +531,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

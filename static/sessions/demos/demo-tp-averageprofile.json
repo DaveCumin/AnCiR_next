@@ -277,7 +277,7 @@
       "name": "avgprofx_81",
       "data": 778,
       "type": "number",
-      "tableProcessGUId": "939ddb6e-e2a6-45cd-b519-1e14061fac34",
+      "tableProcessGUId": "160266cc-e98d-4610-ba50-930bfa46ebc2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -288,7 +288,7 @@
       "name": "avgprof_777_81",
       "data": 779,
       "type": "number",
-      "tableProcessGUId": "939ddb6e-e2a6-45cd-b519-1e14061fac34",
+      "tableProcessGUId": "160266cc-e98d-4610-ba50-930bfa46ebc2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -299,10 +299,10 @@
     {
       "id": 135,
       "name": "Average Profile result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -447,5 +447,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

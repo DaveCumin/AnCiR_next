@@ -215,7 +215,7 @@
       "name": "x",
       "data": 744,
       "type": "number",
-      "tableProcessGUId": "b2144258-2955-4042-8b46-231276a47ae8",
+      "tableProcessGUId": "5984f5d1-7b1e-4886-960d-e98dc2475245",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -237,7 +237,7 @@
       "name": "smoothedx_75",
       "data": 746,
       "type": "number",
-      "tableProcessGUId": "9b4066d3-2661-468a-9deb-dd14d1f2debd",
+      "tableProcessGUId": "e7cb179f-d9d9-4b67-8a0c-38fd5e6bc1e8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "smoothedy_745_75",
       "data": 747,
       "type": "number",
-      "tableProcessGUId": "9b4066d3-2661-468a-9deb-dd14d1f2debd",
+      "tableProcessGUId": "e7cb179f-d9d9-4b67-8a0c-38fd5e6bc1e8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -259,10 +259,10 @@
     {
       "id": 128,
       "name": "Smooth Data: data + fit",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 300,
       "type": "scatterplot",
       "selected": false,
       "facet": false,
@@ -408,10 +408,10 @@
     {
       "id": 129,
       "name": "Smooth Data: values",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 630,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -578,5 +578,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

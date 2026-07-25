@@ -33,6 +33,7 @@ import { join } from 'node:path';
 import { core, appConsts, pushObj, outputCoreAsJson } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
+import { layoutWorkspacePlots } from '$lib/core/workspaceLayout.js';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
 import { loadProcesses } from '$lib/processes/processMap.js';
 import { loadPlots } from '$lib/plots/plotMap.js';
@@ -2035,6 +2036,24 @@ function prewarmWrapperNames() {
 }
 
 
+/**
+ * Grid the session's plots before it is written.
+ *
+ * Every Plot is born at the same default position, so a demo that adds three without moving them
+ * saved all three on top of each other and the workspace opened as one pile.
+ *
+ * Facet children are NOT baked into a session (syncFacetChildren respawns them from the generator
+ * on load), so the child count has to be estimated here to reserve their space. One child per
+ * wired series is what facetUnits produces, so the series count is the estimate.
+ */
+function tidyPlots() {
+	const facetChildCounts = {};
+	for (const p of core.plots) {
+		if (p.facet) facetChildCounts[p.id] = p.plot?.data?.length ?? 0;
+	}
+	layoutWorkspacePlots(core.plots, { facetChildCounts });
+}
+
 /** RFC4180-ish quoting: only quote when the value actually needs it. */
 function csvCell(v) {
 	if (v == null) return '';
@@ -2131,6 +2150,7 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 			await wf.build();
 			addDemoNote(`workflow-${wf.id}`);
 			prewarmWrapperNames();
+			tidyPlots();
 			const file = `demo-workflow-${wf.id}.json`;
 
 			// The same demo, minus the analysis: a plain CSV of its source columns, listed under
@@ -2196,6 +2216,7 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 			const showcasedType = core.plots.find((p) => p.facetParent == null)?.type;
 			if (showcasedType) addDemoNote(showcasedType);
 			prewarmWrapperNames();
+			tidyPlots();
 			write(
 				`demo-${demo.id}.json`,
 				manifestEntry({
@@ -2219,6 +2240,7 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 			const entry = appConsts.processMap.get(spec.name);
 			const display = entry?.displayName ?? spec.name;
 			await buildProcessDemo(spec, display);
+			tidyPlots();
 			const file = `demo-process-${spec.name.toLowerCase()}.json`;
 			write(
 				file,
@@ -2244,6 +2266,7 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 			const entry = appConsts.tableProcessMap.get(spec.name);
 			const display = entry?.displayName ?? spec.name;
 			await buildTPDemo(spec, entry, display);
+			tidyPlots();
 			const file = `demo-tp-${spec.name.toLowerCase()}.json`;
 			write(
 				file,
@@ -2267,5 +2290,7 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 		writeFileSync(join(OUT_DIR, 'index.json'), JSON.stringify(index, null, 2), 'utf8');
 		// eslint-disable-next-line no-console
 		console.log(`GENERATED ${manifest.length} demos -> ${OUT_DIR}`);
-	});
+		// Builds and writes ~100 sessions, every analysis actually run so its outputs bake in.
+		// The 5s default is not a budget this was ever going to meet.
+	}, 120_000);
 });

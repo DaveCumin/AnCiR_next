@@ -520,10 +520,10 @@
     {
       "id": 63,
       "name": "Measurement distribution",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 300,
       "type": "histogram",
       "selected": false,
       "facet": false,
@@ -690,5 +690,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

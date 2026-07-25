@@ -237,7 +237,7 @@
       "name": "sortedy_577_43",
       "data": 579,
       "type": "number",
-      "tableProcessGUId": "41c091db-bec4-4b02-bbe9-423bad2cadfd",
+      "tableProcessGUId": "efbaaede-d657-4184-a690-f20e8fafa909",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "sortedy_578_43",
       "data": 580,
       "type": "number",
-      "tableProcessGUId": "41c091db-bec4-4b02-bbe9-423bad2cadfd",
+      "tableProcessGUId": "efbaaede-d657-4184-a690-f20e8fafa909",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -259,10 +259,10 @@
     {
       "id": 95,
       "name": "Sort result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -407,5 +407,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

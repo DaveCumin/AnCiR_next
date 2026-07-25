@@ -274,7 +274,13 @@
 		// Plots: yield between each push so the canvas re-render is split
 		// across frames. A single batched push freezes the compositor (and the
 		// spinner) for the entire build, which is what we want to avoid here.
+		//
+		// That yield is also why the whole id space has to be claimed FIRST: it lets Svelte
+		// effects run mid-loop, and a faceted plot's reconcile mints children through the same
+		// allocator. Without this, a child could take an id belonging to a plot further down the
+		// file, leaving the workspace keying an {#each} on two plots with the same id.
 		const totalPlots = jsonData.plots?.length ?? 0;
+		reservePlotIds((jsonData.plots ?? []).map((p) => p?.id));
 		for (let i = 0; i < totalPlots; i++) {
 			if (onProgress) onProgress(`Rebuilding plot ${i + 1} of ${totalPlots}…`);
 			await yieldFrame();
@@ -365,7 +371,7 @@
 	import { core, pushObj, loadAppState, syncNodeIdCounters } from '$lib/core/core.svelte';
 	import { Column, relinkLinkedProcessArgs } from '$lib/core/Column.svelte';
 	import { TableProcess } from '$lib/core/TableProcess.svelte';
-	import { Plot } from '$lib/core/Plot.svelte';
+	import { Plot, reservePlotIds } from '$lib/core/Plot.svelte';
 	import { Process } from '$lib/core/Process.svelte';
 	import { migrateAllInlineProcesses } from '$lib/core/dataflowMigration.js';
 	import { tick } from 'svelte';

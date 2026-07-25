@@ -59,7 +59,7 @@
       "name": "result_66",
       "data": 709,
       "type": "number",
-      "tableProcessGUId": "2db0f69c-a610-4293-a9bf-add749eed1be",
+      "tableProcessGUId": "cbf0b110-7e3a-466b-ab59-530b8613d421",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -70,10 +70,10 @@
     {
       "id": 119,
       "name": "Random result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -201,5 +201,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

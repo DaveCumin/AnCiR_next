@@ -19,7 +19,7 @@
       "name": "result_44",
       "data": 581,
       "type": "category",
-      "tableProcessGUId": "aa388e4c-e6bb-4378-9918-1a1fa23a055d",
+      "tableProcessGUId": "605ded34-6758-4571-96d1-e644d9854bfc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -30,10 +30,10 @@
     {
       "id": 96,
       "name": "Enter Data result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -158,5 +158,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

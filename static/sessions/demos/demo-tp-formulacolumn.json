@@ -185,7 +185,7 @@
       "name": "result_55",
       "data": 628,
       "type": "number",
-      "tableProcessGUId": "3c2f3c7a-70ee-4a21-9ffc-fe24dbc17d0a",
+      "tableProcessGUId": "acd82b33-6139-4064-ba21-3135fcab731c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -196,10 +196,10 @@
     {
       "id": 107,
       "name": "Formula Column result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -348,5 +348,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }

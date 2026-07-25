@@ -219,7 +219,7 @@
       "name": "statistic_11",
       "data": 153,
       "type": "number",
-      "tableProcessGUId": "6fae8605-d734-4d7b-b11b-3523625d3d7e",
+      "tableProcessGUId": "1befdc9a-ae6d-40cb-b1a1-460a65cbb3ac",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -230,7 +230,7 @@
       "name": "pvalue_11",
       "data": 154,
       "type": "number",
-      "tableProcessGUId": "6fae8605-d734-4d7b-b11b-3523625d3d7e",
+      "tableProcessGUId": "1befdc9a-ae6d-40cb-b1a1-460a65cbb3ac",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -241,10 +241,10 @@
     {
       "id": 12,
       "name": "Response by group",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 300,
       "type": "boxplot",
       "selected": false,
       "facet": false,
@@ -349,10 +349,10 @@
     {
       "id": 13,
       "name": "Test result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 630,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -497,5 +497,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.63.3"
+  "version": "β.64.0"
 }
