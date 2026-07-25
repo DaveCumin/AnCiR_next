@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "466": [
+    "470": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "467": [
+    "471": [
       0,
       0,
       0,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 466,
+      "id": 470,
       "name": "hour",
-      "data": 466,
+      "data": 470,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 467,
+      "id": 471,
       "name": "activity",
-      "data": 467,
+      "data": 471,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 67,
+      "id": 68,
       "name": "Activity actogram",
       "x": 60,
       "y": 60,
@@ -411,9 +411,9 @@
         "data": [
           {
             "x": {
-              "id": 468,
+              "id": 472,
               "name": "hour",
-              "refId": 466,
+              "refId": 470,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -422,9 +422,9 @@
               "processes": []
             },
             "y": {
-              "id": 469,
+              "id": 473,
               "name": "activity",
-              "refId": 467,
+              "refId": 471,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -458,11 +458,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_466": {
+    "data_470": {
       "x": 60,
       "y": 314
     },
-    "data_467": {
+    "data_471": {
       "x": 60,
       "y": 814
     },
@@ -470,7 +470,7 @@
       "x": 40,
       "y": 24
     },
-    "plot_67": {
+    "plot_68": {
       "x": 820,
       "y": 314
     }
@@ -532,5 +532,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.0"
+  "version": "β.64.2"
 }

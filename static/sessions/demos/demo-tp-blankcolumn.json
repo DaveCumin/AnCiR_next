@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "581": [
+    "585": [
       null,
       null,
       null,
@@ -15,11 +15,11 @@
   },
   "data": [
     {
-      "id": 581,
+      "id": 585,
       "name": "result_44",
-      "data": 581,
+      "data": 585,
       "type": "category",
-      "tableProcessGUId": "605ded34-6758-4571-96d1-e644d9854bfc",
+      "tableProcessGUId": "34c3b764-9825-4acb-a6bb-424f992b318f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -28,7 +28,7 @@
   ],
   "plots": [
     {
-      "id": 96,
+      "id": 97,
       "name": "Enter Data result",
       "x": 60,
       "y": 60,
@@ -44,7 +44,7 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          581
+          585
         ],
         "showCol": [
           true
@@ -65,7 +65,7 @@
         "N": 10,
         "storedValueRefs": {},
         "out": {
-          "result": 581
+          "result": 585
         }
       },
       "refTPId": null
@@ -92,7 +92,7 @@
       "x": 60,
       "y": 314
     },
-    "plot_96": {
+    "plot_97": {
       "x": 820,
       "y": 314
     },
@@ -158,5 +158,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.0"
+  "version": "β.64.2"
 }

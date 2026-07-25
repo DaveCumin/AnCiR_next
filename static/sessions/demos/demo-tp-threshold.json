@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "591": [
+    "595": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "592": [
+    "596": [
       1,
       1,
       1,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 591,
+      "id": 595,
       "name": "Threshold input",
-      "data": 591,
+      "data": 595,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -118,11 +118,11 @@
       "processes": []
     },
     {
-      "id": 592,
+      "id": 596,
       "name": "binary_48",
-      "data": 592,
+      "data": 596,
       "type": "number",
-      "tableProcessGUId": "23594b46-46fd-4580-9278-ad08f0f25482",
+      "tableProcessGUId": "a3c74fb1-0a2e-4b92-9118-80a94293c149",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -131,7 +131,7 @@
   ],
   "plots": [
     {
-      "id": 100,
+      "id": 101,
       "name": "Threshold result",
       "x": 60,
       "y": 60,
@@ -147,8 +147,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          591,
-          592
+          595,
+          596
         ],
         "showCol": [
           true,
@@ -167,11 +167,11 @@
       "name": "Threshold",
       "displayName": "Threshold",
       "args": {
-        "xIN": 591,
+        "xIN": 595,
         "threshold": 0,
         "comparison": ">=",
         "out": {
-          "binary": 592
+          "binary": 596
         }
       },
       "refTPId": null
@@ -194,7 +194,7 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_591": {
+    "data_595": {
       "x": 60,
       "y": 314
     },
@@ -202,7 +202,7 @@
       "x": 440,
       "y": 314
     },
-    "plot_100": {
+    "plot_101": {
       "x": 820,
       "y": 314
     },
@@ -268,5 +268,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.0"
+  "version": "β.64.2"
 }

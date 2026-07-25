@@ -107,6 +107,24 @@ const meta = new Map([
 		}
 	],
 	[
+		'FDRCorrection',
+		{
+			family: 'Analysis',
+			nodeIcon: 'node-fdr',
+			description:
+				'Adjust a column of p-values for multiple comparisons and flag which survive. Benjamini-Hochberg (FDR under independence or positive dependence), Benjamini-Yekutieli (FDR under arbitrary dependence), Holm and Bonferroni (family-wise error). Missing p-values stay missing and are excluded from the count, so a test that failed to run never tightens the correction on the ones that did.'
+		}
+	],
+	[
+		'SurrogateTest',
+		{
+			family: 'Analysis',
+			nodeIcon: 'node-surrogate',
+			description:
+				'Test rhythm strength against a surrogate null that PRESERVES the series\' nuisance structure. Plain shuffling destroys autocorrelation, which makes the null far too easy to beat; block bootstrap and AR(1) red noise keep it. Phase-randomised and AAFT surrogates are also offered for association questions — the node warns when the chosen null cannot answer the question being asked.'
+		}
+	],
+	[
 		'Threshold',
 		{
 			family: 'Arithmetic',
@@ -405,6 +423,15 @@ const meta = new Map([
 			family: 'Plots',
 			nodeIcon: 'fft',
 			description: 'Fourier analysis (FFT) spectrum of a time-series.'
+		}
+	],
+	[
+		'cwt',
+		{
+			family: 'Plots',
+			nodeIcon: 'node-wavelet',
+			description:
+				'Continuous wavelet transform (scalogram): power as a function of BOTH time and period, so a rhythm that changes period or strength over the record is visible where a periodogram would only show a time-average. Morlet/Paul/DOG wavelets, Torrence & Compo (1998) normalisation, with the cone of influence drawn (values outside it are edge artefacts) and an optional ridge showing the dominant period at each moment. Requires uniformly sampled data.'
 		}
 	],
 	[

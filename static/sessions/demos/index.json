@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 101,
+  "count": 104,
   "sessions": [
     {
       "id": "workflow-rest-activity",
@@ -933,6 +933,32 @@
       "keywords": "fit trend curves fit and store a trend (linear, polynomial, exponential, logarithmic) over the column. fitting trendfit"
     },
     {
+      "id": "tp-fdrcorrection",
+      "name": "FDR Correction",
+      "family": "Analysis",
+      "description": "Adjust a column of p-values for multiple comparisons and flag which survive. Benjamini-Hochberg (FDR under independence or positive dependence), Benjamini-Yekutieli (FDR under arbitrary dependence), Holm and Bonferroni (family-wise error). Missing p-values stay missing and are excluded from the count, so a test that failed to run never tightens the correction on the ones that did.",
+      "summary": "Adjust a column of p-values for multiple comparisons and flag which survive.",
+      "url": "sessions/demos/demo-tp-fdrcorrection.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "FDRCorrection"
+      ],
+      "keywords": "fdr correction adjust a column of p-values for multiple comparisons and flag which survive. benjamini-hochberg (fdr under independence or positive dependence), benjamini-yekutieli (fdr under arbitrary dependence), holm and bonferroni (family-wise error). missing p-values stay missing and are excluded from the count, so a test that failed to run never tightens the correction on the ones that did. analysis fdrcorrection"
+    },
+    {
+      "id": "tp-surrogatetest",
+      "name": "Surrogate Test",
+      "family": "Analysis",
+      "description": "Test rhythm strength against a surrogate null that PRESERVES the series' nuisance structure. Plain shuffling destroys autocorrelation, which makes the null far too easy to beat; block bootstrap and AR(1) red noise keep it. Phase-randomised and AAFT surrogates are also offered for association questions — the node warns when the chosen null cannot answer the question being asked.",
+      "summary": "Test rhythm strength against a surrogate null that PRESERVES the series' nuisance structure.",
+      "url": "sessions/demos/demo-tp-surrogatetest.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "SurrogateTest"
+      ],
+      "keywords": "surrogate test test rhythm strength against a surrogate null that preserves the series' nuisance structure. plain shuffling destroys autocorrelation, which makes the null far too easy to beat; block bootstrap and ar(1) red noise keep it. phase-randomised and aaft surrogates are also offered for association questions — the node warns when the chosen null cannot answer the question being asked. analysis surrogatetest"
+    },
+    {
       "id": "tp-groupcomparison",
       "name": "Compare groups (stats)",
       "family": "Analysis",
@@ -1204,6 +1230,19 @@
         "scatterplot"
       ],
       "keywords": "scatter — activity vs hour a simple scatterplot of a noisy ~24 h rhythmic signal against hours since start (7 days, hourly). plots scatterplot"
+    },
+    {
+      "id": "cwt-period-change",
+      "name": "Wavelet — a period that changes",
+      "family": "Plots",
+      "description": "A scalogram of a signal that runs at 24 h for the first half of the record and 12 h for the second. A periodogram would show both peaks and say nothing about when each applied; the wavelet transform localises them in time. The dashed cone of influence marks the edges, where the transform runs out of data and the values are artefacts.",
+      "summary": "A scalogram of a signal that runs at 24 h for the first half of the record and 12 h for the second.",
+      "url": "sessions/demos/demo-cwt-period-change.json",
+      "kind": "plot",
+      "showcases": [
+        "cwt"
+      ],
+      "keywords": "wavelet — a period that changes a scalogram of a signal that runs at 24 h for the first half of the record and 12 h for the second. a periodogram would show both peaks and say nothing about when each applied; the wavelet transform localises them in time. the dashed cone of influence marks the edges, where the transform runs out of data and the values are artefacts. plots cwt"
     },
     {
       "id": "histogram-normal",

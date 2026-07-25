@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "635": [
+    "646": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "636": [
+    "647": [
       1,
       3,
       5,
@@ -104,187 +104,66 @@
       97,
       99
     ],
-    "637": [
+    "648": [
       "Describe Data input 1",
       "Describe Data input 2"
     ],
-    "638": [
+    "649": [
       50,
       50
     ],
-    "639": [
+    "650": [
       48.42725933896873,
       50
     ],
-    "640": [
+    "651": [
       49.99999999999998,
       50
     ],
-    "641": [
+    "652": [
       29.056294644061907,
       29.154759474226502
     ],
-    "642": [
+    "653": [
       10,
       1
     ],
-    "643": [
+    "654": [
       90,
       99
     ],
-    "644": [
+    "655": [
       80,
       98
     ],
-    "645": [
+    "656": [
       21.715728752538084,
       25.5
     ],
-    "646": [
+    "657": [
       78.28427124746192,
       74.5
     ],
-    "647": [
+    "658": [
       56.56854249492383,
       49
     ],
-    "648": [
+    "659": [
       0.06387191582287348,
       0
     ],
-    "649": [
+    "660": [
       -1.5514528241552457,
       -1.2
     ]
   },
   "data": [
     {
-      "id": 635,
-      "name": "Describe Data input 1",
-      "data": 635,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 636,
-      "name": "Describe Data input 2",
-      "data": 636,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 637,
-      "name": "variable_57",
-      "data": 637,
-      "type": "category",
-      "tableProcessGUId": "a98c753b-0394-4a07-ba78-ce50385cad34",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 638,
-      "name": "n_57",
-      "data": 638,
-      "type": "number",
-      "tableProcessGUId": "a98c753b-0394-4a07-ba78-ce50385cad34",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 639,
-      "name": "mean_57",
-      "data": 639,
-      "type": "number",
-      "tableProcessGUId": "a98c753b-0394-4a07-ba78-ce50385cad34",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 640,
-      "name": "median_57",
-      "data": 640,
-      "type": "number",
-      "tableProcessGUId": "a98c753b-0394-4a07-ba78-ce50385cad34",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 641,
-      "name": "sd_57",
-      "data": 641,
-      "type": "number",
-      "tableProcessGUId": "a98c753b-0394-4a07-ba78-ce50385cad34",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 642,
-      "name": "min_57",
-      "data": 642,
-      "type": "number",
-      "tableProcessGUId": "a98c753b-0394-4a07-ba78-ce50385cad34",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 643,
-      "name": "max_57",
-      "data": 643,
-      "type": "number",
-      "tableProcessGUId": "a98c753b-0394-4a07-ba78-ce50385cad34",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 644,
-      "name": "range_57",
-      "data": 644,
-      "type": "number",
-      "tableProcessGUId": "a98c753b-0394-4a07-ba78-ce50385cad34",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 645,
-      "name": "q1_57",
-      "data": 645,
-      "type": "number",
-      "tableProcessGUId": "a98c753b-0394-4a07-ba78-ce50385cad34",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 646,
-      "name": "q3_57",
+      "name": "Describe Data input 1",
       "data": 646,
       "type": "number",
-      "tableProcessGUId": "a98c753b-0394-4a07-ba78-ce50385cad34",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -292,10 +171,10 @@
     },
     {
       "id": 647,
-      "name": "iqr_57",
+      "name": "Describe Data input 2",
       "data": 647,
       "type": "number",
-      "tableProcessGUId": "a98c753b-0394-4a07-ba78-ce50385cad34",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -303,10 +182,10 @@
     },
     {
       "id": 648,
-      "name": "skewness_57",
+      "name": "variable_59",
       "data": 648,
-      "type": "number",
-      "tableProcessGUId": "a98c753b-0394-4a07-ba78-ce50385cad34",
+      "type": "category",
+      "tableProcessGUId": "c082647b-3ce2-4244-944c-3d763d887d24",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -314,10 +193,131 @@
     },
     {
       "id": 649,
-      "name": "kurtosis_57",
+      "name": "n_59",
       "data": 649,
       "type": "number",
-      "tableProcessGUId": "a98c753b-0394-4a07-ba78-ce50385cad34",
+      "tableProcessGUId": "c082647b-3ce2-4244-944c-3d763d887d24",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 650,
+      "name": "mean_59",
+      "data": 650,
+      "type": "number",
+      "tableProcessGUId": "c082647b-3ce2-4244-944c-3d763d887d24",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 651,
+      "name": "median_59",
+      "data": 651,
+      "type": "number",
+      "tableProcessGUId": "c082647b-3ce2-4244-944c-3d763d887d24",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 652,
+      "name": "sd_59",
+      "data": 652,
+      "type": "number",
+      "tableProcessGUId": "c082647b-3ce2-4244-944c-3d763d887d24",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 653,
+      "name": "min_59",
+      "data": 653,
+      "type": "number",
+      "tableProcessGUId": "c082647b-3ce2-4244-944c-3d763d887d24",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 654,
+      "name": "max_59",
+      "data": 654,
+      "type": "number",
+      "tableProcessGUId": "c082647b-3ce2-4244-944c-3d763d887d24",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 655,
+      "name": "range_59",
+      "data": 655,
+      "type": "number",
+      "tableProcessGUId": "c082647b-3ce2-4244-944c-3d763d887d24",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 656,
+      "name": "q1_59",
+      "data": 656,
+      "type": "number",
+      "tableProcessGUId": "c082647b-3ce2-4244-944c-3d763d887d24",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 657,
+      "name": "q3_59",
+      "data": 657,
+      "type": "number",
+      "tableProcessGUId": "c082647b-3ce2-4244-944c-3d763d887d24",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 658,
+      "name": "iqr_59",
+      "data": 658,
+      "type": "number",
+      "tableProcessGUId": "c082647b-3ce2-4244-944c-3d763d887d24",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 659,
+      "name": "skewness_59",
+      "data": 659,
+      "type": "number",
+      "tableProcessGUId": "c082647b-3ce2-4244-944c-3d763d887d24",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 660,
+      "name": "kurtosis_59",
+      "data": 660,
+      "type": "number",
+      "tableProcessGUId": "c082647b-3ce2-4244-944c-3d763d887d24",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -326,7 +326,7 @@
   ],
   "plots": [
     {
-      "id": 109,
+      "id": 112,
       "name": "Describe Data result",
       "x": 60,
       "y": 60,
@@ -342,21 +342,21 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          635,
-          636,
-          637,
-          638,
-          639,
-          640,
-          641,
-          642,
-          643,
-          644,
-          645,
           646,
           647,
           648,
-          649
+          649,
+          650,
+          651,
+          652,
+          653,
+          654,
+          655,
+          656,
+          657,
+          658,
+          659,
+          660
         ],
         "showCol": [
           true,
@@ -384,28 +384,28 @@
   ],
   "tableProcesses": [
     {
-      "id": 57,
+      "id": 59,
       "name": "DescribeData",
       "displayName": "Describe Data",
       "args": {
         "yIN": [
-          635,
-          636
+          646,
+          647
         ],
         "out": {
-          "variable": 637,
-          "n": 638,
-          "mean": 639,
-          "median": 640,
-          "sd": 641,
-          "min": 642,
-          "max": 643,
-          "range": 644,
-          "q1": 645,
-          "q3": 646,
-          "iqr": 647,
-          "skewness": 648,
-          "kurtosis": 649
+          "variable": 648,
+          "n": 649,
+          "mean": 650,
+          "median": 651,
+          "sd": 652,
+          "min": 653,
+          "max": 654,
+          "range": 655,
+          "q1": 656,
+          "q3": 657,
+          "iqr": 658,
+          "skewness": 659,
+          "kurtosis": 660
         },
         "valid": false
       },
@@ -417,7 +417,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_55",
+      "id": "note_57",
       "text": "Reports summary statistics for each wired column, one row per variable: n, mean, median, standard deviation, min, max, range, first and third quartiles, IQR, skewness and (excess) kurtosis. Skewness and kurtosis use the bias-corrected sample formulae (matching scipy). Quick-plot draws a histogram of each column so you can see the distribution behind the numbers.",
       "x": 40,
       "y": 24,
@@ -429,23 +429,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_635": {
+    "data_646": {
       "x": 60,
       "y": 314
     },
-    "data_636": {
+    "data_647": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_57": {
+    "tableprocess_59": {
       "x": 440,
       "y": 314
     },
-    "plot_109": {
+    "plot_112": {
       "x": 820,
       "y": 314
     },
-    "note_55": {
+    "note_57": {
       "x": 40,
       "y": 24
     }
@@ -507,5 +507,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.0"
+  "version": "β.64.2"
 }

@@ -32,7 +32,9 @@
     <em>demands</em>, on the two axes that most often disqualify a method outright,
     after Refinetti, Cornélissen &amp; Halberg<sup class="cite"><a href="#ref-1">[1]</a></sup>.
     A ✗ here is not a matter of degree: it means the method cannot answer the question
-    from that kind of data at all, however much data you have.
+    from that kind of data at all, however much data you have. To come at the same two
+    axes from the other direction, starting from your question rather than from a method,
+    use the <a href="#choosing">method picker</a> in the Choosing a Method guide.
   </p>
   <MethodTable
     headers={[

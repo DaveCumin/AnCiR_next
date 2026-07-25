@@ -124,6 +124,16 @@ export const PLOT_SPECS = [
 		wire: (p, [v]) => p.plot.addData({ values: { refId: v } })
 	},
 	{
+		// Scalogram. Self-contained: runs the wavelet transform on the wired pair.
+		// The x column must be UNIFORMLY sampled — cwtFromSeries refuses otherwise.
+		type: 'cwt',
+		inputs: [
+			{ type: 'number', data: SAMPLE.hours },
+			{ type: 'number', data: () => SAMPLE.rhythm(24, 40, 50) }
+		],
+		wire: (p, [x, y]) => p.plot.addData({ x: { refId: x }, y: { refId: y } })
+	},
+	{
 		// Self-contained: takes the raw columns and computes the matrix itself.
 		type: 'correlationheatmap',
 		inputs: [
@@ -269,6 +279,35 @@ export const TP_SPECS = [
 		name: 'Threshold',
 		inputs: [T('number', () => SAMPLE.rhythm(24))],
 		args: ([x]) => ({ xIN: x, threshold: 0, comparison: '>=', out: { binary: -1 } })
+	},
+	{
+		// A column of raw p-values is exactly what a metric out-key holds (one
+		// value per y input), so this is the realistic input shape.
+		name: 'FDRCorrection',
+		inputs: [T('number', () => [0.001, 0.008, 0.039, 0.041, 0.042, 0.2, 0.6, 0.9])],
+		args: ([p]) => ({
+			xIN: p,
+			method: 'benjamini-hochberg',
+			alpha: 0.05,
+			out: { padj: -1, reject: -1 }
+		})
+	},
+	{
+		name: 'SurrogateTest',
+		inputs: [T('number', SAMPLE.hours), T('number', () => SAMPLE.rhythm(24))],
+		args: ([t, y]) => ({
+			xIN: t,
+			yIN: y,
+			method: 'block',
+			// Kept small: the coverage test only needs a valid run, and each
+			// surrogate costs an FFT.
+			nSurrogates: 19,
+			seed: 12345,
+			blockLengthHours: 24,
+			periodMin: 20,
+			periodMax: 28,
+			out: { pvalue: -1, observed: -1 }
+		})
 	},
 	{
 		name: 'Cosinor',

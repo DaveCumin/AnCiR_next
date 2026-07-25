@@ -2864,7 +2864,7 @@
       "name": "stat_peak_period_26",
       "data": 376,
       "type": "number",
-      "tableProcessGUId": "17cd766c-c1ba-4ab0-ac95-b40d3d90fb35",
+      "tableProcessGUId": "2f3d30e7-3d9a-46c1-a730-80f65986bc02",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2875,7 +2875,7 @@
       "name": "stat_peak_power_26",
       "data": 377,
       "type": "number",
-      "tableProcessGUId": "17cd766c-c1ba-4ab0-ac95-b40d3d90fb35",
+      "tableProcessGUId": "2f3d30e7-3d9a-46c1-a730-80f65986bc02",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2886,7 +2886,7 @@
       "name": "rhythmicityy_367_26",
       "data": 378,
       "type": "number",
-      "tableProcessGUId": "17cd766c-c1ba-4ab0-ac95-b40d3d90fb35",
+      "tableProcessGUId": "2f3d30e7-3d9a-46c1-a730-80f65986bc02",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -3334,5 +3334,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.0"
+  "version": "β.64.2"
 }

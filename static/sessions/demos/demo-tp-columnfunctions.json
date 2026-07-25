@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "588": [
+    "592": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "589": [
+    "593": [
       1,
       3,
       5,
@@ -104,7 +104,7 @@
       97,
       99
     ],
-    "590": [
+    "594": [
       1,
       4,
       7,
@@ -159,9 +159,9 @@
   },
   "data": [
     {
-      "id": 588,
+      "id": 592,
       "name": "Column Function input 1",
-      "data": 588,
+      "data": 592,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -170,9 +170,9 @@
       "processes": []
     },
     {
-      "id": 589,
+      "id": 593,
       "name": "Column Function input 2",
-      "data": 589,
+      "data": 593,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,11 +181,11 @@
       "processes": []
     },
     {
-      "id": 590,
+      "id": 594,
       "name": "result_47",
-      "data": 590,
+      "data": 594,
       "type": "category",
-      "tableProcessGUId": "cc4eb2ef-738d-4431-9bb8-daf39907e870",
+      "tableProcessGUId": "c5c7ba18-656c-41e6-a4d5-607ba1f93cba",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -194,7 +194,7 @@
   ],
   "plots": [
     {
-      "id": 99,
+      "id": 100,
       "name": "Column Function result",
       "x": 60,
       "y": 60,
@@ -210,9 +210,9 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          588,
-          589,
-          590
+          592,
+          593,
+          594
         ],
         "showCol": [
           true,
@@ -234,11 +234,11 @@
       "args": {
         "func": "add",
         "xsIN": [
-          588,
-          589
+          592,
+          593
         ],
         "out": {
-          "result": 590
+          "result": 594
         }
       },
       "refTPId": null
@@ -261,11 +261,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_588": {
+    "data_592": {
       "x": 60,
       "y": 314
     },
-    "data_589": {
+    "data_593": {
       "x": 60,
       "y": 814
     },
@@ -273,7 +273,7 @@
       "x": 440,
       "y": 314
     },
-    "plot_99": {
+    "plot_100": {
       "x": 820,
       "y": 314
     },
@@ -339,5 +339,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.0"
+  "version": "β.64.2"
 }

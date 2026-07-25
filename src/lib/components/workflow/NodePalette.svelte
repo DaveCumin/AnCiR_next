@@ -17,6 +17,9 @@
 	// SVG file.
 	const KNOWN_ICONS = new Set([
 		'add-file',
+		'node-wavelet',
+		'node-fdr',
+		'node-surrogate',
 		'add',
 		'align-bottom',
 		'align-centre',

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "452": [
+    "456": [
       1,
       1,
       1,
@@ -170,7 +170,7 @@
       7,
       7
     ],
-    "453": [
+    "457": [
       16.291076892469444,
       20.29554398487714,
       9.51596332468565,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 452,
+      "id": 456,
       "name": "day",
-      "data": 452,
+      "data": 456,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 453,
+      "id": 457,
       "name": "activity",
-      "data": 453,
+      "data": 457,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 65,
+      "id": 66,
       "name": "Activity by day (mean ± SEM)",
       "x": 60,
       "y": 60,
@@ -411,9 +411,9 @@
         "data": [
           {
             "x": {
-              "id": 454,
+              "id": 458,
               "name": "day",
-              "refId": 452,
+              "refId": 456,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -422,9 +422,9 @@
               "processes": []
             },
             "y": {
-              "id": 455,
+              "id": 459,
               "name": "activity",
-              "refId": 453,
+              "refId": 457,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -484,11 +484,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_452": {
+    "data_456": {
       "x": 60,
       "y": 314
     },
-    "data_453": {
+    "data_457": {
       "x": 60,
       "y": 814
     },
@@ -496,7 +496,7 @@
       "x": 40,
       "y": 24
     },
-    "plot_65": {
+    "plot_66": {
       "x": 820,
       "y": 314
     }
@@ -558,5 +558,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.0"
+  "version": "β.64.2"
 }

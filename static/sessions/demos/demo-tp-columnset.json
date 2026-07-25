@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "586": [
+    "590": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "587": [
+    "591": [
       1,
       3,
       5,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 586,
+      "id": 590,
       "name": "Column Set input 1",
-      "data": 586,
+      "data": 590,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -118,9 +118,9 @@
       "processes": []
     },
     {
-      "id": 587,
+      "id": 591,
       "name": "Column Set input 2",
-      "data": 587,
+      "data": 591,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -131,7 +131,7 @@
   ],
   "plots": [
     {
-      "id": 98,
+      "id": 99,
       "name": "Column Set result",
       "x": 60,
       "y": 60,
@@ -147,8 +147,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          586,
-          587
+          590,
+          591
         ],
         "showCol": [
           true,
@@ -168,8 +168,8 @@
       "displayName": "Column Set",
       "args": {
         "colsIN": [
-          586,
-          587
+          590,
+          591
         ],
         "pattern": "",
         "matchField": "either",
@@ -195,11 +195,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_586": {
+    "data_590": {
       "x": 60,
       "y": 314
     },
-    "data_587": {
+    "data_591": {
       "x": 60,
       "y": 814
     },
@@ -207,7 +207,7 @@
       "x": 440,
       "y": 314
     },
-    "plot_98": {
+    "plot_99": {
       "x": 820,
       "y": 314
     },
@@ -273,5 +273,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.0"
+  "version": "β.64.2"
 }

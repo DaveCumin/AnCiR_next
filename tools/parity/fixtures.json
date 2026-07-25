@@ -2225,6 +2225,376 @@
 				"fitted",
 				"outcome"
 			]
+		},
+		{
+			"id": "util-padjust-bh",
+			"kind": "pureUtil",
+			"jsFn": "pAdjust",
+			"pyFunc": "p_adjust",
+			"generate": {
+				"type": "pvalues",
+				"n": 40,
+				"seed": 202,
+				"refs": {
+					"y": "p"
+				}
+			},
+			"valuesRef": "p",
+			"jsArgs": [
+				"benjamini-hochberg"
+			],
+			"pyArgs": [
+				"benjamini-hochberg"
+			],
+			"compareArrays": [
+				"adjusted"
+			]
+		},
+		{
+			"id": "util-padjust-by",
+			"kind": "pureUtil",
+			"jsFn": "pAdjust",
+			"pyFunc": "p_adjust",
+			"generate": {
+				"type": "pvalues",
+				"n": 40,
+				"seed": 203,
+				"refs": {
+					"y": "p"
+				}
+			},
+			"valuesRef": "p",
+			"jsArgs": [
+				"benjamini-yekutieli"
+			],
+			"pyArgs": [
+				"benjamini-yekutieli"
+			],
+			"compareArrays": [
+				"adjusted"
+			]
+		},
+		{
+			"id": "util-padjust-holm",
+			"kind": "pureUtil",
+			"jsFn": "pAdjust",
+			"pyFunc": "p_adjust",
+			"generate": {
+				"type": "pvalues",
+				"n": 40,
+				"seed": 204,
+				"refs": {
+					"y": "p"
+				}
+			},
+			"valuesRef": "p",
+			"jsArgs": [
+				"holm"
+			],
+			"pyArgs": [
+				"holm"
+			],
+			"compareArrays": [
+				"adjusted"
+			]
+		},
+		{
+			"id": "util-padjust-bonferroni",
+			"kind": "pureUtil",
+			"jsFn": "pAdjust",
+			"pyFunc": "p_adjust",
+			"generate": {
+				"type": "pvalues",
+				"n": 40,
+				"seed": 205,
+				"refs": {
+					"y": "p"
+				}
+			},
+			"valuesRef": "p",
+			"jsArgs": [
+				"bonferroni"
+			],
+			"pyArgs": [
+				"bonferroni"
+			],
+			"compareArrays": [
+				"adjusted"
+			]
+		},
+		{
+			"id": "util-cwt-peak-scale",
+			"kind": "pureUtil",
+			"jsFn": "cwtPeakScaleIndex",
+			"pyFunc": "cwt_peak_scale_index",
+			"generate": {
+				"type": "rhythm",
+				"n": 256,
+				"period": 24,
+				"amp": 30,
+				"mesor": 50,
+				"phase": 0,
+				"noise": 2,
+				"seed": 77,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"valuesRef": "y",
+			"jsArgs": [
+				{
+					"dt": 0.5,
+					"dj": 0.25,
+					"s0": 1.0,
+					"j1": 12,
+					"w0": 6,
+					"lo": 60,
+					"hi": 196
+				}
+			],
+			"pyArgs": [
+				{
+					"dt": 0.5,
+					"dj": 0.25,
+					"s0": 1.0,
+					"j1": 12,
+					"w0": 6,
+					"lo": 60,
+					"hi": 196
+				}
+			],
+			"compareArrays": [
+				"peakScaleIndex"
+			]
+		},
+		{
+			"id": "tp-fdr-benjamini-hochberg",
+			"kind": "tableProcess",
+			"jsName": "FDRCorrection",
+			"pyFunc": "fdrcorrection",
+			"generate": {
+				"type": "pvalues",
+				"n": 40,
+				"seed": 301,
+				"refs": {
+					"y": "p"
+				}
+			},
+			"args": {
+				"xIN": "@p",
+				"method": "benjamini-hochberg",
+				"alpha": 0.05,
+				"out": {
+					"padj": -1,
+					"reject": -1
+				}
+			},
+			"compareOutputs": [
+				"padj",
+				"reject"
+			]
+		},
+		{
+			"id": "tp-fdr-benjamini-yekutieli",
+			"kind": "tableProcess",
+			"jsName": "FDRCorrection",
+			"pyFunc": "fdrcorrection",
+			"generate": {
+				"type": "pvalues",
+				"n": 40,
+				"seed": 302,
+				"refs": {
+					"y": "p"
+				}
+			},
+			"args": {
+				"xIN": "@p",
+				"method": "benjamini-yekutieli",
+				"alpha": 0.05,
+				"out": {
+					"padj": -1,
+					"reject": -1
+				}
+			},
+			"compareOutputs": [
+				"padj",
+				"reject"
+			]
+		},
+		{
+			"id": "tp-fdr-holm",
+			"kind": "tableProcess",
+			"jsName": "FDRCorrection",
+			"pyFunc": "fdrcorrection",
+			"generate": {
+				"type": "pvalues",
+				"n": 40,
+				"seed": 303,
+				"refs": {
+					"y": "p"
+				}
+			},
+			"args": {
+				"xIN": "@p",
+				"method": "holm",
+				"alpha": 0.01,
+				"out": {
+					"padj": -1,
+					"reject": -1
+				}
+			},
+			"compareOutputs": [
+				"padj",
+				"reject"
+			]
+		},
+		{
+			"id": "tp-surrogate-observed-statistic",
+			"kind": "tableProcess",
+			"jsName": "SurrogateTest",
+			"pyFunc": "surrogatetest",
+			"generate": {
+				"type": "rhythm",
+				"n": 480,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 0,
+				"noise": 8,
+				"seed": 403,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": "@y",
+				"method": "block",
+				"nSurrogates": 19,
+				"seed": 12345,
+				"blockLengthHours": 24,
+				"periodMin": 20,
+				"periodMax": 28,
+				"out": {
+					"pvalue": -1,
+					"observed": -1
+				}
+			},
+			"compareOutputs": [
+				"observed"
+			]
+		},
+		{
+			"id": "util-movingwindows-npcra",
+			"kind": "pureUtil",
+			"jsFn": "movingWindows",
+			"pyFunc": "moving_windows",
+			"generate": {
+				"type": "rhythm",
+				"n": 480,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 401,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"argRefs": [
+				"t",
+				"y"
+			],
+			"jsArgs": [
+				{
+					"analysis": "npcra",
+					"windowSize": 168,
+					"stepSize": 24,
+					"npcraEpochHours": 1,
+					"npcraPeriod": 24,
+					"npcraMWindow": 10,
+					"npcraLWindow": 5
+				}
+			],
+			"pyArgs": [
+				{
+					"analysis": "npcra",
+					"windowSize": 168,
+					"stepSize": 24,
+					"npcraEpochHours": 1,
+					"npcraPeriod": 24,
+					"npcraMWindow": 10,
+					"npcraLWindow": 5
+				}
+			],
+			"compareArrays": [
+				"starts",
+				"IS",
+				"IV",
+				"RA",
+				"L5",
+				"M10",
+				"M10onset"
+			]
+		},
+		{
+			"id": "util-movingwindows-cosinor-relamp",
+			"kind": "pureUtil",
+			"jsFn": "movingWindows",
+			"pyFunc": "moving_windows",
+			"generate": {
+				"type": "rhythm",
+				"n": 480,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 402,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"argRefs": [
+				"t",
+				"y"
+			],
+			"jsArgs": [
+				{
+					"analysis": "cosinor",
+					"windowSize": 168,
+					"stepSize": 24,
+					"useFixedPeriod": true,
+					"fixedPeriod": 24,
+					"nHarmonics": 1,
+					"alpha": 0.05
+				}
+			],
+			"pyArgs": [
+				{
+					"analysis": "cosinor",
+					"windowSize": 168,
+					"stepSize": 24,
+					"useFixedPeriod": true,
+					"fixedPeriod": 24,
+					"nHarmonics": 1,
+					"alpha": 0.05
+				}
+			],
+			"compareArrays": [
+				"starts",
+				"mesor",
+				"H1_amplitude",
+				"H1_acrophase",
+				"rel_amplitude",
+				"r2",
+				"rmse"
+			]
 		}
 	]
 }

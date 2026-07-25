@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "709": [
+    "720": [
       9.23,
       3.33,
       1.98,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 709,
-      "name": "result_66",
-      "data": 709,
+      "id": 720,
+      "name": "result_68",
+      "data": 720,
       "type": "number",
-      "tableProcessGUId": "cbf0b110-7e3a-466b-ab59-530b8613d421",
+      "tableProcessGUId": "83be380c-c1ec-4afb-931a-3ff9cb317109",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -68,7 +68,7 @@
   ],
   "plots": [
     {
-      "id": 119,
+      "id": 122,
       "name": "Random result",
       "x": 60,
       "y": 60,
@@ -84,7 +84,7 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          709
+          720
         ],
         "showCol": [
           true
@@ -98,7 +98,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 66,
+      "id": 68,
       "name": "Random",
       "displayName": "Random",
       "args": {
@@ -108,7 +108,7 @@
         "seed": 12345,
         "distribution": "uniform",
         "out": {
-          "result": 709
+          "result": 720
         }
       },
       "refTPId": null
@@ -119,7 +119,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_63",
+      "id": "note_65",
       "text": "Generates a column of pseudo-random values from a uniform, Gaussian, or exponential distribution, scaled by an offset and multiplier, with a fixed seed for reproducibility. Use it to add controlled noise or to create random test data.",
       "x": 40,
       "y": 24,
@@ -131,15 +131,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_66": {
+    "tableprocess_68": {
       "x": 60,
       "y": 314
     },
-    "plot_119": {
+    "plot_122": {
       "x": 820,
       "y": 314
     },
-    "note_63": {
+    "note_65": {
       "x": 40,
       "y": 24
     }
@@ -201,5 +201,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.0"
+  "version": "β.64.2"
 }

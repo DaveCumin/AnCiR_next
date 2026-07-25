@@ -1,7 +1,7 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.64.2",
-  "count": 57,
+  "generatedFromVersion": "β.65.0",
+  "count": 60,
   "nodes": [
     {
       "id": "actogram",
@@ -112,6 +112,29 @@
       "params": [],
       "outputs": [],
       "demo": "sessions/demos/demo-correlogram-rhythm.json"
+    },
+    {
+      "id": "cwt",
+      "displayName": "Wavelet (CWT)",
+      "kind": "plot",
+      "family": "Plots",
+      "description": "Continuous wavelet transform (scalogram): power as a function of BOTH time and period, so a rhythm that changes period or strength over the record is visible where a periodogram would only show a time-average. Morlet/Paul/DOG wavelets, Torrence & Compo (1998) normalisation, with the cone of influence drawn (values outside it are edge artefacts) and an optional ridge showing the dominant period at each moment. Requires uniformly sampled data.",
+      "hideFromPalette": false,
+      "inputs": [
+        {
+          "name": "x",
+          "kind": "column",
+          "cardinality": "many"
+        },
+        {
+          "name": "y",
+          "kind": "column",
+          "cardinality": "many"
+        }
+      ],
+      "params": [],
+      "outputs": [],
+      "demo": "sessions/demos/demo-cwt-period-change.json"
     },
     {
       "id": "dataview",
@@ -1335,6 +1358,44 @@
       "demo": "sessions/demos/demo-tp-doublelogistic.json"
     },
     {
+      "id": "FDRCorrection",
+      "displayName": "FDR Correction",
+      "kind": "tableProcess",
+      "family": "Analysis",
+      "description": "Adjust a column of p-values for multiple comparisons and flag which survive. Benjamini-Hochberg (FDR under independence or positive dependence), Benjamini-Yekutieli (FDR under arbitrary dependence), Holm and Bonferroni (family-wise error). Missing p-values stay missing and are excluded from the count, so a test that failed to run never tightens the correction on the ones that did.",
+      "hideFromPalette": false,
+      "inputs": [
+        {
+          "name": "xIN",
+          "kind": "column",
+          "cardinality": "one"
+        }
+      ],
+      "params": [
+        {
+          "name": "method",
+          "default": "benjamini-hochberg"
+        },
+        {
+          "name": "alpha",
+          "default": 0.05
+        }
+      ],
+      "outputs": [
+        {
+          "name": "padj",
+          "kind": "column",
+          "cardinality": "one"
+        },
+        {
+          "name": "reject",
+          "kind": "column",
+          "cardinality": "one"
+        }
+      ],
+      "demo": "sessions/demos/demo-tp-fdrcorrection.json"
+    },
+    {
       "id": "FitFunction",
       "displayName": "Fit Function",
       "kind": "tableProcess",
@@ -1758,6 +1819,22 @@
         {
           "name": "analysis",
           "default": "periodogram"
+        },
+        {
+          "name": "npcraEpochHours",
+          "default": 1
+        },
+        {
+          "name": "npcraPeriod",
+          "default": 24
+        },
+        {
+          "name": "npcraMWindow",
+          "default": 10
+        },
+        {
+          "name": "npcraLWindow",
+          "default": 5
         },
         {
           "name": "trendModel",
@@ -2578,6 +2655,67 @@
         }
       ],
       "demo": "sessions/demos/demo-tp-storedvaluegroup.json"
+    },
+    {
+      "id": "SurrogateTest",
+      "displayName": "Surrogate Test",
+      "kind": "tableProcess",
+      "family": "Analysis",
+      "description": "Test rhythm strength against a surrogate null that PRESERVES the series' nuisance structure. Plain shuffling destroys autocorrelation, which makes the null far too easy to beat; block bootstrap and AR(1) red noise keep it. Phase-randomised and AAFT surrogates are also offered for association questions — the node warns when the chosen null cannot answer the question being asked.",
+      "hideFromPalette": false,
+      "inputs": [
+        {
+          "name": "xIN",
+          "kind": "column",
+          "cardinality": "one"
+        },
+        {
+          "name": "yIN",
+          "kind": "column",
+          "cardinality": "one"
+        }
+      ],
+      "params": [
+        {
+          "name": "method",
+          "default": "block"
+        },
+        {
+          "name": "nSurrogates",
+          "default": 199
+        },
+        {
+          "name": "seed",
+          "default": null
+        },
+        {
+          "name": "blockLengthHours",
+          "default": 24
+        },
+        {
+          "name": "periodMin",
+          "default": 20
+        },
+        {
+          "name": "periodMax",
+          "default": 28
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pvalue",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "observed",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        }
+      ],
+      "demo": "sessions/demos/demo-tp-surrogatetest.json"
     },
     {
       "id": "Threshold",

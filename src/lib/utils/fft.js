@@ -2,6 +2,89 @@
 import { mean } from '$lib/components/plotbits/helpers/wrangleData.js';
 import { validPairs } from './validPairs.js';
 
+/**
+ * In-place iterative radix-2 Cooley-Tukey FFT over Float64Array pairs.
+ *
+ * Exported (unlike the object-based `fft` below) because the CWT and the
+ * phase-randomised surrogates both need a REUSABLE forward+inverse pair, and
+ * both run it once per scale / per surrogate. The `{re, im}` object form
+ * allocates one object per sample per transform, which is fine for a one-shot
+ * spectrum and much too slow when the transform is in a loop.
+ *
+ * `re` and `im` are modified in place and must both have the same power-of-two
+ * length. `inverse` applies the conjugate twiddles and the 1/n scaling, so
+ * `ifftInPlace(fftInPlace(x))` returns x (to floating-point tolerance).
+ *
+ * @param {Float64Array} re real parts, modified in place
+ * @param {Float64Array} im imaginary parts, modified in place
+ * @param {boolean} [inverse=false] run the inverse transform
+ */
+export function fftInPlace(re, im, inverse = false) {
+	const n = re.length;
+	if (n !== im.length) throw new Error('fftInPlace: re and im must be the same length');
+	if (n < 2) return;
+	if ((n & (n - 1)) !== 0) throw new Error('fftInPlace: length must be a power of two');
+
+	// Bit-reversal permutation.
+	for (let i = 1, j = 0; i < n; i++) {
+		let bit = n >> 1;
+		for (; j & bit; bit >>= 1) j ^= bit;
+		j ^= bit;
+		if (i < j) {
+			let t = re[i];
+			re[i] = re[j];
+			re[j] = t;
+			t = im[i];
+			im[i] = im[j];
+			im[j] = t;
+		}
+	}
+
+	// Danielson-Lanczos butterflies.
+	const sign = inverse ? 1 : -1;
+	for (let len = 2; len <= n; len <<= 1) {
+		const ang = (sign * 2 * Math.PI) / len;
+		const wRe = Math.cos(ang);
+		const wIm = Math.sin(ang);
+		for (let i = 0; i < n; i += len) {
+			let curRe = 1;
+			let curIm = 0;
+			const half = len >> 1;
+			for (let k = 0; k < half; k++) {
+				const aRe = re[i + k];
+				const aIm = im[i + k];
+				const bRe = re[i + k + half] * curRe - im[i + k + half] * curIm;
+				const bIm = re[i + k + half] * curIm + im[i + k + half] * curRe;
+				re[i + k] = aRe + bRe;
+				im[i + k] = aIm + bIm;
+				re[i + k + half] = aRe - bRe;
+				im[i + k + half] = aIm - bIm;
+				const nextRe = curRe * wRe - curIm * wIm;
+				curIm = curRe * wIm + curIm * wRe;
+				curRe = nextRe;
+			}
+		}
+	}
+
+	if (inverse) {
+		for (let i = 0; i < n; i++) {
+			re[i] /= n;
+			im[i] /= n;
+		}
+	}
+}
+
+/** Inverse of {@link fftInPlace}. Modifies `re`/`im` in place. */
+export function ifftInPlace(re, im) {
+	fftInPlace(re, im, true);
+}
+
+/** Smallest power of two >= n (n <= 0 gives 1). */
+export function nextPowerOfTwo(n) {
+	if (!Number.isFinite(n) || n <= 1) return 1;
+	return 2 ** Math.ceil(Math.log2(n));
+}
+
 // Cooley-Tukey radix-2 FFT (recursive). Input: array of {re, im}.
 function fft(signal) {
 	const n = signal.length;

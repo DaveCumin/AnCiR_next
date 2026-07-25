@@ -10,19 +10,30 @@ import { computeAutocorrelation } from './correlogram.js';
 import { fitRectangularWave } from './rectwave.js';
 import { fitDoubleLogistic } from './doublelogistic.js';
 import { fitTrend } from './trendfit.js';
+import { computeNPCRA } from './npcra.js';
+import { wrapToPeriod } from './cosinorAddons.js';
 
 export function getStatKeys(args) {
 	if (args.analysis === 'periodogram') {
 		return ['peak_period', 'peak_power'];
 	}
+	// Nonparametric circadian rhythm analysis per window: interdaily stability,
+	// intradaily variability, relative amplitude and the L5/M10 windows. Rolling
+	// IS/IV is the standard way to watch rhythm fragmentation develop over time.
+	if (args.analysis === 'npcra') {
+		return ['IS', 'IV', 'RA', 'L5', 'M10', 'M10onset'];
+	}
 	if (args.analysis === 'cosinor') {
 		if (args.useFixedPeriod) {
+			// rel_amplitude = amplitude / MESOR. Reported separately because the raw
+			// amplitude confounds "the rhythm got weaker" with "the whole signal got
+			// smaller"; the ratio is what stays comparable across animals and windows.
 			const keys = ['mesor'];
 			const H = Math.max(1, args.nHarmonics ?? 1);
 			for (let h = 1; h <= H; h++) {
 				keys.push(`H${h}_amplitude`, `H${h}_acrophase`);
 			}
-			keys.push('r2', 'rmse', 'pvalue');
+			keys.push('rel_amplitude', 'r2', 'rmse', 'pvalue');
 			return keys;
 		}
 		const keys = [];
@@ -95,6 +106,26 @@ function computeStatsForWindow(tt, yy, args) {
 		return stats;
 	}
 
+	if (args.analysis === 'npcra') {
+		// computeNPCRA resamples onto its own epoch grid internally, so it only
+		// needs the window's raw (t, y). A 7-day window at 5-minute resolution is
+		// ~2000 samples, which it bins down before doing any work.
+		const r = computeNPCRA(tt, yy, {
+			epochHours: args.npcraEpochHours ?? 1,
+			period: args.npcraPeriod ?? 24,
+			mWindow: args.npcraMWindow ?? 10,
+			lWindow: args.npcraLWindow ?? 5
+		});
+		if (!r) return stats;
+		stats.IS = r.IS;
+		stats.IV = r.IV;
+		stats.RA = r.RA;
+		stats.L5 = r.L5;
+		stats.M10 = r.M10;
+		stats.M10onset = r.M10onset;
+		return stats;
+	}
+
 	if (args.analysis === 'cosinor') {
 		if (args.useFixedPeriod) {
 			const r = fitCosinorFixed(
@@ -106,10 +137,26 @@ function computeStatsForWindow(tt, yy, args) {
 			);
 			if (!r) return stats;
 			stats.mesor = r.M;
+			const periodUsed = args.fixedPeriod ?? 24;
 			for (let h = 0; h < r.harmonics.length; h++) {
-				stats[`H${h + 1}_amplitude`] = r.harmonics[h].amplitude;
-				stats[`H${h + 1}_acrophase`] = r.harmonics[h].acrophase_hrs;
+				const k = h + 1;
+				stats[`H${k}_amplitude`] = r.harmonics[h].amplitude;
+				// fitCosinorFixed returns the CLASSICAL acrophase; the peak time is
+				// wrap(-acrophase_hrs). The standalone Cosinor node already converts
+				// (Cosinor.svelte, "convert here to the same peak-time convention"),
+				// and this path did NOT — so a rhythm peaking at 08:00 was reported
+				// as 16:00, disagreeing with the Cosinor node on the same data.
+				// Caught by the util-movingwindows-cosinor-relamp parity fixture.
+				stats[`H${k}_acrophase`] = wrapToPeriod(-r.harmonics[h].acrophase_hrs, periodUsed / k);
 			}
+			// Guard the ratio: a MESOR at or near zero (a mean-centred or
+			// zero-baseline signal) makes amplitude/MESOR meaningless or infinite.
+			const mesor = r.M;
+			const amp1 = r.harmonics[0]?.amplitude;
+			stats.rel_amplitude =
+				Number.isFinite(mesor) && Math.abs(mesor) > 1e-12 && Number.isFinite(amp1)
+					? amp1 / mesor
+					: NaN;
 			stats.r2 = r.R2;
 			stats.rmse = r.RMSE;
 			stats.pvalue = r.pF;
@@ -263,7 +310,10 @@ export function computeMovingWindows({ tAll, ys, starts, windowSize, statKeys, a
 				const ti = tAll[i];
 				const yi = yData[i];
 				if (isInvalid(ti) || isInvalid(yi)) continue;
-				if (ti >= wStart && ti < wEnd) { tt.push(ti); yy.push(yi); }
+				if (ti >= wStart && ti < wEnd) {
+					tt.push(ti);
+					yy.push(yi);
+				}
 			}
 			if (tt.length < 3) continue;
 			const s = computeStatsForWindow(tt, yy, args);

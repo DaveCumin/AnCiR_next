@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "448": [
+    "452": [
       1,
       1,
       1,
@@ -170,7 +170,7 @@
       7,
       7
     ],
-    "449": [
+    "453": [
       16.291076892469444,
       20.29554398487714,
       9.51596332468565,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 448,
+      "id": 452,
       "name": "day",
-      "data": 448,
+      "data": 452,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 449,
+      "id": 453,
       "name": "activity",
-      "data": 449,
+      "data": 453,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 64,
+      "id": 65,
       "name": "Activity by day",
       "x": 60,
       "y": 60,
@@ -411,9 +411,9 @@
         "data": [
           {
             "x": {
-              "id": 450,
+              "id": 454,
               "name": "day",
-              "refId": 448,
+              "refId": 452,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -422,9 +422,9 @@
               "processes": []
             },
             "y": {
-              "id": 451,
+              "id": 455,
               "name": "activity",
-              "refId": 449,
+              "refId": 453,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -493,11 +493,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_448": {
+    "data_452": {
       "x": 60,
       "y": 314
     },
-    "data_449": {
+    "data_453": {
       "x": 60,
       "y": 814
     },
@@ -505,7 +505,7 @@
       "x": 40,
       "y": 24
     },
-    "plot_64": {
+    "plot_65": {
       "x": 820,
       "y": 314
     }
@@ -567,5 +567,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.0"
+  "version": "β.64.2"
 }

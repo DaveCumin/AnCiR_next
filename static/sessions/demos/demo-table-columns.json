@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "498": [
+    "502": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "499": [
+    "503": [
       50,
       60,
       70,
@@ -100,7 +100,7 @@
       30,
       40
     ],
-    "500": [
+    "504": [
       30,
       30,
       29,
@@ -153,9 +153,9 @@
   },
   "data": [
     {
-      "id": 498,
+      "id": 502,
       "name": "hour",
-      "data": 498,
+      "data": 502,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -164,9 +164,9 @@
       "processes": []
     },
     {
-      "id": 499,
+      "id": 503,
       "name": "signalA",
-      "data": 499,
+      "data": 503,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -175,9 +175,9 @@
       "processes": []
     },
     {
-      "id": 500,
+      "id": 504,
       "name": "signalB",
-      "data": 500,
+      "data": 504,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -188,7 +188,7 @@
   ],
   "plots": [
     {
-      "id": 73,
+      "id": 74,
       "name": "Signal table",
       "x": 60,
       "y": 60,
@@ -204,9 +204,9 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          498,
-          499,
-          500
+          502,
+          503,
+          504
         ],
         "showCol": [
           true,
@@ -238,15 +238,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_498": {
+    "data_502": {
       "x": 60,
       "y": 314
     },
-    "data_499": {
+    "data_503": {
       "x": 60,
       "y": 814
     },
-    "data_500": {
+    "data_504": {
       "x": 60,
       "y": 1314
     },
@@ -254,7 +254,7 @@
       "x": 40,
       "y": 24
     },
-    "plot_73": {
+    "plot_74": {
       "x": 820,
       "y": 314
     }
@@ -316,5 +316,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.0"
+  "version": "β.64.2"
 }

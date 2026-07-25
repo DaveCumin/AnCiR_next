@@ -128,6 +128,26 @@ const DEMOS = [
 		}
 	},
 	{
+		id: 'cwt-period-change',
+		name: 'Wavelet — a period that changes',
+		family: 'Plots',
+		description:
+			'A scalogram of a signal that runs at 24 h for the first half of the record and 12 h for the second. A periodogram would show both peaks and say nothing about when each applied; the wavelet transform localises them in time. The dashed cone of influence marks the edges, where the transform runs out of data and the values are artefacts.',
+		build(mk) {
+			const rng = mulberry32(11);
+			const dtHrs = 0.5;
+			const n = 2 * 24 * 20; // 20 days at 30-minute sampling, uniformly spaced
+			const hours = Array.from({ length: n }, (_, i) => i * dtHrs);
+			const activity = hours.map((h) => {
+				const period = h < (n * dtHrs) / 2 ? 24 : 12;
+				return 50 + 30 * Math.sin((2 * Math.PI * h) / period - Math.PI / 2) + normal(rng, 0, 4);
+			});
+			const xId = mk.col('hour', 'number', hours);
+			const yId = mk.col('activity', 'number', activity);
+			mk.plot('cwt', 'Wavelet scalogram', { x: xId, y: yId });
+		}
+	},
+	{
 		id: 'histogram-normal',
 		name: 'Histogram — distribution',
 		family: 'Plots',

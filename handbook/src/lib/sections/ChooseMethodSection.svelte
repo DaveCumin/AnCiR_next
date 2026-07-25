@@ -1,86 +1,11 @@
 <script>
   import ChapterSection from "$lib/components/ChapterSection.svelte";
   import NoteBox from "$lib/components/NoteBox.svelte";
+  import MethodPicker from "$lib/components/MethodPicker.svelte";
+  // The goal index lives in $lib/methodGuide.js so this table and the picker
+  // below it are driven by one set of facts.
+  import { GOALS, SAMPLING_SHORT, SPACING_SHORT } from "$lib/methodGuide.js";
 
-  // Goal-first index: what you want to know -> method -> what you need
-  // (including the study design it implies) -> where to go. The "You need"
-  // column names whether the question is answered from ONE individual measured
-  // over time (longitudinal) or from MANY individuals (cross-sectional); see the
-  // discussion above the table.
-  const goals = [
-    {
-      goal: "Is there a rhythm?<span class=\"q-design\">one individual, over time</span>",
-      method: "Periodogram (χ² or Lomb–Scargle), read with its <em>peak power</em> next to the actogram",
-      need: "A multi-day record from one individual",
-      go: [["Ch 6", "ch6"], ["Recipe", "recipes"]],
-    },
-    {
-      goal: "Is there a rhythm?<span class=\"q-design\">many individuals</span>",
-      method: "Fit a cosinor at the expected period and test whether the amplitude differs from zero (the fit's F-test / p-value)",
-      need: "Many individuals sampled across the cycle, clock times recorded",
-      go: [["Ch 7", "ch7"]],
-    },
-    {
-      goal: "What is the period, τ?",
-      method: "χ² periodogram (dense, even) · Lomb–Scargle (sparse, uneven) · FFT for a quick spectral view",
-      need: "One individual, ideally ≥ 7 cycles; even spacing for χ²/FFT",
-      go: [["Ch 6", "ch6"], ["Ch 8", "ch8"]],
-    },
-    {
-      goal: "Amplitude, phase and MESOR at a known τ?",
-      method: "Cosinor (fixed period); population-mean cosinor for a group",
-      need: "One individual, or many for a group estimate; τ known",
-      go: [["Ch 7", "ch7"], ["Recipe", "recipes"]],
-    },
-    {
-      goal: "Compare <strong>phase</strong> between groups?",
-      method: "Circular statistics (Rayleigh, Watson–Williams)",
-      need: "Many individuals; one acrophase each",
-      go: [["Ch 12", "ch12"], ["Recipe", "recipes"]],
-    },
-    {
-      goal: "Compare <strong>period</strong> between groups?",
-      method: "Estimate τ per individual (periodogram), then t-test or regression on the periods",
-      need: "Many individuals; several cycles each",
-      go: [["Ch 6", "ch6"], ["Ch 12", "ch12"]],
-    },
-    {
-      goal: "Compare <strong>amplitude</strong> or mean level between groups?",
-      method: "Cosinor per individual, then t-test on the parameters",
-      need: "Many individuals; τ known or estimated",
-      go: [["Ch 7", "ch7"], ["Recipe", "recipes"]],
-    },
-    {
-      goal: "How strong or fragmented is the rhythm?",
-      method: "NPCRA: interdaily stability (IS), intradaily variability (IV), relative amplitude (RA), M10 / L5",
-      need: "One individual; continuous actigraphy, ≥ 7 days",
-      go: [["Ch 9", "ch9"], ["Recipe", "recipes"]],
-    },
-    {
-      goal: "Waveform clearly non-sinusoidal?",
-      method: "A shape-matched fit rather than a plain cosine: harmonic cosinor, <strong>rectangular-wave</strong> (crisp on/off rhythms) or <strong>double-logistic</strong> (gradual, asymmetric on/off transitions), all via <strong>FitFunction</strong>; or NPCRA / an average-day profile for a shape-free summary",
-      need: "One individual; continuous record",
-      go: [["Ch 7", "ch7"], ["Ch 9", "ch9"]],
-    },
-    {
-      goal: "Size and direction of a phase shift (PRC)?",
-      method: "Detect activity onsets, then measure the phase difference against the stimulus time",
-      need: "One individual; free-run before and after the stimulus",
-      go: [["Ch 10", "ch10"]],
-    },
-    {
-      goal: "Only times of events (no magnitude)?",
-      method: "Rayleigh test on the event phases",
-      need: "Event or onset times, from one or many individuals",
-      go: [["Ch 12", "ch12"]],
-    },
-    {
-      goal: "How do two rhythms line up in time?",
-      method: "Cross-correlation",
-      need: "One individual; two aligned series",
-      go: [["Ch 9", "ch9"]],
-    },
-  ];
 </script>
 
 <ChapterSection id="choosing" num="Guide" title="Choosing a Method: The Bigger Picture">
@@ -140,14 +65,17 @@
     <em>period</em> is the one thing a cross-sectional design cannot do: folding
     many individuals onto clock time assumes the period rather than revealing it,
     so an unknown period must come from a longitudinal record. The
-    &ldquo;You need&rdquo; column below says which each method wants.
+    &ldquo;Sampling&rdquo; column below says which design each question wants.
   </p>
 
   <h3 class="section-head">Start from your goal</h3>
   <p>
     Pick the row that matches the question you actually have. The method column
-    names what to reach for; the last column links to the chapter and, where one
-    exists, a ready-made recipe.
+    names what to reach for; <strong>Sampling</strong> and <strong>Spacing</strong>
+    say what the data must look like for that method to be valid, and the last
+    column links to the chapter and, where one exists, a ready-made recipe. A
+    <em>Spacing</em> of &ldquo;Even&rdquo; means the method reads position in the
+    sequence rather than clock time; hover it for what to use instead on gappy data.
   </p>
 
   <div class="goal-table-wrap">
@@ -156,15 +84,33 @@
         <tr>
           <th>Your question</th>
           <th>Reach for</th>
+          <th>Sampling</th>
+          <th>Spacing</th>
           <th>You need</th>
           <th>Go to</th>
         </tr>
       </thead>
       <tbody>
-        {#each goals as row}
+        {#each GOALS as row}
           <tr>
-            <td class="goal-cell">{@html row.goal}</td>
+            <td class="goal-cell">
+              {@html row.goal}{#if row.context}<span class="q-design">{row.context}</span>{/if}
+            </td>
             <td>{@html row.method}</td>
+            <td class="axis-cell">
+              <span class="axis-badge">{SAMPLING_SHORT[row.sampling]}</span>
+            </td>
+            <td class="axis-cell">
+              <span
+                class="axis-badge"
+                class:even={row.spacing === 'even'}
+                title={row.spacing === 'even'
+                  ? row.ifUneven
+                    ? `Unevenly spaced data: use ${row.ifUneven}.`
+                    : 'Unevenly spaced data must be re-binned or interpolated onto an even grid first.'
+                  : 'Fits against the actual timestamps, so gaps are fine.'}
+              >{SPACING_SHORT[row.spacing]}</span>
+            </td>
             <td class="need-cell">{row.need}</td>
             <td class="go-cell">
               {#each row.go as [label, id], i}<a href="#{id}">{label}</a>{#if i < row.go.length - 1}<span class="sep">·</span>{/if}{/each}
@@ -174,6 +120,15 @@
       </tbody>
     </table>
   </div>
+
+  <h3 class="section-head">Or let the picker narrow it for you</h3>
+  <p>
+    The same index, filtered. Tell it your question and what your data look like
+    and it keeps only the routes that stay valid, showing the ruled-out ones
+    greyed with the reason, because <em>why</em> a method is out is usually the
+    part worth knowing.
+  </p>
+  <MethodPicker />
 
   <NoteBox title="How this fits with the rest of the handbook">
     <p>
@@ -229,7 +184,7 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9rem;
-    min-width: 640px;
+    min-width: 820px;
   }
   .goal-table th,
   .goal-table td {
@@ -264,7 +219,28 @@
   }
   .need-cell {
     color: var(--muted);
-    width: 22%;
+    width: 16%;
+  }
+  /* The two structured axes the picker filters on. Badges rather than prose so a
+     reader can scan one column and see which rows their data rule out. */
+  .axis-cell {
+    width: 9%;
+  }
+  .axis-badge {
+    display: inline-block;
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.3;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    background: var(--panel-bg);
+    color: var(--text);
+    cursor: help;
+  }
+  /* "Even" is the constraint that bites, so it is the one that gets the warning tint. */
+  .axis-badge.even {
+    background: var(--gold-lt);
+    color: var(--gold);
   }
   .go-cell {
     white-space: nowrap;

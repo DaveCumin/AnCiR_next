@@ -1063,7 +1063,7 @@
       "name": "R_30",
       "data": 432,
       "type": "number",
-      "tableProcessGUId": "2daa76e8-6155-4809-bed6-5cb574b93d50",
+      "tableProcessGUId": "4b93f419-0458-463c-8221-d5dd81a2ee3a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1074,7 +1074,7 @@
       "name": "z_30",
       "data": 433,
       "type": "number",
-      "tableProcessGUId": "2daa76e8-6155-4809-bed6-5cb574b93d50",
+      "tableProcessGUId": "4b93f419-0458-463c-8221-d5dd81a2ee3a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1085,7 +1085,7 @@
       "name": "pvalue_30",
       "data": 434,
       "type": "number",
-      "tableProcessGUId": "2daa76e8-6155-4809-bed6-5cb574b93d50",
+      "tableProcessGUId": "4b93f419-0458-463c-8221-d5dd81a2ee3a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1422,5 +1422,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.0"
+  "version": "β.64.2"
 }

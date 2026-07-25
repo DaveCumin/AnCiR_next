@@ -168,7 +168,12 @@ def fit_cosinor_fixed(t, y, period=24.0, n_harmonics=1, alpha=0.05):
         return None
     rss = float((residuals ** 2).sum())
     mse = rss / df_resid
-    rmse = math.sqrt(rss / n)
+    # sqrt(MSE), i.e. divided by the residual DF — matching the JS
+    # (cosinor.js: `const RMSE = Math.sqrt(MSE)` with MSE = SSres/df_res), which
+    # is the parity source of truth. Dividing by n instead gave a ~0.9% low RMSE
+    # on a 168-point window; no fixture compared rmse until the rolling-cosinor
+    # one, so the divergence had gone unnoticed.
+    rmse = math.sqrt(mse)
     ss_tot = float(((y - y.mean()) ** 2).sum())
     r2 = 1 - rss / ss_tot if ss_tot > 0 else 0.0
 
@@ -1830,6 +1835,92 @@ def tp_threshold(args, cols, raw_data, _sv):
     return len(out) > 0
 
 
+# --- FDRCorrection ---
+
+def tp_fdrcorrection(args, cols, raw_data, _sv):
+    """Adjust a column of p-values for multiple comparisons.
+
+    Mirrors FDRCorrection.svelte fdrcorrection. The adjustment itself is
+    delegated to p_adjust (statsmodels-backed), so this is a real reference for
+    the JS rather than a second copy of it.
+    """
+    x_in = args.get('xIN', -1)
+    if x_in == -1 or x_in not in cols:
+        return False
+    data = cols[x_in].get_data() or []
+    if not data:
+        return False
+
+    method = args.get('method', 'benjamini-hochberg')
+    if method not in ('none', 'bonferroni', 'holm',
+                      'benjamini-hochberg', 'benjamini-yekutieli'):
+        method = 'benjamini-hochberg'
+    try:
+        alpha = float(args.get('alpha', 0.05))
+    except (TypeError, ValueError):
+        alpha = 0.05
+    if not math.isfinite(alpha):
+        alpha = 0.05
+
+    padj = p_adjust(data, method)['adjusted']
+    reject = [None if not math.isfinite(v) else (1 if v < alpha else 0) for v in padj]
+    n_tested = sum(1 for v in padj if math.isfinite(v))
+
+    _set_col(raw_data, cols, _out_id(args, 'padj'), padj, type_='number')
+    _set_col(raw_data, cols, _out_id(args, 'reject'), reject, type_='number')
+    return n_tested > 0
+
+
+# --- SurrogateTest ---
+
+def tp_surrogatetest(args, cols, raw_data, _sv):
+    """Observed band-limited statistic for the surrogate rhythmicity test.
+
+    PARITY SCOPE — deliberate and limited. The `observed` statistic is fully
+    deterministic (peak FFT magnitude inside the period band) and IS matched
+    against the JS. The `pvalue` is NOT: it is a Monte Carlo quantity whose value
+    depends on the exact sequence drawn from the JS's seeded @stdlib
+    minstd-shuffle PRNG, which this runtime does not reproduce. That is the same
+    boundary already drawn for tp_random, which is excluded from session parity
+    for the same reason.
+
+    So p-value is emitted as NaN here rather than a number that would look
+    comparable but could not be.
+    """
+    x_in = args.get('xIN', -1)
+    y_in = args.get('yIN', -1)
+    if x_in == -1 or y_in == -1 or x_in not in cols or y_in not in cols:
+        return False
+
+    times = _t_for_col(cols[x_in])
+    values = cols[y_in].get_data() or []
+    if len(times) < 8 or len(values) < 8:
+        return False
+
+    ta = np.array([np.nan if v is None else v for v in times], dtype=float)
+    ya = np.array([np.nan if v is None else v for v in values], dtype=float)
+    finite = np.isfinite(ta) & np.isfinite(ya)
+    ta, ya = ta[finite], ya[finite]
+    if ta.size < 8:
+        return False
+
+    period_min = float(args.get('periodMin', 20) or 20)
+    period_max = float(args.get('periodMax', 28) or 28)
+
+    fft = compute_fft(ta.tolist(), ya.tolist())
+    best = 0.0
+    for f, m in zip(fft['frequencies'], fft['magnitudes']):
+        if f == 0:
+            continue
+        period = 1.0 / f
+        if period_min <= period <= period_max and m > best:
+            best = m
+
+    _set_col(raw_data, cols, _out_id(args, 'observed'), [best], type_='number')
+    _set_col(raw_data, cols, _out_id(args, 'pvalue'), [float('nan')], type_='number')
+    return True
+
+
 # --- DoubleLogistic ---
 
 def tp_doublelogistic(args, cols, raw_data, _sv):
@@ -2042,6 +2133,16 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
                         for h in res['harmonics']:
                             stats[f"H{h['k']}_amplitude"] = h['amplitude']
                             stats[f"H{h['k']}_acrophase"] = h['acrophase_hrs']
+                        # rel_amplitude = first-harmonic amplitude / MESOR. NaN when
+                        # the MESOR is ~0 (a mean-centred signal has no meaningful
+                        # relative amplitude) rather than +-inf. Mirrors the JS.
+                        mesor = res['M']
+                        amp1 = res['harmonics'][0]['amplitude'] if res['harmonics'] else float('nan')
+                        stats['rel_amplitude'] = (
+                            amp1 / mesor
+                            if math.isfinite(mesor) and abs(mesor) > 1e-12 and math.isfinite(amp1)
+                            else float('nan')
+                        )
                 else:
                     res = fit_cosine_curves(tw, yw, int(args.get('Ncurves', 1)))
                     if res:
@@ -2052,6 +2153,18 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
                                                      if c['frequency'] else float('inf'))
                             stats[f"C{k}_amplitude"] = c['amplitude']
                             stats[f"C{k}_phase"] = c['phase']
+            elif analysis == 'npcra':
+                # Nonparametric circadian rhythm analysis per window: IS/IV/RA and
+                # the L5/M10 windows. compute_npcra re-bins onto its own epoch grid
+                # internally, so it takes the window's raw (t, y).
+                npc = compute_npcra(tw.tolist(), yw.tolist(),
+                                    epoch_hours=float(args.get('npcraEpochHours', 1)),
+                                    period=float(args.get('npcraPeriod', 24)),
+                                    m_window=float(args.get('npcraMWindow', 10)),
+                                    l_window=float(args.get('npcraLWindow', 5)))
+                if npc:
+                    for k in ('IS', 'IV', 'RA', 'L5', 'M10', 'M10onset'):
+                        stats[k] = npc.get(k, float('nan'))
             elif analysis == 'fft':
                 fft = compute_fft(tw, yw)
                 if fft['magnitudes']:
@@ -3212,6 +3325,10 @@ DISPLAY_TO_TP = {
     'SmoothedData': 'smootheddata',
     'Sort': 'sort',
     'Threshold': 'threshold',
+    'FDR Correction': 'fdrcorrection',
+    'FDRCorrection': 'fdrcorrection',
+    'Surrogate Test': 'surrogatetest',
+    'SurrogateTest': 'surrogatetest',
     'Split': 'split',
     'Split data': 'split',
     'Stored Value Group': 'storedvaluegroup',
@@ -3847,6 +3964,8 @@ TABLE_PROCESS_MAP = {
     'smootheddata': tp_smootheddata,
     'sort': tp_sort,
     'threshold': tp_threshold,
+    'fdrcorrection': tp_fdrcorrection,
+    'surrogatetest': tp_surrogatetest,
     'split': tp_split,
     'trendfit': tp_trendfit,
     'storedvaluegroup': tp_storedvaluegroup,
@@ -4766,3 +4885,171 @@ def logistic_regression(y, predictor_cols, names=None):
         "fitted": fit_arr,
         "outcome": out_arr,
     }
+
+
+# ---------------------------------------------------------------------------
+# Multiple-comparison correction — mirrors src/lib/utils/pAdjust.js
+# ---------------------------------------------------------------------------
+def p_adjust(pvalues, method="benjamini-hochberg"):
+    """Adjust p-values for multiple comparisons.
+
+    Backed by statsmodels.stats.multitest.multipletests, so the JS is checked
+    against a real reference implementation rather than a second copy of itself.
+
+    Non-finite entries (None, '', bool, NaN) are EXCLUDED from n and returned as
+    NaN, matching the JS: a test that failed to run must not tighten the
+    correction applied to the ones that did.
+    """
+    from statsmodels.stats.multitest import multipletests
+
+    name_map = {
+        "bonferroni": "bonferroni",
+        "holm": "holm",
+        "benjamini-hochberg": "fdr_bh",
+        "benjamini-yekutieli": "fdr_by",
+    }
+
+    kept, out = [], [float("nan")] * len(pvalues)
+    for i, raw in enumerate(pvalues):
+        if raw is None or isinstance(raw, bool) or raw == "":
+            continue
+        try:
+            v = float(raw)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(v):
+            continue
+        kept.append((i, min(1.0, max(0.0, v))))
+
+    if not kept:
+        return {"adjusted": out}
+    if method == "none":
+        for i, v in kept:
+            out[i] = v
+        return {"adjusted": out}
+
+    sm_method = name_map.get(method)
+    if sm_method is None:
+        raise ValueError(f"p_adjust: unknown method {method!r}")
+
+    adj = multipletests([v for _, v in kept], method=sm_method)[1]
+    for (i, _), a in zip(kept, adj):
+        out[i] = float(a)
+    return {"adjusted": out}
+
+
+# ---------------------------------------------------------------------------
+# Continuous wavelet transform — mirrors src/lib/utils/cwt.js
+# ---------------------------------------------------------------------------
+def cwt_peak_scale_index(values, opts):
+    """Index of the maximum-power SCALE at each interior time point.
+
+    Backed by PyWavelets (pywt.cwt with a complex Morlet).
+
+    Why the peak scale INDEX rather than the power map: pywt's `cmor`
+    normalisation and edge handling differ from Torrence & Compo's, so the two
+    power fields agree only up to a scale-dependent factor (measured: dominant
+    rows correlate 0.99, low-power rows diverge). The argmax over scales is
+    invariant to any per-scale factor, and it is also the quantity that carries
+    the science — "what period dominates here". Interior points only, because
+    inside the cone of influence both implementations are reporting edge
+    artefacts rather than a measurement.
+    """
+    import pywt
+
+    dt = float(opts["dt"])
+    dj = float(opts.get("dj", 0.25))
+    s0 = float(opts.get("s0", 2 * dt))
+    j1 = int(opts.get("j1", 12))
+    w0 = float(opts.get("w0", 6.0))
+    lo = int(opts["lo"])
+    hi = int(opts["hi"])
+
+    y = np.asarray([float(v) for v in values], dtype=float)
+    y = y - y.mean()
+
+    scales = np.array([s0 * 2 ** (j * dj) for j in range(j1 + 1)])
+    fc = w0 / (2 * np.pi)
+    # cmor bandwidth 2.0 gives the exp(-t^2/2) envelope of the standard Morlet.
+    coef, _ = pywt.cwt(y, scales / dt, f"cmor2.0-{fc:.10f}", sampling_period=dt)
+    power = np.abs(coef) ** 2
+
+    return {"peakScaleIndex": [int(v) for v in power[:, lo:hi].argmax(axis=0)]}
+
+
+def moving_windows(times, values, opts):
+    """Rolling-window statistics, mirroring utils/movinganalysis.js.
+
+    Targets the pure windowing function rather than tp_movinganalysis: the JS
+    node's per-stat output COLUMNS are created by its component reconcile, not by
+    its `func`, so the table-process parity path cannot reach them. This is where
+    the windowing and per-window maths actually live.
+
+    Returns {'starts': [...], '<stat>': [...], ...}.
+    """
+    window = float(opts.get('windowSize', 168))
+    step = float(opts.get('stepSize', 24))
+    analysis = opts.get('analysis', 'npcra')
+
+    ta = np.array([np.nan if v is None else v for v in times], dtype=float)
+    ya = np.array([np.nan if v is None else v for v in values], dtype=float)
+    finite = np.isfinite(ta) & np.isfinite(ya)
+    ta, ya = ta[finite], ya[finite]
+
+    starts = []
+    s = float(ta.min())
+    hi = float(ta.max())
+    while s <= hi - window + 1e-9:
+        starts.append(s)
+        s += step
+
+    if analysis == 'npcra':
+        keys = ['IS', 'IV', 'RA', 'L5', 'M10', 'M10onset']
+    elif analysis == 'cosinor':
+        n_h = int(opts.get('nHarmonics', 1))
+        keys = ['mesor']
+        for h in range(1, n_h + 1):
+            keys += [f'H{h}_amplitude', f'H{h}_acrophase']
+        keys += ['rel_amplitude', 'r2', 'rmse', 'pvalue']
+    else:
+        raise ValueError(f'moving_windows: unsupported analysis {analysis!r}')
+
+    out = {k: [] for k in keys}
+    for st in starts:
+        mask = (ta >= st) & (ta < st + window)
+        tw, yw = ta[mask], ya[mask]
+        stats = {k: float('nan') for k in keys}
+        if tw.size >= 3:
+            if analysis == 'npcra':
+                npc = compute_npcra(tw.tolist(), yw.tolist(),
+                                    epoch_hours=float(opts.get('npcraEpochHours', 1)),
+                                    period=float(opts.get('npcraPeriod', 24)),
+                                    m_window=float(opts.get('npcraMWindow', 10)),
+                                    l_window=float(opts.get('npcraLWindow', 5)))
+                if npc:
+                    for k in keys:
+                        stats[k] = npc.get(k, float('nan'))
+            else:
+                res = fit_cosinor_fixed(tw, yw,
+                                        float(opts.get('fixedPeriod', 24)),
+                                        int(opts.get('nHarmonics', 1)))
+                if res:
+                    stats['mesor'] = res['M']
+                    stats['r2'] = res['R2']
+                    stats['rmse'] = res['RMSE']
+                    stats['pvalue'] = res['pF']
+                    for h in res['harmonics']:
+                        stats[f"H{h['k']}_amplitude"] = h['amplitude']
+                        stats[f"H{h['k']}_acrophase"] = h['acrophase_hrs']
+                    mesor = res['M']
+                    amp1 = res['harmonics'][0]['amplitude'] if res['harmonics'] else float('nan')
+                    stats['rel_amplitude'] = (
+                        amp1 / mesor
+                        if math.isfinite(mesor) and abs(mesor) > 1e-12 and math.isfinite(amp1)
+                        else float('nan')
+                    )
+        for k in keys:
+            out[k].append(stats[k])
+
+    out['starts'] = starts
+    return out

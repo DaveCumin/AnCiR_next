@@ -874,7 +874,7 @@
       "name": "Peak period (h)",
       "data": 62,
       "type": "number",
-      "tableProcessGUId": "a63ae1fd-d0ae-484d-a14f-189a5fbce877",
+      "tableProcessGUId": "db3175ff-5786-4955-a422-b650339a9552",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -885,7 +885,7 @@
       "name": "Peak power",
       "data": 63,
       "type": "number",
-      "tableProcessGUId": "a63ae1fd-d0ae-484d-a14f-189a5fbce877",
+      "tableProcessGUId": "db3175ff-5786-4955-a422-b650339a9552",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -896,7 +896,7 @@
       "name": "rhythmicityy_57_4",
       "data": 64,
       "type": "number",
-      "tableProcessGUId": "a63ae1fd-d0ae-484d-a14f-189a5fbce877",
+      "tableProcessGUId": "db3175ff-5786-4955-a422-b650339a9552",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1232,5 +1232,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.0"
+  "version": "β.64.2"
 }

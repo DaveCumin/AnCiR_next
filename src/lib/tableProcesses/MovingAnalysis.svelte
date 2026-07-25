@@ -25,6 +25,11 @@
 		['binLabel', { val: 'center' }],
 		// 'periodogram' | 'cosinor' | 'fft' | 'correlogram' | 'rectfit' | 'doublelogistic' | 'trend'
 		['analysis', { val: 'periodogram' }],
+		// nonparametric circadian rhythm analysis params (analysis === 'npcra')
+		['npcraEpochHours', { val: 1 }],
+		['npcraPeriod', { val: 24 }],
+		['npcraMWindow', { val: 10 }],
+		['npcraLWindow', { val: 5 }],
 		// trend-fit params (used when analysis === 'trend')
 		// 'linear' | 'polynomial' | 'logarithmic' | 'exponential'
 		['trendModel', { val: 'linear' }],
@@ -548,6 +553,7 @@
 				options={[
 					'periodogram',
 					'cosinor',
+					'npcra',
 					'fft',
 					'correlogram',
 					'rectfit',
@@ -557,6 +563,7 @@
 				optionsDisplay={[
 					'Periodogram',
 					'Cosinor',
+					'Nonparametric (IS/IV/RA)',
 					'FFT',
 					'Correlogram',
 					'Rectangular wave fit',
@@ -621,6 +628,23 @@
 				</ControlInput>
 			</div>
 		{/if}
+	{:else if p.args.analysis === 'npcra'}
+		<div class="control-input-horizontal">
+			<ControlInput label="Epoch (hrs)">
+				<NumberWithUnits bind:value={p.args.npcraEpochHours} min="0.01" step="0.25" />
+			</ControlInput>
+			<ControlInput label="Period (hrs)">
+				<NumberWithUnits bind:value={p.args.npcraPeriod} min="1" step="1" />
+			</ControlInput>
+		</div>
+		<div class="control-input-horizontal">
+			<ControlInput label="M window (hrs)">
+				<NumberWithUnits bind:value={p.args.npcraMWindow} min="1" step="1" />
+			</ControlInput>
+			<ControlInput label="L window (hrs)">
+				<NumberWithUnits bind:value={p.args.npcraLWindow} min="1" step="1" />
+			</ControlInput>
+		</div>
 	{:else if p.args.analysis === 'fft'}
 		<div class="control-input-horizontal">
 			<ControlInput label="Frequency step (cycles/hr; 0 = auto)">

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "537": [
+    "541": [
       0,
       1,
       2,
@@ -53,7 +53,7 @@
       49,
       50
     ],
-    "538": [
+    "542": [
       0,
       1,
       2,
@@ -109,20 +109,20 @@
   },
   "data": [
     {
-      "id": 537,
+      "id": 541,
       "name": "x",
-      "data": 537,
+      "data": 541,
       "type": "number",
-      "tableProcessGUId": "5f3950aa-3ddf-4e94-b1f7-a9d17feddd10",
+      "tableProcessGUId": "66ebb2a5-aca7-468b-b6f2-22aadcc93ab1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 538,
+      "id": 542,
       "name": "y",
-      "data": 538,
+      "data": 542,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -131,20 +131,20 @@
       "processes": []
     },
     {
-      "id": 539,
+      "id": 543,
       "name": "Remove Outliers result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_5",
-      "producerPort": "out_538",
+      "producerPort": "out_542",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 84,
+      "id": 85,
       "name": "Remove Outliers: before vs after",
       "x": 60,
       "y": 60,
@@ -201,9 +201,9 @@
         "data": [
           {
             "x": {
-              "id": 540,
+              "id": 544,
               "name": "x",
-              "refId": 537,
+              "refId": 541,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -212,9 +212,9 @@
               "processes": []
             },
             "y": {
-              "id": 541,
+              "id": 545,
               "name": "y",
-              "refId": 538,
+              "refId": 542,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -240,9 +240,9 @@
           },
           {
             "x": {
-              "id": 542,
+              "id": 546,
               "name": "x",
-              "refId": 537,
+              "refId": 541,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -251,9 +251,9 @@
               "processes": []
             },
             "y": {
-              "id": 543,
+              "id": 547,
               "name": "Remove Outliers result",
-              "refId": 539,
+              "refId": 543,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -293,7 +293,7 @@
       }
     },
     {
-      "id": 85,
+      "id": 86,
       "name": "Remove Outliers: values",
       "x": 630,
       "y": 60,
@@ -309,8 +309,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          538,
-          539
+          542,
+          543
         ],
         "showCol": [
           true,
@@ -335,7 +335,7 @@
         "count": 51,
         "end": 50,
         "out": {
-          "result": 537
+          "result": 541
         }
       },
       "refTPId": null
@@ -365,13 +365,13 @@
         "iqrMultiplier": 1.5,
         "zThreshold": 3,
         "inIN": [
-          538
+          542
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_538": {
+    "data_542": {
       "x": 60,
       "y": 314
     },
@@ -383,11 +383,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_84": {
+    "plot_85": {
       "x": 820,
       "y": 314
     },
-    "plot_85": {
+    "plot_86": {
       "x": 820,
       "y": 814
     },
@@ -453,5 +453,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.0"
+  "version": "β.64.2"
 }
