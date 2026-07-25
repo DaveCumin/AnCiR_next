@@ -22,11 +22,16 @@ beforeEach(() => {
 		fetchCalls.push({ url, body: JSON.parse(init.body) });
 		return Promise.resolve(new Response('{}'));
 	};
+	// jsdom serves these on `localhost`, which the reporter now treats as a developer's machine and
+	// won't POST from. Report-path tests assert what a REAL user's browser does, so run them on a
+	// production-like host; the one dev-suppression test below overrides this back to localhost.
+	vi.stubGlobal('location', new URL('https://cumin.co.nz/ancir/'));
 	// Each test is a distinct error, so the repeat-suppressor doesn't hide it.
 	vi.setSystemTime?.(new Date());
 });
 afterEach(() => {
 	vi.restoreAllMocks();
+	vi.unstubAllGlobals();
 });
 
 describe('reportError', () => {
@@ -77,6 +82,18 @@ describe('reportError', () => {
 		expect(fetchCalls).toHaveLength(1);
 		// Still logged locally every time: that's the developer's record, not the user's.
 		expect(console.error).toHaveBeenCalledTimes(20);
+	});
+
+	it('on localhost, still tells the user and saves the session, but does NOT report', () => {
+		// A developer mid-refactor throws transient errors constantly; those must not reach the
+		// shared production log. The LOCAL half of the crash handler still has to work, though.
+		vi.stubGlobal('location', new URL('http://localhost:5173/'));
+		core.data.push({ id: 0, name: 'time' });
+		reportError(new Error('dev-only-crash'), { source: 'render' });
+
+		expect(notifications.list).toHaveLength(1); // user still told
+		expect(readCrashSnapshot()?.session).toBeTruthy(); // session still parked
+		expect(fetchCalls).toHaveLength(0); // but nothing sent to the Worker
 	});
 
 	it('says so honestly when the session could NOT be saved', () => {

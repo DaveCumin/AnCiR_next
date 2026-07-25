@@ -412,7 +412,7 @@
 		"
 		>
 			{#each core.notes as note (note.id)}
-				<NoteCard {note} />
+				<NoteCard {note} viewportEl={canvasViewportEl} />
 			{/each}
 
 			{#if core.plots.length > 0}

@@ -320,7 +320,9 @@
 			//now distribute
 			let currentX = minX;
 			sortedPlotIds.forEach((id) => {
-				getPlotById(id).x = snapToGrid(Math.max(0, currentX));
+				// Not clamped to 0: the canvas extends infinitely in every direction,
+				// so a selection sitting left of the origin must distribute in place.
+				getPlotById(id).x = snapToGrid(currentX);
 				currentX += getPlotById(id).width + 25 + spacingIN;
 			});
 		}
@@ -339,7 +341,8 @@
 			let currentY = minY;
 			sortedPlotIds.forEach((id) => {
 				console.log('setting plot ', id, ' to y: ', currentY);
-				getPlotById(id).y = snapToGrid(Math.max(0, currentY));
+				// See horizontalEqual above: no clamp on an infinite canvas.
+				getPlotById(id).y = snapToGrid(currentY);
 				currentY += getPlotById(id).height + 50 + spacingIN;
 			});
 		}

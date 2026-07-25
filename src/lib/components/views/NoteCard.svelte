@@ -5,8 +5,27 @@
 	// editor and vice-versa.
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appState, snapToGrid, removeNote } from '$lib/core/core.svelte.js';
+	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
+	import { clientToCanvasPoint } from '$lib/core/canvasCoords.js';
 
-	let { note } = $props();
+	let { note, viewportEl = null } = $props();
+
+	function applyEdgePan(dx, dy) {
+		appState.canvasOffset = {
+			x: (appState.canvasOffset?.x ?? 0) + dx,
+			y: (appState.canvasOffset?.y ?? 0) + dy
+		};
+	}
+
+	// Drag maths runs in canvas coords, so a mid-drag edge-pan leaves the note
+	// under the cursor instead of sliding out from under it.
+	function canvasPoint(clientX, clientY) {
+		return clientToCanvasPoint(clientX, clientY, {
+			rect: viewportEl?.getBoundingClientRect(),
+			scale: appState.canvasScale,
+			offset: appState.canvasOffset
+		});
+	}
 
 	let dragStartX = 0;
 	let dragStartY = 0;
@@ -23,17 +42,28 @@
 	function onHeaderPointerDown(e) {
 		if (e.target.closest('button.icon')) return;
 		e.stopPropagation();
-		mouseStartX = e.clientX;
-		mouseStartY = e.clientY;
+		const start = canvasPoint(e.clientX, e.clientY);
+		mouseStartX = start.x;
+		mouseStartY = start.y;
 		dragStartX = note.x;
 		dragStartY = note.y;
 		dragging = true;
+		if (viewportEl) {
+			startEdgePan({
+				getViewportRect: () => viewportEl.getBoundingClientRect(),
+				applyPan: applyEdgePan
+			});
+			noteEdgePanMouse(e.clientX, e.clientY);
+		}
 		window.addEventListener('pointermove', onPointerMove);
 		window.addEventListener('pointerup', onPointerUp);
 	}
 
 	function startResize(e) {
 		e.stopPropagation();
+		// NOTE: resize keeps mouseStart* in CLIENT coords (it only needs a screen
+		// delta / zoom), whereas drag stores CANVAS coords. The two gestures are
+		// mutually exclusive and each seeds the pair itself, so they never mix.
 		mouseStartX = e.clientX;
 		mouseStartY = e.clientY;
 		initialWidth = note.width;
@@ -45,11 +75,13 @@
 
 	function onPointerMove(e) {
 		const scale = appState.canvasScale || 1;
+		if (dragging || resizing) noteEdgePanMouse(e.clientX, e.clientY);
 		if (dragging) {
-			const dx = (e.clientX - mouseStartX) / scale;
-			const dy = (e.clientY - mouseStartY) / scale;
-			note.x = Math.max(0, snapToGrid(dragStartX + dx));
-			note.y = Math.max(0, snapToGrid(dragStartY + dy));
+			// The canvas is infinite in every direction (as the workflow canvas is),
+			// so note positions are deliberately NOT clamped to the positive quadrant.
+			const cur = canvasPoint(e.clientX, e.clientY);
+			note.x = snapToGrid(dragStartX + (cur.x - mouseStartX));
+			note.y = snapToGrid(dragStartY + (cur.y - mouseStartY));
 		} else if (resizing) {
 			const dx = (e.clientX - mouseStartX) / scale;
 			const dy = (e.clientY - mouseStartY) / scale;
@@ -61,6 +93,7 @@
 	function onPointerUp() {
 		dragging = false;
 		resizing = false;
+		stopEdgePan();
 		window.removeEventListener('pointermove', onPointerMove);
 		window.removeEventListener('pointerup', onPointerUp);
 	}

@@ -13,6 +13,7 @@
 	import NodeNoteButton from '$lib/components/workflow/NodeNoteButton.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
+	import { clientToCanvasPoint } from '$lib/core/canvasCoords.js';
 	let plotElement;
 
 	let {
@@ -46,14 +47,11 @@
 	let dragThreshold = 5; // pixels before considering it a drag
 
 	function clientToCanvas(clientX, clientY) {
-		const rect = viewportEl?.getBoundingClientRect() ?? { left: 0, top: 0 };
-		const z = appState.canvasScale ?? 1;
-		const offX = appState.canvasOffset?.x ?? 0;
-		const offY = appState.canvasOffset?.y ?? 0;
-		return {
-			x: (clientX - rect.left - offX) / z,
-			y: (clientY - rect.top - offY) / z
-		};
+		return clientToCanvasPoint(clientX, clientY, {
+			rect: viewportEl?.getBoundingClientRect(),
+			scale: appState.canvasScale,
+			offset: appState.canvasOffset
+		});
 	}
 
 	function applyEdgePan(dx, dy) {

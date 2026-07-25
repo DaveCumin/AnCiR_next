@@ -82,9 +82,25 @@ export function clearCrashSnapshot() {
 	}
 }
 
+/**
+ * True when the app is running on a developer's machine (dev server OR `vite preview`), not a
+ * real deployment. Host-based rather than `import.meta.env.DEV`, because a production BUILD served
+ * from `vite preview` is still localhost and still ours — and it's the same host either way.
+ */
+function isLocalHost() {
+	if (typeof location === 'undefined') return false; // SSR / no DOM ⇒ not a user's browser
+	const h = location.hostname;
+	return h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '[::1]' || h === '' || h.endsWith('.local');
+}
+
 /** Fire-and-forget to the Worker's /report. Never throws, never blocks, never waits. */
 function report(fields) {
 	if (!NL_CONFIGURED) return; // no AI service configured ⇒ nowhere to send it
+	// Only real users' crashes belong in the shared log. On localhost the reporter would otherwise
+	// flood it with transient HMR-time ReferenceErrors from half-saved refactors — which is exactly
+	// what buried the single genuine production report under 20+ dev ones. The user-facing half of a
+	// crash (the toast, the local session snapshot) is in reportError, not here, so it still happens.
+	if (isLocalHost()) return;
 	try {
 		const body = JSON.stringify(fields);
 		// keepalive so a report survives the user closing the tab straight after the crash —
