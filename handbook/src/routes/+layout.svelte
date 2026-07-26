@@ -14,6 +14,7 @@
     { label: "AnCiR Quick Start", id: "ancir-start" },
     { label: "Choosing a Method", id: "choosing" },
     { label: "Recipes (common tasks)", id: "recipes" },
+    { label: "Statistical Foundations", id: "stats" },
     { label: "1. Introduction", id: "ch1", group: "Chapters" },
     { label: "2. Data Collection", id: "ch2" },
     { label: "3. Simulating Data", id: "ch3" },

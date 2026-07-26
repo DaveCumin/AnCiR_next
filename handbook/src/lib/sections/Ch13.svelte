@@ -123,6 +123,14 @@
       <li><strong>Chi-squared harmonics in square-wave data</strong> — may produce a spurious 12 h peak. Confirm with Lomb-Scargle.</li>
       <li><strong>Time-unspecified group comparisons</strong> — comparing groups at uncontrolled times without accounting for circadian variation can reverse effect directions (Refinetti et al. 2007, Fig. 26).</li>
       <li><strong>Ignoring masking</strong> — acute environmental effects can temporarily obscure the underlying rhythm.</li>
+      <li><strong>Reporting a p-value without an effect size</strong> — a dense recording makes trivial differences &ldquo;significant&rdquo;. Give the difference in hours or units, with an interval (<a href="#stats">Statistical Foundations</a>).</li>
+      <li><strong>Treating observations as the sample size</strong> — for a group comparison the unit is the <em>subject</em>, not the time point. Twelve animals sampled every minute is n = 12, not n = 172,800.</li>
+      <li><strong>Unlabelled error bars</strong> — SD, SEM and 95% CI differ by up to a factor of five. State which you plotted.</li>
+      <li><strong>Using a normality test as an automatic gate</strong> — it has least power at small n (where it matters) and rejects trivia at large n (where it does not). Test residuals, and decide with a plot.</li>
+      <li><strong>Skipping multiple-comparison correction</strong> — 60 tests at &alpha; = 0.05 give about 3 false positives before any real effect; 15,000 give about 750.</li>
+      <li><strong>Shuffling as the null for a time series</strong> — it destroys autocorrelation along with the rhythm, so almost anything looks significant. Use block, AR(1) or phase surrogates.</li>
+      <li><strong>Measuring amplitude on smoothed data</strong> — every smoother attenuates amplitude by an amount you chose. Smooth to look; fit to the raw data.</li>
+      <li><strong>Judging a fit by R&sup2; alone</strong> — R&sup2; says how much variance was absorbed, not whether the model is right. The residuals say that.</li>
     </ul>
   </WarnBox>
 

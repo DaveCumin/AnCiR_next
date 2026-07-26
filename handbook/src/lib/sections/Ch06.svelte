@@ -5,6 +5,7 @@
   import AnCiRBox from "$lib/components/AnCiRBox.svelte";
   import DemoLink from "$lib/components/DemoLink.svelte";
   import WarnBox from "$lib/components/WarnBox.svelte";
+  import NoteBox from "$lib/components/NoteBox.svelte";
   import Formula from "$lib/components/Formula.svelte";
   import PeriodogramAnim from "$lib/animations/PeriodogramAnim.svelte";
 
@@ -70,6 +71,17 @@
     Increasingly used in chronobiology for sparse clinical datasets, actigraphy
     with gaps, and hormone time-course data.
   </p>
+  <NoteBox title="How this relates to the FFT">
+    <p>
+      Lomb-Scargle is, in effect, a <a href="#ch7">cosinor</a> swept across frequencies: at each trial period it fits a sinusoid and reports how much of the variance that fit explains. The <a href="#ch8">FFT</a> does the same thing, with two restrictions lifted here.
+    </p>
+    <p>
+      First, the FFT can only test frequencies on a <strong>fixed grid</strong> (one, two, three… whole cycles across the record); Lomb-Scargle can test any period you name, so you can search 20&ndash;28 h at whatever step you choose. Second, the FFT relies on even spacing to keep its sine and cosine terms independent of each other; Lomb-Scargle restores that independence explicitly, with a small time offset computed at each frequency, which is what lets it cope with gaps and irregular timestamps.
+    </p>
+    <p>
+      For evenly spaced, complete data the two give the same answer. The differences only appear when the sampling is not ideal &mdash; which, for clinical and field data, is most of the time.
+    </p>
+  </NoteBox>
   <p>
     Lomb-Scargle is not assumption-free. It fits a <strong>single sinusoid</strong>
     at each frequency, so like <a class="gloss" href="#gloss-cosinor">cosinor</a> it underestimates the amplitude of, and can
@@ -209,5 +221,111 @@
     </ol>
     <DemoLink session="sessions/demos/demo-periodogram-rhythm.json" label="Open the Periodogram example in AnCiR" />
   </AnCiRBox>
+
+  <h3 class="section-head">Correcting for Multiple Comparisons</h3>
+  <p>
+    The warning above applies whenever you run more than one test. Screen 15,000 transcripts for rhythmicity at p &lt; 0.05 and you should expect roughly <strong>750 false positives</strong> before any real biology — comparable to the true signal in many tissues. The same problem arises on a smaller scale whenever you test several animals, several tissues, or several metrics.
+  </p>
+  <p>
+    Two different things can be controlled, and choosing between them is the real decision:
+  </p>
+  <ul>
+    <li>
+      The <strong>family-wise error rate (FWER)</strong> — the probability of <em>even one</em> false positive. Strict, appropriate when a single wrong claim is costly.
+    </li>
+    <li>
+      The <strong>false discovery rate (FDR)</strong> — the expected <em>proportion</em> of your declared discoveries that are false. More permissive, and the right frame for a screen whose output is a candidate list you intend to follow up.
+    </li>
+  </ul>
+
+  <AnCiRBox title="FDR Correction node" tip="Wire the node's padj output into a Filter to keep only the rows that survive, or plot padj against the raw p-value to see how hard the correction bit.">
+    <p>
+      The <strong>FDR Correction</strong> node (Analysis family) takes a column of p-values in <code>xIN</code> and returns two columns: <strong>padj</strong> (the adjusted p-values) and <strong>reject</strong> (whether each survives at your chosen α).
+    </p>
+    <ul>
+      <li>
+        <strong>Benjamini-Hochberg</strong> — controls FDR under independence or positive dependence. The default, and the right choice for almost every omics screen.
+      </li>
+      <li>
+        <strong>Benjamini-Yekutieli</strong> — controls FDR under <em>arbitrary</em> dependence. More conservative; use when the tests may be negatively correlated in ways you cannot rule out.
+      </li>
+      <li>
+        <strong>Holm</strong> — controls FWER, step-down. Uniformly more powerful than Bonferroni, so there is rarely a reason to prefer Bonferroni to it.
+      </li>
+      <li>
+        <strong>Bonferroni</strong> — controls FWER by multiplying each p-value by <em>n</em>. Simple and very conservative.
+      </li>
+      <li>
+        <strong>None</strong> — pass through unchanged, for when correction is applied elsewhere.
+      </li>
+    </ul>
+    <p>
+      Set <strong>alpha</strong> (default 0.05) to the threshold you will report against. The adjusted values are computed so that comparing <code>padj</code> against α gives the same decisions as the classical step-up or step-down procedure.
+    </p>
+  </AnCiRBox>
+
+  <NoteBox title="Two details worth knowing">
+    <p>
+      <strong>Failed fits do not tighten the correction.</strong> Non-finite p-values — from a node that did not converge — are carried through as NaN and excluded from the count <em>n</em>, rather than being silently treated as 1. A model that failed to fit should not make the correction harsher for the ones that succeeded.
+    </p>
+    <p>
+      <strong>The implementation is checked against a reference.</strong> All four methods are tested to agree with the standard implementations (as in Python's <code>statsmodels</code>) to nine decimal places, so results are directly comparable with a scripted pipeline.
+    </p>
+  </NoteBox>
+
+  <h3 class="section-head">Surrogate Testing: a Null That Respects Your Data</h3>
+  <p>
+    The significance line on a periodogram, and the p-value from a cosinor, both rest on an assumption that circadian data routinely break: that the noise is <strong>independent from one sample to the next</strong>. It is not. Activity now strongly predicts activity a minute from now, and that autocorrelation alone produces broad spectral peaks that look convincingly rhythmic.
+  </p>
+  <p>
+    A <strong>surrogate test</strong> sidesteps the assumption entirely. Instead of trusting a formula, it builds the null distribution empirically: generate many artificial series that share the nuisance structure of your data but contain <em>no genuine rhythm</em>, compute the same statistic on each, and see where your real value falls.
+  </p>
+  <p>
+    Everything depends on what "share the nuisance structure" means, which is what the method choice controls.
+  </p>
+
+  <AnCiRBox title="Surrogate Test node" tip="Start with block and a block length near one cycle. If the result is borderline, try ar1 and phase as well — a rhythm that survives all three is a rhythm worth reporting.">
+    <p>
+      The <strong>Surrogate Test</strong> node (Analysis family) takes time in <code>xIN</code> and values in <code>yIN</code>, and returns a <strong>pvalue</strong> and the <strong>observed</strong> statistic as metrics you can wire onward or store.
+    </p>
+    <ul>
+      <li>
+        <strong>Block</strong> (default) — resample contiguous blocks of the record. Preserves short-range autocorrelation up to the block length while destroying rhythm across blocks. Set <strong>blockLengthHours</strong> near one cycle (default 24).
+      </li>
+      <li>
+        <strong>AR(1)</strong> — fit a first-order autoregressive model and simulate from it. The classic "red noise" null: this asks directly whether your peak beats what autocorrelation alone would produce.
+      </li>
+      <li>
+        <strong>Phase</strong> — randomise the Fourier phases while keeping the amplitude spectrum exactly. Preserves the entire autocorrelation structure; a strict and widely used null.
+      </li>
+      <li>
+        <strong>AAFT</strong> — amplitude-adjusted Fourier transform. Like phase randomisation, but also preserves the <em>distribution</em> of the values, which matters for skewed data such as activity counts.
+      </li>
+      <li>
+        <strong>Shuffle</strong> — plain random reordering. Destroys autocorrelation along with the rhythm, which makes the null far too easy to beat. Included for comparison and teaching; <strong>not</strong> a defensible primary analysis for a dense record.
+      </li>
+    </ul>
+    <p>
+      Set <strong>nSurrogates</strong> (default 199) to control resolution — the smallest achievable p-value is 1/(n+1), so 199 surrogates bottoms out at 0.005. Set <strong>seed</strong> for a reproducible result. <strong>periodMin</strong> and <strong>periodMax</strong> (default 20–28 h) bound the period range searched.
+    </p>
+  </AnCiRBox>
+
+  <WarnBox title="Shuffling is the wrong null for a time series">
+    <p>
+      This is the single most common mistake in surrogate testing. Randomly reordering your data destroys the autocorrelation as well as the rhythm, so the resulting null is a white-noise null — a much lower bar than your data actually face. Almost any real recording beats it, and the resulting p-value is spuriously tiny.
+    </p>
+    <p>
+      Use <strong>block</strong>, <strong>ar1</strong>, or <strong>phase</strong> for any densely sampled record. Reserve <strong>shuffle</strong> for genuinely independent observations — one value per subject, for instance.
+    </p>
+  </WarnBox>
+
+  <NoteBox title="Why the p-value is never exactly zero">
+    <p>
+      The node computes p as <strong>(k + 1) / (m + 1)</strong>, where <em>k</em> is the number of surrogates matching or exceeding your observed statistic and <em>m</em> is the number of surrogates. Adding one to each count includes the observed value in its own reference distribution, which is the standard convention for a Monte Carlo test.
+    </p>
+    <p>
+      The practical consequence is that p can never be 0 — with 199 surrogates the floor is 0.005. This is honest: having beaten 199 random draws is evidence, but it is not evidence of p &lt; 0.001. If you need a smaller p-value, run more surrogates.
+    </p>
+  </NoteBox>
   <ChapterExamples chapter="ch6" />
 </ChapterSection>

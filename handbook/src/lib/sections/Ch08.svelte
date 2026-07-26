@@ -8,6 +8,7 @@
   import AnCiRBox from "$lib/components/AnCiRBox.svelte";
   import DemoLink from "$lib/components/DemoLink.svelte";
   import FftAnim from "$lib/animations/FftAnim.svelte";
+  import WaveletAnim from "$lib/animations/WaveletAnim.svelte";
 
   const historyEntries = [
     {
@@ -132,6 +133,92 @@
       </li>
     </ol>
     <DemoLink session="sessions/demos/demo-fft-rhythm.json" label="Open the FFT example in AnCiR" />
+  </AnCiRBox>
+
+  <NoteBox title="The one constraint that makes this a DFT">
+    <p>
+      Look at what the animation is doing: at each frequency it multiplies the data by a test wave and adds up the result, then reports how big the answer is. That is a <strong>correlation</strong> — and it is also, exactly, a least-squares fit of that sinusoid to the data. On an evenly spaced grid the two are the same operation, because the sines and cosines are already mathematically independent of one another.
+    </p>
+    <p>
+      So what makes this the <em>discrete Fourier transform</em> rather than something more general? Just one thing: <strong>k is a whole number</strong>. The test frequencies are locked to a fixed grid of one, two, three… complete cycles across the record. You can ask about 24 h and 12 h because they land on that grid. You cannot ask about 23.7 h at all.
+    </p>
+    <p>
+      Relax that single constraint — allow any frequency you like, and do the extra work needed to keep the sine and cosine independent when the samples are unevenly spaced — and you have the <a href="#ch6">Lomb-Scargle periodogram</a> of Chapter 6. Seen this way, the DFT is the special case where your sampling is regular enough that you get that independence for free.
+    </p>
+  </NoteBox>
+
+  <h3 class="section-head">Beyond Fourier: Wavelets and Time-Frequency Analysis</h3>
+  <p>
+    Everything above assumes the rhythm is <strong>the same throughout the record</strong>. The Fourier transform correlates your data with sines and cosines that run the entire length of the recording, so it answers one question: <em>how much energy is there at each period, overall?</em> If the period changed half-way through, the FFT does not tell you so. It reports a single blurred or doubled peak, averaging two states that were never true at the same time.
+  </p>
+  <p>
+    A <strong>wavelet transform</strong> fixes this by using a wave packet that is <em>localised in time</em> instead of infinite. The packet — a <strong>wavelet</strong> — is stretched or squeezed to probe different periods, and slid along the record to probe different times. The result is a two-dimensional picture called a <strong>scalogram</strong>: power as a function of both period <em>and</em> time.
+  </p>
+
+  <p>
+    In the animation the signal has a period of <strong>24 h for the first five days and 21 h for the last five</strong>. Watch the gold wavelet stretch as it probes longer periods, and sweep across the record at each one. The scalogram builds up underneath: a bright ridge at 24 h in the first half that steps down to 21 h in the second. An FFT of this record would report one smeared peak somewhere in between.
+  </p>
+  <WaveletAnim height="560px" />
+
+  <NoteBox title="Why the wavelet changes width — and why that is the whole idea">
+    <p>
+      Watch the gold packet as the animation moves to longer periods: it <strong>stretches</strong>. At 33 h it is more than twice as wide as at 15 h. That scaling is the entire difference between a wavelet transform and the more familiar <strong>spectrogram</strong>.
+    </p>
+    <p>
+      A spectrogram picks a window of <em>fixed</em> width, Fourier-transforms whatever is inside it, and slides it along — so it fills the picture in <strong>vertical</strong> strips, one time at a time, all frequencies at once. Because the window never changes size, it is necessarily a compromise: wide enough to resolve a 24 h rhythm means far too wide to localise anything fast.
+    </p>
+    <p>
+      A wavelet transform instead fills the picture in <strong>horizontal</strong> strips, one period at a time, sweeping across all times — which is exactly what you are watching, and also how the standard algorithm computes it. Each strip uses a window matched to the period it is probing: long windows for long periods, short for short. You get good period resolution where you need it and good time resolution where you need that, instead of one compromise everywhere.
+    </p>
+  </NoteBox>
+
+  <p>
+    Three things are worth reading off the finished scalogram:
+  </p>
+  <ul>
+    <li><strong>A horizontal ridge</strong> means a stable period.</li>
+    <li><strong>A ridge that steps or slopes</strong> means the period is changing — the thing an FFT cannot show.</li>
+    <li><strong>A ridge that fades</strong> means the amplitude is falling, as in a damping culture.</li>
+  </ul>
+
+  <WarnBox title="The cone of influence: do not interpret the shaded edges">
+    <p>
+      Near the start and end of the record the wavelet runs off the edge of the data, and software pads the gap. Values there are partly made of padding rather than signal. That region is the <strong>cone of influence</strong>, hatched in the animation.
+    </p>
+    <p>
+      Notice how <em>wide</em> it is: because longer wavelets reach further, the cone at 32 h extends roughly 44 h — nearly two days — in from each end. This is a real trap in chronobiology, because the interesting event (a light pulse, a drug, a treatment) is so often near the start or end of the recording, which is exactly where the cone is widest. If a claim depends on structure inside the hatched region, the answer is to record for longer, not to reinterpret the plot.
+    </p>
+  </WarnBox>
+
+  <NoteBox title="The trade-off you cannot escape">
+    <p>
+      A wavelet cannot be sharp in time <em>and</em> sharp in period at once. A long wavelet spans many cycles, so it pins the period down precisely — but it smears the moment of any change across its own length. A short wavelet localises the change sharply but cannot tell 23 h from 25 h.
+    </p>
+    <p>
+      You can see this in the animation: the ridge does not step cleanly at day 5. It transitions over roughly a day either side, because the wavelet at those periods is about that wide. That blur is not a defect in the method — it is the honest width of what the data can resolve, and it is the same limit as the <strong>Δτ ≈ τ²/T</strong> resolution result above, viewed from a different direction.
+    </p>
+  </NoteBox>
+
+  <AnCiRBox title="Wavelet analysis in AnCiR" tip="Put the scalogram directly above an actogram of the same record. A change in period is far easier to believe when you can see it in the summary and in the raw data at once.">
+    <ol>
+      <li>Add a <strong>Wavelet (CWT)</strong> node from <strong>Plots</strong> and wire your time and value columns into it.</li>
+      <li>
+        Choose the <strong>wavelet</strong>: <strong>Morlet</strong> (the default, and the right choice for period estimation), <strong>Paul</strong> (better time localisation, worse period resolution — useful for pinning down when a shift happened), or <strong>DOG / Mexican hat</strong> (good for detecting sharp features rather than oscillations).
+      </li>
+      <li>
+        Set <strong>omega0</strong> for Morlet — this is the trade-off dial. Larger values sharpen period resolution and blur time; smaller does the reverse. The conventional 6 is a sensible default, and it makes period ≈ scale.
+      </li>
+      <li>
+        Set <strong>periodMin</strong> and <strong>periodMax</strong>. The default 1–48 h spans ultradian through circadian, which is where a wavelet most earns its keep; narrow it to 20–28 h if you only care about the circadian band.
+      </li>
+      <li>Keep <strong>show COI</strong> on, and ignore everything inside the shaded wedges.</li>
+    </ol>
+    <p>
+      For tracking a <em>single</em> parameter rather than reading a whole surface, the <strong>Moving Analysis</strong> node (Analysis family) is often easier to interpret: it slides a window along the record and emits period, amplitude, or phase as a new column you can plot like any other. The window length is the same trade-off as the wavelet's width.
+    </p>
+    <p>
+      One caution for both: overlapping windows share data, so the resulting curve is much smoother than the evidence warrants. Use them to <em>see</em> when something changed, not to compute a p-value for the change.
+    </p>
   </AnCiRBox>
   <ChapterExamples chapter="ch8" />
 </ChapterSection>

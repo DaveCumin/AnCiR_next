@@ -130,6 +130,78 @@
   </p>
   <MethodPicker />
 
+  <h3 class="section-head">Ordinary statistics: which test?</h3>
+  <p>
+    The rows above are circadian questions. Underneath them sit ordinary
+    statistical ones, and the same goal-first logic applies. Each row names the
+    AnCiR node; <a href="#stats">Statistical Foundations</a> explains the
+    reasoning.
+  </p>
+
+  <div class="goal-table-wrap">
+    <table class="goal-table">
+      <thead>
+        <tr><th>Your question</th><th>Reach for</th><th>Node</th><th>Go to</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="goal-cell">What does this variable look like?</td>
+          <td>Summary statistics plus a histogram and boxplot &mdash; never the numbers alone</td>
+          <td class="need-cell">Describe Data, histogram, boxplot</td>
+          <td class="go-cell"><a href="#stats">Stats</a></td>
+        </tr>
+        <tr>
+          <td class="goal-cell">Are these data normal enough?</td>
+          <td>Shapiro-Wilk on the <em>residuals</em>, read alongside a plot, never as an automatic gate</td>
+          <td class="need-cell">Normality Test</td>
+          <td class="go-cell"><a href="#stats">Stats</a></td>
+        </tr>
+        <tr>
+          <td class="goal-cell">Do two groups differ?</td>
+          <td>Welch t-test; Mann-Whitney if skewed or outlier-prone</td>
+          <td class="need-cell">Compare groups (stats)</td>
+          <td class="go-cell"><a href="#stats">Stats</a></td>
+        </tr>
+        <tr>
+          <td class="goal-cell">Do three or more groups differ?</td>
+          <td>ANOVA; Kruskal-Wallis if skewed</td>
+          <td class="need-cell">Compare groups (stats)</td>
+          <td class="go-cell"><a href="#stats">Stats</a></td>
+        </tr>
+        <tr>
+          <td class="goal-cell">Do counts differ between categories?</td>
+          <td>Chi-squared (independence for a contingency table)</td>
+          <td class="need-cell">Chi-squared test</td>
+          <td class="go-cell"><a href="#stats">Stats</a></td>
+        </tr>
+        <tr>
+          <td class="goal-cell">Are two variables associated?</td>
+          <td>Pearson if linear; Spearman if skewed, curved-but-monotonic, or outlier-driven. Plot first.</td>
+          <td class="need-cell">Correlation, pairsplot</td>
+          <td class="go-cell"><a href="#stats">Stats</a> &middot; <a href="#ch9">Ch 9</a></td>
+        </tr>
+        <tr>
+          <td class="goal-cell">Does a predictor explain an outcome?</td>
+          <td>Trend fit for continuous; logistic regression for binary. Check the residuals.</td>
+          <td class="need-cell">Fit Trend Curves, Logistic regression</td>
+          <td class="go-cell"><a href="#stats">Stats</a> &middot; <a href="#ch11">Ch 11</a></td>
+        </tr>
+        <tr>
+          <td class="goal-cell">I ran many tests &mdash; what now?</td>
+          <td>FDR (Benjamini-Hochberg) for a screen; Holm if a single false claim is costly</td>
+          <td class="need-cell">FDR Correction</td>
+          <td class="go-cell"><a href="#stats">Stats</a> &middot; <a href="#ch6">Ch 6</a></td>
+        </tr>
+        <tr>
+          <td class="goal-cell">Can I trust this p-value on a time series?</td>
+          <td>Probably not &mdash; build a null that preserves the autocorrelation</td>
+          <td class="need-cell">Surrogate Test</td>
+          <td class="go-cell"><a href="#stats">Stats</a> &middot; <a href="#ch6">Ch 6</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
   <NoteBox title="How this fits with the rest of the handbook">
     <p>
       This guide answers <em>which</em> method. The <a href="#recipes">Recipes</a>

@@ -4,6 +4,7 @@
   import QuickStart from "../lib/sections/QuickStart.svelte";
   import ChooseMethodSection from "../lib/sections/ChooseMethodSection.svelte";
   import RecipesSection from "../lib/sections/RecipesSection.svelte";
+  import StatsFoundationsSection from "../lib/sections/StatsFoundationsSection.svelte";
   import Ch01 from "../lib/sections/Ch01.svelte";
   import Ch02 from "../lib/sections/Ch02.svelte";
   import Ch03 from "../lib/sections/Ch03.svelte";
@@ -36,6 +37,8 @@
 <ChooseMethodSection />
 <hr class="section-divider" />
 <RecipesSection />
+<hr class="section-divider" />
+<StatsFoundationsSection />
 <hr class="section-divider" />
 <Ch01 />
 <hr class="section-divider" />
