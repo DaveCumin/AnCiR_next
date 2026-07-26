@@ -29,7 +29,10 @@ export function movingStatKeys(args) {
 			const keys = ['mesor'];
 			const H = Math.max(1, args.nHarmonics ?? 1);
 			for (let h = 1; h <= H; h++) keys.push(`H${h}_amplitude`, `H${h}_acrophase`);
-			keys.push('r2', 'rmse', 'pvalue');
+			// `rel_amplitude` (= amplitude / MESOR) mirrors the real getStatKeys — it separates "the
+			// rhythm got weaker" from "the whole signal shifted". Must sit before r2/rmse/pvalue to
+			// match the app's key ORDER, or the parity test (and the pre-allocated columns) drift.
+			keys.push('rel_amplitude', 'r2', 'rmse', 'pvalue');
 			return keys;
 		}
 		const keys = [];

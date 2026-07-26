@@ -234,6 +234,55 @@ test('Split conversion honours a non-zero start time', () => {
 	assert.deepEqual(findTP(session, 'Split').args.splitTimes, [start + 12 * 3600000]);
 });
 
+// "Compare X before vs after 21 Aug" — a CALENDAR question, not an offset. A STRING boundary is an
+// absolute ISO date, converted by Date.parse (dataless — no recording start needed), distinct from a
+// NUMBER boundary which stays hours-from-start. String-vs-number is unambiguous, so both conventions
+// live in the one `splitTimes` array without a heuristic.
+test('Split accepts an absolute ISO-date boundary, converting it via Date.parse (not hours)', () => {
+	const start = Date.parse('2024-08-18T00:00:00.000Z');
+	const times = Array.from({ length: 8 }, (_, i) => new Date(start + i * 86400000).toISOString());
+	const { session, errors } = normalizeSession({
+		columns: [
+			{ name: 'time', type: 'time', values: times },
+			{ name: 'values', values: times.map((_, i) => i) }
+		],
+		analyses: [{ name: 'Split', args: { xIN: 'time', yIN: ['values'], splitTimes: ['2024-08-21'] } }]
+	});
+	assert.deepEqual(errors, []);
+	// The literal parsed date, NOT start + 2024*3600000 (which is what the hours path would produce).
+	assert.deepEqual(findTP(session, 'Split').args.splitTimes, [Date.parse('2024-08-21')]);
+});
+
+test('Split warns and declines an absolute date on a non-time (relative) column', () => {
+	const { warnings } = normalizeSession({
+		columns: [
+			{ name: 'hour', type: 'number', values: Array.from({ length: 48 }, (_, i) => i) },
+			{ name: 'values', values: Array.from({ length: 48 }, (_, i) => i) }
+		],
+		analyses: [{ name: 'Split', args: { xIN: 'hour', yIN: ['values'], splitTimes: ['2024-08-21'] } }]
+	});
+	assert.ok(
+		warnings.some((w) => /date/i.test(w) && /time column/i.test(w)),
+		`expected a "date on a non-time column" warning, got: ${JSON.stringify(warnings)}`
+	);
+});
+
+test('Split rejects a yearless date, asking for a full one', () => {
+	const start = Date.parse('2024-08-18T00:00:00.000Z');
+	const times = Array.from({ length: 8 }, (_, i) => new Date(start + i * 86400000).toISOString());
+	const { warnings } = normalizeSession({
+		columns: [
+			{ name: 'time', type: 'time', values: times },
+			{ name: 'values', values: times.map((_, i) => i) }
+		],
+		analyses: [{ name: 'Split', args: { xIN: 'time', yIN: ['values'], splitTimes: ['21 Aug'] } }]
+	});
+	assert.ok(
+		warnings.some((w) => /year/i.test(w)),
+		`expected a "needs a year" warning, got: ${JSON.stringify(warnings)}`
+	);
+});
+
 test('Split on a NUMERIC axis leaves splitTimes in the column’s own units', () => {
 	const { session } = normalizeSession({
 		columns: [

@@ -146,7 +146,13 @@ RULES:
   rhythm period in hours (e.g. 24).
 - When an analysis lists a "fitted curve", PLOT BOTH: the raw data (x = its own xIN, y = its
   yIN) as points, AND the fit (x = its fitted-curve x, y = its fitted-curve y for that same Y
-  column) as a line. The fit's x pairs ONLY with the fit's y.`;
+  column) as a line. The fit's x pairs ONLY with the fit's y.
+- A COMPARISON QUESTION is answered by ADDING the analysis that computes it, not by judging the
+  result: "is the difference between groups significant?" → add a GroupComparison (or a boxplot,
+  which draws the significance bars); "what is the phase difference between groups?" → add a
+  RayleighTest with showWatsonWilliams:true and yIN = the per-group phase columns (it reports each
+  group's mean phase and a Watson-Williams F / ww_pvalue). Contrasting two single fitted values
+  (e.g. a Cosinor amplitude) is DESCRIPTIVE — never call it significant or "tested".`;
 
 /**
  * @param {object} summary the open session (see summariseSession in src/lib/utils/aiEdit.js)

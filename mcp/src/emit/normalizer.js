@@ -254,31 +254,61 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 			if (args[k] == null) args[k] = structuredClone(v);
 		}
 
-		// Units bridge for Split on a TIME axis — the same trap as the periodogram/cosinor units.
-		// The model gives split points as HOURS from the start of the recording (it reads "14
-		// days" and emits 336), but the Split node compares them against the x column's stored
-		// values, which for a time column are absolute epoch-ms. Left as-is, 336 lands 336 ms
-		// after the epoch — the very first sample — so one segment is empty and every analysis
-		// downstream of it plots nothing (the exact bug a user hit). Convert here from the baked
-		// time column's start, the same bridge the night-band feature does for clock hours.
+		// Units bridge for Split on a TIME axis. A boundary reaches the Split node as an absolute
+		// epoch-ms VALUE (it compares against the x column's stored epoch-ms), but the model can't
+		// know those, so it speaks in one of two human conventions — and the entry's TYPE says which:
+		//   • NUMBER → HOURS from the start of the recording (an offset: "14 days" → 336). Needs the
+		//     baked start value to become epoch-ms. This is the original bridge; without it a user's
+		//     periodograms went blank (336 ms landed on the first sample).
+		//   • STRING → an absolute ISO DATE (a calendar question: "before/after 21 Aug"). Converted by
+		//     Date.parse alone — no recording start, no rawData — so it also works where the data isn't
+		//     baked. Only meaningful on a time column; on a relative-number axis a calendar date has no
+		//     referent, so decline with a warning rather than emit a silent no-op split.
+		// String-vs-number is unambiguous, so both conventions coexist in the one `splitTimes` array.
 		if (name === 'Split' && Array.isArray(args.splitTimes) && args.splitTimes.length) {
 			const xCol = data.find((c) => c.id === args.xIN);
+			const isTime = xCol?.type === 'time';
 			const raw = rawData[args.xIN];
-			if (xCol?.type === 'time' && Array.isArray(raw) && raw.length) {
-				const asMs = (v) => (typeof v === 'number' ? v : Date.parse(v));
-				const startMs = asMs(raw[0]);
-				const endMs = asMs(raw[raw.length - 1]);
-				if (Number.isFinite(startMs)) {
-					args.splitTimes = args.splitTimes.map((h) => startMs + Number(h) * 3600000);
-					// A split that lands outside the recording means the model's number wasn't
-					// hours-from-start after all — surface it rather than emit a silent no-op split.
-					if (Number.isFinite(endMs) && args.splitTimes.some((t) => t <= startMs || t >= endMs)) {
+			const asMs = (v) => (typeof v === 'number' ? v : Date.parse(v));
+			const haveBounds = Array.isArray(raw) && raw.length;
+			const startMs = haveBounds ? asMs(raw[0]) : NaN;
+			const endMs = haveBounds ? asMs(raw[raw.length - 1]) : NaN;
+
+			args.splitTimes = args.splitTimes.map((entry) => {
+				if (typeof entry === 'string') {
+					if (!isTime) {
 						warnings.push(
-							`Split: a split point falls outside the recording — check it is given as HOURS from the start.`
+							`Split: "${entry}" is a calendar date, but the split column isn't a time column — leaving it unconverted.`
 						);
+						return entry;
 					}
-				} else {
+					if (!/\d{4}/.test(entry)) {
+						warnings.push(`Split: "${entry}" has no year — give a full date like 2024-08-21.`);
+						return entry;
+					}
+					const ms = Date.parse(entry);
+					if (!Number.isFinite(ms)) {
+						warnings.push(`Split: couldn't read the date "${entry}" — give it as e.g. 2024-08-21.`);
+						return entry;
+					}
+					return ms;
+				}
+				// A number is hours-from-start; only a TIME axis needs the conversion (a relative-number
+				// axis takes the value literally, as before).
+				if (isTime) {
+					if (Number.isFinite(startMs)) return startMs + Number(entry) * 3600000;
 					warnings.push(`Split: couldn't read the start time, so split points may be misplaced.`);
+				}
+				return entry;
+			});
+
+			// A converted split that lands outside the recording means the model's value wasn't what we
+			// assumed — surface it rather than emit a silent no-op split.
+			if (isTime && Number.isFinite(startMs) && Number.isFinite(endMs)) {
+				if (args.splitTimes.some((t) => typeof t === 'number' && (t <= startMs || t >= endMs))) {
+					warnings.push(
+						`Split: a split point falls outside the recording — check the date, or that an offset is given as HOURS from the start.`
+					);
 				}
 			}
 		}
